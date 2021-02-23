@@ -72,18 +72,23 @@ class SharedFileState {
 
 class PagingTestFile : public PagedVnode {
  public:
-  PagingTestFile(PagedVfs* vfs, std::shared_ptr<SharedFileState> shared, std::vector<uint8_t> data)
-      : PagedVnode(vfs), shared_(std::move(shared)), data_(data) {}
-
-  ~PagingTestFile() override {}
+  // Controls the success or failure that VmoRead() will report. Defaults to success (ZX_OK).
+  void set_read_status(zx_status_t status) { vmo_read_status_ = status; }
 
   // PagedVnode implementation:
   void VmoRead(uint64_t offset, uint64_t length) override {
     std::lock_guard<std::mutex> lock(mutex_);
 
+    if (vmo_read_status_ != ZX_OK) {
+      // We're supposed to report errors.
+      EXPECT_TRUE(
+          paged_vfs()->ReportPagerError(vmo(), offset, length, ZX_ERR_IO_DATA_INTEGRITY).is_ok());
+      return;
+    }
+
     zx::vmo transfer;
     if (zx::vmo::create(length, 0, &transfer) != ZX_OK) {
-      ASSERT_TRUE(paged_vfs()->ReportPagerError(vmo(), offset, length, 0).is_ok());
+      ASSERT_TRUE(paged_vfs()->ReportPagerError(vmo(), offset, length, ZX_ERR_BAD_STATE).is_ok());
       return;
     }
 
@@ -124,13 +129,25 @@ class PagingTestFile : public PagedVnode {
   void OnNoClones() override { shared_->SignalVmoPresenceChanged(false); }
 
  private:
+  friend fbl::RefPtr<PagingTestFile>;
+  friend fbl::internal::MakeRefCountedHelper<PagingTestFile>;
+
+  PagingTestFile(PagedVfs* vfs, std::shared_ptr<SharedFileState> shared, std::vector<uint8_t> data)
+      : PagedVnode(vfs), shared_(std::move(shared)), data_(data) {}
+
+  ~PagingTestFile() override {}
+
   std::shared_ptr<SharedFileState> shared_;
   std::vector<uint8_t> data_;
+  zx_status_t vmo_read_status_ = ZX_OK;
 };
 
 // This file has many pages and end in a non-page-boundary.
 const char kFile1Name[] = "file1";
 constexpr size_t kFile1Size = 4096 * 17 + 87;
+
+// This file is the one that always reports errors.
+const char kFileErrName[] = "file_err";
 
 class PagingTest : public zxtest::Test {
  public:
@@ -183,6 +200,11 @@ class PagingTest : public zxtest::Test {
     file1_ = fbl::MakeRefCounted<PagingTestFile>(vfs_.get(), file1_shared_, file1_contents_);
     root_->AddEntry(kFile1Name, file1_);
 
+    file_err_shared_ = std::make_shared<SharedFileState>();
+    file_err_ = fbl::MakeRefCounted<PagingTestFile>(vfs_.get(), file_err_shared_, file1_contents_);
+    file_err_->set_read_status(ZX_ERR_IO_DATA_INTEGRITY);
+    root_->AddEntry(kFileErrName, file_err_);
+
     // Connect to the root.
     zx::channel client_end, server_end;
     EXPECT_OK(zx::channel::create(0u, &client_end, &server_end));
@@ -197,6 +219,7 @@ class PagingTest : public zxtest::Test {
 
  protected:
   std::shared_ptr<SharedFileState> file1_shared_;
+  std::shared_ptr<SharedFileState> file_err_shared_;
   std::vector<uint8_t> file1_contents_;
 
  private:
@@ -215,6 +238,7 @@ class PagingTest : public zxtest::Test {
   fbl::RefPtr<PseudoDir> root_;
 
   fbl::RefPtr<PagingTestFile> file1_;
+  fbl::RefPtr<PagingTestFile> file_err_;
 };
 
 template <typename T>
@@ -263,10 +287,45 @@ TEST_F(PagingTest, Read) {
   ASSERT_FALSE(file1_shared_->WaitForChangedVmoPresence());
 }
 
+TEST_F(PagingTest, VmoRead) {
+  fbl::unique_fd root_dir_fd(CreateVfs(1));
+  ASSERT_TRUE(root_dir_fd);
+
+  // Open file1 and get the VMO.
+  fbl::unique_fd file1_fd(openat(root_dir_fd.get(), kFile1Name, 0, S_IRWXU));
+  ASSERT_TRUE(file1_fd);
+  zx::vmo vmo;
+  ASSERT_EQ(ZX_OK, fdio_get_vmo_exact(file1_fd.get(), vmo.reset_and_get_address()));
+
+  // Test that zx_vmo_read works on the file's VMO.
+  std::vector<uint8_t> read;
+  read.resize(kFile1Size);
+  ASSERT_EQ(ZX_OK, vmo.read(&read[0], 0, kFile1Size));
+  for (size_t i = 0; i < kFile1Size; i++) {
+    ASSERT_EQ(read[i], file1_contents_[i]);
+  }
+}
+
+// Tests that read errors are propagated. This uses zx_vmo_read so we can get the error without
+// segfaulting. Since we're not actually trying to test the kernel's delivery of paging errors, this
+// is enough for the VFS paging behavior.
+TEST_F(PagingTest, ReadError) {
+  fbl::unique_fd root_dir_fd(CreateVfs(1));
+  ASSERT_TRUE(root_dir_fd);
+
+  // Open the "error" file and get the VMO.
+  fbl::unique_fd file_err_fd(openat(root_dir_fd.get(), kFileErrName, 0, S_IRWXU));
+  ASSERT_TRUE(file_err_fd);
+  zx::vmo vmo;
+  ASSERT_EQ(ZX_OK, fdio_get_vmo_exact(file_err_fd.get(), vmo.reset_and_get_address()));
+
+  // All reads should be errors.
+  uint8_t buf[8];
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, vmo.read(buf, 0, std::size(buf)));
+}
+
 // TODO(bug 51111):
 //  - Test closing a file frees the PagedVnode object.
-//  - Test pager error propagation.
-//  - Test with vmo_read.
 //  - Test multiple threads (deliberately hang one to make sure we can service another request).
 
 }  // namespace fs

@@ -30,8 +30,8 @@ zx::status<> PagedVfs::SupplyPages(zx::vmo& node_vmo, uint64_t offset, uint64_t 
 }
 
 zx::status<> PagedVfs::ReportPagerError(zx::vmo& node_vmo, uint64_t offset, uint64_t length,
-                                        uint64_t data) {
-  return zx::make_status(pager_.op_range(ZX_PAGER_OP_FAIL, node_vmo, offset, length, data));
+                                        zx_status_t err) {
+  return zx::make_status(pager_.op_range(ZX_PAGER_OP_FAIL, node_vmo, offset, length, err));
 }
 
 zx::status<zx::vmo> PagedVfs::CreatePagedNodeVmo(fbl::RefPtr<PagedVnode> node, uint64_t size) {
