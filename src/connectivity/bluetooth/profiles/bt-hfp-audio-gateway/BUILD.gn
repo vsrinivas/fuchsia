@@ -71,6 +71,7 @@ resource("test_config") {
 }
 
 fuchsia_component("component") {
+  component_name = "bt-hfp-audio-gateway"
   deps = [ ":bin" ]
   manifest = "meta/bt-hfp-audio-gateway.cmx"
 }
