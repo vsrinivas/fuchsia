@@ -77,6 +77,9 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #
 #   cmdline_golden (optional)
 #     [string] The path to the kernel cmdline golden file to comapre against.
+#
+#   testonly (optional)
+#     [bool] Usual GN meanings.
 template("assemble_system") {
   assert(defined(invoker.base_packages), "Need to define base_packages")
   assert(defined(invoker.bootfs_labels), "Need to define bootfs_labels")
@@ -127,14 +130,14 @@ template("assemble_system") {
 
   shell_commands("${target_name}_shell-commands") {
     package_name = "shell-commands"
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
     deps = base_packages + cache_packages + universe_packages
   }
 
   config_package("${image_name}_config-data") {
     package_name = "config-data"
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
     deps = base_packages + cache_packages + universe_packages
     if (defined(invoker.sysmgr_golden)) {
@@ -146,7 +149,7 @@ template("assemble_system") {
   }
 
   group("${image_name}_base_packages") {
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
     deps = base_packages + [
              ":${image_name}_config-data",
@@ -157,7 +160,7 @@ template("assemble_system") {
 
   meta_far_merkle_index = "$target_out_dir/${image_name}_meta_far_merkle_index"
   generate_package_metadata("${image_name}_meta_far_merkle_index") {
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
     outputs = [ meta_far_merkle_index ]
     data_keys = [ "meta_far_merkle_index_entries" ]
@@ -166,7 +169,7 @@ template("assemble_system") {
 
   action("${image_name}_pkgsvr_index") {
     visibility = [ ":*" ]
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     inputs = [ meta_far_merkle_index ]
     outputs = [ "${target_out_dir}/${target_name}" ]
     deps = [ ":${image_name}_meta_far_merkle_index" ]
@@ -181,7 +184,7 @@ template("assemble_system") {
       "$target_out_dir/${image_name}_system_image.manifest_args"
   generated_file("${image_name}_system_image.manifest_args") {
     visibility = [ ":*" ]
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     outputs = [ system_image_manifest_args ]
     data_keys = [ "system_image_rsps" ]
     walk_keys = [ "system_image_barrier" ]
@@ -195,7 +198,7 @@ template("assemble_system") {
 
   generate_manifest("${image_name}_system_image.manifest") {
     visibility = [ ":*" ]
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
 
     deps = [
       ":${image_name}_fuchsia_packages",
@@ -226,14 +229,14 @@ template("assemble_system") {
 
   pm_build("${image_name}_system_image.meta") {
     visibility = [ ":*" ]
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     manifest = ":${image_name}_system_image.manifest"
     package_name = "system_image"
   }
 
   blob_manifest = "$target_out_dir/${image_name}_blob.manifest"
   collect_blob_manifest("${image_name}_blob.manifest") {
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
     outputs = [ blob_manifest ]
     deps = [
@@ -245,7 +248,7 @@ template("assemble_system") {
 
   compiled_action("${image_name}_blob.blk") {
     visibility = [ ":*" ]
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     deps = [ ":${image_name}_blob.manifest" ]
     blob_image_path = "$target_out_dir/$target_name"
     blob_size_list = "$target_out_dir/${image_name}_blobs.json"
@@ -278,7 +281,7 @@ template("assemble_system") {
   compiled_action("${image_name}_data.blk") {
     data_image_path = "$target_out_dir/${target_name}"
     visibility = [ ":*" ]
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     outputs = [ data_image_path ]
     tool = "//zircon/tools/minfs"
     args = [
@@ -289,7 +292,7 @@ template("assemble_system") {
 
   generate_fvm("${image_name}_fvm.blk") {
     # Referenced by guest_package.
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     output_name = "$target_out_dir/$target_name"
 
     # This target is only ever used for a ram-based FVM, so the slice size chosen does not need
@@ -312,7 +315,7 @@ template("assemble_system") {
   }
 
   zbi_input("${image_name}_fvm.blk_ramdisk") {
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
 
     type = "ramdisk"
 
@@ -325,7 +328,7 @@ template("assemble_system") {
 
   action("${image_name}_devmgr_config.txt") {
     visibility = [ ":*" ]
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     hermetic_deps = false
     script = "//build/images/manifest.py"
     outputs = [ "$target_out_dir/$target_name" ]
@@ -382,7 +385,7 @@ template("assemble_system") {
 
   devmgr_config("${image_name}_devmgr_config") {
     label = ":${image_name}_devmgr_config.txt"
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
   }
 
   zbi_input("${image_name}_cmdline") {
@@ -425,9 +428,6 @@ template("assemble_system") {
                              "testonly",
                              "visibility",
                            ])
-
-    # TODO(fxbug.dev/69264): Remove this line and use testonly from invoker.
-    testonly = true
     deps = [
       ":${image_name}_cmdline",
       ":${image_name}_devmgr_config",
@@ -448,8 +448,7 @@ template("assemble_system") {
   if (defined(invoker.cmdline_golden)) {
     zbi_outputs = get_target_outputs(":${image_name}_zbi")
     kernel_cmdline_verify("${image_name}_zbi_verify") {
-      # TODO(fxbug.dev/69264): use testonly from invoker.
-      testonly = true
+      forward_variables_from(invoker, [ "testonly" ])
       zbi = zbi_outputs[0]
       golden = invoker.cmdline_golden
       deps = [ ":${image_name}_zbi" ]
@@ -457,8 +456,7 @@ template("assemble_system") {
   }
 
   group(image_name) {
-    # TODO(fxbug.dev/69264): use testonly from invoker.
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     public_deps = [ ":${image_name}_zbi" ]
     if (defined(invoker.cmdline_golden)) {
       deps = [ ":${image_name}_zbi_verify" ]

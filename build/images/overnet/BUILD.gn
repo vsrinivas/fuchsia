@@ -6,6 +6,7 @@ import("//build/images/assemble_system.gni")
 import("//build/testing/host_test_data.gni")
 
 assemble_system("overnet") {
+  testonly = true
   base_packages = [
     "//garnet/bin/run",
     "//garnet/bin/trace",

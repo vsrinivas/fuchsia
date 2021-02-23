@@ -61,6 +61,7 @@ recovery_eng_packages =
     ]
 
 assemble_system("recovery-eng") {
+  testonly = true
   base_packages = recovery_eng_packages
 
   system_image_deps = recovery_system_image_deps
@@ -105,6 +106,7 @@ assemble_system("recovery-eng") {
 }
 
 assemble_system("recovery-fdr") {
+  testonly = true
   base_packages = recovery_packages
 
   system_image_deps = recovery_system_image_deps
