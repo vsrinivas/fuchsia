@@ -701,11 +701,6 @@ impl Facade for HfpFacade {
                 self.cleanup().await;
                 Ok(to_value(())?)
             }
-            "IncomingCall" => {
-                let remote = parse_arg!(args, as_str, "remote")?;
-                let result = self.incoming_call(&remote).await?;
-                Ok(to_value(result)?)
-            }
             "ListPeers" => {
                 let result = self.list_peers().await?;
                 Ok(to_value(result)?)
@@ -713,6 +708,40 @@ impl Facade for HfpFacade {
             "SetActivePeer" => {
                 let id = parse_arg!(args, as_u64, "peer_id")?;
                 let result = self.set_active_peer(id).await?;
+                Ok(to_value(result)?)
+            }
+            "ListCalls" => {
+                let result = self.list_calls().await?;
+                Ok(to_value(result)?)
+            }
+            "IncomingCall" => {
+                let remote = parse_arg!(args, as_str, "remote")?;
+                let result = self.incoming_call(&remote).await?;
+                Ok(to_value(result)?)
+            }
+            "OutgoingCall" => {
+                let remote = parse_arg!(args, as_str, "remote")?;
+                let result = self.outgoing_call(&remote).await?;
+                Ok(to_value(result)?)
+            }
+            "SetCallActive" => {
+                let call_id = parse_arg!(args, as_u64, "call_id")?;
+                let result = self.set_call_active(call_id).await?;
+                Ok(to_value(result)?)
+            }
+            "SetCallHeld" => {
+                let call_id = parse_arg!(args, as_u64, "call_id")?;
+                let result = self.set_call_held(call_id).await?;
+                Ok(to_value(result)?)
+            }
+            "SetCallTerminated" => {
+                let call_id = parse_arg!(args, as_u64, "call_id")?;
+                let result = self.set_call_terminated(call_id).await?;
+                Ok(to_value(result)?)
+            }
+            "SetCallTransferredToAg" => {
+                let call_id = parse_arg!(args, as_u64, "call_id")?;
+                let result = self.set_call_transferred_to_ag(call_id).await?;
                 Ok(to_value(result)?)
             }
             _ => bail!("Invalid Hfp FIDL method: {:?}", method),

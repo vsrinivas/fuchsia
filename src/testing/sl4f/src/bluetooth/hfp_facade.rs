@@ -7,7 +7,8 @@ use async_utils::hanging_get::client::HangingGetStream;
 use derivative::Derivative;
 use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_hfp::{
-    CallManagerMarker, CallManagerProxy, CallMarker, CallState, HeadsetGainProxy, HfpMarker,
+    CallManagerMarker, CallManagerProxy, CallMarker, CallRequest, CallRequestStream,
+    CallState as FidlCallState, CallWatchStateResponder, DtmfCode, HeadsetGainProxy, HfpMarker,
     NetworkInformation, PeerHandlerRequest, PeerHandlerRequestStream,
     PeerHandlerWaitForCallResponder,
 };
@@ -56,6 +57,36 @@ struct PeerState {
     gain_control_watcher: Option<fasync::Task<()>>,
     gain_control: Option<HeadsetGainProxy>,
     call_responder: Option<PeerHandlerWaitForCallResponder>,
+    // The tasks for managing a peer's call actions is owned by the peer.
+    // This task is separate from the manager's view of the call's state.
+    #[derivative(Debug = "ignore")]
+    call_tasks: HashMap<CallId, fasync::Task<()>>,
+}
+
+/// State associated with a single Call.
+#[derive(Derivative)]
+#[derivative(Debug)]
+struct CallState {
+    remote: String,
+    peer_id: Option<PeerId>,
+    responder: Option<CallWatchStateResponder>,
+    state: FidlCallState,
+    reported_state: Option<FidlCallState>,
+    dtmf_codes: Vec<DtmfCode>,
+}
+
+impl CallState {
+    /// Update the `state` and report the state if it is a new state and there is a
+    /// responder to report with.
+    pub fn update_state(&mut self, state: FidlCallState) -> Result<(), Error> {
+        self.state = state;
+        if self.reported_state != Some(state) {
+            let responder = self.responder.take().ok_or(format_err!("No call responder"))?;
+            responder.send(state)?;
+            self.reported_state = Some(state);
+        }
+        Ok(())
+    }
 }
 
 #[derive(Derivative, Default)]
@@ -74,7 +105,7 @@ struct HfpFacadeInner {
     next_call_id: CallId,
     /// State for all ongoing calls
     #[derivative(Debug = "ignore")]
-    calls: HashMap<CallId, (PeerId, fasync::Task<()>)>,
+    calls: HashMap<CallId, CallState>,
 }
 
 #[derive(Debug, Clone)]
@@ -143,6 +174,53 @@ impl HfpFacade {
         Ok(())
     }
 
+    /// Return a list of Calls by call id and remote number.
+    pub async fn list_calls(&self) -> Result<Vec<(u64, String)>, Error> {
+        let inner = self.inner.lock().await;
+        Ok(inner.calls.iter().map(|(&id, state)| (id, state.remote.clone())).collect())
+    }
+
+    /// Notify HFP of an ongoing call. Simulates a new call from the network in the
+    /// "incoming ringing" state.
+    ///
+    /// Arguments:
+    ///     `remote`: The number associated with the remote party. This can be any string formatted
+    ///     number (e.g. +1-555-555-5555).
+    ///     `fidl_state`: The state to assign to the newly created call.
+    async fn new_call(&self, remote: &str, fidl_state: FidlCallState) -> Result<CallId, Error> {
+        let mut inner = self.inner.lock().await;
+        let call_id = inner.next_call_id;
+        inner.next_call_id += 1;
+        let mut state = CallState {
+            remote: remote.into(),
+            peer_id: None,
+            responder: None,
+            state: fidl_state,
+            reported_state: None,
+            dtmf_codes: vec![],
+        };
+
+        if let Some(peer_id) = inner.active_peer.clone() {
+            let peer = inner.peers.get_mut(&peer_id).expect("Active peer must exist in peers map");
+
+            let (client_end, stream) = fidl::endpoints::create_request_stream::<CallMarker>()
+                .map_err(|e| format_err!("Error creating fidl endpoints: {}", e))?;
+            // This does not handle the case where there is no peer responder
+            let responder = peer
+                .call_responder
+                .take()
+                .ok_or(format_err!("No peer call responder for {:?}", peer_id))?;
+            if let Ok(()) = responder.send(client_end, remote, fidl_state) {
+                let task = fasync::Task::local(self.clone().manage_call(peer_id, call_id, stream));
+                peer.call_tasks.insert(call_id, task);
+                state.peer_id = Some(peer_id);
+            }
+        }
+
+        inner.calls.insert(call_id, state);
+        Ok(call_id)
+    }
+
     /// Notify HFP of an incoming call. Simulates a new call from the network in the
     /// "incoming ringing" state.
     ///
@@ -150,21 +228,90 @@ impl HfpFacade {
     ///     `remote`: The number associated with the remote party. This can be any string formatted
     ///     number (e.g. +1-555-555-5555).
     pub async fn incoming_call(&self, remote: &str) -> Result<CallId, Error> {
-        let mut inner = self.inner.lock().await;
-        let active_peer = inner.active_peer.ok_or(format_err!("No active peer"))?;
-        let peer = inner.peers.get_mut(&active_peer).expect("Active peer must be in peers map");
-        let (client_end, mut stream) = fidl::endpoints::create_request_stream::<CallMarker>()
-            .map_err(|e| format_err!("Error creating fidl endpoints: {}", e))?;
-        let state = CallState::IncomingRinging;
-        let responder = peer.call_responder.take().unwrap();
-        responder.send(client_end, remote, state).unwrap();
-        let task =
-            fasync::Task::local(async move { while let Some(_request) = stream.next().await {} });
-        let call_id = inner.next_call_id;
-        inner.next_call_id += 1;
-        inner.calls.insert(call_id, (active_peer, task));
+        self.new_call(remote, FidlCallState::IncomingRinging).await
+    }
 
-        Ok(call_id)
+    /// Notify HFP of an outgoing call. Simulates a new call to the network in the
+    /// "outgoing notifying" state.
+    ///
+    /// Arguments:
+    ///     `remote`: The number associated with the remote party. This can be any string formatted
+    ///     number (e.g. +1-555-555-5555).
+    pub async fn outgoing_call(&self, remote: &str) -> Result<CallId, Error> {
+        self.new_call(remote, FidlCallState::OutgoingDialing).await
+    }
+
+    /// Notify HFP of an update to the state of an ongoing call.
+    ///
+    /// Arguments:
+    ///     `call_id`: The unique id of the call as assigned by the call manager.
+    ///     `fidl_state`: The state to assign to the call.
+    async fn update_call(&self, call_id: CallId, fidl_state: FidlCallState) -> Result<(), Error> {
+        // TODO: do not allow invalid state transitions (e.g. Terminated to Active)
+        self.inner
+            .lock()
+            .await
+            .calls
+            .get_mut(&call_id)
+            .ok_or(format_err!("Unknown Call Id {}", call_id))
+            .and_then(|call| call.update_state(fidl_state))
+    }
+
+    /// Notify HFP that a call is now active.
+    ///
+    /// Arguments:
+    ///     `call_id`: The unique id of the call as assigned by the call manager.
+    pub async fn set_call_active(&self, call_id: CallId) -> Result<(), Error> {
+        let tag = "HfpFacade::set_call_active";
+        match self.update_call(call_id, FidlCallState::OngoingActive).await {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                fx_err_and_bail!(&with_line!(tag), format_err!("Failed to set call active: {}", e))
+            }
+        }
+    }
+
+    /// Notify HFP that a call is now held.
+    ///
+    /// Arguments:
+    ///     `call_id`: The unique id of the call as assigned by the call manager.
+    pub async fn set_call_held(&self, call_id: CallId) -> Result<(), Error> {
+        let tag = "HfpFacade::set_call_held";
+        match self.update_call(call_id, FidlCallState::OngoingHeld).await {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                fx_err_and_bail!(&with_line!(tag), format_err!("Failed to set call active: {}", e))
+            }
+        }
+    }
+
+    /// Notify HFP that a call is now terminated.
+    ///
+    /// Arguments:
+    ///     `call_id`: The unique id of the call as assigned by the call manager.
+    pub async fn set_call_terminated(&self, call_id: CallId) -> Result<(), Error> {
+        let tag = "HfpFacade::set_call_terminated";
+        match self.update_call(call_id, FidlCallState::Terminated).await {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                fx_err_and_bail!(&with_line!(tag), format_err!("Failed to terminate call: {}", e))
+            }
+        }
+    }
+
+    /// Notify HFP that a call's audio is now transferred to the Audio Gateway.
+    ///
+    /// Arguments:
+    ///     `call_id`: The unique id of the call as assigned by the call manager.
+    pub async fn set_call_transferred_to_ag(&self, call_id: CallId) -> Result<(), Error> {
+        let tag = "HfpFacade::set_call_transferred_to_ag";
+        match self.update_call(call_id, FidlCallState::TransferredToAg).await {
+            Ok(()) => Ok(()),
+            Err(e) => fx_err_and_bail!(
+                &with_line!(tag),
+                format_err!("Failed to transfer call to ag: {}", e)
+            ),
+        }
     }
 
     /// Return a list of HFP peers along with a boolean specifying whether each peer is the
@@ -346,6 +493,81 @@ impl HfpFacade {
             let task = fasync::Task::spawn(self.clone().manage_peer(id, stream));
             peers.insert(id, task);
         }
+    }
+
+    /// Manage an ongoing call that is being routed to the Hands Free peer. Handle any requests
+    /// made by the peer that are associated with the individual call.
+    ///
+    /// Arguments:
+    ///     `peer_id`: The unique id of the peer as assigned by the Bluetooth stack.
+    ///     `call_id`: The unique id of the call as assigned by the call manager.
+    ///     `stream`: A stream of requests associated with a single call.
+    async fn manage_call(self, peer_id: PeerId, call_id: CallId, mut stream: CallRequestStream) {
+        while let Some(request) = stream.next().await {
+            let mut inner = self.inner.lock().await;
+            let state = if let Some(state) = inner.calls.get_mut(&call_id) {
+                state
+            } else {
+                fx_log_info!("Call management by {:?} ended: {:?}", peer_id, call_id);
+                break;
+            };
+            match request {
+                Ok(CallRequest::WatchState { responder, .. }) => {
+                    if state.responder.is_some() {
+                        fx_log_warn!(
+                            "Call client sent multiple WatchState requests. Closing channel"
+                        );
+                        break;
+                    }
+                    state.responder = Some(responder);
+                    // Trigger an update with the existing state to send it on the responder if
+                    // necessary.
+                    if let Err(e) = state.update_state(state.state) {
+                        fx_log_info!("Call ended: {}", e);
+                        break;
+                    }
+                }
+                Ok(CallRequest::RequestHold { .. }) => {
+                    if let Err(e) = state.update_state(FidlCallState::OngoingHeld) {
+                        fx_log_info!("Call ended: {}", e);
+                        break;
+                    }
+                }
+                Ok(CallRequest::RequestActive { .. }) => {
+                    if let Err(e) = state.update_state(FidlCallState::OngoingActive) {
+                        fx_log_info!("Call ended: {}", e);
+                        break;
+                    }
+                }
+                Ok(CallRequest::RequestTerminate { .. }) => {
+                    if let Err(e) = state.update_state(FidlCallState::Terminated) {
+                        fx_log_info!("Call ended: {}", e);
+                        break;
+                    }
+                }
+                Ok(CallRequest::RequestTransferAudio { .. }) => {
+                    if let Err(e) = state.update_state(FidlCallState::TransferredToAg) {
+                        fx_log_info!("Call ended: {}", e);
+                        break;
+                    }
+                }
+                Ok(CallRequest::SendDtmfCode { code, responder, .. }) => {
+                    state.dtmf_codes.push(code);
+                    if let Err(e) = responder.send(&mut Ok(())) {
+                        fx_log_info!("Call ended: {}", e);
+                        break;
+                    }
+                }
+                Err(e) => {
+                    fx_log_warn!("Call fidl channel error: {}", e);
+                }
+            }
+        }
+
+        // Cleanup before exiting call task
+        let mut inner = self.inner.lock().await;
+        inner.calls.get_mut(&call_id).map(|call| call.peer_id = None);
+        inner.peers.get_mut(&peer_id).map(|peer| peer.call_tasks.remove(&call_id));
     }
 
     /// Cleanup any HFP related objects.
