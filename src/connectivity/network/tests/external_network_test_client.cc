@@ -21,15 +21,18 @@ namespace {
 //
 // Since this only used on Fuchsia, it is conditionally compiled.
 #if defined(__Fuchsia__)
-const char kDerivedDeviceName[] = "train-cache-uncle-chill";
+constexpr char kDerivedDeviceName[] = "train-cache-uncle-chill";
 #endif
 
 TEST(ExternalNetworkTest, ConnectToNonRoutableINET) {
-  int s;
-  ASSERT_GE(s = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0), 0) << strerror(errno);
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
+      << strerror(errno);
 
-  struct sockaddr_in addr = {};
-  addr.sin_family = AF_INET;
+  struct sockaddr_in addr = {
+      .sin_family = AF_INET,
+      .sin_port = htons(1337),
+  };
 
   // RFC5737#section-3
   //
@@ -37,9 +40,7 @@ TEST(ExternalNetworkTest, ConnectToNonRoutableINET) {
   // 203.0.113.0/24 (TEST-NET-3) are provided for use in documentation.
   ASSERT_EQ(inet_pton(AF_INET, "192.0.2.55", &addr.sin_addr), 1) << strerror(errno);
 
-  addr.sin_port = htons(1337);
-
-  ASSERT_EQ(connect(s, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), -1);
+  ASSERT_EQ(connect(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), -1);
 
   // The host env (linux) may have a route to the remote (e.g. default route),
   // resulting in a TCP handshake being attempted and errno being set to
@@ -47,32 +48,33 @@ TEST(ExternalNetworkTest, ConnectToNonRoutableINET) {
   // EINPROGRESS because a TCP handshake will never be performed (the test is
   // run without network configurations that make the remote routable).
   //
-  // TODO(fxbug.dev/46817): Set errno to the same value as linux when a remote is
-  // unroutable.
+  // TODO(https://fxbug.dev/46817, https://gvisor.dev/issues/1988): Set errno to the
+  // same value as linux when a remote is unroutable.
 #if defined(__linux__)
   ASSERT_TRUE(errno == EINPROGRESS || errno == ENETUNREACH) << strerror(errno);
 #else
   ASSERT_EQ(errno, EHOSTUNREACH) << strerror(errno);
 #endif
 
-  ASSERT_EQ(close(s), 0) << strerror(errno);
+  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 TEST(ExternalNetworkTest, ConnectToNonRoutableINET6) {
-  int s;
-  ASSERT_GE(s = socket(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, 0), 0) << strerror(errno);
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, 0)))
+      << strerror(errno);
 
-  struct sockaddr_in6 addr = {};
-  addr.sin6_family = AF_INET6;
+  struct sockaddr_in6 addr = {
+      .sin6_family = AF_INET6,
+      .sin6_port = htons(1337),
+  };
 
   // RFC3849#section-2
   //
   // The prefix allocated for documentation purposes is 2001:DB8::/32.
   ASSERT_EQ(inet_pton(AF_INET6, "2001:db8::55", &addr.sin6_addr), 1) << strerror(errno);
 
-  addr.sin6_port = htons(1337);
-
-  ASSERT_EQ(connect(s, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), -1);
+  ASSERT_EQ(connect(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), -1);
 
   // The host env (linux) may have a route to the remote (e.g. default route),
   // resulting in a TCP handshake being attempted and errno being set to
@@ -88,7 +90,7 @@ TEST(ExternalNetworkTest, ConnectToNonRoutableINET6) {
   ASSERT_EQ(errno, EHOSTUNREACH) << strerror(errno);
 #endif
 
-  ASSERT_EQ(close(s), 0) << strerror(errno);
+  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 TEST(ExternalNetworkTest, GetHostName) {
@@ -107,45 +109,50 @@ TEST(ExternalNetworkTest, Uname) {
 #endif
 }
 
+constexpr char routable[] = "192.168.0.254";
+
 TEST(ExternalNetworkTest, ConnectToRoutableNonexistentINET) {
-  int fd;
-  ASSERT_GE(fd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  struct sockaddr_in addr = {};
-  addr.sin_family = AF_INET;
-  // Connect to a routable address to a non-existing remote. This triggers ARP resolution which is
-  // expected to fail.
-  addr.sin_addr.s_addr = htonl(0xd0e0a0d);
-  addr.sin_port = htons(1337);
+  struct sockaddr_in addr = {
+      .sin_family = AF_INET,
+      .sin_port = htons(1337),
+  };
 
-  EXPECT_EQ(connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)), -1);
-  // TODO(tamird): match linux. https://github.com/google/gvisor/issues/923.
+  // Connect to a routable address to a non-existing remote. This triggers ARP resolution which
+  // is expected to fail.
+  ASSERT_EQ(inet_pton(AF_INET, routable, &addr.sin_addr), 1) << strerror(errno);
+
+  EXPECT_EQ(connect(fd.get(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)), -1);
+  // TODO: write some netlink to find a routable but unassigned address when we're running on Linux.
 #if defined(__linux__)
   EXPECT_EQ(errno, ETIMEDOUT) << strerror(errno);
 #else
   EXPECT_EQ(errno, EHOSTUNREACH) << strerror(errno);
 #endif
 
-  EXPECT_EQ(close(fd), 0) << strerror(errno);
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 // Test to ensure UDP send doesn`t error even with ARP timeouts.
-// TODO(fxb.dev/35006): Test needs to be extended or replicated to test
+// TODO(https://fxb.dev/35006): Test needs to be extended or replicated to test
 // against other transport send errors.
 TEST(ExternalNetworkTest, UDPErrSend) {
-  int sendfd;
-  ASSERT_GE(sendfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
-  struct sockaddr_in addr = {};
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(1337);
+  struct sockaddr_in addr = {
+      .sin_family = AF_INET,
+      .sin_port = htons(1337),
+  };
   char bytes[64];
   // Assign to a ssize_t variable to avoid compiler warnings for signedness in the EXPECTs below.
   ssize_t len = sizeof(bytes);
 
   // Precondition sanity check: write completes without error.
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  EXPECT_EQ(sendto(sendfd, bytes, sizeof(bytes), 0, reinterpret_cast<struct sockaddr*>(&addr),
+  EXPECT_EQ(sendto(fd.get(), bytes, sizeof(bytes), 0, reinterpret_cast<struct sockaddr*>(&addr),
                    sizeof(addr)),
             len)
       << strerror(errno);
@@ -153,26 +160,20 @@ TEST(ExternalNetworkTest, UDPErrSend) {
   // Send to a routable address to a non-existing remote. This triggers ARP resolution which is
   // expected to fail, but that failure is expected to leave the socket alive. Before the change
   // that added this test, the socket would be incorrectly shut down.
-  addr.sin_addr.s_addr = htonl(0xd0e0a0d);
-  ssize_t ret = sendto(sendfd, bytes, sizeof(bytes), 0, reinterpret_cast<struct sockaddr*>(&addr),
-                       sizeof(addr));
-
-  // TODO(tamird): Why does linux not signal an error? Should we do the same?
-#if defined(__linux__)
-  EXPECT_EQ(ret, len) << strerror(errno);
-#else
-  EXPECT_EQ(ret, -1);
-  EXPECT_EQ(errno, EHOSTUNREACH) << strerror(errno);
-#endif
-
-  // Postcondition sanity check: write completes without error.
-  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  EXPECT_EQ(sendto(sendfd, bytes, sizeof(bytes), 0, reinterpret_cast<struct sockaddr*>(&addr),
+  ASSERT_EQ(inet_pton(AF_INET, routable, &addr.sin_addr), 1) << strerror(errno);
+  EXPECT_EQ(sendto(fd.get(), bytes, sizeof(bytes), 0, reinterpret_cast<struct sockaddr*>(&addr),
                    sizeof(addr)),
             len)
       << strerror(errno);
 
-  EXPECT_EQ(close(sendfd), 0) << strerror(errno);
+  // Postcondition sanity check: write completes without error.
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  EXPECT_EQ(sendto(fd.get(), bytes, sizeof(bytes), 0, reinterpret_cast<struct sockaddr*>(&addr),
+                   sizeof(addr)),
+            len)
+      << strerror(errno);
+
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 TEST(ExternalNetworkTest, IoctlGetInterfaceAddresses) {
