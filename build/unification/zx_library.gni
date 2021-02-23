@@ -299,7 +299,7 @@ template("zx_library") {
 
     lib_libs = []
     if (defined(invoker.libs)) {
-      lib_dirs = invoker.libs
+      lib_libs = invoker.libs
     }
 
     if (!is_fuchsia) {
