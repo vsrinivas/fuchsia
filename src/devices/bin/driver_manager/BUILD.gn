@@ -248,6 +248,12 @@ fuchsia_unittest_component("driver-runner-test") {
 }
 
 fuchsia_test_package("driver-manager-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+
   test_components = [
     ":driver-host-loader-service-test",
     ":driver-manager-test",
