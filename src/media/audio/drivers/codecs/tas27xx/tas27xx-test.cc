@@ -140,6 +140,72 @@ TEST(Tas27xxTest, CodecReset) {
   mock_fault.VerifyAndClear();
 }
 
+TEST(Tas27xxTest, ExternalConfig) {
+  fake_ddk::Bind tester;
+  zx::interrupt irq;
+  ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
+
+  metadata::ti::TasConfig metadata = {};
+  metadata.number_of_writes1 = 2;
+  metadata.init_sequence1[0].address = 0x12;
+  metadata.init_sequence1[0].value = 0x34;
+  metadata.init_sequence1[1].address = 0x56;
+  metadata.init_sequence1[1].value = 0x78;
+  metadata.number_of_writes2 = 3;
+  metadata.init_sequence2[0].address = 0x11;
+  metadata.init_sequence2[0].value = 0x22;
+  metadata.init_sequence2[1].address = 0x33;
+  metadata.init_sequence2[1].value = 0x44;
+  metadata.init_sequence2[2].address = 0x55;
+  metadata.init_sequence2[2].value = 0x66;
+  tester.SetMetadata(&metadata, sizeof(metadata));
+
+  mock_i2c::MockI2c mock_i2c;
+  // Reset by the call to Reset.
+  mock_i2c
+      .ExpectWriteStop({0x01, 0x01}, ZX_ERR_INTERNAL)  // SW_RESET error, will retry.
+      .ExpectWriteStop({0x01, 0x01}, ZX_OK)            // SW_RESET.
+      .ExpectWriteStop({0x12, 0x34})                   // External config.
+      .ExpectWriteStop({0x56, 0x78})                   // External config.
+      .ExpectWriteStop({0x11, 0x22})                   // External config.
+      .ExpectWriteStop({0x33, 0x44})                   // External config.
+      .ExpectWriteStop({0x55, 0x66})                   // External config.
+      .ExpectWriteStop({0x02, 0x0d})                   // PRW_CTL stopped.
+      .ExpectWriteStop({0x3c, 0x10})                   // CLOCK_CFG.
+      .ExpectWriteStop({0x0a, 0x07})                   // SetRate.
+      .ExpectWriteStop({0x0c, 0x22})                   // TDM_CFG2.
+      .ExpectWriteStop({0x0e, 0x02})                   // TDM_CFG4.
+      .ExpectWriteStop({0x0f, 0x44})                   // TDM_CFG5.
+      .ExpectWriteStop({0x10, 0x40})                   // TDM_CFG6.
+      .ExpectWrite({0x24})
+      .ExpectReadStop({0x00})  // INT_LTCH0.
+      .ExpectWrite({0x25})
+      .ExpectReadStop({0x00})  // INT_LTCH1.
+      .ExpectWrite({0x26})
+      .ExpectReadStop({0x00})          // INT_LTCH2.
+      .ExpectWriteStop({0x20, 0xf8})   // INT_MASK0.
+      .ExpectWriteStop({0x21, 0xff})   // INT_MASK1.
+      .ExpectWriteStop({0x30, 0x01})   // INT_CFG.
+      .ExpectWriteStop({0x05, 0x3c})   // -30dB.
+      .ExpectWriteStop({0x02, 0x0d});  // PWR_CTL stopped.
+
+  ddk::MockGpio mock_fault;
+  mock_fault.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
+
+  auto codec = SimpleCodecServer::Create<Tas27xxCodec>(mock_i2c.GetProto(), mock_fault.GetProto());
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
+  ASSERT_OK(client.Reset());
+
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+  mock_i2c.VerifyAndClear();
+  mock_fault.VerifyAndClear();
+}
+
 TEST(Tas27xxTest, CodecBridgedMode) {
   fake_ddk::Bind tester;
   zx::interrupt irq;

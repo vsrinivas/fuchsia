@@ -3,7 +3,16 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
+
+if (internal_access) {
+  config_tas2770 = "audio/config/tas2770/tas2770_config.h"
+  copy("config-tas2770-copy") {
+    sources = [ "//prebuilt/$config_tas2770" ]
+    outputs = [ "$root_out_dir/$config_tas2770" ]
+  }
+}
 
 bind_rules("astro-bind") {
   rules = "astro.bind"
@@ -74,6 +83,7 @@ driver_module("astro") {
     "//src/devices/lib/metadata:llcpp",
     "//src/devices/lib/mmio",
     "//src/devices/lib/thermal",
+    "//src/devices/lib/ti",
     "//src/devices/usb/lib/usb",
     "//src/graphics/display/lib/device-protocol-display",
     "//src/lib/ddk",
@@ -88,6 +98,11 @@ driver_module("astro") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+  if (internal_access) {
+    deps += [ ":config-tas2770-copy($shlib_toolchain)" ]
+    include_dirs = [ "$root_out_dir" ]
+    defines = [ "TAS2770_CONFIG_PATH=\"$config_tas2770\"" ]
+  }
 }
 
 group("tests") {
