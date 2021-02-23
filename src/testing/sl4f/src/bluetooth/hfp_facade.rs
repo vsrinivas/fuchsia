@@ -110,6 +110,16 @@ struct HfpFacadeInner {
     calls: HashMap<CallId, CallState>,
 }
 
+impl HfpFacadeInner {
+    pub fn active_peer_mut(&mut self) -> Option<&mut PeerState> {
+        if let Some(id) = &self.active_peer {
+            Some(self.peers.get_mut(id).expect("Active peer must exist in peers map"))
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct HfpFacade {
     inner: Arc<Mutex<HfpFacadeInner>>,
@@ -579,12 +589,11 @@ impl HfpFacade {
     pub async fn set_speaker_gain(&self, value: u64) -> Result<(), Error> {
         let value = value as u8;
         let mut inner = self.inner.lock().await;
-        let id = inner.active_peer.unwrap();
-        let peer = inner.peers.get_mut(&id).unwrap();
+        let peer = inner.active_peer_mut().ok_or(format_err!("No active peer"))?;
         peer.requested_speaker_gain = Some(value);
         if peer.speaker_gain != value {
             if let Some(gain_control) = &peer.gain_control {
-                gain_control.set_speaker_gain(value).unwrap();
+                gain_control.set_speaker_gain(value)?;
             }
         }
         Ok(())
@@ -597,12 +606,11 @@ impl HfpFacade {
     pub async fn set_microphone_gain(&self, value: u64) -> Result<(), Error> {
         let value = value as u8;
         let mut inner = self.inner.lock().await;
-        let id = inner.active_peer.unwrap();
-        let peer = inner.peers.get_mut(&id).unwrap();
+        let peer = inner.active_peer_mut().ok_or(format_err!("No active peer"))?;
         peer.requested_microphone_gain = Some(value);
         if peer.microphone_gain != value {
             if let Some(gain_control) = &peer.gain_control {
-                gain_control.set_microphone_gain(value).unwrap();
+                gain_control.set_microphone_gain(value)?;
             }
         }
         Ok(())
