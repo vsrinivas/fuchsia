@@ -423,6 +423,8 @@ func (h *subshardHeap) Pop() interface{} {
 // first sorts the tests in descending order by expected duration and then
 // successively allocates each test to the subshard with the lowest total
 // expected duration so far.
+//
+// Within each returned shard, tests will be sorted alphabetically by GN label.
 func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int) []*Shard {
 	sort.Slice(shard.Tests, func(index1, index2 int) bool {
 		test1, test2 := shard.Tests[index1], shard.Tests[index2]
@@ -480,6 +482,14 @@ func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int)
 
 	newShards := make([]*Shard, 0, numNewShards)
 	for i, subshard := range h {
+		// Sort tests alphabetically (otherwise they'd be in descending order by
+		// duration) so that updates to checked-in test durations can't
+		// arbitrarily reorder tests, making those updates less likely to break
+		// non-hermetic tests. Sort by GN label rather than name so that host
+		// tests don't always come last after all component tests.
+		sort.Slice(subshard.tests, func(i, j int) bool {
+			return subshard.tests[i].Label < subshard.tests[j].Label
+		})
 		name := shard.Name
 		if numNewShards > 1 {
 			name = fmt.Sprintf("%s-(%d)", shard.Name, i+1)
