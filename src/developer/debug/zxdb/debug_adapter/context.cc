@@ -6,6 +6,7 @@
 
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_attach.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_breakpoint.h"
 #include "src/developer/debug/zxdb/debug_adapter/server.h"
 
@@ -75,6 +76,12 @@ void DebugAdapterContext::InitDebugAdapterProtocolSession() {
     DEBUG_LOG(DebugAdapter) << "ConfigurationDoneRequest received";
     return dap::ConfigurationDoneResponse();
   });
+
+  dap_->registerHandler(
+      [&](const dap::AttachRequestZxdb &req) -> dap::ResponseOrError<dap::AttachResponse> {
+        DEBUG_LOG(DebugAdapter) << "AttachRequest received";
+        return OnRequestAttach(this, req);
+      });
 
   dap_->onError([&](const char *msg) { FX_LOGS(ERROR) << "dap::Session error:" << msg << "\r\n"; });
 

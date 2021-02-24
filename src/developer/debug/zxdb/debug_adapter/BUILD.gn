@@ -8,6 +8,8 @@ static_library("debug_adapter") {
   sources = [
     "context.cc",
     "context.h",
+    "handlers/request_attach.cc",
+    "handlers/request_attach.h",
     "handlers/request_breakpoint.cc",
     "handlers/request_breakpoint.h",
     "server.cc",
@@ -27,6 +29,7 @@ source_set("tests") {
     "context_test.cc",
     "context_test.h",
     "context_unittest.cc",
+    "handlers/request_attach_unittest.cc",
     "handlers/request_breakpoint_unittest.cc",
     "server_unittest.cc",
   ]
