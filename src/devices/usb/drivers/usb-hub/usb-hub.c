@@ -15,12 +15,13 @@
 #include <unistd.h>
 #include <zircon/listnode.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
+
+#include "src/devices/usb/drivers/usb-hub/usb_hub_bind.h"
 
 // usb_port_status_t.wPortStatus
 typedef uint16_t port_status_t;
@@ -588,6 +589,4 @@ static zx_driver_ops_t usb_hub_driver_ops = {
     .bind = usb_hub_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(usb_hub, usb_hub_driver_ops, "zircon", "0.1", 2)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE),
-    BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HUB), ZIRCON_DRIVER_END(usb_hub)
+ZIRCON_DRIVER(usb_hub, usb_hub_driver_ops, "zircon", "0.1");

@@ -13,6 +13,7 @@ group("tests") {
     "nelson-usb-phy:tests",
     "usb-bus:tests",
     "usb-composite:tests",
+    "usb-hub:tests",
     "usb-hub-rewrite:tests",
     "usb-peripheral:tests",
     "usb-peripheral-test:tests",
