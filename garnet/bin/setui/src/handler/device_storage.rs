@@ -14,6 +14,7 @@ use futures::{FutureExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::any::Any;
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::ops::{Add, Sub};
 use std::sync::Arc;
@@ -106,6 +107,80 @@ pub trait DeviceStorageCompatible:
     }
 
     const KEY: &'static str;
+}
+
+/// This trait represents types that can be converted into a storable type. It's also important
+/// that the type it is transformed into can also be converted back into this type. This reverse
+/// conversion is used to populate the fields of the original type with the stored values plus
+/// defaulting the other fields that, e.g. might later be populated from hardware APIs.
+///
+/// # Example
+/// ```
+/// // Struct used in controllers.
+/// struct SomeSettingInfo {
+///     storable_field: u8,
+///     hardware_backed_field: String,
+/// }
+///
+/// // Struct only used for storage.
+/// #[derive(Serialize, Deserialize, PartialEq, Clone)]
+/// struct StorableSomeSettingInfo {
+///     storable_field: u8,
+/// }
+///
+/// // Impl compatible for the storable type.
+/// impl DeviceStorageCompatible for StorableSomeSettingInfo {
+///     const KEY: &'static str = "some_setting_info";
+///
+///     fn default_value() -> Self {
+///         Self { storable_field: 1, }
+///     }
+/// }
+///
+/// // Impl convertible for controller type.
+/// impl DeviceStorageConvertible for SomeSettingInfo {
+///     type Storable = StorableSomeSettingInfo;
+///     fn get_storable(&self) -> Cow<'_, Self::Storable> {
+///         Cow::Owned(Self { storable_field: self.storable_field })
+///     }
+/// }
+///
+/// // This impl helps us convert from the storable version to the
+/// // controller version of the struct. Hardware fields should be backed
+/// // by default or usable values.
+/// impl Into<SomeSettingInfo> for StorableSomeSettingInfo {
+///     fn into(self) -> SomeSettingInfo {
+///         SomeSettingInfo {
+///             storable_field: self.storable_field,
+///             hardware_back_field: String::new(),
+///         }
+///     }
+/// }
+///
+/// ```
+pub trait DeviceStorageConvertible: Sized {
+    /// The type that will be used for storing the data.
+    type Storable: DeviceStorageCompatible + Into<Self>;
+
+    /// Convert `self` into its storable version.
+    // The reason we don't take ownership here is that the setting handler uses the original value
+    // to send a message on the message hub for when the change is written. Serializing also only
+    // borrows the data and doesn't need to own it. When `Storable` is `Self`, we only need to keep
+    // the borrow on self, but when the types differ, then we need to own the newly constructed
+    // type.
+    fn get_storable(&self) -> Cow<'_, Self::Storable>;
+}
+
+// Any type that is storage compatible is also storage convertible (it can convert to itself!).
+impl<T> DeviceStorageConvertible for T
+where
+    T: DeviceStorageCompatible,
+{
+    type Storable = T;
+
+    fn get_storable(&self) -> Cow<'_, Self::Storable> {
+        Cow::Borrowed(self)
+    }
 }
 
 /// A trait for describing which storages an item needs access to.

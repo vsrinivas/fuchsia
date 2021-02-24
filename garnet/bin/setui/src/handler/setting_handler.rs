@@ -337,10 +337,11 @@ pub mod persist {
     use super::ClientProxy as BaseProxy;
     use super::*;
     use crate::base::SettingInfo;
-    use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
+    use crate::handler::device_storage::{DeviceStorage, DeviceStorageConvertible};
+    use std::borrow::Borrow;
 
-    pub trait Storage: DeviceStorageCompatible + Into<SettingInfo> + Send + Sync {}
-    impl<T: DeviceStorageCompatible + Into<SettingInfo> + Send + Sync> Storage for T {}
+    pub trait Storage: DeviceStorageConvertible + Into<SettingInfo> + Send + Sync {}
+    impl<T: DeviceStorageConvertible + Into<SettingInfo> + Send + Sync> Storage for T {}
 
     #[derive(PartialEq, Clone, Debug)]
     /// Enum for describing whether writing affected persistent value.
@@ -387,7 +388,7 @@ pub mod persist {
         where
             S: Storage + 'static,
         {
-            self.storage.get().await
+            self.storage.get::<S::Storable>().await.into()
         }
 
         /// Returns a boolean indicating whether the value was written or an
@@ -402,11 +403,13 @@ pub mod persist {
         where
             S: Storage + 'static,
         {
-            if value == self.read().await {
+            let storable_value = value.get_storable();
+            let storable_value: &S::Storable = storable_value.borrow();
+            if storable_value == &self.storage.get::<S::Storable>().await {
                 return Ok(UpdateState::Unchanged);
             }
 
-            match self.storage.write(&value, write_through).await {
+            match self.storage.write(storable_value, write_through).await {
                 Ok(_) => {
                     self.notify(Event::Changed(value.into())).await;
                     Ok(UpdateState::Updated)
