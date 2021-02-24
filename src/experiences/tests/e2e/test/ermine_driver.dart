@@ -93,15 +93,18 @@ class ErmineDriver {
   }
 
   /// Launch a component given its [componentUrl].
-  Future<void> launch(String componentUrl,
+  Future<bool> launch(String componentUrl,
       {Duration timeout = const Duration(seconds: 30)}) async {
     final result = await sl4f.ssh.run('session_control add $componentUrl');
     if (result.exitCode != 0) {
       fail('failed to launch component: $componentUrl.');
     }
-    if (!await isRunning(componentUrl, timeout: timeout)) {
+    final running = await isRunning(componentUrl, timeout: timeout);
+    if (!running) {
       fail('Timed out waiting to launch $componentUrl');
     }
+
+    return running;
   }
 
   /// Returns true if a component is running.
@@ -133,16 +136,13 @@ class ErmineDriver {
   /// Launches a simple browser and returns a [FlutterDriver] connected to it.
   ///
   /// Opens another new tab as soon as the browser is launched, unless you set
-  /// [openNewTab] to false. Likewise, set [fullscreen] to false if you do not
-  /// want the browser to expand its size to full-screen upon its launch.
+  /// [openNewTab] to false. Contrarily, set [fullscreen] to true if you want
+  /// the browser to expand its size to full-screen upon its launch.
   Future<FlutterDriver> launchAndWaitForSimpleBrowser({
     bool openNewTab = true,
-    bool fullscreen = true,
+    bool fullscreen = false,
   }) async {
-    await launch(simpleBrowserUrl);
-    final runningComponents = await component.list();
-    expect(
-        runningComponents.where((c) => c.contains(simpleBrowserUrl)).length, 1);
+    expect(await launch(simpleBrowserUrl), isTrue);
 
     // Initializes the browser's flutter driver connector.
     final browserConnector = FlutterDriverConnector(sl4f);
@@ -300,6 +300,10 @@ class ErmineDriver {
   /// you can use them as your golden images. Once you have them there and in
   /// BUILD, you are good to write your image diff test using [screenshot] and
   /// [goldenDiff] and remove this method call.
+  ///
+  /// Note that due to the size limit of the data used for the communication
+  /// between sl4f and the host, the screenshots over 4MB in size will be
+  /// cropped out to 1536x864 (fxb/70233).
   void saveImageAs(Image image, String file) async {
     final fileName = _sanitizeGoldenFileName(file);
     File(fileName).writeAsBytesSync(encodePng(image));

@@ -13,6 +13,7 @@ import 'ermine_driver.dart';
 
 const _timeoutSeconds = 10;
 const _timeout = Duration(seconds: _timeoutSeconds);
+const _sampleViewRect = Rectangle(100, 200, 100, 100);
 const testserverUrl =
     'fuchsia-pkg://fuchsia.com/ermine_testserver#meta/ermine_testserver.cmx';
 
@@ -54,13 +55,11 @@ void main() {
     FlutterDriver browser = await ermine.launchAndWaitForSimpleBrowser();
     await browser.requestData('http://127.0.0.1:8080/stop');
 
-    await ermine.driver.requestData('closeAll');
+    await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
 
-    final runningComponents = await ermine.component.list();
-    expect(
-        runningComponents.where((c) => c.contains(simpleBrowserUrl)).length, 0);
-    expect(runningComponents.where((c) => c.contains(testserverUrl)).length, 0);
+    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+    expect(await ermine.isStopped(testserverUrl), isTrue);
 
     await ermine.tearDown();
 
@@ -70,7 +69,7 @@ void main() {
 
   Future<bool> _waitForColor(
     int hex, {
-    Rectangle rect = const Rectangle(100, 100, 100, 100),
+    Rectangle rect = _sampleViewRect,
     Duration timeout = _timeout,
   }) async {
     final end = DateTime.now().add(timeout);
@@ -159,9 +158,7 @@ void main() {
 
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
-    final runningComponents = await ermine.component.list();
-    expect(
-        runningComponents.where((c) => c.contains(simpleBrowserUrl)).length, 0);
+    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
   });
 
   test('Should be able to play videos on web pages.', () async {
@@ -178,26 +175,20 @@ void main() {
 
     expect(await browser.getText(videoTabFinder), isNotNull);
 
-    // Takes the screenshot of the part of the video.
-    // Only the color is changed in this area as the video is played.
-    final viewRect = Rectangle(100, 100, 100, 100);
-
     // Waits for a while for the video to be loaded before taking a screenshot.
     await Future.delayed(Duration(seconds: 2));
-    final earlyScreenshot = await ermine.screenshot(viewRect);
+    final earlyScreenshot = await ermine.screenshot(_sampleViewRect);
 
     // Takes another screenshot after 3 seconds.
     await Future.delayed(Duration(seconds: 3));
-    final lateScreenshot = await ermine.screenshot(viewRect);
+    final lateScreenshot = await ermine.screenshot(_sampleViewRect);
 
     final diff = ermine.screenshotsDiff(earlyScreenshot, lateScreenshot);
     expect(diff, 1, reason: 'The screenshots are more similar than expected.');
 
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
-    final runningComponents = await ermine.component.list();
-    expect(
-        runningComponents.where((c) => c.contains(simpleBrowserUrl)).length, 0);
+    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
   });
 
   test('Should be able to switch, rearrange, and close tabs', () async {
@@ -312,9 +303,7 @@ void main() {
 
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
-    final runningComponents = await ermine.component.list();
-    expect(
-        runningComponents.where((c) => c.contains(simpleBrowserUrl)).length, 0);
+    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
   });
 
   // TODO(fxb/68720): Test web editing
