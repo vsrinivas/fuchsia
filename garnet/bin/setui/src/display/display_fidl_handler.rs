@@ -12,10 +12,9 @@ use {
     crate::switchboard::base::FidlResponseErrorLogger,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
-        DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatch2Responder,
-        DisplayWatchLightSensor2Responder, DisplayWatchLightSensorResponder, DisplayWatchResponder,
-        Error, LightSensorData, LowLightMode as FidlLowLightMode, Theme as FidlTheme,
-        ThemeMode as FidlThemeMode, ThemeType as FidlThemeType,
+        DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatchLightSensorResponder,
+        DisplayWatchResponder, Error, LightSensorData, LowLightMode as FidlLowLightMode,
+        Theme as FidlTheme, ThemeMode as FidlThemeMode, ThemeType as FidlThemeType,
     },
     fuchsia_async as fasync,
 };
@@ -24,10 +23,6 @@ fidl_hanging_get_responder!(
     DisplayMarker,
     DisplaySettings,
     DisplayWatchResponder,
-    DisplaySettings,
-    DisplayWatch2Responder,
-    LightSensorData,
-    DisplayWatchLightSensor2Responder,
     LightSensorData,
     DisplayWatchLightSensorResponder,
 );
@@ -157,18 +152,10 @@ fidl_process!(
     Display,
     SettingType::Display,
     process_request,
-    SettingType::Display,
-    DisplaySettings,
-    DisplayWatch2Responder,
-    process_request_2,
     SettingType::LightSensor,
     LightSensorData,
     DisplayWatchLightSensorResponder,
     process_sensor_request,
-    SettingType::LightSensor,
-    LightSensorData,
-    DisplayWatchLightSensor2Responder,
-    process_sensor_request_2,
 );
 
 async fn process_request(
@@ -214,53 +201,6 @@ async fn process_sensor_request(
     req: DisplayRequest,
 ) -> Result<Option<DisplayRequest>, anyhow::Error> {
     if let DisplayRequest::WatchLightSensor { delta, responder } = req {
-        context
-            .watch_with_change_fn(
-                // Bucket watch requests to the nearest 0.01.
-                format!("{:.2}", delta),
-                Box::new(move |old_data: &LightSensorData, new_data: &LightSensorData| {
-                    if let (Some(old_lux), Some(new_lux)) =
-                        (old_data.illuminance_lux, new_data.illuminance_lux)
-                    {
-                        (new_lux - old_lux).abs() >= delta
-                    } else {
-                        true
-                    }
-                }),
-                responder,
-                true,
-            )
-            .await;
-    } else {
-        return Ok(Some(req));
-    }
-
-    return Ok(None);
-}
-
-async fn process_request_2(
-    context: RequestContext<DisplaySettings, DisplayWatch2Responder>,
-    req: DisplayRequest,
-) -> Result<Option<DisplayRequest>, anyhow::Error> {
-    // Support future expansion of FIDL.
-    #[allow(unreachable_patterns)]
-    match req {
-        DisplayRequest::Watch2 { responder } => {
-            context.watch(responder, true).await;
-        }
-        _ => {
-            return Ok(Some(req));
-        }
-    }
-
-    return Ok(None);
-}
-
-async fn process_sensor_request_2(
-    context: RequestContext<LightSensorData, DisplayWatchLightSensor2Responder>,
-    req: DisplayRequest,
-) -> Result<Option<DisplayRequest>, anyhow::Error> {
-    if let DisplayRequest::WatchLightSensor2 { delta, responder } = req {
         context
             .watch_with_change_fn(
                 // Bucket watch requests to the nearest 0.01.

@@ -1,9 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use fidl_fuchsia_settings::{
-    IntlMarker, IntlRequest, IntlSettings, IntlWatch2Responder, IntlWatchResponder,
-};
+use fidl_fuchsia_settings::{IntlMarker, IntlRequest, IntlSettings, IntlWatchResponder};
 use fuchsia_async as fasync;
 
 use crate::base::{SettingInfo, SettingType};
@@ -13,13 +11,7 @@ use crate::fidl_processor::settings::RequestContext;
 use crate::handler::base::Request;
 use crate::request_respond;
 
-fidl_hanging_get_responder!(
-    IntlMarker,
-    IntlSettings,
-    IntlWatchResponder,
-    IntlSettings,
-    IntlWatch2Responder,
-);
+fidl_hanging_get_responder!(IntlMarker, IntlSettings, IntlWatchResponder,);
 
 impl From<SettingInfo> for IntlSettings {
     fn from(response: SettingInfo) -> Self {
@@ -37,15 +29,7 @@ impl From<IntlSettings> for Request {
     }
 }
 
-fidl_process!(
-    Intl,
-    SettingType::Intl,
-    process_request,
-    SettingType::Intl,
-    IntlSettings,
-    IntlWatch2Responder,
-    process_request_2,
-);
+fidl_process!(Intl, SettingType::Intl, process_request,);
 
 async fn process_request(
     context: RequestContext<IntlSettings, IntlWatchResponder>,
@@ -69,23 +53,6 @@ async fn process_request(
             .detach();
         }
         IntlRequest::Watch { responder } => context.watch(responder, true).await,
-        _ => {
-            return Ok(Some(req));
-        }
-    }
-
-    return Ok(None);
-}
-
-// TODO(fxbug.dev/55719): Remove when clients are ported to watch.
-async fn process_request_2(
-    context: RequestContext<IntlSettings, IntlWatch2Responder>,
-    req: IntlRequest,
-) -> Result<Option<IntlRequest>, anyhow::Error> {
-    // Support future expansion of FIDL
-    #[allow(unreachable_patterns)]
-    match req {
-        IntlRequest::Watch2 { responder } => context.watch(responder, true).await,
         _ => {
             return Ok(Some(req));
         }

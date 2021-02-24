@@ -4,8 +4,7 @@
 
 use crate::fidl_process;
 use fidl_fuchsia_settings::{
-    Error, PrivacyMarker, PrivacyRequest, PrivacySettings, PrivacyWatch2Responder,
-    PrivacyWatchResponder,
+    Error, PrivacyMarker, PrivacyRequest, PrivacySettings, PrivacyWatchResponder,
 };
 use fuchsia_async as fasync;
 
@@ -15,13 +14,7 @@ use crate::fidl_processor::settings::RequestContext;
 use crate::handler::base::Request;
 use crate::request_respond;
 
-fidl_hanging_get_responder!(
-    PrivacyMarker,
-    PrivacySettings,
-    PrivacyWatchResponder,
-    PrivacySettings,
-    PrivacyWatch2Responder,
-);
+fidl_hanging_get_responder!(PrivacyMarker, PrivacySettings, PrivacyWatchResponder,);
 
 impl From<SettingInfo> for PrivacySettings {
     fn from(response: SettingInfo) -> Self {
@@ -42,15 +35,7 @@ impl From<PrivacySettings> for Request {
     }
 }
 
-fidl_process!(
-    Privacy,
-    SettingType::Privacy,
-    process_request,
-    SettingType::Privacy,
-    PrivacySettings,
-    PrivacyWatch2Responder,
-    process_request_2,
-);
+fidl_process!(Privacy, SettingType::Privacy, process_request,);
 
 async fn process_request(
     context: RequestContext<PrivacySettings, PrivacyWatchResponder>,
@@ -73,24 +58,6 @@ async fn process_request(
             .detach();
         }
         PrivacyRequest::Watch { responder } => {
-            context.watch(responder, true).await;
-        }
-        _ => {
-            return Ok(Some(req));
-        }
-    }
-
-    return Ok(None);
-}
-
-// TODO(fxbug.dev/55719): Remove when clients are ported to watch.
-async fn process_request_2(
-    context: RequestContext<PrivacySettings, PrivacyWatch2Responder>,
-    req: PrivacyRequest,
-) -> Result<Option<PrivacyRequest>, anyhow::Error> {
-    #[allow(unreachable_patterns)]
-    match req {
-        PrivacyRequest::Watch2 { responder } => {
             context.watch(responder, true).await;
         }
         _ => {

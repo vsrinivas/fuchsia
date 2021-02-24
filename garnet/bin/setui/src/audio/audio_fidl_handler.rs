@@ -15,18 +15,12 @@ use {
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::{
         AudioInput, AudioMarker, AudioRequest, AudioSettings, AudioStreamSettingSource,
-        AudioStreamSettings, AudioWatch2Responder, AudioWatchResponder, Error, Volume,
+        AudioStreamSettings, AudioWatchResponder, Error, Volume,
     },
     fuchsia_async as fasync,
 };
 
-fidl_hanging_get_responder!(
-    AudioMarker,
-    AudioSettings,
-    AudioWatchResponder,
-    AudioSettings,
-    AudioWatch2Responder,
-);
+fidl_hanging_get_responder!(AudioMarker, AudioSettings, AudioWatchResponder,);
 
 impl From<SettingInfo> for AudioSettings {
     fn from(response: SettingInfo) -> Self {
@@ -127,15 +121,7 @@ fn to_request(settings: AudioSettings) -> Option<Request> {
     request
 }
 
-fidl_process!(
-    Audio,
-    SettingType::Audio,
-    process_request,
-    SettingType::Audio,
-    AudioSettings,
-    AudioWatch2Responder,
-    process_request_2,
-);
+fidl_process!(Audio, SettingType::Audio, process_request,);
 
 async fn process_request(
     context: RequestContext<AudioSettings, AudioWatchResponder>,
@@ -165,24 +151,6 @@ async fn process_request(
             }
         }
         AudioRequest::Watch { responder } => {
-            context.watch(responder, true).await;
-        }
-        _ => {
-            return Ok(Some(req));
-        }
-    }
-    return Ok(None);
-}
-
-// TODO(fxbug.dev/55719): Remove when clients are ported to watch.
-async fn process_request_2(
-    context: RequestContext<AudioSettings, AudioWatch2Responder>,
-    req: AudioRequest,
-) -> Result<Option<AudioRequest>, anyhow::Error> {
-    // Support future expansion of FIDL.
-    #[allow(unreachable_patterns)]
-    match req {
-        AudioRequest::Watch2 { responder } => {
             context.watch(responder, true).await;
         }
         _ => {

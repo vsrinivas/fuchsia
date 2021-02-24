@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_settings::{
-    AccessibilityMarker, AccessibilityRequest, AccessibilitySettings, AccessibilityWatch2Responder,
-    AccessibilityWatchResponder,
+    AccessibilityMarker, AccessibilityRequest, AccessibilitySettings, AccessibilityWatchResponder,
 };
 use fuchsia_async as fasync;
 
@@ -20,8 +19,6 @@ fidl_hanging_get_responder!(
     AccessibilityMarker,
     AccessibilitySettings,
     AccessibilityWatchResponder,
-    AccessibilitySettings,
-    AccessibilityWatch2Responder,
 );
 
 impl From<SettingInfo> for AccessibilitySettings {
@@ -62,15 +59,7 @@ impl From<AccessibilitySettings> for Request {
     }
 }
 
-fidl_process!(
-    Accessibility,
-    SettingType::Accessibility,
-    process_request,
-    SettingType::Accessibility,
-    AccessibilitySettings,
-    AccessibilityWatch2Responder,
-    process_request_2,
-);
+fidl_process!(Accessibility, SettingType::Accessibility, process_request,);
 
 async fn process_request(
     context: RequestContext<AccessibilitySettings, AccessibilityWatchResponder>,
@@ -94,25 +83,6 @@ async fn process_request(
             .detach();
         }
         AccessibilityRequest::Watch { responder } => {
-            context.watch(responder, true).await;
-        }
-        _ => {
-            return Ok(Some(req));
-        }
-    }
-
-    return Ok(None);
-}
-
-// TODO(fxbug.dev/55719): Remove when clients are ported to watch.
-async fn process_request_2(
-    context: RequestContext<AccessibilitySettings, AccessibilityWatch2Responder>,
-    req: AccessibilityRequest,
-) -> Result<Option<AccessibilityRequest>, anyhow::Error> {
-    // Support future expansion of FIDL.
-    #[allow(unreachable_patterns)]
-    match req {
-        AccessibilityRequest::Watch2 { responder } => {
             context.watch(responder, true).await;
         }
         _ => {
