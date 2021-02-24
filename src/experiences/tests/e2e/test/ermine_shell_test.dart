@@ -37,8 +37,12 @@ void main() {
     // We should have thumbnails for running views.
     final thumbnails = find.descendant(
         of: find.byType('Thumbnails'), matching: find.byType('Text'));
-    await ermine.driver.waitFor(thumbnails);
-    expect(await ermine.driver.getText(thumbnails), 'terminal.cmx');
+    expect(
+        await ermine.waitFor(() async {
+          await ermine.driver.waitFor(thumbnails);
+          return await ermine.driver.getText(thumbnails) == 'terminal.cmx';
+        }),
+        isTrue);
 
     // Close terminal.
     await ermine.driver.requestData('close');
