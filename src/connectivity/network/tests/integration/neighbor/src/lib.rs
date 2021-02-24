@@ -8,14 +8,15 @@ use std::collections::HashMap;
 use std::convert::From as _;
 
 use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use futures::{stream, FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_mac};
 use net_types::SpecifiedAddress;
 use netemul::{
-    Endpoint as _, EnvironmentTcpStream, EnvironmentUdpSocket as _, TestEnvironment, TestInterface,
-    TestNetwork, TestSandbox,
+    Endpoint as _, EnvironmentUdpSocket as _, TestEnvironment, TestInterface, TestNetwork,
+    TestSandbox,
 };
 use netstack_testing_common::environments::*;
 use netstack_testing_common::Result;
@@ -260,7 +261,25 @@ async fn exchange_dgrams(
     Ok(())
 }
 
-/// Helper function to assert validity of a reachable entry.
+fn assert_incomplete_entry(
+    entry: fidl_fuchsia_net_neighbor::Entry,
+    match_interface: u64,
+    match_neighbor: fidl_fuchsia_net::IpAddress,
+) {
+    matches::assert_matches!(
+        entry,
+        fidl_fuchsia_net_neighbor::Entry {
+            interface: Some(interface),
+            neighbor: Some(neighbor),
+            state: Some(fidl_fuchsia_net_neighbor::EntryState::Incomplete(
+                fidl_fuchsia_net_neighbor::IncompleteState { .. },
+            )),
+            mac: None,
+            updated_at: Some(updated_at), ..
+        } if interface == match_interface && neighbor == match_neighbor && updated_at != 0
+    );
+}
+
 fn assert_reachable_entry(
     entry: fidl_fuchsia_net_neighbor::Entry,
     match_interface: u64,
@@ -283,7 +302,6 @@ fn assert_reachable_entry(
     );
 }
 
-/// Helper function to assert validity of a stale entry.
 fn assert_stale_entry(
     entry: fidl_fuchsia_net_neighbor::Entry,
     match_interface: u64,
@@ -304,7 +322,6 @@ fn assert_stale_entry(
     );
 }
 
-/// Helper function to assert validity of an unreachable entry.
 fn assert_unreachable_entry(
     entry: fidl_fuchsia_net_neighbor::Entry,
     match_interface: u64,
@@ -324,7 +341,6 @@ fn assert_unreachable_entry(
     );
 }
 
-/// Helper function to assert validity of a static entry.
 fn assert_static_entry(
     entry: fidl_fuchsia_net_neighbor::Entry,
     match_interface: u64,
@@ -1029,7 +1045,6 @@ async fn neigh_unreachability_config() -> Result {
 
 #[fasync::run_singlethreaded(test)]
 async fn neigh_unreachable_entries() -> Result {
-    // TODO(https://fxbug.dev/59425): Extend this test with hanging get.
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
 
@@ -1049,28 +1064,45 @@ async fn neigh_unreachable_entries() -> Result {
         list_existing_entries(&alice.env).await.context("failed to get entries for alice")?;
     assert!(initial_entries.is_empty(), "expected empty set of entries: {:?}", initial_entries);
 
-    // Intentionally fail to connect to bob so we can create a neighbor entry
-    // and have it go to UNREACHABLE state.
+    // Intentionally fail to send a packet to Bob so we can create a neighbor
+    // entry and have it go to UNREACHABLE state.
+    let fidl_fuchsia_net_ext::IpAddress(alice_addr) = ALICE_IP.into();
+    let alice_addr = std::net::SocketAddr::new(alice_addr, 1234);
+
     let fidl_fuchsia_net_ext::IpAddress(bob_addr) = BOB_IP.into();
-    let addr = std::net::SocketAddr::new(bob_addr, 8080);
+    let bob_addr = std::net::SocketAddr::new(bob_addr, 8080);
+
+    const PAYLOAD: &'static str = "Hello, is it me you're looking for?";
     assert_eq!(
-        fuchsia_async::net::TcpStream::connect_in_env(&alice.env, addr)
+        fuchsia_async::net::UdpSocket::bind_in_env(&alice.env, alice_addr)
             .await
-            .expect_err("expected TCP connect to fail")
-            .chain()
-            .find_map(|cause| cause.downcast_ref::<std::io::Error>())
-            .and_then(|io_error| io_error.raw_os_error()),
-        Some(libc::EHOSTUNREACH),
+            .context("failed to create client socket")?
+            .send_to(PAYLOAD.as_bytes(), bob_addr)
+            .await
+            .context("UDP send_to failed")?,
+        PAYLOAD.as_bytes().len()
     );
 
-    let mut entries =
-        list_existing_entries(&alice.env).await.context("failed to get entries for alice")?;
-    let () = assert_unreachable_entry(
-        entries.remove(&(alice.ep.id(), BOB_IP)).context("missing IPv4 neighbor entry")?,
-        alice.ep.id(),
-        BOB_IP,
-    );
-    assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
+    // Poll the neighbor table until the entry transitions to UNREACHABLE state.
+    //
+    // TODO(https://fxbug.dev/59425): Use hanging get instead of polling.
+    let mut interval = fuchsia_async::Interval::new(zx::Duration::from_seconds(1));
+
+    while let Some(()) = interval.next().await {
+        let mut entries =
+            list_existing_entries(&alice.env).await.context("failed to get entries for alice")?;
+        let entry =
+            entries.remove(&(alice.ep.id(), BOB_IP)).context("missing IPv4 neighbor entry")?;
+        assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
+
+        if let Some(fidl_fuchsia_net_neighbor::EntryState::Unreachable(_)) = entry.state {
+            let () = assert_unreachable_entry(entry, alice.ep.id(), BOB_IP);
+            break;
+        } else {
+            let () = assert_incomplete_entry(entry, alice.ep.id(), BOB_IP);
+            println!("Found incomplete entry, waiting for the transition to unreachable...");
+        }
+    }
 
     Ok(())
 }
