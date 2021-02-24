@@ -102,6 +102,24 @@ For instance:
 You can copy the files from the target device using `fx scp`. Afterwards,
 consider deleting the storage directory.
 
+Example commands
+
+Using fx:
+
+```posix-terminal
+fx test my_test_url.cmx --realm my_realm
+```
+
+On-device:
+
+```posix-terminal
+run-test-component --realm-label=my_realm my_test_url.cmx
+
+```
+
+**Note**: `run-test-component` will be deprecated in a future release, prefer
+`fx test` when remove device access is available.
+
 ## Services
 
 ### Basic system services
