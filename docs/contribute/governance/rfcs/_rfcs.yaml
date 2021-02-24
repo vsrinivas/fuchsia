@@ -274,3 +274,16 @@
   reviewers: ['jamesr@google.com', 'shayba@google.com', 'geb@google.com', 'adamperry@google.com', 'pascallouis@google.com', 'abarth@google.com', 'vaas@google.com', 'cpu@google.com']
   submitted: '2021-02-02'
   reviewed: '2021-02-17'
+
+- name: 'RFC-0071'
+  title: 'OTA backstop'
+  short_description: 'Prevent devices from OTAing backwards across a version boundary.'
+  authors: ['zkbaum@google.com']
+  file: '0071_ota_backstop.md'
+  area: ['System']
+  issue: ['66089']
+  gerrit_change_id: ['481013']
+  status: 'Accepted'
+  reviewers: ['jamesr@google.com', 'computerdruid@google.com', 'jfsulliv@google.com', 'ampearce@google.com', 'atyfto@google.com']
+  submitted: '2021-02-03'
+  reviewed: '2021-02-24'
