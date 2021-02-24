@@ -8,6 +8,8 @@
 
 #include <string>
 
+#include "fuchsia/accessibility/semantics/cpp/fidl.h"
+
 namespace a11y {
 
 namespace {
@@ -62,7 +64,8 @@ bool NodeIsDescribable(const fuchsia::accessibility::semantics::Node* node) {
   bool contains_text = node->has_attributes() && node->attributes().has_label() &&
                        !node->attributes().label().empty();
   bool is_actionable =
-      node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::BUTTON;
+      node->has_role() && (node->role() == fuchsia::accessibility::semantics::Role::BUTTON ||
+                           node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH);
   return contains_text || is_actionable;
 }
 
