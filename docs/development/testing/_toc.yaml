@@ -36,3 +36,7 @@ toc:
   path: /docs/development/testing/host_target_interaction_tests.md
 - title: "Testing for flakiness in CQ"
   path: /docs/development/testing/testing_for_flakiness_in_cq.md
+- title: "Stress tests"
+  path: /docs/development/testing/stress_tests.md
+- title: "Rust stress test library"
+  path: /docs/development/testing/rust_stress_test_library.md
