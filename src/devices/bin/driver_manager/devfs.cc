@@ -189,7 +189,7 @@ class DevfsFidlServer : public fio::DirectoryAdmin::Interface {
                         fidl::ServerEnd<::llcpp::fuchsia::io2::Inotifier> controller,
                         AddInotifyFilterCompleter::Sync& completer) override {}
   void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {}
-  void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) override {}
+  void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) override;
   void Rewind(RewindCompleter::Sync& completer) override;
   void GetToken(GetTokenCompleter::Sync& completer) override {}
   void Rename(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
@@ -808,7 +808,6 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
 
   auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
 
-  zx_status_t r;
   uint64_t ordinal = hdr->ordinal;
   switch (ordinal) {
     case fuchsia_io_NodeCloneOrdinal: {
@@ -871,21 +870,11 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
       return transaction.GetStatus();
     }
     case fuchsia_io_DirectoryReadDirentsOrdinal: {
-      DECODE_REQUEST(msg, DirectoryReadDirents);
-      DEFINE_REQUEST(msg, DirectoryReadDirents);
-
-      if (request->max_bytes > fio::MAX_BUF) {
-        return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
-      }
-
-      uint8_t data[fio::MAX_BUF];
-      size_t actual = 0;
-      r = devfs_readdir(dn, &ios->readdir_ino_, data, request->max_bytes);
-      if (r >= 0) {
-        actual = r;
-        r = ZX_OK;
-      }
-      return fuchsia_io_DirectoryReadDirents_reply(txn, r, data, actual);
+      ios->server_->set_current_dispatcher(dispatcher);
+      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
+      ios->server_->clear_current_dispatcher();
+      ZX_ASSERT(result == fidl::DispatchResult::kFound);
+      return transaction.GetStatus();
     }
     case fuchsia_io_DirectoryWatchOrdinal: {
       ios->server_->set_current_dispatcher(dispatcher);
@@ -948,6 +937,22 @@ void DevfsFidlServer::Watch(uint32_t mask, uint32_t options, zx::channel watcher
 void DevfsFidlServer::Rewind(RewindCompleter::Sync& completer) {
   owner_->readdir_ino_ = 0;
   completer.Reply(ZX_OK);
+}
+
+void DevfsFidlServer::ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) {
+  if (max_bytes > fio::MAX_BUF) {
+    completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
+    return;
+  }
+
+  uint8_t data[fio::MAX_BUF];
+  size_t actual = 0;
+  zx_status_t status = devfs_readdir(owner_->devnode_, &owner_->readdir_ino_, data, max_bytes);
+  if (status >= 0) {
+    actual = status;
+    status = ZX_OK;
+  }
+  completer.Reply(status, fidl::VectorView<uint8_t>(fidl::unowned_ptr<uint8_t>(data), actual));
 }
 
 void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
