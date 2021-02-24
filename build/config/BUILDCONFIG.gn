@@ -619,6 +619,7 @@ foreach(_target_type,
         script = python_exe_src
 
         inputs += [
+          "//prebuilt/fsatrace/fsatrace",
           "//build/tracer/action_tracer.py",
           _invoker_script,
         ]
