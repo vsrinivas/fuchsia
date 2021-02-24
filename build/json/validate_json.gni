@@ -72,7 +72,5 @@ template("validate_json") {
       rebase_path(invoker.data, root_build_dir),
       rebase_path(stamp_file, root_build_dir),
     ]
-
-    hermetic_deps = false
   }
 }

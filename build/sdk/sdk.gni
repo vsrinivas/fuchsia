@@ -205,6 +205,10 @@ template("sdk") {
     data = sdk_meta_file
 
     schema = "//build/sdk/meta/manifest.json"
+    sources = [
+      # This file is imported by all schemas.
+      "//build/sdk/meta/common.json",
+    ]
 
     public_deps = [ ":$meta_target_name" ]
   }
