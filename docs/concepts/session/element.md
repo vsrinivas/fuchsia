@@ -70,3 +70,4 @@ have recommended meanings with recommended standard schemas.
 [doc-capability-routing]: /docs/concepts/components/v2/topology.md#capability-routing
 [doc-scenic]: /docs/concepts/graphics/scenic/scenic.md
 [doc-component-collection]: /docs/concepts/components/v2/realms.md#collections
+[doc-graphical-presenter]: /docs/concepts/session/graphical_presenter.md
