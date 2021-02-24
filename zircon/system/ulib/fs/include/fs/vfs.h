@@ -228,7 +228,8 @@ class Vfs {
   // Otherwise, a corresponding error code is returned.
   zx_status_t EnsureExists(fbl::RefPtr<Vnode> vndir, fbl::StringPiece name,
                            fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
-                           uint32_t mode, bool* did_create) FS_TA_REQUIRES(vfs_lock_);
+                           uint32_t mode, Rights parent_rights, bool* did_create)
+      FS_TA_REQUIRES(vfs_lock_);
 
   bool readonly_ = false;
 

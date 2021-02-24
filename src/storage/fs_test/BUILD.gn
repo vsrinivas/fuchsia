@@ -292,6 +292,19 @@ isolated_devmgr_unittest_v2_component("mmap-tests") {
   deps = [ ":mmap_tests" ]
 }
 
+test("open_tests") {
+  sources = [ "open.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+isolated_devmgr_unittest_v2_component("open-tests") {
+  executable_path = "test/open_tests"
+  deps = [ ":open_tests" ]
+}
+
 test("overflow_tests") {
   sources = [ "overflow.cc" ]
   deps = [
@@ -544,6 +557,7 @@ fuchsia_test_package("fs-tests") {
     ":lseek-tests",
     ":minfs-tests",
     ":mmap-tests",
+    ":open-tests",
     ":overflow-tests",
     ":persist-tests",
     ":random-op-tests",

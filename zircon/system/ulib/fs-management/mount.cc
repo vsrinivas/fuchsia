@@ -64,8 +64,9 @@ zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
   if ((status = zx::channel::create(0, &parent, &parent_server)) != ZX_OK) {
     return status;
   }
-  if ((status = fdio_open(parent_path, O_RDONLY | O_DIRECTORY | O_ADMIN,
-                          parent_server.release())) != ZX_OK) {
+  uint32_t flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DIRECTORY |
+                   fio::OPEN_RIGHT_ADMIN;
+  if ((status = fdio_open(parent_path, flags, parent_server.release())) != ZX_OK) {
     return status;
   }
   fio::DirectoryAdmin::SyncClient parent_client(std::move(parent));

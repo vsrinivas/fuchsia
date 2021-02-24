@@ -97,7 +97,7 @@ zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountC
   return OpenLocked(
              vn, name,
              fs::VnodeConnectionOptions::ReadOnly().set_create().set_directory().set_no_remote(),
-             fs::Rights::ReadOnly(), S_IFDIR)
+             fs::Rights::ReadWrite(), S_IFDIR)
       .visit([&](auto&& result) FS_TA_REQUIRES(vfs_lock_) {
         using T = std::decay_t<decltype(result)>;
         using OpenResult = fs::Vfs::OpenResult;

@@ -163,7 +163,8 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
   fbl::RefPtr<Vnode> vn;
   bool just_created = false;
   if (options.flags.create) {
-    if ((r = EnsureExists(std::move(vndir), path, &vn, options, mode, &just_created)) != ZX_OK) {
+    if ((r = EnsureExists(std::move(vndir), path, &vn, options, mode, parent_rights,
+                          &just_created)) != ZX_OK) {
       return r;
     }
   } else {
@@ -226,7 +227,7 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
 
 zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
                               fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
-                              uint32_t mode, bool* did_create) {
+                              uint32_t mode, Rights parent_rights, bool* did_create) {
   zx_status_t status;
   if (options.flags.directory && !S_ISDIR(mode)) {
     return ZX_ERR_INVALID_ARGS;
@@ -235,6 +236,8 @@ zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
   } else if (path == ".") {
     return ZX_ERR_INVALID_ARGS;
   } else if (ReadonlyLocked()) {
+    return ZX_ERR_ACCESS_DENIED;
+  } else if (!parent_rights.write) {
     return ZX_ERR_ACCESS_DENIED;
   }
   if ((status = vndir->Create(path, mode, out_vn)) != ZX_OK) {
