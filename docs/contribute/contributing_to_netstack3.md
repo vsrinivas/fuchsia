@@ -83,8 +83,7 @@ spend time doing work that we won't end up accepting.
  Once you're ready to contribute, just follow these simple steps:
 
 * Read the general instructions for [Contributing to Fuchsia](/CONTRIBUTING.md)
-* Read our [Fuchsia Networking Contributor
-  Guide](/src/connectivity/network/CONTRIBUTING.md)
+* Read our [Fuchsia Networking Contributor Guide](/src/connectivity/network/CONTRIBUTING.md)
 
 ## Understanding
 
