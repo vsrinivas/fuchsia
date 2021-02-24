@@ -13,7 +13,7 @@ import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
-import 'package:fuchsia_inspect/inspect.dart' as inspect;
+import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
@@ -33,6 +33,7 @@ import 'topbar_model.dart';
 /// Its primary responsibility is to manage visibility of top level UI widgets
 /// like Overview, Recents, Ask and Status.
 class AppModel {
+  Inspect _inspect;
   KeyboardShortcuts _keyboardShortcuts;
   PointerEventsStream _pointerEventsStream;
   SuggestionService _suggestionService;
@@ -66,15 +67,17 @@ class AppModel {
   TopbarModel topbarModel;
   String keyboardShortcutsHelpText = 'Help Me!';
 
-  AppModel({
-    KeyboardShortcuts keyboardShortcuts,
-    PointerEventsStream pointerEventsStream,
-    LocaleSource localeSource,
-    SuggestionService suggestionService,
-    FocusChainListenerBinding focusChainListenerBinding,
-    this.statusModel,
-    this.clustersModel,
-  })  : _keyboardShortcuts = keyboardShortcuts,
+  AppModel(
+      {Inspect inspect,
+      KeyboardShortcuts keyboardShortcuts,
+      PointerEventsStream pointerEventsStream,
+      LocaleSource localeSource,
+      SuggestionService suggestionService,
+      FocusChainListenerBinding focusChainListenerBinding,
+      this.statusModel,
+      this.clustersModel})
+      : _inspect = inspect,
+        _keyboardShortcuts = keyboardShortcuts,
         _pointerEventsStream = pointerEventsStream,
         _focusChainListenerBinding = focusChainListenerBinding,
         _suggestionService = suggestionService {
@@ -84,6 +87,9 @@ class AppModel {
     statusModel ??= StatusModel.fromStartupContext(_startupContext, onLogout);
 
     clustersModel ??= ClustersModel();
+
+    // Setup Inspect.
+    _inspect ??= Inspect()..serve(_startupContext.outgoing);
 
     // Setup keyboard shortcuts.
     _keyboardShortcuts ??= KeyboardShortcuts.fromStartupContext(
@@ -168,9 +174,7 @@ class AppModel {
     ]).addListener(onCancel);
 
     // Add inspect data when requested.
-    inspect.Inspect()
-      ..serve(_startupContext.outgoing)
-      ..onDemand('ermine', _onInspect);
+    _inspect.onDemand('ermine', _onInspect);
 
     // Handle commands from Flutter Driver.
     _flutterDriverHandler = MethodChannel('flutter_driver/handler');
@@ -317,7 +321,7 @@ class AppModel {
     _focusChainListenerBinding.close();
   }
 
-  void _onInspect(inspect.Node node) {
+  void _onInspect(Node node) {
     // Session.
     node.stringProperty('session').setValue('started');
 

@@ -11,6 +11,7 @@ import 'package:fidl_fuchsia_ui_input/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_focus/fidl_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
+import 'package:fuchsia_inspect/inspect.dart' show Inspect;
 import 'package:mockito/mockito.dart';
 
 // ignore_for_file: implementation_imports
@@ -24,6 +25,7 @@ import 'package:ermine/src/models/app_model.dart';
 
 void main() {
   AppModel appModel;
+  Inspect inspect;
   KeyboardShortcuts keyboardShortcuts;
   PointerEventsStream pointerEventsStream;
   LocaleSource localeSource;
@@ -34,6 +36,7 @@ void main() {
   FocusChainListenerBinding focusChainListenerBinding;
 
   setUp(() async {
+    inspect = MockInspect();
     keyboardShortcuts = MockKeyboardShortcuts();
     pointerEventsStream = MockPointerEventsStream();
     localeSource = MockLocaleSource();
@@ -47,6 +50,7 @@ void main() {
     when(pointerEventsStream.stream).thenAnswer((_) => controller.stream);
 
     appModel = _TestAppModel(
+      inspect: inspect,
       keyboardShortcuts: keyboardShortcuts,
       pointerEventsStream: pointerEventsStream,
       localeSource: localeSource,
@@ -57,6 +61,7 @@ void main() {
     );
     TestWidgetsFlutterBinding.ensureInitialized();
     await appModel.onStarted();
+    verify(inspect.onDemand(any, any)).called(1);
   });
 
   tearDown(() {
@@ -237,6 +242,7 @@ void main() {
 
 class _TestAppModel extends AppModel {
   _TestAppModel({
+    Inspect inspect,
     KeyboardShortcuts keyboardShortcuts,
     PointerEventsStream pointerEventsStream,
     LocaleSource localeSource,
@@ -245,6 +251,7 @@ class _TestAppModel extends AppModel {
     ClustersModel clustersModel,
     FocusChainListenerBinding focusChainListenerBinding,
   }) : super(
+          inspect: inspect,
           keyboardShortcuts: keyboardShortcuts,
           pointerEventsStream: pointerEventsStream,
           localeSource: localeSource,
@@ -272,6 +279,8 @@ PointerEvent _pointerEvent({PointerEventPhase phase, double x, double y}) =>
       eventTime: 0,
       pointerId: 0,
     );
+
+class MockInspect extends Mock implements Inspect {}
 
 class MockKeyboardShortcuts extends Mock implements KeyboardShortcuts {}
 
