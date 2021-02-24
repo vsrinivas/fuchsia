@@ -433,7 +433,7 @@ func copyImageToDir(ctx context.Context, dir string, img *bootserver.Image) erro
 	}()
 
 	if _, err := io.Copy(f, iomisc.ReaderAtToReader(img.Reader)); err != nil {
-		return fmt.Errorf("%s %q from GCS: %w", constants.FailedToCopyImageMsg, img.Name, err)
+		return fmt.Errorf("%s (%q): %w", constants.FailedToCopyImageMsg, img.Name, err)
 	}
 	img.Path = dest
 

@@ -6,7 +6,7 @@ package constants
 
 const (
 	FailedToStartTargetMsg    = "start target error"
-	FailedToCopyImageMsg      = "failed to copy GCS image"
+	FailedToCopyImageMsg      = "failed to copy image from GCS"
 	QEMUInvocationErrorMsg    = "QEMU invocation error"
 	ReadConfigFileErrorMsg    = "could not open config file"
 	FailedToResolveIPErrorMsg = "could not resolve target IP address"
