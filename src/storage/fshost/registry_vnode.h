@@ -18,7 +18,7 @@ namespace devmgr {
 namespace fshost {
 
 // The fshost Vnode represents access to a registry of filesystems.
-class RegistryVnode final : public ::llcpp::fuchsia::fshost::Registry::RawChannelInterface,
+class RegistryVnode final : public ::llcpp::fuchsia::fshost::Registry::Interface,
                             public fs::Service {
  public:
   // Constructs the vnode, providing a |filesystems| node to which this node will
@@ -29,7 +29,7 @@ class RegistryVnode final : public ::llcpp::fuchsia::fshost::Registry::RawChanne
   zx_status_t AddFilesystem(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> directory);
 
   // FIDL method from |fuchsia.fshost.Registry|.
-  void RegisterFilesystem(zx::channel public_export,
+  void RegisterFilesystem(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> public_export,
                           RegisterFilesystemCompleter::Sync& completer) final;
 
  private:

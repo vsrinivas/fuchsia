@@ -34,8 +34,9 @@ zx_status_t RegistryVnode::AddFilesystem(
   return directory_vnode->AddAsTrackedEntry(dispatcher_, filesystems_.get(), fbl::String(buf));
 }
 
-void RegistryVnode::RegisterFilesystem(zx::channel public_export,
-                                       RegisterFilesystemCompleter::Sync& completer) {
+void RegistryVnode::RegisterFilesystem(
+    fidl::ClientEnd<::llcpp::fuchsia::io::Directory> public_export,
+    RegisterFilesystemCompleter::Sync& completer) {
   completer.Reply(AddFilesystem(std::move(public_export)));
 }
 
