@@ -25,18 +25,21 @@ def expand(items):
     '''Reads metadata produced by GN.
        Expands and flattens file references found within that metadata.
        See distribution_manifest.gni for a description of the metadata format.
+       Also returns a list of files opened.
        '''
     entries = []
+    opened_files = []
     for item in items:
         if 'source' in item:
             entries.append(item)
         elif 'file' in item:
             with open(item['file'], 'r') as data_file:
+                opened_files.append(item['file'])
                 data = json.load(data_file)
             for entry in data:
                 entry['label'] = item['label']
                 items.append(entry)
-    return [Entry(**e) for e in entries]
+    return [Entry(**e) for e in entries], opened_files
 
 
 def sources_are_different(entries):
@@ -52,16 +55,20 @@ def main():
         '--input', help='Path to original manifest', required=True)
     parser.add_argument(
         '--output', help='Path to the updated manifest', required=True)
+    parser.add_argument(
+        '--depfile', help='Path to GN style depfile', required=True)
     args = parser.parse_args()
 
     with open(args.input, 'r') as input_file:
         contents = json.load(input_file)
 
-    entries = expand(contents)
+    entries, opened_files = expand(contents)
     entries_by_dest = {
         d: set(e for e in entries if e.destination == d) for d in set(
             e.destination for e in entries)
     }
+    with open(args.depfile, 'w+') as depfile:
+        depfile.write('%s: %s\n' % (args.output, ' '.join(opened_files)))
 
     # Filter entries for which is is ok to have duplication if the sources are
     # the same.

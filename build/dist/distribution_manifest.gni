@@ -97,8 +97,8 @@ template("distribution_manifest") {
                              "visibility",
                            ])
 
-    hermetic_deps = false
     script = "//build/dist/expand_and_find_conflicting_dist_entries.py"
+    depfile = "${manifest_file}.d"
 
     inputs = [ intermediate_file ]
     outputs = [ manifest_file ]
@@ -108,6 +108,8 @@ template("distribution_manifest") {
       rebase_path(intermediate_file, root_build_dir),
       "--output",
       rebase_path(manifest_file, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
     ]
 
     if (!defined(deps)) {
