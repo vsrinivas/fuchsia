@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### ExampleOfUseOfAliases {#ExampleOfUseOfAliases}
-*Defined in [fidl.test.typealiasesexample.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=25)*
+*Defined in [fidl.test.typealiases/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=25)*
 
 
 
@@ -79,7 +79,7 @@
 ### obj_type {#obj_type}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.typealiasesexample.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=8)*
+*Defined in [fidl.test.typealiases/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=8)*
 
 
 

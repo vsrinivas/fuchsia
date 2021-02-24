@@ -6,7 +6,7 @@
 ## **PROTOCOLS**
 
 ## SomeProtocol {#SomeProtocol}
-*Defined in [fidl.test.handleshandles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/testdata/handles.test.fidl;l=45)*
+*Defined in [fidl.test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/testdata/handles.test.fidl;l=45)*
 
 
 
@@ -14,7 +14,7 @@
 ## **STRUCTS**
 
 ### Handles {#Handles}
-*Defined in [fidl.test.handleshandles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/testdata/handles.test.fidl;l=52)*
+*Defined in [fidl.test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/testdata/handles.test.fidl;l=52)*
 
 
 
@@ -260,7 +260,7 @@
 ### obj_type {#obj_type}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.handleshandles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/testdata/handles.test.fidl;l=6)*
+*Defined in [fidl.test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/testdata/handles.test.fidl;l=6)*
 
 
 
