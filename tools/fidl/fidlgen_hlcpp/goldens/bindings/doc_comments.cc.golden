@@ -49,8 +49,9 @@ bool Table::IsEmpty() const {
   return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
-void Table::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Table::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;

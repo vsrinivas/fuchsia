@@ -77,8 +77,9 @@ Union Union::WithVectorStringAlsoNeedsConstructor(
   return result;
 }
 
-void Union::Encode(::fidl::Encoder* encoder, size_t offset,
-                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Union::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -1210,8 +1211,9 @@ void ReverseOrdinalUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 extern "C" const fidl_type_t fidl_test_union_PizzaTable;
 const fidl_type_t* Pizza::FidlType = &fidl_test_union_PizzaTable;
 
-void Pizza::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Pizza::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Pizza>::value) {
     memcpy(_encoder->template GetPtr<Pizza>(_offset), this, sizeof(Pizza));
   } else {
@@ -1236,8 +1238,9 @@ zx_status_t Pizza::Clone(Pizza* _result) const {
 extern "C" const fidl_type_t fidl_test_union_PastaTable;
 const fidl_type_t* Pasta::FidlType = &fidl_test_union_PastaTable;
 
-void Pasta::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Pasta::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Pasta>::value) {
     memcpy(_encoder->template GetPtr<Pasta>(_offset), this, sizeof(Pasta));
   } else {
@@ -3897,8 +3900,9 @@ void ExplicitFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 extern "C" const fidl_type_t fidl_test_union_EmptyTable;
 const fidl_type_t* Empty::FidlType = &fidl_test_union_EmptyTable;
 
-void Empty::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Empty::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Empty>::value) {
     memcpy(_encoder->template GetPtr<Empty>(_offset), this, sizeof(Empty));
   } else {

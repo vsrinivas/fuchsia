@@ -287,7 +287,8 @@ class FlexibleBits final {
   // Constructs an instance of |FlexibleBits| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
   // FIDL schema. Otherwise, returns |cpp17::nullopt|.
-  constexpr inline static cpp17::optional<FlexibleBits> TryFrom(uint64_t value) {
+  constexpr inline static cpp17::optional<FlexibleBits> TryFrom(
+      uint64_t value) {
     if (value & ~kMask.value_) {
       return cpp17::nullopt;
     }
