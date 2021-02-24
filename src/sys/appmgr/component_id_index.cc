@@ -73,18 +73,18 @@ fit::result<ComponentIdEntry, ComponentIdIndex::Error> ParseEntry(const rapidjso
     return fit::error(ComponentIdIndex::Error::INVALID_INSTANCE_ID);
   }
 
-  // `appmgr_moniker` is missing.
-  if (!entry.HasMember("appmgr_moniker")) {
+  // `appmgr_moniker` must not be missing.
+  if (!entry.HasMember("appmgr_moniker") || entry["appmgr_moniker"].IsNull()) {
     return fit::error(ComponentIdIndex::Error::MISSING_MONIKER);
   }
 
+  const auto& appmgr_moniker = entry["appmgr_moniker"];
   // `appmgr_moniker` must be an object.
-  if (!entry["appmgr_moniker"].IsObject()) {
+  if (!appmgr_moniker.IsObject()) {
     FX_LOGS(ERROR) << "appmgr_moniker must be valid object.";
     return fit::error(ComponentIdIndex::Error::INVALID_MONIKER);
   }
 
-  const auto& appmgr_moniker = entry["appmgr_moniker"];
   // `url` is a required string.
   if (!appmgr_moniker.HasMember("url") || !appmgr_moniker["url"].IsString()) {
     FX_LOGS(ERROR) << "appmgr_moniker.url is a required string.";

@@ -83,6 +83,11 @@ TEST_F(ComponentIdIndexTest, MissingAppmgrMonikerIsOk) {
         "moniker": "/a/b/c"
       },
       {
+        "instance_id": "bbbbd44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b35bbbb",
+        "moniker": "/a/b/c/d",
+        "appmgr_moniker": null
+      },
+      {
         "instance_id": "8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280",
         "appmgr_moniker": {
           "realm_path": ["sys"],
@@ -100,7 +105,6 @@ TEST_F(ComponentIdIndexTest, MissingAppmgrMonikerIsOk) {
   auto id = index->LookupMoniker(moniker).value_or("");
   EXPECT_EQ("8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280", id);
 }
-
 
 TEST_F(ComponentIdIndexTest, LookupTransitionalMoniker_Exists) {
   auto config_dir = MakeAppmgrConfigDirWithIndex(R"({
