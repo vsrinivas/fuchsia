@@ -108,16 +108,17 @@
 //! // `my_subscriber` is now the default
 //! ```
 //!
-//! **Note**: the thread-local scoped dispatcher (`with_default`) requires the
-//! Rust standard library. `no_std` users should use [`set_global_default`]
+//! <div class="information">
+//!     <div class="tooltip ignore" style="">ⓘ<span class="tooltiptext">Note</span></div>
+//! </div>
+//! <div class="example-wrap" style="display:inline-block">
+//! <pre class="ignore" style="white-space:normal;font:inherit;">
+//! <strong>Note</strong>:the thread-local scoped dispatcher
+//! (<a href="#fn.with_default"><code>with_default</code></a>) requires the
+//! Rust standard library. <code>no_std</code> users should use
+//! <a href="#fn.set_global_default"><code>set_global_default</code></a>
 //! instead.
-//!
-//! Finally, `tokio` users should note that versions of `tokio` >= 0.1.22
-//! support an `experimental-tracing` feature flag. When this flag is enabled,
-//! the `tokio` runtime's thread pool will automatically propagate the default
-//! subscriber. This means that if `tokio::runtime::Runtime::new()` or
-//! `tokio::run()` are invoked when a default subscriber is set, it will also be
-//! set by all worker threads created by that runtime.
+//! </pre></div>
 //!
 //! ## Accessing the Default Subscriber
 //!
@@ -134,7 +135,7 @@
 use crate::{
     callsite, span,
     subscriber::{self, Subscriber},
-    Event, Metadata,
+    Event, LevelFilter, Metadata,
 };
 
 use crate::stdlib::{
@@ -148,7 +149,7 @@ use crate::stdlib::{
 
 #[cfg(feature = "std")]
 use crate::stdlib::{
-    cell::{Cell, RefCell},
+    cell::{Cell, RefCell, RefMut},
     error,
 };
 
@@ -192,6 +193,12 @@ struct State {
     can_enter: Cell<bool>,
 }
 
+/// While this guard is active, additional calls to subscriber functions on
+/// the default dispatcher will not be able to access the dispatch context.
+/// Dropping the guard will allow the dispatch context to be re-entered.
+#[cfg(feature = "std")]
+struct Entered<'a>(&'a State);
+
 /// A guard that resets the current default dispatcher to the prior
 /// default dispatcher when dropped.
 #[cfg(feature = "std")]
@@ -204,8 +211,15 @@ pub struct DefaultGuard(Option<Dispatch>);
 /// The default dispatcher is used when creating a new [span] or
 /// [`Event`].
 ///
-/// **Note**: This function requires the Rust standard library. `no_std` users
-/// should use [`set_global_default`] instead.
+/// <div class="information">
+///     <div class="tooltip ignore" style="">ⓘ<span class="tooltiptext">Note</span></div>
+/// </div>
+/// <div class="example-wrap" style="display:inline-block">
+/// <pre class="ignore" style="white-space:normal;font:inherit;">
+/// <strong>Note</strong>: This function required the Rust standard library.
+/// <code>no_std</code> users should use <a href="../fn.set_global_default.html">
+/// <code>set_global_default</code></a> instead.
+/// </pre></div>
 ///
 /// [span]: ../span/index.html
 /// [`Subscriber`]: ../subscriber/trait.Subscriber.html
@@ -225,12 +239,20 @@ pub fn with_default<T>(dispatcher: &Dispatch, f: impl FnOnce() -> T) -> T {
 /// Sets the dispatch as the default dispatch for the duration of the lifetime
 /// of the returned DefaultGuard
 ///
-/// **Note**: This function required the Rust standard library. `no_std`  users
-/// should use [`set_global_default`] instead.
+/// <div class="information">
+///     <div class="tooltip ignore" style="">ⓘ<span class="tooltiptext">Note</span></div>
+/// </div>
+/// <div class="example-wrap" style="display:inline-block">
+/// <pre class="ignore" style="white-space:normal;font:inherit;">
+/// <strong>Note</strong>: This function required the Rust standard library.
+/// <code>no_std</code> users should use <a href="../fn.set_global_default.html">
+/// <code>set_global_default</code></a> instead.
+/// </pre></div>
 ///
 /// [`set_global_default`]: ../fn.set_global_default.html
 #[cfg(feature = "std")]
 #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+#[must_use = "Dropping the guard unregisters the dispatcher."]
 pub fn set_default(dispatcher: &Dispatch) -> DefaultGuard {
     // When this guard is dropped, the default dispatcher will be reset to the
     // prior default. Using this ensures that we always reset to the prior
@@ -245,8 +267,14 @@ pub fn set_default(dispatcher: &Dispatch) -> DefaultGuard {
 /// Can only be set once; subsequent attempts to set the global default will fail.
 /// Returns `Err` if the global default has already been set.
 ///
-/// Note: Libraries should *NOT* call `set_global_default()`! That will cause conflicts when
-/// executables try to set them later.
+///
+/// <div class="information">
+///     <div class="tooltip compile_fail" style="">&#x26a0; &#xfe0f;<span class="tooltiptext">Warning</span></div>
+/// </div><div class="example-wrap" style="display:inline-block"><pre class="compile_fail" style="white-space:normal;font:inherit;">
+/// <strong>Warning</strong>: In general, libraries should <em>not</em> call
+/// <code>set_global_default()</code>! Doing so will cause conflicts when
+/// executables that depend on the library try to set the default later.
+/// </pre></div>
 ///
 /// [span]: ../span/index.html
 /// [`Subscriber`]: ../subscriber/trait.Subscriber.html
@@ -303,36 +331,44 @@ pub fn get_default<T, F>(mut f: F) -> T
 where
     F: FnMut(&Dispatch) -> T,
 {
-    // While this guard is active, additional calls to subscriber functions on
-    // the default dispatcher will not be able to access the dispatch context.
-    // Dropping the guard will allow the dispatch context to be re-entered.
-    struct Entered<'a>(&'a Cell<bool>);
-    impl<'a> Drop for Entered<'a> {
-        #[inline]
-        fn drop(&mut self) {
-            self.0.set(true);
-        }
-    }
-
     CURRENT_STATE
         .try_with(|state| {
-            if state.can_enter.replace(false) {
-                let _guard = Entered(&state.can_enter);
-
-                let mut default = state.default.borrow_mut();
-
-                if default.is::<NoSubscriber>() {
-                    if let Some(global) = get_global() {
-                        // don't redo this call on the next check
-                        *default = global.clone();
-                    }
-                }
-                f(&*default)
-            } else {
-                f(&Dispatch::none())
+            if let Some(entered) = state.enter() {
+                return f(&*entered.current());
             }
+
+            f(&Dispatch::none())
         })
         .unwrap_or_else(|_| f(&Dispatch::none()))
+}
+
+/// Executes a closure with a reference to this thread's current [dispatcher].
+///
+/// Note that calls to `get_default` should not be nested; if this function is
+/// called while inside of another `get_default`, that closure will be provided
+/// with `Dispatch::none` rather than the previously set dispatcher.
+///
+/// [dispatcher]: ../dispatcher/struct.Dispatch.html
+#[cfg(feature = "std")]
+#[doc(hidden)]
+#[inline(never)]
+pub fn get_current<T>(f: impl FnOnce(&Dispatch) -> T) -> Option<T> {
+    CURRENT_STATE
+        .try_with(|state| {
+            let entered = state.enter()?;
+            Some(f(&*entered.current()))
+        })
+        .ok()?
+}
+
+/// Executes a closure with a reference to the current [dispatcher].
+///
+/// [dispatcher]: ../dispatcher/struct.Dispatch.html
+#[cfg(not(feature = "std"))]
+#[doc(hidden)]
+pub fn get_current<T>(f: impl FnOnce(&Dispatch) -> T) -> Option<T> {
+    let dispatch = get_global()?;
+    Some(f(&dispatch))
 }
 
 /// Executes a closure with a reference to the current [dispatcher].
@@ -369,9 +405,7 @@ impl Dispatch {
     /// Returns a new `Dispatch` that discards events and spans.
     #[inline]
     pub fn none() -> Self {
-        Dispatch {
-            subscriber: Arc::new(NoSubscriber),
-        }
+        Dispatch { subscriber: Arc::new(NoSubscriber) }
     }
 
     /// Returns a `Dispatch` that forwards to the given [`Subscriber`].
@@ -381,9 +415,7 @@ impl Dispatch {
     where
         S: Subscriber + Send + Sync + 'static,
     {
-        let me = Dispatch {
-            subscriber: Arc::new(subscriber),
-        };
+        let me = Dispatch { subscriber: Arc::new(subscriber) };
         callsite::register_dispatch(&me);
         me
     }
@@ -403,6 +435,22 @@ impl Dispatch {
     #[inline]
     pub fn register_callsite(&self, metadata: &'static Metadata<'static>) -> subscriber::Interest {
         self.subscriber.register_callsite(metadata)
+    }
+
+    /// Returns the highest [verbosity level][level] that this [`Subscriber`] will
+    /// enable, or `None`, if the subscriber does not implement level-based
+    /// filtering or chooses not to implement this method.
+    ///
+    /// This calls the [`max_level_hint`] function on the [`Subscriber`]
+    /// that this `Dispatch` forwards to.
+    ///
+    /// [level]: ../struct.Level.html
+    /// [`Subscriber`]: ../subscriber/trait.Subscriber.html
+    /// [`register_callsite`]: ../subscriber/trait.Subscriber.html#method.max_level_hint
+    // TODO(eliza): consider making this a public API?
+    #[inline]
+    pub(crate) fn max_level_hint(&self) -> Option<LevelFilter> {
+        self.subscriber.max_level_hint()
     }
 
     /// Record the construction of a new span, returning a new [ID] for the
@@ -521,11 +569,17 @@ impl Dispatch {
     /// this guarantee and any other libraries implementing instrumentation APIs
     /// must as well.
     ///
-    /// This calls the [`drop_span`]  function on the [`Subscriber`] that this
+    /// This calls the [`drop_span`] function on the [`Subscriber`] that this
     ///  `Dispatch` forwards to.
     ///
-    /// **Note:** the [`try_close`] function is functionally identical, but
-    /// returns `true` if the span is now closed.
+    /// <div class="information">
+    ///     <div class="tooltip compile_fail" style="">&#x26a0; &#xfe0f;<span class="tooltiptext">Warning</span></div>
+    /// </div>
+    /// <div class="example-wrap" style="display:inline-block"><pre class="compile_fail" style="white-space:normal;font:inherit;">
+    /// <strong>Deprecated</strong>: The <a href="#method.try_close"><code>try_close</code></a>
+    /// method is functionally identical, but returns <code>true</code> if the span is now closed.
+    /// It should be used instead of this method.
+    /// </pre></div>
     ///
     /// [span ID]: ../span/struct.Id.html
     /// [`Subscriber`]: ../subscriber/trait.Subscriber.html
@@ -547,7 +601,7 @@ impl Dispatch {
     /// this guarantee and any other libraries implementing instrumentation APIs
     /// must as well.
     ///
-    /// This calls the [`try_close`]  function on the [`Subscriber`] that this
+    /// This calls the [`try_close`] function on the [`Subscriber`] that this
     ///  `Dispatch` forwards to.
     ///
     /// [span ID]: ../span/struct.Id.html
@@ -642,8 +696,8 @@ impl Registrar {
         self.0.upgrade().map(|s| s.register_callsite(metadata))
     }
 
-    pub(crate) fn is_alive(&self) -> bool {
-        self.0.upgrade().is_some()
+    pub(crate) fn upgrade(&self) -> Option<Dispatch> {
+        self.0.upgrade().map(|subscriber| Dispatch { subscriber })
     }
 }
 
@@ -666,6 +720,42 @@ impl State {
             .ok();
         EXISTS.store(true, Ordering::Release);
         DefaultGuard(prior)
+    }
+
+    #[inline]
+    fn enter(&self) -> Option<Entered<'_>> {
+        if self.can_enter.replace(false) {
+            Some(Entered(&self))
+        } else {
+            None
+        }
+    }
+}
+
+// ===== impl Entered =====
+
+#[cfg(feature = "std")]
+impl<'a> Entered<'a> {
+    #[inline]
+    fn current(&self) -> RefMut<'a, Dispatch> {
+        let mut default = self.0.default.borrow_mut();
+
+        if default.is::<NoSubscriber>() {
+            if let Some(global) = get_global() {
+                // don't redo this call on the next check
+                *default = global.clone();
+            }
+        }
+
+        default
+    }
+}
+
+#[cfg(feature = "std")]
+impl<'a> Drop for Entered<'a> {
+    #[inline]
+    fn drop(&mut self) {
+        self.0.can_enter.set(true);
     }
 }
 
@@ -749,11 +839,7 @@ mod test {
 
             fn event(&self, _: &Event<'_>) {
                 static EVENTS: AtomicUsize = AtomicUsize::new(0);
-                assert_eq!(
-                    EVENTS.fetch_add(1, Ordering::Relaxed),
-                    0,
-                    "event method called twice!"
-                );
+                assert_eq!(EVENTS.fetch_add(1, Ordering::Relaxed), 0, "event method called twice!");
                 Event::dispatch(&TEST_META, &TEST_META.fields().value_set(&[]))
             }
 

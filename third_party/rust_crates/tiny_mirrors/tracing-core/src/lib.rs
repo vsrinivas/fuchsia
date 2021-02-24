@@ -23,6 +23,10 @@
 //! In addition, it defines the global callsite registry and per-thread current
 //! dispatcher which other components of the tracing system rely on.
 //!
+//! *Compiler support: [requires `rustc` 1.40+][msrv]*
+//!
+//! [msrv]: #supported-rust-versions
+//!
 //! ## Usage
 //!
 //! Application authors will typically not use this crate directly. Instead,
@@ -49,12 +53,25 @@
 //!
 //!   ```toml
 //!   [dependencies]
-//!   tracing-core = { version = "0.1.10", default-features = false }
+//!   tracing-core = { version = "0.1.17", default-features = false }
 //!   ```
 //!
-//!   *Compiler support: requires rustc 1.39+*
-//!
 //!   **Note**:`tracing-core`'s `no_std` support requires `liballoc`.
+//!
+//! ## Supported Rust Versions
+//!
+//! Tracing is built against the latest stable release. The minimum supported
+//! version is 1.40. The current Tracing version is not guaranteed to build on
+//! Rust versions earlier than the minimum supported version.
+//!
+//! Tracing follows the same compiler support policies as the rest of the Tokio
+//! project. The current stable Rust compiler and the three most recent minor
+//! versions before it will always be supported. For example, if the current
+//! stable compiler version is 1.45, the minimum supported version will not be
+//! increased past 1.42, three minor versions prior. Increasing the minimum
+//! supported compiler version is not considered a semver breaking change as
+//! long as doing so complies with this policy.
+//!
 //!
 //! [`span::Id`]: span/struct.Id.html
 //! [`Event`]: event/struct.Event.html
@@ -68,9 +85,13 @@
 //! [`Dispatch`]: dispatcher/struct.Dispatch.html
 //! [`tokio-rs/tracing`]: https://github.com/tokio-rs/tracing
 //! [`tracing`]: https://crates.io/crates/tracing
-#![doc(html_root_url = "https://docs.rs/tracing-core/0.1.10")]
+#![doc(html_root_url = "https://docs.rs/tracing-core/0.1.17")]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/tokio-rs/tracing/master/assets/logo-type.png",
+    issue_tracker_base_url = "https://github.com/tokio-rs/tracing/issues/"
+)]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg), deny(broken_intra_doc_links))]
 #![warn(
     missing_debug_implementations,
     missing_docs,
@@ -177,7 +198,7 @@ macro_rules! metadata {
         callsite: $callsite:expr,
         kind: $kind:expr
     ) => {
-        metadata! {
+        $crate::metadata! {
             name: $name,
             target: $target,
             level: $level,
@@ -226,7 +247,10 @@ pub(crate) mod spin;
 
 #[cfg(not(feature = "std"))]
 #[doc(hidden)]
-pub use self::spin::Once;
+pub type Once = self::spin::Once<()>;
+
+#[cfg(feature = "std")]
+pub use stdlib::sync::Once;
 
 pub mod callsite;
 pub mod dispatcher;
@@ -244,7 +268,7 @@ pub use self::{
     dispatcher::Dispatch,
     event::Event,
     field::Field,
-    metadata::{Level, Metadata},
+    metadata::{Level, LevelFilter, Metadata},
     subscriber::Subscriber,
 };
 

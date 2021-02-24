@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "tracing-attributes"
-version = "0.1.9"
+version = "0.1.13"
 authors = ["Tokio Contributors <team@tokio.rs>", "Eliza Weisman <eliza@buoyant.io>", "David Barsky <dbarsky@amazon.com>"]
 description = "Procedural macro attributes for automatically instrumenting functions.\n"
 homepage = "https://tokio.rs"
@@ -33,7 +33,8 @@ version = "1"
 
 [dependencies.syn]
 version = "1"
-features = ["full", "extra-traits"]
+features = ["full", "parsing", "printing", "visit-mut", "clone-impls", "extra-traits", "proc-macro"]
+default-features = false
 [dev-dependencies.async-trait]
 version = "0.1"
 
@@ -45,9 +46,6 @@ version = "0.1"
 
 [dev-dependencies.tracing-core]
 version = "0.1"
-
-[dev-dependencies.tracing-futures]
-version = "0.2"
 
 [features]
 async-await = []

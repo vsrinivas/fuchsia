@@ -47,10 +47,7 @@ pub struct Current {
 
 #[derive(Debug)]
 enum CurrentInner {
-    Current {
-        id: Id,
-        metadata: &'static Metadata<'static>,
-    },
+    Current { id: Id, metadata: &'static Metadata<'static> },
     None,
     Unknown,
 }
@@ -60,7 +57,12 @@ enum CurrentInner {
 impl Id {
     /// Constructs a new span ID from the given `u64`.
     ///
-    /// **Note**: Span IDs must be greater than zero.
+    /// <div class="information">
+    ///     <div class="tooltip ignore" style="">ⓘ<span class="tooltiptext">Note</span></div>
+    /// </div>
+    /// <div class="example-wrap" style="display:inline-block">
+    /// <pre class="ignore" style="white-space:normal;font:inherit;">
+    /// <strong>Note</strong>: Span IDs must be greater than zero.</pre></div>
     ///
     /// # Panics
     /// - If the provided `u64` is 0
@@ -68,11 +70,27 @@ impl Id {
         Id(NonZeroU64::new(u).expect("span IDs must be > 0"))
     }
 
+    /// Constructs a new span ID from the given `NonZeroU64`.
+    ///
+    /// Unlike [`Id::from_u64`](#method.from_u64), this will never panic.
+    #[inline]
+    pub const fn from_non_zero_u64(id: NonZeroU64) -> Self {
+        Id(id)
+    }
+
     // Allow `into` by-ref since we don't want to impl Copy for Id
     #[allow(clippy::wrong_self_convention)]
-    /// Returns the span's ID as a  `u64`.
+    /// Returns the span's ID as a `u64`.
     pub fn into_u64(&self) -> u64 {
         self.0.get()
+    }
+
+    // Allow `into` by-ref since we don't want to impl Copy for Id
+    #[allow(clippy::wrong_self_convention)]
+    /// Returns the span's ID as a `NonZeroU64`.
+    #[inline]
+    pub const fn into_non_zero_u64(&self) -> NonZeroU64 {
+        self.0
     }
 }
 
@@ -88,21 +106,13 @@ impl<'a> Attributes<'a> {
     /// Returns `Attributes` describing a new child span of the current span,
     /// with the provided metadata and values.
     pub fn new(metadata: &'static Metadata<'static>, values: &'a field::ValueSet<'a>) -> Self {
-        Attributes {
-            metadata,
-            values,
-            parent: Parent::Current,
-        }
+        Attributes { metadata, values, parent: Parent::Current }
     }
 
     /// Returns `Attributes` describing a new span at the root of its own trace
     /// tree, with the provided metadata and values.
     pub fn new_root(metadata: &'static Metadata<'static>, values: &'a field::ValueSet<'a>) -> Self {
-        Attributes {
-            metadata,
-            values,
-            parent: Parent::Root,
-        }
+        Attributes { metadata, values, parent: Parent::Root }
     }
 
     /// Returns `Attributes` describing a new child span of the specified
@@ -112,11 +122,7 @@ impl<'a> Attributes<'a> {
         metadata: &'static Metadata<'static>,
         values: &'a field::ValueSet<'a>,
     ) -> Self {
-        Attributes {
-            metadata,
-            values,
-            parent: Parent::Explicit(parent),
-        }
+        Attributes { metadata, values, parent: Parent::Explicit(parent) }
     }
 
     /// Returns a reference to the new span's metadata.
@@ -215,25 +221,19 @@ impl Current {
     /// Constructs a new `Current` that indicates the current context is a span
     /// with the given `metadata` and `metadata`.
     pub fn new(id: Id, metadata: &'static Metadata<'static>) -> Self {
-        Self {
-            inner: CurrentInner::Current { id, metadata },
-        }
+        Self { inner: CurrentInner::Current { id, metadata } }
     }
 
     /// Constructs a new `Current` that indicates the current context is *not*
     /// in a span.
     pub fn none() -> Self {
-        Self {
-            inner: CurrentInner::None,
-        }
+        Self { inner: CurrentInner::None }
     }
 
     /// Constructs a new `Current` that indicates the `Subscriber` does not
     /// track a current span.
     pub(crate) fn unknown() -> Self {
-        Self {
-            inner: CurrentInner::Unknown,
-        }
+        Self { inner: CurrentInner::Unknown }
     }
 
     /// Returns `true` if the `Subscriber` that constructed this `Current` tracks a

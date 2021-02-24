@@ -132,8 +132,9 @@ thiserror = "1.0.23"
 timebomb = "0.1.2"
 tokio = { version = "0.2.16", default-features = false }
 toml = "0.5"
-tracing = { version = "0.1.15", features = ["log"] }
-tracing-futures = "0.2.4"
+tracing = { version = "0.1.25", features = ["log"] }
+tracing-futures = "0.2.5"
+tracing-log = "0.1.2"
 unicase = "2.2.0"
 untrusted = "0.7"
 url = "2.1"

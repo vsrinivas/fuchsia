@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "tracing-core"
-version = "0.1.10"
+version = "0.1.17"
 authors = ["Tokio Contributors <team@tokio.rs>"]
 description = "Core primitives for application-level tracing.\n"
 homepage = "https://tokio.rs"
@@ -32,10 +32,5 @@ optional = true
 [features]
 default = ["std"]
 std = ["lazy_static"]
-[badges.azure-devops]
-build = "1"
-pipeline = "tokio-rs.tracing"
-project = "tracing/tracing"
-
 [badges.maintenance]
 status = "actively-developed"

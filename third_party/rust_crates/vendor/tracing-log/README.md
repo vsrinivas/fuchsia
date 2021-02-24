@@ -1,3 +1,7 @@
+![Tracing — Structured, application-level diagnostics][splash]
+
+[splash]: https://raw.githubusercontent.com/tokio-rs/tracing/master/assets/splash.svg
+
 # tracing-log
 
 [`log`] compatibility for [`tracing`].
@@ -6,10 +10,9 @@
 [![Documentation][docs-badge]][docs-url]
 [![Documentation (master)][docs-master-badge]][docs-master-url]
 [![MIT licensed][mit-badge]][mit-url]
-[![Build Status][azure-badge]][azure-url]
+[![Build Status][actions-badge]][actions-url]
 [![Discord chat][discord-badge]][discord-url]
 ![maintenance status][maint-badge]
-
 
 [Documentation][docs-url] | [Chat (discord)][discord-url]
 
@@ -22,10 +25,10 @@
 [docs-master-url]: https://tracing-rs.netlify.com/tracing_log
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [mit-url]: LICENSE
-[azure-badge]: https://dev.azure.com/tracing/tracing/_apis/build/status/tokio-rs.tracing?branchName=master
-[azure-url]: https://dev.azure.com/tracing/tracing/_build/latest?definitionId=1&branchName=master
+[actions-badge]: https://github.com/tokio-rs/tracing/workflows/CI/badge.svg
+[actions-url]:https://github.com/tokio-rs/tracing/actions?query=workflow%3ACI
 [discord-badge]: https://img.shields.io/discord/500028886025895936?logo=discord&label=discord&logoColor=white
-[discord-url]: https://discordapp.com/invite/XdPzyTZ
+[discord-url]: https://discord.gg/EeF3cQw
 [maint-badge]: https://img.shields.io/badge/maintenance-experimental-blue.svg
 
 ## Overview
@@ -41,7 +44,7 @@ This crate provides:
 - [`LogTracer`], a [`log::Log`] implementation that consumes [`log::Record`]s
   and outputs them as [`tracing::Event`]s.
 - An [`env_logger`] module, with helpers for using the [`env_logger` crate]
-  with `tracing` (optional, enabled by the `env-logger` feature).
+  with `tracing` (optional, enabled by the `env_logger` feature).
 
 [`tracing`]: https://crates.io/crates/tracing
 [`log`]: https://crates.io/crates/log
@@ -52,6 +55,24 @@ This crate provides:
 [`log::Record`]: https://docs.rs/log/latest/log/struct.Record.html
 [`tracing::Subscriber`]: https://docs.rs/tracing/latest/tracing/trait.Subscriber.html
 [`tracing::Event`]: https://docs.rs/tracing/latest/tracing/struct.Event.html
+
+*Compiler support: [requires `rustc` 1.42+][msrv]*
+
+[msrv]: #supported-rust-versions
+
+## Supported Rust Versions
+
+Tracing is built against the latest stable release. The minimum supported
+version is 1.42. The current Tracing version is not guaranteed to build on Rust
+versions earlier than the minimum supported version.
+
+Tracing follows the same compiler support policies as the rest of the Tokio
+project. The current stable Rust compiler and the three most recent minor
+versions before it will always be supported. For example, if the current stable
+compiler version is 1.45, the minimum supported version will not be increased
+past 1.42, three minor versions prior. Increasing the minimum supported compiler
+version is not considered a semver breaking change as long as doing so complies
+with this policy.
 
 ## License
 

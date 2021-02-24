@@ -16,6 +16,10 @@
 //! - An [`env_logger`] module, with helpers for using the [`env_logger` crate]
 //!   with `tracing` (optional, enabled by the `env-logger` feature).
 //!
+//! *Compiler support: [requires `rustc` 1.42+][msrv]*
+//!
+//! [msrv]: #supported-rust-versions
+//!
 //! # Usage
 //!
 //! ## Convert log records to tracing `Event`s
@@ -71,6 +75,20 @@
 //! * `env_logger`: enables the `env_logger` module, with helpers for working
 //!   with the [`env_logger` crate].
 //!
+//! ## Supported Rust Versions
+//!
+//! Tracing is built against the latest stable release. The minimum supported
+//! version is 1.42. The current Tracing version is not guaranteed to build on
+//! Rust versions earlier than the minimum supported version.
+//!
+//! Tracing follows the same compiler support policies as the rest of the Tokio
+//! project. The current stable Rust compiler and the three most recent minor
+//! versions before it will always be supported. For example, if the current
+//! stable compiler version is 1.45, the minimum supported version will not be
+//! increased past 1.42, three minor versions prior. Increasing the minimum
+//! supported compiler version is not considered a semver breaking change as
+//! long as doing so complies with this policy.
+//!
 //! [`init`]: struct.LogTracer.html#method.init
 //! [`init_with_filter`]: struct.LogTracer.html#method.init_with_filter
 //! [`AsTrace`]: trait.AsTrace.html
@@ -86,7 +104,13 @@
 //! [`tracing::Subscriber`]: https://docs.rs/tracing/latest/tracing/trait.Subscriber.html
 //! [`Subscriber`]: https://docs.rs/tracing/latest/tracing/trait.Subscriber.html
 //! [`tracing::Event`]: https://docs.rs/tracing/latest/tracing/struct.Event.html
-#![doc(html_root_url = "https://docs.rs/tracing-log/0.1.1")]
+//! [flags]: https://docs.rs/tracing/latest/tracing/#crate-feature-flags
+#![doc(html_root_url = "https://docs.rs/tracing-log/0.1.2")]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/tokio-rs/tracing/master/assets/logo-type.png",
+    issue_tracker_base_url = "https://github.com/tokio-rs/tracing/issues/"
+)]
+#![cfg_attr(docsrs, feature(doc_cfg), deny(broken_intra_doc_links))]
 #![warn(
     missing_debug_implementations,
     missing_docs,
@@ -96,15 +120,12 @@
     const_err,
     dead_code,
     improper_ctypes,
-    legacy_directory_ownership,
     non_shorthand_field_patterns,
     no_mangle_generic_items,
     overflowing_literals,
     path_statements,
     patterns_in_fns_without_body,
-    plugin_as_library,
     private_in_public,
-    safe_extern_statics,
     unconditional_recursion,
     unused,
     unused_allocation,
@@ -126,16 +147,20 @@ use tracing_core::{
 };
 
 #[cfg(feature = "log-tracer")]
+#[cfg_attr(docsrs, doc(cfg(feature = "log-tracer")))]
 pub mod log_tracer;
 
 #[cfg(feature = "trace-logger")]
+#[cfg_attr(docsrs, doc(cfg(feature = "trace-logger")))]
 pub mod trace_logger;
 
 #[cfg(feature = "log-tracer")]
+#[cfg_attr(docsrs, doc(cfg(feature = "log-tracer")))]
 #[doc(inline)]
 pub use self::log_tracer::LogTracer;
 
 #[cfg(feature = "trace-logger")]
+#[cfg_attr(docsrs, doc(cfg(feature = "trace-logger")))]
 #[deprecated(
     since = "0.1.1",
     note = "use the `tracing` crate's \"log\" feature flag instead"
@@ -145,37 +170,48 @@ pub use self::log_tracer::LogTracer;
 pub use self::trace_logger::TraceLogger;
 
 #[cfg(feature = "env_logger")]
+#[cfg_attr(docsrs, doc(cfg(feature = "env_logger")))]
 pub mod env_logger;
+
+pub use log;
 
 /// Format a log record as a trace event in the current span.
 pub fn format_trace(record: &log::Record<'_>) -> io::Result<()> {
-    let filter_meta = record.as_trace();
-    if !dispatcher::get_default(|dispatch| dispatch.enabled(&filter_meta)) {
-        return Ok(());
-    };
-
-    let (cs, keys) = loglevel_to_cs(record.level());
-
-    let log_module = record.module_path();
-    let log_file = record.file();
-    let log_line = record.line();
-
-    let module = log_module.as_ref().map(|s| s as &dyn field::Value);
-    let file = log_file.as_ref().map(|s| s as &dyn field::Value);
-    let line = log_line.as_ref().map(|s| s as &dyn field::Value);
-
-    let meta = cs.metadata();
-    Event::dispatch(
-        &meta,
-        &meta.fields().value_set(&[
-            (&keys.message, Some(record.args() as &dyn field::Value)),
-            (&keys.target, Some(&record.target())),
-            (&keys.module, module),
-            (&keys.file, file),
-            (&keys.line, line),
-        ]),
-    );
+    dispatch_record(record);
     Ok(())
+}
+
+// XXX(eliza): this is factored out so that we don't have to deal with the pub
+// function `format_trace`'s `Result` return type...maybe we should get rid of
+// that in 0.2...
+pub(crate) fn dispatch_record(record: &log::Record<'_>) {
+    dispatcher::get_default(|dispatch| {
+        let filter_meta = record.as_trace();
+        if !dispatch.enabled(&filter_meta) {
+            return;
+        }
+
+        let (_, keys, meta) = loglevel_to_cs(record.level());
+
+        let log_module = record.module_path();
+        let log_file = record.file();
+        let log_line = record.line();
+
+        let module = log_module.as_ref().map(|s| s as &dyn field::Value);
+        let file = log_file.as_ref().map(|s| s as &dyn field::Value);
+        let line = log_line.as_ref().map(|s| s as &dyn field::Value);
+
+        dispatch.event(&Event::new(
+            meta,
+            &meta.fields().value_set(&[
+                (&keys.message, Some(record.args() as &dyn field::Value)),
+                (&keys.target, Some(&record.target())),
+                (&keys.module, module),
+                (&keys.file, file),
+                (&keys.line, line),
+            ]),
+        ));
+    });
 }
 
 /// Trait implemented for `tracing` types that can be converted to a `log`
@@ -207,6 +243,24 @@ impl<'a> AsLog for Metadata<'a> {
             .build()
     }
 }
+impl<'a> crate::sealed::Sealed for log::Metadata<'a> {}
+
+impl<'a> AsTrace for log::Metadata<'a> {
+    type Trace = Metadata<'a>;
+    fn as_trace(&self) -> Self::Trace {
+        let cs_id = identify_callsite!(loglevel_to_cs(self.level()).0);
+        Metadata::new(
+            "log record",
+            self.target(),
+            self.level().as_trace(),
+            None,
+            None,
+            None,
+            field::FieldSet::new(FIELD_NAMES, cs_id),
+            Kind::EVENT,
+        )
+    }
+}
 
 struct Fields {
     message: field::Field,
@@ -216,7 +270,7 @@ struct Fields {
     line: field::Field,
 }
 
-static FIELD_NAMES: &'static [&'static str] = &[
+static FIELD_NAMES: &[&str] = &[
     "message",
     "log.target",
     "log.module_path",
@@ -243,62 +297,81 @@ impl Fields {
 }
 
 macro_rules! log_cs {
-    ($level:expr) => {{
-        struct Callsite;
-        static CALLSITE: Callsite = Callsite;
-        static META: Metadata<'static> = Metadata::new(
+    ($level:expr, $cs:ident, $meta:ident, $ty:ident) => {
+        struct $ty;
+        static $cs: $ty = $ty;
+        static $meta: Metadata<'static> = Metadata::new(
             "log event",
             "log",
             $level,
             None,
             None,
             None,
-            field::FieldSet::new(FIELD_NAMES, identify_callsite!(&CALLSITE)),
+            field::FieldSet::new(FIELD_NAMES, identify_callsite!(&$cs)),
             Kind::EVENT,
         );
 
-        impl callsite::Callsite for Callsite {
+        impl callsite::Callsite for $ty {
             fn set_interest(&self, _: subscriber::Interest) {}
             fn metadata(&self) -> &'static Metadata<'static> {
-                &META
+                &$meta
             }
         }
-
-        &CALLSITE
-    }};
+    };
 }
 
-static TRACE_CS: &'static dyn Callsite = log_cs!(tracing_core::Level::TRACE);
-static DEBUG_CS: &'static dyn Callsite = log_cs!(tracing_core::Level::DEBUG);
-static INFO_CS: &'static dyn Callsite = log_cs!(tracing_core::Level::INFO);
-static WARN_CS: &'static dyn Callsite = log_cs!(tracing_core::Level::WARN);
-static ERROR_CS: &'static dyn Callsite = log_cs!(tracing_core::Level::ERROR);
+log_cs!(
+    tracing_core::Level::TRACE,
+    TRACE_CS,
+    TRACE_META,
+    TraceCallsite
+);
+log_cs!(
+    tracing_core::Level::DEBUG,
+    DEBUG_CS,
+    DEBUG_META,
+    DebugCallsite
+);
+log_cs!(tracing_core::Level::INFO, INFO_CS, INFO_META, InfoCallsite);
+log_cs!(tracing_core::Level::WARN, WARN_CS, WARN_META, WarnCallsite);
+log_cs!(
+    tracing_core::Level::ERROR,
+    ERROR_CS,
+    ERROR_META,
+    ErrorCallsite
+);
 
 lazy_static! {
-    static ref TRACE_FIELDS: Fields = Fields::new(TRACE_CS);
-    static ref DEBUG_FIELDS: Fields = Fields::new(DEBUG_CS);
-    static ref INFO_FIELDS: Fields = Fields::new(INFO_CS);
-    static ref WARN_FIELDS: Fields = Fields::new(WARN_CS);
-    static ref ERROR_FIELDS: Fields = Fields::new(ERROR_CS);
+    static ref TRACE_FIELDS: Fields = Fields::new(&TRACE_CS);
+    static ref DEBUG_FIELDS: Fields = Fields::new(&DEBUG_CS);
+    static ref INFO_FIELDS: Fields = Fields::new(&INFO_CS);
+    static ref WARN_FIELDS: Fields = Fields::new(&WARN_CS);
+    static ref ERROR_FIELDS: Fields = Fields::new(&ERROR_CS);
 }
 
-fn level_to_cs(level: &Level) -> (&'static dyn Callsite, &'static Fields) {
-    match *level {
-        Level::TRACE => (TRACE_CS, &*TRACE_FIELDS),
-        Level::DEBUG => (DEBUG_CS, &*DEBUG_FIELDS),
-        Level::INFO => (INFO_CS, &*INFO_FIELDS),
-        Level::WARN => (WARN_CS, &*WARN_FIELDS),
-        Level::ERROR => (ERROR_CS, &*ERROR_FIELDS),
+fn level_to_cs(level: Level) -> (&'static dyn Callsite, &'static Fields) {
+    match level {
+        Level::TRACE => (&TRACE_CS, &*TRACE_FIELDS),
+        Level::DEBUG => (&DEBUG_CS, &*DEBUG_FIELDS),
+        Level::INFO => (&INFO_CS, &*INFO_FIELDS),
+        Level::WARN => (&WARN_CS, &*WARN_FIELDS),
+        Level::ERROR => (&ERROR_CS, &*ERROR_FIELDS),
     }
 }
 
-fn loglevel_to_cs(level: log::Level) -> (&'static dyn Callsite, &'static Fields) {
+fn loglevel_to_cs(
+    level: log::Level,
+) -> (
+    &'static dyn Callsite,
+    &'static Fields,
+    &'static Metadata<'static>,
+) {
     match level {
-        log::Level::Trace => (TRACE_CS, &*TRACE_FIELDS),
-        log::Level::Debug => (DEBUG_CS, &*DEBUG_FIELDS),
-        log::Level::Info => (INFO_CS, &*INFO_FIELDS),
-        log::Level::Warn => (WARN_CS, &*WARN_FIELDS),
-        log::Level::Error => (ERROR_CS, &*ERROR_FIELDS),
+        log::Level::Trace => (&TRACE_CS, &*TRACE_FIELDS, &TRACE_META),
+        log::Level::Debug => (&DEBUG_CS, &*DEBUG_FIELDS, &DEBUG_META),
+        log::Level::Info => (&INFO_CS, &*INFO_FIELDS, &INFO_META),
+        log::Level::Warn => (&WARN_CS, &*WARN_FIELDS, &WARN_META),
+        log::Level::Error => (&ERROR_CS, &*ERROR_FIELDS, &ERROR_META),
     }
 }
 
@@ -340,6 +413,7 @@ impl crate::sealed::Sealed for log::Level {}
 
 impl AsTrace for log::Level {
     type Trace = tracing_core::Level;
+    #[inline]
     fn as_trace(&self) -> tracing_core::Level {
         match self {
             log::Level::Error => tracing_core::Level::ERROR,
@@ -351,6 +425,39 @@ impl AsTrace for log::Level {
     }
 }
 
+impl crate::sealed::Sealed for log::LevelFilter {}
+
+impl AsTrace for log::LevelFilter {
+    type Trace = tracing_core::LevelFilter;
+    #[inline]
+    fn as_trace(&self) -> tracing_core::LevelFilter {
+        match self {
+            log::LevelFilter::Off => tracing_core::LevelFilter::OFF,
+            log::LevelFilter::Error => tracing_core::LevelFilter::ERROR,
+            log::LevelFilter::Warn => tracing_core::LevelFilter::WARN,
+            log::LevelFilter::Info => tracing_core::LevelFilter::INFO,
+            log::LevelFilter::Debug => tracing_core::LevelFilter::DEBUG,
+            log::LevelFilter::Trace => tracing_core::LevelFilter::TRACE,
+        }
+    }
+}
+
+impl crate::sealed::Sealed for tracing_core::LevelFilter {}
+
+impl AsLog for tracing_core::LevelFilter {
+    type Log = log::LevelFilter;
+    #[inline]
+    fn as_log(&self) -> Self::Log {
+        match *self {
+            tracing_core::LevelFilter::OFF => log::LevelFilter::Off,
+            tracing_core::LevelFilter::ERROR => log::LevelFilter::Error,
+            tracing_core::LevelFilter::WARN => log::LevelFilter::Warn,
+            tracing_core::LevelFilter::INFO => log::LevelFilter::Info,
+            tracing_core::LevelFilter::DEBUG => log::LevelFilter::Debug,
+            tracing_core::LevelFilter::TRACE => log::LevelFilter::Trace,
+        }
+    }
+}
 /// Extends log `Event`s to provide complete `Metadata`.
 ///
 /// In `tracing-log`, an `Event` produced by a log (through [`AsTrace`]) has an hard coded
@@ -387,13 +494,13 @@ impl<'a> NormalizeEvent<'a> for Event<'a> {
     fn normalized_metadata(&'a self) -> Option<Metadata<'a>> {
         let original = self.metadata();
         if self.is_log() {
-            let mut fields = LogVisitor::new_for(self, level_to_cs(original.level()).1);
+            let mut fields = LogVisitor::new_for(self, level_to_cs(*original.level()).1);
             self.record(&mut fields);
 
             Some(Metadata::new(
                 "log event",
                 fields.target.unwrap_or("log"),
-                original.level().clone(),
+                *original.level(),
                 fields.file,
                 fields.line.map(|l| l as u32),
                 fields.module_path,
@@ -406,7 +513,7 @@ impl<'a> NormalizeEvent<'a> for Event<'a> {
     }
 
     fn is_log(&self) -> bool {
-        self.metadata().callsite() == identify_callsite!(level_to_cs(self.metadata().level()).0)
+        self.metadata().callsite() == identify_callsite!(level_to_cs(*self.metadata().level()).0)
     }
 }
 
@@ -479,7 +586,7 @@ mod test {
             .build();
 
         let meta = record.as_trace();
-        let (cs, _keys) = loglevel_to_cs(record.level());
+        let (cs, _keys, _) = loglevel_to_cs(record.level());
         let cs_meta = cs.metadata();
         assert_eq!(
             meta.callsite(),

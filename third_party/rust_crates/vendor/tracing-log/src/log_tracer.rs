@@ -19,15 +19,12 @@
 //! such as when a crate emits both `tracing` diagnostics _and_ log records by
 //! default.
 //!
-//! [`LogTracer`]: struct.LogTracer.html
-//! [`log`]: https://docs.rs/log/0.4.8/log/
-//! [logger interface]: https://docs.rs/log/0.4.8/log/trait.Log.html
-//! [`init`]: struct.LogTracer.html#method.init.html
-//! [`init_with_filter`]: struct.LogTracer.html#method.init_with_filter.html
-//! [builder]: struct.LogTracer.html#method.builder
-//! [ignore]: struct.Builder.html#method.ignore_crate
-use crate::{format_trace, AsTrace};
-use log;
+//! [logger interface]: log::Log
+//! [`init`]: LogTracer.html#method.init
+//! [`init_with_filter`]: LogTracer.html#method.init_with_filter
+//! [builder]: LogTracer::builder()
+//! [ignore]: Builder::ignore_crate()
+use crate::AsTrace;
 pub use log::SetLoggerError;
 use tracing_core::dispatcher;
 
@@ -112,6 +109,7 @@ impl LogTracer {
     ///
     /// [`builder`]: #method.builder
     #[cfg(feature = "std")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn init_with_filter(level: log::LevelFilter) -> Result<(), SetLoggerError> {
         Self::builder().with_max_level(level).init()
     }
@@ -146,6 +144,7 @@ impl LogTracer {
     /// [`init_with_filter`]: #method.init_with_filter
     /// [`builder`]: #method.builder
     #[cfg(feature = "std")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn init() -> Result<(), SetLoggerError> {
         Self::builder().init()
     }
@@ -159,33 +158,32 @@ impl Default for LogTracer {
 
 impl log::Log for LogTracer {
     fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
-        if self.ignore_crates.is_empty() {
-            return true;
+        // First, check the log record against the current max level enabled by
+        // the current `tracing` subscriber.
+        if metadata.level().as_trace() > tracing_core::LevelFilter::current() {
+            // If the log record's level is above that, disable it.
+            return false;
         }
 
-        // If we are ignoring certain module paths, ensure that the metadata
-        // does not start with one of those paths.
-        let target = metadata.target();
-        !self
-            .ignore_crates
-            .iter()
-            .any(|ignored| target.starts_with(ignored))
+        // Okay, it wasn't disabled by the max level — do we have any specific
+        // modules to ignore?
+        if !self.ignore_crates.is_empty() {
+            // If we are ignoring certain module paths, ensure that the metadata
+            // does not start with one of those paths.
+            let target = metadata.target();
+            for ignored in &self.ignore_crates[..] {
+                if target.starts_with(ignored) {
+                    return false;
+                }
+            }
+        }
+
+        // Finally, check if the current `tracing` dispatcher cares about this.
+        dispatcher::get_default(|dispatch| dispatch.enabled(&metadata.as_trace()))
     }
 
     fn log(&self, record: &log::Record<'_>) {
-        let enabled = dispatcher::get_default(|dispatch| {
-            // TODO: can we cache this for each log record, so we can get
-            // similar to the callsite cache?
-            dispatch.enabled(&record.as_trace())
-        });
-
-        if enabled {
-            // TODO: if the record is enabled, we'll get the current dispatcher
-            // twice --- once to check if enabled, and again to dispatch the event.
-            // If we could construct events without dispatching them, we could
-            // re-use the dispatcher reference...
-            format_trace(record).unwrap();
-        }
+        crate::dispatch_record(record);
     }
 
     fn flush(&self) {}
@@ -241,6 +239,7 @@ impl Builder {
     ///
     /// Setting a global logger can only be done once.
     #[cfg(feature = "std")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn init(self) -> Result<(), SetLoggerError> {
         let ignore_crates = self.ignore_crates.into_boxed_slice();
         let logger = Box::new(LogTracer { ignore_crates });

@@ -1,3 +1,96 @@
+# 0.1.17 (September 28, 2020)
+
+### Fixed
+
+- Incorrect inlining of `Event::dispatch` and `Event::child_of`, which could
+  result in `dispatcher::get_default` being inlined at the callsite ([#994])
+
+### Added
+
+- `Copy` implementations for `Level` and `LevelFilter` ([#992])
+
+Thanks to new contributors @jyn514 and @TaKO8Ki for contributing to this 
+release!
+
+[#994]: https://github.com/tokio-rs/tracing/pull/994
+[#992]: https://github.com/tokio-rs/tracing/pull/992
+
+# 0.1.16 (September 8, 2020)
+
+### Fixed
+
+- Added a conversion from `Option<Level>` to `LevelFilter`. This resolves a
+  previously unreported regression where `Option<Level>` was no longer
+  a valid LevelFilter. ([#966](https://github.com/tokio-rs/tracing/pull/966))
+
+# 0.1.15 (August 22, 2020)
+
+### Fixed
+
+- When combining `Interest` from multiple subscribers, if the interests differ,
+  the current subscriber is now always asked if a callsite should be enabled
+  (#927)
+
+## Added
+
+- Internal API changes to support optimizations in the `tracing` crate (#943)
+- **docs**: Multiple fixes and improvements (#913, #941)
+
+# 0.1.14 (August 10, 2020)
+
+### Fixed
+
+- Incorrect calculation of global max level filter which could result in fast
+  filtering paths not being taken (#908)
+  
+# 0.1.13 (August 4, 2020)
+
+### Fixed
+
+- Missing `fmt::Display` impl for `field::DisplayValue` causing a compilation
+  failure when the "log" feature is enabled (#887)
+  
+Thanks to @d-e-s-o for contributing to this release!
+
+# 0.1.12 (July 31, 2020)
+
+### Added
+
+- `LevelFilter` type and `LevelFilter::current()` for returning the highest level
+  that any subscriber will enable (#853)
+- `Subscriber::max_level_hint` optional trait method, for setting the value
+  returned by `LevelFilter::current()` (#853)
+  
+### Fixed
+
+- **docs**: Removed outdated reference to a Tokio API that no longer exists
+  (#857)
+
+Thanks to new contributor @dignati for contributing to this release!
+
+# 0.1.11 (June 8, 2020)
+
+### Changed
+
+- Replaced use of `inner_local_macros` with `$crate::` (#729)
+
+### Added
+
+- `must_use` warning to guards returned by `dispatcher::set_default` (#686)
+- `fmt::Debug` impl to `dyn Value`s (#696) 
+- Functions to convert between `span::Id` and `NonZeroU64` (#770)
+- More obvious warnings in documentation (#769)
+
+### Fixed
+
+- Compiler error when `tracing-core/std` feature is enabled but `tracing/std` is
+  not (#760)
+- Clippy warning on vtable address comparison in `callsite::Identifier` (#749)
+- Documentation formatting issues (#715, #771)
+
+Thanks to @bkchr, @majecty, @taiki-e, @nagisa, and @nvzqz for contributing to
+this release!
+
 # 0.1.10 (January 24, 2020)
 
 ### Added

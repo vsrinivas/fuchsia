@@ -29,7 +29,6 @@ pub struct Event<'a> {
 impl<'a> Event<'a> {
     /// Constructs a new `Event` with the specified metadata and set of values,
     /// and observes it with the current subscriber.
-    #[inline]
     pub fn dispatch(metadata: &'static Metadata<'static>, fields: &'a field::ValueSet<'_>) {
         let event = Event::new(metadata, fields);
         crate::dispatcher::get_default(|current| {
@@ -41,11 +40,7 @@ impl<'a> Event<'a> {
     /// and set of values.
     #[inline]
     pub fn new(metadata: &'static Metadata<'static>, fields: &'a field::ValueSet<'a>) -> Self {
-        Event {
-            metadata,
-            fields,
-            parent: Parent::Current,
-        }
+        Event { metadata, fields, parent: Parent::Current }
     }
 
     /// Returns a new `Event` as a child of the specified span, with the
@@ -60,16 +55,11 @@ impl<'a> Event<'a> {
             Some(p) => Parent::Explicit(p),
             None => Parent::Root,
         };
-        Event {
-            metadata,
-            fields,
-            parent,
-        }
+        Event { metadata, fields, parent }
     }
 
     /// Constructs a new `Event` with the specified metadata and set of values,
     /// and observes it with the current subscriber and an explicit parent.
-    #[inline]
     pub fn child_of(
         parent: impl Into<Option<Id>>,
         metadata: &'static Metadata<'static>,

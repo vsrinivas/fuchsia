@@ -735,11 +735,15 @@ group("toml") {
 }
 
 group("tracing") {
-  deps = [ ":tracing-v0_1_15" ]
+  deps = [ ":tracing-v0_1_25" ]
 }
 
 group("tracing-futures") {
-  deps = [ ":tracing-futures-v0_2_4" ]
+  deps = [ ":tracing-futures-v0_2_5" ]
+}
+
+group("tracing-log") {
+  deps = [ ":tracing-log-v0_1_2" ]
 }
 
 group("tracing-subscriber") {
@@ -9316,28 +9320,29 @@ rust_library("tower-service-v0_3_0") {
   ]
 }
 
-rust_library("tracing-v0_1_15") {
+rust_library("tracing-v0_1_25") {
   crate_name = "tracing"
   crate_root = "//third_party/rust_crates/vendor/tracing/src/lib.rs"
-  output_name = "tracing-7df98c48eff2097"
+  output_name = "tracing-c94323666e971838"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":cfg-if-v0_1_10" ]
+  deps += [ ":cfg-if-v1_0_0" ]
   deps += [ ":log-v0_4_11" ]
-  deps += [ ":tracing-attributes-v0_1_9($host_toolchain)" ]
-  deps += [ ":tracing-core-v0_1_10" ]
+  deps += [ ":pin-project-lite-v0_2_4" ]
+  deps += [ ":tracing-attributes-v0_1_13($host_toolchain)" ]
+  deps += [ ":tracing-core-v0_1_17" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=7df98c48eff2097",
-    "-Cextra-filename=-7df98c48eff2097",
+    "-Cmetadata=c94323666e971838",
+    "-Cextra-filename=-c94323666e971838",
     "--cfg=feature=\"attributes\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"log\"",
@@ -9346,10 +9351,10 @@ rust_library("tracing-v0_1_15") {
   ]
 }
 
-rust_proc_macro("tracing-attributes-v0_1_9") {
+rust_proc_macro("tracing-attributes-v0_1_13") {
   crate_name = "tracing_attributes"
   crate_root = "//third_party/rust_crates/vendor/tracing-attributes/src/lib.rs"
-  output_name = "tracing_attributes-1e51075a344d1a76"
+  output_name = "tracing_attributes-e32085986140309a"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -9365,15 +9370,15 @@ rust_proc_macro("tracing-attributes-v0_1_9") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=1e51075a344d1a76",
-    "-Cextra-filename=-1e51075a344d1a76",
+    "-Cmetadata=e32085986140309a",
+    "-Cextra-filename=-e32085986140309a",
   ]
 }
 
-rust_library("tracing-core-v0_1_10") {
+rust_library("tracing-core-v0_1_17") {
   crate_name = "tracing_core"
   crate_root = "//third_party/rust_crates/tiny_mirrors/tracing-core/src/lib.rs"
-  output_name = "tracing_core-1a1da1948dcfba9e"
+  output_name = "tracing_core-54e4edd42ff24907"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -9387,34 +9392,34 @@ rust_library("tracing-core-v0_1_10") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=1a1da1948dcfba9e",
-    "-Cextra-filename=-1a1da1948dcfba9e",
+    "-Cmetadata=54e4edd42ff24907",
+    "-Cextra-filename=-54e4edd42ff24907",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
   ]
 }
 
-rust_library("tracing-futures-v0_2_4") {
+rust_library("tracing-futures-v0_2_5") {
   crate_name = "tracing_futures"
   crate_root = "//third_party/rust_crates/vendor/tracing-futures/src/lib.rs"
-  output_name = "tracing_futures-5bf1848656e98263"
+  output_name = "tracing_futures-3433c9509e7eda17"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":pin-project-v0_4_26" ]
-  deps += [ ":tracing-v0_1_15" ]
+  deps += [ ":pin-project-v1_0_4" ]
+  deps += [ ":tracing-v0_1_25" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=5bf1848656e98263",
-    "-Cextra-filename=-5bf1848656e98263",
+    "-Cmetadata=3433c9509e7eda17",
+    "-Cextra-filename=-3433c9509e7eda17",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"pin-project\"",
     "--cfg=feature=\"std\"",
@@ -9422,10 +9427,10 @@ rust_library("tracing-futures-v0_2_4") {
   ]
 }
 
-rust_library("tracing-log-v0_1_1") {
+rust_library("tracing-log-v0_1_2") {
   crate_name = "tracing_log"
   crate_root = "//third_party/rust_crates/vendor/tracing-log/src/lib.rs"
-  output_name = "tracing_log-e2660b4a22826952"
+  output_name = "tracing_log-ccb7308262919f5b"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -9434,17 +9439,19 @@ rust_library("tracing-log-v0_1_1") {
   deps = []
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":log-v0_4_11" ]
-  deps += [ ":tracing-core-v0_1_10" ]
+  deps += [ ":tracing-core-v0_1_17" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=e2660b4a22826952",
-    "-Cextra-filename=-e2660b4a22826952",
+    "-Cmetadata=ccb7308262919f5b",
+    "-Cextra-filename=-ccb7308262919f5b",
+    "--cfg=feature=\"default\"",
     "--cfg=feature=\"log-tracer\"",
     "--cfg=feature=\"std\"",
+    "--cfg=feature=\"trace-logger\"",
   ]
 }
 
@@ -9460,8 +9467,8 @@ rust_library("tracing-subscriber-v0_2_7") {
   deps = []
   deps += [ ":chrono-v0_4_11" ]
   deps += [ ":sharded-slab-v0_0_9" ]
-  deps += [ ":tracing-core-v0_1_10" ]
-  deps += [ ":tracing-log-v0_1_1" ]
+  deps += [ ":tracing-core-v0_1_17" ]
+  deps += [ ":tracing-log-v0_1_2" ]
 
   rustenv = []
 

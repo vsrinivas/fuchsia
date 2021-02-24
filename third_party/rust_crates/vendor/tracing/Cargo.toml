@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "tracing"
-version = "0.1.15"
+version = "0.1.25"
 authors = ["Eliza Weisman <eliza@buoyant.io>", "Tokio Contributors <team@tokio.rs>"]
 description = "Application-level tracing for Rust.\n"
 homepage = "https://tokio.rs"
@@ -34,18 +34,21 @@ harness = false
 name = "no_subscriber"
 harness = false
 [dependencies.cfg-if]
-version = "0.1.10"
+version = "1.0.0"
 
 [dependencies.log]
 version = "0.4"
 optional = true
 
+[dependencies.pin-project-lite]
+version = "0.2"
+
 [dependencies.tracing-attributes]
-version = "0.1.8"
+version = "0.1.13"
 optional = true
 
 [dependencies.tracing-core]
-version = "0.1.10"
+version = "0.1.17"
 default-features = false
 [dev-dependencies.criterion]
 version = "0.3"
@@ -56,6 +59,10 @@ version = "0.1"
 
 [dev-dependencies.log]
 version = "0.4"
+
+[dev-dependencies.tokio]
+version = "0.2.21"
+features = ["rt-core"]
 
 [features]
 async-await = []
@@ -75,5 +82,7 @@ release_max_level_off = []
 release_max_level_trace = []
 release_max_level_warn = []
 std = ["tracing-core/std"]
+[target."cfg(target_arch = \"wasm32\")".dev-dependencies.wasm-bindgen-test]
+version = "^0.3"
 [badges.maintenance]
 status = "actively-developed"
