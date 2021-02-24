@@ -2,8 +2,16 @@ abarth@google.com
 gboone@google.com
 raggi@google.com
 mangini@google.com
-per-file add-update-source,build-push,push-package,serve,serve-updates,lib/updates.sh = file: /src/sys/pkg/OWNERS
-# per-file-COMPONENT add-update-source,build-push,push-package,serve,serve-updates,lib/updates.sh = Packages
+
+per-file             add-update-source,build-push,lib/updates.sh = file: /src/sys/pkg/OWNERS
+# per-file-COMPONENT add-update-source,build-push,lib/updates.sh = Packages
+per-file             push-package,serve,serve-updates,update     = file: /src/sys/pkg/OWNERS
+# per-file-COMPONENT push-package,serve,serve-updates,update     = Packages
+
+per-file             flash,flash-migration,flash-remote                = file: /src/firmware/OWNERS
+# per-file-COMPONENT flash,flash-migration,flash-remote                = Firmware
+per-file             pave,pave-remote,pave-zedboot,pave-zedboot-remote = joshuaseaton@google.com,mangini@google.com,surajmalhotra@google.com
+# per-file-COMPONENT pave,pave-remote,pave-zedboot,pave-zedboot-remote = Zircon>FW-Services
 
 per-file             args,build,clean,clean-build,gen,get-build-artifacts = file: /build/OWNERS
 # per-file-COMPONENT args,build,clean,clean-build,gen,get-build-artifacts = Build>Workflow
