@@ -60,6 +60,12 @@ kernel_cmdline("x64-reduced-perf-variation") {
   ]
 }
 
+kernel_cmdline("gce") {
+  # TODO(http://fxbug.dev/67007): Remove this cmdline option once serial works
+  # reliably on GCE.
+  args = [ "kernel.bypass-debuglog=true" ]
+}
+
 kernel_cmdline("vs680") {
   args = [ "kernel.bypass-debuglog=true" ]
 }
