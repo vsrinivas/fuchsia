@@ -198,6 +198,17 @@ void free(void* ptr) {
   cmpct_free(ptr);
 }
 
+void sized_free(void* ptr, size_t s) {
+  DEBUG_ASSERT(!arch_blocking_disallowed());
+
+  LTRACEF("ptr %p size %lu\n", ptr, s);
+  if (unlikely(heap_trace)) {
+    printf("caller %p free %p size %lu\n", __GET_CALLER(), ptr, s);
+  }
+
+  cmpct_sized_free(ptr, s);
+}
+
 static void heap_dump(bool panic_time) { cmpct_dump(panic_time); }
 
 void heap_get_info(size_t* total_bytes, size_t* free_bytes) {

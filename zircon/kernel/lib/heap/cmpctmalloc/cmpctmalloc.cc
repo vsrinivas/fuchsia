@@ -960,15 +960,9 @@ NO_ASAN void* cmpct_alloc(size_t size) {
   return result;
 }
 
-NO_ASAN void cmpct_free(void* payload) {
-  if (payload == NULL) {
-    return;
-  }
-
-  LockGuard guard(TheHeapLock::Get());
-
-  header_t* header = (header_t*)payload - 1;
+NO_ASAN void cmpct_free_internal(void* payload, header_t* header) TA_REQ(TheHeapLock::Get()) {
   ZX_DEBUG_ASSERT(!is_tagged_as_free(header));  // Double free!
+  ZX_ASSERT_MSG(header->size > sizeof(header_t), "got %lu min %lu", header->size, sizeof(header_t));
 
 #if KERNEL_ASAN
   asan_poison_shadow(reinterpret_cast<uintptr_t>(payload), header->size - sizeof(header_t),
@@ -1008,6 +1002,41 @@ NO_ASAN void cmpct_free(void* payload) {
       free_memory(header, left, size);
     }
   }
+}
+
+NO_ASAN void cmpct_free(void* payload) {
+  if (payload == NULL) {
+    return;
+  }
+
+  LockGuard guard(TheHeapLock::Get());
+  header_t* header = (header_t*)payload - 1;
+  return cmpct_free_internal(payload, header);
+}
+
+NO_ASAN void cmpct_sized_free(void* payload, size_t s) {
+  if (payload == NULL) {
+    return;
+  }
+
+  LockGuard guard(TheHeapLock::Get());
+  header_t* header = (header_t*)payload - 1;
+  // header->size is the size of the heap block |payload| is in, plus sizeof(header_t), plus
+  // the difference between the block size and the requested allocation size. If kernel ASAN
+  // is enabled, it also includes an ASAN redzone.
+  ZX_ASSERT_MSG(header->size >= s, "expected %lu got %lu", header->size, s);
+#if !KERNEL_ASAN
+  // Heap blocks are larger than |s| by at most:
+  // 1. sizeof(header_t)
+  // 2. sizeof(free_t) - we don't split heap blocks if the remaining space is < free_t,
+  //    so free_t additional bytes can be present
+  // 3. A bucket- and size-dependent extra space, see cmpct_alloc's computation.
+  //
+  // The computation here is a conservative limit on that difference rather than a precise limit.
+  const size_t max_diff = sizeof(header_t) + sizeof(free_t) + (s >> 2);
+  ZX_ASSERT_MSG((header->size - s) <= max_diff, "header->size %lu s %lu", header->size, s);
+#endif
+  return cmpct_free_internal(payload, header);
 }
 
 NO_ASAN void* cmpct_memalign(size_t alignment, size_t size) {

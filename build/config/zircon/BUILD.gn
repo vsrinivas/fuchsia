@@ -152,6 +152,11 @@ config("compiler") {
       # cause the presumption of executable stack as they do in GCC.
       ldflags += [ "-Wl,-z,noexecstack" ]
     } else {
+      # gcc defaults to enabling sized deallocation >= c++14; clang does not.
+      # Enable sized-deallocation for the kernel, so the heap implementation can
+      # optimize for or check generated sizes.
+      cflags += [ "-fsized-deallocation" ]
+
       # TODO(mcgrathr): This should be default in the compiler driver.
       ldflags += [ "-Wl,--pack-dyn-relocs=relr" ]
     }

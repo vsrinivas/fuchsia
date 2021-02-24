@@ -207,6 +207,13 @@ TEST_F(CmpctmallocTest, CanMemalignAndFree) {
   }
 }
 
+TEST_F(CmpctmallocTest, SizedFree) {
+  constexpr size_t kAllocSize = 1000;
+  void* const p = cmpct_alloc(kAllocSize);
+  EXPECT_NOT_NULL(p);
+  cmpct_sized_free(p, kAllocSize);
+}
+
 TEST_F(CmpctmallocTest, LargeAllocsAreNull) {
   void* p = cmpct_alloc(kHeapMaxAllocSize);
   EXPECT_NOT_NULL(p);
