@@ -203,7 +203,7 @@ class DevfsFidlServer : public fio::DirectoryAdmin::Interface {
                       MountAndCreateCompleter::Sync& completer) override {}
   void Unmount(UnmountCompleter::Sync& completer) override {}
   void UnmountNode(UnmountNodeCompleter::Sync& completer) override {}
-  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override {}
+  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override;
   void GetDevicePath(GetDevicePathCompleter::Sync& completer) override {}
 
  private:
@@ -804,13 +804,14 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
     return ZX_ERR_PEER_CLOSED;
   }
 
+  TxnForwarder transaction(txn);
+
   auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
 
   zx_status_t r;
   uint64_t ordinal = hdr->ordinal;
   switch (ordinal) {
     case fuchsia_io_NodeCloneOrdinal: {
-      TxnForwarder transaction(txn);
       ios->server_->set_current_dispatcher(dispatcher);
       auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
       ios->server_->clear_current_dispatcher();
@@ -839,7 +840,6 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
       return txn->reply(txn, &raw_msg);
     }
     case fuchsia_io_DirectoryOpenOrdinal: {
-      TxnForwarder transaction(txn);
       ios->server_->set_current_dispatcher(dispatcher);
       auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
       ios->server_->clear_current_dispatcher();
@@ -898,11 +898,11 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
       return fuchsia_io_DirectoryWatch_reply(txn, r);
     }
     case fuchsia_io_DirectoryAdminQueryFilesystemOrdinal: {
-      DECODE_REQUEST(msg, DirectoryAdminQueryFilesystem);
-      fuchsia_io_FilesystemInfo info;
-      memset(&info, 0, sizeof(info));
-      strlcpy((char*)info.name, "devfs", fio::MAX_FS_NAME_BUFFER);
-      return fuchsia_io_DirectoryAdminQueryFilesystem_reply(txn, ZX_OK, &info);
+      ios->server_->set_current_dispatcher(dispatcher);
+      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
+      ios->server_->clear_current_dispatcher();
+      ZX_ASSERT(result == fidl::DispatchResult::kFound);
+      return transaction.GetStatus();
     }
   }  // switch
 
@@ -929,6 +929,12 @@ void DevfsFidlServer::Clone(uint32_t flags, fidl::ServerEnd<fio::Node> object,
   char path[] = ".";
   devfs_open(owner_->devnode_, current_dispatcher_, object.TakeChannel().release(), path,
              flags | ZX_FS_FLAG_NOREMOTE);
+}
+
+void DevfsFidlServer::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
+  fidl::tracking_ptr<fio::FilesystemInfo> info(std::make_unique<fio::FilesystemInfo>());
+  strlcpy(reinterpret_cast<char*>(info->name.data()), "devfs", fio::MAX_FS_NAME_BUFFER);
+  completer.Reply(ZX_OK, std::move(info));
 }
 
 void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
