@@ -50,6 +50,13 @@ func TestFileTreeHasLowerPrefix(t *testing.T) {
 	}
 }
 
+func TestFileTreeWithDontSkip(t *testing.T) {
+	want, got := setupFileTreeTestDir("skipdir", t)
+	if !got.Equal(want) {
+		t.Errorf("%v(): got %v, want %v", t.Name(), got, want)
+	}
+}
+
 func setupFileTreeTestDir(name string, t *testing.T) (*FileTree, *FileTree) {
 	// Find the right testdata directory for this test.
 	testDir, err := filepath.Abs(filepath.Join(*testDataDir, "filetree", name))
