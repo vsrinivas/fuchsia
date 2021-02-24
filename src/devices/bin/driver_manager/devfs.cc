@@ -178,7 +178,7 @@ class DevfsFidlServer : public fio::DirectoryAdmin::Interface {
   void Close(CloseCompleter::Sync& completer) override {}
   void Describe(DescribeCompleter::Sync& completer) override {}
   void Sync(SyncCompleter::Sync& completer) override {}
-  void GetAttr(GetAttrCompleter::Sync& completer) override {}
+  void GetAttr(GetAttrCompleter::Sync& completer) override;
   void SetAttr(uint32_t flags, fio::wire::NodeAttributes attributes,
                SetAttrCompleter::Sync& completer) override {}
 
@@ -846,21 +846,11 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
       return transaction.GetStatus();
     }
     case fuchsia_io_NodeGetAttrOrdinal: {
-      DECODE_REQUEST(msg, NodeGetAttr);
-      uint32_t mode;
-      if (devnode_is_dir(dn)) {
-        mode = V_TYPE_DIR | V_IRUSR | V_IWUSR;
-      } else {
-        mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
-      }
-
-      fuchsia_io_NodeAttributes attributes;
-      memset(&attributes, 0, sizeof(attributes));
-      attributes.mode = mode;
-      attributes.content_size = 0;
-      attributes.link_count = 1;
-      attributes.id = dn->ino;
-      return fuchsia_io_NodeGetAttr_reply(txn, ZX_OK, &attributes);
+      ios->server_->set_current_dispatcher(dispatcher);
+      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
+      ios->server_->clear_current_dispatcher();
+      ZX_ASSERT(result == fidl::DispatchResult::kFound);
+      return transaction.GetStatus();
     }
     case fuchsia_io_DirectoryRewindOrdinal: {
       ios->server_->set_current_dispatcher(dispatcher);
@@ -953,6 +943,22 @@ void DevfsFidlServer::ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync
     status = ZX_OK;
   }
   completer.Reply(status, fidl::VectorView<uint8_t>(fidl::unowned_ptr<uint8_t>(data), actual));
+}
+
+void DevfsFidlServer::GetAttr(GetAttrCompleter::Sync& completer) {
+  uint32_t mode;
+  if (devnode_is_dir(owner_->devnode_)) {
+    mode = V_TYPE_DIR | V_IRUSR | V_IWUSR;
+  } else {
+    mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
+  }
+
+  fio::NodeAttributes attributes;
+  attributes.mode = mode;
+  attributes.content_size = 0;
+  attributes.link_count = 1;
+  attributes.id = owner_->devnode_->ino;
+  completer.Reply(ZX_OK, attributes);
 }
 
 void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
