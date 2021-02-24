@@ -6,7 +6,7 @@
   "textExtensionList": ["a", "b", "c"],
   "prohibitedLicenseTypes" :["1", "2", "3"],
   "outputFilePrefix": "NOTICE",
-  "outputFileExtension": "html.gz",
+  "outputFileExtensions": ["txt.gz"],
   "singleLicenseFiles": ["a", "b", "c"],
   "licensePatternDir": "tools/check-licenses/golden/patterns",
   "baseDir": ".",

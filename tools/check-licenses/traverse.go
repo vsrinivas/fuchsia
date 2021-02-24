@@ -111,9 +111,11 @@ func Walk(ctx context.Context, config *Config) error {
 	}
 
 	if config.OutputLicenseFile {
-		path := config.OutputFilePrefix + "." + config.OutputFileExtension
-		if err := saveToOutputFile(path, licenses); err != nil {
-			return err
+		for _, extension := range config.OutputFileExtensions {
+			path := config.OutputFilePrefix + "." + extension
+			if err := saveToOutputFile(path, licenses); err != nil {
+				return err
+			}
 		}
 	}
 	metrics.print()

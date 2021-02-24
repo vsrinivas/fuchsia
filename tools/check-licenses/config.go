@@ -29,7 +29,7 @@ type Config struct {
 	OutputLicenseFile            bool                   `json:"outputLicenseFile"`
 	MaxReadSize                  int                    `json:"maxReadSize"`
 	OutputFilePrefix             string                 `json:"outputFilePrefix"`
-	OutputFileExtension          string                 `json:"outputFileExtension"`
+	OutputFileExtensions         []string               `json:"outputFileExtensions"`
 	SingleLicenseFiles           []string               `json:"singleLicenseFiles"`
 	StopLicensePropagation       []string               `json:"stopLicensePropagation"`
 	LicensePatternDir            string                 `json:"licensePatternDir"`
@@ -81,6 +81,7 @@ func (c *Config) Merge(other *Config) {
 	c.ProhibitedLicenseTypes = append(c.ProhibitedLicenseTypes, other.ProhibitedLicenseTypes...)
 	c.TextExtensionList = append(c.TextExtensionList, other.TextExtensionList...)
 	c.StrictTextExtensionList = append(c.StrictTextExtensionList, other.StrictTextExtensionList...)
+	c.OutputFileExtensions = append(c.OutputFileExtensions, other.OutputFileExtensions...)
 	c.ExitOnDirRestrictedLicense = c.ExitOnDirRestrictedLicense || other.ExitOnDirRestrictedLicense
 	c.ExitOnProhibitedLicenseTypes = c.ExitOnProhibitedLicenseTypes || other.ExitOnProhibitedLicenseTypes
 	c.ExitOnUnlicensedFiles = c.ExitOnUnlicensedFiles || other.ExitOnUnlicensedFiles
@@ -91,9 +92,6 @@ func (c *Config) Merge(other *Config) {
 	}
 	if c.OutputFilePrefix == "" {
 		c.OutputFilePrefix = other.OutputFilePrefix
-	}
-	if c.OutputFileExtension == "" {
-		c.OutputFileExtension = other.OutputFileExtension
 	}
 	c.SingleLicenseFiles = append(c.SingleLicenseFiles, other.SingleLicenseFiles...)
 	c.StopLicensePropagation = append(c.StopLicensePropagation, other.StopLicensePropagation...)

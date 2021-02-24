@@ -11,7 +11,9 @@
   "strictAnalysis": true,
   "outputLicenseFile": true,
   "outputFilePrefix": "NOTICE",
-  "outputFileExtension": "html.gz",
+  "outputFileExtensions": [
+      "html.gz"
+  ],
   "singleLicenseFiles": [],
   "customProjectLicenses" : [],
   "licensePatternDir": "tools/check-licenses/golden/patterns",

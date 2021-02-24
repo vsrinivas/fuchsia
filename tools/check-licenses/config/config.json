@@ -108,7 +108,10 @@
   "strictAnalysis": true,
   "outputLicenseFile": true,
   "outputFilePrefix": "NOTICE",
-  "outputFileExtension": "html.gz",
+  "outputFileExtensions": [
+      "html.gz",
+      "txt.gz"
+  ],
   "singleLicenseFiles": [
     "about_os_credits.html",
     "copying",
@@ -119,7 +122,7 @@
     "ofl",
     "unicode_license.txt"
   ],
-  "customProjectLicenses" : [
+  "customProjectLicenses": [
     {
       "projectRoot": "prebuilt/third_party/rust/linux-x64",
       "licenseLocation": "share/doc/rust/COPYRIGHT"
