@@ -13,8 +13,6 @@ void DebugAdapterContextTest::SetUp() {
   RemoteAPITest::SetUp();
   context_ = std::make_unique<DebugAdapterContext>(&session(), pipe_.end1());
   client_ = dap::Session::create();
-  process_ = InjectProcess(kProcessKoid);
-  thread_ = InjectThread(kProcessKoid, kThreadKoid);
 
   client_->connect(std::make_shared<DebugAdapterReader>(pipe_.end2()),
                    std::make_shared<DebugAdapterWriter>(pipe_.end2()));
@@ -23,12 +21,20 @@ void DebugAdapterContextTest::SetUp() {
 }
 
 void DebugAdapterContextTest::TearDown() {
-  thread_ = nullptr;
-  process_ = nullptr;
-
   context_.reset();
   client_.reset();
   RemoteAPITest::TearDown();
+}
+
+void DebugAdapterContextTest::IntializeDebugging() {
+  // Send initialize request from the client.
+  auto response = client().send(dap::InitializeRequest{});
+  // Run server to process request
+  context().OnStreamReadable();
+  // Run client twice to receive initialize response and event.
+  RunClient();
+  RunClient();
+  response.get();
 }
 
 }  // namespace zxdb

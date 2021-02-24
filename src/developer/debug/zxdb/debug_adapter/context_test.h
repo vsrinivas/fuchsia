@@ -86,8 +86,8 @@ class DebugAdapterContextTest : public RemoteAPITest {
     }
   }
 
-  Process* process() const { return process_; }
-  Thread* thread() const { return thread_; }
+  // Helper method to set up debug adapter session between client and server.
+  void IntializeDebugging();
 
   // testing::Test implementation.
   void SetUp() override;
@@ -97,10 +97,6 @@ class DebugAdapterContextTest : public RemoteAPITest {
   std::unique_ptr<DebugAdapterContext> context_;
   std::unique_ptr<dap::Session> client_;
   TestPipe pipe_;
-
-  // The injected process/thread.
-  Process* process_ = nullptr;
-  Thread* thread_ = nullptr;
 };
 
 }  // namespace zxdb
