@@ -30,22 +30,65 @@
 #include <inet6/netifc-discover.h>
 
 #include "args.h"
-#include "eff_short_wordlist_1.h"
+#include "name_tokens.h"
 
-#define APPEND_WORD(NUM, SEP)                          \
-  word = dictionary[(NUM) % DICEWARE_DICTIONARY_SIZE]; \
-  memcpy(dest, word, strlen(word));                    \
-  dest += strlen(word);                                \
-  *dest = SEP;                                         \
+// Copies a word from the wordlist starting at |dest| and then adds |sep| at the end.
+// Returns a pointer to the character after the separator.
+char* append_word(char* dest, uint16_t num, char sep) {
+  const char* word = dictionary[num % TOKEN_DICTIONARY_SIZE];
+  memcpy(dest, word, strlen(word));
+  dest += strlen(word);
+  *dest = sep;
   dest++;
+  return dest;
+}
 
-void device_id_get(unsigned char mac[6], char out[HOST_NAME_MAX]) {
-  const char* word;
+void device_id_get_words(unsigned char mac[6], char out[HOST_NAME_MAX]) {
   char* dest = out;
-  APPEND_WORD(mac[0] | ((mac[4] << 8) & 0xF00), '-');
-  APPEND_WORD(mac[1] | ((mac[5] << 8) & 0xF00), '-');
-  APPEND_WORD(mac[2] | ((mac[4] << 4) & 0xF00), '-');
-  APPEND_WORD(mac[3] | ((mac[5] << 4) & 0xF00), 0);
+  dest = append_word(dest, static_cast<uint16_t>(mac[0] | ((mac[4] << 8) & 0xF00)), '-');
+  dest = append_word(dest, static_cast<uint16_t>(mac[1] | ((mac[5] << 8) & 0xF00)), '-');
+  dest = append_word(dest, static_cast<uint16_t>(mac[2] | ((mac[4] << 4) & 0xF00)), '-');
+  dest = append_word(dest, static_cast<uint16_t>(mac[3] | ((mac[5] << 4) & 0xF00)), 0);
+}
+
+const char hex_chars[17] = "0123456789abcdef";
+
+// Copies 4 hex characters of hex value of the bits of |num|.
+// Then writes |sep| to the character after.
+// Returns a pointer to the character after the separator.
+char* append_hex(char* dest, uint16_t num, char sep) {
+  for (uint8_t i = 0; i < 4; i++) {
+    uint16_t left = num >> ((3 - i) * 4);
+    *dest = hex_chars[left & 0x0F];
+    dest++;
+  }
+  *dest = sep;
+  dest++;
+  return dest;
+}
+
+#define PREFIX_LEN 9
+const char mac_prefix[PREFIX_LEN] = "fuchsia-";
+
+void device_id_get_mac(unsigned char mac[6], char out[HOST_NAME_MAX]) {
+  char* dest = out;
+  // Prepend with 'fs-'
+  // Prepended with mac_prefix
+  for (uint8_t i = 0; i < PREFIX_LEN; i++) {
+    dest[i] = mac_prefix[i];
+  }
+  dest = dest + PREFIX_LEN - 1;
+  dest = append_hex(dest, static_cast<uint16_t>((mac[0] << 8) | mac[1]), '-');
+  dest = append_hex(dest, static_cast<uint16_t>((mac[2] << 8) | mac[3]), '-');
+  dest = append_hex(dest, static_cast<uint16_t>((mac[4] << 8) | mac[5]), 0);
+}
+
+void device_id_get(unsigned char mac[6], char out[HOST_NAME_MAX], uint32_t generation) {
+  if (generation == 1) {
+    device_id_get_mac(mac, out);
+  } else {  // Style 0
+    device_id_get_words(mac, out);
+  }
 }
 
 class DeviceNameProviderServer final : public llcpp::fuchsia::device::NameProvider::Interface {
@@ -84,7 +127,7 @@ int main(int argc, char** argv) {
           "%s\n",
           device_name, args.ethdir.c_str(), err, strerror(errno));
     } else {
-      device_id_get(mac, device_name);
+      device_id_get(mac, device_name, args.namegen);
       printf("device-name-provider: generated device name: %s\n", device_name);
     }
   }

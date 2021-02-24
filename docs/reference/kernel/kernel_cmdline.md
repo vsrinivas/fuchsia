@@ -936,8 +936,19 @@ Specify the font for the virtual console.  "9x16" and "18x32" are supported.
 
 Set the system nodename, as used by `bootserver`, `loglistener`, and the
 `net{addr,cp,ls,runcmd}` tools.  If omitted, the system will generate a
-human-readable nodename from its MAC address.  This cmdline is honored by
-GigaBoot and Zircon.
+nodename from its MAC address.  This cmdline is honored by GigaBoot and Zircon.
+
+## zircon.namegen=\<num>
+
+Set the system nodename generation style.
+If omitted or unknown, the system uses style 0.
+It has no effect if `zircon.nodename` is set.
+Older name generation styles may be removed in the future.
+This cmdline is honored by GigaBoot and Zircon.
+
+Styles:
+ - 0: Uses a four-word-name-style using based on the MAC address.
+ - 1: fuchsia-0123-4567-89ab based on the MAC address.
 
 ## zvb.current\_slot=\<\_a|\_b|\_r>
 

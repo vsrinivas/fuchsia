@@ -19,6 +19,11 @@ struct DeviceNameProviderArgs {
   // This defaults to "/dev/class/ethernet/"
   // BUT it overriden by `--ethdir` on the binary commandline.
   std::string ethdir;
+  // This is the integer value of `zircon.namegen`
+  // It is overridden by the value of `--namegen` on the commandline.
+  // `--namegen 1` disables wordnames, any other value is treated as zero.
+  // It has no effect if `nodename` is non-empty.
+  uint32_t namegen = 0;
 };
 
 // Parses DeviceNameProviderArgs via the kernel commandline and the binary commandline (argv).

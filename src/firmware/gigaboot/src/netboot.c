@@ -304,14 +304,14 @@ void tftp_recv(void* data, size_t len, const ip6_addr* daddr, uint16_t dport, co
 #define FAST_TICK 100
 #define SLOW_TICK 1000
 
-int netboot_init(const char* nodename) {
+int netboot_init(const char* nodename, uint32_t namegen) {
   if (netifc_open()) {
     printf("netboot: Failed to open network interface\n");
     return -1;
   }
   char buf[DEVICE_ID_MAX];
   if (!nodename || (nodename[0] == 0)) {
-    device_id(eth_addr(), buf);
+    device_id(eth_addr(), buf, namegen);
     nodename = buf;
   }
   if (nodename) {
