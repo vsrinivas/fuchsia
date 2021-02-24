@@ -5,27 +5,15 @@
 package templates
 
 const TemplateTxt = `
-UNUSED LICENSES:
-{{ range $_, $license := .Unused }}
-================================================================================
-Category: {{ (getCategory $license) }}
---------------------------------------------------------------------------------
-License:
-{{ (getPattern $license) }}
-================================================================================
-{{ end }}
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-USED LICENSES:
 {{ range $_, $license := .Used }}
 ================================================================================
-Category: {{ (getCategory $license) }}
-{{ range $author := (getAuthors $license ) }}Authors/Contributors: {{ $author }}
-{{ range $file := (getFiles $license $author) }}FILE: {{ $file }}
-{{ end }}--------------------------------------------------------------------------------
-License:
-{{ (getText $license $author) }} {{ end }}
+License Category: {{ (getCategory $license) }}
+{{ range $author := (getAuthors $license ) }}
+--------------------------------------------------------------------------------
+Authors/Contributors: {{ $author }}
+
+{{ (getText $license $author) }}
+{{ end }}
 ================================================================================
 {{ end }}
 `

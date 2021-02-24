@@ -19,7 +19,7 @@ var testDataDir = flag.String("test_data_dir", "testdata", "Path to test data; o
 func TestConfigNew(t *testing.T) {
 	folder := t.TempDir()
 	path := filepath.Join(folder, "config.json")
-	json := `{"skipFiles":[".gitignore"],"skipDirs":[".git"],"textExtensionList":["go"],"maxReadSize":6144,"outputFilePrefix":"NOTICE","outputFileExtension":"txt","outputLicenseFile": true,"singleLicenseFiles":["LICENSE"],"licensePatternDir":"golden/","baseDir":".","target":"all","logLevel":"verbose", "customProjectLicenses": [{"projectRoot": "test", "licenseLocation": "test"}], "exitOnUnlicensedFiles": false}`
+	json := `{"skipFiles":[".gitignore"],"skipDirs":[".git"],"textExtensionList":["go"],"maxReadSize":6144,"outputFilePrefix":"NOTICE","outputFileExtensions":["txt"],"outputLicenseFile": true,"singleLicenseFiles":["LICENSE"],"licensePatternDir":"golden/","baseDir":".","target":"all","logLevel":"verbose", "customProjectLicenses": [{"projectRoot": "test", "licenseLocation": "test"}], "exitOnUnlicensedFiles": false}`
 	if err := ioutil.WriteFile(path, []byte(json), 0o600); err != nil {
 		t.Errorf("%v(): got %v", t.Name(), err)
 	}

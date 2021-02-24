@@ -36,13 +36,13 @@ func saveToOutputFile(path string, licenses *Licenses) error {
 
 	templateStr := ""
 	switch {
-	case strings.HasSuffix(path, ".txt"):
+	case strings.HasSuffix(path, ".txt") || strings.HasSuffix(path, ".txt.gz"):
 		templateStr = templates.TemplateTxt
 	case strings.HasSuffix(path, ".html") || strings.HasSuffix(path, ".html.gz"):
 		// TODO(omerlevran): Use html/template instead of text/template.
 		// text/template is inherently unsafe to generate HTML.
 		templateStr = templates.TemplateHtml
-	case strings.HasSuffix(path, ".json"):
+	case strings.HasSuffix(path, ".json") || strings.HasSuffix(path, ".json.gz"):
 		// TODO(omerlevran): Use encoding/json instead of hand-rolling out json.
 		templateStr = templates.TemplateJson
 	default:

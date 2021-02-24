@@ -12,7 +12,9 @@
    ],
    "maxReadSize":6144,
    "outputFilePrefix":"NOTICE",
-   "outputFileExtension":"txt",
+   "outputFileExtensions":[
+       "txt"
+   ],
    "singleLicenseFiles":[
       "LICENSE"
    ],
