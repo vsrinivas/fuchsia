@@ -43,6 +43,14 @@ void SystemLogRecorder::Start() {
   periodic_write_task_.Post(write_dispatcher_);
 }
 
+void SystemLogRecorder::Flush(const std::optional<std::string> message) {
+  FX_LOGS(INFO) << "Received signal to flush cached logs to disk";
+  if (message.has_value()) {
+    store_.AppendToEnd(message.value());
+  }
+  writer_.Write();
+}
+
 void SystemLogRecorder::StopAndDeleteLogs() {
   // Stop collecting logs.
   archive_accessor_.StopCollect();

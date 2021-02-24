@@ -16,7 +16,7 @@ class DataProviderController : public fuchsia::feedback::DataProviderController 
  public:
   void BindSystemLogRecorderController(zx::channel channel, async_dispatcher_t* dispatcher);
 
-  // |fuchisa.feedback.DataProviderController|
+  // |fuchsia.feedback.DataProviderController|
   void DisableAndDropPersistentLogs(DisableAndDropPersistentLogsCallback callback) override;
 
  private:

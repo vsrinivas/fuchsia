@@ -8,6 +8,7 @@
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/cpp/component.h>
@@ -45,8 +46,9 @@ class Component {
   // since boot.
   bool IsFirstInstance() const;
 
-  // Handle stopping the component when the stop signal is received.
-  void OnStopSignal(::fit::closure on_stop);
+  // Handle stopping the component when the Stop signal is received. The parent will be notified
+  // that it can stop the component when |deferred_callback| is executed.
+  void OnStopSignal(::fit::function<void(::fit::deferred_callback)> on_stop);
 
  protected:
   // Constructor for testing when the component should run on a different loop than |loop_|.

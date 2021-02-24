@@ -61,6 +61,13 @@ int main() {
         main_service->HandleDeviceIdProviderRequest(std::move(request));
       }));
 
+  component.OnStopSignal([&](::fit::deferred_callback stop_respond) {
+    FX_LOGS(INFO) << "Received stop signal; not exiting to continue persisting logs.";
+    main_service->Stop(std::move(stop_respond));
+    // Don't stop the loop so incoming logs can be persisted by the system log recorder while appmgr
+    // is waiting to terminate v1 components.
+  });
+
   component.RunLoop();
 
   return EXIT_SUCCESS;

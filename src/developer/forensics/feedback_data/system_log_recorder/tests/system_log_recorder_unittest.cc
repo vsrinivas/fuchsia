@@ -68,7 +68,7 @@ using SystemLogRecorderTest = UnitTestFixture;
 
 TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   // To simulate a real load, we set up the test with the following conditions:
-  //  * The listener will listener messages every 750 milliseconds.
+  //  * The listener will get messages every 750 milliseconds.
   //  * The writer writes messages every 1 second. Each write will contain at most 2 log
   //    lines.
   //  * Each file will contain at most 2 log lines.
@@ -227,7 +227,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
 TEST_F(SystemLogRecorderTest, SingleThreaded_StopAndDeleteLogs) {
   // To simulate a real load, we set up the test with the following conditions:
-  //  * The listener will listener messages every 750 milliseconds.
+  //  * The listener will get messages every 750 milliseconds.
   //  * The writer writes messages every 1 second. Each write will contain at most 2 log
   //    lines.
   //  * Each file will contain at most 2 log lines.
@@ -345,6 +345,102 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_StopAndDeleteLogs) {
     float compression_ratio;
     ASSERT_FALSE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
   }
+}
+
+TEST_F(SystemLogRecorderTest, SingleThreaded_Flush) {
+  // To simulate a real load, we set up the test with the following conditions:
+  //  * The listener will get messages every 750 milliseconds.
+  //  * The writer writes messages every 1 second. Each write will contain at most 2 log
+  //    lines.
+  //  * Each file will contain at most 2 log lines.
+  //
+  //    Using the above, we'll see log lines arrive with the at the following times:
+  //    0.00: line0, line1, line2, line3 -> write 1 -> file 1
+  //    0.75: line4, line5, line6, line7 -> write 1 -> file 1
+  //    0.75: FLUSH
+  //    1.50: line8  -> write 2 -> file 2
+  //
+  // Note: we use the IdentityEncoder to easily control which messages are dropped.
+  const zx::duration kArchivePeriod = zx::msec(750);
+  const zx::duration kWriterPeriod = zx::sec(1);
+
+  const std::vector<std::vector<std::string>> json_batches({
+      {
+          BuildLogMessage("line 0"),
+          BuildLogMessage("line 1"),
+          BuildLogMessage("line 2"),
+          BuildLogMessage("line 3"),
+
+      },
+      {
+          BuildLogMessage("line 4"),
+          BuildLogMessage("line 5"),
+          BuildLogMessage("line 6"),
+          BuildLogMessage("line 7"),
+      },
+      {BuildLogMessage("line 8")},
+      {},
+  });
+
+  stubs::DiagnosticsArchive archive(std::make_unique<stubs::DiagnosticsBatchIteratorDelayedBatches>(
+      dispatcher(), json_batches, kArchivePeriod, /*strict=*/true));
+
+  InjectServiceProvider(&archive, kArchiveAccessorName);
+
+  files::ScopedTempDir temp_dir;
+
+  const std::string kFlushStr = "FLUSH\n";
+
+  const size_t kWriteSize = kMaxLogLineSize * 2 + kDroppedFormatStrSize + kFlushStr.size();
+
+  SystemLogRecorder recorder(dispatcher(), dispatcher(), services(),
+                             SystemLogRecorder::WriteParameters{
+                                 .period = kWriterPeriod,
+                                 .max_write_size_bytes = kWriteSize,
+                                 .logs_dir = temp_dir.path(),
+                                 .max_num_files = 2u,
+                                 .total_log_size_bytes = 2u * kWriteSize,
+                             },
+                             std::unique_ptr<Encoder>(new IdentityEncoder()));
+  recorder.Start();
+
+  RunLoopFor(kArchivePeriod);
+  recorder.Flush(kFlushStr);
+
+  std::string contents;
+
+  files::ScopedTempDir output_dir;
+  const std::string output_path = files::JoinPath(output_dir.path(), "output.txt");
+
+  IdentityDecoder decoder;
+
+  {
+    float compression_ratio;
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
+    EXPECT_EQ(compression_ratio, 1.0);
+  }
+  ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
+  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
+[15604.000][07559][07687][] INFO: line 1
+!!! DROPPED 6 MESSAGES !!!
+FLUSH
+)");
+
+  RunLoopFor(kWriterPeriod);
+  RunLoopFor(kWriterPeriod);
+
+  {
+    float compression_ratio;
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
+    EXPECT_EQ(compression_ratio, 1.0);
+  }
+  ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
+  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
+[15604.000][07559][07687][] INFO: line 1
+!!! DROPPED 6 MESSAGES !!!
+FLUSH
+[15604.000][07559][07687][] INFO: line 8
+)");
 }
 
 }  // namespace

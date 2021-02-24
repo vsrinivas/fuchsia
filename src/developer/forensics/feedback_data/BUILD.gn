@@ -212,6 +212,7 @@ source_set("main_service") {
     ":datastore",
     ":device_id_provider",
     ":inspect_manager",
+    "//sdk/fidl/fuchsia.process.lifecycle",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

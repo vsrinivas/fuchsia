@@ -6,8 +6,10 @@
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_MAIN_SERVICE_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fit/defer.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <memory>
@@ -41,6 +43,7 @@ class MainService {
                                                 inspect::Node* root_node, bool is_first_instance);
 
   void SpawnSystemLogRecorder();
+  void Stop(::fit::deferred_callback respond_to_stop);
 
   // FIDL protocol handlers.
   //
@@ -80,6 +83,8 @@ class MainService {
 
   DataRegister data_register_;
   ::fidl::BindingSet<fuchsia::feedback::ComponentDataRegister> data_register_connections_;
+
+  fuchsia::process::lifecycle::LifecyclePtr system_log_recorder_lifecycle_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MainService);
 };

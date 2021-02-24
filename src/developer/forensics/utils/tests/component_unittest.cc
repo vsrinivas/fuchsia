@@ -5,6 +5,9 @@
 #include "src/developer/forensics/utils/component/component.h"
 
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
+#include <lib/fit/defer.h>
+#include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -13,7 +16,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "lib/sys/cpp/component_context.h"
 #include "src/lib/files/path.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
@@ -68,8 +70,12 @@ TEST_F(ComponentTest, OnStopSignal) {
   // The loop in |component| doesn't need to be attached to a thread.
   ComponentForTest component(dispatcher(), TakeContext());
 
+  ::fit::deferred_callback disconnect;
   bool stopped{false};
-  component.OnStopSignal([&] { stopped = true; });
+  component.OnStopSignal([&](::fit::deferred_callback send_stop) {
+    stopped = true;
+    disconnect = std::move(send_stop);
+  });
 
   fuchsia::process::lifecycle::LifecyclePtr lifecycle_ptr;
   Services()->Connect(lifecycle_ptr.NewRequest(dispatcher()),
@@ -78,6 +84,11 @@ TEST_F(ComponentTest, OnStopSignal) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(stopped);
+  EXPECT_TRUE(lifecycle_ptr.is_bound());
+
+  disconnect.call();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(lifecycle_ptr.is_bound());
 }
 
 }  // namespace

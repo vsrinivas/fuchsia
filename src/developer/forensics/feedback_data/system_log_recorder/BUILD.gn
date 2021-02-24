@@ -47,6 +47,7 @@ source_set("src") {
   public_deps = [
     "encoding:encoder",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.process.lifecycle",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback_data:archive_accessor",
     "//src/developer/forensics/utils:logs",

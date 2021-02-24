@@ -42,6 +42,10 @@ class LogMessageStore {
   // * The message is omitted if it is the same one as the previous one in the store.
   bool Add(::fit::result<fuchsia::logger::LogMessage, std::string> log);
 
+  // |str| will be the final message in the consumed buffer, after the dropped and repeated
+  // messages.
+  void AppendToEnd(const std::string& str);
+
   // Consumes the contents of the store as a string and sends a signal that notifies the end
   // of the block (after the returned string). Calling Consume will empty the store.
   std::string Consume(bool* end_of_block);
@@ -80,6 +84,7 @@ class LogMessageStore {
   size_t last_pushed_message_count_ = 0;
   std::string last_pushed_message_;
   size_t repeat_buffer_count_ = 0;
+  std::optional<std::string> to_append_ = std::nullopt;
 
   std::unique_ptr<Encoder> encoder_;
 };

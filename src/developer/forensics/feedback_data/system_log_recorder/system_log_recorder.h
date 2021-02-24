@@ -33,6 +33,7 @@ class SystemLogRecorder {
                     WriteParameters write_parameters, std::unique_ptr<Encoder> encoder);
   void Start();
 
+  void Flush(std::optional<std::string> message);
   void StopAndDeleteLogs();
 
  private:

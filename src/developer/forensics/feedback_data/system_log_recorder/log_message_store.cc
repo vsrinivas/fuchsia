@@ -120,6 +120,11 @@ std::string LogMessageStore::Consume(bool* end_of_block) {
     last_pushed_message_count_ = 0;
   }
 
+  if (to_append_.has_value()) {
+    AddToBuffer(to_append_.value());
+    to_append_ = std::nullopt;
+  }
+
   // We assume all messages end with a newline character.
   std::string str = fxl::JoinStrings(buffer_);
 
@@ -142,6 +147,8 @@ std::string LogMessageStore::Consume(bool* end_of_block) {
 
   return str;
 }
+
+void LogMessageStore::AppendToEnd(const std::string& str) { to_append_ = str; }
 
 }  // namespace system_log_recorder
 }  // namespace feedback_data

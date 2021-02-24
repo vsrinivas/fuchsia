@@ -65,16 +65,17 @@ inspect::Node* Component::InspectRoot() { return &(inspector_.root()); }
 bool Component::IsFirstInstance() const { return instance_index_ == 1; }
 
 zx_status_t Component::RunLoop() { return loop_.Run(); }
+
 void Component::ShutdownLoop() { return loop_.Shutdown(); }
 
-void Component::OnStopSignal(::fit::closure on_stop) {
+void Component::OnStopSignal(::fit::function<void(::fit::deferred_callback)> on_stop) {
   using ProcLifecycle = fuchsia::process::lifecycle::Lifecycle;
 
   lifecycle_ = std::make_unique<Lifecycle>([this, on_stop = std::move(on_stop)] {
-    on_stop();
-
-    // Close the channel to indicate to the client that stop procedures have completed.
-    lifecycle_connection_->Close(ZX_OK);
+    on_stop(::fit::defer<::fit::callback<void()>>([this] {
+      // Close the channel to indicate to the client that stop procedures have completed.
+      lifecycle_connection_->Close(ZX_OK);
+    }));
   });
   lifecycle_connection_ = std::make_unique<::fidl::Binding<ProcLifecycle>>(lifecycle_.get());
 
