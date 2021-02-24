@@ -44,6 +44,12 @@ AbrSlotIndex zircon_abr_get_boot_slot(void) {
   return AbrGetBootSlot(&ops, false, NULL);
 }
 
+AbrResult zircon_abr_set_oneshot_recovery(void) {
+  AbrOps ops = {.read_abr_metadata = read_abr_metadata, .write_abr_metadata = write_abr_metadata};
+
+  return AbrSetOneShotRecovery(&ops, true);
+}
+
 void zircon_abr_update_boot_slot_metadata(void) {
   AbrOps ops = {.read_abr_metadata = read_abr_metadata, .write_abr_metadata = write_abr_metadata};
 

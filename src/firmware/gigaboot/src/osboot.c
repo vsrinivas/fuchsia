@@ -793,6 +793,9 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
       case 'r':
       case 'z':
         printf("Booting Recovery...\n");
+        if (zircon_abr_get_boot_slot() != kAbrSlotIndexR) {
+          zircon_abr_set_oneshot_recovery();
+        }
         zircon_abr_update_boot_slot_metadata();
         print_cmdline();
 
