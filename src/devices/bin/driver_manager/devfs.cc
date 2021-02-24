@@ -197,7 +197,7 @@ class DevfsFidlServer : public fio::DirectoryAdmin::Interface {
   void Link(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
             LinkCompleter::Sync& completer) override {}
   void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
-             WatchCompleter::Sync& completer) override {}
+             WatchCompleter::Sync& completer) override;
   void Mount(fidl::ClientEnd<fio::Directory> remote, MountCompleter::Sync& completer) override {}
   void MountAndCreate(fidl::ClientEnd<fio::Directory> remote, fidl::StringView name, uint32_t flags,
                       MountAndCreateCompleter::Sync& completer) override {}
@@ -886,16 +886,11 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
       return fuchsia_io_DirectoryReadDirents_reply(txn, r, data, actual);
     }
     case fuchsia_io_DirectoryWatchOrdinal: {
-      DECODE_REQUEST(msg, DirectoryWatch);
-      DEFINE_REQUEST(msg, DirectoryWatch);
-      zx::channel watcher(request->watcher);
-
-      request->watcher = ZX_HANDLE_INVALID;
-      if (request->mask & (~fio::WATCH_MASK_ALL) || request->options != 0) {
-        return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_INVALID_ARGS);
-      }
-      r = devfs_watch(dn, std::move(watcher), request->mask);
-      return fuchsia_io_DirectoryWatch_reply(txn, r);
+      ios->server_->set_current_dispatcher(dispatcher);
+      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
+      ios->server_->clear_current_dispatcher();
+      ZX_ASSERT(result == fidl::DispatchResult::kFound);
+      return transaction.GetStatus();
     }
     case fuchsia_io_DirectoryAdminQueryFilesystemOrdinal: {
       ios->server_->set_current_dispatcher(dispatcher);
@@ -935,6 +930,17 @@ void DevfsFidlServer::QueryFilesystem(QueryFilesystemCompleter::Sync& completer)
   fidl::tracking_ptr<fio::FilesystemInfo> info(std::make_unique<fio::FilesystemInfo>());
   strlcpy(reinterpret_cast<char*>(info->name.data()), "devfs", fio::MAX_FS_NAME_BUFFER);
   completer.Reply(ZX_OK, std::move(info));
+}
+
+void DevfsFidlServer::Watch(uint32_t mask, uint32_t options, zx::channel watcher,
+                            WatchCompleter::Sync& completer) {
+  zx_status_t status;
+  if (mask & (~fio::WATCH_MASK_ALL) || options != 0) {
+    status = ZX_ERR_INVALID_ARGS;
+  } else {
+    status = devfs_watch(owner_->devnode_, std::move(watcher), mask);
+  }
+  completer.Reply(status);
 }
 
 void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
