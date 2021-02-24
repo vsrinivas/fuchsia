@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/sync/completion.h>
 #include <pthread.h>
 
 #include <condition_variable>
@@ -30,27 +31,35 @@ class Gate {
       std::unique_lock lock{mutex_};
       message_ = message;
     }
+
     condvar_.notify_one();
 
-    // Wait for the receiver to notify us back.
+    // Wait for the receiver ack that it has processed the command.
     {
       std::unique_lock lock{mutex_};
       condvar_.wait(lock, [this] { return this->MessageHandled(); });
     }
   }
 
-  Message Receive() {
-    // Wait for, and receive, a message from the sender.
-    Message message = [this] {
+  Message PeekMessage() {
+    // Return a copy of any pending message.  Do not ack that the message has
+    // been processed yet.
+    std::unique_lock lock{mutex_};
+    condvar_.wait(lock, [this] { return this->HasMessage(); });
+    ZX_DEBUG_ASSERT(message_.has_value());
+    return message_.value();
+  }
+
+  void AckMessage() {
+    // Clear out any pending message and poke the condvar, signalling to the
+    // transmitter that they may process the results from the previous message,
+    // and send the next message.
+    {
       std::unique_lock lock{mutex_};
-      condvar_.wait(lock, [this] { return this->HasMessage(); });
-      Message message = std::move(*message_);
       message_ = std::nullopt;
-      return message;
-    }();
+    }
 
     condvar_.notify_one();
-    return message;
   }
 
  private:
@@ -59,11 +68,10 @@ class Gate {
 
   std::mutex mutex_;
   std::condition_variable condvar_;
-
   std::optional<Message> message_ = std::nullopt;
 };
 
-enum Operation {
+enum class Operation {
   kExit,
   kDetach,
 };
@@ -87,36 +95,41 @@ class Thread {
     ASSERT_EQ(ret, 0);
   }
 
+  void WaitForThreadExited() { sync_completion_wait(&thread_exited_, ZX_TIME_INFINITE); }
+
  private:
   static void* Handler(void* self) {
     auto thread = static_cast<Thread*>(self);
     thread->Run();
+
+    // Remember to ack our last received message.  It was either a kExit
+    // command, or a kDetach command in the case that the test failed and
+    // aborted early.  Either way, we do not want to leave the main thread
+    // waiting forever.
+    thread->gate_->AckMessage();
+    sync_completion_signal(&thread->thread_exited_);
     return nullptr;
   }
 
   void Run() {
     for (;;) {
-      Operation op = gate_->Receive();
+      Operation op = gate_->PeekMessage();
 
-      switch (op) {
-        case kDetach: {
-          int ret = pthread_detach(thread_);
-          // We are already detached, and testing that this returns
-          // EINVAL. Specifically
-          ASSERT_EQ(ret, EINVAL);
-          break;
-        }
-
-        case kExit: {
-          pthread_exit(nullptr);
-          break;
-        }
+      if (op == Operation::kExit) {
+        return;
       }
+
+      int ret = pthread_detach(thread_);
+      // We are already detached, and testing that this returns
+      // EINVAL. Specifically
+      ASSERT_EQ(ret, EINVAL);
+      gate_->AckMessage();
     }
   }
 
   pthread_t thread_;
   Gate<Operation>* gate_;
+  sync_completion_t thread_exited_;
 };
 
 TEST(PthreadDetach, Idempotent) {
@@ -127,13 +140,27 @@ TEST(PthreadDetach, Idempotent) {
   Thread thread{&gate};
   ASSERT_NO_FATAL_FAILURES();
 
-  // Ten is an arbitrary number greater than 1, to exercise the
-  // behavior a few times.
-  for (int count = 0; count < 10; ++count) {
-    ASSERT_NO_FATAL_FAILURES(gate.Send(kDetach));
-  }
+  // Now that our thread has been successfully created, run our main test from
+  // within the scope of the lambda.  If the test encounters a fatal failure and
+  // we need to bail out early, we still need to wait for the thread to have
+  // exited, or we risk a stack-use-after-free situation.
+  auto run_test = [&gate]() {
+    // Ten is an arbitrary number greater than 1, to exercise the
+    // behavior a few times.
+    for (int count = 0; count < 10; ++count) {
+      ASSERT_NO_FATAL_FAILURES(gate.Send(Operation::kDetach));
+    }
+    gate.Send(Operation::kExit);
+  };
 
-  gate.Send(kExit);
+  run_test();
+
+  // Note, do not skip this waiting step.  It is not safe to remove the Thread
+  // and Gate instances from the stack yet, even after the acknowledgement of
+  // the last message.  While it would be nice to use a join for this, we have
+  // detached this thread, so we will have to make due with a completion.
+  // See the write-up in fxb/70261 for details.
+  thread.WaitForThreadExited();
 }
 
 }  // namespace
