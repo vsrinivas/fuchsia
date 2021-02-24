@@ -28,10 +28,14 @@ EOF
 # Usage: json_format --format FILE
 readonly json_format=third_party/catapult/telemetry/json_format
 
-# GLOBAL MUTABLE
+# GLOBAL MUTABLES
 # Accumulate paths to unexpected differences here.
 # bash: array variables are not POSIX
 unexpected_diffs=()
+unexpected_matches=()
+# These files match or differ, but we didn't know what to expect.
+unclassified_diffs=()
+unclassified_matches=()
 
 function diff_json() {
   # json_format doesn't have an option to output to stdout,
@@ -55,11 +59,13 @@ function diff_binary() {
 function diff_file_relpath() {
   # $1 is left dir
   # $2 is right dir
-  # $3 is common path under both dirs, and is itself not a directory.
+  # $3 is a relative path under both dirs, and is itself not a directory.
+  #   This file name is reported in diagnostics.
   # one could also use an all-inclusive diff tool like https://diffoscope.org/
   local left="$1/$3"
   local right="$2/$3"
-  common_path="$3"
+  local common_path="$3"
+  # echo "Comparing file $3"
   filebase="$(basename "$common_path")"
 
   # TODO(fangism): Some files are stored as blobs so content differences
@@ -73,85 +79,110 @@ function diff_file_relpath() {
     return
   fi
 
-  # Add known diff cases below
+  # Classify each category of files with expectations in each case below:
+  #   expect={diff,match,unknown,ignore}
+  # Leave blank for ignored files (not compared).
+  # "unknown" means unclassified and could contain a mix of matches/diffs.
   # Goal:
   #   * Identify and classify known differences.
   #   * Gradually reduce sources of differences.
+  #
+  # TODO(fangism): different expectations in clean-vs-clean /
+  # clean-vs-incremental modes.
+  expect=unknown
   case "$filebase" in
-    # The exit status of this case statement will be used
-    # to determine whether or not the given file is an
-    # erroneous diff.
+    # The exit status of this case statement will be used to determine
+    # whether or not the given file is an erroneous diff.
     #
     # Generally:
     #   diff_text for text files that are expected to match
     #   diff_binary for binaries or known large textual differences
 
     # depfiles
-    *.d) diff_text "$left" "$right" ;;
+    *.d) expect=match; diff_text "$left" "$right" ;;
 
     # C++ object files (binary)
-    *.o) diff_binary "$left" "$right" ;;
+    *.o) expect=match; diff_binary "$left" "$right" ;;
     # TODO(fangism): compare objdumps for details
     # TODO(fangism): suppress known issues on a path-by-path basis
 
     # Ignore .a differences until .o differences have been eliminated.
-    *.a) diff_binary "$left" "$right" || : ;;
+    # Eventually, use diff_binary.
+    *.a) expect=ignore ;;
 
     # Rust libraries (binary)
-    *.rlib) diff_binary "$left" "$right" ;;
+    *.rlib) expect=match; diff_binary "$left" "$right" ;;
 
     # The following groups of files have known huge diffs,
     # so omit details from the general report, and diff_binary.
-    # For now, ignore these differences (using || :) until their
-    # inputs' differences have been resolved and eliminated.
-    meta.far) diff_binary "$left" "$right" || : ;;
-    meta.far.merkle) diff_binary "$left" "$right" || : ;;
-    contents) diff_binary "$left" "$right" || : ;;
-    blobs.json) diff_binary "$left" "$right" || : ;;
-    blobs.manifest) diff_binary "$left" "$right" || : ;;
-    package_manifest.json) diff_binary "$left" "$right" || : ;;
-    targets.json) diff_binary "$left" "$right" || : ;;
+    meta.far) expect=diff; diff_binary "$left" "$right" ;;
+    meta.far.merkle) expect=diff; diff_binary "$left" "$right" ;;
+    contents) expect=diff; diff_binary "$left" "$right" ;;
+    blobs.json) expect=diff; diff_binary "$left" "$right" ;;
+    blobs.manifest) expect=diff; diff_binary "$left" "$right" ;;
+    package_manifest.json) expect=diff; diff_binary "$left" "$right" ;;
+    targets.json) expect=diff; diff_binary "$left" "$right" ;;
 
     # Diff formatted JSON for readability.
-    *.json) diff_json "$left" "$right" ;;
+    *.json) expect=match; diff_json "$left" "$right" ;;
 
     # Ignore ninja logs, as they bear timestamps,
     # and are non-essential build artifacts.
-    .ninja.log) ;;
+    .ninja.log) expect=ignore ;;
 
     # Ignore filesystem access trace files.
     # They may contain nondeterministic paths to /proc/PID
-    *_trace.txt) ;;
+    *_trace.txt) expect=ignore ;;
 
     # like exe.unstripped/*.map files
     # Many of these (but not all) reference mktemp paths.
-    *.map) diff_binary "$left" "$right" ;;
+    *.map) expect=diff; diff_binary "$left" "$right" ;;
 
     # Ignore stamp files.
-    *.stamp) ;;
+    *.stamp) expect=ignore ;;
 
     # Ignore temporary and backup files.
-    *.tmp) ;;
-    *.bak) ;;
-    *.bkp) ;;
+    *.tmp) expect=ignore ;;
+    *.bak) expect=ignore ;;
+    *.bkp) expect=ignore ;;
 
     # All others.
     # Binary files diffs will still only be reported tersely.
-    *) diff_text "$left" "$right" ;;
+    *) expect=match; diff_text "$left" "$right" ;;
   esac
   # Record unexpected differences.
-  test "$?" = 0 || unexpected_diffs=("${unexpected_diffs[@]}" "$common_path")
+  diff_status="$?"
+  case "$expect" in
+    match) test "$diff_status" = 0 || unexpected_diffs=("${unexpected_diffs[@]}" "$common_path") ;;
+    diff) test "$diff_status" != 0 || unexpected_matches=("${unexpected_matches[@]}" "$common_path") ;;
+    unknown) if test "$diff_status" = 0
+       then unclassified_matches=("${unclassified_matches[@]}" "$common_path")
+       else unclassified_diffs=("${unclassified_diffs[@]}" "$common_path")
+       fi ;;
+    *) ;; # ignore
+  esac
 }
 
 function diff_dir_recursive() {
-  # $1 and $2 are two directories, each two levels deep, e.g. "out/default"
+  # $1 and $2 are two directories, e.g. "out/default"
+  # $3 is the relative path down from $1 and $2, e.g. "subdir/" or "".
   # For dual-traversal, arbitrarily use $2's subdirs.
-  for f in "$2"/*
+  # echo "Comparing: $sub"
+  local sub="$3"  # sub-dir or file
+
+  # Silence empty dirs.
+  if ! ls "$2/$sub"*
+  then return  # empty dir
+  fi > /dev/null 2>&1
+
+  for f in "$2/$sub"*
   do
-    relpath="${f#"$2/"}"   # Remove $2/ prefix.
-    filebase="$(basename "$relpath")"
+    filebase="$(basename "$f")"
+    relpath="$sub$filebase"
     if test -d "$f"
-    then diff_dir_recursive "$1/$filebase" "$f"
+    then diff_dir_recursive "$1" "$2" "$relpath/"
+      # TODO(fangism): ignore amber-files/repository/blobs for now?
+      # TODO(fangism): what about test -L for symlinks?
     else diff_file_relpath "$1" "$2" "$relpath"
     fi
   done
@@ -159,18 +190,45 @@ function diff_dir_recursive() {
 
 test "$#" = 2 || { usage; exit 2; }
 
-diff_dir_recursive "$1" "$2"
+diff_dir_recursive "$1" "$2" ""
 
-# TODO(fangism): summarize findings in a report
+# Summarize findings:
+exit_status=0
 
 if test "${#unexpected_diffs[@]}" != 0
 then
-  echo "UNEXPECTED DIFFS:"
+  echo "UNEXPECTED DIFFS: (action: fix source of difference)"
   for path in "${unexpected_diffs[@]}"
   do echo "  $path"
   done
-  exit 1
+  exit_status=1
 fi
 
-# TODO(fangism): Track unexpected *matches* so that when differences
-# are eliminated, their suppressions get removed.
+if test "${#unexpected_matches[@]}" != 0
+then
+  echo "UNEXPECTED MATCHES: (action: make these expect=match now?)"
+  for path in "${unexpected_matches[@]}"
+  do echo "  $path"
+  done
+  exit_status=1
+fi
+
+if test "${#unclassified_diffs[@]}" != 0
+then
+  echo "unclassified diffs: (action: classify them as expect=diff)"
+  for path in "${unclassified_diffs[@]}"
+  do echo "  $path"
+  done
+  # Leave exit status as it were.
+fi
+
+if test "${#unclassified_matches[@]}" != 0
+then
+  echo "unclassified matches: (action: classify them as expect=match)"
+  for path in "${unclassified_matches[@]}"
+  do echo "  $path"
+  done
+  # Leave exit status as it were.
+fi
+
+exit "$exit_status"
