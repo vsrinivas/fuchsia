@@ -26,11 +26,11 @@ rustc_test("integration_test_bin") {
   source_root = "integration_test.rs"
   name = "detect_integration_test"
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//src/diagnostics/lib/selectors",
+    "//src/diagnostics/lib/testing/fake-archive-accessor",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -49,9 +49,6 @@ rustc_test("integration_test_bin") {
   ]
 
   sources = [
-    "fake_archive_accessor.rs",
-    "fake_archive_accessor/archivist_accessor.rs",
-    "fake_archive_accessor/archivist_server.rs",
     "fake_crash_reporter.rs",
     "fake_crash_reporting_product_register.rs",
     "integration_test.rs",

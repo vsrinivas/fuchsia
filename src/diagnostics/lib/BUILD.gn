@@ -8,6 +8,7 @@ group("tests") {
     "inspect-fidl-load:tests",
     "selectors:tests",
     "streams/dart:tests",
+    "testing:tests",
     "triage:tests",
     "util:tests",
     "validating-log-listener:tests",

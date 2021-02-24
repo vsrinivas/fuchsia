@@ -19,12 +19,12 @@
  *  report requests sent between each fetch of Diagnostic data. Order of the inner vector does
  *  not matter, but duplicates do matter.
  */
-mod fake_archive_accessor;
 mod fake_crash_reporter;
 mod fake_crash_reporting_product_register;
 
 use {
-    anyhow::{bail, Error},
+    anyhow::{bail, format_err, Error},
+    async_trait::async_trait,
     component_events::{
         events::{Event, EventMode, EventStream, EventSubscription, Stopped},
         injectors::{CapabilityInjector, DirectoryInjector},
@@ -171,6 +171,29 @@ impl DoneWaiter {
     }
 }
 
+struct ArchiveEventSignaler {
+    event_sender: TestEventSender,
+    done_signaler: DoneSignaler,
+}
+
+impl ArchiveEventSignaler {
+    fn new(event_sender: TestEventSender, done_signaler: DoneSignaler) -> ArchiveEventSignaler {
+        ArchiveEventSignaler { event_sender, done_signaler }
+    }
+}
+
+#[async_trait]
+impl fake_archive_accessor::EventSignaler for ArchiveEventSignaler {
+    async fn signal_fetch(&self) {
+        self.event_sender.clone().send(Ok(TestEvent::DiagnosticFetch)).await.unwrap();
+    }
+    async fn signal_done(&self) {
+        self.done_signaler.signal_done().await;
+    }
+    async fn signal_error(&self, error: &str) {
+        self.event_sender.clone().send(Err(format_err!("{}", error))).await.unwrap();
+    }
+}
 async fn run_a_test(test_data: TestData) -> Result<(), Error> {
     info!("Running test {}", test_data.name);
     let start_time = std::time::Instant::now();
@@ -193,8 +216,9 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
         FakeCrashReportingProductRegister::new(done_waiter.get_signaler());
     registration_capability.inject(&event_source, EventMatcher::ok()).await;
 
-    let archive_capability =
-        FakeArchiveAccessor::new(&test_data, events_sender.clone(), done_waiter.get_signaler());
+    let event_signaler =
+        Box::new(ArchiveEventSignaler::new(events_sender.clone(), done_waiter.get_signaler()));
+    let archive_capability = FakeArchiveAccessor::new(&test_data.inspect_data, event_signaler);
     archive_capability
         .inject(&event_source, EventMatcher::ok().capability_name(ARCHIVE_ACCESSOR_CAPABILITY_NAME))
         .await;
