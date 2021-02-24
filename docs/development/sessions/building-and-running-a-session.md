@@ -13,8 +13,17 @@ To boot into a session, do the following:
 session component URL.
 
    <pre><code>{
-       "session_url": "fuchsia-pkg://fuchsia.com/<var>your_package</var>#meta/<var>your_session.cm</var>"
+       "session_url": "fuchsia-pkg://fuchsia.com/<var>pkg-name</var>#meta/<var>your_session.cm</var>"
    }</code></pre>
+
+   Replace the following:
+   * <var>pkg-name</var>: the package name
+   * <var>your_session.cm</var>: the name of your session, including the `.cm`
+   extension.
+
+   For more information, see
+   [`fuchsia-pkg`](/docs/concepts/components/component_urls.md#fuchsia-pkg) and
+   [Package name](/docs/concepts/packages/package_url.md#package-name).
 
 1.  In the `BUILD.gn` file, include the configuration file for the session
 component
@@ -85,12 +94,8 @@ image while also including your session in the build.
 
    Run the following command to launch your session:
 
-   <pre class="prettyprint"><code class="devsite-terminal">fx shell session_control launch fuchsia-pkg://fuchsia.com/<var>your_package</var>#meta/<var>your_session.cm</var></code></pre>
+   <pre class="prettyprint"><code class="devsite-terminal">ffx session launch fuchsia-pkg://fuchsia.com/<var>pkg-name</var>#meta/<var>your_session.cm</var></code></pre>
 
-   `session_control` is the current tool used to interact with a running
-   `session_manager`. `session_control launch` launches a new session when
-   passed the session component's URL.
-
-   Work is currently underway to add session controls to
-   [`ffx`](/docs/development/tools/ffx/overview.md). Related bug:
-   [fxbug.dev/61623](https://fxbug.dev/61623)
+   For more information about the `ffx session` command, run
+   `ffx session --help`. For more information about `ffx`, see the
+   [`ffx documentation`](/docs/development/tools/ffx/overview.md).
