@@ -4,6 +4,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <optional>
+
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
 // This header file has been generated from the strings library fuchsia.intl.l10n.
 #include "fuchsia/intl/l10n/cpp/fidl.h"
@@ -65,7 +67,8 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
     } else if (node->has_role() &&
                node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH) {
       description.emplace_back(DescribeToggleSwitch(node));
-    } else if (node->has_attributes() && node->attributes().has_label()) {
+    } else if (node->has_attributes() && node->attributes().has_label() &&
+               !node->attributes().label().empty()) {
       Utterance utterance;
       utterance.set_message(node->attributes().label());
 
@@ -116,9 +119,10 @@ ScreenReaderMessageGenerator::GenerateUtteranceByMessageId(
   UtteranceAndContext utterance;
   auto message = message_formatter_->FormatStringById(static_cast<uint64_t>(message_id), arg_names,
                                                       arg_values);
-  FX_DCHECK(message);
-  utterance.utterance.set_message(std::move(*message));
-  utterance.delay = delay;
+  if (message != std::nullopt) {
+    utterance.utterance.set_message(std::move(*message));
+    utterance.delay = delay;
+  }
   return utterance;
 }
 
@@ -132,8 +136,12 @@ ScreenReaderMessageGenerator::UtteranceAndContext ScreenReaderMessageGenerator::
           : MessageIds::RADIO_BUTTON_UNSELECTED;
   const auto name_value =
       node->has_attributes() && node->attributes().has_label() ? node->attributes().label() : "";
-  return GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0)), {"name"},
-                                      {name_value});
+  if (!name_value.empty()) {
+    return GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0)), {"name"},
+                                        {name_value});
+  }
+
+  return GenerateUtteranceByMessageId(message_id);
 }
 
 std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
@@ -178,8 +186,12 @@ ScreenReaderMessageGenerator::DescribeToggleSwitch(
           : MessageIds::RADIO_BUTTON_UNSELECTED;
   const auto name_value =
       node->has_attributes() && node->attributes().has_label() ? node->attributes().label() : "";
-  return GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0)), {"name"},
-                                      {name_value});
+
+  if (!name_value.empty()) {
+    return GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0)), {"name"},
+                                        {name_value});
+  }
+  return GenerateUtteranceByMessageId(message_id);
 }
 
 }  // namespace a11y
