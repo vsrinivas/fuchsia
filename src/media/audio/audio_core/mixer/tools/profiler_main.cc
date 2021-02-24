@@ -307,7 +307,7 @@ Options ParseCommandLine(int argc, char** argv) {
                std::map<std::string, ASF>{
                    {"uint8", ASF::UNSIGNED_8},
                    {"int16", ASF::SIGNED_16},
-                   {"int32", ASF::SIGNED_24_IN_32},
+                   {"int24", ASF::SIGNED_24_IN_32},
                    {"float", ASF::FLOAT},
                });
 

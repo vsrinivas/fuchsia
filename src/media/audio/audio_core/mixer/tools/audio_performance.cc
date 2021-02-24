@@ -48,8 +48,8 @@ struct Stats {
   }
 
   std::string Summary() {
-    return fxl::StringPrintf("%10.3lf\t%10.3lf\t%10.3lf\t%10.3lf", to_usecs(mean()),
-                             to_usecs(first), to_usecs(best), to_usecs(worst));
+    return fxl::StringPrintf("%10.3lf\t%10.3lf\t%10.3lf\t%10.3lf\t%10ld", to_usecs(mean()),
+                             to_usecs(first), to_usecs(best), to_usecs(worst), runs);
   }
 };
 
@@ -195,7 +195,8 @@ void AudioPerformance::DisplayMixerCreationLegend() {
 
 void AudioPerformance::DisplayMixerCreationColumnHeader() {
   printf(
-      "\nCreation config        \t      Mean\t     First\t      Best\t     Worst\tMean Cached\n");
+      "\nCreation config        \t      Mean\t     First\t      Best\t     Worst\t  "
+      "Iterations\t Mean Cached\n");
 }
 
 void AudioPerformance::ProfileMixerCreation(const std::vector<MixerConfig>& configs,
@@ -239,7 +240,7 @@ void AudioPerformance::ProfileMixerCreation(const MixerConfig& cfg,
     warm_cache.Add(t2 - t1);
   }
 
-  printf("%s:\t%s\t%10.3lf\n", cfg.ToStringForCreate().c_str(), cold_cache.Summary().c_str(),
+  printf("%s:\t%s\t %10.3lf\n", cfg.ToStringForCreate().c_str(), cold_cache.Summary().c_str(),
          to_usecs(warm_cache.mean()));
 }
 
@@ -254,12 +255,12 @@ void AudioPerformance::DisplayMixerLegend() {
       "\t     O: Output channels (one-digit number)\n"
       "\t sssss: Source sample rate\n"
       "\t ddddd: Destination sample rate\n\n"
-      "\t     G: Gain factor - [M]ute, [U]nity, [S]caled, [R]amping\n"
+      "\t     G: Gain factor - [M]ute, [U]nity, [S]caled, [R]amped\n"
       "\t     A: Accumulate - [-] no or [+] yes\n\n");
 }
 
 void AudioPerformance::DisplayMixerColumnHeader() {
-  printf("Configuration             \t     Mean\t    First\t     Best\t    Worst\n");
+  printf("Configuration             \t     Mean\t    First\t     Best\t    Worst\t  Iterations\n");
 }
 
 void AudioPerformance::ProfileMixer(const std::vector<MixerConfig>& configs,
@@ -413,7 +414,7 @@ void AudioPerformance::DisplayOutputConfigLegend() {
 }
 
 void AudioPerformance::DisplayOutputColumnHeader() {
-  printf("Config\t     Mean\t    First\t     Best\t    Worst\n");
+  printf("Config\t     Mean\t    First\t     Best\t    Worst\t Iterations\n");
 }
 
 void AudioPerformance::ProfileOutputProducer(const std::vector<OutputProducerConfig>& configs,
