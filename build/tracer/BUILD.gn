@@ -9,6 +9,7 @@ group("tests") {
 
   deps = [
     ":action_tracer_test($host_toolchain)",
+    ":fsatrace_test",
     ":tracer_test",
   ]
 }
@@ -45,5 +46,16 @@ action("tracer_test") {
     rebase_path("$target_out_dir/tracer_test_output_1.txt", root_build_dir),
     rebase_path("$target_out_dir/tracer_test_output_2.txt", root_build_dir),
     rebase_path("$target_out_dir/tracer_test_output_3.txt", root_build_dir),
+  ]
+}
+
+# Test that fsatrace is working properly on the host.
+action("fsatrace_test") {
+  script = "fsatrace_test.sh"
+  inputs = [ "//prebuilt/fsatrace/fsatrace" ]
+  outputs = [ "$target_out_dir/fsatrace_test_stamp.txt" ]
+  args = [
+    rebase_path(inputs[0], root_build_dir),
+    rebase_path(outputs[0], root_build_dir),
   ]
 }
