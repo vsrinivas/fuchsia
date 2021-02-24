@@ -139,7 +139,7 @@ async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
         ))
     });
 
-    run_stream_link(node, &mut rx, &mut tx, config).await
+    run_stream_link(node, &mut rx, &mut tx, Default::default(), config).await
 }
 
 /// Retry a future until it succeeds or retries run out.
@@ -205,7 +205,7 @@ async fn handle_controller_request(
             fidl_fuchsia_overnet_protocol::Empty {},
         ))
     });
-    if let Err(e) = run_stream_link(node, &mut rx, &mut tx, config).await {
+    if let Err(e) = run_stream_link(node, &mut rx, &mut tx, Default::default(), config).await {
         log::warn!("Socket link failed: {:#?}", e);
     }
     Ok(())

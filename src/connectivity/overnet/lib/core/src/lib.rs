@@ -24,7 +24,9 @@ mod test_util;
 pub use coding::{decode_fidl, encode_fidl};
 pub use future_help::log_errors;
 pub use labels::{ConnectionId, Endpoint, NodeId, NodeLinkId};
-pub use link::{ConfigProducer, LinkReceiver, LinkSender, SendFrame, MAX_FRAME_LENGTH};
+pub use link::{
+    ConfigProducer, LinkIntroductionFacts, LinkReceiver, LinkSender, SendFrame, MAX_FRAME_LENGTH,
+};
 pub use router::security_context::{SecurityContext, SimpleSecurityContext};
 pub use router::{generate_node_id, ListPeersContext, Router, RouterOptions};
 

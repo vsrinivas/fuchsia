@@ -60,8 +60,8 @@ async fn forward(mut sender: LinkSender, mut receiver: LinkReceiver) -> Result<(
 }
 
 async fn link(a: Arc<Router>, b: Arc<Router>) {
-    let (ab_tx, ab_rx) = a.new_link(Box::new(|| None));
-    let (ba_tx, ba_rx) = b.new_link(Box::new(|| None));
+    let (ab_tx, ab_rx) = a.new_link(Default::default(), Box::new(|| None));
+    let (ba_tx, ba_rx) = b.new_link(Default::default(), Box::new(|| None));
     futures::future::try_join(forward(ab_tx, ba_rx), forward(ba_tx, ab_rx)).await.map(drop).unwrap()
 }
 

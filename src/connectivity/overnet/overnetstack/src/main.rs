@@ -110,7 +110,10 @@ async fn run_mesh_controller_server(
                                 fidl_fuchsia_overnet_protocol::Empty {},
                             ))
                         });
-                        if let Err(e) = run_stream_link(node, &mut rx, &mut tx, config).await {
+                        if let Err(e) =
+                            run_stream_link(node, &mut rx, &mut tx, Default::default(), config)
+                                .await
+                        {
                             log::warn!("Socket link failed: {:?}", e);
                         }
                         Ok(())

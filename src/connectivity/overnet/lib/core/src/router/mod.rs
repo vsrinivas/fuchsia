@@ -35,7 +35,7 @@ use crate::{
     future_help::{log_errors, Observable, Observer},
     handle_info::{handle_info, HandleKey, HandleType},
     labels::{ConnectionId, Endpoint, NodeId, NodeLinkId, TransferKey},
-    link::{new_link, LinkReceiver, LinkRouting, LinkSender},
+    link::{new_link, LinkIntroductionFacts, LinkReceiver, LinkRouting, LinkSender},
     peer::{FramedStreamReader, FramedStreamWriter, MessageStats, Peer, PeerConnRef},
     proxy::{IntoProxied, ProxyTransferInitiationReceiver, RemoveFromProxyTable, StreamRefSender},
 };
@@ -353,6 +353,7 @@ impl Router {
     /// Create a new link to some node, returning a `LinkId` describing it.
     pub fn new_link(
         self: &Arc<Self>,
+        facts: LinkIntroductionFacts,
         config: crate::link::ConfigProducer,
     ) -> (LinkSender, LinkReceiver) {
         self.connecting_links.fetch_add(1, Ordering::Relaxed);
@@ -360,6 +361,7 @@ impl Router {
             NEXT_NODE_LINK_ID.fetch_add(1, Ordering::Relaxed).into(),
             self,
             config,
+            facts,
             ConnectingLinkToken { router: Arc::downgrade(self) },
         )
     }
@@ -1030,8 +1032,10 @@ mod tests {
         let mut node_id_gen = NodeIdGenerator::new(name, run);
         let router1 = node_id_gen.new_router()?;
         let router2 = node_id_gen.new_router()?;
-        let (link1_sender, link1_receiver) = router1.new_link(Box::new(|| None));
-        let (link2_sender, link2_receiver) = router2.new_link(Box::new(|| None));
+        let (link1_sender, link1_receiver) =
+            router1.new_link(Default::default(), Box::new(|| None));
+        let (link2_sender, link2_receiver) =
+            router2.new_link(Default::default(), Box::new(|| None));
         let _fwd = Task::spawn(async move {
             if let Err(e) = futures::future::try_join(
                 forward(link1_sender, link2_receiver),

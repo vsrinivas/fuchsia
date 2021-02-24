@@ -4,6 +4,8 @@
 
 library fuchsia.overnet.protocol;
 
+using fuchsia.net;
+
 /// Control frame sent over a link.
 union LinkControlFrame {
     1: uint64 ack;
@@ -53,4 +55,7 @@ table RouteMetrics {
 
 /// Introduction data for a link - basic configuration stuff will go here.
 table LinkIntroduction {
+    /// For IP based link protocols: the address of the receiver of this introduction, as observed
+    /// by the sender.
+    1: fuchsia.net.SocketAddress you_are;
 };

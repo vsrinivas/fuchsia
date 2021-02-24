@@ -8,7 +8,7 @@ use {
     anyhow::Error,
     byteorder::WriteBytesExt,
     futures::{io::AsyncWriteExt, prelude::*},
-    overnet_core::{ConfigProducer, Router},
+    overnet_core::{ConfigProducer, LinkIntroductionFacts, Router},
     std::{sync::Arc, time::Duration},
     stream_framer::{new_deframer, new_framer, Deframed, Format, ReadBytes},
 };
@@ -17,9 +17,10 @@ pub fn run_stream_link<'a>(
     node: Arc<Router>,
     rx_bytes: &'a mut (dyn AsyncRead + Unpin + Send),
     tx_bytes: &'a mut (dyn AsyncWrite + Unpin + Send),
+    introduction_facts: LinkIntroductionFacts,
     config: ConfigProducer,
 ) -> impl 'a + Send + Future<Output = Result<(), Error>> {
-    let (mut link_sender, mut link_receiver) = node.new_link(config);
+    let (mut link_sender, mut link_receiver) = node.new_link(introduction_facts, config);
     drop(node);
 
     let (mut framer, mut framer_read) = new_framer(LosslessBinary, 4096);

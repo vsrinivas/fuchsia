@@ -95,7 +95,7 @@ async fn run_stream(
         ))
     });
     log::trace!("Processing new Ascendd socket");
-    run_stream_link(node, &mut rx, &mut tx, config).await
+    run_stream_link(node, &mut rx, &mut tx, Default::default(), config).await
 }
 
 async fn run_ascendd(

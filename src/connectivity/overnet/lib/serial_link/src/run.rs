@@ -252,12 +252,15 @@ async fn main<OutputSink: AsyncWrite + Unpin>(
     router: &WeakRouter,
     descriptor: Option<String>,
 ) -> Result<(), Error> {
-    let (link_sender, link_receiver) = router.get()?.new_link(Box::new(move || {
-        descriptor.clone().map(|d| match role {
-            Role::Server => fidl_fuchsia_overnet_protocol::LinkConfig::SerialServer(d),
-            Role::Client => fidl_fuchsia_overnet_protocol::LinkConfig::SerialClient(d),
-        })
-    }));
+    let (link_sender, link_receiver) = router.get()?.new_link(
+        Default::default(),
+        Box::new(move || {
+            descriptor.clone().map(|d| match role {
+                Role::Server => fidl_fuchsia_overnet_protocol::LinkConfig::SerialServer(d),
+                Role::Client => fidl_fuchsia_overnet_protocol::LinkConfig::SerialClient(d),
+            })
+        }),
+    );
     futures::future::try_join(
         link_to_framer(link_sender, fragment_writer),
         deframer_to_link(role, fragment_reader, link_receiver),

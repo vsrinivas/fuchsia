@@ -6,7 +6,7 @@ use crate::quic_link::{new_quic_link, QuicReceiver};
 use anyhow::{format_err, Error};
 use fuchsia_async::net::UdpSocket;
 use futures::{channel::mpsc, lock::Mutex, prelude::*};
-use overnet_core::{ConnectionId, Endpoint, Router, MAX_FRAME_LENGTH};
+use overnet_core::{ConnectionId, Endpoint, LinkIntroductionFacts, Router, MAX_FRAME_LENGTH};
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::net::{SocketAddr, SocketAddrV6};
@@ -41,17 +41,19 @@ async fn run_link(
     first_packet: Option<Vec<u8>>,
     udp_socket: &UdpSocket,
 ) -> Result<(), Error> {
-    let (link_sender, link_receiver) = Weak::upgrade(node)
-        .ok_or_else(|| format_err!("router gone"))?
-        .new_link(Box::new(move || {
-            Some(fidl_fuchsia_overnet_protocol::LinkConfig::Udp(
-                fidl_fuchsia_net::Ipv6SocketAddress {
-                    address: fidl_fuchsia_net::Ipv6Address { addr: addr.ip().octets() },
-                    port: addr.port(),
-                    zone_index: addr.scope_id() as u64,
-                },
-            ))
-        }));
+    let (link_sender, link_receiver) =
+        Weak::upgrade(node).ok_or_else(|| format_err!("router gone"))?.new_link(
+            LinkIntroductionFacts { you_are: Some(SocketAddr::V6(addr)) },
+            Box::new(move || {
+                Some(fidl_fuchsia_overnet_protocol::LinkConfig::Udp(
+                    fidl_fuchsia_net::Ipv6SocketAddress {
+                        address: fidl_fuchsia_net::Ipv6Address { addr: addr.ip().octets() },
+                        port: addr.port(),
+                        zone_index: addr.scope_id() as u64,
+                    },
+                ))
+            }),
+        );
     let (link_sender, link_receiver, conn_id) =
         new_quic_link(link_sender, link_receiver, endpoint).await?;
     log::info!(

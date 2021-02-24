@@ -19,6 +19,9 @@ use crate::{
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use cutex::{AcquisitionPredicate, Cutex, CutexGuard, CutexTicket};
+use fidl_fuchsia_net::{
+    Ipv4Address, Ipv4SocketAddress, Ipv6Address, Ipv6SocketAddress, SocketAddress,
+};
 use fidl_fuchsia_overnet_protocol::{
     LinkControlFrame, LinkControlMessage, LinkControlPayload, LinkDiagnosticInfo, LinkIntroduction,
     Route, SetRoute,
@@ -34,6 +37,7 @@ use futures::{
 use rand::Rng;
 use std::{
     convert::TryInto,
+    net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     num::NonZeroU64,
     pin::Pin,
     sync::atomic::{AtomicU64, Ordering},
@@ -50,6 +54,77 @@ struct LinkStats {
     sent_bytes: AtomicU64,
     received_packets: AtomicU64,
     sent_packets: AtomicU64,
+}
+
+fn convert_ipv6_buffer(in_arr: [u8; 16]) -> [u16; 8] {
+    let mut out_arr: [u16; 8] = [0; 8];
+
+    for i in 0..8 {
+        out_arr[i] = ((in_arr[2 * i] as u16) << 8) | (in_arr[2 * i + 1] as u16);
+    }
+
+    out_arr
+}
+
+/// Metadata to be sent during the link introduction
+#[derive(Default, Debug)]
+pub struct LinkIntroductionFacts {
+    /// The socket address of this our peer as observed by us
+    pub you_are: Option<SocketAddr>,
+}
+
+impl LinkIntroductionFacts {
+    fn into_message(&self) -> LinkIntroduction {
+        LinkIntroduction {
+            you_are: self.you_are.map(|a| match a {
+                SocketAddr::V4(v4) => SocketAddress::Ipv4(Ipv4SocketAddress {
+                    address: Ipv4Address { addr: v4.ip().octets() },
+                    port: v4.port(),
+                }),
+                SocketAddr::V6(v6) => SocketAddress::Ipv6(Ipv6SocketAddress {
+                    address: Ipv6Address { addr: v6.ip().octets() },
+                    port: v6.port(),
+                    zone_index: v6.scope_id() as u64,
+                }),
+            }),
+            ..LinkIntroduction::EMPTY
+        }
+    }
+
+    fn from_message(introduction: LinkIntroduction) -> Result<Self, Error> {
+        Ok(LinkIntroductionFacts {
+            you_are: introduction
+                .you_are
+                .map(|a| {
+                    Ok::<_, Error>(match a {
+                        SocketAddress::Ipv4(v4) => SocketAddr::V4(SocketAddrV4::new(
+                            Ipv4Addr::new(
+                                v4.address.addr[0],
+                                v4.address.addr[1],
+                                v4.address.addr[2],
+                                v4.address.addr[3],
+                            ),
+                            v4.port,
+                        )),
+                        SocketAddress::Ipv6(v6) => {
+                            let addr = convert_ipv6_buffer(v6.address.addr);
+                            SocketAddr::V6(SocketAddrV6::new(
+                                Ipv6Addr::new(
+                                    addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6],
+                                    addr[7],
+                                ),
+                                v6.port,
+                                0,
+                                v6.zone_index
+                                    .try_into()
+                                    .map_err(|_| format_err!("zone_index too large"))?,
+                            ))
+                        }
+                    })
+                })
+                .transpose()?,
+        })
+    }
 }
 
 /// Maximum length of a frame that can be sent over a link.
@@ -327,6 +402,7 @@ pub(crate) fn new_link(
     node_link_id: NodeLinkId,
     router: &Arc<Router>,
     config: ConfigProducer,
+    introduction_facts: LinkIntroductionFacts,
     connecting_link_token: ConnectingLinkToken,
 ) -> (LinkSender, LinkReceiver) {
     let forwarding_table = Arc::new(Mutex::new(ForwardingTable::empty()));
@@ -365,6 +441,7 @@ pub(crate) fn new_link(
             rx_control,
             router.new_forwarding_table_observer(),
             forwarding_table.clone(),
+            introduction_facts,
             connecting_link_token,
             rx_send_closed,
             rx_recv_closed,
@@ -403,6 +480,7 @@ async fn run_link(
     input: mpsc::Receiver<LinkControlPayload>,
     forwarding_table: Observer<ForwardingTable>,
     forwarding_forwarding_table: Arc<Mutex<ForwardingTable>>,
+    introduction_facts: LinkIntroductionFacts,
     connecting_link_token: ConnectingLinkToken,
     rx_send_closed: oneshot::Receiver<()>,
     rx_recv_closed: oneshot::Receiver<()>,
@@ -413,6 +491,7 @@ async fn run_link(
         input,
         forwarding_table,
         forwarding_forwarding_table,
+        introduction_facts,
         connecting_link_token,
     );
     pin_mut!(inner);
@@ -437,6 +516,7 @@ async fn run_link_inner(
     mut input: mpsc::Receiver<LinkControlPayload>,
     forwarding_table: Observer<ForwardingTable>,
     forwarding_forwarding_table: Arc<Mutex<ForwardingTable>>,
+    introduction_facts: LinkIntroductionFacts,
     connecting_link_token: ConnectingLinkToken,
 ) -> Result<(), Error> {
     let get_router = || -> Result<Arc<Router>, Error> {
@@ -444,7 +524,8 @@ async fn run_link_inner(
     };
 
     log::trace!("{:?} perform link handshake", (get_router()?.node_id(), output.debug_id()));
-    let peer_node_id = link_handshake(&output, &mut input).await?;
+    let (peer_node_id, _peer_introduction_facts) =
+        link_handshake(&output, &mut input, introduction_facts).await?;
     log::trace!(
         "{:?} link handshake completed: peer_node_id={:?}",
         (get_router()?.node_id(), output.debug_id()),
@@ -525,23 +606,25 @@ async fn publish_rtt(
 async fn link_handshake(
     output: &Arc<LinkOutput>,
     input: &mut mpsc::Receiver<LinkControlPayload>,
-) -> Result<NodeId, Error> {
+    introduction_facts: LinkIntroductionFacts,
+) -> Result<(NodeId, LinkIntroductionFacts), Error> {
     futures::future::try_join3(
         async move {
             output
-                .send_control_message(LinkControlPayload::Introduction(LinkIntroduction {
-                    ..LinkIntroduction::EMPTY
-                }))
+                .send_control_message(LinkControlPayload::Introduction(
+                    introduction_facts.into_message(),
+                ))
                 .await?;
             Ok(())
         },
         async move {
             match input.next().await {
                 None => bail!("No introduction received"),
-                Some(LinkControlPayload::Introduction { .. }) => (),
+                Some(LinkControlPayload::Introduction(introduction)) => {
+                    LinkIntroductionFacts::from_message(introduction)
+                }
                 Some(x) => bail!("Bad initial payload; expected introduction, got {:?}", x),
             }
-            Ok(())
         },
         async move {
             let peer_node_id = output
@@ -554,7 +637,7 @@ async fn link_handshake(
         },
     )
     .await
-    .map(|((), (), id)| id)
+    .map(|((), intro, id)| (id, intro))
 }
 
 /// Process control messages and react to them
