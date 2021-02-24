@@ -75,7 +75,7 @@
   area: ['Storage']
   issue: []
   gerrit_change_id: ['424179']
-  status: 'Accepted'
+  status: 'Rejected'
   reviewers: ['jfsulliv@google.com', 'computerdruid@google.com', 'abarth@google.com', 'wittrock@google.com', 'brettw@google.com']
   submitted: '2020-09-06'
   reviewed: '2020-09-21'

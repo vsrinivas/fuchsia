@@ -5,6 +5,10 @@
 
 ## Summary
 
+Note: This RFC has been withdrawn. It was originally Accepted on 2020-09-21. See [Rationale for
+withdrawal](#rationale-for-withdrawal). This RFC is otherwise retained in its original state for
+historical purposes.
+
 This RFC describes a simple snapshot mechanism that gives increased resilience
 to bugs in the upgrade process. Changes to the Fuchsia Volume Manager (FVM),
 allow a snapshot of the Blobfs partition to be taken that can be reverted to at
@@ -451,6 +455,32 @@ following ways:
 The authors believe Android uses #3, iOS and macOS use #2 & #4.
 
 This RFC is a simplified version of #4.
+
+## Rationale for withdrawal {#rationale-for-withdrawal}
+
+Development on this RFC proceeded for several months before we decided to discontinue work on
+this RFC. There were several factors in this decision, the main being:
+
+* Technical debt in the FVM codebase led to slow progress and risky changes. Lack
+  of test coverage, long-latent bugs, and widespread assumptions about the format layout of FVM
+  (due to lack of encapsulation for the FVM format) were the main hindrances.
+
+* FVM was under-documented and poorly understood by the team. Organizational knowledge about FVM
+  had decayed over time, and the initial assumption that FVM would be a relatively simple and
+  appropriate place to build this feature was incorrect.
+
+* The impact of rolling out the feature was higher than originally understood, since the
+  feature would require an FVM major format revision which was determined to be highly
+  disruptive to engineering efforts (since it requires reimaging devices, and since it
+  also requires rolling the Zedboot version, which itself is a highly disruptive operation).
+
+Given the high risk of developing this feature, and the high likelihood of impact on the growing
+Fuchsia developer community, it no longer made sense to pursue this feature. Instead, the storage
+team will be focusing efforts on improving test coverage and automation to mitigate the risks
+described in the motivation for this RFC, proceeding with a rewrite of the FVM host tooling (a
+substantial source of unexpected complexity), and evaluating the possibility of reducing reliance
+on particular FVM/Zedboot versions to reduce impact to developers when either of these need to be
+changed.
 
 ---
 
