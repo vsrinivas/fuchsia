@@ -8,6 +8,7 @@ import (
 	"container/heap"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"math"
 	"os"
 	"path/filepath"
@@ -423,6 +424,8 @@ func (h *subshardHeap) Pop() interface{} {
 // first sorts the tests in descending order by expected duration and then
 // successively allocates each test to the subshard with the lowest total
 // expected duration so far.
+//
+// Within each returned shard, tests will be sorted pseudo-randomly.
 func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int) []*Shard {
 	sort.Slice(shard.Tests, func(index1, index2 int) bool {
 		test1, test2 := shard.Tests[index1], shard.Tests[index2]
@@ -480,6 +483,18 @@ func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int)
 
 	newShards := make([]*Shard, 0, numNewShards)
 	for i, subshard := range h {
+		// If we left tests in descending order by duration, updates to
+		// checked-in test durations could arbitrarily reorder tests, making
+		// those updates more likely to break non-hermetic tests.
+		// To avoid that, sort by a hash of the name so that similar tests (e.g.
+		// all tests from one area of the codebase, or all host-side tests)
+		// tests don't always run sequentially, since similar tests are more
+		// likely to non-hermetically conflict with each other. Using a
+		// deterministic hash ensures that given tests A and B in the same
+		// shard, A will *always* run before B or vice versa.
+		sort.Slice(subshard.tests, func(i, j int) bool {
+			return hash(subshard.tests[i].Name) < hash(subshard.tests[j].Name)
+		})
 		name := shard.Name
 		if numNewShards > 1 {
 			name = fmt.Sprintf("%s-(%d)", shard.Name, i+1)
@@ -491,6 +506,12 @@ func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int)
 		})
 	}
 	return newShards
+}
+
+func hash(s string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return h.Sum32()
 }
 
 // Removes leading slashes and replaces all other `/` with `_`. This allows the
