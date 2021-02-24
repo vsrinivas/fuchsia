@@ -26,6 +26,13 @@ TEST(ScreenReaderUtilTest, NodeIsDescribableButton) {
   EXPECT_TRUE(a11y::NodeIsDescribable(&node));
 }
 
+TEST(ScreenReaderUtilTest, NodeIsDescribableToggleSwitch) {
+  fuchsia::accessibility::semantics::Node node;
+  node.set_node_id(0u);
+  node.set_role(fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH);
+  EXPECT_TRUE(a11y::NodeIsDescribable(&node));
+}
+
 TEST(ScreenReaderUtilTest, NodeIsDescribableLabelled) {
   fuchsia::accessibility::semantics::Node node;
   node.set_node_id(0u);
@@ -50,10 +57,18 @@ TEST(ScreenReaderUtilTest, NodeIsDescribableNoLabel) {
   EXPECT_FALSE(a11y::NodeIsDescribable(&node));
 }
 
-TEST(ScreenReaderUtilTest, HiddenNodesAreNotDescribable) {
+TEST(ScreenReaderUtilTest, HiddenNodesAreNotDescribableButton) {
   fuchsia::accessibility::semantics::Node node;
   node.set_node_id(0u);
   node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
+  node.mutable_states()->set_hidden(true);
+  EXPECT_FALSE(a11y::NodeIsDescribable(&node));
+}
+
+TEST(ScreenReaderUtilTest, HiddenNodesAreNotDescribableToggleSwitch) {
+  fuchsia::accessibility::semantics::Node node;
+  node.set_node_id(0u);
+  node.set_role(fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH);
   node.mutable_states()->set_hidden(true);
   EXPECT_FALSE(a11y::NodeIsDescribable(&node));
 }
