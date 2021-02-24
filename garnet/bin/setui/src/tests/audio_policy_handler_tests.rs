@@ -601,8 +601,25 @@ async fn test_handler_add_min_limit_unmutes() {
     set_media_volume_limit(&mut env, Transform::Min(starting_volume_level), starting_audio_info)
         .await;
 
-    // Handler requests that the setting handler set the volume to 60% (the max set by policy).
+    // Handler requests that the setting handler unmute the stream.
     verify_stream_set(&mut env, expected_stream).await;
+}
+
+// Verifies that adding a max volume policy of 0% succeeds and sets the volume 0%.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_add_zero_max() {
+    let mut env = create_handler_test_environment().await;
+
+    // Starting audio info at non-zero value.
+    let mut starting_audio_info = default_audio_info();
+    starting_audio_info.replace_stream(create_media_stream(0.5, false));
+
+    // Set the max volume limit to 0%.
+    let max_volume = 0.0;
+    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
+
+    // Handler requests that the setting handler set the volume to 0%.
+    verify_media_volume_set(&mut env, max_volume).await;
 }
 
 // Verifies that the internal volume will not be adjusted when it's already within policy limits.

@@ -278,6 +278,11 @@ impl AudioPolicyHandler {
     fn calculate_external_volume(&self, target: PropertyTarget, internal_volume: f32) -> f32 {
         let VolumeLimits { max_volume, .. } = self.determine_volume_limits(target);
 
+        if max_volume == 0.0 {
+            // When max is capped at 0, return immediately to avoid dividing by 0.
+            return 0.0;
+        }
+
         round_volume_level(internal_volume / max_volume)
     }
 
@@ -309,7 +314,7 @@ impl AudioPolicyHandler {
     }
 
     /// Adds a transform to the given target.
-    // TODO(fxbug.dev/60966): perform validations and return errors for invalid inputs, such as
+    // TODO(fxbug.dev/70856): perform validations and return errors for invalid inputs, such as
     // a max being lower than a min.
     async fn add_policy_transform(
         &mut self,
