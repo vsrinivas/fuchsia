@@ -361,7 +361,6 @@ void GatherVmos::GatherDeviceProperties() {}
 
 void GatherVmos::Gather() {
   TRACE_DURATION("harvester", "GatherVmos::Gather");
-  // NOTE: g_slow_data_task_tree is gathered in GatherChannels::Gather().
 
   // First, gather VMOs.
   std::vector<zx_koid_t> new_vmos;

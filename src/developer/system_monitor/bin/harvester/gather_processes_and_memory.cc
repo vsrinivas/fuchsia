@@ -23,16 +23,17 @@ void GatherProcessesAndMemory::Gather() {
   SampleBundle samples;
   // Note: g_slow_data_task_tree is gathered in GatherChannels::Gather().
   auto task_tree = &g_slow_data_task_tree;
-  if (actions_.WantRefresh()) {
+
+  limiter_.Run([&] {
     AddTaskBasics(&samples, task_tree->Jobs(), dockyard::KoidType::JOB);
     AddTaskBasics(&samples, task_tree->Processes(),
                   dockyard::KoidType::PROCESS);
     AddTaskBasics(&samples, task_tree->Threads(), dockyard::KoidType::THREAD);
-  }
+  });
+
   AddProcessStats(&samples, task_tree->Processes());
   AddGlobalMemorySamples(&samples, InfoResource());
   samples.Upload(DockyardPtr());
-  actions_.NextInterval();
 }
 
 }  // namespace harvester
