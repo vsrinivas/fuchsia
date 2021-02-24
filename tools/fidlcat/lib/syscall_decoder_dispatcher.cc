@@ -51,6 +51,8 @@ std::unique_ptr<fidl_codec::Type> SyscallTypeToFidlCodecType(fidlcat::SyscallTyp
       return std::make_unique<fidl_codec::Int32Type>();
     case SyscallType::kInt64:
       return std::make_unique<fidl_codec::Int64Type>();
+    case SyscallType::kMonotonicTime:
+      return std::make_unique<fidl_codec::Int64Type>(fidl_codec::Int64Type::Kind::kMonotonicTime);
     case SyscallType::kObjectInfoTopic:
       return std::make_unique<fidl_codec::Uint32Type>(
           fidl_codec::Uint32Type::Kind::kObjectInfoTopic);

@@ -118,7 +118,7 @@ INTERRUPT_WAIT_DISPLAY_TEST(
     "zx_interrupt_wait(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "out_timestamp: \x1B[32mzx_time_t\x1B[0m = "
+    "out_timestamp: \x1B[32mzx.time\x1B[0m = "
     "\x1B[34m2 hours, 13 minutes, 20 seconds and 123000 nano seconds\x1B[0m)\n");
 
 // zx_interrupt_destroy tests.
@@ -210,7 +210,7 @@ INTERRUPT_TRIGGER_DISPLAY_TEST(
     "zx_interrupt_trigger("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
-    "timestamp: \x1B[32mzx_time_t\x1B[0m = \x1B[34m2 hours, 13 minutes, 20 seconds\x1B[0m)\n"
+    "timestamp: \x1B[32mzx.time\x1B[0m = \x1B[34m2 hours, 13 minutes, 20 seconds\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 

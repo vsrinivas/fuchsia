@@ -203,7 +203,7 @@ class Int32Type : public IntegralType<int32_t> {
 
 class Int64Type : public IntegralType<int64_t> {
  public:
-  enum class Kind { kDecimal, kDuration, kTime };
+  enum class Kind { kDecimal, kDuration, kTime, kMonotonicTime };
 
   explicit Int64Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 

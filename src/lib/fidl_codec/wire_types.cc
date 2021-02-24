@@ -285,6 +285,8 @@ std::string Int64Type::Name() const {
       return "zx.duration";
     case Kind::kTime:
       return "zx.time";
+    case Kind::kMonotonicTime:
+      return "zx.time";
   }
 }
 
@@ -313,6 +315,12 @@ void Int64Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
           absolute = -absolute;
         }
         printer.DisplayTime(static_cast<zx_time_t>(absolute));
+        break;
+      case Kind::kMonotonicTime:
+        if (negative) {
+          absolute = -absolute;
+        }
+        printer.DisplayDuration(static_cast<zx_duration_t>(absolute));
         break;
     }
   }

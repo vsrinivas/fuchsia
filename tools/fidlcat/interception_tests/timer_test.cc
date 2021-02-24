@@ -76,17 +76,16 @@ std::unique_ptr<SystemCallTest> ZxTimerSet(int64_t result, std::string_view resu
   TEST_F(InterceptionWorkflowTestX64, name) { TIMER_SET_DISPLAY_TEST_CONTENT(errno, expected); } \
   TEST_F(InterceptionWorkflowTestArm, name) { TIMER_SET_DISPLAY_TEST_CONTENT(errno, expected); }
 
-TIMER_SET_DISPLAY_TEST(
-    ZxTimerSet, ZX_OK,
-    "\n"
-    "\x1B[32m0.000000\x1B[0m "
-    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "zx_timer_set("
-    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-    "deadline: \x1B[32mzx_time_t\x1B[0m = \x1B[34m123000000 nano seconds\x1B[0m, "
-    "slack: \x1B[32mduration\x1B[0m = \x1B[34m1000 nano seconds\x1B[0m)\n"
-    "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+TIMER_SET_DISPLAY_TEST(ZxTimerSet, ZX_OK,
+                       "\n"
+                       "\x1B[32m0.000000\x1B[0m "
+                       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+                       "zx_timer_set("
+                       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                       "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34m123000000 nano seconds\x1B[0m, "
+                       "slack: \x1B[32mzx.duration\x1B[0m = \x1B[34m1000 nano seconds\x1B[0m)\n"
+                       "\x1B[32m0.000000\x1B[0m "
+                       "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_timer_cancel tests.
 
