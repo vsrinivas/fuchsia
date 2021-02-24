@@ -190,7 +190,7 @@ class DevfsFidlServer : public fio::DirectoryAdmin::Interface {
                         AddInotifyFilterCompleter::Sync& completer) override {}
   void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {}
   void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) override {}
-  void Rewind(RewindCompleter::Sync& completer) override {}
+  void Rewind(RewindCompleter::Sync& completer) override;
   void GetToken(GetTokenCompleter::Sync& completer) override {}
   void Rename(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
               RenameCompleter::Sync& completer) override {}
@@ -864,9 +864,11 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
       return fuchsia_io_NodeGetAttr_reply(txn, ZX_OK, &attributes);
     }
     case fuchsia_io_DirectoryRewindOrdinal: {
-      DECODE_REQUEST(msg, DirectoryRewind);
-      ios->readdir_ino_ = 0;
-      return fuchsia_io_DirectoryRewind_reply(txn, ZX_OK);
+      ios->server_->set_current_dispatcher(dispatcher);
+      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
+      ios->server_->clear_current_dispatcher();
+      ZX_ASSERT(result == fidl::DispatchResult::kFound);
+      return transaction.GetStatus();
     }
     case fuchsia_io_DirectoryReadDirentsOrdinal: {
       DECODE_REQUEST(msg, DirectoryReadDirents);
@@ -941,6 +943,11 @@ void DevfsFidlServer::Watch(uint32_t mask, uint32_t options, zx::channel watcher
     status = devfs_watch(owner_->devnode_, std::move(watcher), mask);
   }
   completer.Reply(status);
+}
+
+void DevfsFidlServer::Rewind(RewindCompleter::Sync& completer) {
+  owner_->readdir_ino_ = 0;
+  completer.Reply(ZX_OK);
 }
 
 void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
