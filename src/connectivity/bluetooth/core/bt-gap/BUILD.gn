@@ -88,12 +88,17 @@ resource("default-config") {
   outputs = [ "data/default.json" ]
 }
 
-fuchsia_package_with_single_component("bt-gap") {
+fuchsia_component("component") {
+  component_name = "bt-gap"
   deps = [
     ":bin",
     ":default-config",
   ]
   manifest = "meta/bt-gap.cmx"
+}
+
+fuchsia_package("bt-gap") {
+  deps = [ ":component" ]
 }
 
 fuchsia_unittest_package("bt-gap-unittests") {
