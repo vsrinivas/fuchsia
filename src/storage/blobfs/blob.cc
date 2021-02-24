@@ -899,6 +899,8 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
   return ZX_OK;
 }
 
+// TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
+// is complete.
 void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal) {
   const zx::vmo& vmo = data_mapping_.vmo();
@@ -1074,7 +1076,8 @@ bool Blob::ShouldCache() const {
 
 void Blob::ActivateLowMemory() {
   // We shouldn't be putting the blob into a low-memory state while it is still mapped.
-  ZX_ASSERT(clone_watcher_.object() == ZX_HANDLE_INVALID);
+  ZX_ASSERT(!has_clones());
+
   page_watcher_.reset();
   data_mapping_.Reset();
   merkle_mapping_.Reset();
@@ -1179,7 +1182,7 @@ zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   return CloneDataVmo(rights, out_vmo, out_size);
 }
 
-#endif
+#endif  // defined(__Fuchsia__)
 
 void Blob::Sync(SyncCallback on_complete) {
   // This function will issue its callbacks on either the current thread or the journal thread. The
@@ -1235,6 +1238,8 @@ void Blob::CompleteSync() {
   }
 }
 
+// TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
+// is complete.
 fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
   if (clone_watcher_.is_pending()) {
     clone_watcher_.Cancel();

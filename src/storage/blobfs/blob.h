@@ -115,7 +115,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Returns whether there are any external references to the blob.
   // Note that this *must* be called on the main dispatch thread; otherwise the underlying state of
   // the blob could change after (or during) the call.
-  bool HasReferences() const { return fd_count_ > 0 || clone_ref_; }
+  bool HasReferences() const { return fd_count_ > 0 || has_clones(); }
 
   // Identifies if we can safely remove all on-disk and in-memory storage used by this blob.
   // Note that this *must* be called on the main dispatch thread; otherwise the underlying state of
@@ -148,6 +148,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   //
   // Returns this reference, if it exists, to provide control over
   // when the Vnode destructor is executed.
+  //
+  // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
+  // is complete.
   fbl::RefPtr<Blob> CloneWatcherTeardown();
 
   // Marks the blob as deletable, and attempt to purge it.
@@ -204,6 +207,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size);
 
   // Receives notifications when all clones vended by CloneDataVmo() are released.
+  //
+  // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
+  // is complete.
   void HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                       const zx_packet_signal_t* signal);
 
@@ -315,14 +321,26 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   fzl::OwnedVmoMapper merkle_mapping_;
   fzl::OwnedVmoMapper data_mapping_;
 
-  // Watches any clones of "vmo_" provided to clients.
-  // Observes the ZX_VMO_ZERO_CHILDREN signal.
-  async::WaitMethod<Blob, &Blob::HandleNoClones> clone_watcher_;
-  // Keeps a reference to the blob alive (from within itself)
-  // until there are no cloned VMOs in used.
+#if !defined(ENABLE_BLOBFS_NEW_PAGER)
+  // In the new pager the PagedVnode base class provides this function. Defining an identical
+  // function for the old pager allows fewer divergences in this class' logic.
+  bool has_clones() const { return !!clone_ref_; }
+#endif
+
+  // Watches any clones of "vmo_" provided to clients. Observes the ZX_VMO_ZERO_CHILDREN signal.
   //
-  // This RefPtr is only non-null when a client is using a cloned VMO,
-  // or there would be a clear leak of Blob.
+  // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
+  // is complete.
+  async::WaitMethod<Blob, &Blob::HandleNoClones> clone_watcher_;
+
+  // Keeps a reference to the blob alive (from within itself) until there are no cloned VMOs in
+  // used.
+  //
+  // This RefPtr is only non-null when a client is using a cloned VMO, or there would be a clear
+  // leak of Blob.
+  //
+  // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
+  // is complete.
   fbl::RefPtr<Blob> clone_ref_ = {};
 
   zx::event readable_event_ = {};

@@ -75,6 +75,12 @@ class PagingTestFile : public PagedVnode {
   // Controls the success or failure that VmoRead() will report. Defaults to success (ZX_OK).
   void set_read_status(zx_status_t status) { vmo_read_status_ = status; }
 
+  // Public locked version of PagedVnode::has_clones().
+  bool HasClones() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return has_clones();
+  }
+
   // PagedVnode implementation:
   void VmoRead(uint64_t offset, uint64_t length) override {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -222,6 +228,9 @@ class PagingTest : public zxtest::Test {
   std::shared_ptr<SharedFileState> file_err_shared_;
   std::vector<uint8_t> file1_contents_;
 
+  fbl::RefPtr<PagingTestFile> file1_;
+  fbl::RefPtr<PagingTestFile> file_err_;
+
  private:
   // The VFS needs to run on a separate thread to handle the FIDL requests from the test because
   // the FDIO calls from the main thread are blocking.
@@ -237,8 +246,6 @@ class PagingTest : public zxtest::Test {
 
   fbl::RefPtr<PseudoDir> root_;
 
-  fbl::RefPtr<PagingTestFile> file1_;
-  fbl::RefPtr<PagingTestFile> file_err_;
 };
 
 template <typename T>
@@ -257,11 +264,13 @@ TEST_F(PagingTest, Read) {
 
   // With no VMO requests, there should be no mappings of the VMO in the file.
   ASSERT_FALSE(file1_shared_->GetVmoPresent());
+  EXPECT_FALSE(file1_->HasClones());
 
   // Gets the VMO for file1, it should now have a VMO.
   zx::vmo vmo;
   ASSERT_EQ(ZX_OK, fdio_get_vmo_exact(file1_fd.get(), vmo.reset_and_get_address()));
   ASSERT_TRUE(file1_shared_->WaitForChangedVmoPresence());
+  EXPECT_TRUE(file1_->HasClones());
 
   // Map the data and validate the result can be read.
   zx_vaddr_t mapped_addr = 0;
@@ -281,10 +290,12 @@ TEST_F(PagingTest, Read) {
 
   // The vmo should still be valid.
   ASSERT_TRUE(file1_shared_->GetVmoPresent());
+  EXPECT_TRUE(file1_->HasClones());
 
   // Unmap the memory. This should notify the vnode which should free its vmo_ reference.
   ASSERT_EQ(ZX_OK, zx::vmar::root_self()->unmap(mapped_addr, mapped_len));
   ASSERT_FALSE(file1_shared_->WaitForChangedVmoPresence());
+  EXPECT_FALSE(file1_->HasClones());
 }
 
 TEST_F(PagingTest, VmoRead) {

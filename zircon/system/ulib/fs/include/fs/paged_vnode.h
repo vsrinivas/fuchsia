@@ -56,6 +56,9 @@ class PagedVnode : public Vnode {
   // This will be a null handle if there is no VMO associated with this vnode.
   zx::vmo& vmo() FS_TA_REQUIRES(mutex_) { return vmo_; }
 
+  // Returns true if there are clones of the VMO alive that have been given out.
+  bool has_clones() const { return has_clones_; }
+
   // Populates the vmo() if necessary. Does nothing if it already exists. Access the created vmo
   // with this class' vmo() getter.
   //
@@ -85,6 +88,9 @@ class PagedVnode : public Vnode {
   // The root VMO that paging happens out of for this vnode. VMOs that map the data into user
   // processes will be children of this VMO.
   zx::vmo vmo_ FS_TA_GUARDED(mutex_);
+
+  // Set when there are clones of the vmo_.
+  bool has_clones_ = false;
 
   // Watches any clones of "vmo_" provided to clients. Observes the ZX_VMO_ZERO_CHILDREN signal.
   // See WatchForZeroChildren().

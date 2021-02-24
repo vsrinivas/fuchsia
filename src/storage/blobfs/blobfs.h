@@ -73,6 +73,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Creates a blobfs object with the default compression algorithm.
   //
   // The dispatcher should be for the current thread that blobfs is running on.
+  //
+  // The optional root VM resource is needed to create executable blobs. See vmex_resource() getter.
   static zx::status<std::unique_ptr<Blobfs>> Create(async_dispatcher_t* dispatcher,
                                                     std::unique_ptr<BlockDevice> device,
                                                     const MountOptions& options = MountOptions(),
@@ -203,6 +205,9 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
     return write_compression_settings_.compression_algorithm != CompressionAlgorithm::UNCOMPRESSED;
   }
 
+  // Optional root VM resource. This is necessary to allow executable blobs to be created. It will
+  // be a null resource if this blobfs instance does not have access (msotly happens in tests) in
+  // which case it will be impossible to create executable memory mappings.
   const zx::resource& vmex_resource() const { return vmex_resource_; }
 
   BlobLoader& loader() { return loader_; }
@@ -340,7 +345,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   fuchsia_hardware_block_BlockInfo block_info_ = {};
   Writability writability_;
   const CompressionSettings write_compression_settings_;
-  zx::resource vmex_resource_;
+  zx::resource vmex_resource_;  // Possibly null resource. See getter for more.
 
   std::unique_ptr<Allocator> allocator_;
 

@@ -12,8 +12,14 @@ PagedVnode::PagedVnode(PagedVfs* vfs) : Vnode(vfs), clone_watcher_(this) {}
 PagedVnode::~PagedVnode() {}
 
 zx::status<> PagedVnode::EnsureCreateVmo(uint64_t size) {
-  if (vmo_)
+  if (vmo_) {
+    // The derived class can choose to cache the VMO even if it has no clones, so just because the
+    // VMO exists doesn't mean it has clones. As a result, we may need to arm the watcher.
+    WatchForZeroVmoClones();
+
     return zx::ok();
+  }
+
   if (!paged_vfs())
     return zx::error(ZX_ERR_BAD_STATE);  // Currently shutting down.
 
@@ -39,6 +45,8 @@ void PagedVnode::OnNoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBa
                                    zx_status_t status, const zx_packet_signal_t* signal) {
   std::lock_guard<std::mutex> lock(mutex_);
 
+  ZX_DEBUG_ASSERT(has_clones_);
+
   if (!paged_vfs())
     return;  // Called during tear-down.
 
@@ -54,11 +62,14 @@ void PagedVnode::OnNoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBa
   }
 
   clone_watcher_.set_object(ZX_HANDLE_INVALID);
+  has_clones_ = false;
 
   OnNoClones();
 }
 
 void PagedVnode::WatchForZeroVmoClones() {
+  has_clones_ = true;
+
   clone_watcher_.set_object(vmo_.get());
   clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
   clone_watcher_.Begin(paged_vfs()->dispatcher());
