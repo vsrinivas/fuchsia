@@ -333,6 +333,7 @@
         {
             protocol: [
                 "fuchsia.hardware.display.Provider",
+                "fuchsia.process.Launcher",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
