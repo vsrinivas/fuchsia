@@ -2657,7 +2657,19 @@ the "some_other_flavor" flavor instead of their default flavor
 all other packages using this template would use their default
 package flavors.
 
-**Current value (from the default):** `[]`
+**Current value for `target_cpu = "arm64"`:** `[]`
+
+From //products/bringup.gni:57
+
+**Overridden from the default:** `[]`
+
+From //build/packages/prebuilt_package_with_flavors.gni:29
+
+**Current value for `target_cpu = "x64"`:** `[]`
+
+From //products/bringup.gni:57
+
+**Overridden from the default:** `[]`
 
 From //build/packages/prebuilt_package_with_flavors.gni:29
 
