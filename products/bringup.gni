@@ -53,3 +53,5 @@ host_labels = [
   "//tools/devshell:fx",
   "//tools/bindc:host",
 ]
+
+package_flavor_selections = []
