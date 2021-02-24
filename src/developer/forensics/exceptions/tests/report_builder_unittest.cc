@@ -78,6 +78,14 @@ TEST_F(CrashReportBuilderTest, ExpiredException) {
   EXPECT_EQ(crash_report.crash_signature(), "fuchsia-no-minidump-exception-expired");
 }
 
+TEST_F(CrashReportBuilderTest, IsFatal) {
+  builder_.SetExceptionExpired();
+
+  auto crash_report = builder_.Consume();
+  ASSERT_TRUE(crash_report.has_is_fatal());
+  EXPECT_TRUE(crash_report.is_fatal());
+}
+
 }  // namespace
 }  // namespace handler
 }  // namespace exceptions

@@ -24,6 +24,7 @@ class CrashReporter : public CrashReporterBase {
     std::string crash_signature;
     std::string reboot_log;
     std::optional<zx::duration> uptime;
+    std::optional<bool> is_fatal;
   };
 
   CrashReporter(Expectations expectations) : expectations_(expectations) {}
@@ -39,6 +40,7 @@ class CrashReporter : public CrashReporterBase {
   std::string crash_signature_;
   std::string reboot_log_;
   std::optional<zx::duration> uptime_;
+  std::optional<bool> is_fatal_;
 };
 
 class CrashReporterClosesConnection : public CrashReporterBase {

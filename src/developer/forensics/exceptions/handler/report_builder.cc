@@ -93,6 +93,8 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
   using namespace fuchsia::feedback;
   CrashReport crash_report;
 
+  crash_report.set_is_fatal(true);
+
   const std::string program_name =
       (component_url_.has_value()) ? component_url_.value() : process_name_.value();
   crash_report.set_program_name(program_name.substr(0, fuchsia::feedback::MAX_PROGRAM_NAME_LENGTH));

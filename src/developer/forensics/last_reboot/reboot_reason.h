@@ -44,6 +44,9 @@ enum class RebootReason {
 // Whether the reason justifies a crash report.
 bool IsCrash(RebootReason reason);
 
+// Whether the reason is deemed fatal.
+bool IsFatal(RebootReason reason);
+
 // Whether the reboot is graceful, ungraceful or undetermined.
 std::optional<bool> OptionallyGraceful(RebootReason reason);
 

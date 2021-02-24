@@ -272,6 +272,7 @@ void CrashReporter::ScheduleHourlySnapshot(const zx::duration delay) {
         fuchsia::feedback::CrashReport report;
         report.set_program_name(kHourlySnapshotProgramName)
             .set_program_uptime(zx_clock_get_monotonic())
+            .set_is_fatal(false)
             .set_specific_report(std::move(specific_report));
 
         File(std::move(report), /*is_hourly_snapshot=*/true);

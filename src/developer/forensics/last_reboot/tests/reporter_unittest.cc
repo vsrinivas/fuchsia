@@ -62,6 +62,7 @@ struct GracefulRebootWithCrashTestParam {
   std::string output_crash_signature;
   zx::duration output_uptime;
   cobalt::LastRebootReason output_last_reboot_reason;
+  bool output_is_fatal;
 };
 
 template <typename TestParam>
@@ -125,6 +126,7 @@ TEST_F(GenericReporterTest, Succeed_WellFormedRebootLog) {
           .crash_signature = ToCrashSignature(reboot_log.RebootReason()),
           .reboot_log = reboot_log.RebootLogStr(),
           .uptime = reboot_log.Uptime(),
+          .is_fatal = true,
       }));
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
@@ -146,6 +148,7 @@ TEST_F(GenericReporterTest, Succeed_NoUptime) {
           .crash_signature = ToCrashSignature(reboot_log.RebootReason()),
           .reboot_log = reboot_log.RebootLogStr(),
           .uptime = std::nullopt,
+          .is_fatal = true,
       }));
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
@@ -285,6 +288,7 @@ TEST_P(UngracefulReporterTest, Succeed) {
           .crash_signature = param.output_crash_signature,
           .reboot_log = param.zircon_reboot_log,
           .uptime = param.output_uptime,
+          .is_fatal = true,
       }));
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
@@ -384,6 +388,7 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulWithCrashReporterTest,
                                  "fuchsia-session-failure",
                                  zx::msec(65487494),
                                  cobalt::LastRebootReason::kSessionFailure,
+                                 false,
                              },
                              {
                                  "SysmgrFailure",
@@ -391,6 +396,7 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulWithCrashReporterTest,
                                  "fuchsia-sysmgr-failure",
                                  zx::msec(65487494),
                                  cobalt::LastRebootReason::kSysmgrFailure,
+                                 true,
                              },
                              {
                                  "CriticalComponentFailure",
@@ -398,6 +404,7 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulWithCrashReporterTest,
                                  "fuchsia-critical-component-failure",
                                  zx::msec(65487494),
                                  cobalt::LastRebootReason::kCriticalComponentFailure,
+                                 true,
                              },
                              {
                                  "RetrySystemUpdate",
@@ -405,6 +412,7 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulWithCrashReporterTest,
                                  "fuchsia-retry-system-update",
                                  zx::msec(65487494),
                                  cobalt::LastRebootReason::kRetrySystemUpdate,
+                                 true,
                              },
                          })),
                          [](const testing::TestParamInfo<GracefulRebootWithCrashTestParam>& info) {
@@ -426,6 +434,7 @@ TEST_P(GracefulWithCrashReporterTest, Succeed) {
               fxl::StringPrintf("%s\nGRACEFUL REBOOT REASON (%s)", zircon_reboot_log.c_str(),
                                 param.graceful_reboot_log.c_str()),
           .uptime = param.output_uptime,
+          .is_fatal = param.output_is_fatal,
       }));
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 

@@ -77,6 +77,30 @@ bool IsCrash(const RebootReason reason) {
   }
 }
 
+bool IsFatal(const RebootReason reason) {
+  switch (reason) {
+    case RebootReason::kNotParseable:
+    case RebootReason::kSpontaneous:
+    case RebootReason::kKernelPanic:
+    case RebootReason::kOOM:
+    case RebootReason::kHardwareWatchdogTimeout:
+    case RebootReason::kSoftwareWatchdogTimeout:
+    case RebootReason::kBrownout:
+    case RebootReason::kSysmgrFailure:
+    case RebootReason::kCriticalComponentFailure:
+    case RebootReason::kRetrySystemUpdate:
+      return true;
+    case RebootReason::kGenericGraceful:
+    case RebootReason::kUserRequest:
+    case RebootReason::kSystemUpdate:
+    case RebootReason::kHighTemperature:
+    case RebootReason::kCold:
+    case RebootReason::kSessionFailure:
+    case RebootReason::kFdr:
+      return false;
+  }
+}
+
 std::optional<bool> OptionallyGraceful(const RebootReason reason) {
   switch (reason) {
     case RebootReason::kGenericGraceful:
