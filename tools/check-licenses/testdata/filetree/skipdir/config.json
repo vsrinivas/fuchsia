@@ -1,0 +1,33 @@
+{
+   "skipFiles":[
+      ".gitignore"
+   ],
+   "skipDirs":[
+      ".git",
+      "skipMe",
+      "skipMeCompletely",
+      "dontSkip/skipMe"
+   ],
+   "dontSkipDirs":[
+      "skipMe/dontSkipMe"
+   ],
+   "textExtensionList":[
+      "go",
+      "py"
+   ],
+   "maxReadSize":6144,
+   "outputFilePrefix":"NOTICE",
+   "singleLicenseFiles":[
+      "LICENSE"
+   ],
+   "licensePatternDir":"golden/",
+   "baseDir":".",
+   "target":"all",
+   "logLevel":"verbose",
+   "customProjectLicenses":[
+      {
+         "projectRoot":"test",
+         "licenseLocation":"test"
+      }
+   ]
+}

@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime/trace"
 	"sort"
 	"strings"
@@ -293,7 +294,7 @@ func isSkippable(config *Config, path string, info os.FileInfo) (bool, error) {
 		}
 	}
 	for _, dontSkipDir := range config.DontSkipDirs {
-		if strings.HasPrefix(path, dontSkipDir) || strings.HasPrefix(info.Name(), dontSkipDir) {
+		if buildDirRegex(dontSkipDir).Find([]byte(path)) != nil {
 			return false, nil
 		}
 	}
@@ -314,7 +315,7 @@ func isSkippable(config *Config, path string, info os.FileInfo) (bool, error) {
 				err = nil
 			}
 		}
-		if strings.HasPrefix(path, skipDir) || strings.HasPrefix(info.Name(), skipDir) {
+		if buildDirRegex(skipDir).Find([]byte(path)) != nil {
 			return true, err
 		}
 
@@ -325,4 +326,28 @@ func isSkippable(config *Config, path string, info os.FileInfo) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// Build the regex for matching skip/dontSkip paths.
+//
+// We want to be able to match our skip/dontSkip directories in three ways:
+// 1. At start of the path
+// 2. In the middle of the path
+// 3. At the end of the path
+//
+// Normally this would call for `strings.Contains`, but we must be careful to
+// not match on incorrect substring matches.
+//
+// For example:
+// "this/path" should not match on "wait_but_this/path_is_different"
+//
+// So, the regex is adding slashes where appropriate for all three cases listed
+// above. e.g. "this/path" -> "/this/path/" for the case of #2.
+func buildDirRegex(want string) *regexp.Regexp {
+	osSeparator := string(filepath.Separator)
+	regex := strings.ReplaceAll(
+		`(?:^A\`+osSeparator+`)|(?:\`+osSeparator+`A\`+osSeparator+`)|(?:\`+osSeparator+`A$)`,
+		"A",
+		strings.ReplaceAll(want, osSeparator, `\`+osSeparator))
+	return regexp.MustCompile(regex)
 }

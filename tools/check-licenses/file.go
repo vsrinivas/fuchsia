@@ -80,3 +80,7 @@ func (f *File) MarshalJSON() ([]byte, error) {
 		Licenses: licenseList,
 	})
 }
+
+func (f *File) String() string {
+	return f.Path
+}

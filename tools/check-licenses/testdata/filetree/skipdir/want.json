@@ -1,0 +1,35 @@
+{
+	"name": "root",
+	"path": "{root}",
+	"files": [
+		{
+			"name": "testA.py",
+			"path": "{root}/testA.py",
+			"symlink": "{root}/testA.py"
+		}
+	],
+	"children": [
+		{
+			"name": "dontSkipMe",
+			"path": "{root}/skipMe/dontSkipMe",
+			"files": [
+				{
+					"name": "testC.py",
+					"path": "{root}/skipMe/dontSkipMe/testC.py",
+					"symlink": "{root}/skipMe/dontSkipMe/testC.py"
+				}
+			]
+		},
+		{
+			"name": "dontSkip",
+			"path": "{root}/dontSkip",
+			"files": [
+				{
+					"name": "testF.py",
+					"path": "{root}/dontSkip/testF.py",
+					"symlink": "{root}/dontSkip/testF.py"
+				}
+			]
+		}
+	]
+}
