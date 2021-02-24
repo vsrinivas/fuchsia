@@ -2,8 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Library definition file for linking codegen sources into tests
+pub mod codegen {
+    mod common;
+    mod error;
+    mod lower;
+    mod raise;
+    mod toplevel;
+    mod types;
 
+    pub use toplevel::codegen;
+}
 pub mod definition;
-pub mod grammar;
 pub mod parser;
+
+mod grammar;

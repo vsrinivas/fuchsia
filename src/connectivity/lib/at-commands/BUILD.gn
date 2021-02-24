@@ -36,6 +36,7 @@ copy("copy_sources") {
     "src/parser/common.rs",
     "src/parser/response_grammar.rs",
     "src/parser/response_parser.rs",
+    "src/serde.rs",
   ]
   outputs = [ "$target_gen_dir/{{source_target_relative}}" ]
 }
@@ -45,6 +46,8 @@ rustc_library("lib") {
   name = "at_commands"
   edition = "2018"
   deps = [
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:pest",
     "//third_party/rust_crates:pest_derive",
     "//third_party/rust_crates:thiserror",
@@ -67,6 +70,7 @@ rustc_library("lib") {
     "$target_gen_dir/src/parser/common.rs",
     "$target_gen_dir/src/parser/response_grammar.rs",
     "$target_gen_dir/src/parser/response_parser.rs",
+    "$target_gen_dir/src/serde.rs",
   ]
 }
 

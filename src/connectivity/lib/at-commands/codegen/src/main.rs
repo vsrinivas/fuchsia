@@ -4,14 +4,10 @@
 
 use {
     anyhow::{Context, Result},
-    codegen_lib::{definition, parser},
+    codegen_lib::{codegen, definition, parser},
     log::info,
     simplelog::{Config as LogConfig, LevelFilter, SimpleLogger},
-    std::{
-        fs::File,
-        io::{Read, Write},
-        path::PathBuf,
-    },
+    std::{fs::File, io::Read, path::PathBuf},
 };
 
 // This code just confirms we've correctly linked in the parsers.
@@ -44,17 +40,17 @@ fn main() -> Result<()> {
     let mut parsed_definitions = Vec::new();
 
     for file in &args.input {
-        let parsed_definition = parse_definition_file(&file);
-        parsed_definitions.push(parsed_definition);
+        let mut parsed_definition = parse_definition_file(&file)?;
+        parsed_definitions.append(&mut parsed_definition);
     }
 
     let mut output_file =
         File::create(&args.output) // Create or truncate file.
             .with_context(|| format!("Unable to open output file {:?}", &args.output))?;
     info!("Writing generated AT code to {:?} ", &args.output);
-    output_file
-        .write(SOME_CODE.as_bytes())
-        .with_context(|| format!("Unable to write to output file {:?}", &args.output))?;
+
+    codegen::codegen(&mut output_file, &parsed_definitions)?;
+
     info!(
         "Successfully wrote {:} bytes of generated AT code to {:?} ",
         SOME_CODE.len(),

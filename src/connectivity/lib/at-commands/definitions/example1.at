@@ -2,89 +2,95 @@
 # TODO(fxb/61617) Move these to real tests
 
 # Execute command with no arguments
-command { ATTEST }
+command { ATTESTEX }
 
 # Extension execute command with no arguments
-command { AT+TEST }
+command { AT+TESTEXEXEXT }
 
 # Extension execute command with one argument, no trailing comma
-command { AT+TEST=field: Integer, }
+command { AT+TESTEXEXTFI=field: Integer, }
 
 # Extension execute command with one argument, with trailing comma
-command { AT+TEST=field: Integer, }
+command { AT+TESTEXEXTFIC=field: Integer, }
 
 # Extension execute command with multiple arguments, no trailing comma
-command { AT+TEST=field1: Integer, field2: Integer }
+command { AT+TESTEXEXTFII=field1: Integer, field2: Integer }
 
 # Extension execute command with multiple arguments, with trailing comma
-command { AT+TEST=field1: Integer, field2: Integer,}
+command { AT+TESTEXEXTFIIC=field1: Integer, field2: Integer,}
 
 # List type argument
-command { AT+TEST=field: List<Integer>}
+command { AT+TESTL=field: List<Integer>}
 
 # Map  type arguments
-command { AT+TEST=field: Map<Integer, String> }
+command { AT+TESTM=field: Map<Integer, String> }
 
 # Paren delimited argument list
-command { AT+TEST=(field1: Integer) }
+command { AT+TESTP=(field1: Integer) }
 
 # Paren delimited multiple argment lists
-command { AT+TEST=(field1: Integer)(field2: String, field3: String) }
+command { AT+TESTPP=(field1: Integer)(field2: String, field3: String) }
 
 # Read command
-command { ATTEST? }
+command { ATTESTR? }
 
 # Extension read command
-command { AT+TEST? }
+command { AT+TESTREX? }
 
 # Test command
-command { ATTEST=? }
+command { ATTESTR=? }
 
 # Extension test command
-command { AT+TEST=? }
+command { AT+TESTTEX=? }
 
 # Response with no arguments
 response { TEST: }
 
 # Extension response command with no arguments
-response { +TEST: }
+response { +TESTEXT: }
 
 # Extension response with one argument, no trailing comma
-response { +TEST: field: Integer }
+response { +TESTI: field: Integer }
 
 # Extension response with one argument, with trailing comma
-response { +TEST: field: Integer, }
+response { +TESTIC: field: Integer, }
 
 # Extension response with multiple arguments, no trailing comma
-response { +TEST: field1: Integer, field2: Integer }
+response { +TESTII: field1: Integer, field2: Integer }
 
 # Extension response with multiple arguments, with trailing comma
-response { +TEST: field1: Integer, field2: Integer,}
+response { +TESTIIC: field1: Integer, field2: Integer,}
 
 # Response with paren delimited argument list
-response { +TEST: (field1: Integer) }
+response { +TESTP: (field1: Integer) }
 
 # Response with paren delimited multiple argment lists
-response { +TEST: (field1: Integer)(field2: String, field3: String) }
+response { +TESTPP: (field1: Integer)(field2: String, field3: String) }
 
 # Enum with one variant
-enum Test {
+enum TestOneVariant {
     Variant1 = 1
 }
 
 # Enum with one variant, trailing comma
-enum Test {
+enum TestOneVariantComma {
     Variant1 = 1,
 }
 
 # Enum with multiple variants
-enum Test {
+enum TestTwoVariants {
     Variant1 = 1,
     Variant2 = 2
 }
 
 # Enum with multiple variants, trailing comma
-enum Test {
+enum TestTwoVariantsComma {
     Variant1 = 1,
     Variant2 = 2,
 }
+
+# Command with an eum argument
+command { ATTESTENUM=field: TestOneVariantComma }
+
+# Command with a bool argument
+command { ATTESTBOOL=field: BoolAsInt }

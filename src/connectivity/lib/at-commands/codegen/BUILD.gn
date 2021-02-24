@@ -13,8 +13,15 @@ rustc_library("codegen_lib") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:pest",
     "//third_party/rust_crates:pest_derive",
+    "//third_party/rust_crates:thiserror",
   ]
   sources = [
+    "src/codegen/common.rs",
+    "src/codegen/error.rs",
+    "src/codegen/lower.rs",
+    "src/codegen/raise.rs",
+    "src/codegen/toplevel.rs",
+    "src/codegen/types.rs",
     "src/definition.rs",
     "src/grammar.rs",
     "src/lib.rs",

@@ -9,6 +9,32 @@ pub enum Definition {
     Enum { name: String, variants: Vec<Variant> },
 }
 
+impl Definition {
+    pub fn is_command(&self) -> bool {
+        if let Definition::Command(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_response(&self) -> bool {
+        if let Definition::Response { .. } = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_enum(&self) -> bool {
+        if let Definition::Enum { .. } = self {
+            true
+        } else {
+            false
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
     Execute { name: String, is_extension: bool, arguments: Option<ExecuteArguments> },
@@ -26,6 +52,17 @@ pub struct ExecuteArguments {
 pub enum Arguments {
     ParenthesisDelimitedArgumentLists(Vec<Vec<Argument>>),
     ArgumentList(Vec<Argument>),
+}
+
+impl Arguments {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::ArgumentList(vec) => vec.is_empty(),
+            Self::ParenthesisDelimitedArgumentLists(vec) => {
+                vec.is_empty() || vec.into_iter().all(|el| el.is_empty())
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
