@@ -175,6 +175,29 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeRadioButtonUnselected) {
   ASSERT_EQ(result[0].utterance.message(), "foo radio button unselected");
 }
 
+TEST_F(ScreenReaderMessageGeneratorTest, NodeRadioButtonEmptyLabel) {
+  Node node;
+  node.mutable_attributes()->set_label("");
+  node.set_role(Role::RADIO_BUTTON);
+  node.mutable_states()->set_selected(false);
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::RADIO_BUTTON_UNSELECTED), "radio button unselected");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "radio button unselected");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeRadioButtonMessageFormatterReturnNullopt) {
+  Node node;
+  node.mutable_attributes()->set_label("");
+  node.set_role(Role::RADIO_BUTTON);
+  node.mutable_states()->set_selected(false);
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_FALSE(result[0].utterance.has_message());
+}
+
 TEST_F(ScreenReaderMessageGeneratorTest, NodeLink) {
   Node node;
   node.mutable_attributes()->set_label("foo");
@@ -187,6 +210,18 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeLink) {
   ASSERT_EQ(result[0].utterance.message(), "foo");
   ASSERT_TRUE(result[1].utterance.has_message());
   ASSERT_EQ(result[1].utterance.message(), "link");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeLinkEmptyLabel) {
+  Node node;
+  node.mutable_attributes()->set_label("");
+  node.set_role(Role::LINK);
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_LINK),
+                                               "link");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "link");
 }
 
 TEST_F(ScreenReaderMessageGeneratorTest, NodeCheckBoxWithoutStates) {
@@ -298,6 +333,31 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchIndeterminate) {
   ASSERT_EQ(result.size(), 1u);
   ASSERT_TRUE(result[0].utterance.has_message());
   ASSERT_EQ(result[0].utterance.message(), "foo switch off");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchEmptyLabel) {
+  Node node;
+  node.mutable_attributes()->set_label("");
+  node.set_role(Role::TOGGLE_SWITCH);
+  node.mutable_states()->set_toggled_state(
+      fuchsia::accessibility::semantics::ToggledState::INDETERMINATE);
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::ELEMENT_TOGGLED_OFF), "switch off");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "switch off");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchMessageFormatterReturnsNullopt) {
+  Node node;
+  node.mutable_attributes()->set_label("");
+  node.set_role(Role::TOGGLE_SWITCH);
+  node.mutable_states()->set_toggled_state(
+      fuchsia::accessibility::semantics::ToggledState::INDETERMINATE);
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_FALSE(result[0].utterance.has_message());
 }
 
 }  // namespace
