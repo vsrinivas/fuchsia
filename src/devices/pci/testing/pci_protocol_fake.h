@@ -6,8 +6,10 @@
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/fake-bti/bti.h>
+#include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
 #include <zircon/errors.h>
+#include <zircon/hw/pci.h>
 #include <zircon/status.h>
 
 #include <array>
@@ -95,21 +97,15 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
   zx_status_t PciConfigureIrqMode(uint32_t requested_irq_count) {
     ZX_ASSERT(requested_irq_count);
     if (msix_interrupts_.size() >= requested_irq_count) {
-      irq_mode_ = PCI_IRQ_MODE_MSI_X;
-      irq_cnt_ = requested_irq_count;
-      return ZX_OK;
+      return PciSetIrqMode(PCI_IRQ_MODE_MSI_X, requested_irq_count);
     }
 
     if (msi_interrupts_.size() >= requested_irq_count) {
-      irq_mode_ = PCI_IRQ_MODE_MSI;
-      irq_cnt_ = requested_irq_count;
-      return ZX_OK;
+      return PciSetIrqMode(PCI_IRQ_MODE_MSI, requested_irq_count);
     }
 
     if (legacy_interrupt_ && requested_irq_count == 1) {
-      irq_mode_ = PCI_IRQ_MODE_LEGACY;
-      irq_cnt_ = requested_irq_count;
-      return ZX_OK;
+      return PciSetIrqMode(PCI_IRQ_MODE_LEGACY, requested_irq_count);
     }
 
     return ZX_ERR_NOT_SUPPORTED;
@@ -145,7 +141,30 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // This allows us to mimic the kernel's handling of outstanding MsiDispatchers per MsiAllocation
+  // objects. A device's legacy interrupt is still a valid object if the interrupt mode is switched,
+  // albeit not a useful one.
+  bool AllMappedInterruptsFreed() {
+    zx_info_handle_count_t info;
+    for (auto& interrupts : {&msix_interrupts_, &msi_interrupts_}) {
+      for (auto& interrupt : *interrupts) {
+        zx_status_t status =
+            interrupt.get_info(ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr, nullptr);
+        ZX_ASSERT_MSG(status == ZX_OK, "%s status %d", kFakePciInternalError, status);
+
+        if (info.handle_count > 1) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   zx_status_t PciSetIrqMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
+    if (!AllMappedInterruptsFreed()) {
+      return ZX_ERR_BAD_STATE;
+    }
+
     switch (mode) {
       case PCI_IRQ_MODE_LEGACY:
         if (requested_irq_count > 1) {
@@ -462,7 +481,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
   uint32_t irq_cnt_;
 
   std::array<FakeBar, PCI_DEVICE_BAR_COUNT> bars_{};
-  std::vector<FakeCapability> capabilities_{};
+  std::vector<FakeCapability> capabilities_;
 
   zx::bti bti_;
   uint32_t reset_cnt_;

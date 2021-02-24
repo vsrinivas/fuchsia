@@ -8,8 +8,8 @@
 
 #include <zxtest/zxtest.h>
 
-#include "src/devices/bus/drivers/pci/test/fakes/fake_pciroot.h"
 #include "src/devices/bus/drivers/pci/allocation.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_pciroot.h"
 
 namespace pci {
 

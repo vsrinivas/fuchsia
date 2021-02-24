@@ -5,10 +5,10 @@
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/object.h>
+#include <lib/zx/vmo.h>
 #include <zircon/errors.h>
-#include <zircon/hw/pci.h>
-#include <zircon/syscalls/object.h>
-#include <zircon/syscalls/pci.h>
 
 #include <zxtest/zxtest.h>
 
@@ -240,6 +240,7 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   ASSERT_FALSE(MatchKoids(msix1, interrupt));
   ASSERT_FALSE(MatchKoids(msix2, interrupt));
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().MapInterrupt(irq_cnt, &interrupt));
+  interrupt.reset();
 
   irq_cnt = 2;
   ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, irq_cnt));
@@ -251,6 +252,7 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   ASSERT_FALSE(MatchKoids(msix1, interrupt));
   ASSERT_FALSE(MatchKoids(msix2, interrupt));
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().MapInterrupt(irq_cnt, &interrupt));
+  interrupt.reset();
 
   ASSERT_OK(pci().MapInterrupt(1, &interrupt));
   ASSERT_FALSE(MatchKoids(legacy, interrupt));
@@ -259,6 +261,7 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   ASSERT_FALSE(MatchKoids(msix0, interrupt));
   ASSERT_FALSE(MatchKoids(msix1, interrupt));
   ASSERT_FALSE(MatchKoids(msix2, interrupt));
+  interrupt.reset();
 
   irq_cnt = 3;
   ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI_X, irq_cnt));
@@ -269,6 +272,7 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   ASSERT_TRUE(MatchKoids(msix0, interrupt));
   ASSERT_FALSE(MatchKoids(msix1, interrupt));
   ASSERT_FALSE(MatchKoids(msix2, interrupt));
+  interrupt.reset();
 
   ASSERT_OK(pci().MapInterrupt(1, &interrupt));
   ASSERT_FALSE(MatchKoids(legacy, interrupt));
@@ -277,6 +281,7 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   ASSERT_FALSE(MatchKoids(msix0, interrupt));
   ASSERT_TRUE(MatchKoids(msix1, interrupt));
   ASSERT_FALSE(MatchKoids(msix2, interrupt));
+  interrupt.reset();
 
   ASSERT_OK(pci().MapInterrupt(2, &interrupt));
   ASSERT_FALSE(MatchKoids(legacy, interrupt));
@@ -286,6 +291,32 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   ASSERT_FALSE(MatchKoids(msix1, interrupt));
   ASSERT_TRUE(MatchKoids(msix2, interrupt));
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().MapInterrupt(irq_cnt, &interrupt));
+}
+
+TEST_F(FakePciProtocolTests, VerifyAllocatedMsis) {
+  fake_pci().AddLegacyInterrupt();
+  fake_pci().AddMsiInterrupt();
+  fake_pci().AddMsiInterrupt();
+  fake_pci().AddMsixInterrupt();
+
+  zx::interrupt zero, one;
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, 2));
+  ASSERT_OK(pci().MapInterrupt(0, &zero));
+  ASSERT_OK(pci().MapInterrupt(1, &one));
+  // Changing to other IRQ modes should be blocked because IRQ handles are outstanding.
+  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetIrqMode(PCI_IRQ_MODE_LEGACY, 1));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetIrqMode(PCI_IRQ_MODE_MSI_X, 1));
+  zero.reset();
+  one.reset();
+  // Now transitioning should work.
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_LEGACY, 1));
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI_X, 1));
+
+  // Verify MSI-X works the same.
+  ASSERT_OK(pci().MapInterrupt(0, &zero));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetIrqMode(PCI_IRQ_MODE_LEGACY, 1));
+  zero.reset();
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_LEGACY, 1));
 }
 
 TEST_F(FakePciProtocolTests, ConfigRW) {
