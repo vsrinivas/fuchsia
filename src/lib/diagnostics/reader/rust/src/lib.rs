@@ -28,7 +28,6 @@ pub use diagnostics_data::{
     assert_data_tree, tree_assertion, Data, Inspect, Lifecycle, Logs, Severity,
 };
 pub use diagnostics_hierarchy::{DiagnosticsHierarchy, Property};
-pub use fidl_fuchsia_diagnostics::DataType;
 
 const RETRY_DELAY_MS: i64 = 300;
 
@@ -209,23 +208,26 @@ impl ArchiveReader {
     where
         D: DiagnosticsData,
     {
-        let raw_json = self.snapshot_raw(D::DATA_TYPE).await?;
+        let raw_json = self.snapshot_raw::<D>().await?;
         Ok(serde_json::from_value(raw_json).map_err(Error::ReadJson)?)
     }
 
-    pub fn snapshot_then_subscribe<M>(&self) -> Result<Subscription<M>, Error>
+    pub fn snapshot_then_subscribe<D>(&self) -> Result<Subscription<D>, Error>
     where
-        M: DiagnosticsData + 'static,
+        D: DiagnosticsData + 'static,
     {
-        let iterator = self.batch_iterator(M::DATA_TYPE, StreamMode::SnapshotThenSubscribe)?;
+        let iterator = self.batch_iterator::<D>(StreamMode::SnapshotThenSubscribe)?;
         Ok(Subscription::new(iterator))
     }
 
     /// Connects to the ArchiveAccessor and returns inspect data matching provided selectors.
     /// Returns the raw json for each hierarchy fetched.
-    pub async fn snapshot_raw(&self, ty: DataType) -> Result<JsonValue, Error> {
+    pub async fn snapshot_raw<D>(&self) -> Result<JsonValue, Error>
+    where
+        D: DiagnosticsData,
+    {
         let timeout = self.timeout;
-        let data_future = self.snapshot_raw_inner(ty);
+        let data_future = self.snapshot_raw_inner::<D>();
         let data = match timeout {
             Some(timeout) => data_future.on_timeout(timeout.after_now(), || Ok(Vec::new())).await?,
             None => data_future.await?,
@@ -233,10 +235,13 @@ impl ArchiveReader {
         Ok(JsonValue::Array(data))
     }
 
-    async fn snapshot_raw_inner(&self, data_type: DataType) -> Result<Vec<JsonValue>, Error> {
+    async fn snapshot_raw_inner<D>(&self) -> Result<Vec<JsonValue>, Error>
+    where
+        D: DiagnosticsData,
+    {
         loop {
             let mut result = Vec::new();
-            let iterator = self.batch_iterator(data_type, StreamMode::Snapshot)?;
+            let iterator = self.batch_iterator::<D>(StreamMode::Snapshot)?;
             drain_batch_iterator(iterator, |d| {
                 result.push(d);
                 async {}
@@ -251,11 +256,10 @@ impl ArchiveReader {
         }
     }
 
-    fn batch_iterator(
-        &self,
-        data_type: DataType,
-        mode: StreamMode,
-    ) -> Result<BatchIteratorProxy, Error> {
+    fn batch_iterator<D>(&self, mode: StreamMode) -> Result<BatchIteratorProxy, Error>
+    where
+        D: DiagnosticsData,
+    {
         // TODO(fxbug.dev/58051) this should be done in an ArchiveReaderBuilder -> Reader init
         let mut archive = self.archive.lock();
         if archive.is_none() {
@@ -272,7 +276,7 @@ impl ArchiveReader {
 
         let mut stream_parameters = StreamParameters::EMPTY;
         stream_parameters.stream_mode = Some(mode);
-        stream_parameters.data_type = Some(data_type);
+        stream_parameters.data_type = Some(D::DATA_TYPE);
         stream_parameters.format = Some(Format::Json);
 
         stream_parameters.client_selector_configuration = if self.selectors.is_empty() {

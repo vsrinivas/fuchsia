@@ -4,7 +4,7 @@
 
 use crate::diagnostics::types::SnapshotInspectArgs;
 use anyhow::Error;
-use diagnostics_reader::{ArchiveReader, DataType};
+use diagnostics_reader::{ArchiveReader, Inspect};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fuchsia_component::client;
 use serde_json::Value;
@@ -31,7 +31,7 @@ impl DiagnosticsFacade {
             .with_archive(proxy)
             .add_selectors(args.selectors.into_iter())
             .with_batch_retrieval_timeout_seconds(BATCH_RETRIEVAL_TIMEOUT_SECONDS)
-            .snapshot_raw(DataType::Inspect)
+            .snapshot_raw::<Inspect>()
             .await?;
         Ok(value)
     }
