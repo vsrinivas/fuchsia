@@ -80,15 +80,17 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 
 	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
+			if strings.Contains(err.Error(), "no such file or directory") {
+				log.Printf("skipping non-existing file: %s", path)
+				return nil
+			}
+			return err
+		}
+		if skippable, err := isSkippable(config, path, info); skippable {
+			log.Printf("skipping: %s", path)
 			return err
 		}
 		if info.IsDir() {
-			for _, skipDir := range config.SkipDirs {
-				if info.Name() == skipDir || path == skipDir {
-					log.Printf("skipping: %s", path)
-					return filepath.SkipDir
-				}
-			}
 			if path != root {
 				child, err := NewFileTree(ctx, path, &ft, config, metrics)
 				if err != nil {
@@ -98,17 +100,6 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 				return filepath.SkipDir
 			}
 			return nil
-		}
-
-		if info.Size() == 0 {
-			// An empty file has no content to copyright. Skip.
-			return nil
-		}
-		for _, skipFile := range config.SkipFiles {
-			if strings.ToLower(info.Name()) == skipFile || strings.ToLower(path) == skipFile {
-				log.Printf("skipping: %s", path)
-				return nil
-			}
 		}
 		newFile, err := NewFile(path, &ft)
 
@@ -289,4 +280,49 @@ func hasLowerPrefix(name string, files []string) bool {
 		}
 	}
 	return false
+}
+
+func isSkippable(config *Config, path string, info os.FileInfo) (bool, error) {
+	if info.Size() == 0 {
+		// An empty file has no content to copyright. Skip.
+		return true, nil
+	}
+	for _, skipFile := range config.SkipFiles {
+		if strings.ToLower(info.Name()) == skipFile || strings.ToLower(path) == skipFile {
+			return true, nil
+		}
+	}
+	for _, dontSkipDir := range config.DontSkipDirs {
+		if strings.HasPrefix(path, dontSkipDir) || strings.HasPrefix(info.Name(), dontSkipDir) {
+			return false, nil
+		}
+	}
+
+	parents := strings.Split(path, "/")
+
+	for _, skipDir := range config.SkipDirs {
+		var err error
+		if info.IsDir() {
+			err = filepath.SkipDir
+		}
+		for _, dontSkipDir := range config.DontSkipDirs {
+			// Check if there are `dontSkipDirs` within this `skipDir`.
+			// If there are none, then we can return `filepath.SkipDir`.
+			if strings.HasPrefix(dontSkipDir, skipDir) {
+				// There is a `dontSkipDir` within this `skipDir`, so we
+				// cannot return `filepath.SkipDir`.
+				err = nil
+			}
+		}
+		if strings.HasPrefix(path, skipDir) || strings.HasPrefix(info.Name(), skipDir) {
+			return true, err
+		}
+
+		for _, p := range parents {
+			if p == skipDir {
+				return true, err
+			}
+		}
+	}
+	return false, nil
 }

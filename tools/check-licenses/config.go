@@ -18,6 +18,7 @@ type CustomProjectLicense struct {
 // Config values are populated from the the json file at the default or user-specified path
 type Config struct {
 	SkipDirs                     []string               `json:"skipDirs"`
+	DontSkipDirs                 []string               `json:"dontSkipDirs"`
 	SkipFiles                    []string               `json:"skipFiles"`
 	ProhibitedLicenseTypes       []string               `json:"prohibitedLicenseTypes"`
 	TextExtensionList            []string               `json:"textExtensionList"`
@@ -77,6 +78,7 @@ func NewConfig(path string) (*Config, error) {
 //	otherwise they will be set to the right struct field.
 func (c *Config) Merge(other *Config) {
 	c.SkipDirs = append(c.SkipDirs, other.SkipDirs...)
+	c.DontSkipDirs = append(c.DontSkipDirs, other.DontSkipDirs...)
 	c.SkipFiles = append(c.SkipFiles, other.SkipFiles...)
 	c.ProhibitedLicenseTypes = append(c.ProhibitedLicenseTypes, other.ProhibitedLicenseTypes...)
 	c.TextExtensionList = append(c.TextExtensionList, other.TextExtensionList...)
