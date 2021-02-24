@@ -543,7 +543,6 @@ impl Error {
 }
 
 /// A bucket of a histogram property.
-#[allow(missing_docs)]
 #[derive(Debug, Deserialize, PartialEq, Clone)]
 pub struct Bucket<T> {
     /// The floor of the bucket range.
