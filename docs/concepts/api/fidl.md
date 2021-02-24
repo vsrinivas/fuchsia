@@ -1406,4 +1406,4 @@ protocol.
 [rust-hanging-get]: /docs/development/languages/fidl/guides/rust-hanging-get.md
 [resource-lang]: /docs/reference/fidl/language/language.md#value-vs-resource
 [flexible-lang]: /docs/reference/fidl/language/language.md#strict-vs-flexible
-[flexible-transition]: /docs/development/languages/fidl/guides/abi-api-compat.md#strict-flexible
+[flexible-transition]: /docs/development/languages/fidl/guides/compatibility/README.md#strict-flexible

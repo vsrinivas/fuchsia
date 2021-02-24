@@ -161,6 +161,8 @@ It is binary-compatible to add a table field.
 
 It is source-compatible to add a table field.
 
+Example: [adding a table member][example-table-member-add].
+
 ### Removing a table field {#table-field-remove}
 
 **ABI**
@@ -170,6 +172,8 @@ It is binary-compatible to remove a table field.
 **API**
 
 There must not be any use of the field to ensure a source-compatible removal.
+
+Example: [removing a table member][example-table-member-remove].
 
 ### Renaming a table field {#table-field-rename}
 
@@ -193,8 +197,10 @@ readers ahead of it being used by writers.
 
 **API**
 
-Care must be taken to transition [switches on the union
+For `strict` unions, care must be taken to transition [switches on the union
 tag](#switch-evolvability).
+
+Example: [adding a union variant][example-union-member-add].
 
 ### Removing a union variant {#union-variant-remove}
 
@@ -206,8 +212,10 @@ variant when it is removed.
 
 **API**
 
-Care must be taken to transition [switches on the union
+For `strict` unions, care must be taken to transition [switches on the union
 tag](#switch-evolvability).
+
+Example: [removing a union variant][example-union-member-remove].
 
 ### Renaming a union variant {#union-variant-rename}
 
@@ -233,6 +241,8 @@ ahead of it being used by writers.
 
 Care must be taken to transition [switches on the enum](#switch-evolvability).
 
+Example: [adding an enum member][example-enum-member-add].
+
 ### Removing an enum member {#enum-member-remove}
 
 **ABI**
@@ -245,6 +255,8 @@ member when it is removed.
 
 Care must be taken to transition [switches on the enum](#switch-evolvability).
 Ensure that no uses of this enum member exists.
+
+Example: [removing an enum member][example-enum-member-remove].
 
 ### Renaming an enum member {#enum-member-rename}
 
@@ -270,6 +282,8 @@ propagated to readers ahead of it being used by writers.
 
 It is source-compatible to add a bits member.
 
+Example: [adding a bits member][example-bits-member-add].
+
 ### Removing a bits member {#bits-member-remove}
 
 **ABI**
@@ -282,6 +296,8 @@ the bits member when it is removed.
 
 It is source-compatible to remove a bits member. Ensure that no uses of this
 bits member exists.
+
+Example: [removing a bits member][example-bits-member-remove].
 
 ### Renaming a bits member {#bits-member-rename}
 
@@ -507,16 +523,24 @@ languages that do not support ADTs like C++.
 
 <!-- xrefs -->
 [bindings-ref]: /docs/reference/fidl/bindings/overview.md
-[example-bits-flexible-strict]: /src/tests/fidl/source_compatibility/bits-flexible-strict/README.md
-[example-bits-strict-flexible]: /src/tests/fidl/source_compatibility/bits-strict-flexible/README.md
-[example-enum-flexible-strict]: /src/tests/fidl/source_compatibility/enum-flexible-strict/README.md
-[example-enum-strict-flexible]: /src/tests/fidl/source_compatibility/enum-strict-flexible/README.md
-[example-event-add]: /src/tests/fidl/source_compatibility/protocol-event-add/README.md
-[example-event-remove]: /src/tests/fidl/source_compatibility/protocol-event-remove/README.md
-[example-method-add]: /src/tests/fidl/source_compatibility/protocol-method-add/README.md
-[example-method-remove]: /src/tests/fidl/source_compatibility/protocol-method-remove/README.md
-[example-union-flexible-strict]: /src/tests/fidl/source_compatibility/union-flexible-strict/README.md
-[example-union-strict-flexible]: /src/tests/fidl/source_compatibility/union-strict-flexible/README.md
+[example-bits-flexible-strict]: /docs/development/languages/fidl/guides/compatibility/bits_flexible_strict.md
+[example-bits-member-add]: /docs/development/languages/fidl/guides/compatibility/bits_member_add.md
+[example-bits-member-remove]: /docs/development/languages/fidl/guides/compatibility/bits_member_remove.md
+[example-bits-strict-flexible]: /docs/development/languages/fidl/guides/compatibility/bits_strict_flexible.md
+[example-enum-flexible-strict]: /docs/development/languages/fidl/guides/compatibility/enum_flexible_strict.md
+[example-enum-member-add]: /docs/development/languages/fidl/guides/compatibility/enum_member_add.md
+[example-enum-member-remove]: /docs/development/languages/fidl/guides/compatibility/enum_member_remove.md
+[example-enum-strict-flexible]: /docs/development/languages/fidl/guides/compatibility/enum_strict_flexible.md
+[example-protocol-event-add]: /docs/development/languages/fidl/guides/compatibility/protocol_event_add.md
+[example-protocol-event-remove]: /docs/development/languages/fidl/guides/compatibility/protocol_event_remove.md
+[example-protocol-method-add]: /docs/development/languages/fidl/guides/compatibility/protocol_method_add.md
+[example-protocol-method-remove]: /docs/development/languages/fidl/guides/compatibility/protocol_method_remove.md
+[example-table-member-add]: /docs/development/languages/fidl/guides/compatibility/table_member_add.md
+[example-table-member-remove]: /docs/development/languages/fidl/guides/compatibility/table_member_remove.md
+[example-union-flexible-strict]: /docs/development/languages/fidl/guides/compatibility/union_flexible_strict.md
+[example-union-member-add]: /docs/development/languages/fidl/guides/compatibility/union_member_add.md
+[example-union-member-remove]: /docs/development/languages/fidl/guides/compatibility/union_member_remove.md
+[example-union-strict-flexible]: /docs/development/languages/fidl/guides/compatibility/union_strict_flexible.md
 [ftp-057-motivation]: /docs/contribute/governance/fidl/ftp/ftp-057.md#motivation
 [lexicon-tag]: /docs/reference/fidl/language/lexicon.md#union-terms
 [Platform Versioning]: /docs/contribute/governance/rfcs/0002_platform_versioning.md

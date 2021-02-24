@@ -12,8 +12,9 @@ import shutil
 import sys
 
 import generate_test
+import generate_docs
 from reverse_test import reverse_test
-from util import print_err, TEST_FILE, white
+from util import print_err, TEST_FILE, white, find_tests, print_warning
 from types_ import CompatTest
 
 
@@ -61,10 +62,7 @@ def gen_reverse(args):
 
 
 def regen(args):
-    tests = args.tests or [
-        p for p in Path(args.root).iterdir()
-        if p.is_dir() and (p / TEST_FILE).exists()
-    ]
+    tests = args.tests or find_tests(args.root)
     for name in tests:
         print(f'Regenerating files for {name}')
         test_dir = Path(os.path.join(args.root, name))
@@ -72,10 +70,21 @@ def regen(args):
             test = CompatTest.fromdict(json.load(f))
         generate_test.regen_files(test_dir, test)
     if not tests:
-        print('No tests found')
+        print_warning('No tests found')
     else:
         print(
             white('Done! Run fx-format to get rid of formatting differences.'))
+
+
+def regen_toc(args):
+    all_tests = []
+    for test_root in find_tests(args.root):
+        with open(test_root / TEST_FILE, 'r') as f:
+            test = CompatTest.fromdict(json.load(f))
+        all_tests.append((test_root, test))
+    if not all_tests:
+        print_warning('No tests found')
+    generate_docs.regen_toc(all_tests)
 
 
 parser = argparse.ArgumentParser(
@@ -122,6 +131,13 @@ gen_reverse_parser.set_defaults(func=gen_reverse)
 gen_reverse_parser.add_argument('source', help='Name of the test to reverse.')
 gen_reverse_parser.add_argument(
     'target', help='Name of the (new) reversed test.')
+
+regen_toc_parser = subparsers.add_parser(
+    'regen_toc',
+    help=
+    'Regenerate the docs compatibility guide TOC, e.g. when you add/remove a test case.'
+)
+regen_toc_parser.set_defaults(func=regen_toc)
 
 if __name__ == '__main__':
     args = parser.parse_args()

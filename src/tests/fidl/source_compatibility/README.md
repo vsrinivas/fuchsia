@@ -18,6 +18,87 @@ This directory consists of:
   the tool above, and also each contain a generated README.md file describing
   the transition being tested.
 
+## Transition terminology
+
+Transitions that follow a specific pattern are sometimes given a specific name to make it
+easier to refer to these kinds of transitions when discussing them.
+
+One set of terms we use is "FIDL assisted" and "source assisted": when
+transitioning a FIDL library involves an initial state (**before**), an
+intermediate state (**during**), and a final state (**after**), depending on the
+bindings used and the kind of change made to the FIDL library, the transition is
+either [FIDL-assisted](#fidl-assisted) or [source-assisted](#source-assisted).
+
+### FIDL-assisted {#fidl-assisted}
+
+In a FIDL-assisted transition, you change source code while the FIDL library is
+held in a transitional state (e.g., using the `Transitional` attribute). For
+these transitions, we test four states:
+
+| Time   | 1      | 2      | 3      | 4     |
+| ------ | ------ | ------ | ------ | ----- |
+| FIDL   | before | during | during | after |
+| Source | before | before | after  | after |
+
+### Source-assisted {#source-assisted}
+
+In a source-assisted transition, you change the FIDL library while source code
+held is in a transitional state (e.g., using `default:` in switch statements).
+This _would_ lead to testing four states:
+
+| Time   | 1      | 2      | 3      | 4     |
+| ------ | ------ | ------ | ------ | ----- |
+| FIDL   | before | before | after  | after |
+| Source | before | during | during | after |
+
+However, certain FIDL changes require a FIDL-assisted transition in some
+bindings and a source-assisted transition in others. Suppose there is a change in
+FIDL library _L_ requiring a FIDL-assisted transition in bindings _A_ and
+source-assisted in bindings _B_. The following steps would be taken:
+
+1. Initially, _L_, _A_, and _B_ are **before**.
+2. Change _B_ to **during**.
+3. Change _L_ to **during**.
+4. Change _A_ to **after**.
+5. Change _L_ to **after**.
+6. Change _B_ to **after**.
+
+All correct ways of interleaving the steps will have _L_ and _B_ both in the
+**during** state at some point. Therefore, although a FIDL **during** state is
+unnecessary for a pure source-assisted transition, we must include it in tests.
+Thus, we actually test 5 states for source-assisted transitions:
+
+| Time   | 1      | 2      | 3      | 4      | 5     |
+| ------ | ------ | ------ | ------ | ------ | ----- |
+| FIDL   | before | before | during | after  | after |
+| Source | before | during | during | during | after |
+
+## Updating test documentation
+
+The transition example docs are each generated from individual source
+compatibility test cases. To update a file (e.g. `bits_member_add.md`), you need
+to update the test that the file is generated from, and then regenerate the
+documentation.
+
+The tests are located in `//src/tests/fidl/source_compatibility`, and have a
+name matching the generated doc's filename. For example, the test corresponding
+to `bits_member_add.md` is `bits-member-add`.
+
+* Make the desired change
+  * For code changes, find the test file containing the code you want to change
+    by identifying the step number and binding of the code in question, and
+    modify the source as desired
+  * For instruction changes, find the corresponding entry in the test's JSON
+    configuration file (`test.json`) using step number and binding
+    and modify the value under the `"instructions"` key. The value should be an
+    array of strings, which will get rendered as a bulleted list in markdown.
+* Regen the documentation by running, e.g.
+  `src/tests/fidl/source_compatibility/gen/main.py regen bits-member-add`. The
+  argument of `regen` should be the name of the directory that the test is
+  contained in.
+* Run `fx format-code` to get rid of formatting differences, and verify the
+  desired change
+
 ## Writing tests (#writing-tests)
 
 A test is declared by defining a test JSON configuration and adding a
@@ -59,6 +140,14 @@ as follows:
   to build the test between adding steps to ensure that they are correct. Note
   however that the tool does not save the state until you complete the current
   step.
+* Update documentation top level documentation when adding removing tests (the
+  `generate_test`, `generate_reverse`, and `regen` command automatically regen
+  the test-specific documentation).
+  * Update the table of contents in
+    `//docs/development/languages/fidl/guides/compatibility/_toc.yaml` to point to
+    the newly generated documentation. You can do this by running `scompat regen_toc`.
+  * Update the top level ABI/API compatibility doc to add or remove xrefs to
+    generated documentation.
 
 ### Modifying existing tests:
 
@@ -118,58 +207,3 @@ the test, there are two additional manual steps:
   `"add method foo"`, would become `"remove method foo"` in the reversed test.
 * Run the regen command (`scompat regen [test_name]`) to regenerate the
   documentation based on any instruction changes.
-
-## Transition terminology
-
-We sometimes give transitions that follow a specific pattern a name to make it
-easier to refer to these kinds of transitions when discussing them.
-
-One set of terms we use is "FIDL assisted" and "source assisted": when
-transitioning a FIDL library involves an initial state (**before**), an
-intermediate state (**during**), and a final state (**after**), depending on the
-bindings used and the kind of change made to the FIDL library, the transition is
-either [FIDL-assisted](#fidl-assisted) or [source-assisted](#source-assisted).
-
-### FIDL-assisted {#fidl-assisted}
-
-In a FIDL-assisted transition, you change source code while the FIDL library is
-held in a transitional state (e.g., using the `Transitional` attribute). For
-these transitions, we test four states:
-
-| Time   | 1      | 2      | 3      | 4     |
-| ------ | ------ | ------ | ------ | ----- |
-| FIDL   | before | during | during | after |
-| Source | before | before | after  | after |
-
-### Source-assisted {#source-assisted}
-
-In a source-assisted transition, you change the FIDL library while source code
-held is in a transitional state (e.g., using `default:` in switch statements).
-This _would_ lead to testing four states:
-
-| Time   | 1      | 2      | 3      | 4     |
-| ------ | ------ | ------ | ------ | ----- |
-| FIDL   | before | before | after  | after |
-| Source | before | during | during | after |
-
-However, certain FIDL changes require a FIDL-assisted transition in some
-bindings and a source-assisted transition in others. Suppose we make a change in
-FIDL library _L_ requiring a FIDL-assisted transition in bindings _A_ and
-source-assisted in bindings _B_. We would take the following steps:
-
-1. Initially, _L_, _A_, and _B_ are **before**.
-2. Change _B_ to **during**.
-3. Change _L_ to **during**.
-4. Change _A_ to **after**.
-5. Change _L_ to **after**.
-6. Change _B_ to **after**.
-
-All correct ways of interleaving the steps will have _L_ and _B_ both in the
-**during** state at some point. Therefore, although a FIDL **during** state is
-unnecessary for a pure source-assisted transition, we must include it in tests.
-Thus, we actually test 5 states for source-assisted transitions:
-
-| Time   | 1      | 2      | 3      | 4      | 5     |
-| ------ | ------ | ------ | ------ | ------ | ----- |
-| FIDL   | before | before | during | after  | after |
-| Source | before | during | during | during | after |

@@ -814,6 +814,6 @@ for you that contains commonly used Zircon definitions.
 [fidl-grammar]: /docs/reference/fidl/language/grammar.md
 [doc-attribute]: /docs/reference/fidl/language/attributes.md#Doc
 [naming-style]: /docs/development/languages/fidl/guides/style.md#Names
-[union-compat]: /docs/development/languages/fidl/guides/abi-api-compat.md#union
-[resource-compat]: /docs/development/languages/fidl/guides/abi-api-compat.md#modifiers
+[union-compat]: /docs/development/languages/fidl/guides/compatibility/README.md#union
+[resource-compat]: /docs/development/languages/fidl/guides/compatibility/README.md#modifiers
 [bindings-reference]: /docs/reference/fidl/bindings/overview.md

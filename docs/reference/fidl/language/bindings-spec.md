@@ -529,5 +529,5 @@ interface Hasher {
 [go-generated-code-comment]: https://github.com/golang/go/issues/13560#issuecomment-288457920
 [attributes]: /docs/reference/fidl/language/attributes.md
 [llcpp]: /docs/reference/fidl/bindings/llcpp-bindings.md
-[source-compatible]: /docs/development/languages/fidl/guides/abi-api-compat.md#strict-flexible
+[source-compatible]: /docs/development/languages/fidl/guides/compatibility/README.md#strict-flexible
 [soft-transitions]: /docs/contribute/governance/rfcs/0002_platform_versioning.md#terminology

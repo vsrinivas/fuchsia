@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from typing import List
+
 from pathlib import Path
 
 RED = '\033[1;31m'
@@ -51,3 +53,10 @@ def parse_step(s: str) -> (str, int):
     prefix_len = len('step_')
     step_num = int(s[prefix_len:prefix_len + 2])
     return s[prefix_len + 3:], step_num
+
+
+def find_tests(root: Path) -> List[Path]:
+    return [
+        p for p in Path(root).iterdir()
+        if p.is_dir() and (p / TEST_FILE).exists()
+    ]

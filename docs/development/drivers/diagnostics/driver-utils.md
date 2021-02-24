@@ -101,4 +101,4 @@ auto read = client.Transfer(...);
 This calls the `Transfer()` method to write and read from an I2C device.
 
 <!-- xrefs -->
-[abi-api-compat]: /docs/development/languages/fidl/guides/abi-api-compat.md
+[abi-api-compat]: /docs/development/languages/fidl/guides/compatibility/README.md

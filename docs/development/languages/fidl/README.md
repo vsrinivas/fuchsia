@@ -39,7 +39,7 @@ Please read the [contributing doc][contributing] for more information.
 [cli]: /docs/development/languages/fidl/guides/cli.md
 [style]: /docs/development/languages/fidl/guides/style.md
 [designing-apis]: /docs/development/languages/fidl/guides/api-design.md
-[abi-api-compat]: /docs/development/languages/fidl/guides/abi-api-compat.md
+[abi-api-compat]: /docs/development/languages/fidl/guides/compatibility/README.md
 [pagination]: /docs/development/languages/fidl/guides/max-out-pagination.md
 [c-family]: /docs/development/languages/fidl/guides/c-family-comparison.md
 

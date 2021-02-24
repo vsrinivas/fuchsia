@@ -8,9 +8,12 @@
 toc:
 - title: "Overview"
   path: /docs/development/languages/fidl
-- title: "Developer Guide"
+- title: "Developer guide"
   section:
   - include: /docs/development/languages/fidl/guides/_toc.yaml
+- title: "Compatibility guide"
+  section:
+  - include: /docs/development/languages/fidl/guides/compatibility/_toc.yaml
 - title: "Tutorials"
   section:
   - title: "Overview"
@@ -21,7 +24,7 @@ toc:
     section:
     - title: "Overview"
       path: /docs/development/languages/fidl/tutorials/hlcpp/README.md
-    - title: "Getting Started"
+    - title: "Getting started"
       section:
       - include: /docs/development/languages/fidl/tutorials/hlcpp/basics/_toc.yaml
     - title: "Debug output"
@@ -38,7 +41,7 @@ toc:
     section:
     - title: "Overview"
       path: /docs/development/languages/fidl/tutorials/llcpp/README.md
-    - title: "Getting Started"
+    - title: "Getting started"
       section:
       - include: /docs/development/languages/fidl/tutorials/llcpp/basics/_toc.yaml
     - title: "Async server responses"
@@ -51,7 +54,7 @@ toc:
     section:
     - title: "Overview"
       path: /docs/development/languages/fidl/tutorials/rust/README.md
-    - title: "Getting Started"
+    - title: "Getting started"
       section:
       - include: /docs/development/languages/fidl/tutorials/rust/basics/_toc.yaml
     - title: "Request pipelining"
@@ -62,7 +65,7 @@ toc:
     section:
     - title: "Overview"
       path: /docs/development/languages/fidl/tutorials/dart/README.md
-    - title: "Getting Started"
+    - title: "Getting started"
       section:
       - include: /docs/development/languages/fidl/tutorials/dart/basics/_toc.yaml
     - title: "Request pipelining"

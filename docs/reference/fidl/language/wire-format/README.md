@@ -830,7 +830,7 @@ Read [The Lost Art of Structure Packing][lostart] for an in-depth treatise on th
 [FTP-015]: /docs/contribute/governance/fidl/ftp/ftp-015.md
 [FTP-030]: /docs/contribute/governance/fidl/ftp/ftp-030.md
 [FTP-059]: /docs/contribute/governance/fidl/ftp/ftp-059.md
-[abi-api-compat]: /docs/development/languages/fidl/guides/abi-api-compat.md
+[abi-api-compat]: /docs/development/languages/fidl/guides/compatibility/README.md
 [lostart]: http://www.catb.org/esr/structure-packing/
 [concepts]: /docs/concepts/fidl/overview.md
 [c-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-c.md

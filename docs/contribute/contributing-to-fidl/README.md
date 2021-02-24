@@ -729,7 +729,7 @@ fidl fmt --library my_library.fidl -i
 ```
 
 <!-- xrefs -->
-[abi-api-compat]: /docs/development/languages/fidl/guides/abi-api-compat.md
+[abi-api-compat]: /docs/development/languages/fidl/guides/compatibility/README.md
 [fidl-readme]: /docs/development/languages/fidl
 [cpp-style]: /docs/development/languages/c-cpp/cpp-style.md
 [fidlc-source]: /tools/fidl/fidlc/
