@@ -27,6 +27,7 @@ inline void CopyNotification(const msd_notification_t* src, msd_notification_t* 
   dst->type = src->type;
   switch (dst->type) {
     case MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND:
+      DASSERT(src->u.channel_send.size <= MSD_CHANNEL_SEND_MAX_SIZE);
       memcpy(dst->u.channel_send.data, src->u.channel_send.data, src->u.channel_send.size);
       dst->u.channel_send.size = src->u.channel_send.size;
       break;
