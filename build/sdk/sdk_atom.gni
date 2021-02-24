@@ -269,7 +269,6 @@ template("sdk_atom") {
     manifest = "$target_gen_dir/$target_name.sdk"
     depfile = "$manifest.d"
 
-    hermetic_deps = false
     script = "//build/sdk/create_atom_manifest.py"
 
     public_deps = gn_deps + [ ":$meta_target_name" ]
@@ -303,6 +302,7 @@ template("sdk_atom") {
            ] + dep_manifests + file_args
 
     if (defined(invoker.file_list)) {
+      inputs += [ rebase_path(invoker.file_list) ]
       args += [
         "--file-list",
         rebase_path(invoker.file_list),
