@@ -11,7 +11,7 @@
       ]
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:log_batch_iterator_get_next_requests",
+      "selector": "bootstrap/archivist:root/all_archive_accessor:logs_batch_iterator_get_next_requests",
       "metric_id": 1,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:log_batch_iterator_get_next_requests",
+      "selector": "bootstrap/archivist:root/feedback_archive_accessor:logs_batch_iterator_get_next_requests",
       "metric_id": 1,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -59,7 +59,7 @@
       ]
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:log_batch_iterator_get_next_requests",
+      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:logs_batch_iterator_get_next_requests",
       "metric_id": 1,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -83,7 +83,7 @@
       ]
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:log_batch_iterator_get_next_errors",
+      "selector": "bootstrap/archivist:root/all_archive_accessor:logs_batch_iterator_get_next_errors",
       "metric_id": 2,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -107,7 +107,7 @@
       ]
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:log_batch_iterator_get_next_errors",
+      "selector": "bootstrap/archivist:root/feedback_archive_accessor:logs_batch_iterator_get_next_errors",
       "metric_id": 2,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -131,7 +131,7 @@
       ]
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:log_batch_iterator_get_next_errors",
+      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:logs_batch_iterator_get_next_errors",
       "metric_id": 2,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -155,7 +155,7 @@
       ]
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:log_batch_iterator_get_next_result_count",
+      "selector": "bootstrap/archivist:root/all_archive_accessor:logs_batch_iterator_get_next_result_count",
       "metric_id": 3,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -179,7 +179,7 @@
       ]
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:log_batch_iterator_get_next_result_count",
+      "selector": "bootstrap/archivist:root/feedback_archive_accessor:logs_batch_iterator_get_next_result_count",
       "metric_id": 3,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -203,7 +203,7 @@
       ]
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:log_batch_iterator_get_next_result_count",
+      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:logs_batch_iterator_get_next_result_count",
       "metric_id": 3,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -227,7 +227,7 @@
       ]
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:log_batch_iterator_get_next_result_errors",
+      "selector": "bootstrap/archivist:root/all_archive_accessor:logs_batch_iterator_get_next_result_errors",
       "metric_id": 4,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -251,7 +251,7 @@
       ]
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:log_batch_iterator_get_next_result_errors",
+      "selector": "bootstrap/archivist:root/feedback_archive_accessor:logs_batch_iterator_get_next_result_errors",
       "metric_id": 4,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -275,7 +275,7 @@
       ]
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:log_batch_iterator_get_next_result_errors",
+      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:logs_batch_iterator_get_next_result_errors",
       "metric_id": 4,
       "metric_type": "Occurrence",
       "event_codes": [
