@@ -524,7 +524,7 @@ fn contains_matching_network(
 ) -> bool {
     scanned_ids.iter().any(|scanned_id| {
         let security_matches = saved_id.type_ == scanned_id.type_
-            || upgrade_security(&scanned_id.type_.clone().into()).contains(&saved_id.type_);
+            || upgrade_security(&scanned_id.type_.clone().into()).as_ref() == Some(&saved_id.type_);
         scanned_id.ssid == saved_id.ssid && security_matches
     })
 }
