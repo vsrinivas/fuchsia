@@ -49,4 +49,7 @@ message Context {
 
   // Whether to build for the purposes of collecting coverage.
   bool collect_coverage = 11;
+
+  // Use this many jobs if building with Goma (ignored otherwise).
+  int32 goma_job_count = 12;
 }
