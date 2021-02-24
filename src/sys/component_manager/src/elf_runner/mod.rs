@@ -430,12 +430,14 @@ impl ElfRunner {
         // The kernel-level mechanisms for creating processes are very low-level. We require that
         // all processes be created via fuchsia.process.Launcher in order for the platform to
         // maintain change-control over how processes are created.
-        component_job
-            .set_policy(zx::JobPolicy::Basic(
-                zx::JobPolicyOption::Absolute,
-                vec![(zx::JobCondition::NewProcess, zx::JobAction::Deny)],
-            ))
-            .map_err(|e| ElfRunnerError::component_job_policy_error(resolved_url.clone(), e))?;
+        if !program_config.create_raw_processes {
+            component_job
+                .set_policy(zx::JobPolicy::Basic(
+                    zx::JobPolicyOption::Absolute,
+                    vec![(zx::JobCondition::NewProcess, zx::JobAction::Deny)],
+                ))
+                .map_err(|e| ElfRunnerError::component_job_policy_error(resolved_url.clone(), e))?;
+        }
 
         // Default deny the job policy which allows ambiently marking VMOs executable, i.e. calling
         // vmo_replace_as_executable without an appropriate resource handle.
@@ -522,6 +524,7 @@ struct ElfProgramConfig {
     notify_lifecycle_stop: bool,
     ambient_mark_vmo_exec: bool,
     main_process_critical: bool,
+    create_raw_processes: bool,
 }
 
 impl ElfProgramConfig {
@@ -577,7 +580,27 @@ impl ElfProgramConfig {
             checker.main_process_critical_allowed()?;
         }
 
-        Ok(ElfProgramConfig { notify_lifecycle_stop, ambient_mark_vmo_exec, main_process_critical })
+        const CREATE_RAW_PROCESSES_KEY: &str = "job_policy_create_raw_processes";
+        let create_raw_processes = match Self::find(program, CREATE_RAW_PROCESSES_KEY) {
+            Some(fdata::DictionaryValue::Str(str_val)) => match &str_val[..] {
+                "true" => Ok(true),
+                "false" => Ok(false),
+                _ => Err(()),
+            },
+            Some(_) => Err(()),
+            None => Ok(false),
+        }
+        .map_err(|_| ElfRunnerError::program_dictionary_error(CREATE_RAW_PROCESSES_KEY, url))?;
+        if create_raw_processes {
+            checker.create_raw_processes_allowed()?;
+        }
+
+        Ok(ElfProgramConfig {
+            notify_lifecycle_stop,
+            ambient_mark_vmo_exec,
+            main_process_critical,
+            create_raw_processes,
+        })
     }
 
     fn find<'a>(dict: &'a fdata::Dictionary, key: &str) -> Option<&'a fdata::DictionaryValue> {

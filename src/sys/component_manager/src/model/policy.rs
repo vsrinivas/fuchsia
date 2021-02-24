@@ -251,7 +251,7 @@ impl ScopedPolicyChecker {
         ScopedPolicyChecker { config, moniker }
     }
 
-    // This interface is super simple for now since there's only two allowlists. In the future
+    // This interface is super simple for now since there's only three allowlists. In the future
     // we'll probably want a different interface than an individual function per policy item.
 
     pub fn ambient_mark_vmo_exec_allowed(&self) -> Result<(), PolicyError> {
@@ -269,6 +269,15 @@ impl ScopedPolicyChecker {
             Ok(())
         } else {
             Err(PolicyError::job_policy_disallowed("main_process_critical", &self.moniker))
+        }
+    }
+
+    pub fn create_raw_processes_allowed(&self) -> Result<(), PolicyError> {
+        let config = self.config.upgrade().ok_or(PolicyError::PolicyUnavailable)?;
+        if config.security_policy.job_policy.create_raw_processes.contains(&self.moniker) {
+            Ok(())
+        } else {
+            Err(PolicyError::job_policy_disallowed("create_raw_processes", &self.moniker))
         }
     }
 }
@@ -337,6 +346,7 @@ mod tests {
                     job_policy: JobPolicyAllowlists {
                         ambient_mark_vmo_exec: vec![],
                         main_process_critical: vec![],
+                        create_raw_processes: vec![],
                     },
                     capability_policy: self.capability_policy.clone(),
                     debug_capability_policy: self.debug_capability_policy.clone(),
@@ -377,6 +387,7 @@ mod tests {
                 job_policy: JobPolicyAllowlists {
                     ambient_mark_vmo_exec: vec![allowed1.clone(), allowed2.clone()],
                     main_process_critical: vec![allowed1.clone(), allowed2.clone()],
+                    create_raw_processes: vec![allowed1.clone(), allowed2.clone()],
                 },
                 capability_policy: HashMap::new(),
                 debug_capability_policy: HashMap::new(),
@@ -393,6 +404,66 @@ mod tests {
         drop(strong_config);
         assert_vmex_allowed_matches!(config, allowed1, Err(PolicyError::PolicyUnavailable));
         assert_vmex_allowed_matches!(config, allowed2, Err(PolicyError::PolicyUnavailable));
+    }
+
+    #[test]
+    fn scoped_policy_checker_create_raw_processes() {
+        macro_rules! assert_create_raw_processes_allowed_matches {
+            ($config:expr, $moniker:expr, $expected:pat) => {
+                let result = ScopedPolicyChecker::new($config.clone(), $moniker.clone())
+                    .create_raw_processes_allowed();
+                assert_matches!(result, $expected);
+            };
+        }
+        macro_rules! assert_create_raw_processes_disallowed {
+            ($config:expr, $moniker:expr) => {
+                assert_create_raw_processes_allowed_matches!(
+                    $config,
+                    $moniker,
+                    Err(PolicyError::JobPolicyDisallowed { .. })
+                );
+            };
+        }
+        let strong_config = Arc::new(RuntimeConfig::default());
+        let config = Arc::downgrade(&strong_config);
+        assert_create_raw_processes_disallowed!(config, AbsoluteMoniker::root());
+        assert_create_raw_processes_disallowed!(config, AbsoluteMoniker::from(vec!["foo:0"]));
+
+        let allowed1 = AbsoluteMoniker::from(vec!["foo:0", "bar:0"]);
+        let allowed2 = AbsoluteMoniker::from(vec!["baz:0", "fiz:0"]);
+        let strong_config = Arc::new(RuntimeConfig {
+            security_policy: SecurityPolicy {
+                job_policy: JobPolicyAllowlists {
+                    ambient_mark_vmo_exec: vec![],
+                    main_process_critical: vec![],
+                    create_raw_processes: vec![allowed1.clone(), allowed2.clone()],
+                },
+                capability_policy: HashMap::new(),
+                debug_capability_policy: HashMap::new(),
+            },
+            ..Default::default()
+        });
+        let config = Arc::downgrade(&strong_config);
+        assert_create_raw_processes_allowed_matches!(config, allowed1, Ok(()));
+        assert_create_raw_processes_allowed_matches!(config, allowed2, Ok(()));
+        assert_create_raw_processes_disallowed!(config, AbsoluteMoniker::root());
+        assert_create_raw_processes_disallowed!(config, allowed1.parent().unwrap());
+        assert_create_raw_processes_disallowed!(
+            config,
+            allowed1.child(ChildMoniker::from("baz:0"))
+        );
+
+        drop(strong_config);
+        assert_create_raw_processes_allowed_matches!(
+            config,
+            allowed1,
+            Err(PolicyError::PolicyUnavailable)
+        );
+        assert_create_raw_processes_allowed_matches!(
+            config,
+            allowed2,
+            Err(PolicyError::PolicyUnavailable)
+        );
     }
 
     #[test]
@@ -425,6 +496,7 @@ mod tests {
                 job_policy: JobPolicyAllowlists {
                     ambient_mark_vmo_exec: vec![allowed1.clone(), allowed2.clone()],
                     main_process_critical: vec![allowed1.clone(), allowed2.clone()],
+                    create_raw_processes: vec![allowed1.clone(), allowed2.clone()],
                 },
                 capability_policy: HashMap::new(),
                 debug_capability_policy: HashMap::new(),

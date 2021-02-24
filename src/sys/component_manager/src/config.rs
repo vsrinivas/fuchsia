@@ -117,6 +117,13 @@ pub struct JobPolicyAllowlists {
     /// Components must request this critical marking by including "main_process_critical: true" in
     /// their manifest's program object and must be using the ELF runner.
     pub main_process_critical: Vec<AbsoluteMoniker>,
+
+    /// Absolute monikers for components allowed to call zx_process_create directly (e.g., do not
+    /// have ZX_POL_NEW_PROCESS set to ZX_POL_ACTION_DENY).
+    ///
+    /// Components must request this policy by including "job_policy_create_raw_processes: true" in
+    /// their manifest's program object and must be using the ELF runner.
+    pub create_raw_processes: Vec<AbsoluteMoniker>,
 }
 
 /// The available capability sources for capability allow lists. This is a strict
@@ -408,7 +415,13 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
                 parse_absolute_monikers_from_strings(&job_policy.ambient_mark_vmo_exec)?;
             let main_process_critical =
                 parse_absolute_monikers_from_strings(&job_policy.main_process_critical)?;
-            JobPolicyAllowlists { ambient_mark_vmo_exec, main_process_critical }
+            let create_raw_processes =
+                parse_absolute_monikers_from_strings(&job_policy.create_raw_processes)?;
+            JobPolicyAllowlists {
+                ambient_mark_vmo_exec,
+                main_process_critical,
+                create_raw_processes,
+            }
         } else {
             JobPolicyAllowlists::default()
         };
@@ -486,6 +499,7 @@ mod tests {
                 job_policy: Some(component_internal::JobPolicyAllowlists {
                     main_process_critical: None,
                     ambient_mark_vmo_exec: None,
+                    create_raw_processes: None,
                     ..component_internal::JobPolicyAllowlists::EMPTY
                 }),
                 capability_policy: None,
@@ -514,6 +528,7 @@ mod tests {
                     job_policy: Some(component_internal::JobPolicyAllowlists {
                         main_process_critical: Some(vec!["/something/important".to_string()]),
                         ambient_mark_vmo_exec: Some(vec!["/".to_string(), "/foo/bar".to_string()]),
+                        create_raw_processes: Some(vec!["/another/thing".to_string()]),
                         ..component_internal::JobPolicyAllowlists::EMPTY
                     }),
                     capability_policy: Some(component_internal::CapabilityPolicyAllowlists {
@@ -612,6 +627,9 @@ mod tests {
                         main_process_critical: vec![
                             AbsoluteMoniker::from(vec!["something:0", "important:0"]),
                         ],
+                        create_raw_processes: vec![
+                            AbsoluteMoniker::from(vec!["another:0", "thing:0"]),
+                        ],
                     },
                     capability_policy: HashMap::from_iter(vec![
                         (CapabilityAllowlistKey {
@@ -694,6 +712,7 @@ mod tests {
                 job_policy: Some(component_internal::JobPolicyAllowlists {
                     main_process_critical: None,
                     ambient_mark_vmo_exec: Some(vec!["/".to_string(), "bad".to_string()]),
+                    create_raw_processes: None,
                     ..component_internal::JobPolicyAllowlists::EMPTY
                 }),
                 capability_policy: None,
