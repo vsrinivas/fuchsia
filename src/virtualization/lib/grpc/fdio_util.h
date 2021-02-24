@@ -5,8 +5,8 @@
 #ifndef SRC_VIRTUALIZATION_LIB_GRPC_FDIO_UTIL_H_
 #define SRC_VIRTUALIZATION_LIB_GRPC_FDIO_UTIL_H_
 
-#include <lib/zx/socket.h>
+#include <fbl/unique_fd.h>
 
-int ConvertSocketToNonBlockingFd(zx::socket socket);
+int SetNonBlocking(fbl::unique_fd& fd);
 
 #endif  // SRC_VIRTUALIZATION_LIB_GRPC_FDIO_UTIL_H_

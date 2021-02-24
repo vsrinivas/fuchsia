@@ -10,6 +10,7 @@
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/syslog/cpp/macros.h>
 #include <threads.h>
+#include <zircon/status.h>
 
 #include <map>
 
@@ -46,9 +47,17 @@ std::string drain_socket(zx::socket socket) {
 }
 
 static int run_grpc_client(void* client_to_run) {
-  ClientImpl<PosixPlatform>* client_impl = (ClientImpl<PosixPlatform>*)client_to_run;
+  auto client_impl = static_cast<ClientImpl<PosixPlatform>*>(client_to_run);
   client_impl->Run();
   return 0;
+}
+
+static void ConvertSocketToNonBlockingFd(zx::socket socket, fbl::unique_fd& fd) {
+  zx_status_t status;
+  ASSERT_EQ((status = fdio_fd_create(socket.release(), fd.reset_and_get_address())), ZX_OK)
+      << zx_status_get_string(status);
+  int result;
+  ASSERT_EQ((result = SetNonBlocking(fd)), 0) << strerror(result);
 }
 
 TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
@@ -72,10 +81,10 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   RunLoopUntil([&connect_complete] { return connect_complete; });
   ASSERT_EQ(status, ZX_OK);
 
-  int32_t vsock_fd = ConvertSocketToNonBlockingFd(std::move(local_socket));
-  ASSERT_GE(vsock_fd, 0);
+  fbl::unique_fd vsock_fd;
+  ASSERT_NO_FATAL_FAILURE(ConvertSocketToNonBlockingFd(std::move(local_socket), vsock_fd));
 
-  ClientImpl<PosixPlatform> client(vsock_fd);
+  ClientImpl<PosixPlatform> client(vsock_fd.release());
 
   // Push the bash script to the guest
   zx::channel put_local, put_remote;
@@ -106,7 +115,8 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   // Once the subprocess has started, write to stdin.
   std::string to_write = kTestScriptInput;
   uint32_t bytes_written = 0;
-  int32_t stdin_fd = ConvertSocketToNonBlockingFd(std::move(stdin_writer));
+  fbl::unique_fd stdin_fd;
+  ASSERT_NO_FATAL_FAILURE(ConvertSocketToNonBlockingFd(std::move(stdin_writer), stdin_fd));
 
   // Run the bash script on the guest.
   std::string command = "/bin/sh ";
@@ -126,8 +136,8 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
     exec_started_status = status;
     if (status == ZX_OK) {
       while (bytes_written < to_write.size()) {
-        size_t curr_bytes_written =
-            write(stdin_fd, &(to_write.c_str()[bytes_written]), to_write.size() - bytes_written);
+        size_t curr_bytes_written = write(stdin_fd.get(), &(to_write.c_str()[bytes_written]),
+                                          to_write.size() - bytes_written);
         if (curr_bytes_written < 0) {
           break;
         }
@@ -136,7 +146,7 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
       }
     }
     client.Stop();
-    close(stdin_fd);
+    stdin_fd.reset();
     exec_started = true;
   };
   listener.events().OnTerminated = [&](zx_status_t exec_result, int32_t exit_code) {
@@ -228,10 +238,10 @@ TEST_F(GuestInteractionTest, DISABLED_GrpcPutGetTest) {
   RunLoopUntil([&connect_complete] { return connect_complete; });
   ASSERT_EQ(status, ZX_OK);
 
-  int32_t vsock_fd = ConvertSocketToNonBlockingFd(std::move(local_socket));
-  ASSERT_GE(vsock_fd, 0);
+  fbl::unique_fd vsock_fd;
+  ASSERT_NO_FATAL_FAILURE(ConvertSocketToNonBlockingFd(std::move(local_socket), vsock_fd));
 
-  ClientImpl<PosixPlatform> client(vsock_fd);
+  ClientImpl<PosixPlatform> client(vsock_fd.release());
 
   // Write a file of gibberish that the test can send over to the guest.
   char test_file[] = "/data/test_file.txt";

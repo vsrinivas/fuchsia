@@ -4,8 +4,10 @@
 
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 
+#include <lib/fdio/fd.h>
 #include <lib/fit/bridge.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/status.h>
 
 #include "src/virtualization/lib/grpc/fdio_util.h"
 
@@ -36,12 +38,12 @@ void GrpcVsockServerBuilder::AddListenPort(uint32_t vsock_port) {
 fit::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> GrpcVsockServerBuilder::Build() {
   return fit::join_promise_vector(std::move(service_promises_))
       .then([builder = std::move(builder_)](
-                const fit::result<std::vector<fit::result<void, zx_status_t>>>& result) mutable
+                const fit::result<std::vector<fit::result<void, zx_status_t>>>& results) mutable
             -> fit::result<std::unique_ptr<grpc::Server>, zx_status_t> {
         // join_promise_vector should never fail, but instead return a vector
         // of results.
-        FX_CHECK(result.is_ok()) << "fit::join_promise_vector returns fit::error";
-        for (const auto& result : result.value()) {
+        FX_CHECK(results.is_ok()) << "fit::join_promise_vector returns fit::error";
+        for (const auto& result : results.value()) {
           if (result.is_error()) {
             FX_CHECK(false) << "Failed to listen on vsock port: " << result.error();
             return fit::error(result.error());
@@ -64,21 +66,28 @@ void GrpcVsockServer::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
                              AcceptCallback callback) {
   FX_CHECK(server_);
   zx::socket h1, h2;
-  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create socket " << status;
-    callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
-    return;
-  }
+  zx_status_t status = [&]() {
+    zx_status_t status;
+    if ((status = zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2)) != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to create socket " << zx_status_get_string(status);
+      return ZX_ERR_CONNECTION_REFUSED;
+    }
 
-  // gRPC is not compatible with Zircon primitives, so we need to provide it
-  // with a compatible file descriptor instead.
-  int fd = ConvertSocketToNonBlockingFd(std::move(h1));
-  if (fd < 0) {
-    FX_LOGS(ERROR) << "Failed get file descriptor for socket";
-    callback(ZX_ERR_INTERNAL, zx::socket());
-    return;
-  }
-  grpc::AddInsecureChannelFromFd(server_.get(), fd);
-  callback(ZX_OK, std::move(h2));
+    // gRPC is not compatible with Zircon primitives, so we need to provide it
+    // with a compatible file descriptor instead.
+    fbl::unique_fd fd;
+    if ((status = fdio_fd_create(h1.release(), fd.reset_and_get_address())) != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to get file descriptor for socket " << zx_status_get_string(status);
+      return ZX_ERR_INTERNAL;
+    }
+    int result = SetNonBlocking(fd);
+    if (result != 0) {
+      FX_LOGS(ERROR) << "Failed to set nonblocking " << strerror(result);
+      return ZX_ERR_INTERNAL;
+    }
+
+    grpc::AddInsecureChannelFromFd(server_.get(), fd.release());
+    return ZX_OK;
+  }();
+  callback(status, std::move(h2));
 }

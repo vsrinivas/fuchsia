@@ -63,13 +63,13 @@ TEST_F(GuestInteractionTest, FidlExecScriptTest) {
   // Run the bash script in the guest.  The script will write to stdout and
   // stderr.  The script will also block waiting to receive input from stdin.
   zx::socket stdin_writer, stdin_reader;
-  zx::socket::create(0, &stdin_writer, &stdin_reader);
+  ASSERT_EQ(zx::socket::create(0, &stdin_writer, &stdin_reader), ZX_OK);
 
   zx::socket stdout_writer, stdout_reader;
-  zx::socket::create(0, &stdout_writer, &stdout_reader);
+  ASSERT_EQ(zx::socket::create(0, &stdout_writer, &stdout_reader), ZX_OK);
 
   zx::socket stderr_writer, stderr_reader;
-  zx::socket::create(0, &stderr_writer, &stderr_reader);
+  ASSERT_EQ(zx::socket::create(0, &stderr_writer, &stderr_reader), ZX_OK);
 
   bool exec_started = false;
   bool exec_terminated = false;
@@ -101,7 +101,7 @@ TEST_F(GuestInteractionTest, FidlExecScriptTest) {
 
       bytes_written += curr_bytes_written;
     }
-    stdin_writer.shutdown(ZX_SOCKET_SHUTDOWN_MASK);
+    stdin_writer.reset();
     exec_started_status = status;
     exec_started = true;
   };

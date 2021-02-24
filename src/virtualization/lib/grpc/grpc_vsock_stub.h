@@ -6,10 +6,12 @@
 #define SRC_VIRTUALIZATION_LIB_GRPC_GRPC_VSOCK_STUB_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <grpc++/grpc++.h>
+#include <lib/fdio/fd.h>
 #include <lib/fit/promise.h>
 
 #include "src/virtualization/lib/grpc/fdio_util.h"
+
+#include <grpc++/grpc++.h>
 
 // Connects to a gRPC service listening on cid:port and returns a file
 // descriptor for the connection socket.
@@ -23,11 +25,15 @@ fit::promise<zx::socket, zx_status_t> ConnectToGrpcVsockService(
 // Creates a new gRPC stub backed by a zx::socket.
 template <typename T>
 fit::result<std::unique_ptr<typename T::Stub>, zx_status_t> NewGrpcStub(zx::socket socket) {
-  auto fd = ConvertSocketToNonBlockingFd(std::move(socket));
-  if (fd < 0) {
+  fbl::unique_fd fd;
+  zx_status_t status = fdio_fd_create(socket.release(), fd.reset_and_get_address());
+  if (status != ZX_OK) {
+    return fit::error(status);
+  }
+  if (SetNonBlocking(fd) != 0) {
     return fit::error(ZX_ERR_IO);
   }
-  return fit::ok(T::NewStub(grpc::CreateInsecureChannelFromFd("vsock", fd)));
+  return fit::ok(T::NewStub(grpc::CreateInsecureChannelFromFd("vsock", fd.release())));
 }
 
 // Connects to a gRPC service listening on cid:port and returns a gRPC

@@ -4,26 +4,16 @@
 
 #include "src/virtualization/lib/grpc/fdio_util.h"
 
+#include <errno.h>
 #include <fcntl.h>
-#include <lib/fdio/fd.h>
-#include <lib/syslog/cpp/macros.h>
 
-int ConvertSocketToNonBlockingFd(zx::socket socket) {
-  int fd = -1;
-  zx_status_t status = fdio_fd_create(socket.release(), &fd);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not get client fdio endpoint";
-    return -1;
+int SetNonBlocking(fbl::unique_fd& fd) {
+  int flags = fcntl(fd.get(), F_GETFL);
+  if (flags < 0) {
+    return errno;
   }
-
-  auto flags = fcntl(fd, F_GETFL);
-  if (flags == -1) {
-    FX_LOGS(ERROR) << "fcntl(F_GETFL) failed: " << strerror(errno);
-    return -1;
+  if (fcntl(fd.get(), F_SETFL, flags | O_NONBLOCK) < 0) {
+    return errno;
   }
-  if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-    FX_LOGS(ERROR) << "fcntl(F_SETFL) failed: " << strerror(errno);
-    return -1;
-  }
-  return fd;
+  return 0;
 }

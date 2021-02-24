@@ -12,18 +12,22 @@
 #include "src/virtualization/lib/guest_interaction/common.h"
 
 static int run_grpc_loop(void* service_to_run) {
-  FuchsiaGuestInteractionService* gis = (FuchsiaGuestInteractionService*)service_to_run;
+  auto gis = static_cast<FuchsiaGuestInteractionService*>(service_to_run);
   gis->Run();
   return 0;
 }
 
 FuchsiaGuestInteractionService::FuchsiaGuestInteractionService(zx::socket socket)
     : executor_(async_get_default_dispatcher()) {
-  int32_t vsock_fd = ConvertSocketToNonBlockingFd(std::move(socket));
-  if (vsock_fd < 0) {
+  fbl::unique_fd fd;
+  zx_status_t status = fdio_fd_create(socket.release(), fd.reset_and_get_address());
+  if (status != ZX_OK) {
     abort();
   }
-  client_ = std::make_unique<ClientImpl<PosixPlatform>>(vsock_fd);
+  if (SetNonBlocking(fd) != 0) {
+    abort();
+  }
+  client_ = std::make_unique<ClientImpl<PosixPlatform>>(fd.release());
   thrd_create_with_name(&guest_interaction_service_thread_, run_grpc_loop, this, "gRPC run");
 }
 
@@ -78,8 +82,8 @@ void FuchsiaGuestInteractionService::ExecuteCommand(
     env_map[env_var.key] = env_var.value;
   }
 
-  client_->Exec(command, std::move(env_map), std::move(std_in), std::move(std_out),
-                std::move(std_err), std::move(req));
+  client_->Exec(command, env_map, std::move(std_in), std::move(std_out), std::move(std_err),
+                std::move(req));
 }
 
 void FuchsiaGuestInteractionService::AddBinding(

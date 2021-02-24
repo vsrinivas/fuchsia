@@ -361,14 +361,6 @@
             "url": "fuchsia-pkg://fuchsia.com/msd_vsi_vip_nonhardware_tests#meta/msd_vsi_vip_nonhardware_tests.cmx"
         },
         {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/netemul-dhcp-tests#meta/dhcp-validity-test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/sandbox-service.cmx"
-        },
-        {
             "max_severity": "FATAL",
             "url": "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-integration-test.cmx"
         },
