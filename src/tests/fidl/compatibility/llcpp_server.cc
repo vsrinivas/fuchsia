@@ -116,7 +116,8 @@ class EchoClientApp {
 
  private:
   // Called once upon construction to launch and connect to the server.
-  zx::channel ConnectTo(::fidl::StringView server_url) {
+  ::fidl::ClientEnd<llcpp::fidl::test::compatibility::Echo> ConnectTo(
+      ::fidl::StringView server_url) {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = std::string(server_url.data(), server_url.size());
     echo_provider_ = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
@@ -125,11 +126,12 @@ class EchoClientApp {
     context_->svc()->Connect(launcher.NewRequest());
     launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
 
-    zx::channel server_end, client_end;
-    ZX_ASSERT(zx::channel::create(0, &client_end, &server_end) == ZX_OK);
-    ZX_ASSERT(echo_provider_->Connect(kEchoInterfaceName, std::move(server_end)) == ZX_OK);
+    auto echo_ends = ::fidl::CreateEndpoints<llcpp::fidl::test::compatibility::Echo>();
+    ZX_ASSERT(echo_ends.is_ok());
+    ZX_ASSERT(echo_provider_->Connect(kEchoInterfaceName, echo_ends->server.TakeChannel()) ==
+              ZX_OK);
 
-    return client_end;
+    return std::move(echo_ends->client);
   }
 
   std::unique_ptr<sys::ComponentContext> context_;
@@ -370,7 +372,10 @@ int main(int argc, const char** argv) {
   context->outgoing()->AddPublicService(
       std::make_unique<vfs::Service>([&](zx::channel request, async_dispatcher_t* dispatcher) {
         auto conn = std::make_unique<llcpp::fidl::test::compatibility::EchoConnection>();
-        auto result = ::fidl::BindServer(dispatcher, std::move(request), conn.get());
+        auto result = ::fidl::BindServer(
+            dispatcher,
+            ::fidl::ServerEnd<llcpp::fidl::test::compatibility::Echo>(std::move(request)),
+            conn.get());
         ZX_ASSERT(result.is_ok());
         conn->set_server_binding(result.take_value());
         connections.push_back(std::move(conn));

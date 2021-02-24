@@ -255,7 +255,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/sys/component_manager/tests/security_policy/capability_allowlist:dir_service_bin",
     "//src/sys/lib/stdout-to-debuglog/cpp:cpp",
     "//src/sys/startup:startup",
-    "//src/tests/fidl/compatibility:llcpp_server",
     "//src/ui/backlight/bin/backlight:backlight",
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test",
     "//src/ui/backlight/tests:backlight-test",
