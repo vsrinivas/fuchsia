@@ -32,5 +32,7 @@ void main() {
     expect(
         archivistInspect['payload']['root']['fuchsia.inspect.Health']['status'],
         equals('OK'));
-  });
+    // when a component's inspect times out, the SL4F snapshot facade waits up
+    // to two minutes
+  }, timeout: Timeout(Duration(minutes: 3)));
 }
