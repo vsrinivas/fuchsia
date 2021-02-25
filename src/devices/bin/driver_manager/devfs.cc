@@ -176,7 +176,7 @@ class DevfsFidlServer : public fio::DirectoryAdmin::Interface {
   void Clone(uint32_t flags, fidl::ServerEnd<fio::Node> object,
              CloneCompleter::Sync& completer) override;
   void Close(CloseCompleter::Sync& completer) override {}
-  void Describe(DescribeCompleter::Sync& completer) override {}
+  void Describe(DescribeCompleter::Sync& completer) override;
   void Sync(SyncCompleter::Sync& completer) override {}
   void GetAttr(GetAttrCompleter::Sync& completer) override;
   void SetAttr(uint32_t flags, fio::wire::NodeAttributes attributes,
@@ -818,25 +818,11 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
       return transaction.GetStatus();
     }
     case fuchsia_io_NodeDescribeOrdinal: {
-      DECODE_REQUEST(msg, NodeDescribe);
-
-      fio::wire::NodeInfo node_info;
-      fidl::aligned<fio::DirectoryObject> directory;
-      node_info.set_directory(fidl::unowned_ptr(&directory));
-      fio::Node::DescribeResponse::OwnedEncodedMessage response(node_info);
-      const auto& out = response.GetOutgoingMessage();
-
-      fidl_outgoing_msg_t raw_msg = {
-          .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
-          .byte =
-              {
-                  .bytes = out.bytes(),
-                  .handles = out.handles(),
-                  .num_bytes = out.byte_actual(),
-                  .num_handles = out.handle_actual(),
-              },
-      };
-      return txn->reply(txn, &raw_msg);
+      ios->server_->set_current_dispatcher(dispatcher);
+      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
+      ios->server_->clear_current_dispatcher();
+      ZX_ASSERT(result == fidl::DispatchResult::kFound);
+      return transaction.GetStatus();
     }
     case fuchsia_io_DirectoryOpenOrdinal: {
       ios->server_->set_current_dispatcher(dispatcher);
@@ -959,6 +945,13 @@ void DevfsFidlServer::GetAttr(GetAttrCompleter::Sync& completer) {
   attributes.link_count = 1;
   attributes.id = owner_->devnode_->ino;
   completer.Reply(ZX_OK, attributes);
+}
+
+void DevfsFidlServer::Describe(DescribeCompleter::Sync& completer) {
+  fio::NodeInfo node_info;
+  fidl::aligned<fio::DirectoryObject> directory;
+  node_info.set_directory(fidl::unowned_ptr(&directory));
+  completer.Reply(std::move(node_info));
 }
 
 void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
