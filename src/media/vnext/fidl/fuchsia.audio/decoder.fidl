@@ -1,0 +1,49 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.audio;
+
+using fuchsia.media2;
+using fuchsia.mediastreams;
+using zx;
+
+/// The maximum number of VMO handles allowed per buffer collection.
+const int64 MAX_PAYLOAD_RANGES = 16;
+
+/// Represents an audio decoder.
+protocol Decoder {
+    /// Adds an input stream in the form of a `StreamSink` through
+    /// which the decoder consumes packets. `format` may be
+    /// supplied to provide additional format details not
+    /// established when the decoder was created. Likewise,
+    /// `compression` may be supplied to provide additional
+    /// compression details.
+    ConnectInputStream(
+        zx.handle:EVENTPAIR buffer_collection_token,
+        fuchsia.mediastreams.AudioFormat? format,
+        fuchsia.mediastreams.Compression? compression,
+        request<fuchsia.media2.StreamSink> stream_sink_request);
+
+    /// Indicates that the current input stream has been disconnected unexpectedly.
+    -> OnInputStreamDisconnected(zx.status status);
+
+    /// Indicates that a new output stream is available with the
+    /// specified format. The client is expected to call
+    /// `AddOutputStream` immediately after this event is
+    /// signalled.
+    -> OnNewOutputStreamAvailable(
+           fuchsia.mediastreams.AudioFormat format);
+
+    /// Establishes a new output stream in response to a
+    /// `OnNewOutputStreamAvailable` event.
+    ConnectOutputStream(
+        zx.handle:EVENTPAIR buffer_collection_token,
+        fuchsia.media2.StreamSink stream_sink);
+
+    /// Disconnects the output stream.
+    DisconnectOutputStream();
+
+    /// Indicates that the current output stream has been disconnected unexpectedly.
+    -> OnOutputStreamDisconnected(zx.status status);
+};
