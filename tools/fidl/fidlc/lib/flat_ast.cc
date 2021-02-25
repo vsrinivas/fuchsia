@@ -1945,7 +1945,7 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
   // TODO(fxbug.dev/65978): Create a naming context, and use it to name all
   // anonymous layouts present in this type declaration. Currently, we do this
-  // inline, and in a very crude way (simple concatenantion). We'll want to unit
+  // inline, and in a very crude way (simple concatenation). We'll want to unit
   // test the naming context separately since it is a key part of the language
   // specification, and enables stable bindings generation.
 
@@ -1957,7 +1957,7 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
         case raw::Layout::Kind::kStruct:
         case raw::Layout::Kind::kUnion: {
           // TODO(fxbug.dev/65978): Here specifically we need the naming context
-          // mentionned above.
+          // mentioned above.
           auto name_of_anonymous_layout = Name::CreateDerived(
               this, member->span(),
               std::string(context.decl_name()) +
@@ -1996,9 +1996,7 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
         }
 
         RegisterDecl(std::make_unique<Struct>(/*attributes=*/nullptr, std::move(context),
-                                              std::move(members),
-                                              // TODO(fxbug.dev/65978): Change, this is hard coded.
-                                              types::Resourceness::kValue));
+                                              std::move(members), layout->resourceness));
         break;
       }
       case raw::Layout::Kind::kUnion: {
@@ -2015,12 +2013,9 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
           index++;
         }
 
-        RegisterDecl(std::make_unique<Union>(/*attributes=*/nullptr, std::move(context),
-                                             std::move(members),
-                                             // TODO(fxbug.dev/65978): Change, this is hard coded.
-                                             types::Strictness::kFlexible,
-                                             // TODO(fxbug.dev/65978): Change, this is hard coded.
-                                             types::Resourceness::kValue));
+        RegisterDecl(std::make_unique<Union>(
+            /*attributes=*/nullptr, std::move(context), std::move(members),
+            layout->strictness.value_or(types::Strictness::kFlexible), layout->resourceness));
         break;
       }
       case raw::Layout::Kind::kTypeCtor: {

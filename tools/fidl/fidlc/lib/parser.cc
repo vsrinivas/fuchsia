@@ -1652,6 +1652,7 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(ASTScope& scope) {
   // how layout parse should be done e.g. has an ordinal? default value
   // allowed?.
 
+  const auto modifiers = ParseModifiers();
   auto identifier = ParseCompoundIdentifier();
   if (!Ok())
     return Fail();
@@ -1664,13 +1665,17 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(ASTScope& scope) {
         // union, table, bits, and enum layouts exist.
         return Fail();
       }
+
       // TODO(fxbug.dev/65978): Once fully transitioned, we will be able to
       // remove token subkinds for struct, union, table, bits, and enum. Or
       // maybe we want to have a 'recognize token subkind' on an identifier
       // instead of doing string comparison directly.
       if (identifier->components[0]->span().data() == "struct") {
+        ValidateModifiers<types::Resourceness>(modifiers, identifier->components[0]->start_);
         kind = raw::Layout::Kind::kStruct;
       } else if (identifier->components[0]->span().data() == "union") {
+        ValidateModifiers<types::Strictness, types::Resourceness>(
+            modifiers, identifier->components[0]->start_);
         kind = raw::Layout::Kind::kUnion;
       } else {
         // TODO(fxbug.dev/65978): Improve error messaging here, only struct,
@@ -1682,13 +1687,14 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(ASTScope& scope) {
     case Token::Kind::kLeftAngle:
     case Token::Kind::kColon:
     case Token::Kind::kSemicolon: {
+      ValidateModifiers</* none */>(modifiers, identifier->start_);
       auto type_ctor = ParseTypeConstructorOf(scope, std::move(identifier));
       if (!Ok())
         return Fail();
       return std::make_unique<raw::Layout>(scope.GetSourceElement(), raw::Layout::Kind::kTypeCtor,
                                            std::vector<std::unique_ptr<raw::LayoutMember>>(),
-                                           std::move(type_ctor));
-      break;
+                                           std::move(type_ctor), /*strictness=*/std::nullopt,
+                                           types::Resourceness::kValue);
     }
     default:
       // TODO(fxbug.dev/65978): Improve error messaging here, only struct,
@@ -1725,8 +1731,10 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(ASTScope& scope) {
   if (!Ok())
     return Fail();
 
-  return std::make_unique<raw::Layout>(scope.GetSourceElement(), kind, std::move(members),
-                                       /*type_ctor=*/nullptr);
+  return std::make_unique<raw::Layout>(
+      scope.GetSourceElement(), kind, std::move(members),
+      /*type_ctor=*/nullptr, modifiers.strictness,
+      modifiers.resourceness.value_or(types::Resourceness::kValue));
 };
 
 std::unique_ptr<raw::TypeDecl> Parser::ParseTypeDecl(ASTScope& scope) {
@@ -1764,13 +1772,12 @@ std::unique_ptr<raw::File> Parser::ParseFileFtp050(
   std::vector<std::unique_ptr<raw::UnionDeclaration>> union_declaration_list;
   std::vector<std::unique_ptr<raw::TypeDecl>> type_decls;
 
-  // TODO(fxbug.dev/65978): Parse library imports (`using ...`).
-
+  bool done_with_library_imports = false;
   auto parse_declaration = [&]() {
     ASTScope scope(this);
-
-    // TODO(fxbug.dev/65978): Parse attributes.
-    // TODO(fxbug.dev/65978): Parse modifiers.
+    std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
+    if (!Ok())
+      return More;
 
     switch (Peek().combined()) {
       default:
@@ -1788,6 +1795,21 @@ std::unique_ptr<raw::File> Parser::ParseFileFtp050(
         // TODO(fxbug.dev/65978): Parse type aliases (`alias ...`).
         // TODO(fxbug.dev/65978): Parse resource definition declarations (`resource_definition
         // ...`).
+      }
+
+      case CASE_IDENTIFIER(Token::Subkind::kUsing): {
+        auto using_decl = ParseUsing(std::move(attributes), scope, Modifiers());
+        if (using_decl == nullptr) {
+          // Failed to parse using declaration.
+          return Done;
+        }
+        if (using_decl->maybe_type_ctor) {
+          done_with_library_imports = true;
+        } else if (done_with_library_imports) {
+          reporter_->Report(ErrLibraryImportsMustBeGroupedAtTopOfFile, using_decl->span());
+        }
+        using_list.emplace_back(std::move(using_decl));
+        return More;
       }
     }
   };
