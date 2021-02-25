@@ -146,11 +146,10 @@ zx_status_t VerifiedVolumeClient::OpenForAuthoring(const zx::duration& timeout,
       llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
   fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
       llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
-  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
-                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
-                    .set_hash_function(fidl::unowned_ptr(&hash_function))
-                    .set_block_size(fidl::unowned_ptr(&block_size))
-                    .build();
+  fidl::FidlAllocator allocator;
+  llcpp::fuchsia::hardware::block::verified::Config config(allocator);
+  config.set_hash_function(fidl::unowned_ptr(&hash_function));
+  config.set_block_size(fidl::unowned_ptr(&block_size));
 
   // Request the device be opened for writes
   auto open_resp = llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::OpenForWrite(
@@ -243,11 +242,10 @@ zx_status_t VerifiedVolumeClient::OpenForVerifiedRead(const digest::Digest& expe
       llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
   fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
       llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
-  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
-                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
-                    .set_hash_function(fidl::unowned_ptr(&hash_function))
-                    .set_block_size(fidl::unowned_ptr(&block_size))
-                    .build();
+  fidl::FidlAllocator allocator;
+  llcpp::fuchsia::hardware::block::verified::Config config(allocator);
+  config.set_hash_function(fidl::unowned_ptr(&hash_function));
+  config.set_block_size(fidl::unowned_ptr(&block_size));
 
   // Make a copy of the seal to send.
   llcpp::fuchsia::hardware::block::verified::Sha256Seal sha256_seal;

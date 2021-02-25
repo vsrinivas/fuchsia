@@ -15,11 +15,10 @@ TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction) {
       llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
   fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
       llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
-  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
-                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
-                    .set_hash_function(fidl::unowned_ptr(&hash_function))
-                    .set_block_size(fidl::unowned_ptr(&block_size))
-                    .build();
+  fidl::FidlAllocator allocator;
+  llcpp::fuchsia::hardware::block::verified::Config config(allocator);
+  config.set_hash_function(fidl::unowned_ptr(&hash_function));
+  config.set_block_size(fidl::unowned_ptr(&block_size));
 
   block_info_t blk;
   blk.block_size = 4096;
@@ -32,11 +31,10 @@ TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction512BackingBlockSize) {
       llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
   fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
       llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
-  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
-                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
-                    .set_hash_function(fidl::unowned_ptr(&hash_function))
-                    .set_block_size(fidl::unowned_ptr(&block_size))
-                    .build();
+  fidl::FidlAllocator allocator;
+  llcpp::fuchsia::hardware::block::verified::Config config(allocator);
+  config.set_hash_function(fidl::unowned_ptr(&hash_function));
+  config.set_block_size(fidl::unowned_ptr(&block_size));
 
   block_info_t blk;
   blk.block_size = 512;
@@ -47,10 +45,9 @@ TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction512BackingBlockSize) {
 TEST(ConfigCheckTest, RejectsMissingHashFunction) {
   fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
       llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
-  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
-                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
-                    .set_block_size(fidl::unowned_ptr(&block_size))
-                    .build();
+  fidl::FidlAllocator allocator;
+  llcpp::fuchsia::hardware::block::verified::Config config(allocator);
+  config.set_block_size(fidl::unowned_ptr(&block_size));
 
   block_info_t blk;
   blk.block_size = 4096;
@@ -61,10 +58,9 @@ TEST(ConfigCheckTest, RejectsMissingHashFunction) {
 TEST(ConfigCheckTest, RejectsMissingBlockSize) {
   fidl::aligned<llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
       llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
-  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
-                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
-                    .set_hash_function(fidl::unowned_ptr(&hash_function))
-                    .build();
+  fidl::FidlAllocator allocator;
+  llcpp::fuchsia::hardware::block::verified::Config config(allocator);
+  config.set_hash_function(fidl::unowned_ptr(&hash_function));
 
   block_info_t blk;
   blk.block_size = 4096;
@@ -77,11 +73,10 @@ TEST(ConfigCheckTest, RejectsIfBlockSizeUnsupportable) {
       llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
   fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
       llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
-  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
-                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
-                    .set_hash_function(fidl::unowned_ptr(&hash_function))
-                    .set_block_size(fidl::unowned_ptr(&block_size))
-                    .build();
+  fidl::FidlAllocator allocator;
+  llcpp::fuchsia::hardware::block::verified::Config config(allocator);
+  config.set_hash_function(fidl::unowned_ptr(&hash_function));
+  config.set_block_size(fidl::unowned_ptr(&block_size));
 
   block_info_t blk;
   // not a divisor of 4k
