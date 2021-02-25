@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -32,13 +32,6 @@ rustc_test("waitgroup_lib_test") {
   sources = [ "src/test.rs" ]
 }
 
-test_package("waitgroup_tests") {
+fuchsia_unittest_package("waitgroup_tests") {
   deps = [ ":waitgroup_lib_test" ]
-
-  tests = [
-    {
-      name = "waitgroup_lib_test"
-      environments = basic_envs
-    },
-  ]
 }
