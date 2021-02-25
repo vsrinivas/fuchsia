@@ -460,7 +460,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   // Default boot defaults to network
   const char* defboot = cmdline_get("bootloader.default", "network");
   const char* nodename = cmdline_get("zircon.nodename", "");
-  uint32_t namegen = cmdline_get_uint32("zircon.namegen", 0);
+  uint32_t namegen = cmdline_get_uint32("zircon.namegen", 1);
 
   // See if there's a network interface
   bool have_network = netboot_init(nodename, namegen) == 0;

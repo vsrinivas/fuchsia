@@ -79,7 +79,7 @@ TEST_F(ArgsTest, DeviceNameProviderNoneProvided) {
   ASSERT_EQ(ParseArgs(argc, const_cast<char**>(argv), svc_root(), &error, &args), 0, "%s", error);
   ASSERT_TRUE(args.interface.empty());
   ASSERT_TRUE(args.nodename.empty());
-  ASSERT_EQ(args.namegen, 0);
+  ASSERT_EQ(args.namegen, 1);
   ASSERT_EQ(args.ethdir, std::string("/dev/class/ethernet"));
   ASSERT_EQ(error, nullptr);
 }
@@ -94,14 +94,14 @@ TEST_F(ArgsTest, DeviceNameProviderAllProvided) {
                         "--ethdir",
                         kEthDir,
                         "--namegen",
-                        "1"};
+                        "0"};
   const char* error = nullptr;
   DeviceNameProviderArgs args;
   ASSERT_EQ(ParseArgs(argc, const_cast<char**>(argv), svc_root(), &error, &args), 0, "%s", error);
   ASSERT_EQ(args.interface, std::string(kInterface));
   ASSERT_EQ(args.nodename, std::string(kNodename));
   ASSERT_EQ(args.ethdir, std::string(kEthDir));
-  ASSERT_EQ(args.namegen, 1);
+  ASSERT_EQ(args.namegen, 0);
   ASSERT_EQ(error, nullptr);
 }
 
@@ -121,7 +121,7 @@ TEST_F(ArgsTest, DeviceNameProviderValidation) {
   argv[1] = "--nodename";
   args.interface = "";
   args.nodename = "";
-  args.namegen = 0;
+  args.namegen = 1;
   error = nullptr;
   ASSERT_LT(ParseArgs(argc, const_cast<char**>(argv), svc_root(), &error, &args), 0);
   ASSERT_TRUE(args.nodename.empty());
@@ -131,10 +131,10 @@ TEST_F(ArgsTest, DeviceNameProviderValidation) {
   argv[1] = "--namegen";
   args.interface = "";
   args.nodename = "";
-  args.namegen = 0;
+  args.namegen = 1;
   error = nullptr;
   ASSERT_LT(ParseArgs(argc, const_cast<char**>(argv), svc_root(), &error, &args), 0);
-  ASSERT_EQ(args.namegen, 0);
+  ASSERT_EQ(args.namegen, 1);
   ASSERT_TRUE(strstr(error, "namegen"));
 }
 }  // namespace

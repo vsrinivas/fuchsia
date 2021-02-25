@@ -156,11 +156,11 @@ mod test {
         [00031.633][13936][13938][pkg-resolver] INFO: AutoClient for "http://[fe80::2438:dbff:fe0b:afe1%25ethp0003]:8083/auto" connecting.
         "#;
 
-    const KLOG_CONTENT: &str = r#"[00005.453] 22815.22817> mDNS: Verifying uniqueness of host name step-atom-yard-juicy.local.
+    const KLOG_CONTENT: &str = r#"[00005.453] 22815.22817> mDNS: Verifying uniqueness of host name fuchsia-5254-0063-5e7a.local.
         [00005.454] 22815.22817> Starting mDNS on interface ethp0002 fe80::5054:ff:fe63:5e7a using port 5353
         [00005.455] 20259.20572> [00005.455615][3937501459][0][netstack] INFO: socket_conv.go(828): unimplemented setsockopt: SOL_IPV6 name=16 optVal=ff000000
         [00005.455] 20259.25153> [00005.455904][3937501459][0][netstack] INFO: socket_conv.go(828): unimplemented setsockopt: SOL_IPV6 name=52 optVal=01000000
-        [00006.224] 22815.22817> mDNS: Using unique host name step-atom-yard-juicy.local.
+        [00006.224] 22815.22817> mDNS: Using unique host name fuchsia-5254-0063-5e7a.local.
         [00010.247] 00000.00000> memory-pressure: memory availability state - Normal"#;
 
     const BOOTLOG_CONTENT: &str = r#"[00009.431][13936][13938][pkg-resolver] INFO: inserting repository Some("fuchsia-pkg://devhost")

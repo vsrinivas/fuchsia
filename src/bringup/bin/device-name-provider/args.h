@@ -21,9 +21,9 @@ struct DeviceNameProviderArgs {
   std::string ethdir;
   // This is the integer value of `zircon.namegen`
   // It is overridden by the value of `--namegen` on the commandline.
-  // `--namegen 1` disables wordnames, any other value is treated as zero.
+  // `--namegen 0` enables wordnames, any other value is treated as 1.
   // It has no effect if `nodename` is non-empty.
-  uint32_t namegen = 0;
+  uint32_t namegen = 1;
 };
 
 // Parses DeviceNameProviderArgs via the kernel commandline and the binary commandline (argv).
