@@ -23,6 +23,7 @@ zx_library("crypto") {
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/unittest",
     "//zircon/system/ulib/explicit-memory",
+    "//zircon/system/ulib/zbitl",
     "//zircon/third_party/ulib/boringssl",
   ]
   public_deps = [

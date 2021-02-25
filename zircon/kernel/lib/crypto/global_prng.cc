@@ -14,6 +14,7 @@
 #include <lib/crypto/entropy/quality_test.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
+#include <lib/zbitl/view.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/errors.h>
@@ -27,6 +28,8 @@
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <ktl/algorithm.h>
+#include <ktl/byte.h>
+#include <ktl/span.h>
 #include <ktl/string_view.h>
 #include <lk/init.h>
 
@@ -45,6 +48,30 @@ static PRNG* kGlobalPrng = nullptr;
 PRNG* GetInstance() {
   ASSERT(kGlobalPrng);
   return kGlobalPrng;
+}
+
+static unsigned int IntegrateZbiEntropy() {
+  auto zbi_bytes = zbitl::StorageFromRawHeader(platform_get_zbi());
+  zbitl::PermissiveView<ktl::span<ktl::byte>> zbi(
+      {const_cast<ktl::byte*>(zbi_bytes.data()), zbi_bytes.size()});
+  unsigned int found = 0;
+  for (auto it = zbi.begin(); it != zbi.end(); ++it) {
+    if ((*it).header->type == ZBI_TYPE_SECURE_ENTROPY) {
+      auto data = (*it).payload;
+      if (data.size() < PRNG::kMinEntropy) {
+        printf("ZBI_TYPE_SECURE_ENTROPY item at offset %#x too small: %zu < %zu\n",
+               it.item_offset(), data.size(), static_cast<size_t>(PRNG::kMinEntropy));
+      } else {
+        kGlobalPrng->AddEntropy(data.data(), data.size());
+        mandatory_memset(data.data(), 0, data.size());
+        auto result = zbi.EditHeader(it, {.type = ZBI_TYPE_DISCARD});
+        ZX_ASSERT(result.is_ok());
+        ++found;
+      }
+    }
+  }
+  zbi.ignore_error();
+  return found;
 }
 
 // Returns true if the kernel cmdline provided at least PRNG::kMinEntropy bytes
@@ -138,9 +165,12 @@ static void EarlyBootSeed(uint level) {
     panic("Failed to seed PRNG from required entropy source: jitterentropy\n");
   }
 
+  unsigned int zbi_items = IntegrateZbiEntropy();
+  successful += zbi_items;
+
   if (IntegrateCmdlineEntropy()) {
     successful++;
-  } else if (gCmdline.GetBool(kernel_option::kCprngSeedRequireCmdline, false)) {
+  } else if (zbi_items == 0 && gCmdline.GetBool(kernel_option::kCprngSeedRequireCmdline, false)) {
     panic("Failed to seed PRNG from required entropy source: cmdline\n");
   }
 
