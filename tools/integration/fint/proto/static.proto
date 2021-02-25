@@ -105,4 +105,8 @@ message Static {
   // Passed to --json-ide-script GN flag; GN will execute each of these scripts
   // after regenerating the project.json IDE file.
   repeated string json_ide_scripts = 25;
+
+  // Whether to build images for paving (rather than netbooting). Ignored if
+  // `exclude_images` is true.
+  bool pave = 26;
 }
