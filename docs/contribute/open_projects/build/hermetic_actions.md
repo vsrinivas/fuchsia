@@ -74,9 +74,8 @@ set up your build as follows:
 Running a build with the above setting should produce an error with
 actionable troubleshooting information.
 
-You can also reproduce this in Gerrit with an optional tryjob.
-In the Gerrit UI, click "choose tryjobs" and select `fuchsia-x64-debug-traced`.
-In the near future this check will be performed on all changes in CQ.
+CQ runs action tracing by default, so you can use it to get the same
+troubleshooting information.
 
 If there's already a bug filed for the issue then the bug should include the
 information that's in the error. If there isn't a bug, please file one and
