@@ -61,8 +61,9 @@ TEST(SwapTest, IsConstexpr) {
 #if __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(SwapTest, IsAlisWhenAvailable) {
-  static_assert(&cpp17::swap<int> == &std::swap<int>,
-                "cpp20::swap must be an alias for std::swap in c++20.");
+  constexpr void (*cpp20_swap)(int&, int&) = &cpp20::swap<int>;
+  constexpr void (*std_swap)(int&, int&) = &std::swap<int>;
+  static_assert(cpp20_swap == std_swap, "cpp20::swap must be an alias for std::swap in c++20.");
 }
 
 #endif

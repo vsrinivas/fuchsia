@@ -24,8 +24,8 @@ TEST(VersionTest, FeatureTestMacrosForCpp20) {
                 "'__cpp_lib_byte' should be using draft 201603L in c++20.");
   static_assert(__cpp_lib_logical_traits == 201510L,
                 "'__cpp_lib_logical_traits' should be using draft 201510L.");
-  static_assert(__cpp_lib_void_t ==
-                201411L. "'__cpp_lib_void_t' should be using draft 201411L for c++20.");
+  static_assert(__cpp_lib_void_t == 201411L,
+                "'__cpp_lib_void_t' should be using draft 201411L for c++20.");
   static_assert(__cpp_lib_optional == 201606L,
                 "'__cpp_optional_lib' should be using draft 201606L in c++20.");
   static_assert(__cpp_lib_addressof_constexpr == 201603L,
