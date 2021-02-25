@@ -18,6 +18,7 @@ use {
     serde::{Deserialize, Serialize},
     serde_json::{from_value, Value},
     std::io::{Read, Write},
+    termion::{color, style},
 };
 
 pub(crate) const UNKNOWN_VERSION: &str = "Unknown flash manifest version";
@@ -25,11 +26,13 @@ pub(crate) const MISSING_PRODUCT: &str = "Manifest does not contain product";
 pub(crate) const MULTIPLE_PRODUCT: &str =
     "Multiple products found in manifest. Please specify a product";
 
+const LARGE_FILE: &str = "large file, please wait... ";
+
 #[async_trait]
 pub(crate) trait Flash {
     async fn flash<W>(
         &self,
-        writer: W,
+        writer: &mut W,
         fastboot_proxy: FastbootProxy,
         cmd: FlashCommand,
     ) -> Result<()>
@@ -92,7 +95,7 @@ impl FlashManifest {
 impl Flash for FlashManifest {
     async fn flash<W>(
         &self,
-        writer: W,
+        writer: &mut W,
         fastboot_proxy: FastbootProxy,
         cmd: FlashCommand,
     ) -> Result<()>
@@ -105,32 +108,48 @@ impl Flash for FlashManifest {
     }
 }
 
-fn upload_time<W: Write + Send>(writer: &mut W, duration: Option<Duration>) -> std::io::Result<()> {
-    if let Some(d) = duration {
-        writeln!(writer, "Done [{:.2}s]", (d.num_milliseconds() as f32) / (1000 as f32))
-    } else {
-        Ok(())
-    }
+fn done_time<W: Write + Send>(writer: &mut W, duration: Duration) -> std::io::Result<()> {
+    writeln!(
+        writer,
+        "{}Done{} [{}{:.2}s{}]",
+        color::Fg(color::Green),
+        style::Reset,
+        color::Fg(color::Blue),
+        (duration.num_milliseconds() as f32) / (1000 as f32),
+        style::Reset
+    )?;
+    writer.flush()
 }
 
-async fn handle_upload_progress(
+async fn handle_upload_progress_for_staging<W: Write + Send>(
+    writer: &mut W,
     prog_server: ServerEnd<UploadProgressListenerMarker>,
-) -> Result<Option<Duration>> {
+) -> Result<Option<DateTime<Utc>>> {
     let mut stream = prog_server.into_stream()?;
     let mut start_time: Option<DateTime<Utc>> = None;
-    let mut duration: Option<Duration> = None;
+    let mut finish_time: Option<DateTime<Utc>> = None;
     loop {
         match stream.try_next().await? {
             Some(UploadProgressListenerRequest::OnStarted { size, .. }) => {
                 start_time.replace(Utc::now());
                 log::debug!("Upload started: {}", size);
+                write!(writer, "Uploading... ")?;
+                if size > (1 << 24) {
+                    write!(writer, "{}", LARGE_FILE)?;
+                }
+                writer.flush()?;
             }
             Some(UploadProgressListenerRequest::OnFinished { .. }) => {
                 if let Some(st) = start_time {
                     let d = Utc::now().signed_duration_since(st);
                     log::debug!("Upload duration: {:.2}s", (d.num_milliseconds() / 1000));
-                    duration.replace(d);
+                    done_time(writer, d)?;
+                } else {
+                    // Write done without the time .
+                    writeln!(writer, "{}Done{}", color::Fg(color::Green), style::Reset)?;
+                    writer.flush()?;
                 }
+                finish_time.replace(Utc::now());
                 log::debug!("Upload finished");
             }
             Some(UploadProgressListenerRequest::OnError { error, .. }) => {
@@ -140,38 +159,101 @@ async fn handle_upload_progress(
             Some(UploadProgressListenerRequest::OnProgress { bytes_written, .. }) => {
                 log::debug!("Upload progress: {}", bytes_written);
             }
-            None => return Ok(duration),
+            None => return Ok(finish_time),
         }
     }
 }
 
-async fn stage_file(file: &str, fastboot_proxy: &FastbootProxy) -> Result<Option<Duration>> {
+async fn handle_upload_progress_for_flashing<W: Write + Send>(
+    name: &str,
+    writer: &mut W,
+    prog_server: ServerEnd<UploadProgressListenerMarker>,
+) -> Result<Option<DateTime<Utc>>> {
+    let mut stream = prog_server.into_stream()?;
+    let mut start_time: Option<DateTime<Utc>> = None;
+    let mut finish_time: Option<DateTime<Utc>> = None;
+    let mut is_large: bool = false;
+    loop {
+        match stream.try_next().await? {
+            Some(UploadProgressListenerRequest::OnStarted { size, .. }) => {
+                start_time.replace(Utc::now());
+                log::debug!("Upload started: {}", size);
+                write!(writer, "Uploading... ")?;
+                if size > (1 << 24) {
+                    is_large = true;
+                    write!(writer, "{}", LARGE_FILE)?;
+                }
+                writer.flush()?;
+            }
+            Some(UploadProgressListenerRequest::OnFinished { .. }) => {
+                if let Some(st) = start_time {
+                    let d = Utc::now().signed_duration_since(st);
+                    log::debug!("Upload duration: {:.2}s", (d.num_milliseconds() / 1000));
+                    done_time(writer, d)?;
+                } else {
+                    // Write done without the time .
+                    writeln!(writer, "{}Done{}", color::Fg(color::Green), style::Reset)?;
+                    writer.flush()?;
+                }
+                write!(writer, "Partitioning {}... ", name)?;
+                if is_large {
+                    write!(writer, "{}", LARGE_FILE)?;
+                }
+                writer.flush()?;
+                finish_time.replace(Utc::now());
+                log::debug!("Upload finished");
+            }
+            Some(UploadProgressListenerRequest::OnError { error, .. }) => {
+                log::error!("{}", error);
+                bail!(error)
+            }
+            Some(UploadProgressListenerRequest::OnProgress { bytes_written, .. }) => {
+                log::debug!("Upload progress: {}", bytes_written);
+            }
+            None => return Ok(finish_time),
+        }
+    }
+}
+
+async fn stage_file<W: Write + Send>(
+    writer: &mut W,
+    file: &str,
+    fastboot_proxy: &FastbootProxy,
+) -> Result<()> {
     let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
+    writeln!(writer, "Preparing to stage {}", file)?;
     try_join!(
         fastboot_proxy.stage(file, prog_client).map_err(|e| anyhow!(e)),
-        handle_upload_progress(prog_server),
+        handle_upload_progress_for_staging(writer, prog_server),
     )
-    .and_then(|(stage, progress)| {
-        stage
-            .map(|_| progress)
-            .map_err(|e| anyhow!("There was an error flashing {}: {:?}", file, e))
+    .and_then(|(stage, _)| {
+        stage.map_err(|e| anyhow!("There was an error staging {}: {:?}", file, e))
     })
 }
 
-async fn flash_partition(
+async fn flash_partition<W: Write + Send>(
+    writer: &mut W,
     name: &str,
     file: &str,
     fastboot_proxy: &FastbootProxy,
-) -> Result<Option<Duration>> {
+) -> Result<()> {
     let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
+    writeln!(writer, "Preparing to upload {}", file)?;
     try_join!(
         fastboot_proxy.flash(name, file, prog_client).map_err(|e| anyhow!(e)),
-        handle_upload_progress(prog_server),
+        handle_upload_progress_for_flashing(name, writer, prog_server),
     )
-    .and_then(|(flash, progress)| {
-        flash
-            .map(|_| progress)
-            .map_err(|e| anyhow!("There was an error flashing \"{}\" - {}: {:?}", name, file, e))
+    .and_then(|(flash, prog)| {
+        if let Some(p) = prog {
+            let d = Utc::now().signed_duration_since(p);
+            log::debug!("Partition duration: {:.2}s", (d.num_milliseconds() / 1000));
+            done_time(writer, d)?;
+        } else {
+            // Write a line break otherwise
+            writeln!(writer, "{}Done{}", color::Fg(color::Green), style::Reset)?;
+            writer.flush()?;
+        }
+        flash.map_err(|e| anyhow!("There was an error flashing \"{}\" - {}: {:?}", name, file, e))
     })
 }
 
@@ -179,7 +261,7 @@ async fn flash_partition(
 impl Flash for FlashManifestV1 {
     async fn flash<W>(
         &self,
-        mut writer: W,
+        writer: &mut W,
         fastboot_proxy: FastbootProxy,
         cmd: FlashCommand,
     ) -> Result<()>
@@ -203,16 +285,14 @@ impl Flash for FlashManifestV1 {
             }
         };
         for partition in &product.bootloader_partitions {
-            writeln!(writer, "Writing \"{}\" from {}", partition.name(), partition.file())?;
-            upload_time(
-                &mut writer,
-                flash_partition(partition.name(), partition.file(), &fastboot_proxy).await?,
-            )?;
+            flash_partition(writer, partition.name(), partition.file(), &fastboot_proxy).await?;
         }
         if product.bootloader_partitions.len() > 0 {
-            writeln!(writer, "Rebooting to bootloader")?;
+            write!(writer, "Rebooting to bootloader... ")?;
+            writer.flush()?;
             let (reboot_client, reboot_server) = create_endpoints::<RebootListenerMarker>()?;
             let mut stream = reboot_server.into_stream()?;
+            let start_time = Utc::now();
             try_join!(
                 fastboot_proxy
                     .reboot_bootloader(reboot_client)
@@ -221,7 +301,6 @@ impl Flash for FlashManifestV1 {
                     if let Some(RebootListenerRequest::OnReboot { control_handle: _ }) =
                         stream.try_next().await?
                     {
-                        log::debug!("Received reboot signal");
                         Ok(())
                     } else {
                         bail!("Did not receive reboot signal");
@@ -229,27 +308,24 @@ impl Flash for FlashManifestV1 {
                 }
             )
             .and_then(|(reboot, _)| {
+                let d = Utc::now().signed_duration_since(start_time);
+                log::debug!("Reboot duration: {:.2}s", (d.num_milliseconds() / 1000));
+                done_time(writer, d)?;
                 reboot.map_err(|e| anyhow!("failed booting to bootloader: {:?}", e))
             })?;
         }
         for partition in &product.partitions {
-            writeln!(writer, "Writing \"{}\" from {}", partition.name(), partition.file())?;
-            upload_time(
-                &mut writer,
-                flash_partition(partition.name(), partition.file(), &fastboot_proxy).await?,
-            )?;
+            flash_partition(writer, partition.name(), partition.file(), &fastboot_proxy).await?;
         }
         for oem_file in &product.oem_files {
-            writeln!(writer, "Writing {}", oem_file.file())?;
-            upload_time(&mut writer, stage_file(oem_file.file(), &fastboot_proxy).await?)?;
+            stage_file(writer, oem_file.file(), &fastboot_proxy).await?;
             writeln!(writer, "Sending command \"{}\"", oem_file.command())?;
             fastboot_proxy.oem(oem_file.command()).await?.map_err(|_| {
                 anyhow!("There was an error sending oem command \"{}\"", oem_file.command())
             })?;
         }
         for oem_file in &cmd.oem_stage {
-            writeln!(writer, "Writing {}", oem_file.file())?;
-            upload_time(&mut writer, stage_file(oem_file.file(), &fastboot_proxy).await?)?;
+            stage_file(writer, oem_file.file(), &fastboot_proxy).await?;
             writeln!(writer, "Sending command \"{}\"", oem_file.command())?;
             fastboot_proxy.oem(oem_file.command()).await?.map_err(|_| {
                 anyhow!("There was an error sending oem command \"{}\"", oem_file.command())

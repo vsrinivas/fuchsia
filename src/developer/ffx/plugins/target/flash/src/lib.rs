@@ -60,7 +60,8 @@ mod test {
         (
             state.clone(),
             setup_fake_fastboot_proxy(move |req| match req {
-                FastbootRequest::Flash { responder, .. } => {
+                FastbootRequest::Flash { listener, responder, .. } => {
+                    listener.into_proxy().unwrap().on_finished().unwrap();
                     responder.send(&mut Ok(())).unwrap();
                 }
                 FastbootRequest::Erase { responder, .. } => {
@@ -180,8 +181,8 @@ mod test {
         for partition in &manifest.0[0].partitions {
             let name_listing = Regex::new(&partition.name()).expect("test regex");
             let path_listing = Regex::new(&partition.file()).expect("test regex");
-            assert_eq!(1, name_listing.find_iter(&output).count());
-            assert_eq!(1, path_listing.find_iter(&output).count());
+            assert_eq!(name_listing.find_iter(&output).count(), 1);
+            assert_eq!(path_listing.find_iter(&output).count(), 1);
         }
         Ok(())
     }
@@ -242,8 +243,8 @@ mod test {
         for partition in &manifest.0[1].partitions {
             let name_listing = Regex::new(&partition.name()).expect("test regex");
             let path_listing = Regex::new(&partition.file()).expect("test regex");
-            assert_eq!(1, name_listing.find_iter(&output).count());
-            assert_eq!(1, path_listing.find_iter(&output).count());
+            assert_eq!(name_listing.find_iter(&output).count(), 1);
+            assert_eq!(path_listing.find_iter(&output).count(), 1);
         }
         Ok(())
     }
