@@ -83,7 +83,7 @@ struct MessageParam {
       uint64_t b;
       uint64_t c;
     } generic;
-    TEEC_UUID uuid_big_endian;
+    Uuid::Octets uuid_octets;
     struct {
       uint64_t seconds;
       uint64_t nanoseconds;
@@ -381,7 +381,7 @@ class LoadTaRpcMessage : public RpcMessage {
   // Attempts to create a `LoadTaRpcMessage` from a moved-in `RpcMessage`.
   static fit::result<LoadTaRpcMessage, zx_status_t> CreateFromRpcMessage(RpcMessage&& rpc_message);
 
-  const TEEC_UUID& ta_uuid() const { return ta_uuid_; }
+  const Uuid& ta_uuid() const { return ta_uuid_; }
 
   uint64_t memory_reference_id() const { return mem_id_; }
 
@@ -401,7 +401,7 @@ class LoadTaRpcMessage : public RpcMessage {
   static constexpr size_t kUuidParamIndex = 0;
   static constexpr size_t kMemoryReferenceParamIndex = 1;
 
-  TEEC_UUID ta_uuid_;
+  Uuid ta_uuid_;
   uint64_t mem_id_;
   size_t mem_size_;
   zx_paddr_t mem_paddr_;

@@ -38,7 +38,7 @@ class OpteeDeviceInfo : public OpteeDeviceInfoBase,
   void GetOsInfo(GetOsInfoCompleter::Sync& completer) override;
 
  private:
-  static constexpr TEEC_UUID kOpteeOsUuid = {
+  static constexpr fuchsia_tee::Uuid kOpteeOsUuid = {
       0x486178E0, 0xE7F8, 0x11E3, {0xBC, 0x5E, 0x00, 0x02, 0xA5, 0xD5, 0xC5, 0x1B}};
 
   const OpteeController* controller_;

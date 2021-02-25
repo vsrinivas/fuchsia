@@ -45,15 +45,11 @@ namespace {
 namespace fuchsia_tee = ::llcpp::fuchsia::tee;
 namespace fuchsia_io = ::llcpp::fuchsia::io;
 
-// RFC 4122 specification dictates a UUID is of the form xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-constexpr const char* kUuidNameFormat = "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x";
-constexpr size_t kUuidNameLength = 36;
-
 constexpr const char kTaFileExtension[] = ".ta";
 
 // The length of a path to a trusted app consists of its UUID and file extension
 // Subtracting 1 from sizeof(char[])s to account for the terminating null character.
-constexpr size_t kTaPathLength = kUuidNameLength + (sizeof(kTaFileExtension) - 1u);
+constexpr size_t kTaPathLength = optee::Uuid::kUuidStringLength + (sizeof(kTaFileExtension) - 1u);
 
 template <typename SRC_T, typename DST_T>
 static constexpr
@@ -79,14 +75,10 @@ static constexpr
 
 // Builds the expected path to a trusted application, formatting the file name per the RFC 4122
 // specification.
-static fbl::StringBuffer<kTaPathLength> BuildTaPath(const TEEC_UUID& ta_uuid) {
+static fbl::StringBuffer<kTaPathLength> BuildTaPath(const optee::Uuid& ta_uuid) {
   fbl::StringBuffer<kTaPathLength> buf;
 
-  buf.AppendPrintf(kUuidNameFormat, ta_uuid.timeLow, ta_uuid.timeMid, ta_uuid.timeHiAndVersion,
-                   ta_uuid.clockSeqAndNode[0], ta_uuid.clockSeqAndNode[1],
-                   ta_uuid.clockSeqAndNode[2], ta_uuid.clockSeqAndNode[3],
-                   ta_uuid.clockSeqAndNode[4], ta_uuid.clockSeqAndNode[5],
-                   ta_uuid.clockSeqAndNode[6], ta_uuid.clockSeqAndNode[7]);
+  buf.Append(ta_uuid.ToString().ToStringPiece());
   buf.Append(kTaFileExtension);
 
   return buf;

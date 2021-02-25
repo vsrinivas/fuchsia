@@ -131,6 +131,18 @@ test("optee-client-test-bin") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
+test("optee-uuid-test-bin") {
+  sources = [ "test/optee-uuid-test.cc" ]
+  include_dirs = [ "." ]
+  output_name = "optee-uuid-test"
+  deps = [
+    ":optee_lib",
+    "//sdk/banjo/fuchsia.hardware.tee",
+    "//sdk/fidl/fuchsia.tee:fuchsia.tee_llcpp",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
 fuchsia_unittest_component("optee-client-test") {
   deps = [ ":optee-client-test-bin" ]
 }
@@ -143,10 +155,15 @@ fuchsia_unittest_component("optee-message-test") {
   deps = [ ":optee-message-test-bin" ]
 }
 
+fuchsia_unittest_component("optee-uuid-test") {
+  deps = [ ":optee-uuid-test-bin" ]
+}
+
 fuchsia_test_package("optee-unittest") {
   test_components = [
     ":optee-client-test",
     ":optee-controller-test",
     ":optee-message-test",
+    ":optee-uuid-test",
   ]
 }

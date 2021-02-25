@@ -17,20 +17,6 @@ namespace optee {
 
 namespace {
 
-// Converts a big endian UUID from a MessageParam value to a host endian TEEC_UUID.
-// The fields of a UUID are stored in big endian in a MessageParam by the TEE and is thus why the
-// parameter value cannot be directly reinterpreted as a UUID.
-void ConvertMessageParamToUuid(const MessageParam::Value& src, TEEC_UUID* dst) {
-  // Convert TEEC_UUID fields from big endian to host endian
-  dst->timeLow = betoh32(src.uuid_big_endian.timeLow);
-  dst->timeMid = betoh16(src.uuid_big_endian.timeMid);
-  dst->timeHiAndVersion = betoh16(src.uuid_big_endian.timeHiAndVersion);
-
-  // Because clockSeqAndNode is uint8_t, no need to convert endianness - just memcpy
-  memcpy(dst->clockSeqAndNode, src.uuid_big_endian.clockSeqAndNode,
-         sizeof(src.uuid_big_endian.clockSeqAndNode));
-}
-
 constexpr bool IsDirectionInput(fuchsia_tee::Direction direction) {
   return (direction == fuchsia_tee::Direction::INPUT) ||
          (direction == fuchsia_tee::Direction::INOUT);
@@ -384,8 +370,7 @@ fit::result<OpenSessionMessage, zx_status_t> OpenSessionMessage::TryCreate(
 
   trusted_app_param.attribute =
       MessageParam::kAttributeTypeMeta | MessageParam::kAttributeTypeValueInput;
-  trusted_app.ToUint64Pair(&trusted_app_param.payload.value.generic.a,
-                           &trusted_app_param.payload.value.generic.b);
+  trusted_app_param.payload.value.uuid_octets = trusted_app.ToOctets();
 
   client_app_param.attribute =
       MessageParam::kAttributeTypeMeta | MessageParam::kAttributeTypeValueInput;
@@ -492,7 +477,7 @@ fit::result<LoadTaRpcMessage, zx_status_t> LoadTaRpcMessage::CreateFromRpcMessag
   switch (uuid_param.attribute) {
     case MessageParam::kAttributeTypeValueInput:
     case MessageParam::kAttributeTypeValueInOut:
-      ConvertMessageParamToUuid(uuid_param.payload.value, &result_message.ta_uuid_);
+      result_message.ta_uuid_ = Uuid(uuid_param.payload.value.uuid_octets);
       break;
     default:
       LOG(ERROR, "RPC command to load trusted app received unexpected first parameter!");
