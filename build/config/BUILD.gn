@@ -447,8 +447,9 @@ config("optimize_sanitizer") {
 }
 
 config("optimize_profile") {
-  # TODO(fxbug.dev/51509): Perhaps use a different default.
-  configs = [ ":optimize_none" ]
+  cflags = [ "-O1" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=0" ]
 }
 
 config("default_optimize") {
