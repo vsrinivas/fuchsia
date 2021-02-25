@@ -97,30 +97,35 @@ class TestAmlGpu {
     protocol.ops->get_properties(protocol.ctx, &properties);
     EXPECT_FALSE(properties.supports_protected_mode);
 
-    auto metadata = Metadata::Builder(std::make_unique<Metadata::Frame>())
-                        .set_supports_protected_mode(std::make_unique<bool>(false))
-                        .build();
     {
-      fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
-      ASSERT_TRUE(encoded_metadata.ok());
-      auto& message = encoded_metadata.GetOutgoingMessage();
-      EXPECT_OK(aml_gpu.ProcessMetadata(
-          std::vector<uint8_t>(message.bytes(), message.bytes() + message.byte_actual())));
+      fidl::FidlAllocator allocator;
+      Metadata metadata(allocator);
+      metadata.set_supports_protected_mode(allocator, false);
+      {
+        fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
+        ASSERT_TRUE(encoded_metadata.ok());
+        auto& message = encoded_metadata.GetOutgoingMessage();
+        EXPECT_OK(aml_gpu.ProcessMetadata(
+            std::vector<uint8_t>(message.bytes(), message.bytes() + message.byte_actual())));
+      }
     }
 
     protocol.ops->get_properties(protocol.ctx, &properties);
     EXPECT_FALSE(properties.supports_protected_mode);
 
-    metadata = Metadata::Builder(std::make_unique<Metadata::Frame>())
-                   .set_supports_protected_mode(std::make_unique<bool>(true))
-                   .build();
     {
-      fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
-      ASSERT_TRUE(encoded_metadata.ok());
-      auto& message = encoded_metadata.GetOutgoingMessage();
-      EXPECT_OK(aml_gpu.ProcessMetadata(
-          std::vector<uint8_t>(message.bytes(), message.bytes() + message.byte_actual())));
+      fidl::FidlAllocator allocator;
+      Metadata metadata(allocator);
+      metadata.set_supports_protected_mode(allocator, true);
+      {
+        fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
+        ASSERT_TRUE(encoded_metadata.ok());
+        auto& message = encoded_metadata.GetOutgoingMessage();
+        EXPECT_OK(aml_gpu.ProcessMetadata(
+            std::vector<uint8_t>(message.bytes(), message.bytes() + message.byte_actual())));
+      }
     }
+
     protocol.ops->get_properties(protocol.ctx, &properties);
     EXPECT_TRUE(properties.supports_protected_mode);
   }
