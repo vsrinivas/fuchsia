@@ -10,6 +10,6 @@ alias PongString = string:105;
 [Discoverable]
 protocol Ping {
     /// Returns a string that is the concatenation of the input `ping`
-    /// and the string " pong".
+    /// a space and the string "pong".
     Ping(PingString ping) -> (PongString pong);
 };
