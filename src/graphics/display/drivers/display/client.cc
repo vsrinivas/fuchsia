@@ -1384,7 +1384,7 @@ void Client::CaptureCompleted() {
   }
 
   // release any pending capture images
-  if (pending_capture_release_image_ == current_capture_image_) {
+  if (pending_capture_release_image_ != INVALID_ID) {
     auto image = capture_images_.find(pending_capture_release_image_);
     if (image.IsValid()) {
       capture_images_.erase(image);
@@ -1411,7 +1411,12 @@ void Client::TearDown() {
   server_handle_ = ZX_HANDLE_INVALID;
 
   CleanUpImage(nullptr);
-  CleanUpCaptureImage();
+  zxlogf(INFO, "Releasing %lu capture images cur=%lu, pending=%lu",
+         capture_images_.size(),
+         current_capture_image_,
+         pending_capture_release_image_);
+  current_capture_image_ = pending_capture_release_image_ = INVALID_ID;
+  capture_images_.clear();
 
   fences_.Clear();
 
@@ -1461,21 +1466,15 @@ bool Client::CleanUpImage(Image* image) {
   return current_config_change;
 }
 
-void Client::CleanUpCaptureImage() {
-  if (current_capture_image_ != INVALID_ID) {
-    // There is an active capture. Need to wait for that to stop before
-    // releasing the resources
-    // 200ms should be plenty of time for capture to complete
-    int64_t timeout = 200;  // unit in ms
-    while (!controller_->dc_capture()->IsCaptureCompleted() && timeout--) {
-      zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
-    }
-    // Timeout is fatal since capture never completed and hardware is in unknown state
-    ZX_ASSERT(timeout > 0);
-    auto image = capture_images_.find(current_capture_image_);
-    if (image.IsValid()) {
-      capture_images_.erase(image);
-    }
+void Client::CleanUpCaptureImage(uint64_t id) {
+  if (id == INVALID_ID) {
+    return;
+  }
+  // If the image is currently active, the underlying driver will retain a
+  // handle to it until the hardware can be reprogrammed.
+  auto image = capture_images_.find(id);
+  if (image.IsValid()) {
+    capture_images_.erase(image);
   }
 }
 

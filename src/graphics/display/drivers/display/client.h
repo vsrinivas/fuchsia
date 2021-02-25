@@ -294,7 +294,7 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::RawChannelI
   // Cleans up layer state associated with an image. If image == nullptr, then
   // cleans up all image state. Return true if a current layer was modified.
   bool CleanUpImage(Image* image);
-  void CleanUpCaptureImage();
+  void CleanUpCaptureImage(uint64_t id);
 
   Controller* controller_;
   ClientProxy* proxy_;

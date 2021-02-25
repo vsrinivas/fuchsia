@@ -41,6 +41,7 @@ namespace amlogic_display {
 
 struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> {
   ~ImageInfo() {
+    zxlogf(INFO, "Destroying image on canvas %d", canvas_idx);
     if (canvas.is_valid() && canvas_idx > 0) {
       canvas.Free(canvas_idx);
     }

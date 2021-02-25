@@ -460,6 +460,11 @@ void Controller::DisplayCaptureInterfaceOnCaptureComplete() {
       if (primary_client_ && primary_ready_) {
         primary_client_->OnCaptureComplete();
       }
+      // Free an image that was previously used by the hardware.
+      if (pending_capture_image_release_ != 0) {
+        ReleaseCaptureImage(pending_capture_image_release_);
+        pending_capture_image_release_ = 0;
+      }
     } else {
       zxlogf(ERROR, "Failed to dispatch capture complete task %d", status);
     }
@@ -735,9 +740,14 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
 
 void Controller::ReleaseImage(Image* image) { dc_.ReleaseImage(&image->info()); }
 
-void Controller::ReleaseCaptureImage(Image* image) {
-  if (dc_capture_.is_valid() && image != nullptr) {
-    dc_capture_.ReleaseCapture(reinterpret_cast<uint64_t>(&image->info()));
+void Controller::ReleaseCaptureImage(uint64_t handle) {
+  if (dc_capture_.is_valid() && handle != 0) {
+    if (dc_capture_.ReleaseCapture(handle) == ZX_ERR_SHOULD_WAIT) {
+      ZX_DEBUG_ASSERT_MSG(pending_capture_image_release_ == 0,
+                          "multiple pending releases for capture images");
+      // Delay the image release until the hardware is done.
+      pending_capture_image_release_ = handle;
+    }
   }
 }
 

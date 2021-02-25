@@ -37,7 +37,7 @@ Image::~Image() {
     ZX_ASSERT(!list_in_list(&node.link));
     controller_->ReleaseImage(this);
   } else {
-    controller_->ReleaseCaptureImage(this);
+    controller_->ReleaseCaptureImage(info_.handle);
   }
 }
 

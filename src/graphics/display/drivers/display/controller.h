@@ -126,7 +126,7 @@ class Controller : public ControllerParent,
                    uint32_t client_id) __TA_EXCLUDES(mtx());
 
   void ReleaseImage(Image* image);
-  void ReleaseCaptureImage(Image* image);
+  void ReleaseCaptureImage(uint64_t handle);
 
   // |mtx()| must be held for as long as |edid| and |params| are retained.
   bool GetPanelConfig(uint64_t display_id, const fbl::Vector<edid::timing_params_t>** timings,
@@ -193,6 +193,7 @@ class Controller : public ControllerParent,
   bool vc_applied_ = false;
   uint32_t applied_stamp_ = UINT32_MAX;
   uint32_t applied_client_id_ = 0;
+  uint64_t pending_capture_image_release_ = 0;
 
   uint32_t next_client_id_ __TA_GUARDED(mtx()) = 1;
   ClientProxy* vc_client_ __TA_GUARDED(mtx()) = nullptr;

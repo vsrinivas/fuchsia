@@ -689,9 +689,10 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplReleaseCapture(uint64_t capture_ha
   }
 
   // Find and erase previously imported capture
-  auto info = reinterpret_cast<ImageInfo*>(capture_handle);
-  if (imported_captures_.erase_if([info](auto& i) { return i.canvas_idx == info->canvas_idx; }) ==
+  auto idx = reinterpret_cast<ImageInfo*>(capture_handle)->canvas_idx;
+  if (imported_captures_.erase_if([idx](auto& i) { return i.canvas_idx == idx; }) ==
       nullptr) {
+    DISP_ERROR("Tried to release non-existent capture image %d\n", idx);
     return ZX_ERR_NOT_FOUND;
   }
 
