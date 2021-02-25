@@ -5,7 +5,6 @@
 #include "devfs.h"
 
 #include <fcntl.h>
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/directory.h>
@@ -163,8 +162,6 @@ class TxnForwarder : public fidl::Transaction {
   zx_status_t status_ = ZX_OK;
 };
 
-// This is an llcpp-backed server equivalent to the switch() in DevfsFidlHandler(). Entries are
-// DevfsFidlHandler() are being migrated to methods here. See https://fxbug.dev/68648.
 class DevfsFidlServer : public fio::DirectoryAdmin::Interface {
  public:
   explicit DevfsFidlServer(DcIostate* iostate) : owner_(iostate) {}
@@ -175,7 +172,7 @@ class DevfsFidlServer : public fio::DirectoryAdmin::Interface {
 
   void Clone(uint32_t flags, fidl::ServerEnd<fio::Node> object,
              CloneCompleter::Sync& completer) override;
-  void Close(CloseCompleter::Sync& completer) override {}
+  void Close(CloseCompleter::Sync& completer) override;
   void Describe(DescribeCompleter::Sync& completer) override;
   void Sync(SyncCompleter::Sync& completer) override {}
   void GetAttr(GetAttrCompleter::Sync& completer) override;
@@ -778,99 +775,19 @@ zx_status_t devfs_connect(const Device* dev, zx::channel client_remote) {
 
 void devfs_connect_diagnostics(zx::unowned_channel h) { diagnostics_channel = h; }
 
-// Helper macros for |DevfsFidlHandler| which make it easier
-// avoid typing generated names.
-
-// Decode the incoming request, returning an error and consuming
-// all handles on error.
-#define DECODE_REQUEST(MSG, METHOD)                                                         \
-  do {                                                                                      \
-    zx_status_t r;                                                                          \
-    if ((r = fidl_decode_msg(&fuchsia_io_##METHOD##RequestTable, msg, nullptr)) != ZX_OK) { \
-      return r;                                                                             \
-    }                                                                                       \
-  } while (0);
-
-// Define a variable |request| from the incoming method, of
-// the requested type.
-#define DEFINE_REQUEST(MSG, METHOD) \
-  fuchsia_io_##METHOD##Request* request = (fuchsia_io_##METHOD##Request*)MSG->bytes;
-
 zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* txn, void* cookie,
                                         async_dispatcher_t* dispatcher) {
   auto ios = static_cast<DcIostate*>(cookie);
-  Devnode* dn = ios->devnode_;
-  if (dn == nullptr) {
+  if (!ios->devnode_) {
     return ZX_ERR_PEER_CLOSED;
   }
 
   TxnForwarder transaction(txn);
+  ios->server_->set_current_dispatcher(dispatcher);
+  auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
+  ios->server_->clear_current_dispatcher();
 
-  auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
-
-  uint64_t ordinal = hdr->ordinal;
-  switch (ordinal) {
-    case fuchsia_io_NodeCloneOrdinal: {
-      ios->server_->set_current_dispatcher(dispatcher);
-      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
-      ios->server_->clear_current_dispatcher();
-      ZX_ASSERT(result == fidl::DispatchResult::kFound);
-      return transaction.GetStatus();
-    }
-    case fuchsia_io_NodeDescribeOrdinal: {
-      ios->server_->set_current_dispatcher(dispatcher);
-      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
-      ios->server_->clear_current_dispatcher();
-      ZX_ASSERT(result == fidl::DispatchResult::kFound);
-      return transaction.GetStatus();
-    }
-    case fuchsia_io_DirectoryOpenOrdinal: {
-      ios->server_->set_current_dispatcher(dispatcher);
-      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
-      ios->server_->clear_current_dispatcher();
-      ZX_ASSERT(result == fidl::DispatchResult::kFound);
-      return transaction.GetStatus();
-    }
-    case fuchsia_io_NodeGetAttrOrdinal: {
-      ios->server_->set_current_dispatcher(dispatcher);
-      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
-      ios->server_->clear_current_dispatcher();
-      ZX_ASSERT(result == fidl::DispatchResult::kFound);
-      return transaction.GetStatus();
-    }
-    case fuchsia_io_DirectoryRewindOrdinal: {
-      ios->server_->set_current_dispatcher(dispatcher);
-      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
-      ios->server_->clear_current_dispatcher();
-      ZX_ASSERT(result == fidl::DispatchResult::kFound);
-      return transaction.GetStatus();
-    }
-    case fuchsia_io_DirectoryReadDirentsOrdinal: {
-      ios->server_->set_current_dispatcher(dispatcher);
-      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
-      ios->server_->clear_current_dispatcher();
-      ZX_ASSERT(result == fidl::DispatchResult::kFound);
-      return transaction.GetStatus();
-    }
-    case fuchsia_io_DirectoryWatchOrdinal: {
-      ios->server_->set_current_dispatcher(dispatcher);
-      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
-      ios->server_->clear_current_dispatcher();
-      ZX_ASSERT(result == fidl::DispatchResult::kFound);
-      return transaction.GetStatus();
-    }
-    case fuchsia_io_DirectoryAdminQueryFilesystemOrdinal: {
-      ios->server_->set_current_dispatcher(dispatcher);
-      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
-      ios->server_->clear_current_dispatcher();
-      ZX_ASSERT(result == fidl::DispatchResult::kFound);
-      return transaction.GetStatus();
-    }
-  }  // switch
-
-  // close inbound handles so they do not leak
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-  return ZX_ERR_NOT_SUPPORTED;
+  return result == fidl::DispatchResult::kNotFound ? ZX_ERR_NOT_SUPPORTED : transaction.GetStatus();
 }
 
 void DevfsFidlServer::Open(uint32_t flags, uint32_t mode, fidl::StringView path,
@@ -952,6 +869,10 @@ void DevfsFidlServer::Describe(DescribeCompleter::Sync& completer) {
   fidl::aligned<fio::DirectoryObject> directory;
   node_info.set_directory(fidl::unowned_ptr(&directory));
   completer.Reply(std::move(node_info));
+}
+
+void DevfsFidlServer::Close(CloseCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
 void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
