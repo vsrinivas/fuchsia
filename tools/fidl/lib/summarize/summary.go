@@ -26,7 +26,7 @@ type Element interface {
 	Member() bool
 	// Name returns the fully-qualified name of this Element.  For example,
 	// "library/protocol.Method".
-	Name() string
+	Name() Name
 	// Serialize converts an Element into a serializable representation.
 	Serialize() elementStr
 }
@@ -161,82 +161,39 @@ func nullableToString(n bool) string {
 
 // fidlNestedToString prints the FIDL type of a sequence or aggregate, assuming
 // that t is indeed such a type.
-func fidlNestedToString(t fidlgen.Type) string {
-	return fmt.Sprintf("%v<%v>%v%v",
+func fidlNestedToString(t fidlgen.Type) Decl {
+	return Decl(fmt.Sprintf("%v<%v>%v%v",
 		// Assumes t.Kind is one of the sequential types.
 		t.Kind,
 		fidlTypeString(*t.ElementType),
 		elementCountToString(t.ElementCount),
-		nullableToString(t.Nullable))
+		nullableToString(t.Nullable)))
 }
 
 // fidlTypeString converts the FIDL type declaration into a string.
-func fidlTypeString(t fidlgen.Type) string {
+func fidlTypeString(t fidlgen.Type) Decl {
 	n := nullableToString(t.Nullable)
 	switch t.Kind {
 	case fidlgen.PrimitiveType:
-		return string(t.PrimitiveSubtype)
+		return Decl(t.PrimitiveSubtype)
 	case fidlgen.StringType:
-		return fmt.Sprintf("%s%s%s",
-			t.Kind, elementCountToString(t.ElementCount), n)
+		return Decl(fmt.Sprintf("%s%s%s",
+			t.Kind, elementCountToString(t.ElementCount), n))
 	case fidlgen.ArrayType, fidlgen.VectorType:
 		return fidlNestedToString(t)
 	case fidlgen.HandleType:
 		switch t.HandleSubtype {
 		case fidlgen.Handle:
-			return fmt.Sprintf("handle%v", n)
+			return Decl(fmt.Sprintf("handle%v", n))
 		default:
-			return fmt.Sprintf(
-				"zx/handle:zx/obj_type.%v%v", strings.ToUpper(string(t.HandleSubtype)), n)
+			return Decl(fmt.Sprintf(
+				"zx/handle:zx/obj_type.%v%v", strings.ToUpper(string(t.HandleSubtype)), n))
 		}
 	case fidlgen.IdentifierType:
-		return fmt.Sprintf("%v%v", string(t.Identifier), n)
+		return Decl(fmt.Sprintf("%v%v", string(t.Identifier), n))
 	case fidlgen.RequestType:
-		return fmt.Sprintf("request<%v>%v", string(t.RequestSubtype), n)
+		return Decl(fmt.Sprintf("request<%v>%v", string(t.RequestSubtype), n))
 	default:
 		return "<not implemented>"
 	}
-}
-
-// Strictness is whether an aggregate is strict or flexible.
-type Strictness string
-
-var (
-	// isStrict strictness value.
-	isStrict Strictness = "strict"
-	// isFlexible strictness value.
-	isFlexible Strictness = "flexible"
-)
-
-// Resourceness is whether the aggregate has resources or not.
-type Resourceness string
-
-var (
-	// isValue resourceness is the "default", so we omit it altogether.
-	isValue Resourceness = ""
-	// isResource is an aggregate that contains e.g. handles.
-	isResource Resourceness = "resource"
-)
-
-// elementStr is a generic stringly-typed view of an Element. The aim is to
-// keep the structure as flat as possible, and omit fields which have no
-// bearing to the Kind of element represented.
-type elementStr struct {
-	Name         string `json:"name"`
-	Kind         string `json:"kind"`
-	Decl         string `json:"declaration,omitempty"`
-	Strictness   `json:"strictness,omitempty"`
-	Resourceness `json:"resourceness,omitempty"`
-}
-
-func (e elementStr) String() string {
-	var p []string
-	if e.Strictness != "" {
-		p = append(p, string(e.Strictness))
-	}
-	p = append(p, e.Kind, e.Name)
-	if e.Decl != "" {
-		p = append(p, e.Decl)
-	}
-	return strings.Join(p, " ")
 }

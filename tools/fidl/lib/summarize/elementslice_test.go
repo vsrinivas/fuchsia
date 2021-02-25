@@ -11,7 +11,7 @@ import (
 
 func TestFQNLess(t *testing.T) {
 	tests := []struct {
-		e1, e2 string
+		e1, e2 Name
 		less   bool
 	}{
 		{e1: "l", e2: "l/foo", less: false},

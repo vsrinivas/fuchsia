@@ -6,7 +6,6 @@ package summarize
 
 import (
 	"fmt"
-	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
@@ -21,13 +20,13 @@ an example, see below how isMember embeds named.
 type named struct {
 	// name is a fully qualified name. It is generic, as sometimes it is a
 	// compound identifier and sometimes "just" an identifier.
-	name string
+	name Name
 	// parent is nonempty for members.
 	parent fidlgen.EncodedCompoundIdentifier
 }
 
 func newNamed(name fidlgen.EncodedCompoundIdentifier) named {
-	return named{name: string(name)}
+	return named{name: Name(name)}
 }
 
 func (l named) Serialize() elementStr {
@@ -36,9 +35,9 @@ func (l named) Serialize() elementStr {
 	return e
 }
 
-func (l named) Name() string {
+func (l named) Name() Name {
 	if l.parent != "" {
-		return fmt.Sprintf("%v.%v", l.parent, l.name)
+		return Name(fmt.Sprintf("%v.%v", l.parent, l.name))
 	}
 	return l.name
 }
@@ -55,7 +54,7 @@ func newIsMember(
 	name fidlgen.Identifier,
 	parentType fidlgen.DeclType) isMember {
 	return isMember{
-		named:      named{parent: parentName, name: string(name)},
+		named:      named{parent: parentName, name: Name(name)},
 		parentType: parentType,
 	}
 }
@@ -67,7 +66,7 @@ func (i isMember) String() string {
 
 func (i isMember) Serialize() elementStr {
 	e := i.named.Serialize()
-	e.Kind = fmt.Sprintf("%v/member", i.parentType)
+	e.Kind = Kind(fmt.Sprintf("%v/member", i.parentType))
 	return e
 }
 
@@ -95,7 +94,7 @@ func newAggregate(
 	resourceness fidlgen.Resourceness,
 	typeName fidlgen.DeclType) aggregate {
 	return aggregate{
-		named:        named{name: string(name)},
+		named:        named{name: Name(name)},
 		resourceness: resourceness,
 		typeName:     typeName,
 	}
@@ -103,12 +102,7 @@ func newAggregate(
 
 // String implements Element.
 func (s aggregate) String() string {
-	var ret []string
-	if s.resourceness {
-		ret = append(ret, "resource")
-	}
-	ret = append(ret, string(s.typeName), s.name)
-	return strings.Join(ret, " ")
+	return s.Serialize().String()
 }
 
 func resourceness(resourceness fidlgen.Resourceness) Resourceness {
@@ -121,7 +115,7 @@ func resourceness(resourceness fidlgen.Resourceness) Resourceness {
 func (s aggregate) Serialize() elementStr {
 	e := s.named.Serialize()
 	e.Resourceness = resourceness(s.resourceness)
-	e.Kind = string(s.typeName)
+	e.Kind = Kind(s.typeName)
 	return e
 }
 
@@ -154,7 +148,7 @@ func (s member) Member() bool {
 }
 
 // Name implements Element.
-func (s member) Name() string {
+func (s member) Name() Name {
 	return s.m.Name()
 }
 

@@ -57,7 +57,7 @@ func (e elementSlice) Swap(i, j int) {
 type fqn fidlgen.CompoundIdentifier
 
 // newFqn parses out a fqn from the given string.
-func newFqn(name string) fqn {
+func newFqn(name Name) fqn {
 	ci := fidlgen.ParseCompoundIdentifier(fidlgen.EncodedCompoundIdentifier(name))
 	// Convert empty strings to a "maximal" marker to get the expected sort ordering.
 	// If 'name' is a library, it will end up in ci.Name. Otherwise it will end

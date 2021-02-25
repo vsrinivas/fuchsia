@@ -14,7 +14,7 @@ type alias struct {
 	notMember
 }
 
-const aliasType = "alias"
+const aliasType Kind = "alias"
 
 // String implements Element.
 func (a alias) String() string {
@@ -36,7 +36,7 @@ func (s *summarizer) addAliases(decls fidlgen.DeclMap) {
 			continue
 		}
 		s.addElement(alias{
-			named: named{name: string(d)},
+			named: named{name: Name(d)},
 		})
 	}
 }

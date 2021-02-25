@@ -9,11 +9,7 @@ The first set, `//tools`, is needed to ensure that the testing utilities are
 present.  Otherwise, `fx test` may not work.  The second set, `//src/lib/intl` is
 only used in the "Example use" below.
 ```
-fx set core.qemu-x64 --auto-dir \
-  --with=//tools \
-  --with=//src/lib/intl \
-  --with=//tools/fidl_fidl_api_summarize:host \
-  --with=//tools/fidl/fidl_api_summarize:tests
+fx set core.qemu-x64 --auto-dir --with=//tools
 ```
 ## Compile
 ```

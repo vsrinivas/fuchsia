@@ -11,7 +11,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-const protocolKind = "protocol"
+const protocolKind Kind = "protocol"
 
 // addProtocols adds the protocols to the elements list.
 func (s *summarizer) addProtocols(protocols []fidlgen.Protocol) {
@@ -19,7 +19,7 @@ func (s *summarizer) addProtocols(protocols []fidlgen.Protocol) {
 		for _, m := range p.Methods {
 			s.addElement(newMethod(p.Name, m))
 		}
-		s.addElement(protocol{named: named{name: string(p.Name)}})
+		s.addElement(protocol{named: named{name: Name(p.Name)}})
 	}
 }
 
@@ -55,7 +55,7 @@ func newMethod(parent fidlgen.EncodedCompoundIdentifier, m fidlgen.Method) metho
 }
 
 // Name implements Element.
-func (m method) Name() string {
+func (m method) Name() Name {
 	return m.membership.Name()
 }
 
@@ -74,7 +74,7 @@ func (m method) Member() bool {
 
 // getTypeSignature returns a string representation of the type signature of
 // this method.  E.g. "(int32 a) -> (Foo b)"
-func (m method) getTypeSignature() string {
+func (m method) getTypeSignature() Decl {
 	var parlist []string
 	request := getParamList(m.method.HasRequest, m.method.Request)
 	if request != "" {
@@ -88,7 +88,7 @@ func (m method) getTypeSignature() string {
 		}
 		parlist = append(parlist, "->", response)
 	}
-	return strings.Join(parlist, " ")
+	return Decl(strings.Join(parlist, " "))
 }
 
 func (m method) Serialize() elementStr {

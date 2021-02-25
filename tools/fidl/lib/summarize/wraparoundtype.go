@@ -33,8 +33,8 @@ func (b wraparoundType) String() string {
 
 func (b wraparoundType) Serialize() elementStr {
 	e := b.named.Serialize()
-	e.Kind = string(b.parentType)
+	e.Kind = Kind(b.parentType)
 	e.Strictness = strictness(b.strictness)
-	e.Decl = fmt.Sprintf("%v", b.subtype)
+	e.Decl = Decl(fmt.Sprintf("%v", b.subtype))
 	return e
 }

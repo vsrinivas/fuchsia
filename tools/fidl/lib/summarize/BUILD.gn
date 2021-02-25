@@ -45,6 +45,7 @@ if (is_host) {
       "bits.go",
       "consts.go",
       "elementslice.go",
+      "elementstr.go",
       "enums.go",
       "library.go",
       "properties.go",

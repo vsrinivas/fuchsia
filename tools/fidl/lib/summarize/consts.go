@@ -8,14 +8,14 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-const aConstType = "const"
+const aConstType Kind = "const"
 
 // addConsts obtains the API elements present in the constants.
 func (s *summarizer) addConsts(consts []fidlgen.Const) {
 	for _, c := range consts {
 		s.addElement(
 			aConst{
-				named: named{name: string(c.Name)},
+				named: named{name: Name(c.Name)},
 				aType: c.Type,
 			})
 	}
@@ -35,7 +35,7 @@ func (c aConst) String() string {
 
 func (c aConst) Serialize() elementStr {
 	e := c.named.Serialize()
-	e.Kind = aConstType
-	e.Decl = fidlTypeString(c.aType)
+	e.Kind = Kind(aConstType)
+	e.Decl = Decl(fidlTypeString(c.aType))
 	return e
 }

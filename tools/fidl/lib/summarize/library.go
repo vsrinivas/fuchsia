@@ -8,7 +8,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-const libraryKind = "library"
+const libraryKind Kind = "library"
 
 // library is a library element.
 type library struct {
@@ -22,8 +22,8 @@ func (l library) String() string {
 }
 
 // Name implements Element.
-func (l library) Name() string {
-	return string(l.r.Name)
+func (l library) Name() Name {
+	return Name(l.r.Name)
 }
 
 func (l library) Serialize() elementStr {
