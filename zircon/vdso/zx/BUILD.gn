@@ -5,7 +5,10 @@
 import("//build/fidl/fidl.gni")
 
 fidl("zx") {
-  sources = [ "../zx_common.fidl" ]
+  sources = [
+    "../rights.fidl",
+    "../zx_common.fidl",
+  ]
   host_llcpp = true
 
   sdk_category = "partner"

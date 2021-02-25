@@ -1,5 +1,7 @@
 library fidl.test.handles;
 
+using zx;
+
 // This is not a reference to library zx to avoid complexity in the test data.
 // A local handle is defined here that contains subtypes that this test cares
 // about.
@@ -79,7 +81,7 @@ resource struct Handles {
     handle:VMAR vmar_handle;
     handle:VMO vmo_handle;
 
-    handle:<VMO, 1> rights_handle;
+    handle:<VMO, zx.rights.DUPLICATE | zx.rights.READ> rights_handle;
 
     aliased_plain_handle aliased_plain_handle_field;
     aliased_subtype_handle aliased_subtype_handle_field;

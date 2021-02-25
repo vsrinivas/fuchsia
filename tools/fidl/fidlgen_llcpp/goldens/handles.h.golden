@@ -64,6 +64,7 @@
 
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
+#include <zx/llcpp/fidl.h>
 
 namespace llcpp {
 namespace fidl {

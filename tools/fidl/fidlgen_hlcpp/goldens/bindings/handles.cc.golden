@@ -186,7 +186,7 @@ void Handles::Encode(
     ::fidl::Encode(_encoder, &rights_handle, _offset + 108,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_VMO,
-                       .rights = 0x1,
+                       .rights = 0x5,
                    });
 
     ::fidl::Encode(_encoder, &aliased_plain_handle_field, _offset + 112,

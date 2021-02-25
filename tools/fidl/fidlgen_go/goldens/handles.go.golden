@@ -245,7 +245,7 @@ type Handles struct {
 	VcpuHandle                _zx.Handle                          `fidl_offset_v1:"96" fidl_handle_subtype:"21" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 	VmarHandle                _zx.VMAR                            `fidl_offset_v1:"100" fidl_handle_subtype:"18" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 	VmoHandle                 _zx.VMO                             `fidl_offset_v1:"104" fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	RightsHandle              _zx.VMO                             `fidl_offset_v1:"108" fidl_handle_subtype:"3" fidl_handle_rights:"1" fidl_bounds:"0"`
+	RightsHandle              _zx.VMO                             `fidl_offset_v1:"108" fidl_handle_subtype:"3" fidl_handle_rights:"5" fidl_bounds:"0"`
 	AliasedPlainHandleField   _zx.Handle                          `fidl_offset_v1:"112" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 	AliasedSubtypeHandleField _zx.VMO                             `fidl_offset_v1:"116" fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 	AliasedRightsHandleField  _zx.VMO                             `fidl_offset_v1:"120" fidl_handle_subtype:"3" fidl_handle_rights:"1" fidl_bounds:"0"`

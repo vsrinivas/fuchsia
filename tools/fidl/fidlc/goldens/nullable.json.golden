@@ -5,6 +5,9 @@
     {
       "name": "zx",
       "declarations": {
+        "zx/rights": {
+          "kind": "bits"
+        },
         "zx/CHANNEL_MAX_MSG_BYTES": {
           "kind": "const"
         },

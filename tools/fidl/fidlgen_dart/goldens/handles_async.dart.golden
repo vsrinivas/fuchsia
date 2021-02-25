@@ -12,6 +12,7 @@ import 'package:fidl/fidl.dart' as $fidl;
 import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart' as $zircon;
 
+import 'package:fidl_zx/fidl_async.dart' as lib$zx;
 // ignore_for_file: always_specify_types
 // ignore_for_file: avoid_positional_boolean_parameters
 // ignore_for_file: avoid_returning_null
@@ -558,7 +559,7 @@ class Handles extends $fidl.Struct {
   static const $fieldType25 =
       $fidl.HandleType(objectType: 18, rights: 2147483648);
   static const $fieldType26 = $fidl.VmoType(objectType: 3, rights: 2147483648);
-  static const $fieldType27 = $fidl.VmoType(objectType: 3, rights: 1);
+  static const $fieldType27 = $fidl.VmoType(objectType: 3, rights: 5);
   static const $fieldType28 =
       $fidl.HandleType(objectType: 0, rights: 2147483648);
   static const $fieldType29 = $fidl.VmoType(objectType: 3, rights: 2147483648);

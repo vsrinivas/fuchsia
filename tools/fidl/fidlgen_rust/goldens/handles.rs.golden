@@ -359,7 +359,7 @@ fidl_struct! {
       offset_v1: 108,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::VMO,
-        handle_rights: fidl::Rights::from_bits_const(1).unwrap(),
+        handle_rights: fidl::Rights::from_bits_const(5).unwrap(),
       },
     },
     aliased_plain_handle_field {
