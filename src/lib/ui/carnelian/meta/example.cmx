@@ -1,6 +1,6 @@
 {
     "include": [
-        "/Users/rob/projects/fuchsia/src/lib/ui/carnelian/meta/example.shard.cmx"
+        "src/lib/ui/carnelian/meta/example.shard.cmx"
     ],
     "program": {
         "binary": "bin/app"
