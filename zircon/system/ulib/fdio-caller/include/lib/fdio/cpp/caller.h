@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FDIO_CPP_CALLER_H_
+#define LIB_FDIO_CPP_CALLER_H_
 
-#include <fbl/auto_call.h>
-#include <fbl/unique_fd.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/fidl/llcpp/client_end.h>
 #include <lib/zx/channel.h>
 
 #include <utility>
+
+#include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
 
 namespace fdio_cpp {
 
@@ -72,6 +76,28 @@ class FdioCaller {
   // ownership.
   zx::unowned_channel channel() const { return zx::unowned_channel(borrow_channel()); }
 
+  // Same as borrow_channel, but wrapped as a fuchsia.io/Node client channel.
+  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Node> node() const {
+    return borrow_as<::llcpp::fuchsia::io::Node>();
+  }
+
+  // Same as borrow_channel, but wrapped as a fuchsia.io/File client channel.
+  fidl::UnownedClientEnd<::llcpp::fuchsia::io::File> file() const {
+    return borrow_as<::llcpp::fuchsia::io::File>();
+  }
+
+  // Same as borrow_channel, but wrapped as a fuchsia.io/Directory client channel.
+  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> directory() const {
+    return borrow_as<::llcpp::fuchsia::io::Directory>();
+  }
+
+  // Same as borrow_channel but wrapped in a typed client channel.
+  // Be careful to only use this if you know the type of the protocol being spoken.
+  template <typename T>
+  fidl::UnownedClientEnd<T> borrow_as() const {
+    return fidl::UnownedClientEnd<T>(channel());
+  }
+
  private:
   fbl::unique_fd fd_;
   fdio_t* io_;
@@ -108,6 +134,28 @@ class UnownedFdioCaller {
   // ownership.
   zx::unowned_channel channel() const { return zx::unowned_channel(borrow_channel()); }
 
+  // Same as borrow_channel, but wrapped as a fuchsia.io/Node client channel.
+  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Node> node() const {
+    return borrow_as<::llcpp::fuchsia::io::Node>();
+  }
+
+  // Same as borrow_channel, but wrapped as a fuchsia.io/File client channel.
+  fidl::UnownedClientEnd<::llcpp::fuchsia::io::File> file() const {
+    return borrow_as<::llcpp::fuchsia::io::File>();
+  }
+
+  // Same as borrow_channel, but wrapped as a fuchsia.io/Directory client channel.
+  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> directory() const {
+    return borrow_as<::llcpp::fuchsia::io::Directory>();
+  }
+
+  // Same as borrow_channel but wrapped in a typed client channel.
+  // Be careful to only use this if you know the type of the protocol being spoken.
+  template <typename T>
+  fidl::UnownedClientEnd<T> borrow_as() const {
+    return fidl::UnownedClientEnd<T>(channel());
+  }
+
   UnownedFdioCaller& operator=(UnownedFdioCaller&& o) = delete;
   UnownedFdioCaller(UnownedFdioCaller&& o) = delete;
   UnownedFdioCaller(const UnownedFdioCaller&) = delete;
@@ -125,3 +173,5 @@ class UnownedFdioCaller {
 };
 
 }  // namespace fdio_cpp
+
+#endif  // LIB_FDIO_CPP_CALLER_H_
