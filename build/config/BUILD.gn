@@ -481,7 +481,7 @@ config("linker_gc_sanitizer") {
 }
 
 config("linker_gc_profile") {
-  # TODO(fxbug.dev/51509): See if we can enable linker GC for profile.
+  configs = [ ":linker_gc" ]
 }
 
 config("default_linker_gc") {
