@@ -21,6 +21,19 @@
 
 namespace wlan::brcmfmac {
 
+// TODO (fxbug.dev/70331) - Avoid duplicates for windowed and non-windowed property.
+struct DeviceConnMetrics {
+  inspect::Node root;
+  inspect::UintProperty success;
+  WindowedUintProperty success_24hrs;
+  inspect::UintProperty no_network_fail;
+  WindowedUintProperty no_network_fail_24hrs;
+  inspect::UintProperty auth_fail;
+  WindowedUintProperty auth_fail_24hrs;
+  inspect::UintProperty other_fail;
+  WindowedUintProperty other_fail_24hrs;
+};
+
 class DeviceInspect {
  public:
   zx_status_t Start(struct brcmf_bus* bus_if, async_dispatcher_t* dispatcher);
@@ -33,6 +46,10 @@ class DeviceInspect {
 
   // Metrics APIs
   void LogTxQueueFull();
+  void LogConnSuccess();
+  void LogConnNoNetworkFail();
+  void LogConnAuthFail();
+  void LogConnOtherFail();
 
  private:
   void AllocTimers(struct brcmf_bus* bus_if, async_dispatcher_t* dispatcher);
@@ -44,7 +61,8 @@ class DeviceInspect {
   void TimerHrCallback();
   zx_status_t InitMetrics();
 
-  // Metrics tracked
+  // Metrics
+  DeviceConnMetrics conn_metrics_;
   inspect::UintProperty tx_qfull_;
   WindowedUintProperty tx_qfull_24hrs_;
 };

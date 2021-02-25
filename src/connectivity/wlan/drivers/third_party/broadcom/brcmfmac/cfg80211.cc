@@ -49,10 +49,12 @@
 #include "core.h"
 #include "debug.h"
 #include "defs.h"
+#include "device.h"
 #include "feature.h"
 #include "fweh.h"
 #include "fwil.h"
 #include "fwil_types.h"
+#include "inspect/device_inspect.h"
 #include "linuxisms.h"
 #include "macros.h"
 #include "netbuf.h"
@@ -3304,8 +3306,8 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
   if (!ssid.empty()) {
     BRCMF_IFDBG(WLANIF, ndev,
                 "Join request from SME. ssid: " SSID_FMT_STR ", bssid: " MAC_FMT_STR
-                ", channel: %u", SSID_FMT_ARGS(ssid), MAC_FMT_ARGS(sme_bss.bssid),
-                sme_bss.chan.primary);
+                ", channel: %u",
+                SSID_FMT_ARGS(ssid), MAC_FMT_ARGS(sme_bss.bssid), sme_bss.chan.primary);
     memcpy(&ifp->bss, &sme_bss, sizeof(ifp->bss));
     if (ifp->bss.ies_bytes_count > WLAN_MSDU_MAX_LEN) {
       ifp->bss.ies_bytes_count = WLAN_MSDU_MAX_LEN;
@@ -4902,6 +4904,26 @@ static zx_status_t brcmf_rx_auth_frame(struct brcmf_if* ifp, const uint32_t data
   return ZX_OK;
 }
 
+static void brcmf_log_conn_status(brcmf_if* ifp, brcmf_connect_status_t connect_status) {
+  BRCMF_DBG(CONN, "connect_status %s", brcmf_get_connect_status_str(connect_status));
+
+  // We track specific failures that are of interest on inspect.
+  switch (connect_status) {
+    case BRCMF_CONNECT_STATUS_CONNECTED:
+      ifp->drvr->inspect->LogConnSuccess();
+      break;
+    case BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED:
+      ifp->drvr->inspect->LogConnAuthFail();
+      break;
+    case BRCMF_CONNECT_STATUS_NO_NETWORK:
+      ifp->drvr->inspect->LogConnNoNetworkFail();
+      break;
+    default:
+      ifp->drvr->inspect->LogConnOtherFail();
+      break;
+  }
+}
+
 static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t connect_status) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   struct net_device* ndev = ifp->ndev;
@@ -4911,7 +4933,8 @@ static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t 
     // Stop connect timer no matter connect success or not, this timer only timeout when nothing
     // is heard from firmware.
     cfg->connect_timer->Stop();
-    BRCMF_DBG(CONN, "connect_status %s", brcmf_get_connect_status_str(connect_status));
+    brcmf_log_conn_status(ifp, connect_status);
+
     switch (connect_status) {
       case BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED:
         brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);

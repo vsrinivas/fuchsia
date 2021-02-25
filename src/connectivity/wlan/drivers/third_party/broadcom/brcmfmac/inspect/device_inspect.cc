@@ -26,12 +26,13 @@ void DeviceInspect::DeallocTimers() { timer_hr_.reset(); }
 
 void DeviceInspect::StartTimers() { timer_hr_->Start(ZX_HOUR(1)); }
 
-void DeviceInspect::LogTxQueueFull() {
-  tx_qfull_.Add(1);
-  tx_qfull_24hrs_.Add(1);
+void DeviceInspect::TimerHrCallback() {
+  tx_qfull_24hrs_.SlideWindow();
+  conn_metrics_.success_24hrs.SlideWindow();
+  conn_metrics_.no_network_fail_24hrs.SlideWindow();
+  conn_metrics_.auth_fail_24hrs.SlideWindow();
+  conn_metrics_.other_fail_24hrs.SlideWindow();
 }
-
-void DeviceInspect::TimerHrCallback() { tx_qfull_24hrs_.SlideWindow(); }
 
 zx_status_t DeviceInspect::InitMetrics() {
   zx_status_t status = ZX_OK;
@@ -39,6 +40,29 @@ zx_status_t DeviceInspect::InitMetrics() {
   if ((status = tx_qfull_24hrs_.Init(&root_, 24, "tx_qfull_24hrs", 0)) != ZX_OK) {
     return status;
   }
+
+  conn_metrics_.root = root_.CreateChild("connection-metrics");
+  conn_metrics_.success = conn_metrics_.root.CreateUint("success", 0);
+  if ((status = conn_metrics_.success_24hrs.Init(&conn_metrics_.root, 24, "success_24hrs", 0)) !=
+      ZX_OK) {
+    return status;
+  }
+  conn_metrics_.no_network_fail = conn_metrics_.root.CreateUint("no_network_fail", 0);
+  if ((status = conn_metrics_.no_network_fail_24hrs.Init(&conn_metrics_.root, 24,
+                                                         "no_network_fail_24hrs", 0)) != ZX_OK) {
+    return status;
+  }
+  conn_metrics_.auth_fail = conn_metrics_.root.CreateUint("auth_fail", 0);
+  if ((status = conn_metrics_.auth_fail_24hrs.Init(&conn_metrics_.root, 24, "auth_fail_24hrs",
+                                                   0)) != ZX_OK) {
+    return status;
+  }
+  conn_metrics_.other_fail = conn_metrics_.root.CreateUint("other_fail", 0);
+  if ((status = conn_metrics_.other_fail_24hrs.Init(&conn_metrics_.root, 24, "other_fail_24hrs",
+                                                    0)) != ZX_OK) {
+    return status;
+  }
+
   return status;
 }
 
@@ -60,6 +84,28 @@ zx_status_t DeviceInspect::Start(struct brcmf_bus* bus_if, async_dispatcher_t* d
   }
 
   return ZX_OK;
+}
+
+void DeviceInspect::LogTxQueueFull() {
+  tx_qfull_.Add(1);
+  tx_qfull_24hrs_.Add(1);
+}
+
+void DeviceInspect::LogConnSuccess() {
+  conn_metrics_.success.Add(1);
+  conn_metrics_.success_24hrs.Add(1);
+}
+void DeviceInspect::LogConnAuthFail() {
+  conn_metrics_.auth_fail.Add(1);
+  conn_metrics_.auth_fail_24hrs.Add(1);
+}
+void DeviceInspect::LogConnNoNetworkFail() {
+  conn_metrics_.no_network_fail.Add(1);
+  conn_metrics_.no_network_fail_24hrs.Add(1);
+}
+void DeviceInspect::LogConnOtherFail() {
+  conn_metrics_.other_fail.Add(1);
+  conn_metrics_.other_fail_24hrs.Add(1);
 }
 
 }  // namespace wlan::brcmfmac

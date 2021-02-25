@@ -19,27 +19,62 @@
 namespace wlan {
 namespace brcmfmac {
 
+constexpr uint16_t kUintPropertyNum = 5;
+constexpr uint16_t kWindowPropertyNum = 5;
+
+const std::vector<std::string> kRootMetrics = {"brcmfmac-phy"};
+const std::vector<std::string> kConnMetrics = {"brcmfmac-phy", "connection-metrics"};
+
+struct PropertyTestUnit {
+  const std::vector<std::string> path_;
+  std::string name_;
+  std::function<void()> log_callback_;
+  PropertyTestUnit(const std::vector<std::string> path, std::string name,
+                   std::function<void()> callback)
+      : path_(path), name_(name), log_callback_(callback) {}
+};
+
 class DeviceInspectTest : public DeviceInspectTestHelper {
  public:
   void LogTxQfull() { device_->inspect_.LogTxQueueFull(); }
+  void LogConnSuccess() { device_->inspect_.LogConnSuccess(); }
+  void LogConnNoNetworkFail() { device_->inspect_.LogConnNoNetworkFail(); }
+  void LogConnAuthFail() { device_->inspect_.LogConnAuthFail(); }
+  void LogConnOtherFail() { device_->inspect_.LogConnOtherFail(); }
 
-  uint64_t GetTxQfull() {
+  uint64_t GetUintProperty(const std::vector<std::string>& path, std::string name) {
     FetchHierarchy();
-    auto* root = hierarchy_.value().GetByPath({"brcmfmac-phy"});
+    auto* root = hierarchy_.value().GetByPath(path);
     EXPECT_TRUE(root);
-    auto* tx_qfull = root->node().get_property<inspect::UintPropertyValue>("tx_qfull");
-    EXPECT_TRUE(tx_qfull);
-    return tx_qfull->value();
+    auto* uint_property = root->node().get_property<inspect::UintPropertyValue>(name);
+    EXPECT_TRUE(uint_property);
+    return uint_property->value();
   }
 
-  uint64_t GetTxQfull24Hrs() {
-    FetchHierarchy();
-    auto* root = hierarchy_.value().GetByPath({"brcmfmac-phy"});
-    EXPECT_TRUE(root);
-    auto* tx_qfull_24hrs = root->node().get_property<inspect::UintPropertyValue>("tx_qfull_24hrs");
-    EXPECT_TRUE(tx_qfull_24hrs);
-    return tx_qfull_24hrs->value();
-  }
+  // Defining properties which will be covered in the test cases.
+  const PropertyTestUnit uint_properties_[kUintPropertyNum] = {
+      PropertyTestUnit(kRootMetrics, "tx_qfull", std::bind(&DeviceInspectTest::LogTxQfull, this)),
+      PropertyTestUnit(kConnMetrics, "success",
+                       std::bind(&DeviceInspectTest::LogConnSuccess, this)),
+      PropertyTestUnit(kConnMetrics, "no_network_fail",
+                       std::bind(&DeviceInspectTest::LogConnNoNetworkFail, this)),
+      PropertyTestUnit(kConnMetrics, "auth_fail",
+                       std::bind(&DeviceInspectTest::LogConnAuthFail, this)),
+      PropertyTestUnit(kConnMetrics, "other_fail",
+                       std::bind(&DeviceInspectTest::LogConnOtherFail, this)),
+  };
+  const PropertyTestUnit window_properties_[kWindowPropertyNum] = {
+      PropertyTestUnit(kRootMetrics, "tx_qfull_24hrs",
+                       std::bind(&DeviceInspectTest::LogTxQfull, this)),
+      PropertyTestUnit(kConnMetrics, "success_24hrs",
+                       std::bind(&DeviceInspectTest::LogConnSuccess, this)),
+      PropertyTestUnit(kConnMetrics, "no_network_fail_24hrs",
+                       std::bind(&DeviceInspectTest::LogConnNoNetworkFail, this)),
+      PropertyTestUnit(kConnMetrics, "auth_fail_24hrs",
+                       std::bind(&DeviceInspectTest::LogConnAuthFail, this)),
+      PropertyTestUnit(kConnMetrics, "other_fail_24hrs",
+                       std::bind(&DeviceInspectTest::LogConnOtherFail, this)),
+  };
 };
 
 TEST_F(DeviceInspectTest, HierarchyCreation) {
@@ -47,48 +82,65 @@ TEST_F(DeviceInspectTest, HierarchyCreation) {
   ASSERT_TRUE(hierarchy_.is_ok());
 }
 
-TEST_F(DeviceInspectTest, LogTxQfullSingle) {
-  EXPECT_EQ(0u, GetTxQfull());
-  LogTxQfull();
-  EXPECT_EQ(1u, GetTxQfull());
+TEST_F(DeviceInspectTest, SimpleIncrementCounterSingle) {
+  // Going over all inspect counters inside this loop.
+  for (uint16_t k = 0; k < kUintPropertyNum; k++) {
+    BRCMF_INFO("Testing %s", uint_properties_[k].name_.c_str());
+    EXPECT_EQ(0u, GetUintProperty(uint_properties_[k].path_, uint_properties_[k].name_));
+    uint_properties_[k].log_callback_();
+    EXPECT_EQ(1u, GetUintProperty(uint_properties_[k].path_, uint_properties_[k].name_));
+  }
 }
 
-TEST_F(DeviceInspectTest, LogTxQfullMultiple) {
-  const uint32_t qfull_cnt = 100;
+TEST_F(DeviceInspectTest, SimpleIncrementCounterMultiple) {
+  const uint32_t property_cnt = 100;
 
-  EXPECT_EQ(0u, GetTxQfull());
-  for (uint32_t i = 0; i < qfull_cnt; i++) {
-    LogTxQfull();
+  // Outer Loop is to go over all inspect counters.
+  for (uint16_t k = 0; k < kUintPropertyNum; k++) {
+    BRCMF_INFO("Testing %s", uint_properties_[k].name_.c_str());
+    EXPECT_EQ(0u, GetUintProperty(uint_properties_[k].path_, uint_properties_[k].name_));
+    for (uint32_t i = 0; i < property_cnt; i++) {
+      uint_properties_[k].log_callback_();
+    }
+    EXPECT_EQ(property_cnt, GetUintProperty(uint_properties_[k].path_, uint_properties_[k].name_));
   }
-  EXPECT_EQ(qfull_cnt, GetTxQfull());
 }
 
-TEST_F(DeviceInspectTest, LogTxQfull24HrsFor10Hrs) {
-  EXPECT_EQ(0u, GetTxQfull24Hrs());
-  const uint32_t log_duration = 10;
+TEST_F(DeviceInspectTest, SimpleIncrementCounter24HrsFor10Hrs) {
+  // Outer Loop is to go over all inspect counters.
+  for (uint16_t k = 0; k < kWindowPropertyNum; k++) {
+    BRCMF_INFO("Testing %s", window_properties_[k].name_.c_str());
+    EXPECT_EQ(0u, GetUintProperty(window_properties_[k].path_, window_properties_[k].name_));
+    const uint32_t log_duration = 10;
+    // Log 1 queue full event every hour, for 'log_duration' hours.
+    for (uint32_t i = 0; i < log_duration; i++) {
+      SCHEDULE_CALL(zx::hour(i), window_properties_[k].log_callback_);
+    }
+    env_->Run(zx::hour(log_duration));
 
-  // Log 1 queue full event every hour, for 'log_duration' hours.
-  for (uint32_t i = 0; i < log_duration; i++) {
-    SCHEDULE_CALL(zx::hour(i), &DeviceInspectTest::LogTxQfull, this);
+    // Since we also log once at the beginning of the run, we will have one more count.
+    EXPECT_EQ(log_duration,
+              GetUintProperty(window_properties_[k].path_, window_properties_[k].name_));
   }
-  env_->Run(zx::hour(log_duration));
-
-  EXPECT_EQ(log_duration, GetTxQfull24Hrs());
 }
 
 TEST_F(DeviceInspectTest, LogTxQfull24HrsFor100Hrs) {
-  EXPECT_EQ(0u, GetTxQfull24Hrs());
-  const uint32_t log_duration = 100;
+  // Outer Loop is to go over all inspect counters.
+  for (uint16_t k = 0; k < kWindowPropertyNum; k++) {
+    BRCMF_INFO("Testing %s", window_properties_[k].name_.c_str());
+    EXPECT_EQ(0u, GetUintProperty(window_properties_[k].path_, window_properties_[k].name_));
+    const uint32_t log_duration = 100;
 
-  // Log 1 queue full event every hour, for 'log_duration' hours.
-  for (uint32_t i = 0; i < log_duration; i++) {
-    SCHEDULE_CALL(zx::hour(i), &DeviceInspectTest::LogTxQfull, this);
+    // Log 1 queue full event every hour, for 'log_duration' hours.
+    for (uint32_t i = 0; i < log_duration; i++) {
+      SCHEDULE_CALL(zx::hour(i), window_properties_[k].log_callback_);
+    }
+    env_->Run(zx::hour(log_duration));
+
+    // Since log_duration is > 24hrs, we expect the rolling counter to show
+    // a count of only 24.
+    EXPECT_EQ(24u, GetUintProperty(window_properties_[k].path_, window_properties_[k].name_));
   }
-  env_->Run(zx::hour(log_duration));
-
-  // Since log_duration is > 24hrs, we expect the rolling counter to show
-  // a count of only 24.
-  EXPECT_EQ(24u, GetTxQfull24Hrs());
 }
 
 }  // namespace brcmfmac
