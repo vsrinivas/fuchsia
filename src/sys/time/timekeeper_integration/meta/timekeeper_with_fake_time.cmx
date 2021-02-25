@@ -1,6 +1,7 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/fake-clock/lib/client.shard.cmx"
     ],
     "program": {
         "args": [
@@ -15,7 +16,6 @@
             "fuchsia.net.interfaces.State",
             "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Launcher",
-            "fuchsia.testing.FakeClock",
             "fuchsia.time.Maintenance"
         ]
     }

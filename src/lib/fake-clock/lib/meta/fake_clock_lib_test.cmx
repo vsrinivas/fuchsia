@@ -8,14 +8,14 @@
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/fake-clock/lib/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/fake_clock_lib_test"
     },
     "sandbox": {
         "services": [
-            "fuchsia.testing.FakeClock",
             "fuchsia.testing.FakeClockControl"
         ]
     }
