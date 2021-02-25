@@ -4,8 +4,6 @@
 
 //! Code common to all code generation modules.
 
-#![macro_use]
-
 use {super::super::definition::Arguments, std::io, thiserror};
 
 /// Errors that occur during code generation, mainly from ill-formed definitions.

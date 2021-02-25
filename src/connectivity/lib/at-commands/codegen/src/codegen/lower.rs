@@ -15,20 +15,14 @@ use {
 };
 
 /// Entry point to generate `lower` methods at a given indentation.
-pub fn codegen<W: io::Write>(sink: &mut W, indent: i64, definitions: &[Definition]) -> Result {
-    let commands = definitions.into_iter().filter(|d| d.is_command()).cloned().collect::<Vec<_>>();
-
-    codegen_commands(sink, indent, &commands)?;
-
-    let responses =
-        definitions.into_iter().filter(|d| d.is_response()).cloned().collect::<Vec<_>>();
-
-    codegen_responses(sink, indent, &responses)
+pub fn codegen<W: io::Write>(sink: &mut W, indent: u64, definitions: &[Definition]) -> Result {
+    codegen_commands(sink, indent, &definitions)?;
+    codegen_responses(sink, indent, &definitions)
 }
 
 fn codegen_commands<W: io::Write>(
     sink: &mut W,
-    indent: i64,
+    indent: u64,
     _definitions: &[Definition],
 ) -> Result {
     write_indented!(
@@ -44,7 +38,7 @@ fn codegen_commands<W: io::Write>(
 
 fn codegen_responses<W: io::Write>(
     sink: &mut W,
-    indent: i64,
+    indent: u64,
     _definitions: &[Definition],
 ) -> Result {
     write_indented!(

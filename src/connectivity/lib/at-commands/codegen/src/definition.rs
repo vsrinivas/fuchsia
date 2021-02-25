@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use super::codegen::common::to_initial_capital;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Definition {
     Command(Command),
@@ -9,37 +11,26 @@ pub enum Definition {
     Enum { name: String, variants: Vec<Variant> },
 }
 
-impl Definition {
-    pub fn is_command(&self) -> bool {
-        if let Definition::Command(_) = self {
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn is_response(&self) -> bool {
-        if let Definition::Response { .. } = self {
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn is_enum(&self) -> bool {
-        if let Definition::Enum { .. } = self {
-            true
-        } else {
-            false
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
     Execute { name: String, is_extension: bool, arguments: Option<ExecuteArguments> },
     Read { name: String, is_extension: bool },
     Test { name: String, is_extension: bool },
+}
+
+impl Command {
+    pub fn type_name(&self) -> String {
+        match self {
+            Command::Execute {
+                name,
+                arguments: Some(ExecuteArguments { nonstandard_delimiter: Some(_), .. }),
+                ..
+            } => format!("{}Special", to_initial_capital(name)),
+            Command::Execute { name, .. } => to_initial_capital(name.as_str()),
+            Command::Read { name, .. } => format!("{}Read", to_initial_capital(name.as_str())),
+            Command::Test { name, .. } => format!("{}Test", to_initial_capital(name.as_str())),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

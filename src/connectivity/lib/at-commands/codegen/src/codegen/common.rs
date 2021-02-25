@@ -9,24 +9,36 @@
 use {super::error::Result, std::io};
 
 /// The amount to increase indentation when generating a new block.
-pub static TABSTOP: i64 = 4;
+pub static TABSTOP: u64 = 4;
 
-/// Utility method for writing a newline.
+/// Convert a string to all lowercase except for an initial capital
+pub fn to_initial_capital(str: &str) -> String {
+    let mut chars = str.chars();
+    let head = chars.next();
+    if let Some(head) = head {
+        let tail = chars.as_str();
+        format!("{}{}", head.to_uppercase(), tail.to_lowercase())
+    } else {
+        String::from("")
+    }
+}
+
+/// Utility function for writing a newline.
 pub fn write_newline<W: io::Write>(sink: &mut W) -> Result {
     sink.write_all("\n".as_bytes())?;
 
     Ok(())
 }
 
-/// Utility method for writing an indentation of a certain width.
-pub fn write_indent<W: io::Write>(sink: &mut W, indent: i64) -> Result {
+/// Utility function for writing an indentation of a certain width.
+pub fn write_indent<W: io::Write>(sink: &mut W, indent: u64) -> Result {
     let bytes = vec![b' '; indent as usize];
     sink.write_all(&bytes)?;
 
     Ok(())
 }
 
-/// Macro to write a formatted string at a certain indentation level.
+/// Macro to write a formatted string at a certain indentation level as bytes.
 macro_rules! write_indented {
     ($sink: expr, $indent: expr, $($format_args: tt)*) => {
         {
@@ -35,4 +47,42 @@ macro_rules! write_indented {
             ($sink).write_all(formatted_string.as_bytes())
         }
     }
+}
+
+/// Macro to write a formatted string as bytes.
+macro_rules! write_no_indent {
+    ($sink: expr, $($format_args: tt)*) => {
+        {
+          let formatted_string = format!($($format_args)*);
+          ($sink).write_all(formatted_string.as_bytes())
+        }
+    }
+}
+
+/// Write an item definiton block with an initial type and name.
+pub fn codegen_block<W: io::Write, I: FnOnce(&mut W, u64) -> Result>(
+    sink: &mut W,
+    indent: u64,
+    item: Option<&str>,
+    name: &str,
+    interior: I,
+    trailing_char: Option<&str>,
+) -> Result {
+    write_indent(sink, indent)?;
+    item.map(|item| {
+        sink.write_all(item.as_bytes())?;
+        sink.write_all(" ".as_bytes())
+    })
+    .unwrap_or(Ok(()))?;
+    sink.write_all(name.as_bytes())?;
+    sink.write_all(" {".as_bytes())?;
+    write_newline(sink)?;
+
+    interior(sink, indent + 4)?;
+
+    write_indented!(sink, indent, "}}")?;
+    trailing_char
+        .map(|trailing_char| sink.write_all(trailing_char.as_bytes()))
+        .unwrap_or(Ok(()))?;
+    write_newline(sink)
 }

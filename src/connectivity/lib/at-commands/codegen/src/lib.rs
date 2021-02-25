@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 pub mod codegen {
-    mod common;
+    pub(crate) mod common;
     mod error;
     mod lower;
     mod raise;
