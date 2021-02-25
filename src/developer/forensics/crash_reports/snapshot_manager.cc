@@ -409,6 +409,15 @@ void SnapshotManager::DropArchive(SnapshotData* data) {
 
   current_archives_size_ -= data->archive_size;
   data->archive_size = StorageSize::Bytes(0u);
+
+  // If annotations still exist, add an annotation indicating the archive was garbage collected.
+  if (data->annotations) {
+    for (const auto& [k, v] : *garbage_collected_snapshot_.annotations) {
+      data->annotations->emplace(k, v);
+      data->annotations_size += StorageSize::Bytes(k.size()) + StorageSize::Bytes(v.size());
+      current_annotations_size_ += StorageSize::Bytes(k.size()) + StorageSize::Bytes(v.size());
+    }
+  }
 }
 
 bool SnapshotManager::UseLatestRequest() const {

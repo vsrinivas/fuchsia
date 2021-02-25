@@ -279,7 +279,7 @@ TEST_F(SnapshotManagerTest, Check_ArchivesMaxSizeIsEnforced) {
   SetUpDefaultDataProviderServer();
 
   // Initialize the manager to only hold a single default snapshot archive..
-  SetUpSnapshotManager(StorageSize::Bytes(0), StorageSize::Bytes(kDefaultArchiveKey.size()));
+  SetUpSnapshotManager(StorageSize::Megabytes(1), StorageSize::Bytes(kDefaultArchiveKey.size()));
 
   std::optional<std::string> uuid1{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
@@ -300,6 +300,15 @@ TEST_F(SnapshotManagerTest, Check_ArchivesMaxSizeIsEnforced) {
   ASSERT_TRUE(snapshot_manager_->GetSnapshot(uuid2.value()).LockArchive());
 
   EXPECT_FALSE(snapshot_manager_->GetSnapshot(uuid1.value()).LockArchive());
+  EXPECT_THAT(*(snapshot_manager_->GetSnapshot(uuid1.value()).LockAnnotations()),
+              UnorderedElementsAreArray({
+                  Pair("annotation.key.one", "annotation.value.one"),
+                  Pair("annotation.key.two", "annotation.value.two"),
+                  Pair("debug.snapshot.error", "garbage collected"),
+                  Pair("debug.snapshot.present", "false"),
+                  Pair("debug.snapshot.shared-request.num-clients", "1"),
+                  Pair("debug.snapshot.shared-request.uuid", uuid1.value().c_str()),
+              }));
 }
 
 TEST_F(SnapshotManagerTest, Check_Timeout) {
