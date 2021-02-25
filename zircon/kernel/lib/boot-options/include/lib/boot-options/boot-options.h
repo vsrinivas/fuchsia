@@ -107,6 +107,7 @@ struct BootOptions {
   OPTION_TYPE(bool);
   OPTION_TYPE(uint64_t);
   OPTION_TYPE(uint32_t);
+  OPTION_TYPE(uint8_t);
   OPTION_TYPE(SmallString);
   OPTION_TYPE(RedactedHex);
 #if BOOT_OPTIONS_TESTONLY_OPTIONS

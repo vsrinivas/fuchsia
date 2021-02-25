@@ -4,6 +4,19 @@ TODO([fxbug.dev/53594](https://fxbug.dev/53594)): move kernel_cmdline.md verbiag
 
 ## Options common to all machines
 
+### aslr.disable=\<bool>
+**Default:** `false`
+
+If this option is set, the system will not use Address Space Layout
+Randomization.
+
+### aslr.entropy_bits=\<uint8_t>
+**Default:** `0x1e`
+
+For address spaces that use ASLR this controls the number of bits of entropy in
+the randomization. Higher entropy results in a sparser address space and uses
+more memory for page tables. Valid values range from 0-36.
+
 ### kernel.entropy-mixin=\<hexadecimal>
 
 Provides entropy to be mixed into the kernel's CPRNG.  The value must be a

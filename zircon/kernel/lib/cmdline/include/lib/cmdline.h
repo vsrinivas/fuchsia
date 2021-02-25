@@ -124,8 +124,6 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
-static constexpr const char kAslrDisable[] = "aslr.disable";
-static constexpr const char kAslrEntropyBits[] = "aslr.entropy_bits";
 static constexpr const char kBufferchainReservePages[] = "kernel.bufferchain.reserve-pages";
 static constexpr const char kBypassDebuglog[] = "kernel.bypass-debuglog";
 static constexpr const char kCprngReseedRequireHwRng[] = "kernel.cprng-reseed-require.hw-rng";

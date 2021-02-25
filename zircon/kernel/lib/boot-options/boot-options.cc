@@ -300,6 +300,12 @@ void BootOptions::Parse(std::string_view value, uint32_t BootOptions::*member) {
 
 void BootOptions::PrintValue(const uint32_t& value, FILE* out) { fprintf(out, "%#" PRIx32, value); }
 
+void BootOptions::Parse(std::string_view value, uint8_t BootOptions::*member) {
+  ParseIntValue(value, this->*member);
+}
+
+void BootOptions::PrintValue(const uint8_t& value, FILE* out) { fprintf(out, "%#" PRIx8, value); }
+
 void BootOptions::Parse(std::string_view value, SmallString BootOptions::*member) {
   SmallString& result = this->*member;
   size_t wrote = value.copy(&result[0], result.size());

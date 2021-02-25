@@ -8,7 +8,7 @@
 #include <align.h>
 #include <assert.h>
 #include <inttypes.h>
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
 #include <lib/userabi/vdso.h>
@@ -47,10 +47,6 @@ VmAspace* VmAspace::kernel_aspace_ = nullptr;
 struct VmAspaceListGlobal {};
 static DECLARE_MUTEX(VmAspaceListGlobal) aspace_list_lock;
 static fbl::DoublyLinkedList<VmAspace*> aspaces TA_GUARDED(aspace_list_lock);
-
-// This is the default bits of entropy that will be used for ASLR if it is enabled. If this is
-// changed then the constant in the kernel_cmdline.md should also be updated.
-static constexpr uint32_t kDefaultASLREntropy = 30;
 
 // Called once at boot to initialize the singleton kernel address
 // space. Thread safety analysis is disabled since we don't need to
@@ -640,12 +636,12 @@ size_t VmAspace::AllocatedPages() const {
 }
 
 void VmAspace::InitializeAslr() {
-  aslr_enabled_ = is_user() && !gCmdline.GetBool(kernel_option::kAslrDisable, false);
+  // As documented in //docs/gen/boot-options.md.
+  static constexpr uint8_t kMaxAslrEntropy = 36;
 
+  aslr_enabled_ = is_user() && !gBootOptions->aslr_disabled;
   if (aslr_enabled_) {
-    aslr_entropy_bits_ = ktl::min(static_cast<uint8_t>(gCmdline.GetUInt32(
-                                      kernel_option::kAslrEntropyBits, kDefaultASLREntropy)),
-                                  (uint8_t)36);
+    aslr_entropy_bits_ = ktl::min(gBootOptions->aslr_entropy_bits, kMaxAslrEntropy);
     aslr_compact_entropy_bits_ = 8;
   }
 

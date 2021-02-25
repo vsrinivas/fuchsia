@@ -13,6 +13,17 @@
 // See boot-options.h for admonitions about what kinds of types can be used, as
 // well as test-optons.inc for basic examples.
 
+DEFINE_OPTION("aslr.disable", bool, aslr_disabled, {false}, R"""(
+If this option is set, the system will not use Address Space Layout
+Randomization.
+)""")
+
+DEFINE_OPTION("aslr.entropy_bits", uint8_t, aslr_entropy_bits, {30}, R"""(
+For address spaces that use ASLR this controls the number of bits of entropy in
+the randomization. Higher entropy results in a sparser address space and uses
+more memory for page tables. Valid values range from 0-36.
+)""")
+
 // RedactedHex parses an arbitrary-length (but bounded like SmallString) string
 // of ASCII hex digits, and then overwrites those digits in the original
 // command line text in the ZBI's physical memory so the entropy_mixin string
