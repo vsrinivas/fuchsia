@@ -69,7 +69,7 @@ enum SemanticKeyAction : uint32 {
     END = 0x00000025;
 
     /// The Home key, used with keyboard entry, to go to start of content.
-    /// For the mobile phone Home key (which goes to the phone’s main screen),
+    /// For the mobile phone Home key (which goes to the phone's main screen),
     /// use "GO_HOME".
     HOME = 0x00000026;
 
@@ -147,7 +147,7 @@ enum SemanticKeyAction : uint32 {
     // UI Keys
     // Reserved range: 0x00000081 - 0x000000B0
 
-    /// Show the application’s context menu.
+    /// Show the application's context menu.
     /// This key is commonly found between the right Meta key and the right
     /// Control key.
     CONTEXT_MENU = 0x00000081;
@@ -163,6 +163,6 @@ enum SemanticKeyAction : uint32 {
     /// The Back key.
     GO_BACK = 0x000000B1;
 
-    /// The Home key, which goes to the phone’s main screen.
+    /// The Home key, which goes to the phone's main screen.
     GO_HOME = 0x000000B2;
 };

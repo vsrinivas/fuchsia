@@ -77,7 +77,7 @@ table ScoConnectionParameters {
     /// The data format over the transport for linear samples.
     /// Ignored for non-linear coding formats.
     /// Optional.
-    /// SIGNED indicates 2’s complement sign encoding.
+    /// SIGNED indicates 2's complement sign encoding.
     /// FLOAT is not supported.
     7: fuchsia.hardware.audio.SampleFormat io_pcm_data_format;
 

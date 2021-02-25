@@ -69,7 +69,7 @@ struct Compression {
     /// because those encodings are regarded as uncompressed.
     CompressionType type;
 
-    /// Type-specific, opaque ‘out-of-band’ parameters describing the compression of the stream.
+    /// Type-specific, opaque 'out-of-band' parameters describing the compression of the stream.
     bytes:8192? parameters;
 };
 

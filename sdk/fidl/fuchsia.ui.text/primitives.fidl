@@ -25,7 +25,7 @@ struct Position {
 /// A zero-length selection is a caret. Affinity only has an effect on carets.
 ///
 /// Even in mixed RTL and LTR text situations, a selection is still just the
-/// string-wise slice between `focus` and `anchor` — graphical representations
+/// string-wise slice between `focus` and `anchor` - graphical representations
 /// of selections flip directions when crossing the RTL/LTR boundary, but no
 /// special code is needed to handle crossing the boundary in the model.
 struct Selection {

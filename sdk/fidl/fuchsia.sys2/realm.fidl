@@ -19,7 +19,7 @@ protocol Realm {
     /// running and `exposed_dir` is bound to a directory that contains the
     /// capabilities which the child exposed to its realm via
     /// `ComponentDecl.exposes` (specified via "expose" declarations in the
-    /// component’s manifest).
+    /// component's manifest).
     ///
     /// `exposed_dir` is a valid channel as long as `child` is running. `child`
     /// will remain running until it either stops on its own, or `DestroyChild`

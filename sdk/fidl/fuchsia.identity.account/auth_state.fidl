@@ -41,7 +41,7 @@ enum ThreatScenario {
     /// No attackers are considered.
     NONE = 1;
 
-    /// People that may typically and frequently gain access to a user’s device
+    /// People that may typically and frequently gain access to a user's device
     /// are considered. Examples include nefarious roommates, coworkers,
     /// houseguests, family members, or thieves. We assume limited technical
     /// skills and/or motivation and commonly available technology.

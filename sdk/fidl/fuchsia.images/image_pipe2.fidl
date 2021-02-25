@@ -74,7 +74,7 @@ protocol ImagePipe2 {
     ///
     /// The producer is expected to set constraints on this resource for images added
     /// via `AddImage()`. The consumer can set its constraints on
-    /// `buffer_collection_token` before or after. Note that the buffers won’t be
+    /// `buffer_collection_token` before or after. Note that the buffers won't be
     /// allocated until all BufferCollectionToken instances are used to set
     /// constraints, on both the producer and consumer side. See collection.fidl for
     /// details.
@@ -154,10 +154,10 @@ protocol ImagePipe2 {
     /// and future frames (see presentation_info.fidl).
     ///
     /// The producer may decide not to signal `acquire_fences` for an image.
-    /// In that case, if a later image is enqueued and later image’s
+    /// In that case, if a later image is enqueued and later image's
     /// `presentation_time` is reached, the consumer presents the later image when
-    /// later image’s `acquire_fences` are signaled. The consumer also signals
-    /// earlier image’s `release_fences` and removes it from the presentation queue.
+    /// later image's `acquire_fences` are signaled. The consumer also signals
+    /// earlier image's `release_fences` and removes it from the presentation queue.
     /// This sequence works as a cancellation mechanism.
     ///
     /// The following errors will cause the connection to be closed:

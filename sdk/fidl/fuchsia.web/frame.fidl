@@ -329,7 +329,7 @@ protocol Frame {
     /// service. If the service is not available, the [`Frame`] will disconnect with
     /// `ZX_ERR_INVALID_ARGS`.
     /// Valid themes are `LIGHT`, `DARK`, and `AUTO`. The default color scheme is `LIGHT`.
-    /// If `DEFAULT is specified, the [`Frame`] will disconnect with `ZX_ERR_INVALID_ARGS`.
+    /// If `DEFAULT` is specified, the [`Frame`] will disconnect with `ZX_ERR_INVALID_ARGS`.
     [Transitional]
     SetPreferredTheme(fuchsia.settings.ThemeType theme);
 };

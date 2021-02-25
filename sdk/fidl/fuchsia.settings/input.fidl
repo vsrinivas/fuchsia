@@ -87,13 +87,13 @@ table DeviceState {
     1: ToggleStateFlags toggle_flags;
 };
 
-/// Describes what the |source|’s |state| is.
+/// Describes what the |source|'s |state| is.
 table SourceState {
     1: DeviceStateSource source;
     2: DeviceState state;
 };
 
-/// A subset of |DeviceState|’s properties that clients may pass to change the
+/// A subset of |DeviceState|'s properties that clients may pass to change the
 /// software state of an InputDevice.
 table InputState {
     1: string:MAX name;

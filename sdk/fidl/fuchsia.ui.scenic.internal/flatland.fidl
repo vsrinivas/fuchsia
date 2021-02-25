@@ -32,7 +32,7 @@ enum Orientation {
 /// provided to the client before the command that creates the Link is presented, so that the client
 /// may lay out content properly before their first call to Present().
 table LayoutInfo {
-    /// The layout size of a Graph in logical pixels, defined by the parent’s call to
+    /// The layout size of a Graph in logical pixels, defined by the parent's call to
     /// SetLinkProperties(). Clients should re-layout their content when this value changes.
     1: Vec2 logical_size;
     /// The ratio from physical display pixels to logical pixels, defined by the sizes and scale
@@ -283,7 +283,7 @@ protocol Flatland {
     // Transform management
 
     /// Adds a child Transform to a parent Transform. The new child Transform, and any Content
-    /// attached to it or its children, will be rendered on top of the parent’s Content, as well as
+    /// attached to it or its children, will be rendered on top of the parent's Content, as well as
     /// any previously added children.
     AddChild(TransformId parent_transform_id, TransformId child_transform_id);
 

@@ -492,7 +492,7 @@ protocol Directory {
 
     /// Adds a new inotify filter for an object relative to this directory object.
     ///
-    /// 'filters` is a mask of different inotify events that need to be watched by the server
+    /// `filters` is a mask of different inotify events that need to be watched by the server
     /// for a specific file/directory.
     /// `path` may contain multiple segments, separated by "/" characters,
     /// and should never be empty; i.e., "" is an invalid path. Paths should not contain

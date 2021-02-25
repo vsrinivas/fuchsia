@@ -18,7 +18,7 @@ flexible union Ref {
     7: DebugRef debug;
 };
 
-/// A reference to a component’s parent instance.
+/// A reference to a component's parent instance.
 struct ParentRef {
 };
 

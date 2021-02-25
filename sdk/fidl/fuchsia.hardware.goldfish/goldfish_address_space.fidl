@@ -80,7 +80,7 @@ protocol AddressSpaceChildDriver {
     /// larger region managed by hardware.  It is possible to share the same
     /// regions across different connections, but within a connection, we
     /// require the claimed regions to be disjoint. Otherwise,
-    /// `ZX_ERROR_INVALID_ARGS1 is returned.
+    /// `ZX_ERROR_INVALID_ARGS1` is returned.
     ClaimSharedBlock(uint64 offset, uint64 size) -> (zx.status res, zx.handle:VMO? vmo);
 
     /// Unclaim a hardware-shared region. This must correspond to an existing 

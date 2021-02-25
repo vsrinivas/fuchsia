@@ -28,7 +28,7 @@ table ComponentDecl {
     /// The exposed capabilities must be unique and non-overlapping.
     3: vector<ExposeDecl> exposes;
 
-    /// List of capabilities offered to the component’s children. These consist
+    /// List of capabilities offered to the component's children. These consist
     /// of capabilities that the given children may `use`, which may come from a
     /// child, the parent, or the component's own outgoing namespace.
     ///

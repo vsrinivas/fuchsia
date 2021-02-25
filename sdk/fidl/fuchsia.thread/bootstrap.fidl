@@ -27,7 +27,7 @@ protocol Bootstrap {
     /// 2 bytes of key1, 2 bytes of value_len1, 'value_len1' bytes of 'value1',
     /// 2 bytes of key2, 2 bytes of value_len2, 'value_len2' bytes of 'value2',
     /// 2 bytes of key1, 2 bytes of value_len3, 'value_len3' bytes of 'value3',
-    /// 2 bytes of key2, 2 bytes of value_len4, 'value_len4' bytes of 'value4.
+    /// 2 bytes of key2, 2 bytes of value_len4, 'value_len4' bytes of 'value4'.
     /// The POSIX binary file is simply a sequence of bytes and allows for
     /// duplicate keys. This is converted to json format above with values
     /// transformed as:

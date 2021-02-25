@@ -65,7 +65,7 @@ table KeyEvent {
     ///
     /// Use this value for the following purposes:
     /// - typing text when implementing an input method editor (IME) or when IME services
-    ///   are not available (this won’t work for languages that require composition)
+    ///   are not available (this won't work for languages that require composition)
     ///
     /// The input system derives this value from the combination of `physical_key` and
     /// `modifiers` by consulting the key symbol map of `KeyboardLayout` that was active
@@ -81,6 +81,6 @@ table KeyEvent {
     /// - synthesizing input events into virtual machines, since VMs will do own layout mapping
     ///
     /// The input system derives this value from the data reported by the keyboard itself
-    /// without taking into account the keyboard’s current `KeyboardLayout` or modifiers.
+    /// without taking into account the keyboard's current `KeyboardLayout` or modifiers.
     5: PhysicalKey physical_key;
 };
