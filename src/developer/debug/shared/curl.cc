@@ -53,7 +53,8 @@ class Curl::Impl final : public debug_ipc::FDWatcher, public fxl::RefCountedThre
   std::map<curl_socket_t, debug_ipc::MessageLoop::WatchHandle> watches_;
   // Indicates whether we already have a task posted to read the messages from multi_handler_.
   bool cleanup_pending_ = false;
-  // Used in TimerCallback to avoid scheduling 2 timers and invalidate timers after destruction.
+  // Used in TimerCallback to avoid scheduling 2 timers and invalidate timers after destruction,
+  // because currently there's no way to cancel a timer from the message loop.
   std::shared_ptr<bool> last_timer_valid_ = std::make_shared<bool>(false);
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Impl);
@@ -157,6 +158,8 @@ int Curl::Impl::TimerCallback(CURLM* multi, long timeout_ms, void* /*userp*/) {
   }
 
   instance_->last_timer_valid_ = std::make_shared<bool>(true);
+  // It's possible to use PostTask instead of PostTimer if timeout_ms is 0. DO NOT call
+  // curl_multi_socket_action directly!
   debug_ipc::MessageLoop::Current()->PostTimer(
       FROM_HERE, timeout_ms, [multi, valid = instance_->last_timer_valid_]() {
         if (!*valid) {
@@ -268,6 +271,17 @@ void Curl::PrepareToPerform() {
   curl_easy_setopt_CHECK(curl_, CURLOPT_HEADERDATA, this);
   curl_easy_setopt_CHECK(curl_, CURLOPT_WRITEFUNCTION, DoDataCallback);
   curl_easy_setopt_CHECK(curl_, CURLOPT_WRITEDATA, this);
+
+  // We don't want to set a hard timeout on the request, as the symbol file might be extremely large
+  // and the downloading might take arbitrary time.
+  // The default connect timeout is 300s, which is too long for today's network.
+  curl_easy_setopt_CHECK(curl_, CURLOPT_CONNECTTIMEOUT, 10L);
+  // Curl will install some signal handler for SIGPIPE which causes a segfault if NOSIGNAL is unset.
+  curl_easy_setopt_CHECK(curl_, CURLOPT_NOSIGNAL, 1L);
+  // Abort if slower than 1 bytes/sec during 10 seconds. Ideally we want a read timeout.
+  // This will install a lot of timers (one for each read() call) to the message loop.
+  curl_easy_setopt_CHECK(curl_, CURLOPT_LOW_SPEED_LIMIT, 1L);
+  curl_easy_setopt_CHECK(curl_, CURLOPT_LOW_SPEED_TIME, 10L);
 
   // API documentation specifies "A long value of 1" enables this option, so we convert very
   // specifically. Why take chances on sensible behavior?
