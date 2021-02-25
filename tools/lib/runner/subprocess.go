@@ -28,11 +28,18 @@ type SubprocessRunner struct {
 // which case the subprocess is killed so that no subprocesses it spun up are
 // orphaned.
 func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
+	return r.RunWithStdin(ctx, command, stdout, stderr, nil)
+}
+
+// RunWithStdin operates identically to Run, but additionally pipes input to the
+// process via stdin.
+func (r *SubprocessRunner) RunWithStdin(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
 	cmd := exec.Cmd{
 		Path:   command[0],
 		Args:   command,
 		Stdout: stdout,
 		Stderr: stderr,
+		Stdin:  stdin,
 		Dir:    r.Dir,
 		Env:    r.Env,
 		// Set a process group ID so we can kill the entire group,

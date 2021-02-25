@@ -28,7 +28,11 @@ type fakeSubprocessRunner struct {
 
 var errSubprocessFailure = errors.New("exit status 1")
 
-func (r *fakeSubprocessRunner) Run(_ context.Context, cmd []string, stdout, _ io.Writer) error {
+func (r *fakeSubprocessRunner) Run(ctx context.Context, cmd []string, stdout, stderr io.Writer) error {
+	return r.RunWithStdin(ctx, cmd, stdout, stderr, nil)
+}
+
+func (r *fakeSubprocessRunner) RunWithStdin(_ context.Context, cmd []string, stdout, _ io.Writer, _ io.Reader) error {
 	r.commandsRun = append(r.commandsRun, cmd)
 	stdout.Write(r.mockStdout)
 	if r.fail {
@@ -184,10 +188,10 @@ func TestRunGen(t *testing.T) {
 				t.Errorf("runGen produced the wrong failure output: %q, expected %q", failureSummary, runner.mockStdout)
 			}
 
-			if len(runner.commandsRun) != 1 {
-				t.Fatalf("Expected runGen to run one command, but it ran %d", len(runner.commandsRun))
+			if len(runner.commandsRun) != 2 {
+				t.Fatalf("Expected runGen to run two commands, but it ran %d", len(runner.commandsRun))
 			}
-			cmd := runner.commandsRun[0]
+			cmd := runner.commandsRun[1]
 			if len(cmd) < 4 {
 				t.Fatalf("runGen ran wrong command: %v", cmd)
 			}
@@ -240,7 +244,6 @@ func TestToGNValue(t *testing.T) {
 }
 
 func TestGenArgs(t *testing.T) {
-	platform := "linux-x64"
 	// Magic strings that will be replaced with the actual paths to mock
 	// checkout and build dirs before making any assertions.
 	checkoutDir := "$CHECKOUT_DIR"
@@ -507,7 +510,7 @@ func TestGenArgs(t *testing.T) {
 				}
 			}
 
-			args, err := genArgs(tc.staticSpec, tc.contextSpec, platform)
+			args, err := genArgs(tc.staticSpec, tc.contextSpec)
 			if err != nil {
 				if tc.expectErr {
 					return

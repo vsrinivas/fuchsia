@@ -11,4 +11,5 @@ import (
 
 type subprocessRunner interface {
 	Run(ctx context.Context, cmd []string, stdout, stderr io.Writer) error
+	RunWithStdin(ctx context.Context, cmd []string, stdout, stderr io.Writer, stdin io.Reader) error
 }

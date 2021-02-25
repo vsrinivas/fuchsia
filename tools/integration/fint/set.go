@@ -48,7 +48,7 @@ func runSteps(
 	if contextSpec.BuildDir == "" {
 		return nil, fmt.Errorf("build_dir must be set")
 	}
-	genArgs, err := genArgs(staticSpec, contextSpec, platform)
+	genArgs, err := genArgs(staticSpec, contextSpec)
 	if err != nil {
 		return nil, err
 	}
@@ -96,8 +96,12 @@ func runGen(
 	gnTracePath string,
 	args []string,
 ) (genStdout string, err error) {
+	gn := thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "gn")
+
+	formattedArgs := gnFormat(ctx, gn, runner, args)
+
 	genCmd := []string{
-		thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "gn"),
+		gn,
 		"gen",
 		contextSpec.BuildDir,
 		"--check=system",
@@ -125,7 +129,7 @@ func runGen(
 		genCmd = append(genCmd, fmt.Sprintf("--json-ide-script=%s", s))
 	}
 
-	genCmd = append(genCmd, fmt.Sprintf("--args=%s", strings.Join(args, " ")))
+	genCmd = append(genCmd, fmt.Sprintf("--args=\n%s", formattedArgs))
 
 	// When `gn gen` fails, it outputs a brief helpful error message to stdout.
 	var stdoutBuf bytes.Buffer
@@ -135,7 +139,7 @@ func runGen(
 	return stdoutBuf.String(), nil
 }
 
-func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform string) ([]string, error) {
+func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, error) {
 	// GN variables to set via args (mapping from variable name to value).
 	vars := make(map[string]interface{})
 	// GN list variables to which we want to append via args (mapping from
@@ -288,6 +292,22 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform st
 	finalArgs = append(finalArgs, "if (!defined(zircon_extra_args)) { zircon_extra_args = {} }")
 	finalArgs = append(finalArgs, normalArgs...)
 	return finalArgs, nil
+}
+
+// gnFormat makes a best-effort attempt to format the input arguments using `gn
+// format` so that the output will be more readable in case of any errors like
+// unknown variables. If formatting fails (e.g. due to a syntax error) we'll
+// just return the unformatted args and let `gn gen` return an error; otherwise
+// we'd need duplicated error handling code to handle both syntax errors from
+// `gn format` and non-syntax errors from `gn gen`.
+func gnFormat(ctx context.Context, gn string, runner subprocessRunner, args []string) string {
+	var output bytes.Buffer
+	unformatted := strings.Join(args, "\n")
+	input := strings.NewReader(unformatted)
+	if err := runner.RunWithStdin(ctx, []string{gn, "format", "--stdin"}, &output, nil, input); err != nil {
+		return unformatted
+	}
+	return output.String()
 }
 
 // toGNValue converts a Go value to a string representation of the corresponding
