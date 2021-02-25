@@ -549,6 +549,7 @@ pub struct Bucket<T> {
     pub floor: T,
 
     /// The ceiling of the bucket range.
+    #[serde(alias = "upper_bound")]
     pub ceiling: T,
 
     /// The number of items in this bucket.
@@ -613,7 +614,7 @@ impl<T: Add<Output = T> + AddAssign + Copy + MulAssign + Bounded> ArrayContent<T
 
     fn buckets_for_exp_hist(values: Vec<T>) -> Result<Vec<Bucket<T>>, Error> {
         // Check that the minimum required values are available:
-        // floor, initial step, step multiplier, underflow, bucket 0, underflow
+        // floor, initial step, step multiplier, underflow, bucket 0, overflow
         if values.len() < 6 {
             return Err(Error::missing_histogram_elements(
                 ArrayFormat::ExponentialHistogram,
@@ -1160,6 +1161,99 @@ mod tests {
                 Bucket { floor: 3.0, ceiling: 11.0, count: 11.0 },
                 Bucket { floor: 11.0, ceiling: std::f64::MAX, count: 15.0 },
         ]);
+    }
+
+    #[test]
+    fn deserialize_buckets() -> Result<(), serde_json::Error> {
+        let json_string = r#"{
+            "root": {
+                "histogram": {
+                  "buckets": [
+                    {
+                      "count": 4,
+                      "floor": -9223372036854775808,
+                      "ceiling": 0
+                    },
+                    {
+                      "count": 1,
+                      "floor": 0,
+                      "upper_bound": 2
+                    },
+                    {
+                      "count": 3,
+                      "floor": 2,
+                      "ceiling": 9223372036854775807
+                    }
+                  ]
+                }
+            }
+          }"#;
+        let json_bad_missing_field = r#"{
+            "root": {
+                "histogram": {
+                  "buckets": [
+                    {
+                      "count": 4,
+                      "floor": -9223372036854775808
+                    },
+                    {
+                      "count": 1,
+                      "floor": 0,
+                      "upper_bound": 2
+                    },
+                    {
+                      "count": 3,
+                      "floor": 2,
+                      "ceiling": 9223372036854775807
+                    }
+                  ]
+                }
+            }
+          }"#;
+        let json_bad_extra_field = r#"{
+            "root": {
+                "histogram": {
+                  "buckets": [
+                    {
+                      "count": 4,
+                      "floor": -9223372036854775808,
+                      "ceiling": 0,
+                      "upper_bound": 0
+                    },
+                    {
+                      "count": 1,
+                      "floor": 0,
+                      "upper_bound": 2
+                    },
+                    {
+                      "count": 3,
+                      "floor": 2,
+                      "ceiling": 9223372036854775807
+                    }
+                  ]
+                }
+            }
+          }"#;
+
+        let expected_hierarchy = DiagnosticsHierarchy::new(
+            "root".to_string(),
+            vec![Property::IntArray(
+                "histogram".to_string(),
+                ArrayContent::new(vec![0, 2, 4, 1, 3], ArrayFormat::LinearHistogram).unwrap(),
+            )],
+            vec![],
+        );
+        let parsed_hierarchy: DiagnosticsHierarchy =
+            serde_json::from_value(serde_json::from_str(json_string)?)?;
+        let missing_hierarchy: Result<DiagnosticsHierarchy, serde_json::Error> =
+            serde_json::from_value(serde_json::from_str(json_bad_missing_field)?);
+        let extra_hierarchy: Result<DiagnosticsHierarchy, serde_json::Error> =
+            serde_json::from_value(serde_json::from_str(json_bad_extra_field)?);
+
+        assert_eq!(expected_hierarchy, parsed_hierarchy);
+        assert_matches!(missing_hierarchy, Err(_));
+        assert_matches!(extra_hierarchy, Err(_));
+        Ok(())
     }
 
     #[test]
