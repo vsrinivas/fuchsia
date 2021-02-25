@@ -32,6 +32,7 @@ use std::rc::Rc;
 
 /// Path to the CrashReporter service.
 const CRASH_REPORTER_SVC: &'static str = "/svc/fuchsia.feedback.CrashReporter";
+type GetProxyFn = Box<dyn Fn() -> Result<fidl_feedback::CrashReporterProxy, anyhow::Error>>;
 
 /// The maximum number of pending crash report requests. This is needed because the FIDL API to file
 /// a crash report does not return until the crash report has been fully generated, which can take
@@ -42,18 +43,21 @@ const MAX_PENDING_CRASH_REPORTS: usize = 5;
 
 /// A builder for constructing the CrashReportHandler node.
 pub struct CrashReportHandlerBuilder {
-    proxy: Option<fidl_feedback::CrashReporterProxy>,
+    get_proxy_fn: GetProxyFn,
     max_pending_crash_reports: usize,
 }
 
 impl CrashReportHandlerBuilder {
     pub fn new() -> Self {
-        Self { proxy: None, max_pending_crash_reports: MAX_PENDING_CRASH_REPORTS }
+        Self {
+            get_proxy_fn: Box::new(default_get_proxy_fn),
+            max_pending_crash_reports: MAX_PENDING_CRASH_REPORTS,
+        }
     }
 
     #[cfg(test)]
-    pub fn with_proxy(mut self, proxy: fidl_feedback::CrashReporterProxy) -> Self {
-        self.proxy = Some(proxy);
+    pub fn with_proxy_fn(mut self, proxy: GetProxyFn) -> Self {
+        self.get_proxy_fn = proxy;
         self
     }
 
@@ -64,19 +68,19 @@ impl CrashReportHandlerBuilder {
     }
 
     pub fn build(self) -> Result<Rc<CrashReportHandler>, Error> {
-        // Connect to the CrashReporter service if a proxy wasn't specified
-        let proxy = if self.proxy.is_some() {
-            self.proxy.unwrap()
-        } else {
-            connect_proxy::<fidl_feedback::CrashReporterMarker>(&CRASH_REPORTER_SVC.to_string())?
-        };
-
         // Set up the crash report sender that runs asynchronously
         let (channel, receiver) = mpsc::channel(self.max_pending_crash_reports);
-        CrashReportHandler::begin_crash_report_sender(proxy, receiver);
 
+        // Connect to Crash Reporter service only on demand - when there is a thermal event
+        CrashReportHandler::begin_crash_report_sender(self.get_proxy_fn, receiver);
         Ok(Rc::new(CrashReportHandler { crash_report_sender: RefCell::new(channel) }))
     }
+}
+
+pub fn default_get_proxy_fn() -> Result<fidl_feedback::CrashReporterProxy, anyhow::Error> {
+    let proxy = connect_proxy::<fidl_feedback::CrashReporterMarker>(&CRASH_REPORTER_SVC.to_string())
+        .map_err(|e| anyhow::format_err!("Failed to connect to crash reporter svc: {}", e))?;
+    Ok(proxy)
 }
 
 pub struct CrashReportHandler {
@@ -113,13 +117,13 @@ impl CrashReportHandler {
     /// proxy to send a File FIDL request to the CrashReporter service with the specified
     /// signatures.
     fn begin_crash_report_sender(
-        proxy: fidl_feedback::CrashReporterProxy,
+        get_proxy_fn: GetProxyFn,
         mut receive_channel: mpsc::Receiver<String>,
     ) {
         fasync::Task::local(async move {
             while let Some(signature) = receive_channel.next().await {
                 log_if_err!(
-                    Self::send_crash_report(&proxy, signature).await,
+                    Self::send_crash_report(&get_proxy_fn, signature).await,
                     "Failed to file crash report"
                 );
             }
@@ -128,17 +132,14 @@ impl CrashReportHandler {
     }
 
     /// Send a File request to the CrashReporter service with the specified crash report signature.
-    async fn send_crash_report(
-        proxy: &fidl_feedback::CrashReporterProxy,
-        signature: String,
-    ) -> Result<(), Error> {
+    async fn send_crash_report(get_proxy_fn: &GetProxyFn, signature: String) -> Result<(), Error> {
         let report = fidl_feedback::CrashReport {
             program_name: Some(CrashReportHandler::DEFAULT_PROGRAM_NAME.to_string()),
             crash_signature: Some(signature),
             ..fidl_feedback::CrashReport::EMPTY
         };
-
-        let result = proxy.file(report).await.map_err(|e| format_err!("IPC error: {}", e))?;
+        let result =
+            get_proxy_fn()?.file(report).await.map_err(|e| format_err!("IPC error: {}", e))?;
         result.map_err(|e| format_err!("Service error: {}", e))
     }
 }
@@ -162,8 +163,9 @@ impl Node for CrashReportHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::TryStreamExt;
+    use futures::{TryStreamExt, poll};
     use matches::assert_matches;
+    use std::task::Poll;
 
     /// Tests that the node responds to the FileCrashReport message and that the expected crash
     /// report is received by the CrashReporter service.
@@ -176,8 +178,10 @@ mod tests {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_feedback::CrashReporterMarker>()
                 .unwrap();
-        let crash_report_handler =
-            CrashReportHandlerBuilder::new().with_proxy(proxy).build().unwrap();
+        let crash_report_handler = CrashReportHandlerBuilder::new()
+            .with_proxy_fn(Box::new(move || Ok(proxy.clone())))
+            .build()
+            .unwrap();
 
         // File a crash report
         crash_report_handler
@@ -213,7 +217,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_feedback::CrashReporterMarker>()
                 .unwrap();
         let crash_report_handler = CrashReportHandlerBuilder::new()
-            .with_proxy(proxy)
+            .with_proxy_fn(Box::new(move || Ok(proxy.clone())))
             .with_max_pending_crash_reports(1)
             .build()
             .unwrap();
@@ -290,5 +294,46 @@ mod tests {
         // Verify there are no more crash reports. Use `run_until_stalled` because `next` is
         // expected to block until a new crash report is ready, which shouldn't happen here.
         assert!(exec.run_until_stalled(&mut stream.next()).is_pending());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_crash_report_channel_closure() {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_feedback::CrashReporterMarker>()
+                .unwrap();
+        let crash_report_handler = CrashReportHandlerBuilder::new()
+            .with_proxy_fn(Box::new(move || Ok(proxy.clone())))
+            .build()
+            .unwrap();
+
+        // File a crash report
+        crash_report_handler
+            .handle_message(&Message::FileCrashReport("TestCrashReportSvcChannelClosure".to_string()))
+            .await
+            .unwrap();
+
+        // Verify the fake service receives the crash report with expected data
+        if let Ok(Some(fidl_feedback::CrashReporterRequest::File { responder: _, report })) =
+            stream.try_next().await
+        {
+            assert_eq!(
+                report,
+                fidl_feedback::CrashReport {
+                    program_name: Some("device".to_string()),
+                    crash_signature: Some("TestCrashReportSvcChannelClosure".to_string()),
+                    ..fidl_feedback::CrashReport::EMPTY
+                }
+            );
+        } else {
+            panic!("Did not receive a crash report");
+        }
+
+        // verify channel is closed
+        let poll_result = poll!(stream.next());
+        match poll_result {
+            Poll::Ready(None) => {},
+            Poll::Pending => panic!("channel expected to be closed"),
+            Poll::Ready(_) => panic!("channel expected to be closed"),
+        }
     }
 }
