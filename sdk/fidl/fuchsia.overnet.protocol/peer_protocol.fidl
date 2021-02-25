@@ -74,28 +74,6 @@ table PeerDescription {
     1: vector<string:MAX_SERVICE_NAME_LENGTH>:MAX services;
 };
 
-/// Metrics associated with a link.
-/// Note that a link is a uni-directional connection between two nodes.
-table LinkMetrics {
-    /// Current round trip time for requests across this link in microseconds.
-    1: uint64 round_trip_time;
-};
-
-/// Status packet for a single link. A link is a unidirectional connection
-/// between two peers, and is owned by the first peer. The target node is
-/// identified by `to`.
-struct LinkStatus {
-    /// Link target node.
-    NodeId to;
-    /// An identifier (chosen by the link owner) to label this link.
-    /// The link owner must guarantee that the tuple (to, local_id) is unique
-    /// for each of it's held links.
-    LinkId local_id;
-
-    /// Metrics associated with this link.
-    LinkMetrics metrics;
-};
-
 /// Stream control message: sent instead of usual stream frames if the frame
 /// type is 1 (StreamControl).
 /// TODO: consider defining the stream framing format in FIDL also.
