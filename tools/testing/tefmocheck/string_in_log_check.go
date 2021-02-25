@@ -170,17 +170,18 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 			{startString: "RUN   TestOOMHard", endString: "PASS: TestOOMHard"},
 		}})
 		ret = append(ret, &stringInLogCheck{String: "SUMMARY: UndefinedBehaviorSanitizer", Type: lt})
-		ret = append(ret, &stringInLogCheck{
-			String: "ZIRCON KERNEL OOPS",
-			Type:   lt,
-			ExceptBlocks: []*logBlock{
-				{startString: " lock_dep_dynamic_analysis_tests ", endString: " lock_dep_static_analysis_tests "},
-				{startString: "RUN   TestKillCriticalProcess", endString: ": TestKillCriticalProcess"},
-				{startString: "RUN   TestKernelLockupDetectorCriticalSection", endString: ": TestKernelLockupDetectorCriticalSection"},
-				{startString: "RUN   TestKernelLockupDetectorHeartbeat", endString: ": TestKernelLockupDetectorHeartbeat"},
-				{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: ": TestPmmCheckerOopsAndPanic"},
-			},
-		})
+
+		oopsExceptBlocks := []*logBlock{
+			{startString: " lock_dep_dynamic_analysis_tests ", endString: " lock_dep_static_analysis_tests "},
+			{startString: "RUN   TestKillCriticalProcess", endString: ": TestKillCriticalProcess"},
+			{startString: "RUN   TestKernelLockupDetectorCriticalSection", endString: ": TestKernelLockupDetectorCriticalSection"},
+			{startString: "RUN   TestKernelLockupDetectorHeartbeat", endString: ": TestKernelLockupDetectorHeartbeat"},
+			{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: ": TestPmmCheckerOopsAndPanic"},
+		}
+		// Match specific OOPS types before finally matching the generic type.
+		ret = append(ret, &stringInLogCheck{String: "lockup_detector: no heartbeat from", Type: lt, ExceptBlocks: oopsExceptBlocks})
+		ret = append(ret, &stringInLogCheck{String: "ZIRCON KERNEL OOPS", Type: lt, ExceptBlocks: oopsExceptBlocks})
+
 		ret = append(ret, &stringInLogCheck{String: "ZIRCON KERNEL PANIC", Type: lt, ExceptBlocks: []*logBlock{
 			// These tests intentionally trigger kernel panics.
 			{startString: "RUN   TestBasicCrash", endString: "PASS: TestBasicCrash"},
