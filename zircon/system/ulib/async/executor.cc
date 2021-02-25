@@ -38,6 +38,26 @@ fit::promise<> Executor::MakePromiseForTime(zx::time deadline) {
   return bridge.consumer.promise();
 }
 
+fit::promise<zx_packet_signal_t, zx_status_t> Executor::MakePromiseWaitHandle(
+    zx::unowned_handle object, zx_signals_t trigger, uint32_t options) {
+  fit::bridge<zx_packet_signal_t, zx_status_t> bridge;
+  auto wait_once = std::make_unique<async::WaitOnce>(object->get(), trigger, options);
+  auto wait_once_raw = wait_once.get();
+  wait_once_raw->Begin(
+      dispatcher(), [wait_once = std::move(wait_once), completer = std::move(bridge.completer)](
+                        async_dispatcher_t* dispatcher, async::WaitOnce* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal) mutable {
+        if (status == ZX_OK) {
+          ZX_DEBUG_ASSERT(signal);
+          completer.complete_ok(*signal);
+        } else {
+          completer.complete_error(status);
+        }
+      });
+
+  return bridge.consumer.promise();
+}
+
 Executor::DispatcherImpl::DispatcherImpl(async_dispatcher_t* dispatcher, Executor* executor)
     : async_task_t{{ASYNC_STATE_INIT}, &DispatcherImpl::Dispatch, 0},
       dispatcher_(dispatcher),

@@ -10,6 +10,7 @@
 #include <lib/fit/promise.h>
 #include <lib/fit/scheduler.h>
 #include <lib/fit/thread_safety.h>
+#include <lib/zx/handle.h>
 #include <lib/zx/time.h>
 
 #include <mutex>
@@ -64,6 +65,16 @@ class Executor final : public fit::executor {
   //
   // The countdown starts when this method is called.
   fit::promise<> MakePromiseForTime(zx::time deadline);
+
+  // Makes a promise that waits for one or more signals on a handle.
+  //
+  // |object|, |trigger|, and |options| must be valid according to the
+  // corresponding arguments to |async::WaitOnce()|.
+  //
+  // |object| must remain valid at least until |trigger| is sent. The returned promise will only
+  // have access to the data that was sent up to the point that |object| received |trigger|.
+  fit::promise<zx_packet_signal_t, zx_status_t> MakePromiseWaitHandle(
+      zx::unowned_handle object, zx_signals_t trigger = ZX_SIGNAL_NONE, uint32_t options = 0);
 
  private:
   // The dispatcher runs tasks, provides the suspended task resolver, and

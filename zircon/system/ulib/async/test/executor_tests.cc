@@ -7,6 +7,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
+#include <lib/zx/event.h>
 
 #include <future>
 
@@ -357,6 +358,103 @@ TEST(ExecutorTests, delayed_promises) {
 
   EXPECT_EQ(stats.tasks_planned, stats.tasks_scheduled);
   EXPECT_EQ(stats.tasks_scheduled, stats.tasks_completed);
+}
+
+TEST(ExecutorTests, promise_wait_on_handle) {
+  constexpr zx_signals_t trigger = ZX_USER_SIGNAL_0;
+  constexpr zx_signals_t other = ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2;
+  constexpr zx_signals_t sent = trigger | other;
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async::Executor executor(loop.dispatcher());
+
+  constexpr auto check_signaled = [](zx::event& event, zx_signals_t signals) {
+    zx_signals_t pending;
+    ASSERT_EQ(event.wait_one(0, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+    EXPECT_EQ(pending, signals);
+  };
+
+  constexpr auto check_not_signaled = [=](zx::event& event) { check_signaled(event, 0); };
+
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+  check_not_signaled(event);
+
+  zx::time begin = now();
+  bool completed = false;
+  executor.schedule_task(
+      executor
+          .MakePromiseWaitHandle(zx::unowned_handle(event.get()), trigger, ZX_WAIT_ASYNC_TIMESTAMP)
+          .then([&](fit::result<zx_packet_signal_t, zx_status_t>& result) {
+            ASSERT_FALSE(result.is_pending());
+            ASSERT_FALSE(result.is_error());
+
+            check_signaled(event, sent);
+
+            auto packet = result.take_value();
+            EXPECT_EQ(packet.trigger, trigger);
+            EXPECT_EQ(packet.observed, sent);
+            EXPECT_EQ(packet.count, 1);
+            EXPECT_GE(zx::time(packet.timestamp) - begin, delay);
+
+            completed = true;
+            loop.Quit();
+          }));
+
+  std::future<void> run_loop = std::async(std::launch::async, [&] {
+    loop.Run();
+    loop.ResetQuit();
+  });
+
+  std::future<void> signal_promise = std::async(std::launch::async, [&] {
+    check_not_signaled(event);
+    zx::time deadline = begin + delay;
+    zx::nanosleep(deadline);
+    // This will queue up on the port but the promise won't be notified about it
+    check_not_signaled(event);
+    event.signal(0, other);
+    check_signaled(event, other);
+    event.signal(0, trigger);
+    check_signaled(event, sent);
+  });
+
+  run_loop.get();
+  signal_promise.get();
+  check_delay(begin, delay);
+  check_signaled(event, sent);
+
+  ASSERT_TRUE(completed);
+
+  // This test demonstrates what happens when you close the handle at various points.
+  event.reset();
+  ASSERT_OK(zx::event::create(0, &event));
+  check_not_signaled(event);
+
+  completed = false;
+  executor.schedule_task(executor.MakePromiseWaitHandle(zx::unowned_handle(event.get()), trigger)
+                             .then([&](fit::result<zx_packet_signal_t, zx_status_t>& result) {
+                               EXPECT_TRUE(result.is_ok());
+
+                               auto packet = result.take_value();
+                               EXPECT_EQ(packet.trigger, trigger);
+                               EXPECT_EQ(packet.observed, trigger);
+                               EXPECT_EQ(packet.count, 1);
+
+                               completed = true;
+                               loop.Quit();
+                             }));
+
+  // Closing the handle before the signal is fired will result in a hang (the signal will never be
+  // delivered). However, closing the handle *after* the trigger is sent will still allow the
+  // promise to complete, since it already queued on the port.
+  //
+  // event.reset();
+  event.signal(0, trigger);
+  event.reset();
+
+  loop.Run();
+  loop.ResetQuit();
+
+  ASSERT_TRUE(completed);
 }
 
 }  // namespace
