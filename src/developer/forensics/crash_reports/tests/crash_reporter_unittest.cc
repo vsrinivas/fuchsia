@@ -891,6 +891,32 @@ TEST_F(CrashReporterTest, Upload_HourlySnapshot) {
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
 
+TEST_F(CrashReporterTest, Skip_HourlySnapshotIfPending) {
+  SetUpCrashReporterDefaultConfig({
+      // Initial upload attempt.
+      kUploadFailed,
+
+      // 4 failed periodic uploads by the queue.
+      kUploadFailed,
+      kUploadFailed,
+      kUploadFailed,
+      kUploadFailed,
+  });
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
+  SetUpDataProviderServer(
+      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+
+  RunLoopFor(zx::min(5));
+  RunLoopFor(zx::hour(1));
+  EXPECT_THAT(crash_server_->latest_annotations(),
+              IsSupersetOf(Linearize(std::map<std::string, testing::Matcher<std::string>>({
+                  {"ptime", Not(IsEmpty())},
+                  {"signature", kHourlySnapshotSignature},
+              }))));
+  CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
+}
+
 TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));

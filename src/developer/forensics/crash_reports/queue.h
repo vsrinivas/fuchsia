@@ -46,6 +46,7 @@ class Queue {
   bool IsEmpty() const;
   bool Contains(ReportId report_id) const;
   ReportId LatestReport() { return pending_reports_.back(); }
+  bool HasHourlyReport() const { return hourly_report_.has_value(); }
 
  private:
   // Attempts to upload all pending reports and removes the successfully uploaded reports from the

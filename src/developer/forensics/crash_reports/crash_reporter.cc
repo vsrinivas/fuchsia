@@ -6,6 +6,7 @@
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/result.h>
 #include <lib/syslog/cpp/macros.h>
@@ -260,6 +261,13 @@ void CrashReporter::ScheduleHourlySnapshot(const zx::duration delay) {
   async::PostDelayedTask(
       dispatcher_,
       [this]() {
+        auto schedule_next = ::fit::defer([this] { ScheduleHourlySnapshot(zx::hour(1)); });
+
+        if (queue_.HasHourlyReport()) {
+          FX_LOGS(INFO) << "Skipping hourly snapshot; a previous one is still pending";
+          return;
+        }
+
         fuchsia::feedback::GenericCrashReport generic_report;
         generic_report.set_crash_signature(kHourlySnapshotSignature);
         fuchsia::feedback::SpecificCrashReport specific_report;
@@ -270,8 +278,6 @@ void CrashReporter::ScheduleHourlySnapshot(const zx::duration delay) {
             .set_specific_report(std::move(specific_report));
 
         File(std::move(report), /*is_hourly_snapshot=*/true);
-
-        ScheduleHourlySnapshot(zx::hour(1));
       },
       delay);
 }
