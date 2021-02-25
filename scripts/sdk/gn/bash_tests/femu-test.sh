@@ -310,9 +310,9 @@ readonly EXPECTED_HELP="Usage: femu.sh
   [--work-dir <directory to store image assets>]
     Defaults to ${BT_TEMP_DIR}/test-home/.fuchsia
   [--bucket <fuchsia gsutil bucket>]
-    Default is read using \`fconfig get step-atom-yard-juicy.bucket\` if set. Otherwise defaults to fuchsia.
+    Default is read using \`fconfig get fuchsia-5254-0063-5e7a.bucket\` if set. Otherwise defaults to fuchsia.
   [--image <image name>]
-    Default is read using \`fconfig get step-atom-yard-juicy.image\` if set. Otherwise defaults to qemu-x64.
+    Default is read using \`fconfig get fuchsia-5254-0063-5e7a.image\` if set. Otherwise defaults to qemu-x64.
   [--authorized-keys <file>]
     The authorized public key file for securing the device.  Defaults to
     ${BT_TEMP_DIR}/test-home/.ssh/fuchsia_authorized_keys, which is generated if needed.
@@ -370,10 +370,10 @@ TEST_femu_with_props() {
     cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
 
   if [[ "$1" == "get" ]]; then
-    if [[ "${2}" == "step-atom-yard-juicy.bucket" ]]; then
+    if [[ "${2}" == "fuchsia-5254-0063-5e7a.bucket" ]]; then
       echo "test-bucket"
       return 0
-    elif [[ "${2}" == "step-atom-yard-juicy.image" ]]; then
+    elif [[ "${2}" == "fuchsia-5254-0063-5e7a.image" ]]; then
       echo "test-image"
       return 0
     fi

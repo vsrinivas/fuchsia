@@ -80,8 +80,8 @@ You'll see a list of devices that `ffx` has discovered. For example, with a
 single emulator running, output looks like:
 
 ```
-NAME                    TYPE       STATE      ADDRS/IP                       AGE     RCS
-step-atom-yard-juicy    Unknown    Unknown    [fe80::5054:ff:fe63:5e7a%4]    0m0s    N
+NAME                    TYPE       STATE      ADDRS/IP                       AGE     CS
+fuchsia-5254-0063-5e7a  Unknown    Unknown    [fe80::5054:ff:fe63:5e7a%4]    0m0s    N
 ```
 
 NOTE: Ignore the `TYPE` and `STATE` columns - they have no values besides
@@ -121,7 +121,7 @@ isn't active.
 ```sh
 $ fx ffx target list
 NAME                    TYPE       STATE      ADDRS/IP                       AGE     RCS
-step-atom-yard-juicy    Unknown    Unknown    [fe80::5054:ff:fe63:5e7a%4]    0m6s    Y
+fuchsia-5254-0063-5e7a  Unknown    Unknown    [fe80::5054:ff:fe63:5e7a%4]    0m6s    Y
 ```
 
 If a target has been set as default there will be a `*` next to it.

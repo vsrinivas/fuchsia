@@ -77,3 +77,8 @@ fuchsia_component("device-name-provider-component") {
 kernel_cmdline("nodenames-newgen") {
   args = [ "zircon.namegen=1" ]
 }
+
+# command line package to be included for old-style nodename generation.
+kernel_cmdline("nodenames-oldgen") {
+  args = [ "zircon.namegen=0" ]
+}

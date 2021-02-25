@@ -172,10 +172,10 @@ In a new terminal, run the tests. For example, to run the upgrade tests:
   --ssh-private-key ~/.ssh/fuchsia_ed25519 \
   --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
   --upgrade-fuchsia-build-dir $(fx get-build-dir) \
-  --device step-atom-yard-juicy
+  --device fuchsia-5254-0063-5e7a
 ```
 
-Note that your QEMU device will always be named `step-atom-yard-juicy`.
+Note that your QEMU device will always be named `fuchsia-5254-0063-5e7a`.
 Explicitly naming the device for the test will help prevent accidental upgrades
 to your other devices.
 
