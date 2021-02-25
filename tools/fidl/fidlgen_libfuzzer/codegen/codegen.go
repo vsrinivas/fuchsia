@@ -13,6 +13,7 @@ import (
 	"text/template"
 
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	fidlgen "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
 
@@ -111,7 +112,7 @@ func (gen FidlGenerator) GenerateFuzzer(fidl fidl.Root, tree cpp.Root, config *C
 	headerPath := config.OutputBase + ".h"
 	sourcePath := config.OutputBase + ".cc"
 
-	headerFile, err := os.Create(headerPath)
+	headerFile, err := fidlgen.NewLazyWriter(headerPath)
 	if err != nil {
 		return err
 	}
@@ -127,7 +128,7 @@ func (gen FidlGenerator) GenerateFuzzer(fidl fidl.Root, tree cpp.Root, config *C
 	}
 
 	// Note that if the FIDL library defines no protocols, this will produce an empty file.
-	sourceFile, err := os.Create(sourcePath)
+	sourceFile, err := fidlgen.NewLazyWriter(sourcePath)
 	if err != nil {
 		return err
 	}
@@ -159,7 +160,7 @@ func (gen FidlGenerator) GenerateDecoderEncoders(fidl fidl.Root, tree cpp.Root, 
 	headerPath := config.OutputBase + "_decode_encode.h"
 	sourcePath := config.OutputBase + "_decode_encode.cc"
 
-	headerFile, err := os.Create(headerPath)
+	headerFile, err := fidlgen.NewLazyWriter(headerPath)
 	if err != nil {
 		return err
 	}
@@ -175,7 +176,7 @@ func (gen FidlGenerator) GenerateDecoderEncoders(fidl fidl.Root, tree cpp.Root, 
 	}
 
 	// Note that if the FIDL library defines no protocols, this will produce an empty file.
-	sourceFile, err := os.Create(sourcePath)
+	sourceFile, err := fidlgen.NewLazyWriter(sourcePath)
 	if err != nil {
 		return err
 	}

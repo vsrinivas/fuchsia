@@ -100,7 +100,7 @@ func (gen *FidlGenerator) GenerateTestBase(wr io.Writer, tree cpp.Root) error {
 }
 
 func (gen *FidlGenerator) generateFile(filepath, clangFormatPath string, generate func(w io.Writer) error) error {
-	file, err := os.Create(filepath)
+	file, err := fidl.NewLazyWriter(filepath)
 	if err != nil {
 		return err
 	}

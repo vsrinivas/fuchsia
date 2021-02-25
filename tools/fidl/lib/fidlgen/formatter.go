@@ -58,7 +58,7 @@ var _ = []io.WriteCloser{
 }
 
 type unformattedStream struct {
-	normalOut io.Writer
+	normalOut io.WriteCloser
 }
 
 func (s unformattedStream) Write(p []byte) (int, error) {
@@ -66,9 +66,7 @@ func (s unformattedStream) Write(p []byte) (int, error) {
 }
 
 func (s unformattedStream) Close() error {
-	// Not the responsibility of unformattedStream to close underlying stream
-	// which may (or may not) be an io.WriteCloser.
-	return nil
+	return s.normalOut.Close()
 }
 
 type formattedStream struct {

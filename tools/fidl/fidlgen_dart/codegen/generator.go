@@ -47,7 +47,7 @@ func writeFile(
 	if err := os.MkdirAll(filepath.Dir(outputFilename), os.ModePerm); err != nil {
 		return err
 	}
-	generated, err := os.Create(outputFilename)
+	generated, err := fidl.NewLazyWriter(outputFilename)
 	if err != nil {
 		return err
 	}

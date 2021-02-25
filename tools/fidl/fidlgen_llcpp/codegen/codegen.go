@@ -13,6 +13,7 @@ import (
 	"strings"
 	"text/template"
 
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
 
@@ -212,7 +213,7 @@ func generateFile(filename, clangFormatPath string, contentGenerator func(wr io.
 		return err
 	}
 
-	file, err := os.Create(filename)
+	file, err := fidl.NewLazyWriter(filename)
 	if err != nil {
 		return err
 	}

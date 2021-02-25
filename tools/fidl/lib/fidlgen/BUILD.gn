@@ -9,6 +9,7 @@ go_library("fidlgen") {
   sources = [
     "formatter.go",
     "identifiers.go",
+    "lazywriter.go",
     "names.go",
     "strings.go",
     "types.go",

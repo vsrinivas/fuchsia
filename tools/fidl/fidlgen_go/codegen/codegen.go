@@ -7,10 +7,11 @@ package codegen
 import (
 	"bytes"
 	"go/format"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"text/template"
+
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type Generator struct {
@@ -52,7 +53,15 @@ func (gen *Generator) generateFile(dataFn func() ([]byte, error), filename strin
 	}
 
 	// Write out file.
-	if err := ioutil.WriteFile(filename, data, 0666); err != nil {
+	file, err := fidl.NewLazyWriter(filename)
+	if err != nil {
+		return err
+	}
+	_, err = file.Write(data)
+	if err != nil {
+		return err
+	}
+	if err = file.Close(); err != nil {
 		return err
 	}
 

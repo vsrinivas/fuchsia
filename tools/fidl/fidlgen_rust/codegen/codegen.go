@@ -46,7 +46,7 @@ func (gen *Generator) GenerateFidl(ir fidl.Root, outputFilename, rustfmtPath, ru
 		return err
 	}
 
-	generated, err := os.Create(outputFilename)
+	generated, err := fidl.NewLazyWriter(outputFilename)
 	if err != nil {
 		return err
 	}
