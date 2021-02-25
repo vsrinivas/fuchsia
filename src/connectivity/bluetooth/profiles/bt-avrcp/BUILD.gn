@@ -90,6 +90,7 @@ fuchsia_package("bt-avrcp") {
 }
 
 fuchsia_unittest_package("bt-avrcp-tests") {
+  v2 = true
   deps = [ ":bin_test" ]
 }
 

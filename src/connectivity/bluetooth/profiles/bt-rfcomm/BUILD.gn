@@ -62,6 +62,7 @@ fuchsia_package("bt-rfcomm") {
 }
 
 fuchsia_unittest_package("bt-rfcomm-tests") {
+  v2 = true
   deps = [ ":bin_test" ]
 }
 

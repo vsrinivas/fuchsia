@@ -92,11 +92,11 @@ group("bt-hfp-audio-gateway") {
 }
 
 fuchsia_unittest_package("bt-hfp-audio-gateway-tests") {
+  v2 = true
   deps = [
     ":bin_test",
     ":test_config",
   ]
-  manifest = "meta/bt-hfp-audio-gateway-unittests.cmx"
 }
 
 group("tests") {
