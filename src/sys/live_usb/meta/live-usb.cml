@@ -1,0 +1,29 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/live_usb",
+    },
+    use: [
+        { protocol: "fuchsia.boot.Arguments" },
+        { protocol: "fuchsia.fshost.BlockWatcher" },
+        { protocol: "fuchsia.paver.Paver" },
+
+        // For block device access.
+        {
+            directory: "dev-class-block",
+            rights: [ "rw*" ],
+            path: "/dev/class/block",
+        },
+
+        // For ramctl.
+        {
+            directory: "dev-misc",
+            rights: [ "rw*" ],
+            path: "/dev/misc",
+        },
+    ],
+}

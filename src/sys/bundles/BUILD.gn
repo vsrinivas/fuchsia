@@ -8,6 +8,7 @@ group("bootstrap") {
   deps = [
     "//src/sys/bootstrap:root_manifests",
     "//src/sys/component_manager:bootfs",
+    "//src/sys/live_usb:bootfs",
   ]
 }
 

@@ -29,6 +29,7 @@ group("tests") {
     "gtest_v1_runner:tests",
     "installer:tests",
     "lib:tests",
+    "live_usb:tests",
     "locate:tests",
     "pkg:tests",
     "run_test_suite:tests",

@@ -64,6 +64,12 @@ The following values are supported:
 *   `ZSTD_CHUNKED`
 *   `UNCOMPRESSED`
 
+## boot.usb=\<bool\>
+
+If true, indicates that the boot storage medium is connected over a USB bus.
+This is used by the live_usb component in //src/sys/live_usb to determine
+whether or not it should run.
+
 ## bootsvc.next=\<bootfs path\>
 
 Controls what program is executed by bootsvc to continue the boot process.
@@ -762,6 +768,12 @@ Hex values may be specified as 0xNNN.
 This option (disabled by default) turns on dynamic linker trace output.
 The output is in a form that is consumable by clients like Intel
 Processor Trace support.
+
+## live_usb.is_system=\<bool>
+
+This option indicates to the `live_usb` component that the system is booting
+into a full system rather than a recovery environment. If this is not set to
+true, the `live_usb` component does nothing.
 
 ## zircon.autorun.boot=\<command>
 
