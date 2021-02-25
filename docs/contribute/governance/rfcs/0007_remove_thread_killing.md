@@ -32,9 +32,11 @@ Dangers killing a thread
 ## Design
 
 The following syscall will fail with `ZX_ERR_NOT_SUPPORTED` when passed a handle to a thread:
+
 ```
 zx_status_t zx_task_kill(zx_handle_t handle);
 ```
+
 Processes and jobs will still be killable as normal.
 
 ## Implementation

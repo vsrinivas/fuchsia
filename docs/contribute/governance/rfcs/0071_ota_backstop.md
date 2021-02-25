@@ -106,7 +106,8 @@ packages/update_pkg.md) and on the system. It should be a JSON file with two str
   package < epoch of system, we should fail OTAs in the prepare phase with `UNSUPPORTED_DOWNGRADE`.
 
 For example, `epoch.json` may look like:
-```
+
+```json
 {
   "version": "1",
   "epoch": 5
@@ -115,6 +116,7 @@ For example, `epoch.json` may look like:
 
 In order to safely bump the epoch, let’s also introduce an `epoch_history` file that gets compiled
 into `epoch.json` via the build system. The `epoch_history` file could be in the form:
+
 ```
 0=Initial epoch (https://fxbug.dev/66089)
 1=Storage format migration (https://fxbug.dev/XXXXX)
