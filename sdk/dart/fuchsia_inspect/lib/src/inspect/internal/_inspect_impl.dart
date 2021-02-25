@@ -56,9 +56,8 @@ class InspectImpl implements Inspect {
       outgoing.diagnosticsDir().addNode(_fileName, _writer.vmoNode);
       _outgoing = outgoing;
     } else {
-      // TODO(fxb/68973): Uncomment after soft transition.
-      // throw InspectStateError(
-      //     'Attempted to call Inspect.serve after serving. Ensure that Inspect.serve is not called multiple times.');
+      throw InspectStateError(
+          'Attempted to call Inspect.serve after serving. Ensure that Inspect.serve is not called multiple times.');
     }
   }
 

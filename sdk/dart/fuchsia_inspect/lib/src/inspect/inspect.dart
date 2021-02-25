@@ -65,18 +65,14 @@ abstract class Inspect {
 
   /// Returns a singleton [Inspect] instance at root.inspect
   factory Inspect() {
-    // TODO(fxb/68973): Don't serve after soft transition.
-    return _singleton ??= InspectImpl(VmoWriter.withSize(vmoSize))
-      ..serve(StartupContext.fromStartupInfo().outgoing);
+    return _singleton ??= InspectImpl(VmoWriter.withSize(vmoSize));
   }
 
   /// Returns a new [Inspect] object at root.inspect backed by a fake VMO
   /// intended for unit testing inspect integrations, so that they can run as
   /// host tests.
   factory Inspect.forTesting(FakeVmoHolder vmo) {
-    // TODO(fxb/68973): Don't serve after soft transition.
-    return InspectImpl(VmoWriter.withVmo(vmo))
-      ..serve(StartupContext.fromStartupInfo().outgoing);
+    return InspectImpl(VmoWriter.withVmo(vmo));
   }
 
   /// Mounts an [Inspect] file at <name>.inspect whose contents are
