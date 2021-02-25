@@ -46,10 +46,9 @@ const std::map<std::string, std::string> kAttachments = {
 };
 
 TEST(ArchiveTest, Archive) {
-  Buffer archive;
+  fsl::SizedVmo archive;
   ASSERT_TRUE(Archive(kAttachments, &archive));
-  ASSERT_TRUE(archive.vmo.is_valid());
-  ASSERT_GT(archive.size, 0u);
+  ASSERT_GT(archive.size(), 0u);
 
   fsl::SizedVmo expected_vmo;
   ASSERT_TRUE(fsl::VmoFromFilename("/pkg/data/test_data.zip", &expected_vmo));
@@ -75,11 +74,11 @@ TEST(ArchiveTest, Unpack) {
 }
 
 TEST(ArchiveTest, UnpackArchive) {
-  Buffer archive;
+  fsl::SizedVmo archive;
   ASSERT_TRUE(Archive(kAttachments, &archive));
 
   std::map<std::string, std::string> unpacked_attachments;
-  ASSERT_TRUE(Unpack(archive, &unpacked_attachments));
+  ASSERT_TRUE(Unpack(std::move(archive).ToTransport(), &unpacked_attachments));
   EXPECT_EQ(unpacked_attachments, kAttachments);
 }
 

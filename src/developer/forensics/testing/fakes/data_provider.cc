@@ -46,11 +46,10 @@ Attachment CreateSnapshot() {
   attachments["annotations.json"] = AnnotationsToJSON(CreateAnnotations());
   attachments["attachment_key"] = "attachment_value";
 
-  Attachment snapshot;
-  snapshot.key = "snapshot.zip";
-  Archive(attachments, &snapshot.value);
+  fsl::SizedVmo archive;
+  Archive(attachments, &archive);
 
-  return snapshot;
+  return {.key = "snapshot.zip", .value = std::move(archive).ToTransport()};
 }
 
 std::unique_ptr<Screenshot> LoadPngScreenshot() {

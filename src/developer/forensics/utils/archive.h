@@ -10,6 +10,8 @@
 #include <map>
 #include <string>
 
+#include "src/lib/fsl/vmo/sized_vmo.h"
+
 namespace forensics {
 
 struct ArchiveFileStats {
@@ -19,7 +21,7 @@ struct ArchiveFileStats {
 
 // Bundles a map of filenames to string content into a single ZIP archive with DEFLATE compression.
 // Also returns a map of the same filenames to size stats.
-bool Archive(const std::map<std::string, std::string>& files, fuchsia::mem::Buffer* archive,
+bool Archive(const std::map<std::string, std::string>& files, fsl::SizedVmo* archive,
              std::map<std::string, ArchiveFileStats>* file_to_size_stats = nullptr);
 
 // Unpack a ZIP archive into a map of filenames to string content.

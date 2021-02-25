@@ -13,12 +13,14 @@ source_set("archive") {
     "archive.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.mem" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.mem",
+    "//src/lib/fsl",
+  ]
 
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
-    "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/zlib:minizip",
   ]

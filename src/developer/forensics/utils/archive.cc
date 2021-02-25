@@ -62,7 +62,7 @@ bool Archive(const std::map<std::string, std::string>& files, const std::string&
 
 }  // namespace
 
-bool Archive(const std::map<std::string, std::string>& files, Buffer* archive,
+bool Archive(const std::map<std::string, std::string>& files, fsl::SizedVmo* archive,
              std::map<std::string, ArchiveFileStats>* file_to_size_stats) {
   // We write the archive to a temporary file because in-memory archiving in minizip is complicated.
   files::ScopedTempDir tmp_dir;
@@ -86,13 +86,10 @@ bool Archive(const std::map<std::string, std::string>& files, Buffer* archive,
     return false;
   }
 
-  fsl::SizedVmo vmo;
-  if (!fsl::VmoFromFilename(archive_filename, &vmo)) {
+  if (!fsl::VmoFromFilename(archive_filename, archive)) {
     FX_LOGS(ERROR) << "error loading output zip archive into VMO";
     return false;
   }
-
-  *archive = std::move(vmo).ToTransport();
 
   return true;
 }

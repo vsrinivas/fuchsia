@@ -107,15 +107,15 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                 metadata_.MakeMetadata(annotations_result, attachments_result,
                                        datastore_->IsMissingNonPlatformAnnotations());
 
-            // We bundle the attachments into a single attachment.
+            // We bundle the attachments into a single archive.
             if (!attachments.empty()) {
-              fuchsia::feedback::Attachment bundle;
-              bundle.key = kSnapshotFilename;
+              fsl::SizedVmo archive;
               std::map<std::string, ArchiveFileStats> file_size_stats;
-              if (Archive(attachments, &(bundle.value), &file_size_stats)) {
+              if (Archive(attachments, &archive, &file_size_stats)) {
                 inspect_data_budget_->UpdateBudget(file_size_stats);
-                cobalt_->LogCount(SnapshotVersion::kCobalt, (uint64_t)bundle.value.size);
-                snapshot.set_archive(std::move(bundle));
+                cobalt_->LogCount(SnapshotVersion::kCobalt, (uint64_t)archive.size());
+                snapshot.set_archive(
+                    {.key = kSnapshotFilename, .value = std::move(archive).ToTransport()});
               }
             }
 
