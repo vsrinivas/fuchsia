@@ -15,11 +15,11 @@ For a detailed explanation of how processes are created, please see
 
 ## Using the ELF Runner
 
-To use the ELF runner, the component must:
+To use the ELF runner, the component must add a `program` block, containing:
 
--   Add a [`use`][use] declaration for the ELF runner.
--   Add a `program` block, containing the binary and (optionally) program
-    arguments that should be used.
+- the binary
+- the runner the program uses (unless that is already included via a [CML shard][cml-shards])
+- (optionally) program arguments that should be used.
 
 The ELF runner receives instructions from the `program` section of the
 [component manifest][glossary-component-manifests]. The `binary` field holds the
@@ -75,6 +75,7 @@ execution context, which includes the component's job and all subprocesses.
 
 [use]: /docs/glossary.md#use
 [capability-routing]: component_manifests.md#capability-routing
+[cml-shards]: component_manifests.md#include
 [glossary-components]: /docs/glossary.md#component
 [lc-example]: /examples/components/basic/src/lifecycle_full.rs
 [lc-proto]: /sdk/fidl/fuchsia.process.lifecycle/lifecycle.fidl
