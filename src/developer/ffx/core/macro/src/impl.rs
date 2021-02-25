@@ -615,7 +615,7 @@ mod test {
         std::default::Default,
         syn::{
             parse::{Parse, ParseStream},
-            parse2, parse_quote, ItemType,
+            parse2, parse_quote, Attribute, ItemType, ReturnType,
         },
     };
 
@@ -629,24 +629,6 @@ mod test {
     impl Parse for WrappedCommand {
         fn parse(input: ParseStream<'_>) -> Result<Self, Error> {
             Ok(WrappedCommand { original: input.parse()?, plugin: input.parse()? })
-        }
-    }
-
-    struct WrappedFunction {
-        original: ItemFn,
-        plugin: ItemFn,
-        fake_tests: Vec<ItemFn>,
-    }
-
-    impl Parse for WrappedFunction {
-        fn parse(input: ParseStream<'_>) -> Result<Self, Error> {
-            let original = input.parse()?;
-            let plugin = input.parse()?;
-            let mut fake_tests = Vec::new();
-            while !input.is_empty() {
-                fake_tests.push(input.parse()?);
-            }
-            Ok(WrappedFunction { original, plugin, fake_tests })
         }
     }
 
@@ -666,40 +648,7 @@ mod test {
         let original: ItemFn = parse_quote! {
             pub async fn echo(_cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
-        let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                daemon_factory: D,
-                remote_factory: R,
-                fastboot_factory: F,
-                is_experiment: E,
-                _cmd: EchoCommand
-            ) -> anyhow::Result<()>
-                where
-                D: FnOnce() -> DFut,
-                DFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
-                >,
-                R: FnOnce() -> RFut,
-                RFut: std::future::Future<
-                    Output = anyhow::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
-                    >,
-                >,
-                E: FnOnce(&'static str) -> EFut,
-                EFut: std::future::Future<Output = bool>,
-                F: FnOnce() -> FFut,
-                FFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
-                >,
-            {
-                echo(_cmd).await
-            }
-        };
-        let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
-        assert_eq!(original, result.original);
-        assert_eq!(plugin, result.plugin);
-        assert_eq!(0, result.fake_tests.len());
-        Ok(())
+        ffx_plugin(original.clone(), proxies).map(|_| ())
     }
 
     #[test]
@@ -708,40 +657,7 @@ mod test {
         let original: ItemFn = parse_quote! {
             pub fn echo(_cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
-        let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                daemon_factory: D,
-                remote_factory: R,
-                fastboot_factory: F,
-                is_experiment: E,
-                _cmd: EchoCommand
-            ) -> anyhow::Result<()>
-                where
-                D: FnOnce() -> DFut,
-                DFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
-                >,
-                R: FnOnce() -> RFut,
-                RFut: std::future::Future<
-                    Output = anyhow::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
-                    >,
-                >,
-                E: FnOnce(&'static str) -> EFut,
-                EFut: std::future::Future<Output = bool>,
-                F: FnOnce() -> FFut,
-                FFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
-                >,
-            {
-                echo(_cmd)
-            }
-        };
-        let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
-        assert_eq!(original, result.original);
-        assert_eq!(plugin, result.plugin);
-        assert_eq!(0, result.fake_tests.len());
-        Ok(())
+        ffx_plugin(original.clone(), proxies).map(|_| ())
     }
 
     #[test]
@@ -752,77 +668,7 @@ mod test {
                 daemon: DaemonProxy,
                 _cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
-        let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                daemon_factory: D,
-                remote_factory: R,
-                fastboot_factory: F,
-                is_experiment: E,
-                _cmd: EchoCommand
-            ) -> anyhow::Result<()>
-                where
-                D: FnOnce() -> DFut,
-                DFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
-                >,
-                R: FnOnce() -> RFut,
-                RFut: std::future::Future<
-                    Output = anyhow::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
-                    >,
-                >,
-                E: FnOnce(&'static str) -> EFut,
-                EFut: std::future::Future<Output = bool>,
-                F: FnOnce() -> FFut,
-                FFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
-                >,
-            {
-                let daemon_proxy = daemon_factory().await?;
-                echo(daemon_proxy, _cmd).await
-            }
-        };
-        let fake_test: ItemFn = parse_quote! {
-            #[cfg(test)]
-            fn setup_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
-                where R: Fn(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
-            {
-                use futures::TryStreamExt;
-                let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<<DaemonProxy as fidl::endpoints::Proxy>::Service>().unwrap();
-                fuchsia_async::Task::spawn(async move {
-                    while let Ok(Some(req)) = stream.try_next().await {
-                        handle_request(req);
-                    }
-                })
-                .detach();
-                proxy
-            }
-        };
-        let oneshot_fake_test: ItemFn = parse_quote! {
-            #[cfg(test)]
-            fn setup_oneshot_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
-                where R: Fn(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
-            {
-                use futures::TryStreamExt;
-                let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<<DaemonProxy as fidl::endpoints::Proxy>::Service>().unwrap();
-                fuchsia_async::Task::spawn(async move {
-                    if let Ok(Some(req)) = stream.try_next().await {
-                        handle_request(req);
-                    }
-                })
-                .detach();
-                proxy
-            }
-        };
-        let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
-        assert_eq!(original, result.original);
-        assert_eq!(plugin, result.plugin);
-        assert_eq!(2, result.fake_tests.len());
-        assert_eq!(fake_test, result.fake_tests[0]);
-        assert_eq!(oneshot_fake_test, result.fake_tests[1]);
-        Ok(())
+        ffx_plugin(original.clone(), proxies).map(|_| ())
     }
 
     #[test]
@@ -833,77 +679,7 @@ mod test {
                 fastboot: FastbootProxy,
                 _cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
-        let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                daemon_factory: D,
-                remote_factory: R,
-                fastboot_factory: F,
-                is_experiment: E,
-                _cmd: EchoCommand
-            ) -> anyhow::Result<()>
-                where
-                D: FnOnce() -> DFut,
-                DFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
-                >,
-                R: FnOnce() -> RFut,
-                RFut: std::future::Future<
-                    Output = anyhow::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
-                    >,
-                >,
-                E: FnOnce(&'static str) -> EFut,
-                EFut: std::future::Future<Output = bool>,
-                F: FnOnce() -> FFut,
-                FFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
-                >,
-            {
-                let fastboot_proxy = fastboot_factory().await?;
-                echo(fastboot_proxy, _cmd).await
-            }
-        };
-        let fake_test: ItemFn = parse_quote! {
-            #[cfg(test)]
-            fn setup_fake_fastboot<R:'static>(handle_request: R) -> FastbootProxy
-                where R: Fn(fidl::endpoints::Request<<FastbootProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
-            {
-                use futures::TryStreamExt;
-                let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<<FastbootProxy as fidl::endpoints::Proxy>::Service>().unwrap();
-                fuchsia_async::Task::spawn(async move {
-                    while let Ok(Some(req)) = stream.try_next().await {
-                        handle_request(req);
-                    }
-                })
-                .detach();
-                proxy
-            }
-        };
-        let oneshot_fake_test: ItemFn = parse_quote! {
-            #[cfg(test)]
-            fn setup_oneshot_fake_fastboot<R:'static>(handle_request: R) -> FastbootProxy
-                where R: Fn(fidl::endpoints::Request<<FastbootProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
-            {
-                use futures::TryStreamExt;
-                let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<<FastbootProxy as fidl::endpoints::Proxy>::Service>().unwrap();
-                fuchsia_async::Task::spawn(async move {
-                    if let Ok(Some(req)) = stream.try_next().await {
-                        handle_request(req);
-                    }
-                })
-                .detach();
-                proxy
-            }
-        };
-        let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
-        assert_eq!(original, result.original);
-        assert_eq!(plugin, result.plugin);
-        assert_eq!(2, result.fake_tests.len());
-        assert_eq!(fake_test, result.fake_tests[0]);
-        assert_eq!(oneshot_fake_test, result.fake_tests[1]);
-        Ok(())
+        ffx_plugin(original.clone(), proxies).map(|_| ())
     }
 
     #[test]
@@ -914,59 +690,7 @@ mod test {
                 remote: RemoteControlProxy,
                 _cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
-        let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                daemon_factory: D,
-                remote_factory: R,
-                fastboot_factory: F,
-                is_experiment: E,
-                _cmd: EchoCommand
-            ) -> anyhow::Result<()>
-                where
-                D: FnOnce() -> DFut,
-                DFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
-                >,
-                R: FnOnce() -> RFut,
-                RFut: std::future::Future<
-                    Output = anyhow::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
-                    >,
-                >,
-                E: FnOnce(&'static str) -> EFut,
-                EFut: std::future::Future<Output = bool>,
-                F: FnOnce() -> FFut,
-                FFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
-                >,
-            {
-                let remote_proxy = remote_factory().await?;
-                echo(remote_proxy, _cmd).await
-            }
-        };
-        let fake_test: ItemFn = parse_quote! {
-            #[cfg(test)]
-            fn setup_fake_remote<R:'static>(handle_request: R) -> RemoteControlProxy
-                where R: Fn(fidl::endpoints::Request<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
-            {
-                use futures::TryStreamExt;
-                let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>().unwrap();
-                fuchsia_async::Task::spawn(async move {
-                    while let Ok(Some(req)) = stream.try_next().await {
-                        handle_request(req);
-                    }
-                })
-                .detach();
-                proxy
-            }
-        };
-        let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
-        assert_eq!(original, result.original);
-        assert_eq!(plugin, result.plugin, "{:?}", result.plugin);
-        assert_eq!(2, result.fake_tests.len());
-        assert_eq!(fake_test, result.fake_tests[0]);
-        Ok(())
+        ffx_plugin(original.clone(), proxies).map(|_| ())
     }
 
     #[test]
@@ -978,78 +702,7 @@ mod test {
                 remote: RemoteControlProxy,
                 _cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
-        let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                daemon_factory: D,
-                remote_factory: R,
-                fastboot_factory: F,
-                is_experiment: E,
-                _cmd: EchoCommand
-            ) -> anyhow::Result<()>
-                where
-                D: FnOnce() -> DFut,
-                DFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
-                >,
-                R: FnOnce() -> RFut,
-                RFut: std::future::Future<
-                    Output = anyhow::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
-                    >,
-                >,
-                E: FnOnce(&'static str) -> EFut,
-                EFut: std::future::Future<Output = bool>,
-                F: FnOnce() -> FFut,
-                FFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
-                >,
-            {
-                let daemon_proxy = daemon_factory().await?;
-                let remote_proxy = remote_factory().await?;
-                echo(daemon_proxy, remote_proxy, _cmd).await
-            }
-        };
-        let fake_daemon_test: ItemFn = parse_quote! {
-            #[cfg(test)]
-            fn setup_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
-                where R: Fn(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
-            {
-                use futures::TryStreamExt;
-                let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<<DaemonProxy as fidl::endpoints::Proxy>::Service>().unwrap();
-                fuchsia_async::Task::spawn(async move {
-                    while let Ok(Some(req)) = stream.try_next().await {
-                        handle_request(req);
-                    }
-                })
-                .detach();
-                proxy
-            }
-        };
-        let fake_remote_test: ItemFn = parse_quote! {
-            #[cfg(test)]
-            fn setup_fake_remote<R:'static>(handle_request: R) -> RemoteControlProxy
-                where R: Fn(fidl::endpoints::Request<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
-            {
-                use futures::TryStreamExt;
-                let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>().unwrap();
-                fuchsia_async::Task::spawn(async move {
-                    while let Ok(Some(req)) = stream.try_next().await {
-                        handle_request(req);
-                    }
-                })
-                .detach();
-                proxy
-            }
-        };
-        let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
-        assert_eq!(original, result.original);
-        assert_eq!(plugin, result.plugin);
-        assert_eq!(4, result.fake_tests.len());
-        assert_eq!(fake_daemon_test, result.fake_tests[0]);
-        assert_eq!(fake_remote_test, result.fake_tests[2]);
-        Ok(())
+        ffx_plugin(original.clone(), proxies).map(|_| ())
     }
 
     #[test]
@@ -1062,78 +715,7 @@ mod test {
                 _cmd: EchoCommand,
                 daemon: DaemonProxy) -> anyhow::Result<()> { Ok(()) }
         };
-        let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                daemon_factory: D,
-                remote_factory: R,
-                fastboot_factory: F,
-                is_experiment: E,
-                _cmd: EchoCommand
-            ) -> anyhow::Result<()>
-                where
-                D: FnOnce() -> DFut,
-                DFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
-                >,
-                R: FnOnce() -> RFut,
-                RFut: std::future::Future<
-                    Output = anyhow::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
-                    >,
-                >,
-                E: FnOnce(&'static str) -> EFut,
-                EFut: std::future::Future<Output = bool>,
-                F: FnOnce() -> FFut,
-                FFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
-                >,
-            {
-                let remote_proxy = remote_factory().await?;
-                let daemon_proxy = daemon_factory().await?;
-                echo(remote_proxy, _cmd, daemon_proxy).await
-            }
-        };
-        let fake_daemon_test: ItemFn = parse_quote! {
-            #[cfg(test)]
-            fn setup_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
-                where R: Fn(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
-            {
-                use futures::TryStreamExt;
-                let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<<DaemonProxy as fidl::endpoints::Proxy>::Service>().unwrap();
-                fuchsia_async::Task::spawn(async move {
-                    while let Ok(Some(req)) = stream.try_next().await {
-                        handle_request(req);
-                    }
-                })
-                .detach();
-                proxy
-            }
-        };
-        let fake_remote_test: ItemFn = parse_quote! {
-            #[cfg(test)]
-            fn setup_fake_remote<R:'static>(handle_request: R) -> RemoteControlProxy
-                where R: Fn(fidl::endpoints::Request<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
-            {
-                use futures::TryStreamExt;
-                let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>().unwrap();
-                fuchsia_async::Task::spawn(async move {
-                    while let Ok(Some(req)) = stream.try_next().await {
-                        handle_request(req);
-                    }
-                })
-                .detach();
-                proxy
-            }
-        };
-        let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
-        assert_eq!(original, result.original);
-        assert_eq!(plugin, result.plugin);
-        assert_eq!(4, result.fake_tests.len());
-        assert_eq!(fake_remote_test, result.fake_tests[0]);
-        assert_eq!(fake_daemon_test, result.fake_tests[2]);
-        Ok(())
+        ffx_plugin(original.clone(), proxies).map(|_| ())
     }
 
     #[test]
@@ -1147,109 +729,7 @@ mod test {
                 cmd: WhateverCommand,
                 ) -> anyhow::Result<()> { Ok(()) }
         };
-        let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                daemon_factory: D,
-                remote_factory: R,
-                fastboot_factory: F,
-                is_experiment: E,
-                cmd: WhateverCommand
-            ) -> anyhow::Result<()>
-                where
-                D: FnOnce() -> DFut,
-                DFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
-                >,
-                R: FnOnce() -> RFut,
-                RFut: std::future::Future<
-                    Output = anyhow::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
-                    >,
-                >,
-                E: FnOnce(&'static str) -> EFut,
-                EFut: std::future::Future<Output = bool>,
-                F: FnOnce() -> FFut,
-                FFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
-                >,
-            {
-                let remote_proxy = remote_factory().await?;
-                let (test, test_server_end) =
-                    fidl::endpoints::create_proxy::<<TestProxy as fidl::endpoints::Proxy>::Service>()?;
-                let test_selector = selectors::parse_selector("test")?;
-                let test_fut;
-                {
-                    // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
-                    use futures::TryFutureExt;
-                    test_fut = remote_proxy
-                    .connect(test_selector, test_server_end.into_channel())
-                    .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
-                        fidl_result
-                        .map(|_| ())
-                        .map_err(|e| {
-                            match e {
-                                fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
-                                    ffx_core::ffx_error!(
-                                        format!(
-"The plugin service selector '{}' did not match any services on the target.
-If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
-
-Plugin developers: you can use `ffx component select '<selector>'` to explore the component topology of your target device and fix this selector.",
-                                            "test")).into()
-                                }
-                                fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
-                                    ffx_core::ffx_error!(
-                                        format!(
-"Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
-If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
-
-Plugin developers: you can use `ffx component select '{}'` to see which services matched the provided selector.",
-                                            "test", "test")).into()
-                                }
-                                _ => {
-                                    anyhow::anyhow!(
-                                        format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, "test")
-                                    )
-                                }
-                            }
-                        })
-                    });
-                }
-
-                match futures::try_join!(test_fut) {
-                    Ok(_) => {
-                        echo(test, cmd).await
-                    },
-                    Err(e) => {
-                        log::error!("There was an error getting proxies from the Remote Control Service: {}", e);
-                        anyhow::bail!(e)
-                    }
-                }
-            }
-        };
-        let fake_test: ItemFn = parse_quote! {
-            #[cfg(test)]
-            fn setup_fake_test<R:'static>(handle_request: R) -> TestProxy
-                where R: Fn(fidl::endpoints::Request<<TestProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
-            {
-                use futures::TryStreamExt;
-                let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<<TestProxy as fidl::endpoints::Proxy>::Service>().unwrap();
-                fuchsia_async::Task::spawn(async move {
-                    while let Ok(Some(req)) = stream.try_next().await {
-                        handle_request(req);
-                    }
-                })
-                .detach();
-                proxy
-            }
-        };
-        let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
-        assert_eq!(original, result.original);
-        assert_eq!(plugin, result.plugin);
-        assert_eq!(2, result.fake_tests.len());
-        assert_eq!(fake_test, result.fake_tests[0]);
-        Ok(())
+        ffx_plugin(original.clone(), proxies).map(|_| ())
     }
 
     #[test]
@@ -1265,167 +745,7 @@ Plugin developers: you can use `ffx component select '{}'` to see which services
                 test: TestProxy,
                 ) -> anyhow::Result<()> { Ok(()) }
         };
-        let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                daemon_factory: D,
-                remote_factory: R,
-                fastboot_factory: F,
-                is_experiment: E,
-                cmd: WhateverCommand
-            ) -> anyhow::Result<()>
-                where
-                D: FnOnce() -> DFut,
-                DFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
-                >,
-                R: FnOnce() -> RFut,
-                RFut: std::future::Future<
-                    Output = anyhow::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
-                    >,
-                >,
-                E: FnOnce(&'static str) -> EFut,
-                EFut: std::future::Future<Output = bool>,
-                F: FnOnce() -> FFut,
-                FFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
-                >,
-            {
-                let remote_proxy = remote_factory().await?;
-                let (foo, foo_server_end) =
-                    fidl::endpoints::create_proxy::<<FooProxy as fidl::endpoints::Proxy>::Service>()?;
-                let foo_selector = selectors::parse_selector("foo")?;
-                let foo_fut;
-                {
-                    // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
-                    use futures::TryFutureExt;
-                    foo_fut = remote_proxy
-                    .connect(foo_selector, foo_server_end.into_channel())
-                    .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
-                        fidl_result
-                        .map(|_| ())
-                        .map_err(|e| {
-                            match e {
-                                fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
-                                    ffx_core::ffx_error!(
-                                        format!(
-"The plugin service selector '{}' did not match any services on the target.
-If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
-
-Plugin developers: you can use `ffx component select '<selector>'` to explore the component topology of your target device and fix this selector.",
-                                            "foo")).into()
-                                }
-                                fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
-                                    ffx_core::ffx_error!(
-                                        format!(
-"Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
-If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
-
-Plugin developers: you can use `ffx component select '{}'` to see which services matched the provided selector.",
-                                            "foo", "foo")).into()
-                                }
-                                _ => {
-                                    anyhow::anyhow!(
-                                        format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, "foo")
-                                    )
-                                }
-                            }
-                        })
-                    });
-                }
-                let (test, test_server_end) =
-                    fidl::endpoints::create_proxy::<<TestProxy as fidl::endpoints::Proxy>::Service>()?;
-                let test_selector = selectors::parse_selector("test")?;
-                let test_fut;
-                {
-                    // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
-                    use futures::TryFutureExt;
-                    test_fut = remote_proxy
-                    .connect(test_selector, test_server_end.into_channel())
-                    .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
-                        fidl_result
-                        .map(|_| ())
-                        .map_err(|e| {
-                            match e {
-                                fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
-                                    ffx_core::ffx_error!(
-                                        format!(
-"The plugin service selector '{}' did not match any services on the target.
-If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
-
-Plugin developers: you can use `ffx component select '<selector>'` to explore the component topology of your target device and fix this selector.",
-                                            "test")).into()
-                                }
-                                fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
-                                    ffx_core::ffx_error!(
-                                        format!(
-"Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
-If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
-
-Plugin developers: you can use `ffx component select '{}'` to see which services matched the provided selector.",
-                                            "test", "test")).into()
-                                }
-                                _ => {
-                                    anyhow::anyhow!(
-                                        format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, "test")
-                                    )
-                                }
-                            }
-                        })
-                    });
-                }
-                match futures::try_join!(foo_fut, test_fut) {
-                    Ok(_) => {
-                        echo(foo, cmd, test).await
-                    },
-                    Err(e) => {
-                        log::error!("There was an error getting proxies from the Remote Control Service: {}", e);
-                        anyhow::bail!(e)
-                    }
-                }
-            }
-        };
-        let fake_foo_test: ItemFn = parse_quote! {
-            #[cfg(test)]
-            fn setup_fake_foo<R:'static>(handle_request: R) -> FooProxy
-                where R: Fn(fidl::endpoints::Request<<FooProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
-            {
-                use futures::TryStreamExt;
-                let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<<FooProxy as fidl::endpoints::Proxy>::Service>().unwrap();
-                fuchsia_async::Task::spawn(async move {
-                    while let Ok(Some(req)) = stream.try_next().await {
-                        handle_request(req);
-                    }
-                })
-                .detach();
-                proxy
-            }
-        };
-        let fake_test_test: ItemFn = parse_quote! {
-            #[cfg(test)]
-            fn setup_fake_test<R:'static>(handle_request: R) -> TestProxy
-                where R: Fn(fidl::endpoints::Request<<TestProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
-            {
-                use futures::TryStreamExt;
-                let (proxy, mut stream) =
-                    fidl::endpoints::create_proxy_and_stream::<<TestProxy as fidl::endpoints::Proxy>::Service>().unwrap();
-                fuchsia_async::Task::spawn(async move {
-                    while let Ok(Some(req)) = stream.try_next().await {
-                        handle_request(req);
-                    }
-                })
-                .detach();
-                proxy
-            }
-        };
-        let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
-        assert_eq!(original, result.original);
-        assert_eq!(plugin, result.plugin);
-        assert_eq!(4, result.fake_tests.len());
-        assert_eq!(fake_foo_test, result.fake_tests[0]);
-        assert_eq!(fake_test_test, result.fake_tests[2]);
-        Ok(())
+        ffx_plugin(original.clone(), proxies).map(|_| ())
     }
 
     #[test]
@@ -1443,135 +763,7 @@ Plugin developers: you can use `ffx component select '{}'` to see which services
                 test: TestProxy,
                 ) -> anyhow::Result<()> { Ok(()) }
         };
-        let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                daemon_factory: D,
-                remote_factory: R,
-                fastboot_factory: F,
-                is_experiment: E,
-                cmd: WhateverCommand
-            ) -> anyhow::Result<()>
-                where
-                D: FnOnce() -> DFut,
-                DFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
-                >,
-                R: FnOnce() -> RFut,
-                RFut: std::future::Future<
-                    Output = anyhow::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
-                    >,
-                >,
-                E: FnOnce(&'static str) -> EFut,
-                EFut: std::future::Future<Output = bool>,
-                F: FnOnce() -> FFut,
-                FFut: std::future::Future<
-                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
-                >,
-            {
-                if is_experiment("foo_key").await {
-                    let remote_proxy = remote_factory().await?;
-                    let (foo, foo_server_end) =
-                        fidl::endpoints::create_proxy::<<FooProxy as fidl::endpoints::Proxy>::Service>()?;
-                    let foo_selector = selectors::parse_selector("foo")?;
-                let foo_fut;
-                {
-                    // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
-                    use futures::TryFutureExt;
-                    foo_fut = remote_proxy
-                    .connect(foo_selector, foo_server_end.into_channel())
-                    .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
-                        fidl_result
-                        .map(|_| ())
-                        .map_err(|e| {
-                            match e {
-                                fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
-                                    ffx_core::ffx_error!(
-                                        format!(
-"The plugin service selector '{}' did not match any services on the target.
-If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
-
-Plugin developers: you can use `ffx component select '<selector>'` to explore the component topology of your target device and fix this selector.",
-                                            "foo")).into()
-                                }
-                                fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
-                                    ffx_core::ffx_error!(
-                                        format!(
-"Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
-If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
-
-Plugin developers: you can use `ffx component select '{}'` to see which services matched the provided selector.",
-                                            "foo", "foo")).into()
-                                }
-                                _ => {
-                                    anyhow::anyhow!(
-                                        format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, "foo")
-                                    )
-                                }
-                            }
-                        })
-                    });
-                }
-                    let (test, test_server_end) =
-                        fidl::endpoints::create_proxy::<<TestProxy as fidl::endpoints::Proxy>::Service>()?;
-                    let test_selector = selectors::parse_selector("test")?;
-                let test_fut;
-                {
-                    // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
-                    use futures::TryFutureExt;
-                    test_fut = remote_proxy
-                    .connect(test_selector, test_server_end.into_channel())
-                    .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
-                        fidl_result
-                        .map(|_| ())
-                        .map_err(|e| {
-                            match e {
-                                fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
-                                    ffx_core::ffx_error!(
-                                        format!(
-"The plugin service selector '{}' did not match any services on the target.
-If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
-
-Plugin developers: you can use `ffx component select '<selector>'` to explore the component topology of your target device and fix this selector.",
-                                            "test")).into()
-                                }
-                                fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
-                                    ffx_core::ffx_error!(
-                                        format!(
-"Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
-If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
-
-Plugin developers: you can use `ffx component select '{}'` to see which services matched the provided selector.",
-                                            "test", "test")).into()
-                                }
-                                _ => {
-                                    anyhow::anyhow!(
-                                        format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, "test")
-                                    )
-                                }
-                            }
-                        })
-                    });
-                }
-                    match futures::try_join!(foo_fut, test_fut) {
-                        Ok(_) => {
-                            echo(foo, cmd, test).await
-                        },
-                        Err(e) => {
-                            log::error!("There was an error getting proxies from the Remote Control Service: {}", e);
-                            anyhow::bail!(e)
-                        }
-                    }
-                } else {
-                    println!("This is an experimental subcommand.  To enable this subcommand run 'ffx config set {} true'", "foo_key");
-                    Ok(())
-                }
-            }
-        };
-        let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
-        assert_eq!(original, result.original);
-        assert_eq!(plugin, result.plugin);
-        Ok(())
+        ffx_plugin(original.clone(), proxies).map(|_| ())
     }
 
     #[test]
@@ -1804,6 +996,217 @@ Plugin developers: you can use `ffx component select '{}'` to see which services
             #ex_key_2,
         });
         assert!(result.is_err());
+        Ok(())
+    }
+
+    struct WrappedTestFunctions {
+        fake_test: ItemFn,
+        fake_oneshot_test: ItemFn,
+    }
+
+    impl Parse for WrappedTestFunctions {
+        fn parse(input: ParseStream<'_>) -> Result<Self, Error> {
+            let fake_test = input.parse()?;
+            let fake_oneshot_test = input.parse()?;
+            Ok(WrappedTestFunctions { fake_test, fake_oneshot_test })
+        }
+    }
+
+    #[test]
+    fn test_generated_test_functions_should_have_test_attribute() -> Result<(), Error> {
+        let test = "test_proxy";
+        let proxy_name = Ident::new(&format!("{}", test), Span::call_site());
+        let qualified_proxy_type: syn::Path = parse2(quote! { test::TestProxy })?;
+        let generated = generate_fake_test_proxy_method(proxy_name, &qualified_proxy_type);
+        let result: WrappedTestFunctions = parse2(generated)?;
+        let attribute_path: syn::Path = parse_quote! { cfg };
+        assert_eq!(result.fake_test.attrs[0].path, attribute_path);
+        assert_eq!(result.fake_oneshot_test.attrs[0].path, attribute_path);
+        let expected_test_arg = Ident::new("test", Span::call_site());
+        let mut attr_args: Ident = Attribute::parse_args(&result.fake_test.attrs[0])?;
+        assert_eq!(attr_args, expected_test_arg);
+        attr_args = Attribute::parse_args(&result.fake_oneshot_test.attrs[0])?;
+        assert_eq!(attr_args, expected_test_arg);
+        Ok(())
+    }
+
+    #[test]
+    fn test_generated_test_functions_should_have_expected_names() -> Result<(), Error> {
+        let test = "test_proxy";
+        let proxy_name = Ident::new(&format!("{}", test), Span::call_site());
+        let qualified_proxy_type: syn::Path = parse2(quote! { test::TestProxy })?;
+        let generated = generate_fake_test_proxy_method(proxy_name, &qualified_proxy_type);
+        let result: WrappedTestFunctions = parse2(generated)?;
+        let expected_name = Ident::new(&format!("setup_fake_{}", test), Span::call_site());
+        let expected_oneshot_name =
+            Ident::new(&format!("setup_oneshot_fake_{}", test), Span::call_site());
+        assert_eq!(result.fake_test.sig.ident, expected_name);
+        assert_eq!(result.fake_oneshot_test.sig.ident, expected_oneshot_name);
+        Ok(())
+    }
+
+    #[test]
+    fn test_generated_test_functions_should_have_expected_return_type() -> Result<(), Error> {
+        let test = "test_proxy";
+        let proxy_name = Ident::new(&format!("{}", test), Span::call_site());
+        let qualified_proxy_type: syn::Path = parse2(quote! { test::TestProxy })?;
+        let generated = generate_fake_test_proxy_method(proxy_name, &qualified_proxy_type);
+        let result: WrappedTestFunctions = parse2(generated)?;
+        match result.fake_test.sig.output {
+            ReturnType::Type(_, output_type) => match output_type.as_ref() {
+                Path(TypePath { path, .. }) => assert_eq!(path, &qualified_proxy_type),
+                _ => return Err(Error::new(Span::call_site(), "unexpected return type")),
+            },
+            _ => return Err(Error::new(Span::call_site(), "unexpected return type")),
+        }
+        match result.fake_oneshot_test.sig.output {
+            ReturnType::Type(_, output_type) => match output_type.as_ref() {
+                Path(TypePath { path, .. }) => assert_eq!(path, &qualified_proxy_type),
+                _ => return Err(Error::new(Span::call_site(), "unexpected return type")),
+            },
+            _ => return Err(Error::new(Span::call_site(), "unexpected return type")),
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_generate_known_proxy_works_with_daemon_proxy() -> Result<(), Error> {
+        let input: ItemFn = parse_quote!(
+            fn test_fn(test_param: DaemonProxy) {}
+        );
+        let param = input.sig.inputs[0].clone();
+        if let Some(GeneratedKnownProxyParts { name, factory, testing: _, is_remote }) = match param
+        {
+            FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
+                Path(TypePath { path, .. }) => match path.segments.last() {
+                    Some(simple_proxy_type) => generate_known_proxy(simple_proxy_type, &pat, path),
+                    _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+                },
+                _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+            },
+            _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+        } {
+            assert_eq!(name, Ident::new("daemon_proxy", Span::call_site()));
+            assert_eq!(factory, Ident::new("daemon_factory", Span::call_site()));
+            assert_eq!(is_remote, false);
+            Ok(())
+        } else {
+            Err(Error::new(Span::call_site(), "known proxy not generated"))
+        }
+    }
+
+    #[test]
+    fn test_generate_known_proxy_works_with_remote_proxy() -> Result<(), Error> {
+        let input: ItemFn = parse_quote!(
+            fn test_fn(test_param: RemoteControlProxy) {}
+        );
+        let param = input.sig.inputs[0].clone();
+        if let Some(GeneratedKnownProxyParts { name, factory, testing: _, is_remote }) = match param
+        {
+            FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
+                Path(TypePath { path, .. }) => match path.segments.last() {
+                    Some(simple_proxy_type) => generate_known_proxy(simple_proxy_type, &pat, path),
+                    _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+                },
+                _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+            },
+            _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+        } {
+            assert_eq!(name, Ident::new("remote_proxy", Span::call_site()));
+            assert_eq!(factory, Ident::new("remote_factory", Span::call_site()));
+            assert_eq!(is_remote, true);
+            Ok(())
+        } else {
+            Err(Error::new(Span::call_site(), "known proxy not generated"))
+        }
+    }
+
+    #[test]
+    fn test_generate_known_proxy_works_with_fastboot_proxy() -> Result<(), Error> {
+        let input: ItemFn = parse_quote!(
+            fn test_fn(test_param: FastbootProxy) {}
+        );
+        let param = input.sig.inputs[0].clone();
+        if let Some(GeneratedKnownProxyParts { name, factory, testing: _, is_remote }) = match param
+        {
+            FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
+                Path(TypePath { path, .. }) => match path.segments.last() {
+                    Some(simple_proxy_type) => generate_known_proxy(simple_proxy_type, &pat, path),
+                    _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+                },
+                _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+            },
+            _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+        } {
+            assert_eq!(name, Ident::new("fastboot_proxy", Span::call_site()));
+            assert_eq!(factory, Ident::new("fastboot_factory", Span::call_site()));
+            assert_eq!(is_remote, false);
+            Ok(())
+        } else {
+            Err(Error::new(Span::call_site(), "known proxy not generated"))
+        }
+    }
+
+    #[test]
+    fn test_generate_known_proxy_does_not_generate_proxy_for_unknown_proxies() -> Result<(), Error>
+    {
+        let input: ItemFn = parse_quote!(
+            fn test_fn(test_param: UnknownProxy) {}
+        );
+        let param = input.sig.inputs[0].clone();
+        let result = match param {
+            FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
+                Path(TypePath { path, .. }) => match path.segments.last() {
+                    Some(simple_proxy_type) => generate_known_proxy(simple_proxy_type, &pat, path),
+                    _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+                },
+                _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+            },
+            _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+        };
+        assert!(result.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn test_generate_mapped_proxy_generates_name_and_future() -> Result<(), Error> {
+        let proxy_map: ProxyMap = parse_quote! { TestProxy= "test:expose:anything" };
+        let input: ItemFn = parse_quote!(
+            fn test_fn(test_param: TestProxy) {}
+        );
+        let param = input.sig.inputs[0].clone();
+        if let Some(GeneratedMappedProxyParts { name, fut, implementation: _, testing: _ }) =
+            match param {
+                FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
+                    Path(TypePath { path, .. }) => generate_mapped_proxy(&proxy_map, &pat, path),
+                    _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+                },
+                _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+            }
+        {
+            assert_eq!(name, Ident::new("test_param", Span::call_site()));
+            assert_eq!(fut, Ident::new("test_param_fut", Span::call_site()));
+            Ok(())
+        } else {
+            Err(Error::new(Span::call_site(), "mappedproxy not generated"))
+        }
+    }
+
+    #[test]
+    fn test_generate_mapped_proxy_does_not_generate_unmapped_proxies() -> Result<(), Error> {
+        let proxy_map: ProxyMap = parse_quote! { TestProxy= "test:expose:anything" };
+        let input: ItemFn = parse_quote!(
+            fn test_fn(test_param: AnotherTestProxy) {}
+        );
+        let param = input.sig.inputs[0].clone();
+        let result = match param {
+            FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
+                Path(TypePath { path, .. }) => generate_mapped_proxy(&proxy_map, &pat, path),
+                _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+            },
+            _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+        };
+        assert!(result.is_none());
         Ok(())
     }
 }
