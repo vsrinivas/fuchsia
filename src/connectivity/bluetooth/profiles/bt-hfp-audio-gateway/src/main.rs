@@ -19,6 +19,7 @@ use crate::{
     profile::Profile,
 };
 
+mod at;
 mod call_manager;
 mod config;
 mod error;
