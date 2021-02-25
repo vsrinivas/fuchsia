@@ -219,16 +219,16 @@ currently running FEMU or the `fx serve` command.
     fx emu -N
     ```
 
-1.  Run the `fx set-device` command and select `step-atom-yard-juicy` (the
+1.  Run the `fx set-device` command and select `fuchsia-5254-0063-5e7a` (the
     emulator’s default device name) to be your device, for example:
 
     <pre>
     $ fx set-device
     ERROR: Multiple devices found, please pick one from the list:
-    1) rabid-snort-wired-tutu
-    2) step-atom-yard-juicy
+    1) fuchsia-4407-0bb4-d0eb
+    2) fuchsia-5254-0063-5e7a
     #? <b>2</b>
-    New default device: step-atom-yard-juicy
+    New default device: fuchsia-5254-0063-5e7a
     </pre>
 
 1.  In another terminal, start a package server:

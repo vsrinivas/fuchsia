@@ -973,7 +973,7 @@ nodename from its MAC address.  This cmdline is honored by GigaBoot and Zircon.
 ## zircon.namegen=\<num>
 
 Set the system nodename generation style.
-If omitted or unknown, the system uses style 0.
+If omitted or unknown, the system uses style 1.
 It has no effect if `zircon.nodename` is set.
 Older name generation styles may be removed in the future.
 This cmdline is honored by GigaBoot and Zircon.

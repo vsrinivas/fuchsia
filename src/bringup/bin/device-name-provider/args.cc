@@ -29,10 +29,10 @@ int ParseCommonArgs(int argc, char** argv, const char** error, std::string* inte
 }
 
 uint32_t NamegenParse(const std::string& str) {
-  if (str == "1") {
-    return 1;
+  if (str == "0") {
+    return 0;
   }
-  return 0;
+  return 1;
 }
 
 }  // namespace

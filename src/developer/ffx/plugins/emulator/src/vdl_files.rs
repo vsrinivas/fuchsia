@@ -367,7 +367,7 @@ impl VDLFiles {
             )
         }
         if vdl_args.tuntap {
-            println!("{}", Yellow.paint("To support fx tools on emulator, please run \"fx set-device step-atom-yard-juicy\""));
+            println!("{}", Yellow.paint("To support fx tools on emulator, please run \"fx set-device fuchsia-5254-0063-5e7a\""));
         } else {
             println!(
                 "{}",
@@ -400,7 +400,7 @@ impl VDLFiles {
     fn ssh_and_wait(&self, tuntap: bool, ssh_port: Port) -> Result<()> {
         if tuntap {
             let device_addr = Command::new(&self.host_tools.device_finder)
-                .args(&["resolve", "-ipv4=false", "step-atom-yard-juicy"])
+                .args(&["resolve", "-ipv4=false", "fuchsia-5254-0063-5e7a"])
                 .output()?;
             // Ref to SSH flags: http://man.openbsd.org/ssh_config
             Command::new("ssh")

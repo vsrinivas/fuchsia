@@ -11,7 +11,7 @@ set -e -o pipefail
 
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 
-readonly DEFAULT_EMULATOR_NAME="step-atom-yard-juicy"
+readonly DEFAULT_EMULATOR_NAME="fuchsia-5254-0063-5e7a"
 
 DEFAULT_FUCHSIA_BUCKET="fuchsia"
 SSH_BIN="$(command -v ssh)"
