@@ -9,6 +9,10 @@ group("tests") {
 
   deps = [
     ":action_tracer_test($host_toolchain)",
+
+    # There are known environment/hardware where fsatrace_test fails.
+    # TODO(fxb/70879): enable when test passes on all of them
+    # ":fsatrace_test",
     ":tracer_test",
   ]
 }
@@ -41,9 +45,22 @@ action("tracer_test") {
   ]
 
   args = [
-    rebase_path("tracer_test_input.txt", root_build_dir),
-    rebase_path("$target_out_dir/tracer_test_output_1.txt", root_build_dir),
-    rebase_path("$target_out_dir/tracer_test_output_2.txt", root_build_dir),
-    rebase_path("$target_out_dir/tracer_test_output_3.txt", root_build_dir),
+    rebase_path(inputs[0], root_build_dir),
+    rebase_path(outputs[0], root_build_dir),
+    rebase_path(outputs[1], root_build_dir),
+    rebase_path(outputs[2], root_build_dir),
+  ]
+}
+
+# Test that fsatrace is working properly on the host.
+# If this fails, tracing is not capturing file accesses properly,
+# and enabling action tracing is providing no coverage or diagnostic value.
+action("fsatrace_test") {
+  script = "fsatrace_test.sh"
+  inputs = [ "//prebuilt/fsatrace/fsatrace" ]
+  outputs = [ "$target_out_dir/fsatrace_test_stamp.txt" ]
+  args = [
+    rebase_path(inputs[0], root_build_dir),
+    rebase_path(outputs[0], root_build_dir),
   ]
 }
