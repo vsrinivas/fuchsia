@@ -33,6 +33,7 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <set>
 #include <string>
 #include <thread>
@@ -1320,15 +1321,28 @@ class Item final {
 
   static const char* TypeExtension(uint32_t zbi_type) { return ItemTypeInfo(zbi_type).extension; }
 
-  static bool ParseTypeName(const char* name, uint32_t* abi_type) {
+  static bool ParseTypeName(std::string name, uint32_t* abi_type,
+                            std::optional<uint32_t>* max_size) {
+    if (auto pos = name.find_first_of(':'); pos != std::string::npos) {
+      int i = 0;
+      uint32_t size;
+      if (sscanf(&name[pos], ":%i%n", &size, &i) == 1 && pos + i == name.size()) {
+        name.resize(pos);
+        *max_size = size;
+      } else {
+        return false;
+      }
+    } else {
+      *max_size = std::nullopt;
+    }
     for (const auto& t : kItemTypes_) {
-      if (!strcasecmp(t.name, name)) {
+      if (!strcasecmp(t.name, name.c_str())) {
         *abi_type = t.type;
         return true;
       }
     }
     int i = 0;
-    return sscanf(name, "%x%n", abi_type, &i) == 1 && name[i] == '\0';
+    return sscanf(name.c_str(), "%x%n", abi_type, &i) == 1 && static_cast<size_t>(i) == name.size();
   }
 
   static std::filesystem::path ExtractedFileName(unsigned int n, uint32_t zbi_type, bool raw) {
@@ -1377,7 +1391,8 @@ Extracted items use the file names shown below:\n\
       zbi_header_t check_header = header_;
       crc.FinalizeHeader(&check_header);
       if (!compress_ && check_header.crc32 != header_.crc32) {
-        fprintf(stderr, "error: CRC %08x does not match header\n", check_header.crc32);
+        fprintf(stderr, "error: CRC %08x does not match header %08x\n", check_header.crc32,
+                header_.crc32);
       }
       return check_header;
     } else {
@@ -1493,6 +1508,7 @@ Extracted items use the file names shown below:\n\
 
   // Create from raw file contents.
   static ItemPtr CreateFromFile(const File* filenode, const char* file_name, uint32_t type,
+                                std::optional<uint32_t> input_size_limit,
                                 Compressor::Config compress) {
     bool null_terminate = type == ZBI_TYPE_CMDLINE;
     if (!zbitl::TypeIsStorage(type)) {
@@ -1501,7 +1517,9 @@ Extracted items use the file names shown below:\n\
 
     const auto file = filenode->AsContents();
     size_t size = file->exact_size() + (null_terminate ? 1 : 0);
-    if (size > UINT32_MAX) {
+    if (input_size_limit) {
+      size = std::min(size, static_cast<size_t>(*input_size_limit));
+    } else if (size > UINT32_MAX) {
       fprintf(stderr, "size of input file %s (%zu) is larger than format maximum (%u)\n", file_name,
               size, UINT32_MAX);
       exit(1);
@@ -2327,7 +2345,7 @@ Input control switches apply to subsequent input arguments:\n\
     --files, -F                    read BOOTFS manifest files (default)\n\
     --prefix=PREFIX, -p PREFIX     prepend PREFIX/ to target file names\n\
     --replace, -r                  duplicate target file name OK (see below)\n\
-    --type=TYPE, -T TYPE           input files are TYPE items (see below)\n\
+    --type=TYPE[:N], -T TYPE[:N]   input files are TYPE items (see below)\n\
     --compressed[=HOW], -c [HOW]   compress storage images (see below)\n\
     --uncompressed, -u             do not compress storage images\n\
     --recompress                   recompress input items already compressed\n\
@@ -2352,6 +2370,7 @@ directory in subsequent FILE, DIRECTORY, or TEXT arguments.\n\
 \n\
 With `--type` or `-T`, input files are treated as TYPE instead of manifest\n\
 files, and directories are not permitted.  See below for the TYPE strings.\n\
+If `:N` appears after TYPE then larger input files are truncated to N bytes.\n\
 \n\
 ZBI items from input ZBI files are normally emitted unchanged.  (However,\n\
 see below about BOOTFS items.)  With `--recompress`, input items of storage\n\
@@ -2423,6 +2442,7 @@ int main(int argc, char** argv) {
   uint32_t bootable = kImageArchUndefined;
   bool input_manifest = true;
   uint32_t input_type = ZBI_TYPE_DISCARD;
+  std::optional<uint32_t> input_size_limit;
   const char* json_output = nullptr;
   Compressor::Config compressed;
   bool extract = false;
@@ -2472,7 +2492,7 @@ int main(int argc, char** argv) {
         continue;
 
       case 'T':
-        if (Item::ParseTypeName(optarg, &input_type)) {
+        if (Item::ParseTypeName(optarg, &input_type, &input_size_limit)) {
           input_manifest = false;
         } else {
           fprintf(stderr, "unrecognized type: %s\n", optarg);
@@ -2552,7 +2572,7 @@ int main(int argc, char** argv) {
         } else {
           items.push_back(
               Item::CreateFromFile(opener.Emplace(optarg, input_type == ZBI_TYPE_CMDLINE),
-                                   "<command-line>", input_type, compressed));
+                                   "<command-line>", input_type, input_size_limit, compressed));
           if (input_type == ZBI_TYPE_STORAGE_BOOTFS) {
             bootfs.push_back(&items.back());
           }
@@ -2588,7 +2608,8 @@ int main(int argc, char** argv) {
       }
     } else {
       // --type told us how to pack it.
-      items.push_back(Item::CreateFromFile(input, optarg, input_type, compressed));
+      items.push_back(
+          Item::CreateFromFile(input, optarg, input_type, input_size_limit, compressed));
     }
   }
 

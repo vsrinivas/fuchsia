@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/zbi/zbi.gni")
+import("//build/zbi/zbi_input.gni")
 import("//build/zircon/migrated_targets.gni")
 
 zx_host_tool("zbi") {
@@ -19,4 +21,68 @@ zx_host_tool("zbi") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config/zircon:Wno-conversion" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":zbi-input-size-limit-test" ]
+}
+
+template("input_test") {
+  test_name = target_name
+  jq_path = "//prebuilt/third_party/jq/$host_platform/bin/jq"
+
+  zbi("$test_name.zbi") {
+    testonly = true
+    cpu = ""
+    deps = [ ":$test_name.input" ]
+  }
+
+  zbi_input("$test_name.input") {
+    testonly = true
+    forward_variables_from(invoker, "*", [ "expected" ])
+  }
+
+  action("$test_name.json") {
+    testonly = true
+    deps = [ ":$test_name.zbi" ]
+    zbi_outputs = get_target_outputs(deps[0])
+    sources = [ zbi_outputs[1] ]  # Just the JSON file.
+    outputs = [ "$target_out_dir/$target_name" ]
+    inputs = [ jq_path ]
+    script = "jq-test.sh"
+    args = rebase_path(inputs + sources + outputs, root_build_dir) +
+           [ "[ .[] | {type, size} ]" ]
+  }
+
+  generated_file("$test_name.expected.json") {
+    testonly = true
+    outputs = [ "$target_gen_dir/$target_name" ]
+    output_conversion = "json"
+    contents = invoker.expected
+  }
+
+  action(test_name) {
+    testonly = true
+    deps = [
+      ":$test_name.expected.json",
+      ":$test_name.json",
+    ]
+    sources = get_target_outputs(deps[0]) + get_target_outputs(deps[1])
+    outputs = [ "$target_out_dir/$test_name.ok" ]
+    script = "json-diff.sh"
+    args = rebase_path([ jq_path ] + outputs + sources, root_build_dir)
+  }
+}
+
+input_test("zbi-input-size-limit-test") {
+  args = [ "--uncompressed" ]
+  type = "ramdisk:42"
+  sources = [ "BUILD.gn" ]
+  expected = [
+    {
+      type = "RAMDISK"
+      size = 42
+    },
+  ]
 }
