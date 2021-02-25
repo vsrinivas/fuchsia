@@ -55,23 +55,20 @@ class KeyboardInputHelper {
   ~KeyboardInputHelper() {}
 
   void WriteReportBuf(std::vector<uint32_t> keys) {
-    auto report_builder = fuchsia_input_report::InputReport::Builder(
-        std::make_unique<fuchsia_input_report::InputReport::Frame>());
-    auto keyboard_builder = fuchsia_input_report::KeyboardInputReport::Builder(
-        std::make_unique<fuchsia_input_report::KeyboardInputReport::Frame>());
+    fidl::FidlAllocator allocator;
+    fuchsia_input_report::InputReport input_report(allocator);
+    fuchsia_input_report::KeyboardInputReport keyboard_input_report(allocator);
 
-    std::vector<llcpp::fuchsia::ui::input2::Key> fidl_keys;
+    size_t index = 0;
+    fidl::VectorView<llcpp::fuchsia::ui::input2::Key> fidl_keys(allocator, keys.size());
     for (auto& key : keys) {
       auto fidl_key =
           *key_util::hid_key_to_fuchsia_key(hid::USAGE(hid::usage::Page::kKeyboardKeypad, key));
-      fidl_keys.push_back(static_cast<::llcpp::fuchsia::ui::input2::Key>(fidl_key));
+      fidl_keys[index++] = static_cast<::llcpp::fuchsia::ui::input2::Key>(fidl_key);
     }
-    keyboard_builder.set_pressed_keys(
-        std::make_unique<fidl::VectorView<::llcpp::fuchsia::ui::input2::Key>>(
-            fidl::unowned_ptr(fidl_keys.data()), fidl_keys.size()));
-    report_builder.set_keyboard(
-        std::make_unique<fuchsia_input_report::KeyboardInputReport>(keyboard_builder.build()));
-    keyboard_.ProcessInput(report_builder.build());
+    keyboard_input_report.set_pressed_keys(allocator, std::move(fidl_keys));
+    input_report.set_keyboard(allocator, std::move(keyboard_input_report));
+    keyboard_.ProcessInput(input_report);
   }
 
   // Byte 0 contains one bit per modifier key.
