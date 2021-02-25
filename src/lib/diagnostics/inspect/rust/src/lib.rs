@@ -312,6 +312,15 @@ impl Inspector {
         &self.root_node
     }
 
+    /// Takes a function to execute as under a single lock of the Inspect VMO. This function
+    /// receives a reference to the root of the inspect hierarchy.
+    pub fn atomic_update<F, R>(&self, update_fn: F) -> R
+    where
+        F: FnMut(&Node) -> R,
+    {
+        self.root().atomic_update(update_fn)
+    }
+
     fn state(&self) -> Option<State> {
         self.root().inner.inner_ref().map(|inner_ref| inner_ref.state.clone())
     }
@@ -757,10 +766,10 @@ impl Node {
     /// Creates and keeps track of a child with the given `name`.
     pub fn record_child<F>(&self, name: impl AsRef<str>, initialize: F)
     where
-        F: FnOnce(&mut Node),
+        F: FnOnce(&Node),
     {
-        let mut child = self.create_child(name);
-        initialize(&mut child);
+        let child = self.create_child(name);
+        initialize(&child);
         self.record(child);
     }
 
@@ -778,6 +787,30 @@ impl Node {
                     .ok()
             })
             .unwrap_or(Node::new_no_op())
+    }
+
+    /// Takes a function to execute as under a single lock of the Inspect VMO. This function
+    /// receives a reference to the `Node` where this is called.
+    pub fn atomic_update<F, R>(&self, mut update_fn: F) -> R
+    where
+        F: FnMut(&Node) -> R,
+    {
+        match self.inner.inner_ref() {
+            None => {
+                // If the node was a no-op we still execute the `update_fn` even if all operations
+                // inside it will be no-ops to return `R`.
+                update_fn(&self)
+            }
+            Some(inner_ref) => {
+                // Silently ignore the error when fail to lock (as in any regular operation).
+                // All operations performed in the `update_fn` won't update the vmo
+                // generation count since we'll be holding one lock here.
+                inner_ref.state.begin_transaction();
+                let result = update_fn(&self);
+                inner_ref.state.end_transaction();
+                result
+            }
+        }
     }
 
     /// Keeps track of the given property for the lifetime of the node.
@@ -1301,16 +1334,17 @@ mod tests {
             reader,
         },
         anyhow::{bail, format_err},
+        diagnostics_hierarchy::{DiagnosticsHierarchy, Property as DProperty},
         fdio,
         fidl::endpoints::DiscoverableService,
         fidl_fuchsia_sys::ComponentControllerEvent,
         fuchsia_async as fasync,
         fuchsia_component::client,
         fuchsia_component::server::ServiceObj,
-        fuchsia_zircon::AsHandleRef,
+        fuchsia_zircon::{AsHandleRef, Peered},
         glob::glob,
         mapped_vmo::Mapping,
-        std::ffi::CString,
+        std::{convert::TryFrom, ffi::CString},
     };
 
     const TEST_COMPONENT_CMX: &str = "inspect_test_component.cmx";
@@ -2090,6 +2124,108 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             a0: 1u64,
             a1: 1u64,
+        });
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn atomic_update_reader() {
+        let inspector = Inspector::new();
+
+        // Spawn a read thread that holds a duplicate handle to the VMO that will be written.
+        let vmo = inspector.duplicate_vmo().expect("duplicate vmo handle");
+        let (p1, p2) = zx::EventPair::create().unwrap();
+
+        macro_rules! notify_and_wait_reader {
+            () => {
+                p1.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).unwrap();
+                p1.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE).unwrap();
+                p1.signal_handle(zx::Signals::USER_0, zx::Signals::NONE).unwrap();
+            };
+        }
+
+        macro_rules! wait_and_notify_writer {
+            ($code:block) => {
+              p2.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE).unwrap();
+              p2.signal_handle(zx::Signals::USER_0, zx::Signals::NONE).unwrap();
+              $code
+              p2.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).unwrap();
+            }
+        }
+
+        let thread = std::thread::spawn(move || {
+            // Before running the atomic update.
+            wait_and_notify_writer! {{
+                let hierarchy: DiagnosticsHierarchy<String> =
+                    reader::PartialNodeHierarchy::try_from(&vmo).unwrap().into();
+                assert_eq!(hierarchy, DiagnosticsHierarchy::new_root());
+            }};
+            // After: create_child("child"): Assert that the VMO is in use (locked) and we can't
+            // read.
+            wait_and_notify_writer! {{
+                assert!(reader::PartialNodeHierarchy::try_from(&vmo).is_err());
+            }};
+            // After: record_int("a"): Assert that the VMO is in use (locked) and we can't
+            // read.
+            wait_and_notify_writer! {{
+                assert!(reader::PartialNodeHierarchy::try_from(&vmo).is_err());
+            }};
+            // After: record_int("b"): Assert that the VMO is in use (locked) and we can't
+            // read.
+            wait_and_notify_writer! {{
+                assert!(reader::PartialNodeHierarchy::try_from(&vmo).is_err());
+            }};
+            // After atomic update
+            wait_and_notify_writer! {{
+                let expected_hierarchy = DiagnosticsHierarchy::new(
+                    "root".to_string(),
+                    vec![DProperty::Int("value".to_string(), 2)],
+                    vec![DiagnosticsHierarchy::new(
+                        "child".to_string(),
+                        vec![
+                            DProperty::Int("a".to_string(), 1),
+                            DProperty::Int("b".to_string(), 2),
+                        ],
+                        vec![],
+                    )],
+                );
+                let hierarchy: DiagnosticsHierarchy<String> =
+                    reader::PartialNodeHierarchy::try_from(&vmo).unwrap().into();
+                assert_eq!(hierarchy, expected_hierarchy);
+            }};
+        });
+
+        // Perform the atomic update
+        let mut child = Node::default();
+        notify_and_wait_reader!();
+        let int_val = inspector.root().create_int("value", 1);
+        inspector
+            .root()
+            .atomic_update(|node| {
+                // Intentionally make this slow to assert an atomic update in the reader.
+                child = node.create_child("child");
+                notify_and_wait_reader!();
+                child.record_int("a", 1);
+                notify_and_wait_reader!();
+                child.record_int("b", 2);
+                notify_and_wait_reader!();
+                int_val.add(1);
+                Ok::<(), Error>(())
+            })
+            .expect("successful atomic update");
+        notify_and_wait_reader!();
+
+        // Wait for the reader thread to successfully finish.
+        let _ = thread.join();
+
+        // Ensure that the variable that we mutated internally can be used.
+        child.record_int("c", 3);
+        assert_inspect_tree!(inspector, root: {
+            value: 2i64,
+            child: {
+                a: 1i64,
+                b: 2i64,
+                c: 3i64,
+            }
         });
     }
 }

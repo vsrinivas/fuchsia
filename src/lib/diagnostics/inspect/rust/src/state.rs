@@ -264,6 +264,30 @@ impl State {
         LockedStateGuard::new(&self.header, inner_lock)
     }
 
+    /// Locks the state mutex and inspect vmo. The state will be unlocked on drop.
+    /// This can fail when the header is already locked.
+    pub fn begin_transaction(&self) {
+        let mut inner_lock = self.inner.lock();
+        if inner_lock.transaction_count == 0 {
+            debug_assert!(self.header.check_locked(false).is_ok());
+            let res = self.header.lock_header();
+            debug_assert!(res.is_ok());
+        }
+        inner_lock.transaction_count += 1;
+    }
+
+    /// Locks the state mutex and inspect vmo. The state will be unlocked on drop.
+    /// This can fail when the header is already locked.
+    pub fn end_transaction(&self) {
+        let mut inner_lock = self.inner.lock();
+        inner_lock.transaction_count -= 1;
+        if inner_lock.transaction_count == 0 {
+            debug_assert!(self.header.check_locked(true).is_ok());
+            let res = self.header.unlock_header();
+            debug_assert!(res.is_ok());
+        }
+    }
+
     /// Copies the bytes in the VMO into the returned vector.
     pub fn copy_vmo_bytes(&self) -> Vec<u8> {
         let state = self.inner.lock();
@@ -294,7 +318,9 @@ impl<'a> LockedStateGuard<'a> {
         header: &'a Block<Arc<Mapping>>,
         inner_lock: MutexGuard<'a, InnerState>,
     ) -> Result<Self, Error> {
-        header.lock_header()?;
+        if inner_lock.transaction_count == 0 {
+            header.lock_header()?;
+        }
         Ok(Self { header, inner_lock })
     }
 
@@ -412,9 +438,11 @@ impl<'a> LockedStateGuard<'a> {
 
 impl Drop for LockedStateGuard<'_> {
     fn drop(&mut self) {
-        self.header.unlock_header().unwrap_or_else(|e| {
-            error!(?e, "Failed to unlock header");
-        });
+        if self.inner_lock.transaction_count == 0 {
+            self.header.unlock_header().unwrap_or_else(|e| {
+                error!(?e, "Failed to unlock header");
+            });
+        }
     }
 }
 
@@ -424,6 +452,7 @@ impl Drop for LockedStateGuard<'_> {
 struct InnerState {
     heap: Heap,
     next_unique_link_id: AtomicU64,
+    transaction_count: usize,
 
     #[derivative(Debug = "ignore")]
     callbacks: HashMap<String, LazyNodeContextFnArc>,
@@ -432,7 +461,12 @@ struct InnerState {
 impl InnerState {
     /// Creates a new inner state that performs all operations on the heap.
     pub fn new(heap: Heap) -> Self {
-        Self { heap, next_unique_link_id: AtomicU64::new(0), callbacks: HashMap::new() }
+        Self {
+            heap,
+            next_unique_link_id: AtomicU64::new(0),
+            callbacks: HashMap::new(),
+            transaction_count: 0,
+        }
     }
 
     /// Allocate a NODE block with the given |name| and |parent_index|.
@@ -1374,6 +1408,43 @@ mod tests {
             state_guard.stats(),
             Stats { total_dynamic_children: 1, maximum_size: 12288, current_size: 4096 }
         )
+    }
+
+    #[test]
+    fn transaction_locking() {
+        let state = get_state(4096);
+        // Initial generation count is 0
+        assert_eq!(state.header.header_generation_count().unwrap(), 0);
+
+        // Begin a transaction
+        state.begin_transaction();
+        assert_eq!(state.header.header_generation_count().unwrap(), 1);
+        assert!(state.header.check_locked(true).is_ok());
+
+        // Operations on the lock  guard do not change the generation counter.
+        let mut lock_guard1 = state.try_lock().expect("lock state");
+        assert_eq!(lock_guard1.inner_lock.transaction_count, 1);
+        assert_eq!(state.header.header_generation_count().unwrap(), 1);
+        assert!(state.header.check_locked(true).is_ok());
+        let _ = lock_guard1.create_node("test", 0).unwrap();
+        assert_eq!(lock_guard1.inner_lock.transaction_count, 1);
+        assert_eq!(state.header.header_generation_count().unwrap(), 1);
+
+        // Dropping the guard releases the mutex lock but the header remains locked.
+        drop(lock_guard1);
+        assert_eq!(state.header.header_generation_count().unwrap(), 1);
+        assert!(state.header.check_locked(true).is_ok());
+
+        // When the transaction finishes, the header is unlocked.
+        state.end_transaction();
+        assert_eq!(state.header.header_generation_count().unwrap(), 2);
+        assert!(state.header.check_locked(false).is_ok());
+
+        // Operations under no transaction work as usual.
+        let lock_guard2 = state.try_lock().expect("lock state");
+        assert!(state.header.check_locked(true).is_ok());
+        assert_eq!(state.header.header_generation_count().unwrap(), 3);
+        assert_eq!(lock_guard2.inner_lock.transaction_count, 0);
     }
 
     fn get_state(size: usize) -> State {
