@@ -70,6 +70,10 @@ toc:
   path: /docs/contribute/governance/fidl/ftp/ftp-036.md
 - title: "FTP-037: Transactional Message Header v3"
   path: /docs/contribute/governance/fidl/ftp/ftp-037.md
+- title: "FTP-038: Separating Layouts from Constraints"
+  path: /docs/contribute/governance/fidl/ftp/ftp-038.md
+- title: "FTP-039: Types Come Second"
+  path: /docs/contribute/governance/fidl/ftp/ftp-039.md
 - title: "FTP-040: Identifier Uniqueness"
   path: /docs/contribute/governance/fidl/ftp/ftp-040.md
 - title: "FTP-041: Support for Unifying Services and Devices"
@@ -86,6 +90,8 @@ toc:
   path: /docs/contribute/governance/fidl/ftp/ftp-048.md
 - title: "FTP-049: FIDL Tuning Process Evolution"
   path: /docs/contribute/governance/fidl/ftp/ftp-049.md
+- title: "FTP-050: FIDL Syntax Revamp"
+  path: /docs/contribute/governance/fidl/ftp/ftp-050.md
 - title: "FTP-052: Type Aliasing and New Types"
   path: /docs/contribute/governance/fidl/ftp/ftp-052.md
 - title: "FTP-054: Parameter Attributes"
