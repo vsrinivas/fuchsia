@@ -136,7 +136,8 @@ typedef struct {
     macro(ZBI_TYPE_HW_REBOOT_REASON, "HW_REBOOT_REASON", ".bin") \
     macro(ZBI_TYPE_SERIAL_NUMBER, "SERIAL_NUMBER", ".txt") \
     macro(ZBI_TYPE_BOOTLOADER_FILE, "BOOTLOADER_FILE", ".bin") \
-    macro(ZBI_TYPE_DEVICETREE, "DEVICETREE", ".dtb")
+    macro(ZBI_TYPE_DEVICETREE, "DEVICETREE", ".dtb") \
+    macro(ZBI_TYPE_SECURE_ENTROPY, "ENTROPY", ".bin")
 // clang-format on
 
 // Each ZBI starts with a container header.
@@ -676,5 +677,11 @@ using zbi_hw_reboot_reason_t = ZbiHwRebootReason;
 // along for development purposes, but extract information from it to populate
 // specific ZBI items such as ZBI_TYPE_KERNEL_DRIVER et al.
 #define ZBI_TYPE_DEVICETREE (0xd00dfeed)
+
+// An arbitrary number of random bytes attested to have high entropy.  Any
+// number of items of any size can be provided, but no data should be provided
+// that is not true entropy of cryptographic quality.  This is used to seed
+// secure cryptographic pseudo-random number generators.
+#define ZBI_TYPE_SECURE_ENTROPY (0x444e4152)  // RAND
 
 #endif  // SYSROOT_ZIRCON_BOOT_IMAGE_H_
