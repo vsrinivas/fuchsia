@@ -914,6 +914,9 @@ class FileContents final {
         exact_size_(mapped_size_ - (null_terminate ? 0 : 1)),
         owned_(false) {}
 
+  FileContents(void* mapped, size_t mapped_size, size_t exact_size)
+      : mapped_(mapped), mapped_size_(mapped_size), exact_size_(exact_size), owned_(true) {}
+
   FileContents(FileContents&& other) { *this = std::move(other); }
 
   FileContents& operator=(FileContents&& other) {
@@ -975,6 +978,32 @@ class FileContents final {
     result.exact_size_ = size;
     result.mapped_size_ = (size + pagesize - 1) & -pagesize;
     return result;
+  }
+
+  static FileContents Read(fbl::unique_fd fd, const std::filesystem::path& file,
+                           size_t size_limit) {
+    void* mapped = mmap(nullptr, size_limit, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+    if (mapped == MAP_FAILED) {
+      perror("mmap");
+      exit(1);
+    }
+
+    auto p = static_cast<std::byte*>(mapped);
+    size_t size = 0;
+    do {
+      ssize_t n = read(fd.get(), p, size_limit - size);
+      if (n < 0) {
+        perror(file.c_str());
+        exit(1);
+      }
+      p += n;
+      size += n;
+      if (n == 0) {
+        break;
+      }
+    } while (size < size_limit);
+
+    return FileContents(mapped, size_limit, size);
   }
 
   const iovec View() const { return View(0, exact_size()); }
@@ -1162,39 +1191,24 @@ class FileOpener final {
     cwd_ /= dir;
   }
 
-  // The returned FileContents is cached and lives forever (for the lifetime
-  // of the FileOpener).
-  const FileContents* OpenFile(std::filesystem::path file) {
-    file.make_preferred();
-    auto& cache = name_cache_[file];
-    if (!cache) {
-      struct stat st;
-      auto [cached_file, fd] = Open(file, &st);
-      OpenFile(cached_file, std::move(fd), st, file);
-      cache = cached_file;
-    }
-    return cache->AsContents();
-  }
-
   // Like OpenFile, but also accept a directory.
-  const File* OpenFileOrDir(std::filesystem::path file, bool ignore_missing = false) {
+  const File* OpenFileOrDir(std::filesystem::path file, bool ignore_missing = false,
+                            std::optional<uint32_t> input_size_limit = {}) {
     file.make_preferred();
     auto& cache = name_cache_[file];
-    if (!cache) {
-      struct stat st;
-      auto [cached_file, fd] = Open(file, &st, ignore_missing);
-      if (!cached_file) {
-        assert(ignore_missing);
-        return nullptr;
-      }
-      if (S_ISDIR(st.st_mode)) {
-        OpenDirectory(cached_file, std::move(fd), std::move(file));
-      } else {
-        OpenFile(cached_file, std::move(fd), st, std::move(file));
-      }
-      cache = cached_file;
+    if (cache) {
+      return cache;
     }
-    return cache;
+    struct stat st;
+    auto [cached_file, fd] = Open(file, &st, ignore_missing);
+    if (!cached_file) {
+      assert(ignore_missing);
+      return nullptr;
+    }
+    if (S_ISDIR(st.st_mode)) {
+      return OpenDirectory(cached_file, std::move(fd), std::move(file), cache);
+    }
+    return OpenFile(cached_file, std::move(fd), st, std::move(file), cache, input_size_limit);
   }
 
   // Construct a new "unowned" FileContents in place.  The returned
@@ -1279,17 +1293,27 @@ class FileOpener final {
     return {&file_cache_[FileId(*st)], std::move(fd)};
   }
 
-  void OpenFile(File* cached, fbl::unique_fd fd, const struct stat& st,
-                std::filesystem::path file) {
-    if (!S_ISREG(st.st_mode)) {
+  const File* OpenFile(File* cached, fbl::unique_fd fd, const struct stat& st,
+                       std::filesystem::path file, const File*& cache_slot,
+                       std::optional<uint32_t> input_size_limit = {}) {
+    if (S_ISREG(st.st_mode)) {
+      *cached = File(
+          std::make_unique<const FileContents>(FileContents::Map(std::move(fd), st, file.c_str())));
+      cache_slot = cached;
+      return cached;
+    }
+
+    if (!input_size_limit) {
       fprintf(stderr, "%s: not a regular file\n", file.c_str());
       exit(1);
     }
-    *cached = File(
-        std::make_unique<const FileContents>(FileContents::Map(std::move(fd), st, file.c_str())));
+
+    // Special files can be read up to the size limit, but don't get cached.
+    return Emplace(FileContents::Read(std::move(fd), file, *input_size_limit));
   }
 
-  void OpenDirectory(File* cached, fbl::unique_fd fd, std::filesystem::path file) {
+  const File* OpenDirectory(File* cached, fbl::unique_fd fd, std::filesystem::path file,
+                            const File*& cache_slot) {
     DIR* dir = fdopendir(fd.release());
     if (!dir) {
       perror("fdopendir");
@@ -1307,6 +1331,8 @@ class FileOpener final {
     }
     closedir(dir);
     *cached = File(std::move(dirmap));
+    cache_slot = cached;
+    return cached;
   }
 };
 
@@ -2371,6 +2397,8 @@ directory in subsequent FILE, DIRECTORY, or TEXT arguments.\n\
 With `--type` or `-T`, input files are treated as TYPE instead of manifest\n\
 files, and directories are not permitted.  See below for the TYPE strings.\n\
 If `:N` appears after TYPE then larger input files are truncated to N bytes.\n\
+In this case, input files other than regular files are allowed: N or fewer\n\
+bytes will be read from the input device, pipe, or socket.\n\
 \n\
 ZBI items from input ZBI files are normally emitted unchanged.  (However,\n\
 see below about BOOTFS items.)  With `--recompress`, input items of storage\n\
@@ -2586,7 +2614,7 @@ int main(int argc, char** argv) {
     }
     assert(opt == 1);
 
-    auto input = opener.OpenFileOrDir(optarg);
+    auto input = opener.OpenFileOrDir(optarg, false, input_size_limit);
 
     if (input->IsDir()) {
       // A directory populates the BOOTFS.

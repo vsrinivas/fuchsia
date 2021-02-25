@@ -25,7 +25,10 @@ zx_host_tool("zbi") {
 
 group("tests") {
   testonly = true
-  deps = [ ":zbi-input-size-limit-test" ]
+  deps = [
+    ":zbi-input-chrdev-test",
+    ":zbi-input-size-limit-test",
+  ]
 }
 
 template("input_test") {
@@ -83,6 +86,18 @@ input_test("zbi-input-size-limit-test") {
     {
       type = "RAMDISK"
       size = 42
+    },
+  ]
+}
+
+input_test("zbi-input-chrdev-test") {
+  args = [ "--uncompressed" ]
+  type = "ramdisk:23"
+  sources = [ "/dev/zero" ]
+  expected = [
+    {
+      type = "RAMDISK"
+      size = 23
     },
   ]
 }
