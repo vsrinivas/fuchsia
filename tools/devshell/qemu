@@ -128,7 +128,10 @@ CLEANUP_LIST+=("$imgdir")
 
 kernelzbi="${imgdir}/fuchsia-ssh.zbi"
 args+=(-z "${kernelzbi}")
-fx-zbi -o "${kernelzbi}" "${ZBI_IMAGE}" --entry "data/ssh/authorized_keys=${authkeys_path}"
+fx-zbi -o "${kernelzbi}" \
+  "${ZBI_IMAGE}" \
+  --entry "data/ssh/authorized_keys=${authkeys_path}" \
+  --type=entropy:64 /dev/urandom
 
 fvm_raw=
 if [[ -n "${fvm_source}" ]]; then
