@@ -6,6 +6,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/defer.h>
+#include <lib/zx/clock.h>
 
 #include <future>
 
@@ -229,6 +230,133 @@ TEST(ExecutorTests, when_loop_is_shutdown_all_remaining_tasks_are_immediately_de
   loop.Shutdown();
   EXPECT_TRUE(was_destroyed[0]);
   EXPECT_TRUE(was_destroyed[1]);
+}
+
+constexpr zx::duration delay = zx::msec(5);
+
+zx::time now() { return zx::clock::get_monotonic(); }
+
+void check_delay(zx::time begin, zx::duration delay) {
+  zx::duration actual = now() - begin;
+  EXPECT_GE(actual.to_usecs(), delay.to_usecs());
+}
+
+TEST(ExecutorTests, delayed_promises) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async::Executor async_executor(loop.dispatcher());
+
+  struct TaskStats {
+    int tasks_planned = 0;
+    int tasks_scheduled = 0;
+    int tasks_completed = 0;
+  } stats;
+
+  class LoggingExecutor final {
+   public:
+    LoggingExecutor(async::Executor& executor, TaskStats& stats)
+        : executor_(executor), stats_(stats) {}
+
+    // This doesn't implement fit::executor because we need to chain a then to increment the
+    // counter, and we can't do that with fit::pending_task
+    void schedule_task(fit::promise<> task) {
+      executor_.schedule_task(task.then([&](fit::result<>&) { ++stats_.tasks_completed; }));
+      ++stats_.tasks_scheduled;
+    }
+
+    async::Executor* operator->() const { return &executor_; }
+
+   private:
+    async::Executor& executor_;
+    TaskStats& stats_;
+  } executor(async_executor, stats);
+
+  auto check = [&](zx::time begin) {
+    return [&, begin](fit::result<>&) { check_delay(begin, delay); };
+  };
+
+  auto check_and_quit = [&](zx::time begin) {
+    return [&, begin](fit::result<>&) {
+      check_delay(begin, delay);
+      loop.Quit();
+    };
+  };
+
+  auto start_loop = [&] {
+    return std::thread([&] {
+      loop.Run();
+      loop.ResetQuit();
+    });
+  };
+
+  auto check_single = [&](fit::promise<> promise, zx::time begin) {
+    ++stats.tasks_planned;
+    auto loop_thread = start_loop();
+    executor.schedule_task(promise.then(check_and_quit(begin)));
+    loop_thread.join();
+    // Doing this both in and outside the executor in case it doesn't run at all
+    check_delay(begin, delay);
+  };
+
+  zx::time begin = now();
+  zx::time deadline = begin + delay;
+  check_single(executor->MakePromiseForTime(deadline), begin);
+  check_single(executor->MakeDelayedPromise(delay), begin);
+
+  auto check_combinations = [&](auto&& check) {
+    zx::time begin = now();
+    zx::time deadline = begin + delay;
+    check(executor->MakeDelayedPromise(delay), executor->MakePromiseForTime(deadline), begin);
+
+    begin = now();
+    deadline = begin + delay;
+    check(executor->MakePromiseForTime(deadline), executor->MakeDelayedPromise(delay), begin);
+
+    begin = now();
+    check(executor->MakeDelayedPromise(delay), executor->MakeDelayedPromise(delay), begin);
+
+    begin = now();
+    deadline = begin + delay;
+    check(executor->MakePromiseForTime(deadline), executor->MakePromiseForTime(deadline), begin);
+  };
+
+  // The two promises still take up only |delay| when created at the same time.
+  auto check_sequential = [&](fit::promise<> first, fit::promise<> second, zx::time begin) {
+    stats.tasks_planned += 2;
+    auto loop_thread = start_loop();
+    executor.schedule_task(first.then([&](fit::result<>&) {
+      check_delay(begin, delay);
+      executor.schedule_task(second.then(check_and_quit(begin)));
+    }));
+    loop_thread.join();
+    check_delay(begin, delay);
+  };
+
+  auto check_simultaneous = [&](fit::promise<> first, fit::promise<> second, zx::time begin) {
+    stats.tasks_planned += 2;
+    auto loop_thread = start_loop();
+    executor.schedule_task(first.then(check(begin)));
+    executor.schedule_task(second.then(check_and_quit(begin)));
+    loop_thread.join();
+    check_delay(begin, delay);
+  };
+
+  // Even when the returned promise is scheduled late, it still finishes at the right time
+  auto check_staggered = [&](fit::promise<> first, fit::promise<> second, zx::time begin) {
+    stats.tasks_planned += 2;
+    auto loop_thread = start_loop();
+    executor.schedule_task(first.then(check(begin)));
+    zx::nanosleep(begin + (delay / 2));
+    executor.schedule_task(second.then(check_and_quit(begin)));
+    loop_thread.join();
+    check_delay(begin, delay);
+  };
+
+  check_combinations(check_sequential);
+  check_combinations(check_simultaneous);
+  check_combinations(check_staggered);
+
+  EXPECT_EQ(stats.tasks_planned, stats.tasks_scheduled);
+  EXPECT_EQ(stats.tasks_scheduled, stats.tasks_completed);
 }
 
 }  // namespace
