@@ -12,7 +12,7 @@ async fn can_launch_and_connect_to_test_service() {
     let launcher = fuchsia_component::client::launcher().expect("Cannot create launcher");
     let app = fuchsia_component::client::launch(
         &launcher,
-        "fuchsia-pkg://fuchsia.com/component_manager_for_test_integration_test#meta\
+        "fuchsia-pkg://fuchsia.com/component-manager-for-test-integration-test#meta\
          /component_manager_for_test.cmx"
             .to_string(),
         None,
@@ -25,7 +25,7 @@ async fn can_launch_and_connect_to_test_service() {
     let (_controller_proxy, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
     harness
         .launch_suite(
-            "fuchsia-pkg://fuchsia.com/component_manager_for_test_integration_test\
+            "fuchsia-pkg://fuchsia.com/component-manager-for-test-integration-test\
                    #meta/passing-test-example.cm",
             LaunchOptions::EMPTY,
             suite_server_end,

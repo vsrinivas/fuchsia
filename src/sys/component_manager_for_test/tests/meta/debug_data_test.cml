@@ -1,0 +1,15 @@
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/debug_data_test",
+    },
+    use: [
+        {
+            protocol: "fuchsia.debugdata.DebugData",
+            from: "debug",
+        },
+    ],
+}

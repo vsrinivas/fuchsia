@@ -32,6 +32,10 @@
             name: "test_tmpfs",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/memfs.cm",
         },
+        {
+            name: "debug_data",
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/debug_data.cm",
+        },
     ],
     collections: [
         {
@@ -59,6 +63,7 @@
             backing_dir: "memfs",
         },
         { protocol: "fuchsia.test.manager.Harness" },
+        { protocol: "fuchsia.test.internal.Info" },
     ],
     use: [
         {
@@ -77,6 +82,16 @@
             from: "parent",
             to: [ "#tests" ],
         },
+        {
+            protocol: [ "fuchsia.sys2.EventSource" ],
+            from: "parent",
+            to: [ "#debug_data" ],
+        },
+        {
+            protocol: [ "fuchsia.test.internal.Info" ],
+            from: "self",
+            to: [ "#debug_data" ],
+        },
 
         // These capabilities are offered for use by certain non-hermetic tests.
         {
@@ -93,6 +108,7 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
+                "#debug_data",
                 "#elf_test_runner",
                 "#go_test_runner",
                 "#gtest_runner",
@@ -110,6 +126,12 @@
                 "#gtest_runner",
                 "#rust_test_runner",
             ],
+        },
+        {
+            event: "capability_requested",
+            from: "framework",
+            to: [ "#debug_data" ],
+            filter: { name: "fuchsia.debugdata.DebugData" },
         },
         {
             storage: "data",
@@ -177,6 +199,10 @@
             from: "self",
         },
         {
+            protocol: "fuchsia.test.internal.Info",
+            from: "self",
+        },
+        {
             directory: "hub",
             from: "framework",
         },
@@ -212,6 +238,12 @@
                     resolver: "topology_builder_registry",
                     from: "#topology_builder_framework_intermediary",
                     scheme: "topology-builder-registry",
+                },
+            ],
+            debug: [
+                {
+                    protocol: "fuchsia.debugdata.DebugData",
+                    from: "#debug_data",
                 },
             ],
         },

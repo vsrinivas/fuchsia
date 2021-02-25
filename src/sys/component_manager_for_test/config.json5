@@ -9,17 +9,23 @@
     namespace_capabilities: [
         {
             directory: "dev-input-report",
-            rights: [ "r*" ],
+            rights: [
+                "r*"
+            ],
             path: "/dev/class/input-report",
         },
         {
             directory: "config-data",
-            rights: [ "r*" ],
+            rights: [
+                "r*"
+            ],
             path: "/pkgfs/packages/config-data/0/meta/data",
         },
         {
             directory: "config-ssl",
-            rights: [ "r*" ],
+            rights: [
+                "r*"
+            ],
             path: "/config/ssl",
         },
         {
@@ -30,4 +36,15 @@
             ],
         }
     ],
+    security_policy: {
+        debug_registration_policy: [
+            {
+                debug: "protocol",
+                environment_name: "test-env",
+                source_moniker: "/debug_data",
+                source_name: "fuchsia.debugdata.DebugData",
+                target_moniker: "/"
+            }
+        ]
+    },
 }

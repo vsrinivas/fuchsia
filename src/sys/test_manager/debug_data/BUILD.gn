@@ -1,0 +1,77 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+source_set("lib") {
+  testonly = true
+
+  sources = [
+    "debug_data.cc",
+    "debug_data.h",
+    "event_stream.cc",
+    "event_stream.h",
+    "moniker_url_cache.cc",
+    "moniker_url_cache.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.debugdata",
+    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/fidl/fuchsia.test.internal",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+}
+
+executable("bin") {
+  testonly = true
+  output_name = "debug_data"
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("debug_data") {
+  testonly = true
+  deps = [ ":bin" ]
+  manifest = "meta/debug_data.cml"
+}
+
+executable("test_bin") {
+  testonly = true
+  output_name = "debug_data_unittests"
+
+  sources = [ "moniker_url_cache_unittests.cc" ]
+
+  deps = [
+    ":lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_component("debug_data_unittests_component") {
+  component_name = "debug_data_unittests"
+  deps = [ ":test_bin" ]
+}
+
+fuchsia_test_package("debug_data_unittests") {
+  test_components = [ ":debug_data_unittests_component" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":debug_data_unittests" ]
+}

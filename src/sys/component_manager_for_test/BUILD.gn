@@ -6,7 +6,7 @@ import("//build/component/config.gni")
 import("//src/sys/build/components.gni")
 
 component_config("component_manager_config") {
-  sources = [ "config.json" ]
+  sources = [ "config.json5" ]
 }
 
 fuchsia_component("component_manager_for_test_cmp") {

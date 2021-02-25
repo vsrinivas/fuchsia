@@ -24,6 +24,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+    "//sdk/fidl/fuchsia.test.internal:fuchsia.test.internal-rustc",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/developer/remote-control/diagnostics-bridge",
     "//src/diagnostics/archivist/fidl:controller-rustc",
@@ -39,6 +40,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
@@ -62,6 +64,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tracing",
@@ -89,6 +92,7 @@ fuchsia_package("test_manager_pkg") {
   deps = [
     ":memfs",
     ":test_manager_cmp",
+    "debug_data",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
   ]
 }
@@ -113,6 +117,7 @@ group("tests") {
   testonly = true
   deps = [
     ":test-manager-unittests",
+    "debug_data:tests",
     "tests",
   ]
 }
