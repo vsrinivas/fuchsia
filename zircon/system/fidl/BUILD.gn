@@ -12,16 +12,6 @@ fidl_c_header("fuchsia-debugdata") {
   deps = [ ":zx" ]
 }
 
-fidl_c_header("fuchsia-io") {
-  sources = [ "../../../sdk/fidl/fuchsia.io/io.fidl" ]
-
-  deps = [
-    ":fuchsia-io2",
-    ":fuchsia-mem",
-    ":zx",
-  ]
-}
-
 fidl_c_header("fuchsia-io2") {
   sources = [
     "../../../sdk/fidl/fuchsia.io2/connection-info.fidl",

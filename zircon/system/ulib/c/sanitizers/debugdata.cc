@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/debugdata/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -14,6 +13,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
+
+#include "fuchsia-io-constants.h"
 
 __attribute__((visibility("hidden"))) zx_handle_t __zircon_namespace_svc = ZX_HANDLE_INVALID;
 

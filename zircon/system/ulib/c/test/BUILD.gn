@@ -77,6 +77,7 @@ test("cdebugdata-test") {
   data_deps = [ ":debugdata-test-helper" ]
   deps = [
     "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",

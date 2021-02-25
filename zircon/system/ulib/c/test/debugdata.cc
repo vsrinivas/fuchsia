@@ -5,6 +5,7 @@
 #include "debugdata.h"
 
 #include <fuchsia/debugdata/llcpp/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -33,6 +34,8 @@
 #include <fs/synchronous_vfs.h>
 #include <fs/vfs_types.h>
 #include <zxtest/zxtest.h>
+
+#include "../sanitizers/fuchsia-io-constants.h"
 
 namespace {
 
@@ -174,6 +177,26 @@ TEST(DebugDataTests, LoadConfigNotFound) {
 
 TEST(DebugDataTests, LoadConfigWithoutSvc) {
   ASSERT_NO_FATAL_FAILURES(RunHelperWithoutSvc("load_config", ZX_ERR_BAD_HANDLE));
+}
+
+// debugdata.cc cannot use LLCPP (because it allocates with new/delete) so
+// instead defines a local set of a few constants and structure definition in
+// fuchsia-io-constants.h to call fuchsia.io.Directory/Open(). Confirm that the
+// local copy matches the canonical definition here.
+TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
+  namespace fio = ::llcpp::fuchsia::io;
+
+  ASSERT_EQ(fuchsia_io_MAX_PATH, fio::MAX_PATH);
+  ASSERT_EQ(fuchsia_io_OPEN_RIGHT_READABLE, fio::OPEN_RIGHT_READABLE);
+  ASSERT_EQ(fuchsia_io_OPEN_RIGHT_WRITABLE, fio::OPEN_RIGHT_WRITABLE);
+
+  // LLCPP doesn't expose the ordinal, so we have to dig into internals to assert this.
+  fio::Directory::OpenRequest for_ordinal(zx_txid_t(0));
+  ASSERT_EQ(fuchsia_io_DirectoryOpenOrdinal, for_ordinal._hdr.ordinal);
+
+  fidl::ServerEnd<fio::Node> empty;
+  fio::Directory::OpenRequest::OwnedEncodedMessage msg(0, 0, 0, "", empty);
+  ASSERT_EQ(sizeof(fuchsia_io_DirectoryOpenRequest), msg.GetOutgoingMessage().byte_actual());
 }
 
 }  // anonymous namespace
