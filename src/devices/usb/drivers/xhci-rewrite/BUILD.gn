@@ -2,9 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
+
+bind_rules("usb_xhci_bind") {
+  rules = "usb_xhci.bind"
+  output = "usb_xhci_bind.h"
+  tests = "tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.pci",
+    "//src/devices/bind/fuchsia.pci:serial",
+    "//src/devices/bind/fuchsia.pci:serial.usb",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("xhci") {
   configs += [
@@ -21,6 +34,7 @@ driver_module("xhci") {
     "xhci-transfer-ring.cc",
   ]
   deps = [
+    ":usb_xhci_bind",
     "//sdk/banjo/fuchsia.hardware.pci",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.usb",
@@ -38,9 +52,6 @@ driver_module("xhci") {
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
@@ -60,6 +71,7 @@ driver_module("xhci") {
 source_set("test-libs") {
   testonly = true
   public_deps = [
+    ":usb_xhci_bind",
     "//sdk/banjo/fuchsia.hardware.acpi",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
@@ -79,9 +91,6 @@ source_set("test-libs") {
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
@@ -216,6 +225,7 @@ fuchsia_unittest_package("xhci-transfer-ring-unittest") {
 group("tests") {
   testonly = true
   deps = [
+    ":usb_xhci_bind_test",
     ":xhci-core-unittest",
     ":xhci-event-ring-unittest",
     ":xhci-transfer-ring-unittest",

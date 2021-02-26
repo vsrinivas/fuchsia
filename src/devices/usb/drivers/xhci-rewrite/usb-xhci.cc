@@ -20,7 +20,6 @@
 #include <memory>
 #include <string>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -28,6 +27,8 @@
 #include <fbl/auto_call.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
+
+#include "src/devices/usb/drivers/xhci-rewrite/usb_xhci_bind.h"
 
 namespace usb_xhci {
 
@@ -2098,30 +2099,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace usb_xhci
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(usb_xhci, usb_xhci::driver_ops, "zircon", "0.1", 17)
-    BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PDEV, 0),
-    BI_GOTO_IF(EQ, BIND_COMPOSITE, 1, 1),
-
-    // PCI binding support
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x0C),
-    BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 0x03),
-    BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 0x30),
-    BI_ABORT(),
-
-    // platform bus support
-    BI_LABEL(0),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_XHCI),
-    BI_ABORT(),
-
-    // composite binding support
-    BI_LABEL(1),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_XHCI_COMPOSITE),
-
-    BI_ABORT(),
-ZIRCON_DRIVER_END(usb_xhci)
+ZIRCON_DRIVER(usb_xhci, usb_xhci::driver_ops, "zircon", "0.1");
