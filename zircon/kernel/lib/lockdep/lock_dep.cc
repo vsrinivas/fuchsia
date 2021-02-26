@@ -134,11 +134,11 @@ void SystemLockValidationError(AcquiredLockEntry* bad_entry, AcquiredLockEntry* 
   char owner_name[ZX_MAX_NAME_LEN];
   current_thread->OwnerName(owner_name);
 
-  const uint64_t user_pid = current_thread->user_pid();
-  const uint64_t user_tid = current_thread->user_tid();
+  const uint64_t pid = current_thread->pid();
+  const uint64_t tid = current_thread->tid();
 
   KERNEL_OOPS("Lock validation failed for thread %p pid %" PRIu64 " tid %" PRIu64 " (%s:%s):\n",
-              current_thread, user_pid, user_tid, owner_name, current_thread->name());
+              current_thread, pid, tid, owner_name, current_thread->name());
   printf("Reason: %s\n", ToString(result));
   printf("Bad lock: name=%s order=%" PRIu64 "\n", LockClassState::GetName(bad_entry->id()),
          bad_entry->order());
