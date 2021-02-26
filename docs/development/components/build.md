@@ -349,7 +349,7 @@ Note the following details:
     for organizing targets across the source tree.
 
 An important limitation of `fuchsia_test_package()` is that any
-`fuchsia_test_component()` targets must be defined in the same `BUILD.gn` file as the
+`test_component` targets must be defined in the same `BUILD.gn` file as the
 test package target. This is due to a [limitation in GN][gn-get-target-outputs].
 
 It's possible to work around this limitation with an indirection through
