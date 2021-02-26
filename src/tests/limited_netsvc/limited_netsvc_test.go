@@ -24,7 +24,7 @@ import (
 )
 
 // The default nodename given to an target with the default QEMU MAC address.
-const defaultNodename = "swarm-donut-petri-acre"
+const defaultNodename = "fuchsia-5254-0012-3456"
 
 func toolPath(t *testing.T, name string) string {
 	return filepath.Join(execDir(t), "test_data", "limited_netsvc", name)
