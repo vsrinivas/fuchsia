@@ -352,10 +352,12 @@ impl Timer {
     /// Wraps the
     /// [zx_timer_create](https://fuchsia.dev/fuchsia-src/reference/syscalls/timer_create.md)
     /// syscall.
-    pub fn create(clock_id: ClockId) -> Result<Timer, Status> {
+    pub fn create() -> Result<Timer, Status> {
         let mut out = 0;
         let opts = 0;
-        let status = unsafe { sys::zx_timer_create(opts, clock_id as u32, &mut out) };
+        let status = unsafe {
+            sys::zx_timer_create(opts, 0 /*ZX_CLOCK_MONOTONIC*/, &mut out)
+        };
         ok(status)?;
         unsafe { Ok(Self::from(Handle::from_raw(out))) }
     }
@@ -422,12 +424,6 @@ mod tests {
     }
 
     #[test]
-    fn create_timer_invalid_clock() {
-        assert_eq!(Timer::create(ClockId::UTC).unwrap_err(), Status::INVALID_ARGS);
-        assert_eq!(Timer::create(ClockId::Thread), Err(Status::INVALID_ARGS));
-    }
-
-    #[test]
     fn from_std() {
         let std_dur = stdtime::Duration::new(25, 25);
         let dur = Duration::from(std_dur);
@@ -454,7 +450,7 @@ mod tests {
         let six_secs = 6.seconds();
 
         // Create a timer
-        let timer = Timer::create(ClockId::Monotonic).unwrap();
+        let timer = Timer::create().unwrap();
 
         // Should not signal yet.
         assert_eq!(
