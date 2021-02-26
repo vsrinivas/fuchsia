@@ -51,7 +51,7 @@ template("fuchsia_shell_package") {
                              ])
       visibility = [ ":*" ]
       manifest = invoker.manifest
-      component_name = invoker.target_name
+      component_name = package_name
     }
   }
 
