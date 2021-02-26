@@ -4,6 +4,7 @@
 
 #include "gt92xx.h"
 
+#include <endian.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
@@ -251,6 +252,20 @@ zx_status_t Gt92xxDevice::Init() {
   } else {
     node_.CreateString("CONFIG_VERSION", "error", &values_);
     zxlogf(ERROR, "  CONFIG_VERSION: error %d", status);
+  }
+
+  union {
+    uint8_t fw_buffer[2];
+    uint16_t fw_version;
+  };
+  status = Read(GT_REG_FW_VERSION, fw_buffer, sizeof(fw_buffer));
+  if (status == ZX_OK) {
+    node_.CreateByteVector("FW_VERSION", {fw_buffer[1], fw_buffer[0]}, &values_);
+    fw_version = le16toh(fw_version);
+    zxlogf(INFO, "  FW_VERSION: 0x%04x", fw_version);
+  } else {
+    node_.CreateString("FW_VERSION", "error", &values_);
+    zxlogf(ERROR, "  FW_VERSION: error %d", status);
   }
 
   return ZX_OK;
