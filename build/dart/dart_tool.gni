@@ -217,7 +217,6 @@ template("dart_tool") {
   # via a depfile so that a Dart app gets properly rebuilt when one of its
   # sources is modified.
   action(snapshot_target_name) {
-    hermetic_deps = false
     if (defined(invoker.testonly)) {
       testonly = invoker.testonly
     }
