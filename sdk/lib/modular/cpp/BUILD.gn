@@ -4,7 +4,7 @@
 
 import("//build/cpp/sdk_source_set.gni")
 import("//build/fidl/fidl.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 sdk_source_set("cpp") {
   category = "partner"
@@ -46,12 +46,7 @@ executable("modular_cpp_tests_bin") {
   ]
 }
 
-test_package("modular_cpp_tests") {
-  tests = [
-    {
-      name = "modular_cpp_tests_bin"
-    },
-  ]
-
+fuchsia_unittest_package("modular_cpp_tests") {
   deps = [ ":modular_cpp_tests_bin" ]
+  manifest = "meta/modular_cpp_tests_bin.cmx"
 }
