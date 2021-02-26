@@ -79,6 +79,8 @@ class OpteeClient : public OpteeClientBase,
  private:
   using SharedMemoryList = fbl::DoublyLinkedList<std::unique_ptr<SharedMemory>>;
 
+  static constexpr zx::duration kSmcCallDurationThreshold = zx::msec(10);
+
   zx_status_t CloseSession(uint32_t session_id);
 
   // Attempts to allocate a block of SharedMemory from a designated memory pool.

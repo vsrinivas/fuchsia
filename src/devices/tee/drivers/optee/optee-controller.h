@@ -40,7 +40,17 @@ class OpteeControllerBase {
  public:
   using RpcHandler = fbl::Function<zx_status_t(const RpcFunctionArgs&, RpcFunctionResult*)>;
 
-  virtual uint32_t CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) = 0;
+  // Helper struct for the return value of CallWithMessage.
+  struct CallResult {
+    uint32_t return_code;
+    // For each CallWithMessage, the OpteeController will likely make several invocations of
+    // zx_smc_call. This is usually due to interrupts or RPC calls and we'll re-enter the secure
+    // world with a subsequent zx_smc_call. The peak_smc_call_duration will capture the duration of
+    // the longest zx_smc_call invocation for debugging purposes.
+    zx::duration peak_smc_call_duration;
+  };
+
+  virtual CallResult CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) = 0;
   virtual SharedMemoryManager::DriverMemoryPool* driver_pool() const = 0;
   virtual SharedMemoryManager::ClientMemoryPool* client_pool() const = 0;
   virtual zx_status_t RpmbConnectServer(::zx::channel server) const = 0;
@@ -81,7 +91,7 @@ class OpteeController : public OpteeControllerBase,
                             zx::channel service_provider, zx::channel application_request,
                             ConnectToApplicationCompleter::Sync& _completer) override;
 
-  uint32_t CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) override;
+  CallResult CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) override;
 
   SharedMemoryManager::DriverMemoryPool* driver_pool() const override {
     return shared_memory_manager_->driver_pool();

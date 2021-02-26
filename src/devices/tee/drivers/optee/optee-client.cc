@@ -327,8 +327,9 @@ void OpteeClient::OpenSession2(
 
   OpResult result;
 
-  auto create_result = OpenSessionMessage::TryCreate(
-      controller_->driver_pool(), controller_->client_pool(), application_uuid_, std::move(parameter_set));
+  auto create_result =
+      OpenSessionMessage::TryCreate(controller_->driver_pool(), controller_->client_pool(),
+                                    application_uuid_, std::move(parameter_set));
   if (!create_result.is_ok()) {
     LOG(ERROR, "failed to create OpenSessionMessage (status: %d)", create_result.error());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
@@ -339,8 +340,15 @@ void OpteeClient::OpenSession2(
 
   OpenSessionMessage message = create_result.take_value();
 
-  uint32_t call_code =
+  auto [call_code, peak_smc_call_duration] =
       controller_->CallWithMessage(message, fbl::BindMember(this, &OpteeClient::HandleRpc));
+
+  if (peak_smc_call_duration > kSmcCallDurationThreshold) {
+    LOG(WARNING,
+        "SMC call threshold exceeded. peak_smc_call_duration: %" PRIi64 "us trusted_app: %s",
+        peak_smc_call_duration.to_usecs(), application_uuid_.ToString().c_str());
+  }
+
   if (call_code != kReturnOk) {
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
@@ -399,8 +407,17 @@ void OpteeClient::InvokeCommand(
 
   InvokeCommandMessage message = create_result.take_value();
 
-  uint32_t call_code =
+  auto [call_code, peak_smc_call_duration] =
       controller_->CallWithMessage(message, fbl::BindMember(this, &OpteeClient::HandleRpc));
+
+  if (peak_smc_call_duration > kSmcCallDurationThreshold) {
+    LOG(WARNING,
+        "SMC call threshold exceeded. peak_smc_call_duration: %" PRIi64
+        "us trusted_app: %s session_id: 0x%" PRIx32 " command_id: 0x%" PRIx32,
+        peak_smc_call_duration.to_usecs(), application_uuid_.ToString().c_str(), session_id,
+        command_id);
+  }
+
   if (call_code != kReturnOk) {
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
@@ -438,8 +455,15 @@ zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
 
   CloseSessionMessage message = create_result.take_value();
 
-  uint32_t call_code =
+  auto [call_code, peak_smc_call_duration] =
       controller_->CallWithMessage(message, fbl::BindMember(this, &OpteeClient::HandleRpc));
+
+  if (peak_smc_call_duration > kSmcCallDurationThreshold) {
+    LOG(WARNING,
+        "SMC call threshold exceeded. peak_smc_call_duration: %" PRIi64
+        "us trusted_app: %s session_id: 0x%" PRIx32,
+        peak_smc_call_duration.to_usecs(), application_uuid_.ToString().c_str(), session_id);
+  }
 
   if (call_code == kReturnOk) {
     open_sessions_.erase(session_id);

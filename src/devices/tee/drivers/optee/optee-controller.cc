@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
 #include <string.h>
@@ -27,6 +28,7 @@
 #include "optee-device-info.h"
 #include "optee-util.h"
 #include "src/devices/tee/drivers/optee/optee-bind.h"
+#include "src/devices/tee/drivers/optee/tee-smc.h"
 
 namespace optee {
 
@@ -430,8 +432,10 @@ zx_status_t OpteeController::ConnectToApplicationInternal(Uuid application_uuid,
   return ZX_OK;
 }
 
-uint32_t OpteeController::CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) {
-  uint32_t return_value = tee_smc::kSmc32ReturnUnknownFunction;
+OpteeController::CallResult OpteeController::CallWithMessage(const optee::Message& message,
+                                                             RpcHandler rpc_handler) {
+  CallResult call_result{.return_code = tee_smc::kSmc32ReturnUnknownFunction,
+                         .peak_smc_call_duration = zx::duration::infinite_past()};
   union {
     zx_smc_parameters_t params;
     RpcFunctionResult rpc_result;
@@ -447,10 +451,17 @@ uint32_t OpteeController::CallWithMessage(const optee::Message& message, RpcHand
       RpcFunctionArgs rpc_args;
     } result;
 
+    const auto start = zx::clock::get_monotonic();
     zx_status_t status = zx_smc_call(secure_monitor_.get(), &func_call.params, &result.raw);
+    const auto duration = zx::clock::get_monotonic() - start;
+
+    if (duration > call_result.peak_smc_call_duration) {
+      call_result.peak_smc_call_duration = duration;
+    }
+
     if (status != ZX_OK) {
       LOG(ERROR, "unable to invoke SMC");
-      return return_value;
+      return call_result;
     }
 
     if (result.response.status == kReturnEThreadLimit) {
@@ -461,12 +472,12 @@ uint32_t OpteeController::CallWithMessage(const optee::Message& message, RpcHand
     } else if (optee::IsReturnRpc(result.response.status)) {
       rpc_handler(result.rpc_args, &func_call.rpc_result);
     } else {
-      return_value = result.response.status;
+      call_result.return_code = result.response.status;
       break;
     }
   }
 
-  return return_value;
+  return call_result;
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {

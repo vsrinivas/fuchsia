@@ -164,7 +164,7 @@ class OpteeClientTestRpmb : public OpteeClientTestBase {
     fake_rpmb_.reset(new FakeRpmb());
   }
 
-  uint32_t CallWithMessage(const optee::Message &message, RpcHandler rpc_handler) override {
+  CallResult CallWithMessage(const optee::Message &message, RpcHandler rpc_handler) override {
     size_t offset = message.paddr() - shared_memory_paddr_;
 
     MessageHeader *hdr = reinterpret_cast<MessageHeader *>(shared_memory_vaddr_ + offset);
@@ -220,7 +220,7 @@ class OpteeClientTestRpmb : public OpteeClientTestBase {
         hdr->return_code = TEEC_ERROR_NOT_IMPLEMENTED;
     }
 
-    return kReturnOk;
+    return CallResult{.return_code = kReturnOk};
   };
 
   zx_status_t RpmbConnectServer(::zx::channel server) const override {
