@@ -35,25 +35,28 @@ class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
 // [START launcher-impl]
 // Implementation of EchoLauncher. Each method creates an instance of EchoImpl
 // with the specified prefix.
-class EchoLauncherImpl final : public llcpp::fuchsia::examples::EchoLauncher::RawChannelInterface {
+class EchoLauncherImpl final : public llcpp::fuchsia::examples::EchoLauncher::Interface {
  public:
   explicit EchoLauncherImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
   void GetEcho(fidl::StringView prefix, GetEchoCompleter::Sync& completer) override {
     std::cout << "Got non pipelined request" << std::endl;
-    zx::channel server_end, client_end;
-    ZX_ASSERT(zx::channel::create(0, &client_end, &server_end) == ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::examples::Echo>();
+    ZX_ASSERT(endpoints.is_ok());
+    auto [client_end, server_end] = *std::move(endpoints);
     RunEchoServer(std::move(prefix), std::move(server_end));
     completer.Reply(std::move(client_end));
   }
 
-  void GetEchoPipelined(fidl::StringView prefix, zx::channel server_end,
+  void GetEchoPipelined(fidl::StringView prefix,
+                        fidl::ServerEnd<llcpp::fuchsia::examples::Echo> server_end,
                         GetEchoPipelinedCompleter::Sync& completer) override {
     std::cout << "Got pipelined request" << std::endl;
     RunEchoServer(std::move(prefix), std::move(server_end));
   }
 
-  void RunEchoServer(fidl::StringView prefix, zx::channel server_end) {
+  void RunEchoServer(fidl::StringView prefix,
+                     fidl::ServerEnd<llcpp::fuchsia::examples::Echo> server_end) {
     // The binding stays alive as long as the EchoImpl class that is bound is kept in
     // scope, so store them in the class.
     server_instances_.push_back(
@@ -76,7 +79,10 @@ struct ConnectRequestContext {
 static void connect(void* untyped_context, const char* service_name, zx_handle_t service_request) {
   auto context = static_cast<ConnectRequestContext*>(untyped_context);
   std::cout << "echo_server_llcpp: Incoming connection for " << service_name << std::endl;
-  fidl::BindServer(context->dispatcher, zx::channel(service_request), context->server.get());
+  fidl::BindServer(
+      context->dispatcher,
+      fidl::ServerEnd<llcpp::fuchsia::examples::EchoLauncher>(zx::channel(service_request)),
+      context->server.get());
 }
 
 // [START main]

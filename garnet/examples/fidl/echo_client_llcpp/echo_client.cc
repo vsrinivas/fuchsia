@@ -48,7 +48,8 @@ int main(int argc, const char** argv) {
   echo_provider.Connect("fidl.examples.echo.Echo", std::move(server_end));
 
   // Using low-level C++ bindings to perform a call
-  ::llcpp::fidl::examples::echo::Echo::SyncClient client(std::move(client_end));
+  ::llcpp::fidl::examples::echo::Echo::SyncClient client(
+      fidl::ClientEnd<::llcpp::fidl::examples::echo::Echo>(std::move(client_end)));
   auto result = client.EchoString(fidl::unowned_str(msg));
   if (result.status() != ZX_OK) {
     std::cerr << "Failed to call server: " << result.status() << " (" << result.error() << ")"

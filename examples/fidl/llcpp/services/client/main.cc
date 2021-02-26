@@ -28,7 +28,7 @@ fidl::InterfaceHandle<fuchsia::io::Directory> StartEchoServer(
   return svc;
 }
 
-zx::status<> llcpp_example(zx::unowned_channel svc) {
+zx::status<> llcpp_example(fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> svc) {
   zx::status<EchoService::ServiceClient> open_result =
       llcpp::sys::OpenServiceAt<EchoService>(std::move(svc));
   if (open_result.is_error()) {
@@ -76,7 +76,10 @@ int main(int argc, const char** argv) {
   fuchsia::sys::ComponentControllerPtr controller;
   auto svc = StartEchoServer(context.get(), controller.NewRequest());
 
-  zx::status<> result = llcpp_example(zx::unowned_channel(svc.channel()));
+  // Convert the typed handle to LLCPP types.
+  auto llsvc = fidl::ClientEnd<llcpp::fuchsia::io::Directory>(svc.TakeChannel());
+
+  zx::status<> result = llcpp_example(llsvc);
   if (result.is_error()) {
     std::cerr << "llcpp_example failed with status: " << result.status_string() << std::endl;
     return 1;

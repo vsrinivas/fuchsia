@@ -13,10 +13,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
   # how a target could be migrated to use typed channels.
   visibility = [
     "//examples/dotmatrix_display:bin2",
-    "//examples/fidl/llcpp/request_pipelining/server:bin",
-    "//examples/fidl/llcpp/services/client:bin",
-    "//garnet/examples/fidl/echo_client_llcpp:bin",
-    "//garnet/examples/fidl/echo_server_llcpp:bin",
     "//garnet/public/lib/svc/cpp:cpp",
     "//garnet/public/lib/test_runner/cpp:cpp",
     "//sdk/lib/fdio:fdio",

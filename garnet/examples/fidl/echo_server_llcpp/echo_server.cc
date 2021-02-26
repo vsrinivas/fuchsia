@@ -39,8 +39,10 @@ static void connect(void* untyped_context, const char* service_name, zx_handle_t
   if (!context->quiet) {
     std::cout << "echo_server_llcpp: Incoming connection for " << service_name << std::endl;
   }
-  fidl::BindSingleInFlightOnly(context->dispatcher, zx::channel(service_request),
-                               context->server.get());
+  fidl::BindSingleInFlightOnly(
+      context->dispatcher,
+      fidl::ServerEnd<llcpp::fidl::examples::echo::Echo>(zx::channel(service_request)),
+      context->server.get());
 }
 
 int main(int argc, char** argv) {
