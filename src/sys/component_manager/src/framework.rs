@@ -676,7 +676,11 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_dynamic_child() {
         // Set up model and realm service.
-        let events = vec![EventType::MarkedForDestruction.into(), EventType::Destroyed.into()];
+        let events = vec![
+            EventType::Stopped.into(),
+            EventType::MarkedForDestruction.into(),
+            EventType::Destroyed.into(),
+        ];
         let mut test = RealmCapabilityTest::new(
             vec![
                 ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
@@ -718,6 +722,14 @@ mod tests {
         let (f, destroy_handle) = test.realm_proxy.destroy_child(&mut child_ref).remote_handle();
         fasync::Task::spawn(f).detach();
 
+        // The component should be stopped (shut down) before it is marked deleted.
+        let event = test
+            .event_stream()
+            .unwrap()
+            .wait_until(EventType::Stopped, vec!["system:0", "coll:a:1"].into())
+            .await
+            .unwrap();
+        event.resume();
         let event = test
             .event_stream()
             .unwrap()
@@ -725,13 +737,17 @@ mod tests {
             .await
             .unwrap();
 
-        // Child is not marked deleted yet.
+        // Child is not marked deleted yet, but should be shut down.
         {
             let actual_children = get_live_children(test.component()).await;
             let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
             expected_children.insert("coll:a".into());
             expected_children.insert("coll:b".into());
             assert_eq!(actual_children, expected_children);
+            let child_a = get_live_child(test.component(), "coll:a").await;
+            let child_b = get_live_child(test.component(), "coll:b").await;
+            assert!(execution_is_shut_down(&child_a).await);
+            assert!(!execution_is_shut_down(&child_b).await);
         }
 
         // The destruction of "a" was arrested during `PreDestroy`. The old "a" should still exist,

@@ -348,6 +348,23 @@ async fn dynamic_child_test() {
         .send()
         .unwrap();
 
+    // Wait for the dynamic child to stop
+    let event = EventMatcher::ok()
+        .moniker("./coll:simple_instance:1")
+        .expect_match::<Stopped>(&mut event_stream)
+        .await;
+
+    // After stopping, the dynamic child should not have an exec directory
+    test_runner
+        .verify_directory_listing(
+            "children/coll:simple_instance",
+            vec!["children", "component_type", "deleting", "id", "resolved", "url"],
+        )
+        .await;
+
+    // Unblock the Component Manager
+    event.resume().await.unwrap();
+
     // Wait for the dynamic child to begin deletion
     let event = EventMatcher::ok()
         .moniker("./coll:simple_instance:1")
@@ -357,23 +374,6 @@ async fn dynamic_child_test() {
     // When deletion begins, the dynamic child should be moved to the deleting directory
     test_runner.verify_directory_listing("children", vec![]).await;
     test_runner.verify_directory_listing("deleting", vec!["coll:simple_instance:1"]).await;
-    test_runner
-        .verify_directory_listing(
-            "deleting/coll:simple_instance:1",
-            vec!["children", "component_type", "deleting", "exec", "id", "resolved", "url"],
-        )
-        .await;
-
-    // Unblock the ComponentManager
-    event.resume().await.unwrap();
-
-    // Wait for the dynamic child to stop
-    let event = EventMatcher::ok()
-        .moniker("./coll:simple_instance:1")
-        .expect_match::<Stopped>(&mut event_stream)
-        .await;
-
-    // After stopping, the dynamic child should not have an exec directory
     test_runner
         .verify_directory_listing(
             "deleting/coll:simple_instance:1",

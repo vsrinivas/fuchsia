@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        actions::{Action, ActionKey},
+        actions::{Action, ActionKey, ActionSet, ShutdownAction},
         component::{ComponentInstance, InstanceState},
         error::ModelError,
         hooks::{Event, EventPayload},
@@ -14,29 +14,29 @@ use {
     std::sync::Arc,
 };
 
-/// Marks a child of a component as deleting.
-pub struct MarkDeletingAction {
+/// Marks a child of a component as deleted, after shutting it down.
+pub struct MarkDeletedAction {
     moniker: ChildMoniker,
 }
 
-impl MarkDeletingAction {
+impl MarkDeletedAction {
     pub fn new(moniker: ChildMoniker) -> Self {
         Self { moniker }
     }
 }
 
 #[async_trait]
-impl Action for MarkDeletingAction {
+impl Action for MarkDeletedAction {
     type Output = Result<(), ModelError>;
     async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
-        do_mark_deleting(component, self.moniker.clone()).await
+        do_mark_deleted(component, self.moniker.clone()).await
     }
     fn key(&self) -> ActionKey {
-        ActionKey::MarkDeleting(self.moniker.clone())
+        ActionKey::MarkDeleted(self.moniker.clone())
     }
 }
 
-async fn do_mark_deleting(
+async fn do_mark_deleted(
     component: &Arc<ComponentInstance>,
     moniker: ChildMoniker,
 ) -> Result<(), ModelError> {
@@ -47,21 +47,24 @@ async fn do_mark_deleting(
             InstanceState::Resolved(ref s) => s.get_live_child(&partial_moniker).map(|r| r.clone()),
             InstanceState::Destroyed => None,
             InstanceState::New | InstanceState::Discovered => {
-                panic!("do_mark_deleting: not resolved");
+                panic!("do_mark_deleted: not resolved");
             }
         }
     };
     if let Some(child) = child {
+        // For destruction to behave correctly, the component has to be shut down first.
+        ActionSet::register(child.clone(), ShutdownAction::new()).await?;
+
         let event = Event::new(&child, Ok(EventPayload::MarkedForDestruction));
         child.hooks.dispatch(&event).await?;
         let mut state = component.lock_state().await;
         match *state {
             InstanceState::Resolved(ref mut s) => {
-                s.mark_child_deleting(&partial_moniker);
+                s.mark_child_deleted(&partial_moniker);
             }
             InstanceState::Destroyed => {}
             InstanceState::New | InstanceState::Discovered => {
-                panic!("do_mark_deleting: not resolved");
+                panic!("do_mark_deleted: not resolved");
             }
         }
     } else {
@@ -87,16 +90,19 @@ pub mod tests {
     };
 
     #[fasync::run_singlethreaded(test)]
-    async fn mark_deleting() {
+    async fn mark_deleted() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
             ("a", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
 
-        // Register `mark_deleting` action, and wait for it. Component should be marked deleted.
+        // Bind to component so we can witness it getting stopped.
+        test.bind(vec!["a:0"].into()).await;
+
+        // Register `mark_deleted` action, and wait for it. Component should be marked deleted.
         let component_root = test.look_up(vec![].into()).await;
-        ActionSet::register(component_root.clone(), MarkDeletingAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), MarkDeletedAction::new("a:0".into()))
             .await
             .expect("mark delete failed");
         assert!(is_deleting(&component_root, "a:0".into()).await);
@@ -106,15 +112,21 @@ pub mod tests {
                 .lifecycle()
                 .into_iter()
                 .filter(|e| match e {
-                    Lifecycle::PreDestroy(_) | Lifecycle::Destroy(_) => true,
+                    Lifecycle::Stop(_) | Lifecycle::PreDestroy(_) | Lifecycle::Destroy(_) => true,
                     _ => false,
                 })
                 .collect();
-            assert_eq!(events, vec![Lifecycle::PreDestroy(vec!["a:0"].into())],);
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Stop(vec!["a:0"].into()),
+                    Lifecycle::PreDestroy(vec!["a:0"].into())
+                ],
+            );
         }
 
         // Execute action again, same state and no new events.
-        ActionSet::register(component_root.clone(), MarkDeletingAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), MarkDeletedAction::new("a:0".into()))
             .await
             .expect("mark delete failed");
         assert!(is_deleting(&component_root, "a:0".into()).await);
@@ -124,16 +136,22 @@ pub mod tests {
                 .lifecycle()
                 .into_iter()
                 .filter(|e| match e {
-                    Lifecycle::PreDestroy(_) | Lifecycle::Destroy(_) => true,
+                    Lifecycle::Stop(_) | Lifecycle::PreDestroy(_) | Lifecycle::Destroy(_) => true,
                     _ => false,
                 })
                 .collect();
-            assert_eq!(events, vec![Lifecycle::PreDestroy(vec!["a:0"].into())],);
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Stop(vec!["a:0"].into()),
+                    Lifecycle::PreDestroy(vec!["a:0"].into())
+                ],
+            );
         }
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn mark_deleting_in_collection() {
+    async fn mark_deleted_in_collection() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
             ("a", component_decl_with_test_runner()),
@@ -145,16 +163,19 @@ pub mod tests {
         test.create_dynamic_child("coll", "a").await;
         test.create_dynamic_child("coll", "b").await;
 
-        // Register `mark_deleting` action for "a" only.
+        // Bind to component so we can witness it getting stopped.
+        test.bind(vec!["coll:a:1"].into()).await;
+
+        // Register `mark_deleted` action for "a" only.
         let component_root = test.look_up(vec![].into()).await;
-        ActionSet::register(component_root.clone(), MarkDeletingAction::new("coll:a:1".into()))
+        ActionSet::register(component_root.clone(), MarkDeletedAction::new("coll:a:1".into()))
             .await
             .expect("mark delete failed");
         assert!(is_deleting(&component_root, "coll:a:1".into()).await);
         assert!(!is_deleting(&component_root, "coll:b:2".into()).await);
 
-        // Register `mark_deleting` action for "b".
-        ActionSet::register(component_root.clone(), MarkDeletingAction::new("coll:b:1".into()))
+        // Register `mark_deleted` action for "b".
+        ActionSet::register(component_root.clone(), MarkDeletedAction::new("coll:b:1".into()))
             .await
             .expect("mark delete failed");
         assert!(is_deleting(&component_root, "coll:a:1".into()).await);
@@ -165,13 +186,14 @@ pub mod tests {
                 .lifecycle()
                 .into_iter()
                 .filter(|e| match e {
-                    Lifecycle::PreDestroy(_) | Lifecycle::Destroy(_) => true,
+                    Lifecycle::Stop(_) | Lifecycle::PreDestroy(_) | Lifecycle::Destroy(_) => true,
                     _ => false,
                 })
                 .collect();
             assert_eq!(
                 events,
                 vec![
+                    Lifecycle::Stop(vec!["coll:a:1"].into()),
                     Lifecycle::PreDestroy(vec!["coll:a:1"].into()),
                     Lifecycle::PreDestroy(vec!["coll:b:2"].into())
                 ],

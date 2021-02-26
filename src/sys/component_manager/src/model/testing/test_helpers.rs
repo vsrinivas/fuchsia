@@ -8,7 +8,8 @@ use {
         config::RuntimeConfig,
         klog,
         model::{
-            component::{ComponentInstance, InstanceState, WeakComponentInstance},
+            binding::Binder,
+            component::{BindReason, ComponentInstance, InstanceState, WeakComponentInstance},
             hooks::HooksRegistration,
             model::Model,
             rights,
@@ -802,6 +803,13 @@ impl ActionsTest {
 
     pub async fn look_up(&self, moniker: AbsoluteMoniker) -> Arc<ComponentInstance> {
         self.model.look_up(&moniker).await.expect(&format!("could not look up {}", moniker))
+    }
+
+    pub async fn bind(&self, moniker: AbsoluteMoniker) -> Arc<ComponentInstance> {
+        self.model
+            .bind(&moniker, &BindReason::Eager)
+            .await
+            .expect(&format!("could not bind to {}", moniker))
     }
 
     /// Add a dynamic child to the given collection, with the given name to the

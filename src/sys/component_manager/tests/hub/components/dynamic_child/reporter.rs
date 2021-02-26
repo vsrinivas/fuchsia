@@ -9,12 +9,14 @@ use {
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
+    fuchsia_syslog as syslog,
     futures::prelude::*,
     hub_report::HubReport,
 };
 
 #[fasync::run_singlethreaded]
 async fn main() {
+    syslog::init().unwrap();
     let event_source = EventSource::new().unwrap();
 
     // Subscribe to relevant events
@@ -102,6 +104,14 @@ async fn main() {
     let (f, destroy_handle) = realm.destroy_child(&mut child_ref).remote_handle();
     fasync::Task::spawn(f).detach();
 
+    // Wait for the dynamic child to stop
+    let event = EventMatcher::ok()
+        .moniker("./coll:simple_instance:1")
+        .expect_match::<Stopped>(&mut event_stream)
+        .await;
+    hub_report.report_directory_contents("/hub/children/coll:simple_instance").await.unwrap();
+    event.resume().await.unwrap();
+
     // Wait for the dynamic child to begin deletion
     let event = EventMatcher::ok()
         .moniker("./coll:simple_instance:1")
@@ -114,14 +124,6 @@ async fn main() {
 
     // Wait for the destroy call to return
     destroy_handle.await.context("delete_child failed").unwrap().expect("failed to delete child");
-
-    // Wait for the dynamic child to stop
-    let event = EventMatcher::ok()
-        .moniker("./coll:simple_instance:1")
-        .expect_match::<Stopped>(&mut event_stream)
-        .await;
-    hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await.unwrap();
-    event.resume().await.unwrap();
 
     // Wait for the dynamic child's static child to begin deletion
     let event = EventMatcher::ok()

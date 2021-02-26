@@ -11,7 +11,7 @@ use {
         config::{CapabilityAllowlistKey, CapabilityAllowlistSource},
         framework::REALM_SERVICE,
         model::{
-            actions::{ActionSet, DestroyAction},
+            actions::{ActionSet, DestroyAction, ShutdownAction},
             error::ModelError,
             events::{event::EventMode, registry::EventSubscription},
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -2649,6 +2649,10 @@ async fn use_from_destroyed_but_not_removed() {
     let test = RoutingTest::new("a", components).await;
     let component_b =
         test.model.look_up(&vec!["b:0"].into()).await.expect("failed to look up realm b");
+    // Destroy `b` but keep alive its reference from the parent.
+    // TODO: If we had a "pre-destroy" event we could delete the child through normal means and
+    // block on the event instead of explicitly registering actions.
+    ActionSet::register(component_b.clone(), ShutdownAction::new()).await.expect("shutdown failed");
     ActionSet::register(component_b, DestroyAction::new()).await.expect("destroy failed");
     test.check_use(
         vec!["c:0"].into(),

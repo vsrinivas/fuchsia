@@ -115,7 +115,7 @@ template("component_manager") {
     "src/model/actions/delete_child.rs",
     "src/model/actions/destroy.rs",
     "src/model/actions/discover.rs",
-    "src/model/actions/mark_deleting.rs",
+    "src/model/actions/mark_deleted.rs",
     "src/model/actions/mod.rs",
     "src/model/actions/resolve.rs",
     "src/model/actions/shutdown.rs",

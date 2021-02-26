@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        actions::{Action, ActionKey, ActionSet, DestroyAction, MarkDeletingAction},
+        actions::{Action, ActionKey, ActionSet, DestroyAction, MarkDeletedAction},
         component::{ComponentInstance, InstanceState},
         error::ModelError,
         hooks::{Event, EventPayload},
@@ -42,7 +42,7 @@ async fn do_delete_child(
 ) -> Result<(), ModelError> {
     // Some paths may have already marked the child deleting before scheduling the DeleteChild
     // action, in which case this is a no-op.
-    ActionSet::register(component.clone(), MarkDeletingAction::new(moniker.clone())).await?;
+    ActionSet::register(component.clone(), MarkDeletedAction::new(moniker.clone())).await?;
 
     // The child may not exist or may already be deleted by a previous DeleteChild action.
     let child = {

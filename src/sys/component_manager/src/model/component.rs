@@ -8,7 +8,7 @@ use {
         channel,
         model::{
             actions::{
-                ActionSet, DeleteChildAction, DiscoverAction, MarkDeletingAction, ResolveAction,
+                ActionSet, DeleteChildAction, DiscoverAction, MarkDeletedAction, ResolveAction,
                 StopAction,
             },
             binding,
@@ -472,7 +472,7 @@ impl ComponentInstance {
         if let Some(tup) = tup {
             let (instance, _) = tup;
             let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
-            ActionSet::register(self.clone(), MarkDeletingAction::new(child_moniker.clone()))
+            ActionSet::register(self.clone(), MarkDeletedAction::new(child_moniker.clone()))
                 .await?;
             let fut = ActionSet::register(self.clone(), DeleteChildAction::new(child_moniker));
             Ok(fut)
@@ -591,7 +591,7 @@ impl ComponentInstance {
             // above.
             if let Some(coll) = m.collection() {
                 if transient_colls.contains(coll) {
-                    ActionSet::register(self.clone(), MarkDeletingAction::new(m.clone())).await?;
+                    ActionSet::register(self.clone(), MarkDeletedAction::new(m.clone())).await?;
                     let nf = ActionSet::register(self.clone(), DeleteChildAction::new(m));
                     futures.push(nf);
                 }
@@ -860,7 +860,7 @@ impl ResolvedInstanceState {
     }
 
     /// Marks a live child deleting. No-op if the child is already deleting.
-    pub fn mark_child_deleting(&mut self, partial_moniker: &PartialMoniker) {
+    pub fn mark_child_deleted(&mut self, partial_moniker: &PartialMoniker) {
         self.live_children.remove(&partial_moniker);
     }
 

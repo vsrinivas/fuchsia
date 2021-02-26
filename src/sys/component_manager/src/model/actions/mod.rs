@@ -54,7 +54,7 @@
 mod delete_child;
 mod destroy;
 mod discover;
-mod mark_deleting;
+mod mark_deleted;
 mod resolve;
 mod shutdown;
 pub mod start;
@@ -63,7 +63,7 @@ mod stop;
 // Re-export the actions
 pub use {
     delete_child::DeleteChildAction, destroy::DestroyAction, discover::DiscoverAction,
-    mark_deleting::MarkDeletingAction, resolve::ResolveAction, shutdown::ShutdownAction,
+    mark_deleted::MarkDeletedAction, resolve::ResolveAction, shutdown::ShutdownAction,
     start::StartAction, stop::StopAction,
 };
 
@@ -105,7 +105,7 @@ pub enum ActionKey {
     Start,
     Stop,
     Shutdown,
-    MarkDeleting(ChildMoniker),
+    MarkDeleted(ChildMoniker),
     DeleteChild(ChildMoniker),
     Destroy,
 }
@@ -412,9 +412,13 @@ pub(crate) mod test_utils {
     pub async fn is_deleting(component: &ComponentInstance, moniker: ChildMoniker) -> bool {
         let partial = moniker.to_partial();
         match *component.lock_state().await {
-            InstanceState::Resolved(ref s) => {
-                s.get_live_child(&partial).is_none() && s.get_child(&moniker).is_some()
-            }
+            InstanceState::Resolved(ref s) => match s.get_child(&moniker) {
+                Some(child) => {
+                    let child_execution = child.lock_execution().await;
+                    s.get_live_child(&partial).is_none() && child_execution.is_shut_down()
+                }
+                None => false,
+            },
             InstanceState::Destroyed => false,
             InstanceState::New | InstanceState::Discovered => {
                 panic!("not resolved")

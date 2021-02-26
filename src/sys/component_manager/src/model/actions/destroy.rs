@@ -6,7 +6,7 @@ use {
     crate::model::{
         actions::{
             Action, ActionKey, ActionSet, DeleteChildAction, DiscoverAction, ResolveAction,
-            ShutdownAction, StartAction,
+            StartAction,
         },
         component::{BindReason, ComponentInstance, InstanceState},
         error::ModelError,
@@ -40,9 +40,15 @@ impl Action for DestroyAction {
 }
 
 async fn do_destroy(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
-    // For destruction to behave correctly, the component has to be shut down first.
-    ActionSet::register(component.clone(), ShutdownAction::new()).await?;
-
+    // It is always expected that the component shut down first.
+    {
+        let execution = component.lock_execution().await;
+        assert!(
+            execution.is_shut_down(),
+            "Component was not shut down before being destroyed? {}",
+            component.abs_moniker
+        );
+    }
     let nfs = {
         match *component.lock_state().await {
             InstanceState::Resolved(ref s) => {
@@ -104,7 +110,7 @@ pub mod tests {
         crate::model::{
             actions::{
                 test_utils::{is_child_deleted, is_destroyed, is_executing},
-                ActionNotifier,
+                ActionNotifier, ShutdownAction,
             },
             binding::Binder,
             component::BindReason,
