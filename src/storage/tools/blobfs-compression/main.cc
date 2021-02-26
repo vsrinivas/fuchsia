@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
@@ -13,6 +12,8 @@
 
 #include "src/lib/chunked-compression/chunked-compressor.h"
 #include "src/lib/chunked-compression/status.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 #include "src/storage/blobfs/compression/configs/chunked_compression_params.h"
 #include "src/storage/tools/blobfs-compression/blobfs-compression.h"
 
@@ -22,10 +23,12 @@ using ::chunked_compression::ChunkedCompressor;
 using ::chunked_compression::CompressionParams;
 
 void usage(const char* fname) {
-  fprintf(stderr, "Usage: %s <source_file> [destination_file]\n\n", fname);
-  fprintf(stderr, "Params:\n");
-  fprintf(stderr, "  %-20s%s\n", "source_file", "the file to be compressed.");
-  fprintf(stderr, "  %-20s%s\n", "destination_file", "(optional) the compressed file.");
+  fprintf(stderr, "Usage: %s [--option=value ...]\n\n", fname);
+  fprintf(stderr, "Options:\n");
+  fprintf(stderr, "  %-20s%s\n", "source_file", "(required) the file to be compressed.");
+  fprintf(stderr, "  %-20s%s\n", "compressed_file", "(optional) the compressed file output path.");
+  fprintf(stderr, "  %-20s%s\n", "help", "print this usage message.");
+  fprintf(stderr, "  %-20s%s\n", "verbose", "show debugging information.");
 }
 
 // Opens |file|, truncates to |write_size|, and mmaps the file for writing.
@@ -96,17 +99,36 @@ int OpenAndMapForReading(const char* file, fbl::unique_fd* out_fd, const uint8_t
 }
 }  // namespace
 
-int main(int argc, char* const* argv) {
-  if (argc < 2 || argc > 3) {
+int main(int argc, char** argv) {
+  const auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetLogSettingsFromCommandLine(cl)) {
+    return 1;
+  }
+  if (cl.HasOption("verbose", nullptr)) {
+    printf("Received flags:\n");
+    for (const auto option : cl.options()) {
+      printf("  %s = \"%s\"\n", option.name.c_str(), option.value.c_str());
+    }
+    printf("\n");
+  }
+  if (cl.HasOption("help", nullptr)) {
+    usage(argv[0]);
+    return 0;
+  }
+
+  // Parse command line options.
+  std::string source_file, compressed_file;
+  cl.GetOptionValue("source_file", &source_file);
+  cl.GetOptionValue("compressed_file", &compressed_file);
+  if (source_file.empty()) {
     usage(argv[0]);
     return 1;
   }
-  const bool has_dst_file = (argc == 3);
 
   fbl::unique_fd src_fd;
   const uint8_t* src_data;
   size_t src_size;
-  if (OpenAndMapForReading(argv[1] /*src file*/, &src_fd, &src_data, &src_size)) {
+  if (OpenAndMapForReading(source_file.c_str(), &src_fd, &src_data, &src_size)) {
     return 1;
   }
 
@@ -114,8 +136,8 @@ int main(int argc, char* const* argv) {
 
   uint8_t* dest_write_buf = nullptr;
   fbl::unique_fd dst_fd;
-  if (has_dst_file &&
-      OpenAndMapForWriting(argv[2] /*destination file*/, params.ComputeOutputSizeLimit(src_size),
+  if (!compressed_file.empty() &&
+      OpenAndMapForWriting(compressed_file.c_str(), params.ComputeOutputSizeLimit(src_size),
                            &dest_write_buf, &dst_fd)) {
     return 1;
   }
@@ -126,7 +148,7 @@ int main(int argc, char* const* argv) {
     return 1;
   }
 
-  if (has_dst_file) {
+  if (!compressed_file.empty()) {
     ftruncate(dst_fd.get(), compressed_size);
   }
   return 0;

@@ -12,6 +12,7 @@ executable("blobfs-compression") {
   ]
   deps = [
     "//src/lib/chunked-compression",
+    "//src/lib/fxl",
     "//src/storage/blobfs/compression/configs",
   ]
 }
