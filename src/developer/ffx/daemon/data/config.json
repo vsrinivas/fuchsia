@@ -8,7 +8,7 @@
         "enabled": false,
         "max_log_size_bytes": 1048576,
         "max_session_size_bytes": 104857600,
-        "max_sessions_per_target": 10
+        "max_sessions_per_target": 5
     },
     "ssh": {
         "port": "$FUCHSIA_SSH_PORT",
