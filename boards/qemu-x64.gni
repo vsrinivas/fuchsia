@@ -9,3 +9,5 @@ target_cpu = "x64"
 board_name = "qemu-x64"
 
 add_qemu_to_build_archives = true
+
+board_package_labels += [ "//src/factory/factory_store_providers/config/qemu" ]

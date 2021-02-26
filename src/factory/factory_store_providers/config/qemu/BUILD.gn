@@ -1,0 +1,41 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/factory/factory_store_provider_config.gni")
+
+factory_store_provider_config("alpha") {
+  provider = "fuchsia.factory.AlphaFactoryStoreProvider"
+  config = rebase_path("fuchsia.factory.AlphaFactoryStoreProvider.config")
+}
+
+factory_store_provider_config("cast") {
+  provider = "fuchsia.factory.CastCredentialsFactoryStoreProvider"
+  config =
+      rebase_path("fuchsia.factory.CastCredentialsFactoryStoreProvider.config")
+}
+
+factory_store_provider_config("misc") {
+  provider = "fuchsia.factory.MiscFactoryStoreProvider"
+  config = rebase_path("fuchsia.factory.MiscFactoryStoreProvider.config")
+}
+
+factory_store_provider_config("playready") {
+  provider = "fuchsia.factory.PlayReadyFactoryStoreProvider"
+  config = rebase_path("fuchsia.factory.PlayReadyFactoryStoreProvider.config")
+}
+
+factory_store_provider_config("widevine") {
+  provider = "fuchsia.factory.WidevineFactoryStoreProvider"
+  config = rebase_path("fuchsia.factory.WidevineFactoryStoreProvider.config")
+}
+
+group("qemu") {
+  deps = [
+    ":alpha",
+    ":cast",
+    ":misc",
+    ":playready",
+    ":widevine",
+  ]
+}
