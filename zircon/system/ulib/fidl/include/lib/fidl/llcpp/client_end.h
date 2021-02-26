@@ -124,7 +124,10 @@ class UnownedClientEnd final {
   explicit operator bool() const { return is_valid(); }
 
   // The underlying channel.
-  zx_handle_t channel() const { return channel_; }
+  zx::unowned_channel channel() const { return zx::unowned_channel(channel_); }
+
+  // The underlying channel, as a |zx_handle_t|.
+  zx_handle_t handle() const { return channel_; }
 
  private:
   zx_handle_t channel_;

@@ -20,6 +20,7 @@
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/paver/provider.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/sysconfig/sync-client.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
@@ -222,32 +223,33 @@ class FakeSvc {
                           return fake_boot_args_.Connect(dispatcher_, std::move(request));
                         }));
 
-    zx::channel svc_remote;
-    ASSERT_OK(zx::channel::create(0, &svc_local_, &svc_remote));
+    auto svc_remote = fidl::CreateEndpoints(&svc_local_);
+    ASSERT_OK(svc_remote.status_value());
 
-    vfs_.ServeDirectory(root_dir_, std::move(svc_remote));
+    vfs_.ServeDirectory(root_dir_, std::move(*svc_remote));
   }
 
   void ForwardServiceTo(const char* name,
                         fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> root) {
-    zx::channel cloned = zx::channel(fdio_service_clone(root.channel()));
+    auto cloned = service::Clone(root);
+    ASSERT_OK(cloned.status_value());
     root_dir_->AddEntry(
         name,
-        fbl::MakeRefCounted<fs::Service>([name, cloned = std::move(cloned)](zx::channel request) {
-          return fdio_service_connect_at(cloned.get(), fbl::StringPrintf("/svc/%s", name).data(),
-                                         request.release());
+        fbl::MakeRefCounted<fs::Service>([name, cloned = std::move(*cloned)](zx::channel request) {
+          return fdio_service_connect_at(
+              cloned.channel().get(), fbl::StringPrintf("/svc/%s", name).data(), request.release());
         }));
   }
 
   FakeBootArgs& fake_boot_args() { return fake_boot_args_; }
-  zx::channel& svc_chan() { return svc_local_; }
+  fidl::ClientEnd<::llcpp::fuchsia::io::Directory>& svc_chan() { return svc_local_; }
 
  private:
   async_dispatcher_t* dispatcher_;
   fbl::RefPtr<fs::PseudoDir> root_dir_;
   fs::SynchronousVfs vfs_;
   FakeBootArgs fake_boot_args_;
-  zx::channel svc_local_;
+  fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_local_;
 };
 
 class PaverServiceTest : public zxtest::Test {
@@ -1924,8 +1926,7 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
   }
 
   fidl::ClientEnd<::llcpp::fuchsia::io::Directory> GetSvcRoot() {
-    return fidl::ClientEnd<::llcpp::fuchsia::io::Directory>(
-        zx::channel(fdio_service_clone(fake_svc_.svc_chan().get())));
+    return service::MaybeClone(fake_svc_.svc_chan());
   }
 
   struct PartitionDescription {

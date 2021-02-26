@@ -65,8 +65,8 @@ TEST(StartArgsTest, NsValue) {
 
   auto svc = start_args::NsValue(entries, "/svc");
   zx_info_handle_basic_t client_info = {}, server_info = {};
-  ASSERT_EQ(ZX_OK, zx_object_get_info(svc.value().channel(), ZX_INFO_HANDLE_BASIC, &client_info,
-                                      sizeof(client_info), nullptr, nullptr));
+  ASSERT_EQ(ZX_OK, svc.value().channel()->get_info(ZX_INFO_HANDLE_BASIC, &client_info,
+                                                   sizeof(client_info), nullptr, nullptr));
   ASSERT_EQ(ZX_OK, endpoints->server.channel().get_info(ZX_INFO_HANDLE_BASIC, &server_info,
                                                         sizeof(server_info), nullptr, nullptr));
   EXPECT_EQ(client_info.koid, server_info.related_koid);

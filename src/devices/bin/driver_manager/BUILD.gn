@@ -210,6 +210,7 @@ source_set("driver_runner") {
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

@@ -259,9 +259,9 @@ std::optional<::fidl::UnbindInfo> Transitional::ClientImpl::DispatchEvent(
 ::fidl::Result Transitional::SyncEventHandler::HandleOneEvent(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
         client_end) {
-  zx_status_t status = zx_object_wait_one(
-      client_end.channel(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-      ZX_TIME_INFINITE, nullptr);
+  zx_status_t status = client_end.channel()->wait_one(
+      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
+      nullptr);
   if (status != ZX_OK) {
     return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
   }
@@ -289,10 +289,9 @@ std::optional<::fidl::UnbindInfo> Transitional::ClientImpl::DispatchEvent(
   zx_handle_info_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
-  status =
-      zx_channel_read_etc(client_end.channel(), ZX_CHANNEL_READ_MAY_DISCARD,
-                          read_bytes, read_handles, kReadAllocSize,
-                          kHandleAllocSize, &actual_bytes, &actual_handles);
+  status = client_end.channel()->read_etc(
+      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles, kReadAllocSize,
+      kHandleAllocSize, &actual_bytes, &actual_handles);
   if (status == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -977,9 +976,9 @@ std::optional<::fidl::UnbindInfo> ChannelProtocol::ClientImpl::DispatchEvent(
 ::fidl::Result ChannelProtocol::SyncEventHandler::HandleOneEvent(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::ChannelProtocol>
         client_end) {
-  zx_status_t status = zx_object_wait_one(
-      client_end.channel(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-      ZX_TIME_INFINITE, nullptr);
+  zx_status_t status = client_end.channel()->wait_one(
+      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
+      nullptr);
   if (status != ZX_OK) {
     return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
   }
@@ -1007,10 +1006,9 @@ std::optional<::fidl::UnbindInfo> ChannelProtocol::ClientImpl::DispatchEvent(
   zx_handle_info_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
-  status =
-      zx_channel_read_etc(client_end.channel(), ZX_CHANNEL_READ_MAY_DISCARD,
-                          read_bytes, read_handles, kReadAllocSize,
-                          kHandleAllocSize, &actual_bytes, &actual_handles);
+  status = client_end.channel()->read_etc(
+      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles, kReadAllocSize,
+      kHandleAllocSize, &actual_bytes, &actual_handles);
   if (status == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -2000,9 +1998,9 @@ WithAndWithoutRequestResponse::ClientImpl::DispatchEvent(
     ::fidl::UnownedClientEnd<
         ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
         client_end) {
-  zx_status_t status = zx_object_wait_one(
-      client_end.channel(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-      ZX_TIME_INFINITE, nullptr);
+  zx_status_t status = client_end.channel()->wait_one(
+      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
+      nullptr);
   if (status != ZX_OK) {
     return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
   }
@@ -2040,10 +2038,9 @@ WithAndWithoutRequestResponse::ClientImpl::DispatchEvent(
   zx_handle_info_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
-  status =
-      zx_channel_read_etc(client_end.channel(), ZX_CHANNEL_READ_MAY_DISCARD,
-                          read_bytes, read_handles, kReadAllocSize,
-                          kHandleAllocSize, &actual_bytes, &actual_handles);
+  status = client_end.channel()->read_etc(
+      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles, kReadAllocSize,
+      kHandleAllocSize, &actual_bytes, &actual_handles);
   if (status == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new

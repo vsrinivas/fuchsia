@@ -56,8 +56,7 @@ class InstanceLifecycleTest : public zxtest::Test {
 
   static void WaitForEvent(fidl::UnownedClientEnd<Lifecycle> lifecycle_client, Event event);
   static bool AreEventsPending(fidl::UnownedClientEnd<Lifecycle> lifecycle_client) {
-    return zx::unowned_channel(lifecycle_client.channel())
-               ->wait_one(ZX_CHANNEL_READABLE, zx::time{}, nullptr) == ZX_OK;
+    return lifecycle_client.channel()->wait_one(ZX_CHANNEL_READABLE, zx::time{}, nullptr) == ZX_OK;
   }
 
   fidl::ClientEnd<TestDevice> device_;

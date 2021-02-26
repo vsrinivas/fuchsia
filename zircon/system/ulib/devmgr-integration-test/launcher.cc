@@ -152,8 +152,7 @@ void ForwardService(fbl::RefPtr<fs::PseudoDir> root, const char* name,
 
 fidl::ClientEnd<llcpp::fuchsia::io::Directory> CloneDirectory(
     fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> end) {
-  return fidl::ClientEnd<llcpp::fuchsia::io::Directory>(
-      zx::channel(fdio_service_clone(end.channel())));
+  return service::MaybeClone(end);
 }
 
 }  // namespace

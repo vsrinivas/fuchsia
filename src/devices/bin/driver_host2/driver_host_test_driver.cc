@@ -5,6 +5,7 @@
 #include <fuchsia/driverhost/test/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/epitaph.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/svc/outgoing.h>
 
 #include "src/devices/lib/driver2/record.h"
@@ -29,19 +30,13 @@ class TestDriver {
     if (svc_dir.is_error()) {
       return svc_dir.take_error();
     }
-    zx::channel client_end, server_end;
-    zx_status_t status = zx::channel::create(0, &client_end, &server_end);
-    if (status != ZX_OK) {
-      return zx::error(status);
-    }
-    status = fdio_service_connect_at(svc_dir.value().channel(), ftest::Incoming::Name,
-                                     server_end.release());
-    if (status != ZX_OK) {
-      return zx::error(status);
+    auto client_end = service::ConnectAt<ftest::Incoming>(svc_dir.value());
+    if (!client_end.is_ok()) {
+      return client_end.take_error();
     }
 
     // Setup the outgoing service.
-    status = outgoing_.svc_dir()->AddEntry(
+    zx_status_t status = outgoing_.svc_dir()->AddEntry(
         ftest::Outgoing::Name, fbl::MakeRefCounted<fs::Service>([](zx::channel request) {
           return fidl_epitaph_write(request.get(), ZX_ERR_STOP);
         }));

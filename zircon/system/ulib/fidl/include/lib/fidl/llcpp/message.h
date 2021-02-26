@@ -128,7 +128,7 @@ class OutgoingMessage : public ::fidl::Result {
   template <typename FidlType, typename Protocol>
   void Call(::fidl::UnownedClientEnd<Protocol> client_end, uint8_t* result_bytes,
             uint32_t result_capacity, zx_time_t deadline = ZX_TIME_INFINITE) {
-    CallImpl(FidlType::Type, client_end.channel(), result_bytes, result_capacity, deadline);
+    CallImpl(FidlType::Type, client_end.handle(), result_bytes, result_capacity, deadline);
   }
 
   // For asynchronous clients, writes a request.

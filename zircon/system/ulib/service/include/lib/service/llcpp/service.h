@@ -33,7 +33,7 @@ namespace internal {
     ::fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> svc_dir, const char* protocol_name);
 
 // Implementation of |service::Clone| that is independent from the actual |Protocol|.
-::zx::status<zx::channel> CloneRaw(zx_handle_t node);
+::zx::status<zx::channel> CloneRaw(::zx::unowned_channel&& node);
 
 template <size_t... I>
 using seq = std::integer_sequence<size_t, I...>;

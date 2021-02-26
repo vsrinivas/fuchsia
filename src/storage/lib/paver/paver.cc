@@ -10,6 +10,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -876,11 +877,7 @@ void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync& completer) {
 void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                        fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
                        std::shared_ptr<Context> context, zx::channel server) {
-  auto status =
-      abr::ClientFactory::Create(std::move(devfs_root),
-                                 fidl::ClientEnd<::llcpp::fuchsia::io::Directory>(
-                                     zx::channel(fdio_service_clone(svc_root.borrow().channel()))),
-                                 context);
+  auto status = abr::ClientFactory::Create(std::move(devfs_root), svc_root, context);
   if (status.is_error()) {
     ERROR("Failed to get ABR client: %s\n", status.status_string());
     fidl_epitaph_write(server.get(), status.error_value());

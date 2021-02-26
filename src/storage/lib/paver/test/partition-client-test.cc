@@ -388,14 +388,14 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
     constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
     ASSERT_NO_FATAL_FAILURES(
         BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, 2, 512, &gpt_dev_));
-    ASSERT_OK(fdio_get_service_handle(gpt_dev_->fd(), service_channel_.reset_and_get_address()));
+    ASSERT_OK(fdio_get_service_handle(gpt_dev_->fd(),
+                                      service_channel_.channel().reset_and_get_address()));
   }
 
   // Creates a BlockPartitionClient which will read/write the entire device.
   std::unique_ptr<paver::BlockPartitionClient> RawClient() {
     return std::make_unique<paver::BlockPartitionClient>(
-        fidl::ClientEnd<llcpp::fuchsia::hardware::block::Block>(
-            zx::channel(fdio_service_clone(service_channel_.get()))));
+        service::MaybeClone(service_channel_, service::AssumeProtocolComposesNode));
   }
 
   // Creates a FixedOffsetBlockPartitionClient which will read/write with a partition
@@ -403,8 +403,7 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
   std::unique_ptr<paver::FixedOffsetBlockPartitionClient> FixedOffsetClient(size_t partition_offset,
                                                                             size_t buffer_offset) {
     return std::make_unique<paver::FixedOffsetBlockPartitionClient>(
-        fidl::ClientEnd<llcpp::fuchsia::hardware::block::Block>(
-            zx::channel(fdio_service_clone(service_channel_.get()))),
+        service::MaybeClone(service_channel_, service::AssumeProtocolComposesNode),
         partition_offset, buffer_offset);
   }
 
@@ -421,7 +420,7 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
  private:
   IsolatedDevmgr devmgr_;
   std::unique_ptr<BlockDevice> gpt_dev_;
-  zx::channel service_channel_;
+  fidl::ClientEnd<llcpp::fuchsia::hardware::block::Block> service_channel_;
 };
 
 // Writes |data| to |client|.

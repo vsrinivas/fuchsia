@@ -36,20 +36,20 @@ namespace internal {
     return ::zx::error(status);
   }
   if (zx_status_t status =
-          fdio_service_connect_at(svc_dir.channel(), protocol_name, server_end.release());
+          fdio_service_connect_at(svc_dir.handle(), protocol_name, server_end.release());
       status != ZX_OK) {
     return ::zx::error(status);
   }
   return ::zx::ok(std::move(client_end));
 }
 
-::zx::status<::zx::channel> CloneRaw(zx_handle_t node) {
+::zx::status<::zx::channel> CloneRaw(::zx::unowned_channel&& node) {
   ::zx::channel client_end, server_end;
   zx_status_t status = ::zx::channel::create(0, &client_end, &server_end);
   if (status != ZX_OK) {
     return ::zx::error(status);
   }
-  status = fdio_service_clone_to(node, server_end.release());
+  status = fdio_service_clone_to(node->get(), server_end.release());
   if (status != ZX_OK) {
     return ::zx::error(status);
   }
@@ -118,8 +118,8 @@ namespace internal {
   if (!path_result.is_ok()) {
     return path_result.take_error();
   }
-  return internal::DirectoryOpenFunc(::zx::unowned_channel(dir.channel()),
-                                     std::move(path_result.value()), std::move(remote));
+  return internal::DirectoryOpenFunc(dir.channel(), std::move(path_result.value()),
+                                     std::move(remote));
 }
 
 }  // namespace llcpp::sys

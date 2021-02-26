@@ -6,6 +6,7 @@
 
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 
 #include <fbl/function.h>
@@ -104,7 +105,7 @@ class GptDevicePartitioner {
                        fbl::unique_fd fd, std::unique_ptr<GptDevice> gpt,
                        ::llcpp::fuchsia::hardware::block::BlockInfo block_info)
       : devfs_root_(std::move(devfs_root)),
-        svc_root_(zx::channel(fdio_service_clone(svc_root.channel()))),
+        svc_root_(service::MaybeClone(svc_root)),
         caller_(std::move(fd)),
         gpt_(std::move(gpt)),
         block_info_(block_info) {}

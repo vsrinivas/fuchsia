@@ -107,8 +107,8 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   ASSERT_OK(dir->Lookup("0", &node));
   zx_info_handle_basic_t vfs_remote_info;
   auto remote = node->GetRemote();
-  ASSERT_OK(zx_object_get_info(remote.channel(), ZX_INFO_HANDLE_BASIC, &vfs_remote_info,
-                               sizeof(vfs_remote_info), nullptr, nullptr));
+  ASSERT_OK(remote.channel()->get_info(ZX_INFO_HANDLE_BASIC, &vfs_remote_info,
+                                       sizeof(vfs_remote_info), nullptr, nullptr));
   EXPECT_EQ(vfs_remote_info.koid, vfs_client_info.koid);
 }
 

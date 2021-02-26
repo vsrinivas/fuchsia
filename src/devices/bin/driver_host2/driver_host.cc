@@ -155,7 +155,7 @@ void DriverHost::Start(fdf::DriverStartArgs start_args,
     completer.Close(endpoints.status_value());
     return;
   }
-  zx_status_t status = fdio_open_at(pkg->channel(), binary->data(),
+  zx_status_t status = fdio_open_at(pkg->handle(), binary->data(),
                                     fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
                                     endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {

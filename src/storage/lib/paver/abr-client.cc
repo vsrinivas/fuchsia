@@ -10,6 +10,7 @@
 #include <lib/abr/abr.h>
 #include <lib/cksum.h>
 #include <lib/fdio/directory.h>
+#include <lib/service/llcpp/service.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/errors.h>
@@ -32,13 +33,11 @@ zx::status<Configuration> QueryBootConfig(
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  auto status = zx::make_status(fdio_service_connect_at(svc_root.channel(),
-                                                        ::llcpp::fuchsia::boot::Arguments::Name,
-                                                        endpoints->server.channel().release()));
-  if (status.is_error()) {
-    return status.take_error();
+  auto client_end = service::ConnectAt<::llcpp::fuchsia::boot::Arguments>(svc_root);
+  if (!client_end.is_ok()) {
+    return client_end.take_error();
   }
-  auto client = fidl::BindSyncClient(std::move(endpoints->client));
+  auto client = fidl::BindSyncClient(std::move(*client_end));
   auto result = client.GetString(::fidl::StringView{"zvb.current_slot"});
   if (!result.ok()) {
     return zx::error(result.status());

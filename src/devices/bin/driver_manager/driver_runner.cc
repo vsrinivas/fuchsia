@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/service/llcpp/service.h>
 #include <zircon/status.h>
 
 #include <sstream>
@@ -438,16 +439,17 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info,
     completer.Close(endpoints.status_value());
     return;
   }
-  zx::channel exposed_dir(fdio_service_clone(driver_args.exposed_dir.channel().get()));
-  if (!exposed_dir.is_valid()) {
-    LOGF(ERROR, "Failed to clone exposed directory for driver '%.*s'", url.size(), url.data());
+  auto exposed_dir = service::Clone(driver_args.exposed_dir);
+  if (!exposed_dir.is_ok()) {
+    LOGF(ERROR, "Failed to clone exposed directory for driver '%.*s': %s", url.size(), url.data(),
+         exposed_dir.status_string());
     completer.Close(ZX_ERR_INTERNAL);
     return;
   }
   auto start = driver_host->Start(std::move(endpoints->client), driver_args.node->offers(),
                                   std::move(symbols), std::move(start_info.resolved_url()),
                                   std::move(start_info.program()), std::move(start_info.ns()),
-                                  std::move(start_info.outgoing_dir()), std::move(exposed_dir));
+                                  std::move(start_info.outgoing_dir()), std::move(*exposed_dir));
   if (start.is_error()) {
     completer.Close(start.error_value());
     return;

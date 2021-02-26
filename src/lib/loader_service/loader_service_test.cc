@@ -274,8 +274,7 @@ void LoadObjectLdmsg(fidl::UnownedClientEnd<fldsvc::Loader> client, const char* 
   };
 
   uint32_t actual_bytes, actual_handles;
-  status = zx::unowned_channel(client.channel())
-               ->call(0, zx::time::infinite(), &call, &actual_bytes, &actual_handles);
+  status = client.channel()->call(0, zx::time::infinite(), &call, &actual_bytes, &actual_handles);
   ASSERT_OK(status);
   ASSERT_EQ(actual_bytes, ldmsg_rsp_get_size(&rsp));
   ASSERT_EQ(rsp.header.ordinal, req.header.ordinal);
