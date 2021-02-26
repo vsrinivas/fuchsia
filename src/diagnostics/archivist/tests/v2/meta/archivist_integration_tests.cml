@@ -4,7 +4,6 @@
         {
             name: "archivist",
             url: "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/archivist.cm",
-            startup: "eager",
         },
         {
             name: "driver",
