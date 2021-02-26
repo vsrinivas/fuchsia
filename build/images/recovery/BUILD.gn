@@ -23,7 +23,7 @@ recovery_packages = [
   "//src/connectivity/wlan/wlancfg",
   "//src/connectivity/wlan/wlanstack",
   "//src/devices/sysmem/bin/sysmem_connector",
-  "//src/recovery/system",
+  "//src/recovery/system:system_recovery",
   "//src/recovery/system:config",
   "//src/security/root_ssl_certificates",
   "//src/sys/appmgr",
@@ -108,6 +108,7 @@ assemble_system("recovery-eng") {
 }
 
 assemble_system("recovery-fdr") {
+  # TODO(fxbug.dev/70733): remove this line.
   testonly = true
   base_packages = recovery_packages
 
@@ -127,12 +128,9 @@ assemble_system("recovery-fdr") {
     "//build/info:bootfs",
     "//build/input:recovery_bootfs",
     "//bundles:bootstrap",
-    "//bundles:debugging",
-    "//bundles/bringup:manual_testing",
     "//bundles/drivers:bootstrap",
     "//bundles/drivers:usb-host-stack",
     "//bundles/drivers:usb-peripheral-stack",
-    "//bundles/drivers:utils",
   ]
   bootfs_labels +=
       [ "//src/sys/component_manager:component_manager_bootfs_config" ]
