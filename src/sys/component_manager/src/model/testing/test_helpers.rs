@@ -19,18 +19,24 @@ use {
             },
         },
     },
+    anyhow::{Context, Error},
+    archivist_lib::{
+        container::ComponentIdentity, events::types::ComponentIdentifier, logs::Message,
+    },
     cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl, ProgramDecl},
     cm_types::Url,
     fidl::encoding::encode_persistent,
-    fidl::endpoints::{self, Proxy, ServerEnd},
+    fidl::endpoints::{self, Proxy, ServerEnd, ServiceMarker},
     fidl_fidl_examples_echo as echo, fidl_fuchsia_component_internal as fcomponent_internal,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
-        DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE,
+        OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::{self as fio2},
+    fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequestStream},
     fidl_fuchsia_sys2 as fsys, files_async, fuchsia_async as fasync,
+    fuchsia_component::server::{ServiceFs, ServiceObjLocal},
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{channel::mpsc::Receiver, StreamExt, TryStreamExt},
     moniker::{AbsoluteMoniker, PartialMoniker},
@@ -43,6 +49,12 @@ use {
     tempfile::NamedTempFile,
     vfs::directory::entry::DirectoryEntry,
 };
+
+pub type MockServiceFs<'a> = ServiceFs<ServiceObjLocal<'a, MockServiceRequest>>;
+
+pub enum MockServiceRequest {
+    LogSink(LogSinkRequestStream),
+}
 
 pub struct ComponentInfo {
     pub component: Arc<ComponentInstance>,
@@ -830,5 +842,47 @@ impl ActionsTest {
             .create_child(&mut collection_ref, child_decl)
             .await;
         res.expect("failed to create child").expect("failed to create child");
+    }
+}
+
+/// Create a new local fs and install a mock LogSink service into.
+/// Returns the created directory and corresponding namespace entries.
+pub fn create_fs_with_mock_logsink(
+) -> Result<(MockServiceFs<'static>, Vec<fcrunner::ComponentNamespaceEntry>), Error> {
+    let (client, server) = endpoints::create_endpoints::<DirectoryMarker>()
+        .context("Failed to create VFS endpoints.")?;
+    let mut dir = ServiceFs::new_local();
+    dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
+    dir.serve_connection(server.into_channel()).context("Failed to add serving channel.")?;
+    let entries = vec![fcrunner::ComponentNamespaceEntry {
+        path: Some("/svc".to_string()),
+        directory: Some(client),
+        ..fcrunner::ComponentNamespaceEntry::EMPTY
+    }];
+
+    Ok((dir, entries))
+}
+
+/// Retrieve message logged to socket. The wire format is expected to
+/// match with the LogSink protocol format.
+pub fn get_message_logged_to_socket(socket: zx::Socket) -> Option<String> {
+    let mut buffer: [u8; 1024] = [0; 1024];
+    match socket.read(&mut buffer) {
+        Ok(read_len) => {
+            let msg = Message::from_logger(
+                &ComponentIdentity::from_identifier_and_url(
+                    &ComponentIdentifier::Legacy {
+                        moniker: vec!["test-pkg", "test-component.cmx"].into(),
+                        instance_id: "".into(),
+                    },
+                    "fuchsia-pkg://fuchsia.com/test-pkg#meta/test-component.cm",
+                ),
+                &buffer[..read_len],
+            )
+            .expect("Couldn't decode message from buffer.");
+
+            (*msg).msg().map(String::from)
+        }
+        Err(_) => None,
     }
 }

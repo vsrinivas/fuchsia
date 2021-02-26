@@ -30,6 +30,7 @@ template("component_manager") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.time:fuchsia.time-rustc",
+    "//src/diagnostics/archivist:lib",
     "//src/lib/by_addr:by_addr",
     "//src/lib/error/clonable_error",
     "//src/lib/fdio/rust:fdio",
@@ -209,6 +210,7 @@ template("component_manager") {
       # above, which has the benefit of keeping unneeded deps out of the production
       # binary and allows depending on 'testonly' targets.
       deps += [
+        "//src/lib/diagnostics/testing",
         "//src/lib/process_builder:test-util-fidl-rustc",
         "//src/sys/lib/directory_broker",
         "//src/sys/lib/library_loader",
@@ -352,7 +354,7 @@ fuchsia_test_package("component-manager-tests") {
     "src/elf_runner/tests/lifecycle:run-indefinitely",
     "//examples/components/basic:hello-world",
     "//examples/components/basic:lifecycle-full",
-    "//examples/hello_world/rust",
+    "//examples/hello_world/rust:hello-world-rust-component-v2",
     "//garnet/examples/fidl/echo_server_rust:echo-server-rust-cmp",
   ]
 }

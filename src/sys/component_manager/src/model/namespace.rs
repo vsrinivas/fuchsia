@@ -620,11 +620,12 @@ async fn connect_to_logger(sink: &fidl_fuchsia_logger::LogSinkProxy) -> Result<L
 pub mod test {
 
     use {
-        super::IncomingNamespace,
+        super::*,
+        crate::model::testing::test_helpers::MockServiceRequest,
         cm_rust::{CapabilityPath, UseProtocolDecl, UseSource},
         fidl::endpoints::{self, ServiceMarker},
         fidl_fuchsia_component_runner as fcrunner,
-        fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequest, LogSinkRequestStream},
+        fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequest},
         fuchsia_async,
         fuchsia_component::server::ServiceFs,
         futures::StreamExt,
@@ -660,10 +661,6 @@ pub mod test {
         );
     }
 
-    enum FidlServices {
-        LogSink(LogSinkRequestStream),
-    }
-
     #[fuchsia_async::run_singlethreaded(test)]
     /// Tests that the logger is connected to when it is in a subdirectory of a
     /// namespace entry.
@@ -679,7 +676,7 @@ pub mod test {
             endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()
                 .expect("failed to create VFS endpoints");
         let mut root_dir = ServiceFs::new_local();
-        root_dir.add_fidl_service_at(LogSinkMarker::NAME, FidlServices::LogSink);
+        root_dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
         let _sub_dir = root_dir.dir("subdir");
         root_dir
             .serve_connection(dir_server.into_channel())
@@ -717,7 +714,7 @@ pub mod test {
                 .expect("failed to create VFS endpoints");
         let mut root_dir = ServiceFs::new_local();
         let mut svc_dir = root_dir.dir("arbitrary-dir");
-        svc_dir.add_fidl_service_at(LogSinkMarker::NAME, FidlServices::LogSink);
+        svc_dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
         let _sub_dir = root_dir.dir("subdir");
         root_dir
             .serve_connection(dir_server.into_channel())
@@ -752,7 +749,7 @@ pub mod test {
             endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()
                 .expect("failed to create VFS endpoints");
         let mut root_dir = ServiceFs::new_local();
-        root_dir.add_fidl_service_at(LogSinkMarker::NAME, FidlServices::LogSink);
+        root_dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
         let _sub_dir = root_dir.dir("subdir");
         root_dir
             .serve_connection(dir_server.into_channel())
@@ -764,7 +761,7 @@ pub mod test {
             endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()
                 .expect("Failed creating directory endpoints");
         let mut extra_dir = ServiceFs::new_local();
-        extra_dir.add_fidl_service(FidlServices::LogSink);
+        extra_dir.add_fidl_service(MockServiceRequest::LogSink);
         extra_dir
             .serve_connection(extra_dir_server.into_channel())
             .expect("serving channel failed");
@@ -804,7 +801,7 @@ pub mod test {
         let ns_entries = vec![];
 
         verify_logger_connects_in_namespace(
-            Option::<&mut ServiceFs<fuchsia_component::server::ServiceObjLocal<FidlServices>>>::None,
+            Option::<&mut ServiceFs<fuchsia_component::server::ServiceObjLocal<MockServiceRequest>>>::None,
             incoming_ns,
             ns_entries,
             log_decl,
@@ -826,7 +823,7 @@ pub mod test {
             endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()
                 .expect("failed to create VFS endpoints");
         let mut root_dir = ServiceFs::new_local();
-        root_dir.add_fidl_service_at(LogSinkMarker::NAME, FidlServices::LogSink);
+        root_dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
         root_dir
             .serve_connection(dir_server.into_channel())
             .expect("failed to add serving channel");
@@ -850,7 +847,7 @@ pub mod test {
     /// Verify the expected logger connection behavior and that the logger is
     /// set or not in the namespace.
     async fn verify_logger_connects_in_namespace<
-        T: fuchsia_component::server::ServiceObjTrait<Output = FidlServices>,
+        T: fuchsia_component::server::ServiceObjTrait<Output = MockServiceRequest>,
     >(
         root_dir: Option<&mut ServiceFs<T>>,
         incoming_ns: IncomingNamespace,
@@ -880,8 +877,8 @@ pub mod test {
             // directory handle.
             let request_count = Arc::new(Mutex::new(0u8));
             let request_count_copy = request_count.clone();
-            dir.for_each_concurrent(10usize, move |request: FidlServices| match request {
-                FidlServices::LogSink(mut r) => {
+            dir.for_each_concurrent(10usize, move |request: MockServiceRequest| match request {
+                MockServiceRequest::LogSink(mut r) => {
                     let req_count = request_count_copy.clone();
                     async move {
                         match r.next().await.expect("stream error").expect("fidl error") {

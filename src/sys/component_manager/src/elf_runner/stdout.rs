@@ -80,6 +80,7 @@ fn new_stream_bound_to_fd(fd: i32) -> Result<(LoggerStream, fproc::HandleInfo), 
         },
     ))
 }
+
 struct SyslogWriter {
     logger: Arc<NamespaceLogger>,
     level: Level,
@@ -97,5 +98,94 @@ impl LogWriter for SyslogWriter {
         let msg = String::from_utf8_lossy(&bytes);
         self.logger.log(self.level, format_args!("{}", msg));
         Ok(bytes.len())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use {
+        super::*,
+        crate::model::testing::test_helpers::{
+            create_fs_with_mock_logsink, get_message_logged_to_socket, MockServiceFs,
+            MockServiceRequest,
+        },
+        anyhow::{anyhow, Context, Error},
+        fidl_fuchsia_component_runner as fcrunner,
+        fidl_fuchsia_logger::LogSinkRequest,
+        fuchsia_async::{self as fasync, futures::try_join},
+        futures::StreamExt,
+        log::Level,
+        std::{
+            convert::TryFrom,
+            sync::{Arc, Mutex},
+        },
+    };
+
+    #[fasync::run_singlethreaded(test)]
+    async fn syslog_writer_decodes_valid_utf8_message() -> Result<(), Error> {
+        let (dir, ns_entries) = create_fs_with_mock_logsink()?;
+
+        let ((), actual) = try_join!(
+            write_to_syslog_or_panic(ns_entries, b"Hello World!"),
+            read_message_from_syslog(dir)
+        )?;
+
+        assert_eq!(actual, Some("Hello World!".to_owned()));
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn syslog_writer_decodes_non_utf8_message() -> Result<(), Error> {
+        let (dir, ns_entries) = create_fs_with_mock_logsink()?;
+
+        let ((), actual) = try_join!(
+            write_to_syslog_or_panic(ns_entries, b"Hello \xF0\x90\x80World!"),
+            read_message_from_syslog(dir)
+        )?;
+
+        assert_eq!(actual, Some("Hello �World!".to_owned()));
+        Ok(())
+    }
+
+    async fn write_to_syslog_or_panic(
+        ns_entries: Vec<fcrunner::ComponentNamespaceEntry>,
+        message: &[u8],
+    ) -> Result<(), Error> {
+        let ns = ComponentNamespace::try_from(ns_entries)
+            .context("Failed to create ComponentNamespace")?;
+        let logger =
+            create_namespace_logger(&ns).await.context("Failed to create NamespaceLogger")?;
+        let mut writer = SyslogWriter::new(Arc::new(logger), Level::Info);
+        let _ = writer.write(message).await.context("Failed to write message")?;
+
+        Ok(())
+    }
+
+    async fn read_message_from_syslog(
+        dir: MockServiceFs<'static>,
+    ) -> Result<Option<String>, Error> {
+        let message_logged = Arc::new(Mutex::new(Option::<String>::None));
+        dir.for_each_concurrent(None, |request: MockServiceRequest| match request {
+            MockServiceRequest::LogSink(mut r) => {
+                let message_logged_copy = Arc::clone(&message_logged);
+                async move {
+                    match r.next().await.expect("stream error").expect("fidl error") {
+                        LogSinkRequest::Connect { socket, .. } => {
+                            *message_logged_copy.lock().unwrap() =
+                                get_message_logged_to_socket(socket);
+                        }
+                        LogSinkRequest::ConnectStructured { .. } => {
+                            panic!("Unexpected call to `ConnectStructured`");
+                        }
+                    }
+                }
+            }
+        })
+        .await;
+
+        let message_logged =
+            message_logged.lock().map_err(|_| anyhow!("Failed to lock mutex"))?.clone();
+        Ok(message_logged)
     }
 }

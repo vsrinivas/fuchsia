@@ -917,15 +917,18 @@ impl ProcessLauncherConnector {
 mod tests {
     use {
         super::*,
-        crate::config::{JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
+        crate::{
+            config::{JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
+            model::testing::test_helpers::{create_fs_with_mock_logsink, MockServiceRequest},
+        },
+        anyhow::Error,
         fdio,
-        fidl::endpoints::{self, create_proxy, ClientEnd, Proxy, ServiceMarker},
+        fidl::endpoints::{create_proxy, ClientEnd, Proxy},
         fidl_fuchsia_component as fcomp, fidl_fuchsia_component_runner as fcrunner,
         fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::DirectoryProxy,
-        fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequest, LogSinkRequestStream},
-        fuchsia_async as fasync,
-        fuchsia_component::server::ServiceFs,
+        fidl_fuchsia_logger::LogSinkRequest,
+        fuchsia_async::{self as fasync, futures::join},
         fuchsia_zircon as zx,
         futures::{prelude::*, StreamExt},
         io_util,
@@ -1570,10 +1573,6 @@ mod tests {
         let _ = controller.take_event_stream().try_next().await;
     }
 
-    enum FidlServices {
-        LogSink(LogSinkRequestStream),
-    }
-
     fn hello_world_startinfo_forward_stdout_to_log(
         runtime_dir: Option<ServerEnd<DirectoryMarker>>,
         mut ns: Vec<fcrunner::ComponentNamespaceEntry>,
@@ -1601,7 +1600,7 @@ mod tests {
                     fdata::DictionaryEntry {
                         key: "binary".to_string(),
                         value: Some(Box::new(fdata::DictionaryValue::Str(
-                            "bin/hello_world".to_string(),
+                            "bin/hello_world_rust".to_string(),
                         ))),
                     },
                     fdata::DictionaryEntry {
@@ -1622,57 +1621,48 @@ mod tests {
     // //src/sys/component_manager/src/model/namespace.rs tests. Shared
     // functionality should be refactored into a common test util lib.
     #[fasync::run_singlethreaded(test)]
-    async fn enable_stdout_logging() {
-        let (dir_client, dir_server) =
-            endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()
-                .expect("failed to create VFS endpoints");
-        let mut root_dir = ServiceFs::new_local();
-        root_dir.add_fidl_service_at(LogSinkMarker::NAME, FidlServices::LogSink);
-        root_dir
-            .serve_connection(dir_server.into_channel())
-            .expect("failed to add serving channel");
+    async fn enable_stdout_logging() -> Result<(), Error> {
+        let (dir, ns) = create_fs_with_mock_logsink()?;
 
-        let ns = vec![fcrunner::ComponentNamespaceEntry {
-            path: Some("/svc".to_string()),
-            directory: Some(dir_client),
-            ..fcrunner::ComponentNamespaceEntry::EMPTY
-        }];
+        let run_component_fut = async move {
+            let (_, runtime_dir_server) = zx::Channel::create().unwrap();
+            let start_info = hello_world_startinfo_forward_stdout_to_log(
+                Some(ServerEnd::new(runtime_dir_server)),
+                ns,
+            );
 
-        let (_, runtime_dir_server) = zx::Channel::create().unwrap();
-        let start_info = hello_world_startinfo_forward_stdout_to_log(
-            Some(ServerEnd::new(runtime_dir_server)),
-            ns,
-        );
+            let config = RuntimeConfig {
+                use_builtin_process_launcher: should_use_builtin_process_launcher(),
+                ..Default::default()
+            };
 
-        let config = RuntimeConfig {
-            use_builtin_process_launcher: should_use_builtin_process_launcher(),
-            ..Default::default()
+            let runner = Arc::new(ElfRunner::new(&config, None));
+            let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
+                Arc::downgrade(&Arc::new(config)),
+                AbsoluteMoniker::root(),
+            ));
+            let (client_controller, server_controller) =
+                create_proxy::<fcrunner::ComponentControllerMarker>()
+                    .expect("could not create component controller endpoints");
+
+            runner.start(start_info, server_controller).await;
+            assert_matches!(
+                client_controller.take_event_stream().try_next().await,
+                Err(fidl::Error::ClientChannelClosed { .. })
+            );
         };
 
-        let runner = Arc::new(ElfRunner::new(&config, None));
-        let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
-            Arc::downgrade(&Arc::new(config)),
-            AbsoluteMoniker::root(),
-        ));
-        let (client_controller, server_controller) =
-            create_proxy::<fcrunner::ComponentControllerMarker>()
-                .expect("could not create component controller endpoints");
-
-        runner.start(start_info, server_controller).await;
-
-        // We expect 2 connections to be made to LogSink. The first one is done
-        // for all components, regardless if stdout/stderr is enabled. The
-        // second is only made for the stdout/stderr forwarding code.
         // TODO(fxbug.dev/69634): Instead of checking for connection count,
         // we should assert that a message printed to stdout is logged. To
         // do so, we can use the archvist_lib to unpack the socket payload.
         // Until then, integration tests shall cover this validation.
-        let connection_count = 2u8;
+        let connection_count = 1u8;
         let request_count = Arc::new(Mutex::new(0u8));
         let request_count_copy = request_count.clone();
-        root_dir
-            .for_each_concurrent(10usize, move |request: FidlServices| match request {
-                FidlServices::LogSink(mut r) => {
+
+        let service_fs_listener_fut = async move {
+            dir.for_each_concurrent(None, move |request: MockServiceRequest| match request {
+                MockServiceRequest::LogSink(mut r) => {
                     let req_count = request_count_copy.clone();
                     async move {
                         match r.next().await.expect("stream error").expect("fidl error") {
@@ -1688,10 +1678,11 @@ mod tests {
                 }
             })
             .await;
-        assert_matches!(
-            client_controller.take_event_stream().try_next().await,
-            Err(fidl::Error::ClientChannelClosed { .. })
-        );
+        };
+
+        join!(run_component_fut, service_fs_listener_fut);
+
         assert_eq!(*request_count.lock().expect("lock failed"), connection_count);
+        Ok(())
     }
 }
