@@ -231,7 +231,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
   int failed_count = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
   if (!RunTests(test_paths, test_args, repeat,
-                static_cast<uint64_t>(timeout_seconds) * static_cast<uint64_t>(1000), output_dir,
+                static_cast<int64_t>(timeout_seconds) * static_cast<int64_t>(1000), output_dir,
                 kOutputFileName, realm_label, &failed_count, &results)) {
     return EXIT_FAILURE;
   }

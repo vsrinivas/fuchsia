@@ -308,7 +308,7 @@ int DiscoverTestsInDirGlobs(const fbl::Vector<fbl::String>& dir_globs, const cha
 }
 
 bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl::String>& test_args,
-              int repeat, uint64_t timeout_msec, const char* output_dir,
+              int repeat, int64_t timeout_msec, const char* output_dir,
               const fbl::StringPiece output_file_basename, const char* realm_label,
               int* failed_count, fbl::Vector<std::unique_ptr<Result>>* results) {
   std::map<fbl::String, int> test_name_to_count;

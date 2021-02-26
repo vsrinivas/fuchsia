@@ -44,8 +44,6 @@
 #include <runtests-utils/profile.h>
 #include <runtests-utils/service-proxy-dir.h>
 
-namespace fio = ::llcpp::fuchsia::io;
-
 namespace runtests {
 
 namespace {
@@ -338,7 +336,7 @@ bool SetUpForTestComponent(const char* test_path, fbl::String* out_component_exe
 
 std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
                                 const char* output_filename, const char* test_name,
-                                uint64_t timeout_msec, const char* realm_label) {
+                                int64_t timeout_msec, const char* realm_label) {
   // The arguments passed to fdio_spawn_etc. May be overridden.
   const char** args = argv;
   // calculate size of argv

@@ -78,7 +78,7 @@ struct Result {
 //   after the completion of the test.
 std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
                                 const char* output_filename, const char* test_name,
-                                uint64_t timeout_msec, const char* realm_label);
+                                int64_t timeout_msec, const char* realm_label);
 
 // A means of measuring how long it takes to run tests.
 class Stopwatch {
@@ -155,9 +155,9 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs, fbl::Vector<fbl::String>
 //
 // Returns false if any test binary failed, true otherwise.
 bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl::String>& test_args,
-              int repeat, uint64_t timeout_msec, const char* output_dir,
-              fbl::StringPiece output_file_basename, const char* realm_label,
-              int* failed_count, fbl::Vector<std::unique_ptr<Result>>* results);
+              int repeat, int64_t timeout_msec, const char* output_dir,
+              fbl::StringPiece output_file_basename, const char* realm_label, int* failed_count,
+              fbl::Vector<std::unique_ptr<Result>>* results);
 
 // Expands |dir_globs| and searches those directories for files.
 //
@@ -186,7 +186,7 @@ int DiscoverTestsInDirGlobs(const fbl::Vector<fbl::String>& dir_globs, const cha
 // Returns EXIT_SUCCESS if all tests passed; else, returns EXIT_FAILURE.
 int DiscoverAndRunTests(int argc, const char* const* argv,
                         const fbl::Vector<fbl::String>& default_test_dirs, Stopwatch* stopwatch,
-                        const fbl::StringPiece syslog_file_name);
+                        fbl::StringPiece syslog_file_name);
 
 // Returns true iff |s| is a fuchsia-pkg URI.
 bool IsFuchsiaPkgURI(const char* s);
