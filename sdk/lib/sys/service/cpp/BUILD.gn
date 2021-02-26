@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/cpp/sdk_source_set.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 sdk_source_set("cpp") {
   category = "partner"
@@ -58,14 +58,7 @@ executable("sys_service_unittests") {
   ]
 }
 
-test_package("sys_service_tests") {
+fuchsia_unittest_package("sys_service_tests") {
   deps = [ ":sys_service_unittests" ]
-
-  tests = [
-    {
-      name = "sys_service_unittests"
-      manifest = rebase_path("../meta/sys_service_unittests.cmx")
-      environments = basic_envs
-    },
-  ]
+  manifest = "../meta/sys_service_unittests.cmx"
 }

@@ -128,7 +128,6 @@ group("deprecated_package") {
     "//sdk/lib/sys/cpp/testing/environment_delegating_runner/*",
     "//sdk/lib/sys/cpp/testing/examples/*",
     "//sdk/lib/sys/cpp/testing/examples/test_with_environment/*",
-    "//sdk/lib/sys/service/cpp/*",
     "//sdk/lib/syslog/cpp/*",
     "//sdk/lib/syslog/streams/cpp/*",
     "//src/bringup/bin/pwrbtn-monitor/test/*",
