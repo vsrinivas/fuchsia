@@ -1813,12 +1813,13 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn find_best_connection_candidate_wpa_wpa2() {
+    #[test]
+    fn find_best_connection_candidate_wpa_wpa2() {
         // Check that if we see a WPA2 network and have WPA and WPA3 credentials saved for it, we
         // could choose the WPA credential but not the WPA3 credential. In other words we can
         // upgrade saved networks to higher security but not downgrade.
-        let test_values = test_setup().await;
+        let mut exec = fasync::Executor::new().expect("failed to create executor");
+        let test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
 
         // Save networks with WPA and WPA3 security, same SSIDs, and different passwords.
@@ -1826,39 +1827,35 @@ mod tests {
         let wpa_network_id =
             types::NetworkIdentifier { ssid: ssid.clone(), type_: types::SecurityType::Wpa };
         let credential = Credential::Password("foo_password".as_bytes().to_vec());
-        test_values
-            .saved_network_manager
-            .store(wpa_network_id.clone().into(), credential.clone())
-            .await
-            .expect("Failed to save network");
+        exec.run_singlethreaded(
+            test_values
+                .saved_network_manager
+                .store(wpa_network_id.clone().into(), credential.clone()),
+        )
+        .expect("Failed to save network");
         let wpa3_network_id =
             types::NetworkIdentifier { ssid: ssid.clone(), type_: types::SecurityType::Wpa3 };
         let wpa3_credential = Credential::Password("wpa3_only_password".as_bytes().to_vec());
-        test_values
-            .saved_network_manager
-            .store(wpa3_network_id.clone().into(), wpa3_credential.clone())
-            .await
-            .expect("Failed to save network");
+        exec.run_singlethreaded(
+            test_values
+                .saved_network_manager
+                .store(wpa3_network_id.clone().into(), wpa3_credential.clone()),
+        )
+        .expect("Failed to save network");
 
         // Record passive connects so that the test will not active scan.
-        test_values
-            .saved_network_manager
-            .record_connect_result(
-                wpa_network_id.clone().into(),
-                &credential,
-                fidl_sme::ConnectResultCode::Success,
-                Some(fidl_common::ScanType::Passive),
-            )
-            .await;
-        test_values
-            .saved_network_manager
-            .record_connect_result(
-                wpa3_network_id.clone().into(),
-                &wpa3_credential,
-                fidl_sme::ConnectResultCode::Success,
-                Some(fidl_common::ScanType::Passive),
-            )
-            .await;
+        exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
+            wpa_network_id.clone().into(),
+            &credential,
+            fidl_sme::ConnectResultCode::Success,
+            Some(fidl_common::ScanType::Passive),
+        ));
+        exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
+            wpa3_network_id.clone().into(),
+            &wpa3_credential,
+            fidl_sme::ConnectResultCode::Success,
+            Some(fidl_common::ScanType::Passive),
+        ));
 
         // Feed scans with WPA2 and WPA3 results to network selector, as we should get if a
         // WPA2/WPA3 network was seen.
@@ -1873,29 +1870,41 @@ mod tests {
             compatibility: types::Compatibility::Supported,
         }];
         let mut updater = network_selector.generate_scan_result_updater();
-        updater.update_scan_results(&mixed_scan_results).await;
+        exec.run_singlethreaded(updater.update_scan_results(&mixed_scan_results));
+
+        // Set the scan cache's "updated_at" field to the future so that a scan won't be triggered.
+        {
+            let mut cache_guard =
+                exec.run_singlethreaded(network_selector.scan_result_cache.lock());
+            cache_guard.updated_at = zx::Time::INFINITE;
+        }
 
         // Check that we choose the config saved as WPA2
-        assert_eq!(
-            network_selector
-                .find_best_connection_candidate(test_values.iface_manager.clone(), &vec![])
-                .await,
-            Some(types::ConnectionCandidate {
-                network: id.clone(),
-                credential,
-                bss: mixed_scan_results[0].entries[0].bss_desc.clone(),
-                observed_in_passive_scan: Some(
-                    mixed_scan_results[0].entries[0].observed_in_passive_scan
-                ),
-                multiple_bss_candidates: Some(false),
-            })
+        let ignore_list = Vec::new();
+        let network_selection_fut = network_selector
+            .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
+        pin_mut!(network_selection_fut);
+        assert_variant!(
+            exec.run_until_stalled(&mut network_selection_fut),
+            Poll::Ready(Some(connection_candidate)) => {
+                let expected_candidate = types::ConnectionCandidate {
+                    network: id.clone(),
+                    credential,
+                    bss: mixed_scan_results[0].entries[0].bss_desc.clone(),
+                    observed_in_passive_scan: Some(
+                        mixed_scan_results[0].entries[0].observed_in_passive_scan
+                    ),
+                    multiple_bss_candidates: Some(false),
+                };
+                assert_eq!(connection_candidate, expected_candidate);
+            }
         );
-        assert_eq!(
-            network_selector
-                .find_best_connection_candidate(test_values.iface_manager, &vec![id])
-                .await,
-            None
-        );
+        // If the best network ID is ignored, there is no best connection candidate.
+        let ignore_list = vec![id];
+        let network_selection_fut = network_selector
+            .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
+        pin_mut!(network_selection_fut);
+        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Ready(None));
     }
 
     #[test]
