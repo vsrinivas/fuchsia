@@ -52,7 +52,6 @@ resource struct FileObject {
 };
 
 /// The object may be cast to interface 'Directory'.
-[ForDeprecatedCBindings]
 struct DirectoryObject {
 };
 
@@ -175,7 +174,6 @@ const uint32 OPEN_FLAG_NOT_DIRECTORY = 0x02000000;
 const uint32 CLONE_FLAG_SAME_RIGHTS = 0x04000000;
 
 /// Node defines the minimal interface for entities which can be accessed in a filesystem.
-[ForDeprecatedCBindings]
 protocol Node {
     /// Create another connection to the same remote object.
     ///
@@ -266,7 +264,6 @@ const uint32 MODE_TYPE_SOCKET = 0x0C000;
 const uint32 MODE_TYPE_SERVICE = 0x10000;
 
 /// NodeAttributes defines generic information about a filesystem node.
-[ForDeprecatedCBindings]
 struct NodeAttributes {
     /// Protection bits and node type information describe in 'mode'.
     uint32 mode;
@@ -460,7 +457,6 @@ protocol DirectoryWatcher {
 };
 
 /// Directory defines a node which is capable of containing other Objects.
-[ForDeprecatedCBindings]
 protocol Directory {
     compose Node;
 
@@ -632,7 +628,6 @@ const uint32 MOUNT_CREATE_FLAG_REPLACE = 0x00000001;
 
 const uint64 MAX_FS_NAME_BUFFER = 32;
 
-[ForDeprecatedCBindings]
 struct FilesystemInfo {
     /// The number of data bytes which may be stored in a filesystem.
     uint64 total_bytes;
@@ -663,7 +658,6 @@ struct FilesystemInfo {
 
 /// DirectoryAdmin defines a directory which is capable of handling
 /// administrator tasks within the filesystem.
-[ForDeprecatedCBindings]
 protocol DirectoryAdmin {
     compose Directory;
 

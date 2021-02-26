@@ -7,7 +7,6 @@ library fuchsia.hardware.mediacodec;
 using fuchsia.io;
 using zx;
 
-[ForDeprecatedCBindings]
 protocol Device {
     /// This method connects the caller with a fuchsia.mediacodec.CodecFactory.
     GetCodecFactory(zx.handle:CHANNEL request);
