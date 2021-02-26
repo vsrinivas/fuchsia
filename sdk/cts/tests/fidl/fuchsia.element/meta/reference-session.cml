@@ -19,7 +19,10 @@
     ],
     offer: [
         {
-            protocol: [ "fuchsia.logger.LogSink" ],
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys.Launcher",
+            ],
             from: "parent",
             to: [ "#element_manager" ],
         },
