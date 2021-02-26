@@ -472,7 +472,7 @@ static void scanner_init_func(uint level) {
   Thread *thread =
       Thread::Create("scanner-request-thread", scanner_request_thread, nullptr, LOW_PRIORITY);
   DEBUG_ASSERT(thread);
-  eviction_enabled = gCmdline.GetBool(kernel_option::kPageScannerEnableUserPagerEviction, true);
+  eviction_enabled = gCmdline.GetBool(kernel_option::kPageScannerEnableEviction, true);
   zero_page_scans_per_second = gCmdline.GetUInt64(kernel_option::kPageScannerZeroPageScansPerSecond,
                                                   kDefaultZeroPageScansPerSecond);
   if (!gCmdline.GetBool(kernel_option::kPageScannerStartAtBoot, true)) {
@@ -484,7 +484,7 @@ static void scanner_init_func(uint level) {
   if (gCmdline.GetBool(kernel_option::kPageScannerPromoteNoClones, false)) {
     VmObject::EnableEvictionPromoteNoClones();
   }
-  const char *pt_eviction = gCmdline.GetString("kernel.page-scanner.page-table-eviction-policy");
+  const char *pt_eviction = gCmdline.GetString(kernel_option::kPageScannerPageTableEvictionPolicy);
   if (pt_eviction && !strcmp(pt_eviction, "never")) {
     page_table_reclaim_policy = PageTableReclaim::Never;
   } else if (pt_eviction && !strcmp(pt_eviction, "always")) {
@@ -496,7 +496,7 @@ static void scanner_init_func(uint level) {
   }
 
   uint32_t discardable_evictions = gCmdline.GetUInt32(
-      "kernel.page-scanner.discardable-evictions-percent", kDefaultDiscardableEvictionsPercent);
+      kernel_option::kPageScannerDiscardableEvictionsPercent, kDefaultDiscardableEvictionsPercent);
   if (discardable_evictions <= 100) {
     discardable_evictions_percent = discardable_evictions;
   }
@@ -544,7 +544,7 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
     }
     if (!eviction_enabled) {
       printf("%s is false, reclamation request will have no effect\n",
-             kernel_option::kPageScannerEnableUserPagerEviction);
+             kernel_option::kPageScannerEnableEviction);
     }
     scanner::EvictionLevel eviction_level = scanner::EvictionLevel::IncludeNewest;
     if (argc >= 4 && !strcmp(argv[3].str, "only_old")) {

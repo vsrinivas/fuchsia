@@ -56,7 +56,7 @@ kernel_cmdline("x64-reduced-perf-variation") {
     # benchmarks could cause noticable variation.
     "kernel.page-scanner.start-at-boot=false",
     "kernel.page-scanner.zero-page-scans-per-second=0",
-    "kernel.page-scanner.enable-user-pager-eviction=false",
+    "kernel.page-scanner.enable-eviction=false",
   ]
 }
 

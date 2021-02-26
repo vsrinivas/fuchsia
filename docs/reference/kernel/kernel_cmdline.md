@@ -49,8 +49,8 @@ Blobs that are not pager-backed are not affected by this knob.
 The following values are supported:
 
 * `NEVER_EVICT`: Nodes are never evicted. It is recommended to enable kernel page
-  eviction (`kernel.page-scanner.enable-user-pager-eviction`) in this case, as
-  otherwise blobfs will indefinitely retain all data pages in memory.
+  eviction (`kernel.page-scanner.enable-eviction`) in this case, as otherwise
+  blobfs will indefinitely retain all data pages in memory.
 * `EVICT_IMMEDIATELY`: Nodes are evicted as soon as they have no open handles or
   VMO clones. They will need to be loaded from disk again on next access.
 
@@ -555,7 +555,7 @@ additional system predictability for benchmarking or other workloads.
 The page scanner must be running for this option to have any effect. It can be
 enabled at boot with the `kernel.page-scanner.start-at-boot` option.
 
-## kernel.page-scanner.enable-user-pager-eviction=\<bool>
+## kernel.page-scanner.enable-eviction=\<bool>
 
 This option, true by default, allows for the scanner to evict user pager backed
 pages. Eviction can reduce memory usage and prevent out of memory scenarios, but
