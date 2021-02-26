@@ -4257,10 +4257,12 @@ class TestProtocol final {
 
       ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingByteMessage message_;
@@ -4322,10 +4324,12 @@ class TestProtocol final {
 
       ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingIovecMessage message_;
@@ -4356,10 +4360,12 @@ class TestProtocol final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       FIDL_ALIGNDECL
@@ -4395,10 +4401,12 @@ class TestProtocol final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
@@ -4507,10 +4515,12 @@ class TestProtocol final {
 
       ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingByteMessage message_;
@@ -4572,10 +4582,12 @@ class TestProtocol final {
 
       ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingIovecMessage message_;
@@ -4605,10 +4617,12 @@ class TestProtocol final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       FIDL_ALIGNDECL
@@ -4644,10 +4658,12 @@ class TestProtocol final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
@@ -4759,10 +4775,12 @@ class TestProtocol final {
 
       ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingByteMessage message_;
@@ -4824,10 +4842,12 @@ class TestProtocol final {
 
       ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingIovecMessage message_;
@@ -4858,10 +4878,12 @@ class TestProtocol final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       FIDL_ALIGNDECL
@@ -4897,10 +4919,12 @@ class TestProtocol final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
@@ -5009,10 +5033,12 @@ class TestProtocol final {
 
       ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingByteMessage message_;
@@ -5074,10 +5100,12 @@ class TestProtocol final {
 
       ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingIovecMessage message_;
@@ -5107,10 +5135,12 @@ class TestProtocol final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       FIDL_ALIGNDECL
@@ -5146,10 +5176,12 @@ class TestProtocol final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
@@ -5204,6 +5236,7 @@ class TestProtocol final {
     virtual ~EventHandlerInterface() = default;
   };
 
+#ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -5578,10 +5611,12 @@ class TestProtocol final {
     ::fidl::ClientEnd<TestProtocol> client_end_;
   };
 
+#ifdef __Fuchsia__
   class AsyncEventHandler;
   class StrictXUnionHenceResponseMayBeStackAllocatedResponseContext;
   class FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext;
   class ClientImpl;
+#endif
 
   // Pure-virtual interface to be implemented by a server.
   // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
@@ -5686,6 +5721,8 @@ class TestProtocol final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
+
+#endif
 
   class EventSender;
   class WeakEventSender;
@@ -6352,6 +6389,7 @@ namespace test {
 namespace union_ {
 namespace wire {}  // namespace wire
 
+#ifdef __Fuchsia__
 class TestProtocol::AsyncEventHandler
     : public TestProtocol::EventHandlerInterface {
  public:
@@ -6464,7 +6502,9 @@ class TestProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
   std::shared_ptr<AsyncEventHandler> event_handler_;
 };
+#endif
 
+#ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the TestProtocol protocol, and can send events in that protocol.
 class TestProtocol::EventSender {
@@ -6503,6 +6543,7 @@ class TestProtocol::WeakEventSender {
 
   std::weak_ptr<::fidl::internal::AsyncServerBinding<TestProtocol>> binding_;
 };
+#endif
 
 namespace wire {}  // namespace wire
 }  // namespace union_

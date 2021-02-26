@@ -48,13 +48,16 @@ namespace test {
 namespace handles {
 namespace {}  // namespace
 
+#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> SomeProtocol::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
+#endif
 
+#ifdef __Fuchsia__
 namespace methods {}  // namespace methods
 
 namespace entries {
@@ -68,7 +71,9 @@ namespace entries {
                                                  ::fidl::Transaction* txn) {
   return ::fidl::DispatchResult::kNotFound;
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::DispatchResult SomeProtocol::Dispatch(Interface* impl,
                                               fidl_incoming_msg_t* msg,
                                               ::fidl::Transaction* txn) {
@@ -82,6 +87,10 @@ namespace entries {
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return SomeProtocol::Dispatch(this, msg, txn);
 }
+#endif
+
+#ifdef __Fuchsia__
+#endif
 
 }  // namespace handles
 }  // namespace test

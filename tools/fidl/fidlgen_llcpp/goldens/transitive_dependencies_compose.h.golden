@@ -109,10 +109,12 @@ class Top final {
 
       ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingByteMessage message_;
@@ -173,10 +175,12 @@ class Top final {
 
       ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingIovecMessage message_;
@@ -205,10 +209,12 @@ class Top final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       FIDL_ALIGNDECL
@@ -242,10 +248,12 @@ class Top final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
@@ -339,10 +347,12 @@ class Top final {
 
       ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingByteMessage message_;
@@ -402,10 +412,12 @@ class Top final {
 
       ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingIovecMessage message_;
@@ -434,10 +446,12 @@ class Top final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       FIDL_ALIGNDECL
@@ -472,10 +486,12 @@ class Top final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
@@ -528,6 +544,7 @@ class Top final {
     virtual ~EventHandlerInterface() = default;
   };
 
+#ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -678,9 +695,11 @@ class Top final {
     ::fidl::ClientEnd<Top> client_end_;
   };
 
+#ifdef __Fuchsia__
   class AsyncEventHandler;
   class GetFooResponseContext;
   class ClientImpl;
+#endif
 
   // Pure-virtual interface to be implemented by a server.
   // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
@@ -748,6 +767,8 @@ class Top final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+#endif
+
   class EventSender;
   class WeakEventSender;
 };
@@ -793,6 +814,7 @@ namespace fidl {
 namespace test {
 namespace transitivedependenciescompose {
 
+#ifdef __Fuchsia__
 class Top::AsyncEventHandler : public Top::EventHandlerInterface {
  public:
   AsyncEventHandler() = default;
@@ -847,7 +869,9 @@ class Top::ClientImpl final : private ::fidl::internal::ClientBase {
 
   std::shared_ptr<AsyncEventHandler> event_handler_;
 };
+#endif
 
+#ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Top protocol, and can send events in that protocol.
 class Top::EventSender {
@@ -885,6 +909,7 @@ class Top::WeakEventSender {
 
   std::weak_ptr<::fidl::internal::AsyncServerBinding<Top>> binding_;
 };
+#endif
 
 }  // namespace transitivedependenciescompose
 }  // namespace test

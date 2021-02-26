@@ -20,6 +20,7 @@ extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ParentFirstResponseTable;
 
 }  // namespace
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::ResultOf::First::
     First(::fidl::UnownedClientEnd<
               ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
@@ -33,7 +34,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::UnownedResultOf::
     First::First(::fidl::UnownedClientEnd<
                      ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
@@ -48,7 +51,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result Parent::ClientImpl::First(
     ::fidl::ServerEnd<::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
         request) {
@@ -62,7 +67,9 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result Parent::ClientImpl::First(
     ::fidl::BufferSpan _request_buffer,
     ::fidl::ServerEnd<::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
@@ -77,14 +84,18 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> Parent::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
+#endif
 
+#ifdef __Fuchsia__
 namespace methods {
 
 void ParentDispatchFirst(void* interface, void* bytes,
@@ -121,7 +132,9 @@ namespace entries {
       entries::Parent +
           sizeof(entries::Parent) / sizeof(::fidl::internal::MethodEntry));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::DispatchResult Parent::Dispatch(Interface* impl,
                                         fidl_incoming_msg_t* msg,
                                         ::fidl::Transaction* txn) {
@@ -138,6 +151,7 @@ namespace entries {
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return Parent::Dispatch(this, msg, txn);
 }
+#endif
 
 void ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::FirstRequest::
     _InitHeader(zx_txid_t _txid) {
@@ -148,6 +162,9 @@ void ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::FirstRequest::
     _CloseHandles() {
   request.reset();
 }
+
+#ifdef __Fuchsia__
+#endif
 
 namespace {
 
@@ -169,6 +186,7 @@ extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildSecondResponseTable;
 
 }  // namespace
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::ResultOf::First::
     First(::fidl::UnownedClientEnd<
               ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
@@ -182,7 +200,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::UnownedResultOf::
     First::First(::fidl::UnownedClientEnd<
                      ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
@@ -197,7 +217,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::ResultOf::Second::
     Second(::fidl::UnownedClientEnd<
                ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
@@ -211,7 +233,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::UnownedResultOf::
     Second::Second(
         ::fidl::UnownedClientEnd<
@@ -227,7 +251,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result Child::ClientImpl::First(
     ::fidl::ServerEnd<::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
         request) {
@@ -241,7 +267,9 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result Child::ClientImpl::First(
     ::fidl::BufferSpan _request_buffer,
     ::fidl::ServerEnd<::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
@@ -256,7 +284,9 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result Child::ClientImpl::Second(
     ::fidl::ServerEnd<::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
         request) {
@@ -270,7 +300,9 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result Child::ClientImpl::Second(
     ::fidl::BufferSpan _request_buffer,
     ::fidl::ServerEnd<::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
@@ -285,14 +317,18 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> Child::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
+#endif
 
+#ifdef __Fuchsia__
 namespace methods {
 
 void ChildDispatchFirst(void* interface, void* bytes,
@@ -346,7 +382,9 @@ namespace entries {
       entries::Child +
           sizeof(entries::Child) / sizeof(::fidl::internal::MethodEntry));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::DispatchResult Child::Dispatch(Interface* impl,
                                        fidl_incoming_msg_t* msg,
                                        ::fidl::Transaction* txn) {
@@ -363,6 +401,7 @@ namespace entries {
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return Child::Dispatch(this, msg, txn);
 }
+#endif
 
 void ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::FirstRequest::
     _InitHeader(zx_txid_t _txid) {
@@ -383,6 +422,9 @@ void ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::SecondRequest::
     _CloseHandles() {
   request.reset();
 }
+
+#ifdef __Fuchsia__
+#endif
 
 }  // namespace inheritancewithrecursivedecl
 }  // namespace test

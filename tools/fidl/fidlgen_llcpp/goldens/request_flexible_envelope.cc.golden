@@ -56,6 +56,7 @@ extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
 }  // namespace
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::requestflexibleenvelope::Protocol::ResultOf::
     RequestStrictResponseFlexible::RequestStrictResponseFlexible(
         ::fidl::UnownedClientEnd<
@@ -90,7 +91,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::requestflexibleenvelope::Protocol::UnownedResultOf::
     RequestStrictResponseFlexible::RequestStrictResponseFlexible(
         ::fidl::UnownedClientEnd<
@@ -107,7 +110,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::requestflexibleenvelope::Protocol::ResultOf::
     RequestFlexibleResponseStrict::RequestFlexibleResponseStrict(
         ::fidl::UnownedClientEnd<
@@ -142,7 +147,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::requestflexibleenvelope::Protocol::UnownedResultOf::
     RequestFlexibleResponseStrict::RequestFlexibleResponseStrict(
         ::fidl::UnownedClientEnd<
@@ -159,7 +166,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::requestflexibleenvelope::Protocol::ResultOf::
     RequestStrictResponseFlexible
     Protocol::ClientImpl::RequestStrictResponseFlexible_Sync(
@@ -175,7 +184,9 @@ extern "C" const fidl_type_t
       RequestStrictResponseFlexible(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::requestflexibleenvelope::Protocol::UnownedResultOf::
     RequestStrictResponseFlexible
     Protocol::ClientImpl::RequestStrictResponseFlexible_Sync(
@@ -194,7 +205,9 @@ extern "C" const fidl_type_t
       UnownedResultOf::RequestStrictResponseFlexible(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
     RequestStrictResponseFlexibleResponseContext::
         RequestStrictResponseFlexibleResponseContext()
@@ -248,7 +261,9 @@ void ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::requestflexibleenvelope::Protocol::ResultOf::
     RequestFlexibleResponseStrict
     Protocol::ClientImpl::RequestFlexibleResponseStrict_Sync(
@@ -264,7 +279,9 @@ void ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
       RequestFlexibleResponseStrict(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::requestflexibleenvelope::Protocol::UnownedResultOf::
     RequestFlexibleResponseStrict
     Protocol::ClientImpl::RequestFlexibleResponseStrict_Sync(
@@ -283,7 +300,9 @@ void ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
       UnownedResultOf::RequestFlexibleResponseStrict(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
     RequestFlexibleResponseStrictResponseContext::
         RequestFlexibleResponseStrictResponseContext()
@@ -337,14 +356,18 @@ void ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 
+#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> Protocol::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
+#endif
 
+#ifdef __Fuchsia__
 namespace methods {
 
 void ProtocolDispatchRequestStrictResponseFlexible(void* interface, void* bytes,
@@ -398,7 +421,9 @@ namespace entries {
       entries::Protocol +
           sizeof(entries::Protocol) / sizeof(::fidl::internal::MethodEntry));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::DispatchResult Protocol::Dispatch(Interface* impl,
                                           fidl_incoming_msg_t* msg,
                                           ::fidl::Transaction* txn) {
@@ -415,7 +440,9 @@ namespace entries {
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return Protocol::Dispatch(this, msg, txn);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result
 Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
     ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo f) {
@@ -423,7 +450,9 @@ Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
       RequestStrictResponseFlexibleResponse>::OwnedByte _response{f};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result
 Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
@@ -432,7 +461,9 @@ Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
       _buffer.data, _buffer.capacity, f);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result
 Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
     ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo f) {
@@ -440,7 +471,9 @@ Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
       RequestFlexibleResponseStrictResponse>::OwnedByte _response{f};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result
 Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
@@ -449,6 +482,7 @@ Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
       _buffer.data, _buffer.capacity, f);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
 void ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
     RequestStrictResponseFlexibleRequest::_InitHeader(zx_txid_t _txid) {
@@ -473,6 +507,9 @@ void ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
   fidl_init_txn_header(&_hdr, 0,
                        kProtocol_RequestFlexibleResponseStrict_Ordinal);
 }
+
+#ifdef __Fuchsia__
+#endif
 
 }  // namespace requestflexibleenvelope
 }  // namespace test

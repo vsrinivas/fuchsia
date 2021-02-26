@@ -114,10 +114,12 @@ class SecondProtocol final {
 
       ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingByteMessage message_;
@@ -177,10 +179,12 @@ class SecondProtocol final {
 
       ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingIovecMessage message_;
@@ -209,10 +213,12 @@ class SecondProtocol final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       FIDL_ALIGNDECL
@@ -247,10 +253,12 @@ class SecondProtocol final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
@@ -303,6 +311,7 @@ class SecondProtocol final {
     virtual ~EventHandlerInterface() = default;
   };
 
+#ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -392,8 +401,10 @@ class SecondProtocol final {
     ::fidl::ClientEnd<SecondProtocol> client_end_;
   };
 
+#ifdef __Fuchsia__
   class AsyncEventHandler;
   class ClientImpl;
+#endif
 
   // Pure-virtual interface to be implemented by a server.
   // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
@@ -440,6 +451,8 @@ class SecondProtocol final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
+
+#endif
 
   class EventSender;
   class WeakEventSender;
@@ -504,10 +517,12 @@ class FirstProtocol final {
 
       ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingByteMessage message_;
@@ -567,10 +582,12 @@ class FirstProtocol final {
 
       ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       ::fidl::OutgoingIovecMessage message_;
@@ -599,10 +616,12 @@ class FirstProtocol final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       FIDL_ALIGNDECL
@@ -637,10 +656,12 @@ class FirstProtocol final {
         return message_.GetOutgoingMessage();
       }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
         message_.Write(std::forward<ChannelLike>(client));
       }
+#endif
 
      private:
       zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
@@ -693,6 +714,7 @@ class FirstProtocol final {
     virtual ~EventHandlerInterface() = default;
   };
 
+#ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -782,8 +804,10 @@ class FirstProtocol final {
     ::fidl::ClientEnd<FirstProtocol> client_end_;
   };
 
+#ifdef __Fuchsia__
   class AsyncEventHandler;
   class ClientImpl;
+#endif
 
   // Pure-virtual interface to be implemented by a server.
   // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
@@ -830,6 +854,8 @@ class FirstProtocol final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
+
+#endif
 
   class EventSender;
   class WeakEventSender;
@@ -1228,6 +1254,7 @@ namespace fidl {
 namespace test {
 namespace service {
 
+#ifdef __Fuchsia__
 class SecondProtocol::AsyncEventHandler
     : public SecondProtocol::EventHandlerInterface {
  public:
@@ -1256,7 +1283,9 @@ class SecondProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
   std::shared_ptr<AsyncEventHandler> event_handler_;
 };
+#endif
 
+#ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the SecondProtocol protocol, and can send events in that protocol.
 class SecondProtocol::EventSender {
@@ -1297,7 +1326,9 @@ class SecondProtocol::WeakEventSender {
 
   std::weak_ptr<::fidl::internal::AsyncServerBinding<SecondProtocol>> binding_;
 };
+#endif
 
+#ifdef __Fuchsia__
 class FirstProtocol::AsyncEventHandler
     : public FirstProtocol::EventHandlerInterface {
  public:
@@ -1326,7 +1357,9 @@ class FirstProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
   std::shared_ptr<AsyncEventHandler> event_handler_;
 };
+#endif
 
+#ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the FirstProtocol protocol, and can send events in that protocol.
 class FirstProtocol::EventSender {
@@ -1366,6 +1399,7 @@ class FirstProtocol::WeakEventSender {
 
   std::weak_ptr<::fidl::internal::AsyncServerBinding<FirstProtocol>> binding_;
 };
+#endif
 
 }  // namespace service
 }  // namespace test

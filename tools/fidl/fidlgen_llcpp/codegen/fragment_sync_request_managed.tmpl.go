@@ -6,6 +6,7 @@ package codegen
 
 const fragmentSyncRequestManagedTmpl = `
 {{- define "SyncRequestManagedMethodDefinition" }}
+#ifdef __Fuchsia__
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}::{{ .Name }}(
     ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client
     {{- .Request | CommaMessagePrototype }})
@@ -47,5 +48,6 @@ const fragmentSyncRequestManagedTmpl = `
   error_ = _request.error();
 }
   {{- end }}
+#endif
 {{- end }}
 `

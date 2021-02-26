@@ -53,6 +53,7 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventRequestTable;
 extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
 
 }  // namespace
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::Transitional::ResultOf::Request::Request(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
         _client,
@@ -78,7 +79,9 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::Transitional::UnownedResultOf::Request::Request(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
         _client,
@@ -92,7 +95,9 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::Transitional::ResultOf::OneWay::OneWay(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
         _client,
@@ -103,7 +108,9 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::Transitional::UnownedResultOf::OneWay::OneWay(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
         _client,
@@ -114,7 +121,9 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::Transitional::ResultOf::Request
 Transitional::ClientImpl::Request_Sync(int64_t x) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -126,7 +135,9 @@ Transitional::ClientImpl::Request_Sync(int64_t x) {
   return ::llcpp::fidl::test::protocols::Transitional::ResultOf::Request(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::Transitional::UnownedResultOf::Request
 Transitional::ClientImpl::Request_Sync(::fidl::BufferSpan _request_buffer,
                                        int64_t x,
@@ -141,7 +152,9 @@ Transitional::ClientImpl::Request_Sync(::fidl::BufferSpan _request_buffer,
   return ::llcpp::fidl::test::protocols::Transitional::UnownedResultOf::Request(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::Transitional::RequestResponseContext::
     RequestResponseContext()
     : ::fidl::internal::ResponseContext(RequestResponse::Type,
@@ -186,7 +199,9 @@ void ::llcpp::fidl::test::protocols::Transitional::RequestResponseContext::
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), x);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result Transitional::ClientImpl::OneWay(int64_t x) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::OneWay(
@@ -197,7 +212,9 @@ void ::llcpp::fidl::test::protocols::Transitional::RequestResponseContext::
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result Transitional::ClientImpl::OneWay(
     ::fidl::BufferSpan _request_buffer, int64_t x) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -209,7 +226,9 @@ void ::llcpp::fidl::test::protocols::Transitional::RequestResponseContext::
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> Transitional::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
   if (event_handler_ != nullptr) {
@@ -235,6 +254,7 @@ std::optional<::fidl::UnbindInfo> Transitional::ClientImpl::DispatchEvent(
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
+#endif
 
 ::fidl::Result Transitional::SyncEventHandler::HandleOneEvent(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
@@ -313,6 +333,7 @@ std::optional<::fidl::UnbindInfo> Transitional::ClientImpl::DispatchEvent(
   }
 }
 
+#ifdef __Fuchsia__
 namespace methods {
 
 void TransitionalDispatchRequest(void* interface, void* bytes,
@@ -360,7 +381,9 @@ namespace entries {
       entries::Transitional + sizeof(entries::Transitional) /
                                   sizeof(::fidl::internal::MethodEntry));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::DispatchResult Transitional::Dispatch(Interface* impl,
                                               fidl_incoming_msg_t* msg,
                                               ::fidl::Transaction* txn) {
@@ -377,19 +400,24 @@ namespace entries {
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return Transitional::Dispatch(this, msg, txn);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(int64_t y) {
   ::fidl::internal::EncodedMessageTypes<RequestResponse>::OwnedByte _response{
       y};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {
   RequestResponse::UnownedEncodedMessage _response(_buffer.data,
                                                    _buffer.capacity, y);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
 void ::llcpp::fidl::test::protocols::Transitional::RequestRequest::_InitHeader(
     zx_txid_t _txid) {
@@ -411,6 +439,7 @@ void ::llcpp::fidl::test::protocols::Transitional::EventResponse::
   fidl_init_txn_header(&_hdr, 0, kTransitional_Event_Ordinal);
 }
 
+#ifdef __Fuchsia__
 zx_status_t Transitional::EventSender::Event(int64_t x) const {
   ::fidl::internal::EncodedMessageTypes<EventResponse>::OwnedByte _response{x};
   _response.Write(server_end_);
@@ -424,6 +453,8 @@ zx_status_t Transitional::EventSender::Event(::fidl::BufferSpan _buffer,
   _response.Write(server_end_);
   return _response.status();
 }
+
+#endif
 
 namespace {
 
@@ -469,6 +500,7 @@ extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
 
 }  // namespace
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MethodA::MethodA(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::ChannelProtocol>
         _client,
@@ -479,7 +511,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::MethodA::
     MethodA(::fidl::UnownedClientEnd<
                 ::llcpp::fidl::test::protocols::ChannelProtocol>
@@ -492,7 +526,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MethodB::MethodB(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::ChannelProtocol>
         _client,
@@ -518,7 +554,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::MethodB::
     MethodB(::fidl::UnownedClientEnd<
                 ::llcpp::fidl::test::protocols::ChannelProtocol>
@@ -534,7 +572,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::TakeHandle::
     TakeHandle(::fidl::UnownedClientEnd<
                    ::llcpp::fidl::test::protocols::ChannelProtocol>
@@ -563,7 +603,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::TakeHandle::
     TakeHandle(::fidl::UnownedClientEnd<
                    ::llcpp::fidl::test::protocols::ChannelProtocol>
@@ -579,7 +621,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MutateSocket::
     MutateSocket(::fidl::UnownedClientEnd<
                      ::llcpp::fidl::test::protocols::ChannelProtocol>
@@ -608,7 +652,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::MutateSocket::
     MutateSocket(::fidl::UnownedClientEnd<
                      ::llcpp::fidl::test::protocols::ChannelProtocol>
@@ -624,7 +670,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result ChannelProtocol::ClientImpl::MethodA(int64_t a, int64_t b) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res =
@@ -636,7 +684,9 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result ChannelProtocol::ClientImpl::MethodA(
     ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -649,7 +699,9 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MethodB
 ChannelProtocol::ClientImpl::MethodB_Sync(int64_t a, int64_t b) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -662,7 +714,9 @@ ChannelProtocol::ClientImpl::MethodB_Sync(int64_t a, int64_t b) {
   return ::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MethodB(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::MethodB
 ChannelProtocol::ClientImpl::MethodB_Sync(::fidl::BufferSpan _request_buffer,
                                           int64_t a, int64_t b,
@@ -678,7 +732,9 @@ ChannelProtocol::ClientImpl::MethodB_Sync(::fidl::BufferSpan _request_buffer,
   return ::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::
       MethodB(::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::MethodBResponseContext::
     MethodBResponseContext()
     : ::fidl::internal::ResponseContext(MethodBResponse::Type,
@@ -724,7 +780,9 @@ void ::llcpp::fidl::test::protocols::ChannelProtocol::MethodBResponseContext::
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), a, b);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::TakeHandle
 ChannelProtocol::ClientImpl::TakeHandle_Sync(::zx::handle h) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -737,7 +795,9 @@ ChannelProtocol::ClientImpl::TakeHandle_Sync(::zx::handle h) {
   return ::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::TakeHandle(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::TakeHandle
 ChannelProtocol::ClientImpl::TakeHandle_Sync(
     ::fidl::BufferSpan _request_buffer, ::zx::handle h,
@@ -753,7 +813,9 @@ ChannelProtocol::ClientImpl::TakeHandle_Sync(
   return ::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::
       TakeHandle(::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleResponseContext::
     TakeHandleResponseContext()
     : ::fidl::internal::ResponseContext(TakeHandleResponse::Type,
@@ -798,7 +860,9 @@ void ::llcpp::fidl::test::protocols::ChannelProtocol::
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), h);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MutateSocket
 ChannelProtocol::ClientImpl::MutateSocket_Sync(::zx::socket a) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -812,7 +876,9 @@ ChannelProtocol::ClientImpl::MutateSocket_Sync(::zx::socket a) {
       MutateSocket(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::MutateSocket
 ChannelProtocol::ClientImpl::MutateSocket_Sync(
     ::fidl::BufferSpan _request_buffer, ::zx::socket a,
@@ -829,7 +895,9 @@ ChannelProtocol::ClientImpl::MutateSocket_Sync(
       MutateSocket(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketResponseContext::
     MutateSocketResponseContext()
     : ::fidl::internal::ResponseContext(
@@ -876,7 +944,9 @@ void ::llcpp::fidl::test::protocols::ChannelProtocol::
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), a);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 
+#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> ChannelProtocol::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
   if (event_handler_ != nullptr) {
@@ -902,6 +972,7 @@ std::optional<::fidl::UnbindInfo> ChannelProtocol::ClientImpl::DispatchEvent(
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
+#endif
 
 ::fidl::Result ChannelProtocol::SyncEventHandler::HandleOneEvent(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::ChannelProtocol>
@@ -980,6 +1051,7 @@ std::optional<::fidl::UnbindInfo> ChannelProtocol::ClientImpl::DispatchEvent(
   }
 }
 
+#ifdef __Fuchsia__
 namespace methods {
 
 void ChannelProtocolDispatchMethodA(void* interface, void* bytes,
@@ -1057,7 +1129,9 @@ namespace entries {
       entries::ChannelProtocol + sizeof(entries::ChannelProtocol) /
                                      sizeof(::fidl::internal::MethodEntry));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::DispatchResult ChannelProtocol::Dispatch(Interface* impl,
                                                  fidl_incoming_msg_t* msg,
                                                  ::fidl::Transaction* txn) {
@@ -1074,40 +1148,51 @@ namespace entries {
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ChannelProtocol::Dispatch(this, msg, txn);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result ChannelProtocol::Interface::MethodBCompleterBase::Reply(
     int64_t result) {
   ::fidl::internal::EncodedMessageTypes<MethodBResponse>::OwnedByte _response{
       result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result ChannelProtocol::Interface::MethodBCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, int64_t result) {
   MethodBResponse::UnownedEncodedMessage _response(_buffer.data,
                                                    _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result ChannelProtocol::Interface::TakeHandleCompleterBase::Reply() {
   ::fidl::internal::EncodedMessageTypes<TakeHandleResponse>::OwnedByte
       _response{};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
     ::zx::socket b) {
   ::fidl::internal::EncodedMessageTypes<MutateSocketResponse>::OwnedByte
       _response{b};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, ::zx::socket b) {
   MutateSocketResponse::UnownedEncodedMessage _response(_buffer.data,
                                                         _buffer.capacity, b);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
 void ::llcpp::fidl::test::protocols::ChannelProtocol::MethodARequest::
     _InitHeader(zx_txid_t _txid) {
@@ -1164,6 +1249,7 @@ void ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketResponse::
   b.reset();
 }
 
+#ifdef __Fuchsia__
 zx_status_t ChannelProtocol::EventSender::EventA(int64_t a, int64_t b) const {
   ::fidl::internal::EncodedMessageTypes<EventAResponse>::OwnedByte _response{a,
                                                                              b};
@@ -1178,6 +1264,8 @@ zx_status_t ChannelProtocol::EventSender::EventA(::fidl::BufferSpan _buffer,
   _response.Write(server_end_);
   return _response.status();
 }
+
+#endif
 
 namespace {
 
@@ -1255,6 +1343,7 @@ extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
     NoRequestNoResponse::NoRequestNoResponse(
         ::fidl::UnownedClientEnd<
@@ -1266,7 +1355,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
     NoRequestEmptyResponse::NoRequestEmptyResponse(
         ::fidl::UnownedClientEnd<
@@ -1298,7 +1389,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
     NoRequestWithResponse::NoRequestWithResponse(
         ::fidl::UnownedClientEnd<
@@ -1329,7 +1422,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
     NoRequestWithResponse::NoRequestWithResponse(
         ::fidl::UnownedClientEnd<
@@ -1344,7 +1439,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
     WithRequestNoResponse::WithRequestNoResponse(
         ::fidl::UnownedClientEnd<
@@ -1357,7 +1454,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
     WithRequestNoResponse::WithRequestNoResponse(
         ::fidl::UnownedClientEnd<
@@ -1371,7 +1470,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
     WithRequestEmptyResponse::WithRequestEmptyResponse(
         ::fidl::UnownedClientEnd<
@@ -1404,7 +1505,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
     WithRequestEmptyResponse::WithRequestEmptyResponse(
         ::fidl::UnownedClientEnd<
@@ -1421,7 +1524,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
     WithRequestWithResponse::WithRequestWithResponse(
         ::fidl::UnownedClientEnd<
@@ -1453,7 +1558,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
     WithRequestWithResponse::WithRequestWithResponse(
         ::fidl::UnownedClientEnd<
@@ -1470,7 +1577,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result
 WithAndWithoutRequestResponse::ClientImpl::NoRequestNoResponse() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -1482,7 +1591,9 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestNoResponse() {
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
     NoRequestEmptyResponse
     WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse_Sync() {
@@ -1496,7 +1607,9 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestNoResponse() {
       ResultOf::NoRequestEmptyResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
     NoRequestEmptyResponseResponseContext::
         NoRequestEmptyResponseResponseContext()
@@ -1544,7 +1657,9 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse(
   NoRequestEmptyResponseRequest::OwnedEncodedMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
     NoRequestWithResponse
     WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse_Sync() {
@@ -1558,7 +1673,9 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse(
       ResultOf::NoRequestWithResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
     NoRequestWithResponse
     WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse_Sync(
@@ -1574,7 +1691,9 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse(
       UnownedResultOf::NoRequestWithResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
     NoRequestWithResponseResponseContext::NoRequestWithResponseResponseContext()
     : ::fidl::internal::ResponseContext(
@@ -1619,7 +1738,9 @@ void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
   NoRequestWithResponseRequest::OwnedEncodedMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithAndWithoutRequestResponse::ClientImpl::WithRequestNoResponse(
     ::fidl::StringView arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -1632,7 +1753,9 @@ void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithAndWithoutRequestResponse::ClientImpl::WithRequestNoResponse(
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -1645,7 +1768,9 @@ void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
     WithRequestEmptyResponse
     WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse_Sync(
@@ -1661,7 +1786,9 @@ void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
       ResultOf::WithRequestEmptyResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
     WithRequestEmptyResponse
     WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse_Sync(
@@ -1679,7 +1806,9 @@ void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
       UnownedResultOf::WithRequestEmptyResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
     WithRequestEmptyResponseResponseContext::
         WithRequestEmptyResponseResponseContext()
@@ -1731,7 +1860,9 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse(
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), arg);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
     WithRequestWithResponse
     WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse_Sync(
@@ -1747,7 +1878,9 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse(
       ResultOf::WithRequestWithResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
     WithRequestWithResponse
     WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse_Sync(
@@ -1765,7 +1898,9 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse(
       UnownedResultOf::WithRequestWithResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
     WithRequestWithResponseResponseContext::
         WithRequestWithResponseResponseContext()
@@ -1817,7 +1952,9 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse(
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), arg);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 
+#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo>
 WithAndWithoutRequestResponse::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
@@ -1857,6 +1994,7 @@ WithAndWithoutRequestResponse::ClientImpl::DispatchEvent(
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
+#endif
 
 ::fidl::Result WithAndWithoutRequestResponse::SyncEventHandler::HandleOneEvent(
     ::fidl::UnownedClientEnd<
@@ -1957,6 +2095,7 @@ WithAndWithoutRequestResponse::ClientImpl::DispatchEvent(
   }
 }
 
+#ifdef __Fuchsia__
 namespace methods {
 
 void WithAndWithoutRequestResponseDispatchNoRequestNoResponse(
@@ -2063,7 +2202,9 @@ namespace entries {
           sizeof(entries::WithAndWithoutRequestResponse) /
               sizeof(::fidl::internal::MethodEntry));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::DispatchResult WithAndWithoutRequestResponse::Dispatch(
     Interface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -2080,21 +2221,27 @@ WithAndWithoutRequestResponse::Interface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return WithAndWithoutRequestResponse::Dispatch(this, msg, txn);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     NoRequestEmptyResponseCompleterBase::Reply() {
   ::fidl::internal::EncodedMessageTypes<
       NoRequestEmptyResponseResponse>::OwnedByte _response{};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     NoRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
   ::fidl::internal::EncodedMessageTypes<
       NoRequestWithResponseResponse>::OwnedByte _response{ret};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     NoRequestWithResponseCompleterBase::Reply(::fidl::BufferSpan _buffer,
                                               ::fidl::StringView ret) {
@@ -2102,21 +2249,27 @@ WithAndWithoutRequestResponse::Interface::dispatch_message(
       _buffer.data, _buffer.capacity, ret);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     WithRequestEmptyResponseCompleterBase::Reply() {
   ::fidl::internal::EncodedMessageTypes<
       WithRequestEmptyResponseResponse>::OwnedByte _response{};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     WithRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
   ::fidl::internal::EncodedMessageTypes<
       WithRequestWithResponseResponse>::OwnedByte _response{ret};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     WithRequestWithResponseCompleterBase::Reply(::fidl::BufferSpan _buffer,
                                                 ::fidl::StringView ret) {
@@ -2124,6 +2277,7 @@ WithAndWithoutRequestResponse::Interface::dispatch_message(
       _buffer.data, _buffer.capacity, ret);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 
 void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
     NoRequestNoResponseRequest::_InitHeader(zx_txid_t _txid) {
@@ -2203,6 +2357,7 @@ void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
                        kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
 }
 
+#ifdef __Fuchsia__
 zx_status_t WithAndWithoutRequestResponse::EventSender::OnEmptyResponse()
     const {
   ::fidl::internal::EncodedMessageTypes<OnEmptyResponseResponse>::OwnedByte
@@ -2226,6 +2381,8 @@ zx_status_t WithAndWithoutRequestResponse::EventSender::OnWithResponse(
   _response.Write(server_end_);
   return _response.status();
 }
+
+#endif
 
 void ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
     SizeAndOffsetAssertionHelper() {
@@ -2265,6 +2422,7 @@ extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
 
 }  // namespace
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ResponseAsStruct::
     ResponseAsStruct(::fidl::UnownedClientEnd<
                      ::llcpp::fidl::test::protocols::WithErrorSyntax>
@@ -2294,7 +2452,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::
     ResponseAsStruct::ResponseAsStruct(
         ::fidl::UnownedClientEnd<
@@ -2309,7 +2469,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ErrorAsPrimitive::
     ErrorAsPrimitive(::fidl::UnownedClientEnd<
                      ::llcpp::fidl::test::protocols::WithErrorSyntax>
@@ -2339,7 +2501,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::
     ErrorAsPrimitive::ErrorAsPrimitive(
         ::fidl::UnownedClientEnd<
@@ -2354,7 +2518,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ErrorAsEnum::
     ErrorAsEnum(::fidl::UnownedClientEnd<
                 ::llcpp::fidl::test::protocols::WithErrorSyntax>
@@ -2382,7 +2548,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::ErrorAsEnum::
     ErrorAsEnum(::fidl::UnownedClientEnd<
                     ::llcpp::fidl::test::protocols::WithErrorSyntax>
@@ -2396,7 +2564,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ResponseAsStruct
 WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -2409,7 +2579,9 @@ WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync() {
       ResponseAsStruct(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::
     ResponseAsStruct
     WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync(
@@ -2425,7 +2597,9 @@ WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync() {
       ResponseAsStruct(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::
     ResponseAsStructResponseContext::ResponseAsStructResponseContext()
     : ::fidl::internal::ResponseContext(
@@ -2470,7 +2644,9 @@ void ::llcpp::fidl::test::protocols::WithErrorSyntax::
   ResponseAsStructRequest::OwnedEncodedMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ErrorAsPrimitive
 WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -2483,7 +2659,9 @@ WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync() {
       ErrorAsPrimitive(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::
     ErrorAsPrimitive
     WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync(
@@ -2499,7 +2677,9 @@ WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync() {
       ErrorAsPrimitive(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::
     ErrorAsPrimitiveResponseContext::ErrorAsPrimitiveResponseContext()
     : ::fidl::internal::ResponseContext(
@@ -2544,7 +2724,9 @@ void ::llcpp::fidl::test::protocols::WithErrorSyntax::
   ErrorAsPrimitiveRequest::OwnedEncodedMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ErrorAsEnum
 WithErrorSyntax::ClientImpl::ErrorAsEnum_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -2556,7 +2738,9 @@ WithErrorSyntax::ClientImpl::ErrorAsEnum_Sync() {
   return ::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ErrorAsEnum(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::ErrorAsEnum
 WithErrorSyntax::ClientImpl::ErrorAsEnum_Sync(
     ::fidl::BufferSpan _response_buffer) {
@@ -2571,7 +2755,9 @@ WithErrorSyntax::ClientImpl::ErrorAsEnum_Sync(
       ErrorAsEnum(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumResponseContext::
     ErrorAsEnumResponseContext()
     : ::fidl::internal::ResponseContext(ErrorAsEnumResponse::Type,
@@ -2614,14 +2800,18 @@ void ::llcpp::fidl::test::protocols::WithErrorSyntax::
   ErrorAsEnumRequest::OwnedEncodedMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 
+#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> WithErrorSyntax::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
+#endif
 
+#ifdef __Fuchsia__
 namespace methods {
 
 void WithErrorSyntaxDispatchResponseAsStruct(void* interface, void* bytes,
@@ -2679,7 +2869,9 @@ namespace entries {
       entries::WithErrorSyntax + sizeof(entries::WithErrorSyntax) /
                                      sizeof(::fidl::internal::MethodEntry));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::DispatchResult WithErrorSyntax::Dispatch(Interface* impl,
                                                  fidl_incoming_msg_t* msg,
                                                  ::fidl::Transaction* txn) {
@@ -2696,7 +2888,9 @@ namespace entries {
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return WithErrorSyntax::Dispatch(this, msg, txn);
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
     ::llcpp::fidl::test::protocols::wire::
         WithErrorSyntax_ResponseAsStruct_Result result) {
@@ -2704,6 +2898,8 @@ namespace entries {
       _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
+#ifdef __Fuchsia__
 ::fidl::Result
 WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
     int64_t a, int64_t b, int64_t c) {
@@ -2718,6 +2914,8 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
                    WithErrorSyntax_ResponseAsStruct_Result::WithResponse(
                        ::fidl::unowned_ptr(&_response)));
 }
+#endif
+#ifdef __Fuchsia__
 ::fidl::Result
 WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplyError(
     uint32_t error) {
@@ -2725,7 +2923,9 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplyError(
                    WithErrorSyntax_ResponseAsStruct_Result::WithErr(
                        ::fidl::unowned_ptr(&error)));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
     ::llcpp::fidl::test::protocols::wire::
@@ -2734,6 +2934,8 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplyError(
       _buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
+#ifdef __Fuchsia__
 ::fidl::Result
 WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
     ::fidl::BufferSpan _buffer, int64_t a, int64_t b, int64_t c) {
@@ -2749,7 +2951,9 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
                    WithErrorSyntax_ResponseAsStruct_Result::WithResponse(
                        ::fidl::unowned_ptr(&response)));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
     ::llcpp::fidl::test::protocols::wire::
         WithErrorSyntax_ErrorAsPrimitive_Result result) {
@@ -2757,6 +2961,8 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
       _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
+#ifdef __Fuchsia__
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess() {
   ::fidl::aligned<::llcpp::fidl::test::protocols::wire::
@@ -2767,6 +2973,8 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess() {
                    WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(
                        ::fidl::unowned_ptr(&_response)));
 }
+#endif
+#ifdef __Fuchsia__
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplyError(
     uint32_t error) {
@@ -2774,7 +2982,9 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplyError(
                    WithErrorSyntax_ErrorAsPrimitive_Result::WithErr(
                        ::fidl::unowned_ptr(&error)));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
     ::llcpp::fidl::test::protocols::wire::
@@ -2783,6 +2993,8 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplyError(
       _buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
+#ifdef __Fuchsia__
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
     ::fidl::BufferSpan _buffer) {
@@ -2795,7 +3007,9 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
                    WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(
                        ::fidl::unowned_ptr(&response)));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
     ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result
         result) {
@@ -2803,6 +3017,8 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
       _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
+#ifdef __Fuchsia__
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
   ::fidl::aligned<::llcpp::fidl::test::protocols::wire::
@@ -2813,13 +3029,17 @@ WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
       ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
           WithResponse(::fidl::unowned_ptr(&_response)));
 }
+#endif
+#ifdef __Fuchsia__
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplyError(
     ::llcpp::fidl::test::protocols::wire::ErrorEnun error) {
   return Reply(
       ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
           WithErr(::fidl::unowned_ptr(&error)));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
     ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result
@@ -2828,6 +3048,8 @@ WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
       _buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
+#ifdef __Fuchsia__
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess(
     ::fidl::BufferSpan _buffer) {
@@ -2840,6 +3062,7 @@ WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess(
       ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
           WithResponse(::fidl::unowned_ptr(&response)));
 }
+#endif
 
 void ::llcpp::fidl::test::protocols::WithErrorSyntax::ResponseAsStructRequest::
     _InitHeader(zx_txid_t _txid) {
@@ -2870,6 +3093,9 @@ void ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumResponse::
     _InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kWithErrorSyntax_ErrorAsEnum_Ordinal);
 }
+
+#ifdef __Fuchsia__
+#endif
 
 }  // namespace protocols
 }  // namespace test

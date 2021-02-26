@@ -7,6 +7,7 @@ package codegen
 const fragmentClientSyncMethodsTmpl = `
 {{- define "ClientSyncRequestCallerAllocateMethodDefinition" }}
   {{- if .HasResponse }}
+#ifdef __Fuchsia__
 {{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}
 {{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}_Sync(
      {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
@@ -22,7 +23,9 @@ const fragmentClientSyncMethodsTmpl = `
   return {{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}(
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
   {{- else }}{{ if .Request }}
+#ifdef __Fuchsia__
 ::fidl::Result {{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}(
     {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -36,11 +39,13 @@ const fragmentClientSyncMethodsTmpl = `
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
   {{- end }}{{ end }}
 {{- end }}
 
 {{- define "ClientSyncRequestManagedMethodDefinition" }}
   {{- if .HasResponse }}
+#ifdef __Fuchsia__
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}
 {{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}_Sync({{ .Request | Params }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
@@ -52,7 +57,9 @@ const fragmentClientSyncMethodsTmpl = `
   return {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}(
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
+#endif
   {{- else }}
+#ifdef __Fuchsia__
 ::fidl::Result {{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}({{ .Request | Params }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::{{ .Name }}(
@@ -63,6 +70,7 @@ const fragmentClientSyncMethodsTmpl = `
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
   {{- end }}
 {{- end }}
 `

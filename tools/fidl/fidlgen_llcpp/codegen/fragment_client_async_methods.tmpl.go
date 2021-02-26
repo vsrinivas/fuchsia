@@ -25,6 +25,7 @@ const fragmentClientAsyncMethodsTmpl = `
 {{- end }}
 
 {{- define "ClientAsyncRequestManagedMethodDefinition" }}
+#ifdef __Fuchsia__
 {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::{{ .Name }}ResponseContext()
     : ::fidl::internal::ResponseContext({{ .Name }}Response::Type, {{ .OrdinalName }}) {}
 
@@ -74,5 +75,6 @@ void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* r
   );
   return _request.GetOutgoingMessage().Write(this, _context);
 }
+#endif
 {{- end }}
 `

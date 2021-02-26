@@ -20,6 +20,7 @@ extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondResponseTable;
 
 }  // namespace
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::service::SecondProtocol::ResultOf::MethodOnSecond::
     MethodOnSecond(
         ::fidl::UnownedClientEnd<::llcpp::fidl::test::service::SecondProtocol>
@@ -30,7 +31,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result SecondProtocol::ClientImpl::MethodOnSecond() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::MethodOnSecond(
@@ -40,14 +43,18 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> SecondProtocol::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
+#endif
 
+#ifdef __Fuchsia__
 namespace methods {
 
 void SecondProtocolDispatchMethodOnSecond(void* interface, void* bytes,
@@ -79,7 +86,9 @@ namespace entries {
       entries::SecondProtocol + sizeof(entries::SecondProtocol) /
                                     sizeof(::fidl::internal::MethodEntry));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::DispatchResult SecondProtocol::Dispatch(Interface* impl,
                                                 fidl_incoming_msg_t* msg,
                                                 ::fidl::Transaction* txn) {
@@ -96,11 +105,15 @@ namespace entries {
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return SecondProtocol::Dispatch(this, msg, txn);
 }
+#endif
 
 void ::llcpp::fidl::test::service::SecondProtocol::MethodOnSecondRequest::
     _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kSecondProtocol_MethodOnSecond_Ordinal);
 }
+
+#ifdef __Fuchsia__
+#endif
 
 namespace {
 
@@ -114,6 +127,7 @@ extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstResponseTable;
 
 }  // namespace
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::service::FirstProtocol::ResultOf::MethodOnFirst::
     MethodOnFirst(
         ::fidl::UnownedClientEnd<::llcpp::fidl::test::service::FirstProtocol>
@@ -124,7 +138,9 @@ extern "C" const fidl_type_t
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result FirstProtocol::ClientImpl::MethodOnFirst() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::MethodOnFirst(
@@ -134,14 +150,18 @@ extern "C" const fidl_type_t
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> FirstProtocol::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
+#endif
 
+#ifdef __Fuchsia__
 namespace methods {
 
 void FirstProtocolDispatchMethodOnFirst(void* interface, void* bytes,
@@ -173,7 +193,9 @@ namespace entries {
       entries::FirstProtocol + sizeof(entries::FirstProtocol) /
                                    sizeof(::fidl::internal::MethodEntry));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::DispatchResult FirstProtocol::Dispatch(Interface* impl,
                                                fidl_incoming_msg_t* msg,
                                                ::fidl::Transaction* txn) {
@@ -190,11 +212,15 @@ namespace entries {
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return FirstProtocol::Dispatch(this, msg, txn);
 }
+#endif
 
 void ::llcpp::fidl::test::service::FirstProtocol::MethodOnFirstRequest::
     _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kFirstProtocol_MethodOnFirst_Ordinal);
 }
+
+#ifdef __Fuchsia__
+#endif
 
 }  // namespace service
 }  // namespace test

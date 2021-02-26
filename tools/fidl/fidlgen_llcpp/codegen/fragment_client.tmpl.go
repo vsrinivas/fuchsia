@@ -6,16 +6,20 @@ package codegen
 
 const fragmentClientTmpl = `
 {{- define "ClientForwardDeclaration" }}
+
+#ifdef __Fuchsia__
   class AsyncEventHandler;
   {{- range .TwoWayMethods }}
   class {{ .Name }}ResponseContext;
   {{- end }}
   class ClientImpl;
+#endif
 {{- end }}
 
 {{- define "ClientDeclaration" }}
 {{ EnsureNamespace . }}
 {{- $outer := . }}
+#ifdef __Fuchsia__
 class {{ .Name }}::AsyncEventHandler : public {{ .Name }}::EventHandlerInterface {
  public:
   AsyncEventHandler() = default;
@@ -136,9 +140,11 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
 
   std::shared_ptr<AsyncEventHandler> event_handler_;
 };
+#endif
 {{- end }}
 
 {{- define "ClientDispatchDefinition" }}
+#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::DispatchEvent(fidl_incoming_msg_t* msg) {
   {{- if .Events }}
   if (event_handler_ != nullptr) {
@@ -165,5 +171,6 @@ std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::DispatchEvent(fidl_in
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
 }
+#endif
 {{- end }}
 `

@@ -170,8 +170,10 @@ class {{ .Name }} final {
 
       ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
+#endif
 
      private:
       {{- if gt .ResponseMaxHandles 0 }}
@@ -243,8 +245,10 @@ class {{ .Name }} final {
 
       ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
+#endif
 
      private:
       {{- if gt .ResponseMaxHandles 0 }}
@@ -285,8 +289,10 @@ class {{ .Name }} final {
 
       ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
+#endif
 
      private:
       {{- if gt .ResponseSentMaxSize 512 }}
@@ -322,8 +328,10 @@ class {{ .Name }} final {
 
       ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
+#endif
 
      private:
       zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
@@ -458,8 +466,10 @@ class {{ .Name }} final {
 
       ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
+#endif
 
      private:
       {{- if gt .RequestMaxHandles 0 }}
@@ -532,8 +542,10 @@ class {{ .Name }} final {
 
       ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
+#endif
 
      private:
       {{- if gt .RequestMaxHandles 0 }}
@@ -575,8 +587,10 @@ class {{ .Name }} final {
 
       ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
+#endif
 
      private:
       {{- if gt .RequestSentMaxSize 512 }}
@@ -613,8 +627,10 @@ class {{ .Name }} final {
 
       ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
+#ifdef __Fuchsia__
       template <typename ChannelLike>
       void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
+#endif
 
      private:
       zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
@@ -698,6 +714,7 @@ class {{ .Name }} final {
   };
   {{- end }}
 
+#ifdef __Fuchsia__
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -1056,6 +1073,8 @@ class {{ .Name }} final {
       void* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
+
+#endif
 
   class EventSender;
   class WeakEventSender;

@@ -11,6 +11,7 @@ Reply(::fidl::BufferSpan _buffer {{- if .Response }}, {{ end }}
 {{- end }}
 
 {{- define "ReplyCallerAllocateMethodDefinition" }}
+#ifdef __Fuchsia__
 ::fidl::Result {{ .LLProps.ProtocolName.Name }}::Interface::{{ .Name }}CompleterBase::
 {{- template "ReplyCallerAllocateMethodSignature" . }} {
   {{ .Name }}Response::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
@@ -18,6 +19,7 @@ Reply(::fidl::BufferSpan _buffer {{- if .Response }}, {{ end }}
   );
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
+#endif
 {{- end }}
 
 {{- define "ReplyCallerAllocateResultSuccessMethodSignature" -}}
@@ -26,6 +28,7 @@ ReplySuccess(::fidl::BufferSpan _buffer {{- if .Result.ValueMembers }}, {{ end }
 {{- end }}
 
 {{- define "ReplyCallerAllocateResultSuccessMethodDefinition" }}
+#ifdef __Fuchsia__
 ::fidl::Result {{ .LLProps.ProtocolName.Name }}::Interface::{{ .Name }}CompleterBase::
 {{- template "ReplyCallerAllocateResultSuccessMethodSignature" . }} {
   ::fidl::aligned<{{ .Result.ValueStructDecl }}> response;
@@ -35,5 +38,6 @@ ReplySuccess(::fidl::BufferSpan _buffer {{- if .Result.ValueMembers }}, {{ end }
 
   return Reply(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&response)));
 }
+#endif
 {{- end }}
 `

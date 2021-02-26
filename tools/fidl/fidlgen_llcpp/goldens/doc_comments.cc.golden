@@ -33,6 +33,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventRequestTable;
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 
 }  // namespace
+#ifdef __Fuchsia__
 ::llcpp::fidl::test::doccomments::Interface::ResultOf::Method::Method(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>
         _client) {
@@ -42,7 +43,9 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
   status_ = _request.status();
   error_ = _request.error();
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::Result Interface::ClientImpl::Method() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::Method(
@@ -52,7 +55,9 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
+#endif
 
+#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
   if (event_handler_ != nullptr) {
@@ -78,6 +83,7 @@ std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
+#endif
 
 ::fidl::Result Interface::SyncEventHandler::HandleOneEvent(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>
@@ -156,6 +162,7 @@ std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
   }
 }
 
+#ifdef __Fuchsia__
 namespace methods {
 
 void InterfaceDispatchMethod(void* interface, void* bytes,
@@ -187,7 +194,9 @@ namespace entries {
       entries::Interface +
           sizeof(entries::Interface) / sizeof(::fidl::internal::MethodEntry));
 }
+#endif
 
+#ifdef __Fuchsia__
 ::fidl::DispatchResult Interface::Dispatch(Interface* impl,
                                            fidl_incoming_msg_t* msg,
                                            ::fidl::Transaction* txn) {
@@ -204,6 +213,7 @@ namespace entries {
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return Interface::Dispatch(this, msg, txn);
 }
+#endif
 
 void ::llcpp::fidl::test::doccomments::Interface::MethodRequest::_InitHeader(
     zx_txid_t _txid) {
@@ -215,12 +225,14 @@ void ::llcpp::fidl::test::doccomments::Interface::OnEventResponse::
   fidl_init_txn_header(&_hdr, 0, kInterface_OnEvent_Ordinal);
 }
 
+#ifdef __Fuchsia__
 zx_status_t Interface::EventSender::OnEvent() const {
   ::fidl::internal::EncodedMessageTypes<OnEventResponse>::OwnedByte _response{};
   _response.Write(server_end_);
   return _response.status();
 }
 
+#endif
 auto ::llcpp::fidl::test::doccomments::wire::FlexibleUnion::which() const
     -> Tag {
   ZX_ASSERT(!has_invalid_tag());
