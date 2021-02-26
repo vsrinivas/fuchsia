@@ -1455,8 +1455,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
   if (!Ok())
     return Fail();
 
-  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kFtp050))
-    return ParseFileFtp050(scope, std::move(attributes), std::move(library_name));
+  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax))
+    return ParseFileNewSyntax(scope, std::move(attributes), std::move(library_name));
 
   bool done_with_library_imports = false;
   std::vector<std::unique_ptr<raw::AliasDeclaration>> alias_list;
@@ -1756,7 +1756,7 @@ std::unique_ptr<raw::TypeDecl> Parser::ParseTypeDecl(ASTScope& scope) {
                                          std::move(layout));
 }
 
-std::unique_ptr<raw::File> Parser::ParseFileFtp050(
+std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
     ASTScope& scope, std::unique_ptr<raw::AttributeList> library_attributes,
     std::unique_ptr<raw::CompoundIdentifier> library_name) {
   std::vector<std::unique_ptr<raw::AliasDeclaration>> alias_list;

@@ -44,9 +44,9 @@ resource_definition handle : uint32 {
   return main_lib;
 }
 
-TEST(Ftp050Tests, TypeDeclOfStructLayout) {
+TEST(NewSyntaxTests, TypeDeclOfStructLayout) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kFtp050);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = struct {
@@ -61,9 +61,9 @@ type TypeDecl = struct {
   EXPECT_EQ(type_decl->members.size(), 2);
 }
 
-TEST(Ftp050Tests, TypeDeclOfUnionLayout) {
+TEST(NewSyntaxTests, TypeDeclOfUnionLayout) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kFtp050);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = union {
@@ -78,9 +78,9 @@ type TypeDecl = union {
   EXPECT_EQ(type_decl->members.size(), 2);
 }
 
-TEST(Ftp050Tests, TypeDeclOfStructLayoutWithResourceness) {
+TEST(NewSyntaxTests, TypeDeclOfStructLayoutWithResourceness) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kFtp050);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   SharedAmongstLibraries shared;
 
   auto library = with_fake_zx(shared, R"FIDL(
@@ -106,9 +106,9 @@ type t2 = resource struct {
   EXPECT_EQ(type_decl->resourceness, fidl::types::Resourceness::kResource);
 }
 
-TEST(Ftp050Tests, TypeDeclOfUnionLayoutWithResourceness) {
+TEST(NewSyntaxTests, TypeDeclOfUnionLayoutWithResourceness) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kFtp050);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   SharedAmongstLibraries shared;
 
   auto library = with_fake_zx(shared, R"FIDL(
@@ -136,9 +136,9 @@ type t2 = resource union {
   EXPECT_EQ(type_decl->resourceness, fidl::types::Resourceness::kResource);
 }
 
-TEST(Ftp050Tests, TypeDeclOfUnionLayoutWithStrictnesss) {
+TEST(NewSyntaxTests, TypeDeclOfUnionLayoutWithStrictnesss) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kFtp050);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -172,9 +172,9 @@ type t3 = strict union {
   EXPECT_EQ(type_decl->resourceness, fidl::types::Resourceness::kValue);
 }
 
-TEST(Ftp050Tests, TypeDeclOfUnionLayoutWithResourcenessAndStrictness) {
+TEST(NewSyntaxTests, TypeDeclOfUnionLayoutWithResourcenessAndStrictness) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kFtp050);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   SharedAmongstLibraries shared;
 
   auto library = with_fake_zx(shared, R"FIDL(
@@ -218,9 +218,9 @@ type t4 = strict resource union {
   EXPECT_EQ(type_decl->resourceness, fidl::types::Resourceness::kResource);
 }
 
-TEST(Ftp050Tests, TypeDeclDisallowPartialModifiers) {
+TEST(NewSyntaxTests, TypeDeclDisallowPartialModifiers) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kFtp050);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -236,9 +236,9 @@ type t2 = strict t1;
   ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyModifier);
 }
 
-TEST(Ftp050Tests, TypeDeclOfStructLayoutWithAnonymousStruct) {
+TEST(NewSyntaxTests, TypeDeclOfStructLayoutWithAnonymousStruct) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kFtp050);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = struct {
