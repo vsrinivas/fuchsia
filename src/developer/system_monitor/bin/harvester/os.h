@@ -20,13 +20,23 @@ class OS {
  public:
   virtual ~OS() = default;
 
-  // Thin wrappers around OS calls. Allows for mocking.
-
-  virtual zx_status_t GetInfo(zx_handle_t parent, int children_kind,
-                              void* out_buffer, size_t buffer_size,
-                              size_t* actual, size_t* avail) = 0;
-
   // Convenience methods.
+
+  // Wrapper around GetInfo for fetching singular info objects.
+  template <typename T>
+  zx_status_t GetInfo(zx_handle_t parent, zx_koid_t parent_koid, int kind,
+                      const char* kind_name, T& info_object) {
+    zx_status_t status = GetInfo(parent, kind, &info_object, sizeof(T), nullptr,
+                                 nullptr);
+
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "zx_object_get_info(" << parent_koid << ", "
+                     << kind_name << ", ...) failed: "
+                     << zx_status_get_string(status) << " (" << status << ")";
+    }
+
+    return status;
+  }
 
   // Wrapper around GetInfo for fetching vectors of children.
   template <typename T = zx_koid_t>
@@ -85,6 +95,14 @@ class OS {
 
     return ZX_OK;
   }
+
+ protected:
+
+  // Thin wrappers around OS calls. Allows for mocking.
+
+  virtual zx_status_t GetInfo(zx_handle_t parent, int children_kind,
+                              void* out_buffer, size_t buffer_size,
+                              size_t* actual, size_t* avail) = 0;
 };
 
 class OSImpl : public OS {

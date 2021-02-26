@@ -46,7 +46,8 @@ class Harvester {
   std::unique_ptr<harvester::OS> os_;
   LogListener log_listener_;
 
-  GatherChannels gather_channels_{info_resource_, dockyard_proxy_.get()};
+  GatherChannels gather_channels_{info_resource_, dockyard_proxy_.get(),
+                                  g_slow_data_task_tree, os_.get()};
   GatherCpu gather_cpu_{info_resource_, dockyard_proxy_.get()};
   GatherDeviceInfo gather_device_info_{info_resource_, dockyard_proxy_.get()};
   GatherMemory gather_memory_{info_resource_, dockyard_proxy_.get()};

@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_GATHER_CHANNELS_H_
 
 #include "gather_category.h"
+#include "os.h"
 #include "task_tree.h"
 
 namespace harvester {
@@ -15,12 +16,18 @@ class SampleBundle;
 // Gather Samples for jobs, processes, and threads.
 class GatherChannels : public GatherCategory {
  public:
-  GatherChannels(zx_handle_t info_resource,
-                 harvester::DockyardProxy* dockyard_proxy)
-      : GatherCategory(info_resource, dockyard_proxy) {}
+  GatherChannels(zx_handle_t info_resource, DockyardProxy* dockyard_proxy,
+                 TaskTree& task_tree, OS* os)
+      : GatherCategory(info_resource, dockyard_proxy),
+        task_tree_(task_tree),
+        os_(os) {}
 
   // GatherCategory.
   void Gather() override;
+
+ private:
+  TaskTree& task_tree_;
+  OS* os_;
 };
 
 }  // namespace harvester
