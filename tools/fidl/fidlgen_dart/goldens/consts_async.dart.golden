@@ -60,19 +60,19 @@ const double conversionFactor = 1.41421;
 
 const EnumType enumVal = EnumType.value;
 
-const int enumPrimitiveVal = int.value;
+const int enumPrimitiveVal = EnumType.value;
 
 const EnumType enumTrue = EnumType.true$;
 
-const int enumPrimitiveTrue = int.true$;
+const int enumPrimitiveTrue = EnumType.true$;
 
 const BitsType bitsVal = BitsType.value;
 
-const int bitsPrimitiveVal = int.value;
+const int bitsPrimitiveVal = BitsType.value;
 
 const BitsType bitsTrue = BitsType.true$;
 
-const int bitsPrimitiveTrue = int.true$;
+const int bitsPrimitiveTrue = BitsType.true$;
 
 class EnumType extends $fidl.Enum {
   factory EnumType(int _v) {

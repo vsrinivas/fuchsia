@@ -41,7 +41,7 @@ import 'package:fidl_dependent/fidl_async.dart' as lib$dependent;
 
 class Foo extends $fidl.Struct {
   const Foo({
-    this.field: lib$dependent.MyEnum.lib$dependent.a,
+    this.field: lib$dependent.MyEnum.a,
   });
   Foo.clone(
     Foo $orig, {

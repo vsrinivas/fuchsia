@@ -541,22 +541,34 @@ func (c *compiler) compileCompoundIdentifier(val fidl.CompoundIdentifier, contex
 		strs = append(strs, libraryPrefix(val.Library))
 	}
 	strs = append(strs, context.changeIfReserved(string(val.Name)))
+	if val.Member != "" {
+		strs = append(strs, context.changeIfReserved(string(val.Member)))
+	}
 	return strings.Join(strs, ".")
 }
 
 func (c *compiler) compileUpperCamelCompoundIdentifier(val fidl.CompoundIdentifier, ext string, context context) string {
-	str := context.changeIfReserved(fidl.ToUpperCamelCase(string(val.Name))) + ext
+	str := fidl.ToUpperCamelCase(string(val.Name)) + ext
 	val.Name = fidl.Identifier(str)
 	return c.compileCompoundIdentifier(val, context)
 }
 
 func (c *compiler) compileLowerCamelCompoundIdentifier(val fidl.CompoundIdentifier, ext string, context context) string {
-	constName := string(val.Name)
-	if string(val.Member) != "" {
-		constName = string(val.Member)
-	}
-	str := context.changeIfReserved(fidl.ToLowerCamelCase(string(constName))) + ext
+	str := fidl.ToLowerCamelCase(string(val.Name)) + ext
 	val.Name = fidl.Identifier(str)
+	return c.compileCompoundIdentifier(val, context)
+}
+
+func (c *compiler) compileConstantIdentifier(val fidl.CompoundIdentifier, context context) string {
+	if val.Member != "" {
+		// val.Name here is the type.
+		// Format: Type.memberIdentifier
+		val.Name = fidl.Identifier(fidl.ToUpperCamelCase(string(val.Name)))
+		val.Member = fidl.Identifier(fidl.ToLowerCamelCase(string(val.Member)))
+	} else {
+		// Format: valueIdentifier
+		val.Name = fidl.Identifier(fidl.ToLowerCamelCase(string(val.Name)))
+	}
 	return c.compileCompoundIdentifier(val, context)
 }
 
@@ -602,12 +614,7 @@ func (c *compiler) compileLiteral(val fidl.Literal) string {
 func (c *compiler) compileConstant(val fidl.Constant, t *Type) string {
 	switch val.Kind {
 	case fidl.IdentifierConstant:
-		parsedIdentifier := fidl.ParseCompoundIdentifier(val.Identifier)
-		v := c.compileLowerCamelCompoundIdentifier(parsedIdentifier, "", constantContext)
-		if parsedIdentifier.Member != "" {
-			v = fmt.Sprintf("%s.%s", t.Decl, v)
-		}
-		return v
+		return c.compileConstantIdentifier(fidl.ParseCompoundIdentifier(val.Identifier), constantContext)
 	case fidl.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	case fidl.BinaryOperator:
