@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter_driver/flutter_driver.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
@@ -30,17 +29,17 @@ void main() {
     // Launch terminal.
     const componentUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
     await ermine.launch(componentUrl);
-    expect(await ermine.waitForView(componentUrl), isNotNull);
 
-    // Toggle Recents.
-    await ermine.driver.requestData('recents');
-    // We should have thumbnails for running views.
-    final thumbnails = find.descendant(
-        of: find.byType('Thumbnails'), matching: find.byType('Text'));
+    // Terminal should fill the view from left to right edge.
+    var viewRect = await ermine.getViewRect(componentUrl);
+    expect(viewRect.left, equals(0));
+
+    // Toggle Recents, until it is visible. Terminal view is shifted right.
     expect(
         await ermine.waitFor(() async {
-          await ermine.driver.waitFor(thumbnails);
-          return await ermine.driver.getText(thumbnails) == 'terminal.cmx';
+          await ermine.driver.requestData('recents');
+          viewRect = await ermine.getViewRect(componentUrl);
+          return viewRect.left > 0;
         }),
         isTrue);
 
