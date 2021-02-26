@@ -6,6 +6,7 @@
 #define SRC_BRINGUP_BIN_VIRTCON_KEYBOARD_H_
 
 #include <fuchsia/input/report/llcpp/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/cpp/caller.h>
@@ -99,8 +100,10 @@ class KeyboardWatcher {
   // Attempts to open the file and create a new Keyboard.
   zx_status_t OpenFile(uint8_t evt, char* name);
 
-  // The Fd() representing the directory this is watching.
-  int Fd() { return dir_caller_.fd().get(); }
+  // The channel representing the directory this is watching.
+  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> Directory() {
+    return dir_caller_.directory();
+  }
 
   bool repeat_keys_ = true;
   keypress_handler_t handler_ = {};

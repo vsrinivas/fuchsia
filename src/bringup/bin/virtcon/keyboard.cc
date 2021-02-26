@@ -14,6 +14,8 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <poll.h>
 #include <stdio.h>
@@ -221,11 +223,11 @@ void Keyboard::InputCallback(
 }
 
 zx_status_t Keyboard::StartReading() {
-  zx::channel server, client;
-  zx_status_t status = zx::channel::create(0, &server, &client);
-  if (status != ZX_OK) {
-    return status;
+  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::input::report::InputReportsReader>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
   }
+  auto [client, server] = *std::move(endpoints);
   auto result = keyboard_client_->GetInputReportsReader(std::move(server));
   if (result.status() != ZX_OK) {
     return result.status();
@@ -244,7 +246,7 @@ zx_status_t Keyboard::StartReading() {
     Keyboard* const keyboard_;
   };
 
-  status =
+  auto status =
       reader_client_.Bind(std::move(client), dispatcher_, std::make_shared<EventHandler>(this));
   if (status != ZX_OK) {
     return status;
@@ -290,17 +292,13 @@ zx_status_t KeyboardWatcher::OpenFile(uint8_t evt, char* name) {
     return ZX_OK;
   }
 
-  int fd;
-  if ((fd = openat(Fd(), name, O_RDONLY)) < 0) {
+  auto client_end =
+      service::ConnectAt<llcpp::fuchsia::input::report::InputDevice>(Directory(), name);
+  if (client_end.is_error()) {
     return ZX_OK;
   }
 
-  zx::channel chan;
-  zx_status_t status = fdio_get_service_handle(fd, chan.reset_and_get_address());
-  if (status != ZX_OK) {
-    return status;
-  }
-  auto keyboard_client = llcpp::fuchsia::input::report::InputDevice::SyncClient(std::move(chan));
+  auto keyboard_client = fidl::BindSyncClient(std::move(*client_end));
 
   llcpp::fuchsia::input::report::InputDevice::ResultOf::GetDescriptor result =
       keyboard_client.GetDescriptor();
@@ -317,7 +315,7 @@ zx_status_t KeyboardWatcher::OpenFile(uint8_t evt, char* name) {
   // This is not a memory leak, because keyboards free themselves when their underlying
   // devices close.
   Keyboard* keyboard = new Keyboard(dispatcher_, handler_, repeat_keys_);
-  status = keyboard->Setup(std::move(keyboard_client));
+  zx_status_t status = keyboard->Setup(std::move(keyboard_client));
   if (status != ZX_OK) {
     delete keyboard;
     return status;
@@ -382,8 +380,8 @@ zx_status_t KeyboardWatcher::Setup(async_dispatcher_t* dispatcher, keypress_hand
 
   dir_caller_ = fdio_cpp::FdioCaller(std::move(fd));
 
-  auto result = fio::Directory::Call::Watch(zx::unowned_channel(dir_caller_.borrow_channel()),
-                                            fio::WATCH_MASK_ALL, 0, std::move(server));
+  auto result = fio::Directory::Call::Watch(dir_caller_.directory(), fio::WATCH_MASK_ALL, 0,
+                                            std::move(server));
   if (result.status() != ZX_OK) {
     return result.status();
   }

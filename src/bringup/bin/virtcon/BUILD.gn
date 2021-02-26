@@ -66,6 +66,7 @@ group("common") {
     "//zircon/system/ulib/hid-parser",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/image-format:image-format-llcpp",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/statusor",
     "//zircon/system/ulib/svc",
   ]
@@ -84,11 +85,6 @@ executable("virtual-console") {
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/public/lib/zxc",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("vc-display-test") {
@@ -103,11 +99,6 @@ test("vc-display-test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_component("virtual-console-display-test") {
@@ -127,11 +118,6 @@ test("vc-text-test") {
     ":common",
     "//zircon/public/lib/zxtest",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_component("virtual-console-text-test") {
@@ -154,11 +140,6 @@ test("vc-session-manager-test") {
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_component("virtual-console-session-manager-test") {

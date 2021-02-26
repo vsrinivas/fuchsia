@@ -56,7 +56,8 @@ zx_status_t dc_callback_handler(zx_signals_t signals);
 #if BUILD_FOR_DISPLAY_TEST
 
 struct list_node* get_display_list();
-void initialize_display_channel(zx::channel channel);
+void initialize_display_channel(
+    fidl::ClientEnd<llcpp::fuchsia::hardware::display::Controller> channel);
 llcpp::fuchsia::sysmem::Allocator::SyncClient* get_sysmem_allocator();
 
 #endif

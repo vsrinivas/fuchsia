@@ -11,6 +11,8 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/svc/dir.h>
 #include <lib/svc/outgoing.h>
 #include <lib/syslog/cpp/macros.h>
@@ -55,17 +57,12 @@ int main(int argc, char** argv) {
 
   llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
   {
-    zx::channel local, remote;
-    status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
-      return 1;
-    }
-    status = fdio_service_connect("/svc/fuchsia.boot.Arguments", remote.release());
-    if (status != ZX_OK) {
+    auto client = service::Connect<llcpp::fuchsia::boot::Arguments>();
+    if (client.is_error()) {
       fprintf(stderr, "vc: failed to connect to fuchsia.boot.Arguments\n");
       return 1;
     }
-    boot_args = llcpp::fuchsia::boot::Arguments::SyncClient(std::move(local));
+    boot_args = fidl::BindSyncClient(std::move(*client));
   }
 
   Arguments args;
@@ -95,28 +92,24 @@ int main(int argc, char** argv) {
   }
   status = outgoing.svc_dir()->AddEntry(
       llcpp::fuchsia::virtualconsole::SessionManager::Name,
-      fbl::MakeRefCounted<fs::Service>([&virtcon_server](zx::channel request) mutable {
-        zx_status_t status = virtcon_server.Bind(std::move(request));
-        if (status != ZX_OK) {
-          printf("vc: error binding new server: %d\n", status);
-        }
-        return status;
-      }));
+      fbl::MakeRefCounted<fs::Service>(
+          [&virtcon_server](
+              fidl::ServerEnd<llcpp::fuchsia::virtualconsole::SessionManager> request) mutable {
+            zx_status_t status = virtcon_server.Bind(std::move(request));
+            if (status != ZX_OK) {
+              printf("vc: error binding new server: %d\n", status);
+            }
+            return status;
+          }));
 
   {
-    zx::channel local, remote;
-    status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
+    auto local = service::Connect<llcpp::fuchsia::boot::ReadOnlyLog>();
+    if (local.is_error()) {
+      fprintf(stderr, "vc: unable to connect to fuchsia.boot.ReadOnlyLog %d\n", status);
       return -1;
     }
 
-    status = fdio_service_connect("/svc/fuchsia.boot.ReadOnlyLog", remote.release());
-    if (status != ZX_OK) {
-      fprintf(stderr, "vc: unable to connect to fuchsia.boot.ReadOnlyLog %d\n", status);
-      return 1;
-    }
-
-    auto result = llcpp::fuchsia::boot::ReadOnlyLog::Call::Get(zx::unowned(local));
+    auto result = BindSyncClient(std::move(*local)).Get();
     if (!result.ok()) {
       fprintf(stderr, "vc: unable to get read only debulog\n");
       return -1;

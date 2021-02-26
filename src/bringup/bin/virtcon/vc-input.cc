@@ -6,6 +6,7 @@
 #include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -103,16 +104,13 @@ static bool vc_handle_device_control_keys(uint8_t keycode, int modifiers) {
     case HID_USAGE_KEY_DELETE:
       // Provide a CTRL-ALT-DEL reboot sequence
       if ((modifiers & MOD_CTRL) && (modifiers & MOD_ALT)) {
-        zx::channel local, remote;
-        std::string svc_dir = "/svc/";
-        std::string service = svc_dir + llcpp::fuchsia::hardware::power::statecontrol::Admin::Name;
-        zx_status_t status = fdio_service_connect(service.c_str(), remote.release());
-        if (status != ZX_OK) {
+        auto local = service::Connect<llcpp::fuchsia::hardware::power::statecontrol::Admin>();
+        if (local.is_error()) {
           return true;
         }
-        auto response = llcpp::fuchsia::hardware::power::statecontrol::Admin::Call::Reboot(
-            zx::unowned_channel(local.get()),
-            llcpp::fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST);
+        auto response =
+            fidl::BindSyncClient(std::move(*local))
+                .Reboot(llcpp::fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST);
         if (response.status() != ZX_OK) {
           fprintf(stderr, "Failed to reboot, status:%d\n", response.status());
           return true;

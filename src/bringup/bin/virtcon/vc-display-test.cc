@@ -40,7 +40,7 @@ namespace {
 // Arbitrary
 constexpr uint32_t kSingleBufferStride = 4;
 
-class StubDisplayController : public fhd::Controller::RawChannelInterface {
+class StubDisplayController : public fhd::Controller::Interface {
  public:
   StubDisplayController() {}
 
@@ -158,7 +158,8 @@ class StubDisplayController : public fhd::Controller::RawChannelInterface {
     EXPECT_TRUE(false);
   }
 
-  void ImportBufferCollection(uint64_t collection_id, ::zx::channel collection_token,
+  void ImportBufferCollection(uint64_t collection_id,
+                              fidl::ClientEnd<sysmem::BufferCollectionToken> collection_token,
                               ImportBufferCollectionCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
@@ -246,15 +247,16 @@ class StubMultiBufferDisplayController : public StubDisplayController {
     _completer.Reply(ZX_OK, next_image_++);
   }
 
-  void ImportBufferCollection(uint64_t collection_id, ::zx::channel collection_token,
+  void ImportBufferCollection(uint64_t collection_id,
+                              fidl::ClientEnd<sysmem::BufferCollectionToken> collection_token,
                               ImportBufferCollectionCompleter::Sync& _completer) override {
-    zx::channel server, client;
-    ASSERT_OK(zx::channel::create(0, &server, &client));
+    auto endpoints = fidl::CreateEndpoints<sysmem::BufferCollection>();
+    ASSERT_OK(endpoints.status_value());
     ASSERT_OK(get_sysmem_allocator()
-                  ->BindSharedCollection(std::move(collection_token), std::move(server))
+                  ->BindSharedCollection(std::move(collection_token), std::move(endpoints->server))
                   .status());
-    buffer_collections_[collection_id] =
-        std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(client));
+    buffer_collections_[collection_id] = std::make_unique<sysmem::BufferCollection::SyncClient>(
+        fidl::BindSyncClient(std::move(endpoints->client)));
 
     _completer.Reply(ZX_OK);
   }
@@ -332,13 +334,14 @@ class VcDisplayTest : public zxtest::Test {
 
  protected:
   void InitializeServer() {
-    zx::channel client_end, server_end;
-    zx::channel::create(0u, &server_end, &client_end);
-    initialize_display_channel(std::move(client_end));
+    auto endpoints = fidl::CreateEndpoints<fhd::Controller>();
+    ASSERT_OK(endpoints.status_value());
+    initialize_display_channel(std::move(endpoints->client));
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     loop_->StartThread();
 
-    auto result = fidl::BindServer(loop_->dispatcher(), std::move(server_end), controller_.get());
+    auto result =
+        fidl::BindServer(loop_->dispatcher(), std::move(endpoints->server), controller_.get());
     ASSERT_TRUE(result.is_ok());
 
     server_binding_ = result.take_value();

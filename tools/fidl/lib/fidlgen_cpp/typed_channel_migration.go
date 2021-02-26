@@ -88,7 +88,6 @@ var rawChannelInterfaceAllowed = map[string]bool{
 	"::llcpp::fuchsia::sysmem::Allocator":                         true,
 	"::llcpp::fuchsia::sysmem::BufferCollection":                  true,
 	"::llcpp::fuchsia::sysmem::BufferCollectionToken":             true,
-	"::llcpp::fuchsia::virtualconsole::SessionManager":            true,
 	"::llcpp::fuchsia::wlan::device::Connector":                   true,
 	"::llcpp::fuchsia::wlan::tap::WlantapCtl":                     true,
 }

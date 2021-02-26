@@ -15,7 +15,9 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl/coding.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/statusor/endpoint-or-error.h>
 #include <lib/statusor/status-macros.h>
 #include <lib/zx/channel.h>
@@ -28,8 +30,8 @@
 #include <zircon/syscalls.h>
 
 #include <fbl/unique_fd.h>
+#include <src/lib/fsl/handles/object_info.h>
 
-#include "src/lib/fsl/handles/object_info.h"
 #include "vc.h"
 
 namespace fhd = ::llcpp::fuchsia::hardware::display;
@@ -291,29 +293,70 @@ zx_status_t apply_configuration() {
 static zx_status_t create_buffer_collection(
     display_info_t* display, uint64_t id,
     std::unique_ptr<sysmem::BufferCollection::SyncClient>* collection_client) {
-  ASSIGN_OR_RETURN(auto token, EndpointOrError<sysmem::BufferCollectionToken::SyncClient>::Create(),
-                   "vc: Failed to create collection channel");
-  RETURN_IF_ERROR(sysmem_allocator->AllocateSharedCollection(token.TakeServer()),
-                  "vc: Failed to allocate shared collection");
+  fidl::ClientEnd<sysmem::BufferCollectionToken> token;
+  {
+    zx::status token_server = fidl::CreateEndpoints(&token);
+    if (token_server.is_error()) {
+      printf("vc: Failed to create collection channel: %d\n", token_server.status_value());
+      return token_server.status_value();
+    }
+    zx_status_t status =
+        sysmem_allocator->AllocateSharedCollection(std::move(*token_server)).status();
+    if (status != ZX_OK) {
+      printf("vc: Failed to allocate shared collection: %d\n", status);
+      return status;
+    }
+  }
   constexpr uint32_t kVcNamePriority = 1000000;
   const char* kVcCollectionName = "vc-framebuffer";
-  RETURN_IF_ERROR(token->SetName(kVcNamePriority,
-                                 fidl::unowned_str(kVcCollectionName, strlen(kVcCollectionName))),
-                  "vc: Failed to set debug info");
-  ASSIGN_OR_RETURN(auto display_token,
-                   EndpointOrError<sysmem::BufferCollectionToken::SyncClient>::Create(),
-                   "vc: Failed to allocate display token");
-  RETURN_IF_ERROR(token->Duplicate(ZX_RIGHT_SAME_RIGHTS, display_token.TakeServer()),
-                  "vc: Failed to duplicate token");
-  ASSIGN_OR_RETURN(auto collection, EndpointOrError<sysmem::BufferCollection::SyncClient>::Create(),
-                   "vc: Failed to create collection channel");
-  RETURN_IF_ERROR(sysmem_allocator->BindSharedCollection(std::move(*token->mutable_channel()),
-                                                         collection.TakeServer()),
-                  "vc: Failed to bind collection");
-  RETURN_IF_ERROR(collection->Sync(), "vc: Failed to sync collection");
+  zx_status_t status =
+      sysmem::BufferCollectionToken::Call::SetName(
+          token, kVcNamePriority, fidl::unowned_str(kVcCollectionName, strlen(kVcCollectionName)))
+          .status();
+  if (status != ZX_OK) {
+    printf("vc: Failed to set debug info: %d\n", status);
+    return status;
+  }
 
-  auto import_rsp =
-      dc_client->ImportBufferCollection(id, std::move(*display_token->mutable_channel()));
+  fidl::ClientEnd<sysmem::BufferCollectionToken> display_token;
+  {
+    zx::status display_token_server = fidl::CreateEndpoints(&display_token);
+    if (display_token_server.is_error()) {
+      printf("vc: Failed to allocate display token: %d\n", display_token_server.status_value());
+      return display_token_server.status_value();
+    }
+
+    status = sysmem::BufferCollectionToken::Call::Duplicate(token, ZX_RIGHT_SAME_RIGHTS,
+                                                            *std::move(display_token_server))
+                 .status();
+    if (status != ZX_OK) {
+      printf("vc: Failed to duplicate token: %d\n", status);
+      return status;
+    }
+  }
+
+  sysmem::BufferCollection::SyncClient collection;
+  {
+    auto endpoints = fidl::CreateEndpoints<sysmem::BufferCollection>();
+    if (endpoints.is_error()) {
+      printf("vc: Failed to create collection channel: %d\n", endpoints.status_value());
+      return endpoints.status_value();
+    }
+    status = sysmem_allocator->BindSharedCollection(std::move(token), std::move(endpoints->server))
+                 .status();
+    if (status != ZX_OK) {
+      printf("vc: Failed to bind collection: %d\n", status);
+      return status;
+    }
+    collection = fidl::BindSyncClient(std::move(endpoints->client));
+  }
+  status = collection.Sync().status();
+  if (status != ZX_OK) {
+    printf("vc: Failed to sync collection: %d\n", status);
+    return status;
+  }
+
+  auto import_rsp = dc_client->ImportBufferCollection(id, std::move(display_token));
   RETURN_IF_ERROR(import_rsp, "vc: Failed to import buffer collection");
   if (import_rsp->res != ZX_OK) {
     printf("vc: Import buffer collection error\n");
@@ -340,7 +383,7 @@ static zx_status_t create_buffer_collection(
   image_constraints = image_format::GetDefaultImageFormatConstraints();
   fuchsia_sysmem_PixelFormat pixel_format;
   if (!ImageFormatConvertZxToSysmem(display->format, &pixel_format)) {
-    printf("vc: Unsupported pixel format");
+    printf("vc: Unsupported pixel format\n");
     return ZX_ERR_INVALID_ARGS;
   }
   image_constraints.pixel_format = image_format::GetCppPixelFormat(pixel_format);
@@ -353,9 +396,9 @@ static zx_status_t create_buffer_collection(
   image_constraints.min_bytes_per_row = 0;
   image_constraints.max_bytes_per_row = 0xffffffff;
 
-  RETURN_IF_ERROR(collection->SetConstraints(true, constraints), "vc: Failed to set constraints");
+  RETURN_IF_ERROR(collection.SetConstraints(true, constraints), "vc: Failed to set constraints");
   *collection_client =
-      std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(*collection));
+      std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(collection));
   return ZX_OK;
 }
 
@@ -567,8 +610,9 @@ zx_status_t dc_callback_handler(zx_signals_t signals) {
 }
 
 #if BUILD_FOR_DISPLAY_TEST
-void initialize_display_channel(zx::channel channel) {
-  dc_client = std::make_unique<fhd::Controller::SyncClient>(std::move(channel));
+void initialize_display_channel(fidl::ClientEnd<fhd::Controller> channel) {
+  dc_client =
+      std::make_unique<fhd::Controller::SyncClient>(fidl::BindSyncClient(std::move(channel)));
 
   dc_wait.set_object(dc_client->channel().get());
 }
@@ -596,15 +640,14 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
     return status;
   }
 
-  zx::channel dc_server, dc_client_channel;
-  status = zx::channel::create(0, &dc_server, &dc_client_channel);
-  if (status != ZX_OK) {
-    return status;
+  auto dc_endpoints = fidl::CreateEndpoints<fhd::Controller>();
+  if (dc_endpoints.is_error()) {
+    return dc_endpoints.status_value();
   }
 
   fdio_cpp::FdioCaller caller(std::move(fd));
   auto open_rsp = fhd::Provider::Call::OpenVirtconController(
-      caller.channel(), std::move(device_server), std::move(dc_server));
+      caller.borrow_as<fhd::Provider>(), std::move(device_server), std::move(dc_endpoints->server));
   if (!open_rsp.ok()) {
     return open_rsp.status();
   }
@@ -613,7 +656,7 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
   }
 
   dc_device = device_client.release();
-  dc_client = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client_channel));
+  dc_client = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_endpoints->client));
 
   zx_handle_close(dc_wait.object());
 
@@ -706,17 +749,17 @@ static zx_status_t vc_dc_dir_event_cb(async_dispatcher_t* dispatcher, async::Wai
 }
 
 static void vc_find_display_controller() {
-  zx::channel client, server;
-  if (zx::channel::create(0, &client, &server) != ZX_OK) {
+  auto endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  if (endpoints.is_error()) {
     printf("vc: Failed to create dc watcher channel\n");
     return;
   }
+  auto [client, server] = *std::move(endpoints);
 
-  fdio_t* fdio = fdio_unsafe_fd_to_io(dc_dir_fd);
+  fdio_cpp::UnownedFdioCaller dir_caller(dc_dir_fd);
 
-  auto result = fio::Directory::Call::Watch(zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)),
-                                            fio::WATCH_MASK_ALL, 0, std::move(server));
-  fdio_unsafe_release(fdio);
+  auto result = fio::Directory::Call::Watch(dir_caller.directory(), fio::WATCH_MASK_ALL, 0,
+                                            server.TakeChannel());
   if (result.status() != ZX_OK) {
     printf("vc: Failed to watch dc directory\n");
     return;
@@ -724,7 +767,7 @@ static void vc_find_display_controller() {
 
   ZX_DEBUG_ASSERT(!dc_wait.is_pending());
 
-  dc_wait.set_object(client.release());
+  dc_wait.set_object(client.TakeChannel().release());
   dc_wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
   dc_wait.set_handler([](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                          const zx_packet_signal_t* signal) {
@@ -753,18 +796,12 @@ bool vc_display_init(async_dispatcher_t* dispatcher, bool hide_on_boot) {
 }
 
 bool vc_sysmem_connect() {
-  zx_status_t status;
-  zx::channel sysmem_server, sysmem_client;
-  status = zx::channel::create(0, &sysmem_server, &sysmem_client);
-  if (status != ZX_OK) {
-    return false;
-  }
-  status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator", sysmem_server.release());
-  if (status != ZX_OK) {
+  auto sysmem_client = service::Connect<llcpp::fuchsia::sysmem::Allocator>();
+  if (sysmem_client.is_error()) {
     return false;
   }
 
-  sysmem_allocator = std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client));
+  sysmem_allocator = std::make_unique<sysmem::Allocator::SyncClient>(*std::move(sysmem_client));
   sysmem_allocator->SetDebugClientInfo(fidl::unowned_str(fsl::GetCurrentProcessName()),
                                        fsl::GetCurrentProcessKoid());
   return true;

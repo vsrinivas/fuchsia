@@ -62,7 +62,8 @@ void SessionManager::SessionIoCallback(vc_t* vc, async_dispatcher_t* dispatcher,
   SessionDestroy(vc);
 }
 
-zx::status<vc_t*> SessionManager::CreateSession(zx::channel session, bool make_active,
+zx::status<vc_t*> SessionManager::CreateSession(fidl::ServerEnd<fpty::Device> session,
+                                                bool make_active,
                                                 const color_scheme_t* color_scheme) {
   // Connect to the PTY service.  We have to do this dance rather than just
   // using open() because open() uses the DESCRIBE flag internally, and the
@@ -100,8 +101,9 @@ zx::status<vc_t*> SessionManager::CreateSession(zx::channel session, bool make_a
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  auto result = fpty::Device::Call::OpenClient(zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
-                                               0, std::move(session));
+  auto result = fpty::Device::Call::OpenClient(
+      fidl::UnownedClientEnd<fpty::Device>(fdio_unsafe_borrow_channel(io)), 0,
+      session.TakeChannel());
   fdio_unsafe_release(io);
   if (result.status() != ZX_OK) {
     return zx::error(result.status());
@@ -142,7 +144,8 @@ zx::status<vc_t*> SessionManager::CreateSession(zx::channel session, bool make_a
   return zx::ok(vc);
 }
 
-zx_status_t SessionManager::Bind(zx::channel request) {
+zx_status_t SessionManager::Bind(
+    fidl::ServerEnd<::llcpp::fuchsia::virtualconsole::SessionManager> request) {
   auto result = fidl::BindServer(dispatcher_, std::move(request), this);
   if (!result.is_ok()) {
     return result.error();
@@ -150,11 +153,12 @@ zx_status_t SessionManager::Bind(zx::channel request) {
   return ZX_OK;
 }
 
-void SessionManager::CreateSession(::zx::channel session, CreateSessionCompleter::Sync& completer) {
+void SessionManager::CreateSession(fidl::ServerEnd<fpty::Device> session,
+                                   CreateSessionCompleter::Sync& completer) {
   completer.Reply(CreateSession(std::move(session)).status_value());
 }
 
-zx::status<vc_t*> SessionManager::CreateSession(zx::channel session) {
+zx::status<vc_t*> SessionManager::CreateSession(fidl::ServerEnd<fpty::Device> session) {
   return CreateSession(std::move(session), !keep_log_visible_ && (num_vcs_ == 0), color_scheme_);
 }
 
