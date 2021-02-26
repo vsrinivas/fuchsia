@@ -47,7 +47,7 @@ group("deprecated_dart_app_allowlist") {
         "/test/integration:dart-inspect-vmo-test-writer",
     get_label_info(dart_package_label.fuchsia_inspect, "dir") +
         "/test/validator_puppet:dart-inspect-validator-puppet",
-    "//topaz/public/dart/fuchsia_modular_examples/fibonacci_agent:fibonacci-agent",
+    "//topaz/examples/fuchsia_modular_examples/fibonacci_agent:fibonacci-agent",
     "//topaz/public/dart/fuchsia_modular/examples/fibonacci_agent:fibonacci-agent",
     get_label_info(dart_package_label.fuchsia_services, "dir") +
         "/test_support:fuchsia-services-foo-test-server",
