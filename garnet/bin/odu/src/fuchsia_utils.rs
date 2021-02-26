@@ -28,11 +28,17 @@ pub fn get_trace_event(
             (false, OperationType::Write, 8192) => {
                 ftrace::duration(cstr!("benchmark"), cstr!("random/write/8192"), &[])
             }
-            (true, OperationType::Write, 0) => {
+            (true, OperationType::Write, 1) => {
                 ftrace::duration(cstr!("benchmark"), cstr!("sequential/write/random_size"), &[])
             }
-            (false, OperationType::Write, 0) => {
+            (false, OperationType::Write, 1) => {
                 ftrace::duration(cstr!("benchmark"), cstr!("random/write/random_size"), &[])
+            }
+            (_, OperationType::Exit, _) => {
+                ftrace::duration(cstr!("benchmark"), cstr!("exit/exit/exit"), &[])
+            }
+            (_, OperationType::Abort, _) => {
+                ftrace::duration(cstr!("benchmark"), cstr!("abort/abort/abort"), &[])
             }
             _ => ftrace::duration(cstr!("benchmark"), cstr!("unknown/unknown/unknown"), &[]),
         },
