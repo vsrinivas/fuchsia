@@ -8,6 +8,8 @@
 #include <initializer_list>
 #include <iterator>
 
+#include "version.h"
+
 namespace cpp17 {
 
 #if __cpp_lib_nonmember_container_access >= 201411L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)

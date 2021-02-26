@@ -9,6 +9,7 @@
 
 #include "internal/bit.h"
 #include "memory.h"
+#include "version.h"
 
 #if __has_include(<bit>) && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 

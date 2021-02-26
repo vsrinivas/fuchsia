@@ -10,6 +10,7 @@
 #include <iterator>
 #include <type_traits>
 
+#include "cstddef.h"
 #include "iterator.h"
 #include "memory.h"
 #include "version.h"
@@ -217,6 +218,36 @@ class span {
 };
 
 #endif  // __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+#if __cpp_deduction_guides >= 201703L
+
+template <class It, class EndOrSize>
+span(It, EndOrSize) -> span<std::remove_reference_t<decltype(*std::declval<It&>())>>;
+
+template <typename T, size_t N>
+span(T (&)[N]) -> span<T, N>;
+
+template <typename T, size_t N>
+span(std::array<T, N>&) -> span<T, N>;
+
+template <typename T, size_t N>
+span(const std::array<T, N>&) -> span<const T, N>;
+
+template <class R>
+span(R&&) -> span<std::remove_reference_t<decltype(*cpp17::data(std::declval<R>()))>>;
+
+#endif  // __cpp_deduction_guides >= 201703L
+
+template <typename T, size_t N, size_t S = internal::byte_span_size<T, N>::value>
+cpp20::span<cpp17::byte, S> as_writable_bytes(cpp20::span<T, N> s) noexcept {
+  return cpp20::span<cpp17::byte, S>(reinterpret_cast<cpp17::byte*>(s.data()), s.size_bytes());
+}
+
+template <typename T, size_t N, size_t S = internal::byte_span_size<T, N>::value>
+cpp20::span<const cpp17::byte, S> as_bytes(cpp20::span<T, N> s) noexcept {
+  return cpp20::span<const cpp17::byte, S>(reinterpret_cast<const cpp17::byte*>(s.data()),
+                                           s.size_bytes());
+}
 
 }  // namespace cpp20
 

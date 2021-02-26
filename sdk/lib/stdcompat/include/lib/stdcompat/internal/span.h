@@ -97,6 +97,10 @@ struct subspan_extent
                                             std::integral_constant<SizeType, Extent - Offset>,
                                             std::integral_constant<SizeType, dynamic_extent>>> {};
 
+template <typename T, size_t Extent>
+using byte_span_size =
+    std::integral_constant<size_t, Extent == dynamic_extent ? dynamic_extent : Extent * sizeof(T)>;
+
 }  // namespace internal
 }  // namespace cpp20
 

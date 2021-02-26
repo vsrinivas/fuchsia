@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "internal/utility.h"
+#include "version.h"
 
 namespace cpp17 {
 // Use alias for cpp17 and above.

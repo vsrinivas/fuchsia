@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <span>
 #include <type_traits>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -716,12 +717,114 @@ TEST(SpanTest, LastWithStaticExtent) {
   static_assert(span_last_check_with_static_extent<const int, 20>(), "");
 }
 
+TEST(SpanTest, AsWriteableBytesWithDynamicExtent) {
+  std::vector<int> a = {1, 2, 3, 5};
+  cpp20::span<int> view = a;
+  auto byte_view = cpp20::as_writable_bytes(view);
+
+  static_assert(std::is_same<decltype(byte_view), cpp20::span<cpp17::byte>>::value, "");
+
+  EXPECT_TRUE(are_pointers_equal(byte_view.data(), view.data()));
+  EXPECT_EQ(byte_view.size(), view.size_bytes());
+}
+
+TEST(SpanTest, AsWriteableBytesWithStaticExtent) {
+  std::vector<int> a = {1, 2, 3, 5};
+  cpp20::span<int, 4> view(a);
+  auto byte_view = cpp20::as_writable_bytes(view);
+
+  static_assert(std::is_same<decltype(byte_view), cpp20::span<cpp17::byte, 4 * sizeof(int)>>::value,
+                "");
+
+  EXPECT_TRUE(are_pointers_equal(byte_view.data(), view.data()));
+  EXPECT_EQ(byte_view.size(), view.size_bytes());
+}
+
+TEST(SpanTest, AsBytesWithDynamicExtent) {
+  std::vector<int> a = {1, 2, 3, 5};
+  cpp20::span<int> view = a;
+  auto byte_view = cpp20::as_bytes(view);
+
+  static_assert(std::is_same<decltype(byte_view), cpp20::span<const cpp17::byte>>::value, "");
+
+  EXPECT_TRUE(are_pointers_equal(byte_view.data(), view.data()));
+  EXPECT_EQ(byte_view.size(), view.size_bytes());
+}
+
+TEST(SpanTest, AsBytesWithStaticExtent) {
+  std::vector<int> a = {1, 2, 3, 5};
+  cpp20::span<int, 4> view(a);
+  auto byte_view = cpp20::as_bytes(view);
+
+  static_assert(
+      std::is_same<decltype(byte_view), cpp20::span<const cpp17::byte, 4 * sizeof(int)>>::value,
+      "");
+
+  EXPECT_TRUE(are_pointers_equal(byte_view.data(), view.data()));
+  EXPECT_EQ(byte_view.size(), view.size_bytes());
+}
+
 #if __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(SpanTest, IsAliasWhenStdIsAvailable) {
   static_assert(std::is_same_v<cpp20::span<int>, std::span<int>>,
                 "cpp20::span must an alias of std::span when provided.");
   static_assert(&cpp20::dynamic_extent == &std::dynamic_extent);
+  {
+    constexpr cpp20::span<cpp20::byte>(cpp20_as_writeable_bytes*)(cpp20::span<int>) =
+        &cpp20::as_writable_bytes;
+    constexpr std::span<cpp20::byte>(std_as_writeable_bytes*)(std::span<int>) =
+        &std::as_writable_bytes;
+    static_assert(cpp20_as_writeable_bytes == std_as_writeable_bytes, "");
+  }
+  {
+    constexpr cpp20::span<cpp20::byte, sizeof(int)>(cpp20_as_writeable_bytes*)(
+        cpp20::span<int, 1>) = &cpp20::as_writable_bytes;
+    constexpr std::span<cpp20::byte, sizeof(int)>(std_as_writeable_bytes*)(std::span<int, 1>) =
+        &std::as_writable_bytes;
+    static_assert(cpp20_as_writeable_bytes == std_as_writeable_bytes, "");
+  }
+
+  {
+    constexpr cpp20::span<const cpp20::byte>(cpp20_as_writeable_bytes*)(cpp20::span<int>) =
+        &cpp20::as_writable_bytes;
+    constexpr std::span<const cpp20::byte>(cpp20_as_writeable_bytes*)(std::span<int>) =
+        &std::as_writable_bytes;
+    static_assert(cpp20_as_writeable_bytes == std_as_writeable_bytes, "");
+  }
+  {
+    constexpr cpp20::span<const cpp20::byte, sizeof(int)>(cpp20_as_bytes*)(cpp20::span<int, 1>) =
+        &cpp20::as_bytes;
+    constexpr std::span<const cpp20::byte, sizeof(int)>(std_as_bytes*)(std::span<int, 1>) =
+        &std::as_bytes;
+    static_assert(cpp20_as_bytes == std_as_bytes, "");
+  }
+}
+
+#endif
+
+#if __cpp_deduction_guides >= 201703L
+
+TEST(SpanTest, DeductionGuideCheck) {
+  std::vector<int> a = {1, 2, 3, 4};
+  int b[4] = {};
+  std::array<int, 4> c = {};
+  const std::array<int, 4>& d = {};
+
+  [[gnu::unused]] cpp20::span it_end_or_size{a.data(), a.size()};
+  static_assert(std::is_same<decltype(it_end_or_size), cpp20::span<int>>::value, "");
+
+  [[gnu::unused]] cpp20::span carray{b};
+  static_assert(std::is_same<decltype(carray), cpp20::span<int, 4>>::value, "");
+
+  [[gnu::unused]] cpp20::span typed_array{c};
+  static_assert(std::is_same<decltype(typed_array), cpp20::span<int, 4>>::value, "");
+
+  [[gnu::unused]] cpp20::span const_typed_array{d};
+  static_assert(std::is_same<decltype(const_typed_array), cpp20::span<const int, 4>>::value, "");
+
+  [[gnu::unused]] cpp20::span container_with_data_and_size{a};
+  static_assert(std::is_same<decltype(container_with_data_and_size), cpp20::span<int>>::value, "");
 }
 
 #endif
