@@ -90,6 +90,12 @@ fidl("llcpptest.transitional.test") {
   sources = [ "transitional.test.fidl" ]
 }
 
+fidl("fidl.test.coding.fuchsia") {
+  visibility = [ ":*" ]
+  sources = [ "llcpp.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
 executable("fidl_llcpp_type_tests_bin") {
   testonly = true
 
@@ -178,11 +184,49 @@ fuchsia_unittest_component("fidl_llcpp_builder_tests") {
   deps = [ ":fidl_llcpp_builder_tests_bin" ]
 }
 
+executable("fidl_llcpp_dispatcher_tests_bin") {
+  testonly = true
+
+  output_name = "fidl_llcpp_dispatcher_tests"
+
+  sources = [
+    "llcpp_bind_server_overloads_test.cc",
+    "llcpp_client_test.cc",
+    "llcpp_gen_api_test.cc",
+    "llcpp_server_test.cc",
+    "llcpp_transaction_tests.cc",
+    "llcpp_types_tests.cc",
+  ]
+
+  deps = [
+    ":fidl.test.coding.fuchsia_llcpp",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-llcpp",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_unittest_component("fidl_llcpp_dispatcher_tests") {
+  manifest = "meta/fidl_llcpp_dispatcher_tests.cmx"
+  deps = [ ":fidl_llcpp_dispatcher_tests_bin" ]
+}
+
 fuchsia_test_package("fidl_llcpp_tests") {
   test_components = [
     ":fidl_llcpp_builder_tests",
     ":fidl_llcpp_conformance_tests",
     ":fidl_llcpp_type_tests",
+    ":fidl_llcpp_dispatcher_tests",
   ]
 }
 

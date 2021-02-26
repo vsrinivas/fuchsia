@@ -186,6 +186,7 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/lib/fake-clock/lib:lib",
     "//src/lib/fidl/c/llcpp_interop_tests:bin",
     "//src/lib/fidl/c/walker_tests:test_sources",
+    "//src/lib/fidl/llcpp/tests:fidl_llcpp_dispatcher_tests_bin",
     "//src/lib/fidl/llcpp/tests:fidl_llcpp_type_tests_bin",
     "//src/lib/framebuffer:framebuffer",
     "//src/lib/framebuffer/test:framebuffer-test",

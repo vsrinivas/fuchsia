@@ -16,7 +16,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fidl/test/coding/fuchsia/llcpp/fidl.h>
-#include <fidl/test/coding/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 namespace {

@@ -34,12 +34,6 @@ source_set("test_sources") {
     "fidl_align_tests.cc",
     "fidl_coded_types.cc",
     "formatting_tests.cc",
-    "llcpp_bind_server_overloads_test.cc",
-    "llcpp_client_test.cc",
-    "llcpp_gen_api_test.cc",
-    "llcpp_server_test.cc",
-    "llcpp_transaction_tests.cc",
-    "llcpp_types_tests.cc",
     "message_tests.cc",
     "on_error_handle_tests.cc",
     "validating_tests.cc",
@@ -180,7 +174,6 @@ fidl("fidl.test.coding.fuchsia") {
   visibility = [ ":*" ]
   sources = [
     "extra_messages_fuchsia.test.fidl",
-    "llcpp.test.fidl",
     "messages.test.fidl",
   ]
   public_deps = [ "//zircon/vdso/zx" ]

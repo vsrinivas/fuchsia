@@ -15,10 +15,7 @@
 #include <type_traits>
 
 #include <fidl/test/coding/fuchsia/llcpp/fidl.h>
-#include <fidl/test/coding/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
-
-#include "fidl_coded_types.h"
 
 namespace {
 
