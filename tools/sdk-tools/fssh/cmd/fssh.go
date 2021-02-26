@@ -45,9 +45,9 @@ func main() {
 	// target related options
 	privateKeyFlag := flag.String("private-key", "", "Uses additional private key when using ssh to access the device.")
 	deviceNameFlag := flag.String("device-name", "", `Serves packages to a device with the given device hostname. Cannot be used with --device-ip."
-		  If neither --device-name nor --device-ip are specified, the device-name configured using fconfig.sh is used.`)
+		  If neither --device-name nor --device-ip are specified, the device-name configured using fconfig is used.`)
 	deviceIPFlag := flag.String("device-ip", "", `Serves packages to a device with the given device ip address. Cannot be used with --device-name."
-		  If neither --device-name nor --device-ip are specified, the device-name configured using fconfig.sh is used.`)
+		  If neither --device-name nor --device-ip are specified, the device-name configured using fconfig is used.`)
 	sshConfigFlag := flag.String("sshconfig", "", "Use the specified sshconfig file instead of fssh's version.")
 	flag.Var(&level, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
 
@@ -63,7 +63,7 @@ func main() {
 
 	targetAddress, err := sdk.ResolveTargetAddress(*deviceIPFlag, *deviceNameFlag)
 	if err != nil {
-		log.Fatalf("Could not determine target address with specified device-ip: %v, device-name: %v: %v", *deviceIPFlag, *deviceNameFlag, err)
+		log.Fatalf("%v", err)
 	}
 	log.Debugf("Using target address: %v", targetAddress)
 

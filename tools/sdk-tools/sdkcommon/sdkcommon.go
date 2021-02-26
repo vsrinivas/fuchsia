@@ -904,6 +904,8 @@ func (sdk SDKProperties) ResolveTargetAddress(deviceIP string, deviceName string
 		err           error
 	)
 
+	helpfulTipMsg := `Try running "device-finder list -full" and then "fconfig set-device <device_name> --image <image_name> --default".`
+
 	// If  there is a deviceIP address, use it.
 	if deviceIP != "" {
 		targetAddress = deviceIP
@@ -912,23 +914,24 @@ func (sdk SDKProperties) ResolveTargetAddress(deviceIP string, deviceName string
 		if deviceName == "" {
 			// No name passed in, use the default name.
 			if deviceName, err = sdk.GetDefaultDeviceName(); err != nil {
-				return "", fmt.Errorf("could not determine default device name: %v", err)
+				return "", fmt.Errorf("could not determine default device name.\n%v %v", helpfulTipMsg, err)
 			}
 		}
 		if deviceName == "" {
 			// No address specified, no device name specified, and no device configured as the default.
-			return "", errors.New("invalid arguments. Need to specify --device-ip or --device-name or use fconfig to configure a default device")
+			return "", fmt.Errorf("invalid arguments. Need to specify --device-ip or --device-name or use fconfig to configure a default device.\n%v", helpfulTipMsg)
 		}
 
 		// look up a configured address by devicename
 		targetAddress, err = sdk.GetFuchsiaProperty(deviceName, DeviceIPKey)
 		if err != nil {
-			return "", fmt.Errorf("could not read configuration information for  %v: %v", deviceName, err)
+			return "", fmt.Errorf("could not read configuration information for %v.\n%v %v", deviceName, helpfulTipMsg, err)
 		}
 		// if still nothing, resolve the device address by name
 		if targetAddress == "" {
 			if targetAddress, err = sdk.GetAddressByName(deviceName); err != nil {
-				return "", fmt.Errorf("cannot get target address for %v: %v", deviceName, err)
+				return "", fmt.Errorf(`cannot get target address for %v.
+Try running "device-finder list -full" and verify the name matches in "fconfig get-all". %v`, deviceName, err)
 			}
 		}
 	}

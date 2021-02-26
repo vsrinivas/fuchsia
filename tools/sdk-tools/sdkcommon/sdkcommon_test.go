@@ -745,8 +745,9 @@ func TestResolveTargetAddress(t *testing.T) {
 			deviceIP:        "",
 			deviceName:      "",
 			expectedAddress: "",
-			expectedError:   "invalid arguments. Need to specify --device-ip or --device-name or use fconfig to configure a default device",
-			execHelper:      helperCommandForNoDefaultDevice,
+			expectedError: `invalid arguments. Need to specify --device-ip or --device-name or use fconfig to configure a default device.
+Try running "device-finder list -full" and then "fconfig set-device <device_name> --image <image_name> --default".`,
+			execHelper: helperCommandForNoDefaultDevice,
 		},
 		{
 			deviceIP:        resolvedAddr,
@@ -776,8 +777,9 @@ func TestResolveTargetAddress(t *testing.T) {
 			deviceIP:          "",
 			deviceName:        "unknown-test-device",
 			expectedAddress:   "",
-			expectedError:     "cannot get target address for unknown-test-device: resolve.go:76: no devices found for domains: [unknown-test-device]: exit status 2",
-			execHelper:        helperCommandForGetFuchsiaProperty,
+			expectedError: `cannot get target address for unknown-test-device.
+Try running "device-finder list -full" and verify the name matches in "fconfig get-all". resolve.go:76: no devices found for domains: [unknown-test-device]: exit status 2`,
+			execHelper: helperCommandForGetFuchsiaProperty,
 		},
 	}
 	for i, test := range tests {
