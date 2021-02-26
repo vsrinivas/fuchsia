@@ -10,9 +10,8 @@ use crate::protocol::{
 use anyhow::{Context as _, Error};
 use fuchsia_zircon::Status;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{hash_map::Entry, BTreeSet, HashMap, HashSet};
 use std::convert::TryFrom;
-use std::fmt;
 use std::net::Ipv4Addr;
 use thiserror::Error;
 
@@ -130,8 +129,8 @@ pub enum ServerError {
     #[error("client request error: {}", _0)]
     ClientMessageError(ProtocolError),
 
-    #[error("error manipulating server cache: {}", _0)]
-    ServerCacheUpdateFailure(StashError),
+    #[error("error manipulating server data store: {}", _0)]
+    DataStoreUpdateFailure(DataStoreError),
 
     #[error("server not configured with an ip address")]
     ServerMissingIpAddr,
@@ -155,6 +154,16 @@ pub enum ServerError {
 
     #[error("client request message missing requested ip addr")]
     MissingRequestedAddr,
+
+    #[error("decline from unrecognized client: {:?}", _0)]
+    DeclineFromUnrecognizedClient(ClientIdentifier),
+
+    #[error(
+        "declined ip mismatched with lease: got declined addr {:?}, want client addr {:?}",
+        declined,
+        client
+    )]
+    DeclineIpMismatch { declined: Option<Ipv4Addr>, client: Option<Ipv4Addr> },
 }
 
 impl From<AddressPoolError> for ServerError {
@@ -163,24 +172,17 @@ impl From<AddressPoolError> for ServerError {
     }
 }
 
-/// This struct is used to hold the `anyhow::Error` returned by the server's
-/// Stash manipulation methods. We manually implement `PartialEq` so this
+/// This struct is used to hold the error returned by the server's
+/// DataStore manipulation methods. We manually implement `PartialEq` so this
 /// struct could be included in the `ServerError` enum,
 /// which are asserted for equality in tests.
-#[derive(Debug)]
-pub struct StashError {
-    error: Error,
-}
+#[derive(Debug, Error)]
+#[error(transparent)]
+pub struct DataStoreError(#[from] anyhow::Error);
 
-impl PartialEq for StashError {
+impl PartialEq for DataStoreError {
     fn eq(&self, _other: &Self) -> bool {
         false
-    }
-}
-
-impl fmt::Display for StashError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(&self, f)
     }
 }
 
@@ -304,7 +306,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
         let offer = self.build_offer(disc, offered_ip)?;
         match self.store_client_config(Ipv4Addr::from(offer.yiaddr), client_id, &offer.options) {
             Ok(()) => Ok(ServerAction::SendResponse(offer, dest)),
-            Err(e) => Err(ServerError::ServerCacheUpdateFailure(StashError { error: e })),
+            Err(e) => Err(ServerError::DataStoreUpdateFailure(e.into())),
         }
     }
 
@@ -479,16 +481,60 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
         Ok(ServerAction::SendResponse(self.build_ack(req, client_ip)?, dest))
     }
 
-    /// TODO(fxbug.dev/21422): Ensure server behavior is as intended.
+    // RFC 2131 provides limited guidance for implementation of DHCPDECLINE handling. From
+    // https://tools.ietf.org/html/rfc2131#section-4.3.3:
+    //
+    //   If the server receives a DHCPDECLINE message... The server MUST mark the network address
+    //   as not available...
+    //
+    // However, the RFC does not specify what a valid DHCPDECLINE message looks like. If all
+    // DHCPDECLINE messages are acted upon, then the server will be exposed to DoS attacks.
+    //
+    // We define a valid DHCPDECLINE message as:
+    //   * ServerIdentifier matches the server
+    //   * server has a record of a lease to the client
+    //   * the declined IP matches the leased IP
+    //
+    // Only if those three conditions obtain, the server will then invalidate the lease and mark
+    // the address as allocated and unavailable for assignment (if it isn't already).
     fn handle_decline(&mut self, dec: Message) -> Result<ServerAction, ServerError> {
         let declined_ip =
             get_requested_ip_addr(&dec).ok_or_else(|| ServerError::NoRequestedAddrForDecline)?;
-        if is_recipient(&self.params.server_ips, &dec)
-            && self.validate_requested_addr_with_client(&dec, declined_ip).is_err()
-        {
-            let () = self.pool.allocate_addr(*declined_ip)?;
+        let id = ClientIdentifier::from(&dec);
+        if !is_recipient(&self.params.server_ips, &dec) {
+            return Err(ServerError::IncorrectDHCPServer(
+                get_server_id_from(&dec).ok_or(ServerError::MissingServerIdentifier)?,
+            ));
         }
-        self.cache.remove(&ClientIdentifier::from(&dec));
+        let entry = match self.cache.entry(id) {
+            Entry::Occupied(v) => v,
+            Entry::Vacant(v) => {
+                return Err(ServerError::DeclineFromUnrecognizedClient(v.into_key()))
+            }
+        };
+        let () = match entry.get() {
+            &CachedConfig { client_addr: Some(ip), .. } if ip == *declined_ip => (),
+            &CachedConfig { client_addr, .. } => {
+                return Err(ServerError::DeclineIpMismatch {
+                    declined: Some(*declined_ip),
+                    client: client_addr,
+                })
+            }
+        };
+        // The declined address must be marked allocated/unavailable. Depending on whether the
+        // client declines the address after an OFFER or an ACK, a declined address may already be
+        // marked allocated. Attempt to allocate the declined address, but treat the address
+        // already being allocated as success.
+        let () = self.pool.allocate_addr(*declined_ip).or_else(|e| match e {
+            AddressPoolError::UnavailableIpv4AddrAllocation(ip) if ip == *declined_ip => Ok(()),
+            e => Err(e),
+        })?;
+        let (id, _config) = entry.remove_entry();
+        if let Some(store) = &mut self.store {
+            let () = store
+                .delete(&id)
+                .map_err(|e| ServerError::DataStoreUpdateFailure(anyhow::Error::from(e).into()))?;
+        }
         Ok(ServerAction::AddressDecline(*declined_ip))
     }
 
@@ -504,9 +550,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
             config.client_addr = None;
             if let Some(store) = self.store.as_mut() {
                 let () = store.store_client_config(&client_id, config).map_err(|e| {
-                    ServerError::ServerCacheUpdateFailure(StashError {
-                        error: anyhow::Error::from(e),
-                    })
+                    ServerError::DataStoreUpdateFailure(anyhow::Error::from(e).into())
                 })?;
             }
             Ok(ServerAction::AddressRelease(rel.ciaddr))
@@ -3009,8 +3053,7 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_decline_for_valid_client_binding_updates_cache() -> Result<(), Error>
-    {
+    async fn test_dispatch_with_decline_for_allocated_addr_returns_ok() -> Result<(), Error> {
         let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
         let mut decline = new_test_decline(&server);
 
@@ -3027,16 +3070,44 @@ pub mod tests {
         );
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
-
         assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
         assert!(!server.cache.contains_key(&client_id), "client config incorrectly retained");
+        matches::assert_matches!(
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            [DataStoreAction::Delete { client_id: id }] if *id == client_id
+        );
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_decline_for_invalid_client_binding_updates_pool_and_cache(
-    ) -> Result<(), Error> {
+    async fn test_dispatch_with_decline_for_available_addr_returns_ok() -> Result<(), Error> {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+        let mut decline = new_test_decline(&server);
+
+        let declined_ip = random_ipv4_generator();
+        let client_id = ClientIdentifier::from(&decline);
+
+        decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
+        server.cache.insert(
+            client_id.clone(),
+            CachedConfig::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+        );
+        server.pool.available_addrs.insert(declined_ip);
+
+        assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
+        assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
+        assert!(!server.cache.contains_key(&client_id), "client config incorrectly retained");
+        matches::assert_matches!(
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            [DataStoreAction::Delete { client_id: id }] if *id == client_id
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_decline_for_mismatched_addr_returns_err() -> Result<(), Error> {
         let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
         let mut decline = new_test_decline(&server);
 
@@ -3045,11 +3116,7 @@ pub mod tests {
 
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
-        // Even though declined client ip does not match client binding,
-        // the server must update its address pool and mark declined ip as
-        // allocated, and delete client bindings from its cache.
         let client_ip_according_to_server = random_ipv4_generator();
-
         server.pool.allocated_addrs.insert(client_ip_according_to_server);
         server.pool.available_addrs.insert(declined_ip);
 
@@ -3065,17 +3132,21 @@ pub mod tests {
             )?,
         );
 
-        assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
-
-        assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
-        assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
-        assert!(!server.cache.contains_key(&client_id), "client config incorrectly retained");
+        assert_eq!(
+            server.dispatch(decline),
+            Err(ServerError::DeclineIpMismatch {
+                declined: Some(declined_ip),
+                client: Some(client_ip_according_to_server)
+            })
+        );
+        assert!(server.pool.addr_is_available(&declined_ip), "addr not marked available");
+        assert!(!server.pool.addr_is_allocated(&declined_ip), "addr marked allocated");
+        assert!(server.cache.contains_key(&client_id), "client config deleted from cache");
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_decline_for_expired_client_binding_updates_pool_and_cache(
-    ) -> Result<(), Error> {
+    async fn test_dispatch_with_decline_for_expired_lease_returns_ok() -> Result<(), Error> {
         let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
         let mut decline = new_test_decline(&server);
 
@@ -3092,74 +3163,45 @@ pub mod tests {
         );
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
-
         assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
         assert!(!server.cache.contains_key(&client_id), "client config incorrectly retained");
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_decline_known_client_for_address_not_in_server_pool_returns_error(
-    ) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
-        let mut decline = new_test_decline(&server);
-
-        let declined_ip = random_ipv4_generator();
-
-        decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
-
-        // Server contains client bindings which reflect a different address
-        // than the one being declined.
-        server.cache.insert(
-            ClientIdentifier::from(&decline),
-            CachedConfig::new(
-                Some(random_ipv4_generator()),
-                Vec::new(),
-                time_source.now(),
-                std::u32::MAX,
-            )?,
-        );
-
-        assert_eq!(
-            server.dispatch(decline),
-            Err(ServerError::ServerAddressPoolFailure(
-                AddressPoolError::UnavailableIpv4AddrAllocation(declined_ip)
-            ))
+        matches::assert_matches!(
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            [DataStoreAction::Delete { client_id: id }] if *id == client_id
         );
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_decline_for_unknown_client_updates_pool() -> Result<(), Error> {
+    async fn test_dispatch_with_decline_for_unknown_client_returns_err() -> Result<(), Error> {
         let mut server = new_test_minimal_server()?;
         let mut decline = new_test_decline(&server);
 
         let declined_ip = random_ipv4_generator();
+        let client_id = ClientIdentifier::from(&decline);
 
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
         server.pool.available_addrs.insert(declined_ip);
 
-        assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
-
-        assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
-        assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
+        assert_eq!(
+            server.dispatch(decline),
+            Err(ServerError::DeclineFromUnrecognizedClient(client_id))
+        );
+        assert!(server.pool.addr_is_available(&declined_ip), "addr not marked available");
+        assert!(!server.pool.addr_is_allocated(&declined_ip), "addr marked allocated");
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    // TODO(fxbug.dev/21422): Revisit when decline behavior is verified.
-    async fn test_dispatch_with_decline_for_incorrect_server_recepient_deletes_client_binding(
-    ) -> Result<(), Error> {
+    async fn test_dispatch_with_decline_for_incorrect_server_returns_err() -> Result<(), Error> {
         let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
-        server.params.server_ips = vec![std_ip_v4!("192.168.1.1")];
+        server.params.server_ips = vec![random_ipv4_generator()];
 
-        let mut decline = new_test_decline(&server);
-
-        // Updating decline request to have wrong server ip.
-        decline.options.remove(1);
-        decline.options.push(DhcpOption::ServerIdentifier(std_ip_v4!("1.2.3.4")));
+        let mut decline = new_client_message(MessageType::DHCPDECLINE);
+        let server_id = random_ipv4_generator();
+        decline.options.push(DhcpOption::ServerIdentifier(server_id));
 
         let declined_ip = random_ipv4_generator();
         let client_id = ClientIdentifier::from(&decline);
@@ -3172,17 +3214,15 @@ pub mod tests {
             CachedConfig::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
         );
 
-        assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
-
-        assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
+        assert_eq!(server.dispatch(decline), Err(ServerError::IncorrectDHCPServer(server_id)));
+        assert!(!server.pool.addr_is_available(&declined_ip), "addr marked available");
         assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
-        assert!(!server.cache.contains_key(&client_id), "client config incorrectly retained");
+        assert!(server.cache.contains_key(&client_id), "client config not retained");
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_decline_without_requested_addr_returns_error() -> Result<(), Error>
-    {
+    async fn test_dispatch_with_decline_without_requested_addr_returns_err() -> Result<(), Error> {
         let mut server = new_test_minimal_server()?;
         let decline = new_test_decline(&server);
 
