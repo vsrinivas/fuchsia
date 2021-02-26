@@ -152,10 +152,31 @@ void PrettyPrinter::DisplayDuration(zx_duration_t duration_ns) {
   *this << ResetColor;
 }
 
+#define ExceptionChannelTypeCase(name) \
+  case name:                           \
+    *this << #name;                    \
+    break
+
+void PrettyPrinter::DisplayExceptionChannelType(uint32_t type) {
+  *this << Blue;
+  switch (type) {
+    ExceptionChannelTypeCase(ZX_EXCEPTION_CHANNEL_TYPE_NONE);
+    ExceptionChannelTypeCase(ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER);
+    ExceptionChannelTypeCase(ZX_EXCEPTION_CHANNEL_TYPE_THREAD);
+    ExceptionChannelTypeCase(ZX_EXCEPTION_CHANNEL_TYPE_PROCESS);
+    ExceptionChannelTypeCase(ZX_EXCEPTION_CHANNEL_TYPE_JOB);
+    ExceptionChannelTypeCase(ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER);
+    default:
+      *this << static_cast<uint32_t>(type);
+      break;
+  }
+  *this << ResetColor;
+}
+
 #define ExceptionStateNameCase(name) \
   case name:                         \
-    *this << #name << ResetColor;    \
-    return
+    *this << #name;                  \
+    break
 
 void PrettyPrinter::DisplayExceptionState(uint32_t state) {
   *this << Blue;
@@ -163,9 +184,63 @@ void PrettyPrinter::DisplayExceptionState(uint32_t state) {
     ExceptionStateNameCase(ZX_EXCEPTION_STATE_TRY_NEXT);
     ExceptionStateNameCase(ZX_EXCEPTION_STATE_HANDLED);
     default:
-      *this << static_cast<uint32_t>(state) << ResetColor;
-      return;
+      *this << static_cast<uint32_t>(state);
+      break;
   }
+  *this << ResetColor;
+}
+
+#define FeatureKindNameCase(name) \
+  case name:                      \
+    *this << #name;               \
+    break
+
+void PrettyPrinter::DisplayFeatureKind(uint32_t kind) {
+  *this << Red;
+  switch (kind) {
+    FeatureKindNameCase(ZX_FEATURE_KIND_CPU);
+    FeatureKindNameCase(ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT);
+    FeatureKindNameCase(ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT);
+    default:
+      *this << static_cast<uint32_t>(kind);
+      break;
+  }
+  *this << ResetColor;
+}
+
+#define GuestTrapNameCase(name) \
+  case name:                    \
+    *this << #name;             \
+    break
+
+void PrettyPrinter::DisplayGuestTrap(uint32_t trap_id) {
+  *this << Red;
+  switch (trap_id) {
+    GuestTrapNameCase(ZX_GUEST_TRAP_BELL);
+    GuestTrapNameCase(ZX_GUEST_TRAP_IO);
+    GuestTrapNameCase(ZX_GUEST_TRAP_MEM);
+    default:
+      *this << static_cast<uint32_t>(trap_id);
+      break;
+  }
+  *this << ResetColor;
+}
+
+#define KoidNameCase(name)                                         \
+  case name:                                                       \
+    *this << #name << " (" << static_cast<uint64_t>(state) << ")"; \
+    break
+
+void PrettyPrinter::DisplayKoid(uint64_t state) {
+  *this << Red;
+  switch (state) {
+    KoidNameCase(ZX_KOID_INVALID);
+    KoidNameCase(ZX_KOID_KERNEL);
+    default:
+      *this << static_cast<uint64_t>(state);
+      break;
+  }
+  *this << ResetColor;
 }
 
 void PrettyPrinter::DisplayHexa8(uint8_t value) {

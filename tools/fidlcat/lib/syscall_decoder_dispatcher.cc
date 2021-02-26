@@ -40,17 +40,28 @@ std::unique_ptr<fidl_codec::Type> SyscallTypeToFidlCodecType(fidlcat::SyscallTyp
       return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kClock);
     case SyscallType::kDuration:
       return std::make_unique<fidl_codec::Int64Type>(fidl_codec::Int64Type::Kind::kDuration);
+    case SyscallType::kExceptionChannelType:
+      return std::make_unique<fidl_codec::Uint32Type>(
+          fidl_codec::Uint32Type::Kind::kExceptionChannelType);
     case SyscallType::kExceptionState:
       return std::make_unique<fidl_codec::Uint32Type>(
           fidl_codec::Uint32Type::Kind::kExceptionState);
+    case SyscallType::kFeatureKind:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kFeatureKind);
+    case SyscallType::kFutex:
+      return std::make_unique<fidl_codec::Int32Type>(fidl_codec::Int32Type::Kind::kFutex);
     case SyscallType::kGpAddr:
       return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kGpAddr);
+    case SyscallType::kGuestTrap:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kGuestTrap);
     case SyscallType::kHandle:
       return std::make_unique<fidl_codec::HandleType>();
     case SyscallType::kInt32:
       return std::make_unique<fidl_codec::Int32Type>();
     case SyscallType::kInt64:
       return std::make_unique<fidl_codec::Int64Type>();
+    case SyscallType::kKoid:
+      return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kKoid);
     case SyscallType::kMonotonicTime:
       return std::make_unique<fidl_codec::Int64Type>(fidl_codec::Int64Type::Kind::kMonotonicTime);
     case SyscallType::kObjectInfoTopic:

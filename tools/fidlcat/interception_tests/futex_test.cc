@@ -36,10 +36,10 @@ FUTEX_WAIT_DISPLAY_TEST(ZxFutexWait, ZX_OK,
                         "\x1B[32m0.000000\x1B[0m "
                         "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                         "zx_futex_wait("
-                        "value_ptr: \x1B[32mzx_futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
-                        "current_value: \x1B[32mzx_futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
+                        "value_ptr: \x1B[32mzx.futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
+                        "current_value: \x1B[32mzx.futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
                         "new_futex_owner: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-                        "deadline: \x1B[32mtime\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+                        "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
                         "\x1B[32m0.000000\x1B[0m "
                         "  -> \x1B[32mZX_OK\x1B[0m\n");
 
@@ -66,7 +66,7 @@ FUTEX_WAKE_DISPLAY_TEST(ZxFutexWake, ZX_OK,
                         "\x1B[32m0.000000\x1B[0m "
                         "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                         "zx_futex_wake("
-                        "value_ptr: \x1B[32mzx_futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
+                        "value_ptr: \x1B[32mzx.futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
                         "wake_count: \x1B[32muint32\x1B[0m = \x1B[34m3\x1B[0m)\n"
                         "\x1B[32m0.000000\x1B[0m "
                         "  -> \x1B[32mZX_OK\x1B[0m\n");
@@ -107,10 +107,10 @@ FUTEX_REQUEUE_DISPLAY_TEST(ZxFutexRequeue, ZX_OK,
                            "\x1B[32m0.000000\x1B[0m "
                            "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                            "zx_futex_requeue("
-                           "value_ptr: \x1B[32mzx_futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
+                           "value_ptr: \x1B[32mzx.futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
                            "wake_count: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m, "
-                           "current_value: \x1B[32mzx_futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
-                           "requeue_ptr: \x1B[32mzx_futex_t\x1B[0m = \x1B[31m98765\x1B[0m, "
+                           "current_value: \x1B[32mzx.futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
+                           "requeue_ptr: \x1B[32mzx.futex_t\x1B[0m = \x1B[31m98765\x1B[0m, "
                            "requeue_count: \x1B[32muint32\x1B[0m = \x1B[34m3\x1B[0m, "
                            "new_requeue_owner: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
                            "\x1B[32m0.000000\x1B[0m "
@@ -143,7 +143,7 @@ FUTEX_WAKE_SINGLE_OWNER_DISPLAY_TEST(
     "\n"
     "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "zx_futex_wake_single_owner(value_ptr: \x1B[32mzx_futex_t\x1B[0m = \x1B[31m56789\x1B[0m)\n"
+    "zx_futex_wake_single_owner(value_ptr: \x1B[32mzx.futex_t\x1B[0m = \x1B[31m56789\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
@@ -184,9 +184,9 @@ FUTEX_REQUEUE_SINGLE_OWNER_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_futex_requeue_single_owner("
-    "value_ptr: \x1B[32mzx_futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
-    "current_value: \x1B[32mzx_futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
-    "requeue_ptr: \x1B[32mzx_futex_t\x1B[0m = \x1B[31m98765\x1B[0m, "
+    "value_ptr: \x1B[32mzx.futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
+    "current_value: \x1B[32mzx.futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
+    "requeue_ptr: \x1B[32mzx.futex_t\x1B[0m = \x1B[31m98765\x1B[0m, "
     "requeue_count: \x1B[32muint32\x1B[0m = \x1B[34m3\x1B[0m, "
     "new_requeue_owner: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
@@ -221,9 +221,9 @@ FUTEX_GET_OWNER_DISPLAY_TEST(
     "\n"
     "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "zx_futex_get_owner(value_ptr: \x1B[32mzx_futex_t\x1B[0m = \x1B[31m56789\x1B[0m)\n"
+    "zx_futex_get_owner(value_ptr: \x1B[32mzx.futex_t\x1B[0m = \x1B[31m56789\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (koid: \x1B[32mzx_koid_t\x1B[0m = \x1B[31m4252\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (koid: \x1B[32mzx.koid\x1B[0m = \x1B[31m4252\x1B[0m)\n");
 
 // zx_futex_wake_handle_close_thread_exit tests.
 
@@ -259,7 +259,7 @@ FUTEX_WAKE_HANDLE_CLOSE_THREAD_EXIT_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_futex_wake_handle_close_thread_exit("
-    "value_ptr: \x1B[32mzx_futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
+    "value_ptr: \x1B[32mzx.futex_t\x1B[0m = \x1B[31m56789\x1B[0m, "
     "wake_count: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m, "
     "new_value: \x1B[32mint32\x1B[0m = \x1B[34m-1\x1B[0m, "
     "close_handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n");

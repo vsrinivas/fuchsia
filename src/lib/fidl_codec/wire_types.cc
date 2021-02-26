@@ -255,7 +255,14 @@ void Int16Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
 
 void Int16Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt16Type(this); }
 
-std::string Int32Type::Name() const { return "int32"; }
+std::string Int32Type::Name() const {
+  switch (kind_) {
+    case Kind::kDecimal:
+      return "int32";
+    case Kind::kFutex:
+      return "zx.futex_t";
+  }
+}
 
 void Int32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   uint64_t absolute;
@@ -266,6 +273,13 @@ void Int32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
     switch (kind_) {
       case Kind::kDecimal:
         printer << Blue;
+        if (negative) {
+          printer << '-';
+        }
+        printer << absolute << ResetColor;
+        break;
+      case Kind::kFutex:
+        printer << Red;
         if (negative) {
           printer << '-';
         }
@@ -404,8 +418,14 @@ std::string Uint32Type::Name() const {
     case Kind::kDecimal:
     case Kind::kHexaDecimal:
       return "uint32";
+    case Kind::kExceptionChannelType:
+      return "zx_info_thread_t::wait_exception_channel_type";
     case Kind::kExceptionState:
       return "zx.exception_state";
+    case Kind::kFeatureKind:
+      return "zx.feature_kind_t";
+    case Kind::kGuestTrap:
+      return "zx.guest_trap";
     case Kind::kObjectInfoTopic:
       return "zx.object_info_topic";
     case Kind::kPciBarType:
@@ -445,8 +465,17 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
       case Kind::kDecimal:
         printer << Blue << absolute << ResetColor;
         break;
+      case Kind::kExceptionChannelType:
+        printer.DisplayExceptionChannelType(static_cast<uint32_t>(absolute));
+        break;
       case Kind::kExceptionState:
         printer.DisplayExceptionState(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kFeatureKind:
+        printer.DisplayFeatureKind(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kGuestTrap:
+        printer.DisplayGuestTrap(static_cast<uint32_t>(absolute));
         break;
       case Kind::kHexaDecimal:
         printer.DisplayHexa32(static_cast<uint32_t>(absolute));
@@ -486,6 +515,8 @@ std::string Uint64Type::Name() const {
     case Kind::kDecimal:
     case Kind::kHexaDecimal:
       return "uint64";
+    case Kind::kKoid:
+      return "zx.koid";
     case Kind::kGpAddr:
       return "zx.gpaddr";
     case Kind::kPaddr:
@@ -515,6 +546,9 @@ void Uint64Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         break;
       case Kind::kHexaDecimal:
         printer.DisplayHexa64(absolute);
+        break;
+      case Kind::kKoid:
+        printer.DisplayKoid(absolute);
         break;
       case Kind::kPaddr:
         printer.DisplayPaddr(absolute);

@@ -194,7 +194,7 @@ SYSTEM_GET_FEATURES_DISPLAY_TEST(
     "\n"
     "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_system_get_features("
-    "kind: \x1B[32mzx_feature_kind_t\x1B[0m = \x1B[31mZX_FEATURE_KIND_HW_BREAKPOINT_COUNT\x1B[0m)\n"
+    "kind: \x1B[32mzx.feature_kind_t\x1B[0m = \x1B[31mZX_FEATURE_KIND_HW_BREAKPOINT_COUNT\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (features: \x1B[32muint32\x1B[0m = \x1B[34m8\x1B[0m)\n");
 

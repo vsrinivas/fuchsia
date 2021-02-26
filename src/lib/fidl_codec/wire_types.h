@@ -189,7 +189,7 @@ class Int16Type : public IntegralType<int16_t> {
 
 class Int32Type : public IntegralType<int32_t> {
  public:
-  enum class Kind { kDecimal };
+  enum class Kind { kDecimal, kFutex };
 
   explicit Int32Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 
@@ -250,7 +250,10 @@ class Uint32Type : public IntegralType<uint32_t> {
     kCachePolicy,
     kClock,
     kDecimal,
+    kExceptionChannelType,
     kExceptionState,
+    kFeatureKind,
+    kGuestTrap,
     kHexaDecimal,
     kObjectInfoTopic,
     kPciBarType,
@@ -274,7 +277,7 @@ class Uint32Type : public IntegralType<uint32_t> {
 
 class Uint64Type : public IntegralType<uint64_t> {
  public:
-  enum class Kind { kDecimal, kHexaDecimal, kVaddr, kSize, kPaddr, kGpAddr, kUintptr };
+  enum class Kind { kDecimal, kHexaDecimal, kVaddr, kSize, kPaddr, kGpAddr, kUintptr, kKoid };
 
   explicit Uint64Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 

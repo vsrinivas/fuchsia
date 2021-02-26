@@ -75,19 +75,18 @@ std::unique_ptr<SystemCallTest> ZxGuestSetTrap(int64_t result, std::string_view 
     GUEST_SET_TRAP_DISPLAY_TEST_CONTENT(errno, expected);  \
   }
 
-GUEST_SET_TRAP_DISPLAY_TEST(
-    ZxGuestSetTrap, ZX_OK,
-    "\n"
-    "\x1B[32m0.000000\x1B[0m "
-    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "zx_guest_set_trap("
-    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-    "kind: \x1B[32mzx_guest_trap_t\x1B[0m = \x1B[31mZX_GUEST_TRAP_IO\x1B[0m, "
-    "addr: \x1B[32mzx_vaddr_t\x1B[0m = \x1B[34m0000000000001234\x1B[0m, "
-    "size: \x1B[32msize_t\x1B[0m = \x1B[34m16\x1B[0m, "
-    "port_handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
-    "key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m)\n"
-    "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+GUEST_SET_TRAP_DISPLAY_TEST(ZxGuestSetTrap, ZX_OK,
+                            "\n"
+                            "\x1B[32m0.000000\x1B[0m "
+                            "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+                            "zx_guest_set_trap("
+                            "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                            "kind: \x1B[32mzx.guest_trap\x1B[0m = \x1B[31mZX_GUEST_TRAP_IO\x1B[0m, "
+                            "addr: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000001234\x1B[0m, "
+                            "size: \x1B[32msize\x1B[0m = \x1B[34m16\x1B[0m, "
+                            "port_handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
+                            "key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m)\n"
+                            "\x1B[32m0.000000\x1B[0m "
+                            "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

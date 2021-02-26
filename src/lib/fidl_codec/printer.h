@@ -6,9 +6,11 @@
 #define SRC_LIB_FIDL_CODEC_PRINTER_H_
 
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/features.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/pci.h>
 #include <zircon/syscalls/port.h>
@@ -92,11 +94,23 @@ class PrettyPrinter {
   // Displays a duration.
   void DisplayDuration(zx_duration_t duration_ns);
 
+  // Displays an exception channel type.
+  void DisplayExceptionChannelType(uint32_t type);
+
   // Displays an exception state.
   void DisplayExceptionState(uint32_t state);
 
+  // Displays an feature kind.
+  void DisplayFeatureKind(uint32_t kind);
+
+  // Displays an guest trap.
+  void DisplayGuestTrap(uint32_t trap_id);
+
   // Displays a gpaddr.
   void DisplayGpAddr(zx_gpaddr_t addr);
+
+  // Displays a koid.
+  void DisplayKoid(uint64_t value);
 
   // Displays a uint8_t value in padded hexadecimal format.
   void DisplayHexa8(uint8_t value);
