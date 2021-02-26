@@ -30,6 +30,12 @@ cts_fuchsia_component("element-manager-test") {
 }
 
 cts_fuchsia_test_package("fuchsia-element-tests") {
+  # TODO(fxbug.dev/70941): Remove workaround for teardown race causing unrelated ERROR
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   test_components = [ ":element-manager-test" ]
 }
 
