@@ -40,6 +40,38 @@
   .popsection
 .endm  // .code_patching.range
 
+/// Defines an instruction range to be patched.  See .code_patching.range.
+/// This starts a range that ends with the next `.code_patching.end` directive.
+///
+/// Parameters
+///
+///   * ident
+///     - Required: See .code_patching.range.
+///
+.macro .code_patching.start ident
+  .L.code_patching.start.\@\():
+  .purgem .code_patching.end
+  .macro .code_patching.end
+    _.code_patching.end .L.code_patching.start.\@, .L.code_patching.end.\@, \ident
+  .endm
+.endm
+
+.macro _.code_patching.end.reset purge
+  .ifnb \purge
+    .purgem .code_patching.end
+  .endif
+  .macro .code_patching.end
+    .error "unmatched .code_patching.end directive"
+  .endm
+.endm
+_.code_patching.end.reset
+
+.macro _.code_patching.end start, end, ident
+  _.code_patching.end.reset purge
+  \end\():
+  .code_patching.range \start, \end, \ident
+.endm
+
 #endif  // clang-format on
 
 #endif  // ZIRCON_KERNEL_LIB_CODE_PATCHING_INCLUDE_LIB_CODE_PATCHING_ASM_H_
