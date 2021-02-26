@@ -723,14 +723,18 @@ impl Document {
                 include_path.display()
             )));
         }
-        if !other_program.info.is_empty() {
-            return Err(Error::validate(format!(
-                "manifest include had a program fields other than `runner`, which is not \
-                supported: {}",
-                include_path.display()
-            )));
-        }
         *(&mut my_program.runner) = other_program.runner.take();
+
+        for (key, value) in other_program.info.iter() {
+            if let Some(_) = my_program.info.insert(key.clone(), value.clone()) {
+                return Err(Error::validate(format!(
+                    "manifest include had a conflicting `program.{}`: {}",
+                    key,
+                    include_path.display()
+                )));
+            }
+        }
+
         Ok(())
     }
 
@@ -1606,6 +1610,7 @@ mod tests {
         serde_json::{self, json},
         serde_json5,
         std::path::Path,
+        test_case::test_case,
     };
 
     // Exercise reference parsing tests on `OfferFromRef` because it contains every reference
@@ -2010,32 +2015,34 @@ mod tests {
         let mut some = document(json!({ "program": { "binary": "bin/hello_world" } }));
         let mut other = document(json!({ "program": { "runner": "elf" } }));
         some.merge_from(&mut other, &Path::new("some/path")).unwrap();
-        let mut info = Map::new();
-        info.insert("binary".into(), Value::String("bin/hello_world".into()));
-        assert_eq!(some.program, Some(Program { runner: Some("elf".parse().unwrap()), info }));
+        let expected =
+            document(json!({ "program": { "binary": "bin/hello_world", "runner": "elf" } }));
+        assert_eq!(some.program, expected.program);
     }
 
-    #[test]
-    fn test_merge_from_program_error() {
-        {
-            let mut some = document(json!({ "program": { "runner": "elf" } }));
-            let mut other = document(json!({ "program": { "runner": "fle" } }));
-            assert_matches!(
-                some.merge_from(&mut other, &path::Path::new("some/path")),
-                Err(Error::Validate { schema_name: None, err, .. })
-                    if &err == "manifest include had a conflicting `program.runner`: some/path"
-            );
-        }
-        {
-            let mut some = document(json!({ "program": { "runner": "elf" } }));
-            let mut other = document(json!({ "program": { "binary": "bin/hello_world" } }));
-            assert_matches!(
-                some.merge_from(&mut other, &path::Path::new("some/path")),
-                Err(Error::Validate { schema_name: None, err, .. })
-                    if err.starts_with(
-                        "manifest include had a program fields other than `runner`, which is not \
-                        supported: some/path")
-            );
-        }
+    #[test_case(
+        document(json!({ "program": { "runner": "elf" } })),
+        document(json!({ "program": { "runner": "fle" } })),
+        "runner"
+        ; "when_runner_conflicts"
+    )]
+    #[test_case(
+        document(json!({ "program": { "binary": "bin/hello_world" } })),
+        document(json!({ "program": { "binary": "bin/hola_mundo" } })),
+        "binary"
+        ; "when_binary_conflicts"
+    )]
+    #[test_case(
+        document(json!({ "program": { "args": ["a".to_owned()] } })),
+        document(json!({ "program": { "args": ["b".to_owned()] } })),
+        "args"
+        ; "when_args_conflicts"
+    )]
+    fn test_merge_from_program_error(mut some: Document, mut other: Document, field: &str) {
+        assert_matches!(
+            some.merge_from(&mut other, &path::Path::new("some/path")),
+            Err(Error::Validate { schema_name: None, err, .. })
+                if err == format!("manifest include had a conflicting `program.{}`: some/path", field)
+        );
     }
 }
