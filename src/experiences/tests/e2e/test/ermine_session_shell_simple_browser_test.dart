@@ -67,23 +67,6 @@ void main() {
     sl4f?.close();
   });
 
-  Future<bool> _waitForColor(
-    int hex, {
-    Rectangle rect = _sampleViewRect,
-    Duration timeout = _timeout,
-  }) async {
-    final end = DateTime.now().add(timeout);
-    while (DateTime.now().isBefore(end)) {
-      final sampleImage = await ermine.screenshot(rect);
-      bool isTheColor =
-          sampleImage.data.every((pixel) => (pixel & hex) == (hex & hex));
-      if (!isTheColor) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   // TODO(fxb/68689): Transition physical interactions to use Sl4f.Input once
   // fxb/69277 is fixed.
   test('Should be able to do page and history navigation.', () async {
@@ -202,7 +185,6 @@ void main() {
     const redUrl = 'http://127.0.0.1:8080/red.html';
     const greenUrl = 'http://127.0.0.1:8080/green.html';
     const blueUrl = 'http://127.0.0.1:8080/blue.html';
-    const blue = 0x000000ff;
 
     // Opens red.html in the second tab leaving the first tab as an empty tab.
     await browser.requestData(redUrl);
@@ -256,13 +238,6 @@ void main() {
             'The Green Page tab is not on the left side of the Blue Page tab'
             'Green Page tab\'s x is $greenTabX, Blue Page tab\'s X is $blueTabX ');
 
-    // TODO(fxb/70233): Log the resolution of the screen width to see if
-    // fxb/70233 is also observed on FYI builders. Remove it once it's confirmed.
-    final viewRect = await ermine.getViewRect(simpleBrowserUrl);
-    final screenshot = await ermine.screenshot(viewRect);
-    logger.log.info('The resolution of the screenshot is '
-        '${screenshot.width}x${screenshot.height}');
-
     // Drags the second tab to the right end of the tab list.
     await browser.scroll(redTabFinder, 600, 0, Duration(seconds: 1));
 
@@ -284,16 +259,12 @@ void main() {
             'Blue Page tab\'s x is $blueTabX, Red Page tab\'s X is $redTabX ');
 
     /// Tab closing test
-
     final tabCloseFinder = find.byValueKey('tab_close');
     await browser.tap(tabCloseFinder);
 
+    // The red page should be gone and the last tab should be focused.
     await browser.waitForAbsent(redTabFinder);
 
-    expect(await _waitForColor(blue), true,
-        reason: 'The blue page has not been loaded.');
-
-    // The red page should ge gone and the last tab should be focused.
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(greenTabFinder), isNotNull);
     expect(await browser.getText(blueTabFinder), isNotNull);
