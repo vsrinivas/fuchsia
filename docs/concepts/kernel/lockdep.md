@@ -23,7 +23,7 @@ handled by [zircon/kernel/BUILD.gn](/zircon/kernel/BUILD.gn).
 You can set this variable in your GN invocation like this:
 
 ```
-fx set <your build options> --args 'zircon_extra_args = { enable_lock_dep = true }'
+fx set <your build options> --args 'enable_lock_dep = true'
 ```
 
 When the lock validator is enabled a set of global lock-free, wait-free data
