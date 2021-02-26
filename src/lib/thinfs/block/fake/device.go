@@ -6,7 +6,8 @@
 package fake
 
 import (
-	"github.com/pkg/errors"
+	"errors"
+	"fmt"
 )
 
 const blockSize = 1024
@@ -26,15 +27,15 @@ type Device []byte
 
 func (d Device) check(p []byte, off int64) error {
 	if off%blockSize != 0 {
-		return errors.Wrap(ErrBlockSize, "off")
+		return fmt.Errorf("off: %w", ErrBlockSize)
 	}
 
 	if int64(len(p))%blockSize != 0 {
-		return errors.Wrap(ErrBlockSize, "len(p)")
+		return fmt.Errorf("len(p): %w", ErrBlockSize)
 	}
 
-	if off+int64(len(p)) > d.Size() {
-		return errors.Wrapf(ErrOutOfBounds, "[%v, %v)", off, off+int64(len(p)))
+	if end := off + int64(len(p)); end > d.Size() {
+		return fmt.Errorf("[%d, %d): %w", off, end, ErrOutOfBounds)
 	}
 
 	return nil

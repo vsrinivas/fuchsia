@@ -8,7 +8,6 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/go-cmp v0.5.4
-	github.com/pkg/errors v0.9.1
 	github.com/pkg/sftp v1.12.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613 // indirect
 	go.fuchsia.dev/fuchsia/tools v0.0.0-20210112150134-09b1fab9b7e1

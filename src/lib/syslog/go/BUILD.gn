@@ -12,7 +12,6 @@ go_library("go") {
   deps = [
     "//sdk/fidl/fuchsia.logger($go_toolchain)",
     "//src/lib/component($go_toolchain)",
-    "//third_party/golibs:github.com/pkg/errors",
   ]
   sources = [
     "logger.go",

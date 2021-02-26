@@ -9,6 +9,7 @@ package syslog
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -23,8 +24,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	"fidl/fuchsia/logger"
-
-	"github.com/pkg/errors"
 )
 
 // ErrMsgTooLong is returned when a message is truncated.
@@ -175,11 +174,11 @@ type Logger struct {
 
 func NewLogger(options LogInitOptions) (*Logger, error) {
 	if l, max := len(options.Tags), int(logger.MaxTags); l > max {
-		return nil, errors.Errorf("too many tags: %d/%d", l, max)
+		return nil, fmt.Errorf("too many tags: %d/%d", l, max)
 	}
 	for _, tag := range options.Tags {
 		if l, max := len(tag), int(logger.MaxTagLenBytes); l > max {
-			return nil, errors.Errorf("tag too long: %d/%d", l, max)
+			return nil, fmt.Errorf("tag too long: %d/%d", l, max)
 		}
 	}
 	return &Logger{
