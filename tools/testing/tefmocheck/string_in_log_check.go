@@ -179,6 +179,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 			{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: ": TestPmmCheckerOopsAndPanic"},
 		}
 		// Match specific OOPS types before finally matching the generic type.
+		ret = append(ret, &stringInLogCheck{String: "lockup_detector: thread has overrun its preemption time", Type: lt, ExceptBlocks: oopsExceptBlocks})
 		ret = append(ret, &stringInLogCheck{String: "lockup_detector: no heartbeat from", Type: lt, ExceptBlocks: oopsExceptBlocks})
 		ret = append(ret, &stringInLogCheck{String: "ZIRCON KERNEL OOPS", Type: lt, ExceptBlocks: oopsExceptBlocks})
 

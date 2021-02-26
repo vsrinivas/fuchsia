@@ -31,9 +31,9 @@ bool CheckForOverrun(zx_duration_t threshold) {
   const zx_duration_t overrun = zx_time_sub_time(now, target_preemption_time);
   if (overrun > threshold && oops_rate_limiter.Ready()) {
     KERNEL_OOPS(
-        "thread (%s) has overrun its preemption time, overrun=%ldns, threshold=%ldns (message "
-        "rate limited)\n",
-        Thread::Current::Get()->name(), overrun, threshold);
+        "lockup_detector: thread has overrun its preemption time, overrun=%ldns, threshold=%ldns "
+        "(message rate limited)\n",
+        overrun, threshold);
     return true;
   }
 
