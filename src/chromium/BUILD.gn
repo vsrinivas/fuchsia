@@ -172,6 +172,8 @@ if (is_host) {
     ]
   }
 
+  # The specific tests binaries are specified by the "tests" target in
+  # https://source.chromium.org/chromium/chromium/src/+/master:fuchsia/cipd/BUILD.gn.
   prebuilt_test_manifest("chromium_tests") {
     if (use_chromium_canary) {
       archive_dir = "//prebuilt/third_party/chromium_tests_latest/arch/x64"
