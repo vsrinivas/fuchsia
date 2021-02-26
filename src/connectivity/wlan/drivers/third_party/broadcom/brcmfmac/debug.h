@@ -107,12 +107,12 @@ constexpr size_t kMaxStringDumpBytes = 256;  // point at which output will be tr
 
 // Throttle an event so that it is only called at most |events_per_second| times each second. If the
 // event is throttled it will not be called at all and no additional side effects take place.
-#define BRCMF_THROTTLE(events_per_second, event) \
-  do { \
+#define BRCMF_THROTTLE(events_per_second, event)                  \
+  do {                                                            \
     static wlan::brcmfmac::TokenBucket bucket(events_per_second); \
-    if (bucket.consume()) { \
-      event; \
-    } \
+    if (bucket.consume()) {                                       \
+      event;                                                      \
+    }                                                             \
   } while (0)
 
 // Enable an event if |condition| is true and if it is enabled throttle it so that it is only called
@@ -120,10 +120,10 @@ constexpr size_t kMaxStringDumpBytes = 256;  // point at which output will be tr
 // avoid any throttling checks but note that this also means that any calls to this macro when
 // condition is false will not count towards throttling.
 #define BRCMF_THROTTLE_IF(events_per_second, condition, event) \
-  do { \
-    if (condition) { \
-      BRCMF_THROTTLE(events_per_second, event); \
-    } \
+  do {                                                         \
+    if (condition) {                                           \
+      BRCMF_THROTTLE(events_per_second, event);                \
+    }                                                          \
   } while (0)
 
 // Throttle calls to |event| to only happen at a specific rate per second. If an event is called
@@ -138,18 +138,18 @@ constexpr size_t kMaxStringDumpBytes = 256;  // point at which output will be tr
 //       style call but it may still be throttled even if it's different from the previous message.
 //       Each BRCMF_THROTTLE_MSG statement is its own throttler that is independent of other
 //       throttlers but will evaluate its throttling condition every time regardless of parameters.
-#define BRCMF_THROTTLE_MSG(events_per_second, event, fmt, ...) \
-  do { \
-    static wlan::brcmfmac::TokenBucket bucket(events_per_second); \
-    static wlan::brcmfmac::ThrottleCounter counter(bucket); \
-    uint64_t events = 0; \
-    if (counter.consume(&events)) { \
-      if (events > 0) { \
+#define BRCMF_THROTTLE_MSG(events_per_second, event, fmt, ...)              \
+  do {                                                                      \
+    static wlan::brcmfmac::TokenBucket bucket(events_per_second);           \
+    static wlan::brcmfmac::ThrottleCounter counter(bucket);                 \
+    uint64_t events = 0;                                                    \
+    if (counter.consume(&events)) {                                         \
+      if (events > 0) {                                                     \
         event(fmt " [Throttled %" PRIu64 " times]", ##__VA_ARGS__, events); \
-      } else { \
-        event(fmt, ##__VA_ARGS__); \
-      } \
-    } \
+      } else {                                                              \
+        event(fmt, ##__VA_ARGS__);                                          \
+      }                                                                     \
+    }                                                                       \
   } while (0)
 
 // Convenience macros for logging with certain log levels and a default number of events per second
@@ -162,12 +162,12 @@ constexpr size_t kMaxStringDumpBytes = 256;  // point at which output will be tr
   BRCMF_THROTTLE_MSG(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_WARN, fmt, ##__VA_ARGS__)
 #define BRCMF_INFO_THROTTLE(fmt, ...) \
   BRCMF_THROTTLE_MSG(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_INFO, fmt, ##__VA_ARGS__)
-#define BRCMF_DBG_THROTTLE(filter, fmt, ...) \
-  do { \
-    if (BRCMF_IS_ON(filter)) { \
-      BRCMF_THROTTLE_MSG(wlan::brcmfmac::kLogThrottleEventsPerSec, \
-                         BRCMF_DBG_UNFILTERED, fmt, ##__VA_ARGS__); \
-    } \
+#define BRCMF_DBG_THROTTLE(filter, fmt, ...)                                                  \
+  do {                                                                                        \
+    if (BRCMF_IS_ON(filter)) {                                                                \
+      BRCMF_THROTTLE_MSG(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_DBG_UNFILTERED, fmt, \
+                         ##__VA_ARGS__);                                                      \
+    }                                                                                         \
   } while (0)
 
 namespace wlan {

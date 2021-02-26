@@ -179,8 +179,13 @@ class AssocTest : public SimTest {
   // at the end of each test.
   std::list<simulation::FakeAp*> aps_;
 
-  // All of the association responses seen in the environment
+  // All of the association responses seen in the environment.
   std::list<AssocRespInfo> assoc_responses_;
+
+  // All the reason codes of de-authentication frames seen in the environment.
+  std::list<uint32_t> deauth_frames_;
+
+  // All the status codes of authentication responses seen in the environment.
   std::list<uint16_t> auth_resp_status_list_;
 
   // Trigger to start disassociation. If set to true, disassociation is started
@@ -305,6 +310,11 @@ void AssocTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
 
     if (auth_frame->seq_num_ == 2 || auth_frame->seq_num_ == 4)
       auth_resp_status_list_.push_back(auth_frame->status_);
+  }
+
+  if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_DEAUTH) {
+    auto deauth_frame = std::static_pointer_cast<const simulation::SimDeauthFrame>(mgmt_frame);
+    deauth_frames_.push_back(deauth_frame->reason_);
   }
 }
 
@@ -783,7 +793,8 @@ TEST_F(AssocTest, ApIgnoredRequest) {
   EXPECT_EQ(context_.assoc_resp_count, 1U);
 }
 
-// Verify that if an AP rejects an association request we return a failure
+// Verify that if an AP refuses an association request we return a failure, driver will also send a
+// BRCMF_C_DISASSOC to clear AP state each time when rejected.
 TEST_F(AssocTest, ApRejectedRequest) {
   // Create our device instance
   Init();
@@ -805,10 +816,14 @@ TEST_F(AssocTest, ApRejectedRequest) {
   zx_status_t status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &max_assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
   ASSERT_EQ(max_assoc_retries, kMaxAssocRetries);
-  // We should have gotten a rejection from the fake AP
-  EXPECT_EQ(auth_resp_status_list_.size(), max_assoc_retries + 1);
-  EXPECT_EQ(auth_resp_status_list_.front(), WLAN_STATUS_CODE_REFUSED);
-  EXPECT_EQ(assoc_responses_.size(), 0U);
+
+  // Should have received as many refusals as the configured # of retries.
+  EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
+  EXPECT_EQ(assoc_responses_.front().status, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+
+  // The AP should have received 1 deauth, no matter there were how many firmware assoc retries.
+  EXPECT_EQ(deauth_frames_.size(), 1U);
+  EXPECT_EQ(deauth_frames_.front(), WLANIF_REASON_CODE_STA_LEAVING);
 
   // Make sure we got our response from the driver
   EXPECT_EQ(context_.assoc_resp_count, 1U);
@@ -1261,17 +1276,20 @@ TEST_F(AssocTest, AssocMaxRetries) {
   status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
   ASSERT_EQ(max_assoc_retries, assoc_retries);
-  // Should have received as many rejections as the configured # of retries.
-  EXPECT_EQ(auth_resp_status_list_.size(), max_assoc_retries + 1);
-  EXPECT_EQ(auth_resp_status_list_.front(), WLAN_STATUS_CODE_REFUSED);
-  EXPECT_EQ(assoc_responses_.size(), 0U);
+  // Should have received as many refusals as the configured # of retries.
+  EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
+  EXPECT_EQ(assoc_responses_.front().status, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+
+  // The AP should have received 1 deauth, no matter there were how many firmware assoc retries.
+  EXPECT_EQ(deauth_frames_.size(), 1U);
+  EXPECT_EQ(deauth_frames_.front(), WLANIF_REASON_CODE_STA_LEAVING);
 
   // Make sure we got our response from the driver
   EXPECT_EQ(context_.assoc_resp_count, 1U);
 }
 
 // Verify that association is retried as per the setting
-TEST_F(AssocTest, AssocMaxRetriesWhenTimedout) {
+TEST_F(AssocTest, AssocMaxRetriesWhenTimedOut) {
   // Create our device instance
   Init();
 
@@ -1323,9 +1341,14 @@ TEST_F(AssocTest, AssocNoRetries) {
   status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
   ASSERT_EQ(max_assoc_retries, assoc_retries);
-  // We should have gotten a rejection from the fake AP
-  EXPECT_EQ(auth_resp_status_list_.size(), 1U);
-  EXPECT_EQ(auth_resp_status_list_.front(), WLAN_STATUS_CODE_REFUSED);
+
+  // We should have gotten a refusal from the fake AP
+  EXPECT_EQ(assoc_responses_.size(), 1U);
+  EXPECT_EQ(assoc_responses_.front().status, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+
+  // The AP should have received 1 deauth, no matter there were how many firmware assoc retries.
+  EXPECT_EQ(deauth_frames_.size(), 1U);
+  EXPECT_EQ(deauth_frames_.front(), WLANIF_REASON_CODE_STA_LEAVING);
 
   // Make sure we got our response from the driver
   EXPECT_EQ(context_.assoc_resp_count, 1U);

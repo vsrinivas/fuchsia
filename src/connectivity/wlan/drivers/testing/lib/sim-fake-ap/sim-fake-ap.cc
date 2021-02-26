@@ -322,11 +322,6 @@ void FakeAp::RxMgmtFrame(std::shared_ptr<const SimManagementFrame> mgmt_frame) {
         return;
       }
 
-      if (assoc_handling_mode_ == ASSOC_REFUSED) {
-        ScheduleAuthResp(auth_req_frame, WLAN_STATUS_CODE_REFUSED);
-        return;
-      }
-
       if (security_.sec_type != auth_req_frame->sec_proto_type_) {
         ScheduleAuthResp(auth_req_frame, WLAN_STATUS_CODE_REFUSED);
         return;

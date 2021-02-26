@@ -186,6 +186,10 @@ wlanif_impl_ifc_protocol_ops_t AuthTest::sme_ops_ = {
         [](void* cookie, const wlanif_assoc_confirm_t* resp) {
           static_cast<AuthTest*>(cookie)->OnAssocConf(resp);
         },
+    .disassoc_conf =
+        [](void* cookie, const wlanif_disassoc_confirm_t* ind) {
+          // Ignore
+        },
     .signal_report = [](void* cookie, const wlanif_signal_report_indication* ind) {},
     .sae_handshake_ind =
         [](void* cookie, const wlanif_sae_handshake_ind_t* ind) {
@@ -698,12 +702,10 @@ TEST_F(AuthTest, WEPIgnoreTest) {
   // AuthHandleFailure() will retry for "max_retries" times and will send an BRCMF_E_SET_SSID event
   // with status BRCMF_E_STATUS_FAIL finally.
   uint32_t max_retries = 0;
-
   brcmf_simdev* sim = device_->GetSim();
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   zx_status_t status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &max_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
-
   for (uint32_t i = 0; i < max_retries + 1; i++) {
     expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
   }
