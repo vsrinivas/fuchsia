@@ -137,96 +137,137 @@ class ParseFsatraceOutputTests(unittest.TestCase):
         )
 
 
+class MatchConditionsTests(unittest.TestCase):
+
+    def test_no_conditions(self):
+        self.assertFalse(action_tracer.MatchConditions().matches("foo/bar"))
+
+    def test_prefix_matches(self):
+        self.assertTrue(
+            action_tracer.MatchConditions(prefixes={"fo"}).matches("foo/bar"))
+
+    def test_suffix_matches(self):
+        self.assertTrue(
+            action_tracer.MatchConditions(suffixes={"ar"}).matches("foo/bar"))
+
+    def test_component_matches(self):
+        self.assertTrue(
+            action_tracer.MatchConditions(
+                components={"bar", "bq"}).matches("foo/bar/baz.txt"))
+
+
 class AccessShouldCheckTests(unittest.TestCase):
 
     def test_no_required_prefix(self):
+        ignore_conditions = action_tracer.MatchConditions()
         self.assertTrue(
-            action_tracer.Read("book").should_check(required_path_prefix=""))
+            action_tracer.Read("book").should_check(
+                ignore_conditions=ignore_conditions, required_path_prefix=""))
         self.assertTrue(
-            action_tracer.Write("block").should_check(required_path_prefix=""))
+            action_tracer.Write("block").should_check(
+                ignore_conditions=ignore_conditions, required_path_prefix=""))
 
     def test_required_prefix_matches(self):
+        ignore_conditions = action_tracer.MatchConditions()
         prefix = "/home/project"
         self.assertTrue(
             action_tracer.Read("/home/project/book").should_check(
+                ignore_conditions=ignore_conditions,
                 required_path_prefix=prefix))
         self.assertTrue(
             action_tracer.Write("/home/project/out/block").should_check(
+                ignore_conditions=ignore_conditions,
                 required_path_prefix=prefix))
 
     def test_required_prefix_no_match(self):
+        ignore_conditions = action_tracer.MatchConditions()
         prefix = "/home/project"
         self.assertFalse(
             action_tracer.Read("book").should_check(
+                ignore_conditions=ignore_conditions,
                 required_path_prefix=prefix))
         self.assertFalse(
             action_tracer.Write("output/log").should_check(
+                ignore_conditions=ignore_conditions,
                 required_path_prefix=prefix))
 
     def test_no_ignored_prefix(self):
-        self.assertTrue(
-            action_tracer.Read("book").should_check(ignored_prefixes={}))
-        self.assertTrue(
-            action_tracer.Write("output/log").should_check(ignored_prefixes={}))
-
-    def test_ignored_prefix_matches(self):
-        prefixes = {"/tmp"}
-        self.assertFalse(
-            action_tracer.Read("/tmp/book").should_check(
-                ignored_prefixes=prefixes))
-        self.assertFalse(
-            action_tracer.Write("/tmp/log").should_check(
-                ignored_prefixes=prefixes))
-
-    def test_ignored_prefix_no_match(self):
-        prefixes = {"/tmp", "/no/look/here"}
-        self.assertTrue(
-            action_tracer.Read("book").should_check(ignored_prefixes=prefixes))
-        self.assertTrue(
-            action_tracer.Write("out/log").should_check(
-                ignored_prefixes=prefixes))
-
-    def test_no_ignored_suffix(self):
-        self.assertTrue(
-            action_tracer.Read("book").should_check(ignored_suffixes={}))
-        self.assertTrue(
-            action_tracer.Write("output/log").should_check(ignored_suffixes={}))
-
-    def test_ignored_suffix_matches(self):
-        suffixes = {".ii"}  # e.g. from compiler --save-temps
-        self.assertFalse(
-            action_tracer.Read("book.ii").should_check(
-                ignored_suffixes=suffixes))
-        self.assertFalse(
-            action_tracer.Write("tmp/log.ii").should_check(
-                ignored_suffixes=suffixes))
-
-    def test_ignored_suffix_no_match(self):
-        suffixes = {".ii", ".S"}  # e.g. from compiler --save-temps
-        self.assertTrue(
-            action_tracer.Read("book.txt").should_check(
-                ignored_suffixes=suffixes))
-        self.assertTrue(
-            action_tracer.Write("out/process.log").should_check(
-                ignored_suffixes=suffixes))
-
-    def test_ignored_path_components_no_match(self):
-        components = {"__auto__", ".generated"}
+        ignore_conditions = action_tracer.MatchConditions(prefixes={})
         self.assertTrue(
             action_tracer.Read("book").should_check(
-                ignored_path_parts=components))
+                ignore_conditions=ignore_conditions))
+        self.assertTrue(
+            action_tracer.Write("output/log").should_check(
+                ignore_conditions=ignore_conditions))
+
+    def test_ignored_prefix_matches(self):
+        ignore_conditions = action_tracer.MatchConditions(prefixes={"/tmp"})
+        self.assertFalse(
+            action_tracer.Read("/tmp/book").should_check(
+                ignore_conditions=ignore_conditions))
+        self.assertFalse(
+            action_tracer.Write("/tmp/log").should_check(
+                ignore_conditions=ignore_conditions))
+
+    def test_ignored_prefix_no_match(self):
+        ignore_conditions = action_tracer.MatchConditions(
+            prefixes={"/tmp", "/no/look/here"})
+        self.assertTrue(
+            action_tracer.Read("book").should_check(
+                ignore_conditions=ignore_conditions))
         self.assertTrue(
             action_tracer.Write("out/log").should_check(
-                ignored_path_parts=components))
+                ignore_conditions=ignore_conditions))
+
+    def test_no_ignored_suffix(self):
+        ignore_conditions = action_tracer.MatchConditions(suffixes={})
+        self.assertTrue(
+            action_tracer.Read("book").should_check(
+                ignore_conditions=ignore_conditions))
+        self.assertTrue(
+            action_tracer.Write("output/log").should_check(
+                ignore_conditions=ignore_conditions))
+
+    def test_ignored_suffix_matches(self):
+        # e.g. from compiler --save-temps
+        ignore_conditions = action_tracer.MatchConditions(suffixes={".ii"})
+        self.assertFalse(
+            action_tracer.Read("book.ii").should_check(
+                ignore_conditions=ignore_conditions))
+        self.assertFalse(
+            action_tracer.Write("tmp/log.ii").should_check(
+                ignore_conditions=ignore_conditions))
+
+    def test_ignored_suffix_no_match(self):
+        # e.g. from compiler --save-temps
+        ignore_conditions = action_tracer.MatchConditions(
+            suffixes={".ii", ".S"})
+        self.assertTrue(
+            action_tracer.Read("book.txt").should_check(
+                ignore_conditions=ignore_conditions))
+        self.assertTrue(
+            action_tracer.Write("out/process.log").should_check(
+                ignore_conditions=ignore_conditions))
+
+    def test_ignored_path_components_no_match(self):
+        ignore_conditions = action_tracer.MatchConditions(
+            components={"__auto__", ".generated"})
+        self.assertTrue(
+            action_tracer.Read("book").should_check(
+                ignore_conditions=ignore_conditions))
+        self.assertTrue(
+            action_tracer.Write("out/log").should_check(
+                ignore_conditions=ignore_conditions))
 
     def test_ignored_path_components_matches(self):
-        components = {"__auto__", ".generated"}
+        ignore_conditions = action_tracer.MatchConditions(
+            components={"__auto__", ".generated"})
         self.assertFalse(
             action_tracer.Read("library/__auto__/book").should_check(
-                ignored_path_parts=components))
+                ignore_conditions=ignore_conditions))
         self.assertFalse(
             action_tracer.Write(".generated/out/log").should_check(
-                ignored_path_parts=components))
+                ignore_conditions=ignore_conditions))
 
 
 class CheckAccessAllowedTests(unittest.TestCase):

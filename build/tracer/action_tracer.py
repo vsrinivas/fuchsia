@@ -42,6 +42,23 @@ class FileAccessType(enum.Enum):
 
 
 @dataclasses.dataclass
+class MatchConditions(object):
+    prefixes: FrozenSet[str] = dataclasses.field(default_factory=set)
+    suffixes: FrozenSet[str] = dataclasses.field(default_factory=set)
+    components: FrozenSet[str] = dataclasses.field(default_factory=set)
+
+    def matches(self, path: str) -> bool:
+        """Returns true if path matches any of the conditions."""
+        if any(path.startswith(prefix) for prefix in self.prefixes):
+            return True
+        if any(path.endswith(prefix) for prefix in self.suffixes):
+            return True
+        if set(path.split(os.path.sep)).intersection(self.components):
+            return True
+        return False
+
+
+@dataclasses.dataclass
 class FSAccess(object):
     """Represents a single file system access."""
     # One of: "read", "write" (covers touch), "delete" (covers move-from)
@@ -57,33 +74,22 @@ class FSAccess(object):
 
     def should_check(
             self,
-            required_path_prefix: str = "",
-            ignored_prefixes: FrozenSet[str] = {},
-            ignored_suffixes: FrozenSet[str] = {},
-            ignored_path_parts: FrozenSet[str] = {}) -> bool:
+            ignore_conditions: MatchConditions,
+            required_path_prefix: str = "") -> bool:
         """Predicate function use to filter out FSAccesses.
 
         Args:
           required_path_prefix: Accesses outside of this path prefix are not checked.
             An empty string means: check this access.
-          ignored_prefixes: don't check accesses whose path starts with these prefixes.
-          ignored_suffixes: don't check accesses whose path ends with these suffixes.
-          ignored_path_parts: don't check accesses whose path *components* match any of
-            these names exactly.
+          ignore_conditions: prefixes, suffixes, components to ignore.
 
         Returns:
           true if this access should be checked.
         """
         if not self.path.startswith(required_path_prefix):
             return False
-        if any(self.path.startswith(ignored) for ignored in ignored_prefixes):
-            return False
-        if any(self.path.endswith(ignored) for ignored in ignored_suffixes):
-            return False
-        if any(part for part in self.path.split(os.path.sep)
-               if part in ignored_path_parts):
-            return False
-        return True
+
+        return not ignore_conditions.matches(self.path)
 
     def allowed(
             self, allowed_reads: FrozenSet[str],
@@ -218,6 +224,10 @@ class Action(object):
     depfile: Optional[str] = None
     response_file_name: Optional[str] = None
 
+    @property
+    def all_declared_inputs(self):
+        return set([self.script] + self.inputs + self.sources)
+
     def access_constraints(
             self, writeable_depfile_inputs=False) -> AccessConstraints:
         """Build AccessConstraints from action attributes."""
@@ -228,9 +238,7 @@ class Action(object):
         # Actions may touch files other than their listed outputs.
         allowed_writes = required_writes.copy()
 
-        allowed_reads = {
-            path for path in [self.script] + self.inputs + self.sources
-        }
+        allowed_reads = self.all_declared_inputs
 
         if self.depfile and os.path.exists(self.depfile):
             # Writing the depfile is not required (yet), but allowed.
@@ -644,6 +652,13 @@ def main_arg_parser() -> argparse.ArgumentParser:
         action="store_false",
         dest="writeable_depfile_inputs")
 
+    # TODO(fangism): This check is blocked on *.py being in the ignored set.
+    parser.add_argument(
+        "--check-inputs-not-in-ignored-set",
+        action="store_true",
+        default=False,  # Goal: always True (remove this flag)
+        help="Check that inputs do not belong to the set of ignored files")
+
     # Positional args are the command to run and trace.
     parser.add_argument("args", nargs="*", help="action#args")
     return parser
@@ -755,13 +770,38 @@ def main():
     ]
 
     # Filter out accesses we don't want to track.
+    ignore_conditions = MatchConditions(
+        prefixes=ignored_prefixes,
+        suffixes=ignored_suffixes,
+        components=ignored_path_parts,
+    )
+
+    exit_code = 0
+
+    # Make sure no declared inputs match ignored patterns.
+    # Ignored files should never be depended on by other actions.
+    declared_ignored_inputs = {
+        path for path in action.all_declared_inputs
+        if ignore_conditions.matches(path)
+    }
+    if args.check_inputs_not_in_ignored_set and declared_ignored_inputs:
+        ignored_inputs_formatted = "\n  ".join(declared_ignored_inputs)
+        print(
+            f"""
+The following inputs of {args.label} are ignored by action tracing, and thus,
+should not be declared as dependencies.
+  {ignored_inputs_formatted}
+
+""",
+            file=sys.stderr)
+        exit_code = 1
+
+    # Filter out access we don't want to track.
     filtered_accesses = [
         access for access in file_accesses if access.should_check(
+            ignore_conditions=ignore_conditions,
             # Ignore accesses that fall outside of the source root.
             required_path_prefix=src_root,
-            ignored_prefixes=ignored_prefixes,
-            ignored_suffixes=ignored_suffixes,
-            ignored_path_parts=ignored_path_parts,
         )
     ]
 
@@ -769,7 +809,6 @@ def main():
 
     # Check for overall correctness, print diagnostics,
     # and exit with the right code.
-    exit_code = 0
     if args.check_access_permissions:
         # Verify the filesystem access trace.
         unexpected_accesses = check_access_permissions(
