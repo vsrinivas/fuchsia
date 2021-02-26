@@ -94,7 +94,7 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t ali
   // create a Vm Object dispatcher
   KernelHandle<VmObjectDispatcher> kernel_handle;
   zx_rights_t rights;
-  zx_status_t result = VmObjectDispatcher::Create(ktl::move(vmo), &kernel_handle, &rights);
+  zx_status_t result = VmObjectDispatcher::Create(ktl::move(vmo), size, &kernel_handle, &rights);
   if (result != ZX_OK) {
     return result;
   }
@@ -133,7 +133,7 @@ zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, zx_paddr_t paddr, size_t 
   // create a Vm Object dispatcher
   KernelHandle<VmObjectDispatcher> kernel_handle;
   zx_rights_t rights;
-  result = VmObjectDispatcher::Create(ktl::move(vmo), &kernel_handle, &rights);
+  result = VmObjectDispatcher::Create(ktl::move(vmo), size, &kernel_handle, &rights);
   if (result != ZX_OK) {
     return result;
   }
