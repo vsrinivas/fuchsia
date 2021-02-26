@@ -4,8 +4,8 @@ The Fuchsia emulator (FEMU) allows you to test Fuchsia components and applicatio
 FEMU is included in Fuchsia source, and it’s downloaded by `jiri` as part of `jiri update` or `jiri run-hooks`.
 It’s fetched into the Fuchsia directory `/prebuilt/third_party/aemu`.
 
-You can call FEMU with `fx` using `fx emu` (Linux) or `fx vdl` (macOS). Alternatively,
-you can call FEMU from the Fuchsia IDK using `femu.sh`.
+You can call FEMU with `fx` using `fx vdl`. Alternatively,
+you can call FEMU from the Fuchsia IDK using `fvdl`.
 
 ## FEMU and other emulators {#femu-and-other-emulators}
 
@@ -23,22 +23,24 @@ FEMU looks and behaves like a Fuchsia device, with the exception that no paving 
 FEMU features include:
 
 *   **GUI Support:** You can run Fuchsia with the GUI (by default) or without the GUI
-    (using the `--headless` argument with [fx emu](https://fuchsia.dev/reference/tools/fx/cmd/emu)
-    or [fx vdl](https://fuchsia.dev/reference/tools/fx/cmd/vdl) commands).
+    (using the `--headless` argument.
 *   **GPU Support:** You can run with the host’s GPU (by default) with full
     [Vulkan](/docs/concepts/graphics/magma/vulkan.md) support, or you can choose
     software rendering using [SwiftShader](https://swiftshader.googlesource.com/SwiftShader/).
 *   **Remote Development:** You can use a remote desktop with FEMU, either with Chrome Remote Desktop
      or from the command line using [fx emu-remote](https://fuchsia.dev/reference/tools/fx/cmd/emu-remote)
-     command or `femu.sh` with the Fuchsia IDK.
+     command.
+
+To see full list of supported flags:
+
+```posix-terminal
+fx vdl start --help
+```
 
 To configure these features, see the [Set up and start FEMU](/docs/get-started/set_up_femu.md)
 page.
 
-Additional features are listed in the [fx emu](https://fuchsia.dev/reference/tools/fx/cmd/emu)
-and [fx vdl](https://fuchsia.dev/reference/tools/fx/cmd/vdl) reference pages.
-
-If you’re using the Fuchsia IDK, `femu.sh` supports the same flags as `fx emu`.
+If you’re using the Fuchsia IDK, `fvdl` supports the same flags as `fx vdl`
 
 
 ## FEMU limitations {#femu-limitations}
@@ -60,13 +62,32 @@ Note: ARM64 support (`qemu-arm64`) is very limited and not recommended.
 
 ### FEMU networking  {#femu-networking}
 
-The Fuchsia Emulator should generally be run with the `-N` flag that provides networking through an
+On Linux, Fuchsia Emulator should generally be run with the `-N` flag that provides networking through an
 emulated NIC. Instructions for setting up networking for FEMU is in
 [Setting up the Fuchsia Emulator](/docs/get-started/set_up_femu.md).
 
-Without networking, you only have an isolated serial console. With networking,
-your device is visible to other tools such as `ssh` and `fx serve`.
+Note: Without `-N`, your emulator won't be discoverable using `fx list-devices`. However, you can manually set the SSH address and use `fx` tools to interact with your emulator.
 
+If starting the emulator without `-N` (i.e `fx vdl start`), an available TCP port from the host will be
+picked and forwarded to the emulator's SSH port. When the emulator launches successfully, instruction to set `fx` tools with the correct SSH port are printed in the terminal output. 
+Then, you can manually set the SSH device:
+
+
+```posix-terminal
+fx set-device 127.0.0.1:{{ '<var>' }}SSH_PORT{{ '</var>' }}
+```
+
+To verify `fx` is using the correct port:
+
+```posix-terminal
+fx status
+```
+
+You should see the SSH address printed next to `Device name`. To SSH into the emulator:
+
+```posix-terminal
+fx ssh
+```
 
 ### Emulating Zircon {#emulating-zircon}
 
