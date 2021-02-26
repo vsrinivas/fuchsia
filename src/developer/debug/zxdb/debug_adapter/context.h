@@ -41,6 +41,10 @@ class DebugAdapterContext : public ThreadObserver {
   void OnThreadStopped(Thread* thread, const StopInfo& info) override;
   void OnThreadFramesInvalidated(Thread* thread) override;
 
+  Target* GetCurrentTarget();
+  Process* GetCurrentProcess();
+  Thread* GetThread(uint64_t koid);
+
  private:
   void Init();
 

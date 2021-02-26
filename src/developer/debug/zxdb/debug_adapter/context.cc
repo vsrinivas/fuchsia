@@ -5,10 +5,13 @@
 #include "context.h"
 
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_attach.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_breakpoint.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_launch.h"
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_threads.h"
 #include "src/developer/debug/zxdb/debug_adapter/server.h"
 
 namespace zxdb {
@@ -88,6 +91,12 @@ void DebugAdapterContext::Init() {
         return OnRequestAttach(this, req);
       });
 
+  dap_->registerHandler(
+      [this](const dap::ThreadsRequest &req) -> dap::ResponseOrError<dap::ThreadsResponse> {
+        DEBUG_LOG(DebugAdapter) << "ThreadRequest received";
+        return OnRequestThreads(this, req);
+      });
+
   // Register to zxdb session events
   session()->thread_observers().AddObserver(this);
 
@@ -154,6 +163,39 @@ void DebugAdapterContext::OnThreadFramesInvalidated(Thread *thread) {
     event.threadId = thread->GetKoid();
     dap_->send(event);
   }
+}
+
+Target *DebugAdapterContext::GetCurrentTarget() {
+  auto targets = session()->system().GetTargets();
+  if (targets.size() > 0) {
+    // Currently debug adapter supports only one target. The default target is used to attach
+    // process.
+    return targets[0];
+  }
+  return nullptr;
+}
+
+Process *DebugAdapterContext::GetCurrentProcess() {
+  auto target = GetCurrentTarget();
+  if (target) {
+    return target->GetProcess();
+  }
+  return nullptr;
+}
+
+Thread *DebugAdapterContext::GetThread(uint64_t koid) {
+  Thread *match = nullptr;
+  auto process = GetCurrentProcess();
+  if (process) {
+    auto threads = process->GetThreads();
+    for (auto t : threads) {
+      if (koid == t->GetKoid()) {
+        match = t;
+        break;
+      }
+    }
+  }
+  return match;
 }
 
 }  // namespace zxdb

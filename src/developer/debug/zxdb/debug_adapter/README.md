@@ -27,4 +27,11 @@ below - ![Runtime view](runtime_view.png)
 Note that the session is shared between console and debug adapter, which enables users to use zxdb
 console in addition to the IDE to control the debugging session.
 
+## Interactions with zxdb client session
 
+`Debug adapter context` uses zxdb client session to manage debugging session connected to the
+target debug agent. The client provides `Target`, `Process` and `Thread` objects to represent the
+debugging system. Currently `debug adapter context` uses the default `target` present in the
+`system` and does not create any new targets. This implies that `Debug adapter context` can only
+attach to a single process for debugging. Support for attaching to multiple processes can be added
+in the future.
