@@ -70,6 +70,8 @@ assemble_system("recovery-eng") {
   # effectively compressed by the ZBI compressor that is tuned to zstd max.
   compress_blobs = false
   ramdisk_fvm_in_zbi = true
+
+  include_component_id_index = true
   devmgr_config = [ "virtcon.disable=true" ] + zedboot_devmgr_config
   cmdline = [
     "console.shell=true",
@@ -115,6 +117,9 @@ assemble_system("recovery-fdr") {
   # effectively compressed by the ZBI compressor that is tuned to zstd max.
   compress_blobs = false
   ramdisk_fvm_in_zbi = true
+
+  include_component_id_index = true
+
   devmgr_config = [ "virtcon.disable=true" ]
   cmdline = []
 

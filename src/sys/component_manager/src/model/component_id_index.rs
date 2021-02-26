@@ -48,8 +48,6 @@ impl ComponentIdIndex {
         let mut moniker_to_instance_id = HashMap::<AbsoluteMoniker, ComponentInstanceId>::new();
         for entry in &index.instances {
             if let Some(absolute_moniker) = &entry.moniker {
-                // let absolute_moniker = AbsoluteMoniker::parse_string_without_instances(moniker)
-                //     .map_err(|e| ComponentIdIndexError::MonikerError(e))?;
                 moniker_to_instance_id.insert(
                     absolute_moniker.clone(),
                     entry

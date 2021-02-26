@@ -17,4 +17,5 @@
             ],
         },
     ],
+    component_id_index_path: "/boot/config/component_id_index",
 }

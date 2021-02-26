@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/dist/generated_resource.gni")
 import("//build/images/collect_blob_manifest.gni")
@@ -78,6 +79,10 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   cmdline_golden (optional)
 #     [string] The path to the kernel cmdline golden file to comapre against.
 #
+#   include_component_id_index (default: false)
+#     [bool] Collect and merges a component id index from the base
+#     package set.
+#
 #   testonly (optional)
 #     [bool] Usual GN meanings.
 template("assemble_system") {
@@ -135,11 +140,29 @@ template("assemble_system") {
     deps = base_packages + cache_packages + universe_packages
   }
 
+  # For details, see //docs/development/components/component_id_index.md#system-assembly
+  component_id_index_config("${image_name}_component_id_index_config") {
+    testonly = true
+
+    # collect and merge component ID indicies from the base set.
+    deps = base_packages
+  }
+
+  component_id_index_dep = []
+  component_id_index_config_data_dep = []
+  if (defined(invoker.include_component_id_index) &&
+      invoker.include_component_id_index) {
+    component_id_index_dep = [ ":${image_name}_component_id_index_config" ]
+    component_id_index_config_data_dep =
+        [ ":${image_name}_component_id_index_config-config-data" ]
+  }
+
   config_package("${image_name}_config-data") {
     package_name = "config-data"
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
-    deps = base_packages + cache_packages + universe_packages
+    deps = base_packages + cache_packages + universe_packages +
+           component_id_index_config_data_dep
     if (defined(invoker.sysmgr_golden)) {
       sysmgr_golden = invoker.sysmgr_golden
     }
@@ -155,7 +178,7 @@ template("assemble_system") {
              ":${image_name}_config-data",
              ":${image_name}_shell-commands",
              pkgfs_package_label,
-           ]
+           ] + component_id_index_dep
   }
 
   meta_far_merkle_index = "$target_out_dir/${image_name}_meta_far_merkle_index"

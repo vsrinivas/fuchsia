@@ -2,9 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/component/component_id_index.gni")
+import("//build/dev.gni")
 import("//build/images/args.gni")
 import("//build/images/boot.gni")
-import("//build/images/custom_signing.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
 import("//build/images/vbmeta.gni")
@@ -14,10 +15,9 @@ import("//build/unification/future/images/devmgr_config.gni")
 import("//build/zbi/kernel_cmdline.gni")
 import("//build/zbi/zbi.gni")
 
-zedboot_deps = []
-
 # Base system.
-zedboot_deps += [
+zedboot_labels = []
+zedboot_labels += [
   "//build/info:bootfs",
   "//bundles:bootstrap-zedboot",
   "//bundles/drivers:bootstrap",
@@ -26,20 +26,15 @@ zedboot_deps += [
   "//bundles/drivers:utils",
 ]
 
-# Component manager configuration.
-
-zedboot_deps +=
-    [ "//src/sys/component_manager:component_manager_bootfs_config" ]
-
 # Needed for installer runs.
-zedboot_deps += [
+zedboot_labels += [
   "//src/storage/bin/disk-pave:install-disk-image",
   "//src/storage/bin/mount",
   "//src/sys/installer:bin",
 ]
 
 # For debugging.
-zedboot_deps += [
+zedboot_labels += [
   "//src/bringup/bin/virtcon:bootfs",
   "//src/connectivity/network/bin/ping",
   "//src/devices/nand/bin/nand-util",
@@ -54,6 +49,16 @@ zedboot_deps += [
   "//src/zircon/bin/ktrace",
   "//zircon/third_party/uapp/dash",
 ]
+
+# Component manager configuration.
+component_id_index_config("component_id_index") {
+  testonly = fuchsia_zbi_testonly
+  deps = zedboot_labels
+}
+zedboot_deps = zedboot_labels + [
+                 "//src/sys/component_manager:component_manager_bootfs_config",
+                 "//build/images/zedboot:component_id_index",
+               ]
 
 # Zedboot must be included to pave devices until recovery has a replacement
 # mechanism. Products can specify recovery_label to determine which

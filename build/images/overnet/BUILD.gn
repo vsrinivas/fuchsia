@@ -36,7 +36,9 @@ assemble_system("overnet") {
     "//src/sys/component_manager:component_manager_bootfs_config",
     "//src/power/power-manager:base_config",
   ]
+
   ramdisk_fvm_in_zbi = true
+  include_component_id_index = true
 
   metadata = {
     images = [
