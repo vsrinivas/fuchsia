@@ -205,7 +205,7 @@ async fn handle_upload_progress_for_flashing<W: Write + Send>(
             }
             Some(UploadProgressListenerRequest::OnError { error, .. }) => {
                 log::error!("{}", error);
-                bail!(error)
+                ffx_bail!("{}", error)
             }
             Some(UploadProgressListenerRequest::OnProgress { bytes_written, .. }) => {
                 log::debug!("Upload progress: {}", bytes_written);

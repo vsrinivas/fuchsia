@@ -10,6 +10,7 @@ use {
     crate::target::{Target, TargetEvent},
     anyhow::{bail, Context, Result},
     async_trait::async_trait,
+    fastboot::UploadProgressListener as _,
     fidl_fuchsia_developer_bridge::{FastbootError, FastbootRequest, FastbootRequestStream},
     futures::io::{AsyncRead, AsyncWrite},
     futures::prelude::*,
@@ -83,9 +84,8 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send> FastbootImpl<T> {
         let usb = self.usb().await?;
         match req {
             FastbootRequest::Flash { partition_name, path, listener, responder } => {
-                match flash(usb, &path, &partition_name, UploadProgressListener::new(listener)?)
-                    .await
-                {
+                let upload_listener = UploadProgressListener::new(listener)?;
+                match flash(usb, &path, &partition_name, &upload_listener).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
                         log::error!(
@@ -94,6 +94,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send> FastbootImpl<T> {
                             path,
                             e
                         );
+                        upload_listener.on_error(&format!("{}", e))?;
                         responder
                             .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;
@@ -179,7 +180,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send> FastbootImpl<T> {
                 }
             },
             FastbootRequest::Stage { path, listener, responder } => {
-                match stage(usb, &path, UploadProgressListener::new(listener)?).await {
+                match stage(usb, &path, &UploadProgressListener::new(listener)?).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
                         log::error!("Error setting active: {:?}", e);

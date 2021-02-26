@@ -4,20 +4,30 @@
 
 use {
     anyhow::{bail, Result},
+    chrono::{Duration, Utc},
     command::Command,
+    fuchsia_async::Timer,
     futures::{
         io::{AsyncRead, AsyncWrite},
         AsyncReadExt, AsyncWriteExt,
     },
     reply::Reply,
     std::convert::{TryFrom, TryInto},
+    thiserror::Error,
 };
 
 pub mod command;
 pub mod reply;
 
 const MAX_PACKET_SIZE: usize = 64;
-const READ_RETRY_MAX: usize = 100;
+const DEFAULT_READ_TIMEOUT_SECS: i64 = 30;
+const READ_INTERVAL_MS: i64 = 100;
+
+#[derive(Debug, Error)]
+pub enum SendError {
+    #[error("timed out reading a reply from device")]
+    Timeout,
+}
 
 pub trait UploadProgressListener {
     fn on_started(&self, size: usize) -> Result<()>;
@@ -34,19 +44,28 @@ async fn read_from_interface<T: AsyncRead + Unpin>(interface: &mut T) -> Result<
 }
 
 async fn read_and_log_info<T: AsyncRead + Unpin>(interface: &mut T) -> Result<Reply> {
-    let mut retry = 0;
+    read_and_log_info_with_timeout(interface, Duration::seconds(DEFAULT_READ_TIMEOUT_SECS)).await
+}
+
+async fn read_and_log_info_with_timeout<T: AsyncRead + Unpin>(
+    interface: &mut T,
+    timeout: Duration,
+) -> Result<Reply> {
+    let start = Utc::now();
     loop {
         match read_from_interface(interface).await {
             Ok(reply) => match reply {
-                Reply::Info(msg) => log::info!("{}", msg),
+                Reply::Info(msg) => log::info!("Fastboot Info: \"{}\"", msg),
                 _ => return Ok(reply),
             },
             Err(e) => {
-                log::warn!("error reading fastboot reply from usb interface: {:?}", e);
-                retry += 1;
-                if retry >= READ_RETRY_MAX {
-                    log::error!("could not read reply: {:?}", e);
-                    return Err(e);
+                let elapsed_time = Utc::now().signed_duration_since(start);
+                if elapsed_time >= timeout {
+                    log::error!("timed out reading reply: {:?}", e);
+                    bail!(SendError::Timeout);
+                } else {
+                    let d = Duration::milliseconds(READ_INTERVAL_MS);
+                    Timer::new(d.to_std()?).await;
                 }
             }
         }
@@ -59,6 +78,15 @@ pub async fn send<T: AsyncRead + AsyncWrite + Unpin>(
 ) -> Result<Reply> {
     interface.write(&Vec::<u8>::try_from(cmd)?).await?;
     read_and_log_info(interface).await
+}
+
+pub async fn send_with_timeout<T: AsyncRead + AsyncWrite + Unpin>(
+    cmd: Command,
+    interface: &mut T,
+    timeout: Duration,
+) -> Result<Reply> {
+    interface.write(&Vec::<u8>::try_from(cmd)?).await?;
+    read_and_log_info_with_timeout(interface, timeout).await
 }
 
 pub async fn upload<T: AsyncRead + AsyncWrite + Unpin>(
@@ -83,12 +111,11 @@ pub async fn upload<T: AsyncRead + AsyncWrite + Unpin>(
             let mut t: usize = 0;
             // Chunk into 1mb chunks so that progress can be reported during
             // large writes.
-            for chunk in data.chunks(1<<20) {
+            for chunk in data.chunks(1 << 20) {
                 match interface.write(&chunk).await {
                     Ok(x) => {
                         t += x;
-                        listener
-                            .on_progress(t.try_into().expect("usize should fit in u64"))?;
+                        listener.on_progress(t.try_into().expect("usize should fit in u64"))?;
                     }
                     Err(e) => {
                         let err = format!("Could not write to usb interface: {:?}", e);

@@ -8,7 +8,7 @@ use {
         ConfigError,
     },
     crate::mapping::{filter::filter, flatten::flatten},
-    anyhow::{anyhow, Result},
+    anyhow::anyhow,
     serde_json::Value,
     std::{
         convert::{From, TryFrom, TryInto},
@@ -146,17 +146,35 @@ impl TryFrom<ConfigValue> for u64 {
         value
             .0
             .and_then(|v| {
-                v.as_u64().or_else(|| {
-                    if let Value::String(s) = v {
-                        let parsed: Result<u64, _> = s.parse();
-                        match parsed {
-                            Ok(b) => Some(b),
-                            Err(_) => None,
-                        }
-                    } else {
-                        None
-                    }
-                })
+                v.as_u64().or_else(|| if let Value::String(s) = v { s.parse().ok() } else { None })
+            })
+            .ok_or(anyhow!("no configuration Number value found").into())
+    }
+}
+
+impl ValueStrategy for i64 {
+    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        flatten(next)
+    }
+
+    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
+        match query.select {
+            SelectMode::First => Ok(()),
+            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
+        }
+    }
+}
+
+impl TryFrom<ConfigValue> for i64 {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        value
+            .0
+            .and_then(|v| {
+                v.as_i64().or_else(|| if let Value::String(s) = v { s.parse().ok() } else { None })
             })
             .ok_or(anyhow!("no configuration Number value found").into())
     }
@@ -184,17 +202,7 @@ impl TryFrom<ConfigValue> for bool {
         value
             .0
             .and_then(|v| {
-                v.as_bool().or_else(|| {
-                    if let Value::String(s) = v {
-                        let parsed: Result<bool, _> = s.parse();
-                        match parsed {
-                            Ok(b) => Some(b),
-                            Err(_) => None,
-                        }
-                    } else {
-                        None
-                    }
-                })
+                v.as_bool().or_else(|| if let Value::String(s) = v { s.parse().ok() } else { None })
             })
             .ok_or(anyhow!("no configuration Boolean value found").into())
     }

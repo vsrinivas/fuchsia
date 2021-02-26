@@ -1,4 +1,10 @@
 {
+    "fastboot": {
+        "flash": {
+            "min_timeout_secs": 60,
+            "timeout_rate": 5
+        }
+    },
     "overnet": {
         "max_retry_count": 30,
         "socket": "/tmp/ascendd"

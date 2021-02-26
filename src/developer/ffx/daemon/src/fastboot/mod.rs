@@ -6,11 +6,13 @@ use {
     crate::constants::FASTBOOT_CHECK_INTERVAL_SECS,
     crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
     anyhow::{anyhow, bail, Context, Result},
+    chrono::Duration,
     fastboot::{
         command::{ClientVariable, Command},
         reply::Reply,
-        send, upload,
+        send, send_with_timeout, upload, SendError,
     },
+    ffx_config::get,
     ffx_daemon_core::events,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_developer_bridge::{UploadProgressListenerMarker, UploadProgressListenerProxy},
@@ -22,6 +24,9 @@ use {
 };
 
 pub mod client;
+
+const FLASH_TIMEOUT_RATE: &str = "fastboot.flash.timeout_rate";
+const MIN_FLASH_TIMEOUT: &str = "fastboot.flash.min_timeout_secs";
 
 //TODO(fxbug.dev/52733) - this info will probably get rolled into the target struct
 #[derive(Debug)]
@@ -138,11 +143,11 @@ pub fn open_interface_with_serial(serial: &String) -> Result<Interface> {
 pub async fn stage<T: AsyncRead + AsyncWrite + Unpin>(
     interface: &mut T,
     file: &String,
-    listener: UploadProgressListener,
+    listener: &UploadProgressListener,
 ) -> Result<()> {
     let bytes = read(file)?;
     log::debug!("uploading file size: {}", bytes.len());
-    match upload(&bytes[..], interface, &listener).await.context(format!("uploading {}", file))? {
+    match upload(&bytes[..], interface, listener).await.context(format!("uploading {}", file))? {
         Reply::Okay(s) => {
             log::debug!("Received response from download command: {}", s);
             Ok(())
@@ -156,26 +161,51 @@ pub async fn flash<T: AsyncRead + AsyncWrite + Unpin>(
     interface: &mut T,
     file: &String,
     name: &String,
-    listener: UploadProgressListener,
+    listener: &UploadProgressListener,
 ) -> Result<()> {
     let bytes = read(file)?;
-    log::debug!("uploading file size: {}", bytes.len());
     let upload_reply =
-        upload(&bytes[..], interface, &listener).await.context(format!("uploading {}", file))?;
+        upload(&bytes[..], interface, listener).await.context(format!("uploading {}", file))?;
     match upload_reply {
         Reply::Okay(s) => log::debug!("Received response from download command: {}", s),
         Reply::Fail(s) => bail!("Failed to upload {}: {}", file, s),
         _ => bail!("Unexpected reply from fastboot device for download: {:?}", upload_reply),
-    }
+    };
+    //timeout rate is in mb per seconds
+    let min_timeout: i64 = get(MIN_FLASH_TIMEOUT).await?;
+    let timeout_rate: i64 = get(FLASH_TIMEOUT_RATE).await?;
+    let megabytes = (bytes.len() / 1000000) as i64;
+    let mut timeout = megabytes / timeout_rate;
+    timeout = std::cmp::max(timeout, min_timeout);
+    log::debug!("Estimated timeout: {}s for {}MB", timeout, megabytes);
     let send_reply =
-        send(Command::Flash(name.to_string()), interface).await.context("sending flash")?;
+        send_with_timeout(Command::Flash(name.to_string()), interface, Duration::seconds(timeout))
+            .await
+            .context("sending flash");
     match send_reply {
-        Reply::Okay(_) => {
-            log::debug!("Successfully flashed parition: {}", name);
-            Ok(())
+        Ok(Reply::Okay(_)) => Ok(()),
+        Ok(Reply::Fail(s)) => bail!("Failed to flash \"{}\": {}", name, s),
+        Ok(_) => bail!("Unexpected reply from fastboot device for flash command"),
+        Err(ref e) => {
+            if let Some(ffx_err) = e.downcast_ref::<SendError>() {
+                match ffx_err {
+                    SendError::Timeout => {
+                        if timeout_rate == 1 {
+                            bail!("Could not read response from device.  Reply timed out.");
+                        }
+                        let lowered_rate = timeout_rate - 1;
+                        let timeout_err = format!(
+                            "Time out while waiting on a response from the device. \n\
+                            The current timeout rate is {} mb/s.  Try lowering the timeout rate: \n\
+                            ffx config set \"{}\" {}",
+                            timeout_rate, FLASH_TIMEOUT_RATE, lowered_rate
+                        );
+                        bail!("{}", timeout_err);
+                    }
+                }
+            }
+            bail!("Unexpected reply from fastboot device for flash command: {:?}", send_reply)
         }
-        Reply::Fail(s) => bail!("Failed to flash \"{}\": {}", name, s),
-        _ => bail!("Unexpected reply from fastboot device for flash command: {:?}", send_reply),
     }
 }
 
