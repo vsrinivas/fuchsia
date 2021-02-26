@@ -124,6 +124,13 @@ zx_status_t FtDevice::Init() {
     return ZX_ERR_INTERNAL;
   }
 
+  node_ = inspector_.GetRoot().CreateChild("Chip info");
+  LogRegisterValue(FTS_REG_TYPE, "TYPE");
+  LogRegisterValue(FTS_REG_FIRMID, "FIRMID");
+  LogRegisterValue(FTS_REG_RELEASE_ID_HIGH, "RELEASE_ID_HIGH");
+  LogRegisterValue(FTS_REG_RELEASE_ID_LOW, "RELEASE_ID_LOW");
+  LogRegisterValue(FTS_REG_IC_VERSION, "IC_VERSION");
+
   return ZX_OK;
 }
 
@@ -170,7 +177,8 @@ zx_status_t FtDevice::Create(void* ctx, zx_device_t* device) {
     }
   }
 
-  status = ft_dev->DdkAdd("focaltouch HidDevice");
+  status = ft_dev->DdkAdd(ddk::DeviceAddArgs("focaltouch HidDevice")
+                              .set_inspect_vmo(ft_dev->inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     zxlogf(ERROR, "focaltouch: Could not create hid device: %d", status);
     return status;
@@ -295,6 +303,18 @@ zx_status_t FtDevice::Read(uint8_t addr, uint8_t* buf, size_t len) {
   }
 
   return ZX_OK;
+}
+
+void FtDevice::LogRegisterValue(uint8_t addr, const char* name) {
+  uint8_t value;
+  zx_status_t status = Read(addr, &value, sizeof(value));
+  if (status == ZX_OK) {
+    node_.CreateByteVector(name, {value}, &values_);
+    zxlogf(INFO, "  %-16s: 0x%02x", name, value);
+  } else {
+    node_.CreateString(name, "error", &values_);
+    zxlogf(ERROR, "  %-16s: error %d", name, status);
+  }
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {

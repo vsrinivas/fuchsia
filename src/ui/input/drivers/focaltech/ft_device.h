@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 #include <zircon/compiler.h>
@@ -50,6 +51,11 @@
 #define FTS_REG_MODULE_ID                   0xE3
 #define FTS_REG_LIC_VER                     0xE4
 #define FTS_REG_ESD_SATURATE                0xED
+#define FTS_REG_TYPE                        0xA0  // Chip model number (refer to datasheet)
+#define FTS_REG_FIRMID                      0xA6  // Firmware version
+#define FTS_REG_RELEASE_ID_HIGH             0xAE  // Firmware release ID (two bytes)
+#define FTS_REG_RELEASE_ID_LOW              0xAF
+#define FTS_REG_IC_VERSION                  0xB1
 // clang-format on
 
 namespace ft {
@@ -103,6 +109,8 @@ class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
   ft3x27_touch_t ft_rpt_ __TA_GUARDED(client_lock_);
   void ParseReport(ft3x27_finger_t* rpt, uint8_t* buf);
 
+  void LogRegisterValue(uint8_t addr, const char* name);
+
   ddk::GpioProtocolClient int_gpio_;
   ddk::GpioProtocolClient reset_gpio_;
   zx::interrupt irq_;
@@ -116,6 +124,10 @@ class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
 
   const uint8_t* descriptor_ = nullptr;
   size_t descriptor_len_ = 0;
+
+  inspect::Inspector inspector_;
+  inspect::Node node_;
+  inspect::ValueList values_;
 };
 }  // namespace ft
 
