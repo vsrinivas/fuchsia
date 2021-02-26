@@ -582,6 +582,17 @@ between scanner runs. The following options are supported:
 The page scanner must be running for this option to have any effect. It can be
 enabled at boot with the `kernel.page-scanner.start-at-boot` option.
 
+## kernel.page-scanner.discardable-evictions-percent=\<num>
+
+Percentage of page evictions, zero by default, that should be satisfied from
+discardable VMOs, as opposed to pager-backed VMOs. For example, if this value
+is set to `X` and the kernel needs to reclaim `N` pages to relieve memory
+pressure, it will evict `(N * X / 100)` pages from discardable VMOs, and the
+remaining `(N * (100 - X) / 100)` pages from pager-backed VMOs.
+
+Note that the kernel will try its best to honor this ratio between discardable
+and pager-backed pages evicted, but the actual numbers might not be exact.
+
 ## kernel.userpager.overtime_wait_seconds=\<num>
 
 This option, 20 by default, configures how long a user pager fault may block

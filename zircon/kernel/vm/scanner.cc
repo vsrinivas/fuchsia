@@ -42,14 +42,13 @@ constexpr zx_duration_t kQueueRotateTime = ZX_SEC(10);
 // configurations may wish to tune this higher (or lower) as needed.
 constexpr uint64_t kDefaultZeroPageScansPerSecond = 20000;
 
-// A rough ratio of pages to be evicted from discardable vmos to pages evicted from pager-backed
-// vmos. Will require tuning when discardable vmos start being used. Currently sets the number of
-// discardable pages to evict to 0, putting all the burden of eviction on pager-backed pages.
-constexpr struct {
-  uint8_t discardable = 0;
-  uint8_t pager_backed = 1;
-} kEvictionRatio;
-static_assert(kEvictionRatio.discardable + kEvictionRatio.pager_backed > 0);
+// A rough percentage of page evictions that should be satisfied from discardable vmos (as opposed
+// to pager-backed vmos). Will require tuning when discardable vmos start being used. Currently sets
+// the number of discardable pages to evict to 0, putting all the burden of eviction on pager-backed
+// pages.
+constexpr uint32_t kDefaultDiscardableEvictionsPercent = 0;
+
+uint32_t discardable_evictions_percent = kDefaultDiscardableEvictionsPercent;
 
 // Number of pages to attempt to de-dupe back to zero every second. This not atomic as it is only
 // set during init before the scanner thread starts up, at which point it becomes read only.
@@ -199,10 +198,10 @@ void scanner_do_evict(uint64_t *pages_freed_pager_backed_out,
       break;
     }
 
+    DEBUG_ASSERT(discardable_evictions_percent <= 100);
+
     // Compute the desired number of discardable pages to free (vs pager-backed).
-    uint64_t pages_to_free_discardable =
-        pages_to_free / (kEvictionRatio.discardable + kEvictionRatio.pager_backed) *
-        kEvictionRatio.discardable;
+    uint64_t pages_to_free_discardable = pages_to_free * discardable_evictions_percent / 100;
 
     uint64_t pages_freed = scanner_evict_discardable_vmos(pages_to_free_discardable);
     *pages_freed_discardable_out += pages_freed;
@@ -378,10 +377,14 @@ void scanner_trigger_asynchronous_evict(uint64_t min_free_target, uint64_t free_
 
 uint64_t scanner_synchronous_evict(uint64_t max_pages, scanner::EvictionLevel eviction_level,
                                    scanner::Output output) {
+  if (!eviction_enabled) {
+    return 0;
+  }
+
+  DEBUG_ASSERT(discardable_evictions_percent <= 100);
+
   // Compute the desired number of discardable pages to free (vs pager-backed).
-  uint64_t pages_to_free_discardable = max_pages /
-                                       (kEvictionRatio.discardable + kEvictionRatio.pager_backed) *
-                                       kEvictionRatio.discardable;
+  uint64_t pages_to_free_discardable = max_pages * discardable_evictions_percent / 100;
 
   uint64_t pages_freed = scanner_evict_discardable_vmos(pages_to_free_discardable);
   if (output == scanner::Output::Print && pages_freed > 0) {
@@ -491,6 +494,13 @@ static void scanner_init_func(uint level) {
   } else {
     // Leave the policy at the default.
   }
+
+  uint32_t discardable_evictions = gCmdline.GetUInt32(
+      "kernel.page-scanner.discardable-evictions-percent", kDefaultDiscardableEvictionsPercent);
+  if (discardable_evictions <= 100) {
+    discardable_evictions_percent = discardable_evictions;
+  }
+
   thread->Resume();
 }
 
