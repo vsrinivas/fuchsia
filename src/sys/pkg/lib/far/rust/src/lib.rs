@@ -62,6 +62,9 @@ mod name;
 mod read;
 pub use read::{EntryReader, Reader};
 
+mod async_read;
+pub use async_read::{AsyncEntryReader, AsyncReader};
+
 mod write;
 pub use write::write;
 

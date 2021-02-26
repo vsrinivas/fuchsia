@@ -16,6 +16,7 @@ const ALL_ZEROES_CHUNK_TYPE: ChunkType = [0u8; 8];
 //   1. opens a FAR file named after the first parameter
 //   2. calls fuchsia_archive::Reader::new on the file
 //   3. asserts that the new() result matches the second parameter
+// And also an async version of the same test using fuchsia_archive::AsyncReader.
 macro_rules! tests {
     ( $( $fn:ident => $err:pat $(if $guard:expr)? , )+ ) => {
         $(
@@ -27,6 +28,30 @@ macro_rules! tests {
                 assert_matches!(Reader::new(file), $err $(if $guard)?);
             }
         )+
+
+        mod async_tests {
+            use {
+                super::*,
+                fuchsia_async as fasync,
+                fuchsia_archive::AsyncReader
+            };
+
+            $(
+                #[fasync::run_singlethreaded(test)]
+                async fn $fn() {
+                    let mut filename = stringify!($fn).replace("_", "-");
+                    filename.push_str(".far");
+                    let path = Path::new("/pkg/data/invalid-fars").join(filename);
+                    let file = io_util::file::open_in_namespace(
+                        path.to_str().unwrap(),
+                        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                    )
+                    .unwrap();
+                    let reader = io_util::file::AsyncFile::from_proxy(file);
+                    assert_matches!(AsyncReader::new(reader).await, $err $(if $guard)?);
+                }
+            )+
+        }
     };
 }
 

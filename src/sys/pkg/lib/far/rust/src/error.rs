@@ -25,6 +25,9 @@ pub enum Error {
     #[error("Reading archive")]
     Read(#[source] io::Error),
 
+    #[error("Getting archive size")]
+    GetSize(#[source] io::Error),
+
     #[error(
         "Content chunk had expected size {expected} but Reader supplied {actual} at archive \
              path '{path:?}'"

@@ -9,15 +9,19 @@ rustc_library("fuchsia-archive") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/io_util",
     "//third_party/rust_crates:bincode",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",
   ]
   test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:matches",
   ]
   sources = [
+    "src/async_read.rs",
     "src/error.rs",
     "src/lib.rs",
     "src/name.rs",
@@ -31,6 +35,9 @@ rustc_test("reject-invalid-fars-test") {
   edition = "2018"
   deps = [
     ":fuchsia-archive",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:matches",
   ]
 
