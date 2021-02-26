@@ -9,7 +9,7 @@ import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "factory-reset-trigger"
+  output_name = "factory_reset_trigger"
   with_unit_tests = true
   edition = "2018"
 
