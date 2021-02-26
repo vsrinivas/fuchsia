@@ -42,15 +42,16 @@ scheduling::PresentId DefaultFlatlandPresenter::RegisterPresent(
 }
 
 void DefaultFlatlandPresenter::ScheduleUpdateForSession(zx::time requested_presentation_time,
-                                                        scheduling::SchedulingIdPair id_pair) {
+                                                        scheduling::SchedulingIdPair id_pair,
+                                                        bool squashable) {
   if (auto scheduler = frame_scheduler_.lock()) {
     // TODO(fxbug.dev/61178): The FrameScheduler is not thread-safe, but a lock is not sufficient
     // since GFX sessions may access the FrameScheduler without passing through this object. Post a
     // task to the main thread, which is where GFX runs, to account for thread safety.
-    async::PostTask(main_dispatcher_, [scheduler, requested_presentation_time, id_pair] {
-      scheduler->ScheduleUpdateForSession(requested_presentation_time, id_pair,
-                                          /*squashable=*/true);
-    });
+    async::PostTask(
+        main_dispatcher_, [scheduler, requested_presentation_time, id_pair, squashable] {
+          scheduler->ScheduleUpdateForSession(requested_presentation_time, id_pair, squashable);
+        });
   } else {
     // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
     FX_LOGS(WARNING) << "Cannot schedule update for session due to missing FrameScheduler.";

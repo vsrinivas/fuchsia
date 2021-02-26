@@ -26,7 +26,7 @@ class DefaultFlatlandPresenter final : public FlatlandPresenter {
 
   // |FlatlandPresenter|
   void ScheduleUpdateForSession(zx::time requested_presentation_time,
-                                scheduling::SchedulingIdPair id_pair) override;
+                                scheduling::SchedulingIdPair id_pair, bool squashable) override;
 
   // |FlatlandPresenter|
   void RemoveSession(scheduling::SessionId session_id) override;

@@ -37,7 +37,7 @@ class FlatlandPresenter {
   //
   // This function should be called from Flatland instance worker threads.
   virtual void ScheduleUpdateForSession(zx::time requested_presentation_time,
-                                        scheduling::SchedulingIdPair id_pair) = 0;
+                                        scheduling::SchedulingIdPair id_pair, bool squashable) = 0;
 
   // From scheduling::FrameScheduler::RemoveSession():
   //

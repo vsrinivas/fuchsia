@@ -64,14 +64,28 @@ Flatland::~Flatland() {
   // TODO(fxbug.dev/55374): consider if Link tokens should be returned or not.
 }
 
-void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
-                       std::vector<zx::event> release_fences, PresentCallback callback) {
+void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args, PresentCallback callback) {
+  // Close any clients that call Present() without any present tokens.
   if (present_tokens_remaining_ == 0) {
     callback(fit::error(Error::NO_PRESENTS_REMAINING));
     CloseConnection();
     return;
   }
   present_tokens_remaining_--;
+
+  // If any fields are missing, replace them with the default values.
+  if (!args.has_requested_presentation_time()) {
+    args.set_requested_presentation_time(0);
+  }
+  if (!args.has_release_fences()) {
+    args.set_release_fences({});
+  }
+  if (!args.has_acquire_fences()) {
+    args.set_acquire_fences({});
+  }
+  if (!args.has_squashable()) {
+    args.set_squashable(true);
+  }
 
   auto root_handle = GetRoot();
 
@@ -172,7 +186,8 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
       FX_DCHECK(status == ZX_OK);
 
       // Push the new release fence into the user-provided list.
-      release_fences.push_back(std::move(buffer_collection_and_image_release_fence));
+      args.mutable_release_fences()->push_back(
+          std::move(buffer_collection_and_image_release_fence));
     }
 
     auto uber_struct = std::make_unique<UberStruct>();
@@ -192,21 +207,23 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
 
     // Register a Present to get the PresentId needed to queue the UberStruct. This happens before
     // waiting on the acquire fences to indicate that a Present is pending.
-    auto present_id = flatland_presenter_->RegisterPresent(session_id_, std::move(release_fences));
+    auto present_id = flatland_presenter_->RegisterPresent(
+        session_id_, std::move(*args.mutable_release_fences()));
     present2_helper_.RegisterPresent(present_id,
                                      /*present_received_time=*/zx::time(async_now(dispatcher_)));
 
     // Safe to capture |this| because the Flatland is guaranteed to outlive |fence_queue_|,
     // Flatland is non-movable and FenceQueue does not fire closures after destruction.
     fence_queue_->QueueTask(
-        [this, present_id, requested_presentation_time, uber_struct = std::move(uber_struct),
+        [this, present_id, requested_presentation_time = args.requested_presentation_time(),
+         squashable = args.squashable(), uber_struct = std::move(uber_struct),
          link_operations = std::move(pending_link_operations_),
-         release_fences = std::move(release_fences)]() mutable {
+         release_fences = std::move(*args.mutable_release_fences())]() mutable {
           // Push the UberStruct, then schedule the associated Present that will eventually publish
           // it to the InstanceMap used for rendering.
           uber_struct_queue_->Push(present_id, std::move(uber_struct));
           flatland_presenter_->ScheduleUpdateForSession(zx::time(requested_presentation_time),
-                                                        {session_id_, present_id});
+                                                        {session_id_, present_id}, squashable);
 
           // Finalize Link destruction operations after publishing the new UberStruct. This
           // ensures that any local Transforms referenced by the to-be-deleted Links are already
@@ -215,7 +232,7 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
             operation();
           }
         },
-        std::move(acquire_fences));
+        std::move(*args.mutable_acquire_fences()));
 
     callback(fit::ok());
   } else {

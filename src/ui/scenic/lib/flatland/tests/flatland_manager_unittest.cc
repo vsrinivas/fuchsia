@@ -43,18 +43,21 @@ using fuchsia::ui::scenic::internal::Flatland_Present_Result;
     const auto num_pending_sessions = GetNumPendingSessionUpdates(session_id);                    \
     if (expect_success) {                                                                         \
       EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(session_id, _));                     \
-      EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _));                     \
+      EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));                  \
     }                                                                                             \
     bool processed_callback = false;                                                              \
-    flatland->Present(/*requested_presentation_time=*/0, /*acquire_fences=*/{},                   \
-                      /*release_fences=*/{}, [&](Flatland_Present_Result result) {                \
-                        EXPECT_EQ(!expect_success, result.is_err());                              \
-                        if (!expect_success) {                                                    \
-                          EXPECT_EQ(fuchsia::ui::scenic::internal::Error::NO_PRESENTS_REMAINING,  \
-                                    result.err());                                                \
-                        }                                                                         \
-                        processed_callback = true;                                                \
-                      });                                                                         \
+    fuchsia::ui::scenic::internal::PresentArgs present_args;                                      \
+    present_args.set_requested_presentation_time(0);                                              \
+    present_args.set_acquire_fences({});                                                          \
+    present_args.set_release_fences({});                                                          \
+    present_args.set_squashable(true);                                                            \
+    flatland->Present(std::move(present_args), [&](Flatland_Present_Result result) {              \
+      EXPECT_EQ(!expect_success, result.is_err());                                                \
+      if (!expect_success) {                                                                      \
+        EXPECT_EQ(fuchsia::ui::scenic::internal::Error::NO_PRESENTS_REMAINING, result.err());     \
+      }                                                                                           \
+      processed_callback = true;                                                                  \
+    });                                                                                           \
     /* If expecting success, wait for the worker thread to process the request. */                \
     if (expect_success) {                                                                         \
       EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this, session_id, num_pending_sessions] {            \
@@ -90,9 +93,10 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
               return next_present_id;
             }));
 
-    ON_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _))
-        .WillByDefault(::testing::Invoke(
-            [&](zx::time requested_presentation_time, scheduling::SchedulingIdPair id_pair) {
+    ON_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _))
+        .WillByDefault(
+            ::testing::Invoke([&](zx::time requested_presentation_time,
+                                  scheduling::SchedulingIdPair id_pair, bool squashable) {
               // The ID pair must be already registered.
               EXPECT_TRUE(pending_presents_.count(id_pair));
 
@@ -231,7 +235,7 @@ TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
   manager_->CreateFlatland(flatland.NewRequest(dispatcher()));
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
-  
+
   RunLoopUntilIdle();
 
   EXPECT_TRUE(flatland.is_bound());

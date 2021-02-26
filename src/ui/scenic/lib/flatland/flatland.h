@@ -19,18 +19,17 @@
 
 // clang-format off
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
-// clang-format on
-
 #include <glm/vec2.hpp>
 #include <glm/mat3x3.hpp>
+// clang-format on
 
-#include "src/ui/scenic/lib/flatland/link_system.h"
+#include "src/ui/lib/escher/flib/fence_queue.h"
 #include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
+#include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
-#include "src/ui/lib/escher/flib/fence_queue.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 #include "src/ui/scenic/lib/scheduling/present2_helper.h"
@@ -72,8 +71,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   Flatland& operator=(Flatland&&) = delete;
 
   // |fuchsia::ui::scenic::internal::Flatland|
-  void Present(zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
-               std::vector<zx::event> release_fences, PresentCallback callback) override;
+  void Present(fuchsia::ui::scenic::internal::PresentArgs args, PresentCallback callback) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void LinkToParent(
       fuchsia::ui::scenic::internal::GraphLinkToken token,

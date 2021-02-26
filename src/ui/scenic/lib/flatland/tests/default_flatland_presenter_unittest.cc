@@ -48,7 +48,7 @@ TEST_F(DefaultFlatlandPresenterTest, NoFrameSchedulerSet) {
 
   EXPECT_EQ(present_id, scheduling::kInvalidPresentId);
 
-  presenter.ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId});
+  presenter.ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId}, true);
   RunLoopUntilIdle();
 
   presenter.RemoveSession(kSessionId);
@@ -72,7 +72,7 @@ TEST_F(DefaultFlatlandPresenterTest, FrameSchedulerExpired) {
 
   EXPECT_EQ(present_id, scheduling::kInvalidPresentId);
 
-  presenter.ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId});
+  presenter.ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId}, true);
   RunLoopUntilIdle();
 
   presenter.RemoveSession(kSessionId);
@@ -134,12 +134,14 @@ TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameSche
       .session_id = scheduling::kInvalidSessionId,
       .present_id = scheduling::kInvalidPresentId,
   });
+  bool last_squashable = false;
 
   frame_scheduler->set_schedule_update_for_session_callback(
-      [&last_presentation_time, &last_id_pair](
+      [&last_presentation_time, &last_id_pair, &last_squashable](
           zx::time presentation_time, scheduling::SchedulingIdPair id_pair, bool squashable) {
         last_presentation_time = presentation_time;
         last_id_pair = id_pair;
+        last_squashable = squashable;
       });
 
   auto presenter = CreateDefaultFlatlandPresenter();
@@ -150,12 +152,14 @@ TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameSche
       .present_id = 2,
   });
   const zx::time kPresentationTime = zx::time(123);
+  const bool kSquashable = true;
 
-  presenter.ScheduleUpdateForSession(kPresentationTime, kIdPair);
+  presenter.ScheduleUpdateForSession(kPresentationTime, kIdPair, kSquashable);
   RunLoopUntilIdle();
 
   EXPECT_EQ(last_presentation_time, kPresentationTime);
   EXPECT_EQ(last_id_pair, kIdPair);
+  EXPECT_EQ(last_squashable, kSquashable);
 }
 
 TEST_F(DefaultFlatlandPresenterTest, RemoveSessionForwardsToFrameScheduler) {
@@ -239,7 +243,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
         }
 
         // ScheduleUpdateForSession() is the other function being tested.
-        presenter.ScheduleUpdateForSession(zx::time(0), {session_id, present_id});
+        presenter.ScheduleUpdateForSession(zx::time(0), {session_id, present_id}, true);
 
         // Yield with some randomness so the threads get jumbled up a bit.
         if (std::rand() % 4 == 0) {

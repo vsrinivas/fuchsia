@@ -133,6 +133,54 @@ alias BufferCollectionId = uint64;
 /// (e.g. CreateLink(), CreateImage()) for more information.
 alias ContentId = uint64;
 
+// A maximum of 16 fences is enough for the current usage of these APIs.
+const int32 MAX_ACQUIRE_RELEASE_FENCE_COUNT = 16;
+
+/// Arguments passed into Present(). All arguments are optional, and if an
+/// argument is omitted Flatland will use a reasonable default, specified below.
+resource table PresentArgs {
+    /// `requested_presentation_time` specifies the time on or after which the client would like the
+    /// enqueued operations to take visible effect (light up pixels on the screen), expressed in
+    /// nanoseconds in the `CLOCK_MONOTONIC` timebase.
+    ///
+    /// The default `requested_presentation_time` is 0.
+    ///
+    /// Using a `requested_presentation_time` in the present or past (such as 0) schedules enqueued
+    /// operations to take visible effect as soon as possible, during the next frame to be prepared.
+    ///
+    /// Using a `requested_presentation_time` in the future schedules the enqueued operations to
+    /// take visible effect on or as closely as possible after the stated time, but no earlier.
+    ///
+    /// Each rendered frame has a target presentation time. This is when Flatland aims to have the
+    /// frame presented to the user. Before rendering a frame, Flatland applies all
+    /// enqueued operations associated with all squashable calls to Present() whose
+    /// `requested_presentation_time` is on or before the frame's target presentation time.
+    1: zx.time requested_presentation_time;
+
+    /// Flatland will wait until all of a session's `acquire_fences` are ready before it will
+    /// execute the presented commands.
+    ///
+    /// The default `acquire_fences` value is the empty vector.
+    2: vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT acquire_fences;
+
+    /// Flatland will signal all `release_fences` when the resources and shared buffers from this
+    /// Present() are no longer in use. Callers should not modify shared resources, such as
+    /// BufferCollections, until after these fences are signaled.
+    ///
+    /// If an error occurrs, release fences are not necessarily fired as Flatland can close the
+    /// client's instance at any point.
+    ///
+    /// The default `release_fences` value is the empty vector.
+    3: vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT release_fences;
+
+    /// If `squashable` is true, then an update can be combined with those that
+    /// come after it. If `squashable` is false, then the update is guaranteed
+    /// to be shown for at least one vsync interval.
+    ///
+    /// The default `squashable` value is true.
+    4: bool squashable;
+};
+
 /// Each Flatland instance contains a Graph, which consists of a set of objects, and the
 /// relationships between those objects. The client can specify a subset of those objects
 /// (specifically, the directed acyclic graph starting at the root transform) to be presented as
@@ -152,29 +200,8 @@ protocol Flatland {
     /// return an error. Operations that produce errors are ignored. Future operations are still
     /// executed.
     ///
-    /// `requested_presentation_time` specifies the time on or after which the results of the
-    /// Present() should take visible effect, expressed in nanoseconds in the `CLOCK_MONOTONIC`
-    /// timebase. A `requested_presentation_time` in the present or past (such as 0) schedules the
-    /// Present() to take visible effect as soon as possible (i.e. during the next frame). A
-    /// `requested_presentation_time` in the future schedules the Present() to take visible effect
-    /// as closely as possible to or after the stated time, but no earlier. Times must be
-    /// monotonically increasing.
-    ///
-    /// Flatland will not access any content or shared buffers created since the previous
-    /// Present() until the caller signals all `acquire_fences`. As a result, the updates
-    /// associated with a Present() will not be visible to the user until the caller signals all
-    /// `acquire_fences`. If the `acquire_fences` are not signalled before the
-    /// `requested_presentation_time` is reached, the Present() will be delayed.
-    ///
-    /// Flatland will signal all `release_fences` when the resources and shared buffers from this
-    /// Present() are no longer in use. Callers should not modify shared resources, such as
-    /// BufferCollections, until after these fences are signaled.
-    ///
-    /// TODO(fxbug.dev/36166): Present should stop execution, and kill the channel, when irrecoverable errors
-    /// are detected.
-    ///
     /// The client may only call Present() when they have a non-zero number of "present tokens",
-    /// which are tracked by the server. The server increments the counter when it fires the
+    /// which are tracked by the server. The server may increment the counter when it fires the
     /// OnPresentTokensReturned() event, which informs the client when it receives additional
     /// tokens. Each Present() call uses one "present token" and decrements the server count by
     /// one. If the client calls Present() when no tokens remain, it will return
@@ -182,12 +209,25 @@ protocol Flatland {
     ///
     /// The client should assume that prior to receiving any OnPresentTokensReturned() events, they
     /// have one present token.
-    Present(zx.time requested_presentation_time, vector<zx.handle:EVENT>:16 acquire_fences,
-            vector<zx.handle:EVENT>:16 release_fences) -> () error Error;
+    ///
+    /// Every Present() call results in one OnPresentTokensReturned() event, and one
+    /// OnFramePresented() event, typically in that order.
+    ///
+    /// When the commands flushed by Present() make it to display, an `OnFramePresented`
+    /// event is fired. This event includes information pertaining to all Present()s that had content
+    /// that were part of that frame.
+    ///
+    /// See `PresentArgs` documentation above for more detailed information on what arguments are
+    /// passed in and their role.
+    ///
+    /// TODO(fxbug.dev/36166): Present should stop execution, and kill the channel, when irrecoverable
+    /// errors are detected.
+    Present(PresentArgs args) -> () error Error;
 
+    /// Clients may use the timing of this event to begin their rendering work.
+    ///
     /// This event is fired to give the client additional present tokens, indicating that the
-    /// client can call Present() additional times. `present_tokens` will always be greater than
-    /// zero.
+    /// client can call Present() additional times.
     -> OnPresentTokensReturned(uint32 present_tokens);
 
     /// This event is fired whenever a set of one or more Present()s are presented simultaneously,
