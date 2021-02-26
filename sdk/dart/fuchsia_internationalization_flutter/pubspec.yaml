@@ -6,7 +6,7 @@ description: The internationalization library for Fuchsia.
 
 environment:
   # Future is exported since SDK 2.1
-  sdk: '>=2.12.0 <3.0.0'
+  sdk: '>=2.12.0-0 <3.0.0'
 
 flutter:
 
