@@ -14,34 +14,40 @@ use {
     fuchsia_zircon as zx,
     futures::{channel::mpsc, select, StreamExt},
     log::{debug, info, warn},
+    std::convert::TryInto,
 };
 
-use super::{calls::Calls, gain_control::GainControl, PeerRequest};
+use super::{
+    calls::Calls, gain_control::GainControl, service_level_connection::ServiceLevelConnection,
+    PeerRequest,
+};
 
 pub(super) struct PeerTask {
     id: PeerId,
     _local_config: AudioGatewayFeatureSupport,
-    _profile_proxy: bredr::ProfileProxy,
+    profile_proxy: bredr::ProfileProxy,
     _handler: Option<PeerHandlerProxy>,
     network: NetworkInformation,
     calls: Calls,
     gain_control: GainControl,
+    connection: ServiceLevelConnection,
 }
 
 impl PeerTask {
     pub fn new(
         id: PeerId,
-        _profile_proxy: bredr::ProfileProxy,
+        profile_proxy: bredr::ProfileProxy,
         local_config: AudioGatewayFeatureSupport,
     ) -> Result<Self, Error> {
         Ok(Self {
             id,
             _local_config: local_config,
-            _profile_proxy,
+            profile_proxy,
             _handler: None,
             network: NetworkInformation::EMPTY,
             calls: Calls::new(None),
             gain_control: GainControl::new()?,
+            connection: ServiceLevelConnection::new(),
         })
     }
 
@@ -59,9 +65,11 @@ impl PeerTask {
     fn on_connection_request(
         &mut self,
         _protocol: Vec<ProtocolDescriptor>,
-        _channel: fuchsia_bluetooth::types::Channel,
+        channel: fuchsia_bluetooth::types::Channel,
     ) {
-        // TODO (fxbug.dev/64566): handle connection request
+        // TODO (fxbug.dev/64566): improve connection handling
+        info!("connection request from peer {:?}", self.id);
+        self.connection.connect(channel);
     }
 
     async fn on_search_result(
@@ -69,7 +77,25 @@ impl PeerTask {
         _protocol: Option<Vec<ProtocolDescriptor>>,
         _attributes: Vec<Attribute>,
     ) {
-        // TODO (fxbug.dev/64566): handle search result
+        // TODO (fxbug.dev/64566): improve connection handling
+        info!("connecting to peer {:?} from search results", self.id);
+        let result = self
+            .profile_proxy
+            .connect(
+                &mut self.id.into(),
+                &mut bredr::ConnectParameters::Rfcomm(bredr::RfcommParameters {
+                    channel: Some(1),
+                    ..bredr::RfcommParameters::EMPTY
+                }),
+            )
+            .await;
+
+        match result {
+            Ok(Ok(channel)) => {
+                self.connection.connect(channel.try_into().expect("Channel to be valid"))
+            }
+            r => info!("Error connecting to peer {:?} from search results: {:?}", self.id, r),
+        }
     }
 
     /// When a new handler is received, the state is not known. It might be stale because the
@@ -140,6 +166,9 @@ impl PeerTask {
                 }
                 // A new call state has been received from the call service
                 _update = self.calls.select_next_some() => {
+                    unimplemented!();
+                }
+                _event = self.connection.select_next_some() => {
                     unimplemented!();
                 }
                 complete => break,

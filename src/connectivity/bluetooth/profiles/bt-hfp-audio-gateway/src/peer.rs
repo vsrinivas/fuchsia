@@ -20,6 +20,7 @@ use {
 
 mod calls;
 mod gain_control;
+mod service_level_connection;
 mod task;
 
 /// A request made to the Peer that should be passed along to the PeerTask
