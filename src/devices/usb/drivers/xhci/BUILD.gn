@@ -2,7 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("usb_old_xhci_bind") {
+  rules = "usb_xhci.bind"
+  output = "usb_xhci_bind.h"
+  tests = "tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.pci",
+    "//src/devices/bind/fuchsia.pci:serial",
+    "//src/devices/bind/fuchsia.pci:serial.usb",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":usb_old_xhci_bind_test" ]
+}
 
 driver_module("xhci-x86") {
   configs += [
@@ -23,6 +41,7 @@ driver_module("xhci-x86") {
     "xhci.cc",
   ]
   deps = [
+    ":usb_old_xhci_bind",
     "//sdk/banjo/fuchsia.hardware.pci",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.usb",
@@ -38,9 +57,6 @@ driver_module("xhci-x86") {
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
