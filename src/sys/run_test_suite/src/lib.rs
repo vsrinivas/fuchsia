@@ -56,6 +56,9 @@ pub struct RunResult {
     /// All tests which passed.
     pub passed: Vec<String>,
 
+    /// All tests which failed.
+    pub failed: Vec<String>,
+
     /// Suite protocol completed without error.
     pub successful_completion: bool,
 }
@@ -115,6 +118,7 @@ async fn run_test_for_invocations<W: Write>(
     let mut test_cases_in_progress = HashSet::new();
     let mut test_cases_executed = HashSet::new();
     let mut test_cases_passed = HashSet::new();
+    let mut test_cases_failed = HashSet::new();
     let mut successful_completion = false;
 
     let test_fut = suite_instance
@@ -164,11 +168,13 @@ async fn run_test_for_invocations<W: Write>(
                                     if outcome == Outcome::Passed {
                                         outcome = Outcome::Failed;
                                     }
+                                    test_cases_failed.insert(test_case_name.clone());
                                     "FAILED"
                                 }
                                 test_executor::TestResult::Skipped => "SKIPPED",
                                 test_executor::TestResult::Error => {
                                     outcome = Outcome::Error;
+                                    test_cases_failed.insert(test_case_name.clone());
                                     "ERROR"
                                 }
                             };
@@ -220,14 +226,17 @@ async fn run_test_for_invocations<W: Write>(
 
     let mut test_cases_executed: Vec<String> = test_cases_executed.into_iter().collect();
     let mut test_cases_passed: Vec<String> = test_cases_passed.into_iter().collect();
+    let mut test_cases_failed: Vec<String> = test_cases_failed.into_iter().collect();
 
     test_cases_executed.sort();
     test_cases_passed.sort();
+    test_cases_failed.sort();
 
     Ok(RunResult {
         outcome,
         executed: test_cases_executed,
         passed: test_cases_passed,
+        failed: test_cases_failed,
         successful_completion,
     })
 }
@@ -336,9 +345,13 @@ async fn collect_results(
                 println!("Test suite encountered error trying to run tests: {:?}", e);
                 return Outcome::Error;
             }
-            Ok(Some(RunResult { outcome, executed, passed, successful_completion })) => {
+            Ok(Some(RunResult { outcome, executed, passed, failed, successful_completion })) => {
                 if count.get() > 1 {
                     println!("\nTest run count {}/{}", i, count);
+                }
+                println!("\n");
+                if !failed.is_empty() {
+                    println!("Failed tests: {}", failed.join(", "))
                 }
                 println!("{} out of {} tests passed...", passed.len(), executed.len());
                 println!("{} completed with result: {}", &test_url, outcome);
