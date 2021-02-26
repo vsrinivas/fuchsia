@@ -6,16 +6,14 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/flynn/go-tuf v0.0.0-20200724142817-bf368c57efac
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/google/go-cmp v0.5.3-0.20201020212313-ab46b8bd0abd
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/google/go-cmp v0.5.4
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/sftp v1.12.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613 // indirect
-	go.fuchsia.dev/fuchsia/garnet v0.0.0-20200821151753-3226fa91b98e
 	go.fuchsia.dev/fuchsia/tools v0.0.0-20210112150134-09b1fab9b7e1
 	go.uber.org/multierr v1.6.0
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
-	golang.org/x/net v0.0.0-20200822124328-c89045814202 // indirect
-	golang.org/x/sys v0.0.0-20200828081204-131dc92a58d5 // indirect
 	gvisor.dev/gvisor v0.0.0-20210112063336-a20da708291e
 )
 
