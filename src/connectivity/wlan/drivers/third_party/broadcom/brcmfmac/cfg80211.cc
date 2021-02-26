@@ -3530,6 +3530,7 @@ void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req) {
       std::make_unique<wlan::brcmfmac::AllocatedNetbuf>(std::move(packet_data), packet_length);
   brcmf_netdev_start_xmit(ndev, std::move(packet));
   confirm.result_code = WLAN_EAPOL_RESULT_SUCCESS;
+  std::memcpy(confirm.dst_addr, req->dst_addr, ETH_ALEN);
   zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
   BRCMF_IFDBG(WLANIF, ndev, "Sending EAPOL xmit confirm to SME. result: %s",
               confirm.result_code == WLAN_EAPOL_RESULT_SUCCESS                ? "success"
