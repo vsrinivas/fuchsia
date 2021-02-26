@@ -7,6 +7,7 @@ use {
     diagnostics_data::{LogsData, Timestamp},
     ffx_config::get,
     ffx_log_data::{EventType, LogData, LogEntry},
+    ffx_log_utils::{run_logging_pipeline, OrderedBatchPipeline},
     fidl::endpoints::create_proxy,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::{
@@ -25,6 +26,7 @@ pub mod streamer;
 const BRIDGE_SELECTOR: &str =
     "core/remote-diagnostics-bridge:out:fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge";
 const ENABLED_CONFIG: &str = "proactive_log.enabled";
+const PIPELINE_SIZE: usize = 20;
 
 fn get_timestamp() -> Result<Timestamp> {
     Ok(Timestamp::from(
@@ -51,59 +53,62 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + Send + ?Sized>(
             }])
             .await?;
 
+        let mut requests = OrderedBatchPipeline::new(PIPELINE_SIZE);
         loop {
-            let result = proxy.get_next().await.context("waiting for new log")?;
-            match result {
-                Ok(logs) => {
-                    if logs.is_empty() {
-                        break;
+            let (get_next_results, terminal_err) =
+                run_logging_pipeline(&mut requests, &proxy).await;
+
+            if get_next_results.is_empty() {
+                continue;
+            }
+
+            let ts = Timestamp::from(get_timestamp()?);
+            let log_data = get_next_results
+                .into_iter()
+                .filter_map(|r| {
+                    if let Err(e) = r {
+                        // TODO(jwing): consider exiting if we see a large number of successive errors
+                        // from the diagnostics bridge.
+                        log::warn!("got an error from diagnostics bridge {:?}", e);
                     }
-                    let ts = Timestamp::from(get_timestamp()?);
-                    let log_data = logs
-                        .iter()
-                        .map(|l| l.data.clone())
-                        .filter(|l| l.is_some())
-                        .map(|l| l.unwrap())
-                        .map(|s| {
-                            let data: LogData = match serde_json::from_str::<LogsData>(&s) {
-                                Ok(data) => LogData::TargetLog(data),
-                                Err(_) => LogData::MalformedTargetLog(s.clone()),
-                            };
+                    r.ok()
+                })
+                .flatten()
+                .filter_map(|l| l.data.clone())
+                .map(|s| {
+                    let data: LogData = match serde_json::from_str::<LogsData>(&s) {
+                        Ok(data) => LogData::TargetLog(data),
+                        Err(_) => LogData::MalformedTargetLog(s.clone()),
+                    };
 
-                            LogEntry { data: data, timestamp: ts, version: 1 }
-                        })
-                        .filter(|log| {
-                            // TODO(jwing): use a monotonic ID instead of timestamp
-                            // once fxbug.dev/61795 is resolved.
-                            if let Some(ts) = skip_timestamp {
-                                match &log.data {
-                                    LogData::TargetLog(log_data) => {
-                                        if log_data.metadata.timestamp > ts {
-                                            skip_timestamp = None;
-                                            true
-                                        } else {
-                                            false
-                                        }
-                                    }
-                                    _ => true,
+                    LogEntry { data: data, timestamp: ts, version: 1 }
+                })
+                .filter(|log| {
+                    // TODO(jwing): use a monotonic ID instead of timestamp
+                    // once fxbug.dev/61795 is resolved.
+                    if let Some(ts) = skip_timestamp {
+                        match &log.data {
+                            LogData::TargetLog(log_data) => {
+                                if log_data.metadata.timestamp > ts {
+                                    skip_timestamp = None;
+                                    true
+                                } else {
+                                    false
                                 }
-                            } else {
-                                true
                             }
-                        })
-                        .collect();
+                            _ => true,
+                        }
+                    } else {
+                        true
+                    }
+                })
+                .collect();
 
-                    streamer.append_logs(log_data).await?;
-                }
-                Err(e) => {
-                    // TODO(jwing): consider exiting if we see a large number of successive errors
-                    // from the diagnostics bridge.
-                    log::warn!("got an error from diagnostics bridge {:?}", e);
-                }
+            streamer.append_logs(log_data).await?;
+            if let Some(err) = terminal_err {
+                return Err(anyhow!(err));
             }
         }
-        let resp: Result<()> = Ok(());
-        resp
     };
 
     return Ok((server, listener_fut));
@@ -209,10 +214,10 @@ mod test {
         async_trait::async_trait,
         diagnostics_data::{LogsField, Severity},
         diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
+        ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
         fidl::endpoints::RequestStream,
         fidl_fuchsia_developer_remotecontrol::{
-            ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker,
-            ArchiveIteratorRequest, IdentifyHostResponse, RemoteControlMarker, RemoteControlProxy,
+            ArchiveIteratorError, IdentifyHostResponse, RemoteControlMarker, RemoteControlProxy,
             RemoteControlRequest, RemoteDiagnosticsBridgeRequest,
             RemoteDiagnosticsBridgeRequestStream, ServiceMatch,
         },
@@ -328,49 +333,6 @@ mod test {
                 got.version, expected.version
             );
         }
-    }
-
-    struct FakeArchiveIteratorResponse {
-        values: Vec<String>,
-        iterator_error: Option<ArchiveIteratorError>,
-    }
-
-    fn setup_fake_archive_iterator(
-        server_end: ServerEnd<ArchiveIteratorMarker>,
-        responses: Arc<Vec<FakeArchiveIteratorResponse>>,
-    ) -> Result<()> {
-        let mut stream = server_end.into_stream()?;
-        fuchsia_async::Task::spawn(async move {
-            let mut iter = responses.iter();
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    ArchiveIteratorRequest::GetNext { responder } => {
-                        let next = iter.next();
-                        match next {
-                            Some(FakeArchiveIteratorResponse { values, iterator_error }) => {
-                                if let Some(err) = iterator_error {
-                                    responder.send(&mut Err(*err)).unwrap();
-                                } else {
-                                    responder
-                                        .send(&mut Ok(values
-                                            .iter()
-                                            .map(|s| ArchiveIteratorEntry {
-                                                data: Some(s.clone()),
-                                                truncated_chars: Some(0),
-                                                ..ArchiveIteratorEntry::EMPTY
-                                            })
-                                            .collect()))
-                                        .unwrap()
-                                }
-                            }
-                            None => responder.send(&mut Ok(vec![])).unwrap(),
-                        }
-                    }
-                }
-            }
-        })
-        .detach();
-        Ok(())
     }
 
     fn setup_fake_archive_accessor(
@@ -489,6 +451,13 @@ mod test {
         );
         Target::from_rcs_connection(conn).await.unwrap()
     }
+
+    async fn run_logger_to_completion(logger: Logger) {
+        match logger.start().await {
+            Err(e) => assert!(e.contains("PEER_CLOSED")),
+            _ => panic!("should have exited with PEER_CLOSED, got ok"),
+        };
+    }
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_disabled() -> Result<()> {
         let target = make_default_target(vec![]).await;
@@ -503,14 +472,14 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_multiple_malformed_logs_in_series() -> Result<()> {
         let target = make_default_target(vec![
-            FakeArchiveIteratorResponse {
-                values: vec!["log1".to_string(), "log2".to_string()],
-                iterator_error: None,
-            },
-            FakeArchiveIteratorResponse {
-                values: vec!["log3".to_string(), "log4".to_string()],
-                iterator_error: None,
-            },
+            FakeArchiveIteratorResponse::new_with_values(vec![
+                "log1".to_string(),
+                "log2".to_string(),
+            ]),
+            FakeArchiveIteratorResponse::new_with_values(vec![
+                "log3".to_string(),
+                "log4".to_string(),
+            ]),
         ])
         .await;
         let t = target.downgrade();
@@ -519,7 +488,7 @@ mod test {
         let streamer = FakeDiagnosticsStreamer::new(0, log_buf.clone());
         streamer.expect_setup(NODENAME, BOOT_TIME).await;
         let logger = Logger::new_with_streamer_and_config(t, streamer, true);
-        logger.start().await.unwrap();
+        run_logger_to_completion(logger).await;
 
         verify_logged(
             log_buf.clone(),
@@ -542,14 +511,14 @@ mod test {
         let log3 = target_log(3, "log3");
         let log4 = target_log(4, "log4");
         let target = make_default_target(vec![
-            FakeArchiveIteratorResponse {
-                values: vec![serde_json::to_string(&log1)?, serde_json::to_string(&log2)?],
-                iterator_error: None,
-            },
-            FakeArchiveIteratorResponse {
-                values: vec![serde_json::to_string(&log3)?, serde_json::to_string(&log4)?],
-                iterator_error: None,
-            },
+            FakeArchiveIteratorResponse::new_with_values(vec![
+                serde_json::to_string(&log1)?,
+                serde_json::to_string(&log2)?,
+            ]),
+            FakeArchiveIteratorResponse::new_with_values(vec![
+                serde_json::to_string(&log3)?,
+                serde_json::to_string(&log4)?,
+            ]),
         ])
         .await;
         let t = target.downgrade();
@@ -559,7 +528,7 @@ mod test {
         let streamer = FakeDiagnosticsStreamer::new(0, log_buf.clone());
         streamer.expect_setup(NODENAME, BOOT_TIME).await;
         let logger = Logger::new_with_streamer_and_config(t, streamer, true);
-        logger.start().await.unwrap();
+        run_logger_to_completion(logger).await;
 
         verify_logged(
             log_buf.clone(),
@@ -580,14 +549,8 @@ mod test {
         let log1 = target_log(1, "log1");
         let log2 = target_log(2, "log2");
         let target = make_default_target(vec![
-            FakeArchiveIteratorResponse {
-                values: vec![serde_json::to_string(&log1)?],
-                iterator_error: None,
-            },
-            FakeArchiveIteratorResponse {
-                values: vec![serde_json::to_string(&log2)?],
-                iterator_error: None,
-            },
+            FakeArchiveIteratorResponse::new_with_values(vec![serde_json::to_string(&log1)?]),
+            FakeArchiveIteratorResponse::new_with_values(vec![serde_json::to_string(&log2)?]),
         ])
         .await;
         let t = target.downgrade();
@@ -597,7 +560,7 @@ mod test {
         let streamer = FakeDiagnosticsStreamer::new(1, log_buf.clone());
         streamer.expect_setup(NODENAME, BOOT_TIME).await;
         let logger = Logger::new_with_streamer_and_config(t, streamer, true);
-        logger.start().await.unwrap();
+        run_logger_to_completion(logger).await;
 
         verify_logged(log_buf.clone(), vec![logging_started_entry(), valid_log(log2)]).await;
         Ok(())
@@ -608,18 +571,9 @@ mod test {
         let log1 = target_log(1, "log1");
         let log2 = target_log(2, "log2");
         let target = make_default_target(vec![
-            FakeArchiveIteratorResponse {
-                values: vec![serde_json::to_string(&log1)?],
-                iterator_error: None,
-            },
-            FakeArchiveIteratorResponse {
-                values: vec![],
-                iterator_error: Some(ArchiveIteratorError::DataReadFailed),
-            },
-            FakeArchiveIteratorResponse {
-                values: vec![serde_json::to_string(&log2)?],
-                iterator_error: None,
-            },
+            FakeArchiveIteratorResponse::new_with_values(vec![serde_json::to_string(&log1)?]),
+            FakeArchiveIteratorResponse::new_with_error(ArchiveIteratorError::DataReadFailed),
+            FakeArchiveIteratorResponse::new_with_values(vec![serde_json::to_string(&log2)?]),
         ])
         .await;
         let t = target.downgrade();
@@ -629,7 +583,7 @@ mod test {
         let streamer = FakeDiagnosticsStreamer::new(0, log_buf.clone());
         streamer.expect_setup(NODENAME, BOOT_TIME).await;
         let logger = Logger::new_with_streamer_and_config(t, streamer, true);
-        logger.start().await.unwrap();
+        run_logger_to_completion(logger).await;
 
         verify_logged(
             log_buf.clone(),

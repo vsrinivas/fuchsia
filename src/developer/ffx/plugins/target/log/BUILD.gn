@@ -13,6 +13,8 @@ ffx_plugin("ffx_log") {
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/developer/ffx:ffx_lib_args",
     "//src/developer/ffx/logger/data:lib",
+    "//src/developer/ffx/logger/test_utils:lib",
+    "//src/developer/ffx/logger/utils:lib",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

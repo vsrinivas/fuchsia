@@ -13,16 +13,17 @@ use {
     ffx_core::ffx_plugin,
     ffx_log_args::{DumpCommand, LogCommand, LogSubCommand, WatchCommand},
     ffx_log_data::{EventType, LogData, LogEntry},
+    ffx_log_utils::{run_logging_pipeline, OrderedBatchPipeline},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{
         self as bridge, DaemonDiagnosticsStreamParameters, StreamMode,
     },
-    fidl_fuchsia_developer_remotecontrol::{
-        ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker,
-    },
+    fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, ArchiveIteratorMarker},
+    std::iter::Iterator,
 };
 
 type ArchiveIteratorResult = Result<LogEntry, ArchiveIteratorError>;
+const PIPELINE_SIZE: usize = 20;
 
 fn timestamp_to_partial_secs(ts: Timestamp) -> f64 {
     let u_ts: u64 = ts.into();
@@ -120,27 +121,29 @@ pub async fn log_cmd(
         .await?
         .map_err(|s| anyhow!("failure setting up diagnostics stream: {:?}", s))?;
 
+    let mut requests = OrderedBatchPipeline::new(PIPELINE_SIZE);
     loop {
-        let next = proxy.get_next().await.context("waiting for new log")?;
-        let vec = match next {
-            Ok(l) => l,
-            Err(e) => {
+        let (get_next_results, terminal_err) = run_logging_pipeline(&mut requests, &proxy).await;
+
+        for result in get_next_results.into_iter() {
+            if let Err(e) = result {
+                log::warn!("got an error from the daemon {:?}", e);
                 log_formatter.push_log(Err(e)).await?;
                 continue;
             }
-        };
 
-        if vec.is_empty() {
-            break;
+            let entries = result.unwrap().into_iter().filter_map(|e| e.data);
+
+            for entry in entries {
+                let parsed: LogEntry = serde_json::from_str(&entry)?;
+                log_formatter.push_log(Ok(parsed)).await?
+            }
         }
 
-        for ArchiveIteratorEntry { data, .. } in vec.iter() {
-            let parsed: LogEntry = serde_json::from_str(data.as_ref().unwrap())?;
-            log_formatter.push_log(Ok(parsed)).await?;
+        if let Some(err) = terminal_err {
+            return Err(anyhow!(err));
         }
     }
-
-    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -152,11 +155,9 @@ mod test {
         super::*,
         async_std::sync::Arc,
         diagnostics_data::Timestamp,
-        fidl::endpoints::ServerEnd,
-        fidl_fuchsia_developer_remotecontrol::{
-            ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest,
-        },
-        futures::TryStreamExt,
+        ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
+        fidl::Error as FidlError,
+        fidl_fuchsia_developer_remotecontrol::ArchiveIteratorError,
     };
 
     const DEFAULT_TS: u64 = 1234567;
@@ -196,48 +197,6 @@ mod test {
             }
         }
     }
-    struct FakeArchiveIteratorResponse {
-        values: Vec<String>,
-        iterator_error: Option<ArchiveIteratorError>,
-    }
-
-    fn setup_fake_archive_iterator(
-        server_end: ServerEnd<ArchiveIteratorMarker>,
-        responses: Arc<Vec<FakeArchiveIteratorResponse>>,
-    ) -> Result<()> {
-        let mut stream = server_end.into_stream()?;
-        fuchsia_async::Task::spawn(async move {
-            let mut iter = responses.iter();
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    ArchiveIteratorRequest::GetNext { responder } => {
-                        let next = iter.next();
-                        match next {
-                            Some(FakeArchiveIteratorResponse { values, iterator_error }) => {
-                                if let Some(err) = iterator_error {
-                                    responder.send(&mut Err(*err)).unwrap();
-                                } else {
-                                    responder
-                                        .send(&mut Ok(values
-                                            .iter()
-                                            .map(|s| ArchiveIteratorEntry {
-                                                data: Some(s.clone()),
-                                                truncated_chars: Some(0),
-                                                ..ArchiveIteratorEntry::EMPTY
-                                            })
-                                            .collect()))
-                                        .unwrap()
-                                }
-                            }
-                            None => responder.send(&mut Ok(vec![])).unwrap(),
-                        }
-                    }
-                }
-            }
-        })
-        .detach();
-        Ok(())
-    }
 
     fn setup_fake_daemon_server(
         expected_parameters: DaemonDiagnosticsStreamParameters,
@@ -263,6 +222,16 @@ mod test {
         LogEntry { version: 1, timestamp: Timestamp::from(DEFAULT_TS), data: log_data }
     }
 
+    fn assert_correct_result(r: Result<()>) {
+        assert!(r.is_err(), "expected a ClientChannelClosed error, got Ok");
+        let err = r.unwrap_err();
+        let e = err.downcast_ref::<FidlError>().unwrap();
+        match e {
+            FidlError::ClientChannelClosed { .. } => {}
+            actual => panic!("expected a ClientChannelClosed error, got {}", actual),
+        }
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_dump_empty() {
         let mut formatter = FakeLogFormatter::new();
@@ -273,14 +242,15 @@ mod test {
         };
         let expected_responses = vec![];
 
-        log_cmd(
-            setup_fake_daemon_server(params, Arc::new(expected_responses)),
-            &mut formatter,
-            String::from(DEFAULT_TARGET_STR),
-            cmd,
-        )
-        .await
-        .unwrap();
+        assert_correct_result(
+            log_cmd(
+                setup_fake_daemon_server(params, Arc::new(expected_responses)),
+                &mut formatter,
+                String::from(DEFAULT_TARGET_STR),
+                cmd,
+            )
+            .await,
+        );
 
         formatter.assert_same_logs(vec![])
     }
@@ -298,27 +268,24 @@ mod test {
         let log3 = make_log_entry(LogData::MalformedTargetLog("text2".to_string()));
 
         let expected_responses = vec![
-            FakeArchiveIteratorResponse {
-                values: vec![
-                    serde_json::to_string(&log1).unwrap(),
-                    serde_json::to_string(&log2).unwrap(),
-                ],
-                iterator_error: None,
-            },
-            FakeArchiveIteratorResponse {
-                values: vec![serde_json::to_string(&log3).unwrap()],
-                iterator_error: None,
-            },
+            FakeArchiveIteratorResponse::new_with_values(vec![
+                serde_json::to_string(&log1).unwrap(),
+                serde_json::to_string(&log2).unwrap(),
+            ]),
+            FakeArchiveIteratorResponse::new_with_values(vec![
+                serde_json::to_string(&log3).unwrap()
+            ]),
         ];
 
-        log_cmd(
-            setup_fake_daemon_server(params, Arc::new(expected_responses)),
-            &mut formatter,
-            String::from(DEFAULT_TARGET_STR),
-            cmd,
-        )
-        .await
-        .unwrap();
+        assert_correct_result(
+            log_cmd(
+                setup_fake_daemon_server(params, Arc::new(expected_responses)),
+                &mut formatter,
+                String::from(DEFAULT_TARGET_STR),
+                cmd,
+            )
+            .await,
+        );
 
         formatter.assert_same_logs(vec![Ok(log1), Ok(log2), Ok(log3)])
     }
@@ -336,31 +303,25 @@ mod test {
         let log3 = make_log_entry(LogData::MalformedTargetLog("text2".to_string()));
 
         let expected_responses = vec![
-            FakeArchiveIteratorResponse {
-                values: vec![
-                    serde_json::to_string(&log1).unwrap(),
-                    serde_json::to_string(&log2).unwrap(),
-                ],
-                iterator_error: None,
-            },
-            FakeArchiveIteratorResponse {
-                values: vec![],
-                iterator_error: Some(ArchiveIteratorError::GenericError),
-            },
-            FakeArchiveIteratorResponse {
-                values: vec![serde_json::to_string(&log3).unwrap()],
-                iterator_error: None,
-            },
+            FakeArchiveIteratorResponse::new_with_values(vec![
+                serde_json::to_string(&log1).unwrap(),
+                serde_json::to_string(&log2).unwrap(),
+            ]),
+            FakeArchiveIteratorResponse::new_with_error(ArchiveIteratorError::GenericError),
+            FakeArchiveIteratorResponse::new_with_values(vec![
+                serde_json::to_string(&log3).unwrap()
+            ]),
         ];
 
-        log_cmd(
-            setup_fake_daemon_server(params, Arc::new(expected_responses)),
-            &mut formatter,
-            String::from(DEFAULT_TARGET_STR),
-            cmd,
-        )
-        .await
-        .unwrap();
+        assert_correct_result(
+            log_cmd(
+                setup_fake_daemon_server(params, Arc::new(expected_responses)),
+                &mut formatter,
+                String::from(DEFAULT_TARGET_STR),
+                cmd,
+            )
+            .await,
+        );
 
         formatter.assert_same_logs(vec![
             Ok(log1),
