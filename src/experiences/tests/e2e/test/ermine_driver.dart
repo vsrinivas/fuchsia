@@ -17,6 +17,9 @@ const _chromeDriverPath = 'runtime_deps/chromedriver';
 const ermineUrl = 'fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx';
 const simpleBrowserUrl =
     'fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx';
+const terminalUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
+
+const waitForTimeout = Duration(seconds: 30);
 
 /// Defines a completion function that can be waited on with a timout.
 typedef WaitForCompletion<T> = Future<T> Function();
@@ -94,7 +97,7 @@ class ErmineDriver {
 
   /// Launch a component given its [componentUrl].
   Future<bool> launch(String componentUrl,
-      {Duration timeout = const Duration(seconds: 30)}) async {
+      {Duration timeout = waitForTimeout}) async {
     final result = await sl4f.ssh.run('session_control add $componentUrl');
     if (result.exitCode != 0) {
       fail('failed to launch component: $componentUrl.');
@@ -109,7 +112,7 @@ class ErmineDriver {
 
   /// Returns true if a component is running.
   Future<bool> isRunning(String componentUrl,
-      {Duration timeout = const Duration(seconds: 30)}) async {
+      {Duration timeout = waitForTimeout}) async {
     return waitFor(() async {
       return (await component.list())
           .where((e) => e.contains(componentUrl))
@@ -119,7 +122,7 @@ class ErmineDriver {
 
   /// Returns true if a component is stopped.
   Future<bool> isStopped(String componentUrl,
-      {Duration timeout = const Duration(seconds: 30)}) async {
+      {Duration timeout = waitForTimeout}) async {
     return waitFor(() async {
       return (await component.list())
           .where((e) => e.contains(componentUrl))
@@ -194,7 +197,7 @@ class ErmineDriver {
   }
 
   Future<Rectangle> getViewRect(String viewUrl,
-      [Duration timeout = const Duration(seconds: 30)]) async {
+      [Duration timeout = waitForTimeout]) async {
     final component = await waitForView(viewUrl, timeout);
     final viewport = component['viewport'];
     final viewRect =
@@ -206,7 +209,7 @@ class ErmineDriver {
   /// Finds the first launched component given its [viewUrl] and returns it's
   /// Inspect data. Waits for [timeout] duration for view to launch.
   Future<Map<String, dynamic>> waitForView(String viewUrl,
-      [Duration timeout = const Duration(seconds: 30)]) async {
+      [Duration timeout = waitForTimeout]) async {
     return waitFor(() async {
       final views = await launchedViews();
       final view = views.firstWhere((view) => view['url'] == viewUrl,
@@ -348,7 +351,7 @@ class ErmineDriver {
 
   /// A helper function to wait for completion of a computation within timeout.
   Future<T> waitFor<T>(WaitForCompletion<T> completion,
-      {Duration timeout = const Duration(seconds: 30)}) async {
+      {Duration timeout = waitForTimeout}) async {
     final completer = Completer<T>();
     final end = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(end)) {
