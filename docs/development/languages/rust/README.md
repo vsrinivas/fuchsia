@@ -65,8 +65,8 @@ onerous during development, and on your local machine you may wish to see warnin
 let CQ enforce the hard boundary.
 
 The `rust_cap_lints` GN arg allows you to control this behavior in your development environment.
-Setting `rust_cap_lints = "warn"` in `fx args` or `fx set` will allow you to develop locally without
-being blocked by warnings.
+Setting `rust_cap_lints = "warn"` in `fx args` or adding `--args='rust_cap_lints = "warn"'` to 
+your `fx set` will allow you to develop locally without being blocked by warnings.
 
 ## Style
 
