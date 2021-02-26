@@ -87,7 +87,7 @@ class DebugAdapterContextTest : public RemoteAPITest {
   }
 
   // Helper method to set up debug adapter session between client and server.
-  void IntializeDebugging();
+  void InitializeDebugging();
 
   // testing::Test implementation.
   void SetUp() override;

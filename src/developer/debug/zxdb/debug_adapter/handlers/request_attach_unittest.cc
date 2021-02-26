@@ -17,6 +17,8 @@ class RequestAttachTest : public DebugAdapterContextTest {};
 }  // namespace
 
 TEST_F(RequestAttachTest, AttachProcessName) {
+  InitializeDebugging();
+
   // Send attach request from the client.
   dap::AttachRequestZxdb req = {};
   req.process = "test";

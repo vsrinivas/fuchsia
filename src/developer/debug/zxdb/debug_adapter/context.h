@@ -30,6 +30,7 @@ class DebugAdapterContext : public ThreadObserver {
 
   Session* session() { return session_; }
   dap::Session& dap() { return *dap_; }
+  bool supports_run_in_terminal() { return supports_run_in_terminal_; };
 
   // Notification about the stream.
   void OnStreamReadable();
@@ -41,14 +42,15 @@ class DebugAdapterContext : public ThreadObserver {
   void OnThreadFramesInvalidated(Thread* thread) override;
 
  private:
-  void InitDebugAdapterProtocolSession();
+  void Init();
 
   Session* const session_;
   const std::unique_ptr<dap::Session> dap_;
   std::shared_ptr<DebugAdapterReader> reader_;
   std::shared_ptr<DebugAdapterWriter> writer_;
+  bool supports_run_in_terminal_ = false;
   bool supports_invalidate_event_ = false;
-  bool observers_added_ = false;
+  bool init_done_ = false;
 };
 
 class DebugAdapterReader : public dap::Reader {

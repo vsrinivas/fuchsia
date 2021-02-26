@@ -8,6 +8,7 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_attach.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_breakpoint.h"
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_launch.h"
 #include "src/developer/debug/zxdb/debug_adapter/server.h"
 
 namespace zxdb {
@@ -17,22 +18,7 @@ DebugAdapterContext::DebugAdapterContext(Session *session, debug_ipc::StreamBuff
   reader_ = std::make_shared<DebugAdapterReader>(stream);
   writer_ = std::make_shared<DebugAdapterWriter>(stream);
 
-  InitDebugAdapterProtocolSession();
-}
-
-DebugAdapterContext::~DebugAdapterContext() {
-  if (observers_added_) {
-    session()->thread_observers().RemoveObserver(this);
-  }
-}
-
-void DebugAdapterContext::InitDebugAdapterProtocolSession() {
-  dap_->registerHandler([](const dap::DisconnectRequest &req) {
-    DEBUG_LOG(DebugAdapter) << "DisconnectRequest received";
-    return dap::DisconnectResponse();
-  });
-
-  dap_->registerHandler([&](const dap::InitializeRequest &req) {
+  dap_->registerHandler([this](const dap::InitializeRequest &req) {
     DEBUG_LOG(DebugAdapter) << "InitializeRequest received";
     dap::InitializeResponse response;
     response.supportsFunctionBreakpoints = false;
@@ -41,23 +27,42 @@ void DebugAdapterContext::InitDebugAdapterProtocolSession() {
     if (req.supportsInvalidatedEvent) {
       this->supports_invalidate_event_ = req.supportsInvalidatedEvent.value();
     }
+    if (req.supportsRunInTerminalRequest) {
+      this->supports_run_in_terminal_ = req.supportsRunInTerminalRequest.value();
+    }
     return response;
   });
 
-  dap_->registerHandler([&](const dap::LaunchRequest &req) {
-    DEBUG_LOG(DebugAdapter) << "LaunchRequest received";
-    dap::LaunchResponse response;
-    return response;
-  });
-
-  dap_->registerSentHandler([&](const dap::ResponseOrError<dap::InitializeResponse> &response) {
+  dap_->registerSentHandler([this](const dap::ResponseOrError<dap::InitializeResponse> &response) {
     DEBUG_LOG(DebugAdapter) << "InitializeResponse sent";
-    // Subscribe to session events now. All messages should be sent only after Initialize response
-    // is sent. Subscribing earlier would lead to events being sent before Initialize request is
-    // processed.
-    session()->thread_observers().AddObserver(this);
-    observers_added_ = true;
+    // Set up events and handlers now. All messages should be sent only after Initialize response
+    // is sent. Setting up earlier would lead to events and responses being sent before Initialize
+    // request is processed.
+    Init();
     dap_->send(dap::InitializedEvent());
+  });
+
+  dap_->onError([](const char *msg) { FX_LOGS(ERROR) << "dap::Session error:" << msg << "\r\n"; });
+
+  dap_->connect(reader_, writer_);
+}
+
+DebugAdapterContext::~DebugAdapterContext() {
+  if (init_done_) {
+    session()->thread_observers().RemoveObserver(this);
+  }
+}
+
+void DebugAdapterContext::Init() {
+  // Register handlers with dap module.
+  dap_->registerHandler([](const dap::DisconnectRequest &req) {
+    DEBUG_LOG(DebugAdapter) << "DisconnectRequest received";
+    return dap::DisconnectResponse();
+  });
+
+  dap_->registerHandler([this](const dap::LaunchRequestZxdb &req) {
+    DEBUG_LOG(DebugAdapter) << "LaunchRequest received";
+    return OnRequestLaunch(this, req);
   });
 
   dap_->registerHandler([](const dap::SetExceptionBreakpointsRequest &req) {
@@ -66,26 +71,27 @@ void DebugAdapterContext::InitDebugAdapterProtocolSession() {
     return response;
   });
 
-  dap_->registerHandler([&](const dap::SetBreakpointsRequest &req)
+  dap_->registerHandler([this](const dap::SetBreakpointsRequest &req)
                             -> dap::ResponseOrError<dap::SetBreakpointsResponse> {
     DEBUG_LOG(DebugAdapter) << "SetBreakpointsRequest received";
     return OnRequestBreakpoint(this, req);
   });
 
-  dap_->registerHandler([=](const dap::ConfigurationDoneRequest &req) {
+  dap_->registerHandler([](const dap::ConfigurationDoneRequest &req) {
     DEBUG_LOG(DebugAdapter) << "ConfigurationDoneRequest received";
     return dap::ConfigurationDoneResponse();
   });
 
   dap_->registerHandler(
-      [&](const dap::AttachRequestZxdb &req) -> dap::ResponseOrError<dap::AttachResponse> {
+      [this](const dap::AttachRequestZxdb &req) -> dap::ResponseOrError<dap::AttachResponse> {
         DEBUG_LOG(DebugAdapter) << "AttachRequest received";
         return OnRequestAttach(this, req);
       });
 
-  dap_->onError([&](const char *msg) { FX_LOGS(ERROR) << "dap::Session error:" << msg << "\r\n"; });
+  // Register to zxdb session events
+  session()->thread_observers().AddObserver(this);
 
-  dap_->connect(reader_, writer_);
+  init_done_ = true;
 }
 
 void DebugAdapterContext::OnStreamReadable() {

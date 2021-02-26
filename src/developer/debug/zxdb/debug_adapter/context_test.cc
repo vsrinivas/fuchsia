@@ -26,7 +26,7 @@ void DebugAdapterContextTest::TearDown() {
   RemoteAPITest::TearDown();
 }
 
-void DebugAdapterContextTest::IntializeDebugging() {
+void DebugAdapterContextTest::InitializeDebugging() {
   // Send initialize request from the client.
   auto response = client().send(dap::InitializeRequest{});
   // Run server to process request

@@ -50,7 +50,7 @@ TEST_F(DebugAdapterContextTest, ThreadStartExitEvent) {
     }
   });
 
-  IntializeDebugging();
+  InitializeDebugging();
 
   InjectProcess(kProcessKoid);
   InjectThread(kProcessKoid, kThreadKoid);
@@ -80,7 +80,7 @@ TEST_F(DebugAdapterContextTest, StoppedEvent) {
     event_received = true;
   });
 
-  IntializeDebugging();
+  InitializeDebugging();
 
   InjectProcess(kProcessKoid);
   InjectThread(kProcessKoid, kThreadKoid);

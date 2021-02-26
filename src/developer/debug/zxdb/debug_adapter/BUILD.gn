@@ -12,6 +12,8 @@ static_library("debug_adapter") {
     "handlers/request_attach.h",
     "handlers/request_breakpoint.cc",
     "handlers/request_breakpoint.h",
+    "handlers/request_launch.cc",
+    "handlers/request_launch.h",
     "server.cc",
     "server.h",
   ]
@@ -31,6 +33,7 @@ source_set("tests") {
     "context_unittest.cc",
     "handlers/request_attach_unittest.cc",
     "handlers/request_breakpoint_unittest.cc",
+    "handlers/request_launch_unittest.cc",
     "server_unittest.cc",
   ]
   deps = [

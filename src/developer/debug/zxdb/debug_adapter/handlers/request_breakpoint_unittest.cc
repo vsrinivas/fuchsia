@@ -15,6 +15,8 @@ class RequestBreakpointTest : public DebugAdapterContextTest {};
 }  // namespace
 
 TEST_F(RequestBreakpointTest, SetBreakpoints) {
+  InitializeDebugging();
+
   // Send breakpoint request from the client.
   dap::SetBreakpointsRequest req = {};
   req.source.name = "i2c.c";
