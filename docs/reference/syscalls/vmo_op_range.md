@@ -59,6 +59,7 @@ itself does not commit any pages in the VMO; it just marks the state of the VMO 
 by the kernel.
 
 *buffer* should be a pointer of type `zx_info_lock_state_t`.
+
 ```c
 typedef struct zx_vmo_lock_state {
   // |offset| and |size| track the locked range, and will be set to the |offset|
