@@ -31,13 +31,16 @@ impl FakeCrashReporter {
 }
 
 fn evaluate_report(report: &fcrash::CrashReport) -> Result<String, Error> {
-    let fcrash::CrashReport { program_name, crash_signature, .. } = report;
+    let fcrash::CrashReport { program_name, crash_signature, is_fatal, .. } = report;
     if program_name != &Some(REPORT_PROGRAM_NAME.to_string()) {
         bail!(
             "Crash report program name should be {} but it was {:?}",
             REPORT_PROGRAM_NAME,
             program_name
         );
+    }
+    if is_fatal != &Some(false) {
+        bail!("Crash report should not be fatal, but it was {:?}", is_fatal);
     }
     match crash_signature {
         Some(signature) => return Ok(signature.to_string()),
