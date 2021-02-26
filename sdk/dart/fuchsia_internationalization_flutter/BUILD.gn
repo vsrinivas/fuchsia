@@ -1,0 +1,50 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+import("//build/dart/fidl_move.gni")
+import("//build/flutter/test.gni")
+
+dart_library("fuchsia_internationalization_flutter") {
+  package_name = "fuchsia_internationalization_flutter"
+  null_safe = true
+
+  sources = [
+    "internationalization.dart",
+    "src/current_locale.dart",
+    "src/profile_provider.dart",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.intl",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
+    "//third_party/dart-pkg/pub/intl",
+    dart_package_label.fidl,
+    dart_package_label.fuchsia_logger,
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fuchsia_internationalization_flutter_unittests($host_toolchain)" ]
+}
+
+flutter_test("fuchsia_internationalization_flutter_unittests") {
+  sources = [
+    "current_locale_test.dart",
+    "profile_provider_test.dart",
+  ]
+
+  deps = [
+    ":fuchsia_internationalization_flutter",
+    "//sdk/fidl/fuchsia.intl",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+    "//third_party/dart-pkg/pub/mockito",
+    "//third_party/dart-pkg/pub/test",
+    dart_package_label.fidl,
+    dart_package_label.fuchsia_logger,
+  ]
+}

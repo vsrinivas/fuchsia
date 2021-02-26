@@ -1,0 +1,128 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+import("//build/dart/dart_test_component.gni")
+import("//build/dart/fidl_move.gni")
+import("//build/flutter/test.gni")
+import("//build/testing/environments.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+
+dart_library("fuchsia_modular") {
+  package_name = "fuchsia_modular"
+  null_safe = true
+
+  sdk_category = "partner"
+
+  sources = [
+    "agent.dart",
+    "codecs.dart",
+    "lifecycle.dart",
+    "logger.dart",
+    "module.dart",
+    "service_connection.dart",
+    "src/agent/agent.dart",
+    "src/agent/internal/_agent_impl.dart",
+    "src/internal/_component_context.dart",
+    "src/lifecycle/internal/_lifecycle_impl.dart",
+    "src/lifecycle/lifecycle.dart",
+    "src/module/intent.dart",
+    "src/module/internal/_fidl_transformers.dart",
+    "src/module/internal/_module_context.dart",
+    "src/module/internal/_module_impl.dart",
+    "src/module/module.dart",
+    "src/module/module_state_exception.dart",
+    "src/service_connection/agent_service_connection.dart",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.auth",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//third_party/dart-pkg/pub/meta",
+    dart_package_label.zircon,
+    dart_package_label.fidl,
+    dart_package_label.fuchsia,
+    dart_package_label.fuchsia_logger,
+    dart_package_label.fuchsia_scenic,
+    dart_package_label.fuchsia_services,
+  ]
+}
+
+# Runs these tests using:
+#   fx run-host-tests fuchsia_modular_package_unittests
+flutter_test("fuchsia_modular_package_unittests") {
+  sources = [
+    "agent/agent_test.dart",
+    "agent/internal/agent_impl_test.dart",
+    "lifecycle/lifecycle_test.dart",
+    "matchers.dart",
+    "module/intent_test.dart",
+    "module/internal/fidl_transformers_test.dart",
+    "module/internal/module_impl_test.dart",
+    "module/module_test.dart",
+    "service_connection/agent_service_connection_test.dart",
+  ]
+
+  deps = [
+    ":fuchsia_modular",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.sys",
+    "//third_party/dart-pkg/pub/mockito",
+    "//third_party/dart-pkg/pub/test",
+    dart_package_label.fidl,
+    dart_package_label.fuchsia_logger,
+    dart_package_label.fuchsia_services,
+  ]
+}
+
+# Run these tests using:
+#  fx set x64 --packages topaz/packages/buildbot
+# Start a qemu emulator (using a real device is also possible):
+#  fx run -kN  (tip: to terminate the emulator press "ctrl+a x")
+# Run integration tests:
+#  fx test fuchsia-pkg://fuchsia.com/fuchsia-modular-integration-tests#meta/fuchsia-modular-integration-tests.cmx
+dart_test_component("integration-tests-component") {
+  component_name = "fuchsia-modular-integration-tests"
+  manifest = "meta/fuchsia-modular-integration-tests.cmx"
+
+  # TODO(ianloic): these seem wrong, actually...
+  sources = [
+    "internal/component_context_integ_test.dart",
+    "lifecycle/internal/lifecycle_impl_test.dart",
+
+    # TODO(fxb/70818): Add this source back after fuchsia_modular_testing is migrated to fuchisa.git.
+    # "service_connection/agent_service_connection_integ_test.dart",
+  ]
+
+  deps = [
+    ":fuchsia_modular",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
+    "//third_party/dart-pkg/pub/mockito",  # TODO(fxbug.dev/3114): Remove
+    "//third_party/dart-pkg/pub/test",
+
+    # TODO(fxb/70818): Add these dependencies back after fuchsia_modular_testing is migrated to fuchisa.git.
+    # "//topaz/public/dart/fuchsia_modular_testing",
+    # "//topaz/public/dart/fuchsia_modular_testing:test_fidl",
+    dart_package_label.fidl,
+  ]
+}
+
+fuchsia_test_package("fuchsia-modular-integration-tests") {
+  test_components = [ ":integration-tests-component" ]
+
+  # TODO(fxb/65865): This check shouldn't be necessary.
+  if (is_fuchsia) {
+    test_specs = {
+      log_settings = {
+        max_severity = "ERROR"
+      }
+    }
+  }
+}
