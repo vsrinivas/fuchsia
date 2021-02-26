@@ -44,13 +44,13 @@ class MockEchoService {
 
   // Build a VFS that looks like:
   //
-  // fuchsia.echo.EchoService/
-  //                          default/
-  //                                  foo (Echo)
-  //                                  bar (Echo)
-  //                          other/
-  //                                  foo (Echo)
-  //                                  bar (Echo)
+  // fidl.service.test.EchoService/
+  //                               default/
+  //                                       foo (Echo)
+  //                                       bar (Echo)
+  //                               other/
+  //                                       foo (Echo)
+  //                                       bar (Echo)
   //
   explicit MockEchoService(async_dispatcher_t* dispatcher)
       : dispatcher_(dispatcher), vfs_(dispatcher) {
@@ -81,12 +81,12 @@ class MockEchoService {
     auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
     root_dir->AddEntry(kName, std::move(service));
 
-    zx::channel svc_remote;
-    ASSERT_OK(zx::channel::create(0, &svc_local_, &svc_remote));
-    vfs_.ServeDirectory(root_dir, std::move(svc_remote));
+    auto svc_remote = fidl::CreateEndpoints(&svc_local_);
+    ASSERT_OK(svc_remote.status_value());
+    vfs_.ServeDirectory(root_dir, std::move(*svc_remote));
   }
 
-  zx::unowned_channel svc() { return zx::unowned_channel(svc_local_); }
+  fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> svc() { return svc_local_; }
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -95,7 +95,7 @@ class MockEchoService {
   EchoCommon default_bar_{"default-bar"};
   EchoCommon other_foo_{"other-foo"};
   EchoCommon other_bar_{"other-bar"};
-  zx::channel svc_local_;
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> svc_local_;
 };
 
 }  // namespace
@@ -113,12 +113,11 @@ class ClientTest : public zxtest::Test {
 
   async::Loop loop_;
   MockEchoService echo_service_;
-  zx::unowned_channel svc_;
+  fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> svc_;
 };
 
 TEST_F(ClientTest, ConnectsToDefault) {
-  zx::status<EchoService::ServiceClient> open_result =
-      llcpp::sys::OpenServiceAt<EchoService>(std::move(svc_));
+  zx::status<EchoService::ServiceClient> open_result = llcpp::sys::OpenServiceAt<EchoService>(svc_);
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
@@ -139,7 +138,7 @@ TEST_F(ClientTest, ConnectsToDefault) {
 
 TEST_F(ClientTest, ConnectsToOther) {
   zx::status<EchoService::ServiceClient> open_result =
-      llcpp::sys::OpenServiceAt<EchoService>(std::move(svc_), "other");
+      llcpp::sys::OpenServiceAt<EchoService>(svc_, "other");
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
@@ -163,19 +162,17 @@ TEST_F(ClientTest, FilePathTooLong) {
   illegal_path.assign(256, 'a');
 
   // Use an instance name that is too long.
-  zx::unowned_channel svc_copy(*svc_);
   zx::status<EchoService::ServiceClient> open_result =
-      llcpp::sys::OpenServiceAt<EchoService>(std::move(svc_copy), illegal_path);
+      llcpp::sys::OpenServiceAt<EchoService>(svc_, illegal_path);
   ASSERT_TRUE(open_result.is_error());
   ASSERT_EQ(open_result.status_value(), ZX_ERR_INVALID_ARGS);
 
   // Use a service name that is too long.
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_EQ(
-      llcpp::sys::OpenNamedServiceAt(std::move(svc_), illegal_path, "default", std::move(remote))
-          .status_value(),
-      ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(llcpp::sys::OpenNamedServiceAt(svc_, illegal_path, "default", std::move(remote))
+                .status_value(),
+            ZX_ERR_INVALID_ARGS);
 }
 
 //
@@ -225,4 +222,38 @@ TEST(SingletonService, ConnectAt) {
   ASSERT_OK(client_end->channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
 
   loop.Shutdown();
+}
+
+//
+// Tests for cloning |fuchsia.io/Node|-like services.
+//
+
+TEST_F(ClientTest, CloneServiceDirectory) {
+  auto svc_clone = service::Clone(svc_);
+  ASSERT_OK(svc_clone.status_value());
+  static_assert(
+      std::is_same_v<decltype(svc_clone.value()), fidl::ClientEnd<llcpp::fuchsia::io::Directory>&>);
+  ASSERT_NE(svc_.channel(), svc_clone->channel().get());
+
+  // Test that we can connect to services in the |svc_clone| directory.
+  // Refer to |MockEchoService| for the directory layout.
+  auto client_end = service::ConnectAt<Echo>(
+      *svc_clone, (std::string(EchoService::Name) + "/default/foo").c_str());
+  ASSERT_OK(client_end.status_value());
+  auto echo = fidl::BindSyncClient(std::move(*client_end));
+  auto result = echo.EchoString("foo");
+  ASSERT_OK(result.status());
+  ASSERT_STR_EQ(std::string(result->response.data(), result->response.size()).c_str(),
+                "default-foo: foo");
+}
+
+TEST(CloneService, Error) {
+  auto bad_endpoint = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  bad_endpoint->server.reset();
+
+  auto failure = service::Clone(bad_endpoint->client);
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, failure.status_value());
+
+  auto invalid = service::MaybeClone(bad_endpoint->client);
+  ASSERT_FALSE(invalid.is_valid());
 }

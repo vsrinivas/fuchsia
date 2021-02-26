@@ -43,6 +43,19 @@ namespace internal {
   return ::zx::ok(std::move(client_end));
 }
 
+::zx::status<::zx::channel> CloneRaw(zx_handle_t node) {
+  ::zx::channel client_end, server_end;
+  zx_status_t status = ::zx::channel::create(0, &client_end, &server_end);
+  if (status != ZX_OK) {
+    return ::zx::error(status);
+  }
+  status = fdio_service_clone_to(node, server_end.release());
+  if (status != ZX_OK) {
+    return ::zx::error(status);
+  }
+  return ::zx::ok(std::move(client_end));
+}
+
 }  // namespace internal
 
 }  // namespace service
