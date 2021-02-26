@@ -2658,10 +2658,14 @@ TEST_P(IOMethodTest, NullptrFaultSTREAM) {
   doNullPtrIO(client, server, GetParam(), false);
 }
 
-// BeforeConnect tests the application behavior when we start to
-// read and write from a stream socket that is not yet connected.
-TEST_P(IOMethodTest, BeforeConnect) {
-  auto ioMethod = GetParam();
+using connectingIOParams = std::tuple<IOMethod, bool>;
+
+class ConnectingIOTest : public ::testing::TestWithParam<connectingIOParams> {};
+
+// Tests the application behavior when we start to read and write from a stream socket that is not
+// yet connected.
+TEST_P(ConnectingIOTest, BlockedIO) {
+  auto const& [ioMethod, closeListener] = GetParam();
   fbl::unique_fd listener;
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
@@ -2733,11 +2737,11 @@ TEST_P(IOMethodTest, BeforeConnect) {
   // To correctly test reads, keep alteast one byte larger read buffer than what would be written.
   char recvbuf[sizeof(sample_data) + 1] = {};
   bool isWrite = ioMethod.isWrite();
-  auto executeIO = [&]() {
+  auto executeIO = [&, op = ioMethod]() {
     if (isWrite) {
-      return ioMethod.executeIO(test_client.get(), sample_data, sizeof(sample_data));
+      return op.executeIO(test_client.get(), sample_data, sizeof(sample_data));
     }
-    return ioMethod.executeIO(test_client.get(), recvbuf, sizeof(recvbuf));
+    return op.executeIO(test_client.get(), recvbuf, sizeof(recvbuf));
   };
 #if !defined(__Fuchsia__)
   auto undo = disableSIGPIPE(isWrite);
@@ -2760,69 +2764,87 @@ TEST_P(IOMethodTest, BeforeConnect) {
 
   std::latch fut_started(1);
   // Asynchronously block on I/O from the test client socket.
-  const auto fut = std::async(std::launch::async, [&]() {
+  const auto fut = std::async(std::launch::async, [&, err = closeListener]() {
     // Make the socket blocking.
     int flags = fcntl(test_client.get(), F_GETFL, 0);
     EXPECT_EQ(0, fcntl(test_client.get(), F_SETFL, flags ^ O_NONBLOCK)) << strerror(errno);
 
     fut_started.count_down();
 
-    EXPECT_EQ(executeIO(), static_cast<ssize_t>(sizeof(sample_data)));
+    if (err) {
+      EXPECT_EQ(executeIO(), -1);
+      EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
+    } else {
+      EXPECT_EQ(executeIO(), static_cast<ssize_t>(sizeof(sample_data)));
+    }
   });
   fut_started.wait();
   EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
 
-#if !defined(__Fuchsia__)
-  // Accept the precursor connection to make room for the test client
-  // connection to complete.
-  fbl::unique_fd precursor_accept;
-  ASSERT_TRUE(precursor_accept = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
-      << strerror(errno);
-  ASSERT_EQ(close(precursor_accept.release()), 0) << strerror(errno);
-  ASSERT_EQ(close(precursor_client.release()), 0) << strerror(errno);
-#endif
-
-  // TODO(gvisor.dev/issue/3153): Unlike Linux, gVisor does not accept a connection
-  // when listen backlog is zero.
-#if defined(__Fuchsia__)
-  ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
-#endif
-
-  // Accept the test client connection.
-  fbl::unique_fd test_accept;
-  ASSERT_TRUE(test_accept = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
-      << strerror(errno);
-
-  if (isWrite) {
-    // Ensure that we read the data whose send request was enqueued until
-    // the connection was established.
-    ASSERT_EQ(read(test_accept.get(), recvbuf, sizeof(recvbuf)),
-              static_cast<ssize_t>(sizeof(sample_data)))
-        << strerror(errno);
-    ASSERT_STREQ(recvbuf, sample_data);
+  if (closeListener) {
+    ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
   } else {
-    // Write data to unblock the socket read on the test client connection.
-    ASSERT_EQ(write(test_accept.get(), sample_data, sizeof(sample_data)),
-              static_cast<ssize_t>(sizeof(sample_data)))
+#if !defined(__Fuchsia__)
+    // Accept the precursor connection to make room for the test client
+    // connection to complete.
+    fbl::unique_fd precursor_accept;
+    ASSERT_TRUE(precursor_accept = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
         << strerror(errno);
+    ASSERT_EQ(close(precursor_accept.release()), 0) << strerror(errno);
+    ASSERT_EQ(close(precursor_client.release()), 0) << strerror(errno);
+#endif
+
+    // TODO(gvisor.dev/issue/3153): Unlike Linux, gVisor does not accept a connection
+    // when listen backlog is zero.
+#if defined(__Fuchsia__)
+    ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
+#endif
+
+    // Accept the test client connection.
+    fbl::unique_fd test_accept;
+    ASSERT_TRUE(test_accept = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
+        << strerror(errno);
+
+    if (isWrite) {
+      // Ensure that we read the data whose send request was enqueued until
+      // the connection was established.
+      ASSERT_EQ(read(test_accept.get(), recvbuf, sizeof(recvbuf)),
+                static_cast<ssize_t>(sizeof(sample_data)))
+          << strerror(errno);
+      ASSERT_STREQ(recvbuf, sample_data);
+    } else {
+      // Write data to unblock the socket read on the test client connection.
+      ASSERT_EQ(write(test_accept.get(), sample_data, sizeof(sample_data)),
+                static_cast<ssize_t>(sizeof(sample_data)))
+          << strerror(errno);
+    }
   }
 
   EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
-
-  ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
-  ASSERT_EQ(close(test_accept.release()), 0) << strerror(errno);
-  ASSERT_EQ(close(test_client.release()), 0) << strerror(errno);
 }
 
-INSTANTIATE_TEST_SUITE_P(NetStreamTest, IOMethodTest,
-                         ::testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
-                                           IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
-                                           IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
-                                           IOMethod::Op::WRITEV, IOMethod::Op::SEND,
-                                           IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
-                         [](const ::testing::TestParamInfo<IOMethod>& info) {
-                           return info.param.IOMethodToString();
-                         });
+std::string connectingIOParamsToString(const ::testing::TestParamInfo<connectingIOParams> info) {
+  auto const& [ioMethod, closeListener] = info.param;
+  std::stringstream s;
+  if (closeListener) {
+    s << "CloseListener";
+  } else {
+    s << "Accept";
+  }
+  s << "During" << ioMethod.IOMethodToString();
+
+  return s.str();
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    NetStreamTest, ConnectingIOTest,
+    ::testing::Combine(::testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
+                                         IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
+                                         IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
+                                         IOMethod::Op::WRITEV, IOMethod::Op::SEND,
+                                         IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
+                       ::testing::Values(false, true)),
+    connectingIOParamsToString);
 
 namespace {
 // Test close/shutdown of listening socket with multiple non-blocking connects.

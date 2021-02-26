@@ -2195,11 +2195,12 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
+  uint32_t* ioflag = fdio_get_ioflag(io);
   // The |flags| are typically used to express intent *not* to issue SIGPIPE
   // via MSG_NOSIGNAL. Applications use this frequently to avoid having to
   // install additional signal handlers to handle cases where connection has
   // been closed by remote end.
-  bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+  bool nonblocking = (*ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
   flags &= ~MSG_DONTWAIT;
   zx::time deadline = zx::deadline_after(*fdio_get_sndtimeo(io));
   for (;;) {
@@ -2214,7 +2215,11 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
           break;
         case ZX_OK:
           if (pending & POLLERR) {
-            status = ZX_ERR_CONNECTION_RESET;
+            if (*ioflag & IOFLAG_SOCKET_CONNECTING) {
+              status = ZX_ERR_CONNECTION_REFUSED;
+            } else {
+              status = ZX_ERR_CONNECTION_RESET;
+            }
             break;
           }
           __FALLTHROUGH;
@@ -2239,7 +2244,8 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+  uint32_t* ioflag = fdio_get_ioflag(io);
+  bool nonblocking = (*ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
   flags &= ~MSG_DONTWAIT;
   zx::time deadline = zx::deadline_after(*fdio_get_rcvtimeo(io));
   for (;;) {
@@ -2254,7 +2260,11 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
           break;
         case ZX_OK:
           if (pending & POLLERR) {
-            status = ZX_ERR_CONNECTION_RESET;
+            if (*ioflag & IOFLAG_SOCKET_CONNECTING) {
+              status = ZX_ERR_CONNECTION_REFUSED;
+            } else {
+              status = ZX_ERR_CONNECTION_RESET;
+            }
             break;
           }
           __FALLTHROUGH;
