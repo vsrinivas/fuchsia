@@ -549,9 +549,16 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
   if (output_filename != nullptr) {
     FILE* output_file = fopen(output_filename, "w");
     if (output_file == nullptr) {
-      fprintf(stderr, "FAILURE: Could not open output file at %s: %s\n", output_filename,
-              strerror(errno));
-      return std::make_unique<Result>(test_name, FAILED_DURING_IO, 0, 0);
+      // See fxbug.dev/70554.
+      fprintf(stderr, "WARNING: Could not open output file, sleeping and retrying %s: %s\n",
+              output_filename, strerror(errno));
+      zx::nanosleep(zx::deadline_after(zx::sec(1)));
+      output_file = fopen(output_filename, "w");
+      if (output_file == nullptr) {
+        fprintf(stderr, "FAILURE: Could not open output file at %s: %s\n", output_filename,
+                strerror(errno));
+        return std::make_unique<Result>(test_name, FAILED_DURING_IO, 0, 0);
+      }
     }
     if (timeout_msec) {
       // If we have a timeout, we want non-blocking reads.
