@@ -21,7 +21,7 @@ namespace {
 //
 // Since this only used on Fuchsia, it is conditionally compiled.
 #if defined(__Fuchsia__)
-constexpr char kDerivedDeviceName[] = "train-cache-uncle-chill";
+constexpr char kDerivedDeviceName[] = "fuchsia-aabb-ccdd-eeff";
 #endif
 
 TEST(ExternalNetworkTest, ConnectToNonRoutableINET) {
