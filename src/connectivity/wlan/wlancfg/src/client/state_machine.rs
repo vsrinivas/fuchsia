@@ -17,7 +17,8 @@ use {
     anyhow::format_err,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
+    fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_async::{self as fasync, DurationExt},
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::{
@@ -292,7 +293,7 @@ enum SmeOperation {
     ScanResult(Option<(Box<fidl_internal::BssDescription>, MultipleBssCandidates)>),
 }
 
-fn handle_connecting_error_and_retry(
+async fn handle_connecting_error_and_retry(
     common_options: CommonStateOptions,
     options: ConnectingOptions,
 ) -> Result<State, ExitReason> {
@@ -311,7 +312,11 @@ fn handle_connecting_error_and_retry(
         );
         return Err(ExitReason(Err(format_err!("exceeded connection attempt limit"))));
     } else {
-        // Limit not exceeded, retry.
+        // Limit not exceeded, retry after backing off.
+        let backoff_time = 400_i64 * i64::from(new_attempt_count);
+        info!("Will attempt to reconnect after {}ms backoff", backoff_time);
+        fasync::Timer::new(zx::Duration::from_millis(backoff_time).after_now()).await;
+
         let next_connecting_options = ConnectingOptions {
             connect_responder: None,
             connect_request: types::ConnectRequest {
@@ -430,7 +435,7 @@ async fn connecting_state(
                         Some(bss_info) => bss_info,
                         None => {
                             info!("Failed to find a BSS to connect to.");
-                            return handle_connecting_error_and_retry(common_options, options);
+                            return handle_connecting_error_and_retry(common_options, options).await;
                         }
                     };
                     // Send a connect request to the SME
@@ -498,7 +503,7 @@ async fn connecting_state(
                         },
                         other => {
                             info!("Failed to connect: {:?}", other);
-                            return handle_connecting_error_and_retry(common_options, options);
+                            return handle_connecting_error_and_retry(common_options, options).await;
                         }
                     };
                 },
@@ -1198,6 +1203,8 @@ mod tests {
 
         // Progress the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert!(exec.wake_next_timer().is_some());
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // Ensure a disconnect request is sent to the SME
         assert_variant!(
@@ -1380,6 +1387,8 @@ mod tests {
         });
 
         // Progress the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert!(exec.wake_next_timer().is_some());
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // Ensure a disconnect request is sent to the SME
@@ -2224,6 +2233,8 @@ mod tests {
         drop(test_values.sme_req_stream);
 
         // Ensure the state machine exits
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert!(exec.wake_next_timer().is_some());
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
 
         // Expect the responder to have a success, since the connection was attempted
