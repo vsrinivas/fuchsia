@@ -28,20 +28,20 @@ namespace arch {
 // [intel/vol3]: 2.5 Control Registers: CR0
 struct X86Cr0 : public SysRegBase<X86Cr0> {
   DEF_RSVDZ_FIELD(63, 32);
-  DEF_BIT(31, pg);
-  DEF_BIT(30, cd);
-  DEF_BIT(29, nw);
+  DEF_BIT(31, pg);  // Paging enabled
+  DEF_BIT(30, cd);  // Cache disabled
+  DEF_BIT(29, nw);  // Not write-through
   // Bits [28:19] are reserved.
-  DEF_BIT(18, am);
+  DEF_BIT(18, am);  // Alignment mask (support alignment checking)
   // Bit 17 is reserved.
-  DEF_BIT(16, wp);
+  DEF_BIT(16, wp);  // Write protect (prevent supervisor writing to RO pages)
   // Bits [15:6] are reserved.
-  DEF_BIT(5, ne);
-  DEF_BIT(4, et);
-  DEF_BIT(3, ts);
-  DEF_BIT(2, em);
-  DEF_BIT(1, mp);
-  DEF_BIT(0, pe);
+  DEF_BIT(5, ne);  // Numeric error (control FPU exceptions)
+  DEF_BIT(4, et);  // Extension type (reserved on modern CPUs, always 1)
+  DEF_BIT(3, ts);  // Task switched (trap on FPU/MMX/SSE/etc reg access)
+  DEF_BIT(2, em);  // Emulation (trap on FPU/MMX/SSE/etc instructions)
+  DEF_BIT(1, mp);  // Monitor Coprocessor
+  DEF_BIT(0, pe);  // Protection Enable (enable protected mode)
 };
 
 ARCH_X86_SYSREG(X86Cr0, "cr0");
@@ -63,8 +63,8 @@ struct X86Cr3 : public SysRegBase<X86Cr3> {
   // In case of future additions it's probably best to write them back as
   // written rather than RSVDZ them.
 
-  DEF_BIT(4, pcd);
-  DEF_BIT(3, pwt);
+  DEF_BIT(4, pcd);  // Page-level Cache Disable
+  DEF_BIT(3, pwt);  // Page-level Write-Through
 };
 
 ARCH_X86_SYSREG(X86Cr3, "cr3");
@@ -75,30 +75,31 @@ struct X86Cr4 : public SysRegBase<X86Cr4> {
 
   // The Intel manual lists these in ascending bit order instead of descending
   // bit order like most other control registers, so we follow suit.
-  DEF_BIT(0, vme);
-  DEF_BIT(1, pvi);
-  DEF_BIT(2, tsd);
-  DEF_BIT(3, de);
-  DEF_BIT(4, pse);
-  DEF_BIT(5, pae);
-  DEF_BIT(6, mce);
-  DEF_BIT(7, pge);
-  DEF_BIT(8, pce);
-  DEF_BIT(9, osfxsr);
-  DEF_BIT(10, osmmexcpt);
-  DEF_BIT(11, umip);
-  DEF_BIT(12, la57);
-  DEF_BIT(13, vmxe);
-  DEF_BIT(14, smxe);
+  DEF_BIT(0, vme);         // Virtual-8086 Mode Extensions
+  DEF_BIT(1, pvi);         // Protected-Mode Virtual Interrupts
+  DEF_BIT(2, tsd);         // Time Stamp Disable
+  DEF_BIT(3, de);          // Debugging Extensions
+  DEF_BIT(4, pse);         // Page Size Extensions
+  DEF_BIT(5, pae);         // Physical Address Extension
+  DEF_BIT(6, mce);         // Machine-Check Enable
+  DEF_BIT(7, pge);         // Page Global Enable
+  DEF_BIT(8, pce);         // Performance-Monitoring Counter Enable
+  DEF_BIT(9, osfxsr);      // OS supports FXSAVE and FXRSTOR
+  DEF_BIT(10, osmmexcpt);  // OS supports unmasked SIMD FP Exceptions
+  DEF_BIT(11, umip);       // User-Mode Instruction Prevention
+  DEF_BIT(12, la57);       // 57-bit linear addresses
+  DEF_BIT(13, vmxe);       // VMX-Enable Bit
+  DEF_BIT(14, smxe);       // SMX-Enable Bit
   // Bit 15 is reserved.
-  DEF_BIT(16, fsgsbase);
-  DEF_BIT(17, pcide);
-  DEF_BIT(18, osxsave);
-  DEF_BIT(20, smep);
-  DEF_BIT(21, smap);
-  DEF_BIT(22, pke);
-  DEF_BIT(23, cet);
-  DEF_BIT(24, pks);
+  DEF_BIT(16, fsgsbase);  // FSGSBASE-Enable Bit
+  DEF_BIT(17, pcide);     // PCID-Enable Bit
+  DEF_BIT(18, osxsave);   // XSAVE and Processor Extended States-Enable Bit
+  // Bit 19 is reserved.
+  DEF_BIT(20, smep);  // SMEP-Enable Bit
+  DEF_BIT(21, smap);  // SMAP-Enable Bit
+  DEF_BIT(22, pke);   // Enable protection keys for user-mode pages
+  DEF_BIT(23, cet);   // Control-flow Enforcement Technology
+  DEF_BIT(24, pks);   // Enable protection keys for supervisor-mode pages
 
   // Bits [31:25] are reserved.
 };
@@ -109,7 +110,7 @@ ARCH_X86_SYSREG(X86Cr4, "cr4");
 
 // [Intel/vol3]: 2.5 Control Registers: CR8
 struct X86Cr8 : SysRegBase<X86Cr8> {
-  DEF_FIELD(3, 0, tpl);
+  DEF_FIELD(3, 0, tpl);  // Task Priority Level
 };
 
 ARCH_X86_SYSREG(X86Cr8, "cr8");
