@@ -148,6 +148,13 @@
             to: [ "#tests" ],
             rights: [ "r*" ],
         },
+        {
+            directory: "tmp-debug-data",
+            from: "parent",
+            as: "data",
+            to: [ "#debug_data" ],
+            rights: [ "rw*" ],
+        },
 
         // Some components run under test need access to /config/data.
         {

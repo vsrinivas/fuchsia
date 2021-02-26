@@ -30,6 +30,11 @@
                 },
             ],
         },
+        {
+            directory: "data",
+            rights: [ "rw*" ],
+            path: "/data",
+        },
     ],
     expose: [
         {

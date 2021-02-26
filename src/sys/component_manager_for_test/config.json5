@@ -29,6 +29,13 @@
             path: "/config/ssl",
         },
         {
+            directory: "tmp-debug-data",
+            rights: [
+                "rw*"
+            ],
+            path: "/tmp",
+        },
+        {
             protocol: [
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.logger.LogSink",
