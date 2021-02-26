@@ -7,5 +7,8 @@ group("reader") {
 
 group("tests") {
   testonly = true
-  deps = [ "//src/lib/diagnostics/reader/rust:tests" ]
+  deps = [
+    "//src/lib/diagnostics/reader/dart:tests",
+    "//src/lib/diagnostics/reader/rust:tests",
+  ]
 }

@@ -1,0 +1,18 @@
+{
+  "facets": {
+    "fuchsia.test": {
+      "injected-services": {
+        "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
+      }
+    }
+  },
+  "program": {
+    "data": "data/dart-archive-reader-test"
+  },
+  "sandbox": {
+    "services": [
+      "fuchsia.diagnostics.ArchiveAccessor",
+      "fuchsia.sys.Environment"
+    ]
+  }
+}

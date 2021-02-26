@@ -560,6 +560,9 @@ mod tests {
 
         assert_eq!(response.len(), 1);
 
+        assert_eq!(response[0].metadata.component_url, TEST_COMPONENT_URL);
+        assert_eq!(response[0].moniker, "test-ok/inspect_test_component.cmx");
+
         assert_inspect_tree!(response[0].payload.as_ref().unwrap(), root: {
             int: 3u64,
             "lazy-node": {
