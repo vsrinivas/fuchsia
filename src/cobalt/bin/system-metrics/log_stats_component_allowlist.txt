@@ -15,7 +15,7 @@
 14 fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg.cmx
 15 fuchsia-boot:///#meta/driver_manager.cm
 16 fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx
-17 fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cmx
+17 fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cm
 18 fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx
 19 fuchsia-boot://klog
 20 fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx

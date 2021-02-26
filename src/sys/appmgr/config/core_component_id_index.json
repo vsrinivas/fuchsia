@@ -179,13 +179,7 @@
         },
         {
             instance_id: "8285f9d54645ea6baa7fd7b7905c7ae89a9daf8d5172be43b2587b166fd021af",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cmx",
-                realm_path: [
-                    "app",
-                    "sys"
-                ]
-            }
+            moniker: "/core/brightness_manager"
         },
         {
             instance_id: "f4597d9b92f6c3e4847a5bdb53ea095aee59ad07f69745ebcdb43c9f96125d73",
