@@ -10,13 +10,13 @@ extern const struct FidlCodedTable fidl_test_handlesintypes_TableWithHandleTable
 extern const struct FidlCodedStruct fidl_test_handlesintypes_HandlesInTypesTable;
 
 
-static const struct FidlCodedHandle HandlevmononnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_VMO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedHandle Handlevmo2147483648nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_VMO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedVector Vector4294967295nonnullable20HandlevmononnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&HandlevmononnullableTable), .max_count=4294967295u, .element_size=4u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector4294967295nonnullable30Handlevmo2147483648nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Handlevmo2147483648nonnullableTable), .max_count=4294967295u, .element_size=4u, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedArray Array20_20HandlevmononnullableTable __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&HandlevmononnullableTable), .array_size=20u, .element_size=4u};
+static const struct FidlCodedArray Array20_30Handlevmo2147483648nonnullableTable __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&Handlevmo2147483648nonnullableTable), .array_size=20u, .element_size=4u};
 
-static const struct FidlCodedVector Vector4294967295nonnullable30Array20_20HandlevmononnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Array20_20HandlevmononnullableTable), .max_count=4294967295u, .element_size=20u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector4294967295nonnullable40Array20_30Handlevmo2147483648nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Array20_30Handlevmo2147483648nonnullableTable), .max_count=4294967295u, .element_size=20u, .nullable=kFidlNullability_Nonnullable};
 
 
 static bool EnumValidatorFor_fidl_test_handlesintypes_obj_type(uint64_t v) {
@@ -32,25 +32,25 @@ static bool EnumValidatorFor_fidl_test_handlesintypes_obj_type(uint64_t v) {
 const struct FidlCodedEnum fidl_test_handlesintypes_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_fidl_test_handlesintypes_obj_type, .name="fidl.test.handlesintypes/obj_type"};
 
 static const struct FidlXUnionField Fields40fidl_test_handlesintypes_UnionWithHandle[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&HandlevmononnullableTable)}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&Handlevmo2147483648nonnullableTable)}
 };
 const struct FidlCodedXUnion fidl_test_handlesintypes_UnionWithHandleTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields40fidl_test_handlesintypes_UnionWithHandle, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.handlesintypes/UnionWithHandle", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_Resource};
 static const struct FidlXUnionField Fields51fidl_test_handlesintypes_UnionWithHandleNullableRef[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&HandlevmononnullableTable)}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&Handlevmo2147483648nonnullableTable)}
 };
 const struct FidlCodedXUnion fidl_test_handlesintypes_UnionWithHandleNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields51fidl_test_handlesintypes_UnionWithHandleNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.handlesintypes/UnionWithHandle", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_Resource};
 static const struct FidlTableField Fields40fidl_test_handlesintypes_TableWithHandle[] = {
-    /*FidlTableField*/{.type=(fidl_type_t*)(&HandlevmononnullableTable), .ordinal=1u}
+    /*FidlTableField*/{.type=(fidl_type_t*)(&Handlevmo2147483648nonnullableTable), .ordinal=1u}
 };
 const struct FidlCodedTable fidl_test_handlesintypes_TableWithHandleTable = {.tag=kFidlTypeTable, .fields=Fields40fidl_test_handlesintypes_TableWithHandle, .field_count=1u, .is_resource=kFidlIsResource_Resource, .name="fidl.test.handlesintypes/TableWithHandle"};
 
 static const struct FidlStructElement Fields39fidl_test_handlesintypes_HandlesInTypes[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=0u, .field_type=(fidl_type_t*)(&HandlevmononnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=0u, .field_type=(fidl_type_t*)(&Handlevmo2147483648nonnullableTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=8u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable20HandlevmononnullableTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=24u, .field_type=(fidl_type_t*)(&Array20_20HandlevmononnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=8u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable30Handlevmo2147483648nonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=24u, .field_type=(fidl_type_t*)(&Array20_30Handlevmo2147483648nonnullableTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=44u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=48u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable30Array20_20HandlevmononnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=48u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable40Array20_30Handlevmo2147483648nonnullableTable)}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=64u, .field_type=(fidl_type_t*)(&fidl_test_handlesintypes_TableWithHandleTable)}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=80u, .field_type=(fidl_type_t*)(&fidl_test_handlesintypes_UnionWithHandleTable)}}
 };

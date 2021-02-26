@@ -145,8 +145,14 @@ struct HandleType final : public Type {
   std::any AcceptAny(VisitorAny* visitor) const override;
 
   Comparison Compare(const Type& other) const override {
-    const auto& o = *static_cast<const HandleType*>(&other);
-    return Type::Compare(o).Compare(subtype, o.subtype);
+    const auto& other_handle_type = *static_cast<const HandleType*>(&other);
+    auto rights_val =
+        static_cast<const flat::NumericConstantValue<types::Rights>&>(rights->Value());
+    auto other_rights_val = static_cast<const flat::NumericConstantValue<types::Rights>&>(
+        other_handle_type.rights->Value());
+    return Type::Compare(other_handle_type)
+        .Compare(subtype, other_handle_type.subtype)
+        .Compare(rights_val, other_rights_val);
   }
 };
 

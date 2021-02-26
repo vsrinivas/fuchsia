@@ -138,9 +138,9 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       auto iter = handle_type_map_.find(handle_type);
       if (iter != handle_type_map_.end())
         return iter->second;
-      auto name = NameCodedHandle(handle_type->subtype, handle_type->nullability);
       types::Rights rights = static_cast<const flat::NumericConstantValue<types::Rights>&>(
           handle_type->rights->Value());
+      auto name = NameCodedHandle(handle_type->subtype, rights, handle_type->nullability);
       auto coded_handle_type = std::make_unique<coded::HandleType>(
           std::move(name), handle_type->subtype, rights, handle_type->nullability);
       handle_type_map_[handle_type] = coded_handle_type.get();

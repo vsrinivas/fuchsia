@@ -26,7 +26,7 @@ static const struct FidlCodedHandle Request33fidl_test_nullable_SimpleProtocolnu
 
 static const struct FidlCodedHandle Protocol33fidl_test_nullable_SimpleProtocolnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nullable};
 
-static const struct FidlCodedHandle HandlevmonullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_VMO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nullable};
+static const struct FidlCodedHandle Handlevmo2147483648nullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_VMO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nullable};
 
 extern const struct FidlCodedStruct fidl_test_nullable_SimpleProtocolAddRequestTable;
 const struct FidlCodedStruct fidl_test_nullable_SimpleProtocolAddRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=24u, .name="fidl.test.nullable/SimpleProtocolAddRequest"};
@@ -69,7 +69,7 @@ static const struct FidlStructElement Fields45fidl_test_nullable_StructWithNulla
 const struct FidlCodedStruct fidl_test_nullable_StructWithNullableProtocolTable = {.tag=kFidlTypeStruct, .elements=Fields45fidl_test_nullable_StructWithNullableProtocol, .element_count=1u, .size=4u, .name="fidl.test.nullable/StructWithNullableProtocol"};
 
 static const struct FidlStructElement Fields43fidl_test_nullable_StructWithNullableHandle[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=0u, .field_type=(fidl_type_t*)(&HandlevmonullableTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=0u, .field_type=(fidl_type_t*)(&Handlevmo2147483648nullableTable)}}
 };
 const struct FidlCodedStruct fidl_test_nullable_StructWithNullableHandleTable = {.tag=kFidlTypeStruct, .elements=Fields43fidl_test_nullable_StructWithNullableHandle, .element_count=1u, .size=4u, .name="fidl.test.nullable/StructWithNullableHandle"};
 

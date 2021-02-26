@@ -12,14 +12,14 @@ extern const struct FidlCodedStruct fidl_test_encapsulatedstructs_TopLevelStruct
 
 static const struct FidlCodedStructPointer Pointer39fidl_test_encapsulatedstructs_Int16Int8Table = {.tag=kFidlTypeStructPointer, .struct_type=&fidl_test_encapsulatedstructs_Int16Int8Table};
 
-static const struct FidlCodedHandle HandlehandlenonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedHandle Handlehandle2147483648nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
 static const struct FidlCodedArray Array12_39fidl_test_encapsulatedstructs_Int16Int8Table __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&fidl_test_encapsulatedstructs_Int16Int8Table), .array_size=12u, .element_size=4u};
 
 
 static const struct FidlStructElement Fields55fidl_test_encapsulatedstructs_NonInlineStructTestStruct[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=0u, .field_type=(fidl_type_t*)(&Pointer39fidl_test_encapsulatedstructs_Int16Int8Table)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=8u, .field_type=(fidl_type_t*)(&HandlehandlenonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=8u, .field_type=(fidl_type_t*)(&Handlehandle2147483648nonnullableTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=12u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
 const struct FidlCodedStruct fidl_test_encapsulatedstructs_NonInlineStructTestStructTable = {.tag=kFidlTypeStruct, .elements=Fields55fidl_test_encapsulatedstructs_NonInlineStructTestStruct, .element_count=3u, .size=16u, .name="fidl.test.encapsulatedstructs/NonInlineStructTestStruct"};
@@ -51,7 +51,7 @@ static const struct FidlStructElement Fields44fidl_test_encapsulatedstructs_TopL
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967040u}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=12u, .field_type=(fidl_type_t*)(&Array12_39fidl_test_encapsulatedstructs_Int16Int8Table)}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=24u, .field_type=(fidl_type_t*)(&Pointer39fidl_test_encapsulatedstructs_Int16Int8Table)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=32u, .field_type=(fidl_type_t*)(&HandlehandlenonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=32u, .field_type=(fidl_type_t*)(&Handlehandle2147483648nonnullableTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=36u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
 const struct FidlCodedStruct fidl_test_encapsulatedstructs_TopLevelStructTable = {.tag=kFidlTypeStruct, .elements=Fields44fidl_test_encapsulatedstructs_TopLevelStruct, .element_count=6u, .size=40u, .name="fidl.test.encapsulatedstructs/TopLevelStruct"};

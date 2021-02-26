@@ -360,10 +360,9 @@ success("ChannelMaxUnknownHandlesStored") {
 }
 
 encode_success("EncodeHandleHasExactTypeAndRights") {
-    // TODO(fxbug.dev/69798) Re-enable for LLCPP once coding tables are fixed.
-    bindings_allowlist = [],
+    bindings_allowlist = [llcpp],
     handle_defs = {
-        #0 = event(rights: event_default),
+        #0 = event(),
     },
     value = EventWithDefaultRights {
         h: #0,
@@ -383,7 +382,7 @@ encode_success("EncodeHandleHasExactTypeAndRights") {
 decode_success("DecodeHandleHasExactTypeAndRights") {
     bindings_allowlist = [llcpp],
     handle_defs = {
-        #0 = event(),
+        #0 = event(rights: event_default),
     },
     bytes = {
         v1 = [
@@ -420,10 +419,9 @@ decode_failure("DecodeHandleHasWrongType") {
 }
 
 encode_success("EncodeHandleHasExtraRights") {
-    // TODO(fxbug.dev/69798) Re-enable for LLCPP once coding tables are fixed.
-    bindings_allowlist = [],
+    bindings_allowlist = [llcpp],
     handle_defs = {
-        #0 = event(rights: event_default),
+        #0 = event(),
     },
     value = EventWithReducedRights {
         h: #0,
@@ -435,14 +433,13 @@ encode_success("EncodeHandleHasExtraRights") {
     },
     handle_dispositions = {
         v1 = [
-            { #0, type: event, rights: event_default },
+            { #0, type: event, rights: basic },
         ],
     }
 }
 
 decode_success("DecodeHandleHasExtraRights") {
-    // TODO(fxbug.dev/69798) Re-enable for LLCPP once coding tables are fixed.
-    bindings_allowlist = [],
+    bindings_allowlist = [llcpp],
     handle_defs = {
         #0 = event(rights: event_default),
     },
@@ -457,15 +454,14 @@ decode_success("DecodeHandleHasExtraRights") {
         ],
     },
     value = EventWithReducedRights {
-        h: restrict(#0, rights: event_default),
+        h: restrict(#0, rights: basic),
     },
 }
 
 encode_success("EncodeHandleHasTooFewRights") {
-    // TODO(fxbug.dev/69798) Re-enable for LLCPP once coding tables are fixed.
-    bindings_allowlist = [],
+    bindings_allowlist = [llcpp],
     handle_defs = {
-        #0 = event(rights: signal),
+        #0 = event(),
     },
     value = EventWithDefaultRights {
         h: #0,
@@ -477,14 +473,13 @@ encode_success("EncodeHandleHasTooFewRights") {
     },
     handle_dispositions = {
         v1 = [
-            { #0, type: event, rights: signal },
+            { #0, type: event, rights: event_default },
         ],
     }
 }
 
 decode_failure("DecodeHandleHasTooFewRights") {
-    // TODO(fxbug.dev/69798) Re-enable for LLCPP once coding tables are fixed.
-    bindings_allowlist = [],
+    bindings_allowlist = [llcpp],
     handle_defs = {
         #0 = event(rights: basic),
     },
