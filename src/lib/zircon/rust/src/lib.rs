@@ -219,23 +219,6 @@ pub struct WaitItem<'a> {
     pub pending: Signals,
 }
 
-/// An identifier to select a particular clock. See
-/// [zx_clock_get](https://fuchsia.dev/fuchsia-src/reference/syscalls/clock_get.md)
-/// for more information about the possible values.
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum ClockId {
-    /// The number of nanoseconds since the system was powered on. Corresponds to
-    /// `ZX_CLOCK_MONOTONIC`.
-    Monotonic = 0,
-    /// The number of wall clock nanoseconds since the Unix epoch (midnight on January 1 1970) in
-    /// UTC. Corresponds to ZX_CLOCK_UTC.
-    UTC = 1,
-    /// The number of nanoseconds the current thread has been running for. Corresponds to
-    /// ZX_CLOCK_THREAD.
-    Thread = 2,
-}
-
 /// Wait on multiple handles.
 /// The success return value is a bool indicating whether one or more of the
 /// provided handle references was closed during the wait.

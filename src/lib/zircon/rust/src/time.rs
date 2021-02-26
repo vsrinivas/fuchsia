@@ -5,7 +5,7 @@
 //! Type-safe bindings for Zircon timer objects.
 
 use crate::ok;
-use crate::{AsHandleRef, ClockId, Handle, HandleBased, HandleRef, Status};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
 use fuchsia_zircon_sys as sys;
 use std::ops;
 use std::time as stdtime;
@@ -260,20 +260,6 @@ impl Time {
     pub const INFINITE: Time = Time(sys::ZX_TIME_INFINITE);
     pub const INFINITE_PAST: Time = Time(sys::ZX_TIME_INFINITE_PAST);
     pub const ZERO: Time = Time(0);
-
-    /// Get the current time, from the specific clock id.
-    ///
-    /// Wraps the
-    /// [zx_clock_get](https://fuchsia.dev/fuchsia-src/reference/syscalls/clock_get.md)
-    /// syscall.
-    #[deprecated(note = "Users should instead use get_monotonic or fuchsia_runtime::utc_time")]
-    pub fn get(clock_id: ClockId) -> Time {
-        unsafe {
-            let mut now: sys::zx_time_t = 0;
-            sys::zx_clock_get(clock_id as u32, &mut now);
-            Time(now)
-        }
-    }
 
     /// Get the current monotonic time.
     ///

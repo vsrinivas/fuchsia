@@ -8,7 +8,7 @@ import 'package:sl4f/sl4f.dart' as sl4f;
 
 const Duration pollPeriod = Duration(seconds: 1);
 const Duration maxHostDiff = Duration(minutes: 1);
-const Duration maxUserspaceKernelDiff = Duration(seconds: 2);
+const Duration maxUserspaceSystemDiff = Duration(seconds: 2);
 
 void main() {
   sl4f.Sl4f sl4fDriver;
@@ -30,7 +30,8 @@ void main() {
       await waitUntilTimeSynchronized(sl4fTime);
       final hostTime = DateTime.now().toUtc();
 
-      // All UTC clocks on the DUT should roughly align with the host time.
+      // The UTC clock on the DUT (both as measured through the runtime and as
+      // measured directly) should roughly align with the host time.
       final systemTime = await sl4fTime.systemTime();
       expect(systemTime.isAfter(hostTime.subtract(maxHostDiff)), isTrue);
       expect(systemTime.isBefore(hostTime.add(maxHostDiff)), isTrue);
@@ -38,17 +39,13 @@ void main() {
       final userspaceTime = await sl4fTime.userspaceTime();
       expect(userspaceTime.isAfter(hostTime.subtract(maxHostDiff)), isTrue);
       expect(userspaceTime.isBefore(hostTime.add(maxHostDiff)), isTrue);
-
-      final kernelTime = await sl4fTime.kernelTime();
-      expect(kernelTime.isAfter(hostTime.subtract(maxHostDiff)), isTrue);
-      expect(kernelTime.isBefore(hostTime.add(maxHostDiff)), isTrue);
     });
 
     test('utc clocks agree', () async {
       await waitUntilTimeSynchronized(sl4fTime);
 
-      // Verify that all UTC clocks on the DUT roughly agree by checking that
-      // their offsets from the host time agree.
+      // Verify that both ways to measure the UTC clock on the DUT roughly
+      // agree by checking that their offsets from the host time agree.
       final systemTime = await sl4fTime.systemTime();
       final systemTimeOffset = DateTime.now().toUtc().difference(systemTime);
 
@@ -56,20 +53,14 @@ void main() {
       final userspaceTimeOffset =
           DateTime.now().toUtc().difference(userspaceTime);
 
-      final kernelTime = await sl4fTime.kernelTime();
-      final kernelTimeOffset = DateTime.now().toUtc().difference(kernelTime);
-
       expect((systemTimeOffset - userspaceTimeOffset).abs(),
-          lessThan(maxUserspaceKernelDiff));
-      expect((systemTimeOffset - kernelTimeOffset).abs(),
-          lessThan(maxUserspaceKernelDiff));
-      expect((userspaceTimeOffset - kernelTimeOffset).abs(),
-          lessThan(maxUserspaceKernelDiff));
+          lessThan(maxUserspaceSystemDiff));
     });
   },
-      // While time synchronization is generally expected to complete within a minute, on emulators
-      // the timeout may be exceeded if the device is busy even if time synchronization has
-      // succeeded.
+
+      // While time synchronization is generally expected to complete within a
+      // minute, on emulators the timeout may be exceeded if the device is busy
+      // even if time synchronization has succeeded.
       timeout: Timeout(Duration(minutes: 2)));
 }
 

@@ -40,13 +40,6 @@ fn monotonic_time() -> i64 {
     zx::Time::get_monotonic().into_nanos()
 }
 
-fn kernel_utc() -> i64 {
-    // This deprecated call is used to compare the kernel clock to the userspace clock.
-    // Do not copy.
-    #[allow(deprecated)]
-    zx::Time::get(zx::ClockId::UTC).into_nanos()
-}
-
 /// A vector of inspect nodes used to store some struct implementing `InspectWritable`, where the
 /// contents of the oldest node are replaced on each write.
 ///
@@ -88,10 +81,8 @@ impl<T: InspectWritable + Default> CircularBuffer<T> {
 /// A representation of a point in time as measured by all pertinent clocks.
 #[derive(InspectWritable)]
 pub struct TimeSet {
-    /// The kernel ZX_CLOCK_MONOTONIC time, in ns.
+    /// The ZX_CLOCK_MONOTONIC time, in ns.
     monotonic: i64,
-    /// The kernel ZX_CLOCK_UTC time, in ns.
-    kernel_utc: i64,
     /// The UTC zx::Clock time, in ns.
     clock_utc: i64,
 }
@@ -101,7 +92,6 @@ impl TimeSet {
     pub fn now(clock: &zx::Clock) -> Self {
         TimeSet {
             monotonic: monotonic_time(),
-            kernel_utc: kernel_utc(),
             clock_utc: clock.read().map(zx::Time::into_nanos).unwrap_or(FAILED_TIME),
         }
     }
@@ -566,13 +556,11 @@ mod tests {
             root: contains {
                 initialization: contains {
                     monotonic: AnyProperty,
-                    kernel_utc: AnyProperty,
                     clock_utc: AnyProperty,
                 },
                 backstop: BACKSTOP_TIME,
                 current: contains {
                     monotonic: AnyProperty,
-                    kernel_utc: AnyProperty,
                     clock_utc: AnyProperty,
                 },
                 primary_time_source: contains {
@@ -627,13 +615,11 @@ mod tests {
             root: contains {
                 initialization: contains {
                     monotonic: AnyProperty,
-                    kernel_utc: AnyProperty,
                     clock_utc: AnyProperty,
                 },
                 backstop: BACKSTOP_TIME,
                 current: contains {
                     monotonic: AnyProperty,
-                    kernel_utc: AnyProperty,
                     clock_utc: AnyProperty,
                 },
                 primary_track: contains {

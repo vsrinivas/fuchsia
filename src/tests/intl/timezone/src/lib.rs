@@ -215,10 +215,6 @@ async fn loop_until_matching_time(
                     .map(|zx_time| zx_time.into_nanos() / 1_000_000_000),
                 Err(err) => Err(err),
             };
-            // This deprecated call is used to compare the kernel clock to the userspace clock.
-            // Do not copy.
-            #[allow(deprecated)]
-            let kernel_utc_sec = zx::Time::get(zx::ClockId::UTC).into_nanos() / 1_000_000_000;
 
             return Err(anyhow::anyhow!(
                 "dart VM time and test fixture time mismatch:\n\t\
@@ -228,8 +224,7 @@ async fn loop_until_matching_time(
                 the test fixture local time is:         {}\n\t\
                 test fixture says UTC time is:          {}\n\t\
                 test fixture ucal timestamp is:         {} sec since epoch\n\t\
-                test fixture userspace timestamp is:    {:?} sec since epoch\n\t\
-                test fixture kernel timestamp is:       {} sec since epoch",
+                test fixture userspace timestamp is:    {:?} sec since epoch",
                 vm_time,
                 date_time,
                 timezone_name,
@@ -237,7 +232,6 @@ async fn loop_until_matching_time(
                 utc_format.format(now)?,
                 now / 1000.0,
                 userspace_utc_sec,
-                kernel_utc_sec,
             ));
         }
         fasync::Timer::new(sleep.after_now()).await;

@@ -35,11 +35,6 @@ void main() {
       expect(userspaceTime.isAfter(earlyTime), isTrue);
     });
 
-    test('can retrieve kernel time', () async {
-      final kernelTime = await time.kernelTime();
-      expect(kernelTime.isAfter(earlyTime), isTrue);
-    });
-
     test('can check device synchronized', () async {
       expect(await time.isSystemTimeSynchronized(), isNotNull);
     });
