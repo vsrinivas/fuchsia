@@ -3243,6 +3243,13 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
 
   bool isWrite = ioMethod.isWrite();
 
+#if defined(__Fuchsia__)
+  if (isWrite) {
+    GTEST_SKIP() << "TODO(https://fxbug.dev/60337): Enable socket write methods after we are able "
+                    "to deterministically block on socket writes.";
+  }
+#endif
+
   // If linger is enabled, closing the socket will cause a TCP RST (by definition).
   bool closeRST = lingerEnabled;
   if (isWrite) {
