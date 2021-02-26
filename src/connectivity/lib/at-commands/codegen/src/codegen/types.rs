@@ -106,6 +106,7 @@ fn codegen_enum<W: io::Write>(
     name: &str,
     variants: &[Variant],
 ) -> Result {
+    write_indented!(sink, indent, "#[derive(FromPrimitive)]\n")?;
     codegen_block(
         sink,
         indent,

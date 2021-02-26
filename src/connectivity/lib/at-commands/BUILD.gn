@@ -37,6 +37,7 @@ copy("copy_sources") {
     "src/parser/response_grammar.rs",
     "src/parser/response_parser.rs",
     "src/serde.rs",
+    "src/translate_util.rs",
   ]
   outputs = [ "$target_gen_dir/{{source_target_relative}}" ]
 }
@@ -71,6 +72,7 @@ rustc_library("lib") {
     "$target_gen_dir/src/parser/response_grammar.rs",
     "$target_gen_dir/src/parser/response_parser.rs",
     "$target_gen_dir/src/serde.rs",
+    "$target_gen_dir/src/translate_util.rs",
   ]
 }
 
@@ -111,5 +113,6 @@ rustc_test("lib_tests") {
     "src/parser/response_parser.rs",
     "src/parser/response_parser_tests.rs",
     "src/tests.rs",
+    "src/translate_util.rs",
   ]
 }

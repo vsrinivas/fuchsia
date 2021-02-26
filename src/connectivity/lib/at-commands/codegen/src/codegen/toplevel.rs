@@ -33,6 +33,7 @@ pub fn codegen<W: io::Write>(sink: &mut W, definitions: &[Definition]) -> Result
     write_newline(sink)?;
 
     write_indented!(sink, indent, "pub mod types {{\n")?;
+    write_indented!(sink, indent + TABSTOP, "use num_derive::FromPrimitive;\n\n")?;
 
     codegen_types::codegen(sink, indent + TABSTOP, definitions)?;
 
@@ -41,6 +42,8 @@ pub fn codegen<W: io::Write>(sink: &mut W, definitions: &[Definition]) -> Result
     write_indented!(sink, indent + TABSTOP, "use crate::lowlevel;\n")?;
     write_indented!(sink, indent + TABSTOP, "use crate::generated::types as highlevel;\n")?;
     write_indented!(sink, indent + TABSTOP, "use crate::serde::DeserializeError;\n")?;
+    write_indented!(sink, indent + TABSTOP, "use crate::translate_util::*;\n")?;
+    write_indented!(sink, indent + TABSTOP, "use num_traits::FromPrimitive;\n\n")?;
 
     codegen_raise::codegen(sink, indent + TABSTOP, definitions)?;
     codegen_lower::codegen(sink, indent + TABSTOP, definitions)?;

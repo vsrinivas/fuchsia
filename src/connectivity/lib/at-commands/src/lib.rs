@@ -8,7 +8,7 @@ mod lowlevel {
     pub mod response;
     pub mod write_to;
 
-    pub use command::Command;
+    pub use command::{Command, ExecuteArguments};
     pub use response::Response;
 }
 
@@ -23,6 +23,7 @@ mod parser {
 
 mod generated;
 mod serde;
+mod translate_util;
 
 // Reexport generated high level types and functions for use by clients.
 pub use generated::types::*;
