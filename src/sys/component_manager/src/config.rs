@@ -79,6 +79,9 @@ pub struct RuntimeConfig {
     /// Path to the component ID index, parsed from
     /// `fuchsia.component.internal.RuntimeConfig.component_id_index_path`.
     pub component_id_index_path: Option<String>,
+
+    /// If true, component manager will log all events dispatched in the topology.
+    pub log_all_events: bool,
 }
 
 /// Runtime security policy.
@@ -162,6 +165,7 @@ impl Default for RuntimeConfig {
             out_dir_contents: OutDirContents::None,
             root_component_url: Default::default(),
             component_id_index_path: None,
+            log_all_events: false,
         }
     }
 }
@@ -250,6 +254,9 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
             SecurityPolicy::default()
         };
 
+        let log_all_events =
+            if let Some(log_all_events) = config.log_all_events { log_all_events } else { false };
+
         Ok(RuntimeConfig {
             list_children_batch_size,
             security_policy,
@@ -268,6 +275,7 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
             out_dir_contents: config.out_dir_contents.unwrap_or(default.out_dir_contents),
             root_component_url,
             component_id_index_path: config.component_id_index_path,
+            log_all_events,
         })
     }
 }
@@ -510,6 +518,7 @@ mod tests {
             out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
+            log_all_events: None,
             ..component_internal::Config::EMPTY
         }, RuntimeConfig {
             debug:false, list_children_batch_size: 5,
@@ -611,6 +620,7 @@ mod tests {
                 out_dir_contents: Some(component_internal::OutDirContents::Svc),
                 root_component_url: Some(FOO_PKG_URL.to_string()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
+                log_all_events: Some(true),
                 ..component_internal::Config::EMPTY
             },
             RuntimeConfig {
@@ -697,6 +707,7 @@ mod tests {
                 out_dir_contents: OutDirContents::Svc,
                 root_component_url: Some(Url::new(FOO_PKG_URL.to_string()).unwrap()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
+                log_all_events: true,
             }
         ),
     }

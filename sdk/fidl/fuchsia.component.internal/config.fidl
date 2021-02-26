@@ -64,6 +64,9 @@ table Config {
     /// Path to the component ID index. An empty value defaults to an empty index.
     /// An invalid index causes component_manager to abort.
     11: string:fuchsia.component.MAX_PATH_LENGTH component_id_index_path;
+
+    /// If true, component manager will log all events dispatched in the topology.
+    12: bool log_all_events;
 };
 
 /// The builtin resolver to use, if any.

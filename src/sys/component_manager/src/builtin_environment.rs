@@ -348,7 +348,7 @@ impl BuiltinEnvironment {
         let num_threads = runtime_config.num_threads.clone();
         let out_dir_contents = runtime_config.out_dir_contents.clone();
 
-        let event_logger = if runtime_config.debug {
+        let event_logger = if runtime_config.log_all_events {
             let event_logger = Arc::new(EventLogger::new());
             model.root.hooks.install(event_logger.hooks()).await;
             Some(event_logger)
