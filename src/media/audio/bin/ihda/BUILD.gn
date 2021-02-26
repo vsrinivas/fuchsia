@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("ihda") {
-  testonly = true
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
@@ -27,6 +26,5 @@ executable("ihda") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/intel-hda",
-    "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
   ]
 }

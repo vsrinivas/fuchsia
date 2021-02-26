@@ -12,7 +12,6 @@
 
 #include <fbl/algorithm.h>
 #include <intel-hda/utils/intel-hda-registers.h>
-#include <mmio-ptr/fake.h>
 
 namespace audio {
 namespace intel_hda {
@@ -181,7 +180,7 @@ zx_status_t IntelHDAController::DumpRegs(int argc, const char** argv) {
   ihda_dump32("DPIBUBASE",  &regs, offsetof(hda_registers_t, dpibubase));
   // clang-format on
 
-  uint16_t gcap = REG_RD(FakeMmioPtr(&regs.gcap));
+  uint16_t gcap = REG_RD((MMIO_PTR uint16_t*)(&regs.gcap));
   unsigned int input_stream_cnt = HDA_REG_GCAP_ISS(gcap);
   unsigned int output_stream_cnt = HDA_REG_GCAP_OSS(gcap);
   unsigned int bidir_stream_cnt = HDA_REG_GCAP_BSS(gcap);
