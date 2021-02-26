@@ -27,7 +27,7 @@ If you're using C++ and wondering which tutorial to follow, take a look
 at the [HLCPP and LLCPP comparison doc][c-family].
 
   * [High Level C++ (HLCPP) Tutorial][hlcpp]
-  * [Low Level C++ (HLCPP) Tutorial][llcpp]
+  * [Low Level C++ (LLCPP) Tutorial][llcpp]
   * [Rust Tutorial][rust]
   * [Dart Tutorial][dart]
 
