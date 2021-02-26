@@ -128,7 +128,7 @@ contains a command with an underscore, then you can include the underscore.
   technical words. If you're using Fuchsia-specific jargon, define it in
   the [glossary](/docs/glossary.md).
 
-- **Avoid coloquial phrases or regional idioms** Keep in mind that a lot of users are non-native
+- **Avoid colloquial phrases or regional idioms** Keep in mind that a lot of users are non-native
   English speakers interested in Fuchsia. Avoid difficult to translate idioms, like
   "that's the way the cookie crumbles". While it might make sense to you, it doesn't translate
   well into other languages.
