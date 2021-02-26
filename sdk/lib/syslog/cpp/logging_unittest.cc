@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "lib/syslog/cpp/log_level.h"
+#include "logging_backend_shared.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
@@ -331,6 +332,37 @@ TEST_F(LoggingFixture, LogId) {
 
   EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
                                       std::to_string(line) + ")] Hello log_id=\"test\""));
+}
+
+TEST(StructuredLogging, LOGS) {
+  std::string str;
+  // 5mb log shouldn't crash
+  str.resize(1000 * 5000);
+  memset(str.data(), 's', str.size() - 1);
+  FX_LOGS(INFO) << str;
+}
+
+TEST(StructuredLogging, Remaining) {
+  syslog_backend::LogBuffer buffer;
+  syslog_backend::BeginRecord(&buffer, LOG_INFO, "test", 5, "test_msg", "");
+  auto header = syslog_backend::MsgHeader::CreatePtr(&buffer);
+  auto initial = header->RemainingSpace();
+  header->WriteChar('t');
+  ASSERT_EQ(header->RemainingSpace(), initial - 1);
+  header->WriteString("est");
+  ASSERT_EQ(header->RemainingSpace(), initial - 4);
+}
+
+TEST(StructuredLogging, FlushAndReset) {
+  syslog_backend::LogBuffer buffer;
+  syslog_backend::BeginRecord(&buffer, LOG_INFO, "test", 5, "test_msg", "");
+  auto header = syslog_backend::MsgHeader::CreatePtr(&buffer);
+  auto initial = header->RemainingSpace();
+  header->WriteString("test");
+  ASSERT_EQ(header->RemainingSpace(), initial - 4);
+  header->FlushAndReset();
+  ASSERT_EQ(header->RemainingSpace(),
+            sizeof(syslog_backend::LogBuffer::data) - 1);  // last byte reserved for NULL terminator
 }
 
 }  // namespace

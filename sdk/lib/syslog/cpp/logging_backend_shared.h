@@ -18,21 +18,62 @@ namespace syslog_backend {
 struct MsgHeader {
   syslog::LogSeverity severity;
   char* offset;
+  LogBuffer* buffer;
   bool first_tag;
   char* user_tag;
   bool has_msg;
   bool first_kv;
+  size_t RemainingSpace() {
+    auto end = (reinterpret_cast<const char*>(this) + sizeof(LogBuffer));
+    auto avail = static_cast<size_t>(end - offset - 1);
+    return avail;
+  }
+
   void WriteChar(const char value) {
+    if (!RemainingSpace()) {
+      FlushRecord(buffer);
+      offset = reinterpret_cast<char*>(buffer->data);
+      WriteString("CONTINUATION: ");
+    }
     assert((offset + 1) < (reinterpret_cast<const char*>(this) + sizeof(LogBuffer)));
     *offset = value;
     offset++;
   }
+
   void WriteString(const char* c_str) {
+    size_t total_chars = strlen(c_str);
+    size_t written_chars = 0;
+    while (written_chars < total_chars) {
+      size_t written = WriteStringInternal(c_str + written_chars);
+      written_chars += written;
+      if (written_chars < total_chars) {
+        FlushAndReset();
+        WriteStringInternal("CONTINUATION: ");
+      }
+    }
+  }
+
+  void FlushAndReset() {
+    FlushRecord(buffer);
+    offset = reinterpret_cast<char*>(buffer->data);
+  }
+
+  // Writes a string to the buffer and returns the
+  // number of bytes written. Returns 0 only if
+  // the length of the string is 0, or if we're
+  // exactly at the end of the buffer and need a reset.
+  size_t WriteStringInternal(const char* c_str) {
     size_t len = strlen(c_str);
+    auto remaining = RemainingSpace();
+    if (len > remaining) {
+      len = remaining;
+    }
     assert((offset + len) < (reinterpret_cast<const char*>(this) + sizeof(LogBuffer)));
     memcpy(offset, c_str, len);
     offset += len;
+    return len;
   }
+
   void Init(LogBuffer* buffer, syslog::LogSeverity severity) {
     this->severity = severity;
     user_tag = nullptr;
@@ -41,6 +82,7 @@ struct MsgHeader {
     has_msg = false;
     first_kv = true;
   }
+
   static MsgHeader* CreatePtr(LogBuffer* buffer) {
     return reinterpret_cast<MsgHeader*>(&buffer->record_state);
   }
