@@ -53,25 +53,25 @@ particular component.
 The following is a small example demonstrating the approach:
 
 ``` gn
-config("feature-foo") {
+config("feature_foo") {
   cflags = [ "-DFOO=1" ]
 }
 
-executable("mytool-nofoo") {
+executable("mytool_nofoo") {
   ...
 }
 
-executable("mytool-foo") {
-  configs = [":feature-foo"]
+executable("mytool_foo") {
+  configs = [":feature_foo"]
 }
 
-package("mytool-with-foo") {
-  deps = [":mytool-foo"]
+package("mytool_with_foo") {
+  deps = [":mytool_foo"]
   ...
 }
 
 package("mytool") {
-  deps = [":mytool-nofoo"]
+  deps = [":mytool_nofoo"]
   ...
 }
 ```
