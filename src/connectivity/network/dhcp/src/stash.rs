@@ -45,7 +45,6 @@ pub enum StashError {
     StashConnect(#[source] anyhow::Error),
 }
 
-#[async_trait::async_trait]
 impl DataStore for Stash {
     type Error = StashError;
 
@@ -53,7 +52,7 @@ impl DataStore for Stash {
     ///
     /// This function stores the `client_config` as a serialized JSON string.
     fn store_client_config(
-        &self,
+        &mut self,
         client_id: &ClientIdentifier,
         client_config: &CachedConfig,
     ) -> Result<(), Self::Error> {
@@ -63,111 +62,22 @@ impl DataStore for Stash {
     /// Stores `opts` in `fuchsia.stash`.
     ///
     /// This function stores the `opts` as a serialized JSON string.
-    fn store_options(&self, opts: &[DhcpOption]) -> Result<(), Self::Error> {
+    fn store_options(&mut self, opts: &[DhcpOption]) -> Result<(), Self::Error> {
         self.store(OPTIONS_KEY, opts)
     }
 
     /// Stores `params` in `fuchsia.stash`.
     ///
     /// This function stores the `params` as a serialized JSON string.
-    fn store_parameters(&self, params: &ServerParameters) -> Result<(), Self::Error> {
+    fn store_parameters(&mut self, params: &ServerParameters) -> Result<(), Self::Error> {
         self.store(PARAMETERS_KEY, params)
-    }
-
-    /// Loads a `CachedClients` map from data stored in `fuchsia.stash`.
-    ///
-    /// This function will retrieve all client configuration data from `fuchsia.stash`, deserialize
-    /// the JSON string values, and load the resulting structured data into a `CachedClients`
-    /// hashmap. Any key-value pair which could not be parsed or deserialized will be removed and
-    /// skipped.
-    async fn load_client_configs(&self) -> Result<CachedClients, Self::Error> {
-        let (iter, server) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_stash::GetIteratorMarker>()?;
-        let () = self.proxy.get_prefix(&self.prefix, server)?;
-        let mut cache = std::collections::HashMap::new();
-        for kv in iter.get_next().await? {
-            let key = match kv.key.split("-").last() {
-                Some(v) => v,
-                None => {
-                    // Invalid key-value pair: remove the invalid pair and try the next one.
-                    log::warn!("failed to parse key string: {}", kv.key);
-                    let () = self.rm_key(&kv.key)?;
-                    continue;
-                }
-            };
-            let key = match ClientIdentifier::from_str(key) {
-                Ok(v) => v,
-                Err(e) => {
-                    log::warn!("client id from string conversion failed: {}", e);
-                    let () = self.rm_key(&kv.key)?;
-                    continue;
-                }
-            };
-            let val = match kv.val {
-                fidl_fuchsia_stash::Value::Stringval(v) => v,
-                v => {
-                    log::warn!("invalid value variant stored in stash: {:?}", v);
-                    let () = self.rm_key(&kv.key)?;
-                    continue;
-                }
-            };
-            let val: CachedConfig = match serde_json::from_str(&val) {
-                Ok(v) => v,
-                Err(e) => {
-                    log::warn!("failed to parse JSON from string: {}", e);
-                    let () = self.rm_key(&kv.key)?;
-                    continue;
-                }
-            };
-            cache.insert(key, val);
-        }
-        Ok(cache)
-    }
-
-    /// Loads a map of `OptionCode`s to `DhcpOption`s from data stored in `fuchsia.stash`.
-    async fn load_options(&self) -> Result<HashMap<OptionCode, DhcpOption>, Self::Error> {
-        let val = self.proxy.get_value(&OPTIONS_KEY.to_string()).await?;
-        let val = match val {
-            Some(v) => v,
-            None => return Ok(HashMap::new()),
-        };
-        match *val {
-            fidl_fuchsia_stash::Value::Stringval(v) => {
-                Ok(serde_json::from_str::<Vec<DhcpOption>>(&v)
-                    .map_err(|e| StashError::JsonDeserialization(v.clone(), e))?
-                    .into_iter()
-                    .map(|opt| (opt.code(), opt))
-                    .collect())
-            }
-            v => Err(StashError::UnexpectedStashValue {
-                actual: v,
-                expected: fidl_fuchsia_stash::Value::Stringval(String::new()),
-            }),
-        }
-    }
-
-    /// Loads a new instance of `ServerParameters` from data stored in `fuchsia.stash`.
-    async fn load_parameters(&self) -> Result<ServerParameters, Self::Error> {
-        let val = self
-            .proxy
-            .get_value(&PARAMETERS_KEY.to_string())
-            .await?
-            .ok_or(StashError::MissingValue(PARAMETERS_KEY.to_string()))?;
-        match *val {
-            fidl_fuchsia_stash::Value::Stringval(v) => Ok(serde_json::from_str(&v)
-                .map_err(|e| StashError::JsonDeserialization(v.clone(), e))?),
-            v => Err(StashError::UnexpectedStashValue {
-                actual: v,
-                expected: fidl_fuchsia_stash::Value::Stringval(String::new()),
-            }),
-        }
     }
 
     /// Deletes the stash entry associated with `client`, if any.
     ///
     /// This function immediately commits the deletion operation to the Stash, i.e. there is no
     /// batching of delete operations.
-    fn delete(&self, client_id: &ClientIdentifier) -> Result<(), Self::Error> {
+    fn delete(&mut self, client_id: &ClientIdentifier) -> Result<(), Self::Error> {
         self.rm_key(&self.client_key(client_id))
     }
 }
@@ -217,6 +127,95 @@ impl Stash {
         let () = self.proxy.set_value(key, &mut v)?;
         let () = self.proxy.commit()?;
         Ok(())
+    }
+
+    /// Loads a `CachedClients` map from data stored in `fuchsia.stash`.
+    ///
+    /// This function will retrieve all client configuration data from `fuchsia.stash`, deserialize
+    /// the JSON string values, and load the resulting structured data into a `CachedClients`
+    /// hashmap. Any key-value pair which could not be parsed or deserialized will be removed and
+    /// skipped.
+    pub async fn load_client_configs(&self) -> Result<CachedClients, StashError> {
+        let (iter, server) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_stash::GetIteratorMarker>()?;
+        let () = self.proxy.get_prefix(&self.prefix, server)?;
+        let mut cache = std::collections::HashMap::new();
+        for kv in iter.get_next().await? {
+            let key = match kv.key.split("-").last() {
+                Some(v) => v,
+                None => {
+                    // Invalid key-value pair: remove the invalid pair and try the next one.
+                    log::warn!("failed to parse key string: {}", kv.key);
+                    let () = self.rm_key(&kv.key)?;
+                    continue;
+                }
+            };
+            let key = match ClientIdentifier::from_str(key) {
+                Ok(v) => v,
+                Err(e) => {
+                    log::warn!("client id from string conversion failed: {}", e);
+                    let () = self.rm_key(&kv.key)?;
+                    continue;
+                }
+            };
+            let val = match kv.val {
+                fidl_fuchsia_stash::Value::Stringval(v) => v,
+                v => {
+                    log::warn!("invalid value variant stored in stash: {:?}", v);
+                    let () = self.rm_key(&kv.key)?;
+                    continue;
+                }
+            };
+            let val: CachedConfig = match serde_json::from_str(&val) {
+                Ok(v) => v,
+                Err(e) => {
+                    log::warn!("failed to parse JSON from string: {}", e);
+                    let () = self.rm_key(&kv.key)?;
+                    continue;
+                }
+            };
+            cache.insert(key, val);
+        }
+        Ok(cache)
+    }
+
+    /// Loads a map of `OptionCode`s to `DhcpOption`s from data stored in `fuchsia.stash`.
+    pub async fn load_options(&self) -> Result<HashMap<OptionCode, DhcpOption>, StashError> {
+        let val = self.proxy.get_value(&OPTIONS_KEY.to_string()).await?;
+        let val = match val {
+            Some(v) => v,
+            None => return Ok(HashMap::new()),
+        };
+        match *val {
+            fidl_fuchsia_stash::Value::Stringval(v) => {
+                Ok(serde_json::from_str::<Vec<DhcpOption>>(&v)
+                    .map_err(|e| StashError::JsonDeserialization(v.clone(), e))?
+                    .into_iter()
+                    .map(|opt| (opt.code(), opt))
+                    .collect())
+            }
+            v => Err(StashError::UnexpectedStashValue {
+                actual: v,
+                expected: fidl_fuchsia_stash::Value::Stringval(String::new()),
+            }),
+        }
+    }
+
+    /// Loads a new instance of `ServerParameters` from data stored in `fuchsia.stash`.
+    pub async fn load_parameters(&self) -> Result<ServerParameters, StashError> {
+        let val = self
+            .proxy
+            .get_value(&PARAMETERS_KEY.to_string())
+            .await?
+            .ok_or(StashError::MissingValue(PARAMETERS_KEY.to_string()))?;
+        match *val {
+            fidl_fuchsia_stash::Value::Stringval(v) => Ok(serde_json::from_str(&v)
+                .map_err(|e| StashError::JsonDeserialization(v.clone(), e))?),
+            v => Err(StashError::UnexpectedStashValue {
+                actual: v,
+                expected: fidl_fuchsia_stash::Value::Stringval(String::new()),
+            }),
+        }
     }
 
     fn rm_key(&self, key: &str) -> Result<(), StashError> {
@@ -302,7 +301,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn store_client_succeeds() -> Result<(), Error> {
-        let (stash, id) = new_stash("store_client_succeeds")?;
+        let (mut stash, id) = new_stash("store_client_succeeds")?;
         let accessor_client = stash.proxy.clone();
 
         // Store value in stash.
@@ -328,7 +327,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn store_options_succeeds() -> Result<(), Error> {
-        let (stash, id) = new_stash("store_options_succeeds")?;
+        let (mut stash, id) = new_stash("store_options_succeeds")?;
         let accessor_client = stash.proxy.clone();
 
         let opts = vec![
@@ -353,7 +352,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn store_parameters_succeeds() -> Result<(), Error> {
-        let (stash, id) = new_stash("store_parameters_succeeds")?;
+        let (mut stash, id) = new_stash("store_parameters_succeeds")?;
         let accessor_client = stash.proxy.clone();
 
         let params = ServerParameters {
@@ -536,7 +535,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn delete_client_succeeds() -> Result<(), Error> {
-        let (stash, id) = new_stash("delete_client_succeeds")?;
+        let (mut stash, id) = new_stash("delete_client_succeeds")?;
         let accessor = stash.proxy.clone();
 
         // Store value in stash.

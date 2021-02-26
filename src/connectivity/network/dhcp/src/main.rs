@@ -10,7 +10,7 @@ use {
         configuration,
         protocol::{Message, SERVER_PORT},
         server::{
-            DataStore as _, Server, ServerAction, ServerDispatcher, ServerError, DEFAULT_STASH_ID,
+            DataStore, Server, ServerAction, ServerDispatcher, ServerError, DEFAULT_STASH_ID,
         },
         stash::Stash,
     },
@@ -39,13 +39,8 @@ enum IncomingService {
 
 const DEFAULT_LEASE_DURATION_SECONDS: u32 = 24 * 60 * 60;
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    let () = fuchsia_syslog::init().context("cannot init logger")?;
-    log::info!("starting");
-
-    let stash = Stash::new(DEFAULT_STASH_ID).context("failed to instantiate stash")?;
-    let default_params = configuration::ServerParameters {
+fn default_parameters() -> configuration::ServerParameters {
+    configuration::ServerParameters {
         server_ips: vec![],
         lease_length: dhcp::configuration::LeaseLength {
             default_seconds: DEFAULT_LEASE_DURATION_SECONDS,
@@ -64,36 +59,61 @@ async fn main() -> Result<(), Error> {
         ),
         arp_probe: false,
         bound_device_names: vec![],
-    };
-    // The server parameters and the cache of client entries must be consistent with one another in
-    // order to ensure correct server operation. The cache cannot be consistent with default
-    // parameters, so if parameters fail to load from the stash, then the cache should default to
-    // empty.
-    let (params, options, cache) = match stash.load_parameters().await {
-        Ok(params) => {
-            let options = stash.load_options().await.unwrap_or_else(|e| {
-                log::warn!("failed to load options from stash: {:?}", e);
-                HashMap::new()
-            });
-            let cache = stash.load_client_configs().await.unwrap_or_else(|e| {
-                log::warn!("failed to load cached client config from stash: {:?}", e);
-                HashMap::new()
-            });
-            (params, options, cache)
-        }
-        Err(e) => {
-            log::warn!("failed to load parameters from stash: {:?}", e);
-            (default_params.clone(), HashMap::new(), HashMap::new())
-        }
-    };
-    let server = match Server::new_from_state(stash.clone(), params, options, cache) {
-        Ok(v) => v,
-        Err(e) => {
-            log::warn!("failed to create server from persistent state: {}", e);
-            Server::new(stash, default_params.clone())
-        }
-    };
+    }
+}
 
+/// dhcpd is the Fuchsia DHCPv4 server.
+#[derive(argh::FromArgs)]
+struct Args {
+    /// enables storage of dhcpd lease and configuration state to persistent storage
+    #[argh(switch)]
+    persistent: bool,
+}
+
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
+    let () = fuchsia_syslog::init().context("cannot init logger")?;
+    log::info!("starting");
+
+    let Args { persistent } = argh::from_env();
+    log::info!("persistent={}", persistent);
+    if persistent {
+        let stash = Stash::new(DEFAULT_STASH_ID).context("failed to instantiate stash")?;
+        // The server parameters and the cache of client entries must be consistent with one
+        // another in order to ensure correct server operation. The cache cannot be consistent with
+        // default parameters, so if parameters fail to load from the stash, then the cache should
+        // default to empty.
+        let (params, options, cache) = match stash.load_parameters().await {
+            Ok(params) => {
+                let options = stash.load_options().await.unwrap_or_else(|e| {
+                    log::warn!("failed to load options from stash: {:?}", e);
+                    HashMap::new()
+                });
+                let cache = stash.load_client_configs().await.unwrap_or_else(|e| {
+                    log::warn!("failed to load cached client config from stash: {:?}", e);
+                    HashMap::new()
+                });
+                (params, options, cache)
+            }
+            Err(e) => {
+                log::warn!("failed to load parameters from stash: {:?}", e);
+                (default_parameters(), HashMap::new(), HashMap::new())
+            }
+        };
+        let server = match Server::new_from_state(stash.clone(), params, options, cache) {
+            Ok(v) => v,
+            Err(e) => {
+                log::warn!("failed to create server from persistent state: {}", e);
+                Server::new(Some(stash), default_parameters())
+            }
+        };
+        Ok(run(server).await?)
+    } else {
+        Ok(run(Server::<Stash>::new(None, default_parameters())).await?)
+    }
+}
+
+async fn run<DS: DataStore>(server: Server<DS>) -> Result<(), Error> {
     let server = RefCell::new(ServerDispatcherRuntime::new(server));
 
     let mut fs = ServiceFs::new_local();
@@ -121,7 +141,7 @@ async fn main() -> Result<(), Error> {
         fs.then(futures::future::ok).try_for_each_concurrent(None, |incoming_service| async {
             match incoming_service {
                 IncomingService::Server(stream) => {
-                    run_server(stream, &server, &default_params, socket_sink.clone())
+                    run_server(stream, &server, &default_parameters(), socket_sink.clone())
                         .inspect_err(|e| log::warn!("run_server failed: {:?}", e))
                         .await?;
                     Ok(())
@@ -144,7 +164,7 @@ trait SocketServerDispatcher: ServerDispatcher {
     fn dispatch_message(&mut self, msg: Message) -> Result<ServerAction, ServerError>;
 }
 
-impl SocketServerDispatcher for Server<Stash> {
+impl<DS: DataStore> SocketServerDispatcher for Server<DS> {
     type Socket = UdpSocket;
 
     fn create_socket(name: &str, src: Ipv4Addr) -> std::io::Result<Self::Socket> {
@@ -365,9 +385,9 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
     }
 }
 
-async fn define_msg_handling_loop_future(
+async fn define_msg_handling_loop_future<DS: DataStore>(
     sock: UdpSocket,
-    server: &RefCell<ServerDispatcherRuntime<Server<Stash>>>,
+    server: &RefCell<ServerDispatcherRuntime<Server<DS>>>,
 ) -> Result<Void, Error> {
     let mut handler = MessageHandler::new(server);
     let mut buf = vec![0u8; BUF_SZ];
@@ -384,8 +404,8 @@ async fn define_msg_handling_loop_future(
     }
 }
 
-fn define_lease_expiration_handler_future<'a>(
-    server: &'a RefCell<ServerDispatcherRuntime<Server<Stash>>>,
+fn define_lease_expiration_handler_future<'a, DS: DataStore>(
+    server: &'a RefCell<ServerDispatcherRuntime<Server<DS>>>,
 ) -> impl Future<Output = Result<(), Error>> + 'a {
     let expiration_interval = Interval::new(EXPIRATION_INTERVAL_SECS.seconds());
     expiration_interval
@@ -394,14 +414,15 @@ fn define_lease_expiration_handler_future<'a>(
         .try_collect::<()>()
 }
 
-fn define_running_server_fut<'a, S>(
-    server: &'a RefCell<ServerDispatcherRuntime<Server<Stash>>>,
+fn define_running_server_fut<'a, S, DS>(
+    server: &'a RefCell<ServerDispatcherRuntime<Server<DS>>>,
     socket_stream: S,
 ) -> impl Future<Output = Result<(), Error>> + 'a
 where
     S: futures::Stream<
             Item = ServerSocketCollection<<Server<Stash> as SocketServerDispatcher>::Socket>,
         > + 'static,
+    DS: DataStore,
 {
     socket_stream.map(Ok).try_for_each(move |socket_collection| async move {
         let ServerSocketCollection { sockets, abort_registration } = socket_collection;

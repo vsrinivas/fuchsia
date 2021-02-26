@@ -24,7 +24,7 @@ pub struct Server<DS: DataStore, TS: SystemTimeSource = StdSystemTime> {
     cache: CachedClients,
     pool: AddressPool,
     params: ServerParameters,
-    store: DS,
+    store: Option<DS>,
     options_repo: HashMap<OptionCode, DhcpOption>,
     time_source: TS,
 }
@@ -49,36 +49,26 @@ impl SystemTimeSource for StdSystemTime {
 }
 
 /// An interface for storing and loading DHCP server data.
-#[async_trait::async_trait]
 pub trait DataStore {
     type Error: std::error::Error + std::marker::Send + std::marker::Sync + 'static;
 
     /// Stores the client configuration parameters, including any IP address lease, associated with
     /// the client identifier.
     fn store_client_config(
-        &self,
+        &mut self,
         client_id: &ClientIdentifier,
         client_config: &CachedConfig,
     ) -> Result<(), Self::Error>;
 
     /// Stores the DHCP option values served by the server.
-    fn store_options(&self, opts: &[DhcpOption]) -> Result<(), Self::Error>;
+    fn store_options(&mut self, opts: &[DhcpOption]) -> Result<(), Self::Error>;
 
     /// Stores the DHCP server's configuration parameters.
-    fn store_parameters(&self, params: &ServerParameters) -> Result<(), Self::Error>;
-
-    /// Loads a mapping of client identifiers to client configurations parameters.
-    async fn load_client_configs(&self) -> Result<CachedClients, Self::Error>;
-
-    /// Loads DHCP option values.
-    async fn load_options(&self) -> Result<HashMap<OptionCode, DhcpOption>, Self::Error>;
-
-    /// Loads the DHCP server's configuration parameters.
-    async fn load_parameters(&self) -> Result<ServerParameters, Self::Error>;
+    fn store_parameters(&mut self, params: &ServerParameters) -> Result<(), Self::Error>;
 
     /// Deletes the client configuration parameters associated with the client
     /// identifier.
-    fn delete(&self, client_id: &ClientIdentifier) -> Result<(), Self::Error>;
+    fn delete(&mut self, client_id: &ClientIdentifier) -> Result<(), Self::Error>;
 }
 
 /// The default string used by the Server to identify itself to the Stash service.
@@ -220,13 +210,14 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
                 .allocate_addr(client_addr)
                 .map_err(ServerError::InconsistentInitialServerState)?;
         }
-        let mut server = Self { cache, pool, params, store, options_repo, time_source };
+        let mut server =
+            Self { cache, pool, params, store: Some(store), options_repo, time_source };
         let () = server.release_expired_leases()?;
         Ok(server)
     }
 
     /// Instantiates a new `Server`, without persisted state, from the supplied parameters.
-    pub fn new(store: DS, params: ServerParameters) -> Self {
+    pub fn new(store: Option<DS>, params: ServerParameters) -> Self {
         Self {
             cache: HashMap::new(),
             pool: AddressPool::new(params.managed_addrs.pool_range()),
@@ -378,9 +369,11 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
             self.time_source.now(),
             lease_length_seconds,
         )?;
-        self.store
-            .store_client_config(&client_id, &config)
-            .context("failed to store client in stash")?;
+        if let Some(store) = self.store.as_mut() {
+            let () = store
+                .store_client_config(&client_id, &config)
+                .context("failed to store client in stash")?;
+        }
         self.cache.insert(client_id, config);
         // This should NEVER return an `Err`. If it does it indicates
         // server's state has changed in the middle of request handling.
@@ -509,9 +502,13 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
             // parameters for possible reuse in response to subsequent requests from the client.
             let () = self.pool.release_addr(rel.ciaddr)?;
             config.client_addr = None;
-            let () = self.store.store_client_config(&client_id, config).map_err(|e| {
-                ServerError::ServerCacheUpdateFailure(StashError { error: anyhow::Error::from(e) })
-            })?;
+            if let Some(store) = self.store.as_mut() {
+                let () = store.store_client_config(&client_id, config).map_err(|e| {
+                    ServerError::ServerCacheUpdateFailure(StashError {
+                        error: anyhow::Error::from(e),
+                    })
+                })?;
+            }
             Ok(ServerAction::AddressRelease(rel.ciaddr))
         } else {
             Err(ServerError::UnknownClientId(client_id))
@@ -697,27 +694,33 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
                 let _release_result = self.pool.release_addr(ip);
             }
             self.cache.remove(&id);
-            // The call to delete will immediately be committed to the Stash. Since DHCP lease
-            // acquisitions occur on a human timescale, e.g. a cellphone is brought in range of an
-            // AP, and at a time resolution of a second, it will be rare for expired_clients to
-            // contain sufficient numbers of entries that committing with each deletion will impact
-            // performance.
-            if let Err(e) = self.store.delete(&id) {
-                // We log the failed deletion here because it would be the action taken by the
-                // caller and we do not want to stop the deletion loop on account of a single
-                // failure.
-                log::warn!("stash failed to delete client={}: {}", id, e)
+            if let Some(store) = self.store.as_mut() {
+                // The call to delete will immediately be committed to the Stash. Since DHCP lease
+                // acquisitions occur on a human timescale, e.g. a cellphone is brought in range of
+                // an AP, and at a time resolution of a second, it will be rare for expired_clients
+                // to contain sufficient numbers of entries that committing with each deletion will
+                // impact performance.
+                if let Err(e) = store.delete(&id) {
+                    // We log the failed deletion here because it would be the action taken by the
+                    // caller and we do not want to stop the deletion loop on account of a single
+                    // failure.
+                    log::warn!("stash failed to delete client={}: {}", id, e)
+                }
             }
         }
         Ok(())
     }
 
     /// Saves current parameters to stash.
-    fn save_params(&self) -> Result<(), Status> {
-        self.store.store_parameters(&self.params).map_err(|e| {
-            log::warn!("store_parameters({:?}) in stash failed: {}", self.params, e);
-            fuchsia_zircon::Status::INTERNAL
-        })
+    fn save_params(&mut self) -> Result<(), Status> {
+        if let Some(store) = self.store.as_mut() {
+            store.store_parameters(&self.params).map_err(|e| {
+                log::warn!("store_parameters({:?}) in stash failed: {}", self.params, e);
+                fuchsia_zircon::Status::INTERNAL
+            })
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -844,10 +847,12 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
         })?;
         let _old = self.options_repo.insert(option.code(), option);
         let opts: Vec<DhcpOption> = self.options_repo.values().cloned().collect();
-        let () = self.store.store_options(&opts).map_err(|e| {
-            log::warn!("store_options({:?}) in stash failed: {}", opts, e);
-            fuchsia_zircon::Status::INTERNAL
-        })?;
+        if let Some(store) = self.store.as_mut() {
+            let () = store.store_options(&opts).map_err(|e| {
+                log::warn!("store_options({:?}) in stash failed: {}", opts, e);
+                fuchsia_zircon::Status::INTERNAL
+            })?;
+        }
         Ok(())
     }
 
@@ -968,10 +973,12 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
     fn dispatch_reset_options(&mut self) -> Result<(), Status> {
         let () = self.options_repo.clear();
         let opts: Vec<DhcpOption> = self.options_repo.values().cloned().collect();
-        let () = self.store.store_options(&opts).map_err(|e| {
-            log::warn!("store_options({:?}) in stash failed: {}", opts, e);
-            fuchsia_zircon::Status::INTERNAL
-        })?;
+        if let Some(store) = self.store.as_mut() {
+            let () = store.store_options(&opts).map_err(|e| {
+                log::warn!("store_options({:?}) in stash failed: {}", opts, e);
+                fuchsia_zircon::Status::INTERNAL
+            })?;
+        }
         Ok(())
     }
 
@@ -990,10 +997,12 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
                     panic!("server tried to release unallocated addr {}", client_addr);
                 });
             }
-            let () = self.store.delete(&id).map_err(|e| {
-                log::warn!("delete({}) failed: {:?}", id, e);
-                fuchsia_zircon::Status::INTERNAL
-            })?;
+            if let Some(store) = self.store.as_mut() {
+                let () = store.delete(&id).map_err(|e| {
+                    log::warn!("delete({}) failed: {:?}", id, e);
+                    fuchsia_zircon::Status::INTERNAL
+                })?;
+            }
         }
         Ok(self.cache.clear())
     }
@@ -1269,17 +1278,14 @@ pub mod tests {
     use std::time::{Duration, SystemTime};
 
     mod datastore {
-        use super::default_server_params;
         use crate::protocol::{DhcpOption, OptionCode};
         use crate::server::{
             CachedClients, CachedConfig, ClientIdentifier, DataStore, ServerParameters,
         };
         use std::collections::HashMap;
 
-        // A Mutex is used here for Sync/Send interior mutability on a struct implementing an async
-        // trait whose methods take &self.
         pub struct ActionRecordingDataStore {
-            actions: std::sync::Mutex<Vec<DataStoreAction>>,
+            actions: Vec<DataStoreAction>,
         }
 
         #[derive(Clone, Debug, PartialEq)]
@@ -1289,7 +1295,6 @@ pub mod tests {
             StoreParameters { params: ServerParameters },
             LoadClientConfigs,
             LoadOptions,
-            LoadParameters,
             Delete { client_id: ClientIdentifier },
         }
 
@@ -1299,33 +1304,44 @@ pub mod tests {
 
         impl ActionRecordingDataStore {
             pub fn new() -> Self {
-                Self { actions: std::sync::Mutex::new(Vec::new()) }
+                Self { actions: Vec::new() }
             }
 
-            pub fn push_action(&self, cmd: DataStoreAction) -> () {
+            pub fn push_action(&mut self, cmd: DataStoreAction) -> () {
                 let Self { actions } = self;
-                actions.lock().unwrap().push(cmd)
+                actions.push(cmd)
             }
 
             pub fn actions(&mut self) -> std::vec::Drain<'_, DataStoreAction> {
                 let Self { actions } = self;
-                actions.get_mut().unwrap().drain(..)
+                actions.drain(..)
+            }
+
+            pub fn load_client_configs(&mut self) -> Result<CachedClients, ActionRecordingError> {
+                let () = self.push_action(DataStoreAction::LoadClientConfigs);
+                Ok(HashMap::new())
+            }
+
+            pub fn load_options(
+                &mut self,
+            ) -> Result<HashMap<OptionCode, DhcpOption>, ActionRecordingError> {
+                let () = self.push_action(DataStoreAction::LoadOptions);
+                Ok(HashMap::new())
             }
         }
 
         impl Drop for ActionRecordingDataStore {
             fn drop(&mut self) {
                 let Self { actions } = self;
-                assert!(actions.lock().unwrap().is_empty())
+                assert!(actions.is_empty())
             }
         }
 
-        #[async_trait::async_trait]
         impl DataStore for ActionRecordingDataStore {
             type Error = ActionRecordingError;
 
             fn store_client_config(
-                &self,
+                &mut self,
                 client_id: &ClientIdentifier,
                 client_config: &CachedConfig,
             ) -> Result<(), Self::Error> {
@@ -1335,30 +1351,15 @@ pub mod tests {
                 }))
             }
 
-            fn store_options(&self, opts: &[DhcpOption]) -> Result<(), Self::Error> {
+            fn store_options(&mut self, opts: &[DhcpOption]) -> Result<(), Self::Error> {
                 Ok(self.push_action(DataStoreAction::StoreOptions { opts: Vec::from(opts) }))
             }
 
-            fn store_parameters(&self, params: &ServerParameters) -> Result<(), Self::Error> {
+            fn store_parameters(&mut self, params: &ServerParameters) -> Result<(), Self::Error> {
                 Ok(self.push_action(DataStoreAction::StoreParameters { params: params.clone() }))
             }
 
-            async fn load_client_configs(&self) -> Result<CachedClients, Self::Error> {
-                let () = self.push_action(DataStoreAction::LoadClientConfigs);
-                Ok(HashMap::new())
-            }
-
-            async fn load_options(&self) -> Result<HashMap<OptionCode, DhcpOption>, Self::Error> {
-                let () = self.push_action(DataStoreAction::LoadOptions);
-                Ok(HashMap::new())
-            }
-
-            async fn load_parameters(&self) -> Result<ServerParameters, Self::Error> {
-                let () = self.push_action(DataStoreAction::LoadParameters);
-                Ok(default_server_params()?)
-            }
-
-            fn delete(&self, client_id: &ClientIdentifier) -> Result<(), Self::Error> {
+            fn delete(&mut self, client_id: &ClientIdentifier) -> Result<(), Self::Error> {
                 Ok(self.push_action(DataStoreAction::Delete { client_id: client_id.clone() }))
             }
         }
@@ -1472,7 +1473,7 @@ pub mod tests {
                 cache: HashMap::new(),
                 pool: AddressPool::new(params.managed_addrs.pool_range()),
                 params,
-                store: ActionRecordingDataStore::new(),
+                store: Some(ActionRecordingDataStore::new()),
                 options_repo: HashMap::from_iter(vec![
                     (OptionCode::Router, DhcpOption::Router(vec![random_ipv4_generator()])),
                     (
@@ -1684,7 +1685,7 @@ pub mod tests {
             Ok(ServerAction::SendResponse(expected_offer, Some(expected_dest)))
         );
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -1712,7 +1713,7 @@ pub mod tests {
             Ok(ServerAction::SendResponse(expected_offer, Some(expected_dest)))
         );
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -1739,7 +1740,7 @@ pub mod tests {
             Ok(ServerAction::SendResponse(expected_offer, Some(Ipv4Addr::BROADCAST)))
         );
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -1765,7 +1766,7 @@ pub mod tests {
             Ok(ServerAction::SendResponse(expected_offer, Some(Ipv4Addr::BROADCAST)))
         );
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -1797,7 +1798,7 @@ pub mod tests {
             Ok(ServerAction::SendResponse(expected_offer, Some(expected_dest)))
         );
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -1827,7 +1828,7 @@ pub mod tests {
             Ok(ServerAction::SendResponse(expected_offer, Some(expected_dest)))
         );
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -1870,7 +1871,7 @@ pub mod tests {
         assert_eq!(server.cache.len(), 1);
         assert_eq!(server.cache.get(&client_id), Some(&expected_client_config));
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -1895,7 +1896,7 @@ pub mod tests {
             .ok_or(anyhow::anyhow!("server cache missing entry for {}", client_id))?
             .clone();
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [
                 DataStoreAction::StoreClientConfig { client_id: id, client_config: config },
             ] if *id == client_id && *config == client_config
@@ -1935,7 +1936,7 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, bound_client_ip);
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -1979,7 +1980,7 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, bound_client_ip);
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -2007,7 +2008,7 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, free_ip);
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -2037,7 +2038,7 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, requested_ip);
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -2069,7 +2070,7 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, free_ip);
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -2098,7 +2099,7 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, requested_ip);
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -2123,7 +2124,7 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, free_ip_1);
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -2788,7 +2789,7 @@ pub mod tests {
         assert!(server.pool.available_addrs.is_empty(), "{:?}", server.pool.available_addrs);
         assert_eq!(server.pool.allocated_addrs, client_ips);
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [
                 DataStoreAction::StoreClientConfig { client_id: id_1, .. },
                 DataStoreAction::StoreClientConfig { client_id: id_2, .. },
@@ -2843,7 +2844,7 @@ pub mod tests {
         // Delete actions occur in non-deterministic (HashMap iteration) order, so we must not
         // assert on the ordering of the deleted ids.
         matches::assert_matches!(
-            &server.store.actions().as_slice()[..],
+            &server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice()[..],
             [
                 DataStoreAction::StoreClientConfig { client_id: id_1, .. },
                 DataStoreAction::StoreClientConfig { client_id: id_2, .. },
@@ -2912,7 +2913,7 @@ pub mod tests {
         );
         assert_eq!(server.pool.allocated_addrs, client_ips);
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [
                 DataStoreAction::StoreClientConfig { client_id: id_1, .. },
                 DataStoreAction::StoreClientConfig { client_id: id_2, .. },
@@ -2950,7 +2951,7 @@ pub mod tests {
 
         assert_eq!(server.dispatch(release), Ok(ServerAction::AddressRelease(release_ip)));
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [
                 DataStoreAction::StoreClientConfig { client_id: id, client_config }
             ] if *id == client_id && *client_config == test_client_config(None, dns)
@@ -3223,7 +3224,7 @@ pub mod tests {
             client_requested_time,
         );
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -3266,7 +3267,7 @@ pub mod tests {
             server_max_lease_time,
         );
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
         );
         Ok(())
@@ -3314,7 +3315,7 @@ pub mod tests {
         let result = server.options_repo.get(&code);
         assert_eq!(result, Some(&stored_option));
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [
                 DataStoreAction::StoreOptions { opts },
             ] if opts.contains(&stored_option)
@@ -3333,13 +3334,13 @@ pub mod tests {
             cache: HashMap::new(),
             pool: AddressPool::new(params.managed_addrs.pool_range()),
             params,
-            store: ActionRecordingDataStore::new(),
+            store: Some(ActionRecordingDataStore::new()),
             options_repo: HashMap::new(),
             time_source: TestSystemTime::with_current_time(),
         };
         let () = server.dispatch_set_option(fidl_mask)?;
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [
                 DataStoreAction::StoreOptions { opts },
             ] if *opts == vec![DhcpOption::SubnetMask(Ipv4Addr::from(mask))]
@@ -3359,7 +3360,7 @@ pub mod tests {
         let mut server = new_test_minimal_server()?;
         let () = server.dispatch_set_parameter(fidl_lease)?;
         matches::assert_matches!(
-            server.store.actions().next(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().next(),
             Some(DataStoreAction::StoreParameters {
                 params: ServerParameters {
                     lease_length: LeaseLength { default_seconds: 42, max_seconds: 100 },
@@ -3423,7 +3424,7 @@ pub mod tests {
             fuchsia_zircon::Status::INVALID_ARGS
         );
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreParameters { params }] if *params == server.params
         );
         Ok(())
@@ -3463,10 +3464,14 @@ pub mod tests {
         assert_ne!(empty_map, server.options_repo);
         let () = server.dispatch_reset_options()?;
         assert_eq!(empty_map, server.options_repo);
-        let stored_opts = server.store.load_options().await?;
+        let stored_opts = server
+            .store
+            .as_mut()
+            .ok_or_else(|| anyhow::anyhow!("missing store"))?
+            .load_options()?;
         assert_eq!(empty_map, stored_opts);
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [
                 DataStoreAction::StoreOptions { opts },
                 DataStoreAction::LoadOptions
@@ -3486,7 +3491,7 @@ pub mod tests {
         let () = server.dispatch_reset_parameters(&default_params)?;
         assert_eq!(default_params, server.params);
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreParameters { params }] if *params == default_params
         );
         Ok(())
@@ -3521,11 +3526,15 @@ pub mod tests {
         assert_eq!(empty_map, server.cache);
         assert!(server.pool.addr_is_available(&client));
         assert!(!server.pool.addr_is_allocated(&client));
-        let stored_leases =
-            server.store.load_client_configs().await.context("load_client_configs() failed")?;
+        let stored_leases = server
+            .store
+            .as_mut()
+            .ok_or_else(|| anyhow::anyhow!("missing store"))?
+            .load_client_configs()
+            .context("load_client_configs() failed")?;
         assert_eq!(empty_map, stored_leases);
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [
                 DataStoreAction::Delete { client_id: id },
                 DataStoreAction::LoadClientConfigs
@@ -3583,7 +3592,7 @@ pub mod tests {
             .context("failed to set parameter")?;
         assert_eq!(server.pool.available_addrs.len(), 3);
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreParameters { params }] if *params == server.params
         );
         Ok(())
@@ -3595,7 +3604,7 @@ pub mod tests {
         let mut time_source = TestSystemTime::with_current_time();
         const LEASE_EXPIRATION_SECONDS: u32 = 60;
         // The previous server has stored a stale client config.
-        let store = ActionRecordingDataStore::new();
+        let mut store = ActionRecordingDataStore::new();
         let client_id = ClientIdentifier::from(random_mac_generator());
         let client_config = CachedConfig::new(
             Some(client_ip),
@@ -3630,7 +3639,7 @@ pub mod tests {
         // The server should recover to a consistent state on the next start.
         let cache: HashMap<_, _> =
             Some((client_id.clone(), client_config.clone())).into_iter().collect();
-        let mut server: Server =
+        let server: Server =
             Server::new_with_time_source(store, params, HashMap::new(), cache, time_source)?;
         assert!(server.cache.is_empty());
         assert!(server.pool.allocated_addrs.is_empty());
@@ -3641,7 +3650,7 @@ pub mod tests {
         );
 
         matches::assert_matches!(
-            server.store.actions().as_slice(),
+            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [
                 DataStoreAction::StoreClientConfig{ client_id: id1, client_config: config },
                 DataStoreAction::Delete{ client_id: id2 },

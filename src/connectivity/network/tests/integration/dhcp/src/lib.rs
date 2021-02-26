@@ -8,7 +8,7 @@ use anyhow::Context as _;
 use fuchsia_async::TimeoutExt as _;
 use futures::future::TryFutureExt as _;
 use futures::stream::{self, StreamExt as _, TryStreamExt as _};
-use net_declare::{fidl_ip_v4, fidl_subnet};
+use net_declare::{fidl_ip_v4, fidl_mac, fidl_subnet};
 use netstack_testing_common::environments::{KnownServices, Netstack2, TestSandboxExt as _};
 use netstack_testing_common::Result;
 use netstack_testing_macros::variants_test;
@@ -433,6 +433,116 @@ async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) ->
     .await
 }
 
+#[derive(Copy, Clone)]
+enum PersistenceMode {
+    Persistent,
+    Ephemeral,
+}
+
+impl std::fmt::Display for PersistenceMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PersistenceMode::Persistent => write!(f, "persistent"),
+            PersistenceMode::Ephemeral => write!(f, "ephemeral"),
+        }
+    }
+}
+
+impl PersistenceMode {
+    fn dhcpd_args(&self) -> Option<Vec<String>> {
+        match self {
+            Self::Persistent => Some(vec![String::from("--persistent")]),
+            Self::Ephemeral => None,
+        }
+    }
+
+    fn dhcpd_params_after_restart(
+        &self,
+    ) -> Vec<(fidl_fuchsia_net_dhcp::ParameterName, fidl_fuchsia_net_dhcp::Parameter)> {
+        match self {
+            Self::Persistent => {
+                test_dhcpd_params().into_iter().map(|p| (param_name(&p), p)).collect()
+            }
+            Self::Ephemeral => vec![
+                fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![]),
+                fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
+                    network_id: Some(fidl_fuchsia_net::Ipv4Address { addr: [0, 0, 0, 0] }),
+                    broadcast: Some(fidl_fuchsia_net::Ipv4Address { addr: [0, 0, 0, 0] }),
+                    mask: Some(fidl_fuchsia_net::Ipv4Address { addr: [0, 0, 0, 0] }),
+                    pool_range_start: Some(fidl_fuchsia_net::Ipv4Address { addr: [0, 0, 0, 0] }),
+                    pool_range_stop: Some(fidl_fuchsia_net::Ipv4Address { addr: [0, 0, 0, 0] }),
+                    ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
+                }),
+                fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
+                    default: Some(86400),
+                    max: Some(86400),
+                    ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
+                }),
+                fidl_fuchsia_net_dhcp::Parameter::PermittedMacs(vec![]),
+                fidl_fuchsia_net_dhcp::Parameter::StaticallyAssignedAddrs(vec![]),
+                fidl_fuchsia_net_dhcp::Parameter::ArpProbe(false),
+                fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec![]),
+            ]
+            .into_iter()
+            .map(|p| (param_name(&p), p))
+            .collect(),
+        }
+    }
+}
+
+// This collection of parameters is defined as a function because we need to allocate a Vec which
+// cannot be done statically, i.e. as a constant.
+fn test_dhcpd_params() -> Vec<fidl_fuchsia_net_dhcp::Parameter> {
+    vec![
+        fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![DEFAULT_SERVER_IPV4]),
+        DEFAULT_SERVER_PARAMETER_ADDRESSPOOL,
+        fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
+            default: Some(60),
+            max: Some(60),
+            ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
+        }),
+        fidl_fuchsia_net_dhcp::Parameter::PermittedMacs(vec![fidl_mac!("aa:bb:cc:dd:ee:ff")]),
+        fidl_fuchsia_net_dhcp::Parameter::StaticallyAssignedAddrs(vec![
+            fidl_fuchsia_net_dhcp::StaticAssignment {
+                host: Some(fidl_mac!("aa:bb:cc:dd:ee:ff")),
+                assigned_addr: Some(fidl_ip_v4!("192.168.0.2")),
+                ..fidl_fuchsia_net_dhcp::StaticAssignment::EMPTY
+            },
+        ]),
+        fidl_fuchsia_net_dhcp::Parameter::ArpProbe(true),
+        fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec!["eth2".to_string()]),
+    ]
+}
+
+fn param_name(param: &fidl_fuchsia_net_dhcp::Parameter) -> fidl_fuchsia_net_dhcp::ParameterName {
+    match param {
+        fidl_fuchsia_net_dhcp::Parameter::IpAddrs(_) => {
+            fidl_fuchsia_net_dhcp::ParameterName::IpAddrs
+        }
+        fidl_fuchsia_net_dhcp::Parameter::AddressPool(_) => {
+            fidl_fuchsia_net_dhcp::ParameterName::AddressPool
+        }
+        fidl_fuchsia_net_dhcp::Parameter::Lease(_) => {
+            fidl_fuchsia_net_dhcp::ParameterName::LeaseLength
+        }
+        fidl_fuchsia_net_dhcp::Parameter::PermittedMacs(_) => {
+            fidl_fuchsia_net_dhcp::ParameterName::PermittedMacs
+        }
+        fidl_fuchsia_net_dhcp::Parameter::StaticallyAssignedAddrs(_) => {
+            fidl_fuchsia_net_dhcp::ParameterName::StaticallyAssignedAddrs
+        }
+        fidl_fuchsia_net_dhcp::Parameter::ArpProbe(_) => {
+            fidl_fuchsia_net_dhcp::ParameterName::ArpProbe
+        }
+        fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(_) => {
+            fidl_fuchsia_net_dhcp::ParameterName::BoundDeviceNames
+        }
+        fidl_fuchsia_net_dhcp::ParameterUnknown!() => {
+            panic!("attempted to retrieve name of Parameter::Unknown");
+        }
+    }
+}
+
 // This test guards against regression for the issue found in fxbug.dev/62989. The test attempts to
 // create an inconsistent state on the dhcp server by allowing the server to complete a transaction
 // with a client, thereby creating a record of a lease. The server is then restarted; if the linked
@@ -441,7 +551,50 @@ async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) ->
 // Finally, the server is restarted one more time, and then its clear_leases() function is
 // triggered, which will cause a panic if the server is in an inconsistent state.
 #[variants_test]
-async fn acquire_dhcp_server_restart_consistent_state<E: netemul::Endpoint>(name: &str) -> Result {
+async fn acquire_persistent_dhcp_server_after_restart<E: netemul::Endpoint>(name: &str) -> Result {
+    let mode = PersistenceMode::Persistent;
+    Ok(acquire_dhcp_server_after_restart::<E>(&format!("{}_{}", name, mode), mode).await?)
+}
+
+// An ephemeral dhcp server cannot become inconsistent with its persistent state because it has
+// none.  However, without persistent state, an ephemeral dhcp server cannot run without explicit
+// configuration.  This test verifies that an ephemeral dhcp server will return an error if run
+// after restarting.
+#[variants_test]
+async fn acquire_ephemeral_dhcp_server_after_restart<E: netemul::Endpoint>(name: &str) -> Result {
+    let mode = PersistenceMode::Ephemeral;
+    Ok(acquire_dhcp_server_after_restart::<E>(&format!("{}_{}", name, mode), mode).await?)
+}
+
+fn setup_component_proxy(
+    mode: PersistenceMode,
+    server_env: &netemul::TestEnvironment<'_>,
+) -> Result<(fuchsia_component::client::App, fidl_fuchsia_net_dhcp::Server_Proxy)> {
+    let dhcpd = fuchsia_component::client::launch(
+        &server_env.get_launcher().context("failed to create launcher")?,
+        KnownServices::DhcpServer.get_url().to_string(),
+        mode.dhcpd_args(),
+    )
+    .context("failed to start dhcpd")?;
+    let dhcp_server = dhcpd
+        .connect_to_service::<fidl_fuchsia_net_dhcp::Server_Marker>()
+        .context("failed to connect to DHCP server")?;
+    Ok((dhcpd, dhcp_server))
+}
+
+async fn cleanup_component(dhcpd: &mut fuchsia_component::client::App) -> Result {
+    let () = dhcpd.kill().context("failed to kill dhcpd component")?;
+    assert_eq!(
+        dhcpd.wait().await.context("failed to await dhcpd component exit")?.code(),
+        fuchsia_zircon::sys::ZX_TASK_RETCODE_SYSCALL_KILL
+    );
+    Ok(())
+}
+
+async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
+    name: &str,
+    mode: PersistenceMode,
+) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
 
     let server_env = sandbox
@@ -472,15 +625,7 @@ async fn acquire_dhcp_server_restart_consistent_state<E: netemul::Endpoint>(name
     // Complete initial DHCP transaction in order to store a lease record in the server's
     // persistent storage.
     {
-        let mut dhcpd = fuchsia_component::client::launch(
-            &server_env.get_launcher().context("failed to create launcher")?,
-            KnownServices::DhcpServer.get_url().to_string(),
-            None,
-        )
-        .context("failed to start dhcpd")?;
-        let dhcp_server = dhcpd
-            .connect_to_service::<fidl_fuchsia_net_dhcp::Server_Marker>()
-            .context("failed to connect to DHCP server")?;
+        let (mut dhcpd, dhcp_server) = setup_component_proxy(mode, &server_env)?;
         let () = set_server_parameters(
             &dhcp_server,
             &mut [
@@ -490,89 +635,164 @@ async fn acquire_dhcp_server_restart_consistent_state<E: netemul::Endpoint>(name
             ],
         )
         .await?;
-
         let () = dhcp_server
             .start_serving()
             .await
             .context("failed to call dhcp/Server.StartServing")?
             .map_err(fuchsia_zircon::Status::from_raw)
             .context("dhcp/Server.StartServing returned error")?;
-
         let () = client_acquires_addr(&client_env, &[client_ep], DEFAULT_CLIENT_WANT_ADDR, 1)
             .await
             .context("client failed to acquire address")?;
-
         let () =
             dhcp_server.stop_serving().await.context("failed to call dhcp/Server.StopServing")?;
-        let () = dhcpd.kill().context("failed to kill dhcpd component")?;
-        assert_eq!(
-            dhcpd.wait().await.context("failed to await dhcpd component exit")?.code(),
-            fuchsia_zircon::sys::ZX_TASK_RETCODE_SYSCALL_KILL
-        );
+        let () = cleanup_component(&mut dhcpd).await?;
     }
 
     // Restart the server in an attempt to force the server's persistent storage into an
     // inconsistent state whereby the addresses leased to clients do not agree with the contents of
-    // the server's address pool.
+    // the server's address pool. If the server is in ephemeral mode, it will fail at the call to
+    // start_serving() since it will not have retained its parameters.
     {
-        let mut dhcpd = fuchsia_component::client::launch(
-            &server_env.get_launcher().context("failed to create launcher")?,
-            KnownServices::DhcpServer.get_url().to_string(),
-            None,
-        )
-        .context("failed to start dhcpd")?;
-        let dhcp_server = dhcpd
-            .connect_to_service::<fidl_fuchsia_net_dhcp::Server_Marker>()
-            .context("failed to connect to DHCP server")?;
-        let () = dhcp_server
-            .start_serving()
-            .await
-            .context("failed to call dhcp/Server.StartServing")?
-            .map_err(fuchsia_zircon::Status::from_raw)
-            .context("dhcp/Server.StartServing returned error")?;
-        let () =
-            dhcp_server.stop_serving().await.context("failed to call dhcp/Server.StopServing")?;
-        let () = dhcpd.kill().context("failed to kill dhcpd component")?;
-        assert_eq!(
-            dhcpd.wait().await.context("failed to await dhcpd component exit")?.code(),
-            fuchsia_zircon::sys::ZX_TASK_RETCODE_SYSCALL_KILL
-        );
+        let (mut dhcpd, dhcp_server) = setup_component_proxy(mode, &server_env)?;
+        let () = match mode {
+            PersistenceMode::Persistent => {
+                let () = dhcp_server
+                    .start_serving()
+                    .await
+                    .context("failed to call dhcp/Server.StartServing")?
+                    .map_err(fuchsia_zircon::Status::from_raw)
+                    .context("dhcp/Server.StartServing returned error")?;
+                dhcp_server
+                    .stop_serving()
+                    .await
+                    .context("failed to call dhcp/Server.StopServing")?
+            }
+            PersistenceMode::Ephemeral => {
+                matches::assert_matches!(
+                    dhcp_server
+                        .start_serving()
+                        .await
+                        .context("failed to call dhcp/Server.StartServing")?
+                        .map_err(fuchsia_zircon::Status::from_raw),
+                    Err(fuchsia_zircon::Status::INVALID_ARGS)
+                );
+            }
+        };
+        let () = cleanup_component(&mut dhcpd).await?;
     }
 
     // Restart the server again in order to load the inconsistent state into the server's runtime
     // representation. Call clear_leases() to trigger a panic resulting from inconsistent state,
-    // provided that the issue motivating this test is unfixed/regressed.
+    // provided that the issue motivating this test is unfixed/regressed. If the server is in
+    // ephemeral mode, it will fail at the call to start_serving() since it will not have retained
+    // its parameters.
     {
-        let mut dhcpd = fuchsia_component::client::launch(
-            &server_env.get_launcher().context("failed to create launcher")?,
-            KnownServices::DhcpServer.get_url().to_string(),
-            None,
-        )
-        .context("failed to start dhcpd")?;
-        let dhcp_server = dhcpd
-            .connect_to_service::<fidl_fuchsia_net_dhcp::Server_Marker>()
-            .context("failed to connect to DHCP server")?;
-        let () = dhcp_server
-            .start_serving()
-            .await
-            .context("failed to call dhcp/Server.StartServing")?
-            .map_err(fuchsia_zircon::Status::from_raw)
-            .context("dhcp/Server.StartServing returned error")?;
-        let () =
-            dhcp_server.stop_serving().await.context("failed to call dhcp/Server.StopServing")?;
-        let () = dhcp_server
-            .clear_leases()
-            .await
-            .context("failed to call dhcp/Server.ClearLeases")?
-            .map_err(fuchsia_zircon::Status::from_raw)
-            .context("dhcp/Server.ClearLeases returned error")?;
-
-        let () = dhcpd.kill().context("failed to kill dhcpd component")?;
-        assert_eq!(
-            dhcpd.wait().await.context("failed to await dhcpd component exit")?.code(),
-            fuchsia_zircon::sys::ZX_TASK_RETCODE_SYSCALL_KILL
-        );
+        let (mut dhcpd, dhcp_server) = setup_component_proxy(mode, &server_env)?;
+        let () = match mode {
+            PersistenceMode::Persistent => {
+                let () = dhcp_server
+                    .start_serving()
+                    .await
+                    .context("failed to call dhcp/Server.StartServing")?
+                    .map_err(fuchsia_zircon::Status::from_raw)
+                    .context("dhcp/Server.StartServing returned error")?;
+                let () = dhcp_server
+                    .stop_serving()
+                    .await
+                    .context("failed to call dhcp/Server.StopServing")?;
+                dhcp_server
+                    .clear_leases()
+                    .await
+                    .context("failed to call dhcp/Server.ClearLeases")?
+                    .map_err(fuchsia_zircon::Status::from_raw)
+                    .context("dhcp/Server.ClearLeases returned error")?;
+            }
+            PersistenceMode::Ephemeral => {
+                matches::assert_matches!(
+                    dhcp_server
+                        .start_serving()
+                        .await
+                        .context("failed to call dhcp/Server.StartServing")?
+                        .map_err(fuchsia_zircon::Status::from_raw),
+                    Err(fuchsia_zircon::Status::INVALID_ARGS)
+                );
+            }
+        };
+        let () = cleanup_component(&mut dhcpd).await?;
     }
 
+    Ok(())
+}
+
+#[variants_test]
+async fn test_dhcp_server_persistence_mode_persistent<E: netemul::Endpoint>(name: &str) -> Result {
+    let mode = PersistenceMode::Persistent;
+    Ok(test_dhcp_server_persistence_mode::<E>(&format!("{}_{}", name, mode), mode).await?)
+}
+
+#[variants_test]
+async fn test_dhcp_server_persistence_mode_ephemeral<E: netemul::Endpoint>(name: &str) -> Result {
+    let mode = PersistenceMode::Ephemeral;
+    Ok(test_dhcp_server_persistence_mode::<E>(&format!("{}_{}", name, mode), mode).await?)
+}
+
+async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
+    name: &str,
+    mode: PersistenceMode,
+) -> Result {
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+
+    let server_env = sandbox
+        .create_netstack_environment_with::<Netstack2, _, _>(
+            format!("{}_server", name),
+            &[KnownServices::SecureStash],
+        )
+        .context("failed to create server environment")?;
+
+    let network = sandbox.create_network(name).await.context("failed to create network")?;
+    let _server_ep = server_env
+        .join_network::<E, _>(
+            &network,
+            "server-ep",
+            &netemul::InterfaceConfig::StaticIp(DEFAULT_SERVER_ADDR),
+        )
+        .await
+        .context("failed to create server network endpoint")?;
+
+    // Configure the server with parameters and then restart it.
+    {
+        let (mut dhcpd, dhcp_server) = setup_component_proxy(mode, &server_env)?;
+        let () = set_server_parameters(&dhcp_server, &mut test_dhcpd_params()).await?;
+        let () = cleanup_component(&mut dhcpd).await?;
+    }
+
+    // Assert that configured parameters after the restart correspond to the persistence mode of the
+    // server.
+    {
+        let (mut dhcpd, dhcp_server) = setup_component_proxy(mode, &server_env)?;
+        let dhcp_server = &dhcp_server;
+        let () = stream::iter(mode.dhcpd_params_after_restart().iter_mut())
+            .map(Ok)
+            .try_for_each_concurrent(None, |(name, parameter)| async move {
+                Result::Ok(assert_eq!(
+                    dhcp_server
+                        .get_parameter(*name)
+                        .await
+                        .with_context(|| {
+                            format!("failed to call dhcp/Server.GetParameter({:?})", name)
+                        })?
+                        .map_err(fuchsia_zircon::Status::from_raw)
+                        .with_context(|| {
+                            format!("dhcp/Server.GetParameter({:?}) returned error", name)
+                        })
+                        .unwrap(),
+                    *parameter
+                ))
+            })
+            .await
+            .context("failed to get server parameters")?;
+        let () = cleanup_component(&mut dhcpd).await?;
+    }
     Ok(())
 }
