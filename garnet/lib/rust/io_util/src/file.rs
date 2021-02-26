@@ -16,6 +16,11 @@ use {
 mod async_reader;
 pub use async_reader::AsyncReader;
 
+mod async_read_at;
+pub use async_read_at::{Adapter, AsyncFile, AsyncGetSize, AsyncGetSizeExt, AsyncReadAt};
+mod async_read_at_ext;
+pub use async_read_at_ext::AsyncReadAtExt;
+
 #[cfg(target_os = "fuchsia")]
 use {
     crate::node,

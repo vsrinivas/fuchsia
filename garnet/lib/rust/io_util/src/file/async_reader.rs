@@ -76,10 +76,7 @@ impl AsyncRead for AsyncReader {
                         Ok((status, bytes)) => {
                             if let Err(e) = zx_status::Status::ok(status) {
                                 self.state = State::Empty;
-                                return Poll::Ready(Err(std::io::Error::new(
-                                    std::io::ErrorKind::Other,
-                                    e,
-                                )));
+                                return Poll::Ready(Err(e.into_io_error()));
                             }
                             // If the File.Read request was for zero bytes, but the current
                             // poll_read is not (because the File.Read request was made by an
