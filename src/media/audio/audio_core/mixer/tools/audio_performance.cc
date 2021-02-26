@@ -113,13 +113,13 @@ std::string AudioPerformance::MixerConfig::ToStringForCreate() const {
 
   std::string format;
   if (sample_format == ASF::UNSIGNED_8) {
-    format = "Un8";
+    format = "un8";
   } else if (sample_format == ASF::SIGNED_16) {
-    format = "I16";
+    format = "i16";
   } else if (sample_format == ASF::SIGNED_24_IN_32) {
-    format = "I24";
+    format = "i24";
   } else if (sample_format == ASF::FLOAT) {
-    format = "F32";
+    format = "f32";
   } else {
     FX_LOGS(FATAL) << "Unknown sample format for creation profiling";
     return "";
@@ -153,13 +153,13 @@ std::string AudioPerformance::MixerConfig::ToStringForMixer() const {
 std::string AudioPerformance::OutputProducerConfig::ToString() const {
   std::string format;
   if (sample_format == ASF::UNSIGNED_8) {
-    format = "Un8";
+    format = "un8";
   } else if (sample_format == ASF::SIGNED_16) {
-    format = "I16";
+    format = "i16";
   } else if (sample_format == ASF::SIGNED_24_IN_32) {
-    format = "I24";
+    format = "i24";
   } else if (sample_format == ASF::FLOAT) {
-    format = "F32";
+    format = "f32";
   } else {
     FX_LOGS(FATAL) << "Unknown sample format for creation profiling";
     return "";
@@ -182,15 +182,15 @@ std::string AudioPerformance::OutputProducerConfig::ToString() const {
 }
 
 void AudioPerformance::DisplayMixerCreationLegend() {
-  printf("\n   Elapsed time in microsec for a Mixer object to be created\n");
+  printf("\n    Elapsed time in microsec for a Mixer object to be created\n");
   printf(
-      "\n   For mixer configuration R-fff.IO sssss:ddddd, where:\n"
-      "\t     R: Resampler type - [P]oint, [W]indowed Sinc\n"
-      "\t   fff: Format - un8, i16, i24, f32\n"
-      "\t     I: Input channels (one-digit number)\n"
-      "\t     O: Output channels (one-digit number)\n"
-      "\t sssss: Source sample rate\n"
-      "\t ddddd: Destination sample rate\n\n");
+      "\n    For mixer configuration R-fff.IO ssssss:dddddd, where:\n"
+      "\t      R: Resampler type - [P]oint, [W]indowed Sinc\n"
+      "\t    fff: Format - un8, i16, i24, f32\n"
+      "\t      I: Input channels (one-digit number)\n"
+      "\t      O: Output channels (one-digit number)\n"
+      "\t ssssss: Source sample rate (six-digit integer)\n"
+      "\t dddddd: Destination sample rate (six-digit integer)\n\n");
 }
 
 void AudioPerformance::DisplayMixerCreationColumnHeader() {
@@ -245,26 +245,26 @@ void AudioPerformance::ProfileMixerCreation(const MixerConfig& cfg,
 }
 
 void AudioPerformance::DisplayMixerLegend() {
-  printf("\n   Elapsed time in microsec for Mix() to produce %ldms of frames\n",
+  printf("\n    Elapsed time in microsec for Mix() to produce %ldms of frames\n",
          kMixLength.to_msecs());
   printf(
-      "\n   For mixer configuration R-fff.IO sssss:ddddd GA, where:\n"
-      "\t     R: Resampler type - [P]oint, [W]indowed Sinc\n"
-      "\t   fff: Format - un8, i16, i24, f32\n"
-      "\t     I: Input channels (one-digit number)\n"
-      "\t     O: Output channels (one-digit number)\n"
-      "\t sssss: Source sample rate\n"
-      "\t ddddd: Destination sample rate\n\n"
-      "\t     G: Gain factor - [M]ute, [U]nity, [S]caled, [R]amped\n"
-      "\t     A: Accumulate - [-] no or [+] yes\n\n");
+      "\n    For mixer configuration R-fff.IO ssssss:dddddd GA, where:\n"
+      "\t      R: Resampler type - [P]oint, [W]indowed Sinc\n"
+      "\t    fff: Format - un8, i16, i24, f32\n"
+      "\t      I: Input channels (one-digit number)\n"
+      "\t      O: Output channels (one-digit number)\n"
+      "\t ssssss: Source sample rate (six-digit integer)\n"
+      "\t dddddd: Destination sample rate (six-digit integer)\n\n"
+      "\t      G: Gain factor - [M]ute, [U]nity, [S]caled, [R]amped\n"
+      "\t      A: Accumulate - [-] no or [+] yes\n\n");
 }
 
 void AudioPerformance::DisplayMixerColumnHeader() {
   printf("Configuration             \t     Mean\t    First\t     Best\t    Worst\t  Iterations\n");
 }
 
-void AudioPerformance::ProfileMixer(const std::vector<MixerConfig>& configs,
-                                    zx::duration duration_per_config) {
+void AudioPerformance::ProfileMixing(const std::vector<MixerConfig>& configs,
+                                     zx::duration duration_per_config) {
   auto start_time = zx::clock::get_monotonic();
 
   DisplayMixerLegend();
@@ -273,16 +273,16 @@ void AudioPerformance::ProfileMixer(const std::vector<MixerConfig>& configs,
   for (auto& cfg : configs) {
     switch (cfg.sample_format) {
       case ASF::UNSIGNED_8:
-        ProfileMixer<ASF::UNSIGNED_8>(cfg, duration_per_config);
+        ProfileMixing<ASF::UNSIGNED_8>(cfg, duration_per_config);
         break;
       case ASF::SIGNED_16:
-        ProfileMixer<ASF::SIGNED_16>(cfg, duration_per_config);
+        ProfileMixing<ASF::SIGNED_16>(cfg, duration_per_config);
         break;
       case ASF::SIGNED_24_IN_32:
-        ProfileMixer<ASF::SIGNED_24_IN_32>(cfg, duration_per_config);
+        ProfileMixing<ASF::SIGNED_24_IN_32>(cfg, duration_per_config);
         break;
       case ASF::FLOAT:
-        ProfileMixer<ASF::FLOAT>(cfg, duration_per_config);
+        ProfileMixing<ASF::FLOAT>(cfg, duration_per_config);
         break;
     }
   }
@@ -293,7 +293,7 @@ void AudioPerformance::ProfileMixer(const std::vector<MixerConfig>& configs,
 }
 
 template <ASF SampleFormat>
-void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const zx::duration total_duration) {
+void AudioPerformance::ProfileMixing(const MixerConfig& cfg, const zx::duration total_duration) {
   FX_CHECK(SampleFormat == cfg.sample_format);
 
   double amplitude;
@@ -316,6 +316,9 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const zx::duration t
     return;
   }
 
+  // Proactively construct filter tables now, so this doesn't impact mixing-time measurements.
+  mixer->EagerlyPrepare();
+
   // Allocate enough source and destination frames for kMixLength.
   // When allocating source frames, we round up to ensure we have enough source frames.
   const uint32_t dest_frame_count =
@@ -328,8 +331,8 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const zx::duration t
   auto source_format =
       Format::Create<SampleFormat>(cfg.num_input_chans, cfg.source_rate).take_value();
 
-  // This is a 1kHz sine wave, but the actual data doesn't matter.
-  const auto periods = TimelineRate(1000, 1'000'000'000).Scale(kMixLength.to_nsecs());
+  // This is a 500Hz sine wave, but the actual data doesn't matter.
+  const auto periods = TimelineRate(500, 1'000'000'000).Scale(kMixLength.to_nsecs());
   auto source = GenerateCosineAudio(source_format, source_frame_count, periods, amplitude);
 
   auto accum = std::make_unique<float[]>(dest_frame_count * cfg.num_output_chans);
@@ -407,8 +410,8 @@ void AudioPerformance::DisplayOutputConfigLegend() {
   printf("\n   Elapsed time in microsec to ProduceOutput() %ldms of frames\n",
          kMixLength.to_msecs());
   printf(
-      "\n   For output configuration FFF-Rn, where:\n"
-      "\t   FFF: Format of output data - Un8, I16, I24, F32\n"
+      "\n   For output configuration fff-Rn, where:\n"
+      "\t   fff: Format of output data - un8, i16, i24, f32\n"
       "\t     R: Range of source data - [S]ilence, [O]ut-of-range, [N]ormal\n"
       "\t     n: Number of output channels (one-digit number)\n\n");
 }

@@ -43,6 +43,41 @@ struct Options {
   std::set<InputRange> input_ranges;
 };
 
+constexpr char kBenchmarkDurationSwitch[] = "bench-time";
+
+constexpr char kProfileMixerCreationSwitch[] = "enable-create";
+constexpr char kProfileMixingSwitch[] = "enable-mix";
+constexpr char kProfileOutputSwitch[] = "enable-output";
+
+constexpr char kEnablePprofSwitch[] = "enable-pprof";
+
+constexpr char kSamplerSwitch[] = "samplers";
+constexpr char kSamplerPointOption[] = "point";
+constexpr char kSamplerSincOption[] = "sinc";
+
+constexpr char kChannelsSwitch[] = "channels";
+
+constexpr char kFrameRatesSwitch[] = "frame-rates";
+
+constexpr char kSampleFormatsSwitch[] = "sample-formats";
+constexpr char kSampleFormatUint8Option[] = "uint8";
+constexpr char kSampleFormatInt16Option[] = "int16";
+constexpr char kSampleFormatInt24In32Option[] = "int24";
+constexpr char kSampleFormatFloat32Option[] = "float";
+
+constexpr char kMixingGainsSwitch[] = "mix-gains";
+constexpr char kMixingGainMuteOption[] = "mute";
+constexpr char kMixingGainUnityOption[] = "unity";
+constexpr char kMixingGainScaledOption[] = "scaled";
+constexpr char kMixingGainRampedOption[] = "ramped";
+
+constexpr char kOutputProducerSourceRangesSwitch[] = "output-ranges";
+constexpr char kOutputProducerSourceRangeSilenceOption[] = "silence";
+constexpr char kOutputProducerSourceRangeOutOfRangeOption[] = "out-of-range";
+constexpr char kOutputProducerSourceRangeNormalOption[] = "normal";
+
+constexpr char kUsageSwitch[] = "help";
+
 std::vector<MixerConfig> ConfigsForMixerCreation(const Options& opt) {
   if (opt.enabled.count(Benchmark::Create) == 0) {
     return {};
@@ -156,9 +191,7 @@ const Options kDefaultOpts = {
             {48000, 96000},
             // Extreme cases
             {8000, 192000},
-            // TODO(fxbug.dev/37356): re-enable after the Mixer transitions from 32->64 bit offsets
-            // Note: the expected 12 minute runtime assumes this is enabled
-            //{192000, 8000},
+            {192000, 8000},
         },
     .gain_types = {GainType::Mute, GainType::Unity, GainType::Scaled, GainType::Ramped},
     .accumulates = {false, true},
@@ -172,41 +205,48 @@ void Usage(const char* prog_name) {
   printf("By default, all types of benchmarks are enabled using a default\n");
   printf("set of configurations. Valid options are:\n");
   printf("\n");
-  printf("  --bench-time=<seconds>\n");
+  printf("  --%s=<seconds>\n", kBenchmarkDurationSwitch);
   printf("    Each benchmark is run for at least this long. Defaults to 0.5s.\n");
   printf("\n");
-  printf("  --enable-create=<bool>\n");
+  printf("  --%s=<bool>\n", kProfileMixerCreationSwitch);
   printf("    Enable Mixer creation benchmarks (default=true).\n");
-  printf("  --enable-mixing=<bool>\n");
+  printf("  --%s=<bool>\n", kProfileMixingSwitch);
   printf("    Enable Mixer::Mix() benchmarks (default=true).\n");
-  printf("  --enable-output-producer=<bool>\n");
+  printf("  --%s=<bool>\n", kProfileOutputSwitch);
   printf("    Enable OutputProducer benchmarks (default=true).\n");
   printf("\n");
-  printf("  --enable-pprof=<bool>\n");
+  printf("  --%s=<bool>\n", kEnablePprofSwitch);
   printf("    Dump a pprof-compatible profile to /tmp/audio_mixer_profiler.pprof.\n");
   printf("    Defaults to false.\n");
   printf("\n");
-  printf("  --samplers=[point|sinc]*\n");
+  printf("  --%s=[%s|%s]*\n", kSamplerSwitch, kSamplerPointOption, kSamplerSincOption);
   printf("    Enable these samplers. Multiple samplers can be separated by commas.\n");
-  printf("    For example: --samplers=point,sinc\n");
+  printf("    For example: --%s=%s,%s\n", kSamplerSwitch, kSamplerPointOption, kSamplerSincOption);
   printf("\n");
-  printf("  --channels=[input_chans:output_chans]*\n");
+  printf("  --%s=[input_chans:output_chans]*\n", kChannelsSwitch);
   printf("    Enable these channel configs. Multiple configs can be separated by commas.\n");
-  printf("    For example: --channels=1:2,1:4\n");
+  printf("    For example: --%s=1:2,1:4\n", kChannelsSwitch);
   printf("\n");
-  printf("  --frame-rates=[source_rate:dest_rate]*\n");
+  printf("  --%s=[source_rate:dest_rate]*\n", kFrameRatesSwitch);
   printf("    Enable these frame rate configs. Multiple configs can be separated by commas.\n");
-  printf("    For example: --frame-rates=48000:48000,16000:48000\n");
+  printf("    For example: --%s=48000:48000,16000:48000\n", kFrameRatesSwitch);
   printf("\n");
-  printf("  --sample-formats=[uint8|int16|int24|float]*\n");
+  printf("  --%s=[%s|%s|%s|%s]*\n", kSampleFormatsSwitch, kSampleFormatUint8Option,
+         kSampleFormatInt16Option, kSampleFormatInt24In32Option, kSampleFormatFloat32Option);
   printf("    Enable these sample formats. Multiple sample formats can be separated by commas.\n");
   printf("\n");
-  printf("  --mixer-gains=[mute|unity|scaled|ramped]*\n");
+  printf("  --%s=[%s|%s|%s|%s]*\n", kMixingGainsSwitch, kMixingGainMuteOption,
+         kMixingGainUnityOption, kMixingGainScaledOption, kMixingGainRampedOption);
   printf("    Enable these mixer gain configs. Multiple configs can be separated by commas.\n");
   printf("\n");
-  printf("  --output-producer-input-types=[silence|out-of-range|normal]*\n");
+  printf("  --%s=[%s|%s|%s]*\n", kOutputProducerSourceRangesSwitch,
+         kOutputProducerSourceRangeSilenceOption, kOutputProducerSourceRangeOutOfRangeOption,
+         kOutputProducerSourceRangeNormalOption);
   printf("    Enable these kinds of inputs for OutputProducer benchmarks. Multiple kinds of\n");
   printf("    inputs can be separated by commas.\n");
+  printf("\n");
+  printf("  --%s\n", kUsageSwitch);
+  printf("    Display this message.\n");
   printf("\n");
 }
 
@@ -268,62 +308,62 @@ Options ParseCommandLine(int argc, char** argv) {
     }
   };
 
-  if (command_line.HasOption("help")) {
+  if (command_line.HasOption(kUsageSwitch)) {
     Usage(argv[0]);
     exit(0);
   }
 
-  duration_seconds_flag("bench-time", opt.duration_per_config);
+  duration_seconds_flag(kBenchmarkDurationSwitch, opt.duration_per_config);
 
-  bool enable_create = true;
-  bool enable_mixing = true;
-  bool enable_output_producer = true;
-  bool_flag("enable-create", enable_create);
-  bool_flag("enable-mixing", enable_mixing);
-  bool_flag("enable-output-producer", enable_output_producer);
+  bool profile_creation = true;
+  bool profile_mixing = true;
+  bool profile_output_producer = true;
+  bool_flag(kProfileMixerCreationSwitch, profile_creation);
+  bool_flag(kProfileMixingSwitch, profile_mixing);
+  bool_flag(kProfileOutputSwitch, profile_output_producer);
 
-  if (!enable_create) {
+  if (!profile_creation) {
     opt.enabled.erase(Benchmark::Create);
   }
-  if (!enable_mixing) {
+  if (!profile_mixing) {
     opt.enabled.erase(Benchmark::Mix);
   }
-  if (!enable_output_producer) {
+  if (!profile_output_producer) {
     opt.enabled.erase(Benchmark::Output);
   }
 
-  bool_flag("enable-pprof", opt.enable_pprof);
+  bool_flag(kEnablePprofSwitch, opt.enable_pprof);
 
-  enum_flagset("samplers", opt.samplers,
+  enum_flagset(kSamplerSwitch, opt.samplers,
                std::map<std::string, Resampler>{
-                   {"point", Resampler::SampleAndHold},
-                   {"sinc", Resampler::WindowedSinc},
+                   {kSamplerPointOption, Resampler::SampleAndHold},
+                   {kSamplerSincOption, Resampler::WindowedSinc},
                });
 
-  uint32_pair_flagset("channels", opt.num_input_output_chans);
-  uint32_pair_flagset("frame-rates", opt.source_dest_rates);
+  uint32_pair_flagset(kChannelsSwitch, opt.num_input_output_chans);
+  uint32_pair_flagset(kFrameRatesSwitch, opt.source_dest_rates);
 
-  enum_flagset("sample-formats", opt.sample_formats,
+  enum_flagset(kSampleFormatsSwitch, opt.sample_formats,
                std::map<std::string, ASF>{
-                   {"uint8", ASF::UNSIGNED_8},
-                   {"int16", ASF::SIGNED_16},
-                   {"int24", ASF::SIGNED_24_IN_32},
-                   {"float", ASF::FLOAT},
+                   {kSampleFormatUint8Option, ASF::UNSIGNED_8},
+                   {kSampleFormatInt16Option, ASF::SIGNED_16},
+                   {kSampleFormatInt24In32Option, ASF::SIGNED_24_IN_32},
+                   {kSampleFormatFloat32Option, ASF::FLOAT},
                });
 
-  enum_flagset("mixer-gains", opt.gain_types,
+  enum_flagset(kMixingGainsSwitch, opt.gain_types,
                std::map<std::string, GainType>{
-                   {"mute", GainType::Mute},
-                   {"unity", GainType::Unity},
-                   {"scaled", GainType::Scaled},
-                   {"ramped", GainType::Ramped},
+                   {kMixingGainMuteOption, GainType::Mute},
+                   {kMixingGainUnityOption, GainType::Unity},
+                   {kMixingGainScaledOption, GainType::Scaled},
+                   {kMixingGainRampedOption, GainType::Ramped},
                });
 
-  enum_flagset("output-producer-input-types", opt.input_ranges,
+  enum_flagset(kOutputProducerSourceRangesSwitch, opt.input_ranges,
                std::map<std::string, InputRange>{
-                   {"silence", InputRange::Silence},
-                   {"out-of-range", InputRange::OutOfRange},
-                   {"normal", InputRange::Normal},
+                   {kOutputProducerSourceRangeSilenceOption, InputRange::Silence},
+                   {kOutputProducerSourceRangeOutOfRangeOption, InputRange::OutOfRange},
+                   {kOutputProducerSourceRangeNormalOption, InputRange::Normal},
                });
 
   return opt;
@@ -345,7 +385,7 @@ int main(int argc, char** argv) {
   }
 
   if (opt.enabled.count(Benchmark::Mix) > 0) {
-    AudioPerformance::ProfileMixer(ConfigsForMixer(opt), opt.duration_per_config);
+    AudioPerformance::ProfileMixing(ConfigsForMixer(opt), opt.duration_per_config);
   }
 
   if (opt.enabled.count(Benchmark::Output) > 0) {

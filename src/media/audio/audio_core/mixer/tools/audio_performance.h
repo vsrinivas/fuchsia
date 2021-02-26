@@ -40,8 +40,8 @@ class AudioPerformance {
     uint32_t source_rate;
     uint32_t dest_rate;
     fuchsia::media::AudioSampleFormat sample_format;
-    GainType gain_type;  // ProfileMixer() only
-    bool accumulate;     // ProfileMixer() only
+    GainType gain_type;  // ProfileMixing() only
+    bool accumulate;     // ProfileMixing() only
 
     std::string ToStringForCreate() const;
     std::string ToStringForMixer() const;
@@ -57,8 +57,8 @@ class AudioPerformance {
 
   static void ProfileMixerCreation(const std::vector<MixerConfig>& configs,
                                    zx::duration duration_per_config);
-  static void ProfileMixer(const std::vector<MixerConfig>& configs,
-                           zx::duration duration_per_config);
+  static void ProfileMixing(const std::vector<MixerConfig>& configs,
+                            zx::duration duration_per_config);
   static void ProfileOutputProducer(const std::vector<OutputProducerConfig>& configs,
                                     zx::duration duration_per_config);
 
@@ -70,7 +70,7 @@ class AudioPerformance {
   static void DisplayMixerLegend();
   static void DisplayMixerColumnHeader();
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  static void ProfileMixer(const MixerConfig& cfg, zx::duration total_duration);
+  static void ProfileMixing(const MixerConfig& cfg, zx::duration total_duration);
 
   static void DisplayOutputConfigLegend();
   static void DisplayOutputColumnHeader();
