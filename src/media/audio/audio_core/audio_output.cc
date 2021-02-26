@@ -64,23 +64,31 @@ void AudioOutput::Process() {
     cpu_timer_.Start();
 
     uint32_t frames_remaining;
+
+    // TODO(fxbug.dev/69001): remove after debugging
     uint32_t frames_mixed = 0;
     uint32_t read_lock_calls = 0;
-    std::optional<Fixed> frame_start;
-    std::optional<Fixed> frame_end;
+    std::optional<Fixed> overall_frame_start;
+    std::optional<Fixed> overall_frame_end;
+    std::optional<Fixed> last_buffer_frame_start;
+    std::optional<Fixed> last_buffer_frame_end;
+    std::optional<AudioOutput::FrameSpan> last_mix_job;
 
     do {
       float* payload = nullptr;
       auto mix_frames = StartMixJob(ref_now);
+      last_mix_job = mix_frames;
       // If we have frames to mix that are non-silent, we should do the mix now.
       if (mix_frames && !mix_frames->is_mute) {
         ++read_lock_calls;
         auto buf = pipeline_->ReadLock(Fixed(mix_frames->start), mix_frames->length);
         if (buf) {
-          if (!frame_start) {
-            frame_start = buf->start();
+          if (!overall_frame_start) {
+            overall_frame_start = buf->start();
           }
-          frame_end = buf->end();
+          overall_frame_end = buf->end();
+          last_buffer_frame_start = buf->start();
+          last_buffer_frame_end = buf->end();
 
           // We have a buffer so call FinishMixJob on this region and perform another MixJob if
           // we did not mix enough data. This can happen if our pipeline is unable to produce the
@@ -125,14 +133,30 @@ void AudioOutput::Process() {
       cpu_timer_.Stop();
       TRACE_INSTANT("audio", "AudioOutput::MIX_UNDERFLOW", TRACE_SCOPE_THREAD);
       TRACE_ALERT("audio", "audiounderflow");
+      auto frames_advanced = ((overall_frame_start && overall_frame_end)
+                                  ? Fixed(*overall_frame_end - *overall_frame_start).Floor()
+                                  : 0);
       FX_LOGS(ERROR("pipeline-underflow"))
           << "PIPELINE UNDERFLOW: Mixer ran for " << std::setprecision(4)
           << static_cast<double>(dt.to_nsecs()) / ZX_MSEC(1) << " ms, overran goal of "
           << static_cast<double>(MixDeadline().to_nsecs()) / ZX_MSEC(1) << " ms; thread spent "
           << cpu_timer_.cpu().get() << " ns on CPU, " << cpu_timer_.queue().get() << " ns queued; "
-          << "produced " << frames_mixed << " frames, advanced "
-          << ((frame_start && frame_end) ? Fixed(*frame_end - *frame_start).Floor() : 0)
+          << "produced " << frames_mixed << " frames, advanced " << frames_advanced
           << " frames, made " << read_lock_calls << " ReadLock calls";
+      if (!frames_advanced) {
+        FX_LOGS(ERROR) << "PIPELINE UNDERFLOW advanced zero frames:"
+                       << " overall_frame_start="
+                       << (overall_frame_start ? overall_frame_start->Floor() : 0)
+                       << " overall_frame_end="
+                       << (overall_frame_end ? overall_frame_end->Floor() : 0)
+                       << " last_buffer_empty=" << (last_buffer_frame_start ? "false" : "true")
+                       << " last_buffer_frame_start="
+                       << (last_buffer_frame_start ? last_buffer_frame_start->Floor() : 0)
+                       << " last_buffer_frame_end="
+                       << (last_buffer_frame_end ? last_buffer_frame_end->Floor() : 0)
+                       << " last_mix_job_start=" << (last_mix_job ? last_mix_job->start : 0)
+                       << " last_mix_job_length=" << (last_mix_job ? last_mix_job->length : 0);
+      }
 
       reporter().PipelineUnderflow(mono_now + MixDeadline(), mono_end);
     }
