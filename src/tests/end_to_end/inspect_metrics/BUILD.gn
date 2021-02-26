@@ -167,7 +167,9 @@ group("test") {
     ":archivist_metrics_test($host_toolchain)",
     ":archivist_reader_test($host_toolchain)",
     ":inspect_metrics_emulator_test($host_toolchain)",
-    ":inspect_metrics_test($host_toolchain)",
+
+    # TODO(fxbug.dev/71024): re-enable when fixing flake.
+    #":inspect_metrics_test($host_toolchain)",
     ":legacy_metrics_test($host_toolchain)",
     ":log_stats_test($host_toolchain)",
   ]
