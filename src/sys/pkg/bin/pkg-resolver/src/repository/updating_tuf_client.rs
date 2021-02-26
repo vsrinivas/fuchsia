@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{clock, error, inspect_util, metrics_util::tuf_error_as_update_tuf_client_event_code},
+    crate::{
+        clock, error, inspect_util, metrics_util::tuf_error_as_update_tuf_client_event_code,
+        TCP_KEEPALIVE_TIMEOUT,
+    },
     anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg_ext::MirrorConfig,
@@ -338,12 +341,10 @@ impl AutoClient {
         // The /auto protocol has no heartbeat, so, without TCP keepalive, a client cannot
         // differentiate a repository that is not updating from a repository that has dropped
         // the connection.
-        let mut tcp_options = fuchsia_hyper::TcpOptions::default();
-        tcp_options.keepalive_idle = Some(std::time::Duration::from_secs(15));
-        tcp_options.keepalive_interval = Some(std::time::Duration::from_secs(5));
-        tcp_options.keepalive_count = Some(2);
         match http_sse::Client::connect(
-            fuchsia_hyper::new_https_client_from_tcp_options(tcp_options),
+            fuchsia_hyper::new_https_client_from_tcp_options(
+                fuchsia_hyper::TcpOptions::keepalive_timeout(TCP_KEEPALIVE_TIMEOUT),
+            ),
             &self.auto_url,
         )
         .await

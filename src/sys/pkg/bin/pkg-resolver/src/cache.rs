@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{queue, repository::Repository, repository_manager::Stats},
+    crate::{queue, repository::Repository, repository_manager::Stats, TCP_KEEPALIVE_TIMEOUT},
     anyhow::anyhow,
     cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
@@ -487,7 +487,9 @@ pub fn make_blob_fetch_queue(
     local_mirror_proxy: Option<LocalMirrorProxy>,
     blob_network_timeouts: BlobNetworkTimeouts,
 ) -> (impl Future<Output = ()>, BlobFetcher) {
-    let http_client = Arc::new(fuchsia_hyper::new_https_client());
+    let http_client = Arc::new(fuchsia_hyper::new_https_client_from_tcp_options(
+        fuchsia_hyper::TcpOptions::keepalive_timeout(TCP_KEEPALIVE_TIMEOUT),
+    ));
     let inspect = inspect::BlobFetcher::from_node_and_timeouts(node, &blob_network_timeouts);
 
     let (blob_fetch_queue, blob_fetcher) =
@@ -946,7 +948,9 @@ impl FetchError {
             }
             FetchError::Hyper { .. }
             | FetchError::Http { .. }
-            | FetchError::BadHttpStatus { .. } => FetchErrorKind::Network,
+            | FetchError::BadHttpStatus { .. }
+            | FetchError::BlobHeaderTimeout { .. }
+            | FetchError::BlobBodyTimeout { .. } => FetchErrorKind::Network,
             _ => FetchErrorKind::Other,
         }
     }

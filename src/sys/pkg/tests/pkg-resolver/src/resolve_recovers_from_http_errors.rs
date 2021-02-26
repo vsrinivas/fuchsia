@@ -272,13 +272,11 @@ async fn blob_timeout_causes_new_tcp_connection() {
 
     env.register_repo(&server).await;
 
-    let result = env.resolve_package("fuchsia-pkg://test/test").await;
-    assert_eq!(result.unwrap_err(), Status::UNAVAILABLE);
-    assert_eq!(server.connection_attempts(), 2);
-
-    // The resolve may fail because of the zero second timeout on the blob body future,
-    // but that happens after the header is downloaded and therefore after the new TCP
-    // connection is established.
+    assert_eq!(server.connection_attempts(), 0);
+    // The resolve request may not succeed despite the retry: the zero timeout on the blob body
+    // future can fire prior to the body being downloaded on the retry. However, we expect to
+    // observe three connections: one for the TUF client, one for the initial resolve that timed
+    // out, and one for the retried resolve.
     let _ = env.resolve_package("fuchsia-pkg://test/test").await;
     assert_eq!(server.connection_attempts(), 3);
 

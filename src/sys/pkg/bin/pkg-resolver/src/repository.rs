@@ -8,7 +8,7 @@
 use {
     crate::{
         cache::MerkleForError, clock, error, inspect_util,
-        metrics_util::tuf_error_as_create_tuf_client_event_code,
+        metrics_util::tuf_error_as_create_tuf_client_event_code, TCP_KEEPALIVE_TIMEOUT,
     },
     anyhow::{anyhow, format_err},
     cobalt_sw_delivery_registry as metrics,
@@ -239,7 +239,9 @@ fn get_remote_repo(
                 Box::new(
                     HttpRepositoryBuilder::new_with_uri(
                         remote_url,
-                        fuchsia_hyper::new_https_client(),
+                        fuchsia_hyper::new_https_client_from_tcp_options(
+                            fuchsia_hyper::TcpOptions::keepalive_timeout(TCP_KEEPALIVE_TIMEOUT),
+                        ),
                     )
                     .build(),
                 )

@@ -93,6 +93,12 @@ const DEFAULT_TUF_METADATA_TIMEOUT: Duration = Duration::from_secs(240);
 const DEFAULT_BLOB_NETWORK_BODY_TIMEOUT: Duration = Duration::from_secs(30);
 const DEFAULT_BLOB_NETWORK_HEADER_TIMEOUT: Duration = Duration::from_secs(30);
 
+// The TCP keepalive timeout here in effect acts as a sort of between bytes timeout for connections
+// that are no longer established. Explicit timeouts are used around request futures to guard
+// against cases where both sides agree the connection is established, but the client expects more
+// data and the server doesn't intend to send any.
+const TCP_KEEPALIVE_TIMEOUT: Duration = Duration::from_secs(30);
+
 pub fn main() -> Result<(), Error> {
     let startup_time = Instant::now();
     fuchsia_syslog::init_with_tags(&["pkg-resolver"]).expect("can't init logger");

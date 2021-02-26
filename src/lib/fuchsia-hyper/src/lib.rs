@@ -116,6 +116,27 @@ pub struct TcpOptions {
     pub keepalive_count: Option<u32>,
 }
 
+impl TcpOptions {
+    /// keepalive_timeout returns a TCP keepalive policy that times out after the specified
+    /// duration. The keepalive policy returned waits for half of the supplied duration before
+    /// sending keepalive packets, and attempts to keep the connection alive three times for
+    /// the remaining period.
+    ///
+    /// If the supplied duration does not contain at least one whole second, no TCP keepalive
+    /// policy is returned.
+    pub fn keepalive_timeout(dur: std::time::Duration) -> Self {
+        if dur.as_secs() == 0 {
+            return TcpOptions::default();
+        }
+
+        TcpOptions {
+            keepalive_idle: dur.checked_div(2),
+            keepalive_interval: dur.checked_div(6),
+            keepalive_count: Some(3),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Executor;
 
