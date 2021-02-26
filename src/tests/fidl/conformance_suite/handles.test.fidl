@@ -58,3 +58,15 @@ resource table ReservedFieldTable {
 resource struct ReservedFieldTableStruct {
     ReservedFieldTable table;
 };
+
+resource struct EventWithDefaultRights {
+    // 53251 is ZX_DEFAULT_EVENT_RIGHTS.
+    // TODO(fxbug.dev/41920) Replace with constant value.
+    handle:<EVENT, 53251> h;
+};
+
+resource struct EventWithReducedRights {
+    // 49155 is ZX_RIGHTS_BASIC, which is missing ZX_RIGHT_SIGNAL
+    // TODO(fxbug.dev/41920) Replace with constant value.
+    handle:<EVENT, 49155> h;
+};

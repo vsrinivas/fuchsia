@@ -25,6 +25,10 @@ type EncodeSuccess struct {
 	HandleDefs        []HandleDef
 	BindingsAllowlist *LanguageList
 	BindingsDenylist  *LanguageList
+	// CheckHandleRights is true for standalone "encode_success" tests providing
+	// "handle_dispositions", but false for bidirectional "success" tests
+	// because they provide only "handles" with no rights information.
+	CheckHandleRights bool
 }
 
 type DecodeSuccess struct {

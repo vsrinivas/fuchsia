@@ -144,7 +144,7 @@ func TestParseValues(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.gidl, func(t *testing.T) {
 			p := NewParser("", strings.NewReader(tc.gidl), Config{})
-			value, err := p.parseValue()
+			value, err := p.parseValue(rightsConfiguration{allowRights: true})
 			checkMatch(t, value, tc.expectedValue, err)
 		})
 	}
@@ -165,7 +165,24 @@ func TestFailsParseValues(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.gidl, func(t *testing.T) {
 			p := NewParser("", strings.NewReader(tc.gidl), Config{})
-			_, err := p.parseValue()
+			_, err := p.parseValue(rightsConfiguration{allowRights: true})
+			checkFailure(t, err, tc.expectedErrorSubstr)
+		})
+	}
+}
+
+func TestFailsParseValuesRightsDisabled(t *testing.T) {
+	type testCase struct {
+		gidl                string
+		expectedErrorSubstr string
+	}
+	testCases := []testCase{
+		{gidl: `restrict(#123, rights: read)`, expectedErrorSubstr: "rights are disabled for this section"},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.gidl, func(t *testing.T) {
+			p := NewParser("", strings.NewReader(tc.gidl), Config{})
+			_, err := p.parseValue(rightsConfiguration{allowRights: false})
 			checkFailure(t, err, tc.expectedErrorSubstr)
 		})
 	}
@@ -652,7 +669,7 @@ func TestParseHandleDefs(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		p := NewParser("", strings.NewReader(tc.gidl), Config{})
-		value, err := p.parseHandleDefSection()
+		value, err := p.parseHandleDefSection(rightsConfiguration{allowRights: true})
 		t.Run(tc.gidl, func(t *testing.T) {
 			checkMatch(t, value, tc.expectedValue, err)
 		})
@@ -696,7 +713,32 @@ func TestParseHandleDefsFailures(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		p := NewParser("", strings.NewReader(tc.gidl), Config{})
-		_, err := p.parseHandleDefSection()
+		_, err := p.parseHandleDefSection(rightsConfiguration{allowRights: true})
+		t.Run(tc.gidl, func(t *testing.T) {
+			if err == nil {
+				t.Fatalf("error was expected, but no error was returned")
+			}
+			if !strings.Contains(err.Error(), tc.errSubstring) {
+				t.Errorf("expected error containing %q, but got %q", tc.errSubstring, err.Error())
+			}
+		})
+	}
+}
+
+func TestParseHandleDefsFailuresRightsDisabled(t *testing.T) {
+	type testCase struct {
+		gidl         string
+		errSubstring string
+	}
+	testCases := []testCase{
+		{
+			gidl:         `{ #0 = event(rights: basic) }`,
+			errSubstring: `rights are disabled for this section`,
+		},
+	}
+	for _, tc := range testCases {
+		p := NewParser("", strings.NewReader(tc.gidl), Config{})
+		_, err := p.parseHandleDefSection(rightsConfiguration{allowRights: false})
 		t.Run(tc.gidl, func(t *testing.T) {
 			if err == nil {
 				t.Fatalf("error was expected, but no error was returned")
@@ -814,6 +856,7 @@ func TestParseSuccessCase(t *testing.T) {
 					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 				},
 			}},
+			CheckHandleRights: false,
 		}},
 		DecodeSuccess: []ir.DecodeSuccess{{
 			Name: "OneStringOfMaxLengthFive-empty",
@@ -901,6 +944,7 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 					},
 				},
 			}},
+			CheckHandleRights: true,
 		}},
 	}
 	checkMatch(t, all, expectedAll, err)
@@ -1111,6 +1155,7 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 				}},
 				BindingsAllowlist: &ir.LanguageList{"go", "rust"},
 				BindingsDenylist:  &ir.LanguageList{"dart"},
+				CheckHandleRights: false,
 			},
 		},
 		DecodeSuccess: []ir.DecodeSuccess{
@@ -1221,6 +1266,7 @@ func TestParseSucceedsMultipleWireFormats(t *testing.T) {
 					Bytes:      []byte{1},
 				},
 			},
+			CheckHandleRights: false,
 		}},
 		DecodeSuccess: []ir.DecodeSuccess{{
 			Name: "MultipleWireFormats",
@@ -1356,6 +1402,7 @@ func TestParseSucceedsHandles(t *testing.T) {
 			HandleDefs: []ir.HandleDef{
 				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
 			},
+			CheckHandleRights: false,
 		}},
 		DecodeSuccess: []ir.DecodeSuccess{{
 			Name: "HasHandles",
@@ -1435,6 +1482,7 @@ func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
 			HandleDefs: []ir.HandleDef{
 				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
 			},
+			CheckHandleRights: false,
 		}},
 		DecodeSuccess: []ir.DecodeSuccess{{
 			Name: "HasHandles",

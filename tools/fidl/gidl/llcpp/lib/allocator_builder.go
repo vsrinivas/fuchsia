@@ -15,18 +15,20 @@ import (
 )
 
 // Builds a LLCPP object using std::make_unique.
-func BuildValueHeap(value interface{}, decl gidlmixer.Declaration) (string, string) {
+func BuildValueHeap(value interface{}, decl gidlmixer.Declaration, handleRepr HandleRepr) (string, string) {
 	var builder allocatorBuilder
 	builder.allocationFunc = "std::make_unique"
+	builder.handleRepr = handleRepr
 	valueVar := builder.visit(value, decl, false)
 	valueBuild := builder.String()
 	return valueBuild, valueVar
 }
 
 // Builds an LLCPP object using fidl::Allocator.
-func BuildValueAllocator(allocatorVar string, value interface{}, decl gidlmixer.Declaration) (string, string) {
+func BuildValueAllocator(allocatorVar string, value interface{}, decl gidlmixer.Declaration, handleRepr HandleRepr) (string, string) {
 	var builder allocatorBuilder
 	builder.allocationFunc = fmt.Sprintf("%s->make", allocatorVar)
+	builder.handleRepr = handleRepr
 	valueVar := builder.visit(value, decl, false)
 	valueBuild := builder.String()
 	return valueBuild, valueVar
@@ -35,7 +37,8 @@ func BuildValueAllocator(allocatorVar string, value interface{}, decl gidlmixer.
 type allocatorBuilder struct {
 	allocationFunc string
 	strings.Builder
-	varidx int
+	varidx     int
+	handleRepr HandleRepr
 }
 
 func (a *allocatorBuilder) write(format string, vals ...interface{}) {
@@ -108,6 +111,9 @@ func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration, 
 		}
 		return a.construct(typeNameIgnoreNullable(decl), isPointer, "%q", value)
 	case gidlir.HandleWithRights:
+		if a.handleRepr == HandleReprDisposition || a.handleRepr == HandleReprInfo {
+			return fmt.Sprintf("%s(handle_defs[%d].handle)", typeName(decl), value.Handle)
+		}
 		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value.Handle)
 	case gidlir.Record:
 		switch decl := decl.(type) {

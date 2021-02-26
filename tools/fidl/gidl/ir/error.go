@@ -24,6 +24,8 @@ const (
 	ExtraHandles                          = "EXTRA_HANDLES"
 	TooFewHandles                         = "TOO_FEW_HANDLES"
 	NonResourceUnknownHandles             = "NON_RESOURCE_UNKNOWN_HANDLES"
+	MissingRequiredHandleRights           = "MISSING_REQUIRED_HANDLE_RIGHTS"
+	IncorrectHandleType                   = "INCORRECT_HANDLE_TYPE"
 )
 
 var AllErrorCodes = map[ErrorCode]struct{}{
@@ -41,4 +43,6 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	ExtraHandles:                {},
 	TooFewHandles:               {},
 	NonResourceUnknownHandles:   {},
+	MissingRequiredHandleRights: {},
+	IncorrectHandleType:         {},
 }

@@ -7,6 +7,7 @@ package llcpp
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
@@ -47,7 +48,8 @@ TEST(Conformance, {{ .Name }}_Encode) {
 	const auto expected_bytes = {{ .Bytes }};
 	const auto expected_handles = {{ .Handles }};
 	auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&obj, expected_bytes, expected_handles));
+	EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(
+		&obj, expected_bytes, expected_handles, {{ .CheckHandleRights }}));
 }
 {{- if .FuchsiaOnly }}
 #endif  // __Fuchsia__
@@ -60,7 +62,7 @@ TEST(Conformance, {{ .Name }}_Encode) {
 {{- end }}
 TEST(Conformance, {{ .Name }}_Decode) {
 	{{- if .HandleDefs }}
-	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
+	const std::vector<zx_handle_info_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
 	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
@@ -105,14 +107,14 @@ TEST(Conformance, {{ .Name }}_Encode_Failure) {
 {{- end }}
 TEST(Conformance, {{ .Name }}_Decode_Failure) {
 	{{- if .HandleDefs }}
-	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
+	const std::vector<zx_handle_info_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
 	auto bytes = {{ .Bytes }};
 	auto handles = {{ .Handles }};
 	EXPECT_TRUE(llcpp_conformance_utils::DecodeFailure<{{ .ValueType }}>(std::move(bytes), std::move(handles), {{ .ErrorCode }}));
 	{{- if .HandleDefs }}
-	for (const auto handle : handle_defs) {
-		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+	for (const auto handle_info : handle_defs) {
+		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle_info.handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 	}
 	{{- end }}
 }
@@ -131,7 +133,7 @@ type conformanceTmplInput struct {
 
 type encodeSuccessCase struct {
 	Name, HandleDefs, ValueBuild, ValueVar, Bytes, Handles string
-	FuchsiaOnly                                            bool
+	FuchsiaOnly, CheckHandleRights                         bool
 }
 
 type decodeSuccessCase struct {
@@ -178,6 +180,26 @@ func GenerateConformanceTests(gidl gidlir.All, fidl fidl.Root, config gidlconfig
 	return buf.Bytes(), err
 }
 
+func buildRawHandleDispositions(handle_dispositions []gidlir.HandleDisposition) string {
+	if len(handle_dispositions) == 0 {
+		return fmt.Sprintf("std::vector<zx_handle_disposition_t>{}")
+	}
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("std::vector<zx_handle_disposition_t>{"))
+	for _, h := range handle_dispositions {
+		builder.WriteString(fmt.Sprintf(`
+{
+	.operation = ZX_HANDLE_OP_MOVE,
+	.handle = handle_defs[%d],
+	.type = %d,
+	.rights = %d,
+	.result = ZX_OK,
+},`, h.Handle, h.Type, h.Rights))
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
 func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlmixer.Schema) ([]encodeSuccessCase, error) {
 	var encodeSuccessCases []encodeSuccessCase
 	for _, encodeSuccess := range gidlEncodeSuccesses {
@@ -189,20 +211,21 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 			continue
 		}
 		handleDefs := libhlcpp.BuildHandleDefs(encodeSuccess.HandleDefs)
-		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator_ptr", encodeSuccess.Value, decl)
+		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator_ptr", encodeSuccess.Value, decl, libllcpp.HandleReprRaw)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeSuccess.HandleDefs) > 0
 		for _, encoding := range encodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-				Name:        testCaseName(encodeSuccess.Name, encoding.WireFormat),
-				HandleDefs:  handleDefs,
-				ValueBuild:  valueBuild,
-				ValueVar:    valueVar,
-				Bytes:       libhlcpp.BuildBytes(encoding.Bytes),
-				Handles:     libhlcpp.BuildRawHandles(gidlir.GetHandlesFromHandleDispositions(encoding.HandleDispositions)),
-				FuchsiaOnly: fuchsiaOnly,
+				Name:              testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				HandleDefs:        handleDefs,
+				ValueBuild:        valueBuild,
+				ValueVar:          valueVar,
+				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
+				Handles:           buildRawHandleDispositions(encoding.HandleDispositions),
+				FuchsiaOnly:       fuchsiaOnly,
+				CheckHandleRights: encodeSuccess.CheckHandleRights,
 			})
 		}
 	}
@@ -219,8 +242,8 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
 			continue
 		}
-		handleDefs := libhlcpp.BuildHandleDefs(decodeSuccess.HandleDefs)
-		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator_ptr", decodeSuccess.Value, decl)
+		handleDefs := libhlcpp.BuildHandleInfoDefs(decodeSuccess.HandleDefs)
+		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator_ptr", decodeSuccess.Value, decl, libllcpp.HandleReprInfo)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
@@ -232,7 +255,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				ValueBuild:  valueBuild,
 				ValueVar:    valueVar,
 				Bytes:       libhlcpp.BuildBytes(encoding.Bytes),
-				Handles:     libhlcpp.BuildRawHandles(encoding.Handles),
+				Handles:     libhlcpp.BuildRawHandleInfos(encoding.Handles),
 				FuchsiaOnly: fuchsiaOnly,
 			})
 		}
@@ -248,7 +271,7 @@ func encodeFailureCases(gidlEncodeFailurees []gidlir.EncodeFailure, schema gidlm
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
 		}
 		handleDefs := libhlcpp.BuildHandleDefs(encodeFailure.HandleDefs)
-		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator_ptr", encodeFailure.Value, decl)
+		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator_ptr", encodeFailure.Value, decl, libllcpp.HandleReprRaw)
 		errorCode := libllcpp.LlcppErrorCode(encodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
 		for _, wireFormat := range encodeFailure.WireFormats {
@@ -275,7 +298,7 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("decode failure %s: %s", decodeFailure.Name, err)
 		}
-		handleDefs := libhlcpp.BuildHandleDefs(decodeFailure.HandleDefs)
+		handleDefs := libhlcpp.BuildHandleInfoDefs(decodeFailure.HandleDefs)
 		valueType := libllcpp.ConformanceType(decodeFailure.Type)
 		errorCode := libllcpp.LlcppErrorCode(decodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeFailure.HandleDefs) > 0
@@ -288,7 +311,7 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 				HandleDefs:  handleDefs,
 				ValueType:   valueType,
 				Bytes:       libhlcpp.BuildBytes(encoding.Bytes),
-				Handles:     libhlcpp.BuildRawHandles(encoding.Handles),
+				Handles:     libhlcpp.BuildRawHandleInfos(encoding.Handles),
 				ErrorCode:   errorCode,
 				FuchsiaOnly: fuchsiaOnly,
 			})

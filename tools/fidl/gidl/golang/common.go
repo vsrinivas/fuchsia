@@ -306,6 +306,8 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.ExtraHandles:                "ErrTooManyHandles",
 	gidlir.TooFewHandles:               "ErrNotEnoughHandles",
 	gidlir.NonResourceUnknownHandles:   "ErrValueTypeHandles",
+	gidlir.MissingRequiredHandleRights: "ErrMissingRequiredHandleRights",
+	gidlir.IncorrectHandleType:         "ErrIncorrectHandleType",
 }
 
 func goErrorCode(code gidlir.ErrorCode) (string, error) {

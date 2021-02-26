@@ -345,6 +345,8 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.InvalidNumBytesInEnvelope:   "InvalidNumBytesInEnvelope",
 	gidlir.InvalidNumHandlesInEnvelope: "InvalidNumHandlesInEnvelope",
 	gidlir.ExtraHandles:                "ExtraHandles",
+	gidlir.MissingRequiredHandleRights: "MissingExpectedHandleRights",
+	gidlir.IncorrectHandleType:         "IncorrectHandleSubtype",
 }
 
 func rustErrorCode(code gidlir.ErrorCode) (string, error) {

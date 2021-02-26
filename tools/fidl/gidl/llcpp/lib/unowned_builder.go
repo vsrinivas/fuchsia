@@ -14,8 +14,9 @@ import (
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-func BuildValueUnowned(value interface{}, decl gidlmixer.Declaration) (string, string) {
+func BuildValueUnowned(value interface{}, decl gidlmixer.Declaration, handleRepr HandleRepr) (string, string) {
 	var builder unownedBuilder
+	builder.handleRepr = handleRepr
 	valueVar := builder.visit(value, decl)
 	valueBuild := builder.String()
 	return valueBuild, valueVar
@@ -23,7 +24,8 @@ func BuildValueUnowned(value interface{}, decl gidlmixer.Declaration) (string, s
 
 type unownedBuilder struct {
 	strings.Builder
-	varidx int
+	varidx     int
+	handleRepr HandleRepr
 }
 
 func (b *unownedBuilder) write(format string, vals ...interface{}) {
@@ -86,6 +88,9 @@ func (b *unownedBuilder) visit(value interface{}, decl gidlmixer.Declaration) st
 	case string:
 		return fmt.Sprintf("fidl::StringView(%s, %d)", strconv.Quote(value), len(value))
 	case gidlir.HandleWithRights:
+		if b.handleRepr == HandleReprDisposition || b.handleRepr == HandleReprInfo {
+			return fmt.Sprintf("%s(handle_defs[%d].handle)", typeName(decl), value.Handle)
+		}
 		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value.Handle)
 	case gidlir.Record:
 		switch decl := decl.(type) {

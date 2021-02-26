@@ -292,10 +292,15 @@ func (b *body) addEncoding(e encodingData) error {
 	return nil
 }
 
+type rightsConfiguration struct {
+	allowRights bool
+}
+
 type sectionMetadata struct {
-	requiredKinds map[bodyElement]struct{}
-	optionalKinds map[bodyElement]struct{}
-	setter        func(name string, body body, all *ir.All)
+	requiredKinds       map[bodyElement]struct{}
+	optionalKinds       map[bodyElement]struct{}
+	rightsConfiguration rightsConfiguration
+	setter              func(name string, body body, all *ir.All)
 }
 
 var sections = map[string]sectionMetadata{
@@ -303,6 +308,9 @@ var sections = map[string]sectionMetadata{
 		requiredKinds: map[bodyElement]struct{}{isValue: {}, isBytes: {}},
 		optionalKinds: map[bodyElement]struct{}{
 			isHandles: {}, isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
+		},
+		rightsConfiguration: rightsConfiguration{
+			allowRights: false,
 		},
 		setter: func(name string, body body, all *ir.All) {
 			encodeSuccess := ir.EncodeSuccess{
@@ -312,6 +320,7 @@ var sections = map[string]sectionMetadata{
 				HandleDefs:        body.HandleDefs,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
+				CheckHandleRights: false,
 			}
 			all.EncodeSuccess = append(all.EncodeSuccess, encodeSuccess)
 			decodeSuccess := ir.DecodeSuccess{
@@ -330,6 +339,9 @@ var sections = map[string]sectionMetadata{
 		optionalKinds: map[bodyElement]struct{}{
 			isHandleDispositions: {}, isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
 		},
+		rightsConfiguration: rightsConfiguration{
+			allowRights: true,
+		},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.EncodeSuccess{
 				Name:              name,
@@ -338,6 +350,7 @@ var sections = map[string]sectionMetadata{
 				HandleDefs:        body.HandleDefs,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
+				CheckHandleRights: true,
 			}
 			all.EncodeSuccess = append(all.EncodeSuccess, result)
 		},
@@ -346,6 +359,9 @@ var sections = map[string]sectionMetadata{
 		requiredKinds: map[bodyElement]struct{}{isValue: {}, isBytes: {}},
 		optionalKinds: map[bodyElement]struct{}{
 			isHandles: {}, isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
+		},
+		rightsConfiguration: rightsConfiguration{
+			allowRights: true,
 		},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.DecodeSuccess{
@@ -363,6 +379,9 @@ var sections = map[string]sectionMetadata{
 		requiredKinds: map[bodyElement]struct{}{isValue: {}, isErr: {}},
 		optionalKinds: map[bodyElement]struct{}{
 			isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
+		},
+		rightsConfiguration: rightsConfiguration{
+			allowRights: true,
 		},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.EncodeFailure{
@@ -385,6 +404,9 @@ var sections = map[string]sectionMetadata{
 		optionalKinds: map[bodyElement]struct{}{
 			isHandles: {}, isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
 		},
+		rightsConfiguration: rightsConfiguration{
+			allowRights: true,
+		},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.DecodeFailure{
 				Name:              name,
@@ -403,6 +425,9 @@ var sections = map[string]sectionMetadata{
 		optionalKinds: map[bodyElement]struct{}{
 			isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
 			isEnableSendEventBenchmark: {}, isEnableEchoCallBenchmark: {},
+		},
+		rightsConfiguration: rightsConfiguration{
+			allowRights: false,
 		},
 		setter: func(name string, body body, all *ir.All) {
 			benchmark := ir.Benchmark{
@@ -424,7 +449,7 @@ func (p *Parser) parseSection(all *ir.All) error {
 	if err != nil {
 		return err
 	}
-	body, err := p.parseBody(section.requiredKinds, section.optionalKinds)
+	body, err := p.parseBody(section.requiredKinds, section.optionalKinds, section.rightsConfiguration)
 	if err != nil {
 		return err
 	}
@@ -462,7 +487,7 @@ func (p *Parser) parsePreamble() (sectionMetadata, string, error) {
 	return section, name, nil
 }
 
-func (p *Parser) parseBody(requiredKinds map[bodyElement]struct{}, optionalKinds map[bodyElement]struct{}) (body, error) {
+func (p *Parser) parseBody(requiredKinds map[bodyElement]struct{}, optionalKinds map[bodyElement]struct{}, rightsConfiguration rightsConfiguration) (body, error) {
 	var (
 		result      body
 		parsedKinds = make(map[bodyElement]struct{})
@@ -473,7 +498,7 @@ func (p *Parser) parseBody(requiredKinds map[bodyElement]struct{}, optionalKinds
 	}
 	p.handles = make(map[ir.Handle]handleInfo)
 	if err := p.parseCommaSeparated(tLacco, tRacco, func() error {
-		return p.parseSingleBodyElement(&result, parsedKinds)
+		return p.parseSingleBodyElement(&result, parsedKinds, rightsConfiguration)
 	}); err != nil {
 		return result, err
 	}
@@ -507,7 +532,7 @@ func (p *Parser) parseBody(requiredKinds map[bodyElement]struct{}, optionalKinds
 	return result, nil
 }
 
-func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct{}) error {
+func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct{}, rightsConfiguration rightsConfiguration) error {
 	tok, err := p.consumeToken(tText)
 	if err != nil {
 		return err
@@ -525,7 +550,7 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct
 		result.Type = tok.value
 		kind = isType
 	case "value":
-		val, err := p.parseValue()
+		val, err := p.parseValue(rightsConfiguration)
 		if err != nil {
 			return err
 		}
@@ -565,7 +590,7 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct
 		}
 		kind = isHandleDispositions
 	case "handle_defs":
-		handleDefs, err := p.parseHandleDefSection()
+		handleDefs, err := p.parseHandleDefSection(rightsConfiguration)
 		if err != nil {
 			return err
 		}
@@ -593,7 +618,7 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct
 		result.BindingsDenylist = &languages
 		kind = isBindingsDenylist
 	case "enable_send_event_benchmark":
-		value, err := p.parseValue()
+		value, err := p.parseValue(rightsConfiguration)
 		if err != nil {
 			return err
 		}
@@ -604,7 +629,7 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct
 		result.EnableSendEventBenchmark = boolValue
 		kind = isEnableSendEventBenchmark
 	case "enable_echo_call_benchmark":
-		value, err := p.parseValue()
+		value, err := p.parseValue(rightsConfiguration)
 		if err != nil {
 			return err
 		}
@@ -627,7 +652,7 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct
 	return nil
 }
 
-func (p *Parser) parseHandleRestrict() (interface{}, error) {
+func (p *Parser) parseHandleRestrict(rightsConfiguration rightsConfiguration) (interface{}, error) {
 	if _, err := p.consumeToken(tLparen); err != nil {
 		return nil, err
 	}
@@ -651,6 +676,10 @@ func (p *Parser) parseHandleRestrict() (interface{}, error) {
 
 		switch labelTok.value {
 		case "rights":
+			if !rightsConfiguration.allowRights {
+				return nil, fmt.Errorf("rights are disabled for this section")
+			}
+
 			rights, err = p.parseHandleRights()
 			if err != nil {
 				return nil, err
@@ -669,7 +698,7 @@ func (p *Parser) parseHandleRestrict() (interface{}, error) {
 	}, nil
 }
 
-func (p *Parser) parseValue() (interface{}, error) {
+func (p *Parser) parseValue(rightsConfiguration rightsConfiguration) (interface{}, error) {
 	tok, err := p.peekToken()
 	if err != nil {
 		return nil, err
@@ -696,11 +725,11 @@ func (p *Parser) parseValue() (interface{}, error) {
 			return p.parseRawFloat()
 		}
 		if tok.value == "restrict" {
-			return p.parseHandleRestrict()
+			return p.parseHandleRestrict(rightsConfiguration)
 		}
-		return p.parseRecord(tok.value)
+		return p.parseRecord(tok.value, rightsConfiguration)
 	case tLsquare:
-		return p.parseSlice()
+		return p.parseSlice(rightsConfiguration)
 	case tString:
 		tok, err := p.nextToken()
 		if err != nil {
@@ -778,7 +807,7 @@ func (p *Parser) parseRawFloat() (interface{}, error) {
 	return ir.RawFloat(raw), nil
 }
 
-func (p *Parser) parseRecord(name string) (interface{}, error) {
+func (p *Parser) parseRecord(name string, rightsConfiguration rightsConfiguration) (interface{}, error) {
 	obj := ir.Record{Name: name}
 	err := p.parseCommaSeparated(tLacco, tRacco, func() error {
 		tokFieldName, err := p.consumeToken(tText)
@@ -791,7 +820,7 @@ func (p *Parser) parseRecord(name string) (interface{}, error) {
 		}
 		var val interface{}
 		if key.IsKnown() {
-			val, err = p.parseValue()
+			val, err = p.parseValue(rightsConfiguration)
 		} else {
 			val, err = p.parseUnknownData()
 		}
@@ -882,10 +911,10 @@ func (p *Parser) parseErrorCode() (ir.ErrorCode, error) {
 	return code, nil
 }
 
-func (p *Parser) parseSlice() ([]interface{}, error) {
+func (p *Parser) parseSlice(rightsConfiguration rightsConfiguration) ([]interface{}, error) {
 	var result []interface{}
 	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
-		val, err := p.parseValue()
+		val, err := p.parseValue(rightsConfiguration)
 		if err != nil {
 			return err
 		}
@@ -1067,51 +1096,13 @@ func (p *Parser) parseHandleList(info handleInfo) ([]ir.Handle, error) {
 	return handles, nil
 }
 
-func (p *Parser) parseHandleWithOptionalTypeAndRights(allowType bool) (ir.Handle, fidl.ObjectType, fidl.HandleRights, error) {
-	handle, err := p.parseHandle(handleInfo{usesInValue: 1})
-	if err != nil {
-		return 0, 0, 0, err
-	}
-	objectType := fidl.ObjectTypeNone
-	rights := fidl.HandleRightsSameRights
-	for p.peekTokenKind(tComma) {
-		p.nextToken()
-
-		labelTok, err := p.consumeToken(tText)
-		if err != nil {
-			return 0, 0, 0, err
-		}
-
-		if _, err := p.consumeToken(tColon); err != nil {
-			return 0, 0, 0, err
-		}
-
-		switch labelTok.value {
-		case "type":
-			valueTok, err := p.consumeToken(tText)
-			if err != nil {
-				return 0, 0, 0, err
-			}
-			objectType = fidl.ObjectTypeFromHandleSubtype(fidl.HandleSubtype(valueTok.value))
-		case "rights":
-			rights, err = p.parseHandleRights()
-			if err != nil {
-				return 0, 0, 0, err
-			}
-		default:
-			return 0, 0, 0, fmt.Errorf("unknown handle disposition label: %s", labelTok.value)
-		}
-	}
-	return handle, objectType, rights, nil
-}
-
 func (p *Parser) parseHandleDispositionList(info handleInfo) ([]ir.HandleDisposition, error) {
 	var handleDispositions []ir.HandleDisposition
 	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
 		if _, err := p.consumeToken(tLacco); err != nil {
 			return err
 		}
-		handle, err := p.parseHandle(handleInfo{usesInValue: 1})
+		handle, err := p.parseHandle(handleInfo{usesInHandles: 1})
 		if err != nil {
 			return err
 		}
@@ -1182,7 +1173,7 @@ func (p *Parser) parseHandle(info handleInfo) (ir.Handle, error) {
 	return h, nil
 }
 
-func (p *Parser) parseHandleDefSection() ([]ir.HandleDef, error) {
+func (p *Parser) parseHandleDefSection(rightsConfiguration rightsConfiguration) ([]ir.HandleDef, error) {
 	var res []ir.HandleDef
 	expected := ir.Handle(0)
 	err := p.parseCommaSeparated(tLacco, tRacco, func() error {
@@ -1203,7 +1194,7 @@ func (p *Parser) parseHandleDefSection() ([]ir.HandleDef, error) {
 		if err != nil {
 			return err
 		}
-		hd, err := p.parseHandleDef()
+		hd, err := p.parseHandleDef(rightsConfiguration)
 		if err != nil {
 			return err
 		}
@@ -1250,7 +1241,7 @@ func (p *Parser) parseHandleRights() (fidl.HandleRights, error) {
 	return rights, nil
 }
 
-func (p *Parser) parseHandleDef() (ir.HandleDef, error) {
+func (p *Parser) parseHandleDef(rightsConfiguration rightsConfiguration) (ir.HandleDef, error) {
 	tok, err := p.consumeToken(tText)
 	if err != nil {
 		return ir.HandleDef{}, err
@@ -1268,6 +1259,11 @@ func (p *Parser) parseHandleDef() (ir.HandleDef, error) {
 		panic("'same_rights' is missing")
 	}
 	if p.peekTokenKind(tText) {
+
+		if !rightsConfiguration.allowRights {
+			return ir.HandleDef{}, fmt.Errorf("rights are disabled for this section")
+		}
+
 		tok, err := p.consumeToken(tText)
 		if err != nil {
 			return ir.HandleDef{}, err

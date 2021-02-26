@@ -13,6 +13,15 @@ import (
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
+type HandleRepr int
+
+const (
+	_ = iota
+	HandleReprDisposition
+	HandleReprInfo
+	HandleReprRaw
+)
+
 func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 	switch decl := decl.(type) {
 	case gidlmixer.PrimitiveDeclaration:

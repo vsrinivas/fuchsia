@@ -75,7 +75,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidl.Root, config gidlconfig.Gener
 		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
 			continue
 		}
-		valBuild, valVar := libllcpp.BuildValueUnowned(gidlBenchmark.Value, decl)
+		valBuild, valVar := libllcpp.BuildValueUnowned(gidlBenchmark.Value, decl, libllcpp.HandleReprRaw)
 		tmplInput.Benchmarks = append(tmplInput.Benchmarks, benchmark{
 			Path:       gidlBenchmark.Name,
 			Name:       benchmarkName(gidlBenchmark.Name),

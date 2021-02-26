@@ -37,6 +37,28 @@ func escapeStr(value string) string {
 	return buf.String()
 }
 
+func buildHandleDef(def gidlir.HandleDef) string {
+	switch def.Subtype {
+	case fidl.Channel:
+		return fmt.Sprintf("fidl::test::util::CreateChannel(%d)", def.Rights)
+	case fidl.Event:
+		return fmt.Sprintf("fidl::test::util::CreateEvent(%d)", def.Rights)
+	default:
+		panic(fmt.Sprintf("unsupported handle subtype: %s", def.Subtype))
+	}
+}
+
+func handleType(subtype fidl.HandleSubtype) string {
+	switch subtype {
+	case fidl.Channel:
+		return "ZX_OBJ_TYPE_CHANNEL"
+	case fidl.Event:
+		return "ZX_OBJ_TYPE_EVENT"
+	default:
+		panic(fmt.Sprintf("unsupported handle subtype: %s", subtype))
+	}
+}
+
 func BuildHandleDefs(defs []gidlir.HandleDef) string {
 	if len(defs) == 0 {
 		return ""
@@ -44,16 +66,30 @@ func BuildHandleDefs(defs []gidlir.HandleDef) string {
 	var builder strings.Builder
 	builder.WriteString("std::vector<zx_handle_t>{\n")
 	for i, d := range defs {
-		switch d.Subtype {
-		case fidl.Channel:
-			builder.WriteString("fidl::test::util::create_channel(),")
-		case fidl.Event:
-			builder.WriteString("fidl::test::util::create_event(),")
-		default:
-			panic(fmt.Sprintf("unsupported handle subtype: %s", d.Subtype))
-		}
+		builder.WriteString(buildHandleDef(d))
 		// Write indices corresponding to the .gidl file handle_defs block.
-		builder.WriteString(fmt.Sprintf(" // #%d\n", i))
+		builder.WriteString(fmt.Sprintf(", // #%d\n", i))
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
+func BuildHandleInfoDefs(defs []gidlir.HandleDef) string {
+	if len(defs) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString("std::vector<zx_handle_info_t>{\n")
+	for i, d := range defs {
+		builder.WriteString(fmt.Sprintf(`
+// #%d
+zx_handle_info_t{
+	.handle = %s,
+	.type = %s,
+	.rights = %d,
+	.unused = 0u,
+},
+`, i, buildHandleDef(d), handleType(d.Subtype), d.Rights))
 	}
 	builder.WriteString("}")
 	return builder.String()
@@ -308,12 +344,12 @@ func BuildBytes(bytes []byte) string {
 	return builder.String()
 }
 
-func BuildRawHandles(handles []gidlir.Handle) string {
+func buildRawHandleImpl(handles []gidlir.Handle, handleType string) string {
 	if len(handles) == 0 {
-		return "std::vector<zx_handle_t>{}"
+		return fmt.Sprintf("std::vector<%s>{}", handleType)
 	}
 	var builder strings.Builder
-	builder.WriteString("std::vector<zx_handle_t>{\n")
+	builder.WriteString(fmt.Sprintf("std::vector<%s>{\n", handleType))
 	for i, h := range handles {
 		builder.WriteString(fmt.Sprintf("handle_defs[%d],", h))
 		if i%8 == 7 {
@@ -322,6 +358,14 @@ func BuildRawHandles(handles []gidlir.Handle) string {
 	}
 	builder.WriteString("}")
 	return builder.String()
+}
+
+func BuildRawHandles(handles []gidlir.Handle) string {
+	return buildRawHandleImpl(handles, "zx_handle_t")
+}
+
+func BuildRawHandleInfos(handles []gidlir.Handle) string {
+	return buildRawHandleImpl(handles, "zx_handle_info_t")
 }
 
 func buildHandles(handles []gidlir.Handle) string {

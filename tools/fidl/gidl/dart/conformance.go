@@ -362,6 +362,9 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.TooFewHandles:               "fidlTooFewHandles",
 	gidlir.ExtraHandles:                "fidlTooManyHandles",
 	gidlir.NonResourceUnknownHandles:   "fidlNonResourceHandle",
+	// TODO(fxbug.dev/41920) Assign appropriate error codes.
+	gidlir.MissingRequiredHandleRights: "unknown",
+	gidlir.IncorrectHandleType:         "unknown",
 }
 
 func dartErrorCode(code gidlir.ErrorCode) (string, error) {

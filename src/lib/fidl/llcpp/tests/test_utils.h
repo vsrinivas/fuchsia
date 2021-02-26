@@ -13,6 +13,10 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#ifdef __Fuchsia__
+#include <lib/zx/channel.h>
+#endif
+
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -27,8 +31,20 @@
 // Testing utilities indended for GIDL-generated conformance tests.
 namespace llcpp_conformance_utils {
 
-// TODO(fxbug.dev/63900): Remove this when rights are specified in GIDL.
-std::vector<zx_handle_info_t> ToHandleInfoVec(std::vector<zx_handle_t> handles);
+inline bool operator==(zx_handle_disposition_t a, zx_handle_disposition_t b) {
+  return a.operation == b.operation && a.handle == b.handle && a.type == b.type &&
+         a.rights == b.rights && a.result == b.result;
+}
+inline bool operator!=(zx_handle_disposition_t a, zx_handle_disposition_t b) { return !(a == b); }
+inline std::ostream& operator<<(std::ostream& os, const zx_handle_disposition_t& hd) {
+  return os << "zx_handle_disposition_t{\n"
+            << "  .operator = " << hd.operation << "\n"
+            << "  .handle = " << hd.handle << "\n"
+            << "  .type = " << hd.type << "\n"
+            << "  .rights = " << hd.rights << "\n"
+            << "  .result = " << hd.result << "\n"
+            << "}\n";
+}
 
 template <typename T>
 bool ComparePayload(const T* actual, size_t actual_size, const T* expected, size_t expected_size) {
@@ -36,9 +52,14 @@ bool ComparePayload(const T* actual, size_t actual_size, const T* expected, size
   for (size_t i = 0; i < actual_size && i < expected_size; i++) {
     if (actual[i] != expected[i]) {
       pass = false;
-      std::cout << std::dec << "element[" << i << "]: " << std::hex << "actual=0x" << +actual[i]
-                << " "
-                << "expected=0x" << +expected[i] << "\n";
+      if constexpr (std::is_same_v<T, zx_handle_disposition_t>) {
+        std::cout << std::dec << "element[" << i << "]: actual=" << actual[i]
+                  << " expected=" << expected[i];
+      } else {
+        std::cout << std::dec << "element[" << i << "]: " << std::hex << "actual=0x" << actual[i]
+                  << " "
+                  << "expected=0x" << expected[i] << "\n";
+      }
     }
   }
   if (actual_size != expected_size) {
@@ -54,7 +75,8 @@ bool ComparePayload(const T* actual, size_t actual_size, const T* expected, size
 // Note: This is destructive to |value| - a new value must be created with each call.
 template <typename FidlType>
 bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes,
-                   const std::vector<zx_handle_t>& handles) {
+                   const std::vector<zx_handle_disposition_t>& handle_dispositions,
+                   bool check_handle_rights) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   ::fidl::OwnedEncodedMessage<FidlType> encoded(value);
@@ -66,12 +88,23 @@ bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes,
   bool bytes_match =
       ComparePayload(encoded.GetOutgoingMessage().bytes(),
                      encoded.GetOutgoingMessage().byte_actual(), bytes.data(), bytes.size());
-  std::vector<zx_handle_t> outgoing_msg_handles;
-  for (size_t i = 0; i < encoded.GetOutgoingMessage().handle_actual(); i++) {
-    outgoing_msg_handles.push_back(encoded.GetOutgoingMessage().handles()[i].handle);
+  bool handles_match = false;
+  if (check_handle_rights) {
+    handles_match = ComparePayload(encoded.GetOutgoingMessage().handles(),
+                                   encoded.GetOutgoingMessage().handle_actual(),
+                                   handle_dispositions.data(), handle_dispositions.size());
+  } else {
+    std::vector<zx_handle_t> outgoing_msg_handles;
+    std::vector<zx_handle_t> expected_handles;
+    for (size_t i = 0; i < encoded.GetOutgoingMessage().handle_actual(); i++) {
+      outgoing_msg_handles.push_back(encoded.GetOutgoingMessage().handles()[i].handle);
+    }
+    for (const auto& handle_disposition : handle_dispositions) {
+      expected_handles.push_back(handle_disposition.handle);
+    }
+    handles_match = ComparePayload(outgoing_msg_handles.data(), outgoing_msg_handles.size(),
+                                   expected_handles.data(), expected_handles.size());
   }
-  bool handles_match = ComparePayload(outgoing_msg_handles.data(), outgoing_msg_handles.size(),
-                                      handles.data(), handles.size());
   return bytes_match && handles_match;
 }
 
@@ -97,9 +130,9 @@ bool EncodeFailure(FidlType* value, zx_status_t expected_error_code) {
 
 // Verifies that |bytes| decodes to an object that is the same as |value|.
 template <typename FidlType>
-bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes, std::vector<zx_handle_t> handles) {
+bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes,
+                   std::vector<zx_handle_info_t> handle_infos) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
-  auto handle_infos = ToHandleInfoVec(std::move(handles));
   fidl::DecodedMessage<FidlType> decoded(bytes.data(), static_cast<uint32_t>(bytes.size()),
                                          handle_infos.data(),
                                          static_cast<uint32_t>(handle_infos.size()));
@@ -117,10 +150,9 @@ bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes, std::vector<zx_h
 // Verifies that |bytes| fails to decode as |FidlType|, with the expected error
 // code.
 template <typename FidlType>
-bool DecodeFailure(std::vector<uint8_t> bytes, std::vector<zx_handle_t> handles,
+bool DecodeFailure(std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handle_infos,
                    zx_status_t expected_error_code) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
-  auto handle_infos = ToHandleInfoVec(std::move(handles));
   fidl::DecodedMessage<FidlType> decoded(bytes.data(), static_cast<uint32_t>(bytes.size()),
                                          handle_infos.data(),
                                          static_cast<uint32_t>(handle_infos.size()));
