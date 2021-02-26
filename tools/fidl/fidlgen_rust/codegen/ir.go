@@ -567,6 +567,10 @@ func (c *compiler) compileConstant(val fidl.Constant, typ fidl.Type) string {
 		return c.compileCompoundIdentifier(parts)
 	case fidl.LiteralConstant:
 		return compileLiteral(val.Literal, typ)
+	case fidl.BinaryOperator:
+		decl := c.compileType(typ, false).Decl
+		// from_bits isn't a const function, so from_bits_truncate must be used.
+		return fmt.Sprintf("%s::from_bits_truncate(%s)", decl, val.Value)
 	default:
 		panic(fmt.Sprintf("unknown constant kind: %v", val.Kind))
 	}

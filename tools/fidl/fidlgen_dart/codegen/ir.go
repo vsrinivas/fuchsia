@@ -602,13 +602,19 @@ func (c *compiler) compileLiteral(val fidl.Literal) string {
 func (c *compiler) compileConstant(val fidl.Constant, t *Type) string {
 	switch val.Kind {
 	case fidl.IdentifierConstant:
-		v := c.compileLowerCamelCompoundIdentifier(fidl.ParseCompoundIdentifier(val.Identifier), "", constantContext)
-		if t != nil && t.declType == fidl.EnumDeclType {
+		parsedIdentifier := fidl.ParseCompoundIdentifier(val.Identifier)
+		v := c.compileLowerCamelCompoundIdentifier(parsedIdentifier, "", constantContext)
+		if parsedIdentifier.Member != "" {
 			v = fmt.Sprintf("%s.%s", t.Decl, v)
 		}
 		return v
 	case fidl.LiteralConstant:
 		return c.compileLiteral(val.Literal)
+	case fidl.BinaryOperator:
+		if t == nil || t.declType != fidl.BitsDeclType {
+			panic("only bits is supported")
+		}
+		return fmt.Sprintf("%s._(%s)", t.Decl, val.Value)
 	default:
 		log.Fatal("Unknown constant kind: ", val.Kind)
 		return ""
@@ -787,14 +793,12 @@ func (c *compiler) compileType(val fidl.Type) Type {
 }
 
 func (c *compiler) compileConst(val fidl.Const) Const {
+	t := c.compileType(val.Type)
 	r := Const{
-		Type:       c.compileType(val.Type),
+		Type:       t,
 		Name:       c.compileLowerCamelCompoundIdentifier(fidl.ParseCompoundIdentifier(val.Name), "", constantContext),
-		Value:      c.compileConstant(val.Value, nil),
+		Value:      c.compileConstant(val.Value, &t),
 		Documented: docString(val),
-	}
-	if r.Type.declType == fidl.EnumDeclType {
-		r.Value = fmt.Sprintf("%s.%s", r.Type.Decl, r.Value)
 	}
 	return r
 }

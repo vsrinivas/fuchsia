@@ -1,6 +1,7 @@
 arrays.syz.txt.golden
 bindings_denylist.syz.txt.golden
 bits.syz.txt.golden
+bits_constants.syz.txt.golden
 byte_and_bytes.syz.txt.golden
 constants.syz.txt.golden
 consts.syz.txt.golden

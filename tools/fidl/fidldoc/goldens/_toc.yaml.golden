@@ -9,6 +9,8 @@ toc:
     path: /fidl.test.bindingsdenylist
   - title: fidl.test.bits
     path: /fidl.test.bits
+  - title: fidl.test.bitsconstants
+    path: /fidl.test.bitsconstants
   - title: fidl.test.byteandbytes
     path: /fidl.test.byteandbytes
   - title: fidl.test.constants

@@ -9,6 +9,7 @@ standalone_libraries = [
   "bindings_denylist.test.fidl",
   "bits.test.fidl",
   "byte_and_bytes.test.fidl",
+  "bits_constants.test.fidl",
   "constants.test.fidl",
   "consts.test.fidl",
   "doc_comments.test.fidl",

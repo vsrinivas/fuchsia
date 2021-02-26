@@ -3,6 +3,8 @@ arrays_test.dart.golden
 bindings_denylist_async.dart.golden
 bindings_denylist_test.dart.golden
 bits_async.dart.golden
+bits_constants_async.dart.golden
+bits_constants_test.dart.golden
 bits_test.dart.golden
 byte_and_bytes_async.dart.golden
 byte_and_bytes_test.dart.golden

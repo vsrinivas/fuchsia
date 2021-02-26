@@ -643,6 +643,8 @@ func (c *compiler) compileConstant(val fidl.Constant) string {
 		return c.compileCompoundIdentifier(val.Identifier, true, "")
 	case fidl.LiteralConstant:
 		return c.compileLiteral(val.Literal)
+	case fidl.BinaryOperator:
+		return val.Value
 	default:
 		panic(fmt.Sprintf("unknown constant kind: %v", val.Kind))
 	}

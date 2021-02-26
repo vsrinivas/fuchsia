@@ -1160,6 +1160,14 @@ func (c *compiler) compileConstant(val fidl.Constant, t *Type, typ fidl.Type) Co
 	case fidl.LiteralConstant:
 		lit := c.compileLiteral(val.Literal, typ)
 		return ConstantValue{Natural: lit, Wire: lit}
+	case fidl.BinaryOperator:
+		origVariant := currentVariant
+		currentVariant = naturalVariant
+		naturalVal := fmt.Sprintf("static_cast<%s>(%s)", t.TypeName, val.Value)
+		currentVariant = wireVariant
+		wireVal := fmt.Sprintf("static_cast<%s>(%s)", t.TypeName, val.Value)
+		currentVariant = origVariant
+		return ConstantValue{Natural: naturalVal, Wire: wireVal}
 	default:
 		panic(fmt.Sprintf("unknown constant kind: %v", val.Kind))
 	}

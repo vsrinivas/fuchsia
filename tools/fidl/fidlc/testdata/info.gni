@@ -120,6 +120,10 @@ fidl_testdata_info = [
     ]
   },
   {
+    name = "bits_constants"
+    target = "//tools/fidl/fidlc/testdata:fidl.test.bitsconstants"
+  },
+  {
     name = "doc_comments"
     target = "//tools/fidl/fidlc/testdata:fidl.test.doccomments"
     build_denylist = [

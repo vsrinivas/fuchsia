@@ -1,0 +1,161 @@
+{
+  "version": "0.0.1",
+  "name": "fidl.test.bitsconstants",
+  "library_dependencies": [],
+  "bits_declarations": [
+    {
+      "name": "fidl.test.bitsconstants/BitsType",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bits_constants.test.fidl",
+        "line": 3,
+        "column": 6,
+        "length": 8
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "mask": "131",
+      "members": [
+        {
+          "name": "A",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bits_constants.test.fidl",
+            "line": 4,
+            "column": 5,
+            "length": 1
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "0x00000001",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "0x00000001"
+            }
+          }
+        },
+        {
+          "name": "B",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bits_constants.test.fidl",
+            "line": 5,
+            "column": 5,
+            "length": 1
+          },
+          "value": {
+            "kind": "literal",
+            "value": "128",
+            "expression": "0x80",
+            "literal": {
+              "kind": "numeric",
+              "value": "128",
+              "expression": "0x80"
+            }
+          }
+        },
+        {
+          "name": "C",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bits_constants.test.fidl",
+            "line": 6,
+            "column": 5,
+            "length": 1
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "0x2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "0x2"
+            }
+          }
+        }
+      ],
+      "strict": true
+    }
+  ],
+  "const_declarations": [
+    {
+      "name": "fidl.test.bitsconstants/Const1",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bits_constants.test.fidl",
+        "line": 9,
+        "column": 16,
+        "length": 6
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "fidl.test.bitsconstants/BitsType",
+        "nullable": false
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "BitsType.A",
+        "identifier": "fidl.test.bitsconstants/BitsType.A"
+      }
+    },
+    {
+      "name": "fidl.test.bitsconstants/Const2",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bits_constants.test.fidl",
+        "line": 10,
+        "column": 16,
+        "length": 6
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "fidl.test.bitsconstants/BitsType",
+        "nullable": false
+      },
+      "value": {
+        "kind": "binary_operator",
+        "value": "129",
+        "expression": "BitsType.A | BitsType.B"
+      }
+    },
+    {
+      "name": "fidl.test.bitsconstants/Const3",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bits_constants.test.fidl",
+        "line": 11,
+        "column": 16,
+        "length": 6
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "fidl.test.bitsconstants/BitsType",
+        "nullable": false
+      },
+      "value": {
+        "kind": "binary_operator",
+        "value": "131",
+        "expression": "BitsType.A | BitsType.B | BitsType.C"
+      }
+    }
+  ],
+  "enum_declarations": [],
+  "experimental_resource_declarations": [],
+  "interface_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "fidl.test.bitsconstants/BitsType",
+    "fidl.test.bitsconstants/Const3",
+    "fidl.test.bitsconstants/Const2",
+    "fidl.test.bitsconstants/Const1"
+  ],
+  "declarations": {
+    "fidl.test.bitsconstants/BitsType": "bits",
+    "fidl.test.bitsconstants/Const1": "const",
+    "fidl.test.bitsconstants/Const2": "const",
+    "fidl.test.bitsconstants/Const3": "const"
+  }
+}

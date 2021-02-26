@@ -382,12 +382,14 @@ type ConstantKind string
 const (
 	IdentifierConstant ConstantKind = "identifier"
 	LiteralConstant    ConstantKind = "literal"
+	BinaryOperator     ConstantKind = "binary_operator"
 )
 
 type Constant struct {
 	Kind       ConstantKind              `json:"kind"`
 	Identifier EncodedCompoundIdentifier `json:"identifier,omitempty"`
 	Literal    Literal                   `json:"literal,omitempty"`
+	Value      string                    `json:"value"`
 }
 
 type TypeKind string

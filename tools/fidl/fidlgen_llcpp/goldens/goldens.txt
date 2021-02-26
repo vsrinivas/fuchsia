@@ -6,6 +6,9 @@ bindings_denylist.h.golden
 bindings_denylist_test_base.h.golden
 bits.cc.golden
 bits.h.golden
+bits_constants.cc.golden
+bits_constants.h.golden
+bits_constants_test_base.h.golden
 bits_test_base.h.golden
 byte_and_bytes.cc.golden
 byte_and_bytes.h.golden

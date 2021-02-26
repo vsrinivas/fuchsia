@@ -3,6 +3,7 @@ _toc.yaml.golden
 arrays.md.golden
 bindings_denylist.md.golden
 bits.md.golden
+bits_constants.md.golden
 byte_and_bytes.md.golden
 constants.md.golden
 consts.md.golden

@@ -20,6 +20,10 @@
     <td></td>
 </tr>
 <tr>
+    <td><a href="fidl.test.bitsconstants/index">fidl.test.bitsconstants</a></td>
+    <td></td>
+</tr>
+<tr>
     <td><a href="fidl.test.byteandbytes/index">fidl.test.byteandbytes</a></td>
     <td></td>
 </tr>

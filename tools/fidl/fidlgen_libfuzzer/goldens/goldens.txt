@@ -1,5 +1,7 @@
 bindings_denylist.cc.golden
 bindings_denylist.h.golden
+bits_constants.cc.golden
+bits_constants.h.golden
 doc_comments.cc.golden
 doc_comments.h.golden
 empty_struct.cc.golden

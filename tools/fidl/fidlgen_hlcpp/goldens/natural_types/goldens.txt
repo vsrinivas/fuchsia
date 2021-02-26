@@ -4,6 +4,8 @@ bindings_denylist.cc.golden
 bindings_denylist.h.golden
 bits.cc.golden
 bits.h.golden
+bits_constants.cc.golden
+bits_constants.h.golden
 byte_and_bytes.cc.golden
 byte_and_bytes.h.golden
 consts.cc.golden

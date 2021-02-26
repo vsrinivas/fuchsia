@@ -4,6 +4,8 @@ bindings_denylist.json.golden
 bindings_denylist.tables.c.golden
 bits.json.golden
 bits.tables.c.golden
+bits_constants.json.golden
+bits_constants.tables.c.golden
 byte_and_bytes.json.golden
 byte_and_bytes.tables.c.golden
 constants.json.golden
