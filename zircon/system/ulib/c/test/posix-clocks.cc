@@ -366,6 +366,17 @@ TEST_F(ReadWriteUtcClockTestCase, SetTime) {
             details2.mono_to_synthetic.reference_offset);
 }
 
+TEST(PosixClockTests, InvalidClockId) {
+  struct timespec ts;
+  ts.tv_sec = 0;
+  ts.tv_nsec = 0;
+  errno = 0;
+  ASSERT_EQ(-1, clock_gettime(0xbad1d, &ts));
+  ASSERT_EQ(errno, EINVAL);
+  ASSERT_EQ(ts.tv_sec, 0);
+  ASSERT_EQ(ts.tv_nsec, 0);
+}
+
 TEST(PosixClockTests, BootTimeIsMonotonicTime) {
   // The test strategy here is limited, as we do not have a straightforward
   // mechanism with which to modify the underlying syscall behavior. We switch
