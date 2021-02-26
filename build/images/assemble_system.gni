@@ -142,7 +142,7 @@ template("assemble_system") {
 
   # For details, see //docs/development/components/component_id_index.md#system-assembly
   component_id_index_config("${image_name}_component_id_index_config") {
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
 
     # collect and merge component ID indicies from the base set.
     deps = base_packages
@@ -215,7 +215,7 @@ template("assemble_system") {
   }
 
   system_image_fuchsia_packages_list("${image_name}_fuchsia_packages") {
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     deps = system_image_deps
   }
 

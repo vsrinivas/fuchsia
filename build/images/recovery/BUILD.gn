@@ -108,8 +108,6 @@ assemble_system("recovery-eng") {
 }
 
 assemble_system("recovery-fdr") {
-  # TODO(fxbug.dev/70733): remove this line.
-  testonly = true
   base_packages = recovery_packages
 
   system_image_deps = recovery_system_image_deps

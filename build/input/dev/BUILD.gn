@@ -15,7 +15,6 @@ group("build_only_deps") {
 }
 
 group("recovery_bootfs_labels") {
-  testonly = true
   deps = dev_recovery_bootfs_labels
 }
 

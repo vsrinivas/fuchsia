@@ -11,7 +11,6 @@ group("bootfs_labels") {
 }
 
 group("recovery_bootfs_labels") {
-  testonly = true
   deps = board_recovery_bootfs_labels
 }
 
