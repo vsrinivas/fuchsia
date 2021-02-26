@@ -179,8 +179,13 @@ class AssocTest : public SimTest {
   // at the end of each test.
   std::list<simulation::FakeAp*> aps_;
 
-  // All of the association responses seen in the environment
+  // All of the association responses seen in the environment.
   std::list<AssocRespInfo> assoc_responses_;
+
+  // All the reason codes of de-authentication frames seen in the environment.
+  std::list<wlan_ieee80211::ReasonCode> deauth_frames_;
+
+  // All the status codes of authentication responses seen in the environment.
   std::list<wlan_ieee80211::StatusCode> auth_resp_status_list_;
 
   // Trigger to start disassociation. If set to true, disassociation is started
@@ -301,6 +306,11 @@ void AssocTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
 
     if (auth_frame->seq_num_ == 2 || auth_frame->seq_num_ == 4)
       auth_resp_status_list_.push_back(auth_frame->status_);
+  }
+
+  if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_DEAUTH) {
+    auto deauth_frame = std::static_pointer_cast<const simulation::SimDeauthFrame>(mgmt_frame);
+    deauth_frames_.push_back(deauth_frame->reason_);
   }
 }
 
@@ -779,7 +789,8 @@ TEST_F(AssocTest, ApIgnoredRequest) {
   EXPECT_EQ(context_.assoc_resp_count, 1U);
 }
 
-// Verify that if an AP refuses an association request we return a failure
+// Verify that if an AP refuses an association request we return a failure, driver will also send a
+// BRCMF_C_DISASSOC to clear AP state each time when rejected.
 TEST_F(AssocTest, ApRejectedRequest) {
   // Create our device instance
   Init();
@@ -802,9 +813,9 @@ TEST_F(AssocTest, ApRejectedRequest) {
   EXPECT_EQ(status, ZX_OK);
   ASSERT_EQ(max_assoc_retries, kMaxAssocRetries);
   // We should have gotten a refusal from the fake AP
-  EXPECT_EQ(auth_resp_status_list_.size(), max_assoc_retries + 1);
-  EXPECT_EQ(auth_resp_status_list_.front(), wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
-  EXPECT_EQ(assoc_responses_.size(), 0U);
+  EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
+  EXPECT_EQ(assoc_responses_.front().status,
+            wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
 
   // Make sure we got our response from the driver
   EXPECT_EQ(context_.assoc_resp_count, 1U);
@@ -1260,16 +1271,16 @@ TEST_F(AssocTest, AssocMaxRetries) {
   EXPECT_EQ(status, ZX_OK);
   ASSERT_EQ(max_assoc_retries, assoc_retries);
   // Should have received as many refusals as the configured # of retries.
-  EXPECT_EQ(auth_resp_status_list_.size(), max_assoc_retries + 1);
-  EXPECT_EQ(auth_resp_status_list_.front(), wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
-  EXPECT_EQ(assoc_responses_.size(), 0U);
+  EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
+  EXPECT_EQ(assoc_responses_.front().status,
+            wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
 
   // Make sure we got our response from the driver
   EXPECT_EQ(context_.assoc_resp_count, 1U);
 }
 
 // Verify that association is retried as per the setting
-TEST_F(AssocTest, AssocMaxRetriesWhenTimedout) {
+TEST_F(AssocTest, AssocMaxRetriesWhenTimedOut) {
   // Create our device instance
   Init();
 
@@ -1322,8 +1333,14 @@ TEST_F(AssocTest, AssocNoRetries) {
   EXPECT_EQ(status, ZX_OK);
   ASSERT_EQ(max_assoc_retries, assoc_retries);
   // We should have gotten a refusal from the fake AP
-  EXPECT_EQ(auth_resp_status_list_.size(), 1U);
-  EXPECT_EQ(auth_resp_status_list_.front(), wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(assoc_responses_.size(), 1U);
+  EXPECT_EQ(assoc_responses_.front().status,
+            wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
+
+  // The AP should have received as many deauths as number of its refusals. These are sent by driver
+  // to clean
+  EXPECT_EQ(deauth_frames_.size(), 1U);
+  EXPECT_EQ(deauth_frames_.front(), wlan_ieee80211::ReasonCode::STA_LEAVING);
 
   // Make sure we got our response from the driver
   EXPECT_EQ(context_.assoc_resp_count, 1U);

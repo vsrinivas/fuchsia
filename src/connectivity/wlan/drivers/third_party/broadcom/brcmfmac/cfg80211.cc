@@ -1825,6 +1825,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
   if (err != ZX_OK) {
     BRCMF_ERR("join failed (%d)", err);
   } else {
+    BRCMF_IFDBG(WLANIF, ndev, "Connect timer started.");
     cfg->connect_timer->Start(BRCMF_CONNECT_TIMER_DUR_MS);
   }
 
@@ -1846,7 +1847,6 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
 
   BRCMF_DBG(TRACE, "Enter");
-
   if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state)) {
     cfg->disconnect_timer->Stop();
     if (cfg->disconnect_mode == BRCMF_DISCONNECT_DEAUTH) {
@@ -1859,7 +1859,6 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
     cfg->signal_report_timer->Stop();
     ndev->stats = {};
   }
-
   BRCMF_DBG(TRACE, "Exit");
 }
 
@@ -2041,6 +2040,7 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
   if (status != ZX_OK) {
     BRCMF_ERR("Failed to disassociate: %s, fw err %s", zx_status_get_string(status),
               brcmf_fil_get_errstr(fw_err));
+    brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state);
     cfg->disconnect_timer->Stop();
   }
 
@@ -3163,8 +3163,8 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
   if (!ssid.empty()) {
     BRCMF_IFDBG(WLANIF, ndev,
                 "Join request from SME. ssid: " SSID_FMT_STR ", bssid: " MAC_FMT_STR
-                ", channel: %u", SSID_FMT_ARGS(ssid), MAC_FMT_ARGS(sme_bss.bssid),
-                sme_bss.chan.primary);
+                ", channel: %u",
+                SSID_FMT_ARGS(ssid), MAC_FMT_ARGS(sme_bss.bssid), sme_bss.chan.primary);
     memcpy(&ifp->bss, &sme_bss, sizeof(ifp->bss));
     if (ifp->bss.ies_bytes_count > WLAN_MSDU_MAX_LEN) {
       ifp->bss.ies_bytes_count = WLAN_MSDU_MAX_LEN;
@@ -4815,6 +4815,26 @@ static void brcmf_log_conn_status(brcmf_if* ifp, brcmf_connect_status_t connect_
   }
 }
 
+// This function issues BRCMF_C_DISASSOC command to firmware for cleaning firmware and AP connection
+// states, firmware will send out deauth or disassoc frame to the AP based on current connection
+// state.
+static zx_status_t brcmf_clear_firmware_connection_state(brcmf_if* ifp) {
+  zx_status_t status = ZX_OK;
+  bcme_status_t fw_err = BCME_OK;
+
+  struct brcmf_scb_val_le scbval;
+  memcpy(&scbval.ea, ifp->bss.bssid, ETH_ALEN);
+  scbval.val = WLANIF_REASON_CODE_STA_LEAVING;
+  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state);
+  status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_DISASSOC, &scbval, sizeof(scbval), &fw_err);
+  if (status != ZX_OK) {
+    BRCMF_ERR("Failed to issue BRCMF_C_DISASSOC to firmware: %s, fw err %s",
+              zx_status_get_string(status), brcmf_fil_get_errstr(fw_err));
+  }
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state);
+  return status;
+}
+
 static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t connect_status) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   struct net_device* ndev = ifp->ndev;
@@ -4867,7 +4887,15 @@ static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t 
         brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_SUCCESS);
         break;
       }
-
+      case BRCMF_CONNECT_STATUS_ASSOC_REQ_FAILED: {
+        BRCMF_INFO("Association is rejected, need to reset firmware state.");
+        zx_status_t err = brcmf_clear_firmware_connection_state(ifp);
+        if (err != ZX_OK) {
+          BRCMF_ERR("Failed to clear firmware connection state.");
+        }
+        brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+        break;
+      }
       default:
         BRCMF_WARN("Unsuccessful connect status: %s", brcmf_get_connect_status_str(connect_status));
         brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
@@ -4883,7 +4911,15 @@ static void brcmf_connect_timeout_worker(WorkItem* work) {
   struct brcmf_cfg80211_info* cfg =
       containerof(work, struct brcmf_cfg80211_info, connect_timeout_work);
   struct brcmf_if* ifp = cfg_to_if(cfg);
-
+  BRCMF_WARN(
+      "Connection timeout, sending BRCMF_C_DISASSOC to firmware for state clean-up, and sending "
+      "assoc result to SME.");
+  zx_status_t err = brcmf_clear_firmware_connection_state(ifp);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Failed to clear firmware connection state.");
+  }
+  // In case the timeout happens in SAE process.
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
   brcmf_bss_connect_done(ifp, BRCMF_CONNECT_STATUS_CONNECTING_TIMEOUT);
 }
 
@@ -5097,7 +5133,6 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
              brcmf_get_client_connect_state_string(ifp), ndev->last_known_rssi_dbm,
              ndev->last_known_snr_db);
   BRCMF_INFO_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
-
   brcmf_bss_connect_done(ifp, connect_status);
   brcmf_disconnect_done(cfg);
   brcmf_link_down(ifp->vif, e->reason, e->event_code);
@@ -5140,6 +5175,7 @@ static zx_status_t brcmf_process_link_event(struct brcmf_if* ifp, const struct b
       brcmf_notify_channel_switch(ifp, e, data);
     }
   } else {
+    BRCMF_DBG(CONN, "Client mode link event.");
     if (e->status == BRCMF_E_STATUS_SUCCESS && (e->flags & BRCMF_EVENT_MSG_LINK)) {
       return brcmf_indicate_client_connect(ifp, e, data);
     }

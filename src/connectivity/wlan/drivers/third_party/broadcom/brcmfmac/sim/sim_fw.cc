@@ -1505,18 +1505,24 @@ void SimFirmware::SetAssocState(AssocState::AssocStateName state) { assoc_state_
 
 // Disassociate the Local Client (request coming in from the driver)
 void SimFirmware::DisassocLocalClient(wlan_ieee80211::ReasonCode reason) {
+  common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
+
   if (assoc_state_.state == AssocState::ASSOCIATED) {
     common::MacAddr bssid(assoc_state_.opts->bssid);
-    common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
-
     // Transmit the disassoc req and since there is no response for it, indicate disassoc done to
     // driver now
     simulation::SimDisassocReqFrame disassoc_req_frame(srcAddr, bssid, reason);
     hw_.Tx(disassoc_req_frame);
     SetStateToDisassociated(reason, true);
+  } else if (auth_state_.state == AuthState::AUTHENTICATED) {
+    common::MacAddr bssid(assoc_state_.opts->bssid);
+    // Transmit the deauth frame clear AP state.
+    simulation::SimDeauthFrame deauth_req_frame(srcAddr, bssid, reason);
+    hw_.Tx(deauth_req_frame);
   } else {
     SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_FAIL, kClientIfidx);
   }
+
   AuthClearContext();
   AssocClearContext();
 }
