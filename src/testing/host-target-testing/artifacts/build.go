@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 
@@ -122,6 +123,7 @@ type ArtifactsBuild struct {
 	packages           *packages.Repository
 	buildImageDir      string
 	sshPublicKey       ssh.PublicKey
+	srcs               map[string]struct{}
 }
 
 func (b *ArtifactsBuild) GetBootserver(ctx context.Context) (string, error) {
@@ -143,21 +145,41 @@ func (b *ArtifactsBuild) GetPackageRepository(ctx context.Context) (*packages.Re
 		return b.packages, nil
 	}
 
-	artifact := "packages"
-	packagesDir := filepath.Join(b.dir, b.id, artifact)
-	if err := b.archive.download(ctx, b.id, false, packagesDir, []string{artifact}); err != nil {
-		logger.Infof(ctx, "failed to fetch artifacts for build %s. Using archives.", b.id)
+	packages, err := b.getExpandedPackageRepository(ctx)
+	if err != nil {
+		logger.Infof(ctx, "failed to fetch artifacts for build %s. Falling back to archives: %v", b.id, err)
+	}
+
+	if packages == nil {
 		b.packages, err = b.backupArchiveBuild.GetPackageRepository(ctx)
 		return b.packages, err
 	}
+
+	return packages, nil
+}
+
+// getExpandedPackageRepository tries to download a package when all the
+// artifacts are stored in individual files, which is how modern builds publish
+// their build artifacts, rather than the old-style packages.tar.gz file, which
+// is no longer produced, but might be encountered when testing if an old build
+// can OTA to the latest build.
+func (b *ArtifactsBuild) getExpandedPackageRepository(ctx context.Context) (*packages.Repository, error) {
+	// Make sure the blob contains the `packages/all_blobs.json`. If not,
+	// we need to fall back to the old `packages.tar.gz` file.
+	if _, ok := b.srcs["packages/all_blobs.json"]; !ok {
+		logger.Infof(ctx, "blobs manifest doesn't exist for build %s yet. Falling back to archives.", b.id)
+		return nil, nil
+	}
+
+	packagesDir := filepath.Join(b.dir, b.id, "packages")
+	if err := b.archive.download(ctx, b.id, false, packagesDir, []string{"packages/"}); err != nil {
+		logger.Errorf(ctx, "failed to download packages for build %s to %s: %v", packagesDir, b.id, err)
+		return nil, fmt.Errorf("failed to download packages for build %s to %s: %w", packagesDir, b.id, err)
+	}
+
 	blobsManifest := filepath.Join(packagesDir, "all_blobs.json")
 	blobsData, err := ioutil.ReadFile(blobsManifest)
 	if err != nil {
-		if os.IsNotExist(err) {
-			logger.Infof(ctx, "blobs manifest doesn't exist for build %s yet. Using archives.", b.id)
-			b.packages, err = b.backupArchiveBuild.GetPackageRepository(ctx)
-			return b.packages, err
-		}
 		return nil, fmt.Errorf("failed to read blobs manifest: %w", err)
 	}
 
@@ -167,8 +189,8 @@ func (b *ArtifactsBuild) GetPackageRepository(ctx context.Context) (*packages.Re
 		return nil, fmt.Errorf("failed to unmarshal blobs JSON: %w", err)
 	}
 	var blobsList []string
-	for _, b := range blobs {
-		blobsList = append(blobsList, filepath.Join("blobs", b.Merkle))
+	for _, blob := range blobs {
+		blobsList = append(blobsList, filepath.Join("blobs", blob.Merkle))
 	}
 	logger.Infof(ctx, "all_blobs contains %d blobs", len(blobsList))
 
@@ -194,17 +216,42 @@ func (b *ArtifactsBuild) GetBuildImages(ctx context.Context) (string, error) {
 	if b.buildImageDir != "" {
 		return b.buildImageDir, nil
 	}
-	artifact := "images"
-	imageDir := filepath.Join(b.dir, b.id, artifact)
-	if err := b.archive.download(ctx, b.id, false, imageDir, []string{artifact}); err != nil {
-		logger.Infof(ctx, "failed to fetch artifacts for build %s. Using archives.", b.id)
+
+	hasBuildImages, buildImagesDir, err := b.getExpandedBuildImages(ctx)
+	if !hasBuildImages || err != nil {
+		if err != nil {
+			logger.Infof(ctx, "failed to fetch artifacts for build %s. Trying archives: %v", b.id, err)
+		}
 		b.buildImageDir, err = b.backupArchiveBuild.GetBuildArchive(ctx)
 		return b.buildImageDir, err
 	}
 
-	b.buildImageDir = imageDir
+	return buildImagesDir, err
+}
 
-	return b.buildImageDir, nil
+func (b *ArtifactsBuild) getExpandedBuildImages(ctx context.Context) (bool, string, error) {
+	// Check if the build produced any images/ files. If not, we need to
+	// fall back on the old build-archive.tgz file.
+	hasImages := false
+	for src := range b.srcs {
+		if strings.HasPrefix(src, "images/") {
+			hasImages = true
+			break
+		}
+	}
+
+	if !hasImages {
+		return false, "", nil
+	}
+
+	imageDir := filepath.Join(b.dir, b.id, "images")
+
+	if err := b.archive.download(ctx, b.id, false, imageDir, []string{"images/"}); err != nil {
+		return false, "", err
+	}
+
+	b.buildImageDir = imageDir
+	return true, b.buildImageDir, nil
 }
 
 func (b *ArtifactsBuild) GetPaverDir(ctx context.Context) (string, error) {

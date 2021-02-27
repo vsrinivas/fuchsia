@@ -5,6 +5,8 @@
 package artifacts
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -53,7 +55,40 @@ func (a *Archive) GetBuildByID(
 	publicKey ssh.PublicKey,
 ) (*ArtifactsBuild, error) {
 	// Make sure the build exists.
-	args := []string{"ls", "-build", id}
+	srcs, err := a.list(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	srcsMap := make(map[string]struct{})
+	for _, src := range srcs {
+		srcsMap[src] = struct{}{}
+	}
+
+	// TODO(fxbug.dev/60451): While we are still looking up artifacts from builds
+	// that have expired artifacts or do not include all_blobs.json, we must
+	// retrieve the archives instead. Remove when we no longer need to fetch from
+	// old builds that don't have the proper artifacts present in the artifacts
+	// bucket.
+	backupArchiveBuild := &ArchiveBuild{
+		id:      id,
+		archive: a,
+		dir:     dir,
+	}
+
+	return &ArtifactsBuild{
+		backupArchiveBuild: backupArchiveBuild,
+		id:                 id,
+		archive:            a,
+		dir:                dir,
+		sshPublicKey:       publicKey,
+		srcs:               srcsMap,
+	}, nil
+}
+
+// list artifacts that make up a build id `buildID`.
+func (a *Archive) list(ctx context.Context, buildID string) ([]string, error) {
+	args := []string{"ls", "-build", buildID}
 	stdout, stderr, err := util.RunCommand(ctx, a.artifactsPath, args...)
 	if err != nil {
 		if len(stderr) != 0 {
@@ -63,14 +98,13 @@ func (a *Archive) GetBuildByID(
 		return nil, fmt.Errorf("artifacts failed: %w", err)
 	}
 
-	// TODO(fxbug.dev/60451): While we are still looking up artifacts from builds
-	// that have expired artifacts or do not include all_blobs.json, we must
-	// retrieve the archives instead. Remove when we no longer need to fetch from
-	// old builds that don't have the proper artifacts present in the artifacts
-	// bucket.
-	backupArchiveBuild := &ArchiveBuild{id: id, archive: a, dir: dir}
+	var lines []string
+	sc := bufio.NewScanner(bytes.NewReader(stdout))
+	for sc.Scan() {
+		lines = append(lines, sc.Text())
+	}
 
-	return &ArtifactsBuild{backupArchiveBuild: backupArchiveBuild, id: id, archive: a, dir: dir, sshPublicKey: publicKey}, nil
+	return lines, nil
 }
 
 // Download artifacts from the build id `buildID` and write them to `dst`.
@@ -83,6 +117,10 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 		return err
 	}
 	defer os.RemoveAll(tmpDir)
+
+	// Filter out any duplicate sources.
+	srcs = removeDuplicates(srcs)
+
 	var src string
 	var srcsFile string
 	if len(srcs) > 1 {
@@ -145,9 +183,13 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 			args = append(args, "-srcs-file", srcsFile)
 		}
 
-		_, stderr, err := util.RunCommand(ctx, a.artifactsPath, args...)
+		stdout, stderr, err := util.RunCommand(ctx, a.artifactsPath, args...)
 		if err != nil {
+			if len(stdout) != 0 {
+				logger.Infof(ctx, "artifacts stdout:\n%s", stdout)
+			}
 			if len(stderr) != 0 {
+				logger.Infof(ctx, "artifacts stderr:\n%s", stderr)
 				return fmt.Errorf("artifacts failed: %w: %s", err, string(stderr))
 			}
 			return fmt.Errorf("artifacts failed: %w", err)
@@ -178,4 +220,17 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 			return err
 		})
 	}, nil)
+}
+
+// removeDuplicates removes any duplicated items in the list.
+func removeDuplicates(srcs []string) []string {
+	var srcList []string
+	seen := make(map[string]struct{})
+	for _, src := range srcs {
+		if _, ok := seen[src]; !ok {
+			srcList = append(srcList, src)
+			seen[src] = struct{}{}
+		}
+	}
+	return srcList
 }
