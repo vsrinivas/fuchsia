@@ -32,7 +32,7 @@ TEST(InternalTypeTraitsTest, OccurrencesOfReturnsNumberOfTimesTypeIsPresent) {
 }
 
 TEST(InternalTypeTraitsTest, RemoveCRefDecaysToType) {
-  using cpp17::internal::remove_cvref_t;
+  using cpp20::remove_cvref_t;
   static_assert(std::is_same<int, remove_cvref_t<const volatile int&>>::value, "");
 }
 

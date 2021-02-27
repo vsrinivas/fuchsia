@@ -195,7 +195,7 @@ struct check_valid_option<Index, T, Ti, false,
 // Checks that remove_cvref_t<T> is bool when Ti is cv bool.
 template <size_t Index, typename T, typename Ti>
 struct check_valid_option<Index, T, Ti, true,
-                          std::enable_if_t<std::is_same<bool, remove_cvref_t<T>>::value>> {
+                          std::enable_if_t<std::is_same<bool, ::cpp20::remove_cvref_t<T>>::value>> {
   static std::integral_constant<size_t, Index> check(Ti);
 };
 

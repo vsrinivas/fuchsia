@@ -52,13 +52,9 @@ struct occurences_of<T, First, Rest...>
 template <typename T, typename... Ts>
 constexpr size_t occurences_of_v = occurences_of<T, Ts...>::value;
 
-// Utility to remove const, volatile, and reference qualifiers.
-template <typename T>
-using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
-
 // Evaluates to truth-like when type T matches type U with cv-reference removed.
 template <typename T, typename U>
-using not_same_type = negation<std::is_same<T, remove_cvref_t<U>>>;
+using not_same_type = negation<std::is_same<T, ::cpp20::remove_cvref_t<U>>>;
 
 // Concept helper for constructors.
 template <typename... Conditions>
@@ -91,24 +87,15 @@ template <typename Op, typename... Conditions>
 using enable_relop_t =
     std::enable_if_t<(std::is_convertible<Op, bool>::value && conjunction_v<Conditions...>), bool>;
 
-template <typename T>
-struct identity {
-  using type = T;
-};
-
-// Evaluates to true when T is an unbounded array.
-template <typename T>
-struct is_unbounded_array : conjunction<std::is_array<T>, negation<std::extent<T>>> {};
-
 // Returns true when T is a complete type or an unbounded array.
 template <typename T, size_t = sizeof(T)>
-constexpr bool is_complete_or_unbounded_array(identity<T>) {
+constexpr bool is_complete_or_unbounded_array(::cpp20::type_identity<T>) {
   return true;
 }
 template <typename Identity, typename T = typename Identity::type>
 constexpr bool is_complete_or_unbounded_array(Identity) {
   return disjunction<std::is_reference<T>, std::is_function<T>, std::is_void<T>,
-                     is_unbounded_array<T>>::value;
+                     ::cpp20::is_unbounded_array<T>>::value;
 }
 
 // Using swap for ADL. This directive is contained within the cpp17::internal
@@ -120,26 +107,26 @@ using std::swap;
 // Evaluates to true when T is swappable.
 template <typename T, typename = void>
 struct is_swappable : std::false_type {
-  static_assert(is_complete_or_unbounded_array(identity<T>{}),
+  static_assert(is_complete_or_unbounded_array(::cpp20::type_identity<T>{}),
                 "T must be a complete type or an unbounded array!");
 };
 template <typename T>
 struct is_swappable<T, void_t<decltype(swap(std::declval<T&>(), std::declval<T&>()))>>
     : std::true_type {
-  static_assert(is_complete_or_unbounded_array(identity<T>{}),
+  static_assert(is_complete_or_unbounded_array(::cpp20::type_identity<T>{}),
                 "T must be a complete type or an unbounded array!");
 };
 
 // Evaluates to true when T is nothrow swappable.
 template <typename T, typename = void>
 struct is_nothrow_swappable : std::false_type {
-  static_assert(is_complete_or_unbounded_array(identity<T>{}),
+  static_assert(is_complete_or_unbounded_array(::cpp20::type_identity<T>{}),
                 "T must be a complete type or an unbounded array!");
 };
 template <typename T>
 struct is_nothrow_swappable<T, void_t<decltype(swap(std::declval<T&>(), std::declval<T&>()))>>
     : std::integral_constant<bool, noexcept(swap(std::declval<T&>(), std::declval<T&>()))> {
-  static_assert(is_complete_or_unbounded_array(identity<T>{}),
+  static_assert(is_complete_or_unbounded_array(::cpp20::type_identity<T>{}),
                 "T must be a complete type or an unbounded array!");
 };
 

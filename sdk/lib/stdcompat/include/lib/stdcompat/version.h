@@ -46,6 +46,18 @@
 #define __cpp_lib_byte 201603L
 #endif
 
+#if !defined(__cpp_lib_bool_constant) && __cplusplus >= 201505L
+#define __cpp_lib_bool_constant 201505L
+#endif
+
+#if !defined(__cpp_lib_type_trait_variable_templates) && __cplusplus >= 201510L
+#define __cpp_lib_type_trait_variable_templates 201510L
+#endif
+
+#if !defined(__cpp_lib_is_aggregate) && __cplusplus >= 201703L
+#define __cpp_lib_is_aggregate 201703L
+#endif
+
 #endif  // __has_include(<version>) && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_VERSION_H_
