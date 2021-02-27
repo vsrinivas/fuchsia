@@ -53,20 +53,51 @@ def move_if_different(src: str, dest: str, verbose: bool = False):
 
 
 @dataclasses.dataclass
+class TempFileTransform(object):
+    """Represents a file name transform.
+
+    temp_dir: Write temporary files in here.
+      If blank, paths are relative to working directory.
+    suffix: Add this suffix to temporary files, e.g. ".tmp".
+      At least temp_dir or suffix must be non-blank.
+    """
+    temp_dir: str = ""
+    suffix: str = ""
+
+    @property
+    def valid(self):
+        return self.temp_dir or self.suffix
+
+    def transform(self, path: str) -> str:
+        return os.path.join(self.temp_dir, path + self.suffix)
+
+
+@dataclasses.dataclass
 class Action(object):
     """Represents a set of parameters of a single build action."""
     command: Sequence[str] = dataclasses.field(default_factory=list)
     outputs: FrozenSet[str] = dataclasses.field(default_factory=set)
 
-    def run_cached(self, temp_suffix: str, verbose: bool = False) -> int:
-        renamed_outputs = set()
+    def run_cached(
+            self,
+            tempfile_transform: TempFileTransform,
+            verbose: bool = False) -> int:
+        """Runs a modified command and conditionally moves outputs in-place.
+
+        Args:
+          tempfile_transform: describes transformation to temporary file name.
+          verbose: If True, print substituted command.
+        """
+        # keys: original file names, values: transformed temporary file names
+        renamed_outputs = {}
 
         def replace_arg(arg):
             # TODO(fangism): lex a single arg into tokens, substitute, re-assemble
             #   This would support outputs like "--flag=out1,out2..."
             if arg in self.outputs:
-                renamed_outputs.add(arg)
-                return arg + temp_suffix
+                new_arg = tempfile_transform.transform(arg)
+                renamed_outputs[arg] = new_arg
+                return new_arg
             else:
                 return arg
 
@@ -77,6 +108,11 @@ class Action(object):
             cmd_str = " ".join(substituted_command)
             print(f"=== substituted command: {cmd_str}")
 
+        # mkdir when needed.
+        if tempfile_transform.temp_dir:
+            for new_arg in renamed_outputs.values():
+                os.makedirs(os.path.dirname(new_arg))
+
         # Run the modified command.
         retval = subprocess.call(substituted_command)
 
@@ -86,15 +122,14 @@ class Action(object):
 
         # Otherwise command succeeded, so conditionally move outputs in-place.
         # TODO(fangism): This loop could be parallelized.
-        for out in renamed_outputs:
-            temp_out = out + temp_suffix
-            move_if_different(src=temp_out, dest=out, verbose=verbose)
+        for orig_out, temp_out in renamed_outputs.items():
+            move_if_different(src=temp_out, dest=orig_out, verbose=verbose)
 
         if verbose:
-            unrenamed_outputs = self.outputs - renamed_outputs
+            unrenamed_outputs = self.outputs - set(renamed_outputs.keys())
             if unrenamed_outputs:
                 # Having un-renamed outputs is not an error, but rather an indicator
-                # of a potentially missed opportunity to cache.
+                # of a potentially missed opportunity to cache unchanged outputs.
                 unrenamed_formatted = " ".join(unrenamed_outputs)
                 print(f"  === Un-renamed outputs: {unrenamed_formatted}")
 
@@ -119,8 +154,13 @@ def main_arg_parser() -> argparse.ArgumentParser:
         default=".tmp",
         help="Suffix to use for temporary outputs",
     )
-    # TODO(fangism): support writing temporary files to an entirely different
-    # directory, to leave the original output directory clean.
+    parser.add_argument(
+        "--temp-dir",
+        type=str,
+        default="",
+        help=
+        "Temporary directory for writing, can be relative to working directory or absolute.",
+    )
     parser.add_argument(
         "--verbose",
         action="store_true",
@@ -143,6 +183,14 @@ def main_arg_parser() -> argparse.ArgumentParser:
 def main():
     parser = main_arg_parser()
     args = parser.parse_args()
+
+    tempfile_transform = TempFileTransform(
+        temp_dir=args.temp_dir,
+        suffix=args.temp_suffix,
+    )
+    if not tempfile_transform.valid:
+        raise ValueError(
+            "Need either --temp-dir or --temp-suffix, but both are missing.")
 
     wrap = args.enable
     # Decided whether or not to wrap the action script.
@@ -170,7 +218,8 @@ def main():
         command=args.command,
         outputs=outputs,
     )
-    return action.run_cached(temp_suffix=args.temp_suffix, verbose=args.verbose)
+    return action.run_cached(
+        tempfile_transform=tempfile_transform, verbose=args.verbose)
 
 
 if __name__ == "__main__":
