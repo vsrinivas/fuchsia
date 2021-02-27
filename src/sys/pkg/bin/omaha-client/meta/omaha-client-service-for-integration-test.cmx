@@ -11,6 +11,7 @@
             "root-ssl-certificates"
         ],
         "services": [
+            "fuchsia.feedback.CrashReporter",
             "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.update.CommitStatusProvider",
             "fuchsia.update.installer.Installer"

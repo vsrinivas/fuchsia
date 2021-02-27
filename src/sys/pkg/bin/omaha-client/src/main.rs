@@ -155,6 +155,7 @@ async fn main_inner() -> Result<(), Error> {
         platform_metrics_node,
     );
 
+    futures.push(observer.start_handling_crash_reports());
     futures.push(
         async move {
             futures::pin_mut!(state_machine);
