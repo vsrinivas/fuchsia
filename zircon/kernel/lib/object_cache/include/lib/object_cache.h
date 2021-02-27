@@ -227,7 +227,7 @@ class ObjectCache<T, Option::Single, Allocator> {
   template <typename... Args>
   EnableIfConstructible<zx::status<PtrType>, Args...> Allocate(Args&&... args) TA_EXCL(lock_) {
     LocalTraceDuration<Basic> trace{"ObjectCache::Allocate"_stringref};
-    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disable;
+    AutoPreemptDisabler preempt_disable;
 
     while (true) {
       zx::status<SlabPtr> slab = GetSlab();
@@ -267,7 +267,7 @@ class ObjectCache<T, Option::Single, Allocator> {
   // allocated from.
   static void Delete(void* pointer) {
     LocalTraceDuration<Basic> trace{"ObjectCache::Release"_stringref};
-    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disable;
+    AutoPreemptDisabler preempt_disable;
     SlabPtr slab = Slab::FromAllocatedPointer(pointer);
     Entry* entry = Entry::ToListNode(pointer);
     slab->Free(entry);
@@ -625,7 +625,7 @@ class ObjectCache<T, Option::PerCpu, Allocator> {
   EnableIfConstructible<zx::status<PtrType>, Args...> Allocate(Args&&... args) {
     DEBUG_ASSERT(cpu_caches_ != nullptr);
 
-    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disable;
+    AutoPreemptDisabler preempt_disable;
     const cpu_num_t current_cpu = arch_curr_cpu_num();
     DEBUG_ASSERT(current_cpu < processor_count_);
     return cpu_caches_[current_cpu]->Allocate(ktl::forward<Args>(args)...);

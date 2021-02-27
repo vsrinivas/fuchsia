@@ -394,7 +394,7 @@ bool set_migrate_ready_threads_test() {
   });
 
   {
-    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disabled_guard;
+    AutoPreemptDisabler preempt_disabled_guard;
     const auto context_switches_before = get_local_percpu()->stats.context_switches;
 
     // Resume the workers with preemption disabled. The workers should stack up

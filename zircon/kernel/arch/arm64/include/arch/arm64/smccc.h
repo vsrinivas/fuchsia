@@ -34,7 +34,7 @@ inline arm_smccc_result_t arm_smccc_smc(uint32_t w0,               // Function I
   extern arm_smccc_result_t arm_smccc_smc_internal(uint32_t w0, uint64_t x1, uint64_t x2,
                                                    uint64_t x3, uint64_t x4, uint64_t x5,
                                                    uint64_t x6, uint32_t w7);
-  AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> disabler;
+  AutoPreemptDisabler disabler;
   return arm_smccc_smc_internal(w0, x1, x2, x3, x4, x5, x6, w7);
 }
 
@@ -47,7 +47,7 @@ inline arm_smccc_result_t arm_smccc_hvc(uint32_t w0,               // Function I
   extern arm_smccc_result_t arm_smccc_hvc_internal(uint32_t w0, uint64_t x1, uint64_t x2,
                                                    uint64_t x3, uint64_t x4, uint64_t x5,
                                                    uint64_t x6, uint32_t w7);
-  AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> disabler;
+  AutoPreemptDisabler disabler;
   return arm_smccc_hvc_internal(w0, x1, x2, x3, x4, x5, x6, w7);
 }
 

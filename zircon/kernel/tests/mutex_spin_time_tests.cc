@@ -69,7 +69,7 @@ bool mutex_spin_time_test(void) {
   auto thunk = [](void* ctx) -> int {
     auto& args = *(static_cast<Args*>(ctx));
 
-    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler;
+    AutoPreemptDisabler ap_disabler;
     args.interlock.store(true);
     while (args.interlock.load() == true) {
       arch::Yield();
@@ -98,7 +98,7 @@ bool mutex_spin_time_test(void) {
     // Hold onto the mutex while we create a thread and time how long it takes for the mutex to
     // become blocked.
     {
-      AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler;
+      AutoPreemptDisabler ap_disabler;
       Guard<Mutex> guard{&args.the_mutex};
       test_thread->Resume();
 

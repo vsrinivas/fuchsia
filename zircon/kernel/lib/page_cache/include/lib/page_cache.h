@@ -109,7 +109,7 @@ class PageCache {
     LocalTraceDuration trace{"PageCache::Allocate"_stringref};
     DEBUG_ASSERT(per_cpu_caches_ != nullptr);
 
-    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disable;
+    AutoPreemptDisabler preempt_disable;
     const cpu_num_t current_cpu = arch_curr_cpu_num();
     return Allocate(per_cpu_caches_[current_cpu], page_count);
   }
@@ -124,7 +124,7 @@ class PageCache {
       // Note that preempt_disable is destroyed before page_list, intentionally
       // resulting in excess pages being freed outside of this local preemption
       // disablement.
-      AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disable;
+      AutoPreemptDisabler preempt_disable;
       const cpu_num_t current_cpu = arch_curr_cpu_num();
       Free(per_cpu_caches_[current_cpu], &page_list);
     }

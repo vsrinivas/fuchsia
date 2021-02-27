@@ -45,7 +45,7 @@ bool CheckForOverrun(zx_duration_t threshold) {
 zx_status_t arch_smc_call(const zx_smc_parameters_t* params, zx_smc_result_t* result) {
   arm_smccc_result_t arm_result;
   {
-    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> disabler;
+    AutoPreemptDisabler disabler;
     const uint32_t client_and_secure_os_id = static_cast<uint32_t>(params->secure_os_id) << 16 |
                                              static_cast<uint32_t>(params->client_id);
 

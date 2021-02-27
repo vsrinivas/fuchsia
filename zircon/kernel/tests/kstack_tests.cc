@@ -73,7 +73,7 @@ static int waiter_thread(void* arg) {
   volatile uint8_t buffer[kSize] = {};
 
   context* const deferred = reinterpret_cast<context*>(arg);
-  AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disable;
+  AutoPreemptDisabler preempt_disable;
   // Lock our thread to the current CPU.
   Thread::Current::Get()->SetCpuAffinity(cpu_num_to_mask(arch_curr_cpu_num()));
   deferred->cpu_to_wake = arch_curr_cpu_num();

@@ -85,7 +85,7 @@ static bool test_dpc_requeue() {
   // work stealing can move the test thread to another CPU while the DPC worker
   // executes, resulting in a race between the Dpc destructor in the test thread
   // and the DPC worker.
-  AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disable;
+  AutoPreemptDisabler preempt_disable;
 
   ktl::atomic<uint64_t> actual_count = 0;
   Dpc dpc_increment([](Dpc* d) { d->arg<ktl::atomic<uint64_t>>()->fetch_add(1); }, &actual_count);

@@ -335,7 +335,7 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
     // operating at the very end of our slice, it is best to disable preemption
     // until we manage to join the wait queue, or abort because of state
     // validation issues.
-    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disabler;
+    AutoPreemptDisabler preempt_disabler;
     Guard<Mutex> guard{&futex_ref->lock_};
 
     // Sanity check, bookkeeping should not indicate that we are blocked on
@@ -495,7 +495,7 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const zx_futex_t> value_ptr, uin
   // lock and see if there are any actual waiters to wake up.
   ResetBlockingFutexIdState wake_op;
   {
-    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disabler;
+    AutoPreemptDisabler preempt_disabler;
     Guard<Mutex> guard{&futex_ref->lock_};
 
     // Now, enter the thread lock and actually wake up the threads.
@@ -625,7 +625,7 @@ zx_status_t FutexContext::FutexRequeueInternal(
   ResetBlockingFutexIdState wake_op;
   SetBlockingFutexIdState requeue_op(requeue_id);
   {
-    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disabler;
+    AutoPreemptDisabler preempt_disabler;
     GuardMultiple<2, Mutex> futex_guards{&wake_futex_ref->lock_, &requeue_futex_ref->lock_};
 
     // Validate the futex storage state.

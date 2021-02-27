@@ -157,7 +157,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
   // we disable preemption and take care to not call any functions that might
   // block or otherwise enter the scheduler.
   {
-    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disabler;
+    AutoPreemptDisabler preempt_disabler;
 
     {
       AutoSpinLock guard(&lock_);
