@@ -1,0 +1,250 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+import("//build/test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
+static_library("cpp") {
+  friend = [ ":*" ]
+
+  public = [
+    "debug.h",
+    "locking.h",
+    "vfs.h",
+    "vfs_types.h",
+    "vnode.h",
+  ]
+
+  # Uncomment to enable some debug log messages
+  # defines = [ "FS_TRACE_DEBUG_ENABLED" ]
+
+  sources = [
+    "debug.cc",
+    "vfs.cc",
+    "vnode.cc",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zircon-internal",
+  ]
+
+  if (is_fuchsia) {
+    public += [
+      "fidl_transaction.h",
+      "file_connection.h",
+      "inspectable.h",
+      "lazy_dir.h",
+      "managed_vfs.h",
+      "mount_channel.h",
+      "paged_vfs.h",
+      "paged_vnode.h",
+      "pager_thread_pool.h",
+      "pseudo_dir.h",
+      "pseudo_file.h",
+      "queue.h",
+      "ref_counted.h",
+      "remote_container.h",
+      "remote_dir.h",
+      "remote_file.h",
+      "service.h",
+      "synchronous_vfs.h",
+      "ticker.h",
+      "trace.h",
+      "tracked_remote_dir.h",
+      "vmo_file.h",
+      "watcher.h",
+    ]
+    sources += [
+      "connection.cc",
+      "connection.h",
+      "directory_connection.cc",
+      "directory_connection.h",
+      "fidl_transaction.cc",
+      "fidl_transaction.h",
+      "file_connection.cc",
+      "file_connection.h",
+      "lazy_dir.cc",
+      "managed_vfs.cc",
+      "mount.cc",
+      "mount_channel.cc",
+      "node_connection.cc",
+      "node_connection.h",
+      "paged_vfs.cc",
+      "paged_vnode.cc",
+      "pager_thread_pool.cc",
+      "pseudo_dir.cc",
+      "pseudo_file.cc",
+      "remote_container.cc",
+      "remote_dir.cc",
+      "remote_file.cc",
+      "remote_file_connection.cc",
+      "remote_file_connection.h",
+      "service.cc",
+      "stream_file_connection.cc",
+      "stream_file_connection.h",
+      "synchronous_vfs.cc",
+      "tracked_remote_dir.cc",
+      "unmount.cc",
+      "vfs_types.cc",
+      "vmo_file.cc",
+      "watcher.cc",
+    ]
+    public_deps += [
+      # <fs/vnode.h> has #include <fuchsia/io/llcpp/fidl.h>.
+      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+      "//zircon/public/lib/async",
+
+      # <fs/tracked_remote_dir.h> has #include <lib/async/cpp/wait.h>.
+      "//zircon/public/lib/async-cpp",
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/zx",
+
+      # <fs/trace.h> has #include <lib/trace/event.h>.
+      "//zircon/public/lib/zxc",
+      "//zircon/system/ulib/trace",
+    ]
+    deps += [
+      "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_c",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+      "//sdk/fidl/fuchsia.mem:fuchsia.mem_llcpp",
+      "//sdk/lib/fdio",
+      "//zircon/public/lib/async",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/fidl",
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/sync",
+      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/fzl",
+      "//zircon/system/ulib/trace",
+    ]
+  }
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+source_set("test_support") {
+  public = [ "dir_test_util.h" ]
+  public_deps = [ ":cpp" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fs-connection-test",
+    ":fs-connection-test-pkg",
+    ":fs-fuzzers",
+    ":fs-vnode-test",
+    ":fs-vnode-test-pkg",
+    "journal:tests",
+    "metrics:tests",
+    "transaction:tests",
+  ]
+}
+
+test("fs-vnode-test") {
+  output_name = "fs-vnode-test"
+  sources = [
+    "lazy_dir_tests.cc",
+    "pseudo_dir_tests.cc",
+    "pseudo_file_tests.cc",
+    "remote_dir_tests.cc",
+    "remote_file_tests.cc",
+    "service_tests.cc",
+    "teardown_tests.cc",
+    "tracked_remote_dir_tests.cc",
+    "transaction_counting_tests.cc",
+    "vfs_tests.cc",
+    "vfs_types_tests.cc",
+    "vmo_file_tests.cc",
+    "vnode_contract_tests.cc",
+  ]
+  deps = [
+    ":test_support",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/async-testing",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-engine",
+  ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+test("fs-connection-test") {
+  output_name = "fs-connection-test"
+  sources = [
+    "connection_contract_tests.cc",
+    "connection_integration_tests.cc",
+    "connection_rights_tests.cc",
+    "fidl_transaction_tests.cc",
+    "paging_test.cc",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fs",
+  ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuzzer("vmo_file-fuzzer") {
+  sources = [ "vmo_file-fuzzer.cc" ]
+  deps = [ "//zircon/system/ulib/fs" ]
+}
+
+fuzzers_package("fs-fuzzers") {
+  cpp_fuzzers = [ ":vmo_file-fuzzer" ]
+}
+
+fuchsia_unittest_package("fs-connection-test-pkg") {
+  package_name = "fs-connection-test"
+  deps = [ ":fs-connection-test" ]
+}
+
+fuchsia_unittest_package("fs-vnode-test-pkg") {
+  package_name = "fs-vnode-test"
+  deps = [ ":fs-vnode-test" ]
+}

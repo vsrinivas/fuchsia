@@ -1,0 +1,78 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
+static_library("transaction") {
+  sources = [
+    "buffered_operations_builder.cc",
+    "transaction_handler.cc",
+  ]
+
+  public = [
+    "buffered_operations_builder.h",
+    "device_transaction_handler.h",
+    "transaction_handler.h",
+    "writeback.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/storage/operation",
+  ]
+
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/storage/operation",
+  ]
+
+  if (is_fuchsia) {
+    sources += [
+      "device_transaction_handler.cc",
+      "legacy_transaction_handler.cc",
+      "legacy_transaction_handler.h",
+      "trace.cc",
+      "trace.h",
+      "writeback.cc",
+    ]
+
+    public_deps += [
+      "//zircon/public/lib/fit",
+      "//zircon/system/ulib/block-client",
+    ]
+
+    deps += [
+      "//sdk/lib/fdio",
+      "//zircon/public/lib/zircon-internal",
+      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/trace",
+    ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fs-transaction-tests" ]
+}
+
+test("fs-transaction-test") {
+  output_name = "fs_transaction_test"
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/fs/transaction",
+  ]
+  sources = [
+    "buffered_operations_builder_test.cc",
+    "device_transaction_handler_test.cc",
+    "writeback_test.cc",
+  ]
+}
+
+fuchsia_unittest_package("fs-transaction-tests") {
+  manifest = "meta/fs_transaction_tests.cml"
+  deps = [ ":fs-transaction-test" ]
+}

@@ -219,7 +219,7 @@ This information tells you the following:
 *  The length of time of the function execution.
 
 Note: For information on how tracing is performed for `FileReatAt`,
-see [//zircon/system/ulib/fs/connection.cc](/zircon/system/ulib/fs/connection.cc).
+see [//src/lib/storage/vfs/cpp/connection.cc](/src/lib/storage/vfs/cpp/connection.cc).
 
 If you click on `Blob::Read`, you can see the following information:
 
