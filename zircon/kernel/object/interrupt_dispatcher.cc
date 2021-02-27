@@ -10,6 +10,7 @@
 #include <zircon/syscalls/port.h>
 
 #include <dev/interrupt.h>
+#include <kernel/auto_preempt_disabler.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 
@@ -80,10 +81,9 @@ zx_status_t InterruptDispatcher::Trigger(zx_time_t timestamp) {
   if (!(flags_ & INTERRUPT_VIRTUAL))
     return ZX_ERR_BAD_STATE;
 
-  // Using AutoReschedDisable is necessary for correctness to prevent
-  // context-switching to the woken thread while holding spinlock_.
-  AutoReschedDisable resched_disable;
-  resched_disable.Disable();
+  // Use preempt disable for correctness to prevent rescheduling when waking a
+  // thread while holding the spinlock.
+  AutoPreemptDisabler preempt_disable;
   Guard<SpinLock, IrqSave> guard{&spinlock_};
 
   // only record timestamp if this is the first signal since we started waiting
@@ -110,11 +110,10 @@ zx_status_t InterruptDispatcher::Trigger(zx_time_t timestamp) {
 }
 
 void InterruptDispatcher::InterruptHandler() {
-  // Using AutoReschedDisable is not necessary for correctness, since we should
+  // Using preempt disable is not necessary for correctness, since we should
   // be in an interrupt context with preemption disabled, but we re-disable anyway
   // for clarity and robustness.
-  AutoReschedDisable resched_disable;
-  resched_disable.Disable();
+  AutoPreemptDisabler preempt_disable;
   Guard<SpinLock, IrqSave> guard{&spinlock_};
 
   // only record timestamp if this is the first IRQ since we started waiting
@@ -146,10 +145,9 @@ zx_status_t InterruptDispatcher::Destroy() {
   DeactivateInterrupt();
   UnregisterInterruptHandler();
 
-  // Using AutoReschedDisable is necessary for correctness to prevent
-  // context-switching to the woken thread while holding spinlock_.
-  AutoReschedDisable resched_disable;
-  resched_disable.Disable();
+  // Use preempt disable for correctness to prevent rescheduling when waking a
+  // thread while holding the spinlock.
+  AutoPreemptDisabler preempt_disable;
   Guard<SpinLock, IrqSave> guard{&spinlock_};
 
   if (port_dispatcher_) {
@@ -223,10 +221,9 @@ zx_status_t InterruptDispatcher::Unbind(fbl::RefPtr<PortDispatcher> port_dispatc
 
 zx_status_t InterruptDispatcher::Ack() {
   bool defer_unmask = false;
-  // Using AutoReschedDisable is necessary for correctness to prevent
-  // context-switching to the woken thread while holding spinlock_.
-  AutoReschedDisable resched_disable;
-  resched_disable.Disable();
+  // Use preempt disable to reduce the likelihood of the woken thread running
+  // while the spinlock is still held.
+  AutoPreemptDisabler preempt_disable;
   {
     Guard<SpinLock, IrqSave> guard{&spinlock_};
     if (port_dispatcher_ == nullptr) {

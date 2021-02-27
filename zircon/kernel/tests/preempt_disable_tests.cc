@@ -78,7 +78,7 @@ static bool test_inc_dec_disable_counts() {
 
   // Test initial conditions.
   ASSERT_EQ(preemption_state.PreemptDisableCount(), 0u);
-  ASSERT_EQ(preemption_state.ReschedDisableCount(), 0u);
+  ASSERT_EQ(preemption_state.EagerReschedDisableCount(), 0u);
   // While preemption is allowed, a preemption should not be pending.
   ASSERT_EQ(preemption_state.preempt_pending(), false);
 
@@ -89,10 +89,10 @@ static bool test_inc_dec_disable_counts() {
   EXPECT_EQ(preemption_state.PreemptDisableCount(), 0u);
 
   // Test incrementing and decrementing of resched_disable.
-  preemption_state.ReschedDisable();
-  EXPECT_EQ(preemption_state.ReschedDisableCount(), 1u);
-  preemption_state.ReschedReenable();
-  EXPECT_EQ(preemption_state.ReschedDisableCount(), 0u);
+  preemption_state.EagerReschedDisable();
+  EXPECT_EQ(preemption_state.EagerReschedDisableCount(), 1u);
+  preemption_state.EagerReschedReenable();
+  EXPECT_EQ(preemption_state.EagerReschedDisableCount(), 0u);
 
   // Test nesting: multiple increments and decrements.
   preemption_state.PreemptDisable();
@@ -103,12 +103,12 @@ static bool test_inc_dec_disable_counts() {
   EXPECT_EQ(preemption_state.PreemptDisableCount(), 0u);
 
   // Test nesting: multiple increments and decrements.
-  preemption_state.ReschedDisable();
-  preemption_state.ReschedDisable();
-  EXPECT_EQ(preemption_state.ReschedDisableCount(), 2u);
-  preemption_state.ReschedReenable();
-  preemption_state.ReschedReenable();
-  EXPECT_EQ(preemption_state.ReschedDisableCount(), 0u);
+  preemption_state.EagerReschedDisable();
+  preemption_state.EagerReschedDisable();
+  EXPECT_EQ(preemption_state.EagerReschedDisableCount(), 2u);
+  preemption_state.EagerReschedReenable();
+  preemption_state.EagerReschedReenable();
+  EXPECT_EQ(preemption_state.EagerReschedDisableCount(), 0u);
 
   END_TEST;
 }
@@ -128,14 +128,14 @@ static bool test_decrement_clears_preempt_pending() {
   EXPECT_EQ(preemption_state.preempt_pending(), false);
 
   // Test that preemption_state.ReschedReenable() clears preempt_pending.
-  preemption_state.ReschedDisable();
+  preemption_state.EagerReschedDisable();
   interrupt_saved_state_t int_state = arch_interrupt_save();
   Thread::Current::Reschedule();
   // Read preempt_pending with interrupts disabled because otherwise an
   // interrupt handler could set it to false.
   EXPECT_EQ(preemption_state.preempt_pending(), true);
   arch_interrupt_restore(int_state);
-  preemption_state.ReschedReenable();
+  preemption_state.EagerReschedReenable();
   EXPECT_EQ(preemption_state.preempt_pending(), false);
 
   END_TEST;
@@ -161,11 +161,11 @@ static bool test_blocking_clears_preempt_pending() {
 
   // It is OK to block while rescheduling is disabled.  In this case,
   // blocking should clear preempt_pending.
-  preemption_state.ReschedDisable();
+  preemption_state.EagerReschedDisable();
   Thread::Current::Reschedule();
   Thread::Current::SleepRelative(ZX_MSEC(10));
   EXPECT_EQ(preemption_state.preempt_pending(), false);
-  preemption_state.ReschedReenable();
+  preemption_state.EagerReschedReenable();
 
   END_TEST;
 }
@@ -179,7 +179,7 @@ static bool test_interrupt_preserves_preempt_pending() {
 
   PreemptionState& preemption_state = Thread::Current::preemption_state();
 
-  preemption_state.ReschedDisable();
+  preemption_state.EagerReschedDisable();
   // Do this with interrupts disabled so that a real interrupt does not
   // clear preempt_pending.
   interrupt_saved_state_t int_state = arch_interrupt_save();
@@ -194,7 +194,7 @@ static bool test_interrupt_preserves_preempt_pending() {
   EXPECT_EQ(do_preempt, false);
   EXPECT_EQ(preemption_state.preempt_pending(), true);
   arch_interrupt_restore(int_state);
-  preemption_state.ReschedReenable();
+  preemption_state.EagerReschedReenable();
   EXPECT_EQ(preemption_state.preempt_pending(), false);
 
   END_TEST;
@@ -207,14 +207,14 @@ static bool test_interrupt_clears_preempt_pending() {
 
   PreemptionState& preemption_state = Thread::Current::preemption_state();
 
-  preemption_state.ReschedDisable();
+  preemption_state.EagerReschedDisable();
   Thread::Current::Reschedule();
   // Spin until we detect that we have been preempted.  preempt_pending
   // should eventually get set to false because the scheduler should
   // preempt this thread.
   while (preemption_state.preempt_pending()) {
   }
-  preemption_state.ReschedReenable();
+  preemption_state.EagerReschedReenable();
 
   END_TEST;
 }
@@ -266,7 +266,7 @@ static bool test_interrupt_with_resched_disable() {
   //
   // This assumes that timer_set() will run the callback on the same CPU
   // that we invoked it from.
-  preemption_state.ReschedDisable();
+  preemption_state.EagerReschedDisable();
   ktl::atomic<bool> timer_ran(false);
   Timer timer;
   const Deadline deadline = Deadline::after(ZX_USEC(100));
@@ -277,7 +277,7 @@ static bool test_interrupt_with_resched_disable() {
   // preempt_pending should be reset to false either on returning from
   // our timer interrupt, or by some other preemption.
   EXPECT_EQ(preemption_state.preempt_pending(), false);
-  preemption_state.ReschedReenable();
+  preemption_state.EagerReschedReenable();
 
   END_TEST;
 }

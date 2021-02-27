@@ -10,6 +10,7 @@
 
 #include <debug.h>
 #include <lib/io.h>
+#include <lib/relaxed_atomic.h>
 #include <platform.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -394,18 +395,18 @@ static inline void dump_thread_user_tid_during_panic(zx_koid_t tid,
 
 class PreemptionState {
  public:
-  volatile bool& preempt_pending() { return preempt_pending_; }
-  const volatile bool& preempt_pending() const { return preempt_pending_; }
+  RelaxedAtomic<bool>& preempt_pending() { return preempt_pending_; }
+  const RelaxedAtomic<bool>& preempt_pending() const { return preempt_pending_; }
 
   void CheckPreemptPending() const;
 
-  bool PreemptOrReschedDisabled() const {
-    return PreemptDisableCount() > 0 || ReschedDisableCount() > 0;
+  bool PreemptOrEagerReschedDisabled() const {
+    return PreemptDisableCount() > 0 || EagerReschedDisableCount() > 0;
   }
 
   uint32_t PreemptDisableCount() const { return disable_counts_ & 0xffff; }
 
-  uint32_t ReschedDisableCount() const { return disable_counts_ >> 16; }
+  uint32_t EagerReschedDisableCount() const { return disable_counts_ >> 16; }
 
   // PreemptDisable() increments the preempt_disable counter for the
   // current thread.  While preempt_disable is non-zero, preemption of the
@@ -456,7 +457,7 @@ class PreemptionState {
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   }
 
-  // ReschedDisable() increments the resched_disable counter for the
+  // EagerReschedDisable() increments the resched_disable counter for the
   // current thread.  When resched_disable is non-zero, preemption of the
   // thread from outside interrupt handlers is disabled.  However, interrupt
   // handlers may still preempt the thread.
@@ -466,20 +467,20 @@ class PreemptionState {
   // As with PreemptDisable, blocking operations are still allowed while
   // resched_disable is non-zero.
   //
-  // A call to ReschedDisable() must be matched by a later call to
+  // A call to EagerReschedDisable() must be matched by a later call to
   // ReschedReenable() to decrement the preempt_disable counter.
-  void ReschedDisable() {
-    DEBUG_ASSERT(ReschedDisableCount() < 0xffff);
+  void EagerReschedDisable() {
+    DEBUG_ASSERT(EagerReschedDisableCount() < 0xffff);
 
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
     disable_counts_ = disable_counts_ + (1 << 16);
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   }
 
-  // ReschedReenable() decrements the preempt_disable counter.  See
-  // ReschedDisable().
-  void ReschedReenable() {
-    DEBUG_ASSERT(ReschedDisableCount() > 0);
+  // EagerReschedReenable() decrements the preempt_disable counter.  See
+  // EagerReschedDisable().
+  void EagerReschedReenable() {
+    DEBUG_ASSERT(EagerReschedDisableCount() > 0);
 
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
     uint32_t new_count = disable_counts_ - (1 << 16);
@@ -539,7 +540,7 @@ class PreemptionState {
   //  * if preempt_disable_ or resched_disable_ are non-zero, or
   //  * after preempt_disable_ or resched_disable_ have been decremented,
   //    while preempt_pending_ is being checked.
-  volatile bool preempt_pending_;
+  RelaxedAtomic<bool> preempt_pending_;
 };
 
 // TaskState is responsible for running the task defined by
@@ -1120,49 +1121,6 @@ extern "C" void arch_iframe_process_pending_signals(iframe_t* iframe);
 // NOTE: used only for debugging, its a slow linear search through the
 // global thread list
 Thread* thread_id_to_thread_slow(zx_koid_t tid) TA_EXCL(thread_lock);
-
-// AutoReschedDisable is an RAII helper for disabling rescheduling
-// using thread_resched_disable()/thread_resched_reenable().
-//
-// A typical use case is when we wake another thread while holding a
-// mutex.  If the other thread is likely to claim the same mutex when
-// runs (either immediately or later), then it is useful to defer
-// waking the thread until after we have released the mutex.  We can
-// do that by disabling rescheduling while holding the lock.  This is
-// beneficial when there are no free CPUs for running the woken thread
-// on.
-//
-// Example usage:
-//
-//   AutoReschedDisable resched_disable;
-//   Guard<Mutex> al{&lock_};
-//   // Do some initial computation...
-//   resched_disable.Disable();
-//   // Possibly wake another thread...
-//
-// The AutoReschedDisable must be placed before the Guard to ensure that
-// rescheduling is re-enabled only after releasing the mutex.
-class AutoReschedDisable {
- public:
-  AutoReschedDisable() {}
-  ~AutoReschedDisable() {
-    if (started_) {
-      Thread::Current::preemption_state().ReschedReenable();
-    }
-  }
-
-  void Disable() {
-    if (!started_) {
-      Thread::Current::preemption_state().ReschedDisable();
-      started_ = true;
-    }
-  }
-
-  DISALLOW_COPY_ASSIGN_AND_MOVE(AutoReschedDisable);
-
- private:
-  bool started_ = false;
-};
 
 // RAII helper that installs/removes an exception context and saves/restores user register state.
 // The class operates on the current thread.

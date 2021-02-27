@@ -1622,7 +1622,7 @@ void Scheduler::Reschedule() {
   SchedulerState* const current_state = &current_thread->scheduler_state();
   const cpu_num_t current_cpu = arch_curr_cpu_num();
 
-  if (current_thread->preemption_state().PreemptOrReschedDisabled()) {
+  if (current_thread->preemption_state().PreemptOrEagerReschedDisabled()) {
     current_thread->preemption_state().preempt_pending() = true;
     return;
   }
