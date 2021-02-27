@@ -8,6 +8,7 @@ use crate::config::AudioGatewayFeatureSupport;
 
 bitflags! {
     /// Bitmap defined in HFP v1.8, 4.35.1 for use with the "+BRSF" AT result code.
+    #[derive(Default)]
     pub struct AgFeatures: u32 {
         const THREE_WAY_CALLING            = 0b00_0000_0000_0001;
         const NR_EC                        = 0b00_0000_0000_0010;
@@ -28,6 +29,7 @@ bitflags! {
 
 bitflags! {
     /// Bitmap defined in HFP v1.8, 4.35.1 for use with the "AT+BRSF" AT command.
+    #[derive(Default)]
     pub struct HfFeatures: u32 {
         const NR_EC                        = 0b00_0000_0000_0001;
         const THREE_WAY_CALLING            = 0b00_0000_0000_0010;

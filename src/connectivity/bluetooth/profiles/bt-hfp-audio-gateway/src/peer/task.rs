@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{config::AudioGatewayFeatureSupport, error::Error, profile::ProfileEvent};
 use {
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::{NetworkInformation, PeerHandlerProxy},
@@ -20,6 +19,13 @@ use {
 use super::{
     calls::Calls, gain_control::GainControl, service_level_connection::ServiceLevelConnection,
     PeerRequest,
+};
+use crate::{
+    at::{AtAgMessage, IndicatorStatus},
+    config::AudioGatewayFeatureSupport,
+    error::Error,
+    procedure::{ProcedureMarker, ProcedureRequest},
+    profile::ProfileEvent,
 };
 
 pub(super) struct PeerTask {
@@ -145,6 +151,55 @@ impl PeerTask {
         Ok(())
     }
 
+    /// Processes a `request` associated with the given procedure (identified by the `marker`).
+    ///
+    /// This method is flow-controlled by an iterative loop. There are three termination conditions:
+    ///   1) There is no work requested (typically an ending state in a procedure).
+    ///   2) The procedure encountered an error.
+    ///   3) The procedure requests outbound messages to the peer, and will wait until an inbound
+    ///      event.
+    ///
+    /// Otherwise, the request is processed, the associated procedure is updated, and potentially
+    /// more requests are processed.
+    async fn procedure_request(
+        &mut self,
+        (marker, mut request): (ProcedureMarker, ProcedureRequest),
+    ) {
+        loop {
+            match request {
+                ProcedureRequest::None => return,
+                ProcedureRequest::Error(e) => {
+                    log::warn!("Error processing procedure update: {:?}", e);
+                    self.connection.send_message_to_peer(AtAgMessage::Error).await;
+                    return;
+                }
+                ProcedureRequest::SendMessage(message) => {
+                    // Message to be sent to the peer via the Service Level RFCOMM Connection.
+                    self.connection.send_message_to_peer(message).await;
+                    return;
+                }
+                ProcedureRequest::GetAgFeatures { response } => {
+                    let features = (&self._local_config).into();
+                    // Update the procedure with the retrieved AG update.
+                    request = self.connection.ag_message(marker, response(features));
+                }
+                ProcedureRequest::GetAgIndicatorStatus { response } => {
+                    let status = IndicatorStatus {
+                        service: self.network.service_available.unwrap_or(false),
+                        call: false,
+                        callsetup: (),
+                        callheld: (),
+                        signal: self.network.signal_strength.map(|ss| ss as u8).unwrap_or(0),
+                        roam: self.network.roaming.unwrap_or(false),
+                        batt: 5, // TODO: Retrieve battery status from Fuchsia power service.
+                    };
+                    // Update the procedure with the retrieved AG update.
+                    request = self.connection.ag_message(marker, response(status));
+                }
+            };
+        }
+    }
+
     pub async fn run(mut self, mut task_channel: mpsc::Receiver<PeerRequest>) {
         loop {
             select! {
@@ -168,8 +223,11 @@ impl PeerTask {
                 _update = self.calls.select_next_some() => {
                     unimplemented!();
                 }
-                _event = self.connection.select_next_some() => {
-                    unimplemented!();
+                request = self.connection.select_next_some() => {
+                    match request {
+                        Ok(r) => self.procedure_request(r).await,
+                        Err(e) => log::warn!("SLC stream error: {:?}", e),
+                    }
                 }
                 complete => break,
             }
@@ -200,8 +258,11 @@ mod tests {
         fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
         fidl_fuchsia_bluetooth_hfp::{PeerHandlerMarker, PeerHandlerRequest, SignalStrength},
         fuchsia_async as fasync,
+        fuchsia_bluetooth::types::Channel,
         proptest::prelude::*,
     };
+
+    use crate::protocol::features::HfFeatures;
 
     fn arb_signal() -> impl Strategy<Value = Option<SignalStrength>> {
         proptest::option::of(prop_oneof![
@@ -363,5 +424,35 @@ mod tests {
 
         // Test that `run()` completes.
         peer.run(receiver).await;
+    }
+
+    /// Expects a message to be received by the peer. This expectation does not validate the
+    /// contents of the data received.
+    #[track_caller]
+    fn expect_message_received_by_peer(exec: &mut fasync::Executor, remote: &mut Channel) {
+        let mut vec = Vec::new();
+        let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
+        assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
+    }
+
+    #[test]
+    fn peer_task_drives_procedure() {
+        let mut exec = fasync::Executor::new().unwrap();
+        let (mut peer, _sender, receiver, _profile) = setup_peer_task();
+
+        // Set up the RFCOMM connection.
+        let (local, mut remote) = Channel::create();
+        peer.on_connection_request(vec![], local);
+
+        let mut peer_task_fut = Box::pin(peer.run(receiver));
+        assert!(exec.run_until_stalled(&mut peer_task_fut).is_pending());
+
+        // Simulate remote peer (HF) sending AT command to start the SLC Init Procedure.
+        let features = HfFeatures::empty();
+        let command = format!("AT+BRSF={}\r", features.bits()).into_bytes();
+        let _ = remote.as_ref().write(&command);
+        let _ = exec.run_until_stalled(&mut peer_task_fut);
+        // We then expect an outgoing message to the peer.
+        expect_message_received_by_peer(&mut exec, &mut remote);
     }
 }

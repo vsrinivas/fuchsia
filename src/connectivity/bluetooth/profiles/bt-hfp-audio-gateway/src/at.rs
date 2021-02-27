@@ -13,6 +13,17 @@
 use crate::protocol::features::{AgFeatures, HfFeatures};
 use regex::Regex;
 
+#[derive(Debug, Default, Clone, Copy)]
+pub struct IndicatorStatus {
+    pub service: bool,
+    pub call: bool,
+    pub callsetup: (),
+    pub callheld: (),
+    pub signal: u8,
+    pub roam: bool,
+    pub batt: u8,
+}
+
 pub fn ag_features_ok(features: AgFeatures) -> Vec<u8> {
     format!("\r\n+BRSF: {}\r\n\r\nOK\r\n", features.bits()).into_bytes()
 }
@@ -47,6 +58,18 @@ pub fn at_hf_ind_ag_sup_resp(safety: bool, battery: bool) -> Vec<u8> {
     format!("\r\n+BIND: ({})\r\n\r\nOK\r\n", supported).into_bytes()
 }
 
+pub fn at_ag_indicator_statuses(status: IndicatorStatus) -> Vec<u8> {
+    format!("\r\n+CIND: {service},{call},{callsetup},{callheld},{signal},{roam},{battchg}\r\n\r\nOK\r\n",
+        service=status.service as u8,
+        call=status.call as u8,
+        callsetup=0,
+        callheld=0,
+        signal=status.signal,
+        roam=status.roam as u8,
+        battchg=status.batt,
+    ).into_bytes()
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum AtHfMessage {
     // From HF to AG
@@ -67,6 +90,7 @@ pub enum AtAgMessage {
     // From AG to HF
     AgFeatures(AgFeatures),
     AgThreeWaySupport,
+    AgIndStat(IndicatorStatus),
     Ok,
     Error,
     AgSupportedIndicators,
@@ -79,6 +103,7 @@ impl AtAgMessage {
         match self {
             AgFeatures(features) => ag_features_ok(features),
             AgThreeWaySupport => ag_three_way_support(),
+            AgIndStat(status) => at_ag_indicator_statuses(status),
             Ok => ok(),
             Error => error(),
             AgSupportedIndicators => at_ag_supported_indicators(),
