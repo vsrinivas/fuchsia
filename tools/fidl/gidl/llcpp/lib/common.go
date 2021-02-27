@@ -64,13 +64,15 @@ func typeNameIgnoreNullable(decl gidlmixer.Declaration) string {
 }
 
 func declName(decl gidlmixer.NamedDeclaration) string {
-	parts := strings.Split(decl.Name(), "/")
-	parts = append([]string{"llcpp"}, parts...)
+	// Note: only works for domain objects (not protocols & services)
+	parts := strings.SplitN(decl.Name(), "/", 2)
+	parts = append([]string{"llcpp"}, parts[0], "wire", parts[1])
 	return strings.Join(parts, "::")
 }
 
 func ConformanceType(gidlTypeString string) string {
-	return "llcpp::conformance::" + gidlTypeString
+	// Note: only works for domain objects (not protocols & services)
+	return "llcpp::conformance::wire::" + gidlTypeString
 }
 
 func LlcppErrorCode(code gidlir.ErrorCode) string {
