@@ -1243,55 +1243,47 @@ unsafe fn decode_array<T: Decodable>(
     Ok(())
 }
 
-macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
-    impl<T: Layout> Layout for [T; $len] {
-        #[inline(always)]
-        fn inline_align(context: &Context) -> usize { T::inline_align(context) }
-        #[inline(always)]
-        fn inline_size(context: &Context) -> usize { T::inline_size(context) * $len }
+impl<T: Layout, const N: usize> Layout for [T; N] {
+    #[inline(always)]
+    fn inline_align(context: &Context) -> usize {
+        T::inline_align(context)
     }
-
-    impl<T: Encodable> Encodable for [T; $len] {
-        #[inline]
-        unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> Result<()> {
-            encode_array(self, encoder, offset, recursion_depth)
-        }
+    #[inline(always)]
+    fn inline_size(context: &Context) -> usize {
+        T::inline_size(context) * N
     }
+}
 
-    impl<T: Decodable> Decodable for [T; $len] {
-        #[inline]
-        fn new_empty() -> Self {
-            let mut arr = mem::MaybeUninit::<[T; $len]>::uninit();
-            unsafe {
-                let arr_ptr = arr.as_mut_ptr() as *mut T;
-                for i in 0..$len {
-                    ptr::write(arr_ptr.offset(i as isize), T::new_empty());
-                }
-                arr.assume_init()
+impl<T: Encodable, const N: usize> Encodable for [T; N] {
+    #[inline]
+    unsafe fn unsafe_encode(
+        &mut self,
+        encoder: &mut Encoder<'_, '_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        encode_array(self, encoder, offset, recursion_depth)
+    }
+}
+
+impl<T: Decodable, const N: usize> Decodable for [T; N] {
+    #[inline]
+    fn new_empty() -> Self {
+        let mut arr = mem::MaybeUninit::<[T; N]>::uninit();
+        unsafe {
+            let arr_ptr = arr.as_mut_ptr() as *mut T;
+            for i in 0..N {
+                ptr::write(arr_ptr.offset(i as isize), T::new_empty());
             }
-        }
-
-        #[inline]
-        unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-            decode_array(self, decoder, offset)
+            arr.assume_init()
         }
     }
-)* } }
 
-// Unfortunately, we cannot be generic over the length of a fixed array
-// even though its part of the type (this will hopefully be added in the
-// future) so for now we implement encodable for only the first 33 fixed
-// size array types.
-#[rustfmt::skip]
-impl_codable_for_fixed_array!( 0,  1,  2,  3,  4,  5,  6,  7,
-                               8,  9, 10, 11, 12, 13, 14, 15,
-                              16, 17, 18, 19, 20, 21, 22, 23,
-                              24, 25, 26, 27, 28, 29, 30, 31,
-                              32,);
-// Hack for FIDL library fuchsia.sysmem
-impl_codable_for_fixed_array!(64,);
-// Hack for FIDL library fuchsia.net
-impl_codable_for_fixed_array!(256,);
+    #[inline]
+    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decode_array(self, decoder, offset)
+    }
+}
 
 /// Encode an optional vector-like component.
 #[inline]

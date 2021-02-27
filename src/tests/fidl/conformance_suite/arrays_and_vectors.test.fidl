@@ -31,3 +31,9 @@ struct StructWithVectors {
     vector<StructWithInt?> vec_nullable_struct;
     vector<vector<int32>> vec_vec_int;
 };
+
+struct LargeArrays {
+    array<string?>:33 a33;
+    array<uint8>:100 a100;
+    vector<array<array<string>:100>:200> nested;
+};
