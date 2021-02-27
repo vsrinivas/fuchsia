@@ -227,6 +227,9 @@ async fn main() -> Result<(), Error> {
     println!("  client calls set screen enabled");
     validate_display(None, None, None, Some(ThemeType::Dark), Some(false)).await?;
 
+    println!("  client can modify multiple settings");
+    validate_display(Some(0.3), Some(false), None, Some(ThemeType::Light), Some(true)).await?;
+
     println!("factory reset tests");
     println!("  client calls set local reset allowed");
     validate_factory_reset(true).await?;
