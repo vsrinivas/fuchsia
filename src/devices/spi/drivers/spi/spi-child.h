@@ -41,7 +41,7 @@ class SpiChild : public SpiChildType,
                       ExchangeVectorCompleter::Sync& completer) override;
 
   void RegisterVmo(uint32_t vmo_id, ::llcpp::fuchsia::mem::Range vmo,
-                   ::llcpp::fuchsia::hardware::sharedmemory::SharedVmoRight rights,
+                   ::llcpp::fuchsia::hardware::sharedmemory::wire::SharedVmoRight rights,
                    RegisterVmoCompleter::Sync& completer) override;
   void UnregisterVmo(uint32_t vmo_id, UnregisterVmoCompleter::Sync& completer) override;
 

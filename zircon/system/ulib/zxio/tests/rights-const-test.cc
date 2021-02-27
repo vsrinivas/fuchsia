@@ -14,34 +14,34 @@ namespace fio2 = ::llcpp::fuchsia::io2;
 // the pre-calculated constants in fuchsia.io2/rights-abilities.fidl match the
 // expected set of rights.
 TEST(RightsConstTest, VerifyConstCalculations) {
-  static_assert(fio2::R_STAR_DIR == static_cast<uint64_t>(
-                                        fio2::Operations::CONNECT | fio2::Operations::ENUMERATE |
-                                        fio2::Operations::TRAVERSE | fio2::Operations::READ_BYTES |
-                                        fio2::Operations::GET_ATTRIBUTES),
-                "fio2::Operations::R_STAR does not match expected value");
-  static_assert(fio2::RW_STAR_DIR ==
-                    static_cast<uint64_t>(
-                        fio2::Operations::CONNECT | fio2::Operations::ENUMERATE |
-                        fio2::Operations::TRAVERSE | fio2::Operations::READ_BYTES |
-                        fio2::Operations::WRITE_BYTES | fio2::Operations::MODIFY_DIRECTORY |
-                        fio2::Operations::GET_ATTRIBUTES | fio2::Operations::UPDATE_ATTRIBUTES),
-                "fio2::Operations::RW_STAR_DIR does not match expected value");
+  using fio2::wire::Operations;
   static_assert(
-      fio2::RX_STAR_DIR ==
-          static_cast<uint64_t>(fio2::Operations::CONNECT | fio2::Operations::ENUMERATE |
-                                fio2::Operations::TRAVERSE | fio2::Operations::READ_BYTES |
-                                fio2::Operations::GET_ATTRIBUTES | fio2::Operations::EXECUTE),
-      "fio2::Operations::RX_STAR_DIR does not match expected value");
-  static_assert(fio2::W_STAR_DIR ==
-                    static_cast<uint64_t>(
-                        fio2::Operations::CONNECT | fio2::Operations::ENUMERATE |
-                        fio2::Operations::TRAVERSE | fio2::Operations::WRITE_BYTES |
-                        fio2::Operations::MODIFY_DIRECTORY | fio2::Operations::UPDATE_ATTRIBUTES),
-                "fio2::Operations::W_STAR_DIR does not match expected value");
-  static_assert(fio2::X_STAR_DIR ==
-                    static_cast<uint64_t>(fio2::Operations::CONNECT | fio2::Operations::ENUMERATE |
-                                          fio2::Operations::TRAVERSE | fio2::Operations::EXECUTE),
-                "fio2::Operations::X_STAR_DIR does not match expected value");
+      fio2::R_STAR_DIR ==
+          static_cast<uint64_t>(Operations::CONNECT | Operations::ENUMERATE | Operations::TRAVERSE |
+                                Operations::READ_BYTES | Operations::GET_ATTRIBUTES),
+      "Operations::R_STAR does not match expected value");
+  static_assert(
+      fio2::RW_STAR_DIR ==
+          static_cast<uint64_t>(Operations::CONNECT | Operations::ENUMERATE | Operations::TRAVERSE |
+                                Operations::READ_BYTES | Operations::WRITE_BYTES |
+                                Operations::MODIFY_DIRECTORY | Operations::GET_ATTRIBUTES |
+                                Operations::UPDATE_ATTRIBUTES),
+      "Operations::RW_STAR_DIR does not match expected value");
+  static_assert(
+      fio2::RX_STAR_DIR == static_cast<uint64_t>(Operations::CONNECT | Operations::ENUMERATE |
+                                                 Operations::TRAVERSE | Operations::READ_BYTES |
+                                                 Operations::GET_ATTRIBUTES | Operations::EXECUTE),
+      "Operations::RX_STAR_DIR does not match expected value");
+  static_assert(
+      fio2::W_STAR_DIR ==
+          static_cast<uint64_t>(Operations::CONNECT | Operations::ENUMERATE | Operations::TRAVERSE |
+                                Operations::WRITE_BYTES | Operations::MODIFY_DIRECTORY |
+                                Operations::UPDATE_ATTRIBUTES),
+      "Operations::W_STAR_DIR does not match expected value");
+  static_assert(
+      fio2::X_STAR_DIR == static_cast<uint64_t>(Operations::CONNECT | Operations::ENUMERATE |
+                                                Operations::TRAVERSE | Operations::EXECUTE),
+      "Operations::X_STAR_DIR does not match expected value");
 }
 
 }  // namespace

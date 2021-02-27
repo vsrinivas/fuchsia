@@ -68,15 +68,15 @@ struct SocketAddress {
   }
 };
 
-fsocket::RecvMsgFlags to_recvmsg_flags(int flags) {
-  fsocket::RecvMsgFlags r;
+fsocket::wire::RecvMsgFlags to_recvmsg_flags(int flags) {
+  fsocket::wire::RecvMsgFlags r;
   if (flags & MSG_PEEK) {
-    r |= fsocket::RecvMsgFlags::PEEK;
+    r |= fsocket::wire::RecvMsgFlags::PEEK;
   }
   return r;
 }
 
-fsocket::SendMsgFlags to_sendmsg_flags(int flags) { return fsocket::SendMsgFlags(); }
+fsocket::wire::SendMsgFlags to_sendmsg_flags(int flags) { return fsocket::wire::SendMsgFlags(); }
 
 socklen_t fidl_to_sockaddr(const fnet::SocketAddress& fidl, struct sockaddr* addr,
                            socklen_t addr_len) {
@@ -320,22 +320,23 @@ zx_status_t base_setsockopt(const zx::unowned_channel& channel, int level, int o
 }
 
 // Prevent divergence in flag bitmasks between libc and fuchsia.posix.socket FIDL library.
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::UP) == IFF_UP);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::BROADCAST) == IFF_BROADCAST);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::DEBUG) == IFF_DEBUG);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::LOOPBACK) == IFF_LOOPBACK);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::POINTTOPOINT) == IFF_POINTOPOINT);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::NOTRAILERS) == IFF_NOTRAILERS);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::RUNNING) == IFF_RUNNING);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::NOARP) == IFF_NOARP);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::PROMISC) == IFF_PROMISC);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::ALLMULTI) == IFF_ALLMULTI);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::LEADER) == IFF_MASTER);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::FOLLOWER) == IFF_SLAVE);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::MULTICAST) == IFF_MULTICAST);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::PORTSEL) == IFF_PORTSEL);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::AUTOMEDIA) == IFF_AUTOMEDIA);
-static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::DYNAMIC) == IFF_DYNAMIC);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::UP) == IFF_UP);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::BROADCAST) == IFF_BROADCAST);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::DEBUG) == IFF_DEBUG);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::LOOPBACK) == IFF_LOOPBACK);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::POINTTOPOINT) ==
+              IFF_POINTOPOINT);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::NOTRAILERS) == IFF_NOTRAILERS);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::RUNNING) == IFF_RUNNING);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::NOARP) == IFF_NOARP);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::PROMISC) == IFF_PROMISC);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::ALLMULTI) == IFF_ALLMULTI);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::LEADER) == IFF_MASTER);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::FOLLOWER) == IFF_SLAVE);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::MULTICAST) == IFF_MULTICAST);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::PORTSEL) == IFF_PORTSEL);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::AUTOMEDIA) == IFF_AUTOMEDIA);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::DYNAMIC) == IFF_DYNAMIC);
 
 Errno zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
                         Errno (*fallback)(fdio_t* io, int req, va_list va)) {
@@ -902,16 +903,17 @@ static fdio_ops_t fdio_datagram_socket_ops = {
         },
     .shutdown =
         [](fdio_t* io, int how, int16_t* out_code) {
-          fsocket::ShutdownMode mode;
+          using fsocket::wire::ShutdownMode;
+          ShutdownMode mode;
           switch (how) {
             case SHUT_RD:
-              mode = fsocket::ShutdownMode::READ;
+              mode = ShutdownMode::READ;
               break;
             case SHUT_WR:
-              mode = fsocket::ShutdownMode::WRITE;
+              mode = ShutdownMode::WRITE;
               break;
             case SHUT_RDWR:
-              mode = fsocket::ShutdownMode::READ | fsocket::ShutdownMode::WRITE;
+              mode = ShutdownMode::READ | ShutdownMode::WRITE;
               break;
             default:
               return ZX_ERR_INVALID_ARGS;

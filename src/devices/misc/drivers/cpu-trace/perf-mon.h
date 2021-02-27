@@ -40,6 +40,7 @@ namespace fidl_perfmon = ::llcpp::fuchsia::perfmon::cpu;
 using FidlPerfmonAllocation = fidl_perfmon::Allocation;
 using FidlPerfmonConfig = fidl_perfmon::Config;
 using FidlPerfmonProperties = fidl_perfmon::Properties;
+using FidlPerfmonEventConfigFlags = fidl_perfmon::wire::EventConfigFlags;
 
 #if defined(__x86_64__)
 using PmuHwProperties = X86PmuProperties;

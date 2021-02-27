@@ -4,6 +4,7 @@
 
 #include "session.h"
 
+#include <fuchsia/hardware/network/llcpp/fidl.h>
 #include <lib/fidl/epitaph.h>
 #include <zircon/device/network.h>
 
@@ -21,11 +22,11 @@ constexpr uint32_t kResumeTxKey = 1;
 constexpr uint32_t kTxAvailKey = 2;
 
 bool Session::IsListen() const {
-  return static_cast<bool>(flags_ & netdev::SessionFlags::LISTEN_TX);
+  return static_cast<bool>(flags_ & netdev::wire::SessionFlags::LISTEN_TX);
 }
 
 bool Session::IsPrimary() const {
-  return static_cast<bool>(flags_ & netdev::SessionFlags::PRIMARY);
+  return static_cast<bool>(flags_ & netdev::wire::SessionFlags::PRIMARY);
 }
 
 bool Session::IsPaused() const { return paused_; }
@@ -522,24 +523,25 @@ void Session::Close(CloseCompleter::Sync& _completer) { Kill(); }
 void Session::MarkTxReturnResult(uint16_t descriptor_index, zx_status_t status) {
   ZX_ASSERT(descriptor_index < descriptor_count_);
   auto* desc = descriptor(descriptor_index);
+  using netdev::wire::TxReturnFlags;
   switch (status) {
     case ZX_OK:
       desc->return_flags = 0;
       break;
     case ZX_ERR_NOT_SUPPORTED:
-      desc->return_flags = static_cast<uint32_t>(netdev::TxReturnFlags::TX_RET_NOT_SUPPORTED |
-                                                 netdev::TxReturnFlags::TX_RET_ERROR);
+      desc->return_flags =
+          static_cast<uint32_t>(TxReturnFlags::TX_RET_NOT_SUPPORTED | TxReturnFlags::TX_RET_ERROR);
       break;
     case ZX_ERR_NO_RESOURCES:
-      desc->return_flags = static_cast<uint32_t>(netdev::TxReturnFlags::TX_RET_OUT_OF_RESOURCES |
-                                                 netdev::TxReturnFlags::TX_RET_ERROR);
+      desc->return_flags = static_cast<uint32_t>(TxReturnFlags::TX_RET_OUT_OF_RESOURCES |
+                                                 TxReturnFlags::TX_RET_ERROR);
       break;
     case ZX_ERR_UNAVAILABLE:
-      desc->return_flags = static_cast<uint32_t>(netdev::TxReturnFlags::TX_RET_NOT_AVAILABLE |
-                                                 netdev::TxReturnFlags::TX_RET_ERROR);
+      desc->return_flags =
+          static_cast<uint32_t>(TxReturnFlags::TX_RET_NOT_AVAILABLE | TxReturnFlags::TX_RET_ERROR);
       break;
     default:
-      desc->return_flags = static_cast<uint32_t>(netdev::TxReturnFlags::TX_RET_ERROR);
+      desc->return_flags = static_cast<uint32_t>(TxReturnFlags::TX_RET_ERROR);
       break;
   }
 }
@@ -767,7 +769,7 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
   // NOTE(brunodalbo) Do we want to listen on info as well?
   desc->info_type = static_cast<uint32_t>(netdev::InfoType::NO_INFO);
   desc->frame_type = owner_desc->frame_type;
-  desc->return_flags = static_cast<uint32_t>(netdev::RxFlags::RX_ECHOED_TX);
+  desc->return_flags = static_cast<uint32_t>(netdev::wire::RxFlags::RX_ECHOED_TX);
 
   uint64_t my_offset = 0;
   uint64_t owner_offset = 0;

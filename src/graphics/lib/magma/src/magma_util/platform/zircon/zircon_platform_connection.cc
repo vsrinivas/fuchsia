@@ -21,7 +21,7 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
                                                  uint32_t result_flags) override {
     zx_status_t status = event_sender_.OnPerformanceCounterReadCompleted(
         trigger_id, buffer_id, buffer_offset, time,
-        llcpp::fuchsia::gpu::magma::ResultFlags::TruncatingUnknown(result_flags));
+        llcpp::fuchsia::gpu::magma::wire::ResultFlags::TruncatingUnknown(result_flags));
     switch (status) {
       case ZX_OK:
         return MAGMA_STATUS_OK;

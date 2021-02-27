@@ -27,6 +27,8 @@ namespace {
 namespace fio = ::llcpp::fuchsia::io;
 namespace fuchsia_fs = ::llcpp::fuchsia::fs;
 
+using fuchsia_fs::wire::FilesystemInfoQuery;
+
 class QueryServiceTest : public BlobfsWithFvmTest {
  protected:
   fuchsia_fs::Query::SyncClient ConnectToQueryService() {
@@ -44,7 +46,7 @@ class QueryServiceTest : public BlobfsWithFvmTest {
 
   void QueryInfo(size_t expected_nodes, size_t expected_bytes) {
     fuchsia_fs::Query::SyncClient query_service = ConnectToQueryService();
-    auto call_result = query_service.GetInfo(fuchsia_fs::FilesystemInfoQuery::kMask);
+    auto call_result = query_service.GetInfo(FilesystemInfoQuery::kMask);
     ASSERT_EQ(call_result.status(), ZX_OK);
     const auto& query_result = call_result.value().result;
     ASSERT_TRUE(query_result.is_response());
@@ -107,7 +109,7 @@ TEST_F(QueryServiceTest, QueryInfo) {
 
 TEST_F(QueryServiceTest, SelectiveQueryInfoEmpty) {
   fuchsia_fs::Query::SyncClient query_service = ConnectToQueryService();
-  auto call_result = query_service.GetInfo(fuchsia_fs::FilesystemInfoQuery());
+  auto call_result = query_service.GetInfo(FilesystemInfoQuery());
   ASSERT_EQ(call_result.status(), ZX_OK);
   const auto& query_result = call_result.value().result;
   ASSERT_TRUE(query_result.is_response());
@@ -116,7 +118,7 @@ TEST_F(QueryServiceTest, SelectiveQueryInfoEmpty) {
 
 TEST_F(QueryServiceTest, SelectiveQueryInfoSingleField) {
   fuchsia_fs::Query::SyncClient query_service = ConnectToQueryService();
-  auto call_result = query_service.GetInfo(fuchsia_fs::FilesystemInfoQuery::TOTAL_BYTES);
+  auto call_result = query_service.GetInfo(FilesystemInfoQuery::TOTAL_BYTES);
   ASSERT_EQ(call_result.status(), ZX_OK);
   const auto& query_result = call_result.value().result;
   ASSERT_TRUE(query_result.is_response());

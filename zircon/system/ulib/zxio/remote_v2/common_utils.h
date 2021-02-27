@@ -10,12 +10,12 @@
 
 // Conversion adaptors between zxio and FIDL types.
 
-zxio_node_protocols_t ToZxioNodeProtocols(::llcpp::fuchsia::io2::NodeProtocols protocols);
+zxio_node_protocols_t ToZxioNodeProtocols(::llcpp::fuchsia::io2::wire::NodeProtocols protocols);
 
-::llcpp::fuchsia::io2::NodeProtocols ToIo2NodeProtocols(zxio_node_protocols_t zxio_protocols);
+::llcpp::fuchsia::io2::wire::NodeProtocols ToIo2NodeProtocols(zxio_node_protocols_t zxio_protocols);
 
-zxio_abilities_t ToZxioAbilities(::llcpp::fuchsia::io2::Operations abilities);
+zxio_abilities_t ToZxioAbilities(::llcpp::fuchsia::io2::wire::Operations abilities);
 
-::llcpp::fuchsia::io2::Operations ToIo2Abilities(zxio_abilities_t zxio_abilities);
+::llcpp::fuchsia::io2::wire::Operations ToIo2Abilities(zxio_abilities_t zxio_abilities);
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZXIO_REMOTE_V2_COMMON_UTILS_H_

@@ -101,14 +101,14 @@ REGISTER_TYPED_TEST_SUITE_P(Bits, BitwiseOperators, BitwiseAssignOperators, IsCo
                             CanConvertToNumberButMustBeExplicit, CanConvertToBool,
                             TruncatingUnknown, TryFrom, AllowingUnknownThroughStaticCast);
 
-using BitsTypesToTest = ::testing::Types<llcpp::fidl::llcpp::types::test::StrictBits,
-                                         llcpp::fidl::llcpp::types::test::FlexibleBits>;
+using BitsTypesToTest = ::testing::Types<llcpp::fidl::llcpp::types::test::wire::StrictBits,
+                                         llcpp::fidl::llcpp::types::test::wire::FlexibleBits>;
 INSTANTIATE_TYPED_TEST_SUITE_P(BitsTests, Bits, BitsTypesToTest);
 
 // The following APIs tested are only available on flexible bits.
 
 TEST(Bits, QueryingUnknown) {
-  using BitsType = llcpp::fidl::llcpp::types::test::FlexibleBits;
+  using BitsType = llcpp::fidl::llcpp::types::test::wire::FlexibleBits;
   // The bits type only has 2, 4, and 8 defined.
   auto bits = static_cast<BitsType>(2 | 1);
   EXPECT_TRUE(bits.has_unknown_bits());

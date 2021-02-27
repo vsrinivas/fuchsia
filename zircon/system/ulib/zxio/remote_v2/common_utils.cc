@@ -6,136 +6,140 @@
 
 namespace fio2 = llcpp::fuchsia::io2;
 
-zxio_node_protocols_t ToZxioNodeProtocols(fio2::NodeProtocols protocols) {
+using fio2::wire::NodeProtocols;
+using fio2::wire::Operations;
+
+zxio_node_protocols_t ToZxioNodeProtocols(NodeProtocols protocols) {
   zxio_node_protocols_t zxio_protocols = ZXIO_NODE_PROTOCOL_NONE;
-  if (protocols & fio2::NodeProtocols::CONNECTOR) {
+  if (protocols & NodeProtocols::CONNECTOR) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_CONNECTOR;
   }
-  if (protocols & fio2::NodeProtocols::DIRECTORY) {
+  if (protocols & NodeProtocols::DIRECTORY) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_DIRECTORY;
   }
-  if (protocols & fio2::NodeProtocols::FILE) {
+  if (protocols & NodeProtocols::FILE) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_FILE;
   }
-  if (protocols & fio2::NodeProtocols::MEMORY) {
+  if (protocols & NodeProtocols::MEMORY) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_MEMORY;
   }
-  if (protocols & fio2::NodeProtocols::POSIX_SOCKET) {
+  if (protocols & NodeProtocols::POSIX_SOCKET) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_POSIX_SOCKET;
   }
-  if (protocols & fio2::NodeProtocols::PIPE) {
+  if (protocols & NodeProtocols::PIPE) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_PIPE;
   }
-  if (protocols & fio2::NodeProtocols::DEBUGLOG) {
+  if (protocols & NodeProtocols::DEBUGLOG) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_DEBUGLOG;
   }
-  if (protocols & fio2::NodeProtocols::DEVICE) {
+  if (protocols & NodeProtocols::DEVICE) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_DEVICE;
   }
-  if (protocols & fio2::NodeProtocols::TTY) {
+  if (protocols & NodeProtocols::TTY) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_TTY;
   }
   return zxio_protocols;
 }
 
-fio2::NodeProtocols ToIo2NodeProtocols(zxio_node_protocols_t zxio_protocols) {
-  fio2::NodeProtocols protocols = fio2::NodeProtocols();
+NodeProtocols ToIo2NodeProtocols(zxio_node_protocols_t zxio_protocols) {
+  NodeProtocols protocols = NodeProtocols();
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_CONNECTOR) {
-    protocols |= fio2::NodeProtocols::CONNECTOR;
+    protocols |= NodeProtocols::CONNECTOR;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_DIRECTORY) {
-    protocols |= fio2::NodeProtocols::DIRECTORY;
+    protocols |= NodeProtocols::DIRECTORY;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_FILE) {
-    protocols |= fio2::NodeProtocols::FILE;
+    protocols |= NodeProtocols::FILE;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_MEMORY) {
-    protocols |= fio2::NodeProtocols::MEMORY;
+    protocols |= NodeProtocols::MEMORY;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_POSIX_SOCKET) {
-    protocols |= fio2::NodeProtocols::POSIX_SOCKET;
+    protocols |= NodeProtocols::POSIX_SOCKET;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_PIPE) {
-    protocols |= fio2::NodeProtocols::PIPE;
+    protocols |= NodeProtocols::PIPE;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_DEBUGLOG) {
-    protocols |= fio2::NodeProtocols::DEBUGLOG;
+    protocols |= NodeProtocols::DEBUGLOG;
   }
+
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_DEVICE) {
-    protocols |= fio2::NodeProtocols::DEVICE;
+    protocols |= NodeProtocols::DEVICE;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_TTY) {
-    protocols |= fio2::NodeProtocols::TTY;
+    protocols |= NodeProtocols::TTY;
   }
   return protocols;
 }
 
-zxio_abilities_t ToZxioAbilities(fio2::Operations abilities) {
+zxio_abilities_t ToZxioAbilities(Operations abilities) {
   zxio_abilities_t zxio_abilities = ZXIO_OPERATION_NONE;
-  if (abilities & fio2::Operations::CONNECT) {
+  if (abilities & Operations::CONNECT) {
     zxio_abilities |= ZXIO_OPERATION_CONNECT;
   }
-  if (abilities & fio2::Operations::READ_BYTES) {
+  if (abilities & Operations::READ_BYTES) {
     zxio_abilities |= ZXIO_OPERATION_READ_BYTES;
   }
-  if (abilities & fio2::Operations::WRITE_BYTES) {
+  if (abilities & Operations::WRITE_BYTES) {
     zxio_abilities |= ZXIO_OPERATION_WRITE_BYTES;
   }
-  if (abilities & fio2::Operations::EXECUTE) {
+  if (abilities & Operations::EXECUTE) {
     zxio_abilities |= ZXIO_OPERATION_EXECUTE;
   }
-  if (abilities & fio2::Operations::GET_ATTRIBUTES) {
+  if (abilities & Operations::GET_ATTRIBUTES) {
     zxio_abilities |= ZXIO_OPERATION_GET_ATTRIBUTES;
   }
-  if (abilities & fio2::Operations::UPDATE_ATTRIBUTES) {
+  if (abilities & Operations::UPDATE_ATTRIBUTES) {
     zxio_abilities |= ZXIO_OPERATION_UPDATE_ATTRIBUTES;
   }
-  if (abilities & fio2::Operations::ENUMERATE) {
+  if (abilities & Operations::ENUMERATE) {
     zxio_abilities |= ZXIO_OPERATION_ENUMERATE;
   }
-  if (abilities & fio2::Operations::TRAVERSE) {
+  if (abilities & Operations::TRAVERSE) {
     zxio_abilities |= ZXIO_OPERATION_TRAVERSE;
   }
-  if (abilities & fio2::Operations::MODIFY_DIRECTORY) {
+  if (abilities & Operations::MODIFY_DIRECTORY) {
     zxio_abilities |= ZXIO_OPERATION_MODIFY_DIRECTORY;
   }
-  if (abilities & fio2::Operations::ADMIN) {
+  if (abilities & Operations::ADMIN) {
     zxio_abilities |= ZXIO_OPERATION_ADMIN;
   }
   return zxio_abilities;
 }
 
-fio2::Operations ToIo2Abilities(zxio_abilities_t zxio_abilities) {
-  fio2::Operations abilities = fio2::Operations();
+Operations ToIo2Abilities(zxio_abilities_t zxio_abilities) {
+  Operations abilities = Operations();
   if (zxio_abilities & ZXIO_OPERATION_CONNECT) {
-    abilities |= fio2::Operations::CONNECT;
+    abilities |= Operations::CONNECT;
   }
   if (zxio_abilities & ZXIO_OPERATION_READ_BYTES) {
-    abilities |= fio2::Operations::READ_BYTES;
+    abilities |= Operations::READ_BYTES;
   }
   if (zxio_abilities & ZXIO_OPERATION_WRITE_BYTES) {
-    abilities |= fio2::Operations::WRITE_BYTES;
+    abilities |= Operations::WRITE_BYTES;
   }
   if (zxio_abilities & ZXIO_OPERATION_EXECUTE) {
-    abilities |= fio2::Operations::EXECUTE;
+    abilities |= Operations::EXECUTE;
   }
   if (zxio_abilities & ZXIO_OPERATION_GET_ATTRIBUTES) {
-    abilities |= fio2::Operations::GET_ATTRIBUTES;
+    abilities |= Operations::GET_ATTRIBUTES;
   }
   if (zxio_abilities & ZXIO_OPERATION_UPDATE_ATTRIBUTES) {
-    abilities |= fio2::Operations::UPDATE_ATTRIBUTES;
+    abilities |= Operations::UPDATE_ATTRIBUTES;
   }
   if (zxio_abilities & ZXIO_OPERATION_ENUMERATE) {
-    abilities |= fio2::Operations::ENUMERATE;
+    abilities |= Operations::ENUMERATE;
   }
   if (zxio_abilities & ZXIO_OPERATION_TRAVERSE) {
-    abilities |= fio2::Operations::TRAVERSE;
+    abilities |= Operations::TRAVERSE;
   }
   if (zxio_abilities & ZXIO_OPERATION_MODIFY_DIRECTORY) {
-    abilities |= fio2::Operations::MODIFY_DIRECTORY;
+    abilities |= Operations::MODIFY_DIRECTORY;
   }
   if (zxio_abilities & ZXIO_OPERATION_ADMIN) {
-    abilities |= fio2::Operations::ADMIN;
+    abilities |= Operations::ADMIN;
   }
   return abilities;
 }

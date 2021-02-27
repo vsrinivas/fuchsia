@@ -132,7 +132,7 @@ class UsbAx88179Test : public zxtest::Test {
     ASSERT_OK(result);
   }
 
-  ethernet::DeviceStatus GetDeviceStatus() {
+  ethernet::wire::DeviceStatus GetDeviceStatus() {
     auto status_result = ethernet_client_.GetStatus();
     ZX_ASSERT(status_result.status() == ZX_OK);
     return status_result.Unwrap()->device_status;
@@ -146,7 +146,7 @@ class UsbAx88179Test : public zxtest::Test {
       zx_signals_t pending;
       ASSERT_OK(rx_fifo_.wait_one(ethernet::SIGNAL_STATUS, zx::time::infinite(), &pending));
       ASSERT_EQ((pending & ethernet::SIGNAL_STATUS), ethernet::SIGNAL_STATUS);
-      if (GetDeviceStatus() & ethernet::DeviceStatus::ONLINE) {
+      if (GetDeviceStatus() & ethernet::wire::DeviceStatus::ONLINE) {
         return;
       }
     }
@@ -169,7 +169,7 @@ TEST_F(UsbAx88179Test, OfflineByDefault) {
 
   ASSERT_NO_FATAL_FAILURES(StartDevice());
 
-  ASSERT_FALSE(GetDeviceStatus() & ethernet::DeviceStatus::ONLINE);
+  ASSERT_FALSE(GetDeviceStatus() & ethernet::wire::DeviceStatus::ONLINE);
 }
 
 TEST_F(UsbAx88179Test, SetOnlineAfterStart) {

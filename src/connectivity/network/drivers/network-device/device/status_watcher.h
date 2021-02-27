@@ -27,7 +27,7 @@ namespace network::internal {
 class FidlStatus {
  public:
   explicit FidlStatus(const status_t& status)
-      : mtu_(status.mtu), flags_(netdev::StatusFlags::TruncatingUnknown(status.flags)) {
+      : mtu_(status.mtu), flags_(netdev::wire::StatusFlags::TruncatingUnknown(status.flags)) {
     builder_.set_flags(fidl::unowned_ptr(&flags_));
     builder_.set_mtu(fidl::unowned_ptr(&mtu_));
   }
@@ -36,7 +36,7 @@ class FidlStatus {
 
  private:
   uint32_t mtu_;
-  netdev::StatusFlags flags_;
+  netdev::wire::StatusFlags flags_;
   netdev::Status::UnownedBuilder builder_;
 };
 

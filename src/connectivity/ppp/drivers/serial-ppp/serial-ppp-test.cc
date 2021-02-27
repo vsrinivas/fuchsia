@@ -682,8 +682,8 @@ TEST_F(SerialPppHarness, TestStatus) {
     status_t read;
     Device().NetworkDeviceImplGetStatus(&read);
     if (online) {
-      ASSERT_EQ(status->flags, static_cast<uint32_t>(netdev::StatusFlags::ONLINE));
-      ASSERT_EQ(read.flags, static_cast<uint32_t>(netdev::StatusFlags::ONLINE));
+      ASSERT_EQ(status->flags, static_cast<uint32_t>(netdev::wire::StatusFlags::ONLINE));
+      ASSERT_EQ(read.flags, static_cast<uint32_t>(netdev::wire::StatusFlags::ONLINE));
       Device().NetworkDeviceImplStop([](void* cookie) {}, nullptr);
     } else {
       ASSERT_EQ(status->flags, 0);

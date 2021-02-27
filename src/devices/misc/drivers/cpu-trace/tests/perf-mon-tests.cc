@@ -20,6 +20,7 @@ namespace fidl_perfmon = ::llcpp::fuchsia::perfmon::cpu;
 // Shorten some long FIDL names.
 using FidlPerfmonAllocation = fidl_perfmon::Allocation;
 using FidlPerfmonConfig = fidl_perfmon::Config;
+using FidlPerfmonConfigEventFlags = fidl_perfmon::wire::EventConfigFlags;
 
 // List of events we need. This is a minimal version of
 // garnet/lib/perfmon/event-registry.{h,cc}.
@@ -126,7 +127,7 @@ TEST_F(Perfmon, BasicCycles) {
 #endif
   config.events[0].event = cycle_event_id;
   config.events[0].rate = 0;
-  config.events[0].flags |= fidl_perfmon::EventConfigFlags::COLLECT_OS;
+  config.events[0].flags |= FidlPerfmonEventConfigFlags::COLLECT_OS;
   ASSERT_OK(device()->PmuStageConfig(&config));
 
   ASSERT_OK(device()->PmuStart());
@@ -146,7 +147,7 @@ TEST_F(Perfmon, OnlyNonCpuCountersSelected) {
   FidlPerfmonConfig config{};
   config.events[0].event = static_cast<perfmon::EventId>(SklMiscEvent::MISC_PKG_EDRAM_TEMP);
   config.events[0].rate = 0;
-  config.events[0].flags |= fidl_perfmon::EventConfigFlags::COLLECT_OS;
+  config.events[0].flags |= FidlPerfmonEventConfigFlags::COLLECT_OS;
   ASSERT_OK(device()->PmuStageConfig(&config));
 
   ASSERT_OK(device()->PmuStart());

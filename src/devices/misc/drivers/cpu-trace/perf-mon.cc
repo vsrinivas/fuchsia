@@ -158,10 +158,10 @@ void PerfmonDevice::PmuGetProperties(FidlPerfmonProperties* props) {
   props->max_num_misc_events = pmu_hw_properties_.common.max_num_misc_events;
   props->max_misc_counter_width = pmu_hw_properties_.common.max_misc_counter_width;
 
-  props->flags = fidl_perfmon::PropertyFlags();
+  props->flags = fidl_perfmon::wire::PropertyFlags();
 #ifdef __x86_64__
   if (pmu_hw_properties_.lbr_stack_size > 0) {
-    props->flags |= fidl_perfmon::PropertyFlags::HAS_LAST_BRANCH;
+    props->flags |= fidl_perfmon::wire::PropertyFlags::HAS_LAST_BRANCH;
   }
 #endif
 }
@@ -274,9 +274,9 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
       break;
     }
     EventRate rate = icfg->events[ii].rate;
-    fidl_perfmon::EventConfigFlags flags = icfg->events[ii].flags;
+    fidl_perfmon::wire::EventConfigFlags flags = icfg->events[ii].flags;
 
-    if (flags & fidl_perfmon::EventConfigFlags::IS_TIMEBASE) {
+    if (flags & fidl_perfmon::wire::EventConfigFlags::IS_TIMEBASE) {
       if (ocfg->timebase_event != kEventIdNone) {
         zxlogf(ERROR, "%s: multiple timebases [%u]", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
@@ -284,14 +284,14 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
       ocfg->timebase_event = icfg->events[ii].event;
     }
 
-    if (flags & fidl_perfmon::EventConfigFlags::COLLECT_PC) {
+    if (flags & fidl_perfmon::wire::EventConfigFlags::COLLECT_PC) {
       if (rate == 0) {
         zxlogf(ERROR, "%s: PC flag requires own timebase, event [%u]", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
       }
     }
 
-    if (flags & fidl_perfmon::EventConfigFlags::COLLECT_LAST_BRANCH) {
+    if (flags & fidl_perfmon::wire::EventConfigFlags::COLLECT_LAST_BRANCH) {
       // Further verification is architecture specific.
       if (icfg->events[ii].rate == 0) {
         zxlogf(ERROR, "%s: Last branch requires own timebase, event [%u]", __func__, ii);
@@ -315,7 +315,7 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
       zxlogf(ERROR, "%s: Hole at rate [%u]", __func__, ii);
       return ZX_ERR_INVALID_ARGS;
     }
-    if (icfg->events[ii].flags != fidl_perfmon::EventConfigFlags()) {
+    if (icfg->events[ii].flags != fidl_perfmon::wire::EventConfigFlags()) {
       zxlogf(ERROR, "%s: Hole at flags [%u]", __func__, ii);
       return ZX_ERR_INVALID_ARGS;
     }

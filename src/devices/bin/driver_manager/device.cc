@@ -170,9 +170,8 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, fbl::RefPtr<Driver
                                      composite_props.size());
   memcpy(props.data(), composite_props.data(), props.size() * sizeof(props[0]));
 
-  auto dev =
-      fbl::MakeRefCounted<Device>(coordinator, composite.name(), fbl::String(), fbl::String(),
-                                  nullptr, 0, zx::vmo(), zx::channel());
+  auto dev = fbl::MakeRefCounted<Device>(coordinator, composite.name(), fbl::String(),
+                                         fbl::String(), nullptr, 0, zx::vmo(), zx::channel());
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -818,7 +817,7 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
                        ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
                        ::fidl::StringView name_view, uint32_t protocol_id,
                        ::fidl::StringView driver_path_view, ::fidl::StringView args_view,
-                       llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config,
+                       llcpp::fuchsia::device::manager::wire::AddDeviceConfig device_add_config,
                        bool has_init, ::zx::vmo inspect, ::zx::channel client_remote,
                        AddDeviceCompleter::Sync& completer) {
   auto parent = fbl::RefPtr(this);
@@ -826,10 +825,10 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
   fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
   fbl::StringPiece args(args_view.data(), args_view.size());
 
-  bool invisible = static_cast<bool>(device_add_config &
-                                     llcpp::fuchsia::device::manager::AddDeviceConfig::INVISIBLE);
+  bool invisible = static_cast<bool>(
+      device_add_config & llcpp::fuchsia::device::manager::wire::AddDeviceConfig::INVISIBLE);
   bool skip_autobind = static_cast<bool>(
-      device_add_config & llcpp::fuchsia::device::manager::AddDeviceConfig::SKIP_AUTOBIND);
+      device_add_config & llcpp::fuchsia::device::manager::wire::AddDeviceConfig::SKIP_AUTOBIND);
 
   fbl::RefPtr<Device> device;
   zx_status_t status = parent->coordinator->AddDevice(
@@ -838,7 +837,7 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
       kEnableAlwaysInit, std::move(inspect), std::move(client_remote), &device);
   if (device != nullptr &&
       (device_add_config &
-       llcpp::fuchsia::device::manager::AddDeviceConfig::ALLOW_MULTI_COMPOSITE)) {
+       llcpp::fuchsia::device::manager::wire::AddDeviceConfig::ALLOW_MULTI_COMPOSITE)) {
     device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   }
   uint64_t local_id = device != nullptr ? device->local_id() : 0;

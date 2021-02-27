@@ -36,7 +36,8 @@ class TestServerBase : public fio2::Directory::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync& completer) override {
+  void Describe(fio2::wire::ConnectionInfoQuery query,
+                DescribeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -44,7 +45,7 @@ class TestServerBase : public fio2::Directory::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetAttributes(fio2::NodeAttributesQuery query,
+  void GetAttributes(fio2::wire::NodeAttributesQuery query,
                      GetAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -86,7 +87,7 @@ class TestServerBase : public fio2::Directory::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Watch(fio2::DirectoryWatchMask mask, fio2::DirectoryWatchOptions options,
+  void Watch(fio2::wire::DirectoryWatchMask mask, fio2::DirectoryWatchOptions options,
              zx::channel watcher, WatchCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -148,16 +149,16 @@ TEST_F(DirV2, Enumerate) {
         void GetNext(GetNextCompleter::Sync& completer) override {
           auto builder = fio2::DirectoryEntry::UnownedBuilder();
           fidl::StringView name;
-          fio2::NodeProtocols protocols;
-          fio2::Operations abilities;
+          fio2::wire::NodeProtocols protocols;
+          fio2::wire::Operations abilities;
           uint64_t id;
           switch (count_) {
             case 0:
               name = fidl::StringView("zero");
               builder.set_name(fidl::unowned_ptr(&name));
-              protocols = fio2::NodeProtocols::DIRECTORY;
+              protocols = fio2::wire::NodeProtocols::DIRECTORY;
               builder.set_protocols(fidl::unowned_ptr(&protocols));
-              abilities = fio2::Operations::ENUMERATE;
+              abilities = fio2::wire::Operations::ENUMERATE;
               builder.set_abilities(fidl::unowned_ptr(&abilities));
               id = 0;
               builder.set_id(fidl::unowned_ptr(&id));
@@ -165,9 +166,9 @@ TEST_F(DirV2, Enumerate) {
             case 1:
               name = fidl::StringView("one");
               builder.set_name(fidl::unowned_ptr(&name));
-              protocols = fio2::NodeProtocols::FILE;
+              protocols = fio2::wire::NodeProtocols::FILE;
               builder.set_protocols(fidl::unowned_ptr(&protocols));
-              abilities = fio2::Operations::READ_BYTES;
+              abilities = fio2::wire::Operations::READ_BYTES;
               builder.set_abilities(fidl::unowned_ptr(&abilities));
               id = 1;
               builder.set_id(fidl::unowned_ptr(&id));

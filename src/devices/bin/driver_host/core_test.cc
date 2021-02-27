@@ -30,8 +30,8 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::R
                  ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
                  ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path,
                  ::fidl::StringView args,
-                 llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init,
-                 ::zx::vmo inspect, ::zx::channel client_remote,
+                 llcpp::fuchsia::device::manager::wire::AddDeviceConfig device_add_config,
+                 bool has_init, ::zx::vmo inspect, ::zx::channel client_remote,
                  AddDeviceCompleter::Sync& completer) override {
     llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;

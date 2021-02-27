@@ -10,12 +10,12 @@
 
 namespace {
 
+using llcpp::fuchsia::examples::wire::FileMode;
+
 // [START bits]
 TEST(FidlExamples, Bits) {
-  auto flags = llcpp::fuchsia::examples::FileMode::READ |
-               llcpp::fuchsia::examples::FileMode::WRITE |
-               llcpp::fuchsia::examples::FileMode::EXECUTE;
-  ASSERT_EQ(flags, llcpp::fuchsia::examples::FileMode::kMask);
+  auto flags = FileMode::READ | FileMode::WRITE | FileMode::EXECUTE;
+  ASSERT_EQ(flags, FileMode::kMask);
 }
 // [END bits]
 

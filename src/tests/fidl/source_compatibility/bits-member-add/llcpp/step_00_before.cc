@@ -6,11 +6,11 @@
 namespace fidl_test = llcpp::fidl::test::bitsmemberadd;
 
 // [START contents]
-void use_bits(fidl_test::Flags bits) {
-  if (bits & fidl_test::Flags::OPTION_A) {
+void use_bits(fidl_test::wire::Flags bits) {
+  if (bits & fidl_test::wire::Flags::OPTION_A) {
     printf("option A is set\n");
   }
-  if (bits & fidl_test::Flags::OPTION_B) {
+  if (bits & fidl_test::wire::Flags::OPTION_B) {
     printf("option B is set\n");
   }
   if (bits.has_unknown_bits()) {

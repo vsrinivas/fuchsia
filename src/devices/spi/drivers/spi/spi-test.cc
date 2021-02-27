@@ -269,7 +269,7 @@ TEST(SpiDevice, SpiTest) {
 }
 
 TEST(SpiDevice, SpiFidlVmoTest) {
-  using ::llcpp::fuchsia::hardware::sharedmemory::SharedVmoRight;
+  using ::llcpp::fuchsia::hardware::sharedmemory::wire::SharedVmoRight;
 
   constexpr uint8_t kTestData[] = {1, 2, 3, 4, 5, 6, 7};
 

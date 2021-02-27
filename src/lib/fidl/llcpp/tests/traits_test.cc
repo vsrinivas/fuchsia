@@ -13,35 +13,35 @@ namespace test = llcpp::fidl::llcpp::types::test;
 // There's no actual code in here, but if it compiles, success.
 TEST(Traits, NotConst) {
   static_assert(!fidl::IsFidlObject<uint32_t>::value);
-  static_assert(fidl::IsFidlObject<test::CopyableStruct>::value);
-  static_assert(fidl::IsFidlObject<test::MoveOnlyStruct>::value);
-  static_assert(fidl::IsFidlObject<test::SampleTable>::value);
-  static_assert(fidl::IsFidlObject<test::TestUnion>::value);
+  static_assert(fidl::IsFidlObject<test::wire::CopyableStruct>::value);
+  static_assert(fidl::IsFidlObject<test::wire::MoveOnlyStruct>::value);
+  static_assert(fidl::IsFidlObject<test::wire::SampleTable>::value);
+  static_assert(fidl::IsFidlObject<test::wire::TestUnion>::value);
 
   static_assert(!fidl::IsTable<uint32_t>::value);
-  static_assert(!fidl::IsTable<test::CopyableStruct>::value);
-  static_assert(!fidl::IsTable<test::MoveOnlyStruct>::value);
-  static_assert(fidl::IsTable<test::SampleTable>::value);
-  static_assert(!fidl::IsTable<test::TestUnion>::value);
+  static_assert(!fidl::IsTable<test::wire::CopyableStruct>::value);
+  static_assert(!fidl::IsTable<test::wire::MoveOnlyStruct>::value);
+  static_assert(fidl::IsTable<test::wire::SampleTable>::value);
+  static_assert(!fidl::IsTable<test::wire::TestUnion>::value);
 
   static_assert(!fidl::IsUnion<uint32_t>::value);
-  static_assert(!fidl::IsUnion<test::CopyableStruct>::value);
-  static_assert(!fidl::IsUnion<test::MoveOnlyStruct>::value);
-  static_assert(!fidl::IsUnion<test::SampleTable>::value);
-  static_assert(fidl::IsUnion<test::TestUnion>::value);
+  static_assert(!fidl::IsUnion<test::wire::CopyableStruct>::value);
+  static_assert(!fidl::IsUnion<test::wire::MoveOnlyStruct>::value);
+  static_assert(!fidl::IsUnion<test::wire::SampleTable>::value);
+  static_assert(fidl::IsUnion<test::wire::TestUnion>::value);
 
   static_assert(!fidl::IsStruct<uint32_t>::value);
-  static_assert(fidl::IsStruct<test::CopyableStruct>::value);
-  static_assert(fidl::IsStruct<test::MoveOnlyStruct>::value);
-  static_assert(!fidl::IsStruct<test::SampleTable>::value);
-  static_assert(!fidl::IsStruct<test::TestUnion>::value);
+  static_assert(fidl::IsStruct<test::wire::CopyableStruct>::value);
+  static_assert(fidl::IsStruct<test::wire::MoveOnlyStruct>::value);
+  static_assert(!fidl::IsStruct<test::wire::SampleTable>::value);
+  static_assert(!fidl::IsStruct<test::wire::TestUnion>::value);
 
   static_assert(!fidl::IsTableBuilder<uint32_t>::value);
-  static_assert(!fidl::IsTableBuilder<test::CopyableStruct>::value);
-  static_assert(!fidl::IsTableBuilder<test::MoveOnlyStruct>::value);
-  static_assert(!fidl::IsTableBuilder<test::SampleTable>::value);
-  static_assert(fidl::IsTableBuilder<test::SampleTable::Builder>::value);
-  static_assert(!fidl::IsTableBuilder<test::TestUnion>::value);
+  static_assert(!fidl::IsTableBuilder<test::wire::CopyableStruct>::value);
+  static_assert(!fidl::IsTableBuilder<test::wire::MoveOnlyStruct>::value);
+  static_assert(!fidl::IsTableBuilder<test::wire::SampleTable>::value);
+  static_assert(fidl::IsTableBuilder<test::wire::SampleTable::Builder>::value);
+  static_assert(!fidl::IsTableBuilder<test::wire::TestUnion>::value);
 
   static_assert(!fidl::IsStringView<uint32_t>::value);
   static_assert(fidl::IsStringView<fidl::StringView>::value);
@@ -52,25 +52,25 @@ TEST(Traits, NotConst) {
 
 TEST(Traits, Const) {
   static_assert(!fidl::IsFidlObject<const uint32_t>::value);
-  static_assert(fidl::IsFidlObject<const test::CopyableStruct>::value);
-  static_assert(fidl::IsFidlObject<const test::MoveOnlyStruct>::value);
-  static_assert(fidl::IsFidlObject<const test::SampleTable>::value);
+  static_assert(fidl::IsFidlObject<const test::wire::CopyableStruct>::value);
+  static_assert(fidl::IsFidlObject<const test::wire::MoveOnlyStruct>::value);
+  static_assert(fidl::IsFidlObject<const test::wire::SampleTable>::value);
 
   static_assert(!fidl::IsTable<const uint32_t>::value);
-  static_assert(!fidl::IsTable<const test::CopyableStruct>::value);
-  static_assert(!fidl::IsTable<const test::MoveOnlyStruct>::value);
-  static_assert(fidl::IsTable<const test::SampleTable>::value);
+  static_assert(!fidl::IsTable<const test::wire::CopyableStruct>::value);
+  static_assert(!fidl::IsTable<const test::wire::MoveOnlyStruct>::value);
+  static_assert(fidl::IsTable<const test::wire::SampleTable>::value);
 
   static_assert(!fidl::IsStruct<const uint32_t>::value);
-  static_assert(fidl::IsStruct<const test::CopyableStruct>::value);
-  static_assert(fidl::IsStruct<const test::MoveOnlyStruct>::value);
-  static_assert(!fidl::IsStruct<const test::SampleTable>::value);
+  static_assert(fidl::IsStruct<const test::wire::CopyableStruct>::value);
+  static_assert(fidl::IsStruct<const test::wire::MoveOnlyStruct>::value);
+  static_assert(!fidl::IsStruct<const test::wire::SampleTable>::value);
 
   static_assert(!fidl::IsTableBuilder<const uint32_t>::value);
-  static_assert(!fidl::IsTableBuilder<const test::CopyableStruct>::value);
-  static_assert(!fidl::IsTableBuilder<const test::MoveOnlyStruct>::value);
-  static_assert(!fidl::IsTableBuilder<const test::SampleTable>::value);
-  static_assert(fidl::IsTableBuilder<const test::SampleTable::Builder>::value);
+  static_assert(!fidl::IsTableBuilder<const test::wire::CopyableStruct>::value);
+  static_assert(!fidl::IsTableBuilder<const test::wire::MoveOnlyStruct>::value);
+  static_assert(!fidl::IsTableBuilder<const test::wire::SampleTable>::value);
+  static_assert(fidl::IsTableBuilder<const test::wire::SampleTable::Builder>::value);
 
   static_assert(!fidl::IsStringView<const uint32_t>::value);
   static_assert(fidl::IsStringView<const fidl::StringView>::value);
@@ -82,13 +82,13 @@ TEST(Traits, Const) {
 TEST(Traits, IsFidlType) {
   struct NotAFidlType {};
   static_assert(fidl::IsFidlType<uint32_t>::value);
-  static_assert(fidl::IsFidlType<test::CopyableStruct>::value);
-  static_assert(fidl::IsFidlType<test::MoveOnlyStruct>::value);
-  static_assert(fidl::IsFidlType<test::EmptyStruct>::value);
-  static_assert(fidl::IsFidlType<test::SampleTable>::value);
-  static_assert(fidl::IsFidlType<test::StrictBits>::value);
-  static_assert(fidl::IsFidlType<test::FlexibleBits>::value);
-  static_assert(fidl::IsFidlType<test::StrictEnum>::value);
-  static_assert(fidl::IsFidlType<test::FlexibleEnum>::value);
+  static_assert(fidl::IsFidlType<test::wire::CopyableStruct>::value);
+  static_assert(fidl::IsFidlType<test::wire::MoveOnlyStruct>::value);
+  static_assert(fidl::IsFidlType<test::wire::EmptyStruct>::value);
+  static_assert(fidl::IsFidlType<test::wire::SampleTable>::value);
+  static_assert(fidl::IsFidlType<test::wire::StrictBits>::value);
+  static_assert(fidl::IsFidlType<test::wire::FlexibleBits>::value);
+  static_assert(fidl::IsFidlType<test::wire::StrictEnum>::value);
+  static_assert(fidl::IsFidlType<test::wire::FlexibleEnum>::value);
   static_assert(!fidl::IsFidlType<NotAFidlType>::value);
 }

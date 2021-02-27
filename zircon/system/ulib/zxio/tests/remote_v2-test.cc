@@ -35,7 +35,8 @@ class TestServerBase : public fio2::Node::Interface {
     completer.Close(ZX_OK);
   }
 
-  void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync& completer) override {
+  void Describe(fio2::wire::ConnectionInfoQuery query,
+                DescribeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -43,7 +44,7 @@ class TestServerBase : public fio2::Node::Interface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetAttributes(fio2::NodeAttributesQuery query,
+  void GetAttributes(fio2::wire::NodeAttributesQuery query,
                      GetAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -108,12 +109,12 @@ TEST_F(RemoteV2, GetAttributes) {
   constexpr uint64_t kId = 1;
   class TestServer : public TestServerBase {
    public:
-    void GetAttributes(fio2::NodeAttributesQuery query,
+    void GetAttributes(fio2::wire::NodeAttributesQuery query,
                        GetAttributesCompleter::Sync& completer) override {
-      EXPECT_EQ(query, fio2::NodeAttributesQuery::kMask);
+      EXPECT_EQ(query, fio2::wire::NodeAttributesQuery::kMask);
       uint64_t content_size = kContentSize;
       uint64_t id = kId;
-      fio2::NodeProtocols protocols = fio2::NodeProtocols::FILE;
+      fio2::wire::NodeProtocols protocols = fio2::wire::NodeProtocols::FILE;
       auto builder = fio2::NodeAttributes::UnownedBuilder()
                          .set_content_size(fidl::unowned_ptr(&content_size))
                          .set_protocols(fidl::unowned_ptr(&protocols))
@@ -142,7 +143,7 @@ TEST_F(RemoteV2, GetAttributes) {
 TEST_F(RemoteV2, GetAttributesError) {
   class TestServer : public TestServerBase {
    public:
-    void GetAttributes(fio2::NodeAttributesQuery query,
+    void GetAttributes(fio2::wire::NodeAttributesQuery query,
                        GetAttributesCompleter::Sync& completer) override {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
     }
@@ -211,7 +212,7 @@ TEST_F(RemoteV2, WaitForReadable) {
   ASSERT_NO_FAILURES(StartServer<TestServerBase>());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_OK(eventpair_on_server_.signal_peer(
-      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::DeviceSignal::READABLE)));
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::wire::DeviceSignal::READABLE)));
   ASSERT_OK(zxio_wait_one(&remote_.io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_READABLE, observed);
 }
@@ -220,7 +221,7 @@ TEST_F(RemoteV2, WaitForWritable) {
   ASSERT_NO_FAILURES(StartServer<TestServerBase>());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_OK(eventpair_on_server_.signal_peer(
-      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::DeviceSignal::WRITABLE)));
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::wire::DeviceSignal::WRITABLE)));
   ASSERT_OK(zxio_wait_one(&remote_.io, ZXIO_SIGNAL_WRITABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
 }

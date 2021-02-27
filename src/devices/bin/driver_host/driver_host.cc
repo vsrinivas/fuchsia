@@ -193,16 +193,17 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
                                                 const zx_device_prop_t* props, uint32_t prop_count,
                                                 zx::vmo inspect, zx::channel client_remote) {
   bool add_invisible = child->flags() & DEV_FLAG_INVISIBLE;
-  fuchsia::device::manager::AddDeviceConfig add_device_config;
+  using fuchsia::device::manager::wire::AddDeviceConfig;
+  AddDeviceConfig add_device_config;
 
   if (child->flags() & DEV_FLAG_ALLOW_MULTI_COMPOSITE) {
-    add_device_config |= fuchsia::device::manager::AddDeviceConfig::ALLOW_MULTI_COMPOSITE;
+    add_device_config |= AddDeviceConfig::ALLOW_MULTI_COMPOSITE;
   }
   if (add_invisible) {
-    add_device_config |= fuchsia::device::manager::AddDeviceConfig::INVISIBLE;
+    add_device_config |= AddDeviceConfig::INVISIBLE;
   }
   if (child->flags() & DEV_FLAG_UNBINDABLE) {
-    add_device_config |= fuchsia::device::manager::AddDeviceConfig::SKIP_AUTOBIND;
+    add_device_config |= AddDeviceConfig::SKIP_AUTOBIND;
   }
 
   zx_status_t status;

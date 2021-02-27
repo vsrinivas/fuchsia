@@ -6,10 +6,10 @@
 namespace fidl_test = llcpp::fidl::test::bitsflexiblestrict;
 
 // [START contents]
-uint32_t use_bits(fidl_test::Flags bits) {
-  auto result = fidl_test::Flags::TruncatingUnknown(7u);
-  if (bits & fidl_test::Flags::OPTION_A) {
-    result |= fidl_test::Flags::kMask;
+uint32_t use_bits(fidl_test::wire::Flags bits) {
+  auto result = fidl_test::wire::Flags::TruncatingUnknown(7u);
+  if (bits & fidl_test::wire::Flags::OPTION_A) {
+    result |= fidl_test::wire::Flags::kMask;
   }
   return uint32_t(result);
 }

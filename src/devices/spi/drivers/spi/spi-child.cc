@@ -53,7 +53,7 @@ void SpiChild::ExchangeVector(::fidl::VectorView<uint8_t> txdata,
 }
 
 void SpiChild::RegisterVmo(uint32_t vmo_id, ::llcpp::fuchsia::mem::Range vmo,
-                           sharedmemory::SharedVmoRight rights,
+                           sharedmemory::wire::SharedVmoRight rights,
                            RegisterVmoCompleter::Sync& completer) {
   sharedmemory::SharedVmoRegister_RegisterVmo_Result result;
   fidl::aligned<sharedmemory::SharedVmoRegister_RegisterVmo_Response> response = {};

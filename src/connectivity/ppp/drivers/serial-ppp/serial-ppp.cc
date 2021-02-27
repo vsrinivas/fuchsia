@@ -366,7 +366,7 @@ void SerialPpp::NetworkDeviceImplStart(network_device_impl_start_callback callba
     thread_ = std::thread([&] { WorkerLoop(); });
   }
   status_t new_status = {.mtu = kDefaultMtu,
-                         .flags = static_cast<uint32_t>(netdev::StatusFlags::ONLINE)};
+                         .flags = static_cast<uint32_t>(netdev::wire::StatusFlags::ONLINE)};
   netdevice_protocol_.StatusChanged(&new_status);
 }
 
@@ -408,7 +408,7 @@ void SerialPpp::NetworkDeviceImplGetInfo(device_info_t* out_info) {
 void SerialPpp::NetworkDeviceImplGetStatus(status_t* out_status) {
   *out_status = status_t{
       .mtu = kDefaultMtu,
-      .flags = serial_.is_valid() ? static_cast<uint32_t>(netdev::StatusFlags::ONLINE) : 0};
+      .flags = serial_.is_valid() ? static_cast<uint32_t>(netdev::wire::StatusFlags::ONLINE) : 0};
 }
 
 void SerialPpp::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count) {

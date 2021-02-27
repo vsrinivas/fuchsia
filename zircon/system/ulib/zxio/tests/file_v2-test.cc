@@ -37,8 +37,9 @@ class TestServerBase : public fio2::File::Interface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync& completer) override {
-    if (query == fio2::ConnectionInfoQuery::REPRESENTATION) {
+  void Describe(fio2::wire::ConnectionInfoQuery query,
+                DescribeCompleter::Sync& completer) override {
+    if (query == fio2::wire::ConnectionInfoQuery::REPRESENTATION) {
       auto file_info_builder = fio2::FileInfo::UnownedBuilder();
       fio2::FileInfo file_info = file_info_builder.build();
       auto representation = fio2::Representation::WithFile(fidl::unowned_ptr(&file_info));
@@ -54,7 +55,7 @@ class TestServerBase : public fio2::File::Interface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetAttributes(fio2::NodeAttributesQuery query,
+  void GetAttributes(fio2::wire::NodeAttributesQuery query,
                      GetAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -91,7 +92,7 @@ class TestServerBase : public fio2::File::Interface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetMemRange(fio2::VmoFlags flags, GetMemRangeCompleter::Sync& completer) override {
+  void GetMemRange(fio2::wire::VmoFlags flags, GetMemRangeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -129,8 +130,8 @@ class FileV2 : public zxtest::Test {
       return status;
     }
 
-    auto result =
-        fio2::File::Call::Describe(client_end.borrow(), fio2::ConnectionInfoQuery::REPRESENTATION);
+    auto result = fio2::File::Call::Describe(client_end.borrow(),
+                                             fio2::wire::ConnectionInfoQuery::REPRESENTATION);
 
     if (result.status() != ZX_OK) {
       return status;
@@ -170,8 +171,9 @@ class TestServerEvent final : public TestServerBase {
 
   const zx::event& observer() const { return observer_; }
 
-  void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync& completer) override {
-    if (query == fio2::ConnectionInfoQuery::REPRESENTATION) {
+  void Describe(fio2::wire::ConnectionInfoQuery query,
+                DescribeCompleter::Sync& completer) override {
+    if (query == fio2::wire::ConnectionInfoQuery::REPRESENTATION) {
       auto file_info_builder = fio2::FileInfo::UnownedBuilder();
       zx::event client_observer;
       zx_status_t status = observer_.duplicate(ZX_RIGHTS_BASIC, &client_observer);
@@ -211,7 +213,7 @@ TEST_F(FileV2, WaitForReadable) {
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   // Signal readability on the server end.
   ASSERT_OK(server->observer().signal(ZX_SIGNAL_NONE,
-                                      static_cast<zx_signals_t>(fio2::FileSignal::READABLE)));
+                                      static_cast<zx_signals_t>(fio2::wire::FileSignal::READABLE)));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_READABLE, observed);
 }
@@ -223,7 +225,7 @@ TEST_F(FileV2, WaitForWritable) {
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   // Signal writability on the server end.
   ASSERT_OK(server->observer().signal(ZX_SIGNAL_NONE,
-                                      static_cast<zx_signals_t>(fio2::FileSignal::WRITABLE)));
+                                      static_cast<zx_signals_t>(fio2::wire::FileSignal::WRITABLE)));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_WRITABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
 }
@@ -343,8 +345,9 @@ class TestServerStream final : public TestServerBase {
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 
-  void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync& completer) override {
-    if (query == fio2::ConnectionInfoQuery::REPRESENTATION) {
+  void Describe(fio2::wire::ConnectionInfoQuery query,
+                DescribeCompleter::Sync& completer) override {
+    if (query == fio2::wire::ConnectionInfoQuery::REPRESENTATION) {
       auto file_info_builder = fio2::FileInfo::UnownedBuilder();
       zx::stream client_stream;
       zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &client_stream);

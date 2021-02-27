@@ -159,7 +159,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   std::atomic_bool paused_;
   uint16_t descriptor_count_;
   uint64_t descriptor_length_;
-  netdev::SessionFlags flags_;
+  netdev::wire::SessionFlags flags_;
   std::array<uint8_t, netdev::MAX_FRAME_TYPES> frame_types_{};
   uint32_t frame_type_count_;
   // Pointer to parent network device, not owned.

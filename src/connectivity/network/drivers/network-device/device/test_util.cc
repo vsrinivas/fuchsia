@@ -83,7 +83,7 @@ FakeNetworkDeviceImpl::~FakeNetworkDeviceImpl() {
 zx_status_t FakeNetworkDeviceImpl::NetworkDeviceImplInit(
     const network_device_ifc_protocol_t* iface) {
   status_.mtu = 2048;
-  status_.flags = static_cast<uint32_t>(netdev::StatusFlags::ONLINE);
+  status_.flags = static_cast<uint32_t>(netdev::wire::StatusFlags::ONLINE);
   device_client_ = ddk::NetworkDeviceIfcProtocolClient(iface);
   return ZX_OK;
 }
@@ -186,8 +186,8 @@ bool FakeNetworkDeviceImpl::TriggerStop() {
 
 void FakeNetworkDeviceImpl::SetOnline(bool online) {
   status_t status = status_;
-  status.flags =
-      static_cast<uint32_t>(online ? netdev::StatusFlags::ONLINE : netdev::StatusFlags());
+  status.flags = static_cast<uint32_t>(online ? netdev::wire::StatusFlags::ONLINE
+                                              : netdev::wire::StatusFlags());
   SetStatus(status);
 }
 
@@ -214,7 +214,7 @@ zx_status_t FakeNetworkDeviceImpl::CreateChild(async_dispatcher_t* dispatcher,
 }
 
 zx_status_t TestSession::Open(netdev::Device::SyncClient& netdevice, const char* name,
-                              netdev::SessionFlags flags, uint16_t num_descriptors,
+                              netdev::wire::SessionFlags flags, uint16_t num_descriptors,
                               uint64_t buffer_size,
                               fidl::VectorView<netdev::FrameType> frame_types) {
   netdev::FrameType supported_frames[1];

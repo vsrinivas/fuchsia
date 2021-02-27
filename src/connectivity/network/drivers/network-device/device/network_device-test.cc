@@ -27,6 +27,8 @@
 namespace network {
 namespace testing {
 
+using netdev::wire::RxFlags;
+
 class NetworkDeviceTest : public zxtest::Test {
  public:
   void SetUp() override {
@@ -106,7 +108,7 @@ class NetworkDeviceTest : public zxtest::Test {
   }
 
   zx_status_t OpenSession(
-      TestSession* session, netdev::SessionFlags flags = netdev::SessionFlags::PRIMARY,
+      TestSession* session, netdev::wire::SessionFlags flags = netdev::wire::SessionFlags::PRIMARY,
       uint16_t num_descriptors = kDefaultDescriptorCount,
       uint64_t buffer_size = kDefaultBufferLength,
       fidl::VectorView<netdev::FrameType> frame_types = fidl::VectorView<netdev::FrameType>()) {
@@ -241,7 +243,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   ASSERT_EQ(rx->buff().data.parts_list[0].offset, session.descriptor(0)->offset);
   ASSERT_EQ(rx->buff().data.parts_list[0].length, kDefaultBufferLength);
   rx->return_buffer().total_length = 64;
-  rx->return_buffer().meta.flags = static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_0);
+  rx->return_buffer().meta.flags = static_cast<uint32_t>(RxFlags::RX_ACCEL_0);
   return_session.Enqueue(std::move(rx));
   // check second descriptor:
   rx = impl_.rx_buffers().pop_back();
@@ -252,7 +254,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   ASSERT_EQ(rx->buff().data.parts_list[0].length,
             kDefaultBufferLength - desc->head_length - desc->tail_length);
   rx->return_buffer().total_length = 15;
-  rx->return_buffer().meta.flags = static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_1);
+  rx->return_buffer().meta.flags = static_cast<uint32_t>(RxFlags::RX_ACCEL_1);
   return_session.Enqueue(std::move(rx));
   // check third descriptor:
   rx = impl_.rx_buffers().pop_back();
@@ -269,7 +271,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   ASSERT_EQ(rx->buff().data.parts_list[2].length, d2->data_length);
   // set the total length up to a part of the middle buffer:
   rx->return_buffer().total_length = 25;
-  rx->return_buffer().meta.flags = static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_2);
+  rx->return_buffer().meta.flags = static_cast<uint32_t>(RxFlags::RX_ACCEL_2);
   return_session.Enqueue(std::move(rx));
   // ensure no more rx buffers were actually returned:
   ASSERT_TRUE(impl_.rx_buffers().is_empty());
@@ -287,7 +289,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   desc = session.descriptor(0);
   EXPECT_EQ(desc->offset, session.canonical_offset(0));
   EXPECT_EQ(desc->chain_length, 0);
-  EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_0));
+  EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(RxFlags::RX_ACCEL_0));
   EXPECT_EQ(desc->head_length, 0);
   EXPECT_EQ(desc->data_length, 64);
   EXPECT_EQ(desc->tail_length, 0);
@@ -295,7 +297,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   desc = session.descriptor(1);
   EXPECT_EQ(desc->offset, session.canonical_offset(1));
   EXPECT_EQ(desc->chain_length, 0);
-  EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_1));
+  EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(RxFlags::RX_ACCEL_1));
   EXPECT_EQ(desc->head_length, 16);
   EXPECT_EQ(desc->data_length, 15);
   EXPECT_EQ(desc->tail_length, 32);
@@ -304,7 +306,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   EXPECT_EQ(desc->offset, session.canonical_offset(2));
   EXPECT_EQ(desc->chain_length, 2);
   EXPECT_EQ(desc->nxt, 3);
-  EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_2));
+  EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(RxFlags::RX_ACCEL_2));
   EXPECT_EQ(desc->head_length, 0);
   EXPECT_EQ(desc->data_length, 10);
   EXPECT_EQ(desc->tail_length, 0);
@@ -407,11 +409,13 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   desc = session.descriptor(0);
   EXPECT_EQ(desc->return_flags, 0);
   desc = session.descriptor(1);
-  EXPECT_EQ(desc->return_flags, static_cast<uint32_t>(netdev::TxReturnFlags::TX_RET_ERROR |
-                                                      netdev::TxReturnFlags::TX_RET_NOT_AVAILABLE));
+  EXPECT_EQ(desc->return_flags,
+            static_cast<uint32_t>(netdev::wire::TxReturnFlags::TX_RET_ERROR |
+                                  netdev::wire::TxReturnFlags::TX_RET_NOT_AVAILABLE));
   desc = session.descriptor(2);
-  EXPECT_EQ(desc->return_flags, static_cast<uint32_t>(netdev::TxReturnFlags::TX_RET_ERROR |
-                                                      netdev::TxReturnFlags::TX_RET_NOT_SUPPORTED));
+  EXPECT_EQ(desc->return_flags,
+            static_cast<uint32_t>(netdev::wire::TxReturnFlags::TX_RET_ERROR |
+                                  netdev::wire::TxReturnFlags::TX_RET_NOT_SUPPORTED));
 }
 
 TEST_F(NetworkDeviceTest, SessionEpitaph) {
@@ -503,8 +507,8 @@ TEST_F(NetworkDeviceTest, TwoSessionsTx) {
   ASSERT_EQ(rd, 1);
   ASSERT_EQ(session_a.descriptor(0)->return_flags, 0);
   ASSERT_EQ(session_b.descriptor(1)->return_flags,
-            static_cast<uint32_t>(netdev::TxReturnFlags::TX_RET_ERROR |
-                                  netdev::TxReturnFlags::TX_RET_NOT_AVAILABLE));
+            static_cast<uint32_t>(netdev::wire::TxReturnFlags::TX_RET_ERROR |
+                                  netdev::wire::TxReturnFlags::TX_RET_NOT_AVAILABLE));
 }
 
 TEST_F(NetworkDeviceTest, TwoSessionsRx) {
@@ -566,7 +570,7 @@ TEST_F(NetworkDeviceTest, ListenSession) {
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   TestSession session_b;
-  ASSERT_OK(OpenSession(&session_b, netdev::SessionFlags::LISTEN_TX));
+  ASSERT_OK(OpenSession(&session_b, netdev::wire::SessionFlags::LISTEN_TX));
   ASSERT_OK(session_a.SetPaused(false));
   ASSERT_OK(WaitSessionStarted());
   ASSERT_OK(session_b.SetPaused(false));
@@ -731,8 +735,8 @@ TEST_F(NetworkDeviceTest, ReclaimBuffers) {
   ASSERT_EQ(desc, 1);
   // check that the return flags reflect the error
   ASSERT_EQ(session_a.descriptor(1)->return_flags,
-            static_cast<uint32_t>(netdev::TxReturnFlags::TX_RET_ERROR |
-                                  netdev::TxReturnFlags::TX_RET_NOT_AVAILABLE));
+            static_cast<uint32_t>(netdev::wire::TxReturnFlags::TX_RET_ERROR |
+                                  netdev::wire::TxReturnFlags::TX_RET_NOT_AVAILABLE));
 
   // Unpause the session again and fetch rx buffers to confirm that the Rx buffer was reclaimed
   ASSERT_OK(session_a.SetPaused(false));
@@ -860,6 +864,7 @@ TEST_F(NetworkDeviceTest, RxFrameTypeFilter) {
 }
 
 TEST_F(NetworkDeviceTest, ObserveStatus) {
+  using netdev::wire::StatusFlags;
   ASSERT_OK(CreateDevice());
   auto endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
@@ -870,7 +875,7 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
     auto result = watcher.WatchStatus();
     ASSERT_TRUE(result.ok());
     ASSERT_EQ(result.value().device_status.mtu(), impl_.status().mtu);
-    ASSERT_TRUE(result.value().device_status.flags() & netdev::StatusFlags::ONLINE);
+    ASSERT_TRUE(result.value().device_status.flags() & StatusFlags::ONLINE);
   }
   // Set offline, then set online (watcher is buffered, we should be able to observe both).
   impl_.SetOnline(false);
@@ -879,13 +884,13 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
     auto result = watcher.WatchStatus();
     ASSERT_TRUE(result.ok());
     ASSERT_EQ(result.value().device_status.mtu(), impl_.status().mtu);
-    ASSERT_FALSE(result.value().device_status.flags() & netdev::StatusFlags::ONLINE);
+    ASSERT_FALSE(result.value().device_status.flags() & StatusFlags::ONLINE);
   }
   {
     auto result = watcher.WatchStatus();
     ASSERT_TRUE(result.ok());
     ASSERT_EQ(result.value().device_status.mtu(), impl_.status().mtu);
-    ASSERT_TRUE(result.value().device_status.flags() & netdev::StatusFlags::ONLINE);
+    ASSERT_TRUE(result.value().device_status.flags() & StatusFlags::ONLINE);
   }
 
   DiscardDeviceSync();
@@ -918,7 +923,7 @@ TEST_F(NetworkDeviceTest, RejectsInvalidRxTypes) {
   TestSession session;
   auto frame_type = netdev::FrameType::IPV4;
   ASSERT_STATUS(
-      OpenSession(&session, netdev::SessionFlags::PRIMARY, kDefaultDescriptorCount,
+      OpenSession(&session, netdev::wire::SessionFlags::PRIMARY, kDefaultDescriptorCount,
                   kDefaultBufferLength, fidl::VectorView(fidl::unowned_ptr(&frame_type), 1)),
       ZX_ERR_INVALID_ARGS);
 }
@@ -989,7 +994,7 @@ TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
   auto connection = OpenConnection();
   TestSession session;
   uint16_t descriptor_count = impl_.info().rx_depth * 2;
-  ASSERT_OK(OpenSession(&session, netdev::SessionFlags::PRIMARY, descriptor_count));
+  ASSERT_OK(OpenSession(&session, netdev::wire::SessionFlags::PRIMARY, descriptor_count));
 
   ASSERT_OK(session.SetPaused(false));
   ASSERT_OK(WaitStart());

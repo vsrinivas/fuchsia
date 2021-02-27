@@ -326,16 +326,18 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
     return EAI_SYSTEM;
   }
 
-  fnet::LookupIpOptions options;
+  using fnet::wire::LookupIpOptions;
+
+  LookupIpOptions options;
   switch (family) {
     case AF_UNSPEC:
-      options = fnet::LookupIpOptions::V4_ADDRS | fnet::LookupIpOptions::V6_ADDRS;
+      options = LookupIpOptions::V4_ADDRS | LookupIpOptions::V6_ADDRS;
       break;
     case AF_INET:
-      options = fnet::LookupIpOptions::V4_ADDRS;
+      options = LookupIpOptions::V4_ADDRS;
       break;
     case AF_INET6:
-      options = fnet::LookupIpOptions::V6_ADDRS;
+      options = LookupIpOptions::V6_ADDRS;
       break;
     default:
       return EAI_FAMILY;
@@ -370,7 +372,7 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
   const auto& response = lookup_ip_result.response().addr;
   int count = 0;
 
-  if (options & fnet::LookupIpOptions::V4_ADDRS) {
+  if (options & LookupIpOptions::V4_ADDRS) {
     for (uint64_t i = 0; i < response.ipv4_addrs.count() && count < MAXADDRS; i++) {
       buf[count].family = AF_INET;
       buf[count].scopeid = 0;
@@ -380,7 +382,7 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
       count++;
     }
   }
-  if (options & fnet::LookupIpOptions::V6_ADDRS) {
+  if (options & LookupIpOptions::V6_ADDRS) {
     for (uint64_t i = 0; i < response.ipv6_addrs.count() && count < MAXADDRS; i++) {
       buf[count].family = AF_INET6;
       buf[count].scopeid = 0;  // TODO(fxbug.dev/21415): Figure out a way to expose scope ID
