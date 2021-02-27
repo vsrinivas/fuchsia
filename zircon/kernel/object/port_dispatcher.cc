@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <lib/cmdline.h>
 #include <lib/counters.h>
+#include <lib/object_cache.h>
 #include <platform.h>
 #include <pow2.h>
 #include <zircon/compiler.h>
@@ -35,35 +36,40 @@ static_assert(sizeof(zx_packet_interrupt_t) == 32, "incorrect size for zx_packet
 static_assert(sizeof(zx_packet_page_request_t) == 32,
               "incorrect size for zx_packet_page_request_t");
 
-KCOUNTER(port_arena_count, "port.arena.count")
+KCOUNTER(port_ephemeral_packet_live, "port.ephemeral_packet.live")
+KCOUNTER(port_ephemeral_packet_allocated, "port.ephemeral_packet.allocated")
+KCOUNTER(port_ephemeral_packet_freed, "port.ephemeral_packet.freed")
 KCOUNTER(port_full_count, "port.full.count")
 KCOUNTER(port_dequeue_count, "port.dequeue.count")
 KCOUNTER(port_dequeue_spurious_count, "port.dequeue.spurious.count")
 KCOUNTER(dispatcher_port_create_count, "dispatcher.port.create")
 KCOUNTER(dispatcher_port_destroy_count, "dispatcher.port.destroy")
 
-class ArenaPortAllocator final : public PortAllocator {
- public:
-  zx_status_t Init();
-  virtual ~ArenaPortAllocator() = default;
-
-  virtual PortPacket* Alloc();
-  virtual void Free(PortPacket* port_packet);
-
- private:
-  fbl::TypedArena<PortPacket, Mutex> arena_;
+// Implements the PortAllocator interface and trivially forwards to the
+// ObjectCache allocator for PortPackets defined below.
+struct PortPacketCacheAllocator final : PortAllocator {
+  ~PortPacketCacheAllocator() override = default;
+  PortPacket* Alloc() override;
+  void Free(PortPacket* port_packet) override;
 };
 
 namespace {
 // BUG(53762) Increase from 16k packets to 32k packets.
 // TODO(maniscalco): Enforce this limit per process via the job policy.
 constexpr size_t kMaxAllocatedPacketCountPerPort = 4096u;
-constexpr size_t kMaxAllocatedPacketCount = 8u * kMaxAllocatedPacketCountPerPort;
 
-ArenaPortAllocator port_allocator;
+// Per-cpu cache allocator for PortPackets.
+object_cache::ObjectCache<PortPacket, object_cache::Option::PerCpu> packet_allocator;
+
+// Per-cpu cache allocator for PortObservers.
+object_cache::ObjectCache<PortObserver, object_cache::Option::PerCpu> observer_allocator;
+
+// A trivial instance of the default PortAllocator for comparisons and to supply
+// the vtable used outside of this compilation unit.
+PortPacketCacheAllocator default_port_allocator;
 
 bool IsDefaultAllocatedEphemeral(const PortPacket& port_packet) {
-  return port_packet.allocator == &port_allocator && port_packet.is_ephemeral();
+  return port_packet.allocator == &default_port_allocator && port_packet.is_ephemeral();
 }
 
 void RaisePacketLimitException(zx_koid_t koid, size_t num_packets) {
@@ -76,21 +82,21 @@ void RaisePacketLimitException(zx_koid_t koid, size_t num_packets) {
 
 }  // namespace.
 
-zx_status_t ArenaPortAllocator::Init() { return arena_.Init("packets", kMaxAllocatedPacketCount); }
-
-PortPacket* ArenaPortAllocator::Alloc() {
-  PortPacket* packet = arena_.New(nullptr, this);
-  if (packet == nullptr) {
-    printf("WARNING: Could not allocate new port packet\n");
+PortPacket* PortPacketCacheAllocator::Alloc() {
+  zx::status result = packet_allocator.Allocate(nullptr, this);
+  if (result.is_error()) {
+    printf("WARNING: Could not allocate new port packet: %d\n", result.error_value());
     return nullptr;
   }
-  kcounter_add(port_arena_count, 1);
-  return packet;
+  kcounter_add(port_ephemeral_packet_live, 1);
+  kcounter_add(port_ephemeral_packet_allocated, 1);
+  return result.value().release();
 }
 
-void ArenaPortAllocator::Free(PortPacket* port_packet) {
-  arena_.Delete(port_packet);
-  kcounter_add(port_arena_count, -1);
+void PortPacketCacheAllocator::Free(PortPacket* port_packet) {
+  kcounter_add(port_ephemeral_packet_live, -1);
+  kcounter_add(port_ephemeral_packet_freed, 1);
+  object_cache::UniquePtr<PortPacket> destroyer{port_packet};
 }
 
 PortPacket::PortPacket(const void* handle, PortAllocator* allocator)
@@ -144,9 +150,7 @@ bool PortObserver::MatchesKey(const void* port, uint64_t key) {
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-void PortDispatcher::Init() { port_allocator.Init(); }
-
-PortAllocator* PortDispatcher::DefaultPortAllocator() { return &port_allocator; }
+PortAllocator* PortDispatcher::DefaultPortAllocator() { return &default_port_allocator; }
 
 zx_status_t PortDispatcher::Create(uint32_t options, KernelHandle<PortDispatcher>* handle,
                                    zx_rights_t* rights) {
@@ -225,7 +229,7 @@ void PortDispatcher::on_zero_handles() {
 zx_status_t PortDispatcher::QueueUser(const zx_port_packet_t& packet) {
   canary_.Assert();
 
-  auto port_packet = port_allocator.Alloc();
+  auto port_packet = default_port_allocator.Alloc();
   if (!port_packet)
     return ZX_ERR_NO_MEMORY;
 
@@ -410,7 +414,7 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto observer_result = observer_allocator_.Allocate(
+  auto observer_result = observer_allocator.Allocate(
       options, handle, fbl::RefPtr<PortDispatcher>(this), get_lock(), key, signals);
   if (observer_result.is_error()) {
     return observer_result.error_value();
@@ -489,19 +493,34 @@ bool PortDispatcher::CancelQueued(PortPacket* port_packet) {
   return false;
 }
 
-void PortDispatcher::InitializePortObserverCache(uint32_t /*level*/) {
+void PortDispatcher::InitializeCacheAllocators(uint32_t /*level*/) {
   // Reserve up to 8 pages per CPU for servicing PortObservers, unless
   // overridden on the command line.
-  const size_t default_reserve_pages = 8;
+  const size_t default_observer_reserve_pages = 8;
+  const size_t observer_reserve_pages =
+      gCmdline.GetUInt64("kernel.portobserver.reserve-pages", default_observer_reserve_pages);
 
-  const size_t reserve_pages =
-      gCmdline.GetUInt64("kernel.portobserver.reserve-pages", default_reserve_pages);
-  auto result =
-      object_cache::ObjectCache<PortObserver, object_cache::Option::PerCpu>::Create(reserve_pages);
-  ASSERT(result.is_ok());
-  observer_allocator_ = ktl::move(result.value());
+  zx::status observer_result =
+      object_cache::ObjectCache<PortObserver, object_cache::Option::PerCpu>::Create(
+          observer_reserve_pages);
+
+  ASSERT(observer_result.is_ok());
+  observer_allocator = ktl::move(observer_result.value());
+
+  // Reserve 1 page per CPU for servicing ephemeral PortPackets, unless
+  // overridden on the command line.
+  const size_t default_packet_reserve_pages = 1;
+  const size_t packet_reserve_pages =
+      gCmdline.GetUInt64("kernel.portpacket.reserve-pages", default_packet_reserve_pages);
+
+  zx::status packet_result =
+      object_cache::ObjectCache<PortPacket, object_cache::Option::PerCpu>::Create(
+          packet_reserve_pages);
+
+  ASSERT(packet_result.is_ok());
+  packet_allocator = ktl::move(packet_result.value());
 }
 
 // Initialize the cache after the percpu data structures are initialized.
-LK_INIT_HOOK(port_observer_cache_init, PortDispatcher::InitializePortObserverCache,
+LK_INIT_HOOK(port_observer_cache_init, PortDispatcher::InitializeCacheAllocators,
              LK_INIT_LEVEL_KERNEL + 1)

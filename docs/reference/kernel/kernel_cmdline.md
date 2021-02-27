@@ -505,6 +505,12 @@ Specifies the number of pages per CPU to reserve for port observer (async
 wait) allocations. Higher values reduce contention on the PMM when the system
 is under load at the cost of using more memory when the system is idle.
 
+## kernel.portpacket.reserve-pages=\<num>
+
+Specifies the number of pages per CPU to reserve for port packet (port_queue)
+allocations. Higher values reduce contention on the PMM when the system is
+under load at the cost of using more memory when the system is idle.
+
 ## kernel.root-job.behavior=\<string>
 
 This option specifies what action the kernel should take when the root job is
