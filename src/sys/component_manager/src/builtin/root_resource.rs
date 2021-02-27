@@ -55,13 +55,13 @@ mod tests {
         super::*,
         crate::model::hooks::{Event, EventPayload, Hooks},
         fidl::endpoints::ClientEnd,
-        fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
+        fidl_fuchsia_kernel as fkernel,
         futures::lock::Mutex,
         moniker::AbsoluteMoniker,
         std::path::PathBuf,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_connect() -> Result<(), Error> {
         let root_resource = RootResource::new(Resource::from(zx::Handle::invalid()));
         let hooks = Hooks::new(None);

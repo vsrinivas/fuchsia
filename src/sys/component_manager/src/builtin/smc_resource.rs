@@ -104,7 +104,7 @@ mod tests {
         Ok(proxy)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn fail_with_no_smc_resource() -> Result<(), Error> {
         if smc_resource_available() {
             return Ok(());
@@ -117,7 +117,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn kind_type_is_smc() -> Result<(), Error> {
         if !smc_resource_available() {
             return Ok(());
@@ -132,7 +132,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_connect_to_smc_service() -> Result<(), Error> {
         if !smc_resource_available() {
             return Ok(());

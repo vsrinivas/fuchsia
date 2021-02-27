@@ -11,17 +11,15 @@ use {
         matcher::EventMatcher,
         sequence::EventSequence,
     },
-    fidl_fidl_test_components as test_protocol, fuchsia_async as fasync,
+    fidl_fidl_test_components as test_protocol,
     fuchsia_component::client::ScopedInstance,
-    fuchsia_syslog::{self as fxlog, fx_log_info},
+    fuchsia_syslog::fx_log_info,
     futures_util::stream::TryStreamExt,
     std::sync::{Arc, Mutex},
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_exit_detection() {
-    fxlog::init().unwrap();
-
     let event_source = EventSource::new().unwrap();
     let event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Async)])
@@ -49,10 +47,8 @@ async fn test_exit_detection() {
         .unwrap();
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_exit_after_rendezvous() {
-    fxlog::init().unwrap();
-
     // Get the event source, install our service injector, and then start the
     // component tree.
     let event_source = EventSource::new().unwrap();

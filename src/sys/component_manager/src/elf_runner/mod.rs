@@ -1113,7 +1113,7 @@ mod tests {
         res.expect("Unable to read file.")
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn args_test() -> Result<(), Error> {
         let (runtime_dir_client, runtime_dir_server) = zx::Channel::create()?;
         let start_info = lifecycle_startinfo(Some(ServerEnd::new(runtime_dir_server)));
@@ -1161,7 +1161,7 @@ mod tests {
     // launcher setting for the test environment. This helps ensure that the test above isn't
     // succeeding for an unexpected reason, e.g. that it isn't using a fuchsia.process.Launcher
     // from the test's namespace instead of serving and using a built-in one.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn hello_world_fail_test() -> Result<(), Error> {
         let (_runtime_dir_client, runtime_dir_server) = zx::Channel::create()?;
         let start_info = hello_world_startinfo(Some(ServerEnd::new(runtime_dir_server)));
@@ -1188,7 +1188,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_kill_component() -> Result<(), Error> {
         let (job, component) = make_default_elf_component(None, false);
 
@@ -1301,7 +1301,7 @@ mod tests {
 
     /// Stopping a component which doesn't have a lifecycle channel should be
     /// equivalent to killing a component directly.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_stop_component_without_lifecycle() -> Result<(), Error> {
         let (job, mut component) = make_default_elf_component(None, false);
 
@@ -1320,7 +1320,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_stop_critical_component_with_closed_lifecycle() -> Result<(), Error> {
         let (lifecycle_client, lifecycle_server) =
             fidl::endpoints::create_proxy_and_stream::<LifecycleMarker>()?;
@@ -1346,7 +1346,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_stop_noncritical_component_with_closed_lifecycle() -> Result<(), Error> {
         let (lifecycle_client, lifecycle_server) =
             fidl::endpoints::create_proxy_and_stream::<LifecycleMarker>()?;
@@ -1372,7 +1372,7 @@ mod tests {
     }
 
     /// Dropping the component should kill the job hosting it.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_drop() -> Result<(), Error> {
         let (job, component) = make_default_elf_component(None, false);
 
@@ -1425,7 +1425,7 @@ mod tests {
         start_info
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn vmex_security_policy_denied() -> Result<(), Error> {
         let start_info = lifecycle_startinfo_mark_vmo_exec(None);
 
@@ -1453,7 +1453,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn vmex_security_policy_allowed() -> Result<(), Error> {
         let (runtime_dir_client, runtime_dir_server) = zx::Channel::create()?;
         let start_info =
@@ -1506,7 +1506,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn critical_security_policy_denied() -> Result<(), Error> {
         let start_info = hello_world_startinfo_main_process_critical(None);
 
@@ -1534,7 +1534,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     #[should_panic]
     async fn fail_to_launch_critical_component() {
         let mut start_info = hello_world_startinfo_main_process_critical(None);
@@ -1620,7 +1620,7 @@ mod tests {
     // TODO(fxbug.dev/69634): Following function shares a lot of code with
     // //src/sys/component_manager/src/model/namespace.rs tests. Shared
     // functionality should be refactored into a common test util lib.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn enable_stdout_logging() -> Result<(), Error> {
         let (dir, ns) = create_fs_with_mock_logsink()?;
 

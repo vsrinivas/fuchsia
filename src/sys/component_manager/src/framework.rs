@@ -506,7 +506,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn create_dynamic_child() {
         // Set up model and realm service.
         let test = RealmCapabilityTest::new(
@@ -537,7 +537,7 @@ mod tests {
         assert_eq!("(system(coll:a,coll:b))", test.hook.print());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn create_dynamic_child_errors() {
         let mut test = RealmCapabilityTest::new(
             vec![
@@ -673,7 +673,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn destroy_dynamic_child() {
         // Set up model and realm service.
         let events = vec![
@@ -799,7 +799,7 @@ mod tests {
         assert_eq!(instance_id, 3);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn destroy_dynamic_child_errors() {
         let mut test = RealmCapabilityTest::new(
             vec![
@@ -856,7 +856,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_static_child() {
         // Create a hierarchy of three components, the last with eager startup. The middle
         // component hosts and exposes the "hippo" service.
@@ -910,7 +910,7 @@ mod tests {
         assert_eq!("(system(eager))", test.hook.print());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_dynamic_child() {
         // Create a root component with a collection and define a component that exposes a service.
         let mut out_dir = OutDir::new();
@@ -965,7 +965,7 @@ mod tests {
         assert_eq!("(coll:system)", test.hook.print());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_child_errors() {
         let mut test = RealmCapabilityTest::new(
             vec![
@@ -1029,7 +1029,7 @@ mod tests {
     }
 
     // If a runner fails to launch a child, the error should not occur at `bind_child`.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_child_runner_failure() {
         let test = RealmCapabilityTest::new(
             vec![
@@ -1062,7 +1062,7 @@ mod tests {
         .native_into_fidl()
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn list_children() {
         // Create a root component with collections and a static child.
         let test = RealmCapabilityTest::new(
@@ -1127,7 +1127,7 @@ mod tests {
         assert_eq!(children, vec![]);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn list_children_errors() {
         // Create a root component with a collection.
         let mut test = RealmCapabilityTest::new(

@@ -231,7 +231,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn hello_world_test() -> Result<(), Error> {
         let resolver = FuchsiaBootResolver::new_from_directory(FakeBootfs::new());
 
@@ -307,7 +307,7 @@ mod tests {
         };
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn resolve_errors_test() {
         let resolver = FuchsiaBootResolver::new_from_directory(FakeBootfs::new());
         test_resolve_error!(resolver, "fuchsia-boot:///#meta/invalid.cm", ManifestInvalid);

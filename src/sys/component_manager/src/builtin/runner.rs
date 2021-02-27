@@ -183,7 +183,7 @@ mod tests {
     }
 
     // Test plumbing a `BuiltinRunner` through the hook system.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn builtin_runner_hook() -> Result<(), Error> {
         let config = Arc::new(RuntimeConfig {
             security_policy: SecurityPolicy {
@@ -222,7 +222,7 @@ mod tests {
     }
 
     // Test sending a start command to a failing runner.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn capability_provider_error_from_runner() -> Result<(), Error> {
         // Set up a capability provider wrapping a runner that returns an error on our
         // target URL.
@@ -265,7 +265,7 @@ mod tests {
     //    a
     //
     // a: uses runner "elf" offered from the component mananger.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn use_runner_from_component_manager() {
         let mock_runner = Arc::new(MockRunner::new());
 
@@ -295,7 +295,7 @@ mod tests {
     //
     // (cm): registers runner "elf".
     // b: uses runner "elf".
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn use_runner_from_component_manager_environment() {
         let mock_runner = Arc::new(MockRunner::new());
 

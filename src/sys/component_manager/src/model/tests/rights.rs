@@ -25,7 +25,7 @@ use {
     },
 };
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn offer_increasing_rights() {
     let components = vec![
         (
@@ -79,7 +79,7 @@ async fn offer_increasing_rights() {
     test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn offer_incompatible_rights() {
     let components = vec![
         (
@@ -137,7 +137,7 @@ async fn offer_incompatible_rights() {
     .await;
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn expose_increasing_rights() {
     let components = vec![
         (
@@ -191,7 +191,7 @@ async fn expose_increasing_rights() {
     test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn expose_incompatible_rights() {
     let components = vec![
         (
@@ -249,7 +249,7 @@ async fn expose_incompatible_rights() {
     .await;
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn capability_increasing_rights() {
     let components = vec![
         (
@@ -303,7 +303,7 @@ async fn capability_increasing_rights() {
     test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn capability_incompatible_rights() {
     let components = vec![
         (
@@ -410,7 +410,7 @@ impl Hook for MockFrameworkDirectoryHost {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn framework_directory_rights() {
     let components = vec![
         (
@@ -458,7 +458,7 @@ async fn framework_directory_rights() {
     test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn framework_directory_incompatible_rights() {
     let components = vec![
         (
@@ -518,7 +518,7 @@ async fn framework_directory_incompatible_rights() {
 ///
 /// a: offers directory /offer_from_cm_namespace/data/foo from realm as bar_data
 /// b: uses directory bar_data as /data/hippo, but the rights don't match
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn offer_from_component_manager_namespace_directory_incompatible_rights() {
     let components = vec![
         (

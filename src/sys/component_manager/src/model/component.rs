@@ -1264,7 +1264,7 @@ pub mod tests {
         std::{boxed::Box, collections::HashMap, sync::Arc, task::Poll},
     };
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     /// Test scenario where we tell the controller to stop the component and
     /// the component stops immediately.
     async fn stop_component_well_behaved_component_stop() {
@@ -1315,7 +1315,7 @@ pub mod tests {
         assert_eq!(msg_list, &vec![ControlMessage::Stop]);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     /// Test where the control channel is already closed when we try to stop
     /// the component.
     async fn stop_component_successful_component_already_gone() {
@@ -1706,7 +1706,7 @@ pub mod tests {
     // The "exposed dir" of a component is hosted by component manager on behalf of
     // a running component. This test makes sure that when a component is stopped,
     // the exposed dir is no longer being served.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn stop_component_closes_exposed_dir() {
         let test = RoutingTest::new(
             "root",
@@ -1744,7 +1744,7 @@ pub mod tests {
         proxy.on_closed().await.expect("failed waiting for channel to close");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn notify_capability_ready() {
         let test = RoutingTest::new(
             "root",
@@ -1796,7 +1796,7 @@ pub mod tests {
                                 EventErrorPayload::CapabilityReady { name, .. }, .. }) if name == "diagnostics");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn started_and_running_event_timestamp_matches_component() {
         let test =
             RoutingTest::new("root", vec![("root", ComponentDeclBuilder::new().build())]).await;
@@ -1855,7 +1855,7 @@ pub mod tests {
         assert!(event.timestamp > started_timestamp);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     /// Validate that if the ComponentController channel is closed that the
     /// the component is stopped.
     async fn test_early_component_exit() {
@@ -1926,7 +1926,7 @@ pub mod tests {
         assert_eq!(parent_stop.target_moniker, a_moniker.clone());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn realm_instance_id() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_eager_child("a").build()),

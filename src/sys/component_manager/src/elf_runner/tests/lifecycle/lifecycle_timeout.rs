@@ -8,19 +8,15 @@ use {
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
-    fuchsia_async as fasync,
     fuchsia_component::client::ScopedInstance,
-    fuchsia_syslog::{self as fxlog},
 };
 
 /// Test that a component tree which contains a root component with no program
 /// and two children is stopped properly. One of the children inherits whatever
 /// stop timeout might exist and the other child gets an environment with a
 /// timeout explicitly set.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_stop_timeouts() {
-    fxlog::init().unwrap();
-
     let event_source = EventSource::new().unwrap();
     let event_stream = event_source
         .subscribe(vec![EventSubscription::new(

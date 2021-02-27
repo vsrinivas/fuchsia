@@ -67,7 +67,6 @@ rustc_binary("root_job_test_runner") {
 
   deps = [
     "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

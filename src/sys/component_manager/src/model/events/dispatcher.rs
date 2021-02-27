@@ -309,7 +309,7 @@ mod tests {
 
     // This test verifies that the CapabilityRequested event can only be sent to a source
     // that matches its source moniker.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_send_capability_requested_to_source() {
         // Verify we can dispatch to a debug source.
         // Sync events get a responder if the message was dispatched.
@@ -371,7 +371,7 @@ mod tests {
 
     // This test verifies that the CapabilityRouted event can only be sent in Debug mode and
     // not in production.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn cannot_send_capability_routed_in_production() {
         let mut factory = EventDispatcherFactory::new();
 

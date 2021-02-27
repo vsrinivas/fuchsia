@@ -219,13 +219,13 @@ mod tests {
             testing::{routing_test_helpers::*, test_helpers::*},
         },
         cm_rust::{DirectoryDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget},
-        fidl_fuchsia_io2 as fio, fuchsia_async as fasync,
+        fidl_fuchsia_io2 as fio,
         moniker::AbsoluteMoniker,
         std::{collections::HashSet, iter::FromIterator},
     };
 
     // Shows that we see Running only for components that are bound at the moment of subscription.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn synthesize_only_running() {
         let test = setup_synthesis_test().await;
 
@@ -274,7 +274,7 @@ mod tests {
     }
 
     // Shows that we see Running a single time even if the subscription scopes intersect.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn synthesize_overlapping_scopes() {
         let test = setup_synthesis_test().await;
 
@@ -318,7 +318,7 @@ mod tests {
     }
 
     // Shows that we see Running only for components under the given scopes.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn synthesize_non_overlapping_scopes() {
         let test = setup_synthesis_test().await;
 
@@ -361,7 +361,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn synthesize_capability_ready() {
         let test = setup_synthesis_test().await;
 

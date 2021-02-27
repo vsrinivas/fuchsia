@@ -103,7 +103,6 @@ impl LogWriter for SyslogWriter {
 
 #[cfg(test)]
 mod tests {
-
     use {
         super::*,
         crate::model::testing::test_helpers::{
@@ -113,7 +112,7 @@ mod tests {
         anyhow::{anyhow, Context, Error},
         fidl_fuchsia_component_runner as fcrunner,
         fidl_fuchsia_logger::LogSinkRequest,
-        fuchsia_async::{self as fasync, futures::try_join},
+        fuchsia_async::futures::try_join,
         futures::StreamExt,
         log::Level,
         std::{
@@ -122,7 +121,7 @@ mod tests {
         },
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn syslog_writer_decodes_valid_utf8_message() -> Result<(), Error> {
         let (dir, ns_entries) = create_fs_with_mock_logsink()?;
 
@@ -135,7 +134,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn syslog_writer_decodes_non_utf8_message() -> Result<(), Error> {
         let (dir, ns_entries) = create_fs_with_mock_logsink()?;
 

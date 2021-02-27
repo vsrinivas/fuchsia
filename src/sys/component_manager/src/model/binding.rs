@@ -177,7 +177,7 @@ mod tests {
         (model, builtin_environment, mock_runner)
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_root() {
         let (model, _builtin_environment, mock_runner) =
             new_model(vec![("root", component_decl_with_test_runner())]).await;
@@ -189,7 +189,7 @@ mod tests {
         assert!(actual_children.is_empty());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_root_non_existent() {
         let (model, _builtin_environment, mock_runner) =
             new_model(vec![("root", component_decl_with_test_runner())]).await;
@@ -201,7 +201,7 @@ mod tests {
         mock_runner.wait_for_url("test:///root_resolved").await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_concurrent() {
         // Test binding twice concurrently to the same component. The component should only be
         // started once.
@@ -257,7 +257,7 @@ mod tests {
         mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_parent_then_child() {
         let hook = Arc::new(TestHook::new());
         let (model, _builtin_environment, mock_runner) = new_model_with(
@@ -315,7 +315,7 @@ mod tests {
         assert_eq!("(echo,system)", hook.print());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_child_binds_parent() {
         let hook = Arc::new(TestHook::new());
         let (model, _builtin_environment, mock_runner) = new_model_with(
@@ -374,7 +374,7 @@ mod tests {
         assert_eq!("(system(logger,netstack))", hook.print());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_child_non_existent() {
         let (model, _builtin_environment, mock_runner) = new_model(vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
@@ -405,7 +405,7 @@ mod tests {
     ///         e
     ///
     /// `b`, `c`, and `d` are started eagerly. `a` and `e` are lazy.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_eager_children() {
         let hook = Arc::new(TestHook::new());
         let (model, _builtin_environment, mock_runner) = new_model_with(
@@ -446,7 +446,7 @@ mod tests {
     /// `b` is an eager child of `a` that uses a runner provided by `a`. In the process of binding
     /// to `a`, `b` will be eagerly started, which requires re-binding to `a`. This should work
     /// without causing reentrance issues.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_eager_children_reentrant() {
         let hook = Arc::new(TestHook::new());
         let (model, _builtin_environment, mock_runner) = new_model_with(
@@ -514,7 +514,7 @@ mod tests {
         assert_eq!("(a(b))", hook.print());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_no_execute() {
         // Create a non-executable component with an eagerly-started child.
         let (model, _builtin_environment, mock_runner) = new_model(vec![
@@ -531,7 +531,7 @@ mod tests {
         mock_runner.wait_for_urls(&["test:///root_resolved", "test:///b_resolved"]).await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bind_action_sequence() {
         // Test that binding registers the expected actions in the expected sequence
         // (Discover -> Resolve -> Start).

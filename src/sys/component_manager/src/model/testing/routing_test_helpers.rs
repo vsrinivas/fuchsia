@@ -7,7 +7,6 @@ use {
         builtin::runner::BuiltinRunnerFactory,
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         config::{CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},
-        klog,
         model::{
             binding::Binder,
             component::BindReason,
@@ -239,9 +238,6 @@ impl RoutingTest {
 
     /// Construct a new `RoutingTest` from the given builder.
     async fn from_builder(mut builder: RoutingTestBuilder) -> Self {
-        // Ensure that kernel logging has been set up
-        klog::KernelLogger::init();
-
         let mock_runner = Arc::new(MockRunner::new());
 
         let test_dir = TempDir::new_in("/tmp").expect("failed to create temp directory");

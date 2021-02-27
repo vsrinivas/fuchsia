@@ -776,13 +776,13 @@ mod connect_tests {
         anyhow::Error,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_sys2::WorkSchedulerControlMarker,
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        fuchsia_zircon as zx,
         futures::lock::Mutex,
         moniker::AbsoluteMoniker,
         std::{path::PathBuf, sync::Arc},
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn connect_to_work_scheduler_control_service() -> Result<(), Error> {
         // Retain `Arc` to keep `Binder` alive throughout test.
         let binder = FakeBinder::new();

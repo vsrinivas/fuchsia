@@ -415,7 +415,7 @@ mod tests {
         std::convert::{TryFrom, TryInto},
     };
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn open_isolated_storage_test() {
         let components = vec![
             ("a", ComponentDeclBuilder::new().add_lazy_child("b").add_lazy_child("c").build()),
@@ -505,7 +505,7 @@ mod tests {
         assert_eq!(test_helpers::list_directory(&dir).await, vec!["file".to_string()]);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn open_isolated_storage_instance_id() {
         let components = vec![
             ("a", ComponentDeclBuilder::new().add_lazy_child("b").add_lazy_child("c").build()),
@@ -595,7 +595,7 @@ mod tests {
 
     // TODO: test with different subdirs
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn open_isolated_storage_failure_test() {
         let components = vec![("a", component_decl_with_test_runner())];
 
@@ -628,7 +628,7 @@ mod tests {
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn delete_isolated_storage_test() {
         let components = vec![
             ("a", ComponentDeclBuilder::new().add_lazy_child("b").add_lazy_child("c").build()),
@@ -757,7 +757,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn delete_isolated_storage_instance_id_test() {
         let components = vec![
             ("a", ComponentDeclBuilder::new().add_lazy_child("b").add_lazy_child("c").build()),

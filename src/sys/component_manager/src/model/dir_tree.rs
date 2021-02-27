@@ -156,7 +156,7 @@ mod tests {
         vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path},
     };
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn build_from_uses() {
         // Call `build_from_uses` with a routing factory that routes to a mock directory or service,
         // and a `ComponentDecl` with `use` declarations.
@@ -226,7 +226,7 @@ mod tests {
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn build_from_exposes() {
         // Call `build_from_exposes` with a routing factory that routes to a mock directory or
         // service, and a `ComponentDecl` with `expose` declarations.

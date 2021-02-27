@@ -6,7 +6,6 @@ use {
     crate::{
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         config::RuntimeConfig,
-        klog,
         model::{
             binding::Binder,
             component::{BindReason, ComponentInstance, InstanceState, WeakComponentInstance},
@@ -772,9 +771,6 @@ impl ActionsTest {
         moniker: Option<AbsoluteMoniker>,
         extra_hooks: Vec<HooksRegistration>,
     ) -> Self {
-        // Ensure that kernel logging has been set up
-        let _ = klog::KernelLogger::init();
-
         let TestModelResult { model, builtin_environment, mock_runner } =
             TestEnvironmentBuilder::new()
                 .set_root_component(root_component)

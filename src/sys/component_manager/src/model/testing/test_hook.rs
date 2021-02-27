@@ -392,7 +392,7 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
 mod tests {
     use super::*;
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_hook_test() {
         let root = AbsoluteMoniker::root();
         let a: AbsoluteMoniker = vec!["a:0"].into();

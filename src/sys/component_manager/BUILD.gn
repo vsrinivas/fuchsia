@@ -36,6 +36,7 @@ template("component_manager") {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/from-enum",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
@@ -247,7 +248,6 @@ component_manager("component_manager_boot_env_test") {
 
 rustc_binary("bin") {
   name = "component_manager"
-  with_unit_tests = true
   edition = "2018"
   force_opt = "z"
 
@@ -345,6 +345,12 @@ fuchsia_component("component-manager-boot-env-tests-cmp") {
 }
 
 fuchsia_test_package("component-manager-tests") {
+  # Many tests generate routing errors.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   test_components = [
     ":component-manager-tests-cmp",
     ":component-manager-boot-env-tests-cmp",

@@ -8,17 +8,13 @@ use {
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
-    fuchsia_async as fasync,
     fuchsia_component::client::ScopedInstance,
-    fuchsia_syslog::{self as fxlog},
 };
 
 /// This test invokes components which don't stop when they're told to. We
 /// still expect them to be stopped when the system kills them.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_stop_timeouts() {
-    fxlog::init().unwrap();
-
     let event_source = EventSource::new().unwrap();
     let event_stream = event_source
         .subscribe(vec![EventSubscription::new(

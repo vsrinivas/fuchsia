@@ -41,7 +41,7 @@ const HELLO_WORLD_COMPONENTS: [Component; 2] = [
 
 // TODO(fxbug.dev/69684): Refactor this to receive puppet components
 // through argv once ArchiveAccesor is exposed from Test Runner.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_components_logs_to_stdout() {
     let realm = fuchsia_component::client::realm().unwrap();
 

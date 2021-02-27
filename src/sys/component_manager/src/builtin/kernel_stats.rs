@@ -154,7 +154,7 @@ mod tests {
         Ok(proxy)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn get_mem_stats() -> Result<(), Error> {
         if !root_resource_available() {
             return Ok(());
@@ -169,7 +169,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn get_mem_stats_extended() -> Result<(), Error> {
         if !root_resource_available() {
             return Ok(());
@@ -184,7 +184,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn get_cpu_stats() -> Result<(), Error> {
         if !root_resource_available() {
             return Ok(());

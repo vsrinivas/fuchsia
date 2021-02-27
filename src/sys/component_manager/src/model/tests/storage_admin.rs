@@ -24,7 +24,7 @@ use {
 /// a: offers a storage admin protocol to c from the "data" storage capability
 /// b: uses data storage as /storage.
 /// c: uses the storage admin protocol to access b's storage
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_to_one_child_admin_to_another() {
     let components = vec![
         (
@@ -104,7 +104,7 @@ async fn storage_to_one_child_admin_to_another() {
 /// b: has storage decl with name "storage" based on "data" from parent subdir "bar"
 /// b: offers a storage admin protocol to c from the "storage" storage capability
 /// c: uses the storage admin protocol to access its own storage
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn directory_from_grandparent_storage_and_admin_from_parent() {
     let components = vec![
         (
@@ -184,7 +184,7 @@ async fn directory_from_grandparent_storage_and_admin_from_parent() {
 /// d: uses data storage
 /// a: offers storage admin protocol from c to b
 /// b: uses the storage admin protocol
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_admin_from_sibling() {
     let components = vec![
         (
@@ -273,7 +273,7 @@ async fn storage_admin_from_sibling() {
 /// a: offers data storage to b
 /// a: uses a storage admin protocol from #data
 /// b: uses data storage as /storage.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn admin_protocol_used_in_the_same_place_storage_is_declared() {
     let components = vec![
         (
@@ -338,7 +338,7 @@ async fn admin_protocol_used_in_the_same_place_storage_is_declared() {
 /// a: offers data storage to b
 /// a: uses a storage admin protocol from "unrelated.protocol"
 /// b: uses data storage as /storage.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_admin_from_protocol_on_self() {
     let components = vec![
         (
@@ -403,7 +403,7 @@ async fn storage_admin_from_protocol_on_self() {
 /// a: declares a protocol "unrelated.protocol"
 /// a: offers a storage admin protocol from "unrelated.protocol" to b
 /// b: uses storage admin protocol
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_admin_from_protocol_from_parent() {
     let components = vec![
         (
@@ -470,7 +470,7 @@ async fn storage_admin_from_protocol_from_parent() {
 /// d: uses data storage
 /// a: offers storage admin protocol from c to b
 /// b: uses the storage admin protocol
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_admin_from_protocol_on_sibling() {
     let components = vec![
         (
@@ -560,7 +560,7 @@ async fn storage_admin_from_protocol_on_sibling() {
 /// a: offers data storage to b
 /// a: uses a "unrelated.protocol" protocol from "data"
 /// b: uses data storage as /storage.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_admin_from_storage_on_self_bad_protocol_name() {
     let components = vec![
         (
@@ -624,7 +624,7 @@ async fn storage_admin_from_storage_on_self_bad_protocol_name() {
 /// a: has storage decl with name "data" with a source of self at path /data
 /// a: offers a storage admin protocol from "data" to b with a source name of "unrelated.protocol"
 /// b: uses storage admin protocol
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_admin_from_storage_on_parent_bad_protocol_name() {
     let components = vec![
         (
@@ -689,7 +689,7 @@ async fn storage_admin_from_storage_on_parent_bad_protocol_name() {
 /// d: uses data storage
 /// a: offers storage admin protocol from c to b
 /// b: uses the storage admin protocol
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_admin_from_protocol_on_sibling_bad_protocol_name() {
     let components = vec![
         (

@@ -26,7 +26,7 @@ use {
 /// a: has storage decl with name "mystorage" with a source of realm at path /data
 /// a: offers cache storage to b from "mystorage"
 /// b: uses cache storage as /storage.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_dir_from_cm_namespace() {
     let components = vec![
         (
@@ -90,7 +90,7 @@ async fn storage_dir_from_cm_namespace() {
 /// a: has storage decl with name "mystorage" with a source of self at path /data
 /// a: offers cache storage to b from "mystorage"
 /// b: uses cache storage as /storage
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_and_dir_from_parent() {
     let components = vec![
         (
@@ -150,7 +150,7 @@ async fn storage_and_dir_from_parent() {
 ///    "cache"
 /// a: offers cache storage to b from "mystorage"
 /// b: uses cache storage as /storage
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_and_dir_from_parent_with_subdir() {
     let components = vec![
         (
@@ -210,7 +210,7 @@ async fn storage_and_dir_from_parent_with_subdir() {
 ///    has only read rights
 /// a: offers cache storage to b from "mystorage"
 /// b: uses cache storage as /storage
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_and_dir_from_parent_rights_invalid() {
     let components = vec![
         (
@@ -271,7 +271,7 @@ async fn storage_and_dir_from_parent_rights_invalid() {
 /// b: has storage decl with name "mystorage" with a source of realm at path /minfs
 /// b: offers data storage to c from "mystorage"
 /// c: uses data storage as /storage
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_from_parent_dir_from_grandparent() {
     let components = vec![
         (
@@ -348,7 +348,7 @@ async fn storage_from_parent_dir_from_grandparent() {
 ///    "subdir_2"
 /// b: offers data storage to c from "mystorage"
 /// c: uses data storage as /storage
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_from_parent_dir_from_grandparent_with_subdirs() {
     let components = vec![
         (
@@ -428,7 +428,7 @@ async fn storage_from_parent_dir_from_grandparent_with_subdirs() {
 /// b: has storage decl with name "mystorage" with a source of realm at path /minfs, subdir "bar"
 /// b: offers data storage to c from "mystorage"
 /// c: uses data storage as /storage
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_from_parent_dir_from_grandparent_with_subdir() {
     let components = vec![
         (
@@ -505,7 +505,7 @@ async fn storage_from_parent_dir_from_grandparent_with_subdir() {
 /// a: offers data storage to b from "mystorage"
 /// b: offers data storage to c from realm
 /// c: uses data storage as /storage
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_and_dir_from_grandparent() {
     let components = vec![
         (
@@ -576,7 +576,7 @@ async fn storage_and_dir_from_grandparent() {
 /// a: has storage decl with name "mystorage" with a source of child b at path /minfs
 /// a: offers cache storage to c from "mystorage"
 /// c: uses cache storage as /storage
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_from_parent_dir_from_sibling() {
     let components = vec![
         (
@@ -650,7 +650,7 @@ async fn storage_from_parent_dir_from_sibling() {
 ///    "subdir_2"
 /// a: offers cache storage to c from "mystorage"
 /// c: uses cache storage as /storage
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_from_parent_dir_from_sibling_with_subdir() {
     let components = vec![
         (
@@ -730,7 +730,7 @@ async fn storage_from_parent_dir_from_sibling_with_subdir() {
 /// b: offers storage to collection from "mystorage"
 /// [c]: uses storage as /storage
 /// [c]: destroyed and storage goes away
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_in_collection_from_parent() {
     let components = vec![
         (
@@ -896,7 +896,7 @@ async fn use_in_collection_from_parent() {
 /// b: offers storage to collection from "mystorage"
 /// [c]: uses storage as /storage
 /// [c]: destroyed and storage goes away
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_in_collection_from_grandparent() {
     let components = vec![
         (
@@ -1071,7 +1071,7 @@ async fn use_in_collection_from_grandparent() {
 /// c: uses cache and meta storage as /storage
 /// c: offers data and meta storage to d
 /// d: uses data and meta storage
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_multiple_types() {
     let components = vec![
         (
@@ -1219,7 +1219,7 @@ async fn storage_multiple_types() {
 /// a: offers cache storage to b from "mystorage"
 /// b: uses data storage as /storage, fails to since data != cache
 /// b: uses meta storage, fails to since meta != cache
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_the_wrong_type_of_storage() {
     let components = vec![
         (
@@ -1276,7 +1276,7 @@ async fn use_the_wrong_type_of_storage() {
 ///
 /// a: offers directory from self at path "/data"
 /// b: uses data storage as /storage, fails to since data storage != "/data" directories
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn directories_are_not_storage() {
     let components = vec![
         (
@@ -1331,7 +1331,7 @@ async fn directories_are_not_storage() {
 /// a: has storage decl with name "mystorage" with a source of self at path /data
 /// a: does not offer any storage to b
 /// b: uses meta storage and data storage as /storage, fails to since it was not offered either
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_storage_when_not_offered() {
     let components = vec![
         (
@@ -1386,7 +1386,7 @@ async fn use_storage_when_not_offered() {
 /// b: has storage decl with name "mystorage" with a source of realm at path /minfs
 /// b: offers data and meta storage to b from "mystorage"
 /// c: uses meta and data storage as /storage, fails to since a is non-executable
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn dir_offered_from_nonexecutable() {
     let components = vec![
         (
@@ -1462,7 +1462,7 @@ async fn dir_offered_from_nonexecutable() {
 /// a: offers cache storage to b from "mystorage"
 /// b: uses cache storage as /storage.
 /// Policy prevents b from using storage.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn storage_dir_from_cm_namespace_prevented_by_policy() {
     let components = vec![
         (
@@ -1536,7 +1536,7 @@ async fn storage_dir_from_cm_namespace_prevented_by_policy() {
 ///
 /// Instance IDs defined only for `b` in the component ID index.
 /// Check that the correct storge layout is used when a component has an instance ID.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn instance_id_from_index() {
     let b_instance_id = Some(gen_instance_id(&mut rand::thread_rng()));
     let component_id_index_path = make_index_file(component_id_index::Index {

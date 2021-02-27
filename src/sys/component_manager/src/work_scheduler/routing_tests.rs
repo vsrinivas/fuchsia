@@ -141,7 +141,7 @@ async fn check_use_work_scheduler_control(
 ///
 /// b: uses framework service /svc/fuchsia.sys2.WorkScheduler while exposing
 ///    /svc/fuchsia.sys2.Worker to framework
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_work_scheduler_with_expose_to_framework() {
     let components = vec![
         ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
@@ -180,7 +180,7 @@ async fn use_work_scheduler_with_expose_to_framework() {
 ///
 /// b: uses framework service /svc/fuchsia.sys2.WorkScheduler without exposing
 ///    /svc/fuchsia.sys2.Worker
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_work_scheduler_without_expose() {
     let components = vec![
         ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
@@ -208,7 +208,7 @@ async fn use_work_scheduler_without_expose() {
 ///
 /// b: uses framework service /svc/fuchsia.sys2.WorkScheduler while exposing
 ///    /svc/fuchsia.sys2.Worker to realm (not framework)
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_work_scheduler_with_expose_to_realm() {
     let components = vec![
         ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
@@ -246,7 +246,7 @@ async fn use_work_scheduler_with_expose_to_realm() {
 ///     b
 ///
 /// b: uses WorkSchedulerControl offered by by a
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_work_scheduler_control_routed() {
     let offer_use_name = CapabilityName::from("WorkSchedulerControl");
     let use_path = CapabilityPath::try_from("/svc/WorkSchedulerControl").unwrap();
@@ -288,7 +288,7 @@ async fn use_work_scheduler_control_routed() {
 ///     b
 ///
 /// b: uses framework service /svc/fuchsia.sys2.WorkSchedulerControl from framework (not allowed)
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_work_scheduler_control_error() {
     let offer_use_name = CapabilityName::from("WorkSchedulerControl");
     let use_path = CapabilityPath::try_from("/svc/WorkSchedulerControl").unwrap();

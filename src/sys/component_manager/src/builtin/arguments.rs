@@ -145,7 +145,7 @@ mod tests {
         Ok(proxy)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_get_string() -> Result<(), Error> {
         // check get_string works
         let vars: HashMap<String, String> =
@@ -172,7 +172,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_get_strings() -> Result<(), Error> {
         // check get_strings() works
         let vars: HashMap<String, String> =
@@ -196,7 +196,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_get_bool() -> Result<(), Error> {
         let vars: HashMap<String, String> = [
             ("zero", "0"),
@@ -239,7 +239,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_get_bools() -> Result<(), Error> {
         let vars: HashMap<String, String> = [
             ("zero", "0"),
@@ -289,7 +289,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_collect() -> Result<(), Error> {
         let vars: HashMap<String, String> = [
             ("test.value1", "3"),

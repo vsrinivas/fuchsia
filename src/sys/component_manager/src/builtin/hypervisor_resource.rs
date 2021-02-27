@@ -108,7 +108,7 @@ mod tests {
         Ok(proxy)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn fail_with_no_hypervisor_resource() -> Result<(), Error> {
         if hypervisor_resource_available() {
             return Ok(());
@@ -122,7 +122,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn kind_type_is_hypervisor() -> Result<(), Error> {
         if !hypervisor_resource_available() {
             return Ok(());
@@ -137,7 +137,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_connect_to_hypervisor_service() -> Result<(), Error> {
         if !hypervisor_resource_available() {
             return Ok(());

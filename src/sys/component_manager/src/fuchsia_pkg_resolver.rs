@@ -205,7 +205,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn resolve_test() {
         let loader = MockLoader::start();
         let resolver = FuchsiaPkgResolver::new(loader);
@@ -282,7 +282,7 @@ mod tests {
         };
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn resolve_errors_test() {
         let loader = MockLoader::start();
         let resolver = FuchsiaPkgResolver::new(loader);

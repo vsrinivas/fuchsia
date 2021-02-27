@@ -477,7 +477,7 @@ mod tests {
         Ok((launch_info, util_proxy))
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn start_util_with_args() -> Result<(), Error> {
         let (launcher, _process_launcher) = serve_launcher().await?;
         let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
@@ -503,7 +503,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn start_util_with_env() -> Result<(), Error> {
         let (launcher, _process_launcher) = serve_launcher().await?;
         let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
@@ -529,7 +529,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn start_util_with_namespace_entries() -> Result<(), Error> {
         let (launcher, _process_launcher) = serve_launcher().await?;
         let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
@@ -574,7 +574,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn create_without_starting() -> Result<(), Error> {
         let (launcher, _process_launcher) = serve_launcher().await?;
         let (mut launch_info, proxy) = setup_test_util(&launcher).await?;

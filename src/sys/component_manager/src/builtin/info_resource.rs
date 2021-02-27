@@ -104,7 +104,7 @@ mod tests {
         Ok(proxy)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn fail_with_no_info_resource() -> Result<(), Error> {
         if info_resource_available() {
             return Ok(());
@@ -118,7 +118,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn base_type_is_info() -> Result<(), Error> {
         if !info_resource_available() {
             return Ok(());
@@ -133,7 +133,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_connect_to_info_service() -> Result<(), Error> {
         if !info_resource_available() {
             return Ok(());

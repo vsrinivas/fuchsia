@@ -86,10 +86,9 @@ pub mod tests {
                 test_hook::Lifecycle,
             },
         },
-        fuchsia_async as fasync,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn mark_deleted() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -150,7 +149,7 @@ pub mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn mark_deleted_in_collection() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_transient_collection("coll").build()),

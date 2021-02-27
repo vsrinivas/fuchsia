@@ -8,15 +8,11 @@ use {
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::EventSequence,
     },
-    fuchsia_async as fasync,
     fuchsia_component::client::ScopedInstance,
-    fuchsia_syslog::{self as fxlog},
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_normal_behavior() {
-    fxlog::init().unwrap();
-
     let event_source = EventSource::new().unwrap();
     let event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])

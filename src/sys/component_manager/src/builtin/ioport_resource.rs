@@ -107,7 +107,7 @@ mod tests {
         Ok(proxy)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn fail_with_no_ioport_resource() -> Result<(), Error> {
         if ioport_resource_available() {
             return Ok(());
@@ -121,7 +121,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn kind_type_is_ioport() -> Result<(), Error> {
         if !ioport_resource_available() {
             return Ok(());
@@ -136,7 +136,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_connect_to_ioport_service() -> Result<(), Error> {
         if !ioport_resource_available() {
             return Ok(());

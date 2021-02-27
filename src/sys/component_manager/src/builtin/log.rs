@@ -106,7 +106,7 @@ mod tests {
         std::path::PathBuf,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn has_correct_rights_for_read_only() -> Result<(), Error> {
         // The kernel does not currently require a valid `Resource` to be
         // provided when creating a `Debuglog`. This will change in the future.
@@ -126,7 +126,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_connect_to_read_only() -> Result<(), Error> {
         // The kernel does not currently require a valid `Resource` to be
         // provided when creating a `Debuglog`. This will change in the future.
@@ -165,7 +165,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn has_correct_rights_for_write_only() -> Result<(), Error> {
         // The kernel does not currently require a valid `Resource` to be
         // provided when creating a `Debuglog`. This will change in the future.
@@ -188,7 +188,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_connect_to_write_only() -> Result<(), Error> {
         // The kernel does not currently require a valid `Resource` to be
         // provided when creating a `Debuglog`. This will change in the future.

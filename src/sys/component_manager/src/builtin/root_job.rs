@@ -68,7 +68,7 @@ mod tests {
         std::path::PathBuf,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn has_correct_rights() -> Result<(), Error> {
         let root_job = RootJob::new(&ROOT_JOB_CAPABILITY_NAME, zx::Rights::TRANSFER);
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fkernel::RootJobMarker>()?;
@@ -83,7 +83,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_connect() -> Result<(), Error> {
         let root_job = RootJob::new(&ROOT_JOB_CAPABILITY_NAME, zx::Rights::SAME_RIGHTS);
         let hooks = Hooks::new(None);

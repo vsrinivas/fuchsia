@@ -50,7 +50,7 @@ use {
 ///     b
 ///
 /// b: uses framework service /svc/fuchsia.sys2.Realm
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_framework_service() {
     pub struct MockRealmCapabilityProvider {
         scope_moniker: AbsoluteMoniker,
@@ -212,7 +212,7 @@ async fn use_framework_service() {
 /// extended flags, like `OPEN_FLAG_DESCRIBE`, work correctly. This often
 /// happens for fuchsia.hardware protocols that compose fuchsia.io protocols,
 /// and expect that `fdio_open` should operate correctly.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_from_parent() {
     let components = vec![
         (
@@ -289,7 +289,7 @@ async fn use_from_parent() {
 ///
 /// This test verifies that the parent, if subscribed to the CapabilityRequested event will receive
 /// if when the child connects to /svc/hippo.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn capability_requested_event_at_parent() {
     let components = vec![
         (
@@ -403,7 +403,7 @@ async fn capability_requested_event_at_parent() {
 /// b: offers service /svc/bar from realm as /svc/baz
 /// c: uses /data/baz as /data/hippo
 /// c: uses /svc/baz as /svc/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_from_grandparent() {
     let components = vec![
         (
@@ -489,7 +489,7 @@ async fn use_from_grandparent() {
 /// a: offers service /svc/builtin.Echo from realm
 /// b: offers service /svc/builtin.Echo from realm
 /// c: uses /svc/builtin.Echo as /svc/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_builtin_from_grandparent() {
     let components = vec![
         (
@@ -546,7 +546,7 @@ async fn use_builtin_from_grandparent() {
 /// d: exposes directory /data/foo from self as /data/bar
 /// b: offers directory /data/bar from d as /data/foobar to c
 /// c: uses /data/foobar as /data/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_from_sibling_no_root() {
     let components = vec![
         ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
@@ -629,7 +629,7 @@ async fn use_from_sibling_no_root() {
 /// b: exposes directory /data/foo from self as /data/bar
 /// a: offers directory /data/bar from b as /data/baz to c
 /// c: uses /data/baz as /data/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_from_sibling_root() {
     let components = vec![
         (
@@ -713,7 +713,7 @@ async fn use_from_sibling_root() {
 /// b: exposes directory /data/bar from d as /data/baz
 /// a: offers directory /data/baz from b as /data/foobar to c
 /// c: uses /data/foobar as /data/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_from_niece() {
     let components = vec![
         (
@@ -819,7 +819,7 @@ async fn use_from_niece() {
 /// a,d,h: hosts /svc/foo and /data/foo
 /// e: uses /svc/foo as /svc/hippo from a, uses /data/foo as /data/hippo from d
 /// f: uses /data/foo from d as /data/hippo, uses /svc/foo from h as /svc/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_kitchen_sink() {
     let components = vec![
         (
@@ -996,7 +996,7 @@ async fn use_kitchen_sink() {
 ///
 /// a: uses directory /use_from_cm_namespace/data/foo as foo_data
 /// a: uses service /use_from_cm_namespace/svc/foo as foo_svc
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_from_component_manager_namespace() {
     let components = vec![(
         "a",
@@ -1047,7 +1047,7 @@ async fn use_from_component_manager_namespace() {
 /// a: offers service /offer_from_cm_namespace/svc/foo from realm as bar_svc
 /// b: uses directory bar_data as /data/hippo
 /// b: uses service bar_svc as /svc/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn offer_from_component_manager_namespace() {
     let components = vec![
         (
@@ -1117,7 +1117,7 @@ async fn offer_from_component_manager_namespace() {
 ///
 /// b: uses directory /data/hippo as /data/hippo, but it's not in its realm
 /// b: uses service /svc/hippo as /svc/hippo, but it's not in its realm
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_not_offered() {
     let components = vec![
         ("a", ComponentDeclBuilder::new_empty_component().add_lazy_child("b").build()),
@@ -1163,7 +1163,7 @@ async fn use_not_offered() {
 /// a: offers service /svc/hippo from b as /svc/hippo, but it's not exposed by b
 /// c: uses directory /data/hippo as /data/hippo
 /// c: uses service /svc/hippo as /svc/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_offer_source_not_exposed() {
     let components = vec![
         (
@@ -1234,7 +1234,7 @@ async fn use_offer_source_not_exposed() {
 /// b: offers service /svc/hippo from its realm as /svc/hippo, but it's not offfered by a
 /// c: uses directory /data/hippo as /data/hippo
 /// c: uses service /svc/hippo as /svc/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_offer_source_not_offered() {
     let components = vec![
         ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
@@ -1304,7 +1304,7 @@ async fn use_offer_source_not_offered() {
 /// b: uses service /svc/hippo as /svc/hippo, but it's exposed to it, not offered
 /// c: exposes /data/hippo
 /// c: exposes /svc/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_from_expose() {
     let components = vec![
         ("a", ComponentDeclBuilder::new_empty_component().add_lazy_child("b").build()),
@@ -1371,7 +1371,7 @@ async fn use_from_expose() {
 /// b: exposes directory /data/foo from self as /data/bar to framework (NOT realm)
 /// a: offers directory /data/bar from b as /data/baz to c, but it is not exposed via realm
 /// c: uses /data/baz as /data/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_from_expose_to_framework() {
     let components = vec![
         (
@@ -1460,7 +1460,7 @@ async fn use_from_expose_to_framework() {
 /// a: offers service /svc/hippo to b, but a is not executable
 /// b: uses directory /data/hippo as /data/hippo, but it's not in its realm
 /// b: uses service /svc/hippo as /svc/hippo, but it's not in its realm
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn offer_from_non_executable() {
     let components = vec![
         (
@@ -1530,7 +1530,7 @@ async fn offer_from_non_executable() {
 /// b: offers service /svc/hippo to collection, creates [c]
 /// [c]: instance in collection uses service /svc/hippo
 /// [d]: ditto, but with /data/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_in_collection() {
     let components = vec![
         (
@@ -1647,7 +1647,7 @@ async fn use_in_collection() {
 /// a: offers service /svc/hippo to b
 /// b: creates [c]
 /// [c]: tries to use /svc/hippo, but can't because service was not offered to its collection
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_in_collection_not_offered() {
     let components = vec![
         (
@@ -1739,7 +1739,7 @@ async fn use_in_collection_not_offered() {
 /// a: offers directory /data/foo from self with subdir 's1/s2'
 /// b: offers directory /data/foo from realm with subdir 's3'
 /// c: uses /data/foo as /data/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_directory_with_subdir_from_grandparent() {
     let components = vec![
         (
@@ -1810,7 +1810,7 @@ async fn use_directory_with_subdir_from_grandparent() {
 /// b: exposes directory /data/foo from self with subdir 's1/s2'
 /// a: offers directory /data/foo from `b` to `c` with subdir 's3'
 /// c: uses /data/foo as /data/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_directory_with_subdir_from_sibling() {
     let components = vec![
         (
@@ -1881,7 +1881,7 @@ async fn use_directory_with_subdir_from_sibling() {
 /// b: exposes /data/foo from `c` with subdir `s1/s2`
 /// a: exposes /data/foo from `b` with subdir `s3` as /data/hippo
 /// use /data/hippo from a's exposed dir
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn expose_directory_with_subdir() {
     let components = vec![
         (
@@ -1949,7 +1949,7 @@ async fn expose_directory_with_subdir() {
 /// a: declares runner "elf" with service "/svc/runner" from "self".
 /// a: registers runner "elf" from self in environment as "hobbit".
 /// b: uses runner "hobbit".
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_runner_from_parent_environment() {
     let components = vec![
         (
@@ -2007,7 +2007,7 @@ async fn use_runner_from_parent_environment() {
 /// a: declares runner "elf" with service "/svc/runner" from "self".
 /// a: registers runner "elf" from self in environment as "hobbit".
 /// b: instance in collection uses runner "hobbit".
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_runner_from_environment_in_collection() {
     let components = vec![
         (
@@ -2089,7 +2089,7 @@ async fn use_runner_from_environment_in_collection() {
 /// a: offers runner "elf" from self to "b" as "dwarf".
 /// b: registers runner "dwarf" from realm in environment as "hobbit".
 /// c: uses runner "hobbit".
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_runner_from_grandparent_environment() {
     let components = vec![
         (
@@ -2159,7 +2159,7 @@ async fn use_runner_from_grandparent_environment() {
 /// a: registers runner "dwarf" from "b" in environment as "hobbit".
 /// b: exposes runner "elf" as service "/svc/runner" from self as "dwarf".
 /// c: uses runner "hobbit".
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_runner_from_sibling_environment() {
     let components = vec![
         (
@@ -2232,7 +2232,7 @@ async fn use_runner_from_sibling_environment() {
 /// a: registers runner "elf" from realm in environment as "hobbit".
 /// b: creates environment extending from realm.
 /// c: uses runner "hobbit".
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_runner_from_inherited_environment() {
     let components = vec![
         (
@@ -2302,7 +2302,7 @@ async fn use_runner_from_inherited_environment() {
 /// a: declares runner "elf" with service "/svc/runner" from "self".
 /// a: registers runner "elf" from self in environment as "hobbit".
 /// b: uses runner "hobbit". Fails because "hobbit" was not in environment.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_runner_from_environment_not_found() {
     let components = vec![
         (
@@ -2357,7 +2357,7 @@ async fn use_runner_from_environment_not_found() {
 // straightforward because resolver routing is not implemented yet, which makes it impossible to
 // register a new resolver and have it be usable.
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn expose_from_self_and_child() {
     let components = vec![
         ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
@@ -2440,7 +2440,7 @@ async fn expose_from_self_and_child() {
     .await;
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_not_exposed() {
     let components = vec![
         ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
@@ -2518,7 +2518,7 @@ async fn use_not_exposed() {
 /// [b]: offers service /svc/foo to c
 /// [b]: is destroyed
 /// c: uses service /svc/foo, which should fail
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_with_destroyed_parent() {
     let use_protocol_decl = UseProtocolDecl {
         source: UseSource::Parent,
@@ -2605,7 +2605,7 @@ async fn use_with_destroyed_parent() {
 /// a: offers directory /data/bar from b as /data/baz to c, which was destroyed (but not removed
 ///    from the tree yet)
 /// c: uses /data/baz as /data/hippo
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_from_destroyed_but_not_removed() {
     let components = vec![
         (
@@ -2669,7 +2669,7 @@ async fn use_from_destroyed_but_not_removed() {
 ///    a
 ///
 /// a: uses an invalid service from the component manager.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn invalid_use_from_component_manager() {
     let components = vec![(
         "a",
@@ -2703,7 +2703,7 @@ async fn invalid_use_from_component_manager() {
 ///
 /// a: offers an invalid service from the component manager to "b".
 /// b: attempts to use the service
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn invalid_offer_from_component_manager() {
     let components = vec![
         (
@@ -2749,7 +2749,7 @@ async fn invalid_offer_from_component_manager() {
 ///     b
 ///
 /// b: uses framework events "started", and "capability_requested"
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_event_from_framework() {
     let components = vec![
         (
@@ -2823,7 +2823,7 @@ async fn use_event_from_framework() {
 ///     b
 ///
 /// a; attempts to offer event "capability_requested" to b.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn can_offer_capability_requested_event() {
     let components = vec![
         (
@@ -2899,7 +2899,7 @@ async fn can_offer_capability_requested_event() {
 ///
 /// a: uses framework event "started" and offers to b as "started_on_a"
 /// b: uses framework event "started_on_a" as "started"
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_event_from_parent() {
     let components = vec![
         (
@@ -2979,7 +2979,7 @@ async fn use_event_from_parent() {
 /// c: uses realm event "started_on_a"
 /// c: uses realm event "destroyed"
 /// c: uses realm event "stopped_on_a" but fails to do so
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_event_from_grandparent() {
     let components = vec![
         (
@@ -3119,7 +3119,7 @@ async fn use_event_from_grandparent() {
 /// b: offers realm event "capabilty_ready" with filters "/foo", "/bar" to c, d
 /// c: uses realm event "capability_ready" with filters "/foo", "/bar"
 /// d: uses realm event "capability_ready" with filters "/baz" (fails)
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn event_filter_routing() {
     let components = vec![
         (
@@ -3328,7 +3328,7 @@ async fn event_filter_routing() {
 /// a: offer framework event "capability_ready" with mode "async".
 /// b: offers parent event "capabilty_ready" with mode "sync".
 /// c: uses realm event "capability_ready" with mode "sync"
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn event_mode_routing_failure() {
     let components = vec![
         (
@@ -3421,7 +3421,7 @@ async fn event_mode_routing_failure() {
 /// a: offer framework event "capability_ready" with mode "sync".
 /// b: offers parent event "capabilty_ready" with mode "async".
 /// c: uses realm event "capability_ready" with mode "async"
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn event_mode_routing_success() {
     let components = vec![
         (
@@ -3530,7 +3530,7 @@ async fn event_mode_routing_success() {
 /// a: creates environment "env" and registers resolver "base" from c.
 /// b: resolved by resolver "base" through "env".
 /// b: exposes resolver "base" from self.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_resolver_from_parent_environment() {
     // Note that we do not define a component "b". This will be resolved by our custom resolver.
     let components = vec![
@@ -3624,7 +3624,7 @@ async fn use_resolver_from_parent_environment() {
 /// a: creates environment "env" and registers resolver "base" from self.
 /// b: has environment "env".
 /// c: is resolved by resolver from grandarent.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_resolver_from_grandparent_environment() {
     // Note that we do not define a component "c". This will be resolved by our custom resolver.
     let components = vec![
@@ -3710,7 +3710,7 @@ async fn use_resolver_from_grandparent_environment() {
 /// a: creates environment "env" and registers resolver "base" from self.
 /// b: has environment "env".
 /// c: does NOT have environment "env".
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resolver_is_not_available() {
     // Note that we do not define a component "b" or "c". This will be resolved by our custom resolver.
     let components = vec![(
@@ -3788,7 +3788,7 @@ async fn resolver_is_not_available() {
 /// b
 /// a: creates environment "env" and registers resolver "base" from self.
 /// b: has environment "env".
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resolver_component_decl_is_validated() {
     // Note that we do not define a component "b". This will be resolved by our custom resolver.
     let components = vec![(
@@ -3872,7 +3872,7 @@ async fn resolver_component_decl_is_validated() {
 ///
 /// b: uses service /svc/hippo as /svc/hippo.
 /// a: provides b with the service but policy prevents it.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_protocol_denied_by_capability_policy() {
     let components = vec![
         (
@@ -3928,7 +3928,7 @@ async fn use_protocol_denied_by_capability_policy() {
 ///
 /// b: uses directory /data/foo as /data/bar.
 /// a: provides b with the directory but policy prevents it.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_directory_with_alias_denied_by_capability_policy() {
     let components = vec![
         (
@@ -3988,7 +3988,7 @@ async fn use_directory_with_alias_denied_by_capability_policy() {
 /// b: uses service /svc/hippo as /svc/hippo.
 /// a: provides b with the service policy allows it.
 /// b: provides c with the service policy does not allow it.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_protocol_partial_chain_allowed_by_capability_policy() {
     let components = vec![
         (
@@ -4076,7 +4076,7 @@ async fn use_protocol_partial_chain_allowed_by_capability_policy() {
 /// b: provides c with the service policy allows it.
 /// c: uses service /svc/hippo as /svc/hippo.
 /// Tests component provided caps in the middle of a path
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_protocol_component_provided_capability_policy() {
     let components = vec![
         (
@@ -4176,7 +4176,7 @@ async fn use_protocol_component_provided_capability_policy() {
 /// b: uses framework events "started", and "capability_requested".
 /// Capability policy denies the route from being allowed for started but
 /// not for capability_requested.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_event_from_framework_denied_by_capabiilty_policy() {
     let components = vec![
         (
@@ -4285,7 +4285,7 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
 ///   a
 ///
 /// a: uses service /use_from_cm_namespace/svc/foo as foo_svc
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_from_component_manager_namespace_denied_by_policy() {
     let components = vec![(
         "a",
@@ -4331,7 +4331,7 @@ async fn use_from_component_manager_namespace_denied_by_policy() {
 //
 // a: exposes "foo" to parent from child
 // b: exposes "foo" to parent from self
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn route_protocol_from_expose() {
     let expose_decl = ExposeProtocolDecl {
         source: ExposeSource::Child("b".into()),
@@ -4387,7 +4387,7 @@ async fn route_protocol_from_expose() {
 /// c: uses service svc_allowed as /svc/hippo.
 /// a: offers services using environment.
 /// Tests component provided caps in the middle of a path
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_protocol_component_provided_debug_capability_policy_at_root_from_self() {
     let components = vec![
         (
@@ -4488,7 +4488,7 @@ async fn use_protocol_component_provided_debug_capability_policy_at_root_from_se
 /// c: uses service svc_allowed as /svc/hippo.
 /// b: offers services using environment.
 /// Tests component provided debug caps in the middle of a path
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_protocol_component_provided_debug_capability_policy_from_self() {
     let components = vec![
         ("a", ComponentDeclBuilder::new().add_child(ChildDeclBuilder::new_lazy_child("b")).build()),
@@ -4587,7 +4587,7 @@ async fn use_protocol_component_provided_debug_capability_policy_from_self() {
 /// b: offers services using environment.
 /// d: exposes the service to b
 /// Tests component provided debug caps in the middle of a path
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_protocol_component_provided_debug_capability_policy_from_child() {
     let expose_decl_svc_allowed = ExposeProtocolDecl {
         source: ExposeSource::Self_,
@@ -4708,7 +4708,7 @@ async fn use_protocol_component_provided_debug_capability_policy_from_child() {
 /// b: offers services using environment.
 /// e: exposes the service to b
 /// Tests component provided debug caps in the middle of a path
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_protocol_component_provided_debug_capability_policy_from_grandchild() {
     let expose_decl_svc_allowed = ExposeProtocolDecl {
         source: ExposeSource::Self_,

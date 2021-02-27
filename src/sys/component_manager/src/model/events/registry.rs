@@ -486,7 +486,7 @@ mod tests {
         registry.dispatch(&event).await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn capability_routed_dispatch() -> Result<(), ModelError> {
         let TestModelResult { model, .. } = TestEnvironmentBuilder::new().build().await;
         let registry = EventRegistry::new(Arc::downgrade(&model));
@@ -542,7 +542,7 @@ mod tests {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn drop_dispatcher_when_event_stream_dropped() {
         let TestModelResult { model, .. } = TestEnvironmentBuilder::new().build().await;
         let event_registry = EventRegistry::new(Arc::downgrade(&model));
@@ -592,7 +592,7 @@ mod tests {
         assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn event_error_dispatch() {
         let TestModelResult { model, .. } = TestEnvironmentBuilder::new().build().await;
         let event_registry = EventRegistry::new(Arc::downgrade(&model));
@@ -623,7 +623,7 @@ mod tests {
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn capability_requested_over_two_event_streams() {
         let TestModelResult { model, .. } = TestEnvironmentBuilder::new().build().await;
         let event_registry = EventRegistry::new(Arc::downgrade(&model));

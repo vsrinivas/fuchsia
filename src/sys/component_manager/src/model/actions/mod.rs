@@ -367,7 +367,7 @@ pub mod tests {
         starter_rx.await.expect("Unable to receive start signal");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn action_set() {
         let test = ActionsTest::new("root", vec![], None).await;
         let component = test.model.root.clone();

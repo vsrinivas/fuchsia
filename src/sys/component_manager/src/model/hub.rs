@@ -700,7 +700,7 @@ mod tests {
         (model, builtin_environment, hub_proxy)
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn hub_basic() {
         let root_component_url = "test:///root".to_string();
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
@@ -739,7 +739,7 @@ mod tests {
         assert_eq!("test:///a", read_file(&hub_proxy, "children/a/url").await);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn hub_out_directory() {
         let root_component_url = "test:///root".to_string();
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
@@ -760,7 +760,7 @@ mod tests {
         assert_eq!("bbb", read_file(&hub_proxy, "exec/out/test/aaa").await);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn hub_runtime_directory() {
         let root_component_url = "test:///root".to_string();
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
@@ -777,7 +777,7 @@ mod tests {
         assert_eq!("blah", read_file(&hub_proxy, "exec/runtime/bleep").await);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn hub_test_hook_interception() {
         let root_component_url = "test:///root".to_string();
         let hub_injection_test_hook = Arc::new(HubInjectionTestHook::new());
@@ -831,7 +831,7 @@ mod tests {
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn hub_resolved_directory() {
         let root_component_url = "test:///root".to_string();
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
@@ -867,7 +867,7 @@ mod tests {
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     // TODO(b/65870): change function name to hub_expose_directory after the expose directory
     // is removed from exec and the original hub_expose_directory test is deleted.
     async fn hub_expose_directory_in_resolved() {
@@ -917,7 +917,7 @@ mod tests {
         assert_eq!(vec!["bar", "hippo"], list_directory_recursive(&expose_dir).await);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn hub_in_directory() {
         let root_component_url = "test:///root".to_string();
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
@@ -972,7 +972,7 @@ mod tests {
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn hub_no_event_stream_in_incoming_directory() {
         let root_component_url = "test:///root".to_string();
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
@@ -1011,7 +1011,7 @@ mod tests {
         assert_eq!(0, list_directory(&in_dir).await.len());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn hub_expose_directory() {
         let root_component_url = "test:///root".to_string();
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(

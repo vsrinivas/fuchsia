@@ -106,10 +106,10 @@ pub mod tests {
                 ComponentDeclBuilder, TestEnvironmentBuilder, TestModelResult,
             },
         },
-        fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+        fidl_fuchsia_sys2 as fsys,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn shutting_down_when_start_fails() {
         let components = vec![(
             "root",
@@ -132,7 +132,7 @@ pub mod tests {
     }
 
     #[should_panic]
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn not_shutting_down_when_start_fails() {
         let components = vec![(
             "root",

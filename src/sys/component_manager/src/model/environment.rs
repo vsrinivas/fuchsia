@@ -281,7 +281,6 @@ mod tests {
                 },
             },
         },
-        fuchsia_async as fasync,
         maplit::hashmap,
         matches::assert_matches,
         moniker::AbsoluteMoniker,
@@ -342,7 +341,7 @@ mod tests {
 
     // Each component declares an environment for their child that inherits from the component's
     // environment. The leaf component should be able to access the resolvers of the root.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_inherit_root() -> Result<(), ModelError> {
         let runner_reg = RunnerRegistration {
             source: RegistrationSource::Parent,
@@ -423,7 +422,7 @@ mod tests {
 
     // A component declares an environment that inherits from realm, and the realm's environment
     // added something that should be available in the component's realm.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_inherit_parent() -> Result<(), ModelError> {
         let runner_reg = RunnerRegistration {
             source: RegistrationSource::Parent,
@@ -514,7 +513,7 @@ mod tests {
 
     // A component in a collection declares an environment that inherits from realm, and the
     // realm's environment added something that should be available in the component's realm.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_inherit_in_collection() -> Result<(), ModelError> {
         let runner_reg = RunnerRegistration {
             source: RegistrationSource::Parent,
@@ -618,7 +617,7 @@ mod tests {
     // One of the components does not declare or specify an environment for the leaf child. The
     // leaf child component should still be able to access the resolvers of the root, as an
     // implicit inheriting environment is assumed.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_auto_inheritance() -> Result<(), ModelError> {
         let runner_reg = RunnerRegistration {
             source: RegistrationSource::Parent,
@@ -695,7 +694,7 @@ mod tests {
 
     // One of the components declares an environment that does not inherit from the realm. This
     // means that any child components of this component cannot be resolved.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_resolver_no_inheritance() -> Result<(), ModelError> {
         let mut resolver = MockResolver::new();
         resolver.add_component(

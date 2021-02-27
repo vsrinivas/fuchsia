@@ -103,7 +103,7 @@ mod tests {
         Ok(proxy)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn fail_with_no_irq_resource() -> Result<(), Error> {
         if irq_resource_available() {
             return Ok(());
@@ -116,7 +116,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn kind_type_is_irq() -> Result<(), Error> {
         if !irq_resource_available() {
             return Ok(());
@@ -131,7 +131,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_connect_to_irq_service() -> Result<(), Error> {
         if !irq_resource_available() {
             return Ok(());

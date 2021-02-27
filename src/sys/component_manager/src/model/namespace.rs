@@ -661,7 +661,7 @@ pub mod test {
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     /// Tests that the logger is connected to when it is in a subdirectory of a
     /// namespace entry.
     async fn test_logger_at_root_of_entry() {
@@ -698,7 +698,7 @@ pub mod test {
         .await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     /// Tests that the logger is connected to when it is in a subdirectory of a
     /// namespace entry.
     async fn test_logger_at_subdir_of_entry() {
@@ -736,7 +736,7 @@ pub mod test {
         .await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_multiple_namespace_entries() {
         let incoming_ns = IncomingNamespace::new(None).expect("namespace failed to create");
         let log_decl = UseProtocolDecl {
@@ -789,7 +789,7 @@ pub mod test {
         .await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_no_connect_on_empty_namespace() {
         let incoming_ns = IncomingNamespace::new(None).expect("namespace failed to create");
         let log_decl = UseProtocolDecl {
@@ -810,7 +810,7 @@ pub mod test {
         .await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_logsink_dir_not_in_namespace() {
         let incoming_ns = IncomingNamespace::new(None).expect("namespace failed to create");
         let log_decl = UseProtocolDecl {

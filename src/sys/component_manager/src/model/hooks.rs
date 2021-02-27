@@ -731,7 +731,7 @@ mod tests {
     }
 
     // This test verifies that a hook cannot be installed twice.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn install_hook_twice() {
         // CallCounter counts the number of DynamicChildAdded events it receives.
         // It should only ever receive one.
@@ -764,7 +764,7 @@ mod tests {
     }
 
     // This test verifies that events propagate from child_hooks to parent_hooks.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn event_propagation() {
         let parent_hooks = Arc::new(Hooks::new(None));
         let child_hooks = Hooks::new(Some(parent_hooks.clone()));
@@ -823,7 +823,7 @@ mod tests {
     }
 
     // This test verifies that a hook can receive errors.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn error_event() {
         // CallCounter counts the number of DynamicChildAdded events it receives.
         // It should only ever receive one.
@@ -858,7 +858,7 @@ mod tests {
     }
 
     // This test verifies that the payload of the CapabilityRequested event will be transferred.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn capability_requested_transfer() {
         let (_, capability_server_end) = zx::Channel::create().unwrap();
         let capability_server_end = Arc::new(Mutex::new(Some(capability_server_end)));

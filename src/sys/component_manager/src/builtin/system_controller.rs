@@ -192,7 +192,7 @@ mod tests {
     ///    b
     ///   / \
     ///  c   d
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_system_controller() {
         // Configure and start component
         let components = vec![

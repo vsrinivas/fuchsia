@@ -1358,7 +1358,7 @@ mod tests {
         validate_results(expected, process_component_dependencies(&decl));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn action_shutdown_blocks_stop() {
         let test = ActionsTest::new("root", vec![], None).await;
         let component = test.model.root.clone();
@@ -1383,7 +1383,7 @@ mod tests {
         nf2.await.unwrap();
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn action_shutdown_stop_stop() {
         let test = ActionsTest::new("root", vec![], None).await;
         let component = test.model.root.clone();
@@ -1411,7 +1411,7 @@ mod tests {
         nf3.await.unwrap();
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn shutdown_one_component() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -1448,7 +1448,7 @@ mod tests {
         &a_info.check_is_shut_down(&test.runner).await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn shutdown_collection() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("container").build()),
@@ -1547,7 +1547,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn shutdown_not_started() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -1588,7 +1588,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn shutdown_not_resolved() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -1644,7 +1644,7 @@ mod tests {
     ///    b
     ///   / \
     ///  c   d
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn shutdown_hierarchy() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -1717,7 +1717,7 @@ mod tests {
     ///   / | \
     ///  c<-d->e
     /// In this case C and E use a service provided by d
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn shutdown_with_multiple_deps() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -1858,7 +1858,7 @@ mod tests {
     /// {F}, {C, E}, {D}, {B}, {A}
     /// Note that C must stop before D, but may stop before or after
     /// either of F and E.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn shutdown_with_multiple_out_and_longer_chain() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -2056,7 +2056,7 @@ mod tests {
     /// F uses a services provided by E and D, shutdown order should be F must
     /// stop before E and {C,E,F} must stop before D. C may stop before or
     /// after either of {F, E}.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn shutdown_with_multiple_out_multiple_in() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -2259,7 +2259,7 @@ mod tests {
     ///   / \
     ///  c-->d
     /// In this case D uses a resource exposed by C
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn shutdown_with_dependency() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -2361,7 +2361,7 @@ mod tests {
     ///      ...
     ///
     /// `b` is a child of itself, but shutdown should still be able to complete.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn shutdown_self_referential() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -2431,7 +2431,7 @@ mod tests {
     ///  c   d
     ///
     /// `b` fails to finish shutdown the first time, but succeeds the second time.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn shutdown_error() {
         struct StopErrorHook {
             moniker: AbsoluteMoniker,

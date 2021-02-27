@@ -106,7 +106,7 @@ mod tests {
         Ok(proxy)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn fail_with_no_debug_resource() -> Result<(), Error> {
         if debug_resource_available() {
             return Ok(());
@@ -120,7 +120,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn base_type_is_debug() -> Result<(), Error> {
         if !debug_resource_available() {
             return Ok(());
@@ -135,7 +135,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_connect_to_debug_service() -> Result<(), Error> {
         if !debug_resource_available() {
             return Ok(());

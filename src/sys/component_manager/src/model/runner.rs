@@ -196,7 +196,7 @@ mod tests {
     use super::*;
     use fidl::endpoints::{self, Proxy};
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_null_runner() {
         let null_runner = NullRunner {};
         let (client, server) =

@@ -131,7 +131,7 @@ pub mod tests {
         std::sync::Weak,
     };
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn destroy_one_component() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -182,7 +182,7 @@ pub mod tests {
         assert!(is_child_deleted(&component_root, &component_a).await);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn destroy_collection() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("container").build()),
@@ -229,7 +229,7 @@ pub mod tests {
         assert!(is_destroyed(&component_b).await);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn destroy_already_shut_down() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -361,7 +361,7 @@ pub mod tests {
         assert!(is_child_deleted(&component_root, &component_a).await);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn destroy_blocks_on_discover() {
         let (test, mut event_stream) = setup_destroy_blocks_test(EventType::Discovered).await;
         run_destroy_blocks_test(
@@ -378,7 +378,7 @@ pub mod tests {
         .await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn destroy_blocks_on_resolve() {
         let (test, mut event_stream) = setup_destroy_blocks_test(EventType::Resolved).await;
         let event = event_stream.wait_until(EventType::Resolved, vec![].into()).await.unwrap();
@@ -404,7 +404,7 @@ pub mod tests {
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn destroy_blocks_on_start() {
         let (test, mut event_stream) = setup_destroy_blocks_test(EventType::Started).await;
         let event = event_stream.wait_until(EventType::Started, vec![].into()).await.unwrap();
@@ -430,7 +430,7 @@ pub mod tests {
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn destroy_not_resolved() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -491,7 +491,7 @@ pub mod tests {
     ///      b
     ///     / \
     ///    c   d
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn destroy_hierarchy() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").add_lazy_child("x").build()),
@@ -609,7 +609,7 @@ pub mod tests {
     ///      ...
     ///
     /// `b` is a child of itself, but destruction should still be able to complete.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn destroy_self_referential() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
@@ -694,7 +694,7 @@ pub mod tests {
     ///    c   d
     ///
     /// `a` fails to destroy the first time, but succeeds the second time.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn destroy_error() {
         struct DestroyErrorHook {
             moniker: AbsoluteMoniker,

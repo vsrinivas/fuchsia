@@ -78,9 +78,8 @@ impl ComponentIdIndex {
 pub mod tests {
     use super::*;
     use crate::model::testing::test_helpers::make_index_file;
-    use fuchsia_async as fasync;
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn look_up_moniker_no_exists() {
         let index_file = make_index_file(component_id_index::Index::default()).unwrap();
         let index = ComponentIdIndex::new(index_file.path().to_str().unwrap()).await.unwrap();
@@ -89,7 +88,7 @@ pub mod tests {
             .is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn look_up_moniker_exists() {
         let iid = "0".repeat(64);
         let index_file = make_index_file(component_id_index::Index {
@@ -110,7 +109,7 @@ pub mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn index_unreadable() {
         let result = ComponentIdIndex::new("/this/path/doesnt/exist").await;
         assert!(matches!(result, Err(ComponentIdIndexError::IndexUnreadable { path: _, err: _ })));

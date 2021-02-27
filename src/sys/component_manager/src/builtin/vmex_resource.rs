@@ -104,7 +104,7 @@ mod tests {
         Ok(proxy)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn fail_with_no_vmex_resource() -> Result<(), Error> {
         if vmex_resource_available() {
             return Ok(());
@@ -118,7 +118,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn base_type_is_vmex() -> Result<(), Error> {
         if !vmex_resource_available() {
             return Ok(());
@@ -133,7 +133,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_connect_to_vmex_service() -> Result<(), Error> {
         if !vmex_resource_available() {
             return Ok(());
