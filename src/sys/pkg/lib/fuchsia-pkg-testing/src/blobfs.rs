@@ -5,7 +5,7 @@
 //! Fake and mock implementation of blobfs for blobfs::Client.
 
 use {
-    fidl::endpoints::RequestStream as _,
+    fidl::{encoding::Decodable as _, endpoints::RequestStream as _},
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, DirectoryRequest, DirectoryRequestStream, FileObject,
         FileRequest, FileRequestStream, NodeInfo,
@@ -142,6 +142,16 @@ impl MockBlob {
         }
     }
 
+    /// Succeeds the open request.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn then_send_on_open_readable(mut self) -> Self {
+        self.send_on_open_with_readable(Status::OK);
+        self
+    }
+
     /// Succeeds the open request, then verifies the blob is immediately closed (possibly after
     /// handling a single Close request).
     ///
@@ -183,6 +193,70 @@ impl MockBlob {
                 let _ = responder.send(Status::OK.into_raw());
             }
             Some(other) => panic!("unexpected request: {:?}", other),
+        }
+    }
+
+    /// Handle read_at requests with the given data and offset until all data after offset is read.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error or if data not read sequentially.
+    pub async fn expect_read_at(mut self, data: &[u8], start_offset: usize) -> Self {
+        let mut expected_offset = start_offset;
+        while expected_offset < data.len() {
+            match self.stream.next().await {
+                Some(Ok(FileRequest::ReadAt { count, offset, responder })) => {
+                    let offset: usize = offset.try_into().unwrap();
+                    assert_eq!(offset, expected_offset);
+                    let count = min(count.try_into().unwrap(), data.len() - offset);
+                    responder.send(Status::OK.into_raw(), &data[offset..offset + count]).unwrap();
+                    expected_offset += count;
+                }
+                other => panic!("unexpected request: {:?}", other),
+            }
+        }
+        self
+    }
+
+    /// Handle one get_attr request with the given blob size.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn expect_get_attr(mut self, blob_size: u64) -> Self {
+        match self.stream.next().await {
+            Some(Ok(FileRequest::GetAttr { responder })) => {
+                let mut attr = fidl_fuchsia_io::NodeAttributes::new_empty();
+                attr.content_size = blob_size;
+                responder.send(Status::OK.into_raw(), &mut attr).unwrap();
+            }
+            other => panic!("unexpected request: {:?}", other),
+        }
+        self
+    }
+
+    /// Handle all read_at requests with the given blob data until close is called.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn handle_read_at_until_close(mut self, data: &[u8]) {
+        loop {
+            match self.stream.next().await {
+                Some(Ok(FileRequest::ReadAt { count, offset, responder })) => {
+                    let offset: usize = offset.try_into().unwrap();
+                    let count = min(count.try_into().unwrap(), data.len() - offset);
+                    responder.send(Status::OK.into_raw(), &data[offset..offset + count]).unwrap();
+                }
+                Some(Ok(FileRequest::Close { responder })) => {
+                    let _ = responder.send(Status::OK.into_raw());
+                    return;
+                }
+                None => {
+                    return;
+                }
+                other => panic!("unexpected request: {:?}", other),
+            }
         }
     }
 }

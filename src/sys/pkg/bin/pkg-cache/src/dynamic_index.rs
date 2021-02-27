@@ -179,12 +179,12 @@ pub async fn fulfill_meta_far_blob(
     let (path, required_blobs) = {
         let file =
             blobfs.open_blob_for_read(&blob_hash).await.map_err(DynamicIndexError::OpenBlob)?;
-        let meta_far_blob =
-            io_util::file::read(&file).await.map_err(DynamicIndexError::ReadBlob)?;
-        // TODO: Switch to async far reader (fxbug.dev/68929) to save memory.
-        let mut meta_far = fuchsia_archive::Reader::new(std::io::Cursor::new(meta_far_blob))?;
-        let meta_package = MetaPackage::deserialize(&meta_far.read_file("meta/package")?[..])?;
-        let meta_contents = MetaContents::deserialize(&meta_far.read_file("meta/contents")?[..])?;
+        let mut meta_far =
+            fuchsia_archive::AsyncReader::new(io_util::file::AsyncFile::from_proxy(file)).await?;
+        let meta_package =
+            MetaPackage::deserialize(&meta_far.read_file("meta/package").await?[..])?;
+        let meta_contents =
+            MetaContents::deserialize(&meta_far.read_file("meta/contents").await?[..])?;
 
         (meta_package.into_path(), meta_contents.into_hashes().collect::<HashSet<_>>())
     };
@@ -621,7 +621,17 @@ mod tests {
 
         let ((), ()) = future::join(
             async {
-                blobfs_mock.expect_open_blob(meta_far_hash).await.expect_read(&meta_far).await;
+                blobfs_mock
+                    .expect_open_blob(meta_far_hash)
+                    .await
+                    .then_send_on_open_readable()
+                    .await
+                    .expect_read_at(&meta_far[..64], 0)
+                    .await
+                    .expect_get_attr(meta_far.len() as u64)
+                    .await
+                    .handle_read_at_until_close(&meta_far)
+                    .await;
                 blobfs_mock.expect_open_blob(blob_hash).await.expect_close().await;
             },
             async {
