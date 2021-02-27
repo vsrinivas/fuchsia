@@ -7,9 +7,11 @@ use {
     async_std::{
         io::{stdout, Write},
         prelude::*,
+        sync::Arc,
     },
     async_trait::async_trait,
-    diagnostics_data::Timestamp,
+    diagnostics_data::{Severity, Timestamp},
+    ffx_config::get,
     ffx_core::ffx_plugin,
     ffx_log_args::{DumpCommand, LogCommand, LogSubCommand, WatchCommand},
     ffx_log_data::{EventType, LogData, LogEntry},
@@ -19,15 +21,107 @@ use {
         self as bridge, DaemonDiagnosticsStreamParameters, StreamMode,
     },
     fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, ArchiveIteratorMarker},
+    fidl_fuchsia_diagnostics::ComponentSelector,
+    selectors::{match_moniker_against_component_selectors, parse_path_to_moniker},
     std::iter::Iterator,
+    termion::{color, style},
 };
 
 type ArchiveIteratorResult = Result<LogEntry, ArchiveIteratorError>;
 const PIPELINE_SIZE: usize = 20;
+const COLOR_CONFIG_NAME: &str = "target_log.color";
 
 fn timestamp_to_partial_secs(ts: Timestamp) -> f64 {
     let u_ts: u64 = ts.into();
     u_ts as f64 / 1_000_000_000.0
+}
+
+fn severity_to_color_str(s: Severity) -> String {
+    match s {
+        Severity::Error => color::Fg(color::Red).to_string(),
+        Severity::Warn => color::Fg(color::Yellow).to_string(),
+        _ => "".to_string(),
+    }
+}
+
+struct LogFilterCriteria {
+    monikers: Vec<Arc<ComponentSelector>>,
+    exclude_monikers: Vec<Arc<ComponentSelector>>,
+    min_severity: Severity,
+    msg: Vec<String>,
+}
+
+impl LogFilterCriteria {
+    fn new(
+        monikers: Vec<Arc<ComponentSelector>>,
+        exclude_monikers: Vec<Arc<ComponentSelector>>,
+        min_severity: Severity,
+        msg: Vec<String>,
+    ) -> Self {
+        Self { monikers, exclude_monikers, min_severity: min_severity, msg }
+    }
+
+    fn matches(&self, entry: &LogEntry) -> bool {
+        match entry {
+            LogEntry { data: LogData::TargetLog(data), .. } => {
+                if !(self.msg.is_empty()
+                    || self.msg.iter().any(|m| data.msg().as_ref().unwrap_or(&"").contains(m)))
+                {
+                    return false;
+                }
+
+                if data.metadata.severity < self.min_severity {
+                    return false;
+                }
+
+                let parsed_moniker = match parse_path_to_moniker(&data.moniker) {
+                    Ok(m) => m,
+                    Err(e) => {
+                        log::warn!(
+                            "got a broken moniker '{}' in a log entry: {}",
+                            &data.moniker,
+                            e
+                        );
+                        return true;
+                    }
+                };
+
+                let pos_match_results =
+                    match_moniker_against_component_selectors(&parsed_moniker, &self.monikers);
+                if let Err(ref e) = pos_match_results {
+                    log::warn!("got a bad selector in log matcher: {}", e);
+                } else if !self.monikers.is_empty() && pos_match_results.unwrap().is_empty() {
+                    return false;
+                }
+
+                let neg_match_results = match_moniker_against_component_selectors(
+                    &parsed_moniker,
+                    &self.exclude_monikers,
+                );
+                if let Err(ref e) = neg_match_results {
+                    log::warn!("got a bad selector in log matcher: {}", e);
+                } else if !(self.exclude_monikers.is_empty()
+                    || neg_match_results.unwrap().is_empty())
+                {
+                    return false;
+                }
+
+                true
+            }
+            _ => true,
+        }
+    }
+}
+
+impl From<&LogCommand> for LogFilterCriteria {
+    fn from(cmd: &LogCommand) -> Self {
+        LogFilterCriteria::new(
+            cmd.moniker.clone().into_iter().map(|m| Arc::new(m)).collect(),
+            cmd.exclude_moniker.clone().into_iter().map(|m| Arc::new(m)).collect(),
+            cmd.min_severity,
+            cmd.msg_contains.clone(),
+        )
+    }
 }
 
 #[async_trait(?Send)]
@@ -38,33 +132,58 @@ pub trait LogFormatter {
 struct DefaultLogFormatter<'a> {
     writer: Box<dyn Write + Unpin + 'a>,
     has_previous_log: bool,
+    filters: LogFilterCriteria,
+    color: bool,
 }
 
 #[async_trait(?Send)]
 impl<'a> LogFormatter for DefaultLogFormatter<'_> {
-    async fn push_log(&mut self, log_entry: ArchiveIteratorResult) -> Result<()> {
-        let mut s = match log_entry {
-            Ok(LogEntry { data, timestamp, .. }) => match data {
-                LogData::TargetLog(data) => {
-                    let ts = timestamp_to_partial_secs(data.metadata.timestamp);
-                    format!("[{:05.3}][{}] {}", ts, data.moniker, data.msg().unwrap())
+    async fn push_log(&mut self, log_entry_result: ArchiveIteratorResult) -> Result<()> {
+        let mut s = match log_entry_result {
+            Ok(log_entry) => {
+                if !self.filters.matches(&log_entry) {
+                    return Ok(());
                 }
-                LogData::MalformedTargetLog(raw) => {
-                    format!("malformed target log: {}", raw)
-                }
-                LogData::FfxEvent(etype) => match etype {
-                    EventType::LoggingStarted => {
-                        let mut s = format!(
-                            "[{:05.3}][<ffx daemon>] logger started. ",
-                            timestamp_to_partial_secs(timestamp)
-                        );
-                        if self.has_previous_log {
-                            s.push_str("Logs before this may have been dropped if they were not cached on the target.");
-                        }
-                        s
+
+                match log_entry {
+                    LogEntry { data: LogData::TargetLog(data), .. } => {
+                        let ts = timestamp_to_partial_secs(data.metadata.timestamp);
+                        let color_str = if self.color {
+                            severity_to_color_str(data.metadata.severity)
+                        } else {
+                            String::default()
+                        };
+
+                        let severity_str = &format!("{}", data.metadata.severity)[..1];
+                        format!(
+                            "[{:05.3}][{}][{}{}{}] {}{}{}",
+                            ts,
+                            data.moniker,
+                            color_str,
+                            severity_str,
+                            style::Reset,
+                            color_str,
+                            data.msg().unwrap(),
+                            style::Reset
+                        )
                     }
-                },
-            },
+                    LogEntry { data: LogData::MalformedTargetLog(raw), .. } => {
+                        format!("malformed target log: {}", raw)
+                    }
+                    LogEntry { data: LogData::FfxEvent(etype), timestamp, .. } => match etype {
+                        EventType::LoggingStarted => {
+                            let mut s = format!(
+                                "[{:05.3}][<ffx daemon>] logger started. ",
+                                timestamp_to_partial_secs(timestamp)
+                            );
+                            if self.has_previous_log {
+                                s.push_str("Logs before this may have been dropped if they were not cached on the target.");
+                            }
+                            s
+                        }
+                    },
+                }
+            }
             Err(e) => {
                 format!("got an error fetching next log: {:?}", e)
             }
@@ -79,14 +198,27 @@ impl<'a> LogFormatter for DefaultLogFormatter<'_> {
 }
 
 impl<'a> DefaultLogFormatter<'a> {
-    fn new(writer: impl Write + Unpin + 'a) -> Self {
-        Self { writer: Box::new(writer), has_previous_log: false }
+    fn new(filters: LogFilterCriteria, color: bool, writer: impl Write + Unpin + 'a) -> Self {
+        Self { filters, color, writer: Box::new(writer), has_previous_log: false }
     }
+}
+
+fn should_color(config_color: bool, cmd_color: Option<bool>) -> bool {
+    if let Some(c) = cmd_color {
+        return c;
+    }
+
+    return config_color;
 }
 
 #[ffx_plugin("proactive_log.enabled")]
 pub async fn log(daemon_proxy: bridge::DaemonProxy, cmd: LogCommand) -> Result<()> {
-    let mut formatter = DefaultLogFormatter::new(stdout());
+    let config_color: bool = get(COLOR_CONFIG_NAME).await?;
+    let mut formatter = DefaultLogFormatter::new(
+        LogFilterCriteria::from(&cmd),
+        should_color(config_color, cmd.color),
+        stdout(),
+    );
     let ffx: ffx_lib_args::Ffx = argh::from_env();
     let target_str = ffx.target.unwrap_or(String::default());
     log_cmd(daemon_proxy, &mut formatter, target_str, cmd).await
@@ -154,10 +286,12 @@ mod test {
     use {
         super::*,
         async_std::sync::Arc,
-        diagnostics_data::Timestamp,
+        diagnostics_data::{LogsData, LogsField, Timestamp},
+        diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
         ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
         fidl::Error as FidlError,
         fidl_fuchsia_developer_remotecontrol::ArchiveIteratorError,
+        selectors::parse_component_selector,
     };
 
     const DEFAULT_TS: u64 = 1234567;
@@ -232,10 +366,38 @@ mod test {
         }
     }
 
+    fn make_log(moniker: &str, msg: &str, severity: Severity) -> LogData {
+        let hierarchy = DiagnosticsHierarchy::new(
+            "root",
+            vec![Property::String(LogsField::Msg, msg.to_string())],
+            vec![],
+        );
+        LogData::TargetLog(LogsData::for_logs(
+            String::from(moniker),
+            Some(hierarchy),
+            Timestamp::from(1u64),
+            String::from("fake-url"),
+            severity,
+            1,
+            vec![],
+        ))
+    }
+
+    fn empty_log_command(sub_cmd: LogSubCommand) -> LogCommand {
+        LogCommand {
+            cmd: sub_cmd,
+            msg_contains: vec![],
+            color: None,
+            moniker: vec![],
+            exclude_moniker: vec![],
+            min_severity: Severity::Info,
+        }
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_dump_empty() {
         let mut formatter = FakeLogFormatter::new();
-        let cmd = LogCommand { cmd: LogSubCommand::Dump(DumpCommand {}) };
+        let cmd = empty_log_command(LogSubCommand::Dump(DumpCommand {}));
         let params = DaemonDiagnosticsStreamParameters {
             stream_mode: Some(StreamMode::SnapshotAll),
             ..DaemonDiagnosticsStreamParameters::EMPTY
@@ -258,7 +420,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch() {
         let mut formatter = FakeLogFormatter::new();
-        let cmd = LogCommand { cmd: LogSubCommand::Watch(WatchCommand { dump: true }) };
+        let cmd = empty_log_command(LogSubCommand::Watch(WatchCommand { dump: true }));
         let params = DaemonDiagnosticsStreamParameters {
             stream_mode: Some(StreamMode::SnapshotRecentThenSubscribe),
             ..DaemonDiagnosticsStreamParameters::EMPTY
@@ -293,7 +455,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch_no_dump_with_error() {
         let mut formatter = FakeLogFormatter::new();
-        let cmd = LogCommand { cmd: LogSubCommand::Watch(WatchCommand { dump: false }) };
+        let cmd = empty_log_command(LogSubCommand::Watch(WatchCommand { dump: false }));
         let params = DaemonDiagnosticsStreamParameters {
             stream_mode: Some(StreamMode::Subscribe),
             ..DaemonDiagnosticsStreamParameters::EMPTY
@@ -329,5 +491,166 @@ mod test {
             Err(ArchiveIteratorError::GenericError),
             Ok(log3),
         ])
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_criteria_moniker_message_and_severity_matches() {
+        let cmd = LogCommand {
+            cmd: LogSubCommand::Dump(DumpCommand {}),
+            color: None,
+            moniker: vec![parse_component_selector(&"included/*".to_string()).unwrap()],
+            exclude_moniker: vec![],
+            msg_contains: vec!["included".to_string()],
+            min_severity: Severity::Error,
+        };
+        let criteria = LogFilterCriteria::from(&cmd);
+
+        assert!(criteria.matches(&make_log_entry(make_log(
+            "included/moniker",
+            "included message",
+            Severity::Error
+        ))));
+        assert!(criteria.matches(&make_log_entry(make_log(
+            "included/moniker",
+            "included message",
+            Severity::Fatal
+        ))));
+        assert!(!criteria.matches(&make_log_entry(make_log(
+            "included/moniker",
+            "different message",
+            Severity::Error
+        ))));
+        assert!(!criteria.matches(&make_log_entry(make_log(
+            "included/moniker",
+            "included message",
+            Severity::Warn
+        ))));
+        assert!(!criteria.matches(&make_log_entry(make_log(
+            "other/moniker",
+            "included message",
+            Severity::Error
+        ))));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_empty_criteria() {
+        let cmd = LogCommand {
+            cmd: LogSubCommand::Dump(DumpCommand {}),
+            color: None,
+            moniker: vec![],
+            exclude_moniker: vec![],
+            msg_contains: vec![],
+            min_severity: Severity::Info,
+        };
+        let criteria = LogFilterCriteria::from(&cmd);
+
+        assert!(criteria.matches(&make_log_entry(make_log(
+            "included/moniker",
+            "included message",
+            Severity::Error
+        ))));
+        assert!(criteria.matches(&make_log_entry(make_log(
+            "included/moniker",
+            "different message",
+            Severity::Info
+        ))));
+        assert!(!criteria.matches(&make_log_entry(make_log(
+            "other/moniker",
+            "included message",
+            Severity::Debug
+        ))));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_criteria_multiple_moniker_matches() {
+        let cmd = LogCommand {
+            cmd: LogSubCommand::Dump(DumpCommand {}),
+            color: None,
+            moniker: vec![
+                parse_component_selector(&"included/*".to_string()).unwrap(),
+                parse_component_selector(&"als*/moniker".to_string()).unwrap(),
+            ],
+            exclude_moniker: vec![],
+            msg_contains: vec![],
+            min_severity: Severity::Info,
+        };
+        let criteria = LogFilterCriteria::from(&cmd);
+
+        assert!(criteria.matches(&make_log_entry(make_log(
+            "included/moniker",
+            "included message",
+            Severity::Error
+        ))));
+        assert!(criteria.matches(&make_log_entry(make_log(
+            "also/moniker",
+            "different message",
+            Severity::Error
+        ))));
+        assert!(!criteria.matches(&make_log_entry(make_log(
+            "other/moniker",
+            "included message",
+            Severity::Error
+        ))));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_criteria_multiple_message_matches() {
+        let cmd = LogCommand {
+            cmd: LogSubCommand::Dump(DumpCommand {}),
+            color: None,
+            moniker: vec![],
+            exclude_moniker: vec![],
+            msg_contains: vec!["included".to_string(), "also".to_string()],
+            min_severity: Severity::Info,
+        };
+        let criteria = LogFilterCriteria::from(&cmd);
+
+        assert!(criteria.matches(&make_log_entry(make_log(
+            "moniker",
+            "included message",
+            Severity::Error
+        ))));
+        assert!(criteria.matches(&make_log_entry(make_log(
+            "moniker",
+            "also message",
+            Severity::Info
+        ))));
+        assert!(!criteria.matches(&make_log_entry(make_log(
+            "moniker",
+            "different message",
+            Severity::Error
+        ))));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_criteria_multiple_monikers_excluded() {
+        let cmd = LogCommand {
+            cmd: LogSubCommand::Dump(DumpCommand {}),
+            color: None,
+            moniker: vec![],
+            exclude_moniker: vec![
+                parse_component_selector(&"included/*".to_string()).unwrap(),
+                parse_component_selector(&"als*/moniker".to_string()).unwrap(),
+            ],
+            msg_contains: vec![],
+            min_severity: Severity::Info,
+        };
+        let criteria = LogFilterCriteria::from(&cmd);
+
+        assert!(!criteria.matches(&make_log_entry(make_log(
+            "included/moniker.cmx:12345",
+            "included message",
+            Severity::Error
+        ))));
+        assert!(!criteria.matches(&make_log_entry(make_log(
+            "also/moniker",
+            "different message",
+            Severity::Error
+        ))));
+        assert!(criteria.matches(&make_log_entry(make_log(
+            "other/moniker",
+            "included message",
+            Severity::Error
+        ))));
     }
 }
