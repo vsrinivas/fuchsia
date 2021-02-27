@@ -11,13 +11,8 @@ use {
     anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth::{Appearance, DeviceClass},
     fidl_fuchsia_bluetooth_control as fctrl, fidl_fuchsia_bluetooth_sys as fsys,
-    fuchsia_inspect as inspect,
     fuchsia_inspect_contrib::nodes::ManagedNode,
-    std::{
-        convert::TryFrom,
-        fmt::{self, Write},
-        str::FromStr,
-    },
+    std::{convert::TryFrom, fmt, str::FromStr},
 };
 
 #[derive(Clone, Debug, PartialEq)]

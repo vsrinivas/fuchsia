@@ -6,16 +6,13 @@ use {
     anyhow::format_err,
     fidl_fuchsia_bluetooth as bt, fidl_fuchsia_bluetooth_control as control,
     fidl_fuchsia_bluetooth_sys as sys, fuchsia_inspect as inspect,
-    std::{
-        convert::{TryFrom, TryInto},
-        ops,
-    },
+    std::convert::{TryFrom, TryInto},
 };
 
 use crate::{
-    inspect::{DebugExt, InspectData, Inspectable, IsInspectable, ToProperty},
+    inspect::{InspectData, IsInspectable, ToProperty},
     types::{uuid::Uuid, Address, OneOrBoth, PeerId},
-    util::{self, CollectExt},
+    util::CollectExt,
 };
 
 #[derive(Debug)]
@@ -685,7 +682,9 @@ impl From<Identity> for sys::Identity {
 /// This module defines a BondingData test strategy generator for use with proptest.
 pub mod proptest_util {
     use super::*;
-    use crate::types::address::proptest_util::{any_address, any_public_address};
+    use crate::types::address::proptest_util::any_address;
+    #[cfg(test)]
+    use crate::types::address::proptest_util::any_public_address;
     use proptest::{option, prelude::*};
 
     pub fn any_bonding_data() -> impl Strategy<Value = BondingData> {
@@ -735,6 +734,7 @@ pub mod proptest_util {
 
     // TODO(fxbug.dev/35008): The control library conversions expect `local_ltk` and `peer_ltk` to be the
     // same. We emulate that invariant here.
+    #[cfg(test)]
     pub(crate) fn any_le_data_for_control_test() -> impl Strategy<Value = LeBondData> {
         (
             option::of(any_connection_params()),
@@ -752,6 +752,7 @@ pub mod proptest_util {
             })
     }
 
+    #[cfg(test)]
     pub(crate) fn any_bonding_data_for_control_test() -> impl Strategy<Value = BondingData> {
         let any_data = prop_oneof![
             any_le_data_for_control_test().prop_map(OneOrBoth::Left),
@@ -864,18 +865,9 @@ pub mod example {
 #[cfg(test)]
 pub mod tests {
     use {
-        super::compat::*, super::*, fidl_fuchsia_bluetooth_control as control,
-        fidl_fuchsia_bluetooth_sys as sys, matches::assert_matches,
+        super::*, fidl_fuchsia_bluetooth_control as control, fidl_fuchsia_bluetooth_sys as sys,
+        matches::assert_matches,
     };
-
-    fn control_ltk() -> control::Ltk {
-        control::Ltk {
-            key: compat::peer_key_to_control(example::peer_key()),
-            key_size: 0,
-            ediv: 0,
-            rand: 0,
-        }
-    }
 
     #[test]
     fn host_data_to_control() {
@@ -1508,7 +1500,7 @@ pub mod tests {
                 assert_eq!(data, sys_le_data.into());
             }
             #[test]
-            fn le_data_control_roundtrip((address, mut data) in (any_public_address(), any_le_data_for_control_test())) {
+            fn le_data_control_roundtrip((address, data) in (any_public_address(), any_le_data_for_control_test())) {
                 let control_le_data = LeBondData::into_control(data.clone(), &address);
                 assert_eq!(address.to_string(), control_le_data.address);
                 assert_eq!(Ok(data), control_le_data.try_into().map_err(|e: anyhow::Error| e.to_string()));

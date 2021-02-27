@@ -23,11 +23,7 @@ use {
     anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_le as fidl,
-    std::{
-        convert::{TryFrom, TryInto},
-        fmt,
-        str::FromStr,
-    },
+    std::{convert::TryFrom, fmt, str::FromStr},
 };
 
 #[derive(Clone, Debug)]

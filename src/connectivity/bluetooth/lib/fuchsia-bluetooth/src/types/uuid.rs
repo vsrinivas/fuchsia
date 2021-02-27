@@ -6,13 +6,11 @@
 //! convenience functions to support 16-bit, 32-bit, and 128-bit canonical formats as well as
 //! string representation. It can be converted to/from a fuchsia.bluetooth.Uuid FIDL type.
 use {
-    anyhow::{format_err, Error},
-    byteorder::{ByteOrder, LittleEndian},
+    anyhow::format_err,
     fidl_fuchsia_bluetooth as fidl, fidl_fuchsia_bluetooth_bredr as fidlbredr,
     serde::{Deserialize, Serialize},
     std::{
         convert::{TryFrom, TryInto},
-        fmt,
         str::FromStr,
     },
     uuid,
@@ -22,13 +20,6 @@ use crate::inspect::ToProperty;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Uuid(uuid::Uuid);
-
-fn base_uuid() -> Uuid {
-    Uuid(uuid::Uuid::from_bytes([
-        0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00,
-    ]))
-}
 
 /// Last eight bytes of the BASE UUID, in big-endian order, for comparision.
 const BASE_UUID_FINAL_EIGHT_BYTES: [u8; 8] = [0x80, 0x00, 0x00, 0x80, 0x5F, 0x9B, 0x34, 0xFB];

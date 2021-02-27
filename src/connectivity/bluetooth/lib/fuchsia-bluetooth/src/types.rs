@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(warnings)]
 use {
     fidl_fuchsia_bluetooth, fidl_fuchsia_bluetooth_control as control,
-    fidl_fuchsia_bluetooth_sys as sys,
-    std::{fmt, str::FromStr},
+    fidl_fuchsia_bluetooth_sys as sys, std::fmt,
 };
 
 pub use {

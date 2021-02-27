@@ -1,10 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use {
-    fidl_fuchsia_bluetooth as bt, fidl_fuchsia_bluetooth_control as control,
-    fidl_fuchsia_bluetooth_sys as sys,
-};
+use {fidl_fuchsia_bluetooth_control as control, fidl_fuchsia_bluetooth_sys as sys};
 
 use crate::types::Technology;
 

@@ -131,7 +131,7 @@ impl Inspectable<HostInfo> {
 }
 
 pub struct HostInfoInspect {
-    inspect: inspect::Node,
+    _inspect: inspect::Node,
     identifier: inspect::UintProperty,
     technology: inspect::StringProperty,
     active: inspect::UintProperty,
@@ -161,7 +161,7 @@ impl InspectData<HostInfo> for HostInfoInspect {
             active: inspect.create_uint("active", info.active.to_property()),
             discoverable: inspect.create_uint("discoverable", info.discoverable.to_property()),
             discovering: inspect.create_uint("discovering", info.discovering.to_property()),
-            inspect,
+            _inspect: inspect,
         }
     }
 }

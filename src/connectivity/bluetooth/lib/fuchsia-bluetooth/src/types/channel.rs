@@ -8,8 +8,7 @@ use {
         encoding::Decodable,
         endpoints::{ClientEnd, Proxy},
     },
-    fidl_fuchsia_bluetooth, fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         io,
         stream::{FusedStream, Stream},
@@ -151,7 +150,7 @@ impl Channel {
     pub fn closed<'a>(&'a self) -> impl Future<Output = Result<(), zx::Status>> + 'a {
         let close_signals = zx::Signals::SOCKET_PEER_CLOSED;
         let close_wait = fasync::OnSignals::new(&self.socket, close_signals);
-        close_wait.map_ok(|o| ())
+        close_wait.map_ok(|_o| ())
     }
 }
 
@@ -273,7 +272,7 @@ mod tests {
         let empty = bredr::Channel::new_empty();
         assert!(Channel::try_from(empty).is_err());
 
-        let (remote, local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (remote, _local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
         let okay = bredr::Channel {
             socket: Some(remote),
@@ -308,7 +307,7 @@ mod tests {
     fn test_direction_ext() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        let (remote, local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (remote, _local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let no_ext = bredr::Channel {
             socket: Some(remote),
             channel_mode: Some(bredr::ChannelMode::Basic),
@@ -322,7 +321,7 @@ mod tests {
             .is_err());
         assert!(exec.run_singlethreaded(channel.set_audio_priority(A2dpDirection::Sink)).is_err());
 
-        let (remote, local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (remote, _local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let (client_end, mut direction_request_stream) =
             create_request_stream::<bredr::AudioDirectionExtMarker>().unwrap();
         let ext = bredr::Channel {
@@ -353,7 +352,7 @@ mod tests {
 
         match exec.run_until_stalled(&mut audio_direction_fut) {
             Poll::Ready(Ok(())) => {}
-            x => panic!("Expected ok result from audio direction response"),
+            _x => panic!("Expected ok result from audio direction response"),
         };
 
         let audio_direction_fut = channel.set_audio_priority(A2dpDirection::Sink);
@@ -376,7 +375,7 @@ mod tests {
 
         match exec.run_until_stalled(&mut audio_direction_fut) {
             Poll::Ready(Err(_)) => {}
-            x => panic!("Expected error result from audio direction response"),
+            _x => panic!("Expected error result from audio direction response"),
         };
     }
 }
