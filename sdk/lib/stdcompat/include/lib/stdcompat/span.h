@@ -19,19 +19,25 @@
 
 #include <span>
 
-#endif  // __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
-
-#include "internal/span.h"
-#include "internal/utility.h"
-
 namespace cpp20 {
-
-#if __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::dynamic_extent;
 using std::span;
 
+using std::as_bytes;
+using std::as_writable_bytes;
+
+}  // namespace cpp20
+
 #else  // Provide span polyfill.
+
+#include "internal/span.h"
+#include "internal/utility.h"
+#include "iterator.h"
+#include "memory.h"
+#include "type_traits.h"
+
+namespace cpp20 {
 
 using internal::dynamic_extent;
 
@@ -49,36 +55,27 @@ class span {
   using iterator = T*;
   using reverse_iterator = std::reverse_iterator<iterator>;
 
-#if __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_NO_INLINE_VARIABLES)
-
   static constexpr size_t extent = Extent;
 
-#else  // Use internal alternative for inline storage.
-
-  static constexpr const size_t& extent =
-      cpp17::internal::inline_storage<span<T, Extent>, size_t, Extent>::storage;
-
-#endif  // __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_NO_INLINE_VARIABLES)
-
-  template <size_t _Extent = Extent,
-            std::enable_if_t<_Extent == 0 || _Extent == dynamic_extent, bool> = true>
+  template <size_t Extent_ = Extent,
+            std::enable_if_t<Extent_ == 0 || Extent_ == dynamic_extent, bool> = true>
   constexpr span() noexcept : extent_(nullptr, 0) {}
 
-  template <class It, size_t _Extent = Extent,
-            std::enable_if_t<_Extent != dynamic_extent, bool> = true>
+  template <typename It, size_t Extent_ = Extent,
+            std::enable_if_t<Extent_ != dynamic_extent, bool> = true>
   constexpr explicit span(It first, size_type count) : extent_(to_address(first), count) {
     assert((extent == dynamic_extent || count == size()));
   }
 
-  template <class It, size_t _Extent = Extent,
-            std::enable_if_t<_Extent == dynamic_extent, bool> = true>
+  template <typename It, size_t Extent_ = Extent,
+            std::enable_if_t<Extent_ == dynamic_extent, bool> = true>
   constexpr span(It first, size_type count) : extent_(to_address(first), count) {
     assert((extent == dynamic_extent || count == size()));
   }
 
   template <
-      class It, class End, size_type _Extent = Extent,
-      std::enable_if_t<_Extent != dynamic_extent && !std::is_convertible<End, size_type>::value,
+      typename It, typename End, size_type Extent_ = Extent,
+      std::enable_if_t<Extent_ != dynamic_extent && !std::is_convertible<End, size_type>::value,
                        bool> = true>
   constexpr explicit span(It first, End end)
       : extent_(to_address(first), std::distance(first, end)) {
@@ -87,54 +84,61 @@ class span {
   }
 
   template <
-      class It, class End, size_type _Extent = Extent,
-      std::enable_if_t<_Extent == dynamic_extent && !std::is_convertible<End, size_type>::value,
+      typename It, typename End, size_type Extent_ = Extent,
+      std::enable_if_t<Extent_ == dynamic_extent && !std::is_convertible<End, size_type>::value,
                        bool> = true>
   constexpr span(It first, End end) : extent_(to_address(first), std::distance(first, end)) {
     assert(
         (static_cast<size_type>(std::distance(first, end)) == extent || extent == dynamic_extent));
   }
 
-  template <size_t N, size_type _Extent = Extent,
-            std::enable_if_t<_Extent == dynamic_extent || N == _Extent, bool> = true>
+  template <size_t N, size_type Extent_ = Extent,
+            std::enable_if_t<Extent_ == dynamic_extent || N == Extent_, bool> = true>
   constexpr span(element_type (&arr)[N]) noexcept : extent_(cpp17::data(arr), cpp17::size(arr)) {}
 
-  template <class U, std::size_t N, size_type _Extent = Extent,
-            std::enable_if_t<(_Extent == dynamic_extent || N == _Extent) &&
+  template <typename U, size_t N, size_type Extent_ = Extent,
+            std::enable_if_t<(Extent_ == dynamic_extent || N == Extent_) &&
                                  std::is_convertible<U (*)[], element_type (*)[]>::value,
                              bool> = true>
   constexpr span(U (&arr)[N]) noexcept : extent_(cpp17::data(arr), cpp17::size(arr)) {}
 
-  template <class U, std::size_t N, size_type _Extent = Extent,
-            std::enable_if_t<(_Extent == dynamic_extent || N == _Extent) &&
+  template <typename U, size_t N, size_type Extent_ = Extent,
+            std::enable_if_t<(Extent_ == dynamic_extent || N == Extent_) &&
                                  std::is_convertible<U (*)[], element_type (*)[]>::value,
                              bool> = true>
-  constexpr span(const U (&arr)[N]) noexcept : extent_(cpp17::data(arr), cpp17::size(arr)) {}
+  constexpr span(std::array<U, N>& arr) noexcept : extent_(cpp17::data(arr), cpp17::size(arr)) {}
 
-  template <class R, size_type _Extent = Extent,
-            std::enable_if_t<_Extent != dynamic_extent && internal::is_span_compatible_v<R, T>>* =
-                nullptr>
+  template <typename U, size_t N, size_type Extent_ = Extent,
+            std::enable_if_t<(Extent_ == dynamic_extent || N == Extent_) &&
+                                 std::is_convertible<U (*)[], element_type (*)[]>::value,
+                             bool> = true>
+  constexpr span(const std::array<U, N>& arr) noexcept
+      : extent_(cpp17::data(arr), cpp17::size(arr)) {}
+
+  template <typename R, size_type Extent_ = Extent,
+            std::enable_if_t<Extent_ != dynamic_extent && internal::is_span_compatible_v<R, T>,
+                             bool> = true>
   explicit constexpr span(R&& r) : extent_(cpp17::data(r), cpp17::size(r)) {
-    assert((cpp17::size(r) == size() || _Extent == dynamic_extent));
+    assert((cpp17::size(r) == size() || Extent_ == dynamic_extent));
   }
 
-  template <class R, size_type _Extent = Extent, typename _T = T,
-            std::enable_if_t<_Extent == dynamic_extent && internal::is_span_compatible_v<R, T>>* =
-                nullptr>
+  template <typename R, size_type Extent_ = Extent,
+            std::enable_if_t<Extent_ == dynamic_extent && internal::is_span_compatible_v<R, T>,
+                             bool> = true>
   constexpr span(R&& r) : extent_(cpp17::data(r), cpp17::size(r)) {
     assert((cpp17::size(r) == size() || extent == dynamic_extent));
   }
 
-  template <class U, size_t N, size_type _Extent = Extent, typename _T = T,
-            std::enable_if_t<_Extent != dynamic_extent && N == dynamic_extent &&
-                                 std::is_convertible<U (*)[], _T (*)[]>::value,
+  template <typename U, size_t N, size_type Extent_ = Extent,
+            std::enable_if_t<Extent_ != dynamic_extent && N == dynamic_extent &&
+                                 std::is_convertible<U (*)[], T (*)[]>::value,
                              bool> = true>
   explicit constexpr span(const cpp20::span<U, N>& s) noexcept : extent_(s.data(), s.size()) {
     assert((s.size() == size() || extent == dynamic_extent));
   }
 
-  template <class U, size_t N, size_type _Extent = Extent,
-            std::enable_if_t<(_Extent == dynamic_extent || N == _Extent) &&
+  template <typename U, size_t N, size_type Extent_ = Extent,
+            std::enable_if_t<(Extent_ == dynamic_extent || N == Extent_) &&
                                  std::is_convertible<U (*)[], T (*)[]>::value,
                              bool> = true>
   constexpr span(const cpp20::span<U, N>& s) noexcept : extent_(s.data(), s.size()) {
@@ -142,7 +146,9 @@ class span {
   }
 
   constexpr span(const span& s) noexcept = default;
-  constexpr span& operator=(const span& s) = default;
+  constexpr span& operator=(const span& s) noexcept = default;
+
+  ~span() noexcept = default;
 
   constexpr reference operator[](size_type index) const {
     assert(index < size());
@@ -173,17 +179,17 @@ class span {
 
   template <size_t Offset, size_t Count = dynamic_extent,
             size_type E = internal::subspan_extent<size_type, Extent, Offset, Count>::value,
-            size_type _Extent = Extent,
-            std::enable_if_t<(Offset <= _Extent) &&
-                                 (Count == dynamic_extent || Count <= _Extent - Offset),
+            size_type Extent_ = Extent,
+            std::enable_if_t<(Offset <= Extent_) &&
+                                 (Count == dynamic_extent || Count <= Extent_ - Offset),
                              bool> = true>
   constexpr span<element_type, E> subspan() const {
     assert(Offset <= size() && (Count == dynamic_extent || Count <= size() - Offset));
     return span<element_type, E>(data() + Offset, count_to_size(Offset, Count));
   }
 
-  template <std::size_t Count, size_type _Extent = Extent,
-            std::enable_if_t<Count <= _Extent, bool> = true>
+  template <size_t Count, size_type Extent_ = Extent,
+            std::enable_if_t<Count <= Extent_, bool> = true>
   constexpr span<element_type, Count> first() const {
     assert(Count <= size());
     return subspan<0, Count>();
@@ -194,16 +200,16 @@ class span {
     return subspan(0, count);
   }
 
-  template <std::size_t Count, size_type _Extent = Extent,
-            std::enable_if_t<Count <= _Extent, bool> = true>
+  template <size_t Count, size_type Extent_ = Extent,
+            std::enable_if_t<Count <= Extent_, bool> = true>
   constexpr span<element_type, Count> last() const {
     assert(Count <= size());
-    return span<element_type, Count>(data() + size() - Count, Count);
+    return span<element_type, Count>(data() + (size() - Count), Count);
   }
 
   constexpr span<element_type, dynamic_extent> last(size_type count) const {
     assert(count <= size());
-    return span<element_type, dynamic_extent>(data() + size() - count, count);
+    return span<element_type, dynamic_extent>(data() + (size() - count), count);
   }
 
  private:
@@ -216,8 +222,6 @@ class span {
 
   internal::extent<element_type, Extent> extent_;
 };
-
-#endif  // __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #if __cpp_deduction_guides >= 201703L
 
@@ -250,5 +254,7 @@ cpp20::span<const cpp17::byte, S> as_bytes(cpp20::span<T, N> s) noexcept {
 }
 
 }  // namespace cpp20
+
+#endif  // __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_SPAN_H_

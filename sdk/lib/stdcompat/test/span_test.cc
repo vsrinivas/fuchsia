@@ -153,30 +153,50 @@ TEST(SpanTest, ConstructFromArrayRefWithStaticExtentAndConvertibleType) {
                 "Span constructor with static extent failed with array failed.");
 }
 
-TEST(SpanTest, ConstructFromContainerWithDynamicExtent) {
-  static constexpr std::array<int, 40> kContainer = {};
-  constexpr cpp20::span<const int> container_span(kContainer);
+TEST(SpanTest, ConstructFromStdArrayWithDynamicExtent) {
+  static constexpr std::array<int, 40> kArray = {};
+  constexpr cpp20::span<const int> array_span(kArray);
 
-  static_assert(std::is_convertible<decltype(kContainer)&, cpp20::span<const int>>::value,
-                "cpp20::span constructor for container R should be implicit for dynamic extent.");
-  static_assert(container_span.data() == kContainer.data(),
+  static_assert(std::is_convertible<decltype(kArray)&, cpp20::span<const int>>::value,
+                "cpp20::span constructor for std::array should be implicit.");
+  static_assert(array_span.data() == kArray.data(),
                 "cpp20::span constructor from container R should match the container's data.");
-  static_assert(container_span.size() == kContainer.size(),
+  static_assert(array_span.size() == kArray.size(),
                 "cpp20::span constructor from container R should match the container's size.");
 }
 
-TEST(SpanTest, ConstructFromContainerWithStaticExtent) {
-  static constexpr std::array<int, 40> kContainer = {};
-  constexpr cpp20::span<const int, 40> container_span(kContainer);
+TEST(SpanTest, ConstructFromStdArrayWithStaticExtent) {
+  static constexpr std::array<int, 40> kArray = {};
+  constexpr cpp20::span<const int, 40> array_span(kArray);
 
-  static_assert(!std::is_convertible<decltype(kContainer)&, cpp20::span<const int, 40>>::value,
+  static_assert(std::is_convertible<decltype(kArray)&, cpp20::span<const int, 40>>::value,
+                "cpp20::span constructor for std::array should be implicit.");
+  static_assert(array_span.data() == kArray.data(),
+                "cpp20::span constructor from container R should match the container's data.");
+  static_assert(array_span.size() == kArray.size(),
+                "cpp20::span constructor from container R should match the container's size.");
+}
+
+TEST(SpanTest, ConstructFromContainerWithDynamicExtent) {
+  const std::vector<int> container(40);
+  const cpp20::span<const int> container_span(container);
+
+  static_assert(std::is_convertible<decltype(container)&, cpp20::span<const int>>::value,
+                "cpp20::span constructor for container R should be implicit for dynamic extent.");
+
+  EXPECT_EQ(container_span.data(), container.data());
+  EXPECT_EQ(container_span.size(), container.size());
+}
+
+TEST(SpanTest, ConstructFromContainerWithStaticExtent) {
+  const std::vector<int> container(40);
+  const cpp20::span<const int, 40> container_span(container);
+
+  static_assert(!std::is_convertible<decltype(container)&, cpp20::span<const int, 40>>::value,
                 "cpp20::span from a container R should be explicit for static extent.");
 
-  static_assert(container_span.data() == kContainer.data(),
-                "cpp20::span constructor from container R should match the container's data.");
-  static_assert(container_span.size() == kContainer.size(),
-                "cpp20::span constructor from container R should match the container's size.");
-  ;
+  EXPECT_EQ(container_span.data(), container.data());
+  EXPECT_EQ(container_span.size(), container.size());
 }
 
 template <typename U, typename T>
@@ -404,7 +424,8 @@ TEST(SpanTest, EmptyWhenSizeIsZero) {
   static_assert(kEmpty.empty(), "default constructed span should be considered empty.");
 
   static constexpr std::array<int, 40> kContainer = {};
-  constexpr cpp20::span<const int> view(kContainer.data(), 0);
+  // TODO(fxbug.dev/70669): Remove cast when libc++'s std::span gets constraints correct
+  constexpr cpp20::span<const int> view(kContainer.data(), static_cast<size_t>(0));
 
   static_assert(view.data() == kContainer.data(),
                 "default constructed span should have nullptr as data.");
@@ -680,8 +701,9 @@ TEST(SpanTest, LastWithDynamicExtent) {
 
 template <size_t Count, typename T, typename std::enable_if<Count == 0, bool>::type = true>
 constexpr bool span_last_check_with_static_extent_impl(T& view) {
+  // TODO(fxbug.dev/70523): switch to cpp20::to_address when upstream is fixed
   auto subview = view.template last<Count>();
-  return are_pointers_equal(subview.data(), view.end()) && subview.size() == 0 &&
+  return are_pointers_equal(subview.data(), cpp17::addressof(*view.end())) && subview.size() == 0 &&
          subview.extent == 0;
 }
 
@@ -693,7 +715,8 @@ constexpr bool span_last_check_with_static_extent_impl(T& view) {
     return false;
   }
 
-  if (!are_pointers_equal(subview.data(), view.end() - Count)) {
+  // TODO(fxbug.dev/70523): switch to cpp20::to_address when upstream is fixed
+  if (!are_pointers_equal(subview.data(), cpp17::addressof(*(view.end() - Count)))) {
     return false;
   }
 
@@ -771,31 +794,29 @@ TEST(SpanTest, IsAliasWhenStdIsAvailable) {
                 "cpp20::span must an alias of std::span when provided.");
   static_assert(&cpp20::dynamic_extent == &std::dynamic_extent);
   {
-    constexpr cpp20::span<cpp20::byte>(cpp20_as_writeable_bytes*)(cpp20::span<int>) =
+    constexpr cpp20::span<cpp17::byte> (*cpp20_as_writeable_bytes)(cpp20::span<int>) =
         &cpp20::as_writable_bytes;
-    constexpr std::span<cpp20::byte>(std_as_writeable_bytes*)(std::span<int>) =
+    constexpr std::span<cpp17::byte> (*std_as_writeable_bytes)(std::span<int>) =
         &std::as_writable_bytes;
     static_assert(cpp20_as_writeable_bytes == std_as_writeable_bytes, "");
   }
   {
-    constexpr cpp20::span<cpp20::byte, sizeof(int)>(cpp20_as_writeable_bytes*)(
+    constexpr cpp20::span<cpp17::byte, sizeof(int)> (*cpp20_as_writeable_bytes)(
         cpp20::span<int, 1>) = &cpp20::as_writable_bytes;
-    constexpr std::span<cpp20::byte, sizeof(int)>(std_as_writeable_bytes*)(std::span<int, 1>) =
+    constexpr std::span<cpp17::byte, sizeof(int)> (*std_as_writeable_bytes)(std::span<int, 1>) =
         &std::as_writable_bytes;
     static_assert(cpp20_as_writeable_bytes == std_as_writeable_bytes, "");
   }
 
   {
-    constexpr cpp20::span<const cpp20::byte>(cpp20_as_writeable_bytes*)(cpp20::span<int>) =
-        &cpp20::as_writable_bytes;
-    constexpr std::span<const cpp20::byte>(cpp20_as_writeable_bytes*)(std::span<int>) =
-        &std::as_writable_bytes;
-    static_assert(cpp20_as_writeable_bytes == std_as_writeable_bytes, "");
+    constexpr cpp20::span<const cpp17::byte> (*cpp20_as_bytes)(cpp20::span<int>) = &cpp20::as_bytes;
+    constexpr std::span<const cpp17::byte> (*std_as_bytes)(std::span<int>) = &std::as_bytes;
+    static_assert(cpp20_as_bytes == std_as_bytes, "");
   }
   {
-    constexpr cpp20::span<const cpp20::byte, sizeof(int)>(cpp20_as_bytes*)(cpp20::span<int, 1>) =
+    constexpr cpp20::span<const cpp17::byte, sizeof(int)> (*cpp20_as_bytes)(cpp20::span<int, 1>) =
         &cpp20::as_bytes;
-    constexpr std::span<const cpp20::byte, sizeof(int)>(std_as_bytes*)(std::span<int, 1>) =
+    constexpr std::span<const cpp17::byte, sizeof(int)> (*std_as_bytes)(std::span<int, 1>) =
         &std::as_bytes;
     static_assert(cpp20_as_bytes == std_as_bytes, "");
   }
