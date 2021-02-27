@@ -120,8 +120,8 @@ class BaseCapturer : public AudioObject,
   // Removes the capturer from its owner, the route graph, triggering shutdown and drop.
   void BeginShutdown();
 
-  virtual void ReportStart() {}
-  virtual void ReportStop() {}
+  virtual void ReportStart();
+  virtual void ReportStop();
   virtual void OnStateChanged(State old_state, State new_stage);
   virtual void SetRoutingProfile(bool routable) = 0;
 

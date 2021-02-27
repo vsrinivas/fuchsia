@@ -447,6 +447,10 @@ void BaseCapturer::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
   mix_wakeup_.Signal();
 }
 
+void BaseCapturer::ReportStart() { reporter_->StartSession(zx::clock::get_monotonic()); }
+
+void BaseCapturer::ReportStop() { reporter_->StopSession(zx::clock::get_monotonic()); }
+
 void BaseCapturer::RecomputePresentationDelay() {
   TRACE_DURATION("audio", "BaseCapturer::RecomputePresentationDelay");
 
