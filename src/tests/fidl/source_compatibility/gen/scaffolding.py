@@ -67,6 +67,8 @@ fn main() {{}}
 
 go_init = '''
 
+// +build !build_with_native_toolchain
+
 package main
 
 import (
