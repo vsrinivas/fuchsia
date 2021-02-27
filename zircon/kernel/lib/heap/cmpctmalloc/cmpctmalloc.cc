@@ -126,7 +126,20 @@
 
 #ifdef _KERNEL
 #include <debug.h>
+#include <lib/ktrace.h>
 #include <trace.h>
+
+#include <kernel/auto_preempt_disabler.h>
+
+using LocalTraceDuration =
+    TraceDuration<TraceEnabled<false>, KTRACE_GRP_SCHEDULER, TraceContext::Thread>;
+
+#define LOCAL_TRACE_DURATION(label, name, ...) \
+  LocalTraceDuration name { KTRACE_STRING_REF(label), ##__VA_ARGS__ }
+
+#define LOCAL_TRACE_DURATION_END(name) name.End()
+
+#define PREEMPT_DISABLE(name) AutoPreemptDisabler name
 
 using LockGuard = ::Guard<Mutex>;
 
@@ -143,6 +156,10 @@ KCOUNTER(malloc_size_other, "malloc.size_other")
 KCOUNTER(malloc_heap_grow_fail, "malloc.heap_grow_fail")
 
 #else
+
+#define LOCAL_TRACE_DURATION(label, name, ...)
+#define LOCAL_TRACE_DURATION_END(name)
+#define PREEMPT_DISABLE(name)
 
 class __TA_SCOPED_CAPABILITY LockGuard {
  public:
@@ -865,6 +882,7 @@ static void cmpct_test_return_to_os(void) TA_EXCL(TheHeapLock::Get()) {
 const size_t kHeapMaxAllocSize = HEAP_LARGE_ALLOC_BYTES - sizeof(header_t);
 
 NO_ASAN void* cmpct_alloc(size_t size) {
+  LOCAL_TRACE_DURATION("cmpct_alloc", trace, size, 0);
   if (size == 0u) {
     return NULL;
   }
@@ -909,7 +927,9 @@ NO_ASAN void* cmpct_alloc(size_t size) {
 
   rounded_up += sizeof(header_t);
 
+  PREEMPT_DISABLE(preempt_disable);
   LockGuard guard(TheHeapLock::Get());
+  LOCAL_TRACE_DURATION("locked", trace_lock);
   int bucket = find_nonempty_bucket(start_bucket);
   if (bucket == -1) {
     // Grow heap by at least 12% if we can.
@@ -1005,21 +1025,27 @@ NO_ASAN void cmpct_free_internal(void* payload, header_t* header) TA_REQ(TheHeap
 }
 
 NO_ASAN void cmpct_free(void* payload) {
+  LOCAL_TRACE_DURATION("cmpct_free", trace);
   if (payload == NULL) {
     return;
   }
 
+  PREEMPT_DISABLE(preempt_disable);
   LockGuard guard(TheHeapLock::Get());
+  LOCAL_TRACE_DURATION("locked", trace_locked);
   header_t* header = (header_t*)payload - 1;
   return cmpct_free_internal(payload, header);
 }
 
 NO_ASAN void cmpct_sized_free(void* payload, size_t s) {
+  LOCAL_TRACE_DURATION("cmpct_free", trace);
   if (payload == NULL) {
     return;
   }
 
+  PREEMPT_DISABLE(preempt_disable);
   LockGuard guard(TheHeapLock::Get());
+  LOCAL_TRACE_DURATION("locked", trace_locked);
   header_t* header = (header_t*)payload - 1;
   // header->size is the size of the heap block |payload| is in, plus sizeof(header_t), plus
   // the difference between the block size and the requested allocation size. If kernel ASAN
@@ -1040,6 +1066,7 @@ NO_ASAN void cmpct_sized_free(void* payload, size_t s) {
 }
 
 NO_ASAN void* cmpct_memalign(size_t alignment, size_t size) {
+  LOCAL_TRACE_DURATION("cmpct_memalign", trace, alignment, size);
   if (alignment < 8) {
     return cmpct_alloc(size);
   }
@@ -1051,7 +1078,9 @@ NO_ASAN void* cmpct_memalign(size_t alignment, size_t size) {
     return NULL;
   }
 
+  PREEMPT_DISABLE(preempt_disable);
   LockGuard guard(TheHeapLock::Get());
+  LOCAL_TRACE_DURATION("locked", trace_lock);
 #if KERNEL_ASAN
   // TODO(fxbug.dev/30033): Separately poison padding and the post-buffer redzone.
   asan_poison_shadow(reinterpret_cast<uintptr_t>(unaligned), padded_size,
@@ -1069,6 +1098,7 @@ NO_ASAN void* cmpct_memalign(size_t alignment, size_t size) {
     header_t* right = right_header(unaligned_header);
     unaligned_header->size = left_over;
     FixLeftPointer(right, header);
+    LOCAL_TRACE_DURATION_END(trace_lock);
     guard.Release();
     cmpct_free(unaligned);
   }
@@ -1193,10 +1223,13 @@ void cmpct_test(void) {}
 #endif  // HEAP_ENABLE_TESTS
 
 void cmpct_trim(void) {
+  LOCAL_TRACE_DURATION("cmct_trim", trace);
   // Look at free list entries that are at least as large as one page plus a
   // header. They might be at the start or the end of a block, so we can trim
   // them and free the page(s).
+  PREEMPT_DISABLE(preempt_disable);
   LockGuard guard(TheHeapLock::Get());
+  LOCAL_TRACE_DURATION("locked", trace_lock);
   for (int bucket = size_to_index_freeing(ZX_PAGE_SIZE); bucket < NUMBER_OF_BUCKETS; bucket++) {
     free_t* next;
     for (free_t* free_area = theheap.free_lists[bucket]; free_area != NULL; free_area = next) {
