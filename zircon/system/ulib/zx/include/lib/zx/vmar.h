@@ -30,12 +30,6 @@ class vmar final : public object<vmar> {
     return *this;
   }
 
-  // DEPRECATED: Argument order does not match the C version.
-  zx_status_t map(size_t vmar_offset, const vmo& vmo_handle, uint64_t vmo_offset, size_t len,
-                  zx_vm_option_t options, zx_vaddr_t* ptr) const {
-    return zx_vmar_map(get(), options, vmar_offset, vmo_handle.get(), vmo_offset, len, ptr);
-  }
-
   zx_status_t map(zx_vm_option_t options, size_t vmar_offset, const vmo& vmo_handle,
                   uint64_t vmo_offset, size_t len, zx_vaddr_t* ptr) const {
     return zx_vmar_map(get(), options, vmar_offset, vmo_handle.get(), vmo_offset, len, ptr);
