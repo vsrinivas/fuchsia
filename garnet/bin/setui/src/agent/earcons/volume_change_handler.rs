@@ -8,11 +8,11 @@ use crate::agent::earcons::utils::{connect_to_sound_player, play_sound};
 use crate::audio::types::{AudioInfo, AudioStream, AudioStreamType};
 use crate::audio::{create_default_modified_counters, ModifiedCounters};
 use crate::base::{SettingInfo, SettingType};
-use crate::handler::base::Request;
+use crate::handler::base::{Payload, Request};
 use crate::internal::event;
-use crate::internal::switchboard;
 use crate::message::base::Audience;
 use crate::message::receptor::extract_payload;
+use crate::service;
 
 use anyhow::Error;
 use fuchsia_async as fasync;
@@ -41,23 +41,18 @@ impl VolumeChangeHandler {
     pub async fn create(
         publisher: event::Publisher,
         params: CommonEarconsParams,
-        switchboard_messenger: switchboard::message::Messenger,
+        messenger: service::message::Messenger,
     ) -> Result<(), Error> {
-        let mut receptor = switchboard_messenger
+        let mut receptor = messenger
             .message(
-                switchboard::Payload::Action(switchboard::Action::Request(
-                    SettingType::Audio,
-                    Request::Get,
-                )),
-                Audience::Address(switchboard::Address::Switchboard),
+                Payload::Request(Request::Get).into(),
+                Audience::Address(service::Address::Handler(SettingType::Audio)),
             )
             .send();
 
         // Get initial user media volume level.
         let last_user_volumes = if let Ok((
-            switchboard::Payload::Action(switchboard::Action::Response(Ok(Some(
-                SettingInfo::Audio(info),
-            )))),
+            service::Payload::Setting(Payload::Response(Ok(Some(SettingInfo::Audio(info))))),
             _,
         )) = receptor.next_payload().await
         {
@@ -83,10 +78,10 @@ impl VolumeChangeHandler {
                 publisher,
             };
 
-            let listen_receptor = switchboard_messenger
+            let listen_receptor = messenger
                 .message(
-                    switchboard::Payload::Listen(switchboard::Listen::Request(SettingType::Audio)),
-                    Audience::Address(switchboard::Address::Switchboard),
+                    Payload::Request(Request::Listen).into(),
+                    Audience::Address(service::Address::Handler(SettingType::Audio)),
                 )
                 .send()
                 .fuse();
@@ -96,7 +91,8 @@ impl VolumeChangeHandler {
                 futures::select! {
                     volume_change_event = listen_receptor.next() => {
                         if let Some(
-                            switchboard::Payload::Listen(switchboard::Listen::Update(SettingInfo::Audio(audio_info)))
+                            service::Payload::Setting(Payload::Response(Ok(Some(
+                                SettingInfo::Audio(audio_info)))))
                         ) = extract_payload(volume_change_event) {
                             handler.on_audio_info(audio_info).await;
                         }
