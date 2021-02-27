@@ -150,8 +150,6 @@ mod tests {
     use crate::tests::fakes::service_registry::ServiceRegistry;
     use futures::StreamExt;
 
-    use matches::assert_matches;
-
     // TODO(fxbug.dev/62860): Refactor tests, could use a common setup helper.
 
     // Tests that the initialization lifespan is not handled.
@@ -352,10 +350,12 @@ mod tests {
         // loop below to eventually finish.
         service_message_hub.delete(handler_receptor.get_signature());
 
-        assert_matches!(
-            handler_receptor.next_payload().await,
-            Ok((service::Payload::Setting(HandlerPayload::Request(request)), _))
-                if request == verification_request
-        )
+        if let Ok((service::Payload::Setting(HandlerPayload::Request(request)), _)) =
+            handler_receptor.next_payload().await
+        {
+            assert_eq!(request, verification_request);
+        } else {
+            panic!("should have received payload")
+        }
     }
 }
