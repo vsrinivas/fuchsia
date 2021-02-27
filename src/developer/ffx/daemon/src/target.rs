@@ -632,10 +632,10 @@ impl Target {
         }
     }
 
-    pub async fn usb(&self) -> Option<Interface> {
+    pub async fn usb(&self) -> (String, Option<Interface>) {
         match self.inner.serial.read().await.as_ref() {
-            Some(s) => open_interface_with_serial(s).ok(),
-            None => None,
+            Some(s) => (s.to_string(), open_interface_with_serial(s).ok()),
+            None => ("".to_string(), None),
         }
     }
 

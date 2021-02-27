@@ -6,7 +6,7 @@ use {
     crate::constants::{get_socket, CURRENT_EXE_HASH, MDNS_BROADCAST_INTERVAL_SECS},
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
-    crate::fastboot::{client::Fastboot, spawn_fastboot_discovery},
+    crate::fastboot::{spawn_fastboot_discovery, Fastboot},
     crate::logger::streamer::GenericDiagnosticsStreamer,
     crate::mdns::MdnsTargetFinder,
     crate::onet::create_ascendd,

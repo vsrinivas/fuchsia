@@ -9,8 +9,10 @@ use {
     fuchsia_async::Timer,
     futures::{
         io::{AsyncRead, AsyncWrite},
+        lock::Mutex,
         AsyncReadExt, AsyncWriteExt,
     },
+    lazy_static::lazy_static,
     reply::Reply,
     std::convert::{TryFrom, TryInto},
     thiserror::Error,
@@ -22,6 +24,11 @@ pub mod reply;
 const MAX_PACKET_SIZE: usize = 64;
 const DEFAULT_READ_TIMEOUT_SECS: i64 = 30;
 const READ_INTERVAL_MS: i64 = 100;
+
+lazy_static! {
+    static ref SEND_LOCK: Mutex<()> = Mutex::new(());
+    static ref UPLOAD_LOCK: Mutex<()> = Mutex::new(());
+}
 
 #[derive(Debug, Error)]
 pub enum SendError {
@@ -76,6 +83,7 @@ pub async fn send<T: AsyncRead + AsyncWrite + Unpin>(
     cmd: Command,
     interface: &mut T,
 ) -> Result<Reply> {
+    let _lock = SEND_LOCK.lock().await;
     interface.write(&Vec::<u8>::try_from(cmd)?).await?;
     read_and_log_info(interface).await
 }
@@ -85,6 +93,7 @@ pub async fn send_with_timeout<T: AsyncRead + AsyncWrite + Unpin>(
     interface: &mut T,
     timeout: Duration,
 ) -> Result<Reply> {
+    let _lock = SEND_LOCK.lock().await;
     interface.write(&Vec::<u8>::try_from(cmd)?).await?;
     read_and_log_info_with_timeout(interface, timeout).await
 }
@@ -94,6 +103,7 @@ pub async fn upload<T: AsyncRead + AsyncWrite + Unpin>(
     interface: &mut T,
     listener: &impl UploadProgressListener,
 ) -> Result<Reply> {
+    let _lock = UPLOAD_LOCK.lock().await;
     let reply = send(Command::Download(u32::try_from(data.len())?), interface).await?;
     match reply {
         Reply::Data(s) => {

@@ -8,7 +8,7 @@ use {
         UploadProgressListener,
     },
     crate::target::{Target, TargetEvent},
-    anyhow::{bail, Context, Result},
+    anyhow::{Context, Result},
     async_trait::async_trait,
     fastboot::UploadProgressListener as _,
     fidl_fuchsia_developer_bridge::{FastbootError, FastbootRequest, FastbootRequestStream},
@@ -16,32 +16,12 @@ use {
     futures::prelude::*,
     futures::try_join,
     std::time::Duration,
-    usb_bulk::AsyncInterface as Interface,
 };
-
-pub(crate) struct Fastboot(pub(crate) FastbootImpl<Interface>);
-
-impl Fastboot {
-    pub(crate) fn new(target: Target) -> Self {
-        Self(FastbootImpl::new(target, Box::new(UsbFactory {})))
-    }
-}
 
 #[async_trait]
 pub(crate) trait InterfaceFactory<T: AsyncRead + AsyncWrite + Unpin + Send> {
-    async fn interface(&self, target: &Target) -> Result<T>;
-}
-
-struct UsbFactory {}
-
-#[async_trait]
-impl InterfaceFactory<Interface> for UsbFactory {
-    async fn interface(&self, target: &Target) -> Result<Interface> {
-        match target.usb().await {
-            Some(u) => Ok(u),
-            None => bail!("Could not open usb interface for target: {:?}", target),
-        }
-    }
+    async fn open(&mut self, target: &Target) -> Result<T>;
+    async fn close(&self);
 }
 
 pub(crate) struct FastbootImpl<T: AsyncRead + AsyncWrite + Send + Unpin> {
@@ -58,13 +38,14 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send> FastbootImpl<T> {
         Self { target, usb: None, usb_factory }
     }
 
-    fn clear_usb(&mut self) {
-        self.usb = None
+    async fn clear_usb(&mut self) {
+        self.usb = None;
+        self.usb_factory.close().await;
     }
 
     async fn usb(&mut self) -> Result<&mut T> {
         if let None = self.usb {
-            self.usb = Some(self.usb_factory.interface(&self.target).await?);
+            self.usb = Some(self.usb_factory.open(&self.target).await?);
         }
         Ok(self.usb.as_mut().expect("usb interface not available"))
     }
@@ -124,6 +105,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send> FastbootImpl<T> {
             FastbootRequest::RebootBootloader { listener, responder } => {
                 match reboot_bootloader(usb).await {
                     Ok(_) => {
+                        self.clear_usb().await;
                         match try_join!(
                             self.target
                                 .events
@@ -141,15 +123,11 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send> FastbootImpl<T> {
                         ) {
                             Ok(_) => {
                                 log::debug!("Rediscovered reboot target");
-                                self.clear_usb();
                                 responder.send(&mut Ok(()))?;
                             }
                             Err(e) => {
                                 log::error!("Error rebooting and rediscovering target: {:?}", e);
-                                // Clear the usb connection just to be sure.
-                                self.clear_usb();
                                 responder.send(&mut Err(e)).context("sending error response")?;
-                                return Ok(());
                             }
                         }
                     }
@@ -212,7 +190,7 @@ mod test {
     use {
         super::*,
         crate::onet::create_ascendd,
-        anyhow::anyhow,
+        anyhow::{anyhow, bail},
         fastboot::reply::Reply,
         fidl::endpoints::{create_endpoints, create_proxy_and_stream},
         fidl_fuchsia_developer_bridge::{
@@ -287,11 +265,13 @@ mod test {
 
     #[async_trait]
     impl InterfaceFactory<TestTransport> for TestFactory {
-        async fn interface(&self, _target: &Target) -> Result<TestTransport> {
+        async fn open(&mut self, _target: &Target) -> Result<TestTransport> {
             let mut transport = TestTransport::new();
             self.replies.iter().rev().for_each(|r| transport.push(r.clone()));
             return Ok(transport);
         }
+
+        async fn close(&self) {}
     }
 
     async fn setup(replies: Vec<Reply>) -> (Target, FastbootProxy) {

@@ -5,7 +5,10 @@
 use {
     crate::constants::FASTBOOT_CHECK_INTERVAL_SECS,
     crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
+    crate::fastboot::client::{FastbootImpl, InterfaceFactory},
+    crate::target::Target,
     anyhow::{anyhow, bail, Context, Result},
+    async_trait::async_trait,
     chrono::Duration,
     fastboot::{
         command::{ClientVariable, Command},
@@ -17,16 +20,72 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_developer_bridge::{UploadProgressListenerMarker, UploadProgressListenerProxy},
     fuchsia_async::Timer,
-    futures::io::{AsyncRead, AsyncWrite},
-    std::convert::TryInto,
+    futures::{
+        io::{AsyncRead, AsyncWrite},
+        lock::Mutex,
+    },
+    lazy_static::lazy_static,
     std::fs::read,
+    std::{collections::HashSet, convert::TryInto},
     usb_bulk::{AsyncInterface as Interface, InterfaceInfo, Open},
 };
 
 pub mod client;
 
+lazy_static! {
+    /// This is used to lock serial numbers that are in use from being interrupted by the discovery
+    /// loop.  Otherwise, it's possible to read the REPLY for the discovery code in the flashing
+    /// workflow.
+    static ref SERIALS_IN_USE: Mutex<HashSet<String>> = Mutex::new(HashSet::new());
+}
+
 const FLASH_TIMEOUT_RATE: &str = "fastboot.flash.timeout_rate";
 const MIN_FLASH_TIMEOUT: &str = "fastboot.flash.min_timeout_secs";
+
+pub(crate) struct Fastboot(pub(crate) FastbootImpl<Interface>);
+
+impl Fastboot {
+    pub(crate) fn new(target: Target) -> Self {
+        Self(FastbootImpl::new(target, Box::new(UsbFactory { serial: None })))
+    }
+}
+
+struct UsbFactory {
+    serial: Option<String>,
+}
+
+#[async_trait]
+impl InterfaceFactory<Interface> for UsbFactory {
+    async fn open(&mut self, target: &Target) -> Result<Interface> {
+        let (s, usb) = target.usb().await;
+        match usb {
+            Some(iface) => {
+                let mut in_use = SERIALS_IN_USE.lock().await;
+                let _ = in_use.insert(s.clone());
+                self.serial.replace(s.clone());
+                log::debug!("serial now in use: {}", s);
+                Ok(iface)
+            }
+            None => bail!("Could not open usb interface for target: {:?}", target),
+        }
+    }
+
+    async fn close(&self) {
+        let mut in_use = SERIALS_IN_USE.lock().await;
+        if let Some(s) = &self.serial {
+            log::debug!("dropping in use serial: {}", s);
+            let _ = in_use.remove(s);
+        }
+    }
+}
+
+impl Drop for UsbFactory {
+    fn drop(&mut self) {
+        fuchsia_async::futures::executor::block_on(async move {
+            self.close().await;
+        });
+    }
+}
 
 //TODO(fxbug.dev/52733) - this info will probably get rolled into the target struct
 #[derive(Debug)]
@@ -114,7 +173,10 @@ fn find_serial_numbers() -> Vec<String> {
 pub async fn find_devices() -> Vec<FastbootDevice> {
     let mut products = Vec::new();
     let serials = find_serial_numbers();
-    for serial in serials {
+    let in_use = SERIALS_IN_USE.lock().await;
+    // Don't probe in-use clients
+    let serials_to_probe = serials.into_iter().filter(|s| !in_use.contains(s));
+    for serial in serials_to_probe {
         match open_interface_with_serial(&serial) {
             Ok(mut usb_interface) => {
                 if let Ok(Reply::Okay(version)) =
@@ -125,7 +187,7 @@ pub async fn find_devices() -> Vec<FastbootDevice> {
                         if let Ok(Reply::Okay(product)) =
                             send(Command::GetVar(ClientVariable::Product), &mut usb_interface).await
                         {
-                            products.push(FastbootDevice { product, serial })
+                            products.push(FastbootDevice { product, serial: serial.to_string() })
                         }
                     }
                 }
