@@ -62,7 +62,7 @@ func invocationLevelArtifacts(outputRoot string) map[string]*sinkpb.Artifact {
 	rootPath, _ := filepath.Abs(outputRoot)
 	artifacts := map[string]*sinkpb.Artifact{}
 
-	for _, invocationLog := range [2]string{"syslog.txt", "serial_log.txt"} {
+	for _, invocationLog := range [...]string{"syslog.txt", "serial_log.txt", "triage_output"} {
 		logFile := filepath.Join(rootPath, invocationLog)
 		if isReadable(logFile) {
 			artifacts[invocationLog] = &sinkpb.Artifact{
