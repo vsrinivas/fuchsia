@@ -11,11 +11,13 @@ toc:
   path: /docs/development/internationalization/icu_data.md
 - title: "Localizing mods"
   path: /docs/development/internationalization/localizing_mods.md
-- title: "Profile Preferences"
-  path: /docs/development/internationalization/fuchsia_intl.md
+- title: "Internationalization preferences"
+  path: /docs/development/internationalization/i18n_preferences.md
 - title: "Fonts"
   section:
   - include: /docs/development/internationalization/fonts/_toc.yaml
 - title: "Localization"
   section:
   - include: /docs/development/internationalization/localization/_toc.yaml
+- title: "Future work"
+  path: /docs/development/internationalization/future_work.md

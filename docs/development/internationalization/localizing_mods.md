@@ -6,7 +6,8 @@ The process of localizing mods includes internationalizing the content,
 translating the content, and assembling the localization bundle for the mod to
 use.
 
-For an example localization, see [localized flutter app example in dart][locapp].
+For an example localization, see
+[localized flutter app example in dart][locapp].
 
 For a more complete example, look at the [Ermine shell localization][ermineloc].
 
