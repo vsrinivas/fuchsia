@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1447
+From //build/config/BUILDCONFIG.gn:1440
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -597,7 +597,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:48
+From //products/bringup.gni:53
 
 **Overridden from the default:** `[]`
 
@@ -605,7 +605,7 @@ From //BUILD.gn:34
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:48
+From //products/bringup.gni:53
 
 **Overridden from the default:** `[]`
 
@@ -1086,7 +1086,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1226
+From //build/config/BUILDCONFIG.gn:1219
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1406,7 +1406,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
-From //products/bringup.gni:52
+From //products/bringup.gni:62
 
 **Overridden from the default:** `[]`
 
@@ -1414,7 +1414,7 @@ From //BUILD.gn:53
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
-From //products/bringup.gni:52
+From //products/bringup.gni:62
 
 **Overridden from the default:** `[]`
 
@@ -1705,7 +1705,7 @@ Each element of the list is one variant, which is a scope defining:
   tags = ["lto"]
 }, {
   configs = ["//build/config/profile"]
-  tags = ["instrumented", "profile", "breaks-gc-sections"]
+  tags = ["instrumented", "profile"]
 }, {
   configs = ["//build/config/sanitizers:ubsan"]
   remove_common_configs = ["//build/config:no_rtti"]
@@ -2019,7 +2019,7 @@ A list of labels for meta packages to be included in the monolith.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:44
+From //products/bringup.gni:49
 
 **Overridden from the default:** `[]`
 
@@ -2027,7 +2027,7 @@ From //build/images/args.gni:58
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:44
+From //products/bringup.gni:49
 
 **Overridden from the default:** `[]`
 
@@ -2659,7 +2659,7 @@ package flavors.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:57
+From //products/bringup.gni:67
 
 **Overridden from the default:** `[]`
 
@@ -2667,7 +2667,7 @@ From //build/packages/prebuilt_package_with_flavors.gni:29
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:57
+From //products/bringup.gni:67
 
 **Overridden from the default:** `[]`
 
@@ -2721,7 +2721,7 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:32
 ### product_bootfs_labels
 A list of binary labels to include in ZBIs built for this product.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//build/images:component_id_index_config"]`
 
 From //products/bringup.gni:41
 
@@ -2729,7 +2729,7 @@ From //products/bringup.gni:41
 
 From //build/product.gni:7
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//build/images:component_id_index_config"]`
 
 From //products/bringup.gni:41
 
@@ -2889,7 +2889,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"jYWJjRUNurht-4TulWMZPg1GsEiLkoX1UsHmPUGNBgcC"`
+**Current value (from the default):** `"p-Ebpz3PsdM7_vp0iZyS1QbrAnKpvzypdvINVDh10DEC"`
 
 From //build/rust/config.gni:32
 
@@ -3041,7 +3041,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1437
+From //build/config/BUILDCONFIG.gn:1430
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3050,7 +3050,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1442
+From //build/config/BUILDCONFIG.gn:1435
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3082,7 +3082,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1272
+From //build/config/BUILDCONFIG.gn:1265
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3362,7 +3362,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1256
+From //build/config/BUILDCONFIG.gn:1249
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3372,17 +3372,17 @@ the build. The build system ensures that the universe package set includes
 the base and cache package sets, which means you do not need to redundantly
 include those labels in this variable.
 
-**Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host"]`
+**Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot"]`
 
-From //products/bringup.gni:50
+From //products/bringup.gni:55
 
 **Overridden from the default:** `[]`
 
 From //BUILD.gn:48
 
-**Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host"]`
+**Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot"]`
 
-From //products/bringup.gni:50
+From //products/bringup.gni:55
 
 **Overridden from the default:** `[]`
 
