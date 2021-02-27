@@ -84,15 +84,6 @@ impl Context {
         }
     }
 
-    /// Generates a new `Messenger` on the service `MessageHub`. Only
-    /// top-level messages can be sent, not received, as the associated
-    /// `Receptor` is discarded.
-    pub async fn create_messenger(
-        &self,
-    ) -> Result<service::message::Messenger, service::message::MessageError> {
-        Ok(self.messenger_factory.create(MessengerType::Unbound).await?.0)
-    }
-
     /// Generates a new `Messenger` on the switchboard's `MessageHub`. Only
     /// top-level messages can be sent, not received, as the associated
     /// `Receptor` is discarded.

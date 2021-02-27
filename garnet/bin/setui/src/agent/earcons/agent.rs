@@ -11,8 +11,8 @@ use crate::blueprint_definition;
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::internal::agent::Payload;
 use crate::internal::event::Publisher;
+use crate::internal::switchboard;
 use crate::message::base::MessageEvent;
-use crate::service;
 use crate::service_context::{ExternalServiceProxy, ServiceContextHandle};
 
 use fidl_fuchsia_media_sounds::PlayerProxy;
@@ -30,7 +30,7 @@ blueprint_definition!("earcons_agent", Agent::create);
 pub struct Agent {
     publisher: Publisher,
     sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
-    messenger: service::message::Messenger,
+    switchboard_messenger: switchboard::message::Messenger,
 }
 
 impl DeviceStorageAccess for Agent {
@@ -47,10 +47,17 @@ pub struct CommonEarconsParams {
 
 impl Agent {
     async fn create(mut context: AgentContext) {
+        let messenger_result = context.create_switchboard_messenger().await;
+
+        if messenger_result.is_err() {
+            fx_log_err!("EarconAgent: could not acquire switchboard messenger");
+            return;
+        }
+
         let mut agent = Agent {
             publisher: context.get_publisher(),
             sound_player_connection: Arc::new(Mutex::new(None)),
-            messenger: context.create_messenger().await.expect("messenger should be created"),
+            switchboard_messenger: messenger_result.unwrap(),
         };
 
         fasync::Task::spawn(async move {
@@ -80,7 +87,7 @@ impl Agent {
         if let Err(e) = VolumeChangeHandler::create(
             self.publisher.clone(),
             common_earcons_params.clone(),
-            self.messenger.clone(),
+            self.switchboard_messenger.clone(),
         )
         .await
         {
