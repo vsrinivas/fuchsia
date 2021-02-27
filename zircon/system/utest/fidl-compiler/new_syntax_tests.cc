@@ -258,4 +258,21 @@ type TypeDecl = struct {
   EXPECT_EQ(type_decl_field1->members.size(), 1);
 }
 
+TEST(NewSyntaxTests, DisallowUsingAlias) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+using foo = uint8;
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  EXPECT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrOldUsingSyntaxDeprecated);
+}
+
 }  // namespace

@@ -481,7 +481,8 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
     if (!Ok())
       return Fail();
   } else if (MaybeConsumeToken(OfKind(Token::Kind::kEqual))) {
-    if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDisallowOldUsingSyntax))
+    if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax) ||
+        experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDisallowOldUsingSyntax))
       return Fail(ErrOldUsingSyntaxDeprecated, using_path->span());
     if (!Ok() || using_path->components.size() != 1u)
       return Fail(ErrCompoundAliasIdentifier, using_path->span());
@@ -1788,6 +1789,7 @@ std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
         return Done;
 
       case CASE_IDENTIFIER(Token::Subkind::kType): {
+        done_with_library_imports = true;
         add(&type_decls, [&] { return ParseTypeDecl(scope); });
         return More;
 
@@ -1798,17 +1800,11 @@ std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kUsing): {
-        auto using_decl = ParseUsing(std::move(attributes), scope, Modifiers());
-        if (using_decl == nullptr) {
-          // Failed to parse using declaration.
-          return Done;
+        add(&using_list, [&] { return ParseUsing(std::move(attributes), scope, Modifiers()); });
+        if (Ok() && done_with_library_imports) {
+          reporter_->Report(diagnostics::ErrLibraryImportsMustBeGroupedAtTopOfFile,
+                            using_list.back()->span());
         }
-        if (using_decl->maybe_type_ctor) {
-          done_with_library_imports = true;
-        } else if (done_with_library_imports) {
-          reporter_->Report(ErrLibraryImportsMustBeGroupedAtTopOfFile, using_decl->span());
-        }
-        using_list.emplace_back(std::move(using_decl));
         return More;
       }
     }
