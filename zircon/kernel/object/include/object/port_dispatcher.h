@@ -176,7 +176,6 @@ class PortObserver final : public SignalObserver {
 
 class PortDispatcher final : public SoloDispatcher<PortDispatcher, ZX_DEFAULT_PORT_RIGHTS> {
  public:
-  static void Init();
   static PortAllocator* DefaultPortAllocator();
   static zx_status_t Create(uint32_t options, KernelHandle<PortDispatcher>* handle,
                             zx_rights_t* rights);
@@ -216,8 +215,8 @@ class PortDispatcher final : public SoloDispatcher<PortDispatcher, ZX_DEFAULT_PO
   // not in this queue. It is undefined to call this with a packet queued in another port.
   bool CancelQueued(PortPacket* port_packet);
 
-  // Init hook that sets up the PortObserver cache allocator.
-  static void InitializePortObserverCache(uint32_t level);
+  // Init hook that sets up the cache allocators used by this dispatcher.
+  static void InitializeCacheAllocators(uint32_t level);
 
  private:
   explicit PortDispatcher(uint32_t options);
@@ -236,10 +235,6 @@ class PortDispatcher final : public SoloDispatcher<PortDispatcher, ZX_DEFAULT_PO
   // Keeps track of outstanding observers so they can be removed from dispatchers once handle
   // count drops to zero.
   PortObserver::List observers_ TA_GUARDED(get_lock());
-
-  // Per-cpu cache allocator for PortObservers.
-  inline static object_cache::ObjectCache<PortObserver, object_cache::Option::PerCpu>
-      observer_allocator_;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PORT_DISPATCHER_H_

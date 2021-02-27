@@ -174,6 +174,7 @@ static constexpr const char kPmmCheckerAction[] = "kernel.pmm-checker.action";
 static constexpr const char kPmmCheckerEnable[] = "kernel.pmm-checker.enable";
 static constexpr const char kPmmCheckerFillSize[] = "kernel.pmm-checker.fill-size";
 static constexpr const char kPortobserverReservePages[] = "kernel.portobserver.reserve-pages";
+static constexpr const char kPortPacketReservePages[] = "kernel.portpacket.reserve-pages";
 static constexpr const char kRootJobBehavior[] = "kernel.root-job.behavior";
 static constexpr const char kRootJobNotice[] = "kernel.root-job.notice";
 static constexpr const char kSerial[] = "kernel.serial";

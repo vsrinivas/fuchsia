@@ -21,7 +21,6 @@
 #include <object/executor.h>
 #include <object/job_dispatcher.h>
 #include <object/memory_watchdog.h>
-#include <object/port_dispatcher.h>
 #include <platform/crashlog.h>
 #include <platform/halt_helper.h>
 
@@ -39,7 +38,6 @@ void StartRootJobObserver() { gExecutor.StartRootJobObserver(); }
 
 static void object_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
   Handle::Init();
-  PortDispatcher::Init();
 
   gExecutor.Init();
 }
