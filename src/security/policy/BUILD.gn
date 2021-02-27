@@ -29,6 +29,7 @@ group("appmgr_policy_eng") {
     ":appmgr_smc_resource_allowlist_eng",
     ":appmgr_system_updater_allowlist_eng",
     ":appmgr_vmex_resource_allowlist_eng",
+    ":appmgr_weave_signer_allowlist_eng",
     "//build/validate:non_production_tag",
   ]
 }
@@ -163,4 +164,10 @@ config_data("appmgr_vmex_resource_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "vmex_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/vmex_resource.txt" ]
+}
+
+config_data("appmgr_weave_signer_allowlist_eng") {
+  for_pkg = "appmgr"
+  sources = [ "weave_signer_allowlist_eng.txt" ]
+  outputs = [ "allowlist/weave_signer.txt" ]
 }
