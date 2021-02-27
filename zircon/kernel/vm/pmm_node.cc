@@ -13,6 +13,7 @@
 
 #include <new>
 
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <pretty/sizes.h>
@@ -163,7 +164,7 @@ void PmmNode::AddFreePages(list_node* list) TA_NO_THREAD_SAFETY_ANALYSIS {
     free_count_++;
   }
   ASSERT(free_count_);
-  free_pages_evt_.SignalNoResched();
+  free_pages_evt_.Signal();
 
   LTRACEF("free count now %" PRIu64 "\n", free_count_);
 }
@@ -235,6 +236,7 @@ void PmmNode::AllocPageHelperLocked(vm_page_t* page) {
 }
 
 zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* pa_out) {
+  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
 
   if (unlikely(InOomStateLocked())) {
@@ -281,6 +283,7 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
     return status;
   }
 
+  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
 
   if (unlikely(count > free_count_)) {
@@ -328,6 +331,7 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
 
   address = ROUNDDOWN(address, PAGE_SIZE);
 
+  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
 
   // walk through the arenas, looking to see if the physical page belongs to it
@@ -382,6 +386,7 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
   DEBUG_ASSERT(pa);
   DEBUG_ASSERT(list);
 
+  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
 
   for (auto& a : arena_list_) {
@@ -431,6 +436,7 @@ void PmmNode::FreePageHelperLocked(vm_page* page) {
 }
 
 void PmmNode::FreePage(vm_page* page) {
+  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
 
   // pages freed individually shouldn't be in a queue
@@ -476,6 +482,7 @@ void PmmNode::FreeListLocked(list_node* list) {
 }
 
 void PmmNode::FreeList(list_node* list) {
+  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
 
   FreeListLocked(list);
@@ -484,10 +491,11 @@ void PmmNode::FreeList(list_node* list) {
 void PmmNode::AllocPages(uint alloc_flags, page_request_t* req) {
   kcounter_add(pmm_alloc_async, 1);
 
+  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
   list_add_tail(&request_list_, &req->provider_node);
 
-  request_evt_.SignalNoResched();
+  request_evt_.Signal();
 }
 
 bool PmmNode::InOomStateLocked() {
@@ -504,6 +512,7 @@ bool PmmNode::InOomStateLocked() {
 }
 
 bool PmmNode::ClearRequest(page_request_t* req) {
+  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
   bool res;
   if (list_in_list(&req->provider_node)) {
@@ -532,6 +541,7 @@ void PmmNode::SwapRequest(page_request_t* old, page_request_t* new_req) {
   DEBUG_ASSERT(old->drop_ref_cb == new_req->drop_ref_cb);
   DEBUG_ASSERT(old->pages_available_cb == new_req->pages_available_cb);
 
+  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
 
   new_req->length = old->length;
@@ -545,6 +555,7 @@ void PmmNode::SwapRequest(page_request_t* old, page_request_t* new_req) {
 }
 
 void PmmNode::ProcessPendingRequests() {
+  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
   page_request* node = nullptr;
   while ((node = list_peek_head_type(&request_list_, page_request, provider_node)) &&
@@ -634,6 +645,7 @@ zx_status_t PmmNode::InitReclamation(const uint64_t* watermarks, uint8_t waterma
     return ZX_ERR_INVALID_ARGS;
   }
 
+  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
 
   uint64_t tmp[MAX_WATERMARK_COUNT];
@@ -681,7 +693,7 @@ void PmmNode::SetMemAvailStateLocked(uint8_t mem_avail_state) {
   if (mem_avail_state_cur_index_ == 0) {
     free_pages_evt_.Unsignal();
   } else {
-    free_pages_evt_.SignalNoResched();
+    free_pages_evt_.Signal();
   }
 
   if (mem_avail_state_cur_index_ > 0) {

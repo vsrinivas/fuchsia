@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
+#include <lib/ktrace.h>
 #include <platform.h>
 #include <pow2.h>
 #include <stdlib.h>
@@ -41,6 +42,9 @@
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
+using LocalTraceDuration =
+    TraceDuration<TraceEnabled<false>, KTRACE_GRP_SCHEDULER, TraceContext::Thread>;
+
 // The (currently) one and only pmm node
 static PmmNode pmm_node;
 
@@ -59,27 +63,33 @@ zx_status_t pmm_get_arena_info(size_t count, uint64_t i, pmm_arena_info_t* buffe
 }
 
 zx_status_t pmm_alloc_page(uint alloc_flags, paddr_t* pa) {
+  LocalTraceDuration trace{"pmm_alloc_page"_stringref};
   return pmm_node.AllocPage(alloc_flags, nullptr, pa);
 }
 
 zx_status_t pmm_alloc_page(uint alloc_flags, vm_page_t** page) {
+  LocalTraceDuration trace{"pmm_alloc_page"_stringref};
   return pmm_node.AllocPage(alloc_flags, page, nullptr);
 }
 
 zx_status_t pmm_alloc_page(uint alloc_flags, vm_page_t** page, paddr_t* pa) {
+  LocalTraceDuration trace{"pmm_alloc_page"_stringref};
   return pmm_node.AllocPage(alloc_flags, page, pa);
 }
 
 zx_status_t pmm_alloc_pages(size_t count, uint alloc_flags, list_node* list) {
+  LocalTraceDuration trace{"pmm_alloc_pages"_stringref};
   return pmm_node.AllocPages(count, alloc_flags, list);
 }
 
 zx_status_t pmm_alloc_range(paddr_t address, size_t count, list_node* list) {
+  LocalTraceDuration trace{"pmm_alloc_range"_stringref};
   return pmm_node.AllocRange(address, count, list);
 }
 
 zx_status_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_log2,
                                  paddr_t* pa, list_node* list) {
+  LocalTraceDuration trace{"pmm_alloc_contiguous"_stringref};
   // if we're called with a single page, just fall through to the regular allocation routine
   if (unlikely(count == 1 && alignment_log2 <= PAGE_SIZE_SHIFT)) {
     vm_page_t* page;
@@ -95,6 +105,7 @@ zx_status_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignme
 }
 
 void pmm_alloc_pages(uint alloc_flags, page_request_t* req) {
+  LocalTraceDuration trace{"pmm_alloc_pages"_stringref};
   pmm_node.AllocPages(alloc_flags, req);
 }
 
@@ -104,9 +115,15 @@ void pmm_swap_request(page_request_t* old, page_request_t* new_req) {
   pmm_node.SwapRequest(old, new_req);
 }
 
-void pmm_free(list_node* list) { pmm_node.FreeList(list); }
+void pmm_free(list_node* list) {
+  LocalTraceDuration trace{"pmm_free"_stringref};
+  pmm_node.FreeList(list);
+}
 
-void pmm_free_page(vm_page* page) { pmm_node.FreePage(page); }
+void pmm_free_page(vm_page* page) {
+  LocalTraceDuration trace{"pmm_free_page"_stringref};
+  pmm_node.FreePage(page);
+}
 
 uint64_t pmm_count_free_pages() { return pmm_node.CountFreePages(); }
 
