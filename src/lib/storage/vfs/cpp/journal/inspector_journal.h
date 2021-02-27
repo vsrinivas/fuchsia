@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_JOURNAL_INSPECTOR_JOURNAL_H_
-#define FS_JOURNAL_INSPECTOR_JOURNAL_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_INSPECTOR_JOURNAL_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_INSPECTOR_JOURNAL_H_
 
 #include <disk_inspector/common_types.h>
+
 #include "src/lib/storage/vfs/cpp/inspectable.h"
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 
@@ -49,4 +50,4 @@ class JournalObject : public disk_inspector::DiskObject {
 
 }  // namespace fs
 
-#endif  // FS_JOURNAL_INSPECTOR_JOURNAL_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_INSPECTOR_JOURNAL_H_

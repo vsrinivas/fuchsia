@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_JOURNAL_JOURNAL_H_
-#define FS_JOURNAL_JOURNAL_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_JOURNAL_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_JOURNAL_H_
 
 #include <lib/fit/barrier.h>
 #include <lib/fit/promise.h>
@@ -16,6 +16,10 @@
 
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/vector.h>
+#include <storage/buffer/blocking_ring_buffer.h>
+#include <storage/buffer/ring_buffer.h>
+#include <storage/operation/unbuffered_operation.h>
+
 #include "src/lib/storage/vfs/cpp/journal/background_executor.h"
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/lib/storage/vfs/cpp/journal/journal_writer.h"
@@ -23,9 +27,6 @@
 #include "src/lib/storage/vfs/cpp/journal/superblock.h"
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
-#include <storage/buffer/blocking_ring_buffer.h>
-#include <storage/buffer/ring_buffer.h>
-#include <storage/operation/unbuffered_operation.h>
 
 namespace fs {
 
@@ -35,9 +36,9 @@ namespace fs {
 // - Writing metadata to the underlying device (journaled or unjournaled)
 // - Revoking metadata from the journal
 //
-// The journal operates on asynchronous objects: it returns promises corresponding to
-// each operation, which may be chained together by the caller, and which may be completed
-// by scheduling these promises on the journal's executor via |journal.schedule_task|.
+// The journal operates on asynchronous objects: it returns promises corresponding to each
+// operation, which may be chained together by the caller, and which may be completed by scheduling
+// these promises on the journal's executor via |journal.schedule_task|.
 //
 // EXAMPLE USAGE
 //
@@ -59,9 +60,9 @@ class Journal final : public fit::executor {
   using Promise = fit::promise<void, zx_status_t>;
 
   struct Options {
-    // Pointer to MetricsTrait that helps journal maintain metrics.
-    // The reference to MetricsTrait is dropped when Journal object is destroyed.
-    // A nullptr implies that the user doesn't use/want journal metrics.
+    // Pointer to MetricsTrait that helps journal maintain metrics. The reference to MetricsTrait is
+    // dropped when Journal object is destroyed. A nullptr implies that the user doesn't use/want
+    // journal metrics.
     std::shared_ptr<MetricsTrait> metrics;
   };
 
@@ -88,8 +89,8 @@ class Journal final : public fit::executor {
     fit::callback<void()> complete_callback;
   };
 
-  // Constructs a Journal with journaling enabled. This is the traditional constructor
-  // of Journals, where data and metadata are treated separately.
+  // Constructs a Journal with journaling enabled. This is the traditional constructor of Journals,
+  // where data and metadata are treated separately.
   //
   // |journal_superblock| represents the journal info block.
   // |journal_buffer| must be the size of the entries (not including the info block).
@@ -106,9 +107,9 @@ class Journal final : public fit::executor {
   // Transmits operations containing pure data, which may be subject to different atomicity
   // guarantees than metadata updates.
   //
-  // Multiple requests to WriteData are not ordered. If ordering is desired, it should
-  // be added using a |fit::sequencer| object, or by chaining the data writeback promise
-  // along an object which is ordered.
+  // Multiple requests to WriteData are not ordered. If ordering is desired, it should be added
+  // using a |fit::sequencer| object, or by chaining the data writeback promise along an object
+  // which is ordered.
   Promise WriteData(std::vector<storage::UnbufferedOperation> operations);
 
   // Commits a transaction.
@@ -153,23 +154,23 @@ class Journal final : public fit::executor {
   // Barrier for all outstanding data writes.
   fit::barrier data_barrier_;
 
-  // The journal must enforce the requirement that metadata operations are completed in
-  // the order they are enqueued. To fulfill this requirement, a sequencer guarantees
-  // ordering of internal promise structures before they are handed to |executor_|.
+  // The journal must enforce the requirement that metadata operations are completed in the order
+  // they are enqueued. To fulfill this requirement, a sequencer guarantees ordering of internal
+  // promise structures before they are handed to |executor_|.
   fit::sequencer journal_sequencer_;
 
   // A promise that we use to block writes to the journal until data writes have been flushed.
   fit::promise<> journal_data_barrier_;
 
-  // Journal metrics. This metrics is shared with JournalWriter and potentially other threads.
-  // The reference to MetricsTrait is dropped when Journal object is destroyed.
+  // Journal metrics. This metrics is shared with JournalWriter and potentially other threads. The
+  // reference to MetricsTrait is dropped when Journal object is destroyed.
   std::shared_ptr<JournalMetrics> metrics_;
 
   internal::JournalWriter writer_;
 
-  // Intentionally place the executor at the end of the journal. This ensures that
-  // during destruction, the executor can complete pending tasks operation on the writeback
-  // buffers before the writeback buffers are destroyed.
+  // Intentionally place the executor at the end of the journal. This ensures that during
+  // destruction, the executor can complete pending tasks operation on the writeback buffers before
+  // the writeback buffers are destroyed.
   BackgroundExecutor executor_;
 
   const Options options_;
@@ -183,4 +184,4 @@ class Journal final : public fit::executor {
 
 }  // namespace fs
 
-#endif  // FS_JOURNAL_JOURNAL_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_JOURNAL_H_

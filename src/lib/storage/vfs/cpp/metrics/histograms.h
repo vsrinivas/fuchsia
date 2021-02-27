@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_METRICS_HISTOGRAMS_H_
-#define FS_METRICS_HISTOGRAMS_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_METRICS_HISTOGRAMS_H_
+#define SRC_LIB_STORAGE_VFS_CPP_METRICS_HISTOGRAMS_H_
+
+#include <lib/fzl/time.h>
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/zx/time.h>
 
 #include <limits>
 #include <vector>
 
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
-#include <lib/fzl/time.h>
-#include <lib/inspect/cpp/inspect.h>
-#include <lib/zx/time.h>
 
 namespace fs_metrics {
 
@@ -120,9 +121,9 @@ class Histograms {
   // it is cancelled. |LatencyEvent::mutable_options| allows adjusting the event options.
   LatencyEvent NewLatencyEvent(Event event);
 
-  // Returns a unique Id for a given event and option set. Depending on the event,
-  // multiple option configurations may be mapped to the same Id. The histogram ids are in the
-  // range [0, HistogramCount).
+  // Returns a unique Id for a given event and option set. Depending on the event, multiple option
+  // configurations may be mapped to the same Id. The histogram ids are in the range [0,
+  // HistogramCount).
   uint64_t GetHistogramId(Event event, const EventOptions& options) const;
 
   // Returns the number of different histograms tracking this event.
@@ -144,4 +145,4 @@ class Histograms {
 
 }  // namespace fs_metrics
 
-#endif  // FS_METRICS_HISTOGRAMS_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_METRICS_HISTOGRAMS_H_

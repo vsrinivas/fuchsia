@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/journal/operation_tracker.h"
+
 #include <algorithm>
 #include <vector>
 
-#include "src/lib/storage/vfs/cpp/journal/operation_tracker.h"
 #include <range/interval-tree.h>
 
 namespace fs {

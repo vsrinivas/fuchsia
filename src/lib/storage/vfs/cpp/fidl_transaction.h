@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_INTERNAL_FIDL_TRANSACTION_H_
-#define FS_INTERNAL_FIDL_TRANSACTION_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_FIDL_TRANSACTION_H_
+#define SRC_LIB_STORAGE_VFS_CPP_FIDL_TRANSACTION_H_
 
 #include <lib/fdio/limits.h>
 #include <lib/fidl/llcpp/message.h>
@@ -73,4 +73,4 @@ class FidlTransaction final : public ::fidl::Transaction {
 
 }  // namespace fs
 
-#endif  // FS_INTERNAL_FIDL_TRANSACTION_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_FIDL_TRANSACTION_H_

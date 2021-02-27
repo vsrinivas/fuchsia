@@ -6,10 +6,11 @@
 
 #include <zircon/assert.h>
 
-#include "src/lib/storage/vfs/cpp/journal/journal.h"
-#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
 #include <gtest/gtest.h>
 #include <storage/buffer/vmoid_registry.h>
+
+#include "src/lib/storage/vfs/cpp/journal/journal.h"
+#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
 
 namespace fs {
 namespace {
@@ -59,9 +60,8 @@ constexpr uint64_t kBlockSize = kJournalBlockSize;
 constexpr uint64_t kVmoOffset = 0;
 constexpr uint64_t kDevOffset = 5;
 constexpr uint64_t kWritebackLength = 8;
-// This leaks an internal detail of the DataStreamer (the chunking size),
-// but it's necssary to emulate this externally to validate the issued
-// operations are chunked correctly.
+// This leaks an internal detail of the DataStreamer (the chunking size), but it's necssary to
+// emulate this externally to validate the issued operations are chunked correctly.
 constexpr uint64_t kMaxChunk = (3 * kWritebackLength) / 4;
 
 class DataStreamerFixture : public testing::Test {

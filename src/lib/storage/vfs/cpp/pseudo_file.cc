@@ -59,8 +59,7 @@ BufferedPseudoFile::BufferedPseudoFile(ReadHandler read_handler, WriteHandler wr
 
 BufferedPseudoFile::~BufferedPseudoFile() = default;
 
-zx_status_t BufferedPseudoFile::Open(ValidatedOptions options,
-                                     fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t BufferedPseudoFile::Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) {
   fbl::String output;
   if (options->rights.read) {
     zx_status_t status = read_handler_(&output);
@@ -179,10 +178,11 @@ UnbufferedPseudoFile::UnbufferedPseudoFile(ReadHandler read_handler, WriteHandle
 
 UnbufferedPseudoFile::~UnbufferedPseudoFile() = default;
 
-VnodeProtocolSet UnbufferedPseudoFile::Content::GetProtocols() const { return VnodeProtocol::kFile; }
+VnodeProtocolSet UnbufferedPseudoFile::Content::GetProtocols() const {
+  return VnodeProtocol::kFile;
+}
 
-zx_status_t UnbufferedPseudoFile::Open(ValidatedOptions options,
-                                       fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t UnbufferedPseudoFile::Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) {
   *out_redirect = fbl::AdoptRef(new Content(fbl::RefPtr(this), *options));
   return ZX_OK;
 }
@@ -216,8 +216,8 @@ zx_status_t UnbufferedPseudoFile::Content::Read(void* data, size_t length, size_
   ZX_DEBUG_ASSERT(options_.rights.read);
 
   if (offset != 0u) {
-    // If the offset is non-zero, we assume the client already read the property.
-    // Simulate end of file.
+    // If the offset is non-zero, we assume the client already read the property. Simulate end of
+    // file.
     *out_actual = 0u;
     return ZX_OK;
   }
@@ -239,8 +239,8 @@ zx_status_t UnbufferedPseudoFile::Content::Write(const void* data, size_t length
   ZX_DEBUG_ASSERT(options_.rights.write);
 
   if (offset != 0u) {
-    // If the offset is non-zero, we assume the client already wrote the property.
-    // Simulate an inability to write additional data.
+    // If the offset is non-zero, we assume the client already wrote the property. Simulate an
+    // inability to write additional data.
     return ZX_ERR_NO_SPACE;
   }
 
@@ -275,8 +275,9 @@ zx_status_t UnbufferedPseudoFile::Content::Truncate(size_t length) {
   return ZX_OK;
 }
 
-zx_status_t UnbufferedPseudoFile::Content::GetNodeInfoForProtocol(
-    VnodeProtocol protocol, Rights rights, VnodeRepresentation* info) {
+zx_status_t UnbufferedPseudoFile::Content::GetNodeInfoForProtocol(VnodeProtocol protocol,
+                                                                  Rights rights,
+                                                                  VnodeRepresentation* info) {
   return file_->GetNodeInfoForProtocol(protocol, rights, info);
 }
 

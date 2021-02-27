@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/directory_connection.h"
+
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/io2/llcpp/fidl.h>
@@ -21,8 +23,8 @@
 #include <utility>
 
 #include <fbl/string_buffer.h>
+
 #include "src/lib/storage/vfs/cpp/debug.h"
-#include "src/lib/storage/vfs/cpp/directory_connection.h"
 #include "src/lib/storage/vfs/cpp/fidl_transaction.h"
 #include "src/lib/storage/vfs/cpp/mount_channel.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
@@ -303,8 +305,8 @@ void DirectoryConnection::Mount(fidl::ClientEnd<fio::Directory> remote,
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMount] our options: ", options());
 
   if (!options().rights.admin) {
-    // Note: this is best-effort, and would fail if the remote endpoint
-    // does not speak the |fuchsia.io/DirectoryAdmin| protocol.
+    // Note: this is best-effort, and would fail if the remote endpoint does not speak the
+    // |fuchsia.io/DirectoryAdmin| protocol.
     fidl::ClientEnd<fio::DirectoryAdmin> remote_admin(remote.TakeChannel());
     Vfs::UnmountHandle(std::move(remote_admin), zx::time::infinite());
     completer.Reply(ZX_ERR_ACCESS_DENIED);
@@ -321,8 +323,8 @@ void DirectoryConnection::MountAndCreate(fidl::ClientEnd<fio::Directory> remote,
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMountAndCreate] our options: ", options());
 
   if (!options().rights.admin) {
-    // Note: this is best-effort, and would fail if the remote endpoint
-    // does not speak the |fuchsia.io/DirectoryAdmin| protocol.
+    // Note: this is best-effort, and would fail if the remote endpoint does not speak the
+    // |fuchsia.io/DirectoryAdmin| protocol.
     fidl::ClientEnd<fio::DirectoryAdmin> remote_admin(remote.TakeChannel());
     Vfs::UnmountHandle(std::move(remote_admin), zx::time::infinite());
     completer.Reply(ZX_ERR_ACCESS_DENIED);

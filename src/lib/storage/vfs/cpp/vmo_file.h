@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_VMO_FILE_H_
-#define FS_VMO_FILE_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_VMO_FILE_H_
+#define SRC_LIB_STORAGE_VFS_CPP_VMO_FILE_H_
 
 #include <lib/zx/vmo.h>
 
@@ -15,8 +15,8 @@ namespace fs {
 
 // A file node backed by a range of bytes in a VMO.
 //
-// The file has a fixed size specified at creating time; it does not grow or
-// shrink even when written into.
+// The file has a fixed size specified at creating time; it does not grow or shrink even when
+// written into.
 //
 // This class is thread-safe.
 class VmoFile : public Vnode {
@@ -31,21 +31,20 @@ class VmoFile : public Vnode {
 
     // The VMO handle is duplicated for each client.
     //
-    // This is appropriate when it is okay for clients to access the entire
-    // contents of the VMO, possibly extending beyond the pages spanned by the file.
+    // This is appropriate when it is okay for clients to access the entire contents of the VMO,
+    // possibly extending beyond the pages spanned by the file.
     //
-    // This mode is significantly more efficient than |CLONE| and |CLONE_COW|
-    // and should be preferred when file spans the whole VMO or when the VMO's
-    // entire content is safe for clients to read.
+    // This mode is significantly more efficient than |CLONE| and |CLONE_COW| and should be
+    // preferred when file spans the whole VMO or when the VMO's entire content is safe for clients
+    // to read.
     DUPLICATE,
 
-    // The VMO range spanned by the file is cloned on demand, using copy-on-write
-    // semantics to isolate modifications of clients which open the file in
-    // a writable mode.
+    // The VMO range spanned by the file is cloned on demand, using copy-on-write semantics to
+    // isolate modifications of clients which open the file in a writable mode.
     //
-    // This is appropriate when clients need to be restricted from accessing
-    // portions of the VMO outside of the range of the file and when file
-    // modifications by clients should not be visible to each other.
+    // This is appropriate when clients need to be restricted from accessing portions of the VMO
+    // outside of the range of the file and when file modifications by clients should not be visible
+    // to each other.
     CLONE_COW,
   };
 
@@ -78,8 +77,8 @@ class VmoFile : public Vnode {
   friend fbl::internal::MakeRefCountedHelper<VmoFile>;
   friend fbl::RefPtr<VmoFile>;
 
-  // Creates a file node backed an VMO owned by the creator.
-  // The creator retains ownership of |unowned_vmo| which must outlive this object.
+  // Creates a file node backed an VMO owned by the creator. The creator retains ownership of
+  // |unowned_vmo| which must outlive this object.
   VmoFile(const zx::vmo& unowned_vmo, size_t offset, size_t length, bool writable = false,
           VmoSharing vmo_sharing = VmoSharing::DUPLICATE);
 
@@ -96,8 +95,8 @@ class VmoFile : public Vnode {
   bool const writable_;
   VmoSharing const vmo_sharing_;
 
-  // Clone of the portion of the VMO which contains the file's data.
-  // In |CLONE_COW| mode, this is shared among read-only clients.
+  // Clone of the portion of the VMO which contains the file's data. In |CLONE_COW| mode, this is
+  // shared among read-only clients.
   struct {
     std::once_flag once;
     zx::vmo vmo;
@@ -108,4 +107,4 @@ class VmoFile : public Vnode {
 
 }  // namespace fs
 
-#endif  // FS_VMO_FILE_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_VMO_FILE_H_

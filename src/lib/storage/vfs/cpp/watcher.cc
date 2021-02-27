@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/watcher.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #include <memory>
-
-#include "src/lib/storage/vfs/cpp/watcher.h"
 
 #ifdef __Fuchsia__
 #include <fuchsia/io/llcpp/fidl.h>
@@ -24,6 +24,7 @@
 #include <utility>
 
 #include <fbl/alloc_checker.h>
+
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
@@ -39,9 +40,8 @@ WatcherContainer::VnodeWatcher::VnodeWatcher(zx::channel h, uint32_t mask)
 
 WatcherContainer::VnodeWatcher::~VnodeWatcher() {}
 
-// Transmission buffer for sending directory watcher notifications to clients.
-// Allows enqueueing multiple messages in a buffer before sending an IPC message
-// to a client.
+// Transmission buffer for sending directory watcher notifications to clients. Allows enqueueing
+// multiple messages in a buffer before sending an IPC message to a client.
 class WatchBuffer {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(WatchBuffer);
@@ -168,8 +168,7 @@ void WatcherContainer::Notify(fbl::StringPiece name, unsigned event) {
 
     zx_status_t status = it->h.write(0, msg, static_cast<uint32_t>(msg_length), nullptr, 0);
     if (status < 0) {
-      // Lazily remove watchers when their handles cannot accept incoming
-      // watch messages.
+      // Lazily remove watchers when their handles cannot accept incoming watch messages.
       auto to_remove = it;
       ++it;
       watch_list_.erase(to_remove);

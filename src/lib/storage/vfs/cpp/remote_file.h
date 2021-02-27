@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_REMOTE_FILE_H_
-#define FS_REMOTE_FILE_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_REMOTE_FILE_H_
+#define SRC_LIB_STORAGE_VFS_CPP_REMOTE_FILE_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
 
@@ -14,15 +14,13 @@
 
 namespace fs {
 
-// A remote file holds a channel to a remotely hosted file to
-// which requests are delegated when opened.
+// A remote file holds a channel to a remotely hosted file to which requests are delegated when
+// opened.
 //
-// This class is designed to allow programs to publish remote files
-// without requiring a separate "mount" step.  In effect, a remote file is
-// "mounted" at creation time.
+// This class is designed to allow programs to publish remote files without requiring a separate
+// "mount" step.  In effect, a remote file is "mounted" at creation time.
 //
-// It is not possible for the client to detach the remote file or
-// to mount a new one in its place.
+// It is not possible for the client to detach the remote file or to mount a new one in its place.
 //
 // This class is thread-safe.
 class RemoteFile : public Vnode {
@@ -60,4 +58,4 @@ class RemoteFile : public Vnode {
 
 }  // namespace fs
 
-#endif  // FS_REMOTE_FILE_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_REMOTE_FILE_H_

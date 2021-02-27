@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/vmo_file.h"
+
 #include <fuchsia/io/llcpp/fidl.h>
 #include <limits.h>
 #include <string.h>
@@ -11,9 +13,9 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
+
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
-#include "src/lib/storage/vfs/cpp/vmo_file.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 

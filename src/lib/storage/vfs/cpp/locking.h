@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_LIB_STORAGE_VFS_CPP_LOCKING_H_
+#define SRC_LIB_STORAGE_VFS_CPP_LOCKING_H_
 
 #include <zircon/compiler.h>
 
-// Much filesystem code is built both for Fuchsia and for Linux or OS
-// X hosts. This includes code instrumented with Clang's locking
-// static analysis. The Linux and OS X host mutexes are not
-// necessarily annotated properly for this static analysis. As such,
-// fs provides a macro that wraps the locking annotations, or noops
-// when they are not present. This wrapping is exposed in the public
-// fs interface as the locking requirements are part of public
-// interfaces.
+// Much filesystem code is built both for Fuchsia and for Linux or OS X hosts. This includes code
+// instrumented with Clang's locking static analysis. The Linux and OS X host mutexes are not
+// necessarily annotated properly for this static analysis. As such, fs provides a macro that wraps
+// the locking annotations, or noops when they are not present. This wrapping is exposed in the
+// public fs interface as the locking requirements are part of public interfaces.
 
 #ifdef __Fuchsia__
 
@@ -30,3 +28,5 @@
 #define FS_TA_NO_THREAD_SAFETY_ANALYSIS
 
 #endif
+
+#endif  // SRC_LIB_STORAGE_VFS_CPP_LOCKING_H_

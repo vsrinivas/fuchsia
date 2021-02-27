@@ -9,12 +9,13 @@
 
 #include <utility>
 
+#include <zxtest/zxtest.h>
+
 #include "src/lib/storage/vfs/cpp/connection.h"
 #include "src/lib/storage/vfs/cpp/fidl_transaction.h"
 #include "src/lib/storage/vfs/cpp/node_connection.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
-#include <zxtest/zxtest.h>
 
 TEST(FidlTransaction, Reply) {
   zx::channel client_end, server_end;

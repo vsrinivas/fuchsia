@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_DEBUG_H_
-#define FS_DEBUG_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_DEBUG_H_
+#define SRC_LIB_STORAGE_VFS_CPP_DEBUG_H_
 
 #include <zircon/device/vfs.h>
 
@@ -13,6 +13,7 @@
 #include <utility>
 
 #include <fbl/string_buffer.h>
+
 #include "src/lib/storage/vfs/cpp/trace.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
@@ -208,4 +209,4 @@ void ConnectionTraceDebug(Args... args) {
       fs::debug_internal::ConnectionTraceDebug(args); \
   } while (0)
 
-#endif  // FS_DEBUG_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_DEBUG_H_

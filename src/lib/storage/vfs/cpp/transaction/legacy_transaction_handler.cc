@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/trace/event.h>
-
 #include "src/lib/storage/vfs/cpp/transaction/legacy_transaction_handler.h"
+
+#include <lib/trace/event.h>
 
 #include "trace.h"
 
@@ -25,8 +25,7 @@ void BlockTxn::EnqueueOperation(uint32_t op, vmoid_t id, uint64_t vmo_offset, ui
     }
 
     if (requests_[i].vmo_offset == vmo_offset) {
-      // Take the longer of the operations (if operating on the same
-      // blocks).
+      // Take the longer of the operations (if operating on the same blocks).
       if (requests_[i].length <= blocks) {
         requests_[i].length = blocks;
       }
@@ -42,9 +41,8 @@ void BlockTxn::EnqueueOperation(uint32_t op, vmoid_t id, uint64_t vmo_offset, ui
   block_fifo_request_t request;
   request.opcode = op;
   request.vmoid = id;
-  // NOTE: It's easier to compare everything when dealing
-  // with blocks (not offsets!) so the following are described in
-  // terms of blocks until we Transact().
+  // NOTE: It's easier to compare everything when dealing with blocks (not offsets!) so the
+  // following are described in terms of blocks until we Transact().
   request.length = blocks;
   request.vmo_offset = vmo_offset;
   request.dev_offset = dev_offset;

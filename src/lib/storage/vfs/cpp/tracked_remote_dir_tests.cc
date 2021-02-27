@@ -7,14 +7,14 @@
 
 #include <utility>
 
-#include "src/lib/storage/vfs/cpp/tracked_remote_dir.h"
 #include <zxtest/zxtest.h>
+
+#include "src/lib/storage/vfs/cpp/tracked_remote_dir.h"
 
 namespace {
 
-// A Remote Directory which shuts down a dispatch loop when it is destroyed.
-// This may be utilized to synchronize destruction of the remote directory
-// with a test's dispatch loop.
+// A Remote Directory which shuts down a dispatch loop when it is destroyed. This may be utilized to
+// synchronize destruction of the remote directory with a test's dispatch loop.
 class TestRemoteDir final : public fs::TrackedRemoteDir {
  public:
   TestRemoteDir(zx::channel remote, async::Loop* loop)
@@ -98,11 +98,10 @@ TEST(TrackedRemoteDir, TrackAddingDifferentVnode) {
   // - Add |remote| to |dir|, begin tracking the remote handle.
   // - Remove |remote| from |dir| (while still tracking).
   // - Add a different Vnode to |dir| with the same name.
-  // - Close the remote connection for the still-tracked, but already-removed
-  // vnode.
+  // - Close the remote connection for the still-tracked, but already-removed vnode.
   //
-  // This tests that when |remote| is closed, we don't accidentally remove the
-  // "wrong" Vnode from the containing pseudodirectory.
+  // This tests that when |remote| is closed, we don't accidentally remove the "wrong" Vnode from
+  // the containing pseudodirectory.
   fbl::String name = "remote-directory";
   EXPECT_EQ(ZX_OK, remote->AddAsTrackedEntry(loop.dispatcher(), dir.get(), name));
   EXPECT_EQ(ZX_OK, dir->RemoveEntry(name));

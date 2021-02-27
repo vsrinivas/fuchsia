@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_JOURNAL_BACKGROUND_EXECUTOR_H_
-#define FS_JOURNAL_BACKGROUND_EXECUTOR_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_BACKGROUND_EXECUTOR_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_BACKGROUND_EXECUTOR_H_
 
 #include <lib/fit/promise.h>
 #include <lib/fit/single_threaded_executor.h>
@@ -17,11 +17,10 @@
 
 namespace fs {
 
-// A generic task executor, capable of running only when work is available until
-// destroyed. Tasks added to the BackgroundExecutor are executed on a single thread.
+// A generic task executor, capable of running only when work is available until destroyed. Tasks
+// added to the BackgroundExecutor are executed on a single thread.
 //
-// This class is not assignable, copyable, or moveable.
-// This class is thread-safe.
+// This class is not assignable, copyable, or moveable. This class is thread-safe.
 class BackgroundExecutor final : public fit::executor {
  public:
   BackgroundExecutor();
@@ -35,8 +34,8 @@ class BackgroundExecutor final : public fit::executor {
   //
   // All tasks scheduled to |BackgroundExecutor| via this method are not serialized.
   //
-  // Serialization may be enforced by wrapping incoming objects with a fit::sequencer
-  // object, if desired.
+  // Serialization may be enforced by wrapping incoming objects with a fit::sequencer object, if
+  // desired.
   void schedule_task(fit::pending_task task) final { executor_.schedule_task(std::move(task)); }
 
  private:
@@ -50,12 +49,12 @@ class BackgroundExecutor final : public fit::executor {
   // Used infrequently -- only on setup and teardown.
   std::mutex lock_;
 
-  // An "always scheduled" suspended task, which is resumed during destruction
-  // to finish running all tasks and then exit.
+  // An "always scheduled" suspended task, which is resumed during destruction to finish running all
+  // tasks and then exit.
   fit::suspended_task terminate_ FS_TA_GUARDED(lock_);
   bool should_terminate_ FS_TA_GUARDED(lock_) = false;
 };
 
 }  // namespace fs
 
-#endif  // FS_JOURNAL_BACKGROUND_EXECUTOR_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_BACKGROUND_EXECUTOR_H_

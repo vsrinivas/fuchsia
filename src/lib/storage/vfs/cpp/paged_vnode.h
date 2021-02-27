@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_PAGED_VNODE_H_
-#define FS_PAGED_VNODE_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_PAGED_VNODE_H_
+#define SRC_LIB_STORAGE_VFS_CPP_PAGED_VNODE_H_
 
 #include <lib/async/cpp/wait.h>
 
 #include "src/lib/storage/vfs/cpp/locking.h"
+#include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
 namespace fs {
-
-class PagedVfs;
 
 // A Vnode that supports paged I/O.
 //
@@ -100,4 +99,4 @@ class PagedVnode : public Vnode {
 
 }  // namespace fs
 
-#endif  // FS_PAGED_VNODE_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_PAGED_VNODE_H_

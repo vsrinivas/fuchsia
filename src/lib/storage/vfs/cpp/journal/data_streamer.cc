@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/journal/data_streamer.h"
+
 #include <algorithm>
 #include <utility>
 #include <vector>
 
-#include "src/lib/storage/vfs/cpp/journal/data_streamer.h"
 #include <storage/operation/unbuffered_operation.h>
 
 namespace fs {
@@ -17,9 +18,8 @@ void DataStreamer::StreamData(storage::UnbufferedOperation operation) {
   while (operation.op.length > 0) {
     const uint64_t delta_blocks = std::min(operation.op.length, max_chunk_blocks);
 
-    // If enqueueing these blocks could push us past the writeback buffer capacity
-    // when combined with all previous writes, break this transaction into a smaller
-    // chunk first.
+    // If enqueueing these blocks could push us past the writeback buffer capacity when combined
+    // with all previous writes, break this transaction into a smaller chunk first.
     if (operations_.BlockCount() + delta_blocks > max_chunk_blocks) {
       IssueOperations();
     }
@@ -35,8 +35,8 @@ void DataStreamer::StreamData(storage::UnbufferedOperation operation) {
 }
 
 fs::Journal::Promise DataStreamer::Flush() {
-  // Issue locally buffered operations, to ensure that all data passed through |StreamData()|
-  // has been issued to the executor.
+  // Issue locally buffered operations, to ensure that all data passed through |StreamData()| has
+  // been issued to the executor.
   IssueOperations();
 
   // Return the joined result of all data operations that have been issued.

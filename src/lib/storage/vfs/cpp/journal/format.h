@@ -4,8 +4,8 @@
 
 // This file describes the on-disk structure of a journal.
 
-#ifndef FS_JOURNAL_FORMAT_H_
-#define FS_JOURNAL_FORMAT_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_FORMAT_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_FORMAT_H_
 
 #include <assert.h>
 #include <stdbool.h>
@@ -72,8 +72,8 @@ struct JournalPrefix {
 
   // Must be |kJournalMagic|.
   uint64_t magic;
-  // A monotonically increasing value. This entry will only be replayed if the JournalInfo
-  // block contains a sequence number less than or equal to this value.
+  // A monotonically increasing value. This entry will only be replayed if the JournalInfo block
+  // contains a sequence number less than or equal to this value.
   uint64_t sequence_number;
   // Identifies the type of this journal object. See |GetJournalObjectType()|.
   uint64_t flags;
@@ -85,8 +85,8 @@ constexpr uint32_t kMaxBlockDescriptors = 679;
 
 // Flags for JournalHeaderBlock.target_flags:
 
-// Identifies that the journaled block begins with |kJournalEntryMagic|, which are replaced
-// with zeros to avoid confusing replay logic.
+// Identifies that the journaled block begins with |kJournalEntryMagic|, which are replaced with
+// zeros to avoid confusing replay logic.
 constexpr uint32_t kJournalBlockDescriptorFlagEscapedBlock = 1;
 
 struct JournalHeaderBlock {
@@ -111,4 +111,4 @@ static_assert(sizeof(JournalCommitBlock) <= kJournalBlockSize, "Commit Block is 
 
 }  // namespace fs
 
-#endif  // FS_JOURNAL_FORMAT_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_FORMAT_H_

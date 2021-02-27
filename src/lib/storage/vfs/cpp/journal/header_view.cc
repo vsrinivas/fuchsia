@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/journal/header_view.h"
+
 #include <lib/cksum.h>
 #include <string.h>
-
-#include "src/lib/storage/vfs/cpp/journal/header_view.h"
 
 namespace fs {
 
 namespace {
 
-// Returns true if the |header| has kJournalEntryMagic as magic number and matches
-// the |sequence_number|
+// Returns true if the |header| has kJournalEntryMagic as magic number and matches the
+// |sequence_number|
 bool IsJournalMetadata(const JournalHeaderBlock* header, uint64_t sequence_number) {
   if (header->prefix.magic != kJournalEntryMagic) {
     return false;
@@ -23,8 +23,8 @@ bool IsJournalMetadata(const JournalHeaderBlock* header, uint64_t sequence_numbe
   return true;
 }
 
-// Returns true if the |header| IsJournalMetadata and is of type JournalObjectType::kHeader
-// or JournalObjectType::kRevocation.
+// Returns true if the |header| IsJournalMetadata and is of type JournalObjectType::kHeader or
+// JournalObjectType::kRevocation.
 bool IsHeader(const JournalHeaderBlock* header, uint64_t sequence_number) {
   if (!IsJournalMetadata(header, sequence_number)) {
     return false;

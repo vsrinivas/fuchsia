@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_TRANSACTION_TRANSACTION_HANDLER_H_
-#define FS_TRANSACTION_TRANSACTION_HANDLER_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_TRANSACTION_HANDLER_H_
+#define SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_TRANSACTION_HANDLER_H_
 
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
@@ -26,8 +26,8 @@ inline void* GetBlock(uint64_t block_size, const void* data, uint64_t blkno) {
                                  static_cast<uintptr_t>(block_size * blkno));
 }
 
-// TransactionHandler defines the interface that must be fulfilled
-// for an entity to issue transactions to the underlying device.
+// TransactionHandler defines the interface that must be fulfilled for an entity to issue
+// transactions to the underlying device.
 class TransactionHandler {
  public:
   virtual ~TransactionHandler() = default;
@@ -43,12 +43,11 @@ class TransactionHandler {
   virtual zx_status_t RunOperation(const storage::Operation& operation,
                                    storage::BlockBuffer* buffer);
 
-  // Runs the provided operations against the backing block device.
-  // The values inside |operations| are expected to be filesystem-level block numbers.
-  // This method blocks until the operation completes, but the implementation for Fuchsia forwards
-  // the requests to the underlying BlockDevice so it is expected that this interface will be
-  // upgraded to be fully asynchronous at some point.
-  // The caller should use a BufferedOperationsBuilder to construct the request.
+  // Runs the provided operations against the backing block device. The values inside |operations|
+  // are expected to be filesystem-level block numbers. This method blocks until the operation
+  // completes, but the implementation for Fuchsia forwards the requests to the underlying
+  // BlockDevice so it is expected that this interface will be upgraded to be fully asynchronous at
+  // some point. The caller should use a BufferedOperationsBuilder to construct the request.
   virtual zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations) = 0;
 
   virtual zx_status_t Flush() { return ZX_ERR_NOT_SUPPORTED; }
@@ -56,4 +55,4 @@ class TransactionHandler {
 
 }  // namespace fs
 
-#endif  // FS_TRANSACTION_TRANSACTION_HANDLER_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_TRANSACTION_HANDLER_H_

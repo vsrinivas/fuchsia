@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/lib/storage/vfs/cpp/journal/superblock.h"
+
 #include <gtest/gtest.h>
 
 namespace fs {
@@ -28,8 +29,7 @@ class Buffer : public storage::BlockBuffer {
 class JournalSuperblockFixture : public testing::Test {
  public:
   void SetUp() override {
-    // Grab a backdoor to the Buffer object, so we can change it while the superblock has
-    // ownership.
+    // Grab a backdoor to the Buffer object, so we can change it while the superblock has ownership.
     buffer_ = std::make_unique<Buffer>();
     buffer_ptr_ = static_cast<uint8_t*>(buffer_->Data(0));
   }

@@ -8,9 +8,10 @@
 #include <type_traits>
 #include <utility>
 
+#include <zxtest/zxtest.h>
+
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
-#include <zxtest/zxtest.h>
 
 namespace {
 

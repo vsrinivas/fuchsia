@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/pager_thread_pool.h"
+
 #include <zircon/assert.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/syscalls/types.h>
 
 #include <fbl/auto_lock.h>
+
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
-#include "src/lib/storage/vfs/cpp/pager_thread_pool.h"
 
 namespace fs {
 

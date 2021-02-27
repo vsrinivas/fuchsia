@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 #include "src/lib/storage/vfs/cpp/mount_channel.h"
+
 #include "src/lib/storage/vfs/cpp/vfs.h"
 
 namespace fs {
 
 MountChannel::~MountChannel() {
   if (client_end_.is_valid()) {
-    // Note: this is best-effort, and would fail if the remote endpoint
-    // does not speak the |fuchsia.io/DirectoryAdmin| protocol.
+    // Note: this is best-effort, and would fail if the remote endpoint does not speak the
+    // |fuchsia.io/DirectoryAdmin| protocol.
     fidl::ClientEnd<llcpp::fuchsia::io::DirectoryAdmin> admin(client_end_.TakeChannel());
     Vfs::UnmountHandle(std::move(admin), zx::time::infinite());
   }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_TRANSACTION_TRACE_H_
-#define FS_TRANSACTION_TRACE_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_TRACE_H_
+#define SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_TRACE_H_
 
 #include <stdint.h>
 
@@ -19,4 +19,4 @@ uint64_t GenerateTraceId();
 
 }  // namespace fs
 
-#endif  // FS_TRANSACTION_TRACE_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_TRACE_H_

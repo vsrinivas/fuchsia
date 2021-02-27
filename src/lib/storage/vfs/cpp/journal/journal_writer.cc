@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/journal/journal_writer.h"
+
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/cpp/macros.h>
@@ -9,10 +11,9 @@
 
 #include <cstdio>
 
-#include "src/lib/storage/vfs/cpp/journal/journal_writer.h"
+#include "src/lib/storage/vfs/cpp/journal/entry_view.h"
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/lib/storage/vfs/cpp/transaction/writeback.h"
-#include "src/lib/storage/vfs/cpp/journal/entry_view.h"
 
 namespace fs {
 namespace {
@@ -42,9 +43,8 @@ fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterWriteData);
   uint32_t block_count = 0;
 
-  // If any of the data operations we're about to write overlap with in-flight metadata
-  // operations, then we risk those metadata operations "overwriting" our data blocks
-  // on replay.
+  // If any of the data operations we're about to write overlap with in-flight metadata operations,
+  // then we risk those metadata operations "overwriting" our data blocks on replay.
   //
   // Before writing data, identify that those metadata blocks should not be replayed.
   for (const auto& operation : work.operations) {
@@ -53,11 +53,11 @@ fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
     if (live_metadata_operations_.Overlaps(range)) {
       // TODO(smklein): Write "real" revocation records instead of merely updating the info block.
       //
-      // Currently, writing the info block is sufficient to "avoid metadata replay", but this
-      // is only the case because the JournalWriter is synchronous, single-threaded, and
-      // non-caching. If we enable asynchronous writeback, emitting revocation records
-      // may be a more desirable option than "blocking until all prior operations complete,
-      // then blocking on writing the info block".
+      // Currently, writing the info block is sufficient to "avoid metadata replay", but this is
+      // only the case because the JournalWriter is synchronous, single-threaded, and non-caching.
+      // If we enable asynchronous writeback, emitting revocation records may be a more desirable
+      // option than "blocking until all prior operations complete, then blocking on writing the
+      // info block".
       zx_status_t status = WriteInfoBlock();
       if (status != ZX_OK) {
         FX_LOGST(WARNING, "journal") << "Failed to write data: " << zx_status_get_string(status);
@@ -191,8 +191,8 @@ zx_status_t JournalWriter::WriteMetadataToJournal(JournalWorkItem* work) {
 }
 
 zx_status_t JournalWriter::WriteInfoBlockIfIntersect(uint64_t block_count) {
-  // We need to write the info block now if [journal tail, journal tail + block_count)
-  // intersects with [journal head, journal tail).
+  // We need to write the info block now if [journal tail, journal tail + block_count) intersects
+  // with [journal head, journal tail).
   //
   // Logically, the journal is a circular buffer:
   //
@@ -204,9 +204,8 @@ zx_status_t JournalWriter::WriteInfoBlockIfIntersect(uint64_t block_count) {
   //           |                 |
   //   [ ____, head, data, tail, ____, ____ ]
   //
-  // In this diagram, it would be safe to write one, two, or three additional blocks:
-  // they would fit within the journal. However, if four blocks are written, the journal
-  // would "eat its own head":
+  // In this diagram, it would be safe to write one, two, or three additional blocks: they would fit
+  // within the journal. However, if four blocks are written, the journal would "eat its own head":
   //
   //           Info Block
   //           |
@@ -214,9 +213,9 @@ zx_status_t JournalWriter::WriteInfoBlockIfIntersect(uint64_t block_count) {
   //           |
   //           Collision!
   //
-  // If power failure occurred, replay would be unable to parse prior entries, since the
-  // start block would point to an invalid entry. However, if we also wrote the info block
-  // repeatedly, the journaling code would incur a significant write amplification cost.
+  // If power failure occurred, replay would be unable to parse prior entries, since the start block
+  // would point to an invalid entry. However, if we also wrote the info block repeatedly, the
+  // journaling code would incur a significant write amplification cost.
   //
   // To compromise, we write the info block before any writes that would trigger this collision.
   const uint64_t head = journal_superblock_.start();
@@ -254,8 +253,8 @@ zx_status_t JournalWriter::WriteInfoBlockIfIntersect(uint64_t block_count) {
 }
 
 zx_status_t JournalWriter::WriteInfoBlock() {
-  // Before writing the info block, we must make sure any previous metadata writes have been
-  // flushed because the journal can't replay those writes after writing the info block.
+  // Before writing the info block, we must make sure any previous metadata writes have been flushed
+  // because the journal can't replay those writes after writing the info block.
   while (!pending_work_items_.empty() || pending_flush_) {
     if (auto result = Flush(); result.is_error()) {
       return result.take_error();

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_FS_JOURNAL_REPLAY_TREE_H_
-#define ZIRCON_SYSTEM_ULIB_FS_JOURNAL_REPLAY_TREE_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_REPLAY_TREE_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_REPLAY_TREE_H_
 
-#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
 #include <range/interval-tree.h>
 #include <range/range.h>
 #include <storage/operation/operation.h>
+
+#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
 
 namespace fs {
 namespace internal {
@@ -47,9 +48,8 @@ using BufferedOperationTree = range::IntervalTree<BufferedOperationRange>;
 
 }  // namespace internal
 
-// A tree which enables a caller to collect BufferedOperation objects
-// used during journal replay. On insertion, the tree is updated
-// to use the "latest" operation targetting a particular block.
+// A tree which enables a caller to collect BufferedOperation objects used during journal replay. On
+// insertion, the tree is updated to use the "latest" operation targetting a particular block.
 class ReplayTree {
  public:
   using IterType = typename internal::BufferedOperationTree::IterType;
@@ -59,10 +59,9 @@ class ReplayTree {
 
   // Inserts an operation into the replay tree.
   //
-  // First, removes all overlapping prior operations which target the same
-  // device offset, and then inserts |operation|. This ensures that the "latest
-  // operation touching block B" will be the only operation from replay targetting
-  // that block.
+  // First, removes all overlapping prior operations which target the same device offset, and then
+  // inserts |operation|. This ensures that the "latest operation touching block B" will be the only
+  // operation from replay targetting that block.
   void insert(storage::BufferedOperation operation);
 
   void clear() { tree_.clear(); }
@@ -85,4 +84,4 @@ class ReplayTree {
 
 }  // namespace fs
 
-#endif  // ZIRCON_SYSTEM_ULIB_FS_JOURNAL_REPLAY_TREE_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_REPLAY_TREE_H_

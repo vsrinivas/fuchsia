@@ -17,11 +17,12 @@
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/unique_fd.h>
+#include <zxtest/zxtest.h>
+
 #include "src/lib/storage/vfs/cpp/connection.h"
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/lib/storage/vfs/cpp/paged_vnode.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include <zxtest/zxtest.h>
 
 namespace fs {
 
@@ -245,7 +246,6 @@ class PagingTest : public zxtest::Test {
   std::unique_ptr<PagedVfs> vfs_;
 
   fbl::RefPtr<PseudoDir> root_;
-
 };
 
 template <typename T>

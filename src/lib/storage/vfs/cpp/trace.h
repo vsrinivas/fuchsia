@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_TRACE_H_
-#define FS_TRACE_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_TRACE_H_
+#define SRC_LIB_STORAGE_VFS_CPP_TRACE_H_
 
 #include <stdio.h>
 
 #ifdef __Fuchsia__
 #include <lib/trace/event.h>
 #else
-// TODO(fxbug.dev/31305): If ulib/trace defines a no-op
-// version of these macros, we won't need to.
+// TODO(fxbug.dev/31305): If ulib/trace defines a no-op version of these macros, we won't need to.
 //
 // Redefine tracing macros as no-ops for host-side tools
 #define TRACE_DURATION(args...)
@@ -34,4 +33,4 @@ constexpr bool trace_debug_enabled() {
 
 }  // namespace fs
 
-#endif  // FS_TRACE_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_TRACE_H_

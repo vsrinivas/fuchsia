@@ -6,10 +6,11 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
+#include <fuzzer/FuzzedDataProvider.h>
+
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vmo_file.h"
-#include <fuzzer/FuzzedDataProvider.h>
 
 static const size_t kMaxVmoSz = 1024 * 1024 * 40;
 static const size_t kMaxWriteSz = 4096;
@@ -38,8 +39,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   size_t bytes_written = 0;
   size_t bytes_read = 0;
 
-  // This is defined before the to_write variable so that we don't have to worry
-  // about fuzzed_data running out of bytes.
+  // This is defined before the to_write variable so that we don't have to worry about fuzzed_data
+  // running out of bytes.
   fs::Rights rights;
   rights.raw_value = fuzzed_data.ConsumeIntegral<uint32_t>();
 

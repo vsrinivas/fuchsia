@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/connection.h"
+
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/io.h>
@@ -22,8 +24,8 @@
 #include <utility>
 
 #include <fbl/string_buffer.h>
+
 #include "src/lib/storage/vfs/cpp/debug.h"
-#include "src/lib/storage/vfs/cpp/connection.h"
 #include "src/lib/storage/vfs/cpp/fidl_transaction.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
@@ -82,11 +84,11 @@ zx_status_t EnforceHierarchicalRights(Rights parent_rights, VnodeConnectionOptio
   if (child_options.flags.posix) {
     if (!parent_rights.write && !child_options.rights.write && !parent_rights.execute &&
         !child_options.rights.execute) {
-      // Posix compatibility flag allows the child dir connection to inherit every right from
-      // its immediate parent. Here we know there exists a read-only directory somewhere along
-      // the Open() chain, so remove this flag to rid the child connection the ability to
-      // inherit read-write right from e.g. crossing a read-write mount point
-      // down the line, or similarly with the execute right.
+      // Posix compatibility flag allows the child dir connection to inherit every right from its
+      // immediate parent. Here we know there exists a read-only directory somewhere along the
+      // Open() chain, so remove this flag to rid the child connection the ability to inherit
+      // read-write right from e.g. crossing a read-write mount point down the line, or similarly
+      // with the execute right.
       child_options.flags.posix = false;
     }
   }
@@ -122,8 +124,8 @@ Connection::~Connection() {
   // Invoke a "close" call on the underlying vnode if we haven't already.
   EnsureVnodeClosed();
 
-  // Release the token associated with this connection's vnode since the connection
-  // will be releasing the vnode's reference once this function returns.
+  // Release the token associated with this connection's vnode since the connection will be
+  // releasing the vnode's reference once this function returns.
   if (token_) {
     vfs_->TokenDiscard(std::move(token_));
   }
@@ -136,16 +138,16 @@ void Connection::AsyncTeardown() {
 }
 
 void Binding::AsyncTeardown() {
-  // This will wake up the dispatcher to call |Binding::HandleSignals|
-  // and eventually result in |Connection::SyncTeardown|.
+  // This will wake up the dispatcher to call |Binding::HandleSignals| and eventually result in
+  // |Connection::SyncTeardown|.
   ZX_ASSERT(channel_.signal(0, kLocalTeardownSignal) == ZX_OK);
 }
 
 void Connection::UnmountAndShutdown(fit::callback<void(zx_status_t)> callback) {
   vfs_->UninstallAll(zx::time::infinite());
-  // We need the binding to live on in order to make a reply to this FIDL request.
-  // However, the connection object may be destroyed before the binding. We need to
-  // stop the binding from monitoring further incoming FIDL messages.
+  // We need the binding to live on in order to make a reply to this FIDL request. However, the
+  // connection object may be destroyed before the binding. We need to stop the binding from
+  // monitoring further incoming FIDL messages.
   binding_->DetachFromConnection();
   Vfs::ShutdownCallback closure([binding = std::move(binding_), callback = std::move(callback)](
                                     zx_status_t status) mutable { callback(status); });
@@ -195,8 +197,8 @@ void Binding::DetachFromConnection() {
 void Binding::HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                             zx_status_t status, const zx_packet_signal_t* signal) {
   if (!connection_) {
-    // Before a |Connection| is destructed, it will clear this pointer
-    // in its corresponding |Binding| by calling |DetachFromConnection|.
+    // Before a |Connection| is destructed, it will clear this pointer in its corresponding
+    // |Binding| by calling |DetachFromConnection|.
     return;
   }
   if (status != ZX_OK || !(signal->observed & ZX_CHANNEL_READABLE)) {
@@ -211,9 +213,8 @@ void Binding::HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wai
 
 bool Connection::OnMessage() {
   if (vfs_->IsTerminating()) {
-    // Short-circuit locally destroyed connections, rather than servicing
-    // requests on their behalf. This prevents new requests from being
-    // served while filesystems are torn down.
+    // Short-circuit locally destroyed connections, rather than servicing requests on their behalf.
+    // This prevents new requests from being served while filesystems are torn down.
     return false;
   }
   if (closing_) {
@@ -257,15 +258,15 @@ bool Connection::OnMessage() {
       // If we get here, the message was successfully handled, synchronously.
       return binding->StartDispatching() == ZX_OK;
     case FidlTransaction::Result::kPendingAsyncReply:
-      // If we get here, the transaction was converted to an async one.
-      // Dispatching will be resumed by the transaction when it is completed.
+      // If we get here, the transaction was converted to an async one. Dispatching will be resumed
+      // by the transaction when it is completed.
       return true;
     case FidlTransaction::Result::kClosed:
       return false;
   }
 #ifdef __GNUC__
-  // GCC does not infer that the above switch statement will always return by
-  // handling all defined enum members.
+  // GCC does not infer that the above switch statement will always return by handling all defined
+  // enum members.
   __builtin_abort();
 #endif
 }
@@ -274,9 +275,8 @@ void Connection::SyncTeardown() {
   EnsureVnodeClosed();
   binding_.reset();
 
-  // Tell the VFS that the connection closed remotely.
-  // This might have the side-effect of destroying this object,
-  // so this must be the last statement.
+  // Tell the VFS that the connection closed remotely. This might have the side-effect of destroying
+  // this object, so this must be the last statement.
   vfs_->OnConnectionClosedRemotely(this);
 }
 
@@ -311,8 +311,8 @@ void Connection::NodeClone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> chan
   // These two flags are always preserved.
   clone_options.flags.append = options().flags.append;
   clone_options.flags.node_reference = options().flags.node_reference;
-  // If CLONE_SAME_RIGHTS is requested, cloned connection will inherit the same rights
-  // as those from the originating connection.
+  // If CLONE_SAME_RIGHTS is requested, cloned connection will inherit the same rights as those from
+  // the originating connection.
   if (clone_options.flags.clone_same_rights) {
     clone_options.rights = options().rights;
   }

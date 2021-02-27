@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_MANAGED_VFS_H_
-#define FS_MANAGED_VFS_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_MANAGED_VFS_H_
+#define SRC_LIB_STORAGE_VFS_CPP_MANAGED_VFS_H_
 
 #ifndef __Fuchsia__
 #error "Fuchsia-only header"
@@ -18,6 +18,7 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_double_list.h>
+
 #include "src/lib/storage/vfs/cpp/connection.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 
@@ -54,13 +55,12 @@ class ManagedVfs : public Vfs {
   // Posts the task for OnShutdownComplete if it is safe to do so.
   void CheckForShutdownComplete() __TA_REQUIRES(lock_);
 
-  // Identifies if the filesystem has fully terminated, and is
-  // ready for "OnShutdownComplete" to execute.
+  // Identifies if the filesystem has fully terminated, and is ready for "OnShutdownComplete" to
+  // execute.
   bool IsTerminated() const __TA_REQUIRES(lock_);
 
-  // Invokes the handler from |Shutdown| once all connections have been
-  // released. Additionally, unmounts all sub-mounted filesystems, if any
-  // exist.
+  // Invokes the handler from |Shutdown| once all connections have been released. Additionally,
+  // unmounts all sub-mounted filesystems, if any exist.
   void OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_status_t status)
       __TA_EXCLUDES(lock_);
 
@@ -85,4 +85,4 @@ class ManagedVfs : public Vfs {
 
 }  // namespace fs
 
-#endif  // FS_MANAGED_VFS_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_MANAGED_VFS_H_

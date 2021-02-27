@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/vfs.h"
+
 #include <lib/fdio/watcher.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,8 +15,8 @@
 #include <vector>
 
 #include <fbl/auto_call.h>
+
 #include "src/lib/storage/vfs/cpp/debug.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
 #ifdef __Fuchsia__
@@ -26,12 +28,13 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
+
 #include "src/lib/storage/vfs/cpp/connection.h"
 #include "src/lib/storage/vfs/cpp/directory_connection.h"
+#include "src/lib/storage/vfs/cpp/mount_channel.h"
 #include "src/lib/storage/vfs/cpp/node_connection.h"
 #include "src/lib/storage/vfs/cpp/remote_file_connection.h"
 #include "src/lib/storage/vfs/cpp/stream_file_connection.h"
-#include "src/lib/storage/vfs/cpp/mount_channel.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 
@@ -40,8 +43,8 @@ namespace fio = ::llcpp::fuchsia::io;
 namespace fs {
 namespace {
 
-// Trim a name before sending it to internal filesystem functions.
-// Trailing '/' characters imply that the name must refer to a directory.
+// Trim a name before sending it to internal filesystem functions. Trailing '/' characters imply
+// that the name must refer to a directory.
 zx_status_t TrimName(fbl::StringPiece name, fbl::StringPiece* name_out, bool* dir_out) {
   size_t len = name.length();
   bool is_dir = false;
@@ -76,8 +79,7 @@ zx_status_t LookupNode(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, fbl::RefPtr
   return vn->Lookup(name, out);
 }
 
-// Validate open flags as much as they can be validated
-// independently of the target node.
+// Validate open flags as much as they can be validated independently of the target node.
 zx_status_t PrevalidateOptions(VnodeConnectionOptions options) {
   if (!options.rights.write) {
     if (options.flags.truncate) {
@@ -99,8 +101,8 @@ Vfs::~Vfs() {
   // Keep owning references to each vnode in case the callbacks cause any nodes to be deleted.
   std::vector<fbl::RefPtr<Vnode>> nodes_to_notify;
   {
-    // This lock should not be necessary since the destructor should be single-threaded but is
-    // good for completeness.
+    // This lock should not be necessary since the destructor should be single-threaded but is good
+    // for completeness.
     std::lock_guard<std::mutex> lock(vfs_lock_);
     nodes_to_notify.reserve(live_nodes_.size());
     for (auto& node_ptr : live_nodes_)
@@ -188,11 +190,11 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
     // Save this before modifying |options| below.
     bool admin = options.rights.admin;
 
-    // This is such that POSIX open() can open a directory with O_RDONLY, and
-    // still get the write/execute right if the parent directory connection has the
-    // write/execute right respectively.  With the execute right in particular, the resulting
-    // connection may be passed to fdio_get_vmo_exec() which requires the execute right.
-    // This transfers write and execute from the parent, if present.
+    // This is such that POSIX open() can open a directory with O_RDONLY, and still get the
+    // write/execute right if the parent directory connection has the write/execute right
+    // respectively.  With the execute right in particular, the resulting connection may be passed
+    // to fdio_get_vmo_exec() which requires the execute right. This transfers write and execute
+    // from the parent, if present.
     auto inheritable_rights = Rights::WriteExec();
     options.rights |= parent_rights & inheritable_rights;
 
@@ -204,8 +206,8 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
     return validated_options.error();
   }
 
-  // |node_reference| requests that we don't actually open the underlying Vnode,
-  // but use the connection as a reference to the Vnode.
+  // |node_reference| requests that we don't actually open the underlying Vnode, but use the
+  // connection as a reference to the Vnode.
   if (!options.flags.node_reference && !just_created) {
     if ((r = OpenVnode(validated_options.value(), &vn)) != ZX_OK) {
       return r;
@@ -246,8 +248,8 @@ zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
       return LookupNode(std::move(vndir), path, out_vn);
     }
     if (status == ZX_ERR_NOT_SUPPORTED) {
-      // filesystem may not support create (like devfs)
-      // in which case we should still try to open() the file
+      // Filesystem may not support create (like devfs) in which case we should still try to open()
+      // the file,
       return LookupNode(std::move(vndir), path, out_vn);
     }
     return status;
@@ -319,11 +321,11 @@ void Vfs::TokenDiscard(zx::event ios_token) {
     // 1) Open
     // 2) GetToken
     // 3) Close + Release Vnode
-    // 4) Use token handle to access defunct vnode (or a different vnode,
-    //    if the memory for it is reallocated).
+    // 4) Use token handle to access defunct vnode (or a different vnode, if the memory for it is
+    //    reallocated).
     //
-    // By cleared the token cookie, any remaining handles to the event will
-    // be ignored by the filesystem server.
+    // By cleared the token cookie, any remaining handles to the event will be ignored by the
+    // filesystem server.
     auto rename_request = vnode_tokens_.erase(GetTokenKoid(ios_token));
   }
 }
@@ -494,17 +496,16 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode,
       return result.error();
     }
     ConvertToIoV1NodeInfo(result.take_value(), [&](fio::NodeInfo&& info) {
-      // The channel may switch from |Node| protocol back to a custom protocol,
-      // after sending the event, in the case of |VnodeProtocol::kConnector|.
+      // The channel may switch from |Node| protocol back to a custom protocol, after sending the
+      // event, in the case of |VnodeProtocol::kConnector|.
       fio::Node::EventSender event_sender{std::move(server_end)};
       event_sender.OnOpen(ZX_OK, std::move(info));
       server_end = std::move(event_sender.server_end());
     });
   }
 
-  // If |node_reference| is specified, serve |fuchsia.io/Node| even for
-  // |VnodeProtocol::kConnector| nodes. Otherwise, connect the raw channel
-  // to the custom service.
+  // If |node_reference| is specified, serve |fuchsia.io/Node| even for |VnodeProtocol::kConnector|
+  // nodes. Otherwise, connect the raw channel to the custom service.
   if (!options->flags.node_reference && protocol == VnodeProtocol::kConnector) {
     return vnode->ConnectService(server_end.TakeChannel());
   }
@@ -549,8 +550,8 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode,
         ZX_PANIC("fuchsia.posix.socket/StreamSocket is not implemented");
     }
 #ifdef __GNUC__
-    // GCC does not infer that the above switch statement will always return by
-    // handling all defined enum members.
+    // GCC does not infer that the above switch statement will always return by handling all defined
+    // enum members.
     __builtin_abort();
 #endif
   }());

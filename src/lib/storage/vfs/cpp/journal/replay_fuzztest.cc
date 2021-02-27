@@ -5,9 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "src/lib/storage/vfs/cpp/journal/replay.h"
-
 #include "fuzzer_utils.h"
+#include "src/lib/storage/vfs/cpp/journal/replay.h"
 
 namespace fs {
 namespace {

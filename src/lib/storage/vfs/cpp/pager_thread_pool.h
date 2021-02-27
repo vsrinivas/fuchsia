@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_PAGER_THREAD_POOL_H_
-#define FS_PAGER_THREAD_POOL_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_PAGER_THREAD_POOL_H_
+#define SRC_LIB_STORAGE_VFS_CPP_PAGER_THREAD_POOL_H_
 
 #include <lib/zx/port.h>
 #include <lib/zx/status.h>
@@ -53,4 +53,4 @@ class PagerThreadPool {
 
 }  // namespace fs
 
-#endif  // FS_PAGER_THREAD_POOL_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_PAGER_THREAD_POOL_H_

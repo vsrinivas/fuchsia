@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_PSEUDO_DIR_H_
-#define FS_PSEUDO_DIR_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_PSEUDO_DIR_H_
+#define SRC_LIB_STORAGE_VFS_CPP_PSEUDO_DIR_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
 
@@ -20,22 +20,21 @@
 
 namespace fs {
 
-// A pseudo-directory is a directory-like object whose entries are constructed
-// by a program at runtime.  The client can lookup, enumerate, and watch these
-// directory entries but it cannot create, remove, or rename them.
+// A pseudo-directory is a directory-like object whose entries are constructed by a program at
+// runtime.  The client can lookup, enumerate, and watch these directory entries but it cannot
+// create, remove, or rename them.
 //
-// This class is designed to allow programs to publish a relatively small number
-// of entries (up to a few dozen) such as services, file-system roots,
-// debugging pseudo-files, or other vnodes.  It is not suitable for very large
-// directories (hundreds of entries).
+// This class is designed to allow programs to publish a relatively small number of entries (up to a
+// few dozen) such as services, file-system roots, debugging pseudo-files, or other vnodes.  It is
+// not suitable for very large directories (hundreds of entries).
 //
 // This class is thread-safe.
 class PseudoDir : public Vnode {
  public:
   // Construct with fbl::MakeRefCounted.
 
-  // Adds a directory entry associating the given |name| with |vn|.
-  // It is ok to add the same Vnode multiple times with different names.
+  // Adds a directory entry associating the given |name| with |vn|. It is ok to add the same Vnode
+  // multiple times with different names.
   //
   // Returns |ZX_OK| on success.
   // Returns |ZX_ERR_ALREADY_EXISTS| if there is already a node with the given name.
@@ -51,16 +50,14 @@ class PseudoDir : public Vnode {
   // that the target vnode is |vn|.
   //
   // Returns |ZX_OK| on success.
-  // Returns |ZX_ERR_NOT_FOUND| if there is no node with the given name/vn
-  // pair.
+  // Returns |ZX_ERR_NOT_FOUND| if there is no node with the given name/vn pair.
   zx_status_t RemoveEntry(fbl::StringPiece name, fs::Vnode* vn);
 
   // Removes all directory entries.
   void RemoveAllEntries();
 
-  // Checks if directory is empty.
-  // Be careful while using this function if using this Dir in multiple
-  // threads.
+  // Checks if directory is empty. Be careful while using this function if using this Dir in
+  // multiple threads.
   bool IsEmpty() const;
 
   // |Vnode| implementation:
@@ -135,4 +132,4 @@ class PseudoDir : public Vnode {
 
 }  // namespace fs
 
-#endif  // FS_PSEUDO_DIR_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_PSEUDO_DIR_H_

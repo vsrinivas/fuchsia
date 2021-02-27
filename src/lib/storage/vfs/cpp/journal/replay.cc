@@ -2,28 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/journal/replay.h"
+
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
 
 #include <optional>
 
 #include <fbl/vector.h>
-#include "src/lib/storage/vfs/cpp/journal/format.h"
-#include "src/lib/storage/vfs/cpp/journal/replay.h"
-#include "src/lib/storage/vfs/cpp/journal/superblock.h"
-#include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"
 #include <storage/operation/operation.h>
 
 #include "entry_view.h"
 #include "lib/zx/status.h"
 #include "replay_tree.h"
+#include "src/lib/storage/vfs/cpp/journal/format.h"
+#include "src/lib/storage/vfs/cpp/journal/superblock.h"
+#include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"
 
 namespace fs {
 namespace {
 
-// Reads and validates the length of the entry from a header.
-// Ensures the payload length is not zero, and that the entry length does not overflow
-// the journal buffer.
+// Reads and validates the length of the entry from a header. Ensures the payload length is not
+// zero, and that the entry length does not overflow the journal buffer.
 uint64_t ParseEntryLength(const storage::VmoBuffer* journal_buffer,
                           const JournalHeaderView& header) {
   uint64_t entry_length = 0;
@@ -75,8 +75,8 @@ std::optional<const JournalEntryView> ParseEntry(storage::VmoBuffer* journal_buf
 
   // Decode any blocks within the entry which were previously encoded (escaped).
   //
-  // This way, the internal details of on-disk journal storage are hidden from the public
-  // API of parsing entries.
+  // This way, the internal details of on-disk journal storage are hidden from the public API of
+  // parsing entries.
   entry_view.DecodePayloadBlocks();
 
   return entry_view;
@@ -138,9 +138,9 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
     sequence_number = entry->header().SequenceNumber() + 1;
   }
 
-  // Now that we've finished replaying entries, return the next sequence_number to use.
-  // It is the responsibility of the caller to update the info block, but only after
-  // all prior operations have been replayed.
+  // Now that we've finished replaying entries, return the next sequence_number to use. It is the
+  // responsibility of the caller to update the info block, but only after all prior operations have
+  // been replayed.
   *out_sequence_number = sequence_number;
   *out_start = entry_start;
 

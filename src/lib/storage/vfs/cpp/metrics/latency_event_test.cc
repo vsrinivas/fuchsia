@@ -7,9 +7,10 @@
 
 #include <vector>
 
+#include <zxtest/zxtest.h>
+
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/lib/storage/vfs/cpp/metrics/histograms.h"
-#include <zxtest/zxtest.h>
 
 namespace fs_metrics {
 namespace {

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/sync/completion.h>
@@ -10,7 +12,6 @@
 #include <utility>
 
 #include <fbl/auto_call.h>
-#include "src/lib/storage/vfs/cpp/managed_vfs.h"
 
 namespace fs {
 
@@ -37,8 +38,8 @@ void ManagedVfs::Shutdown(ShutdownCallback handler) {
 
         UninstallAll(zx::time::infinite());
 
-        // Signal the teardown on channels in a way that doesn't potentially
-        // pull them out from underneath async callbacks.
+        // Signal the teardown on channels in a way that doesn't potentially pull them out from
+        // underneath async callbacks.
         for (auto& c : connections_) {
           c.AsyncTeardown();
         }
@@ -117,9 +118,8 @@ void ManagedVfs::UnregisterConnection(internal::Connection* connection) {
     closing_connections_.erase(iter);
   }
 
-  // We drop the result of |erase| on the floor, effectively destroying the
-  // connection when all other references (like async callbacks) have
-  // completed.
+  // We drop the result of |erase| on the floor, effectively destroying the connection when all
+  // other references (like async callbacks) have completed.
   connections_.erase(*connection);
   CheckForShutdownComplete();
 

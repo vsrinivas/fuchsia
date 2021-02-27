@@ -7,8 +7,9 @@
 #include <initializer_list>
 
 #include <fbl/vector.h>
-#include "src/lib/storage/vfs/cpp/pseudo_file.h"
 #include <zxtest/zxtest.h>
+
+#include "src/lib/storage/vfs/cpp/pseudo_file.h"
 
 #define EXPECT_FSTR_EQ(expected, actual)                                                  \
   EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected.c_str()),                     \

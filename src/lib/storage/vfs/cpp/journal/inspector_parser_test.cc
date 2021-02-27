@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/journal/inspector_parser.h"
+
 #include <inttypes.h>
 
-#include "src/lib/storage/vfs/cpp/journal/format.h"
-#include "src/lib/storage/vfs/cpp/journal/inspector_parser.h"
 #include <gtest/gtest.h>
 #include <storage/buffer/array_buffer.h>
+
+#include "src/lib/storage/vfs/cpp/journal/format.h"
 
 namespace fs {
 namespace {

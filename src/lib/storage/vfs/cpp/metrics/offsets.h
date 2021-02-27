@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_LIB_STORAGE_VFS_CPP_METRICS_OFFSETS_H_
+#define SRC_LIB_STORAGE_VFS_CPP_METRICS_OFFSETS_H_
 
 #include <cstdint>
 #include <type_traits>
@@ -98,3 +99,5 @@ struct Offsets {
 };
 
 }  // namespace fs_metrics
+
+#endif  // SRC_LIB_STORAGE_VFS_CPP_METRICS_OFFSETS_H_

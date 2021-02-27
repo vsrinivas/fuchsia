@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_REMOTE_DIR_H_
-#define FS_REMOTE_DIR_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_REMOTE_DIR_H_
+#define SRC_LIB_STORAGE_VFS_CPP_REMOTE_DIR_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
 
@@ -13,15 +13,14 @@
 
 namespace fs {
 
-// A remote directory holds a channel to a remotely hosted directory to
-// which requests are delegated when opened.
+// A remote directory holds a channel to a remotely hosted directory to which requests are delegated
+// when opened.
 //
-// This class is designed to allow programs to publish remote filesystems
-// as directories without requiring a separate "mount" step.  In effect,
-// a remote directory is "mounted" at creation time.
+// This class is designed to allow programs to publish remote filesystems as directories without
+// requiring a separate "mount" step.  In effect, a remote directory is "mounted" at creation time.
 //
-// It is not possible for the client to detach the remote directory or
-// to mount a new one in its place.
+// It is not possible for the client to detach the remote directory or to mount a new one in its
+// place.
 //
 // This class is thread-safe.
 class RemoteDir : public Vnode {
@@ -40,8 +39,8 @@ class RemoteDir : public Vnode {
   friend fbl::internal::MakeRefCountedHelper<RemoteDir>;
   friend fbl::RefPtr<RemoteDir>;
 
-  // Binds to a remotely hosted directory using the specified FIDL client
-  // channel endpoint.  The channel must be valid.
+  // Binds to a remotely hosted directory using the specified FIDL client channel endpoint.  The
+  // channel must be valid.
   explicit RemoteDir(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> remote_dir_client);
 
   // Releases the remotely hosted directory.
@@ -55,4 +54,4 @@ class RemoteDir : public Vnode {
 
 }  // namespace fs
 
-#endif  // FS_REMOTE_DIR_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_REMOTE_DIR_H_

@@ -2,32 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_TRACKED_REMOTE_DIR_H_
-#define FS_TRACKED_REMOTE_DIR_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_TRACKED_REMOTE_DIR_H_
+#define SRC_LIB_STORAGE_VFS_CPP_TRACKED_REMOTE_DIR_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 
 #include <fbl/macros.h>
 #include <fbl/string.h>
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/lib/storage/vfs/cpp/remote_dir.h"
 
 #include "pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "vnode.h"
 
 namespace fs {
 
-// A remote directory which automatically removes itself once the remote channel
-// being tracked is closed.
+// A remote directory which automatically removes itself once the remote channel being tracked is
+// closed.
 //
 // This class is thread-compatible.
 class TrackedRemoteDir : public RemoteDir {
  public:
   // Adds |this| as an entry to |container| with the label |name|.
   //
-  // Begins monitoring |remote| (provided at construction-time) for |PEER_CLOSED|.
-  // When this signal is activated, the |name| entry is removed from |container|.
+  // Begins monitoring |remote| (provided at construction-time) for |PEER_CLOSED|. When this signal
+  // is activated, the |name| entry is removed from |container|.
   //
   // Returns |ZX_ERR_BAD_STATE| if this directory is already tracked.
   // Returns an error if an entry named |name| cannot be added to |container|.
@@ -56,4 +56,4 @@ class TrackedRemoteDir : public RemoteDir {
 
 }  // namespace fs
 
-#endif  // FS_TRACKED_REMOTE_DIR_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_TRACKED_REMOTE_DIR_H_

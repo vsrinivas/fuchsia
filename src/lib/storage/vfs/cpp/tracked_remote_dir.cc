@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/tracked_remote_dir.h"
+
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/string.h>
+
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
-#include "src/lib/storage/vfs/cpp/tracked_remote_dir.h"
 
 namespace fs {
 
@@ -43,8 +45,8 @@ void TrackedRemoteDir::HandleClose(async_dispatcher_t* dispatcher, async::WaitBa
                                    zx_status_t status, const zx_packet_signal_t* signal) {
   ZX_DEBUG_ASSERT(IsTracked());
   container_->RemoveEntry(name_, this);
-  // After we have removed ourself from the PseudoDirectory, we may have been deleted.
-  // Do not deference anything else within |this|.
+  // After we have removed ourself from the PseudoDirectory, we may have been deleted. Do not
+  // deference anything else within |this|.
 }
 
 bool TrackedRemoteDir::IsTracked() const { return container_ != nullptr; }

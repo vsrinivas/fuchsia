@@ -10,11 +10,12 @@
 #include <string.h>
 #include <zircon/device/block.h>
 
-#include "src/lib/storage/vfs/cpp/journal/format.h"
 #include <fuzzer/FuzzedDataProvider.h>
 #include <storage/buffer/blocking_ring_buffer.h>
 #include <storage/operation/operation.h>
 #include <storage/operation/unbuffered_operations_builder.h>
+
+#include "src/lib/storage/vfs/cpp/journal/format.h"
 
 namespace fs {
 

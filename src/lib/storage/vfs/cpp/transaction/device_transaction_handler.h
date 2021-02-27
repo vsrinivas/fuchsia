@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_TRANSACTION_DEVICE_TRANSACTION_HANDLER_H_
-#define FS_TRANSACTION_DEVICE_TRANSACTION_HANDLER_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_DEVICE_TRANSACTION_HANDLER_H_
+#define SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_DEVICE_TRANSACTION_HANDLER_H_
 
 #include <block-client/cpp/block-device.h>
+
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 
 namespace fs {
@@ -23,4 +24,4 @@ class DeviceTransactionHandler : public TransactionHandler {
 
 }  // namespace fs
 
-#endif  // FS_TRANSACTION_DEVICE_TRANSACTION_HANDLER_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_DEVICE_TRANSACTION_HANDLER_H_

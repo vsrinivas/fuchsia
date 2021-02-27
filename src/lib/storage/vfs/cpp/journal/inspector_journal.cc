@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <disk_inspector/common_types.h>
 #include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
+
+#include <disk_inspector/common_types.h>
 
 #include "inspector_journal_entries.h"
 

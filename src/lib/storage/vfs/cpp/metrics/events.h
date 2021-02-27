@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_METRICS_EVENTS_H_
-#define FS_METRICS_EVENTS_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_METRICS_EVENTS_H_
+#define SRC_LIB_STORAGE_VFS_CPP_METRICS_EVENTS_H_
 
 #include <cstdint>
 #include <iterator>
@@ -119,4 +119,4 @@ constexpr uint64_t kEventCount = kVnodeEventCount + kFsManagerEventCount + kJour
 
 }  // namespace fs_metrics
 
-#endif  // FS_METRICS_EVENTS_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_METRICS_EVENTS_H_

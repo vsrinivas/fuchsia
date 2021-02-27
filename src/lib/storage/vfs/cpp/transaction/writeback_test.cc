@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
+
 #include <zircon/assert.h>
 
-#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
 #include <gtest/gtest.h>
 
 namespace fs {
@@ -108,10 +109,9 @@ TEST(FlushRequestsTest, FlushManyRequests) {
   EXPECT_EQ(FlushRequests(&handler, operations), ZX_OK);
 }
 
-// This acts as a regression test against a previous implementation of
-// "FlushRequests", which could pop the stack with a large enough number
-// of requests. The new implementation utilizes heap allocation when necessary,
-// and should be able to withstand very large request counts.
+// This acts as a regression test against a previous implementation of "FlushRequests", which could
+// pop the stack with a large enough number of requests. The new implementation utilizes heap
+// allocation when necessary, and should be able to withstand very large request counts.
 TEST(FlushRequestsTest, FlushAVeryLargeNumberOfRequests) {
   static constexpr vmoid_t kVmoid = 7;
   static constexpr size_t kOperationCount = 10000;

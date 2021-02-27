@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_METRICS_INTERNAL_ATTRIBUTES_H_
-#define FS_METRICS_INTERNAL_ATTRIBUTES_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_METRICS_ATTRIBUTES_H_
+#define SRC_LIB_STORAGE_VFS_CPP_METRICS_ATTRIBUTES_H_
 
 #include <algorithm>
 #include <cstdint>
@@ -98,4 +98,4 @@ struct NumericAttribute<T, decltype(T::kBuckets[0])>;
 
 }  // namespace fs_metrics
 
-#endif  // FS_METRICS_INTERNAL_ATTRIBUTES_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_METRICS_ATTRIBUTES_H_

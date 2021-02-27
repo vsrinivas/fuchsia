@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/trace/event.h>
-
 #include "src/lib/storage/vfs/cpp/transaction/device_transaction_handler.h"
+
+#include <lib/trace/event.h>
 
 #include "trace.h"
 
@@ -44,12 +44,11 @@ zx_status_t DeviceTransactionHandler::RunRequests(
         default:
           ZX_DEBUG_ASSERT_MSG(false, "Unsupported operation");
       }
-      // For the time being, restrict a transaction to operations of the same type.
-      // This probably can be relaxed, as the concept of a transaction implies the
-      // operations take place logically at the same time, so even if there's a
-      // mix of reads and writes, it doesn't make sense to depend on the relative
-      // order of the operations, which is what could break with the merging done
-      // by the request builder.
+      // For the time being, restrict a transaction to operations of the same type. This probably
+      // can be relaxed, as the concept of a transaction implies the operations take place logically
+      // at the same time, so even if there's a mix of reads and writes, it doesn't make sense to
+      // depend on the relative order of the operations, which is what could break with the merging
+      // done by the request builder.
       ZX_DEBUG_ASSERT(operation.type == operations[0].op.type);
 
       request.vmo_offset = BlockNumberToDevice(operation.vmo_offset);

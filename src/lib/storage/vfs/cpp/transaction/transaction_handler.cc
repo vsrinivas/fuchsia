@@ -14,16 +14,15 @@
 
 namespace fs {
 
-zx_status_t TransactionHandler::RunOperation(
-    const storage::Operation& operation, storage::BlockBuffer* buffer) {
-  return RunRequests(
-      {storage::BufferedOperation{
+zx_status_t TransactionHandler::RunOperation(const storage::Operation& operation,
+                                             storage::BlockBuffer* buffer) {
+  return RunRequests({storage::BufferedOperation{
 #ifdef __Fuchsia__
-          .vmoid = buffer->vmoid(),
+      .vmoid = buffer->vmoid(),
 #else
-          .data = buffer->Data(0),
+      .data = buffer->Data(0),
 #endif
-          .op = operation}});
+      .op = operation}});
 }
 
 }  // namespace fs

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/lazy_dir.h"
+
 #include <fuchsia/io/llcpp/fidl.h>
 
 #include <algorithm>
 
-#include "src/lib/storage/vfs/cpp/lazy_dir.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"

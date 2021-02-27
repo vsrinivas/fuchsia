@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_METRICS_COMPOSITE_LATENCY_EVENT_H_
-#define FS_METRICS_COMPOSITE_LATENCY_EVENT_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_METRICS_COMPOSITE_LATENCY_EVENT_H_
+#define SRC_LIB_STORAGE_VFS_CPP_METRICS_COMPOSITE_LATENCY_EVENT_H_
 
 #include <cobalt-client/cpp/histogram.h>
+
 #include "src/lib/storage/vfs/cpp/metrics/cobalt_metrics.h"
 #include "src/lib/storage/vfs/cpp/metrics/histograms.h"
 
@@ -57,4 +58,4 @@ class CompositeLatencyEvent {
 
 }  // namespace fs_metrics
 
-#endif  // FS_METRICS_COMPOSITE_LATENCY_EVENT_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_METRICS_COMPOSITE_LATENCY_EVENT_H_

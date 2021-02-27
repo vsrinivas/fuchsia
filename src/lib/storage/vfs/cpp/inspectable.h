@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_INSPECTABLE_H_
-#define FS_INSPECTABLE_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_INSPECTABLE_H_
+#define SRC_LIB_STORAGE_VFS_CPP_INSPECTABLE_H_
 
 #include <zircon/types.h>
 
@@ -21,4 +21,4 @@ class Inspectable {
 
 }  //  namespace fs
 
-#endif  // FS_INSPECTABLE_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_INSPECTABLE_H_

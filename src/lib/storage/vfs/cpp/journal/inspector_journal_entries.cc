@@ -39,8 +39,7 @@ JournalBlock::JournalBlock(uint32_t index, fs::JournalInfo info,
   } else {
     // Treat non-journal objects as "blocks".
     //
-    // They will not be parsed further, but they'll be identified as a
-    // non-journal object.
+    // They will not be parsed further, but they'll be identified as a non-journal object.
     object_type_ = fs::JournalObjectType::kUnknown;
     name_ = fbl::StringPrintf("Journal[%d]: Block", index_);
     return;
@@ -76,9 +75,9 @@ JournalBlock::JournalBlock(uint32_t index, fs::JournalInfo info,
 uint32_t JournalBlock::GetNumElements() const { return num_elements_; }
 
 void JournalBlock::GetValue(const void** out_buffer, size_t* out_buffer_size) const {
-  // JournalBlocks themselves don't have values that we can meaningfully print,
-  // so instead just return a meaningless fixed value (returning a null buffer
-  // would cause the inspector framework to crash).
+  // JournalBlocks themselves don't have values that we can meaningfully print, so instead just
+  // return a meaningless fixed value (returning a null buffer would cause the inspector framework
+  // to crash).
   static uint32_t sentinel = 0;
   *out_buffer = &sentinel;
   *out_buffer_size = sizeof(sentinel);

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/journal/background_executor.h"
+
 #include <condition_variable>
 #include <mutex>
 
-#include "src/lib/storage/vfs/cpp/journal/background_executor.h"
 #include <gtest/gtest.h>
 
 namespace fs {
@@ -35,11 +36,11 @@ TEST(BackgroundExecutorTest, DestructorCompletesManyScheduledTasks) {
     BackgroundExecutor executor;
     for (size_t i = 0; i < kTotalTasks; i++) {
       executor.schedule_task(fit::make_promise([&counter]() -> fit::result<> {
-        // Note: We don't bother comparing the order that these promises are scheduled,
-        // since they may occur in any order.
+        // Note: We don't bother comparing the order that these promises are scheduled, since they
+        // may occur in any order.
         //
-        // They are guaranteed to be executed by a single thread, so we increment this
-        // counter non-atomically.
+        // They are guaranteed to be executed by a single thread, so we increment this counter
+        // non-atomically.
         counter++;
         return fit::ok();
       }));

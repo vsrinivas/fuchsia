@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_METRICS_COBALT_METRICS_H_
-#define FS_METRICS_COBALT_METRICS_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_METRICS_COBALT_METRICS_H_
+#define SRC_LIB_STORAGE_VFS_CPP_METRICS_COBALT_METRICS_H_
 
 #include <cstdint>
 #include <memory>
@@ -16,10 +16,10 @@
 #include <cobalt-client/cpp/histogram.h>
 #include <cobalt-client/cpp/integer.h>
 #include <fbl/string.h>
-#include "src/lib/storage/vfs/cpp/metrics/events.h"
 
 #include "cobalt-client/cpp/integer.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/storage/vfs/cpp/metrics/events.h"
 
 namespace fs_metrics {
 
@@ -198,4 +198,4 @@ std::string_view ComponentName(Component component);
 
 }  // namespace fs_metrics
 
-#endif  // FS_METRICS_COBALT_METRICS_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_METRICS_COBALT_METRICS_H_

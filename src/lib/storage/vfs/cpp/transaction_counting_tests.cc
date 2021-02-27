@@ -18,10 +18,11 @@
 #include <utility>
 #include <vector>
 
+#include <zxtest/zxtest.h>
+
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/pseudo_file.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
-#include <zxtest/zxtest.h>
 
 namespace {
 

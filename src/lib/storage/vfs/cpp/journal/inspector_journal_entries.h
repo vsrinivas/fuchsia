@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_FS_JOURNAL_INSPECTOR_JOURNAL_ENTRIES_H_
-#define ZIRCON_SYSTEM_ULIB_FS_JOURNAL_INSPECTOR_JOURNAL_ENTRIES_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_INSPECTOR_JOURNAL_ENTRIES_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_INSPECTOR_JOURNAL_ENTRIES_H_
 
 #include <array>
 
 #include <disk_inspector/common_types.h>
 #include <fbl/string_printf.h>
+
 #include "src/lib/storage/vfs/cpp/inspectable.h"
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
@@ -77,4 +78,4 @@ class JournalEntries : public disk_inspector::DiskObject {
 
 }  // namespace fs
 
-#endif  // ZIRCON_SYSTEM_ULIB_FS_JOURNAL_INSPECTOR_JOURNAL_ENTRIES_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_INSPECTOR_JOURNAL_ENTRIES_H_

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
+
 #include <fuchsia/io/llcpp/fidl.h>
 
 #include <utility>
 
-#include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace fio = ::llcpp::fuchsia::io;

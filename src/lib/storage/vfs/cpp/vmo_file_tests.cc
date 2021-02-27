@@ -9,9 +9,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
+#include <zxtest/zxtest.h>
+
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vmo_file.h"
-#include <zxtest/zxtest.h>
 
 namespace {
 

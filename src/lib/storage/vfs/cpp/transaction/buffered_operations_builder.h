@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_TRANSACTION_BUFFERED_OPERATIONS_BUILDER_H_
-#define FS_TRANSACTION_BUFFERED_OPERATIONS_BUILDER_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_BUFFERED_OPERATIONS_BUILDER_H_
+#define SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_BUFFERED_OPERATIONS_BUILDER_H_
+
+#include <zircon/assert.h>
 
 #include <vector>
 
-#include <zircon/assert.h>
 #include <fbl/macros.h>
 #include <storage/buffer/block_buffer.h>
 #include <storage/operation/operation.h>
@@ -66,20 +67,16 @@ class BufferedOperationsBuilder {
   BufferedOperationsBuilder(const BufferedOperationsBuilder&) = delete;
   BufferedOperationsBuilder& operator=(const BufferedOperationsBuilder&) = delete;
 
-  // Adds a request to the list of operations.
-  // Note that there is some coalescing of requests performed here, and mixing different types
-  // of operations is not supported at this time.
-  BufferedOperationsBuilder& Add(
-      const storage::Operation& operation, storage::BlockBuffer* buffer);
+  // Adds a request to the list of operations. Note that there is some coalescing of requests
+  // performed here, and mixing different types of operations is not supported at this time.
+  BufferedOperationsBuilder& Add(const storage::Operation& operation, storage::BlockBuffer* buffer);
 
   // Removes the vector of requests, and returns them to the caller.
   std::vector<storage::BufferedOperation> TakeOperations();
 
 #ifdef __Fuchsia__
   // Adds a vmoid that needs to be detached once the operations have completed.
-  void AddVmoid(storage::OwnedVmoid vmoid) {
-    vmoids_.push_back(std::move(vmoid));
-  }
+  void AddVmoid(storage::OwnedVmoid vmoid) { vmoids_.push_back(std::move(vmoid)); }
 #endif
 
  private:
@@ -92,4 +89,4 @@ class BufferedOperationsBuilder {
 
 }  // namespace fs
 
-#endif  // FS_TRANSACTION_BUFFERED_OPERATIONS_BUILDER_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_BUFFERED_OPERATIONS_BUILDER_H_

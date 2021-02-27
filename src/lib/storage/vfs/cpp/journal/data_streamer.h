@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_JOURNAL_DATA_STREAMER_H_
-#define FS_JOURNAL_DATA_STREAMER_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_DATA_STREAMER_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_DATA_STREAMER_H_
 
 #include <lib/fit/promise.h>
 
 #include <utility>
 
-#include "src/lib/storage/vfs/cpp/journal/journal.h"
 #include <storage/operation/unbuffered_operation.h>
 #include <storage/operation/unbuffered_operations_builder.h>
+
+#include "src/lib/storage/vfs/cpp/journal/journal.h"
 
 namespace fs {
 
@@ -28,16 +29,16 @@ namespace fs {
 //
 //   For operations which are larger than the underlying writeback buffer, caution must be taken to
 //   avoid blocking on "Journal::WriteData", which creates a reservation, but does not begin
-//   execution of the underlying data. To mitigate, this class begins execution of these data
-//   writes if they are larger than an internal threshold (which is smaller than the entire
-//   writeback buffer).
+//   execution of the underlying data. To mitigate, this class begins execution of these data writes
+//   if they are larger than an internal threshold (which is smaller than the entire writeback
+//   buffer).
 //
 // Allows ordering control over "all data", but not between intermediate data writes.
 //
-//   Typically, when data operations are issued, the caller cares that they all occur before
-//   a following action, but the order between those data operations themselves does not matter.
-//   This class enables callers to |Flush()| all prior data requests, without imposing an ordering
-//   on the data requests issued by |StreamData()|.
+//   Typically, when data operations are issued, the caller cares that they all occur before a
+//   following action, but the order between those data operations themselves does not matter. This
+//   class enables callers to |Flush()| all prior data requests, without imposing an ordering on the
+//   data requests issued by |StreamData()|.
 //
 // This class is thread-compatible.
 class DataStreamer {
@@ -75,4 +76,4 @@ class DataStreamer {
 
 }  // namespace fs
 
-#endif  // FS_JOURNAL_DATA_STREAMER_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_DATA_STREAMER_H_

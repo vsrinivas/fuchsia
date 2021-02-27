@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_VFS_TYPES_H_
-#define FS_VFS_TYPES_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_VFS_TYPES_H_
+#define SRC_LIB_STORAGE_VFS_CPP_VFS_TYPES_H_
 
 #include <lib/fdio/vfs.h>
 #include <zircon/compiler.h>
@@ -34,9 +34,10 @@
 // - the FIDL protocol and the Vnode APIs can evolve independently from each other
 // - the Vnode APIs can be tested in isolation without relying on FIDL
 // - the Vnode APIs structures have recursive ownership semantics, simplifying passing around
+//
 // We explicitly define a set of filesystem types to be used by the Vnode interface, as opposed to
-// blindly reusing the FIDL generated types. The names of these types all begin with "Vnode"
-// to reduce confusion with their FIDL counterparts.
+// blindly reusing the FIDL generated types. The names of these types all begin with "Vnode" to
+// reduce confusion with their FIDL counterparts.
 namespace fs {
 
 union Rights {
@@ -87,17 +88,16 @@ union Rights {
 
 constexpr Rights operator&(Rights lhs, Rights rhs) { return Rights(lhs.raw_value & rhs.raw_value); }
 
-// Identifies the different operational contracts used to interact with a vnode.
-// For example, the |kFile| protocol allows reading and writing byte contents through
-// a buffer, and the |kMemory| protocol requests a VMO object to be returned during
-// |GetNodeInfo|, etc.
+// Identifies the different operational contracts used to interact with a vnode. For example, the
+// |kFile| protocol allows reading and writing byte contents through a buffer, and the |kMemory|
+// protocol requests a VMO object to be returned during |GetNodeInfo|, etc.
 //
 // The members in this class have one-to-one correspondence with the variants in
 // |VnodeRepresentation|.
 //
-// Note: Due to the implementation strategy in |VnodeProtocolSet|, the number of
-// protocols must be less than 64. When the need arises as to support more than 64
-// protocols, we should change the implementation in |VnodeProtocolSet| accordingly.
+// Note: Due to the implementation strategy in |VnodeProtocolSet|, the number of protocols must be
+// less than 64. When the need arises as to support more than 64 protocols, we should change the
+// implementation in |VnodeProtocolSet| accordingly.
 enum class VnodeProtocol : uint32_t {
   // TODO(fxbug.dev/39776): change this back to 0 when the referenced compiler bug is resolved.
   // Setting |kConnector| to 1 appears to workaround the issue.
@@ -189,8 +189,8 @@ inline constexpr VnodeProtocolSet operator|(VnodeProtocol lhs, VnodeProtocol rhs
 
 // Options specified during opening and cloning.
 struct VnodeConnectionOptions {
-  // TODO(fxbug.dev/38160): Harmonize flags and rights to express both fuchsia.io v1 and v2 semantics.
-  // For now, these map to the corresponding items in io.fidl. Refer to that file for
+  // TODO(fxbug.dev/38160): Harmonize flags and rights to express both fuchsia.io v1 and v2
+  // semantics. For now, these map to the corresponding items in io.fidl. Refer to that file for
   // documentation.
   union Flags {
     uint32_t raw_value = 0;
@@ -293,10 +293,10 @@ struct VnodeConnectionOptions {
   // Converts from |VnodeConnectionOptions| to fuchsia.io flags.
   uint32_t ToIoV1Flags() const;
 
-  // Some flags (e.g. POSIX) only affect the interpretation of rights at the time of
-  // Open/Clone, and should have no effects thereafter. Hence we filter them here.
-  // TODO(fxbug.dev/33336): Some of these flag groups should be defined in io.fidl and use that as the
-  // source of truth.
+  // Some flags (e.g. POSIX) only affect the interpretation of rights at the time of Open/Clone, and
+  // should have no effects thereafter. Hence we filter them here.
+  // TODO(fxbug.dev/33336): Some of these flag groups should be defined in io.fidl and use that as
+  // the source of truth.
   static VnodeConnectionOptions FilterForNewConnection(VnodeConnectionOptions options);
 #endif  // __Fuchsia__
 };
@@ -323,9 +323,9 @@ struct VnodeAttributes {
 #endif  // __Fuchsia__
 };
 
-// A request to update pieces of the |VnodeAttributes|. The fuchsia.io protocol only
-// allows mutating the creation time and modification time.
-// When a field is present, it indicates that the corresponding field should be updated.
+// A request to update pieces of the |VnodeAttributes|. The fuchsia.io protocol only allows mutating
+// the creation time and modification time. When a field is present, it indicates that the
+// corresponding field should be updated.
 class VnodeAttributesUpdate {
  public:
   VnodeAttributesUpdate& set_creation_time(std::optional<uint64_t> v) {
@@ -342,8 +342,8 @@ class VnodeAttributesUpdate {
 
   bool has_creation_time() const { return creation_time_.has_value(); }
 
-  // Moves out the creation time. Requires |creation_time_| to be present.
-  // After this method returns, |creation_time_| is absent.
+  // Moves out the creation time. Requires |creation_time_| to be present. After this method
+  // returns, |creation_time_| is absent.
   uint64_t take_creation_time() {
     uint64_t v = creation_time_.value();
     creation_time_ = std::nullopt;
@@ -352,8 +352,8 @@ class VnodeAttributesUpdate {
 
   bool has_modification_time() const { return modification_time_.has_value(); }
 
-  // Moves out the modification time. Requires |modification_time_| to be present.
-  // After this method returns, |modification_time_| is absent.
+  // Moves out the modification time. Requires |modification_time_| to be present. After this method
+  // returns, |modification_time_| is absent.
   uint64_t take_modification_time() {
     uint64_t v = modification_time_.value();
     modification_time_ = std::nullopt;
@@ -367,8 +367,8 @@ class VnodeAttributesUpdate {
 
 #ifdef __Fuchsia__
 
-// Describe how the vnode connection should be handled, and provides auxiliary handles
-// and information for the connection where applicable.
+// Describe how the vnode connection should be handled, and provides auxiliary handles and
+// information for the connection where applicable.
 class VnodeRepresentation {
  public:
   struct Connector {};
@@ -407,17 +407,17 @@ class VnodeRepresentation {
 
   VnodeRepresentation() = default;
 
-  // Forwards the constructor arguments into the underlying |std::variant|.
-  // This allows |VnodeRepresentation| to be constructed directly from one of the variants, e.g.
+  // Forwards the constructor arguments into the underlying |std::variant|. This allows
+  // |VnodeRepresentation| to be constructed directly from one of the variants, e.g.
   //
   //     VnodeRepresentation repr = VnodeRepresentation::Tty{.event = zx::event(...)};
   //
   template <typename T>
   VnodeRepresentation(T&& v) : variants_(std::forward<T>(v)) {}
 
-  // Applies the |visitor| function to the variant payload. It simply forwards the visitor into
-  // the underlying |std::variant|. Returns the return value of |visitor|.
-  // Refer to C++ documentation for |std::visit|.
+  // Applies the |visitor| function to the variant payload. It simply forwards the visitor into the
+  // underlying |std::variant|. Returns the return value of |visitor|. Refer to C++ documentation
+  // for |std::visit|.
   template <class Visitor>
   constexpr auto visit(Visitor&& visitor) -> decltype(visitor(std::declval<Connector>())) {
     return std::visit(std::forward<Visitor>(visitor), variants_);
@@ -466,10 +466,9 @@ class VnodeRepresentation {
   Variants variants_ = {};
 };
 
-// Converts the vnode representation to a fuchsia.io v1 NodeInfo union, then synchronously
-// invoke the callback. This operation consumes the |representation|.
-// Using a callback works around LLCPP ownership limitations where an extensible union
-// cannot recursively own its variant payload.
+// Converts the vnode representation to a fuchsia.io v1 NodeInfo union, then synchronously invoke
+// the callback. This operation consumes the |representation|. Using a callback works around LLCPP
+// ownership limitations where an extensible union cannot recursively own its variant payload.
 void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
                            fit::callback<void(llcpp::fuchsia::io::NodeInfo&&)> callback);
 
@@ -477,4 +476,4 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
 
 }  // namespace fs
 
-#endif  // FS_VFS_TYPES_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_VFS_TYPES_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_INTERNAL_DIRECTORY_CONNECTION_H_
-#define FS_INTERNAL_DIRECTORY_CONNECTION_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_DIRECTORY_CONNECTION_H_
+#define SRC_LIB_STORAGE_VFS_CPP_DIRECTORY_CONNECTION_H_
 
 #ifndef __Fuchsia__
 #error "Fuchsia-only header"
@@ -85,4 +85,4 @@ class DirectoryConnection final : public Connection,
 
 }  // namespace fs
 
-#endif  // FS_INTERNAL_DIRECTORY_CONNECTION_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_DIRECTORY_CONNECTION_H_

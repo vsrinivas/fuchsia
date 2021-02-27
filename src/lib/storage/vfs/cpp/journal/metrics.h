@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_JOURNAL_INTERNAL_METRICS_H_
-#define FS_JOURNAL_INTERNAL_METRICS_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_METRICS_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_METRICS_H_
 #include <lib/inspect/cpp/inspect.h>
 
 #include <cstddef>
@@ -12,6 +12,7 @@
 #include <optional>
 
 #include <cobalt-client/cpp/collector.h>
+
 #include "src/lib/storage/vfs/cpp/metrics/composite_latency_event.h"
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 
@@ -26,8 +27,8 @@ class MetricsTrait {
 
 class JournalMetrics {
  public:
-  // A wrapper class around CompositeLatencyEvent to make easier to set block
-  // count and success values.
+  // A wrapper class around CompositeLatencyEvent to make easier to set block count and success
+  // values.
   class LatencyEvent {
    public:
     explicit LatencyEvent(std::optional<fs_metrics::CompositeLatencyEvent> event_or)
@@ -50,13 +51,12 @@ class JournalMetrics {
     }
 
    private:
-    // Internal tracker for the latency event. Set to nullopt if the metrics are
-    // disabled.
+    // Internal tracker for the latency event. Set to nullopt if the metrics are disabled.
     std::optional<fs_metrics::CompositeLatencyEvent> event_or_;
   };
 
-  // Creates new journal metrics for a journal that has |capacity| number of
-  // blocks and starts the journal at |start_block|.
+  // Creates new journal metrics for a journal that has |capacity| number of blocks and starts the
+  // journal at |start_block|.
   JournalMetrics(std::shared_ptr<MetricsTrait> root, uint64_t capacity, uint64_t start_block)
       : root_(root) {
     if (IsInspectEnabled()) {
@@ -92,4 +92,4 @@ class JournalMetrics {
 
 }  // namespace fs
 
-#endif  // FS_JOURNAL_INTERNAL_METRICS_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_METRICS_H_

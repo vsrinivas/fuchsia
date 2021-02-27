@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/journal/initializer.h"
+
 #include <lib/cksum.h>
 #include <sys/mman.h>
 #include <zircon/errors.h>
 
 #include "src/lib/storage/vfs/cpp/journal/format.h"
-#include "src/lib/storage/vfs/cpp/journal/initializer.h"
 
 namespace fs {
 namespace {
@@ -37,9 +38,8 @@ zx_status_t MakeJournal(uint64_t journal_blocks, const WriteBlocksFn& WriteBlock
     return status;
   }
 
-  // If number of journal metadata blocks change, we need to clear/initialize
-  // those blocks. This compile-time assert prevents having uninitialized metadata
-  // blocks.
+  // If number of journal metadata blocks change, we need to clear/initialize those blocks. This
+  // compile-time assert prevents having uninitialized metadata blocks.
   static_assert(fs::kJournalMetadataBlocks == 1, "Uninitialized blocks in journal");
 
   // Clear the journal from disk.

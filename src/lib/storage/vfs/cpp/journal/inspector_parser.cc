@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/journal/inspector_parser.h"
+
 #include <zircon/assert.h>
 
 #include <array>
-
-#include "src/lib/storage/vfs/cpp/journal/inspector_parser.h"
 
 namespace fs {
 

@@ -7,10 +7,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "src/lib/storage/vfs/cpp/journal/journal.h"
 #include <storage/buffer/blocking_ring_buffer.h>
 
 #include "fuzzer_utils.h"
+#include "src/lib/storage/vfs/cpp/journal/journal.h"
 
 namespace fs {
 namespace {

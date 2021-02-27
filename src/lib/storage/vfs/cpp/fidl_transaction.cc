@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/fidl_transaction.h"
+
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/txn_header.h>
@@ -11,8 +13,6 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-
-#include "src/lib/storage/vfs/cpp/fidl_transaction.h"
 
 namespace fs {
 
@@ -31,8 +31,8 @@ zx_status_t FidlTransaction::Reply(fidl::OutgoingMessage* message) {
 
 void FidlTransaction::Close(zx_status_t epitaph) {
   status_ = epitaph;
-  // We need to make sure binding_ is present, since it may have been released
-  // if Reply() called Close()
+  // We need to make sure binding_ is present, since it may have been released if Reply() called
+  // Close()
   if (auto binding = binding_.lock()) {
     fidl_epitaph_write(binding->channel().get(), epitaph);
     binding->AsyncTeardown();

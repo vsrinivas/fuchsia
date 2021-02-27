@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/journal/journal.h"
+
 #include <lib/sync/completion.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/status.h>
 #include <zircon/status.h>
 
-#include "src/lib/storage/vfs/cpp/journal/journal.h"
-#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
 #include <safemath/checked_math.h>
 
 #include "entry_view.h"
 #include "format_assertions.h"
+#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
 #include "storage/operation/unbuffered_operation.h"
 
 namespace fs {
@@ -184,9 +185,8 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
     return ZX_ERR_NO_SPACE;
   }
 
-  // Ensure there is enough space in the journal buffer.
-  // Note that in addition to the operation's blocks, we also reserve space for the journal
-  // entry's metadata (header, footer, etc).
+  // Ensure there is enough space in the journal buffer. Note that in addition to the operation's
+  // blocks, we also reserve space for the journal entry's metadata (header, footer, etc).
   event.set_block_count(block_count_or.value());
   uint64_t block_count = block_count_or.value() + kEntryMetadataBlocks;
   storage::BlockingRingBufferReservation reservation;

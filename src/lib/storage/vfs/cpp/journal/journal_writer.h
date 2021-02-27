@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_JOURNAL_INTERNAL_JOURNAL_WRITER_H_
-#define FS_JOURNAL_INTERNAL_JOURNAL_WRITER_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_JOURNAL_WRITER_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_JOURNAL_WRITER_H_
 
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
@@ -13,13 +13,14 @@
 #include <algorithm>
 
 #include <fbl/vector.h>
+#include <storage/buffer/blocking_ring_buffer.h>
+#include <storage/operation/operation.h>
+
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/lib/storage/vfs/cpp/journal/metrics.h"
 #include "src/lib/storage/vfs/cpp/journal/operation_tracker.h"
 #include "src/lib/storage/vfs/cpp/journal/superblock.h"
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
-#include <storage/buffer/blocking_ring_buffer.h>
-#include <storage/operation/operation.h>
 
 namespace fs {
 namespace internal {
@@ -79,8 +80,8 @@ class JournalWriter {
   // Synchronizes the most up-to-date info block back to disk.
   //
   // Returns ZX_ERR_IO_REFUSED if writeback is disabled.
-  // Returns an error from the block device if the info block cannot be written.
-  // In all other cases, returns ZX_OK.
+  // Returns an error from the block device if the info block cannot be written. In all other cases,
+  // returns ZX_OK.
   fit::result<void, zx_status_t> Sync();
 
   // Returns true if all writeback is "off", and no further data will be written to the
@@ -118,17 +119,15 @@ class JournalWriter {
   // will hit the start of the journal.
   zx_status_t WriteInfoBlockIfIntersect(uint64_t block_count);
 
-  // Writes the info block to the underlying device.
-  // Asserts that the sequence number has increased, and that the info block has
-  // a meaningful update.
+  // Writes the info block to the underlying device. Asserts that the sequence number has increased,
+  // and that the info block has a meaningful update.
   //
   // Blocks the calling thread on I/O until the operation completes.
   zx_status_t WriteInfoBlock();
 
-  // Writes an operation into the journal, creating a sequence of operations
-  // which deal with wraparound of the in-memory |reservation| buffer and the on-disk
-  // journal. Additionally, issues these operations to the underlying device and
-  // returns the result (see |WriteOperations|).
+  // Writes an operation into the journal, creating a sequence of operations which deal with
+  // wraparound of the in-memory |reservation| buffer and the on-disk journal. Additionally, issues
+  // these operations to the underlying device and returns the result (see |WriteOperations|).
   zx_status_t WriteOperationToJournal(const storage::BlockBufferView& view);
 
   // Writes operations directly through to disk.
@@ -174,4 +173,4 @@ class JournalWriter {
 }  // namespace internal
 }  // namespace fs
 
-#endif  // FS_JOURNAL_INTERNAL_JOURNAL_WRITER_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_JOURNAL_WRITER_H_

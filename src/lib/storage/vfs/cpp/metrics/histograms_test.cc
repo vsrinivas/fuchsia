@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/metrics/histograms.h"
+
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/time.h>
 #include <unistd.h>
@@ -11,7 +13,6 @@
 #include <set>
 #include <vector>
 
-#include "src/lib/storage/vfs/cpp/metrics/histograms.h"
 #include <zxtest/zxtest.h>
 
 namespace fs_metrics {

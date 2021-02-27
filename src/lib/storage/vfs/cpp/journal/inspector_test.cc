@@ -6,10 +6,11 @@
 
 #include <string_view>
 
+#include <gtest/gtest.h>
+
 #include "src/lib/storage/vfs/cpp/inspectable.h"
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
-#include <gtest/gtest.h>
 
 namespace fs {
 namespace {

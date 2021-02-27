@@ -5,11 +5,12 @@
 #include <utility>
 
 #include <fbl/vector.h>
+#include <zxtest/zxtest.h>
+
 #include "src/lib/storage/vfs/cpp/dir_test_util.h"
 #include "src/lib/storage/vfs/cpp/lazy_dir.h"
 #include "src/lib/storage/vfs/cpp/pseudo_file.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
-#include <zxtest/zxtest.h>
 
 namespace {
 

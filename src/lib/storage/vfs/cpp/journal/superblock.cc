@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/journal/superblock.h"
+
 #include <lib/cksum.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
 #include "src/lib/storage/vfs/cpp/journal/format.h"
-#include "src/lib/storage/vfs/cpp/journal/superblock.h"
 
 namespace fs {
 

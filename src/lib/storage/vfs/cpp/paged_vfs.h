@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_PAGED_VFS_H_
-#define FS_PAGED_VFS_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_PAGED_VFS_H_
+#define SRC_LIB_STORAGE_VFS_CPP_PAGED_VFS_H_
 
 #include <lib/zx/pager.h>
 #include <lib/zx/status.h>
@@ -72,4 +72,4 @@ class PagedVfs : public ManagedVfs {
 
 }  // namespace fs
 
-#endif  // FS_PAGED_VFS_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_PAGED_VFS_H_

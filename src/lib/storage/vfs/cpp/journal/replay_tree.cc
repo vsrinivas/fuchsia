@@ -15,8 +15,8 @@ zx_status_t RangeTraits::Update(const RangeContainer* other, uint64_t start, uin
   if (other) {
     // Index by "dev_offset", but only allow merging BufferedOperations if:
     // - Their dev offsets, lengths are contiguous (enforced by range library),
-    // - The difference between vmo offsets of an operation equals the difference
-    // between dev offsets.
+    // - The difference between vmo offsets of an operation equals the difference between dev
+    //   offsets.
     //
     // This enables merging between contiguous operations like:
     // - vmo_offset = 1

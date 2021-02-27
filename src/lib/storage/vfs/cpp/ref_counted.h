@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_REF_COUNTED_H_
-#define FS_REF_COUNTED_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_REF_COUNTED_H_
+#define SRC_LIB_STORAGE_VFS_CPP_REF_COUNTED_H_
 
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -17,8 +17,8 @@ namespace fs {
 
 // VnodeRefCounted implements a customized RefCounted object.
 //
-// It adds an additional method, "ResurrectRef", which allows Vnodes to be
-// re-used after a reference count of zero has been reached.
+// It adds an additional method, "ResurrectRef", which allows Vnodes to be re-used after a reference
+// count of zero has been reached.
 template <typename T, bool EnableAdoptionValidator = ZX_DEBUG_ASSERT_IMPLEMENTED>
 class VnodeRefCounted
     : private ::fbl::internal::RefCountedUpgradeableBase<EnableAdoptionValidator> {
@@ -35,20 +35,17 @@ class VnodeRefCounted
   // VnodeRefCounted<> instances may not be copied, assigned or moved.
   DISALLOW_COPY_ASSIGN_AND_MOVE(VnodeRefCounted);
 
-  // This method should only be called if the refcount was "zero", implying the
-  // object is currently executing fbl_recycle. In this case, the refcount
-  // is increased by one.
+  // This method should only be called if the refcount was "zero", implying the object is currently
+  // executing fbl_recycle. In this case, the refcount is increased by one.
   //
-  // This method may be called to prevent fbl_recycle from following the
-  // typical path of object deletion: instead of destroying the object,
-  // this function can be called to "reset" the lifecycle of the RefCounted
-  // object to the initialized state of "ref_count_ = 1", so it can
+  // This method may be called to prevent fbl_recycle from following the typical path of object
+  // deletion: instead of destroying the object, this function can be called to "reset" the
+  // lifecycle of the RefCounted object to the initialized state of "ref_count_ = 1", so it can
   // continue to be utilized after there are no strong references.
   //
-  // This function should be used EXCLUSIVELY from within fbl_recycle.
-  // If other clients (outside fbl_recycle) attempt to resurrect the Vnode
-  // concurrently with a call to Vnode::fbl_recycle, they risk going through
-  // the entire Vnode lifecycle and destroying it (with another call to
+  // This function should be used EXCLUSIVELY from within fbl_recycle. If other clients (outside
+  // fbl_recycle) attempt to resurrect the Vnode concurrently with a call to Vnode::fbl_recycle,
+  // they risk going through the entire Vnode lifecycle and destroying it (with another call to
   // Vnode::fbl_recycle) before the initial recycle execution terminates.
   void ResurrectRef() const {
     if (EnableAdoptionValidator) {
@@ -65,4 +62,4 @@ class VnodeRefCounted
 
 }  // namespace fs
 
-#endif  // FS_REF_COUNTED_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_REF_COUNTED_H_

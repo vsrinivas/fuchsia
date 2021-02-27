@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_JOURNAL_SUPERBLOCK_H_
-#define FS_JOURNAL_SUPERBLOCK_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_SUPERBLOCK_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_SUPERBLOCK_H_
 
 #include <zircon/types.h>
 
 #include <fbl/macros.h>
-#include "src/lib/storage/vfs/cpp/journal/format.h"
 #include <storage/buffer/block_buffer.h>
+
+#include "src/lib/storage/vfs/cpp/journal/format.h"
 
 namespace fs {
 
@@ -19,14 +20,13 @@ class JournalSuperblock {
   JournalSuperblock();
   explicit JournalSuperblock(std::unique_ptr<storage::BlockBuffer> buffer);
 
-  // Confirms that the magic and checksums within the info block
-  // are correct.
+  // Confirms that the magic and checksums within the info block are correct.
   //
   // Returns |ZX_ERR_IO| if these fields do not match the expected value.
   zx_status_t Validate() const;
 
-  // Updates all client-visible fields of the info block. Additionally updates
-  // the checksum and sequence_number in-memory.
+  // Updates all client-visible fields of the info block. Additionally updates the checksum and
+  // sequence_number in-memory.
   void Update(uint64_t start, uint64_t sequence_number);
 
   // Returns the start of the first journal entry.
@@ -48,4 +48,4 @@ class JournalSuperblock {
 
 }  // namespace fs
 
-#endif  // FS_JOURNAL_SUPERBLOCK_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_SUPERBLOCK_H_

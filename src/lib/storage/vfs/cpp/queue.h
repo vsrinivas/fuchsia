@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_LIB_STORAGE_VFS_CPP_QUEUE_H_
+#define SRC_LIB_STORAGE_VFS_CPP_QUEUE_H_
+
+#include <utility>
 
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 
-#include <utility>
-
 namespace fs {
 
-// A wrapper around a singly linked list to make it appear as a queue.
-// We pop from the front (moving the head forward) and push onto the tail.
+// A wrapper around a singly linked list to make it appear as a queue. We pop from the front (moving
+// the head forward) and push onto the tail.
 template <typename PtrType>
 class Queue {
  public:
@@ -46,3 +47,5 @@ class Queue {
 };
 
 }  // namespace fs
+
+#endif  // SRC_LIB_STORAGE_VFS_CPP_QUEUE_H_

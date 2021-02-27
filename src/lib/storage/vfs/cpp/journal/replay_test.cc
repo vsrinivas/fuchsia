@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/journal/replay.h"
+
 #include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
 
 #include <map>
 
-#include "src/lib/storage/vfs/cpp/journal/replay.h"
 #include <gtest/gtest.h>
 
 #include "entry_view.h"
@@ -293,11 +294,11 @@ TEST_F(ParseJournalTest, MultipleEntriesSameDevOffsetCausesOneEntryParsed) {
   ASSERT_NO_FATAL_FAILURE(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
 }
 
-// Tests that contiguous entries with a non-increasing sequence number will
-// be discarded. In a functioning journal, each subsequent entry will have exclusively
-// incrementing sequence numbers, and deviation from that behavior will imply "invalid
-// journal metadata" that should be discarded. This tests one of those deviations (sequence number
-// is not incremented), and validates that the bad entry is ignored.
+// Tests that contiguous entries with a non-increasing sequence number will be discarded. In a
+// functioning journal, each subsequent entry will have exclusively incrementing sequence numbers,
+// and deviation from that behavior will imply "invalid journal metadata" that should be discarded.
+// This tests one of those deviations (sequence number is not incremented), and validates that the
+// bad entry is ignored.
 TEST_F(ParseJournalTest, MultipleEntriesWithSameSequenceNumberOnlyKeepsFirst) {
   info_block()->Update(0, kGoldenSequenceNumber);
   std::vector<storage::BufferedOperation> ops;
@@ -573,8 +574,7 @@ TEST_F(ParseJournalTest, DoesntDetectCorruptJournalIfOldEntryHasBadChecksumAndBa
 
   // Before we replay, flip some bits in the old entry's header.
   //
-  // This time, flip the number of blocks to be replayed, so the subsequent entry
-  // cannot be located.
+  // This time, flip the number of blocks to be replayed, so the subsequent entry cannot be located.
   storage::BlockBufferView buffer_view(journal_buffer(), 0, kEntryLength);
   auto raw_block = static_cast<JournalHeaderBlock*>(buffer_view.Data(0));
   raw_block->payload_blocks = ~(raw_block->payload_blocks);
@@ -666,16 +666,16 @@ class ReplayJournalTest : public ParseJournalTestFixture {
     EXPECT_EQ(kJournalEntryLength, request.op.length);
   }
 
-  // Take the contents of the pre-registered journal superblock and transfer
-  // it into the requested vmoid.
+  // Take the contents of the pre-registered journal superblock and transfer it into the requested
+  // vmoid.
   void TransferInfoTo(vmoid_t vmoid) {
     char buf[kBlockSize * kJournalMetadataBlocks];
     EXPECT_EQ(registry()->GetVmo(kInfoVmoid).read(buf, 0, sizeof(buf)), ZX_OK);
     EXPECT_EQ(registry()->GetVmo(vmoid).write(buf, 0, sizeof(buf)), ZX_OK);
   }
 
-  // Take the contents of the pre-registered journal buffer and transfer
-  // it into the requested vmoid.
+  // Take the contents of the pre-registered journal buffer and transfer it into the requested
+  // vmoid.
   void TransferEntryTo(vmoid_t vmoid, size_t offset, uint64_t length) {
     char entry_buf[kBlockSize * length];
     EXPECT_EQ(

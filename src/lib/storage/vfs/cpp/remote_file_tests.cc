@@ -4,8 +4,9 @@
 
 #include <utility>
 
-#include "src/lib/storage/vfs/cpp/remote_file.h"
 #include <zxtest/zxtest.h>
+
+#include "src/lib/storage/vfs/cpp/remote_file.h"
 
 namespace {
 

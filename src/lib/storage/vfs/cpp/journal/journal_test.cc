@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/journal/journal.h"
+
 #include <lib/cksum.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
@@ -15,21 +17,20 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
-#include "src/lib/storage/vfs/cpp/journal/format.h"
-#include "src/lib/storage/vfs/cpp/journal/header_view.h"
-#include "src/lib/storage/vfs/cpp/journal/initializer.h"
-#include "src/lib/storage/vfs/cpp/journal/journal.h"
-#include "src/lib/storage/vfs/cpp/journal/replay.h"
-#include "src/lib/storage/vfs/cpp/metrics/composite_latency_event.h"
-#include "src/lib/storage/vfs/cpp/metrics/events.h"
-#include "src/lib/storage/vfs/cpp/metrics/histograms.h"
-#include "src/lib/storage/vfs/cpp/transaction/device_transaction_handler.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "src/lib/storage/vfs/cpp/journal/format.h"
+#include "src/lib/storage/vfs/cpp/journal/header_view.h"
+#include "src/lib/storage/vfs/cpp/journal/initializer.h"
 #include "src/lib/storage/vfs/cpp/journal/metrics.h"
+#include "src/lib/storage/vfs/cpp/journal/replay.h"
+#include "src/lib/storage/vfs/cpp/metrics/composite_latency_event.h"
+#include "src/lib/storage/vfs/cpp/metrics/events.h"
+#include "src/lib/storage/vfs/cpp/metrics/histograms.h"
+#include "src/lib/storage/vfs/cpp/transaction/device_transaction_handler.h"
 
 namespace fs {
 namespace {
@@ -84,27 +85,27 @@ void CopyBytes(const zx::vmo& source, const zx::vmo& destination, uint64_t offse
   EXPECT_EQ(destination.write(buffer.data(), offset, length), ZX_OK);
 }
 
-// The collection of all behaviors which are used by the journaling subsystem,
-// and which are registered with the underlying block device.
+// The collection of all behaviors which are used by the journaling subsystem, and which are
+// registered with the underlying block device.
 struct JournalBuffers {
   zx::vmo journal_vmo;
   zx::vmo writeback_vmo;
   zx::vmo info_vmo;
 };
 
-// Identifies if the buffer is the in-memory version of the buffer (accessed
-// directly by the journal code) or the on-disk representation (used by the
-// test to represent all operations which have been transacted to disk).
+// Identifies if the buffer is the in-memory version of the buffer (accessed directly by the journal
+// code) or the on-disk representation (used by the test to represent all operations which have been
+// transacted to disk).
 enum class BufferType {
   kDiskBuffer,
   kMemoryBuffer,
 };
 
-// A mock VMO reigstry, which acts as the holder for all VMOs used by the journaling
-// codebase to interact with the underlying device.
+// A mock VMO reigstry, which acts as the holder for all VMOs used by the journaling codebase to
+// interact with the underlying device.
 //
-// In addition to the storage::VmoidRegistry interface, provides some additional utilities
-// for buffer generation and verification.
+// In addition to the storage::VmoidRegistry interface, provides some additional utilities for
+// buffer generation and verification.
 class MockVmoidRegistry : public storage::VmoidRegistry {
  public:
   // Sets the next Vmoid which will be allocated when "BlockAttachVmo" is invoked.
@@ -128,8 +129,8 @@ class MockVmoidRegistry : public storage::VmoidRegistry {
 
   // Access VMOs by registered VMO ID.
   //
-  // Callers may request the "in-memory" version or the "disk-based" version,
-  // storing the results of all transacted write operations.
+  // Callers may request the "in-memory" version or the "disk-based" version, storing the results of
+  // all transacted write operations.
   const zx::vmo& GetVmo(vmoid_t vmoid, BufferType buffer);
 
   // Initializes |disk_buffers_| by copying the in-memory copies.
@@ -153,8 +154,8 @@ class MockVmoidRegistry : public storage::VmoidRegistry {
   // Using the disk-based journal and info buffers attached to the registry, parse their contents as
   // if executing a replay operation.
   //
-  // This allows us to exercise the integration of the "journal writeback" and the on
-  // reboot "journal replay".
+  // This allows us to exercise the integration of the "journal writeback" and the on reboot
+  // "journal replay".
   void Replay(std::vector<storage::BufferedOperation>* operations, uint64_t* sequence_number);
 
   JournalBuffers memory_buffers_;
@@ -237,8 +238,8 @@ void MockVmoidRegistry::Replay(std::vector<storage::BufferedOperation>* operatio
       std::make_unique<storage::VmoBuffer>(this, std::move(mapper), kInfoVmoid, 1, kBlockSize);
   JournalSuperblock superblock(std::move(info_buffer));
 
-  // Create a clone of the journal, since escaped blocks may be modified. This allows
-  // the "clone" to be modified while leaving the original journal untouched.
+  // Create a clone of the journal, since escaped blocks may be modified. This allows the "clone" to
+  // be modified while leaving the original journal untouched.
   zx::vmo journal_vmo;
   uint64_t length = kBlockSize * kJournalLength;
   ASSERT_EQ(
@@ -254,13 +255,13 @@ void MockVmoidRegistry::Replay(std::vector<storage::BufferedOperation>* operatio
             ZX_OK);
 }
 
-// A transaction handler class, controlling all block device operations which are transmitted
-// by the journaling code.
+// A transaction handler class, controlling all block device operations which are transmitted by the
+// journaling code.
 //
-// In addition to the |TransactionHandler| interface, this class allows clients to supply
-// a series of callbacks, controlling the exact sequence of operations which should be observed
-// by the underlying device. These take the form of callbacks, which can allow test code
-// to "pause and check state" in between each operation.
+// In addition to the |TransactionHandler| interface, this class allows clients to supply a series
+// of callbacks, controlling the exact sequence of operations which should be observed by the
+// underlying device. These take the form of callbacks, which can allow test code to "pause and
+// check state" in between each operation.
 class MockTransactionHandler final : public fs::TransactionHandler {
  public:
   using TransactionCallback =
@@ -326,9 +327,9 @@ zx_status_t FlushCallback(const std::vector<storage::BufferedOperation>& request
 
 // A test fixture which initializes structures that are necessary for journal initialization.
 //
-// This initialization is repeated between all tests, so it is deduplicated here. However,
-// journal construction itself is still left to each individaul test, but the prerequisite
-// structures can be "taken" from this fixture using the "take_*" methods below.
+// This initialization is repeated between all tests, so it is deduplicated here. However, journal
+// construction itself is still left to each individaul test, but the prerequisite structures can be
+// "taken" from this fixture using the "take_*" methods below.
 class JournalTest : public testing::Test {
  public:
   virtual size_t GetJournalLength() const { return kJournalLength; }
@@ -357,8 +358,8 @@ class JournalTest : public testing::Test {
 
   MockVmoidRegistry* registry() { return &registry_; }
 
-  // The following methods take the object out of the fixture. They are typically
-  // used for journal initialization.
+  // The following methods take the object out of the fixture. They are typically used for journal
+  // initialization.
   JournalSuperblock take_info() { return std::move(info_block_); }
   std::unique_ptr<storage::BlockingRingBuffer> take_journal_buffer() {
     return std::move(journal_buffer_);
@@ -374,8 +375,8 @@ class JournalTest : public testing::Test {
   std::unique_ptr<storage::BlockingRingBuffer> data_buffer_;
 };
 
-// Verifies that the info block marks |start| as the beginning of the journal (relative
-// to the start of entries) with a sequence_number of |sequence_number|.
+// Verifies that the info block marks |start| as the beginning of the journal (relative to the start
+// of entries) with a sequence_number of |sequence_number|.
 void CheckInfoBlock(const zx::vmo& info, uint64_t start, uint64_t sequence_number) {
   std::array<char, kBlockSize> buf = {};
   EXPECT_EQ(info.read(buf.data(), 0, kBlockSize), ZX_OK);
@@ -399,8 +400,8 @@ void CheckWriteRequest(const storage::BufferedOperation& request, vmoid_t vmoid,
 // - References to the info block, journal, and data writeback.
 // - Offsets within those structures.
 //
-// Verifying something as simple as "is this data in the right buffer" is non-trivial, given
-// that the operation may wrap around one of many buffers, at a difficult-to-predict offset.
+// Verifying something as simple as "is this data in the right buffer" is non-trivial, given that
+// the operation may wrap around one of many buffers, at a difficult-to-predict offset.
 //
 // Tests typically use this class to validate both:
 // - Incoming requests to the "block device" are consistent, and
@@ -437,24 +438,24 @@ class JournalRequestVerifier {
 
   uint64_t DataOffset() const { return data_offset_; }
 
-  // Verifies that |operation| matches |requests|, and exists within the
-  // data writeback buffer at |DataOffset()|.
+  // Verifies that |operation| matches |requests|, and exists within the data writeback buffer at
+  // |DataOffset()|.
   void VerifyDataWrite(const storage::UnbufferedOperation& operation,
                        const std::vector<storage::BufferedOperation>& requests) const;
 
-  // Verifies that |operation| matches |requests|, exists within the journal
-  // buffer at |JournalOffset()|, and targets the on-device journal.
+  // Verifies that |operation| matches |requests|, exists within the journal buffer at
+  // |JournalOffset()|, and targets the on-device journal.
   void VerifyJournalWrite(const storage::UnbufferedOperation& operation,
                           const std::vector<storage::BufferedOperation>& requests) const;
 
-  // Verifies that |operation| matches |requests|, exists within the journal
-  // buffer at |JournalOffset() + kJournalEntryHeaderBlocks|, and targets the final on-disk
-  // location (not the journal).
+  // Verifies that |operation| matches |requests|, exists within the journal buffer at
+  // |JournalOffset() + kJournalEntryHeaderBlocks|, and targets the final on-disk location (not the
+  // journal).
   void VerifyMetadataWrite(const storage::UnbufferedOperation& operation,
                            const std::vector<storage::BufferedOperation>& requests) const;
 
-  // Verifies that the info block is targeted by |requests|, with |sequence_number|, and
-  // a start block at |JournalOffset()|.
+  // Verifies that the info block is targeted by |requests|, with |sequence_number|, and a start
+  // block at |JournalOffset()|.
   void VerifyInfoBlockWrite(uint64_t sequence_number,
                             const std::vector<storage::BufferedOperation>& requests) const;
 
@@ -585,8 +586,8 @@ void JournalRequestVerifier::VerifyMetadataWrite(
 
   uint64_t blocks_written = 0;
   for (const storage::BufferedOperation& request : requests) {
-    // We only care about wraparound from the in-memory buffer here; any wraparound from the
-    // on-disk journal is not relevant to the metadata writeback.
+    // We only care about wraparound from the in-memory buffer here; any wraparound from the on-disk
+    // journal is not relevant to the metadata writeback.
     const uint64_t journal_vmo_capacity = kJournalLength - request.op.vmo_offset;
     EXPECT_LE(request.op.length, journal_vmo_capacity);
 
@@ -1061,9 +1062,8 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
 
 // Tests that the info block is updated after the journal is completely full.
 //
-// This acts as a regression test against a bug where "the journal was exactly full"
-// appeared the same as "the journal is exactly empty" when making the decision
-// to write back the info block.
+// This acts as a regression test against a bug where "the journal was exactly full" appeared the
+// same as "the journal is exactly empty" when making the decision to write back the info block.
 //
 // Operation 0: [ H, 1, 2, 3, 4, 5, 6, 7, 8, C ]
 // Operation 1: [ H, 1, C, _, _, _, _, _, _, _ ]
@@ -1151,8 +1151,8 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
   }
 }
 
-// Tests that the info block is updated if a metadata write would invalidate
-// the entry pointed to by "start block".
+// Tests that the info block is updated if a metadata write would invalidate the entry pointed to by
+// "start block".
 //
 // Operation 1: [ H, 1, 2, 3, 4, 5, 6, C, _, _ ]
 //            : Info block update prompted by op 2.
@@ -1218,11 +1218,11 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
         verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
 
-        // Before we update the info block, check that a power failure would result in
-        // only the second metadata operation being replayed.
+        // Before we update the info block, check that a power failure would result in only the
+        // second metadata operation being replayed.
         //
-        // The first operation has already completed and peristed thanks to the earlier
-        // info block update.
+        // The first operation has already completed and peristed thanks to the earlier info block
+        // update.
         uint64_t sequence_number = 2;
         registry()->VerifyReplay({operations[1]}, sequence_number);
         return ZX_OK;
@@ -1232,9 +1232,9 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
         uint64_t sequence_number = 2;
         verifier.VerifyInfoBlockWrite(sequence_number, requests);
 
-        // After we update the info block, check that a power failure would result in
-        // no operations being replayed - this equivalent to the "clean shutdown" case,
-        // where there should be no work to do on reboot.
+        // After we update the info block, check that a power failure would result in no operations
+        // being replayed - this equivalent to the "clean shutdown" case, where there should be no
+        // work to do on reboot.
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       },
@@ -1248,8 +1248,8 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
   }
 }
 
-// Tests that metadata updates still operate successfully if the commit block wraps around
-// the journal.
+// Tests that metadata updates still operate successfully if the commit block wraps around the
+// journal.
 //
 // Operation 1: [ H, 1, 2, 3, 4, 5, 6, C, _, _ ]
 //            : Info block written by explicit sync
@@ -1311,11 +1311,11 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
         verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
 
-        // Before we update the info block, check that a power failure would result in
-        // only the second metadata operation being replayed.
+        // Before we update the info block, check that a power failure would result in only the
+        // second metadata operation being replayed.
         //
-        // The first operation has already completed and peristed thanks to the earlier
-        // info block update.
+        // The first operation has already completed and peristed thanks to the earlier info block
+        // update.
         uint64_t sequence_number = 2;
         registry()->VerifyReplay({operations[1]}, sequence_number);
         return ZX_OK;
@@ -1325,9 +1325,9 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
         uint64_t sequence_number = 2;
         verifier.VerifyInfoBlockWrite(sequence_number, requests);
 
-        // After we update the info block, check that a power failure would result in
-        // no operations being replayed - this equivalent to the "clean shutdown" case,
-        // where there should be no work to do on reboot.
+        // After we update the info block, check that a power failure would result in no operations
+        // being replayed - this equivalent to the "clean shutdown" case, where there should be no
+        // work to do on reboot.
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       },
@@ -1341,8 +1341,8 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
   }
 }
 
-// Tests that metadata updates still operate successfully if the commit block and entry wrap
-// around the journal.
+// Tests that metadata updates still operate successfully if the commit block and entry wrap around
+// the journal.
 //
 // Operation 1: [ H, 1, 2, 3, 4, 5, 6, 7, C, _ ]
 //            : Info block written by explicit sync
@@ -1404,11 +1404,11 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
         verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
 
-        // Before we update the info block, check that a power failure would result in
-        // only the second metadata operation being replayed.
+        // Before we update the info block, check that a power failure would result in only the
+        // second metadata operation being replayed.
         //
-        // The first operation has already completed and peristed thanks to the earlier
-        // info block update.
+        // The first operation has already completed and peristed thanks to the earlier info block
+        // update.
         uint64_t sequence_number = 2;
         registry()->VerifyReplay({operations[1]}, sequence_number);
         return ZX_OK;
@@ -1418,9 +1418,9 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
         uint64_t sequence_number = 2;
         verifier.VerifyInfoBlockWrite(sequence_number, requests);
 
-        // After we update the info block, check that a power failure would result in
-        // no operations being replayed - this equivalent to the "clean shutdown" case,
-        // where there should be no work to do on reboot.
+        // After we update the info block, check that a power failure would result in no operations
+        // being replayed - this equivalent to the "clean shutdown" case, where there should be no
+        // work to do on reboot.
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       },
@@ -1687,8 +1687,8 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
   ASSERT_TRUE(writer.Flush().is_ok());
 }
 
-// Tests that the in-memory writeback buffer for metadata and the on-disk buffer for
-// metadata can both wraparound at different offsets.
+// Tests that the in-memory writeback buffer for metadata and the on-disk buffer for metadata can
+// both wraparound at different offsets.
 //
 // Operation 0: [ H, 1, 2, 3, 4, C, _, _, _, _ ]
 // Operation _: [ _, _, _, _, _, _, X, X, X, _ ] (In-memory, reserved then released)
@@ -1791,8 +1791,8 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
   ASSERT_TRUE(writer.Flush().is_ok());
 }
 
-// Tests that writing "block N" to metadata before "block N" to data will revoke the
-// block before data is written to the underlying device.
+// Tests that writing "block N" to metadata before "block N" to data will revoke the block before
+// data is written to the underlying device.
 TEST_F(JournalTest, WriteSameBlockMetadataThenDataRevokesBlock) {
   storage::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
   storage::VmoBuffer buffer = registry()->InitializeBuffer(5);
@@ -1845,8 +1845,8 @@ TEST_F(JournalTest, WriteSameBlockMetadataThenDataRevokesBlock) {
       },
       FlushCallback,
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        // This info block is written before a data operation to intentionally avoid
-        // replaying the metadata operation on reboot.
+        // This info block is written before a data operation to intentionally avoid replaying the
+        // metadata operation on reboot.
         uint64_t sequence_number = 1;
         verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
@@ -1893,8 +1893,8 @@ TEST_F(JournalTest, WriteSameBlockMetadataThenDataRevokesBlock) {
   }
 }
 
-// Tests that writing "block N" to metadata before "block M" to data will not revoke the
-// block before data is written to the underlying device (For N != M).
+// Tests that writing "block N" to metadata before "block M" to data will not revoke the block
+// before data is written to the underlying device (For N != M).
 TEST_F(JournalTest, WriteDifferentBlockMetadataThenDataDoesNotRevoke) {
   storage::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
   storage::VmoBuffer buffer = registry()->InitializeBuffer(5);
@@ -1942,8 +1942,8 @@ TEST_F(JournalTest, WriteDifferentBlockMetadataThenDataDoesNotRevoke) {
         return ZX_OK;
       },
       [&](const std::vector<storage::BufferedOperation>& requests) {
-        // Since the metadata and data regions do not overlap, we're fine letting the
-        // metadata operation replay: it won't overwrite our data operation.
+        // Since the metadata and data regions do not overlap, we're fine letting the metadata
+        // operation replay: it won't overwrite our data operation.
         registry()->VerifyReplay({operations[0]}, ++sequence_number);
         verifier.VerifyDataWrite(operations[1], requests);
         return ZX_OK;
@@ -2048,11 +2048,11 @@ TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
       [&](const std::vector<storage::BufferedOperation>& requests) {
         verifier.VerifyMetadataWrite(operations[1], requests);
 
-        // Before we update the info block, check that a power failure would result in
-        // only the second metadata operation being replayed.
+        // Before we update the info block, check that a power failure would result in only the
+        // second metadata operation being replayed.
         //
-        // The first operation has already completed and peristed thanks to the earlier
-        // info block update.
+        // The first operation has already completed and peristed thanks to the earlier info block
+        // update.
         uint64_t sequence_number = 2;
         registry()->VerifyReplay({operations[1]}, sequence_number);
         return ZX_OK;
@@ -2062,9 +2062,9 @@ TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
         uint64_t sequence_number = 2;
         verifier.VerifyInfoBlockWrite(sequence_number, requests);
 
-        // After we update the info block, check that a power failure would result in
-        // no operations being replayed - this equivalent to the "clean shutdown" case,
-        // where there should be no work to do on reboot.
+        // After we update the info block, check that a power failure would result in no operations
+        // being replayed - this equivalent to the "clean shutdown" case, where there should be no
+        // work to do on reboot.
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       },
@@ -2124,9 +2124,9 @@ TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
                     Journal::Options());
 
-    // Although we "WriteData" in a particular order, we can "and-then" data
-    // to force an arbitrary order that we want. This is visible in the transaction
-    // callbacks, where we notice "operations[1]" before "operations[0]".
+    // Although we "WriteData" in a particular order, we can "and-then" data to force an arbitrary
+    // order that we want. This is visible in the transaction callbacks, where we notice
+    // "operations[1]" before "operations[0]".
     auto first_promise = journal.WriteData({operations[0]});
     auto second_promise = journal.WriteData({operations[1]});
 
@@ -2315,8 +2315,8 @@ TEST_F(JournalTest, WritingDataToFullBufferBlocksCaller) {
     auto promise0 = journal.WriteData({operations[0]});
     journal.schedule_task(std::move(promise0));
 
-    // Start a background thread attempting to write operation[1].
-    // It should block until operations[0] has completed.
+    // Start a background thread attempting to write operation[1]. It should block until
+    // operations[0] has completed.
     std::thread worker([&]() {
       auto promise1 = journal.WriteData({operations[1]});
       if (!op0_completed) {
@@ -2525,8 +2525,8 @@ TEST_F(JournalTest, MetadataOperationTooLargeToFitInJournalFails) {
   }
 }
 
-// Tests that when data operations fail, subsequent operations also fail to avoid
-// leaving the device in an inconsistent state.
+// Tests that when data operations fail, subsequent operations also fail to avoid leaving the device
+// in an inconsistent state.
 TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
   storage::VmoBuffer buffer = registry()->InitializeBuffer(5);
   const std::vector<storage::UnbufferedOperation> operations = {
@@ -2635,8 +2635,8 @@ TEST_F(JournalTest, DataWriteFailureStillLetsSyncComplete) {
   EXPECT_TRUE(sync_done);
 }
 
-// Tests that when metadata operations fail, subsequent operations also fail to avoid
-// leaving the device in an inconsistent state.
+// Tests that when metadata operations fail, subsequent operations also fail to avoid leaving the
+// device in an inconsistent state.
 //
 // Tests a failure which occurs when writing metadata to journal itself.
 TEST_F(JournalTest, JournalWriteFailureFailsSubsequentRequests) {
@@ -2693,8 +2693,8 @@ TEST_F(JournalTest, JournalWriteFailureFailsSubsequentRequests) {
   }
 }
 
-// Tests that when metadata operations fail, subsequent operations also fail to avoid
-// leaving the device in an inconsistent state.
+// Tests that when metadata operations fail, subsequent operations also fail to avoid leaving the
+// device in an inconsistent state.
 //
 // Tests a failure which occurs when writing metadata to the final on-disk location (non-journal).
 TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
@@ -2753,8 +2753,8 @@ TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
   }
 }
 
-// Tests that when info block operations fail, subsequent operations also fail to avoid
-// leaving the device in an inconsistent state.
+// Tests that when info block operations fail, subsequent operations also fail to avoid leaving the
+// device in an inconsistent state.
 //
 // - Write Metadata (OK, but causes a delayed info block writeback)
 // - Sync (cause info block writeback to happen, where it fails)
@@ -2839,8 +2839,8 @@ TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
 //  Journal:
 //      [ _, _, _, H, 1, 2, 3, C, _, _ ]
 //
-// and continued operations occur, such that the header is overwritten, and the
-// info block is updated:
+// and continued operations occur, such that the header is overwritten, and the info block is
+// updated:
 //
 //           New Operation
 //           |
@@ -2852,16 +2852,16 @@ TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
 //
 // Resulting in replaying one operaton.
 //
-// However, if "[1, 2, 3]" actually sets block "1" to a valid header block, and
-// block "3" to a valid commit block, the journal would look like the following:
+// However, if "[1, 2, 3]" actually sets block "1" to a valid header block, and block "3" to a valid
+// commit block, the journal would look like the following:
 //
 //      [ _, H, x, C, H, 2, C, _, _, _ ]
 //
-// This would result in TWO operations being replayed, where the second could
-// contain arbitrary data.
+// This would result in TWO operations being replayed, where the second could contain arbitrary
+// data.
 //
-// To avoid this case, the journal converts payload blocks with "header entry magic"
-// to a form that drops them on replay.
+// To avoid this case, the journal converts payload blocks with "header entry magic" to a form that
+// drops them on replay.
 TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
   // Create an operation which will become escaped when written by the journal.
   storage::VmoBuffer metadata = registry()->InitializeBuffer(1);

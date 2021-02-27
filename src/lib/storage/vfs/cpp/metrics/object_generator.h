@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_METRICS_INTERNAL_OBJECT_GENERATOR_H_
-#define FS_METRICS_INTERNAL_OBJECT_GENERATOR_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_METRICS_OBJECT_GENERATOR_H_
+#define SRC_LIB_STORAGE_VFS_CPP_METRICS_OBJECT_GENERATOR_H_
+
+#include <lib/inspect/cpp/inspect.h>
 
 #include <vector>
 
 #include <fbl/string_buffer.h>
-#include <lib/inspect/cpp/inspect.h>
 
 namespace fs_metrics {
 // This library provides mechanisms for auto generating inspect::vmo::objects. In order to so,
@@ -84,4 +85,4 @@ struct ObjectGenerator {
 
 }  // namespace fs_metrics
 
-#endif  // FS_METRICS_INTERNAL_OBJECT_GENERATOR_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_METRICS_OBJECT_GENERATOR_H_

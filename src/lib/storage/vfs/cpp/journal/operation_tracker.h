@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_JOURNAL_INTERNAL_OPERATION_TRACKER_H_
-#define FS_JOURNAL_INTERNAL_OPERATION_TRACKER_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_OPERATION_TRACKER_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_OPERATION_TRACKER_H_
 
 #include <algorithm>
 #include <vector>
@@ -30,8 +30,7 @@ class OperationTracker {
   void Insert(Range range) { operations_.insert(range); }
 
   // Removes the overlapping portion of tracked operations which overlap with the input range.
-  // This method does not remove the non-overlapping portion.
-  // For example:
+  // This method does not remove the non-overlapping portion. For example:
   //   Insert([0, 100))
   //   Remove([50, 150)
   // Removes/returns [50, 100), but leaves [0, 50) in the tracker.
@@ -40,9 +39,7 @@ class OperationTracker {
   std::vector<Range> Remove(Range range);
 
   // Returns true if any tracked operations even partially overlap with the provided range.
-  bool Overlaps(Range range) {
-    return operations_.find(range) != operations_.end();
-  }
+  bool Overlaps(Range range) { return operations_.find(range) != operations_.end(); }
 
   void Clear() { operations_.clear(); }
 
@@ -53,4 +50,4 @@ class OperationTracker {
 }  // namespace internal
 }  // namespace fs
 
-#endif  // FS_JOURNAL_INTERNAL_OPERATION_TRACKER_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_OPERATION_TRACKER_H_

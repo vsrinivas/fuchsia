@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_FS_JOURNAL_TEST_FUZZER_UTILS_H_
-#define ZIRCON_SYSTEM_ULIB_FS_JOURNAL_TEST_FUZZER_UTILS_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_FUZZER_UTILS_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_FUZZER_UTILS_H_
 
 #include <lib/zx/vmo.h>
 #include <stddef.h>
@@ -13,15 +13,16 @@
 
 #include <map>
 
-#include "src/lib/storage/vfs/cpp/journal/format.h"
-#include "src/lib/storage/vfs/cpp/journal/superblock.h"
-#include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 #include <fuzzer/FuzzedDataProvider.h>
 #include <storage/buffer/blocking_ring_buffer.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/buffer/vmoid_registry.h>
 #include <storage/operation/operation.h>
 #include <storage/operation/unbuffered_operation.h>
+
+#include "src/lib/storage/vfs/cpp/journal/format.h"
+#include "src/lib/storage/vfs/cpp/journal/superblock.h"
+#include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 
 namespace fs {
 
@@ -115,4 +116,4 @@ class FuzzerUtils final {
 
 }  // namespace fs
 
-#endif  // ZIRCON_SYSTEM_ULIB_FS_JOURNAL_TEST_FUZZER_UTILS_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_FUZZER_UTILS_H_

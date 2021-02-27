@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_PSEUDO_FILE_H_
-#define FS_PSEUDO_FILE_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_PSEUDO_FILE_H_
+#define SRC_LIB_STORAGE_VFS_CPP_PSEUDO_FILE_H_
 
 #include <lib/fit/function.h>
 
@@ -15,30 +15,30 @@
 
 namespace fs {
 
-// A pseudo-file is a file-like object whose content is generated and modified
-// dynamically on-the-fly by invoking handler functions rather than being
-// directly persisted as a sequence of bytes.
+// A pseudo-file is a file-like object whose content is generated and modified dynamically
+// on-the-fly by invoking handler functions rather than being directly persisted as a sequence of
+// bytes.
 //
-// This class is designed to allow programs to publish read-only, write-only,
-// or read-write properties such as configuration options, debug flags,
-// and dumps of internal state which may change dynamically.
+// This class is designed to allow programs to publish read-only, write-only, or read-write
+// properties such as configuration options, debug flags, and dumps of internal state which may
+// change dynamically.
 //
-// A pseudo-file is readable when it has a non-null |ReadHandler|.  Typically
-// the read handler will output a UTF-8 representation of some element of
-// the program's state, or return an error if the requested information is not
-// available.  The read handler is not expected to have side-effects (but it can).
+// A pseudo-file is readable when it has a non-null |ReadHandler|.  Typically the read handler will
+// output a UTF-8 representation of some element of the program's state, or return an error if the
+// requested information is not available.  The read handler is not expected to have side-effects
+// (but it can).
 //
-// A pseudo-file is writable when it has a non-null |WriteHandler|.  Typically
-// the write handler will parse the input in a UTF-8 representation and update
-// the program's state in response, or return an error if the input is invalid.
+// A pseudo-file is writable when it has a non-null |WriteHandler|.  Typically the write handler
+// will parse the input in a UTF-8 representation and update the program's state in response, or
+// return an error if the input is invalid.
 //
 // Although pseudo-files usually contain text, they can also be used for binary data.
 //
-// There is no guarantee that data written to the pseudo-file can be read back
-// from the pseudo-file in the same form; it's not a real file after all.
+// There is no guarantee that data written to the pseudo-file can be read back from the pseudo-file
+// in the same form; it's not a real file after all.
 //
-// This is an abstract class.  The concrete implementations are
-// |BufferedPseudoFile| and |UnbufferedPseudoFile|.
+// This is an abstract class.  The concrete implementations are |BufferedPseudoFile| and
+// |UnbufferedPseudoFile|.
 class PseudoFile : public Vnode {
  public:
   // Handler called to read from the pseudo-file.
@@ -68,22 +68,20 @@ class PseudoFile : public Vnode {
 
 // Buffered pseudo-file.
 //
-// This variant is optimized for incrementally reading and writing properties
-// which are larger than can typically be read or written by the client in
-// a single I/O transaction.
+// This variant is optimized for incrementally reading and writing properties which are larger than
+// can typically be read or written by the client in a single I/O transaction.
 //
-// In read mode, the pseudo-file invokes its read handler when the file is opened
-// and retains the content in an output buffer which the client incrementally reads
-// from and can seek within.
+// In read mode, the pseudo-file invokes its read handler when the file is opened and retains the
+// content in an output buffer which the client incrementally reads from and can seek within.
 //
-// In write mode, the client incrementally writes into and seeks within an input
-// buffer which the pseudo-file delivers as a whole to the write handler when the
-// file is closed.  Truncation is also supported.
+// In write mode, the client incrementally writes into and seeks within an input buffer which the
+// pseudo-file delivers as a whole to the write handler when the file is closed.  Truncation is also
+// supported.
 //
-// Each client has its own separate output and input buffers.  Writing into the
-// output buffer does not affect the contents of the client's input buffer or that
-// of any other client.  Changes to the underlying state of the pseudo-file are not
-// observed by the client until it closes and re-opens the file.
+// Each client has its own separate output and input buffers.  Writing into the output buffer does
+// not affect the contents of the client's input buffer or that of any other client.  Changes to the
+// underlying state of the pseudo-file are not observed by the client until it closes and re-opens
+// the file.
 //
 // This class is thread-safe.
 class BufferedPseudoFile : public PseudoFile {
@@ -144,38 +142,36 @@ class BufferedPseudoFile : public PseudoFile {
 
 // Unbuffered pseudo-file.
 //
-// This variant is optimized for atomically reading and writing small properties.
-// Unlike buffered pseudo-files, it is not necessary to re-open the pseudo-file to
-// observe side-effects; the client can simply seek back to the zero offset and
-// read or write again.
+// This variant is optimized for atomically reading and writing small properties. Unlike buffered
+// pseudo-files, it is not necessary to re-open the pseudo-file to observe side-effects; the client
+// can simply seek back to the zero offset and read or write again.
 //
-// Because reads and writes are not buffered, the maximum size of the property
-// is limited to what will fit in a single I/O transaction.  Unbuffered pseudo-files
-// generally work best for properties which are likely to be polled or repeatedly
-// modified and which are no larger than the nominal I/O buffer size used by the
-// intended clients.
+// Because reads and writes are not buffered, the maximum size of the property is limited to what
+// will fit in a single I/O transaction.  Unbuffered pseudo-files generally work best for properties
+// which are likely to be polled or repeatedly modified and which are no larger than the nominal I/O
+// buffer size used by the intended clients.
 //
-// As a conservative guideline, we recommend using |BufferedPseudoFile| instead
-// for content larger than |PAGE_SIZE|.
+// As a conservative guideline, we recommend using |BufferedPseudoFile| instead for content larger
+// than |PAGE_SIZE|.
 //
-// In read mode, the pseudo-file invokes its read handler each time |Read()|
-// is called with a seek offset of 0, returning at most as many bytes as the
-// client requested and discarding the remainder (if any).
+// In read mode, the pseudo-file invokes its read handler each time |Read()| is called with a seek
+// offset of 0, returning at most as many bytes as the client requested and discarding the remainder
+// (if any).
 //
 // Reading with a non-zero seek offset returns empty data, indicating end of file.
 //
-// In write mode, the pseudo-file invokes its write handler each time |Write()|
-// with a seek offset of 0 is called, passing all of the bytes written by the
-// client as the input string.  Likewise, |Append()| invokes the write handler
-// each time it is called and returns a new end of file offset of 0.
+// In write mode, the pseudo-file invokes its write handler each time |Write()| with a seek offset
+// of 0 is called, passing all of the bytes written by the client as the input string.  Likewise,
+// |Append()| invokes the write handler each time it is called and returns a new end of file offset
+// of 0.
 //
-// Writing with a non-zero seek offset returns |ZX_ERR_NO_SPACE|, indicating an
-// attempt to write data beyond what was accepted by the write handler.
+// Writing with a non-zero seek offset returns |ZX_ERR_NO_SPACE|, indicating an attempt to write
+// data beyond what was accepted by the write handler.
 //
-// Opening the file in create mode or truncating it to zero length then closing
-// it without an intervening write is equivalent to writing 0 bytes.  This
-// adaptation improves compatibility with command-line operations which are
-// intended to modify the file in-place such as: `echo "data" > pseudo-file`.
+// Opening the file in create mode or truncating it to zero length then closing it without an
+// intervening write is equivalent to writing 0 bytes.  This adaptation improves compatibility with
+// command-line operations which are intended to modify the file in-place such as: `echo "data" >
+// pseudo-file`.
 //
 // Truncating to a non-zero length returns |ZX_ERR_INVALID_ARGS|.
 //
@@ -229,4 +225,4 @@ class UnbufferedPseudoFile : public PseudoFile {
 
 }  // namespace fs
 
-#endif  // FS_PSEUDO_FILE_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_PSEUDO_FILE_H_

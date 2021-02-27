@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_VFS_H_
-#define FS_VFS_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_VFS_H_
+#define SRC_LIB_STORAGE_VFS_CPP_VFS_H_
 
 #include <lib/fdio/vfs.h>
 #include <stdint.h>
@@ -32,6 +32,7 @@
 #include <lib/zx/vmo.h>
 
 #include <fbl/intrusive_hash_table.h>
+
 #include "src/lib/storage/vfs/cpp/mount_channel.h"
 #endif  // __Fuchsia__
 
@@ -354,4 +355,4 @@ class Vfs::OpenResult {
 
 }  // namespace fs
 
-#endif  // FS_VFS_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_VFS_H_

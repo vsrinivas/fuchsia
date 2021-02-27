@@ -13,9 +13,10 @@
 #include <memory>
 
 #include <fbl/auto_lock.h>
+#include <zxtest/zxtest.h>
+
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
-#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -67,14 +68,14 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
       {.connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE,
        .request_flags = fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
        .expected_result = ZX_OK},
-      // If the connection is missing the EXECUTABLE right, then requests with
-      // fio::VMO_FLAG_EXEC should fail.
+      // If the connection is missing the EXECUTABLE right, then requests with fio::VMO_FLAG_EXEC
+      // should fail.
       {.connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
        .request_flags = fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
        .expected_result = ZX_ERR_ACCESS_DENIED},
 
-      // If the connection is missing the WRITABLE right, then requests with
-      // fio::VMO_FLAG_WRITE should fail.
+      // If the connection is missing the WRITABLE right, then requests with fio::VMO_FLAG_WRITE
+      // should fail.
       {.connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
        .request_flags = fio::VMO_FLAG_READ | fio::VMO_FLAG_WRITE,
        .expected_result = ZX_ERR_ACCESS_DENIED},
@@ -90,8 +91,8 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
       uint32_t flags = row.connection_flags;
       vfs->Serve(vnode, std::move(server), fs::VnodeConnectionOptions::FromIoV1Flags(flags));
 
-      // Call FileGetBuffer on the channel with the testcase's request flags.
-      // Check that we get the expected result.
+      // Call FileGetBuffer on the channel with the testcase's request flags. Check that we get the
+      // expected result.
       auto result =
           fio::File::Call::GetBuffer(zx::unowned_channel(client.get()), row.request_flags);
       EXPECT_EQ(result.status(), ZX_OK);
@@ -101,8 +102,8 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
     }
   }
 
-  // Tear down the VFS.  On completion, it will no longer rely on the async
-  // loop.  Then, tear down the async loop.
+  // Tear down the VFS. On completion, it will no longer rely on the async loop. Then, tear down the
+  // async loop.
   sync_completion_t completion;
   vfs->Shutdown([&completion](zx_status_t status) {
     EXPECT_EQ(status, ZX_OK);

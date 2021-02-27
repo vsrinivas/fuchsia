@@ -16,12 +16,13 @@
 #include <thread>
 #include <utility>
 
+#include <zxtest/zxtest.h>
+
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
-#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -105,9 +106,8 @@ void SendSync(const zx::channel& client) {
   ASSERT_OK(encoded.status());
 }
 
-// Helper function which creates a VFS with a served Vnode,
-// starts a sync request, and then closes the connection to the client
-// in the middle of the async callback.
+// Helper function which creates a VFS with a served Vnode, starts a sync request, and then closes
+// the connection to the client in the middle of the async callback.
 //
 // This helps tests get ready to try handling a tricky teardown.
 void SyncStart(sync_completion_t* completions, async::Loop* loop,
@@ -158,9 +158,8 @@ void CommonTestUnpostedTeardown(zx_status_t status_for_sync) {
 // Test a case where the VFS object is shut down outside the dispatch loop.
 TEST(Teardown, UnpostedTeardown) { CommonTestUnpostedTeardown(ZX_OK); }
 
-// Test a case where the VFS object is shut down outside the dispatch loop,
-// where the |Vnode::Sync| operation also failed causing the connection to
-// be closed.
+// Test a case where the VFS object is shut down outside the dispatch loop, where the |Vnode::Sync|
+// operation also failed causing the connection to be closed.
 TEST(Teardown, UnpostedTeardownSyncError) { CommonTestUnpostedTeardown(ZX_ERR_INVALID_ARGS); }
 
 void CommonTestPostedTeardown(zx_status_t status_for_sync) {
@@ -187,13 +186,11 @@ void CommonTestPostedTeardown(zx_status_t status_for_sync) {
   ASSERT_OK(sync_completion_wait(&shutdown_done, ZX_SEC(3)));
 }
 
-// Test a case where the VFS object is shut down as a posted request to the
-// dispatch loop.
+// Test a case where the VFS object is shut down as a posted request to the dispatch loop.
 TEST(Teardown, PostedTeardown) { ASSERT_NO_FAILURES(CommonTestPostedTeardown(ZX_OK)); }
 
-// Test a case where the VFS object is shut down as a posted request to the
-// dispatch loop, where the |Vnode::Sync| operation also failed causing the
-// connection to be closed.
+// Test a case where the VFS object is shut down as a posted request to the dispatch loop, where the
+// |Vnode::Sync| operation also failed causing the connection to be closed.
 TEST(Teardown, PostedTeardownSyncError) {
   ASSERT_NO_FAILURES(CommonTestPostedTeardown(ZX_ERR_INVALID_ARGS));
 }
@@ -214,8 +211,7 @@ TEST(Teardown, TeardownDeleteThis) {
   fs::ManagedVfs* raw_vfs = vfs.release();
   raw_vfs->Shutdown([&raw_vfs, &vnode_destroyed, &shutdown_done](zx_status_t status) {
     ZX_ASSERT(status == ZX_OK);
-    // C) Issue an explicit shutdown, check that the Vnode has
-    // already torn down.
+    // C) Issue an explicit shutdown, check that the Vnode has already torn down.
     ZX_ASSERT(sync_completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
     delete raw_vfs;
     sync_completion_signal(&shutdown_done);
@@ -223,8 +219,8 @@ TEST(Teardown, TeardownDeleteThis) {
   ASSERT_OK(sync_completion_wait(&shutdown_done, ZX_SEC(3)));
 }
 
-// Test a case where the VFS object is shut down before a background async
-// callback gets the chance to complete.
+// Test a case where the VFS object is shut down before a background async callback gets the chance
+// to complete.
 TEST(Teardown, TeardownSlowAsyncCallback) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sync_completion_t completions[3];
@@ -236,8 +232,7 @@ TEST(Teardown, TeardownSlowAsyncCallback) {
   sync_completion_t shutdown_done;
   vfs->Shutdown([&vnode_destroyed, &shutdown_done](zx_status_t status) {
     ZX_ASSERT(status == ZX_OK);
-    // C) Issue an explicit shutdown, check that the Vnode has
-    // already torn down.
+    // C) Issue an explicit shutdown, check that the Vnode has already torn down.
     //
     // Note: Will not be invoked until (B) completes.
     ZX_ASSERT(sync_completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
@@ -252,8 +247,8 @@ TEST(Teardown, TeardownSlowAsyncCallback) {
   ASSERT_OK(sync_completion_wait(&shutdown_done, ZX_SEC(3)));
 }
 
-// Test a case where the VFS object is shut down while a clone request
-// is concurrently trying to open a new connection.
+// Test a case where the VFS object is shut down while a clone request is concurrently trying to
+// open a new connection.
 TEST(Teardown, TeardownSlowClone) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sync_completion_t completions[3];
@@ -269,8 +264,7 @@ TEST(Teardown, TeardownSlowClone) {
   ASSERT_OK(vfs->Serve(vn, std::move(server), validated_options.value()));
   vn = nullptr;
 
-  // A) Wait for sync to begin.
-  // Block the connection to the server in a sync, while simultaneously
+  // A) Wait for sync to begin. Block the connection to the server in a sync, while simultaneously
   // sending a request to open a new connection.
   SendSync(client);
   sync_completion_wait(&completions[0], ZX_TIME_INFINITE);
@@ -290,8 +284,7 @@ TEST(Teardown, TeardownSlowClone) {
   sync_completion_t shutdown_done;
   vfs->Shutdown([&vnode_destroyed, &shutdown_done](zx_status_t status) {
     ZX_ASSERT(status == ZX_OK);
-    // C) Issue an explicit shutdown, check that the Vnode has
-    // already torn down.
+    // C) Issue an explicit shutdown, check that the Vnode has already torn down.
     //
     // Note: Will not be invoked until (B) completes.
     ZX_ASSERT(sync_completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
@@ -301,8 +294,8 @@ TEST(Teardown, TeardownSlowClone) {
   // Shutdown should be waiting for our sync to finish.
   ASSERT_EQ(ZX_ERR_TIMED_OUT, sync_completion_wait(&shutdown_done, ZX_MSEC(10)));
 
-  // B) Let sync complete. This should result in a successful termination
-  // of the filesystem, even with the pending clone request.
+  // B) Let sync complete. This should result in a successful termination of the filesystem, even
+  // with the pending clone request.
   sync_completion_signal(&completions[1]);
   ASSERT_OK(sync_completion_wait(&shutdown_done, ZX_SEC(3)));
 }

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+
 #include <lib/async/cpp/task.h>
 #include <lib/sync/completion.h>
 
 #include <memory>
 #include <utility>
-
-#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 namespace fs {
 
@@ -63,8 +63,7 @@ zx_status_t SynchronousVfs::RegisterConnection(std::unique_ptr<internal::Connect
 }
 
 void SynchronousVfs::UnregisterConnection(internal::Connection* connection) {
-  // We drop the result of |erase| on the floor, effectively destroying the
-  // connection.
+  // We drop the result of |erase| on the floor, effectively destroying the connection.
   connections_.erase(*connection);
 }
 

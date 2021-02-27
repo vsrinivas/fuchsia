@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fzl/time.h>
-
 #include "src/lib/storage/vfs/cpp/metrics/composite_latency_event.h"
+
+#include <lib/fzl/time.h>
 
 namespace fs_metrics {
 

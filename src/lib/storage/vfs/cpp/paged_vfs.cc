@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_lock.h>
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
+
+#include <fbl/auto_lock.h>
+
 #include "src/lib/storage/vfs/cpp/paged_vnode.h"
 
 namespace fs {

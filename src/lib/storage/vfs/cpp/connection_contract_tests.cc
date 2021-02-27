@@ -7,10 +7,11 @@
 
 #include <utility>
 
-#include "src/lib/storage/vfs/cpp/connection.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include <sanitizer/lsan_interface.h>
 #include <zxtest/zxtest.h>
+
+#include "src/lib/storage/vfs/cpp/connection.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace {
 
@@ -52,9 +53,8 @@ class NoOpVfsGood : public NoOpVfs {
   }
 };
 
-// A Vfs that first starts message dispatch on a connection before
-// placing it into a linked list. This behavior is racy (fxbug.dev/45912)
-// so we test that it triggers a failed precondition check.
+// A Vfs that first starts message dispatch on a connection before placing it into a linked list.
+// This behavior is racy (fxbug.dev/45912) so we test that it triggers a failed precondition check.
 class NoOpVfsBad : public NoOpVfs {
  public:
   using NoOpVfs::NoOpVfs;

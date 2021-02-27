@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_SERVICE_H_
-#define FS_SERVICE_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_SERVICE_H_
+#define SRC_LIB_STORAGE_VFS_CPP_SERVICE_H_
 
 #include <lib/fit/function.h>
 #include <lib/fit/traits.h>
@@ -22,8 +22,7 @@ class Service : public Vnode {
  public:
   // Construct with fbl::MakeRefCounted.
 
-  // Handler called to bind the provided channel to an implementation
-  // of the service.
+  // Handler called to bind the provided channel to an implementation of the service.
   using Connector = fit::function<zx_status_t(zx::channel channel)>;
 
  private:
@@ -47,9 +46,8 @@ class Service : public Vnode {
                          std::negation<std::is_convertible<T, Connector>>>;
 
  public:
-  // Handler called to bind the provided channel to an implementation
-  // of the service. This version is typed to the exact FIDL protocol
-  // the handler will support.
+  // Handler called to bind the provided channel to an implementation of the service. This version
+  // is typed to the exact FIDL protocol the handler will support.
   template <typename Protocol>
   using ProtocolConnector = fit::function<zx_status_t(fidl::ServerEnd<Protocol>)>;
 
@@ -69,8 +67,8 @@ class Service : public Vnode {
   // If the |connector| is null, then incoming connection requests will be dropped.
   explicit Service(Connector connector);
 
-  // Creates a service with the specified connector.
-  // This version is typed to the exact FIDL protocol the handler will support:
+  // Creates a service with the specified connector. This version is typed to the exact FIDL
+  // protocol the handler will support:
   //
   //     auto service = fbl::MakeRefCounted<fs::Service>(
   //         [](fidl::ServerEnd<fidl_library::SomeProtocol> server_end) {
@@ -80,8 +78,8 @@ class Service : public Vnode {
   //
   // If the |connector| is null, then incoming connection requests will be dropped.
   //
-  // The connector should be a callable taking a single |fidl::ServerEnd<ProtocolType>|
-  // as argument, and return a |zx_status_t|.
+  // The connector should be a callable taking a single |fidl::ServerEnd<ProtocolType>| as argument,
+  // and return a |zx_status_t|.
   template <typename Callable, std::enable_if_t<maybe_protocol_connector<Callable>, bool> = true>
   explicit Service(Callable&& connector)
       : Service([connector = std::forward<Callable>(connector)](zx::channel channel) mutable {
@@ -112,4 +110,4 @@ class Service : public Vnode {
 
 }  // namespace fs
 
-#endif  // FS_SERVICE_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_SERVICE_H_

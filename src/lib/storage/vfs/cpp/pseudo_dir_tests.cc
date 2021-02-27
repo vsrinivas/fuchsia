@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zxtest/zxtest.h>
+
 #include "src/lib/storage/vfs/cpp/dir_test_util.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/pseudo_file.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
-#include <zxtest/zxtest.h>
 
 namespace {
 

@@ -13,10 +13,11 @@
 #include <atomic>
 #include <utility>
 
+#include <zxtest/zxtest.h>
+
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/pseudo_file.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
-#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -26,8 +27,8 @@ zx_status_t DummyReader(fbl::String* output) { return ZX_OK; }
 
 zx_status_t DummyWriter(fbl::StringPiece input) { return ZX_OK; }
 
-// Example vnode that supports protocol negotiation.
-// Here the vnode may be opened as a file or a directory.
+// Example vnode that supports protocol negotiation. Here the vnode may be opened as a file or a
+// directory.
 class FileOrDirectory : public fs::Vnode {
  public:
   FileOrDirectory() = default;
@@ -54,8 +55,8 @@ class FileOrDirectory : public fs::Vnode {
 
 class VfsTestSetup : public zxtest::Test {
  public:
-  // Setup file structure with one directory and one file. Note: On creation
-  // directories and files have no flags and rights.
+  // Setup file structure with one directory and one file. Note: On creation directories and files
+  // have no flags and rights.
   VfsTestSetup() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     vfs_.SetDispatcher(loop_.dispatcher());
     root_ = fbl::MakeRefCounted<fs::PseudoDir>();
@@ -260,8 +261,8 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
   expect_on_open(zx::unowned_channel(fc1), [](fio::NodeInfo info) { EXPECT_TRUE(info.is_file()); });
 }
 
-// A vnode which maintains a counter of number of |Open| calls that
-// have not been balanced out with a |Close|.
+// A vnode which maintains a counter of number of |Open| calls that have not been balanced out with
+// a |Close|.
 class CountOutstandingOpenVnode : public fs::Vnode {
  public:
   CountOutstandingOpenVnode() = default;
@@ -292,8 +293,8 @@ class CountOutstandingOpenVnode : public fs::Vnode {
 
 class ConnectionClosingTest : public zxtest::Test {
  public:
-  // Setup file structure with one directory and one file. Note: On creation
-  // directories and files have no flags and rights.
+  // Setup file structure with one directory and one file. Note: On creation directories and files
+  // have no flags and rights.
   ConnectionClosingTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     vfs_.SetDispatcher(loop_.dispatcher());
     root_ = fbl::MakeRefCounted<fs::PseudoDir>();
@@ -346,8 +347,8 @@ TEST_F(ConnectionClosingTest, ClosingChannelImpliesClosingNode) {
   ASSERT_OK(loop().RunUntilIdle());
   ASSERT_EQ(count_outstanding_open_vnode()->num_open(), kNumActiveClients);
 
-  // Drop all the clients, leading to |Close| being invoked
-  // on "count_outstanding_open_vnode" eventually.
+  // Drop all the clients, leading to |Close| being invoked on "count_outstanding_open_vnode"
+  // eventually.
   clients.clear();
 
   ASSERT_OK(loop().RunUntilIdle());

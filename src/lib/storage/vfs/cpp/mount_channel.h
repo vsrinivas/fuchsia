@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_MOUNT_CHANNEL_H_
-#define FS_MOUNT_CHANNEL_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_MOUNT_CHANNEL_H_
+#define SRC_LIB_STORAGE_VFS_CPP_MOUNT_CHANNEL_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/channel.h>
@@ -13,13 +13,11 @@
 
 namespace fs {
 
-// MountChannel functions exactly the same as a channel, except that it
-// intentionally destructs by sending a clean "shutdown" signal to the
-// underlying filesystem. Up until the point that a remote handle is
-// attached to a vnode, this wrapper guarantees not only that the
-// underlying handle gets closed on error, but also that the sub-filesystem
-// is released (which cleans up the underlying connection to the block
-// device).
+// MountChannel functions exactly the same as a channel, except that it intentionally destructs by
+// sending a clean "shutdown" signal to the underlying filesystem. Up until the point that a remote
+// handle is attached to a vnode, this wrapper guarantees not only that the underlying handle gets
+// closed on error, but also that the sub-filesystem is released (which cleans up the underlying
+// connection to the block device).
 class MountChannel {
  public:
   constexpr MountChannel() = default;
@@ -39,4 +37,4 @@ class MountChannel {
 
 }  // namespace fs
 
-#endif  // FS_MOUNT_CHANNEL_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_MOUNT_CHANNEL_H_

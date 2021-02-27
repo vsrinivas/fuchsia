@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_TRANSACTION_WRITEBACK_H_
-#define FS_TRANSACTION_WRITEBACK_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_WRITEBACK_H_
+#define SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_WRITEBACK_H_
 
 #include <lib/fit/promise.h>
 #include <lib/zx/vmo.h>
@@ -13,9 +13,10 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
-#include "src/lib/storage/vfs/cpp/transaction/legacy_transaction_handler.h"
 #include <storage/operation/operation.h>
 #include <storage/operation/unbuffered_operations_builder.h>
+
+#include "src/lib/storage/vfs/cpp/transaction/legacy_transaction_handler.h"
 
 namespace fs {
 
@@ -44,4 +45,4 @@ zx_status_t FlushRequests(LegacyTransactionHandler* transaction_handler,
 
 }  // namespace fs
 
-#endif  // FS_TRANSACTION_WRITEBACK_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_WRITEBACK_H_

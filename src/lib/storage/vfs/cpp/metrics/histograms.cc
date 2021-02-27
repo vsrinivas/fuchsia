@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/metrics/histograms.h"
+
 #include <zircon/assert.h>
 
 #include <algorithm>
@@ -12,7 +14,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_printf.h>
-#include "src/lib/storage/vfs/cpp/metrics/histograms.h"
+
 #include "src/lib/storage/vfs/cpp/metrics/attributes.h"
 #include "src/lib/storage/vfs/cpp/metrics/object_offsets.h"
 
@@ -42,9 +44,9 @@ struct BlockCount : NumericAttribute<BlockCount, int64_t> {
 
 // An attribute which indicates whether the event may be cached in memory or not.
 //
-// Inheriting from this attribute within an event indicates that such event may have
-// variable modes of events, where it either acts on in-memory structures or sends requests to
-// the underlying storage.
+// Inheriting from this attribute within an event indicates that such event may have variable modes
+// of events, where it either acts on in-memory structures or sends requests to the underlying
+// storage.
 struct Bufferable : public BinaryAttribute {
   static constexpr bool EventOptions::*kAttributeValue = &EventOptions::buffered;
 
@@ -54,8 +56,8 @@ struct Bufferable : public BinaryAttribute {
 // An attribute which indicates whether the event successful completion should be treated
 // differently than when it completes with failure.
 //
-// Inheriting from this attribute within an event indicates that such event may fail
-// at any point, and that the recorded data should be splitted.
+// Inheriting from this attribute within an event indicates that such event may fail at any point,
+// and that the recorded data should be splitted.
 struct Success : public BinaryAttribute {
   static constexpr bool EventOptions::*kAttributeValue = &EventOptions::success;
 
@@ -64,8 +66,8 @@ struct Success : public BinaryAttribute {
 
 // An attribute which indicates the number of childs a given node in the file system has.
 //
-// Inheriting from this attribute within an event indicates that such event is affected
-// by the number of children the node has. An example is a lookup event.
+// Inheriting from this attribute within an event indicates that such event is affected by the
+// number of children the node has. An example is a lookup event.
 struct NodeDegree : NumericAttribute<NodeDegree, int64_t> {
   static constexpr int64_t kBuckets[] = {
       // Bucket 0: [0, 10)
@@ -89,8 +91,8 @@ void CreateMicrosecHistogramId(const char* name, inspect::Node* root,
 }
 
 // Provides a specialized type that keep track of created attributes. In order to add new
-// attributes, the Attribute class needs to be listed here.
-// Note: New attributes need to be added to |MakeOptionsSet| in HistogramsTest.
+// attributes, the Attribute class needs to be listed here. Note: New attributes need to be added to
+// |MakeOptionsSet| in HistogramsTest.
 using HistogramOffsets = ObjectOffsets<NodeDegree, BlockCount, Bufferable, Success>;
 
 // In order to add a new events a couple of things needs to be added:
@@ -106,8 +108,8 @@ using HistogramOffsets = ObjectOffsets<NodeDegree, BlockCount, Bufferable, Succe
 template <Event event>
 struct EventInfo {};
 
-// Each event or metric we want to track needs to provide its own specialization with the
-// relavant data and the attributes that it wishes to track.
+// Each event or metric we want to track needs to provide its own specialization with the relavant
+// data and the attributes that it wishes to track.
 template <>
 struct EventInfo<Event::kRead> : public BlockCount, Bufferable, Success {
   using AttributeData = EventOptions;
@@ -318,8 +320,8 @@ Histograms::Histograms(inspect::Node* root) {
   nodes_.push_back(root->CreateChild(kHistComponent));
   auto& hist_node = nodes_[nodes_.size() - 1];
 
-  // Histogram names are defined based on event_name(_DimensionValue){0,5}, where
-  // dimension value is determined at runtime based on the EventOptions.
+  // Histogram names are defined based on event_name(_DimensionValue){0,5}, where dimension value is
+  // determined at runtime based on the EventOptions.
   ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kRead>::kStart);
   AddOpHistograms<Event::kRead>(&hist_node, &histograms_);
 

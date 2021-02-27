@@ -178,8 +178,8 @@ TEST_F(EntryViewTest, ChecksumDoesNotIncludeCommit) {
 
   // Change some data in the commit block.
   //
-  // Note that we need to do some casting hackery to pull this off, because the journal
-  // entry view only allows normal modification through the "set" method exclusively.
+  // Note that we need to do some casting hackery to pull this off, because the journal entry view
+  // only allows normal modification through the "set" method exclusively.
   const_cast<JournalCommitBlock*>(const_cast<const JournalEntryView*>(&view2)->footer())
       ->prefix.sequence_number++;
   ASSERT_EQ(checksum, view2.CalculateChecksum());

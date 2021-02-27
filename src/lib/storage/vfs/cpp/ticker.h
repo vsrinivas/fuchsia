@@ -4,7 +4,8 @@
 
 // This file contains a helper for gathering metrics timing info.
 
-#pragma once
+#ifndef SRC_LIB_STORAGE_VFS_CPP_TICKER_H_
+#define SRC_LIB_STORAGE_VFS_CPP_TICKER_H_
 
 #ifdef __Fuchsia__
 #include <lib/zx/time.h>
@@ -36,11 +37,10 @@ class Ticker {
     ticks_ = zx::ticks::now();
   }
 
-  // Returns '0' for duration if collecting_metrics is false,
-  // preventing an unnecessary syscall.
+  // Returns '0' for duration if collecting_metrics is false, preventing an unnecessary syscall.
   //
-  // Otherwise, returns the time since either the constructor
-  // or the last call to reset (whichever was more recent).
+  // Otherwise, returns the time since either the constructor or the last call to reset (whichever
+  // was more recent).
   Duration End() const {
     if (ticks_.get() == 0) {
       return zx::ticks();
@@ -67,3 +67,5 @@ class Ticker {
 #endif
 
 }  // namespace fs
+
+#endif  // SRC_LIB_STORAGE_VFS_CPP_TICKER_H_

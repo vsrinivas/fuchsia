@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_LIB_STORAGE_VFS_CPP_METRICS_OBJECT_OFFSETS_H_
+#define SRC_LIB_STORAGE_VFS_CPP_METRICS_OBJECT_OFFSETS_H_
 
 #include "src/lib/storage/vfs/cpp/metrics/object_generator.h"
 #include "src/lib/storage/vfs/cpp/metrics/offsets.h"
@@ -16,3 +17,5 @@ template <typename... AttributeList>
 struct ObjectOffsets : Offsets<AttributeList...>, ObjectGenerator<AttributeList...> {};
 
 }  // namespace fs_metrics
+
+#endif  // SRC_LIB_STORAGE_VFS_CPP_METRICS_OBJECT_OFFSETS_H_

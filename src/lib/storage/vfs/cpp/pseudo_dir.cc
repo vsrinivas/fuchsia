@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+
 #include <fuchsia/io/llcpp/fidl.h>
 #include <sys/stat.h>
 
 #include <utility>
 
 #include <fbl/auto_lock.h>
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace fio = ::llcpp::fuchsia::io;

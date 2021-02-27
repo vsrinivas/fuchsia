@@ -6,14 +6,14 @@
 
 #include <iostream>
 
-#include "src/lib/storage/vfs/cpp/journal/format.h"
 #include <gtest/gtest.h>
+
+#include "src/lib/storage/vfs/cpp/journal/format.h"
 
 namespace fs {
 namespace {
 
-// These tests are just to make sure the returned string has all the required
-// fields.
+// These tests are just to make sure the returned string has all the required fields.
 
 TEST(InspectorDiskStruct, GetJournalSuperblockString) {
   std::unique_ptr<disk_inspector::DiskStruct> disk_struct = GetJournalSuperblockStruct();

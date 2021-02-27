@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_DIR_TEST_UTIL_H_
-#define FS_DIR_TEST_UTIL_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_DIR_TEST_UTIL_H_
+#define SRC_LIB_STORAGE_VFS_CPP_DIR_TEST_UTIL_H_
 
 #include <lib/fdio/vfs.h>
 
@@ -47,4 +47,4 @@ class DirentChecker {
 };
 }  // namespace fs
 
-#endif  // FS_DIR_TEST_UTIL_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_DIR_TEST_UTIL_H_

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/metrics/cobalt_metrics.h"
+
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
@@ -12,7 +14,6 @@
 #include <cobalt-client/cpp/counter.h>
 #include <cobalt-client/cpp/histogram.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
-#include "src/lib/storage/vfs/cpp/metrics/cobalt_metrics.h"
 #include <zxtest/zxtest.h>
 
 namespace fs_metrics {

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/vnode.h"
+
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
@@ -9,7 +11,6 @@
 
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
-#include "src/lib/storage/vfs/cpp/vnode.h"
 
 #ifdef __Fuchsia__
 

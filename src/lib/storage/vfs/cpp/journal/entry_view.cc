@@ -36,8 +36,8 @@ void JournalEntryView::Encode(const std::vector<storage::BufferedOperation>& ope
       auto block_ptr =
           reinterpret_cast<uint64_t*>(view_.Data(kJournalEntryHeaderBlocks + block_index));
       if (*block_ptr == kJournalEntryMagic) {
-        // If the payload could be confused with a journal structure, replace
-        // it with zeros, and add an "escaped" flag instead.
+        // If the payload could be confused with a journal structure, replace it with zeros, and add
+        // an "escaped" flag instead.
         *block_ptr = 0;
         header_.SetEscapedBlock(block_index, true);
       }
@@ -68,9 +68,9 @@ uint32_t JournalEntryView::CalculateChecksum() const {
   // Always return 0 when fuzzing.
   return 0;
 #else
-  // Currently, the checksum includes all blocks excluding the commit block.
-  // If additional data is to be added to the commit block, we should consider
-  // making the checksum include the commit block (excluding the checksum location).
+  // Currently, the checksum includes all blocks excluding the commit block. If additional data is
+  // to be added to the commit block, we should consider making the checksum include the commit
+  // block (excluding the checksum location).
   uint32_t checksum = 0;
   for (size_t i = 0; i < view_.length() - 1; i++) {
     checksum = crc32(checksum, static_cast<const uint8_t*>(view_.Data(i)), kJournalBlockSize);

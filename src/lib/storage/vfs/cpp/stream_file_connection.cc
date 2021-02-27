@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/stream_file_connection.h"
+
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/io.h>
@@ -20,9 +22,9 @@
 #include <utility>
 
 #include <fbl/string_buffer.h>
+
 #include "src/lib/storage/vfs/cpp/debug.h"
 #include "src/lib/storage/vfs/cpp/fidl_transaction.h"
-#include "src/lib/storage/vfs/cpp/stream_file_connection.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 

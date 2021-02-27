@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/vfs/cpp/metrics/offsets.h"
+
 #include <lib/inspect/cpp/inspect.h>
 
 #include <algorithm>
@@ -10,10 +12,10 @@
 #include <string_view>
 
 #include <fbl/algorithm.h>
+#include <zxtest/zxtest.h>
+
 #include "src/lib/storage/vfs/cpp/metrics/attributes.h"
 #include "src/lib/storage/vfs/cpp/metrics/object_generator.h"
-#include "src/lib/storage/vfs/cpp/metrics/offsets.h"
-#include <zxtest/zxtest.h>
 
 namespace fs_metrics {
 namespace {
@@ -34,8 +36,8 @@ struct Data {
   std::string attr3 = "";
 };
 
-// Instead of creating an inspect object, stores the generated name. Allows checking
-// that name generation is ok.
+// Instead of creating an inspect object, stores the generated name. Allows checking that name
+// generation is ok.
 void CreateTracker(const char* name, inspect::Node* root, std::vector<std::string>* name_list) {
   name_list->push_back(name);
 }

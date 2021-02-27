@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/lib/storage/vfs/cpp/journal/operation_tracker.h"
+
 #include <gtest/gtest.h>
 
 namespace fs {

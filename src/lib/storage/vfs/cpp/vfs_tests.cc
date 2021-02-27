@@ -7,10 +7,11 @@
 #include <lib/async-loop/default.h>
 #include <lib/async-testing/test_loop.h>
 
+#include <zxtest/zxtest.h>
+
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
-#include <zxtest/zxtest.h>
 
 namespace {
 

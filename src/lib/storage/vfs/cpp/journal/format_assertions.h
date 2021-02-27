@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_FS_JOURNAL_FORMAT_ASSERTIONS_H_
-#define ZIRCON_SYSTEM_ULIB_FS_JOURNAL_FORMAT_ASSERTIONS_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_FORMAT_ASSERTIONS_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_FORMAT_ASSERTIONS_H_
 
 #include <cstddef>
 
@@ -67,4 +67,4 @@ static_assert(PADDING_LENGTH(fs::JournalCommitBlock, prefix, checksum) == 0);
 
 }  // namespace fs
 
-#endif  // ZIRCON_SYSTEM_ULIB_FS_JOURNAL_FORMAT_ASSERTIONS_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_FORMAT_ASSERTIONS_H_

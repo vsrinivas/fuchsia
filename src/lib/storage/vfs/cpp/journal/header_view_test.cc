@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/lib/storage/vfs/cpp/journal/header_view.h"
+
 #include <gtest/gtest.h>
+
+#include "src/lib/storage/vfs/cpp/journal/format.h"
 
 namespace fs {
 namespace {

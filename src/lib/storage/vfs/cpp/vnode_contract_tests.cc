@@ -10,11 +10,12 @@
 #include <type_traits>
 #include <utility>
 
+#include <zxtest/zxtest.h>
+
+#include "fbl/ref_ptr.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
-#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
-#include <zxtest/zxtest.h>
-#include "fbl/ref_ptr.h"
 
 // "Vnode Contract Tests" verifies the runtime contracts enforced by the vnode APIs. They could be
 // consistency checks or other invariants.
@@ -24,9 +25,7 @@ namespace {
 class ErraticVnode : public fs::Vnode {
  public:
   ErraticVnode() = default;
-  fs::VnodeProtocolSet GetProtocols() const final {
-    return fs::VnodeProtocol::kFile;
-  }
+  fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights,
                                      fs::VnodeRepresentation* info) final {
     EXPECT_EQ(protocol, fs::VnodeProtocol::kFile);
@@ -69,6 +68,7 @@ class PolymorphicVnode : public fs::Vnode {
   }
   zx_status_t ConnectService(zx::channel) final { return ZX_OK; }
   bool negotiate_called() const { return negotiate_called_; }
+
  private:
   mutable bool negotiate_called_ = false;
   std::optional<fs::VnodeProtocolSet> expected_candidate_;

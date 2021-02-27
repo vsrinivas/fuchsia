@@ -2,29 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_JOURNAL_HEADER_VIEW_H_
-#define FS_JOURNAL_HEADER_VIEW_H_
+#ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_HEADER_VIEW_H_
+#define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_HEADER_VIEW_H_
 
 #include <lib/fit/result.h>
 
 #include <fbl/span.h>
+
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 
 namespace fs {
 
 class JournalHeaderView {
  public:
-  // Creates header view created from the block. This may or may not be a valid header.
-  // Useful when inspecting a disk.
-  // Asserts on finding |block| to be at smaller than kJournalBlockSize bytes.
+  // Creates header view created from the block. This may or may not be a valid header. Useful when
+  // inspecting a disk. Asserts on finding |block| to be at smaller than kJournalBlockSize bytes.
   explicit JournalHeaderView(fbl::Span<uint8_t> block);
 
   // Returns HeaderView on finding a valid journal entry header in |block|.
   static fit::result<JournalHeaderView, zx_status_t> Create(fbl::Span<uint8_t> block,
                                                             uint64_t sequence_number);
 
-  // Initializes |block| with valid header and sets payload blocks and sequence number.
-  // Asserts on finding |block| to be at smaller than kJournalBlockSize bytes.
+  // Initializes |block| with valid header and sets payload blocks and sequence number. Asserts on
+  // finding |block| to be at smaller than kJournalBlockSize bytes.
   JournalHeaderView(fbl::Span<uint8_t> block, uint64_t payload_blocks, uint64_t sequence_number);
 
   // Returns the block number where |index| block in the payload will be written to.
@@ -89,4 +89,4 @@ class JournalHeaderView {
 
 }  // namespace fs
 
-#endif  // FS_JOURNAL_HEADER_VIEW_H_
+#endif  // SRC_LIB_STORAGE_VFS_CPP_JOURNAL_HEADER_VIEW_H_
