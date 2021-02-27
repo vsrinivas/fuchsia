@@ -28,6 +28,21 @@ pub enum LexicalContent {
     /// A reference is held between back quotes.
     Reference(String),
 
+    /// A text between single quotes. The left quote must be after a white space or at the
+    /// beginning of the text. The text inside the quotes can't start with a space (in that
+    /// particular case, it's a stand alone single quote).
+    SingleQuoteString(String),
+
+    /// A text between double quotes. The text inside the quotes can't start with a space (in
+    /// that particular case, it's a stand alone double quote).
+    DoubleQuoteString(String),
+
+    /// A standalone single quote.
+    SingleQuote,
+
+    /// A standalone double quote.
+    DoubleQuote,
+
     /// The end of an english sentence.
     /// For example ".", ":", "!", "?".
     EndOfSentence(char),
@@ -62,6 +77,12 @@ pub fn reduce_lexems(compiler: &mut DocCompiler, source: &Rc<Source>) -> Option<
             '0'..='9' => reduce_number_or_name(&mut items, &source, index, character, &mut iter),
             'a'..='z' | 'A'..='Z' | '_' => reduce_name(&mut items, &source, index, &mut iter),
             '`' => reduce_reference(compiler, &mut items, &source, &mut iter),
+            '\'' => {
+                reduce_single_quote_string(compiler, &mut items, &source, index, &mut iter, &mut ok)
+            }
+            '"' => {
+                reduce_double_quote_string(compiler, &mut items, &source, index, &mut iter, &mut ok)
+            }
             '.' | ':' | '!' | '?' => {
                 items.push(LexicalItem {
                     location: Location { source: Rc::clone(&source), start: index, end: index },
@@ -236,6 +257,151 @@ fn reduce_reference(
     current
 }
 
+/// Reduces a string between single quotes, a single quote or a name.
+///
+/// If the first single quote is not after a white space or at the beginning of the text then,
+/// a Name is returned.
+/// For example, with the input: `a_reference`'s
+/// This function is called to reduce 's and the result is Name("'s").
+///
+/// If the first single quote is followed by a space, the result is SingleQuote.
+/// For example, the following text is valid: A ' is valid.
+fn reduce_single_quote_string(
+    compiler: &mut DocCompiler,
+    items: &mut Vec<LexicalItem>,
+    source: &Rc<Source>,
+    start: usize,
+    iter: &mut CharIndices<'_>,
+    ok: &mut bool,
+) -> Option<(usize, char)> {
+    // If the quote is not at the beginning of the next and not preceded by a white space then
+    // reduce a Name.
+    if let Some(last) = items.last() {
+        match last.content {
+            LexicalContent::Spaces(_) | LexicalContent::NewLines(_) => {}
+            _ => return reduce_name(items, source, start, iter),
+        }
+    }
+    // If the quote is immediately followed by a space then only reduce a SingleQuote.
+    let mut current = iter.next();
+    let text_start = if let Some((index, character)) = current {
+        if character == ' ' || character == '\n' {
+            items.push(LexicalItem {
+                location: Location { source: Rc::clone(&source), start, end: start },
+                content: LexicalContent::SingleQuote,
+            });
+            return current;
+        }
+        index
+    } else {
+        0
+    };
+    // Reduces a string.
+    loop {
+        match current {
+            Some((index, character)) => match character {
+                '\'' => {
+                    current = iter.next();
+                    let end =
+                        if let Some((index, _)) = current { index } else { source.text.len() };
+                    items.push(LexicalItem {
+                        location: Location { source: Rc::clone(&source), start, end: end },
+                        content: LexicalContent::SingleQuoteString(
+                            source.text[text_start..index].to_string(),
+                        ),
+                    });
+                    return current;
+                }
+                '\\' => {
+                    // At this level we ignore any character after the backslash. The validity of
+                    // the escape sequence is checked at the next level.
+                    current = iter.next();
+                    if current == None {
+                        break;
+                    }
+                }
+                _ => {}
+            },
+            None => {
+                break;
+            }
+        }
+        current = iter.next();
+    }
+    *ok = false;
+    compiler.add_error(
+        &Location { source: Rc::clone(&source), start, end: source.text.len() },
+        "Unterminated string (character <'> expected).".to_owned(),
+    );
+    current
+}
+
+/// Reduces a string between double quotes or a double quote.
+///
+/// If the first double quote is followed by a space, the result is DoubleQuote.
+/// For example, the following text is valid: A " is valid.
+fn reduce_double_quote_string(
+    compiler: &mut DocCompiler,
+    items: &mut Vec<LexicalItem>,
+    source: &Rc<Source>,
+    start: usize,
+    iter: &mut CharIndices<'_>,
+    ok: &mut bool,
+) -> Option<(usize, char)> {
+    let mut current = iter.next();
+    // If the quote is immediately followed by a space then only reduce a DoubleQuote.
+    let text_start = if let Some((index, character)) = current {
+        if character == ' ' || character == '\n' {
+            items.push(LexicalItem {
+                location: Location { source: Rc::clone(&source), start, end: start },
+                content: LexicalContent::DoubleQuote,
+            });
+            return current;
+        }
+        index
+    } else {
+        0
+    };
+    // Reduces a string.
+    loop {
+        match current {
+            Some((index, character)) => match character {
+                '"' => {
+                    current = iter.next();
+                    let end =
+                        if let Some((index, _)) = current { index } else { source.text.len() };
+                    items.push(LexicalItem {
+                        location: Location { source: Rc::clone(&source), start, end: end },
+                        content: LexicalContent::DoubleQuoteString(
+                            source.text[text_start..index].to_string(),
+                        ),
+                    });
+                    return current;
+                }
+                '\\' => {
+                    // At this level we ignore any character after the backslash. The validity of
+                    // the escape sequence is checked at the next level.
+                    current = iter.next();
+                    if current == None {
+                        break;
+                    }
+                }
+                _ => {}
+            },
+            None => {
+                break;
+            }
+        }
+        current = iter.next();
+    }
+    *ok = false;
+    compiler.add_error(
+        &Location { source: Rc::clone(&source), start, end: source.text.len() },
+        "Unterminated string (character <\"> expected).".to_owned(),
+    );
+    current
+}
+
 /// Reduces spaces (at least one).
 fn reduce_spaces(
     items: &mut Vec<LexicalItem>,
@@ -326,6 +492,18 @@ mod test {
                 }
                 LexicalContent::Reference(text) => {
                     compiler.add_error(&item.location, format!("Reference <{}>", text))
+                }
+                LexicalContent::SingleQuoteString(text) => {
+                    compiler.add_error(&item.location, format!("SingleQuoteString <{}>", text))
+                }
+                LexicalContent::DoubleQuoteString(text) => {
+                    compiler.add_error(&item.location, format!("DoubleQuoteString <{}>", text))
+                }
+                LexicalContent::SingleQuote => {
+                    compiler.add_error(&item.location, "SingleQuote".to_owned())
+                }
+                LexicalContent::DoubleQuote => {
+                    compiler.add_error(&item.location, "DoubleQuote".to_owned())
                 }
                 LexicalContent::EndOfSentence(character) => {
                     compiler.add_error(&item.location, format!("EndOfSentence <{}>", character))
@@ -458,6 +636,238 @@ sdk/foo/foo.fidl: 10:17: Reference <abc>
 `xyz` isn't `abc`.
                  ^
 sdk/foo/foo.fidl: 10:21: EndOfSentence <.>
+"
+        );
+    }
+
+    #[test]
+    fn lexer_reference_with_apostrophe() {
+        let mut compiler = DocCompiler::new();
+        let source =
+            Rc::new(Source::new("sdk/foo/foo.fidl".to_owned(), 10, 4, "`xyz`'s.".to_owned()));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(!items.is_none());
+        lexical_items_to_errors(&mut compiler, &items.unwrap(), /*with_spaces=*/ false);
+        assert_eq!(
+            compiler.errors,
+            "\
+`xyz`'s.
+ ^^^
+sdk/foo/foo.fidl: 10:5: Reference <xyz>
+`xyz`'s.
+     ^^
+sdk/foo/foo.fidl: 10:9: Name <'s>
+`xyz`'s.
+       ^
+sdk/foo/foo.fidl: 10:11: EndOfSentence <.>
+"
+        );
+    }
+
+    #[test]
+    fn lexer_reference_with_apostrophe_at_the_end() {
+        let mut compiler = DocCompiler::new();
+        let source =
+            Rc::new(Source::new("sdk/foo/foo.fidl".to_owned(), 10, 4, "`xyz`'s".to_owned()));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(!items.is_none());
+        lexical_items_to_errors(&mut compiler, &items.unwrap(), /*with_spaces=*/ false);
+        assert_eq!(
+            compiler.errors,
+            "\
+`xyz`'s
+ ^^^
+sdk/foo/foo.fidl: 10:5: Reference <xyz>
+`xyz`'s
+     ^^
+sdk/foo/foo.fidl: 10:9: Name <'s>
+"
+        );
+    }
+
+    #[test]
+    fn lexer_single_quotes() {
+        let mut compiler = DocCompiler::new();
+        let source = Rc::new(Source::new(
+            "sdk/foo/foo.fidl".to_owned(),
+            10,
+            4,
+            "'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s".to_owned(),
+        ));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(!items.is_none());
+        lexical_items_to_errors(&mut compiler, &items.unwrap(), /*with_spaces=*/ false);
+        assert_eq!(
+            compiler.errors,
+            "\
+'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
+^^^^^^
+sdk/foo/foo.fidl: 10:4: SingleQuoteString <abcd>
+'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
+       ^
+sdk/foo/foo.fidl: 10:11: SingleQuote
+'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
+         ^^^^^
+sdk/foo/foo.fidl: 10:13: Name <abc's>
+'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
+               ^^^^^
+sdk/foo/foo.fidl: 10:19: SingleQuoteString <xyz>
+'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
+                     ^^
+sdk/foo/foo.fidl: 10:25: SingleQuoteString <>
+'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
+                        ^^^^^^^
+sdk/foo/foo.fidl: 10:28: SingleQuoteString <\\' \\x>
+'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
+                                 ^^^
+sdk/foo/foo.fidl: 10:37: Reference <abc>
+'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
+                                     ^^
+sdk/foo/foo.fidl: 10:41: Name <'s>
+"
+        );
+    }
+
+    #[test]
+    fn lexer_unterminated_single_quotes_1() {
+        let mut compiler = DocCompiler::new();
+        let source = Rc::new(Source::new("sdk/foo/foo.fidl".to_owned(), 10, 4, "'abcd".to_owned()));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(items.is_none());
+        assert_eq!(
+            compiler.errors,
+            "\
+'abcd
+^^^^^
+sdk/foo/foo.fidl: 10:4: Unterminated string (character <'> expected).
+"
+        );
+    }
+
+    #[test]
+    fn lexer_unterminated_single_quotes_2() {
+        let mut compiler = DocCompiler::new();
+        let source =
+            Rc::new(Source::new("sdk/foo/foo.fidl".to_owned(), 10, 4, "'abcd\\".to_owned()));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(items.is_none());
+        assert_eq!(
+            compiler.errors,
+            "\
+'abcd\\
+^^^^^^
+sdk/foo/foo.fidl: 10:4: Unterminated string (character <'> expected).
+"
+        );
+    }
+
+    #[test]
+    fn lexer_double_quotes() {
+        let mut compiler = DocCompiler::new();
+        let source = Rc::new(Source::new(
+            "sdk/foo/foo.fidl".to_owned(),
+            10,
+            4,
+            "\"abcd\" \" \"\" \"xyz\" \"\\\" \\x\"".to_owned(),
+        ));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(!items.is_none());
+        lexical_items_to_errors(&mut compiler, &items.unwrap(), /*with_spaces=*/ false);
+        assert_eq!(
+            compiler.errors,
+            "\
+\"abcd\" \" \"\" \"xyz\" \"\\\" \\x\"
+^^^^^^
+sdk/foo/foo.fidl: 10:4: DoubleQuoteString <abcd>
+\"abcd\" \" \"\" \"xyz\" \"\\\" \\x\"
+       ^
+sdk/foo/foo.fidl: 10:11: DoubleQuote
+\"abcd\" \" \"\" \"xyz\" \"\\\" \\x\"
+         ^^
+sdk/foo/foo.fidl: 10:13: DoubleQuoteString <>
+\"abcd\" \" \"\" \"xyz\" \"\\\" \\x\"
+            ^^^^^
+sdk/foo/foo.fidl: 10:16: DoubleQuoteString <xyz>
+\"abcd\" \" \"\" \"xyz\" \"\\\" \\x\"
+                  ^^^^^^^
+sdk/foo/foo.fidl: 10:22: DoubleQuoteString <\\\" \\x>
+"
+        );
+    }
+
+    #[test]
+    fn lexer_unterminated_double_quotes_1() {
+        let mut compiler = DocCompiler::new();
+        let source =
+            Rc::new(Source::new("sdk/foo/foo.fidl".to_owned(), 10, 4, "\"abcd".to_owned()));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(items.is_none());
+        assert_eq!(
+            compiler.errors,
+            "\
+\"abcd
+^^^^^
+sdk/foo/foo.fidl: 10:4: Unterminated string (character <\"> expected).
+"
+        );
+    }
+
+    #[test]
+    fn lexer_unterminated_double_quotes_2() {
+        let mut compiler = DocCompiler::new();
+        let source =
+            Rc::new(Source::new("sdk/foo/foo.fidl".to_owned(), 10, 4, "\"abcd\\".to_owned()));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(items.is_none());
+        assert_eq!(
+            compiler.errors,
+            "\
+\"abcd\\
+^^^^^^
+sdk/foo/foo.fidl: 10:4: Unterminated string (character <\"> expected).
+"
+        );
+    }
+
+    #[test]
+    fn lexer_end_of_sentence() {
+        let mut compiler = DocCompiler::new();
+        let source = Rc::new(Source::new(
+            "sdk/foo/foo.fidl".to_owned(),
+            10,
+            4,
+            "Aa. Bb? Cc! Dd:".to_owned(),
+        ));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(!items.is_none());
+        lexical_items_to_errors(&mut compiler, &items.unwrap(), /*with_spaces=*/ false);
+        assert_eq!(
+            compiler.errors,
+            "\
+Aa. Bb? Cc! Dd:
+^^
+sdk/foo/foo.fidl: 10:4: Name <Aa>
+Aa. Bb? Cc! Dd:
+  ^
+sdk/foo/foo.fidl: 10:6: EndOfSentence <.>
+Aa. Bb? Cc! Dd:
+    ^^
+sdk/foo/foo.fidl: 10:8: Name <Bb>
+Aa. Bb? Cc! Dd:
+      ^
+sdk/foo/foo.fidl: 10:10: EndOfSentence <?>
+Aa. Bb? Cc! Dd:
+        ^^
+sdk/foo/foo.fidl: 10:12: Name <Cc>
+Aa. Bb? Cc! Dd:
+          ^
+sdk/foo/foo.fidl: 10:14: EndOfSentence <!>
+Aa. Bb? Cc! Dd:
+            ^^
+sdk/foo/foo.fidl: 10:16: Name <Dd>
+Aa. Bb? Cc! Dd:
+              ^
+sdk/foo/foo.fidl: 10:18: EndOfSentence <:>
 "
         );
     }
