@@ -209,7 +209,7 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, ktl::string_view str)
     //
     // We're not holding the thread lock.
     if (arch_num_spinlocks_held() == 0 ||
-        Thread::Current::Get()->preemption_state().PreemptOrReschedDisabled()) {
+        Thread::Current::Get()->preemption_state().PreemptOrEagerReschedDisabled()) {
       // If we're not holding any spinlocks, then we can call Signal.  And if we are holding a
       // spinlock, but we're running in a preempt/reschedule disabled context, we can still call
       // Signal because it will defer the reschedule until preempt/reschedule are re-enabled.

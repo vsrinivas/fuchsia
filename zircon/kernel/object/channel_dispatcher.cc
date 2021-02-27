@@ -18,6 +18,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/event.h>
 #include <object/handle.h>
 #include <object/message_packet.h>
@@ -209,8 +210,7 @@ zx_status_t ChannelDispatcher::Read(zx_koid_t owner, uint32_t* msg_size, uint32_
 zx_status_t ChannelDispatcher::Write(zx_koid_t owner, MessagePacketPtr msg) {
   canary_.Assert();
 
-  AutoReschedDisable resched_disable;  // Must come before the lock guard.
-  resched_disable.Disable();
+  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{get_lock()};
 
   // Failing this test is only possible if this process has two threads racing:
@@ -241,8 +241,7 @@ zx_status_t ChannelDispatcher::Call(zx_koid_t owner, MessagePacketPtr msg, zx_ti
   }
 
   {
-    AutoReschedDisable resched_disable;  // Must come before the lock guard.
-    resched_disable.Disable();
+    AutoPreemptDisabler preempt_disable;
     Guard<Mutex> guard{get_lock()};
 
     // See Write() for an explanation of this test.

@@ -6,6 +6,7 @@
 
 #include "kernel/brwlock.h"
 
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/thread_lock.h>
 #include <ktl/limits.h>
 
@@ -108,8 +109,7 @@ template <BrwLockEnablePi PI>
 void BrwLock<PI>::ContendedReadAcquire() {
   // In the case where we wake other threads up we need them to not run until we're finished
   // holding the thread_lock, so disable local rescheduling.
-  AutoReschedDisable resched_disable;
-  resched_disable.Disable();
+  AutoPreemptDisabler preempt_disable;
   {
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     // Remove our optimistic reader from the count, and put a waiter on there instead.
@@ -143,8 +143,7 @@ template <BrwLockEnablePi PI>
 void BrwLock<PI>::ContendedWriteAcquire() {
   // In the case where we wake other threads up we need them to not run until we're finished
   // holding the thread_lock, so disable local rescheduling.
-  AutoReschedDisable resched_disable;
-  resched_disable.Disable();
+  AutoPreemptDisabler preempt_disable;
   {
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     // Mark ourselves as waiting
@@ -226,8 +225,7 @@ template <BrwLockEnablePi PI>
 void BrwLock<PI>::ReleaseWakeup() {
   // Don't reschedule whilst we're waking up all the threads as if there are
   // several readers available then we'd like to get them all out of the wait queue.
-  AutoReschedDisable resched_disable;
-  resched_disable.Disable();
+  AutoPreemptDisabler preempt_disable;
   {
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     uint64_t count = state_.state_.load(ktl::memory_order_relaxed);
