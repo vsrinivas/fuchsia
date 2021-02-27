@@ -695,6 +695,10 @@ impl Target {
                 if let Some(entry) = addrs.get(&(addr, now.clone()).into()) {
                     addr.scope_id = entry.addr.scope_id;
                 }
+                // Note: not adding ipv6 link-local addresses without scopes here is deliberate!
+                if addr.ip().is_link_local_addr() && addr.scope_id == 0 {
+                    return
+                }
             }
             addrs.replace((addr, now.clone()).into());
         });
@@ -1491,13 +1495,14 @@ mod test {
         assert!(merged_target.addrs().await.contains(&(a1, 1).into()));
         assert!(merged_target.addrs().await.contains(&(a2, 1).into()));
 
-        // Insert another instance of the a2 address, but with a missing scope_id, and ensure that the scope is preserved from the
-        // pre-existing value in t1 a2.
+        // Insert another instance of the a2 address, but with a missing
+        // scope_id, and ensure that the new address does not affect the address
+        // collection.
         let t3 = Target::new_with_time(ascendd.clone(), &nodename, fake_now());
         t3.addrs_insert((a2.clone(), 0).into()).await;
         tc.merge_insert(clone_target(&t3).await).await;
         let merged_target = tc.get(nodename.clone()).await.unwrap();
-        assert_eq!(merged_target.addrs().await.iter().filter(|addr| addr.scope_id == 1).count(), 2);
+        assert_eq!(merged_target.addrs().await.len(), 2);
 
         // Insert another instance of the a2 address, but with a new scope_id, and ensure that the new scope is used.
         let t3 = Target::new_with_time(ascendd.clone(), &nodename, fake_now());
@@ -2147,12 +2152,21 @@ mod test {
     async fn test_target_merge_no_name() {
         let ascendd = Arc::new(create_ascendd().await.unwrap());
         let ip = "f111::3".parse().unwrap();
+
+        // t1 is a target as we would naturally discover it via mdns, or from a
+        // user adding it explicitly. That is, the target has a correctly scoped
+        // link-local address.
         let mut addr_set = BTreeSet::new();
         addr_set.replace(TargetAddr { ip, scope_id: 0xbadf00d });
         let t1 = Target::new_with_addrs(ascendd.clone(), None, addr_set);
+
+        // t2 is an incoming target that has the same address, but, it is
+        // missing scope information, this is essentially what occurs when we
+        // ask the target for its addresses.
         let t2 = Target::new(ascendd, "this-is-a-crunchy-falafel");
-        let tc = TargetCollection::new();
         t2.inner.addrs.write().await.replace(TargetAddr { ip, scope_id: 0 }.into());
+
+        let tc = TargetCollection::new();
         tc.merge_insert(t1).await;
         tc.merge_insert(t2).await;
         let mut targets = tc.targets().await.into_iter();
@@ -2162,6 +2176,7 @@ mod test {
         let mut addrs = target.addrs().await.into_iter();
         let addr = addrs.next().expect("Merged target has no address.");
         assert!(addrs.next().is_none());
+        assert_eq!(addr, TargetAddr{ip, scope_id: 0xbadf00d});
         assert_eq!(addr.ip, ip);
         assert_eq!(addr.scope_id, 0xbadf00d);
     }
