@@ -9,96 +9,64 @@
 
 #include <kernel/thread.h>
 
-// AutoPreemptDisabler is a small RAII style helper which automatically manages
-// disabling and re-enabling preemption via thread_preempt_(disable|reenable).
-// It is offered as a partially specialized class which can either start by
-// automatically disabling preemption when it is instantiated, or which allows
-// preemption until a point in time where Disable is explicitly called by a
-// user.  Either way, when the object goes out of scope, it automatically calls
-// thread_preempt_reenable if preemption had been disabled during the life of
-// the object.
+// AutoPreemptDisabler is a RAII helper that automatically manages disabling and
+// re-enabling preemption. When the object goes out of scope, it automatically
+// re-enables preemption if it had been previously disabled by the instance.
 //
-// Note: In the version which begins with preemption enabled, multiple calls to
-// Disable are idempotent.  In the version which begins with preemption
-// disabled, there should never be any reason to explicitly call disable,
-// therefore the method is omitted in order to deliberately fail to compile.
+// Example usage:
 //
-// Example usages:
-//
-// /* Immediately disable preemption, then obtain the list_ lock and append an
-//  * element to the list.
-//  */
+// // Immediately disable preemption, then obtain the list_ lock and append an
+// // element to the list.
 // {
-//   AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler;
+//   AutoPreemptDisabler preempt_disabler;
 //   Guard<Mutex> guard{&lock_};
 //   list_.push_back(ktl::move(element_uptr));
 // }
 //
-// /* Reserve the option to disable preemption, but do not do so right now.  If
-//  * we decide to do so, however, we want to make certain that we do _not_ do so
-//  * until after the lock is released.
-//  */
+//  // Reserve the option to disable preemption, but do not do so right now.
 //  {
-//     AutoPreemptDisabler<APDInitialState::PREEMPT_ALLOWED> ap_disabler;
+//     AutoPreemptDisabler preempt_disabler{AutoPreemptDisabler::Defer};
 //     Guard<Mutex> guard{&lock_};
 //
-//     // Do some work
+//     // Do some work.
 //
 //     if (predicate()) {
-//       ap_disabler.Disable();
+//       preempt_disabler.Disable();
 //       // Do some more work with preemption disabled.
 //     }
 //  } // lock_ is released first, then (if predicate() was true), preemption is re-enabled.
 //
 
-// Enum which selects the version of the class to use.
-enum class APDInitialState { PREEMPT_ALLOWED, PREEMPT_DISABLED };
-
-// Fwd decl of the non-specialized class.
-template <APDInitialState>
-class AutoPreemptDisabler;
-
-// The version which defers disabling until the user explicitly requests it.
-template <>
-class AutoPreemptDisabler<APDInitialState::PREEMPT_ALLOWED> {
+class AutoPreemptDisabler {
  public:
-  AutoPreemptDisabler() = default;
+  // Tag type to construct the AutoPreemptDisabler without preemption initially
+  // disabled.
+  enum DeferType { Defer };
+
+  AutoPreemptDisabler() { Thread::Current::preemption_state().PreemptDisable(); }
+  explicit AutoPreemptDisabler(DeferType) : disabled_{false} {}
 
   ~AutoPreemptDisabler() {
-    if (started_) {
+    if (disabled_) {
       Thread::Current::preemption_state().PreemptReenable();
     }
   }
 
+  AutoPreemptDisabler(const AutoPreemptDisabler&) = delete;
+  AutoPreemptDisabler& operator=(const AutoPreemptDisabler&) = delete;
+  AutoPreemptDisabler(AutoPreemptDisabler&&) = delete;
+  AutoPreemptDisabler& operator=(AutoPreemptDisabler&&) = delete;
+
+  // Disables preemption if it was not disabled by this instance already.
   void Disable() {
-    if (!started_) {
+    if (!disabled_) {
       Thread::Current::preemption_state().PreemptDisable();
-      started_ = true;
+      disabled_ = true;
     }
   }
 
-  // No move, no copy
-  AutoPreemptDisabler(const AutoPreemptDisabler&) = delete;
-  AutoPreemptDisabler(AutoPreemptDisabler&&) = delete;
-  AutoPreemptDisabler& operator=(const AutoPreemptDisabler&) = delete;
-  AutoPreemptDisabler& operator=(AutoPreemptDisabler&&) = delete;
-
  private:
-  bool started_ = false;
-};
-
-// The version which automatically disables preemption from the start.
-template <>
-class AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> {
- public:
-  AutoPreemptDisabler() { Thread::Current::preemption_state().PreemptDisable(); }
-  ~AutoPreemptDisabler() { Thread::Current::preemption_state().PreemptReenable(); }
-
-  // No move, no copy
-  AutoPreemptDisabler(const AutoPreemptDisabler&) = delete;
-  AutoPreemptDisabler(AutoPreemptDisabler&&) = delete;
-  AutoPreemptDisabler& operator=(const AutoPreemptDisabler&) = delete;
-  AutoPreemptDisabler& operator=(AutoPreemptDisabler&&) = delete;
+  bool disabled_{true};
 };
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_AUTO_PREEMPT_DISABLER_H_

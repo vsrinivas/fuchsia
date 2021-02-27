@@ -16,7 +16,7 @@ namespace {
 bool NestedCriticalSectionTest() {
   BEGIN_TEST;
 
-  AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler;
+  AutoPreemptDisabler ap_disabler;
 
   // For the context of this test, use the maximum threshold to prevent the detector from "firing".
   auto cleanup = fbl::MakeAutoCall(

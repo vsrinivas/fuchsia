@@ -294,7 +294,7 @@ static bool test_auto_preempt_disabler() {
   {
     // Create a disabler inside of a scope, but do not have it immediately
     // request that preemption be disabled.  Our count should still be zero.
-    AutoPreemptDisabler<APDInitialState::PREEMPT_ALLOWED> ap_disabler;
+    AutoPreemptDisabler ap_disabler{AutoPreemptDisabler::Defer};
     ASSERT_EQ(0u, preemption_state.PreemptDisableCount());
 
     // Now explicitly disable.  Our count should go to 1.
@@ -308,7 +308,7 @@ static bool test_auto_preempt_disabler() {
     {
       // Make another inside of a new scope.  Our count should remain at 1 until
       // we explicitly use the new instance to disable preemption.
-      AutoPreemptDisabler<APDInitialState::PREEMPT_ALLOWED> ap_disabler2;
+      AutoPreemptDisabler ap_disabler2{AutoPreemptDisabler::Defer};
       ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
 
       ap_disabler2.Disable();
@@ -321,21 +321,19 @@ static bool test_auto_preempt_disabler() {
   ASSERT_EQ(0u, preemption_state.PreemptDisableCount());
 
   // Next, do a similar test, but this time with the version which automatically
-  // begins life with preemption disabled.  These versions are a bit simpler
-  // under the hood as they do not require any internal state tracking.
+  // begins life with preemption disabled.
   {
-    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler;
+    AutoPreemptDisabler ap_disabler;
     ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
 
-#if TEST_WILL_NOT_COMPILE || 0
-    // Attempting to call disable should fail to build.
+    // Attempting to call disable should do nothing.
     ap_disabler.Disable();
-#endif
+    ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
 
     {
       // Add a second.  Watch the count go up as it comes into scope, and back
       // down again when it goes out.
-      AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler2;
+      AutoPreemptDisabler ap_disabler2;
       ASSERT_EQ(2u, preemption_state.PreemptDisableCount());
     }
 

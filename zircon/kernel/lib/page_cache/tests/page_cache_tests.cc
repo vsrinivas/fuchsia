@@ -35,7 +35,7 @@ bool page_cache_tests() {
   });
 
   {
-    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disable;
+    AutoPreemptDisabler preempt_disable;
     const cpu_num_t current_cpu = arch_curr_cpu_num();
     current_thread->SetCpuAffinity(cpu_num_to_mask(current_cpu));
   }
