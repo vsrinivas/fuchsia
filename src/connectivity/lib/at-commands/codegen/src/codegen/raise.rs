@@ -18,8 +18,8 @@ use {
 
 /// Entry point to generate `raise` methods at a given indentation.
 pub fn codegen<W: io::Write>(sink: &mut W, indent: u64, definitions: &[Definition]) -> Result {
-    codegen_commands(sink, indent, &definitions)?;
-    codegen_responses(sink, indent, &definitions)
+    codegen_commands(sink, indent, definitions)?;
+    codegen_responses(sink, indent, definitions)
 }
 
 fn codegen_commands<W: io::Write>(sink: &mut W, indent: u64, definitions: &[Definition]) -> Result {
@@ -326,7 +326,7 @@ fn codegen_extract_list<W: io::Write>(
         sink,
         indent,
         "for {}_raw in arg_vec[{}..].into_iter() {{\n",
-        &element_name,
+        element_name,
         initial_index
     )?;
 
@@ -371,11 +371,11 @@ fn codegen_argument_vec_extraction<W: io::Write>(
                 )?
             }
             Type::List(typ) => {
-                codegen_extract_list(sink, indent, &arg.name, typ, i)?;
+                codegen_extract_list(sink, indent, &arg.name, &typ, i)?;
                 break;
             }
             Type::Map { key, value } => {
-                codegen_extract_map(sink, indent, &arg.name, key, value, i)?;
+                codegen_extract_map(sink, indent, &arg.name, &key, &value, i)?;
                 break;
             }
         }
@@ -385,7 +385,7 @@ fn codegen_argument_vec_extraction<W: io::Write>(
     Ok(())
 }
 
-/// Specified how to generate pieces of a match arm. Implemented for both Arguments and ExecuteArguments.
+/// Specifies how to generate pieces of a match arm for both Arguments and ExecuteArguments.
 trait CodegenArguments {
     fn codegen_arguments_lowlevel_pattern<W: io::Write>(&self, sink: &mut W, indent: u64)
         -> Result;

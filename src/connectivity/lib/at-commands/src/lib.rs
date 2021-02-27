@@ -8,6 +8,8 @@ mod lowlevel {
     pub mod response;
     pub mod write_to;
 
+    // Make these available in lowlevel to simplify generated code.
+    pub use arguments::{Argument, Arguments, PrimitiveArgument};
     pub use command::{Command, ExecuteArguments};
     pub use response::Response;
 }

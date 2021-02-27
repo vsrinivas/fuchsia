@@ -7,31 +7,96 @@
 
 use {
     super::{
-        common::{write_indent, TABSTOP},
+        common::{to_initial_capital, write_indent, write_newline, TABSTOP},
         error::Result,
     },
-    crate::definition::Definition,
+    crate::definition::{
+        Argument, Arguments, Command, Definition, ExecuteArguments, PrimitiveType, Type,
+    },
     std::io,
 };
 
 /// Entry point to generate `lower` methods at a given indentation.
 pub fn codegen<W: io::Write>(sink: &mut W, indent: u64, definitions: &[Definition]) -> Result {
-    codegen_commands(sink, indent, &definitions)?;
-    codegen_responses(sink, indent, &definitions)
+    codegen_commands(sink, indent, definitions)?;
+    codegen_responses(sink, indent, definitions)
 }
 
-fn codegen_commands<W: io::Write>(
-    sink: &mut W,
-    indent: u64,
-    _definitions: &[Definition],
-) -> Result {
+fn codegen_commands<W: io::Write>(sink: &mut W, indent: u64, definitions: &[Definition]) -> Result {
     write_indented!(
         sink,
         indent,
-        "pub fn lower_command(_highlevel: &highlevel::Command) -> lowlevel::Command {{\n"
+        "pub fn lower_command(highlevel: &highlevel::Command) -> lowlevel::Command {{\n"
     )?;
-    write_indented!(sink, indent + TABSTOP, "unimplemented!()\n")?;
+
+    // Increment indent
+    {
+        let indent = indent + TABSTOP;
+
+        write_indented!(sink, indent, "match highlevel {{\n")?;
+
+        // Increment indent
+        {
+            let indent = indent + TABSTOP;
+
+            for definition in definitions {
+                if let Definition::Command(command) = definition {
+                    codegen_command(sink, indent, command)?;
+                }
+            }
+        }
+
+        write_indented!(sink, indent, "}}\n")?;
+    }
+
     write_indented!(sink, indent, "}}\n\n")?;
+
+    Ok(())
+}
+
+fn codegen_command<W: io::Write>(sink: &mut W, indent: u64, command: &Command) -> Result {
+    match command {
+        Command::Execute { name, is_extension, arguments } => {
+            codegen_match_branch(
+                sink,
+                indent,
+                "Command",
+                "Execute",
+                name,
+                &command.type_name(),
+                *is_extension,
+                arguments.as_ref(),
+                true,
+            )?;
+        }
+        Command::Read { name, is_extension } => {
+            codegen_match_branch(
+                sink,
+                indent,
+                "Command",
+                "Read",
+                name,
+                &command.type_name(),
+                *is_extension,
+                None::<&ExecuteArguments>,
+                false,
+            )?;
+        }
+        Command::Test { name, is_extension } => {
+            codegen_match_branch(
+                sink,
+                indent,
+                "Command",
+                "Test",
+                name,
+                &command.type_name(),
+                *is_extension,
+                None::<&ExecuteArguments>,
+                false,
+            )?;
+        }
+    };
+    write_newline(sink)?;
 
     Ok(())
 }
@@ -39,15 +104,405 @@ fn codegen_commands<W: io::Write>(
 fn codegen_responses<W: io::Write>(
     sink: &mut W,
     indent: u64,
-    _definitions: &[Definition],
+    definitions: &[Definition],
 ) -> Result {
     write_indented!(
         sink,
         indent,
-        "pub fn lower_response(_highlevel: &highlevel::Response) -> lowlevel::Response {{\n"
+        "pub fn lower_response(highlevel: &highlevel::Response) -> lowlevel::Response {{\n"
     )?;
-    write_indented!(sink, indent + TABSTOP, "unimplemented!()\n")?;
+
+    // Increment indent
+    {
+        let indent = indent + TABSTOP;
+
+        write_indented!(sink, indent, "match highlevel {{\n")?;
+
+        // Increment indent
+        {
+            let indent = indent + TABSTOP;
+
+            for definition in definitions {
+                if let Definition::Response { name, is_extension, arguments } = definition {
+                    let type_name = to_initial_capital(name);
+                    codegen_match_branch(
+                        sink,
+                        indent,
+                        "Response",
+                        "Success",
+                        name,
+                        &type_name,
+                        *is_extension,
+                        Some(arguments),
+                        true,
+                    )?;
+                };
+                write_newline(sink)?;
+            }
+        }
+        write_indented!(sink, indent, "}}\n")?;
+    }
     write_indented!(sink, indent, "}}\n\n")?;
 
     Ok(())
+}
+
+fn codegen_match_branch<W: io::Write, A: CodegenArguments>(
+    sink: &mut W,
+    indent: u64,
+    typ: &str,
+    variant: &str,
+    name: &str,
+    type_name: &str,
+    is_extension: bool,
+    arguments: Option<&A>,
+    // TODO(fxb/66041) This is a hack, to distinguish between match arms that have no arguments
+    // and those whose enum variants don't even allow arguments.  This really needs to be cleaned up,
+    // in both raise and lower, probably by changing the above argument to be something more
+    // descriptive than just an option.
+    add_empty_argument_field: bool,
+) -> Result {
+    write_indented!(sink, indent, "highlevel::{}::{} {{", typ, type_name,)?;
+
+    if let Some(arguments) = arguments {
+        arguments.codegen_arguments_highlevel_pattern(sink, indent + TABSTOP)?;
+        write_indent(sink, indent)?;
+    }
+    write!(sink, "}} => {{\n")?;
+
+    // Increment indent.
+    {
+        let indent = indent + TABSTOP;
+
+        if let Some(arguments) = arguments {
+            arguments.codegen_arguments_encoding(sink, indent)?;
+        }
+
+        write_indented!(
+            sink,
+            indent,
+            "lowlevel::{}::{} {{ name: String::from(\"{}\"), is_extension: {}",
+            typ,
+            variant,
+            name,
+            is_extension
+        )?;
+
+        if let Some(arguments) = arguments {
+            arguments.codegen_arguments_lowlevel_parameters(sink, indent + TABSTOP)?;
+        } else if add_empty_argument_field {
+            write!(sink, ", arguments: None")?;
+        }
+        // else there's no argument field at all.
+        write!(sink, " }}\n")?;
+    }
+    write_indented!(sink, indent, "}},")?;
+
+    Ok(())
+}
+
+fn codegen_encode_primitive<W: io::Write>(
+    sink: &mut W,
+    indent: u64,
+    src_name: &str,
+    dst_name: &str,
+    typ: &PrimitiveType,
+) -> Result {
+    match typ {
+        PrimitiveType::Integer => {
+            write_indented!(
+                sink,
+                indent,
+                "let {} = lowlevel::PrimitiveArgument::Integer(*{});\n",
+                dst_name,
+                src_name
+            )?;
+        }
+        PrimitiveType::BoolAsInt => {
+            write_indented!(
+                sink,
+                indent,
+                "let {}_int = if *{} {{ 1 }} else {{ 0 }};\n",
+                dst_name,
+                src_name
+            )?;
+            write_indented!(
+                sink,
+                indent,
+                "let {} = lowlevel::PrimitiveArgument::Integer({}_int);\n",
+                dst_name,
+                dst_name
+            )?;
+        }
+        PrimitiveType::NamedType(_type_name) => {
+            write_indented!(sink, indent, "let {}_int = *{} as i64;\n", dst_name, src_name)?;
+            write_indented!(
+                sink,
+                indent,
+                "let {} = lowlevel::PrimitiveArgument::Integer({}_int);\n",
+                dst_name,
+                dst_name
+            )?;
+        }
+        PrimitiveType::String => {
+            write_indented!(
+                sink,
+                indent,
+                "let {} = lowlevel::PrimitiveArgument::String({}.clone());\n",
+                dst_name,
+                src_name
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn codegen_encode_map<W: io::Write>(
+    sink: &mut W,
+    indent: u64,
+    name: &str,
+    key: &PrimitiveType,
+    value: &PrimitiveType,
+    arg_vec_name: &str,
+) -> Result {
+    let key_src_name = format!("{}_typed_key", name);
+    let key_dst_name = format!("{}_primitive_key", name);
+    let value_src_name = format!("{}_typed_value", name);
+    let value_dst_name = format!("{}_primitive_value", name);
+    let pair_name = format!("{}_untyped_pair", name);
+
+    write_indented!(sink, indent, "for ({}, {}) in {} {{\n", key_src_name, value_src_name, name,)?;
+
+    // Increment indent
+    {
+        let indent = indent + TABSTOP;
+
+        codegen_encode_primitive(sink, indent, &key_src_name, &key_dst_name, key)?;
+        codegen_encode_primitive(sink, indent, &value_src_name, &value_dst_name, value)?;
+
+        write_indented!(
+            sink,
+            indent,
+            "let {} = lowlevel::Argument::KeyValueArgument {{ key: {}, value: {} }};\n",
+            pair_name,
+            key_dst_name,
+            value_dst_name
+        )?;
+        write_indented!(sink, indent, "{}.push({});\n", arg_vec_name, pair_name)?;
+    }
+    write_indented!(sink, indent, "}}   \n")?;
+
+    Ok(())
+}
+
+fn codegen_encode_list<W: io::Write>(
+    sink: &mut W,
+    indent: u64,
+    name: &str,
+    typ: &PrimitiveType,
+    arg_vec_name: &str,
+) -> Result {
+    let element_typed_name = format!("{}_typed_element", name);
+    let element_primitive_name = format!("{}_primitive_element", name);
+    let element_untyped_name = format!("{}_untyped_element", name);
+
+    write_indented!(sink, indent, "for {} in {}.into_iter() {{\n", element_typed_name, name)?;
+
+    // Increment indent
+    {
+        let indent = indent + TABSTOP;
+        codegen_encode_primitive(
+            sink,
+            indent + TABSTOP,
+            &element_typed_name,
+            &element_primitive_name,
+            typ,
+        )?;
+        write_indented!(
+            sink,
+            indent,
+            "let {} = lowlevel::Argument::PrimitiveArgument({});\n",
+            element_untyped_name,
+            element_primitive_name
+        )?;
+        write_indented!(
+            sink,
+            indent + TABSTOP,
+            "{}.push({});\n",
+            arg_vec_name,
+            element_untyped_name
+        )?;
+    }
+    write_indented!(sink, indent, "}}   \n")?;
+
+    Ok(())
+}
+
+fn codegen_argument_vec_encoding<W: io::Write>(
+    sink: &mut W,
+    indent: u64,
+    arg_vec: &[Argument],
+    arg_vec_name: &str,
+) -> Result {
+    for arg in arg_vec {
+        match &arg.typ {
+            Type::PrimitiveType(typ) => {
+                let primitive_arg = format!("{}_primitive", arg.name);
+                let untyped_arg = format!("{}_untyped", arg.name);
+                codegen_encode_primitive(sink, indent, &arg.name, &primitive_arg, &typ)?;
+                write_indented!(
+                    sink,
+                    indent,
+                    "let {} = lowlevel::Argument::PrimitiveArgument({});\n",
+                    untyped_arg,
+                    primitive_arg
+                )?;
+                write_indented!(sink, indent, "{}.push({});\n", arg_vec_name, untyped_arg)?;
+            }
+            Type::List(typ) => {
+                codegen_encode_list(sink, indent, &arg.name, typ, arg_vec_name)?;
+                break;
+            }
+            Type::Map { key, value } => {
+                codegen_encode_map(sink, indent, &arg.name, &key, &value, arg_vec_name)?;
+                break;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Specifies how to generate pieces of a match arm for both Arguments and ExecuteArguments.
+trait CodegenArguments {
+    fn codegen_arguments_highlevel_pattern<W: io::Write>(
+        &self,
+        sink: &mut W,
+        indent: u64,
+    ) -> Result;
+    fn codegen_arguments_encoding<W: io::Write>(&self, sink: &mut W, indent: u64) -> Result;
+    fn codegen_arguments_lowlevel_parameters<W: io::Write>(
+        &self,
+        sink: &mut W,
+        indent: u64,
+    ) -> Result;
+}
+
+impl CodegenArguments for Arguments {
+    fn codegen_arguments_highlevel_pattern<W: io::Write>(
+        &self,
+        sink: &mut W,
+        indent: u64,
+    ) -> Result {
+        if !self.is_empty() {
+            let arg_vec = match self {
+                Arguments::ParenthesisDelimitedArgumentLists(arg_vec_vec) => arg_vec_vec.concat(),
+                Arguments::ArgumentList(arg_vec) => arg_vec.clone(),
+            };
+
+            write_newline(sink)?;
+
+            for arg in arg_vec {
+                write_indented!(sink, indent, "{},\n", arg.name)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn codegen_arguments_encoding<W: io::Write>(&self, sink: &mut W, indent: u64) -> Result {
+        if !self.is_empty() {
+            match self {
+                Arguments::ParenthesisDelimitedArgumentLists(arg_vec_vec) => {
+                    write_indented!(
+                        sink,
+                        indent,
+                        "let mut raw_arguments_outer = Vec::<Vec<lowlevel::Argument>>::new();\n"
+                    )?;
+                    for arg_vec in arg_vec_vec {
+                        write_indented!(
+                            sink,
+                            indent,
+                            "let mut raw_arguments_inner = Vec::<lowlevel::Argument>::new();\n"
+                        )?;
+                        codegen_argument_vec_encoding(
+                            sink,
+                            indent,
+                            arg_vec,
+                            "raw_arguments_inner",
+                        )?;
+                        write_indented!(
+                            sink,
+                            indent,
+                            "raw_arguments_outer.push(raw_arguments_inner);\n"
+                        )?;
+                    }
+                    write_indented!(
+                        sink,
+                        indent,
+                        "let arguments = lowlevel::Arguments::ParenthesisDelimitedArgumentLists(raw_arguments_outer);\n"
+                    )?;
+                }
+                Arguments::ArgumentList(arg_vec) => {
+                    write_indented!(
+                        sink,
+                        indent,
+                        "let mut raw_arguments = Vec::<lowlevel::Argument>::new();\n"
+                    )?;
+                    codegen_argument_vec_encoding(sink, indent, arg_vec, "raw_arguments")?;
+                    write_indented!(
+                        sink,
+                        indent,
+                        "let arguments = lowlevel::Arguments::ArgumentList(raw_arguments);\n"
+                    )?;
+                }
+            }
+        } else {
+            write_indented!(
+                sink,
+                indent,
+                "let arguments = lowlevel::Arguments::ArgumentList(Vec::new());\n"
+            )?;
+        }
+        Ok(())
+    }
+
+    fn codegen_arguments_lowlevel_parameters<W: io::Write>(
+        &self,
+        sink: &mut W,
+        _indent: u64,
+    ) -> Result {
+        write!(sink, ", arguments")?;
+
+        Ok(())
+    }
+}
+
+impl CodegenArguments for ExecuteArguments {
+    fn codegen_arguments_highlevel_pattern<W: io::Write>(
+        &self,
+        sink: &mut W,
+        indent: u64,
+    ) -> Result {
+        let ExecuteArguments { arguments, .. } = self;
+        arguments.codegen_arguments_highlevel_pattern(sink, indent)
+    }
+
+    fn codegen_arguments_encoding<W: io::Write>(&self, sink: &mut W, indent: u64) -> Result {
+        let ExecuteArguments { arguments, .. } = self;
+        arguments.codegen_arguments_encoding(sink, indent)
+    }
+
+    fn codegen_arguments_lowlevel_parameters<W: io::Write>(
+        &self,
+        sink: &mut W,
+        _indent: u64,
+    ) -> Result {
+        let ExecuteArguments { nonstandard_delimiter, .. } = self;
+        write!(sink,
+            ", arguments: Some(lowlevel::command::ExecuteArguments {{ nonstandard_delimiter: {:?}, arguments }})",
+            nonstandard_delimiter
+        )?;
+
+        Ok(())
+    }
 }

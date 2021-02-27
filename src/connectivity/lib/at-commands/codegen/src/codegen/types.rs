@@ -106,7 +106,7 @@ fn codegen_enum<W: io::Write>(
     name: &str,
     variants: &[Variant],
 ) -> Result {
-    write_indented!(sink, indent, "#[derive(FromPrimitive)]\n")?;
+    write_indented!(sink, indent, "#[derive(Copy, Clone, FromPrimitive)]\n")?;
     codegen_block(
         sink,
         indent,
@@ -151,7 +151,7 @@ fn codegen_execute_command<W: io::Write>(
         sink,
         indent,
         None,
-        &type_name,
+        type_name,
         |sink, indent| {
             arguments
                 .as_ref()
