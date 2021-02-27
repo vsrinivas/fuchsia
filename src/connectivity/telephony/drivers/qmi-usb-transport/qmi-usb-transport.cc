@@ -214,13 +214,14 @@ zx_status_t Device::SetAsyncWait() {
                               ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
 }
 
-zx_status_t Device::SetSnoopChannelToDevice(zx_handle_t channel) {
+zx_status_t Device::SetSnoopChannelToDevice(
+    ::fidl::ClientEnd<::llcpp::fuchsia::telephony::snoop::Publisher> channel) {
   zx_port_packet_t packet;
   zx_status_t status = ZX_OK;
   // Initialize a port to watch whether the other handle of snoop channel has
   // closed
-  if (snoop_channel_port_ == ZX_HANDLE_INVALID) {
-    status = zx_port_create(0, &snoop_channel_port_);
+  if (!snoop_port_.is_valid()) {
+    status = zx::port::create(0, &snoop_port_);
     if (status != ZX_OK) {
       zxlogf(ERROR,
              "qmi-usb-transport: failed to create a port to watch snoop channel: "
@@ -229,25 +230,25 @@ zx_status_t Device::SetSnoopChannelToDevice(zx_handle_t channel) {
       return status;
     }
   } else {
-    status = zx_port_wait(snoop_channel_port_, 0, &packet);
+    status = snoop_port_.wait(zx::deadline_after(zx::sec(0)), &packet);
     if (status == ZX_ERR_TIMED_OUT) {
       zxlogf(ERROR, "qmi-usb-transport: timed out: %s", zx_status_get_string(status));
     } else if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
       zxlogf(INFO, "qmi-usb-transport: snoop channel peer closed");
-      snoop_channel_ = ZX_HANDLE_INVALID;
+      snoop_client_end_.reset();
     }
   }
 
   status = ZX_OK;
-  if (snoop_channel_ != ZX_HANDLE_INVALID) {
+  if (snoop_client_end_.is_valid()) {
     zxlogf(ERROR, "snoop channel already connected");
     status = ZX_ERR_ALREADY_BOUND;
-  } else if (channel == ZX_HANDLE_INVALID) {
+  } else if (!channel.is_valid()) {
     zxlogf(ERROR, "get invalid snoop channel handle");
     status = ZX_ERR_BAD_HANDLE;
   } else {
-    snoop_channel_ = channel;
-    zx_object_wait_async(snoop_channel_, snoop_channel_port_, 0, ZX_CHANNEL_PEER_CLOSED, 0);
+    snoop_client_end_ = std::move(channel);
+    snoop_client_end_.channel().wait_async(snoop_port_, 0, ZX_CHANNEL_PEER_CLOSED, 0);
   }
   return status;
 }
@@ -276,8 +277,10 @@ void Device::SetNetwork(bool connected, SetNetworkCompleter::Sync& completer) {
   completer.Reply();
 }
 
-void Device::SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync& completer) {
-  zx_status_t set_snoop_res = SetSnoopChannelToDevice(interface.release());
+void Device::SetSnoopChannel(
+    ::fidl::ClientEnd<::llcpp::fuchsia::telephony::snoop::Publisher> interface,
+    SetSnoopChannelCompleter::Sync& completer) {
+  zx_status_t set_snoop_res = SetSnoopChannelToDevice(std::move(interface));
   if (set_snoop_res == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -483,7 +486,7 @@ void Device::UsbCdcIntHander(uint16_t packet_size) {
     zxlogf(ERROR, "qmi-usb-transport: failed to write message to channel: %s",
            zx_status_get_string(status));
   }
-  if (snoop_channel_) {
+  if (snoop_client_end_) {
     SnoopQmiMsgSend(buffer, sizeof(buffer), telephony_snoop::Direction::FROM_MODEM);
   }
   return;
@@ -501,8 +504,7 @@ void Device::SnoopQmiMsgSend(uint8_t* msg_arr, uint32_t msg_arr_len,
   memcpy(qmi_msg.opaque_bytes.data_, msg_arr, current_length);
   telephony_snoop::Message snoop_msg =
       telephony_snoop::Message::WithQmiMessage(fidl::unowned_ptr(&qmi_msg));
-  telephony_snoop::Publisher::Call::SendMessage(zx::unowned_channel(snoop_channel_),
-                                                std::move(snoop_msg));
+  telephony_snoop::Publisher::Call::SendMessage(snoop_client_end_, std::move(snoop_msg));
 }
 
 static void qmi_interrupt_cb(void* ctx, usb_request_t* req) {
@@ -563,7 +565,7 @@ int Device::EventLoop(void) {
       if (status != ZX_OK) {
         return status;
       }
-      if (snoop_channel_) {
+      if (snoop_client_end_) {
         SnoopQmiMsgSend(buffer, sizeof(buffer), telephony_snoop::Direction::TO_MODEM);
       }
     } else if (packet.key == INTERRUPT_MSG) {

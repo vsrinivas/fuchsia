@@ -33,20 +33,22 @@ zx_status_t ControllerDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* t
   return transaction.Status();
 }
 
-void ControllerDevice::GetChannel2(zx::channel server_end, GetChannel2Completer::Sync& completer) {
-  if (server_end == ZX_HANDLE_INVALID) {
+void ControllerDevice::GetChannel2(
+    ::fidl::ServerEnd<::llcpp::fuchsia::camera2::hal::Controller> server_end,
+    GetChannel2Completer::Sync& completer) {
+  if (!server_end.is_valid()) {
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
 
-  zx::channel channel(std::move(server_end));
   if (controller_ != nullptr) {
     zxlogf(ERROR, "%s: Camera2 Controller already running", __func__);
     completer.Close(ZX_ERR_INTERNAL);
     return;
   }
 
-  fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control_interface(std::move(channel));
+  fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control_interface(
+      server_end.TakeChannel());
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
 

@@ -58,7 +58,8 @@ void SerialDevice::Read(ReadCompleter::Sync& completer) {
       this);
 }
 
-void SerialDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync& completer) {
+void SerialDevice::GetChannel(fidl::ServerEnd<llcpp::fuchsia::hardware::serial::NewDevice> req,
+                              GetChannelCompleter::Sync& completer) {
   if (loop_.has_value()) {
     if (loop_->GetState() == ASYNC_LOOP_SHUTDOWN) {
       loop_.reset();

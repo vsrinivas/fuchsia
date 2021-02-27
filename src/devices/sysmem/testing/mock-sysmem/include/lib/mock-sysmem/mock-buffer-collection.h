@@ -11,9 +11,10 @@
 
 namespace mock_sysmem {
 
-class MockBufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::RawChannelInterface {
+class MockBufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interface {
  public:
-  void SetEventSink(::zx::channel events, SetEventSinkCompleter::Sync& _completer) override {
+  void SetEventSink(fidl::ClientEnd<llcpp::fuchsia::sysmem::BufferCollectionEvents> events,
+                    SetEventSinkCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
   void Sync(SyncCompleter::Sync& _completer) override { EXPECT_TRUE(false); }

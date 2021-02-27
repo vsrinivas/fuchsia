@@ -12,6 +12,7 @@
 #include <fuchsia/telephony/snoop/llcpp/fidl.h>
 #include <lib/operation/ethernet.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/port.h>
 #include <stdint.h>
 #include <threads.h>
 #include <zircon/compiler.h>
@@ -115,7 +116,7 @@ struct IpPktHdr {
 constexpr std::array<uint8_t, kMacAddrLen> kFakeMacAddr = {0x02, 0x47, 0x4f, 0x4f, 0x47, 0x4c};
 
 class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Messageable>,
-               llcpp::fuchsia::hardware::telephony::transport::Qmi::RawChannelInterface {
+               llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface {
  public:
   explicit Device(zx_device_t* parent);
 
@@ -126,7 +127,8 @@ class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Messageable>,
 
   zx_status_t SetChannelToDevice(zx_handle_t transport);
   zx_status_t SetNetworkStatusToDevice(bool connected);
-  zx_status_t SetSnoopChannelToDevice(zx_handle_t channel);
+  zx_status_t SetSnoopChannelToDevice(
+      ::fidl::ClientEnd<::llcpp::fuchsia::telephony::snoop::Publisher> channel);
 
   // TODO(jiamingw): Group similar declarations together.
   zx_status_t CloseQmiChannel();
@@ -181,7 +183,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Messageable>,
   // FIDL interface implementation
   void SetChannel(::zx::channel transport, SetChannelCompleter::Sync& _completer) override;
   void SetNetwork(bool connected, SetNetworkCompleter::Sync& _completer) override;
-  void SetSnoopChannel(::zx::channel interface,
+  void SetSnoopChannel(::fidl::ClientEnd<::llcpp::fuchsia::telephony::snoop::Publisher> interface,
                        SetSnoopChannelCompleter::Sync& _completer) override;
 
   // Ethernet
@@ -227,8 +229,8 @@ class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Messageable>,
   zx_handle_t qmi_channel_ = ZX_HANDLE_INVALID;
 
   // Port for snoop QMI messages
-  zx_handle_t snoop_channel_port_ = ZX_HANDLE_INVALID;
-  zx_handle_t snoop_channel_ = ZX_HANDLE_INVALID;
+  ::zx::port snoop_port_;
+  ::fidl::ClientEnd<::llcpp::fuchsia::telephony::snoop::Publisher> snoop_client_end_;
 };
 
 }  // namespace qmi_usb

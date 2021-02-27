@@ -8,9 +8,5 @@ zx_library("mock-sysmem") {
   sdk = "source"
   sdk_headers = [ "lib/mock-sysmem/mock-buffer-collection.h" ]
   sources = []
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  public_configs = [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+  deps = [ "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp" ]
 }

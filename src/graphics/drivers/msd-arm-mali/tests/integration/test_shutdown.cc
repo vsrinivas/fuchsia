@@ -93,7 +93,7 @@ static void test_shutdown(uint32_t iters) {
         std::unique_lock lock(connection_create_mutex);
 
         auto test_base = std::make_unique<magma::TestDeviceBase>(MAGMA_VENDOR_ID_MALI);
-        zx::channel parent_device = test_base->GetParentDevice();
+        fidl::ClientEnd parent_device = test_base->GetParentDevice();
 
         test_base->ShutdownDevice();
         test_base.reset();

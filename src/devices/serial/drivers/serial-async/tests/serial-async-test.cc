@@ -4,6 +4,7 @@
 
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <memory>
@@ -172,13 +173,11 @@ class SerialDeviceTest : public zxtest::Test {
   llcpp::fuchsia::hardware::serial::NewDevice::SyncClient& fidl() {
     if (!fidl_.has_value()) {
       // Connect
-      auto connection = llcpp::fuchsia::hardware::serial::NewDeviceProxy::SyncClient(
-          std::move(tester_.ddk().FidlClient()));
-      zx::channel remote;
-      zx::channel local;
-      zx::channel::create(0, &remote, &local);
-      connection.GetChannel(std::move(remote));
-      fidl_ = llcpp::fuchsia::hardware::serial::NewDevice::SyncClient(std::move(local));
+      auto connection = fidl::BindSyncClient(
+          tester_.ddk().FidlClient<llcpp::fuchsia::hardware::serial::NewDeviceProxy>());
+      auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::hardware::serial::NewDevice>();
+      connection.GetChannel(std::move(endpoints->server));
+      fidl_ = fidl::BindSyncClient(std::move(endpoints->client));
     }
     return *fidl_;
   }

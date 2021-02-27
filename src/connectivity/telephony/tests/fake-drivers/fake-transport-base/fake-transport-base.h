@@ -29,7 +29,7 @@ typedef enum {
 } DevicePacketEnum;
 
 // TODO (jiamingw): change the name of FIDL protocol in next CL.
-class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::RawChannelInterface {
+class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface {
  public:
   explicit Device(zx_device_t* device);
 
@@ -47,7 +47,8 @@ class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::RawChannel
   zx_status_t GetProtocol(uint32_t proto_id, void* out_proto);
   zx_status_t SetChannelToDevice(zx::channel transport);
   zx_status_t SetNetworkStatusToDevice(bool connected);
-  zx_status_t SetSnoopChannelToDevice(zx::channel channel);
+  zx_status_t SetSnoopChannelToDevice(
+      ::fidl::ClientEnd<::llcpp::fuchsia::telephony::snoop::Publisher> channel);
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t CloseCtrlChannel();
 
@@ -57,8 +58,8 @@ class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::RawChannel
   // Get/Set functions
   zx::channel& GetCtrlChannel() { return ctrl_channel_; };
   zx::port& GetCtrlChannelPort() { return ctrl_channel_port_; };
-  zx::channel& GetCtrlSnoopChannel() { return snoop_channel_; };
-  zx::port& GetCtrlSnoopChannelPort() { return snoop_channel_port_; };
+  zx::channel& GetCtrlSnoopChannel() { return snoop_client_end_.channel(); };
+  zx::port& GetCtrlSnoopChannelPort() { return snoop_port_; };
   std::thread& GetCtrlThrd() { return fake_ctrl_thread_; }
 
   bool GetConnectStatus() { return connected_; }
@@ -68,12 +69,13 @@ class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::RawChannel
  private:
   void SetChannel(::zx::channel transport, SetChannelCompleter::Sync& completer) override;
   void SetNetwork(bool connected, SetNetworkCompleter::Sync& completer) override;
-  void SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync& completer) override;
+  void SetSnoopChannel(::fidl::ClientEnd<::llcpp::fuchsia::telephony::snoop::Publisher> interface,
+                       SetSnoopChannelCompleter::Sync& completer) override;
 
   zx::channel ctrl_channel_;
   zx::port ctrl_channel_port_;
-  zx::channel snoop_channel_;
-  zx::port snoop_channel_port_;
+  fidl::ClientEnd<::llcpp::fuchsia::telephony::snoop::Publisher> snoop_client_end_;
+  zx::port snoop_port_;
   std::thread fake_ctrl_thread_;
   bool connected_;
   zx_device_t* parent_;

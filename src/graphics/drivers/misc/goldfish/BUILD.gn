@@ -57,7 +57,7 @@ driver_module("goldfish_driver") {
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
-  public_configs = [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 driver_package("goldfish") {

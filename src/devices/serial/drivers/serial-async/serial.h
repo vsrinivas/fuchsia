@@ -27,7 +27,7 @@ using DeviceType = ddk::Device<SerialDevice, ddk::Messageable>;
 
 class SerialDevice : public DeviceType,
                      public llcpp::fuchsia::hardware::serial::NewDevice::Interface,
-                     public llcpp::fuchsia::hardware::serial::NewDeviceProxy::RawChannelInterface {
+                     public llcpp::fuchsia::hardware::serial::NewDeviceProxy::Interface {
  public:
   explicit SerialDevice(zx_device_t* parent) : DeviceType(parent), serial_(parent) {}
 
@@ -44,7 +44,8 @@ class SerialDevice : public DeviceType,
   zx_status_t SerialConfig(uint32_t baud_rate, uint32_t flags);
   void Read(ReadCompleter::Sync& completer) override;
   void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) override;
-  void GetChannel(zx::channel req, GetChannelCompleter::Sync& completer) override;
+  void GetChannel(fidl::ServerEnd<llcpp::fuchsia::hardware::serial::NewDevice> req,
+                  GetChannelCompleter::Sync& completer) override;
 
   // Fidl protocol implementation.
   void GetClass(GetClassCompleter::Sync& completer) override;
