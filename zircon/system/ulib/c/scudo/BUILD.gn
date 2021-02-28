@@ -177,16 +177,6 @@ libc_source_set("gwp_asan") {
     "stack_trace_compressor.h",
   ]
 
-  # TODO(mcgrathr): temporary hack to let the integration roller succeed, to be
-  # removed immediately after the roll lands
-  if (read_file("//third_party/scudo/gwp_asan/.git/HEAD", "list lines") ==
-      [ "30fc6a50bc04d2125056b95011acf84d2717d0c0" ]) {
-    sources += [
-      "utilities.cpp",
-      "utilities.h",
-    ]
-  }
-
   non_test_deps = [ ":libc" ]
   testonly_deps = [ ":testonly" ]
 }
