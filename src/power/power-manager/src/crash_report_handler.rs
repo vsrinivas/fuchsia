@@ -136,6 +136,7 @@ impl CrashReportHandler {
         let report = fidl_feedback::CrashReport {
             program_name: Some(CrashReportHandler::DEFAULT_PROGRAM_NAME.to_string()),
             crash_signature: Some(signature),
+            is_fatal: Some(false),
             ..fidl_feedback::CrashReport::EMPTY
         };
         let result =
@@ -198,6 +199,7 @@ mod tests {
                 fidl_feedback::CrashReport {
                     program_name: Some("device".to_string()),
                     crash_signature: Some(crash_report_signature.to_string()),
+                    is_fatal: Some(false),
                     ..fidl_feedback::CrashReport::EMPTY
                 }
             );
@@ -265,6 +267,7 @@ mod tests {
                     fidl_feedback::CrashReport {
                         program_name: Some("device".to_string()),
                         crash_signature: Some("TestCrash1".to_string()),
+                        is_fatal: Some(false),
                         ..fidl_feedback::CrashReport::EMPTY
                     }
                 );
@@ -283,6 +286,7 @@ mod tests {
                     fidl_feedback::CrashReport {
                         program_name: Some("device".to_string()),
                         crash_signature: Some("TestCrash2".to_string()),
+                        is_fatal: Some(false),
                         ..fidl_feedback::CrashReport::EMPTY
                     }
                 );
@@ -321,6 +325,7 @@ mod tests {
                 fidl_feedback::CrashReport {
                     program_name: Some("device".to_string()),
                     crash_signature: Some("TestCrashReportSvcChannelClosure".to_string()),
+                    is_fatal: Some(false),
                     ..fidl_feedback::CrashReport::EMPTY
                 }
             );

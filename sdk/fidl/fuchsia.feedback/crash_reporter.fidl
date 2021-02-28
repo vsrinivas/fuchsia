@@ -71,12 +71,21 @@ resource table CrashReport {
     /// ZX_ERR_INVALID_ARGS epitaph.
     7: string:MAX_CRASH_SIGNATURE_LENGTH crash_signature;
 
-    /// Indicates whether the crash report corresponds to the atypical termination of a running
-    /// program or the system itself.
+    /// Indicates whether the crash report is for the atypical stop of a running process, component,
+    /// or the system itself.
     ///
-    /// An example of a non-fatal crash is an uncaught exception in a Dart program with many
-    /// exection contexts. The runtime may choose to file a crash report for that execution context,
-    /// but not terminate the whole program which the excution context was a part of.
+    /// Examples of events that result in fatal crash reports are:
+    ///  * an ELF process crashing
+    ///  * the system rebooting because it ran out of memory.
+    ///  * the system rebooting because a critical component crashed.
+    ///  * the system rebooting because the device was too hot.
+    ///
+    /// Examples of events that result in non-fatal crash reports are:
+    ///  * an uncaught exception in a Dart program with many execution contexts. The runtime may
+    ///    chose to terminate that specific execution context and file a crash report for it instead
+    ///    of the whole program.
+    ///  * a component detecting a fatal event (like an OOM) may occur soon, but isn't guaranteed to
+    ///    occur.
     ///
     /// This field is primarily used for grouping crashes by fatal, not fatal, and unknown,
     /// each corresponding to the field being set to true, set to false, or not set respectively.
