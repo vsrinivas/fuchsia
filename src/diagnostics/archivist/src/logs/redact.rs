@@ -68,27 +68,27 @@ const DEFAULT_REDACTION_PATTERNS: &[RedactionPattern] = &[
     },
     // IPv4 Address
     RedactionPattern {
-        matcher: r"((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])",
+        matcher: r"\b((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\b",
         replacement: "<REDACTED-IPV4>",
     },
     // Link local IPv6
     RedactionPattern {
-        matcher: r"fe80::(?:[a-fA-F0-9]{1,4}:){0,4}[a-fA-F0-9]{1,4}",
+        matcher: r"\bfe80::(?:[a-fA-F0-9]{1,4}:){0,4}[a-fA-F0-9]{1,4}\b",
         replacement: "fe80::<REDACTED-IPV6-LL>",
     },
     // IPv6 without ::
     RedactionPattern {
-        matcher: r"(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}",
+        matcher: r"\b(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}\b",
         replacement: "<REDACTED-IPV6>",
     },
     // IPv6 with ::
     RedactionPattern {
-        matcher: r"(?:[a-fA-F0-9]{1,4}:)+:(?:[a-fA-F0-9]{1,4}:)*[a-fA-F0-9]{1,4}",
+        matcher: r"\b(?:[a-fA-F0-9]{1,4}:)+:(?:[a-fA-F0-9]{1,4}:)*[a-fA-F0-9]{1,4}\b",
         replacement: "<REDACTED-IPV6>",
     },
     // IPv6 starting with :: for ipv4
     RedactionPattern {
-        matcher: r"::ffff:[a-fA-F0-9]{1,4}:[a-fA-F0-9]{1,4}",
+        matcher: r"::ffff:[a-fA-F0-9]{1,4}:[a-fA-F0-9]{1,4}\b",
         replacement: "::ffff:<REDACTED-IPV4>",
     },
     // uuid
@@ -98,7 +98,7 @@ const DEFAULT_REDACTION_PATTERNS: &[RedactionPattern] = &[
     },
     // mac address
     RedactionPattern {
-        matcher: r"([0-9a-fA-F]{1,2}([\.:-])){5}[0-9a-fA-F]{1,2}",
+        matcher: r"\b([0-9a-fA-F]{1,2}([\.:-])){5}[0-9a-fA-F]{1,2}\b",
         replacement: "<REDACTED-MAC>",
     },
 ];
@@ -243,6 +243,7 @@ mod test {
         mac_address: "MAC address: 00:0a:95:9F:68:16" => "MAC address: <REDACTED-MAC>",
         combined: "Combined: Email alice@website.tld, IPv4 8.8.8.8" =>
                 "Combined: Email <REDACTED-EMAIL>, IPv4 <REDACTED-IPV4>",
+        preserve: "service::fidl service:fidl" => "service::fidl service:fidl",
         canary: UNREDACTED_CANARY_MESSAGE => REDACTED_CANARY_MESSAGE,
     }
 }
