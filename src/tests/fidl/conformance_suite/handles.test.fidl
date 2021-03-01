@@ -71,18 +71,6 @@ resource struct EventWithReducedRights {
     handle:<EVENT, 49155> h;
 };
 
-resource union UnionOfEventWithReducedRights {
-    1: EventWithReducedRights s;
-};
-
-resource table TableOfUnionOfEventWithReducedRights {
-    1: UnionOfEventWithReducedRights uu;
-};
-
-resource struct StructOfTableOfUnionOfEventWithReducedRights {
-    TableOfUnionOfEventWithReducedRights t;
-};
-
 resource struct ArrayOfVectorOfEventInStructWithReducedRights {
     // 49155 is ZX_RIGHTS_BASIC.
     // TODO(fxbug.dev/41920) Replace with constant value.
@@ -122,7 +110,7 @@ resource union ArrayOfVectorOfEventInUnionWithReducedRights {
 };
 
 resource struct ArrayOfVectorOfEventInUnionWithReducedRightsStruct {
-    ArrayOfVectorOfEventInUnionWithReducedRights t;
+    ArrayOfVectorOfEventInUnionWithReducedRights u;
 };
 
 resource union VectorOfArrayOfEventInUnionWithReducedRights {
@@ -132,5 +120,5 @@ resource union VectorOfArrayOfEventInUnionWithReducedRights {
 };
 
 resource struct VectorOfArrayOfEventInUnionWithReducedRightsStruct {
-    VectorOfArrayOfEventInUnionWithReducedRights t;
+    VectorOfArrayOfEventInUnionWithReducedRights u;
 };

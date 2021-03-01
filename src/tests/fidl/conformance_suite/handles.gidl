@@ -577,7 +577,7 @@ encode_success("EncodeArrayOfVectorOfEventInUnion") {
         #0 = channel(rights: channel_default),
     },
     value = ArrayOfVectorOfEventInUnionWithReducedRightsStruct{
-        t: ArrayOfVectorOfEventInUnionWithReducedRights{
+        u: ArrayOfVectorOfEventInUnionWithReducedRights{
             h: [[ #0 ]],
         },
     },
@@ -608,7 +608,7 @@ encode_success("EncodeVectorOfArrayOfEventInUnion") {
         #0 = channel(rights: channel_default),
     },
     value = VectorOfArrayOfEventInUnionWithReducedRightsStruct{
-        t: VectorOfArrayOfEventInUnionWithReducedRights{
+        u: VectorOfArrayOfEventInUnionWithReducedRights{
             h: [[ #0 ]],
         },
     },
@@ -631,39 +631,246 @@ encode_success("EncodeVectorOfArrayOfEventInUnion") {
     },
 }
 
-// Ensure handle rights are propogated through different record types.
-encode_success("EncodeRightsArePropogated") {
+// Vector and arrays can't hold handle rights information in some bindings
+// This behavior can also differ based on the type of the parent object holding
+// the vector and arrays.
+// Test whether handles in an array of a vector in a struct use the correct
+// rights by reducing the rights.
+decode_success("DecodeArrayOfVectorOfEventInStructRights") {
     bindings_allowlist = [llcpp],
     handle_defs = {
-        #0 = channel(rights: channel_default),
+        #0 = event(rights: event_default),
     },
-    value = StructOfTableOfUnionOfEventWithReducedRights{
-        t: TableOfUnionOfEventWithReducedRights{
-            uu: UnionOfEventWithReducedRights{
-                s: EventWithReducedRights{
-                    h: #0,
-                },
-            },
-        },
+    bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+            repeat(0xff):4,
+            padding:4
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    },
+    value = ArrayOfVectorOfEventInStructWithReducedRights {
+        h: [[restrict(#0, rights: basic)]],
+    },
+}
+
+// Vector and arrays can't hold handle type information in some bindings
+// This behavior can also differ based on the type of the parent object holding
+// the vector and arrays.
+// Test whether handles in an array of a vector in a struct have the type
+// checked by failing when there is a type mismatch.
+decode_failure("DecodeArrayOfVectorOfEventInStructType") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = channel(rights: transfer),
+    },
+    type = ArrayOfVectorOfEventInStructWithReducedRights,
+    bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+            repeat(0xff):4,
+            padding:4
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    },
+    err = INCORRECT_HANDLE_TYPE
+}
+
+// Vector and arrays can't hold handle rights information in some bindings
+// This behavior can also differ based on the type of the parent object holding
+// the vector and arrays.
+// Test whether handles in a vector of an array in a struct use the correct
+// rights by reducing the rights.
+decode_success("DecodeVectorOfArrayOfEventInStructRights") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = event(rights: event_default),
+    },
+    bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+            repeat(0xff):4,
+            padding:4
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    },
+    value = VectorOfArrayOfEventInStructWithReducedRights {
+        h: [[restrict(#0, rights: basic)]],
+    },
+}
+
+// Vector and arrays can't hold handle type information in some bindings
+// This behavior can also differ based on the type of the parent object holding
+// the vector and arrays.
+// Test whether handles in a vector of an array in a struct have the type
+// checked by failing when there is a type mismatch.
+decode_failure("DecodeVectorOfArrayOfEventInStructType") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = channel(rights: transfer),
+    },
+    type = VectorOfArrayOfEventInStructWithReducedRights,
+    bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+            repeat(0xff):4,
+            padding:4
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    },
+    err = INCORRECT_HANDLE_TYPE
+}
+
+// Vector and arrays can't hold handle rights information in some bindings
+// This behavior can also differ based on the type of the parent object holding
+// the vector and arrays.
+// Test whether handles in an array of a vector in a table use the correct
+// rights by reducing the rights.
+decode_success("DecodeArrayOfVectorOfEventInTableRights") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = event(rights: event_default),
     },
     bytes = {
         v1 = [
             num(1):8,
             repeat(0xff):8,
 
-            num(32):4, num(1):4,
+            num(24):4, num(1):4,
             repeat(0xff):8,
 
             num(1):8,
-            num(8):4, num(1):4,
             repeat(0xff):8,
 
             repeat(0xff):4, padding:4,
         ],
     },
-    handle_dispositions = {
+    handles = {
         v1 = [
-            { #0, type: event, rights: basic },
+            #0,
         ],
     },
+    value = ArrayOfVectorOfEventInTableWithReducedRightsStruct {
+        t: ArrayOfVectorOfEventInTableWithReducedRights{
+            h: [[restrict(#0, rights: basic)]],
+        },
+    },
+}
+
+// Vector and arrays can't hold handle type information in some bindings
+// This behavior can also differ based on the type of the parent object holding
+// the vector and arrays.
+// Test whether handles in an array of a vector in a table have the type
+// checked by failing when there is a type mismatch.
+decode_failure("DecodeArrayOfVectorOfEventInTableType") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = channel(rights: transfer),
+    },
+    type = ArrayOfVectorOfEventInTableWithReducedRightsStruct,
+    bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(24):4, num(1):4,
+            repeat(0xff):8,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    },
+    err = INCORRECT_HANDLE_TYPE
+}
+
+// Vector and arrays can't hold handle rights information in some bindings
+// This behavior can also differ based on the type of the parent object holding
+// the vector and arrays.
+// Test whether handles in an array of a vector in a union use the correct
+// rights by reducing the rights.
+decode_success("DecodeArrayOfVectorOfEventInUnionRights") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = event(rights: event_default),
+    },
+    bytes = {
+        v1 = [
+            num(1):8,
+            num(24):4, num(1):4,
+            repeat(0xff):8,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    },
+    value = ArrayOfVectorOfEventInUnionWithReducedRightsStruct {
+        u: ArrayOfVectorOfEventInUnionWithReducedRights{
+            h: [[restrict(#0, rights: basic)]],
+        },
+    },
+}
+
+// Vector and arrays can't hold handle type information in some bindings
+// This behavior can also differ based on the type of the parent object holding
+// the vector and arrays.
+// Test whether handles in an array of a vector in a union have the type
+// checked by failing when there is a type mismatch.
+decode_failure("DecodeArrayOfVectorOfEventInUnionType") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = channel(rights: transfer),
+    },
+    type = ArrayOfVectorOfEventInUnionWithReducedRightsStruct,
+    bytes = {
+        v1 = [
+            num(1):8,
+            num(24):4, num(1):4,
+            repeat(0xff):8,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    },
+    err = INCORRECT_HANDLE_TYPE
 }
