@@ -539,7 +539,6 @@ foreach(_target_type,
                                "script",
                                "testonly",
                                "visibility",
-                               "metadata",
                              ])
 
       forward_variables_from(invoker,
@@ -579,15 +578,6 @@ foreach(_target_type,
       # TODO(shayba): fix response file issue (see below)
       should_trace =
           build_should_trace_actions && !defined(response_file_contents)
-      metadata = {
-        if (defined(invoker.metadata)) {
-          forward_variables_from(invoker.metadata, "*")
-        }
-        if (should_trace) {
-          traceable_action =
-              [ get_label_info(":$target_name", "label_no_toolchain") ]
-        }
-      }
 
       # If the action has inputs/outputs that are not explicitly stated then
       # it will fail verification against the trace.
@@ -599,6 +589,9 @@ foreach(_target_type,
       hermetic_deps = true
       if (defined(invoker.hermetic_deps)) {
         hermetic_deps = invoker.hermetic_deps
+      }
+      if (!hermetic_deps) {
+        inputs += [ "//build/tracer/force_nonhermetic_rebuild" ]
       }
 
       # If the action didn't write or touch all of its declared outputs, it
