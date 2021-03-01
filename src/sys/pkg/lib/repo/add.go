@@ -9,8 +9,10 @@ package repo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -32,6 +34,10 @@ const (
 	backoffFloor      = 500 * time.Millisecond
 	backoffCeiling    = 8 * time.Second
 	backoffMultiplier = 2.0
+)
+
+var (
+	OutOfRangeError = errors.New("out of range")
 )
 
 // AddFromConfig writes the given config to the given remote install path and
@@ -109,15 +115,55 @@ func (sh remoteShell) run(ctx context.Context, cmd []string) error {
 	return sh.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr)
 }
 
-// GetRootKeysInsecurely returns the list of public key config objects from a package
-// repository. Note this is an insecure method, as it leaves the caller open to a
-// man-in-the-middle attack.
-func GetRootKeysInsecurely(ctx context.Context, repoURL string) ([]KeyConfig, error) {
+// RootMetadata describes the package repository root metadata.
+type RootMetadata struct {
+	// RootKeys is the list of public key config objects from a package
+	// repository.
+	RootKeys []KeyConfig
+
+	// RootVersion is the root version of the repository
+	RootVersion uint32
+
+	// RootThreshold is how many signatures the root metadata needs before
+	// it is considered valid.
+	RootThreshold uint32
+}
+
+// GetRootMetadataInsecurely returns the TUF root metadata. Note this is an
+// insecure method, as it leaves the caller open to a man-in-the-middle attack.
+func GetRootMetadataInsecurely(ctx context.Context, repoURL string) (RootMetadata, error) {
 	root, err := getRepoRoot(ctx, repoURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch %s: %v", rootJSON, err)
+		return RootMetadata{}, fmt.Errorf("failed to fetch %s: %w", rootJSON, err)
 	}
-	return GetRootKeys(root)
+
+	var meta RootMetadata
+	meta.RootVersion, err = intToUint32(root.Version)
+	if err != nil {
+		return RootMetadata{}, fmt.Errorf("root version error: %w", err)
+	}
+
+	if role, ok := root.Roles["root"]; ok {
+		meta.RootThreshold, err = intToUint32(role.Threshold)
+		if err != nil {
+			return RootMetadata{}, fmt.Errorf("root threshold error: %w", err)
+		}
+	}
+
+	meta.RootKeys, err = GetRootKeys(root)
+	if err != nil {
+		return RootMetadata{}, err
+	}
+
+	return meta, nil
+}
+
+func intToUint32(x int) (uint32, error) {
+	if x < 0 || x > math.MaxUint32 {
+		return 0, OutOfRangeError
+	}
+
+	return uint32(x), nil
 }
 
 func getRepoRoot(ctx context.Context, repoURL string) (*tuf_data.Root, error) {

@@ -65,6 +65,7 @@ go_library("pm_lib") {
     "pkg/package.go",
     "pmhttp/auto.go",
     "pmhttp/config.go",
+    "pmhttp/config_test.go",
     "pmhttp/index.go",
     "pmhttp/pmhttp.go",
     "repo/config.go",
@@ -78,6 +79,7 @@ test_packages = [
   "cmd/pm/genkey",
   "cmd/pm/publish",
   "cmd/pm/serve",
+  "pmhttp",
   "repo",
 ]
 

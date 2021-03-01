@@ -39,8 +39,11 @@ rustc_test("driver") {
 }
 
 resource("testdata") {
-  sources = [ "data/test.json" ]
-  outputs = [ "data/sources/test.json" ]
+  sources = [
+    "data/test-with-versions.json",
+    "data/test.json",
+  ]
+  outputs = [ "data/sources/{{source_file_part}}" ]
 }
 
 fuchsia_unittest_component("amberctl-test") {

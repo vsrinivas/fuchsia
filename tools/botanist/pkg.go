@@ -48,14 +48,16 @@ func AddPackageRepository(ctx context.Context, client *sshutil.Client, repoURL, 
 		logger.Infof(ctx, "remote-scoped package blob address: %s\n", rScopedBlobURL)
 	}
 
-	keys, err := repo.GetRootKeysInsecurely(ctx, lScopedRepoURL)
+	rootMeta, err := repo.GetRootMetadataInsecurely(ctx, lScopedRepoURL)
 	if err != nil {
-		return fmt.Errorf("failed to derive root keys: %w", err)
+		return fmt.Errorf("failed to derive root metadata: %w", err)
 	}
 
 	cfg := &repo.Config{
-		URL:      repoID,
-		RootKeys: keys,
+		URL:           repoID,
+		RootKeys:      rootMeta.RootKeys,
+		RootVersion:   rootMeta.RootVersion,
+		RootThreshold: rootMeta.RootThreshold,
 		Mirrors: []repo.MirrorConfig{
 			{
 				URL:     rScopedRepoURL,

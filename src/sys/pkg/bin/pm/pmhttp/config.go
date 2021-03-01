@@ -6,14 +6,20 @@ package pmhttp
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 
 	tuf_data "github.com/flynn/go-tuf/data"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
+)
+
+var (
+	OutOfRangeError = errors.New("out of range error")
 )
 
 type ConfigServer struct {
@@ -26,12 +32,14 @@ func NewConfigServer(rootKeyFetcher func() []byte, encryptionKey string) *Config
 }
 
 type Config struct {
-	ID           string
-	RepoURL      string
-	BlobRepoURL  string
-	RatePeriod   int
-	RootKeys     []repo.KeyConfig
-	StatusConfig struct {
+	ID            string
+	RepoURL       string
+	BlobRepoURL   string
+	RatePeriod    int
+	RootKeys      []repo.KeyConfig
+	RootVersion   uint32 `json:"rootVersion,omitempty"`
+	RootThreshold uint32 `json:"rootThreshold,omitempty"`
+	StatusConfig  struct {
 		Enabled bool
 	}
 	Auto    bool
@@ -48,6 +56,18 @@ func (c *ConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	repoUrl := fmt.Sprintf("%s%s", scheme, r.Host)
 
+	cfg, err := c.parseConfig(repoUrl)
+	if err != nil {
+		log.Printf("%s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(cfg)
+}
+
+func (c *ConfigServer) parseConfig(repoUrl string) (Config, error) {
 	cfg := Config{
 		ID:          repoUrl,
 		RepoURL:     repoUrl,
@@ -73,24 +93,44 @@ func (c *ConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		copy(cfg.BlobKey.Data[:], keyBytes)
 	}
 
-	var err error
-	cfg.RootKeys, err = func() ([]repo.KeyConfig, error) {
+	root, err := func() (tuf_data.Root, error) {
 		var signed tuf_data.Signed
-		if err := json.Unmarshal(c.rootKeyFetcher(), &signed); err != nil {
-			return nil, err
-		}
 		var root tuf_data.Root
-		if err := json.Unmarshal(signed.Signed, &root); err != nil {
-			return nil, err
+		if err := json.Unmarshal(c.rootKeyFetcher(), &signed); err != nil {
+			return root, err
 		}
-		return repo.GetRootKeys(&root)
+		if err := json.Unmarshal(signed.Signed, &root); err != nil {
+			return root, err
+		}
+		return root, nil
 	}()
 	if err != nil {
-		log.Printf("root.json parsing error: %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return Config{}, fmt.Errorf("root.json parsing error: %w", err)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(cfg)
+	cfg.RootKeys, err = repo.GetRootKeys(&root)
+	if err != nil {
+		return Config{}, fmt.Errorf("could not get root keys from root.json: %w", err)
+	}
+	cfg.RootVersion, err = intToUint32(root.Version)
+	if err != nil {
+		return Config{}, fmt.Errorf("error parsing root version: %w", err)
+	}
+
+	if rootRole, ok := root.Roles["root"]; ok {
+		cfg.RootThreshold, err = intToUint32(rootRole.Threshold)
+		if err != nil {
+			return Config{}, fmt.Errorf("error parsing root threshold: %w", err)
+		}
+	}
+
+	return cfg, nil
+}
+
+func intToUint32(x int) (uint32, error) {
+	if x < 0 || x > math.MaxUint32 {
+		return 0, OutOfRangeError
+	}
+
+	return uint32(x), nil
 }

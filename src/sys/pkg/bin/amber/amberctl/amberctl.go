@@ -153,13 +153,15 @@ func connectToUpdateManager(ctx *component.Context) *update.ManagerWithCtxInterf
 }
 
 type SourceConfig struct {
-	Id           string
-	RepoUrl      string
-	BlobRepoUrl  string
-	RootKeys     []KeyConfig
-	StatusConfig *StatusConfig
-	Auto         bool
-	BlobKey      *BlobEncryptionKey
+	Id            string
+	RepoUrl       string
+	BlobRepoUrl   string
+	RootKeys      []KeyConfig
+	RootVersion   uint32
+	RootThreshold uint32
+	StatusConfig  *StatusConfig
+	Auto          bool
+	BlobKey       *BlobEncryptionKey
 }
 type KeyConfig struct {
 	Type  string
@@ -188,6 +190,14 @@ func upgradeSourceConfig(cfg SourceConfig) pkg.RepositoryConfig {
 	repoCfg := pkg.RepositoryConfig{
 		RepoUrl:        repoUrlForId(cfg.Id),
 		RepoUrlPresent: true,
+	}
+
+	if cfg.RootVersion != 0 {
+		repoCfg.SetRootVersion(cfg.RootVersion)
+	}
+
+	if cfg.RootThreshold != 0 {
+		repoCfg.SetRootThreshold(cfg.RootThreshold)
 	}
 
 	mirror := pkg.MirrorConfig{

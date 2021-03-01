@@ -405,6 +405,20 @@ fn make_test_repo_config() -> RepositoryConfig {
         .build()
 }
 
+fn make_test_repo_config_with_versions() -> RepositoryConfig {
+    RepositoryConfigBuilder::new("fuchsia-pkg://test".parse().unwrap())
+        .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
+        .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_2).unwrap()))
+        .root_version(2)
+        .root_threshold(2)
+        .add_mirror(
+            MirrorConfigBuilder::new("http://example.com".parse::<Uri>().unwrap())
+                .unwrap()
+                .subscribe(true),
+        )
+        .build()
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn test_services_start_with_no_config() {
     let env = TestEnv::new();
@@ -422,6 +436,20 @@ async fn test_add_src() {
 
     assert_eq!(env.run_amberctl_list_srcs().await, vec!["fuchsia-pkg://test"]);
     assert_eq!(env.resolver_list_repos().await, vec![make_test_repo_config()]);
+    assert_eq!(
+        env.rewrite_engine_list_rules().await,
+        vec![Rule::new("fuchsia.com", "test", "/", "/").unwrap()]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_add_src_with_versions() {
+    let env = TestEnv::new();
+
+    env.run_amberctl_add_static_src("test-with-versions.json").await;
+
+    assert_eq!(env.run_amberctl_list_srcs().await, vec!["fuchsia-pkg://test"]);
+    assert_eq!(env.resolver_list_repos().await, vec![make_test_repo_config_with_versions()]);
     assert_eq!(
         env.rewrite_engine_list_rules().await,
         vec![Rule::new("fuchsia.com", "test", "/", "/").unwrap()]

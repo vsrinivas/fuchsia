@@ -185,7 +185,15 @@ func TestServer(t *testing.T) {
 		}
 
 		if len(config.RootKeys) != 1 {
-			t.Errorf("got %q, wanted 1", config.RootKeys)
+			t.Errorf("got root keys %q, wanted 1", config.RootKeys)
+		}
+
+		if config.RootVersion != 1 {
+			t.Errorf("got root version %v, wanted 1", config.RootVersion)
+		}
+
+		if config.RootThreshold != 1 {
+			t.Errorf("got root threshold %v, wanted 1", config.RootThreshold)
 		}
 
 		// TODO: add some additional coverage for contents of the config file

@@ -47,7 +47,9 @@ func TestAddFromConfig(t *testing.T) {
 	ctx := context.Background()
 
 	cfg := &Config{
-		URL: "fuchsia-pkg://example.com",
+		URL:           "fuchsia-pkg://example.com",
+		RootVersion:   2,
+		RootThreshold: 1,
 		RootKeys: []KeyConfig{
 			{
 				ED25519Key: "00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100",
