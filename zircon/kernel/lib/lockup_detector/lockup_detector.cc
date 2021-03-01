@@ -17,6 +17,7 @@
 #include <zircon/time.h>
 
 #include <fbl/auto_call.h>
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/event_limiter.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
@@ -104,47 +105,94 @@ void heartbeat_callback(Timer* timer, zx_time_t now, void* arg) {
   }
 }
 
-EventLimiter<ZX_SEC(10)> alert_limiter;
-
 // Periodic timer that invokes |check_heartbeats_callback|.
 Timer check_heartbeats_timer;
 
-  // Periodic timer callback invoked on the primary CPU to check heartbeats of secondary CPUs.
-void check_heartbeats_callback(Timer* timer, zx_time_t now, void*) {
+void check_heartbeat(LockupDetectorState* state, cpu_num_t cpu, zx_ticks_t now_ticks,
+                     zx_time_t now_mono) {
+  if (!state->heartbeat_active.load()) {
+    return;
+  }
+
+  const zx_time_t last_heartbeat = state->last_heartbeat.load();
+  const zx_duration_t age = zx_time_sub_time(now_mono, last_heartbeat);
+  if (age < heartbeat_threshold.load()) {
+    return;
+  }
+
+  if (age > state->max_heartbeat_gap.load()) {
+    state->max_heartbeat_gap.store(age);
+  }
+
+  kcounter_add(counter_lockup_no_heartbeat_oops, 1);
+
+  static EventLimiter<ZX_SEC(10)> alert_limiter;
+  if (alert_limiter.Ready()) {
+    KERNEL_OOPS("lockup_detector: no heartbeat from CPU-%u in %" PRId64
+                " ms, last_heartbeat=%" PRId64 " now=%" PRId64 " (message rate limited)\n",
+                cpu, age / ZX_MSEC(1), last_heartbeat, now_mono);
+    {
+      Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
+      percpu::Get(cpu).scheduler.Dump();
+    }
+    // TODO(maniscalco): Print the contents of cpu's interrupt counters.
+  }
+}
+
+void check_critical_section(LockupDetectorState* state, cpu_num_t cpu, zx_ticks_t now_ticks,
+                            zx_time_t now_mono) {
+  const zx_ticks_t begin_ticks = state->begin_ticks.load(std::memory_order_relaxed);
+  if (begin_ticks <= 0) {
+    return;
+  }
+
+  // CPU is in a critical section.
+  //
+  // Do we have a threshold?
+  //
+  // Take care to only load |cs_threshold_ticks| once since we might be racing with another
+  // thread calling |lockup_set_cs_threshold_ticks| and it's important that this logic sees a
+  // consistent value.
+  const zx_ticks_t threshold_ticks = cs_threshold_ticks.load();
+  if (threshold_ticks <= 0) {
+    return;
+  }
+
+  // Was the threshold exceeded?
+  const zx_ticks_t ticks = (now_ticks - begin_ticks);
+  if (ticks < threshold_ticks) {
+    return;
+  }
+
+  // Threshold exceeded.
+  const zx_duration_t duration = TicksToDuration(ticks);
+  RecordCriticalSectionCounters(duration);
+  static EventLimiter<ZX_SEC(10)> alert_limiter;
+  if (alert_limiter.Ready()) {
+    KERNEL_OOPS("lockup_detector: CPU-%u in critical section for %" PRId64 " ms, start=%" PRId64
+                " now=%" PRId64 " (message rate limited)\n",
+                cpu, duration / ZX_MSEC(1), TicksToDuration(begin_ticks),
+                TicksToDuration(now_ticks));
+  }
+}
+
+// Periodic timer callback invoked on the primary CPU to check heartbeats of secondary CPUs.
+void check_for_lockup_callback(Timer* timer, zx_time_t now_mono, void*) {
+  const zx_ticks_t now_ticks = current_ticks();
   const cpu_num_t current_cpu = arch_curr_cpu_num();
   DEBUG_ASSERT(current_cpu == BOOT_CPU_ID);
 
-  percpu::ForEach([current_cpu, now](cpu_num_t cpu, percpu* percpu_state) {
+  percpu::ForEach([current_cpu, now_ticks, now_mono](cpu_num_t cpu, percpu* percpu_state) {
     if (cpu == current_cpu || !mp_is_cpu_online(cpu) | !mp_is_cpu_active(cpu)) {
       return;
     }
     LockupDetectorState* state = &percpu_state->lockup_detector_state;
-    if (!state->heartbeat_active.load()) {
-      return;
-    }
-
-    const zx_time_t last_heartbeat = state->last_heartbeat.load();
-    const zx_duration_t age = zx_time_sub_time(now, last_heartbeat);
-    if (age > heartbeat_threshold.load()) {
-      if (age > state->max_heartbeat_gap.load()) {
-        state->max_heartbeat_gap.store(age);
-      }
-      if (alert_limiter.Ready()) {
-        kcounter_add(counter_lockup_no_heartbeat_oops, 1);
-        KERNEL_OOPS("lockup_detector: no heartbeat from CPU-%u in %" PRId64
-                    " ms, last_heartbeat=%" PRId64 " now=%" PRId64 " (message rate limited)\n",
-                    cpu, age / ZX_MSEC(1), last_heartbeat, now);
-        {
-          Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
-          percpu::Get(cpu).scheduler.Dump();
-        }
-        // TODO(maniscalco): Print the contents of cpu's interrupt counters.
-      }
-    }
+    check_heartbeat(state, cpu, now_ticks, now_mono);
+    check_critical_section(state, cpu, now_ticks, now_mono);
   });
 
   if (heartbeats_enabled()) {
-    check_heartbeats_timer.Set(Deadline::after(heartbeat_period.load()), check_heartbeats_callback,
+    check_heartbeats_timer.Set(Deadline::after(heartbeat_period.load()), check_for_lockup_callback,
                                nullptr);
   }
 }
@@ -152,38 +200,42 @@ void check_heartbeats_callback(Timer* timer, zx_time_t now, void*) {
 }  // namespace
 
 void lockup_primary_init() {
-  // TODO(maniscalco): Set a default threshold that is high enough that it won't erronously trigger
-  // under qemu.  Alternatively, set an aggressive default threshold in code and override in
-  // virtualized environments and scripts that start qemu.
-  constexpr uint64_t kDefaultThresholdMsec = 0;
-  const zx_duration_t lockup_duration = ZX_MSEC(gCmdline.GetUInt64(
-      kernel_option::kLockupDetectorCriticalSectionThresholdMs, kDefaultThresholdMsec));
-  const zx_ticks_t ticks = DurationToTicks(lockup_duration);
-  cs_threshold_ticks.store(ticks);
-
-  if constexpr (!DEBUG_ASSERT_IMPLEMENTED) {
-    dprintf(INFO, "lockup_detector: critical section detection disabled\n");
-  } else if (ticks > 0) {
-    dprintf(INFO,
-            "lockup_detector: critical section threshold is %" PRId64 " ticks (%" PRId64 " ns)\n",
-            ticks, lockup_duration);
-  } else {
-    dprintf(INFO, "lockup_detector: critical section detection disabled by threshold\n");
-  }
-
+  // Initialize heartbeat checks.
   constexpr uint64_t kDefaultHeartbeatPeriodMsec = 1000;
   heartbeat_period.store(ZX_MSEC(gCmdline.GetUInt64(kernel_option::kLockupDetectorHeartbeatPeriodMs,
                                                     kDefaultHeartbeatPeriodMsec)));
   constexpr uint64_t kDefaultHeartbeatAgeThresholdMsec = 3000;
   heartbeat_threshold.store(ZX_MSEC(gCmdline.GetUInt64(
       kernel_option::kLockupDetectorHeartbeatAgeThresholdMs, kDefaultHeartbeatAgeThresholdMsec)));
-  const bool enabled = heartbeats_enabled();
   dprintf(INFO,
           "lockup_detector: heartbeats %s, period is %" PRId64 " ms, threshold is %" PRId64 " ms\n",
-          enabled ? "enabled" : "disabled", heartbeat_period.load() / ZX_MSEC(1),
+          heartbeats_enabled() ? "enabled" : "disabled", heartbeat_period.load() / ZX_MSEC(1),
           heartbeat_threshold.load() / ZX_MSEC(1));
-  if (enabled) {
-    check_heartbeats_callback(&check_heartbeats_timer, current_time(), nullptr);
+
+  // Initialize critical section checks.
+  constexpr uint64_t kDefaultCriticalSectionThresholdMsec = 3000;
+  const zx_duration_t critical_section_duration =
+      ZX_MSEC(gCmdline.GetUInt64(kernel_option::kLockupDetectorCriticalSectionThresholdMs,
+                                 kDefaultCriticalSectionThresholdMsec));
+  const zx_ticks_t critical_section_ticks = DurationToTicks(critical_section_duration);
+  cs_threshold_ticks.store(critical_section_ticks);
+
+  if constexpr (!LOCKUP_CRITICAL_SECTION_ENALBED) {
+    dprintf(INFO, "lockup_detector: critical section detection disabled by build\n");
+  } else if (critical_section_ticks <= 0) {
+    dprintf(INFO, "lockup_detector: critical section detection disabled by threshold\n");
+  } else if (!heartbeats_enabled()) {
+    dprintf(
+        INFO,
+        "lockup_detector: critical section detection disabled because heartbeats are disabled\n");
+  } else {
+    dprintf(INFO,
+            "lockup_detector: critical section threshold is %" PRId64 " ticks (%" PRId64 " ms)\n",
+            critical_section_ticks, ZX_MSEC(critical_section_duration));
+  }
+
+  if (heartbeats_enabled()) {
+    check_for_lockup_callback(&check_heartbeats_timer, current_time(), nullptr);
   }
 }
 
@@ -196,7 +248,7 @@ void lockup_secondary_init() {
     return;
   }
 
-  // To be save, make sure we have a recent last heartbeat before activating.
+  // To be safe, make sure we have a recent last heartbeat before activating.
   const zx_time_t now = current_time();
   state->last_heartbeat.store(now);
   state->heartbeat_active.store(true);
@@ -257,43 +309,8 @@ void lockup_end() {
     return;
   }
 
-  const zx_ticks_t begin_ticks = state->begin_ticks.load(ktl::memory_order_relaxed);
-  // Was a begin time recorded?
-  if (begin_ticks == 0) {
-    // Nope, nothing to clear.
-    return;
-  }
-
   // Clear it.
   state->begin_ticks.store(0, ktl::memory_order_relaxed);
-
-  // Do we have a threshold?
-  //
-  // Take care to only load |cs_threshold_ticks| once since we might be racing with another thread
-  // calling |lockup_set_cs_threshold_ticks| and it's important that this logic sees a consistent
-  // value.
-  const zx_ticks_t threshold_ticks = cs_threshold_ticks.load();
-  if (threshold_ticks == 0) {
-    // Nope.  Lockup detector is disabled.
-    return;
-  }
-
-  // Was the threshold exceeded?
-  const zx_ticks_t now = current_ticks();
-  const zx_ticks_t ticks = (now - begin_ticks);
-  if (ticks < threshold_ticks) {
-    // Nope.
-    return;
-  }
-
-  // Threshold exceeded.
-  const zx_duration_t duration = TicksToDuration(ticks);
-  const cpu_num_t cpu = arch_curr_cpu_num();
-  RecordCriticalSectionCounters(duration);
-  KERNEL_OOPS("lockup_detector: CPU-%u in critical section for %" PRId64 " ms, start=%" PRId64
-              " now=%" PRId64 "\n",
-              cpu, duration / ZX_MSEC(1), begin_ticks, now);
-  Thread::Current::PrintBacktrace();
 }
 
 int64_t lockup_get_critical_section_oops_count() { return counter_lockup_cs_count.Value(); }
@@ -344,9 +361,17 @@ void lockup_status() {
   });
 }
 
-// Trigger a temporary lockup of |cpu| for |duration|.
-void lockup_spin(cpu_num_t cpu, zx_duration_t duration) {
-  thread_start_routine spin = [](void* arg) -> int {
+// Runs |func| on |cpu|, passing |duration| as an argument.
+void run_lockup_func(cpu_num_t cpu, zx_duration_t duration, thread_start_routine func) {
+  Thread* t = Thread::Create("lockup-test", func, &duration, DEFAULT_PRIORITY);
+  t->SetCpuAffinity(cpu_num_to_mask(cpu));
+  t->Resume();
+  t->Join(nullptr, ZX_TIME_INFINITE);
+}
+
+// Trigger a temporary lockup of |cpu| by holding a spinlock for |duration|.
+void lockup_trigger_spinlock(cpu_num_t cpu, zx_duration_t duration) {
+  run_lockup_func(cpu, duration, [](void* arg) -> int {
     const zx_duration_t duration = *reinterpret_cast<zx_duration_t*>(arg);
     // Acquire a spinlock and hold it for |duration|.
     DECLARE_SINGLETON_SPINLOCK(lockup_test_lock);
@@ -356,38 +381,65 @@ void lockup_spin(cpu_num_t cpu, zx_duration_t duration) {
       arch::Yield();
     }
     return 0;
-  };
-  Thread* t = Thread::Create("lockup-spin", spin, &duration, DEFAULT_PRIORITY);
-  t->SetCpuAffinity(cpu_num_to_mask(cpu));
-  t->Resume();
-  t->Join(nullptr, ZX_TIME_INFINITE);
+  });
+}
+
+// Trigger a temporary lockup of |cpu| by remaining in a critical section for |duration|.
+void lockup_trigger_critical_section(cpu_num_t cpu, zx_duration_t duration) {
+  run_lockup_func(cpu, duration, [](void* arg) -> int {
+    const zx_duration_t duration = *reinterpret_cast<zx_duration_t*>(arg);
+    AutoPreemptDisabler preempt_disable;
+    LOCKUP_BEGIN();
+    const zx_time_t deadline = zx_time_add_duration(current_time(), duration);
+    while (current_time() < deadline) {
+      arch::Yield();
+    }
+    LOCKUP_END();
+    return 0;
+  });
 }
 
 int cmd_lockup(int argc, const cmd_args* argv, uint32_t flags) {
+  auto usage = [cmd_name = argv[0].str]() -> int {
+    printf("usage:\n");
+    printf("%s status                                 : print lockup detector status\n", cmd_name);
+    printf("%s test_spinlock <cpu> <num msec>         : hold spinlock on <cpu> for <num msec>\n",
+           cmd_name);
+    printf(
+        "%s test_critical_section <cpu> <num msec> : hold critical section on <cpu> for <num "
+        "msec>\n",
+        cmd_name);
+    return ZX_ERR_INTERNAL;
+  };
+
   if (argc < 2) {
     printf("not enough arguments\n");
-  usage:
-    printf("usage:\n");
-    printf("%s status                            : print lockup detector status\n", argv[0].str);
-    printf("%s test <cpu> <num msec>             : trigger a lockup on <cpu> for <num msec>\n",
-           argv[0].str);
-    return ZX_ERR_INTERNAL;
+    return usage();
   }
 
   if (!strcmp(argv[1].str, "status")) {
     lockup_status();
-  } else if (!strcmp(argv[1].str, "test")) {
+  } else if (!strcmp(argv[1].str, "test_spinlock")) {
     if (argc < 4) {
-      goto usage;
+      return usage();
     }
     const auto cpu = static_cast<cpu_num_t>(argv[2].u);
     const auto ms = static_cast<uint32_t>(argv[3].u);
-    printf("locking up CPU %u for %u ms\n", cpu, ms);
-    lockup_spin(cpu, ZX_MSEC(ms));
+    printf("test_spinlock: locking up CPU %u for %u ms\n", cpu, ms);
+    lockup_trigger_spinlock(cpu, ZX_MSEC(ms));
+    printf("done\n");
+  } else if (!strcmp(argv[1].str, "test_critical_section")) {
+    if (argc < 4) {
+      return usage();
+    }
+    const auto cpu = static_cast<cpu_num_t>(argv[2].u);
+    const auto ms = static_cast<uint32_t>(argv[3].u);
+    printf("test_critical_section: locking up CPU %u for %u ms\n", cpu, ms);
+    lockup_trigger_critical_section(cpu, ZX_MSEC(ms));
     printf("done\n");
   } else {
     printf("unknown command\n");
-    goto usage;
+    return usage();
   }
 
   return ZX_OK;

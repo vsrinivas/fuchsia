@@ -12,6 +12,7 @@
 #include <inttypes.h>
 #include <lib/arch/intrin.h>
 #include <lib/console.h>
+#include <lib/lockup_detector.h>
 #include <platform.h>
 #include <stdlib.h>
 #include <trace.h>

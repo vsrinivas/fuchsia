@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/lockup_detector.h>
 
 #include <arch/arm64/smccc.h>
 #include <kernel/auto_preempt_disabler.h>
@@ -43,15 +44,17 @@ bool CheckForOverrun(zx_duration_t threshold) {
 }  // namespace
 
 zx_status_t arch_smc_call(const zx_smc_parameters_t* params, zx_smc_result_t* result) {
+  const uint32_t client_and_secure_os_id =
+      static_cast<uint32_t>(params->secure_os_id) << 16 | static_cast<uint32_t>(params->client_id);
   arm_smccc_result_t arm_result;
   {
     AutoPreemptDisabler disabler;
-    const uint32_t client_and_secure_os_id = static_cast<uint32_t>(params->secure_os_id) << 16 |
-                                             static_cast<uint32_t>(params->client_id);
 
     const zx_time_t before = current_time();
+    LOCKUP_BEGIN();
     arm_result = arm_smccc_smc(params->func_id, params->arg1, params->arg2, params->arg3,
                                params->arg4, params->arg5, params->arg6, client_and_secure_os_id);
+    LOCKUP_END();
     const zx_duration_t delta = zx_time_sub_time(current_time(), before);
 
     // Amount of time this thread may overrun its target preemption time before an OOPS is emitted.

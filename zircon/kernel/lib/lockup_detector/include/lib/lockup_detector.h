@@ -36,7 +36,9 @@ void lockup_secondary_shutdown(void);
 zx_ticks_t lockup_get_cs_threshold_ticks(void);
 void lockup_set_cs_threshold_ticks(zx_ticks_t ticks);
 
-#if DEBUG_ASSERT_IMPLEMENTED
+#define LOCKUP_CRITICAL_SECTION_ENALBED 1
+
+#if LOCKUP_CRITICAL_SECTION_ENALBED
 #define LOCKUP_BEGIN() \
   do {                 \
     lockup_begin();    \
@@ -52,14 +54,14 @@ void lockup_set_cs_threshold_ticks(zx_ticks_t ticks);
 
 // Used to indicate the CPU is entering a critical section where it might appear to be locked up.
 //
-// Must be called with interrupts disabled.
+// Must be called with preemption disabled or interrupts disabled.
 //
 // Do not use directly.  Use |LOCKUP_BEGIN| macro instead.
 void lockup_begin(void);
 
 // Used to indicate the CPU has left a critical section.
 //
-// Must be called with interrupts disabled.
+// Must be called with preemption disabled or interrupts disabled.
 //
 // Do not use directly.  Use |LOCKUP_END| macro instead.
 void lockup_end(void);

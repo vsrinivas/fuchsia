@@ -405,6 +405,9 @@ See also `k lockup status` and
 
 When 0, critical section lockup detection is disabled.
 
+When kernel.lockup-detector.heartbeat-period-ms is 0, critical section lockup
+detection is disabled.
+
 ## kernel.lockup-detector.heartbeat-period-ms=\<num>
 
 How frequently a secondary CPU should emit a heartbeat via kernel timer.  This
