@@ -66,11 +66,11 @@ class OpteeClient : public OpteeClientBase,
 
   // `fuchsia.tee.Application` FIDL Handlers
   void OpenSession2(
-      fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
+      fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
       fuchsia_tee::Application::Interface::OpenSession2Completer::Sync& completer) override;
   void InvokeCommand(
       uint32_t session_id, uint32_t command_id,
-      fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
+      fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
       fuchsia_tee::Application::Interface::InvokeCommandCompleter::Sync& completer) override;
   void CloseSession(
       uint32_t session_id,

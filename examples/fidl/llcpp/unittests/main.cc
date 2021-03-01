@@ -40,9 +40,10 @@ TEST(FidlExamples, Structs) {
 
 // [START unions]
 TEST(FidlExamples, Unions) {
-  auto int_val = llcpp::fuchsia::examples::JsonValue::WithIntValue(std::make_unique<int32_t>(1));
-  auto str_val =
-      llcpp::fuchsia::examples::JsonValue::WithStringValue(std::make_unique<fidl::StringView>("1"));
+  auto int_val =
+      llcpp::fuchsia::examples::wire::JsonValue::WithIntValue(std::make_unique<int32_t>(1));
+  auto str_val = llcpp::fuchsia::examples::wire::JsonValue::WithStringValue(
+      std::make_unique<fidl::StringView>("1"));
   ASSERT_TRUE(int_val.is_int_value());
   ASSERT_TRUE(str_val.is_string_value());
 }
@@ -62,7 +63,7 @@ TEST(FidlExamples, Tables) {
 // [START heap-field]
 TEST(AllocationExamples, UnionOrTableField) {
   // JsonValue is a FIDL union with field: "int32 int_value"
-  llcpp::fuchsia::examples::JsonValue val;
+  llcpp::fuchsia::examples::wire::JsonValue val;
   val.set_int_value(std::make_unique<int32_t>(1));
 }
 // [END heap-field]
@@ -91,7 +92,7 @@ TEST(AllocationExamples, StringViewCopy) {
 // [START allocator-field]
 TEST(AllocationExamples, AllocatorUnionOrTableField) {
   fidl::BufferThenHeapAllocator<2048> allocator;
-  llcpp::fuchsia::examples::JsonValue val;
+  llcpp::fuchsia::examples::wire::JsonValue val;
   val.set_int_value(allocator.make<int32_t>(1));
 }
 // [END allocator-field]
@@ -122,7 +123,7 @@ TEST(AllocationExamples, AllocatorCopyStr) {
 
 // [START unowned-ptr]
 TEST(AllocationExamples, UnownedPtr) {
-  llcpp::fuchsia::examples::JsonValue val;
+  llcpp::fuchsia::examples::wire::JsonValue val;
   int32_t i = 1;
   val.set_int_value(fidl::unowned_ptr(&i));
 }

@@ -43,7 +43,7 @@ void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& compl
 }
 
 void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
-  ::llcpp::fuchsia::paver::ReadResult result = {};
+  ::llcpp::fuchsia::paver::wire::ReadResult result = {};
   if (!vmo_) {
     zx_status_t status = ZX_ERR_BAD_STATE;
     result.set_err(fidl::unowned_ptr(&status));

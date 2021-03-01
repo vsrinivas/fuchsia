@@ -141,8 +141,8 @@ void RpmbDevice::RpmbConnectServer(zx::channel server) {
 }
 
 void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
-  using DeviceInfo = ::llcpp::fuchsia::hardware::rpmb::DeviceInfo;
-  using EmmcDeviceInfo = ::llcpp::fuchsia::hardware::rpmb::EmmcDeviceInfo;
+  using DeviceInfo = ::llcpp::fuchsia::hardware::rpmb::wire::DeviceInfo;
+  using EmmcDeviceInfo = ::llcpp::fuchsia::hardware::rpmb::wire::EmmcDeviceInfo;
 
   EmmcDeviceInfo emmc_info = {};
   memcpy(emmc_info.cid.data(), cid_.data(), cid_.size() * sizeof(cid_[0]));

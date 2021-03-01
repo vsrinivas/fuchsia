@@ -235,7 +235,7 @@ static zx_status_t check_connected(const zx::socket& socket, bool* out_connected
   return ZX_OK;
 }
 
-zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t** out_io) {
+zx_status_t fdio_from_node_info(zx::channel handle, fio::wire::NodeInfo info, fdio_t** out_io) {
   if (!handle.is_valid()) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -244,23 +244,23 @@ zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t**
 
   fdio_t* io = nullptr;
   switch (info.which()) {
-    case fio::NodeInfo::Tag::kDirectory:
+    case fio::wire::NodeInfo::Tag::kDirectory:
       io = fdio_dir_create(handle.release());
       break;
-    case fio::NodeInfo::Tag::kService:
+    case fio::wire::NodeInfo::Tag::kService:
       io = fdio_remote_create(handle.release(), 0);
       break;
-    case fio::NodeInfo::Tag::kFile:
+    case fio::wire::NodeInfo::Tag::kFile:
       io = fdio_file_create(handle.release(), info.mutable_file().event.release(),
                             info.mutable_file().stream.release());
       break;
-    case fio::NodeInfo::Tag::kDevice:
+    case fio::wire::NodeInfo::Tag::kDevice:
       io = fdio_remote_create(handle.release(), info.mutable_device().event.release());
       break;
-    case fio::NodeInfo::Tag::kTty:
+    case fio::wire::NodeInfo::Tag::kTty:
       io = fdio_pty_create(handle.release(), info.mutable_tty().event.release());
       break;
-    case fio::NodeInfo::Tag::kVmofile: {
+    case fio::wire::NodeInfo::Tag::kVmofile: {
       fio::File::SyncClient control(std::move(handle));
       auto result = control.Seek(0, fio::wire::SeekOrigin::START);
       zx_status_t status = result.status();
@@ -275,16 +275,16 @@ zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t**
                                info.vmofile().offset, info.vmofile().length, result->offset);
       break;
     }
-    case fio::NodeInfo::Tag::kPipe: {
+    case fio::wire::NodeInfo::Tag::kPipe: {
       io = fdio_pipe_create(std::move(info.mutable_pipe().socket));
       break;
     }
-    case fio::NodeInfo::Tag::kDatagramSocket: {
+    case fio::wire::NodeInfo::Tag::kDatagramSocket: {
       io = fdio_datagram_socket_create(std::move(info.mutable_datagram_socket().event),
                                        fsocket::DatagramSocket::SyncClient(std::move(handle)));
       break;
     }
-    case fio::NodeInfo::Tag::kStreamSocket: {
+    case fio::wire::NodeInfo::Tag::kStreamSocket: {
       zx_status_t status = check_connected(info.stream_socket().socket, &connected);
       if (status != ZX_OK) {
         return status;

@@ -224,11 +224,11 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     fdata::DictionaryEntry program_entries[] = {
         {
             .key = "binary",
-            .value = fdata::DictionaryValue::WithStr(fidl::unowned_ptr(&binary)),
+            .value = fdata::wire::DictionaryValue::WithStr(fidl::unowned_ptr(&binary)),
         },
         {
             .key = "colocate",
-            .value = fdata::DictionaryValue::WithStr(fidl::unowned_ptr(&colocate)),
+            .value = fdata::wire::DictionaryValue::WithStr(fidl::unowned_ptr(&colocate)),
         },
     };
     auto entries = fidl::unowned_vec(program_entries);

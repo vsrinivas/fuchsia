@@ -215,7 +215,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
   void WriteFirmware(::llcpp::fuchsia::paver::wire::Configuration configuration,
                      fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
                      WriteFirmwareCompleter::Sync& completer) override {
-    using ::llcpp::fuchsia::paver::WriteFirmwareResult;
+    using ::llcpp::fuchsia::paver::wire::WriteFirmwareResult;
     AppendCommand(Command::kWriteFirmware);
     last_firmware_type_ = std::string(type.data(), type.size());
 
@@ -262,11 +262,11 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
           }
           const auto& response = result.value();
           switch (response.result.which()) {
-            case ::llcpp::fuchsia::paver::ReadResult::Tag::kErr:
+            case ::llcpp::fuchsia::paver::wire::ReadResult::Tag::kErr:
               return response.result.err();
-            case ::llcpp::fuchsia::paver::ReadResult::Tag::kEof:
+            case ::llcpp::fuchsia::paver::wire::ReadResult::Tag::kEof:
               return data_transferred == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
-            case ::llcpp::fuchsia::paver::ReadResult::Tag::kInfo:
+            case ::llcpp::fuchsia::paver::wire::ReadResult::Tag::kInfo:
               data_transferred += response.result.info().size;
               continue;
             default:

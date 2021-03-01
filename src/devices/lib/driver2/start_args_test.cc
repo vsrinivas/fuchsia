@@ -30,11 +30,11 @@ TEST(StartArgsTest, ProgramValue) {
   fdata::DictionaryEntry program_entries[] = {
       {
           .key = "key-for-str",
-          .value = fdata::DictionaryValue::WithStr(fidl::unowned_ptr(&str)),
+          .value = fdata::wire::DictionaryValue::WithStr(fidl::unowned_ptr(&str)),
       },
       {
           .key = "key-for-strvec",
-          .value = fdata::DictionaryValue::WithStrVec(fidl::unowned_ptr(&strvec)),
+          .value = fdata::wire::DictionaryValue::WithStrVec(fidl::unowned_ptr(&strvec)),
       },
   };
   auto entries = fidl::unowned_vec(program_entries);

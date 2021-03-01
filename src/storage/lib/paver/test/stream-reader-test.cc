@@ -33,11 +33,11 @@ class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interfa
     vmo_.write(kFileData, 0, sizeof(kFileData));
 
     ::llcpp::fuchsia::paver::ReadInfo info{.offset = 0, .size = sizeof(kFileData)};
-    completer.Reply(::llcpp::fuchsia::paver::ReadResult::WithInfo(fidl::unowned_ptr(&info)));
+    completer.Reply(::llcpp::fuchsia::paver::wire::ReadResult::WithInfo(fidl::unowned_ptr(&info)));
   }
 
   void ReadError(ReadDataCompleter::Sync& completer) {
-    ::llcpp::fuchsia::paver::ReadResult result;
+    ::llcpp::fuchsia::paver::wire::ReadResult result;
     zx_status_t status = ZX_ERR_INTERNAL;
     result.set_err(fidl::unowned_ptr(&status));
 
@@ -45,7 +45,7 @@ class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interfa
   }
 
   void ReadEof(ReadDataCompleter::Sync& completer) {
-    ::llcpp::fuchsia::paver::ReadResult result;
+    ::llcpp::fuchsia::paver::wire::ReadResult result;
     fidl::aligned<bool> eof = true;
     result.set_eof(fidl::unowned_ptr(&eof));
 
@@ -54,7 +54,7 @@ class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interfa
 
   void ReadData(ReadDataCompleter::Sync& completer) {
     if (!vmo_) {
-      ::llcpp::fuchsia::paver::ReadResult result;
+      ::llcpp::fuchsia::paver::wire::ReadResult result;
       zx_status_t status = ZX_ERR_BAD_STATE;
       result.set_err(fidl::unowned_ptr(&status));
       completer.Reply(std::move(result));

@@ -182,7 +182,7 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   void CreateExecutionContext(uint64_t context_id,
                               CreateExecutionContextCompleter::Sync& completer) override;
   void AddNodes(uint64_t context_id,
-                ::fidl::VectorView<::llcpp::fuchsia::shell::NodeDefinition> nodes,
+                ::fidl::VectorView<::llcpp::fuchsia::shell::wire::NodeDefinition> nodes,
                 AddNodesCompleter::Sync& _completer) override;
   void DumpExecutionContext(uint64_t context_id,
                             DumpExecutionContextCompleter::Sync& completer) override;
@@ -213,7 +213,8 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
     return binding_.value()->OnTextResult(context_id, fidl::unowned_str(result), partial_result);
   }
 
-  zx_status_t OnResult(uint64_t context_id, fidl::VectorView<llcpp::fuchsia::shell::Node>&& nodes,
+  zx_status_t OnResult(uint64_t context_id,
+                       fidl::VectorView<llcpp::fuchsia::shell::wire::Node>&& nodes,
                        bool partial_result) {
     return binding_.value()->OnResult(context_id, std::move(nodes), partial_result);
   }
@@ -252,7 +253,7 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
                    const fidl::StringView& name, bool root_node);
 
   void AddEmitResult(ServerInterpreterContext* context, uint64_t node_file_id,
-                     uint64_t node_node_id, const llcpp::fuchsia::shell::NodeId& node,
+                     uint64_t node_node_id, const llcpp::fuchsia::shell::wire::NodeId& node,
                      bool root_node);
 
   void AddAssignment(ServerInterpreterContext* context, uint64_t node_file_id,

@@ -39,14 +39,14 @@ zx_status_t StreamReader::Read(void* buf, size_t buf_size, size_t* size_actual) 
     if (call_result.status() != ZX_OK) {
       return call_result.status();
     }
-    const ::llcpp::fuchsia::paver::ReadResult& read_result = call_result.value().result;
+    const ::llcpp::fuchsia::paver::wire::ReadResult& read_result = call_result.value().result;
     switch (read_result.which()) {
-      case llcpp::fuchsia::paver::ReadResult::Tag::kErr:
+      case llcpp::fuchsia::paver::wire::ReadResult::Tag::kErr:
         return read_result.err();
-      case llcpp::fuchsia::paver::ReadResult::Tag::kEof:
+      case llcpp::fuchsia::paver::wire::ReadResult::Tag::kEof:
         *size_actual = 0;
         return ZX_OK;
-      case llcpp::fuchsia::paver::ReadResult::Tag::kInfo:
+      case llcpp::fuchsia::paver::wire::ReadResult::Tag::kInfo:
         offset_ = read_result.info().offset;
         size_ = read_result.info().size;
         break;

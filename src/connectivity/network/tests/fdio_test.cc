@@ -112,8 +112,8 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
 
   auto response = client.Describe();
   ASSERT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
-  const ::llcpp::fuchsia::io::NodeInfo& node_info = response.Unwrap()->info;
-  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::NodeInfo::Tag::kStreamSocket);
+  const ::llcpp::fuchsia::io::wire::NodeInfo& node_info = response.Unwrap()->info;
+  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::wire::NodeInfo::Tag::kStreamSocket);
 
   const zx::socket& socket = node_info.stream_socket().socket;
 
@@ -127,25 +127,25 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
       << zx_status_get_string(status);
 }
 
-static const zx::socket& stream_handle(const ::llcpp::fuchsia::io::NodeInfo& node_info) {
+static const zx::socket& stream_handle(const ::llcpp::fuchsia::io::wire::NodeInfo& node_info) {
   return node_info.stream_socket().socket;
 }
 
-static const zx::eventpair& datagram_handle(const ::llcpp::fuchsia::io::NodeInfo& node_info) {
+static const zx::eventpair& datagram_handle(const ::llcpp::fuchsia::io::wire::NodeInfo& node_info) {
   return node_info.datagram_socket().event;
 }
 
-template <int Type, typename ClientType, ::llcpp::fuchsia::io::NodeInfo::Tag Tag,
+template <int Type, typename ClientType, ::llcpp::fuchsia::io::wire::NodeInfo::Tag Tag,
           typename HandleType,
-          const HandleType& (*GetHandle)(const ::llcpp::fuchsia::io::NodeInfo& node_info),
+          const HandleType& (*GetHandle)(const ::llcpp::fuchsia::io::wire::NodeInfo& node_info),
           zx_signals_t PeerClosed>
 struct SocketImpl {
   using Client = ClientType;
   using Handle = HandleType;
 
   static int type() { return Type; };
-  static ::llcpp::fuchsia::io::NodeInfo::Tag tag() { return Tag; }
-  static const Handle& handle(const ::llcpp::fuchsia::io::NodeInfo& node_info) {
+  static ::llcpp::fuchsia::io::wire::NodeInfo::Tag tag() { return Tag; }
+  static const Handle& handle(const ::llcpp::fuchsia::io::wire::NodeInfo& node_info) {
     return GetHandle(node_info);
   }
   static zx_signals_t peer_closed() { return PeerClosed; };
@@ -178,12 +178,12 @@ class SocketTest : public testing::Test {
 
 using StreamSocketImpl =
     SocketImpl<SOCK_STREAM, ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient,
-               ::llcpp::fuchsia::io::NodeInfo::Tag::kStreamSocket, zx::socket, stream_handle,
+               ::llcpp::fuchsia::io::wire::NodeInfo::Tag::kStreamSocket, zx::socket, stream_handle,
                ZX_SOCKET_PEER_CLOSED>;
 
 using DatagramSocketImpl =
     SocketImpl<SOCK_DGRAM, ::llcpp::fuchsia::posix::socket::DatagramSocket::SyncClient,
-               ::llcpp::fuchsia::io::NodeInfo::Tag::kDatagramSocket, zx::eventpair, datagram_handle,
+               ::llcpp::fuchsia::io::wire::NodeInfo::Tag::kDatagramSocket, zx::eventpair, datagram_handle,
                ZX_EVENTPAIR_PEER_CLOSED>;
 
 class SocketTestNames {
@@ -216,7 +216,7 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
 
   auto describe_response = client.Describe();
   ASSERT_EQ(status = describe_response.status(), ZX_OK) << zx_status_get_string(status);
-  const ::llcpp::fuchsia::io::NodeInfo& node_info = describe_response.Unwrap()->info;
+  const ::llcpp::fuchsia::io::wire::NodeInfo& node_info = describe_response.Unwrap()->info;
   ASSERT_EQ(node_info.which(), TypeParam::tag());
 
   zx_signals_t observed;
@@ -290,8 +290,8 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
 
   auto response = client.Describe();
   ASSERT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
-  const ::llcpp::fuchsia::io::NodeInfo& node_info = response.Unwrap()->info;
-  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::NodeInfo::Tag::kStreamSocket);
+  const ::llcpp::fuchsia::io::wire::NodeInfo& node_info = response.Unwrap()->info;
+  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::wire::NodeInfo::Tag::kStreamSocket);
 
   const zx::socket& socket = node_info.stream_socket().socket;
 

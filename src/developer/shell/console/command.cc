@@ -103,7 +103,7 @@ std::string CollectErrors(std::string_view line, const parser::ast::Node& node) 
 
 struct IdAndType {
   AstBuilder::NodeId id;
-  llcpp::fuchsia::shell::ShellType type;
+  llcpp::fuchsia::shell::wire::ShellType type;
 };
 
 // Visitor for loading a parser AST into a FIDL AST.
@@ -136,14 +136,15 @@ class NodeASTVisitor : public parser::ast::NodeVisitor<IdAndType> {
     AstBuilder::NodeId id = builder_->AddVariableDeclaration(
         node.identifier(), std::move(expression.type), expression.id, false);
 
-    return {.id = id, .type = llcpp::fuchsia::shell::ShellType()};
+    return {.id = id, .type = llcpp::fuchsia::shell::wire::ShellType()};
   }
 
   IdAndType VisitInteger(const parser::ast::Integer& node) override {
     AstBuilder::NodeId id = builder_->AddIntegerLiteral(node.value());
     fidl::ObjectView<llcpp::fuchsia::shell::wire::BuiltinType> builtin_type(
         builder_->allocator(), llcpp::fuchsia::shell::wire::BuiltinType::INTEGER);
-    return {.id = id, .type = llcpp::fuchsia::shell::ShellType::WithBuiltinType(builtin_type)};
+    return {.id = id,
+            .type = llcpp::fuchsia::shell::wire::ShellType::WithBuiltinType(builtin_type)};
   }
 
   IdAndType VisitIdentifier(const parser::ast::Identifier& node) override {
@@ -174,7 +175,7 @@ class NodeASTVisitor : public parser::ast::NodeVisitor<IdAndType> {
   IdAndType VisitString(const parser::ast::String& node) override {
     AstBuilder::NodeId id = builder_->AddStringLiteral(node.value());
     return {.id = id,
-            .type = llcpp::fuchsia::shell::ShellType::WithBuiltinType(
+            .type = llcpp::fuchsia::shell::wire::ShellType::WithBuiltinType(
                 builder_->allocator(), llcpp::fuchsia::shell::wire::BuiltinType::STRING)};
   }
 
@@ -188,8 +189,8 @@ class NodeASTVisitor : public parser::ast::NodeVisitor<IdAndType> {
     auto result = builder_->CloseObject();
     AstBuilder::NodeId id = result.value_node;
     return {.id = id,
-            .type = llcpp::fuchsia::shell::ShellType::WithObjectSchema(builder_->allocator(),
-                                                                       result.schema_node)};
+            .type = llcpp::fuchsia::shell::wire::ShellType::WithObjectSchema(builder_->allocator(),
+                                                                             result.schema_node)};
   }
 
   IdAndType VisitField(const parser::ast::Field& node) override {

@@ -125,7 +125,7 @@ TEST(VmofileTests, test_vmofile_basic) {
   {
     auto describe_result = fio::File::Call::Describe(zx::unowned_channel(h));
     ASSERT_EQ(describe_result.status(), ZX_OK);
-    fio::NodeInfo* info = &describe_result.Unwrap()->info;
+    fio::wire::NodeInfo* info = &describe_result.Unwrap()->info;
     ASSERT_TRUE(info->is_vmofile());
     ASSERT_EQ(info->vmofile().offset, 0u);
     ASSERT_EQ(info->vmofile().length, 13u);
@@ -200,7 +200,7 @@ TEST(VmofileTests, test_vmofile_exec) {
     // Describe should also return a VMO with ZX_RIGHT_EXECUTE.
     auto describe_result = fio::File::Call::Describe(zx::unowned_channel(h));
     ASSERT_EQ(describe_result.status(), ZX_OK);
-    fio::NodeInfo* info = &describe_result.Unwrap()->info;
+    fio::wire::NodeInfo* info = &describe_result.Unwrap()->info;
     ASSERT_TRUE(info->is_vmofile());
     ASSERT_EQ(info->vmofile().offset, 0u);
     ASSERT_EQ(info->vmofile().length, 13u);

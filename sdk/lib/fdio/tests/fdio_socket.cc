@@ -56,7 +56,7 @@ class Server final : public llcpp::fuchsia::posix::socket::testing::StreamSocket
     if (status != ZX_OK) {
       return completer.Close(status);
     }
-    llcpp::fuchsia::io::NodeInfo info;
+    llcpp::fuchsia::io::wire::NodeInfo info;
     info.set_stream_socket(fidl::unowned_ptr(&stream_socket));
     completer.Reply(std::move(info));
   }

@@ -19,7 +19,7 @@ namespace device_mock = ::llcpp::fuchsia::device::mock;
 // Returns ZX_ERR_STOP if channel has been closed
 // Returns ZX_OK and populates |actions_out| on success.
 zx_status_t WaitForPerformActions(const zx::channel& c,
-                                  fbl::Array<device_mock::Action>* actions_out);
+                                  fbl::Array<device_mock::wire::Action>* actions_out);
 
 }  // namespace mock_device
 

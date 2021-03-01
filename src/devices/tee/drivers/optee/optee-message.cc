@@ -30,21 +30,21 @@ constexpr bool IsDirectionOutput(fuchsia_tee::wire::Direction direction) {
 }  // namespace
 
 zx_status_t Message::TryInitializeParameters(
-    size_t starting_param_index, fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
+    size_t starting_param_index, fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
     SharedMemoryManager::ClientMemoryPool* temp_memory_pool) {
   zx_status_t status = ZX_OK;
   for (size_t i = 0; i < parameter_set.count(); i++) {
     MessageParam& optee_param = params()[starting_param_index + i];
-    fuchsia_tee::Parameter& zx_param = parameter_set[i];
+    fuchsia_tee::wire::Parameter& zx_param = parameter_set[i];
 
     switch (zx_param.which()) {
-      case fuchsia_tee::Parameter::Tag::kNone:
+      case fuchsia_tee::wire::Parameter::Tag::kNone:
         optee_param.attribute = MessageParam::kAttributeTypeNone;
         break;
-      case fuchsia_tee::Parameter::Tag::kValue:
+      case fuchsia_tee::wire::Parameter::Tag::kValue:
         status = TryInitializeValue(zx_param.value(), &optee_param);
         break;
-      case fuchsia_tee::Parameter::Tag::kBuffer:
+      case fuchsia_tee::wire::Parameter::Tag::kBuffer:
         status = TryInitializeBuffer(&zx_param.mutable_buffer(), temp_memory_pool, &optee_param);
         break;
       default:
@@ -346,7 +346,7 @@ zx_handle_t Message::TemporarySharedMemory::ReleaseVmo() { return vmo_.release()
 fit::result<OpenSessionMessage, zx_status_t> OpenSessionMessage::TryCreate(
     SharedMemoryManager::DriverMemoryPool* message_pool,
     SharedMemoryManager::ClientMemoryPool* temp_memory_pool, const Uuid& trusted_app,
-    fidl::VectorView<fuchsia_tee::Parameter> parameter_set) {
+    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set) {
   ZX_DEBUG_ASSERT(message_pool != nullptr);
   ZX_DEBUG_ASSERT(temp_memory_pool != nullptr);
 
@@ -409,7 +409,7 @@ fit::result<CloseSessionMessage, zx_status_t> CloseSessionMessage::TryCreate(
 fit::result<InvokeCommandMessage, zx_status_t> InvokeCommandMessage::TryCreate(
     SharedMemoryManager::DriverMemoryPool* message_pool,
     SharedMemoryManager::ClientMemoryPool* temp_memory_pool, uint32_t session_id,
-    uint32_t command_id, fidl::VectorView<fuchsia_tee::Parameter> parameter_set) {
+    uint32_t command_id, fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set) {
   ZX_DEBUG_ASSERT(message_pool != nullptr);
 
   const size_t num_params = parameter_set.count();

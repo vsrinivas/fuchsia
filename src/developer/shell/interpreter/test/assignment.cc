@@ -122,7 +122,7 @@ TEST_F(InterpreterTest, AssignObject) {
     std::vector<std::string> names{"alpha", "beta"};
     std::vector<shell::console::AstBuilder::NodeId> values{builder.AddIntegerLiteral(10, false),
                                                            builder.AddIntegerLiteral(20, false)};
-    std::vector<llcpp::fuchsia::shell::ShellType> types;
+    std::vector<llcpp::fuchsia::shell::wire::ShellType> types;
     types.emplace_back(builder.TypeUint64());
     types.emplace_back(builder.TypeUint64());
     shell::console::AstBuilder::NodePair object_pair =
@@ -136,7 +136,7 @@ TEST_F(InterpreterTest, AssignObject) {
     std::vector<std::string> names{"alpha", "beta"};
     std::vector<shell::console::AstBuilder::NodeId> values{builder.AddIntegerLiteral(4, false),
                                                            builder.AddIntegerLiteral(5, false)};
-    std::vector<llcpp::fuchsia::shell::ShellType> types;
+    std::vector<llcpp::fuchsia::shell::wire::ShellType> types;
     types.emplace_back(builder.TypeUint64());
     types.emplace_back(builder.TypeUint64());
     shell::console::AstBuilder::NodePair object_pair =

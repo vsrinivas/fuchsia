@@ -81,12 +81,13 @@ class BlockVerityTest : public zxtest::Test {
   }
 
   void CloseAndGenerateSeal(
-      llcpp::fuchsia::hardware::block::verified::DeviceManager_CloseAndGenerateSeal_Result* out) {
+      llcpp::fuchsia::hardware::block::verified::wire::DeviceManager_CloseAndGenerateSeal_Result*
+          out) {
     ASSERT_OK(vvc_->CloseAndGenerateSeal(&seal_response_buffer_, out));
   }
 
   zx_status_t OpenForVerifiedRead(
-      const llcpp::fuchsia::hardware::block::verified::Seal& expected_seal,
+      const llcpp::fuchsia::hardware::block::verified::wire::Seal& expected_seal,
       fbl::unique_fd& verified_block_fd) {
     uint8_t buf[block_verity::kHashOutputSize];
     memcpy(buf, expected_seal.sha256().superblock_hash.begin(), block_verity::kHashOutputSize);
@@ -202,7 +203,7 @@ TEST_F(BlockVerityTest, BasicSeal) {
   OpenForAuthoring(mutable_block_fd);
 
   // Close and generate a seal over the all-zeroes data section.
-  llcpp::fuchsia::hardware::block::verified::DeviceManager_CloseAndGenerateSeal_Result result;
+  llcpp::fuchsia::hardware::block::verified::wire::DeviceManager_CloseAndGenerateSeal_Result result;
   CloseAndGenerateSeal(&result);
   ASSERT_TRUE(result.is_response());
 
@@ -354,11 +355,11 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
   OpenForAuthoring(mutable_block_fd);
 
   // Close and generate a seal over the all-zeroes data section.
-  llcpp::fuchsia::hardware::block::verified::DeviceManager_CloseAndGenerateSeal_Result result;
+  llcpp::fuchsia::hardware::block::verified::wire::DeviceManager_CloseAndGenerateSeal_Result result;
   CloseAndGenerateSeal(&result);
   ASSERT_TRUE(result.is_response());
 
-  const llcpp::fuchsia::hardware::block::verified::Seal& seal = result.response().seal;
+  const llcpp::fuchsia::hardware::block::verified::wire::Seal& seal = result.response().seal;
   fbl::unique_fd verified_block_fd;
 
   // Prepare to read every block.
@@ -446,7 +447,7 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
   memset(mangled_sha256_seal.superblock_hash.begin(), 0xff, 32);
   fidl::aligned<llcpp::fuchsia::hardware::block::verified::Sha256Seal> mangled_aligned =
       std::move(mangled_sha256_seal);
-  auto mangled_seal = llcpp::fuchsia::hardware::block::verified::Seal::WithSha256(
+  auto mangled_seal = llcpp::fuchsia::hardware::block::verified::wire::Seal::WithSha256(
       fidl::unowned_ptr(&mangled_aligned));
   ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, OpenForVerifiedRead(mangled_seal, verified_block_fd));
 

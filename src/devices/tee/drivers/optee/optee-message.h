@@ -208,7 +208,7 @@ class Message : public MessageBase<std::unique_ptr<SharedMemory>> {
   using MessageBase::MessageBase;  // inherit constructors
 
   zx_status_t TryInitializeParameters(size_t starting_param_index,
-                                      fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
+                                      fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
                                       SharedMemoryManager::ClientMemoryPool* temp_memory_pool);
   zx_status_t TryInitializeValue(const fuchsia_tee::Value& value, MessageParam* out_param);
   zx_status_t TryInitializeBuffer(fuchsia_tee::Buffer* buffer,
@@ -258,7 +258,7 @@ class OpenSessionMessage : public Message {
   static fit::result<OpenSessionMessage, zx_status_t> TryCreate(
       SharedMemoryManager::DriverMemoryPool* message_pool,
       SharedMemoryManager::ClientMemoryPool* temp_memory_pool, const Uuid& trusted_app,
-      fidl::VectorView<fuchsia_tee::Parameter> parameter_set);
+      fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set);
 
   // Outputs
   uint32_t session_id() const { return header()->session_id; }
@@ -305,7 +305,7 @@ class InvokeCommandMessage : public Message {
   static fit::result<InvokeCommandMessage, zx_status_t> TryCreate(
       SharedMemoryManager::DriverMemoryPool* message_pool,
       SharedMemoryManager::ClientMemoryPool* temp_memory_pool, uint32_t session_id,
-      uint32_t command_id, fidl::VectorView<fuchsia_tee::Parameter> parameter_set);
+      uint32_t command_id, fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set);
 
   // Outputs
   uint32_t return_code() const { return header()->return_code; }

@@ -227,7 +227,7 @@ void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync& comple
     status = ZX_ERR_BAD_STATE;
   }
 
-  FidlBacklight::Device_GetStateNormalized_Result result;
+  FidlBacklight::wire::Device_GetStateNormalized_Result result;
   FidlBacklight::Device_GetStateNormalized_Response response{.state = state};
   if (status == ZX_OK) {
     result.set_response(fidl::unowned_ptr(&response));
@@ -259,7 +259,7 @@ void DisplayDevice::SetStateNormalized(FidlBacklight::State state,
 }
 
 void DisplayDevice::GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) {
-  FidlBacklight::Device_GetStateAbsolute_Result result;
+  FidlBacklight::wire::Device_GetStateAbsolute_Result result;
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   result.set_err(fidl::unowned_ptr(&status));
   completer.Reply(std::move(result));
@@ -267,12 +267,12 @@ void DisplayDevice::GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer)
 
 void DisplayDevice::SetStateAbsolute(FidlBacklight::State state,
                                      SetStateAbsoluteCompleter::Sync& completer) {
-  FidlBacklight::Device_SetStateAbsolute_Result result;
+  FidlBacklight::wire::Device_SetStateAbsolute_Result result;
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void DisplayDevice::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync& completer) {
-  FidlBacklight::Device_GetMaxAbsoluteBrightness_Result result;
+  FidlBacklight::wire::Device_GetMaxAbsoluteBrightness_Result result;
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 

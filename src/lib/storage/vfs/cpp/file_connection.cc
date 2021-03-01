@@ -58,7 +58,7 @@ void FileConnection::Describe(DescribeCompleter::Sync& completer) {
     return completer.Close(result.error());
   }
   ConvertToIoV1NodeInfo(result.take_value(),
-                        [&](fio::NodeInfo&& info) { completer.Reply(std::move(info)); });
+                        [&](fio::wire::NodeInfo&& info) { completer.Reply(std::move(info)); });
 }
 
 void FileConnection::Sync(SyncCompleter::Sync& completer) {

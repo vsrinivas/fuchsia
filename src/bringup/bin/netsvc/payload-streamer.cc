@@ -28,7 +28,7 @@ void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& compl
 }
 
 void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
-  using ::llcpp::fuchsia::paver::ReadResult;
+  using ::llcpp::fuchsia::paver::wire::ReadResult;
   ReadResult result;
   if (!vmo_) {
     zx_status_t status = ZX_ERR_BAD_STATE;

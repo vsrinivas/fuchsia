@@ -42,7 +42,7 @@ TEST(InlineXUnionInStruct, Success) {
   // encode
   {
     llcpp_misc::InlineXUnionInStruct input;
-    llcpp_misc::SimpleUnion simple_union;
+    llcpp_misc::wire::SimpleUnion simple_union;
     int64_t i64 = 0xdeadbeef;
     simple_union.set_i64(fidl::unowned_ptr(&i64));
     input.before = fidl::unowned_str(before);
@@ -67,9 +67,9 @@ TEST(InlineXUnionInStruct, Success) {
     ASSERT_EQ(msg.before.size(), before.size());
     ASSERT_STREQ(msg.after.begin(), &after[0]);
     ASSERT_EQ(msg.after.size(), after.size());
-    ASSERT_EQ(msg.xu.which(), llcpp_misc::SampleXUnion::Tag::kSu);
-    const llcpp_misc::SimpleUnion& su = msg.xu.su();
-    ASSERT_EQ(su.which(), llcpp_misc::SimpleUnion::Tag::kI64);
+    ASSERT_EQ(msg.xu.which(), llcpp_misc::wire::SampleXUnion::Tag::kSu);
+    const llcpp_misc::wire::SimpleUnion& su = msg.xu.su();
+    ASSERT_EQ(su.which(), llcpp_misc::wire::SimpleUnion::Tag::kI64);
     ASSERT_EQ(su.i64(), 0xdeadbeef);
   }
 }
@@ -118,7 +118,7 @@ TEST(PrimitiveInXUnionInStruct, Success) {
     ASSERT_EQ(msg.before.size(), before.size());
     ASSERT_STREQ(msg.after.begin(), &after[0]);
     ASSERT_EQ(msg.after.size(), after.size());
-    ASSERT_EQ(msg.xu.which(), llcpp_misc::SampleXUnion::Tag::kI);
+    ASSERT_EQ(msg.xu.which(), llcpp_misc::wire::SampleXUnion::Tag::kI);
     const int32_t& i = msg.xu.i();
     ASSERT_EQ(i, integer);
   }
@@ -298,7 +298,7 @@ TEST(ComplexTable, Success) {
                               .set_x(fidl::unowned_ptr(&table_x))
                               .set_y(fidl::unowned_ptr(&table_y));
     auto simple_table = simple_builder.build();
-    llcpp_misc::SampleXUnion xu;
+    llcpp_misc::wire::SampleXUnion xu;
     xu.set_i(fidl::unowned_ptr(&xunion_i));
     fidl::StringView strings_vector[]{
         fidl::unowned_str(before),
@@ -331,7 +331,7 @@ TEST(ComplexTable, Success) {
     ASSERT_TRUE(msg.simple().has_y());
     ASSERT_EQ(msg.simple().y(), table_y);
     ASSERT_TRUE(msg.has_u());
-    ASSERT_EQ(msg.u().which(), llcpp_misc::SampleXUnion::Tag::kI);
+    ASSERT_EQ(msg.u().which(), llcpp_misc::wire::SampleXUnion::Tag::kI);
     const int32_t& i = msg.u().i();
     ASSERT_EQ(i, xunion_i);
     ASSERT_TRUE(msg.has_strings());

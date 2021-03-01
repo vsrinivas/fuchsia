@@ -186,7 +186,7 @@ TEST(Service, OpeningServiceWithNodeReferenceFlag) {
   // verify it by calling describe on it, which should return correctly.
   auto describe_result = fio::Node::Call::Describe(zx::unowned_channel(abc_client_end));
   ASSERT_EQ(ZX_OK, describe_result.status());
-  ASSERT_EQ(fio::NodeInfo::Tag::kService, describe_result->info.which());
+  ASSERT_EQ(fio::wire::NodeInfo::Tag::kService, describe_result->info.which());
 
   loop.Shutdown();
 }

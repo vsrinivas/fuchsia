@@ -26,8 +26,6 @@
 #include "src/devices/lib/log/log.h"
 #include "suspend_task.h"
 
-namespace fio = llcpp::fuchsia::io;
-
 // TODO(fxbug.dev/43370): remove this once init tasks can be enabled for all devices.
 static constexpr bool kEnableAlwaysInit = false;
 
@@ -841,7 +839,7 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
     device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   }
   uint64_t local_id = device != nullptr ? device->local_id() : 0;
-  llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result response;
+  llcpp::fuchsia::device::manager::wire::Coordinator_AddDevice_Result response;
   if (status != ZX_OK) {
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
@@ -863,7 +861,7 @@ void Device::PublishMetadata(::fidl::StringView device_path, uint32_t key,
   path[device_path.size()] = 0;
   zx_status_t status = dev->coordinator->PublishMetadata(dev, path, key, data.data(),
                                                          static_cast<uint32_t>(data.count()));
-  llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result response;
+  llcpp::fuchsia::device::manager::wire::Coordinator_PublishMetadata_Result response;
   if (status != ZX_OK) {
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
@@ -892,7 +890,7 @@ void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& compl
 
 void Device::MakeVisible(MakeVisibleCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
-  llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result response;
+  llcpp::fuchsia::device::manager::wire::Coordinator_MakeVisible_Result response;
   if (dev->coordinator->InSuspend()) {
     LOGF(ERROR, "'make-visible' is forbidden in suspend");
     zx_status_t status = ZX_ERR_BAD_STATE;
@@ -913,7 +911,7 @@ void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter
   auto dev = fbl::RefPtr(this);
   fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
 
-  llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result response;
+  llcpp::fuchsia::device::manager::wire::Coordinator_BindDevice_Result response;
   if (dev->coordinator->InSuspend()) {
     LOGF(ERROR, "'bind-device' is forbidden in suspend");
     zx_status_t status = ZX_ERR_BAD_STATE;
@@ -938,7 +936,7 @@ void Device::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
   zx_status_t status;
-  llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result response;
+  llcpp::fuchsia::device::manager::wire::Coordinator_GetTopologicalPath_Result response;
   if ((status = dev->coordinator->GetTopologicalPath(dev, path, sizeof(path))) != ZX_OK) {
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
@@ -957,7 +955,7 @@ void Device::LoadFirmware(::fidl::StringView fw_path_view, LoadFirmwareCompleter
   char fw_path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
   memcpy(fw_path, fw_path_view.data(), fw_path_view.size());
   fw_path[fw_path_view.size()] = 0;
-  llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result response;
+  llcpp::fuchsia::device::manager::wire::Coordinator_LoadFirmware_Result response;
 
   zx::vmo vmo;
   uint64_t size = 0;
@@ -980,7 +978,7 @@ void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   uint8_t data[fuchsia_device_manager_METADATA_BYTES_MAX];
   size_t actual = 0;
-  llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result response;
+  llcpp::fuchsia::device::manager::wire::Coordinator_GetMetadata_Result response;
   zx_status_t status = dev->coordinator->GetMetadata(dev, key, data, sizeof(data), &actual);
   if (status != ZX_OK) {
     response.set_err(fidl::unowned_ptr(&status));
@@ -997,7 +995,7 @@ void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync& completer) {
 void Device::GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   size_t size;
-  llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result response;
+  llcpp::fuchsia::device::manager::wire::Coordinator_GetMetadataSize_Result response;
   zx_status_t status = dev->coordinator->GetMetadataSize(dev, key, &size);
   if (status != ZX_OK) {
     response.set_err(fidl::unowned_ptr(&status));
@@ -1014,7 +1012,7 @@ void Device::AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data,
   auto dev = fbl::RefPtr(this);
   zx_status_t status =
       dev->coordinator->AddMetadata(dev, key, data.data(), static_cast<uint32_t>(data.count()));
-  llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result response;
+  llcpp::fuchsia::device::manager::wire::Coordinator_AddMetadata_Result response;
   if (status != ZX_OK) {
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
@@ -1036,7 +1034,7 @@ void Device::RunCompatibilityTests(int64_t hook_wait_time,
   real_parent->set_test_time(test_time);
   real_parent->set_test_reply_required(true);
   status = real_parent->DriverCompatibilityTest();
-  llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result response;
+  llcpp::fuchsia::device::manager::wire::Coordinator_RunCompatibilityTests_Result response;
   if (status != ZX_OK) {
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
@@ -1054,7 +1052,7 @@ void Device::AddCompositeDevice(
   auto dev = fbl::RefPtr(this);
   fbl::StringPiece name(name_view.data(), name_view.size());
   zx_status_t status = this->coordinator->AddCompositeDevice(dev, name, std::move(comp_desc));
-  llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result response;
+  llcpp::fuchsia::device::manager::wire::Coordinator_AddCompositeDevice_Result response;
   if (status != ZX_OK) {
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));

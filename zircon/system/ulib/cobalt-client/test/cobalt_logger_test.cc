@@ -35,7 +35,7 @@ namespace internal {
 namespace {
 
 using Status = ::llcpp::fuchsia::cobalt::wire::Status;
-using EventData = ::llcpp::fuchsia::cobalt::EventPayload;
+using EventData = ::llcpp::fuchsia::cobalt::wire::EventPayload;
 
 // Fake Implementation for fuchsia::cobalt::LoggerFactory.
 class FakeLoggerFactoryService : public ::llcpp::fuchsia::cobalt::LoggerFactory::Interface {

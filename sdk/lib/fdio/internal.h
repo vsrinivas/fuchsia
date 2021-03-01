@@ -285,7 +285,7 @@ zx_status_t fdio_validate_path(const char* path, size_t* out_length);
 // Upon success, |out_io| receives ownership of all handles.
 //
 // Upon failure, consumes all handles.
-zx_status_t fdio_from_node_info(zx::channel handle, llcpp::fuchsia::io::NodeInfo info,
+zx_status_t fdio_from_node_info(zx::channel handle, llcpp::fuchsia::io::wire::NodeInfo info,
                                 fdio_t** out_io);
 
 // Creates an |fdio_t| from a Zircon channel object.

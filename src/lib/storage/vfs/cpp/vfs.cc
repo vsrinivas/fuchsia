@@ -492,10 +492,10 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode,
     fit::result<VnodeRepresentation, zx_status_t> result =
         internal::Describe(vnode, protocol, *options);
     if (result.is_error()) {
-      fio::Node::EventSender(std::move(server_end)).OnOpen(result.error(), fio::NodeInfo());
+      fio::Node::EventSender(std::move(server_end)).OnOpen(result.error(), fio::wire::NodeInfo());
       return result.error();
     }
-    ConvertToIoV1NodeInfo(result.take_value(), [&](fio::NodeInfo&& info) {
+    ConvertToIoV1NodeInfo(result.take_value(), [&](fio::wire::NodeInfo&& info) {
       // The channel may switch from |Node| protocol back to a custom protocol, after sending the
       // event, in the case of |VnodeProtocol::kConnector|.
       fio::Node::EventSender event_sender{std::move(server_end)};

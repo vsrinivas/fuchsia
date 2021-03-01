@@ -27,7 +27,7 @@ class MockMessage : public Message {
   static fit::result<MockMessage, zx_status_t> TryCreate(
       SharedMemoryManager::DriverMemoryPool* message_pool,
       SharedMemoryManager::ClientMemoryPool* temp_memory_pool, size_t start_index,
-      fidl::VectorView<fuchsia_tee::Parameter> parameter_set) {
+      fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set) {
     ZX_DEBUG_ASSERT(message_pool != nullptr);
     ZX_DEBUG_ASSERT(temp_memory_pool != nullptr);
 
@@ -126,7 +126,8 @@ TEST_F(MessageTest, ParameterSetInvertabilityTest) {
   ParameterSet parameter_set_in = CreateParameterSet(kParameterSetSize);
   ParameterSet parameter_set_out{};
 
-  fidl::VectorView<fuchsia_tee::Parameter> llcpp_parameter_set_in = parameter_set_in.to_llcpp();
+  fidl::VectorView<fuchsia_tee::wire::Parameter> llcpp_parameter_set_in =
+      parameter_set_in.to_llcpp();
 
   auto result =
       MockMessage::TryCreate(dpool_.get(), cpool_.get(), 0, std::move(llcpp_parameter_set_in));
@@ -135,7 +136,8 @@ TEST_F(MessageTest, ParameterSetInvertabilityTest) {
 
   result.take_value().CreateOutputParameterSet(0, &parameter_set_out);
 
-  fidl::VectorView<fuchsia_tee::Parameter> llcpp_parameter_set_out = parameter_set_out.to_llcpp();
+  fidl::VectorView<fuchsia_tee::wire::Parameter> llcpp_parameter_set_out =
+      parameter_set_out.to_llcpp();
 
   llcpp_parameter_set_in = parameter_set_in.to_llcpp();
   ASSERT_EQ(llcpp_parameter_set_in.count(), llcpp_parameter_set_out.count());

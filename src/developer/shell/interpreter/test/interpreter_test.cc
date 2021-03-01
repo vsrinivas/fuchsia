@@ -20,7 +20,7 @@
 shell::console::AstBuilder::NodePair AddObject(
     shell::console::AstBuilder& builder, std::vector<std::string>& names,
     std::vector<shell::console::AstBuilder::NodeId>& values,
-    std::vector<llcpp::fuchsia::shell::ShellType>&& types) {
+    std::vector<llcpp::fuchsia::shell::wire::ShellType>&& types) {
   EXPECT_EQ(names.size(), values.size())
       << "Test incorrect - mismatch in keys and values for constructing object";
   EXPECT_EQ(names.size(), types.size())

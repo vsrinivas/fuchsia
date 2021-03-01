@@ -80,7 +80,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
   }
   void GetHandleUnion(int32_t field, GetHandleUnionCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    test::HandleUnion u;
+    test::wire::HandleUnion u;
     if (field == 1) {
       u.set_h1(allocator);
       zx::event::create(0, &u.mutable_h1());
@@ -148,7 +148,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
   void GetOptionalHandleUnion(int32_t field,
                               GetOptionalHandleUnionCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    test::HandleUnion u;
+    test::wire::HandleUnion u;
     if (field == 1) {
       zx::event event;
       zx::event::create(0, &event);

@@ -55,7 +55,7 @@ class Keyboard {
   // The callback for when key-repeat is triggered.
   void TimerCallback(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status);
   void InputCallback(
-      llcpp::fuchsia::input::report::InputReportsReader_ReadInputReports_Result result);
+      llcpp::fuchsia::input::report::wire::InputReportsReader_ReadInputReports_Result result);
 
   // This is the callback if reader_client_ is unbound. This tries to reconnect and
   // will delete Keyboard if reconnecting fails.

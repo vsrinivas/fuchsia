@@ -151,24 +151,24 @@ class Buffer {
 
 class Parameter {
  public:
-  fuchsia_tee::Parameter to_llcpp() {
+  fuchsia_tee::wire::Parameter to_llcpp() {
     if (std::holds_alternative<fidl::aligned<fuchsia_tee::None>>(data_)) {
       llcpp_data_ = std::get<fidl::aligned<fuchsia_tee::None>>(data_);
-      return fuchsia_tee::Parameter::WithNone(
+      return fuchsia_tee::wire::Parameter::WithNone(
           fidl::unowned_ptr(&std::get<fidl::aligned<fuchsia_tee::None>>(llcpp_data_)));
     }
     if (std::holds_alternative<Value>(data_)) {
       llcpp_data_ = std::get<Value>(data_).to_llcpp();
-      return fuchsia_tee::Parameter::WithValue(
+      return fuchsia_tee::wire::Parameter::WithValue(
           fidl::unowned_ptr(&std::get<fuchsia_tee::Value>(llcpp_data_)));
     }
     if (std::holds_alternative<Buffer>(data_)) {
       llcpp_data_ = std::get<Buffer>(data_).to_llcpp();
-      return fuchsia_tee::Parameter::WithBuffer(
+      return fuchsia_tee::wire::Parameter::WithBuffer(
           fidl::unowned_ptr(&std::get<fuchsia_tee::Buffer>(llcpp_data_)));
     }
 
-    return fuchsia_tee::Parameter();
+    return fuchsia_tee::wire::Parameter();
   }
 
   void set_none() { data_ = fuchsia_tee::None{}; }
@@ -187,7 +187,7 @@ class Parameter {
 
 class ParameterSet {
  public:
-  fidl::VectorView<fuchsia_tee::Parameter> to_llcpp() {
+  fidl::VectorView<fuchsia_tee::wire::Parameter> to_llcpp() {
     ZX_DEBUG_ASSERT(parameters_.has_value());
 
     llcpp_parameters_.clear();
@@ -202,7 +202,7 @@ class ParameterSet {
   void set_parameters(std::vector<Parameter> parameters) { parameters_ = std::move(parameters); }
 
  private:
-  std::vector<fuchsia_tee::Parameter> llcpp_parameters_;
+  std::vector<fuchsia_tee::wire::Parameter> llcpp_parameters_;
 
   std::optional<std::vector<Parameter>> parameters_;
 };
@@ -236,7 +236,7 @@ class OpResult {
 
  private:
   fuchsia_tee::OpResult::UnownedBuilder llcpp_builder_;
-  fidl::VectorView<fuchsia_tee::Parameter> llcpp_parameter_set_;
+  fidl::VectorView<fuchsia_tee::wire::Parameter> llcpp_parameter_set_;
 
   std::optional<uint64_t> return_code_{};
   std::optional<fuchsia_tee::wire::ReturnOrigin> return_origin_{};

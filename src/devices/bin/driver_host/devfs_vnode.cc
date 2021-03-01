@@ -274,8 +274,9 @@ void DevfsVnode::GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync& completer
   for (size_t i = 0; i < fuchsia_device_MAX_DEVICE_POWER_STATES; i++) {
     response.dpstates[i] = states[i];
   }
-  completer.Reply(::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result::WithResponse(
-      fidl::unowned_ptr(&response)));
+  completer.Reply(
+      ::llcpp::fuchsia::device::wire::Controller_GetDevicePowerCaps_Result::WithResponse(
+          fidl::unowned_ptr(&response)));
 };
 
 void DevfsVnode::SetPerformanceState(uint32_t requested_state,
@@ -313,8 +314,9 @@ void DevfsVnode::UpdatePowerStateMapping(
   }
 
   fidl::aligned<::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response> response;
-  completer.Reply(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::WithResponse(
-      fidl::unowned_ptr(&response)));
+  completer.Reply(
+      ::llcpp::fuchsia::device::wire::Controller_UpdatePowerStateMapping_Result::WithResponse(
+          fidl::unowned_ptr(&response)));
 }
 
 void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& completer) {
@@ -326,8 +328,9 @@ void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& compl
   for (size_t i = 0; i < power_fidl::statecontrol::MAX_SYSTEM_POWER_STATES; i++) {
     response.mapping[i] = mapping[i];
   }
-  completer.Reply(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::WithResponse(
-      fidl::unowned_ptr(&response)));
+  completer.Reply(
+      ::llcpp::fuchsia::device::wire::Controller_GetPowerStateMapping_Result::WithResponse(
+          fidl::unowned_ptr(&response)));
 };
 
 void DevfsVnode::Suspend(::llcpp::fuchsia::device::wire::DevicePowerState requested_state,

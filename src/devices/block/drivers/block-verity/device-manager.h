@@ -71,7 +71,7 @@ class DeviceManager final
   void CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync& completer) override
       __TA_EXCLUDES(mtx_);
   void OpenForVerifiedRead(llcpp::fuchsia::hardware::block::verified::Config config,
-                           llcpp::fuchsia::hardware::block::verified::Seal seal,
+                           llcpp::fuchsia::hardware::block::verified::wire::Seal seal,
                            OpenForVerifiedReadCompleter::Sync& completer) override
       __TA_EXCLUDES(mtx_);
   void Close(CloseCompleter::Sync& completer) override __TA_EXCLUDES(mtx_);

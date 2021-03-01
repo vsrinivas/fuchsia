@@ -215,7 +215,8 @@ zx_status_t VerifiedVolumeClient::CloseAndGenerateSeal(
     fidl::Buffer<
         llcpp::fuchsia::hardware::block::verified::DeviceManager::CloseAndGenerateSealResponse>*
         seal_response_buffer,
-    llcpp::fuchsia::hardware::block::verified::DeviceManager_CloseAndGenerateSeal_Result* out) {
+    llcpp::fuchsia::hardware::block::verified::wire::DeviceManager_CloseAndGenerateSeal_Result*
+        out) {
   // We use the caller-provided buffer FIDL call style because the caller
   // needs to do something with the seal returned, so we need to keep the
   // response object alive so that the caller can interact with it after this
@@ -252,8 +253,8 @@ zx_status_t VerifiedVolumeClient::OpenForVerifiedRead(const digest::Digest& expe
   expected_seal.CopyTo(sha256_seal.superblock_hash.begin(), sha256_seal.superblock_hash.size());
   fidl::aligned<llcpp::fuchsia::hardware::block::verified::Sha256Seal> aligned =
       std::move(sha256_seal);
-  auto seal_to_send =
-      llcpp::fuchsia::hardware::block::verified::Seal::WithSha256(fidl::unowned_ptr(&aligned));
+  auto seal_to_send = llcpp::fuchsia::hardware::block::verified::wire::Seal::WithSha256(
+      fidl::unowned_ptr(&aligned));
 
   // Request the device be opened for verified read
   auto open_resp =

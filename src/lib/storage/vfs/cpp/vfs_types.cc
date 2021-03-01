@@ -142,10 +142,10 @@ fio::NodeAttributes VnodeAttributes::ToIoV1NodeAttributes() const {
 }
 
 void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
-                           fit::callback<void(fio::NodeInfo&&)> callback) {
+                           fit::callback<void(fio::wire::NodeInfo&&)> callback) {
   representation.visit([&](auto&& repr) {
     using T = std::decay_t<decltype(repr)>;
-    fio::NodeInfo info;
+    fio::wire::NodeInfo info;
     if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Connector>) {
       fidl::aligned<fio::Service> service;
       info.set_service(fidl::unowned_ptr(&service));

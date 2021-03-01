@@ -432,8 +432,8 @@ void Control::CreateColorBuffer2(
 Control::CreateBuffer2Result Control::CreateBuffer2(
     zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params create_params) {
   using llcpp::fuchsia::hardware::goldfish::ControlDevice;
-  using llcpp::fuchsia::hardware::goldfish::ControlDevice_CreateBuffer2_Response;
-  using llcpp::fuchsia::hardware::goldfish::ControlDevice_CreateBuffer2_Result;
+  using llcpp::fuchsia::hardware::goldfish::wire::ControlDevice_CreateBuffer2_Response;
+  using llcpp::fuchsia::hardware::goldfish::wire::ControlDevice_CreateBuffer2_Result;
 
   // Check argument validity.
   if (!create_params.has_size() || !create_params.has_memory_property()) {
@@ -574,9 +574,9 @@ void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& compl
 }
 
 void Control::GetBufferHandleInfo(zx::vmo vmo, GetBufferHandleInfoCompleter::Sync& completer) {
-  using llcpp::fuchsia::hardware::goldfish::ControlDevice_GetBufferHandleInfo_Response;
-  using llcpp::fuchsia::hardware::goldfish::ControlDevice_GetBufferHandleInfo_Result;
   using llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType;
+  using llcpp::fuchsia::hardware::goldfish::wire::ControlDevice_GetBufferHandleInfo_Response;
+  using llcpp::fuchsia::hardware::goldfish::wire::ControlDevice_GetBufferHandleInfo_Result;
 
   TRACE_DURATION("gfx", "Control::FidlGetBufferHandleInfo");
 

@@ -287,7 +287,7 @@ class HandleProviderServer : public test::HandleProvider::Interface {
   void GetHandleUnion(GetHandleUnionCompleter::Sync& completer) override {
     zx::event h;
     zx::event::create(0, &h);
-    test::HandleUnionStruct s = {.u = test::HandleUnion::WithH(fidl::unowned_ptr(&h))};
+    test::HandleUnionStruct s = {.u = test::wire::HandleUnion::WithH(fidl::unowned_ptr(&h))};
     completer.Reply(std::move(s));
   }
 };

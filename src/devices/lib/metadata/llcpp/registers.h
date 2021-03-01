@@ -9,7 +9,7 @@
 
 namespace registers {
 
-using ::llcpp::fuchsia::hardware::registers::Mask;
+using ::llcpp::fuchsia::hardware::registers::wire::Mask;
 template <typename T>
 Mask BuildMask(fidl::AnyAllocator& allocator, T mask) {
   if constexpr (std::is_same_v<T, uint8_t>) {
@@ -34,8 +34,8 @@ struct MaskEntryBuilder {
   uint32_t reg_count;
   bool overlap_check_on = true;
 };
-using ::llcpp::fuchsia::hardware::registers::MaskEntry;
-using ::llcpp::fuchsia::hardware::registers::RegistersMetadataEntry;
+using ::llcpp::fuchsia::hardware::registers::wire::MaskEntry;
+using ::llcpp::fuchsia::hardware::registers::wire::RegistersMetadataEntry;
 template <typename T>
 RegistersMetadataEntry BuildMetadata(fidl::AnyAllocator& allocator, uint32_t bind_id,
                                      uint32_t mmio_id, std::vector<MaskEntryBuilder<T>> masks) {

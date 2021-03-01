@@ -321,7 +321,7 @@ zx_status_t OpteeClient::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 }
 
 void OpteeClient::OpenSession2(
-    fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
+    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
     fuchsia_tee::Application::Interface::OpenSession2Completer::Sync& completer) {
   constexpr uint32_t kInvalidSession = 0;
 
@@ -383,7 +383,7 @@ void OpteeClient::OpenSession2(
 
 void OpteeClient::InvokeCommand(
     uint32_t session_id, uint32_t command_id,
-    fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
+    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
     fuchsia_tee::Application::Interface::InvokeCommandCompleter::Sync& completer) {
   OpResult result;
 

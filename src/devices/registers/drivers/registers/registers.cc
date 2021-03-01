@@ -17,15 +17,16 @@ namespace registers {
 
 namespace {
 
-const static std::map<::llcpp::fuchsia::hardware::registers::Mask::Tag, uint8_t> kTagToBytes = {
-    {::llcpp::fuchsia::hardware::registers::Mask::Tag::kR8, 1},
-    {::llcpp::fuchsia::hardware::registers::Mask::Tag::kR16, 2},
-    {::llcpp::fuchsia::hardware::registers::Mask::Tag::kR32, 4},
-    {::llcpp::fuchsia::hardware::registers::Mask::Tag::kR64, 8},
+const static std::map<::llcpp::fuchsia::hardware::registers::wire::Mask::Tag, uint8_t> kTagToBytes =
+    {
+        {::llcpp::fuchsia::hardware::registers::wire::Mask::Tag::kR8, 1},
+        {::llcpp::fuchsia::hardware::registers::wire::Mask::Tag::kR16, 2},
+        {::llcpp::fuchsia::hardware::registers::wire::Mask::Tag::kR32, 4},
+        {::llcpp::fuchsia::hardware::registers::wire::Mask::Tag::kR64, 8},
 };
 
 template <typename Ty>
-std::optional<Ty> GetMask(const ::llcpp::fuchsia::hardware::registers::Mask& mask) {
+std::optional<Ty> GetMask(const ::llcpp::fuchsia::hardware::registers::wire::Mask& mask) {
   if constexpr (std::is_same_v<Ty, uint8_t>) {
     // Need cast to compile
     return static_cast<Ty>(mask.r8());
@@ -300,7 +301,7 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
     }
   }
   bool begin = true;
-  ::llcpp::fuchsia::hardware::registers::Mask::Tag tag;
+  ::llcpp::fuchsia::hardware::registers::wire::Mask::Tag tag;
   for (const auto& reg : metadata->registers()) {
     if (!reg.has_bind_id() && !reg.has_mmio_id() && !reg.has_masks()) {
       // Doesn't have to have all Register IDs.
@@ -337,16 +338,16 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
 
   // Create devices
   switch (tag) {
-    case ::llcpp::fuchsia::hardware::registers::Mask::Tag::kR8:
+    case ::llcpp::fuchsia::hardware::registers::wire::Mask::Tag::kR8:
       status = RegistersDevice<uint8_t>::Create(parent, std::move(*metadata));
       break;
-    case ::llcpp::fuchsia::hardware::registers::Mask::Tag::kR16:
+    case ::llcpp::fuchsia::hardware::registers::wire::Mask::Tag::kR16:
       status = RegistersDevice<uint16_t>::Create(parent, std::move(*metadata));
       break;
-    case ::llcpp::fuchsia::hardware::registers::Mask::Tag::kR32:
+    case ::llcpp::fuchsia::hardware::registers::wire::Mask::Tag::kR32:
       status = RegistersDevice<uint32_t>::Create(parent, std::move(*metadata));
       break;
-    case ::llcpp::fuchsia::hardware::registers::Mask::Tag::kR64:
+    case ::llcpp::fuchsia::hardware::registers::wire::Mask::Tag::kR64:
       status = RegistersDevice<uint64_t>::Create(parent, std::move(*metadata));
       break;
   }

@@ -25,7 +25,7 @@ namespace {
 
 // A helper structure to keep a socket address and the variants allocations in stack.
 struct SocketAddress {
-  fnet::SocketAddress address;
+  fnet::wire::SocketAddress address;
   union U {
     fnet::Ipv4SocketAddress ipv4;
     fnet::Ipv6SocketAddress ipv6;
@@ -78,10 +78,10 @@ fsocket::wire::RecvMsgFlags to_recvmsg_flags(int flags) {
 
 fsocket::wire::SendMsgFlags to_sendmsg_flags(int flags) { return fsocket::wire::SendMsgFlags(); }
 
-socklen_t fidl_to_sockaddr(const fnet::SocketAddress& fidl, struct sockaddr* addr,
+socklen_t fidl_to_sockaddr(const fnet::wire::SocketAddress& fidl, struct sockaddr* addr,
                            socklen_t addr_len) {
   switch (fidl.which()) {
-    case fnet::SocketAddress::Tag::kIpv4: {
+    case fnet::wire::SocketAddress::Tag::kIpv4: {
       struct sockaddr_in tmp;
       auto* s = reinterpret_cast<struct sockaddr_in*>(addr);
       if (addr_len < sizeof(tmp)) {
@@ -99,7 +99,7 @@ socklen_t fidl_to_sockaddr(const fnet::SocketAddress& fidl, struct sockaddr* add
       }
       return sizeof(tmp);
     }
-    case fnet::SocketAddress::Tag::kIpv6: {
+    case fnet::wire::SocketAddress::Tag::kIpv6: {
       struct sockaddr_in6 tmp;
       auto* s = reinterpret_cast<struct sockaddr_in6*>(addr);
       if (addr_len < sizeof(tmp)) {
@@ -452,7 +452,7 @@ Errno zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
         int len = 0;
         for (const auto& iface : interfaces) {
           for (const auto& address : iface.addresses()) {
-            if (address.addr.which() == fnet::IpAddress::Tag::kIpv4) {
+            if (address.addr.which() == fnet::wire::IpAddress::Tag::kIpv4) {
               len += sizeof(struct ifreq);
             }
           }
@@ -488,7 +488,7 @@ Errno zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
           // family for compatibility; this is the behavior documented in the
           // manual. See: https://man7.org/linux/man-pages/man7/netdevice.7.html
           const auto& addr = address.addr;
-          if (addr.which() != fnet::IpAddress::Tag::kIpv4) {
+          if (addr.which() != fnet::wire::IpAddress::Tag::kIpv4) {
             continue;
           }
 

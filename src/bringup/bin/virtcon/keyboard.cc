@@ -206,7 +206,7 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& 
 }
 
 void Keyboard::InputCallback(
-    llcpp::fuchsia::input::report::InputReportsReader_ReadInputReports_Result result) {
+    llcpp::fuchsia::input::report::wire::InputReportsReader_ReadInputReports_Result result) {
   if (result.is_err()) {
     printf("vc: InputCallback returns error: %d!\n", result.err());
     return;

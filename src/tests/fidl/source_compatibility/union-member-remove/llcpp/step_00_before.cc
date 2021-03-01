@@ -25,29 +25,29 @@ std::optional<float> parse_as_float(const std::string& s) {
 }
 
 // [START contents]
-fidl_test::JsonValue writer(const std::string& s) {
+fidl_test::wire::JsonValue writer(const std::string& s) {
   std::optional<float> maybe_float = parse_as_float(s);
   ;
   if (maybe_float) {
-    return fidl_test::JsonValue::WithIntValue(std::make_unique<int32_t>(*maybe_float));
+    return fidl_test::wire::JsonValue::WithIntValue(std::make_unique<int32_t>(*maybe_float));
   }
   std::optional<int32_t> maybe_int = parse_as_int(s);
   if (maybe_int) {
-    return fidl_test::JsonValue::WithIntValue(std::make_unique<int32_t>(*maybe_int));
+    return fidl_test::wire::JsonValue::WithIntValue(std::make_unique<int32_t>(*maybe_int));
   }
-  return fidl_test::JsonValue::WithStringValue(
+  return fidl_test::wire::JsonValue::WithStringValue(
       std::make_unique<fidl::StringView>(fidl::heap_copy_str(s)));
 }
 
-std::string reader(const fidl_test::JsonValue& value) {
+std::string reader(const fidl_test::wire::JsonValue& value) {
   switch (value.which()) {
-    case fidl_test::JsonValue::Tag::kIntValue:
+    case fidl_test::wire::JsonValue::Tag::kIntValue:
       return std::to_string(value.int_value());
-    case fidl_test::JsonValue::Tag::kStringValue:
+    case fidl_test::wire::JsonValue::Tag::kStringValue:
       return std::string(value.string_value().data(), value.string_value().size());
-    case fidl_test::JsonValue::Tag::kFloatValue:
+    case fidl_test::wire::JsonValue::Tag::kFloatValue:
       return std::to_string(value.float_value());
-    case fidl_test::JsonValue::Tag::kUnknown:
+    case fidl_test::wire::JsonValue::Tag::kUnknown:
       return "<unknown>";
   }
 }

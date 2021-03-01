@@ -865,7 +865,7 @@ void DevfsFidlServer::GetAttr(GetAttrCompleter::Sync& completer) {
 }
 
 void DevfsFidlServer::Describe(DescribeCompleter::Sync& completer) {
-  fio::NodeInfo node_info;
+  fio::wire::NodeInfo node_info;
   fidl::aligned<fio::DirectoryObject> directory;
   node_info.set_directory(fidl::unowned_ptr(&directory));
   completer.Reply(std::move(node_info));

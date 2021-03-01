@@ -153,7 +153,7 @@ template <class... Ts>
 matchers(Ts...) -> matchers<Ts...>;
 
 // Execute the actions returned by a hook
-zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
+zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
                            ProcessActionsContext* context);
 
 MockDevice::MockDevice(zx_device_t* device, fidl::ClientEnd<device_mock::MockDevice> controller)
@@ -166,7 +166,7 @@ int MockDevice::ThreadFunc(void* raw_arg) {
       device_mock::MockDeviceThread::EventSender(std::move(arg->server_end));
 
   while (true) {
-    fbl::Array<device_mock::Action> actions;
+    fbl::Array<device_mock::wire::Action> actions;
     zx_status_t status = WaitForPerformActions(
         std::get<device_mock::MockDeviceThread::EventSender>(event_sender).channel(), &actions);
     if (status != ZX_OK) {
@@ -383,12 +383,12 @@ zx_status_t MockDevice::Create(zx_device_t* parent,
   return ZX_OK;
 }
 
-zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
+zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
                            ProcessActionsContext* ctx) {
   for (size_t i = 0; i < actions.count(); ++i) {
     auto& action = actions[i];
     switch (action.which()) {
-      case device_mock::Action::Tag::kReturnStatus: {
+      case device_mock::wire::Action::Tag::kReturnStatus: {
         if (i != actions.count() - 1) {
           printf("MockDevice::ProcessActions: return_status was not the final entry\n");
           return ZX_ERR_INVALID_ARGS;
@@ -400,7 +400,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
         ctx->hook_status = action.return_status();
         return ZX_OK;
       }
-      case device_mock::Action::Tag::kWrite: {
+      case device_mock::wire::Action::Tag::kWrite: {
         if (ctx->associated_buf == nullptr) {
           printf("MockDevice::ProcessActions: write action with no associated buf\n");
           return ZX_ERR_INVALID_ARGS;
@@ -414,7 +414,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
         memcpy(ctx->associated_buf, write_action.data(), write_action.count());
         break;
       }
-      case device_mock::Action::Tag::kCreateThread: {
+      case device_mock::wire::Action::Tag::kCreateThread: {
         if (ctx->mock_device == nullptr) {
           printf("MockDevice::CreateThread: asked to create thread without device\n");
           return ZX_ERR_INVALID_ARGS;
@@ -422,7 +422,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
         ctx->mock_device->CreateThread(std::move(action.mutable_create_thread()));
         break;
       }
-      case device_mock::Action::Tag::kAsyncRemoveDevice: {
+      case device_mock::wire::Action::Tag::kAsyncRemoveDevice: {
         if (ctx->mock_device == nullptr) {
           printf("MockDevice::RemoveDevice: asked to remove device but none populated\n");
           return ZX_ERR_INVALID_ARGS;
@@ -430,7 +430,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
         ctx->mock_device->DdkAsyncRemove();
         break;
       }
-      case device_mock::Action::Tag::kUnbindReply: {
+      case device_mock::wire::Action::Tag::kUnbindReply: {
         if (!ctx->pending_unbind_txn) {
           printf("MockDevice::UnbindReply: asked to reply to unbind but no unbind is pending\n");
           return ZX_ERR_INVALID_ARGS;
@@ -456,7 +456,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
         break;
       }
 
-      case device_mock::Action::Tag::kSuspendReply: {
+      case device_mock::wire::Action::Tag::kSuspendReply: {
         if (!ctx->pending_suspend_txn) {
           printf("MockDevice::SuspendReply: asked to reply to suspend but no suspend is pending\n");
           return ZX_ERR_INVALID_ARGS;
@@ -478,7 +478,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
         break;
       }
 
-      case device_mock::Action::Tag::kResumeReply: {
+      case device_mock::wire::Action::Tag::kResumeReply: {
         if (!ctx->pending_resume_txn) {
           printf("MockDevice::ResumeReply: asked to reply to resume but no resume is pending\n");
           return ZX_ERR_INVALID_ARGS;
@@ -499,7 +499,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
         ZX_ASSERT(status == ZX_OK);
         break;
       }
-      case device_mock::Action::Tag::kAddDevice: {
+      case device_mock::wire::Action::Tag::kAddDevice: {
         // TODO(teisenbe): Implement more functionality here
         auto& add_device_action = action.mutable_add_device();
         ZX_ASSERT_MSG(!add_device_action.do_bind, "bind not yet supported\n");

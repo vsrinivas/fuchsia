@@ -55,7 +55,7 @@ void SpiChild::ExchangeVector(::fidl::VectorView<uint8_t> txdata,
 void SpiChild::RegisterVmo(uint32_t vmo_id, ::llcpp::fuchsia::mem::Range vmo,
                            sharedmemory::wire::SharedVmoRight rights,
                            RegisterVmoCompleter::Sync& completer) {
-  sharedmemory::SharedVmoRegister_RegisterVmo_Result result;
+  sharedmemory::wire::SharedVmoRegister_RegisterVmo_Result result;
   fidl::aligned<sharedmemory::SharedVmoRegister_RegisterVmo_Response> response = {};
   zx_status_t status = spi_.RegisterVmo(cs_, vmo_id, std::move(vmo.vmo), vmo.offset, vmo.size,
                                         static_cast<uint32_t>(rights));
@@ -68,7 +68,7 @@ void SpiChild::RegisterVmo(uint32_t vmo_id, ::llcpp::fuchsia::mem::Range vmo,
 }
 
 void SpiChild::UnregisterVmo(uint32_t vmo_id, UnregisterVmoCompleter::Sync& completer) {
-  sharedmemory::SharedVmoRegister_UnregisterVmo_Result result;
+  sharedmemory::wire::SharedVmoRegister_UnregisterVmo_Result result;
   sharedmemory::SharedVmoRegister_UnregisterVmo_Response response = {};
   zx_status_t status = spi_.UnregisterVmo(cs_, vmo_id, &response.vmo);
   if (status == ZX_OK) {
@@ -80,7 +80,7 @@ void SpiChild::UnregisterVmo(uint32_t vmo_id, UnregisterVmoCompleter::Sync& comp
 }
 
 void SpiChild::Transmit(sharedmemory::SharedVmoBuffer buffer, TransmitCompleter::Sync& completer) {
-  sharedmemory::SharedVmoIo_Transmit_Result result;
+  sharedmemory::wire::SharedVmoIo_Transmit_Result result;
   fidl::aligned<sharedmemory::SharedVmoIo_Transmit_Response> response = {};
   zx_status_t status = spi_.TransmitVmo(cs_, buffer.vmo_id, buffer.offset, buffer.size);
   if (status == ZX_OK) {
@@ -92,7 +92,7 @@ void SpiChild::Transmit(sharedmemory::SharedVmoBuffer buffer, TransmitCompleter:
 }
 
 void SpiChild::Receive(sharedmemory::SharedVmoBuffer buffer, ReceiveCompleter::Sync& completer) {
-  sharedmemory::SharedVmoIo_Receive_Result result;
+  sharedmemory::wire::SharedVmoIo_Receive_Result result;
   fidl::aligned<sharedmemory::SharedVmoIo_Receive_Response> response = {};
   zx_status_t status = spi_.ReceiveVmo(cs_, buffer.vmo_id, buffer.offset, buffer.size);
   if (status == ZX_OK) {
@@ -106,7 +106,7 @@ void SpiChild::Receive(sharedmemory::SharedVmoBuffer buffer, ReceiveCompleter::S
 void SpiChild::Exchange(sharedmemory::SharedVmoBuffer tx_buffer,
                         sharedmemory::SharedVmoBuffer rx_buffer,
                         ExchangeCompleter::Sync& completer) {
-  sharedmemory::SharedVmoIo_Exchange_Result result;
+  sharedmemory::wire::SharedVmoIo_Exchange_Result result;
   fidl::aligned<sharedmemory::SharedVmoIo_Exchange_Response> response = {};
 
   zx_status_t status;

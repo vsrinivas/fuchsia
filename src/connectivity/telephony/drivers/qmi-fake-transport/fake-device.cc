@@ -59,8 +59,8 @@ static void sent_fake_qmi_msg(zx::channel& channel, uint8_t* resp, uint32_t resp
 void QmiDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
                              fidl_tel_snoop::wire::Direction direction) {
   if (GetCtrlSnoopChannel()) {
-    fidl_tel_snoop::Message snoop_msg;
-    fidl_tel_snoop::QmiMessage qmi_msg;
+    fidl_tel_snoop::wire::Message snoop_msg;
+    fidl_tel_snoop::wire::QmiMessage qmi_msg;
     uint32_t current_length =
         std::min(static_cast<std::size_t>(snoop_data_len), sizeof(qmi_msg.opaque_bytes));
     qmi_msg.is_partial_copy = snoop_data_len > current_length;

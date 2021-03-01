@@ -214,10 +214,10 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
   ASSERT_OK(ConnectClient(std::move(server_end)));
 
   // Helper method to monitor the OnOpen event, used by the tests below
-  auto expect_on_open = [](zx::unowned_channel channel, fit::function<void(fio::NodeInfo)> cb) {
+  auto expect_on_open = [](zx::unowned_channel channel, fit::function<void(fio::wire::NodeInfo)> cb) {
     class EventHandler : public fio::Node::SyncEventHandler {
      public:
-      explicit EventHandler(fit::function<void(fio::NodeInfo)>& cb) : cb_(cb) {}
+      explicit EventHandler(fit::function<void(fio::wire::NodeInfo)>& cb) : cb_(cb) {}
 
       void OnOpen(fio::Node::OnOpenResponse* event) override {
         EXPECT_OK(event->s);
@@ -228,7 +228,7 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
       zx_status_t Unknown() override { return ZX_ERR_INVALID_ARGS; }
 
      private:
-      fit::function<void(fio::NodeInfo)>& cb_;
+      fit::function<void(fio::wire::NodeInfo)>& cb_;
     };
 
     EventHandler event_handler(cb);
@@ -248,7 +248,7 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
                 kOpenMode, fidl::StringView("file_or_dir"), std::move(dc2))
                 .status());
   expect_on_open(zx::unowned_channel(dc1),
-                 [](fio::NodeInfo info) { EXPECT_TRUE(info.is_directory()); });
+                 [](fio::wire::NodeInfo info) { EXPECT_TRUE(info.is_directory()); });
 
   // Connect to polymorphic node as a file, by passing |OPEN_FLAG_NOT_DIRECTORY|.
   zx::channel fc1, fc2;
@@ -258,7 +258,7 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
                 fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_NOT_DIRECTORY,
                 kOpenMode, fidl::StringView("file_or_dir"), std::move(fc2))
                 .status());
-  expect_on_open(zx::unowned_channel(fc1), [](fio::NodeInfo info) { EXPECT_TRUE(info.is_file()); });
+  expect_on_open(zx::unowned_channel(fc1), [](fio::wire::NodeInfo info) { EXPECT_TRUE(info.is_file()); });
 }
 
 // A vnode which maintains a counter of number of |Open| calls that have not been balanced out with

@@ -101,13 +101,13 @@ class EchoClientApp {
                                       response_buffer);
   }
 
-  Echo::ResultOf::EchoXunions EchoXunions(::fidl::VectorView<AllTypesXunion> value,
+  Echo::ResultOf::EchoXunions EchoXunions(::fidl::VectorView<wire::AllTypesXunion> value,
                                           ::fidl::StringView forward_to_server) {
     return client_.EchoXunions(std::move(value), std::move(forward_to_server));
   }
 
   Echo::ResultOf::EchoXunionsWithError EchoXunionsWithError(
-      ::fidl::VectorView<AllTypesXunion> value, wire::default_enum err,
+      ::fidl::VectorView<wire::AllTypesXunion> value, wire::default_enum err,
       ::fidl::StringView forward_to_server, wire::RespondWith result_variant) {
     return client_.EchoXunionsWithError(std::move(value), err, std::move(forward_to_server),
                                         result_variant);
@@ -320,7 +320,8 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoXunions(::fidl::VectorView<AllTypesXunion> value, ::fidl::StringView forward_to_server,
+  void EchoXunions(::fidl::VectorView<wire::AllTypesXunion> value,
+                   ::fidl::StringView forward_to_server,
                    EchoXunionsCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
       completer.Reply(std::move(value));
@@ -333,7 +334,7 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoXunionsWithError(::fidl::VectorView<AllTypesXunion> value, wire::default_enum err,
+  void EchoXunionsWithError(::fidl::VectorView<wire::AllTypesXunion> value, wire::default_enum err,
                             ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                             EchoXunionsWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {

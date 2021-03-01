@@ -63,8 +63,8 @@ static void sent_fake_at_msg(zx::channel& channel, uint8_t* resp, uint32_t resp_
 void AtDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
                             fidl_tel_snoop::wire::Direction direction) {
   if (GetCtrlSnoopChannel()) {
-    fidl_tel_snoop::Message snoop_msg;
-    fidl_tel_snoop::QmiMessage msg;
+    fidl_tel_snoop::wire::Message snoop_msg;
+    fidl_tel_snoop::wire::QmiMessage msg;
     uint32_t current_length =
         std::min(static_cast<std::size_t>(snoop_data_len), sizeof(msg.opaque_bytes));
     msg.is_partial_copy = snoop_data_len > current_length;

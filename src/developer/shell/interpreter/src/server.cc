@@ -31,7 +31,7 @@ inline std::string_view GetView(const ::fidl::StringView& view) {
 
 std::unique_ptr<Type> GetType(ServerInterpreterContext* context, uint64_t node_file_id,
                               uint64_t node_node_id,
-                              const llcpp::fuchsia::shell::ShellType& shell_type) {
+                              const llcpp::fuchsia::shell::wire::ShellType& shell_type) {
   if (shell_type.is_undef()) {
     return std::make_unique<TypeUndefined>();
   }
@@ -89,11 +89,13 @@ class SerializeHelper {
  public:
   SerializeHelper() = default;
 
-  fidl::VectorView<llcpp::fuchsia::shell::Node> nodes() { return builder_.NodesAsVectorView(); }
+  fidl::VectorView<llcpp::fuchsia::shell::wire::Node> nodes() {
+    return builder_.NodesAsVectorView();
+  }
 
   struct TypeAndValue {
     shell::console::AstBuilder::NodeId value_id;
-    llcpp::fuchsia::shell::ShellType type;
+    llcpp::fuchsia::shell::wire::ShellType type;
   };
 
   TypeAndValue Set(const Value& value) {
@@ -161,7 +163,7 @@ class SerializeHelper {
     return id;
   }
 
-  llcpp::fuchsia::shell::ShellType GetBuiltin(llcpp::fuchsia::shell::wire::BuiltinType type) {
+  llcpp::fuchsia::shell::wire::ShellType GetBuiltin(llcpp::fuchsia::shell::wire::BuiltinType type) {
     return builder_.TypeBuiltin(type);
   }
 
@@ -218,8 +220,8 @@ void ServerInterpreter::EmitError(ExecutionContext* context, NodeId node_id,
                                   std::string error_message) {
   FX_DCHECK(context != nullptr);
   std::vector<llcpp::fuchsia::shell::Location> locations;
-  llcpp::fuchsia::shell::NodeId fidl_node_id{.file_id = node_id.file_id,
-                                             .node_id = node_id.node_id};
+  llcpp::fuchsia::shell::wire::NodeId fidl_node_id{.file_id = node_id.file_id,
+                                                   .node_id = node_id.node_id};
   auto builder = llcpp::fuchsia::shell::Location::UnownedBuilder().set_node_id(
       fidl::unowned_ptr(&fidl_node_id));
   locations.emplace_back(builder.build());
@@ -397,7 +399,7 @@ void Service::CreateExecutionContext(uint64_t context_id,
 }
 
 void Service::AddNodes(uint64_t context_id,
-                       ::fidl::VectorView<::llcpp::fuchsia::shell::NodeDefinition> nodes,
+                       ::fidl::VectorView<::llcpp::fuchsia::shell::wire::NodeDefinition> nodes,
                        AddNodesCompleter::Sync& _completer) {
   auto context = interpreter_->GetServerContext(context_id);
   if (context == nullptr) {
@@ -608,7 +610,7 @@ void Service::AddVariable(ServerInterpreterContext* context, uint64_t node_file_
 }
 
 void Service::AddEmitResult(ServerInterpreterContext* context, uint64_t node_file_id,
-                            uint64_t node_node_id, const llcpp::fuchsia::shell::NodeId& node,
+                            uint64_t node_node_id, const llcpp::fuchsia::shell::wire::NodeId& node,
                             bool root_node) {
   std::unique_ptr<Expression> expression =
       interpreter_->GetExpression(context, NodeId(node_file_id, node_node_id), "expression",

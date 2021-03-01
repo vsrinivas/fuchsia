@@ -6,12 +6,12 @@
 namespace fidl_test = llcpp::fidl::test::unionstrictflexible;
 
 // [START contents]
-void use_union(fidl_test::JsonValue* value) {
+void use_union(fidl_test::wire::JsonValue* value) {
   switch (value->which()) {
-    case fidl_test::JsonValue::Tag::kIntValue:
+    case fidl_test::wire::JsonValue::Tag::kIntValue:
       printf("int value: %d\n", value->int_value());
       break;
-    case fidl_test::JsonValue::Tag::kStringValue:
+    case fidl_test::wire::JsonValue::Tag::kStringValue:
       printf("string value: %s\n", value->string_value().data());
       break;
     default:

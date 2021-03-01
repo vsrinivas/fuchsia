@@ -42,13 +42,13 @@ void OpenHelper(const zx::channel& directory, const char* path, zx::channel* res
 // Validate some size information and expected fields without fully decoding the
 // FIDL message, for opening a path from a directory where we expect to open successfully.
 void FidlOpenValidator(const zx::channel& directory, const char* path,
-                       fio::NodeInfo::Tag expected_tag, size_t expected_handles) {
+                       fio::wire::NodeInfo::Tag expected_tag, size_t expected_handles) {
   zx::channel client;
   ASSERT_NO_FAILURES(OpenHelper(directory, path, &client));
 
   class EventHandler : public fio::Node::SyncEventHandler {
    public:
-    explicit EventHandler(fio::NodeInfo::Tag expected_tag) : expected_tag_(expected_tag) {}
+    explicit EventHandler(fio::wire::NodeInfo::Tag expected_tag) : expected_tag_(expected_tag) {}
 
     bool event_tag_ok() const { return event_tag_ok_; }
     bool status_ok() const { return status_ok_; }
@@ -66,7 +66,7 @@ void FidlOpenValidator(const zx::channel& directory, const char* path,
     }
 
    private:
-    const fio::NodeInfo::Tag expected_tag_;
+    const fio::wire::NodeInfo::Tag expected_tag_;
     bool event_tag_ok_ = false;
     bool status_ok_ = false;
     bool node_info_ok_ = false;
@@ -126,9 +126,9 @@ TEST(FidlTestCase, Open) {
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
     ASSERT_OK(fdio_ns_connect(ns, "/dev", ZX_FS_RIGHT_READABLE, dev_server.release()));
-    ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "zero", fio::NodeInfo::Tag::kDevice, 1));
+    ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "zero", fio::wire::NodeInfo::Tag::kDevice, 1));
     ASSERT_NO_FAILURES(
-        FidlOpenValidator(dev_client, "class/platform-bus/000", fio::NodeInfo::Tag::kDevice, 1));
+        FidlOpenValidator(dev_client, "class/platform-bus/000", fio::wire::NodeInfo::Tag::kDevice, 1));
     ASSERT_NO_FAILURES(FidlOpenErrorValidator(dev_client, "this-path-better-not-actually-exist"));
     ASSERT_NO_FAILURES(
         FidlOpenErrorValidator(dev_client, "zero/this-path-better-not-actually-exist"));
@@ -140,7 +140,7 @@ TEST(FidlTestCase, Open) {
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
     ASSERT_OK(fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, dev_server.release()));
-    ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "lib", fio::NodeInfo::Tag::kDirectory, 0));
+    ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "lib", fio::wire::NodeInfo::Tag::kDirectory, 0));
     ASSERT_NO_FAILURES(FidlOpenErrorValidator(dev_client, "this-path-better-not-actually-exist"));
   }
 }

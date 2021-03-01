@@ -39,7 +39,7 @@ class TestServerBase : public fio::Node::RawChannelInterface {
 
   void Describe(DescribeCompleter::Sync& completer) override {
     fio::FileObject file_object;
-    completer.Reply(fio::NodeInfo::WithFile(fidl::unowned_ptr(&file_object)));
+    completer.Reply(fio::wire::NodeInfo::WithFile(fidl::unowned_ptr(&file_object)));
   }
 
   void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }

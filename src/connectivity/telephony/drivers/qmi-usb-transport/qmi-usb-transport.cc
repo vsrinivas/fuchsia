@@ -478,7 +478,7 @@ void Device::UsbCdcIntHander(uint16_t packet_size) {
                           USB_CDC_GET_ENCAPSULATED_RESPONSE, 0, QMI_INTERFACE_NUM, ZX_TIME_INFINITE,
                           buffer, packet_size, nullptr);
   if (!qmi_channel_) {
-    zxlogf(WARNING, "qmi-usb-transport: recieving USB CDC frames without a channel");
+    zxlogf(WARNING, "qmi-usb-transport: receiving USB CDC frames without a channel");
     return;
   }
   status = zx_channel_write(qmi_channel_, 0, buffer, sizeof(buffer), nullptr, 0);
@@ -502,8 +502,8 @@ void Device::SnoopQmiMsgSend(uint8_t* msg_arr, uint32_t msg_arr_len,
   qmi_msg.direction = direction;
   qmi_msg.timestamp = zx_clock_get_monotonic();
   memcpy(qmi_msg.opaque_bytes.data_, msg_arr, current_length);
-  telephony_snoop::Message snoop_msg =
-      telephony_snoop::Message::WithQmiMessage(fidl::unowned_ptr(&qmi_msg));
+  telephony_snoop::wire::Message snoop_msg =
+      telephony_snoop::wire::Message::WithQmiMessage(fidl::unowned_ptr(&qmi_msg));
   telephony_snoop::Publisher::Call::SendMessage(snoop_client_end_, std::move(snoop_msg));
 }
 
@@ -615,7 +615,7 @@ void Device::UsbRecv(usb_request_t* request) {
   }
 
   if (eth_frame_payload_len > kUsbBulkInEpMsgSizeMax) {
-    zxlogf(ERROR, "qmi-usb-transport: recieved usb packet is too large: %zd",
+    zxlogf(ERROR, "qmi-usb-transport: received usb packet is too large: %zd",
            eth_frame_payload_len);
     return;
   }

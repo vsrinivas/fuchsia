@@ -123,9 +123,9 @@ class RewriteTransaction : public fidl::Transaction {
       // Manually craft the actual response which has an unknown ordinal
       constexpr uint32_t kBadOrdinal = 0x8badf00d;
       static_assert(kBadOrdinal !=
-                    static_cast<uint32_t>(test::FlexibleXUnion::Tag::kWantMoreThan30Bytes));
+                    static_cast<uint32_t>(test::wire::FlexibleXUnion::Tag::kWantMoreThan30Bytes));
       static_assert(kBadOrdinal !=
-                    static_cast<uint32_t>(test::FlexibleXUnion::Tag::kWantMoreThan4Handles));
+                    static_cast<uint32_t>(test::wire::FlexibleXUnion::Tag::kWantMoreThan4Handles));
       auto real_response =
           reinterpret_cast<fidl_xunion_t*>(&real_msg_bytes[sizeof(fidl_message_header_t)]);
       real_response->tag = kBadOrdinal;
@@ -134,7 +134,7 @@ class RewriteTransaction : public fidl::Transaction {
           const test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandlesResponse*>(
           indicator_byte_msg->bytes());
       switch (indicator_response->xu.which()) {
-        case test::FlexibleXUnion::Tag::kWantMoreThan30Bytes: {
+        case test::wire::FlexibleXUnion::Tag::kWantMoreThan30Bytes: {
           // Create a message with more bytes than expected
           constexpr uint32_t kUnknownBytes = 5000;
           constexpr uint32_t kUnknownHandles = 0;
@@ -151,7 +151,7 @@ class RewriteTransaction : public fidl::Transaction {
                  kUnknownBytes);
           break;
         }
-        case test::FlexibleXUnion::Tag::kWantMoreThan4Handles: {
+        case test::wire::FlexibleXUnion::Tag::kWantMoreThan4Handles: {
           // Create a message with more handles than expected
           constexpr uint32_t kUnknownBytes = 16;
           constexpr uint32_t kUnknownHandles = ZX_CHANNEL_MAX_MSG_HANDLES;
@@ -171,7 +171,7 @@ class RewriteTransaction : public fidl::Transaction {
                  kUnknownBytes);
           break;
         }
-        case test::FlexibleXUnion::Tag::kUnknown:
+        case test::wire::FlexibleXUnion::Tag::kUnknown:
           ZX_ASSERT_MSG(false, "Cannot reach here");
       }
     }
@@ -193,14 +193,14 @@ class RewriteTransaction : public fidl::Transaction {
 class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
  public:
   void GetUnknownXUnionMoreBytes(GetUnknownXUnionMoreBytesCompleter::Sync& completer) override {
-    test::FlexibleXUnion xunion;
+    test::wire::FlexibleXUnion xunion;
     fidl::aligned<fidl::Array<uint8_t, 30>> array = {};
     xunion.set_want_more_than_30_bytes(fidl::unowned_ptr(&array));
     completer.Reply(std::move(xunion));
   }
 
   void GetUnknownXUnionMoreHandles(GetUnknownXUnionMoreHandlesCompleter::Sync& completer) override {
-    test::FlexibleXUnion xunion;
+    test::wire::FlexibleXUnion xunion;
     fidl::Array<zx::handle, 4> array = {};
     xunion.set_want_more_than_4_handles(fidl::unowned_ptr(&array));
     completer.Reply(std::move(xunion));
@@ -323,7 +323,7 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreBytes) {
   EXPECT_TRUE(result.ok());
   EXPECT_EQ(result.error(), nullptr) << result.error();
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
-  ASSERT_EQ(result.value().xu.which(), test::FlexibleXUnion::Tag::kUnknown);
+  ASSERT_EQ(result.value().xu.which(), test::wire::FlexibleXUnion::Tag::kUnknown);
 }
 
 static_assert(fidl::internal::ClampedHandleCount<
@@ -337,7 +337,7 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreHandles) {
   EXPECT_TRUE(result.ok());
   EXPECT_EQ(result.error(), nullptr) << result.error();
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
-  ASSERT_EQ(result.value().xu.which(), test::FlexibleXUnion::Tag::kUnknown);
+  ASSERT_EQ(result.value().xu.which(), test::wire::FlexibleXUnion::Tag::kUnknown);
 }
 
 static_assert(fidl::internal::ClampedMessageSize<

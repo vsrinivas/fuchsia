@@ -354,7 +354,7 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
     errno = fdio_status_to_errno(status);
     return EAI_SYSTEM;
   }
-  fnet::NameLookup_LookupIp_Result& lookup_ip_result = result.Unwrap()->result;
+  fnet::wire::NameLookup_LookupIp_Result& lookup_ip_result = result.Unwrap()->result;
   if (lookup_ip_result.is_err()) {
     switch (lookup_ip_result.err()) {
       case fnet::wire::LookupError::NOT_FOUND:
@@ -590,7 +590,7 @@ int getifaddrs(struct ifaddrs** ifap) {
       const uint8_t prefix_len = address.prefix_len;
 
       switch (addr.which()) {
-        case fnet::IpAddress::Tag::kIpv4: {
+        case fnet::wire::IpAddress::Tag::kIpv4: {
           const auto& addr_bytes = addr.ipv4().addr;
           copy_addr(&ifs->ifa.ifa_addr, AF_INET, &ifs->addr,
                     const_cast<uint8_t*>(addr_bytes.data()), addr_bytes.size(),
@@ -598,7 +598,7 @@ int getifaddrs(struct ifaddrs** ifap) {
           gen_netmask(&ifs->ifa.ifa_netmask, AF_INET, &ifs->netmask, prefix_len);
           break;
         }
-        case fnet::IpAddress::Tag::kIpv6: {
+        case fnet::wire::IpAddress::Tag::kIpv6: {
           const auto& addr_bytes = addr.ipv6().addr;
           copy_addr(&ifs->ifa.ifa_addr, AF_INET6, &ifs->addr,
                     const_cast<uint8_t*>(addr_bytes.data()), addr_bytes.size(),

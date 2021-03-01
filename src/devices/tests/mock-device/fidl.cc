@@ -17,7 +17,7 @@
 namespace mock_device {
 
 zx_status_t WaitForPerformActions(const zx::channel& c,
-                                  fbl::Array<device_mock::Action>* actions_out) {
+                                  fbl::Array<device_mock::wire::Action>* actions_out) {
   zx_signals_t signals;
   zx_status_t status =
       c.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals);
@@ -44,10 +44,10 @@ zx_status_t WaitForPerformActions(const zx::channel& c,
     return status;
   }
   auto payload = request.GetBytesAs<device_mock::MockDeviceThread::PerformActionsRequest>();
-  auto array = std::make_unique<device_mock::Action[]>(payload->actions.count());
+  auto array = std::make_unique<device_mock::wire::Action[]>(payload->actions.count());
   memcpy(reinterpret_cast<void*>(array.get()),
          reinterpret_cast<const void*>(payload->actions.data()),
-         payload->actions.count() * sizeof(device_mock::Action));
+         payload->actions.count() * sizeof(device_mock::wire::Action));
   actions_out->reset(array.release(), payload->actions.count());
   return ZX_OK;
 }

@@ -82,7 +82,7 @@ TEST_F(PayloadStreamerTest, RegisterInvalidVmo) {
 TEST_F(PayloadStreamerTest, ReadNoVmoRegistered) {
   auto call_result = client_->ReadData();
   ASSERT_OK(call_result.status());
-  const ::llcpp::fuchsia::paver::ReadResult& result = call_result.value().result;
+  const ::llcpp::fuchsia::paver::wire::ReadResult& result = call_result.value().result;
   ASSERT_TRUE(result.is_err());
   EXPECT_NE(result.err(), ZX_OK);
 }

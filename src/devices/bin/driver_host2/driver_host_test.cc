@@ -173,7 +173,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
     fdata::DictionaryEntry program_entries[] = {
         {
             .key = "binary",
-            .value = fdata::DictionaryValue::WithStr(
+            .value = fdata::wire::DictionaryValue::WithStr(
                 std::make_unique<fidl::StringView>("driver/library.so")),
         },
     };
@@ -449,7 +449,7 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
   fdata::DictionaryEntry program_entries[] = {
       {
           .key = "binary",
-          .value = fdata::DictionaryValue::WithStr(
+          .value = fdata::wire::DictionaryValue::WithStr(
               std::make_unique<fidl::StringView>("driver/library.so")),
       },
   };

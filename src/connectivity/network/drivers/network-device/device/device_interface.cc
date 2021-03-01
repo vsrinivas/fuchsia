@@ -260,7 +260,7 @@ void DeviceInterface::OpenSession(::fidl::StringView session_name, netdev::Sessi
                                   OpenSessionCompleter::Sync& completer) {
   netdev::Device_OpenSession_Response rsp;
   zx_status_t status = OpenSession(std::move(session_name), std::move(session_info), &rsp);
-  netdev::Device_OpenSession_Result result;
+  netdev::wire::Device_OpenSession_Result result;
   if (status != ZX_OK) {
     result.set_err(fidl::unowned_ptr(&status));
   } else {

@@ -107,24 +107,24 @@ class Buffer {
 
 class Parameter {
  public:
-  fuchsia_tee::Parameter to_llcpp() {
+  fuchsia_tee::wire::Parameter to_llcpp() {
     if (std::holds_alternative<fidl::aligned<fuchsia_tee::None>>(data_)) {
       llcpp_data_ = std::get<fidl::aligned<fuchsia_tee::None>>(data_);
-      return fuchsia_tee::Parameter::WithNone(
+      return fuchsia_tee::wire::Parameter::WithNone(
           fidl::unowned_ptr(&std::get<fidl::aligned<fuchsia_tee::None>>(llcpp_data_)));
     }
     if (std::holds_alternative<Value>(data_)) {
       llcpp_data_ = std::get<Value>(data_).to_llcpp();
-      return fuchsia_tee::Parameter::WithValue(
+      return fuchsia_tee::wire::Parameter::WithValue(
           fidl::unowned_ptr(&std::get<fuchsia_tee::Value>(llcpp_data_)));
     }
     if (std::holds_alternative<Buffer>(data_)) {
       llcpp_data_ = std::get<Buffer>(data_).to_llcpp();
-      return fuchsia_tee::Parameter::WithBuffer(
+      return fuchsia_tee::wire::Parameter::WithBuffer(
           fidl::unowned_ptr(&std::get<fuchsia_tee::Buffer>(llcpp_data_)));
     }
 
-    return fuchsia_tee::Parameter();
+    return fuchsia_tee::wire::Parameter();
   }
 
   void set_none() { data_ = fuchsia_tee::None{}; }
@@ -143,7 +143,7 @@ class Parameter {
 
 class ParameterSet {
  public:
-  fidl::VectorView<fuchsia_tee::Parameter> to_llcpp() {
+  fidl::VectorView<fuchsia_tee::wire::Parameter> to_llcpp() {
     ZX_DEBUG_ASSERT(parameters_.has_value());
 
     llcpp_parameters_.clear();
@@ -158,7 +158,7 @@ class ParameterSet {
   void set_parameters(std::vector<Parameter> parameters) { parameters_ = std::move(parameters); }
 
  private:
-  std::vector<fuchsia_tee::Parameter> llcpp_parameters_;
+  std::vector<fuchsia_tee::wire::Parameter> llcpp_parameters_;
 
   std::optional<std::vector<Parameter>> parameters_;
 };
@@ -559,13 +559,13 @@ TEEC_Result PreprocessOperation(const TEEC_Operation* operation, ParameterSet* o
   return rc;
 }
 
-TEEC_Result PostprocessValue(uint32_t param_type, const fuchsia_tee::Parameter& zx_param,
+TEEC_Result PostprocessValue(uint32_t param_type, const fuchsia_tee::wire::Parameter& zx_param,
                              TEEC_Value* out_teec_value) {
   ZX_DEBUG_ASSERT(out_teec_value);
   ZX_DEBUG_ASSERT(param_type == TEEC_VALUE_INPUT || param_type == TEEC_VALUE_OUTPUT ||
                   param_type == TEEC_VALUE_INOUT);
 
-  if (zx_param.which() != fuchsia_tee::Parameter::Tag::kValue) {
+  if (zx_param.which() != fuchsia_tee::wire::Parameter::Tag::kValue) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
@@ -601,13 +601,14 @@ TEEC_Result PostprocessValue(uint32_t param_type, const fuchsia_tee::Parameter& 
   return TEEC_SUCCESS;
 }
 
-TEEC_Result PostprocessTemporaryMemref(uint32_t param_type, const fuchsia_tee::Parameter& zx_param,
+TEEC_Result PostprocessTemporaryMemref(uint32_t param_type,
+                                       const fuchsia_tee::wire::Parameter& zx_param,
                                        TEEC_TempMemoryReference* out_temp_memory_ref) {
   ZX_DEBUG_ASSERT(out_temp_memory_ref);
   ZX_DEBUG_ASSERT(param_type == TEEC_MEMREF_TEMP_INPUT || param_type == TEEC_MEMREF_TEMP_OUTPUT ||
                   param_type == TEEC_MEMREF_TEMP_INOUT);
 
-  if (zx_param.which() != fuchsia_tee::Parameter::Tag::kBuffer) {
+  if (zx_param.which() != fuchsia_tee::wire::Parameter::Tag::kBuffer) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
@@ -653,12 +654,12 @@ TEEC_Result PostprocessTemporaryMemref(uint32_t param_type, const fuchsia_tee::P
   return rc;
 }
 
-TEEC_Result PostprocessWholeMemref(const fuchsia_tee::Parameter& zx_param,
+TEEC_Result PostprocessWholeMemref(const fuchsia_tee::wire::Parameter& zx_param,
                                    TEEC_RegisteredMemoryReference* out_memory_ref) {
   ZX_DEBUG_ASSERT(out_memory_ref);
   ZX_DEBUG_ASSERT(out_memory_ref->parent);
 
-  if (zx_param.which() != fuchsia_tee::Parameter::Tag::kBuffer) {
+  if (zx_param.which() != fuchsia_tee::wire::Parameter::Tag::kBuffer) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
@@ -677,14 +678,15 @@ TEEC_Result PostprocessWholeMemref(const fuchsia_tee::Parameter& zx_param,
   return TEEC_SUCCESS;
 }
 
-TEEC_Result PostprocessPartialMemref(uint32_t param_type, const fuchsia_tee::Parameter& zx_param,
+TEEC_Result PostprocessPartialMemref(uint32_t param_type,
+                                     const fuchsia_tee::wire::Parameter& zx_param,
                                      TEEC_RegisteredMemoryReference* out_memory_ref) {
   ZX_DEBUG_ASSERT(out_memory_ref);
   ZX_DEBUG_ASSERT(param_type == TEEC_MEMREF_PARTIAL_INPUT ||
                   param_type == TEEC_MEMREF_PARTIAL_OUTPUT ||
                   param_type == TEEC_MEMREF_PARTIAL_INOUT);
 
-  if (zx_param.which() != fuchsia_tee::Parameter::Tag::kBuffer) {
+  if (zx_param.which() != fuchsia_tee::wire::Parameter::Tag::kBuffer) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
@@ -716,8 +718,9 @@ TEEC_Result PostprocessPartialMemref(uint32_t param_type, const fuchsia_tee::Par
   return TEEC_SUCCESS;
 }
 
-TEEC_Result PostprocessOperation(const fidl::VectorView<fuchsia_tee::Parameter>& parameter_set,
-                                 TEEC_Operation* out_operation) {
+TEEC_Result PostprocessOperation(
+    const fidl::VectorView<fuchsia_tee::wire::Parameter>& parameter_set,
+    TEEC_Operation* out_operation) {
   if (!out_operation) {
     return TEEC_SUCCESS;
   }
@@ -736,7 +739,7 @@ TEEC_Result PostprocessOperation(const fidl::VectorView<fuchsia_tee::Parameter>&
 
     switch (param_type) {
       case TEEC_NONE:
-        if (parameter_set[i].which() != fuchsia_tee::Parameter::Tag::kNone) {
+        if (parameter_set[i].which() != fuchsia_tee::wire::Parameter::Tag::kNone) {
           rc = TEEC_ERROR_BAD_PARAMETERS;
         }
         break;
@@ -771,7 +774,7 @@ TEEC_Result PostprocessOperation(const fidl::VectorView<fuchsia_tee::Parameter>&
 
   // This check catches the case where we received more parameters than we expected.
   for (size_t i = num_params; i < parameter_set.count(); i++) {
-    if (parameter_set[i].which() != fuchsia_tee::Parameter::Tag::kNone) {
+    if (parameter_set[i].which() != fuchsia_tee::wire::Parameter::Tag::kNone) {
       return TEEC_ERROR_BAD_PARAMETERS;
     }
   }

@@ -117,7 +117,7 @@ void SysmemSecureMemServer::SetPhysicalSecureHeaps(
         completer) {
   ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
   // must out-live |complete|
-  llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result result;
+  llcpp::fuchsia::sysmem::wire::SecureMem_SetPhysicalSecureHeaps_Result result;
   zx_status_t status = SetPhysicalSecureHeapsInternal(heaps);
   if (status != ZX_OK) {
     // Logging handled in `SetPhysicalSecureHeapsInternal`

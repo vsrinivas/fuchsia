@@ -827,7 +827,7 @@ void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
                                      SetConfigurationCompleter::Sync& completer) {
   zxlogf(DEBUG, "%s", __func__);
   ZX_ASSERT(!config_descs.empty());
-  peripheral::Device_SetConfiguration_Result response;
+  peripheral::wire::Device_SetConfiguration_Result response;
   uint8_t index = 0;
   for (auto& func_descs : config_descs) {
     auto descriptor = fbl::MakeRefCounted<UsbConfiguration>();
