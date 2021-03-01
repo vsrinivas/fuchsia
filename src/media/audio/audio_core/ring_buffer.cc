@@ -18,26 +18,46 @@ namespace {
 
 template <class RingBufferT>
 struct BufferTraits {
-  static std::optional<typename RingBufferT::Buffer> MakeBuffer(int64_t start, uint32_t length,
+  static std::optional<typename RingBufferT::Buffer> MakeBuffer(const Format& format,
+                                                                int64_t start_frame,
+                                                                int64_t payload_frames,
                                                                 void* payload);
 };
 
 template <>
 struct BufferTraits<ReadableRingBuffer> {
-  static std::optional<ReadableStream::Buffer> MakeBuffer(int64_t start, uint32_t length,
-                                                          void* payload) {
-    return std::make_optional<ReadableStream::Buffer>(Fixed(start), Fixed(length), payload, true,
-                                                      StreamUsageMask(), Gain::kUnityGainDb);
+  static std::optional<ReadableStream::Buffer> MakeBuffer(const Format& format, int64_t start_frame,
+                                                          int64_t payload_frames, void* payload) {
+    // RingBuffers are synchronized only by time, which means there may not be a synchronization
+    // happens-before edge connecting the last writer with the current reader, which means we must
+    // invalidate our cache to ensure we read the latest data.
+    //
+    // This is especially important when the RingBuffer represents a buffer shared with HW, because
+    // the last write may have happened very recently, increasing the likelihood that our local
+    // cache is out-of-date. This is less important when the buffer is used in SW only because it
+    // is more likely that the last write happened long enough ago that our cache has been flushed
+    // in the interim, however to be strictly correct, a flush is needed in all cases.
+    size_t payload_bytes = payload_frames * format.bytes_per_frame();
+    zx_cache_flush(payload, payload_bytes, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+    return std::make_optional<ReadableStream::Buffer>(Fixed(start_frame), Fixed(payload_frames),
+                                                      payload, true, StreamUsageMask(),
+                                                      Gain::kUnityGainDb);
   }
 };
 
 template <>
 struct BufferTraits<WritableRingBuffer> {
-  // TODO(fxbug.dev/50442): Technically the destructor should flush cache for the memory range that
-  // was locked when is_hardware_buffer == true.
-  static std::optional<WritableStream::Buffer> MakeBuffer(int64_t start, uint32_t length,
-                                                          void* payload) {
-    return std::make_optional<WritableStream::Buffer>(Fixed(start), Fixed(length), payload);
+  static std::optional<WritableStream::Buffer> MakeBuffer(const Format& format, int64_t start_frame,
+                                                          int64_t payload_frames, void* payload) {
+    size_t payload_bytes = payload_frames * format.bytes_per_frame();
+    return std::make_optional<WritableStream::Buffer>(
+        Fixed(start_frame), Fixed(payload_frames), payload,
+        // RingBuffers are synchronized only by time, which means there may not be a synchronization
+        // happens-before edge connecting the current writer with the next reader. When this buffer
+        // is unlocked, we must flush our cache to ensure we have published the latest data.
+        [payload, payload_bytes]() {
+          zx_cache_flush(payload, payload_bytes, ZX_CACHE_FLUSH_DATA);
+        });
   }
 };
 
@@ -46,7 +66,7 @@ std::optional<typename RingBufferT::Buffer> LockBuffer(RingBufferT* b,
                                                        SafeReadWriteFrameFn* safe_read_frame,
                                                        SafeReadWriteFrameFn* safe_write_frame,
                                                        int64_t frame, uint32_t frame_count,
-                                                       bool is_read_lock, bool is_hardware_buffer) {
+                                                       bool is_read_lock) {
   auto [ref_time_to_frac_presentation_frame, _] = b->ref_time_to_frac_presentation_frame();
   if (!ref_time_to_frac_presentation_frame.invertible()) {
     return std::nullopt;
@@ -82,19 +102,10 @@ std::optional<typename RingBufferT::Buffer> LockBuffer(RingBufferT* b,
   }
 
   void* payload = b->virt() + (first_frame_local * b->format().bytes_per_frame());
-  uint32_t payload_frames = last_frame_local - first_frame_local;
-  size_t payload_bytes = payload_frames * b->format().bytes_per_frame();
+  int64_t payload_frames = last_frame_local - first_frame_local;
 
-  // Software buffers are entirely within-process and we assume that higher-level readers and
-  // writers are synchronized appropriately.
-  //
-  // Hardware buffers are shared with hardware, so we need to flush cache to ensure we read the
-  // latest data.
-  if (is_read_lock && is_hardware_buffer) {
-    zx_cache_flush(payload, payload_bytes, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
-  }
-
-  return BufferTraits<RingBufferT>::MakeBuffer(first_absolute_frame, payload_frames, payload);
+  return BufferTraits<RingBufferT>::MakeBuffer(b->format(), first_absolute_frame, payload_frames,
+                                               payload);
 }
 
 fbl::RefPtr<RefCountedVmoMapper> MapVmo(const Format& format, zx::vmo vmo, uint32_t frame_count,
@@ -143,13 +154,11 @@ fbl::RefPtr<RefCountedVmoMapper> MapVmo(const Format& format, zx::vmo vmo, uint3
 BaseRingBuffer::BaseRingBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-    AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
-    bool is_hardware_buffer)
+    AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count)
     : vmo_mapper_(std::move(vmo_mapper)),
       frames_(frame_count),
       ref_time_to_frac_presentation_frame_(std::move(ref_time_to_frac_presentation_frame)),
-      audio_clock_(audio_clock),
-      is_hardware_buffer_(is_hardware_buffer) {
+      audio_clock_(audio_clock) {
   FX_CHECK(vmo_mapper_->start() != nullptr);
   FX_CHECK(vmo_mapper_->size() >= (format.bytes_per_frame() * frame_count));
 }
@@ -158,20 +167,20 @@ ReadableRingBuffer::ReadableRingBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
     AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
-    SafeReadWriteFrameFn safe_read_frame, bool is_hardware_buffer)
+    SafeReadWriteFrameFn safe_read_frame)
     : ReadableStream(format),
       BaseRingBuffer(format, ref_time_to_frac_presentation_frame, audio_clock, vmo_mapper,
-                     frame_count, is_hardware_buffer),
+                     frame_count),
       safe_read_frame_(std::move(safe_read_frame)) {}
 
 WritableRingBuffer::WritableRingBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
     AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
-    SafeReadWriteFrameFn safe_write_frame, bool is_hardware_buffer)
+    SafeReadWriteFrameFn safe_write_frame)
     : WritableStream(format),
       BaseRingBuffer(format, ref_time_to_frac_presentation_frame, audio_clock, vmo_mapper,
-                     frame_count, is_hardware_buffer),
+                     frame_count),
       safe_write_frame_(std::move(safe_write_frame)) {}
 
 // static
@@ -232,14 +241,14 @@ BaseRingBuffer::Endpoints BaseRingBuffer::AllocateSoftwareBuffer(
   // This explains why R = W-1 and why we pass ref_time_to_frac_presentation_frame to
   // both sides of the ring buffer.
 
-  auto w = std::make_shared<WritableRingBuffer>(format, ref_time_to_frac_presentation_frame,
-                                                audio_clock, vmo_mapper, frame_count,
-                                                std::move(safe_write_frame), false);
+  auto w =
+      std::make_shared<WritableRingBuffer>(format, ref_time_to_frac_presentation_frame, audio_clock,
+                                           vmo_mapper, frame_count, std::move(safe_write_frame));
 
   auto safe_read_frame = [w]() { return w->safe_write_frame_() - 1; };
-  auto r = std::make_shared<ReadableRingBuffer>(format, ref_time_to_frac_presentation_frame,
-                                                audio_clock, vmo_mapper, frame_count,
-                                                std::move(safe_read_frame), false);
+  auto r =
+      std::make_shared<ReadableRingBuffer>(format, ref_time_to_frac_presentation_frame, audio_clock,
+                                           vmo_mapper, frame_count, std::move(safe_read_frame));
 
   return Endpoints{
       .reader = r,
@@ -260,7 +269,7 @@ std::shared_ptr<ReadableRingBuffer> BaseRingBuffer::CreateReadableHardwareBuffer
 
   return std::make_shared<ReadableRingBuffer>(
       format, std::move(ref_time_to_frac_presentation_frame), audio_clock, std::move(vmo_mapper),
-      frame_count, std::move(safe_read_frame), true);
+      frame_count, std::move(safe_read_frame));
 }
 
 // static
@@ -276,19 +285,19 @@ std::shared_ptr<WritableRingBuffer> BaseRingBuffer::CreateWritableHardwareBuffer
 
   return std::make_shared<WritableRingBuffer>(
       format, std::move(ref_time_to_frac_presentation_frame), audio_clock, std::move(vmo_mapper),
-      frame_count, std::move(safe_write_frame), true);
+      frame_count, std::move(safe_write_frame));
 }
 
 std::optional<ReadableStream::Buffer> ReadableRingBuffer::ReadLock(Fixed frame,
                                                                    size_t frame_count) {
   return LockBuffer<ReadableRingBuffer>(this, &safe_read_frame_, nullptr, frame.Floor(),
-                                        frame_count, true, is_hardware_buffer_);
+                                        frame_count, true);
 }
 
 std::optional<WritableStream::Buffer> WritableRingBuffer::WriteLock(int64_t frame,
                                                                     size_t frame_count) {
   return LockBuffer<WritableRingBuffer>(this, nullptr, &safe_write_frame_, frame, frame_count,
-                                        false, is_hardware_buffer_);
+                                        false);
 }
 
 BaseStream::TimelineFunctionSnapshot BaseRingBuffer::ReferenceClockToFixedImpl() const {
