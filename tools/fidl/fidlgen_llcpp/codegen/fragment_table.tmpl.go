@@ -47,32 +47,37 @@ public:
     return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.data != nullptr;
   }
   {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
-  void set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
+  {{ $.Name }}& set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->{{ .Name }}_.data = elem;
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
+    return *this;
   }
-  void set_{{ .Name }}(std::nullptr_t) {
+  {{ $.Name }}& set_{{ .Name }}(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->{{ .Name }}_.data = nullptr;
+    return *this;
   }
   template <typename... Args>
-  void set_{{ .Name }}(::fidl::AnyAllocator& allocator, Args&&... args) {
+  {{ $.Name }}& set_{{ .Name }}(::fidl::AnyAllocator& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->{{ .Name }}_.data =
         ::fidl::ObjectView<{{ .Type }}>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
+    return *this;
   }
   template <typename... Args>
-  void set_{{ .Name }}(::fidl::Allocator& allocator, Args&&... args) {
+  {{ $.Name }}& set_{{ .Name }}(::fidl::Allocator& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->{{ .Name }}_.data =
         ::fidl::tracking_ptr<{{ .Type }}>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
+    return *this;
   }
-  void set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type }}> elem) {
+  {{ $.Name }}& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type }}> elem) {
     frame_ptr_->{{ .Name }}_.data = std::move(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
+    return *this;
   }
   {{- end }}
 

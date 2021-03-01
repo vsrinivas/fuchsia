@@ -197,32 +197,37 @@ class TableWithHandle final {
   bool has_h() const {
     return max_ordinal_ >= 1 && frame_ptr_->h_.data != nullptr;
   }
-  void set_h(::fidl::ObjectView<::zx::vmo> elem) {
+  TableWithHandle& set_h(::fidl::ObjectView<::zx::vmo> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->h_.data = elem;
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
   }
-  void set_h(std::nullptr_t) {
+  TableWithHandle& set_h(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->h_.data = nullptr;
+    return *this;
   }
   template <typename... Args>
-  void set_h(::fidl::AnyAllocator& allocator, Args&&... args) {
+  TableWithHandle& set_h(::fidl::AnyAllocator& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->h_.data =
         ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
   }
   template <typename... Args>
-  void set_h(::fidl::Allocator& allocator, Args&&... args) {
+  TableWithHandle& set_h(::fidl::Allocator& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->h_.data =
         ::fidl::tracking_ptr<::zx::vmo>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
   }
-  void set_h(::fidl::tracking_ptr<::zx::vmo> elem) {
+  TableWithHandle& set_h(::fidl::tracking_ptr<::zx::vmo> elem) {
     frame_ptr_->h_.data = std::move(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
   }
 
   TableWithHandle() = default;

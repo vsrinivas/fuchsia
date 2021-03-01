@@ -386,32 +386,37 @@ class Table final {
   bool has_Field() const {
     return max_ordinal_ >= 1 && frame_ptr_->Field_.data != nullptr;
   }
-  void set_Field(::fidl::ObjectView<int32_t> elem) {
+  Table& set_Field(::fidl::ObjectView<int32_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->Field_.data = elem;
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
   }
-  void set_Field(std::nullptr_t) {
+  Table& set_Field(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->Field_.data = nullptr;
+    return *this;
   }
   template <typename... Args>
-  void set_Field(::fidl::AnyAllocator& allocator, Args&&... args) {
+  Table& set_Field(::fidl::AnyAllocator& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->Field_.data =
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
   }
   template <typename... Args>
-  void set_Field(::fidl::Allocator& allocator, Args&&... args) {
+  Table& set_Field(::fidl::Allocator& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->Field_.data =
         ::fidl::tracking_ptr<int32_t>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
   }
-  void set_Field(::fidl::tracking_ptr<int32_t> elem) {
+  Table& set_Field(::fidl::tracking_ptr<int32_t> elem) {
     frame_ptr_->Field_.data = std::move(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
   }
 
   Table() = default;
