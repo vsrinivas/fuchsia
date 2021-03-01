@@ -44,10 +44,12 @@ class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::testing::
     fuchsia::hardware::ethernet::MacAddress mac_address = {
         .octets = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     };
-    net_->Start(std::move(start_info), mac_address, true /* enable_bridge */, [] {});
 
-    // Wait for the device to call AddEthernetDevice on the netstack.
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] { return eth_device_added_; }, zx::sec(5)));
+    // Start the device, waiting for it to complete before attempting to use it.
+    bool started = false;
+    net_->Start(std::move(start_info), mac_address, true /* enable_bridge */,
+                [&started] { started = true; });
+    RunLoopUntil([&] { return started; });
 
     // Get fifos.
     eth_device_->GetFifos(
@@ -78,17 +80,41 @@ class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::testing::
       net_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used(), [] {});
     }
 
-    eth_device_->Start([](zx_status_t status) { ASSERT_EQ(ZX_OK, status); });
+    bool eth_started = false;
+    eth_device_->Start([&eth_started](zx_status_t status) {
+      ASSERT_EQ(ZX_OK, status);
+      eth_started = true;
+    });
+    RunLoopUntil([&] { return eth_started; });
   }
 
+  // Fake |fuchsia.netstack.Netstack| implementation.
   void AddEthernetDevice(std::string topological_path,
                          fuchsia::netstack::InterfaceConfig interfaceConfig,
                          fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
                          AddEthernetDeviceCallback callback) override {
     eth_device_ = device.Bind();
-    eth_device_added_ = true;
     callback(fuchsia::netstack::Netstack_AddEthernetDevice_Result::WithResponse(
         fuchsia::netstack::Netstack_AddEthernetDevice_Response{kFakeInterfaceId}));
+  }
+
+  // Fake |fuchsia.netstack.Netstack| implementation.
+  void GetInterfaces(GetInterfacesCallback callback) override {
+    // Return a single fake interface.
+    std::vector<fuchsia::netstack::NetInterface> interfaces;
+    interfaces.push_back({
+        .id = 0,
+        .flags = fuchsia::netstack::Flags::UP,
+        .addr = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address()),
+        .netmask = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address()),
+        .broadaddr = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address()),
+    });
+    callback(std::move(interfaces));
+  }
+
+  // Fake |fuchsia.netstack.Netstack| implementation.
+  void BridgeInterfaces(std::vector<uint32_t> nicids, BridgeInterfacesCallback callback) override {
+    callback(fuchsia::netstack::NetErr{.status = fuchsia::netstack::Status::OK}, /*nicid=*/0);
   }
 
   void NotImplemented_(const std::string& name) override {
@@ -102,7 +128,6 @@ class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::testing::
   VirtioQueueFake tx_queue_;
   fidl::BindingSet<fuchsia::netstack::Netstack> bindings_;
   fuchsia::hardware::ethernet::DevicePtr eth_device_;
-  bool eth_device_added_ = false;
 
   zx::fifo rx_;
   zx::fifo tx_;
