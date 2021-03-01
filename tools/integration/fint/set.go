@@ -173,7 +173,7 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 		if staticSpec.UseGoma {
 			return nil, fmt.Errorf("goma is not supported for builds using a custom gcc toolchain")
 		}
-		vars["zircon_extra_args.gcc_tool_dir"] = filepath.Join(contextSpec.GccToolchainDir, "bin")
+		vars["gcc_tool_dir"] = filepath.Join(contextSpec.GccToolchainDir, "bin")
 	}
 	if contextSpec.RustToolchainDir != "" {
 		vars["rustc_prefix"] = filepath.Join(contextSpec.RustToolchainDir, "bin")
@@ -284,12 +284,6 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 	// otherwise the imported files might blindly redefine variables set or
 	// modified by other arguments.
 	finalArgs = append(finalArgs, importArgs...)
-	// Initialize `zircon_extra_args` before any variable-setting args, so that
-	// it's safe for subsequent args to do things like `zircon_extra_args.foo =
-	// "bar"` without worrying about initializing zircon_extra_args if it hasn't
-	// yet been defined. But do it after all imports in case one of the imported
-	// files sets `zircon_extra_args`.
-	finalArgs = append(finalArgs, "if (!defined(zircon_extra_args)) { zircon_extra_args = {} }")
 	finalArgs = append(finalArgs, normalArgs...)
 	return finalArgs, nil
 }

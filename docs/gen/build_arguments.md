@@ -3752,10 +3752,6 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 From //build/zircon/build_args.gni:21
 
-### zircon_extra_args
-This variable is no longer used, bur some of our infra build scripts still
-set it to an empty scope for historical reasons.
-
 **Current value for `target_cpu = "arm64"`:** `{ }`
 
 From //out/not-default/args.gn:4

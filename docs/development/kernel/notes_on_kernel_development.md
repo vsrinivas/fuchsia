@@ -26,7 +26,7 @@ To directly output to the console rather than buffering it (useful in the event
 of kernel freezes) you can enable ``ENABLE_KERNEL_LL_DEBUG`` in your build like so:
 
 ```
-fx set ... --args='zircon_extra_args={kernel_extra_defines=["ENABLE_KERNEL_LL_DEBUG"]}'
+fx set ... --args='kernel_extra_defines=["ENABLE_KERNEL_LL_DEBUG"]'
 
 ```
 

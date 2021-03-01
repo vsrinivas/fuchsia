@@ -307,7 +307,7 @@ func TestGenArgs(t *testing.T) {
 				GccToolchainDir: "/tmp/gcc_toolchain",
 			},
 			expectedArgs: []string{
-				`zircon_extra_args.gcc_tool_dir="/tmp/gcc_toolchain/bin"`,
+				`gcc_tool_dir="/tmp/gcc_toolchain/bin"`,
 			},
 		},
 		{
@@ -467,8 +467,6 @@ func TestGenArgs(t *testing.T) {
 			expectedArgs: []string{
 				`import("//foo.gni")`,
 				`import("//products/core.gni")`,
-				// This must come after all imports but before any other variables.
-				`if (!defined(zircon_extra_args)) { zircon_extra_args = {} }`,
 				`build_info_product="core"`,
 				`foo="bar"`,
 			},
