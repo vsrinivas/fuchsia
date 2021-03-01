@@ -275,6 +275,19 @@
   submitted: '2021-02-02'
   reviewed: '2021-02-17'
 
+- name: 'RFC-0070'
+  title: 'PCI protocol changes to support legacy interrupts'
+  short_description: 'Mitigations for spurious PCI legacy interrupts.'
+  authors: ['cja@google.com']
+  file: '0070_pci_protocol_legacy_interrupt_changes.md'
+  area: ['Zircon']
+  issue: ['71188']
+  gerrit_change_id: ['457076']
+  status: 'Accepted'
+  reviewers: ['tbd']
+  submitted: '2020-01-17'
+  reviewed: '2020-02-25'
+
 - name: 'RFC-0071'
   title: 'OTA backstop'
   short_description: 'Prevent devices from OTAing backwards across a version boundary.'
