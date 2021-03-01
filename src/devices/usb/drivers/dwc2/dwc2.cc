@@ -53,6 +53,9 @@ void Dwc2::HandleReset() {
   // Flush endpoint zero TX FIFO
   FlushTxFifo(0);
 
+  // Flush All other endpoint TX FIFOs.
+  FlushTxFifo(0x10);
+
   // Flush the learning queue
   GRSTCTL::Get().FromValue(0).set_intknqflsh(1).WriteTo(mmio);
 
@@ -138,7 +141,7 @@ void Dwc2::HandleInEpInterrupt() {
         } else {
           HandleTransferComplete(ep_num);
           if (diepint.nak()) {
-            zxlogf(ERROR, "Unandled interrupt diepint.nak ep_num %u", ep_num);
+            zxlogf(ERROR, "Unhandled interrupt diepint.nak ep_num %u", ep_num);
             DIEPINT::Get(ep_num).ReadFrom(mmio).set_nak(1).WriteTo(mmio);
           }
         }
@@ -146,19 +149,19 @@ void Dwc2::HandleInEpInterrupt() {
 
       // TODO(voydanoff) Implement error recovery for these interrupts
       if (diepint.epdisabled()) {
-        zxlogf(ERROR, "Unandled interrupt diepint.epdisabled for ep_num %u", ep_num);
+        zxlogf(ERROR, "Unhandled interrupt diepint.epdisabled for ep_num %u", ep_num);
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_epdisabled(1).WriteTo(mmio);
       }
       if (diepint.ahberr()) {
-        zxlogf(ERROR, "Unandled interrupt diepint.ahberr for ep_num %u", ep_num);
+        zxlogf(ERROR, "Unhandled interrupt diepint.ahberr for ep_num %u", ep_num);
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_ahberr(1).WriteTo(mmio);
       }
       if (diepint.timeout()) {
-        zxlogf(ERROR, "Unandled interrupt diepint.timeout for ep_num %u", ep_num);
+        zxlogf(ERROR, "Unhandled interrupt diepint.timeout for ep_num %u", ep_num);
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_timeout(1).WriteTo(mmio);
       }
       if (diepint.intktxfemp()) {
-        zxlogf(ERROR, "Unandled interrupt diepint.intktxfemp for ep_num %u", ep_num);
+        zxlogf(ERROR, "Unhandled interrupt diepint.intktxfemp for ep_num %u", ep_num);
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_intktxfemp(1).WriteTo(mmio);
       }
       if (diepint.intknepmis()) {
@@ -166,7 +169,7 @@ void Dwc2::HandleInEpInterrupt() {
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_intknepmis(1).WriteTo(mmio);
       }
       if (diepint.inepnakeff()) {
-        printf("Unandled interrupt diepint.inepnakeff for ep_num %u\n", ep_num);
+        printf("Unhandled interrupt diepint.inepnakeff for ep_num %u\n", ep_num);
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_inepnakeff(1).WriteTo(mmio);
       }
     }
