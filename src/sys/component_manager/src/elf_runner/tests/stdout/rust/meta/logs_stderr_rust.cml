@@ -2,8 +2,7 @@
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/hello_world_rust",
-        forward_stdout_to: "log",
+        binary: "bin/prints_when_launched_rust",
         forward_stderr_to: "log",
     },
 }

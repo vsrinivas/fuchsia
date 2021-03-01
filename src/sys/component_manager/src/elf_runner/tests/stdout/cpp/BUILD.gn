@@ -4,14 +4,32 @@
 
 import("//src/sys/build/components.gni")
 
+group("cpp") {
+  deps = [
+    ":logs-stderr-cpp",
+    ":logs-stdout-and-stderr-cpp",
+    ":logs-stdout-cpp",
+  ]
+}
+
 executable("bin") {
   output_name = "prints_when_launched_cpp"
 
   sources = [ "src/main.cc" ]
 }
 
-fuchsia_component("prints-when-launched-cpp-component") {
+fuchsia_component("logs-stdout-and-stderr-cpp") {
   deps = [ ":bin" ]
-  component_name = "prints-when-launched-cpp"
-  manifest = "meta/prints_when_launched_cpp.cml"
+  component_name = "logs-stdout-and-stderr-cpp"
+  manifest = "meta/logs_stdout_and_stderr_cpp.cml"
+}
+
+fuchsia_component("logs-stdout-cpp") {
+  deps = [ ":bin" ]
+  manifest = "meta/logs_stdout_cpp.cml"
+}
+
+fuchsia_component("logs-stderr-cpp") {
+  deps = [ ":bin" ]
+  manifest = "meta/logs_stderr_cpp.cml"
 }

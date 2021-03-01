@@ -33,6 +33,7 @@ rustc_library("runner") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:test-case",
     "//third_party/rust_crates:thiserror",
   ]
 

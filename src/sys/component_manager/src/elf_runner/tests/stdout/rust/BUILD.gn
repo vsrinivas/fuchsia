@@ -5,6 +5,14 @@
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
+group("rust") {
+  deps = [
+    ":logs-stderr-rust",
+    ":logs-stdout-and-stderr-rust",
+    ":logs-stdout-rust",
+  ]
+}
+
 rustc_binary("bin") {
   name = "prints_when_launched_rust"
   edition = "2018"
@@ -14,8 +22,17 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("prints-when-launched-rust-component") {
+fuchsia_component("logs-stdout-and-stderr-rust") {
   deps = [ ":bin" ]
-  component_name = "prints-when-launched-rust"
-  manifest = "meta/prints_when_launched_rust.cml"
+  manifest = "meta/logs_stdout_and_stderr_rust.cml"
+}
+
+fuchsia_component("logs-stdout-rust") {
+  deps = [ ":bin" ]
+  manifest = "meta/logs_stdout_rust.cml"
+}
+
+fuchsia_component("logs-stderr-rust") {
+  deps = [ ":bin" ]
+  manifest = "meta/logs_stderr_rust.cml"
 }

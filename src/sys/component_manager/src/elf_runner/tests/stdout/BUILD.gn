@@ -41,8 +41,8 @@ fuchsia_test_package("elf_runner_stdout_test") {
   test_components = [ ":stdout_integration_test" ]
 
   deps = [
-    "cpp:prints-when-launched-cpp-component",
-    "go:prints-when-launched-go-component",
-    "rust:prints-when-launched-rust-component",
+    "cpp",
+    "go",
+    "rust",
   ]
 }

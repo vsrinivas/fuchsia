@@ -9,9 +9,9 @@
 //  find docs -name "*.md" | xargs \
 //  grep "\{% includecode .*gerrit_path=\"examples/hello_world/rust/src/main.rs\""
 
-
 fn main() {
     println!("{}, world!", greeting());
+    eprintln!("{}, world!", greeting());
 }
 
 fn greeting() -> String {
@@ -30,8 +30,8 @@ mod tests {
 
 #[cfg(test)]
 mod hello_tests {
-    use fuchsia_async as fasync;
     use crate::greeting;
+    use fuchsia_async as fasync;
 
     // [START async_test]
     #[fasync::run_until_stalled(test)]

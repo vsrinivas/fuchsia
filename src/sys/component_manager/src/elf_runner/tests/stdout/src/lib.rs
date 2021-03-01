@@ -7,37 +7,29 @@ use {
     diagnostics_reader::{ArchiveReader, SubscriptionResultsStream},
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_sys2::ChildRef,
+    fidl_fuchsia_sys2 as fsys,
     fuchsia_async::{OnSignals, Task},
     fuchsia_zircon as zx,
     futures::StreamExt,
 };
 
+const BASE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test";
+const COLLECTION_NAME: &str = "puppets";
 const EXPECTED_STDOUT_PAYLOAD: &str = "Hello Stdout!\n";
 const EXPECTED_STDERR_PAYLOAD: &str = "Hello Stderr!\n";
+// TODO(fxbug.dev/69588): Add golang when bug is resolved.
+const TESTED_LANGUAGUES: [&str; 2] = ["cpp", "rust"];
 
 struct Component {
-    url: &'static str,
-    moniker: &'static str,
+    url: String,
+    moniker: String,
 }
 
-const HELLO_WORLD_COMPONENTS: [Component; 2] = [
-    Component {
-        url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/prints-when-launched-cpp.cm",
-        moniker: "prints_when_launched_cpp",
-    },
-    Component {
-        url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/prints-when-launched-rust.cm",
-        moniker: "prints_when_launched_rust",
-    },
-    /*
-    // TODO(fxbug.dev/69588): Enable this when fix lands for Go runtime.
-    Component {
-        url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/prints-when-launched-go.cm",
-        moniker: "prints_when_launched_go",
-    },
-    */
-];
+#[derive(Clone)]
+struct MessageAssertion {
+    payload: &'static str,
+    severity: Severity,
+}
 
 // TODO(fxbug.dev/69684): Refactor this to receive puppet components
 // through argv once ArchiveAccesor is exposed from Test Runner.
@@ -49,24 +41,61 @@ async fn test_components_logs_to_stdout() {
 
     // Doing this in loop as opposed to separate test cases ensures linear
     // execution for Archivist's log streams.
-    for component in HELLO_WORLD_COMPONENTS.iter() {
-        let mut child_ref = ChildRef { name: component.moniker.to_string(), collection: None };
+    for (component, message_assertions) in get_all_test_components().iter() {
+        start_child_component_and_wait_for_exit(&realm, &component).await;
 
-        // launch our child and wait for it to exit before asserting on its logs
-        let (client_end, server_end) = create_endpoints::<DirectoryMarker>().unwrap();
-        realm
-            .bind_child(&mut child_ref, server_end)
-            .await
-            .expect("failed to make FIDL call")
-            .expect("failed to bind child");
-        OnSignals::new(&client_end, zx::Signals::CHANNEL_PEER_CLOSED).await.unwrap();
-
-        // Puppets should emit 2 messages: one to stdout, another to stderr.
-        let messages = subscription.by_ref().take(2).collect::<Vec<_>>().await;
+        let messages =
+            subscription.by_ref().take(message_assertions.len()).collect::<Vec<_>>().await;
         assert_all_have_attribution(&messages, &component);
-        assert_any_has_content(&messages, EXPECTED_STDOUT_PAYLOAD, Severity::Info);
-        assert_any_has_content(&messages, EXPECTED_STDERR_PAYLOAD, Severity::Warn);
+
+        for message_assertion in message_assertions.iter() {
+            assert_any_has_content(
+                &messages,
+                message_assertion.payload,
+                message_assertion.severity,
+            );
+        }
     }
+}
+
+fn get_all_test_components() -> Vec<(Component, Vec<MessageAssertion>)> {
+    let stdout_assertion =
+        MessageAssertion { payload: EXPECTED_STDOUT_PAYLOAD, severity: Severity::Info };
+
+    let stderr_assertion =
+        MessageAssertion { payload: EXPECTED_STDERR_PAYLOAD, severity: Severity::Warn };
+
+    TESTED_LANGUAGUES
+        .iter()
+        .flat_map(|language| {
+            vec![
+                (
+                    Component {
+                        url: format!(
+                            "{}#meta/logs-stdout-and-stderr-{}.cm",
+                            BASE_PACKAGE_URL, language
+                        ),
+                        moniker: format!("logs_stdout_and_stderr_{}", language),
+                    },
+                    vec![stdout_assertion.clone(), stderr_assertion.clone()],
+                ),
+                (
+                    Component {
+                        url: format!("{}#meta/logs-stdout-{}.cm", BASE_PACKAGE_URL, language),
+                        moniker: format!("logs_stdout_{}", language),
+                    },
+                    vec![stdout_assertion.clone()],
+                ),
+                (
+                    Component {
+                        url: format!("{}#meta/logs-stderr-{}.cm", BASE_PACKAGE_URL, language),
+                        moniker: format!("logs_stderr_{}", language),
+                    },
+                    vec![stderr_assertion.clone()],
+                ),
+            ]
+        })
+        .collect()
 }
 
 async fn launch_embedded_archivist() -> SubscriptionResultsStream<Logs> {
@@ -86,10 +115,41 @@ async fn launch_embedded_archivist() -> SubscriptionResultsStream<Logs> {
     subscription
 }
 
+async fn start_child_component_and_wait_for_exit(realm: &fsys::RealmProxy, component: &Component) {
+    let mut collection_ref = fsys::CollectionRef { name: COLLECTION_NAME.to_owned() };
+    let child_decl = fsys::ChildDecl {
+        name: Some(component.moniker.to_owned()),
+        url: Some(component.url.to_owned()),
+        startup: Some(fsys::StartupMode::Lazy),
+        environment: None,
+        ..fsys::ChildDecl::EMPTY
+    };
+
+    realm
+        .create_child(&mut collection_ref, child_decl)
+        .await
+        .expect("Failed to make FIDL call")
+        .expect("Failed to create child");
+
+    let mut child_ref = fsys::ChildRef {
+        name: component.moniker.to_owned(),
+        collection: Some(COLLECTION_NAME.to_owned()),
+    };
+
+    let (client_end, server_end) = create_endpoints::<DirectoryMarker>().unwrap();
+    realm
+        .bind_child(&mut child_ref, server_end)
+        .await
+        .expect("failed to make FIDL call")
+        .expect("failed to bind child");
+    OnSignals::new(&client_end, zx::Signals::CHANNEL_PEER_CLOSED).await.unwrap();
+}
+
 #[track_caller]
 fn assert_all_have_attribution(messages: &[Data<Logs>], component: &Component) {
     let check_attribution = |msg: &Data<Logs>| {
-        msg.moniker == component.moniker && msg.metadata.component_url == component.url
+        msg.moniker == format!("{}:{}", COLLECTION_NAME, component.moniker)
+            && msg.metadata.component_url == component.url
     };
 
     assert!(messages.iter().all(check_attribution));

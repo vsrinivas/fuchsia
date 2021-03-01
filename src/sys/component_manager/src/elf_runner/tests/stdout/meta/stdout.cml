@@ -6,18 +6,10 @@
     program: {
         binary: "bin/elf_runner_stdout",
     },
-    children: [
+    collections: [
         {
-            name: "prints_when_launched_cpp",
-            url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/prints-when-launched-cpp.cm",
-        },
-        {
-            name: "prints_when_launched_go",
-            url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/prints-when-launched-go.cm",
-        },
-        {
-            name: "prints_when_launched_rust",
-            url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/prints-when-launched-rust.cm",
+            name: "puppets",
+            durability: "transient",
         },
     ],
     use: [
@@ -31,11 +23,7 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [
-                "#prints_when_launched_cpp",
-                "#prints_when_launched_go",
-                "#prints_when_launched_rust",
-            ],
+            to: [ "#puppets" ],
         },
     ],
 }

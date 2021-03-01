@@ -10,6 +10,9 @@ use {
     thiserror::Error,
 };
 
+const FORWARD_STDOUT_PROGRAM_KEY: &str = "forward_stdout_to";
+const FORWARD_STDERR_PROGRAM_KEY: &str = "forward_stderr_to";
+
 /// An error encountered operating on `ComponentStartInfo`.
 #[derive(Debug, PartialEq, Eq, Error)]
 pub enum StartInfoError {
@@ -37,11 +40,14 @@ pub enum StartInfoProgramError {
 
     #[error("the value of \"program.forward_stdout_to\" must be 'none' or 'log'")]
     InvalidStdoutSink,
+
+    #[error("the value of \"program.forward_stderr_to\" must be 'none' or 'log'")]
+    InvalidStderrSink,
 }
 
 /// Target sink for stdout and stderr output streams.
 #[derive(Debug, PartialEq, Eq)]
-pub enum StdoutSink {
+pub enum StreamSink {
     Log,
     None,
 }
@@ -107,93 +113,147 @@ pub fn get_program_args(
     Ok(vec![])
 }
 
-/// Retrieves program.forward_stdout_to from ComponentStartInfo and validates.
+/// Retrieves `program.forward_stdout_to` from ComponentStartInfo and validates.
 /// Valid values for this field are: "log", "none".
 pub fn get_program_stdout_sink(
     start_info: &fcrunner::ComponentStartInfo,
-) -> Result<StdoutSink, StartInfoProgramError> {
-    if let Some(program) = &start_info.program {
-        if let Some(val) = find(program, "forward_stdout_to") {
-            if let fdata::DictionaryValue::Str(sink) = val {
-                match sink.as_str() {
-                    "log" => {
-                        return Ok(StdoutSink::Log);
-                    }
-                    "none" => {
-                        return Ok(StdoutSink::None);
-                    }
-                    _ => {
-                        return Err(StartInfoProgramError::InvalidStdoutSink);
-                    }
-                }
-            }
-        }
+) -> Result<StreamSink, StartInfoProgramError> {
+    get_program_stream_sink_by_key(&start_info, FORWARD_STDOUT_PROGRAM_KEY)
+        .ok_or(StartInfoProgramError::InvalidStdoutSink)
+}
+
+/// Retrieves `program.forward_stderr_to` from ComponentStartInfo and validates.
+/// Valid values for this field are: "log", "none".
+pub fn get_program_stderr_sink(
+    start_info: &fcrunner::ComponentStartInfo,
+) -> Result<StreamSink, StartInfoProgramError> {
+    get_program_stream_sink_by_key(&start_info, FORWARD_STDERR_PROGRAM_KEY)
+        .ok_or(StartInfoProgramError::InvalidStderrSink)
+}
+
+fn get_program_stream_sink_by_key(
+    start_info: &fcrunner::ComponentStartInfo,
+    key: &str,
+) -> Option<StreamSink> {
+    let val = if let Some(val) = start_info.program.as_ref().and_then(|program| find(program, key))
+    {
+        val
+    } else {
+        return Some(StreamSink::None); // Default to None.
+    };
+
+    match val {
+        fdata::DictionaryValue::Str(sink) => match sink.as_str() {
+            "log" => Some(StreamSink::Log),
+            "none" => Some(StreamSink::None),
+            _ => None,
+        },
+        _ => None,
     }
-    Ok(StdoutSink::None)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, test_case::test_case};
 
-    #[test]
-    fn get_resolved_url_test() {
-        let new_start_info = |url: Option<String>| fcrunner::ComponentStartInfo {
-            resolved_url: url,
+    #[test_case(Some("some_url"), Ok("some_url".to_owned()) ; "when url is valid")]
+    #[test_case(None, Err(StartInfoError::MissingUrl) ; "when url is missing")]
+    fn get_resolved_url_test(maybe_url: Option<&str>, expected: Result<String, StartInfoError>) {
+        let start_info = fcrunner::ComponentStartInfo {
+            resolved_url: maybe_url.map(str::to_owned),
             program: None,
             ns: None,
             outgoing_dir: None,
             runtime_dir: None,
             ..fcrunner::ComponentStartInfo::EMPTY
         };
-        assert_eq!(
-            Ok("some_url".to_string()),
-            get_resolved_url(&new_start_info(Some("some_url".to_owned()))),
-        );
+        assert_eq!(get_resolved_url(&start_info), expected,);
+    }
 
-        assert_eq!(Err(StartInfoError::MissingUrl), get_resolved_url(&new_start_info(None)));
+    #[test_case(Some("bin/myexecutable"), Ok("bin/myexecutable".to_owned()) ; "when binary value is valid")]
+    #[test_case(Some("/bin/myexecutable"), Err(StartInfoProgramError::BinaryPathNotRelative) ; "when binary path is not relative")]
+    #[test_case(None, Err(StartInfoProgramError::NotFound) ; "when program stanza is not set")]
+    fn get_program_binary_test(
+        maybe_value: Option<&str>,
+        expected: Result<String, StartInfoProgramError>,
+    ) {
+        let start_info = match maybe_value {
+            Some(value) => new_start_info(Some(new_program_stanza("binary", value))),
+            None => new_start_info(None),
+        };
+        assert_eq!(get_program_binary(&start_info), expected);
     }
 
     #[test]
-    fn get_program_binary_test() {
-        let new_start_info = |binary_name: Option<&str>| fcrunner::ComponentStartInfo {
-            program: Some(fdata::Dictionary {
-                entries: Some(vec![fdata::DictionaryEntry {
-                    key: "binary".to_string(),
-                    value: binary_name
-                        .and_then(|s| Some(Box::new(fdata::DictionaryValue::Str(s.to_string())))),
-                }]),
-                ..fdata::Dictionary::EMPTY
-            }),
-            ns: None,
-            outgoing_dir: None,
-            runtime_dir: None,
-            resolved_url: None,
-            ..fcrunner::ComponentStartInfo::EMPTY
-        };
-        assert_eq!(
-            Ok("bin/myexecutable".to_string()),
-            get_program_binary(&new_start_info(Some("bin/myexecutable"))),
-        );
-        assert_eq!(
-            Err(StartInfoProgramError::BinaryPathNotRelative),
-            get_program_binary(&new_start_info(Some("/bin/myexecutable")))
-        );
-        assert_eq!(
-            Err(StartInfoProgramError::MissingBinary),
-            get_program_binary(&new_start_info(None))
-        );
+    fn get_program_binary_test_when_binary_key_is_missing() {
+        let start_info = new_start_info(Some(new_program_stanza("some_other_key", "bin/foo")));
+        assert_eq!(get_program_binary(&start_info), Err(StartInfoProgramError::MissingBinary));
     }
 
-    fn new_args_set(args: Vec<String>) -> fcrunner::ComponentStartInfo {
+    #[test_case(&[], Ok(vec![]) ; "when args is empty")]
+    #[test_case(&["a".to_owned()], Ok(vec!["a".to_owned()]) ; "when args is a")]
+    #[test_case(&["a".to_owned(), "b".to_owned()], Ok(vec!["a".to_owned(), "b".to_owned()]) ; "when args a and b")]
+    fn get_program_args_test(
+        args: &[String],
+        expected: Result<Vec<String>, StartInfoProgramError>,
+    ) {
+        let start_info = new_start_info(Some(new_program_stanza_with_vec("args", Vec::from(args))));
+        assert_eq!(get_program_args(&start_info), expected);
+    }
+
+    #[test_case(Some("log"), Ok(StreamSink::Log) ; "when value is 'log'")]
+    #[test_case(Some("none"), Ok(StreamSink::None) ; "when value is 'none'")]
+    #[test_case(None, Ok(StreamSink::None) ; "when value is not set")]
+    #[test_case(Some("unknown_value"), Err(StartInfoProgramError::InvalidStdoutSink) ; "when value is invalid")]
+    fn get_program_stdout_sink_test(
+        maybe_value: Option<&str>,
+        expected: Result<StreamSink, StartInfoProgramError>,
+    ) {
+        let start_info = match maybe_value {
+            Some(value) => new_start_info(Some(new_program_stanza("forward_stdout_to", value))),
+            None => new_start_info(None),
+        };
+        assert_eq!(expected, get_program_stdout_sink(&start_info));
+    }
+
+    #[test_case(Some("log"), Ok(StreamSink::Log) ; "when value is 'log'")]
+    #[test_case(Some("none"), Ok(StreamSink::None) ; "when value is 'none'")]
+    #[test_case(None, Ok(StreamSink::None) ; "when value is not set")]
+    #[test_case(Some("unknown_value"), Err(StartInfoProgramError::InvalidStderrSink) ; "when value is invalid")]
+    fn get_program_stderr_sink_test(
+        maybe_value: Option<&str>,
+        expected: Result<StreamSink, StartInfoProgramError>,
+    ) {
+        let start_info = match maybe_value {
+            Some(value) => new_start_info(Some(new_program_stanza("forward_stderr_to", value))),
+            None => new_start_info(None),
+        };
+        assert_eq!(expected, get_program_stderr_sink(&start_info));
+    }
+
+    #[test_case(
+        "forward_stdout_to",
+        get_program_stdout_sink,
+        Err(StartInfoProgramError::InvalidStdoutSink)
+    )]
+    #[test_case(
+        "forward_stderr_to",
+        get_program_stderr_sink,
+        Err(StartInfoProgramError::InvalidStderrSink)
+    )]
+    fn get_program_str_fails_if_value_is_vec(
+        key: &str,
+        get_fn: fn(&fcrunner::ComponentStartInfo) -> Result<StreamSink, StartInfoProgramError>,
+        expected: Result<StreamSink, StartInfoProgramError>,
+    ) {
+        let values = vec!["a".to_owned()];
+        let start_info = new_start_info(Some(new_program_stanza_with_vec(key, values)));
+        assert_eq!(expected, get_fn(&start_info));
+    }
+
+    fn new_start_info(program: Option<fdata::Dictionary>) -> fcrunner::ComponentStartInfo {
         fcrunner::ComponentStartInfo {
-            program: Some(fdata::Dictionary {
-                entries: Some(vec![fdata::DictionaryEntry {
-                    key: "args".to_string(),
-                    value: Some(Box::new(fdata::DictionaryValue::StrVec(args))),
-                }]),
-                ..fdata::Dictionary::EMPTY
-            }),
+            program: program,
             ns: None,
             outgoing_dir: None,
             runtime_dir: None,
@@ -202,62 +262,23 @@ mod tests {
         }
     }
 
-    #[test]
-    fn get_program_args_test() {
-        let e: Vec<String> = vec![];
-
-        assert_eq!(
-            e,
-            get_program_args(&fcrunner::ComponentStartInfo {
-                program: Some(fdata::Dictionary {
-                    entries: Some(vec![]),
-                    ..fdata::Dictionary::EMPTY
-                }),
-                ns: None,
-                outgoing_dir: None,
-                runtime_dir: None,
-                resolved_url: None,
-                ..fcrunner::ComponentStartInfo::EMPTY
-            })
-            .unwrap()
-        );
-
-        assert_eq!(e, get_program_args(&new_args_set(vec![])).unwrap());
-
-        assert_eq!(
-            Ok(vec!["a".to_string()]),
-            get_program_args(&new_args_set(vec!["a".to_string()]))
-        );
-
-        assert_eq!(
-            Ok(vec!["a".to_string(), "b".to_string()]),
-            get_program_args(&new_args_set(vec!["a".to_string(), "b".to_string()]))
-        );
+    fn new_program_stanza(key: &str, value: &str) -> fdata::Dictionary {
+        fdata::Dictionary {
+            entries: Some(vec![fdata::DictionaryEntry {
+                key: key.to_owned(),
+                value: Some(Box::new(fdata::DictionaryValue::Str(value.to_owned()))),
+            }]),
+            ..fdata::Dictionary::EMPTY
+        }
     }
 
-    #[test]
-    fn get_program_stdout_sink_test() {
-        let new_start_info = |sink: Option<&str>| fcrunner::ComponentStartInfo {
-            program: Some(fdata::Dictionary {
-                entries: Some(vec![fdata::DictionaryEntry {
-                    key: "forward_stdout_to".to_string(),
-                    value: sink
-                        .and_then(|s| Some(Box::new(fdata::DictionaryValue::Str(s.to_string())))),
-                }]),
-                ..fdata::Dictionary::EMPTY
-            }),
-            ns: None,
-            outgoing_dir: None,
-            runtime_dir: None,
-            resolved_url: None,
-            ..fcrunner::ComponentStartInfo::EMPTY
-        };
-        assert_eq!(Ok(StdoutSink::Log), get_program_stdout_sink(&new_start_info(Some("log"))),);
-        assert_eq!(Ok(StdoutSink::None), get_program_stdout_sink(&new_start_info(Some("none"))),);
-        assert_eq!(Ok(StdoutSink::None), get_program_stdout_sink(&new_start_info(None)),);
-        assert_eq!(
-            Err(StartInfoProgramError::InvalidStdoutSink),
-            get_program_stdout_sink(&new_start_info(Some("unknown_value")))
-        );
+    fn new_program_stanza_with_vec(key: &str, values: Vec<String>) -> fdata::Dictionary {
+        fdata::Dictionary {
+            entries: Some(vec![fdata::DictionaryEntry {
+                key: key.to_owned(),
+                value: Some(Box::new(fdata::DictionaryValue::StrVec(values))),
+            }]),
+            ..fdata::Dictionary::EMPTY
+        }
     }
 }

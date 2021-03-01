@@ -282,6 +282,9 @@ impl ElfRunner {
         let stdout_sink = runner::get_program_stdout_sink(&start_info)
             .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
 
+        let stderr_sink = runner::get_program_stderr_sink(&start_info)
+            .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
+
         // TODO(fxbug.dev/45586): runtime_dir may be unavailable in tests. We should fix tests so
         // that we don't have to have this check here.
         let runtime_dir_builder = match start_info.runtime_dir {
@@ -303,18 +306,14 @@ impl ElfRunner {
         )
         .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
 
-        let (tasks, stdio_handles) = match stdout_sink {
-            runner::StdoutSink::Log => stdout::forward_stdout_to_syslog(&ns)
+        let (stdout_and_stderr_tasks, stdout_and_stderr_handles) =
+            stdout::bind_streams_to_syslog(&ns, stdout_sink, stderr_sink)
                 .await
-                .map_err(|s| RunnerError::component_launch_error(resolved_url.clone(), s))?,
-            runner::StdoutSink::None => {
-                (Vec::<fasync::Task<()>>::new(), Vec::<fproc::HandleInfo>::new())
-            }
-        };
+                .map_err(|s| RunnerError::component_launch_error(resolved_url.clone(), s))?;
 
         let mut handle_infos = vec![];
 
-        handle_infos.extend(stdio_handles);
+        handle_infos.extend(stdout_and_stderr_handles);
 
         if let Some(outgoing_dir) = start_info.outgoing_dir {
             handle_infos.push(fproc::HandleInfo {
@@ -365,7 +364,11 @@ impl ElfRunner {
             .await
             .map_err(|e| RunnerError::component_load_error(resolved_url.clone(), e))?;
 
-        Ok(Some(ConfigureLauncherResult { launch_info, runtime_dir_builder, tasks }))
+        Ok(Some(ConfigureLauncherResult {
+            launch_info,
+            runtime_dir_builder,
+            tasks: stdout_and_stderr_tasks,
+        }))
     }
 
     async fn start_component(
@@ -1607,6 +1610,10 @@ mod tests {
                         key: "forward_stdout_to".to_string(),
                         value: Some(Box::new(fdata::DictionaryValue::Str("log".to_string()))),
                     },
+                    fdata::DictionaryEntry {
+                        key: "forward_stderr_to".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("log".to_string()))),
+                    },
                 ]),
                 ..fdata::Dictionary::EMPTY
             }),
@@ -1621,7 +1628,7 @@ mod tests {
     // //src/sys/component_manager/src/model/namespace.rs tests. Shared
     // functionality should be refactored into a common test util lib.
     #[fuchsia::test]
-    async fn enable_stdout_logging() -> Result<(), Error> {
+    async fn enable_stdout_and_stderr_logging() -> Result<(), Error> {
         let (dir, ns) = create_fs_with_mock_logsink()?;
 
         let run_component_fut = async move {
