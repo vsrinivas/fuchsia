@@ -7,6 +7,7 @@ group("storage") {
     "fs_management",
     "pseudo-fs",
     "ramdevice_client",
+    "vfs/cpp",
     "vfs/rust:vfs",
   ]
 }
@@ -21,6 +22,7 @@ group("tests") {
     "fuchsia-watch:tests",
     "pseudo-fs:tests",
     "ramdevice_client:tests",
+    "vfs/cpp:tests",
     "vfs/rust:tests",
   ]
 }

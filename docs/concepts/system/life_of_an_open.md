@@ -187,11 +187,18 @@ underlying filesystem where appropriate. Notably, this layer is completely
 optional -- if a filesystem server does not want to link against this library,
 they have no obligation to use it. To be a filesystem server, a process must
 merely understand the FIDL wire format. As a consequence, there could be
-any number of “VFS” implementations in a language, but at the time of writing,
-two well-known implementations exist: one written in C++ within the
-[libfs library](/zircon/system/ulib/fs/),
-and another written in Go in the
-[rpc package of ThinFS](/src/lib/thinfs/zircon/rpc/rpc.go).
+any number of “VFS” implementations in a language. There are currently these
+implementations:
+
+  * [In-tree C++ VFS](/src/lib/storage/vfs/cpp): Used by Fuchsia's "main" filesystems minfs and
+    blobfs. It currently has the most features of any VFS implementation, but can also be the most
+    difficult to use.
+  * [In-tree Rust VFS](/src/lib/storage/vfs/rust): This is used by some Rust filesystems including
+    the fat32 implementation. It is newer and currently has fewer features than the C++
+    implementation.
+  * [SDK C++ VFS](/sdk/lib/vfs/cpp): A somewhat simplified version of of the "in-tree" C++ version
+    for SDK users. This is most commonly used for simpler uses like service discovery.
+  * [Rpc package of ThinFS](/src/lib/thinfs/zircon/rpc/rpc.go): Go VFS implementation.
 
 The VFS layer defines the interface of operations that may be routed to the
 underlying filesystem, including:
