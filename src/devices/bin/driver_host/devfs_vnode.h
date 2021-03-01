@@ -51,14 +51,15 @@ class DevfsVnode : public fs::Vnode, public llcpp::fuchsia::device::Controller::
   void GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync& _completer) override;
   void SetPerformanceState(uint32_t requested_state,
                            SetPerformanceStateCompleter::Sync& _completer) override;
-  void ConfigureAutoSuspend(bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_state,
+  void ConfigureAutoSuspend(bool enable,
+                            ::llcpp::fuchsia::device::wire::DevicePowerState requested_state,
                             ConfigureAutoSuspendCompleter::Sync& _completer) override;
 
   void UpdatePowerStateMapping(
       ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping,
       UpdatePowerStateMappingCompleter::Sync& _completer) override;
   void GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& _completer) override;
-  void Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state,
+  void Suspend(::llcpp::fuchsia::device::wire::DevicePowerState requested_state,
                SuspendCompleter::Sync& _completer) override;
   void Resume(ResumeCompleter::Sync& _complete) override;
 

@@ -115,7 +115,8 @@ class TestServer final : public fuchsia_io::File::Interface {
   void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
                WriteAtCompleter::Sync& completer) override {}
 
-  void Seek(int64_t offset, fuchsia_io::SeekOrigin start, SeekCompleter::Sync& completer) override {
+  void Seek(int64_t offset, fuchsia_io::wire::SeekOrigin start,
+            SeekCompleter::Sync& completer) override {
     if (!context->supports_seek) {
       completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
     }

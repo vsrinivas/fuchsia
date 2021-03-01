@@ -73,8 +73,8 @@ enum class Command {
 struct Flags {
   Command cmd;
   const char* cmd_name = nullptr;
-  ::llcpp::fuchsia::paver::Configuration configuration;
-  ::llcpp::fuchsia::paver::Asset asset;
+  ::llcpp::fuchsia::paver::wire::Configuration configuration;
+  ::llcpp::fuchsia::paver::wire::Asset asset;
   fbl::unique_fd payload_fd;
   const char* path = nullptr;
   const char* block_device = nullptr;
@@ -100,32 +100,32 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
     flags->cmd = Command::kBootloader;
   } else if (!strcmp(argv[0], "install-kernc")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::Configuration::A;
-    flags->asset = ::llcpp::fuchsia::paver::Asset::KERNEL;
+    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::A;
+    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::KERNEL;
   } else if (!strcmp(argv[0], "install-zircona")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::Configuration::A;
-    flags->asset = ::llcpp::fuchsia::paver::Asset::KERNEL;
+    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::A;
+    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::KERNEL;
   } else if (!strcmp(argv[0], "install-zirconb")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::Configuration::B;
-    flags->asset = ::llcpp::fuchsia::paver::Asset::KERNEL;
+    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::B;
+    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::KERNEL;
   } else if (!strcmp(argv[0], "install-zirconr")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::Configuration::RECOVERY;
-    flags->asset = ::llcpp::fuchsia::paver::Asset::KERNEL;
+    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::RECOVERY;
+    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::KERNEL;
   } else if (!strcmp(argv[0], "install-vbmetaa")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::Configuration::A;
-    flags->asset = ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA;
+    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::A;
+    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::VERIFIED_BOOT_METADATA;
   } else if (!strcmp(argv[0], "install-vbmetab")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::Configuration::B;
-    flags->asset = ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA;
+    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::B;
+    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::VERIFIED_BOOT_METADATA;
   } else if (!strcmp(argv[0], "install-vbmetar")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::Configuration::RECOVERY;
-    flags->asset = ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA;
+    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::RECOVERY;
+    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::VERIFIED_BOOT_METADATA;
   } else if (!strcmp(argv[0], "install-data-file")) {
     flags->cmd = Command::kDataFile;
   } else if (!strcmp(argv[0], "install-fvm")) {

@@ -341,11 +341,12 @@ TEST_F(VirtioInputTest, KeyboardTest) {
 
     ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 4U);
     EXPECT_EQ(input_report.keyboard().pressed_keys()[0],
-              llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
-    EXPECT_EQ(input_report.keyboard().pressed_keys()[1], llcpp::fuchsia::ui::input2::Key::A);
+              llcpp::fuchsia::ui::input2::wire::Key::LEFT_SHIFT);
+    EXPECT_EQ(input_report.keyboard().pressed_keys()[1], llcpp::fuchsia::ui::input2::wire::Key::A);
     EXPECT_EQ(input_report.keyboard().pressed_keys()[2],
-              llcpp::fuchsia::ui::input2::Key::RIGHT_ALT);
-    EXPECT_EQ(input_report.keyboard().pressed_keys()[3], llcpp::fuchsia::ui::input2::Key::DOWN);
+              llcpp::fuchsia::ui::input2::wire::Key::RIGHT_ALT);
+    EXPECT_EQ(input_report.keyboard().pressed_keys()[3],
+              llcpp::fuchsia::ui::input2::wire::Key::DOWN);
   }
 }
 

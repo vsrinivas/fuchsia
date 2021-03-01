@@ -43,9 +43,9 @@ zx_status_t RxBuffer::WriteData(const uint8_t* data, size_t len,
 
 void RxBuffer::FillReturn() {
   return_.total_length = 0;
-  return_.meta.info_type = static_cast<uint32_t>(netdev::InfoType::NO_INFO);
+  return_.meta.info_type = static_cast<uint32_t>(netdev::wire::InfoType::NO_INFO);
   return_.meta.flags = 0;
-  return_.meta.frame_type = static_cast<uint8_t>(netdev::FrameType::ETHERNET);
+  return_.meta.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::ETHERNET);
   return_.id = buffer_.id;
 }
 
@@ -57,7 +57,7 @@ FakeNetworkDeviceImpl::FakeNetworkDeviceImpl()
           .tx_depth = kTxDepth,
           .rx_depth = kRxDepth,
           .rx_threshold = kRxDepth / 2,
-          .device_class = static_cast<uint8_t>(netdev::DeviceClass::ETHERNET),
+          .device_class = static_cast<uint8_t>(netdev::wire::DeviceClass::ETHERNET),
           .rx_types_list = rx_types_.data(),
           .rx_types_count = 1,
           .tx_types_list = tx_types_.data(),
@@ -65,8 +65,8 @@ FakeNetworkDeviceImpl::FakeNetworkDeviceImpl()
           .max_buffer_length = ZX_PAGE_SIZE / 2,
           .buffer_alignment = ZX_PAGE_SIZE,
       }) {
-  rx_types_[0] = static_cast<uint8_t>(netdev::FrameType::ETHERNET);
-  tx_types_[0].type = static_cast<uint8_t>(netdev::FrameType::ETHERNET);
+  rx_types_[0] = static_cast<uint8_t>(netdev::wire::FrameType::ETHERNET);
+  tx_types_[0].type = static_cast<uint8_t>(netdev::wire::FrameType::ETHERNET);
   tx_types_[0].supported_flags = 0;
   tx_types_[0].features = netdev::FRAME_FEATURES_RAW;
 
@@ -216,13 +216,14 @@ zx_status_t FakeNetworkDeviceImpl::CreateChild(async_dispatcher_t* dispatcher,
 zx_status_t TestSession::Open(netdev::Device::SyncClient& netdevice, const char* name,
                               netdev::wire::SessionFlags flags, uint16_t num_descriptors,
                               uint64_t buffer_size,
-                              fidl::VectorView<netdev::FrameType> frame_types) {
-  netdev::FrameType supported_frames[1];
-  supported_frames[0] = netdev::FrameType::ETHERNET;
+                              fidl::VectorView<netdev::wire::FrameType> frame_types) {
+  netdev::wire::FrameType supported_frames[1];
+  supported_frames[0] = netdev::wire::FrameType::ETHERNET;
   netdev::SessionInfo info{};
   if (frame_types.count() == 0) {
     // default to just ethernet
-    info.rx_frames = fidl::VectorView<netdev::FrameType>(fidl::unowned_ptr(supported_frames), 1);
+    info.rx_frames =
+        fidl::VectorView<netdev::wire::FrameType>(fidl::unowned_ptr(supported_frames), 1);
   } else {
     info.rx_frames = std::move(frame_types);
   }
@@ -312,9 +313,9 @@ zx_status_t TestSession::WaitClosed(zx::time deadline) {
 
 buffer_descriptor_t* TestSession::ResetDescriptor(uint16_t index) {
   auto* desc = descriptor(index);
-  desc->frame_type = static_cast<uint8_t>(netdev::FrameType::ETHERNET);
+  desc->frame_type = static_cast<uint8_t>(netdev::wire::FrameType::ETHERNET);
   desc->offset = canonical_offset(index);
-  desc->info_type = static_cast<uint32_t>(netdev::InfoType::NO_INFO);
+  desc->info_type = static_cast<uint32_t>(netdev::wire::InfoType::NO_INFO);
   desc->head_length = 0;
   desc->data_length = static_cast<uint32_t>(buffer_length_);
   desc->tail_length = 0;

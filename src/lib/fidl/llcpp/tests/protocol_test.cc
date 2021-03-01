@@ -48,7 +48,7 @@ class ErrorServer : public test::ErrorMethods::Interface {
   void ManyArgsCustomError(bool should_error,
                            ManyArgsCustomErrorCompleter::Sync& completer) override {
     if (should_error) {
-      completer.ReplyError(test::MyError::REALLY_BAD_ERROR);
+      completer.ReplyError(test::wire::MyError::REALLY_BAD_ERROR);
     } else {
       completer.ReplySuccess(1, 2, 3);
     }
@@ -99,7 +99,7 @@ TEST_F(ResultTest, OwnedCustomError) {
   auto resp = client.ManyArgsCustomError(true);
   ASSERT_TRUE(resp.ok());
   ASSERT_TRUE(resp->result.is_err());
-  EXPECT_EQ(resp->result.err(), test::MyError::REALLY_BAD_ERROR);
+  EXPECT_EQ(resp->result.err(), test::wire::MyError::REALLY_BAD_ERROR);
 }
 
 TEST_F(ResultTest, OwnedSuccessNoArgs) {

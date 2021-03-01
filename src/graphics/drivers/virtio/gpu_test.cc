@@ -25,7 +25,7 @@ class StubBufferCollection : public mock_sysmem::MockBufferCollection {
   void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
                       SetConstraintsCompleter::Sync& _completer) override {
     auto& image_constraints = constraints.image_format_constraints[0];
-    EXPECT_EQ(sysmem::PixelFormatType::BGRA32, image_constraints.pixel_format.type);
+    EXPECT_EQ(sysmem::wire::PixelFormatType::BGRA32, image_constraints.pixel_format.type);
     EXPECT_EQ(4u, image_constraints.bytes_per_row_divisor);
   }
   void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& _completer) override {
@@ -34,7 +34,7 @@ class StubBufferCollection : public mock_sysmem::MockBufferCollection {
     info.buffer_count = 1;
     ASSERT_OK(zx::vmo::create(4096, 0, &info.buffers[0].vmo));
     sysmem::ImageFormatConstraints& constraints = info.settings.image_format_constraints;
-    constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+    constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
     constraints.pixel_format.has_format_modifier = true;
     constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
     constraints.max_coded_width = 1000;

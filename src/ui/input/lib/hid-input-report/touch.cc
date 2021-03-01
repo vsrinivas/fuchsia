@@ -35,10 +35,10 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
 
   if (main_collection->usage ==
       hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchScreen)) {
-    touch_type_ = fuchsia_input_report::TouchType::TOUCHSCREEN;
+    touch_type_ = fuchsia_input_report::wire::TouchType::TOUCHSCREEN;
   } else if (main_collection->usage ==
              hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchPad)) {
-    touch_type_ = fuchsia_input_report::TouchType::TOUCHPAD;
+    touch_type_ = fuchsia_input_report::wire::TouchType::TOUCHPAD;
   } else {
     return ParseResult::kNoCollection;
   }

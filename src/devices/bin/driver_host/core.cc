@@ -32,8 +32,8 @@
 #include "driver_host.h"
 #include "log.h"
 
-using llcpp::fuchsia::device::DevicePowerState;
-using llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState;
+using llcpp::fuchsia::device::wire::DevicePowerState;
+using llcpp::fuchsia::hardware::power::statecontrol::wire::SystemPowerState;
 
 namespace internal {
 
@@ -439,7 +439,7 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
   }
   VLOGD(1, *dev, "Adding device %p (parent %p)", dev.get(), parent.get());
 
-  // Don't create an event handle if we alredy have one
+  // Don't create an event handle if we already have one
   if (!dev->event.is_valid() &&
       ((status = zx::eventpair::create(0, &dev->event, &dev->local_event)) < 0)) {
     return status;
@@ -631,7 +631,7 @@ void DriverHostContext::DeviceUnbindReply(const fbl::RefPtr<zx_device_t>& dev) {
 
 void DriverHostContext::DeviceSuspendReply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
                                            uint8_t out_state) {
-  // There are 3 references when this function gets called in repsonse to
+  // There are 3 references when this function gets called in response to
   // selective suspend on a device. 1. When we create a connection in ReadMessage
   // 2. When we wrap the txn in Transaction.
   // 3. When we make the suspend txn asynchronous using ToAsync()
@@ -866,7 +866,7 @@ zx_status_t DriverHostContext::DeviceConfigureAutoSuspend(const fbl::RefPtr<zx_d
 }
 
 void DriverHostContext::QueueDeviceForFinalization(zx_device_t* device) {
-  // Put on the defered work list for finalization
+  // Put on the deferred work list for finalization
   defer_device_list_.push_back(device);
 
   // Immediately finalize if there's not an active enumerator

@@ -36,34 +36,35 @@ std::unique_ptr<Type> GetType(ServerInterpreterContext* context, uint64_t node_f
     return std::make_unique<TypeUndefined>();
   }
   if (shell_type.is_builtin_type()) {
+    using llcpp::fuchsia::shell::wire::BuiltinType;
     switch (shell_type.builtin_type()) {
-      case llcpp::fuchsia::shell::BuiltinType::BOOL:
+      case BuiltinType::BOOL:
         return std::make_unique<TypeBool>();
-      case llcpp::fuchsia::shell::BuiltinType::CHAR:
+      case BuiltinType::CHAR:
         return std::make_unique<TypeChar>();
-      case llcpp::fuchsia::shell::BuiltinType::STRING:
+      case BuiltinType::STRING:
         return std::make_unique<TypeString>();
-      case llcpp::fuchsia::shell::BuiltinType::INT8:
+      case BuiltinType::INT8:
         return std::make_unique<TypeInt8>();
-      case llcpp::fuchsia::shell::BuiltinType::UINT8:
+      case BuiltinType::UINT8:
         return std::make_unique<TypeUint8>();
-      case llcpp::fuchsia::shell::BuiltinType::INT16:
+      case BuiltinType::INT16:
         return std::make_unique<TypeInt16>();
-      case llcpp::fuchsia::shell::BuiltinType::UINT16:
+      case BuiltinType::UINT16:
         return std::make_unique<TypeUint16>();
-      case llcpp::fuchsia::shell::BuiltinType::INT32:
+      case BuiltinType::INT32:
         return std::make_unique<TypeInt32>();
-      case llcpp::fuchsia::shell::BuiltinType::UINT32:
+      case BuiltinType::UINT32:
         return std::make_unique<TypeUint32>();
-      case llcpp::fuchsia::shell::BuiltinType::INT64:
+      case BuiltinType::INT64:
         return std::make_unique<TypeInt64>();
-      case llcpp::fuchsia::shell::BuiltinType::UINT64:
+      case BuiltinType::UINT64:
         return std::make_unique<TypeUint64>();
-      case llcpp::fuchsia::shell::BuiltinType::INTEGER:
+      case BuiltinType::INTEGER:
         return std::make_unique<TypeInteger>();
-      case llcpp::fuchsia::shell::BuiltinType::FLOAT32:
+      case BuiltinType::FLOAT32:
         return std::make_unique<TypeFloat32>();
-      case llcpp::fuchsia::shell::BuiltinType::FLOAT64:
+      case BuiltinType::FLOAT64:
         return std::make_unique<TypeFloat64>();
       default:
         break;
@@ -97,6 +98,7 @@ class SerializeHelper {
 
   TypeAndValue Set(const Value& value) {
     TypeAndValue id;
+    using llcpp::fuchsia::shell::wire::BuiltinType;
     switch (value.type()) {
       case ValueType::kUndef: {
         id.value_id.file_id = -1;
@@ -106,40 +108,40 @@ class SerializeHelper {
       }
       case ValueType::kInt8:
         id.value_id = builder_.AddIntegerLiteral(value.GetInt8());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::INT8);
+        id.type = GetBuiltin(BuiltinType::INT8);
         break;
       case ValueType::kUint8:
         id.value_id = builder_.AddIntegerLiteral(value.GetUint8());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT8);
+        id.type = GetBuiltin(BuiltinType::UINT8);
         break;
       case ValueType::kInt16:
         id.value_id = builder_.AddIntegerLiteral(value.GetInt16());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::INT16);
+        id.type = GetBuiltin(BuiltinType::INT16);
         break;
       case ValueType::kUint16:
         id.value_id = builder_.AddIntegerLiteral(value.GetUint16());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT16);
+        id.type = GetBuiltin(BuiltinType::UINT16);
         break;
       case ValueType::kInt32:
         id.value_id = builder_.AddIntegerLiteral(value.GetInt32());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::INT32);
+        id.type = GetBuiltin(BuiltinType::INT32);
         break;
       case ValueType::kUint32:
         id.value_id = builder_.AddIntegerLiteral(value.GetUint32());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT32);
+        id.type = GetBuiltin(BuiltinType::UINT32);
         break;
       case ValueType::kInt64:
         id.value_id = builder_.AddIntegerLiteral(value.GetInt64());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::INT64);
+        id.type = GetBuiltin(BuiltinType::INT64);
         break;
       case ValueType::kUint64:
         id.value_id = builder_.AddIntegerLiteral(value.GetUint64());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT64);
+        id.type = GetBuiltin(BuiltinType::UINT64);
         break;
       // Float ?
       case ValueType::kString:
         id.value_id = builder_.AddStringLiteral(value.GetString()->value());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::STRING);
+        id.type = GetBuiltin(BuiltinType::STRING);
         break;
       case ValueType::kObject: {
         builder_.OpenObject();
@@ -159,7 +161,7 @@ class SerializeHelper {
     return id;
   }
 
-  llcpp::fuchsia::shell::ShellType GetBuiltin(llcpp::fuchsia::shell::BuiltinType type) {
+  llcpp::fuchsia::shell::ShellType GetBuiltin(llcpp::fuchsia::shell::wire::BuiltinType type) {
     return builder_.TypeBuiltin(type);
   }
 
@@ -232,17 +234,19 @@ void ServerInterpreter::DumpDone(ExecutionContext* context) {
 
 void ServerInterpreter::ContextDone(ExecutionContext* context) {
   FX_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(), llcpp::fuchsia::shell::ExecuteResult::OK);
+  service_->OnExecutionDone(context->id(), llcpp::fuchsia::shell::wire::ExecuteResult::OK);
 }
 
 void ServerInterpreter::ContextDoneWithAnalysisError(ExecutionContext* context) {
   FX_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(), llcpp::fuchsia::shell::ExecuteResult::ANALYSIS_ERROR);
+  service_->OnExecutionDone(context->id(),
+                            llcpp::fuchsia::shell::wire::ExecuteResult::ANALYSIS_ERROR);
 }
 
 void ServerInterpreter::ContextDoneWithExecutionError(ExecutionContext* context) {
   FX_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(), llcpp::fuchsia::shell::ExecuteResult::EXECUTION_ERROR);
+  service_->OnExecutionDone(context->id(),
+                            llcpp::fuchsia::shell::wire::ExecuteResult::EXECUTION_ERROR);
 }
 
 void ServerInterpreter::TextResult(ExecutionContext* context, std::string_view text) {

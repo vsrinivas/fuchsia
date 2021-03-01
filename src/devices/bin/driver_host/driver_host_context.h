@@ -66,7 +66,7 @@ class DriverHostContext {
       TA_REQ(api_lock_);
   zx_status_t DeviceRebind(const fbl::RefPtr<zx_device_t>& dev) TA_REQ(api_lock_);
   void DeviceSuspendNew(const fbl::RefPtr<zx_device_t>& dev,
-                        ::llcpp::fuchsia::device::DevicePowerState requested_state);
+                        ::llcpp::fuchsia::device::wire::DevicePowerState requested_state);
   void DeviceSuspendReply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
                           uint8_t out_state) TA_REQ(api_lock_);
   void DeviceResumeNew(const fbl::RefPtr<zx_device_t>& dev);
@@ -85,7 +85,7 @@ class DriverHostContext {
                                         uint32_t requested_state, uint32_t* out_state);
   zx_status_t DeviceConfigureAutoSuspend(
       const fbl::RefPtr<zx_device_t>& dev, bool enable,
-      ::llcpp::fuchsia::device::DevicePowerState requested_state);
+      ::llcpp::fuchsia::device::wire::DevicePowerState requested_state);
   void DeviceSystemResume(const fbl::RefPtr<zx_device_t>& dev, uint32_t target_system_state)
       TA_REQ(api_lock_);
   void DeviceDestroy(zx_device_t* dev) TA_REQ(api_lock_);

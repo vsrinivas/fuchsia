@@ -87,9 +87,9 @@ std::unique_ptr<ResultType> DeserializeResult::DeserializeType(
     const llcpp::fuchsia::shell::ShellType& shell_type) {
   if (shell_type.is_builtin_type()) {
     switch (shell_type.builtin_type()) {
-      case llcpp::fuchsia::shell::BuiltinType::UINT64:
+      case llcpp::fuchsia::shell::wire::BuiltinType::UINT64:
         return std::make_unique<ResultTypeUint64>();
-      case llcpp::fuchsia::shell::BuiltinType::STRING:
+      case llcpp::fuchsia::shell::wire::BuiltinType::STRING:
         return std::make_unique<ResultTypeString>();
       default:
         return nullptr;

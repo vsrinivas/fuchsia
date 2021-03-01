@@ -21,24 +21,24 @@ namespace hid_input_report {
 namespace {
 
 void InsertFuchsiaKey(uint32_t hid_usage, uint32_t hid_key,
-                      std::set<::llcpp::fuchsia::ui::input2::Key>* key_values) {
+                      std::set<::llcpp::fuchsia::ui::input2::wire::Key>* key_values) {
   std::optional<fuchsia::ui::input2::Key> fuchsia_key =
       key_util::hid_key_to_fuchsia_key(hid::USAGE(hid_usage, hid_key));
   if (fuchsia_key) {
     // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be
     // equivalent.
-    key_values->insert(static_cast<llcpp::fuchsia::ui::input2::Key>(*fuchsia_key));
+    key_values->insert(static_cast<llcpp::fuchsia::ui::input2::wire::Key>(*fuchsia_key));
   }
 }
 
 void InsertFuchsiaKey3(uint32_t hid_usage, uint32_t hid_key,
-                       std::set<::llcpp::fuchsia::input::Key>* key_values) {
+                       std::set<::llcpp::fuchsia::input::wire::Key>* key_values) {
   std::optional<fuchsia::input::Key> fuchsia_key3 =
       key_util::hid_key_to_fuchsia_key3(hid::USAGE(hid_usage, hid_key));
   if (fuchsia_key3) {
     // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be
     // equivalent.
-    key_values->insert(static_cast<llcpp::fuchsia::input::Key>(*fuchsia_key3));
+    key_values->insert(static_cast<llcpp::fuchsia::input::wire::Key>(*fuchsia_key3));
   }
 }
 
@@ -47,8 +47,8 @@ void InsertFuchsiaKey3(uint32_t hid_usage, uint32_t hid_key,
 ParseResult Keyboard::ParseInputReportDescriptor(
     const hid::ReportDescriptor& hid_report_descriptor) {
   // Use a set to make it easy to create a list of sorted and unique keys.
-  std::set<::llcpp::fuchsia::ui::input2::Key> key_values;
-  std::set<::llcpp::fuchsia::input::Key> key_3_values;
+  std::set<::llcpp::fuchsia::ui::input2::wire::Key> key_values;
+  std::set<::llcpp::fuchsia::input::wire::Key> key_3_values;
   std::array<hid::ReportField, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS> key_fields;
   size_t num_key_fields = 0;
 
@@ -110,7 +110,7 @@ ParseResult Keyboard::ParseOutputReportDescriptor(
     return ParseResult::kOk;
   }
 
-  // No errors, write to class memebers.
+  // No errors, write to class members.
   num_leds_ = num_leds;
   led_fields_ = led_fields;
 
@@ -137,12 +137,12 @@ ParseResult Keyboard::CreateDescriptor(fidl::AnyAllocator& allocator,
     fuchsia_input_report::KeyboardInputDescriptor keyboard_input(allocator);
 
     size_t keys_index = 0;
-    fidl::VectorView<::llcpp::fuchsia::ui::input2::Key> keys(allocator, key_values_.size());
+    fidl::VectorView<::llcpp::fuchsia::ui::input2::wire::Key> keys(allocator, key_values_.size());
     for (auto& key : key_values_) {
       keys[keys_index++] = key;
     }
     size_t keys_3_index = 0;
-    fidl::VectorView<::llcpp::fuchsia::input::Key> keys_3(allocator, key_3_values_.size());
+    fidl::VectorView<::llcpp::fuchsia::input::wire::Key> keys_3(allocator, key_3_values_.size());
     for (auto& key : key_3_values_) {
       keys_3[keys_3_index++] = key;
     }
@@ -157,7 +157,7 @@ ParseResult Keyboard::CreateDescriptor(fidl::AnyAllocator& allocator,
     fuchsia_input_report::KeyboardOutputDescriptor keyboard_output(allocator);
 
     size_t leds_index = 0;
-    fidl::VectorView<fuchsia_input_report::LedType> leds(allocator, num_leds_);
+    fidl::VectorView<fuchsia_input_report::wire::LedType> leds(allocator, num_leds_);
     for (hid::ReportField& field : fbl::Span(led_fields_.data(), num_leds_)) {
       zx_status_t status = HidLedUsageToLlcppLedType(
           static_cast<hid::usage::LEDs>(field.attr.usage.usage), &leds[leds_index++]);
@@ -185,9 +185,9 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len,
 
   size_t num_pressed_keys = 0;
   size_t num_pressed_keys_3 = 0;
-  std::array<::llcpp::fuchsia::ui::input2::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS>
+  std::array<::llcpp::fuchsia::ui::input2::wire::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS>
       pressed_keys;
-  std::array<::llcpp::fuchsia::input::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS>
+  std::array<::llcpp::fuchsia::input::wire::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS>
       pressed_keys_3;
   for (hid::ReportField& field : fbl::Span(key_fields_.data(), num_key_fields_)) {
     double val_out_double;
@@ -216,23 +216,25 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len,
         key_util::hid_key_to_fuchsia_key(hid::USAGE(hid::usage::Page::kKeyboardKeypad, hid_key));
     if (fuchsia_key) {
       // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be equivalent.
-      pressed_keys[num_pressed_keys++] = static_cast<llcpp::fuchsia::ui::input2::Key>(*fuchsia_key);
+      pressed_keys[num_pressed_keys++] =
+          static_cast<llcpp::fuchsia::ui::input2::wire::Key>(*fuchsia_key);
     }
     auto fuchsia_key_3 =
         key_util::hid_key_to_fuchsia_key3(hid::USAGE(hid::usage::Page::kKeyboardKeypad, hid_key));
     if (fuchsia_key_3) {
       pressed_keys_3[num_pressed_keys_3++] =
-          static_cast<llcpp::fuchsia::input::Key>(*fuchsia_key_3);
+          static_cast<llcpp::fuchsia::input::wire::Key>(*fuchsia_key_3);
     }
   }
 
-  fidl::VectorView<::llcpp::fuchsia::ui::input2::Key> fidl_pressed_keys(allocator,
-                                                                        num_pressed_keys);
+  fidl::VectorView<::llcpp::fuchsia::ui::input2::wire::Key> fidl_pressed_keys(allocator,
+                                                                              num_pressed_keys);
   for (size_t i = 0; i < num_pressed_keys; i++) {
     fidl_pressed_keys[i] = pressed_keys[i];
   }
 
-  fidl::VectorView<::llcpp::fuchsia::input::Key> fidl_pressed_keys_3(allocator, num_pressed_keys_3);
+  fidl::VectorView<::llcpp::fuchsia::input::wire::Key> fidl_pressed_keys_3(allocator,
+                                                                           num_pressed_keys_3);
   for (size_t i = 0; i < num_pressed_keys_3; i++) {
     fidl_pressed_keys_3[i] = pressed_keys_3[i];
   }
@@ -259,12 +261,12 @@ ParseResult Keyboard::SetOutputReport(const fuchsia_input_report::OutputReport* 
     data[i] = 0;
   }
   // Go through each enabled LED and set its report field to enabled.
-  for (fuchsia_input_report::LedType led : report->keyboard().enabled_leds()) {
+  for (fuchsia_input_report::wire::LedType led : report->keyboard().enabled_leds()) {
     bool found = false;
     for (size_t i = 0; i < num_leds_; i++) {
       hid::ReportField& hid_led = led_fields_[i];
       // Convert the usage to LedType.
-      fuchsia_input_report::LedType hid_led_type;
+      fuchsia_input_report::wire::LedType hid_led_type;
       zx_status_t status = HidLedUsageToLlcppLedType(
           static_cast<hid::usage::LEDs>(hid_led.attr.usage.usage), &hid_led_type);
       if (status != ZX_OK) {

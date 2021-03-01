@@ -57,12 +57,12 @@ class TestServerBase : public fio2::Directory::RawChannelInterface {
 
   void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
-  void Open(fidl::StringView path, fio2::OpenMode mode, fio2::ConnectionOptions options,
+  void Open(fidl::StringView path, fio2::wire::OpenMode mode, fio2::ConnectionOptions options,
             zx::channel object_request, OpenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void AddInotifyFilter(fio2::InotifyWatchMask filters, fidl::StringView path,
+  void AddInotifyFilter(fio2::wire::InotifyWatchMask filters, fidl::StringView path,
                         uint32_t watch_descriptor, zx::socket socket, zx::channel controller,
                         AddInotifyFilterCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);

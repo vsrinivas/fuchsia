@@ -215,7 +215,7 @@ struct IsolatedDevmgr::ExceptionLoopState {
     ::llcpp::fuchsia::exception::ExceptionInfo einfo;
     einfo.process_koid = info.pid;
     einfo.thread_koid = info.tid;
-    einfo.type = static_cast<::llcpp::fuchsia::exception::ExceptionType>(info.type);
+    einfo.type = static_cast<::llcpp::fuchsia::exception::wire::ExceptionType>(info.type);
     handler.OnException(std::move(exception), einfo);
   }
 

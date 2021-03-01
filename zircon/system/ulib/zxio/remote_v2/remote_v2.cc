@@ -497,7 +497,8 @@ zx_status_t zxio_remote_v2_seek(zxio_t* io, zxio_seek_origin_t start, int64_t of
     return rio.stream()->seek(start, offset, out_offset);
   }
 
-  auto result = fio2::File::Call::Seek(rio.control(), static_cast<fio2::SeekOrigin>(start), offset);
+  auto result =
+      fio2::File::Call::Seek(rio.control(), static_cast<fio2::wire::SeekOrigin>(start), offset);
   if (result.status() != ZX_OK) {
     return result.status();
   }

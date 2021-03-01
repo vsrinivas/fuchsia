@@ -27,7 +27,7 @@ class ExternalDecompressorClient {
   // places the results in `decompressed_vmo`. This calls `Prepare()` and
   // returns a failure if it cannot succeed on the first try. Both vmos require
   // the ZX_DEFAULT_VMO_RIGHTS except that ZX_RIGHT_WRITE is not required on
-  // `compressed_vmo`, this permission will be ommited before sending to the
+  // `compressed_vmo`, this permission will be omitted before sending to the
   // external decompressor if present.
   static zx::status<std::unique_ptr<ExternalDecompressorClient>> Create(
       const zx::vmo& decompressed_vmo, const zx::vmo& compressed_vmo);
@@ -40,14 +40,14 @@ class ExternalDecompressorClient {
 
   // Convert from fidl compatible enum to local.
   static CompressionAlgorithm CompressionAlgorithmFidlToLocal(
-      llcpp::fuchsia::blobfs::internal::CompressionAlgorithm algorithm);
+      llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm algorithm);
 
   // Convert to fidl compatible enum from local.
-  static llcpp::fuchsia::blobfs::internal::CompressionAlgorithm CompressionAlgorithmLocalToFidl(
-      CompressionAlgorithm algorithm);
+  static llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm
+  CompressionAlgorithmLocalToFidl(CompressionAlgorithm algorithm);
 
-  // Convert to fidl compatible enum from local for partial decompresion.
-  static zx::status<llcpp::fuchsia::blobfs::internal::CompressionAlgorithm>
+  // Convert to fidl compatible enum from local for partial decompression.
+  static zx::status<llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm>
   CompressionAlgorithmLocalToFidlForPartial(CompressionAlgorithm algorithm);
 
  private:

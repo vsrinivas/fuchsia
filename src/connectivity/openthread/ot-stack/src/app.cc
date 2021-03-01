@@ -102,7 +102,7 @@ void OtStackApp::UpdateClientInboundAllowance() {
 void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer) {
   if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-radio not connected when client called Open()";
-    completer.ReplyError(fidl_spinel::Error::UNSPECIFIED);
+    completer.ReplyError(fidl_spinel::wire::Error::UNSPECIFIED);
     app_.Shutdown();
     return;
   }
@@ -125,14 +125,14 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer
 void OtStackApp::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync& completer) {
   if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-radio not connected";
-    completer.ReplyError(fidl_spinel::Error::UNSPECIFIED);
+    completer.ReplyError(fidl_spinel::wire::Error::UNSPECIFIED);
     app_.Shutdown();
     return;
   }
   auto fidl_result = app_.device_client_ptr_->Close();
   if (fidl_result.status() != ZX_OK) {
     FX_LOGS(ERROR) << "FIDL error while sending req to ot-radio";
-    completer.ReplyError(fidl_spinel::Error::UNSPECIFIED);
+    completer.ReplyError(fidl_spinel::wire::Error::UNSPECIFIED);
     app_.Shutdown();
     return;
   }
@@ -331,7 +331,7 @@ void OtStackApp::SendOneFrameToClient() {
   }
 }
 
-zx_status_t OtStackApp::InitRadioDrievr() {
+zx_status_t OtStackApp::InitRadioDriver() {
   zx_status_t result = ConnectToOtRadioDev();
   if (result != ZX_OK) {
     return result;
@@ -357,7 +357,7 @@ zx_status_t OtStackApp::Init(const std::string& path, bool is_test_env) {
 
   lowpan_spinel_ptr_ = std::make_unique<OtStackCallBackImpl>(*this);
 
-  zx_status_t status = InitRadioDrievr();
+  zx_status_t status = InitRadioDriver();
   if (status != ZX_OK) {
     return status;
   }
@@ -509,7 +509,7 @@ void OtStackApp::OnError(fidl_spinel::Device::OnErrorResponse* event) {
 }
 
 zx_status_t OtStackApp::Unknown() {
-  (*binding_)->OnError(fidl_spinel::Error::IO_ERROR, true);
+  (*binding_)->OnError(fidl_spinel::wire::Error::IO_ERROR, true);
   DisconnectDevice();
   return ZX_ERR_IO;
 }

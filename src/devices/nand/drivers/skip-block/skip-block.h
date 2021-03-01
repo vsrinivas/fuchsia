@@ -26,10 +26,10 @@ namespace nand {
 
 using NandOperation = nand::Operation<>;
 
-using ::llcpp::fuchsia::hardware::skipblock::PartitionInfo;
-using ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation;
-using ::llcpp::fuchsia::hardware::skipblock::WriteBytesMode;
-using ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation;
+using ::llcpp::fuchsia::hardware::skipblock::wire::PartitionInfo;
+using ::llcpp::fuchsia::hardware::skipblock::wire::ReadWriteOperation;
+using ::llcpp::fuchsia::hardware::skipblock::wire::WriteBytesMode;
+using ::llcpp::fuchsia::hardware::skipblock::wire::WriteBytesOperation;
 
 struct PageRange {
   size_t page_offset;

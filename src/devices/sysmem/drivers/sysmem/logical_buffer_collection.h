@@ -195,8 +195,9 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   bool AccumulateConstraintsBufferUsage(llcpp::fuchsia::sysmem2::BufferUsage* acc,
                                         llcpp::fuchsia::sysmem2::BufferUsage* c);
 
-  bool AccumulateConstraintHeapPermitted(fidl::VectorView<llcpp::fuchsia::sysmem2::HeapType>* acc,
-                                         fidl::VectorView<llcpp::fuchsia::sysmem2::HeapType>* c);
+  bool AccumulateConstraintHeapPermitted(
+      fidl::VectorView<llcpp::fuchsia::sysmem2::wire::HeapType>* acc,
+      fidl::VectorView<llcpp::fuchsia::sysmem2::wire::HeapType>* c);
 
   bool AccumulateConstraintBufferMemory(llcpp::fuchsia::sysmem2::BufferMemoryConstraints* acc,
                                         llcpp::fuchsia::sysmem2::BufferMemoryConstraints* c);

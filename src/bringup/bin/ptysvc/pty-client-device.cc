@@ -107,7 +107,7 @@ void PtyClientDevice::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start,
+void PtyClientDevice::Seek(int64_t offset, ::llcpp::fuchsia::io::wire::SeekOrigin start,
                            SeekCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

@@ -6,21 +6,21 @@
 namespace fidl_test = llcpp::fidl::test::enummemberadd;
 
 // [START contents]
-fidl_test::Color writer(std::string s) {
+fidl_test::wire::Color writer(std::string s) {
   if (s == "red") {
-    return fidl_test::Color::RED;
+    return fidl_test::wire::Color::RED;
   } else if (s == "blue") {
-    return fidl_test::Color::BLUE;
+    return fidl_test::wire::Color::BLUE;
   } else {
-    return fidl_test::Color::Unknown();
+    return fidl_test::wire::Color::Unknown();
   }
 }
 
-std::string reader(fidl_test::Color color) {
+std::string reader(fidl_test::wire::Color color) {
   switch (color) {
-    case fidl_test::Color::RED:
+    case fidl_test::wire::Color::RED:
       return "red";
-    case fidl_test::Color::BLUE:
+    case fidl_test::wire::Color::BLUE:
       return "blue";
     default:
       return "<unknown>";

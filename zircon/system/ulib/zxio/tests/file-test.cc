@@ -73,7 +73,7 @@ class TestServerBase : public fio::File::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Seek(int64_t offset, llcpp::fuchsia::io::SeekOrigin start,
+  void Seek(int64_t offset, llcpp::fuchsia::io::wire::SeekOrigin start,
             SeekCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -317,7 +317,7 @@ class TestServerChannel final : public TestServerBase {
     completer.Reply(status, actual);
   }
 
-  void Seek(int64_t offset, fio::SeekOrigin origin, SeekCompleter::Sync& completer) override {
+  void Seek(int64_t offset, fio::wire::SeekOrigin origin, SeekCompleter::Sync& completer) override {
     zx_off_t seek = 0u;
     zx_status_t status = stream_.seek(static_cast<zx_stream_seek_origin_t>(origin), offset, &seek);
     completer.Reply(status, seek);

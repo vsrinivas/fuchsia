@@ -117,69 +117,69 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
 
   void QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync& completer) override {
     AppendCommand(Command::kQueryCurrentConfiguration);
-    completer.ReplySuccess(::llcpp::fuchsia::paver::Configuration::A);
+    completer.ReplySuccess(::llcpp::fuchsia::paver::wire::Configuration::A);
   }
 
   void FindSysconfig(zx::channel sysconfig, FindSysconfigCompleter::Sync& _completer) override {}
 
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync& completer) override {
     AppendCommand(Command::kQueryActiveConfiguration);
-    completer.ReplySuccess(::llcpp::fuchsia::paver::Configuration::A);
+    completer.ReplySuccess(::llcpp::fuchsia::paver::wire::Configuration::A);
   }
 
-  void QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration,
+  void QueryConfigurationStatus(::llcpp::fuchsia::paver::wire::Configuration configuration,
                                 QueryConfigurationStatusCompleter::Sync& completer) override {
     AppendCommand(Command::kQueryConfigurationStatus);
-    completer.ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY);
+    completer.ReplySuccess(::llcpp::fuchsia::paver::wire::ConfigurationStatus::HEALTHY);
   }
 
-  void SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration,
+  void SetConfigurationActive(::llcpp::fuchsia::paver::wire::Configuration configuration,
                               SetConfigurationActiveCompleter::Sync& completer) override {
     AppendCommand(Command::kSetConfigurationActive);
     zx_status_t status;
     switch (configuration) {
-      case ::llcpp::fuchsia::paver::Configuration::A:
+      case ::llcpp::fuchsia::paver::wire::Configuration::A:
         abr_data_.slot_a.active = true;
         abr_data_.slot_a.unbootable = false;
         status = ZX_OK;
         break;
 
-      case ::llcpp::fuchsia::paver::Configuration::B:
+      case ::llcpp::fuchsia::paver::wire::Configuration::B:
         abr_data_.slot_b.active = true;
         abr_data_.slot_b.unbootable = false;
         status = ZX_OK;
         break;
 
-      case ::llcpp::fuchsia::paver::Configuration::RECOVERY:
+      case ::llcpp::fuchsia::paver::wire::Configuration::RECOVERY:
         status = ZX_ERR_INVALID_ARGS;
         break;
     }
     completer.Reply(status);
   }
 
-  void SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration,
+  void SetConfigurationUnbootable(::llcpp::fuchsia::paver::wire::Configuration configuration,
                                   SetConfigurationUnbootableCompleter::Sync& completer) override {
     AppendCommand(Command::kSetConfigurationUnbootable);
     zx_status_t status;
     switch (configuration) {
-      case ::llcpp::fuchsia::paver::Configuration::A:
+      case ::llcpp::fuchsia::paver::wire::Configuration::A:
         abr_data_.slot_a.unbootable = true;
         status = ZX_OK;
         break;
 
-      case ::llcpp::fuchsia::paver::Configuration::B:
+      case ::llcpp::fuchsia::paver::wire::Configuration::B:
         abr_data_.slot_b.unbootable = true;
         status = ZX_OK;
         break;
 
-      case ::llcpp::fuchsia::paver::Configuration::RECOVERY:
+      case ::llcpp::fuchsia::paver::wire::Configuration::RECOVERY:
         status = ZX_ERR_INVALID_ARGS;
         break;
     }
     completer.Reply(status);
   }
 
-  void SetConfigurationHealthy(::llcpp::fuchsia::paver::Configuration configuration,
+  void SetConfigurationHealthy(::llcpp::fuchsia::paver::wire::Configuration configuration,
                                SetConfigurationHealthyCompleter::Sync& completer) override {
     AppendCommand(Command::kSetConfigurationHealthy);
     completer.Reply(ZX_OK);
@@ -197,23 +197,23 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
     completer.Reply(ZX_OK);
   }
 
-  void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                 ::llcpp::fuchsia::paver::Asset asset,
+  void ReadAsset(::llcpp::fuchsia::paver::wire::Configuration configuration,
+                 ::llcpp::fuchsia::paver::wire::Asset asset,
                  ReadAssetCompleter::Sync& completer) override {
     AppendCommand(Command::kReadAsset);
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                  ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
+  void WriteAsset(::llcpp::fuchsia::paver::wire::Configuration configuration,
+                  ::llcpp::fuchsia::paver::wire::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
                   WriteAssetCompleter::Sync& completer) override {
     AppendCommand(Command::kWriteAsset);
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
 
-  void WriteFirmware(::llcpp::fuchsia::paver::Configuration configuration, fidl::StringView type,
-                     ::llcpp::fuchsia::mem::Buffer payload,
+  void WriteFirmware(::llcpp::fuchsia::paver::wire::Configuration configuration,
+                     fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
                      WriteFirmwareCompleter::Sync& completer) override {
     using ::llcpp::fuchsia::paver::WriteFirmwareResult;
     AppendCommand(Command::kWriteFirmware);

@@ -84,7 +84,8 @@ class TestServerBase : public fio2::File::Interface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Seek(fio2::SeekOrigin origin, int64_t offset, SeekCompleter::Sync& completer) override {
+  void Seek(fio2::wire::SeekOrigin origin, int64_t offset,
+            SeekCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -314,7 +315,8 @@ class TestServerChannel final : public TestServerBase {
     completer.ReplySuccess(actual);
   }
 
-  void Seek(fio2::SeekOrigin origin, int64_t offset, SeekCompleter::Sync& completer) override {
+  void Seek(fio2::wire::SeekOrigin origin, int64_t offset,
+            SeekCompleter::Sync& completer) override {
     zx_off_t seek = 0u;
     zx_status_t status = stream_.seek(static_cast<zx_stream_seek_origin_t>(origin), offset, &seek);
     if (status != ZX_OK) {

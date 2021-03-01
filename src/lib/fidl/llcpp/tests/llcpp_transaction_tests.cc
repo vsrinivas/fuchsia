@@ -104,7 +104,7 @@ TEST(LlcppTransaction, transaction_error) {
   ::llcpp::fidl::test::coding::fuchsia::Llcpp::Interface::EnumActionCompleter::Sync completer(&txn);
   // We are using the fact that 2 isn't a valid enum value to cause an error.
   fidl::Result result =
-      completer.Reply(static_cast<llcpp::fidl::test::coding::fuchsia::TestEnum>(2));
+      completer.Reply(static_cast<llcpp::fidl::test::coding::fuchsia::wire::TestEnum>(2));
   ASSERT_FALSE(result.ok());
 }
 

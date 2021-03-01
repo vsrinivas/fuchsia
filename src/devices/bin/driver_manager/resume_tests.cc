@@ -15,7 +15,7 @@ void ResumeTestCase::StateTest(zx_status_t resume_status, Device::State want_dev
   size_t index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "", &index));
 
-  // Mark all devices suspened.
+  // Mark all devices suspended.
   coordinator().sys_device()->set_state(Device::State::kSuspended);
   coordinator().sys_device()->proxy()->set_state(Device::State::kSuspended);
   platform_bus()->set_state(Device::State::kSuspended);
@@ -67,7 +67,7 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
     ASSERT_NO_FATAL_FAILURES(AddDevice(parent, desc.name, 0 /* protocol id */, "", &desc.index));
   }
 
-  // Mark all devices suspened. Otherwise resume will fail
+  // Mark all devices suspended. Otherwise resume will fail
   coordinator().sys_device()->set_state(Device::State::kSuspended);
   coordinator().sys_device()->proxy()->set_state(Device::State::kSuspended);
   platform_bus()->set_state(Device::State::kSuspended);

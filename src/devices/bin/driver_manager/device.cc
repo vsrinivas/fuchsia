@@ -699,7 +699,7 @@ const char* Device::GetTestDriverName() {
   return nullptr;
 }
 
-zx_status_t Device::DriverCompatibiltyTest() {
+zx_status_t Device::DriverCompatibilityTest() {
   thrd_t t;
   if (test_state() != TestStateMachine::kTestNotStarted) {
     return ZX_ERR_ALREADY_EXISTS;
@@ -1035,7 +1035,7 @@ void Device::RunCompatibilityTests(int64_t hook_wait_time,
   zx::duration test_time = zx::nsec(hook_wait_time);
   real_parent->set_test_time(test_time);
   real_parent->set_test_reply_required(true);
-  status = real_parent->DriverCompatibiltyTest();
+  status = real_parent->DriverCompatibilityTest();
   llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result response;
   if (status != ZX_OK) {
     response.set_err(fidl::unowned_ptr(&status));

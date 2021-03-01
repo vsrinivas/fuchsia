@@ -57,7 +57,7 @@ using ButtonsFunctionType = ddk::Device<HidButtonsButtonsFunction, ddk::Unbindab
 class ButtonsNotifyInterface;
 
 using Buttons = ::llcpp::fuchsia::buttons::Buttons;
-using ButtonType = ::llcpp::fuchsia::buttons::ButtonType;
+using ButtonType = ::llcpp::fuchsia::buttons::wire::ButtonType;
 
 class HidButtonsDevice : public DeviceType {
  public:

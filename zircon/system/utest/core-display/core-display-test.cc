@@ -4,8 +4,10 @@
 
 #include <errno.h>
 #include <fcntl.h>
+// clang-format off
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
+// clang-format on
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
@@ -225,10 +227,10 @@ void CoreDisplayTest::FinalizeClientConstraints() {
   constraints.has_buffer_memory_constraints = false;
   constraints.image_format_constraints_count = 1;
   sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
   image_constraints.color_spaces_count = 1;
   image_constraints.color_space[0] = sysmem::ColorSpace{
-      .type = sysmem::ColorSpaceType::SRGB,
+      .type = sysmem::wire::ColorSpaceType::SRGB,
   };
   image_constraints.min_coded_width = 0;
   image_constraints.max_coded_width = std::numeric_limits<uint32_t>::max();

@@ -17,12 +17,12 @@
 
 namespace {
 
-using ColorSpace = llcpp::fuchsia::sysmem2::ColorSpace;
-using ColorSpaceType = llcpp::fuchsia::sysmem2::ColorSpaceType;
-using ImageFormat = llcpp::fuchsia::sysmem2::ImageFormat;
-using ImageFormatConstraints = llcpp::fuchsia::sysmem2::ImageFormatConstraints;
-using PixelFormat = llcpp::fuchsia::sysmem2::PixelFormat;
-using PixelFormatType = llcpp::fuchsia::sysmem2::PixelFormatType;
+using ColorSpace = llcpp::fuchsia::sysmem2::wire::ColorSpace;
+using ColorSpaceType = llcpp::fuchsia::sysmem2::wire::ColorSpaceType;
+using ImageFormat = llcpp::fuchsia::sysmem2::wire::ImageFormat;
+using ImageFormatConstraints = llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints;
+using PixelFormat = llcpp::fuchsia::sysmem2::wire::PixelFormat;
+using PixelFormatType = llcpp::fuchsia::sysmem2::wire::PixelFormatType;
 
 // There are two aspects of the ColorSpace and PixelFormat that we care about:
 //   * bits-per-sample - bits per primary sample (R, G, B, or Y)
@@ -387,9 +387,9 @@ class LinearFormats : public ImageFormatSet {
     }
     if (plane == 1) {
       switch (image_format.pixel_format().type()) {
-        case llcpp::fuchsia::sysmem2::PixelFormatType::NV12:
-        case llcpp::fuchsia::sysmem2::PixelFormatType::I420:
-        case llcpp::fuchsia::sysmem2::PixelFormatType::YV12:
+        case PixelFormatType::NV12:
+        case PixelFormatType::I420:
+        case PixelFormatType::YV12:
           *offset_out = image_format.coded_height() * image_format.bytes_per_row();
           return true;
         default:
@@ -398,8 +398,8 @@ class LinearFormats : public ImageFormatSet {
     }
     if (plane == 2) {
       switch (image_format.pixel_format().type()) {
-        case llcpp::fuchsia::sysmem2::PixelFormatType::I420:
-        case llcpp::fuchsia::sysmem2::PixelFormatType::YV12:
+        case PixelFormatType::I420:
+        case PixelFormatType::YV12:
           *offset_out = image_format.coded_height() * image_format.bytes_per_row();
           *offset_out += image_format.coded_height() / 2 * image_format.bytes_per_row() / 2;
           return true;
@@ -418,11 +418,11 @@ class LinearFormats : public ImageFormatSet {
       return true;
     } else if (plane == 1) {
       switch (image_format.pixel_format().type()) {
-        case llcpp::fuchsia::sysmem2::PixelFormatType::NV12:
+        case PixelFormatType::NV12:
           *row_bytes_out = image_format.bytes_per_row();
           return true;
-        case llcpp::fuchsia::sysmem2::PixelFormatType::I420:
-        case llcpp::fuchsia::sysmem2::PixelFormatType::YV12:
+        case PixelFormatType::I420:
+        case PixelFormatType::YV12:
           *row_bytes_out = image_format.bytes_per_row() / 2;
           return true;
         default:
@@ -430,8 +430,8 @@ class LinearFormats : public ImageFormatSet {
       }
     } else if (plane == 2) {
       switch (image_format.pixel_format().type()) {
-        case llcpp::fuchsia::sysmem2::PixelFormatType::I420:
-        case llcpp::fuchsia::sysmem2::PixelFormatType::YV12:
+        case PixelFormatType::I420:
+        case PixelFormatType::YV12:
           *row_bytes_out = image_format.bytes_per_row() / 2;
           return true;
         default:
@@ -504,23 +504,23 @@ class ArmTELinearFormats : public ImageFormatSet {
         llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_LINEAR_TE)
       return false;
     switch (pixel_format.type()) {
-      case llcpp::fuchsia::sysmem2::PixelFormatType::INVALID:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::MJPEG:
+      case PixelFormatType::INVALID:
+      case PixelFormatType::MJPEG:
         return false;
-      case llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::BGR24:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::I420:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::M420:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::NV12:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::YUY2:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::YV12:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::RGB565:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::RGB332:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::RGB2220:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::L8:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::R8:
-      case llcpp::fuchsia::sysmem2::PixelFormatType::R8G8:
+      case PixelFormatType::R8G8B8A8:
+      case PixelFormatType::BGRA32:
+      case PixelFormatType::BGR24:
+      case PixelFormatType::I420:
+      case PixelFormatType::M420:
+      case PixelFormatType::NV12:
+      case PixelFormatType::YUY2:
+      case PixelFormatType::YV12:
+      case PixelFormatType::RGB565:
+      case PixelFormatType::RGB332:
+      case PixelFormatType::RGB2220:
+      case PixelFormatType::L8:
+      case PixelFormatType::R8:
+      case PixelFormatType::R8G8:
         return true;
     }
     return false;

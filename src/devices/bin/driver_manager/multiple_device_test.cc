@@ -415,7 +415,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
   auto response =
       llcpp::fuchsia::device::manager::SystemStateTransition::Call::SetTerminationSystemState(
           zx::unowned_channel(system_state_transition_client.get()),
-          llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::POWEROFF);
+          llcpp::fuchsia::hardware::power::statecontrol::wire::SystemPowerState::POWEROFF);
 
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
@@ -424,7 +424,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(coordinator().shutdown_system_state(),
-            llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::POWEROFF);
+            llcpp::fuchsia::hardware::power::statecontrol::wire::SystemPowerState::POWEROFF);
 }
 
 TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
@@ -447,7 +447,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
   auto response =
       llcpp::fuchsia::device::manager::SystemStateTransition::Call::SetTerminationSystemState(
           zx::unowned_channel(channel.get()),
-          llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::MEXEC);
+          llcpp::fuchsia::hardware::power::statecontrol::wire::SystemPowerState::MEXEC);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -455,7 +455,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(coordinator().shutdown_system_state(),
-            llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::MEXEC);
+            llcpp::fuchsia::hardware::power::statecontrol::wire::SystemPowerState::MEXEC);
 }
 
 TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
@@ -474,7 +474,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
   auto response =
       llcpp::fuchsia::device::manager::SystemStateTransition::Call::SetTerminationSystemState(
           zx::unowned_channel(system_state_transition_client.get()),
-          llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::FULLY_ON);
+          llcpp::fuchsia::hardware::power::statecontrol::wire::SystemPowerState::FULLY_ON);
 
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
@@ -484,7 +484,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
   ASSERT_EQ(call_status, ZX_ERR_INVALID_ARGS);
   // Default shutdown_system_state in test is MEXEC.
   ASSERT_EQ(coordinator().shutdown_system_state(),
-            llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::MEXEC);
+            llcpp::fuchsia::hardware::power::statecontrol::wire::SystemPowerState::MEXEC);
 }
 
 TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {

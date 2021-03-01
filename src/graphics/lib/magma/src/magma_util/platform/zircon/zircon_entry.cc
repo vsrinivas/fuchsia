@@ -35,7 +35,7 @@ zx_status_t magma_indriver_test(zx_device_t* device);
 
 class GpuDevice;
 
-using FidlStatus = llcpp::fuchsia::gpu::magma::Status;
+using FidlStatus = llcpp::fuchsia::gpu::magma::wire::Status;
 
 using DdkDeviceType = ddk::Device<GpuDevice, ddk::Messageable, ddk::Unbindable, ddk::Initializable>;
 

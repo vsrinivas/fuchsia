@@ -67,7 +67,7 @@ bool CobaltLogger::TryObtainLogger() {
       ::llcpp::fuchsia::cobalt::LoggerFactory::Call::CreateLoggerFromProjectId(
           logger_factory_client, options_.project_id, std::move(logger_server));
   if (create_logger_result.status() == ZX_OK &&
-      create_logger_result->status == ::llcpp::fuchsia::cobalt::Status::OK) {
+      create_logger_result->status == ::llcpp::fuchsia::cobalt::wire::Status::OK) {
     logger_ = fidl::BindSyncClient(std::move(logger_client));
     return true;
   }
@@ -89,7 +89,8 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, const HistogramBucket* 
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }
-  return log_result.status() == ZX_OK && log_result->status == ::llcpp::fuchsia::cobalt::Status::OK;
+  return log_result.status() == ZX_OK &&
+         log_result->status == ::llcpp::fuchsia::cobalt::wire::Status::OK;
 }
 
 bool CobaltLogger::Log(const MetricOptions& metric_info, RemoteCounter::Type count) {
@@ -104,7 +105,8 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, RemoteCounter::Type cou
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }
-  return log_result.status() == ZX_OK && log_result->status == ::llcpp::fuchsia::cobalt::Status::OK;
+  return log_result.status() == ZX_OK &&
+         log_result->status == ::llcpp::fuchsia::cobalt::wire::Status::OK;
 }
 
 bool CobaltLogger::LogInteger(const MetricOptions& metric_info, RemoteCounter::Type value) {
@@ -123,7 +125,8 @@ bool CobaltLogger::LogInteger(const MetricOptions& metric_info, RemoteCounter::T
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }
-  return log_result.status() == ZX_OK && log_result->status == ::llcpp::fuchsia::cobalt::Status::OK;
+  return log_result.status() == ZX_OK &&
+         log_result->status == ::llcpp::fuchsia::cobalt::wire::Status::OK;
 }
 
 }  // namespace internal

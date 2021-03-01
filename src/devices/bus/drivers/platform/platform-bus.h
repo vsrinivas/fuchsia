@@ -115,8 +115,8 @@ class PlatformBus : public PlatformBusType,
   std::vector<GetBootloaderVendorCompleter::Async> bootloader_vendor_completer_
       __TA_GUARDED(bootloader_info_lock_);
 
-  ::llcpp::fuchsia::sysinfo::InterruptControllerType interrupt_controller_type_ =
-      ::llcpp::fuchsia::sysinfo::InterruptControllerType::UNKNOWN;
+  ::llcpp::fuchsia::sysinfo::wire::InterruptControllerType interrupt_controller_type_ =
+      ::llcpp::fuchsia::sysinfo::wire::InterruptControllerType::UNKNOWN;
 
   // Protocols that are optionally provided by the board driver.
   std::optional<ddk::ClockImplProtocolClient> clock_;

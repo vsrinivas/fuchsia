@@ -169,12 +169,12 @@ class TestSession {
 
   TestSession() = default;
 
-  zx_status_t Open(
-      netdev::Device::SyncClient& netdevice, const char* name,
-      netdev::wire::SessionFlags flags = netdev::wire::SessionFlags::PRIMARY,
-      uint16_t num_descriptors = kDefaultDescriptorCount,
-      uint64_t buffer_size = kDefaultBufferLength,
-      fidl::VectorView<netdev::FrameType> frame_types = fidl::VectorView<netdev::FrameType>());
+  zx_status_t Open(netdev::Device::SyncClient& netdevice, const char* name,
+                   netdev::wire::SessionFlags flags = netdev::wire::SessionFlags::PRIMARY,
+                   uint16_t num_descriptors = kDefaultDescriptorCount,
+                   uint64_t buffer_size = kDefaultBufferLength,
+                   fidl::VectorView<netdev::wire::FrameType> frame_types =
+                       fidl::VectorView<netdev::wire::FrameType>());
 
   zx_status_t Init(uint16_t descriptor_count, uint64_t buffer_size);
   zx_status_t GetInfo(netdev::SessionInfo* info);

@@ -84,7 +84,7 @@ zx_status_t ConnectListener(zx::channel listener, std::vector<std::string> allow
   llcpp::fuchsia::logger::LogFilterOptions options{
       .filter_by_pid = false,
       .filter_by_tid = false,
-      .min_severity = llcpp::fuchsia::logger::LogLevelFilter::TRACE,
+      .min_severity = llcpp::fuchsia::logger::wire::LogLevelFilter::TRACE,
       .tags = fidl::unowned_vec(tags),
   };
   auto result = log.ListenSafe(std::move(listener), fidl::unowned_ptr(&options));

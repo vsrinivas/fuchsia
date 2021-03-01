@@ -40,7 +40,7 @@
 void magma_indriver_test(zx_device_t* device, void* driver_device_handle);
 #endif
 
-using FidlStatus = llcpp::fuchsia::gpu::magma::Status;
+using FidlStatus = llcpp::fuchsia::gpu::magma::wire::Status;
 
 namespace {
 struct FragmentDescription {
@@ -416,7 +416,7 @@ void Mt8167sGpu::QueryReturnsBuffer(uint64_t query_id,
     _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
     return;
   }
-  DLOG("query exteneded query_id 0x%" PRIx64 " returning 0x%x", query_id, result);
+  DLOG("query extended query_id 0x%" PRIx64 " returning 0x%x", query_id, result);
 
   _completer.ReplySuccess(zx::vmo(result));
 }

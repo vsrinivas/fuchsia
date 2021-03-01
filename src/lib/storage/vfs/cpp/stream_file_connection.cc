@@ -143,7 +143,7 @@ void StreamFileConnection::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offs
   completer.Reply(status, actual);
 }
 
-void StreamFileConnection::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start,
+void StreamFileConnection::Seek(int64_t offset, ::llcpp::fuchsia::io::wire::SeekOrigin start,
                                 SeekCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileSeek] options: ", options());
 

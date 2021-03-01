@@ -12,6 +12,7 @@ namespace sdio {
 
 using SdioClient = ::llcpp::fuchsia::hardware::sdio::Device::SyncClient;
 using namespace ::llcpp::fuchsia::hardware::sdio;
+using namespace ::llcpp::fuchsia::hardware::sdio::wire;
 
 constexpr char kUsageMessage[] = R"""(Usage: sdio <device> <command> [options]
 

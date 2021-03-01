@@ -101,7 +101,7 @@ class AstBuilder {
     return nullptr;
   }
 
-  llcpp::fuchsia::shell::ShellType TypeBuiltin(llcpp::fuchsia::shell::BuiltinType type) {
+  llcpp::fuchsia::shell::ShellType TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType type) {
     return llcpp::fuchsia::shell::ShellType::WithBuiltinType(allocator_, type);
   }
 
@@ -112,59 +112,59 @@ class AstBuilder {
   }
 
   llcpp::fuchsia::shell::ShellType TypeBool() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::BOOL);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::BOOL);
   }
 
   llcpp::fuchsia::shell::ShellType TypeChar() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::CHAR);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::CHAR);
   }
 
   llcpp::fuchsia::shell::ShellType TypeString() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::STRING);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::STRING);
   }
 
   llcpp::fuchsia::shell::ShellType TypeInt8() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::INT8);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::INT8);
   }
 
   llcpp::fuchsia::shell::ShellType TypeUint8() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT8);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::UINT8);
   }
 
   llcpp::fuchsia::shell::ShellType TypeInt16() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::INT16);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::INT16);
   }
 
   llcpp::fuchsia::shell::ShellType TypeUint16() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT16);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::UINT16);
   }
 
   llcpp::fuchsia::shell::ShellType TypeInt32() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::INT32);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::INT32);
   }
 
   llcpp::fuchsia::shell::ShellType TypeUint32() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT32);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::UINT32);
   }
 
   llcpp::fuchsia::shell::ShellType TypeInt64() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::INT64);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::INT64);
   }
 
   llcpp::fuchsia::shell::ShellType TypeUint64() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT64);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::UINT64);
   }
 
   llcpp::fuchsia::shell::ShellType TypeInteger() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::INTEGER);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::INTEGER);
   }
 
   llcpp::fuchsia::shell::ShellType TypeFloat32() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::FLOAT32);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::FLOAT32);
   }
 
   llcpp::fuchsia::shell::ShellType TypeFloat64() {
-    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::FLOAT64);
+    return TypeBuiltin(llcpp::fuchsia::shell::wire::BuiltinType::FLOAT64);
   }
 
   llcpp::fuchsia::shell::ShellType TypeObject(AstBuilder::NodeId schema_node) {

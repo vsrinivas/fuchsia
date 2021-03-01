@@ -22,9 +22,10 @@
 
 #include "src/devices/tests/ddk-power/test-power-child-bind.h"
 
-using llcpp::fuchsia::device::DevicePerformanceStateInfo;
-using llcpp::fuchsia::device::DevicePowerStateInfo;
 using llcpp::fuchsia::device::power::test::TestDevice;
+using llcpp::fuchsia::device::wire::DevicePerformanceStateInfo;
+using llcpp::fuchsia::device::wire::DevicePowerState;
+using llcpp::fuchsia::device::wire::DevicePowerStateInfo;
 
 class TestPowerDriverChild;
 using DeviceType =
@@ -211,8 +212,7 @@ void TestPowerDriverChild::SetTestStatusInfo(
 
 void TestPowerDriverChild::GetCurrentDevicePowerState(
     GetCurrentDevicePowerStateCompleter::Sync& completer) {
-  completer.ReplySuccess(
-      static_cast<llcpp::fuchsia::device::DevicePowerState>(current_power_state_));
+  completer.ReplySuccess(static_cast<DevicePowerState>(current_power_state_));
 }
 
 void TestPowerDriverChild::GetCurrentSuspendReason(
@@ -222,9 +222,8 @@ void TestPowerDriverChild::GetCurrentSuspendReason(
 
 void TestPowerDriverChild::GetCurrentDeviceAutoSuspendConfig(
     GetCurrentDeviceAutoSuspendConfigCompleter::Sync& completer) {
-  completer.ReplySuccess(
-      auto_suspend_enabled_,
-      static_cast<llcpp::fuchsia::device::DevicePowerState>(auto_suspend_sleep_state_));
+  completer.ReplySuccess(auto_suspend_enabled_,
+                         static_cast<DevicePowerState>(auto_suspend_sleep_state_));
 }
 
 zx_status_t TestPowerDriverChild::Bind() { return DdkAdd("power-test-child"); }

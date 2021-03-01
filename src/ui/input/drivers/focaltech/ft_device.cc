@@ -201,9 +201,9 @@ zx_status_t FtDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
   info->dev_num = 0;
   info->device_class = HID_DEVICE_CLASS_OTHER;
   info->boot_device = false;
-  info->vendor_id = static_cast<uint32_t>(::llcpp::fuchsia::input::report::VendorId::GOOGLE);
+  info->vendor_id = static_cast<uint32_t>(::llcpp::fuchsia::input::report::wire::VendorId::GOOGLE);
   info->product_id = static_cast<uint32_t>(
-      ::llcpp::fuchsia::input::report::VendorGoogleProductId::FOCALTECH_TOUCHSCREEN);
+      ::llcpp::fuchsia::input::report::wire::VendorGoogleProductId::FOCALTECH_TOUCHSCREEN);
 
   return ZX_OK;
 }

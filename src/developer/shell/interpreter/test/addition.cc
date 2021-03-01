@@ -45,7 +45,7 @@ TEST_F(InterpreterTest, StringAdditionOk) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::OK, context->GetResult());
 
   CHECK_RESULT(0, "\"A Marx brother\"");
   CHECK_RESULT(1, "\"A Marx brother\"");
@@ -77,7 +77,7 @@ TEST_F(InterpreterTest, StringAdditionEmpty) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::OK, context->GetResult());
 
   CHECK_RESULT(0, "\"foo\"");
   CHECK_RESULT(1, "\"foo\"");
@@ -108,24 +108,24 @@ TEST_F(InterpreterTest, StringAdditionEmpty) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));                       \
   Finish(kExecute);
 
-#define DoAdditionTest(name, type, with_exceptions, left, right, result)       \
-  TEST_F(InterpreterTest, name) {                                              \
-    ExecuteAddition(builder.type, with_exceptions, left, right);               \
-                                                                               \
-    ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult()); \
-                                                                               \
-    std::string string_result = std::to_string(result);                        \
-    CHECK_RESULT(0, string_result);                                            \
+#define DoAdditionTest(name, type, with_exceptions, left, right, result)             \
+  TEST_F(InterpreterTest, name) {                                                    \
+    ExecuteAddition(builder.type, with_exceptions, left, right);                     \
+                                                                                     \
+    ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::OK, context->GetResult()); \
+                                                                                     \
+    std::string string_result = std::to_string(result);                              \
+    CHECK_RESULT(0, string_result);                                                  \
   }
 
-#define DoAdditionTestException(name, type, left, right, errors)                       \
-  TEST_F(InterpreterTest, name) {                                                      \
-    ExecuteAddition(builder.type, /*with_exceptions=*/true, left, right);              \
-                                                                                       \
-    ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::EXECUTION_ERROR, context->result); \
-                                                                                       \
-    std::string error_result = context->error_stream.str();                            \
-    ASSERT_EQ(errors, error_result);                                                   \
+#define DoAdditionTestException(name, type, left, right, errors)                             \
+  TEST_F(InterpreterTest, name) {                                                            \
+    ExecuteAddition(builder.type, /*with_exceptions=*/true, left, right);                    \
+                                                                                             \
+    ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::EXECUTION_ERROR, context->result); \
+                                                                                             \
+    std::string error_result = context->error_stream.str();                                  \
+    ASSERT_EQ(errors, error_result);                                                         \
   }
 
 #define AdditionTest(name, type, left, right, result) \

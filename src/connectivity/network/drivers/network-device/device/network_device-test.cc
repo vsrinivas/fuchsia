@@ -107,11 +107,12 @@ class NetworkDeviceTest : public zxtest::Test {
     return impl_.CreateChild(dispatcher(), &device_);
   }
 
-  zx_status_t OpenSession(
-      TestSession* session, netdev::wire::SessionFlags flags = netdev::wire::SessionFlags::PRIMARY,
-      uint16_t num_descriptors = kDefaultDescriptorCount,
-      uint64_t buffer_size = kDefaultBufferLength,
-      fidl::VectorView<netdev::FrameType> frame_types = fidl::VectorView<netdev::FrameType>()) {
+  zx_status_t OpenSession(TestSession* session,
+                          netdev::wire::SessionFlags flags = netdev::wire::SessionFlags::PRIMARY,
+                          uint16_t num_descriptors = kDefaultDescriptorCount,
+                          uint64_t buffer_size = kDefaultBufferLength,
+                          fidl::VectorView<netdev::wire::FrameType> frame_types =
+                              fidl::VectorView<netdev::wire::FrameType>()) {
     // automatically increment to test_session_(a, b, c, etc...)
     char session_name[] = "test_session_a";
     session_name[strlen(session_name) - 1] = static_cast<char>('a' + session_counter_);
@@ -158,7 +159,7 @@ TEST_F(NetworkDeviceTest, GetInfo) {
   EXPECT_EQ(info.buffer_alignment, impl_.info().buffer_alignment);
   static_assert(sizeof(buffer_descriptor_t) % 8 == 0);
   EXPECT_EQ(info.min_descriptor_length, sizeof(buffer_descriptor_t) / sizeof(uint64_t));
-  EXPECT_EQ(info.class_, netdev::DeviceClass::ETHERNET);
+  EXPECT_EQ(info.class_, netdev::wire::DeviceClass::ETHERNET);
   EXPECT_EQ(info.tx_accel.count(), impl_.info().tx_accel_count);
   EXPECT_EQ(info.rx_accel.count(), impl_.info().rx_accel_count);
   EXPECT_EQ(info.rx_types.count(), impl_.info().rx_types_count);
@@ -834,7 +835,7 @@ TEST_F(NetworkDeviceTest, InvalidTxFrameType) {
   ASSERT_OK(session.SetPaused(false));
   ASSERT_OK(WaitStart());
   auto* desc = session.ResetDescriptor(0);
-  desc->frame_type = static_cast<uint8_t>(netdev::FrameType::IPV4);
+  desc->frame_type = static_cast<uint8_t>(netdev::wire::FrameType::IPV4);
   ASSERT_OK(session.SendTx(0));
   // Session should be killed because of contract breach:
   ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
@@ -853,7 +854,7 @@ TEST_F(NetworkDeviceTest, RxFrameTypeFilter) {
   ASSERT_OK(session.SendRx(0));
   ASSERT_OK(WaitRxAvailable());
   auto buff = impl_.rx_buffers().pop_front();
-  buff->return_buffer().meta.frame_type = static_cast<uint8_t>(netdev::FrameType::IPV4);
+  buff->return_buffer().meta.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::IPV4);
   buff->return_buffer().total_length = 10;
   RxReturnTransaction rx_transaction(&impl_);
   rx_transaction.Enqueue(std::move(buff));
@@ -899,7 +900,7 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
   ASSERT_OK(watcher.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, TEST_DEADLINE, nullptr));
 }
 
-// Test that returning tx buffers in the body of QueueTx is allowd and works.
+// Test that returning tx buffers in the body of QueueTx is allowed and works.
 TEST_F(NetworkDeviceTest, ReturnTxInline) {
   impl_.set_auto_return_tx(true);
   ASSERT_OK(CreateDevice());
@@ -921,7 +922,7 @@ TEST_F(NetworkDeviceTest, RejectsInvalidRxTypes) {
   ASSERT_OK(CreateDevice());
   auto connection = OpenConnection();
   TestSession session;
-  auto frame_type = netdev::FrameType::IPV4;
+  auto frame_type = netdev::wire::FrameType::IPV4;
   ASSERT_STATUS(
       OpenSession(&session, netdev::wire::SessionFlags::PRIMARY, kDefaultDescriptorCount,
                   kDefaultBufferLength, fidl::VectorView(fidl::unowned_ptr(&frame_type), 1)),

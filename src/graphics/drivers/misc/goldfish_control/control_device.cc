@@ -247,7 +247,8 @@ zx_status_t Control::InitSyncDeviceLocked() {
   return ZX_OK;
 }
 
-zx_status_t Control::RegisterAndBindHeap(llcpp::fuchsia::sysmem2::HeapType heap_type, Heap* heap) {
+zx_status_t Control::RegisterAndBindHeap(llcpp::fuchsia::sysmem2::wire::HeapType heap_type,
+                                         Heap* heap) {
   zx::channel heap_request, heap_connection;
   zx_status_t status = zx::channel::create(0, &heap_request, &heap_connection);
   if (status != ZX_OK) {
@@ -288,14 +289,14 @@ zx_status_t Control::Bind() {
   std::unique_ptr<DeviceLocalHeap> device_local_heap = DeviceLocalHeap::Create(this);
   DeviceLocalHeap* device_local_heap_ptr = device_local_heap.get();
   heaps_.push_back(std::move(device_local_heap));
-  RegisterAndBindHeap(llcpp::fuchsia::sysmem2::HeapType::GOLDFISH_DEVICE_LOCAL,
+  RegisterAndBindHeap(llcpp::fuchsia::sysmem2::wire::HeapType::GOLDFISH_DEVICE_LOCAL,
                       device_local_heap_ptr);
 
   // Serve goldfish host-visible heap allocations.
   std::unique_ptr<HostVisibleHeap> host_visible_heap = HostVisibleHeap::Create(this);
   HostVisibleHeap* host_visible_heap_ptr = host_visible_heap.get();
   heaps_.push_back(std::move(host_visible_heap));
-  RegisterAndBindHeap(llcpp::fuchsia::sysmem2::HeapType::GOLDFISH_HOST_VISIBLE,
+  RegisterAndBindHeap(llcpp::fuchsia::sysmem2::wire::HeapType::GOLDFISH_HOST_VISIBLE,
                       host_visible_heap_ptr);
 
   return DdkAdd(ddk::DeviceAddArgs("goldfish-control").set_proto_id(ZX_PROTOCOL_GOLDFISH_CONTROL));
@@ -411,7 +412,7 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
   close_color_buffer.cancel();
   it->second = id;
   buffer_handle_info_[id] = {
-      .type = llcpp::fuchsia::hardware::goldfish::BufferHandleType::COLOR_BUFFER,
+      .type = llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::COLOR_BUFFER,
       .memory_property = create_params.memory_property()};
 
   return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_OK, hw_address_page_offset));
@@ -505,8 +506,9 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
 
   close_buffer.cancel();
   it->second = id;
-  buffer_handle_info_[id] = {.type = llcpp::fuchsia::hardware::goldfish::BufferHandleType::BUFFER,
-                             .memory_property = create_params.memory_property()};
+  buffer_handle_info_[id] = {
+      .type = llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::BUFFER,
+      .memory_property = create_params.memory_property()};
 
   return fit::ok(ControlDevice_CreateBuffer2_Result::WithResponse(
       std::make_unique<ControlDevice_CreateBuffer2_Response>(
@@ -543,7 +545,7 @@ void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& compl
   }
 
   uint32_t handle = kInvalidBufferHandle;
-  auto handle_type = llcpp::fuchsia::hardware::goldfish::BufferHandleType::INVALID;
+  auto handle_type = llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::INVALID;
 
   fbl::AutoLock lock(&lock_);
 
@@ -572,9 +574,9 @@ void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& compl
 }
 
 void Control::GetBufferHandleInfo(zx::vmo vmo, GetBufferHandleInfoCompleter::Sync& completer) {
-  using llcpp::fuchsia::hardware::goldfish::BufferHandleType;
   using llcpp::fuchsia::hardware::goldfish::ControlDevice_GetBufferHandleInfo_Response;
   using llcpp::fuchsia::hardware::goldfish::ControlDevice_GetBufferHandleInfo_Result;
+  using llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType;
 
   TRACE_DURATION("gfx", "Control::FidlGetBufferHandleInfo");
 
@@ -791,10 +793,10 @@ void Control::CloseBufferOrColorBufferLocked(uint32_t id) {
   ZX_DEBUG_ASSERT(buffer_handle_info_.find(id) != buffer_handle_info_.end());
   auto buffer_type = buffer_handle_info_.at(id).type;
   switch (buffer_type) {
-    case llcpp::fuchsia::hardware::goldfish::BufferHandleType::BUFFER:
+    case llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::BUFFER:
       CloseBufferLocked(id);
       break;
-    case llcpp::fuchsia::hardware::goldfish::BufferHandleType::COLOR_BUFFER:
+    case llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::COLOR_BUFFER:
       CloseColorBufferLocked(id);
       break;
     default:

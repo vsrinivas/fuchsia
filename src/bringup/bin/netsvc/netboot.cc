@@ -323,8 +323,8 @@ static zx_status_t reboot() {
   if (!ConnectToService(statecontrol::Admin::Name, local)) {
     return ZX_ERR_INTERNAL;
   }
-  auto response =
-      statecontrol::Admin::Call::Reboot(local.borrow(), statecontrol::RebootReason::USER_REQUEST);
+  auto response = statecontrol::Admin::Call::Reboot(local.borrow(),
+                                                    statecontrol::wire::RebootReason::USER_REQUEST);
   if (response.status() != ZX_OK) {
     return response.status();
   }

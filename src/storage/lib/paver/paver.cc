@@ -47,9 +47,10 @@
 namespace paver {
 namespace {
 
-using ::llcpp::fuchsia::paver::Asset;
-using ::llcpp::fuchsia::paver::Configuration;
-using ::llcpp::fuchsia::paver::WriteFirmwareResult;
+using ::llcpp::fuchsia::paver::wire::Asset;
+using ::llcpp::fuchsia::paver::wire::Configuration;
+using ::llcpp::fuchsia::paver::wire::ConfigurationStatus;
+using ::llcpp::fuchsia::paver::wire::WriteFirmwareResult;
 
 // Get the architecture of the currently running platform.
 inline constexpr Arch GetCurrentArch() {
@@ -515,8 +516,7 @@ void Paver::FindBootManager(zx::channel boot_manager, FindBootManagerCompleter::
                     std::move(boot_manager));
 }
 
-void DataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                         ::llcpp::fuchsia::paver::Asset asset,
+void DataSink::ReadAsset(Configuration configuration, Asset asset,
                          ReadAssetCompleter::Sync& completer) {
   auto status = sink_.ReadAsset(configuration, asset);
   if (status.is_ok()) {
@@ -526,8 +526,8 @@ void DataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
   }
 }
 
-void DataSink::WriteFirmware(::llcpp::fuchsia::paver::Configuration configuration,
-                             fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
+void DataSink::WriteFirmware(Configuration configuration, fidl::StringView type,
+                             ::llcpp::fuchsia::mem::Buffer payload,
                              WriteFirmwareCompleter::Sync& completer) {
   auto variant = sink_.WriteFirmware(configuration, std::move(type), std::move(payload));
   completer.Reply(CreateWriteFirmwareResult(&variant));
@@ -847,8 +847,7 @@ void DynamicDataSink::WipePartitionTables(WipePartitionTablesCompleter::Sync& co
   completer.Reply(sink_.partitioner()->WipePartitionTables().status_value());
 }
 
-void DynamicDataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                                ::llcpp::fuchsia::paver::Asset asset,
+void DynamicDataSink::ReadAsset(Configuration configuration, Asset asset,
                                 ReadAssetCompleter::Sync& completer) {
   auto status = sink_.ReadAsset(configuration, asset);
   if (status.is_ok()) {
@@ -858,8 +857,8 @@ void DynamicDataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configura
   }
 }
 
-void DynamicDataSink::WriteFirmware(::llcpp::fuchsia::paver::Configuration configuration,
-                                    fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
+void DynamicDataSink::WriteFirmware(Configuration configuration, fidl::StringView type,
+                                    ::llcpp::fuchsia::mem::Buffer payload,
                                     WriteFirmwareCompleter::Sync& completer) {
   auto variant = sink_.WriteFirmware(configuration, std::move(type), std::move(payload));
   completer.Reply(CreateWriteFirmwareResult(&variant));
@@ -919,11 +918,11 @@ void BootManager::QueryConfigurationStatus(Configuration configuration,
   const AbrSlotInfo& slot = status.value();
 
   if (!slot.is_bootable) {
-    completer.ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus::UNBOOTABLE);
+    completer.ReplySuccess(ConfigurationStatus::UNBOOTABLE);
   } else if (slot.is_marked_successful == 0) {
-    completer.ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus::PENDING);
+    completer.ReplySuccess(ConfigurationStatus::PENDING);
   } else {
-    completer.ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY);
+    completer.ReplySuccess(ConfigurationStatus::HEALTHY);
   }
 }
 

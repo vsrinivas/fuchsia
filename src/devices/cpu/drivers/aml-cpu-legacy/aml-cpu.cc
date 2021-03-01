@@ -24,7 +24,7 @@
 namespace {
 using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
 using llcpp::fuchsia::hardware::thermal::MAX_DVFS_DOMAINS;
-using llcpp::fuchsia::hardware::thermal::PowerDomain;
+using llcpp::fuchsia::hardware::thermal::wire::PowerDomain;
 
 constexpr zx_off_t kCpuVersionOffset = 0x220;
 

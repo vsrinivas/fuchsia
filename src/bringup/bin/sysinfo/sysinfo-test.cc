@@ -19,8 +19,8 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-using llcpp::fuchsia::sysinfo::InterruptControllerType;
 using llcpp::fuchsia::sysinfo::SysInfo;
+using llcpp::fuchsia::sysinfo::wire::InterruptControllerType;
 
 namespace sysinfo {
 

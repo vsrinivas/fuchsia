@@ -11,10 +11,10 @@
 namespace {
 
 TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction) {
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
-      llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
-      llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::HashFunction> hash_function =
+      llcpp::fuchsia::hardware::block::verified::wire::HashFunction::SHA256;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::BlockSize> block_size =
+      llcpp::fuchsia::hardware::block::verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
   llcpp::fuchsia::hardware::block::verified::Config config(allocator);
   config.set_hash_function(fidl::unowned_ptr(&hash_function));
@@ -27,10 +27,10 @@ TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction) {
 }
 
 TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction512BackingBlockSize) {
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
-      llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
-      llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::HashFunction> hash_function =
+      llcpp::fuchsia::hardware::block::verified::wire::HashFunction::SHA256;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::BlockSize> block_size =
+      llcpp::fuchsia::hardware::block::verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
   llcpp::fuchsia::hardware::block::verified::Config config(allocator);
   config.set_hash_function(fidl::unowned_ptr(&hash_function));
@@ -43,8 +43,8 @@ TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction512BackingBlockSize) {
 }
 
 TEST(ConfigCheckTest, RejectsMissingHashFunction) {
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
-      llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::BlockSize> block_size =
+      llcpp::fuchsia::hardware::block::verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
   llcpp::fuchsia::hardware::block::verified::Config config(allocator);
   config.set_block_size(fidl::unowned_ptr(&block_size));
@@ -56,8 +56,8 @@ TEST(ConfigCheckTest, RejectsMissingHashFunction) {
 }
 
 TEST(ConfigCheckTest, RejectsMissingBlockSize) {
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
-      llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::HashFunction> hash_function =
+      llcpp::fuchsia::hardware::block::verified::wire::HashFunction::SHA256;
   fidl::FidlAllocator allocator;
   llcpp::fuchsia::hardware::block::verified::Config config(allocator);
   config.set_hash_function(fidl::unowned_ptr(&hash_function));
@@ -69,10 +69,10 @@ TEST(ConfigCheckTest, RejectsMissingBlockSize) {
 }
 
 TEST(ConfigCheckTest, RejectsIfBlockSizeUnsupportable) {
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
-      llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
-      llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::HashFunction> hash_function =
+      llcpp::fuchsia::hardware::block::verified::wire::HashFunction::SHA256;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::BlockSize> block_size =
+      llcpp::fuchsia::hardware::block::verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
   llcpp::fuchsia::hardware::block::verified::Config config(allocator);
   config.set_hash_function(fidl::unowned_ptr(&hash_function));

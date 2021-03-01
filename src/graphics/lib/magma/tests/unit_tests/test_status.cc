@@ -8,7 +8,7 @@
 
 #if defined(__Fuchsia__)
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
-using FidlStatus = llcpp::fuchsia::gpu::magma::Status;
+using FidlStatus = llcpp::fuchsia::gpu::magma::wire::Status;
 
 static FidlStatus Convert(magma_status_t status) {
   return static_cast<FidlStatus>(magma::Status(status).getFidlStatus());

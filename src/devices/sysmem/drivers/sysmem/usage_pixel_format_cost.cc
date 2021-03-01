@@ -92,8 +92,8 @@ struct PlatformCostsEntry {
 static void AddRgbaPixelFormat(fidl::AnyAllocator& allocator, uint64_t format_modifier, double cost,
                                std::list<const UsagePixelFormatCostEntry>& result) {
   // Both RGBA and BGRA versions have similar cost, if they're supported.
-  for (auto format : {llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32,
-                      llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8}) {
+  for (auto format : {llcpp::fuchsia::sysmem2::wire::PixelFormatType::BGRA32,
+                      llcpp::fuchsia::sysmem2::wire::PixelFormatType::R8G8B8A8}) {
     llcpp::fuchsia::sysmem2::PixelFormat pixel_format(allocator);
     pixel_format.set_type(allocator, format);
     pixel_format.set_format_modifier_value(allocator, format_modifier);
@@ -182,7 +182,7 @@ const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries =
   std::list<const UsagePixelFormatCostEntry> result;
   // NV12 weakly preferred for VIDEO_USAGE_HW_DECODER.
   llcpp::fuchsia::sysmem2::PixelFormat pixel_format(allocator);
-  pixel_format.set_type(allocator, llcpp::fuchsia::sysmem2::PixelFormatType::NV12);
+  pixel_format.set_type(allocator, llcpp::fuchsia::sysmem2::wire::PixelFormatType::NV12);
   llcpp::fuchsia::sysmem2::BufferUsage buffer_usage(allocator);
   buffer_usage.set_none(allocator, 0u);
   buffer_usage.set_cpu(allocator, 0u);

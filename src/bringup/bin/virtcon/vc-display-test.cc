@@ -110,13 +110,13 @@ class StubDisplayController : public fhd::Controller::Interface {
     // Ignore
   }
 
-  void SetLayerPrimaryPosition(uint64_t layer_id, fhd::Transform transform, fhd::Frame src_frame,
-                               fhd::Frame dest_frame,
+  void SetLayerPrimaryPosition(uint64_t layer_id, fhd::wire::Transform transform,
+                               fhd::Frame src_frame, fhd::Frame dest_frame,
                                SetLayerPrimaryPositionCompleter::Sync& _completer) override {
     // Ignore
   }
 
-  void SetLayerPrimaryAlpha(uint64_t layer_id, fhd::AlphaMode mode, float val,
+  void SetLayerPrimaryAlpha(uint64_t layer_id, fhd::wire::AlphaMode mode, float val,
                             SetLayerPrimaryAlphaCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
@@ -143,7 +143,7 @@ class StubDisplayController : public fhd::Controller::Interface {
   }
 
   void CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) override {
-    _completer.Reply(fhd::ConfigResult::OK, fidl::VectorView<fhd::ClientCompositionOp>());
+    _completer.Reply(fhd::wire::ConfigResult::OK, fidl::VectorView<fhd::ClientCompositionOp>());
   }
 
   void ApplyConfig(ApplyConfigCompleter::Sync& _completer) override {
@@ -276,14 +276,14 @@ class StubMultiBufferDisplayController : public StubDisplayController {
       auto& image_constraints = constraints.image_format_constraints[i];
       image_constraints = image_format::GetDefaultImageFormatConstraints();
       if (i == 0) {
-        image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+        image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
       } else {
-        image_constraints.pixel_format.type = sysmem::PixelFormatType::RGB565;
+        image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::RGB565;
       }
       image_constraints.pixel_format.has_format_modifier = true;
       image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
       image_constraints.color_spaces_count = 1;
-      image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
+      image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
       image_constraints.max_coded_width = 0xffffffff;
       image_constraints.max_coded_height = 0xffffffff;
       image_constraints.max_bytes_per_row = 0xffffffff;

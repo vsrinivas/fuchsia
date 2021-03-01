@@ -135,7 +135,7 @@ void RemoteFileConnection::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offs
   completer.Reply(status, actual);
 }
 
-void RemoteFileConnection::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start,
+void RemoteFileConnection::Seek(int64_t offset, ::llcpp::fuchsia::io::wire::SeekOrigin start,
                                 SeekCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileSeek] options: ", options());
 
@@ -150,14 +150,14 @@ void RemoteFileConnection::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin
   }
   size_t n;
   switch (start) {
-    case fio::SeekOrigin::START:
+    case fio::wire::SeekOrigin::START:
       if (offset < 0) {
         completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
         return;
       }
       n = offset;
       break;
-    case fio::SeekOrigin::CURRENT:
+    case fio::wire::SeekOrigin::CURRENT:
       n = offset_ + offset;
       if (offset < 0) {
         // if negative seek
@@ -175,7 +175,7 @@ void RemoteFileConnection::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin
         }
       }
       break;
-    case fio::SeekOrigin::END:
+    case fio::wire::SeekOrigin::END:
       n = attr.content_size + offset;
       if (offset < 0) {
         // if negative seek

@@ -160,13 +160,13 @@ class StubDisplayController : public fhd::Controller::RawChannelInterface {
     // Ignore
   }
 
-  void SetLayerPrimaryPosition(uint64_t layer_id, fhd::Transform transform, fhd::Frame src_frame,
-                               fhd::Frame dest_frame,
+  void SetLayerPrimaryPosition(uint64_t layer_id, fhd::wire::Transform transform,
+                               fhd::Frame src_frame, fhd::Frame dest_frame,
                                SetLayerPrimaryPositionCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
 
-  void SetLayerPrimaryAlpha(uint64_t layer_id, fhd::AlphaMode mode, float val,
+  void SetLayerPrimaryAlpha(uint64_t layer_id, fhd::wire::AlphaMode mode, float val,
                             SetLayerPrimaryAlphaCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
@@ -233,11 +233,11 @@ class StubDisplayController : public fhd::Controller::RawChannelInterface {
     constraints.image_format_constraints_count = 1;
     auto& image_constraints = constraints.image_format_constraints[0];
     image_constraints = image_format::GetDefaultImageFormatConstraints();
-    image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+    image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
     image_constraints.pixel_format.has_format_modifier = true;
     image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
+    image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
     image_constraints.max_coded_width = 0xffffffff;
     image_constraints.max_coded_height = 0xffffffff;
     image_constraints.min_bytes_per_row = 0;

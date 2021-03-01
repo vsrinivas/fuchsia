@@ -218,7 +218,7 @@ zx_status_t SysmemSecureMemServer::GetPhysicalSecureHeapsInternal(
   }
 
   heaps->heaps_count = 1;
-  heaps->heaps[0].heap = llcpp::fuchsia::sysmem::HeapType::AMLOGIC_SECURE_VDEC;
+  heaps->heaps[0].heap = llcpp::fuchsia::sysmem::wire::HeapType::AMLOGIC_SECURE_VDEC;
   heaps->heaps[0].physical_address = vdec_phys_base;
   heaps->heaps[0].size_bytes = static_cast<uint64_t>(vdec_size);
   return ZX_OK;
@@ -246,7 +246,7 @@ zx_status_t SysmemSecureMemServer::SetPhysicalSecureHeapsInternal(
     return ZX_ERR_INVALID_ARGS;
   }
   const llcpp::fuchsia::sysmem::PhysicalSecureHeap& heap = heaps.heaps[0];
-  if (heap.heap != llcpp::fuchsia::sysmem::HeapType::AMLOGIC_SECURE) {
+  if (heap.heap != llcpp::fuchsia::sysmem::wire::HeapType::AMLOGIC_SECURE) {
     LOG(ERROR, "heap != AMLOGIC_SECURE");
     return ZX_ERR_INVALID_ARGS;
   }

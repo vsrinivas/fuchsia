@@ -32,7 +32,7 @@ audio_fidl::PcmFormat GetDefaultPcmFormat() {
   audio_fidl::PcmFormat format;
   format.number_of_channels = 2;
   format.channels_to_use_bitmask = 0x03;
-  format.sample_format = audio_fidl::SampleFormat::PCM_SIGNED;
+  format.sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
   format.frame_rate = kTestFrameRate1;
   format.bytes_per_sample = 2;
   format.valid_bits_per_sample = 16;

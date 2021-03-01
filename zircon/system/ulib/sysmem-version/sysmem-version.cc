@@ -53,7 +53,7 @@ template <typename V2, typename V1>
 inline constexpr bool IsCompatibleFidlScalarTypes_v = IsCompatibleFidlScalarTypes<V2, V1>::value;
 
 // The C++ style guide discourages macros, but does not prohibit them.  To operate on a bunch of
-// separate fields with different names, it's a choice among tons of error-prone repetetive
+// separate fields with different names, it's a choice among tons of error-prone repetitive
 // verbosity, macros, or more abstraction than I think anyone would want.  Macros are the least-bad
 // option (among those options considred so far).  Feel free to propose another option.
 
@@ -112,15 +112,16 @@ inline constexpr bool IsCompatibleFidlScalarTypes_v = IsCompatibleFidlScalarType
   } while (false)
 
 template <size_t N>
-fit::result<fidl::VectorView<llcpp::fuchsia::sysmem2::HeapType>> V2CopyFromV1HeapPermittedArray(
-    fidl::Allocator& allocator, const fidl::Array<llcpp::fuchsia::sysmem::HeapType, N>& v1a,
-    const uint32_t v1_count) {
+fit::result<fidl::VectorView<llcpp::fuchsia::sysmem2::wire::HeapType>>
+V2CopyFromV1HeapPermittedArray(fidl::Allocator& allocator,
+                               const fidl::Array<llcpp::fuchsia::sysmem::wire::HeapType, N>& v1a,
+                               const uint32_t v1_count) {
   ZX_DEBUG_ASSERT(v1_count);
   if (v1_count > v1a.size()) {
     LOG(ERROR, "v1_count > v1a.size() - v1_count: %u v1a.size(): %zu", v1_count, v1a.size());
     return fit::error();
   }
-  fidl::VectorView<llcpp::fuchsia::sysmem2::HeapType> v2a(allocator, v1_count);
+  fidl::VectorView<llcpp::fuchsia::sysmem2::wire::HeapType> v2a(allocator, v1_count);
   for (uint32_t i = 0; i < v1_count; i++) {
     ASSIGN_SCALAR(v2a[i], v1a[i]);
   }
@@ -169,7 +170,7 @@ fit::result<> V2CopyFromV1BufferCollectionConstraintsMain(
   ZX_DEBUG_ASSERT(v2b_param);
   llcpp::fuchsia::sysmem2::BufferCollectionConstraints& v2b = *v2b_param;
 
-  // This sets usage regardless of whether the client set any usage bits within uage.  That's
+  // This sets usage regardless of whether the client set any usage bits within usage.  That's
   // checked later (regardless of v1 or v2 client).  If a v1 client said !has_constraints, we
   // won't call the current method and usage field will remain un-set so that
   // Constraints2.IsEmpty() overall.

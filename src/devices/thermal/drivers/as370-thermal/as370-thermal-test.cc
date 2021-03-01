@@ -22,10 +22,10 @@ bool FloatNear(float a, float b) { return std::abs(a - b) < 0.001f; }
 namespace thermal {
 
 using ThermalClient = llcpp::fuchsia::hardware::thermal::Device::SyncClient;
-using llcpp::fuchsia::hardware::thermal::OperatingPoint;
-using llcpp::fuchsia::hardware::thermal::OperatingPointEntry;
-using llcpp::fuchsia::hardware::thermal::PowerDomain;
-using llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo;
+using llcpp::fuchsia::hardware::thermal::wire::OperatingPoint;
+using llcpp::fuchsia::hardware::thermal::wire::OperatingPointEntry;
+using llcpp::fuchsia::hardware::thermal::wire::PowerDomain;
+using llcpp::fuchsia::hardware::thermal::wire::ThermalDeviceInfo;
 
 class As370ThermalTest : public zxtest::Test {
  public:

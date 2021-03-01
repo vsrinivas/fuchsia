@@ -487,7 +487,7 @@ void Device::UsbCdcIntHander(uint16_t packet_size) {
            zx_status_get_string(status));
   }
   if (snoop_client_end_) {
-    SnoopQmiMsgSend(buffer, sizeof(buffer), telephony_snoop::Direction::FROM_MODEM);
+    SnoopQmiMsgSend(buffer, sizeof(buffer), telephony_snoop::wire::Direction::FROM_MODEM);
   }
   return;
 }
@@ -495,7 +495,7 @@ void Device::UsbCdcIntHander(uint16_t packet_size) {
 zx_handle_t Device::GetQmiChannelPort() { return qmi_channel_port_; }
 
 void Device::SnoopQmiMsgSend(uint8_t* msg_arr, uint32_t msg_arr_len,
-                             telephony_snoop::Direction direction) {
+                             telephony_snoop::wire::Direction direction) {
   telephony_snoop::QmiMessage qmi_msg;
   uint32_t current_length = std::min(msg_arr_len, (uint32_t)sizeof(qmi_msg.opaque_bytes));
   qmi_msg.is_partial_copy = true;  // do not know the real length of QMI message for now
@@ -566,7 +566,7 @@ int Device::EventLoop(void) {
         return status;
       }
       if (snoop_client_end_) {
-        SnoopQmiMsgSend(buffer, sizeof(buffer), telephony_snoop::Direction::TO_MODEM);
+        SnoopQmiMsgSend(buffer, sizeof(buffer), telephony_snoop::wire::Direction::TO_MODEM);
       }
     } else if (packet.key == INTERRUPT_MSG) {
       if (txn->response.status == ZX_OK) {

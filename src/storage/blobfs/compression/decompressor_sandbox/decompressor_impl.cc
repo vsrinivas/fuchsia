@@ -74,15 +74,15 @@ void HandleFifo(const fzl::OwnedVmoMapper& compressed_mapper,
   TRACE_DURATION("decompressor", "HandleFifo", "length", request->decompressed.size);
   size_t bytes_decompressed = 0;
   switch (request->algorithm) {
-    case llcpp::fuchsia::blobfs::internal::CompressionAlgorithm::CHUNKED_PARTIAL:
+    case llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::CHUNKED_PARTIAL:
       response->status =
           DecompressChunkedPartial(decompressed_mapper, compressed_mapper, request->decompressed,
                                    request->compressed, &bytes_decompressed);
       break;
-    case llcpp::fuchsia::blobfs::internal::CompressionAlgorithm::LZ4:
-    case llcpp::fuchsia::blobfs::internal::CompressionAlgorithm::ZSTD:
-    case llcpp::fuchsia::blobfs::internal::CompressionAlgorithm::ZSTD_SEEKABLE:
-    case llcpp::fuchsia::blobfs::internal::CompressionAlgorithm::CHUNKED:
+    case llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::LZ4:
+    case llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::ZSTD:
+    case llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::ZSTD_SEEKABLE:
+    case llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::CHUNKED:
       if (request->decompressed.offset != 0 || request->compressed.offset != 0) {
         bytes_decompressed = 0;
         response->status = ZX_ERR_NOT_SUPPORTED;
@@ -94,7 +94,7 @@ void HandleFifo(const fzl::OwnedVmoMapper& compressed_mapper,
                            request->compressed.size, algorithm, &bytes_decompressed);
       }
       break;
-    case llcpp::fuchsia::blobfs::internal::CompressionAlgorithm::UNCOMPRESSED:
+    case llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::UNCOMPRESSED:
       response->status = ZX_ERR_NOT_SUPPORTED;
       break;
   }

@@ -44,24 +44,24 @@ TEST(SensorTest, AmbientLight) {
   ASSERT_EQ(4, descriptor.sensor().input().values().count());
 
   ASSERT_EQ(descriptor.sensor().input().values()[0].type,
-            ::llcpp::fuchsia::input::report::SensorType::LIGHT_ILLUMINANCE);
+            ::llcpp::fuchsia::input::report::wire::SensorType::LIGHT_ILLUMINANCE);
   ASSERT_EQ(descriptor.sensor().input().values()[0].axis.unit.type,
-            ::llcpp::fuchsia::input::report::UnitType::NONE);
+            ::llcpp::fuchsia::input::report::wire::UnitType::NONE);
 
   ASSERT_EQ(descriptor.sensor().input().values()[1].type,
-            ::llcpp::fuchsia::input::report::SensorType::LIGHT_RED);
+            ::llcpp::fuchsia::input::report::wire::SensorType::LIGHT_RED);
   ASSERT_EQ(descriptor.sensor().input().values()[1].axis.unit.type,
-            ::llcpp::fuchsia::input::report::UnitType::NONE);
+            ::llcpp::fuchsia::input::report::wire::UnitType::NONE);
 
   ASSERT_EQ(descriptor.sensor().input().values()[2].type,
-            ::llcpp::fuchsia::input::report::SensorType::LIGHT_BLUE);
+            ::llcpp::fuchsia::input::report::wire::SensorType::LIGHT_BLUE);
   ASSERT_EQ(descriptor.sensor().input().values()[2].axis.unit.type,
-            ::llcpp::fuchsia::input::report::UnitType::NONE);
+            ::llcpp::fuchsia::input::report::wire::UnitType::NONE);
 
   ASSERT_EQ(descriptor.sensor().input().values()[3].type,
-            ::llcpp::fuchsia::input::report::SensorType::LIGHT_GREEN);
+            ::llcpp::fuchsia::input::report::wire::SensorType::LIGHT_GREEN);
   ASSERT_EQ(descriptor.sensor().input().values()[3].axis.unit.type,
-            ::llcpp::fuchsia::input::report::UnitType::NONE);
+            ::llcpp::fuchsia::input::report::wire::UnitType::NONE);
 
   // Create the report.
   ambient_light_input_rpt_t report_data = {};

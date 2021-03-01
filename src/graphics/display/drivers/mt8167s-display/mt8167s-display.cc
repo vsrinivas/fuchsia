@@ -96,7 +96,7 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportImage(image_t* image,
   }
 
   ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type ==
-                  sysmem::PixelFormatType::BGRA32);
+                  sysmem::wire::PixelFormatType::BGRA32);
   ZX_DEBUG_ASSERT(
       collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
   ZX_DEBUG_ASSERT(
@@ -289,14 +289,14 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.cpu_domain_supported = false;
   buffer_constraints.inaccessible_domain_supported = true;
   buffer_constraints.heap_permitted_count = 1;
-  buffer_constraints.heap_permitted[0] = sysmem::HeapType::SYSTEM_RAM;
+  buffer_constraints.heap_permitted[0] = sysmem::wire::HeapType::SYSTEM_RAM;
   constraints.image_format_constraints_count = 1;
   sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
   image_constraints.pixel_format.has_format_modifier = true;
   image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
   image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
+  image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
   image_constraints.bytes_per_row_divisor = 32;
   image_constraints.start_offset_divisor = 32;
 

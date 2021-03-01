@@ -701,15 +701,15 @@ zx_status_t InsntraceDevice::IptInitialize(const fuchsia_insntrace::Allocation* 
     return ZX_ERR_BAD_STATE;
 
   // TODO(dje): Until thread tracing is supported.
-  if (allocation->mode == fuchsia_insntrace::Mode::THREAD)
+  if (allocation->mode == fuchsia_insntrace::wire::Mode::THREAD)
     return ZX_ERR_NOT_SUPPORTED;
 
   zx_insntrace_trace_mode_t internal_mode;
   switch (allocation->mode) {
-    case fuchsia_insntrace::Mode::CPU:
+    case fuchsia_insntrace::wire::Mode::CPU:
       internal_mode = IPT_MODE_CPU;
       break;
-    case fuchsia_insntrace::Mode::THREAD:
+    case fuchsia_insntrace::wire::Mode::THREAD:
       internal_mode = IPT_MODE_THREAD;
       break;
     default:
@@ -785,10 +785,10 @@ zx_status_t InsntraceDevice::IptGetAllocation(fuchsia_insntrace::Allocation* out
     return ZX_ERR_BAD_STATE;
   switch (mode_) {
     case IPT_MODE_CPU:
-      out_config->mode = fuchsia_insntrace::Mode::CPU;
+      out_config->mode = fuchsia_insntrace::wire::Mode::CPU;
       break;
     case IPT_MODE_THREAD:
-      out_config->mode = fuchsia_insntrace::Mode::THREAD;
+      out_config->mode = fuchsia_insntrace::wire::Mode::THREAD;
       break;
     default:
       __UNREACHABLE;

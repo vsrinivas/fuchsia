@@ -262,7 +262,7 @@ zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t**
       break;
     case fio::NodeInfo::Tag::kVmofile: {
       fio::File::SyncClient control(std::move(handle));
-      auto result = control.Seek(0, fio::SeekOrigin::START);
+      auto result = control.Seek(0, fio::wire::SeekOrigin::START);
       zx_status_t status = result.status();
       if (status != ZX_OK) {
         return status;

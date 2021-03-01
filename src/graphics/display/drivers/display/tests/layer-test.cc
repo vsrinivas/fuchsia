@@ -54,8 +54,8 @@ TEST_F(LayerTest, PrimaryBasic) {
                                    .type = fhd::TYPE_SIMPLE};
   fhd::Frame frame = {.width = kDisplayWidth, .height = kDisplayHeight};
   l.SetPrimaryConfig(image_config);
-  l.SetPrimaryPosition(fhd::Transform::IDENTITY, frame, frame);
-  l.SetPrimaryAlpha(fhd::AlphaMode::DISABLE, 0);
+  l.SetPrimaryPosition(fhd::wire::Transform::IDENTITY, frame, frame);
+  l.SetPrimaryAlpha(fhd::wire::AlphaMode::DISABLE, 0);
   auto image = CreateReadyImage();
   l.SetImage(image, INVALID_ID, INVALID_ID);
   l.ApplyChanges({.h_addressable = kDisplayWidth, .v_addressable = kDisplayHeight});

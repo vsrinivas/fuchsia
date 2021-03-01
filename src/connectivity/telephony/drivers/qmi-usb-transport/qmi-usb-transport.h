@@ -149,7 +149,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Messageable>,
   void UsbCdcIntHander(uint16_t packet_size);
   int EventLoop();
   void SnoopQmiMsgSend(uint8_t* msg_arr, uint32_t msg_arr_len,
-                       ::llcpp::fuchsia::telephony::snoop::Direction direction);
+                       ::llcpp::fuchsia::telephony::snoop::wire::Direction direction);
   // Usb ops handler
   void UsbReadCompleteHandler(usb_request_t* request);
   void UsbWriteCompleteHandler(usb_request_t* request);

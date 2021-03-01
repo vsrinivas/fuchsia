@@ -38,6 +38,8 @@ namespace fhd = ::llcpp::fuchsia::hardware::display;
 namespace sysmem = ::llcpp::fuchsia::sysmem;
 namespace fio = ::llcpp::fuchsia::io;
 
+using fhd::wire::VirtconMode;
+
 static async_dispatcher_t* dc_dispatcher = nullptr;
 // At any point, |dc_wait| will either be waiting on the display controller device directory
 // for a display controller instance or it will be waiting on a display controller interface
@@ -74,7 +76,7 @@ static constexpr const char* kDisplayControllerDir = "/dev/class/display-control
 static int dc_dir_fd;
 static zx_handle_t dc_device;
 
-static zx_status_t vc_set_mode(fhd::VirtconMode mode) {
+static zx_status_t vc_set_mode(VirtconMode mode) {
   return dc_client->SetVirtconMode(static_cast<uint8_t>(mode)).status();
 }
 
@@ -93,7 +95,7 @@ void vc_toggle_framebuffer() {
   }
 
   zx_status_t status =
-      vc_set_mode(!g_vc_owns_display ? fhd::VirtconMode::FORCED : fhd::VirtconMode::FALLBACK);
+      vc_set_mode(!g_vc_owns_display ? VirtconMode::FORCED : VirtconMode::FALLBACK);
   if (status != ZX_OK) {
     printf("vc: Failed to toggle ownership %d\n", status);
   }
@@ -267,7 +269,7 @@ zx_status_t configure_layer(display_info_t* display, uint64_t layer_id, uint64_t
   RETURN_IF_ERROR(dc_client->SetLayerPrimaryConfig(layer_id, *config),
                   "vc: Failed to set layer config");
   RETURN_IF_ERROR(dc_client->SetLayerPrimaryPosition(
-                      layer_id, fhd::Transform::IDENTITY,
+                      layer_id, fhd::wire::Transform::IDENTITY,
                       fhd::Frame{.width = config->width, .height = config->height},
                       fhd::Frame{.width = display->width, .height = display->height}),
                   "vc: Failed to set layer position");
@@ -280,7 +282,7 @@ zx_status_t apply_configuration() {
   auto check_rsp = dc_client->CheckConfig(false);
   RETURN_IF_ERROR(check_rsp, "vc: Failed to validate display config");
 
-  if (check_rsp->res != fhd::ConfigResult::OK) {
+  if (check_rsp->res != fhd::wire::ConfigResult::OK) {
     printf("vc: Config not valid %d\n", static_cast<int>(check_rsp->res));
     return ZX_ERR_INTERNAL;
   }
@@ -388,7 +390,7 @@ static zx_status_t create_buffer_collection(
   }
   image_constraints.pixel_format = image_format::GetCppPixelFormat(pixel_format);
   image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
+  image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
   image_constraints.min_coded_width = display->width;
   image_constraints.min_coded_height = display->height;
   image_constraints.max_coded_width = 0xffffffff;
@@ -660,7 +662,8 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
 
   zx_handle_close(dc_wait.object());
 
-  status = vc_set_mode(g_hide_on_boot ? fhd::VirtconMode::INACTIVE : fhd::VirtconMode::FALLBACK);
+  status = vc_set_mode(g_hide_on_boot ? fhd::wire::VirtconMode::INACTIVE
+                                      : fhd::wire::VirtconMode::FALLBACK);
   if (status != ZX_OK) {
     printf("vc: Failed to set initial ownership %d\n", status);
     vc_find_display_controller();

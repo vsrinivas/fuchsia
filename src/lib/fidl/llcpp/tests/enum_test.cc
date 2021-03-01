@@ -5,9 +5,12 @@
 #include <fidl/llcpp/types/test/llcpp/fidl.h>
 #include <gtest/gtest.h>
 
+using llcpp::fidl::llcpp::types::test::wire::FlexibleEnum;
+using llcpp::fidl::llcpp::types::test::wire::StrictEnum;
+
 TEST(Enum, Defaults) {
-  using StrictType = llcpp::fidl::llcpp::types::test::StrictEnum;
-  using FlexibleType = llcpp::fidl::llcpp::types::test::FlexibleEnum;
+  using StrictType = StrictEnum;
+  using FlexibleType = FlexibleEnum;
 
   StrictType strict_enum_default = {};
   FlexibleType flexible_enum_default = {};
@@ -17,7 +20,7 @@ TEST(Enum, Defaults) {
 }
 
 TEST(FlexibleEnum, IsUnknown) {
-  using EnumType = llcpp::fidl::llcpp::types::test::FlexibleEnum;
+  using EnumType = FlexibleEnum;
 
   EXPECT_FALSE(EnumType::B.IsUnknown());
   EXPECT_FALSE(EnumType::D.IsUnknown());
@@ -28,7 +31,7 @@ TEST(FlexibleEnum, IsUnknown) {
 }
 
 TEST(FlexibleEnum, Equality) {
-  using EnumType = llcpp::fidl::llcpp::types::test::FlexibleEnum;
+  using EnumType = FlexibleEnum;
 
   EXPECT_TRUE(EnumType::B == EnumType(2));
   EXPECT_TRUE(EnumType::D == EnumType(4));
@@ -40,8 +43,8 @@ TEST(FlexibleEnum, Equality) {
 }
 
 TEST(Enum, Switch) {
-  using StrictType = llcpp::fidl::llcpp::types::test::StrictEnum;
-  using FlexibleType = llcpp::fidl::llcpp::types::test::FlexibleEnum;
+  using StrictType = StrictEnum;
+  using FlexibleType = FlexibleEnum;
 
   // This is a compilation test ensuring that we can use strict and flexible
   // enums in switch statements.

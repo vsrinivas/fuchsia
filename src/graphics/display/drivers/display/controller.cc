@@ -753,14 +753,14 @@ void Controller::ReleaseCaptureImage(uint64_t handle) {
 
 void Controller::SetVcMode(uint8_t vc_mode) {
   fbl::AutoLock lock(mtx());
-  vc_mode_ = static_cast<fidl_display::VirtconMode>(vc_mode);
+  vc_mode_ = static_cast<fidl_display::wire::VirtconMode>(vc_mode);
   HandleClientOwnershipChanges();
 }
 
 void Controller::HandleClientOwnershipChanges() {
   ClientProxy* new_active;
-  if (vc_mode_ == fidl_display::VirtconMode::FORCED ||
-      (vc_mode_ == fidl_display::VirtconMode::FALLBACK && primary_client_ == nullptr)) {
+  if (vc_mode_ == fidl_display::wire::VirtconMode::FORCED ||
+      (vc_mode_ == fidl_display::wire::VirtconMode::FALLBACK && primary_client_ == nullptr)) {
     new_active = vc_client_;
   } else {
     new_active = primary_client_;
@@ -785,7 +785,7 @@ void Controller::OnClientDead(ClientProxy* client) {
   }
   if (client == vc_client_) {
     vc_client_ = nullptr;
-    vc_mode_ = fidl_display::VirtconMode::INACTIVE;
+    vc_mode_ = fidl_display::wire::VirtconMode::INACTIVE;
   } else if (client == primary_client_) {
     primary_client_ = nullptr;
   } else {

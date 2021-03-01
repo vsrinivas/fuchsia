@@ -204,7 +204,8 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
 
   zx_status_t OnDumpDone(uint64_t context_id) { return binding_.value()->OnDumpDone(context_id); }
 
-  zx_status_t OnExecutionDone(uint64_t context_id, llcpp::fuchsia::shell::ExecuteResult result) {
+  zx_status_t OnExecutionDone(uint64_t context_id,
+                              llcpp::fuchsia::shell::wire::ExecuteResult result) {
     return binding_.value()->OnExecutionDone(context_id, result);
   }
 

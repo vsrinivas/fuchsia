@@ -51,11 +51,11 @@ int MemoryPressureCommand(fxl::CommandLine command_line, bool sleep) {
     return 1;
   }
 
-  sysmem::HeapType heap = sysmem::HeapType::SYSTEM_RAM;
+  sysmem::wire::HeapType heap = sysmem::wire::HeapType::SYSTEM_RAM;
   std::string heap_string;
   if (command_line.GetOptionValue("heap", &heap_string)) {
     char* endptr;
-    heap = static_cast<sysmem::HeapType>(strtoull(heap_string.c_str(), &endptr, 0));
+    heap = static_cast<sysmem::wire::HeapType>(strtoull(heap_string.c_str(), &endptr, 0));
     if (endptr != heap_string.c_str() + heap_string.size()) {
       LogError("Invalid heap string: %s\n", heap_string.c_str());
       return 1;

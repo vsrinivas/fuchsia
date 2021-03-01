@@ -161,8 +161,8 @@ zx_status_t Coordinator::RegisterWithPowerManager(zx::channel power_manager_clie
       std::move(system_state_transition_client), std::move(devfs_handle),
       [](power_manager_fidl::DriverManagerRegistration::RegisterResponse* response) {
         if (response->result.is_err()) {
-          power_manager_fidl::RegistrationError err = response->result.err();
-          if (err == power_manager_fidl::RegistrationError::INVALID_HANDLE) {
+          power_manager_fidl::wire::RegistrationError err = response->result.err();
+          if (err == power_manager_fidl::wire::RegistrationError::INVALID_HANDLE) {
             LOGF(ERROR, "Failed to register with power_manager.Invalid handle.\n");
             return;
           }
@@ -1078,7 +1078,7 @@ static zx_status_t dh_bind_driver(const fbl::RefPtr<Device>& dev, const char* li
               test_time = zx::msec(atoi(test_timeout.data()));
             }
             real_parent->set_test_time(test_time);
-            real_parent->DriverCompatibiltyTest();
+            real_parent->DriverCompatibilityTest();
             break;
           } else if (real_parent->test_state() == Device::TestStateMachine::kTestBindSent) {
             real_parent->test_event().signal(0, TEST_BIND_DONE_SIGNAL);
@@ -1367,7 +1367,7 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
   bool fallback = false;
   if (version[0] == '*') {
     fallback = true;
-    // TODO(fxbug.dev/44586): remove this once a better solution for driver prioritisation is
+    // TODO(fxbug.dev/44586): remove this once a better solution for driver prioritization is
     // implemented.
     for (auto& name : config_.eager_fallback_drivers) {
       if (driver->name == name) {
@@ -1594,21 +1594,21 @@ void Coordinator::UseFallbackDrivers() { drivers_.splice(drivers_.end(), fallbac
 // TODO(fxbug.dev/42257): Temporary helper to convert state to flags.
 // Will be removed eventually.
 uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
-    power_fidl::statecontrol::SystemPowerState state) {
+    power_fidl::statecontrol::wire::SystemPowerState state) {
   switch (state) {
-    case power_fidl::statecontrol::SystemPowerState::FULLY_ON:
+    case power_fidl::statecontrol::wire::SystemPowerState::FULLY_ON:
       return 0;
-    case power_fidl::statecontrol::SystemPowerState::REBOOT:
+    case power_fidl::statecontrol::wire::SystemPowerState::REBOOT:
       return power_fidl::statecontrol::SUSPEND_FLAG_REBOOT;
-    case power_fidl::statecontrol::SystemPowerState::REBOOT_BOOTLOADER:
+    case power_fidl::statecontrol::wire::SystemPowerState::REBOOT_BOOTLOADER:
       return power_fidl::statecontrol::SUSPEND_FLAG_REBOOT_BOOTLOADER;
-    case power_fidl::statecontrol::SystemPowerState::REBOOT_RECOVERY:
+    case power_fidl::statecontrol::wire::SystemPowerState::REBOOT_RECOVERY:
       return power_fidl::statecontrol::SUSPEND_FLAG_REBOOT_RECOVERY;
-    case power_fidl::statecontrol::SystemPowerState::POWEROFF:
+    case power_fidl::statecontrol::wire::SystemPowerState::POWEROFF:
       return power_fidl::statecontrol::SUSPEND_FLAG_POWEROFF;
-    case power_fidl::statecontrol::SystemPowerState::MEXEC:
+    case power_fidl::statecontrol::wire::SystemPowerState::MEXEC:
       return power_fidl::statecontrol::SUSPEND_FLAG_MEXEC;
-    case power_fidl::statecontrol::SystemPowerState::SUSPEND_RAM:
+    case power_fidl::statecontrol::wire::SystemPowerState::SUSPEND_RAM:
       return power_fidl::statecontrol::SUSPEND_FLAG_SUSPEND_RAM;
     default:
       return 0;
@@ -1865,7 +1865,7 @@ std::string Coordinator::GetFragmentDriverPath() const {
 }
 
 void Coordinator::RestartDriverHosts(fidl::StringView driver_path_view,
-                                 RestartDriverHostsCompleter::Sync& completer) {
+                                     RestartDriverHostsCompleter::Sync& completer) {
   fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
 
   // Find devices containing the driver.
@@ -1884,9 +1884,9 @@ void Coordinator::RestartDriverHosts(fidl::StringView driver_path_view,
 }
 
 void Coordinator::ScheduleUnbindRemoveAllDevices(const fbl::RefPtr<DriverHost> driver_host) {
-  for (auto& dev: driver_host->devices()) {
+  for (auto& dev : driver_host->devices()) {
     // This will also call on all the children of the device.
     dev.CreateUnbindRemoveTasks(
-      UnbindTaskOpts{.do_unbind = true, .post_on_create = true, .driver_host_requested = false});
+        UnbindTaskOpts{.do_unbind = true, .post_on_create = true, .driver_host_requested = false});
   }
 }

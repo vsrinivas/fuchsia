@@ -22,7 +22,7 @@ class SystemStateManager : public device_manager_fidl::SystemStateTransition::In
                             std::unique_ptr<SystemStateManager>* out);
 
   // SystemStateTransition interface
-  void SetTerminationSystemState(power_fidl::statecontrol::SystemPowerState state,
+  void SetTerminationSystemState(power_fidl::statecontrol::wire::SystemPowerState state,
                                  device_manager_fidl::SystemStateTransition::Interface::
                                      SetTerminationSystemStateCompleter::Sync& completer) override;
 

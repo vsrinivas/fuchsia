@@ -100,7 +100,8 @@ class SerialPppHarness : public zxtest::Test {
     return status;
   }
 
-  void Tx(uint32_t id, uint64_t offset, netdev::FrameType type, fbl::Span<const uint8_t> data) {
+  void Tx(uint32_t id, uint64_t offset, netdev::wire::FrameType type,
+          fbl::Span<const uint8_t> data) {
     std::copy(data.begin(), data.end(), vmo_data().subspan(offset).begin());
     buffer_region_t part = {
         .offset = offset,
@@ -228,7 +229,7 @@ TEST_F(SerialPppHarness, DriverTx) {
   std::string information = "Hello\x7eworld!";
   fbl::Span<const uint8_t> span(reinterpret_cast<const uint8_t*>(information.data()),
                                 information.size());
-  Tx(0, 0, netdev::FrameType::IPV4, span);
+  Tx(0, 0, netdev::wire::FrameType::IPV4, span);
   ASSERT_OK(Wait(kEventTxCompleted));
   const std::vector<uint8_t> expect = {
       0x7e, 0xff, 0x7d, 0x23, 0x7d, 0x20, 0x21, 'H', 'e',  'l',  'l',  'o',
@@ -247,7 +248,7 @@ TEST_F(SerialPppHarness, DriverMultipleTx) {
                                 information.size());
   constexpr uint32_t kFrameCount = 5;
   for (uint32_t i = 0; i < kFrameCount; i++) {
-    Tx(i, i * kDefaultBufferReservation, netdev::FrameType::IPV4, span);
+    Tx(i, i * kDefaultBufferReservation, netdev::wire::FrameType::IPV4, span);
   }
 
   const std::vector<uint8_t> expect = {
@@ -273,7 +274,7 @@ TEST_F(SerialPppHarness, DriverTxEscapedFcs) {
   std::string information = "\x29Hello\x7eworld!";
   fbl::Span<const uint8_t> span(reinterpret_cast<const uint8_t*>(information.data()),
                                 information.size());
-  Tx(0, 0, netdev::FrameType::IPV4, span);
+  Tx(0, 0, netdev::wire::FrameType::IPV4, span);
   ASSERT_OK(Wait(kEventTxCompleted));
   auto tx_result = PopTx();
   ASSERT_TRUE(tx_result.has_value());
@@ -294,7 +295,7 @@ TEST_F(SerialPppHarness, DriverTxEmpty) {
   std::string information;
   fbl::Span<const uint8_t> span(reinterpret_cast<const uint8_t*>(information.data()),
                                 information.size());
-  Tx(0, 0, netdev::FrameType::IPV6, span);
+  Tx(0, 0, netdev::wire::FrameType::IPV6, span);
   ASSERT_OK(Wait(kEventTxCompleted));
   auto tx_result = PopTx();
   ASSERT_TRUE(tx_result.has_value());
@@ -336,7 +337,7 @@ TEST_F(SerialPppHarness, DriverRxSingleFrame) {
   ASSERT_OK(Wait(kEventRxCompleted));
   auto rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
-  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::FrameType::IPV4));
+  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::IPV4));
   auto rx_data = vmo_data().subspan(0, rx_buffer->total_length);
   ASSERT_EQ(rx_data.size(), information.length());
   ASSERT_BYTES_EQ(rx_data.data(), information.data(), rx_data.size());
@@ -355,7 +356,7 @@ TEST_F(SerialPppHarness, DriverRxSingleFrameFiller) {
   ASSERT_OK(Wait(kEventRxCompleted));
   auto rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
-  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::FrameType::IPV4));
+  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::IPV4));
   auto rx_data = vmo_data().subspan(0, rx_buffer->total_length);
   ASSERT_EQ(rx_data.size(), information.length());
   ASSERT_BYTES_EQ(rx_data.data(), information.data(), rx_data.size());
@@ -376,8 +377,8 @@ TEST_F(SerialPppHarness, DriverRxTwoJoinedFrames) {
   ASSERT_EQ(actual, serial_data.size());
 
   auto validate_rx = [this](const rx_buffer_t& result, const std::string& expect) {
-    ASSERT_EQ(result.meta.frame_type, static_cast<uint8_t>(netdev::FrameType::IPV4), "buffer %d",
-              result.id);
+    ASSERT_EQ(result.meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::IPV4),
+              "buffer %d", result.id);
     auto data = vmo_data().subspan(result.id * kDefaultBufferReservation, result.total_length);
     ASSERT_EQ(data.size(), expect.size(), "buffer %d", result.id);
     ASSERT_BYTES_EQ(data.data(), expect.data(), data.size(), "buffer %d", result.id);
@@ -401,7 +402,7 @@ TEST_F(SerialPppHarness, DriverRxEmpty) {
   ASSERT_OK(Wait(kEventRxCompleted));
   auto rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
-  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::FrameType::IPV6));
+  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::IPV6));
   ASSERT_EQ(rx_buffer->total_length, 0);
 }
 
@@ -418,7 +419,7 @@ TEST_F(SerialPppHarness, DriverRxBadProtocol) {
   ASSERT_OK(Wait(kEventRxCompleted));
   auto rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
-  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::FrameType::IPV6));
+  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::IPV6));
   ASSERT_EQ(rx_buffer->total_length, 0);
 }
 
@@ -435,7 +436,7 @@ TEST_F(SerialPppHarness, DriverRxBadHeader) {
   ASSERT_OK(Wait(kEventRxCompleted));
   auto rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
-  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::FrameType::IPV6));
+  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::IPV6));
   ASSERT_EQ(rx_buffer->total_length, 0);
 }
 
@@ -452,7 +453,7 @@ TEST_F(SerialPppHarness, DriverRxTooShort) {
   ASSERT_OK(Wait(kEventRxCompleted));
   auto rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
-  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::FrameType::IPV6));
+  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::IPV6));
   ASSERT_EQ(rx_buffer->total_length, 0);
 }
 
@@ -474,7 +475,7 @@ TEST_F(SerialPppHarness, DriverRxTooLong) {
   ASSERT_OK(Wait(kEventRxCompleted));
   auto rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
-  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::FrameType::IPV6));
+  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::IPV6));
   ASSERT_EQ(rx_buffer->total_length, 0);
 }
 
@@ -492,7 +493,7 @@ TEST_F(SerialPppHarness, DriverRxBadFrameCheckSequence) {
   ASSERT_OK(Wait(kEventRxCompleted));
   auto rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
-  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::FrameType::IPV6));
+  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::IPV6));
   ASSERT_EQ(rx_buffer->total_length, 0);
 }
 
@@ -520,7 +521,7 @@ TEST_F(SerialPppHarness, DriverRxTimeout) {
   ASSERT_OK(Wait(kEventRxCompleted));
   auto rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
-  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::FrameType::IPV4));
+  ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::IPV4));
   auto data = vmo_data().subspan(0, rx_buffer->total_length);
   ASSERT_EQ(data.size(), expect.size());
   ASSERT_BYTES_EQ(data.data(), expect.data(), data.size());
@@ -563,7 +564,7 @@ TEST_F(SerialPppHarness, CycleTraffic) {
   // Enqueue FIFO-depth tx frames.
   for (uint32_t i = 0; i < ppp::SerialPpp::kFifoDepth; i++) {
     uint32_t id = i + ppp::SerialPpp::kFifoDepth;
-    Tx(id, id * kDefaultBufferReservation, netdev::FrameType::IPV4,
+    Tx(id, id * kDefaultBufferReservation, netdev::wire::FrameType::IPV4,
        fbl::Span(reinterpret_cast<uint8_t*>(&tx_driver_count), sizeof(tx_driver_count)));
     tx_driver_count++;
   }
@@ -639,7 +640,7 @@ TEST_F(SerialPppHarness, CycleTraffic) {
         received.pop();
         ASSERT_EQ(buffer.id, rx_driver_count % ppp::SerialPpp::kFifoDepth);
         uint64_t offset = buffer.id * kDefaultBufferReservation;
-        ASSERT_EQ(buffer.meta.frame_type, static_cast<uint8_t>(netdev::FrameType::IPV4));
+        ASSERT_EQ(buffer.meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::IPV4));
         ASSERT_EQ(buffer.total_length, sizeof(rx_driver_count));
         ASSERT_BYTES_EQ(vmo_data().begin() + offset, reinterpret_cast<uint8_t*>(&rx_driver_count),
                         sizeof(rx_driver_count));
@@ -657,7 +658,7 @@ TEST_F(SerialPppHarness, CycleTraffic) {
                                  ppp::SerialPpp::kFifoDepth);
         tx_returned_driver_count++;
         if (tx_driver_count < kTotalFrames) {
-          Tx(result.id, result.id * kDefaultBufferReservation, netdev::FrameType::IPV4,
+          Tx(result.id, result.id * kDefaultBufferReservation, netdev::wire::FrameType::IPV4,
              make_span(&tx_driver_count));
           tx_driver_count++;
         }

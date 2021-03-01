@@ -376,7 +376,7 @@ zx_status_t Session::FetchTx() {
     buffer->meta.flags = desc->inbound_flags;
     buffer->meta.frame_type = desc->frame_type;
     buffer->meta.info_type = desc->info_type;
-    if (buffer->meta.info_type != static_cast<uint32_t>(netdev::InfoType::NO_INFO)) {
+    if (buffer->meta.info_type != static_cast<uint32_t>(netdev::wire::InfoType::NO_INFO)) {
       LOGF_WARN("network-device(%s): Info type (%d) not recognized, discarding information", name(),
                 buffer->meta.info_type);
     }
@@ -450,7 +450,7 @@ zx_status_t Session::FetchTx() {
       return ZX_ERR_IO_INVALID;
     }
 
-    // notifty parent so we can copy this to any listening sessions
+    // notify parent so we can copy this to any listening sessions
     notify_listeners |= parent_->ListenSessionData(*this, *desc_idx);
     transaction.Push(*desc_idx);
     desc_idx++;
@@ -767,7 +767,7 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
   auto* owner_desc = owner.descriptor(owner_index);
   auto* desc = descriptor(target_desc);
   // NOTE(brunodalbo) Do we want to listen on info as well?
-  desc->info_type = static_cast<uint32_t>(netdev::InfoType::NO_INFO);
+  desc->info_type = static_cast<uint32_t>(netdev::wire::InfoType::NO_INFO);
   desc->frame_type = owner_desc->frame_type;
   desc->return_flags = static_cast<uint32_t>(netdev::wire::RxFlags::RX_ECHOED_TX);
 
@@ -833,10 +833,10 @@ zx_status_t Session::LoadRxInfo(uint16_t descriptor_index, const rx_buffer_t* bu
   }
   auto len = static_cast<uint32_t>(buff->total_length);
 
-  if (buff->meta.info_type != static_cast<uint32_t>(netdev::InfoType::NO_INFO)) {
+  if (buff->meta.info_type != static_cast<uint32_t>(netdev::wire::InfoType::NO_INFO)) {
     LOGF_WARN("network-device(%s): InfoType not recognized :%d", name(), buff->meta.info_type);
   } else {
-    desc->info_type = static_cast<uint32_t>(netdev::InfoType::NO_INFO);
+    desc->info_type = static_cast<uint32_t>(netdev::wire::InfoType::NO_INFO);
   }
   desc->frame_type = buff->meta.frame_type;
   desc->inbound_flags = buff->meta.flags;

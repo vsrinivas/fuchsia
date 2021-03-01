@@ -17,7 +17,7 @@
 zx_device::zx_device(DriverHostContext* ctx, std::string name, zx_driver_t* drv)
     : driver(drv), driver_host_context_(ctx) {
   size_t len = name.length();
-  // TODO(teisenbe): I think this is overly aggresive, and could be changed
+  // TODO(teisenbe): I think this is overly aggressive, and could be changed
   // to |len > ZX_DEVICE_NAME_MAX| and |len = ZX_DEVICE_NAME_MAX|.
   if (len >= ZX_DEVICE_NAME_MAX) {
     LOGF(WARNING, "Name too large for device %p: %s", this, name.c_str());
@@ -116,7 +116,7 @@ zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_sta
       return ZX_ERR_INVALID_ARGS;
     }
     auto state = &power_states_[info.state_id];
-    state->state_id = static_cast<::llcpp::fuchsia::device::DevicePowerState>(info.state_id);
+    state->state_id = static_cast<::llcpp::fuchsia::device::wire::DevicePowerState>(info.state_id);
     state->is_supported = true;
     state->restore_latency = info.restore_latency;
     state->wakeup_capable = info.wakeup_capable;
@@ -124,10 +124,10 @@ zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_sta
     visited[info.state_id] = true;
   }
   if (!(power_states_[static_cast<uint8_t>(
-                          ::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D0)]
+                          ::llcpp::fuchsia::device::wire::DevicePowerState::DEVICE_POWER_STATE_D0)]
             .is_supported) ||
-      !(power_states_[static_cast<uint8_t>(
-                          ::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D3COLD)]
+      !(power_states_[static_cast<uint8_t>(::llcpp::fuchsia::device::wire::DevicePowerState::
+                                               DEVICE_POWER_STATE_D3COLD)]
             .is_supported)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -299,9 +299,7 @@ void zx_device::set_composite(fbl::RefPtr<CompositeDevice> composite, bool fragm
   }
 }
 
-bool zx_device::is_composite() const {
-  return is_composite_ && !!composite_;
-}
+bool zx_device::is_composite() const { return is_composite_ && !!composite_; }
 
 fbl::RefPtr<CompositeDevice> zx_device::composite() { return composite_; }
 

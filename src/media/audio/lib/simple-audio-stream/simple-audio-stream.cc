@@ -286,7 +286,7 @@ void SimpleAudioStream::CreateRingBuffer(
     return;
   }
 
-  if (format_v1.sample_format == audio_fidl::SampleFormat::PCM_FLOAT) {
+  if (format_v1.sample_format == audio_fidl::wire::SampleFormat::PCM_FLOAT) {
     sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
     if (format_v1.valid_bits_per_sample != 32 || format_v1.bytes_per_sample != 4) {
       zxlogf(ERROR, "Unsupported format: Not 32 per sample/channel for float\n");
@@ -295,7 +295,7 @@ void SimpleAudioStream::CreateRingBuffer(
     }
   }
 
-  if (format_v1.sample_format == audio_fidl::SampleFormat::PCM_UNSIGNED) {
+  if (format_v1.sample_format == audio_fidl::wire::SampleFormat::PCM_UNSIGNED) {
     sample_format |= AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
   }
 
@@ -499,12 +499,12 @@ void SimpleAudioStream::GetProperties(
   builder.set_manufacturer(fidl::unowned_ptr(&manufacturer));
   fidl::aligned<uint32_t> domain = clock_domain_;
   builder.set_clock_domain(fidl::unowned_ptr(&domain));
-  fidl::aligned<audio_fidl::PlugDetectCapabilities> cap;
+  fidl::aligned<audio_fidl::wire::PlugDetectCapabilities> cap;
   if (pd_flags_ & AUDIO_PDNF_CAN_NOTIFY) {
-    cap = audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY;
+    cap = audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY;
     builder.set_plug_detect_capabilities(fidl::unowned_ptr(&cap));
   } else if (pd_flags_ & AUDIO_PDNF_HARDWIRED) {
-    cap = audio_fidl::PlugDetectCapabilities::HARDWIRED;
+    cap = audio_fidl::wire::PlugDetectCapabilities::HARDWIRED;
     builder.set_plug_detect_capabilities(fidl::unowned_ptr(&cap));
   }
   completer.Reply(builder.build());
@@ -518,19 +518,19 @@ void SimpleAudioStream::GetSupportedFormats(
   // Needs to be alive until the reply is sent.
   struct FidlCompatibleFormats {
     fbl::Vector<uint8_t> number_of_channels;
-    fbl::Vector<audio_fidl::SampleFormat> sample_formats;
+    fbl::Vector<audio_fidl::wire::SampleFormat> sample_formats;
     fbl::Vector<uint32_t> frame_rates;
     fbl::Vector<uint8_t> valid_bits_per_sample;
     fbl::Vector<uint8_t> bytes_per_sample;
   };
   fbl::Vector<FidlCompatibleFormats> fidl_compatible_formats;
   for (auto& i : supported_formats_) {
-    audio_fidl::SampleFormat sample_format = audio_fidl::SampleFormat::PCM_SIGNED;
+    audio_fidl::wire::SampleFormat sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
     ZX_ASSERT(!(i.sample_formats & AUDIO_SAMPLE_FORMAT_BITSTREAM));
     ZX_ASSERT(!(i.sample_formats & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN));
 
     if (i.sample_formats & AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED) {
-      sample_format = audio_fidl::SampleFormat::PCM_UNSIGNED;
+      sample_format = audio_fidl::wire::SampleFormat::PCM_UNSIGNED;
     }
 
     auto noflag_format =
@@ -542,7 +542,7 @@ void SimpleAudioStream::GetSupportedFormats(
     ZX_ASSERT(sizes.bytes_per_sample != 0);
 
     if (noflag_format == AUDIO_SAMPLE_FORMAT_32BIT_FLOAT) {
-      sample_format = audio_fidl::SampleFormat::PCM_FLOAT;
+      sample_format = audio_fidl::wire::SampleFormat::PCM_FLOAT;
     }
 
     fbl::Vector<uint32_t> rates;
@@ -578,7 +578,7 @@ void SimpleAudioStream::GetSupportedFormats(
     audio_fidl::PcmSupportedFormats formats;
     formats.number_of_channels = ::fidl::VectorView<uint8_t>(
         fidl::unowned_ptr(i.number_of_channels.data()), i.number_of_channels.size());
-    formats.sample_formats = ::fidl::VectorView<audio_fidl::SampleFormat>(
+    formats.sample_formats = ::fidl::VectorView<audio_fidl::wire::SampleFormat>(
         fidl::unowned_ptr(i.sample_formats.data()), i.sample_formats.size());
     formats.frame_rates =
         ::fidl::VectorView<uint32_t>(fidl::unowned_ptr(i.frame_rates.data()), i.frame_rates.size());
@@ -627,7 +627,7 @@ void SimpleAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_r
   ScopedToken t(domain_token());
 
   if (rb_started_) {
-    completer.ReplyError(audio_fidl::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
     return;
   }
 
@@ -639,7 +639,7 @@ void SimpleAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_r
   auto status = GetBuffer(req, &num_ring_buffer_frames, &buffer);
   if (status != ZX_OK) {
     expected_notifications_per_ring_.store(0);
-    completer.ReplyError(audio_fidl::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
     return;
   }
 

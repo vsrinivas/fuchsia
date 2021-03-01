@@ -138,20 +138,20 @@ void Gt6853Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
 
   constexpr fuchsia_input_report::Axis kAxisX = {
       .range = {.min = 0, .max = kMaxContactX},
-      .unit = {.type = fuchsia_input_report::UnitType::NONE, .exponent = 0},
+      .unit = {.type = fuchsia_input_report::wire::UnitType::NONE, .exponent = 0},
   };
 
   constexpr fuchsia_input_report::Axis kAxisY = {
       .range = {.min = 0, .max = kMaxContactY},
-      .unit = {.type = fuchsia_input_report::UnitType::NONE, .exponent = 0},
+      .unit = {.type = fuchsia_input_report::wire::UnitType::NONE, .exponent = 0},
   };
 
   fidl::FidlAllocator<kDescriptorBufferSize> allocator;
 
   fuchsia_input_report::DeviceInfo device_info;
-  device_info.vendor_id = static_cast<uint32_t>(fuchsia_input_report::VendorId::GOOGLE);
-  device_info.product_id =
-      static_cast<uint32_t>(fuchsia_input_report::VendorGoogleProductId::FOCALTECH_TOUCHSCREEN);
+  device_info.vendor_id = static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::GOOGLE);
+  device_info.product_id = static_cast<uint32_t>(
+      fuchsia_input_report::wire::VendorGoogleProductId::FOCALTECH_TOUCHSCREEN);
 
   fidl::VectorView<fuchsia_input_report::ContactInputDescriptor> touch_input_contacts(allocator,
                                                                                       kMaxContacts);
@@ -164,7 +164,8 @@ void Gt6853Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   fuchsia_input_report::TouchInputDescriptor touch_input_descriptor(allocator);
   touch_input_descriptor.set_contacts(allocator, std::move(touch_input_contacts));
   touch_input_descriptor.set_max_contacts(allocator, kMaxContacts);
-  touch_input_descriptor.set_touch_type(allocator, fuchsia_input_report::TouchType::TOUCHSCREEN);
+  touch_input_descriptor.set_touch_type(allocator,
+                                        fuchsia_input_report::wire::TouchType::TOUCHSCREEN);
 
   fuchsia_input_report::TouchDescriptor touch_descriptor(allocator);
   touch_descriptor.set_input(allocator, std::move(touch_input_descriptor));
@@ -351,7 +352,7 @@ zx::status<uint64_t> Gt6853Device::GetConfigOffset(const fzl::VmoMapper& mapped_
   memcpy(&config_size, mapped_config.start(), sizeof(config_size));
   config_size = le32toh(config_size);
   if (config_size != mapped_config.size()) {
-    zxlogf(ERROR, "Config size (%u) doesnt't match VMO size (%zu)", config_size,
+    zxlogf(ERROR, "Config size (%u) doesn't match VMO size (%zu)", config_size,
            mapped_config.size());
     return zx::error(ZX_ERR_IO_INVALID);
   }

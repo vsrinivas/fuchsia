@@ -33,10 +33,11 @@ constexpr uint32_t kGoldfishBtiId = 0x80888088;
 constexpr uint32_t kPipeMinDeviceVersion = 2;
 constexpr uint32_t kMaxSignalledPipes = 64;
 
-constexpr llcpp::fuchsia::sysmem::HeapType kSysmemHeaps[] = {
-    llcpp::fuchsia::sysmem::HeapType::SYSTEM_RAM,
-    llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL,
-    llcpp::fuchsia::sysmem::HeapType::GOLDFISH_HOST_VISIBLE,
+using llcpp::fuchsia::sysmem::wire::HeapType;
+constexpr HeapType kSysmemHeaps[] = {
+    HeapType::SYSTEM_RAM,
+    HeapType::GOLDFISH_DEVICE_LOCAL,
+    HeapType::GOLDFISH_HOST_VISIBLE,
 };
 
 // MMIO Registers of goldfish pipe.

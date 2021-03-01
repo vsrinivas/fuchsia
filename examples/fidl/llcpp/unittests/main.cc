@@ -21,7 +21,7 @@ TEST(FidlExamples, Bits) {
 
 // [START enums]
 TEST(FidlExamples, Enums) {
-  ASSERT_EQ(static_cast<uint32_t>(llcpp::fuchsia::examples::LocationType::MUSEUM), 1u);
+  ASSERT_EQ(static_cast<uint32_t>(llcpp::fuchsia::examples::wire::LocationType::MUSEUM), 1u);
 }
 // [END enums]
 

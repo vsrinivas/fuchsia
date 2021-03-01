@@ -29,10 +29,11 @@ struct InterpreterTestContext {
   InterpreterTestContext(uint64_t new_id) : id(new_id) {}
 
   // Returns the result. If the error stream is not empty, prints it.
-  llcpp::fuchsia::shell::ExecuteResult GetResult() const;
+  llcpp::fuchsia::shell::wire::ExecuteResult GetResult() const;
 
   uint64_t id;
-  llcpp::fuchsia::shell::ExecuteResult result = llcpp::fuchsia::shell::ExecuteResult::UNDEF;
+  llcpp::fuchsia::shell::wire::ExecuteResult result =
+      llcpp::fuchsia::shell::wire::ExecuteResult::UNDEF;
   std::stringstream error_stream;
 };
 

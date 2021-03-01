@@ -6,15 +6,15 @@
 namespace fidl_test = llcpp::fidl::test::enumflexiblestrict;
 
 // [START contents]
-fidl_test::Color complement(fidl_test::Color color) {
+fidl_test::wire::Color complement(fidl_test::wire::Color color) {
   if (color.IsUnknown()) {
     return color;
   }
   switch (color) {
-    case fidl_test::Color::RED:
-      return fidl_test::Color::BLUE;
-    case fidl_test::Color::BLUE:
-      return fidl_test::Color::RED;
+    case fidl_test::wire::Color::RED:
+      return fidl_test::wire::Color::BLUE;
+    case fidl_test::wire::Color::BLUE:
+      return fidl_test::wire::Color::RED;
     default:
       return color;
   }

@@ -38,9 +38,9 @@ class EchoClientApp {
     return client_.EchoStruct(std::move(value), std::move(forward_to_server));
   }
 
-  Echo::ResultOf::EchoStructWithError EchoStructWithError(Struct value, default_enum err,
+  Echo::ResultOf::EchoStructWithError EchoStructWithError(Struct value, wire::default_enum err,
                                                           ::fidl::StringView forward_to_server,
-                                                          RespondWith result_variant) {
+                                                          wire::RespondWith result_variant) {
     return client_.EchoStructWithError(std::move(value), err, std::move(forward_to_server),
                                        result_variant);
   }
@@ -62,9 +62,10 @@ class EchoClientApp {
                               response_buffer);
   }
 
-  Echo::ResultOf::EchoArraysWithError EchoArraysWithError(ArraysStruct value, default_enum err,
+  Echo::ResultOf::EchoArraysWithError EchoArraysWithError(ArraysStruct value,
+                                                          wire::default_enum err,
                                                           ::fidl::StringView forward_to_server,
-                                                          RespondWith result_variant) {
+                                                          wire::RespondWith result_variant) {
     return client_.EchoArraysWithError(std::move(value), err, std::move(forward_to_server),
                                        result_variant);
   }
@@ -74,9 +75,10 @@ class EchoClientApp {
     return client_.EchoVectors(std::move(value), std::move(forward_to_server));
   }
 
-  Echo::ResultOf::EchoVectorsWithError EchoVectorsWithError(VectorsStruct value, default_enum err,
+  Echo::ResultOf::EchoVectorsWithError EchoVectorsWithError(VectorsStruct value,
+                                                            wire::default_enum err,
                                                             ::fidl::StringView forward_to_server,
-                                                            RespondWith result_variant) {
+                                                            wire::RespondWith result_variant) {
     return client_.EchoVectorsWithError(std::move(value), err, std::move(forward_to_server),
                                         result_variant);
   }
@@ -90,9 +92,9 @@ class EchoClientApp {
 
   Echo::UnownedResultOf::EchoTableWithError EchoTableWithError(::fidl::BufferSpan request_buffer,
                                                                AllTypesTable value,
-                                                               default_enum err,
+                                                               wire::default_enum err,
                                                                ::fidl::StringView forward_to_server,
-                                                               RespondWith result_variant,
+                                                               wire::RespondWith result_variant,
                                                                ::fidl::BufferSpan response_buffer) {
     return client_.EchoTableWithError(request_buffer, std::move(value), err,
                                       std::move(forward_to_server), result_variant,
@@ -105,8 +107,8 @@ class EchoClientApp {
   }
 
   Echo::ResultOf::EchoXunionsWithError EchoXunionsWithError(
-      ::fidl::VectorView<AllTypesXunion> value, default_enum err,
-      ::fidl::StringView forward_to_server, RespondWith result_variant) {
+      ::fidl::VectorView<AllTypesXunion> value, wire::default_enum err,
+      ::fidl::StringView forward_to_server, wire::RespondWith result_variant) {
     return client_.EchoXunionsWithError(std::move(value), err, std::move(forward_to_server),
                                         result_variant);
   }
@@ -156,11 +158,11 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoStructWithError(Struct value, default_enum err, ::fidl::StringView forward_to_server,
-                           RespondWith result_variant,
+  void EchoStructWithError(Struct value, wire::default_enum err,
+                           ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                            EchoStructWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
-      if (result_variant == RespondWith::ERR) {
+      if (result_variant == wire::RespondWith::ERR) {
         completer.ReplyError(err);
       } else {
         completer.ReplySuccess(std::move(value));
@@ -227,11 +229,11 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoArraysWithError(ArraysStruct value, default_enum err,
-                           ::fidl::StringView forward_to_server, RespondWith result_variant,
+  void EchoArraysWithError(ArraysStruct value, wire::default_enum err,
+                           ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                            EchoArraysWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
-      if (result_variant == RespondWith::ERR) {
+      if (result_variant == wire::RespondWith::ERR) {
         completer.ReplyError(err);
       } else {
         completer.ReplySuccess(std::move(value));
@@ -259,11 +261,11 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoVectorsWithError(VectorsStruct value, default_enum err,
-                            ::fidl::StringView forward_to_server, RespondWith result_variant,
+  void EchoVectorsWithError(VectorsStruct value, wire::default_enum err,
+                            ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                             EchoVectorsWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
-      if (result_variant == RespondWith::ERR) {
+      if (result_variant == wire::RespondWith::ERR) {
         completer.ReplyError(err);
       } else {
         completer.ReplySuccess(std::move(value));
@@ -295,11 +297,11 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoTableWithError(AllTypesTable value, default_enum err,
-                          ::fidl::StringView forward_to_server, RespondWith result_variant,
+  void EchoTableWithError(AllTypesTable value, wire::default_enum err,
+                          ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                           EchoTableWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
-      if (result_variant == RespondWith::ERR) {
+      if (result_variant == wire::RespondWith::ERR) {
         completer.ReplyError(err);
       } else {
         completer.ReplySuccess(std::move(value));
@@ -331,11 +333,11 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoXunionsWithError(::fidl::VectorView<AllTypesXunion> value, default_enum err,
-                            ::fidl::StringView forward_to_server, RespondWith result_variant,
+  void EchoXunionsWithError(::fidl::VectorView<AllTypesXunion> value, wire::default_enum err,
+                            ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                             EchoXunionsWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
-      if (result_variant == RespondWith::ERR) {
+      if (result_variant == wire::RespondWith::ERR) {
         completer.ReplyError(err);
       } else {
         completer.ReplySuccess(std::move(value));

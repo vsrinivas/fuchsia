@@ -44,19 +44,19 @@ constexpr zx::duration kLowRepeatKeyFreq = zx::msec(250);
 // remove the global watcher and use lambdas.
 KeyboardWatcher main_watcher;
 
-int modifiers_from_fuchsia_key(llcpp::fuchsia::ui::input2::Key key) {
+int modifiers_from_fuchsia_key(llcpp::fuchsia::ui::input2::wire::Key key) {
   switch (key) {
-    case llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT:
+    case llcpp::fuchsia::ui::input2::wire::Key::LEFT_SHIFT:
       return MOD_LSHIFT;
-    case llcpp::fuchsia::ui::input2::Key::RIGHT_SHIFT:
+    case llcpp::fuchsia::ui::input2::wire::Key::RIGHT_SHIFT:
       return MOD_RSHIFT;
-    case llcpp::fuchsia::ui::input2::Key::LEFT_ALT:
+    case llcpp::fuchsia::ui::input2::wire::Key::LEFT_ALT:
       return MOD_LALT;
-    case llcpp::fuchsia::ui::input2::Key::RIGHT_ALT:
+    case llcpp::fuchsia::ui::input2::wire::Key::RIGHT_ALT:
       return MOD_RALT;
-    case llcpp::fuchsia::ui::input2::Key::LEFT_CTRL:
+    case llcpp::fuchsia::ui::input2::wire::Key::LEFT_CTRL:
       return MOD_LCTRL;
-    case llcpp::fuchsia::ui::input2::Key::RIGHT_CTRL:
+    case llcpp::fuchsia::ui::input2::wire::Key::RIGHT_CTRL:
       return MOD_RCTRL;
     default:
       return 0;
@@ -89,8 +89,8 @@ int modifiers_from_keycode(uint8_t keycode) {
 
 bool keycode_is_modifier(uint8_t keycode) { return modifiers_from_keycode(keycode) != 0; }
 
-bool is_key_in_set(llcpp::fuchsia::ui::input2::Key key,
-                   const fidl::VectorView<llcpp::fuchsia::ui::input2::Key>& set) {
+bool is_key_in_set(llcpp::fuchsia::ui::input2::wire::Key key,
+                   const fidl::VectorView<llcpp::fuchsia::ui::input2::wire::Key>& set) {
   for (auto s : set) {
     if (key == s) {
       return true;
@@ -126,15 +126,15 @@ void Keyboard::SetCapsLockLed(bool caps_lock) {
   auto report_builder = llcpp::fuchsia::input::report::OutputReport::UnownedBuilder();
   auto keyboard_report_builder =
       llcpp::fuchsia::input::report::KeyboardOutputReport::UnownedBuilder();
-  fidl::VectorView<llcpp::fuchsia::input::report::LedType> led_view;
-  llcpp::fuchsia::input::report::LedType caps_led =
-      llcpp::fuchsia::input::report::LedType::CAPS_LOCK;
+  fidl::VectorView<llcpp::fuchsia::input::report::wire::LedType> led_view;
+  llcpp::fuchsia::input::report::wire::LedType caps_led =
+      llcpp::fuchsia::input::report::wire::LedType::CAPS_LOCK;
 
   if (caps_lock) {
-    led_view =
-        fidl::VectorView<llcpp::fuchsia::input::report::LedType>(fidl::unowned_ptr(&caps_led), 1);
+    led_view = fidl::VectorView<llcpp::fuchsia::input::report::wire::LedType>(
+        fidl::unowned_ptr(&caps_led), 1);
   } else {
-    led_view = fidl::VectorView<llcpp::fuchsia::input::report::LedType>(nullptr, 0);
+    led_view = fidl::VectorView<llcpp::fuchsia::input::report::wire::LedType>(nullptr, 0);
   }
 
   keyboard_report_builder.set_enabled_leds(fidl::unowned_ptr(&led_view));
@@ -161,7 +161,7 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& 
                                      last_pressed_keys_size_);
 
   // Process the released keys.
-  for (llcpp::fuchsia::ui::input2::Key prev_key : last_pressed_keys) {
+  for (llcpp::fuchsia::ui::input2::wire::Key prev_key : last_pressed_keys) {
     if (!is_key_in_set(prev_key, report.keyboard().pressed_keys())) {
       modifiers_ &= ~modifiers_from_fuchsia_key(prev_key);
 
@@ -176,10 +176,10 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& 
   }
 
   // Process the pressed keys.
-  for (llcpp::fuchsia::ui::input2::Key key : report.keyboard().pressed_keys()) {
+  for (llcpp::fuchsia::ui::input2::wire::Key key : report.keyboard().pressed_keys()) {
     if (!is_key_in_set(key, last_pressed_keys)) {
       modifiers_ |= modifiers_from_fuchsia_key(key);
-      if (key == llcpp::fuchsia::ui::input2::Key::CAPS_LOCK) {
+      if (key == llcpp::fuchsia::ui::input2::wire::Key::CAPS_LOCK) {
         modifiers_ ^= MOD_CAPSLOCK;
         SetCapsLockLed(modifiers_ & MOD_CAPSLOCK);
       }
@@ -199,7 +199,7 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& 
 
   // Store the previous state.
   size_t i = 0;
-  for (llcpp::fuchsia::ui::input2::Key key : report.keyboard().pressed_keys()) {
+  for (llcpp::fuchsia::ui::input2::wire::Key key : report.keyboard().pressed_keys()) {
     last_pressed_keys_[i++] = key;
   }
   last_pressed_keys_size_ = i;

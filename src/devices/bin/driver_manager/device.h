@@ -447,7 +447,7 @@ class Device
   void DropUnbindTask() { active_unbind_ = nullptr; }
   void DropRemoveTask() { active_remove_ = nullptr; }
 
-  zx_status_t DriverCompatibiltyTest();
+  zx_status_t DriverCompatibilityTest();
 
   zx::channel take_client_remote() { return std::move(client_remote_); }
 

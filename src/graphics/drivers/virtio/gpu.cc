@@ -112,7 +112,7 @@ zx_status_t GpuDevice::GetVmoAndStride(image_t* image, zx_unowned_handle_t handl
   }
 
   ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type ==
-                  sysmem::PixelFormatType::BGRA32);
+                  sysmem::wire::PixelFormatType::BGRA32);
   ZX_DEBUG_ASSERT(
       collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
   ZX_DEBUG_ASSERT(
@@ -263,11 +263,11 @@ zx_status_t GpuDevice::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.cpu_domain_supported = true;
   constraints.image_format_constraints_count = 1;
   sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
   image_constraints.pixel_format.has_format_modifier = true;
   image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
   image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
+  image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
   image_constraints.min_coded_width = 0;
   image_constraints.max_coded_width = 0xffffffff;
   image_constraints.min_coded_height = 0;

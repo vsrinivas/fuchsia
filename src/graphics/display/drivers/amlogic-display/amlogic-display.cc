@@ -497,18 +497,18 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.cpu_domain_supported = false;
   buffer_constraints.inaccessible_domain_supported = true;
   buffer_constraints.heap_permitted_count = 2;
-  buffer_constraints.heap_permitted[0] = sysmem::HeapType::SYSTEM_RAM;
-  buffer_constraints.heap_permitted[1] = sysmem::HeapType::AMLOGIC_SECURE;
+  buffer_constraints.heap_permitted[0] = sysmem::wire::HeapType::SYSTEM_RAM;
+  buffer_constraints.heap_permitted[1] = sysmem::wire::HeapType::AMLOGIC_SECURE;
   constraints.image_format_constraints_count = config->type == IMAGE_TYPE_CAPTURE ? 1 : 4;
   for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
     sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[i];
 
     image_constraints.pixel_format.has_format_modifier = true;
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
+    image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
     if (config->type == IMAGE_TYPE_CAPTURE) {
       ZX_DEBUG_ASSERT(i == 0);
-      image_constraints.pixel_format.type = sysmem::PixelFormatType::BGR24;
+      image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGR24;
       image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
       image_constraints.min_coded_width = vout_->display_width();
       image_constraints.max_coded_width = vout_->display_width();
@@ -527,21 +527,21 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
       ZX_DEBUG_ASSERT(i <= 3);
       switch (i) {
         case 0:
-          image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
           image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
           break;
         case 1:
-          image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
           image_constraints.pixel_format.format_modifier.value =
               sysmem::FORMAT_MODIFIER_ARM_LINEAR_TE;
           break;
         case 2:
-          image_constraints.pixel_format.type = sysmem::PixelFormatType::R8G8B8A8;
+          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::R8G8B8A8;
           image_constraints.pixel_format.format_modifier.value =
               sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16;
           break;
         case 3:
-          image_constraints.pixel_format.type = sysmem::PixelFormatType::R8G8B8A8;
+          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::R8G8B8A8;
           image_constraints.pixel_format.format_modifier.value =
               sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_TE;
           break;
@@ -606,7 +606,7 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
 
   // Ensure the proper format
   ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type ==
-                  sysmem::PixelFormatType::BGR24);
+                  sysmem::wire::PixelFormatType::BGR24);
 
   // Allocate a canvas for the capture image
   canvas_info_t canvas_info = {};
@@ -690,8 +690,7 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplReleaseCapture(uint64_t capture_ha
 
   // Find and erase previously imported capture
   auto idx = reinterpret_cast<ImageInfo*>(capture_handle)->canvas_idx;
-  if (imported_captures_.erase_if([idx](auto& i) { return i.canvas_idx == idx; }) ==
-      nullptr) {
+  if (imported_captures_.erase_if([idx](auto& i) { return i.canvas_idx == idx; }) == nullptr) {
     DISP_ERROR("Tried to release non-existent capture image %d\n", idx);
     return ZX_ERR_NOT_FOUND;
   }

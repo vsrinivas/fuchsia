@@ -232,7 +232,7 @@ bool apply_config() {
     return false;
   }
 
-  if (result->res != fhd::ConfigResult::OK) {
+  if (result->res != fhd::wire::ConfigResult::OK) {
     printf("Config not valid (%d)\n", static_cast<uint32_t>(result->res));
     for (const auto& op : result->ops) {
       printf("Client composition op (display %ld, layer %ld): %hhu\n", op.display_id, op.layer_id,
@@ -430,13 +430,13 @@ zx_status_t capture_setup() {
   constraints.image_format_constraints_count = 1;
   sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
   if (platform == AMLOGIC_PLATFORM) {
-    image_constraints.pixel_format.type = sysmem::PixelFormatType::BGR24;
+    image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGR24;
   } else {
-    image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+    image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
   }
   image_constraints.color_spaces_count = 1;
   image_constraints.color_space[0] = sysmem::ColorSpace{
-      .type = sysmem::ColorSpaceType::SRGB,
+      .type = sysmem::wire::ColorSpaceType::SRGB,
   };
   image_constraints.min_coded_width = 0;
   image_constraints.max_coded_width = std::numeric_limits<uint32_t>::max();

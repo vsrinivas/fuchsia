@@ -142,10 +142,10 @@ zx_status_t VerifiedVolumeClient::CreateFromBlockDevice(
 zx_status_t VerifiedVolumeClient::OpenForAuthoring(const zx::duration& timeout,
                                                    fbl::unique_fd& mutable_block_fd_out) {
   // make FIDL call to open in authoring mode
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
-      llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
-      llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::HashFunction> hash_function =
+      llcpp::fuchsia::hardware::block::verified::wire::HashFunction::SHA256;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::BlockSize> block_size =
+      llcpp::fuchsia::hardware::block::verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
   llcpp::fuchsia::hardware::block::verified::Config config(allocator);
   config.set_hash_function(fidl::unowned_ptr(&hash_function));
@@ -238,10 +238,10 @@ zx_status_t VerifiedVolumeClient::OpenForVerifiedRead(const digest::Digest& expe
                                                       const zx::duration& timeout,
                                                       fbl::unique_fd& verified_block_fd_out) {
   // make FIDL call to open in authoring mode
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
-      llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
-      llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::HashFunction> hash_function =
+      llcpp::fuchsia::hardware::block::verified::wire::HashFunction::SHA256;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::BlockSize> block_size =
+      llcpp::fuchsia::hardware::block::verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
   llcpp::fuchsia::hardware::block::verified::Config config(allocator);
   config.set_hash_function(fidl::unowned_ptr(&hash_function));

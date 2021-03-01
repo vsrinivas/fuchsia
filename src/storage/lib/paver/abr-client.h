@@ -21,7 +21,7 @@
 
 namespace abr {
 
-zx::status<llcpp::fuchsia::paver::Configuration> QueryBootConfig(
+zx::status<llcpp::fuchsia::paver::wire::Configuration> QueryBootConfig(
     fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root);
 
 // Interface for interacting with ABR data.

@@ -7,21 +7,22 @@
 #include <lib/sysconfig/sysconfig-header.h>
 // clang-format on
 
-#include <array>
 #include <dirent.h>
 #include <fcntl.h>
-
-#include <fbl/algorithm.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/cksum.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <string.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/status.h>
+
+#include <array>
+
+#include <fbl/algorithm.h>
 
 namespace sysconfig {
 
@@ -180,7 +181,7 @@ struct PartitionTypeAndInfo {
   PartitionTypeAndInfo() {}
 
   // Why not use a sysconfig_subpartition member?
-  // Because sysconfig_subpartition is declared with "packed" atrribute. This has been seen
+  // Because sysconfig_subpartition is declared with "packed" attribute. This has been seen
   // to cause alignment issue on some platforms if used directly as member.
   PartitionTypeAndInfo(SyncClient::PartitionType part, sysconfig_subpartition info)
       : id(part), offset(info.offset), size(info.size) {}
@@ -364,7 +365,7 @@ zx_status_t SyncClient::WritePartition(PartitionType partition, const zx::vmo& v
   const sysconfig_header* header;
   zx_status_t status;
   if ((header = GetHeader(&status)) == nullptr) {
-    // In case there is acutally a valid header in the storage, but just that we fail to read due to
+    // In case there is actually a valid header in the storage, but just that we fail to read due to
     // transient error, refuse to perform any write to avoid compromising the partition, bootloader
     // etc.
     fprintf(stderr,
@@ -378,7 +379,7 @@ zx_status_t SyncClient::WritePartition(PartitionType partition, const zx::vmo& v
 }
 
 zx_status_t SyncClient::Write(size_t offset, size_t len, const zx::vmo& vmo, zx_off_t vmo_offset,
-                              skipblock::WriteBytesMode mode) {
+                              skipblock::wire::WriteBytesMode mode) {
   zx::vmo dup;
   if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
     return status;
@@ -408,7 +409,7 @@ zx_status_t SyncClient::WriteBytesWithoutErase(size_t offset, size_t len, const 
       .size = len,
       // The option doesn't have effect, but not setting it to a valid enum value will result
       // in fidl errors.
-      .mode = skipblock::WriteBytesMode::READ_MODIFY_ERASE_WRITE,
+      .mode = skipblock::wire::WriteBytesMode::READ_MODIFY_ERASE_WRITE,
   };
   auto result = skip_block_.WriteBytesWithoutErase(std::move(operation));
   return result.ok() ? result.value().status : result.status();
@@ -511,7 +512,7 @@ zx_status_t SyncClient::UpdateLayout(const sysconfig_header& target_header) {
 
   if (sysconfig_header_equal(&target_header, current_header)) {
     fprintf(stderr,
-            "UpdateLayout: Already orgianized according to the specified layout. Skipping.\n");
+            "UpdateLayout: Already organized according to the specified layout. Skipping.\n");
     return ZX_OK;
   }
 
@@ -875,8 +876,8 @@ zx_status_t SyncClientAbrWearLeveling::FlushReset(const sysconfig_header* header
 
   // Write data to persistent storage.
   size_t write_size = kAstroSysconfigPartitionSize - (header->abr_metadata.size - kAstroPageSize);
-  if (auto status =
-          client_.Write(0, write_size, cache_.vmo(), 0, skipblock::WriteBytesMode::ERASE_WRITE);
+  if (auto status = client_.Write(0, write_size, cache_.vmo(), 0,
+                                  skipblock::wire::WriteBytesMode::ERASE_WRITE);
       status != ZX_OK) {
     fprintf(stderr, "Failed to flush write. %s\n", zx_status_get_string(status));
     return status;

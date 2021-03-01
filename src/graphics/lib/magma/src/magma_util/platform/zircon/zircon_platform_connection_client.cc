@@ -10,7 +10,7 @@
 #include "zircon_platform_handle.h"
 
 // clang-format off
-using llcpp::fuchsia::gpu::magma::QueryId;
+using llcpp::fuchsia::gpu::magma::wire::QueryId;
 static_assert(static_cast<uint32_t>(QueryId::VENDOR_ID) == MAGMA_QUERY_VENDOR_ID, "mismatch");
 static_assert(static_cast<uint32_t>(QueryId::DEVICE_ID) == MAGMA_QUERY_DEVICE_ID, "mismatch");
 static_assert(static_cast<uint32_t>(QueryId::IS_TEST_RESTART_SUPPORTED) == MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, "mismatch");
@@ -265,7 +265,7 @@ magma_status_t PrimaryWrapper::CommitBuffer(uint64_t buffer_id, uint64_t page_of
 }
 
 magma_status_t PrimaryWrapper::BufferRangeOp(uint64_t buffer_id,
-                                             llcpp::fuchsia::gpu::magma::BufferOp op,
+                                             llcpp::fuchsia::gpu::magma::wire::BufferOp op,
                                              uint64_t start, uint64_t length) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
@@ -680,13 +680,13 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   magma_status_t BufferRangeOp(uint64_t buffer_id, uint32_t options, uint64_t start,
                                uint64_t length) override {
     DLOG("ZirconPlatformConnectionClient::BufferOpRange");
-    llcpp::fuchsia::gpu::magma::BufferOp op;
+    llcpp::fuchsia::gpu::magma::wire::BufferOp op;
     switch (options) {
       case MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES:
-        op = llcpp::fuchsia::gpu::magma::BufferOp::DEPOPULATE_TABLES;
+        op = llcpp::fuchsia::gpu::magma::wire::BufferOp::DEPOPULATE_TABLES;
         break;
       case MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES:
-        op = llcpp::fuchsia::gpu::magma::BufferOp::POPULATE_TABLES;
+        op = llcpp::fuchsia::gpu::magma::wire::BufferOp::POPULATE_TABLES;
         break;
       default:
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid buffer op %d", options);

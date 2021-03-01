@@ -116,7 +116,7 @@ class Device final : public DdkDeviceType,
   // Clients should guarantee that the heap is valid and already registered
   // to sysmem driver.
   [[nodiscard]] const llcpp::fuchsia::sysmem2::HeapProperties& GetHeapProperties(
-      llcpp::fuchsia::sysmem2::HeapType heap) const;
+      llcpp::fuchsia::sysmem2::wire::HeapType heap) const;
 
   [[nodiscard]] const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }
   [[nodiscard]] const zx_device_t* device() const { return zxdev_; }
@@ -187,19 +187,19 @@ class Device final : public DdkDeviceType,
   fidl::HeapAllocator fidl_allocator_;
 
   // This map contains all registered memory allocators.
-  std::map<llcpp::fuchsia::sysmem2::HeapType, std::unique_ptr<MemoryAllocator>> allocators_;
+  std::map<llcpp::fuchsia::sysmem2::wire::HeapType, std::unique_ptr<MemoryAllocator>> allocators_;
 
   // Some memory allocators need to be registered with properties before
   // we can use them to allocate memory. We keep this map to store all the
   // unregistered allocators.
   std::map<MemoryAllocator*,
-           std::pair<llcpp::fuchsia::sysmem2::HeapType, std::unique_ptr<MemoryAllocator>>>
+           std::pair<llcpp::fuchsia::sysmem2::wire::HeapType, std::unique_ptr<MemoryAllocator>>>
       unregistered_allocators_;
 
   // This map contains only the secure allocators, if any.  The pointers are owned by allocators_.
   //
   // TODO(dustingreen): Consider unordered_map for this and some of above.
-  std::map<llcpp::fuchsia::sysmem2::HeapType, MemoryAllocator*> secure_allocators_;
+  std::map<llcpp::fuchsia::sysmem2::wire::HeapType, MemoryAllocator*> secure_allocators_;
 
   // This flag is used to determine if the closing of the current secure mem
   // connection is an error (true), or expected (false).

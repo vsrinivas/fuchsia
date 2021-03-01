@@ -32,7 +32,7 @@ shell::console::AstBuilder::NodePair AddObject(
   return builder.CloseObject();
 }
 
-llcpp::fuchsia::shell::ExecuteResult InterpreterTestContext::GetResult() const {
+llcpp::fuchsia::shell::wire::ExecuteResult InterpreterTestContext::GetResult() const {
   std::string string = error_stream.str();
   if (!string.empty()) {
     std::cout << string;

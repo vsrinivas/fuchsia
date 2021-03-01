@@ -167,8 +167,8 @@ zx_status_t ExternalDecompressorClient::SendMessage(
 }
 
 CompressionAlgorithm ExternalDecompressorClient::CompressionAlgorithmFidlToLocal(
-    const llcpp::fuchsia::blobfs::internal::CompressionAlgorithm algorithm) {
-  using Fidl = llcpp::fuchsia::blobfs::internal::CompressionAlgorithm;
+    const llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm algorithm) {
+  using Fidl = llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm;
   switch (algorithm) {
     case Fidl::UNCOMPRESSED:
       return CompressionAlgorithm::UNCOMPRESSED;
@@ -184,9 +184,9 @@ CompressionAlgorithm ExternalDecompressorClient::CompressionAlgorithmFidlToLocal
   }
 }
 
-llcpp::fuchsia::blobfs::internal::CompressionAlgorithm
+llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm
 ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm algorithm) {
-  using Fidl = llcpp::fuchsia::blobfs::internal::CompressionAlgorithm;
+  using Fidl = llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm;
   switch (algorithm) {
     case CompressionAlgorithm::UNCOMPRESSED:
       return Fidl::UNCOMPRESSED;
@@ -201,12 +201,12 @@ ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm
   }
 }
 
-zx::status<llcpp::fuchsia::blobfs::internal::CompressionAlgorithm>
+zx::status<llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm>
 ExternalDecompressorClient::CompressionAlgorithmLocalToFidlForPartial(
     CompressionAlgorithm algorithm) {
   switch (algorithm) {
     case CompressionAlgorithm::CHUNKED:
-      return zx::ok(llcpp::fuchsia::blobfs::internal::CompressionAlgorithm::CHUNKED_PARTIAL);
+      return zx::ok(llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::CHUNKED_PARTIAL);
     case CompressionAlgorithm::UNCOMPRESSED:
     case CompressionAlgorithm::LZ4:
     case CompressionAlgorithm::ZSTD:
@@ -238,7 +238,8 @@ zx_status_t ExternalSeekableDecompressor::DecompressRange(size_t compressed_offs
   if (!algorithm_or.is_ok()) {
     return algorithm_or.status_value();
   }
-  llcpp::fuchsia::blobfs::internal::CompressionAlgorithm fidl_algorithm = algorithm_or.value();
+  llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm fidl_algorithm =
+      algorithm_or.value();
 
   return client_->SendMessage({
       {0, uncompressed_size},

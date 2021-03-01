@@ -96,7 +96,7 @@ class Value {
     return llcpp_builder_.build();
   }
 
-  void set_direction(fuchsia_tee::Direction direction) { direction_ = direction; }
+  void set_direction(fuchsia_tee::wire::Direction direction) { direction_ = direction; }
 
   void set_a(uint64_t a) { a_ = a; }
 
@@ -107,7 +107,7 @@ class Value {
  private:
   fuchsia_tee::Value::UnownedBuilder llcpp_builder_;
 
-  std::optional<fuchsia_tee::Direction> direction_{};
+  std::optional<fuchsia_tee::wire::Direction> direction_{};
   std::optional<uint64_t> a_{};
   std::optional<uint64_t> b_{};
   std::optional<uint64_t> c_{};
@@ -132,7 +132,7 @@ class Buffer {
     return llcpp_builder_.build();
   }
 
-  void set_direction(fuchsia_tee::Direction direction) { direction_ = direction; }
+  void set_direction(fuchsia_tee::wire::Direction direction) { direction_ = direction; }
 
   void set_vmo(zx::vmo vmo) { vmo_ = std::move(vmo); }
 
@@ -143,7 +143,7 @@ class Buffer {
  private:
   fuchsia_tee::Buffer::UnownedBuilder llcpp_builder_;
 
-  std::optional<fuchsia_tee::Direction> direction_{};
+  std::optional<fuchsia_tee::wire::Direction> direction_{};
   std::optional<zx::vmo> vmo_{};
   std::optional<uint64_t> offset_{};
   std::optional<uint64_t> size_{};
@@ -228,7 +228,7 @@ class OpResult {
 
   void set_return_code(uint64_t return_code) { return_code_ = return_code; }
 
-  void set_return_origin(fuchsia_tee::ReturnOrigin return_origin) {
+  void set_return_origin(fuchsia_tee::wire::ReturnOrigin return_origin) {
     return_origin_ = return_origin;
   }
 
@@ -239,7 +239,7 @@ class OpResult {
   fidl::VectorView<fuchsia_tee::Parameter> llcpp_parameter_set_;
 
   std::optional<uint64_t> return_code_{};
-  std::optional<fuchsia_tee::ReturnOrigin> return_origin_{};
+  std::optional<fuchsia_tee::wire::ReturnOrigin> return_origin_{};
   std::optional<ParameterSet> parameter_set_{};
 };
 

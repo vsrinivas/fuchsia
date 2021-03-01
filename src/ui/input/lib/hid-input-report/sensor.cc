@@ -28,7 +28,7 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
       continue;
     }
 
-    llcpp::fuchsia::input::report::SensorType type;
+    llcpp::fuchsia::input::report::wire::SensorType type;
     zx_status_t status = HidSensorUsageToLlcppSensorType(
         static_cast<hid::usage::Sensor>(field.attr.usage.usage), &type);
     if (status != ZX_OK) {

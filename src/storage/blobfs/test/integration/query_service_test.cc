@@ -75,7 +75,7 @@ class QueryServiceTest : public BlobfsWithFvmTest {
 
     EXPECT_EQ(info.block_size(), kBlobfsBlockSize);
     EXPECT_EQ(info.max_node_name_size(), digest::kSha256HexLength);
-    EXPECT_EQ(info.fs_type(), fuchsia_fs::FsType::BLOBFS);
+    EXPECT_EQ(info.fs_type(), fuchsia_fs::wire::FsType::BLOBFS);
 
     const std::string expected_fs_name = "blobfs";
     ASSERT_EQ(expected_fs_name.size(), info.name().size());

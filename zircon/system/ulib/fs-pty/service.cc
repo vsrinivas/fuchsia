@@ -23,7 +23,7 @@ namespace fs_pty::internal {
 
 void DispatchPtyDeviceMessage(
     ::llcpp::fuchsia::hardware::pty::Device::RawChannelInterface* interface,
-                              fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
+    fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
   ::llcpp::fuchsia::hardware::pty::Device::Dispatch(interface, msg, txn);
 }
 
@@ -92,7 +92,7 @@ void NullPtyDeviceImpl::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start,
+void NullPtyDeviceImpl::Seek(int64_t offset, ::llcpp::fuchsia::io::wire::SeekOrigin start,
                              SeekCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

@@ -76,9 +76,9 @@ void QueryService::GetInfo(FilesystemInfoQuery query, GetInfoCompleter::Sync& co
     builder.set_max_node_name_size(fidl::unowned_ptr(&max_node_name_size));
   }
 
-  fuchsia_fs::FsType fs_type;
+  fuchsia_fs::wire::FsType fs_type;
   if (query & FilesystemInfoQuery::FS_TYPE) {
-    fs_type = fuchsia_fs::FsType::BLOBFS;
+    fs_type = fuchsia_fs::wire::FsType::BLOBFS;
     builder.set_fs_type(fidl::unowned_ptr(&fs_type));
   }
 

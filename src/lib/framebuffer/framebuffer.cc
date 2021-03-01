@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
+// FIDL must come before banjo
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
@@ -173,11 +174,11 @@ static zx_status_t create_buffer_collection(
   constraints.image_format_constraints_count = 1;
   auto& image_constraints = constraints.image_format_constraints[0];
   image_constraints = image_format::GetDefaultImageFormatConstraints();
-  image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
   image_constraints.pixel_format.has_format_modifier = true;
   image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
   image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
+  image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
   image_constraints.min_coded_width = width;
   image_constraints.min_coded_height = height;
   image_constraints.max_coded_width = 0xffffffff;
@@ -207,7 +208,7 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
   *err_msg_out = "";
 
   if (inited) {
-    *err_msg_out = "framebufer already initialzied";
+    *err_msg_out = "framebuffer already initialized";
     return ZX_ERR_ALREADY_BOUND;
   }
 

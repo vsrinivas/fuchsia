@@ -34,7 +34,7 @@ namespace cobalt_client {
 namespace internal {
 namespace {
 
-using Status = ::llcpp::fuchsia::cobalt::Status;
+using Status = ::llcpp::fuchsia::cobalt::wire::Status;
 using EventData = ::llcpp::fuchsia::cobalt::EventPayload;
 
 // Fake Implementation for fuchsia::cobalt::LoggerFactory.

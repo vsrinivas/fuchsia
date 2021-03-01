@@ -59,7 +59,7 @@ class DirectoryConnection final : public Connection,
             LinkCompleter::Sync& completer) final;
   void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
              WatchCompleter::Sync& completer) final;
-  void AddInotifyFilter(llcpp::fuchsia::io2::InotifyWatchMask filters, fidl::StringView path,
+  void AddInotifyFilter(llcpp::fuchsia::io2::wire::InotifyWatchMask filters, fidl::StringView path,
                         uint32_t watch_descriptor, zx::socket socket,
                         fidl::ServerEnd<llcpp::fuchsia::io2::Inotifier> controller,
                         AddInotifyFilterCompleter::Sync& completer) final {}

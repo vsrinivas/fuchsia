@@ -303,14 +303,14 @@ void Client::SetBufferCollectionConstraints(
     switch (config.pixel_format) {
       case ZX_PIXEL_FORMAT_RGB_x888:
       case ZX_PIXEL_FORMAT_ARGB_8888:
-        image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+        image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
         image_constraints.pixel_format.has_format_modifier = true;
         image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
         break;
     }
 
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
+    image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
     image_constraints.min_coded_width = 0;
     image_constraints.max_coded_width = 0xffffffff;
     image_constraints.min_coded_height = 0;
@@ -326,7 +326,7 @@ void Client::SetBufferCollectionConstraints(
     image_constraints.display_width_divisor = 1;
     image_constraints.display_height_divisor = 1;
 
-    if (image_constraints.pixel_format.type != sysmem::PixelFormatType::INVALID) {
+    if (image_constraints.pixel_format.type != sysmem::wire::PixelFormatType::INVALID) {
       _completer.Reply(it->second.kernel.SetConstraints(true, constraints).status());
       return;
     }
@@ -523,7 +523,7 @@ void Client::SetLayerPrimaryConfig(uint64_t layer_id, fhd::ImageConfig image_con
   // no Reply defined
 }
 
-void Client::SetLayerPrimaryPosition(uint64_t layer_id, fhd::Transform transform,
+void Client::SetLayerPrimaryPosition(uint64_t layer_id, fhd::wire::Transform transform,
                                      fhd::Frame src_frame, fhd::Frame dest_frame,
                                      SetLayerPrimaryPositionCompleter::Sync& /*_completer*/) {
   auto layer = layers_.find(layer_id);
@@ -532,7 +532,7 @@ void Client::SetLayerPrimaryPosition(uint64_t layer_id, fhd::Transform transform
     TearDown();
     return;
   }
-  if (transform > fhd::Transform::ROT_90_REFLECT_Y) {
+  if (transform > fhd::wire::Transform::ROT_90_REFLECT_Y) {
     zxlogf(ERROR, "Invalid transform %hhu", static_cast<uint8_t>(transform));
     TearDown();
     return;
@@ -542,7 +542,7 @@ void Client::SetLayerPrimaryPosition(uint64_t layer_id, fhd::Transform transform
   // no Reply defined
 }
 
-void Client::SetLayerPrimaryAlpha(uint64_t layer_id, fhd::AlphaMode mode, float val,
+void Client::SetLayerPrimaryAlpha(uint64_t layer_id, fhd::wire::AlphaMode mode, float val,
                                   SetLayerPrimaryAlphaCompleter::Sync& /*_completer*/) {
   auto layer = layers_.find(layer_id);
   if (!layer.IsValid() || layer->pending_type() != LAYER_TYPE_PRIMARY) {
@@ -551,7 +551,7 @@ void Client::SetLayerPrimaryAlpha(uint64_t layer_id, fhd::AlphaMode mode, float 
     return;
   }
 
-  if (mode > fhd::AlphaMode::HW_MULTIPLY || (!isnan(val) && (val < 0 || val > 1))) {
+  if (mode > fhd::wire::AlphaMode::HW_MULTIPLY || (!isnan(val) && (val < 0 || val > 1))) {
     zxlogf(ERROR, "Invalid args %hhu %f", static_cast<uint8_t>(mode), val);
     TearDown();
     return;
@@ -642,7 +642,7 @@ void Client::SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_e
 }
 
 void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) {
-  fhd::ConfigResult res;
+  fhd::wire::ConfigResult res;
   std::vector<fhd::ClientCompositionOp> ops;
 
   pending_config_valid_ = CheckConfig(&res, &ops);
@@ -938,7 +938,7 @@ void Client::SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync& _c
   }
 }
 
-bool Client::CheckConfig(fhd::ConfigResult* res, std::vector<fhd::ClientCompositionOp>* ops) {
+bool Client::CheckConfig(fhd::wire::ConfigResult* res, std::vector<fhd::ClientCompositionOp>* ops) {
   const display_config_t* configs[configs_.size()];
   layer_t* layers[layers_.size()];
   uint32_t layer_cfg_results[layers_.size()];
@@ -946,7 +946,7 @@ bool Client::CheckConfig(fhd::ConfigResult* res, std::vector<fhd::ClientComposit
   memset(layer_cfg_results, 0, layers_.size() * sizeof(uint32_t));
 
   if (res && ops) {
-    *res = fhd::ConfigResult::OK;
+    *res = fhd::wire::ConfigResult::OK;
     ops->clear();
   }
 
@@ -1033,7 +1033,7 @@ bool Client::CheckConfig(fhd::ConfigResult* res, std::vector<fhd::ClientComposit
 
   if (config_fail) {
     if (res) {
-      *res = fhd::ConfigResult::INVALID_CONFIG;
+      *res = fhd::wire::ConfigResult::INVALID_CONFIG;
     }
     // If the config is invalid, there's no point in sending it to the impl driver.
     return false;
@@ -1046,8 +1046,8 @@ bool Client::CheckConfig(fhd::ConfigResult* res, std::vector<fhd::ClientComposit
   if (display_cfg_result != CONFIG_DISPLAY_OK) {
     if (res) {
       *res = display_cfg_result == CONFIG_DISPLAY_TOO_MANY
-                 ? fhd::ConfigResult::TOO_MANY_DISPLAYS
-                 : fhd::ConfigResult::UNSUPPORTED_DISPLAY_MODES;
+                 ? fhd::wire::ConfigResult::TOO_MANY_DISPLAYS
+                 : fhd::wire::ConfigResult::UNSUPPORTED_DISPLAY_MODES;
     }
     return false;
   }
@@ -1067,7 +1067,7 @@ bool Client::CheckConfig(fhd::ConfigResult* res, std::vector<fhd::ClientComposit
   } else if (!(res && ops)) {
     return false;
   }
-  *res = fhd::ConfigResult::UNSUPPORTED_CONFIG;
+  *res = fhd::wire::ConfigResult::UNSUPPORTED_CONFIG;
 
   constexpr uint32_t kAllErrors = (CLIENT_GAMMA << 1) - 1;
 
@@ -1096,7 +1096,7 @@ bool Client::CheckConfig(fhd::ConfigResult* res, std::vector<fhd::ClientComposit
           fhd::ClientCompositionOp op{
               .display_id = display_config.id,
               .layer_id = layer_node.layer->id,
-              .opcode = static_cast<fhd::ClientCompositionOpcode>(i),
+              .opcode = static_cast<fhd::wire::ClientCompositionOpcode>(i),
 
           };
           ops->push_back(std::move(op));
@@ -1411,10 +1411,8 @@ void Client::TearDown() {
   server_handle_ = ZX_HANDLE_INVALID;
 
   CleanUpImage(nullptr);
-  zxlogf(INFO, "Releasing %lu capture images cur=%lu, pending=%lu",
-         capture_images_.size(),
-         current_capture_image_,
-         pending_capture_release_image_);
+  zxlogf(INFO, "Releasing %lu capture images cur=%lu, pending=%lu", capture_images_.size(),
+         current_capture_image_, pending_capture_release_image_);
   current_capture_image_ = pending_capture_release_image_ = INVALID_ID;
   capture_images_.clear();
 
@@ -1876,31 +1874,32 @@ constexpr auto banjo_CLIENT_GAMMA = CLIENT_GAMMA;
 #undef CLIENT_ALPHA
 #undef CLIENT_GAMMA
 
-static_assert((1 << static_cast<int>(fhd::ClientCompositionOpcode::CLIENT_USE_PRIMARY)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_USE_PRIMARY)) ==
                   banjo_CLIENT_USE_PRIMARY,
               "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::ClientCompositionOpcode::CLIENT_MERGE_BASE)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_MERGE_BASE)) ==
                   banjo_CLIENT_MERGE_BASE,
               "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::ClientCompositionOpcode::CLIENT_MERGE_SRC)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_MERGE_SRC)) ==
                   banjo_CLIENT_MERGE_SRC,
               "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::ClientCompositionOpcode::CLIENT_FRAME_SCALE)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_FRAME_SCALE)) ==
                   banjo_CLIENT_FRAME_SCALE,
               "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::ClientCompositionOpcode::CLIENT_SRC_FRAME)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_SRC_FRAME)) ==
                   banjo_CLIENT_SRC_FRAME,
               "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::ClientCompositionOpcode::CLIENT_TRANSFORM)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_TRANSFORM)) ==
                   banjo_CLIENT_TRANSFORM,
               "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::ClientCompositionOpcode::CLIENT_COLOR_CONVERSION)) ==
-                  banjo_CLIENT_COLOR_CONVERSION,
-              "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::ClientCompositionOpcode::CLIENT_ALPHA)) ==
+static_assert(
+    (1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_COLOR_CONVERSION)) ==
+        banjo_CLIENT_COLOR_CONVERSION,
+    "Const mismatch");
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_ALPHA)) ==
                   banjo_CLIENT_ALPHA,
               "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::ClientCompositionOpcode::CLIENT_GAMMA)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_GAMMA)) ==
                   banjo_CLIENT_GAMMA,
               "Const mismatch");
 

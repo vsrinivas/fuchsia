@@ -56,12 +56,12 @@ class AddressSpaceDevice
   zx_status_t GoldfishAddressSpaceOpenChildDriver(address_space_child_driver_type_t type,
                                                   zx::channel request) {
     return OpenChildDriver(
-        static_cast<llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType>(type),
+        static_cast<llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType>(type),
         std::move(request));
   }
 
   // |llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface|
-  void OpenChildDriver(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
+  void OpenChildDriver(llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType type,
                        zx::channel request, OpenChildDriverCompleter::Sync& completer) override {
     zx_status_t result = OpenChildDriver(type, std::move(request));
     completer.Close(result);
@@ -72,8 +72,9 @@ class AddressSpaceDevice
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
  private:
-  zx_status_t OpenChildDriver(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
-                              zx::channel request);
+  zx_status_t OpenChildDriver(
+      llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType type,
+      zx::channel request);
 
   uint32_t CommandMmioLocked(uint32_t cmd) TA_REQ(mmio_lock_);
 
@@ -93,7 +94,7 @@ class AddressSpaceChildDriver
       public llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::Interface {
  public:
   explicit AddressSpaceChildDriver(
-      llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
+      llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType type,
       AddressSpaceDevice* device, uint64_t dma_region_paddr, ddk::IoBuffer&& io_buffer,
       uint32_t child_device_handle);
 
@@ -103,7 +104,7 @@ class AddressSpaceChildDriver
   // This destructor unpins all the pinned memory when it destroys the block
   // maps. Client (ICD) guarantees that all the blocks allocated / claimed
   // by this device (including host-visible memory, user-space ring buffers)
-  // will not be accessed anymore after the ICD is destoryed, so it's safe
+  // will not be accessed anymore after the ICD is destroyed, so it's safe
   // to unpin the memory.
   ~AddressSpaceChildDriver();
 

@@ -17,8 +17,8 @@
 
 namespace thermal {
 
-using llcpp::fuchsia::hardware::thermal::PowerDomain;
-using llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo;
+using llcpp::fuchsia::hardware::thermal::wire::PowerDomain;
+using llcpp::fuchsia::hardware::thermal::wire::ThermalDeviceInfo;
 
 class As370Thermal;
 using DeviceType = ddk::Device<As370Thermal, ddk::Messageable, ddk::Unbindable>;

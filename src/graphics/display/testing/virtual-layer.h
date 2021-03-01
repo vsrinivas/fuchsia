@@ -47,7 +47,7 @@ class VirtualLayer {
   // Waits for the display controller to be done with the previous version of this frame.
   virtual bool WaitForReady() = 0;
 
-  // Sets the current layout to the display contorller.
+  // Sets the current layout to the display controller.
   virtual void SendLayout(Controller::SyncClient* dc) = 0;
 
   // Renders the current frame (and signals the fence if necessary).
@@ -174,7 +174,7 @@ class PrimaryLayer : public VirtualLayer {
 
   ::llcpp::fuchsia::hardware::display::Frame src_frame_ = {};
   ::llcpp::fuchsia::hardware::display::Frame dest_frame_ = {};
-  typedef ::llcpp::fuchsia::hardware::display::Transform Transform;
+  typedef ::llcpp::fuchsia::hardware::display::wire::Transform Transform;
   Transform rotation_ = Transform::IDENTITY;
   bool layer_flipping_ = false;
   bool pan_src_ = false;

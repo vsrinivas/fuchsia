@@ -248,12 +248,13 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::RawChannelI
                              llcpp::fuchsia::hardware::display::ImageConfig image_config,
                              SetLayerPrimaryConfigCompleter::Sync& _completer) override;
   void SetLayerPrimaryPosition(uint64_t layer_id,
-                               llcpp::fuchsia::hardware::display::Transform transform,
+                               llcpp::fuchsia::hardware::display::wire::Transform transform,
                                llcpp::fuchsia::hardware::display::Frame src_frame,
                                llcpp::fuchsia::hardware::display::Frame dest_frame,
                                SetLayerPrimaryPositionCompleter::Sync& _completer) override;
-  void SetLayerPrimaryAlpha(uint64_t layer_id, llcpp::fuchsia::hardware::display::AlphaMode mode,
-                            float val, SetLayerPrimaryAlphaCompleter::Sync& _completer) override;
+  void SetLayerPrimaryAlpha(uint64_t layer_id,
+                            llcpp::fuchsia::hardware::display::wire::AlphaMode mode, float val,
+                            SetLayerPrimaryAlphaCompleter::Sync& _completer) override;
   void SetLayerCursorConfig(uint64_t layer_id,
                             llcpp::fuchsia::hardware::display::ImageConfig image_config,
                             SetLayerCursorConfigCompleter::Sync& _completer) override;
@@ -339,7 +340,7 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::RawChannelI
 
   void NotifyDisplaysChanged(const int32_t* displays_added, uint32_t added_count,
                              const int32_t* displays_removed, uint32_t removed_count);
-  bool CheckConfig(llcpp::fuchsia::hardware::display::ConfigResult* res,
+  bool CheckConfig(llcpp::fuchsia::hardware::display::wire::ConfigResult* res,
                    std::vector<llcpp::fuchsia::hardware::display::ClientCompositionOp>* ops);
 
   uint64_t GetActiveCaptureImage() { return current_capture_image_; }

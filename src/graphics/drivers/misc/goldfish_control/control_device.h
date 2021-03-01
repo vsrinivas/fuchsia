@@ -103,7 +103,7 @@ class Control : public ControlType,
   // Create a pair of channel and register a sysmem Heap of |heap_type| using
   // the channel pair. The client-side channel is sent to sysmem, and the
   // server-side channel is bound to |heap|.
-  zx_status_t RegisterAndBindHeap(llcpp::fuchsia::sysmem2::HeapType heap_type, Heap* heap);
+  zx_status_t RegisterAndBindHeap(llcpp::fuchsia::sysmem2::wire::HeapType heap_type, Heap* heap);
 
   int32_t WriteLocked(uint32_t cmd_size, int32_t* consumed_size) TA_REQ(lock_);
   void WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
@@ -150,7 +150,7 @@ class Control : public ControlType,
   std::map<zx_koid_t, uint32_t> buffer_handles_ TA_GUARDED(lock_);
 
   struct BufferHandleInfo {
-    llcpp::fuchsia::hardware::goldfish::BufferHandleType type;
+    llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType type;
     uint32_t memory_property;
   };
   std::map<uint32_t, BufferHandleInfo> buffer_handle_info_ TA_GUARDED(lock_);

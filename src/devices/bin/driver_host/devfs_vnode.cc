@@ -286,9 +286,9 @@ void DevfsVnode::SetPerformanceState(uint32_t requested_state,
   completer.Reply(status, out_state);
 }
 
-void DevfsVnode::ConfigureAutoSuspend(bool enable,
-                                      ::llcpp::fuchsia::device::DevicePowerState requested_state,
-                                      ConfigureAutoSuspendCompleter::Sync& completer) {
+void DevfsVnode::ConfigureAutoSuspend(
+    bool enable, ::llcpp::fuchsia::device::wire::DevicePowerState requested_state,
+    ConfigureAutoSuspendCompleter::Sync& completer) {
   zx_status_t status =
       dev_->driver_host_context()->DeviceConfigureAutoSuspend(dev_, enable, requested_state);
   completer.Reply(status);
@@ -330,11 +330,12 @@ void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& compl
       fidl::unowned_ptr(&response)));
 };
 
-void DevfsVnode::Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state,
+void DevfsVnode::Suspend(::llcpp::fuchsia::device::wire::DevicePowerState requested_state,
                          SuspendCompleter::Sync& completer) {
   dev_->suspend_cb = [completer = completer.ToAsync()](zx_status_t status,
                                                        uint8_t out_state) mutable {
-    completer.Reply(status, static_cast<::llcpp::fuchsia::device::DevicePowerState>(out_state));
+    completer.Reply(status,
+                    static_cast<::llcpp::fuchsia::device::wire::DevicePowerState>(out_state));
   };
   dev_->driver_host_context()->DeviceSuspendNew(dev_, requested_state);
 }
@@ -343,7 +344,7 @@ void DevfsVnode::Resume(ResumeCompleter::Sync& completer) {
   dev_->resume_cb = [completer = completer.ToAsync()](zx_status_t status, uint8_t out_power_state,
                                                       uint32_t out_perf_state) mutable {
     completer.Reply(status,
-                    static_cast<::llcpp::fuchsia::device::DevicePowerState>(out_power_state),
+                    static_cast<::llcpp::fuchsia::device::wire::DevicePowerState>(out_power_state),
                     out_perf_state);
   };
   dev_->driver_host_context()->DeviceResumeNew(dev_);

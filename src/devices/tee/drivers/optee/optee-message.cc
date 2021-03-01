@@ -17,14 +17,14 @@ namespace optee {
 
 namespace {
 
-constexpr bool IsDirectionInput(fuchsia_tee::Direction direction) {
-  return (direction == fuchsia_tee::Direction::INPUT) ||
-         (direction == fuchsia_tee::Direction::INOUT);
+constexpr bool IsDirectionInput(fuchsia_tee::wire::Direction direction) {
+  return (direction == fuchsia_tee::wire::Direction::INPUT) ||
+         (direction == fuchsia_tee::wire::Direction::INOUT);
 }
 
-constexpr bool IsDirectionOutput(fuchsia_tee::Direction direction) {
-  return (direction == fuchsia_tee::Direction::OUTPUT) ||
-         (direction == fuchsia_tee::Direction::INOUT);
+constexpr bool IsDirectionOutput(fuchsia_tee::wire::Direction direction) {
+  return (direction == fuchsia_tee::wire::Direction::OUTPUT) ||
+         (direction == fuchsia_tee::wire::Direction::INOUT);
 }
 
 }  // namespace
@@ -67,13 +67,13 @@ zx_status_t Message::TryInitializeValue(const fuchsia_tee::Value& value, Message
   }
 
   switch (value.direction()) {
-    case fuchsia_tee::Direction::INPUT:
+    case fuchsia_tee::wire::Direction::INPUT:
       out_param->attribute = MessageParam::kAttributeTypeValueInput;
       break;
-    case fuchsia_tee::Direction::OUTPUT:
+    case fuchsia_tee::wire::Direction::OUTPUT:
       out_param->attribute = MessageParam::kAttributeTypeValueOutput;
       break;
-    case fuchsia_tee::Direction::INOUT:
+    case fuchsia_tee::wire::Direction::INOUT:
       out_param->attribute = MessageParam::kAttributeTypeValueInOut;
       break;
     default:
@@ -109,13 +109,13 @@ zx_status_t Message::TryInitializeBuffer(fuchsia_tee::Buffer* buffer,
 
   MessageParam::AttributeType attribute;
   switch (buffer->direction()) {
-    case fuchsia_tee::Direction::INPUT:
+    case fuchsia_tee::wire::Direction::INPUT:
       attribute = MessageParam::kAttributeTypeTempMemInput;
       break;
-    case fuchsia_tee::Direction::OUTPUT:
+    case fuchsia_tee::wire::Direction::OUTPUT:
       attribute = MessageParam::kAttributeTypeTempMemOutput;
       break;
-    case fuchsia_tee::Direction::INOUT:
+    case fuchsia_tee::wire::Direction::INOUT:
       attribute = MessageParam::kAttributeTypeTempMemInOut;
       break;
     default:
@@ -231,17 +231,17 @@ zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
 Value Message::CreateOutputValueParameter(const MessageParam& optee_param) {
   Value zx_value;
 
-  fuchsia_tee::Direction direction;
+  fuchsia_tee::wire::Direction direction;
 
   switch (optee_param.attribute) {
     case MessageParam::kAttributeTypeValueInput:
-      direction = fuchsia_tee::Direction::INPUT;
+      direction = fuchsia_tee::wire::Direction::INPUT;
       break;
     case MessageParam::kAttributeTypeValueOutput:
-      direction = fuchsia_tee::Direction::OUTPUT;
+      direction = fuchsia_tee::wire::Direction::OUTPUT;
       break;
     case MessageParam::kAttributeTypeValueInOut:
-      direction = fuchsia_tee::Direction::INOUT;
+      direction = fuchsia_tee::wire::Direction::INOUT;
       break;
     default:
       ZX_PANIC("Invalid OP-TEE attribute specified\n");
@@ -264,16 +264,16 @@ zx_status_t Message::CreateOutputBufferParameter(const MessageParam& optee_param
                                                  Buffer* out_buffer) {
   ZX_DEBUG_ASSERT(out_buffer != nullptr);
 
-  fuchsia_tee::Direction direction;
+  fuchsia_tee::wire::Direction direction;
   switch (optee_param.attribute) {
     case MessageParam::kAttributeTypeTempMemInput:
-      direction = fuchsia_tee::Direction::INPUT;
+      direction = fuchsia_tee::wire::Direction::INPUT;
       break;
     case MessageParam::kAttributeTypeTempMemOutput:
-      direction = fuchsia_tee::Direction::OUTPUT;
+      direction = fuchsia_tee::wire::Direction::OUTPUT;
       break;
     case MessageParam::kAttributeTypeTempMemInOut:
-      direction = fuchsia_tee::Direction::INOUT;
+      direction = fuchsia_tee::wire::Direction::INOUT;
       break;
     default:
       ZX_PANIC("Invalid OP-TEE attribute specified\n");

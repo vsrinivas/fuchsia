@@ -33,8 +33,8 @@ namespace hid_driver {
 
 class HidDevice;
 
-using ::llcpp::fuchsia::hardware::input::BootProtocol;
-using ::llcpp::fuchsia::hardware::input::ReportType;
+using ::llcpp::fuchsia::hardware::input::wire::BootProtocol;
+using ::llcpp::fuchsia::hardware::input::wire::ReportType;
 
 class HidInstance;
 using HidInstanceDeviceType = ddk::Device<HidInstance, ddk::Closable, ddk::Messageable>;

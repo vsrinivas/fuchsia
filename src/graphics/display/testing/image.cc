@@ -139,22 +139,22 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
   constraints.image_format_constraints_count = 1;
   sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
   if (format == ZX_PIXEL_FORMAT_ARGB_8888 || format == ZX_PIXEL_FORMAT_RGB_x888) {
-    image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+    image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
     image_constraints.color_spaces_count = 1;
     image_constraints.color_space[0] = sysmem::ColorSpace{
-        .type = sysmem::ColorSpaceType::SRGB,
+        .type = sysmem::wire::ColorSpaceType::SRGB,
     };
   } else if (format == ZX_PIXEL_FORMAT_ABGR_8888 || format == ZX_PIXEL_FORMAT_BGR_888x) {
-    image_constraints.pixel_format.type = sysmem::PixelFormatType::R8G8B8A8;
+    image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::R8G8B8A8;
     image_constraints.color_spaces_count = 1;
     image_constraints.color_space[0] = sysmem::ColorSpace{
-        .type = sysmem::ColorSpaceType::SRGB,
+        .type = sysmem::wire::ColorSpaceType::SRGB,
     };
   } else {
-    image_constraints.pixel_format.type = sysmem::PixelFormatType::NV12;
+    image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::NV12;
     image_constraints.color_spaces_count = 1;
     image_constraints.color_space[0] = sysmem::ColorSpace{
-        .type = sysmem::ColorSpaceType::REC709,
+        .type = sysmem::wire::ColorSpaceType::REC709,
     };
   }
   image_constraints.pixel_format.has_format_modifier = true;
@@ -200,7 +200,7 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
     bool result = image_format::GetMinimumRowBytes(
         buffer_collection_info.settings.image_format_constraints, width, &minimum_row_bytes);
     if (!result) {
-      fprintf(stderr, "Could not calcualte minimum row byte\n");
+      fprintf(stderr, "Could not calculate minimum row byte\n");
       return nullptr;
     }
   } else {

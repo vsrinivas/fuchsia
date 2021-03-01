@@ -134,7 +134,8 @@ TEST(VmofileTests, test_vmofile_basic) {
   }
 
   {
-    auto seek_result = fio::File::Call::Seek(zx::unowned_channel(h), 7u, fio::SeekOrigin::START);
+    auto seek_result =
+        fio::File::Call::Seek(zx::unowned_channel(h), 7u, fio::wire::SeekOrigin::START);
     ASSERT_EQ(seek_result.status(), ZX_OK);
     ASSERT_EQ(seek_result.Unwrap()->s, ZX_OK);
     ASSERT_EQ(seek_result.Unwrap()->offset, 7u);
@@ -191,8 +192,7 @@ TEST(VmofileTests, test_vmofile_exec) {
     ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
     auto buffer = get_result.Unwrap()->buffer.get();
     ASSERT_TRUE(buffer->vmo.is_valid());
-    ASSERT_EQ(get_rights(buffer->vmo),
-              kCommonExpectedRights | ZX_RIGHT_EXECUTE);
+    ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights | ZX_RIGHT_EXECUTE);
     ASSERT_EQ(buffer->size, 13);
   }
 

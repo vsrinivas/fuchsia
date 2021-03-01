@@ -6,26 +6,26 @@
 namespace fidl_test = llcpp::fidl::test::enumstrictflexible;
 
 // [START contents]
-template <fidl_test::Color color>
+template <fidl_test::wire::Color color>
 class ComplementaryColors {};
 
-fidl_test::Color writer(std::string s) {
+fidl_test::wire::Color writer(std::string s) {
   if (s == "red") {
-    return fidl_test::Color::RED;
+    return fidl_test::wire::Color::RED;
   } else if (s == "blue") {
-    return fidl_test::Color::BLUE;
+    return fidl_test::wire::Color::BLUE;
   } else {
-    return fidl_test::Color::UNKNOWN_COLOR;
+    return fidl_test::wire::Color::UNKNOWN_COLOR;
   }
 }
 
-std::string reader(fidl_test::Color color) {
+std::string reader(fidl_test::wire::Color color) {
   switch (color) {
-    case fidl_test::Color::RED:
+    case fidl_test::wire::Color::RED:
       return "red";
-    case fidl_test::Color::BLUE:
+    case fidl_test::wire::Color::BLUE:
       return "blue";
-    case fidl_test::Color::UNKNOWN_COLOR:
+    case fidl_test::wire::Color::UNKNOWN_COLOR:
       return "unknown";
     default:
       return "error";

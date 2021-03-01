@@ -57,16 +57,18 @@ class DeviceControllerConnection
   void Resume(uint32_t target_system_state, ResumeCompleter::Sync& _completer) override;
   void Unbind(UnbindCompleter::Sync& _completer) override;
   void CompleteRemoval(CompleteRemovalCompleter::Sync& _completer) override;
-  void CompleteCompatibilityTests(llcpp::fuchsia::device::manager::CompatibilityTestStatus status,
-                                  CompleteCompatibilityTestsCompleter::Sync& _completer) override;
+  void CompleteCompatibilityTests(
+      llcpp::fuchsia::device::manager::wire::CompatibilityTestStatus status,
+      CompleteCompatibilityTestsCompleter::Sync& _completer) override;
 
   // Io.fidl methods
   void Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object,
             OpenCompleter::Sync& _completer) override;
 
   // All methods below are intentionally unimplemented.
-  void AddInotifyFilter(::llcpp::fuchsia::io2::InotifyWatchMask filters, ::fidl::StringView path,
-                        uint32_t watch_descriptor, ::zx::socket socket, ::zx::channel controller,
+  void AddInotifyFilter(::llcpp::fuchsia::io2::wire::InotifyWatchMask filters,
+                        ::fidl::StringView path, uint32_t watch_descriptor, ::zx::socket socket,
+                        ::zx::channel controller,
                         AddInotifyFilterCompleter::Sync& _completer) override {}
 
   void Clone(uint32_t flags, ::zx::channel object, CloneCompleter::Sync& _completer) override {}

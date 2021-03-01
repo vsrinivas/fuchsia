@@ -140,10 +140,10 @@ TEST_F(Ft8201Test, GetDescriptor) {
   ASSERT_EQ(response->descriptor.touch().input().contacts().count(), 10);
 
   EXPECT_EQ(response->descriptor.device_info().vendor_id,
-            static_cast<uint32_t>(fuchsia_input_report::VendorId::GOOGLE));
-  EXPECT_EQ(
-      response->descriptor.device_info().product_id,
-      static_cast<uint32_t>(fuchsia_input_report::VendorGoogleProductId::FOCALTECH_TOUCHSCREEN));
+            static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::GOOGLE));
+  EXPECT_EQ(response->descriptor.device_info().product_id,
+            static_cast<uint32_t>(
+                fuchsia_input_report::wire::VendorGoogleProductId::FOCALTECH_TOUCHSCREEN));
 
   for (size_t i = 0; i < 10; i++) {
     const auto& contact = response->descriptor.touch().input().contacts()[i];
@@ -152,23 +152,23 @@ TEST_F(Ft8201Test, GetDescriptor) {
 
     EXPECT_EQ(contact.position_x().range.min, 0);
     EXPECT_EQ(contact.position_x().range.max, 1279);
-    EXPECT_EQ(contact.position_x().unit.type, fuchsia_input_report::UnitType::NONE);
+    EXPECT_EQ(contact.position_x().unit.type, fuchsia_input_report::wire::UnitType::NONE);
     EXPECT_EQ(contact.position_x().unit.exponent, 0);
 
     EXPECT_EQ(contact.position_y().range.min, 0);
     EXPECT_EQ(contact.position_y().range.max, 799);
-    EXPECT_EQ(contact.position_y().unit.type, fuchsia_input_report::UnitType::NONE);
+    EXPECT_EQ(contact.position_y().unit.type, fuchsia_input_report::wire::UnitType::NONE);
     EXPECT_EQ(contact.position_y().unit.exponent, 0);
 
     EXPECT_EQ(contact.pressure().range.min, 0);
     EXPECT_EQ(contact.pressure().range.max, 0xff);
-    EXPECT_EQ(contact.pressure().unit.type, fuchsia_input_report::UnitType::NONE);
+    EXPECT_EQ(contact.pressure().unit.type, fuchsia_input_report::wire::UnitType::NONE);
     EXPECT_EQ(contact.pressure().unit.exponent, 0);
   }
 
   EXPECT_EQ(response->descriptor.touch().input().max_contacts(), 10);
   EXPECT_EQ(response->descriptor.touch().input().touch_type(),
-            fuchsia_input_report::TouchType::TOUCHSCREEN);
+            fuchsia_input_report::wire::TouchType::TOUCHSCREEN);
 }
 
 TEST_F(Ft8201Test, ReadReport) {

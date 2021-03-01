@@ -290,19 +290,19 @@ void UsbAudioStream::GetSupportedFormats(
   // Needs to be alive until the reply is sent.
   struct FidlCompatibleFormats {
     fbl::Vector<uint8_t> number_of_channels;
-    fbl::Vector<audio_fidl::SampleFormat> sample_formats;
+    fbl::Vector<audio_fidl::wire::SampleFormat> sample_formats;
     fbl::Vector<uint32_t> frame_rates;
     fbl::Vector<uint8_t> valid_bits_per_sample;
     fbl::Vector<uint8_t> bytes_per_sample;
   };
   fbl::Vector<FidlCompatibleFormats> fidl_compatible_formats;
   for (auto& i : formats) {
-    audio_fidl::SampleFormat sample_format = audio_fidl::SampleFormat::PCM_SIGNED;
+    audio_fidl::wire::SampleFormat sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
     ZX_DEBUG_ASSERT(!(i.range_.sample_formats & AUDIO_SAMPLE_FORMAT_BITSTREAM));
     ZX_DEBUG_ASSERT(!(i.range_.sample_formats & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN));
 
     if (i.range_.sample_formats & AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED) {
-      sample_format = audio_fidl::SampleFormat::PCM_UNSIGNED;
+      sample_format = audio_fidl::wire::SampleFormat::PCM_UNSIGNED;
     }
 
     auto noflag_format = static_cast<audio_sample_format_t>(i.range_.sample_formats &
@@ -314,7 +314,7 @@ void UsbAudioStream::GetSupportedFormats(
     ZX_DEBUG_ASSERT(sizes.bytes_per_sample != 0);
 
     if (noflag_format == AUDIO_SAMPLE_FORMAT_32BIT_FLOAT) {
-      sample_format = audio_fidl::SampleFormat::PCM_FLOAT;
+      sample_format = audio_fidl::wire::SampleFormat::PCM_FLOAT;
     }
 
     fbl::Vector<uint32_t> rates;
@@ -350,7 +350,7 @@ void UsbAudioStream::GetSupportedFormats(
     audio_fidl::PcmSupportedFormats formats;
     formats.number_of_channels = ::fidl::VectorView<uint8_t>(
         fidl::unowned_ptr(i.number_of_channels.data()), i.number_of_channels.size());
-    formats.sample_formats = ::fidl::VectorView<audio_fidl::SampleFormat>(
+    formats.sample_formats = ::fidl::VectorView<audio_fidl::wire::SampleFormat>(
         fidl::unowned_ptr(i.sample_formats.data()), i.sample_formats.size());
     formats.frame_rates =
         ::fidl::VectorView<uint32_t>(fidl::unowned_ptr(i.frame_rates.data()), i.frame_rates.size());
@@ -414,7 +414,7 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
     return;
   }
 
-  if (req.sample_format == audio_fidl::SampleFormat::PCM_FLOAT) {
+  if (req.sample_format == audio_fidl::wire::SampleFormat::PCM_FLOAT) {
     sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
     if (req.valid_bits_per_sample != 32 || req.bytes_per_sample != 4) {
       LOG(ERROR, "Unsupported format: Not 32 per sample/channel for float\n");
@@ -423,7 +423,7 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
     }
   }
 
-  if (req.sample_format == audio_fidl::SampleFormat::PCM_UNSIGNED) {
+  if (req.sample_format == audio_fidl::wire::SampleFormat::PCM_UNSIGNED) {
     sample_format |= AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
   }
 
@@ -679,8 +679,8 @@ void UsbAudioStream::GetProperties(StreamChannel::GetPropertiesCompleter::Sync& 
   fidl::aligned<uint32_t> domain = clock_domain_;
   builder.set_clock_domain(fidl::unowned_ptr(&domain));
 
-  fidl::aligned<audio_fidl::PlugDetectCapabilities> cap =
-      audio_fidl::PlugDetectCapabilities::HARDWIRED;
+  fidl::aligned<audio_fidl::wire::PlugDetectCapabilities> cap =
+      audio_fidl::wire::PlugDetectCapabilities::HARDWIRED;
   builder.set_plug_detect_capabilities(fidl::unowned_ptr(&cap));
   completer.Reply(builder.build());
 }
@@ -722,7 +722,7 @@ void UsbAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
       fbl::AutoLock req_lock(&this->lock_);
       this->ReleaseRingBufferLocked();
     }
-    completer.ReplyError(audio_fidl::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
   });
 
   // Compute the ring buffer size.  It needs to be at least as big

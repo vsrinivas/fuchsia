@@ -135,19 +135,23 @@ TEST(KeyboardTest, BootKeyboard) {
   ASSERT_TRUE(input_report.has_keyboard());
 
   ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 5U);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[1], llcpp::fuchsia::ui::input2::Key::RIGHT_META);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[2], llcpp::fuchsia::ui::input2::Key::A);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[0],
+            llcpp::fuchsia::ui::input2::wire::Key::LEFT_SHIFT);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[1],
+            llcpp::fuchsia::ui::input2::wire::Key::RIGHT_META);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[2], llcpp::fuchsia::ui::input2::wire::Key::A);
   EXPECT_EQ(input_report.keyboard().pressed_keys()[3],
-            llcpp::fuchsia::ui::input2::Key::NON_US_BACKSLASH);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[4], llcpp::fuchsia::ui::input2::Key::UP);
+            llcpp::fuchsia::ui::input2::wire::Key::NON_US_BACKSLASH);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[4], llcpp::fuchsia::ui::input2::wire::Key::UP);
 
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[0], llcpp::fuchsia::input::Key::LEFT_SHIFT);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[1], llcpp::fuchsia::input::Key::RIGHT_META);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[2], llcpp::fuchsia::input::Key::A);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[0],
+            llcpp::fuchsia::input::wire::Key::LEFT_SHIFT);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[1],
+            llcpp::fuchsia::input::wire::Key::RIGHT_META);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[2], llcpp::fuchsia::input::wire::Key::A);
   EXPECT_EQ(input_report.keyboard().pressed_keys3()[3],
-            llcpp::fuchsia::input::Key::NON_US_BACKSLASH);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[4], llcpp::fuchsia::input::Key::UP);
+            llcpp::fuchsia::input::wire::Key::NON_US_BACKSLASH);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[4], llcpp::fuchsia::input::wire::Key::UP);
 }
 
 TEST(KeyboardTest, OutputDescriptor) {
@@ -171,15 +175,15 @@ TEST(KeyboardTest, OutputDescriptor) {
 
   ASSERT_EQ(descriptor.keyboard().output().leds().count(), 5);
   EXPECT_EQ(descriptor.keyboard().output().leds()[0],
-            hid_input_report::fuchsia_input_report::LedType::NUM_LOCK);
+            hid_input_report::fuchsia_input_report::wire::LedType::NUM_LOCK);
   EXPECT_EQ(descriptor.keyboard().output().leds()[1],
-            hid_input_report::fuchsia_input_report::LedType::CAPS_LOCK);
+            hid_input_report::fuchsia_input_report::wire::LedType::CAPS_LOCK);
   EXPECT_EQ(descriptor.keyboard().output().leds()[2],
-            hid_input_report::fuchsia_input_report::LedType::SCROLL_LOCK);
+            hid_input_report::fuchsia_input_report::wire::LedType::SCROLL_LOCK);
   EXPECT_EQ(descriptor.keyboard().output().leds()[3],
-            hid_input_report::fuchsia_input_report::LedType::COMPOSE);
+            hid_input_report::fuchsia_input_report::wire::LedType::COMPOSE);
   EXPECT_EQ(descriptor.keyboard().output().leds()[4],
-            hid_input_report::fuchsia_input_report::LedType::KANA);
+            hid_input_report::fuchsia_input_report::wire::LedType::KANA);
 }
 
 // This test double checks that we don't double count keys that are included twice.
@@ -215,9 +219,9 @@ TEST(KeyboardTest, BootKeyboardOutputReport) {
   hid_input_report::Keyboard keyboard;
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
-  std::array<hid_input_report::fuchsia_input_report::LedType, 2> led_array;
-  led_array[0] = hid_input_report::fuchsia_input_report::LedType::NUM_LOCK;
-  led_array[1] = hid_input_report::fuchsia_input_report::LedType::SCROLL_LOCK;
+  std::array<hid_input_report::fuchsia_input_report::wire::LedType, 2> led_array;
+  led_array[0] = hid_input_report::fuchsia_input_report::wire::LedType::NUM_LOCK;
+  led_array[1] = hid_input_report::fuchsia_input_report::wire::LedType::SCROLL_LOCK;
   // Build the FIDL table.
   auto led_view = fidl::unowned_vec(led_array);
   hid_input_report::fuchsia_input_report::KeyboardOutputReport::UnownedBuilder keyboard_builder;
@@ -270,20 +274,24 @@ TEST(KeyboardTest, FullKeysKeyboard) {
                                       report_allocator, input_report));
 
   ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 5U);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[1], llcpp::fuchsia::ui::input2::Key::RIGHT_META);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[2], llcpp::fuchsia::ui::input2::Key::A);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[0],
+            llcpp::fuchsia::ui::input2::wire::Key::LEFT_SHIFT);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[1],
+            llcpp::fuchsia::ui::input2::wire::Key::RIGHT_META);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[2], llcpp::fuchsia::ui::input2::wire::Key::A);
   EXPECT_EQ(input_report.keyboard().pressed_keys()[3],
-            llcpp::fuchsia::ui::input2::Key::NON_US_BACKSLASH);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[4], llcpp::fuchsia::ui::input2::Key::UP);
+            llcpp::fuchsia::ui::input2::wire::Key::NON_US_BACKSLASH);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[4], llcpp::fuchsia::ui::input2::wire::Key::UP);
 
   ASSERT_EQ(input_report.keyboard().pressed_keys3().count(), 5U);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[0], llcpp::fuchsia::input::Key::LEFT_SHIFT);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[1], llcpp::fuchsia::input::Key::RIGHT_META);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[2], llcpp::fuchsia::input::Key::A);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[0],
+            llcpp::fuchsia::input::wire::Key::LEFT_SHIFT);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[1],
+            llcpp::fuchsia::input::wire::Key::RIGHT_META);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[2], llcpp::fuchsia::input::wire::Key::A);
   EXPECT_EQ(input_report.keyboard().pressed_keys3()[3],
-            llcpp::fuchsia::input::Key::NON_US_BACKSLASH);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[4], llcpp::fuchsia::input::Key::UP);
+            llcpp::fuchsia::input::wire::Key::NON_US_BACKSLASH);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[4], llcpp::fuchsia::input::wire::Key::UP);
 }
 
 TEST(KeyboardTest, DeviceType) {

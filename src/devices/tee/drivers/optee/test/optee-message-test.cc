@@ -70,7 +70,7 @@ static ParameterSet CreateParameterSet(size_t num_params) {
 
   for (size_t i = 0; i < num_params; i++) {
     Value value;
-    value.set_direction(fuchsia_tee::Direction::INOUT);
+    value.set_direction(fuchsia_tee::wire::Direction::INOUT);
 
     uint64_t a, b, c;
 

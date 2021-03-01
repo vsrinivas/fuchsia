@@ -69,10 +69,11 @@ class DataSinkImpl {
       : devfs_root_(std::move(devfs_root)), partitioner_(std::move(partitioner)) {}
 
   zx::status<::llcpp::fuchsia::mem::Buffer> ReadAsset(
-      ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset);
+      ::llcpp::fuchsia::paver::wire::Configuration configuration,
+      ::llcpp::fuchsia::paver::wire::Asset asset);
 
-  zx::status<> WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                          ::llcpp::fuchsia::paver::Asset asset,
+  zx::status<> WriteAsset(::llcpp::fuchsia::paver::wire::Configuration configuration,
+                          ::llcpp::fuchsia::paver::wire::Asset asset,
                           ::llcpp::fuchsia::mem::Buffer payload);
 
   // FIDL llcpp unions don't currently support memory ownership so we need to
@@ -81,7 +82,7 @@ class DataSinkImpl {
   // Once unions do support owned memory we can just return
   // WriteBootloaderResult directly here.
   std::variant<zx_status_t, fidl::aligned<bool>> WriteFirmware(
-      ::llcpp::fuchsia::paver::Configuration configuration, fidl::StringView type,
+      ::llcpp::fuchsia::paver::wire::Configuration configuration, fidl::StringView type,
       ::llcpp::fuchsia::mem::Buffer payload);
 
   zx::status<> WriteVolumes(zx::channel payload_stream);
@@ -111,18 +112,18 @@ class DataSink : public ::llcpp::fuchsia::paver::DataSink::RawChannelInterface {
                    fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root, zx::channel server,
                    std::shared_ptr<Context> context);
 
-  void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                 ::llcpp::fuchsia::paver::Asset asset,
+  void ReadAsset(::llcpp::fuchsia::paver::wire::Configuration configuration,
+                 ::llcpp::fuchsia::paver::wire::Asset asset,
                  ReadAssetCompleter::Sync& completer) override;
 
-  void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                  ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
+  void WriteAsset(::llcpp::fuchsia::paver::wire::Configuration configuration,
+                  ::llcpp::fuchsia::paver::wire::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
                   WriteAssetCompleter::Sync& completer) override {
     completer.Reply(sink_.WriteAsset(configuration, asset, std::move(payload)).status_value());
   }
 
-  void WriteFirmware(::llcpp::fuchsia::paver::Configuration configuration, fidl::StringView type,
-                     ::llcpp::fuchsia::mem::Buffer payload,
+  void WriteFirmware(::llcpp::fuchsia::paver::wire::Configuration configuration,
+                     fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
                      WriteFirmwareCompleter::Sync& completer) override;
 
   void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync& completer) override {
@@ -162,18 +163,18 @@ class DynamicDataSink : public ::llcpp::fuchsia::paver::DynamicDataSink::RawChan
 
   void WipePartitionTables(WipePartitionTablesCompleter::Sync& completer) override;
 
-  void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                 ::llcpp::fuchsia::paver::Asset asset,
+  void ReadAsset(::llcpp::fuchsia::paver::wire::Configuration configuration,
+                 ::llcpp::fuchsia::paver::wire::Asset asset,
                  ReadAssetCompleter::Sync& completer) override;
 
-  void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                  ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
+  void WriteAsset(::llcpp::fuchsia::paver::wire::Configuration configuration,
+                  ::llcpp::fuchsia::paver::wire::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
                   WriteAssetCompleter::Sync& completer) override {
     completer.Reply(sink_.WriteAsset(configuration, asset, std::move(payload)).status_value());
   }
 
-  void WriteFirmware(::llcpp::fuchsia::paver::Configuration configuration, fidl::StringView type,
-                     ::llcpp::fuchsia::mem::Buffer payload,
+  void WriteFirmware(::llcpp::fuchsia::paver::wire::Configuration configuration,
+                     fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
                      WriteFirmwareCompleter::Sync& completer) override;
 
   void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync& completer) override {
@@ -214,16 +215,16 @@ class BootManager : public ::llcpp::fuchsia::paver::BootManager::Interface {
 
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync& completer) override;
 
-  void QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration,
+  void QueryConfigurationStatus(::llcpp::fuchsia::paver::wire::Configuration configuration,
                                 QueryConfigurationStatusCompleter::Sync& completer) override;
 
-  void SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration,
+  void SetConfigurationActive(::llcpp::fuchsia::paver::wire::Configuration configuration,
                               SetConfigurationActiveCompleter::Sync& completer) override;
 
-  void SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration,
+  void SetConfigurationUnbootable(::llcpp::fuchsia::paver::wire::Configuration configuration,
                                   SetConfigurationUnbootableCompleter::Sync& completer) override;
 
-  void SetConfigurationHealthy(::llcpp::fuchsia::paver::Configuration configuration,
+  void SetConfigurationHealthy(::llcpp::fuchsia::paver::wire::Configuration configuration,
                                SetConfigurationHealthyCompleter::Sync& completer) override;
 
   void Flush(FlushCompleter::Sync& completer) override {

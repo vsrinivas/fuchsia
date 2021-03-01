@@ -38,7 +38,7 @@ class StreamFileConnection final : public FileConnection {
   void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) final;
   void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
                WriteAtCompleter::Sync& completer) final;
-  void Seek(int64_t offset, llcpp::fuchsia::io::SeekOrigin start,
+  void Seek(int64_t offset, llcpp::fuchsia::io::wire::SeekOrigin start,
             SeekCompleter::Sync& completer) final;
 
   zx::stream stream_;

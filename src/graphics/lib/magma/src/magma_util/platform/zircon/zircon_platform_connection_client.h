@@ -37,7 +37,7 @@ class PrimaryWrapper {
                               uint64_t page_count, uint64_t flags);
   magma_status_t UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va);
   magma_status_t CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count);
-  magma_status_t BufferRangeOp(uint64_t buffer_id, llcpp::fuchsia::gpu::magma::BufferOp op,
+  magma_status_t BufferRangeOp(uint64_t buffer_id, llcpp::fuchsia::gpu::magma::wire::BufferOp op,
                                uint64_t start, uint64_t length);
   magma_status_t AccessPerformanceCounters(zx::event event);
   magma_status_t EnablePerformanceCounters(fidl::VectorView<uint64_t> counters);

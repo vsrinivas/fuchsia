@@ -54,7 +54,7 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
   uint64_t seek = file->offset;
   sync_mutex_unlock(&file->lock);
 
-  auto result = file->control.Seek(seek, fio::SeekOrigin::START);
+  auto result = file->control.Seek(seek, fio::wire::SeekOrigin::START);
   if (result.status() != ZX_OK) {
     return ZX_ERR_BAD_STATE;
   }

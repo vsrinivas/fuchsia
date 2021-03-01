@@ -59,7 +59,7 @@ class OtStackApp : public fidl_spinel::Device::SyncEventHandler {
   zx_status_t SetDeviceSetupClientInDevmgr(const std::string& path);
   zx_status_t SetDeviceSetupClientInIsolatedDevmgr(const std::string& path);
   zx_status_t SetupOtRadioDev();
-  zx_status_t InitRadioDrievr();
+  zx_status_t InitRadioDriver();
   void InitOpenThreadLibrary(bool reset_rcp);
 
   // Events.

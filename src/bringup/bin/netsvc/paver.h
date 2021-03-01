@@ -110,9 +110,9 @@ class Paver : public PaverInterface {
 
   std::optional<::llcpp::fuchsia::paver::Paver::SyncClient> paver_svc_;
 
-  ::llcpp::fuchsia::paver::Configuration configuration_;
+  ::llcpp::fuchsia::paver::wire::Configuration configuration_;
   // Only meaningful when command == Command::kAsset.
-  ::llcpp::fuchsia::paver::Asset asset_;
+  ::llcpp::fuchsia::paver::wire::Asset asset_;
   // Only meaningful when command == Command::kDataFile.
   char path_[PATH_MAX];
   // Only meaningful when command == Command::kFirmware.

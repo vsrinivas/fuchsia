@@ -39,7 +39,7 @@ class Touch : public Device {
   hid::Attributes buttons_[fuchsia_input_report::TOUCH_MAX_NUM_BUTTONS] = {};
   size_t num_buttons_ = 0;
 
-  fuchsia_input_report::TouchType touch_type_;
+  fuchsia_input_report::wire::TouchType touch_type_;
 
   size_t report_size_ = 0;
   uint8_t report_id_ = 0;

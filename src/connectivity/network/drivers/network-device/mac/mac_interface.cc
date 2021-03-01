@@ -98,16 +98,17 @@ zx_status_t MacInterface::Bind(async_dispatcher_t* dispatcher,
   return status;
 }
 
-mode_t MacInterface::ConvertMode(const netdev::MacFilterMode& mode) const {
+mode_t MacInterface::ConvertMode(const netdev::wire::MacFilterMode& mode) const {
+  using netdev::wire::MacFilterMode;
   mode_t check = 0;
   switch (mode) {
-    case netdev::MacFilterMode::PROMISCUOUS:
+    case MacFilterMode::PROMISCUOUS:
       check = MODE_PROMISCUOUS;
       break;
-    case netdev::MacFilterMode::MULTICAST_PROMISCUOUS:
+    case MacFilterMode::MULTICAST_PROMISCUOUS:
       check = MODE_MULTICAST_PROMISCUOUS;
       break;
-    case netdev::MacFilterMode::MULTICAST_FILTER:
+    case MacFilterMode::MULTICAST_FILTER:
       check = MODE_MULTICAST_FILTER;
       break;
   }
@@ -138,7 +139,7 @@ void MacInterface::Consolidate() {
       addresses.insert(client_addresses.begin(), client_addresses.end());
       if (addresses.size() > features_.multicast_filter_count) {
         // Try to go into multicast_promiscuous mode, if it's supported.
-        auto try_mode = ConvertMode(netdev::MacFilterMode::MULTICAST_PROMISCUOUS);
+        auto try_mode = ConvertMode(netdev::wire::MacFilterMode::MULTICAST_PROMISCUOUS);
         // If it's not supported (meaning that neither multicast promiscuous nor promiscuous is
         // supported, since ConvertMode will fall back to the more permissive mode), we have no
         // option but to truncate the address list.
@@ -203,7 +204,8 @@ void MacClientInstance::GetUnicastAddress(GetUnicastAddressCompleter::Sync& comp
   completer.Reply(addr);
 }
 
-void MacClientInstance::SetMode(netdev::MacFilterMode mode, SetModeCompleter::Sync& completer) {
+void MacClientInstance::SetMode(netdev::wire::MacFilterMode mode,
+                                SetModeCompleter::Sync& completer) {
   mode_t resolved_mode = parent_->ConvertMode(mode);
   if (resolved_mode != 0) {
     fbl::AutoLock lock(&parent_->lock_);

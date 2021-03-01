@@ -20,7 +20,7 @@
 #include "src/graphics/drivers/msd-img-rgx/no_hardware/msd_img_rgx_no_hardware-bind.h"
 #include "sys_driver/magma_driver.h"
 
-using FidlStatus = llcpp::fuchsia::gpu::magma::Status;
+using FidlStatus = llcpp::fuchsia::gpu::magma::wire::Status;
 
 NoHardwareGpu::~NoHardwareGpu() {
   std::lock_guard<std::mutex> lock(magma_mutex_);

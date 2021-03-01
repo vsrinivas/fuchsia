@@ -20,7 +20,7 @@ using magma::Status;
 namespace magma_sysmem {
 
 namespace {
-uint32_t SysmemToMagmaFormat(llcpp::fuchsia::sysmem::PixelFormatType format) {
+uint32_t SysmemToMagmaFormat(llcpp::fuchsia::sysmem::wire::PixelFormatType format) {
   // The values are required to be identical.
   return static_cast<uint32_t>(format);
 }
@@ -35,10 +35,11 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
   ~ZirconPlatformBufferDescription() override {}
 
   bool IsValid() {
+    using llcpp::fuchsia::sysmem::wire::CoherencyDomain;
     switch (settings_.buffer_settings.coherency_domain) {
-      case llcpp::fuchsia::sysmem::CoherencyDomain::RAM:
-      case llcpp::fuchsia::sysmem::CoherencyDomain::CPU:
-      case llcpp::fuchsia::sysmem::CoherencyDomain::INACCESSIBLE:
+      case CoherencyDomain::RAM:
+      case CoherencyDomain::CPU:
+      case CoherencyDomain::INACCESSIBLE:
         break;
 
       default:
@@ -63,14 +64,15 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
     return settings_.image_format_constraints.pixel_format.format_modifier.value;
   }
   uint32_t coherency_domain() const override {
+    using llcpp::fuchsia::sysmem::wire::CoherencyDomain;
     switch (settings_.buffer_settings.coherency_domain) {
-      case llcpp::fuchsia::sysmem::CoherencyDomain::RAM:
+      case CoherencyDomain::RAM:
         return MAGMA_COHERENCY_DOMAIN_RAM;
 
-      case llcpp::fuchsia::sysmem::CoherencyDomain::CPU:
+      case CoherencyDomain::CPU:
         return MAGMA_COHERENCY_DOMAIN_CPU;
 
-      case llcpp::fuchsia::sysmem::CoherencyDomain::INACCESSIBLE:
+      case CoherencyDomain::INACCESSIBLE:
         return MAGMA_COHERENCY_DOMAIN_INACCESSIBLE;
 
       default:
@@ -167,6 +169,9 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
 
   Status SetImageFormatConstraints(
       uint32_t index, const magma_image_format_constraints_t* format_constraints) override {
+    using llcpp::fuchsia::sysmem::wire::ColorSpaceType;
+    using llcpp::fuchsia::sysmem::wire::PixelFormatType;
+
     if (index != raw_image_constraints_.size())
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Format constraint gaps or changes not allowed");
     if (merge_result_)
@@ -187,27 +192,27 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     bool is_yuv = false;
     switch (format_constraints->image_format) {
       case MAGMA_FORMAT_R8G8B8A8:
-        constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::R8G8B8A8;
+        constraints.pixel_format.type = PixelFormatType::R8G8B8A8;
         break;
       case MAGMA_FORMAT_BGRA32:
-        constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::BGRA32;
+        constraints.pixel_format.type = PixelFormatType::BGRA32;
         break;
       case MAGMA_FORMAT_NV12:
-        constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::NV12;
+        constraints.pixel_format.type = PixelFormatType::NV12;
         is_yuv = true;
         break;
       case MAGMA_FORMAT_I420:
-        constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::I420;
+        constraints.pixel_format.type = PixelFormatType::I420;
         is_yuv = true;
         break;
       case MAGMA_FORMAT_R8:
-        constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::R8;
+        constraints.pixel_format.type = PixelFormatType::R8;
         break;
       case MAGMA_FORMAT_L8:
-        constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::L8;
+        constraints.pixel_format.type = PixelFormatType::L8;
         break;
       case MAGMA_FORMAT_R8G8:
-        constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::R8G8;
+        constraints.pixel_format.type = PixelFormatType::R8G8;
         break;
       default:
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid format: %d",
@@ -218,21 +223,15 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
       // This is the full list of formats currently supported by
       // VkSamplerYcbcrModelConversion and VkSamplerYcbcrRange as of vulkan 1.1,
       // restricted to 8-bit-per-component formats.
-      constraints.color_space[color_space_count++].type =
-          llcpp::fuchsia::sysmem::ColorSpaceType::REC601_NTSC;
-      constraints.color_space[color_space_count++].type =
-          llcpp::fuchsia::sysmem::ColorSpaceType::REC601_NTSC_FULL_RANGE;
-      constraints.color_space[color_space_count++].type =
-          llcpp::fuchsia::sysmem::ColorSpaceType::REC601_PAL;
-      constraints.color_space[color_space_count++].type =
-          llcpp::fuchsia::sysmem::ColorSpaceType::REC601_PAL_FULL_RANGE;
-      constraints.color_space[color_space_count++].type =
-          llcpp::fuchsia::sysmem::ColorSpaceType::REC709;
+      constraints.color_space[color_space_count++].type = ColorSpaceType::REC601_NTSC;
+      constraints.color_space[color_space_count++].type = ColorSpaceType::REC601_NTSC_FULL_RANGE;
+      constraints.color_space[color_space_count++].type = ColorSpaceType::REC601_PAL;
+      constraints.color_space[color_space_count++].type = ColorSpaceType::REC601_PAL_FULL_RANGE;
+      constraints.color_space[color_space_count++].type = ColorSpaceType::REC709;
       constraints.color_spaces_count = color_space_count;
     } else {
       uint32_t color_space_count = 0;
-      constraints.color_space[color_space_count++].type =
-          llcpp::fuchsia::sysmem::ColorSpaceType::SRGB;
+      constraints.color_space[color_space_count++].type = ColorSpaceType::SRGB;
       constraints.color_spaces_count = color_space_count;
     }
 
@@ -262,7 +261,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     auto& constraints = raw_image_constraints_[index];
     for (uint32_t i = 0; i < color_space_count; i++) {
       constraints.color_space[i].type =
-          static_cast<llcpp::fuchsia::sysmem::ColorSpaceType>(color_spaces[i]);
+          static_cast<llcpp::fuchsia::sysmem::wire::ColorSpaceType>(color_spaces[i]);
     }
     constraints.color_spaces_count = color_space_count;
     return MAGMA_STATUS_OK;
@@ -320,7 +319,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
           std::max(in_constraints.bytes_per_row_divisor, out_constraints.bytes_per_row_divisor);
 
       // Union the sets of color spaces to ensure that they're all still legal.
-      std::unordered_set<llcpp::fuchsia::sysmem::ColorSpaceType> color_spaces;
+      std::unordered_set<llcpp::fuchsia::sysmem::wire::ColorSpaceType> color_spaces;
       for (uint32_t j = 0; j < out_constraints.color_spaces_count; j++) {
         color_spaces.insert(out_constraints.color_space[j].type);
       }

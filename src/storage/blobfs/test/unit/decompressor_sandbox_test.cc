@@ -151,7 +151,7 @@ TEST_F(DecompressorSandboxTest, ChunkedFullDecompression) {
   DecompressRequest request = {
       {0, kDataSize},
       {0, compressed_size},
-      llcpp::fuchsia::blobfs::internal::CompressionAlgorithm::CHUNKED,
+      llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::CHUNKED,
   };
 
   DecompressResponse response;
@@ -187,7 +187,7 @@ TEST_F(DecompressorSandboxTest, ChunkedPartialDecompression) {
     DecompressRequest request = {
         {mapping.decompressed_offset, mapping.decompressed_length},
         {mapping.compressed_offset, mapping.compressed_length},
-        llcpp::fuchsia::blobfs::internal::CompressionAlgorithm::CHUNKED_PARTIAL,
+        llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::CHUNKED_PARTIAL,
     };
     DecompressResponse response;
     SendRequest(&request, &response);

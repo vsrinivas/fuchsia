@@ -33,7 +33,7 @@ class MockBufferCollection : public mock_sysmem::MockBufferCollection {
     info.buffer_count = 1;
     ASSERT_OK(zx::vmo::create(4096, 0, &info.buffers[0].vmo));
     sysmem::ImageFormatConstraints& constraints = info.settings.image_format_constraints;
-    constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+    constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
     constraints.pixel_format.has_format_modifier = true;
     constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
     constraints.max_coded_width = 1000;

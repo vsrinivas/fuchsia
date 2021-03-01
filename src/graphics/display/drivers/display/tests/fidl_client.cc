@@ -160,7 +160,7 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
     }
 
     void OnClientOwnershipChange(
-        fhd::Controller::OnClientOwnershipChangeResponse* meesage) override {}
+        fhd::Controller::OnClientOwnershipChangeResponse* message) override {}
 
     zx_status_t Unknown() override { return ZX_ERR_STOP; }
 
@@ -222,7 +222,8 @@ zx_status_t TestFidlClient::PresentImage() {
   if (auto reply = dc_->SetLayerImage(layer_id_, image_id_, 0, 0); !reply.ok()) {
     return reply.status();
   }
-  if (auto reply = dc_->CheckConfig(false); !reply.ok() || reply->res != fhd::ConfigResult::OK) {
+  if (auto reply = dc_->CheckConfig(false);
+      !reply.ok() || reply->res != fhd::wire::ConfigResult::OK) {
     return reply.ok() ? ZX_ERR_INVALID_ARGS : reply.status();
   }
   return dc_->ApplyConfig().status();

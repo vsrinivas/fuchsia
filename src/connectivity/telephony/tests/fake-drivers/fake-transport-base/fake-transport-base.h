@@ -37,7 +37,7 @@ class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface 
 
   virtual void ReplyCtrlMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uint32_t resp_size) = 0;
   virtual void SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
-                            ::llcpp::fuchsia::telephony::snoop::Direction direction) = 0;
+                            ::llcpp::fuchsia::telephony::snoop::wire::Direction direction) = 0;
 
   zx_status_t FidlDispatch(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn);

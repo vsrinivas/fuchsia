@@ -38,7 +38,7 @@ class PtyClientDevice : public ::llcpp::fuchsia::hardware::pty::Device::RawChann
   void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
                WriteAtCompleter::Sync& completer) final;
 
-  void Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start,
+  void Seek(int64_t offset, ::llcpp::fuchsia::io::wire::SeekOrigin start,
             SeekCompleter::Sync& completer) final;
   void Truncate(uint64_t length, TruncateCompleter::Sync& completer) final;
   void GetFlags(GetFlagsCompleter::Sync& completer) final;

@@ -56,7 +56,7 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
 }  // namespace
 
 void DeviceControllerConnection::CompleteCompatibilityTests(
-    llcpp::fuchsia::device::manager::CompatibilityTestStatus status,
+    llcpp::fuchsia::device::manager::wire::CompatibilityTestStatus status,
     CompleteCompatibilityTestsCompleter::Sync& _completer) {
   if (auto compat_conn = dev()->PopTestCompatibilityConn(); compat_conn) {
     compat_conn(static_cast<zx_status_t>(status));
@@ -101,7 +101,8 @@ void DeviceControllerConnection::Resume(uint32_t target_system_state,
     }
     if (status != ZX_OK &&
         (out_power_state ==
-         static_cast<uint8_t>(llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D0))) {
+         static_cast<uint8_t>(
+             llcpp::fuchsia::device::wire::DevicePowerState::DEVICE_POWER_STATE_D0))) {
       // Do not fail system resume, when the device is unable to go into a particular performance
       // state, but resumed to a working state.
       status = ZX_OK;

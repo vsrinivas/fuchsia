@@ -39,7 +39,7 @@ static int magma_start(sysdrv_device_t* dev);
 static int magma_stop(sysdrv_device_t* dev);
 #endif
 
-using FidlStatus = llcpp::fuchsia::gpu::magma::Status;
+using FidlStatus = llcpp::fuchsia::gpu::magma::wire::Status;
 
 struct sysdrv_device_t : public llcpp::fuchsia::gpu::magma::Device::Interface {
  public:

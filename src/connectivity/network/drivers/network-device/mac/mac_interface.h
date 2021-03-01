@@ -50,7 +50,7 @@ class MacInterface : public ::network::MacAddrDeviceInterface {
 
   // Converts a fuchsia.hardware.network.MacFilterMode to a valid mode to be communicated to the
   // device implementation, taking into consideration the device's available operating modes.
-  mode_t ConvertMode(const netdev::MacFilterMode& mode) const;
+  mode_t ConvertMode(const netdev::wire::MacFilterMode& mode) const;
 
  protected:
   friend MacClientInstance;
@@ -76,7 +76,7 @@ class MacInterface : public ::network::MacAddrDeviceInterface {
 // The state associated with a FIDL client for fuchsia.hardware.network.MacAddressing.
 class ClientState {
  public:
-  // Helper class to store a Mac Address in an unoredered_set. Hashing is performed by the
+  // Helper class to store a Mac Address in an unordered_set. Hashing is performed by the
   // `MacHasher` class.
   struct Addr {
     MacAddress address;
@@ -116,7 +116,7 @@ class MacClientInstance : public netdev::MacAddressing::Interface,
   explicit MacClientInstance(MacInterface* parent, mode_t default_mode);
 
   void GetUnicastAddress(GetUnicastAddressCompleter::Sync& _completer) override;
-  void SetMode(netdev::MacFilterMode mode, SetModeCompleter::Sync& _completer) override;
+  void SetMode(netdev::wire::MacFilterMode mode, SetModeCompleter::Sync& _completer) override;
   void AddMulticastAddress(MacAddress address,
                            AddMulticastAddressCompleter::Sync& _completer) override;
   void RemoveMulticastAddress(MacAddress address,

@@ -200,8 +200,8 @@ class Controller : public ControllerParent,
   bool vc_ready_ __TA_GUARDED(mtx());
   ClientProxy* primary_client_ __TA_GUARDED(mtx()) = nullptr;
   bool primary_ready_ __TA_GUARDED(mtx());
-  llcpp::fuchsia::hardware::display::VirtconMode vc_mode_ __TA_GUARDED(mtx()) =
-      llcpp::fuchsia::hardware::display::VirtconMode::INACTIVE;
+  llcpp::fuchsia::hardware::display::wire::VirtconMode vc_mode_ __TA_GUARDED(mtx()) =
+      llcpp::fuchsia::hardware::display::wire::VirtconMode::INACTIVE;
   ClientProxy* active_client_ __TA_GUARDED(mtx()) = nullptr;
 
   async::Loop loop_;

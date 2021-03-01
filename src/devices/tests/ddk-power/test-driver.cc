@@ -15,10 +15,10 @@
 
 #include "src/devices/tests/ddk-power/test-power-bind.h"
 
-using llcpp::fuchsia::device::DevicePerformanceStateInfo;
-using llcpp::fuchsia::device::DevicePowerState;
-using llcpp::fuchsia::device::DevicePowerStateInfo;
 using llcpp::fuchsia::device::power::test::TestDevice;
+using llcpp::fuchsia::device::wire::DevicePerformanceStateInfo;
+using llcpp::fuchsia::device::wire::DevicePowerState;
+using llcpp::fuchsia::device::wire::DevicePowerStateInfo;
 
 class TestPowerDriver;
 using DeviceType =
@@ -96,9 +96,8 @@ void TestPowerDriver::GetCurrentDevicePowerState(
 
 void TestPowerDriver::GetCurrentDeviceAutoSuspendConfig(
     GetCurrentDeviceAutoSuspendConfigCompleter::Sync& completer) {
-  completer.ReplySuccess(
-      auto_suspend_enabled_,
-      static_cast<llcpp::fuchsia::device::DevicePowerState>(deepest_autosuspend_sleep_state_));
+  completer.ReplySuccess(auto_suspend_enabled_,
+                         static_cast<DevicePowerState>(deepest_autosuspend_sleep_state_));
 }
 void TestPowerDriver::SetTestStatusInfo(
     llcpp::fuchsia::device::power::test::TestStatusInfo status_info,

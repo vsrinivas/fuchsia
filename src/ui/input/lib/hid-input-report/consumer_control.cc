@@ -18,25 +18,26 @@
 #include "src/ui/input/lib/hid-input-report/device.h"
 
 namespace hid_input_report {
+using fuchsia_input_report::wire::ConsumerControlButton;
 
 namespace {
 
-std::optional<fuchsia_input_report::ConsumerControlButton> HidToConsumerControlButton(
+std::optional<fuchsia_input_report::wire::ConsumerControlButton> HidToConsumerControlButton(
     hid::Usage usage) {
   struct {
     hid::Usage usage;
-    fuchsia_input_report::ConsumerControlButton button;
+    ConsumerControlButton button;
   } usage_to_button[] = {
       {hid::USAGE(hid::usage::Page::kConsumer, hid::usage::Consumer::kVolumeUp),
-       fuchsia_input_report::ConsumerControlButton::VOLUME_UP},
+       ConsumerControlButton::VOLUME_UP},
       {hid::USAGE(hid::usage::Page::kConsumer, hid::usage::Consumer::kVolumeDown),
-       fuchsia_input_report::ConsumerControlButton::VOLUME_DOWN},
+       ConsumerControlButton::VOLUME_DOWN},
       {hid::USAGE(hid::usage::Page::kConsumer, hid::usage::Consumer::kReset),
-       fuchsia_input_report::ConsumerControlButton::REBOOT},
+       ConsumerControlButton::REBOOT},
       {hid::USAGE(hid::usage::Page::kConsumer, hid::usage::Consumer::kCameraAccessDisabled),
-       fuchsia_input_report::ConsumerControlButton::CAMERA_DISABLE},
+       ConsumerControlButton::CAMERA_DISABLE},
       {hid::USAGE(hid::usage::Page::kTelephony, hid::usage::Telephony::kPhoneMute),
-       fuchsia_input_report::ConsumerControlButton::MIC_MUTE},
+       ConsumerControlButton::MIC_MUTE},
   };
 
   for (auto& map : usage_to_button) {
@@ -91,7 +92,7 @@ ParseResult ConsumerControl::CreateDescriptor(fidl::AnyAllocator& allocator,
 
   // Set the buttons array.
   {
-    fidl::VectorView<fuchsia_input_report::ConsumerControlButton> buttons(allocator, num_buttons_);
+    fidl::VectorView<ConsumerControlButton> buttons(allocator, num_buttons_);
     for (size_t i = 0; i < num_buttons_; i++) {
       auto button = HidToConsumerControlButton(button_fields_[i].attr.usage);
       if (button) {
@@ -113,9 +114,7 @@ ParseResult ConsumerControl::ParseInputReport(const uint8_t* data, size_t len,
                                               fuchsia_input_report::InputReport& input_report) {
   fuchsia_input_report::ConsumerControlInputReport consumer_report(allocator);
 
-  std::array<fuchsia_input_report::ConsumerControlButton,
-             fuchsia_input_report::CONSUMER_CONTROL_MAX_NUM_BUTTONS>
-      buttons;
+  std::array<ConsumerControlButton, fuchsia_input_report::CONSUMER_CONTROL_MAX_NUM_BUTTONS> buttons;
   size_t buttons_size = 0;
 
   for (const hid::ReportField& field : button_fields_) {
@@ -135,8 +134,7 @@ ParseResult ConsumerControl::ParseInputReport(const uint8_t* data, size_t len,
     buttons[buttons_size++] = *button;
   }
 
-  fidl::VectorView<fuchsia_input_report::ConsumerControlButton> fidl_buttons(allocator,
-                                                                             buttons_size);
+  fidl::VectorView<ConsumerControlButton> fidl_buttons(allocator, buttons_size);
   for (size_t i = 0; i < buttons_size; i++) {
     fidl_buttons[i] = buttons[i];
   }

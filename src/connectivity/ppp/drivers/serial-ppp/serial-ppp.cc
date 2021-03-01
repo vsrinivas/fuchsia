@@ -32,13 +32,13 @@ constexpr uint64_t kExitKey = 3;
 constexpr uint64_t kWaitSocketReadableKey = 4;
 constexpr uint64_t kWaitSocketWritableKey = 5;
 
-static constexpr uint8_t kRxFrameTypes[] = {static_cast<uint8_t>(netdev::FrameType::IPV4),
-                                            static_cast<uint8_t>(netdev::FrameType::IPV6)};
+static constexpr uint8_t kRxFrameTypes[] = {static_cast<uint8_t>(netdev::wire::FrameType::IPV4),
+                                            static_cast<uint8_t>(netdev::wire::FrameType::IPV6)};
 static constexpr tx_support_t kTxFrameSupport[] = {
-    {.type = static_cast<uint8_t>(netdev::FrameType::IPV4),
+    {.type = static_cast<uint8_t>(netdev::wire::FrameType::IPV4),
      .features = netdev::FRAME_FEATURES_RAW,
      .supported_flags = 0},
-    {.type = static_cast<uint8_t>(netdev::FrameType::IPV4),
+    {.type = static_cast<uint8_t>(netdev::wire::FrameType::IPV4),
      .features = netdev::FRAME_FEATURES_RAW,
      .supported_flags = 0}};
 
@@ -170,11 +170,11 @@ void SerialPpp::WorkerLoop() {
           has_more_tx = !pending_tx_.empty();
         }
         Protocol protocol;
-        switch (netdev::FrameType(buffer.type)) {
-          case llcpp::fuchsia::hardware::network::FrameType::IPV4:
+        switch (netdev::wire::FrameType(buffer.type)) {
+          case netdev::wire::FrameType::IPV4:
             protocol = Protocol::Ipv4;
             break;
-          case llcpp::fuchsia::hardware::network::FrameType::IPV6:
+          case netdev::wire::FrameType::IPV6:
             protocol = Protocol::Ipv6;
             break;
           default:
@@ -253,13 +253,13 @@ bool SerialPpp::ConsumeSerial(bool fetch_from_socket) {
       continue;
     }
     auto frame = maybe_frame.take_value();
-    netdev::FrameType frame_type;
+    netdev::wire::FrameType frame_type;
     switch (frame.protocol) {
       case Protocol::Ipv4:
-        frame_type = netdev::FrameType::IPV4;
+        frame_type = netdev::wire::FrameType::IPV4;
         break;
       case Protocol::Ipv6:
-        frame_type = netdev::FrameType::IPV6;
+        frame_type = netdev::wire::FrameType::IPV6;
         break;
       default: {
         // Ignore all other protocols.
@@ -394,7 +394,7 @@ void SerialPpp::NetworkDeviceImplGetInfo(device_info_t* out_info) {
       .tx_depth = kFifoDepth,
       .rx_depth = kFifoDepth,
       .rx_threshold = kFifoDepth / 2,
-      .device_class = static_cast<uint8_t>(llcpp::fuchsia::hardware::network::DeviceClass::PPP),
+      .device_class = static_cast<uint8_t>(netdev::wire::DeviceClass::PPP),
       .rx_types_list = kRxFrameTypes,
       .rx_types_count = sizeof(kRxFrameTypes) / sizeof(uint8_t),
       .tx_types_list = kTxFrameSupport,

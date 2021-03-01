@@ -18,7 +18,7 @@ zx_status_t CheckConfig(const llcpp::fuchsia::hardware::block::verified::Config&
     return ZX_ERR_INVALID_ARGS;
   }
   switch (config.hash_function()) {
-    case llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256:
+    case llcpp::fuchsia::hardware::block::verified::wire::HashFunction::SHA256:
       break;
     default:
       zxlogf(WARNING, "Unknown hash function enum value %hhu", config.hash_function());
@@ -32,7 +32,7 @@ zx_status_t CheckConfig(const llcpp::fuchsia::hardware::block::verified::Config&
     return ZX_ERR_INVALID_ARGS;
   }
   switch (config.block_size()) {
-    case llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096:
+    case llcpp::fuchsia::hardware::block::verified::wire::BlockSize::SIZE_4096:
       // Verify that the block size from the device matches the value requested.
       if (kBlockSize % blk.block_size != 0) {
         zxlogf(WARNING,

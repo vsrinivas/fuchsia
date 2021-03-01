@@ -558,7 +558,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
   };
   auto unowned_name = fidl::unowned_str(name);
   auto unowned_url = fidl::unowned_str(url);
-  auto startup = fsys::StartupMode::LAZY;
+  auto startup = fsys::wire::StartupMode::LAZY;
   auto child_decl = fsys::ChildDecl::UnownedBuilder()
                         .set_name(fidl::unowned_ptr(&unowned_name))
                         .set_url(fidl::unowned_ptr(&unowned_url))

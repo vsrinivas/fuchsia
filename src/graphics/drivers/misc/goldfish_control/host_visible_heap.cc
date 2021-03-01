@@ -96,9 +96,9 @@ zx_status_t CheckSingleBufferSettings(
 fit::result<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params, zx_status_t>
 GetCreateColorBuffer2Params(const llcpp::fuchsia::sysmem2::SingleBufferSettings& buffer_settings,
                             uint64_t paddr) {
-  using llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType;
-  using llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params;
-  using llcpp::fuchsia::sysmem2::PixelFormatType;
+  using llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType;
+  using llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params;
+  using llcpp::fuchsia::sysmem2::wire::PixelFormatType;
 
   ZX_DEBUG_ASSERT(buffer_settings.has_image_format_constraints());
   const auto& image_constraints = buffer_settings.image_format_constraints();
@@ -151,9 +151,10 @@ GetCreateColorBuffer2Params(const llcpp::fuchsia::sysmem2::SingleBufferSettings&
 }
 
 llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params GetCreateBuffer2Params(
-    const llcpp::fuchsia::sysmem2::SingleBufferSettings& single_buffer_settings, uint64_t paddr) {
-  using llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params;
-  using llcpp::fuchsia::sysmem2::PixelFormatType;
+    const llcpp::fuchsia::sysmem2::wire::SingleBufferSettings& single_buffer_settings,
+    uint64_t paddr) {
+  using llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params;
+  using llcpp::fuchsia::sysmem2::wire::PixelFormatType;
 
   ZX_DEBUG_ASSERT(single_buffer_settings.has_buffer_settings());
 
@@ -264,9 +265,9 @@ void HostVisibleHeap::DeallocateVmo(zx_koid_t koid) {
 void HostVisibleHeap::CreateResource(::zx::vmo vmo,
                                      llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings,
                                      CreateResourceCompleter::Sync& completer) {
-  using llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType;
-  using llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params;
-  using llcpp::fuchsia::sysmem2::PixelFormatType;
+  using llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType;
+  using llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params;
+  using llcpp::fuchsia::sysmem2::wire::PixelFormatType;
 
   ZX_DEBUG_ASSERT(vmo.is_valid());
 

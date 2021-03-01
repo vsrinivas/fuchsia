@@ -337,7 +337,7 @@ struct zx_device
 
   zx_status_t SetPowerStates(const device_power_state_info_t* power_states, uint8_t count);
 
-  bool IsPowerStateSupported(::llcpp::fuchsia::device::DevicePowerState requested_state) {
+  bool IsPowerStateSupported(::llcpp::fuchsia::device::wire::DevicePowerState requested_state) {
     // requested_state is bounded by the enum.
     return power_states_[static_cast<uint8_t>(requested_state)].is_supported;
   }

@@ -38,15 +38,15 @@ TEST(ConsumerControlTest, HidButtonsTest) {
   // Test the descriptor.
   EXPECT_EQ(descriptor.consumer_control().input().buttons().count(), 5U);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[0],
-            llcpp::fuchsia::input::report::ConsumerControlButton::VOLUME_UP);
+            llcpp::fuchsia::input::report::wire::ConsumerControlButton::VOLUME_UP);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[1],
-            llcpp::fuchsia::input::report::ConsumerControlButton::VOLUME_DOWN);
+            llcpp::fuchsia::input::report::wire::ConsumerControlButton::VOLUME_DOWN);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[2],
-            llcpp::fuchsia::input::report::ConsumerControlButton::REBOOT);
+            llcpp::fuchsia::input::report::wire::ConsumerControlButton::REBOOT);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[3],
-            llcpp::fuchsia::input::report::ConsumerControlButton::CAMERA_DISABLE);
+            llcpp::fuchsia::input::report::wire::ConsumerControlButton::CAMERA_DISABLE);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[4],
-            llcpp::fuchsia::input::report::ConsumerControlButton::MIC_MUTE);
+            llcpp::fuchsia::input::report::wire::ConsumerControlButton::MIC_MUTE);
 
   // Test a report parses correctly.
   struct buttons_input_rpt report = {};
@@ -63,11 +63,11 @@ TEST(ConsumerControlTest, HidButtonsTest) {
 
   EXPECT_EQ(input_report.consumer_control().pressed_buttons().count(), 3U);
   EXPECT_EQ(input_report.consumer_control().pressed_buttons()[0],
-            llcpp::fuchsia::input::report::ConsumerControlButton::VOLUME_UP);
+            llcpp::fuchsia::input::report::wire::ConsumerControlButton::VOLUME_UP);
   EXPECT_EQ(input_report.consumer_control().pressed_buttons()[1],
-            llcpp::fuchsia::input::report::ConsumerControlButton::REBOOT);
+            llcpp::fuchsia::input::report::wire::ConsumerControlButton::REBOOT);
   EXPECT_EQ(input_report.consumer_control().pressed_buttons()[2],
-            llcpp::fuchsia::input::report::ConsumerControlButton::MIC_MUTE);
+            llcpp::fuchsia::input::report::wire::ConsumerControlButton::MIC_MUTE);
 }
 
 TEST(ConsumerControlTest, MaxButtonsTest) {

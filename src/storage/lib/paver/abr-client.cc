@@ -24,8 +24,8 @@
 
 namespace abr {
 
-using ::llcpp::fuchsia::paver::Asset;
-using ::llcpp::fuchsia::paver::Configuration;
+using ::llcpp::fuchsia::paver::wire::Asset;
+using ::llcpp::fuchsia::paver::wire::Configuration;
 
 zx::status<Configuration> QueryBootConfig(
     fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root) {

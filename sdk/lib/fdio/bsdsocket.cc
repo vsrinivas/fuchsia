@@ -69,13 +69,13 @@ int socket(int domain, int type, int protocol) {
     return ERRNO(EIO);
   }
 
-  fsocket::Domain sock_domain;
+  fsocket::wire::Domain sock_domain;
   switch (domain) {
     case AF_INET:
-      sock_domain = fsocket::Domain::IPV4;
+      sock_domain = fsocket::wire::Domain::IPV4;
       break;
     case AF_INET6:
-      sock_domain = fsocket::Domain::IPV6;
+      sock_domain = fsocket::wire::Domain::IPV6;
       break;
     case AF_PACKET:
       return ERRNO(EPERM);
@@ -89,7 +89,8 @@ int socket(int domain, int type, int protocol) {
       switch (protocol) {
         case IPPROTO_IP:
         case IPPROTO_TCP: {
-          auto result = provider->StreamSocket(sock_domain, fsocket::StreamSocketProtocol::TCP);
+          auto result =
+              provider->StreamSocket(sock_domain, fsocket::wire::StreamSocketProtocol::TCP);
           if (result.status() != ZX_OK) {
             return ERROR(result.status());
           }
@@ -103,23 +104,23 @@ int socket(int domain, int type, int protocol) {
       }
       break;
     case SOCK_DGRAM: {
-      fsocket::DatagramSocketProtocol proto;
+      fsocket::wire::DatagramSocketProtocol proto;
       switch (protocol) {
         case IPPROTO_IP:
         case IPPROTO_UDP:
-          proto = fsocket::DatagramSocketProtocol::UDP;
+          proto = fsocket::wire::DatagramSocketProtocol::UDP;
           break;
         case IPPROTO_ICMP:
-          if (sock_domain != fsocket::Domain::IPV4) {
+          if (sock_domain != fsocket::wire::Domain::IPV4) {
             return ERRNO(EPROTONOSUPPORT);
           }
-          proto = fsocket::DatagramSocketProtocol::ICMP_ECHO;
+          proto = fsocket::wire::DatagramSocketProtocol::ICMP_ECHO;
           break;
         case IPPROTO_ICMPV6:
-          if (sock_domain != fsocket::Domain::IPV6) {
+          if (sock_domain != fsocket::wire::Domain::IPV6) {
             return ERRNO(EPROTONOSUPPORT);
           }
-          proto = fsocket::DatagramSocketProtocol::ICMP_ECHO;
+          proto = fsocket::wire::DatagramSocketProtocol::ICMP_ECHO;
           break;
         default:
           return ERRNO(EPROTONOSUPPORT);
@@ -356,13 +357,13 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
   fnet::NameLookup_LookupIp_Result& lookup_ip_result = result.Unwrap()->result;
   if (lookup_ip_result.is_err()) {
     switch (lookup_ip_result.err()) {
-      case fnet::LookupError::NOT_FOUND:
+      case fnet::wire::LookupError::NOT_FOUND:
         return EAI_NONAME;
-      case fnet::LookupError::TRANSIENT:
+      case fnet::wire::LookupError::TRANSIENT:
         return EAI_AGAIN;
-      case fnet::LookupError::INVALID_ARGS:
+      case fnet::wire::LookupError::INVALID_ARGS:
         return EAI_FAIL;
-      case fnet::LookupError::INTERNAL_ERROR:  // fallthrough
+      case fnet::wire::LookupError::INTERNAL_ERROR:  // fallthrough
       default:
         errno = EIO;
         return EAI_SYSTEM;

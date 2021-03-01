@@ -51,7 +51,7 @@
 #include "vmo_writer.h"
 
 namespace power_fidl = llcpp::fuchsia::hardware::power;
-using power_fidl::statecontrol::SystemPowerState;
+using power_fidl::statecontrol::wire::SystemPowerState;
 namespace device_manager_fidl = llcpp::fuchsia::device::manager;
 namespace power_manager_fidl = llcpp::fuchsia::power::manager;
 
@@ -141,8 +141,7 @@ struct CoordinatorConfig {
   zx::duration resume_timeout = kDefaultResumeTimeout;
   // System will be transitioned to this system power state during
   // component shutdown.
-  power_fidl::statecontrol::SystemPowerState default_shutdown_system_state =
-      power_fidl::statecontrol::SystemPowerState::REBOOT;
+  SystemPowerState default_shutdown_system_state = SystemPowerState::REBOOT;
   // Something to clone a handle from the environment to pass to a Devhost.
   FsProvider* fs_provider = nullptr;
   // The path prefix to find binaries, drivers, etc. Typically this is "/boot/", but in test
@@ -254,15 +253,11 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   llcpp::fuchsia::boot::Arguments::SyncClient* boot_args() const { return config_.boot_args; }
   bool require_system() const { return config_.require_system; }
   bool suspend_fallback() const { return config_.suspend_fallback; }
-  power_fidl::statecontrol::SystemPowerState shutdown_system_state() const {
-    return shutdown_system_state_;
-  }
-  power_fidl::statecontrol::SystemPowerState default_shutdown_system_state() const {
+  SystemPowerState shutdown_system_state() const { return shutdown_system_state_; }
+  SystemPowerState default_shutdown_system_state() const {
     return config_.default_shutdown_system_state;
   }
-  void set_shutdown_system_state(power_fidl::statecontrol::SystemPowerState state) {
-    shutdown_system_state_ = state;
-  }
+  void set_shutdown_system_state(SystemPowerState state) { shutdown_system_state_ = state; }
 
   void set_running(bool running) { running_ = running; }
   bool system_available() const { return system_available_; }
@@ -323,7 +318,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   zx_status_t LoadEphemeralDriver(internal::PackageResolverInterface* resolver,
                                   const std::string& package_url);
 
-  uint32_t GetSuspendFlagsFromSystemPowerState(power_fidl::statecontrol::SystemPowerState state);
+  uint32_t GetSuspendFlagsFromSystemPowerState(SystemPowerState state);
 
   // These methods are used by the DriverHost class to register in the coordinator's bookkeeping
   void RegisterDriverHost(DriverHost* dh) { driver_hosts_.push_back(dh); }
@@ -376,7 +371,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
 
   InspectManager* const inspect_manager_;
   std::unique_ptr<SystemStateManager> system_state_manager_;
-  power_fidl::statecontrol::SystemPowerState shutdown_system_state_;
+  SystemPowerState shutdown_system_state_;
 
   // Bind debugger interface
   void GetBindProgram(::fidl::StringView driver_path,

@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
   GpioFunc func;
   uint8_t write_value, out_value;
   uint64_t ds_ua;
-  ::llcpp::fuchsia::hardware::gpio::GpioFlags in_flag;
+  ::llcpp::fuchsia::hardware::gpio::wire::GpioFlags in_flag;
   if (ParseArgs(argc, argv, &func, &write_value, &in_flag, &out_value, &ds_ua)) {
     printf("Unable to parse arguments!\n\n");
     usage();

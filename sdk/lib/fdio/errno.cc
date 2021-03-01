@@ -11,7 +11,7 @@
   static_assert(e == static_cast<int32_t>(fidl), \
                 name " mismatch between errno.h and fuchsia.posix/Errno")
 
-#define ASSERT_MATCHES(e) COMPARE(e, llcpp::fuchsia::posix::Errno::e##_, #e)
+#define ASSERT_MATCHES(e) COMPARE(e, llcpp::fuchsia::posix::wire::Errno::e##_, #e)
 #define ASSERT_MATCHES_ALIASED(e) COMPARE(e, llcpp::fuchsia::posix::e##_, #e)
 
 ASSERT_MATCHES(EPERM);

@@ -57,7 +57,7 @@ static void sent_fake_qmi_msg(zx::channel& channel, uint8_t* resp, uint32_t resp
 }
 
 void QmiDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
-                             fidl_tel_snoop::Direction direction) {
+                             fidl_tel_snoop::wire::Direction direction) {
   if (GetCtrlSnoopChannel()) {
     fidl_tel_snoop::Message snoop_msg;
     fidl_tel_snoop::QmiMessage qmi_msg;
@@ -82,24 +82,24 @@ void QmiDevice::ReplyCtrlMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uin
     memcpy(resp, kQmiPerioEvent,
            std::min(sizeof(kQmiPerioEvent), static_cast<std::size_t>(resp_size)));
     sent_fake_qmi_msg(GetCtrlChannel(), resp, resp_size);
-    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
+    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::FROM_MODEM);
     memcpy(resp, kQmiInitResp, std::min(sizeof(kQmiInitResp), static_cast<std::size_t>(resp_size)));
     sent_fake_qmi_msg(GetCtrlChannel(), resp, resp_size);
-    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
+    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::FROM_MODEM);
   } else if (0 == memcmp(req, kQmiImeiReq, sizeof(kQmiImeiReq))) {
     memcpy(resp, kQmiImeiResp, std::min(sizeof(kQmiImeiResp), static_cast<std::size_t>(resp_size)));
     sent_fake_qmi_msg(GetCtrlChannel(), resp, resp_size);
-    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
+    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::FROM_MODEM);
     memcpy(resp, kQmiPerioEvent,
            std::min(sizeof(kQmiPerioEvent), static_cast<std::size_t>(resp_size)));
     sent_fake_qmi_msg(GetCtrlChannel(), resp, resp_size);
-    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
+    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::FROM_MODEM);
   } else {
     zxlogf(ERROR, "qmi-fake-driver: unexpected qmi msg received");
     memcpy(resp, kQmiNonsenseResp,
            std::min(sizeof(kQmiNonsenseResp), static_cast<std::size_t>(resp_size)));
     sent_fake_qmi_msg(GetCtrlChannel(), resp, resp_size);
-    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
+    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::FROM_MODEM);
   }
 }
 
@@ -132,7 +132,7 @@ static int qmi_fake_transport_thread(void* cookie) {
             return status;
           }
           device_ptr->SnoopCtrlMsg(req_buf, kTelCtrlPlanePktMax,
-                                   fidl_tel_snoop::Direction::TO_MODEM);
+                                   fidl_tel_snoop::wire::Direction::TO_MODEM);
           // TODO (jiamingw): parse QMI msg, form reply and write back to channel.
           device_ptr->ReplyCtrlMsg(req_buf, req_len, resp_buf, kTelCtrlPlanePktMax);
           status = device_ptr->SetAsyncWait();

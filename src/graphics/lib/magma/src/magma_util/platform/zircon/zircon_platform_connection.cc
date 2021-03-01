@@ -306,17 +306,17 @@ void ZirconPlatformConnection::CommitBuffer(uint64_t buffer_id, uint64_t page_of
 }
 
 void ZirconPlatformConnection::BufferRangeOp(uint64_t buffer_id,
-                                             llcpp::fuchsia::gpu::magma::BufferOp op,
+                                             llcpp::fuchsia::gpu::magma::wire::BufferOp op,
                                              uint64_t start, uint64_t length,
                                              BufferRangeOpCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection:::BufferOp %d", static_cast<uint32_t>(op));
   FlowControl();
   uint32_t buffer_op;
   switch (op) {
-    case llcpp::fuchsia::gpu::magma::BufferOp::POPULATE_TABLES:
+    case llcpp::fuchsia::gpu::magma::wire::BufferOp::POPULATE_TABLES:
       buffer_op = MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES;
       break;
-    case llcpp::fuchsia::gpu::magma::BufferOp::DEPOPULATE_TABLES:
+    case llcpp::fuchsia::gpu::magma::wire::BufferOp::DEPOPULATE_TABLES:
       buffer_op = MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES;
       break;
     default:

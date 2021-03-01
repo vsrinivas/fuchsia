@@ -169,7 +169,7 @@ void random(T* field) {
 }
 
 template <>
-void random<v1::HeapType>(v1::HeapType* field) {
+void random<v1::wire::HeapType>(v1::wire::HeapType* field) {
   // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if avaialable.
   static constexpr uint64_t valid[] = {
       /*SYSTEM_RAM =*/0u,
@@ -180,11 +180,11 @@ void random<v1::HeapType>(v1::HeapType* field) {
   uint32_t index;
   random(&index);
   index %= std::size(valid);
-  *field = static_cast<v1::HeapType>(valid[index]);
+  *field = static_cast<v1::wire::HeapType>(valid[index]);
 }
 
 template <>
-void random<v1::PixelFormatType>(v1::PixelFormatType* field) {
+void random<v1::wire::PixelFormatType>(v1::wire::PixelFormatType* field) {
   // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if avaialable.
   static constexpr uint32_t valid[] = {
       /*INVALID =*/0u,
@@ -205,11 +205,11 @@ void random<v1::PixelFormatType>(v1::PixelFormatType* field) {
   uint32_t index;
   random(&index);
   index %= std::size(valid);
-  *field = static_cast<v1::PixelFormatType>(valid[index]);
+  *field = static_cast<v1::wire::PixelFormatType>(valid[index]);
 }
 
 template <>
-void random<v1::ColorSpaceType>(v1::ColorSpaceType* field) {
+void random<v1::wire::ColorSpaceType>(v1::wire::ColorSpaceType* field) {
   // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if avaialable.
   static constexpr uint32_t valid[] = {
       /*INVALID =*/0u,
@@ -225,11 +225,11 @@ void random<v1::ColorSpaceType>(v1::ColorSpaceType* field) {
   uint32_t index;
   random(&index);
   index %= std::size(valid);
-  *field = static_cast<v1::ColorSpaceType>(valid[index]);
+  *field = static_cast<v1::wire::ColorSpaceType>(valid[index]);
 }
 
 template <>
-void random<v1::CoherencyDomain>(v1::CoherencyDomain* field) {
+void random<v1::wire::CoherencyDomain>(v1::wire::CoherencyDomain* field) {
   // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if avaialable.
   static constexpr uint32_t valid[] = {
       /*CPU =*/0u,
@@ -239,7 +239,7 @@ void random<v1::CoherencyDomain>(v1::CoherencyDomain* field) {
   uint32_t index;
   random(&index);
   index %= std::size(valid);
-  *field = static_cast<v1::CoherencyDomain>(valid[index]);
+  *field = static_cast<v1::wire::CoherencyDomain>(valid[index]);
 }
 
 v1::BufferUsage V1RandomBufferUsage() {

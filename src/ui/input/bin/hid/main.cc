@@ -67,7 +67,7 @@ struct input_args_t {
   char devpath[kDevPathSize];
   size_t num_reads;
 
-  llcpp::fuchsia::hardware::input::ReportType report_type;
+  llcpp::fuchsia::hardware::input::wire::ReportType report_type;
   uint8_t report_id;
 
   const char** data;
@@ -108,19 +108,19 @@ static zx_status_t parse_uint_arg(const char* arg, uint32_t min, uint32_t max, u
   return ZX_OK;
 }
 
-static zx_status_t parse_input_report_type(const char* arg,
-                                           llcpp::fuchsia::hardware::input::ReportType* out_type) {
+static zx_status_t parse_input_report_type(
+    const char* arg, llcpp::fuchsia::hardware::input::wire::ReportType* out_type) {
   if ((arg == NULL) || (out_type == NULL)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   static const struct {
     const char* name;
-    llcpp::fuchsia::hardware::input::ReportType type;
+    llcpp::fuchsia::hardware::input::wire::ReportType type;
   } LUT[] = {
-      {.name = "in", .type = llcpp::fuchsia::hardware::input::ReportType::INPUT},
-      {.name = "out", .type = llcpp::fuchsia::hardware::input::ReportType::OUTPUT},
-      {.name = "feature", .type = llcpp::fuchsia::hardware::input::ReportType::FEATURE},
+      {.name = "in", .type = llcpp::fuchsia::hardware::input::wire::ReportType::INPUT},
+      {.name = "out", .type = llcpp::fuchsia::hardware::input::wire::ReportType::OUTPUT},
+      {.name = "feature", .type = llcpp::fuchsia::hardware::input::wire::ReportType::FEATURE},
   };
 
   for (size_t i = 0; i < std::size(LUT); ++i) {
@@ -472,7 +472,7 @@ zx_status_t parse_input_args(int argc, const char** argv, input_args_t* args) {
   }
 
   // Parse ReportType argument.
-  llcpp::fuchsia::hardware::input::ReportType report_type;
+  llcpp::fuchsia::hardware::input::wire::ReportType report_type;
   status = parse_input_report_type(argv[2], &report_type);
   if (status != ZX_OK) {
     return status;

@@ -108,9 +108,9 @@ static bool vc_handle_device_control_keys(uint8_t keycode, int modifiers) {
         if (local.is_error()) {
           return true;
         }
-        auto response =
-            fidl::BindSyncClient(std::move(*local))
-                .Reboot(llcpp::fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST);
+        auto response = fidl::BindSyncClient(std::move(*local))
+                            .Reboot(llcpp::fuchsia::hardware::power::statecontrol::wire::
+                                        RebootReason::USER_REQUEST);
         if (response.status() != ZX_OK) {
           fprintf(stderr, "Failed to reboot, status:%d\n", response.status());
           return true;

@@ -203,7 +203,7 @@ void DeviceInterface::NetworkDeviceIfcSnoop(const rx_buffer_t* rx_list, size_t r
 void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
   LOG_TRACE("network-device: GetInfo");
   netdev::Info info{
-      .class_ = static_cast<netdev::DeviceClass>(device_info_.device_class),
+      .class_ = static_cast<netdev::wire::DeviceClass>(device_info_.device_class),
       .min_descriptor_length = sizeof(buffer_descriptor_t) / sizeof(uint64_t),
       .descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION,
       .rx_depth = rx_fifo_depth(),
@@ -216,17 +216,17 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
       .min_tx_buffer_tail = device_info_.tx_tail_length,
   };
 
-  std::array<netdev::FrameType, netdev::MAX_FRAME_TYPES> rx;
+  std::array<netdev::wire::FrameType, netdev::MAX_FRAME_TYPES> rx;
   std::array<netdev::FrameTypeSupport, netdev::MAX_FRAME_TYPES> tx;
   for (size_t i = 0; i < device_info_.rx_types_count; i++) {
-    rx[i] = static_cast<netdev::FrameType>(device_info_.rx_types_list[i]);
+    rx[i] = static_cast<netdev::wire::FrameType>(device_info_.rx_types_list[i]);
   }
   for (size_t i = 0; i < device_info_.tx_types_count; i++) {
     auto& dst = tx[i];
     auto& src = device_info_.tx_types_list[i];
     dst.features = src.features;
     dst.supported_flags = netdev::wire::TxFlags::TruncatingUnknown(src.supported_flags);
-    dst.type = static_cast<netdev::FrameType>(src.type);
+    dst.type = static_cast<netdev::wire::FrameType>(src.type);
   }
 
   info.rx_types.set_count(device_info_.rx_types_count);
@@ -234,13 +234,13 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
   info.tx_types.set_count(device_info_.tx_types_count);
   info.tx_types.set_data(fidl::unowned_ptr(tx.data()));
 
-  std::array<netdev::RxAcceleration, netdev::MAX_ACCEL_FLAGS> rx_accel;
-  std::array<netdev::TxAcceleration, netdev::MAX_ACCEL_FLAGS> tx_accel;
+  std::array<netdev::wire::RxAcceleration, netdev::MAX_ACCEL_FLAGS> rx_accel;
+  std::array<netdev::wire::TxAcceleration, netdev::MAX_ACCEL_FLAGS> tx_accel;
   for (size_t i = 0; i < device_info_.rx_accel_count; i++) {
-    rx_accel[i] = static_cast<netdev::RxAcceleration>(device_info_.rx_accel_list[i]);
+    rx_accel[i] = static_cast<netdev::wire::RxAcceleration>(device_info_.rx_accel_list[i]);
   }
   for (size_t i = 0; i < device_info_.tx_accel_count; i++) {
-    tx_accel[i] = static_cast<netdev::TxAcceleration>(device_info_.tx_accel_list[i]);
+    tx_accel[i] = static_cast<netdev::wire::TxAcceleration>(device_info_.tx_accel_list[i]);
   }
   info.rx_accel.set_count(device_info_.rx_accel_count);
   info.rx_accel.set_data(fidl::unowned_ptr(rx_accel.data()));

@@ -93,20 +93,20 @@ static zx_status_t ConvertOpteeToZxResult(uint32_t optee_return_code, uint32_t o
   switch (optee_return_origin) {
     case TEEC_ORIGIN_COMMS:
       zx_result->set_return_code(optee_return_code);
-      zx_result->set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
+      zx_result->set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
       break;
     case TEEC_ORIGIN_TEE:
       zx_result->set_return_code(optee_return_code);
-      zx_result->set_return_origin(fuchsia_tee::ReturnOrigin::TRUSTED_OS);
+      zx_result->set_return_origin(fuchsia_tee::wire::ReturnOrigin::TRUSTED_OS);
       break;
     case TEEC_ORIGIN_TRUSTED_APP:
       zx_result->set_return_code(optee_return_code);
-      zx_result->set_return_origin(fuchsia_tee::ReturnOrigin::TRUSTED_APPLICATION);
+      zx_result->set_return_origin(fuchsia_tee::wire::ReturnOrigin::TRUSTED_APPLICATION);
       break;
     default:
       LOG(ERROR, "optee: returned an invalid return origin (%" PRIu32 ")", optee_return_origin);
       zx_result->set_return_code(TEEC_ERROR_COMMUNICATION);
-      zx_result->set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
+      zx_result->set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
       return ZX_ERR_INTERNAL;
   }
   return ZX_OK;
@@ -333,7 +333,7 @@ void OpteeClient::OpenSession2(
   if (!create_result.is_ok()) {
     LOG(ERROR, "failed to create OpenSessionMessage (status: %d)", create_result.error());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
     completer.Reply(kInvalidSession, result.to_llcpp());
     return;
   }
@@ -351,7 +351,7 @@ void OpteeClient::OpenSession2(
 
   if (call_code != kReturnOk) {
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
     completer.Reply(kInvalidSession, result.to_llcpp());
     return;
   }
@@ -370,7 +370,7 @@ void OpteeClient::OpenSession2(
     // It is okay that the session id is not in the session list.
     CloseSession(message.session_id());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
     completer.Reply(kInvalidSession, result.to_llcpp());
     return;
   }
@@ -389,7 +389,7 @@ void OpteeClient::InvokeCommand(
 
   if (open_sessions_.find(session_id) == open_sessions_.end()) {
     result.set_return_code(TEEC_ERROR_BAD_STATE);
-    result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
     completer.Reply(result.to_llcpp());
     return;
   }
@@ -400,7 +400,7 @@ void OpteeClient::InvokeCommand(
   if (!create_result.is_ok()) {
     LOG(ERROR, "failed to create InvokeCommandMessage (status: %d)", create_result.error());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
     completer.Reply(result.to_llcpp());
     return;
   }
@@ -420,7 +420,7 @@ void OpteeClient::InvokeCommand(
 
   if (call_code != kReturnOk) {
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
     completer.Reply(result.to_llcpp());
     return;
   }
@@ -436,7 +436,7 @@ void OpteeClient::InvokeCommand(
   ParameterSet out_parameter_set;
   if (message.CreateOutputParameterSet(&out_parameter_set) != ZX_OK) {
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
     completer.Reply(result.to_llcpp());
     return;
   }
@@ -1077,7 +1077,7 @@ zx_status_t OpteeClient::RpmbSendRequest(std::optional<SharedMemoryView>& req,
                                          std::optional<SharedMemoryView>& resp) {
   ZX_DEBUG_ASSERT(req.has_value());
   // One VMO contains both TX and RX frames:
-  // Offset: 0           TX size        TX size alligned           RX size
+  // Offset: 0           TX size        TX size aligned            RX size
   //                                      by PAGE SIZE
   //         |   TX FRAMES  |     padding      |        RX FRAMES     |
   zx::vmo rpmb_vmo;

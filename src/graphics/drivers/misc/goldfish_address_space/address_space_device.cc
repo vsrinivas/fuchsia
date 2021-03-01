@@ -218,7 +218,8 @@ uint32_t AddressSpaceDevice::ChildDriverPing(uint32_t handle) {
 }
 
 zx_status_t AddressSpaceDevice::OpenChildDriver(
-    llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type, zx::channel request) {
+    llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType type,
+    zx::channel request) {
   using llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage;
 
   ddk::IoBuffer io_buffer;
@@ -266,7 +267,7 @@ uint32_t AddressSpaceDevice::CommandMmioLocked(uint32_t cmd) {
 }
 
 AddressSpaceChildDriver::AddressSpaceChildDriver(
-    llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
+    llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType type,
     AddressSpaceDevice* device, uint64_t dma_region_paddr, ddk::IoBuffer&& io_buffer,
     uint32_t child_device_handle)
     : Device(device->zxdev()),

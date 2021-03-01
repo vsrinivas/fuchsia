@@ -23,7 +23,7 @@ audio_fidl::PcmFormat GetDefaultPcmFormat() {
   audio_fidl::PcmFormat format;
   format.number_of_channels = 2;
   format.channels_to_use_bitmask = 0x03;
-  format.sample_format = audio_fidl::SampleFormat::PCM_SIGNED;
+  format.sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
   format.frame_rate = 48000;
   format.bytes_per_sample = 2;
   format.valid_bits_per_sample = 16;
@@ -349,7 +349,7 @@ TEST(SimpleAudioTest, Enumerate1) {
   auto& formats = supported_formats[0].pcm_supported_formats();
   ASSERT_EQ(1, formats.number_of_channels.count());
   ASSERT_EQ(1, formats.sample_formats.count());
-  ASSERT_EQ(audio_fidl::SampleFormat::PCM_SIGNED, formats.sample_formats[0]);
+  ASSERT_EQ(audio_fidl::wire::SampleFormat::PCM_SIGNED, formats.sample_formats[0]);
   ASSERT_EQ(1, formats.frame_rates.count());
   ASSERT_EQ(48000, formats.frame_rates[0]);
   ASSERT_EQ(1, formats.bytes_per_sample.count());
@@ -409,7 +409,7 @@ TEST(SimpleAudioTest, Enumerate2) {
   ASSERT_EQ(3, formats1.number_of_channels[1]);
   ASSERT_EQ(4, formats1.number_of_channels[2]);
   ASSERT_EQ(1, formats1.sample_formats.count());
-  ASSERT_EQ(audio_fidl::SampleFormat::PCM_SIGNED, formats1.sample_formats[0]);
+  ASSERT_EQ(audio_fidl::wire::SampleFormat::PCM_SIGNED, formats1.sample_formats[0]);
   ASSERT_EQ(5, formats1.frame_rates.count());
   std::set<uint32_t> rates1;
   for (auto& i : formats1.frame_rates) {
@@ -425,7 +425,7 @@ TEST(SimpleAudioTest, Enumerate2) {
   ASSERT_EQ(1, formats2.number_of_channels.count());
   ASSERT_EQ(1, formats2.number_of_channels[0]);
   ASSERT_EQ(1, formats2.sample_formats.count());
-  ASSERT_EQ(audio_fidl::SampleFormat::PCM_FLOAT, formats2.sample_formats[0]);
+  ASSERT_EQ(audio_fidl::wire::SampleFormat::PCM_FLOAT, formats2.sample_formats[0]);
   ASSERT_EQ(1, formats2.frame_rates.count());
   std::set<uint32_t> rates2;
   for (auto& i : formats2.frame_rates) {
@@ -499,7 +499,7 @@ TEST(SimpleAudioTest, CreateRingBuffer2) {
   audio_fidl::PcmFormat pcm_format = {};
   pcm_format.number_of_channels = 4;
   pcm_format.channels_to_use_bitmask = 0x0f;
-  pcm_format.sample_format = audio_fidl::SampleFormat::PCM_UNSIGNED;
+  pcm_format.sample_format = audio_fidl::wire::SampleFormat::PCM_UNSIGNED;
   pcm_format.frame_rate = 44100;
   pcm_format.bytes_per_sample = 4;
   pcm_format.valid_bits_per_sample = 24;
@@ -532,7 +532,7 @@ TEST(SimpleAudioTest, SetBadFormat1) {
 
   // Define a pretty bad format.
   audio_fidl::PcmFormat pcm_format = {};
-  pcm_format.sample_format = audio_fidl::SampleFormat::PCM_SIGNED;
+  pcm_format.sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
   auto builder = audio_fidl::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
 
@@ -625,9 +625,9 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   ASSERT_OK(prop2.status());
 
   ASSERT_EQ(prop1->properties.plug_detect_capabilities(),
-            audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+            audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
   ASSERT_EQ(prop2->properties.plug_detect_capabilities(),
-            audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+            audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
 
   auto state1 = audio_fidl::StreamConfig::Call::WatchPlugState(ch1->channel);
   auto state2 = audio_fidl::StreamConfig::Call::WatchPlugState(ch2->channel);
@@ -658,9 +658,9 @@ TEST(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   ASSERT_OK(prop2.status());
 
   ASSERT_EQ(prop1->properties.plug_detect_capabilities(),
-            audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+            audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
   ASSERT_EQ(prop2->properties.plug_detect_capabilities(),
-            audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+            audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
 
   // Watch each channel for initial reply.
   auto state1 = audio_fidl::StreamConfig::Call::WatchPlugState(ch1->channel);

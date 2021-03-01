@@ -160,8 +160,9 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Raw
                       UnmapBufferGpuCompleter::Sync& _completer) override;
   void CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count,
                     CommitBufferCompleter::Sync& _completer) override;
-  void BufferRangeOp(uint64_t buffer_id, llcpp::fuchsia::gpu::magma::BufferOp op, uint64_t start,
-                     uint64_t length, BufferRangeOpCompleter::Sync& completer) override;
+  void BufferRangeOp(uint64_t buffer_id, llcpp::fuchsia::gpu::magma::wire::BufferOp op,
+                     uint64_t start, uint64_t length,
+                     BufferRangeOpCompleter::Sync& completer) override;
   void AccessPerformanceCounters(zx::event event,
                                  AccessPerformanceCountersCompleter::Sync& completer) override;
   void IsPerformanceCounterAccessEnabled(

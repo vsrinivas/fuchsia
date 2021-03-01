@@ -230,7 +230,7 @@ bool Layer::AddToConfig(fbl::SinglyLinkedList<layer_node_t*>* list, uint32_t z_i
   }
 }
 
-void Layer::SetPrimaryConfig(llcpp::fuchsia::hardware::display::ImageConfig image_config) {
+void Layer::SetPrimaryConfig(fhd::ImageConfig image_config) {
   pending_layer_.type = LAYER_TYPE_PRIMARY;
   auto* primary = &pending_layer_.cfg.primary;
   populate_image(image_config, &primary->image);
@@ -243,9 +243,8 @@ void Layer::SetPrimaryConfig(llcpp::fuchsia::hardware::display::ImageConfig imag
   config_change_ = true;
 }
 
-void Layer::SetPrimaryPosition(llcpp::fuchsia::hardware::display::Transform transform,
-                               llcpp::fuchsia::hardware::display::Frame src_frame,
-                               llcpp::fuchsia::hardware::display::Frame dest_frame) {
+void Layer::SetPrimaryPosition(fhd::wire::Transform transform, fhd::wire::Frame src_frame,
+                               fhd::wire::Frame dest_frame) {
   primary_layer_t* primary_layer = &pending_layer_.cfg.primary;
 
   static_assert(sizeof(fhd::Frame) == sizeof(frame_t), "Struct mismatch");
@@ -261,13 +260,14 @@ void Layer::SetPrimaryPosition(llcpp::fuchsia::hardware::display::Transform tran
   config_change_ = true;
 }
 
-void Layer::SetPrimaryAlpha(llcpp::fuchsia::hardware::display::AlphaMode mode, float val) {
+void Layer::SetPrimaryAlpha(fhd::wire::AlphaMode mode, float val) {
   primary_layer_t* primary_layer = &pending_layer_.cfg.primary;
 
-  static_assert(static_cast<alpha_t>(fhd::AlphaMode::DISABLE) == ALPHA_DISABLE, "Bad constant");
-  static_assert(static_cast<alpha_t>(fhd::AlphaMode::PREMULTIPLIED) == ALPHA_PREMULTIPLIED,
+  static_assert(static_cast<alpha_t>(fhd::wire::AlphaMode::DISABLE) == ALPHA_DISABLE,
                 "Bad constant");
-  static_assert(static_cast<alpha_t>(fhd::AlphaMode::HW_MULTIPLY) == ALPHA_HW_MULTIPLY,
+  static_assert(static_cast<alpha_t>(fhd::wire::AlphaMode::PREMULTIPLIED) == ALPHA_PREMULTIPLIED,
+                "Bad constant");
+  static_assert(static_cast<alpha_t>(fhd::wire::AlphaMode::HW_MULTIPLY) == ALPHA_HW_MULTIPLY,
                 "Bad constant");
 
   primary_layer->alpha_mode = static_cast<alpha_t>(mode);
@@ -276,7 +276,7 @@ void Layer::SetPrimaryAlpha(llcpp::fuchsia::hardware::display::AlphaMode mode, f
   config_change_ = true;
 }
 
-void Layer::SetCursorConfig(llcpp::fuchsia::hardware::display::ImageConfig image_config) {
+void Layer::SetCursorConfig(fhd::ImageConfig image_config) {
   pending_layer_.type = LAYER_TYPE_CURSOR;
   pending_cursor_x_ = pending_cursor_y_ = 0;
 

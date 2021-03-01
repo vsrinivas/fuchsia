@@ -28,7 +28,7 @@ class AtDevice : public tel_fake::Device {
 
   void ReplyCtrlMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uint32_t resp_size) override;
   void SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
-                    ::llcpp::fuchsia::telephony::snoop::Direction direction) override;
+                    ::llcpp::fuchsia::telephony::snoop::wire::Direction direction) override;
 };
 
 }  // namespace at_fake

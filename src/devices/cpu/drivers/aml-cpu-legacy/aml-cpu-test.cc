@@ -79,15 +79,15 @@ using ThermalSyncClient = fuchsia_thermal::Device::SyncClient;
 using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
 
 constexpr size_t kBigClusterIdx =
-    static_cast<size_t>(fuchsia_thermal::PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    static_cast<size_t>(fuchsia_thermal::wire::PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
 constexpr size_t kLittleClusterIdx =
-    static_cast<size_t>(fuchsia_thermal::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN);
+    static_cast<size_t>(fuchsia_thermal::wire::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN);
 
-constexpr size_t PowerDomainToIndex(fuchsia_thermal::PowerDomain pd) {
+constexpr size_t PowerDomainToIndex(fuchsia_thermal::wire::PowerDomain pd) {
   switch (pd) {
-    case fuchsia_thermal::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN:
+    case fuchsia_thermal::wire::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN:
       return kLittleClusterIdx;
-    case fuchsia_thermal::PowerDomain::BIG_CLUSTER_POWER_DOMAIN:
+    case fuchsia_thermal::wire::PowerDomain::BIG_CLUSTER_POWER_DOMAIN:
       return kBigClusterIdx;
   }
   __UNREACHABLE;
@@ -148,14 +148,14 @@ class FakeAmlThermal : fuchsia_thermal::Device::Interface {
   // Implement Thermal FIDL Protocol.
   void GetInfo(GetInfoCompleter::Sync& completer);
   void GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer);
-  void GetDvfsInfo(fuchsia_thermal::PowerDomain pd, GetDvfsInfoCompleter::Sync& completer);
+  void GetDvfsInfo(fuchsia_thermal::wire::PowerDomain pd, GetDvfsInfoCompleter::Sync& completer);
   void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer);
   void GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer);
   void GetStateChangePort(GetStateChangePortCompleter::Sync& completer);
   void SetTripCelsius(uint32_t id, float temp, SetTripCelsiusCompleter::Sync& completer);
-  void GetDvfsOperatingPoint(fuchsia_thermal::PowerDomain pd,
+  void GetDvfsOperatingPoint(fuchsia_thermal::wire::PowerDomain pd,
                              GetDvfsOperatingPointCompleter::Sync& completer);
-  void SetDvfsOperatingPoint(uint16_t op_idx, fuchsia_thermal::PowerDomain pd,
+  void SetDvfsOperatingPoint(uint16_t op_idx, fuchsia_thermal::wire::PowerDomain pd,
                              SetDvfsOperatingPointCompleter::Sync& completer);
   void GetFanLevel(GetFanLevelCompleter::Sync& completer);
   void SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync& completer);
@@ -195,7 +195,7 @@ void FakeAmlThermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   completer.Reply(ZX_OK, fidl::unowned_ptr(&result));
 }
 
-void FakeAmlThermal::GetDvfsInfo(fuchsia_thermal::PowerDomain pd,
+void FakeAmlThermal::GetDvfsInfo(fuchsia_thermal::wire::PowerDomain pd,
                                  GetDvfsInfoCompleter::Sync& completer) {
   fuchsia_thermal::ThermalDeviceInfo device_info = device_info_;
   fuchsia_thermal::OperatingPoint result = device_info.opps[PowerDomainToIndex(pd)];
@@ -221,9 +221,9 @@ void FakeAmlThermal::SetTripCelsius(uint32_t id, float temp,
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
-void FakeAmlThermal::GetDvfsOperatingPoint(fuchsia_thermal::PowerDomain pd,
+void FakeAmlThermal::GetDvfsOperatingPoint(fuchsia_thermal::wire::PowerDomain pd,
                                            GetDvfsOperatingPointCompleter::Sync& completer) {
-  if (pd == fuchsia_thermal::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN) {
+  if (pd == fuchsia_thermal::wire::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
     return;
   }
@@ -231,9 +231,9 @@ void FakeAmlThermal::GetDvfsOperatingPoint(fuchsia_thermal::PowerDomain pd,
   completer.Reply(ZX_OK, active_operating_point_);
 }
 
-void FakeAmlThermal::SetDvfsOperatingPoint(uint16_t idx, fuchsia_thermal::PowerDomain pd,
+void FakeAmlThermal::SetDvfsOperatingPoint(uint16_t idx, fuchsia_thermal::wire::PowerDomain pd,
                                            SetDvfsOperatingPointCompleter::Sync& completer) {
-  if (pd == fuchsia_thermal::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN) {
+  if (pd == fuchsia_thermal::wire::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
     return;
   }
