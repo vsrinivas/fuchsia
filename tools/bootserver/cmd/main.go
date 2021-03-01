@@ -424,7 +424,7 @@ func execute(ctx context.Context, cmdlineArgs []string) error {
 			return err
 		} else if err != nil {
 			// Error is an errIncompleteTransfer. Retry after some delay.
-			logger.Errorf(ctx, err.Error())
+			logger.Errorf(ctx, "%v", err)
 			time.Sleep(retryDelay)
 		}
 	}
@@ -435,6 +435,6 @@ func main() {
 
 	ctx := context.Background()
 	if err := execute(ctx, flag.Args()); err != nil {
-		logger.Fatalf(ctx, err.Error())
+		logger.Fatalf(ctx, "%v", err)
 	}
 }
