@@ -17,10 +17,10 @@
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <cobalt-client/cpp/metric_options.h>
-#include <fs/metrics/events.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
+#include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/block-watcher.h"
 #include "src/storage/fshost/extract-metadata.h"

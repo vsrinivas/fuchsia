@@ -29,13 +29,13 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
-#include <fs/vfs_types.h>
 #include <zxtest/zxtest.h>
 
 #include "../sanitizers/fuchsia-io-constants.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace {
 

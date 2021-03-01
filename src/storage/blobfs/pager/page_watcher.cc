@@ -8,8 +8,8 @@
 #include <zircon/status.h>
 
 #include <fbl/auto_lock.h>
-#include <fs/trace.h>
 
+#include "src/lib/storage/vfs/cpp/trace.h"
 #include "src/storage/blobfs/format.h"
 
 namespace blobfs {

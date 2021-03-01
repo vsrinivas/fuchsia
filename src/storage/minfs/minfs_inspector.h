@@ -12,8 +12,8 @@
 #include <disk_inspector/buffer_factory.h>
 #include <disk_inspector/common_types.h>
 #include <disk_inspector/inspector_transaction_handler.h>
-#include <fs/journal/format.h>
 
+#include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/storage/minfs/format.h"
 
 namespace minfs {

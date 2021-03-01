@@ -16,11 +16,11 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
-#include <fs/vfs.h>
-#include <fs/vfs_types.h>
-#include <fs/vnode.h>
 
 #include "src/lib/digest/digest.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/blob_cache.h"
 
 namespace blobfs {

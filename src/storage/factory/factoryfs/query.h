@@ -8,8 +8,7 @@
 #include <fuchsia/fs/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include <fs/service.h>
-
+#include "src/lib/storage/vfs/cpp/service.h"
 #include "src/storage/factory/factoryfs/factoryfs.h"
 #include "src/storage/factory/factoryfs/runner.h"
 

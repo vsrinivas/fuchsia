@@ -19,8 +19,7 @@
 
 #include <sstream>
 
-#include <fs/pseudo_file.h>
-
+#include "src/lib/storage/vfs/cpp/pseudo_file.h"
 #include "src/lib/ui/base_view/base_view.h"
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"
 #include "src/media/playback/mediaplayer/core/renderer_sink_segment.h"

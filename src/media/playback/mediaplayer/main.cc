@@ -14,9 +14,8 @@
 
 #include <string>
 
-#include <fs/pseudo_file.h>
-
 #include "lib/fidl/cpp/interface_request.h"
+#include "src/lib/storage/vfs/cpp/pseudo_file.h"
 #include "src/media/playback/mediaplayer/audio_consumer_impl.h"
 #include "src/media/playback/mediaplayer/player_impl.h"
 

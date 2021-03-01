@@ -30,10 +30,10 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
-#include <fs/vfs.h>
 #include <pretty/hexdump.h>
 
 #include "admin.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
 
 namespace fblock = ::llcpp::fuchsia::hardware::block;
 namespace fio = ::llcpp::fuchsia::io;

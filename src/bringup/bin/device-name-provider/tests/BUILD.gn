@@ -12,6 +12,7 @@ test("device-name-provider-test") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/lib/fdio",
     "//src/bringup/bin/device-name-provider:args",
+    "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -19,7 +20,6 @@ test("device-name-provider-test") {
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/mock-boot-arguments",
   ]
 

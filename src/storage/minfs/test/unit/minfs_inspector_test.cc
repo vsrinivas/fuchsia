@@ -11,10 +11,10 @@
 #include <block-client/cpp/fake-device.h>
 #include <disk_inspector/inspector_transaction_handler.h>
 #include <disk_inspector/vmo_buffer_factory.h>
-#include <fs/journal/format.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs_private.h"
 

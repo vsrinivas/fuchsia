@@ -13,14 +13,13 @@
 #include <utility>
 #include <vector>
 
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
-#include <fs/vfs_types.h>
-
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/sys/appmgr/log_connector_impl.h"
 #include "src/sys/appmgr/moniker.h"
 

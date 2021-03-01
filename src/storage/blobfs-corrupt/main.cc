@@ -10,9 +10,9 @@
 
 #include <block-client/cpp/remote-block-device.h>
 #include <fbl/unique_fd.h>
-#include <fs/vfs.h>
 
 #include "src/lib/digest/digest.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/blobfs-corrupt/corrupt_blob.h"
 #include "src/storage/blobfs-corrupt/fs_block_client.h"
 
@@ -87,8 +87,7 @@ zx_status_t ProcessArgs(int argc, char** argv, zx::channel* block_channel,
   fbl::unique_fd block_fd(open(arg_block_path, O_RDWR));
 
   if (!block_fd) {
-    FX_LOGS(ERROR) << "unable to open block device: '" << arg_block_path << "' "
-                   << errno;
+    FX_LOGS(ERROR) << "unable to open block device: '" << arg_block_path << "' " << errno;
     return Usage();
   }
 
@@ -120,8 +119,7 @@ int main(int argc, char** argv) {
 
   status = CorruptBlob(std::move(device), &options);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not corrupt the requested blob. Failed with error "
-                   << status;
+    FX_LOGS(ERROR) << "Could not corrupt the requested blob. Failed with error " << status;
     return -1;
   }
   return 0;

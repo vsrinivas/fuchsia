@@ -11,8 +11,8 @@
 #include <variant>
 
 #include <ddktl/fidl.h>
-#include <fs/vnode.h>
 
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "zx_device.h"
 
 class DevfsVnode : public fs::Vnode, public llcpp::fuchsia::device::Controller::Interface {

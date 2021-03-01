@@ -7,7 +7,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include <fs/service.h>
+#include "src/lib/storage/vfs/cpp/service.h"
 
 namespace devmgr {
 

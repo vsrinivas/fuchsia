@@ -11,10 +11,9 @@
 #include <lib/zx/resource.h>
 #include <lib/zx/status.h>
 
-#include <fs/managed_vfs.h>
-#include <fs/vfs.h>
-#include <fs/vnode.h>
-
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/health_check_service.h"
 #include "src/storage/blobfs/mount.h"

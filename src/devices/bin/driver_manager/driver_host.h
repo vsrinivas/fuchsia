@@ -15,10 +15,10 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo_dir.h>
 
 #include "device.h"
 #include "fdio.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 using LoaderServiceConnector = fit::function<zx_status_t(zx::channel*)>;
 class Coordinator;

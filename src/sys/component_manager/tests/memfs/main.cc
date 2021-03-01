@@ -8,9 +8,9 @@
 #include <zircon/process.h>
 #include <zircon/status.h>
 
-#include <fs/managed_vfs.h>
-#include <fs/pseudo_dir.h>
-#include <fs/remote_dir.h>
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
 
 int main(int argc, char** argv) {
   fprintf(stderr, "memfs starting up\n");

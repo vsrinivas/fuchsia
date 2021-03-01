@@ -4,12 +4,12 @@
 
 #include "src/storage/minfs/inspector/loader.h"
 
-#include <fs/journal/format.h>
-#include <fs/transaction/transaction_handler.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <storage/buffer/array_buffer.h>
 
+#include "src/lib/storage/vfs/cpp/journal/format.h"
+#include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 #include "src/storage/minfs/format.h"
 
 namespace minfs {

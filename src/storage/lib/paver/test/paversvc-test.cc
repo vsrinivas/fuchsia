@@ -32,12 +32,12 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
 #include <soc/aml-common/aml-guid.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/storage/lib/paver/device-partitioner.h"
 #include "src/storage/lib/paver/luis.h"
 #include "src/storage/lib/paver/paver.h"

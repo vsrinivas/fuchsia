@@ -9,9 +9,9 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/memfs/cpp/vnode.h>
 
-#include <fs/service.h>
-#include <fs/tracked_remote_dir.h>
-#include <fs/vfs_types.h>
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/tracked_remote_dir.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace devmgr {
 namespace fshost {

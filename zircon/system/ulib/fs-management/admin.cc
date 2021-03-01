@@ -17,9 +17,9 @@
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <fs-management/admin.h>
-#include <fs/vfs.h>
 
 #include "path.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 namespace fshost = ::llcpp::fuchsia::fshost;

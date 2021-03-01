@@ -4,7 +4,7 @@
 
 #include "src/devices/lib/driver2/inspect.h"
 
-#include <fs/vmo_file.h>
+#include "src/lib/storage/vfs/cpp/vmo_file.h"
 
 zx::status<zx::vmo> ExposeInspector(const inspect::Inspector& inspector,
                                     const fbl::RefPtr<fs::PseudoDir>& dir) {

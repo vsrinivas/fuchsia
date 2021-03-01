@@ -13,11 +13,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fs/managed_vfs.h>
-
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/sys/appmgr/job_provider_impl.h"
 #include "src/sys/appmgr/moniker.h"
 #include "src/sys/appmgr/service_provider_dir_impl.h"

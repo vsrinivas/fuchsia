@@ -11,10 +11,10 @@
 #include <utility>
 
 #include <fbl/ref_ptr.h>
-#include <fs/journal/initializer.h>
 #include <safemath/checked_math.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "src/lib/storage/vfs/cpp/journal/initializer.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/fvm/client.h"

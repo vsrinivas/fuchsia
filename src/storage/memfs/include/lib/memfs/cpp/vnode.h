@@ -19,12 +19,13 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
-#include <fs/managed_vfs.h>
-#include <fs/remote_container.h>
-#include <fs/vfs.h>
-#include <fs/vfs_types.h>
-#include <fs/vnode.h>
-#include <fs/watcher.h>
+
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/remote_container.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
+#include "src/lib/storage/vfs/cpp/watcher.h"
 
 namespace memfs {
 

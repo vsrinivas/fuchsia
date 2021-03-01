@@ -11,9 +11,9 @@
 #include <utility>
 
 #include <bitmap/raw-bitmap.h>
-#include <fs/transaction/buffered_operations_builder.h>
 #include <storage/buffer/block_buffer.h>
 
+#include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"
 #include "src/storage/minfs/superblock.h"
 
 namespace minfs {

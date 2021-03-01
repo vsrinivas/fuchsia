@@ -10,11 +10,10 @@
 
 #include <vector>
 
-#include <fs/remote_dir.h>
-
 #include "coordinator.h"
 #include "fdio.h"
 #include "src/devices/lib/log/log.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
 
 DriverHost::DriverHost(Coordinator* coordinator, zx::channel rpc, zx::channel diagnostics,
                        zx::process proc)

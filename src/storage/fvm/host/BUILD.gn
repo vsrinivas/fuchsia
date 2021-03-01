@@ -40,6 +40,8 @@ static_library("host") {
   ]
   deps = [
     "//src/lib/digest",
+    "//src/lib/storage/vfs/cpp",
+    "//src/lib/storage/vfs/cpp/transaction",
     "//src/storage/blobfs",
     "//src/storage/fvm",
     "//src/storage/minfs",
@@ -47,8 +49,6 @@ static_library("host") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
-    "//zircon/system/ulib/fs",
-    "//zircon/system/ulib/fs/transaction",
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/lz4",
   ]

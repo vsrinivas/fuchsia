@@ -9,11 +9,11 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <fs/trace.h>
 #include <src/lib/chunked-compression/chunked-archive.h>
 #include <src/lib/chunked-compression/status.h>
 #include <src/lib/chunked-compression/streaming-chunked-compressor.h>
 
+#include "src/lib/storage/vfs/cpp/trace.h"
 #include "src/storage/blobfs/compression/configs/chunked_compression_params.h"
 #include "src/storage/blobfs/compression_settings.h"
 

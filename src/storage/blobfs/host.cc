@@ -30,14 +30,14 @@
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fs-host/common.h>
-#include <fs/journal/initializer.h>
-#include <fs/transaction/transaction_handler.h>
 #include <safemath/checked_math.h>
 #include <safemath/safe_conversions.h>
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
 #include "src/lib/digest/node-digest.h"
+#include "src/lib/storage/vfs/cpp/journal/initializer.h"
+#include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/compression/chunked.h"

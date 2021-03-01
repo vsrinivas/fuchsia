@@ -26,8 +26,8 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <fs/vfs.h>
 
+#include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/minfs/minfs_private.h"
 #include "src/storage/minfs/writeback.h"
 

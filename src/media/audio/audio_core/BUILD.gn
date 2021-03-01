@@ -286,6 +286,7 @@ executable("unittest_bin") {
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp",
     "//src/lib/testing/loop_fixture",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/clock/testing",
@@ -295,7 +296,6 @@ executable("unittest_bin") {
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fzl",
   ]
 

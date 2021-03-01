@@ -10,9 +10,9 @@
 #include <lib/service/llcpp/service_handler.h>
 #include <lib/stdcompat/string_view.h>
 
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 namespace llcpp::sys {
 

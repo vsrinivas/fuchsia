@@ -9,8 +9,7 @@
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include <fs/pseudo_dir.h>
-
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/storage/blobfs/query.h"
 
 namespace blobfs {

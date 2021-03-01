@@ -15,11 +15,11 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include <fs/managed_vfs.h>
-#include <fs/pseudo_dir.h>
-#include <fs/remote_dir.h>
-#include <fs/vfs.h>
-#include <fs/vfs_types.h>
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace devmgr {
 

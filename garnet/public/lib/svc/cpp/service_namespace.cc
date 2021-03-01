@@ -14,7 +14,8 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
-#include <fs/service.h>
+
+#include "src/lib/storage/vfs/cpp/service.h"
 
 namespace component {
 

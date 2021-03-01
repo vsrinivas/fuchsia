@@ -33,15 +33,15 @@
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
-#include <fs/journal/journal.h>
-#include <fs/journal/replay.h>
-#include <fs/journal/superblock.h>
-#include <fs/pseudo_dir.h>
-#include <fs/ticker.h>
-#include <fs/vfs_types.h>
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
+#include "src/lib/storage/vfs/cpp/journal/journal.h"
+#include "src/lib/storage/vfs/cpp/journal/replay.h"
+#include "src/lib/storage/vfs/cpp/journal/superblock.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/ticker.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
 #include "src/storage/blobfs/allocator/node_reserver.h"
 #include "src/storage/blobfs/blob.h"

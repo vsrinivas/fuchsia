@@ -5,9 +5,9 @@
 #include "src/sys/appmgr/hub/hub.h"
 
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo_file.h>
-#include <fs/vnode.h>
 
+#include "src/lib/storage/vfs/cpp/pseudo_file.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/sys/appmgr/hub/hub_info.h"
 
 namespace component {

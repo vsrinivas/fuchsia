@@ -9,9 +9,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
 
-#include <fs/service.h>
-
 #include "fs-manager.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 
 namespace devmgr {
 

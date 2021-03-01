@@ -9,10 +9,10 @@
 #include <lib/fdio/directory.h>
 
 #include <fbl/string_printf.h>
-#include <fs/vfs.h>
 
 #include "src/devices/lib/log/log.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
 
 namespace fio = llcpp::fuchsia::io;
 

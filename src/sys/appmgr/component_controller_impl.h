@@ -16,9 +16,8 @@
 
 #include <vector>
 
-#include <fs/pseudo_dir.h>
-
 #include "lib/fidl/cpp/binding.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/sys/appmgr/component_container.h"
 #include "src/sys/appmgr/debug_info_retriever.h"
 #include "src/sys/appmgr/hub/component_hub.h"

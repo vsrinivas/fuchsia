@@ -28,8 +28,8 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fs/vfs.h>
 
+#include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/cache_policy.h"
 #include "src/storage/blobfs/compression_settings.h"

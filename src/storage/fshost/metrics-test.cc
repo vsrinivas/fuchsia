@@ -12,8 +12,9 @@
 
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
-#include <fs/metrics/events.h>
 #include <zxtest/zxtest.h>
+
+#include "src/lib/storage/vfs/cpp/metrics/events.h"
 
 namespace devmgr {
 namespace {

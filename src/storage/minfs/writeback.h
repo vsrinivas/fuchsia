@@ -19,17 +19,18 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <fs/transaction/writeback.h>
+
+#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
 #endif
 
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
-#include <fs/queue.h>
-#include <fs/transaction/buffered_operations_builder.h>
-#include <fs/vfs.h>
 
+#include "src/lib/storage/vfs/cpp/queue.h"
+#include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/minfs/allocator_reservation.h"
 #include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/cached_block_transaction.h"

@@ -20,15 +20,15 @@
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo_dir.h>
 #include <zxtest/zxtest.h>
 
 #include "fs-manager.h"
-#include "fs/synchronous_vfs.h"
 #include "fshost-fs-provider.h"
 #include "metrics.h"
 #include "registry.h"
 #include "registry_vnode.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/storage/fshost/block-watcher.h"
 
 namespace devmgr {

@@ -10,9 +10,9 @@
 
 #include <fbl/function.h>
 #include <fbl/macros.h>
-#include <fs/transaction/buffered_operations_builder.h>
 #include <storage/operation/operation.h>
 
+#include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/superblock.h"
 

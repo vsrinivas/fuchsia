@@ -4,11 +4,11 @@
 
 #include "inspect.h"
 
-#include <fs/dir_test_util.h>
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
 #include "driver_host.h"
+#include "src/lib/storage/vfs/cpp/dir_test_util.h"
 
 namespace {
 using inspect::InspectTestHelper;

@@ -16,11 +16,11 @@
 
 #include <ddk/platform-defs.h>
 #include <fbl/ref_ptr.h>
-#include <fs/service.h>
 
 #include "fuchsia/logger/cpp/fidl.h"
 #include "lib/fdio/namespace.h"
 #include "lib/zx/channel.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 
 class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
  public:

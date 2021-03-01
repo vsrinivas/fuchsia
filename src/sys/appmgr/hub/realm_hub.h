@@ -8,11 +8,11 @@
 #include <zircon/types.h>
 
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
-#include <fs/vnode.h>
 
 #include "src/lib/fxl/macros.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/sys/appmgr/hub/hub.h"
 #include "src/sys/appmgr/hub/hub_info.h"
 

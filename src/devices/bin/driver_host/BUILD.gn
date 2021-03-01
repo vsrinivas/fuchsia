@@ -59,6 +59,7 @@ source_set("common") {
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
+    "//src/lib/storage/vfs/cpp",
     "//src/storage/deprecated-fs-fidl-handler",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -68,7 +69,6 @@ source_set("common") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
@@ -167,6 +167,7 @@ test("driver_host_test") {
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/storage/vfs/cpp:test_support",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",

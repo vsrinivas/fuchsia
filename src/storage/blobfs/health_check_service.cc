@@ -9,7 +9,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/channel.h>
 
-#include <fs/service.h>
+#include "src/lib/storage/vfs/cpp/service.h"
 
 namespace fuv = ::llcpp::fuchsia::update::verify;
 

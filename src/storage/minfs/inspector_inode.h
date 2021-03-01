@@ -7,8 +7,8 @@
 
 #include <disk_inspector/common_types.h>
 #include <fbl/string_printf.h>
-#include <fs/journal/format.h>
 
+#include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs_private.h"
 

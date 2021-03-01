@@ -10,8 +10,8 @@
 #include <block-client/cpp/block-device.h>
 #include <disk_inspector/common_types.h>
 #include <fbl/unique_fd.h>
-#include <fs/journal/inspector_journal.h>
 
+#include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
 #include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/inspector_inode_table.h"
 #include "src/storage/minfs/inspector_private.h"

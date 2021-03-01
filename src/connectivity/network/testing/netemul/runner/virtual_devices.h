@@ -11,9 +11,10 @@
 #include <string>
 
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo_dir.h>
-#include <fs/synchronous_vfs.h>
-#include <fs/vnode.h>
+
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 
 namespace netemul {
 

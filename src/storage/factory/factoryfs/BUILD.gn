@@ -20,10 +20,10 @@ source_set("factoryfs") {
     "superblock.cc",
   ]
   public_deps = [
+    "//src/lib/storage/vfs/cpp",
+    "//src/lib/storage/vfs/cpp/transaction",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/zxc",
-    "//zircon/system/ulib/fs",
-    "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/storage/buffer",
   ]
   deps = [
@@ -31,6 +31,7 @@ source_set("factoryfs") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop",
@@ -38,7 +39,6 @@ source_set("factoryfs") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",

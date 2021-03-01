@@ -78,8 +78,8 @@ executable("test-inspect") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp",
     "//third_party/googletest:gmock",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/inspect",
   ]
 

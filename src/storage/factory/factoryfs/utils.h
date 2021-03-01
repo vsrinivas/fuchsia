@@ -11,9 +11,9 @@
 #include <block-client/cpp/block-device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
-#include <fs/transaction/legacy_transaction_handler.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/storage/vfs/cpp/transaction/legacy_transaction_handler.h"
 #include "src/storage/factory/factoryfs/format.h"
 
 namespace factoryfs {

@@ -9,7 +9,7 @@
 
 #include <queue>
 
-#include <fs/pseudo_dir.h>
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace devmgr {
 

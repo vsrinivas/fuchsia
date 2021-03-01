@@ -8,13 +8,13 @@
 
 #include <ddk/driver.h>
 #include <driver-info/driver-info.h>
-#include <fs/service.h>
-#include <fs/vfs_types.h>
-#include <fs/vnode.h>
 
 #include "device.h"
 #include "init_task.h"
 #include "resume_task.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "suspend_task.h"
 #include "unbind_task.h"
 

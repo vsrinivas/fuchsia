@@ -13,9 +13,9 @@
 #include <type_traits>
 #include <utility>
 
-#include <fs/vfs.h>
-#include <fs/vfs_types.h>
-#include <fs/vnode.h>
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 
 namespace fs_pty {
 

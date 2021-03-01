@@ -16,10 +16,10 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
-#include <fs/vfs.h>
-#include <fs/vfs_types.h>
 
 #include "dnode.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace memfs {
 namespace {

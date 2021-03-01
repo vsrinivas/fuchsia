@@ -14,7 +14,8 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
-#include <fs/vfs.h>
+
+#include "src/lib/storage/vfs/cpp/vfs.h"
 
 namespace memfs {
 

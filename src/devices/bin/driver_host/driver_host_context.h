@@ -13,11 +13,11 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
-#include <fs/managed_vfs.h>
 
 #include "async_loop_owned_event_handler.h"
 #include "inspect.h"
 #include "lock.h"
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "zx_device.h"
 #include "zx_driver.h"
 

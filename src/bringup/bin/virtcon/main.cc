@@ -38,13 +38,13 @@
 #include <fbl/algorithm.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
-#include <fs/service.h>
 #include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
 #include "args.h"
 #include "keyboard.h"
 #include "session-manager.h"
 #include "src/lib/listnode/listnode.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 #include "vc.h"
 

@@ -7,9 +7,9 @@
 
 #include <vector>
 
-#include <fs/journal/journal.h>
 #include <storage/operation/unbuffered_operations_builder.h>
 
+#include "src/lib/storage/vfs/cpp/journal/journal.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
 
 namespace blobfs {

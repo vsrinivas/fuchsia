@@ -34,12 +34,12 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
-#include <fs/journal/journal.h>
-#include <fs/vfs.h>
-#include <fs/vnode.h>
 #include <storage/operation/unbuffered_operations_builder.h>
 
 #include "src/lib/digest/digest.h"
+#include "src/lib/storage/vfs/cpp/journal/journal.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/allocator/allocator.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
 #include "src/storage/blobfs/allocator/node_reserver.h"

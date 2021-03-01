@@ -10,9 +10,10 @@
 #include <lib/fs-pty/tty-connection-internal.h>
 #include <lib/sync/completion.h>
 
-#include <fs/managed_vfs.h>
-#include <fs/vfs_types.h>
 #include <zxtest/zxtest.h>
+
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace {
 

@@ -18,8 +18,7 @@
 #include <optional>
 #include <utility>
 
-#include <fs/journal/format.h>
-
+#include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/storage/minfs/format.h"
 #ifdef __Fuchsia__
 #include <storage/buffer/owned_vmoid.h>

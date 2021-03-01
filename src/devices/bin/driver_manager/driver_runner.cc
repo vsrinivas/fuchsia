@@ -14,10 +14,9 @@
 #include <stack>
 #include <unordered_set>
 
-#include <fs/service.h>
-
 #include "src/devices/lib/driver2/start_args.h"
 #include "src/devices/lib/log/log.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 
 namespace fdata = llcpp::fuchsia::data;
 namespace fdf = llcpp::fuchsia::driver::framework;

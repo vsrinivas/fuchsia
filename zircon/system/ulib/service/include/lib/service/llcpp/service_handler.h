@@ -8,8 +8,9 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
+
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 
 namespace llcpp::sys {
 

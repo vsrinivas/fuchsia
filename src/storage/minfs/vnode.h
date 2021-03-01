@@ -18,9 +18,9 @@
 #include <lib/zx/vmo.h>
 
 #include <fbl/auto_lock.h>
-#include <fs/remote_container.h>
-#include <fs/watcher.h>
 
+#include "src/lib/storage/vfs/cpp/remote_container.h"
+#include "src/lib/storage/vfs/cpp/watcher.h"
 #include "src/storage/minfs/vnode_allocation.h"
 #endif
 
@@ -29,11 +29,11 @@
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <fs/locking.h>
-#include <fs/ticker.h>
-#include <fs/vfs.h>
-#include <fs/vnode.h>
 
+#include "src/lib/storage/vfs/cpp/locking.h"
+#include "src/lib/storage/vfs/cpp/ticker.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/lazy_buffer.h"
 #include "src/storage/minfs/minfs.h"

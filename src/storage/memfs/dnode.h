@@ -14,8 +14,9 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fs/vfs.h>
-#include <fs/vnode.h>
+
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 
 namespace memfs {
 

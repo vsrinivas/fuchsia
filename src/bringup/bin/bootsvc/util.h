@@ -13,8 +13,9 @@
 
 #include <fbl/string.h>
 #include <fbl/vector.h>
-#include <fs/vfs.h>
-#include <fs/vfs_types.h>
+
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace bootsvc {
 

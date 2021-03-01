@@ -12,12 +12,12 @@
 #include <lib/zx/vmo.h>
 
 #include <fbl/span.h>
-#include <fs/pseudo_dir.h>
-#include <fs/synchronous_vfs.h>
 
 #include "coordinator.h"
 #include "fdio.h"
 #include "fuchsia/boot/llcpp/fidl.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 

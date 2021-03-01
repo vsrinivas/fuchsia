@@ -9,13 +9,12 @@
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/sys/cpp/service_directory.h>
 
-#include <fs/pseudo_dir.h>
-#include <fs/remote_dir.h>
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
-
 #include "lib/async/cpp/executor.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/sys/appmgr/cpu_watcher.h"
 #include "src/sys/appmgr/lifecycle.h"
 #include "src/sys/appmgr/moniker.h"

@@ -12,10 +12,10 @@
 
 #include <ddk/driver.h>
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo_dir.h>
-#include <fs/synchronous_vfs.h>
 
 #include "defaults.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 class InspectCallStats {
  public:

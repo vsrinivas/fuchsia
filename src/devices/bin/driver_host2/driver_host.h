@@ -11,9 +11,9 @@
 #include <lib/zx/status.h>
 
 #include <fbl/intrusive_double_list.h>
-#include <fs/pseudo_dir.h>
 
 #include "src/devices/lib/driver2/record.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 class Driver : public llcpp::fuchsia::driver::framework::Driver::Interface,
                public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {

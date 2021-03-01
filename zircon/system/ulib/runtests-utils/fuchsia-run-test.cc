@@ -39,10 +39,11 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
-#include <fs/synchronous_vfs.h>
 #include <runtests-utils/fuchsia-run-test.h>
 #include <runtests-utils/profile.h>
 #include <runtests-utils/service-proxy-dir.h>
+
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 namespace runtests {
 

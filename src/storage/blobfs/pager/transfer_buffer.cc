@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include <fs/trace.h>
+#include "src/lib/storage/vfs/cpp/trace.h"
 
 namespace blobfs {
 namespace pager {

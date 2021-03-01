@@ -23,10 +23,10 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fs/journal/initializer.h>
-#include <fs/trace.h>
 #include <safemath/checked_math.h>
 
+#include "src/lib/storage/vfs/cpp/journal/initializer.h"
+#include "src/lib/storage/vfs/cpp/trace.h"
 #include "src/storage/minfs/allocator_reservation.h"
 #include "src/storage/minfs/writeback.h"
 #ifdef __Fuchsia__
@@ -36,21 +36,20 @@
 #include <lib/zx/event.h>
 
 #include <fbl/auto_lock.h>
-#include <fs/journal/header_view.h>
-#include <fs/journal/journal.h>
-#include <fs/journal/replay.h>
-#include <fs/metrics/events.h>
-#include <fs/pseudo_dir.h>
 #include <storage/buffer/owned_vmoid.h>
 
 #include "sdk/lib/sys/cpp/service_directory.h"
+#include "src/lib/storage/vfs/cpp/journal/header_view.h"
+#include "src/lib/storage/vfs/cpp/journal/journal.h"
+#include "src/lib/storage/vfs/cpp/journal/replay.h"
+#include "src/lib/storage/vfs/cpp/metrics/events.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/storage/fvm/client.h"
 #endif
 
 #include <utility>
 
-#include <fs/journal/format.h>
-
+#include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/storage/minfs/file.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs_private.h"

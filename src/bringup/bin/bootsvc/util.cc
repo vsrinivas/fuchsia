@@ -13,9 +13,9 @@
 #include <zircon/status.h>
 
 #include <fbl/algorithm.h>
-#include <fs/vfs_types.h>
 #include <safemath/checked_math.h>
 
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "zircon/device/vfs.h"
 
 namespace {

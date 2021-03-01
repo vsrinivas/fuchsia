@@ -23,11 +23,11 @@
 #include <vector>
 
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
 
 #include "lib/inspect/cpp/inspector.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 #include "src/sys/appmgr/constants.h"
 #include "src/sys/appmgr/startup_service.h"
 

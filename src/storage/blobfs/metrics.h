@@ -13,14 +13,14 @@
 #include <lib/zx/time.h>
 
 #include <cobalt-client/cpp/collector.h>
-#include <fs/journal/journal.h>
-#include <fs/metrics/cobalt_metrics.h>
-#include <fs/metrics/composite_latency_event.h>
-#include <fs/metrics/events.h>
-#include <fs/metrics/histograms.h>
-#include <fs/ticker.h>
-#include <fs/vnode.h>
 
+#include "src/lib/storage/vfs/cpp/journal/journal.h"
+#include "src/lib/storage/vfs/cpp/metrics/cobalt_metrics.h"
+#include "src/lib/storage/vfs/cpp/metrics/composite_latency_event.h"
+#include "src/lib/storage/vfs/cpp/metrics/events.h"
+#include "src/lib/storage/vfs/cpp/metrics/histograms.h"
+#include "src/lib/storage/vfs/cpp/ticker.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/blobfs/read_metrics.h"

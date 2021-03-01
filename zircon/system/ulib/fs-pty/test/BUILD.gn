@@ -24,13 +24,13 @@ test("libfs-pty-test") {
   sources = [ "service-test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
+    "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-pty",
   ]
 }

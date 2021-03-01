@@ -12,10 +12,10 @@
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
 #include <fs-management/mount.h>
-#include <fs/journal/format.h>
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>
 
+#include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs_private.h"
 

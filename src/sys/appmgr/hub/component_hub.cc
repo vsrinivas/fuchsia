@@ -7,8 +7,8 @@
 #include <zircon/types.h>
 
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo_dir.h>
 
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/sys/appmgr/component_controller_impl.h"
 #include "src/sys/appmgr/hub/hub.h"
 #include "src/sys/appmgr/realm.h"

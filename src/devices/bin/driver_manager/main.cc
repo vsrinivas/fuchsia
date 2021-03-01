@@ -31,11 +31,6 @@
 #include <memory>
 
 #include <fbl/string_printf.h>
-#include <fs/managed_vfs.h>
-#include <fs/pseudo_dir.h>
-#include <fs/remote_dir.h>
-#include <fs/vfs.h>
-#include <fs/vmo_file.h>
 
 #include "component_lifecycle.h"
 #include "coordinator.h"
@@ -44,6 +39,11 @@
 #include "driver_runner.h"
 #include "fdio.h"
 #include "src/devices/lib/log/log.h"
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vmo_file.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 #include "system_instance.h"
 

@@ -9,8 +9,7 @@
 
 #include <algorithm>
 
-#include <fs/journal/internal/inspector_parser.h>
-
+#include "src/lib/storage/vfs/cpp/journal/inspector_parser.h"
 #include "src/storage/blobfs/inspector/parser.h"
 
 namespace blobfs {

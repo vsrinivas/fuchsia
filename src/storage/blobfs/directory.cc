@@ -17,10 +17,10 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
-#include <fs/metrics/events.h>
-#include <fs/vfs_types.h>
 
 #include "src/lib/digest/digest.h"
+#include "src/lib/storage/vfs/cpp/metrics/events.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/storage/blobfs/blob.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/metrics.h"

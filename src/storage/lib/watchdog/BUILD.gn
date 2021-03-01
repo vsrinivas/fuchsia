@@ -16,12 +16,12 @@ test("watchdog_unittest") {
   testonly = true
   sources = [ "watchdog_test.cc" ]
   deps = [
+    "//src/lib/storage/vfs/cpp",
     "//src/storage/lib/watchdog",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/syslog",
   ]
 
@@ -45,10 +45,10 @@ zx_library("watchdog") {
   ]
   host = true
   deps = [
+    "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zxc",
-    "//zircon/system/ulib/fs",
   ]
 
   if (is_fuchsia) {

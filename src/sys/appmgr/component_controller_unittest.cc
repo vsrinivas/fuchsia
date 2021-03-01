@@ -9,16 +9,16 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls/object.h>
 
-#include <fs/pseudo_dir.h>
-#include <fs/pseudo_file.h>
-#include <fs/remote_dir.h>
-#include <fs/synchronous_vfs.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "lib/gtest/real_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/pseudo_file.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/sys/appmgr/component_controller_impl.h"
 #include "src/sys/appmgr/util.h"
 

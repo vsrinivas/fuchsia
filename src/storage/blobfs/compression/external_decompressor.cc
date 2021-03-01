@@ -9,7 +9,7 @@
 #include <lib/zx/time.h>
 #include <zircon/rights.h>
 
-#include <fs/debug.h>
+#include "src/lib/storage/vfs/cpp/debug.h"
 
 namespace blobfs {
 

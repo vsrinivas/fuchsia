@@ -12,10 +12,9 @@
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include <fs/pseudo_dir.h>
-#include <fs/remote_dir.h>
-#include <fs/synchronous_vfs.h>
-
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/virtualization/lib/guest_config/guest_config.h"
 
 namespace {

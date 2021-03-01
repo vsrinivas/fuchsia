@@ -32,15 +32,15 @@
 #include <fbl/span.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
-#include <fs/journal/data_streamer.h>
-#include <fs/metrics/events.h>
-#include <fs/transaction/writeback.h>
-#include <fs/vfs_types.h>
 #include <safemath/checked_math.h>
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
 #include "src/lib/digest/node-digest.h"
+#include "src/lib/storage/vfs/cpp/journal/data_streamer.h"
+#include "src/lib/storage/vfs/cpp/metrics/events.h"
+#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/blob_verifier.h"
 #include "src/storage/blobfs/blobfs.h"

@@ -7,7 +7,7 @@
 #include <lib/inspect/service/cpp/service.h>
 #include <sys/stat.h>
 
-#include <fs/service.h>
+#include "src/lib/storage/vfs/cpp/service.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 

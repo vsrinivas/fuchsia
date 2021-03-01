@@ -47,8 +47,8 @@ static_library("disk_extractor") {
     "hex_dump_generator.h",
   ]
   deps = [
+    "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/fs",
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/safemath:safemath",
   ]

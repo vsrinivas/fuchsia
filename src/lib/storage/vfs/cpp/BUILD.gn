@@ -175,6 +175,7 @@ test("fs-vnode-test") {
     ":test_support",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
+    "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -187,7 +188,6 @@ test("fs-vnode-test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/async-testing",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
   ]
@@ -210,6 +210,7 @@ test("fs-connection-test") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
+    "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -221,7 +222,6 @@ test("fs-connection-test") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fs",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -232,7 +232,7 @@ test("fs-connection-test") {
 
 fuzzer("vmo_file-fuzzer") {
   sources = [ "vmo_file-fuzzer.cc" ]
-  deps = [ "//zircon/system/ulib/fs" ]
+  deps = [ "//src/lib/storage/vfs/cpp" ]
 }
 
 fuzzers_package("fs-fuzzers") {

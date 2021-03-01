@@ -4,11 +4,11 @@
 
 #include "inspect.h"
 
-#include <fs/dir_test_util.h>
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
 #include "multiple_device_test.h"
+#include "src/lib/storage/vfs/cpp/dir_test_util.h"
 
 class InspectManagerTestCase : public zxtest::Test {
  public:

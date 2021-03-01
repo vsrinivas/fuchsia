@@ -23,13 +23,13 @@
 #include <memory>
 #include <vector>
 
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
 #include "src/bringup/bin/netsvc/paver.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 enum class Command {
   kUnknown,

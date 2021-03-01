@@ -11,9 +11,9 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fs/vfs.h>
 
 #include "fifo.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
 
 // forward-decl
 class PtyClient;

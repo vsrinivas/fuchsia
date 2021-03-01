@@ -13,8 +13,8 @@
 
 #include <utility>
 
-#include <fs/service.h>
-#include <fs/vfs_types.h>
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace component {
 

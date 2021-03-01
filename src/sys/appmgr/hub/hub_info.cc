@@ -5,7 +5,8 @@
 #include "hub_info.h"
 
 #include <fbl/string.h>
-#include <fs/pseudo_dir.h>
+
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace component {
 

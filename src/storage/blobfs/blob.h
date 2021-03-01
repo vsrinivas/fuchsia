@@ -24,13 +24,13 @@
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
-#include <fs/journal/data_streamer.h>
-#include <fs/vfs.h>
-#include <fs/vfs_types.h>
-#include <fs/vnode.h>
 #include <storage/buffer/owned_vmoid.h>
 
 #include "src/lib/digest/digest.h"
+#include "src/lib/storage/vfs/cpp/journal/data_streamer.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/allocator/allocator.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
 #include "src/storage/blobfs/allocator/node_reserver.h"

@@ -8,10 +8,10 @@
 #include <zircon/status.h>
 
 #include <fbl/auto_lock.h>
-#include <fs/vfs.h>
 
 #include "composite_device.h"
 #include "src/devices/lib/log/log.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
 
 DriverHostContext::~DriverHostContext() {
   while (!dead_devices_.is_empty()) {

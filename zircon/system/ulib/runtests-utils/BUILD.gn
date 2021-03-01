@@ -47,6 +47,7 @@ zx_library("runtests-utils") {
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
       "//sdk/lib/fdio",
+      "//src/lib/storage/vfs/cpp",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/fidl",
@@ -57,7 +58,6 @@ zx_library("runtests-utils") {
       "//zircon/system/ulib/async-loop:async-loop-default",
       "//zircon/system/ulib/debugdata",
       "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-      "//zircon/system/ulib/fs",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/unittest",
     ]

@@ -17,12 +17,12 @@
 
 #include <memory>
 
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/modular_config/modular_config.h"
@@ -540,7 +540,7 @@ TEST_F(AgentRunnerTest, AddRunningAgent_NotRestartedIfRestartDisabled) {
 
   // Terminate the agent.
   test_agent->KillApplication();
-  
+
   // Wait for a bit to ensuire that the session wasn't restarted.
   sleep(3);
   EXPECT_FALSE(is_restart_called);

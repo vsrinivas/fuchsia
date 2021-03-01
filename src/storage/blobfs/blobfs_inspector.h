@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_BLOBFS_INSPECTOR_H_
-#define SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_BLOBFS_INSPECTOR_H_
+#ifndef SRC_STORAGE_BLOBFS_BLOBFS_INSPECTOR_H_
+#define SRC_STORAGE_BLOBFS_BLOBFS_INSPECTOR_H_
 
 #include <lib/zx/status.h>
 
 #include <string>
 #include <vector>
 
-#include "src/storage/blobfs/format.h"
 #include <disk_inspector/buffer_factory.h>
 #include <disk_inspector/common_types.h>
 #include <disk_inspector/loader.h>
-#include <fs/journal/format.h>
-#include <fs/transaction/transaction_handler.h>
+
+#include "src/lib/storage/vfs/cpp/journal/format.h"
+#include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 
@@ -127,4 +128,4 @@ class BlobfsInspector {
 
 }  // namespace blobfs
 
-#endif  // SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_BLOBFS_INSPECTOR_H_
+#endif  // SRC_STORAGE_BLOBFS_BLOBFS_INSPECTOR_H_

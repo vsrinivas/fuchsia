@@ -30,9 +30,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
-#include <fs/remote_dir.h>
 
 #include "src/bringup/bin/svchost/args.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 #include "sysmem.h"
 

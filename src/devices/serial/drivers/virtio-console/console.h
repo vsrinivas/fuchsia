@@ -18,7 +18,8 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
-#include <fs/managed_vfs.h>
+
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
 
 namespace virtio {
 

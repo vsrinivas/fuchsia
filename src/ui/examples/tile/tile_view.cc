@@ -14,9 +14,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
-#include <fs/service.h>
-
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/ui/base_view/embedded_view_utils.h"
 
 namespace examples {

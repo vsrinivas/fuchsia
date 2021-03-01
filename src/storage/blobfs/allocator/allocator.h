@@ -21,10 +21,10 @@
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <fbl/vector.h>
-#include <fs/transaction/legacy_transaction_handler.h>
 #include <id_allocator/id_allocator.h>
 #include <storage/buffer/vmoid_registry.h>
 
+#include "src/lib/storage/vfs/cpp/transaction/legacy_transaction_handler.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
 #include "src/storage/blobfs/allocator/node_reserver.h"
 #include "src/storage/blobfs/common.h"

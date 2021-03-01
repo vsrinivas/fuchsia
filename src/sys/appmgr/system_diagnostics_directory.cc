@@ -8,13 +8,12 @@
 
 #include <algorithm>
 
-#include <fs/pseudo_file.h>
-
 #include "debug_info_retriever.h"
 #include "lib/fit/promise.h"
 #include "lib/inspect/cpp/inspector.h"
 #include "lib/inspect/cpp/value_list.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/storage/vfs/cpp/pseudo_file.h"
 
 using fxl::StringPrintf;
 

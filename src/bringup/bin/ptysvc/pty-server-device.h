@@ -9,11 +9,11 @@
 #include <lib/zx/channel.h>
 
 #include <fbl/ref_ptr.h>
-#include <fs/vfs.h>
-#include <fs/vfs_types.h>
-#include <fs/vnode.h>
 
 #include "pty-server.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 
 class PtyServerDevice : public ::llcpp::fuchsia::hardware::pty::Device::RawChannelInterface {
  public:

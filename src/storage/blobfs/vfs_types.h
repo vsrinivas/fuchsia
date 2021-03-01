@@ -11,11 +11,11 @@
 // TODO(http://fxbug.dev/51111) convert to using the new interface everywhere and delete this file.
 
 #if defined(ENABLE_BLOBFS_NEW_PAGER)
-#include <fs/paged_vfs.h>
-#include <fs/paged_vnode.h>
+#include "src/lib/storage/vfs/cpp/paged_vfs.h"
+#include "src/lib/storage/vfs/cpp/paged_vnode.h"
 #else
-#include <fs/managed_vfs.h>
-#include <fs/vnode.h>
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #endif
 
 namespace blobfs {

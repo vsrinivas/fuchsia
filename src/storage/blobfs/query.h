@@ -12,7 +12,7 @@
 #include <fuchsia/fs/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include <fs/service.h>
+#include "src/lib/storage/vfs/cpp/service.h"
 
 namespace blobfs {
 

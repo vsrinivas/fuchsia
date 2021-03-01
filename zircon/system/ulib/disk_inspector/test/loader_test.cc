@@ -4,9 +4,10 @@
 
 #include "disk_inspector/loader.h"
 
-#include <fs/transaction/transaction_handler.h>
 #include <storage/buffer/array_buffer.h>
 #include <zxtest/zxtest.h>
+
+#include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 
 namespace disk_inspector {
 namespace {

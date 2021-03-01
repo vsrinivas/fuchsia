@@ -19,11 +19,11 @@
 #include <thread>
 
 #include <fbl/string_printf.h>
-#include <fs/managed_vfs.h>
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
-#include <fs/vfs.h>
 
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 namespace fio = ::llcpp::fuchsia::io;

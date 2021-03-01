@@ -14,6 +14,7 @@ static_library("transaction") {
   public = [
     "buffered_operations_builder.h",
     "device_transaction_handler.h",
+    "legacy_transaction_handler.h",
     "transaction_handler.h",
     "writeback.h",
   ]
@@ -33,7 +34,6 @@ static_library("transaction") {
     sources += [
       "device_transaction_handler.cc",
       "legacy_transaction_handler.cc",
-      "legacy_transaction_handler.h",
       "trace.cc",
       "trace.h",
       "writeback.cc",
@@ -62,8 +62,8 @@ test("fs-transaction-test") {
   output_name = "fs_transaction_test"
   deps = [
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp/transaction",
     "//zircon/system/ulib/block-client:fake-device",
-    "//zircon/system/ulib/fs/transaction",
   ]
   sources = [
     "buffered_operations_builder_test.cc",

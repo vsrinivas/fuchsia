@@ -85,6 +85,7 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/loader_service",
     "//src/lib/pkg_url",
+    "//src/lib/storage/vfs/cpp",
     "//third_party/googletest:gtest_prod",
     "//third_party/rapidjson",
     "//zircon/public/lib/fit",
@@ -93,7 +94,6 @@ source_set("lib") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/inspector",
     "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/task-utils",
@@ -133,10 +133,10 @@ source_set("appmgr_for_test") {
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/storage/vfs/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/fs",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

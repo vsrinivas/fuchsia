@@ -14,6 +14,7 @@ test("memfs-test") {
   sources = [ "memfs-tests.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
     "//src/storage/memfs:memfs-cpp",
     "//zircon/public/lib/async",
@@ -25,7 +26,6 @@ test("memfs-test") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fs",
   ]
 }
 

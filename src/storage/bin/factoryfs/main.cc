@@ -25,8 +25,8 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fs/vfs.h>
 
+#include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/factory/factoryfs/fsck.h"
 #include "src/storage/factory/factoryfs/mkfs.h"
 #include "src/storage/factory/factoryfs/mount.h"

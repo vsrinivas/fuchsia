@@ -15,15 +15,14 @@
 #include <memory>
 #include <vector>
 
-#include <fs/managed_vfs.h>
-#include <fs/pseudo_dir.h>
-#include <fs/pseudo_file.h>
-#include <fs/remote_dir.h>
-#include <fs/vfs_types.h>
-#include <fs/vmo_file.h>
-
 #include "fuchsia/io/cpp/fidl.h"
 #include "fuchsia/io/test/cpp/fidl.h"
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/pseudo_file.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
+#include "src/lib/storage/vfs/cpp/vmo_file.h"
 
 zx_status_t DummyReader(fbl::String* output) { return ZX_OK; }
 

@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include <fs/vfs.h>
+#include "src/lib/storage/vfs/cpp/vfs.h"
 
 namespace component {
 

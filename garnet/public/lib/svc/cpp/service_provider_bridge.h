@@ -14,12 +14,12 @@
 #include <utility>
 
 #include <fbl/ref_ptr.h>
-#include <fs/synchronous_vfs.h>
-#include <fs/vfs_types.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace component {
 

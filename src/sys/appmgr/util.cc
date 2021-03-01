@@ -11,8 +11,8 @@
 
 #include <string>
 
-#include <fs/vfs.h>
-#include <fs/vnode.h>
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 
 namespace component {
 

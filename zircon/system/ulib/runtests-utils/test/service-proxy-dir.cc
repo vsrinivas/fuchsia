@@ -13,12 +13,13 @@
 #include <zircon/status.h>
 
 #include <fidl/test/echo/c/fidl.h>
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
-#include <fs/vmo_file.h>
 #include <runtests-utils/service-proxy-dir.h>
 #include <zxtest/zxtest.h>
+
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/lib/storage/vfs/cpp/vmo_file.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 

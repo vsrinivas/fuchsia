@@ -5,9 +5,7 @@
 #ifndef LIB_SVC_CPP_SERVICE_NAMESPACE_H_
 #define LIB_SVC_CPP_SERVICE_NAMESPACE_H_
 
-#include <fbl/ref_ptr.h>
-#include <fs/pseudo_dir.h>
-#include <fs/synchronous_vfs.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
@@ -15,9 +13,12 @@
 #include <unordered_map>
 #include <utility>
 
-#include <fuchsia/sys/cpp/fidl.h>
+#include <fbl/ref_ptr.h>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 namespace component {
 

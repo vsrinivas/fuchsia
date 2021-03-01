@@ -33,15 +33,15 @@
 
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/unique_fd.h>
-#include <fs/metrics/cobalt_metrics.h>
-#include <fs/remote_dir.h>
-#include <fs/service.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zbi-bootfs/zbi-bootfs.h>
 
 #include "block-watcher.h"
 #include "fs-manager.h"
 #include "metrics.h"
+#include "src/lib/storage/vfs/cpp/metrics/cobalt_metrics.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 #include "src/storage/fshost/deprecated-loader-service.h"
 #include "src/storage/lib/utils/use_debug_log.h"
 

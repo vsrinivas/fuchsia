@@ -90,9 +90,9 @@ source_set("src") {
     "//src/connectivity/network/testing/netemul/lib/fidl:sandbox",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync",
     "//src/connectivity/network/testing/netemul/lib/network:network_service",
+    "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/fs",
   ]
 }
 

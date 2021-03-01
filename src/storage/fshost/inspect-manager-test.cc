@@ -14,10 +14,10 @@
 #include <sys/stat.h>
 
 #include <fbl/unique_fd.h>
-#include <fs/remote_dir.h>
 #include <zxtest/zxtest.h>
 
 #include "src/lib/fxl/strings/substitute.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
 
 namespace {
 

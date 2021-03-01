@@ -19,8 +19,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/string_buffer.h>
-#include <fs/transaction/transaction_handler.h>
 
+#include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/format.h"
 

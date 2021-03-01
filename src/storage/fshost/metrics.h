@@ -17,7 +17,8 @@
 
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/counter.h>
-#include <fs/metrics/events.h>
+
+#include "src/lib/storage/vfs/cpp/metrics/events.h"
 
 namespace devmgr {
 

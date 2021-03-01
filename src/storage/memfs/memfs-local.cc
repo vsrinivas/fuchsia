@@ -19,9 +19,9 @@
 #include <utility>
 
 #include <fbl/ref_ptr.h>
-#include <fs/vfs.h>
 
 #include "dnode.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
 
 struct memfs_filesystem {
   std::unique_ptr<memfs::Vfs> vfs;

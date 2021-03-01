@@ -16,7 +16,8 @@
 #include <unordered_map>
 
 #include <fbl/intrusive_double_list.h>
-#include <fs/pseudo_dir.h>
+
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 // Note, all of the logic here assumes we are operating on a single-threaded
 // dispatcher. It is not safe to use a multi-threaded dispatcher with this code.

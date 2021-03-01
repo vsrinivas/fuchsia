@@ -64,6 +64,7 @@ source_set("lib") {
     "//sdk/lib/virtualization",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/storage/vfs/cpp",
     "//src/virtualization/lib/grpc",
     "//src/virtualization/lib/guest_config",
     "//src/virtualization/packages/biscotti_guest/third_party/protos:vm_cc_proto",
@@ -73,7 +74,6 @@ source_set("lib") {
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]

@@ -10,8 +10,8 @@
 #include <memory>
 
 #include <fbl/span.h>
-#include <fs/service.h>
 
+#include "src/lib/storage/vfs/cpp/service.h"
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"

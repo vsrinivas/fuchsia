@@ -66,11 +66,11 @@ static_library("journal") {
     ]
     public_deps += [
       "//sdk/lib/sys/inspect/cpp",
+      "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
+      "//src/lib/storage/vfs/cpp/metrics:metrics-composite-latency-event",
+      "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
       "//zircon/system/ulib/cobalt-client",
       "//zircon/system/ulib/disk_inspector",
-      "//zircon/system/ulib/fs/metrics:metrics-cobalt",
-      "//zircon/system/ulib/fs/metrics:metrics-composite-latency-event",
-      "//zircon/system/ulib/fs/metrics:metrics-inspect",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/range",
       "//zircon/system/ulib/storage/buffer",
@@ -125,6 +125,9 @@ test("journal-unit") {
     ":journal",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-composite-latency-event",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/safemath",
@@ -133,9 +136,6 @@ test("journal-unit") {
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
-    "//zircon/system/ulib/fs/metrics:metrics-cobalt",
-    "//zircon/system/ulib/fs/metrics:metrics-composite-latency-event",
-    "//zircon/system/ulib/fs/metrics:metrics-inspect",
     "//zircon/third_party/ulib/cksum",
   ]
 }
@@ -145,12 +145,12 @@ source_set("fuzz-utils") {
   public_deps = [
     ":journal",
     "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-composite-latency-event",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/cobalt-client",
-    "//zircon/system/ulib/fs/metrics:metrics-cobalt",
-    "//zircon/system/ulib/fs/metrics:metrics-composite-latency-event",
-    "//zircon/system/ulib/fs/metrics:metrics-inspect",
     "//zircon/third_party/ulib/cksum",
   ]
 }

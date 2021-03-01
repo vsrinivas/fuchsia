@@ -21,8 +21,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
-#include <fs/debug.h>
-#include <fs/vfs_types.h>
+
+#include "src/lib/storage/vfs/cpp/debug.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 #ifdef __Fuchsia__
 #include <lib/fidl-utils/bind.h>

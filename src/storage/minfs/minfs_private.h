@@ -21,11 +21,10 @@
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 
-#include <fs/journal/journal.h>
-#include <fs/managed_vfs.h>
-#include <fs/remote_container.h>
-#include <fs/watcher.h>
-
+#include "src/lib/storage/vfs/cpp/journal/journal.h"
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/remote_container.h"
+#include "src/lib/storage/vfs/cpp/watcher.h"
 #include "src/storage/minfs/metrics.h"
 #endif
 
@@ -37,13 +36,13 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <fs/inspectable.h>
-#include <fs/locking.h>
-#include <fs/ticker.h>
-#include <fs/transaction/transaction_handler.h>
-#include <fs/vfs.h>
-#include <fs/vnode.h>
 
+#include "src/lib/storage/vfs/cpp/inspectable.h"
+#include "src/lib/storage/vfs/cpp/locking.h"
+#include "src/lib/storage/vfs/cpp/ticker.h"
+#include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs.h"
 #include "src/storage/minfs/superblock.h"

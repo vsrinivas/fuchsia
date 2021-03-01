@@ -103,9 +103,9 @@ executable("package_updating_loader_test_bin") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp",
     "//src/sys/sysmgr:lib",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/fs",
   ]
 }
 

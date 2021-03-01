@@ -34,9 +34,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
-#include <fs/remote_dir.h>
-#include <fs/vfs.h>
-#include <fs/vfs_types.h>
 
 #include "admin-server.h"
 #include "block-watcher.h"
@@ -45,6 +42,9 @@
 #include "lib/async/cpp/task.h"
 #include "lifecycle.h"
 #include "metrics.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 #define ZXDEBUG 0
 

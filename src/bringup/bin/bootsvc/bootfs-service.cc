@@ -19,10 +19,10 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fs/vfs_types.h>
 #include <launchpad/launchpad.h>
 
 #include "src/lib/bootfs/parser.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "util.h"
 
 namespace fio = ::llcpp::fuchsia::io;

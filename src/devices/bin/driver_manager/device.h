@@ -22,13 +22,13 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/string.h>
-#include <fs/vmo_file.h>
 
 #include "async_loop_ref_counted_rpc_handler.h"
 #include "composite_device.h"
 #include "driver_test_reporter.h"
 #include "inspect.h"
 #include "metadata.h"
+#include "src/lib/storage/vfs/cpp/vmo_file.h"
 
 class Coordinator;
 class DriverHost;

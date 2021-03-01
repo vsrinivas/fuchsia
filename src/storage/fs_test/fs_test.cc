@@ -29,10 +29,10 @@
 #include <fs-management/format.h>
 #include <fs-management/launch.h>
 #include <fs-management/mount.h>
-#include <fs/vfs.h>
 
 #include "src/lib/isolated_devmgr/v2_component/bind_devfs_to_namespace.h"
 #include "src/lib/isolated_devmgr/v2_component/fvm.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/fs_test/blobfs_test.h"
 #include "src/storage/fs_test/minfs_test.h"

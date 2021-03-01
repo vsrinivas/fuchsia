@@ -24,13 +24,13 @@
 
 #include <cerrno>
 
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
 #include <inet6/netifc-discover.h>
 
 #include "args.h"
 #include "name_tokens.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 // Copies a word from the wordlist starting at |dest| and then adds |sep| at the end.
 // Returns a pointer to the character after the separator.

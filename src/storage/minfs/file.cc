@@ -21,10 +21,10 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
-#include <fs/debug.h>
-#include <fs/vfs_types.h>
 #include <safemath/checked_math.h>
 
+#include "src/lib/storage/vfs/cpp/debug.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "zircon/assert.h"
 
 #ifdef __Fuchsia__

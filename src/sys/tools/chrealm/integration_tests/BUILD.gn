@@ -28,9 +28,9 @@ executable("tests") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp",
     "//src/sys/appmgr:lib",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/fs",
   ]
 }
 

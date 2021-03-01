@@ -50,13 +50,13 @@ executable("agent_runner_unittest") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp",
     "//src/lib/testing/loop_fixture",
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/modular_config:modular_config",
     "//src/modular/lib/pseudo_dir",
     "//src/modular/tests:fuchsia.testing.modular",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/trace",
   ]
 }

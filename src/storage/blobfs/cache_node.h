@@ -13,9 +13,9 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
-#include <fs/vnode.h>
 
 #include "src/lib/digest/digest.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/cache_policy.h"
 #include "src/storage/blobfs/vfs_types.h"
 

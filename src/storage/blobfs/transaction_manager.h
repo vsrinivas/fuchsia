@@ -9,10 +9,9 @@
 #error Fuchsia-only Header
 #endif
 
-#include <fs/journal/journal.h>
-#include <fs/transaction/legacy_transaction_handler.h>
-#include <fs/vnode.h>
-
+#include "src/lib/storage/vfs/cpp/journal/journal.h"
+#include "src/lib/storage/vfs/cpp/transaction/legacy_transaction_handler.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/allocator/allocator.h"
 #include "src/storage/blobfs/metrics.h"
 

@@ -5,9 +5,9 @@
 #ifndef SRC_STORAGE_MINFS_INSPECTOR_LOADER_H_
 #define SRC_STORAGE_MINFS_INSPECTOR_LOADER_H_
 
-#include <fs/transaction/transaction_handler.h>
 #include <storage/buffer/block_buffer.h>
 
+#include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 #include "src/storage/minfs/format.h"
 
 namespace minfs {

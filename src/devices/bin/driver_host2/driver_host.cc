@@ -10,10 +10,9 @@
 #include <lib/fit/function.h>
 #include <zircon/dlfcn.h>
 
-#include <fs/service.h>
-
 #include "src/devices/lib/driver2/start_args.h"
 #include "src/devices/lib/log/log.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 
 namespace fdf = llcpp::fuchsia::driver::framework;
 namespace fio = llcpp::fuchsia::io;

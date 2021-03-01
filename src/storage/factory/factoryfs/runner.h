@@ -9,10 +9,9 @@
 #include <lib/trace/event.h>
 #include <lib/zx/resource.h>
 
-#include <fs/managed_vfs.h>
-#include <fs/vfs.h>
-#include <fs/vnode.h>
-
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/factory/factoryfs/factoryfs.h"
 #include "src/storage/factory/factoryfs/mount.h"
 

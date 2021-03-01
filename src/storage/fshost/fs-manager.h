@@ -22,9 +22,8 @@
 #include <iterator>
 #include <map>
 
-#include <fs/vfs.h>
-
 #include "src/lib/loader_service/loader_service.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
 
 // Used for fshost signals.
 #include "delayed-outdir.h"

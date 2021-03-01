@@ -74,13 +74,13 @@ source_set("fshost-registry") {
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/vfs/cpp",
     "//src/lib/loader_service",
+    "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-management",
   ]
   deps = [
@@ -108,9 +108,9 @@ source_set("inspect") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fsl",
+    "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
     "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/fs",
   ]
 }
 
@@ -120,15 +120,15 @@ source_set("metrics") {
     "metrics.h",
   ]
   public_deps = [
+    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/cobalt-client",
-    "//zircon/system/ulib/fs/metrics:metrics-cobalt",
   ]
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
     "//zircon/system/ulib/cobalt-client",
-    "//zircon/system/ulib/fs/metrics:metrics-cobalt",
-    "//zircon/system/ulib/fs/metrics:metrics-inspect",
   ]
 }
 
@@ -151,6 +151,7 @@ source_set("block-watcher") {
     ":metrics",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
+    "//src/lib/storage/vfs/cpp",
     "//src/storage/blobfs",
     "//src/storage/memfs",
     "//zircon/public/lib/fit",
@@ -159,7 +160,6 @@ source_set("block-watcher") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fs",
   ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
@@ -175,6 +175,7 @@ source_set("block-watcher") {
     "//src/devices/block/drivers/block-verity:verified-volume-client",
     "//src/lib/digest",
     "//src/lib/loader_service",
+    "//src/lib/storage/vfs/cpp",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//src/storage/gpt",
     "//src/storage/minfs",
@@ -185,7 +186,6 @@ source_set("block-watcher") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/trace",
@@ -326,11 +326,11 @@ test("fshost_metrics_test") {
     ":metrics",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/lib/fdio",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
-    "//zircon/system/ulib/fs/metrics:metrics-cobalt",
-    "//zircon/system/ulib/fs/metrics:metrics-inspect",
   ]
 }
 
@@ -359,6 +359,7 @@ test("fshost_integration_test") {
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/isolated_devmgr/v2_component:client",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
     "//src/storage/blobfs",
     "//src/storage/minfs",
     "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
@@ -366,7 +367,6 @@ test("fshost_integration_test") {
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fs-management",
-    "//zircon/system/ulib/fs/metrics:metrics-cobalt",
     "//zircon/system/ulib/ramdevice-client",
   ]
 

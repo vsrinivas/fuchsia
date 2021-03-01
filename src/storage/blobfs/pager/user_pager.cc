@@ -18,8 +18,8 @@
 #include <memory>
 
 #include <fbl/auto_call.h>
-#include <fs/trace.h>
 
+#include "src/lib/storage/vfs/cpp/trace.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/metrics.h"
 #include "src/storage/lib/watchdog/include/lib/watchdog/operations.h"

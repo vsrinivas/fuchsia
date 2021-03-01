@@ -14,12 +14,12 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
-#include <fs/vfs_types.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/node-digest.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/common.h"

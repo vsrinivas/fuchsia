@@ -47,11 +47,11 @@ source_set("lib") {
   public_deps = [
     ":util",
     "//src/lib/loader_service",
+    "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs:memfs-cpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/fs",
   ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
@@ -99,9 +99,9 @@ source_set("util") {
   ]
   deps = [ "//zircon/public/lib/safemath" ]
   public_deps = [
+    "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/fs",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

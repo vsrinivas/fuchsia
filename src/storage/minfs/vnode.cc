@@ -17,9 +17,10 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string_piece.h>
-#include <fs/trace.h>
-#include <fs/vfs_types.h>
 #include <safemath/checked_math.h>
+
+#include "src/lib/storage/vfs/cpp/trace.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 #ifdef __Fuchsia__
 #include <lib/fidl-utils/bind.h>

@@ -8,8 +8,8 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <fbl/auto_lock.h>
-#include <fs/pseudo_dir.h>
 
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/storage/factory/factoryfs/query.h"
 
 namespace factoryfs {

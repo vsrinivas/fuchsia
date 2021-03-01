@@ -10,7 +10,7 @@
 
 #include <mutex>
 
-#include <fs/ticker.h>
+#include "src/lib/storage/vfs/cpp/ticker.h"
 
 namespace blobfs {
 

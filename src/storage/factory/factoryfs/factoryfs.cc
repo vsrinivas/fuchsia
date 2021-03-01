@@ -14,12 +14,12 @@
 #include <iostream>
 
 #include <block-client/cpp/remote-block-device.h>
-#include <fs/managed_vfs.h>
-#include <fs/pseudo_dir.h>
-#include <fs/trace.h>
-#include <fs/vnode.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/trace.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/factory/factoryfs/directory.h"
 #include "src/storage/factory/factoryfs/file.h"
 #include "src/storage/factory/factoryfs/format.h"

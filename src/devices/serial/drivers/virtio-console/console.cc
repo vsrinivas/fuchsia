@@ -18,9 +18,10 @@
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fs/vfs.h>
-#include <fs/vnode.h>
 #include <virtio/virtio.h>
+
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 
 namespace virtio {
 

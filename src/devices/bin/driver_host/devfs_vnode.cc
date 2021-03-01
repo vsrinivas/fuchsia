@@ -6,9 +6,9 @@
 
 #include <ddk/device.h>
 #include <fbl/string_buffer.h>
-#include <fs/vfs_types.h>
 
 #include "driver_host.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace {
 

@@ -20,7 +20,8 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
-#include <fs/journal/format.h>
+
+#include "src/lib/storage/vfs/cpp/journal/format.h"
 
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>

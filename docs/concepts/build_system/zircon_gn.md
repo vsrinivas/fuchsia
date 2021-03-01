@@ -264,8 +264,8 @@ driver("fvm") {
     "fvm.cpp",
   ]
   deps = [
+    "//src/lib/storage/fs/cpp",
     "//zircon/system/ulib/ddktl",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/zircon",
   ]
 }

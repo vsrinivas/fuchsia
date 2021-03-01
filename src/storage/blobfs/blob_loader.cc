@@ -18,10 +18,10 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
-#include <fs/trace.h>
 #include <storage/buffer/owned_vmoid.h>
 
 #include "src/lib/digest/digest.h"
+#include "src/lib/storage/vfs/cpp/trace.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/blob_verifier.h"
 #include "src/storage/blobfs/common.h"

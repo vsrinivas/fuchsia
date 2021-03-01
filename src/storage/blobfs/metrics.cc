@@ -19,10 +19,11 @@
 
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/algorithm.h>
-#include <fs/metrics/cobalt_metrics.h>
-#include <fs/metrics/events.h>
-#include <fs/service.h>
-#include <fs/vnode.h>
+
+#include "src/lib/storage/vfs/cpp/metrics/cobalt_metrics.h"
+#include "src/lib/storage/vfs/cpp/metrics/events.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 
 namespace blobfs {
 namespace {

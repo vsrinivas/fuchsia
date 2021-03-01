@@ -11,8 +11,9 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <fs/managed_vfs.h>
 #include <zxtest/zxtest.h>
+
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
 
 // TODO(fxbug.dev/39588): delete this
 TEST(DelayedOutdirTest, MessagesWaitForStart) {

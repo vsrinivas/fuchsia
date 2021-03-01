@@ -8,13 +8,13 @@
 #include <memory>
 
 #include <disk_inspector/buffer_factory.h>
-#include <fs/journal/format.h>
-#include <fs/journal/initializer.h>
-#include <fs/transaction/legacy_transaction_handler.h>
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>
 #include <storage/buffer/array_buffer.h>
 
+#include "src/lib/storage/vfs/cpp/journal/format.h"
+#include "src/lib/storage/vfs/cpp/journal/initializer.h"
+#include "src/lib/storage/vfs/cpp/transaction/legacy_transaction_handler.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/format.h"

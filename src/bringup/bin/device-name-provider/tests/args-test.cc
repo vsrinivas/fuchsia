@@ -14,11 +14,12 @@
 #include <lib/zx/process.h>
 #include <zircon/processargs.h>
 
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
 #include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>
+
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 namespace {
 constexpr char kInterface[] = "/dev/whatever/whatever";

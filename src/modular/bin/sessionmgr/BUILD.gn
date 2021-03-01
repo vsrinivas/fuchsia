@@ -126,8 +126,8 @@ source_set("session_ctl") {
   deps = [
     "//sdk/lib/vfs/cpp",
     "//src/lib/fsl",
+    "//src/lib/storage/vfs/cpp",
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_impl",
-    "//zircon/system/ulib/fs",
   ]
 }
 

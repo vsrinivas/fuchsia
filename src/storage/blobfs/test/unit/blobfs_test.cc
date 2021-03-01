@@ -11,10 +11,10 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
-#include <fs/metrics/events.h>
 #include <gtest/gtest.h>
 #include <storage/buffer/vmo_buffer.h>
 
+#include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/storage/blobfs/blob.h"
 #include "src/storage/blobfs/directory.h"
 #include "src/storage/blobfs/format.h"

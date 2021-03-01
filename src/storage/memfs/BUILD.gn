@@ -29,8 +29,8 @@ zx_library("memfs-cpp") {
     # <lib/memfs/cpp/vnode.h> has #include <lib/zx/vmo.h>
     "//zircon/public/lib/zx",
 
-    # <lib/memfs/cpp/vnode.h> has #include <fs/vfs.h> and many other <fs/*.h>
-    "//zircon/system/ulib/fs",
+    # <lib/memfs/cpp/vnode.h> has #include "src/lib/storage/vfs/cpp/vfs.h> and many other <fs/*.h"
+    "//src/lib/storage/vfs/cpp",
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
@@ -61,8 +61,8 @@ zx_library("memfs") {
   deps = [
     ":memfs-cpp",
     "//sdk/lib/fdio",
+    "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/fs",
   ]
   runtime_deps = [
     "//sdk/lib/fdio:fdio_sdk",

@@ -84,14 +84,13 @@ static_library("minfs") {
     "writeback.h",
   ]
   public_deps = [
+    "//src/lib/storage/vfs/cpp/transaction",
     "//zircon/public/lib/fbl",
-
-    # bcache.h includes fs/transaction/device_transaction_handler.h & storage/buffer/...
-    "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/storage/buffer",
   ]
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//src/lib/storage/vfs/cpp",
     "//src/storage/fvm",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
@@ -99,7 +98,6 @@ static_library("minfs") {
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/disk_inspector",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/operation",
     "//zircon/third_party/ulib/cksum",
@@ -147,8 +145,8 @@ static_library("minfs") {
       # fsck.h includes block-client/cpp/block-device.h
       "//zircon/system/ulib/block-client",
 
-      # minfs_inspector.h includes fs/journal/format.h
-      "//zircon/system/ulib/fs/journal",
+      # minfs_inspector.h includes journal/format.h
+      "//src/lib/storage/vfs/cpp/journal",
     ]
     deps += [
       "//sdk/fidl/fuchsia.device:fuchsia.device_c",
@@ -157,6 +155,7 @@ static_library("minfs") {
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
       "//sdk/lib/syslog/cpp",
+      "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
       "//src/storage/fvm",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-cpp",
@@ -169,7 +168,6 @@ static_library("minfs") {
       "//zircon/system/ulib/async-loop:async-loop-default",
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fidl-utils",
-      "//zircon/system/ulib/fs/metrics:metrics-cobalt",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/storage-metrics",
       "//zircon/system/ulib/trace",
@@ -188,8 +186,8 @@ static_library("minfs") {
       "superblock_host.cc",
     ]
     deps += [
+      "//src/lib/storage/vfs/cpp/journal",
       "//src/zircon/lib/zircon:zircon-headers",
-      "//zircon/system/ulib/fs/journal",
     ]
   }
 

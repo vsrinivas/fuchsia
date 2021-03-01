@@ -40,10 +40,10 @@ if (is_fuchsia) {
       sources += [ "inspector_transaction_handler.cc" ]
 
       public_deps += [
+        "//src/lib/storage/vfs/cpp",
+        "//src/lib/storage/vfs/cpp/transaction",
         "//zircon/public/lib/fit",
         "//zircon/system/ulib/block-client",
-        "//zircon/system/ulib/fs",
-        "//zircon/system/ulib/fs/transaction",
         "//zircon/system/ulib/storage/buffer",
       ]
 
@@ -77,5 +77,7 @@ if (is_fuchsia) {
     ]
 
     public_configs = [ ":headers_config" ]
+
+    public_deps = [ "//src/lib/storage/vfs/cpp/transaction" ]
   }
 }

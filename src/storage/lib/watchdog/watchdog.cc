@@ -23,8 +23,9 @@
 #include <string>
 #include <thread>
 
-#include <fs/locking.h>
 #include <inspector/inspector.h>
+
+#include "src/lib/storage/vfs/cpp/locking.h"
 
 namespace fs_watchdog {
 

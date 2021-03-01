@@ -32,8 +32,6 @@
 #include <vector>
 
 #include <fidl/examples/echo/cpp/fidl.h>
-#include <fs/pseudo_dir.h>
-#include <fs/synchronous_vfs.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <test/appmgr/integration/cpp/fidl.h>
@@ -45,6 +43,8 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/strings/substitute.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/sys/appmgr/component_controller_impl.h"
 #include "src/sys/appmgr/integration_tests/util/data_file_reader_writer_util.h"
 #include "src/sys/appmgr/realm.h"

@@ -24,15 +24,15 @@
 #include <utility>
 
 #include <fbl/string_printf.h>
-#include <fs/pseudo_file.h>
-#include <fs/remote_dir.h>
-#include <fs/service.h>
 #include <task-utils/walker.h>
 
 #include "fbl/ref_ptr.h"
 #include "lib/inspect/service/cpp/service.h"
 #include "lib/vfs/cpp/service.h"
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/storage/vfs/cpp/pseudo_file.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 #include "src/sys/appmgr/component_container.h"
 #include "src/sys/appmgr/namespace.h"
 #include "src/sys/appmgr/realm.h"

@@ -11,9 +11,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
-#include <fs/trace.h>
 #include <lz4/lz4frame.h>
 
+#include "src/lib/storage/vfs/cpp/trace.h"
 #include "src/storage/blobfs/compression/compressor.h"
 #include "src/storage/blobfs/compression/decompressor.h"
 

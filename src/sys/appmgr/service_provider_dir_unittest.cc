@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
 #include <gtest/gtest.h>
 #include <test/placeholders/cpp/fidl.h>
 
 #include "lib/gtest/real_loop_fixture.h"
 #include "src/lib/fxl/strings/substitute.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/sys/appmgr/service_provider_dir_impl.h"
 #include "src/sys/appmgr/util.h"
 

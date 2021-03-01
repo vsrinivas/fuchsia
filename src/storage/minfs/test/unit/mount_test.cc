@@ -4,10 +4,10 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
-#include <fs/metrics/events.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/cobalt/cpp/testing/mock_cobalt_logger.h"
+#include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs_private.h"
 

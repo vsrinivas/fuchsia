@@ -20,9 +20,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
-#include <fs/trace.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "src/lib/storage/vfs/cpp/trace.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
 #include "src/storage/blobfs/allocator/node_reserver.h"
 #include "src/storage/blobfs/common.h"

@@ -11,9 +11,9 @@
 #include <block-client/cpp/fake-device.h>
 #include <disk_inspector/disk_inspector.h>
 #include <fbl/string_printf.h>
-#include <fs/journal/inspector_journal.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
 #include "src/storage/minfs/inspector_inode.h"
 #include "src/storage/minfs/inspector_inode_table.h"
 #include "src/storage/minfs/inspector_private.h"
