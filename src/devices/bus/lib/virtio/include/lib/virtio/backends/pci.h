@@ -79,8 +79,8 @@ class PciLegacyBackend : public PciBackend {
   // Handle the virtio queues for the device. Due to configuration layouts changing
   // depending on backend this has to be handled by the backend itself.
   uint16_t GetRingSize(uint16_t index) final;
-  void SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc, zx_paddr_t pa_avail,
-               zx_paddr_t pa_used) final;
+  zx_status_t SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc, zx_paddr_t pa_avail,
+                      zx_paddr_t pa_used) final;
   void RingKick(uint16_t ring_index) final;
 
  private:
@@ -136,8 +136,8 @@ class PciModernBackend : public PciBackend {
   // Handle the virtio queues for the device. Due to configuration layouts changing
   // depending on backend this has to be handled by the backend itself.
   uint16_t GetRingSize(uint16_t index) final;
-  void SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc, zx_paddr_t pa_avail,
-               zx_paddr_t pa_used) final;
+  zx_status_t SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc, zx_paddr_t pa_avail,
+                      zx_paddr_t pa_used) final;
   void RingKick(uint16_t ring_index) final;
 
  private:

@@ -13,7 +13,7 @@
 static const zx_driver_ops_t virtio_input_driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = CreateAndBind<virtio::InputDevice>;
+  ops.bind = virtio::CreateAndBind<virtio::InputDevice>;
   return ops;
 }();
 

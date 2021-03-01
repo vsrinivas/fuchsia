@@ -47,9 +47,9 @@ class Device {
   // simply do config reads to determine the information.
   uint16_t GetRingSize(uint16_t index) { return backend_->GetRingSize(index); }
   // Set up ring descriptors with the backend.
-  void SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc, zx_paddr_t pa_avail,
-               zx_paddr_t pa_used) {
-    backend_->SetRing(index, count, pa_desc, pa_avail, pa_used);
+  zx_status_t SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc, zx_paddr_t pa_avail,
+                      zx_paddr_t pa_used) {
+    return backend_->SetRing(index, count, pa_desc, pa_avail, pa_used);
   }
 
   // Another method that has to be proxied to the backend due to differences

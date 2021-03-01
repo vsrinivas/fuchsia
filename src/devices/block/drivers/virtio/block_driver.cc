@@ -13,7 +13,7 @@
 static const zx_driver_ops_t virtio_block_driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = CreateAndBind<virtio::BlockDevice>;
+  ops.bind = virtio::CreateAndBind<virtio::BlockDevice>;
   return ops;
 }();
 

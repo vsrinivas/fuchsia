@@ -401,7 +401,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     if (!capabilities_.empty()) {
       for (auto& cap : capabilities_) {
         ZX_ASSERT_MSG(!(position <= cap.position && position + size > cap.position) &&
-                          !(position >= cap.position && position <= cap.position + cap.size),
+                          !(position >= cap.position && position < cap.position + cap.size),
                       "FakePciProtocol Error: New capability overlaps with a previous capability "
                       "[%#x, %#x] (new capability id = %#x @ [%#x, %#x]).",
                       cap.position, cap.position + cap.size - 1, capability_id, position,

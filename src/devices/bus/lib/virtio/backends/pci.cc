@@ -65,7 +65,7 @@ zx_status_t PciBackend::ConfigureIrqMode() {
   pci_irq_mode_t mode = PCI_IRQ_MODE_MSI_X;
   zx_status_t st = pci().QueryIrqMode(mode, &irq_cnt);
   irq_cnt = std::min(2u, irq_cnt);
-  if (st != ZX_OK || irq_cnt < 2 || (st = pci().SetIrqMode(mode, irq_cnt)) != ZX_OK) {
+  if ((st != ZX_OK || irq_cnt < 2) || (st = pci().SetIrqMode(mode, irq_cnt)) != ZX_OK) {
     mode = PCI_IRQ_MODE_LEGACY;
     zx_status_t intx_st = pci().QueryIrqMode(mode, &irq_cnt);
     if (intx_st != ZX_OK || (intx_st = pci().SetIrqMode(mode, irq_cnt)) != ZX_OK) {
@@ -79,14 +79,14 @@ zx_status_t PciBackend::ConfigureIrqMode() {
   for (uint32_t i = 0; i < irq_cnt; i++) {
     zx::interrupt interrupt = {};
     if ((st = pci().MapInterrupt(i, &interrupt)) != ZX_OK) {
-      zxlogf(DEBUG, "Failed to map interrupt %u: %s", i, zx_status_get_string(st));
+      zxlogf(ERROR, "Failed to map interrupt %u: %s", i, zx_status_get_string(st));
       return st;
     }
 
     // Use the interrupt index as the key so we can ack the correct interrupt after
     // a port wait.
     if ((st = interrupt.bind(wait_port_, /*key=*/i, /*options=*/0)) != ZX_OK) {
-      zxlogf(DEBUG, "Failed to bind interrupt %u: %s", i, zx_status_get_string(st));
+      zxlogf(ERROR, "Failed to bind interrupt %u: %s", i, zx_status_get_string(st));
       return st;
     }
     irq_handles().push_back(std::move(interrupt));

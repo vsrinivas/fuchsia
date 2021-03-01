@@ -149,7 +149,7 @@ zx_status_t PciModernBackend::Init() {
         CommonCfgCallbackLocked(cap);
         break;
       case VIRTIO_PCI_CAP_NOTIFY_CFG:
-        // Virtio 1.01`2Zxc vbnm1.4.4
+        // Virtio 1.0 section 4.1.4.4
         // notify_off_multiplier is a 32bit field following this capability
         pci().ConfigRead32(static_cast<uint8_t>(off + sizeof(virtio_pci_cap_t)), &notify_off_mul_);
         NotifyCfgCallbackLocked(cap);
@@ -311,12 +311,13 @@ uint16_t PciModernBackend::GetRingSize(uint16_t index) {
   uint16_t queue_size = 0;
   MmioWrite(&common_cfg_->queue_select, index);
   MmioRead(&common_cfg_->queue_size, &queue_size);
+  zxlogf(TRACE, "QueueSize: %#x", queue_size);
   return queue_size;
 }
 
 // Set up ring descriptors with the backend.
-void PciModernBackend::SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc,
-                               zx_paddr_t pa_avail, zx_paddr_t pa_used) {
+zx_status_t PciModernBackend::SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc,
+                                      zx_paddr_t pa_avail, zx_paddr_t pa_used) {
   fbl::AutoLock guard(&lock());
 
   // These offsets are wrong and this should be changed
@@ -329,17 +330,27 @@ void PciModernBackend::SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_des
   if (irq_mode() == PCI_IRQ_MODE_MSI_X) {
     uint16_t vector = 0;
     MmioRead(&common_cfg_->queue_msix_vector, &vector);
-    ZX_DEBUG_ASSERT(vector == PciBackend::kVirtioMsiNoVector);
+    if (vector != PciBackend::kVirtioMsiNoVector) {
+      zxlogf(WARNING, "MSI-X queue vector has invalid reset value: %#x", vector);
+    }
     MmioWrite(&common_cfg_->queue_msix_vector, PciBackend::kMsiQueueVector);
     MmioRead(&common_cfg_->queue_msix_vector, &vector);
-    ZX_DEBUG_ASSERT(vector == PciBackend::kMsiQueueVector);
+    if (vector != PciBackend::kMsiQueueVector) {
+      zxlogf(ERROR, "MSI-X queue vector in invalid state after write: %#x", vector);
+      return ZX_ERR_BAD_STATE;
+    }
   }
 
   MmioWrite<uint16_t>(&common_cfg_->queue_enable, 1);
   // Assert that queue_notify_off is equal to the ring index.
   uint16_t queue_notify_off;
   MmioRead(&common_cfg_->queue_notify_off, &queue_notify_off);
-  ZX_ASSERT(queue_notify_off == index);
+  if (queue_notify_off != index) {
+    zxlogf(ERROR, "Virtio queue notify setup failed");
+    return ZX_ERR_BAD_STATE;
+  }
+
+  return ZX_OK;
 }
 
 void PciModernBackend::RingKick(uint16_t ring_index) {

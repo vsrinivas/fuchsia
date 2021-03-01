@@ -54,8 +54,8 @@ class Backend {
 
   // Ring methods vary based on backend due to config offsets and field sizes.
   virtual uint16_t GetRingSize(uint16_t index) = 0;
-  virtual void SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc, zx_paddr_t pa_avail,
-                       zx_paddr_t pa_used) = 0;
+  virtual zx_status_t SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc,
+                              zx_paddr_t pa_avail, zx_paddr_t pa_used) = 0;
   virtual void RingKick(uint16_t ring_index) = 0;
   // Expected to read the interrupt status out of the config based on the offset/address
   // specified by the isr capability.

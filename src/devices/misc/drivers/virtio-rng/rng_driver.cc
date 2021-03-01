@@ -13,7 +13,7 @@
 static const zx_driver_ops_t virtio_rng_driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = CreateAndBind<virtio::RngDevice>;
+  ops.bind = virtio::CreateAndBind<virtio::RngDevice>;
   return ops;
 }();
 

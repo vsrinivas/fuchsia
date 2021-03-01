@@ -14,13 +14,16 @@
 
 #include "include/lib/virtio/backends/pci.h"
 
+namespace virtio {
+
 zx::status<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBackend(
     zx_device_t* bus_device) {
   zx_status_t status;
   ddk::PciProtocolClient pci(bus_device);
 
   if (!pci.is_valid()) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
+    zxlogf(ERROR, "virtio failed to find PciProtocol");
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
 
   pcie_device_info_t info;
@@ -58,3 +61,5 @@ zx::status<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBacken
 
   return zx::ok(std::make_pair(std::move(bti), std::move(backend)));
 }
+
+}  // namespace virtio

@@ -23,13 +23,15 @@ namespace virtio {
 
 Device::Device(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
     : bti_(std::move(bti)), backend_(std::move(backend)), bus_device_(bus_device) {
-  zxlogf(TRACE, "%s: entry", __func__);
   device_ops_.version = DEVICE_OPS_VERSION;
 }
 
 Device::~Device() { zxlogf(TRACE, "%s: exit", __func__); }
 
-void Device::Unbind(ddk::UnbindTxn txn) { txn.Reply(); }
+void Device::Unbind(ddk::UnbindTxn txn) {
+  zxlogf(TRACE, "%s unbound", tag());
+  txn.Reply();
+}
 
 void Device::Release() {
   irq_thread_should_exit_.store(true, std::memory_order_release);

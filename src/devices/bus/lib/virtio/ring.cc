@@ -34,7 +34,7 @@ zx_status_t Ring::Init(uint16_t index) {
 }
 
 zx_status_t Ring::Init(uint16_t index, uint16_t count) {
-  zxlogf(TRACE, "%s: index %u, count %u\n", __func__, index, count);
+  zxlogf(TRACE, "%s: index %u, count %u", __func__, index, count);
 
   // check that count is a power of 2
   if (!fbl::is_pow2(count)) {
@@ -53,7 +53,7 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
 
   // allocate a ring
   size_t size = vring_size(count, PAGE_SIZE);
-  zxlogf(TRACE, "%s: need %zu bytes\n", __func__, size);
+  zxlogf(TRACE, "%s: need %zu bytes", __func__, size);
 
   zx_status_t status =
       io_buffer_init(&ring_buf_, device_->bti().get(), size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
@@ -61,7 +61,7 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
     return status;
   }
 
-  zxlogf(TRACE, "%s: allocated vring at %p, physical address %#" PRIxPTR "\n", __func__,
+  zxlogf(TRACE, "%s: allocated vring at %p, physical address %#" PRIxPTR, __func__,
          io_buffer_virt(&ring_buf_), io_buffer_phys(&ring_buf_));
 
   /* initialize the ring */
@@ -84,7 +84,7 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
 }
 
 void Ring::FreeDesc(uint16_t desc_index) {
-  zxlogf(TRACE, "%s: index %u free_count %u\n", __func__, desc_index, ring_.free_count);
+  zxlogf(TRACE, "%s: index %u free_count %u", __func__, desc_index, ring_.free_count);
   ring_.desc[desc_index].next = ring_.free_list;
   ring_.free_list = desc_index;
   ring_.free_count++;
@@ -92,7 +92,7 @@ void Ring::FreeDesc(uint16_t desc_index) {
 
 struct vring_desc* Ring::AllocDescChain(uint16_t count, uint16_t* start_index) {
   if (ring_.free_count < count)
-    return NULL;
+    return nullptr;
 
   /* start popping entries off the chain */
   struct vring_desc* last = 0;
@@ -126,7 +126,7 @@ struct vring_desc* Ring::AllocDescChain(uint16_t count, uint16_t* start_index) {
 }
 
 void Ring::SubmitChain(uint16_t desc_index) {
-  zxlogf(TRACE, "%s: desc %u\n", __func__, desc_index);
+  zxlogf(TRACE, "%s: desc %u", __func__, desc_index);
 
   /* add the chain to the available list */
   struct vring_avail* avail = ring_.avail;

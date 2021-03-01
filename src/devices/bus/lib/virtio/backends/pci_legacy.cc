@@ -44,7 +44,7 @@ zx_status_t PciLegacyBackend::Init() {
   pci_bar_t bar0;
   zx_status_t status = pci().GetBar(0u, &bar0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Couldn't get IO bar for device: %d", tag(), status);
+    zxlogf(ERROR, "%s: Couldn't get IO bar for device: %s", tag(), zx_status_get_string(status));
     return status;
   }
 
@@ -127,14 +127,15 @@ uint16_t PciLegacyBackend::GetRingSize(uint16_t index) {
 }
 
 // Set up ring descriptors with the backend.
-void PciLegacyBackend::SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc,
-                               zx_paddr_t pa_avail, zx_paddr_t pa_used) {
+zx_status_t PciLegacyBackend::SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc,
+                                      zx_paddr_t pa_avail, zx_paddr_t pa_used) {
   fbl::AutoLock guard(&lock());
   // Virtio 1.0 section 2.4.2
   IoWriteLocked(VIRTIO_PCI_QUEUE_SELECT, index);
   IoWriteLocked(VIRTIO_PCI_QUEUE_SIZE, count);
   IoWriteLocked(VIRTIO_PCI_QUEUE_PFN, static_cast<uint32_t>(pa_desc / 4096));
   zxlogf(TRACE, "%s: set ring %u (# = %u, addr = %#lx)", tag(), index, count, pa_desc);
+  return ZX_OK;
 }
 
 void PciLegacyBackend::RingKick(uint16_t ring_index) {

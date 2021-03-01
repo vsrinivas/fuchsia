@@ -81,8 +81,10 @@ class FakeBackend : public Backend {
     EXPECT_GT(queue_sizes_.count(index), 0);
     return queue_sizes_[index];
   }
-  void SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc, zx_paddr_t pa_avail,
-               zx_paddr_t pa_used) override {}
+  zx_status_t SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc, zx_paddr_t pa_avail,
+                      zx_paddr_t pa_used) override {
+    return ZX_OK;
+  }
   void RingKick(uint16_t ring_index) override {
     EXPECT_EQ(state_, State::DRIVER_OK);
     EXPECT_GT(queue_sizes_.count(ring_index), 0);
