@@ -4,9 +4,43 @@
 
 import 'dart:async';
 import 'package:fxtest/fxtest.dart';
+import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 import 'fake_fx_env.dart';
 import 'helpers.dart';
+
+typedef TestBundleBuilder = TestBundle Function(TestDefinition, [double]);
+typedef EventEmitter = void Function(TestEvent);
+
+class EmptyTestManifestReader extends TestsManifestReader {
+  @override
+  Future<List<TestDefinition>> loadTestsJson(
+          {@required String buildDir,
+          @required String fxLocation,
+          @required String manifestFileName,
+          bool usePackageHash = true}) async =>
+      <TestDefinition>[];
+
+  @override
+  ParsedManifest aggregateTests({
+    @required TestBundleBuilder testBundleBuilder,
+    @required List<TestDefinition> testDefinitions,
+    @required EventEmitter eventEmitter,
+    @required TestsConfig testsConfig,
+    Comparer comparer,
+    MatchLength matchLength = MatchLength.partial,
+  }) =>
+      ParsedManifest(testDefinitions: [], testBundles: []);
+
+  @override
+  void reportOnTestBundles({
+    @required ParsedManifest parsedManifest,
+    @required TestsConfig testsConfig,
+    @required EventEmitter eventEmitter,
+    @required String userFriendlyBuildDir,
+  }) =>
+      null;
+}
 
 void main() {
   OutputBuffer buffer;
@@ -108,6 +142,27 @@ void main() {
       expect(allOutput, contains('❌'));
       expect(allOutput, contains('/whatever/host_x64/lib_tests'));
       expect(commandExitCode, 2);
+    });
+  });
+
+  group('exit code', () {
+    test('should be non-zero when no tests are found', () async {
+      final testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: [],
+        fxEnv: FakeFxEnv.shared,
+      );
+      int commandExitCode = 0;
+      final cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        exitCodeSetter: (e) => commandExitCode = e,
+        outputFormatter: OutputFormatter.fromConfig(
+          testsConfig,
+          buffer: OutputBuffer.locMemIO(),
+        ),
+        testRunnerBuilder: (TestsConfig config) => FakeTestRunner.passing(),
+      );
+      await cmd.runTestSuite(EmptyTestManifestReader());
+      expect(commandExitCode, equals(noTestFoundExitCode));
     });
   });
 }

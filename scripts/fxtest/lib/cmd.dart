@@ -142,6 +142,7 @@ class FuchsiaTestCommand {
     );
 
     if (parsedManifest.testBundles.isEmpty) {
+      _exitCodeSetter(noTestFoundExitCode);
       return noMatchesHelp(
         manifestReader: manifestReader,
         testDefinitions: parsedManifest.testDefinitions,
