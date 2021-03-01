@@ -10,6 +10,7 @@ import("//src/diagnostics/triage/build/triage_config_test.gni")
 # in this variable will be ignored.
 triage_files = [
   "a11y.triage",
+  "bluetooth.triage",
   "cpu.triage",
   "crashes.triage",
   "disk.triage",
