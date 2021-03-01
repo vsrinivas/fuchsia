@@ -56,9 +56,9 @@ bool ComparePayload(const T* actual, size_t actual_size, const T* expected, size
         std::cout << std::dec << "element[" << i << "]: actual=" << actual[i]
                   << " expected=" << expected[i];
       } else {
-        std::cout << std::dec << "element[" << i << "]: " << std::hex << "actual=0x" << actual[i]
+        std::cout << std::dec << "element[" << i << "]: " << std::hex << "actual=0x" << +actual[i]
                   << " "
-                  << "expected=0x" << expected[i] << "\n";
+                  << "expected=0x" << +expected[i] << "\n";
       }
     }
   }

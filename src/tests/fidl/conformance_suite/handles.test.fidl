@@ -70,3 +70,67 @@ resource struct EventWithReducedRights {
     // TODO(fxbug.dev/41920) Replace with constant value.
     handle:<EVENT, 49155> h;
 };
+
+resource union UnionOfEventWithReducedRights {
+    1: EventWithReducedRights s;
+};
+
+resource table TableOfUnionOfEventWithReducedRights {
+    1: UnionOfEventWithReducedRights uu;
+};
+
+resource struct StructOfTableOfUnionOfEventWithReducedRights {
+    TableOfUnionOfEventWithReducedRights t;
+};
+
+resource struct ArrayOfVectorOfEventInStructWithReducedRights {
+    // 49155 is ZX_RIGHTS_BASIC.
+    // TODO(fxbug.dev/41920) Replace with constant value.
+    array<vector<handle:<EVENT, 49155>>:1>:1 h;
+};
+
+resource struct VectorOfArrayOfEventInStructWithReducedRights {
+    // 49155 is ZX_RIGHTS_BASIC.
+    // TODO(fxbug.dev/41920) Replace with constant value.
+    vector<array<handle:<EVENT, 49155>>:1>:1 h;
+};
+
+resource table ArrayOfVectorOfEventInTableWithReducedRights {
+    // 49155 is ZX_RIGHTS_BASIC.
+    // TODO(fxbug.dev/41920) Replace with constant value.
+    1: array<vector<handle:<EVENT, 49155>>:1>:1 h;
+};
+
+resource struct ArrayOfVectorOfEventInTableWithReducedRightsStruct {
+    ArrayOfVectorOfEventInTableWithReducedRights t;
+};
+
+resource table VectorOfArrayOfEventInTableWithReducedRights {
+    // 49155 is ZX_RIGHTS_BASIC.
+    // TODO(fxbug.dev/41920) Replace with constant value.
+    1: vector<array<handle:<EVENT, 49155>>:1>:1 h;
+};
+
+resource struct VectorOfArrayOfEventInTableWithReducedRightsStruct {
+    VectorOfArrayOfEventInTableWithReducedRights t;
+};
+
+resource union ArrayOfVectorOfEventInUnionWithReducedRights {
+    // 49155 is ZX_RIGHTS_BASIC.
+    // TODO(fxbug.dev/41920) Replace with constant value.
+    1: array<vector<handle:<EVENT, 49155>>:1>:1 h;
+};
+
+resource struct ArrayOfVectorOfEventInUnionWithReducedRightsStruct {
+    ArrayOfVectorOfEventInUnionWithReducedRights t;
+};
+
+resource union VectorOfArrayOfEventInUnionWithReducedRights {
+    // 49155 is ZX_RIGHTS_BASIC.
+    // TODO(fxbug.dev/41920) Replace with constant value.
+    1: vector<array<handle:<EVENT, 49155>>:1>:1 h;
+};
+
+resource struct VectorOfArrayOfEventInUnionWithReducedRightsStruct {
+    VectorOfArrayOfEventInUnionWithReducedRights t;
+};

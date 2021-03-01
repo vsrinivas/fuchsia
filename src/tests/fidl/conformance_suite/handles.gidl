@@ -456,3 +456,214 @@ decode_failure("DecodeHandleHasTooFewRights") {
     },
     err = MISSING_REQUIRED_HANDLE_RIGHTS
 }
+
+// Vector and arrays can't hold handle type information in some bindings.
+// Test this with structs, which may have different behavior than other types.
+encode_success("EncodeArrayOfVectorOfEventInStruct") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = channel(rights: channel_default),
+    },
+    value = ArrayOfVectorOfEventInStructWithReducedRights{h: [[#0]]},
+    bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+            repeat(0xff):4,
+            padding:4
+        ],
+    },
+    handle_dispositions = {
+        v1 = [
+            { #0, type: event, rights: basic },
+        ],
+    },
+}
+
+// Vector and arrays can't hold handle type information in some bindings.
+// Test this with structs, which may have different behavior than other types.
+encode_success("EncodeVectorOfArrayOfEventInStruct") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = channel(rights: channel_default),
+    },
+    value = VectorOfArrayOfEventInStructWithReducedRights{h: [[#0]]},
+    bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+            repeat(0xff):4,
+            padding:4
+        ],
+    },
+    handle_dispositions = {
+        v1 = [
+            { #0, type: event, rights: basic },
+        ],
+    },
+}
+
+// Vector and arrays can't hold handle type information in some bindings.
+// Test this with tables, which may have different behavior than other types.
+encode_success("EncodeArrayOfVectorOfEventInTable") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = channel(rights: channel_default),
+    },
+    value = ArrayOfVectorOfEventInTableWithReducedRightsStruct{
+        t: ArrayOfVectorOfEventInTableWithReducedRights{
+            h: [[ #0 ]],
+        },
+    },
+    bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(24):4, num(1):4,
+            repeat(0xff):8,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handle_dispositions = {
+        v1 = [
+            { #0, type: event, rights: basic },
+        ],
+    },
+}
+
+// Vector and arrays can't hold handle type information in some bindings.
+// Test this with tables, which may have different behavior than other types.
+encode_success("EncodeVectorOfArrayOfEventInTable") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = channel(rights: channel_default),
+    },
+    value = VectorOfArrayOfEventInTableWithReducedRightsStruct{
+        t: VectorOfArrayOfEventInTableWithReducedRights{
+            h: [[ #0 ]],
+        },
+    },
+    bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(24):4, num(1):4,
+            repeat(0xff):8,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handle_dispositions = {
+        v1 = [
+            { #0, type: event, rights: basic },
+        ],
+    },
+}
+
+// Vector and arrays can't hold handle type information in some bindings.
+// Test this with unions, which may have different behavior than other types.
+encode_success("EncodeArrayOfVectorOfEventInUnion") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = channel(rights: channel_default),
+    },
+    value = ArrayOfVectorOfEventInUnionWithReducedRightsStruct{
+        t: ArrayOfVectorOfEventInUnionWithReducedRights{
+            h: [[ #0 ]],
+        },
+    },
+    bytes = {
+        v1 = [
+            num(1):8,
+            num(24):4, num(1):4,
+            repeat(0xff):8,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handle_dispositions = {
+        v1 = [
+            { #0, type: event, rights: basic },
+        ],
+    },
+}
+
+// Vector and arrays can't hold handle type information in some bindings.
+// Test this with unions, which may have different behavior than other types.
+encode_success("EncodeVectorOfArrayOfEventInUnion") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = channel(rights: channel_default),
+    },
+    value = VectorOfArrayOfEventInUnionWithReducedRightsStruct{
+        t: VectorOfArrayOfEventInUnionWithReducedRights{
+            h: [[ #0 ]],
+        },
+    },
+    bytes = {
+        v1 = [
+            num(1):8,
+            num(24):4, num(1):4,
+            repeat(0xff):8,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handle_dispositions = {
+        v1 = [
+            { #0, type: event, rights: basic },
+        ],
+    },
+}
+
+// Ensure handle rights are propogated through different record types.
+encode_success("EncodeRightsArePropogated") {
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = channel(rights: channel_default),
+    },
+    value = StructOfTableOfUnionOfEventWithReducedRights{
+        t: TableOfUnionOfEventWithReducedRights{
+            uu: UnionOfEventWithReducedRights{
+                s: EventWithReducedRights{
+                    h: #0,
+                },
+            },
+        },
+    },
+    bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(32):4, num(1):4,
+            repeat(0xff):8,
+
+            num(1):8,
+            num(8):4, num(1):4,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handle_dispositions = {
+        v1 = [
+            { #0, type: event, rights: basic },
+        ],
+    },
+}
