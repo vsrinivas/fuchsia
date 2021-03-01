@@ -27,8 +27,8 @@ pub trait Sink: Send {
 /// When a sink has reached it's full capacity or when the producer has exhausted all the values it
 /// had, sink is transformed into a value that implements this trait.  It helps to reduce the
 /// number of possible states the sink has.  Once "sealed" it can not be converted back into a
-/// [`Sink`] instance.  And the only way forward is to call the [`open()`] method to downcast sink
-/// into the underlying type that gives access to the data that the sink have stored.
+/// [`Sink`] instance.  And the only way forward is to call the [`Self::open()`] method to downcast
+/// sink into the underlying type that gives access to the data that the sink have stored.
 pub trait Sealed: Send {
     /// Converts a "sealed" sink into [`Any`] that can be later cast into a specific type that the
     /// consumer of the full sink can use to extract contained data.

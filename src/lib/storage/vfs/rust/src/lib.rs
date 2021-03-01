@@ -41,7 +41,8 @@ pub mod pseudo_directory;
 /// separated by commas, with an optional trailing comma.
 ///
 /// It generates a nested pseudo directory, using [`directory::immutable::simple()`] then adding
-/// all the specified entries in it, by calling [`directory::Simple::add_entry`].
+/// all the specified entries in it, by calling
+/// [`crate::directory::helper::DirectlyMutable::add_entry`].
 ///
 /// See [`mut_pseudo_directory!`] if you want the directory to be modifiable by the clients.
 ///

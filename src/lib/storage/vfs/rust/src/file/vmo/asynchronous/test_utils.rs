@@ -112,7 +112,7 @@ pub fn simple_read_only(
     read_only(simple_init_vmo(content))
 }
 
-/// Possible errors for the [`assert_vmo_content`] function.
+/// Possible errors for the [`assert_vmo_content()`] function.
 pub enum AssertVmoContentError {
     /// Failure returned from the `vmo.read()` call.
     VmoReadFailed(Status),
@@ -132,7 +132,7 @@ pub fn assert_vmo_content(vmo: &Vmo, expected: &[u8]) -> Result<(), AssertVmoCon
     }
 }
 
-/// Wraps an [`assert_vmo_content`] call, panicking with a descriptive error message for any `Err`
+/// Wraps an [`assert_vmo_content()`] call, panicking with a descriptive error message for any `Err`
 /// return values.
 #[macro_export]
 macro_rules! assert_vmo_content {
@@ -162,7 +162,7 @@ macro_rules! assert_vmo_content {
     }};
 }
 
-/// Possible errors for the [`report_invalid_vmo_content`] function.
+/// Possible errors for the [`report_invalid_vmo_content()`] function.
 pub enum ReportInvalidVmoContentError {
     /// Failure returned from the `vmo.read()` call.
     VmoReadFailed(Status),
@@ -185,8 +185,8 @@ pub fn report_invalid_vmo_content(
     );
 }
 
-/// Wraps a [`report_invalid_vmo_content`] call, panicking with a descriptive error message for any
-/// `Err` return values.
+/// Wraps a [`report_invalid_vmo_content()`] call, panicking with a descriptive error message for
+/// any `Err` return values.
 #[macro_export]
 macro_rules! report_invalid_vmo_content {
     ($vmo:expr, $context:expr) => {{

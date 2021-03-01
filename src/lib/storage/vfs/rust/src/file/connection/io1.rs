@@ -46,7 +46,7 @@ pub struct FileConnection<T: 'static + File> {
     requests: FileRequestStream,
 
     /// Either the "flags" value passed into [`DirectoryEntry::open()`], or the "flags" value
-    /// received with [`FileRequest::Clone()`].
+    /// received with [`value@FileRequest::Clone`].
     flags: u32,
 
     /// Flag passed into `create_connection`, that is used to limit read operations on this

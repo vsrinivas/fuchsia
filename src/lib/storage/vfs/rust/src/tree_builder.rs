@@ -4,9 +4,9 @@
 
 //! A helper to build a tree of directory nodes.  It is useful in case when a nested tree is
 //! desired, with specific nodes to be inserted as the leafs of this tree.  It is similar to the
-//! functionality provided by the [`pseudo_directory`] macro, except that the macro expects the
-//! tree structure to be defined at compile time, while this helper allows the tree structure to be
-//! dynamic.
+//! functionality provided by the [`vfs_macros::pseudo_directory!`] macro, except that the macro
+//! expects the tree structure to be defined at compile time, while this helper allows the tree
+//! structure to be dynamic.
 
 use crate::directory::{entry::DirectoryEntry, helper::DirectlyMutable, immutable};
 
@@ -84,14 +84,16 @@ pub enum TreeBuilder {
 
 /// Collects a number of [`DirectoryEntry`] nodes and corresponding paths and the constructs a tree
 /// of [`immutable::simple::Simple`] directories that hold these nodes.  This is a companion tool,
-/// related to the [`pseudo_directory!`] macro, except that it is collecting the paths dynamically,
-/// while the [`pseudo_directory!`] expects the tree to be specified at compilation time.
+/// related to the [`vfs_macros::pseudo_directory!`] macro, except that it is collecting the paths
+/// dynamically, while the [`vfs_macros::pseudo_directory!`] expects the tree to be specified at
+/// compilation time.
 ///
-/// Note that the final tree is build as a result of the [`build()`] method that consumes the
-/// builder.  You would need to use the [`directory::Simple::add_entry()`] interface to add any new
-/// nodes afterwards (a [`directory::controlled::Controller`] APIs).
+/// Note that the final tree is build as a result of the [`Self::build()`] method that consumes the
+/// builder.  You would need to use the [`crate::directory::helper::DirectlyMutable::add_entry()`]
+/// interface to add any new nodes afterwards (a [`crate::directory::watchers::Controller`] APIs).
 impl TreeBuilder {
-    /// Constructs an empty builder.  It is always an empty [`Simple`] directory.
+    /// Constructs an empty builder.  It is always an empty [`crate::directory::simple::Simple`]
+    /// directory.
     pub fn empty_dir() -> Self {
         TreeBuilder::Directory(HashMap::new())
     }
@@ -134,7 +136,7 @@ impl TreeBuilder {
     }
 
     /// Adds an empty directory into the generated tree at the specified path.  The difference with
-    /// the [`add_entry`] that adds an entry that is a directory is that the builder can can only
+    /// the [`crate::directory::helper::DirectlyMutable::add_entry`] that adds an entry that is a directory is that the builder can can only
     /// add leaf nodes.  In other words, code like this will fail:
     ///
     /// ```should_panic
@@ -254,8 +256,9 @@ impl TreeBuilder {
         }
     }
 
-    /// Consumes the builder, producing a tree with all the nodes provided to [`add_entry()`] at
-    /// their respective locations.  The tree itself is built using [`directory::simple::Simple`]
+    /// Consumes the builder, producing a tree with all the nodes provided to
+    /// [`crate::directory::helper::DirectlyMutable::add_entry()`] at their respective locations.
+    /// The tree itself is built using [`crate::directory::simple::Simple`]
     /// nodes, and the top level is a directory.
     pub fn build(self) -> Arc<immutable::Simple> {
         match self {

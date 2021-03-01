@@ -26,9 +26,10 @@ pub type Connection = connection::io1::MutableConnection;
 pub type Simple = simple::Simple<Connection>;
 
 /// Creates a mutable empty "simple" directory.  This directory holds a "static" set of entries,
-/// allowing the server to add or remove entries via the [`add_entry`] and [`remove_entry`]
-/// methods.  These directories content can be modified by the client.  It uses
-/// [`directory::mutable::connection::MutableConnection`] type for the connection objects.
+/// allowing the server to add or remove entries via the
+/// [`crate::directory::helper::DirectlyMutable::add_entry()`] and
+/// [`crate::directory::helper::DirectlyMutable::remove_entry()`] methods.  These directories
+/// content can be modified by the client.  It uses [`Connection`] type for the connection objects.
 pub fn simple() -> Arc<Simple> {
     Simple::new(true)
 }
@@ -36,8 +37,8 @@ pub fn simple() -> Arc<Simple> {
 /// Creates an [`EntryConstructor`] that will insert empty mutable directories when asked to create
 /// a directory and when asked to create a file will delegate to the `file_constructor` function.
 ///
-/// As the [`EntryConstructor`]s are expected to be inserted into the [`ExecutionScope`] via
-/// [`Arc`]s, it returns an `Arc` right away.
+/// As the [`EntryConstructor`]s are expected to be inserted into the
+/// [`crate::execution_scope::ExecutionScope`] via [`Arc`]s, it returns an `Arc` right away.
 pub fn tree_constructor<FileConstructor>(
     file_constructor: FileConstructor,
 ) -> Arc<dyn EntryConstructor + Send + Sync>

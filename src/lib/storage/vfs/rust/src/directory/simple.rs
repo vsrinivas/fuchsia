@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! This is an implementation of "simple" pseudo directories.  Use [`directory::immutable::simple`]
+//! This is an implementation of "simple" pseudo directories.
+//! Use [`mod@crate::directory::immutable::simple`]
 //! to construct actual instances.  See [`Simple`] for details.
 
 use crate::{
@@ -50,12 +51,12 @@ use {
 };
 
 /// An implementation of a "simple" pseudo directory.  This directory holds a set of entries,
-/// allowing the server to add or remove entries via the [`add_entry`] and
-/// [`remove_entry`] methods, and, depending on the connection been used (see
-/// [`directory::immutable::connection::ImmutableConnection`] or
-/// [`directory::mutable::connection::MutableConnection`])
+/// allowing the server to add or remove entries via the
+/// [`crate::directory::helper::DirectlyMutable::add_entry()`] and
+/// [`crate::directory::helper::DirectlyMutable::remove_entry`] methods, and, depending on the
+/// connection been used (see [`ImmutableConnection`] or [`MutableConnection`])
 /// it may also allow the clients to modify the entries as well.  This is a common implemmentation
-/// for [`directory::immutable::simple`] and [`directory::mutable::simple`].
+/// for [`mod@crate::directory::immutable::simple`] and [`mod@crate::directory::mutable::simple`].
 pub struct Simple<Connection>
 where
     Connection: DerivedConnection + 'static,

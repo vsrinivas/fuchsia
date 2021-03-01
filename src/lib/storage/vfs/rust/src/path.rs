@@ -95,10 +95,10 @@ impl Path {
     }
 
     /// Returns a reference to a portion of the string that names the next component, and move the
-    /// internal pointer to point to the next component.  See also [`peek()`].
+    /// internal pointer to point to the next component.  See also [`Path::peek()`].
     ///
-    /// Also see [`next_with_ref()`] if you want to use `self` while holding a reference to the
-    /// returned name.
+    /// Also see [`Path::next_with_ref()`] if you want to use `self` while holding a reference to
+    /// the returned name.
     pub fn next(&mut self) -> Option<&str> {
         self.next_with_ref().1
     }
@@ -111,7 +111,7 @@ impl Path {
     /// for additional details.  So if the caller wants to call any other methods on the `path`
     /// after calling `next()` while still holding a reference to the returned name they can use
     /// this method as a workaround.  When Rust is extended to cover this use case, `next_with_ref`
-    /// should be merged into [`next()`].
+    /// should be merged into [`Self::next()`].
     pub fn next_with_ref(&mut self) -> (&Self, Option<&str>) {
         match self.inner[self.next..].find('/') {
             Some(i) => {
@@ -133,7 +133,7 @@ impl Path {
 
     /// Returns a referenc to a position of the string that names the next component, without
     /// moving the internal pointer.  So calling `peek()` multiple times in a row would return the
-    /// same result.  See also [`next()`].
+    /// same result.  See also [`Self::next()`].
     pub fn peek(&self) -> Option<&str> {
         match self.inner[self.next..].find('/') {
             Some(i) => Some(&self.inner[self.next..self.next + i]),
@@ -147,7 +147,7 @@ impl Path {
         }
     }
 
-    /// Converts this `Path` into a `String` holding the rest of the path.  If [`next()`] was
+    /// Converts this `Path` into a `String` holding the rest of the path.  If [`Self::next()`] was
     /// called, this would cause reallocation.
     pub fn into_string(self) -> String {
         if self.next == 0 {

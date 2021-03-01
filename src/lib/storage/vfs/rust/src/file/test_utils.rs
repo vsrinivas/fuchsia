@@ -17,7 +17,7 @@ use {
 
 pub use run::{run_client, test_client};
 
-/// A thin wrapper around [`test_utils::run::run_server_client`] that sets the `Marker` to be
+/// A thin wrapper around [`run::run_server_client()`] that sets the `Marker` to be
 /// [`FileMarker`], and providing explicit type for the `get_client` closure argument.  This makes
 /// it possible for the caller not to provide explicit types.
 pub fn run_server_client<GetClientRes>(
@@ -30,7 +30,7 @@ pub fn run_server_client<GetClientRes>(
     run::run_server_client::<FileMarker, _, _>(flags, server, get_client)
 }
 
-/// A thin wrapper around [`test_utils::run::test_server_client`] that sets the `Marker` to be
+/// A thin wrapper around [`run::test_server_client()`] that sets the `Marker` to be
 /// [`FileMarker`], and providing explicit type for the `get_client` closure argument.  This makes
 /// it possible for the caller not to provide explicit types.
 pub fn test_server_client<'test_refs, GetClientRes>(

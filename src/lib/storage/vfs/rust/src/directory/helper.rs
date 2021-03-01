@@ -24,7 +24,7 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     /// Adds a child entry to this directory.
     ///
     /// Possible errors are:
-    ///   * `name` exceeding [`MAX_FILENAME`] bytes in length.
+    ///   * `name` exceeding [`fidl_fuchsia_io::MAX_FILENAME`] bytes in length.
     ///   * An entry with the same name is already present in the directory.
     fn add_entry<Name>(&self, name: Name, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status>
     where
@@ -37,7 +37,7 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     /// Adds a child entry to this directory.
     ///
     /// Possible errors are:
-    ///   * `name` exceeding [`MAX_FILENAME`] bytes in length.
+    ///   * `name` exceeding [`fidl_fuchsia_io::MAX_FILENAME`] bytes in length.
     ///   * An entry with the same name is already present in the directory.
     fn add_entry_impl(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status>;
 
@@ -45,7 +45,7 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     /// found, the entry will be returned to the caller.
     ///
     /// Possible errors are:
-    ///   * `name` exceeding [`MAX_FILENAME`] bytes in length.
+    ///   * `name` exceeding [`fidl_fuchsia_io::MAX_FILENAME`] bytes in length.
     fn remove_entry<Name>(&self, name: Name) -> Result<Option<Arc<dyn DirectoryEntry>>, Status>
     where
         Name: Into<String>,
@@ -58,7 +58,7 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     /// found, the entry will be returned to the caller.
     ///
     /// Possible errors are:
-    ///   * `name` exceeding [`MAX_FILENAME`] bytes in length.
+    ///   * `name` exceeding [`fidl_fuchsia_io::MAX_FILENAME`] bytes in length.
     fn remove_entry_impl(&self, name: String) -> Result<Option<Arc<dyn DirectoryEntry>>, Status>;
 
     /// Add a child entry to this directory, even if it already exists.  The target is discarded,
@@ -70,12 +70,13 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     ///
     /// As two distinc directories may mean two mutexes to lock, using it correctly is non-trivial.
     /// In order to avoid a deadlock, we need to decide on a global ordering for the locks.
-    /// `rename_from` and [`rename_to`] are used depending on the relative order of the two
+    /// `rename_from` and [`Self::rename_to`] are used depending on the relative order of the two
     /// directories involved in the operation.
     ///
-    /// This method is `unsafe`, as `rename_from` and [`rename_to`] should only be called by the
-    /// [`rename_helper`], which will establish the global order and will call proper method.  It
-    /// should reduce the chances one will use this API incorrectly.
+    /// This method is `unsafe`, as `rename_from` and [`Self::rename_to`] should only be called by
+    /// the [`crate::filesystem::FilesystemRename::rename()`], which will establish the global order
+    /// and will call proper method.  It should reduce the chances one will use this API
+    /// incorrectly.
     ///
     /// Implementations are expected to lock this directory, check that the entry exists and pass a
     /// reference to the entry to the `to` callback.  Only if the `to` callback succeed, should the
@@ -90,7 +91,7 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     /// Renaming needs to be atomic, even accross two distinct directories.  So we need a special
     /// API to handle that.
     ///
-    /// See [`rename_from`] comment for an explanation.
+    /// See [`Self::rename_from`] comment for an explanation.
     ///
     /// Implementations are expected to lock this dirctory, check if they can accept an entry named
     /// `dst` (in case there might be any restrictions), then call the `from` callback to obtain a
@@ -102,10 +103,11 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     ) -> Result<(), Status>;
 
     /// In case an entry is renamed within the same directory only one lock needs to be obtained.
-    /// This is a companion method to the [`rename_from`]/[`rename_to`] pair.  [`rename_helper`]
-    /// will use this method to avoid locking the same directory mutex twice.
+    /// This is a companion method to the [`Self::rename_from`]/[`Self::rename_to`] pair.
+    /// [`crate::filesystem::FilesystemRename::rename()`] will use this method to avoid locking the
+    /// same directory mutex twice.
     ///
-    /// It should only be used by the [`rename_helper`].
+    /// It should only be used by the [`crate::filesystem::FilesystemRename::rename()`].
     fn rename_within(&self, src: String, dst: String) -> Result<(), Status>;
 
     /// Get the filesystem this directory belongs to.

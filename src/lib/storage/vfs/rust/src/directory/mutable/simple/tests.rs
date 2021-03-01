@@ -132,7 +132,6 @@ fn unlink_fails_for_read_only_source() {
 
         assert_close!(etc);
         assert_close!(proxy);
-
     })
     .token_registry(token_registry::Simple::new())
     .run();

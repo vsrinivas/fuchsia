@@ -22,7 +22,7 @@ use {
 /// must complete it's execution at this point. It is a failure if the client is stalled.
 ///
 /// This is the most common case for the test execution, and is actualy just forwarding to
-/// [`test_server_client()`] followed immediately by a [`run()`] call.
+/// [`test_server_client()`] followed immediately by a [`AsyncClientTestParams::run()`] call.
 pub fn run_server_client<Marker, GetClient, GetClientRes>(
     flags: u32,
     server: Arc<dyn DirectoryEntry>,
@@ -46,7 +46,7 @@ pub fn run_server_client<Marker, GetClient, GetClientRes>(
 ///
 /// This is the second most common case for the test execution, and, similarly to
 /// [`run_server_client`] it is actually just forwarding to [`test_client()`] followed by a
-/// [`run()`] call.
+/// [`AsyncClientTestParams::run()`] call.
 pub fn run_client<GetClient, GetClientRes>(exec: Executor, get_client: GetClient)
 where
     GetClient: FnOnce() -> GetClientRes,
@@ -61,8 +61,9 @@ where
 ///
 /// This type represents a controller that the coordinator uses to achieve this effect.
 /// Coordinator will use `oneshot` or `mpsc` channels to synchronize with the test execution and
-/// will call [`run_until_stalled`] to separate portions of the test, optinally followed by
-/// [`run_until_complete`].  In any case, [`TestController`] will ensure that the test execution
+/// will call [`TestController::run_until_stalled()`] to separate portions of the test, optinally
+/// followed by [`TestController::run_until_complete()`].  In any case, [`TestController`] will
+/// ensure that the test execution
 /// finishes completely, not just stalls.
 pub struct TestController<'test_refs> {
     exec: Executor,
@@ -121,8 +122,9 @@ impl<'test_refs> Drop for TestController<'test_refs> {
 }
 
 /// Collects a basic required set of parameters for a server/client test.  Additional parameteres
-/// can be specified using [`exec`], [`mode`], and [`coordinator`] methods via a builder patter.
-/// Actual execution of the test happen when [`run`] method is invoked.
+/// can be specified using `exec`, `mode`, and `coordinator` methods via a builder patter.
+/// Actual execution of the test happen when [`AsyncServerClientTestParams::run()`] method is
+/// invoked.
 pub fn test_server_client<'test_refs, Marker, GetClient, GetClientRes>(
     flags: u32,
     server: Arc<dyn DirectoryEntry>,
@@ -174,8 +176,8 @@ where
 }
 
 /// Collects a basic required set of parameters for a client-only test.  Additional parameteres can
-/// be specified using [`exec`], and [`coordinator`] methods via a builder patter.  Actual
-/// execution of the test happen when [`run`] method is invoked.
+/// be specified using `exec`, and `coordinator` methods via a builder patter.  Actual
+/// execution of the test happen when [`AsyncClientTestParams::run()`] method is invoked.
 pub fn test_client<'test_refs, GetClient, GetClientRes>(
     get_client: GetClient,
 ) -> AsyncClientTestParams<'test_refs>

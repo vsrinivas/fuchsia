@@ -14,7 +14,7 @@
 //! Scope will also shutdown all the tasks when it goes out of scope.
 //!
 //! Implementation wise, execution scope is just a proxy, that forwards all the tasks to an actual
-//! executor, provided as an instance of a [`Spawn`] trait.
+//! executor, provided as an instance of a [`futures::task::Spawn`] trait.
 
 use crate::{
     directory::mutable::entry_constructor::EntryConstructor,
@@ -39,9 +39,9 @@ pub type SpawnError = task::SpawnError;
 /// documentation for details.
 ///
 /// Actual execution will be delegated to an "upstream" executor - something that implements
-/// [`Spawn`].  In a sense, this is somewhat of an analog of a multithreaded capable
-/// [`FuturesUnordered`], but this some additional functionality specific to the vfs
-/// library.
+/// [`futures::task::Spawn`].  In a sense, this is somewhat of an analog of a multithreaded capable
+/// [`futures::stream::FuturesUnordered`], but this some additional functionality specific to the
+/// vfs library.
 ///
 /// Use [`ExecutionScope::new()`] or [`ExecutionScope::build()`] to construct new
 /// `ExecutionScope`es.
@@ -67,7 +67,8 @@ struct Executor {
 
 impl ExecutionScope {
     /// Constructs an execution scope that has no `token_registry`, `inode_registry`, nor
-    /// `entry_constructor`.  Use [`build()`] if you want to specify other parameters.
+    /// `entry_constructor`.  Use [`ExecutionScope::build()`] if you want to specify other
+    /// parameters.
     pub fn new() -> Self {
         Self::build().new()
     }
@@ -80,16 +81,17 @@ impl ExecutionScope {
     }
 
     /// Sends a `task` to be executed in this execution scope.  This is very similar to
-    /// [`Spawn::spawn_obj`] with a minor difference that `self` reference is not exclusive.
+    /// [`futures::task::Spawn::spawn_obj()`] with a minor difference that `self` reference is not
+    /// exclusive.
     ///
     /// Note that when the scope is shut down, this task will be interrupted the next time it
     /// returns `Pending`.  If you need to perform any shutdown operations, use
-    /// [`spawn_with_shutdown`] instead.
+    /// [`ExecutionScope::spawn_with_shutdown()`] instead.
     ///
     /// For the "vfs" library it is more convenient that this method allows non-exclusive
     /// access.  And as the implementation is employing internal mutability there are no downsides.
-    /// This way `ExecutionScope` can actually also implement [`Spawn`] - it just was not necessary
-    /// for now.
+    /// This way `ExecutionScope` can actually also implement [`futures::task::Spawn`] - it just was
+    /// not necessary for now.
     pub fn spawn<Task>(&self, task: Task)
     where
         Task: Future<Output = ()> + Send + 'static,
@@ -98,18 +100,19 @@ impl ExecutionScope {
     }
 
     /// Sends a `task` to be executed in this execution scope.  This is very similar to
-    /// [`Spawn::spawn_obj`] with a minor difference that `self` reference is not exclusive.
+    /// [`futures::task::Spawn::spawn_obj`] with a minor difference that `self` reference is not
+    /// exclusive.
     ///
     /// Task to be executed will be constructed using the specified callback.  It is provided with
     /// a one-shot channel that will be signaled during the shutdown process.  The task must be
     /// monitoring the channel and should perform any necessary shutdown steps and terminate when
     /// a message is received over the channel.  If you do not need a custom shutdown process you
-    /// can use [`spawn`] method instead.
+    /// can use [`ExecutionScope::spawn()`] method instead.
     ///
     /// For the "vfs" library it is more convenient that this method allows non-exclusive
     /// access.  And as the implementation is employing internal mutability there are no downsides.
-    /// This way `ExecutionScope` can actually also implement [`Spawn`] - it just was not necessary
-    /// for now.
+    /// This way `ExecutionScope` can actually also implement [`futures::task::Spawn`] - it just was
+    /// not necessary for now.
     pub fn spawn_with_shutdown<Constructor, Task>(&self, constructor: Constructor)
     where
         Constructor: FnOnce(oneshot::Receiver<()>) -> Task + 'static,

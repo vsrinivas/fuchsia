@@ -18,7 +18,7 @@ use crate::{
 use {fuchsia_async::Channel, slab::Slab, std::sync::Arc};
 
 /// Wraps all watcher connections observing one directory.  The directory is responsible for
-/// calling [`add`] and [`send_event`]/[`send_events`] methods when appropriate to make sure
+/// calling [`Self::add()`] and [`Self::send_event()`] method when appropriate to make sure
 /// watchers are observing a consistent view.
 pub struct Watchers(Slab<Controller>);
 
@@ -31,7 +31,7 @@ impl Watchers {
     /// Connects a new watcher (connected over the `channel`) to the list of watchers.  It is the
     /// responsibility of the caller to also send `WATCH_EVENT_EXISTING` and `WATCH_MASK_IDLE`
     /// events on the returned [`Controller`] to the newly connected watcher using the
-    /// [`send_event`] methods.  This `mask` is the event mask this watcher has requested.
+    /// [`Self::send_event`] methods.  This `mask` is the event mask this watcher has requested.
     ///
     /// Return value of `None` means the executor did not accept a new task, so the watcher has
     /// been dropped.
@@ -41,7 +41,7 @@ impl Watchers {
     /// it's entries.  Meaning we need a async version of the [`EventProducer`] - and that is a lot
     /// of additional managing of functions and state.  Traits do not support async methods yet, so
     /// we would need to manage futures returned by the [`EventProducer`] methods explicitly.
-    /// Plus, for the [`Simple`] directory it is all unnecessary.
+    /// Plus, for the [`crate::directory::simple::Simple`] directory it is all unnecessary.
     #[must_use = "Caller of add() must send WATCH_EVENT_EXISTING and WATCH_MASK_IDLE on the \
                   returned controller"]
     pub fn add(

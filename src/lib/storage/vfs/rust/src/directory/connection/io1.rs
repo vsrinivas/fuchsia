@@ -38,7 +38,7 @@ use {
     std::{default::Default, sync::Arc},
 };
 
-/// Return type for [`BaseConnection::handle_request`] and [`DerivedConnection::handle_request`].
+/// Return type for `BaseConnection::handle_request` and [`DerivedConnection::handle_request`].
 pub enum ConnectionState {
     /// Connection is still alive.
     Alive,

@@ -32,8 +32,8 @@ pub enum NewEntryType {
 }
 
 /// Should a file system support entry creation, it will need to provide an object implementing
-/// this trait and register it in the [`ExecutionScope`].  Connections will use this trait when
-/// constructing new entries.
+/// this trait and register it in the [`crate::execution_scope::ExecutionScope`].  Connections will
+/// use this trait when constructing new entries.
 pub trait EntryConstructor {
     /// This method is called when a new entry need to be constructed.  The constructor is only
     /// responsibility is to create a new entry.  It does not need to attach the entry to the

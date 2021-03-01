@@ -18,18 +18,18 @@ use {
 
 /// Watcher event producer, that generates buffers filled with watcher events.  Watchers use this
 /// API to obtain buffers that are then sent to the actual watchers.  Every producer may generate
-/// multiple events, but they all need to be of the same type, as returned by [`event()`] and
-/// [`mask()`] methods.
+/// multiple events, but they all need to be of the same type, as returned by [`Self::event()`] and
+/// [`Self::mask()`] methods.
 pub trait EventProducer {
     /// Returns a mask that represents the type of events this producer can generate, as one of the
     /// `fidl_fuchsia_io::WATCH_MASK_*` constants.  There might be only one bit set and it should
-    /// correspond to the event returned by the [`event()`] method.  It is a duplication, but it
+    /// correspond to the event returned by the [`Self::event()`] method.  It is a duplication, but it
     /// helps the callers that need both masks and event IDs.
     fn mask(&self) -> u32;
 
     /// Returns an event ID this event producer will use to populate the buffers, as one of the
-    /// `fidl_fuchsia_io::WATCH_EVENT_*` constants.  Must match what [`mask()`], returns, see there
-    /// for details.
+    /// `fidl_fuchsia_io::WATCH_EVENT_*` constants.  Must match what [`Self::mask()`], returns, see
+    /// there for details.
     fn event(&self) -> u8;
 
     /// Checks if this producer can create another buffer, returning `true` if it can.  This method
@@ -39,10 +39,10 @@ pub trait EventProducer {
 
     /// Returns a copy of the current buffer prepared by this producer.  This method will be the
     /// one constructing a buffer, if necessary, after a preceding call to
-    /// [`prepare_for_next_buffer`].
+    /// [`Self::prepare_for_next_buffer()`].
     ///
     /// Note that this method will keep returning copies of the same buffer, until
-    /// [`prepare_for_next_buffer`] is not called explicitly.
+    /// [`Self::prepare_for_next_buffer()`] is not called explicitly.
     fn buffer(&mut self) -> Vec<u8>;
 }
 
