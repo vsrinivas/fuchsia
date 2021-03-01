@@ -264,6 +264,11 @@ void x86_cpu_feature_late_init_percpu(void) {
   cpu_id::CpuId cpuid;
   MsrAccess msr;
 
+  // Same reasoning as was done in x86_cpu_feature_init() for the boot CPU.
+  if (x86_get_disable_spec_mitigations() == false && arch_curr_cpu_num() != 0) {
+    x86_intel_cpu_try_disable_tsx(&cpuid, &msr);
+  }
+
   // Spectre V2: If Enhanced IBRS is available and speculative mitigations are enabled, enable IBRS.
   // x86_retpoline_select will take care of converting the retpoline thunks to appropriate versions
   // for Enhanced IBRS CPUs.
