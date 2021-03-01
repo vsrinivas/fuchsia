@@ -26,16 +26,17 @@ developers, don't hesitate to reach out! We hang out on the
 
 * [Get the source code](/docs/get-started/get_fuchsia_source.md)
 * [Configure and build Fuchsia](/docs/get-started/build_fuchsia.md)
-  * Your `fx set` command will need to specify Netstack3 by including the flag
-    `--with //src/connectivity/network/netstack3:bin`. Assuming you're
-    developing on an x86 machine, use `fx set core.x64 --with
-    //src/connectivity/network/netstack3:bin`.
+  * Your `fx set` command will need to enable Netstack3 development using Cargo
+    by including the flags `--with //src/connectivity/network/netstack3:bin
+    --cargo-toml-gen`. Assuming you're developing on an x86 machine, use `fx set
+    core.x64 --with //src/connectivity/network/netstack3:bin --cargo-toml-gen`.
 * The source code for Netstack3's platform-agnostic core lives in
   `src/connectivity/network/netstack3/core`.
 * Build the Netstack3 core by running `fx build
-  //src/connectivity/network/netstack3/core:netstack3-core`.
+  src/connectivity/network/netstack3/core:netstack3-core`.
 * Generate a `Cargo.toml` file to enable development with `cargo` by running `fx
-  gen-cargo //src/connectivity/network/netstack3/core:netstack3-core`.
+  build build/rust:cargo_toml_gen` followed by `fx gen-cargo
+  //src/connectivity/network/netstack3/core:netstack3-core`.
 * Add the following lines to your `~/.cargo/config` file, replacing the absolute
   path to your Fuchsia directory and replacing the target if your local
   development target is different than `x86_64-unknown-linux-gnu`:
@@ -65,8 +66,10 @@ fixing your build if this happens.
     * `fx clean` - this cleans out the build output, and prepares you to do a
       full clean build
     * Run the same `fx set` command you ran in the beginning (probably `fx set
-      core.x64 --with //src/connectivity/network/netstack3:bin`)
-    * `fx build //src/connectivity/network/netstack3/core:netstack3-core`
+      core.x64 --with //src/connectivity/network/netstack3:bin
+      --cargo-toml-gen`).
+    * `fx build src/connectivity/network/netstack3/core:netstack3-core`
+    * `fx build build/rust:cargo_toml_gen`
 
 ## Contributing changes
 
