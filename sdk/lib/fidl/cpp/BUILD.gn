@@ -112,8 +112,6 @@ sdk_source_set("cpp_base") {
     "encoder.cc",
     "encoder.h",
     "enum.h",
-    "interface_handle.h",
-    "interface_request.h",
     "internal/bitset.h",
     "internal/natural_types_header.h",
     "internal/natural_types_implementation.h",
@@ -143,6 +141,10 @@ sdk_source_set("cpp_base") {
   ]
 
   if (is_fuchsia) {
+    sources += [
+      "interface_handle.h",
+      "interface_request.h",
+    ]
     public_deps += [
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/zx",
