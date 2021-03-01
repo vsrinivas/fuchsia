@@ -11,6 +11,8 @@
 #include <threads.h>
 #include <zircon/types.h>
 
+#include <optional>
+
 #include <fbl/macros.h>
 
 #include "registers-pipe.h"
@@ -45,7 +47,7 @@ class Interrupts {
 
   // Initialized by |Init|.
   zx::interrupt irq_;
-  thrd_t irq_thread_;  // Valid while irq_ is valid.
+  std::optional<thrd_t> irq_thread_;  // Valid while irq_ is valid.
 
   zx_intel_gpu_core_interrupt_t interrupt_cb_ __TA_GUARDED(lock_) = {};
   uint32_t interrupt_mask_ __TA_GUARDED(lock_) = 0;

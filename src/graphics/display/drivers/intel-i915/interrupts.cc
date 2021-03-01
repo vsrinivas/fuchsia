@@ -23,12 +23,11 @@ Interrupts::Interrupts(Controller* controller) : controller_(controller) {
 Interrupts::~Interrupts() { ZX_ASSERT(irq_ == ZX_HANDLE_INVALID); }
 
 void Interrupts::Destroy() {
-  if (irq_ != ZX_HANDLE_INVALID) {
-    zx_interrupt_destroy(irq_.get());
-    thrd_join(irq_thread_, nullptr);
-
-    irq_.reset();
+  irq_.destroy();
+  if (irq_thread_) {
+    thrd_join(irq_thread_.value(), nullptr);
   }
+  irq_.reset();
 }
 
 int Interrupts::IrqLoop() {
@@ -51,6 +50,7 @@ int Interrupts::IrqLoop() {
       zxlogf(INFO, "interrupt wait failed");
       break;
     }
+
     auto interrupt_ctrl =
         registers::MasterInterruptControl::Get().ReadFrom(controller_->mmio_space());
     interrupt_ctrl.set_enable_mask(0);
@@ -181,7 +181,7 @@ zx_status_t Interrupts::Init(bool start_thread) {
   }
 
   if (start_thread) {
-    status = thrd_create_with_name(&irq_thread_, irq_handler, this, "i915-irq-thread");
+    status = thrd_create_with_name(&*irq_thread_, irq_handler, this, "i915-irq-thread");
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to create irq thread");
       irq_.reset();
