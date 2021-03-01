@@ -15,7 +15,6 @@ template("verify_pragma_once") {
   stamp_file = "$target_gen_dir/$target_name.pragma.txt"
 
   action(target_name) {
-    hermetic_deps = false
     script = "//build/cpp/verify_pragma_once.py"
 
     inputs = invoker.headers
