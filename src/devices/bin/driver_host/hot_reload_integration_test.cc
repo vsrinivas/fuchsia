@@ -10,6 +10,7 @@
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
@@ -44,7 +45,9 @@ void SetupEnvironment(board_test::DeviceEntry dev, driver_integration_test::Isol
 
   std::string svc_name =
       fxl::StringPrintf("svc/%s", fuchsia::device::manager::DriverHostDevelopment::Name_);
-  sys::ServiceDirectory svc_dir(zx::channel(devmgr->svc_root_dir().handle()));
+  zx::status svc = service::Clone(devmgr->svc_root_dir());
+  ASSERT_EQ(svc.status_value(), ZX_OK);
+  sys::ServiceDirectory svc_dir(svc->TakeChannel());
   zx_status_t status = svc_dir.Connect(svc_name, std::move(remote));
   ASSERT_EQ(status, ZX_OK);
 
