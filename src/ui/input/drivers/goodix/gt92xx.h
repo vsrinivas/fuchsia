@@ -33,6 +33,7 @@
 
 #define GT_REG_CONFIG_REFRESH   0x812a
 #define GT_REG_VERSION          0x8140
+#define GT_REG_FW_VERSION       0x8144
 #define GT_REG_SENSOR_ID        0x814a
 #define GT_REG_TOUCH_STATUS     0x814e
 #define GT_REG_REPORTS          0x814f

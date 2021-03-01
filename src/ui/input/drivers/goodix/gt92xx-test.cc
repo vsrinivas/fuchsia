@@ -90,7 +90,10 @@ TEST(GoodixTest, Init) {
                         static_cast<uint8_t>(GT_REG_TOUCH_STATUS & 0xff), 0x00})
       .ExpectWrite({static_cast<uint8_t>(GT_REG_CONFIG_DATA >> 8),
                     static_cast<uint8_t>(GT_REG_CONFIG_DATA & 0xff)})
-      .ExpectReadStop({0x00});
+      .ExpectReadStop({0x00})
+      .ExpectWrite({static_cast<uint8_t>(GT_REG_FW_VERSION >> 8),
+                    static_cast<uint8_t>(GT_REG_FW_VERSION & 0xff)})
+      .ExpectReadStop({0x05, 0x61});
 
   EXPECT_OK(device.Init());
   ASSERT_NO_FATAL_FAILURES(reset_mock.VerifyAndClear());
