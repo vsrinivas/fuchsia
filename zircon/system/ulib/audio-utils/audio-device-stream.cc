@@ -239,9 +239,10 @@ zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second, uint16_t ch
   if (!stream_ch_.is_valid() || rb_ch_.is_valid())
     return ZX_ERR_BAD_STATE;
 
-  auto sizes = audio::utils::GetSampleSizes(sample_format);
-  sample_size_ = sizes.valid_bits_per_sample;
-  channel_size_ = 8 * sizes.bytes_per_sample;
+  auto formats = audio::utils::GetAllFormats(sample_format);
+  ZX_ASSERT(formats.size() == 1);  // Must have one format.
+  sample_size_ = formats[0].valid_bits_per_sample;
+  channel_size_ = 8 * formats[0].bytes_per_sample;
 
   if (sample_size_ == 0 || channel_size_ == 0) {
     return ZX_ERR_NOT_SUPPORTED;
