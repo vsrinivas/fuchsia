@@ -23,6 +23,8 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 #include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
 #include <perftest/perftest.h>
 
+#include <vector>
+
 #include "src/tests/benchmarks/fidl/llcpp/builder_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/decode_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/encode_benchmark_util.h"

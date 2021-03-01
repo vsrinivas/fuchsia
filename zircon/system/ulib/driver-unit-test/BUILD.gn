@@ -16,6 +16,7 @@ zx_library("driver-unit-test") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_c",
+    "//sdk/lib/fidl/cpp:cpp_base",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",

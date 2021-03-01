@@ -7,7 +7,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fidl/cpp/message_buffer.h>
+#include <lib/fidl/cpp/message.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>

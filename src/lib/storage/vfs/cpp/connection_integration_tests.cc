@@ -12,6 +12,7 @@
 
 #include <atomic>
 #include <utility>
+#include <vector>
 
 #include <zxtest/zxtest.h>
 
@@ -214,7 +215,8 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
   ASSERT_OK(ConnectClient(std::move(server_end)));
 
   // Helper method to monitor the OnOpen event, used by the tests below
-  auto expect_on_open = [](zx::unowned_channel channel, fit::function<void(fio::wire::NodeInfo)> cb) {
+  auto expect_on_open = [](zx::unowned_channel channel,
+                           fit::function<void(fio::wire::NodeInfo)> cb) {
     class EventHandler : public fio::Node::SyncEventHandler {
      public:
       explicit EventHandler(fit::function<void(fio::wire::NodeInfo)>& cb) : cb_(cb) {}
@@ -258,7 +260,8 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
                 fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_NOT_DIRECTORY,
                 kOpenMode, fidl::StringView("file_or_dir"), std::move(fc2))
                 .status());
-  expect_on_open(zx::unowned_channel(fc1), [](fio::wire::NodeInfo info) { EXPECT_TRUE(info.is_file()); });
+  expect_on_open(zx::unowned_channel(fc1),
+                 [](fio::wire::NodeInfo info) { EXPECT_TRUE(info.is_file()); });
 }
 
 // A vnode which maintains a counter of number of |Open| calls that have not been balanced out with

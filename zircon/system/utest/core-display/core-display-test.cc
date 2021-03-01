@@ -4,7 +4,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
+
 // clang-format off
+// Required because banjo defines some macros that conflict with LLCPP.
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 // clang-format on
@@ -13,16 +15,23 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fidl/cpp/message.h>
+#include <lib/fidl/llcpp/vector_view.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/event.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/errors.h>
+#include <zircon/fidl.h>
 #include <zircon/pixelformat.h>
+#include <zircon/rights.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <algorithm>
@@ -33,15 +42,6 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
-
-#include "lib/fidl/llcpp/vector_view.h"
-#include "lib/zx/event.h"
-#include "lib/zx/handle.h"
-#include "lib/zx/time.h"
-#include "zircon/errors.h"
-#include "zircon/fidl.h"
-#include "zircon/rights.h"
-#include "zircon/time.h"
 
 namespace fhd = ::llcpp::fuchsia::hardware::display;
 namespace sysinfo = ::llcpp::fuchsia::sysinfo;

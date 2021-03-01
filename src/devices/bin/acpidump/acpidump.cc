@@ -9,7 +9,7 @@
 #include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <lib/cmdline/args_parser.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/fidl/cpp/message.h>
+#include <lib/fidl/llcpp/vector_view.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,10 +25,8 @@
 
 #include <fbl/array.h>
 #include <fbl/span.h>
+#include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
-
-#include "fbl/string_printf.h"
-#include "lib/fidl/llcpp/vector_view.h"
 
 namespace acpidump {
 

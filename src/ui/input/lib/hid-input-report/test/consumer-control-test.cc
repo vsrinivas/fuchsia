@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <variant>
+#include <vector>
 
 #include <ddk/metadata/buttons.h>
 #include <fbl/auto_call.h>

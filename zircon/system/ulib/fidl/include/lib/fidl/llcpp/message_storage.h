@@ -5,7 +5,6 @@
 #ifndef LIB_FIDL_LLCPP_MESSAGE_STORAGE_H_
 #define LIB_FIDL_LLCPP_MESSAGE_STORAGE_H_
 
-#include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/llcpp/traits.h>
 
 #include <cstddef>

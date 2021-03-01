@@ -10,6 +10,7 @@ test("sysmem-version-test") {
   sources = [ "sysmem-version-test.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl/cpp:cpp_base",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/sysmem-version",
   ]

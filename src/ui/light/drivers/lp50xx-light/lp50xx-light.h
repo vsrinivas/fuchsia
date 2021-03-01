@@ -12,6 +12,7 @@
 #include <threads.h>
 
 #include <map>
+#include <vector>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>

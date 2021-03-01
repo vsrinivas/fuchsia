@@ -7,8 +7,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl-utils/bind.h>
-#include <lib/fidl/cpp/message.h>
-#include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 

@@ -23,6 +23,8 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 #include <perftest/perftest.h>
 #include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
 
+#include <vector>
+
 #include "src/tests/benchmarks/fidl/walker/walker_benchmark_util.h"
 
 namespace {

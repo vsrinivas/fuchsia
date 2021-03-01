@@ -4,7 +4,6 @@
 
 #include "src/lib/storage/vfs/cpp/fidl_transaction.h"
 
-#include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/txn_header.h>
 #include <stdio.h>

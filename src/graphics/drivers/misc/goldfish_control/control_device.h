@@ -15,6 +15,7 @@
 #include <zircon/types.h>
 
 #include <map>
+#include <vector>
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>

@@ -12,6 +12,7 @@
 #include <zircon/types.h>
 
 #include <optional>
+#include <vector>
 
 #include <block-client/cpp/client.h>
 #include <fbl/auto_lock.h>

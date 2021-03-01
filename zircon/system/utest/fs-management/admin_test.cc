@@ -5,6 +5,8 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 
+#include <vector>
+
 #include <fs-management/admin.h>
 #include <fs-management/format.h>
 #include <ramdevice-client/ramdisk.h>

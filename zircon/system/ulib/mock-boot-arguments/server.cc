@@ -9,6 +9,7 @@
 #include <zircon/status.h>
 
 #include <map>
+#include <vector>
 
 #include <fbl/string.h>
 #include <fbl/string_printf.h>

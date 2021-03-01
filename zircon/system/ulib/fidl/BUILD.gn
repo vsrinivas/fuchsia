@@ -17,11 +17,6 @@ zx_library("fidl_base") {
   sdk_headers = [
     "lib/fidl/coding.h",
     "lib/fidl/txn_header.h",
-    "lib/fidl/cpp/builder.h",
-    "lib/fidl/cpp/message.h",
-    "lib/fidl/cpp/message_buffer.h",
-    "lib/fidl/cpp/message_builder.h",
-    "lib/fidl/cpp/message_part.h",
     "lib/fidl/internal.h",
     "lib/fidl/internal_callable_traits.h",
     "lib/fidl/trace.h",
@@ -31,15 +26,11 @@ zx_library("fidl_base") {
   sdk_migrated = true
 
   sources = [
-    "builder.cc",
     "decoding_and_validating.cc",
     "encoding.cc",
     "formatting.cc",
     "handle_close_many.cc",
     "internal.c",
-    "message.cc",
-    "message_buffer.cc",
-    "message_builder.cc",
     "txn_header.c",
     "validate_string.cc",
     "walker.cc",

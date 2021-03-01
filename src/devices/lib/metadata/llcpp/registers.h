@@ -7,6 +7,8 @@
 
 #include <fuchsia/hardware/registers/llcpp/fidl.h>
 
+#include <vector>
+
 namespace registers {
 
 using ::llcpp::fuchsia::hardware::registers::wire::Mask;

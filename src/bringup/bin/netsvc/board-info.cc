@@ -9,9 +9,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "lib/fidl/cpp/message_part.h"
-#include "lib/fidl/llcpp/traits.h"
-#include "zircon/types.h"
+// clang-format off
+#include <zircon/types.h>
 #undef VMOID_INVALID
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
@@ -24,6 +23,7 @@
 #include <zircon/boot/netboot.h>
 #include <zircon/device/block.h>
 #include <zircon/status.h>
+// clang-format on
 
 #include <algorithm>
 #include <memory>

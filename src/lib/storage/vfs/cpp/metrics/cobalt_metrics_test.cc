@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <utility>
+#include <vector>
 
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/counter.h>

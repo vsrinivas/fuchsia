@@ -5,7 +5,6 @@
 #ifndef SRC_LIB_FIDL_CODEC_MESSAGE_DECODER_H_
 #define SRC_LIB_FIDL_CODEC_MESSAGE_DECODER_H_
 
-#include <lib/fidl/cpp/message.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/syslog/cpp/macros.h>
 

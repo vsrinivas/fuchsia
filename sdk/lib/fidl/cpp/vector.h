@@ -5,7 +5,6 @@
 #ifndef LIB_FIDL_CPP_VECTOR_H_
 #define LIB_FIDL_CPP_VECTOR_H_
 
-#include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/comparison.h>
 #include <lib/stdcompat/optional.h>
 #include <zircon/assert.h>

@@ -42,6 +42,7 @@ source_set("test_sources") {
     ":fidl.test.coding.fuchsia_llcpp",
     ":fidl.test.coding_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl/cpp:cpp_base",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -144,6 +145,7 @@ source_set("host_test_sources") {
   ]
   public_deps = [
     ":fidl.test.coding_llcpp",
+    "//sdk/lib/fidl/cpp:cpp_base",
     "//zircon/public/lib/fidl_base",
     "//zircon/public/lib/zxtest",
   ]

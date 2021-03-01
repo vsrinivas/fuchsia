@@ -101,6 +101,8 @@ sdk_source_set("cpp_base") {
   sdk_name = "fidl_cpp_base"
 
   sources = [
+    "builder.cc",
+    "builder.h",
     "clone.cc",
     "clone.h",
     "coding_traits.h",
@@ -115,6 +117,13 @@ sdk_source_set("cpp_base") {
     "internal/bitset.h",
     "internal/natural_types_header.h",
     "internal/natural_types_implementation.h",
+    "message.cc",
+    "message.h",
+    "message_buffer.cc",
+    "message_buffer.h",
+    "message_builder.cc",
+    "message_builder.h",
+    "message_part.h",
     "object_coding.h",
     "string.h",
     "traits.h",

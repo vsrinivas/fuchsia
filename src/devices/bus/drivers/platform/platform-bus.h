@@ -25,6 +25,7 @@
 
 #include <map>
 #include <optional>
+#include <vector>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>

@@ -13,6 +13,7 @@
 #include <zircon/status.h>
 
 #include <iostream>
+#include <vector>
 
 // [START echo-impl]
 // Implementation of the Echo protocol that prepends a prefix to every response.

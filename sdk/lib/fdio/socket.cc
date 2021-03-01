@@ -12,6 +12,8 @@
 #include <poll.h>
 #include <sys/ioctl.h>
 
+#include <vector>
+
 #include <safemath/safe_conversions.h>
 
 #include "fdio_unistd.h"

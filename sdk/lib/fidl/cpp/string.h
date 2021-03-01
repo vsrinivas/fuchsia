@@ -5,7 +5,6 @@
 #ifndef LIB_FIDL_CPP_STRING_H_
 #define LIB_FIDL_CPP_STRING_H_
 
-#include <lib/fidl/cpp/builder.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/stdcompat/string_view.h>
 #include <zircon/assert.h>

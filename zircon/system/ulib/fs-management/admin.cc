@@ -13,6 +13,7 @@
 #include <zircon/syscalls.h>
 
 #include <array>
+#include <vector>
 
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>

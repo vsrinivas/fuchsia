@@ -5,7 +5,6 @@
 #ifndef SRC_LIB_FIDL_CODEC_WIRE_OBJECT_H_
 #define SRC_LIB_FIDL_CODEC_WIRE_OBJECT_H_
 
-#include <lib/fidl/cpp/message.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <map>

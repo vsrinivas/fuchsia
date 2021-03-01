@@ -20,6 +20,7 @@
 #include <mutex>
 #include <thread>
 #include <unordered_set>
+#include <vector>
 
 #include <zxtest/zxtest.h>
 

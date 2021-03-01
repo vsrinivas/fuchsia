@@ -6,7 +6,6 @@
 #include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/cpp/message.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>

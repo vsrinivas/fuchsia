@@ -13,6 +13,7 @@
 #include <lib/zx/eventpair.h>
 
 #include <thread>
+#include <vector>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>

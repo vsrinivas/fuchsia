@@ -5,7 +5,6 @@
 #ifndef LIB_FIDL_LLCPP_MESSAGE_H_
 #define LIB_FIDL_LLCPP_MESSAGE_H_
 
-#include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/stdcompat/variant.h>

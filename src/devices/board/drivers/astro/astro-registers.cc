@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <memory>
+#include <vector>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>

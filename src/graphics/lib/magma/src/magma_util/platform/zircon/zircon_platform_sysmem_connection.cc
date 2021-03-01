@@ -9,6 +9,7 @@
 
 #include <limits>
 #include <unordered_set>
+#include <vector>
 
 #include "magma_common_defs.h"
 #include "magma_util/macros.h"

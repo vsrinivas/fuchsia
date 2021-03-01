@@ -28,6 +28,7 @@
 #include <sstream>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #include <fbl/string.h>
 #include <fbl/vector.h>

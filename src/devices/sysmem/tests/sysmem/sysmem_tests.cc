@@ -26,6 +26,7 @@
 #include <limits>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>

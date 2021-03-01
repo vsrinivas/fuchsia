@@ -1,4 +1,5 @@
 {
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/builder.h": "a6764a81d16ac6a9ec07239bd101bbce",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/clone.h": "d3d680f96f3b8a8a003fe6fd0ddc05e6",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/coding_traits.h": "6f75747cbc4eaa090c272501c5aceda2",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/comparison.h": "83af4784b1593fac21e25504f4309614",
@@ -10,10 +11,14 @@
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/bitset.h": "112110f8080e0a5fa560f7e5403f2609",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/natural_types_header.h": "693bb046740f37a8c2f6976fb8a3560b",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/natural_types_implementation.h": "78b8e4dfcb074e5fcce2722506c3aaa9",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/message.h": "d06447418ae5130b474bd7158bdcc7d0",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/message_buffer.h": "c5ccbeef5fe5c44126000288b542762c",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/message_builder.h": "2deb7e46901817a5141b293a5e88a9ee",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/message_part.h": "41ef9cba95309d8b2f6e352eefd7516a",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/object_coding.h": "654a2d9b39f18bb4e844362ba4dfc31d",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "e0cf6be194c6b4dafe0613a3e9bfec1d",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "972c77ef036856b7ef039d68a21565bf",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/traits.h": "9a662d0b356f8ca126441598fbb7d169",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/transition.h": "ea5fd3c5abf19d39e0dda995f794d148",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/types.h": "56e709911f72250dfe5755dfcc2d1445",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "9b613baaca6343d66c6b39b0273ebfcb"
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "6ad9c74d26e7a5b160ef1ad6d0ae9b44"
 }

@@ -9,6 +9,7 @@
 #include <lib/mock-sysmem/mock-buffer-collection.h>
 
 #include <type_traits>
+#include <vector>
 
 #include <ddk/driver.h>
 #include <mmio-ptr/fake.h>

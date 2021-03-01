@@ -11,6 +11,7 @@
 
 #include <iomanip>
 #include <iostream>
+#include <vector>
 
 #include <perftest/perftest.h>
 

@@ -7,6 +7,8 @@
 
 #include <lib/zx/event.h>
 
+#include <vector>
+
 #include "mac_interface.h"
 
 namespace network {

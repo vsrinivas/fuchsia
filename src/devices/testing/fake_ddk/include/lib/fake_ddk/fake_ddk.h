@@ -13,6 +13,7 @@
 #include <optional>
 #include <set>
 #include <utility>
+#include <vector>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>

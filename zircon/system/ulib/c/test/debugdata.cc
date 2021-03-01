@@ -12,7 +12,6 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
