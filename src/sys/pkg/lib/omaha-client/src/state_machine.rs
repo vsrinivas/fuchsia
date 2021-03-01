@@ -146,7 +146,6 @@ impl From<http::StatusCode> for OmahaRequestError {
 /// This is the set of errors that can occur when parsing the response body from Omaha.  This is an
 /// internal collection of error types.
 #[derive(Error, Debug)]
-#[allow(dead_code)]
 pub enum ResponseParseError {
     #[error("Response was not valid UTF-8")]
     Utf8(Utf8Error),
