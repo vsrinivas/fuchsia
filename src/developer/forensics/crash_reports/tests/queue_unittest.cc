@@ -150,9 +150,9 @@ class QueueTest : public UnitTestFixture {
     expected_queue_contents_.clear();
     upload_attempt_results_ = upload_attempt_results;
     next_upload_attempt_result_ = upload_attempt_results_.cbegin();
-    snapshot_manager_ =
-        std::make_unique<SnapshotManager>(dispatcher(), services(), &clock_, zx::sec(5),
-                                          StorageSize::Gigabytes(1), StorageSize::Gigabytes(1));
+    snapshot_manager_ = std::make_unique<SnapshotManager>(
+        dispatcher(), services(), &clock_, zx::sec(5), kGarbageCollectedSnapshotsPath,
+        StorageSize::Gigabytes(1), StorageSize::Gigabytes(1));
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
     crash_server_->AddSnapshotManager(snapshot_manager_.get());
 
@@ -256,7 +256,7 @@ class QueueTest : public UnitTestFixture {
     EXPECT_THAT(crash_server_->latest_annotations(),
                 UnorderedElementsAreArray({
                     Pair(kAnnotationKey, kAnnotationValue),
-                    Pair("debug.snapshot.error", "garbage collected"),
+                    Pair("debug.snapshot.error", "not persisted"),
                     Pair("debug.snapshot.present", "false"),
                 }));
   }

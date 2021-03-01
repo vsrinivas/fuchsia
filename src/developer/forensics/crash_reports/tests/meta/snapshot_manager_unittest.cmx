@@ -4,5 +4,10 @@
     ],
     "program": {
         "binary": "bin/snapshot_manager_unittest_exe"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
     }
 }

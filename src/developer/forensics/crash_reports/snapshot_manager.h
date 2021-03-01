@@ -14,6 +14,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -40,6 +41,7 @@ class SnapshotManager {
  public:
   SnapshotManager(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                   timekeeper::Clock* clock, zx::duration shared_request_window,
+                  const std::string& garbage_collected_snapshots_path,
                   StorageSize max_annotations_size, StorageSize max_archives_size);
 
   // Returns a promise of a snapshot uuid for a snapshot that contains the most up-to-date system
@@ -133,6 +135,8 @@ class SnapshotManager {
   void DropAnnotations(SnapshotData* data);
   void DropArchive(SnapshotData* data);
 
+  void RecordAsGarbageCollected(const SnapshotUuid& uuid);
+
   async_dispatcher_t* dispatcher_;
   std::shared_ptr<sys::ServiceDirectory> services_;
   timekeeper::Clock* clock_;
@@ -140,6 +144,8 @@ class SnapshotManager {
   fuchsia::feedback::DataProviderPtr data_provider_;
 
   zx::duration shared_request_window_;
+
+  std::string garbage_collected_snapshots_path_;
 
   StorageSize max_annotations_size_;
   StorageSize current_annotations_size_;
@@ -149,6 +155,7 @@ class SnapshotManager {
 
   std::vector<std::unique_ptr<SnapshotRequest>> requests_;
   std::map<SnapshotUuid, SnapshotData> data_;
+  std::set<SnapshotUuid> garbage_collected_snapshots_;
 
   bool shutdown_{false};
 
@@ -162,6 +169,7 @@ class SnapshotManager {
   };
 
   SpecialCaseSnapshot garbage_collected_snapshot_;
+  SpecialCaseSnapshot not_persisted_snapshot_;
   SpecialCaseSnapshot timed_out_snapshot_;
   SpecialCaseSnapshot shutdown_snapshot_;
   SpecialCaseSnapshot no_uuid_snapshot_;

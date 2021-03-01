@@ -26,6 +26,8 @@ constexpr char kCrashServerUrl[] = "https://clients2.google.com/cr/report";
 constexpr StorageSize kSnapshotAnnotationsMaxSize = StorageSize::Megabytes(5);
 constexpr StorageSize kSnapshotArchivesMaxSize = StorageSize::Megabytes(5);
 
+constexpr const char* kGarbageCollectedSnapshotsPath = "/tmp/garbage_collected_snapshots.txt";
+
 // Up to 512KiB of the non-snapshot portion of reports, like annotations and the minidump, are
 // stored on disk under /cache/reports. This allows some report data to be uploaded in the event of
 // a device shutdown.

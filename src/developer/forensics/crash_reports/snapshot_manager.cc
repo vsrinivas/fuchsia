@@ -9,6 +9,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
+#include <fstream>
 #include <memory>
 #include <vector>
 
@@ -60,21 +61,27 @@ std::shared_ptr<T> MakeShared(T&& t) {
 SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher,
                                  std::shared_ptr<sys::ServiceDirectory> services,
                                  timekeeper::Clock* clock, zx::duration shared_request_window,
+                                 const std::string& garbage_collected_snapshots_path,
                                  StorageSize max_annotations_size, StorageSize max_archives_size)
     : dispatcher_(dispatcher),
       services_(std::move(services)),
       clock_(clock),
       shared_request_window_(shared_request_window),
+      garbage_collected_snapshots_path_(garbage_collected_snapshots_path),
       max_annotations_size_(max_annotations_size),
       current_annotations_size_(0u),
       max_archives_size_(max_archives_size),
       current_archives_size_(0u),
       garbage_collected_snapshot_("garbage collected"),
+      not_persisted_snapshot_("not persisted"),
       timed_out_snapshot_("timed out"),
       shutdown_snapshot_("shutdown"),
       no_uuid_snapshot_(UuidForNoSnapshotUuid()) {
   garbage_collected_snapshot_.annotations->emplace("debug.snapshot.error", "garbage collected");
   garbage_collected_snapshot_.annotations->emplace("debug.snapshot.present", "false");
+
+  not_persisted_snapshot_.annotations->emplace("debug.snapshot.error", "not persisted");
+  not_persisted_snapshot_.annotations->emplace("debug.snapshot.present", "false");
 
   timed_out_snapshot_.annotations->emplace("debug.snapshot.error", "timeout");
   timed_out_snapshot_.annotations->emplace("debug.snapshot.present", "false");
@@ -84,6 +91,12 @@ SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher,
 
   no_uuid_snapshot_.annotations->emplace("debug.snapshot.error", "missing uuid");
   no_uuid_snapshot_.annotations->emplace("debug.snapshot.present", "false");
+
+  // Load the file lines into a set of UUIDs.
+  std::ifstream file(garbage_collected_snapshots_path_);
+  for (std::string uuid; getline(file, uuid);) {
+    garbage_collected_snapshots_.insert(uuid);
+  }
 }
 
 void SnapshotManager::Connect() {
@@ -118,6 +131,10 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
     return Snapshot(garbage_collected_snapshot_.annotations);
   }
 
+  if (uuid == not_persisted_snapshot_.uuid) {
+    return Snapshot(not_persisted_snapshot_.annotations);
+  }
+
   if (uuid == timed_out_snapshot_.uuid) {
     return Snapshot(timed_out_snapshot_.annotations);
   }
@@ -133,7 +150,11 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
   auto* data = FindSnapshotData(uuid);
 
   if (!data) {
-    return Snapshot(garbage_collected_snapshot_.annotations);
+    if (garbage_collected_snapshots_.find(uuid) != garbage_collected_snapshots_.end()) {
+      return Snapshot(garbage_collected_snapshot_.annotations);
+    } else {
+      return Snapshot(not_persisted_snapshot_.annotations);
+    }
   }
 
   return Snapshot(data->annotations, data->archive);
@@ -190,8 +211,8 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
 }
 
 void SnapshotManager::Release(const SnapshotUuid& uuid) {
-  if (uuid == garbage_collected_snapshot_.uuid || uuid == timed_out_snapshot_.uuid ||
-      uuid == no_uuid_snapshot_.uuid) {
+  if (uuid == garbage_collected_snapshot_.uuid || uuid == not_persisted_snapshot_.uuid ||
+      uuid == timed_out_snapshot_.uuid || uuid == no_uuid_snapshot_.uuid) {
     return;
   }
 
@@ -220,6 +241,7 @@ void SnapshotManager::Release(const SnapshotUuid& uuid) {
   requests_.erase(std::remove_if(
       requests_.begin(), requests_.end(),
       [uuid](const std::unique_ptr<SnapshotRequest>& request) { return uuid == request->uuid; }));
+  RecordAsGarbageCollected(uuid);
   data_.erase(uuid);
 }
 
@@ -382,11 +404,13 @@ void SnapshotManager::EnforceSizeLimits() {
     // Drop |request|'s archive if necessary.
     if (current_archives_size_ > max_archives_size_) {
       DropArchive(data);
+      RecordAsGarbageCollected(request->uuid);
     }
 
     // Delete the SnapshotRequest and SnapshotData if the annotations and archive have been
     // dropped, either in this iteration of the loop or a prior one.
     if (!data->annotations && !data->archive) {
+      RecordAsGarbageCollected(request->uuid);
       data_.erase(request->uuid);
       continue;
     }
@@ -418,6 +442,19 @@ void SnapshotManager::DropArchive(SnapshotData* data) {
       current_annotations_size_ += StorageSize::Bytes(k.size()) + StorageSize::Bytes(v.size());
     }
   }
+}
+
+void SnapshotManager::RecordAsGarbageCollected(const SnapshotUuid& uuid) {
+  if (garbage_collected_snapshots_.find(uuid) != garbage_collected_snapshots_.end()) {
+    return;
+  }
+
+  garbage_collected_snapshots_.insert(uuid);
+
+  // Append the UUID to the file on its own line.
+  std::ofstream file(garbage_collected_snapshots_path_, std::ofstream::out | std::ofstream::app);
+  file << uuid << "\n";
+  file.close();
 }
 
 bool SnapshotManager::UseLatestRequest() const {

@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/testing/stubs/loader.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
@@ -36,7 +37,8 @@ class CrashServerTest : public gtest::TestLoopFixture {
       : loader_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         loader_context_provider_(loader_loop_.dispatcher()),
         snapshot_manager_(dispatcher(), loader_context_provider_.public_service_directory(),
-                          &clock_, zx::min(0), StorageSize::Bytes(0u), StorageSize::Bytes(0u)),
+                          &clock_, zx::min(0), kGarbageCollectedSnapshotsPath,
+                          StorageSize::Bytes(0u), StorageSize::Bytes(0u)),
         tags_(),
         crash_server_(loader_context_provider_.public_service_directory(), kUrl, &snapshot_manager_,
                       &tags_) {

@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
+#include <fstream>
 #include <map>
 #include <memory>
 #include <optional>
@@ -22,6 +23,8 @@
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/data_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
@@ -29,6 +32,7 @@ namespace crash_reports {
 namespace {
 
 using testing::Contains;
+using testing::IsEmpty;
 using testing::IsSupersetOf;
 using testing::Pair;
 using testing::UnorderedElementsAreArray;
@@ -57,7 +61,11 @@ auto Vector(const std::map<K, V>& annotations) {
 class SnapshotManagerTest : public UnitTestFixture {
  public:
   SnapshotManagerTest()
-      : UnitTestFixture(), clock_(), executor_(dispatcher()), snapshot_manager_(nullptr) {}
+      : UnitTestFixture(),
+        clock_(),
+        executor_(dispatcher()),
+        snapshot_manager_(nullptr),
+        path_(files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt")) {}
 
  protected:
   void SetUp() override {
@@ -67,8 +75,21 @@ class SnapshotManagerTest : public UnitTestFixture {
   void SetUpSnapshotManager(StorageSize max_annotations_size, StorageSize max_archives_size) {
     clock_.Set(zx::time(0u));
     snapshot_manager_ = std::make_unique<SnapshotManager>(
-        dispatcher(), services(), &clock_, kWindow, max_annotations_size, max_archives_size);
+        dispatcher(), services(), &clock_, kWindow, path_, max_annotations_size, max_archives_size);
   }
+
+  std::set<std::string> ReadGarbageCollectedSnapshots() {
+    std::set<std::string> garbage_collected_snapshots;
+
+    std::ifstream file(path_);
+    for (std::string uuid; getline(file, uuid);) {
+      garbage_collected_snapshots.insert(uuid);
+    }
+
+    return garbage_collected_snapshots;
+  }
+
+  void ClearGarbageCollectedSnapshots() { files::DeletePath(path_, /*recursive=*/true); }
 
   void SetUpDefaultDataProviderServer() {
     SetUpDataProviderServer(
@@ -100,6 +121,8 @@ class SnapshotManagerTest : public UnitTestFixture {
 
  private:
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
+  files::ScopedTempDir tmp_dir_;
+  std::string path_;
 };
 
 TEST_F(SnapshotManagerTest, Check_GetSnapshotUuid) {
@@ -246,6 +269,10 @@ TEST_F(SnapshotManagerTest, Check_AnnotationsMaxSizeIsEnforced) {
                   Pair("debug.snapshot.error", "garbage collected"),
                   Pair("debug.snapshot.present", "false"),
               }));
+  EXPECT_THAT(ReadGarbageCollectedSnapshots(), UnorderedElementsAreArray({
+                                                   uuid1.value(),
+                                                   uuid2.value(),
+                                               }));
 }
 
 TEST_F(SnapshotManagerTest, Check_Release) {
@@ -273,6 +300,9 @@ TEST_F(SnapshotManagerTest, Check_Release) {
                 }));
     EXPECT_FALSE(snapshot.LockArchive());
   }
+  EXPECT_THAT(ReadGarbageCollectedSnapshots(), UnorderedElementsAreArray({
+                                                   uuid.value(),
+                                               }));
 }
 
 TEST_F(SnapshotManagerTest, Check_ArchivesMaxSizeIsEnforced) {
@@ -309,6 +339,9 @@ TEST_F(SnapshotManagerTest, Check_ArchivesMaxSizeIsEnforced) {
                   Pair("debug.snapshot.shared-request.num-clients", "1"),
                   Pair("debug.snapshot.shared-request.uuid", uuid1.value().c_str()),
               }));
+  EXPECT_THAT(ReadGarbageCollectedSnapshots(), UnorderedElementsAreArray({
+                                                   uuid1.value(),
+                                               }));
 }
 
 TEST_F(SnapshotManagerTest, Check_Timeout) {
@@ -366,6 +399,59 @@ TEST_F(SnapshotManagerTest, Check_Shutdown) {
                                                  Pair("debug.snapshot.present", "false"),
                                              }));
   EXPECT_FALSE(snapshot.LockArchive());
+}
+
+TEST_F(SnapshotManagerTest, Check_DefaultToNotPersisted) {
+  SetUpDefaultDataProviderServer();
+
+  std::string uuid("UNKNOWN");
+  auto snapshot = snapshot_manager_->GetSnapshot(uuid);
+  EXPECT_THAT(*(snapshot.LockAnnotations()), UnorderedElementsAreArray({
+                                                 Pair("debug.snapshot.error", "not persisted"),
+                                                 Pair("debug.snapshot.present", "false"),
+                                             }));
+  EXPECT_FALSE(snapshot.LockArchive());
+}
+
+TEST_F(SnapshotManagerTest, Check_ReadPreviouslyGarbageCollected) {
+  SetUpDefaultDataProviderServer();
+
+  std::optional<std::string> uuid{std::nullopt};
+  ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
+                                 ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
+  RunLoopFor(kWindow);
+
+  ASSERT_TRUE(uuid.has_value());
+  {
+    auto snapshot = snapshot_manager_->GetSnapshot(uuid.value());
+    ASSERT_TRUE(snapshot.LockAnnotations());
+    ASSERT_TRUE(snapshot.LockArchive());
+  }
+
+  snapshot_manager_->Release(uuid.value());
+  {
+    auto snapshot = snapshot_manager_->GetSnapshot(uuid.value());
+    EXPECT_THAT(*(snapshot.LockAnnotations()),
+                UnorderedElementsAreArray({
+                    Pair("debug.snapshot.error", "garbage collected"),
+                    Pair("debug.snapshot.present", "false"),
+                }));
+    EXPECT_FALSE(snapshot.LockArchive());
+  }
+  EXPECT_THAT(ReadGarbageCollectedSnapshots(), UnorderedElementsAreArray({
+                                                   uuid.value(),
+                                               }));
+
+  SetUpSnapshotManager(StorageSize::Megabytes(1u), StorageSize::Megabytes(1u));
+  {
+    auto snapshot = snapshot_manager_->GetSnapshot(uuid.value());
+    EXPECT_THAT(*(snapshot.LockAnnotations()),
+                UnorderedElementsAreArray({
+                    Pair("debug.snapshot.error", "garbage collected"),
+                    Pair("debug.snapshot.present", "false"),
+                }));
+    EXPECT_FALSE(snapshot.LockArchive());
+  }
 }
 
 }  // namespace

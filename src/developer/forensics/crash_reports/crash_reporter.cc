@@ -96,9 +96,9 @@ std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context, Config config,
     const ErrorOr<std::string>& build_version, CrashRegister* crash_register) {
-  std::unique_ptr<SnapshotManager> snapshot_manager =
-      std::make_unique<SnapshotManager>(dispatcher, services, clock, kSnapshotSharedRequestWindow,
-                                        kSnapshotAnnotationsMaxSize, kSnapshotArchivesMaxSize);
+  std::unique_ptr<SnapshotManager> snapshot_manager = std::make_unique<SnapshotManager>(
+      dispatcher, services, clock, kSnapshotSharedRequestWindow, kGarbageCollectedSnapshotsPath,
+      kSnapshotAnnotationsMaxSize, kSnapshotArchivesMaxSize);
 
   auto tags = std::make_unique<LogTags>();
 

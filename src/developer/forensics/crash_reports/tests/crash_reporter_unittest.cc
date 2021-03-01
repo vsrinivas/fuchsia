@@ -154,8 +154,8 @@ class CrashReporterTest : public UnitTestFixture {
   void SetUpCrashReporter(
       Config config, const std::vector<CrashServer::UploadStatus>& upload_attempt_results = {}) {
     auto snapshot_manager = std::make_unique<SnapshotManager>(
-        dispatcher(), services(), &clock_, kSnapshotSharedRequestWindow, StorageSize::Gigabytes(1u),
-        StorageSize::Gigabytes(1u));
+        dispatcher(), services(), &clock_, kSnapshotSharedRequestWindow,
+        kGarbageCollectedSnapshotsPath, StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u));
     auto crash_server = std::make_unique<StubCrashServer>(upload_attempt_results);
 
     crash_server_ = crash_server.get();
