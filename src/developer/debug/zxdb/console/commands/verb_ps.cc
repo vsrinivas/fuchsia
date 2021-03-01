@@ -20,23 +20,23 @@ namespace {
 
 void OutputProcessTreeRecord(const debug_ipc::ProcessTreeRecord& rec, int indent,
                              OutputBuffer* output) {
-  std::ostringstream line;
-  line << std::setw(indent * 2) << "";
+  output->Append(std::string(indent * 2, ' '));
 
   switch (rec.type) {
     case debug_ipc::ProcessTreeRecord::Type::kJob:
-      line << 'j';
+      output->Append("j: ");
       break;
     case debug_ipc::ProcessTreeRecord::Type::kProcess:
-      line << 'p';
+      output->Append("p: ");
       break;
     default:
-      line << '?';
+      output->Append("?: ");
+      break;
   }
 
-  line << ": " << rec.koid << " " << rec.name << "\n";
+  output->Append(Syntax::kSpecial, std::to_string(rec.koid));
+  output->Append(" " + rec.name + "\n");
 
-  output->Append(line.str());
   for (const auto& child : rec.children)
     OutputProcessTreeRecord(child, indent + 1, output);
 }
