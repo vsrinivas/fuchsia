@@ -628,35 +628,35 @@ func (ifs *ifState) updateMetric(metric routes.Metric) {
 	ifs.mu.Unlock()
 }
 
-func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, config dhcp.Config) {
+func (ifs *ifState) dhcpAcquired(lost, acquired tcpip.AddressWithPrefix, config dhcp.Config) {
 	name := ifs.ns.name(ifs.nicid)
 
-	if oldAddr == newAddr {
-		_ = syslog.Infof("NIC %s: DHCP renewed address %s for %s", name, newAddr, config.LeaseLength)
+	if lost == acquired {
+		_ = syslog.Infof("NIC %s: DHCP renewed address %s for %s", name, acquired, config.LeaseLength)
 	} else {
-		if oldAddr != (tcpip.AddressWithPrefix{}) {
-			if err := ifs.ns.stack.RemoveAddress(ifs.nicid, oldAddr.Address); err != nil {
-				_ = syslog.Infof("NIC %s: failed to remove DHCP address %s: %s", name, oldAddr, err)
+		if lost != (tcpip.AddressWithPrefix{}) {
+			if err := ifs.ns.stack.RemoveAddress(ifs.nicid, lost.Address); err != nil {
+				_ = syslog.Errorf("NIC %s: failed to remove DHCP address %s: %s", name, lost, err)
 			} else {
-				_ = syslog.Infof("NIC %s: removed DHCP address %s", name, oldAddr)
+				_ = syslog.Infof("NIC %s: removed DHCP address %s", name, lost)
 			}
 
 			// Remove the dynamic routes for this interface.
 			ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionDeleteDynamic)
 		}
 
-		if newAddr != (tcpip.AddressWithPrefix{}) {
+		if acquired != (tcpip.AddressWithPrefix{}) {
 			if err := ifs.ns.stack.AddProtocolAddressWithOptions(ifs.nicid, tcpip.ProtocolAddress{
 				Protocol:          ipv4.ProtocolNumber,
-				AddressWithPrefix: newAddr,
+				AddressWithPrefix: acquired,
 			}, stack.FirstPrimaryEndpoint); err != nil {
-				_ = syslog.Infof("NIC %s: failed to add DHCP acquired address %s: %s", name, newAddr, err)
+				_ = syslog.Errorf("NIC %s: failed to add DHCP acquired address %s: %s", name, acquired, err)
 			} else {
-				_ = syslog.Infof("NIC %s: DHCP acquired address %s for %s", name, newAddr, config.LeaseLength)
+				_ = syslog.Infof("NIC %s: DHCP acquired address %s for %s", name, acquired, config.LeaseLength)
 
 				// Add a route for the local subnet.
 				rs := []tcpip.Route{
-					addressWithPrefixRoute(ifs.nicid, newAddr),
+					addressWithPrefixRoute(ifs.nicid, acquired),
 				}
 				// Add a default route through each router.
 				for _, router := range config.Router {
@@ -675,6 +675,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 				}
 			}
 		}
+
 		// Dispatch interface change handlers on another goroutine to prevent a
 		// deadlock while holding ifState.mu since dhcpAcquired is called on
 		// cancellation.
@@ -685,7 +686,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 	}
 
 	if updated := ifs.setDNSServers(config.DNS); updated {
-		_ = syslog.Infof("NIC %s: setting DNS servers: %s", name, config.DNS)
+		_ = syslog.Infof("NIC %s: set DNS servers: %s", name, config.DNS)
 	}
 }
 

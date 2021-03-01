@@ -201,14 +201,14 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	}
 	cond := sync.Cond{L: &mu.Mutex}
 	serverLinkEP := endpoint{
-		onWritePacket: func(b *stack.PacketBuffer) *stack.PacketBuffer {
+		onWritePacket: func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 			mu.Lock()
 			mu.buffered++
 			for mu.buffered < len(clientLinkEPs) {
 				cond.Wait()
 			}
 			mu.Unlock()
-			return b
+			return pkt
 		},
 	}
 	serverStack := createTestStack()
@@ -316,7 +316,7 @@ func TestDHCP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got, want := info.Addr.Address, defaultClientAddrs[0]; got != want {
+			if got, want := info.Acquired.Address, defaultClientAddrs[0]; got != want {
 				t.Errorf("c.addr=%s, want=%s", got, want)
 			}
 			if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
@@ -329,7 +329,7 @@ func TestDHCP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got, want := info.Addr.Address, defaultClientAddrs[0]; got != want {
+			if got, want := info.Acquired.Address, defaultClientAddrs[0]; got != want {
 				t.Errorf("c.addr=%s, want=%s", got, want)
 			}
 			if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
@@ -346,7 +346,7 @@ func TestDHCP(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := info.Addr.Address, defaultClientAddrs[1]; got != want {
+		if got, want := info.Acquired.Address, defaultClientAddrs[1]; got != want {
 			t.Errorf("c.addr=%s, want=%s", got, want)
 		}
 		if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
@@ -358,16 +358,16 @@ func TestDHCP(t *testing.T) {
 	{
 		if err := clientStack.AddProtocolAddressWithOptions(testNICID, tcpip.ProtocolAddress{
 			Protocol:          ipv4.ProtocolNumber,
-			AddressWithPrefix: info.Addr,
+			AddressWithPrefix: info.Acquired,
 		}, stack.NeverPrimaryEndpoint); err != nil {
 			t.Fatalf("failed to add address to stack: %s", err)
 		}
-		defer clientStack.RemoveAddress(testNICID, info.Addr.Address)
+		defer clientStack.RemoveAddress(testNICID, info.Acquired.Address)
 		cfg, err := acquire(ctx, c0, t.Name(), &info)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := info.Addr.Address, defaultClientAddrs[0]; got != want {
+		if got, want := info.Acquired.Address, defaultClientAddrs[0]; got != want {
 			t.Errorf("c.addr=%s, want=%s", got, want)
 		}
 		if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
@@ -375,16 +375,16 @@ func TestDHCP(t *testing.T) {
 		}
 
 		if diff := cmp.Diff(cfg, defaultServerCfg); diff != "" {
-			t.Errorf("(-want +got)\n%s", diff)
+			t.Errorf("got config diff (-want +got):\n%s", diff)
 		}
 		c0.verifyClientStats(t, 3)
 	}
 }
 
-func mustMsgType(t *testing.T, b *stack.PacketBuffer) dhcpMsgType {
+func mustMsgType(t *testing.T, b buffer.View) dhcpMsgType {
 	t.Helper()
 
-	h := hdr(b.Data.ToView())
+	h := hdr(b)
 	if !h.isValid() {
 		t.Fatalf("invalid header: %s", h)
 	}
@@ -431,9 +431,9 @@ func TestDelayRetransmission(t *testing.T) {
 			defer cancel()
 
 			_, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
-			serverEP.onWritePacket = func(b *stack.PacketBuffer) *stack.PacketBuffer {
+			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 				func() {
-					switch mustMsgType(t, b) {
+					switch mustMsgType(t, pkt.Data.ToView()) {
 					case dhcpOFFER:
 						if !tc.cancelBeforeOffer {
 							return
@@ -453,7 +453,7 @@ func TestDelayRetransmission(t *testing.T) {
 					// notice it has been timed out.
 					time.Sleep(10 * time.Millisecond)
 				}()
-				return b
+				return pkt
 			}
 
 			info := c.Info()
@@ -462,7 +462,7 @@ func TestDelayRetransmission(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got, want := info.Addr.Address, defaultClientAddrs[0]; got != want {
+				if got, want := info.Acquired.Address, defaultClientAddrs[0]; got != want {
 					t.Errorf("c.addr=%s, want=%s", got, want)
 				}
 				if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
@@ -602,29 +602,29 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 			c.now = stubTimeNow(ctx, time.Now(), tc.durations, clientTransitionsDone)
 
 			var ackCnt uint32
-			serverEP.onWritePacket = func(b *stack.PacketBuffer) *stack.PacketBuffer {
-				if mustMsgType(t, b) != dhcpACK {
-					return b
+			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
+				if mustMsgType(t, pkt.Data.ToView()) != dhcpACK {
+					return pkt
 				}
 
 				ackCnt++
 				if ackCnt == tc.nakNthReq {
-					b = mustCloneWithNewMsgType(t, b, dhcpNAK)
+					pkt = mustCloneWithNewMsgType(t, pkt, dhcpNAK)
 				}
-				return b
+				return pkt
 			}
 
-			c.acquiredFunc = func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
-				if newAddr != oldAddr {
-					if oldAddr != (tcpip.AddressWithPrefix{}) {
-						if err := clientStack.RemoveAddress(testNICID, oldAddr.Address); err != nil {
-							t.Fatalf("RemoveAddress(%s): %s", oldAddr.Address, err)
+			c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
+				if acquired != lost {
+					if lost != (tcpip.AddressWithPrefix{}) {
+						if err := clientStack.RemoveAddress(testNICID, lost.Address); err != nil {
+							t.Fatalf("RemoveAddress(%s): %s", lost.Address, err)
 						}
 					}
-					if newAddr != (tcpip.AddressWithPrefix{}) {
+					if acquired != (tcpip.AddressWithPrefix{}) {
 						protocolAddress := tcpip.ProtocolAddress{
 							Protocol:          ipv4.ProtocolNumber,
-							AddressWithPrefix: newAddr,
+							AddressWithPrefix: acquired,
 						}
 						if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
 							t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
@@ -778,20 +778,20 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 			}
 
 			requestSent := make(chan struct{})
-			clientEP.onWritePacket = func(b *stack.PacketBuffer) *stack.PacketBuffer {
+			clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 				defer signal(ctx, requestSent)
 
-				return b
+				return pkt
 			}
 
 			unblockResponse := make(chan struct{})
 			var dropServerPackets bool
-			serverEP.onWritePacket = func(b *stack.PacketBuffer) *stack.PacketBuffer {
+			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 				waitForSignal(ctx, unblockResponse)
 				if dropServerPackets {
 					return nil
 				}
-				return b
+				return pkt
 			}
 
 			var wg sync.WaitGroup
@@ -908,7 +908,7 @@ func TestRenewRebindBackoff(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			_, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+			clientStack, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
 
 			now := time.Now()
 			c.rebindTime = now.Add(tc.rebindTime)
@@ -939,16 +939,25 @@ func TestRenewRebindBackoff(t *testing.T) {
 			errs := make(chan error)
 			go func() {
 				info := c.Info()
-				info.State = tc.state
-				if tc.state == renewing {
-					// Pretend the server's address is broadcast to avoid ARP (which
-					// won't work because we don't have an IP address). This is not
-					// necessary in other states since DHCPDISCOVER is always sent to
-					// broadcast.
-					info.Server = header.IPv4Broadcast
-				} else {
-					info.Server = serverAddr
+				if tc.state != initSelecting {
+					// Uphold the invariant that an address is assigned in this state. Without this, ARP
+					// would immediately fail as it tries to resolve the server's unicast link address.
+					assigned := tcpip.AddressWithPrefix{
+						Address:   defaultClientAddrs[0],
+						PrefixLen: 24,
+					}
+					info.Assigned = assigned
+					info.Acquired = assigned
+					protocolAddress := tcpip.ProtocolAddress{
+						Protocol:          ipv4.ProtocolNumber,
+						AddressWithPrefix: assigned,
+					}
+					if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
+						t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
+					}
 				}
+				info.State = tc.state
+				info.Server = serverAddr
 				_, err := acquire(ctx, c, t.Name(), &info)
 				errs <- err
 			}()
@@ -970,7 +979,7 @@ func TestRenewRebindBackoff(t *testing.T) {
 			}
 
 			if diff := cmp.Diff(tc.wantTimeouts, gotTimeouts); diff != "" {
-				t.Errorf("Got retransmission timeouts diff (-want +got):\n%s", diff)
+				t.Errorf("got retransmission timeouts diff (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -980,12 +989,12 @@ func TestRenewRebindBackoff(t *testing.T) {
 // with DHCP message type set to `msgType` specified in the argument.
 // This function does not make a deep copy of packet buffer passed in except
 // for the part it has to modify.
-func mustCloneWithNewMsgType(t *testing.T, b *stack.PacketBuffer, msgType dhcpMsgType) *stack.PacketBuffer {
+func mustCloneWithNewMsgType(t *testing.T, pkt *stack.PacketBuffer, msgType dhcpMsgType) *stack.PacketBuffer {
 	t.Helper()
 
-	b = b.Clone()
+	pkt = pkt.Clone()
 
-	h := hdr(b.Data.ToView())
+	h := hdr(pkt.Data.ToView())
 	opts, err := h.options()
 	if err != nil {
 		t.Fatalf("failed to get options from header: %s", err)
@@ -1007,10 +1016,10 @@ func mustCloneWithNewMsgType(t *testing.T, b *stack.PacketBuffer, msgType dhcpMs
 	h.setOptions(opts)
 
 	// Disable checksum verification since we've surely invalidated it.
-	header.UDP(b.TransportHeader().View()).SetChecksum(0)
+	header.UDP(pkt.TransportHeader().View()).SetChecksum(0)
 
-	b.Data = buffer.NewViewFromBytes(h).ToVectorisedView()
-	return b
+	pkt.Data = buffer.NewViewFromBytes(h).ToVectorisedView()
+	return pkt
 }
 
 func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
@@ -1033,13 +1042,13 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 	responseSent := make(chan struct{})
 
 	var serverShouldDecline bool
-	serverEP.onWritePacket = func(b *stack.PacketBuffer) *stack.PacketBuffer {
+	serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 		waitForSignal(ctx, unblockResponse)
 
 		if serverShouldDecline {
-			b = mustCloneWithNewMsgType(t, b, dhcpDECLINE)
+			pkt = mustCloneWithNewMsgType(t, pkt, dhcpDECLINE)
 		}
-		return b
+		return pkt
 	}
 	serverEP.onPacketDelivered = func() {
 		signal(ctx, responseSent)
@@ -1286,7 +1295,7 @@ func TestStateTransition(t *testing.T) {
 					return Config{}, fmt.Errorf("fake test timeout error: %w", ctx.Err())
 				}
 
-				info.Addr = tcpip.AddressWithPrefix{
+				info.Acquired = tcpip.AddressWithPrefix{
 					Address:   "\xc0\xa8\x03\x02",
 					PrefixLen: 24,
 				}
@@ -1303,13 +1312,13 @@ func TestStateTransition(t *testing.T) {
 			count := 0
 			var curAddr tcpip.AddressWithPrefix
 			addrCh := make(chan tcpip.AddressWithPrefix)
-			c.acquiredFunc = func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
-				if oldAddr != curAddr {
-					t.Fatalf("aquisition %d: curAddr=%s, oldAddr=%s", count, curAddr, oldAddr)
+			c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
+				if lost != curAddr {
+					t.Fatalf("aquisition %d: curAddr=%s, lost=%s", count, curAddr, lost)
 				}
 
 				count++
-				curAddr = newAddr
+				curAddr = acquired
 
 				// Respond to context cancellation to avoid deadlock when enclosing test
 				// times out.
@@ -1398,7 +1407,7 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 			return Config{}, fmt.Errorf("fake test timeout error: %w", ctx.Err())
 		}
 		firstAcquisition = false
-		info.Addr = tcpip.AddressWithPrefix{
+		info.Acquired = tcpip.AddressWithPrefix{
 			Address:   "\xc0\xa8\x03\x02",
 			PrefixLen: 24,
 		}
@@ -1425,7 +1434,7 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 
 	var curAddr tcpip.AddressWithPrefix
 	addrCh := make(chan tcpip.AddressWithPrefix)
-	c.acquiredFunc = func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
+	c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
 		// Respond to context cancellation to avoid deadlock when enclosing test
 		// times out.
 		select {
@@ -1543,5 +1552,51 @@ func TestTwoServers(t *testing.T) {
 	info := c.Info()
 	if _, err := acquire(ctx, c, t.Name(), &info); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestClientRestartIPHeader(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	_, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg)
+
+	sourcesByType := make(map[dhcpMsgType]map[tcpip.Address]int)
+	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
+		ip := header.IPv4(pkt.Data.ToView())
+		typ := mustMsgType(t, header.UDP(ip.Payload()).Payload())
+		countsBySource, ok := sourcesByType[typ]
+		if !ok {
+			countsBySource = make(map[tcpip.Address]int)
+			sourcesByType[typ] = countsBySource
+		}
+		countsBySource[ip.SourceAddress()]++
+
+		return pkt
+	}
+
+	const iterations = 3
+	for i := 0; i < iterations; i++ {
+		func() {
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			c.acquiredFunc = func(_, _ tcpip.AddressWithPrefix, _ Config) {
+				cancel()
+			}
+
+			c.Run(ctx)
+		}()
+	}
+
+	if diff := cmp.Diff(sourcesByType, map[dhcpMsgType]map[tcpip.Address]int{
+		dhcpDISCOVER: {
+			header.IPv4Any: iterations,
+		},
+		dhcpREQUEST: {
+			header.IPv4Any: iterations,
+		},
+	}); diff != "" {
+		t.Errorf("got source address diff (-want +got):\n%s", diff)
 	}
 }

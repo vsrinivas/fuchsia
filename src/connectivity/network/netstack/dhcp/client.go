@@ -30,7 +30,7 @@ const (
 	defaultLeaseLength Seconds = 12 * 3600
 )
 
-type AcquiredFunc func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config)
+type AcquiredFunc func(lost, acquired tcpip.AddressWithPrefix, cfg Config)
 
 // Client is a DHCP client.
 type Client struct {
@@ -103,14 +103,14 @@ type Info struct {
 	// Retransmission is the duration to wait before resending a DISCOVER or
 	// REQUEST within an active transaction.
 	Retransmission time.Duration
-	// Addr is the acquired network address.
-	Addr tcpip.AddressWithPrefix
+	// Acquired is the network address most recently acquired by the client.
+	Acquired tcpip.AddressWithPrefix
 	// Server is the network address of the DHCP server.
 	Server tcpip.Address
 	// State is the DHCP client state.
 	State dhcpClientState
-	// OldAddr is the address reported in the last call to acquiredFunc.
-	OldAddr tcpip.AddressWithPrefix
+	// Assigned is the network address added by the client to its stack.
+	Assigned tcpip.AddressWithPrefix
 }
 
 // NewClient creates a DHCP client.
@@ -263,10 +263,7 @@ func (c *Client) Run(ctx context.Context) {
 			c.renewTime = now.Add(cfg.RenewTime.Duration())
 			c.rebindTime = now.Add(cfg.RebindTime.Duration())
 
-			if fn := c.acquiredFunc; fn != nil {
-				fn(info.OldAddr, info.Addr, cfg)
-			}
-			info.OldAddr = info.Addr
+			c.assign(&info, info.Acquired, cfg)
 			info.State = bound
 
 			return nil
@@ -348,16 +345,15 @@ func (c *Client) Run(ctx context.Context) {
 	}
 }
 
-func (c *Client) cleanup(info *Info) {
-	if info.OldAddr == (tcpip.AddressWithPrefix{}) {
-		return
-	}
-
-	// Remove the old address and configuration.
+func (c *Client) assign(info *Info, acquired tcpip.AddressWithPrefix, config Config) {
 	if fn := c.acquiredFunc; fn != nil {
-		fn(info.OldAddr, tcpip.AddressWithPrefix{}, Config{})
+		fn(info.Assigned, acquired, config)
 	}
-	info.OldAddr = tcpip.AddressWithPrefix{}
+	info.Assigned = acquired
+}
+
+func (c *Client) cleanup(info *Info) {
+	c.assign(info, tcpip.AddressWithPrefix{}, Config{})
 }
 
 const maxBackoff = 64 * time.Second
@@ -454,7 +450,7 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 			6,  // domain name server
 		}},
 	}
-	requestedAddr := info.Addr
+	requestedAddr := info.Acquired
 	if info.State == initSelecting {
 		discOpts := append(options{
 			{optDHCPMsgType, []byte{byte(dhcpDISCOVER)}},
@@ -520,7 +516,7 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 				info.Server = cfg.ServerAddress
 
 				if len(cfg.SubnetMask) == 0 {
-					cfg.SubnetMask = tcpip.AddressMask(net.IP(info.Addr.Address).DefaultMask())
+					cfg.SubnetMask = tcpip.AddressMask(net.IP(result.yiaddr).DefaultMask())
 				}
 
 				prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
@@ -639,7 +635,7 @@ retransmitRequest:
 				c.stats.RecvAcks.Increment()
 
 				// Now that we've successfully acquired the address, update the client state.
-				info.Addr = requestedAddr
+				info.Acquired = requestedAddr
 				_ = syslog.InfoTf(tag, "%s: got %s from %s with leaseLength=%s", nicName, result.typ, result.source, cfg.LeaseLength)
 				return cfg, nil
 			case dhcpNAK:
@@ -685,13 +681,15 @@ func (c *Client) send(
 		dhcpPayload.setBroadcast()
 	}
 	if ciaddr {
-		if l := copy(dhcpPayload.ciaddr(), info.Addr.Address); l != len(info.Addr.Address) {
-			panic(fmt.Sprintf("failed to copy info.Addr.Address bytes, want=%d got=%d", len(info.Addr.Address), l))
+		ciaddr := info.Assigned.Address
+		if n, l := copy(dhcpPayload.ciaddr(), ciaddr), len(ciaddr); n != l {
+			panic(fmt.Sprintf("failed to copy ciaddr bytes, want=%d got=%d", l, n))
 		}
 	}
 
-	if l := copy(dhcpPayload.chaddr(), info.LinkAddr); l != len(info.LinkAddr) {
-		panic(fmt.Sprintf("failed to copy all info.LinkAddr bytes, want=%d got=%d", len(info.LinkAddr), l))
+	chaddr := info.LinkAddr
+	if n, l := copy(dhcpPayload.chaddr(), chaddr), len(chaddr); n != l {
+		panic(fmt.Sprintf("failed to copy chaddr bytes, want=%d got=%d", l, n))
 	}
 	dhcpPayload.setOptions(opts)
 
@@ -705,7 +703,7 @@ func (c *Client) send(
 		"%s: send %s from %s:%d to %s:%d on NIC:%d (bcast=%t ciaddr=%t)",
 		nicName,
 		typ,
-		info.Addr.Address,
+		info.Assigned.Address,
 		ClientPort,
 		writeTo.Addr,
 		writeTo.Port,
@@ -725,7 +723,7 @@ func (c *Client) send(
 		DstPort: writeTo.Port,
 		Length:  length,
 	})
-	xsum := header.PseudoHeaderChecksum(header.UDPProtocolNumber, info.Addr.Address, writeTo.Addr, length)
+	xsum := header.PseudoHeaderChecksum(header.UDPProtocolNumber, info.Assigned.Address, writeTo.Addr, length)
 	xsum = header.Checksum(dhcpPayload, xsum)
 	udp.SetChecksum(^udp.CalculateChecksum(xsum))
 
@@ -738,7 +736,7 @@ func (c *Client) send(
 		TTL:         ep.DefaultTTL(),
 		TOS:         stack.DefaultTOS,
 		Protocol:    uint8(header.UDPProtocolNumber),
-		SrcAddr:     info.Addr.Address,
+		SrcAddr:     info.Assigned.Address,
 		DstAddr:     writeTo.Addr,
 	})
 	ip.SetChecksum(^ip.CalculateChecksum())
@@ -746,7 +744,7 @@ func (c *Client) send(
 	var linkAddress tcpip.LinkAddress
 	{
 		ch := make(chan stack.LinkResolutionResult, 1)
-		err := c.stack.GetLinkAddress(info.NICID, writeTo.Addr, info.Addr.Address, header.IPv4ProtocolNumber, func(result stack.LinkResolutionResult) {
+		err := c.stack.GetLinkAddress(info.NICID, writeTo.Addr, info.Assigned.Address, header.IPv4ProtocolNumber, func(result stack.LinkResolutionResult) {
 			ch <- result
 		})
 		switch err.(type) {

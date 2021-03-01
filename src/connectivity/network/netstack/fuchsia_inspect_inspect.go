@@ -423,9 +423,9 @@ func (impl *dhcpInfoInspectImpl) ReadData() inspect.Object {
 		Name: impl.name,
 		Properties: []inspect.Property{
 			{Key: "State", Value: inspect.PropertyValueWithStr(impl.info.State.String())},
-			{Key: "AcquiredAddress", Value: inspect.PropertyValueWithStr(addrPrefixString(impl.info.Addr))},
+			{Key: "AcquiredAddress", Value: inspect.PropertyValueWithStr(addrPrefixString(impl.info.Acquired))},
 			{Key: "ServerAddress", Value: inspect.PropertyValueWithStr(addrString(impl.info.Server))},
-			{Key: "OldAddress", Value: inspect.PropertyValueWithStr(addrPrefixString(impl.info.OldAddr))},
+			{Key: "AssignedAddress", Value: inspect.PropertyValueWithStr(addrPrefixString(impl.info.Assigned))},
 			{Key: "Acquisition", Value: inspect.PropertyValueWithStr(impl.info.Acquisition.String())},
 			{Key: "Backoff", Value: inspect.PropertyValueWithStr(impl.info.Backoff.String())},
 			{Key: "Retransmission", Value: inspect.PropertyValueWithStr(impl.info.Retransmission.String())},

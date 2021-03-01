@@ -328,7 +328,7 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 			{Key: "State", Value: inspect.PropertyValueWithStr(v.info.State.String())},
 			{Key: "AcquiredAddress", Value: inspect.PropertyValueWithStr("[none]")},
 			{Key: "ServerAddress", Value: inspect.PropertyValueWithStr("[none]")},
-			{Key: "OldAddress", Value: inspect.PropertyValueWithStr("[none]")},
+			{Key: "AssignedAddress", Value: inspect.PropertyValueWithStr("[none]")},
 			{Key: "Acquisition", Value: inspect.PropertyValueWithStr(v.info.Acquisition.String())},
 			{Key: "Backoff", Value: inspect.PropertyValueWithStr(v.info.Backoff.String())},
 			{Key: "Retransmission", Value: inspect.PropertyValueWithStr(v.info.Retransmission.String())},
