@@ -4,28 +4,36 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import sys
 import argparse
-from pathlib import Path
 import shutil
 
-params = argparse.ArgumentParser(
-    description="Copy all files in a directory tree and touch a stamp file")
-params.add_argument("source", type=Path)
-params.add_argument("target", type=Path)
-params.add_argument("stamp", type=Path)
-params.add_argument("--ignore_pattern", action="append")
-args = params.parse_args()
+from pathlib import Path
 
-if args.target.is_file():
-    args.target.unlink()
-if args.target.is_dir():
-    shutil.rmtree(args.target, ignore_errors=True)
 
-ignore = None
-if args.ignore_pattern:
-    ignore = shutil.ignore_patterns(*args.ignore_pattern)
+def main():
+    params = argparse.ArgumentParser(
+        description="Copy all files in a directory tree and touch a stamp file")
+    params.add_argument("source", type=Path)
+    params.add_argument("target", type=Path)
+    params.add_argument("stamp", type=Path)
+    params.add_argument("--ignore_pattern", action="append")
+    args = params.parse_args()
 
-shutil.copytree(args.source, args.target, symlinks=True, ignore=ignore)
+    if args.target.is_file():
+        args.target.unlink()
+    if args.target.is_dir():
+        shutil.rmtree(args.target, ignore_errors=True)
 
-stamp = Path(str(args.stamp))
-stamp.touch()
+    ignore = None
+    if args.ignore_pattern:
+        ignore = shutil.ignore_patterns(*args.ignore_pattern)
+
+    shutil.copytree(args.source, args.target, symlinks=True, ignore=ignore)
+
+    stamp = Path(str(args.stamp))
+    stamp.touch()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

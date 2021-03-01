@@ -469,7 +469,7 @@ executable("device_unittests") {
 
 action("virtio_magma_generic") {
   out_file = "$target_gen_dir/virtio_magma_generic.h"
-  script = "virtio_magma_generic.h.gen.py"
+  script = "virtio_magma_generic_h_gen.py"
   args = [
     rebase_path("//src/graphics/lib/magma/include/magma_abi/magma.json",
                 root_build_dir),

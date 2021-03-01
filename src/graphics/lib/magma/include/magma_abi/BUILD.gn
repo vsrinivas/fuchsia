@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 action("magma_header_gen") {
-  script = "magma.h.gen.py"
+  script = "magma_h_gen.py"
   args = [
     rebase_path("magma.json", root_build_dir),
     rebase_path("$target_gen_dir/magma.h", root_build_dir),

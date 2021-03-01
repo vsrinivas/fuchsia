@@ -32,7 +32,7 @@ static_library("libmagma_linux") {
 
 action("magma_generic") {
   out_file = "$target_gen_dir/magma_generic.cc"
-  script = "magma_generic.cc.gen.py"
+  script = "magma_generic_cc_gen.py"
   args = [
     rebase_path("//src/graphics/lib/magma/include/magma_abi/magma.json",
                 root_build_dir),

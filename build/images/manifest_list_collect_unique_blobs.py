@@ -14,30 +14,36 @@
 import os
 import sys
 
-infile = sys.argv[1]
-outfile = sys.argv[2]
 
-outdir = os.path.dirname(outfile)
+def main():
+    infile = sys.argv[1]
+    outfile = sys.argv[2]
 
-files = {}
-with open(infile) as listfile:
-  for manifest in listfile:
-    with open(manifest.strip()) as f:
-      for line in f:
-        try:
-          line = line.strip()
-          if line == "":
-            continue
-          (id, src) = line.split("=", 2)
-          # There are often cases where one content address has more than one
-          # possible source, that's fine, it does not matter which we use.
-          files[id] = src
-        except:
-          sys.stderr.write("Failed on line: " + line)
-          raise
+    outdir = os.path.dirname(outfile)
 
-with open(outfile, "w") as f:
-  for id, src in list(files.items()):
-    f.write(id + "=")
-    f.write(os.path.relpath(src, outdir))
-    f.write("\n")
+    files = {}
+    with open(infile) as listfile:
+        for manifest in listfile:
+            with open(manifest.strip()) as f:
+                for line in f:
+                    try:
+                        line = line.strip()
+                        if line == "":
+                            continue
+                        (id, src) = line.split("=", 2)
+                        # There are often cases where one content address has more than one
+                        # possible source, that's fine, it does not matter which we use.
+                        files[id] = src
+                    except:
+                        sys.stderr.write("Failed on line: " + line)
+                        raise
+
+    with open(outfile, "w") as f:
+        for id, src in list(files.items()):
+            f.write(id + "=")
+            f.write(os.path.relpath(src, outdir))
+            f.write("\n")
+
+
+if __name__ == "__main__":
+    sys.exit(main())

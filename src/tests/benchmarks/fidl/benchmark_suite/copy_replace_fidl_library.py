@@ -12,18 +12,27 @@
 
 import sys
 
-if len(sys.argv) != 4:
-    print("expected 3 arguments: [input file] [output file] [new fidl library]")
-    exit(1)
 
-input_file = sys.argv[1]
-output_file = sys.argv[2]
-new_fidl_library = sys.argv[3]
+def main():
+    if len(sys.argv) != 4:
+        print(
+            "expected 3 arguments: [input file] [output file] [new fidl library]",
+            file=sys.stderr,
+        )
+        return 2
 
-with open(input_file) as fi:
-    with open(output_file, "w") as fo:
-        for line in fi:
-            if 'library benchmarkfidl;\n' in line:
-                fo.write('library %s;\n' % new_fidl_library)
-            else:
-                fo.write(line)
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+    new_fidl_library = sys.argv[3]
+
+    with open(input_file) as fi:
+        with open(output_file, "w") as fo:
+            for line in fi:
+                if 'library benchmarkfidl;\n' in line:
+                    fo.write('library %s;\n' % new_fidl_library)
+                else:
+                    fo.write(line)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

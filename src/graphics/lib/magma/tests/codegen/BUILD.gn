@@ -25,21 +25,21 @@ action("magma_header_compare") {
 }
 
 action_foreach("magma_ordinal_error_tests") {
-  # This target validates that the virtio_magma.h generation script catches ordinal errors.
+  # This target validates that the virtio_magma_h_generation script catches ordinal errors.
   testonly = true
   sources = [
     "magma_bad-next-free.json",
     "magma_ordinal-collision.json",
     "magma_ordinal-overflow.json",
   ]
-  inputs = [ "//src/graphics/lib/magma/include/virtio/virtio_magma.h.gen.py" ]
+  inputs = [ "//src/graphics/lib/magma/include/virtio/virtio_magma_h_gen.py" ]
 
   _header_file = "$target_gen_dir/{{source_name_part}}.h"
   _exit_code_file = "$target_gen_dir/{{source_name_part}}-exitcode"
   script = "call_expect_error.sh"
   args = [
     rebase_path(_exit_code_file, root_build_dir),
-    rebase_path("//src/graphics/lib/magma/include/virtio/virtio_magma.h.gen.py",
+    rebase_path("//src/graphics/lib/magma/include/virtio/virtio_magma_h_gen.py",
                 root_build_dir),
     "fuchsia",
     "{{source}}",
