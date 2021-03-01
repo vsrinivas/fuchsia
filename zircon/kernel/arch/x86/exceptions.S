@@ -7,207 +7,201 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <asm.h>
+#include <arch/asm_macros.h>
 #include <arch/x86/descriptor.h>
+#include <lib/arch/asm.h>
 #include <lib/code_patching.h>
 
-#define NUM_INT 256
-
-/*
- * Please note that the macro for generating interrupt routine stubs relies
- * on the macro execution counter \@ which is shared by all invocations across
- * this compilation unit. Be careful when adding additional macros to this
- * file. In particular:
- * 1) No macros can be executed before def_isr (so \@ starts at zero).
- * 2) def_isr cannot have any macros (so \@ increments by one for each
- *    def_isr invocation).
- */
-
-.text
-
-/* interrupt service routine stubs */
-_isr:
-.macro def_isr
-.pushsection .text
-FUNCTION_LABEL(_isr_\@)
-    .cfi_startproc simple
+// This is called 256 times in a row, with isr.current set to the iteration
+// count starting at 0.  This is inside the definition for the ISR table,
+// below (equivalent to being inside an .object ... .end_object pair,
+// though those macros are not actually used because they don't allow
+// nesting .function ... .end_function inside).  So the ambient section
+// state is building up the table, and the macro defines a function using
+// pushsection/popsection before adding its pointer to the table.
+.macro isr.dispatch.define name
+  // Make the whole set of macro-generated functions be cache-line aligned
+  // collectively.
+  .pushsection .text.isr.dispatch, "ax", %progbits
+  .ifeq isr.current
+    .balign 64
+  .endif
+  .function \name, cfi=custom, nosection=nosection
+    // Set CFI for an interrupt frame.
     .cfi_signal_frame
-    /* Set CFA for an interrupt frame. */
-.if \@ == 8 || (\@ >= 10 && \@ <= 14) || \@ == 17
-    .cfi_def_cfa %rsp, (8 * 6)
-.else
-    .cfi_def_cfa %rsp, (8 * 5)
-.endif
+    isr.current.has_error = isr.current == 8 || (isr.current >= 10 && isr.current <= 14) || isr.current == 17
+    .cfi_def_cfa %rsp, (8 * (5 + isr.current.has_error))
     .cfi_offset %rip, -(5 * 8)
-    /* Mark each reg as having the same value as from the "calling" frame.
-       This is the default state for callee-saved registers, but for completeness
-       sake we do this for all of them. */
+    // Mark each reg as having the same value as from the "calling" frame.
+    // This is the default state for callee-saved registers, but for
+    // completeness sake we do this for all of them.
     ALL_CFI_SAME_VALUE
-    /* Clear the AC flag to prevent ring 0 from performing data accesses to
-     * ring 3 if SMAP is available.  If it was set, it will get restored by
-     * iretd.  DO NOT REMOVE THIS CLAC, code in idt.c assumes it is here.
-     * It MUST be the first instruction of this function. */
+
+    // Clear the AC flag to prevent ring 0 from performing data accesses to
+    // ring 3 if SMAP is available.  If it was set, it will get restored by
+    // iretd.  DO NOT REMOVE THIS CLAC, code in idt.c assumes it is here.
+    // It MUST be the first instruction of this function.
     clac
-    /* We can't use push_value here: it is a macro invocation and using it
-     * will screw up tracking of \@ == isr number. Instead we inline the .cfi
-     * directives. */
-.if \@ == 8 || (\@ >= 10 && \@ <= 14) || \@ == 17
-    /* error code pushed by exception */
-    pushq $\@              /* interrupt number */
-    .cfi_adjust_cfa_offset 8
+   .if !isr.current.has_error
+      // Fill in the error code not pushed by the hardware.
+      push_value $0
+   .endif
+    // Fill in the interrupt number.
+    push_value $isr.current
     jmp interrupt_common
-.else
-    pushq $0               /* fill in error code in iframe */
-    .cfi_adjust_cfa_offset 8
-    pushq $\@              /* interrupt number */
-    .cfi_adjust_cfa_offset 8
-    jmp interrupt_common
-.endif
-END_FUNCTION(_isr_\@)
-.popsection
-.pushsection .rodata.isr
-.quad _isr_\@
-.popsection
+  .end_function
+  .popsection
+
+  // Now we're back in the section building up the table.
+  .quad \name
 .endm
 
-.pushsection .rodata.isr
-/* build a table of isr entry points */
+.macro isr.dispatch.define.next
+  // The name is generated with an arbitrary number and is not actually
+  // meaningful at all.  But there's no way to get isr.current into a
+  // symbol name here.
+  isr.dispatch.define isr.dispatch.\@.is.not.the.isr.number
+  isr.current = isr.current + 1
+.endm
+
+// This defines the table with pointers to all the macro-generated functions.
+// This does the same as .object, but .function can't be nested inside .object.
+.pushsection .rodata.isr_table, "a", %progbits
 .balign 8
-DATA(_isr_table)
+.label _isr_table, global, object
+  isr.current = 0
+  .rept 256
+    isr.dispatch.define.next
+  .endr
+.size _isr_table, _isr_table - .
 .popsection
-.rept NUM_INT
-def_isr
-.endr
 
-.p2align 6
-FUNCTION_LABEL(interrupt_common)
-    .cfi_startproc simple
-    .cfi_signal_frame
-    /* Set CFA for an interrupt frame. */
-    .cfi_def_cfa %rsp, 7 * 8 /* hw + _isr_* push this many values */
-    .cfi_offset %rip, -(5 * 8)
-    /* Mark each reg as having the same value as from the "calling" frame.
-       This is the default state for callee-saved registers, but for completeness
-       sake we do this for all of them. */
-    ALL_CFI_SAME_VALUE
+// This is the real function all the macro-generated functions tail-call into.
+.function interrupt_common, global, align=64, cfi=custom
+  // Set CFI for an interrupt frame, with all the words pushed by the hardware
+  // and the macro-generated functions together.
+  .cfi_signal_frame
+  .cfi_def_cfa %rsp, 7 * 8
+  .cfi_offset %rip, -(5 * 8)
+  // Mark each reg as having the same value as from the "calling" frame.
+  // This is the default state for callee-saved registers, but for completeness
+  // sake we do this for all of them.
+  ALL_CFI_SAME_VALUE
 
-    /* Clear the direction flag.  Without this, uses of string
-       instructions, e.g. REP MOVS in memcpy() or inlined by the compiler,
-       can go wrong and copy in the wrong direction, since this code may
-       assume that the direction flag is unset. */
-    cld
+  // Clear the direction flag.  Without this, uses of string
+  // instructions, e.g. REP MOVS in memcpy() or inlined by the compiler,
+  // can go wrong and copy in the wrong direction, since this code may
+  // assume that the direction flag is unset.
+  cld
 
-    /* Check to see if we came from user space by testing the PL of the
-     * CS register that was saved on the stack automatically. Check for != 0.
-     */
-    testb $3, 0x18(%rsp)
-    jz    1f
+  // Check to see if we came from user space by testing the CPL in the
+  // %cs selector that was saved on the stack automatically.  Check for != 0.
+  testb $3, 0x18(%rsp)
+  jz 1f
 
-    /* swap gs to kernel space */
-    swapgs
+  // Swap %gs.base to kernel space.
+  swapgs
 1:
-    /* Certain processors may speculative past a conditional swapgs, with a caller-controlled
-     * GS_BASE register. This may allow callers to infer the contents of kernel offsets or data.
-     * Execute a dispatch-serializing fence to constrain speculation and mitigate the leak.
-     */
-    APPLY_CODE_PATCH_FUNC(swapgs_bug_postfence, 3)
+  // Certain processors may speculative past a conditional swapgs, with a
+  // caller-controlled %gs.base register. This may allow callers to infer the
+  // contents of kernel offsets or data.  Execute a dispatch-serializing fence
+  // to constrain speculation and mitigate the leak.
+  APPLY_CODE_PATCH_FUNC(swapgs_bug_postfence, 3)
 
-    /* save general purpose registers */
-    push_reg %r15
-    push_reg %r14
-    push_reg %r13
-    push_reg %r12
-    push_reg %r11
-    push_reg %r10
-    push_reg %r9
-    push_reg %r8
-    push_reg %rax
-    push_reg %rcx
-    push_reg %rdx
-    push_reg %rbx
-    push_reg %rbp
-    push_reg %rsi
-    push_reg %rdi
+  // Save general purpose registers.
+  push_reg %r15
+  push_reg %r14
+  push_reg %r13
+  push_reg %r12
+  push_reg %r11
+  push_reg %r10
+  push_reg %r9
+  push_reg %r8
+  push_reg %rax
+  push_reg %rcx
+  push_reg %rdx
+  push_reg %rbx
+  push_reg %rbp
+  push_reg %rsi
+  push_reg %rdi
 
-    movq %rsp, %rdi     /* pass the  iframe using rdi */
+  movq %rsp, %rdi     // Pass the iframe in %rdi.
 
-    call x86_exception_handler
+  call x86_exception_handler
 
-/* A label to assist gdb's backtracing through kernel exceptions.
-   When gdb sees this as the return address it knows it can fetch
-   iframe_t from $rsp. See scripts/zircon.elf-gdb.py. */
-interrupt_common_iframe_set_up_for_debugger:
+  // A label to assist gdb's backtracing through kernel exceptions.
+  // When gdb sees this as the return address it knows it can fetch
+  // iframe_t from $rsp. See scripts/zircon.elf-gdb.py.
+.label interrupt_common_iframe_set_up_for_debugger
 
-    /* restore general purpose registers */
-    pop_reg %rdi
-    pop_reg %rsi
-    pop_reg %rbp
-    pop_reg %rbx
-    pop_reg %rdx
-    pop_reg %rcx
-    pop_reg %rax
-    pop_reg %r8
-    pop_reg %r9
-    pop_reg %r10
-    pop_reg %r11
-    pop_reg %r12
-    pop_reg %r13
-    pop_reg %r14
-    pop_reg %r15
+  // Restore general purpose registers.
+  pop_reg %rdi
+  pop_reg %rsi
+  pop_reg %rbp
+  pop_reg %rbx
+  pop_reg %rdx
+  pop_reg %rcx
+  pop_reg %rax
+  pop_reg %r8
+  pop_reg %r9
+  pop_reg %r10
+  pop_reg %r11
+  pop_reg %r12
+  pop_reg %r13
+  pop_reg %r14
+  pop_reg %r15
 
-    /* check if we're returning to user space as per before */
-    testb $3, 0x18(%rsp)
-    jz    1f
+  /* check if we're returning to user space as per before */
+  testb $3, 0x18(%rsp)
+  jz    1f
 
-.global interrupt_maybe_mds_buff_overwrite
-interrupt_maybe_mds_buff_overwrite:
-    call mds_buff_overwrite
-    APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_mds_flush_select, interrupt_maybe_mds_buff_overwrite, 5)
+.label interrupt_maybe_mds_buff_overwrite, global
+  call mds_buff_overwrite
+  APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_mds_flush_select, interrupt_maybe_mds_buff_overwrite, 5)
 
-    /* swap gs back to user space */
-    swapgs
-
+  /* swap gs back to user space */
+  swapgs
 1:
-    APPLY_CODE_PATCH_FUNC(swapgs_bug_postfence, 3)
-    /* drop vector number and error code*/
-    add_to_sp 16
+  APPLY_CODE_PATCH_FUNC(swapgs_bug_postfence, 3)
 
-    iretq
-END_FUNCTION(interrupt_common)
+  // Drop vector number and error code.
+  add_to_sp 16
 
-/* Call external interrupt handler manually without actually issuing interrupt.
- *
- * For external interrupts CPU doesn't store error code on stack so we use 0. We
- * additionally use CODE_64_SELECTOR as CS, 0 as SS, RFLAGS value and current
- * stack.
- */
-FUNCTION(x86_call_external_interrupt_handler)
-    /* save current RFLAGS value */
-    pushfq
-    popq %r10
+  iretq
+.end_function
 
-    /* save current RSP value */
-    movq %rsp, %r11
+// Call external interrupt handler manually without actually issuing interrupt.
+//
+// For external interrupts CPU doesn't store error code on stack so we use
+// 0. We additionally use CODE_64_SELECTOR as CS, 0 as SS, RFLAGS value and
+// current stack.
+.function x86_call_external_interrupt_handler, global
+  // Save current RFLAGS value.
+  pushfq
+  .cfi_adjust_cfa_offset 8
+  pop_value %r10
 
-    /* calculate exit address */
-    leaq .Lexit(%rip), %rax
+  // Save current RSP value.
+  movq %rsp, %r11
 
-    /* prepare interrupt stack frame in the from interrupt_common expects to see */
-    sub_from_sp 0x38
-    movq %rdi, 0x00(%rsp)              // rdi holds vector number
-    movq $0, 0x08(%rsp)                // error code
-    movq %rax, 0x10(%rsp)              // RIP (return address)
-    movq $CODE_64_SELECTOR, 0x18(%rsp) // CS
-    movq %r10, 0x20(%rsp)              // RFLAGS
-    movq %r11, 0x28(%rsp)              // RSP
-    movq $0, 0x30(%rsp)                // SS
+  // Calculate exit address.
+  leaq .Lexit(%rip), %rax
 
-    /* we can actually avoid this jump if we put this code above
-     * interrupt_common and just fall through, but benefits of doing this are
-     * not obvious so for now for the sake of clarity keep this jump
-     */
-    jmp    interrupt_common
+  // Prepare interrupt stack frame in the form interrupt_common expects to see.
+  sub_from_sp 0x38
+  movq %rdi, 0x00(%rsp)              // %rdi holds vector number
+  movq $0, 0x08(%rsp)                // error code
+  movq %rax, 0x10(%rsp)              // RIP (return address)
+  movq $CODE_64_SELECTOR, 0x18(%rsp) // CS
+  movq %r10, 0x20(%rsp)              // RFLAGS
+  movq %r11, 0x28(%rsp)              // RSP
+  movq $0, 0x30(%rsp)                // SS
+
+  // We can actually avoid this jump if we put this code above
+  // interrupt_common and just fall through, but benefits of doing this are
+  // not obvious so for now for the sake of clarity keep this jump.
+  jmp interrupt_common
 
 .Lexit:
-    ret
-END_FUNCTION(x86_call_external_interrupt_handler)
+  ret
+.end_function
