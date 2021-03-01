@@ -24,18 +24,18 @@ class TestFidlClient {
  public:
   class Display {
    public:
-    Display(const ::llcpp::fuchsia::hardware::display::Info& info);
+    Display(const ::llcpp::fuchsia::hardware::display::wire::Info& info);
 
     uint64_t id_;
     fbl::Vector<zx_pixel_format_t> pixel_formats_;
-    fbl::Vector<::llcpp::fuchsia::hardware::display::Mode> modes_;
-    fbl::Vector<::llcpp::fuchsia::hardware::display::CursorInfo> cursors_;
+    fbl::Vector<::llcpp::fuchsia::hardware::display::wire::Mode> modes_;
+    fbl::Vector<::llcpp::fuchsia::hardware::display::wire::CursorInfo> cursors_;
 
     fbl::String manufacturer_name_;
     fbl::String monitor_name_;
     fbl::String monitor_serial_;
 
-    ::llcpp::fuchsia::hardware::display::ImageConfig image_config_;
+    ::llcpp::fuchsia::hardware::display::wire::ImageConfig image_config_;
   };
 
   TestFidlClient(::llcpp::fuchsia::sysmem::Allocator::SyncClient* sysmem) : sysmem_(sysmem) {}
@@ -45,8 +45,8 @@ class TestFidlClient {
   // Enable vsync for a display and wait for events using |dispatcher|.
   bool Bind(async_dispatcher_t* dispatcher) TA_EXCL(mtx());
   zx_status_t ImportImageWithSysmem(
-      const ::llcpp::fuchsia::hardware::display::ImageConfig& image_config, uint64_t* image_id)
-      TA_EXCL(mtx());
+      const ::llcpp::fuchsia::hardware::display::wire::ImageConfig& image_config,
+      uint64_t* image_id) TA_EXCL(mtx());
   zx_status_t PresentImage();
   uint64_t display_id() const;
 
@@ -75,8 +75,8 @@ class TestFidlClient {
   uint64_t cookie_ = 0;
 
   zx_status_t ImportImageWithSysmemLocked(
-      const ::llcpp::fuchsia::hardware::display::ImageConfig& image_config, uint64_t* image_id)
-      TA_REQ(mtx());
+      const ::llcpp::fuchsia::hardware::display::wire::ImageConfig& image_config,
+      uint64_t* image_id) TA_REQ(mtx());
   void OnEventMsgAsync(async_dispatcher_t* dispatcher, async::WaitBase* self, zx_status_t status,
                        const zx_packet_signal_t* signal) TA_EXCL(mtx());
   async::WaitMethod<TestFidlClient, &TestFidlClient::OnEventMsgAsync> wait_events_{this};

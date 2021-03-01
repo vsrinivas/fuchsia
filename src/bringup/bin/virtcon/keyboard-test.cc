@@ -56,8 +56,8 @@ class KeyboardInputHelper {
 
   void WriteReportBuf(std::vector<uint32_t> keys) {
     fidl::FidlAllocator allocator;
-    fuchsia_input_report::InputReport input_report(allocator);
-    fuchsia_input_report::KeyboardInputReport keyboard_input_report(allocator);
+    fuchsia_input_report::wire::InputReport input_report(allocator);
+    fuchsia_input_report::wire::KeyboardInputReport keyboard_input_report(allocator);
 
     size_t index = 0;
     fidl::VectorView<llcpp::fuchsia::ui::input2::wire::Key> fidl_keys(allocator, keys.size());

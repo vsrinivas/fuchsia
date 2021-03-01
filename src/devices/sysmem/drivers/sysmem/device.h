@@ -109,13 +109,13 @@ class Device final : public DdkDeviceType,
   // Get allocator for |settings|. Returns NULL if allocator is not
   // registered for settings.
   [[nodiscard]] MemoryAllocator* GetAllocator(
-      const llcpp::fuchsia::sysmem2::BufferMemorySettings& settings);
+      const llcpp::fuchsia::sysmem2::wire::BufferMemorySettings& settings);
 
   // Get heap properties of a specific memory heap allocator.
   //
   // Clients should guarantee that the heap is valid and already registered
   // to sysmem driver.
-  [[nodiscard]] const llcpp::fuchsia::sysmem2::HeapProperties& GetHeapProperties(
+  [[nodiscard]] const llcpp::fuchsia::sysmem2::wire::HeapProperties& GetHeapProperties(
       llcpp::fuchsia::sysmem2::wire::HeapType heap) const;
 
   [[nodiscard]] const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }

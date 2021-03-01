@@ -31,7 +31,7 @@ constexpr uint64_t kPortKeyWorkPendingMsg = 0x2;
 // decision, or simply the way these counters are wired?
 constexpr uint64_t kBytesPerCycle = 16ul;
 
-zx_status_t ValidateRequest(const ram_metrics::BandwidthMeasurementConfig& config) {
+zx_status_t ValidateRequest(const ram_metrics::wire::BandwidthMeasurementConfig& config) {
   // Restrict timer to reasonable values.
   if ((config.cycles_to_measure < kMinimumCycleCount) ||
       (config.cycles_to_measure > kMaximumCycleCount)) {
@@ -165,7 +165,7 @@ zx_status_t AmlRam::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void AmlRam::MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
+void AmlRam::MeasureBandwidth(ram_metrics::wire::BandwidthMeasurementConfig config,
                               MeasureBandwidthCompleter::Sync& completer) {
   zx_status_t st = ValidateRequest(config);
   if (st != ZX_OK) {
@@ -219,7 +219,8 @@ void AmlRam::StartReadBandwithCounters(Job* job) {
   mmio_.Write32(channels_enabled | DMC_QOS_ENABLE_CTRL, MEMBW_PORTS_CTRL);
 }
 
-void AmlRam::FinishReadBandwithCounters(ram_metrics::BandwidthInfo* bpi, zx_time_t start_time) {
+void AmlRam::FinishReadBandwithCounters(ram_metrics::wire::BandwidthInfo* bpi,
+                                        zx_time_t start_time) {
   ZX_ASSERT(irq_.ack() == ZX_OK);
 
   bpi->timestamp = start_time;
@@ -266,7 +267,7 @@ void AmlRam::ReadLoop() {
 
       case kPortKeyIrqMsg: {
         ZX_ASSERT(!jobs.empty());
-        ram_metrics::BandwidthInfo bpi;
+        ram_metrics::wire::BandwidthInfo bpi;
         FinishReadBandwithCounters(&bpi, jobs.front().start_time);
         Job job = std::move(jobs.front());
         jobs.pop_front();

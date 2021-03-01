@@ -496,7 +496,7 @@ class ArmTELinearFormats : public ImageFormatSet {
  public:
   const char* Name() const override { return "ArmTELinearFormats"; }
 
-  bool IsSupported(const llcpp::fuchsia::sysmem2::PixelFormat& pixel_format) const override {
+  bool IsSupported(const llcpp::fuchsia::sysmem2::wire::PixelFormat& pixel_format) const override {
     if (!pixel_format.has_format_modifier_value()) {
       return false;
     }
@@ -527,7 +527,7 @@ class ArmTELinearFormats : public ImageFormatSet {
   }
 
   uint64_t ImageFormatImageSize(
-      const llcpp::fuchsia::sysmem2::ImageFormat& image_format) const override {
+      const llcpp::fuchsia::sysmem2::wire::ImageFormat& image_format) const override {
     ZX_DEBUG_ASSERT(IsSupported(image_format.pixel_format()));
     ZX_DEBUG_ASSERT(image_format.has_coded_width());
     ZX_DEBUG_ASSERT(image_format.has_coded_height());
@@ -540,7 +540,7 @@ class ArmTELinearFormats : public ImageFormatSet {
     return size + crc_size;
   }
 
-  bool ImageFormatPlaneByteOffset(const llcpp::fuchsia::sysmem2::ImageFormat& image_format,
+  bool ImageFormatPlaneByteOffset(const llcpp::fuchsia::sysmem2::wire::ImageFormat& image_format,
 
                                   uint32_t plane, uint64_t* offset_out) const override {
     if (plane < kTransactionEliminationPlane) {
@@ -558,7 +558,7 @@ class ArmTELinearFormats : public ImageFormatSet {
     return false;
   }
 
-  bool ImageFormatPlaneRowBytes(const llcpp::fuchsia::sysmem2::ImageFormat& image_format,
+  bool ImageFormatPlaneRowBytes(const llcpp::fuchsia::sysmem2::wire::ImageFormat& image_format,
                                 uint32_t plane, uint32_t* row_bytes_out) const override {
     if (plane < kTransactionEliminationPlane) {
       return kLinearFormats.ImageFormatPlaneRowBytes(image_format, plane, row_bytes_out);
@@ -581,8 +581,8 @@ constexpr const ImageFormatSet* kImageFormats[] = {
 
 }  // namespace
 
-bool ImageFormatIsPixelFormatEqual(const llcpp::fuchsia::sysmem2::PixelFormat& a,
-                                   const llcpp::fuchsia::sysmem2::PixelFormat& b) {
+bool ImageFormatIsPixelFormatEqual(const llcpp::fuchsia::sysmem2::wire::PixelFormat& a,
+                                   const llcpp::fuchsia::sysmem2::wire::PixelFormat& b) {
   if (a.type() != b.type()) {
     return false;
   }
@@ -598,8 +598,8 @@ bool ImageFormatIsPixelFormatEqual(const llcpp::fuchsia::sysmem2::PixelFormat& a
   return true;
 }
 
-bool ImageFormatIsPixelFormatEqual(const llcpp::fuchsia::sysmem::PixelFormat& a_v1,
-                                   const llcpp::fuchsia::sysmem::PixelFormat& b_v1) {
+bool ImageFormatIsPixelFormatEqual(const llcpp::fuchsia::sysmem::wire::PixelFormat& a_v1,
+                                   const llcpp::fuchsia::sysmem::wire::PixelFormat& b_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
   PixelFormat a = sysmem::V2CopyFromV1PixelFormat(allocator, a_v1);
   PixelFormat b = sysmem::V2CopyFromV1PixelFormat(allocator, b_v1);
@@ -615,8 +615,8 @@ bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem_PixelFormat& a_v1,
 }
 
 bool ImageFormatIsSupportedColorSpaceForPixelFormat(
-    const llcpp::fuchsia::sysmem2::ColorSpace& color_space,
-    const llcpp::fuchsia::sysmem2::PixelFormat& pixel_format) {
+    const llcpp::fuchsia::sysmem2::wire::ColorSpace& color_space,
+    const llcpp::fuchsia::sysmem2::wire::PixelFormat& pixel_format) {
   if (!color_space.has_type())
     return false;
   // Ignore pixel format modifier - assume it has already been checked.
@@ -650,8 +650,8 @@ bool ImageFormatIsSupportedColorSpaceForPixelFormat(
 }
 
 bool ImageFormatIsSupportedColorSpaceForPixelFormat(
-    const llcpp::fuchsia::sysmem::ColorSpace& color_space_v1,
-    const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
+    const llcpp::fuchsia::sysmem::wire::ColorSpace& color_space_v1,
+    const llcpp::fuchsia::sysmem::wire::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
   ColorSpace color_space = sysmem::V2CopyFromV1ColorSpace(allocator, color_space_v1);
   PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(allocator, pixel_format_v1);
@@ -667,7 +667,7 @@ bool ImageFormatIsSupportedColorSpaceForPixelFormat(
   return ImageFormatIsSupportedColorSpaceForPixelFormat(color_space, pixel_format);
 }
 
-bool ImageFormatIsSupported(const llcpp::fuchsia::sysmem2::PixelFormat& pixel_format) {
+bool ImageFormatIsSupported(const llcpp::fuchsia::sysmem2::wire::PixelFormat& pixel_format) {
   for (auto format_set : kImageFormats) {
     if (format_set->IsSupported(pixel_format)) {
       return true;
@@ -676,7 +676,7 @@ bool ImageFormatIsSupported(const llcpp::fuchsia::sysmem2::PixelFormat& pixel_fo
   return false;
 }
 
-bool ImageFormatIsSupported(const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
+bool ImageFormatIsSupported(const llcpp::fuchsia::sysmem::wire::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
   PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(allocator, pixel_format_v1);
   return ImageFormatIsSupported(pixel_format);
@@ -689,7 +689,7 @@ bool ImageFormatIsSupported(const fuchsia_sysmem_PixelFormat* pixel_format_v1) {
   return ImageFormatIsSupported(pixel_format);
 }
 
-uint32_t ImageFormatBitsPerPixel(const llcpp::fuchsia::sysmem2::PixelFormat& pixel_format) {
+uint32_t ImageFormatBitsPerPixel(const llcpp::fuchsia::sysmem2::wire::PixelFormat& pixel_format) {
   ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
   switch (pixel_format.type()) {
     case PixelFormatType::INVALID:
@@ -727,7 +727,7 @@ uint32_t ImageFormatBitsPerPixel(const llcpp::fuchsia::sysmem2::PixelFormat& pix
   return 0u;
 }
 
-uint32_t ImageFormatBitsPerPixel(const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
+uint32_t ImageFormatBitsPerPixel(const llcpp::fuchsia::sysmem::wire::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
   PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(allocator, pixel_format_v1);
   return ImageFormatBitsPerPixel(pixel_format);
@@ -742,7 +742,7 @@ uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem_PixelFormat* pixel_format_
 }
 
 uint32_t ImageFormatStrideBytesPerWidthPixel(
-    const llcpp::fuchsia::sysmem2::PixelFormat& pixel_format) {
+    const llcpp::fuchsia::sysmem2::wire::PixelFormat& pixel_format) {
   ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
   // This list should match the one in garnet/public/rust/fuchsia-framebuffer/src/sysmem.rs.
   switch (pixel_format.type()) {
@@ -785,7 +785,7 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(
 }
 
 uint32_t ImageFormatStrideBytesPerWidthPixel(
-    const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
+    const llcpp::fuchsia::sysmem::wire::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
   PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(allocator, pixel_format_v1);
   return ImageFormatStrideBytesPerWidthPixel(pixel_format);
@@ -798,7 +798,7 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(const fuchsia_sysmem_PixelFormat* p
   return ImageFormatStrideBytesPerWidthPixel(pixel_format);
 }
 
-uint64_t ImageFormatImageSize(const llcpp::fuchsia::sysmem2::ImageFormat& image_format) {
+uint64_t ImageFormatImageSize(const llcpp::fuchsia::sysmem2::wire::ImageFormat& image_format) {
   ZX_DEBUG_ASSERT(image_format.has_pixel_format());
   for (auto format_set : kImageFormats) {
     if (format_set->IsSupported(image_format.pixel_format())) {
@@ -809,7 +809,7 @@ uint64_t ImageFormatImageSize(const llcpp::fuchsia::sysmem2::ImageFormat& image_
   return 0;
 }
 
-uint64_t ImageFormatImageSize(const llcpp::fuchsia::sysmem::ImageFormat_2& image_format_v1) {
+uint64_t ImageFormatImageSize(const llcpp::fuchsia::sysmem::wire::ImageFormat_2& image_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
   ImageFormat image_format =
       sysmem::V2CopyFromV1ImageFormat(allocator, image_format_v1).take_value();
@@ -824,7 +824,8 @@ uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format_v
   return ImageFormatImageSize(image_format);
 }
 
-uint32_t ImageFormatCodedWidthMinDivisor(const llcpp::fuchsia::sysmem2::PixelFormat& pixel_format) {
+uint32_t ImageFormatCodedWidthMinDivisor(
+    const llcpp::fuchsia::sysmem2::wire::PixelFormat& pixel_format) {
   ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
   switch (pixel_format.type()) {
     case PixelFormatType::INVALID:
@@ -866,7 +867,7 @@ uint32_t ImageFormatCodedWidthMinDivisor(const llcpp::fuchsia::sysmem2::PixelFor
 }
 
 uint32_t ImageFormatCodedWidthMinDivisor(
-    const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
+    const llcpp::fuchsia::sysmem::wire::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
   PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(allocator, pixel_format_v1);
   return ImageFormatCodedWidthMinDivisor(pixel_format);
@@ -880,7 +881,7 @@ uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem_PixelFormat* pixel
 }
 
 uint32_t ImageFormatCodedHeightMinDivisor(
-    const llcpp::fuchsia::sysmem2::PixelFormat& pixel_format) {
+    const llcpp::fuchsia::sysmem2::wire::PixelFormat& pixel_format) {
   ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
   switch (pixel_format.type()) {
     case PixelFormatType::INVALID:
@@ -922,7 +923,7 @@ uint32_t ImageFormatCodedHeightMinDivisor(
 }
 
 uint32_t ImageFormatCodedHeightMinDivisor(
-    const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
+    const llcpp::fuchsia::sysmem::wire::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
   PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(allocator, pixel_format_v1);
   return ImageFormatCodedHeightMinDivisor(pixel_format);
@@ -935,7 +936,8 @@ uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem_PixelFormat* pixe
   return ImageFormatCodedHeightMinDivisor(pixel_format);
 }
 
-uint32_t ImageFormatSampleAlignment(const llcpp::fuchsia::sysmem2::PixelFormat& pixel_format) {
+uint32_t ImageFormatSampleAlignment(
+    const llcpp::fuchsia::sysmem2::wire::PixelFormat& pixel_format) {
   ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
   switch (pixel_format.type()) {
     case PixelFormatType::INVALID:
@@ -976,7 +978,8 @@ uint32_t ImageFormatSampleAlignment(const llcpp::fuchsia::sysmem2::PixelFormat& 
   return 0u;
 }
 
-uint32_t ImageFormatSampleAlignment(const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
+uint32_t ImageFormatSampleAlignment(
+    const llcpp::fuchsia::sysmem::wire::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
   PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(allocator, pixel_format_v1);
   return ImageFormatSampleAlignment(pixel_format);
@@ -989,8 +992,9 @@ uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem_PixelFormat* pixel_form
   return ImageFormatSampleAlignment(pixel_format);
 }
 
-bool ImageFormatMinimumRowBytes(const llcpp::fuchsia::sysmem2::ImageFormatConstraints& constraints,
-                                uint32_t width, uint32_t* minimum_row_bytes_out) {
+bool ImageFormatMinimumRowBytes(
+    const llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints& constraints, uint32_t width,
+    uint32_t* minimum_row_bytes_out) {
   ZX_DEBUG_ASSERT(minimum_row_bytes_out);
   // Caller must set pixel_format.
   ZX_DEBUG_ASSERT(constraints.has_pixel_format());
@@ -1023,7 +1027,7 @@ bool ImageFormatMinimumRowBytes(const llcpp::fuchsia::sysmem2::ImageFormatConstr
 }
 
 bool ImageFormatMinimumRowBytes(
-    const llcpp::fuchsia::sysmem::ImageFormatConstraints& image_format_constraints_v1,
+    const llcpp::fuchsia::sysmem::wire::ImageFormatConstraints& image_format_constraints_v1,
     uint32_t width, uint32_t* minimum_row_bytes_out) {
   ZX_DEBUG_ASSERT(minimum_row_bytes_out);
   fidl::BufferThenHeapAllocator<680> allocator;
@@ -1045,7 +1049,7 @@ bool ImageFormatMinimumRowBytes(
   return ImageFormatMinimumRowBytes(image_format_constraints, width, minimum_row_bytes_out);
 }
 
-bool ImageFormatConvertSysmemToZx(const llcpp::fuchsia::sysmem2::PixelFormat& pixel_format,
+bool ImageFormatConvertSysmemToZx(const llcpp::fuchsia::sysmem2::wire::PixelFormat& pixel_format,
                                   zx_pixel_format_t* zx_pixel_format_out) {
   if (pixel_format.has_format_modifier_value() &&
       (pixel_format.format_modifier_value() != llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR)) {
@@ -1085,7 +1089,7 @@ bool ImageFormatConvertSysmemToZx(const llcpp::fuchsia::sysmem2::PixelFormat& pi
   }
 }
 
-bool ImageFormatConvertSysmemToZx(const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1,
+bool ImageFormatConvertSysmemToZx(const llcpp::fuchsia::sysmem::wire::PixelFormat& pixel_format_v1,
                                   zx_pixel_format_t* zx_pixel_format_out) {
   ZX_DEBUG_ASSERT(zx_pixel_format_out);
   fidl::BufferThenHeapAllocator<384> allocator;
@@ -1102,7 +1106,7 @@ bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format
   return ImageFormatConvertSysmemToZx(pixel_format, zx_pixel_format_out);
 }
 
-fit::result<llcpp::fuchsia::sysmem2::PixelFormat> ImageFormatConvertZxToSysmem_v2(
+fit::result<llcpp::fuchsia::sysmem2::wire::PixelFormat> ImageFormatConvertZxToSysmem_v2(
     fidl::Allocator& allocator, zx_pixel_format_t zx_pixel_format) {
   PixelFormat v2b = allocator.make_table<PixelFormat>();
   v2b.set_format_modifier_value(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR);
@@ -1148,7 +1152,7 @@ fit::result<llcpp::fuchsia::sysmem2::PixelFormat> ImageFormatConvertZxToSysmem_v
   return fit::ok(std::move(v2b));
 }
 
-fit::result<llcpp::fuchsia::sysmem::PixelFormat> ImageFormatConvertZxToSysmem_v1(
+fit::result<llcpp::fuchsia::sysmem::wire::PixelFormat> ImageFormatConvertZxToSysmem_v1(
     fidl::Allocator& allocator, zx_pixel_format_t zx_pixel_format) {
   auto pixel_format_v2_result = ImageFormatConvertZxToSysmem_v2(allocator, zx_pixel_format);
   if (!pixel_format_v2_result.is_ok()) {
@@ -1209,8 +1213,8 @@ fit::result<ImageFormat> ImageConstraintsToFormat(fidl::Allocator& allocator,
   return fit::ok(std::move(result));
 }
 
-fit::result<llcpp::fuchsia::sysmem::ImageFormat_2> ImageConstraintsToFormat(
-    const llcpp::fuchsia::sysmem::ImageFormatConstraints& image_format_constraints_v1,
+fit::result<llcpp::fuchsia::sysmem::wire::ImageFormat_2> ImageConstraintsToFormat(
+    const llcpp::fuchsia::sysmem::wire::ImageFormatConstraints& image_format_constraints_v1,
     uint32_t width, uint32_t height) {
   fidl::BufferThenHeapAllocator<384> allocator;
   ImageFormatConstraints image_format_constraints_v2 =
@@ -1266,7 +1270,7 @@ bool ImageFormatPlaneByteOffset(const ImageFormat& image_format, uint32_t plane,
   return false;
 }
 
-bool ImageFormatPlaneByteOffset(const llcpp::fuchsia::sysmem::ImageFormat_2& image_format,
+bool ImageFormatPlaneByteOffset(const llcpp::fuchsia::sysmem::wire::ImageFormat_2& image_format,
                                 uint32_t plane, uint64_t* offset_out) {
   ZX_DEBUG_ASSERT(offset_out);
   fidl::BufferThenHeapAllocator<384> allocator;
@@ -1302,7 +1306,7 @@ bool ImageFormatPlaneRowBytes(const ImageFormat& image_format, uint32_t plane,
   return false;
 }
 
-bool ImageFormatPlaneRowBytes(const llcpp::fuchsia::sysmem::ImageFormat_2& image_format,
+bool ImageFormatPlaneRowBytes(const llcpp::fuchsia::sysmem::wire::ImageFormat_2& image_format,
                               uint32_t plane, uint32_t* row_bytes_out) {
   ZX_DEBUG_ASSERT(row_bytes_out);
   fidl::BufferThenHeapAllocator<384> allocator;
@@ -1328,7 +1332,7 @@ bool ImageFormatPlaneRowBytes(const fuchsia_sysmem_ImageFormat_2* image_format, 
 }
 
 bool ImageFormatCompatibleWithProtectedMemory(
-    const llcpp::fuchsia::sysmem2::PixelFormat& pixel_format) {
+    const llcpp::fuchsia::sysmem2::wire::PixelFormat& pixel_format) {
   if (!pixel_format.has_format_modifier_value())
     return true;
   constexpr uint64_t kArmLinearFormat = 0x0800000000000000ul;
@@ -1346,7 +1350,7 @@ bool ImageFormatCompatibleWithProtectedMemory(
 }
 
 bool ImageFormatCompatibleWithProtectedMemory(
-    const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
+    const llcpp::fuchsia::sysmem::wire::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
   auto pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(allocator, pixel_format_v1);
   return ImageFormatCompatibleWithProtectedMemory(pixel_format_v2);

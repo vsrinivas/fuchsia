@@ -59,7 +59,8 @@ zx_status_t Message::TryInitializeParameters(
   return status;
 }
 
-zx_status_t Message::TryInitializeValue(const fuchsia_tee::Value& value, MessageParam* out_param) {
+zx_status_t Message::TryInitializeValue(const fuchsia_tee::wire::Value& value,
+                                        MessageParam* out_param) {
   ZX_DEBUG_ASSERT(out_param != nullptr);
 
   if (!value.has_direction()) {
@@ -89,7 +90,7 @@ zx_status_t Message::TryInitializeValue(const fuchsia_tee::Value& value, Message
   return ZX_OK;
 }
 
-zx_status_t Message::TryInitializeBuffer(fuchsia_tee::Buffer* buffer,
+zx_status_t Message::TryInitializeBuffer(fuchsia_tee::wire::Buffer* buffer,
                                          SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                                          MessageParam* out_param) {
   ZX_DEBUG_ASSERT(buffer != nullptr);

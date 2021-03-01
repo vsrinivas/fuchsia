@@ -77,7 +77,7 @@ zx_status_t StartVirtconShell(llcpp::fuchsia::virtualconsole::SessionManager::Sy
 }  // namespace
 
 zx::status<VirtconArgs> GetVirtconArgs(llcpp::fuchsia::boot::Arguments::SyncClient* boot_args) {
-  llcpp::fuchsia::boot::BoolPair bool_keys[]{
+  llcpp::fuchsia::boot::wire::BoolPair bool_keys[]{
       {fidl::StringView{"netsvc.disable"}, true},
       {fidl::StringView{"netsvc.netboot"}, false},
       {fidl::StringView{"devmgr.require-system"}, false},

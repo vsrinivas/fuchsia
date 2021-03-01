@@ -12,7 +12,7 @@
 #include "block-device-utils.h"
 #include "src/storage/minfs/format.h"
 
-namespace minfs_micro_benchmanrk {
+namespace minfs_micro_benchmark {
 
 class MinfsProperties {
  public:
@@ -70,9 +70,9 @@ class MinfsProperties {
 
   uint64_t BitsToFsBlocks(uint64_t bits) const;
 
-  // Update total_calls and bytes_transferrd stats.
+  // Update total_calls and bytes_transferred stats.
   void AddIoStats(uint64_t total_calls, uint64_t blocks_transferred,
-                  llcpp::fuchsia::storage::metrics::CallStat* out) const;
+                  llcpp::fuchsia::storage::metrics::wire::CallStat* out) const;
 
   void AddMultipleBlocksReadCosts(uint64_t block_count, BlockFidlMetrics* out) const;
 
@@ -107,6 +107,6 @@ class MinfsProperties {
   minfs::Superblock superblock_;
 };
 
-}  // namespace minfs_micro_benchmanrk
+}  // namespace minfs_micro_benchmark
 
 #endif  // SRC_STORAGE_MINFS_TEST_MICRO_BENCHMARK_MINFS_COSTS_H_

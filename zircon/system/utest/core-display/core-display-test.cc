@@ -85,7 +85,7 @@ class CoreDisplayTest : public zxtest::Test {
   zx::channel sysinfo_client_channel_;
   zx::channel sysmem_client_channel_;
   fdio_cpp::FdioCaller caller_;
-  fbl::Vector<fhd::Info> displays_;
+  fbl::Vector<fhd::wire::Info> displays_;
   bool capture_supported_ = false;
 };
 
@@ -112,7 +112,7 @@ void CoreDisplayTest::SetUp() {
     EventHandler() = default;
 
     bool has_display() const { return has_display_; }
-    const fbl::Vector<fhd::Info>& displays_tmp() const { return displays_tmp_; }
+    const fbl::Vector<fhd::wire::Info>& displays_tmp() const { return displays_tmp_; }
 
     void OnDisplaysChanged(fhd::Controller::OnDisplaysChangedResponse* event) override {
       for (unsigned i = 0; i < event->added.count(); i++) {
@@ -130,7 +130,7 @@ void CoreDisplayTest::SetUp() {
 
    private:
     bool has_display_ = false;
-    fbl::Vector<fhd::Info> displays_tmp_;
+    fbl::Vector<fhd::wire::Info> displays_tmp_;
   };
 
   EventHandler event_handler;
@@ -201,7 +201,7 @@ void CoreDisplayTest::DuplicateAndImportToken() {
 }
 
 void CoreDisplayTest::SetBufferConstraints() {
-  fhd::ImageConfig image_config = {};
+  fhd::wire::ImageConfig image_config = {};
   image_config.type = IMAGE_TYPE_CAPTURE;
   auto constraints_resp = dc_client_->SetBufferCollectionConstraints(kCollectionId, image_config);
   ASSERT_TRUE(constraints_resp.ok());
@@ -221,15 +221,15 @@ void CoreDisplayTest::FinalizeClientConstraints() {
   ASSERT_OK(bind_resp.status());
 
   // token has been returned. Let's set contraints
-  sysmem::BufferCollectionConstraints constraints = {};
+  sysmem::wire::BufferCollectionConstraints constraints = {};
   constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = false;
   constraints.image_format_constraints_count = 1;
-  sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
+  sysmem::wire::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
   image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
   image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0] = sysmem::ColorSpace{
+  image_constraints.color_space[0] = sysmem::wire::ColorSpace{
       .type = sysmem::wire::ColorSpaceType::SRGB,
   };
   image_constraints.min_coded_width = 0;
@@ -259,7 +259,7 @@ void CoreDisplayTest::FinalizeClientConstraints() {
 
 uint64_t CoreDisplayTest::ImportCaptureImage() const {
   // Make the buffer available for capture
-  fhd::ImageConfig capture_cfg = {};  // will contain a handle
+  fhd::wire::ImageConfig capture_cfg = {};  // will contain a handle
   auto importcap_resp = dc_client_->ImportImageForCapture(capture_cfg, kCollectionId, 0);
   if (importcap_resp.status() != ZX_OK) {
     return INVALID_ID;
@@ -500,7 +500,7 @@ TEST_F(CoreDisplayTest, CaptureNotSupported) {
     printf("Test Skipped\n");
     return;
   }
-  fhd::ImageConfig image_config = {};
+  fhd::wire::ImageConfig image_config = {};
   auto import_resp = dc_client_->ImportImageForCapture(image_config, 0, 0);
   EXPECT_TRUE(import_resp.ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, import_resp.value().result.err());

@@ -196,7 +196,7 @@ void PlatformBus::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync& comple
 }
 
 void PlatformBus::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync& completer) {
-  ::llcpp::fuchsia::sysinfo::InterruptControllerInfo info = {
+  ::llcpp::fuchsia::sysinfo::wire::InterruptControllerInfo info = {
       .type = interrupt_controller_type_,
   };
   completer.Reply(ZX_OK, fidl::unowned_ptr(&info));

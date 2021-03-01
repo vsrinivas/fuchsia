@@ -55,13 +55,13 @@ zx_koid_t GetKoid(zx_handle_t handle) {
 }
 
 void LogTester::GetInfo(GetInfoCompleter::Sync& completer) {
-  ::llcpp::fuchsia::validate::logs::PuppetInfo info;
+  ::llcpp::fuchsia::validate::logs::wire::PuppetInfo info;
   info.pid = GetKoid(zx_process_self());
   info.tid = GetKoid(zx_thread_self());
   completer.Reply(info);
 }
 
-void LogTester::EmitLog(::llcpp::fuchsia::validate::logs::RecordSpec spec,
+void LogTester::EmitLog(::llcpp::fuchsia::validate::logs::wire::RecordSpec spec,
                         EmitLogCompleter::Sync& completer) {
   using llcpp::fuchsia::diagnostics::wire::Severity;
   fx_log_severity_t severity;

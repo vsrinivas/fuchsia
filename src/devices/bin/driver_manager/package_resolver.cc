@@ -65,8 +65,8 @@ zx::status<fio::Directory::SyncClient> PackageResolver::Resolve(
     LOGF(ERROR, "Failed to parse package url: %s", package_url.data());
     return zx::error(ZX_ERR_INTERNAL);
   }
-  ::llcpp::fuchsia::pkg::UpdatePolicy update_policy{.fetch_if_absent = true,
-                                                    .allow_old_versions = false};
+  ::llcpp::fuchsia::pkg::wire::UpdatePolicy update_policy{.fetch_if_absent = true,
+                                                          .allow_old_versions = false};
   ::fidl::VectorView<::fidl::StringView> selectors;
 
   // This is synchronous for now so we can get the proof of concept working.

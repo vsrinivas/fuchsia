@@ -35,7 +35,7 @@ class HealthCheckTest : public ParameterizedBlobfsTest {
 };
 
 TEST_P(HealthCheckTest, EmptyFilesystem) {
-  fuv::VerifyOptions options;
+  fuv::wire::VerifyOptions options;
   auto status = ConnectToHealthCheckService().Verify(std::move(options));
   ASSERT_EQ(status.status(), ZX_OK) << status.error();
 }

@@ -24,7 +24,7 @@ namespace {
 class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
   bool set_constraints_called() const { return set_constraints_called_; }
-  void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
+  void SetConstraints(bool has_constraints, sysmem::wire::BufferCollectionConstraints constraints,
                       SetConstraintsCompleter::Sync& _completer) override {
     set_constraints_called_ = true;
     EXPECT_FALSE(constraints.buffer_memory_constraints.inaccessible_domain_supported);

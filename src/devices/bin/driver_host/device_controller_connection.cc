@@ -193,7 +193,7 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync& completer) {
   this->dev()->unbind_cb = [dev = this->dev(), completer = completer.ToAsync(),
                             trace = std::move(trace)](zx_status_t status) mutable {
     llcpp::fuchsia::device::manager::wire::DeviceController_Unbind_Result result;
-    fidl::aligned<llcpp::fuchsia::device::manager::DeviceController_Unbind_Response> response;
+    fidl::aligned<llcpp::fuchsia::device::manager::wire::DeviceController_Unbind_Response> response;
     if (status != ZX_OK && dev->parent()) {
       // If unbind returns an error, and if client is waiting for unbind to complete,
       // inform the client.
@@ -213,7 +213,7 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync&
   ZX_ASSERT(this->dev()->removal_cb == nullptr);
   this->dev()->removal_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
     llcpp::fuchsia::device::manager::wire::DeviceController_CompleteRemoval_Result result;
-    fidl::aligned<llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response>
+    fidl::aligned<llcpp::fuchsia::device::manager::wire::DeviceController_CompleteRemoval_Response>
         response;
     result.set_response(fidl::unowned_ptr(&response));
     completer.Reply(std::move(result));

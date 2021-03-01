@@ -64,13 +64,13 @@ class TestServer final : public fuchsia_io::File::Interface {
         return;
       }
 
-      fuchsia_io::Vmofile vmofile;
+      fuchsia_io::wire::Vmofile vmofile;
       vmofile.vmo = std::move(vmo);
       vmofile.offset = 0;
       vmofile.length = context->content_size;
       completer.Reply(fuchsia_io::wire::NodeInfo::WithVmofile(fidl::unowned_ptr(&vmofile)));
     } else {
-      fuchsia_io::FileObject fo;
+      fuchsia_io::wire::FileObject fo;
       completer.Reply(fuchsia_io::wire::NodeInfo::WithFile(fidl::unowned_ptr(&fo)));
     }
   }
@@ -78,7 +78,7 @@ class TestServer final : public fuchsia_io::File::Interface {
   void Sync(SyncCompleter::Sync& completer) override {}
 
   void GetAttr(GetAttrCompleter::Sync& completer) override {
-    fuchsia_io::NodeAttributes attributes;
+    fuchsia_io::wire::NodeAttributes attributes;
     attributes.id = 5;
     attributes.content_size = context->content_size;
     attributes.storage_size = ZX_PAGE_SIZE;
@@ -86,7 +86,7 @@ class TestServer final : public fuchsia_io::File::Interface {
     completer.Reply(ZX_OK, std::move(attributes));
   }
 
-  void SetAttr(uint32_t flags, fuchsia_io::NodeAttributes attribute,
+  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attribute,
                SetAttrCompleter::Sync& completer) override {}
 
   void Read(uint64_t count, ReadCompleter::Sync& completer) override {}
@@ -137,7 +137,7 @@ class TestServer final : public fuchsia_io::File::Interface {
       return;
     }
 
-    llcpp::fuchsia::mem::Buffer buffer = {};
+    llcpp::fuchsia::mem::wire::Buffer buffer = {};
     buffer.size = context->content_size;
 
     zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;

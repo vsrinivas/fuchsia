@@ -27,7 +27,7 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::R
   }
 
   void AddDevice(::zx::channel coordinator, ::zx::channel device_controller,
-                 ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
+                 ::fidl::VectorView<llcpp::fuchsia::device::manager::wire::DeviceProperty> props,
                  ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path,
                  ::fidl::StringView args,
                  llcpp::fuchsia::device::manager::wire::AddDeviceConfig device_add_config,
@@ -39,9 +39,10 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::R
     completer.Reply(std::move(response));
   }
   void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync& completer) override {}
-  void AddCompositeDevice(::fidl::StringView name,
-                          llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
-                          AddCompositeDeviceCompleter::Sync& completer) override {
+  void AddCompositeDevice(
+      ::fidl::StringView name,
+      llcpp::fuchsia::device::manager::wire::CompositeDeviceDescriptor comp_desc,
+      AddCompositeDeviceCompleter::Sync& completer) override {
     llcpp::fuchsia::device::manager::wire::Coordinator_AddCompositeDevice_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::unowned_ptr(&status));

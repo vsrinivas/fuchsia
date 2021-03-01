@@ -97,7 +97,7 @@ func libraryName(librarySuffix string) string {
 }
 
 func llcppBenchmarkType(librarySuffix string, value gidlir.Value) string {
-	return fmt.Sprintf("llcpp::%s::%s", libraryName(librarySuffix), gidlir.TypeFromValue(value))
+	return fmt.Sprintf("llcpp::%s::wire::%s", libraryName(librarySuffix), gidlir.TypeFromValue(value))
 }
 
 func benchmarkName(gidlName string) string {

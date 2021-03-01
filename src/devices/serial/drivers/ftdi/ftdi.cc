@@ -342,8 +342,8 @@ void FtdiDevice::DdkRelease() {
   delete this;
 }
 
-void FtdiDevice::CreateI2C(::llcpp::fuchsia::hardware::ftdi::I2cBusLayout layout,
-                           ::llcpp::fuchsia::hardware::ftdi::I2cDevice device,
+void FtdiDevice::CreateI2C(::llcpp::fuchsia::hardware::ftdi::wire::I2cBusLayout layout,
+                           ::llcpp::fuchsia::hardware::ftdi::wire::I2cDevice device,
                            CreateI2CCompleter::Sync& completer) {
   // Set the chip to run in MPSSE mode.
   zx_status_t status = this->SetBitMode(0, 0);

@@ -868,7 +868,7 @@ void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
     completer.Reply(std::move(response));
     return;
   }
-  fidl::aligned<peripheral::Device_SetConfiguration_Response> resp;
+  fidl::aligned<peripheral::wire::Device_SetConfiguration_Response> resp;
   response.set_response(fidl::unowned_ptr(&resp));
   completer.Reply(std::move(response));
 }

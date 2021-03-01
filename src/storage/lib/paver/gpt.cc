@@ -59,7 +59,7 @@ bool FilterByName(const gpt_partition_t& part, fbl::StringPiece name) {
   char cstring_name[GPT_NAME_LEN];
   ::utf16_to_cstring(cstring_name, reinterpret_cast<const uint16_t*>(part.name), GPT_NAME_LEN);
 
-  // We use a case-insenstive comparison to be compatible with the previous naming scheme.
+  // We use a case-insensitive comparison to be compatible with the previous naming scheme.
   // On a ChromeOS device, all of the kernel partitions share a common GUID type, so we
   // distinguish Zircon kernel partitions based on name.
   return strncasecmp(cstring_name, name.data(), name.length()) == 0;
@@ -183,7 +183,7 @@ zx::status<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
       ERROR("Failed to re-read GPT\n");
       return status.take_error();
     }
-    printf("Rebound GPT driver succesfully\n");
+    printf("Rebound GPT driver successfully\n");
   }
 
   return zx::ok(new GptDevicePartitioner(devfs_root.duplicate(), svc_root, std::move(gpt_device),

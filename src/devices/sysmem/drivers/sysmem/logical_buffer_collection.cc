@@ -662,7 +662,7 @@ void LogicalBufferCollection::TryAllocate() {
   }
   ZX_DEBUG_ASSERT(!!constraints_);
 
-  fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo, zx_status_t> result =
+  fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo, zx_status_t> result =
       Allocate(allocator_);
   if (!result.is_ok()) {
     ZX_DEBUG_ASSERT(result.error() != ZX_OK);
@@ -671,7 +671,7 @@ void LogicalBufferCollection::TryAllocate() {
   }
   ZX_DEBUG_ASSERT(result.is_ok());
 
-  llcpp::fuchsia::sysmem2::BufferCollectionInfo info = result.take_value();
+  llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo info = result.take_value();
   // Setting empty constraints as the success case isn't allowed.  That's
   // considered a failure.  At least one participant must specify non-empty
   // constraints.
@@ -883,7 +883,7 @@ bool LogicalBufferCollection::CombineConstraints() {
   }
 
   // Start with empty constraints / unconstrained.
-  llcpp::fuchsia::sysmem2::BufferCollectionConstraints acc(allocator_);
+  llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints acc(allocator_);
   // Sanitize initial accumulation target to keep accumulation simpler.  This is guaranteed to
   // succeed; the input is always the same.
   bool result = CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kInitial, acc);
@@ -921,8 +921,9 @@ bool LogicalBufferCollection::CombineConstraints() {
 //
 // TODO(dustingreen): From a particular participant, be more picky about which domains are supported
 // vs. which heaps are supported.
-static bool IsHeapPermitted(const llcpp::fuchsia::sysmem2::BufferMemoryConstraints& constraints,
-                            llcpp::fuchsia::sysmem2::wire::HeapType heap) {
+static bool IsHeapPermitted(
+    const llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints& constraints,
+    llcpp::fuchsia::sysmem2::wire::HeapType heap) {
   if (constraints.heap_permitted().count()) {
     auto begin = constraints.heap_permitted().begin();
     auto end = constraints.heap_permitted().end();
@@ -932,7 +933,8 @@ static bool IsHeapPermitted(const llcpp::fuchsia::sysmem2::BufferMemoryConstrain
   return true;
 }
 
-static bool IsSecurePermitted(const llcpp::fuchsia::sysmem2::BufferMemoryConstraints& constraints) {
+static bool IsSecurePermitted(
+    const llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints& constraints) {
   // TODO(fxbug.dev/37452): Generalize this by finding if there's a heap that maps to secure
   // MemoryAllocator in the permitted heaps.
   return constraints.inaccessible_domain_supported() &&
@@ -942,12 +944,12 @@ static bool IsSecurePermitted(const llcpp::fuchsia::sysmem2::BufferMemoryConstra
 }
 
 static bool IsCpuAccessSupported(
-    const llcpp::fuchsia::sysmem2::BufferMemoryConstraints& constraints) {
+    const llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints& constraints) {
   return constraints.cpu_domain_supported() || constraints.ram_domain_supported();
 }
 
 bool LogicalBufferCollection::CheckSanitizeBufferUsage(
-    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::BufferUsage& buffer_usage) {
+    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::wire::BufferUsage& buffer_usage) {
   FIELD_DEFAULT_ZERO(buffer_usage, none);
   FIELD_DEFAULT_ZERO(buffer_usage, cpu);
   FIELD_DEFAULT_ZERO(buffer_usage, vulkan);
@@ -999,7 +1001,8 @@ size_t LogicalBufferCollection::InitialCapacityOrZero(CheckSanitizeStage stage,
 // constraint checks that are present under Accumulate* are commented explaining
 // why it's ok for them to be there.
 bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
-    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints) {
+    CheckSanitizeStage stage,
+    llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& constraints) {
   bool was_empty = constraints.IsEmpty();
   FIELD_DEFAULT_SET(constraints, usage);
   if (was_empty) {
@@ -1084,8 +1087,8 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
 }
 
 bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
-    CheckSanitizeStage stage, const llcpp::fuchsia::sysmem2::BufferUsage& buffer_usage,
-    llcpp::fuchsia::sysmem2::BufferMemoryConstraints& constraints) {
+    CheckSanitizeStage stage, const llcpp::fuchsia::sysmem2::wire::BufferUsage& buffer_usage,
+    llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints& constraints) {
   FIELD_DEFAULT_ZERO(constraints, min_size_bytes);
   FIELD_DEFAULT_MAX(constraints, max_size_bytes);
   FIELD_DEFAULT_FALSE(constraints, physically_contiguous_required);
@@ -1120,7 +1123,7 @@ bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
 }
 
 bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
-    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::ImageFormatConstraints& constraints) {
+    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints& constraints) {
   // We never CheckSanitizeImageFormatConstraints() on empty (aka initial) constraints.
   ZX_DEBUG_ASSERT(stage != CheckSanitizeStage::kInitial);
 
@@ -1287,7 +1290,8 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
 }
 
 bool LogicalBufferCollection::AccumulateConstraintsBufferUsage(
-    llcpp::fuchsia::sysmem2::BufferUsage* acc, llcpp::fuchsia::sysmem2::BufferUsage* c) {
+    llcpp::fuchsia::sysmem2::wire::BufferUsage* acc,
+    llcpp::fuchsia::sysmem2::wire::BufferUsage* c) {
   // We accumulate "none" usage just like other usages, to make aggregation and CheckSanitize
   // consistent/uniform.
   acc->none() |= c->none();
@@ -1302,8 +1306,8 @@ bool LogicalBufferCollection::AccumulateConstraintsBufferUsage(
 //
 // |c| additional constraint to aggregate into acc
 bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
-    llcpp::fuchsia::sysmem2::BufferCollectionConstraints* acc,
-    llcpp::fuchsia::sysmem2::BufferCollectionConstraints* c) {
+    llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints* acc,
+    llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints* c) {
   if (!AccumulateConstraintsBufferUsage(&acc->usage(), &c->usage())) {
     return false;
   }
@@ -1406,8 +1410,8 @@ bool LogicalBufferCollection::AccumulateConstraintHeapPermitted(
 }
 
 bool LogicalBufferCollection::AccumulateConstraintBufferMemory(
-    llcpp::fuchsia::sysmem2::BufferMemoryConstraints* acc,
-    llcpp::fuchsia::sysmem2::BufferMemoryConstraints* c) {
+    llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints* acc,
+    llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints* c) {
   acc->min_size_bytes() = std::max(acc->min_size_bytes(), c->min_size_bytes());
 
   // Don't permit 0 as the overall min_size_bytes; that would be nonsense.  No
@@ -1442,8 +1446,8 @@ bool LogicalBufferCollection::AccumulateConstraintBufferMemory(
 }
 
 bool LogicalBufferCollection::AccumulateConstraintImageFormats(
-    fidl::VectorView<llcpp::fuchsia::sysmem2::ImageFormatConstraints>* acc,
-    fidl::VectorView<llcpp::fuchsia::sysmem2::ImageFormatConstraints>* c) {
+    fidl::VectorView<llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints>* acc,
+    fidl::VectorView<llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints>* c) {
   // Remove any pixel_format in acc that's not in c.  Process any format
   // that's in both.  If processing the format results in empty set for that
   // format, pretend as if the format wasn't in c and remove that format from
@@ -1479,7 +1483,7 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormats(
       } else {
         // Stuff under this item would get deleted later anyway, but delete now to avoid keeping
         // cruft we don't need.
-        (*acc)[ai] = llcpp::fuchsia::sysmem2::ImageFormatConstraints();
+        (*acc)[ai] = llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints();
       }
       // remove last item
       acc->set_count(acc->count() - 1);
@@ -1503,8 +1507,8 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormats(
 }
 
 bool LogicalBufferCollection::AccumulateConstraintImageFormat(
-    llcpp::fuchsia::sysmem2::ImageFormatConstraints* acc,
-    llcpp::fuchsia::sysmem2::ImageFormatConstraints* c) {
+    llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints* acc,
+    llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints* c) {
   ZX_DEBUG_ASSERT(ImageFormatIsPixelFormatEqual(acc->pixel_format(), c->pixel_format()));
   // Checked previously.
   ZX_DEBUG_ASSERT(acc->color_spaces().count());
@@ -1574,8 +1578,8 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormat(
 }
 
 bool LogicalBufferCollection::AccumulateConstraintColorSpaces(
-    fidl::VectorView<llcpp::fuchsia::sysmem2::ColorSpace>* acc,
-    fidl::VectorView<llcpp::fuchsia::sysmem2::ColorSpace>* c) {
+    fidl::VectorView<llcpp::fuchsia::sysmem2::wire::ColorSpace>* acc,
+    fidl::VectorView<llcpp::fuchsia::sysmem2::wire::ColorSpace>* c) {
   // Remove any color_space in acc that's not in c.  If zero color spaces
   // remain in acc, return false.
 
@@ -1597,7 +1601,7 @@ bool LogicalBufferCollection::AccumulateConstraintColorSpaces(
       } else {
         // Stuff under this item would get deleted later anyway, but delete now to avoid keeping
         // cruft we don't need.
-        (*acc)[ai] = llcpp::fuchsia::sysmem2::ColorSpace();
+        (*acc)[ai] = llcpp::fuchsia::sysmem2::wire::ColorSpace();
       }
       // remove last item
       acc->set_count(acc->count() - 1);
@@ -1618,13 +1622,14 @@ bool LogicalBufferCollection::AccumulateConstraintColorSpaces(
   return true;
 }
 
-bool LogicalBufferCollection::IsColorSpaceEqual(const llcpp::fuchsia::sysmem2::ColorSpace& a,
-                                                const llcpp::fuchsia::sysmem2::ColorSpace& b) {
+bool LogicalBufferCollection::IsColorSpaceEqual(
+    const llcpp::fuchsia::sysmem2::wire::ColorSpace& a,
+    const llcpp::fuchsia::sysmem2::wire::ColorSpace& b) {
   return a.type() == b.type();
 }
 
 static fit::result<llcpp::fuchsia::sysmem2::wire::HeapType, zx_status_t> GetHeap(
-    const llcpp::fuchsia::sysmem2::BufferMemoryConstraints& constraints, Device* device) {
+    const llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints& constraints, Device* device) {
   if (constraints.secure_required()) {
     // TODO(fxbug.dev/37452): Generalize this.
     //
@@ -1659,7 +1664,7 @@ static fit::result<llcpp::fuchsia::sysmem2::wire::HeapType, zx_status_t> GetHeap
 }
 
 static fit::result<llcpp::fuchsia::sysmem2::wire::CoherencyDomain> GetCoherencyDomain(
-    const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints,
+    const llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& constraints,
     MemoryAllocator* memory_allocator) {
   ZX_DEBUG_ASSERT(constraints.has_buffer_memory_constraints());
 
@@ -1699,12 +1704,12 @@ static fit::result<llcpp::fuchsia::sysmem2::wire::CoherencyDomain> GetCoherencyD
   return fit::error();
 }
 
-fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo, zx_status_t>
+fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo, zx_status_t>
 LogicalBufferCollection::Allocate(fidl::Allocator& result_allocator) {
   TRACE_DURATION("gfx", "LogicalBufferCollection:Allocate", "this", this);
   ZX_DEBUG_ASSERT(constraints_);
 
-  llcpp::fuchsia::sysmem2::BufferCollectionInfo result(result_allocator);
+  llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo result(result_allocator);
 
   uint32_t min_buffer_count = constraints_->min_buffer_count_for_camping() +
                               constraints_->min_buffer_count_for_dedicated_slack() +
@@ -1733,12 +1738,12 @@ LogicalBufferCollection::Allocate(fidl::Allocator& result_allocator) {
   uint64_t max_size_bytes = std::numeric_limits<uint64_t>::max();
 
   result.set_settings(result_allocator, result_allocator);
-  llcpp::fuchsia::sysmem2::SingleBufferSettings& settings = result.settings();
+  llcpp::fuchsia::sysmem2::wire::SingleBufferSettings& settings = result.settings();
   settings.set_buffer_settings(result_allocator, result_allocator);
-  llcpp::fuchsia::sysmem2::BufferMemorySettings& buffer_settings = settings.buffer_settings();
+  llcpp::fuchsia::sysmem2::wire::BufferMemorySettings& buffer_settings = settings.buffer_settings();
 
   ZX_DEBUG_ASSERT(constraints_->has_buffer_memory_constraints());
-  const llcpp::fuchsia::sysmem2::BufferMemoryConstraints& buffer_constraints =
+  const llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints& buffer_constraints =
       constraints_->buffer_memory_constraints();
   buffer_settings.set_is_physically_contiguous(result_allocator,
                                                buffer_constraints.physically_contiguous_required());
@@ -1821,9 +1826,9 @@ LogicalBufferCollection::Allocate(fidl::Allocator& result_allocator) {
   // Compute the min buffer size implied by image_format_constraints, so we ensure the buffers can
   // hold the min-size image.
   if (settings.has_image_format_constraints()) {
-    const llcpp::fuchsia::sysmem2::ImageFormatConstraints& image_format_constraints =
+    const llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints& image_format_constraints =
         settings.image_format_constraints();
-    llcpp::fuchsia::sysmem2::ImageFormat min_image(result_allocator);
+    llcpp::fuchsia::sysmem2::wire::ImageFormat min_image(result_allocator);
     min_image.set_pixel_format(
         result_allocator,
         sysmem::V2ClonePixelFormat(result_allocator, image_format_constraints.pixel_format()));
@@ -1917,7 +1922,7 @@ LogicalBufferCollection::Allocate(fidl::Allocator& result_allocator) {
   ZX_DEBUG_ASSERT(min_size_bytes <= std::numeric_limits<uint32_t>::max());
 
   if (settings.has_image_format_constraints()) {
-    const llcpp::fuchsia::sysmem2::ImageFormatConstraints& image_format_constraints =
+    const llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints& image_format_constraints =
         settings.image_format_constraints();
     node_.CreateUint("pixel_format",
                      static_cast<uint64_t>(image_format_constraints.pixel_format().type()),
@@ -1959,9 +1964,10 @@ LogicalBufferCollection::Allocate(fidl::Allocator& result_allocator) {
 
   // Get memory allocator for aux buffers, if needed.
   MemoryAllocator* maybe_aux_allocator = nullptr;
-  std::optional<llcpp::fuchsia::sysmem2::SingleBufferSettings> maybe_aux_settings;
+  std::optional<llcpp::fuchsia::sysmem2::wire::SingleBufferSettings> maybe_aux_settings;
   if (buffer_settings.is_secure() && constraints_->need_clear_aux_buffers_for_secure()) {
-    maybe_aux_settings.emplace(llcpp::fuchsia::sysmem2::SingleBufferSettings(result_allocator));
+    maybe_aux_settings.emplace(
+        llcpp::fuchsia::sysmem2::wire::SingleBufferSettings(result_allocator));
     maybe_aux_settings->set_buffer_settings(result_allocator, result_allocator);
     auto& aux_buffer_settings = maybe_aux_settings->buffer_settings();
     aux_buffer_settings.set_size_bytes(result_allocator, buffer_settings.size_bytes());
@@ -1992,7 +1998,7 @@ LogicalBufferCollection::Allocate(fidl::Allocator& result_allocator) {
       return fit::error(ZX_ERR_NO_MEMORY);
     }
     zx::vmo vmo = allocate_result.take_value();
-    llcpp::fuchsia::sysmem2::VmoBuffer vmo_buffer(result_allocator);
+    llcpp::fuchsia::sysmem2::wire::VmoBuffer vmo_buffer(result_allocator);
     vmo_buffer.set_vmo(result_allocator, std::move(vmo));
     vmo_buffer.set_vmo_usable_start(result_allocator, 0ul);
     if (maybe_aux_allocator) {
@@ -2022,7 +2028,7 @@ LogicalBufferCollection::Allocate(fidl::Allocator& result_allocator) {
 }
 
 fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
-    MemoryAllocator* allocator, const llcpp::fuchsia::sysmem2::SingleBufferSettings& settings,
+    MemoryAllocator* allocator, const llcpp::fuchsia::sysmem2::wire::SingleBufferSettings& settings,
     uint32_t index) {
   TRACE_DURATION("gfx", "LogicalBufferCollection::AllocateVmo", "size_bytes",
                  settings.buffer_settings().size_bytes());
@@ -2229,8 +2235,8 @@ static int32_t clamp_difference(int32_t a, int32_t b) {
 // overrides that prefer particular PixelFormat based on a usage / usage
 // combination.
 int32_t LogicalBufferCollection::CompareImageFormatConstraintsTieBreaker(
-    const llcpp::fuchsia::sysmem2::ImageFormatConstraints& a,
-    const llcpp::fuchsia::sysmem2::ImageFormatConstraints& b) {
+    const llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints& a,
+    const llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints& b) {
   // If there's not any cost difference, fall back to choosing the
   // pixel_format that has the larger type enum value as a tie-breaker.
 

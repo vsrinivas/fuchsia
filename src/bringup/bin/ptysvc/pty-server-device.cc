@@ -9,7 +9,7 @@
 // The pty server half only supports OpenClient and SetWindowSize. Return ZX_ERR_NOT_SUPPORTED for
 // all of the others
 
-void PtyServerDevice::SetWindowSize(::llcpp::fuchsia::hardware::pty::WindowSize size,
+void PtyServerDevice::SetWindowSize(::llcpp::fuchsia::hardware::pty::wire::WindowSize size,
                                     SetWindowSizeCompleter::Sync& completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::SetWindowSizeResponse> buf;
   server_->set_window_size({.width = size.width, .height = size.height});
@@ -29,7 +29,7 @@ void PtyServerDevice::ClrSetFeature(uint32_t clr, uint32_t set,
 
 void PtyServerDevice::GetWindowSize(GetWindowSizeCompleter::Sync& completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::GetWindowSizeResponse> buf;
-  ::llcpp::fuchsia::hardware::pty::WindowSize wsz = {.width = 0, .height = 0};
+  ::llcpp::fuchsia::hardware::pty::wire::WindowSize wsz = {.width = 0, .height = 0};
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, wsz);
 }
 
@@ -91,7 +91,7 @@ void PtyServerDevice::GetBuffer(uint32_t flags, GetBufferCompleter::Sync& comple
 
 void PtyServerDevice::Sync(SyncCompleter::Sync& completer) { ZX_ASSERT(false); }
 
-void PtyServerDevice::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
+void PtyServerDevice::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::wire::NodeAttributes attributes,
                               SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

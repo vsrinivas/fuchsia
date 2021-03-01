@@ -496,7 +496,7 @@ zx_handle_t Device::GetQmiChannelPort() { return qmi_channel_port_; }
 
 void Device::SnoopQmiMsgSend(uint8_t* msg_arr, uint32_t msg_arr_len,
                              telephony_snoop::wire::Direction direction) {
-  telephony_snoop::QmiMessage qmi_msg;
+  telephony_snoop::wire::QmiMessage qmi_msg;
   uint32_t current_length = std::min(msg_arr_len, (uint32_t)sizeof(qmi_msg.opaque_bytes));
   qmi_msg.is_partial_copy = true;  // do not know the real length of QMI message for now
   qmi_msg.direction = direction;

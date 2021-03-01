@@ -140,7 +140,7 @@ void usage(const char* prog_name) {
 
 void dump_formats(const audio::utils::AudioDeviceStream& stream) {
   stream.GetSupportedFormats(
-      [](const ::llcpp::fuchsia::hardware::audio::SupportedFormats& formats) {
+      [](const ::llcpp::fuchsia::hardware::audio::wire::SupportedFormats& formats) {
         auto& pcm = formats.pcm_supported_formats();
         printf("\nNumber of channels      :");
         for (auto i : pcm.number_of_channels) {

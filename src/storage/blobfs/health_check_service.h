@@ -22,7 +22,7 @@ class HealthCheckService : public llcpp::fuchsia::update::verify::BlobfsVerifier
                            public fs::Service {
  public:
   // fuchsia.update.verify.BlobfsVerifier interface
-  void Verify(llcpp::fuchsia::update::verify::VerifyOptions options,
+  void Verify(llcpp::fuchsia::update::verify::wire::VerifyOptions options,
               VerifyCompleter::Sync& completer) final;
 
  protected:

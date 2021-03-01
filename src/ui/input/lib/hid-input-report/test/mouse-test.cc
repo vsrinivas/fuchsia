@@ -86,7 +86,7 @@ TEST(MouseTest, BootMouse) {
   EXPECT_EQ(hid_input_report::ParseResult::kOk, mouse.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
+  fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             mouse.CreateDescriptor(descriptor_allocator, descriptor));
   EXPECT_TRUE(descriptor.has_mouse());
@@ -109,7 +109,7 @@ TEST(MouseTest, BootMouse) {
   report_data.buttons = 0xFF;
 
   hid_input_report::TestReportAllocator report_allocator;
-  fuchsia_input_report::InputReport input_report(report_allocator);
+  fuchsia_input_report::wire::InputReport input_report(report_allocator);
 
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             mouse.ParseInputReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data),
@@ -145,7 +145,7 @@ TEST(MouseTest, ScrollMouse) {
   EXPECT_EQ(hid_input_report::ParseResult::kOk, mouse.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
+  fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             mouse.CreateDescriptor(descriptor_allocator, descriptor));
 
@@ -160,7 +160,7 @@ TEST(MouseTest, ScrollMouse) {
   report_data.scroll = 100;
 
   hid_input_report::TestReportAllocator report_allocator;
-  fuchsia_input_report::InputReport input_report(report_allocator);
+  fuchsia_input_report::wire::InputReport input_report(report_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             mouse.ParseInputReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data),
                                    report_allocator, input_report));
@@ -184,7 +184,7 @@ TEST(MouseTest, VncMouse) {
   EXPECT_EQ(hid_input_report::ParseResult::kOk, mouse.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
+  fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             mouse.CreateDescriptor(descriptor_allocator, descriptor));
 
@@ -204,7 +204,7 @@ TEST(MouseTest, VncMouse) {
   report_data.position_y = 1000;
 
   hid_input_report::TestReportAllocator report_allocator;
-  fuchsia_input_report::InputReport input_report(report_allocator);
+  fuchsia_input_report::wire::InputReport input_report(report_allocator);
 
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             mouse.ParseInputReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data),

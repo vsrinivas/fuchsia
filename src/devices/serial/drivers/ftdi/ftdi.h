@@ -115,13 +115,13 @@ class FtdiDevice : public DeviceType,
   zx_status_t SerialImplSetNotifyCallback(const serial_notify_t* cb);
 
  private:
-  void CreateI2C(::llcpp::fuchsia::hardware::ftdi::I2cBusLayout layout,
-                 ::llcpp::fuchsia::hardware::ftdi::I2cDevice device,
+  void CreateI2C(::llcpp::fuchsia::hardware::ftdi::wire::I2cBusLayout layout,
+                 ::llcpp::fuchsia::hardware::ftdi::wire::I2cDevice device,
                  CreateI2CCompleter::Sync& _completer) override;
 
-  static zx_status_t FidlCreateI2c(void* ctx,
-                                   const ::llcpp::fuchsia::hardware::ftdi::I2cBusLayout* layout,
-                                   const ::llcpp::fuchsia::hardware::ftdi::I2cDevice* device);
+  static zx_status_t FidlCreateI2c(
+      void* ctx, const ::llcpp::fuchsia::hardware::ftdi::wire::I2cBusLayout* layout,
+      const ::llcpp::fuchsia::hardware::ftdi::wire::I2cDevice* device);
   zx_status_t Reset();
   zx_status_t SetBaudrate(uint32_t baudrate);
   zx_status_t CalcDividers(uint32_t* baudrate, uint32_t clock, uint32_t divisor,

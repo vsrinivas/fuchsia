@@ -37,8 +37,8 @@ static uint32_t get_fg_color() {
 }
 
 // Checks if two rectangles intersect, and if so, returns their intersection.
-static bool compute_intersection(const fhd::Frame& a, const fhd::Frame& b,
-                                 fhd::Frame* intersection) {
+static bool compute_intersection(const fhd::wire::Frame& a, const fhd::wire::Frame& b,
+                                 fhd::wire::Frame* intersection) {
   uint32_t left = std::max(a.x_pos, b.x_pos);
   uint32_t right = std::min(a.x_pos + a.width, b.x_pos + b.width);
   uint32_t top = std::max(a.y_pos, b.y_pos);
@@ -161,7 +161,7 @@ bool PrimaryLayer::Init(fhd::Controller::SyncClient* dc) {
       layer->import_info[alt_image_].events[WAIT_EVENT].signal(0, ZX_EVENT_SIGNALED);
     }
 
-    fhd::ImageConfig image_config;
+    fhd::wire::ImageConfig image_config;
     images_[0]->GetConfig(&image_config);
     auto set_config_result = dc->SetLayerPrimaryConfig(layer->id, image_config);
     if (!set_config_result.ok()) {
@@ -229,7 +229,7 @@ void PrimaryLayer::StepLayout(int32_t frame_num) {
     }
   }
 
-  fhd::Frame display = {};
+  fhd::wire::Frame display = {};
   for (unsigned i = 0; i < displays_.size(); i++) {
     display.height = displays_[i]->mode().vertical_resolution;
     display.width = displays_[i]->mode().horizontal_resolution;
@@ -350,7 +350,7 @@ CursorLayer::CursorLayer(Display* display) : VirtualLayer(display) {}
 CursorLayer::CursorLayer(const fbl::Vector<Display>& displays) : VirtualLayer(displays) {}
 
 bool CursorLayer::Init(fhd::Controller::SyncClient* dc) {
-  fhd::CursorInfo info = displays_[0]->cursor();
+  fhd::wire::CursorInfo info = displays_[0]->cursor();
   uint32_t bg_color = 0xffffffff;
   image_ = Image::Create(dc, info.width, info.height, info.pixel_format, Image::Pattern::kBorder,
                          get_fg_color(), bg_color, false);
@@ -371,7 +371,7 @@ bool CursorLayer::Init(fhd::Controller::SyncClient* dc) {
     }
     layer->import_info[0].events[WAIT_EVENT].signal(0, ZX_EVENT_SIGNALED);
 
-    fhd::ImageConfig image_config = {};
+    fhd::wire::ImageConfig image_config = {};
     image_config.height = info.height;
     image_config.width = info.width;
     image_config.pixel_format = info.pixel_format;
@@ -389,7 +389,7 @@ bool CursorLayer::Init(fhd::Controller::SyncClient* dc) {
 }
 
 void CursorLayer::StepLayout(int32_t frame_num) {
-  fhd::CursorInfo info = displays_[0]->cursor();
+  fhd::wire::CursorInfo info = displays_[0]->cursor();
 
   x_pos_ = interpolate(width_ + info.width, frame_num, kDestFrameBouncePeriod) - info.width;
   y_pos_ = interpolate(height_ + info.height, frame_num, kDestFrameBouncePeriod) - info.height;

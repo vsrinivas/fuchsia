@@ -70,12 +70,12 @@ class Layer : public IdMappable<std::unique_ptr<Layer>> {
   // currently in use.
   bool AddToConfig(fbl::SinglyLinkedList<layer_node_t*>* list, uint32_t z_index);
 
-  void SetPrimaryConfig(llcpp::fuchsia::hardware::display::ImageConfig image_config);
+  void SetPrimaryConfig(llcpp::fuchsia::hardware::display::wire::ImageConfig image_config);
   void SetPrimaryPosition(llcpp::fuchsia::hardware::display::wire::Transform transform,
-                          llcpp::fuchsia::hardware::display::Frame src_frame,
-                          llcpp::fuchsia::hardware::display::Frame dest_frame);
+                          llcpp::fuchsia::hardware::display::wire::Frame src_frame,
+                          llcpp::fuchsia::hardware::display::wire::Frame dest_frame);
   void SetPrimaryAlpha(llcpp::fuchsia::hardware::display::wire::AlphaMode mode, float val);
-  void SetCursorConfig(llcpp::fuchsia::hardware::display::ImageConfig image_config);
+  void SetCursorConfig(llcpp::fuchsia::hardware::display::wire::ImageConfig image_config);
   void SetCursorPosition(int32_t x, int32_t y);
   void SetColorConfig(uint32_t pixel_format, ::fidl::VectorView<uint8_t> color_bytes);
   void SetImage(fbl::RefPtr<Image> image_id, uint64_t wait_event_id, uint64_t signal_event_id);

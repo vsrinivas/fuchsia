@@ -13,17 +13,17 @@
 namespace blobfs {
 
 // ensure inline request/response are the same sizes to fit in a FIFO
-static_assert(llcpp::fuchsia::blobfs::internal::DecompressRequest::PrimarySize ==
-              llcpp::fuchsia::blobfs::internal::DecompressResponse::PrimarySize);
-static_assert(llcpp::fuchsia::blobfs::internal::DecompressRequest::MaxOutOfLine == 0);
-static_assert(llcpp::fuchsia::blobfs::internal::DecompressResponse::MaxOutOfLine == 0);
+static_assert(llcpp::fuchsia::blobfs::internal::wire::DecompressRequest::PrimarySize ==
+              llcpp::fuchsia::blobfs::internal::wire::DecompressResponse::PrimarySize);
+static_assert(llcpp::fuchsia::blobfs::internal::wire::DecompressRequest::MaxOutOfLine == 0);
+static_assert(llcpp::fuchsia::blobfs::internal::wire::DecompressResponse::MaxOutOfLine == 0);
 
 class DecompressorImpl : public fuchsia::blobfs::internal::DecompressorCreator {
  public:
   // DecompressorCreator implementation
 
   // Sets up a fifo to do work using the provided vmos, with the compressed vmo
-  // as the src and the decompressed as the desination in all requests on the
+  // as the src and the decompressed as the destination in all requests on the
   // fifo.
   void Create(zx::fifo, zx::vmo decompressed_vmo, zx::vmo compressed_vmo,
               CreateCallback callback) override;

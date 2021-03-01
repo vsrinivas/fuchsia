@@ -27,13 +27,13 @@ TEST(FidlExamples, Enums) {
 
 // [START structs]
 TEST(FidlExamples, Structs) {
-  llcpp::fuchsia::examples::Color default_color;
+  llcpp::fuchsia::examples::wire::Color default_color;
   ASSERT_EQ(default_color.id, 0u);
   // Default values are currently not supported.
   ASSERT_TRUE(default_color.name.is_null());
   ASSERT_TRUE(default_color.name.empty());
 
-  llcpp::fuchsia::examples::Color blue = {1, "blue"};
+  llcpp::fuchsia::examples::wire::Color blue = {1, "blue"};
   ASSERT_EQ(blue.id, 1u);
 }
 // [END structs]
@@ -52,7 +52,7 @@ TEST(FidlExamples, Unions) {
 // [START tables]
 TEST(FidlExamples, Tables) {
   fidl::FidlAllocator allocator;
-  llcpp::fuchsia::examples::User user(allocator);
+  llcpp::fuchsia::examples::wire::User user(allocator);
   user.set_age(allocator, 30);
   user.set_name(allocator, allocator, "jdoe");
   ASSERT_FALSE(user.IsEmpty());

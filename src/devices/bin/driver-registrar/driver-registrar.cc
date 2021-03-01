@@ -32,8 +32,8 @@ int main(int argc, char* argv[]) {
   }
   llcpp::fuchsia::driver::registrar::DriverRegistrar::SyncClient client(std::move(local));
 
-  auto resp =
-      client.Register(llcpp::fuchsia::pkg::PackageUrl{fidl::unowned_str(argv[1], strlen(argv[1]))});
+  auto resp = client.Register(
+      llcpp::fuchsia::pkg::wire::PackageUrl{fidl::unowned_str(argv[1], strlen(argv[1]))});
   if (!resp.ok()) {
     fprintf(stderr, "Failed to call DriverRegistrar::Register for driver package %s\n", argv[1]);
     return -1;

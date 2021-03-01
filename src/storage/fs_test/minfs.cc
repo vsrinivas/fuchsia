@@ -39,7 +39,7 @@ namespace fio = ::llcpp::fuchsia::io;
 // Tests using MinfsTest will get tested with and without FVM.
 using MinfsTest = FilesystemTest;
 
-void QueryInfo(const TestFilesystem& fs, fio::FilesystemInfo* info) {
+void QueryInfo(const TestFilesystem& fs, fio::wire::FilesystemInfo* info) {
   // Sync before querying fs so that we can obtain an accurate number of used bytes. Otherwise,
   // blocks which are reserved but not yet allocated won't be counted.
   fbl::unique_fd root_fd = fs.GetRootFd();
@@ -66,7 +66,7 @@ void QueryInfo(const TestFilesystem& fs, fio::FilesystemInfo* info) {
 }
 
 void GetFreeBlocks(const TestFilesystem& fs, uint32_t* out_free_blocks) {
-  fio::FilesystemInfo info;
+  fio::wire::FilesystemInfo info;
   ASSERT_NO_FATAL_FAILURE(QueryInfo(fs, &info));
   uint64_t total_bytes = info.total_bytes + info.free_shared_pool_bytes;
   uint64_t used_bytes = info.used_bytes;
@@ -121,7 +121,7 @@ class MinfsFvmTest : public BaseFilesystemTest {
   };
 
   void VerifyQueryInfo(const ExpectedQueryInfo& expected) const {
-    fio::FilesystemInfo info;
+    fio::wire::FilesystemInfo info;
     ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
     ASSERT_EQ(info.total_bytes, expected.total_bytes);
     ASSERT_EQ(info.used_bytes, expected.used_bytes);
@@ -187,7 +187,7 @@ class MinfsWithoutFvmTest : public BaseFilesystemTest {
   }
 
   void GetAllocatedBlocks(uint64_t* out_allocated_blocks) const {
-    fio::FilesystemInfo info;
+    fio::wire::FilesystemInfo info;
     ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
     *out_allocated_blocks = static_cast<uint64_t>(info.used_bytes) / info.block_size;
   }
@@ -196,7 +196,7 @@ class MinfsWithoutFvmTest : public BaseFilesystemTest {
 // Verify initial conditions on a filesystem, and validate that filesystem modifications adjust the
 // query info accordingly.
 TEST_F(MinfsFvmTest, QueryInfo) {
-  fio::FilesystemInfo info;
+  fio::wire::FilesystemInfo info;
   ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
 
   EXPECT_EQ(fs().options().fvm_slice_size, info.total_bytes);

@@ -129,15 +129,16 @@ V2CopyFromV1HeapPermittedArray(fidl::Allocator& allocator,
 }
 
 template <size_t N>
-fit::result<fidl::VectorView<llcpp::fuchsia::sysmem2::ColorSpace>> V2CopyFromV1ColorSpaceArray(
-    fidl::Allocator& allocator, const fidl::Array<llcpp::fuchsia::sysmem::ColorSpace, N>& v1a,
-    uint32_t v1_count) {
+fit::result<fidl::VectorView<llcpp::fuchsia::sysmem2::wire::ColorSpace>>
+V2CopyFromV1ColorSpaceArray(fidl::Allocator& allocator,
+                            const fidl::Array<llcpp::fuchsia::sysmem::wire::ColorSpace, N>& v1a,
+                            uint32_t v1_count) {
   ZX_DEBUG_ASSERT(v1_count);
   if (v1_count > v1a.size()) {
     LOG(ERROR, "v1_count > v1a.size() - v1_count: %u v1a.size(): %zu", v1_count, v1a.size());
     return fit::error();
   }
-  fidl::VectorView<llcpp::fuchsia::sysmem2::ColorSpace> v2a(allocator, v1_count);
+  fidl::VectorView<llcpp::fuchsia::sysmem2::wire::ColorSpace> v2a(allocator, v1_count);
   for (uint32_t i = 0; i < v1_count; i++) {
     v2a[i] = V2CopyFromV1ColorSpace(allocator, v1a[i]);
   }
@@ -145,17 +146,17 @@ fit::result<fidl::VectorView<llcpp::fuchsia::sysmem2::ColorSpace>> V2CopyFromV1C
 }
 
 template <size_t N>
-fit::result<fidl::VectorView<llcpp::fuchsia::sysmem2::ImageFormatConstraints>>
+fit::result<fidl::VectorView<llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints>>
 V2CopyFromV1ImageFormatConstraintsArray(
     fidl::Allocator& allocator,
-    const fidl::Array<llcpp::fuchsia::sysmem::ImageFormatConstraints, N>& v1a,
+    const fidl::Array<llcpp::fuchsia::sysmem::wire::ImageFormatConstraints, N>& v1a,
     const uint32_t v1_count) {
   ZX_DEBUG_ASSERT(v1_count);
   if (v1_count > v1a.size()) {
     LOG(ERROR, "v1_count > v1a.size() - v1_count: %u v1a.size(): %zu", v1_count, v1a.size());
     return fit::error();
   }
-  fidl::VectorView<llcpp::fuchsia::sysmem2::ImageFormatConstraints> v2a(allocator, v1_count);
+  fidl::VectorView<llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints> v2a(allocator, v1_count);
   for (uint32_t i = 0; i < v1_count; i++) {
     auto result = V2CopyFromV1ImageFormatConstraints(allocator, v1a[i]);
     OK_OR_RET_ERROR(result);
@@ -165,10 +166,11 @@ V2CopyFromV1ImageFormatConstraintsArray(
 }
 
 fit::result<> V2CopyFromV1BufferCollectionConstraintsMain(
-    fidl::Allocator& allocator, llcpp::fuchsia::sysmem2::BufferCollectionConstraints* v2b_param,
-    const llcpp::fuchsia::sysmem::BufferCollectionConstraints& v1) {
+    fidl::Allocator& allocator,
+    llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints* v2b_param,
+    const llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints& v1) {
   ZX_DEBUG_ASSERT(v2b_param);
-  llcpp::fuchsia::sysmem2::BufferCollectionConstraints& v2b = *v2b_param;
+  llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& v2b = *v2b_param;
 
   // This sets usage regardless of whether the client set any usage bits within usage.  That's
   // checked later (regardless of v1 or v2 client).  If a v1 client said !has_constraints, we
@@ -200,10 +202,11 @@ fit::result<> V2CopyFromV1BufferCollectionConstraintsMain(
 }
 
 fit::result<> V2CopyFromV1BufferCollectionConstraintsAuxBuffers(
-    fidl::Allocator& allocator, llcpp::fuchsia::sysmem2::BufferCollectionConstraints* v2b_param,
-    const llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers& v1) {
+    fidl::Allocator& allocator,
+    llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints* v2b_param,
+    const llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers& v1) {
   ZX_DEBUG_ASSERT(v2b_param);
-  llcpp::fuchsia::sysmem2::BufferCollectionConstraints& v2b = *v2b_param;
+  llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& v2b = *v2b_param;
   PROCESS_SCALAR_FIELD_V1(need_clear_aux_buffers_for_secure);
   PROCESS_SCALAR_FIELD_V1(allow_clear_aux_buffers_for_secure);
   return fit::ok();
@@ -211,9 +214,9 @@ fit::result<> V2CopyFromV1BufferCollectionConstraintsAuxBuffers(
 
 }  // namespace
 
-llcpp::fuchsia::sysmem2::PixelFormat V2CopyFromV1PixelFormat(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::PixelFormat& v1) {
-  llcpp::fuchsia::sysmem2::PixelFormat v2b(allocator);
+llcpp::fuchsia::sysmem2::wire::PixelFormat V2CopyFromV1PixelFormat(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::wire::PixelFormat& v1) {
+  llcpp::fuchsia::sysmem2::wire::PixelFormat v2b(allocator);
   PROCESS_SCALAR_FIELD_V1(type);
   if (v1.has_format_modifier) {
     v2b.set_format_modifier_value(allocator, v1.format_modifier.value);
@@ -221,28 +224,29 @@ llcpp::fuchsia::sysmem2::PixelFormat V2CopyFromV1PixelFormat(
   return v2b;
 }
 
-llcpp::fuchsia::sysmem2::PixelFormat V2CopyFromV1PixelFormat(fidl::Allocator& allocator,
-                                                             const fuchsia_sysmem_PixelFormat& v1) {
-  using CStruct = FidlStruct<fuchsia_sysmem_PixelFormat, llcpp::fuchsia::sysmem::PixelFormat>;
+llcpp::fuchsia::sysmem2::wire::PixelFormat V2CopyFromV1PixelFormat(
+    fidl::Allocator& allocator, const fuchsia_sysmem_PixelFormat& v1) {
+  using CStruct = FidlStruct<fuchsia_sysmem_PixelFormat, llcpp::fuchsia::sysmem::wire::PixelFormat>;
   return V2CopyFromV1PixelFormat(allocator, *CStruct::BorrowAsLlcpp(&v1));
 }
 
-llcpp::fuchsia::sysmem2::ColorSpace V2CopyFromV1ColorSpace(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::ColorSpace& v1) {
-  llcpp::fuchsia::sysmem2::ColorSpace v2b(allocator);
+llcpp::fuchsia::sysmem2::wire::ColorSpace V2CopyFromV1ColorSpace(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::wire::ColorSpace& v1) {
+  llcpp::fuchsia::sysmem2::wire::ColorSpace v2b(allocator);
   PROCESS_SCALAR_FIELD_V1(type);
   return v2b;
 }
 
-llcpp::fuchsia::sysmem2::ColorSpace V2CopyFromV1ColorSpace(fidl::Allocator& allocator,
-                                                           const fuchsia_sysmem_ColorSpace& v1) {
-  using CStruct = FidlStruct<fuchsia_sysmem_ColorSpace, llcpp::fuchsia::sysmem::ColorSpace>;
+llcpp::fuchsia::sysmem2::wire::ColorSpace V2CopyFromV1ColorSpace(
+    fidl::Allocator& allocator, const fuchsia_sysmem_ColorSpace& v1) {
+  using CStruct = FidlStruct<fuchsia_sysmem_ColorSpace, llcpp::fuchsia::sysmem::wire::ColorSpace>;
   return V2CopyFromV1ColorSpace(allocator, *CStruct::BorrowAsLlcpp(&v1));
 }
 
-fit::result<llcpp::fuchsia::sysmem2::ImageFormatConstraints> V2CopyFromV1ImageFormatConstraints(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::ImageFormatConstraints& v1) {
-  llcpp::fuchsia::sysmem2::ImageFormatConstraints v2b(allocator);
+fit::result<llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints>
+V2CopyFromV1ImageFormatConstraints(fidl::Allocator& allocator,
+                                   const llcpp::fuchsia::sysmem::wire::ImageFormatConstraints& v1) {
+  llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints v2b(allocator);
   v2b.set_pixel_format(allocator, V2CopyFromV1PixelFormat(allocator, v1.pixel_format));
   if (v1.color_spaces_count) {
     auto result = V2CopyFromV1ColorSpaceArray(allocator, v1.color_space, v1.color_spaces_count);
@@ -280,16 +284,17 @@ fit::result<llcpp::fuchsia::sysmem2::ImageFormatConstraints> V2CopyFromV1ImageFo
   return fit::ok(std::move(v2b));
 }
 
-fit::result<llcpp::fuchsia::sysmem2::ImageFormatConstraints> V2CopyFromV1ImageFormatConstraints(
-    fidl::Allocator& allocator, const fuchsia_sysmem_ImageFormatConstraints& v1) {
+fit::result<llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints>
+V2CopyFromV1ImageFormatConstraints(fidl::Allocator& allocator,
+                                   const fuchsia_sysmem_ImageFormatConstraints& v1) {
   using CStruct = FidlStruct<fuchsia_sysmem_ImageFormatConstraints,
-                             llcpp::fuchsia::sysmem::ImageFormatConstraints>;
+                             llcpp::fuchsia::sysmem::wire::ImageFormatConstraints>;
   return V2CopyFromV1ImageFormatConstraints(allocator, *CStruct::BorrowAsLlcpp(&v1));
 }
 
-fit::result<llcpp::fuchsia::sysmem2::BufferUsage> V2CopyFromV1BufferUsage(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::BufferUsage& v1) {
-  llcpp::fuchsia::sysmem2::BufferUsage v2b(allocator);
+fit::result<llcpp::fuchsia::sysmem2::wire::BufferUsage> V2CopyFromV1BufferUsage(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::wire::BufferUsage& v1) {
+  llcpp::fuchsia::sysmem2::wire::BufferUsage v2b(allocator);
   using foo = std::remove_reference<decltype((v1.none))>::type;
   static_assert(std::is_const<foo>::value);
   PROCESS_SCALAR_FIELD_V1(none);
@@ -300,15 +305,16 @@ fit::result<llcpp::fuchsia::sysmem2::BufferUsage> V2CopyFromV1BufferUsage(
   return fit::ok(std::move(v2b));
 }
 
-fit::result<llcpp::fuchsia::sysmem2::BufferUsage> V2CopyFromV1BufferUsage(
+fit::result<llcpp::fuchsia::sysmem2::wire::BufferUsage> V2CopyFromV1BufferUsage(
     fidl::Allocator& allocator, const fuchsia_sysmem_BufferUsage& v1) {
-  using CStruct = FidlStruct<fuchsia_sysmem_BufferUsage, llcpp::fuchsia::sysmem::BufferUsage>;
+  using CStruct = FidlStruct<fuchsia_sysmem_BufferUsage, llcpp::fuchsia::sysmem::wire::BufferUsage>;
   return V2CopyFromV1BufferUsage(allocator, *CStruct::BorrowAsLlcpp(&v1));
 }
 
-fit::result<llcpp::fuchsia::sysmem2::BufferMemoryConstraints> V2CopyFromV1BufferMemoryConstraints(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::BufferMemoryConstraints& v1) {
-  llcpp::fuchsia::sysmem2::BufferMemoryConstraints v2b(allocator);
+fit::result<llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints>
+V2CopyFromV1BufferMemoryConstraints(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints& v1) {
+  llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints v2b(allocator);
   PROCESS_SCALAR_FIELD_V1(min_size_bytes);
   PROCESS_SCALAR_FIELD_V1(max_size_bytes);
   PROCESS_SCALAR_FIELD_V1(physically_contiguous_required);
@@ -325,21 +331,22 @@ fit::result<llcpp::fuchsia::sysmem2::BufferMemoryConstraints> V2CopyFromV1Buffer
   return fit::ok(std::move(v2b));
 }
 
-fit::result<llcpp::fuchsia::sysmem2::BufferMemoryConstraints> V2CopyFromV1BufferMemoryConstraints(
-    fidl::Allocator& allocator, const fuchsia_sysmem_BufferMemoryConstraints& v1) {
+fit::result<llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints>
+V2CopyFromV1BufferMemoryConstraints(fidl::Allocator& allocator,
+                                    const fuchsia_sysmem_BufferMemoryConstraints& v1) {
   using CStruct = FidlStruct<fuchsia_sysmem_BufferMemoryConstraints,
-                             llcpp::fuchsia::sysmem::BufferMemoryConstraints>;
+                             llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints>;
   return V2CopyFromV1BufferMemoryConstraints(allocator, *CStruct::BorrowAsLlcpp(&v1));
 }
 
 // If !v1 && !aux_buffers_v1, the result will be fit::is_ok(), but result.value().IsEmpty().
-fit::result<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>
+fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints>
 V2CopyFromV1BufferCollectionConstraints(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::BufferCollectionConstraints* v1,
-    const llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers* aux_buffers_v1) {
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints* v1,
+    const llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers* aux_buffers_v1) {
   // Should be enforced by the caller.
   ZX_DEBUG_ASSERT(v1 || !aux_buffers_v1);
-  llcpp::fuchsia::sysmem2::BufferCollectionConstraints v2b(allocator);
+  llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints v2b(allocator);
 
   if (v1) {
     auto result = V2CopyFromV1BufferCollectionConstraintsMain(allocator, &v2b, *v1);
@@ -355,21 +362,22 @@ V2CopyFromV1BufferCollectionConstraints(
   return fit::ok(std::move(v2b));
 }
 
-fit::result<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>
+fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints>
 V2CopyFromV1BufferCollectionConstraints(
     fidl::Allocator& allocator, const fuchsia_sysmem_BufferCollectionConstraints* v1,
     const fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers* aux_buffers_v1) {
   using CStructMain = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-                                 llcpp::fuchsia::sysmem::BufferCollectionConstraints>;
-  using CStructAux = FidlStruct<fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers,
-                                llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>;
+                                 llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints>;
+  using CStructAux =
+      FidlStruct<fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers,
+                 llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers>;
   return V2CopyFromV1BufferCollectionConstraints(allocator, CStructMain::BorrowAsLlcpp(v1),
                                                  CStructAux::BorrowAsLlcpp(aux_buffers_v1));
 }
 
-fit::result<llcpp::fuchsia::sysmem2::ImageFormat> V2CopyFromV1ImageFormat(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::ImageFormat_2& v1) {
-  llcpp::fuchsia::sysmem2::ImageFormat v2b(allocator);
+fit::result<llcpp::fuchsia::sysmem2::wire::ImageFormat> V2CopyFromV1ImageFormat(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::wire::ImageFormat_2& v1) {
+  llcpp::fuchsia::sysmem2::wire::ImageFormat v2b(allocator);
   v2b.set_pixel_format(allocator, V2CopyFromV1PixelFormat(allocator, v1.pixel_format));
   PROCESS_SCALAR_FIELD_V1(coded_width);
   PROCESS_SCALAR_FIELD_V1(coded_height);
@@ -391,15 +399,16 @@ fit::result<llcpp::fuchsia::sysmem2::ImageFormat> V2CopyFromV1ImageFormat(
   return fit::ok(std::move(v2b));
 }
 
-fit::result<llcpp::fuchsia::sysmem2::ImageFormat> V2CopyFromV1ImageFormat(
+fit::result<llcpp::fuchsia::sysmem2::wire::ImageFormat> V2CopyFromV1ImageFormat(
     fidl::Allocator& allocator, const fuchsia_sysmem_ImageFormat_2& v1) {
-  using CStruct = FidlStruct<fuchsia_sysmem_ImageFormat_2, llcpp::fuchsia::sysmem::ImageFormat_2>;
+  using CStruct =
+      FidlStruct<fuchsia_sysmem_ImageFormat_2, llcpp::fuchsia::sysmem::wire::ImageFormat_2>;
   return V2CopyFromV1ImageFormat(allocator, *CStruct::BorrowAsLlcpp(&v1));
 }
 
-[[nodiscard]] llcpp::fuchsia::sysmem2::BufferMemorySettings V2CopyFromV1BufferMemorySettings(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::BufferMemorySettings& v1) {
-  llcpp::fuchsia::sysmem2::BufferMemorySettings v2b(allocator);
+[[nodiscard]] llcpp::fuchsia::sysmem2::wire::BufferMemorySettings V2CopyFromV1BufferMemorySettings(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::wire::BufferMemorySettings& v1) {
+  llcpp::fuchsia::sysmem2::wire::BufferMemorySettings v2b(allocator);
   PROCESS_SCALAR_FIELD_V1(size_bytes);
   PROCESS_SCALAR_FIELD_V1(is_physically_contiguous);
   PROCESS_SCALAR_FIELD_V1(is_secure);
@@ -408,9 +417,9 @@ fit::result<llcpp::fuchsia::sysmem2::ImageFormat> V2CopyFromV1ImageFormat(
   return v2b;
 }
 
-fit::result<llcpp::fuchsia::sysmem2::SingleBufferSettings> V2CopyFromV1SingleBufferSettings(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::SingleBufferSettings& v1) {
-  llcpp::fuchsia::sysmem2::SingleBufferSettings v2b(allocator);
+fit::result<llcpp::fuchsia::sysmem2::wire::SingleBufferSettings> V2CopyFromV1SingleBufferSettings(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::wire::SingleBufferSettings& v1) {
+  llcpp::fuchsia::sysmem2::wire::SingleBufferSettings v2b(allocator);
   v2b.set_buffer_settings(allocator,
                           V2CopyFromV1BufferMemorySettings(allocator, v1.buffer_settings));
   if (v1.has_image_format_constraints) {
@@ -425,10 +434,10 @@ fit::result<llcpp::fuchsia::sysmem2::SingleBufferSettings> V2CopyFromV1SingleBuf
   return fit::ok(std::move(v2b));
 }
 
-llcpp::fuchsia::sysmem2::VmoBuffer V2MoveFromV1VmoBuffer(
-    fidl::Allocator& allocator, llcpp::fuchsia::sysmem::VmoBuffer&& to_move_v1) {
-  llcpp::fuchsia::sysmem::VmoBuffer v1 = std::move(to_move_v1);
-  llcpp::fuchsia::sysmem2::VmoBuffer v2b(allocator);
+llcpp::fuchsia::sysmem2::wire::VmoBuffer V2MoveFromV1VmoBuffer(
+    fidl::Allocator& allocator, llcpp::fuchsia::sysmem::wire::VmoBuffer&& to_move_v1) {
+  llcpp::fuchsia::sysmem::wire::VmoBuffer v1 = std::move(to_move_v1);
+  llcpp::fuchsia::sysmem2::wire::VmoBuffer v2b(allocator);
   if (v1.vmo) {
     v2b.set_vmo(allocator, std::move(v1.vmo));
   }
@@ -437,10 +446,10 @@ llcpp::fuchsia::sysmem2::VmoBuffer V2MoveFromV1VmoBuffer(
   return v2b;
 }
 
-fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo> V2MoveFromV1BufferCollectionInfo(
-    fidl::Allocator& allocator, llcpp::fuchsia::sysmem::BufferCollectionInfo_2&& to_move_v1) {
-  llcpp::fuchsia::sysmem::BufferCollectionInfo_2 v1 = std::move(to_move_v1);
-  llcpp::fuchsia::sysmem2::BufferCollectionInfo v2b(allocator);
+fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo> V2MoveFromV1BufferCollectionInfo(
+    fidl::Allocator& allocator, llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2&& to_move_v1) {
+  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 v1 = std::move(to_move_v1);
+  llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo v2b(allocator);
   auto settings_result = V2CopyFromV1SingleBufferSettings(allocator, v1.settings);
   if (!settings_result.is_ok()) {
     LOG(ERROR, "!settings_result.is_ok()");
@@ -456,15 +465,17 @@ fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo> V2MoveFromV1BufferCol
   return fit::ok(std::move(v2b));
 }
 
-fit::result<std::pair<std::optional<llcpp::fuchsia::sysmem::BufferCollectionConstraints>,
-                      std::optional<llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>>>
+fit::result<
+    std::pair<std::optional<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints>,
+              std::optional<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers>>>
 V1CopyFromV2BufferCollectionConstraints(
-    const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& v2) {
-  llcpp::fuchsia::sysmem::BufferCollectionConstraints v1{};
+    const llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& v2) {
+  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints v1{};
   if (v2.IsEmpty()) {
     return fit::ok(
-        std::pair<std::optional<llcpp::fuchsia::sysmem::BufferCollectionConstraints>,
-                  std::optional<llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>>());
+        std::pair<
+            std::optional<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints>,
+            std::optional<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers>>());
   }
   if (v2.has_usage()) {
     v1.usage = V1CopyFromV2BufferUsage(v2.usage());
@@ -506,9 +517,9 @@ V1CopyFromV2BufferCollectionConstraints(
     }
   }
 
-  std::optional<llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers> v1_aux_buffers;
+  std::optional<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers> v1_aux_buffers;
   if (v2.has_need_clear_aux_buffers_for_secure() || v2.has_allow_clear_aux_buffers_for_secure()) {
-    llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers v1{};
+    llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers v1{};
     PROCESS_SCALAR_FIELD_V2(need_clear_aux_buffers_for_secure);
     PROCESS_SCALAR_FIELD_V2(allow_clear_aux_buffers_for_secure);
     v1_aux_buffers.emplace(v1);
@@ -517,9 +528,10 @@ V1CopyFromV2BufferCollectionConstraints(
   return fit::ok(std::make_pair(std::move(v1), std::move(v1_aux_buffers)));
 }
 
-fit::result<llcpp::fuchsia::sysmem::BufferMemoryConstraints> V1CopyFromV2BufferMemoryConstraints(
-    const llcpp::fuchsia::sysmem2::BufferMemoryConstraints& v2) {
-  llcpp::fuchsia::sysmem::BufferMemoryConstraints v1{};
+fit::result<llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints>
+V1CopyFromV2BufferMemoryConstraints(
+    const llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints& v2) {
+  llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints v1{};
   PROCESS_SCALAR_FIELD_V2(min_size_bytes);
   PROCESS_SCALAR_FIELD_V2(max_size_bytes);
   PROCESS_SCALAR_FIELD_V2(physically_contiguous_required);
@@ -542,9 +554,9 @@ fit::result<llcpp::fuchsia::sysmem::BufferMemoryConstraints> V1CopyFromV2BufferM
   return fit::ok(std::move(v1));
 }
 
-llcpp::fuchsia::sysmem::BufferUsage V1CopyFromV2BufferUsage(
-    const llcpp::fuchsia::sysmem2::BufferUsage& v2) {
-  llcpp::fuchsia::sysmem::BufferUsage v1{};
+llcpp::fuchsia::sysmem::wire::BufferUsage V1CopyFromV2BufferUsage(
+    const llcpp::fuchsia::sysmem2::wire::BufferUsage& v2) {
+  llcpp::fuchsia::sysmem::wire::BufferUsage v1{};
   PROCESS_SCALAR_FIELD_V2(none);
   PROCESS_SCALAR_FIELD_V2(cpu);
   PROCESS_SCALAR_FIELD_V2(vulkan);
@@ -554,9 +566,9 @@ llcpp::fuchsia::sysmem::BufferUsage V1CopyFromV2BufferUsage(
 }
 
 // v2 must have all fields set.
-llcpp::fuchsia::sysmem::BufferMemorySettings V1CopyFromV2BufferMemorySettings(
-    const llcpp::fuchsia::sysmem2::BufferMemorySettings& v2) {
-  llcpp::fuchsia::sysmem::BufferMemorySettings v1{};
+llcpp::fuchsia::sysmem::wire::BufferMemorySettings V1CopyFromV2BufferMemorySettings(
+    const llcpp::fuchsia::sysmem2::wire::BufferMemorySettings& v2) {
+  llcpp::fuchsia::sysmem::wire::BufferMemorySettings v1{};
   PROCESS_SCALAR_FIELD_V2(size_bytes);
   PROCESS_SCALAR_FIELD_V2(is_physically_contiguous);
   PROCESS_SCALAR_FIELD_V2(is_secure);
@@ -565,9 +577,9 @@ llcpp::fuchsia::sysmem::BufferMemorySettings V1CopyFromV2BufferMemorySettings(
   return v1;
 }
 
-llcpp::fuchsia::sysmem::PixelFormat V1CopyFromV2PixelFormat(
-    const llcpp::fuchsia::sysmem2::PixelFormat& v2) {
-  llcpp::fuchsia::sysmem::PixelFormat v1;
+llcpp::fuchsia::sysmem::wire::PixelFormat V1CopyFromV2PixelFormat(
+    const llcpp::fuchsia::sysmem2::wire::PixelFormat& v2) {
+  llcpp::fuchsia::sysmem::wire::PixelFormat v1;
   PROCESS_SCALAR_FIELD_V2(type);
   v1.has_format_modifier = v2.has_format_modifier_value();
   if (v2.has_format_modifier_value()) {
@@ -576,16 +588,17 @@ llcpp::fuchsia::sysmem::PixelFormat V1CopyFromV2PixelFormat(
   return v1;
 }
 
-llcpp::fuchsia::sysmem::ColorSpace V1CopyFromV2ColorSpace(
-    const llcpp::fuchsia::sysmem2::ColorSpace& v2) {
-  llcpp::fuchsia::sysmem::ColorSpace v1{};
+llcpp::fuchsia::sysmem::wire::ColorSpace V1CopyFromV2ColorSpace(
+    const llcpp::fuchsia::sysmem2::wire::ColorSpace& v2) {
+  llcpp::fuchsia::sysmem::wire::ColorSpace v1{};
   PROCESS_SCALAR_FIELD_V2(type);
   return v1;
 }
 
-fit::result<llcpp::fuchsia::sysmem::ImageFormatConstraints> V1CopyFromV2ImageFormatConstraints(
-    const llcpp::fuchsia::sysmem2::ImageFormatConstraints& v2) {
-  llcpp::fuchsia::sysmem::ImageFormatConstraints v1;
+fit::result<llcpp::fuchsia::sysmem::wire::ImageFormatConstraints>
+V1CopyFromV2ImageFormatConstraints(
+    const llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints& v2) {
+  llcpp::fuchsia::sysmem::wire::ImageFormatConstraints v1;
   v1.pixel_format = V1CopyFromV2PixelFormat(v2.pixel_format());
   ZX_DEBUG_ASSERT(!v1.color_spaces_count);
   if (v2.has_color_spaces()) {
@@ -624,9 +637,9 @@ fit::result<llcpp::fuchsia::sysmem::ImageFormatConstraints> V1CopyFromV2ImageFor
   return fit::ok(std::move(v1));
 }
 
-fit::result<llcpp::fuchsia::sysmem::ImageFormat_2> V1CopyFromV2ImageFormat(
-    llcpp::fuchsia::sysmem2::ImageFormat& v2) {
-  llcpp::fuchsia::sysmem::ImageFormat_2 v1;
+fit::result<llcpp::fuchsia::sysmem::wire::ImageFormat_2> V1CopyFromV2ImageFormat(
+    llcpp::fuchsia::sysmem2::wire::ImageFormat& v2) {
+  llcpp::fuchsia::sysmem::wire::ImageFormat_2 v1;
   if (v2.has_pixel_format()) {
     v1.pixel_format = V1CopyFromV2PixelFormat(v2.pixel_format());
   }
@@ -648,9 +661,9 @@ fit::result<llcpp::fuchsia::sysmem::ImageFormat_2> V1CopyFromV2ImageFormat(
   return fit::ok(std::move(v1));
 }
 
-fit::result<llcpp::fuchsia::sysmem::SingleBufferSettings> V1CopyFromV2SingleBufferSettings(
-    const llcpp::fuchsia::sysmem2::SingleBufferSettings& v2) {
-  llcpp::fuchsia::sysmem::SingleBufferSettings v1;
+fit::result<llcpp::fuchsia::sysmem::wire::SingleBufferSettings> V1CopyFromV2SingleBufferSettings(
+    const llcpp::fuchsia::sysmem2::wire::SingleBufferSettings& v2) {
+  llcpp::fuchsia::sysmem::wire::SingleBufferSettings v1;
   v1.buffer_settings = V1CopyFromV2BufferMemorySettings(v2.buffer_settings());
   v1.has_image_format_constraints = v2.has_image_format_constraints();
   if (v2.has_image_format_constraints()) {
@@ -668,11 +681,11 @@ fit::result<llcpp::fuchsia::sysmem::SingleBufferSettings> V1CopyFromV2SingleBuff
 // Intentionally just consumes aux_vmo.  The implied extra handle duplications from this behavior go
 // away when all participants speak V2.  For V1 participants that need the aux_vmo, there's a
 // completely different method and struct for getting that.
-llcpp::fuchsia::sysmem::VmoBuffer V1MoveFromV2VmoBuffer(
-    llcpp::fuchsia::sysmem2::VmoBuffer&& to_move_v2) {
+llcpp::fuchsia::sysmem::wire::VmoBuffer V1MoveFromV2VmoBuffer(
+    llcpp::fuchsia::sysmem2::wire::VmoBuffer&& to_move_v2) {
   // Always take ownership even on failure.
-  llcpp::fuchsia::sysmem2::VmoBuffer v2 = std::move(to_move_v2);
-  llcpp::fuchsia::sysmem::VmoBuffer v1;
+  llcpp::fuchsia::sysmem2::wire::VmoBuffer v2 = std::move(to_move_v2);
+  llcpp::fuchsia::sysmem::wire::VmoBuffer v1;
   if (v2.has_vmo()) {
     v1.vmo = std::move(v2.vmo());
   }
@@ -683,11 +696,11 @@ llcpp::fuchsia::sysmem::VmoBuffer V1MoveFromV2VmoBuffer(
 
 // Intentionally just consumes vmo (but not aux_vmo).  The implied extra handle duplications from
 // this behavior go away when all participants speak V2.
-llcpp::fuchsia::sysmem::VmoBuffer V1AuxBuffersMoveFromV2VmoBuffer(
-    llcpp::fuchsia::sysmem2::VmoBuffer&& to_move_v2) {
+llcpp::fuchsia::sysmem::wire::VmoBuffer V1AuxBuffersMoveFromV2VmoBuffer(
+    llcpp::fuchsia::sysmem2::wire::VmoBuffer&& to_move_v2) {
   // Always take ownership even on failure.
-  llcpp::fuchsia::sysmem2::VmoBuffer v2 = std::move(to_move_v2);
-  llcpp::fuchsia::sysmem::VmoBuffer v1;
+  llcpp::fuchsia::sysmem2::wire::VmoBuffer v2 = std::move(to_move_v2);
+  llcpp::fuchsia::sysmem::wire::VmoBuffer v1;
   if (v2.has_aux_vmo()) {
     v1.vmo = std::move(v2.aux_vmo());
   }
@@ -696,14 +709,14 @@ llcpp::fuchsia::sysmem::VmoBuffer V1AuxBuffersMoveFromV2VmoBuffer(
   return v1;
 }
 
-fit::result<llcpp::fuchsia::sysmem::BufferCollectionInfo_2> V1MoveFromV2BufferCollectionInfo(
-    llcpp::fuchsia::sysmem2::BufferCollectionInfo&& to_move_v2) {
+fit::result<llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2> V1MoveFromV2BufferCollectionInfo(
+    llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo&& to_move_v2) {
   // This move is mainly to make it very clear what's going on here, but also to ensure that we
   // don't take any dependency on incorrect/stale failure to move out any of the handles in to_move.
   //
   // Always take ownership of the incoming handles, even on failure.
-  llcpp::fuchsia::sysmem2::BufferCollectionInfo v2 = std::move(to_move_v2);
-  llcpp::fuchsia::sysmem::BufferCollectionInfo_2 v1;
+  llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo v2 = std::move(to_move_v2);
+  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 v1;
   if (v2.has_buffers()) {
     if (v2.buffers().count() > llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
       LOG(ERROR,
@@ -725,15 +738,15 @@ fit::result<llcpp::fuchsia::sysmem::BufferCollectionInfo_2> V1MoveFromV2BufferCo
   return fit::ok(std::move(v1));
 }
 
-[[nodiscard]] fit::result<llcpp::fuchsia::sysmem::BufferCollectionInfo_2>
+[[nodiscard]] fit::result<llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>
 V1AuxBuffersMoveFromV2BufferCollectionInfo(
-    llcpp::fuchsia::sysmem2::BufferCollectionInfo&& to_move_v2) {
+    llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo&& to_move_v2) {
   // This move is mainly to make it very clear what's going on here, but also to ensure that we
   // don't take any dependency on incorrect/stale failure to move out any of the handles in to_move.
   //
   // Always take ownership of the incoming handles, even on failure.
-  llcpp::fuchsia::sysmem2::BufferCollectionInfo v2 = std::move(to_move_v2);
-  llcpp::fuchsia::sysmem::BufferCollectionInfo_2 v1;
+  llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo v2 = std::move(to_move_v2);
+  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 v1;
   if (v2.has_buffers()) {
     if (v2.buffers().count() > llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
       LOG(ERROR,
@@ -755,9 +768,9 @@ V1AuxBuffersMoveFromV2BufferCollectionInfo(
   return fit::ok(std::move(v1));
 }
 
-llcpp::fuchsia::sysmem2::PixelFormat V2ClonePixelFormat(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::PixelFormat& src) {
-  llcpp::fuchsia::sysmem2::PixelFormat pixel_format(allocator);
+llcpp::fuchsia::sysmem2::wire::PixelFormat V2ClonePixelFormat(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::wire::PixelFormat& src) {
+  llcpp::fuchsia::sysmem2::wire::PixelFormat pixel_format(allocator);
   if (src.has_type()) {
     pixel_format.set_type(allocator, src.type());
   }
@@ -767,18 +780,18 @@ llcpp::fuchsia::sysmem2::PixelFormat V2ClonePixelFormat(
   return pixel_format;
 }
 
-llcpp::fuchsia::sysmem2::ColorSpace V2CloneColorSpace(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::ColorSpace& src) {
-  llcpp::fuchsia::sysmem2::ColorSpace color_space(allocator);
+llcpp::fuchsia::sysmem2::wire::ColorSpace V2CloneColorSpace(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::wire::ColorSpace& src) {
+  llcpp::fuchsia::sysmem2::wire::ColorSpace color_space(allocator);
   if (src.has_type()) {
     color_space.set_type(allocator, src.type());
   }
   return color_space;
 }
 
-llcpp::fuchsia::sysmem2::BufferMemorySettings V2CloneBufferMemorySettings(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::BufferMemorySettings& src) {
-  llcpp::fuchsia::sysmem2::BufferMemorySettings buffer_memory_settings(allocator);
+llcpp::fuchsia::sysmem2::wire::BufferMemorySettings V2CloneBufferMemorySettings(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::wire::BufferMemorySettings& src) {
+  llcpp::fuchsia::sysmem2::wire::BufferMemorySettings buffer_memory_settings(allocator);
   if (src.has_size_bytes()) {
     buffer_memory_settings.set_size_bytes(allocator, src.size_bytes());
   }
@@ -797,9 +810,9 @@ llcpp::fuchsia::sysmem2::BufferMemorySettings V2CloneBufferMemorySettings(
   return buffer_memory_settings;
 }
 
-llcpp::fuchsia::sysmem2::ImageFormatConstraints V2CloneImageFormatConstraints(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::ImageFormatConstraints& src) {
-  llcpp::fuchsia::sysmem2::ImageFormatConstraints image_format_constraints(allocator);
+llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints V2CloneImageFormatConstraints(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints& src) {
+  llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints image_format_constraints(allocator);
   if (src.has_pixel_format()) {
     image_format_constraints.set_pixel_format(allocator,
                                               V2ClonePixelFormat(allocator, src.pixel_format()));
@@ -878,9 +891,9 @@ llcpp::fuchsia::sysmem2::ImageFormatConstraints V2CloneImageFormatConstraints(
   return image_format_constraints;
 }
 
-llcpp::fuchsia::sysmem2::SingleBufferSettings V2CloneSingleBufferSettings(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::SingleBufferSettings& src) {
-  llcpp::fuchsia::sysmem2::SingleBufferSettings single_buffer_settings(allocator);
+llcpp::fuchsia::sysmem2::wire::SingleBufferSettings V2CloneSingleBufferSettings(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::wire::SingleBufferSettings& src) {
+  llcpp::fuchsia::sysmem2::wire::SingleBufferSettings single_buffer_settings(allocator);
   if (src.has_buffer_settings()) {
     single_buffer_settings.set_buffer_settings(
         allocator, V2CloneBufferMemorySettings(allocator, src.buffer_settings()));
@@ -892,10 +905,10 @@ llcpp::fuchsia::sysmem2::SingleBufferSettings V2CloneSingleBufferSettings(
   return single_buffer_settings;
 }
 
-fit::result<llcpp::fuchsia::sysmem2::VmoBuffer, zx_status_t> V2CloneVmoBuffer(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::VmoBuffer& src,
+fit::result<llcpp::fuchsia::sysmem2::wire::VmoBuffer, zx_status_t> V2CloneVmoBuffer(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::wire::VmoBuffer& src,
     uint32_t vmo_rights_mask, uint32_t aux_vmo_rights_mask) {
-  llcpp::fuchsia::sysmem2::VmoBuffer vmo_buffer(allocator);
+  llcpp::fuchsia::sysmem2::wire::VmoBuffer vmo_buffer(allocator);
   if (src.has_vmo()) {
     zx_info_handle_basic_t info{};
     zx_status_t get_info_status =
@@ -935,10 +948,11 @@ fit::result<llcpp::fuchsia::sysmem2::VmoBuffer, zx_status_t> V2CloneVmoBuffer(
   return fit::ok(std::move(vmo_buffer));
 }
 
-fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo, zx_status_t> V2CloneBufferCollectionInfo(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::BufferCollectionInfo& src,
-    uint32_t vmo_rights_mask, uint32_t aux_vmo_rights_mask) {
-  llcpp::fuchsia::sysmem2::BufferCollectionInfo buffer_collection_info(allocator);
+fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo, zx_status_t>
+V2CloneBufferCollectionInfo(fidl::Allocator& allocator,
+                            const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& src,
+                            uint32_t vmo_rights_mask, uint32_t aux_vmo_rights_mask) {
+  llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo buffer_collection_info(allocator);
   if (src.has_settings()) {
     buffer_collection_info.set_settings(allocator,
                                         V2CloneSingleBufferSettings(allocator, src.settings()));
@@ -957,9 +971,9 @@ fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo, zx_status_t> V2CloneB
   return fit::ok(std::move(buffer_collection_info));
 }
 
-llcpp::fuchsia::sysmem2::CoherencyDomainSupport V2CloneCoherencyDomainSuppoort(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::CoherencyDomainSupport& src) {
-  llcpp::fuchsia::sysmem2::CoherencyDomainSupport coherency_domain_support(allocator);
+llcpp::fuchsia::sysmem2::wire::CoherencyDomainSupport V2CloneCoherencyDomainSuppoort(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::wire::CoherencyDomainSupport& src) {
+  llcpp::fuchsia::sysmem2::wire::CoherencyDomainSupport coherency_domain_support(allocator);
   if (src.has_cpu_supported()) {
     coherency_domain_support.set_cpu_supported(allocator, src.cpu_supported());
   }
@@ -972,9 +986,9 @@ llcpp::fuchsia::sysmem2::CoherencyDomainSupport V2CloneCoherencyDomainSuppoort(
   return coherency_domain_support;
 }
 
-llcpp::fuchsia::sysmem2::HeapProperties V2CloneHeapProperties(
-    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::HeapProperties& src) {
-  llcpp::fuchsia::sysmem2::HeapProperties heap_properties(allocator);
+llcpp::fuchsia::sysmem2::wire::HeapProperties V2CloneHeapProperties(
+    fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::wire::HeapProperties& src) {
+  llcpp::fuchsia::sysmem2::wire::HeapProperties heap_properties(allocator);
   if (src.has_coherency_domain_support()) {
     heap_properties.set_coherency_domain_support(
         allocator, V2CloneCoherencyDomainSuppoort(allocator, src.coherency_domain_support()));

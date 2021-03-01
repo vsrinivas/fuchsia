@@ -92,7 +92,7 @@ void Console::DebugReaderThread() {
   }
 }
 
-zx_status_t Console::Log(llcpp::fuchsia::logger::LogMessage log) {
+zx_status_t Console::Log(llcpp::fuchsia::logger::wire::LogMessage log) {
   fbl::StringBuffer<kMaxWriteSize> buffer;
   auto time = zx::nsec(log.time);
   buffer.AppendPrintf("[%05ld.%03ld] %05lu:%05lu> [", time.to_secs(), time.to_msecs() % 1000,
@@ -135,7 +135,7 @@ zx_status_t Console::Log(llcpp::fuchsia::logger::LogMessage log) {
   return tx_sink_(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.size());
 }
 
-void Console::Log(llcpp::fuchsia::logger::LogMessage log, LogCompleter::Sync& completer) {
+void Console::Log(llcpp::fuchsia::logger::wire::LogMessage log, LogCompleter::Sync& completer) {
   zx_status_t status = Log(std::move(log));
   if (status != ZX_OK) {
     completer.Close(status);
@@ -144,7 +144,7 @@ void Console::Log(llcpp::fuchsia::logger::LogMessage log, LogCompleter::Sync& co
   completer.Reply();
 }
 
-void Console::LogMany(fidl::VectorView<llcpp::fuchsia::logger::LogMessage> logs,
+void Console::LogMany(fidl::VectorView<llcpp::fuchsia::logger::wire::LogMessage> logs,
                       LogManyCompleter::Sync& completer) {
   for (auto& log : logs) {
     zx_status_t status = Log(std::move(log));

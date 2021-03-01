@@ -177,8 +177,8 @@ class TestSession {
                        fidl::VectorView<netdev::wire::FrameType>());
 
   zx_status_t Init(uint16_t descriptor_count, uint64_t buffer_size);
-  zx_status_t GetInfo(netdev::SessionInfo* info);
-  void Setup(fidl::ClientEnd<netdev::Session> session, netdev::Fifos fifos);
+  zx_status_t GetInfo(netdev::wire::SessionInfo* info);
+  void Setup(fidl::ClientEnd<netdev::Session> session, netdev::wire::Fifos fifos);
   zx_status_t SetPaused(bool paused);
   zx_status_t Close();
   zx_status_t WaitClosed(zx::time deadline);
@@ -225,7 +225,7 @@ class TestSession {
   fzl::VmoMapper data_;
   zx::vmo descriptors_vmo_;
   fzl::VmoMapper descriptors_;
-  netdev::Fifos fifos_;
+  netdev::wire::Fifos fifos_;
 };
 
 class RxReturnTransaction {

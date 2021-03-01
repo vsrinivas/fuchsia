@@ -209,7 +209,7 @@ TEST(BasicTypesTest, SyncCallStruct) {
   // generated interface API
   basictypes::TestInterface::SyncClient test(std::move(client));
 
-  basictypes::SimpleStruct simple_struct = {};
+  basictypes::wire::SimpleStruct simple_struct = {};
   simple_struct.field = 123;
   // make sure array shape is as expected (5 by 4)
   constexpr size_t kNumRow = 5;
@@ -253,7 +253,7 @@ TEST(BasicTypesTest, SyncCallerAllocateCallStruct) {
   // generated interface API
   basictypes::TestInterface::SyncClient test(std::move(client));
 
-  basictypes::SimpleStruct simple_struct = {};
+  basictypes::wire::SimpleStruct simple_struct = {};
   simple_struct.field = 123;
   // make sure array shape is as expected (5 by 4)
   constexpr size_t kNumRow = 5;
@@ -300,7 +300,7 @@ namespace gen = llcpp::fidl::test::llcpp::basictypes;
 
 class Server : public gen::TestInterface::Interface {
  public:
-  void ConsumeSimpleStruct(gen::SimpleStruct arg,
+  void ConsumeSimpleStruct(gen::wire::SimpleStruct arg,
                            ConsumeSimpleStructCompleter::Sync& txn) override {
     num_struct_calls_.fetch_add(1);
     // Verify that all the handles are valid channels

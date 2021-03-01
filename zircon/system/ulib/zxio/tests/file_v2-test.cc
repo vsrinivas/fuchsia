@@ -32,7 +32,7 @@ class TestServerBase : public fio2::File::Interface {
     completer.Close(ZX_OK);
   }
 
-  void Reopen(fio2::ConnectionOptions options, ::zx::channel object_request,
+  void Reopen(fio2::wire::ConnectionOptions options, ::zx::channel object_request,
               ReopenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -40,10 +40,10 @@ class TestServerBase : public fio2::File::Interface {
   void Describe(fio2::wire::ConnectionInfoQuery query,
                 DescribeCompleter::Sync& completer) override {
     if (query == fio2::wire::ConnectionInfoQuery::REPRESENTATION) {
-      auto file_info_builder = fio2::FileInfo::UnownedBuilder();
-      fio2::FileInfo file_info = file_info_builder.build();
+      auto file_info_builder = fio2::wire::FileInfo::UnownedBuilder();
+      fio2::wire::FileInfo file_info = file_info_builder.build();
       auto representation = fio2::wire::Representation::WithFile(fidl::unowned_ptr(&file_info));
-      auto info_builder = fio2::ConnectionInfo::UnownedBuilder();
+      auto info_builder = fio2::wire::ConnectionInfo::UnownedBuilder();
       info_builder.set_representation(fidl::unowned_ptr(&representation));
       completer.Reply(info_builder.build());
       return;
@@ -60,7 +60,7 @@ class TestServerBase : public fio2::File::Interface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void UpdateAttributes(fio2::NodeAttributes attributes,
+  void UpdateAttributes(fio2::wire::NodeAttributes attributes,
                         UpdateAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -142,7 +142,7 @@ class FileV2 : public zxtest::Test {
     zx::stream stream;
     if (result->info.has_representation()) {
       EXPECT_TRUE(result->info.representation().is_file());
-      fio2::FileInfo& file = result->info.representation().mutable_file();
+      fio2::wire::FileInfo& file = result->info.representation().mutable_file();
       if (file.has_observer()) {
         observer = std::move(file.observer());
       }
@@ -175,7 +175,7 @@ class TestServerEvent final : public TestServerBase {
   void Describe(fio2::wire::ConnectionInfoQuery query,
                 DescribeCompleter::Sync& completer) override {
     if (query == fio2::wire::ConnectionInfoQuery::REPRESENTATION) {
-      auto file_info_builder = fio2::FileInfo::UnownedBuilder();
+      auto file_info_builder = fio2::wire::FileInfo::UnownedBuilder();
       zx::event client_observer;
       zx_status_t status = observer_.duplicate(ZX_RIGHTS_BASIC, &client_observer);
       if (status != ZX_OK) {
@@ -183,9 +183,9 @@ class TestServerEvent final : public TestServerBase {
         return;
       }
       file_info_builder.set_observer(fidl::unowned_ptr(&client_observer));
-      fio2::FileInfo file_info = file_info_builder.build();
+      fio2::wire::FileInfo file_info = file_info_builder.build();
       auto representation = fio2::wire::Representation::WithFile(fidl::unowned_ptr(&file_info));
-      auto info_builder = fio2::ConnectionInfo::UnownedBuilder();
+      auto info_builder = fio2::wire::ConnectionInfo::UnownedBuilder();
       info_builder.set_representation(fidl::unowned_ptr(&representation));
       completer.Reply(info_builder.build());
       return;
@@ -350,7 +350,7 @@ class TestServerStream final : public TestServerBase {
   void Describe(fio2::wire::ConnectionInfoQuery query,
                 DescribeCompleter::Sync& completer) override {
     if (query == fio2::wire::ConnectionInfoQuery::REPRESENTATION) {
-      auto file_info_builder = fio2::FileInfo::UnownedBuilder();
+      auto file_info_builder = fio2::wire::FileInfo::UnownedBuilder();
       zx::stream client_stream;
       zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &client_stream);
       if (status != ZX_OK) {
@@ -358,9 +358,9 @@ class TestServerStream final : public TestServerBase {
         return;
       }
       file_info_builder.set_stream(fidl::unowned_ptr(&client_stream));
-      fio2::FileInfo file_info = file_info_builder.build();
+      fio2::wire::FileInfo file_info = file_info_builder.build();
       auto representation = fio2::wire::Representation::WithFile(fidl::unowned_ptr(&file_info));
-      auto info_builder = fio2::ConnectionInfo::UnownedBuilder();
+      auto info_builder = fio2::wire::ConnectionInfo::UnownedBuilder();
       info_builder.set_representation(fidl::unowned_ptr(&representation));
       completer.Reply(info_builder.build());
       return;

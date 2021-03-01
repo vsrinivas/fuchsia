@@ -19,8 +19,8 @@ namespace {
 
 namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
 
-audio_fidl::PcmFormat GetDefaultPcmFormat() {
-  audio_fidl::PcmFormat format;
+audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
+  audio_fidl::wire::PcmFormat format;
   format.number_of_channels = 2;
   format.channels_to_use_bitmask = 0x03;
   format.sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
@@ -186,7 +186,7 @@ TEST(SimpleAudioTest, SetAndGetGain) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto builder = audio_fidl::GainState::UnownedBuilder();
+  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
   fidl::aligned<float> target_gain = MockSimpleAudio::kTestGain;
   builder.set_gain_db(fidl::unowned_ptr(&target_gain));
   auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
@@ -208,7 +208,7 @@ TEST(SimpleAudioTest, WatchGainAndCloseStreamBeforeReply) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto builder = audio_fidl::GainState::UnownedBuilder();
+  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
   fidl::aligned<float> target_gain = MockSimpleAudio::kTestGain;
   builder.set_gain_db(fidl::unowned_ptr(&target_gain));
   auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
@@ -249,7 +249,7 @@ TEST(SimpleAudioTest, SetAndGetAgc) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto builder = audio_fidl::GainState::UnownedBuilder();
+  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
 
   fidl::aligned<bool> target_agc1 = true;
   builder.set_agc_enabled(fidl::unowned_ptr(&target_agc1));
@@ -280,7 +280,7 @@ TEST(SimpleAudioTest, SetAndGetMute) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto builder = audio_fidl::GainState::UnownedBuilder();
+  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
 
   fidl::aligned<bool> muted1 = true;
   builder.set_muted(fidl::unowned_ptr(&muted1));
@@ -319,7 +319,7 @@ TEST(SimpleAudioTest, SetMuteWhenDisabled) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto builder = audio_fidl::GainState::UnownedBuilder();
+  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
 
   fidl::aligned<bool> muted1 = true;
   builder.set_muted(fidl::unowned_ptr(&muted1));
@@ -455,8 +455,8 @@ TEST(SimpleAudioTest, CreateRingBuffer1) {
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
-  fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::Format::UnownedBuilder();
+  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
+  auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
   client.CreateRingBuffer(builder.build(), std::move(remote));
 
@@ -496,14 +496,14 @@ TEST(SimpleAudioTest, CreateRingBuffer2) {
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
-  audio_fidl::PcmFormat pcm_format = {};
+  audio_fidl::wire::PcmFormat pcm_format = {};
   pcm_format.number_of_channels = 4;
   pcm_format.channels_to_use_bitmask = 0x0f;
   pcm_format.sample_format = audio_fidl::wire::SampleFormat::PCM_UNSIGNED;
   pcm_format.frame_rate = 44100;
   pcm_format.bytes_per_sample = 4;
   pcm_format.valid_bits_per_sample = 24;
-  auto builder = audio_fidl::Format::UnownedBuilder();
+  auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
   client.CreateRingBuffer(builder.build(), std::move(remote));
 
@@ -531,9 +531,9 @@ TEST(SimpleAudioTest, SetBadFormat1) {
   auto [local, remote] = std::move(endpoints.value());
 
   // Define a pretty bad format.
-  audio_fidl::PcmFormat pcm_format = {};
+  audio_fidl::wire::PcmFormat pcm_format = {};
   pcm_format.sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
-  auto builder = audio_fidl::Format::UnownedBuilder();
+  auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
 
   auto result0 = client.CreateRingBuffer(builder.build(), std::move(remote));
@@ -565,9 +565,9 @@ TEST(SimpleAudioTest, SetBadFormat2) {
   auto [local, remote] = std::move(endpoints.value());
 
   // Define an almost good format.
-  audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
+  audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
   pcm_format.frame_rate = 48001;  // Bad rate.
-  auto builder = audio_fidl::Format::UnownedBuilder();
+  auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
 
   auto result0 = client.CreateRingBuffer(builder.build(), std::move(remote));
@@ -789,7 +789,7 @@ TEST(SimpleAudioTest, MultipleChannelsGainStateNotify) {
     zx::nanosleep(zx::deadline_after(zx::msec(100)));
     audio_fidl::Device::ResultOf::GetChannel* ch1 =
         static_cast<audio_fidl::Device::ResultOf::GetChannel*>(arg);
-    auto builder = audio_fidl::GainState::UnownedBuilder();
+    auto builder = audio_fidl::wire::GainState::UnownedBuilder();
     fidl::aligned<bool> muted = false;
     fidl::aligned<bool> agc = false;
     builder.set_muted(fidl::unowned_ptr(&muted));
@@ -834,8 +834,8 @@ TEST(SimpleAudioTest, RingBufferTests) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
 
-  fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::Format::UnownedBuilder();
+  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
+  auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
   auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, builder.build(),
                                                              std::move(remote));
@@ -875,8 +875,8 @@ TEST(SimpleAudioTest, WatchPositionAndCloseRingBufferBeforeReply) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
 
-  fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::Format::UnownedBuilder();
+  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
+  auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
   auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, builder.build(),
                                                              std::move(remote));
@@ -943,8 +943,8 @@ TEST(SimpleAudioTest, ClientCloseRingBufferProtocol) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::Format::UnownedBuilder();
+  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
+  auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
   auto ret = client.CreateRingBuffer(builder.build(), std::move(remote));
   ASSERT_OK(ret.status());
@@ -969,8 +969,8 @@ TEST(SimpleAudioTest, ClientCloseStreamConfigProtocolWithARingBufferProtocol) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::Format::UnownedBuilder();
+  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
+  auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
   auto ret = client.CreateRingBuffer(builder.build(), std::move(remote));
   ASSERT_OK(ret.status());
@@ -995,8 +995,8 @@ TEST(SimpleAudioTest, NonPriviledged) {
   ASSERT_EQ(ch2.status(), ZX_OK);
   ASSERT_EQ(ch3.status(), ZX_OK);
 
-  fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::Format::UnownedBuilder();
+  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
+  auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
 
   auto channel1 = zx::unowned_channel(ch1->channel.channel());

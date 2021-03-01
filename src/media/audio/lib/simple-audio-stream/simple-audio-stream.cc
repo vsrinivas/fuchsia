@@ -124,7 +124,7 @@ zx_status_t SimpleAudioStream::SetPlugState(bool plugged) {
 
 // Asynchronously notify of plug state changes.
 zx_status_t SimpleAudioStream::NotifyPlugDetect() {
-  auto builder = audio_fidl::PlugState::UnownedBuilder();
+  auto builder = audio_fidl::wire::PlugState::UnownedBuilder();
   fidl::aligned<bool> plugged = pd_flags_ & AUDIO_PDNF_PLUGGED;
   builder.set_plugged(fidl::unowned_ptr(&plugged));
   builder.set_plug_state_time(fidl::unowned_ptr(&plug_time_));
@@ -144,7 +144,7 @@ zx_status_t SimpleAudioStream::NotifyPosition(const audio_proto::RingBufPosition
   if (!expected_notifications_per_ring_.load() || (rb_channel_ == nullptr)) {
     return ZX_ERR_BAD_STATE;
   }
-  audio_fidl::RingBufferPositionInfo position_info = {};
+  audio_fidl::wire::RingBufferPositionInfo position_info = {};
   position_info.position = notif.ring_buffer_pos;
   position_info.timestamp = notif.monotonic_time;
 
@@ -255,7 +255,7 @@ void SimpleAudioStream::DeactivateRingBufferChannel(const Channel* channel) {
 }
 
 void SimpleAudioStream::CreateRingBuffer(
-    StreamChannel* channel, audio_fidl::Format format,
+    StreamChannel* channel, audio_fidl::wire::Format format,
     fidl::ServerEnd<audio_fidl::RingBuffer> ring_buffer,
     audio_fidl::StreamConfig::Interface::CreateRingBufferCompleter::Sync& completer) {
   ScopedToken t(domain_token());
@@ -374,7 +374,7 @@ void SimpleAudioStream::WatchGainState(StreamChannel* channel,
   ScopedToken t(domain_token());
   // Reply is delayed if there is no change since the last reported gain state.
   if (channel->last_reported_gain_state_ != cur_gain_state_) {
-    auto builder = audio_fidl::GainState::UnownedBuilder();
+    auto builder = audio_fidl::wire::GainState::UnownedBuilder();
     fidl::aligned<bool> mute = cur_gain_state_.cur_mute;
     fidl::aligned<bool> agc = cur_gain_state_.cur_agc;
     fidl::aligned<float> gain = cur_gain_state_.cur_gain;
@@ -401,7 +401,7 @@ void SimpleAudioStream::WatchPlugState(StreamChannel* channel,
   // Reply is delayed if there is no change since the last reported plugged state.
   if (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kNotReported ||
       (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kPlugged) != plugged) {
-    auto builder = audio_fidl::PlugState::UnownedBuilder();
+    auto builder = audio_fidl::wire::PlugState::UnownedBuilder();
     builder.set_plugged(fidl::unowned_ptr(&plugged));
     fidl::aligned<zx_time_t> plug_time = plug_time_;
     builder.set_plug_state_time(fidl::unowned_ptr(&plug_time));
@@ -418,7 +418,7 @@ void SimpleAudioStream::WatchClockRecoveryPositionInfo(
   position_completer_ = completer.ToAsync();
 }
 
-void SimpleAudioStream::SetGain(audio_fidl::GainState target_state,
+void SimpleAudioStream::SetGain(audio_fidl::wire::GainState target_state,
                                 StreamChannel::SetGainCompleter::Sync& completer) {
   ScopedToken t(domain_token());
   audio_stream_cmd_set_gain_req_t req = {};
@@ -474,7 +474,7 @@ void SimpleAudioStream::SetGain(audio_fidl::GainState target_state,
 void SimpleAudioStream::GetProperties(
     audio_fidl::StreamConfig::Interface::GetPropertiesCompleter::Sync& completer) {
   ScopedToken t(domain_token());
-  auto builder = audio_fidl::StreamProperties::UnownedBuilder();
+  auto builder = audio_fidl::wire::StreamProperties::UnownedBuilder();
   fidl::Array<uint8_t, audio_fidl::UNIQUE_ID_SIZE> unique_id = {};
   for (size_t i = 0; i < audio_fidl::UNIQUE_ID_SIZE; ++i) {
     unique_id.data_[i] = unique_id_.data[i];
@@ -573,9 +573,9 @@ void SimpleAudioStream::GetSupportedFormats(
 
   // Get FIDL PcmSupportedFormats from FIDL compatible vectors.
   // Needs to be alive until the reply is sent.
-  fbl::Vector<audio_fidl::PcmSupportedFormats> fidl_pcm_formats;
+  fbl::Vector<audio_fidl::wire::PcmSupportedFormats> fidl_pcm_formats;
   for (auto& i : fidl_compatible_formats) {
-    audio_fidl::PcmSupportedFormats formats;
+    audio_fidl::wire::PcmSupportedFormats formats;
     formats.number_of_channels = ::fidl::VectorView<uint8_t>(
         fidl::unowned_ptr(i.number_of_channels.data()), i.number_of_channels.size());
     formats.sample_formats = ::fidl::VectorView<audio_fidl::wire::SampleFormat>(
@@ -591,28 +591,28 @@ void SimpleAudioStream::GetSupportedFormats(
 
   // Get builders from PcmSupportedFormats tables.
   // Needs to be alive until the reply is sent.
-  fbl::Vector<audio_fidl::SupportedFormats::UnownedBuilder> fidl_builders;
+  fbl::Vector<audio_fidl::wire::SupportedFormats::UnownedBuilder> fidl_builders;
   for (auto& i : fidl_pcm_formats) {
-    auto builder = audio_fidl::SupportedFormats::UnownedBuilder();
+    auto builder = audio_fidl::wire::SupportedFormats::UnownedBuilder();
     builder.set_pcm_supported_formats(fidl::unowned_ptr(&i));
     fidl_builders.push_back(std::move(builder));
   }
 
   // Build FIDL SupportedFormats from PcmSupportedFormats's builders.
   // Needs to be alive until the reply is sent.
-  fbl::Vector<audio_fidl::SupportedFormats> fidl_formats;
+  fbl::Vector<audio_fidl::wire::SupportedFormats> fidl_formats;
   for (auto& i : fidl_builders) {
     fidl_formats.push_back(i.build());
   }
 
-  completer.Reply(::fidl::VectorView<audio_fidl::SupportedFormats>(
+  completer.Reply(::fidl::VectorView<audio_fidl::wire::SupportedFormats>(
       fidl::unowned_ptr(fidl_formats.data()), fidl_formats.size()));
 }
 
 // Ring Buffer GetProperties.
 void SimpleAudioStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
   ScopedToken t(domain_token());
-  auto builder = audio_fidl::RingBufferProperties::UnownedBuilder();
+  auto builder = audio_fidl::wire::RingBufferProperties::UnownedBuilder();
   fidl::aligned<uint32_t> fifo_depth = fifo_depth_;
   builder.set_fifo_depth(fidl::unowned_ptr(&fifo_depth));
   fidl::aligned<int64_t> delay = static_cast<int64_t>(external_delay_nsec_);

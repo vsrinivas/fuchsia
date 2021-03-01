@@ -310,7 +310,7 @@ class FakeAddressSpace
   void ClaimSharedBlock(uint64_t offset, uint64_t size,
                         ClaimSharedBlockCompleter::Sync& completer) override {}
   void UnclaimSharedBlock(uint64_t offset, UnclaimSharedBlockCompleter::Sync& completer) override {}
-  void Ping(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage ping,
+  void Ping(llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverPingMessage ping,
             PingCompleter::Sync& completer) override {}
 
  private:
@@ -412,8 +412,8 @@ TEST_P(BufferTest, TestCreate2) {
 
   dut_->RegisterBufferHandle(buffer_vmo);
   auto create_params_builder =
-      llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Builder(
-          std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Frame>())
+      llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Builder(
+          std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
           .set_size(std::make_unique<uint64_t>(kSize))
           .set_memory_property(std::make_unique<uint32_t>(memory_property));
   if (is_host_visible) {
@@ -490,8 +490,8 @@ TEST_F(ControlDeviceTest, CreateBuffer2_AlreadyExists) {
 
   dut_->RegisterBufferHandle(buffer_vmo);
   auto create_params =
-      llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Builder(
-          std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Frame>())
+      llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Builder(
+          std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
           .set_size(std::make_unique<uint64_t>(kSize))
           .set_memory_property(std::make_unique<uint32_t>(
               llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
@@ -503,8 +503,8 @@ TEST_F(ControlDeviceTest, CreateBuffer2_AlreadyExists) {
   ASSERT_TRUE(create_buffer_result.value().result.is_response());
 
   auto create_params2 =
-      llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Builder(
-          std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Frame>())
+      llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Builder(
+          std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
           .set_size(std::make_unique<uint64_t>(kSize))
           .set_memory_property(std::make_unique<uint32_t>(
               llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
@@ -528,8 +528,9 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Builder(
-            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Frame>())
+        llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Builder(
+            std::make_unique<
+                llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
             // missing size
             .set_memory_property(std::make_unique<uint32_t>(
                 llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
@@ -551,8 +552,9 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
     auto create_params2 =
-        llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Builder(
-            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Frame>())
+        llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Builder(
+            std::make_unique<
+                llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
             .set_size(std::make_unique<uint64_t>(kSize))
             // missing memory property
             .build();
@@ -571,8 +573,8 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidVmo) {
   ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
 
   auto create_params =
-      llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Builder(
-          std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Frame>())
+      llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Builder(
+          std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
           .set_size(std::make_unique<uint64_t>(kSize))
           .set_memory_property(std::make_unique<uint32_t>(
               llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
@@ -585,8 +587,8 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidVmo) {
   ASSERT_EQ(create_unregistered_buffer_result.value().result.err(), ZX_ERR_INVALID_ARGS);
 
   auto create_params2 =
-      llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Builder(
-          std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Frame>())
+      llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Builder(
+          std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
           .set_size(std::make_unique<uint64_t>(kSize))
           .set_memory_property(std::make_unique<uint32_t>(
               llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
@@ -618,8 +620,9 @@ TEST_P(ColorBufferTest, TestCreate) {
 
   dut_->RegisterBufferHandle(buffer_vmo);
   auto create_params_builder =
-      llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
-          std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+      llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
+          std::make_unique<
+              llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
           .set_width(std::make_unique<uint32_t>(kWidth))
           .set_height(std::make_unique<uint32_t>(kHeight))
           .set_format(
@@ -743,8 +746,9 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_AlreadyExists) {
 
   dut_->RegisterBufferHandle(buffer_vmo);
   auto create_params =
-      llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
-          std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+      llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
+          std::make_unique<
+              llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
           .set_width(std::make_unique<uint32_t>(kWidth))
           .set_height(std::make_unique<uint32_t>(kHeight))
           .set_format(
@@ -759,8 +763,9 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_AlreadyExists) {
   EXPECT_OK(create_color_buffer_result.value().res);
 
   create_params =
-      llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
-          std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+      llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
+          std::make_unique<
+              llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
           .set_width(std::make_unique<uint32_t>(kWidth))
           .set_height(std::make_unique<uint32_t>(kHeight))
           .set_format(
@@ -791,8 +796,9 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
-            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<
+                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
             // missing width
             .set_height(std::make_unique<uint32_t>(kHeight))
             .set_format(
@@ -818,8 +824,9 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
-            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<
+                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(kWidth))
             // missing height
             .set_format(
@@ -845,8 +852,9 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
-            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<
+                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(kWidth))
             .set_height(std::make_unique<uint32_t>(kHeight))
             // missing format
@@ -870,8 +878,9 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
-            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<
+                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(kWidth))
             .set_height(std::make_unique<uint32_t>(kHeight))
             .set_format(
@@ -897,8 +906,9 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
-            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<
+                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(kWidth))
             .set_height(std::make_unique<uint32_t>(kHeight))
             .set_format(
@@ -929,8 +939,9 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidVmo) {
   ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
 
   auto create_params =
-      llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
-          std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+      llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
+          std::make_unique<
+              llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
           .set_width(std::make_unique<uint32_t>(kWidth))
           .set_height(std::make_unique<uint32_t>(kHeight))
           .set_format(
@@ -945,8 +956,9 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidVmo) {
   EXPECT_EQ(create_unregistered_buffer_result.value().res, ZX_ERR_INVALID_ARGS);
 
   create_params =
-      llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
-          std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+      llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
+          std::make_unique<
+              llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
           .set_width(std::make_unique<uint32_t>(kWidth))
           .set_height(std::make_unique<uint32_t>(kHeight))
           .set_format(
@@ -976,8 +988,9 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Builder(
-            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params::Frame>())
+        llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Builder(
+            std::make_unique<
+                llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
             .set_size(std::make_unique<uint64_t>(kSize))
             .set_memory_property(std::make_unique<uint32_t>(
                 llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
@@ -1006,8 +1019,9 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
 
     dut_->RegisterBufferHandle(color_buffer_vmo);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
-            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<
+                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(kWidth))
             .set_height(std::make_unique<uint32_t>(kHeight))
             .set_format(

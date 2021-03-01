@@ -38,7 +38,7 @@ class InputReportReader;
 //   struct TouchScreenReport {
 //      int64_t x;
 //      int64_t y;
-//      void ToFidlInputReport(fuchsia_input_report::InputReport& input_report,
+//      void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
 //                             fidl::AnyAllocator& allocator);
 //   };
 //
@@ -48,14 +48,16 @@ template <class Report>
 class InputReportReaderManager {
  public:
   // Assert that our template type `Report` has the following function:
-  //      void ToFidlInputReport(fuchsia_input_report::InputReport& input_report,
+  //      void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
   //                             fidl::AnyAllocator& allocator);
-  DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_to_fidl_input_report, ToFidlInputReport,
-                                       void (C::*)(fuchsia_input_report::InputReport& input_report,
-                                                   fidl::AnyAllocator& allocator));
-  static_assert(has_to_fidl_input_report<Report>::value,
-                "Report must implement void ToFidlInputReport(fuchsia_input_report::InputReport& "
-                "input_report, fidl::AnyAllocator& allocator);");
+  DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(
+      has_to_fidl_input_report, ToFidlInputReport,
+      void (C::*)(fuchsia_input_report::wire::InputReport& input_report,
+                  fidl::AnyAllocator& allocator));
+  static_assert(
+      has_to_fidl_input_report<Report>::value,
+      "Report must implement void ToFidlInputReport(fuchsia_input_report::wire::InputReport& "
+      "input_report, fidl::AnyAllocator& allocator);");
 
   // This class can't be moved because the InputReportReaders are pointing to the main class.
   DISALLOW_COPY_ASSIGN_AND_MOVE(InputReportReaderManager);
@@ -190,14 +192,14 @@ void InputReportReader<Report>::ReadInputReports(ReadInputReportsCompleter::Sync
 
 template <class Report>
 void InputReportReader<Report>::ReplyWithReports(ReadInputReportsCompleterBase& completer) {
-  std::array<fuchsia_input_report::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
+  std::array<fuchsia_input_report::wire::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
       reports;
 
   TRACE_DURATION("input", "InputReportInstance GetReports", "instance_id", reader_id_);
   size_t num_reports = 0;
   for (; !reports_data_.empty() && num_reports < reports.size(); num_reports++) {
     // Build the report.
-    fuchsia_input_report::InputReport input_report(report_allocator_);
+    fuchsia_input_report::wire::InputReport input_report(report_allocator_);
     reports_data_.front().ToFidlInputReport(input_report, report_allocator_);
 
     // Add some common fields if they weren't already set.

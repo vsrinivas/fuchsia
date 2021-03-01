@@ -88,7 +88,7 @@ int Paver::StreamBuffer() {
     ZX_ASSERT(read_offset + size > decommitted_offset);
     const size_t decommit_size =
         fbl::round_down(read_offset + size - decommitted_offset, ZX_PAGE_SIZE);
-    // TODO(surajmalhotra): Tune this in case we decommit too aggresively.
+    // TODO(surajmalhotra): Tune this in case we decommit too aggressively.
     if (decommit_size > 0) {
       if (auto status = buffer_mapper_.vmo().op_range(ZX_VMO_OP_DECOMMIT, decommitted_offset,
                                                       decommit_size, nullptr, 0);
@@ -185,7 +185,7 @@ zx_status_t ProcessWriteFirmwareResult(const WriteFirmwareResult& res, const cha
 }  // namespace
 
 zx_status_t Paver::WriteABImage(::llcpp::fuchsia::paver::DataSink::SyncClient data_sink,
-                                ::llcpp::fuchsia::mem::Buffer buffer) {
+                                ::llcpp::fuchsia::mem::wire::Buffer buffer) {
   zx::channel boot_manager_chan, remote;
   auto status = zx::channel::create(0, &boot_manager_chan, &remote);
   if (status != ZX_OK) {
@@ -338,7 +338,7 @@ zx_status_t Paver::ClearSysconfig() {
 }
 
 zx_status_t Paver::OpenDataSink(
-    ::llcpp::fuchsia::mem::Buffer buffer,
+    ::llcpp::fuchsia::mem::wire::Buffer buffer,
     std::optional<::llcpp::fuchsia::paver::DynamicDataSink::SyncClient>* data_sink) {
   modify_partition_table_info_t partition_info = {};
   auto status = buffer.vmo.read(&partition_info, 0, sizeof(partition_info));
@@ -391,7 +391,7 @@ zx_status_t Paver::OpenDataSink(
   return ZX_OK;
 }
 
-zx_status_t Paver::InitPartitionTables(::llcpp::fuchsia::mem::Buffer buffer) {
+zx_status_t Paver::InitPartitionTables(::llcpp::fuchsia::mem::wire::Buffer buffer) {
   std::optional<::llcpp::fuchsia::paver::DynamicDataSink::SyncClient> data_sink;
   auto status = OpenDataSink(std::move(buffer), &data_sink);
   if (status != ZX_OK) {
@@ -408,7 +408,7 @@ zx_status_t Paver::InitPartitionTables(::llcpp::fuchsia::mem::Buffer buffer) {
   return ZX_OK;
 }
 
-zx_status_t Paver::WipePartitionTables(::llcpp::fuchsia::mem::Buffer buffer) {
+zx_status_t Paver::WipePartitionTables(::llcpp::fuchsia::mem::wire::Buffer buffer) {
   std::optional<::llcpp::fuchsia::paver::DynamicDataSink::SyncClient> data_sink;
   auto status = OpenDataSink(std::move(buffer), &data_sink);
   if (status != ZX_OK) {
@@ -465,7 +465,7 @@ int Paver::MonitorBuffer() {
     return 0;
   }
 
-  ::llcpp::fuchsia::mem::Buffer buffer = {
+  ::llcpp::fuchsia::mem::wire::Buffer buffer = {
       .vmo = std::move(dup),
       .size = buffer_mapper_.size(),
   };
@@ -502,7 +502,7 @@ int Paver::MonitorBuffer() {
   }
   ::llcpp::fuchsia::paver::DataSink::SyncClient data_sink(std::move(data_sink_chan));
 
-  // Blocks untils paving is complete.
+  // Blocks until paving is complete.
   switch (command_) {
     case Command::kDataFile: {
       auto res = data_sink.WriteDataFile(fidl::StringView(path_, strlen(path_)), std::move(buffer));

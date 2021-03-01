@@ -114,7 +114,7 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
 
   // Invalid cycles (too low).
   {
-    ram_metrics::BandwidthMeasurementConfig config = {(200), {1, 0, 0, 0, 0, 0}};
+    ram_metrics::wire::BandwidthMeasurementConfig config = {(200), {1, 0, 0, 0, 0, 0}};
     auto info = client.MeasureBandwidth(config);
     ASSERT_TRUE(info.ok());
     ASSERT_TRUE(info->result.is_err());
@@ -123,7 +123,7 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
 
   // Invalid cycles (too high).
   {
-    ram_metrics::BandwidthMeasurementConfig config = {(0x100000000ull), {1, 0, 0, 0, 0, 0}};
+    ram_metrics::wire::BandwidthMeasurementConfig config = {(0x100000000ull), {1, 0, 0, 0, 0, 0}};
     auto info = client.MeasureBandwidth(config);
     ASSERT_TRUE(info.ok());
     ASSERT_TRUE(info->result.is_err());
@@ -132,7 +132,7 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
 
   // Invalid channel (above channel 3).
   {
-    ram_metrics::BandwidthMeasurementConfig config = {(1024 * 1024 * 10), {0, 0, 0, 0, 1}};
+    ram_metrics::wire::BandwidthMeasurementConfig config = {(1024 * 1024 * 10), {0, 0, 0, 0, 1}};
     auto info = client.MeasureBandwidth(config);
     ASSERT_TRUE(info.ok());
     ASSERT_TRUE(info->result.is_err());
@@ -141,7 +141,7 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
 }
 
 TEST_F(AmlRamDeviceTest, ValidRequest) {
-  // Peform a request for 3 channels. The harness provides the data that should be
+  // Perform a request for 3 channels. The harness provides the data that should be
   // read via mmio and verifies that the control registers are accessed in the
   // right sequence.
   constexpr uint32_t kCyclesToMeasure = (1024 * 1024 * 10u);
@@ -152,7 +152,7 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
   // Note that the cycles are to be interpreted as shifted 4 bits.
   constexpr uint32_t kReadCycles[] = {0x125001, 0x124002, 0x123003, 0x0};
 
-  ram_metrics::BandwidthMeasurementConfig config = {kCyclesToMeasure, {4, 2, 1, 0, 0, 0}};
+  ram_metrics::wire::BandwidthMeasurementConfig config = {kCyclesToMeasure, {4, 2, 1, 0, 0, 0}};
 
   // |step| helps track of the expected sequence of reads and writes.
   std::atomic<int> step = 0;

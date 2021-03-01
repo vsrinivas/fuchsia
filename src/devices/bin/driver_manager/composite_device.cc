@@ -28,7 +28,7 @@ CompositeDevice::~CompositeDevice() = default;
 
 zx_status_t CompositeDevice::Create(
     const fbl::StringPiece& name,
-    llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
+    llcpp::fuchsia::device::manager::wire::CompositeDeviceDescriptor comp_desc,
     std::unique_ptr<CompositeDevice>* out) {
   fbl::String name_obj(name);
   fbl::Array<zx_device_prop_t> properties(new zx_device_prop_t[comp_desc.props.count() + 1],
@@ -243,7 +243,7 @@ zx_status_t CompositeDevice::TryAssemble() {
 }
 
 void CompositeDevice::UnbindFragment(CompositeDeviceFragment* fragment) {
-  // If the composite was fully instantiated, diassociate from it.  It will be
+  // If the composite was fully instantiated, disassociate from it.  It will be
   // reinstantiated when this fragment is re-bound.
   if (device_ != nullptr) {
     Remove();

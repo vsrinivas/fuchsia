@@ -160,7 +160,7 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
 }
 
 void Lp8556Device::GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) {
-  FidlBacklight::State state = {};
+  FidlBacklight::wire::State state = {};
   auto status = GetBacklightState(&state.backlight_on, &state.brightness);
   if (status == ZX_OK) {
     completer.ReplySuccess(state);
@@ -169,7 +169,7 @@ void Lp8556Device::GetStateNormalized(GetStateNormalizedCompleter::Sync& complet
   }
 }
 
-void Lp8556Device::SetStateNormalized(FidlBacklight::State state,
+void Lp8556Device::SetStateNormalized(FidlBacklight::wire::State state,
                                       SetStateNormalizedCompleter::Sync& completer) {
   auto status = SetBacklightState(state.backlight_on, state.brightness);
   if (status == ZX_OK) {
@@ -190,7 +190,7 @@ void Lp8556Device::GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) 
     return;
   }
 
-  FidlBacklight::State state = {};
+  FidlBacklight::wire::State state = {};
   auto status = GetBacklightState(&state.backlight_on, &state.brightness);
   if (status == ZX_OK) {
     state.brightness *= max_absolute_brightness_nits_.value();
@@ -200,7 +200,7 @@ void Lp8556Device::GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) 
   }
 }
 
-void Lp8556Device::SetStateAbsolute(FidlBacklight::State state,
+void Lp8556Device::SetStateAbsolute(FidlBacklight::wire::State state,
                                     SetStateAbsoluteCompleter::Sync& completer) {
   if (!max_absolute_brightness_nits_.has_value()) {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);

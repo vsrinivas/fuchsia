@@ -58,8 +58,8 @@ class TestAudioStreamIn : public AudioStreamIn {
   bool AllowNonContiguousRingBuffer() override { return true; }
 };
 
-audio_fidl::PcmFormat GetDefaultPcmFormat() {
-  audio_fidl::PcmFormat format;
+audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
+  audio_fidl::wire::PcmFormat format;
   format.number_of_channels = 2;
   format.channels_to_use_bitmask = 0x03;
   format.sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
@@ -102,11 +102,11 @@ struct AudioStreamInTest : public zxtest::Test {
 
     audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
-    audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.channels_to_use_bitmask = channels_to_use_bitmask;
     pcm_format.number_of_channels = number_of_channels;
-    fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
-    auto builder = audio_fidl::Format::UnownedBuilder();
+    fidl::aligned<audio_fidl::wire::PcmFormat> aligned_pcm_format = std::move(pcm_format);
+    auto builder = audio_fidl::wire::Format::UnownedBuilder();
     builder.set_pcm_format(fidl::unowned_ptr(&aligned_pcm_format));
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
     ASSERT_OK(endpoints.status_value());
@@ -137,9 +137,9 @@ struct AudioStreamInTest : public zxtest::Test {
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
-    fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
+    fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
     pcm_format.value.number_of_channels = number_of_channels;
-    auto builder = audio_fidl::Format::UnownedBuilder();
+    auto builder = audio_fidl::wire::Format::UnownedBuilder();
     builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
     client.CreateRingBuffer(builder.build(), std::move(remote));
 

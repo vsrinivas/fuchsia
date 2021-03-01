@@ -69,7 +69,7 @@ void Server::GetBool(fidl::StringView view, bool defaultval, GetBoolCompleter::S
   completer.Reply(StrToBool(view, defaultval));
 }
 
-void Server::GetBools(fidl::VectorView<llcpp::fuchsia::boot::BoolPair> keys,
+void Server::GetBools(fidl::VectorView<llcpp::fuchsia::boot::wire::BoolPair> keys,
                       GetBoolsCompleter::Sync& completer) {
   // The vector<bool> optimisation means we have to use a manually-allocated array.
   std::unique_ptr<bool[]> ret = std::make_unique<bool[]>(keys.count());

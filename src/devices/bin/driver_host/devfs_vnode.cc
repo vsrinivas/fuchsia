@@ -130,7 +130,7 @@ void DevfsVnode::GetDevicePerformanceStates(GetDevicePerformanceStatesCompleter:
   auto& perf_states = dev_->GetPerformanceStates();
   ZX_DEBUG_ASSERT(perf_states.size() == fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES);
 
-  ::fidl::Array<::llcpp::fuchsia::device::DevicePerformanceStateInfo, 20> states{};
+  ::fidl::Array<::llcpp::fuchsia::device::wire::DevicePerformanceStateInfo, 20> states{};
   for (size_t i = 0; i < fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES; i++) {
     states[i] = perf_states[i];
   }
@@ -267,7 +267,7 @@ void DevfsVnode::GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync& completer
   // For now, the result is always a successful response because the device itself is not added
   // without power states validation. In future, we may add more checks for validation, and the
   // error result will be put to use.
-  ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response response{};
+  ::llcpp::fuchsia::device::wire::Controller_GetDevicePowerCaps_Response response{};
   auto& states = dev_->GetPowerStates();
 
   ZX_DEBUG_ASSERT(states.size() == fuchsia_device_MAX_DEVICE_POWER_STATES);
@@ -296,11 +296,11 @@ void DevfsVnode::ConfigureAutoSuspend(
 }
 
 void DevfsVnode::UpdatePowerStateMapping(
-    ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo,
+    ::fidl::Array<::llcpp::fuchsia::device::wire::SystemPowerStateInfo,
                   power_fidl::statecontrol::MAX_SYSTEM_POWER_STATES>
         mapping,
     UpdatePowerStateMappingCompleter::Sync& completer) {
-  std::array<::llcpp::fuchsia::device::SystemPowerStateInfo,
+  std::array<::llcpp::fuchsia::device::wire::SystemPowerStateInfo,
              power_fidl::statecontrol::MAX_SYSTEM_POWER_STATES>
       states_mapping;
 
@@ -313,14 +313,15 @@ void DevfsVnode::UpdatePowerStateMapping(
     return;
   }
 
-  fidl::aligned<::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response> response;
+  fidl::aligned<::llcpp::fuchsia::device::wire::Controller_UpdatePowerStateMapping_Response>
+      response;
   completer.Reply(
       ::llcpp::fuchsia::device::wire::Controller_UpdatePowerStateMapping_Result::WithResponse(
           fidl::unowned_ptr(&response)));
 }
 
 void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& completer) {
-  ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response response;
+  ::llcpp::fuchsia::device::wire::Controller_GetPowerStateMapping_Response response;
 
   auto& mapping = dev_->GetSystemPowerStateMapping();
   ZX_DEBUG_ASSERT(mapping.size() == power_fidl::statecontrol::MAX_SYSTEM_POWER_STATES);

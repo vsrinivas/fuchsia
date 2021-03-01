@@ -37,7 +37,7 @@
 
 namespace peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
 
-const peripheral::FunctionDescriptor cdc_function_descs[] = {
+const peripheral::wire::FunctionDescriptor cdc_function_descs[] = {
     {
         .interface_class = USB_CLASS_COMM,
         .interface_subclass = USB_CDC_SUBCLASS_ETHERNET,
@@ -45,7 +45,7 @@ const peripheral::FunctionDescriptor cdc_function_descs[] = {
     },
 };
 
-const peripheral::FunctionDescriptor ums_function_descs[] = {
+const peripheral::wire::FunctionDescriptor ums_function_descs[] = {
     {
         .interface_class = USB_CLASS_MSC,
         .interface_subclass = USB_SUBCLASS_MSC_SCSI,
@@ -53,7 +53,7 @@ const peripheral::FunctionDescriptor ums_function_descs[] = {
     },
 };
 
-const peripheral::FunctionDescriptor rndis_function_descs[] = {
+const peripheral::wire::FunctionDescriptor rndis_function_descs[] = {
     {
         .interface_class = USB_CLASS_MISC,
         .interface_subclass = USB_SUBCLASS_MSC_RNDIS,
@@ -61,7 +61,7 @@ const peripheral::FunctionDescriptor rndis_function_descs[] = {
     },
 };
 
-const peripheral::FunctionDescriptor test_function_descs[] = {
+const peripheral::wire::FunctionDescriptor test_function_descs[] = {
     {
         .interface_class = USB_CLASS_VENDOR,
         .interface_subclass = 0,
@@ -69,7 +69,7 @@ const peripheral::FunctionDescriptor test_function_descs[] = {
     },
 };
 
-const peripheral::FunctionDescriptor cdc_test_function_descs[] = {
+const peripheral::wire::FunctionDescriptor cdc_test_function_descs[] = {
     {
         .interface_class = USB_CLASS_COMM,
         .interface_subclass = USB_CDC_SUBCLASS_ETHERNET,
@@ -83,7 +83,7 @@ const peripheral::FunctionDescriptor cdc_test_function_descs[] = {
 };
 
 typedef struct {
-  const peripheral::FunctionDescriptor* descs;
+  const peripheral::wire::FunctionDescriptor* descs;
   size_t descs_count;
   const char* product_string;
   uint16_t vid;
@@ -130,7 +130,7 @@ static const usb_config_t cdc_test_function = {
     .pid = GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID,
 };
 
-static peripheral::DeviceDescriptor device_desc = {
+static peripheral::wire::DeviceDescriptor device_desc = {
     .bcd_usb = htole16(0x0200),
     .b_device_class = 0,
     .b_device_sub_class = 0,
@@ -170,18 +170,19 @@ static int open_usb_device(void) {
 
 static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
+      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
   device_desc.id_vendor = htole16(config->vid);
   device_desc.id_product = htole16(config->pid);
   device_desc.manufacturer = MANUFACTURER_STRING;
   device_desc.product = fidl::unowned_str(config->product_string, strlen(config->product_string));
   device_desc.serial = SERIAL_STRING;
   ConfigurationDescriptor config_desc;
-  peripheral::FunctionDescriptor func_descs[config->descs_count];
-  memcpy(func_descs, config->descs, sizeof(peripheral::FunctionDescriptor) * config->descs_count);
+  peripheral::wire::FunctionDescriptor func_descs[config->descs_count];
+  memcpy(func_descs, config->descs,
+         sizeof(peripheral::wire::FunctionDescriptor) * config->descs_count);
   {
-    fidl::VectorView<peripheral::FunctionDescriptor> function_descs(fidl::unowned_ptr(func_descs),
-                                                                    config->descs_count);
+    fidl::VectorView<peripheral::wire::FunctionDescriptor> function_descs(
+        fidl::unowned_ptr(func_descs), config->descs_count);
     config_desc = std::move(function_descs);
   }
   auto resp = peripheral::Device::Call::SetConfiguration(

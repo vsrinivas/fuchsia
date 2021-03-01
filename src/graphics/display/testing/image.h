@@ -43,7 +43,7 @@ class Image {
   uint32_t stride() { return stride_; }
   zx_pixel_format_t format() { return format_; }
 
-  void GetConfig(::llcpp::fuchsia::hardware::display::ImageConfig* config_out);
+  void GetConfig(::llcpp::fuchsia::hardware::display::wire::ImageConfig* config_out);
   bool Import(::llcpp::fuchsia::hardware::display::Controller::SyncClient* dc,
               image_import_t* import_out);
 

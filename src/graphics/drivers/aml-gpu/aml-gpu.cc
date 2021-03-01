@@ -281,7 +281,7 @@ zx_status_t AmlGpu::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 
 zx_status_t AmlGpu::ProcessMetadata(std::vector<uint8_t> raw_metadata) {
   properties_ = {};
-  fidl::DecodedMessage<llcpp::fuchsia::hardware::gpu::amlogic::Metadata> decoded(
+  fidl::DecodedMessage<llcpp::fuchsia::hardware::gpu::amlogic::wire::Metadata> decoded(
       raw_metadata.data(), static_cast<uint32_t>(raw_metadata.size()));
   if (!decoded.ok() || (decoded.error() != nullptr)) {
     GPU_ERROR("Unable to parse metadata %s", decoded.error());

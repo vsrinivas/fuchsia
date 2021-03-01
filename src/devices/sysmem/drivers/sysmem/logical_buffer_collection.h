@@ -102,7 +102,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
                        va_list args);
 
   struct AllocationResult {
-    const llcpp::fuchsia::sysmem2::BufferCollectionInfo* buffer_collection_info = nullptr;
+    const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo* buffer_collection_info = nullptr;
     const zx_status_t status = ZX_OK;
   };
   AllocationResult allocation_result();
@@ -127,11 +127,11 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   struct Constraints {
     Constraints(const Constraints&) = delete;
     Constraints(Constraints&&) = default;
-    Constraints(llcpp::fuchsia::sysmem2::BufferCollectionConstraints&& constraints,
+    Constraints(llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints&& constraints,
                 ClientInfo&& client)
         : constraints(std::move(constraints)), client(std::move(client)) {}
 
-    llcpp::fuchsia::sysmem2::BufferCollectionConstraints constraints;
+    llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints constraints;
     ClientInfo client;
   };
 
@@ -176,57 +176,59 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   bool CombineConstraints();
 
   bool CheckSanitizeBufferCollectionConstraints(
-      CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints);
+      CheckSanitizeStage stage,
+      llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& constraints);
 
   bool CheckSanitizeBufferUsage(CheckSanitizeStage stage,
-                                llcpp::fuchsia::sysmem2::BufferUsage& buffer_usage);
+                                llcpp::fuchsia::sysmem2::wire::BufferUsage& buffer_usage);
 
   bool CheckSanitizeBufferMemoryConstraints(
-      CheckSanitizeStage stage, const llcpp::fuchsia::sysmem2::BufferUsage& buffer_usage,
-      llcpp::fuchsia::sysmem2::BufferMemoryConstraints& constraints);
+      CheckSanitizeStage stage, const llcpp::fuchsia::sysmem2::wire::BufferUsage& buffer_usage,
+      llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints& constraints);
 
   bool CheckSanitizeImageFormatConstraints(
-      CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::ImageFormatConstraints& constraints);
+      CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints& constraints);
 
   bool AccumulateConstraintBufferCollection(
-      llcpp::fuchsia::sysmem2::BufferCollectionConstraints* acc,
-      llcpp::fuchsia::sysmem2::BufferCollectionConstraints* c);
+      llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints* acc,
+      llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints* c);
 
-  bool AccumulateConstraintsBufferUsage(llcpp::fuchsia::sysmem2::BufferUsage* acc,
-                                        llcpp::fuchsia::sysmem2::BufferUsage* c);
+  bool AccumulateConstraintsBufferUsage(llcpp::fuchsia::sysmem2::wire::BufferUsage* acc,
+                                        llcpp::fuchsia::sysmem2::wire::BufferUsage* c);
 
   bool AccumulateConstraintHeapPermitted(
       fidl::VectorView<llcpp::fuchsia::sysmem2::wire::HeapType>* acc,
       fidl::VectorView<llcpp::fuchsia::sysmem2::wire::HeapType>* c);
 
-  bool AccumulateConstraintBufferMemory(llcpp::fuchsia::sysmem2::BufferMemoryConstraints* acc,
-                                        llcpp::fuchsia::sysmem2::BufferMemoryConstraints* c);
+  bool AccumulateConstraintBufferMemory(llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints* acc,
+                                        llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints* c);
 
   bool AccumulateConstraintImageFormats(
-      fidl::VectorView<llcpp::fuchsia::sysmem2::ImageFormatConstraints>* acc,
-      fidl::VectorView<llcpp::fuchsia::sysmem2::ImageFormatConstraints>* c);
+      fidl::VectorView<llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints>* acc,
+      fidl::VectorView<llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints>* c);
 
-  bool AccumulateConstraintImageFormat(llcpp::fuchsia::sysmem2::ImageFormatConstraints* acc,
-                                       llcpp::fuchsia::sysmem2::ImageFormatConstraints* c);
+  bool AccumulateConstraintImageFormat(llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints* acc,
+                                       llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints* c);
 
-  bool AccumulateConstraintColorSpaces(fidl::VectorView<llcpp::fuchsia::sysmem2::ColorSpace>* acc,
-                                       fidl::VectorView<llcpp::fuchsia::sysmem2::ColorSpace>* c);
+  bool AccumulateConstraintColorSpaces(
+      fidl::VectorView<llcpp::fuchsia::sysmem2::wire::ColorSpace>* acc,
+      fidl::VectorView<llcpp::fuchsia::sysmem2::wire::ColorSpace>* c);
 
   size_t InitialCapacityOrZero(CheckSanitizeStage stage, size_t initial_capacity);
 
-  bool IsColorSpaceEqual(const llcpp::fuchsia::sysmem2::ColorSpace& a,
-                         const llcpp::fuchsia::sysmem2::ColorSpace& b);
+  bool IsColorSpaceEqual(const llcpp::fuchsia::sysmem2::wire::ColorSpace& a,
+                         const llcpp::fuchsia::sysmem2::wire::ColorSpace& b);
 
-  fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo, zx_status_t> Allocate(
+  fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo, zx_status_t> Allocate(
       fidl::Allocator& result_allocator);
 
-  fit::result<zx::vmo> AllocateVmo(MemoryAllocator* allocator,
-                                   const llcpp::fuchsia::sysmem2::SingleBufferSettings& settings,
-                                   uint32_t index);
+  fit::result<zx::vmo> AllocateVmo(
+      MemoryAllocator* allocator,
+      const llcpp::fuchsia::sysmem2::wire::SingleBufferSettings& settings, uint32_t index);
 
   int32_t CompareImageFormatConstraintsTieBreaker(
-      const llcpp::fuchsia::sysmem2::ImageFormatConstraints& a,
-      const llcpp::fuchsia::sysmem2::ImageFormatConstraints& b);
+      const llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints& a,
+      const llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints& b);
 
   int32_t CompareImageFormatConstraintsByIndex(uint32_t index_a, uint32_t index_b);
   void CreationTimedOut(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status);
@@ -246,14 +248,14 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   bool is_allocate_attempted_ = false;
 
-  std::optional<llcpp::fuchsia::sysmem2::BufferCollectionConstraints> constraints_;
+  std::optional<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints> constraints_;
 
   // Iff true, initial allocation has been attempted and has succeeded or
   // failed.  Both allocation_result_status_ and allocation_result_info_ are
   // not meaningful until has_allocation_result_ is true.
   bool has_allocation_result_ = false;
   zx_status_t allocation_result_status_ = ZX_OK;
-  std::optional<llcpp::fuchsia::sysmem2::BufferCollectionInfo> allocation_result_info_;
+  std::optional<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo> allocation_result_info_;
 
   MemoryAllocator* memory_allocator_ = nullptr;
   std::optional<CollectionName> name_;

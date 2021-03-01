@@ -15,14 +15,15 @@ class ExternalMemoryAllocator : public MemoryAllocator {
   ExternalMemoryAllocator(MemoryAllocator::Owner* owner,
                           fidl::Client<llcpp::fuchsia::sysmem2::Heap> heap,
                           std::unique_ptr<async::Wait> wait_for_close,
-                          llcpp::fuchsia::sysmem2::HeapProperties properties);
+                          llcpp::fuchsia::sysmem2::wire::HeapProperties properties);
 
   ~ExternalMemoryAllocator() override;
 
   zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
                        zx::vmo* parent_vmo) override;
-  zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-                            llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings) override;
+  zx_status_t SetupChildVmo(
+      const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
+      llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings) override;
   void Delete(zx::vmo parent_vmo) override;
   bool is_empty() override { return allocations_.empty(); }
 

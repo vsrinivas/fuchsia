@@ -89,7 +89,7 @@ zx_status_t Sgm37603a::DisableBacklight() {
 }
 
 void Sgm37603a::GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) {
-  FidlBacklight::State state = {};
+  FidlBacklight::wire::State state = {};
   auto status = GetBacklightState(&state.backlight_on, &state.brightness);
   if (status == ZX_OK) {
     completer.ReplySuccess(state);
@@ -98,7 +98,7 @@ void Sgm37603a::GetStateNormalized(GetStateNormalizedCompleter::Sync& completer)
   }
 }
 
-void Sgm37603a::SetStateNormalized(FidlBacklight::State state,
+void Sgm37603a::SetStateNormalized(FidlBacklight::wire::State state,
                                    SetStateNormalizedCompleter::Sync& completer) {
   auto status = SetBacklightState(state.backlight_on, state.brightness);
   if (status == ZX_OK) {
@@ -112,7 +112,7 @@ void Sgm37603a::GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Sgm37603a::SetStateAbsolute(FidlBacklight::State state,
+void Sgm37603a::SetStateAbsolute(FidlBacklight::wire::State state,
                                  SetStateAbsoluteCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }

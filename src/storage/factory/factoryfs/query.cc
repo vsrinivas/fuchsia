@@ -28,7 +28,7 @@ void QueryService::GetInfo(FilesystemInfoQuery query, GetInfoCompleter::Sync& co
   static_assert(fbl::constexpr_strlen(kFsName) < fuchsia_fs::MAX_FS_NAME_LENGTH,
                 "Factoryfs name too long");
 
-  fuchsia_fs::FilesystemInfo::UnownedBuilder builder;
+  fuchsia_fs::wire::FilesystemInfo::UnownedBuilder builder;
 
   uint64_t total_bytes;
   if (query & FilesystemInfoQuery::TOTAL_BYTES) {

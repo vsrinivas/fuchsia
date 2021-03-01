@@ -317,12 +317,12 @@ struct zx_device
     static bool EqualTo(const uint64_t& key1, const uint64_t& key2) { return key1 == key2; }
   };
 
-  using DevicePowerStates = std::array<::llcpp::fuchsia::device::DevicePowerStateInfo,
+  using DevicePowerStates = std::array<::llcpp::fuchsia::device::wire::DevicePowerStateInfo,
                                        ::llcpp::fuchsia::device::MAX_DEVICE_POWER_STATES>;
   using SystemPowerStateMapping =
-      std::array<::llcpp::fuchsia::device::SystemPowerStateInfo,
+      std::array<::llcpp::fuchsia::device::wire::SystemPowerStateInfo,
                  ::llcpp::fuchsia::hardware::power::statecontrol::MAX_SYSTEM_POWER_STATES>;
-  using PerformanceStates = std::array<::llcpp::fuchsia::device::DevicePerformanceStateInfo,
+  using PerformanceStates = std::array<::llcpp::fuchsia::device::wire::DevicePerformanceStateInfo,
                                        ::llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES>;
 
   bool has_composite() const;

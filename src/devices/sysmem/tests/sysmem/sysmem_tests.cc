@@ -39,13 +39,14 @@
 // We assume one sysmem since boot, for now.
 const char* kSysmemDevicePath = "/dev/class/sysmem/000";
 
-using BufferCollectionConstraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-                                               llcpp::fuchsia::sysmem::BufferCollectionConstraints>;
+using BufferCollectionConstraints =
+    FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
+               llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints>;
 using BufferCollectionConstraintsAuxBuffers =
     FidlStruct<fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers,
-               llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>;
+               llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers>;
 using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                                        llcpp::fuchsia::sysmem::BufferCollectionInfo_2>;
+                                        llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>;
 
 namespace {
 
@@ -343,7 +344,7 @@ SecureVmoReadTester::SecureVmoReadTester(zx::vmo secure_vmo) : secure_vmo_(std::
   status = secure_vmo_.op_range(ZX_VMO_OP_CACHE_INVALIDATE, 0, ZX_PAGE_SIZE, nullptr, 0);
   ZX_ASSERT(status == ZX_OK);
 
-  // But currently the read doesn't visibily fault while the vaddr is mapped to
+  // But currently the read doesn't visibly fault while the vaddr is mapped to
   // a secure page.  Instead the read gets stuck and doesn't complete (perhaps
   // internally faulting from kernel's point of view).  While that's not ideal,
   // we can check that the thread doing the reading doesn't get anything from
@@ -352,12 +353,12 @@ SecureVmoReadTester::SecureVmoReadTester(zx::vmo secure_vmo) : secure_vmo_(std::
   let_die_thread_ = std::thread([this] {
     is_let_die_started_ = true;
     // Ensure is_read_from_secure_attempted_ becomes true before we start
-    // waiting.  This just increases the liklihood that we wait long enough
+    // waiting.  This just increases the likelihood that we wait long enough
     // for the read itself to potentially execute (expected to fault instead).
     while (!is_read_from_secure_attempted_) {
       nanosleep_duration(zx::msec(10));
     }
-    // Wait 10ms for the read attempt to succed; the read attempt should not
+    // Wait 10ms for the read attempt to succeed; the read attempt should not
     // succeed.  The read attempt may fail immediately or may get stuck.  It's
     // possible we might very occasionally not wait long enough for the read
     // to have actually started - if that occurs the test will "pass" without
@@ -965,7 +966,7 @@ TEST(Sysmem, NoSync) {
 
   SetDefaultCollectionName(collection_client);
 
-  // The duplicate/sync should print out an errror message but succeed.
+  // The duplicate/sync should print out an error message but succeed.
   status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), ZX_RIGHT_SAME_RIGHTS,
                                                          token_server_2.release());
   EXPECT_EQ(status, ZX_OK, "");
@@ -2276,7 +2277,7 @@ TEST(Sysmem, NoneUsageWithSeparateOtherUsageSucceeds) {
       // min_coded_height in NV12
       // format.
       .min_size_bytes = 64 * 1024,
-      // Allow a max that's just large enough to accomodate the size implied
+      // Allow a max that's just large enough to accommodate the size implied
       // by the min frame size and PixelFormat.
       .max_size_bytes = (512 * 512) * 3 / 2,
       .physically_contiguous_required = false,
@@ -2607,9 +2608,9 @@ TEST(Sysmem, HeapAmlogicSecure) {
       // This shouldn't crash for the aux VMO.
       aux_tester.AttemptReadFromSecure(/*expect_read_success=*/true);
       // Read from aux VMO using REE (rich execution environment, in contrast to the TEE (trusted
-      // execution evironment)) CPU should work.  In actual usage, only the non-encrypted parts of
+      // execution environment)) CPU should work.  In actual usage, only the non-encrypted parts of
       // the data will be present in the VMO, and the encrypted parts will be all 0xFF.  The point
-      // of the aux VMO is to allow reading and parsing the non-encypted parts using REE CPU.
+      // of the aux VMO is to allow reading and parsing the non-encrypted parts using REE CPU.
       ASSERT_TRUE(aux_tester.IsReadFromSecureAThing());
     }
   }
@@ -2871,7 +2872,7 @@ TEST(Sysmem, AllocatedBufferZeroInRam) {
 
     // Before we read from the VMO, we need to invalidate cache for the VMO.  We do this via a
     // syscall since it seems like mapping would have a greater chance of doing a fence.
-    // Unfortunately none of these steps are guarnteed not to hide a problem with flushing or fence
+    // Unfortunately none of these steps are guaranteed not to hide a problem with flushing or fence
     // in sysmem...
     status = vmo.op_range(ZX_VMO_OP_CACHE_INVALIDATE, /*offset=*/0, kBufferSize, /*buffer=*/nullptr,
                           /*buffer_size=*/0);
@@ -3078,9 +3079,10 @@ class EventSinkServer : public llcpp::fuchsia::sysmem::BufferCollectionEvents::I
     loop_.Quit();
   }
 
-  void OnBuffersAllocated(zx_status_t status,
-                          llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info,
-                          OnBuffersAllocatedCompleter::Sync& completer) override {
+  void OnBuffersAllocated(
+      zx_status_t status,
+      llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 buffer_collection_info,
+      OnBuffersAllocatedCompleter::Sync& completer) override {
     EXPECT_TRUE(!status_);
     status_ = status;
     buffer_collection_info_ = std::move(buffer_collection_info);
@@ -3088,7 +3090,7 @@ class EventSinkServer : public llcpp::fuchsia::sysmem::BufferCollectionEvents::I
   }
 
   void OnAllocateSingleBufferDone(zx_status_t status,
-                                  llcpp::fuchsia::sysmem::SingleBufferInfo single_buffer_info,
+                                  llcpp::fuchsia::sysmem::wire::SingleBufferInfo single_buffer_info,
                                   OnAllocateSingleBufferDoneCompleter::Sync& completer) override {
     EXPECT_TRUE(false);
   }
@@ -3098,7 +3100,7 @@ class EventSinkServer : public llcpp::fuchsia::sysmem::BufferCollectionEvents::I
     ZX_DEBUG_ASSERT(status_);
     return *status_;
   }
-  const llcpp::fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info() {
+  const llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2& buffer_collection_info() {
     return buffer_collection_info_;
   }
 
@@ -3106,7 +3108,7 @@ class EventSinkServer : public llcpp::fuchsia::sysmem::BufferCollectionEvents::I
   async::Loop& loop_;
   bool got_tokens_known_ = false;
   std::optional<zx_status_t> status_;
-  llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info_;
+  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 buffer_collection_info_;
 };
 
 TEST(Sysmem, EventSink) {

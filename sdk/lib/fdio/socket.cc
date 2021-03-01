@@ -27,8 +27,8 @@ namespace {
 struct SocketAddress {
   fnet::wire::SocketAddress address;
   union U {
-    fnet::Ipv4SocketAddress ipv4;
-    fnet::Ipv6SocketAddress ipv6;
+    fnet::wire::Ipv4SocketAddress ipv4;
+    fnet::wire::Ipv6SocketAddress ipv6;
 
     U() { memset(this, 0x00, sizeof(U)); }
   } storage;
@@ -886,8 +886,9 @@ static fdio_ops_t fdio_datagram_socket_ops = {
           // TODO(fxbug.dev/21106): Support control messages.
           // TODO(fxbug.dev/58503): Use better representation of nullable union when available.
           // Currently just using a default-initialized union with an invalid tag.
-          auto response = sio->client.SendMsg(std::move(addr.address), std::move(vec),
-                                              fsocket::SendControlData(), to_sendmsg_flags(flags));
+          auto response =
+              sio->client.SendMsg(std::move(addr.address), std::move(vec),
+                                  fsocket::wire::SendControlData(), to_sendmsg_flags(flags));
           zx_status_t status = response.status();
           if (status != ZX_OK) {
             return status;

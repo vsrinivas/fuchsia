@@ -6,7 +6,7 @@
 
 #include <inttypes.h>
 
-bool IsWriteUsage(const llcpp::fuchsia::sysmem2::BufferUsage& buffer_usage) {
+bool IsWriteUsage(const llcpp::fuchsia::sysmem2::wire::BufferUsage& buffer_usage) {
   const uint32_t kCpuWriteBits =
       llcpp::fuchsia::sysmem2::CPU_USAGE_WRITE_OFTEN | llcpp::fuchsia::sysmem2::CPU_USAGE_WRITE;
   // This list may not be complete.
@@ -30,12 +30,12 @@ bool IsWriteUsage(const llcpp::fuchsia::sysmem2::BufferUsage& buffer_usage) {
   return is_write_needed;
 }
 
-bool IsCpuUsage(const llcpp::fuchsia::sysmem2::BufferUsage& buffer_usage) {
+bool IsCpuUsage(const llcpp::fuchsia::sysmem2::wire::BufferUsage& buffer_usage) {
   uint32_t cpu = buffer_usage.has_cpu() ? buffer_usage.cpu() : 0;
   return cpu != 0;
 }
 
-bool IsAnyUsage(const llcpp::fuchsia::sysmem2::BufferUsage& buffer_usage) {
+bool IsAnyUsage(const llcpp::fuchsia::sysmem2::wire::BufferUsage& buffer_usage) {
   // none() is intentionally missing here
   uint32_t cpu = buffer_usage.has_cpu() ? buffer_usage.cpu() : 0;
   uint32_t vulkan = buffer_usage.has_vulkan() ? buffer_usage.vulkan() : 0;

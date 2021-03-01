@@ -314,7 +314,7 @@ uint8_t device_get_suspend_reason(SystemPowerState power_state) {
 
 zx_status_t device_get_dev_power_state_from_mapping(
     const fbl::RefPtr<zx_device>& dev, uint32_t flags,
-    llcpp::fuchsia::device::SystemPowerStateInfo* info, uint8_t* suspend_reason) {
+    llcpp::fuchsia::device::wire::SystemPowerStateInfo* info, uint8_t* suspend_reason) {
   // TODO(ravoorir) : When the usage of suspend flags is replaced with
   // system power states, this function will not need the switch case.
   // Some suspend flags might be translated to system power states with
@@ -727,7 +727,7 @@ void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, u
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // If new suspend hook is implemented, prefer that.
   if (dev->ops()->suspend) {
-    llcpp::fuchsia::device::SystemPowerStateInfo new_state_info;
+    llcpp::fuchsia::device::wire::SystemPowerStateInfo new_state_info;
     uint8_t suspend_reason = DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
 
     status = internal::device_get_dev_power_state_from_mapping(dev, flags, &new_state_info,

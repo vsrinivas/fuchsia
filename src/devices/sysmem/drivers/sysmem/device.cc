@@ -64,10 +64,10 @@ T AlignUp(T value, T divisor) {
 }
 
 // Helper function to build owned HeapProperties table with coherency domain support.
-llcpp::fuchsia::sysmem2::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
+llcpp::fuchsia::sysmem2::wire::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
     bool cpu_supported, bool ram_supported, bool inaccessible_supported, bool need_clear) {
-  using llcpp::fuchsia::sysmem2::CoherencyDomainSupport;
-  using llcpp::fuchsia::sysmem2::HeapProperties;
+  using llcpp::fuchsia::sysmem2::wire::CoherencyDomainSupport;
+  using llcpp::fuchsia::sysmem2::wire::HeapProperties;
 
   auto coherency_domain_support = std::make_unique<CoherencyDomainSupport>();
   *coherency_domain_support =
@@ -108,7 +108,7 @@ class SystemRamMemoryAllocator : public MemoryAllocator {
 
   zx_status_t SetupChildVmo(
       const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-      llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings) override {
+      llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings) override {
     // nothing to do here
     return ZX_OK;
   }
@@ -174,7 +174,7 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
   }
   virtual zx_status_t SetupChildVmo(
       const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-      llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings) override {
+      llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings) override {
     // nothing to do here
     return ZX_OK;
   }
@@ -610,7 +610,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
         // At this point secure_allocators_ has only the secure heaps that are configured via sysmem
         // (not those configured via the TEE), and the memory for these is not yet protected.  Tell
         // the TEE about these.
-        ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps sysmem_configured_heaps;
+        ::llcpp::fuchsia::sysmem::wire::PhysicalSecureHeaps sysmem_configured_heaps;
         for (const auto& [heap_type, allocator] : secure_allocators_) {
           uint64_t base;
           uint64_t size;
@@ -622,7 +622,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
               " size: %016" PRIx64,
               static_cast<uint64_t>(heap_type), base, size);
 
-          ::llcpp::fuchsia::sysmem::PhysicalSecureHeap& heap =
+          ::llcpp::fuchsia::sysmem::wire::PhysicalSecureHeap& heap =
               sysmem_configured_heaps.heaps[sysmem_configured_heaps.heaps_count];
           heap.heap = static_cast<::llcpp::fuchsia::sysmem::wire::HeapType>(heap_type);
           heap.physical_address = base;
@@ -661,11 +661,11 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           return;
         }
         ZX_ASSERT(get_result->result.is_response());
-        const ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps& tee_configured_heaps =
+        const ::llcpp::fuchsia::sysmem::wire::PhysicalSecureHeaps& tee_configured_heaps =
             get_result->result.response().heaps;
 
         for (uint32_t heap_index = 0; heap_index < tee_configured_heaps.heaps_count; ++heap_index) {
-          const ::llcpp::fuchsia::sysmem::PhysicalSecureHeap& heap =
+          const ::llcpp::fuchsia::sysmem::wire::PhysicalSecureHeap& heap =
               tee_configured_heaps.heaps[heap_index];
           constexpr bool kIsCpuAccessible = false;
           constexpr bool kIsReady = true;
@@ -779,7 +779,7 @@ BufferCollectionToken* Device::FindTokenByServerChannelKoid(zx_koid_t token_serv
 }
 
 MemoryAllocator* Device::GetAllocator(
-    const llcpp::fuchsia::sysmem2::BufferMemorySettings& settings) {
+    const llcpp::fuchsia::sysmem2::wire::BufferMemorySettings& settings) {
   if (settings.heap() == llcpp::fuchsia::sysmem2::wire::HeapType::SYSTEM_RAM &&
       settings.is_physically_contiguous()) {
     return contiguous_system_ram_allocator_.get();
@@ -792,7 +792,7 @@ MemoryAllocator* Device::GetAllocator(
   return iter->second.get();
 }
 
-const llcpp::fuchsia::sysmem2::HeapProperties& Device::GetHeapProperties(
+const llcpp::fuchsia::sysmem2::wire::HeapProperties& Device::GetHeapProperties(
     llcpp::fuchsia::sysmem2::wire::HeapType heap) const {
   ZX_DEBUG_ASSERT(allocators_.find(heap) != allocators_.end());
   return allocators_.at(heap)->heap_properties();

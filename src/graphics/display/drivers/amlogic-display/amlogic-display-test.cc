@@ -17,7 +17,7 @@ namespace sysmem = llcpp::fuchsia::sysmem;
 
 class MockBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
-  void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
+  void SetConstraints(bool has_constraints, sysmem::wire::BufferCollectionConstraints constraints,
                       SetConstraintsCompleter::Sync& _completer) override {
     EXPECT_TRUE(constraints.buffer_memory_constraints.inaccessible_domain_supported);
     EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);

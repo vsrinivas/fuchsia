@@ -205,7 +205,8 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
   }
 
   void WriteAsset(::llcpp::fuchsia::paver::wire::Configuration configuration,
-                  ::llcpp::fuchsia::paver::wire::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
+                  ::llcpp::fuchsia::paver::wire::Asset asset,
+                  ::llcpp::fuchsia::mem::wire::Buffer payload,
                   WriteAssetCompleter::Sync& completer) override {
     AppendCommand(Command::kWriteAsset);
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
@@ -213,7 +214,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
   }
 
   void WriteFirmware(::llcpp::fuchsia::paver::wire::Configuration configuration,
-                     fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
+                     fidl::StringView type, ::llcpp::fuchsia::mem::wire::Buffer payload,
                      WriteFirmwareCompleter::Sync& completer) override {
     using ::llcpp::fuchsia::paver::wire::WriteFirmwareResult;
     AppendCommand(Command::kWriteFirmware);
@@ -282,14 +283,14 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
     completer.Reply(status);
   }
 
-  void WriteBootloader(::llcpp::fuchsia::mem::Buffer payload,
+  void WriteBootloader(::llcpp::fuchsia::mem::wire::Buffer payload,
                        WriteBootloaderCompleter::Sync& completer) override {
     AppendCommand(Command::kWriteBootloader);
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
 
-  void WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload,
+  void WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::wire::Buffer payload,
                      WriteDataFileCompleter::Sync& completer) override {
     AppendCommand(Command::kWriteDataFile);
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;

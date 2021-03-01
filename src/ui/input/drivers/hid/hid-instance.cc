@@ -169,7 +169,7 @@ void HidInstance::GetBootProtocol(GetBootProtocolCompleter::Sync& completer) {
 
 void HidInstance::GetDeviceIds(GetDeviceIdsCompleter::Sync& completer) {
   hid_info_t info = base_->GetHidInfo();
-  ::llcpp::fuchsia::hardware::input::DeviceIds ids = {};
+  ::llcpp::fuchsia::hardware::input::wire::DeviceIds ids = {};
   ids.vendor_id = info.vendor_id;
   ids.product_id = info.product_id;
   ids.version = info.version;

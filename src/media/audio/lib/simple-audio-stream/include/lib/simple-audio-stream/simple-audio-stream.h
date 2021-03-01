@@ -351,11 +351,11 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     virtual void WatchPlugState(WatchPlugStateCompleter::Sync& completer) override {
       stream_.WatchPlugState(this, completer);
     }
-    virtual void SetGain(audio_fidl::GainState target_state,
+    virtual void SetGain(audio_fidl::wire::GainState target_state,
                          SetGainCompleter::Sync& completer) override {
       stream_.SetGain(std::move(target_state), completer);
     }
-    virtual void CreateRingBuffer(audio_fidl::Format format,
+    virtual void CreateRingBuffer(audio_fidl::wire::Format format,
                                   fidl::ServerEnd<audio_fidl::RingBuffer> ring_buffer,
                                   CreateRingBufferCompleter::Sync& completer) override {
       stream_.CreateRingBuffer(this, std::move(format), std::move(ring_buffer), completer);
@@ -400,14 +400,14 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)
   void GetProperties(StreamChannel::GetPropertiesCompleter::Sync& completer);
   void GetSupportedFormats(StreamChannel::GetSupportedFormatsCompleter::Sync& completer);
-  void CreateRingBuffer(StreamChannel* channel, audio_fidl::Format format,
+  void CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::Format format,
                         fidl::ServerEnd<audio_fidl::RingBuffer> ring_buffer,
                         StreamChannel::CreateRingBufferCompleter::Sync& completer);
   void WatchGainState(StreamChannel* channel,
                       StreamChannel::WatchGainStateCompleter::Sync& completer);
   void WatchPlugState(StreamChannel* channel,
                       StreamChannel::WatchPlugStateCompleter::Sync& completer);
-  void SetGain(audio_fidl::GainState target_state,
+  void SetGain(audio_fidl::wire::GainState target_state,
                StreamChannel::SetGainCompleter::Sync& completer);
 
   void DeactivateStreamChannel(StreamChannel* channel) __TA_REQUIRES(domain_token(), channel_lock_);

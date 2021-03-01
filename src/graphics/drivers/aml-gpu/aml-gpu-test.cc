@@ -88,7 +88,7 @@ class TestAmlGpu {
   }
 
   static void TestMetadata() {
-    using ::llcpp::fuchsia::hardware::gpu::amlogic::Metadata;
+    using ::llcpp::fuchsia::hardware::gpu::amlogic::wire::Metadata;
     aml_gpu::AmlGpu aml_gpu(nullptr);
     arm_mali_protocol_t protocol;
     EXPECT_OK(aml_gpu.DdkGetProtocol(ZX_PROTOCOL_ARM_MALI, &protocol));

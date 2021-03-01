@@ -210,8 +210,8 @@ class Message : public MessageBase<std::unique_ptr<SharedMemory>> {
   zx_status_t TryInitializeParameters(size_t starting_param_index,
                                       fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
                                       SharedMemoryManager::ClientMemoryPool* temp_memory_pool);
-  zx_status_t TryInitializeValue(const fuchsia_tee::Value& value, MessageParam* out_param);
-  zx_status_t TryInitializeBuffer(fuchsia_tee::Buffer* buffer,
+  zx_status_t TryInitializeValue(const fuchsia_tee::wire::Value& value, MessageParam* out_param);
+  zx_status_t TryInitializeBuffer(fuchsia_tee::wire::Buffer* buffer,
                                   SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                                   MessageParam* out_param);
 

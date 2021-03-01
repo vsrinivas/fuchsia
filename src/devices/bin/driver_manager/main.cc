@@ -62,7 +62,7 @@ struct DriverManagerParams {
 };
 
 DriverManagerParams GetDriverManagerParams(llcpp::fuchsia::boot::Arguments::SyncClient& client) {
-  llcpp::fuchsia::boot::BoolPair bool_req[]{
+  llcpp::fuchsia::boot::wire::BoolPair bool_req[]{
       // TODO(bwb): remove this or figure out how to make it work
       {"devmgr.devhost.asan", false},
       {"devmgr.devhost.strict-linking", false},

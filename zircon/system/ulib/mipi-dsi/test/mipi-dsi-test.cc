@@ -20,7 +20,7 @@ namespace mipi_dsi {
 
 namespace fidl_dsi = ::llcpp::fuchsia::hardware::dsi;
 
-TEST(CreateCommmand, CommandStructure) {
+TEST(CreateCommand, CommandStructure) {
   mipi_dsi_cmd_t cmd;
   uint8_t tbuf[3];
   uint8_t rbuf[3];
@@ -35,20 +35,20 @@ TEST(CreateCommmand, CommandStructure) {
   EXPECT_TRUE(cmd.dsi_data_type == kMipiDsiDtUnknown);
 }
 
-TEST(CreateCommmand, GenShortWrite0T1) {
+TEST(CreateCommand, GenShortWrite0T1) {
   mipi_dsi_cmd_t cmd;
   zx_status_t status = MipiDsi::CreateCommand(nullptr, 0, nullptr, 0, false, &cmd);
   EXPECT_TRUE(cmd.dsi_data_type == kMipiDsiDtGenShortWrite0);
   EXPECT_OK(status);
 }
 
-TEST(CreateCommmand, GenShortWrite0T2) {
+TEST(CreateCommand, GenShortWrite0T2) {
   mipi_dsi_cmd_t cmd;
   zx_status_t status = MipiDsi::CreateCommand(nullptr, 0, nullptr, 0, true, &cmd);
   EXPECT_TRUE(status == ZX_ERR_INVALID_ARGS);
 }
 
-TEST(CreateCommmand, GenShortWrite1T1) {
+TEST(CreateCommand, GenShortWrite1T1) {
   uint8_t tbuf[1];
   mipi_dsi_cmd_t cmd;
   zx_status_t status = MipiDsi::CreateCommand(tbuf, sizeof(tbuf), nullptr, 0, false, &cmd);
@@ -56,7 +56,7 @@ TEST(CreateCommmand, GenShortWrite1T1) {
   EXPECT_OK(status);
 }
 
-TEST(CreateCommmand, DcsShortWrite0T1) {
+TEST(CreateCommand, DcsShortWrite0T1) {
   uint8_t tbuf[1];
   mipi_dsi_cmd_t cmd;
   zx_status_t status = MipiDsi::CreateCommand(tbuf, sizeof(tbuf), nullptr, 0, true, &cmd);
@@ -64,7 +64,7 @@ TEST(CreateCommmand, DcsShortWrite0T1) {
   EXPECT_OK(status);
 }
 
-TEST(CreateCommmand, GenShortWrite2T1) {
+TEST(CreateCommand, GenShortWrite2T1) {
   uint8_t tbuf[2];
   mipi_dsi_cmd_t cmd;
   zx_status_t status = MipiDsi::CreateCommand(tbuf, sizeof(tbuf), nullptr, 0, false, &cmd);
@@ -72,7 +72,7 @@ TEST(CreateCommmand, GenShortWrite2T1) {
   EXPECT_OK(status);
 }
 
-TEST(CreateCommmand, DcsShortWrite1T1) {
+TEST(CreateCommand, DcsShortWrite1T1) {
   uint8_t tbuf[2];
   mipi_dsi_cmd_t cmd;
   zx_status_t status = MipiDsi::CreateCommand(tbuf, sizeof(tbuf), nullptr, 0, true, &cmd);
@@ -80,7 +80,7 @@ TEST(CreateCommmand, DcsShortWrite1T1) {
   EXPECT_OK(status);
 }
 
-TEST(CreateCommmand, GenLongWriteT1) {
+TEST(CreateCommand, GenLongWriteT1) {
   uint8_t tbuf[4];
   mipi_dsi_cmd_t cmd;
   zx_status_t status = MipiDsi::CreateCommand(tbuf, sizeof(tbuf), nullptr, 0, false, &cmd);
@@ -88,7 +88,7 @@ TEST(CreateCommmand, GenLongWriteT1) {
   EXPECT_OK(status);
 }
 
-TEST(CreateCommmand, DcsLongWriteT1) {
+TEST(CreateCommand, DcsLongWriteT1) {
   uint8_t tbuf[4];
   mipi_dsi_cmd_t cmd;
   zx_status_t status = MipiDsi::CreateCommand(tbuf, sizeof(tbuf), nullptr, 0, true, &cmd);
@@ -96,7 +96,7 @@ TEST(CreateCommmand, DcsLongWriteT1) {
   EXPECT_OK(status);
 }
 
-TEST(CreateCommmand, GenShortRead0T1) {
+TEST(CreateCommand, GenShortRead0T1) {
   mipi_dsi_cmd_t cmd;
   uint8_t rbuf[2];
   zx_status_t status = MipiDsi::CreateCommand(nullptr, 0, rbuf, sizeof(rbuf), false, &cmd);
@@ -106,7 +106,7 @@ TEST(CreateCommmand, GenShortRead0T1) {
   EXPECT_OK(status);
 }
 
-TEST(CreateCommmand, GenShortRead1T1) {
+TEST(CreateCommand, GenShortRead1T1) {
   mipi_dsi_cmd_t cmd;
   uint8_t tbuf[1];
   uint8_t rbuf[2];
@@ -117,7 +117,7 @@ TEST(CreateCommmand, GenShortRead1T1) {
   EXPECT_OK(status);
 }
 
-TEST(CreateCommmand, DcsShortRead0T1) {
+TEST(CreateCommand, DcsShortRead0T1) {
   mipi_dsi_cmd_t cmd;
   uint8_t tbuf[1];
   uint8_t rbuf[2];
@@ -128,7 +128,7 @@ TEST(CreateCommmand, DcsShortRead0T1) {
   EXPECT_OK(status);
 }
 
-TEST(CreateCommmand, GenShortRead2T1) {
+TEST(CreateCommand, GenShortRead2T1) {
   mipi_dsi_cmd_t cmd;
   uint8_t tbuf[2];
   uint8_t rbuf[2];
@@ -139,7 +139,7 @@ TEST(CreateCommmand, GenShortRead2T1) {
   EXPECT_OK(status);
 }
 
-TEST(CreateCommmand, InvalidDcsReadT1) {
+TEST(CreateCommand, InvalidDcsReadT1) {
   mipi_dsi_cmd_t cmd;
   uint8_t tbuf[2];
   uint8_t rbuf[2];
@@ -147,7 +147,7 @@ TEST(CreateCommmand, InvalidDcsReadT1) {
   EXPECT_TRUE(status == ZX_ERR_INVALID_ARGS);
 }
 
-TEST(CreateCommmand, InvalidReadT1) {
+TEST(CreateCommand, InvalidReadT1) {
   mipi_dsi_cmd_t cmd;
   uint8_t tbuf[3];
   uint8_t rbuf[2];
@@ -251,7 +251,7 @@ TEST(CreateCommandFidl, DcsLongWriteT1) {
 }
 
 TEST(CreateCommandFidl, GenShortRead0T1) {
-  ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd;
+  ::llcpp::fuchsia::hardware::dsi::wire::MipiDsiCmd cmd;
   uint8_t rbuf[2];
   fidl::FidlAllocator<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(0, sizeof(rbuf), false, allocator);
@@ -263,7 +263,7 @@ TEST(CreateCommandFidl, GenShortRead0T1) {
 }
 
 TEST(CreateCommandFidl, GenShortRead1T1) {
-  ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd;
+  ::llcpp::fuchsia::hardware::dsi::wire::MipiDsiCmd cmd;
   uint8_t tbuf[1];
   uint8_t rbuf[2];
   fidl::FidlAllocator<2048> allocator;
@@ -276,7 +276,7 @@ TEST(CreateCommandFidl, GenShortRead1T1) {
 }
 
 TEST(CreateCommandFidl, DcsShortRead0T1) {
-  ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd;
+  ::llcpp::fuchsia::hardware::dsi::wire::MipiDsiCmd cmd;
   uint8_t tbuf[1];
   uint8_t rbuf[2];
   fidl::FidlAllocator<2048> allocator;
@@ -289,7 +289,7 @@ TEST(CreateCommandFidl, DcsShortRead0T1) {
 }
 
 TEST(CreateCommandFidl, GenShortRead2T1) {
-  ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd;
+  ::llcpp::fuchsia::hardware::dsi::wire::MipiDsiCmd cmd;
   uint8_t tbuf[2];
   uint8_t rbuf[2];
   fidl::FidlAllocator<2048> allocator;
@@ -302,7 +302,7 @@ TEST(CreateCommandFidl, GenShortRead2T1) {
 }
 
 TEST(CreateCommandFidl, InvalidDcsReadT1) {
-  ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd;
+  ::llcpp::fuchsia::hardware::dsi::wire::MipiDsiCmd cmd;
   uint8_t tbuf[2];
   uint8_t rbuf[2];
   fidl::FidlAllocator<2048> allocator;
@@ -311,7 +311,7 @@ TEST(CreateCommandFidl, InvalidDcsReadT1) {
 }
 
 TEST(CreateCommandFidl, InvalidReadT1) {
-  ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd;
+  ::llcpp::fuchsia::hardware::dsi::wire::MipiDsiCmd cmd;
   uint8_t tbuf[3];
   uint8_t rbuf[2];
   fidl::FidlAllocator<2048> allocator;

@@ -48,7 +48,7 @@ class Console : public llcpp::fuchsia::logger::LogListenerSafe::Interface,
   zx_status_t Write(const void* data, size_t len, size_t* out_actual);
 
   // Used to implement fuchsia.log.LogListenerSafe/{Log,LogMany}
-  zx_status_t Log(llcpp::fuchsia::logger::LogMessage log);
+  zx_status_t Log(llcpp::fuchsia::logger::wire::LogMessage log);
 
   // Return the event for a connection to this console
   zx_status_t GetEvent(zx::eventpair* event) const;
@@ -58,8 +58,8 @@ class Console : public llcpp::fuchsia::logger::LogListenerSafe::Interface,
   void DebugReaderThread();
 
   // Functions to handle fuchsia.log.LogListenerSafe
-  void Log(llcpp::fuchsia::logger::LogMessage log, LogCompleter::Sync& completer) override;
-  void LogMany(fidl::VectorView<llcpp::fuchsia::logger::LogMessage> logs,
+  void Log(llcpp::fuchsia::logger::wire::LogMessage log, LogCompleter::Sync& completer) override;
+  void LogMany(fidl::VectorView<llcpp::fuchsia::logger::wire::LogMessage> logs,
                LogManyCompleter::Sync& completer) override;
   void Done(DoneCompleter::Sync& completer) override;
 

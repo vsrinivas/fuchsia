@@ -104,14 +104,14 @@ class DeviceInterface : public netdev::Device::Interface,
   // Fidl protocol implementation.
   void GetInfo(GetInfoCompleter::Sync& completer) override;
   void GetStatus(GetStatusCompleter::Sync& completer) override;
-  void OpenSession(::fidl::StringView session_name, netdev::SessionInfo session_info,
+  void OpenSession(::fidl::StringView session_name, netdev::wire::SessionInfo session_info,
                    OpenSessionCompleter::Sync& completer) override;
   void GetStatusWatcher(fidl::ServerEnd<netdev::StatusWatcher> watcher, uint32_t buffer,
                         GetStatusWatcherCompleter::Sync& completer) override;
 
   // Serves the OpenSession FIDL handle method synchronously.
-  zx_status_t OpenSession(fidl::StringView name, netdev::SessionInfo session_info,
-                          netdev::Device_OpenSession_Response* rsp);
+  zx_status_t OpenSession(fidl::StringView name, netdev::wire::SessionInfo session_info,
+                          netdev::wire::Device_OpenSession_Response* rsp);
 
  private:
   // Helper class to keep track of clients bound to DeviceInterface.

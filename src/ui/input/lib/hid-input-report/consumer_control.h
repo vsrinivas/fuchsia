@@ -14,10 +14,10 @@ class ConsumerControl : public Device {
   ParseResult ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) override;
 
   ParseResult CreateDescriptor(fidl::AnyAllocator& allocator,
-                               fuchsia_input_report::DeviceDescriptor& descriptor) override;
+                               fuchsia_input_report::wire::DeviceDescriptor& descriptor) override;
 
   ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::AnyAllocator& allocator,
-                               fuchsia_input_report::InputReport& inputreport) override;
+                               fuchsia_input_report::wire::InputReport& inputreport) override;
 
   uint8_t InputReportId() const override { return input_report_id_; }
 

@@ -221,7 +221,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   zx::channel StartDriver(DriverRunner* driver_runner, Driver driver) {
     fidl::StringView binary = fidl::unowned_str(driver.binary);
     auto colocate = driver.colocate ? fidl::StringView("true") : fidl::StringView("false");
-    fdata::DictionaryEntry program_entries[] = {
+    fdata::wire::DictionaryEntry program_entries[] = {
         {
             .key = "binary",
             .value = fdata::wire::DictionaryValue::WithStr(fidl::unowned_ptr(&binary)),
@@ -232,14 +232,15 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
         },
     };
     auto entries = fidl::unowned_vec(program_entries);
-    auto program = fdata::Dictionary::Builder(std::make_unique<fdata::Dictionary::Frame>())
-                       .set_entries(fidl::unowned_ptr(&entries))
-                       .build();
+    auto program =
+        fdata::wire::Dictionary::Builder(std::make_unique<fdata::wire::Dictionary::Frame>())
+            .set_entries(fidl::unowned_ptr(&entries))
+            .build();
     auto url = fidl::unowned_str(driver.url);
-    fidl::VectorView<frunner::ComponentNamespaceEntry> ns;
+    fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns;
     auto outgoing_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
     EXPECT_EQ(ZX_OK, outgoing_endpoints.status_value());
-    auto start_info = frunner::ComponentStartInfo::UnownedBuilder()
+    auto start_info = frunner::wire::ComponentStartInfo::UnownedBuilder()
                           .set_resolved_url(fidl::unowned_ptr(&url))
                           .set_program(fidl::unowned_ptr(&program))
                           .set_ns(fidl::unowned_ptr(&ns))

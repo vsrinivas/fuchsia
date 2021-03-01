@@ -147,7 +147,7 @@ zx_status_t VerifiedVolumeClient::OpenForAuthoring(const zx::duration& timeout,
   fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::BlockSize> block_size =
       llcpp::fuchsia::hardware::block::verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
-  llcpp::fuchsia::hardware::block::verified::Config config(allocator);
+  llcpp::fuchsia::hardware::block::verified::wire::Config config(allocator);
   config.set_hash_function(fidl::unowned_ptr(&hash_function));
   config.set_block_size(fidl::unowned_ptr(&block_size));
 
@@ -244,14 +244,14 @@ zx_status_t VerifiedVolumeClient::OpenForVerifiedRead(const digest::Digest& expe
   fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::BlockSize> block_size =
       llcpp::fuchsia::hardware::block::verified::wire::BlockSize::SIZE_4096;
   fidl::FidlAllocator allocator;
-  llcpp::fuchsia::hardware::block::verified::Config config(allocator);
+  llcpp::fuchsia::hardware::block::verified::wire::Config config(allocator);
   config.set_hash_function(fidl::unowned_ptr(&hash_function));
   config.set_block_size(fidl::unowned_ptr(&block_size));
 
   // Make a copy of the seal to send.
-  llcpp::fuchsia::hardware::block::verified::Sha256Seal sha256_seal;
+  llcpp::fuchsia::hardware::block::verified::wire::Sha256Seal sha256_seal;
   expected_seal.CopyTo(sha256_seal.superblock_hash.begin(), sha256_seal.superblock_hash.size());
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::Sha256Seal> aligned =
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::Sha256Seal> aligned =
       std::move(sha256_seal);
   auto seal_to_send = llcpp::fuchsia::hardware::block::verified::wire::Seal::WithSha256(
       fidl::unowned_ptr(&aligned));

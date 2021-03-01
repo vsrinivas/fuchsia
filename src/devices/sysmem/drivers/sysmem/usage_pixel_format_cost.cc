@@ -66,10 +66,10 @@ const std::map<uint64_t, Platform> kPlatformTranslation = {
 // later-listed otherwise-equally-close-match to be ignored.
 struct UsagePixelFormatCostEntry {
   // The query's pixel_format must match for this entry to be considered.
-  llcpp::fuchsia::sysmem2::PixelFormat pixel_format;
+  llcpp::fuchsia::sysmem2::wire::PixelFormat pixel_format;
   // A query's usage bits must contain all these usage bits for this entry to
   // be considered.
-  llcpp::fuchsia::sysmem2::BufferUsage required_buffer_usage_bits;
+  llcpp::fuchsia::sysmem2::wire::BufferUsage required_buffer_usage_bits;
   // First the entry that's the best match for the GetCost() query is
   // determined.  If this entry is selected as the best match for the query,
   // this is the cost returned by GetCost().
@@ -94,10 +94,10 @@ static void AddRgbaPixelFormat(fidl::AnyAllocator& allocator, uint64_t format_mo
   // Both RGBA and BGRA versions have similar cost, if they're supported.
   for (auto format : {llcpp::fuchsia::sysmem2::wire::PixelFormatType::BGRA32,
                       llcpp::fuchsia::sysmem2::wire::PixelFormatType::R8G8B8A8}) {
-    llcpp::fuchsia::sysmem2::PixelFormat pixel_format(allocator);
+    llcpp::fuchsia::sysmem2::wire::PixelFormat pixel_format(allocator);
     pixel_format.set_type(allocator, format);
     pixel_format.set_format_modifier_value(allocator, format_modifier);
-    llcpp::fuchsia::sysmem2::BufferUsage buffer_usage(allocator);
+    llcpp::fuchsia::sysmem2::wire::BufferUsage buffer_usage(allocator);
     buffer_usage.set_none(allocator, 0u);
     buffer_usage.set_cpu(allocator, 0u);
     buffer_usage.set_vulkan(allocator, 0u);
@@ -181,9 +181,9 @@ const PlatformCostsEntry kArm_Mali_Costs = {
 const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries = [] {
   std::list<const UsagePixelFormatCostEntry> result;
   // NV12 weakly preferred for VIDEO_USAGE_HW_DECODER.
-  llcpp::fuchsia::sysmem2::PixelFormat pixel_format(allocator);
+  llcpp::fuchsia::sysmem2::wire::PixelFormat pixel_format(allocator);
   pixel_format.set_type(allocator, llcpp::fuchsia::sysmem2::wire::PixelFormatType::NV12);
-  llcpp::fuchsia::sysmem2::BufferUsage buffer_usage(allocator);
+  llcpp::fuchsia::sysmem2::wire::BufferUsage buffer_usage(allocator);
   buffer_usage.set_none(allocator, 0u);
   buffer_usage.set_cpu(allocator, 0u);
   buffer_usage.set_vulkan(allocator, 0u);
@@ -295,8 +295,8 @@ bool HasAllRequiredBits(uint32_t a, uint32_t r) { return (r & a) == r; }
 
 // |a| to check
 // |r| required bits
-bool HasAllRequiredUsageBits(const llcpp::fuchsia::sysmem2::BufferUsage& a,
-                             const llcpp::fuchsia::sysmem2::BufferUsage& r) {
+bool HasAllRequiredUsageBits(const llcpp::fuchsia::sysmem2::wire::BufferUsage& a,
+                             const llcpp::fuchsia::sysmem2::wire::BufferUsage& r) {
   const uint32_t a_cpu = a.has_cpu() ? a.cpu() : 0;
   const uint32_t a_vulkan = a.has_vulkan() ? a.vulkan() : 0;
   const uint32_t a_display = a.has_display() ? a.display() : 0;
@@ -323,8 +323,8 @@ uint32_t SharedBitsCount(uint32_t a, uint32_t b) {
   return count;
 }
 
-uint32_t SharedUsageBitsCount(const llcpp::fuchsia::sysmem2::BufferUsage& a,
-                              const llcpp::fuchsia::sysmem2::BufferUsage& b) {
+uint32_t SharedUsageBitsCount(const llcpp::fuchsia::sysmem2::wire::BufferUsage& a,
+                              const llcpp::fuchsia::sysmem2::wire::BufferUsage& b) {
   const uint32_t a_cpu = a.has_cpu() ? a.cpu() : 0;
   const uint32_t a_vulkan = a.has_vulkan() ? a.vulkan() : 0;
   const uint32_t a_display = a.has_display() ? a.display() : 0;
@@ -348,7 +348,7 @@ uint32_t SharedUsageBitsCount(const llcpp::fuchsia::sysmem2::BufferUsage& a,
 // |a| the new UsagePixelFormatCostEntry to consider
 //
 // |b| the existing UsagePixelFormatCostEntry that a is being compared against
-bool IsBetterMatch(const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints,
+bool IsBetterMatch(const llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& constraints,
                    uint32_t image_format_constraints_index, const UsagePixelFormatCostEntry* a,
                    const UsagePixelFormatCostEntry* b) {
   ZX_DEBUG_ASSERT(a);
@@ -360,14 +360,14 @@ bool IsBetterMatch(const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& c
           constraints.image_format_constraints()[image_format_constraints_index].pixel_format()))
     return false;
 
-  llcpp::fuchsia::sysmem2::BufferUsage default_usage;
-  const llcpp::fuchsia::sysmem2::BufferUsage* usage_ptr;
+  llcpp::fuchsia::sysmem2::wire::BufferUsage default_usage;
+  const llcpp::fuchsia::sysmem2::wire::BufferUsage* usage_ptr;
   if (constraints.has_usage()) {
     usage_ptr = &constraints.usage();
   } else {
     usage_ptr = &default_usage;
   }
-  const llcpp::fuchsia::sysmem2::BufferUsage& usage = *usage_ptr;
+  const llcpp::fuchsia::sysmem2::wire::BufferUsage& usage = *usage_ptr;
   if (!HasAllRequiredUsageBits(usage, a->required_buffer_usage_bits)) {
     return false;
   }
@@ -382,8 +382,9 @@ bool IsBetterMatch(const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& c
   return a_shared_bits > b_shared_bits;
 }
 
-double GetCostInternal(const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints,
-                       uint32_t image_format_constraints_index, Platform platform) {
+double GetCostInternal(
+    const llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& constraints,
+    uint32_t image_format_constraints_index, Platform platform) {
   const PlatformCostsEntry* platform_costs = FindPlatformCosts(platform);
   if (!platform_costs) {
     return kDefaultCost;
@@ -405,7 +406,7 @@ double GetCostInternal(const llcpp::fuchsia::sysmem2::BufferCollectionConstraint
 }
 
 double GetCost(uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
-               const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints,
+               const llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& constraints,
                uint32_t image_format_constraints_index) {
   Platform platform = FindPlatform(pdev_device_info_vid, pdev_device_info_pid);
   if (platform == kPlatform_None) {
@@ -418,7 +419,7 @@ double GetCost(uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
 
 int32_t UsagePixelFormatCost::Compare(
     uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
-    const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints,
+    const llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& constraints,
     uint32_t image_format_constraints_index_a, uint32_t image_format_constraints_index_b) {
   double cost_a = GetCost(pdev_device_info_vid, pdev_device_info_pid, constraints,
                           image_format_constraints_index_a);

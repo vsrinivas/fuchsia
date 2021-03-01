@@ -323,7 +323,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
 #ifdef __Fuchsia__
   // Return information about the underlying filesystem, if desired.
-  virtual zx_status_t QueryFilesystem(llcpp::fuchsia::io::FilesystemInfo* out);
+  virtual zx_status_t QueryFilesystem(llcpp::fuchsia::io::wire::FilesystemInfo* out);
 
   // Returns the name of the device backing the filesystem, if one exists.
   virtual zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len);

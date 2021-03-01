@@ -46,11 +46,11 @@ class StubDisplayController : public fhd::Controller::Interface {
 
   virtual ~StubDisplayController() {}
 
-  void ImportVmoImage(fhd::ImageConfig image_config, ::zx::vmo vmo, int32_t offset,
+  void ImportVmoImage(fhd::wire::ImageConfig image_config, ::zx::vmo vmo, int32_t offset,
                       ImportVmoImageCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
-  void ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, uint32_t index,
+  void ImportImage(fhd::wire::ImageConfig image_config, uint64_t collection_id, uint32_t index,
                    ImportImageCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
@@ -84,7 +84,7 @@ class StubDisplayController : public fhd::Controller::Interface {
     EXPECT_TRUE(false);
   }
 
-  void SetDisplayMode(uint64_t display_id, fhd::Mode mode,
+  void SetDisplayMode(uint64_t display_id, fhd::wire::Mode mode,
                       SetDisplayModeCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
@@ -105,13 +105,13 @@ class StubDisplayController : public fhd::Controller::Interface {
     // Ignore
   }
 
-  void SetLayerPrimaryConfig(uint64_t layer_id, fhd::ImageConfig image_config,
+  void SetLayerPrimaryConfig(uint64_t layer_id, fhd::wire::ImageConfig image_config,
                              SetLayerPrimaryConfigCompleter::Sync& _completer) override {
     // Ignore
   }
 
   void SetLayerPrimaryPosition(uint64_t layer_id, fhd::wire::Transform transform,
-                               fhd::Frame src_frame, fhd::Frame dest_frame,
+                               fhd::wire::Frame src_frame, fhd::wire::Frame dest_frame,
                                SetLayerPrimaryPositionCompleter::Sync& _completer) override {
     // Ignore
   }
@@ -121,7 +121,7 @@ class StubDisplayController : public fhd::Controller::Interface {
     EXPECT_TRUE(false);
   }
 
-  void SetLayerCursorConfig(uint64_t layer_id, fhd::ImageConfig image_config,
+  void SetLayerCursorConfig(uint64_t layer_id, fhd::wire::ImageConfig image_config,
                             SetLayerCursorConfigCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
@@ -143,7 +143,8 @@ class StubDisplayController : public fhd::Controller::Interface {
   }
 
   void CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) override {
-    _completer.Reply(fhd::wire::ConfigResult::OK, fidl::VectorView<fhd::ClientCompositionOp>());
+    _completer.Reply(fhd::wire::ConfigResult::OK,
+                     fidl::VectorView<fhd::wire::ClientCompositionOp>());
   }
 
   void ApplyConfig(ApplyConfigCompleter::Sync& _completer) override {
@@ -167,7 +168,7 @@ class StubDisplayController : public fhd::Controller::Interface {
                                ReleaseBufferCollectionCompleter::Sync& _completer) override {}
 
   void SetBufferCollectionConstraints(
-      uint64_t collection_id, fhd::ImageConfig config,
+      uint64_t collection_id, fhd::wire::ImageConfig config,
       SetBufferCollectionConstraintsCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
@@ -180,7 +181,8 @@ class StubDisplayController : public fhd::Controller::Interface {
     EXPECT_TRUE(false);
   }
 
-  void ImportImageForCapture(fhd::ImageConfig image_config, uint64_t collection_id, uint32_t index,
+  void ImportImageForCapture(fhd::wire::ImageConfig image_config, uint64_t collection_id,
+                             uint32_t index,
                              ImportImageForCaptureCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
@@ -223,7 +225,7 @@ class StubDisplayController : public fhd::Controller::Interface {
 
 class StubSingleBufferDisplayController : public StubDisplayController {
  public:
-  void ImportVmoImage(fhd::ImageConfig image_config, ::zx::vmo vmo, int32_t offset,
+  void ImportVmoImage(fhd::wire::ImageConfig image_config, ::zx::vmo vmo, int32_t offset,
                       ImportVmoImageCompleter::Sync& _completer) override {
     EXPECT_NE(ZX_HANDLE_INVALID, vmo.get());
     images_.push_back(next_image_);
@@ -241,7 +243,7 @@ class StubMultiBufferDisplayController : public StubDisplayController {
   void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync& _completer) override {
     _completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::vmo(), 0);
   }
-  void ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, uint32_t index,
+  void ImportImage(fhd::wire::ImageConfig image_config, uint64_t collection_id, uint32_t index,
                    ImportImageCompleter::Sync& _completer) override {
     images_.push_back(next_image_);
     _completer.Reply(ZX_OK, next_image_++);
@@ -266,9 +268,9 @@ class StubMultiBufferDisplayController : public StubDisplayController {
   }
 
   void SetBufferCollectionConstraints(
-      uint64_t collection_id, fhd::ImageConfig config,
+      uint64_t collection_id, fhd::wire::ImageConfig config,
       SetBufferCollectionConstraintsCompleter::Sync& _completer) override {
-    sysmem::BufferCollectionConstraints constraints;
+    sysmem::wire::BufferCollectionConstraints constraints;
     constraints.usage.cpu = sysmem::cpuUsageWriteOften | sysmem::cpuUsageRead;
     constraints.min_buffer_count = 1;
     constraints.image_format_constraints_count = 2;
@@ -346,13 +348,13 @@ class VcDisplayTest : public zxtest::Test {
 
     server_binding_ = result.take_value();
   }
-  void SendAddDisplay(fhd::Info* display) {
+  void SendAddDisplay(fhd::wire::Info* display) {
     server_binding_.value()->OnDisplaysChanged(fidl::VectorView(fidl::unowned_ptr(display), 1),
                                                fidl::VectorView<uint64_t>());
   }
   void SendRemoveDisplay(uint64_t id) {
     server_binding_.value()->OnDisplaysChanged(
-        fidl::VectorView<fhd::Info>(), fidl::VectorView<uint64_t>(fidl::unowned_ptr(&id), 1));
+        fidl::VectorView<fhd::wire::Info>(), fidl::VectorView<uint64_t>(fidl::unowned_ptr(&id), 1));
   }
 
   void ProcessEvent() { ASSERT_OK(dc_callback_handler(ZX_CHANNEL_READABLE)); }
@@ -373,10 +375,10 @@ TEST_F(VcDisplayTest, OneDisplay) {
   controller_ = std::make_unique<StubSingleBufferDisplayController>();
   InitializeServer();
 
-  fhd::Info info;
+  fhd::wire::Info info;
   info.id = 1;
   uint32_t format = 0x0;
-  fhd::Mode mode;
+  fhd::wire::Mode mode;
   info.modes = fidl::VectorView(fidl::unowned_ptr(&mode), 1);
   info.pixel_format = fidl::VectorView(fidl::unowned_ptr(&format), 1);
 
@@ -394,10 +396,10 @@ TEST_F(VcDisplayTest, TwoDisplays) {
   controller_ = std::make_unique<StubSingleBufferDisplayController>();
   InitializeServer();
 
-  fhd::Info hardware_display;
+  fhd::wire::Info hardware_display;
   hardware_display.id = 1;
   uint32_t format = 0x0;
-  fhd::Mode mode;
+  fhd::wire::Mode mode;
   hardware_display.modes = fidl::VectorView(fidl::unowned_ptr(&mode), 1);
   hardware_display.pixel_format = fidl::VectorView(fidl::unowned_ptr(&format), 1);
 
@@ -443,10 +445,10 @@ TEST_F(VcDisplayTest, ChangePrimaryDisplay) {
   controller_ = std::make_unique<StubSingleBufferDisplayController>();
   InitializeServer();
 
-  fhd::Info hardware_display;
+  fhd::wire::Info hardware_display;
   hardware_display.id = 1;
   uint32_t format = 0x0;
-  fhd::Mode mode;
+  fhd::wire::Mode mode;
   hardware_display.modes = fidl::VectorView(fidl::unowned_ptr(&mode), 1);
   hardware_display.pixel_format = fidl::VectorView(fidl::unowned_ptr(&format), 1);
 
@@ -488,10 +490,10 @@ TEST_F(VcDisplayTest, SingleBufferVmo) {
   controller_ = std::make_unique<StubSingleBufferDisplayController>();
   InitializeServer();
 
-  fhd::Info hardware_display;
+  fhd::wire::Info hardware_display;
   hardware_display.id = 1;
   uint32_t format = 0x0;
-  fhd::Mode mode;
+  fhd::wire::Mode mode;
   hardware_display.modes = fidl::VectorView(fidl::unowned_ptr(&mode), 1);
   hardware_display.pixel_format = fidl::VectorView(fidl::unowned_ptr(&format), 1);
 
@@ -517,9 +519,9 @@ class VcDisplayMultibufferTest : public VcDisplayTest {
     controller_ = std::make_unique<StubMultiBufferDisplayController>();
     InitializeServer();
 
-    fhd::Info hardware_display;
+    fhd::wire::Info hardware_display;
     hardware_display.id = 1;
-    fhd::Mode mode;
+    fhd::wire::Mode mode;
     mode.horizontal_resolution = 641;
     mode.vertical_resolution = 480;
     hardware_display.modes = fidl::VectorView(fidl::unowned_ptr(&mode), 1);

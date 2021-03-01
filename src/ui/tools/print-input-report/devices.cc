@@ -44,7 +44,7 @@ zx_status_t PrintInputDescriptor(std::string filename, Printer* printer,
 }
 
 void PrintMouseDesc(Printer* printer,
-                    const fuchsia_input_report::MouseInputDescriptor& mouse_desc) {
+                    const fuchsia_input_report::wire::MouseInputDescriptor& mouse_desc) {
   printer->Print("Mouse Descriptor:\n");
   printer->IncreaseIndent();
   if (mouse_desc.has_movement_x()) {
@@ -72,7 +72,7 @@ void PrintMouseDesc(Printer* printer,
 }
 
 void PrintSensorDesc(Printer* printer,
-                     const fuchsia_input_report::SensorInputDescriptor& sensor_desc) {
+                     const fuchsia_input_report::wire::SensorInputDescriptor& sensor_desc) {
   printer->Print("Sensor Descriptor:\n");
   if (!sensor_desc.has_values()) {
     return;
@@ -90,7 +90,7 @@ void PrintSensorDesc(Printer* printer,
 }
 
 void PrintTouchDesc(Printer* printer,
-                    const fuchsia_input_report::TouchInputDescriptor& touch_desc) {
+                    const fuchsia_input_report::wire::TouchInputDescriptor& touch_desc) {
   printer->Print("Touch Descriptor:\n");
   printer->IncreaseIndent();
   if (touch_desc.has_touch_type()) {
@@ -101,7 +101,7 @@ void PrintTouchDesc(Printer* printer,
   }
   if (touch_desc.has_contacts()) {
     for (size_t i = 0; i < touch_desc.contacts().count(); i++) {
-      const fuchsia_input_report::ContactInputDescriptor& contact = touch_desc.contacts()[i];
+      const fuchsia_input_report::wire::ContactInputDescriptor& contact = touch_desc.contacts()[i];
 
       printer->Print("Contact: %02d\n", i);
       printer->IncreaseIndent();
@@ -134,11 +134,11 @@ void PrintTouchDesc(Printer* printer,
 }
 
 void PrintKeyboardDesc(Printer* printer,
-                       const fuchsia_input_report::KeyboardDescriptor& descriptor) {
+                       const fuchsia_input_report::wire::KeyboardDescriptor& descriptor) {
   printer->Print("Keyboard Descriptor:\n");
 
   if (descriptor.has_input()) {
-    const fuchsia_input_report::KeyboardInputDescriptor& input = descriptor.input();
+    const fuchsia_input_report::wire::KeyboardInputDescriptor& input = descriptor.input();
     printer->Print("Input Report:\n");
     printer->IncreaseIndent();
     if (input.has_keys()) {
@@ -149,7 +149,7 @@ void PrintKeyboardDesc(Printer* printer,
     printer->DecreaseIndent();
   }
   if (descriptor.has_output()) {
-    const fuchsia_input_report::KeyboardOutputDescriptor& output = descriptor.output();
+    const fuchsia_input_report::wire::KeyboardOutputDescriptor& output = descriptor.output();
     printer->Print("Output Report:\n");
     printer->IncreaseIndent();
     if (output.has_leds()) {
@@ -161,12 +161,12 @@ void PrintKeyboardDesc(Printer* printer,
   }
 }
 
-void PrintConsumerControlDesc(Printer* printer,
-                              const fuchsia_input_report::ConsumerControlDescriptor& descriptor) {
+void PrintConsumerControlDesc(
+    Printer* printer, const fuchsia_input_report::wire::ConsumerControlDescriptor& descriptor) {
   printer->Print("ConsumerControl Descriptor:\n");
 
   if (descriptor.has_input()) {
-    const fuchsia_input_report::ConsumerControlInputDescriptor& input = descriptor.input();
+    const fuchsia_input_report::wire::ConsumerControlInputDescriptor& input = descriptor.input();
     printer->Print("Input Report:\n");
     printer->IncreaseIndent();
     if (input.has_buttons()) {
@@ -250,7 +250,7 @@ zx::status<fidl::Client<llcpp::fuchsia::input::report::InputReportsReader>> GetR
 }
 
 void PrintMouseInputReport(Printer* printer,
-                           const fuchsia_input_report::MouseInputReport& mouse_report) {
+                           const fuchsia_input_report::wire::MouseInputReport& mouse_report) {
   if (mouse_report.has_movement_x()) {
     printer->Print("Movement x: %08ld\n", mouse_report.movement_x());
   }
@@ -274,7 +274,7 @@ void PrintMouseInputReport(Printer* printer,
 }
 
 void PrintSensorInputReport(Printer* printer,
-                            const fuchsia_input_report::SensorInputReport& sensor_report) {
+                            const fuchsia_input_report::wire::SensorInputReport& sensor_report) {
   if (!sensor_report.has_values()) {
     return;
   }
@@ -285,10 +285,10 @@ void PrintSensorInputReport(Printer* printer,
 }
 
 void PrintTouchInputReport(Printer* printer,
-                           const fuchsia_input_report::TouchInputReport& touch_report) {
+                           const fuchsia_input_report::wire::TouchInputReport& touch_report) {
   if (touch_report.has_contacts()) {
     for (size_t i = 0; i < touch_report.contacts().count(); i++) {
-      const fuchsia_input_report::ContactInputReport& contact = touch_report.contacts()[i];
+      const fuchsia_input_report::wire::ContactInputReport& contact = touch_report.contacts()[i];
 
       if (contact.has_contact_id()) {
         printer->Print("Contact ID: %2ld\n", contact.contact_id());
@@ -318,8 +318,8 @@ void PrintTouchInputReport(Printer* printer,
   }
 }
 
-void PrintKeyboardInputReport(Printer* printer,
-                              const fuchsia_input_report::KeyboardInputReport& keyboard_report) {
+void PrintKeyboardInputReport(
+    Printer* printer, const fuchsia_input_report::wire::KeyboardInputReport& keyboard_report) {
   printer->Print("Keyboard Report\n");
   printer->IncreaseIndent();
   if (keyboard_report.has_pressed_keys()) {
@@ -334,7 +334,7 @@ void PrintKeyboardInputReport(Printer* printer,
 }
 
 void PrintConsumerControlInputReport(
-    Printer* printer, const fuchsia_input_report::ConsumerControlInputReport& report) {
+    Printer* printer, const fuchsia_input_report::wire::ConsumerControlInputReport& report) {
   printer->Print("ConsumerControl Report\n");
   printer->IncreaseIndent();
   if (report.has_pressed_buttons()) {

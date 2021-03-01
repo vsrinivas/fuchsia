@@ -69,9 +69,9 @@ constexpr uint32_t kExtentCount = 6;
 namespace minfs {
 
 #ifdef __Fuchsia__
-using MountState = llcpp::fuchsia::minfs::MountState;
+using MountState = llcpp::fuchsia::minfs::wire::MountState;
 
-// How frequently we synchoronize the journal. Without this, the journal will only get flushed when
+// How frequently we synchronize the journal. Without this, the journal will only get flushed when
 // there is no room for a new transaction, or it is explicitly asked to by some other mechanism.
 constexpr zx::duration kJournalBackgroundSyncTime = zx::sec(30);
 #endif  // __Fuchsia__
@@ -263,7 +263,7 @@ class Minfs :
 
   // Converts a cached transaction into a Transaction. Extends block reservation
   // by |reserve_blocks|.
-  // On failure to reserve blocks, returns error but out will have a trnsaction
+  // On failure to reserve blocks, returns error but out will have a transaction
   // that was converted.
   [[nodiscard]] zx_status_t ContinueTransaction(
       size_t reserve_blocks, std::unique_ptr<CachedBlockTransaction> cached_transaction,
@@ -348,7 +348,7 @@ class Minfs :
 
 #ifdef __Fuchsia__
   // Acquire a copy of the collected metrics.
-  [[nodiscard]] zx_status_t GetMetrics(::llcpp::fuchsia::minfs::Metrics* out) const {
+  [[nodiscard]] zx_status_t GetMetrics(::llcpp::fuchsia::minfs::wire::Metrics* out) const {
     if (metrics_.Enabled()) {
       metrics_.CopyToFidl(out);
       return ZX_OK;
@@ -369,7 +369,7 @@ class Minfs :
   const Superblock& Info() const final { return sb_->Info(); }
 
   uint64_t BlockSize() const {
-    // Either intentionally or unintenttionally, we do not want to change block
+    // Either intentionally or unintentionally, we do not want to change block
     // size to anything other than kMinfsBlockSize yet. This is because changing
     // block size might lead to format change and also because anything other
     // than 8k is not well tested. So assert when we find block size other

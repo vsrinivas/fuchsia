@@ -297,7 +297,7 @@ void SerialDevice::GetClass(GetClassCompleter::Sync& completer) {
   completer.Reply(static_cast<fuchsia::hardware::serial::wire::Class>(serial_class_));
 }
 
-void SerialDevice::SetConfig(fuchsia::hardware::serial::Config config,
+void SerialDevice::SetConfig(fuchsia::hardware::serial::wire::Config config,
                              SetConfigCompleter::Sync& completer) {
   using fuchsia::hardware::serial::wire::CharacterWidth;
   using fuchsia::hardware::serial::wire::FlowControl;

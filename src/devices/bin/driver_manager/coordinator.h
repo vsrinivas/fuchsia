@@ -200,7 +200,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   // TODO(fxbug.dev/43370): remove |always_init| once init tasks can be enabled for all devices.
   zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
                         zx::channel coordinator,
-                        const llcpp::fuchsia::device::manager::DeviceProperty* props_data,
+                        const llcpp::fuchsia::device::manager::wire::DeviceProperty* props_data,
                         size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
                         fbl::StringPiece driver_path, fbl::StringPiece args, bool invisible,
                         bool skip_autobind, bool has_init, bool always_init, zx::vmo inspect,
@@ -233,10 +233,10 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
                               const void* data, uint32_t length);
   zx_status_t AddCompositeDevice(
       const fbl::RefPtr<Device>& dev, fbl::StringPiece name,
-      llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc);
+      llcpp::fuchsia::device::manager::wire::CompositeDeviceDescriptor comp_desc);
 
   // Implementation of fuchsia::device::manager::DriverHostDevelopment FIDL protocol.
-  // Restart all Driver Hosts conatining a driver specified by |driver_path|.
+  // Restart all Driver Hosts containing a driver specified by |driver_path|.
   void RestartDriverHosts(fidl::StringView driver_path,
                           RestartDriverHostsCompleter::Sync& completer) override;
 
@@ -380,7 +380,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
                            GetDevicePropertiesCompleter::Sync& completer) override;
 
   // Driver registrar interface
-  void Register(::llcpp::fuchsia::pkg::PackageUrl driver_url,
+  void Register(::llcpp::fuchsia::pkg::wire::PackageUrl driver_url,
                 RegisterCompleter::Sync& completer) override;
 
   void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,

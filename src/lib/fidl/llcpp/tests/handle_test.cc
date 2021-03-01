@@ -36,17 +36,17 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
     completer.Reply(std::move(e));
   }
   void GetHandleStruct(GetHandleStructCompleter::Sync& completer) override {
-    test::HandleStruct s;
+    test::wire::HandleStruct s;
     zx::event::create(0, &s.h);
     completer.Reply(std::move(s));
   }
   void GetHandleStructStruct(GetHandleStructStructCompleter::Sync& completer) override {
-    test::HandleStructStruct s;
+    test::wire::HandleStructStruct s;
     zx::event::create(0, &s.s.h);
     completer.Reply(std::move(s));
   }
   void GetMultiFieldStruct(GetMultiFieldStructCompleter::Sync& completer) override {
-    test::MultiFieldStruct s;
+    test::wire::MultiFieldStruct s;
     zx::event::create(0, &s.h1);
     zx::event::create(0, &s.s.h);
     zx::event::create(0, &s.h2);
@@ -55,7 +55,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
   void GetMultiArgs(GetMultiArgsCompleter::Sync& completer) override {
     zx::event h1;
     zx::event::create(0, &h1);
-    test::HandleStruct s;
+    test::wire::HandleStruct s;
     zx::event::create(0, &s.h);
     zx::event h2;
     zx::event::create(0, &h2);
@@ -63,16 +63,16 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
   }
   void GetVectorStruct(uint32_t count, GetVectorStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    fidl::VectorView<test::HandleStruct> v(allocator, count);
+    fidl::VectorView<test::wire::HandleStruct> v(allocator, count);
     for (auto& s : v) {
       zx::event::create(0, &s.h);
     }
-    test::VectorStruct s;
+    test::wire::VectorStruct s;
     s.v = std::move(v);
     completer.Reply(std::move(s));
   }
   void GetArrayStruct(GetArrayStructCompleter::Sync& completer) override {
-    test::ArrayStruct s;
+    test::wire::ArrayStruct s;
     for (size_t i = 0; i < s.a.size(); ++i) {
       zx::event::create(0, &s.a[i].h);
     }
@@ -93,7 +93,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
   void GetHandleUnionStruct(int32_t field,
                             GetHandleUnionStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    test::HandleUnionStruct u;
+    test::wire::HandleUnionStruct u;
     if (field == 1) {
       zx::event event;
       zx::event::create(0, &event);
@@ -106,7 +106,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
   }
   void GetHandleTable(uint32_t fields, GetHandleTableCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    test::HandleTable t(allocator);
+    test::wire::HandleTable t(allocator);
     if ((fields & 1) != 0) {
       zx::event event;
       zx::event::create(0, &event);
@@ -121,7 +121,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
   void GetHandleTableStruct(uint32_t fields,
                             GetHandleTableStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    test::HandleTableStruct reply;
+    test::wire::HandleTableStruct reply;
     reply.t.Allocate(allocator);
     if ((fields & 1) != 0) {
       zx::event event;
@@ -138,7 +138,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
                                GetOptionalHandleStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
     if (defined) {
-      fidl::ObjectView<test::HandleStruct> s(allocator);
+      fidl::ObjectView<test::wire::HandleStruct> s(allocator);
       zx::event::create(0, &s->h);
       completer.Reply(s);
     } else {
@@ -164,7 +164,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
       GetOptionalHandleUnionStructCompleter::Sync& completer) override {
     if (defined) {
       fidl::FidlAllocator allocator;
-      fidl::ObjectView<test::HandleUnionStruct> u(allocator);
+      fidl::ObjectView<test::wire::HandleUnionStruct> u(allocator);
       if (field == 1) {
         zx::event event;
         zx::event::create(0, &event);
@@ -183,7 +183,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
       GetOptionalHandleTableStructCompleter::Sync& completer) override {
     if (defined) {
       fidl::FidlAllocator allocator;
-      fidl::ObjectView<test::HandleTableStruct> reply(allocator);
+      fidl::ObjectView<test::wire::HandleTableStruct> reply(allocator);
       reply->t.Allocate(allocator);
       if ((fields & 1) != 0) {
         fidl::ObjectView<zx::event> e(allocator);
@@ -191,7 +191,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
         reply->t.set_h1(e);
       }
       if ((fields & 2) != 0) {
-        fidl::ObjectView<test::HandleStruct> s(allocator);
+        fidl::ObjectView<test::wire::HandleStruct> s(allocator);
         zx::event::create(0, &s->h);
         reply->t.set_h2(s);
       }
@@ -203,9 +203,9 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
   void GetHandleStructOptionalStruct(
       bool defined, GetHandleStructOptionalStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    test::HandleStructOptionalStruct reply;
+    test::wire::HandleStructOptionalStruct reply;
     if (defined) {
-      fidl::ObjectView<test::HandleStruct> s(allocator);
+      fidl::ObjectView<test::wire::HandleStruct> s(allocator);
       zx::event::create(0, &s->h);
       reply.s = s;
     }
@@ -215,14 +215,14 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
       bool defined, int32_t field,
       GetHandleUnionOptionalStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    test::HandleUnionOptionalStruct reply;
+    test::wire::HandleUnionOptionalStruct reply;
     if (defined) {
       if (field == 1) {
         zx::event event;
         zx::event::create(0, &event);
         reply.u.set_h1(allocator, std::move(event));
       } else if (field == 2) {
-        fidl::ObjectView<test::HandleStruct> s(allocator);
+        fidl::ObjectView<test::wire::HandleStruct> s(allocator);
         reply.u.set_h2(allocator);
         zx::event::create(0, &reply.u.mutable_h2().h);
       }
@@ -268,7 +268,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
   void GetVectorOfHandleStruct(uint32_t count,
                                GetVectorOfHandleStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    fidl::VectorView<test::HandleStruct> v(allocator, count);
+    fidl::VectorView<test::wire::HandleStruct> v(allocator, count);
     for (auto& item : v) {
       zx::event::create(0, &item.h);
     }
@@ -278,7 +278,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
       uint32_t count1, uint32_t count2,
       GetVectorOfVectorOfHandleStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    fidl::VectorView<fidl::VectorView<test::HandleStruct>> v(allocator, count1);
+    fidl::VectorView<fidl::VectorView<test::wire::HandleStruct>> v(allocator, count1);
     for (uint32_t i1 = 0; i1 < count1; ++i1) {
       v[i1].Allocate(allocator, count2);
       for (uint32_t i2 = 0; i2 < count2; ++i2) {
@@ -291,7 +291,8 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
       uint32_t count1, uint32_t count2, uint32_t count3,
       GetVectorOfVectorOfVectorOfHandleStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    fidl::VectorView<fidl::VectorView<fidl::VectorView<test::HandleStruct>>> v(allocator, count1);
+    fidl::VectorView<fidl::VectorView<fidl::VectorView<test::wire::HandleStruct>>> v(allocator,
+                                                                                     count1);
     for (uint32_t i1 = 0; i1 < count1; ++i1) {
       v[i1].Allocate(allocator, count2);
       for (uint32_t i2 = 0; i2 < count2; ++i2) {
@@ -332,7 +333,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
     completer.Reply(std::move(a));
   }
   void GetArrayOfHandleStruct(GetArrayOfHandleStructCompleter::Sync& completer) override {
-    fidl::Array<test::HandleStruct, 2> a;
+    fidl::Array<test::wire::HandleStruct, 2> a;
     for (auto& item : a) {
       zx::event::create(0, &item.h);
     }
@@ -340,7 +341,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
   }
   void GetArrayOfArrayOfHandleStruct(
       GetArrayOfArrayOfHandleStructCompleter::Sync& completer) override {
-    fidl::Array<fidl::Array<test::HandleStruct, 2>, 3> a;
+    fidl::Array<fidl::Array<test::wire::HandleStruct, 2>, 3> a;
     for (auto& item1 : a) {
       for (auto& item2 : item1) {
         zx::event::create(0, &item2.h);
@@ -350,7 +351,7 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
   }
   void GetArrayOfArrayOfArrayOfHandleStruct(
       GetArrayOfArrayOfArrayOfHandleStructCompleter::Sync& completer) override {
-    fidl::Array<fidl::Array<fidl::Array<test::HandleStruct, 2>, 3>, 4> a;
+    fidl::Array<fidl::Array<fidl::Array<test::wire::HandleStruct, 2>, 3>, 4> a;
     for (auto& item1 : a) {
       for (auto& item2 : item1) {
         for (auto& item3 : item2) {

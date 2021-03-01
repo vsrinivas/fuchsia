@@ -123,9 +123,9 @@ void Keyboard::SetCapsLockLed(bool caps_lock) {
   }
 
   // Generate the OutputReport.
-  auto report_builder = llcpp::fuchsia::input::report::OutputReport::UnownedBuilder();
+  auto report_builder = llcpp::fuchsia::input::report::wire::OutputReport::UnownedBuilder();
   auto keyboard_report_builder =
-      llcpp::fuchsia::input::report::KeyboardOutputReport::UnownedBuilder();
+      llcpp::fuchsia::input::report::wire::KeyboardOutputReport::UnownedBuilder();
   fidl::VectorView<llcpp::fuchsia::input::report::wire::LedType> led_view;
   llcpp::fuchsia::input::report::wire::LedType caps_led =
       llcpp::fuchsia::input::report::wire::LedType::CAPS_LOCK;
@@ -138,7 +138,7 @@ void Keyboard::SetCapsLockLed(bool caps_lock) {
   }
 
   keyboard_report_builder.set_enabled_leds(fidl::unowned_ptr(&led_view));
-  llcpp::fuchsia::input::report::KeyboardOutputReport keyboard_report =
+  llcpp::fuchsia::input::report::wire::KeyboardOutputReport keyboard_report =
       keyboard_report_builder.build();
   report_builder.set_keyboard(fidl::unowned_ptr(&keyboard_report));
 
@@ -146,7 +146,7 @@ void Keyboard::SetCapsLockLed(bool caps_lock) {
 }
 
 // returns true if key was pressed and none were released
-void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& report) {
+void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::wire::InputReport& report) {
   if (!report.has_keyboard()) {
     return;
   }

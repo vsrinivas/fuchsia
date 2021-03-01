@@ -80,8 +80,8 @@ ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
 }
 
 ParseResult Mouse::CreateDescriptor(fidl::AnyAllocator& allocator,
-                                    fuchsia_input_report::DeviceDescriptor& descriptor) {
-  fuchsia_input_report::MouseInputDescriptor mouse_input(allocator);
+                                    fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
+  fuchsia_input_report::wire::MouseInputDescriptor mouse_input(allocator);
 
   if (movement_x_) {
     mouse_input.set_movement_x(allocator, LlcppAxisFromAttribute(*movement_x_));
@@ -113,7 +113,7 @@ ParseResult Mouse::CreateDescriptor(fidl::AnyAllocator& allocator,
     mouse_input.set_buttons(allocator, std::move(buttons));
   }
 
-  fuchsia_input_report::MouseDescriptor mouse(allocator);
+  fuchsia_input_report::wire::MouseDescriptor mouse(allocator);
   mouse.set_input(allocator, std::move(mouse_input));
   descriptor.set_mouse(allocator, std::move(mouse));
 
@@ -121,12 +121,12 @@ ParseResult Mouse::CreateDescriptor(fidl::AnyAllocator& allocator,
 }
 
 ParseResult Mouse::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyAllocator& allocator,
-                                    fuchsia_input_report::InputReport& input_report) {
+                                    fuchsia_input_report::wire::InputReport& input_report) {
   if (len != report_size_) {
     return ParseResult::kReportSizeMismatch;
   }
 
-  fuchsia_input_report::MouseInputReport mouse_report(allocator);
+  fuchsia_input_report::wire::MouseInputReport mouse_report(allocator);
 
   if (movement_x_) {
     mouse_report.set_movement_x(Extract<int64_t>(data, len, *movement_x_, allocator));

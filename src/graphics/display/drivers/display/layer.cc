@@ -29,13 +29,16 @@ static void do_early_retire(list_node_t* list, display::image_node_t* end = null
   }
 }
 
-static void populate_image(const fhd::ImageConfig& image, image_t* image_out) {
-  static_assert(offsetof(image_t, width) == offsetof(fhd::ImageConfig, width), "Struct mismatch");
-  static_assert(offsetof(image_t, height) == offsetof(fhd::ImageConfig, height), "Struct mismatch");
-  static_assert(offsetof(image_t, pixel_format) == offsetof(fhd::ImageConfig, pixel_format),
+static void populate_image(const fhd::wire::ImageConfig& image, image_t* image_out) {
+  static_assert(offsetof(image_t, width) == offsetof(fhd::wire::ImageConfig, width),
                 "Struct mismatch");
-  static_assert(offsetof(image_t, type) == offsetof(fhd::ImageConfig, type), "Struct mismatch");
-  memcpy(image_out, &image, sizeof(fhd::ImageConfig));
+  static_assert(offsetof(image_t, height) == offsetof(fhd::wire::ImageConfig, height),
+                "Struct mismatch");
+  static_assert(offsetof(image_t, pixel_format) == offsetof(fhd::wire::ImageConfig, pixel_format),
+                "Struct mismatch");
+  static_assert(offsetof(image_t, type) == offsetof(fhd::wire::ImageConfig, type),
+                "Struct mismatch");
+  memcpy(image_out, &image, sizeof(fhd::wire::ImageConfig));
 }
 
 }  // namespace
@@ -230,7 +233,7 @@ bool Layer::AddToConfig(fbl::SinglyLinkedList<layer_node_t*>* list, uint32_t z_i
   }
 }
 
-void Layer::SetPrimaryConfig(fhd::ImageConfig image_config) {
+void Layer::SetPrimaryConfig(fhd::wire::ImageConfig image_config) {
   pending_layer_.type = LAYER_TYPE_PRIMARY;
   auto* primary = &pending_layer_.cfg.primary;
   populate_image(image_config, &primary->image);
@@ -247,11 +250,11 @@ void Layer::SetPrimaryPosition(fhd::wire::Transform transform, fhd::wire::Frame 
                                fhd::wire::Frame dest_frame) {
   primary_layer_t* primary_layer = &pending_layer_.cfg.primary;
 
-  static_assert(sizeof(fhd::Frame) == sizeof(frame_t), "Struct mismatch");
-  static_assert(offsetof(fhd::Frame, x_pos) == offsetof(frame_t, x_pos), "Struct mismatch");
-  static_assert(offsetof(fhd::Frame, y_pos) == offsetof(frame_t, y_pos), "Struct mismatch");
-  static_assert(offsetof(fhd::Frame, width) == offsetof(frame_t, width), "Struct mismatch");
-  static_assert(offsetof(fhd::Frame, height) == offsetof(frame_t, height), "Struct mismatch");
+  static_assert(sizeof(fhd::wire::Frame) == sizeof(frame_t), "Struct mismatch");
+  static_assert(offsetof(fhd::wire::Frame, x_pos) == offsetof(frame_t, x_pos), "Struct mismatch");
+  static_assert(offsetof(fhd::wire::Frame, y_pos) == offsetof(frame_t, y_pos), "Struct mismatch");
+  static_assert(offsetof(fhd::wire::Frame, width) == offsetof(frame_t, width), "Struct mismatch");
+  static_assert(offsetof(fhd::wire::Frame, height) == offsetof(frame_t, height), "Struct mismatch");
 
   memcpy(&primary_layer->src_frame, &src_frame, sizeof(frame_t));
   memcpy(&primary_layer->dest_frame, &dest_frame, sizeof(frame_t));
@@ -276,7 +279,7 @@ void Layer::SetPrimaryAlpha(fhd::wire::AlphaMode mode, float val) {
   config_change_ = true;
 }
 
-void Layer::SetCursorConfig(fhd::ImageConfig image_config) {
+void Layer::SetCursorConfig(fhd::wire::ImageConfig image_config) {
   pending_layer_.type = LAYER_TYPE_CURSOR;
   pending_cursor_x_ = pending_cursor_y_ = 0;
 

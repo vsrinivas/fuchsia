@@ -35,7 +35,7 @@ namespace {
 
 class Value {
  public:
-  fuchsia_tee::Value to_llcpp() {
+  fuchsia_tee::wire::Value to_llcpp() {
     if (direction_.has_value()) {
       llcpp_builder_.set_direction(fidl::unowned_ptr(&direction_.value()));
     }
@@ -61,7 +61,7 @@ class Value {
   void set_c(uint64_t c) { c_ = c; }
 
  private:
-  fuchsia_tee::Value::UnownedBuilder llcpp_builder_;
+  fuchsia_tee::wire::Value::UnownedBuilder llcpp_builder_;
 
   std::optional<fuchsia_tee::wire::Direction> direction_{};
   std::optional<uint64_t> a_{};
@@ -71,7 +71,7 @@ class Value {
 
 class Buffer {
  public:
-  fuchsia_tee::Buffer to_llcpp() {
+  fuchsia_tee::wire::Buffer to_llcpp() {
     if (direction_.has_value()) {
       llcpp_builder_.set_direction(fidl::unowned_ptr(&direction_.value()));
     }
@@ -97,7 +97,7 @@ class Buffer {
   void set_size(uint64_t size) { size_ = size; }
 
  private:
-  fuchsia_tee::Buffer::UnownedBuilder llcpp_builder_;
+  fuchsia_tee::wire::Buffer::UnownedBuilder llcpp_builder_;
 
   std::optional<fuchsia_tee::wire::Direction> direction_{};
   std::optional<zx::vmo> vmo_{};
@@ -108,37 +108,37 @@ class Buffer {
 class Parameter {
  public:
   fuchsia_tee::wire::Parameter to_llcpp() {
-    if (std::holds_alternative<fidl::aligned<fuchsia_tee::None>>(data_)) {
-      llcpp_data_ = std::get<fidl::aligned<fuchsia_tee::None>>(data_);
+    if (std::holds_alternative<fidl::aligned<fuchsia_tee::wire::None>>(data_)) {
+      llcpp_data_ = std::get<fidl::aligned<fuchsia_tee::wire::None>>(data_);
       return fuchsia_tee::wire::Parameter::WithNone(
-          fidl::unowned_ptr(&std::get<fidl::aligned<fuchsia_tee::None>>(llcpp_data_)));
+          fidl::unowned_ptr(&std::get<fidl::aligned<fuchsia_tee::wire::None>>(llcpp_data_)));
     }
     if (std::holds_alternative<Value>(data_)) {
       llcpp_data_ = std::get<Value>(data_).to_llcpp();
       return fuchsia_tee::wire::Parameter::WithValue(
-          fidl::unowned_ptr(&std::get<fuchsia_tee::Value>(llcpp_data_)));
+          fidl::unowned_ptr(&std::get<fuchsia_tee::wire::Value>(llcpp_data_)));
     }
     if (std::holds_alternative<Buffer>(data_)) {
       llcpp_data_ = std::get<Buffer>(data_).to_llcpp();
       return fuchsia_tee::wire::Parameter::WithBuffer(
-          fidl::unowned_ptr(&std::get<fuchsia_tee::Buffer>(llcpp_data_)));
+          fidl::unowned_ptr(&std::get<fuchsia_tee::wire::Buffer>(llcpp_data_)));
     }
 
     return fuchsia_tee::wire::Parameter();
   }
 
-  void set_none() { data_ = fuchsia_tee::None{}; }
+  void set_none() { data_ = fuchsia_tee::wire::None{}; }
 
   void set_value(Value value) { data_ = std::move(value); }
 
   void set_buffer(Buffer buffer) { data_ = std::move(buffer); }
 
  private:
-  std::variant<std::monostate, fidl::aligned<fuchsia_tee::None>, fuchsia_tee::Value,
-               fuchsia_tee::Buffer>
+  std::variant<std::monostate, fidl::aligned<fuchsia_tee::wire::None>, fuchsia_tee::wire::Value,
+               fuchsia_tee::wire::Buffer>
       llcpp_data_{};
 
-  std::variant<std::monostate, fidl::aligned<fuchsia_tee::None>, Value, Buffer> data_{};
+  std::variant<std::monostate, fidl::aligned<fuchsia_tee::wire::None>, Value, Buffer> data_{};
 };
 
 class ParameterSet {
@@ -164,7 +164,7 @@ class ParameterSet {
 };
 
 struct UuidEqualityComparator {
-  bool operator()(const fuchsia_tee::Uuid& lhs, const fuchsia_tee::Uuid& rhs) const {
+  bool operator()(const fuchsia_tee::wire::Uuid& lhs, const fuchsia_tee::wire::Uuid& rhs) const {
     if (lhs.time_low != rhs.time_low) {
       return false;
     }
@@ -184,7 +184,7 @@ struct UuidEqualityComparator {
   }
 };
 
-using UuidToChannelContainer = std::vector<std::pair<fuchsia_tee::Uuid, zx::channel>>;
+using UuidToChannelContainer = std::vector<std::pair<fuchsia_tee::wire::Uuid, zx::channel>>;
 
 constexpr std::string_view kServiceDirectoryPath("/svc/");
 constexpr std::string_view kDeviceInfoServicePath("/svc/fuchsia.tee.DeviceInfo");
@@ -193,7 +193,7 @@ constexpr std::string_view kDeviceInfoServicePath("/svc/fuchsia.tee.DeviceInfo")
 // the TEE to be able to use file services.
 constexpr std::string_view kTeeDevClass("/dev/class/tee/");
 
-std::string GetApplicationServicePath(const fuchsia_tee::Uuid& app_uuid) {
+std::string GetApplicationServicePath(const fuchsia_tee::wire::Uuid& app_uuid) {
   constexpr std::string_view kApplicationServicePathPrefix = "/svc/fuchsia.tee.Application.";
   constexpr size_t kUuidNameLength = 36;
   constexpr const char* kPathFormat = "%s%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x";
@@ -264,7 +264,7 @@ TEEC_Result CheckGlobalPlatformCompliance(zx::unowned_channel device_connector_c
   return TEEC_SUCCESS;
 }
 
-void ConvertTeecUuidToZxUuid(const TEEC_UUID& teec_uuid, fuchsia_tee::Uuid* out_uuid) {
+void ConvertTeecUuidToZxUuid(const TEEC_UUID& teec_uuid, fuchsia_tee::wire::Uuid* out_uuid) {
   ZX_DEBUG_ASSERT(out_uuid);
 
   out_uuid->time_low = teec_uuid.timeLow;
@@ -569,7 +569,7 @@ TEEC_Result PostprocessValue(uint32_t param_type, const fuchsia_tee::wire::Param
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
-  const fuchsia_tee::Value& zx_value = zx_param.value();
+  const fuchsia_tee::wire::Value& zx_value = zx_param.value();
   if (!zx_value.has_direction()) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
@@ -612,7 +612,7 @@ TEEC_Result PostprocessTemporaryMemref(uint32_t param_type,
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
-  const fuchsia_tee::Buffer& zx_buffer = zx_param.buffer();
+  const fuchsia_tee::wire::Buffer& zx_buffer = zx_param.buffer();
   if (!zx_buffer.has_direction()) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
@@ -663,7 +663,7 @@ TEEC_Result PostprocessWholeMemref(const fuchsia_tee::wire::Parameter& zx_param,
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
-  const fuchsia_tee::Buffer& zx_buffer = zx_param.buffer();
+  const fuchsia_tee::wire::Buffer& zx_buffer = zx_param.buffer();
   if (!zx_buffer.has_direction()) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
@@ -690,7 +690,7 @@ TEEC_Result PostprocessPartialMemref(uint32_t param_type,
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
-  const fuchsia_tee::Buffer& zx_buffer = zx_param.buffer();
+  const fuchsia_tee::wire::Buffer& zx_buffer = zx_param.buffer();
   if (!zx_buffer.has_direction()) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
@@ -788,7 +788,7 @@ UuidToChannelContainer* GetUuidToChannelContainerFromContext(TEEC_Context* conte
 }
 
 UuidToChannelContainer::iterator FindInUuidToChannelContainer(UuidToChannelContainer* container,
-                                                              const fuchsia_tee::Uuid& uuid) {
+                                                              const fuchsia_tee::wire::Uuid& uuid) {
   ZX_DEBUG_ASSERT(container);
 
   return std::find_if(container->begin(), container->end(), [&](const auto& uuid_channel_pair) {
@@ -827,7 +827,7 @@ zx_status_t ConnectToDeviceConnector(const char* tee_device, zx::channel* connec
 }
 
 // Opens a connection to a `fuchsia.tee.Application` via a device connector.
-TEEC_Result ConnectApplicationViaDeviceConnector(const fuchsia_tee::Uuid& app_uuid,
+TEEC_Result ConnectApplicationViaDeviceConnector(const fuchsia_tee::wire::Uuid& app_uuid,
                                                  zx::unowned_channel device_connector_channel,
                                                  zx::channel* out_app_channel) {
   ZX_DEBUG_ASSERT(device_connector_channel->is_valid());
@@ -852,7 +852,7 @@ TEEC_Result ConnectApplicationViaDeviceConnector(const fuchsia_tee::Uuid& app_uu
 }
 
 // Opens a connection to a `fuchsia.tee.Application` via the service.
-TEEC_Result ConnectApplicationViaService(const fuchsia_tee::Uuid& app_uuid,
+TEEC_Result ConnectApplicationViaService(const fuchsia_tee::wire::Uuid& app_uuid,
                                          zx::channel* out_app_channel) {
   ZX_DEBUG_ASSERT(out_app_channel);
 
@@ -873,7 +873,7 @@ TEEC_Result ConnectApplicationViaService(const fuchsia_tee::Uuid& app_uuid,
   return TEEC_SUCCESS;
 }
 
-TEEC_Result ConnectApplication(const fuchsia_tee::Uuid& app_uuid, TEEC_Context* context,
+TEEC_Result ConnectApplication(const fuchsia_tee::wire::Uuid& app_uuid, TEEC_Context* context,
                                zx::unowned_channel* out_app_channel) {
   ZX_DEBUG_ASSERT(context);
   ZX_DEBUG_ASSERT(out_app_channel);
@@ -1032,7 +1032,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
     return TEEC_ERROR_NOT_IMPLEMENTED;
   }
 
-  fuchsia_tee::Uuid app_uuid_fidl;
+  fuchsia_tee::wire::Uuid app_uuid_fidl;
   ConvertTeecUuidToZxUuid(*destination, &app_uuid_fidl);
 
   ParameterSet parameter_set;
@@ -1072,7 +1072,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
   }
 
   uint32_t out_session_id = result->session_id;
-  fuchsia_tee::OpResult& out_result = result->op_result;
+  fuchsia_tee::wire::OpResult& out_result = result->op_result;
 
   if (!out_result.has_return_code() || !out_result.has_return_origin()) {
     if (returnOrigin) {
@@ -1150,7 +1150,7 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
     return ConvertStatusToResult(status);
   }
 
-  fuchsia_tee::OpResult& out_result = result->op_result;
+  fuchsia_tee::wire::OpResult& out_result = result->op_result;
 
   if (!out_result.has_return_code() || !out_result.has_return_origin()) {
     if (returnOrigin) {

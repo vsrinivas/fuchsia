@@ -333,7 +333,7 @@ zx::status<> NelsonBootloaderPartitionClient::Write(const zx::vmo& vmo, size_t v
     return status.take_error();
   }
   // write to tpl for only the tpl part.
-  // tpl_client adds an interal offset equal to the bl2 size when accessing vmo.
+  // tpl_client adds an integral offset equal to the bl2 size when accessing vmo.
   // thus the size to write should be adjusted accordingly.
   auto buffer_offset_size_status = tpl_client_->GetBufferOffsetInBytes();
   if (buffer_offset_size_status.is_error()) {

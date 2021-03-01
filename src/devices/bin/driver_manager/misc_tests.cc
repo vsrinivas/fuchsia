@@ -502,8 +502,8 @@ TEST(MiscTestCase, TestOutput) {
 
 // Adds a device with the given properties to the device coordinator, then checks that the
 // coordinator contains the device, and that its properties are correct.
-void AddDeviceWithProperties(const llcpp::fuchsia::device::manager::DeviceProperty* props_data,
-                             size_t props_count) {
+void AddDeviceWithProperties(
+    const llcpp::fuchsia::device::manager::wire::DeviceProperty* props_data, size_t props_count) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   InspectManager inspect_manager(loop.dispatcher());
   Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher());
@@ -546,9 +546,9 @@ TEST(MiscTestCase, DeviceProperties) {
   AddDeviceWithProperties(nullptr, 0);
 
   // Multiple properties.
-  llcpp::fuchsia::device::manager::DeviceProperty props[] = {
-      llcpp::fuchsia::device::manager::DeviceProperty{1, 0, 1},
-      llcpp::fuchsia::device::manager::DeviceProperty{2, 0, 1},
+  llcpp::fuchsia::device::manager::wire::DeviceProperty props[] = {
+      llcpp::fuchsia::device::manager::wire::DeviceProperty{1, 0, 1},
+      llcpp::fuchsia::device::manager::wire::DeviceProperty{2, 0, 1},
   };
   AddDeviceWithProperties(props, std::size(props));
 }

@@ -41,7 +41,9 @@ class GptDevicePartitioner {
       const fbl::unique_fd& block_device);
 
   // Returns block info for a specified block device.
-  const ::llcpp::fuchsia::hardware::block::BlockInfo& GetBlockInfo() const { return block_info_; }
+  const ::llcpp::fuchsia::hardware::block::wire::BlockInfo& GetBlockInfo() const {
+    return block_info_;
+  }
 
   GptDevice* GetGpt() const { return gpt_.get(); }
   zx::unowned_channel Channel() const { return caller_.channel(); }
@@ -103,7 +105,7 @@ class GptDevicePartitioner {
   GptDevicePartitioner(fbl::unique_fd devfs_root,
                        fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
                        fbl::unique_fd fd, std::unique_ptr<GptDevice> gpt,
-                       ::llcpp::fuchsia::hardware::block::BlockInfo block_info)
+                       ::llcpp::fuchsia::hardware::block::wire::BlockInfo block_info)
       : devfs_root_(std::move(devfs_root)),
         svc_root_(service::MaybeClone(svc_root)),
         caller_(std::move(fd)),
@@ -117,7 +119,7 @@ class GptDevicePartitioner {
   fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root_;
   fdio_cpp::FdioCaller caller_;
   mutable std::unique_ptr<GptDevice> gpt_;
-  ::llcpp::fuchsia::hardware::block::BlockInfo block_info_;
+  ::llcpp::fuchsia::hardware::block::wire::BlockInfo block_info_;
 };
 
 zx::status<uuid::Uuid> GptPartitionType(Partition type);

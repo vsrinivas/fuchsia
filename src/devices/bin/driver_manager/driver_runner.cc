@@ -132,14 +132,14 @@ DriverHostComponent::DriverHostComponent(
 
 zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
     fidl::ClientEnd<fdf::Node> node, fidl::VectorView<fidl::StringView> offers,
-    fidl::VectorView<fdf::NodeSymbol> symbols, fidl::StringView url, fdata::Dictionary program,
-    fidl::VectorView<frunner::ComponentNamespaceEntry> ns,
+    fidl::VectorView<fdf::wire::NodeSymbol> symbols, fidl::StringView url,
+    fdata::wire::Dictionary program, fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns,
     fidl::ServerEnd<fio::Directory> outgoing_dir, fidl::ClientEnd<fio::Directory> exposed_dir) {
   auto endpoints = fidl::CreateEndpoints<fdf::Driver>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  auto args = fdf::DriverStartArgs::UnownedBuilder()
+  auto args = fdf::wire::DriverStartArgs::UnownedBuilder()
                   .set_node(fidl::unowned_ptr(&node))
                   .set_offers(fidl::unowned_ptr(&offers))
                   .set_symbols(fidl::unowned_ptr(&symbols))
@@ -172,7 +172,7 @@ const std::string& Node::name() const { return name_; }
 
 fidl::VectorView<fidl::StringView> Node::offers() { return fidl::unowned_vec(offers_); }
 
-fidl::VectorView<fdf::NodeSymbol> Node::symbols() { return fidl::unowned_vec(symbols_); }
+fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() { return fidl::unowned_vec(symbols_); }
 
 DriverHostComponent* Node::parent_driver_host() const { return parent_->driver_host_; }
 
@@ -260,7 +260,7 @@ void Node::Remove(RemoveCompleter::Sync& completer) {
   UnbindAndReset(node_binding_);
 }
 
-void Node::AddChild(fdf::NodeAddArgs args, fidl::ServerEnd<fdf::NodeController> controller,
+void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeController> controller,
                     fidl::ServerEnd<fdf::Node> node, AddChildCompleter::Sync& completer) {
   auto name = args.has_name() ? std::move(args.name()) : fidl::StringView();
   Offers offers;
@@ -299,7 +299,7 @@ void Node::AddChild(fdf::NodeAddArgs args, fidl::ServerEnd<fdf::NodeController> 
         return;
       }
       symbols.emplace_back(
-          fdf::NodeSymbol::Builder(std::make_unique<fdf::NodeSymbol::Frame>())
+          fdf::wire::NodeSymbol::Builder(std::make_unique<fdf::wire::NodeSymbol::Frame>())
               .set_name(std::make_unique<fidl::StringView>(fidl::heap_copy_str(symbol.name())))
               .set_address(std::make_unique<zx_vaddr_t>(symbol.address()))
               .build());
@@ -345,7 +345,7 @@ void Node::AddChild(fdf::NodeAddArgs args, fidl::ServerEnd<fdf::NodeController> 
 DriverIndex::DriverIndex(MatchCallback match_callback)
     : match_callback_(std::move(match_callback)) {}
 
-zx::status<MatchResult> DriverIndex::Match(fdf::NodeAddArgs args) {
+zx::status<MatchResult> DriverIndex::Match(fdf::wire::NodeAddArgs args) {
   return match_callback_(std::move(args));
 }
 
@@ -389,11 +389,11 @@ zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDi
 
 zx::status<> DriverRunner::StartRootDriver(std::string_view name) {
   auto root_name = fidl::unowned_str(name);
-  auto args = fdf::NodeAddArgs::UnownedBuilder().set_name(fidl::unowned_ptr(&root_name));
+  auto args = fdf::wire::NodeAddArgs::UnownedBuilder().set_name(fidl::unowned_ptr(&root_name));
   return Bind(&root_node_, args.build());
 }
 
-void DriverRunner::Start(frunner::ComponentStartInfo start_info,
+void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
                          fidl::ServerEnd<frunner::ComponentController> controller,
                          StartCompleter::Sync& completer) {
   std::string url(start_info.resolved_url().get());
@@ -491,7 +491,7 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info,
   drivers_.push_back(std::move(driver));
 }
 
-zx::status<> DriverRunner::Bind(Node* node, fdf::NodeAddArgs args) {
+zx::status<> DriverRunner::Bind(Node* node, fdf::wire::NodeAddArgs args) {
   auto match_result = driver_index_->Match(std::move(args));
   if (match_result.is_error()) {
     return match_result.take_error();
@@ -549,8 +549,8 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
       LOGF(ERROR, "Failed to create component '%s': %u", name.data(), response->result.err());
       return;
     }
-    auto bind = realm_->BindChild(fsys::ChildRef{.name = fidl::unowned_str(name),
-                                                 .collection = fidl::unowned_str(collection)},
+    auto bind = realm_->BindChild(fsys::wire::ChildRef{.name = fidl::unowned_str(name),
+                                                       .collection = fidl::unowned_str(collection)},
                                   std::move(server_end), std::move(bind_callback));
     if (!bind.ok()) {
       LOGF(ERROR, "Failed to bind component '%s': %s", name.data(), bind.error());
@@ -559,12 +559,13 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
   auto unowned_name = fidl::unowned_str(name);
   auto unowned_url = fidl::unowned_str(url);
   auto startup = fsys::wire::StartupMode::LAZY;
-  auto child_decl = fsys::ChildDecl::UnownedBuilder()
+  auto child_decl = fsys::wire::ChildDecl::UnownedBuilder()
                         .set_name(fidl::unowned_ptr(&unowned_name))
                         .set_url(fidl::unowned_ptr(&unowned_url))
                         .set_startup(fidl::unowned_ptr(&startup));
-  auto create = realm_->CreateChild(fsys::CollectionRef{.name = fidl::unowned_str(collection)},
-                                    child_decl.build(), std::move(create_callback));
+  auto create =
+      realm_->CreateChild(fsys::wire::CollectionRef{.name = fidl::unowned_str(collection)},
+                          child_decl.build(), std::move(create_callback));
   if (!create.ok()) {
     LOGF(ERROR, "Failed to create component '%s': %s", name.data(), create.error());
     return zx::error(ZX_ERR_INTERNAL);

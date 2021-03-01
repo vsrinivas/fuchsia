@@ -463,7 +463,7 @@ void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expect
   ASSERT_EQ(query_result.status(), ZX_OK);
   ASSERT_EQ(query_result.value().s, ZX_OK);
   ASSERT_NE(query_result.value().info, nullptr);
-  const fio::FilesystemInfo& info = *query_result.value().info;
+  const fio::wire::FilesystemInfo& info = *query_result.value().info;
 
   constexpr std::string_view kFsName = "blobfs";
   const char* name = reinterpret_cast<const char*>(info.name.data());

@@ -219,10 +219,10 @@ void ServerInterpreter::EmitError(ExecutionContext* context, std::string error_m
 void ServerInterpreter::EmitError(ExecutionContext* context, NodeId node_id,
                                   std::string error_message) {
   FX_DCHECK(context != nullptr);
-  std::vector<llcpp::fuchsia::shell::Location> locations;
+  std::vector<llcpp::fuchsia::shell::wire::Location> locations;
   llcpp::fuchsia::shell::wire::NodeId fidl_node_id{.file_id = node_id.file_id,
                                                    .node_id = node_id.node_id};
-  auto builder = llcpp::fuchsia::shell::Location::UnownedBuilder().set_node_id(
+  auto builder = llcpp::fuchsia::shell::wire::Location::UnownedBuilder().set_node_id(
       fidl::unowned_ptr(&fidl_node_id));
   locations.emplace_back(builder.build());
   service_->OnError(context->id(), locations, std::move(error_message));
@@ -495,7 +495,8 @@ void Service::Shutdown(ShutdownCompleter::Sync& completer) {
 
 void Service::AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
                                 uint64_t node_node_id,
-                                const llcpp::fuchsia::shell::IntegerLiteral& node, bool root_node) {
+                                const llcpp::fuchsia::shell::wire::IntegerLiteral& node,
+                                bool root_node) {
   if (node.absolute_value.count() > 1) {
     interpreter_->EmitError(context->execution_context(),
                             "Infinite precision integers not supported for node " +
@@ -514,7 +515,7 @@ void Service::AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node
 
 void Service::AddObjectSchema(ServerInterpreterContext* context, uint64_t node_file_id,
                               uint64_t node_node_id,
-                              const llcpp::fuchsia::shell::ObjectSchemaDefinition& node,
+                              const llcpp::fuchsia::shell::wire::ObjectSchemaDefinition& node,
                               bool root_node) {
   std::vector<std::shared_ptr<ObjectFieldSchema>> fields;
   for (auto& field : node.fields) {
@@ -528,7 +529,7 @@ void Service::AddObjectSchema(ServerInterpreterContext* context, uint64_t node_f
 
 void Service::AddObjectSchemaField(
     ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
-    const llcpp::fuchsia::shell::ObjectFieldSchemaDefinition& field_type, bool root_node) {
+    const llcpp::fuchsia::shell::wire::ObjectFieldSchemaDefinition& field_type, bool root_node) {
   auto definition = std::make_shared<ObjectFieldSchema>(
       interpreter(), node_file_id, node_node_id, field_type.name.data(),
       GetType(context, node_file_id, node_node_id, field_type.type));
@@ -536,8 +537,8 @@ void Service::AddObjectSchemaField(
 }
 
 void Service::AddObject(ServerInterpreterContext* context, uint64_t node_file_id,
-                        uint64_t node_node_id, const llcpp::fuchsia::shell::ObjectDefinition& node,
-                        bool root_node) {
+                        uint64_t node_node_id,
+                        const llcpp::fuchsia::shell::wire::ObjectDefinition& node, bool root_node) {
   NodeId schema_node_id(node.object_schema.file_id, node.object_schema.node_id);
 
   std::shared_ptr<ObjectSchema> object_schema =
@@ -563,7 +564,7 @@ void Service::AddObject(ServerInterpreterContext* context, uint64_t node_file_id
 
 void Service::AddObjectField(ServerInterpreterContext* context, uint64_t node_file_id,
                              uint64_t node_node_id,
-                             const llcpp::fuchsia::shell::ObjectFieldDefinition& node,
+                             const llcpp::fuchsia::shell::wire::ObjectFieldDefinition& node,
                              bool root_node) {
   NodeId schema_id(node.object_field_schema.file_id, node.object_field_schema.node_id);
   std::shared_ptr<ObjectFieldSchema> field_schema =
@@ -578,7 +579,7 @@ void Service::AddObjectField(ServerInterpreterContext* context, uint64_t node_fi
 
 void Service::AddVariableDefinition(ServerInterpreterContext* context, uint64_t node_file_id,
                                     uint64_t node_node_id,
-                                    const llcpp::fuchsia::shell::VariableDefinition& node,
+                                    const llcpp::fuchsia::shell::wire::VariableDefinition& node,
                                     bool root_node) {
   std::unique_ptr<Expression> initial_value = interpreter_->GetNullableExpression(
       context, NodeId(node.initial_value.file_id, node.initial_value.node_id));
@@ -621,8 +622,8 @@ void Service::AddEmitResult(ServerInterpreterContext* context, uint64_t node_fil
 }
 
 void Service::AddAssignment(ServerInterpreterContext* context, uint64_t node_file_id,
-                            uint64_t node_node_id, const llcpp::fuchsia::shell::Assignment& node,
-                            bool root_node) {
+                            uint64_t node_node_id,
+                            const llcpp::fuchsia::shell::wire::Assignment& node, bool root_node) {
   std::unique_ptr<Expression> destination =
       interpreter_->GetExpression(context, NodeId(node_file_id, node_node_id), "destination",
                                   NodeId(node.destination.file_id, node.destination.node_id));
@@ -635,7 +636,7 @@ void Service::AddAssignment(ServerInterpreterContext* context, uint64_t node_fil
 }
 
 void Service::AddAddition(ServerInterpreterContext* context, uint64_t node_file_id,
-                          uint64_t node_node_id, const llcpp::fuchsia::shell::Addition& node,
+                          uint64_t node_node_id, const llcpp::fuchsia::shell::wire::Addition& node,
                           bool root_node) {
   std::unique_ptr<Expression> left =
       interpreter_->GetExpression(context, NodeId(node_file_id, node_node_id), "left",

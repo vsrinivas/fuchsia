@@ -68,7 +68,7 @@ void CheckMountedFs(const char* path, const char* fs_name, size_t len) {
       fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
-  fio::FilesystemInfo info = *result.value().info;
+  fio::wire::FilesystemInfo info = *result.value().info;
   ASSERT_EQ(strncmp(fs_name, reinterpret_cast<char*>(info.name.data()), strlen(fs_name)), 0);
   ASSERT_LE(info.used_nodes, info.total_nodes, "Used nodes greater than free nodes");
   ASSERT_LE(info.used_bytes, info.total_bytes, "Used bytes greater than free bytes");

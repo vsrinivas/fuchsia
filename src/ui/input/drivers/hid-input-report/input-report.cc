@@ -106,12 +106,12 @@ void InputReport::GetInputReportsReader(zx::channel req,
 
 void InputReport::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   fidl::FidlAllocator<kFidlDescriptorBufferSize> descriptor_allocator;
-  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
+  fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
 
   hid_device_info_t info;
   hiddev_.GetHidDeviceInfo(&info);
 
-  fuchsia_input_report::DeviceInfo fidl_info;
+  fuchsia_input_report::wire::DeviceInfo fidl_info;
   fidl_info.vendor_id = info.vendor_id;
   fidl_info.product_id = info.product_id;
   fidl_info.version = info.version;
@@ -128,7 +128,7 @@ void InputReport::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   }
 }
 
-void InputReport::SendOutputReport(fuchsia_input_report::OutputReport report,
+void InputReport::SendOutputReport(fuchsia_input_report::wire::OutputReport report,
                                    SendOutputReportCompleter::Sync& completer) {
   uint8_t hid_report[HID_MAX_DESC_LEN];
   size_t size;

@@ -6,7 +6,7 @@
 
 #include "pty-client.h"
 
-void PtyClientDevice::SetWindowSize(::llcpp::fuchsia::hardware::pty::WindowSize size,
+void PtyClientDevice::SetWindowSize(::llcpp::fuchsia::hardware::pty::wire::WindowSize size,
                                     SetWindowSizeCompleter::Sync& completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::SetWindowSizeResponse> buf;
   client_->server()->set_window_size({.width = size.width, .height = size.height});
@@ -50,7 +50,8 @@ void PtyClientDevice::ClrSetFeature(uint32_t clr, uint32_t set,
 void PtyClientDevice::GetWindowSize(GetWindowSizeCompleter::Sync& completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::GetWindowSizeResponse> buf;
   auto size = client_->server()->window_size();
-  ::llcpp::fuchsia::hardware::pty::WindowSize wsz = {.width = size.width, .height = size.height};
+  ::llcpp::fuchsia::hardware::pty::wire::WindowSize wsz = {.width = size.width,
+                                                           .height = size.height};
   completer.Reply(buf.view(), ZX_OK, wsz);
 }
 
@@ -126,7 +127,7 @@ void PtyClientDevice::GetBuffer(uint32_t flags, GetBufferCompleter::Sync& comple
 
 void PtyClientDevice::Sync(SyncCompleter::Sync& completer) { ZX_ASSERT(false); }
 
-void PtyClientDevice::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
+void PtyClientDevice::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::wire::NodeAttributes attributes,
                               SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

@@ -224,7 +224,7 @@ TEST(PtyTests, pty_test) {
   ASSERT_EQ(ws_result1->size.width, 0u, "");
   ASSERT_EQ(ws_result1->size.height, 0u, "");
 
-  fpty::WindowSize ws;
+  fpty::wire::WindowSize ws;
   ws.width = 80;
   ws.height = 25;
   auto result5 = fpty::Device::Call::SetWindowSize(pc_io.channel(), ws);

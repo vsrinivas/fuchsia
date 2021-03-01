@@ -68,9 +68,7 @@ zx_status_t FtdiI2c::Enable() {
   return ZX_OK;
 }
 
-zx_status_t FtdiI2c::Bind() {
-  return DdkAdd("ftdi-i2c");
-}
+zx_status_t FtdiI2c::Bind() { return DdkAdd("ftdi-i2c"); }
 
 void FtdiI2c::DdkInit(ddk::InitTxn txn) {
   std::vector<i2c_channel_t> i2c_channels(i2c_devices_.size());
@@ -269,7 +267,7 @@ zx_status_t FtdiI2c::Transact(uint8_t bus_address, std::vector<uint8_t> write_da
   // Check each response byte to see if its an ACK (zero) or NACK (non-zero).
   for (size_t i = 0; i < response.size() - read_size; i++) {
     if ((response[i] & 0x1) != 0) {
-      zxlogf(INFO, "Ftdi-i2c: Recieved NACK on byte %ld (data=%d)", i, response[i]);
+      zxlogf(INFO, "Ftdi-i2c: Received NACK on byte %ld (data=%d)", i, response[i]);
       return ZX_ERR_INTERNAL;
     }
   }
@@ -389,9 +387,9 @@ zx_status_t FtdiI2c::I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_li
 }
 
 zx_status_t FtdiI2c::Create(zx_device_t* device,
-                            const ::llcpp::fuchsia::hardware::ftdi::I2cBusLayout* layout,
-                            const ::llcpp::fuchsia::hardware::ftdi::I2cDevice* i2c_dev) {
-  // TODO(dgilhooley: Support i2c on different sets of pins and then remove this check.
+                            const ::llcpp::fuchsia::hardware::ftdi::wire::I2cBusLayout* layout,
+                            const ::llcpp::fuchsia::hardware::ftdi::wire::I2cDevice* i2c_dev) {
+  // TODO(dgilhooley): Support i2c on different sets of pins and then remove this check.
   if (layout->scl != 0 && layout->sda_out != 1 && layout->sda_in != 2) {
     return ZX_ERR_OUT_OF_RANGE;
   }

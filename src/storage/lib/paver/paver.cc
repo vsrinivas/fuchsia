@@ -219,7 +219,7 @@ zx::status<zx::channel> FormatFvm(const fbl::unique_fd& devfs_root,
 }
 
 // Reads an image from disk into a vmo.
-zx::status<::llcpp::fuchsia::mem::Buffer> PartitionRead(const DevicePartitioner& partitioner,
+zx::status<::llcpp::fuchsia::mem::wire::Buffer> PartitionRead(const DevicePartitioner& partitioner,
                                                         const PartitionSpec& spec) {
   LOG("Reading partition \"%s\".\n", spec.ToString().c_str());
 
@@ -266,7 +266,7 @@ zx::status<::llcpp::fuchsia::mem::Buffer> PartitionRead(const DevicePartitioner&
   }
 
   LOG("Completed successfully\n");
-  return zx::ok(::llcpp::fuchsia::mem::Buffer{std::move(vmo), asset_size});
+  return zx::ok(::llcpp::fuchsia::mem::wire::Buffer{std::move(vmo), asset_size});
 }
 
 zx::status<> ValidatePartitionPayload(const DevicePartitioner& partitioner,
@@ -527,7 +527,7 @@ void DataSink::ReadAsset(Configuration configuration, Asset asset,
 }
 
 void DataSink::WriteFirmware(Configuration configuration, fidl::StringView type,
-                             ::llcpp::fuchsia::mem::Buffer payload,
+                             ::llcpp::fuchsia::mem::wire::Buffer payload,
                              WriteFirmwareCompleter::Sync& completer) {
   auto variant = sink_.WriteFirmware(configuration, std::move(type), std::move(payload));
   completer.Reply(CreateWriteFirmwareResult(&variant));
@@ -542,7 +542,7 @@ void DataSink::WipeVolume(WipeVolumeCompleter::Sync& completer) {
   }
 }
 
-zx::status<::llcpp::fuchsia::mem::Buffer> DataSinkImpl::ReadAsset(Configuration configuration,
+zx::status<::llcpp::fuchsia::mem::wire::Buffer> DataSinkImpl::ReadAsset(Configuration configuration,
                                                                   Asset asset) {
   // No assets support content types yet, use the PartitionSpec default.
   PartitionSpec spec(PartitionType(configuration, asset));
@@ -563,7 +563,7 @@ zx::status<::llcpp::fuchsia::mem::Buffer> DataSinkImpl::ReadAsset(Configuration 
 }
 
 zx::status<> DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
-                                      ::llcpp::fuchsia::mem::Buffer payload) {
+                                      ::llcpp::fuchsia::mem::wire::Buffer payload) {
   // No assets support content types yet, use the PartitionSpec default.
   PartitionSpec spec(PartitionType(configuration, asset));
 
@@ -579,7 +579,7 @@ zx::status<> DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
 }
 
 std::variant<zx_status_t, fidl::aligned<bool>> DataSinkImpl::WriteFirmware(
-    Configuration configuration, fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload) {
+    Configuration configuration, fidl::StringView type, ::llcpp::fuchsia::mem::wire::Buffer payload) {
   // Currently all our supported firmware lives in Partition::kBootloaderA/B/R.
   Partition part_type;
   switch (configuration) {
@@ -624,7 +624,7 @@ zx::status<> DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
 
 // Deprecated in favor of WriteFirmware().
 // TODO(fxbug.dev/45606): move clients off this function and delete it.
-zx::status<> DataSinkImpl::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload) {
+zx::status<> DataSinkImpl::WriteBootloader(::llcpp::fuchsia::mem::wire::Buffer payload) {
   PartitionSpec spec(Partition::kBootloaderA);
 
   if (!partitioner_->SupportsPartition(spec)) {
@@ -635,7 +635,7 @@ zx::status<> DataSinkImpl::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload
 }
 
 zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
-                                         ::llcpp::fuchsia::mem::Buffer payload) {
+                                         ::llcpp::fuchsia::mem::wire::Buffer payload) {
   const char* mount_path = "/volume/data";
   const uint8_t data_guid[] = GUID_DATA_VALUE;
   char minfs_path[PATH_MAX] = {0};
@@ -858,7 +858,7 @@ void DynamicDataSink::ReadAsset(Configuration configuration, Asset asset,
 }
 
 void DynamicDataSink::WriteFirmware(Configuration configuration, fidl::StringView type,
-                                    ::llcpp::fuchsia::mem::Buffer payload,
+                                    ::llcpp::fuchsia::mem::wire::Buffer payload,
                                     WriteFirmwareCompleter::Sync& completer) {
   auto variant = sink_.WriteFirmware(configuration, std::move(type), std::move(payload));
   completer.Reply(CreateWriteFirmwareResult(&variant));

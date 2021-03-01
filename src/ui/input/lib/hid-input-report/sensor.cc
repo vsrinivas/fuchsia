@@ -55,12 +55,12 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
 }
 
 ParseResult Sensor::CreateDescriptor(fidl::AnyAllocator& allocator,
-                                     fuchsia_input_report::DeviceDescriptor& descriptor) {
-  fuchsia_input_report::SensorInputDescriptor input(allocator);
+                                     fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
+  fuchsia_input_report::wire::SensorInputDescriptor input(allocator);
 
   // Set the values array.
   {
-    fidl::VectorView<fuchsia_input_report::SensorAxis> values(allocator, num_values_);
+    fidl::VectorView<fuchsia_input_report::wire::SensorAxis> values(allocator, num_values_);
     for (size_t i = 0; i < num_values_; i++) {
       if (HidSensorUsageToLlcppSensorType(static_cast<hid::usage::Sensor>(values_[i].usage.usage),
                                           &values[i].type) != ZX_OK) {
@@ -71,7 +71,7 @@ ParseResult Sensor::CreateDescriptor(fidl::AnyAllocator& allocator,
     input.set_values(allocator, std::move(values));
   }
 
-  fuchsia_input_report::SensorDescriptor sensor(allocator);
+  fuchsia_input_report::wire::SensorDescriptor sensor(allocator);
   sensor.set_input(allocator, std::move(input));
   descriptor.set_sensor(allocator, std::move(sensor));
 
@@ -79,8 +79,8 @@ ParseResult Sensor::CreateDescriptor(fidl::AnyAllocator& allocator,
 }
 
 ParseResult Sensor::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyAllocator& allocator,
-                                     fuchsia_input_report::InputReport& input_report) {
-  fuchsia_input_report::SensorInputReport sensor_report(allocator);
+                                     fuchsia_input_report::wire::InputReport& input_report) {
+  fuchsia_input_report::wire::SensorInputReport sensor_report(allocator);
 
   fidl::VectorView<int64_t> values(allocator, num_values_);
   for (size_t i = 0; i < num_values_; i++) {

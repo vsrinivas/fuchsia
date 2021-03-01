@@ -164,7 +164,7 @@ zx::status<> SkipBlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
     return status.take_error();
   }
 
-  skipblock::ReadWriteOperation operation = {
+  skipblock::wire::ReadWriteOperation operation = {
       .vmo = std::move(dup),
       .vmo_offset = 0,
       .block = 0,
@@ -195,7 +195,7 @@ zx::status<> SkipBlockPartitionClient::Write(const zx::vmo& vmo, size_t size) {
     return status.take_error();
   }
 
-  skipblock::ReadWriteOperation operation = {
+  skipblock::wire::ReadWriteOperation operation = {
       .vmo = std::move(dup),
       .vmo_offset = 0,
       .block = 0,
@@ -221,7 +221,7 @@ zx::status<> SkipBlockPartitionClient::WriteBytes(const zx::vmo& vmo, zx_off_t o
     return status.take_error();
   }
 
-  skipblock::WriteBytesOperation operation = {
+  skipblock::wire::WriteBytesOperation operation = {
       .vmo = std::move(dup),
       .vmo_offset = 0,
       .offset = offset,

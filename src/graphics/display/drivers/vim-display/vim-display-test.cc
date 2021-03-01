@@ -21,18 +21,18 @@ namespace {
 // system.
 class MockBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
-  void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
+  void SetConstraints(bool has_constraints, sysmem::wire::BufferCollectionConstraints constraints,
                       SetConstraintsCompleter::Sync& _completer) override {
     EXPECT_FALSE(constraints.buffer_memory_constraints.inaccessible_domain_supported);
     EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
     set_constraints_called_ = true;
   }
   void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& _completer) override {
-    sysmem::BufferCollectionInfo_2 info;
+    sysmem::wire::BufferCollectionInfo_2 info;
     info.settings.has_image_format_constraints = true;
     info.buffer_count = 1;
     ASSERT_OK(zx::vmo::create(4096, 0, &info.buffers[0].vmo));
-    sysmem::ImageFormatConstraints& constraints = info.settings.image_format_constraints;
+    sysmem::wire::ImageFormatConstraints& constraints = info.settings.image_format_constraints;
     constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
     constraints.pixel_format.has_format_modifier = true;
     constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;

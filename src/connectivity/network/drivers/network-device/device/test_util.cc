@@ -219,7 +219,7 @@ zx_status_t TestSession::Open(netdev::Device::SyncClient& netdevice, const char*
                               fidl::VectorView<netdev::wire::FrameType> frame_types) {
   netdev::wire::FrameType supported_frames[1];
   supported_frames[0] = netdev::wire::FrameType::ETHERNET;
-  netdev::SessionInfo info{};
+  netdev::wire::SessionInfo info{};
   if (frame_types.count() == 0) {
     // default to just ethernet
     info.rx_frames =
@@ -278,7 +278,7 @@ zx_status_t TestSession::Init(uint16_t descriptor_count, uint64_t buffer_size) {
   return ZX_OK;
 }
 
-zx_status_t TestSession::GetInfo(netdev::SessionInfo* info) {
+zx_status_t TestSession::GetInfo(netdev::wire::SessionInfo* info) {
   zx_status_t status;
   if (!data_vmo_.is_valid() || !descriptors_vmo_.is_valid()) {
     return ZX_ERR_BAD_STATE;
@@ -296,7 +296,7 @@ zx_status_t TestSession::GetInfo(netdev::SessionInfo* info) {
   return ZX_OK;
 }
 
-void TestSession::Setup(fidl::ClientEnd<netdev::Session> session, netdev::Fifos fifos) {
+void TestSession::Setup(fidl::ClientEnd<netdev::Session> session, netdev::wire::Fifos fifos) {
   session_ = std::move(session);
   fifos_ = std::move(fifos);
 }

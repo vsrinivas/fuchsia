@@ -55,9 +55,9 @@ zx_status_t WaitForDevice(int dirfd, int event, const char* name, void* cookie) 
 void USBVirtualBus::InitUsbVirtualBus(std::optional<virtualbustest::BusTest::SyncClient>* test) {
   namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
+      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
 
-  usb_peripheral::DeviceDescriptor device_desc = {};
+  usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = 0x0200;
   device_desc.b_device_class = 0;
   device_desc.b_device_sub_class = 0;
@@ -73,13 +73,13 @@ void USBVirtualBus::InitUsbVirtualBus(std::optional<virtualbustest::BusTest::Syn
   device_desc.id_vendor = 0x18D1;
   device_desc.id_product = 2;
 
-  usb_peripheral::FunctionDescriptor usb_cdc_ecm_function_desc = {
+  usb_peripheral::wire::FunctionDescriptor usb_cdc_ecm_function_desc = {
       .interface_class = USB_CLASS_VENDOR,
       .interface_subclass = 0,
       .interface_protocol = 0,
   };
 
-  std::vector<usb_peripheral::FunctionDescriptor> function_descs;
+  std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
   function_descs.push_back(usb_cdc_ecm_function_desc);
   std::vector<ConfigurationDescriptor> config_descs;
   config_descs.emplace_back(fidl::unowned_vec(function_descs));

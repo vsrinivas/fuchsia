@@ -31,7 +31,7 @@ class TestServerBase : public fio2::Directory::RawChannelInterface {
     completer.Close(ZX_OK);
   }
 
-  void Reopen(fio2::ConnectionOptions options, ::zx::channel object_request,
+  void Reopen(fio2::wire::ConnectionOptions options, ::zx::channel object_request,
               ReopenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -50,14 +50,14 @@ class TestServerBase : public fio2::Directory::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void UpdateAttributes(fio2::NodeAttributes attributes,
+  void UpdateAttributes(fio2::wire::NodeAttributes attributes,
                         UpdateAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
-  void Open(fidl::StringView path, fio2::wire::OpenMode mode, fio2::ConnectionOptions options,
+  void Open(fidl::StringView path, fio2::wire::OpenMode mode, fio2::wire::ConnectionOptions options,
             zx::channel object_request, OpenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -72,7 +72,7 @@ class TestServerBase : public fio2::Directory::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Enumerate(fio2::DirectoryEnumerateOptions options, zx::channel iterator,
+  void Enumerate(fio2::wire::DirectoryEnumerateOptions options, zx::channel iterator,
                  EnumerateCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -87,7 +87,7 @@ class TestServerBase : public fio2::Directory::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Watch(fio2::wire::DirectoryWatchMask mask, fio2::DirectoryWatchOptions options,
+  void Watch(fio2::wire::DirectoryWatchMask mask, fio2::wire::DirectoryWatchOptions options,
              zx::channel watcher, WatchCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -139,7 +139,7 @@ class DirV2 : public zxtest::Test {
 TEST_F(DirV2, Enumerate) {
   class TestServer : public TestServerBase {
    public:
-    void Enumerate(fio2::DirectoryEnumerateOptions options, zx::channel iterator,
+    void Enumerate(fio2::wire::DirectoryEnumerateOptions options, zx::channel iterator,
                    EnumerateCompleter::Sync& completer) override {
       class IteratorServer : public fio2::DirectoryIterator::Interface {
        public:
@@ -147,7 +147,7 @@ TEST_F(DirV2, Enumerate) {
 
         // Sends a different entry every time.
         void GetNext(GetNextCompleter::Sync& completer) override {
-          auto builder = fio2::DirectoryEntry::UnownedBuilder();
+          auto builder = fio2::wire::DirectoryEntry::UnownedBuilder();
           fidl::StringView name;
           fio2::wire::NodeProtocols protocols;
           fio2::wire::Operations abilities;
@@ -174,11 +174,11 @@ TEST_F(DirV2, Enumerate) {
               builder.set_id(fidl::unowned_ptr(&id));
               break;
             default:
-              completer.ReplySuccess(fidl::VectorView<fio2::DirectoryEntry>());
+              completer.ReplySuccess(fidl::VectorView<fio2::wire::DirectoryEntry>());
               return;
           }
           count_++;
-          fio2::DirectoryEntry entry[1] = {builder.build()};
+          fio2::wire::DirectoryEntry entry[1] = {builder.build()};
           completer.ReplySuccess(fidl::unowned_vec(entry));
         }
 

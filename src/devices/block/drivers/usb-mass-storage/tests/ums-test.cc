@@ -38,8 +38,8 @@ constexpr const char kManufacturer[] = "Google";
 constexpr const char kProduct[] = "USB test drive";
 constexpr const char kSerial[] = "ebfd5ad49d2a";
 
-usb_peripheral::DeviceDescriptor GetDeviceDescriptor() {
-  usb_peripheral::DeviceDescriptor device_desc = {};
+usb_peripheral::wire::DeviceDescriptor GetDeviceDescriptor() {
+  usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);
   device_desc.b_device_class = 0;
   device_desc.b_device_sub_class = 0;
@@ -70,15 +70,15 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 // Initialize UMS. Asserts on failure.
 void USBVirtualBus::InitUMS(fbl::String* devpath) {
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
+      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
   // auto device_desc = GetDeviceDescriptor();
-  usb_peripheral::FunctionDescriptor ums_function_desc = {
+  usb_peripheral::wire::FunctionDescriptor ums_function_desc = {
       .interface_class = USB_CLASS_MSC,
       .interface_subclass = USB_SUBCLASS_MSC_SCSI,
       .interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY,
   };
 
-  std::vector<usb_peripheral::FunctionDescriptor> function_descs;
+  std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
   function_descs.push_back(ums_function_desc);
   std::vector<ConfigurationDescriptor> config_descs;
   config_descs.emplace_back(fidl::unowned_vec(function_descs));
@@ -106,15 +106,15 @@ class BlockDeviceController {
 
   void Connect() {
     using ConfigurationDescriptor =
-        ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
+        ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
     // auto device_desc = GetDeviceDescriptor();
-    usb_peripheral::FunctionDescriptor ums_function_desc = {
+    usb_peripheral::wire::FunctionDescriptor ums_function_desc = {
         .interface_class = USB_CLASS_MSC,
         .interface_subclass = USB_SUBCLASS_MSC_SCSI,
         .interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY,
     };
 
-    std::vector<usb_peripheral::FunctionDescriptor> function_descs;
+    std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
     function_descs.push_back(ums_function_desc);
     std::vector<ConfigurationDescriptor> config_descs;
     config_descs.emplace_back(fidl::unowned_vec(function_descs));

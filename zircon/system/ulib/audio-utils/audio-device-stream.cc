@@ -126,7 +126,7 @@ zx_status_t AudioDeviceStream::SetGain(float gain) {
 }
 
 zx_status_t AudioDeviceStream::SetGainParams() {
-  auto builder = audio_fidl::GainState::UnownedBuilder();
+  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
   fidl::aligned<bool> muted = muted_;
   fidl::aligned<bool> agc_enabled = agc_enabled_;
   fidl::aligned<float> gain = gain_;
@@ -258,14 +258,14 @@ zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second, uint16_t ch
   }
   auto [local, remote] = std::move(endpoints.value());
 
-  audio_fidl::PcmFormat pcm_format = {};
+  audio_fidl::wire::PcmFormat pcm_format = {};
   pcm_format.number_of_channels = static_cast<uint8_t>(channel_cnt_);
   pcm_format.channels_to_use_bitmask = channels_to_use_bitmask;
   pcm_format.sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
   pcm_format.frame_rate = frames_per_second;
   pcm_format.bytes_per_sample = channel_size_ / 8;
   pcm_format.valid_bits_per_sample = sample_size_;
-  auto builder = audio_fidl::Format::UnownedBuilder();
+  auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
 
   audio_fidl::StreamConfig::Call::CreateRingBuffer(stream_ch_, builder.build(), std::move(remote));

@@ -122,7 +122,7 @@ zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc
   return zx::make_status(status);
 }
 
-void DriverHost::Start(fdf::DriverStartArgs start_args,
+void DriverHost::Start(fdf::wire::DriverStartArgs start_args,
                        fidl::ServerEnd<llcpp::fuchsia::driver::framework::Driver> request,
                        StartCompleter::Sync& completer) {
   if (!start_args.has_url()) {
@@ -165,7 +165,7 @@ void DriverHost::Start(fdf::DriverStartArgs start_args,
   }
   // We encode start_args outside of callback in order to access stack-allocated
   // data before it is destroyed.
-  auto message = std::make_unique<fdf::DriverStartArgs::OwnedEncodedMessage>(&start_args);
+  auto message = std::make_unique<fdf::wire::DriverStartArgs::OwnedEncodedMessage>(&start_args);
   if (!message->ok()) {
     LOGF(ERROR, "Failed to start driver '/pkg/%s', could not encode start args: %s", binary->data(),
          message->error());

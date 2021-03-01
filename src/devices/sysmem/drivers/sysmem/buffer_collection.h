@@ -63,12 +63,12 @@ class BufferCollection
   // has_constraints() must be true to call this.
   //
   // this can only be called if TakeConstraints() hasn't been called yet.
-  const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints();
+  const llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& constraints();
 
   // has_constraints() must be true to call this.
   //
   // this can only be called once
-  llcpp::fuchsia::sysmem2::BufferCollectionConstraints TakeConstraints();
+  llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints TakeConstraints();
 
   LogicalBufferCollection* parent();
 
@@ -81,7 +81,7 @@ class BufferCollection
 
  private:
   using V1CBufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                                             llcpp::fuchsia::sysmem::BufferCollectionInfo_2>;
+                                             llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>;
 
   friend class FidlServer;
 
@@ -98,13 +98,13 @@ class BufferCollection
   // Hide parent method.
   void FailAsync(zx_status_t status, const char* format, ...);
 
-  fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo> CloneResultForSendingV2(
-      const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info);
+  fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo> CloneResultForSendingV2(
+      const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
 
   fit::result<V1CBufferCollectionInfo> CloneResultForSendingV1(
-      const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info);
+      const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
   fit::result<BufferCollection::V1CBufferCollectionInfo> CloneAuxBuffersResultForSendingV1(
-      const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info);
+      const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
 
   static const fuchsia_sysmem_BufferCollection_ops_t kOps;
 
@@ -135,15 +135,15 @@ class BufferCollection
   //     SetConstraints()
   //
   // Either way, the constraints here are in v2 form.
-  std::optional<llcpp::fuchsia::sysmem2::BufferCollectionConstraints> constraints_;
+  std::optional<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints> constraints_;
 
   // Stash BufferUsage aside for benefit of GetUsageBasedRightsAttenuation() despite
   // TakeConstraints().
-  std::optional<llcpp::fuchsia::sysmem2::BufferUsage> usage_;
+  std::optional<llcpp::fuchsia::sysmem2::wire::BufferUsage> usage_;
 
   // Temporarily holds fuchsia.sysmem.BufferCollectionConstraintsAuxBuffers until SetConstraints()
   // arrives.
-  std::optional<llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>
+  std::optional<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers>
       constraints_aux_buffers_;
 
   // FIDL protocol enforcement.

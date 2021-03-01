@@ -31,9 +31,10 @@ class DirentIteratorImpl {
       return status;
     }
     RemoteV2 dir(directory);
-    status = fio2::Directory::Call::Enumerate(dir.control(), fio2::DirectoryEnumerateOptions(),
-                                              std::move(iterator_server_end))
-                 .status();
+    status =
+        fio2::Directory::Call::Enumerate(dir.control(), fio2::wire::DirectoryEnumerateOptions(),
+                                         std::move(iterator_server_end))
+            .status();
     if (status != ZX_OK) {
       return status;
     }
@@ -126,7 +127,7 @@ class DirentIteratorImpl {
   zxio_remote_v2_t* io_;
 
   std::unique_ptr<Boxed> boxed_;
-  fidl::VectorView<fio2::DirectoryEntry> entries_ = {};
+  fidl::VectorView<fio2::wire::DirectoryEntry> entries_ = {};
   uint64_t index_ = 0;
   fio2::DirectoryIterator::SyncClient iterator_;
   uint64_t opaque_[2];

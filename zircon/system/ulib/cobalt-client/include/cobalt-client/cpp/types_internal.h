@@ -19,7 +19,7 @@ namespace internal {
 // Note: Everything on this namespace is internal, no external users should rely
 // on the behaviour of any of these classes.
 // A value pair which represents a bucket index and the count for such index.
-using HistogramBucket = ::llcpp::fuchsia::cobalt::HistogramBucket;
+using HistogramBucket = ::llcpp::fuchsia::cobalt::wire::HistogramBucket;
 
 static_assert(::llcpp::fuchsia::cobalt::MAX_EVENT_CODE_COUNT == MetricOptions::kMaxEventCodes);
 
@@ -50,7 +50,7 @@ class FlushInterface {
   // Returns false if logger failed to flush the data.
   virtual bool Flush(Logger* logger) = 0;
 
-  // Undo's the effect of the on going flush.
+  // Undoes the effect of the ongoing flush.
   virtual void UndoFlush() = 0;
 };
 

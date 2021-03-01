@@ -38,7 +38,8 @@ class Printer {
     rows_[channel_index] = name;
   }
 
-  virtual void Print(const ::llcpp::fuchsia::hardware::ram::metrics::BandwidthInfo& bpi) const = 0;
+  virtual void Print(
+      const ::llcpp::fuchsia::hardware::ram::metrics::wire::BandwidthInfo& bpi) const = 0;
 
  protected:
   FILE* const file_;
@@ -49,13 +50,15 @@ class Printer {
 class DefaultPrinter : public Printer {
  public:
   DefaultPrinter(FILE* file, uint64_t cycles_to_measure) : Printer(file, cycles_to_measure) {}
-  void Print(const ::llcpp::fuchsia::hardware::ram::metrics::BandwidthInfo& info) const override;
+  void Print(
+      const ::llcpp::fuchsia::hardware::ram::metrics::wire::BandwidthInfo& info) const override;
 };
 
 class CsvPrinter : public Printer {
  public:
   CsvPrinter(FILE* file, uint64_t cycles_to_measure) : Printer(file, cycles_to_measure) {}
-  void Print(const ::llcpp::fuchsia::hardware::ram::metrics::BandwidthInfo& info) const override;
+  void Print(
+      const ::llcpp::fuchsia::hardware::ram::metrics::wire::BandwidthInfo& info) const override;
 };
 
 zx::status<std::array<uint64_t, ::llcpp::fuchsia::hardware::ram::metrics::MAX_COUNT_CHANNELS>>
@@ -65,7 +68,7 @@ std::tuple<zx::channel, ram_info::RamDeviceInfo> ConnectToRamDevice();
 
 zx_status_t MeasureBandwith(
     const Printer* printer, zx::channel channel,
-    const ::llcpp::fuchsia::hardware::ram::metrics::BandwidthMeasurementConfig& config);
+    const ::llcpp::fuchsia::hardware::ram::metrics::wire::BandwidthMeasurementConfig& config);
 
 zx_status_t GetDdrWindowingResults(zx::channel channel);
 

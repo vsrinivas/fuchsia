@@ -13,7 +13,7 @@ namespace optee {
 namespace test {
 
 TEST(UuidTest, LlcppCtor) {
-  llcpp::fuchsia::tee::Uuid llcpp_uuid{
+  llcpp::fuchsia::tee::wire::Uuid llcpp_uuid{
       .time_low = 0x01234567,
       .time_mid = 0x89AB,
       .time_hi_and_version = 0xCDEF,

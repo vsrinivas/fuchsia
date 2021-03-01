@@ -38,7 +38,7 @@ void SysInfo::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync &completer)
 }
 
 void SysInfo::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync &completer) {
-  llcpp::fuchsia::sysinfo::InterruptControllerInfo info = {};
+  llcpp::fuchsia::sysinfo::wire::InterruptControllerInfo info = {};
   zx_status_t status = GetInterruptControllerInfo(&info);
   completer.Reply(status, fidl::unowned_ptr(&info));
 }
@@ -98,7 +98,7 @@ zx_status_t SysInfo::GetBootloaderVendor(std::string *bootloader_vendor) {
 }
 
 zx_status_t SysInfo::GetInterruptControllerInfo(
-    llcpp::fuchsia::sysinfo::InterruptControllerInfo *info) {
+    llcpp::fuchsia::sysinfo::wire::InterruptControllerInfo *info) {
   llcpp::fuchsia::sysinfo::SysInfo::SyncClient client{zx::channel()};
   zx_status_t status = ConnectToPBus(&client);
   if (status != ZX_OK) {

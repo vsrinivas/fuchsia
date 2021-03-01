@@ -667,7 +667,7 @@ void VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out) {
 
 constexpr const char kFsName[] = "minfs";
 
-zx_status_t VnodeMinfs::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info) {
+zx_status_t VnodeMinfs::QueryFilesystem(::llcpp::fuchsia::io::wire::FilesystemInfo* info) {
   static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER,
                 "Minfs name too long");
   uint32_t reserved_blocks = Vfs()->BlocksReserved();
@@ -698,7 +698,7 @@ zx_status_t VnodeMinfs::GetDevicePath(size_t buffer_len, char* out_name, size_t*
 }
 
 void VnodeMinfs::GetMetrics(GetMetricsCompleter::Sync& completer) {
-  ::llcpp::fuchsia::minfs::Metrics metrics;
+  ::llcpp::fuchsia::minfs::wire::Metrics metrics;
   zx_status_t status = fs_->GetMetrics(&metrics);
   completer.Reply(status, status == ZX_OK ? fidl::unowned_ptr(&metrics) : nullptr);
 }
@@ -709,10 +709,10 @@ void VnodeMinfs::ToggleMetrics(bool enable, ToggleMetricsCompleter::Sync& comple
 }
 
 void VnodeMinfs::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) {
-  static_assert(sizeof(llcpp::fuchsia::minfs::BlockRegion) == sizeof(BlockRegion));
-  static_assert(offsetof(llcpp::fuchsia::minfs::BlockRegion, offset) ==
+  static_assert(sizeof(llcpp::fuchsia::minfs::wire::BlockRegion) == sizeof(BlockRegion));
+  static_assert(offsetof(llcpp::fuchsia::minfs::wire::BlockRegion, offset) ==
                 offsetof(BlockRegion, offset));
-  static_assert(offsetof(llcpp::fuchsia::minfs::BlockRegion, length) ==
+  static_assert(offsetof(llcpp::fuchsia::minfs::wire::BlockRegion, length) ==
                 offsetof(BlockRegion, length));
   zx::vmo vmo;
   zx_status_t status = ZX_OK;

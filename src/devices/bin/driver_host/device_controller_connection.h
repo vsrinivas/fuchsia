@@ -78,7 +78,7 @@ class DeviceControllerConnection
   void Rewind(RewindCompleter::Sync& _completer) override {}
   void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& _completer) override {}
   void Unlink(::fidl::StringView path, UnlinkCompleter::Sync& _completer) override {}
-  void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attributes,
+  void SetAttr(uint32_t flags, llcpp::fuchsia::io::wire::NodeAttributes attributes,
                SetAttrCompleter::Sync& _completer) override {}
   void Sync(SyncCompleter::Sync& _completer) override {}
   void GetAttr(GetAttrCompleter::Sync& _completer) override {}

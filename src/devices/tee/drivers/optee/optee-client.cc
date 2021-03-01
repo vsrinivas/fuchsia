@@ -1094,7 +1094,7 @@ zx_status_t OpteeClient::RpmbSendRequest(std::optional<SharedMemoryView>& req,
     size += fbl::round_up(resp->size(), ZX_PAGE_SIZE);
   }
 
-  ::llcpp::fuchsia::hardware::rpmb::Request rpmb_request = {};
+  ::llcpp::fuchsia::hardware::rpmb::wire::Request rpmb_request = {};
 
   status = zx::vmo::create(size, 0, &rpmb_vmo);
   if (status != ZX_OK) {
@@ -1116,7 +1116,7 @@ zx_status_t OpteeClient::RpmbSendRequest(std::optional<SharedMemoryView>& req,
     return status;
   }
 
-  ::llcpp::fuchsia::mem::Range rx_frames_range = {};
+  ::llcpp::fuchsia::mem::wire::Range rx_frames_range = {};
 
   if (has_rx_frames) {
     status = rpmb_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &rx_frames_range.vmo);
@@ -1127,7 +1127,8 @@ zx_status_t OpteeClient::RpmbSendRequest(std::optional<SharedMemoryView>& req,
 
     rx_frames_range.offset = rx_offset;
     rx_frames_range.size = resp->size();
-    rpmb_request.rx_frames = fidl::unowned_ptr_t<::llcpp::fuchsia::mem::Range>(&rx_frames_range);
+    rpmb_request.rx_frames =
+        fidl::unowned_ptr_t<::llcpp::fuchsia::mem::wire::Range>(&rx_frames_range);
   }
 
   auto res = rpmb_client_->Request(std::move(rpmb_request));

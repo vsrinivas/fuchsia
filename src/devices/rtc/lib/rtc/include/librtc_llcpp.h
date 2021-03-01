@@ -26,18 +26,18 @@ enum Month {
   DECEMBER      // 31
 };
 
-bool IsRtcValid(FidlRtc::Time rtc);
+bool IsRtcValid(FidlRtc::wire::Time rtc);
 
 // Convert |seconds| to RTC. If |seconds| is before the local epoch time, then
 // the default RTC value is returned instead.
-FidlRtc::Time SecondsToRtc(uint64_t seconds);
+FidlRtc::wire::Time SecondsToRtc(uint64_t seconds);
 
-uint64_t SecondsSinceEpoch(FidlRtc::Time rtc);
+uint64_t SecondsSinceEpoch(FidlRtc::wire::Time rtc);
 
 // Validate that |rtc| is set to a valid time and is later than the default year
 // and environment backstop time. If it is, then return |rtc|.  Otherwise, return
 // the backstop time. If the backstop time isn't available, return the default rtc.
-FidlRtc::Time SanitizeRtc(FidlRtc::Time rtc);
+FidlRtc::wire::Time SanitizeRtc(FidlRtc::wire::Time rtc);
 
 }  // namespace rtc
 

@@ -45,7 +45,7 @@ zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
 
-zx_status_t VnodeDir::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info) {
+zx_status_t VnodeDir::QueryFilesystem(::llcpp::fuchsia::io::wire::FilesystemInfo* info) {
   static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER,
                 "Memfs name too long");
   *info = {};

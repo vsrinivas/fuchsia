@@ -62,7 +62,7 @@ zx::status<std::unique_ptr<DevicePartitioner>> CrosDevicePartitioner::Initialize
   std::unique_ptr<GptDevicePartitioner>& gpt_partitioner = status_or_gpt->gpt;
 
   GptDevice* gpt = gpt_partitioner->GetGpt();
-  block::BlockInfo info = gpt_partitioner->GetBlockInfo();
+  block::wire::BlockInfo info = gpt_partitioner->GetBlockInfo();
 
   if (!is_ready_to_pave(gpt, reinterpret_cast<fuchsia_hardware_block_BlockInfo*>(&info),
                         SZ_ZX_PART)) {

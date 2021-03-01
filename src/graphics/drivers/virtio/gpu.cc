@@ -100,7 +100,7 @@ zx_status_t GpuDevice::GetVmoAndStride(image_t* image, zx_unowned_handle_t handl
     return wait_result->status;
   }
 
-  sysmem::BufferCollectionInfo_2& collection_info = wait_result->buffer_collection_info;
+  sysmem::wire::BufferCollectionInfo_2& collection_info = wait_result->buffer_collection_info;
 
   if (!collection_info.settings.has_image_format_constraints) {
     zxlogf(ERROR, "%s: bad image format constraints", tag());
@@ -251,10 +251,10 @@ zx_status_t GpuDevice::DisplayControllerImplGetSysmemConnection(zx::channel sysm
 
 zx_status_t GpuDevice::DisplayControllerImplSetBufferCollectionConstraints(
     const image_t* config, zx_unowned_handle_t collection) {
-  sysmem::BufferCollectionConstraints constraints;
+  sysmem::wire::BufferCollectionConstraints constraints;
   constraints.usage.display = sysmem::displayUsageLayer;
   constraints.has_buffer_memory_constraints = true;
-  sysmem::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
+  sysmem::wire::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
   buffer_constraints.min_size_bytes = 0;
   buffer_constraints.max_size_bytes = 0xffffffff;
   buffer_constraints.physically_contiguous_required = true;
@@ -262,7 +262,7 @@ zx_status_t GpuDevice::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.ram_domain_supported = true;
   buffer_constraints.cpu_domain_supported = true;
   constraints.image_format_constraints_count = 1;
-  sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
+  sysmem::wire::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
   image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
   image_constraints.pixel_format.has_format_modifier = true;
   image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;

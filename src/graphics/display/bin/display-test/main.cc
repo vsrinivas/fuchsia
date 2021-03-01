@@ -330,7 +330,7 @@ zx_status_t capture_setup() {
   zx::event e2;
   status = client_event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &e2);
   if (status != ZX_OK) {
-    printf("Could not dupicate event %d\n", status);
+    printf("Could not duplicate event %d\n", status);
     return status;
   }
   auto event_status = dc->ImportEvent(std::move(e2), kEventId);
@@ -397,7 +397,7 @@ zx_status_t capture_setup() {
   }
 
   // set buffer constraints
-  fhd::ImageConfig image_config = {};
+  fhd::wire::ImageConfig image_config = {};
   image_config.type = fhd::TYPE_CAPTURE;
   auto constraints_resp = dc->SetBufferCollectionConstraints(kCollectionId, image_config);
   if (constraints_resp.status() != ZX_OK) {
@@ -422,20 +422,20 @@ zx_status_t capture_setup() {
   }
 
   // finally setup our constraints
-  sysmem::BufferCollectionConstraints constraints = {};
+  sysmem::wire::BufferCollectionConstraints constraints = {};
   constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
   constraints.buffer_memory_constraints.ram_domain_supported = true;
   constraints.image_format_constraints_count = 1;
-  sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
+  sysmem::wire::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
   if (platform == AMLOGIC_PLATFORM) {
     image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGR24;
   } else {
     image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
   }
   image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0] = sysmem::ColorSpace{
+  image_constraints.color_space[0] = sysmem::wire::ColorSpace{
       .type = sysmem::wire::ColorSpaceType::SRGB,
   };
   image_constraints.min_coded_width = 0;
@@ -470,7 +470,7 @@ zx_status_t capture_setup() {
 
   capture_vmo = std::move(wait_resp.value().buffer_collection_info.buffers[0].vmo);
   // import image for capture
-  fhd::ImageConfig capture_cfg = {};  // will contain a handle
+  fhd::wire::ImageConfig capture_cfg = {};  // will contain a handle
   auto importcap_resp = dc->ImportImageForCapture(capture_cfg, kCollectionId, 0);
   if (importcap_resp.status() != ZX_OK) {
     printf("Failed to start capture: %s\n", importcap_resp.error());
@@ -929,7 +929,7 @@ int main(int argc, const char* argv[]) {
   }
 
   if (capture && capture_setup() != ZX_OK) {
-    printf("Cound not setup capture\n");
+    printf("Could not setup capture\n");
     capture = false;
   }
 

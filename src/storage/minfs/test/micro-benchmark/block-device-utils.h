@@ -8,9 +8,9 @@
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <stdint.h>
 
-namespace minfs_micro_benchmanrk {
+namespace minfs_micro_benchmark {
 
-using BlockFidlMetrics = ::llcpp::fuchsia::hardware::block::BlockStats;
+using BlockFidlMetrics = ::llcpp::fuchsia::hardware::block::wire::BlockStats;
 
 constexpr uint8_t BitsPerByte = 8;
 
@@ -29,6 +29,6 @@ struct BlockDeviceSizes {
   uint64_t BytesToBlocks(uint64_t bytes) const { return (bytes + BlockSize() - 1) / BlockSize(); }
 };
 
-}  // namespace minfs_micro_benchmanrk
+}  // namespace minfs_micro_benchmark
 
 #endif  // SRC_STORAGE_MINFS_TEST_MICRO_BENCHMARK_BLOCK_DEVICE_UTILS_H_

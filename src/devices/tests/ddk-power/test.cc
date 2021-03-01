@@ -20,12 +20,12 @@
 using driver_integration_test::IsolatedDevmgr;
 using llcpp::fuchsia::device::Controller;
 using llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0;
-using llcpp::fuchsia::device::DevicePowerStateInfo;
 using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
 using llcpp::fuchsia::device::MAX_DEVICE_POWER_STATES;
 using llcpp::fuchsia::device::power::test::TestDevice;
 using llcpp::fuchsia::device::wire::DevicePerformanceStateInfo;
 using llcpp::fuchsia::device::wire::DevicePowerState;
+using llcpp::fuchsia::device::wire::DevicePowerStateInfo;
 using llcpp::fuchsia::device::wire::SystemPowerStateInfo;
 using llcpp::fuchsia::hardware::power::statecontrol::MAX_SYSTEM_POWER_STATES;
 using llcpp::fuchsia::hardware::power::statecontrol::wire::SystemPowerState;
@@ -1287,7 +1287,7 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToWorking) {
   ASSERT_OK(call_status);
   ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
 
-  ::llcpp::fuchsia::device::power::test::TestStatusInfo info;
+  ::llcpp::fuchsia::device::power::test::wire::TestStatusInfo info;
   info.resume_status = ZX_ERR_IO;
   info.out_power_state = static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D3COLD);
   info.out_performance_state = 1;
@@ -1357,7 +1357,7 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToPerformanceState) {
   ASSERT_OK(call_status);
   ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
 
-  ::llcpp::fuchsia::device::power::test::TestStatusInfo info;
+  ::llcpp::fuchsia::device::power::test::wire::TestStatusInfo info;
   info.resume_status = ZX_ERR_IO;
   info.out_power_state = static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0);
   // The previous performance_state set was 1.

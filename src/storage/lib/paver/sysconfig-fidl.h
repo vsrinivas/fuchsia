@@ -22,7 +22,7 @@ class Sysconfig : public ::llcpp::fuchsia::paver::Sysconfig::Interface {
 
   void Read(ReadCompleter::Sync& completer) override;
 
-  void Write(::llcpp::fuchsia::mem::Buffer payload, WriteCompleter::Sync& completer) override;
+  void Write(::llcpp::fuchsia::mem::wire::Buffer payload, WriteCompleter::Sync& completer) override;
 
   void GetPartitionSize(GetPartitionSizeCompleter::Sync& completer) override;
 

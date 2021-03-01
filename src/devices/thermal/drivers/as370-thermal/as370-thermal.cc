@@ -30,7 +30,7 @@ constexpr float SensorReadingToTemperature(int32_t reading) {
 
 namespace thermal {
 
-using llcpp::fuchsia::hardware::thermal::OperatingPoint;
+using llcpp::fuchsia::hardware::thermal::wire::OperatingPoint;
 
 zx_status_t As370Thermal::Create(void* ctx, zx_device_t* parent) {
   auto pdev = ddk::PDev::FromFragment(parent);

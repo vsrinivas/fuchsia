@@ -40,8 +40,8 @@ struct MmioInfo {
   std::vector<fbl::Mutex> locks;
 };
 
-using ::llcpp::fuchsia::hardware::registers::Metadata;
-using ::llcpp::fuchsia::hardware::registers::RegistersMetadataEntry;
+using ::llcpp::fuchsia::hardware::registers::wire::Metadata;
+using ::llcpp::fuchsia::hardware::registers::wire::RegistersMetadataEntry;
 
 template <typename T>
 class Register : public ::llcpp::fuchsia::hardware::registers::Device::Interface,

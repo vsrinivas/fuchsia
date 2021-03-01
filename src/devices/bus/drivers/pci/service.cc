@@ -22,7 +22,8 @@ zx_status_t Bus::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 // We need size both for the final serialized Device, as well as the out of line space used before
 // everything is serialized.
 constexpr size_t kAllocatorSize =
-    (PciFidl::Device::PrimarySize + (PciFidl::Device::MaxOutOfLine * 2)) * PciFidl::MAX_DEVICES;
+    (PciFidl::wire::Device::PrimarySize + (PciFidl::wire::Device::MaxOutOfLine * 2)) *
+    PciFidl::MAX_DEVICES;
 
 static_assert(PciFidl::BASE_CONFIG_SIZE == PCI_BASE_CONFIG_SIZE);
 
@@ -32,7 +33,7 @@ void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
   fidl::FidlAllocator<kAllocatorSize> allocator;
 
   size_t dev_idx = 0;
-  fidl::VectorView<PciFidl::Device> devices(allocator, dev_cnt);
+  fidl::VectorView<PciFidl::wire::Device> devices(allocator, dev_cnt);
   for (auto& device : devices_) {
     auto& cfg = device.config();
     if (dev_idx >= PciFidl::MAX_DEVICES) {
@@ -50,7 +51,7 @@ void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
     }
 
     size_t bar_cnt = device.bar_count();
-    fidl::VectorView<PciFidl::BaseAddress> bars(allocator, bar_cnt);
+    fidl::VectorView<PciFidl::wire::BaseAddress> bars(allocator, bar_cnt);
     for (size_t i = 0; i < bar_cnt; i++) {
       auto info = device.GetBar(i);
       bars[i].is_memory = info.is_mmio;
@@ -62,7 +63,7 @@ void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
     }
 
     size_t cap_cnt = device.capabilities().list.size_slow();
-    fidl::VectorView<PciFidl::Capability> capabilities(allocator, cap_cnt);
+    fidl::VectorView<PciFidl::wire::Capability> capabilities(allocator, cap_cnt);
     size_t cap_idx = 0;
     for (auto& cap : device.capabilities().list) {
       if (cap_idx >= PciFidl::MAX_CAPABILITIES) {
@@ -76,7 +77,7 @@ void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
     }
 
     size_t ext_cap_cnt = device.capabilities().ext_list.size_slow();
-    fidl::VectorView<PciFidl::ExtendedCapability> ext_capabilities(allocator, ext_cap_cnt);
+    fidl::VectorView<PciFidl::wire::ExtendedCapability> ext_capabilities(allocator, ext_cap_cnt);
     size_t ext_cap_idx = 0;
     for (auto& cap : device.capabilities().ext_list) {
       if (ext_cap_idx >= PciFidl::MAX_EXT_CAPABILITIES) {
@@ -101,7 +102,7 @@ void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
 }
 
 void Bus::GetHostBridgeInfo(GetHostBridgeInfoCompleter::Sync& completer) {
-  PciFidl::HostBridgeInfo info = {
+  PciFidl::wire::HostBridgeInfo info = {
       .start_bus_number = info_.start_bus_num,
       .end_bus_number = info_.end_bus_num,
       .segment_group = info_.segment_group,

@@ -78,7 +78,7 @@ zx_status_t Directory::Close() { return ZX_OK; }
 
 constexpr const char kFsName[] = "factoryfs";
 
-zx_status_t Directory::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info) {
+zx_status_t Directory::QueryFilesystem(::llcpp::fuchsia::io::wire::FilesystemInfo* info) {
   static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER,
                 "Factoryfs name too long");
   *info = {};

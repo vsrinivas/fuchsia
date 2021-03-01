@@ -161,7 +161,7 @@ void DeviceManager::DdkChildPreRelease(void* child_ctx) {
   }
 }
 
-void DeviceManager::OpenForWrite(llcpp::fuchsia::hardware::block::verified::Config config,
+void DeviceManager::OpenForWrite(llcpp::fuchsia::hardware::block::verified::wire::Config config,
                                  OpenForWriteCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
@@ -243,10 +243,10 @@ void DeviceManager::OnSealCompleted(zx_status_t status, const uint8_t* seal_buf,
 
   if (status == ZX_OK) {
     // Assemble the result struct and reply with success
-    llcpp::fuchsia::hardware::block::verified::Sha256Seal sha256;
+    llcpp::fuchsia::hardware::block::verified::wire::Sha256Seal sha256;
     memcpy(sha256.superblock_hash.begin(), seal_buf, seal_len);
 
-    fidl::aligned<llcpp::fuchsia::hardware::block::verified::Sha256Seal> aligned =
+    fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::Sha256Seal> aligned =
         std::move(sha256);
     seal_completer_->ReplySuccess(llcpp::fuchsia::hardware::block::verified::wire::Seal::WithSha256(
         fidl::unowned_ptr(&aligned)));
@@ -329,9 +329,10 @@ void DeviceManager::CompleteOpenForVerifiedRead(zx_status_t status) {
   superblock_verifier_.reset();
 }
 
-void DeviceManager::OpenForVerifiedRead(llcpp::fuchsia::hardware::block::verified::Config config,
-                                        llcpp::fuchsia::hardware::block::verified::wire::Seal seal,
-                                        OpenForVerifiedReadCompleter::Sync& completer) {
+void DeviceManager::OpenForVerifiedRead(
+    llcpp::fuchsia::hardware::block::verified::wire::Config config,
+    llcpp::fuchsia::hardware::block::verified::wire::Seal seal,
+    OpenForVerifiedReadCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
   if (state_ != kClosed) {

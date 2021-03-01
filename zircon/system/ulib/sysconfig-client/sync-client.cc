@@ -384,7 +384,7 @@ zx_status_t SyncClient::Write(size_t offset, size_t len, const zx::vmo& vmo, zx_
   if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
     return status;
   }
-  skipblock::WriteBytesOperation operation = {
+  skipblock::wire::WriteBytesOperation operation = {
       .vmo = std::move(dup),
       .vmo_offset = vmo_offset,
       .offset = offset,
@@ -402,7 +402,7 @@ zx_status_t SyncClient::WriteBytesWithoutErase(size_t offset, size_t len, const 
   if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
     return status;
   }
-  skipblock::WriteBytesOperation operation = {
+  skipblock::wire::WriteBytesOperation operation = {
       .vmo = std::move(dup),
       .vmo_offset = vmo_offset,
       .offset = offset,
@@ -462,7 +462,7 @@ zx_status_t SyncClient::LoadFromStorage() {
       status != ZX_OK) {
     return status;
   }
-  skipblock::ReadWriteOperation operation = {
+  skipblock::wire::ReadWriteOperation operation = {
       .vmo = std::move(dup),
       .vmo_offset = 0,
       .block = 0,

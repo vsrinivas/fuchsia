@@ -48,11 +48,11 @@ class LayerTest : public TestBase {
 
 TEST_F(LayerTest, PrimaryBasic) {
   Layer l(1);
-  fhd::ImageConfig image_config = {.width = kDisplayWidth,
-                                   .height = kDisplayHeight,
-                                   .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
-                                   .type = fhd::TYPE_SIMPLE};
-  fhd::Frame frame = {.width = kDisplayWidth, .height = kDisplayHeight};
+  fhd::wire::ImageConfig image_config = {.width = kDisplayWidth,
+                                         .height = kDisplayHeight,
+                                         .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
+                                         .type = fhd::TYPE_SIMPLE};
+  fhd::wire::Frame frame = {.width = kDisplayWidth, .height = kDisplayHeight};
   l.SetPrimaryConfig(image_config);
   l.SetPrimaryPosition(fhd::wire::Transform::IDENTITY, frame, frame);
   l.SetPrimaryAlpha(fhd::wire::AlphaMode::DISABLE, 0);

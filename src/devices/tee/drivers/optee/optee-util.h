@@ -40,7 +40,7 @@ class Uuid final {
   Uuid() = default;
   Uuid(uint32_t time_low, uint16_t time_mid, uint16_t time_hi_and_version,
        const std::array<uint8_t, 8>& clock_seq_and_node);
-  explicit Uuid(const fuchsia_tee::Uuid& zx_uuid);
+  explicit Uuid(const fuchsia_tee::wire::Uuid& zx_uuid);
   explicit Uuid(const uuid_t& uuid);
   explicit Uuid(const Octets& uuid);
 

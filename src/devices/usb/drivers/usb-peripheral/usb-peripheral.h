@@ -70,9 +70,9 @@ namespace usb_peripheral {
 class UsbFunction;
 
 using ConfigurationDescriptor =
-    ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
-using ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor;
-using ::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor;
+    ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
+using ::llcpp::fuchsia::hardware::usb::peripheral::wire::DeviceDescriptor;
+using ::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor;
 
 class UsbPeripheral;
 using UsbPeripheralType = ddk::Device<UsbPeripheral, ddk::Unbindable, ddk::Messageable>;

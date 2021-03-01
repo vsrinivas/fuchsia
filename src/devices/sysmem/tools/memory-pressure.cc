@@ -64,7 +64,7 @@ int MemoryPressureCommand(fxl::CommandLine command_line, bool sleep) {
 
   bool physically_contiguous = command_line.HasOption("contiguous");
 
-  sysmem::BufferCollectionConstraints constraints;
+  sysmem::wire::BufferCollectionConstraints constraints;
   std::string usage;
   if (command_line.GetOptionValue("usage", &usage)) {
     if (usage == "vulkan") {

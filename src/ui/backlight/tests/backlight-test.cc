@@ -8,9 +8,9 @@
 #include <lib/zx/channel.h>
 
 #include <array>
+#include <cmath>
 #include <filesystem>
 #include <vector>
-#include <cmath>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
@@ -49,7 +49,7 @@ class BacklightDevice {
   }
 
   zx_status_t SetBrightnessNormalized(double brightness) {
-    FidlBacklight::State state = {.backlight_on = brightness > 0, .brightness = brightness};
+    FidlBacklight::wire::State state = {.backlight_on = brightness > 0, .brightness = brightness};
 
     printf("Setting brightness to: %f\n", brightness);
     auto response = client_.SetStateNormalized(state);
@@ -72,7 +72,7 @@ class BacklightDevice {
   }
 
   zx_status_t SetBrightnessAbsolute(double brightness) {
-    FidlBacklight::State state = {.backlight_on = brightness > 0, .brightness = brightness};
+    FidlBacklight::wire::State state = {.backlight_on = brightness > 0, .brightness = brightness};
 
     printf("Setting brightness to: %f nits\n", brightness);
     auto response = client_.SetStateAbsolute(state);

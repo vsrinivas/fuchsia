@@ -55,14 +55,14 @@ RegistersMetadataEntry BuildMetadata(fidl::AnyAllocator& allocator, uint32_t bin
   return entry;
 }
 
-using ::llcpp::fuchsia::hardware::registers::MmioMetadataEntry;
+using ::llcpp::fuchsia::hardware::registers::wire::MmioMetadataEntry;
 MmioMetadataEntry BuildMetadata(fidl::AnyAllocator& allocator, uint32_t id) {
   MmioMetadataEntry entry(allocator);
   entry.set_id(allocator, id);
   return entry;
 }
 
-using ::llcpp::fuchsia::hardware::registers::Metadata;
+using ::llcpp::fuchsia::hardware::registers::wire::Metadata;
 Metadata BuildMetadata(fidl::AnyAllocator& allocator, fidl::VectorView<MmioMetadataEntry> mmio,
                        fidl::VectorView<RegistersMetadataEntry> registers) {
   Metadata metadata(allocator);

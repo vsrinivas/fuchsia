@@ -22,18 +22,18 @@ namespace {
 // require things that aren't available on the current system.
 class StubBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
-  void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
+  void SetConstraints(bool has_constraints, sysmem::wire::BufferCollectionConstraints constraints,
                       SetConstraintsCompleter::Sync& _completer) override {
     auto& image_constraints = constraints.image_format_constraints[0];
     EXPECT_EQ(sysmem::wire::PixelFormatType::BGRA32, image_constraints.pixel_format.type);
     EXPECT_EQ(4u, image_constraints.bytes_per_row_divisor);
   }
   void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& _completer) override {
-    sysmem::BufferCollectionInfo_2 info;
+    sysmem::wire::BufferCollectionInfo_2 info;
     info.settings.has_image_format_constraints = true;
     info.buffer_count = 1;
     ASSERT_OK(zx::vmo::create(4096, 0, &info.buffers[0].vmo));
-    sysmem::ImageFormatConstraints& constraints = info.settings.image_format_constraints;
+    sysmem::wire::ImageFormatConstraints& constraints = info.settings.image_format_constraints;
     constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
     constraints.pixel_format.has_format_modifier = true;
     constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;

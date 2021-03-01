@@ -62,7 +62,7 @@ class TestPowerDriver : public DeviceType,
   void GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync& completer) override;
   void GetCurrentDeviceAutoSuspendConfig(
       GetCurrentDeviceAutoSuspendConfigCompleter::Sync& completer) override;
-  void SetTestStatusInfo(llcpp::fuchsia::device::power::test::TestStatusInfo status_info,
+  void SetTestStatusInfo(llcpp::fuchsia::device::power::test::wire::TestStatusInfo status_info,
                          SetTestStatusInfoCompleter::Sync& completer) override;
 
  private:
@@ -100,7 +100,7 @@ void TestPowerDriver::GetCurrentDeviceAutoSuspendConfig(
                          static_cast<DevicePowerState>(deepest_autosuspend_sleep_state_));
 }
 void TestPowerDriver::SetTestStatusInfo(
-    llcpp::fuchsia::device::power::test::TestStatusInfo status_info,
+    llcpp::fuchsia::device::power::test::wire::TestStatusInfo status_info,
     SetTestStatusInfoCompleter::Sync& completer) {
   reply_suspend_status_ = status_info.suspend_status;
   reply_resume_status_ = status_info.resume_status;

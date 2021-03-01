@@ -34,18 +34,19 @@ class EchoClientApp {
 
   // Half the methods are testing the managed flavor; the other half are testing caller-allocate.
 
-  Echo::ResultOf::EchoStruct EchoStruct(Struct value, ::fidl::StringView forward_to_server) {
+  Echo::ResultOf::EchoStruct EchoStruct(wire::Struct value, ::fidl::StringView forward_to_server) {
     return client_.EchoStruct(std::move(value), std::move(forward_to_server));
   }
 
-  Echo::ResultOf::EchoStructWithError EchoStructWithError(Struct value, wire::default_enum err,
+  Echo::ResultOf::EchoStructWithError EchoStructWithError(wire::Struct value,
+                                                          wire::default_enum err,
                                                           ::fidl::StringView forward_to_server,
                                                           wire::RespondWith result_variant) {
     return client_.EchoStructWithError(std::move(value), err, std::move(forward_to_server),
                                        result_variant);
   }
 
-  zx_status_t EchoStructNoRetVal(Struct value, ::fidl::StringView forward_to_server,
+  zx_status_t EchoStructNoRetVal(wire::Struct value, ::fidl::StringView forward_to_server,
                                  Echo::SyncEventHandler& event_handler) {
     auto result = client_.EchoStructNoRetVal(std::move(value), std::move(forward_to_server));
     if (result.status() != ZX_OK) {
@@ -55,14 +56,14 @@ class EchoClientApp {
   }
 
   Echo::UnownedResultOf::EchoArrays EchoArrays(::fidl::BufferSpan request_buffer,
-                                               ArraysStruct value,
+                                               wire::ArraysStruct value,
                                                ::fidl::StringView forward_to_server,
                                                ::fidl::BufferSpan response_buffer) {
     return client_.EchoArrays(request_buffer, std::move(value), std::move(forward_to_server),
                               response_buffer);
   }
 
-  Echo::ResultOf::EchoArraysWithError EchoArraysWithError(ArraysStruct value,
+  Echo::ResultOf::EchoArraysWithError EchoArraysWithError(wire::ArraysStruct value,
                                                           wire::default_enum err,
                                                           ::fidl::StringView forward_to_server,
                                                           wire::RespondWith result_variant) {
@@ -70,12 +71,12 @@ class EchoClientApp {
                                        result_variant);
   }
 
-  Echo::ResultOf::EchoVectors EchoVectors(VectorsStruct value,
+  Echo::ResultOf::EchoVectors EchoVectors(wire::VectorsStruct value,
                                           ::fidl::StringView forward_to_server) {
     return client_.EchoVectors(std::move(value), std::move(forward_to_server));
   }
 
-  Echo::ResultOf::EchoVectorsWithError EchoVectorsWithError(VectorsStruct value,
+  Echo::ResultOf::EchoVectorsWithError EchoVectorsWithError(wire::VectorsStruct value,
                                                             wire::default_enum err,
                                                             ::fidl::StringView forward_to_server,
                                                             wire::RespondWith result_variant) {
@@ -83,7 +84,8 @@ class EchoClientApp {
                                         result_variant);
   }
 
-  Echo::UnownedResultOf::EchoTable EchoTable(::fidl::BufferSpan request_buffer, AllTypesTable value,
+  Echo::UnownedResultOf::EchoTable EchoTable(::fidl::BufferSpan request_buffer,
+                                             wire::AllTypesTable value,
                                              ::fidl::StringView forward_to_server,
                                              ::fidl::BufferSpan response_buffer) {
     return client_.EchoTable(request_buffer, std::move(value), std::move(forward_to_server),
@@ -91,7 +93,7 @@ class EchoClientApp {
   }
 
   Echo::UnownedResultOf::EchoTableWithError EchoTableWithError(::fidl::BufferSpan request_buffer,
-                                                               AllTypesTable value,
+                                                               wire::AllTypesTable value,
                                                                wire::default_enum err,
                                                                ::fidl::StringView forward_to_server,
                                                                wire::RespondWith result_variant,
@@ -146,7 +148,7 @@ class EchoConnection final : public Echo::Interface {
  public:
   EchoConnection() = default;
 
-  void EchoStruct(Struct value, ::fidl::StringView forward_to_server,
+  void EchoStruct(wire::Struct value, ::fidl::StringView forward_to_server,
                   EchoStructCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
       completer.Reply(std::move(value));
@@ -158,7 +160,7 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoStructWithError(Struct value, wire::default_enum err,
+  void EchoStructWithError(wire::Struct value, wire::default_enum err,
                            ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                            EchoStructWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
@@ -175,7 +177,7 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoStructNoRetVal(Struct value, ::fidl::StringView forward_to_server,
+  void EchoStructNoRetVal(wire::Struct value, ::fidl::StringView forward_to_server,
                           EchoStructNoRetValCompleter::Sync&) override {
     if (forward_to_server.empty()) {
       auto status = server_binding_.value()->EchoEvent(std::move(value));
@@ -212,7 +214,7 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoArrays(ArraysStruct value, ::fidl::StringView forward_to_server,
+  void EchoArrays(wire::ArraysStruct value, ::fidl::StringView forward_to_server,
                   EchoArraysCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
       completer.Reply(std::move(value));
@@ -229,7 +231,7 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoArraysWithError(ArraysStruct value, wire::default_enum err,
+  void EchoArraysWithError(wire::ArraysStruct value, wire::default_enum err,
                            ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                            EchoArraysWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
@@ -247,13 +249,13 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoVectors(VectorsStruct value, ::fidl::StringView forward_to_server,
+  void EchoVectors(wire::VectorsStruct value, ::fidl::StringView forward_to_server,
                    EchoVectorsCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
       completer.Reply(std::move(value));
     } else {
       EchoClientApp app(std::move(forward_to_server));
-      VectorsStruct out_value;
+      wire::VectorsStruct out_value;
       auto result = app.EchoVectors(std::move(value), "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.error());
@@ -261,7 +263,7 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoVectorsWithError(VectorsStruct value, wire::default_enum err,
+  void EchoVectorsWithError(wire::VectorsStruct value, wire::default_enum err,
                             ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                             EchoVectorsWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
@@ -279,7 +281,7 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoTable(AllTypesTable value, ::fidl::StringView forward_to_server,
+  void EchoTable(wire::AllTypesTable value, ::fidl::StringView forward_to_server,
                  EchoTableCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
       completer.Reply(std::move(value));
@@ -297,7 +299,7 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoTableWithError(AllTypesTable value, wire::default_enum err,
+  void EchoTableWithError(wire::AllTypesTable value, wire::default_enum err,
                           ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                           EchoTableWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {

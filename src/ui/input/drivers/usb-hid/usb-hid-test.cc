@@ -33,7 +33,7 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 
   // Initialize a Usb HID device. Asserts on failure.
   void InitUsbHid(fbl::String* devpath,
-                  ::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor desc);
+                  ::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor desc);
 
   // Unbinds Usb HID driver from host.
   void Unbind(fbl::String devpath);
@@ -41,17 +41,18 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 
 // Initialize a Usb HID device. Asserts on failure.
 void USBVirtualBus::InitUsbHid(
-    fbl::String* devpath, ::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor desc) {
+    fbl::String* devpath,
+    ::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor desc) {
   namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
-  usb_peripheral::DeviceDescriptor device_desc = {};
+      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
+  usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);
   device_desc.b_max_packet_size0 = 64;
   device_desc.bcd_device = htole16(0x0100);
   device_desc.b_num_configurations = 1;
 
-  std::vector<usb_peripheral::FunctionDescriptor> function_descs;
+  std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
   function_descs.push_back(desc);
   std::vector<ConfigurationDescriptor> config_descs;
   config_descs.emplace_back(fidl::unowned_vec(function_descs));
@@ -98,7 +99,7 @@ void USBVirtualBus::Unbind(fbl::String devpath) {
 class UsbOneEndpointTest : public zxtest::Test {
  public:
   void SetUp() override {
-    ::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor usb_hid_function_desc = {
+    ::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor usb_hid_function_desc = {
         .interface_class = USB_CLASS_HID,
         .interface_subclass = 0,
         .interface_protocol = USB_PROTOCOL_TEST_HID_ONE_ENDPOINT,
@@ -130,7 +131,7 @@ class UsbOneEndpointTest : public zxtest::Test {
 class UsbTwoEndpointTest : public zxtest::Test {
  public:
   void SetUp() override {
-    ::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor usb_hid_function_desc = {
+    ::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor usb_hid_function_desc = {
         .interface_class = USB_CLASS_HID,
         .interface_subclass = 0,
         .interface_protocol = USB_PROTOCOL_TEST_HID_TWO_ENDPOINT,

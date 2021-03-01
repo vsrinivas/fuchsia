@@ -220,7 +220,7 @@ uint32_t AddressSpaceDevice::ChildDriverPing(uint32_t handle) {
 zx_status_t AddressSpaceDevice::OpenChildDriver(
     llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType type,
     zx::channel request) {
-  using llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage;
+  using llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverPingMessage;
 
   ddk::IoBuffer io_buffer;
   uint32_t handle;
@@ -386,9 +386,9 @@ void AddressSpaceChildDriver::UnclaimSharedBlock(uint64_t offset,
 };
 
 void AddressSpaceChildDriver::Ping(
-    llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage ping,
+    llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverPingMessage ping,
     PingCompleter::Sync& completer) {
-  using llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage;
+  using llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverPingMessage;
   AddressSpaceChildDriverPingMessage* output =
       reinterpret_cast<AddressSpaceChildDriverPingMessage*>(io_buffer_.virt());
   *output = ping;

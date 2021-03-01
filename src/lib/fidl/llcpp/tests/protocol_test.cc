@@ -271,13 +271,13 @@ TEST(EventSenderTest, SendEvent) {
 class HandleProviderServer : public test::HandleProvider::Interface {
  public:
   void GetHandle(GetHandleCompleter::Sync& completer) override {
-    test::HandleStruct s;
+    test::wire::HandleStruct s;
     zx::event::create(0, &s.h);
     completer.Reply(std::move(s));
   }
 
   void GetHandleVector(uint32_t count, GetHandleVectorCompleter::Sync& completer) override {
-    std::vector<test::HandleStruct> v(count);
+    std::vector<test::wire::HandleStruct> v(count);
     for (auto& s : v) {
       zx::event::create(0, &s.h);
     }
@@ -287,7 +287,7 @@ class HandleProviderServer : public test::HandleProvider::Interface {
   void GetHandleUnion(GetHandleUnionCompleter::Sync& completer) override {
     zx::event h;
     zx::event::create(0, &h);
-    test::HandleUnionStruct s = {.u = test::wire::HandleUnion::WithH(fidl::unowned_ptr(&h))};
+    test::wire::HandleUnionStruct s = {.u = test::wire::HandleUnion::WithH(fidl::unowned_ptr(&h))};
     completer.Reply(std::move(s));
   }
 };

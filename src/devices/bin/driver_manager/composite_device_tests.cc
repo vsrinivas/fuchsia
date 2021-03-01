@@ -74,24 +74,24 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
                                   const char* name, zx_status_t expected_status = ZX_OK,
                                   const device_metadata_t* metadata = nullptr,
                                   size_t metadata_count = 0) {
-  std::vector<llcpp::fuchsia::device::manager::DeviceFragment> fragments = {};
+  std::vector<llcpp::fuchsia::device::manager::wire::DeviceFragment> fragments = {};
   for (size_t i = 0; i < fragment_count; ++i) {
     // Define a union type to avoid violating the strict aliasing rule.
 
     zx_bind_inst_t always = BI_MATCH();
     zx_bind_inst_t protocol = BI_MATCH_IF(EQ, BIND_PROTOCOL, protocol_ids[i]);
 
-    llcpp::fuchsia::device::manager::DeviceFragment fragment;  // = &fragments[i];
+    llcpp::fuchsia::device::manager::wire::DeviceFragment fragment;  // = &fragments[i];
     fragment.name = ::fidl::StringView("unnamed-fragment");
     fragment.parts_count = 2;
     fragment.parts[0].match_program_count = 1;
-    fragment.parts[0].match_program[0] = ::llcpp::fuchsia::device::manager::BindInstruction{
+    fragment.parts[0].match_program[0] = ::llcpp::fuchsia::device::manager::wire::BindInstruction{
         .op = always.op,
         .arg = always.arg,
         .debug = always.debug,
     };
     fragment.parts[1].match_program_count = 1;
-    fragment.parts[1].match_program[0] = ::llcpp::fuchsia::device::manager::BindInstruction{
+    fragment.parts[1].match_program[0] = ::llcpp::fuchsia::device::manager::wire::BindInstruction{
         .op = protocol.op,
         .arg = protocol.arg,
         .debug = always.debug,
@@ -99,18 +99,18 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
     fragments.push_back(std::move(fragment));
   }
 
-  std::vector<llcpp::fuchsia::device::manager::DeviceProperty> props_list = {};
+  std::vector<llcpp::fuchsia::device::manager::wire::DeviceProperty> props_list = {};
   for (size_t i = 0; i < props_count; i++) {
-    props_list.push_back(llcpp::fuchsia::device::manager::DeviceProperty{
+    props_list.push_back(llcpp::fuchsia::device::manager::wire::DeviceProperty{
         .id = props[i].id,
         .reserved = props[i].reserved,
         .value = props[i].value,
     });
   }
 
-  std::vector<llcpp::fuchsia::device::manager::DeviceMetadata> metadata_list = {};
+  std::vector<llcpp::fuchsia::device::manager::wire::DeviceMetadata> metadata_list = {};
   for (size_t i = 0; i < metadata_count; i++) {
-    auto meta = llcpp::fuchsia::device::manager::DeviceMetadata{
+    auto meta = llcpp::fuchsia::device::manager::wire::DeviceMetadata{
         .key = metadata[i].type,
         .data = ::fidl::VectorView(
             fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<void*>(metadata[i].data))),
@@ -118,7 +118,7 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
     metadata_list.emplace_back(std::move(meta));
   }
 
-  llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc = {
+  llcpp::fuchsia::device::manager::wire::CompositeDeviceDescriptor comp_desc = {
       .props = ::fidl::unowned_vec(props_list),
       .fragments = ::fidl::unowned_vec(fragments),
       .coresident_device_index = 0,

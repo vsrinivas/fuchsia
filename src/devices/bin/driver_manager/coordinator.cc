@@ -483,7 +483,7 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
 // Caller closes handles on error, so we don't have to.
 zx_status_t Coordinator::AddDevice(
     const fbl::RefPtr<Device>& parent, zx::channel device_controller, zx::channel coordinator,
-    const llcpp::fuchsia::device::manager::DeviceProperty* props_data, size_t props_count,
+    const llcpp::fuchsia::device::manager::wire::DeviceProperty* props_data, size_t props_count,
     fbl::StringPiece name, uint32_t protocol_id, fbl::StringPiece driver_path,
     fbl::StringPiece args, bool invisible, bool skip_autobind, bool has_init, bool always_init,
     zx::vmo inspect, zx::channel client_remote, fbl::RefPtr<Device>* new_device) {
@@ -792,7 +792,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
 
 zx_status_t Coordinator::AddCompositeDevice(
     const fbl::RefPtr<Device>& dev, fbl::StringPiece name,
-    llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc) {
+    llcpp::fuchsia::device::manager::wire::CompositeDeviceDescriptor comp_desc) {
   // Only the platform bus driver should be able to use this.  It is the
   // descendant of the sys device node.
   if (dev->parent() != sys_device_) {
@@ -1633,9 +1633,9 @@ void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
     return;
   }
 
-  std::vector<llcpp::fuchsia::device::manager::BindInstruction> instructions;
+  std::vector<llcpp::fuchsia::device::manager::wire::BindInstruction> instructions;
   for (uint32_t i = 0; i < count; i++) {
-    instructions.push_back(llcpp::fuchsia::device::manager::BindInstruction{
+    instructions.push_back(llcpp::fuchsia::device::manager::wire::BindInstruction{
         .op = driver->binding[i].op,
         .arg = driver->binding[i].arg,
         .debug = driver->binding[i].debug,
@@ -1644,7 +1644,7 @@ void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
   completer.ReplySuccess(::fidl::unowned_vec(instructions));
 }
 
-void Coordinator::Register(::llcpp::fuchsia::pkg::PackageUrl driver_url,
+void Coordinator::Register(::llcpp::fuchsia::pkg::wire::PackageUrl driver_url,
                            RegisterCompleter::Sync& completer) {
   std::string driver_url_str(driver_url.url.data(), driver_url.url.size());
   zx_status_t status = LoadEphemeralDriver(&package_resolver_, driver_url_str);
@@ -1687,9 +1687,9 @@ void Coordinator::GetDeviceProperties(::fidl::StringView device_path,
     return;
   }
 
-  std::vector<llcpp::fuchsia::device::manager::DeviceProperty> props;
+  std::vector<llcpp::fuchsia::device::manager::wire::DeviceProperty> props;
   for (const auto& prop : device->props()) {
-    props.push_back(llcpp::fuchsia::device::manager::DeviceProperty{
+    props.push_back(llcpp::fuchsia::device::manager::wire::DeviceProperty{
         .id = prop.id,
         .reserved = prop.reserved,
         .value = prop.value,

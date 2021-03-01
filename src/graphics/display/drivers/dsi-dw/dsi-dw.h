@@ -60,8 +60,8 @@ class DsiDwBase : public DeviceTypeBase,
   zx_status_t Bind();
 
   // FIDL
-  void SendCmd(::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd, ::fidl::VectorView<uint8_t> txdata,
-               SendCmdCompleter::Sync& _completer) override;
+  void SendCmd(::llcpp::fuchsia::hardware::dsi::wire::MipiDsiCmd cmd,
+               ::fidl::VectorView<uint8_t> txdata, SendCmdCompleter::Sync& _completer) override;
 
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
@@ -125,11 +125,11 @@ class DsiDw : public DeviceType, public ddk::DsiImplProtocol<DsiDw, ddk::base_pr
   zx_status_t GenWriteShort(const mipi_dsi_cmd_t& cmd) TA_REQ(command_lock_);
   zx_status_t DcsWriteShort(const mipi_dsi_cmd_t& cmd) TA_REQ(command_lock_);
   zx_status_t GenWriteLong(const mipi_dsi_cmd_t& cmd) TA_REQ(command_lock_);
-  zx_status_t DcsWriteShort(const fidl_dsi::MipiDsiCmd& cmd, fidl::VectorView<uint8_t>& txdata)
-      TA_REQ(command_lock_);
+  zx_status_t DcsWriteShort(const fidl_dsi::wire::MipiDsiCmd& cmd,
+                            fidl::VectorView<uint8_t>& txdata) TA_REQ(command_lock_);
   zx_status_t GenRead(const mipi_dsi_cmd_t& cmd) TA_REQ(command_lock_);
   zx_status_t SendCommand(const mipi_dsi_cmd_t& cmd);
-  zx_status_t SendCommand(const fidl_dsi::MipiDsiCmd& cmd, fidl::VectorView<uint8_t>& txdata,
+  zx_status_t SendCommand(const fidl_dsi::wire::MipiDsiCmd& cmd, fidl::VectorView<uint8_t>& txdata,
                           fidl::VectorView<uint8_t>& response);
   zx_status_t GetColorCode(color_code_t c, bool& packed, uint8_t& code);
   zx_status_t GetVideoMode(video_mode_t v, uint8_t& mode);

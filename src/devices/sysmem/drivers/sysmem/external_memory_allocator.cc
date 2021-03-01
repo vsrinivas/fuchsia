@@ -9,10 +9,10 @@
 #include "macros.h"
 
 namespace sysmem_driver {
-ExternalMemoryAllocator::ExternalMemoryAllocator(MemoryAllocator::Owner* owner,
-                                                 fidl::Client<llcpp::fuchsia::sysmem2::Heap> heap,
-                                                 std::unique_ptr<async::Wait> wait_for_close,
-                                                 llcpp::fuchsia::sysmem2::HeapProperties properties)
+ExternalMemoryAllocator::ExternalMemoryAllocator(
+    MemoryAllocator::Owner* owner, fidl::Client<llcpp::fuchsia::sysmem2::Heap> heap,
+    std::unique_ptr<async::Wait> wait_for_close,
+    llcpp::fuchsia::sysmem2::wire::HeapProperties properties)
     : MemoryAllocator(std::move(properties)),
       owner_(owner),
       heap_(std::move(heap)),
@@ -42,7 +42,7 @@ zx_status_t ExternalMemoryAllocator::Allocate(uint64_t size, std::optional<std::
 
 zx_status_t ExternalMemoryAllocator::SetupChildVmo(
     const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-    llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings) {
+    llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings) {
   zx::vmo child_vmo_copy;
   zx_status_t status = child_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &child_vmo_copy);
   if (status != ZX_OK) {

@@ -106,7 +106,7 @@ zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
 std::optional<Arguments> GetArguments(llcpp::fuchsia::boot::Arguments::SyncClient* client) {
   Arguments ret;
 
-  llcpp::fuchsia::boot::BoolPair bool_keys[]{
+  llcpp::fuchsia::boot::wire::BoolPair bool_keys[]{
       {fidl::StringView{"console.shell"}, false},
       {fidl::StringView{"kernel.shell"}, false},
       {fidl::StringView{"console.is_virtio"}, false},

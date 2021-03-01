@@ -29,7 +29,7 @@ TEST(ConsumerControlTest, HidButtonsTest) {
             consumer_control.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
+  fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             consumer_control.CreateDescriptor(descriptor_allocator, descriptor));
   EXPECT_TRUE(descriptor.has_consumer_control());
@@ -56,7 +56,7 @@ TEST(ConsumerControlTest, HidButtonsTest) {
   fill_button_in_report(BUTTONS_ID_MIC_MUTE, true, &report);
 
   hid_input_report::TestReportAllocator report_allocator;
-  fuchsia_input_report::InputReport input_report(report_allocator);
+  fuchsia_input_report::wire::InputReport input_report(report_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             consumer_control.ParseInputReport(reinterpret_cast<uint8_t*>(&report), sizeof(report),
                                               report_allocator, input_report));

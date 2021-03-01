@@ -35,10 +35,10 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 // Initialize an FTDI USB device. Asserts on failure.
 void USBVirtualBus::InitFtdi(fbl::String* devpath) {
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
+      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
   namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
 
-  usb_peripheral::DeviceDescriptor device_desc = {};
+  usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);
   device_desc.b_max_packet_size0 = 64;
   device_desc.bcd_device = htole16(0x0100);
@@ -49,13 +49,13 @@ void USBVirtualBus::InitFtdi(fbl::String* devpath) {
   // Setting 232H product
   device_desc.id_product = htole16(0x6014);
 
-  usb_peripheral::FunctionDescriptor ftdi_function_desc = {
+  usb_peripheral::wire::FunctionDescriptor ftdi_function_desc = {
       .interface_class = USB_CLASS_VENDOR,
       .interface_subclass = USB_SUBCLASS_VENDOR,
       .interface_protocol = USB_PROTOCOL_TEST_FTDI,
   };
 
-  std::vector<usb_peripheral::FunctionDescriptor> function_descs;
+  std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
   function_descs.push_back(ftdi_function_desc);
   std::vector<ConfigurationDescriptor> config_descs;
   config_descs.emplace_back(fidl::unowned_vec(function_descs));

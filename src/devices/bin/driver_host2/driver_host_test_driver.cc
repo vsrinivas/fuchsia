@@ -18,7 +18,7 @@ class TestDriver {
  public:
   explicit TestDriver(async_dispatcher_t* dispatcher) : outgoing_(dispatcher) {}
 
-  zx::status<> Init(fdf::DriverStartArgs* start_args) {
+  zx::status<> Init(fdf::wire::DriverStartArgs* start_args) {
     // Call the "func" driver symbol.
     auto func = start_args::SymbolValue<void (*)()>(start_args->symbols(), "func");
     if (func.is_ok()) {
@@ -53,7 +53,7 @@ class TestDriver {
 
 zx_status_t test_driver_start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher,
                               void** driver) {
-  fdf::DriverStartArgs::DecodedMessage decoded(msg);
+  fdf::wire::DriverStartArgs::DecodedMessage decoded(msg);
   if (!decoded.ok()) {
     return decoded.status();
   }

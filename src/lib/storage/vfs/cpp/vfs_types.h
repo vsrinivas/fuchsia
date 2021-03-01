@@ -319,7 +319,7 @@ struct VnodeAttributes {
 
 #ifdef __Fuchsia__
   // Converts from |VnodeAttributes| to fuchsia.io v1 |NodeAttributes|.
-  llcpp::fuchsia::io::NodeAttributes ToIoV1NodeAttributes() const;
+  llcpp::fuchsia::io::wire::NodeAttributes ToIoV1NodeAttributes() const;
 #endif  // __Fuchsia__
 };
 

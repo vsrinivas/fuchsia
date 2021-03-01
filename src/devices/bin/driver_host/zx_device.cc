@@ -150,7 +150,7 @@ zx_status_t zx_device::SetPerformanceStates(
     if (visited[info.state_id]) {
       return ZX_ERR_INVALID_ARGS;
     }
-    ::llcpp::fuchsia::device::DevicePerformanceStateInfo* state =
+    ::llcpp::fuchsia::device::wire::DevicePerformanceStateInfo* state =
         &(performance_states_[info.state_id]);
     state->state_id = info.state_id;
     state->is_supported = true;

@@ -56,7 +56,7 @@ int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** e
     out->interface = std::string{value.data(), value.size()};
   }
 
-  llcpp::fuchsia::boot::BoolPair bool_keys[]{
+  llcpp::fuchsia::boot::wire::BoolPair bool_keys[]{
       {fidl::StringView{"netsvc.disable"}, true},
       {fidl::StringView{"netsvc.netboot"}, false},
       {fidl::StringView{"netsvc.advertise"}, true},

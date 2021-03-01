@@ -23,7 +23,7 @@ class NullPtyDeviceImpl : public ::llcpp::fuchsia::hardware::pty::Device::RawCha
   void GetWindowSize(GetWindowSizeCompleter::Sync& completer) final;
   void MakeActive(uint32_t client_pty_id, MakeActiveCompleter::Sync& completer) final;
   void ReadEvents(ReadEventsCompleter::Sync& completer) final;
-  void SetWindowSize(::llcpp::fuchsia::hardware::pty::WindowSize size,
+  void SetWindowSize(::llcpp::fuchsia::hardware::pty::wire::WindowSize size,
                      SetWindowSizeCompleter::Sync& completer) final;
 
   // fuchsia.io.File methods (which were composed by fuchsia.hardware.pty.Device)
@@ -46,7 +46,7 @@ class NullPtyDeviceImpl : public ::llcpp::fuchsia::hardware::pty::Device::RawCha
   void Describe(DescribeCompleter::Sync& completer) final;
   void Sync(SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrCompleter::Sync& completer) final;
-  void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
+  void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::wire::NodeAttributes attributes,
                SetAttrCompleter::Sync& completer) final;
 };
 

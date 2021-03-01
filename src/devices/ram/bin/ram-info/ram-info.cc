@@ -55,7 +55,7 @@ double CounterToBandwidthMBs(uint64_t cycles, uint64_t frequency, uint64_t cycle
 
 namespace ram_info {
 
-void DefaultPrinter::Print(const ram_metrics::BandwidthInfo& info) const {
+void DefaultPrinter::Print(const ram_metrics::wire::BandwidthInfo& info) const {
   fprintf(file_, "channel \t\t usage (MB/s)  time: %lu ms\n", info.timestamp / ZX_MSEC(1));
   size_t ix = 0;
   double total_bandwidth_rw = 0;
@@ -79,7 +79,7 @@ void DefaultPrinter::Print(const ram_metrics::BandwidthInfo& info) const {
   fprintf(file_, "total (rw) \t\t %g\n", total_bandwidth_rw);
 }
 
-void CsvPrinter::Print(const ram_metrics::BandwidthInfo& info) const {
+void CsvPrinter::Print(const ram_metrics::wire::BandwidthInfo& info) const {
   size_t row_count = 0;
   for (const auto& row : rows_) {
     if (!row.empty()) {
@@ -175,7 +175,7 @@ std::tuple<zx::channel, ram_info::RamDeviceInfo> ConnectToRamDevice() {
 }
 
 zx_status_t MeasureBandwith(const Printer* const printer, zx::channel channel,
-                            const ram_metrics::BandwidthMeasurementConfig& config) {
+                            const ram_metrics::wire::BandwidthMeasurementConfig& config) {
   ram_metrics::Device::SyncClient client{std::move(channel)};
   auto info = client.MeasureBandwidth(config);
   if (!info.ok()) {

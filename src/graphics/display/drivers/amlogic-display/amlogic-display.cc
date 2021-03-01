@@ -155,7 +155,7 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
     return result->status;
   }
 
-  sysmem::BufferCollectionInfo_2& collection_info = result->buffer_collection_info;
+  sysmem::wire::BufferCollectionInfo_2& collection_info = result->buffer_collection_info;
 
   if (!collection_info.settings.has_image_format_constraints ||
       index >= collection_info.buffer_count) {
@@ -482,7 +482,7 @@ zx_status_t AmlogicDisplay::DisplayControllerImplGetSysmemConnection(zx::channel
 
 zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     const image_t* config, zx_unowned_handle_t collection) {
-  sysmem::BufferCollectionConstraints constraints = {};
+  sysmem::wire::BufferCollectionConstraints constraints = {};
   const char* buffer_name;
   if (config->type == IMAGE_TYPE_CAPTURE) {
     constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
@@ -490,7 +490,7 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     constraints.usage.display = sysmem::displayUsageLayer;
   }
   constraints.has_buffer_memory_constraints = true;
-  sysmem::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
+  sysmem::wire::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
   buffer_constraints.physically_contiguous_required = true;
   buffer_constraints.secure_required = false;
   buffer_constraints.ram_domain_supported = true;
@@ -501,7 +501,8 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.heap_permitted[1] = sysmem::wire::HeapType::AMLOGIC_SECURE;
   constraints.image_format_constraints_count = config->type == IMAGE_TYPE_CAPTURE ? 1 : 4;
   for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
-    sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[i];
+    sysmem::wire::ImageFormatConstraints& image_constraints =
+        constraints.image_format_constraints[i];
 
     image_constraints.pixel_format.has_format_modifier = true;
     image_constraints.color_spaces_count = 1;
@@ -597,7 +598,7 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
     return result->status;
   }
 
-  sysmem::BufferCollectionInfo_2& collection_info = result->buffer_collection_info;
+  sysmem::wire::BufferCollectionInfo_2& collection_info = result->buffer_collection_info;
 
   if (!collection_info.settings.has_image_format_constraints ||
       index >= collection_info.buffer_count) {

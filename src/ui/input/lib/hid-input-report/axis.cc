@@ -5,8 +5,8 @@
 #include "src/ui/input/lib/hid-input-report/axis.h"
 
 namespace hid_input_report {
-fuchsia_input_report::Unit HidUnitToLlcppUnit(hid::unit::UnitType unit) {
-  fuchsia_input_report::Unit out_unit;
+fuchsia_input_report::wire::Unit HidUnitToLlcppUnit(hid::unit::UnitType unit) {
+  fuchsia_input_report::wire::Unit out_unit;
   out_unit.type = fuchsia_input_report::wire::UnitType::NONE;
   out_unit.exponent = 0;
 
@@ -132,8 +132,8 @@ zx_status_t HidLedUsageToLlcppLedType(hid::usage::LEDs usage,
   return ZX_OK;
 }
 
-fuchsia_input_report::Axis LlcppAxisFromAttribute(const hid::Attributes& attrs) {
-  fuchsia_input_report::Axis axis;
+fuchsia_input_report::wire::Axis LlcppAxisFromAttribute(const hid::Attributes& attrs) {
+  fuchsia_input_report::wire::Axis axis;
   axis.range.min = static_cast<int64_t>(
       hid::unit::ConvertValToUnitType(attrs.unit, static_cast<double>(attrs.phys_mm.min)));
   axis.range.max = static_cast<int64_t>(

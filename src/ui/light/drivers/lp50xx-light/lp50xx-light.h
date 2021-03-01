@@ -54,7 +54,7 @@ class Lp50xxLight : public Lp50xxLightType,
   void SetBrightnessValue(uint32_t index, double value,
                           SetBrightnessValueCompleter::Sync& completer) override;
   void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync& completer) override;
-  void SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb value,
+  void SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::wire::Rgb value,
                    SetRgbValueCompleter::Sync& completer) override;
 
   void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync& completer) override;
@@ -69,7 +69,7 @@ class Lp50xxLight : public Lp50xxLightType,
   void GetGroupCurrentRgbValue(uint32_t group_id,
                                GetGroupCurrentRgbValueCompleter::Sync& completer) override;
   void SetGroupRgbValue(uint32_t group_id,
-                        ::fidl::VectorView<llcpp::fuchsia::hardware::light::Rgb> values,
+                        ::fidl::VectorView<llcpp::fuchsia::hardware::light::wire::Rgb> values,
                         SetGroupRgbValueCompleter::Sync& completer) override;
 
   bool BlinkTest();
@@ -79,8 +79,8 @@ class Lp50xxLight : public Lp50xxLightType,
   // virtual method overloaded in unit test
   virtual zx_status_t InitHelper();
 
-  zx_status_t SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb rgb);
-  zx_status_t GetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb* rgb);
+  zx_status_t SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::wire::Rgb rgb);
+  zx_status_t GetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::wire::Rgb* rgb);
 
   uint32_t pid_ = 0;
   ddk::I2cProtocolClient i2c_;

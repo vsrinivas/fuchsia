@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
     on = true;
   }
 
-  FidlBacklight::State state = {.backlight_on = on, .brightness = brightness};
+  FidlBacklight::wire::State state = {.backlight_on = on, .brightness = brightness};
 
   auto response = client.SetStateNormalized(state);
   status = response.ok() ? (response->result.is_err() ? response->result.err() : ZX_OK)

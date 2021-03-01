@@ -34,7 +34,7 @@ class SysmemSecureMemServer : public llcpp::fuchsia::sysmem::SecureMem::Interfac
       llcpp::fuchsia::sysmem::SecureMem::Interface::GetPhysicalSecureHeapsCompleter::Sync&
           completer) override;
   void SetPhysicalSecureHeaps(
-      llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps,
+      llcpp::fuchsia::sysmem::wire::PhysicalSecureHeaps heaps,
       llcpp::fuchsia::sysmem::SecureMem::Interface::SetPhysicalSecureHeapsCompleter::Sync&
           completer) override;
 
@@ -44,8 +44,10 @@ class SysmemSecureMemServer : public llcpp::fuchsia::sysmem::SecureMem::Interfac
   bool TrySetupSecmemSession();
   void EnsureLoopDone(bool is_success);
 
-  zx_status_t GetPhysicalSecureHeapsInternal(llcpp::fuchsia::sysmem::PhysicalSecureHeaps* heaps);
-  zx_status_t SetPhysicalSecureHeapsInternal(llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps);
+  zx_status_t GetPhysicalSecureHeapsInternal(
+      llcpp::fuchsia::sysmem::wire::PhysicalSecureHeaps* heaps);
+  zx_status_t SetPhysicalSecureHeapsInternal(
+      llcpp::fuchsia::sysmem::wire::PhysicalSecureHeaps heaps);
 
   // Call secmem TA to setup the one physical secure heap that's configured by the TEE Controller.
   zx_status_t SetupVdec(uint64_t* physical_address, uint64_t* size_bytes);

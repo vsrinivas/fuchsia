@@ -17,8 +17,8 @@
 
 namespace storage_metrics {
 constexpr zx_ticks_t kUninitializedMinimumLatency = std::numeric_limits<zx_ticks_t>::max();
-using CallStatFidl = ::llcpp::fuchsia::storage::metrics::CallStat;
-using CallStatRawFidl = ::llcpp::fuchsia::storage::metrics::CallStatRaw;
+using CallStatFidl = ::llcpp::fuchsia::storage::metrics::wire::CallStat;
+using CallStatRawFidl = ::llcpp::fuchsia::storage::metrics::wire::CallStatRaw;
 
 // Compares total_calls and bytes_transferred. Returns false if they don't match.
 bool RawCallStatEqual(const CallStatRawFidl& lhs, const CallStatRawFidl& rhs);
@@ -56,7 +56,7 @@ class CallStat {
   // are printed.
   void Dump(FILE* stream, const char* stat_name, std::optional<bool> success = std::nullopt) const;
 
-  // Prints stats of both sucess_stat_ and failure_stat_ to |stream| file.
+  // Prints stats of both success_stat_ and failure_stat_ to |stream| file.
   void DumpAll(FILE* stream, const char* stat_name) const;
 
   // Updates fields of success_stat_ or of failure_stat_ if |success| is true

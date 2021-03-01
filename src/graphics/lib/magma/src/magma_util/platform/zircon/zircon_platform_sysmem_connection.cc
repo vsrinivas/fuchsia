@@ -30,7 +30,7 @@ uint32_t SysmemToMagmaFormat(llcpp::fuchsia::sysmem::wire::PixelFormatType forma
 class ZirconPlatformBufferDescription : public PlatformBufferDescription {
  public:
   ZirconPlatformBufferDescription(uint32_t buffer_count,
-                                  llcpp::fuchsia::sysmem::SingleBufferSettings settings)
+                                  llcpp::fuchsia::sysmem::wire::SingleBufferSettings settings)
       : buffer_count_(buffer_count), settings_(settings) {}
   ~ZirconPlatformBufferDescription() override {}
 
@@ -104,7 +104,7 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
       planes_out[i].bytes_per_row = 0;
     }
 
-    std::optional<llcpp::fuchsia::sysmem::ImageFormat_2> image_format =
+    std::optional<llcpp::fuchsia::sysmem::wire::ImageFormat_2> image_format =
         image_format::ConstraintsToFormat(settings_.image_format_constraints,
                                           magma::to_uint32(width), magma::to_uint32(height));
     if (!image_format) {
@@ -133,7 +133,7 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
 
  private:
   uint32_t buffer_count_;
-  llcpp::fuchsia::sysmem::SingleBufferSettings settings_;
+  llcpp::fuchsia::sysmem::wire::SingleBufferSettings settings_;
 };
 
 class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
@@ -143,7 +143,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
   ZirconPlatformBufferConstraints(const magma_buffer_format_constraints_t* constraints) {
     constraints_.min_buffer_count = constraints->count;
     // Ignore input usage
-    llcpp::fuchsia::sysmem::BufferUsage usage;
+    llcpp::fuchsia::sysmem::wire::BufferUsage usage;
     usage.vulkan = llcpp::fuchsia::sysmem::vulkanUsageTransientAttachment |
                    llcpp::fuchsia::sysmem::vulkanUsageStencilAttachment |
                    llcpp::fuchsia::sysmem::vulkanUsageInputAttachment |
@@ -178,7 +178,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
                       "Setting format constraints on merged constraints.");
 
-    llcpp::fuchsia::sysmem::ImageFormatConstraints constraints;
+    llcpp::fuchsia::sysmem::wire::ImageFormatConstraints constraints;
     constraints.min_coded_width = 0u;
     constraints.max_coded_width = 16384;
     constraints.min_coded_height = 0u;
@@ -340,20 +340,20 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     return true;
   }
 
-  const llcpp::fuchsia::sysmem::BufferCollectionConstraints& constraints() {
+  const llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints& constraints() {
     DASSERT(merge_result_);
     DASSERT(*merge_result_);
     return constraints_;
   }
 
-  const std::vector<llcpp::fuchsia::sysmem::ImageFormatConstraints>& raw_image_constraints() {
+  const std::vector<llcpp::fuchsia::sysmem::wire::ImageFormatConstraints>& raw_image_constraints() {
     return raw_image_constraints_;
   }
 
  private:
   std::optional<bool> merge_result_;
-  llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints_ = {};
-  std::vector<llcpp::fuchsia::sysmem::ImageFormatConstraints> raw_image_constraints_;
+  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints_ = {};
+  std::vector<llcpp::fuchsia::sysmem::wire::ImageFormatConstraints> raw_image_constraints_;
 };
 
 class ZirconPlatformBufferCollection : public PlatformBufferCollection {
@@ -468,7 +468,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
 
   magma_status_t AllocateBuffer(uint32_t flags, size_t size,
                                 std::unique_ptr<magma::PlatformBuffer>* buffer_out) override {
-    llcpp::fuchsia::sysmem::BufferUsage usage;
+    llcpp::fuchsia::sysmem::wire::BufferUsage usage;
     usage.vulkan = llcpp::fuchsia::sysmem::vulkanUsageTransientAttachment |
                    llcpp::fuchsia::sysmem::vulkanUsageStencilAttachment |
                    llcpp::fuchsia::sysmem::vulkanUsageInputAttachment |
@@ -484,7 +484,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
       usage.display = llcpp::fuchsia::sysmem::displayUsageLayer;
     }
 
-    llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints;
+    llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints;
     constraints.usage = usage;
     constraints.min_buffer_count_for_camping = 1;
     constraints.has_buffer_memory_constraints = true;
@@ -509,7 +509,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
       // directly.
       buffer_name += "ForClient";
     }
-    llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
+    llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 info;
     magma_status_t result = AllocateBufferCollection(constraints, buffer_name, &info);
     if (result != MAGMA_STATUS_OK)
       return DRET(result);
@@ -568,8 +568,8 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
 
  private:
   magma_status_t AllocateBufferCollection(
-      const llcpp::fuchsia::sysmem::BufferCollectionConstraints& constraints, std::string name,
-      llcpp::fuchsia::sysmem::BufferCollectionInfo_2* info_out) {
+      const llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints& constraints,
+      std::string name, llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2* info_out) {
     zx::channel h1;
     zx::channel h2;
     zx_status_t status = zx::channel::create(0, &h1, &h2);
@@ -625,10 +625,10 @@ magma_status_t PlatformSysmemConnection::DecodeBufferDescription(
     std::unique_ptr<PlatformBufferDescription>* buffer_description_out) {
   std::vector<uint8_t> copy_message(image_data, image_data + image_data_size);
   const char* error = nullptr;
-  static_assert(llcpp::fuchsia::sysmem::SingleBufferSettings::MaxNumHandles == 0,
+  static_assert(llcpp::fuchsia::sysmem::wire::SingleBufferSettings::MaxNumHandles == 0,
                 "Can't decode a buffer with handles");
   zx_status_t status =
-      fidl_decode(llcpp::fuchsia::sysmem::SingleBufferSettings::Type, copy_message.data(),
+      fidl_decode(llcpp::fuchsia::sysmem::wire::SingleBufferSettings::Type, copy_message.data(),
                   magma::to_uint32(copy_message.size()), nullptr, 0, &error);
 
   if (status != ZX_OK)
@@ -636,7 +636,8 @@ magma_status_t PlatformSysmemConnection::DecodeBufferDescription(
                     error);
 
   const auto& buffer_settings =
-      *reinterpret_cast<const llcpp::fuchsia::sysmem::SingleBufferSettings*>(copy_message.data());
+      *reinterpret_cast<const llcpp::fuchsia::sysmem::wire::SingleBufferSettings*>(
+          copy_message.data());
 
   if (!buffer_settings.has_image_format_constraints) {
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Buffer is not image");

@@ -176,7 +176,7 @@ class StubExceptionHandler final : public llcpp::fuchsia::exception::Handler::In
   }
 
   // fuchsia.exception.Handler
-  void OnException(::zx::exception exception, llcpp::fuchsia::exception::ExceptionInfo info,
+  void OnException(::zx::exception exception, llcpp::fuchsia::exception::wire::ExceptionInfo info,
                    OnExceptionCompleter::Sync& completer) override {
     exception_count_++;
     if (respond_sync_) {

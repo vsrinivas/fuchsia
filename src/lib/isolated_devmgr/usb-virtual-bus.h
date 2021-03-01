@@ -19,10 +19,10 @@
 #include "usb-virtual-bus-helper.h"
 
 namespace usb_virtual_bus {
-using llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor;
-using llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor;
+using llcpp::fuchsia::hardware::usb::peripheral::wire::DeviceDescriptor;
+using llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor;
 using ConfigurationDescriptor =
-    ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
+    ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
 
 class USBVirtualBusBase {
  public:

@@ -49,7 +49,7 @@ TEST(TouchscreenTest, ParadiseV1) {
   EXPECT_EQ(hid_input_report::ParseResult::kOk, touch.ParseReportDescriptor(*hid_report_desc));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
+  fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             touch.CreateDescriptor(descriptor_allocator, descriptor));
   EXPECT_TRUE(descriptor.has_touch());
@@ -75,7 +75,7 @@ TEST(TouchscreenTest, ParadiseV1) {
   touch_v1_report.fingers[1].y = 200;
 
   hid_input_report::TestReportAllocator report_allocator;
-  fuchsia_input_report::InputReport input_report(report_allocator);
+  fuchsia_input_report::wire::InputReport input_report(report_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             touch.ParseInputReport(reinterpret_cast<uint8_t*>(&touch_v1_report),
                                    sizeof(touch_v1_report), report_allocator, input_report));
@@ -109,7 +109,7 @@ TEST(TouchscreenTest, ParadiseV1Touchpad) {
   EXPECT_EQ(hid_input_report::ParseResult::kOk, touch.ParseReportDescriptor(*hid_report_desc));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
+  fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             touch.CreateDescriptor(descriptor_allocator, descriptor));
   EXPECT_TRUE(descriptor.has_touch());
@@ -139,7 +139,7 @@ TEST(TouchscreenTest, ParadiseV1Touchpad) {
   touch_report.fingers[0].y = 100;
 
   hid_input_report::TestReportAllocator report_allocator;
-  fuchsia_input_report::InputReport input_report(report_allocator);
+  fuchsia_input_report::wire::InputReport input_report(report_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             touch.ParseInputReport(reinterpret_cast<uint8_t*>(&touch_report), sizeof(touch_report),
                                    report_allocator, input_report));

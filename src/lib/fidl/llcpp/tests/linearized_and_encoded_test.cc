@@ -11,15 +11,15 @@
 namespace fidl_linearized = ::llcpp::fidl::llcpp::linearized::test;
 
 TEST(LinearizedAndEncoded, FullyLinearizedAndEncoded) {
-  fidl_linearized::InnerStruct inner = {.x = 1};
-  fidl_linearized::FullyLinearizedStruct input{.ptr = fidl::unowned_ptr(&inner)};
-  fidl::OwnedEncodedMessage<fidl_linearized::FullyLinearizedStruct> encoded(&input);
+  fidl_linearized::wire::InnerStruct inner = {.x = 1};
+  fidl_linearized::wire::FullyLinearizedStruct input{.ptr = fidl::unowned_ptr(&inner)};
+  fidl::OwnedEncodedMessage<fidl_linearized::wire::FullyLinearizedStruct> encoded(&input);
   EXPECT_TRUE(encoded.ok());
 
-  auto encoded_obj = reinterpret_cast<const fidl_linearized::FullyLinearizedStruct*>(
+  auto encoded_obj = reinterpret_cast<const fidl_linearized::wire::FullyLinearizedStruct*>(
       encoded.GetOutgoingMessage().bytes());
   EXPECT_NE(encoded_obj, &input);
   EXPECT_EQ(*reinterpret_cast<const uintptr_t*>(&encoded_obj->ptr), FIDL_ALLOC_PRESENT);
-  EXPECT_EQ(reinterpret_cast<const fidl_linearized::InnerStruct*>(encoded_obj + 1)->x,
+  EXPECT_EQ(reinterpret_cast<const fidl_linearized::wire::InnerStruct*>(encoded_obj + 1)->x,
             input.ptr->x);
 }

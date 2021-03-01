@@ -100,9 +100,9 @@ static zx_status_t load_executable_vmo(const char* path, zx::vmo* result) {
 }
 
 struct springboard {
-  fprocess::ProcessStartData data;
+  fprocess::wire::ProcessStartData data;
 
-  springboard(fprocess::ProcessStartData* reference) {
+  springboard(fprocess::wire::ProcessStartData* reference) {
     data.process.reset(reference->process.release());
     data.root_vmar.reset(reference->root_vmar.release());
     data.thread.reset(reference->thread.release());
@@ -170,13 +170,13 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
     zx_status_t status = fdio_ns_export_root(&flat);
     tu_check("getting namespace", status);
     size_t count = flat->count;
-    fprocess::NameInfo data[count];
+    fprocess::wire::NameInfo data[count];
     for (size_t i = 0; i < count; i++) {
       const char* path = flat->path[i];
       data[i].path = fidl::unowned_str(path, strlen(path));
       data[i].directory = fidl::ClientEnd<fio::Directory>(zx::channel(flat->handle[i]));
     }
-    fidl::VectorView<fprocess::NameInfo> names(fidl::unowned_ptr(data), count);
+    fidl::VectorView<fprocess::wire::NameInfo> names(fidl::unowned_ptr(data), count);
     fprocess::Launcher::ResultOf::AddNames result = launcher.AddNames(std::move(names));
     tu_check("sending names", result.status());
     free(flat);
@@ -186,7 +186,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
 
   {
     const size_t handle_count = num_handles + 1;
-    fprocess::HandleInfo handle_infos[handle_count];
+    fprocess::wire::HandleInfo handle_infos[handle_count];
 
     // Input handles.
 
@@ -203,15 +203,15 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
     tu_check("getting loader service", status);
     handle_infos[index++].id = PA_LDSVC_LOADER;
 
-    fidl::VectorView<fprocess::HandleInfo> handle_vector(fidl::unowned_ptr(handle_infos),
-                                                         handle_count);
+    fidl::VectorView<fprocess::wire::HandleInfo> handle_vector(fidl::unowned_ptr(handle_infos),
+                                                               handle_count);
     fprocess::Launcher::ResultOf::AddHandles result = launcher.AddHandles(std::move(handle_vector));
     tu_check("sending handles", result.status());
   }
 
   // Create the process.
 
-  fprocess::LaunchInfo launch_info;
+  fprocess::wire::LaunchInfo launch_info;
 
   const char* filename = argv[0];
   status = load_executable_vmo(filename, &launch_info.executable);

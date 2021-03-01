@@ -21,7 +21,7 @@ namespace fio2 = llcpp::fuchsia::io2;
 
 namespace {
 
-zxio_node_attributes_t ToZxioNodeAttributes(const fio2::NodeAttributes& attr) {
+zxio_node_attributes_t ToZxioNodeAttributes(const fio2::wire::NodeAttributes& attr) {
   zxio_node_attributes_t zxio_attr = {};
   if (attr.has_protocols()) {
     ZXIO_NODE_ATTR_SET(zxio_attr, protocols, ToZxioNodeProtocols(attr.protocols()));
@@ -50,9 +50,9 @@ zxio_node_attributes_t ToZxioNodeAttributes(const fio2::NodeAttributes& attr) {
   return zxio_attr;
 }
 
-fio2::NodeAttributes ToIo2NodeAttributes(fidl::AnyAllocator& allocator,
-                                         const zxio_node_attributes_t& attr) {
-  fio2::NodeAttributes node_attributes(allocator);
+fio2::wire::NodeAttributes ToIo2NodeAttributes(fidl::AnyAllocator& allocator,
+                                               const zxio_node_attributes_t& attr) {
+  fio2::wire::NodeAttributes node_attributes(allocator);
   if (attr.has.protocols) {
     node_attributes.set_protocols(allocator, ToIo2NodeProtocols(attr.protocols));
   }
@@ -112,7 +112,7 @@ zx_status_t zxio_remote_v2_clone(zxio_t* io, zx_handle_t* out_handle) {
     return status;
   }
   auto result =
-      fio2::Node::Call::Reopen(rio.control(), fio2::ConnectionOptions(), std::move(remote));
+      fio2::Node::Call::Reopen(rio.control(), fio2::wire::ConnectionOptions(), std::move(remote));
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -200,7 +200,7 @@ zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr
   if (result->result.is_err()) {
     return result->result.err();
   }
-  const fio2::NodeAttributes& attributes = result->result.response().attributes;
+  const fio2::wire::NodeAttributes& attributes = result->result.response().attributes;
   *out_attr = ToZxioNodeAttributes(attributes);
   return ZX_OK;
 }

@@ -10,7 +10,7 @@
 
 namespace block_verity {
 
-zx_status_t CheckConfig(const llcpp::fuchsia::hardware::block::verified::Config& config,
+zx_status_t CheckConfig(const llcpp::fuchsia::hardware::block::verified::wire::Config& config,
                         const block_info_t& blk) {
   // Check that the config specifies a supported hash function
   if (!config.has_hash_function()) {

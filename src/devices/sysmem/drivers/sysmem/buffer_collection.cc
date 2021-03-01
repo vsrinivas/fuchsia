@@ -25,7 +25,7 @@ namespace sysmem_driver {
 namespace {
 
 using BufferCollectionInfo_v1 = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                                           llcpp::fuchsia::sysmem::BufferCollectionInfo_2>;
+                                           llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>;
 
 constexpr uint32_t kConcurrencyCap = 64;
 
@@ -138,9 +138,9 @@ zx_status_t BufferCollection::SetConstraintsAuxBuffers(
   ZX_DEBUG_ASSERT(constraints_param);
 
   // Copy data and own handles.
-  static_assert(sizeof(llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers) ==
+  static_assert(sizeof(llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers) ==
                 sizeof(fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers));
-  llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers local_constraints;
+  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers local_constraints;
   memcpy(&local_constraints, constraints_param, sizeof(local_constraints));
 
   if (is_set_constraints_aux_buffers_seen_) {
@@ -176,9 +176,9 @@ zx_status_t BufferCollection::SetConstraints(
   ZX_DEBUG_ASSERT(constraints_param);
 
   // Copy data and own handles.
-  static_assert(sizeof(llcpp::fuchsia::sysmem::BufferCollectionConstraints) ==
+  static_assert(sizeof(llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints) ==
                 sizeof(fuchsia_sysmem_BufferCollectionConstraints));
-  std::optional<llcpp::fuchsia::sysmem::BufferCollectionConstraints> local_constraints;
+  std::optional<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints> local_constraints;
   local_constraints.emplace();
   memcpy(&local_constraints.value(), constraints_param, sizeof(local_constraints.value()));
 
@@ -226,8 +226,8 @@ zx_status_t BufferCollection::SetConstraints(
   // Stash BufferUsage also, for benefit of GetUsageBasedRightsAttenuation() depsite
   // TakeConstraints().
   {  // scope buffer_usage
-    llcpp::fuchsia::sysmem::BufferUsage empty_buffer_usage{};
-    llcpp::fuchsia::sysmem::BufferUsage* source_buffer_usage = &empty_buffer_usage;
+    llcpp::fuchsia::sysmem::wire::BufferUsage empty_buffer_usage{};
+    llcpp::fuchsia::sysmem::wire::BufferUsage* source_buffer_usage = &empty_buffer_usage;
     if (local_constraints) {
       source_buffer_usage = &local_constraints.value().usage;
     }
@@ -417,9 +417,9 @@ void BufferCollection::FailAsync(zx_status_t status, const char* format, ...) {
   FidlServer::FailAsync(status, __FILE__, __LINE__, "");
 }
 
-fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo>
+fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo>
 BufferCollection::CloneResultForSendingV2(
-    const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info) {
+    const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto clone_result = sysmem::V2CloneBufferCollectionInfo(
       allocator_, buffer_collection_info, GetClientVmoRights(), GetClientAuxVmoRights());
   if (!clone_result.is_ok()) {
@@ -446,7 +446,7 @@ BufferCollection::CloneResultForSendingV2(
 }
 
 fit::result<BufferCollection::V1CBufferCollectionInfo> BufferCollection::CloneResultForSendingV1(
-    const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info) {
+    const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto v2_result = CloneResultForSendingV2(buffer_collection_info);
   if (!v2_result.is_ok()) {
     // FailAsync() already called.
@@ -466,7 +466,7 @@ fit::result<BufferCollection::V1CBufferCollectionInfo> BufferCollection::CloneRe
 
 fit::result<BufferCollection::V1CBufferCollectionInfo>
 BufferCollection::CloneAuxBuffersResultForSendingV1(
-    const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info) {
+    const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto v2_result = CloneResultForSendingV2(buffer_collection_info);
   if (!v2_result.is_ok()) {
     // FailAsync() already called.
@@ -515,14 +515,15 @@ void BufferCollection::OnBuffersAllocated() {
 
 bool BufferCollection::has_constraints() { return !!constraints_; }
 
-const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& BufferCollection::constraints() {
+const llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& BufferCollection::constraints() {
   ZX_DEBUG_ASSERT(has_constraints());
   return constraints_.value();
 }
 
-llcpp::fuchsia::sysmem2::BufferCollectionConstraints BufferCollection::TakeConstraints() {
+llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints BufferCollection::TakeConstraints() {
   ZX_DEBUG_ASSERT(has_constraints());
-  llcpp::fuchsia::sysmem2::BufferCollectionConstraints result = std::move(constraints_.value());
+  llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints result =
+      std::move(constraints_.value());
   constraints_.reset();
   return result;
 }

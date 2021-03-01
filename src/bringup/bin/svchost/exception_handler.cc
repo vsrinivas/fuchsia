@@ -91,7 +91,7 @@ void ExceptionHandler::Handle(zx::exception exception, const zx_exception_info_t
 
   ConnectToServer();
 
-  llcpp::fuchsia::exception::ExceptionInfo exception_info;
+  llcpp::fuchsia::exception::wire::ExceptionInfo exception_info;
   exception_info.process_koid = info.pid;
   exception_info.thread_koid = info.tid;
   exception_info.type = static_cast<llcpp::fuchsia::exception::wire::ExceptionType>(info.type);

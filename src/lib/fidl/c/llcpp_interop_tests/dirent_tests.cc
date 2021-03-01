@@ -36,18 +36,18 @@ namespace {
 
 static_assert(gen::SMALL_DIR_VECTOR_SIZE == 3);
 
-gen::DirEnt golden_dirents_array[gen::SMALL_DIR_VECTOR_SIZE] = {
-    gen::DirEnt{
+gen::wire::DirEnt golden_dirents_array[gen::SMALL_DIR_VECTOR_SIZE] = {
+    gen::wire::DirEnt{
         .is_dir = false,
         .name = fidl::StringView{"ab"},
         .some_flags = 0,
     },
-    gen::DirEnt{
+    gen::wire::DirEnt{
         .is_dir = true,
         .name = fidl::StringView{"cde"},
         .some_flags = 1,
     },
-    gen::DirEnt{
+    gen::wire::DirEnt{
         .is_dir = false,
         .name = fidl::StringView{"fghi"},
         .some_flags = 2,
@@ -241,7 +241,7 @@ class CFlavorServer : public ServerBase {
  public:
   CFlavorServer(zx::channel chan) : ServerBase(std::move(chan)) {}
 
-  void CountNumDirectories(fidl::VectorView<gen::DirEnt> dirents,
+  void CountNumDirectories(fidl::VectorView<gen::wire::DirEnt> dirents,
                            CountNumDirectoriesCompleter::Sync& txn) override {
     count_num_directories_num_calls_.fetch_add(1);
     int64_t count = 0;
@@ -260,7 +260,7 @@ class CFlavorServer : public ServerBase {
 
   // |ConsumeDirectories| has zero number of arguments in its return value, hence only the
   // C-flavor reply API is generated.
-  void ConsumeDirectories(fidl::VectorView<gen::DirEnt> dirents,
+  void ConsumeDirectories(fidl::VectorView<gen::wire::DirEnt> dirents,
                           ConsumeDirectoriesCompleter::Sync& txn) override {
     consume_directories_num_calls_.fetch_add(1);
     EXPECT_EQ(dirents.count(), 3);
@@ -268,7 +268,7 @@ class CFlavorServer : public ServerBase {
   }
 
   // |OneWayDirents| has no return value, hence there is no reply API generated
-  void OneWayDirents(fidl::VectorView<gen::DirEnt> dirents, zx::eventpair ep,
+  void OneWayDirents(fidl::VectorView<gen::wire::DirEnt> dirents, zx::eventpair ep,
                      OneWayDirentsCompleter::Sync& txn) override {
     one_way_dirents_num_calls_.fetch_add(1);
     EXPECT_EQ(dirents.count(), 3);
@@ -281,7 +281,7 @@ class CallerAllocateServer : public ServerBase {
  public:
   CallerAllocateServer(zx::channel chan) : ServerBase(std::move(chan)) {}
 
-  void CountNumDirectories(fidl::VectorView<gen::DirEnt> dirents,
+  void CountNumDirectories(fidl::VectorView<gen::wire::DirEnt> dirents,
                            CountNumDirectoriesCompleter::Sync& txn) override {
     count_num_directories_num_calls_.fetch_add(1);
     int64_t count = 0;
@@ -302,13 +302,13 @@ class CallerAllocateServer : public ServerBase {
 
   // |ConsumeDirectories| has zero number of arguments in its return value, hence only the
   // C-flavor reply API is applicable.
-  void ConsumeDirectories(fidl::VectorView<gen::DirEnt> dirents,
+  void ConsumeDirectories(fidl::VectorView<gen::wire::DirEnt> dirents,
                           ConsumeDirectoriesCompleter::Sync& txn) override {
     ZX_ASSERT_MSG(false, "Never used by unit tests");
   }
 
   // |OneWayDirents| has no return value, hence there is no reply API generated
-  void OneWayDirents(fidl::VectorView<gen::DirEnt> dirents, zx::eventpair ep,
+  void OneWayDirents(fidl::VectorView<gen::wire::DirEnt> dirents, zx::eventpair ep,
                      OneWayDirentsCompleter::Sync&) override {
     ZX_ASSERT_MSG(false, "Never used by unit tests");
   }
@@ -319,7 +319,7 @@ class AsyncReplyServer : public ServerBase {
  public:
   AsyncReplyServer(zx::channel chan) : ServerBase(std::move(chan)) {}
 
-  void CountNumDirectories(fidl::VectorView<gen::DirEnt> dirents,
+  void CountNumDirectories(fidl::VectorView<gen::wire::DirEnt> dirents,
                            CountNumDirectoriesCompleter::Sync& txn) override {
     count_num_directories_num_calls_.fetch_add(1);
     int64_t count = 0;
@@ -336,7 +336,7 @@ class AsyncReplyServer : public ServerBase {
     async::PostTask(dispatcher(), [txn = txn.ToAsync()]() mutable { txn.Reply(golden_dirents()); });
   }
 
-  void ConsumeDirectories(fidl::VectorView<gen::DirEnt> dirents,
+  void ConsumeDirectories(fidl::VectorView<gen::wire::DirEnt> dirents,
                           ConsumeDirectoriesCompleter::Sync& txn) override {
     consume_directories_num_calls_.fetch_add(1);
     EXPECT_EQ(dirents.count(), 3);
@@ -344,7 +344,7 @@ class AsyncReplyServer : public ServerBase {
   }
 
   // |OneWayDirents| has no return value, hence there is no reply API generated
-  void OneWayDirents(fidl::VectorView<gen::DirEnt> dirents, zx::eventpair ep,
+  void OneWayDirents(fidl::VectorView<gen::wire::DirEnt> dirents, zx::eventpair ep,
                      OneWayDirentsCompleter::Sync&) override {
     ZX_ASSERT_MSG(false, "Never used by unit tests");
   }
@@ -373,16 +373,16 @@ class Random {
 };
 
 template <size_t kNumDirents>
-fidl::Array<gen::DirEnt, kNumDirents> RandomlyFillDirEnt(char* name) {
+fidl::Array<gen::wire::DirEnt, kNumDirents> RandomlyFillDirEnt(char* name) {
   Random random;
-  fidl::Array<gen::DirEnt, kNumDirents> dirents;
+  fidl::Array<gen::wire::DirEnt, kNumDirents> dirents;
   for (size_t i = 0; i < kNumDirents; i++) {
     int str_len = random.UpTo(gen::TEST_MAX_PATH) + 1;
     bool is_dir = random.UpTo(2) == 0;
     int32_t flags = static_cast<int32_t>(random.UpTo(1000));
-    dirents[i] = gen::DirEnt{.is_dir = is_dir,
-                             .name = fidl::unowned_str(name, static_cast<uint64_t>(str_len)),
-                             .some_flags = flags};
+    dirents[i] = gen::wire::DirEnt{.is_dir = is_dir,
+                                   .name = fidl::unowned_str(name, static_cast<uint64_t>(str_len)),
+                                   .some_flags = flags};
   }
   return dirents;
 }

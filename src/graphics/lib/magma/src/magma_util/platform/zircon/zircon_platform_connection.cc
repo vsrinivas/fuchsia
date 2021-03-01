@@ -209,8 +209,8 @@ void ZirconPlatformConnection::DestroyContext(uint32_t context_id,
 }
 
 void ZirconPlatformConnection::ExecuteCommandBufferWithResources(
-    uint32_t context_id, llcpp::fuchsia::gpu::magma::CommandBuffer fidl_command_buffer,
-    ::fidl::VectorView<llcpp::fuchsia::gpu::magma::Resource> fidl_resources,
+    uint32_t context_id, llcpp::fuchsia::gpu::magma::wire::CommandBuffer fidl_command_buffer,
+    ::fidl::VectorView<llcpp::fuchsia::gpu::magma::wire::Resource> fidl_resources,
     ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores,
     ExecuteCommandBufferWithResourcesCompleter::Sync& _completer) {
   FlowControl();
@@ -378,7 +378,7 @@ void ZirconPlatformConnection::ReleasePerformanceCounterBufferPool(
 }
 
 void ZirconPlatformConnection::AddPerformanceCounterBufferOffsetsToPool(
-    uint64_t pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::BufferOffset> offsets,
+    uint64_t pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::wire::BufferOffset> offsets,
     AddPerformanceCounterBufferOffsetsToPoolCompleter::Sync& completer) {
   FlowControl();
   for (auto& offset : offsets) {

@@ -68,7 +68,7 @@ void DisplayConfig::InitializeInspect(inspect::Node* parent) {
       node_.CreateBool("pending_apply_layer_change", pending_apply_layer_change_);
 }
 
-void Client::ImportVmoImage(fhd::ImageConfig image_config, ::zx::vmo vmo, int32_t offset,
+void Client::ImportVmoImage(fhd::wire::ImageConfig image_config, ::zx::vmo vmo, int32_t offset,
                             ImportVmoImageCompleter::Sync& _completer) {
   if (!single_buffer_framebuffer_stride_) {
     _completer.Reply(ZX_ERR_INVALID_ARGS, 0);
@@ -107,8 +107,8 @@ void Client::ImportVmoImage(fhd::ImageConfig image_config, ::zx::vmo vmo, int32_
   }
 }
 
-void Client::ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, uint32_t index,
-                         ImportImageCompleter::Sync& _completer) {
+void Client::ImportImage(fhd::wire::ImageConfig image_config, uint64_t collection_id,
+                         uint32_t index, ImportImageCompleter::Sync& _completer) {
   auto it = collection_map_.find(collection_id);
   if (it == collection_map_.end()) {
     _completer.Reply(ZX_ERR_INVALID_ARGS, 0);
@@ -145,7 +145,7 @@ void Client::ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, 
       _completer.Reply(ZX_ERR_NO_MEMORY, 0);
       return;
     }
-    sysmem::BufferCollectionInfo_2& info = res->buffer_collection_info;
+    sysmem::wire::BufferCollectionInfo_2& info = res->buffer_collection_info;
 
     if (!info.settings.has_image_format_constraints || index >= info.buffer_count) {
       _completer.Reply(ZX_ERR_OUT_OF_RANGE, 0);
@@ -270,7 +270,7 @@ void Client::ReleaseBufferCollection(uint64_t collection_id,
 }
 
 void Client::SetBufferCollectionConstraints(
-    uint64_t collection_id, fhd::ImageConfig config,
+    uint64_t collection_id, fhd::wire::ImageConfig config,
     SetBufferCollectionConstraintsCompleter::Sync& _completer) {
   auto it = collection_map_.find(collection_id);
   if (it == collection_map_.end()) {
@@ -290,16 +290,18 @@ void Client::SetBufferCollectionConstraints(
     ZX_ASSERT(it->second.kernel.channel());
 
     // Constraints to be used with zx_framebuffer_set_range.
-    sysmem::BufferCollectionConstraints constraints;
+    sysmem::wire::BufferCollectionConstraints constraints;
     constraints.usage.display = sysmem::displayUsageLayer;
     constraints.has_buffer_memory_constraints = true;
-    sysmem::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
+    sysmem::wire::BufferMemoryConstraints& buffer_constraints =
+        constraints.buffer_memory_constraints;
     buffer_constraints.min_size_bytes = 0;
     buffer_constraints.max_size_bytes = 0xffffffff;
     buffer_constraints.secure_required = false;
     buffer_constraints.ram_domain_supported = true;
     constraints.image_format_constraints_count = 1;
-    sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
+    sysmem::wire::ImageFormatConstraints& image_constraints =
+        constraints.image_format_constraints[0];
     switch (config.pixel_format) {
       case ZX_PIXEL_FORMAT_RGB_x888:
       case ZX_PIXEL_FORMAT_ARGB_8888:
@@ -391,7 +393,7 @@ void Client::ReleaseGammaTable(uint64_t gamma_table_id,
   gamma_table_map_.erase(gamma_table_id);
 }
 
-void Client::SetDisplayMode(uint64_t display_id, fhd::Mode mode,
+void Client::SetDisplayMode(uint64_t display_id, fhd::wire::Mode mode,
                             SetDisplayModeCompleter::Sync& _completer) {
   auto config = configs_.find(display_id);
   if (!config.IsValid()) {
@@ -509,7 +511,7 @@ void Client::SetDisplayGammaTable(uint64_t display_id, uint64_t gamma_table_id,
   pending_config_valid_ = false;
 }
 
-void Client::SetLayerPrimaryConfig(uint64_t layer_id, fhd::ImageConfig image_config,
+void Client::SetLayerPrimaryConfig(uint64_t layer_id, fhd::wire::ImageConfig image_config,
                                    SetLayerPrimaryConfigCompleter::Sync& /*_completer*/) {
   auto layer = layers_.find(layer_id);
   if (!layer.IsValid()) {
@@ -524,7 +526,7 @@ void Client::SetLayerPrimaryConfig(uint64_t layer_id, fhd::ImageConfig image_con
 }
 
 void Client::SetLayerPrimaryPosition(uint64_t layer_id, fhd::wire::Transform transform,
-                                     fhd::Frame src_frame, fhd::Frame dest_frame,
+                                     fhd::wire::Frame src_frame, fhd::wire::Frame dest_frame,
                                      SetLayerPrimaryPositionCompleter::Sync& /*_completer*/) {
   auto layer = layers_.find(layer_id);
   if (!layer.IsValid() || layer->pending_type() != LAYER_TYPE_PRIMARY) {
@@ -561,7 +563,7 @@ void Client::SetLayerPrimaryAlpha(uint64_t layer_id, fhd::wire::AlphaMode mode, 
   // no Reply defined
 }
 
-void Client::SetLayerCursorConfig(uint64_t layer_id, fhd::ImageConfig image_config,
+void Client::SetLayerCursorConfig(uint64_t layer_id, fhd::wire::ImageConfig image_config,
                                   SetLayerCursorConfigCompleter::Sync& /*_completer*/) {
   auto layer = layers_.find(layer_id);
   if (!layer.IsValid()) {
@@ -643,7 +645,7 @@ void Client::SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_e
 
 void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) {
   fhd::wire::ConfigResult res;
-  std::vector<fhd::ClientCompositionOp> ops;
+  std::vector<fhd::wire::ClientCompositionOp> ops;
 
   pending_config_valid_ = CheckConfig(&res, &ops);
 
@@ -758,7 +760,7 @@ void Client::ApplyConfig(ApplyConfigCompleter::Sync& /*_completer*/) {
     // gamma table
     if (display_config.pending_gamma_table_ != nullptr &&
         (display_config.pending_gamma_table_ == display_config.current_gamma_table_)) {
-      // no need to make client re-apply gamma table if it has already been aplied
+      // no need to make client re-apply gamma table if it has already been applied
       display_config.current_.apply_gamma_table = false;
     } else {
       display_config.current_gamma_table_ = display_config.pending_gamma_table_;
@@ -801,7 +803,7 @@ void Client::IsCaptureSupported(IsCaptureSupportedCompleter::Sync& _completer) {
   _completer.ReplySuccess(controller_->dc_capture() != nullptr);
 }
 
-void Client::ImportImageForCapture(fhd::ImageConfig image_config, uint64_t collection_id,
+void Client::ImportImageForCapture(fhd::wire::ImageConfig image_config, uint64_t collection_id,
                                    uint32_t index,
                                    ImportImageForCaptureCompleter::Sync& _completer) {
   // Ensure display driver supports/implements capture.
@@ -938,7 +940,8 @@ void Client::SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync& _c
   }
 }
 
-bool Client::CheckConfig(fhd::wire::ConfigResult* res, std::vector<fhd::ClientCompositionOp>* ops) {
+bool Client::CheckConfig(fhd::wire::ConfigResult* res,
+                         std::vector<fhd::wire::ClientCompositionOp>* ops) {
   const display_config_t* configs[configs_.size()];
   layer_t* layers[layers_.size()];
   uint32_t layer_cfg_results[layers_.size()];
@@ -1093,7 +1096,7 @@ bool Client::CheckConfig(fhd::wire::ConfigResult* res, std::vector<fhd::ClientCo
 
       for (uint8_t i = 0; i < 32; i++) {
         if (err & (1 << i)) {
-          fhd::ClientCompositionOp op{
+          fhd::wire::ClientCompositionOp op{
               .display_id = display_config.id,
               .layer_id = layer_node.layer->id,
               .opcode = static_cast<fhd::wire::ClientCompositionOpcode>(i),
@@ -1148,7 +1151,7 @@ void Client::ApplyConfig() {
                                    fb->info().pixel_format, fb->info().width, fb->info().height,
                                    stride);
         } else if (console_fb_display_id_ == display_config.id) {
-          // If this display doesnt' have an image but it was the display which had the
+          // If this display doesn't have an image but it was the display which had the
           // kernel's framebuffer, make the kernel drop the reference. Note that this
           // executes when tearing down the virtcon client.
           // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
@@ -1259,11 +1262,11 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
 
   // We need 2 loops, since we need to make sure we allocate the
   // correct size array in the fidl response.
-  std::vector<fhd::Info> coded_configs;
+  std::vector<fhd::wire::Info> coded_configs;
   coded_configs.reserve(added_count);
 
   // Hang on to modes values until we send the message.
-  std::vector<std::vector<fhd::Mode>> modes_vector;
+  std::vector<std::vector<fhd::wire::Mode>> modes_vector;
 
   for (unsigned i = 0; i < added_count; i++) {
     auto config = configs_.find(displays_added[i]);
@@ -1271,17 +1274,17 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
       continue;
     }
 
-    fhd::Info info;
+    fhd::wire::Info info;
     info.id = config->id;
 
     const fbl::Vector<edid::timing_params>* edid_timings;
     const display_params_t* params;
     controller_->GetPanelConfig(config->id, &edid_timings, &params);
-    std::vector<fhd::Mode> modes;
+    std::vector<fhd::wire::Mode> modes;
     if (edid_timings) {
       modes.reserve(edid_timings->size());
       for (auto timing : *edid_timings) {
-        fhd::Mode mode{
+        fhd::wire::Mode mode{
             .horizontal_resolution = timing.horizontal_addressable,
             .vertical_resolution = timing.vertical_addressable,
             .refresh_rate_e2 = timing.vertical_refresh_e2,
@@ -1290,7 +1293,7 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
       }
     } else {
       modes.reserve(1);
-      fhd::Mode mode{
+      fhd::wire::Mode mode{
           .horizontal_resolution = params->width,
           .vertical_resolution = params->height,
           .refresh_rate_e2 = params->refresh_rate_e2,
@@ -1303,14 +1306,15 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
     static_assert(sizeof(zx_pixel_format_t) == sizeof(int32_t), "Bad pixel format size");
     info.pixel_format = fidl::unowned_vec(config->pixel_formats_);
 
-    static_assert(offsetof(cursor_info_t, width) == offsetof(fhd::CursorInfo, width), "Bad struct");
-    static_assert(offsetof(cursor_info_t, height) == offsetof(fhd::CursorInfo, height),
+    static_assert(offsetof(cursor_info_t, width) == offsetof(fhd::wire::CursorInfo, width),
                   "Bad struct");
-    static_assert(offsetof(cursor_info_t, format) == offsetof(fhd::CursorInfo, pixel_format),
+    static_assert(offsetof(cursor_info_t, height) == offsetof(fhd::wire::CursorInfo, height),
                   "Bad struct");
-    static_assert(sizeof(cursor_info_t) <= sizeof(fhd::CursorInfo), "Bad size");
-    info.cursor_configs = fidl::VectorView<fhd::CursorInfo>(
-        fidl::unowned_ptr((fhd::CursorInfo*)config->cursor_infos_.data()),
+    static_assert(offsetof(cursor_info_t, format) == offsetof(fhd::wire::CursorInfo, pixel_format),
+                  "Bad struct");
+    static_assert(sizeof(cursor_info_t) <= sizeof(fhd::wire::CursorInfo), "Bad size");
+    info.cursor_configs = fidl::VectorView<fhd::wire::CursorInfo>(
+        fidl::unowned_ptr((fhd::wire::CursorInfo*)config->cursor_infos_.data()),
         config->cursor_infos_.size());
 
     const char* manufacturer_name = "";

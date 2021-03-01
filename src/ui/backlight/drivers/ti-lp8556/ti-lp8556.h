@@ -83,7 +83,7 @@ class Lp8556Device : public DeviceType,
 
   zx_status_t Init();
 
-  // Methods requried by the ddk mixins
+  // Methods required by the ddk mixins
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
@@ -119,7 +119,7 @@ class Lp8556Device : public DeviceType,
 
   // FIDL calls
   void GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) override;
-  void SetStateNormalized(FidlBacklight::State state,
+  void SetStateNormalized(FidlBacklight::wire::State state,
                           SetStateNormalizedCompleter::Sync& completer) override;
   // Note: the device is calibrated at the factory to find a normalized brightness scale value that
   // corresponds to a set maximum brightness in nits. GetStateAbsolute() will return an error if
@@ -128,7 +128,7 @@ class Lp8556Device : public DeviceType,
   void GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) override;
   // Note: this changes the normalized brightness scale back to the calibrated value in order to set
   // the absolute brightness.
-  void SetStateAbsolute(FidlBacklight::State state,
+  void SetStateAbsolute(FidlBacklight::wire::State state,
                         SetStateAbsoluteCompleter::Sync& completer) override;
   void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync& completer) override;
   void SetNormalizedBrightnessScale(

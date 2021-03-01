@@ -244,7 +244,7 @@ class VnodeMinfs : public fs::Vnode,
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t SetAttributes(fs::VnodeAttributesUpdate a) final;
 #ifdef __Fuchsia__
-  zx_status_t QueryFilesystem(llcpp::fuchsia::io::FilesystemInfo* out) final;
+  zx_status_t QueryFilesystem(llcpp::fuchsia::io::wire::FilesystemInfo* out) final;
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
 #endif
 

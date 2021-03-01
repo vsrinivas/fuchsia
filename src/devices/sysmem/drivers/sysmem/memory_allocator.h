@@ -29,7 +29,7 @@ class MemoryAllocator {
     virtual void CheckForUnbind() {}
   };
 
-  explicit MemoryAllocator(llcpp::fuchsia::sysmem2::HeapProperties properties);
+  explicit MemoryAllocator(llcpp::fuchsia::sysmem2::wire::HeapProperties properties);
 
   virtual ~MemoryAllocator();
 
@@ -51,7 +51,7 @@ class MemoryAllocator {
   // during Delete().
   virtual zx_status_t SetupChildVmo(
       const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-      llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings) = 0;
+      llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings) = 0;
 
   // This also should clean up any tracking of child_vmo by child_vmo's koid.
   // The child_vmo object itself, and all handles to it, are completely gone by
@@ -66,7 +66,7 @@ class MemoryAllocator {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  const llcpp::fuchsia::sysmem2::HeapProperties& heap_properties() const {
+  const llcpp::fuchsia::sysmem2::wire::HeapProperties& heap_properties() const {
     return heap_properties_;
   }
 
@@ -93,7 +93,7 @@ class MemoryAllocator {
  private:
   // This is a unique ID for the allocator on this system.
   uint64_t id_{};
-  llcpp::fuchsia::sysmem2::HeapProperties heap_properties_;
+  llcpp::fuchsia::sysmem2::wire::HeapProperties heap_properties_;
 };
 
 }  // namespace sysmem_driver

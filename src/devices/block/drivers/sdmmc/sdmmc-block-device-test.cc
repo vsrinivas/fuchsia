@@ -1152,7 +1152,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   ASSERT_OK(rx_frames_mapper.CreateAndMap(512 * 4, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
                                           &rx_frames));
 
-  ::llcpp::fuchsia::hardware::rpmb::Request write_read_request = {};
+  ::llcpp::fuchsia::hardware::rpmb::wire::Request write_read_request = {};
   ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_MAP,
                                 &write_read_request.tx_frames.vmo));
 
@@ -1160,12 +1160,12 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   write_read_request.tx_frames.size = 1024;
   FillVmo(tx_frames_mapper, 2, 2);
 
-  ::llcpp::fuchsia::mem::Range rx_frames_range = {};
+  ::llcpp::fuchsia::mem::wire::Range rx_frames_range = {};
   ASSERT_OK(rx_frames.duplicate(ZX_RIGHT_SAME_RIGHTS, &rx_frames_range.vmo));
   rx_frames_range.offset = 512;
   rx_frames_range.size = 1536;
   write_read_request.rx_frames =
-      fidl::unowned_ptr_t<::llcpp::fuchsia::mem::Range>(&rx_frames_range);
+      fidl::unowned_ptr_t<::llcpp::fuchsia::mem::wire::Range>(&rx_frames_range);
 
   sdmmc_.set_command_callback(MMC_SWITCH, [](sdmmc_req_t* req) {
     const uint32_t index = (req->arg >> 16) & 0xff;
@@ -1187,7 +1187,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   // The first two blocks were written by the RPMB write request, and read back by the read request.
   ASSERT_NO_FATAL_FAILURES(CheckVmo(rx_frames_mapper, 2, 1));
 
-  ::llcpp::fuchsia::hardware::rpmb::Request write_request = {};
+  ::llcpp::fuchsia::hardware::rpmb::wire::Request write_request = {};
   ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_MAP,
                                 &write_request.tx_frames.vmo));
 
@@ -1231,7 +1231,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestLimit) {
   ASSERT_OK(zx::vmo::create(512, 0, &tx_frames));
 
   for (int i = 0; i < 16; i++) {
-    ::llcpp::fuchsia::hardware::rpmb::Request request = {};
+    ::llcpp::fuchsia::hardware::rpmb::wire::Request request = {};
     ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.tx_frames.vmo));
     request.tx_frames.offset = 0;
     request.tx_frames.size = 512;
@@ -1240,7 +1240,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestLimit) {
         [&](__UNUSED ::llcpp::fuchsia::hardware::rpmb::Rpmb::RequestResponse* response) {});
   }
 
-  ::llcpp::fuchsia::hardware::rpmb::Request error_request = {};
+  ::llcpp::fuchsia::hardware::rpmb::wire::Request error_request = {};
   ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_SAME_RIGHTS, &error_request.tx_frames.vmo));
   error_request.tx_frames.offset = 0;
   error_request.tx_frames.size = 512;
@@ -1320,7 +1320,7 @@ void SdmmcBlockDeviceTest::QueueRpmbRequests() {
   while (run_threads_.load()) {
     for (uint32_t i = outstanding_op_count.load(); i < kMaxOutstandingOps;
          i = outstanding_op_count.fetch_add(1) + 1) {
-      ::llcpp::fuchsia::hardware::rpmb::Request request = {};
+      ::llcpp::fuchsia::hardware::rpmb::wire::Request request = {};
       EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.tx_frames.vmo));
       request.tx_frames.offset = 0;
       request.tx_frames.size = 512;
@@ -1376,7 +1376,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestsGetToRun) {
   sync_completion_t completion;
 
   for (uint32_t i = 0; i < kMaxOutstandingOps; i++) {
-    ::llcpp::fuchsia::hardware::rpmb::Request request = {};
+    ::llcpp::fuchsia::hardware::rpmb::wire::Request request = {};
     EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.tx_frames.vmo));
     request.tx_frames.offset = 0;
     request.tx_frames.size = 512;

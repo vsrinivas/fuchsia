@@ -191,14 +191,15 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   void Shutdown(ShutdownCompleter::Sync& completer) override;
 
   // Helpers to be able to send events to the client.
-  zx_status_t OnError(uint64_t context_id, std::vector<llcpp::fuchsia::shell::Location>& locations,
+  zx_status_t OnError(uint64_t context_id,
+                      std::vector<llcpp::fuchsia::shell::wire::Location>& locations,
                       const std::string& error_message) {
     return binding_.value()->OnError(context_id, fidl::unowned_vec(locations),
                                      fidl::unowned_str(error_message));
   }
 
   zx_status_t OnError(uint64_t context_id, const std::string& error_message) {
-    std::vector<llcpp::fuchsia::shell::Location> locations;
+    std::vector<llcpp::fuchsia::shell::wire::Location> locations;
     return OnError(context_id, locations, error_message);
   }
 
@@ -222,28 +223,29 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
  private:
   // Helpers to be able to create AST nodes.
   void AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
-                         uint64_t node_node_id, const llcpp::fuchsia::shell::IntegerLiteral& node,
-                         bool root_node);
+                         uint64_t node_node_id,
+                         const llcpp::fuchsia::shell::wire::IntegerLiteral& node, bool root_node);
 
   void AddVariableDefinition(ServerInterpreterContext* context, uint64_t node_file_id,
                              uint64_t node_node_id,
-                             const llcpp::fuchsia::shell::VariableDefinition& node, bool root_node);
+                             const llcpp::fuchsia::shell::wire::VariableDefinition& node,
+                             bool root_node);
 
   void AddObjectSchema(ServerInterpreterContext* context, uint64_t node_file_id,
                        uint64_t node_node_id,
-                       const llcpp::fuchsia::shell::ObjectSchemaDefinition& node, bool root_node);
+                       const llcpp::fuchsia::shell::wire::ObjectSchemaDefinition& node,
+                       bool root_node);
 
-  void AddObjectSchemaField(ServerInterpreterContext* context, uint64_t node_file_id,
-                            uint64_t node_node_id,
-                            const llcpp::fuchsia::shell::ObjectFieldSchemaDefinition& field_type,
-                            bool root_node);
+  void AddObjectSchemaField(
+      ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
+      const llcpp::fuchsia::shell::wire::ObjectFieldSchemaDefinition& field_type, bool root_node);
 
   void AddObject(ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
-                 const llcpp::fuchsia::shell::ObjectDefinition& node, bool root_node);
+                 const llcpp::fuchsia::shell::wire::ObjectDefinition& node, bool root_node);
 
   void AddObjectField(ServerInterpreterContext* context, uint64_t node_file_id,
                       uint64_t node_node_id,
-                      const llcpp::fuchsia::shell::ObjectFieldDefinition& field_type,
+                      const llcpp::fuchsia::shell::wire::ObjectFieldDefinition& field_type,
                       bool root_node);
 
   void AddStringLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
@@ -257,11 +259,11 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
                      bool root_node);
 
   void AddAssignment(ServerInterpreterContext* context, uint64_t node_file_id,
-                     uint64_t node_node_id, const llcpp::fuchsia::shell::Assignment& node,
+                     uint64_t node_node_id, const llcpp::fuchsia::shell::wire::Assignment& node,
                      bool root_node);
 
   void AddAddition(ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
-                   const llcpp::fuchsia::shell::Addition& node, bool root_node);
+                   const llcpp::fuchsia::shell::wire::Addition& node, bool root_node);
 
   // The server which created this service.
   Server* server_;

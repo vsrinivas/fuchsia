@@ -402,7 +402,7 @@ void OpteeController::ConnectToDeviceInfo(
 }
 
 void OpteeController::ConnectToApplication(
-    llcpp::fuchsia::tee::Uuid application_uuid, zx::channel service_provider,
+    llcpp::fuchsia::tee::wire::Uuid application_uuid, zx::channel service_provider,
     zx::channel application_request,
     [[maybe_unused]] ConnectToApplicationCompleter::Sync& _completer) {
   ConnectToApplicationInternal(Uuid(application_uuid), std::move(service_provider),

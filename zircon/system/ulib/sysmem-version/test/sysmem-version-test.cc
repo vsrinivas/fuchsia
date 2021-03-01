@@ -38,8 +38,8 @@ class LinearSnap {
   }
 
   // This value is similar to an in-place decode received LLCPP message, in that it can be moved out
-  // syntatically, but really any tracking_ptr<>(s) are non-owned, so callers should take care to
-  // not use the returned logical FidlType& (even if syntatically moved out) beyond ~LinearSnap.
+  // syntactically, but really any tracking_ptr<>(s) are non-owned, so callers should take care to
+  // not use the returned logical FidlType& (even if syntactically moved out) beyond ~LinearSnap.
   FidlType& value() { return *reinterpret_cast<FidlType*>(&linear_data_); }
 
   const fidl::BytePart snap_bytes() const {
@@ -170,7 +170,7 @@ void random(T* field) {
 
 template <>
 void random<v1::wire::HeapType>(v1::wire::HeapType* field) {
-  // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if avaialable.
+  // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if available.
   static constexpr uint64_t valid[] = {
       /*SYSTEM_RAM =*/0u,
       /*AMLOGIC_SECURE =*/1152921504606912512u,
@@ -185,7 +185,7 @@ void random<v1::wire::HeapType>(v1::wire::HeapType* field) {
 
 template <>
 void random<v1::wire::PixelFormatType>(v1::wire::PixelFormatType* field) {
-  // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if avaialable.
+  // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if available.
   static constexpr uint32_t valid[] = {
       /*INVALID =*/0u,
       /*R8G8B8A8 =*/1u,
@@ -210,7 +210,7 @@ void random<v1::wire::PixelFormatType>(v1::wire::PixelFormatType* field) {
 
 template <>
 void random<v1::wire::ColorSpaceType>(v1::wire::ColorSpaceType* field) {
-  // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if avaialable.
+  // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if available.
   static constexpr uint32_t valid[] = {
       /*INVALID =*/0u,
       /*SRGB =*/1u,
@@ -230,7 +230,7 @@ void random<v1::wire::ColorSpaceType>(v1::wire::ColorSpaceType* field) {
 
 template <>
 void random<v1::wire::CoherencyDomain>(v1::wire::CoherencyDomain* field) {
-  // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if avaialable.
+  // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if available.
   static constexpr uint32_t valid[] = {
       /*CPU =*/0u,
       /*RAM =*/1u,
@@ -242,8 +242,8 @@ void random<v1::wire::CoherencyDomain>(v1::wire::CoherencyDomain* field) {
   *field = static_cast<v1::wire::CoherencyDomain>(valid[index]);
 }
 
-v1::BufferUsage V1RandomBufferUsage() {
-  v1::BufferUsage r{};
+v1::wire::BufferUsage V1RandomBufferUsage() {
+  v1::wire::BufferUsage r{};
   random(&r.none);
   random(&r.cpu);
   random(&r.vulkan);
@@ -252,8 +252,8 @@ v1::BufferUsage V1RandomBufferUsage() {
   return r;
 }
 
-v1::BufferMemoryConstraints V1RandomBufferMemoryConstraints() {
-  v1::BufferMemoryConstraints r{};
+v1::wire::BufferMemoryConstraints V1RandomBufferMemoryConstraints() {
+  v1::wire::BufferMemoryConstraints r{};
   random(&r.min_size_bytes);
   random(&r.max_size_bytes);
   random(&r.physically_contiguous_required);
@@ -270,8 +270,8 @@ v1::BufferMemoryConstraints V1RandomBufferMemoryConstraints() {
   return r;
 }
 
-v1::PixelFormat V1RandomPixelFormat() {
-  v1::PixelFormat r{};
+v1::wire::PixelFormat V1RandomPixelFormat() {
+  v1::wire::PixelFormat r{};
   random(&r.type);
   random(&r.has_format_modifier);
   if (r.has_format_modifier) {
@@ -280,14 +280,14 @@ v1::PixelFormat V1RandomPixelFormat() {
   return r;
 }
 
-v1::ColorSpace V1RandomColorSpace() {
-  v1::ColorSpace r{};
+v1::wire::ColorSpace V1RandomColorSpace() {
+  v1::wire::ColorSpace r{};
   random(&r.type);
   return r;
 }
 
-v1::ImageFormatConstraints V1RandomImageFormatConstraints() {
-  v1::ImageFormatConstraints r{};
+v1::wire::ImageFormatConstraints V1RandomImageFormatConstraints() {
+  v1::wire::ImageFormatConstraints r{};
   r.pixel_format = V1RandomPixelFormat();
   random(&r.color_spaces_count);
   r.color_spaces_count %= llcpp::fuchsia::sysmem::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES;
@@ -319,8 +319,8 @@ v1::ImageFormatConstraints V1RandomImageFormatConstraints() {
   return r;
 }
 
-v1::ImageFormat_2 V1RandomImageFormat() {
-  v1::ImageFormat_2 r{};
+v1::wire::ImageFormat_2 V1RandomImageFormat() {
+  v1::wire::ImageFormat_2 r{};
   r.pixel_format = V1RandomPixelFormat();
   random(&r.coded_width);
   random(&r.coded_height);
@@ -338,8 +338,8 @@ v1::ImageFormat_2 V1RandomImageFormat() {
   return r;
 }
 
-v1::BufferMemorySettings V1RandomBufferMemorySettings() {
-  v1::BufferMemorySettings r{};
+v1::wire::BufferMemorySettings V1RandomBufferMemorySettings() {
+  v1::wire::BufferMemorySettings r{};
   random(&r.size_bytes);
   random(&r.is_physically_contiguous);
   random(&r.is_secure);
@@ -348,8 +348,8 @@ v1::BufferMemorySettings V1RandomBufferMemorySettings() {
   return r;
 }
 
-v1::SingleBufferSettings V1RandomSingleBufferSettings() {
-  v1::SingleBufferSettings r{};
+v1::wire::SingleBufferSettings V1RandomSingleBufferSettings() {
+  v1::wire::SingleBufferSettings r{};
   r.buffer_settings = V1RandomBufferMemorySettings();
   random(&r.has_image_format_constraints);
   if (r.has_image_format_constraints) {
@@ -358,8 +358,8 @@ v1::SingleBufferSettings V1RandomSingleBufferSettings() {
   return r;
 }
 
-v1::VmoBuffer V1RandomVmoBuffer() {
-  v1::VmoBuffer r{};
+v1::wire::VmoBuffer V1RandomVmoBuffer() {
+  v1::wire::VmoBuffer r{};
   // Arbitrary is good enough - we don't need truly "random" for this.
   zx::vmo arbitrary_vmo;
   ZX_ASSERT(ZX_OK == zx::vmo::create(ZX_PAGE_SIZE, 0, &arbitrary_vmo));
@@ -368,8 +368,8 @@ v1::VmoBuffer V1RandomVmoBuffer() {
   return r;
 }
 
-v1::BufferCollectionInfo_2 V1RandomBufferCollectionInfo() {
-  v1::BufferCollectionInfo_2 r{};
+v1::wire::BufferCollectionInfo_2 V1RandomBufferCollectionInfo() {
+  v1::wire::BufferCollectionInfo_2 r{};
   random(&r.buffer_count);
   r.buffer_count %= v1::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS;
   r.settings = V1RandomSingleBufferSettings();
@@ -379,8 +379,8 @@ v1::BufferCollectionInfo_2 V1RandomBufferCollectionInfo() {
   return r;
 }
 
-v1::BufferCollectionConstraints V1RandomBufferCollectionConstraints() {
-  v1::BufferCollectionConstraints r{};
+v1::wire::BufferCollectionConstraints V1RandomBufferCollectionConstraints() {
+  v1::wire::BufferCollectionConstraints r{};
   r.usage = V1RandomBufferUsage();
   random(&r.min_buffer_count_for_camping);
   random(&r.min_buffer_count_for_dedicated_slack);
@@ -400,8 +400,8 @@ v1::BufferCollectionConstraints V1RandomBufferCollectionConstraints() {
   return r;
 }
 
-v1::BufferCollectionConstraintsAuxBuffers V1RandomBufferCollectionConstraintsAuxBuffers() {
-  v1::BufferCollectionConstraintsAuxBuffers r{};
+v1::wire::BufferCollectionConstraintsAuxBuffers V1RandomBufferCollectionConstraintsAuxBuffers() {
+  v1::wire::BufferCollectionConstraintsAuxBuffers r{};
   random(&r.need_clear_aux_buffers_for_secure);
   random(&r.allow_clear_aux_buffers_for_secure);
   return r;
@@ -602,8 +602,9 @@ TEST(SysmemVersion, BufferCollectionConstraints) {
     if (has_main) {
       random(&has_aux);
     }
-    v1::BufferCollectionConstraints* maybe_main = has_main ? &snap_1->value() : nullptr;
-    v1::BufferCollectionConstraintsAuxBuffers* maybe_aux = has_aux ? &snap_aux_1->value() : nullptr;
+    v1::wire::BufferCollectionConstraints* maybe_main = has_main ? &snap_1->value() : nullptr;
+    v1::wire::BufferCollectionConstraintsAuxBuffers* maybe_aux =
+        has_aux ? &snap_aux_1->value() : nullptr;
     auto v2 = sysmem::V2CopyFromV1BufferCollectionConstraints(allocator, maybe_main, maybe_aux)
                   .take_value();
     auto v1_2_result = sysmem::V1CopyFromV2BufferCollectionConstraints(v2);
@@ -617,7 +618,7 @@ TEST(SysmemVersion, BufferCollectionConstraints) {
       auto snap_2 = SnapMoveFrom(std::move(v1_2));
       EXPECT_TRUE(IsEqual(*snap_1, *snap_2));
     } else {
-      auto v1_2 = v1::BufferCollectionConstraints{};
+      auto v1_2 = v1::wire::BufferCollectionConstraints{};
       auto snap_2 = SnapMoveFrom(std::move(v1_2));
       EXPECT_TRUE(IsEqual(*snap_1, *snap_2));
     }
@@ -642,12 +643,12 @@ TEST(SysmemVersion, CoherencyDomainSupport) {
     random(&ram_supported);
     random(&inaccessible_supported);
 
-    v2::CoherencyDomainSupport v2_1(allocator);
+    v2::wire::CoherencyDomainSupport v2_1(allocator);
     v2_1.set_cpu_supported(allocator, cpu_supported);
     v2_1.set_ram_supported(allocator, ram_supported);
     v2_1.set_inaccessible_supported(allocator, inaccessible_supported);
 
-    v2::CoherencyDomainSupport v2_2 = sysmem::V2CloneCoherencyDomainSuppoort(allocator, v2_1);
+    v2::wire::CoherencyDomainSupport v2_2 = sysmem::V2CloneCoherencyDomainSuppoort(allocator, v2_1);
     EXPECT_TRUE(v2_2.has_cpu_supported());
     EXPECT_TRUE(v2_2.has_ram_supported());
     EXPECT_TRUE(v2_2.has_inaccessible_supported());
@@ -670,17 +671,17 @@ TEST(SysmemVersion, HeapProperties) {
     random(&inaccessible_supported);
     random(&need_clear);
 
-    v2::HeapProperties v2_1(allocator);
+    v2::wire::HeapProperties v2_1(allocator);
     v2_1.set_need_clear(allocator, need_clear);
     {
-      v2::CoherencyDomainSupport coherency_domain_support(allocator);
+      v2::wire::CoherencyDomainSupport coherency_domain_support(allocator);
       coherency_domain_support.set_cpu_supported(allocator, cpu_supported);
       coherency_domain_support.set_ram_supported(allocator, ram_supported);
       coherency_domain_support.set_inaccessible_supported(allocator, inaccessible_supported);
       v2_1.set_coherency_domain_support(allocator, std::move(coherency_domain_support));
     }
 
-    v2::HeapProperties v2_2 = sysmem::V2CloneHeapProperties(allocator, v2_1);
+    v2::wire::HeapProperties v2_2 = sysmem::V2CloneHeapProperties(allocator, v2_1);
     EXPECT_TRUE(v2_2.has_coherency_domain_support());
     EXPECT_TRUE(v2_2.coherency_domain_support().has_cpu_supported());
     EXPECT_TRUE(v2_2.coherency_domain_support().has_ram_supported());

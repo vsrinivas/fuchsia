@@ -12,11 +12,11 @@
 
 namespace fidl_linearized = ::llcpp::fidl::llcpp::linearized::test;
 
-void RunTest(
-    const std::function<void(fidl::OutgoingIovecMessage*, fidl_linearized::FullyLinearizedStruct*,
-                             fidl_linearized::InnerStruct*)>& run_test_body) {
-  fidl_linearized::InnerStruct inner = {.x = 1};
-  fidl_linearized::FullyLinearizedStruct input{.ptr = fidl::unowned_ptr(&inner)};
+void RunTest(const std::function<void(fidl::OutgoingIovecMessage*,
+                                      fidl_linearized::wire::FullyLinearizedStruct*,
+                                      fidl_linearized::wire::InnerStruct*)>& run_test_body) {
+  fidl_linearized::wire::InnerStruct inner = {.x = 1};
+  fidl_linearized::wire::FullyLinearizedStruct input{.ptr = fidl::unowned_ptr(&inner)};
 
   constexpr uint32_t kNumIovecs = 3;
   zx_channel_iovec_t iovecs[kNumIovecs];
@@ -54,7 +54,8 @@ uint32_t Linearize(fidl::OutgoingIovecMessage* iovec_message, uint8_t (&bytes)[N
 
 TEST(Iovec, Encode) {
   RunTest([](fidl::OutgoingIovecMessage* iovec_message,
-             fidl_linearized::FullyLinearizedStruct* input, fidl_linearized::InnerStruct* inner) {
+             fidl_linearized::wire::FullyLinearizedStruct* input,
+             fidl_linearized::wire::InnerStruct* inner) {
     ASSERT_EQ(3u, iovec_message->iovec_actual());
 
     EXPECT_EQ(input, iovec_message->iovecs()[0].buffer);
@@ -74,7 +75,8 @@ TEST(Iovec, Encode) {
 
 TEST(Iovec, Write) {
   RunTest([](fidl::OutgoingIovecMessage* iovec_message,
-             fidl_linearized::FullyLinearizedStruct* input, fidl_linearized::InnerStruct* inner) {
+             fidl_linearized::wire::FullyLinearizedStruct* input,
+             fidl_linearized::wire::InnerStruct* inner) {
     zx::channel ch1, ch2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &ch1, &ch2));
     iovec_message->Write(ch1);
@@ -96,7 +98,8 @@ TEST(Iovec, Write) {
 
 TEST(Iovec, Call) {
   RunTest([](fidl::OutgoingIovecMessage* iovec_message,
-             fidl_linearized::FullyLinearizedStruct* input, fidl_linearized::InnerStruct* inner) {
+             fidl_linearized::wire::FullyLinearizedStruct* input,
+             fidl_linearized::wire::InnerStruct* inner) {
     uint8_t expected_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     uint32_t expected_num_bytes = Linearize(iovec_message, expected_bytes);
 
@@ -122,10 +125,11 @@ TEST(Iovec, Call) {
     });
 
     uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-    iovec_message->Call<fidl_linearized::FullyLinearizedStruct>(ch1.get(), bytes, sizeof(bytes));
+    iovec_message->Call<fidl_linearized::wire::FullyLinearizedStruct>(ch1.get(), bytes,
+                                                                      sizeof(bytes));
     ASSERT_EQ(ZX_OK, iovec_message->status()) << iovec_message->error();
 
-    auto result = reinterpret_cast<fidl_linearized::FullyLinearizedStruct*>(bytes);
+    auto result = reinterpret_cast<fidl_linearized::wire::FullyLinearizedStruct*>(bytes);
     EXPECT_EQ(1, result->ptr->x);
 
     thread.join();

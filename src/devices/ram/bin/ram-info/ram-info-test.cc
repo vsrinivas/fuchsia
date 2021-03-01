@@ -35,7 +35,7 @@ class FakeRamDevice : public ::llcpp::fuchsia::hardware::ram::metrics::Device::I
     completer.ReplySuccess(TEST_REGISTER_VALUE);
   }
 
-  void MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
+  void MeasureBandwidth(ram_metrics::wire::BandwidthMeasurementConfig config,
                         MeasureBandwidthCompleter::Sync& completer) override {
     if (completer_action_ == CompleterAction::kClose) {
       completer.Close(0);
@@ -49,7 +49,7 @@ class FakeRamDevice : public ::llcpp::fuchsia::hardware::ram::metrics::Device::I
     EXPECT_EQ(config.cycles_to_measure % 1024, 0);
     auto mul = config.cycles_to_measure / 1024;
 
-    ram_metrics::BandwidthInfo info = {};
+    ram_metrics::wire::BandwidthInfo info = {};
     info.timestamp = zx::msec(1234).to_nsecs();
     info.frequency = 256 * 1024 * 1024;
     info.bytes_per_cycle = 1;
@@ -124,7 +124,7 @@ TEST_F(RamInfoTest, DefaultPrinter) {
   printer.AddChannelName(2, "channel2");
   printer.AddChannelName(3, "channel3");
 
-  ram_metrics::BandwidthMeasurementConfig config = {};
+  ram_metrics::wire::BandwidthMeasurementConfig config = {};
   config.cycles_to_measure = kCyclesToMeasure;
 
   EXPECT_OK(MeasureBandwith(&printer, std::move(client_), config));
@@ -153,7 +153,7 @@ TEST_F(RamInfoTest, CsvPrinter) {
   printer.AddChannelName(2, "channel2");
   printer.AddChannelName(3, "channel3");
 
-  ram_metrics::BandwidthMeasurementConfig config = {};
+  ram_metrics::wire::BandwidthMeasurementConfig config = {};
   config.cycles_to_measure = kCyclesToMeasure;
 
   EXPECT_OK(MeasureBandwith(&printer, std::move(client_), config));
@@ -215,7 +215,7 @@ TEST_F(RamInfoTest, CyclesToMeasure) {
   printer.AddChannelName(2, "channel2");
   printer.AddChannelName(3, "channel3");
 
-  ram_metrics::BandwidthMeasurementConfig config = {};
+  ram_metrics::wire::BandwidthMeasurementConfig config = {};
   config.cycles_to_measure = kCyclesToMeasure;
 
   EXPECT_OK(MeasureBandwith(&printer, std::move(client_), config));

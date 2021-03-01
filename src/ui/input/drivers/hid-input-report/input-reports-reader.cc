@@ -59,7 +59,7 @@ void InputReportsReader::SendReportsToWaitingRead() {
     return;
   }
 
-  std::array<fuchsia_input_report::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
+  std::array<fuchsia_input_report::wire::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
       reports;
   size_t num_reports = 0;
 
@@ -71,7 +71,7 @@ void InputReportsReader::SendReportsToWaitingRead() {
   }
 
   fidl::Result result =
-      waiting_read_->ReplySuccess(fidl::VectorView<fuchsia_input_report::InputReport>(
+      waiting_read_->ReplySuccess(fidl::VectorView<fuchsia_input_report::wire::InputReport>(
           fidl::unowned_ptr(reports.data()), num_reports));
   if (result.status() != ZX_OK) {
     zxlogf(ERROR, "SendReport: Failed to send reports (%s): %s\n", result.status_string(),
@@ -87,7 +87,7 @@ void InputReportsReader::ReceiveReport(const uint8_t* raw_report, size_t raw_rep
                                        zx_time_t time, hid_input_report::Device* device) {
   fbl::AutoLock lock(&readers_lock_);
 
-  fuchsia_input_report::InputReport report(report_allocator_);
+  fuchsia_input_report::wire::InputReport report(report_allocator_);
 
   if (device->ParseInputReport(raw_report, raw_report_size, report_allocator_, report) !=
       hid_input_report::ParseResult::kOk) {

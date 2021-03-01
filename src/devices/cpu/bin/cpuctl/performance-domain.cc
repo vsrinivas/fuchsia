@@ -48,9 +48,9 @@ std::pair<zx_status_t, uint64_t> CpuPerformanceDomain::GetNumLogicalCores() {
   return std::make_pair(resp.status(), resp.status() == ZX_OK ? resp.value().count : 0);
 }
 
-std::tuple<zx_status_t, uint64_t, cpuctrl::CpuPerformanceStateInfo>
+std::tuple<zx_status_t, uint64_t, cpuctrl::wire::CpuPerformanceStateInfo>
 CpuPerformanceDomain::GetCurrentPerformanceState() {
-  constexpr cpuctrl::CpuPerformanceStateInfo kEmptyPstate = {
+  constexpr cpuctrl::wire::CpuPerformanceStateInfo kEmptyPstate = {
       .frequency_hz = cpuctrl::FREQUENCY_UNKNOWN,
       .voltage_uv = cpuctrl::VOLTAGE_UNKNOWN,
   };
@@ -64,7 +64,7 @@ CpuPerformanceDomain::GetCurrentPerformanceState() {
 
   uint64_t current_pstate = resp.value().out_state;
 
-  cpuctrl::CpuPerformanceStateInfo pstate_result = kEmptyPstate;
+  cpuctrl::wire::CpuPerformanceStateInfo pstate_result = kEmptyPstate;
   if (current_pstate >= pstates.size()) {
     std::cerr << "No description for current pstate." << std::endl;
   } else {
@@ -74,7 +74,8 @@ CpuPerformanceDomain::GetCurrentPerformanceState() {
   return std::make_tuple(ZX_OK, current_pstate, pstate_result);
 }
 
-const std::vector<cpuctrl::CpuPerformanceStateInfo>& CpuPerformanceDomain::GetPerformanceStates() {
+const std::vector<cpuctrl::wire::CpuPerformanceStateInfo>&
+CpuPerformanceDomain::GetPerformanceStates() {
   // If we've already fetched this in the past, there's no need to fetch again.
   if (!cached_pstates_.empty()) {
     return cached_pstates_;

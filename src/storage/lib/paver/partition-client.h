@@ -97,7 +97,7 @@ class BlockPartitionClient final : public BlockDevicePartitionClient {
 
   ::llcpp::fuchsia::hardware::block::Block::SyncClient partition_;
   std::optional<block_client::Client> client_;
-  std::optional<::llcpp::fuchsia::hardware::block::BlockInfo> block_info_;
+  std::optional<::llcpp::fuchsia::hardware::block::wire::BlockInfo> block_info_;
 };
 
 // A variant of BlockPartitionClient that reads/writes starting from a fixed offset in

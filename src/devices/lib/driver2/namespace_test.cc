@@ -20,9 +20,9 @@ TEST(NamespaceTest, CreateAndConnect) {
 
   auto pkg = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
   EXPECT_EQ(ZX_OK, pkg.status_value());
-  frunner::ComponentNamespaceEntry ns_entries[] = {
-      frunner::ComponentNamespaceEntry::Builder(
-          std::make_unique<frunner::ComponentNamespaceEntry::Frame>())
+  frunner::wire::ComponentNamespaceEntry ns_entries[] = {
+      frunner::wire::ComponentNamespaceEntry::Builder(
+          std::make_unique<frunner::wire::ComponentNamespaceEntry::Frame>())
           .set_path(std::make_unique<fidl::StringView>("/pkg"))
           .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>(
               std::move(pkg->client)))
@@ -58,9 +58,9 @@ TEST(NamespaceTest, CreateAndConnect) {
 TEST(NamespaceTest, CreateFailed) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
-  frunner::ComponentNamespaceEntry ns_entries[] = {
-      frunner::ComponentNamespaceEntry::Builder(
-          std::make_unique<frunner::ComponentNamespaceEntry::Frame>())
+  frunner::wire::ComponentNamespaceEntry ns_entries[] = {
+      frunner::wire::ComponentNamespaceEntry::Builder(
+          std::make_unique<frunner::wire::ComponentNamespaceEntry::Frame>())
           .set_path(std::make_unique<fidl::StringView>("/pkg"))
           .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>())
           .build(),

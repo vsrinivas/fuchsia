@@ -47,7 +47,7 @@ class TestServer final : public fio::Directory::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void SetAttr(uint32_t flags, fio::NodeAttributes attribute,
+  void SetAttr(uint32_t flags, fio::wire::NodeAttributes attribute,
                SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }

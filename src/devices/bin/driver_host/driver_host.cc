@@ -61,8 +61,9 @@
 
 namespace {
 
-llcpp::fuchsia::device::manager::DeviceProperty convert_device_prop(const zx_device_prop_t& prop) {
-  return llcpp::fuchsia::device::manager::DeviceProperty{
+llcpp::fuchsia::device::manager::wire::DeviceProperty convert_device_prop(
+    const zx_device_prop_t& prop) {
+  return llcpp::fuchsia::device::manager::wire::DeviceProperty{
       .id = prop.id,
       .reserved = prop.reserved,
       .value = prop.value,
@@ -226,7 +227,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
     return status;
   }
 
-  std::vector<llcpp::fuchsia::device::manager::DeviceProperty> props_list = {};
+  std::vector<llcpp::fuchsia::device::manager::wire::DeviceProperty> props_list = {};
   for (size_t i = 0; i < prop_count; i++) {
     props_list.push_back(convert_device_prop(props[i]));
   }
@@ -509,7 +510,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_client,
 
 void DevhostControllerConnection::CreateCompositeDevice(
     zx::channel coordinator_client, zx::channel device_controller_rpc,
-    ::fidl::VectorView<::llcpp::fuchsia::device::manager::Fragment> fragments,
+    ::fidl::VectorView<::llcpp::fuchsia::device::manager::wire::Fragment> fragments,
     ::fidl::StringView name, uint64_t local_device_id,
     CreateCompositeDeviceCompleter::Sync& completer) {
   // Convert the fragment IDs into zx_device references
@@ -1100,29 +1101,29 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
   }
 
   VLOGD(1, *dev, "create-composite");
-  std::vector<fuchsia::device::manager::DeviceFragment> compvec = {};
+  std::vector<fuchsia::device::manager::wire::DeviceFragment> compvec = {};
   for (size_t i = 0; i < comp_desc->fragments_count; i++) {
-    ::fidl::Array<fuchsia::device::manager::DeviceFragmentPart,
+    ::fidl::Array<fuchsia::device::manager::wire::DeviceFragmentPart,
                   fuchsia::device::manager::DEVICE_FRAGMENT_PARTS_MAX>
         parts{};
     for (uint32_t j = 0; j < comp_desc->fragments[i].parts_count; j++) {
-      ::fidl::Array<fuchsia::device::manager::BindInstruction,
+      ::fidl::Array<fuchsia::device::manager::wire::BindInstruction,
                     fuchsia::device::manager::DEVICE_FRAGMENT_PART_INSTRUCTIONS_MAX>
           bind_instructions{};
       for (uint32_t k = 0; k < comp_desc->fragments[i].parts[j].instruction_count; k++) {
-        bind_instructions[k] = fuchsia::device::manager::BindInstruction{
+        bind_instructions[k] = fuchsia::device::manager::wire::BindInstruction{
             .op = comp_desc->fragments[i].parts[j].match_program[k].op,
             .arg = comp_desc->fragments[i].parts[j].match_program[k].arg,
             .debug = comp_desc->fragments[i].parts[j].match_program[k].debug,
         };
       }
-      auto part = fuchsia::device::manager::DeviceFragmentPart{
+      auto part = fuchsia::device::manager::wire::DeviceFragmentPart{
           .match_program_count = comp_desc->fragments[i].parts[j].instruction_count,
           .match_program = bind_instructions,
       };
       parts[j] = part;
     }
-    auto dc = fuchsia::device::manager::DeviceFragment{
+    auto dc = fuchsia::device::manager::wire::DeviceFragment{
         .name = ::fidl::StringView{fidl::unowned_ptr(comp_desc->fragments[i].name),
                                    strnlen(comp_desc->fragments[i].name, 32)},
         .parts_count = comp_desc->fragments[i].parts_count,
@@ -1131,9 +1132,9 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
     compvec.push_back(std::move(dc));
   }
 
-  std::vector<fuchsia::device::manager::DeviceMetadata> metadata = {};
+  std::vector<fuchsia::device::manager::wire::DeviceMetadata> metadata = {};
   for (size_t i = 0; i < comp_desc->metadata_count; i++) {
-    auto meta = fuchsia::device::manager::DeviceMetadata{
+    auto meta = fuchsia::device::manager::wire::DeviceMetadata{
         .key = comp_desc->metadata_list[i].type,
         .data = fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(
                                      const_cast<void*>(comp_desc->metadata_list[i].data))),
@@ -1141,12 +1142,12 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
     metadata.emplace_back(std::move(meta));
   }
 
-  std::vector<llcpp::fuchsia::device::manager::DeviceProperty> props = {};
+  std::vector<llcpp::fuchsia::device::manager::wire::DeviceProperty> props = {};
   for (size_t i = 0; i < comp_desc->props_count; i++) {
     props.push_back(convert_device_prop(comp_desc->props[i]));
   }
 
-  fuchsia::device::manager::CompositeDeviceDescriptor comp_dev = {
+  fuchsia::device::manager::wire::CompositeDeviceDescriptor comp_dev = {
       .props = ::fidl::unowned_vec(props),
       .fragments = ::fidl::unowned_vec(compvec),
       .coresident_device_index = comp_desc->coresident_device_index,

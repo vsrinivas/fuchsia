@@ -70,13 +70,13 @@ void FileConnection::Sync(SyncCompleter::Sync& completer) {
 void FileConnection::GetAttr(GetAttrCompleter::Sync& completer) {
   auto result = Connection::NodeGetAttr();
   if (result.is_error()) {
-    completer.Reply(result.error(), fio::NodeAttributes());
+    completer.Reply(result.error(), fio::wire::NodeAttributes());
   } else {
     completer.Reply(ZX_OK, result.value().ToIoV1NodeAttributes());
   }
 }
 
-void FileConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
+void FileConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::wire::NodeAttributes attributes,
                              SetAttrCompleter::Sync& completer) {
   auto result = Connection::NodeSetAttr(flags, attributes);
   if (result.is_error()) {
@@ -148,7 +148,7 @@ void FileConnection::GetBuffer(uint32_t flags, GetBufferCompleter::Sync& complet
   } else if (!options().rights.read) {
     completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
   } else {
-    ::llcpp::fuchsia::mem::Buffer buffer;
+    ::llcpp::fuchsia::mem::wire::Buffer buffer;
     zx_status_t status = vnode()->GetVmo(flags, &buffer.vmo, &buffer.size);
     completer.Reply(status, status == ZX_OK ? fidl::unowned_ptr(&buffer) : nullptr);
   }

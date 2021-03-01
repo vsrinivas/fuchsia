@@ -40,7 +40,7 @@
 #include "src/storage/minfs/test/micro-benchmark/block-device-utils.h"
 #include "src/storage/minfs/test/micro-benchmark/minfs-costs.h"
 
-namespace minfs_micro_benchmanrk {
+namespace minfs_micro_benchmark {
 namespace {
 
 using MinfsFidlMetrics = fuchsia_minfs_Metrics;
@@ -320,4 +320,4 @@ TEST_F(MinfsMicroBenchmark, SmallFileMultiBlockWriteCost) {
 }
 
 }  // namespace
-}  // namespace minfs_micro_benchmanrk
+}  // namespace minfs_micro_benchmark

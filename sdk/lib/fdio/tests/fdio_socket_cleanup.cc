@@ -67,7 +67,7 @@ TEST(SocketCleanup, Datagram) {
   zx::eventpair client_event, server_event;
   ASSERT_OK(zx::eventpair::create(0, &client_event, &server_event));
 
-  llcpp::fuchsia::io::DatagramSocket dgram_info{.event = std::move(client_event)};
+  llcpp::fuchsia::io::wire::DatagramSocket dgram_info{.event = std::move(client_event)};
   llcpp::fuchsia::io::wire::NodeInfo node_info;
   node_info.set_datagram_socket(fidl::unowned_ptr(&dgram_info));
 
@@ -88,7 +88,7 @@ TEST(SocketCleanup, Stream) {
   zx::socket client_socket, server_socket;
   ASSERT_OK(zx::socket::create(0, &client_socket, &server_socket));
 
-  llcpp::fuchsia::io::StreamSocket stream_info{.socket = std::move(client_socket)};
+  llcpp::fuchsia::io::wire::StreamSocket stream_info{.socket = std::move(client_socket)};
   llcpp::fuchsia::io::wire::NodeInfo node_info;
   node_info.set_stream_socket(fidl::unowned_ptr(&stream_info));
 

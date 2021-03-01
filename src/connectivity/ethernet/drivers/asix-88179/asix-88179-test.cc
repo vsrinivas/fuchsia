@@ -36,15 +36,15 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 void USBVirtualBus::InitUsbAx88179(fbl::String* dev_path, fbl::String* test_function_path) {
   namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
+      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
 
-  usb_peripheral::DeviceDescriptor device_desc = {};
+  usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);
   device_desc.b_max_packet_size0 = 64;
   device_desc.bcd_device = htole16(0x0100);
   device_desc.b_num_configurations = 1;
 
-  usb_peripheral::FunctionDescriptor usb_ax88179_desc = {
+  usb_peripheral::wire::FunctionDescriptor usb_ax88179_desc = {
       .interface_class = USB_CLASS_COMM,
       .interface_subclass = USB_CDC_SUBCLASS_ETHERNET,
       .interface_protocol = 0,
@@ -53,7 +53,7 @@ void USBVirtualBus::InitUsbAx88179(fbl::String* dev_path, fbl::String* test_func
   device_desc.id_vendor = htole16(ASIX_VID);
   device_desc.id_product = htole16(AX88179_PID);
   std::vector<ConfigurationDescriptor> config_descs;
-  std::vector<usb_peripheral::FunctionDescriptor> function_descs;
+  std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
   function_descs.push_back(usb_ax88179_desc);
   ConfigurationDescriptor config_desc;
   config_desc = fidl::VectorView(fidl::unowned_ptr(function_descs.data()), function_descs.size());

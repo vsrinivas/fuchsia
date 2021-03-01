@@ -20,7 +20,7 @@ namespace fuchsia_tee = ::llcpp::fuchsia::tee;
 
 class OsRevision {
  public:
-  fuchsia_tee::OsRevision to_llcpp() {
+  fuchsia_tee::wire::OsRevision to_llcpp() {
     if (major_.has_value()) {
       llcpp_builder_.set_major(fidl::unowned_ptr(&major_.value()));
     }
@@ -36,7 +36,7 @@ class OsRevision {
   void set_minor(uint32_t minor) { minor_ = minor; }
 
  private:
-  fuchsia_tee::OsRevision::UnownedBuilder llcpp_builder_;
+  fuchsia_tee::wire::OsRevision::UnownedBuilder llcpp_builder_;
 
   std::optional<uint32_t> major_{};
   std::optional<uint32_t> minor_{};
@@ -44,7 +44,7 @@ class OsRevision {
 
 class OsInfo {
  public:
-  fuchsia_tee::OsInfo to_llcpp() {
+  fuchsia_tee::wire::OsInfo to_llcpp() {
     if (uuid_.has_value()) {
       llcpp_builder_.set_uuid(fidl::unowned_ptr(&uuid_.value()));
     }
@@ -60,7 +60,7 @@ class OsInfo {
     return llcpp_builder_.build();
   }
 
-  void set_uuid(fuchsia_tee::Uuid uuid) { uuid_ = uuid; }
+  void set_uuid(fuchsia_tee::wire::Uuid uuid) { uuid_ = uuid; }
 
   void set_revision(OsRevision revision) { revision_ = std::move(revision); }
 
@@ -69,17 +69,17 @@ class OsInfo {
   }
 
  private:
-  fuchsia_tee::OsInfo::UnownedBuilder llcpp_builder_;
-  fuchsia_tee::OsRevision llcpp_revision_{};
+  fuchsia_tee::wire::OsInfo::UnownedBuilder llcpp_builder_;
+  fuchsia_tee::wire::OsRevision llcpp_revision_{};
 
-  std::optional<fuchsia_tee::Uuid> uuid_{};
+  std::optional<fuchsia_tee::wire::Uuid> uuid_{};
   std::optional<OsRevision> revision_{};
   std::optional<fidl::aligned<bool>> is_global_platform_compliant_{};
 };
 
 class Value {
  public:
-  fuchsia_tee::Value to_llcpp() {
+  fuchsia_tee::wire::Value to_llcpp() {
     if (direction_.has_value()) {
       llcpp_builder_.set_direction(fidl::unowned_ptr(&direction_.value()));
     }
@@ -105,7 +105,7 @@ class Value {
   void set_c(uint64_t c) { c_ = c; }
 
  private:
-  fuchsia_tee::Value::UnownedBuilder llcpp_builder_;
+  fuchsia_tee::wire::Value::UnownedBuilder llcpp_builder_;
 
   std::optional<fuchsia_tee::wire::Direction> direction_{};
   std::optional<uint64_t> a_{};
@@ -115,7 +115,7 @@ class Value {
 
 class Buffer {
  public:
-  fuchsia_tee::Buffer to_llcpp() {
+  fuchsia_tee::wire::Buffer to_llcpp() {
     if (direction_.has_value()) {
       llcpp_builder_.set_direction(fidl::unowned_ptr(&direction_.value()));
     }
@@ -141,7 +141,7 @@ class Buffer {
   void set_size(uint64_t size) { size_ = size; }
 
  private:
-  fuchsia_tee::Buffer::UnownedBuilder llcpp_builder_;
+  fuchsia_tee::wire::Buffer::UnownedBuilder llcpp_builder_;
 
   std::optional<fuchsia_tee::wire::Direction> direction_{};
   std::optional<zx::vmo> vmo_{};
@@ -152,37 +152,37 @@ class Buffer {
 class Parameter {
  public:
   fuchsia_tee::wire::Parameter to_llcpp() {
-    if (std::holds_alternative<fidl::aligned<fuchsia_tee::None>>(data_)) {
-      llcpp_data_ = std::get<fidl::aligned<fuchsia_tee::None>>(data_);
+    if (std::holds_alternative<fidl::aligned<fuchsia_tee::wire::None>>(data_)) {
+      llcpp_data_ = std::get<fidl::aligned<fuchsia_tee::wire::None>>(data_);
       return fuchsia_tee::wire::Parameter::WithNone(
-          fidl::unowned_ptr(&std::get<fidl::aligned<fuchsia_tee::None>>(llcpp_data_)));
+          fidl::unowned_ptr(&std::get<fidl::aligned<fuchsia_tee::wire::None>>(llcpp_data_)));
     }
     if (std::holds_alternative<Value>(data_)) {
       llcpp_data_ = std::get<Value>(data_).to_llcpp();
       return fuchsia_tee::wire::Parameter::WithValue(
-          fidl::unowned_ptr(&std::get<fuchsia_tee::Value>(llcpp_data_)));
+          fidl::unowned_ptr(&std::get<fuchsia_tee::wire::Value>(llcpp_data_)));
     }
     if (std::holds_alternative<Buffer>(data_)) {
       llcpp_data_ = std::get<Buffer>(data_).to_llcpp();
       return fuchsia_tee::wire::Parameter::WithBuffer(
-          fidl::unowned_ptr(&std::get<fuchsia_tee::Buffer>(llcpp_data_)));
+          fidl::unowned_ptr(&std::get<fuchsia_tee::wire::Buffer>(llcpp_data_)));
     }
 
     return fuchsia_tee::wire::Parameter();
   }
 
-  void set_none() { data_ = fuchsia_tee::None{}; }
+  void set_none() { data_ = fuchsia_tee::wire::None{}; }
 
   void set_value(Value value) { data_ = std::move(value); }
 
   void set_buffer(Buffer buffer) { data_ = std::move(buffer); }
 
  private:
-  std::variant<std::monostate, fidl::aligned<fuchsia_tee::None>, fuchsia_tee::Value,
-               fuchsia_tee::Buffer>
+  std::variant<std::monostate, fidl::aligned<fuchsia_tee::wire::None>, fuchsia_tee::wire::Value,
+               fuchsia_tee::wire::Buffer>
       llcpp_data_{};
 
-  std::variant<std::monostate, fidl::aligned<fuchsia_tee::None>, Value, Buffer> data_{};
+  std::variant<std::monostate, fidl::aligned<fuchsia_tee::wire::None>, Value, Buffer> data_{};
 };
 
 class ParameterSet {
@@ -209,7 +209,7 @@ class ParameterSet {
 
 class OpResult {
  public:
-  fuchsia_tee::OpResult to_llcpp() {
+  fuchsia_tee::wire::OpResult to_llcpp() {
     if (return_code_.has_value()) {
       llcpp_builder_.set_return_code(fidl::unowned_ptr(&return_code_.value()));
     }
@@ -235,7 +235,7 @@ class OpResult {
   void set_parameter_set(ParameterSet parameter_set) { parameter_set_ = std::move(parameter_set); }
 
  private:
-  fuchsia_tee::OpResult::UnownedBuilder llcpp_builder_;
+  fuchsia_tee::wire::OpResult::UnownedBuilder llcpp_builder_;
   fidl::VectorView<fuchsia_tee::wire::Parameter> llcpp_parameter_set_;
 
   std::optional<uint64_t> return_code_{};

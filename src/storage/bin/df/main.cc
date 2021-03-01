@@ -105,8 +105,8 @@ void print_human_readable(int padding, size_t size) {
   }
 }
 
-void print_fs_type(const char* name, const df_options_t* options, const fio::FilesystemInfo* info,
-                   const char* device_path) {
+void print_fs_type(const char* name, const df_options_t* options,
+                   const fio::wire::FilesystemInfo* info, const char* device_path) {
   if (options->node_usage) {
     size_t nodes_total = info ? info->total_nodes : 0;
     size_t nodes_used = info ? info->used_nodes : 0;
@@ -174,7 +174,7 @@ int main(int argc, const char** argv) {
       admin = false;
     }
 
-    fio::FilesystemInfo info;
+    fio::wire::FilesystemInfo info;
     fdio_cpp::FdioCaller caller(std::move(fd));
     auto result = fio::DirectoryAdmin::Call::QueryFilesystem(
         fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));

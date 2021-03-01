@@ -14,13 +14,13 @@
 
 namespace mipi_dsi {
 
-zx::status<llcpp::fuchsia::hardware::dsi::MipiDsiCmd> MipiDsi::CreateCommandFidl(
+zx::status<llcpp::fuchsia::hardware::dsi::wire::MipiDsiCmd> MipiDsi::CreateCommandFidl(
     uint32_t tlen, uint32_t rlen, bool is_dcs, fidl::AnyAllocator& allocator) {
   // Create a command packet
   uint8_t ch_id = kMipiDsiVirtualChanId;
   uint8_t dsi_data_type = kMipiDsiDtUnknown;
   uint32_t flags = 0;
-  ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd command(allocator);
+  ::llcpp::fuchsia::hardware::dsi::wire::MipiDsiCmd command(allocator);
 
   switch (tlen) {
     case 0:

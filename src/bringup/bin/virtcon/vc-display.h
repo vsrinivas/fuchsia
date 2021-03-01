@@ -28,7 +28,7 @@ typedef struct display_info {
 
   // Only valid when |bound| is true.
   zx_handle_t image_vmo;
-  llcpp::fuchsia::hardware::display::ImageConfig image_config;
+  llcpp::fuchsia::hardware::display::wire::ImageConfig image_config;
 
   vc_gfx_t* graphics;
 
@@ -47,11 +47,11 @@ void destroy_layer(uint64_t layer_id);
 void release_image(uint64_t image_id);
 zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id);
 zx_status_t configure_layer(display_info_t* display, uint64_t layer_id, uint64_t image_id,
-                            llcpp::fuchsia::hardware::display::ImageConfig* config);
+                            llcpp::fuchsia::hardware::display::wire::ImageConfig* config);
 zx_status_t alloc_display_info_vmo(display_info_t* display);
 zx_status_t apply_configuration();
-zx_status_t import_vmo(zx_handle_t vmo, llcpp::fuchsia::hardware::display::ImageConfig* config,
-                       uint64_t* id);
+zx_status_t import_vmo(zx_handle_t vmo,
+                       llcpp::fuchsia::hardware::display::wire::ImageConfig* config, uint64_t* id);
 zx_status_t dc_callback_handler(zx_signals_t signals);
 #if BUILD_FOR_DISPLAY_TEST
 

@@ -30,7 +30,7 @@ class LogTester : public LogTesterType,
   void DdkInit(ddk::InitTxn txn);
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void GetInfo(GetInfoCompleter::Sync& completer) override;
-  void EmitLog(::llcpp::fuchsia::validate::logs::RecordSpec spec,
+  void EmitLog(::llcpp::fuchsia::validate::logs::wire::RecordSpec spec,
                EmitLogCompleter::Sync& completer) override;
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();

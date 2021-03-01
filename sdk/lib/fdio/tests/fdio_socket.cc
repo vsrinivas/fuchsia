@@ -50,7 +50,7 @@ class Server final : public llcpp::fuchsia::posix::socket::testing::StreamSocket
   }
 
   void Describe(Interface::DescribeCompleter::Sync& completer) override {
-    llcpp::fuchsia::io::StreamSocket stream_socket;
+    llcpp::fuchsia::io::wire::StreamSocket stream_socket;
     zx_status_t status =
         peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &stream_socket.socket);
     if (status != ZX_OK) {

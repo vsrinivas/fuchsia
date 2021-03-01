@@ -121,11 +121,11 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   ASSERT_TRUE(fvm);
 
   // Type GUID for partition.
-  llcpp::fuchsia::hardware::block::partition::GUID type_guid;
+  llcpp::fuchsia::hardware::block::partition::wire::GUID type_guid;
   std::fill(std::begin(type_guid.value), std::end(type_guid.value), 0x11);
 
   // Instance GUID for partition.
-  llcpp::fuchsia::hardware::block::partition::GUID guid;
+  llcpp::fuchsia::hardware::block::partition::wire::GUID guid;
   std::fill(std::begin(guid.value), std::end(guid.value), 0x12);
 
   // The partition hasn't been created yet, the result should be "not found".

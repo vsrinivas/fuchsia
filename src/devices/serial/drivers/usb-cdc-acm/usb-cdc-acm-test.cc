@@ -36,20 +36,20 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 void USBVirtualBus::InitUsbCdcAcm(fbl::String* devpath) {
   namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
-  usb_peripheral::DeviceDescriptor device_desc = {};
+      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
+  usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);
   device_desc.b_max_packet_size0 = 64;
   device_desc.bcd_device = htole16(0x0100);
   device_desc.b_num_configurations = 1;
 
-  usb_peripheral::FunctionDescriptor usb_cdc_acm_function_desc = {
+  usb_peripheral::wire::FunctionDescriptor usb_cdc_acm_function_desc = {
       .interface_class = USB_CLASS_COMM,
       .interface_subclass = USB_CDC_SUBCLASS_ABSTRACT,
       .interface_protocol = 0,
   };
 
-  std::vector<usb_peripheral::FunctionDescriptor> function_descs;
+  std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
   function_descs.push_back(usb_cdc_acm_function_desc);
   std::vector<ConfigurationDescriptor> config_descs;
   config_descs.emplace_back(fidl::unowned_vec(function_descs));

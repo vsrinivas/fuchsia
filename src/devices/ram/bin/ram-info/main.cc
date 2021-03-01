@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  ::llcpp::fuchsia::hardware::ram::metrics::BandwidthMeasurementConfig config = {};
+  ::llcpp::fuchsia::hardware::ram::metrics::wire::BandwidthMeasurementConfig config = {};
   config.cycles_to_measure =
       cycles_to_measure ? *cycles_to_measure : device_info.default_cycles_to_measure;
 

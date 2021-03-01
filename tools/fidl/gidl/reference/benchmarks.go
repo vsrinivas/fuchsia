@@ -71,7 +71,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidl.Root, config gidlconfig.Gener
 }
 
 func llcppBenchmarkType(value gidlir.Value) string {
-	return fmt.Sprintf("llcpp::benchmarkfidl::%s", gidlir.TypeFromValue(value))
+	return fmt.Sprintf("llcpp::benchmarkfidl::wire::%s", gidlir.TypeFromValue(value))
 }
 
 func benchmarkName(gidlName string) string {

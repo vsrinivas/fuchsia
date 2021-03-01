@@ -50,7 +50,7 @@ struct WlantapCtl : wlantap::WlantapCtl::RawChannelInterface {
 
   static void DdkRelease(void* ctx) { delete static_cast<WlantapCtl*>(ctx); }
 
-  void CreatePhy(wlantap::WlantapPhyConfig config, ::zx::channel proxy,
+  void CreatePhy(wlantap::wire::WlantapPhyConfig config, ::zx::channel proxy,
                  CreatePhyCompleter::Sync& completer) override {
     zx_status_t status;
 
@@ -63,14 +63,14 @@ struct WlantapCtl : wlantap::WlantapCtl::RawChannelInterface {
     // Convert to HLCPP by transiting through fidl bytes.
     auto phy_config = ::fuchsia::wlan::tap::WlantapPhyConfig::New();
     {
-      fidl::OwnedEncodedMessage<wlantap::WlantapPhyConfig> encoded(&config);
+      fidl::OwnedEncodedMessage<wlantap::wire::WlantapPhyConfig> encoded(&config);
       if (!encoded.ok()) {
         completer.Reply(encoded.status());
         return;
       }
       auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
       ZX_ASSERT(converted.ok());
-      fidl::DecodedMessage<wlantap::WlantapPhyConfig> decoded(converted.incoming_message());
+      fidl::DecodedMessage<wlantap::wire::WlantapPhyConfig> decoded(converted.incoming_message());
       if (!decoded.ok()) {
         completer.Reply(status);
         return;

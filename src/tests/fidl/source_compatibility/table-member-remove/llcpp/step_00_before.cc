@@ -6,7 +6,7 @@
 namespace fidl_test = llcpp::fidl::test::tablememberremove;
 
 // [START contents]
-void use_table(const fidl_test::Profile& profile) {
+void use_table(const fidl_test::wire::Profile& profile) {
   if (profile.has_timezone()) {
     printf("timezone: %s", profile.timezone().data());
   }

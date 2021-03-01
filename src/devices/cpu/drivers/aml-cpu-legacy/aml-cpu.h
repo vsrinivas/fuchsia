@@ -56,7 +56,7 @@ class AmlCpu : public DeviceType,
   void SetCpuInfo(uint32_t cpu_version_packed);
 
  private:
-  zx_status_t GetThermalOperatingPoints(fuchsia_thermal::OperatingPoint* out);
+  zx_status_t GetThermalOperatingPoints(fuchsia_thermal::wire::OperatingPoint* out);
   fuchsia_thermal::Device::SyncClient thermal_client_;
   size_t power_domain_index_;
 

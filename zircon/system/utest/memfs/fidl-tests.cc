@@ -100,7 +100,7 @@ TEST(FidlTests, TestFidlOpenReadOnly) {
   // No way to clean up the namespace entry. See fxbug.dev/31875 for more details.
 }
 
-void QueryInfo(const char* path, fio::FilesystemInfo* info) {
+void QueryInfo(const char* path, fio::wire::FilesystemInfo* info) {
   fbl::unique_fd fd(open(path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
   fdio_cpp::FdioCaller caller(std::move(fd));
@@ -129,7 +129,7 @@ TEST(FidlTests, TestFidlQueryFilesystem) {
     ASSERT_GE(fd.get(), 0);
 
     // Sanity checks
-    fio::FilesystemInfo info;
+    fio::wire::FilesystemInfo info;
     ASSERT_NO_FATAL_FAILURES(QueryInfo("/fidltmp-basic", &info));
 
     // These values are nonsense, but they're the nonsense we expect memfs to generate.

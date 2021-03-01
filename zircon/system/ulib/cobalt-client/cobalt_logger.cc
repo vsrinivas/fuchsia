@@ -24,8 +24,9 @@ namespace cobalt_client {
 namespace internal {
 namespace {
 
-::llcpp::fuchsia::cobalt::CobaltEvent MetricIntoToCobaltEvent(const MetricOptions& metric_info) {
-  llcpp::fuchsia::cobalt::CobaltEvent event;
+::llcpp::fuchsia::cobalt::wire::CobaltEvent MetricIntoToCobaltEvent(
+    const MetricOptions& metric_info) {
+  llcpp::fuchsia::cobalt::wire::CobaltEvent event;
   event.metric_id = metric_info.metric_id;
   event.component = fidl::unowned_str(metric_info.component);
   // Safe to do so, since the request is read only.
@@ -98,7 +99,7 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, RemoteCounter::Type cou
     return false;
   }
   auto event = MetricIntoToCobaltEvent(metric_info);
-  llcpp::fuchsia::cobalt::CountEvent event_count{.period_duration_micros = 0, .count = count};
+  llcpp::fuchsia::cobalt::wire::CountEvent event_count{.period_duration_micros = 0, .count = count};
   event.payload.set_event_count(fidl::unowned_ptr(&event_count));
 
   auto log_result = logger_.LogCobaltEvent(std::move(event));

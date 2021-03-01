@@ -14,7 +14,7 @@ namespace sysmem = ::llcpp::fuchsia::sysmem;
 
 namespace display {
 
-TestFidlClient::Display::Display(const fhd::Info& info) {
+TestFidlClient::Display::Display(const fhd::wire::Info& info) {
   id_ = info.id;
 
   for (size_t i = 0; i < info.pixel_format.count(); i++) {
@@ -229,13 +229,13 @@ zx_status_t TestFidlClient::PresentImage() {
   return dc_->ApplyConfig().status();
 }
 
-zx_status_t TestFidlClient::ImportImageWithSysmem(const fhd::ImageConfig& image_config,
+zx_status_t TestFidlClient::ImportImageWithSysmem(const fhd::wire::ImageConfig& image_config,
                                                   uint64_t* image_id) {
   fbl::AutoLock lock(mtx());
   return ImportImageWithSysmemLocked(image_config, image_id);
 }
 
-zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::ImageConfig& image_config,
+zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageConfig& image_config,
                                                         uint64_t* image_id) {
   // Create all the tokens.
   std::unique_ptr<sysmem::BufferCollectionToken::SyncClient> local_token;
@@ -307,7 +307,7 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::ImageConfig& 
     sysmem_collection = std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(client));
   }
   sysmem_collection->SetName(10000u, "display-client-unittest");
-  sysmem::BufferCollectionConstraints constraints = {};
+  sysmem::wire::BufferCollectionConstraints constraints = {};
   constraints.min_buffer_count = 1;
   constraints.usage.none = sysmem::noneUsage;
   // We specify min_size_bytes 1 so that something is specifying a minimum size.  More typically the

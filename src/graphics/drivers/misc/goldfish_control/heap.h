@@ -35,7 +35,8 @@ class Heap : public HeapInterface, public fbl::DoublyLinkedListable<std::unique_
   void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& completer) override = 0;
 
   // |llcpp::fuchsia::sysmem2::Heap::Interface|
-  void CreateResource(::zx::vmo vmo, llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings,
+  void CreateResource(::zx::vmo vmo,
+                      llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings,
                       CreateResourceCompleter::Sync& completer) override = 0;
 
   // |llcpp::fuchsia::sysmem2::Heap::Interface|
@@ -53,7 +54,7 @@ class Heap : public HeapInterface, public fbl::DoublyLinkedListable<std::unique_
   // This helper method is used only by subclasses to bind to sysmem using
   // given channel and send |heap_properties| to sysmem.
   void BindWithHeapProperties(zx::channel server_request,
-                              llcpp::fuchsia::sysmem2::HeapProperties heap_properties);
+                              llcpp::fuchsia::sysmem2::wire::HeapProperties heap_properties);
 
   Control* control() const { return control_; }
 

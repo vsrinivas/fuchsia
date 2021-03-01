@@ -162,7 +162,7 @@ TEST_F(HidDevTest, GetReportDescTest) {
   auto& desc = result.Unwrap()->descriptor;
   ASSERT_TRUE(desc.has_mouse());
   ASSERT_TRUE(desc.mouse().has_input());
-  fuchsia_input_report::MouseInputDescriptor& mouse = desc.mouse().input();
+  fuchsia_input_report::wire::MouseInputDescriptor& mouse = desc.mouse().input();
 
   ASSERT_TRUE(mouse.has_movement_x());
   ASSERT_EQ(-127, mouse.movement_x().range.min);
@@ -338,10 +338,10 @@ TEST_F(HidDevTest, SensorTest) {
   // Get the report descriptor.
   fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
   ASSERT_OK(result.status());
-  fuchsia_input_report::DeviceDescriptor& desc = result->descriptor;
+  fuchsia_input_report::wire::DeviceDescriptor& desc = result->descriptor;
   ASSERT_TRUE(desc.has_sensor());
   ASSERT_TRUE(desc.sensor().has_input());
-  fuchsia_input_report::SensorInputDescriptor& sensor_desc = desc.sensor().input();
+  fuchsia_input_report::wire::SensorInputDescriptor& sensor_desc = desc.sensor().input();
   ASSERT_TRUE(sensor_desc.has_values());
   ASSERT_EQ(4, sensor_desc.values().count());
 
@@ -391,12 +391,12 @@ TEST_F(HidDevTest, SensorTest) {
   auto report_result = reader.ReadInputReports();
   ASSERT_OK(report_result.status());
 
-  const fidl::VectorView<fuchsia_input_report::InputReport>& reports =
+  const fidl::VectorView<fuchsia_input_report::wire::InputReport>& reports =
       report_result->result.response().reports;
   ASSERT_EQ(1, reports.count());
 
   ASSERT_TRUE(reports[0].has_sensor());
-  const fuchsia_input_report::SensorInputReport& sensor_report = reports[0].sensor();
+  const fuchsia_input_report::wire::SensorInputReport& sensor_report = reports[0].sensor();
   EXPECT_TRUE(sensor_report.has_values());
   EXPECT_EQ(4, sensor_report.values().count());
 
@@ -447,7 +447,7 @@ TEST_F(HidDevTest, GetTouchInputReportTest) {
   auto report_result = reader.ReadInputReports();
   ASSERT_OK(report_result.status());
 
-  const fidl::VectorView<fuchsia_input_report::InputReport>& reports =
+  const fidl::VectorView<fuchsia_input_report::wire::InputReport>& reports =
       report_result->result.response().reports;
   ASSERT_EQ(1, reports.count());
 
@@ -477,7 +477,7 @@ TEST_F(HidDevTest, GetTouchPadDescTest) {
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->descriptor.has_touch());
   ASSERT_TRUE(result->descriptor.touch().has_input());
-  fuchsia_input_report::TouchInputDescriptor& touch = result->descriptor.touch().input();
+  fuchsia_input_report::wire::TouchInputDescriptor& touch = result->descriptor.touch().input();
 
   ASSERT_EQ(fuchsia_input_report::wire::TouchType::TOUCHPAD, touch.touch_type());
 }
@@ -518,7 +518,7 @@ TEST_F(HidDevTest, KeyboardTest) {
   auto report_result = reader.ReadInputReports();
   ASSERT_OK(report_result.status());
 
-  const fidl::VectorView<fuchsia_input_report::InputReport>& reports =
+  const fidl::VectorView<fuchsia_input_report::wire::InputReport>& reports =
       report_result->result.response().reports;
   ASSERT_EQ(1, reports.count());
 
@@ -549,11 +549,11 @@ TEST_F(HidDevTest, KeyboardOutputReportTest) {
   led_array[1] = hid_input_report::fuchsia_input_report::wire::LedType::SCROLL_LOCK;
   auto led_view = fidl::unowned_vec(led_array);
   auto keyboard_builder =
-      hid_input_report::fuchsia_input_report::KeyboardOutputReport::UnownedBuilder();
+      hid_input_report::fuchsia_input_report::wire::KeyboardOutputReport::UnownedBuilder();
   keyboard_builder.set_enabled_leds(fidl::unowned_ptr(&led_view));
-  hid_input_report::fuchsia_input_report::KeyboardOutputReport fidl_keyboard =
+  hid_input_report::fuchsia_input_report::wire::KeyboardOutputReport fidl_keyboard =
       keyboard_builder.build();
-  auto builder = hid_input_report::fuchsia_input_report::OutputReport::UnownedBuilder();
+  auto builder = hid_input_report::fuchsia_input_report::wire::OutputReport::UnownedBuilder();
   builder.set_keyboard(fidl::unowned_ptr(&fidl_keyboard));
   // Send the report.
   fuchsia_input_report::InputDevice::ResultOf::SendOutputReport response =
@@ -594,10 +594,10 @@ TEST_F(HidDevTest, ConsumerControlTest) {
   // Get the report descriptor.
   fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
   ASSERT_OK(result.status());
-  fuchsia_input_report::DeviceDescriptor& desc = result->descriptor;
+  fuchsia_input_report::wire::DeviceDescriptor& desc = result->descriptor;
   ASSERT_TRUE(desc.has_consumer_control());
   ASSERT_TRUE(desc.consumer_control().has_input());
-  fuchsia_input_report::ConsumerControlInputDescriptor& consumer_control_desc =
+  fuchsia_input_report::wire::ConsumerControlInputDescriptor& consumer_control_desc =
       desc.consumer_control().input();
   ASSERT_TRUE(consumer_control_desc.has_buttons());
   ASSERT_EQ(5, consumer_control_desc.buttons().count());
@@ -641,7 +641,7 @@ TEST_F(HidDevTest, ConsumerControlTest) {
   auto report_result = reader.ReadInputReports();
   ASSERT_OK(report_result.status());
 
-  const fidl::VectorView<fuchsia_input_report::InputReport>& reports =
+  const fidl::VectorView<fuchsia_input_report::wire::InputReport>& reports =
       report_result->result.response().reports;
   ASSERT_EQ(2, reports.count());
 
@@ -707,7 +707,7 @@ TEST_F(HidDevTest, ConsumerControlTwoClientsTest) {
 
     auto report_result = reader.ReadInputReports();
     ASSERT_OK(report_result.status());
-    const fidl::VectorView<fuchsia_input_report::InputReport>& reports =
+    const fidl::VectorView<fuchsia_input_report::wire::InputReport>& reports =
         report_result->result.response().reports;
     ASSERT_EQ(1, reports.count());
 
@@ -732,7 +732,7 @@ TEST_F(HidDevTest, ConsumerControlTwoClientsTest) {
 
     auto report_result = reader.ReadInputReports();
     ASSERT_OK(report_result.status());
-    const fidl::VectorView<fuchsia_input_report::InputReport>& reports =
+    const fidl::VectorView<fuchsia_input_report::wire::InputReport>& reports =
         report_result->result.response().reports;
     ASSERT_EQ(1, reports.count());
 

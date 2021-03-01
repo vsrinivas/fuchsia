@@ -32,7 +32,7 @@ status_t MakeStatus(StatusFlags status_flags, uint32_t mtu) {
 
 class ObservedStatus {
  public:
-  explicit ObservedStatus(const netdev::Status& status)
+  explicit ObservedStatus(const netdev::wire::Status& status)
       : mtu_(status.mtu()), flags_(status.flags()) {}
 
   uint32_t mtu() const { return mtu_; }
@@ -291,7 +291,7 @@ TEST_F(StatusWatcherTest, CallsOnClosedCallback) {
 
 TEST_F(StatusWatcherTest, LockStepWatch) {
   // Tests that if everytime a status is pushed a waiter is already registered (no queuing ever
-  // happens), StatusWatcher beahves appropriately.
+  // happens), StatusWatcher behaves appropriately.
   auto endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);

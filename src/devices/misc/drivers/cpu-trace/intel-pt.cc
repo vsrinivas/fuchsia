@@ -39,8 +39,8 @@ namespace insntrace {
 namespace fuchsia_insntrace = ::llcpp::fuchsia::hardware::cpu::insntrace;
 
 // Shorten some long fidl names.
-using BufferConfig = fuchsia_insntrace::BufferConfig;
-using BufferState = fuchsia_insntrace::BufferState;
+using BufferConfig = fuchsia_insntrace::wire::BufferConfig;
+using BufferState = fuchsia_insntrace::wire::BufferState;
 
 // This is defined in insntrace.fidl but not emitted.
 using BufferDescriptor = uint32_t;
@@ -97,9 +97,9 @@ class InsntraceDevice : public DeviceType, fuchsia_insntrace::Controller::Interf
   void DdkRelease();
 
   // Fidl handlers
-  zx_status_t IptInitialize(const fuchsia_insntrace::Allocation* allocation);
+  zx_status_t IptInitialize(const fuchsia_insntrace::wire::Allocation* allocation);
   zx_status_t IptTerminate();
-  zx_status_t IptGetAllocation(fuchsia_insntrace::Allocation* config);
+  zx_status_t IptGetAllocation(fuchsia_insntrace::wire::Allocation* config);
   zx_status_t IptAllocateBuffer(const BufferConfig* config, BufferDescriptor* out_descriptor);
   zx_status_t IptAssignThreadBuffer(BufferDescriptor descriptor, zx_handle_t thread);
   zx_status_t IptReleaseThreadBuffer(BufferDescriptor descriptor, zx_handle_t thread);
@@ -112,7 +112,7 @@ class InsntraceDevice : public DeviceType, fuchsia_insntrace::Controller::Interf
   zx_status_t IptStop();
 
   // Fidl server interface implementation
-  void Initialize(fuchsia_insntrace::Allocation allocation,
+  void Initialize(fuchsia_insntrace::wire::Allocation allocation,
                   InitializeCompleter::Sync& completer) override;
   void Terminate(TerminateCompleter::Sync& completer) override;
   void GetAllocation(GetAllocationCompleter::Sync& completer) override;
@@ -690,7 +690,7 @@ zx_status_t InsntraceDevice::X86PtGetTraceData(zx_handle_t resource, BufferDescr
 
 // fidl message handlers
 
-zx_status_t InsntraceDevice::IptInitialize(const fuchsia_insntrace::Allocation* allocation) {
+zx_status_t InsntraceDevice::IptInitialize(const fuchsia_insntrace::wire::Allocation* allocation) {
   if (!ipt_config_supported)
     return ZX_ERR_NOT_SUPPORTED;
   // For now we only support ToPA, though there are no current plans to
@@ -780,7 +780,7 @@ zx_status_t InsntraceDevice::IptTerminate() {
   return ZX_OK;
 }
 
-zx_status_t InsntraceDevice::IptGetAllocation(fuchsia_insntrace::Allocation* out_config) {
+zx_status_t InsntraceDevice::IptGetAllocation(fuchsia_insntrace::wire::Allocation* out_config) {
   if (!per_trace_state_)
     return ZX_ERR_BAD_STATE;
   switch (mode_) {
@@ -993,7 +993,7 @@ zx_status_t InsntraceDevice::IptStop() {
 
 // Fidl interface.
 
-void InsntraceDevice::Initialize(fuchsia_insntrace::Allocation allocation,
+void InsntraceDevice::Initialize(fuchsia_insntrace::wire::Allocation allocation,
                                  InitializeCompleter::Sync& completer) {
   zx_status_t status = IptInitialize(&allocation);
   if (status == ZX_OK) {
@@ -1013,7 +1013,7 @@ void InsntraceDevice::Terminate(TerminateCompleter::Sync& completer) {
 }
 
 void InsntraceDevice::GetAllocation(GetAllocationCompleter::Sync& completer) {
-  fuchsia_insntrace::Allocation config{};
+  fuchsia_insntrace::wire::Allocation config{};
   zx_status_t status = IptGetAllocation(&config);
   completer.Reply(status == ZX_OK ? fidl::unowned_ptr(&config) : nullptr);
 }

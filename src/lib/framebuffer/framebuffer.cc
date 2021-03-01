@@ -73,7 +73,7 @@ static zx_status_t fb_present_image(uint64_t image_id, uint64_t wait_event_id,
 
 static zx_status_t set_layer_config(uint64_t layer_id, uint32_t width, uint32_t height,
                                     zx_pixel_format_t format, int32_t type) {
-  fhd::ImageConfig config = {
+  fhd::wire::ImageConfig config = {
       .width = width,
       .height = height,
       .pixel_format = format,
@@ -142,7 +142,7 @@ static zx_status_t create_buffer_collection(
     return import_rsp->res;
   }
 
-  fhd::ImageConfig config = {
+  fhd::wire::ImageConfig config = {
       .width = static_cast<uint32_t>(width),
       .height = static_cast<uint32_t>(height),
       .pixel_format = format,
@@ -168,7 +168,7 @@ static zx_status_t create_buffer_collection(
       collection->SetName(kNamePriority, fidl::unowned_str(kNameString, strlen(kNameString))),
       "Failed to set framebuffer name");
 
-  sysmem::BufferCollectionConstraints constraints;
+  sysmem::wire::BufferCollectionConstraints constraints;
   constraints.usage.cpu = sysmem::cpuUsageWriteOften | sysmem::cpuUsageRead;
   constraints.min_buffer_count = 1;
   constraints.image_format_constraints_count = 1;
@@ -283,7 +283,7 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
 
     zx_pixel_format_t pixel_format() const { return pixel_format_; }
     bool has_display() const { return has_display_; }
-    fhd::Mode mode() const { return mode_; }
+    fhd::wire::Mode mode() const { return mode_; }
 
     void OnDisplaysChanged(fhd::Controller::OnDisplaysChangedResponse* event) override {
       has_display_ = true;
@@ -304,7 +304,7 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
    private:
     zx_pixel_format_t pixel_format_;
     bool has_display_ = false;
-    fhd::Mode mode_;
+    fhd::wire::Mode mode_;
   };
 
   EventHandler event_handler;
@@ -457,7 +457,7 @@ zx_status_t fb_import_image(uint64_t collection_id, uint32_t index, uint32_t typ
     type_set = true;
   }
 
-  fhd::ImageConfig config = {
+  fhd::wire::ImageConfig config = {
       .width = static_cast<uint32_t>(width),
       .height = static_cast<uint32_t>(height),
       .pixel_format = format,

@@ -182,7 +182,7 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
 #undef SHIFT_ARGS
 }
 
-zx_status_t ReadFileToVmo(fbl::unique_fd payload_fd, ::llcpp::fuchsia::mem::Buffer* payload) {
+zx_status_t ReadFileToVmo(fbl::unique_fd payload_fd, ::llcpp::fuchsia::mem::wire::Buffer* payload) {
   constexpr size_t VmoSize = fbl::round_up(1LU << 20, ZX_PAGE_SIZE);
   fzl::ResizeableVmoMapper mapper;
   zx_status_t status;
@@ -387,7 +387,7 @@ zx_status_t RealMain(Flags flags) {
       break;
   }
 
-  ::llcpp::fuchsia::mem::Buffer payload;
+  ::llcpp::fuchsia::mem::wire::Buffer payload;
   zx_status_t status = ReadFileToVmo(std::move(flags.payload_fd), &payload);
   if (status != ZX_OK) {
     return status;

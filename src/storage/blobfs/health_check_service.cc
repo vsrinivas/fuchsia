@@ -21,7 +21,8 @@ HealthCheckService::HealthCheckService(async_dispatcher_t* dispatcher)
         return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
       }) {}
 
-void HealthCheckService::Verify(fuv::VerifyOptions options, VerifyCompleter::Sync& completer) {
+void HealthCheckService::Verify(fuv::wire::VerifyOptions options,
+                                VerifyCompleter::Sync& completer) {
   // TODO(fxbug.dev/64608): Implement this.
   completer.ReplySuccess();
 }

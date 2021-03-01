@@ -62,9 +62,9 @@ class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<Dri
   zx::status<fidl::ClientEnd<llcpp::fuchsia::driver::framework::Driver>> Start(
       fidl::ClientEnd<llcpp::fuchsia::driver::framework::Node> node,
       fidl::VectorView<fidl::StringView> offers,
-      fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols, fidl::StringView url,
-      llcpp::fuchsia::data::Dictionary program,
-      fidl::VectorView<llcpp::fuchsia::component::runner::ComponentNamespaceEntry> ns,
+      fidl::VectorView<llcpp::fuchsia::driver::framework::wire::NodeSymbol> symbols,
+      fidl::StringView url, llcpp::fuchsia::data::wire::Dictionary program,
+      fidl::VectorView<llcpp::fuchsia::component::runner::wire::ComponentNamespaceEntry> ns,
       fidl::ServerEnd<llcpp::fuchsia::io::Directory> outgoing_dir,
       fidl::ClientEnd<llcpp::fuchsia::io::Directory> exposed_dir);
 
@@ -77,7 +77,8 @@ class Node;
 class DriverBinder {
  public:
   virtual ~DriverBinder() = default;
-  virtual zx::status<> Bind(Node* node, llcpp::fuchsia::driver::framework::NodeAddArgs args) = 0;
+  virtual zx::status<> Bind(Node* node,
+                            llcpp::fuchsia::driver::framework::wire::NodeAddArgs args) = 0;
 };
 
 class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface,
@@ -85,7 +86,7 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
              public fbl::DoublyLinkedListable<std::unique_ptr<Node>> {
  public:
   using Offers = std::vector<fidl::StringView>;
-  using Symbols = std::vector<llcpp::fuchsia::driver::framework::NodeSymbol>;
+  using Symbols = std::vector<llcpp::fuchsia::driver::framework::wire::NodeSymbol>;
 
   Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
        std::string_view name, Offers offers, Symbols symbols);
@@ -93,7 +94,7 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
 
   const std::string& name() const;
   fidl::VectorView<fidl::StringView> offers();
-  fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols();
+  fidl::VectorView<llcpp::fuchsia::driver::framework::wire::NodeSymbol> symbols();
   DriverHostComponent* parent_driver_host() const;
   void set_driver_host(DriverHostComponent* driver_host);
   void set_driver_binding(
@@ -112,7 +113,7 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
   // llcpp::fuchsia::driver::framework::NodeController::Interface
   void Remove(RemoveCompleter::Sync& completer) override;
   // llcpp::fuchsia::driver::framework::Node::Interface
-  void AddChild(llcpp::fuchsia::driver::framework::NodeAddArgs args,
+  void AddChild(llcpp::fuchsia::driver::framework::wire::NodeAddArgs args,
                 fidl::ServerEnd<llcpp::fuchsia::driver::framework::NodeController> controller,
                 fidl::ServerEnd<llcpp::fuchsia::driver::framework::Node> node,
                 AddChildCompleter::Sync& completer) override;
@@ -136,17 +137,17 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
 
 struct MatchResult {
   std::string url;
-  llcpp::fuchsia::driver::framework::NodeAddArgs matched_args;
+  llcpp::fuchsia::driver::framework::wire::NodeAddArgs matched_args;
 };
 
 // TODO(fxbug.dev/33183): Replace this with a driver_index component.
 class DriverIndex {
  public:
-  using MatchCallback =
-      fit::function<zx::status<MatchResult>(llcpp::fuchsia::driver::framework::NodeAddArgs args)>;
+  using MatchCallback = fit::function<zx::status<MatchResult>(
+      llcpp::fuchsia::driver::framework::wire::NodeAddArgs args)>;
   explicit DriverIndex(MatchCallback match_callback);
 
-  zx::status<MatchResult> Match(llcpp::fuchsia::driver::framework::NodeAddArgs args);
+  zx::status<MatchResult> Match(llcpp::fuchsia::driver::framework::wire::NodeAddArgs args);
 
  private:
   MatchCallback match_callback_;
@@ -169,11 +170,11 @@ class DriverRunner : public llcpp::fuchsia::component::runner::ComponentRunner::
 
  private:
   // llcpp::fuchsia::component::runner::ComponentRunner::Interface
-  void Start(llcpp::fuchsia::component::runner::ComponentStartInfo start_info,
+  void Start(llcpp::fuchsia::component::runner::wire::ComponentStartInfo start_info,
              fidl::ServerEnd<llcpp::fuchsia::component::runner::ComponentController> controller,
              StartCompleter::Sync& completer) override;
   // DriverBinder
-  zx::status<> Bind(Node* node, llcpp::fuchsia::driver::framework::NodeAddArgs args) override;
+  zx::status<> Bind(Node* node, llcpp::fuchsia::driver::framework::wire::NodeAddArgs args) override;
 
   zx::status<std::unique_ptr<DriverHostComponent>> StartDriverHost();
   zx::status<fidl::ClientEnd<llcpp::fuchsia::io::Directory>> CreateComponent(

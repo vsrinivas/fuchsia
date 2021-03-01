@@ -32,7 +32,7 @@ constexpr int kDefaultYear = 2020;
 constexpr int kMaxYear = 2099;
 
 // January 1, 2020 00:00:00.
-constexpr FidlRtc::Time kDefaultRtc = {
+constexpr FidlRtc::wire::Time kDefaultRtc = {
     .seconds = 0,
     .minutes = 0,
     .hours = 0,
@@ -66,7 +66,7 @@ uint64_t RtcBackstopSeconds() {
 
 }  // namespace
 
-bool IsRtcValid(FidlRtc::Time rtc) {
+bool IsRtcValid(FidlRtc::wire::Time rtc) {
   if (rtc.year < kLocalEpochYear || rtc.year > kMaxYear) {
     return false;
   }
@@ -90,7 +90,7 @@ bool IsRtcValid(FidlRtc::Time rtc) {
   return true;
 }
 
-FidlRtc::Time SecondsToRtc(uint64_t seconds) {
+FidlRtc::wire::Time SecondsToRtc(uint64_t seconds) {
   if (seconds < kLocalEpoch) {
     fprintf(stderr, "SecondsToRtc: Seconds value is out of range, returning default");
     return kDefaultRtc;
@@ -99,7 +99,7 @@ FidlRtc::Time SecondsToRtc(uint64_t seconds) {
   // Subtract the local epoch offset to get to RTC time.
   uint64_t epoch = seconds - kLocalEpoch;
 
-  FidlRtc::Time rtc;
+  FidlRtc::wire::Time rtc;
   rtc.seconds = epoch % 60;
   epoch /= 60;
   rtc.minutes = epoch % 60;
@@ -131,7 +131,7 @@ FidlRtc::Time SecondsToRtc(uint64_t seconds) {
   return rtc;
 }
 
-uint64_t SecondsSinceEpoch(FidlRtc::Time rtc) {
+uint64_t SecondsSinceEpoch(FidlRtc::wire::Time rtc) {
   // First add all of the prior years.
   uint64_t days_since_local_epoch = 0;
   for (uint16_t year = kLocalEpochYear; year < rtc.year; year++) {
@@ -154,7 +154,7 @@ uint64_t SecondsSinceEpoch(FidlRtc::Time rtc) {
   return kLocalEpoch + kSecondsSinceLocalEpoch;
 }
 
-FidlRtc::Time SanitizeRtc(FidlRtc::Time rtc) {
+FidlRtc::wire::Time SanitizeRtc(FidlRtc::wire::Time rtc) {
   const uint64_t kBackstop = RtcBackstopSeconds();
   if (!IsRtcValid(rtc) || rtc.year < kDefaultYear || SecondsSinceEpoch(rtc) < kBackstop) {
     // Return a backstop value read from the environment.

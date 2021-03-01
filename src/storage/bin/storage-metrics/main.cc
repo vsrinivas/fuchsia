@@ -29,7 +29,7 @@
 
 namespace {
 
-using MinfsFidlMetrics = ::llcpp::fuchsia::minfs::Metrics;
+using MinfsFidlMetrics = ::llcpp::fuchsia::minfs::wire::Metrics;
 namespace fio = ::llcpp::fuchsia::io;
 
 int Usage() {
@@ -187,7 +187,7 @@ void RunFsMetrics(const char* path, const StorageMetricOptions options) {
   }
 
   // Skip any filesystems that aren't minfs
-  fio::FilesystemInfo* info = result.value().info.get();
+  fio::wire::FilesystemInfo* info = result.value().info.get();
   info->name[fio::MAX_FS_NAME_BUFFER - 1] = '\0';
   const char* name = reinterpret_cast<const char*>(info->name.data());
   if (strcmp(name, "minfs") != 0) {

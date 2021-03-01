@@ -32,12 +32,12 @@ class FidlStatus {
     builder_.set_mtu(fidl::unowned_ptr(&mtu_));
   }
 
-  netdev::Status view() { return builder_.build(); }
+  netdev::wire::Status view() { return builder_.build(); }
 
  private:
   uint32_t mtu_;
   netdev::wire::StatusFlags flags_;
-  netdev::Status::UnownedBuilder builder_;
+  netdev::wire::Status::UnownedBuilder builder_;
 };
 
 class StatusWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<StatusWatcher>>,

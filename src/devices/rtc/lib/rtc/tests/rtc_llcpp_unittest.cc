@@ -14,7 +14,7 @@ namespace {
 
 // Default values copied from librtc_llcpp.cc.
 constexpr int kDefaultYear = 2020;
-constexpr FidlRtc::Time kDefaultRtc = {
+constexpr FidlRtc::wire::Time kDefaultRtc = {
     .seconds = 0,
     .minutes = 0,
     .hours = 0,
@@ -23,12 +23,12 @@ constexpr FidlRtc::Time kDefaultRtc = {
     .year = kDefaultYear,
 };
 
-FidlRtc::Time MakeRtc(uint16_t year, uint8_t month, uint8_t day, uint8_t hours, uint8_t minutes,
-                      uint8_t seconds) {
-  return FidlRtc::Time{seconds, minutes, hours, day, month, year};
+FidlRtc::wire::Time MakeRtc(uint16_t year, uint8_t month, uint8_t day, uint8_t hours,
+                            uint8_t minutes, uint8_t seconds) {
+  return FidlRtc::wire::Time{seconds, minutes, hours, day, month, year};
 }
 
-bool IsRtcEqual(FidlRtc::Time t0, FidlRtc::Time t1) {
+bool IsRtcEqual(FidlRtc::wire::Time t0, FidlRtc::wire::Time t1) {
   return (t0.year == t1.year && t0.month == t1.month && t0.day == t1.day && t0.hours == t1.hours &&
           t0.minutes == t1.minutes && t0.seconds == t1.seconds);
 }
@@ -203,12 +203,12 @@ TEST(RtcLlccpTest, SanitizeRtc) {
   unsetenv("clock.backstop");
 
   // Backstop seconds for March 6, 2001.
-  const FidlRtc::Time kBackstop = MakeRtc(2001, 3, 6, 0, 0, 0);
+  const FidlRtc::wire::Time kBackstop = MakeRtc(2001, 3, 6, 0, 0, 0);
   const uint64_t kBackstopSeconds = SecondsSinceEpoch(kBackstop);
   setenv("clock.backstop", std::to_string(kBackstopSeconds).c_str(), 1);
 
   // Test with a valid RTC value. The same value should be returned.
-  FidlRtc::Time t0 = MakeRtc(2020, 10, 3, 0, 0, 0);
+  FidlRtc::wire::Time t0 = MakeRtc(2020, 10, 3, 0, 0, 0);
   EXPECT_TRUE(IsRtcValid(t0));
   EXPECT_TRUE(IsRtcEqual(t0, SanitizeRtc(t0)));
 
@@ -235,7 +235,7 @@ TEST(RtcLlccpTest, SanitizeRtc) {
 TEST(RtcLlccpTest, SanitizeRtcWithInvalidBackstop) {
   unsetenv("clock.backstop");
 
-  const FidlRtc::Time kInvalidRtc = MakeRtc(2000, 13, 1, 0, 0, 0);
+  const FidlRtc::wire::Time kInvalidRtc = MakeRtc(2000, 13, 1, 0, 0, 0);
   EXPECT_FALSE(IsRtcValid(kInvalidRtc));
 
   // Test with an invalid backstop.

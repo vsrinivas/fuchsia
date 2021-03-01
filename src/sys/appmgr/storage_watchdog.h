@@ -26,7 +26,7 @@ class StorageWatchdog {
 
  protected:
   virtual zx_status_t GetFilesystemInfo(zx_handle_t directory,
-                                        llcpp::fuchsia::io::FilesystemInfo* out_info);
+                                        llcpp::fuchsia::io::wire::FilesystemInfo* out_info);
 
  private:
   const std::string path_to_watch_;

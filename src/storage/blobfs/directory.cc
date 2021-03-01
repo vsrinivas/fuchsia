@@ -120,7 +120,7 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
 
 #ifdef __Fuchsia__
 
-zx_status_t Directory::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info) {
+zx_status_t Directory::QueryFilesystem(::llcpp::fuchsia::io::wire::FilesystemInfo* info) {
   blobfs_->GetFilesystemInfo(info);
   return ZX_OK;
 }
@@ -174,10 +174,10 @@ void Directory::HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transact
 }
 
 void Directory::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) {
-  static_assert(sizeof(llcpp::fuchsia::blobfs::BlockRegion) == sizeof(BlockRegion));
-  static_assert(offsetof(llcpp::fuchsia::blobfs::BlockRegion, offset) ==
+  static_assert(sizeof(llcpp::fuchsia::blobfs::wire::BlockRegion) == sizeof(BlockRegion));
+  static_assert(offsetof(llcpp::fuchsia::blobfs::wire::BlockRegion, offset) ==
                 offsetof(BlockRegion, offset));
-  static_assert(offsetof(llcpp::fuchsia::blobfs::BlockRegion, length) ==
+  static_assert(offsetof(llcpp::fuchsia::blobfs::wire::BlockRegion, length) ==
                 offsetof(BlockRegion, length));
   zx::vmo vmo;
   zx_status_t status = ZX_OK;

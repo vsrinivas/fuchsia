@@ -76,7 +76,7 @@ void InspectManager::FillStats(fidl::UnownedClientEnd<fio::Directory> dir_chan,
   inspect::Node stats = inspector->GetRoot().CreateChild("stats");
   if (result.status() == ZX_OK) {
     fio::DirectoryAdmin::QueryFilesystemResponse* response = result.Unwrap();
-    fio::FilesystemInfo* info = response->info.get();
+    fio::wire::FilesystemInfo* info = response->info.get();
     if (info != nullptr) {
       stats.CreateUint("total_bytes", info->total_bytes + info->free_shared_pool_bytes, inspector);
       stats.CreateUint("used_bytes", info->used_bytes, inspector);
@@ -98,7 +98,7 @@ void InspectManager::FillFileTreeSizes(fidl::ClientEnd<fio::Directory> current_d
   };
 
   // Keeps track of entries in the stack, the entry at N+1 will always be a child of the entry at N
-  // to be able to update the parent `total_size` and propaget the sizes up. We use the lazy
+  // to be able to update the parent `total_size` and propagate the sizes up. We use the lazy
   // iterator to have a single child connection at a time per node.
   std::vector<PendingDirectory> work_stack;
   auto current = PendingDirectory{

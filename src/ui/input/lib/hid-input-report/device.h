@@ -51,19 +51,19 @@ class Device {
 
   virtual ParseResult ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) = 0;
 
-  virtual ParseResult SetOutputReport(const fuchsia_input_report::OutputReport* report,
+  virtual ParseResult SetOutputReport(const fuchsia_input_report::wire::OutputReport* report,
                                       uint8_t* data, size_t data_size, size_t* data_out_size) {
     return ParseResult::kNotImplemented;
   }
 
   virtual ParseResult CreateDescriptor(fidl::AnyAllocator& allocator,
-                                       fuchsia_input_report::DeviceDescriptor& descriptor) {
+                                       fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
     return ParseResult::kNotImplemented;
   }
 
   virtual ParseResult ParseInputReport(const uint8_t* data, size_t len,
                                        fidl::AnyAllocator& allocator,
-                                       fuchsia_input_report::InputReport& input_report) {
+                                       fuchsia_input_report::wire::InputReport& input_report) {
     return ParseResult::kNotImplemented;
   }
 

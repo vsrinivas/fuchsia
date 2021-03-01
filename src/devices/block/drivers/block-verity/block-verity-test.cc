@@ -443,9 +443,9 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
 
   // Attempt to open the superblock with a different seal.  Expect failure,
   // because the superblock hash doesn't match.
-  llcpp::fuchsia::hardware::block::verified::Sha256Seal mangled_sha256_seal;
+  llcpp::fuchsia::hardware::block::verified::wire::Sha256Seal mangled_sha256_seal;
   memset(mangled_sha256_seal.superblock_hash.begin(), 0xff, 32);
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::Sha256Seal> mangled_aligned =
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::Sha256Seal> mangled_aligned =
       std::move(mangled_sha256_seal);
   auto mangled_seal = llcpp::fuchsia::hardware::block::verified::wire::Seal::WithSha256(
       fidl::unowned_ptr(&mangled_aligned));

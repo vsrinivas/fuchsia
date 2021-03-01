@@ -86,9 +86,9 @@ ParseResult ConsumerControl::ParseReportDescriptor(
   return ParseInputReportDescriptor(hid_report_descriptor);
 };
 
-ParseResult ConsumerControl::CreateDescriptor(fidl::AnyAllocator& allocator,
-                                              fuchsia_input_report::DeviceDescriptor& descriptor) {
-  fuchsia_input_report::ConsumerControlInputDescriptor input(allocator);
+ParseResult ConsumerControl::CreateDescriptor(
+    fidl::AnyAllocator& allocator, fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
+  fuchsia_input_report::wire::ConsumerControlInputDescriptor input(allocator);
 
   // Set the buttons array.
   {
@@ -102,17 +102,17 @@ ParseResult ConsumerControl::CreateDescriptor(fidl::AnyAllocator& allocator,
     input.set_buttons(allocator, std::move(buttons));
   }
 
-  fuchsia_input_report::ConsumerControlDescriptor consumer(allocator);
+  fuchsia_input_report::wire::ConsumerControlDescriptor consumer(allocator);
   consumer.set_input(allocator, std::move(input));
   descriptor.set_consumer_control(allocator, std::move(consumer));
 
   return ParseResult::kOk;
 }
 
-ParseResult ConsumerControl::ParseInputReport(const uint8_t* data, size_t len,
-                                              fidl::AnyAllocator& allocator,
-                                              fuchsia_input_report::InputReport& input_report) {
-  fuchsia_input_report::ConsumerControlInputReport consumer_report(allocator);
+ParseResult ConsumerControl::ParseInputReport(
+    const uint8_t* data, size_t len, fidl::AnyAllocator& allocator,
+    fuchsia_input_report::wire::InputReport& input_report) {
+  fuchsia_input_report::wire::ConsumerControlInputReport consumer_report(allocator);
 
   std::array<ConsumerControlButton, fuchsia_input_report::CONSUMER_CONTROL_MAX_NUM_BUTTONS> buttons;
   size_t buttons_size = 0;

@@ -68,7 +68,8 @@ class DecompressorSandboxTest : public ::testing::Test {
     ASSERT_EQ(ZX_OK, decompressed_mapper_.Map(std::move(decompressed_vmo), kMapSize));
 
     zx::fifo remote_fifo;
-    ASSERT_EQ(ZX_OK, zx::fifo::create(16, sizeof(DecompressRequest), 0, &fifo_, &remote_fifo));
+    ASSERT_EQ(ZX_OK,
+              zx::fifo::create(16, sizeof(wire::DecompressRequest), 0, &fifo_, &remote_fifo));
 
     zx_status_t status;
     decompressor_.Create(std::move(remote_fifo), std::move(remote_compressed_vmo),
@@ -103,7 +104,7 @@ class DecompressorSandboxTest : public ::testing::Test {
   }
 
  protected:
-  void SendRequest(DecompressRequest* request, DecompressResponse* response) {
+  void SendRequest(wire::DecompressRequest* request, wire::DecompressResponse* response) {
     ASSERT_EQ(ZX_OK, fifo_.write(sizeof(*request), request, 1, nullptr));
     zx_signals_t signal;
     fifo_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), &signal);
@@ -126,13 +127,13 @@ TEST_F(DecompressorSandboxTest, FullDecompression) {
             ZSTDCompressor::Create({CompressionAlgorithm::ZSTD, kCompressionLevel}, kDataSize,
                                    compressed_mapper_.start(), kMapSize, &compressor));
   CompressData(std::move(compressor), input_data_, &compressed_size);
-  DecompressRequest request = {
+  wire::DecompressRequest request = {
       {0, kDataSize},
       {0, compressed_size},
       ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::ZSTD),
   };
 
-  DecompressResponse response;
+  wire::DecompressResponse response;
   SendRequest(&request, &response);
   ASSERT_EQ(ZX_OK, response.status);
   ASSERT_EQ(kDataSize, response.size);
@@ -148,13 +149,13 @@ TEST_F(DecompressorSandboxTest, ChunkedFullDecompression) {
   ASSERT_EQ(ZX_OK, compressor->SetOutput(compressed_mapper_.start(), kMapSize));
   CompressData(std::move(compressor), input_data_, &compressed_size);
 
-  DecompressRequest request = {
+  wire::DecompressRequest request = {
       {0, kDataSize},
       {0, compressed_size},
       llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::CHUNKED,
   };
 
-  DecompressResponse response;
+  wire::DecompressResponse response;
   SendRequest(&request, &response);
   ASSERT_EQ(ZX_OK, response.status);
   ASSERT_EQ(kDataSize, response.size);
@@ -184,12 +185,12 @@ TEST_F(DecompressorSandboxTest, ChunkedPartialDecompression) {
     ASSERT_TRUE(mapping_or.is_ok());
     CompressionMapping mapping = mapping_or.value();
 
-    DecompressRequest request = {
+    wire::DecompressRequest request = {
         {mapping.decompressed_offset, mapping.decompressed_length},
         {mapping.compressed_offset, mapping.compressed_length},
         llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::CHUNKED_PARTIAL,
     };
-    DecompressResponse response;
+    wire::DecompressResponse response;
     SendRequest(&request, &response);
     ASSERT_EQ(ZX_OK, response.status);
     ASSERT_EQ(mapping.decompressed_length, response.size);
@@ -206,11 +207,11 @@ TEST_F(DecompressorSandboxTest, ChunkedPartialDecompression) {
 // Put junk the in the compressed vmo to verify an error signal.
 TEST_F(DecompressorSandboxTest, CorruptedInput) {
   memcpy(compressed_mapper_.start(), input_data_, kDataSize);
-  DecompressRequest request = {
+  wire::DecompressRequest request = {
       {0, kDataSize},
       {0, kDataSize},
       ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::ZSTD)};
-  DecompressResponse response;
+  wire::DecompressResponse response;
   SendRequest(&request, &response);
   // Error is really specific to the compression lib. Just verify that it failed.
   ASSERT_NE(ZX_OK, response.status);
@@ -226,24 +227,24 @@ TEST_F(DecompressorSandboxTest, CorruptedInput) {
 
 // Verify the error signal of using unsupported algorithms.
 TEST_F(DecompressorSandboxTest, UnsupportedCompression) {
-  DecompressRequest request = {
+  wire::DecompressRequest request = {
       {0, kDataSize},
       {0, kDataSize},
       ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(
           CompressionAlgorithm::UNCOMPRESSED),
   };
-  DecompressResponse response;
+  wire::DecompressResponse response;
   SendRequest(&request, &response);
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, response.status);
 }
 
 // Verify the error signal of using offsets with full decompression.
 TEST_F(DecompressorSandboxTest, NonzeroOffsetsForFullDecompression) {
-  DecompressRequest request = {
+  wire::DecompressRequest request = {
       {12, kDataSize},
       {0, kDataSize},
       ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::ZSTD)};
-  DecompressResponse response;
+  wire::DecompressResponse response;
   SendRequest(&request, &response);
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, response.status);
 }

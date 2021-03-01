@@ -50,23 +50,23 @@ using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
 // TODO(http://fxbug.dev/33183): Replace this with a test component_manager.
 class FakeRealm : public llcpp::fuchsia::sys2::Realm::Interface {
  public:
-  void BindChild(llcpp::fuchsia::sys2::ChildRef child,
+  void BindChild(llcpp::fuchsia::sys2::wire::ChildRef child,
                  fidl::ServerEnd<llcpp::fuchsia::io::Directory> exposed_dir,
                  BindChildCompleter::Sync& completer) override {
     exposed_dir_ = std::move(exposed_dir);
     completer.ReplySuccess();
   }
 
-  void CreateChild(llcpp::fuchsia::sys2::CollectionRef collection,
-                   llcpp::fuchsia::sys2::ChildDecl decl,
+  void CreateChild(llcpp::fuchsia::sys2::wire::CollectionRef collection,
+                   llcpp::fuchsia::sys2::wire::ChildDecl decl,
                    CreateChildCompleter::Sync& completer) override {
     completer.ReplySuccess();
   }
 
-  void DestroyChild(llcpp::fuchsia::sys2::ChildRef child,
+  void DestroyChild(llcpp::fuchsia::sys2::wire::ChildRef child,
                     DestroyChildCompleter::Sync& completer) override {}
 
-  void ListChildren(llcpp::fuchsia::sys2::CollectionRef collection,
+  void ListChildren(llcpp::fuchsia::sys2::wire::CollectionRef collection,
                     fidl::ServerEnd<llcpp::fuchsia::sys2::ChildIterator> iter,
                     ListChildrenCompleter::Sync& completer) override {}
 
@@ -212,7 +212,7 @@ struct IsolatedDevmgr::ExceptionLoopState {
       return;
     }
     ::llcpp::fuchsia::exception::Handler::SyncClient handler(std::move(*local));
-    ::llcpp::fuchsia::exception::ExceptionInfo einfo;
+    ::llcpp::fuchsia::exception::wire::ExceptionInfo einfo;
     einfo.process_koid = info.pid;
     einfo.thread_koid = info.tid;
     einfo.type = static_cast<::llcpp::fuchsia::exception::wire::ExceptionType>(info.type);

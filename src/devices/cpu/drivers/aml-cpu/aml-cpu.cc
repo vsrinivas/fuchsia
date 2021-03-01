@@ -18,7 +18,6 @@
 
 #include "src/devices/cpu/drivers/aml-cpu/aml-cpu-bind.h"
 
-
 namespace amlogic_cpu {
 
 namespace {
@@ -290,7 +289,7 @@ zx_status_t AmlCpu::DdkSetPerformanceState(uint32_t requested_state, uint32_t* o
   // If we're decreasing the frequency, then we set the voltage after the frequency has
   // been reduced.
   if (target_state.freq_hz < initial_state.freq_hz) {
-    // If we're increaing the frequency, we need to increase the voltage first.
+    // If we're increasing the frequency, we need to increase the voltage first.
     uint32_t actual_voltage;
     st = pwr_.RequestVoltage(target_state.volt_uv, &actual_voltage);
     if (st != ZX_OK || actual_voltage != target_state.volt_uv) {
@@ -358,7 +357,7 @@ void AmlCpu::GetPerformanceStateInfo(uint32_t state,
     return;
   }
 
-  llcpp::fuchsia::hardware::cpu::ctrl::CpuPerformanceStateInfo result;
+  llcpp::fuchsia::hardware::cpu::ctrl::wire::CpuPerformanceStateInfo result;
   result.frequency_hz = operating_points_[state].freq_hz;
   result.voltage_uv = operating_points_[state].volt_uv;
 

@@ -138,7 +138,7 @@ void release_image(uint64_t image_id) {
   }
 }
 
-static zx_status_t handle_display_added(fhd::Info* info) {
+static zx_status_t handle_display_added(fhd::wire::Info* info) {
   display_info_t* display_info =
       reinterpret_cast<display_info_t*>(calloc(1, sizeof(display_info_t)));
   if (!display_info) {
@@ -221,7 +221,7 @@ static zx_status_t get_single_framebuffer(zx_handle_t* vmo_out, uint32_t* stride
   return ZX_OK;
 }
 
-zx_status_t import_buffer_collection(uint64_t collection_id, fhd::ImageConfig* config,
+zx_status_t import_buffer_collection(uint64_t collection_id, fhd::wire::ImageConfig* config,
                                      uint64_t* id) {
   constexpr uint32_t kImageIndex = 0;
   auto import_rsp = dc_client->ImportImage(*config, collection_id, kImageIndex);
@@ -236,7 +236,7 @@ zx_status_t import_buffer_collection(uint64_t collection_id, fhd::ImageConfig* c
   return ZX_OK;
 }
 
-zx_status_t import_vmo(zx_handle_t vmo, fhd::ImageConfig* config, uint64_t* id) {
+zx_status_t import_vmo(zx_handle_t vmo, fhd::wire::ImageConfig* config, uint64_t* id) {
   zx_handle_t vmo_dup;
   zx_status_t status;
   if ((status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &vmo_dup)) != ZX_OK) {
@@ -265,13 +265,13 @@ zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id) {
 }
 
 zx_status_t configure_layer(display_info_t* display, uint64_t layer_id, uint64_t image_id,
-                            fhd::ImageConfig* config) {
+                            fhd::wire::ImageConfig* config) {
   RETURN_IF_ERROR(dc_client->SetLayerPrimaryConfig(layer_id, *config),
                   "vc: Failed to set layer config");
   RETURN_IF_ERROR(dc_client->SetLayerPrimaryPosition(
                       layer_id, fhd::wire::Transform::IDENTITY,
-                      fhd::Frame{.width = config->width, .height = config->height},
-                      fhd::Frame{.width = display->width, .height = display->height}),
+                      fhd::wire::Frame{.width = config->width, .height = config->height},
+                      fhd::wire::Frame{.width = display->width, .height = display->height}),
                   "vc: Failed to set layer position");
   RETURN_IF_ERROR(dc_client->SetLayerImage(layer_id, image_id, 0, 0), "vc: Failed to set image");
   return ZX_OK;
@@ -373,7 +373,7 @@ static zx_status_t create_buffer_collection(
     return set_display_constraints->res;
   }
 
-  sysmem::BufferCollectionConstraints constraints;
+  sysmem::wire::BufferCollectionConstraints constraints;
   constraints.usage.cpu = sysmem::cpuUsageWriteOften | sysmem::cpuUsageRead;
   constraints.min_buffer_count = 1;
   constraints.has_buffer_memory_constraints = true;
@@ -494,7 +494,7 @@ zx_status_t rebind_display(bool use_all) {
       }
       info->bound = true;
 
-      fhd::ImageConfig config = info->image_config;
+      fhd::wire::ImageConfig config = info->image_config;
       if (info->buffer_collection_id) {
         if ((status = import_buffer_collection(info->buffer_collection_id, &config,
                                                &info->image_id)) != ZX_OK) {
@@ -553,7 +553,7 @@ zx_status_t rebind_display(bool use_all) {
   }
 }
 
-static zx_status_t handle_displays_changed(fidl::VectorView<fhd::Info>& added,
+static zx_status_t handle_displays_changed(fidl::VectorView<fhd::wire::Info>& added,
                                            fidl::VectorView<uint64_t>& removed) {
   for (auto& display : added) {
     zx_status_t status = handle_display_added(&display);

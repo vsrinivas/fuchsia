@@ -139,8 +139,8 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidl.Root, config gidlconfig.Gener
 			Path:                     gidlBenchmark.Name,
 			Name:                     benchmarkName(gidlBenchmark.Name),
 			Type:                     benchmarkTypeFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value),
-			EventProtocolType:        benchmarkTypeFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value) + "EventProtocol",
-			EchoCallProtocolType:     benchmarkTypeFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value) + "EchoCall",
+			EventProtocolType:        benchmarkProtocolFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value) + "EventProtocol",
+			EchoCallProtocolType:     benchmarkProtocolFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value) + "EchoCall",
 			ValueBuildHeap:           valBuildHeap,
 			ValueVarHeap:             valVarHeap,
 			HandleDefs:               libhlcpp.BuildHandleDefs(gidlBenchmark.HandleDefs),
@@ -160,6 +160,10 @@ func libraryName(librarySuffix string) string {
 }
 
 func benchmarkTypeFromValue(librarySuffix string, value gidlir.Value) string {
+	return fmt.Sprintf("llcpp::%s::wire::%s", libraryName(librarySuffix), gidlir.TypeFromValue(value))
+}
+
+func benchmarkProtocolFromValue(librarySuffix string, value gidlir.Value) string {
 	return fmt.Sprintf("llcpp::%s::%s", libraryName(librarySuffix), gidlir.TypeFromValue(value))
 }
 

@@ -23,7 +23,7 @@ namespace sysmem_driver {
 // For now, the overrides are baked into sysmem based on the platform ID (AKA
 // PID), in usage_overrides_*.cpp.
 //
-// Any override will take precidence over the default PixelFormat sort order.
+// Any override will take precedence over the default PixelFormat sort order.
 class UsagePixelFormatCost {
  public:
   // Compare the cost of two pixel formats, returning -1 if the first format
@@ -35,10 +35,10 @@ class UsagePixelFormatCost {
   //
   // By passing in the BufferCollectionConstraints, the implementation can
   // consider other aspects of constraints in addition to the usage.
-  static int32_t Compare(uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
-                         const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints,
-                         uint32_t image_format_constraints_index_a,
-                         uint32_t image_format_constraints_index_b);
+  static int32_t Compare(
+      uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
+      const llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& constraints,
+      uint32_t image_format_constraints_index_a, uint32_t image_format_constraints_index_b);
 
  private:
   // For now the implementation is via a static table.

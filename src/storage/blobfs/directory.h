@@ -50,7 +50,7 @@ class Directory final : public fs::Vnode {
   zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) final;
-  zx_status_t QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* out) final;
+  zx_status_t QueryFilesystem(::llcpp::fuchsia::io::wire::FilesystemInfo* out) final;
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
   zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
   void Sync(SyncCallback closure) final;

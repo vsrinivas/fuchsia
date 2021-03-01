@@ -49,11 +49,12 @@ class Control : public ControlType,
                   zx_status_t>;
 
   CreateColorBuffer2Result CreateColorBuffer2(
-      zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params);
+      zx::vmo vmo,
+      llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params create_params);
 
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
   void CreateColorBuffer2(
-      zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params,
+      zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params create_params,
       CreateColorBuffer2Completer::Sync& completer) override;
 
   using CreateBuffer2Result =
@@ -61,11 +62,11 @@ class Control : public ControlType,
                   zx_status_t>;
 
   CreateBuffer2Result CreateBuffer2(
-      zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params create_params);
+      zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params create_params);
 
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
   void CreateBuffer2(zx::vmo vmo,
-                     llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params create_params,
+                     llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params create_params,
                      CreateBuffer2Completer::Sync& completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|

@@ -71,7 +71,8 @@ class FakeBootArgsServer final : public fboot::Arguments::Interface {
     completer.Reply(result);
   }
 
-  void GetBools(::fidl::VectorView<fboot::BoolPair> keys, GetBoolsCompleter::Sync& completer) {
+  void GetBools(::fidl::VectorView<fboot::wire::BoolPair> keys,
+                GetBoolsCompleter::Sync& completer) {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

@@ -15,7 +15,7 @@ namespace fhd = ::llcpp::fuchsia::hardware::display;
 namespace testing {
 namespace display {
 
-Display::Display(const fhd::Info& info) {
+Display::Display(const fhd::wire::Info& info) {
   id_ = info.id;
 
   auto pixel_format = reinterpret_cast<const int32_t*>(info.pixel_format.data());
@@ -23,12 +23,12 @@ Display::Display(const fhd::Info& info) {
     pixel_formats_.push_back(pixel_format[i]);
   }
 
-  auto mode = reinterpret_cast<const fhd::Mode*>(info.modes.data());
+  auto mode = reinterpret_cast<const fhd::wire::Mode*>(info.modes.data());
   for (unsigned i = 0; i < info.modes.count(); i++) {
     modes_.push_back(mode[i]);
   }
 
-  auto cursors = reinterpret_cast<const fhd::CursorInfo*>(info.cursor_configs.data());
+  auto cursors = reinterpret_cast<const fhd::wire::CursorInfo*>(info.cursor_configs.data());
   for (unsigned i = 0; i < info.cursor_configs.count(); i++) {
     cursors_.push_back(cursors[i]);
   }

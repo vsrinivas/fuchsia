@@ -34,7 +34,7 @@ constexpr uint32_t kMutexRegNum = 48;
 class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
   MockNoCpuBufferCollection() { EXPECT_EQ(ZX_OK, fake_bti_create(bti_.reset_and_get_address())); }
-  void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
+  void SetConstraints(bool has_constraints, sysmem::wire::BufferCollectionConstraints constraints,
                       SetConstraintsCompleter::Sync& _completer) override {
     EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
     image_constraints_ = constraints.image_format_constraints[0];
@@ -42,7 +42,7 @@ class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
   }
 
   void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) override {
-    sysmem::BufferCollectionInfo_2 info;
+    sysmem::wire::BufferCollectionInfo_2 info;
     zx::vmo vmo;
     constexpr uint32_t kWidth = 800;
     constexpr uint32_t kHeight = 600;
@@ -61,7 +61,7 @@ class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
 
  private:
   bool set_constraints_called_ = false;
-  sysmem::ImageFormatConstraints image_constraints_;
+  sysmem::wire::ImageFormatConstraints image_constraints_;
   zx::bti bti_;
 };
 

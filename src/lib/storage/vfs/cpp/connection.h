@@ -210,7 +210,7 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   Result<VnodeRepresentation> NodeDescribe();
   void NodeSync(fit::callback<void(zx_status_t)> callback);
   Result<VnodeAttributes> NodeGetAttr();
-  Result<> NodeSetAttr(uint32_t flags, const llcpp::fuchsia::io::NodeAttributes& attributes);
+  Result<> NodeSetAttr(uint32_t flags, const llcpp::fuchsia::io::wire::NodeAttributes& attributes);
   Result<uint32_t> NodeNodeGetFlags();
   Result<> NodeNodeSetFlags(uint32_t flags);
 

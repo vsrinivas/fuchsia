@@ -230,7 +230,7 @@ class MockDirectoryAdminOpener : public fio::DirectoryAdmin::Interface {
   void Describe(DescribeCompleter::Sync& completer) override {}
   void Sync(SyncCompleter::Sync& completer) override {}
   void GetAttr(GetAttrCompleter::Sync& completer) override {}
-  void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attributes,
+  void SetAttr(uint32_t flags, llcpp::fuchsia::io::wire::NodeAttributes attributes,
                SetAttrCompleter::Sync& completer) override {}
   void NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) override {}
   void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) override {}

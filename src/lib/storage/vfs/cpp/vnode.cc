@@ -204,7 +204,7 @@ zx_status_t Vnode::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::QueryFilesystem(fio::FilesystemInfo* out) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Vnode::QueryFilesystem(fio::wire::FilesystemInfo* out) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t Vnode::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
   return ZX_ERR_NOT_SUPPORTED;

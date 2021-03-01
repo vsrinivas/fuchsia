@@ -51,10 +51,10 @@ bool Session::ShouldTakeOverPrimary(const Session* current_primary) const {
   return descriptor_count_ > current_primary->descriptor_count_;
 }
 
-zx_status_t Session::Create(async_dispatcher_t* dispatcher, netdev::SessionInfo info,
+zx_status_t Session::Create(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo info,
                             fidl::StringView name, DeviceInterface* parent,
                             fidl::ServerEnd<netdev::Session> control,
-                            std::unique_ptr<Session>* out_session, netdev::Fifos* out_fifos) {
+                            std::unique_ptr<Session>* out_session, netdev::wire::Fifos* out_fifos) {
   fbl::AllocChecker checker;
 
   for (const auto& rx_request : info.rx_frames) {
@@ -97,8 +97,8 @@ zx_status_t Session::Create(async_dispatcher_t* dispatcher, netdev::SessionInfo 
   return ZX_OK;
 }
 
-Session::Session(async_dispatcher_t* dispatcher, netdev::SessionInfo* info, fidl::StringView name,
-                 DeviceInterface* parent)
+Session::Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo* info,
+                 fidl::StringView name, DeviceInterface* parent)
     : dispatcher_(dispatcher),
       vmo_descriptors_(std::move(info->descriptors)),
       paused_(true),
@@ -131,7 +131,7 @@ Session::~Session() {
   LOGF_TRACE("network-device(%s): Session destroyed", name());
 }
 
-zx_status_t Session::Init(netdev::Fifos* out) {
+zx_status_t Session::Init(netdev::wire::Fifos* out) {
   // Map the data and descriptors VMO:
 
   zx_status_t status;

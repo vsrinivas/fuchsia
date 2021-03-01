@@ -343,7 +343,8 @@ class ToIo1ModePermissionsForDirectory {
 };
 
 template <typename ToZxioAbilities>
-zxio_node_attributes_t ToZxioNodeAttributes(fio::NodeAttributes attr, ToZxioAbilities to_zxio) {
+zxio_node_attributes_t ToZxioNodeAttributes(fio::wire::NodeAttributes attr,
+                                            ToZxioAbilities to_zxio) {
   zxio_node_attributes_t zxio_attr = {};
   ZXIO_NODE_ATTR_SET(zxio_attr, protocols, ToZxioNodeProtocols(attr.mode));
   ZXIO_NODE_ATTR_SET(zxio_attr, abilities, to_zxio(attr.mode));
@@ -357,8 +358,9 @@ zxio_node_attributes_t ToZxioNodeAttributes(fio::NodeAttributes attr, ToZxioAbil
 }
 
 template <typename ToIo1ModePermissions>
-fio::NodeAttributes ToNodeAttributes(zxio_node_attributes_t attr, ToIo1ModePermissions to_io1) {
-  return fio::NodeAttributes{
+fio::wire::NodeAttributes ToNodeAttributes(zxio_node_attributes_t attr,
+                                           ToIo1ModePermissions to_io1) {
+  return fio::wire::NodeAttributes{
       .mode = ToIo1ModeFileType(attr.protocols) | to_io1(attr.abilities),
       .id = attr.has.id ? attr.id : fio::INO_UNKNOWN,
       .content_size = attr.content_size,
@@ -721,7 +723,7 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo
   if (response->s != ZX_OK) {
     return response->s;
   }
-  llcpp::fuchsia::mem::Buffer* buffer = response->buffer.get();
+  llcpp::fuchsia::mem::wire::Buffer* buffer = response->buffer.get();
   if (!buffer) {
     return ZX_ERR_IO;
   }

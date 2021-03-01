@@ -104,13 +104,14 @@ void DirectoryConnection::Sync(SyncCompleter::Sync& completer) {
 void DirectoryConnection::GetAttr(GetAttrCompleter::Sync& completer) {
   auto result = Connection::NodeGetAttr();
   if (result.is_error()) {
-    completer.Reply(result.error(), fio::NodeAttributes());
+    completer.Reply(result.error(), fio::wire::NodeAttributes());
   } else {
     completer.Reply(ZX_OK, result.value().ToIoV1NodeAttributes());
   }
 }
 
-void DirectoryConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
+void DirectoryConnection::SetAttr(uint32_t flags,
+                                  ::llcpp::fuchsia::io::wire::NodeAttributes attributes,
                                   SetAttrCompleter::Sync& completer) {
   auto result = Connection::NodeSetAttr(flags, attributes);
   if (result.is_error()) {
@@ -363,7 +364,7 @@ void DirectoryConnection::UnmountNode(UnmountNodeCompleter::Sync& completer) {
 void DirectoryConnection::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminQueryFilesystem] our options: ", options());
 
-  fio::FilesystemInfo info;
+  fio::wire::FilesystemInfo info;
   zx_status_t status = vnode()->QueryFilesystem(&info);
   completer.Reply(status, status == ZX_OK ? fidl::unowned_ptr(&info) : nullptr);
 }

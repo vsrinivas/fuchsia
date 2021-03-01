@@ -66,11 +66,11 @@ class DeviceManager final
   void DdkChildPreRelease(void* child_ctx);
 
   // implement `DeviceManager::Interface`
-  void OpenForWrite(llcpp::fuchsia::hardware::block::verified::Config config,
+  void OpenForWrite(llcpp::fuchsia::hardware::block::verified::wire::Config config,
                     OpenForWriteCompleter::Sync& completer) override __TA_EXCLUDES(mtx_);
   void CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync& completer) override
       __TA_EXCLUDES(mtx_);
-  void OpenForVerifiedRead(llcpp::fuchsia::hardware::block::verified::Config config,
+  void OpenForVerifiedRead(llcpp::fuchsia::hardware::block::verified::wire::Config config,
                            llcpp::fuchsia::hardware::block::verified::wire::Seal seal,
                            OpenForVerifiedReadCompleter::Sync& completer) override
       __TA_EXCLUDES(mtx_);

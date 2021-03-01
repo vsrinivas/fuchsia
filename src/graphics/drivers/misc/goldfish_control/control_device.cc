@@ -330,7 +330,7 @@ void Control::FreeBufferHandle(uint64_t id) {
 }
 
 Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
-    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params) {
+    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params create_params) {
   using llcpp::fuchsia::hardware::goldfish::ControlDevice;
 
   // Check argument validity.
@@ -419,7 +419,7 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
 }
 
 void Control::CreateColorBuffer2(
-    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params,
+    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params create_params,
     CreateColorBuffer2Completer::Sync& completer) {
   auto result = CreateColorBuffer2(std::move(vmo), std::move(create_params));
   if (result.is_ok()) {
@@ -430,7 +430,7 @@ void Control::CreateColorBuffer2(
 }
 
 Control::CreateBuffer2Result Control::CreateBuffer2(
-    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params create_params) {
+    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params create_params) {
   using llcpp::fuchsia::hardware::goldfish::ControlDevice;
   using llcpp::fuchsia::hardware::goldfish::wire::ControlDevice_CreateBuffer2_Response;
   using llcpp::fuchsia::hardware::goldfish::wire::ControlDevice_CreateBuffer2_Result;
@@ -515,9 +515,9 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
           ControlDevice_CreateBuffer2_Response{.hw_address_page_offset = hw_address_page_offset})));
 }
 
-void Control::CreateBuffer2(zx::vmo vmo,
-                            llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params create_params,
-                            CreateBuffer2Completer::Sync& completer) {
+void Control::CreateBuffer2(
+    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params create_params,
+    CreateBuffer2Completer::Sync& completer) {
   auto result = CreateBuffer2(std::move(vmo), std::move(create_params));
   if (result.is_ok()) {
     completer.Reply(result.take_value());
@@ -611,8 +611,8 @@ void Control::GetBufferHandleInfo(zx::vmo vmo, GetBufferHandleInfoCompleter::Syn
 
   ControlDevice_GetBufferHandleInfo_Response response;
   auto builder =
-      llcpp::fuchsia::hardware::goldfish::BufferHandleInfo::Builder(
-          std::make_unique<llcpp::fuchsia::hardware::goldfish::BufferHandleInfo::Frame>())
+      llcpp::fuchsia::hardware::goldfish::wire::BufferHandleInfo::Builder(
+          std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::BufferHandleInfo::Frame>())
           .set_id(std::make_unique<uint32_t>(handle))
           .set_memory_property(std::make_unique<uint32_t>(it_types->second.memory_property))
           .set_type(std::make_unique<BufferHandleType>(it_types->second.type));

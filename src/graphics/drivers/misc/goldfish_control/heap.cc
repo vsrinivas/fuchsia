@@ -24,7 +24,7 @@ Heap::Heap(Control* control, const char* tag)
     : control_(control), loop_(&kAsyncLoopConfigNoAttachToCurrentThread), tag_(tag) {
   ZX_DEBUG_ASSERT(control_);
 
-  // Start server thread. Heap server must be running on a seperate
+  // Start server thread. Heap server must be running on a separate
   // thread as sysmem might be making synchronous allocation requests
   // from the main thread.
   std::string thread_name = tag_ + "-thread";
@@ -34,7 +34,7 @@ Heap::Heap(Control* control, const char* tag)
 Heap::~Heap() { loop_.Shutdown(); }
 
 void Heap::BindWithHeapProperties(zx::channel server_request,
-                                  llcpp::fuchsia::sysmem2::HeapProperties heap_properties) {
+                                  llcpp::fuchsia::sysmem2::wire::HeapProperties heap_properties) {
   async::PostTask(
       loop_.dispatcher(),
       [server_end = fidl::ServerEnd<::llcpp::fuchsia::sysmem2::Heap>(std::move(server_request)),

@@ -155,7 +155,7 @@ void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   completer.ToAsync().Reply(DeviceInfo::WithEmmcInfo(emmc_info_ptr));
 }
 
-void RpmbDevice::Request(::llcpp::fuchsia::hardware::rpmb::Request request,
+void RpmbDevice::Request(::llcpp::fuchsia::hardware::rpmb::wire::Request request,
                          RequestCompleter::Sync& completer) {
   RpmbRequestInfo info = {
       .tx_frames = std::move(request.tx_frames),

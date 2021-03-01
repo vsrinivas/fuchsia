@@ -55,7 +55,7 @@ zx_status_t ParseArgs(llcpp::fuchsia::boot::Arguments::SyncClient& client, Argum
     out->keymap = qwerty_map;
   }
 
-  llcpp::fuchsia::boot::BoolPair bool_keys[]{
+  llcpp::fuchsia::boot::wire::BoolPair bool_keys[]{
       {fidl::StringView{"virtcon.keep-log-visible"}, false},
       {fidl::StringView{"virtcon.disable"}, false},
       {fidl::StringView{"virtcon.keyrepeat"}, true},

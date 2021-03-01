@@ -50,8 +50,8 @@ namespace partition = ::llcpp::fuchsia::hardware::block::partition;
 namespace volume = ::llcpp::fuchsia::hardware::block::volume;
 namespace device = ::llcpp::fuchsia::device;
 
-using ::llcpp::fuchsia::hardware::block::volume::VolumeInfo;
-using ::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo;
+using ::llcpp::fuchsia::hardware::block::volume::wire::VolumeInfo;
+using ::llcpp::fuchsia::hardware::block::volume::wire::VolumeManagerInfo;
 
 // The number of additional slices a partition will need to become
 // zxcrypt'd.
@@ -563,7 +563,7 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
     }
     part = reinterpret_cast<fvm::PartitionDescriptor*>(
         reinterpret_cast<uint8_t*>(parts[p].pd) + sizeof(fvm::PartitionDescriptor) +
-       parts[p].aligned_pd.extent_count * sizeof(fvm::ExtentDescriptor));
+        parts[p].aligned_pd.extent_count * sizeof(fvm::ExtentDescriptor));
   }
 
   *out_requested_slices = requested_slices;

@@ -123,7 +123,6 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   std::unique_ptr<DevfsFidlServer> server_;
 };
 
-
 // This is a wrapper-adapter while the rest of the infrastructure here uses fidl_txn_t. It forwards
 // fidl::Transaction::Reply() to fidl_txn_t.reply().
 class TxnForwarder : public fidl::Transaction {
@@ -152,9 +151,7 @@ class TxnForwarder : public fidl::Transaction {
     ZX_ASSERT_MSG(false, "TxnForwarder cannot take ownership.");
   }
 
-  zx_status_t GetStatus() const {
-    return status_;
-  }
+  zx_status_t GetStatus() const { return status_; }
 
  private:
   fidl_txn_t* txn_;
@@ -567,7 +564,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
     }
     if (describe) {
       fio::wire::NodeInfo node_info;
-      fidl::aligned<fio::DirectoryObject> directory;
+      fidl::aligned<fio::wire::DirectoryObject> directory;
       node_info.set_directory(fidl::unowned_ptr(&directory));
       fio::Node::OnOpenResponse::OwnedEncodedMessage response(ZX_OK, node_info);
 
@@ -811,7 +808,7 @@ void DevfsFidlServer::Clone(uint32_t flags, fidl::ServerEnd<fio::Node> object,
 }
 
 void DevfsFidlServer::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
-  fidl::tracking_ptr<fio::FilesystemInfo> info(std::make_unique<fio::FilesystemInfo>());
+  fidl::tracking_ptr<fio::wire::FilesystemInfo> info(std::make_unique<fio::wire::FilesystemInfo>());
   strlcpy(reinterpret_cast<char*>(info->name.data()), "devfs", fio::MAX_FS_NAME_BUFFER);
   completer.Reply(ZX_OK, std::move(info));
 }
@@ -856,7 +853,7 @@ void DevfsFidlServer::GetAttr(GetAttrCompleter::Sync& completer) {
     mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
   }
 
-  fio::NodeAttributes attributes;
+  fio::wire::NodeAttributes attributes;
   attributes.mode = mode;
   attributes.content_size = 0;
   attributes.link_count = 1;
@@ -866,7 +863,7 @@ void DevfsFidlServer::GetAttr(GetAttrCompleter::Sync& completer) {
 
 void DevfsFidlServer::Describe(DescribeCompleter::Sync& completer) {
   fio::wire::NodeInfo node_info;
-  fidl::aligned<fio::DirectoryObject> directory;
+  fidl::aligned<fio::wire::DirectoryObject> directory;
   node_info.set_directory(fidl::unowned_ptr(&directory));
   completer.Reply(std::move(node_info));
 }

@@ -61,7 +61,7 @@ zx_status_t DsiDwBase::Bind() {
   return status;
 }
 
-void DsiDwBase::SendCmd(::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd,
+void DsiDwBase::SendCmd(::llcpp::fuchsia::hardware::dsi::wire::MipiDsiCmd cmd,
                         ::fidl::VectorView<uint8_t> txdata, SendCmdCompleter::Sync& _completer) {
   zx_status_t status = ZX_OK;
   // TODO(payamm): We don't support READ at the moment. READ is complicated because it consumes
@@ -229,7 +229,8 @@ zx_status_t DsiDw::DsiImplSendCmd(const mipi_dsi_cmd_t* cmd_list, size_t cmd_cou
 }
 
 // TODO(payamm): Add support for other types of commands
-zx_status_t DsiDw::SendCommand(const fidl_dsi::MipiDsiCmd& cmd, fidl::VectorView<uint8_t>& txdata,
+zx_status_t DsiDw::SendCommand(const fidl_dsi::wire::MipiDsiCmd& cmd,
+                               fidl::VectorView<uint8_t>& txdata,
                                fidl::VectorView<uint8_t>& response) {
   fbl::AutoLock lock(&command_lock_);
   zx_status_t status = ZX_OK;
@@ -655,7 +656,7 @@ zx_status_t DsiDw::GenWriteShort(const mipi_dsi_cmd_t& cmd) {
   return GenericHdrWrite(regVal);
 }
 
-zx_status_t DsiDw::DcsWriteShort(const fidl_dsi::MipiDsiCmd& cmd,
+zx_status_t DsiDw::DcsWriteShort(const fidl_dsi::wire::MipiDsiCmd& cmd,
                                  fidl::VectorView<uint8_t>& txdata) {
   // Check that the payload size and command match
   if ((txdata.count() > 1) ||

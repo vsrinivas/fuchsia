@@ -15,7 +15,7 @@
 
 namespace {
 
-constexpr cpuctrl::CpuPerformanceStateInfo kTestPstates[] = {
+constexpr cpuctrl::wire::CpuPerformanceStateInfo kTestPstates[] = {
     {.frequency_hz = 1000, .voltage_uv = 100}, {.frequency_hz = 800, .voltage_uv = 90},
     {.frequency_hz = 600, .voltage_uv = 80},   {.frequency_hz = 400, .voltage_uv = 70},
     {.frequency_hz = 200, .voltage_uv = 60},
@@ -78,7 +78,7 @@ class FakeCpuDevice : TestDeviceType,
                             ::llcpp::fuchsia::device::wire::DevicePowerState requested_state,
                             ConfigureAutoSuspendCompleter::Sync& _completer) override {}
   void UpdatePowerStateMapping(
-      ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping,
+      ::fidl::Array<::llcpp::fuchsia::device::wire::SystemPowerStateInfo, 7> mapping,
       UpdatePowerStateMappingCompleter::Sync& _completer) override {}
   void GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& _completer) override {}
   void Suspend(::llcpp::fuchsia::device::wire::DevicePowerState requested_state,
@@ -149,7 +149,7 @@ void FakeCpuDevice::SetPerformanceState(uint32_t requested_state,
 
 void FakeCpuDevice::GetDevicePerformanceStates(
     GetDevicePerformanceStatesCompleter::Sync& completer) {
-  ::fidl::Array<::llcpp::fuchsia::device::DevicePerformanceStateInfo,
+  ::fidl::Array<::llcpp::fuchsia::device::wire::DevicePerformanceStateInfo,
                 fuchsia_device::MAX_DEVICE_PERFORMANCE_STATES>
       states{};
 

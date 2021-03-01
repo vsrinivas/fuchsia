@@ -37,9 +37,9 @@ namespace perfmon {
 namespace fidl_perfmon = ::llcpp::fuchsia::perfmon::cpu;
 
 // Shorten some long FIDL names.
-using FidlPerfmonAllocation = fidl_perfmon::Allocation;
-using FidlPerfmonConfig = fidl_perfmon::Config;
-using FidlPerfmonProperties = fidl_perfmon::Properties;
+using FidlPerfmonAllocation = fidl_perfmon::wire::Allocation;
+using FidlPerfmonConfig = fidl_perfmon::wire::Config;
+using FidlPerfmonProperties = fidl_perfmon::wire::Properties;
 using FidlPerfmonEventConfigFlags = fidl_perfmon::wire::EventConfigFlags;
 
 #if defined(__x86_64__)

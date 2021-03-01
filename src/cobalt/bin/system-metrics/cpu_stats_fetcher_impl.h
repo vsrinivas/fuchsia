@@ -34,10 +34,10 @@ class CpuStatsFetcherImpl : public CpuStatsFetcher {
   std::unique_ptr<llcpp::fuchsia::kernel::Stats::SyncClient> stats_service_;
   std::unique_ptr<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>
       cpu_stats_buffer_;
-  llcpp::fuchsia::kernel::CpuStats* cpu_stats_ = nullptr;
+  llcpp::fuchsia::kernel::wire::CpuStats* cpu_stats_ = nullptr;
   std::unique_ptr<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>
       last_cpu_stats_buffer_;
-  llcpp::fuchsia::kernel::CpuStats* last_cpu_stats_ = nullptr;
+  llcpp::fuchsia::kernel::wire::CpuStats* last_cpu_stats_ = nullptr;
 };
 
 }  // namespace cobalt

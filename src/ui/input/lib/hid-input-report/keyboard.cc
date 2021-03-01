@@ -129,12 +129,12 @@ ParseResult Keyboard::ParseReportDescriptor(const hid::ReportDescriptor& hid_rep
 };
 
 ParseResult Keyboard::CreateDescriptor(fidl::AnyAllocator& allocator,
-                                       fuchsia_input_report::DeviceDescriptor& descriptor) {
-  fuchsia_input_report::KeyboardDescriptor keyboard(allocator);
+                                       fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
+  fuchsia_input_report::wire::KeyboardDescriptor keyboard(allocator);
 
   // Input Descriptor parsing.
   if (input_report_size_ > 0) {
-    fuchsia_input_report::KeyboardInputDescriptor keyboard_input(allocator);
+    fuchsia_input_report::wire::KeyboardInputDescriptor keyboard_input(allocator);
 
     size_t keys_index = 0;
     fidl::VectorView<::llcpp::fuchsia::ui::input2::wire::Key> keys(allocator, key_values_.size());
@@ -154,7 +154,7 @@ ParseResult Keyboard::CreateDescriptor(fidl::AnyAllocator& allocator,
 
   // Output Descriptor parsing.
   if (output_report_size_ > 0) {
-    fuchsia_input_report::KeyboardOutputDescriptor keyboard_output(allocator);
+    fuchsia_input_report::wire::KeyboardOutputDescriptor keyboard_output(allocator);
 
     size_t leds_index = 0;
     fidl::VectorView<fuchsia_input_report::wire::LedType> leds(allocator, num_leds_);
@@ -176,12 +176,12 @@ ParseResult Keyboard::CreateDescriptor(fidl::AnyAllocator& allocator,
 
 ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len,
                                        fidl::AnyAllocator& allocator,
-                                       fuchsia_input_report::InputReport& input_report) {
+                                       fuchsia_input_report::wire::InputReport& input_report) {
   if (len != input_report_size_) {
     return ParseResult::kReportSizeMismatch;
   }
 
-  fuchsia_input_report::KeyboardInputReport keyboard_report(allocator);
+  fuchsia_input_report::wire::KeyboardInputReport keyboard_report(allocator);
 
   size_t num_pressed_keys = 0;
   size_t num_pressed_keys_3 = 0;
@@ -246,7 +246,7 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len,
   return ParseResult::kOk;
 }
 
-ParseResult Keyboard::SetOutputReport(const fuchsia_input_report::OutputReport* report,
+ParseResult Keyboard::SetOutputReport(const fuchsia_input_report::wire::OutputReport* report,
                                       uint8_t* data, size_t data_size, size_t* data_out_size) {
   if (!report->has_keyboard()) {
     return ParseResult::kNotImplemented;

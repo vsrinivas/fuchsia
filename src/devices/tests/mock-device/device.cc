@@ -60,8 +60,8 @@ class MockDevice : public MockDeviceType {
   zx_status_t DdkRxrpc(zx_handle_t channel);
 
   // Generate an invocation record for a hook RPC
-  device_mock::HookInvocation ConstructHookInvocation();
-  static device_mock::HookInvocation ConstructHookInvocation(uint64_t device_id);
+  device_mock::wire::HookInvocation ConstructHookInvocation();
+  static device_mock::wire::HookInvocation ConstructHookInvocation(uint64_t device_id);
 
   // Create a new thread that will serve a MockDeviceThread interface over |server_end|
   void CreateThread(fidl::ServerEnd<device_mock::MockDeviceThread> server_end);
@@ -221,14 +221,14 @@ void MockDevice::GetThreadKoids(zx_koid_t* process, zx_koid_t* thread) {
   *thread = thread_koids.thread;
 }
 
-device_mock::HookInvocation MockDevice::ConstructHookInvocation(uint64_t device_id) {
-  device_mock::HookInvocation invoc;
+device_mock::wire::HookInvocation MockDevice::ConstructHookInvocation(uint64_t device_id) {
+  device_mock::wire::HookInvocation invoc;
   GetThreadKoids(&invoc.process_koid, &invoc.thread_koid);
   invoc.device_id = device_id;
   return invoc;
 }
 
-device_mock::HookInvocation MockDevice::ConstructHookInvocation() {
+device_mock::wire::HookInvocation MockDevice::ConstructHookInvocation() {
   return ConstructHookInvocation(reinterpret_cast<uintptr_t>(zxdev()));
 }
 

@@ -108,7 +108,7 @@ size_t StorageWatchdog::GetStorageUsage() {
     return 0;
   }
 
-  fio::FilesystemInfo info;
+  fio::wire::FilesystemInfo info;
   fdio_cpp::FdioCaller caller(std::move(fd));
   zx_status_t status = GetFilesystemInfo(caller.borrow_channel(), &info);
   if (status != ZX_OK) {
@@ -170,7 +170,7 @@ void StorageWatchdog::PurgeCache() {
 }
 
 zx_status_t StorageWatchdog::GetFilesystemInfo(zx_handle_t directory,
-                                               fio::FilesystemInfo* out_info) {
+                                               fio::wire::FilesystemInfo* out_info) {
   auto result = fio::DirectoryAdmin::Call::QueryFilesystem(
       fidl::UnownedClientEnd<fio::DirectoryAdmin>(directory));
   if (result.ok())

@@ -370,7 +370,7 @@ Connection::Result<VnodeAttributes> Connection::NodeGetAttr() {
 }
 
 Connection::Result<> Connection::NodeSetAttr(uint32_t flags,
-                                             const fio::NodeAttributes& attributes) {
+                                             const fio::wire::NodeAttributes& attributes) {
   FS_PRETTY_TRACE_DEBUG("[NodeSetAttr] our options: ", options(), ", incoming flags: ", flags);
 
   if (options().flags.node_reference) {

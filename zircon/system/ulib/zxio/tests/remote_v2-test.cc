@@ -24,7 +24,7 @@ class TestServerBase : public fio2::Node::Interface {
   TestServerBase() = default;
   virtual ~TestServerBase() = default;
 
-  void Reopen(fio2::ConnectionOptions options, ::zx::channel object_request,
+  void Reopen(fio2::wire::ConnectionOptions options, ::zx::channel object_request,
               ReopenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -49,7 +49,7 @@ class TestServerBase : public fio2::Node::Interface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void UpdateAttributes(fio2::NodeAttributes attributes,
+  void UpdateAttributes(fio2::wire::NodeAttributes attributes,
                         UpdateAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -115,7 +115,7 @@ TEST_F(RemoteV2, GetAttributes) {
       uint64_t content_size = kContentSize;
       uint64_t id = kId;
       fio2::wire::NodeProtocols protocols = fio2::wire::NodeProtocols::FILE;
-      auto builder = fio2::NodeAttributes::UnownedBuilder()
+      auto builder = fio2::wire::NodeAttributes::UnownedBuilder()
                          .set_content_size(fidl::unowned_ptr(&content_size))
                          .set_protocols(fidl::unowned_ptr(&protocols))
                          .set_id(fidl::unowned_ptr(&id));
@@ -158,7 +158,7 @@ TEST_F(RemoteV2, SetAttributes) {
   constexpr uint64_t kCreationTime = 123;
   class TestServer : public TestServerBase {
    public:
-    void UpdateAttributes(fio2::NodeAttributes attributes,
+    void UpdateAttributes(fio2::wire::NodeAttributes attributes,
                           UpdateAttributesCompleter::Sync& completer) override {
       EXPECT_TRUE(attributes.has_creation_time());
       EXPECT_FALSE(attributes.has_protocols());
@@ -189,7 +189,7 @@ TEST_F(RemoteV2, SetAttributes) {
 TEST_F(RemoteV2, SetAttributesError) {
   class TestServer : public TestServerBase {
    public:
-    void UpdateAttributes(fio2::NodeAttributes attributes,
+    void UpdateAttributes(fio2::wire::NodeAttributes attributes,
                           UpdateAttributesCompleter::Sync& completer) override {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
     }

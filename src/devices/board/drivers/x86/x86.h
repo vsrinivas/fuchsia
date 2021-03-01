@@ -51,7 +51,7 @@ class X86 : public ddk::Device<X86, ddk::Messageable>,
   //
   // Requires that ACPI has been initialised.
   zx_status_t GetAcpiTableEntries(
-      fbl::Vector<::llcpp::fuchsia::hardware::acpi::TableInfo>* entries);
+      fbl::Vector<::llcpp::fuchsia::hardware::acpi::wire::TableInfo>* entries);
 
  private:
   X86(const X86&) = delete;

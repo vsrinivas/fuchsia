@@ -116,7 +116,7 @@ class AddressSpaceChildDriver
   void ClaimSharedBlock(uint64_t offset, uint64_t size,
                         ClaimSharedBlockCompleter::Sync& completer) override;
   void UnclaimSharedBlock(uint64_t offset, UnclaimSharedBlockCompleter::Sync& completer) override;
-  void Ping(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage ping,
+  void Ping(llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverPingMessage ping,
             PingCompleter::Sync& completer) override;
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);

@@ -18,8 +18,8 @@
 namespace {
 namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
 
-audio_fidl::PcmFormat GetDefaultPcmFormat() {
-  audio_fidl::PcmFormat format;
+audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
+  audio_fidl::wire::PcmFormat format;
   format.number_of_channels = 2;
   format.channels_to_use_bitmask = 0x03;
   format.sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
@@ -300,7 +300,7 @@ TEST(UsbAudioTest, SetAndGetGain) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto builder = audio_fidl::GainState::UnownedBuilder();
+  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
   constexpr float kTestGain = -12.f;
   fidl::aligned<float> target_gain = kTestGain;
   builder.set_gain_db(fidl::unowned_ptr(&target_gain));
@@ -374,8 +374,8 @@ TEST(UsbAudioTest, CreateRingBuffer) {
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
-  fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::Format::UnownedBuilder();
+  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
+  auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
   client.CreateRingBuffer(builder.build(), std::move(remote));
 
@@ -398,8 +398,8 @@ TEST(UsbAudioTest, RingBuffer) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
 
-  fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::Format::UnownedBuilder();
+  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
+  auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
   auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, builder.build(),
                                                              std::move(remote));

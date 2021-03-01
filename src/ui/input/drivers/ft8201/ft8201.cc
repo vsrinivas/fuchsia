@@ -89,12 +89,12 @@ constexpr uint16_t ExpectedWriteStatus(const uint32_t address, const size_t pack
 
 namespace touch {
 
-void Ft8201InputReport::ToFidlInputReport(fuchsia_input_report::InputReport& input_report,
+void Ft8201InputReport::ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
                                           fidl::AnyAllocator& allocator) {
-  fidl::VectorView<fuchsia_input_report::ContactInputReport> input_contacts(allocator,
-                                                                            num_contacts);
+  fidl::VectorView<fuchsia_input_report::wire::ContactInputReport> input_contacts(allocator,
+                                                                                  num_contacts);
   for (size_t i = 0; i < num_contacts; i++) {
-    fuchsia_input_report::ContactInputReport contact(allocator);
+    fuchsia_input_report::wire::ContactInputReport contact(allocator);
     contact.set_contact_id(allocator, contacts[i].contact_id);
     contact.set_position_x(allocator, contacts[i].position_x);
     contact.set_position_y(allocator, contacts[i].position_y);
@@ -102,7 +102,7 @@ void Ft8201InputReport::ToFidlInputReport(fuchsia_input_report::InputReport& inp
     input_contacts[i] = std::move(contact);
   }
 
-  fuchsia_input_report::TouchInputReport touch_report(allocator);
+  fuchsia_input_report::wire::TouchInputReport touch_report(allocator);
   touch_report.set_contacts(allocator, std::move(input_contacts));
 
   input_report.set_event_time(allocator, event_time.get());
@@ -189,30 +189,30 @@ void Ft8201Device::GetInputReportsReader(zx::channel server,
 void Ft8201Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   constexpr size_t kDescriptorBufferSize = 512;
 
-  constexpr fuchsia_input_report::Axis kAxisX = {
+  constexpr fuchsia_input_report::wire::Axis kAxisX = {
       .range = {.min = 0, .max = kMaxContactX},
       .unit = {.type = fuchsia_input_report::wire::UnitType::NONE, .exponent = 0},
   };
 
-  constexpr fuchsia_input_report::Axis kAxisY = {
+  constexpr fuchsia_input_report::wire::Axis kAxisY = {
       .range = {.min = 0, .max = kMaxContactY},
       .unit = {.type = fuchsia_input_report::wire::UnitType::NONE, .exponent = 0},
   };
 
-  constexpr fuchsia_input_report::Axis kAxisPressure = {
+  constexpr fuchsia_input_report::wire::Axis kAxisPressure = {
       .range = {.min = 0, .max = kMaxContactPressure},
       .unit = {.type = fuchsia_input_report::wire::UnitType::NONE, .exponent = 0},
   };
 
   fidl::FidlAllocator<kDescriptorBufferSize> allocator;
 
-  fuchsia_input_report::DeviceInfo device_info;
+  fuchsia_input_report::wire::DeviceInfo device_info;
   device_info.vendor_id = static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::GOOGLE);
   device_info.product_id = static_cast<uint32_t>(
       fuchsia_input_report::wire::VendorGoogleProductId::FOCALTECH_TOUCHSCREEN);
 
-  fidl::VectorView<fuchsia_input_report::ContactInputDescriptor> touch_input_contacts(allocator,
-                                                                                      kNumContacts);
+  fidl::VectorView<fuchsia_input_report::wire::ContactInputDescriptor> touch_input_contacts(
+      allocator, kNumContacts);
   for (uint32_t i = 0; i < kNumContacts; i++) {
     touch_input_contacts[i].Allocate(allocator);
     touch_input_contacts[i].set_position_x(allocator, kAxisX);
@@ -220,23 +220,23 @@ void Ft8201Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
     touch_input_contacts[i].set_pressure(allocator, kAxisPressure);
   }
 
-  fuchsia_input_report::TouchInputDescriptor touch_input_descriptor(allocator);
+  fuchsia_input_report::wire::TouchInputDescriptor touch_input_descriptor(allocator);
   touch_input_descriptor.set_contacts(allocator, std::move(touch_input_contacts));
   touch_input_descriptor.set_max_contacts(allocator, kNumContacts);
   touch_input_descriptor.set_touch_type(allocator,
                                         fuchsia_input_report::wire::TouchType::TOUCHSCREEN);
 
-  fuchsia_input_report::TouchDescriptor touch_descriptor(allocator);
+  fuchsia_input_report::wire::TouchDescriptor touch_descriptor(allocator);
   touch_descriptor.set_input(allocator, std::move(touch_input_descriptor));
 
-  fuchsia_input_report::DeviceDescriptor descriptor(allocator);
+  fuchsia_input_report::wire::DeviceDescriptor descriptor(allocator);
   descriptor.set_device_info(allocator, device_info);
   descriptor.set_touch(allocator, std::move(touch_descriptor));
 
   completer.Reply(std::move(descriptor));
 }
 
-void Ft8201Device::SendOutputReport(fuchsia_input_report::OutputReport report,
+void Ft8201Device::SendOutputReport(fuchsia_input_report::wire::OutputReport report,
                                     SendOutputReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
@@ -245,7 +245,7 @@ void Ft8201Device::GetFeatureReport(GetFeatureReportCompleter::Sync& completer) 
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Ft8201Device::SetFeatureReport(fuchsia_input_report::FeatureReport report,
+void Ft8201Device::SetFeatureReport(fuchsia_input_report::wire::FeatureReport report,
                                     SetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }

@@ -215,7 +215,7 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
 
 void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) {
   zx_status_t status = ZX_OK;
-  FidlBacklight::State state = {};
+  FidlBacklight::wire::State state = {};
 
   if (display_ref_ != nullptr) {
     fbl::AutoLock lock(&display_ref_->mtx);
@@ -228,7 +228,7 @@ void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync& comple
   }
 
   FidlBacklight::wire::Device_GetStateNormalized_Result result;
-  FidlBacklight::Device_GetStateNormalized_Response response{.state = state};
+  FidlBacklight::wire::Device_GetStateNormalized_Response response{.state = state};
   if (status == ZX_OK) {
     result.set_response(fidl::unowned_ptr(&response));
   } else {
@@ -237,7 +237,7 @@ void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync& comple
   completer.Reply(std::move(result));
 }
 
-void DisplayDevice::SetStateNormalized(FidlBacklight::State state,
+void DisplayDevice::SetStateNormalized(FidlBacklight::wire::State state,
                                        SetStateNormalizedCompleter::Sync& completer) {
   zx_status_t status = ZX_OK;
 
@@ -265,7 +265,7 @@ void DisplayDevice::GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer)
   completer.Reply(std::move(result));
 }
 
-void DisplayDevice::SetStateAbsolute(FidlBacklight::State state,
+void DisplayDevice::SetStateAbsolute(FidlBacklight::wire::State state,
                                      SetStateAbsoluteCompleter::Sync& completer) {
   FidlBacklight::wire::Device_SetStateAbsolute_Result result;
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);

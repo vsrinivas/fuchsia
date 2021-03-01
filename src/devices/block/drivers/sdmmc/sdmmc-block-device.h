@@ -46,8 +46,8 @@ struct PartitionInfo {
 };
 
 struct RpmbRequestInfo {
-  ::llcpp::fuchsia::mem::Range tx_frames = {};
-  ::llcpp::fuchsia::mem::Range rx_frames = {};
+  ::llcpp::fuchsia::mem::wire::Range tx_frames = {};
+  ::llcpp::fuchsia::mem::wire::Range rx_frames = {};
   ::llcpp::fuchsia::hardware::rpmb::Rpmb::Interface::RequestCompleter::Async completer;
 };
 
@@ -115,7 +115,7 @@ class RpmbDevice : public RpmbDeviceType,
   void RpmbConnectServer(zx::channel server);
 
   void GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) override;
-  void Request(::llcpp::fuchsia::hardware::rpmb::Request request,
+  void Request(::llcpp::fuchsia::hardware::rpmb::wire::Request request,
                RequestCompleter::Sync& completer) override;
 
  private:

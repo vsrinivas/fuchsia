@@ -38,7 +38,7 @@ class TestServerBase : public fio::Node::RawChannelInterface {
   }
 
   void Describe(DescribeCompleter::Sync& completer) override {
-    fio::FileObject file_object;
+    fio::wire::FileObject file_object;
     completer.Reply(fio::wire::NodeInfo::WithFile(fidl::unowned_ptr(&file_object)));
   }
 
@@ -48,7 +48,7 @@ class TestServerBase : public fio::Node::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attribute,
+  void SetAttr(uint32_t flags, llcpp::fuchsia::io::wire::NodeAttributes attribute,
                SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -105,7 +105,7 @@ TEST_F(Remote, ServiceGetAttributes) {
   class TestServer : public TestServerBase {
    public:
     void GetAttr(GetAttrCompleter::Sync& completer) override {
-      completer.Reply(ZX_OK, ::llcpp::fuchsia::io::NodeAttributes{
+      completer.Reply(ZX_OK, ::llcpp::fuchsia::io::wire::NodeAttributes{
                                  .mode = ::llcpp::fuchsia::io::MODE_TYPE_SERVICE});
     }
   };

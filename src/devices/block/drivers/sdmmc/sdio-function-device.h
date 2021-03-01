@@ -16,7 +16,7 @@
 
 namespace sdmmc {
 
-using ::llcpp::fuchsia::hardware::sdio::SdioRwTxn;
+using ::llcpp::fuchsia::hardware::sdio::wire::SdioRwTxn;
 
 class SdioControllerDevice;
 

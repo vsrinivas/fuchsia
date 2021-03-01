@@ -44,7 +44,7 @@ FshostBootArgs::FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::Sy
     return;
   }
 
-  llcpp::fuchsia::boot::BoolPair defaults[] = {
+  llcpp::fuchsia::boot::wire::BoolPair defaults[] = {
       {fidl::StringView{"netsvc.netboot"}, netsvc_netboot_},
       {fidl::StringView{"zircon.system.disable-automount"}, zircon_system_disable_automount_},
       {fidl::StringView{"zircon.system.filesystem-check"}, zircon_system_filesystem_check_},

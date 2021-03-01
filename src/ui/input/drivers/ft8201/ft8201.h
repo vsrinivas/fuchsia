@@ -41,7 +41,7 @@ struct Ft8201InputReport {
   Ft8201Contact contacts[kNumContacts];
   size_t num_contacts;
 
-  void ToFidlInputReport(fuchsia_input_report::InputReport& input_report,
+  void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
                          fidl::AnyAllocator& allocator);
 };
 
@@ -79,10 +79,10 @@ class Ft8201Device : public DeviceType,
   void GetInputReportsReader(zx::channel server,
                              GetInputReportsReaderCompleter::Sync& completer) override;
   void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
-  void SendOutputReport(fuchsia_input_report::OutputReport report,
+  void SendOutputReport(fuchsia_input_report::wire::OutputReport report,
                         SendOutputReportCompleter::Sync& completer) override;
   void GetFeatureReport(GetFeatureReportCompleter::Sync& completer) override;
-  void SetFeatureReport(fuchsia_input_report::FeatureReport report,
+  void SetFeatureReport(fuchsia_input_report::wire::FeatureReport report,
                         SetFeatureReportCompleter::Sync& completer) override;
 
   // Visible for testing.

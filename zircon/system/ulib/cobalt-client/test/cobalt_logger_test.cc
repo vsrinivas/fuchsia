@@ -108,19 +108,21 @@ class FakeLoggerService : public ::llcpp::fuchsia::cobalt::Logger::Interface {
     ZX_PANIC("Not Implemented.");
   }
 
-  void LogIntHistogram(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component,
-                       ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram,
-                       LogIntHistogramCompleter::Sync& completer) final {
+  void LogIntHistogram(
+      uint32_t metric_id, uint32_t event_code, ::fidl::StringView component,
+      ::fidl::VectorView<::llcpp::fuchsia::cobalt::wire::HistogramBucket> histogram,
+      LogIntHistogramCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void LogCustomEvent(uint32_t metric_id,
-                      ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values,
-                      LogCustomEventCompleter::Sync& completer) final {
+  void LogCustomEvent(
+      uint32_t metric_id,
+      ::fidl::VectorView<::llcpp::fuchsia::cobalt::wire::CustomEventValue> event_values,
+      LogCustomEventCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void LogCobaltEvent(::llcpp::fuchsia::cobalt::CobaltEvent event,
+  void LogCobaltEvent(::llcpp::fuchsia::cobalt::wire::CobaltEvent event,
                       LogCobaltEventCompleter::Sync& completer) final {
     // Use MetricOptions as a key.
     MetricOptions info;
@@ -153,7 +155,7 @@ class FakeLoggerService : public ::llcpp::fuchsia::cobalt::Logger::Interface {
     completer.Reply(log_return_status_);
   }
 
-  void LogCobaltEvents(::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events,
+  void LogCobaltEvents(::fidl::VectorView<::llcpp::fuchsia::cobalt::wire::CobaltEvent> events,
                        LogCobaltEventsCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }

@@ -18,8 +18,8 @@ namespace perfmon {
 namespace fidl_perfmon = ::llcpp::fuchsia::perfmon::cpu;
 
 // Shorten some long FIDL names.
-using FidlPerfmonAllocation = fidl_perfmon::Allocation;
-using FidlPerfmonConfig = fidl_perfmon::Config;
+using FidlPerfmonAllocation = fidl_perfmon::wire::Allocation;
+using FidlPerfmonConfig = fidl_perfmon::wire::Config;
 using FidlPerfmonConfigEventFlags = fidl_perfmon::wire::EventConfigFlags;
 
 // List of events we need. This is a minimal version of

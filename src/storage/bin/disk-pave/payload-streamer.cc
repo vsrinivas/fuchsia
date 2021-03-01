@@ -68,7 +68,7 @@ void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
   } else {
     // completer.Reply must be called from within this else block since otherwise
     // |info| will go out of scope
-    ::llcpp::fuchsia::paver::ReadInfo info{.offset = 0, .size = static_cast<uint64_t>(n)};
+    ::llcpp::fuchsia::paver::wire::ReadInfo info{.offset = 0, .size = static_cast<uint64_t>(n)};
     result.set_info(fidl::unowned_ptr(&info));
     completer.Reply(std::move(result));
   }

@@ -202,7 +202,7 @@ void DeviceInterface::NetworkDeviceIfcSnoop(const rx_buffer_t* rx_list, size_t r
 
 void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
   LOG_TRACE("network-device: GetInfo");
-  netdev::Info info{
+  netdev::wire::Info info{
       .class_ = static_cast<netdev::wire::DeviceClass>(device_info_.device_class),
       .min_descriptor_length = sizeof(buffer_descriptor_t) / sizeof(uint64_t),
       .descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION,
@@ -217,7 +217,7 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
   };
 
   std::array<netdev::wire::FrameType, netdev::MAX_FRAME_TYPES> rx;
-  std::array<netdev::FrameTypeSupport, netdev::MAX_FRAME_TYPES> tx;
+  std::array<netdev::wire::FrameTypeSupport, netdev::MAX_FRAME_TYPES> tx;
   for (size_t i = 0; i < device_info_.rx_types_count; i++) {
     rx[i] = static_cast<netdev::wire::FrameType>(device_info_.rx_types_list[i]);
   }
@@ -256,9 +256,10 @@ void DeviceInterface::GetStatus(GetStatusCompleter::Sync& completer) {
   completer.Reply(FidlStatus(status).view());
 }
 
-void DeviceInterface::OpenSession(::fidl::StringView session_name, netdev::SessionInfo session_info,
+void DeviceInterface::OpenSession(::fidl::StringView session_name,
+                                  netdev::wire::SessionInfo session_info,
                                   OpenSessionCompleter::Sync& completer) {
-  netdev::Device_OpenSession_Response rsp;
+  netdev::wire::Device_OpenSession_Response rsp;
   zx_status_t status = OpenSession(std::move(session_name), std::move(session_info), &rsp);
   netdev::wire::Device_OpenSession_Result result;
   if (status != ZX_OK) {
@@ -312,8 +313,9 @@ void DeviceInterface::GetStatusWatcher(fidl::ServerEnd<netdev::StatusWatcher> wa
   watchers_.push_back(std::move(n_watcher));
 }
 
-zx_status_t DeviceInterface::OpenSession(fidl::StringView name, netdev::SessionInfo session_info,
-                                         netdev::Device_OpenSession_Response* rsp) {
+zx_status_t DeviceInterface::OpenSession(fidl::StringView name,
+                                         netdev::wire::SessionInfo session_info,
+                                         netdev::wire::Device_OpenSession_Response* rsp) {
   {
     fbl::AutoLock teardown_lock(&teardown_lock_);
     // We're currently tearing down and can't open any new sessions.

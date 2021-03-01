@@ -16,15 +16,16 @@
 namespace image_format {
 
 fuchsia_sysmem_ImageFormatConstraints GetCConstraints(
-    const llcpp::fuchsia::sysmem::ImageFormatConstraints& cpp);
+    const llcpp::fuchsia::sysmem::wire::ImageFormatConstraints& cpp);
 
-llcpp::fuchsia::sysmem::PixelFormat GetCppPixelFormat(
+llcpp::fuchsia::sysmem::wire::PixelFormat GetCppPixelFormat(
     const fuchsia_sysmem_PixelFormat& pixel_format);
 
-fuchsia_sysmem_PixelFormat GetCPixelFormat(const llcpp::fuchsia::sysmem::PixelFormat& pixel_format);
+fuchsia_sysmem_PixelFormat GetCPixelFormat(
+    const llcpp::fuchsia::sysmem::wire::PixelFormat& pixel_format);
 
-constexpr llcpp::fuchsia::sysmem::ImageFormatConstraints GetDefaultImageFormatConstraints() {
-  llcpp::fuchsia::sysmem::ImageFormatConstraints constraints;
+constexpr llcpp::fuchsia::sysmem::wire::ImageFormatConstraints GetDefaultImageFormatConstraints() {
+  llcpp::fuchsia::sysmem::wire::ImageFormatConstraints constraints;
   // Should match values in constraints.fidl.
   // TODO(fxbug.dev/35314): LLCPP should initialize to default values.
   constraints.max_coded_width_times_coded_height = 0xffffffff;
@@ -39,33 +40,35 @@ constexpr llcpp::fuchsia::sysmem::ImageFormatConstraints GetDefaultImageFormatCo
   return constraints;
 }
 
-constexpr llcpp::fuchsia::sysmem::BufferMemoryConstraints GetDefaultBufferMemoryConstraints() {
+constexpr llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints
+GetDefaultBufferMemoryConstraints() {
   // Should match values in constraints.fidl.
   // TODO(fxbug.dev/35314): LLCPP should initialize to default values.
-  return llcpp::fuchsia::sysmem::BufferMemoryConstraints{.min_size_bytes = 0,
-                                                         .max_size_bytes = 0xffffffff,
-                                                         .physically_contiguous_required = false,
-                                                         .secure_required = false,
-                                                         .ram_domain_supported = false,
-                                                         .cpu_domain_supported = true,
-                                                         .inaccessible_domain_supported = false,
-                                                         .heap_permitted_count = 0};
+  return llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints{
+      .min_size_bytes = 0,
+      .max_size_bytes = 0xffffffff,
+      .physically_contiguous_required = false,
+      .secure_required = false,
+      .ram_domain_supported = false,
+      .cpu_domain_supported = true,
+      .inaccessible_domain_supported = false,
+      .heap_permitted_count = 0};
 }
 
-bool GetMinimumRowBytes(const llcpp::fuchsia::sysmem::ImageFormatConstraints& constraints,
+bool GetMinimumRowBytes(const llcpp::fuchsia::sysmem::wire::ImageFormatConstraints& constraints,
                         uint32_t width, uint32_t* bytes_per_row_out);
 
-std::optional<llcpp::fuchsia::sysmem::ImageFormat_2> ConstraintsToFormat(
-    const llcpp::fuchsia::sysmem::ImageFormatConstraints& constraints, uint32_t coded_width,
+std::optional<llcpp::fuchsia::sysmem::wire::ImageFormat_2> ConstraintsToFormat(
+    const llcpp::fuchsia::sysmem::wire::ImageFormatConstraints& constraints, uint32_t coded_width,
     uint32_t coded_height);
 
-bool GetPlaneByteOffset(const llcpp::fuchsia::sysmem::ImageFormat_2& image_format, uint32_t plane,
-                        uint64_t* offset_out);
+bool GetPlaneByteOffset(const llcpp::fuchsia::sysmem::wire::ImageFormat_2& image_format,
+                        uint32_t plane, uint64_t* offset_out);
 
-bool GetPlaneRowBytes(const llcpp::fuchsia::sysmem::ImageFormat_2& image_format, uint32_t plane,
-                      uint32_t* row_bytes_out);
+bool GetPlaneRowBytes(const llcpp::fuchsia::sysmem::wire::ImageFormat_2& image_format,
+                      uint32_t plane, uint32_t* row_bytes_out);
 
-bool FormatCompatibleWithProtectedMemory(const llcpp::fuchsia::sysmem::PixelFormat& format);
+bool FormatCompatibleWithProtectedMemory(const llcpp::fuchsia::sysmem::wire::PixelFormat& format);
 
 }  // namespace image_format
 

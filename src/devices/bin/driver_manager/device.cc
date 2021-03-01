@@ -811,13 +811,13 @@ int Device::RunCompatibilityTests() {
 
 #undef TEST_LOGF
 
-void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controller_client,
-                       ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
-                       ::fidl::StringView name_view, uint32_t protocol_id,
-                       ::fidl::StringView driver_path_view, ::fidl::StringView args_view,
-                       llcpp::fuchsia::device::manager::wire::AddDeviceConfig device_add_config,
-                       bool has_init, ::zx::vmo inspect, ::zx::channel client_remote,
-                       AddDeviceCompleter::Sync& completer) {
+void Device::AddDevice(
+    ::zx::channel coordinator, ::zx::channel device_controller_client,
+    ::fidl::VectorView<llcpp::fuchsia::device::manager::wire::DeviceProperty> props,
+    ::fidl::StringView name_view, uint32_t protocol_id, ::fidl::StringView driver_path_view,
+    ::fidl::StringView args_view,
+    llcpp::fuchsia::device::manager::wire::AddDeviceConfig device_add_config, bool has_init,
+    ::zx::vmo inspect, ::zx::channel client_remote, AddDeviceCompleter::Sync& completer) {
   auto parent = fbl::RefPtr(this);
   fbl::StringPiece name(name_view.data(), name_view.size());
   fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
@@ -844,8 +844,8 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
-    llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response resp{.local_device_id =
-                                                                             local_id};
+    llcpp::fuchsia::device::manager::wire::Coordinator_AddDevice_Response resp{.local_device_id =
+                                                                                   local_id};
     response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }
@@ -866,7 +866,7 @@ void Device::PublishMetadata(::fidl::StringView device_path, uint32_t key,
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
-    fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response> resp;
+    fidl::aligned<llcpp::fuchsia::device::manager::wire::Coordinator_PublishMetadata_Response> resp;
     response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }
@@ -899,10 +899,10 @@ void Device::MakeVisible(MakeVisibleCompleter::Sync& completer) {
     return;
   }
   VLOGF(1, "'make-visible' device %p '%s'", dev.get(), dev->name().data());
-  // TODO(teisenbe): MakeVisibile can return errors.  We should probably
+  // TODO(teisenbe): MakeVisible can return errors.  We should probably
   // act on it, but the existing code being migrated does not.
   dev->coordinator->MakeVisible(dev);
-  fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response> resp;
+  fidl::aligned<llcpp::fuchsia::device::manager::wire::Coordinator_MakeVisible_Response> resp;
   response.set_response(fidl::unowned_ptr(&resp));
   completer.Reply(std::move(response));
 }
@@ -926,7 +926,7 @@ void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
-    fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response> resp;
+    fidl::aligned<llcpp::fuchsia::device::manager::wire::Coordinator_BindDevice_Response> resp;
     response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }
@@ -943,7 +943,7 @@ void Device::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
     return;
   }
   auto path_view = ::fidl::unowned_str(path, strlen(path));
-  llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response resp{
+  llcpp::fuchsia::device::manager::wire::Coordinator_GetTopologicalPath_Response resp{
       .path = std::move(path_view)};
   response.set_response(fidl::unowned_ptr(&resp));
   completer.Reply(std::move(response));
@@ -966,7 +966,7 @@ void Device::LoadFirmware(::fidl::StringView fw_path_view, LoadFirmwareCompleter
     return;
   }
 
-  llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response resp{
+  llcpp::fuchsia::device::manager::wire::Coordinator_LoadFirmware_Response resp{
       .vmo = std::move(vmo),
       .size = size,
   };
@@ -986,8 +986,8 @@ void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync& completer) {
     return;
   }
   auto data_view = ::fidl::VectorView<uint8_t>(fidl::unowned_ptr(data), actual);
-  llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response resp{.data =
-                                                                             std::move(data_view)};
+  llcpp::fuchsia::device::manager::wire::Coordinator_GetMetadata_Response resp{
+      .data = std::move(data_view)};
   response.set_response(fidl::unowned_ptr(&resp));
   completer.Reply(std::move(response));
 }
@@ -1002,7 +1002,7 @@ void Device::GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync& compl
     completer.Reply(std::move(response));
     return;
   }
-  llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response resp{.size = size};
+  llcpp::fuchsia::device::manager::wire::Coordinator_GetMetadataSize_Response resp{.size = size};
   response.set_response(fidl::unowned_ptr(&resp));
   completer.Reply(std::move(response));
 }
@@ -1017,7 +1017,7 @@ void Device::AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data,
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
-    fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response> resp;
+    fidl::aligned<llcpp::fuchsia::device::manager::wire::Coordinator_AddMetadata_Response> resp;
     response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }
@@ -1039,7 +1039,8 @@ void Device::RunCompatibilityTests(int64_t hook_wait_time,
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
-    fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response> resp;
+    fidl::aligned<llcpp::fuchsia::device::manager::wire::Coordinator_RunCompatibilityTests_Response>
+        resp;
     response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }
@@ -1047,7 +1048,7 @@ void Device::RunCompatibilityTests(int64_t hook_wait_time,
 
 void Device::AddCompositeDevice(
     ::fidl::StringView name_view,
-    llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
+    llcpp::fuchsia::device::manager::wire::CompositeDeviceDescriptor comp_desc,
     AddCompositeDeviceCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   fbl::StringPiece name(name_view.data(), name_view.size());
@@ -1057,7 +1058,8 @@ void Device::AddCompositeDevice(
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
-    fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response> resp;
+    fidl::aligned<llcpp::fuchsia::device::manager::wire::Coordinator_AddCompositeDevice_Response>
+        resp;
     response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }

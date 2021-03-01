@@ -66,7 +66,7 @@ void AstBuilder::SetRoot(NodeId node_id) {
 NodeId AstBuilder::AddVariableDeclaration(const std::string& identifier,
                                           llcpp::fuchsia::shell::wire::ShellType&& type,
                                           NodeId node_id, bool is_const, bool is_root) {
-  fidl::ObjectView<llcpp::fuchsia::shell::VariableDefinition> def(allocator_);
+  fidl::ObjectView<llcpp::fuchsia::shell::wire::VariableDefinition> def(allocator_);
   def->name.Set(allocator_, identifier);
   def->type = std::move(type);
   def->mutable_value = !is_const;
@@ -80,7 +80,7 @@ NodeId AstBuilder::AddVariable(const std::string& identifier) {
 }
 
 NodeId AstBuilder::AddIntegerLiteral(uint64_t i, bool is_negative) {
-  fidl::ObjectView<llcpp::fuchsia::shell::IntegerLiteral> literal(allocator_);
+  fidl::ObjectView<llcpp::fuchsia::shell::wire::IntegerLiteral> literal(allocator_);
   literal->absolute_value.Allocate(allocator_, 1);
   literal->absolute_value[0] = i;
   literal->negative = is_negative;
@@ -90,7 +90,7 @@ NodeId AstBuilder::AddIntegerLiteral(uint64_t i, bool is_negative) {
 NodeId AstBuilder::AddIntegerLiteral(int64_t i) {
   uint64_t absolute_value = (i == LLONG_MIN) ? (static_cast<uint64_t>(LLONG_MAX) + 1) : llabs(i);
 
-  fidl::ObjectView<llcpp::fuchsia::shell::IntegerLiteral> literal(allocator_);
+  fidl::ObjectView<llcpp::fuchsia::shell::wire::IntegerLiteral> literal(allocator_);
   literal->absolute_value.Allocate(allocator_, 1);
   literal->absolute_value[0] = absolute_value;
   literal->negative = i < 0;
@@ -108,14 +108,14 @@ void AstBuilder::AddEmitResult(NodeId expression) {
 }
 
 NodeId AstBuilder::AddAssignment(NodeId destination, NodeId source) {
-  fidl::ObjectView<llcpp::fuchsia::shell::Assignment> assignment(allocator_);
+  fidl::ObjectView<llcpp::fuchsia::shell::wire::Assignment> assignment(allocator_);
   assignment->destination = destination;
   assignment->source = source;
   return AddNode(llcpp::fuchsia::shell::wire::Node::WithAssignment(assignment), /*root_node=*/true);
 }
 
 NodeId AstBuilder::AddAddition(bool with_exceptions, NodeId left_id, NodeId right_id) {
-  fidl::ObjectView<llcpp::fuchsia::shell::Addition> addition(allocator_);
+  fidl::ObjectView<llcpp::fuchsia::shell::wire::Addition> addition(allocator_);
   addition->left = left_id;
   addition->right = right_id;
   addition->with_exceptions = with_exceptions;
@@ -125,8 +125,8 @@ NodeId AstBuilder::AddAddition(bool with_exceptions, NodeId left_id, NodeId righ
 void AstBuilder::OpenObject() { object_stack_.emplace_back(); }
 
 AstBuilder::NodePair AstBuilder::CloseObject() {
-  fidl::ObjectView<llcpp::fuchsia::shell::ObjectSchemaDefinition> object_schema(allocator_);
-  fidl::ObjectView<llcpp::fuchsia::shell::ObjectDefinition> object(allocator_);
+  fidl::ObjectView<llcpp::fuchsia::shell::wire::ObjectSchemaDefinition> object_schema(allocator_);
+  fidl::ObjectView<llcpp::fuchsia::shell::wire::ObjectDefinition> object(allocator_);
 
   // Create a vector of nodes for the fields.
   std::vector<FidlNodeIdPair>& fields = object_stack_.back();
@@ -157,13 +157,14 @@ AstBuilder::NodePair AstBuilder::AddField(const std::string& key, NodeId express
   NodePair result;
 
   // Create the type.
-  fidl::ObjectView<llcpp::fuchsia::shell::ObjectFieldSchemaDefinition> field_schema(allocator_);
+  fidl::ObjectView<llcpp::fuchsia::shell::wire::ObjectFieldSchemaDefinition> field_schema(
+      allocator_);
   field_schema->name.Set(allocator_, key);
   field_schema->type = std::move(type);
   result.schema_node = AddNode(llcpp::fuchsia::shell::wire::Node::WithFieldSchema(field_schema));
 
   // Create the object
-  fidl::ObjectView<llcpp::fuchsia::shell::ObjectFieldDefinition> field(allocator_);
+  fidl::ObjectView<llcpp::fuchsia::shell::wire::ObjectFieldDefinition> field(allocator_);
   field->object_field_schema.file_id = file_id_;
   field->object_field_schema.node_id = result.schema_node.node_id;
   field->value = expression_node_id;

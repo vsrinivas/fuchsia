@@ -5,6 +5,7 @@
 #ifndef SRC_UI_TOOLS_PRINT_INPUT_REPORT_DEVICES_H_
 #define SRC_UI_TOOLS_PRINT_INPUT_REPORT_DEVICES_H_
 
+#include <fuchsia/input/report/llcpp/fidl.h>
 #include <lib/zx/status.h>
 
 #include "src/ui/tools/print-input-report/printer.h"
@@ -22,28 +23,30 @@ void PrintInputReports(
     fidl::Client<fuchsia_input_report::InputReportsReader> reader, size_t num_reads,
     fit::closure callback = [] {});
 
-void PrintMouseDesc(Printer* printer, const fuchsia_input_report::MouseInputDescriptor& mouse_desc);
+void PrintMouseDesc(Printer* printer,
+                    const fuchsia_input_report::wire::MouseInputDescriptor& mouse_desc);
 void PrintMouseInputReport(Printer* printer,
-                           const fuchsia_input_report::MouseInputReport& mouse_report);
+                           const fuchsia_input_report::wire::MouseInputReport& mouse_report);
 
 void PrintSensorDesc(Printer* printer,
-                     const fuchsia_input_report::SensorInputDescriptor& sensor_desc);
+                     const fuchsia_input_report::wire::SensorInputDescriptor& sensor_desc);
 void PrintSensorInputReport(Printer* printer,
-                            const fuchsia_input_report::SensorInputReport& sensor_report);
+                            const fuchsia_input_report::wire::SensorInputReport& sensor_report);
 
-void PrintTouchDesc(Printer* printer, const fuchsia_input_report::TouchInputDescriptor& touch_desc);
+void PrintTouchDesc(Printer* printer,
+                    const fuchsia_input_report::wire::TouchInputDescriptor& touch_desc);
 void PrintTouchInputReport(Printer* printer,
-                           const fuchsia_input_report::TouchInputReport& touch_report);
+                           const fuchsia_input_report::wire::TouchInputReport& touch_report);
 
 void PrintKeyboardDesc(Printer* printer,
-                       const fuchsia_input_report::KeyboardDescriptor& keyboard_desc);
-void PrintKeyboardInputReport(Printer* printer,
-                              const fuchsia_input_report::KeyboardInputReport& keyboard_report);
+                       const fuchsia_input_report::wire::KeyboardDescriptor& keyboard_desc);
+void PrintKeyboardInputReport(
+    Printer* printer, const fuchsia_input_report::wire::KeyboardInputReport& keyboard_report);
 
-void PrintConsumerControlDesc(Printer* printer,
-                              const fuchsia_input_report::ConsumerControlDescriptor& descriptor);
+void PrintConsumerControlDesc(
+    Printer* printer, const fuchsia_input_report::wire::ConsumerControlDescriptor& descriptor);
 void PrintConsumerControlInputReport(
-    Printer* printer, const fuchsia_input_report::ConsumerControlInputReport& report);
+    Printer* printer, const fuchsia_input_report::wire::ConsumerControlInputReport& report);
 
 }  // namespace print_input_report
 

@@ -43,7 +43,7 @@ constexpr uint64_t kDefaultStressTestIterations = 1000;
 constexpr uint64_t kDefaultStressTestTimeoutMs =
     100;  // Milliseconds to wait before issuing another dvfs opp.
 
-void print_frequency(const cpuctrl::CpuPerformanceStateInfo& info) {
+void print_frequency(const cpuctrl::wire::CpuPerformanceStateInfo& info) {
   if (info.frequency_hz == cpuctrl::FREQUENCY_UNKNOWN) {
     std::cout << "(unknown)";
   } else {
@@ -51,7 +51,7 @@ void print_frequency(const cpuctrl::CpuPerformanceStateInfo& info) {
   }
 }
 
-void print_voltage(const cpuctrl::CpuPerformanceStateInfo& info) {
+void print_voltage(const cpuctrl::wire::CpuPerformanceStateInfo& info) {
   if (info.voltage_uv == cpuctrl::VOLTAGE_UNKNOWN) {
     std::cout << "(unknown)";
   } else {
@@ -141,7 +141,7 @@ void describe(const char* domain_name) {
 
   auto domain = CpuPerformanceDomain::CreateFromPath(path);
 
-  // If status is set, something went wront.
+  // If status is set, something went wrong.
   zx_status_t* st = std::get_if<zx_status_t>(&domain);
   if (st) {
     std::cerr << "Failed to connect to performance domain device '" << domain_name << "'"
@@ -220,7 +220,7 @@ void get_performance_state(const char* domain_name) {
 
   auto domain = CpuPerformanceDomain::CreateFromPath(path);
 
-  // If status is set, something went wront.
+  // If status is set, something went wrong.
   zx_status_t* st = std::get_if<zx_status_t>(&domain);
   if (st) {
     std::cerr << "Failed to connect to performance domain device '" << domain_name << "'"

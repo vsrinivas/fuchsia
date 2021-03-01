@@ -53,10 +53,10 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   //
   // The resulting session is stored in `out_session`, and the created FIFO objects used for the
   // data path are stored in `out_fifos` upon successful creation.
-  static zx_status_t Create(async_dispatcher_t* dispatcher, netdev::SessionInfo info,
+  static zx_status_t Create(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo info,
                             fidl::StringView name, DeviceInterface* parent,
                             fidl::ServerEnd<netdev::Session> control,
-                            std::unique_ptr<Session>* out_session, netdev::Fifos* out_fifos);
+                            std::unique_ptr<Session>* out_session, netdev::wire::Fifos* out_fifos);
   bool IsPrimary() const;
   bool IsListen() const;
   bool IsPaused() const;
@@ -117,9 +117,9 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   const char* name() const { return name_.data(); }
 
  private:
-  Session(async_dispatcher_t* dispatcher, netdev::SessionInfo* info, fidl::StringView name,
+  Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo* info, fidl::StringView name,
           DeviceInterface* parent);
-  zx_status_t Init(netdev::Fifos* out);
+  zx_status_t Init(netdev::wire::Fifos* out);
   zx_status_t Bind(fidl::ServerEnd<netdev::Session> channel);
   void StopTxThread();
   void OnUnbind(fidl::UnbindInfo::Reason reason, fidl::ServerEnd<netdev::Session> channel);

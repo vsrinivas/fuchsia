@@ -64,10 +64,10 @@ class Sgm37603a : public DeviceType,
 
   // FIDL calls
   void GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) override;
-  void SetStateNormalized(FidlBacklight::State state,
+  void SetStateNormalized(FidlBacklight::wire::State state,
                           SetStateNormalizedCompleter::Sync& completer) override;
   void GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) override;
-  void SetStateAbsolute(FidlBacklight::State state,
+  void SetStateAbsolute(FidlBacklight::wire::State state,
                         SetStateAbsoluteCompleter::Sync& completer) override;
   void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync& completer) override;
   void SetNormalizedBrightnessScale(

@@ -42,7 +42,7 @@ class USBVirtualBusQmi : public usb_virtual_bus::USBVirtualBusBase {
 
 void USBVirtualBusQmi::InitUsbQmi(fbl::String* devpath) {
   namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
-  usb_peripheral::DeviceDescriptor device_desc = {};
+  usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);
   device_desc.b_device_class = 0;
   device_desc.b_device_sub_class = 0;
@@ -52,12 +52,12 @@ void USBVirtualBusQmi::InitUsbQmi(fbl::String* devpath) {
   device_desc.b_num_configurations = 1;
   device_desc.id_vendor = htole16(0x1199);
   device_desc.id_product = htole16(0x9091);
-  usb_peripheral::FunctionDescriptor qmi_function_desc = {
+  usb_peripheral::wire::FunctionDescriptor qmi_function_desc = {
       .interface_class = USB_CLASS_VENDOR,
       .interface_subclass = USB_SUBCLASS_VENDOR,
       .interface_protocol = 0xff,
   };
-  std::vector<usb_peripheral::FunctionDescriptor> function_descs_vec;
+  std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs_vec;
   function_descs_vec.push_back(qmi_function_desc);
   SetupPeripheralDevice(std::move(device_desc), std::move(function_descs_vec));
   fbl::unique_fd fd(openat(devfs_root().get(), "class/qmi-transport", O_RDONLY));

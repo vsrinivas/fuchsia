@@ -31,7 +31,7 @@ class MockUserPager {
     ASSERT_OK(loop_.StartThread("data-sink-test-pager-loop"));
   }
 
-  void CreatePayloadPaged(size_t num_pages, ::llcpp::fuchsia::mem::Buffer* out) {
+  void CreatePayloadPaged(size_t num_pages, ::llcpp::fuchsia::mem::wire::Buffer* out) {
     zx::vmo vmo;
     size_t vmo_size = num_pages * ZX_PAGE_SIZE;
 
@@ -131,7 +131,7 @@ TEST(DataSinkTest, WriteAssetPaged) {
 
   auto data_sink = paver::DataSinkImpl(fbl::unique_fd(), std::move(partitioner));
 
-  ::llcpp::fuchsia::mem::Buffer payload;
+  ::llcpp::fuchsia::mem::wire::Buffer payload;
   pager.CreatePayloadPaged(kPageCount, &payload);
 
   // Verify that no pages in the payload VMO are committed initially.

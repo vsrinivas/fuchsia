@@ -15,7 +15,7 @@ namespace {
 
 bool EncodeStructTree(void* value, const char** error,
                       fit::function<void(const uint8_t*, size_t)> callback) {
-  uint8_t buf[sizeof(llcpp::benchmarkfidl::StructTree8)];
+  uint8_t buf[sizeof(llcpp::benchmarkfidl::wire::StructTree8)];
   memcpy(buf, value, sizeof(buf));
 
   callback(buf, sizeof(buf));

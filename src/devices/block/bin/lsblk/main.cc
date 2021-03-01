@@ -114,7 +114,7 @@ static int cmd_list_blk(void) {
 
     populate_topo_path(*caller.channel(), &info);
 
-    fuchsia_block::BlockInfo block_info;
+    fuchsia_block::wire::BlockInfo block_info;
     auto info_resp = fuchsia_block::Block::Call::GetInfo(caller.channel());
     if (info_resp.ok() && info_resp->status == ZX_OK && info_resp->info) {
       block_info = *info_resp->info;
@@ -236,7 +236,7 @@ static int try_read_skip_blk(const fdio_cpp::UnownedFdioCaller& caller, off_t of
 
   // read the data
   auto read_result = fuchsia_skipblock::SkipBlock::Call::Read(
-      caller.channel(), fuchsia_skipblock::ReadWriteOperation{
+      caller.channel(), fuchsia_skipblock::wire::ReadWriteOperation{
                             .vmo = std::move(dup),
                             .vmo_offset = 0,
                             .block = static_cast<uint32_t>(offset / blksize),

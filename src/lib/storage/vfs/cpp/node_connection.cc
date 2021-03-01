@@ -71,13 +71,13 @@ void NodeConnection::Sync(SyncCompleter::Sync& completer) {
 void NodeConnection::GetAttr(GetAttrCompleter::Sync& completer) {
   auto result = Connection::NodeGetAttr();
   if (result.is_error()) {
-    completer.Reply(result.error(), fio::NodeAttributes());
+    completer.Reply(result.error(), fio::wire::NodeAttributes());
   } else {
     completer.Reply(ZX_OK, result.value().ToIoV1NodeAttributes());
   }
 }
 
-void NodeConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
+void NodeConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::wire::NodeAttributes attributes,
                              SetAttrCompleter::Sync& completer) {
   auto result = Connection::NodeSetAttr(flags, attributes);
   if (result.is_error()) {

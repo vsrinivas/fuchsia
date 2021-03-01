@@ -72,11 +72,11 @@ void Sysconfig::Read(ReadCompleter::Sync& completer) {
     return;
   }
 
-  completer.ReplySuccess(::llcpp::fuchsia::mem::Buffer{std::move(vmo), partition_size});
+  completer.ReplySuccess(::llcpp::fuchsia::mem::wire::Buffer{std::move(vmo), partition_size});
   LOG("Completed successfully\n");
 }
 
-void Sysconfig::Write(::llcpp::fuchsia::mem::Buffer payload, WriteCompleter::Sync& completer) {
+void Sysconfig::Write(::llcpp::fuchsia::mem::wire::Buffer payload, WriteCompleter::Sync& completer) {
   LOG("Writing sysconfig-data partition.\n");
 
   if (auto status = partitioner_->Write(payload.vmo, payload.size); status.is_error()) {

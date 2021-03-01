@@ -27,11 +27,11 @@ class Lp50xxLightTest : public Lp50xxLight {
     return ZX_OK;
   }
 
-  zx_status_t GetRgb(uint32_t index, llcpp::fuchsia::hardware::light::Rgb* rgb) {
+  zx_status_t GetRgb(uint32_t index, llcpp::fuchsia::hardware::light::wire::Rgb* rgb) {
     return Lp50xxLight::GetRgbValue(index, rgb);
   }
 
-  zx_status_t SetRgb(uint32_t index, llcpp::fuchsia::hardware::light::Rgb rgb) {
+  zx_status_t SetRgb(uint32_t index, llcpp::fuchsia::hardware::light::wire::Rgb rgb) {
     return Lp50xxLight::SetRgbValue(index, rgb);
   }
 
@@ -60,7 +60,7 @@ TEST(Lp50xxLightTest, GetRgbTest) {
       .ExpectWrite({0x0f})
       .ExpectReadStop({0xCC});
 
-  llcpp::fuchsia::hardware::light::Rgb rgb = {};
+  llcpp::fuchsia::hardware::light::wire::Rgb rgb = {};
   EXPECT_OK(dut.GetRgb(0, &rgb));
   EXPECT_EQ(rgb.red, static_cast<float>((0xAA * 1.0) / (UINT8_MAX * 1.0)));
   EXPECT_EQ(rgb.green, static_cast<float>((0xBB * 1.0) / (UINT8_MAX * 1.0)));
@@ -73,7 +73,7 @@ TEST(Lp50xxLightTest, SetRgbTest) {
   Lp50xxLightTest dut;
   EXPECT_OK(dut.Init());
 
-  llcpp::fuchsia::hardware::light::Rgb rgb = {};
+  llcpp::fuchsia::hardware::light::wire::Rgb rgb = {};
   rgb.red = static_cast<float>((0xAA * 1.0) / (UINT8_MAX * 1.0));
   rgb.green = static_cast<float>((0xBB * 1.0) / (UINT8_MAX * 1.0));
   rgb.blue = static_cast<float>((0xCC * 1.0) / (UINT8_MAX * 1.0));

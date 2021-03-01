@@ -457,7 +457,7 @@ Errno fdio_pty_posix_ioctl(fdio_t* io, int request, va_list va) {
       }
 
       const struct winsize* in_size = va_arg(va, const struct winsize*);
-      fpty::WindowSize size = {};
+      fpty::wire::WindowSize size = {};
       size.width = in_size->ws_col;
       size.height = in_size->ws_row;
 

@@ -31,7 +31,7 @@ using namespace ::llcpp::fidl::types::test;
 
 TEST(FidlStruct, CopyableStruct) {
   constexpr int32_t kNewFieldValue = 12;
-  using Struct = FidlStruct<fidl_types_test_CopyableStruct, CopyableStruct>;
+  using Struct = FidlStruct<fidl_types_test_CopyableStruct, wire::CopyableStruct>;
   Struct s(Struct::Default);
   const Struct& sc = s;
   EXPECT_EQ(0, s->x);
@@ -57,7 +57,7 @@ TEST(FidlStruct, MoveOnlyStruct) {
   zx::event::create(0, &event);
   zx::handle h(event.release());
   int32_t new_field_value = h.get();
-  using Struct = FidlStruct<fidl_types_test_MoveOnlyStruct, MoveOnlyStruct>;
+  using Struct = FidlStruct<fidl_types_test_MoveOnlyStruct, wire::MoveOnlyStruct>;
   Struct s(Struct::Default);
   const Struct& sc = s;
   EXPECT_EQ(ZX_HANDLE_INVALID, s->h);
@@ -79,7 +79,7 @@ TEST(FidlStruct, MoveOnlyStruct) {
 
 TEST(FidlStruct, StructWithArrays) {
   constexpr int32_t kNewFieldValue = 12;
-  using Struct = FidlStruct<fidl_types_test_StructWithArrays, StructWithArrays>;
+  using Struct = FidlStruct<fidl_types_test_StructWithArrays, wire::StructWithArrays>;
   Struct s(Struct::Default);
   const Struct& sc = s;
   EXPECT_EQ(0, s->x);
@@ -102,7 +102,7 @@ TEST(FidlStruct, StructWithArrays) {
 
 TEST(FidlStruct, StructWithSubStruct) {
   constexpr int32_t kNewFieldValue = 12;
-  using Struct = FidlStruct<fidl_types_test_StructWithSubStruct, StructWithSubStruct>;
+  using Struct = FidlStruct<fidl_types_test_StructWithSubStruct, wire::StructWithSubStruct>;
   Struct s(Struct::Default);
   const Struct& sc = s;
   EXPECT_EQ(0, s->s.x);
@@ -124,7 +124,7 @@ TEST(FidlStruct, StructWithSubStruct) {
 }
 
 TEST(FidlStruct, EmptyStruct) {
-  using Struct = FidlStruct<fidl_types_test_EmptyStruct, EmptyStruct>;
+  using Struct = FidlStruct<fidl_types_test_EmptyStruct, wire::EmptyStruct>;
   Struct s(Struct::Default);
   const Struct& sc = s;
   static_assert(HasCopyAsLlcpp<Struct>::value);
@@ -142,7 +142,7 @@ TEST(FidlStruct, EmptyStruct) {
 
 // If this builds, it passes.
 TEST(FidlStruct, TypeAliases) {
-  using Struct = FidlStruct<fidl_types_test_EmptyStruct, EmptyStruct>;
+  using Struct = FidlStruct<fidl_types_test_EmptyStruct, wire::EmptyStruct>;
   static_assert(std::is_same<Struct::c_type, fidl_types_test_EmptyStruct>::value);
-  static_assert(std::is_same<Struct::llcpp_type, EmptyStruct>::value);
+  static_assert(std::is_same<Struct::llcpp_type, wire::EmptyStruct>::value);
 }

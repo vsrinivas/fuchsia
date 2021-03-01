@@ -51,7 +51,7 @@ class DriverHost : public llcpp::fuchsia::driver::framework::DriverHost::Interfa
 
  private:
   // llcpp::fuchsia::driver::framework::DriverHost::Interface
-  void Start(llcpp::fuchsia::driver::framework::DriverStartArgs start_args,
+  void Start(llcpp::fuchsia::driver::framework::wire::DriverStartArgs start_args,
              fidl::ServerEnd<llcpp::fuchsia::driver::framework::Driver> request,
              StartCompleter::Sync& completer) override;
 

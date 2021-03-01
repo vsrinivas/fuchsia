@@ -107,7 +107,7 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
     return nullptr;
   }
 
-  fhd::ImageConfig image_config = {};
+  fhd::wire::ImageConfig image_config = {};
   image_config.pixel_format = format;
   image_config.height = height;
   image_config.width = width;
@@ -130,30 +130,30 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
     collection = std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(client));
   }
 
-  sysmem::BufferCollectionConstraints constraints = {};
+  sysmem::wire::BufferCollectionConstraints constraints = {};
   constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
-  sysmem::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
+  sysmem::wire::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
   buffer_constraints.ram_domain_supported = true;
   constraints.image_format_constraints_count = 1;
-  sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
+  sysmem::wire::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
   if (format == ZX_PIXEL_FORMAT_ARGB_8888 || format == ZX_PIXEL_FORMAT_RGB_x888) {
     image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0] = sysmem::ColorSpace{
+    image_constraints.color_space[0] = sysmem::wire::ColorSpace{
         .type = sysmem::wire::ColorSpaceType::SRGB,
     };
   } else if (format == ZX_PIXEL_FORMAT_ABGR_8888 || format == ZX_PIXEL_FORMAT_BGR_888x) {
     image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::R8G8B8A8;
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0] = sysmem::ColorSpace{
+    image_constraints.color_space[0] = sysmem::wire::ColorSpace{
         .type = sysmem::wire::ColorSpaceType::SRGB,
     };
   } else {
     image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::NV12;
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0] = sysmem::ColorSpace{
+    image_constraints.color_space[0] = sysmem::wire::ColorSpace{
         .type = sysmem::wire::ColorSpaceType::REC709,
     };
   }
@@ -433,7 +433,7 @@ void Image::RenderTiled(T pixel_generator, uint32_t start_y, uint32_t end_y) {
   }
 }
 
-void Image::GetConfig(fhd::ImageConfig* config_out) {
+void Image::GetConfig(fhd::wire::ImageConfig* config_out) {
   config_out->height = height_;
   config_out->width = width_;
   config_out->pixel_format = format_;
@@ -462,7 +462,7 @@ bool Image::Import(fhd::Controller::SyncClient* dc, image_import_t* info_out) {
     }
   }
 
-  fhd::ImageConfig image_config;
+  fhd::wire::ImageConfig image_config;
   GetConfig(&image_config);
   auto import_result = dc->ImportImage(image_config, collection_id_, /*index=*/0);
   if (!import_result.ok() || import_result->res != ZX_OK) {

@@ -16,7 +16,7 @@
 
 namespace storage_metrics {
 
-using BlockStatFidl = ::llcpp::fuchsia::hardware::block::BlockStats;
+using BlockStatFidl = ::llcpp::fuchsia::hardware::block::wire::BlockStats;
 
 // Compares block stat for read, write, trim, flush, barrier_before and
 // barrier_after. Returns false if the stats dont match.
@@ -91,7 +91,7 @@ class BlockDeviceMetrics : public storage_metrics::Metrics {
   }
 
   void UpdateStats(bool success, const zx::ticks start_tick, const uint32_t command,
-                   const uint64_t bytes_transfered);
+                   const uint64_t bytes_transferred);
 
   // Total number of successful, failed, sum of successful and failed calls is returned if
   // |success| is true, false or nullopt, respectively.

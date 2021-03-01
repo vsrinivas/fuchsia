@@ -215,8 +215,8 @@ static zx_status_t parse_interp_spec(char* line, char** interp_start, char** arg
 //      via the current loader service and executable is updated. extra_args will also be appended
 //      to, and these arguments should be added to the front of argv.
 //
-// Directives will be resolved until none are detected, an error is encounted, or a resolution limit
-// is reached. Also, mixing the two types is unsupported.
+// Directives will be resolved until none are detected, an error is encountered, or a resolution
+// limit is reached. Also, mixing the two types is unsupported.
 //
 // The executable and ldsvc paramters are both inputs to and outputs from this function, and are
 // updated based on the resolved directives. executable must always be valid, and ldsvc must be
@@ -329,7 +329,7 @@ static zx_status_t send_handles(fprocess::Launcher::SyncClient* launcher, size_t
   // TODO(abarth): In principle, we should chunk array into separate
   // messages if we exceed ZX_CHANNEL_MAX_MSG_HANDLES.
 
-  fprocess::HandleInfo handle_infos[handle_capacity];
+  fprocess::wire::HandleInfo handle_infos[handle_capacity];
   // VLAs cannot be initialized.
   memset(handle_infos, 0, sizeof(handle_infos));
 
@@ -498,7 +498,7 @@ cleanup:
 static zx_status_t send_namespace(fprocess::Launcher::SyncClient* launcher, size_t name_count,
                                   fdio_flat_namespace_t* flat, size_t action_count,
                                   const fdio_spawn_action_t* actions, char* err_msg) {
-  fprocess::NameInfo names[name_count];
+  fprocess::wire::NameInfo names[name_count];
   // VLAs cannot be initialized.
   memset(names, 0, sizeof(names));
 
@@ -620,7 +620,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   size_t process_name_size = 0;
   std::list<std::string> extra_args;
   zx_handle_t utc_clock = ZX_HANDLE_INVALID;
-  fprocess::LaunchInfo launch_info = {
+  fprocess::wire::LaunchInfo launch_info = {
       .executable = zx::vmo(executable_vmo),
   };
   executable_vmo = ZX_HANDLE_INVALID;

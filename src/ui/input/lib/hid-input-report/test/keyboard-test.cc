@@ -110,7 +110,7 @@ TEST(KeyboardTest, BootKeyboard) {
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
+  fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.CreateDescriptor(descriptor_allocator, descriptor));
   EXPECT_TRUE(descriptor.has_keyboard());
@@ -127,7 +127,7 @@ TEST(KeyboardTest, BootKeyboard) {
   kbd_report.usage[2] = HID_USAGE_KEY_UP;
 
   hid_input_report::TestReportAllocator report_allocator;
-  fuchsia_input_report::InputReport input_report(report_allocator);
+  fuchsia_input_report::wire::InputReport input_report(report_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseInputReport(reinterpret_cast<uint8_t*>(&kbd_report), sizeof(kbd_report),
                                       report_allocator, input_report));
@@ -169,7 +169,7 @@ TEST(KeyboardTest, OutputDescriptor) {
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
+  fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.CreateDescriptor(descriptor_allocator, descriptor));
 
@@ -201,7 +201,7 @@ TEST(KeyboardTest, DoubleCountingKeys) {
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
+  fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.CreateDescriptor(descriptor_allocator, descriptor));
 
@@ -224,13 +224,14 @@ TEST(KeyboardTest, BootKeyboardOutputReport) {
   led_array[1] = hid_input_report::fuchsia_input_report::wire::LedType::SCROLL_LOCK;
   // Build the FIDL table.
   auto led_view = fidl::unowned_vec(led_array);
-  hid_input_report::fuchsia_input_report::KeyboardOutputReport::UnownedBuilder keyboard_builder;
+  hid_input_report::fuchsia_input_report::wire::KeyboardOutputReport::UnownedBuilder
+      keyboard_builder;
   keyboard_builder.set_enabled_leds(fidl::unowned_ptr(&led_view));
-  hid_input_report::fuchsia_input_report::KeyboardOutputReport fidl_keyboard =
+  hid_input_report::fuchsia_input_report::wire::KeyboardOutputReport fidl_keyboard =
       keyboard_builder.build();
-  hid_input_report::fuchsia_input_report::OutputReport::UnownedBuilder builder;
+  hid_input_report::fuchsia_input_report::wire::OutputReport::UnownedBuilder builder;
   builder.set_keyboard(fidl::unowned_ptr(&fidl_keyboard));
-  hid_input_report::fuchsia_input_report::OutputReport fidl_report = builder.build();
+  hid_input_report::fuchsia_input_report::wire::OutputReport fidl_report = builder.build();
   uint8_t report_data;
   size_t out_report_size;
   auto result =
@@ -253,7 +254,7 @@ TEST(KeyboardTest, FullKeysKeyboard) {
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
+  fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.CreateDescriptor(descriptor_allocator, descriptor));
 
@@ -268,7 +269,7 @@ TEST(KeyboardTest, FullKeysKeyboard) {
   kbd_report.usage[2] = HID_USAGE_KEY_UP;
 
   hid_input_report::TestReportAllocator report_allocator;
-  fuchsia_input_report::InputReport input_report(report_allocator);
+  fuchsia_input_report::wire::InputReport input_report(report_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseInputReport(reinterpret_cast<uint8_t*>(&kbd_report), sizeof(kbd_report),
                                       report_allocator, input_report));

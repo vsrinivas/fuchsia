@@ -33,7 +33,7 @@
 namespace acpidump {
 
 using llcpp::fuchsia::hardware::acpi::Acpi;
-using llcpp::fuchsia::hardware::acpi::TableInfo;
+using llcpp::fuchsia::hardware::acpi::wire::TableInfo;
 
 const char kAcpiDevicePath[] = "/dev/sys/platform/acpi";
 

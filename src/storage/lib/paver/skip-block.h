@@ -66,7 +66,7 @@ class SkipBlockPartitionClient : public PartitionClient {
   zx::status<> ReadPartitionInfo();
 
   ::llcpp::fuchsia::hardware::skipblock::SkipBlock::SyncClient partition_;
-  std::optional<::llcpp::fuchsia::hardware::skipblock::PartitionInfo> partition_info_;
+  std::optional<::llcpp::fuchsia::hardware::skipblock::wire::PartitionInfo> partition_info_;
 };
 
 }  // namespace paver

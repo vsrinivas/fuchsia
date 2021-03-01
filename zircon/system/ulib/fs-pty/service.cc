@@ -42,7 +42,7 @@ void NullPtyDeviceImpl::ClrSetFeature(uint32_t clr, uint32_t set,
 
 void NullPtyDeviceImpl::GetWindowSize(GetWindowSizeCompleter::Sync& completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::GetWindowSizeResponse> buf;
-  ::llcpp::fuchsia::hardware::pty::WindowSize wsz = {.width = 0, .height = 0};
+  ::llcpp::fuchsia::hardware::pty::wire::WindowSize wsz = {.width = 0, .height = 0};
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, wsz);
 }
 
@@ -56,7 +56,7 @@ void NullPtyDeviceImpl::ReadEvents(ReadEventsCompleter::Sync& completer) {
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-void NullPtyDeviceImpl::SetWindowSize(::llcpp::fuchsia::hardware::pty::WindowSize size,
+void NullPtyDeviceImpl::SetWindowSize(::llcpp::fuchsia::hardware::pty::wire::WindowSize size,
                                       SetWindowSizeCompleter::Sync& completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::SetWindowSizeResponse> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
@@ -111,7 +111,8 @@ void NullPtyDeviceImpl::GetBuffer(uint32_t flags, GetBufferCompleter::Sync& comp
 
 void NullPtyDeviceImpl::Sync(SyncCompleter::Sync& completer) { ZX_ASSERT(false); }
 
-void NullPtyDeviceImpl::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
+void NullPtyDeviceImpl::SetAttr(uint32_t flags,
+                                ::llcpp::fuchsia::io::wire::NodeAttributes attributes,
                                 SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

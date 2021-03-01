@@ -49,7 +49,7 @@ class SerialDevice : public DeviceType,
 
   // Fidl protocol implementation.
   void GetClass(GetClassCompleter::Sync& completer) override;
-  void SetConfig(llcpp::fuchsia::hardware::serial::Config config,
+  void SetConfig(llcpp::fuchsia::hardware::serial::wire::Config config,
                  SetConfigCompleter::Sync& completer) override;
 
  private:

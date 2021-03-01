@@ -114,7 +114,7 @@ void SerialDevice::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& c
       this);
 }
 
-void SerialDevice::SetConfig(fuchsia::hardware::serial::Config config,
+void SerialDevice::SetConfig(fuchsia::hardware::serial::wire::Config config,
                              SetConfigCompleter::Sync& completer) {
   using fuchsia::hardware::serial::wire::CharacterWidth;
   using fuchsia::hardware::serial::wire::FlowControl;

@@ -20,8 +20,9 @@ class CpuPerformanceDomain {
  public:
   static std::variant<zx_status_t, CpuPerformanceDomain> CreateFromPath(const std::string& path);
   std::pair<zx_status_t, uint64_t> GetNumLogicalCores();
-  std::tuple<zx_status_t, uint64_t, cpuctrl::CpuPerformanceStateInfo> GetCurrentPerformanceState();
-  const std::vector<cpuctrl::CpuPerformanceStateInfo>& GetPerformanceStates();
+  std::tuple<zx_status_t, uint64_t, cpuctrl::wire::CpuPerformanceStateInfo>
+  GetCurrentPerformanceState();
+  const std::vector<cpuctrl::wire::CpuPerformanceStateInfo>& GetPerformanceStates();
   zx_status_t SetPerformanceState(uint32_t new_performance_state);
 
  protected:
@@ -34,7 +35,7 @@ class CpuPerformanceDomain {
   fuchsia_device::Controller::SyncClient device_client_;
 
   // Don't use this directly. Instead call GetPerformanceStates().
-  std::vector<cpuctrl::CpuPerformanceStateInfo> cached_pstates_;
+  std::vector<cpuctrl::wire::CpuPerformanceStateInfo> cached_pstates_;
 };
 
 #endif  // SRC_DEVICES_CPU_BIN_CPUCTL_PERFORMANCE_DOMAIN_H_

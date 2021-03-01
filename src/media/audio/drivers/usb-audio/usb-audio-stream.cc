@@ -345,9 +345,9 @@ void UsbAudioStream::GetSupportedFormats(
 
   // Get FIDL PcmSupportedFormats from FIDL compatible vectors.
   // Needs to be alive until the reply is sent.
-  fbl::Vector<audio_fidl::PcmSupportedFormats> fidl_pcm_formats;
+  fbl::Vector<audio_fidl::wire::PcmSupportedFormats> fidl_pcm_formats;
   for (auto& i : fidl_compatible_formats) {
-    audio_fidl::PcmSupportedFormats formats;
+    audio_fidl::wire::PcmSupportedFormats formats;
     formats.number_of_channels = ::fidl::VectorView<uint8_t>(
         fidl::unowned_ptr(i.number_of_channels.data()), i.number_of_channels.size());
     formats.sample_formats = ::fidl::VectorView<audio_fidl::wire::SampleFormat>(
@@ -363,21 +363,21 @@ void UsbAudioStream::GetSupportedFormats(
 
   // Get builders from PcmSupportedFormats tables.
   // Needs to be alive until the reply is sent.
-  fbl::Vector<audio_fidl::SupportedFormats::UnownedBuilder> fidl_builders;
+  fbl::Vector<audio_fidl::wire::SupportedFormats::UnownedBuilder> fidl_builders;
   for (auto& i : fidl_pcm_formats) {
-    auto builder = audio_fidl::SupportedFormats::UnownedBuilder();
+    auto builder = audio_fidl::wire::SupportedFormats::UnownedBuilder();
     builder.set_pcm_supported_formats(fidl::unowned_ptr(&i));
     fidl_builders.push_back(std::move(builder));
   }
 
   // Build FIDL SupportedFormats from PcmSupportedFormats's builders.
   // Needs to be alive until the reply is sent.
-  fbl::Vector<audio_fidl::SupportedFormats> fidl_formats;
+  fbl::Vector<audio_fidl::wire::SupportedFormats> fidl_formats;
   for (auto& i : fidl_builders) {
     fidl_formats.push_back(i.build());
   }
 
-  completer.Reply(::fidl::VectorView<audio_fidl::SupportedFormats>(
+  completer.Reply(::fidl::VectorView<audio_fidl::wire::SupportedFormats>(
       fidl::unowned_ptr(fidl_formats.data()), fidl_formats.size()));
 }
 
@@ -566,7 +566,7 @@ void UsbAudioStream::WatchGainState(StreamChannel* channel,
   cur_gain_state.gain_step = path.gain_res();
   // Reply is delayed if there is no change since the last reported gain state.
   if (channel->last_reported_gain_state_ != cur_gain_state) {
-    auto builder = audio_fidl::GainState::UnownedBuilder();
+    auto builder = audio_fidl::wire::GainState::UnownedBuilder();
     fidl::aligned<bool> mute = cur_gain_state.cur_mute;
     fidl::aligned<bool> agc = cur_gain_state.cur_agc;
     fidl::aligned<float> gain = cur_gain_state.cur_gain;
@@ -633,7 +633,7 @@ void UsbAudioStream::WatchPlugState(StreamChannel* channel,
   fidl::aligned<bool> plugged = true;
   if (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kNotReported ||
       (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kPlugged) != plugged) {
-    auto builder = audio_fidl::PlugState::UnownedBuilder();
+    auto builder = audio_fidl::wire::PlugState::UnownedBuilder();
     builder.set_plugged(fidl::unowned_ptr(&plugged));
     fidl::aligned<zx_time_t> plug_time = create_time_;
     builder.set_plug_state_time(fidl::unowned_ptr(&plug_time));
@@ -645,7 +645,7 @@ void UsbAudioStream::WatchPlugState(StreamChannel* channel,
 }
 
 void UsbAudioStream::GetProperties(StreamChannel::GetPropertiesCompleter::Sync& completer) {
-  auto builder = audio_fidl::StreamProperties::UnownedBuilder();
+  auto builder = audio_fidl::wire::StreamProperties::UnownedBuilder();
   fidl::Array<uint8_t, audio_fidl::UNIQUE_ID_SIZE> unique_id = {};
   for (size_t i = 0; i < audio_fidl::UNIQUE_ID_SIZE; ++i) {
     unique_id.data_[i] = persistent_unique_id_.data[i];
@@ -686,7 +686,7 @@ void UsbAudioStream::GetProperties(StreamChannel::GetPropertiesCompleter::Sync& 
 }
 
 void UsbAudioStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
-  auto builder = audio_fidl::RingBufferProperties::UnownedBuilder();
+  auto builder = audio_fidl::wire::RingBufferProperties::UnownedBuilder();
   fidl::aligned<uint32_t> fifo_depth = fifo_bytes_;
   builder.set_fifo_depth(fidl::unowned_ptr(&fifo_depth));
   // TODO(johngro): Report the actual external delay.
@@ -860,7 +860,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
     HANDLE_UNPLUG,
   };
 
-  audio_fidl::RingBufferPositionInfo position_info = {};
+  audio_fidl::wire::RingBufferPositionInfo position_info = {};
 
   uint64_t complete_time = zx::clock::get_monotonic().get();
   Action when_finished = Action::NONE;

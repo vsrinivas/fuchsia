@@ -93,8 +93,8 @@ constexpr size_t PowerDomainToIndex(fuchsia_thermal::wire::PowerDomain pd) {
   __UNREACHABLE;
 }
 
-const fuchsia_thermal::OperatingPoint kFakeOperatingPoints = []() {
-  fuchsia_thermal::OperatingPoint result;
+const fuchsia_thermal::wire::OperatingPoint kFakeOperatingPoints = []() {
+  fuchsia_thermal::wire::OperatingPoint result;
 
   result.count = 3;
   result.latency = 0;
@@ -108,8 +108,8 @@ const fuchsia_thermal::OperatingPoint kFakeOperatingPoints = []() {
   return result;
 }();
 
-const fuchsia_thermal::ThermalDeviceInfo kDefaultDeviceInfo = []() {
-  fuchsia_thermal::ThermalDeviceInfo result;
+const fuchsia_thermal::wire::ThermalDeviceInfo kDefaultDeviceInfo = []() {
+  fuchsia_thermal::wire::ThermalDeviceInfo result;
 
   result.active_cooling = false;
   result.passive_cooling = false;
@@ -140,7 +140,7 @@ class FakeAmlThermal : fuchsia_thermal::Device::Interface {
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() {}
 
-  void set_device_info(const fuchsia_thermal::ThermalDeviceInfo& device_info) {
+  void set_device_info(const fuchsia_thermal::wire::ThermalDeviceInfo& device_info) {
     device_info_ = device_info;
   }
 
@@ -162,7 +162,7 @@ class FakeAmlThermal : fuchsia_thermal::Device::Interface {
 
   uint16_t active_operating_point_;
   fake_ddk::FidlMessenger messenger_;
-  fuchsia_thermal::ThermalDeviceInfo device_info_;
+  fuchsia_thermal::wire::ThermalDeviceInfo device_info_;
 };
 
 zx_status_t FakeAmlThermal::MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
@@ -180,7 +180,7 @@ zx_status_t FakeAmlThermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn
 }
 
 void FakeAmlThermal::GetInfo(GetInfoCompleter::Sync& completer) {
-  fuchsia_thermal::ThermalInfo result;
+  fuchsia_thermal::wire::ThermalInfo result;
 
   result.state = 0;
   result.passive_temp_celsius = 0;
@@ -191,14 +191,14 @@ void FakeAmlThermal::GetInfo(GetInfoCompleter::Sync& completer) {
 }
 
 void FakeAmlThermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
-  fuchsia_thermal::ThermalDeviceInfo result = device_info_;
+  fuchsia_thermal::wire::ThermalDeviceInfo result = device_info_;
   completer.Reply(ZX_OK, fidl::unowned_ptr(&result));
 }
 
 void FakeAmlThermal::GetDvfsInfo(fuchsia_thermal::wire::PowerDomain pd,
                                  GetDvfsInfoCompleter::Sync& completer) {
-  fuchsia_thermal::ThermalDeviceInfo device_info = device_info_;
-  fuchsia_thermal::OperatingPoint result = device_info.opps[PowerDomainToIndex(pd)];
+  fuchsia_thermal::wire::ThermalDeviceInfo device_info = device_info_;
+  fuchsia_thermal::wire::OperatingPoint result = device_info.opps[PowerDomainToIndex(pd)];
   completer.Reply(ZX_OK, fidl::unowned_ptr(&result));
 }
 
@@ -266,13 +266,13 @@ class FakeThermalDevice : public ddk::ThermalProtocol<FakeThermalDevice, ddk::ba
 
   const thermal_protocol_t* proto() const { return &proto_; }
 
-  void set_device_info(const fuchsia_thermal::ThermalDeviceInfo& device_info) {
+  void set_device_info(const fuchsia_thermal::wire::ThermalDeviceInfo& device_info) {
     device_info_ = device_info;
   }
 
  private:
   thermal_protocol_t proto_;
-  fuchsia_thermal::ThermalDeviceInfo device_info_;
+  fuchsia_thermal::wire::ThermalDeviceInfo device_info_;
   std::unique_ptr<FakeAmlThermal> fidl_service_;
 };
 
@@ -311,7 +311,7 @@ TEST_F(AmlCpuBindingTest, OneDomain) {
 TEST_F(AmlCpuBindingTest, TwoDomains) {
   // Set up device info that defines two power domains.
   thermal_device_.set_device_info([]() {
-    fuchsia_thermal::ThermalDeviceInfo result;
+    fuchsia_thermal::wire::ThermalDeviceInfo result;
 
     result.active_cooling = false;
     result.passive_cooling = false;

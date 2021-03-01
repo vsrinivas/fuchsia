@@ -41,7 +41,7 @@ class TestServerBase : public fio::File::RawChannelInterface {
   }
 
   void Describe(DescribeCompleter::Sync& completer) override {
-    fio::FileObject file_object;
+    fio::wire::FileObject file_object;
     completer.Reply(fio::wire::NodeInfo::WithFile(fidl::unowned_ptr(&file_object)));
   }
 
@@ -51,7 +51,7 @@ class TestServerBase : public fio::File::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attribute,
+  void SetAttr(uint32_t flags, llcpp::fuchsia::io::wire::NodeAttributes attribute,
                SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -168,7 +168,7 @@ class TestServerEvent final : public TestServerBase {
   const zx::event& event() const { return event_; }
 
   void Describe(DescribeCompleter::Sync& completer) override {
-    fio::FileObject file_object;
+    fio::wire::FileObject file_object;
     zx_status_t status = event_.duplicate(ZX_RIGHTS_BASIC, &file_object.event);
     if (status != ZX_OK) {
       completer.Close(ZX_ERR_INTERNAL);
@@ -223,7 +223,7 @@ TEST_F(File, GetVmoPropagatesError) {
   class TestServer : public TestServerBase {
    public:
     void GetAttr(GetAttrCompleter::Sync& completer) override {
-      completer.Reply(kGetAttrError, ::llcpp::fuchsia::io::NodeAttributes{});
+      completer.Reply(kGetAttrError, ::llcpp::fuchsia::io::wire::NodeAttributes{});
     }
     void GetBuffer(uint32_t flags, GetBufferCompleter::Sync& completer) override {
       completer.Reply(kGetBufferError, nullptr);
@@ -345,7 +345,7 @@ class TestServerStream final : public TestServerBase {
   }
 
   void Describe(DescribeCompleter::Sync& completer) override {
-    fio::FileObject file_object;
+    fio::wire::FileObject file_object;
     zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &file_object.stream);
     if (status != ZX_OK) {
       completer.Close(ZX_ERR_INTERNAL);

@@ -25,7 +25,7 @@
 #include "src/devices/board/drivers/x86/x64-bind.h"
 
 using ::llcpp::fuchsia::hardware::acpi::MAX_ACPI_TABLE_ENTRIES;
-using ::llcpp::fuchsia::hardware::acpi::TableInfo;
+using ::llcpp::fuchsia::hardware::acpi::wire::TableInfo;
 
 zx_handle_t root_resource_handle;
 

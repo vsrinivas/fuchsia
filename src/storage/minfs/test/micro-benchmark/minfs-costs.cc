@@ -11,9 +11,9 @@
 // We reduce our dependency on files outside this file so that any breaking
 // change does not silently suppress degradation alarms.
 // The consts in these files are redeclared so that changes to filesystem consts
-// necessaiates changes to this file and should force reevaluation of the perf
+// necessitates changes to this file and should force reevaluation of the perf
 // impact
-namespace minfs_micro_benchmanrk {
+namespace minfs_micro_benchmark {
 
 // Filesystem IOs that arrive at block device are in chunks of 64 blocks.
 // This is NOT an issue specific to minfs.
@@ -51,9 +51,9 @@ uint64_t MinfsProperties::FsBytesToBlocks(uint64_t bytes) const {
   return (bytes + superblock_.block_size - 1) / superblock_.block_size;
 }
 
-// Update total_calls and bytes_transferrd stats.
+// Update total_calls and bytes_transferred stats.
 void MinfsProperties::AddIoStats(uint64_t total_calls, uint64_t blocks_transferred,
-                                 llcpp::fuchsia::storage::metrics::CallStat* out) const {
+                                 llcpp::fuchsia::storage::metrics::wire::CallStat* out) const {
   out->success.total_calls += total_calls;
   out->success.bytes_transferred += FsBlockToBytes(blocks_transferred);
 }
@@ -256,4 +256,4 @@ void MinfsProperties::AddWriteCost(uint64_t start_offset, uint64_t bytes_per_wri
   return AddUncachedWriteCost(start_offset, bytes_per_write, write_count, out);
 }
 
-}  // namespace minfs_micro_benchmanrk
+}  // namespace minfs_micro_benchmark

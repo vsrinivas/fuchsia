@@ -49,7 +49,7 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   void GetCurrentDeviceAutoSuspendConfig(
       GetCurrentDeviceAutoSuspendConfigCompleter::Sync& completer) override;
 
-  void SetTestStatusInfo(::llcpp::fuchsia::device::power::test::TestStatusInfo test_info,
+  void SetTestStatusInfo(::llcpp::fuchsia::device::power::test::wire::TestStatusInfo test_info,
                          SetTestStatusInfoCompleter::Sync& completer) override;
 
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
@@ -201,7 +201,7 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(
 }
 
 void TestPowerDriverChild::SetTestStatusInfo(
-    llcpp::fuchsia::device::power::test::TestStatusInfo status_info,
+    llcpp::fuchsia::device::power::test::wire::TestStatusInfo status_info,
     SetTestStatusInfoCompleter::Sync& completer) {
   reply_suspend_status_ = status_info.suspend_status;
   reply_resume_status_ = status_info.resume_status;

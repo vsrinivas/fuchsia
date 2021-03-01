@@ -5,12 +5,13 @@
 #ifndef ZIRCON_SYSTEM_ULIB_STORAGE_METRICS_FS_METRICS_H_
 #define ZIRCON_SYSTEM_ULIB_STORAGE_METRICS_FS_METRICS_H_
 
-#include <atomic>
-#include <stdio.h>
-
-#include <fbl/macros.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <fuchsia/minfs/llcpp/fidl.h>
+#include <stdio.h>
+
+#include <atomic>
+
+#include <fbl/macros.h>
 #include <storage-metrics/storage-metrics.h>
 
 namespace storage_metrics {
@@ -23,12 +24,12 @@ class FsMetrics : public Metrics {
   DISALLOW_COPY_ASSIGN_AND_MOVE(FsMetrics);
 
   FsMetrics() = default;
-  explicit FsMetrics(const ::llcpp::fuchsia::storage::metrics::FsMetrics* metrics);
+  explicit FsMetrics(const ::llcpp::fuchsia::storage::metrics::wire::FsMetrics* metrics);
   explicit FsMetrics(const fuchsia_storage_metrics_FsMetrics* metrics);
   ~FsMetrics() = default;
 
   // Copies to fields of fidl structure the corresponding fields of FsMetrics.
-  void CopyToFidl(::llcpp::fuchsia::storage::metrics::FsMetrics* metrics) const;
+  void CopyToFidl(::llcpp::fuchsia::storage::metrics::wire::FsMetrics* metrics) const;
 
   // Copies to fields of fidl structure the corresponding fields of FsMetrics.
   void CopyToFidl(fuchsia_storage_metrics_FsMetrics* metrics) const;

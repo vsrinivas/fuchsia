@@ -936,7 +936,7 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
   // Cast to internal implementation to access methods directly.
   auto* dev = static_cast<internal::DeviceInterface*>(device_.get());
 
-  netdev::SessionInfo info;
+  netdev::wire::SessionInfo info;
   TestSession test_session;
   ASSERT_OK(test_session.Init(kDefaultDescriptorCount, kDefaultBufferLength));
   ASSERT_OK(test_session.GetInfo(&info));
@@ -945,7 +945,7 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
   // String view only contains "hello".
   fidl::StringView name(fidl::unowned_ptr(name_str), 5u);
 
-  netdev::Device_OpenSession_Response rsp;
+  netdev::wire::Device_OpenSession_Response rsp;
   ASSERT_OK(dev->OpenSession(std::move(name), std::move(info), &rsp));
 
   const auto& session = dev->sessions_unsafe().front();

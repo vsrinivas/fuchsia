@@ -51,7 +51,7 @@ class QueryServiceTest : public BlobfsWithFvmTest {
     const auto& query_result = call_result.value().result;
     ASSERT_TRUE(query_result.is_response());
 
-    const fuchsia_fs::FilesystemInfo& info = query_result.response().info;
+    const fuchsia_fs::wire::FilesystemInfo& info = query_result.response().info;
 
     // Check that total_bytes are a multiple of slice size.
     const uint64_t slice_size = fs().options().fvm_slice_size;
@@ -122,7 +122,7 @@ TEST_F(QueryServiceTest, SelectiveQueryInfoSingleField) {
   ASSERT_EQ(call_result.status(), ZX_OK);
   const auto& query_result = call_result.value().result;
   ASSERT_TRUE(query_result.is_response());
-  const fuchsia_fs::FilesystemInfo& info = query_result.response().info;
+  const fuchsia_fs::wire::FilesystemInfo& info = query_result.response().info;
 
   ASSERT_FALSE(info.IsEmpty());
   ASSERT_TRUE(info.has_total_bytes());

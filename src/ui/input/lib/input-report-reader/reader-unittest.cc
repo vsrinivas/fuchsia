@@ -14,9 +14,9 @@ namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
 struct MouseReport {
   int64_t movement_x;
   int64_t movement_y;
-  void ToFidlInputReport(fuchsia_input_report::InputReport& input_report,
+  void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
                          fidl::AnyAllocator& allocator) {
-    fuchsia_input_report::MouseInputReport mouse(allocator);
+    fuchsia_input_report::wire::MouseInputReport mouse(allocator);
     mouse.set_movement_x(allocator, this->movement_x);
     mouse.set_movement_y(allocator, this->movement_y);
 
@@ -42,10 +42,10 @@ class MouseDevice : public fuchsia_input_report::InputDevice::RawChannelInterfac
   void GetInputReportsReader(zx::channel server,
                              GetInputReportsReaderCompleter::Sync& completer) override;
   void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
-  void SendOutputReport(fuchsia_input_report::OutputReport report,
+  void SendOutputReport(fuchsia_input_report::wire::OutputReport report,
                         SendOutputReportCompleter::Sync& completer) override;
   void GetFeatureReport(GetFeatureReportCompleter::Sync& completer) override;
-  void SetFeatureReport(fuchsia_input_report::FeatureReport report,
+  void SetFeatureReport(fuchsia_input_report::wire::FeatureReport report,
                         SetFeatureReportCompleter::Sync& completer) override;
 
  private:
@@ -78,10 +78,10 @@ void MouseDevice::GetInputReportsReader(zx::channel server,
 void MouseDevice::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   fidl::FidlAllocator allocator;
 
-  completer.Reply(fuchsia_input_report::DeviceDescriptor(allocator));
+  completer.Reply(fuchsia_input_report::wire::DeviceDescriptor(allocator));
 }
 
-void MouseDevice::SendOutputReport(fuchsia_input_report::OutputReport report,
+void MouseDevice::SendOutputReport(fuchsia_input_report::wire::OutputReport report,
                                    SendOutputReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
@@ -90,7 +90,7 @@ void MouseDevice::GetFeatureReport(GetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void MouseDevice::SetFeatureReport(fuchsia_input_report::FeatureReport report,
+void MouseDevice::SetFeatureReport(fuchsia_input_report::wire::FeatureReport report,
                                    SetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }

@@ -38,7 +38,7 @@ class DirectoryConnection final : public Connection,
   void Describe(DescribeCompleter::Sync& completer) final;
   void Sync(SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrCompleter::Sync& completer) final;
-  void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attributes,
+  void SetAttr(uint32_t flags, llcpp::fuchsia::io::wire::NodeAttributes attributes,
                SetAttrCompleter::Sync& completer) final;
   void NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) final;
   void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) final;

@@ -88,7 +88,7 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportImage(image_t* image,
     return result->status;
   }
 
-  sysmem::BufferCollectionInfo_2& collection_info = result->buffer_collection_info;
+  sysmem::wire::BufferCollectionInfo_2& collection_info = result->buffer_collection_info;
 
   if (!collection_info.settings.has_image_format_constraints ||
       index >= collection_info.buffer_count) {
@@ -279,10 +279,10 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplGetSysmemConnection(zx::channel
 
 zx_status_t Mt8167sDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     const image_t* config, zx_unowned_handle_t collection) {
-  sysmem::BufferCollectionConstraints constraints = {};
+  sysmem::wire::BufferCollectionConstraints constraints = {};
   constraints.usage.display = sysmem::displayUsageLayer;
   constraints.has_buffer_memory_constraints = true;
-  sysmem::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
+  sysmem::wire::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
   buffer_constraints.physically_contiguous_required = true;
   buffer_constraints.secure_required = false;
   buffer_constraints.ram_domain_supported = true;
@@ -291,7 +291,7 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.heap_permitted_count = 1;
   buffer_constraints.heap_permitted[0] = sysmem::wire::HeapType::SYSTEM_RAM;
   constraints.image_format_constraints_count = 1;
-  sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
+  sysmem::wire::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
   image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
   image_constraints.pixel_format.has_format_modifier = true;
   image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
@@ -382,7 +382,7 @@ zx_status_t Mt8167sDisplay::ShutdownDisplaySubsytem() {
   syscfg_->PowerDown(MODULE_CCORR);
   syscfg_->PowerDown(MODULE_AAL);
   syscfg_->PowerDown(MODULE_GAMMA);
-  // TODO(payamm): Bootloader does not touch any dither-related regs. I'm feeling adventerous
+  // TODO(payamm): Bootloader does not touch any dither-related regs. I'm feeling adventurous
   syscfg_->PowerDown(MODULE_DITHER);
   syscfg_->PowerDown(MODULE_RDMA0);
 
@@ -537,7 +537,7 @@ zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
   } else if (panel_type_ == PANEL_ST7701S) {
     init_disp_table_ = &kDisplaySettingSt7701s;
   } else {
-    DISP_ERROR("Unsupport Hardware Detected\n");
+    DISP_ERROR("Unsupported Hardware Detected\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -587,7 +587,7 @@ zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
   // Map VSync Interrupt
   status = pdev_.GetInterrupt(0, 0, &vsync_irq_);
   if (status != ZX_OK) {
-    DISP_ERROR("Could not map vsync Interruptn");
+    DISP_ERROR("Could not map vsync Interrupt");
     return status;
   }
 

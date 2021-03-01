@@ -34,7 +34,7 @@ namespace {
 
 namespace frpmb = ::llcpp::fuchsia::hardware::rpmb;
 
-constexpr llcpp::fuchsia::tee::Uuid kOpteeOsUuid = {
+constexpr llcpp::fuchsia::tee::wire::Uuid kOpteeOsUuid = {
     0x486178E0, 0xE7F8, 0x11E3, {0xBC, 0x5E, 0x00, 0x02, 0xA5, 0xD5, 0xC5, 0x1B}};
 
 class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
@@ -105,8 +105,8 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
 
 class FakeRpmb : public frpmb::Rpmb::Interface {
  public:
-  using RpmbRequestCallback = fbl::Function<void(::llcpp::fuchsia::hardware::rpmb::Request &request,
-                                                 RequestCompleter::Sync &completer)>;
+  using RpmbRequestCallback = fbl::Function<void(
+      ::llcpp::fuchsia::hardware::rpmb::wire::Request &request, RequestCompleter::Sync &completer)>;
   using GetInfoCallback = fbl::Function<void(GetDeviceInfoCompleter::Sync &completer)>;
   FakeRpmb() {}
 
@@ -118,7 +118,7 @@ class FakeRpmb : public frpmb::Rpmb::Interface {
     }
   };
 
-  void Request(::llcpp::fuchsia::hardware::rpmb::Request request,
+  void Request(::llcpp::fuchsia::hardware::rpmb::wire::Request request,
                RequestCompleter::Sync &completer) override {
     if (request_callback_) {
       request_callback_(request, completer);

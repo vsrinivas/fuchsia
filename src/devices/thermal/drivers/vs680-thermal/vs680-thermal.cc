@@ -20,8 +20,8 @@
 
 namespace {
 
-using ::llcpp::fuchsia::hardware::thermal::OperatingPoint;
-using ::llcpp::fuchsia::hardware::thermal::OperatingPointEntry;
+using ::llcpp::fuchsia::hardware::thermal::wire::OperatingPoint;
+using ::llcpp::fuchsia::hardware::thermal::wire::OperatingPointEntry;
 
 constexpr OperatingPoint kOperatingPoints = {
     .opp =

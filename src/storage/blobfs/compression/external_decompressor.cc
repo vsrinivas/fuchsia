@@ -68,7 +68,7 @@ zx_status_t ExternalDecompressorClient::Prepare() {
   zx::fifo remote_fifo;
   // Sized for 4 elements, allows enough pipelining to keep the remote process
   // from descheduling to have 2 in flight requests/response pairs.
-  status = zx::fifo::create(4, sizeof(llcpp::fuchsia::blobfs::internal::DecompressRequest), 0,
+  status = zx::fifo::create(4, sizeof(llcpp::fuchsia::blobfs::internal::wire::DecompressRequest), 0,
                             &fifo_, &remote_fifo);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed create fifo for external decompressor: "
@@ -125,9 +125,9 @@ zx_status_t ExternalDecompressorClient::PrepareDecompressorCreator() {
 }
 
 zx_status_t ExternalDecompressorClient::SendMessage(
-    const llcpp::fuchsia::blobfs::internal::DecompressRequest& request) {
+    const llcpp::fuchsia::blobfs::internal::wire::DecompressRequest& request) {
   zx_status_t status;
-  llcpp::fuchsia::blobfs::internal::DecompressResponse response;
+  llcpp::fuchsia::blobfs::internal::wire::DecompressResponse response;
   status = Prepare();
   if (status != ZX_OK) {
     return status;

@@ -78,7 +78,7 @@ zx_status_t DeviceReportsReader::SendReports() {
   std::array<uint8_t, ::llcpp::fuchsia::hardware::input::MAX_REPORT_DATA> buf;
   size_t buf_index = 0;
 
-  std::array<::llcpp::fuchsia::hardware::input::Report,
+  std::array<::llcpp::fuchsia::hardware::input::wire::Report,
              ::llcpp::fuchsia::hardware::input::MAX_REPORTS_COUNT>
       reports;
   size_t reports_size = 0;
@@ -110,7 +110,7 @@ zx_status_t DeviceReportsReader::SendReports() {
     return status;
   }
 
-  waiting_read_->ReplySuccess(::fidl::VectorView<llcpp::fuchsia::hardware::input::Report>(
+  waiting_read_->ReplySuccess(::fidl::VectorView<llcpp::fuchsia::hardware::input::wire::Report>(
       fidl::unowned_ptr(reports.data()), reports_size));
   waiting_read_.reset();
 

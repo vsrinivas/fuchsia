@@ -49,7 +49,7 @@ class Keyboard {
   zx_status_t Setup(llcpp::fuchsia::input::report::InputDevice::SyncClient keyboard_client);
 
   // Process a given set of keys and send them to the handler.
-  void ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& report);
+  void ProcessInput(const ::llcpp::fuchsia::input::report::wire::InputReport& report);
 
  private:
   // The callback for when key-repeat is triggered.

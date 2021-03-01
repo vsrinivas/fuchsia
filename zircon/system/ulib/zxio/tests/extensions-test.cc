@@ -43,7 +43,7 @@ class TestServerBase : public llcpp::fuchsia::io::Node::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attribute,
+  void SetAttr(uint32_t flags, llcpp::fuchsia::io::wire::NodeAttributes attribute,
                SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -197,7 +197,7 @@ TEST_F(ExtensionNode, GetAttr) {
     void GetAttr(GetAttrCompleter::Sync& completer) override {
       ASSERT_FALSE(called());
       called_.store(true);
-      llcpp::fuchsia::io::NodeAttributes attr = {};
+      llcpp::fuchsia::io::wire::NodeAttributes attr = {};
       attr.content_size = kContentSize;
       completer.Reply(ZX_OK, attr);
     }

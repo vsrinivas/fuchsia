@@ -93,7 +93,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     return device_info.status();
   }
 
-  const fuchsia_thermal::ThermalDeviceInfo* info = device_info->info.get();
+  const fuchsia_thermal::wire::ThermalDeviceInfo* info = device_info->info.get();
 
   // Ensure there is at least one non-empty power domain. We expect one to exist if this function
   // has been called.
@@ -132,7 +132,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
   // Create an AmlCpu for each power domain with nonempty operating points.
   for (size_t i = 0; i < MAX_DVFS_DOMAINS; i++) {
-    const fuchsia_thermal::OperatingPoint& opps = info->opps[i];
+    const fuchsia_thermal::wire::OperatingPoint& opps = info->opps[i];
 
     // If this domain is empty, don't create a driver.
     if (opps.count == 0) {
@@ -189,7 +189,7 @@ void AmlCpu::DdkRelease() { delete this; }
 
 zx_status_t AmlCpu::DdkSetPerformanceState(uint32_t requested_state, uint32_t* out_state) {
   zx_status_t status;
-  fuchsia_thermal::OperatingPoint opps;
+  fuchsia_thermal::wire::OperatingPoint opps;
 
   status = GetThermalOperatingPoints(&opps);
   if (status != ZX_OK) {
@@ -224,7 +224,7 @@ void AmlCpu::GetPerformanceStateInfo(uint32_t state,
                                      GetPerformanceStateInfoCompleter::Sync& completer) {
   // Get all performance states.
   zx_status_t status;
-  fuchsia_thermal::OperatingPoint opps;
+  fuchsia_thermal::wire::OperatingPoint opps;
 
   status = GetThermalOperatingPoints(&opps);
   if (status != ZX_OK) {
@@ -242,20 +242,20 @@ void AmlCpu::GetPerformanceStateInfo(uint32_t state,
 
   const uint16_t pstate = PstateToOperatingPoint(state, opps.count);
 
-  llcpp::fuchsia::hardware::cpu::ctrl::CpuPerformanceStateInfo result;
+  llcpp::fuchsia::hardware::cpu::ctrl::wire::CpuPerformanceStateInfo result;
   result.frequency_hz = opps.opp[pstate].freq_hz;
   result.voltage_uv = opps.opp[pstate].volt_uv;
   completer.ReplySuccess(result);
 }
 
-zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::OperatingPoint* out) {
+zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::wire::OperatingPoint* out) {
   auto result = thermal_client_.GetDeviceInfo();
   if (!result.ok() || result->status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to get thermal device info", __func__);
     return ZX_ERR_INTERNAL;
   }
 
-  fuchsia_thermal::ThermalDeviceInfo* info = result->info.get();
+  fuchsia_thermal::wire::ThermalDeviceInfo* info = result->info.get();
 
   memcpy(out, &info->opps[power_domain_index_], sizeof(*out));
   return ZX_OK;

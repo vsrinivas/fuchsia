@@ -51,8 +51,8 @@ class SdioTest : public zxtest::Test, public ::llcpp::fuchsia::hardware::sdio::D
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void DoRwTxn(SdioRwTxn txn, DoRwTxnCompleter::Sync& completer) override {
-    txns_.push_back(SdioRwTxn{
+  void DoRwTxn(wire::SdioRwTxn txn, DoRwTxnCompleter::Sync& completer) override {
+    txns_.push_back(wire::SdioRwTxn{
         .addr = txn.addr,
         .data_size = txn.data_size,
         .incr = txn.incr,
@@ -96,9 +96,9 @@ class SdioTest : public zxtest::Test, public ::llcpp::fuchsia::hardware::sdio::D
   void set_byte(uint8_t byte) { byte_ = byte; }
   uint8_t get_byte() { return byte_; }
   uint32_t get_address() { return address_; }
-  const std::vector<SdioRwTxn>& get_txns() { return txns_; }
+  const std::vector<wire::SdioRwTxn>& get_txns() { return txns_; }
 
-  void ExpectTxnsEqual(const SdioRwTxn& lhs, const SdioRwTxn& rhs) {
+  void ExpectTxnsEqual(const wire::SdioRwTxn& lhs, const wire::SdioRwTxn& rhs) {
     EXPECT_EQ(lhs.addr, rhs.addr);
     EXPECT_EQ(lhs.data_size, rhs.data_size);
     EXPECT_EQ(lhs.incr, rhs.incr);
@@ -112,7 +112,7 @@ class SdioTest : public zxtest::Test, public ::llcpp::fuchsia::hardware::sdio::D
  private:
   uint8_t byte_ = 0;
   uint32_t address_ = 0;
-  std::vector<SdioRwTxn> txns_;
+  std::vector<wire::SdioRwTxn> txns_;
 };
 
 TEST_F(SdioTest, NoArguments) {
@@ -167,7 +167,7 @@ TEST_F(SdioTest, ReadStress) {
   EXPECT_EQ(0, sdio::RunSdioTool(SdioClient(std::move(client_)), 4, argv));
   EXPECT_EQ(get_txns().size(), 20);
 
-  const SdioRwTxn kExpectedTxn = {
+  const wire::SdioRwTxn kExpectedTxn = {
       .addr = 0x10000,
       .data_size = 256,
       .incr = true,
@@ -178,7 +178,7 @@ TEST_F(SdioTest, ReadStress) {
       .buf_offset = 0,
   };
 
-  for (const SdioRwTxn& txn : get_txns()) {
+  for (const wire::SdioRwTxn& txn : get_txns()) {
     ASSERT_NO_FATAL_FAILURES(ExpectTxnsEqual(txn, kExpectedTxn));
   }
 }
@@ -188,7 +188,7 @@ TEST_F(SdioTest, ReadStressDma) {
   EXPECT_EQ(0, sdio::RunSdioTool(SdioClient(std::move(client_)), 5, argv));
   EXPECT_EQ(get_txns().size(), 20);
 
-  const SdioRwTxn kExpectedTxn = {
+  const wire::SdioRwTxn kExpectedTxn = {
       .addr = 0x10000,
       .data_size = 256,
       .incr = true,
@@ -199,7 +199,7 @@ TEST_F(SdioTest, ReadStressDma) {
       .buf_offset = 0,
   };
 
-  for (const SdioRwTxn& txn : get_txns()) {
+  for (const wire::SdioRwTxn& txn : get_txns()) {
     ASSERT_NO_FATAL_FAILURES(ExpectTxnsEqual(txn, kExpectedTxn));
   }
 }
@@ -209,7 +209,7 @@ TEST_F(SdioTest, ReadStressFifo) {
   EXPECT_EQ(0, sdio::RunSdioTool(SdioClient(std::move(client_)), 5, argv));
   EXPECT_EQ(get_txns().size(), 20);
 
-  const SdioRwTxn kExpectedTxn = {
+  const wire::SdioRwTxn kExpectedTxn = {
       .addr = 0x10000,
       .data_size = 256,
       .incr = false,
@@ -220,7 +220,7 @@ TEST_F(SdioTest, ReadStressFifo) {
       .buf_offset = 0,
   };
 
-  for (const SdioRwTxn& txn : get_txns()) {
+  for (const wire::SdioRwTxn& txn : get_txns()) {
     ASSERT_NO_FATAL_FAILURES(ExpectTxnsEqual(txn, kExpectedTxn));
   }
 }
@@ -230,7 +230,7 @@ TEST_F(SdioTest, ReadStressDmaFifo) {
   EXPECT_EQ(0, sdio::RunSdioTool(SdioClient(std::move(client_)), 6, argv));
   EXPECT_EQ(get_txns().size(), 20);
 
-  const SdioRwTxn kExpectedTxn = {
+  const wire::SdioRwTxn kExpectedTxn = {
       .addr = 0x10000,
       .data_size = 256,
       .incr = false,
@@ -241,7 +241,7 @@ TEST_F(SdioTest, ReadStressDmaFifo) {
       .buf_offset = 0,
   };
 
-  for (const SdioRwTxn& txn : get_txns()) {
+  for (const wire::SdioRwTxn& txn : get_txns()) {
     ASSERT_NO_FATAL_FAILURES(ExpectTxnsEqual(txn, kExpectedTxn));
   }
 }
@@ -251,7 +251,7 @@ TEST_F(SdioTest, ReadStressFifoDma) {
   EXPECT_EQ(0, sdio::RunSdioTool(SdioClient(std::move(client_)), 6, argv));
   EXPECT_EQ(get_txns().size(), 20);
 
-  const SdioRwTxn kExpectedTxn = {
+  const wire::SdioRwTxn kExpectedTxn = {
       .addr = 0x10000,
       .data_size = 256,
       .incr = false,
@@ -262,7 +262,7 @@ TEST_F(SdioTest, ReadStressFifoDma) {
       .buf_offset = 0,
   };
 
-  for (const SdioRwTxn& txn : get_txns()) {
+  for (const wire::SdioRwTxn& txn : get_txns()) {
     ASSERT_NO_FATAL_FAILURES(ExpectTxnsEqual(txn, kExpectedTxn));
   }
 }

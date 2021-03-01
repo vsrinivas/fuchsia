@@ -35,7 +35,8 @@ class HostVisibleHeap : public Heap {
   void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& completer) override;
 
   // |llcpp::fuchsia::sysmem2::Heap::Interface|
-  void CreateResource(::zx::vmo vmo, llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings,
+  void CreateResource(::zx::vmo vmo,
+                      llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings,
                       CreateResourceCompleter::Sync& completer) override;
 
   // |llcpp::fuchsia::sysmem2::Heap::Interface|

@@ -285,7 +285,7 @@ TEST_F(HidDeviceTest, TestQuery) {
       llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
   auto result = sync_client.GetDeviceIds();
   ASSERT_OK(result.status());
-  llcpp::fuchsia::hardware::input::DeviceIds ids = result->ids;
+  llcpp::fuchsia::hardware::input::wire::DeviceIds ids = result->ids;
 
   ASSERT_EQ(kVendorId, ids.vendor_id);
   ASSERT_EQ(kProductId, ids.product_id);

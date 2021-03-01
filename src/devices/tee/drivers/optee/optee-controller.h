@@ -87,7 +87,7 @@ class OpteeController : public OpteeControllerBase,
   // `DeviceConnector` FIDL protocol
   void ConnectToDeviceInfo(::zx::channel device_info_request,
                            ConnectToDeviceInfoCompleter::Sync& _completer) override;
-  void ConnectToApplication(llcpp::fuchsia::tee::Uuid application_uuid,
+  void ConnectToApplication(llcpp::fuchsia::tee::wire::Uuid application_uuid,
                             zx::channel service_provider, zx::channel application_request,
                             ConnectToApplicationCompleter::Sync& _completer) override;
 

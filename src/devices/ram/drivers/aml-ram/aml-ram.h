@@ -25,7 +25,7 @@ namespace amlogic_ram {
 // The AmlRam device provides FIDL services directly to applications
 // to query performance counters. For example effective DDR bandwith.
 //
-// There are 4 monitoring channels and each one can agregate up to 64
+// There are 4 monitoring channels and each one can aggregate up to 64
 // hardware memory ports. NOTE: the word channel and port in this file
 // refer to hardware, not to zircon objects.
 constexpr size_t MEMBW_MAX_CHANNELS = 4u;
@@ -51,7 +51,7 @@ constexpr uint32_t MEMBW_TIMER = (0x002f << 2);
 constexpr uint32_t MEMBW_RP[MEMBW_MAX_CHANNELS] = {(0x0021 << 2), (0x0023 << 2), (0x0025 << 2),
                                                    (0x0027 << 2)};
 
-// Controls wich subports are assinged to each channel.
+// Controls which subports are assigned to each channel.
 constexpr uint32_t MEMBW_SP[MEMBW_MAX_CHANNELS] = {(0x0022 << 2), (0x0024 << 2), (0x0026 << 2),
                                                    (0x0028 << 2)};
 
@@ -87,21 +87,22 @@ class AmlRam : public DeviceType, private ram_metrics::Device::Interface {
 
  private:
   struct Job {
-    ram_metrics::BandwidthMeasurementConfig config;
+    ram_metrics::wire::BandwidthMeasurementConfig config;
     MeasureBandwidthCompleter::Async completer;
     zx_time_t start_time = 0;
     Job() = delete;
-    Job(ram_metrics::BandwidthMeasurementConfig config, MeasureBandwidthCompleter::Async completer)
+    Job(ram_metrics::wire::BandwidthMeasurementConfig config,
+        MeasureBandwidthCompleter::Async completer)
         : config(std::move(config)), completer(std::move(completer)) {}
   };
 
   // Implementation of ram_metrics::Device::Interface FIDL service.
-  void MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
+  void MeasureBandwidth(ram_metrics::wire::BandwidthMeasurementConfig config,
                         MeasureBandwidthCompleter::Sync& completer) override;
   void GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync& completer) override;
 
   void StartReadBandwithCounters(Job* job);
-  void FinishReadBandwithCounters(ram_metrics::BandwidthInfo* bpi, zx_time_t start_time);
+  void FinishReadBandwithCounters(ram_metrics::wire::BandwidthInfo* bpi, zx_time_t start_time);
   void CancelReadBandwithCounters();
 
   zx_status_t Bind();
