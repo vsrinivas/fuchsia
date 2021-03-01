@@ -1493,7 +1493,6 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
                       0, 0, assoc_state_.opts->bssid, kSsidEventDelay);
     // Set the Assoc state only after E_ASSOC is sent to the driver.
     hw_.RequestCallback(std::bind(&SimFirmware::SetAssocState, this, AssocState::ASSOCIATED),
-
                         kAssocEventDelay);
   } else {
     BRCMF_DBG(SIM, "Assoc refused, Handle failure");
@@ -1519,8 +1518,6 @@ void SimFirmware::DisassocLocalClient(wlan_ieee80211::ReasonCode reason) {
     // Transmit the deauth frame clear AP state.
     simulation::SimDeauthFrame deauth_req_frame(srcAddr, bssid, reason);
     hw_.Tx(deauth_req_frame);
-  } else {
-    SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_FAIL, kClientIfidx);
   }
 
   AuthClearContext();
@@ -1946,8 +1943,7 @@ zx_status_t SimFirmware::IovarWsecKeySet(uint16_t ifidx, int32_t bsscfgidx, cons
   auto wk_req = reinterpret_cast<const brcmf_wsec_key_le*>(value);
   // Ensure that Primary Key does not have a mac address (all zeros)
   if (wk_req->flags == BRCMF_PRIMARY_KEY) {
-    common::MacAddr zero_mac({0x0, 0x0, 0x0, 0x0, 0x0, 0x0});
-    ZX_ASSERT_MSG(std::memcmp(wk_req->ea, zero_mac.byte, ETH_ALEN) == 0,
+    ZX_ASSERT_MSG(std::memcmp(wk_req->ea, kZeroMac.byte, ETH_ALEN) == 0,
                   "Group Key Mac should be all zeros");
   }
   std::vector<brcmf_wsec_key_le>& key_list = iface_tbl_[ifidx].wsec_key_list;
@@ -2925,6 +2921,7 @@ void SimFirmware::SendEventToDriver(size_t payload_size,
                                     char* ifname, uint16_t flags, uint32_t reason,
                                     std::optional<common::MacAddr> addr,
                                     std::optional<zx::duration> delay) {
+  BRCMF_DBG(SIM, "*****Sending Event: %d*****", event_type);
   brcmf_event_msg_be* msg_be;
   size_t payload_offset;
   // Assert if ifidx is not valid

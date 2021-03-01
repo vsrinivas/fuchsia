@@ -283,9 +283,11 @@ struct net_device {
     int multicast;
     int rx_errors;
     int tx_errors;
+    int tx_confirmed;
     // rssi histogram, index = -(rssi), For ex, -128 => 128....-1 => 1
     std::array<uint64_t, RSSI_HISTOGRAM_LEN> rssi_buckets;
     wlanif_mlme_stats_t mlme_stats;
+    brcmf_pktcnt_le fw_pktcnt;
   } stats;
   zx::channel sme_channel;
   uint32_t features;
