@@ -7,82 +7,60 @@ package runner
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"errors"
+	"os/exec"
 	"strings"
 	"testing"
-	"time"
 )
 
-const (
-	skipMessage      = "runner tests are meant for local testing only"
-	defaultIOTimeout = 100 * time.Millisecond
-)
-
-func TestSubprocessRunner(t *testing.T) {
-	t.Skip(skipMessage)
-
+func TestRun(t *testing.T) {
 	t.Run("Run", func(t *testing.T) {
-		t.Run("should execute a commmand", func(t *testing.T) {
-			r := SubprocessRunner{}
+		t.Run("should execute a command", func(t *testing.T) {
+			r := SubprocessRunner{
+				Env: []string{"FOO=bar"}, // Cover env var handling.
+			}
 			message := "Hello, World!"
-			command := []string{"/bin/echo", message}
+			command := []string{"echo", message}
 
 			stdout := new(bytes.Buffer)
 			stderr := new(bytes.Buffer)
 			if err := r.Run(context.Background(), command, stdout, stderr); err != nil {
-				t.Fatalf("failed to run test. Got an error %v", err)
+				t.Fatal(err)
 			}
 
 			stdoutS := strings.TrimSpace(stdout.String())
-			if stdoutS != "Hello, World!" {
-				t.Fatalf("expected output '%s', but got %s", message, stdoutS)
+			if stdoutS != message {
+				t.Fatalf("Expected output %q, but got %q", message, stdoutS)
 			}
 
 			stderrS := strings.TrimSpace(stderr.String())
 			if stderrS != "" {
-				t.Fatalf("expected empty stderr, but got %s", stderrS)
+				t.Fatalf("Expected empty stderr, but got %q", stderrS)
 			}
 		})
 
-		t.Run("should error if the context Completes before the commmand", func(t *testing.T) {
+		t.Run("should error if the context completes before the command", func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
+
 			r := SubprocessRunner{}
-			command := []string{"/bin/sleep", "5"}
-
-			stdout := new(bytes.Buffer)
-			stderr := new(bytes.Buffer)
-
-			err := r.Run(ctx, command, stdout, stderr)
-			stdoutS := strings.TrimSpace(stdout.String())
-			stderrS := strings.TrimSpace(stderr.String())
-
+			command := []string{"sleep", "5"}
+			err := r.Run(ctx, command, nil, nil)
 			if err == nil {
-				t.Fatal(strings.Join([]string{
-					"expected command to terminate early but it completed:",
-					fmt.Sprintf("(stdout): %s\n", stdoutS),
-					fmt.Sprintf("(stderr): %s\n", stderrS),
-				}, "\n"))
+				t.Fatal("Expected sleep command to terminate early but it completed")
+			} else if !errors.Is(err, ctx.Err()) {
+				t.Fatalf("Expected Run() to return a context error after cancelation but got: %s", err)
 			}
 		})
 
 		t.Run("should return an error if the command fails", func(t *testing.T) {
 			r := SubprocessRunner{}
 			command := []string{"not_a_command_12345"}
-
-			stdout := new(bytes.Buffer)
-			stderr := new(bytes.Buffer)
-
-			err := r.Run(context.Background(), command, stdout, stderr)
-			stdoutS := strings.TrimSpace(stdout.String())
-			stderrS := strings.TrimSpace(stderr.String())
-
+			err := r.Run(context.Background(), command, nil, nil)
 			if err == nil {
-				t.Fatal(strings.Join([]string{
-					"expected command to terminate early but it completed:",
-					fmt.Sprintf("(stdout): %s\n", stdoutS),
-					fmt.Sprintf("(stderr): %s\n", stderrS),
-				}, "\n"))
+				t.Fatalf("Expected invalid command to fail but it succeeded: %s", err)
+			} else if !errors.Is(err, exec.ErrNotFound) {
+				t.Fatalf("Expected Run() to return exec.ErrNotFound but got: %s", err)
 			}
 		})
 	})
