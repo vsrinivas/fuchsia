@@ -193,7 +193,7 @@
 
 ## Display drivers
 + [framebuffer_get_info](framebuffer_get_info.md)
-+ [framebugger_set_range](framebuffer_set_range.md)
++ [framebuffer_set_range](framebuffer_set_range.md)
 
 ## Tracing
 + [ktrace_control](ktrace_control.md)
