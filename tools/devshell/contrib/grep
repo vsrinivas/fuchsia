@@ -15,8 +15,10 @@
 ##   c, cpp: C/C++ source and header files
 ##   rs, rust: Rust source files
 ##   py, python: Python source files
+##   go: Go source files
 ##   dart: Dart source files
 ##   fidl: FIDL source files
+##   service, config: Services configuration files
 ##   cm, manifest: Component manifest files
 ##   gn, build: GN build files
 ##   md, doc: Documentation source files
@@ -36,8 +38,10 @@ get_type_list() {
       'c'|'cpp') SELECTED_FILE_TYPES+=('*.c' '*.cc' '*.cpp' '*.h' '*.hpp');;
       'rs'|'rust') SELECTED_FILE_TYPES+=('*.rs');;
       'py'|'python') SELECTED_FILE_TYPES+=('*.py');;
+      'go') SELECTED_FILE_TYPES+=('*.go');;
       'dart') SELECTED_FILE_TYPES+=('*.dart');;
       'fidl') SELECTED_FILE_TYPES+=('*.fidl');;
+      'service'|'config') SELECTED_FILE_TYPES+=('*.config');;
       'cm'|'manifest') SELECTED_FILE_TYPES+=('*.cmx' '*.cml');;
       'gn'|'build') SELECTED_FILE_TYPES+=('*.gn' '*.gni');;
       'md'|'doc') SELECTED_FILE_TYPES+=('*.md');;
