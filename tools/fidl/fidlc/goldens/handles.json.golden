@@ -1435,14 +1435,10 @@
         "args": [],
         "nullable": false,
         "handle_rights": {
-          "kind": "literal",
+          "kind": "identifier",
           "value": "1",
-          "expression": "1",
-          "literal": {
-            "kind": "numeric",
-            "value": "1",
-            "expression": "1"
-          }
+          "expression": "zx.rights.DUPLICATE",
+          "identifier": "zx/rights.DUPLICATE"
         }
       }
     }

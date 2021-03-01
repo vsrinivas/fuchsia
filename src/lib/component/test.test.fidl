@@ -11,7 +11,5 @@ protocol Test1 {
     NoResponse();
     EmptyResponse() -> ();
     -> Surprise(string foo);
-    // 7 is READ | TRANSFER | DUPLICATE
-    // TODO(fxbug.dev/43948) Replace with zx.rights.READ | ...
-    EchoHandleRights(zx.handle:<PORT, 7> h) -> (uint32 rights);
+    EchoHandleRights(zx.handle:<PORT, zx.rights.READ | zx.rights.TRANSFER | zx.rights.DUPLICATE> h) -> (uint32 rights);
 };

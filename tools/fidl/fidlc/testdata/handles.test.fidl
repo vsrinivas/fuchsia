@@ -49,7 +49,7 @@ protocol SomeProtocol {
 
 alias aliased_plain_handle = handle;
 alias aliased_subtype_handle = handle:VMO;
-alias aliased_rights_handle = handle:<VMO, 1>;
+alias aliased_rights_handle = handle:<VMO, zx.rights.DUPLICATE>;
 
 resource struct Handles {
     handle plain_handle;
