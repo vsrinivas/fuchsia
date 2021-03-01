@@ -61,7 +61,7 @@ func Run(cfg *build.Config, args []string) error {
 
 		content, err := buildDepfile(cfg)
 		if err != nil {
-			return fmt.Errorf("failed to build dep file", err)
+			return fmt.Errorf("failed to build dep file: %s", err)
 		}
 		if err := ioutil.WriteFile(cfg.MetaFAR()+".d", content, 0644); err != nil {
 			return err

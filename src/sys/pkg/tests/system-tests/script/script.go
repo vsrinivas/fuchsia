@@ -45,7 +45,7 @@ func RunScript(
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("script %v failed to run: %w", err)
+		return fmt.Errorf("script %v failed to run: %w", script, err)
 	}
 
 	// Reconnect to sl4f if we disconnected.

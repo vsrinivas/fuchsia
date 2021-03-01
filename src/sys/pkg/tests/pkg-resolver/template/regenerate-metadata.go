@@ -51,7 +51,7 @@ func main() {
 
 	repo, err := tuf.NewRepo(tuf.FileSystemStore(tempdir, nil))
 	if err != nil {
-		log.Fatalf("failed to create repository", err)
+		log.Fatalf("failed to create repository: %s", err)
 	}
 
 	if err := repo.Init(true); err != nil {
