@@ -1,5 +1,7 @@
 library test.mixer;
 
+using zx;
+
 bits ExampleBits : uint8 {
     B = 1;
 };
@@ -23,4 +25,8 @@ union ExampleStrictUnion {
 
 flexible union ExampleFlexibleUnion {
     1: string s;
+};
+
+resource struct ExampleHandleStruct {
+    zx.handle:<CHANNEL, zx.rights.DUPLICATE> channel;
 };

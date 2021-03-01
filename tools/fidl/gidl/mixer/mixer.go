@@ -121,6 +121,11 @@ type Declaration interface {
 type context struct {
 	// Handle definitions in scope, used for HandleDecl conformance.
 	handleDefs []gidlir.HandleDef
+
+	// If true, handle types are ignored in conforms(). This allows us to
+	// express EncodeSuccess tests with incorrect handle types (which pass
+	// because bindings do not check handles during encoding).
+	ignoreWrongHandleType bool
 }
 
 // Assert that wrappers conform to the Declaration interface.
@@ -346,12 +351,14 @@ func (decl *HandleDecl) conforms(value interface{}, ctx context) error {
 		if v := int(value.Handle); v < 0 || v >= len(ctx.handleDefs) {
 			return fmt.Errorf("handle #%d out of range", value.Handle)
 		}
-		if decl.subtype == fidl.Handle {
-			// The declaration is an untyped handle. Any subtype conforms.
-			return nil
-		}
-		if subtype := ctx.handleDefs[value.Handle].Subtype; subtype != decl.subtype {
-			return fmt.Errorf("expecting handle<%s>, found handle<%s>", decl.subtype, subtype)
+		if !ctx.ignoreWrongHandleType {
+			if decl.subtype == fidl.Handle {
+				// The declaration is an untyped handle. Any subtype conforms.
+				return nil
+			}
+			if subtype := ctx.handleDefs[value.Handle].Subtype; subtype != decl.subtype {
+				return fmt.Errorf("expecting handle:%s, found handle:%s", decl.subtype, subtype)
+			}
 		}
 		return nil
 	case nil:
@@ -776,7 +783,22 @@ func (s Schema) ExtractDeclaration(value interface{}, handleDefs []gidlir.Handle
 	if err != nil {
 		return nil, err
 	}
-	if err := decl.conforms(value, context{handleDefs}); err != nil {
+	if err := decl.conforms(value, context{handleDefs: handleDefs}); err != nil {
+		return nil, fmt.Errorf("value %v failed to conform to declaration (type %T): %v", value, decl, err)
+	}
+	return decl, nil
+}
+
+// ExtractDeclarationEncodeSuccess extract the top-level declaration for the
+// provided value, and ensures the value conforms to the schema based on the
+// rules for EncodeSuccess. It also takes a list of handle definitions in
+// scope, which can be nil if there are no handles.
+func (s Schema) ExtractDeclarationEncodeSuccess(value interface{}, handleDefs []gidlir.HandleDef) (*StructDecl, error) {
+	decl, err := s.ExtractDeclarationUnsafe(value)
+	if err != nil {
+		return nil, err
+	}
+	if err := decl.conforms(value, context{handleDefs: handleDefs, ignoreWrongHandleType: true}); err != nil {
 		return nil, fmt.Errorf("value %v failed to conform to declaration (type %T): %v", value, decl, err)
 	}
 	return decl, nil

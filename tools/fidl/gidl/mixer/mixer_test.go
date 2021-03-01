@@ -149,6 +149,68 @@ func TestExtractDeclarationDoesNotConform(t *testing.T) {
 	}
 }
 
+func TestExtractDeclarationWrongHandleTypeFailure(t *testing.T) {
+	value := gidlir.Record{
+		Name: "ExampleHandleStruct",
+		Fields: []gidlir.Field{
+			{
+				Key: gidlir.FieldKey{
+					Name:           "channel",
+					UnknownOrdinal: 1,
+				},
+				Value: gidlir.HandleWithRights{
+					Handle: 0,
+					Type:   fidl.ObjectTypeChannel,
+					Rights: fidl.HandleRightsDuplicate,
+				},
+			},
+		},
+	}
+	handleDefs := []gidlir.HandleDef{
+		{
+			Subtype: fidl.Fifo,
+			Rights:  fidl.HandleRightsTransfer,
+		},
+	}
+	decl, err := testSchema(t).ExtractDeclaration(value, handleDefs)
+	if err == nil {
+		t.Fatalf("ExtractDeclaration unexpectedly succeeded: %#v", decl)
+	}
+	if !strings.Contains(err.Error(), "expecting handle:channel") {
+		t.Fatalf("expected err to contain 'failed to conform to declaration', got '%s'", err)
+	}
+}
+
+func TestExtractDeclarationEncodeSuccessWrongHandleTypeSuccess(t *testing.T) {
+	value := gidlir.Record{
+		Name: "ExampleHandleStruct",
+		Fields: []gidlir.Field{
+			{
+				Key: gidlir.FieldKey{
+					Name:           "channel",
+					UnknownOrdinal: 1,
+				},
+				Value: gidlir.HandleWithRights{
+					Handle: 0,
+					Type:   fidl.ObjectTypeChannel,
+					Rights: fidl.HandleRightsDuplicate,
+				},
+			},
+		},
+	}
+	handleDefs := []gidlir.HandleDef{
+		{
+			Subtype: fidl.Fifo,
+			Rights:  fidl.HandleRightsTransfer,
+		},
+	}
+	decl, err := testSchema(t).ExtractDeclarationEncodeSuccess(value, handleDefs)
+	if err != nil {
+		t.Fatalf("ExtractDeclaration failed: %s", err)
+	}
+	checkStruct(t, decl, "ExampleHandleStruct", false)
+}
+
 func TestExtractDeclarationUnsafeSuccess(t *testing.T) {
 	value := gidlir.Record{
 		Name: "ExampleStruct",
@@ -409,7 +471,7 @@ func TestHandleDeclConforms(t *testing.T) {
 			},
 			conformFail{
 				defaultMetadataForHandle(1),
-				"expecting handle<event>",
+				"expecting handle:event",
 			},
 			conformFail{
 				defaultMetadataForHandle(-1),
@@ -441,11 +503,11 @@ func TestHandleDeclConforms(t *testing.T) {
 			conformOk{nil},
 			conformFail{
 				defaultMetadataForHandle(0),
-				"expecting handle<port>",
+				"expecting handle:port",
 			},
 			conformFail{
 				defaultMetadataForHandle(2),
-				"expecting handle<port>",
+				"expecting handle:port",
 			},
 			conformFail{
 				defaultMetadataForHandle(-1),

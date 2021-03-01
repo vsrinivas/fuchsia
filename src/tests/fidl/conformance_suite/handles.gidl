@@ -359,10 +359,10 @@ success("ChannelMaxUnknownHandlesStored") {
     }
 }
 
-encode_success("EncodeHandleHasExactTypeAndRights") {
+encode_success("EncodeHandleTypeAndRightsComeFromFIDL") {
     bindings_allowlist = [llcpp],
     handle_defs = {
-        #0 = event(),
+        #0 = channel(rights: channel_default),
     },
     value = EventWithDefaultRights {
         h: #0,
@@ -418,26 +418,6 @@ decode_failure("DecodeHandleHasWrongType") {
     err = INCORRECT_HANDLE_TYPE
 }
 
-encode_success("EncodeHandleHasExtraRights") {
-    bindings_allowlist = [llcpp],
-    handle_defs = {
-        #0 = event(),
-    },
-    value = EventWithReducedRights {
-        h: #0,
-    },
-    bytes = {
-        v1 = [
-            repeat(0xff):4, padding:4,
-        ],
-    },
-    handle_dispositions = {
-        v1 = [
-            { #0, type: event, rights: basic },
-        ],
-    }
-}
-
 decode_success("DecodeHandleHasExtraRights") {
     bindings_allowlist = [llcpp],
     handle_defs = {
@@ -456,26 +436,6 @@ decode_success("DecodeHandleHasExtraRights") {
     value = EventWithReducedRights {
         h: restrict(#0, rights: basic),
     },
-}
-
-encode_success("EncodeHandleHasTooFewRights") {
-    bindings_allowlist = [llcpp],
-    handle_defs = {
-        #0 = event(),
-    },
-    value = EventWithDefaultRights {
-        h: #0,
-    },
-    bytes = {
-        v1 = [
-            repeat(0xff):4, padding:4,
-        ],
-    },
-    handle_dispositions = {
-        v1 = [
-            { #0, type: event, rights: event_default },
-        ],
-    }
 }
 
 decode_failure("DecodeHandleHasTooFewRights") {
