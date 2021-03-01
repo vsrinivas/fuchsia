@@ -139,16 +139,17 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  auto args = fdf::wire::DriverStartArgs::UnownedBuilder()
-                  .set_node(fidl::unowned_ptr(&node))
-                  .set_offers(fidl::unowned_ptr(&offers))
-                  .set_symbols(fidl::unowned_ptr(&symbols))
-                  .set_url(fidl::unowned_ptr(&url))
-                  .set_program(fidl::unowned_ptr(&program))
-                  .set_ns(fidl::unowned_ptr(&ns))
-                  .set_outgoing_dir(fidl::unowned_ptr(&outgoing_dir))
-                  .set_exposed_dir(fidl::unowned_ptr(&exposed_dir));
-  auto start = driver_host_->Start(args.build(), std::move(endpoints->server));
+  fidl::FidlAllocator allocator;
+  fdf::wire::DriverStartArgs args(allocator);
+  args.set_node(allocator, std::move(node))
+      .set_offers(allocator, std::move(offers))
+      .set_symbols(allocator, std::move(symbols))
+      .set_url(allocator, std::move(url))
+      .set_program(allocator, std::move(program))
+      .set_ns(allocator, std::move(ns))
+      .set_outgoing_dir(allocator, std::move(outgoing_dir))
+      .set_exposed_dir(allocator, std::move(exposed_dir));
+  auto start = driver_host_->Start(std::move(args), std::move(endpoints->server));
   if (!start.ok()) {
     auto binary = start_args::ProgramValue(program, "binary").value_or("");
     LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(), start.error());
@@ -158,13 +159,8 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
 }
 
 Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
-           std::string_view name, Offers offers, Symbols symbols)
-    : parent_(parent),
-      driver_binder_(driver_binder),
-      dispatcher_(dispatcher),
-      name_(name),
-      offers_(std::move(offers)),
-      symbols_(std::move(symbols)) {}
+           std::string_view name)
+    : parent_(parent), driver_binder_(driver_binder), dispatcher_(dispatcher), name_(name) {}
 
 Node::~Node() { UnbindAndReset(controller_binding_); }
 
@@ -263,9 +259,11 @@ void Node::Remove(RemoveCompleter::Sync& completer) {
 void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeController> controller,
                     fidl::ServerEnd<fdf::Node> node, AddChildCompleter::Sync& completer) {
   auto name = args.has_name() ? std::move(args.name()) : fidl::StringView();
-  Offers offers;
+
+  auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_, name.get());
+
   if (args.has_offers()) {
-    offers.reserve(args.offers().count());
+    child->offers_.reserve(args.offers().count());
     std::unordered_set<std::string_view> names;
     for (auto& offer : args.offers()) {
       auto inserted = names.emplace(offer.data(), offer.size()).second;
@@ -275,12 +273,12 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
         completer.Close(ZX_ERR_INVALID_ARGS);
         return;
       }
-      offers.emplace_back(fidl::heap_copy_str(offer));
+      child->offers_.emplace_back(child->allocator_, offer.get());
     }
   }
-  Symbols symbols;
+
   if (args.has_symbols()) {
-    symbols.reserve(args.symbols().count());
+    child->symbols_.reserve(args.symbols().count());
     std::unordered_set<std::string_view> names;
     for (auto& symbol : args.symbols()) {
       if (!symbol.has_name()) {
@@ -298,15 +296,12 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
         completer.Close(ZX_ERR_INVALID_ARGS);
         return;
       }
-      symbols.emplace_back(
-          fdf::wire::NodeSymbol::Builder(std::make_unique<fdf::wire::NodeSymbol::Frame>())
-              .set_name(std::make_unique<fidl::StringView>(fidl::heap_copy_str(symbol.name())))
-              .set_address(std::make_unique<zx_vaddr_t>(symbol.address()))
-              .build());
+      fdf::wire::NodeSymbol node_symbol(child->allocator_);
+      node_symbol.set_name(child->allocator_, child->allocator_, symbol.name().get());
+      node_symbol.set_address(child->allocator_, symbol.address());
+      child->symbols_.emplace_back(std::move(node_symbol));
     }
   }
-  auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_, name.get(),
-                                      std::move(offers), std::move(symbols));
 
   auto bind_controller = fidl::BindServer<fdf::NodeController::Interface>(
       dispatcher_, std::move(controller), child.get());
@@ -354,7 +349,7 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fsys::Realm> realm, DriverIndex* driv
     : realm_(std::move(realm), dispatcher),
       driver_index_(driver_index),
       dispatcher_(dispatcher),
-      root_node_(nullptr, this, dispatcher, "root", {}, {}) {
+      root_node_(nullptr, this, dispatcher, "root") {
   inspector->GetRoot().CreateLazyNode(
       "driver_runner", [this] { return Inspect(); }, inspector);
 }

@@ -89,7 +89,7 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
   using Symbols = std::vector<llcpp::fuchsia::driver::framework::wire::NodeSymbol>;
 
   Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
-       std::string_view name, Offers offers, Symbols symbols);
+       std::string_view name);
   ~Node() override;
 
   const std::string& name() const;
@@ -123,6 +123,7 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
   async_dispatcher_t* const dispatcher_;
 
   const std::string name_;
+  fidl::FidlAllocator<512> allocator_;
   Offers offers_;
   Symbols symbols_;
 

@@ -219,39 +219,33 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   }
 
   zx::channel StartDriver(DriverRunner* driver_runner, Driver driver) {
-    fidl::StringView binary = fidl::unowned_str(driver.binary);
-    auto colocate = driver.colocate ? fidl::StringView("true") : fidl::StringView("false");
-    fdata::wire::DictionaryEntry program_entries[] = {
-        {
-            .key = "binary",
-            .value = fdata::wire::DictionaryValue::WithStr(fidl::unowned_ptr(&binary)),
-        },
-        {
-            .key = "colocate",
-            .value = fdata::wire::DictionaryValue::WithStr(fidl::unowned_ptr(&colocate)),
-        },
-    };
-    auto entries = fidl::unowned_vec(program_entries);
-    auto program =
-        fdata::wire::Dictionary::Builder(std::make_unique<fdata::wire::Dictionary::Frame>())
-            .set_entries(fidl::unowned_ptr(&entries))
-            .build();
-    auto url = fidl::unowned_str(driver.url);
-    fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns;
+    fidl::FidlAllocator allocator;
+
+    fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(allocator, 2);
+    program_entries[0].key.Set(allocator, "binary");
+    program_entries[0].value.set_str(allocator, allocator, driver.binary);
+    program_entries[1].key.Set(allocator, "colocate");
+    program_entries[1].value.set_str(allocator, allocator, driver.colocate ? "true" : "false");
+
+    fdata::Dictionary program(allocator);
+    program.set_entries(allocator, std::move(program_entries));
+
     auto outgoing_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
     EXPECT_EQ(ZX_OK, outgoing_endpoints.status_value());
-    auto start_info = frunner::wire::ComponentStartInfo::UnownedBuilder()
-                          .set_resolved_url(fidl::unowned_ptr(&url))
-                          .set_program(fidl::unowned_ptr(&program))
-                          .set_ns(fidl::unowned_ptr(&ns))
-                          .set_outgoing_dir(fidl::unowned_ptr((&outgoing_endpoints->server)));
+
+    frunner::wire::ComponentStartInfo start_info(allocator);
+    start_info.set_resolved_url(allocator, allocator, driver.url)
+        .set_program(allocator, std::move(program))
+        .set_ns(allocator)
+        .set_outgoing_dir(allocator, std::move(outgoing_endpoints->server));
+
     zx::channel controller_client_end, controller_server_end;
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &controller_client_end, &controller_server_end));
     TestTransaction transaction(driver.close);
     {
       frunner::ComponentRunner::Interface::StartCompleter::Sync completer(&transaction);
       static_cast<frunner::ComponentRunner::Interface*>(driver_runner)
-          ->Start(start_info.build(), std::move(controller_server_end), completer);
+          ->Start(std::move(start_info), std::move(controller_server_end), completer);
     }
     loop().RunUntilIdle();
     return controller_client_end;
