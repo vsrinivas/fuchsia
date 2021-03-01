@@ -111,6 +111,7 @@ class SessionmgrIntegrationTest : public modular_testing::TestHarnessFixture {
 
   std::unique_ptr<modular_testing::FakeGraphicalPresenter> fake_graphical_presenter_;
   std::unique_ptr<modular_testing::FakeModule> fake_module_;
+  std::unique_ptr<modular_testing::FakeAgent> fake_agent_;
 };
 
 class SessionmgrIntegrationTestWithoutDefaultHarness : public sys::testing::TestWithEnvironment {};
@@ -549,7 +550,6 @@ TEST_F(SessionmgrIntegrationTest, RestartSessionAgentOnCrash) {
   spec.mutable_sessionmgr_config()->set_session_agents({fake_agent_url});
   modular_testing::TestHarnessBuilder builder(std::move(spec));
 
-  std::unique_ptr<modular_testing::FakeAgent> fake_agent;
   builder.InterceptComponent({
       .url = fake_agent_url,
       .sandbox_services =
@@ -561,25 +561,25 @@ TEST_F(SessionmgrIntegrationTest, RestartSessionAgentOnCrash) {
               fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
                   intercepted_component) mutable {
             launch_count++;
-            fake_agent =
+            fake_agent_ =
                 std::make_unique<modular_testing::FakeAgent>(modular_testing::FakeComponent::Args{
                     .url = fake_agent_url,
                 });
-            fake_agent->BuildInterceptOptions().launch_handler(std::move(startup_info),
-                                                               std::move(intercepted_component));
+            fake_agent_->BuildInterceptOptions().launch_handler(std::move(startup_info),
+                                                                std::move(intercepted_component));
           },
   });
   builder.BuildAndRun(test_harness());
 
-  RunLoopUntil([&] { return !!fake_agent && fake_agent->is_running(); });
+  RunLoopUntil([&] { return !!fake_agent_ && fake_agent_->is_running(); });
 
   ASSERT_EQ(1, launch_count);
 
-  fake_agent->Exit(1, fuchsia::sys::TerminationReason::UNKNOWN);
-  auto old_agent = std::move(fake_agent);
-  fake_agent.reset();
+  fake_agent_->Exit(1, fuchsia::sys::TerminationReason::UNKNOWN);
+  auto old_agent = std::move(fake_agent_);
+  fake_agent_.reset();
 
-  RunLoopUntil([&] { return !!fake_agent && fake_agent->is_running(); });
+  RunLoopUntil([&] { return !!fake_agent_ && fake_agent_->is_running(); });
 
   ASSERT_EQ(2, launch_count);
 }
@@ -596,24 +596,24 @@ TEST_F(SessionmgrIntegrationTest, RestartSessionOnSessionAgentCrash) {
   modular_testing::TestHarnessBuilder builder(std::move(spec));
   auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
   builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
-  auto fake_agent =
+  fake_agent_ =
       std::make_unique<modular_testing::FakeAgent>(modular_testing::FakeComponent::Args{
           .url = kFakeAgentUrl,
           .sandbox_services = modular_testing::FakeAgent::GetDefaultSandboxServices()});
-  builder.InterceptComponent(fake_agent->BuildInterceptOptions());
+  builder.InterceptComponent(fake_agent_->BuildInterceptOptions());
 
   builder.BuildAndRun(test_harness());
 
   // Wait for the session to start.
-  RunLoopUntil([&] { return session_shell->is_running() && fake_agent->is_running(); });
+  RunLoopUntil([&] { return session_shell->is_running() && fake_agent_->is_running(); });
 
   // Terminate the agent.
-  fake_agent->Exit(1, fuchsia::sys::TerminationReason::UNKNOWN);
-  RunLoopUntil([&] { return !fake_agent->is_running(); });
+  fake_agent_->Exit(1, fuchsia::sys::TerminationReason::UNKNOWN);
+  RunLoopUntil([&] { return !fake_agent_->is_running(); });
 
   // The session and agent should have restarted.
   RunLoopUntil([&] { return !session_shell->is_running(); });
-  RunLoopUntil([&] { return session_shell->is_running() && fake_agent->is_running(); });
+  RunLoopUntil([&] { return session_shell->is_running() && fake_agent_->is_running(); });
 }
 
 // Tests that agents have access to PuppetMaster during teardown.
@@ -622,7 +622,7 @@ TEST_F(SessionmgrIntegrationTestWithoutDefaultHarness, PuppetMasterInAgentTermin
   static const auto kFakeAgentUrl =
       modular_testing::TestHarnessBuilder::GenerateFakeUrl("test_agent");
 
-  auto fake_agent =
+  auto fake_agent_ =
       std::make_unique<FakeComponentWithOnTerminate>(modular_testing::FakeComponent::Args{
           .url = kFakeAgentUrl,
           .sandbox_services = {fuchsia::modular::ComponentContext::Name_,
@@ -643,11 +643,11 @@ TEST_F(SessionmgrIntegrationTestWithoutDefaultHarness, PuppetMasterInAgentTermin
 
     modular_testing::TestHarnessBuilder builder(std::move(spec));
     builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
-    builder.InterceptComponent(fake_agent->BuildInterceptOptions());
+    builder.InterceptComponent(fake_agent_->BuildInterceptOptions());
     builder.BuildAndRun(test_harness_launcher.test_harness());
 
     // Wait for the session to start.
-    RunLoopUntil([&] { return session_shell->is_running() && fake_agent->is_running(); });
+    RunLoopUntil([&] { return session_shell->is_running() && fake_agent_->is_running(); });
 
     puppet_master.set_error_handler([&](zx_status_t /*unused*/) {
       // The agent should have terminated before PuppetMaster is closed.
@@ -656,9 +656,9 @@ TEST_F(SessionmgrIntegrationTestWithoutDefaultHarness, PuppetMasterInAgentTermin
     });
 
     // Connect to the PuppetMaster provided to the agent.
-    fake_agent->component_context()->svc()->Connect(puppet_master.NewRequest());
+    fake_agent_->component_context()->svc()->Connect(puppet_master.NewRequest());
 
-    fake_agent->set_on_terminate([&]() {
+    fake_agent_->set_on_terminate([&]() {
       // PuppetMaster should not have closed before the agent is torn down.
       EXPECT_FALSE(is_puppet_master_closed);
       is_agent_terminate_called = true;
@@ -667,7 +667,7 @@ TEST_F(SessionmgrIntegrationTestWithoutDefaultHarness, PuppetMasterInAgentTermin
     test_harness_launcher.StopTestHarness();
 
     // Wait until the agent terminates
-    RunLoopUntil([&] { return !fake_agent->is_running(); });
+    RunLoopUntil([&] { return !fake_agent_->is_running(); });
 
     RunLoopUntil([&] { return is_agent_terminate_called && is_puppet_master_closed; });
 
