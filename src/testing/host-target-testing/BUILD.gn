@@ -44,7 +44,10 @@ go_library("host-target-testing") {
     "cli/device.go",
     "cli/installer.go",
     "device/device.go",
+    "device/finder.go",
     "device/monotonic.go",
+    "device/node_names.go",
+    "device/node_names_test.go",
     "device/resolver.go",
     "errutil/errutil.go",
     "omaha/omaha.go",
@@ -72,6 +75,7 @@ go_library("host-target-testing") {
 test_packages = [
   "artifacts",
   "avb",
+  "device",
   "packages",
   "paver",
   "omaha",

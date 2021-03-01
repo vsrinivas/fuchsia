@@ -23,6 +23,8 @@
 ##   -h|--help                Print out this message.
 ##   -d NAME                  The name of the device to run on. Defaults to the
 ##                            device specified with `fx set-device`.
+##   --old-device-name NAME   The old-style device node name to run on
+##                            (deprecated).
 ##   -s|--session-name NAME   Name of the tmux session.
 ##   -o|--log-dir DIR         Write logs from every window to this directory.
 ##   -a|--append              Append to the logs, do not overwrite.
@@ -43,6 +45,7 @@ function usage() {
 
 SESSION_NAME=""
 DEVICE_NAME="$(get-device-name)"
+OLD_DEVICE_NAME=""
 TTY=""
 LOG_DIR=""
 APPEND=0
@@ -63,6 +66,16 @@ while [ $# -gt 0 ]; do
         exit 1
       fi
       DEVICE_NAME="$2"
+      shift
+      ;;
+    # FIXME(http://fxbug.dev/71146) drop support for --old-device-name once we
+    # no longer need to test with builds older than 2021-02-22.
+    --old-device-name)
+      if [[ $# -lt 2 ]]; then
+        fx-command-help
+        exit 1
+      fi
+      OLD_DEVICE_NAME="$2"
       shift
       ;;
     -t|--tty)
@@ -133,6 +146,10 @@ args+=(
   send-keys "fx ${device_args[@]} log" C-m \;
 )
 
+if [[ ! -z "$OLD_DEVICE_NAME" ]]; then
+  args+=( new-window -n "old-syslog" \; send-keys "fx -d="$OLD_DEVICE_NAME" log" C-m \; )
+fi
+
 # Create a new window, then use it to capture the serial log, or the kernel logs
 # if a TTY wasn't specified.
 if [[ ! -z "$TTY" ]]; then
@@ -159,8 +176,11 @@ if [[ ! -z "$LOG_DIR" ]]; then
   if [[ "$APPEND" -eq 1 ]]; then
     concat=">>"
   fi
+  args+=( pipe-pane -t syslog "cat $concat $LOG_DIR/$DEVICE_NAME.syslog" \; )
+  if [[ ! -z "$OLD_DEVICE_NAME" ]]; then
+    args+=( pipe-pane -t old-syslog "cat $concat $LOG_DIR/$OLD_DEVICE_NAME.syslog" \; )
+  fi
   args+=(
-    pipe-pane -t syslog "cat $concat $LOG_DIR/$DEVICE_NAME.syslog" \;
     pipe-pane -t serial "cat $concat $LOG_DIR/$DEVICE_NAME.serial" \;
     pipe-pane -t e2e "cat $concat $LOG_DIR/$DEVICE_NAME.e2e" \;
   )

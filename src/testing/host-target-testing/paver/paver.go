@@ -161,7 +161,7 @@ func (p *BuildPaver) Pave(ctx context.Context, deviceName string) error {
 func (p *BuildPaver) runPave(ctx context.Context, deviceName string, args ...string) error {
 	args = append([]string{"--images", filepath.Join(p.ImageDir, ImageManifest)}, args...)
 
-	logger.Infof(ctx, "paving device %q with %s %v", deviceName, p.BootserverPath, args)
+	logger.Infof(ctx, "paving device %q", deviceName)
 	path, err := exec.LookPath(p.BootserverPath)
 	if err != nil {
 		return err
