@@ -11,7 +11,6 @@ base_package_labels -= [
 
 base_package_labels += [
   "//garnet/packages/config:shortcut",
-  "//src/chromium:web_engine",
   "//src/dart:dart_jit",
   "//src/dart:dart_jit_product",
   "//src/flutter",
@@ -32,6 +31,7 @@ base_package_labels += [
 cache_package_labels -= [ "//src/ui/tools/tiles" ]
 
 cache_package_labels += [
+  "//src/chromium:web_engine",
   "//src/experiences/bin/simple_browser:simple-browser",
   "//src/experiences/bin/simple_browser:web_engine_config",
   "//src/experiences/session_shells/ermine",
