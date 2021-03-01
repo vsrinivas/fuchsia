@@ -1,0 +1,39 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/dhcpd",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.net.dhcp.Server" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.net.NameLookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.stash.SecureStore",
+            ],
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.net.dhcp.Server" ],
+            from: "self",
+        },
+    ],
+}

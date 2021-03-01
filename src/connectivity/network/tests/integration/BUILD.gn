@@ -67,7 +67,7 @@ fuchsia_test_package("netstack-integration-tests") {
     "//src/sys/stash:stash_secure",
 
     # dhcpd is used to test DHCP address acquisition.
-    "//src/connectivity/network/dhcp:component",
+    "//src/connectivity/network/dhcp:component-v1",
 
     # DHCPv6 client is under test.
     "//src/connectivity/network/dhcpv6/client:component",

@@ -85,6 +85,10 @@
             name: "pkg-cache",
             url: "fuchsia-pkg://fuchsia.com/pkg-cache#meta/pkg-cache.cm",
         },
+        {
+            name: "dhcpd",
+            url: "fuchsia-pkg://fuchsia.com/dhcpd#meta/dhcpd.cm",
+        },
     ],
     capabilities: [
         {
@@ -306,6 +310,7 @@
                 "#brightness_manager",
                 "#debug_serial",
                 "#detect",
+                "#dhcpd",
                 "#font_provider",
                 "#log-stats",
                 "#pkg-cache",
@@ -602,6 +607,32 @@
             from: "#session-manager",
             to: [ "#appmgr" ],
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.net.NameLookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.stash.SecureStore",
+            ],
+            from: "#appmgr",
+            to: [ "#dhcpd" ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#dhcpd" ],
+            subdir: "dhcpd",
+        },
+        {
+            protocol: "fuchsia.net.dhcp.Server",
+            from: "#dhcpd",
+            to: [ "#appmgr" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#dhcpd" ],
         },
     ],
     expose: [
