@@ -6,7 +6,6 @@
 #define LIB_FIDL_LLCPP_FIDL_ALLOCATOR_H_
 
 #include <lib/fidl/llcpp/traits.h>
-#include <lib/fit/function.h>
 #include <zircon/assert.h>
 
 #include <functional>
