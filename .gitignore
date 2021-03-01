@@ -59,9 +59,6 @@ TAGS
 Thumbs.db
 tools/cipd.gni
 topaz/
-vendor/
-!/src/connectivity/bluetooth/hci/vendor
-!/third_party/rust_crates/vendor
 tmp/
 json_generator_tests_*.txt
 tables_generator_tests_*.txt
@@ -95,16 +92,14 @@ tables_generator_tests_*.txt
 /third_party/zstd/src
 /tmp/
 /topaz/
-/vendor/
 /src/experiences
 /build/secondary/third_party/protobuf
 
+# Ignore all vendored subdirectories.
+/vendor/**/
+
 # rust-analyzer
 /rust-project.json
-
-# All files in vendor need to be delivered as is, as they use
-# checksumming to ensure secure package delivery.
-!/third_party/rust_crates/vendor/**
 
 # jiri generate-gitmodules can be used to generate a .gitmodules file that
 # reflects the repos that jiri checked out. This is useful for tooling (like
