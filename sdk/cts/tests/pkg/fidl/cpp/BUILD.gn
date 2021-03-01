@@ -48,6 +48,7 @@ cts_source_set("host_test_sources") {
     ":test_util",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//sdk/lib/fidl/cpp/test:fidl_test",
+    "//sdk/lib/stdcompat",
     "//zircon/public/lib/zxtest",
   ]
 }

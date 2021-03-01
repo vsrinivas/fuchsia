@@ -7,6 +7,7 @@
 
 #include <lib/fidl/cpp/builder.h>
 #include <lib/stdcompat/optional.h>
+#include <lib/stdcompat/string_view.h>
 #include <zircon/assert.h>
 
 #include <iosfwd>
@@ -64,6 +65,14 @@ class StringPtr final : public cpp17::optional<std::string> {
       : cpp17::optional<std::string>(std::string(value, size)) {}
   StringPtr& operator=(const char* value) {
     cpp17::optional<std::string>::operator=(value);
+    return *this;
+  }
+
+  // Construct from string views.
+  StringPtr(cpp17::string_view value)
+      : cpp17::optional<std::string>(std::string(value.data(), value.size())) {}
+  StringPtr& operator=(cpp17::string_view value) {
+    cpp17::optional<std::string>::operator=(std::string(value.data(), value.size()));
     return *this;
   }
 

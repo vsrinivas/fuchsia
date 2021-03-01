@@ -4,6 +4,8 @@
 
 #include "lib/fidl/cpp/string.h"
 
+#include <lib/stdcompat/string_view.h>
+
 #include <zxtest/zxtest.h>
 
 namespace fidl {
@@ -39,21 +41,69 @@ TEST(StringPtr, Control) {
 }
 
 TEST(StringPtr, Conversions) {
-  StringPtr hello = "hello";
-  EXPECT_TRUE(hello.has_value());
-  EXPECT_EQ("hello", *hello);
+  // const char*.
+  {
+    constexpr const char* kHello = "hello";
+    constexpr const char* kWorld = "world";
 
-  StringPtr world(std::string("world", 5));
-  EXPECT_TRUE(world.has_value());
-  EXPECT_EQ("world", *world);
+    StringPtr hello = kHello;
+    EXPECT_TRUE(hello.has_value());
+    EXPECT_EQ(kHello, *hello);
+
+    StringPtr world(kWorld);
+    EXPECT_TRUE(world.has_value());
+    EXPECT_EQ(kWorld, *world);
+  }
+
+  // cpp17::string_view.
+  {
+    constexpr cpp17::string_view kHello = "hello";
+    constexpr cpp17::string_view kWorld = "world";
+
+    StringPtr hello = kHello;
+    EXPECT_TRUE(hello.has_value());
+    EXPECT_EQ(kHello, *hello);
+
+    StringPtr world(kWorld);
+    EXPECT_TRUE(world.has_value());
+    EXPECT_EQ(kWorld, *world);
+  }
+
+  // const std::string&.
+  {
+    const std::string kHello = "hello";
+    const std::string kWorld = "world";
+
+    StringPtr hello = kHello;
+    EXPECT_TRUE(hello.has_value());
+    EXPECT_EQ(kHello, *hello);
+
+    StringPtr world(kWorld);
+    EXPECT_TRUE(world.has_value());
+    EXPECT_EQ(kWorld, *world);
+  }
+
+  // std::string&&.
+  {
+    std::string movable_hello = "hello";
+    std::string movable_world = "world";
+
+    StringPtr hello = std::move(movable_hello);
+    EXPECT_TRUE(hello.has_value());
+    EXPECT_EQ("hello", *hello);
+
+    StringPtr world(std::move(movable_world));
+    EXPECT_TRUE(world.has_value());
+    EXPECT_EQ("world", *world);
+  }
 
   StringPtr null = nullptr;
   EXPECT_FALSE(null.has_value());
 
-  std::string helloStr = hello.value_or("");
+  std::string helloStr = StringPtr("hello").value_or("");
   EXPECT_EQ("hello", helloStr);
 
-  std::string nullStr = null.value_or("");
+  std::string nullStr = StringPtr(nullptr).value_or("");
   EXPECT_EQ("", nullStr);
 }
 

@@ -11,7 +11,7 @@
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/natural_types_header.h": "693bb046740f37a8c2f6976fb8a3560b",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/natural_types_implementation.h": "78b8e4dfcb074e5fcce2722506c3aaa9",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/object_coding.h": "654a2d9b39f18bb4e844362ba4dfc31d",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "ee31777efb9c3df14040049bbd7740f8",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "e0cf6be194c6b4dafe0613a3e9bfec1d",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/traits.h": "9a662d0b356f8ca126441598fbb7d169",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/transition.h": "ea5fd3c5abf19d39e0dda995f794d148",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/types.h": "56e709911f72250dfe5755dfcc2d1445",
