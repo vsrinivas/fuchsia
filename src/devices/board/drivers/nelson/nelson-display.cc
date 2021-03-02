@@ -157,10 +157,14 @@ zx_status_t Nelson::DisplayInit() {
   };
 
   // TODO(61396): Add support for DVT panels.
-  if (GetDisplayId() & 1) {
-    display_panel_info[0].panel_type = PANEL_P070ACB_FT;
+  if (Is9365Ddic()) {
+    display_panel_info[0].panel_type = PANEL_TV101WXM_FT_9365;
   } else {
-    display_panel_info[0].panel_type = PANEL_TV070WSM_FT;
+    if (GetDisplayId() & 1) {
+      display_panel_info[0].panel_type = PANEL_P070ACB_FT;
+    } else {
+      display_panel_info[0].panel_type = PANEL_TV070WSM_FT;
+    }
   }
   display_panel_metadata[0].data_size = sizeof(display_panel_info);
   display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);
