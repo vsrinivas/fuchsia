@@ -36,6 +36,7 @@ type AcquiredFunc func(lost, acquired tcpip.AddressWithPrefix, cfg Config)
 type Client struct {
 	stack           *stack.Stack
 	networkEndpoint stack.NetworkEndpoint
+	xid             xid
 
 	// info holds the Client's state as type Info.
 	info atomic.Value
@@ -112,8 +113,6 @@ type Info struct {
 	State dhcpClientState
 	// Assigned is the network address added by the client to its stack.
 	Assigned tcpip.AddressWithPrefix
-
-	xid xid
 }
 
 // NewClient creates a DHCP client.
@@ -440,7 +439,7 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 	c.wq.EventRegister(&we, waiter.EventIn)
 	defer c.wq.EventUnregister(&we)
 
-	if _, err := c.rand.Read(info.xid[:]); err != nil {
+	if _, err := c.rand.Read(c.xid[:]); err != nil {
 		return Config{}, fmt.Errorf("c.rand.Read(): %w", err)
 	}
 
@@ -480,7 +479,7 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 			// Receive a DHCPOFFER message from a responding DHCP server.
 			retransmit := c.retransTimeout(c.exponentialBackoff(i))
 			for {
-				result, retransmit, err := c.recv(ctx, nicName, ep, ch, info.xid[:], retransmit)
+				result, retransmit, err := c.recv(ctx, nicName, ep, ch, retransmit)
 				if err != nil {
 					if retransmit {
 						c.stats.RecvOfferAcquisitionTimeout.Increment()
@@ -599,7 +598,7 @@ retransmitRequest:
 		// Receive a DHCPACK/DHCPNAK from the server.
 		retransmit := c.retransTimeout(retransmitAfter)
 		for {
-			result, retransmit, err := c.recv(ctx, nicName, ep, ch, info.xid[:], retransmit)
+			result, retransmit, err := c.recv(ctx, nicName, ep, ch, retransmit)
 			if err != nil {
 				if retransmit {
 					c.stats.RecvAckAcquisitionTimeout.Increment()
@@ -669,8 +668,8 @@ func (c *Client) send(
 	dhcpPayload := hdr(b.Prepend(dhcpLength))
 	dhcpPayload.init()
 	dhcpPayload.setOp(opRequest)
-	if l := copy(dhcpPayload.xidbytes(), info.xid[:]); l != len(info.xid) {
-		panic(fmt.Sprintf("failed to copy xid bytes, want=%d got=%d", len(info.xid), l))
+	if n, l := copy(dhcpPayload.xidbytes(), c.xid[:]), len(c.xid); n != l {
+		panic(fmt.Sprintf("failed to copy xid bytes, want=%d got=%d", l, n))
 	}
 	if broadcast {
 		dhcpPayload.setBroadcast()
@@ -791,7 +790,6 @@ func (c *Client) recv(
 	nicName string,
 	ep tcpip.Endpoint,
 	read <-chan struct{},
-	xid []byte,
 	retransmit <-chan time.Time,
 ) (recvResult, bool, error) {
 	var b bytes.Buffer
@@ -918,7 +916,7 @@ func (c *Client) recv(
 			return recvResult{}, false, fmt.Errorf("op-code=%s, want=%s", h, opReply)
 		}
 
-		if !bytes.Equal(h.xidbytes(), xid) {
+		if !bytes.Equal(h.xidbytes(), c.xid[:]) {
 			// This message is for another client, ignore silently.
 			continue
 		}
