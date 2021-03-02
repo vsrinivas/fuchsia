@@ -4,7 +4,18 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+group("lib") {
+  testonly = true
+  deps = [
+    "memalloc",
+    "page-table",
+  ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ "memalloc:tests" ]
+  deps = [
+    "memalloc:tests",
+    "page-table:tests",
+  ]
 }
