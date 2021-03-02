@@ -5,11 +5,14 @@
 
 function usage() {
   cat <<EOF
-usage: $0 DIR1 DIR2
+usage: $0 DIR1 DIR2 [RELPATH]
 
 Compares two build directories for artifact differences.
 Comparison logic tries to account for the file type in
 choosing a diff strategy.
+
+If RELPATH is provided, then compare DIR1/RELPATH vs. DIR2/RELPATH.
+The joined path may reference a directory or file.
 
 Run this from the Fuchsia source checkout root dir ($FUCHSIA_DIR),
 because it references some tools from the source tree.
@@ -58,6 +61,7 @@ function diff_binary() {
 }
 
 function diff_file_relpath() {
+
   # $1 is left dir
   # $2 is right dir
   # $3 is a relative path under both dirs, and is itself not a directory.
@@ -66,7 +70,6 @@ function diff_file_relpath() {
   local left="$1/$3"
   local right="$2/$3"
   local common_path="$3"
-  # echo "Comparing file $3"
   filebase="$(basename "$common_path")"
 
   # TODO(fangism): Some files are stored as blobs so content differences
@@ -213,6 +216,18 @@ function diff_file_relpath() {
   esac
 }
 
+function diff_select() {
+  # $1 and $2 are two directories, e.g. "out/default"
+  # $3 is the relative path down from $1 and $2, e.g. "subdir/" or "".
+  local relpath="$3"
+  local fullpath="$1/$3"
+  if test -d "$fullpath"
+  then diff_dir_recursive "$1" "$2" "$relpath/"
+    # TODO(fangism): what about test -L for symlinks?
+  else diff_file_relpath "$1" "$2" "$relpath"
+  fi
+}
+
 function diff_dir_recursive() {
   # $1 and $2 are two directories, e.g. "out/default"
   # $3 is the relative path down from $1 and $2, e.g. "subdir/" or "".
@@ -237,17 +252,16 @@ function diff_dir_recursive() {
   do
     filebase="$(basename "$f")"
     relpath="$sub$filebase"
-    if test -d "$f"
-    then diff_dir_recursive "$1" "$2" "$relpath/"
-      # TODO(fangism): what about test -L for symlinks?
-    else diff_file_relpath "$1" "$2" "$relpath"
-    fi
+    diff_select "$1" "$2" "$relpath"
   done
 }
 
-test "$#" = 2 || { usage; exit 2; }
+test "$#" -ge 2 || { usage; exit 2; }
 
-diff_dir_recursive "$1" "$2" ""
+if test "$#" = 3
+then diff_select "$1" "$2" "$3"
+else diff_dir_recursive "$1" "$2" ""
+fi
 
 # Summarize findings:
 exit_status=0
@@ -258,6 +272,7 @@ then
   for path in "${unexpected_diffs[@]}"
   do echo "  $path"
   done
+  echo
   exit_status=1
 fi
 
@@ -267,6 +282,7 @@ then
   for path in "${unexpected_matches[@]}"
   do echo "  $path"
   done
+  echo
   exit_status=1
 fi
 
@@ -276,6 +292,7 @@ then
   for path in "${unclassified_diffs[@]}"
   do echo "  $path"
   done
+  echo
   # Leave exit status as it were.
 fi
 
@@ -285,6 +302,7 @@ then
   for path in "${unclassified_matches[@]}"
   do echo "  $path"
   done
+  echo
   # Leave exit status as it were.
 fi
 
