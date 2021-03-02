@@ -330,7 +330,7 @@ SecureVmoReadTester::SecureVmoReadTester(zx::vmo secure_vmo) : secure_vmo_(std::
   // theoretically something else could be mapped unless we're specific with a
   // VMAR that isn't letting something else get mapped there yet.
   zx_vaddr_t child_vaddr;
-  zx_status_t status = zx::vmar::root_self()->allocate2(
+  zx_status_t status = zx::vmar::root_self()->allocate(
       ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, 0, ZX_PAGE_SIZE,
       &child_vmar_, &child_vaddr);
   ZX_ASSERT(status == ZX_OK);
@@ -373,7 +373,7 @@ SecureVmoReadTester::SecureVmoReadTester(zx::vmo secure_vmo) : secure_vmo_(std::
     // syscall docs aren't completely clear on whether zx_vmar_unmap() might
     // make the vaddr page available for other uses.
     zx_status_t status;
-    status = child_vmar_.protect2(0, reinterpret_cast<uintptr_t>(map_addr_), ZX_PAGE_SIZE);
+    status = child_vmar_.protect(0, reinterpret_cast<uintptr_t>(map_addr_), ZX_PAGE_SIZE);
     ZX_ASSERT(status == ZX_OK);
   });
 

@@ -2173,8 +2173,8 @@ TEST(Vmar, ConcurrentUnmapReadMemory) {
 
   zx::vmar child_vmar;
   uintptr_t addr;
-  ASSERT_EQ(root_vmar->allocate2(ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ, 0,
-                                 zx_system_get_page_size() * 4, &child_vmar, &addr),
+  ASSERT_EQ(root_vmar->allocate(ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ, 0,
+                                zx_system_get_page_size() * 4, &child_vmar, &addr),
             ZX_OK);
 
   std::atomic<bool> running = true;

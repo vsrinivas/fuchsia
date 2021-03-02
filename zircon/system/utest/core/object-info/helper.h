@@ -217,7 +217,7 @@ void CheckPartiallyUnmappedBufferIsError(zx_object_info_topic_t topic,
   uintptr_t vmar_addr;
   const auto& handle = provider();
 
-  ASSERT_OK(zx::vmar::root_self()->allocate2(
+  ASSERT_OK(zx::vmar::root_self()->allocate(
       ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, 0,
       2 * zx_system_get_page_size(), &vmar, &vmar_addr));
 

@@ -119,7 +119,7 @@ bool VmoCloneTest(perftest::RepeatState* state, uint32_t copy_size, uint32_t map
   zx::vmar vmar;
   zx_vaddr_t addr = 0;
   // Allocate a single vmar so we have a single reserved block if mapping in using multiple chunks.
-  ASSERT_OK(zx::vmar::root_self()->allocate2(
+  ASSERT_OK(zx::vmar::root_self()->allocate(
       ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0, copy_size, &vmar,
       &addr));
 

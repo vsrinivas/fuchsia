@@ -108,8 +108,8 @@ class ProcessFixture : public zxtest::Test {
     info_.vmar_size = zx_system_get_page_size() * kNumMappings * 16;
     zx::vmar sub_vmar;
 
-    ASSERT_OK(vmar_.allocate2(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_EXECUTE, 0,
-                              info_.vmar_size, &sub_vmar, &info_.vmar_base));
+    ASSERT_OK(vmar_.allocate(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_EXECUTE, 0,
+                             info_.vmar_size, &sub_vmar, &info_.vmar_base));
 
     zx::vmo vmo;
     const size_t kVmoSize = zx_system_get_page_size() * kNumMappings;

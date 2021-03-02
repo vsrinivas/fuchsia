@@ -875,8 +875,8 @@ void InitializeStruct(Struct* s) {
   ASSERT_EQ(ZX_OK, zx::job::create(*zx::job::default_job(), 0u, &s->handles.job_handle));
 
   uintptr_t vmar_addr;
-  ASSERT_EQ(ZX_OK, zx::vmar::root_self()->allocate2(ZX_VM_CAN_MAP_READ, 0u, getpagesize(),
-                                                    &s->handles.vmar_handle, &vmar_addr));
+  ASSERT_EQ(ZX_OK, zx::vmar::root_self()->allocate(ZX_VM_CAN_MAP_READ, 0u, getpagesize(),
+                                                   &s->handles.vmar_handle, &vmar_addr));
 
   zx::fifo fifo1;
   ASSERT_EQ(ZX_OK, zx::fifo::create(1u, 1u, 0u, &s->handles.fifo_handle, &fifo1));

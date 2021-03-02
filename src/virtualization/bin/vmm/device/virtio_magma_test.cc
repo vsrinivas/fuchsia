@@ -51,8 +51,8 @@ class VirtioMagmaTest : public TestWithDevice {
   void SetUp() override {
     uintptr_t vmar_addr;
     zx::vmar vmar;
-    ASSERT_EQ(zx::vmar::root_self()->allocate2(kAllocateFlags, 0u, kVirtioMagmaVmarSize, &vmar,
-                                               &vmar_addr),
+    ASSERT_EQ(zx::vmar::root_self()->allocate(kAllocateFlags, 0u, kVirtioMagmaVmarSize, &vmar,
+                                              &vmar_addr),
               ZX_OK);
     fuchsia::virtualization::hardware::StartInfo start_info;
     zx_status_t status = LaunchDevice(kVirtioMagmaUrl, out_queue_.end(), &start_info);

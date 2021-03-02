@@ -25,8 +25,8 @@ fitx::result<zx_status_t, void*> StorageTraits<MapUnownedVmo>::Map(MapUnownedVmo
     if (offset_in_mapping < zbi.mapping_.size_ &&
         zbi.mapping_.size_ - offset_in_mapping >= length) {
       if (write && !zbi.mapping_.write_) {
-        zx_status_t status = zbi.vmar().protect2(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                                                 zbi.mapping_.address_, zbi.mapping_.size_);
+        zx_status_t status = zbi.vmar().protect(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                                zbi.mapping_.address_, zbi.mapping_.size_);
         if (status != ZX_OK) {
           return fitx::error{status};
         }
