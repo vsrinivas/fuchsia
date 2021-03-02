@@ -22,9 +22,6 @@ pub mod low_energy_central;
 /// Tests for the fuchsia.bluetooth.le.Peripheral protocol
 pub mod low_energy_peripheral;
 
-/// Tests for the fuchsia.bluetooth.bredr.Profile protocol
-pub mod profile;
-
 // Use a framework-wide timeout of 4 minutes.
 //
 // This time is expected to be:

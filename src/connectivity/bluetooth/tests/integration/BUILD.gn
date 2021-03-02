@@ -10,7 +10,6 @@ rustc_binary("integration_tests_bin") {
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
@@ -48,7 +47,6 @@ rustc_binary("integration_tests_bin") {
     "src/tests/low_energy_central.rs",
     "src/tests/low_energy_peripheral.rs",
     "src/tests/mod.rs",
-    "src/tests/profile.rs",
   ]
 }
 

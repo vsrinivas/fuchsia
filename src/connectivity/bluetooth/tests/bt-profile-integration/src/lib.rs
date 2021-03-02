@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -10,7 +10,7 @@ use {
     },
     fidl::encoding::Decodable,
     fidl::endpoints::create_request_stream,
-    fidl_fuchsia_bluetooth::{DeviceClass, MAJOR_DEVICE_CLASS_MISCELLANEOUS},
+    fidl_fuchsia_bluetooth::{DeviceClass, ErrorCode, MAJOR_DEVICE_CLASS_MISCELLANEOUS},
     fidl_fuchsia_bluetooth_bredr::{
         ChannelParameters, ConnectParameters, ConnectionReceiverRequestStream, DataElement,
         L2capParameters, ProfileDescriptor, ProtocolDescriptor, ProtocolIdentifier,
@@ -21,14 +21,12 @@ use {
     fidl_fuchsia_bluetooth_test::{BredrPeerParameters, HciEmulatorProxy, PeerProxy},
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
+        constants::integration_timeout_duration,
         expectation::asynchronous::{ExpectableExt, ExpectableStateExt},
         types::{Address, PeerId, Uuid},
     },
     futures::{FutureExt, StreamExt, TryFutureExt},
-    test_harness::run_suite,
 };
-
-use crate::tests::timeout_duration;
 
 /// This makes a custom BR/EDR service definition that runs over L2CAP.
 fn service_definition_for_testing() -> ServiceDefinition {
@@ -120,18 +118,20 @@ fn default_address() -> Address {
     Address::Public([1, 0, 0, 0, 0, 0])
 }
 
+#[test_harness::run_singlethreaded_test]
 async fn test_add_profile(profile: ProfileHarness) -> Result<(), Error> {
     let _ = add_service(&profile)?;
     Ok(())
 }
 
+#[test_harness::run_singlethreaded_test]
 async fn test_same_psm_twice_fails(profile: ProfileHarness) -> Result<(), Error> {
     let _request_stream = add_service(&profile)?;
     let mut second_request_stream = add_service(&profile)?;
     // Second request should have a closed stream
     match second_request_stream
         .next()
-        .on_timeout(timeout_duration().after_now(), || {
+        .on_timeout(integration_timeout_duration().after_now(), || {
             Some(Err(fidl::Error::UnexpectedSyncResponse))
         })
         .await
@@ -141,6 +141,7 @@ async fn test_same_psm_twice_fails(profile: ProfileHarness) -> Result<(), Error>
     }
 }
 
+#[test_harness::run_singlethreaded_test]
 async fn test_add_and_remove_profile(profile: ProfileHarness) -> Result<(), Error> {
     let request_stream = add_service(&profile)?;
 
@@ -157,6 +158,7 @@ async fn test_add_and_remove_profile(profile: ProfileHarness) -> Result<(), Erro
     Ok(())
 }
 
+#[test_harness::run_singlethreaded_test]
 async fn test_connect_unknown_peer(profile: ProfileHarness) -> Result<(), Error> {
     let fut = profile.aux().profile.connect(
         &mut PeerId(0xDEAD).into(),
@@ -166,11 +168,14 @@ async fn test_connect_unknown_peer(profile: ProfileHarness) -> Result<(), Error>
         }),
     );
     match fut.await {
-        Ok(Err(_)) => Ok(()),
+        Ok(Err(ErrorCode::Failed)) => Ok(()),
         x => Err(format_err!("Expected error from connecting to an unknown peer, got {:?}", x)),
     }
 }
 
+// TODO(fxbug.dev/70927): Fix this and reenable
+#[ignore]
+#[test_harness::run_singlethreaded_test]
 async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> Result<(), Error> {
     let emulator = profile.aux().emulator.clone();
     let peer_address = default_address();
@@ -180,7 +185,10 @@ async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> 
     let _discovery_result = start_discovery(&access).await?;
 
     let state = access
-        .when_satisfied(expectation::peer_with_address(peer_address), timeout_duration())
+        .when_satisfied(
+            expectation::peer_with_address(peer_address),
+            integration_timeout_duration(),
+        )
         .await?;
 
     let connected_peer_id = state.peers.values().find(|p| p.address == peer_address).unwrap().id;
@@ -190,7 +198,10 @@ async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> 
         .await?
         .map_err(|sys_err| format_err!("Error calling Connect(): {:?}", sys_err))?;
     access
-        .when_satisfied(expectation::peer_connected(connected_peer_id, true), timeout_duration())
+        .when_satisfied(
+            expectation::peer_connected(connected_peer_id, true),
+            integration_timeout_duration(),
+        )
         .await?;
 
     // The SDP search result conducted following connection should contain the
@@ -206,7 +217,7 @@ async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> 
                 connected_peer_id,
                 Uuid::new16(profile_id.into_primitive()),
             ),
-            timeout_duration(),
+            integration_timeout_duration(),
         )
         .await?;
 
@@ -214,17 +225,3 @@ async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> 
 }
 
 // TODO(fxbug.dev/1252): the rest of connect_l2cap tests (that actually succeed)
-
-/// Run all test cases.
-pub fn run_all() -> Result<(), Error> {
-    run_suite!(
-        "bredr.Profile",
-        [
-            test_add_profile,
-            test_same_psm_twice_fails,
-            test_add_and_remove_profile,
-            test_connect_unknown_peer,
-            test_add_search
-        ]
-    )
-}
