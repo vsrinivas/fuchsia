@@ -19,16 +19,24 @@ if !exists("g:main_syntax")
 endif
 
 " Keywords
-syn keyword fidlKeyword as bits compose const enum error library protocol struct table union using xunion
+" 
+" Start from:
+"   sed '/## Grammar/,$!d' docs/reference/fidl/language/grammar.md |
+"   sed '/-------/,$d' |
+"   grep -P '"[a-z]*?"'
+" to update.
+syn keyword fidlKeyword alias as bits compose const enum error false flexible library properties protocol reserved resource resource_definition service strict struct table true union using
 
 " Types
 syn match fidlType "\<request<@\?[a-zA-Z][a-zA-Z0-9]*\(\.[a-zA-Z][a-zA-Z0-9]*\)*>?\?"
 
-syn match fidlType "\<handle\>?\?"
-" Exhaustive list of the handle types is listed below.  Highlight anything else
-" as invalid.
-syn match fidlBadType "\<handle<[^>]*>?\?"
-syn match fidlType "\<handle<\(channel\|clock\|debuglog\|event\|eventpair\|fifo\|guest\|interrupt\|iommu\|job\|pager\|pcidevice\|pmt\|port\|process\|profile\|resource\|socket\|suspendtoken\|thread\|timer\|vcpu\|vmar\|vmo\)>?\?"
+" From zircon/vdso/zx_common.fidl:
+syn match fidlBadType "\<zx.handle:[A-Z]*?\?"
+" The above flags zx.handle:TYPO, but then reallow zx.handle:< anything > for
+" complex handle types.
+syn match fidlType "\<zx.handle:<[^>]*>\?"
+" And specifically make known handle subtypes recognized.
+syn match fidlType "\<zx.handle:\(BTI\|CHANNEL\|CLOCK\|EVENT\|EVENTPAIR\|EXCEPTION\|FIFO\|GUEST\|INTERRUPT\|IOMMU\|JOB\|LOG\|MSI_ALLOCATION\|MSI_INTERRUPT\|PAGER\|PCI_DEVICE\|PMT\|PORT\|PROCESS\|PROFILE\|RESOURCE\|SOCKET\|STREAM\|SUSPEND_TOKEN\|THREAD\|TIMER\|VCPU\|VMAR\|VMO\)\>"
 
 syn match fidlType "\<string\>\%(:\%(\d\+\|\K\k*\%(\.\K\k*\)*\)\)\??\?"
 syn match fidlType "\<bool\>"
