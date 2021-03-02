@@ -165,7 +165,7 @@ function main {
 
     # `go build` does an incremental build, only rebuilding what's necessary
     # based on source content hashes.
-    "${PREBUILT_GO_DIR}/bin/go" build -o "$exe_path" ./build/fx-set/cmd
+    "${PREBUILT_GO_DIR}/bin/go" build -mod=readonly -o "$exe_path" ./build/fx-set/cmd
 
     exec "$exe_path" "$@"
   fi
