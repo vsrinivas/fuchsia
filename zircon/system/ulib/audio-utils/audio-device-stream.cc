@@ -126,14 +126,12 @@ zx_status_t AudioDeviceStream::SetGain(float gain) {
 }
 
 zx_status_t AudioDeviceStream::SetGainParams() {
-  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
-  fidl::aligned<bool> muted = muted_;
-  fidl::aligned<bool> agc_enabled = agc_enabled_;
-  fidl::aligned<float> gain = gain_;
-  builder.set_muted(fidl::unowned_ptr(&muted));
-  builder.set_agc_enabled(fidl::unowned_ptr(&agc_enabled));
-  builder.set_gain_db(fidl::unowned_ptr(&gain));
-  audio_fidl::StreamConfig::Call::SetGain(stream_ch_, builder.build());
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::GainState gain_state(allocator);
+  gain_state.set_muted(allocator, muted_)
+      .set_agc_enabled(allocator, agc_enabled_)
+      .set_gain_db(allocator, gain_);
+  audio_fidl::StreamConfig::Call::SetGain(stream_ch_, std::move(gain_state));
   return ZX_OK;
 }
 
@@ -266,10 +264,12 @@ zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second, uint16_t ch
   pcm_format.frame_rate = frames_per_second;
   pcm_format.bytes_per_sample = channel_size_ / 8;
   pcm_format.valid_bits_per_sample = sample_size_;
-  auto builder = audio_fidl::wire::Format::UnownedBuilder();
-  builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, std::move(pcm_format));
 
-  audio_fidl::StreamConfig::Call::CreateRingBuffer(stream_ch_, builder.build(), std::move(remote));
+  audio_fidl::StreamConfig::Call::CreateRingBuffer(stream_ch_, std::move(format),
+                                                   std::move(remote));
   rb_ch_ = std::move(local);
   return ZX_OK;
 }
