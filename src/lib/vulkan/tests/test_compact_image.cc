@@ -370,4 +370,7 @@ TEST(CompactImage, TrimCompactImageDeviceMemoryFUCHSIA) {
   f_vkTrimCompactImageDeviceMemoryFUCHSIA(device, image, image_memory, 0);
   // TODO(reveman): Querying commitment for memory when
   // VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT is supported.
+
+  vkDestroyImage(device, image, 0);
+  vkFreeMemory(device, image_memory, 0);
 }

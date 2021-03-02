@@ -10,6 +10,7 @@
 #include <vk_layer_utils_minimal.h>
 
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <fbl/auto_call.h>
@@ -633,7 +634,31 @@ class ImageCompactor {
         .allocationSize = pAllocateInfo->allocationSize,
         .memoryTypeIndex = pAllocateInfo->memoryTypeIndex,
     };
-    return dispatch_->AllocateMemory(device_, &allocation_info, pAllocator, pMemory);
+    auto result = dispatch_->AllocateMemory(device_, &allocation_info, pAllocator, pMemory);
+    if (result != VK_SUCCESS) {
+      return result;
+    }
+
+    compact_image_memory_.insert(*pMemory);
+    return VK_SUCCESS;
+  }
+
+  void FreeMemory(VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator) {
+    // Decommit the full-range of compact image memory when released to
+    // ensure that memory is released to the system immediately.
+    auto it = compact_image_memory_.find(memory);
+    if (it != compact_image_memory_.end()) {
+      VkMemoryRangeFUCHSIA range = {
+          .memory = memory,
+          .offset = 0,
+          .size = VK_WHOLE_SIZE,
+      };
+      dispatch_->ModifyMemoryRangesFUCHSIA(
+          device_, VK_MEMORY_OP_UNPIN_BIT_FUCHSIA | VK_MEMORY_OP_DECOMMIT_BIT_FUCHSIA, 1, &range,
+          nullptr);
+      compact_image_memory_.erase(it);
+    }
+    dispatch_->FreeMemory(device_, memory, pAllocator);
   }
 
   VkResult BeginCommandBuffer(VkCommandBuffer commandBuffer,
@@ -1008,7 +1033,7 @@ class ImageCompactor {
   VkPipeline pack_pipeline_ = VK_NULL_HANDLE;
   VkPipeline unpack_pipeline_ = VK_NULL_HANDLE;
   std::unordered_map<VkImage, CompactImage> compact_images_;
-  std::unordered_map<VkDeviceMemory, VkImage> dedicated_image_memory_;
+  std::unordered_set<VkDeviceMemory> compact_image_memory_;
   std::unordered_map<VkCommandBuffer, CommandBufferState> command_buffer_state_;
 };
 
@@ -1286,6 +1311,17 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device,
   return compactor->AllocateMemory(pAllocateInfo, pAllocator, pMemory);
 }
 
+VKAPI_ATTR void VKAPI_CALL FreeMemory(VkDevice device, VkDeviceMemory memory,
+                                      const VkAllocationCallbacks* pAllocator) {
+  dispatch_key device_key = get_dispatch_key(device);
+  LayerData* device_layer_data = GetLayerDataPtr(device_key, layer_data_map);
+  ImageCompactor* compactor = device_layer_data->compactor.get();
+
+  FX_CHECK(compactor);
+
+  return compactor->FreeMemory(memory, pAllocator);
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
                                                   const VkCommandBufferBeginInfo* pBeginInfo) {
   dispatch_key device_key = get_dispatch_key(commandBuffer);
@@ -1433,6 +1469,9 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char* name) {
   }
   if (!strcmp(name, "AllocateMemory")) {
     return reinterpret_cast<PFN_vkVoidFunction>(AllocateMemory);
+  }
+  if (!strcmp(name, "FreeMemory")) {
+    return reinterpret_cast<PFN_vkVoidFunction>(FreeMemory);
   }
   if (!strcmp(name, "BeginCommandBuffer")) {
     return reinterpret_cast<PFN_vkVoidFunction>(BeginCommandBuffer);
