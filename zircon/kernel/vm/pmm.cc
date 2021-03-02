@@ -207,39 +207,43 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
   const bool is_panic = flags & CMD_FLAG_PANIC;
   auto usage = [cmd_name = argv[0].str, is_panic]() -> int {
     printf("usage:\n");
-    printf("%s dump                                 : dump pmm info \n", cmd_name);
+    printf("%s dump                                     : dump pmm info \n", cmd_name);
     if (!is_panic) {
-      printf("%s free                                 : periodically dump free mem count\n",
+      printf("%s free                                     : periodically dump free mem count\n",
              cmd_name);
       printf(
-          "%s oom [<rate>]                         : leak memory until oom is triggered, "
+          "%s oom [<rate>]                             : leak memory until oom is triggered, "
           "optionally specify the rate at which to leak (in MB per second)\n",
           cmd_name);
       printf(
-          "%s oom hard                             : leak memory aggressively and keep on "
+          "%s oom hard                                 : leak memory aggressively and keep on "
           "leaking\n",
           cmd_name);
       printf(
-          "%s oom signal                           : trigger oom signal without leaking memory\n",
+          "%s oom signal                               : trigger oom signal without leaking "
+          "memory\n",
           cmd_name);
-      printf("%s mem_avail_state info                 : dump memory availability state info\n",
+      printf("%s mem_avail_state info                     : dump memory availability state info\n",
              cmd_name);
       printf(
-          "%s mem_avail_state <state> [<nsecs>]    : allocate memory to go to memstate <state>, "
-          "hold the state for <nsecs> (default 10s) only works if going to <state> from current "
-          "state requires allocating memory, can't free up pre-allocated memory\n",
+          "%s mem_avail_state [step] <state> [<nsecs>] : allocate memory to go to memstate "
+          "<state>, hold the state for <nsecs> (10s by default). Only works if going to <state> "
+          "from current state requires allocating memory, can't free up pre-allocated memory. In "
+          "optional [step] mode, allocation pauses for 1 second at each intermediate memory "
+          "availability state until <state> is reached.\n",
           cmd_name);
-      printf("%s drop_user_pt                         : drop all user hardware page tables\n",
+      printf("%s drop_user_pt                             : drop all user hardware page tables\n",
              cmd_name);
-      printf("%s checker status                       : prints the status of the pmm checker\n",
+      printf("%s checker status                           : prints the status of the pmm checker\n",
              cmd_name);
       printf(
-          "%s checker enable [<size>] [oops|panic] : enables the pmm checker with optional fill "
-          "size and optional action\n",
+          "%s checker enable [<size>] [oops|panic]     : enables the pmm checker with optional "
+          "fill size and optional action\n",
           cmd_name);
-      printf("%s checker disable                      : disables the pmm checker\n", cmd_name);
+      printf("%s checker disable                          : disables the pmm checker\n", cmd_name);
       printf(
-          "%s checker check                        : forces a check of all free pages in the pmm\n",
+          "%s checker check                            : forces a check of all free pages in the "
+          "pmm\n",
           cmd_name);
     }
     return ZX_ERR_INTERNAL;
@@ -341,26 +345,60 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     if (!strcmp(argv[2].str, "info")) {
       pmm_node.DumpMemAvailState();
     } else {
-      uint8_t state = static_cast<uint8_t>(argv[2].u);
+      bool step = false;
+      int index = 2;
+      if (!strcmp(argv[2].str, "step")) {
+        step = true;
+        index++;
+      }
+
+      uint8_t state = static_cast<uint8_t>(argv[index++].u);
       if (state > pmm_node.DebugMaxMemAvailState()) {
         printf("Invalid memstate %u. Specify a value between 0 and %u.\n", state,
                pmm_node.DebugMaxMemAvailState());
         return usage();
       }
+
       uint64_t pages_to_alloc, pages_to_free = 0;
       list_node list = LIST_INITIAL_VALUE(list);
-      // In case we are racing with someone freeing pages we will leak in a loop until we are sure
-      // we have hit the required memory availability state.
-      while ((pages_to_alloc = pmm_node.DebugNumPagesTillMemState(state)) > 0) {
-        if (pmm_node.AllocPages(pages_to_alloc, 0, &list) == ZX_OK) {
-          printf("Leaked %lu pages\n", pages_to_alloc);
-          pages_to_free += pages_to_alloc;
+
+      if (step) {
+        uint8_t s = pmm_node.DebugMaxMemAvailState();
+        while (true) {
+          // In case we are racing with someone freeing pages we will leak in a loop until we are
+          // sure we have hit the required memory availability state.
+          uint64_t pages_allocated = 0;
+          while ((pages_to_alloc = pmm_node.DebugNumPagesTillMemState(s)) > 0) {
+            if (pmm_node.AllocPages(pages_to_alloc, 0, &list) == ZX_OK) {
+              printf("Leaked %lu pages\n", pages_to_alloc);
+              pages_allocated += pages_to_alloc;
+            }
+          }
+          pages_to_free += pages_allocated;
+          if (s == state) {
+            break;
+          }
+          s--;
+          if (pages_allocated) {
+            printf("Sleeping for 1 second...\n");
+            Thread::Current::SleepRelative(ZX_SEC(1));
+          }
+        }
+      } else {
+        // In case we are racing with someone freeing pages we will leak in a loop until we are
+        // sure we have hit the required memory availability state.
+        while ((pages_to_alloc = pmm_node.DebugNumPagesTillMemState(state)) > 0) {
+          if (pmm_node.AllocPages(pages_to_alloc, 0, &list) == ZX_OK) {
+            printf("Leaked %lu pages\n", pages_to_alloc);
+            pages_to_free += pages_to_alloc;
+          }
         }
       }
+
       if (pages_to_free > 0) {
         uint64_t nsecs = 10;
-        if (argc > 3) {
-          nsecs = argv[3].u;
+        if (argc > index) {
+          nsecs = argv[index].u;
         }
         printf("Sleeping for %lu seconds...\n", nsecs);
         Thread::Current::SleepRelative(ZX_SEC(nsecs));

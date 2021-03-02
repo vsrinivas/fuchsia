@@ -180,19 +180,27 @@ void MemoryWatchdog::WorkerThread() {
       // and we're configured to evict at that level.
       if (idx < prev_mem_event_idx_ && idx <= max_eviction_level_) {
         // Clear any previous eviction trigger. Once Cancel completes we know that we will not race
-        // with the callback and are free to update the targets.
-        eviction_trigger_.Cancel();
+        // with the callback and are free to update the targets. Cancel will return true if the
+        // timer was canceled before it was scheduled on a cpu, i.e. an eviction was outstanding.
+        bool eviction_was_outstanding = eviction_trigger_.Cancel();
+
         const uint64_t free_mem = pmm_count_free_pages() * PAGE_SIZE;
         // Set the minimum amount to free as half the amount required to reach our desired free
         // memory level. This minimum ensures that even if the user reduces memory in reaction to
         // this signal we will always attempt to free a bit.
         // TODO: measure and fine tune this over time as user space evolves.
         min_free_target_ = free_mem < free_mem_target_ ? (free_mem_target_ - free_mem) / 2 : 0;
-        // Trigger the eviction for slightly in the future. Half the hysteresis time here is a
-        // balance between giving user space time to release memory and the eviction running before
-        // the end of the hysteresis period.
-        eviction_trigger_.Set(
-            Deadline::no_slack(zx_time_add_duration(time_now, kHysteresisSeconds_ / 2)),
+
+        // If eviction was outstanding when we canceled the eviction trigger, trigger eviction
+        // immediately without any delay. We are here because of a rapid allocation spike which
+        // caused the memory pressure to become more critical in a very short interval, so it might
+        // be better to evict pages as soon as possible to try and counter the allocation spike.
+        // Otherwise if eviction was not outstanding, trigger the eviction for slightly in the
+        // future. Half the hysteresis time here is a balance between giving user space time to
+        // release memory and the eviction running before the end of the hysteresis period.
+        eviction_trigger_.SetOneshot(
+            (eviction_was_outstanding ? time_now
+                                      : zx_time_add_duration(time_now, kHysteresisSeconds_ / 2)),
             EvictionTriggerCallback, this);
       }
 
