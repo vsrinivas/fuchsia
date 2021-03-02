@@ -511,7 +511,7 @@ void PortDispatcher::InitializeCacheAllocators(uint32_t /*level*/) {
   // overridden on the command line.
   const size_t default_packet_reserve_pages = 1;
   const size_t packet_reserve_pages =
-      gCmdline.GetUInt64(kernel_option::kPortobserverReservePages, default_packet_reserve_pages);
+      gCmdline.GetUInt64(kernel_option::kPortPacketReservePages, default_packet_reserve_pages);
 
   zx::status packet_result =
       object_cache::ObjectCache<PortPacket, object_cache::Option::PerCpu>::Create(
