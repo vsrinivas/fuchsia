@@ -21,6 +21,7 @@ zx_library("stdcompat") {
   sdk_headers = [
     "lib/stdcompat/bit.h",
     "lib/stdcompat/cstddef.h",
+    "lib/stdcompat/functional.h",
     "lib/stdcompat/iterator.h",
     "lib/stdcompat/memory.h",
     "lib/stdcompat/optional.h",
@@ -37,9 +38,11 @@ zx_library("stdcompat") {
     # section.
     "lib/stdcompat/internal/bit.h",
     "lib/stdcompat/internal/constructors.h",
+    "lib/stdcompat/internal/functional.h",
     "lib/stdcompat/internal/exception.h",
     "lib/stdcompat/internal/span.h",
     "lib/stdcompat/internal/storage.h",
+    "lib/stdcompat/internal/type_traits.h",
     "lib/stdcompat/internal/utility.h",
   ]
 

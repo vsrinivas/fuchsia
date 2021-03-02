@@ -8,6 +8,7 @@
 #include <tuple>
 #include <type_traits>
 
+#include "internal/type_traits.h"
 #include "version.h"
 
 namespace cpp17 {
@@ -320,6 +321,62 @@ template <typename T>
 static constexpr bool is_aggregate_v = is_aggregate<T>::value;
 
 #endif  // __cpp_lib_is_aggregate >= 201703L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+#if __cpp_lib_is_invocable >= 201703L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+using std::is_invocable;
+using std::is_invocable_r;
+using std::is_nothrow_invocable;
+using std::is_nothrow_invocable_r;
+
+using std::is_invocable_r_v;
+using std::is_invocable_v;
+using std::is_nothrow_invocable_r_v;
+using std::is_nothrow_invocable_v;
+
+using std::invoke_result;
+using std::invoke_result_t;
+
+#else
+
+template <typename R, typename F, typename... Args>
+struct is_invocable_r : decltype(::cpp17::internal::is_valid_invoke<R, F, Args...>(nullptr)) {};
+
+template <typename R, typename F, typename... Args>
+static constexpr bool is_invocable_r_v = is_invocable_r<R, F, Args...>::value;
+
+// INVOKE() is a subexpression of INVOKE<R>()
+// INVOKE<void>(f, t1, t2, ..., tn) results in a call to
+// static_cast<void>(INVOKE(f, t1, t2, ..., tn)) per [func.require] ¶ 2
+template <typename F, typename... Args>
+struct is_invocable : is_invocable_r<void, F, Args...> {};
+
+template <typename F, typename... Args>
+static constexpr bool is_invocable_v = is_invocable<F, Args...>::value;
+
+template <typename F, typename... Args>
+struct is_nothrow_invocable
+    : bool_constant<is_invocable_v<F, Args...>&& noexcept(
+          ::cpp17::internal::invoke(std::declval<F>(), std::declval<Args>()...))> {};
+
+template <typename F, typename... Args>
+static constexpr bool is_nothrow_invocable_v = is_nothrow_invocable<F, Args...>::value;
+
+template <typename R, typename F, typename... Args>
+struct is_nothrow_invocable_r
+    : bool_constant<is_invocable_r_v<R, F, Args...>&& noexcept(
+          ::cpp17::internal::invoke_r<R>(std::declval<F>(), std::declval<Args>()...))> {};
+
+template <typename R, typename F, typename... Args>
+static constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<R, F, Args...>::value;
+
+template <typename F, typename... Args>
+struct invoke_result : ::cpp17::internal::invoke_result<is_invocable_v<F, Args...>, F, Args...> {};
+
+template <typename F, typename... Args>
+using invoke_result_t = typename invoke_result<F, Args...>::type;
+
+#endif  // __cpp_lib_is_invocable >= 201703L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 }  // namespace cpp17
 

@@ -54,6 +54,8 @@ TEST(VersionTest, FeatureTestMacrosForCpp17) {
 #if __cplusplus >= 201703L
   static_assert(__cpp_lib_is_aggregate == 201703L,
                 "'__cpp_lib_is_aggregate' should be using draft 201703L for c++17.");
+  static_assert(__cpp_lib_is_invocable == 201703L,
+                "'__cpp_lib_is_invocable' should be using draft 201703L in c++17.");
 #endif
 #if __cplusplus >= 201606L
   static_assert(__cpp_lib_string_view == 201606L,
@@ -85,6 +87,8 @@ TEST(VersionTest, FeatureTestMacrosForCpp17) {
                 "'__cpp_lib_void_t' should be using draft 201411L in c++17.");
   static_assert(__cpp_lib_nonmember_container_access == 201411L,
                 "'__cpp_lib_nonmember_container_access' should be using draft 201411L in c++17.");
+  static_assert(__cpp_lib_invoke == 201411L,
+                "'__cpp_lib_invoke' should be using draft 201411L in c++17.");
 #endif
 }
 
@@ -121,6 +125,12 @@ TEST(VersionTest, FeatureTestMacrosForCpp14) {
 #endif
 #if defined(__cpp_lib_is_aggregate)
   static_assert(false, "'__cpp_lib_is_aggregate' should not be defined in c++14.");
+#endif
+#if defined(__cpp_lib_is_invocable)
+  static_assert(false, "'__cpp_lib_is_invocable' should not be defined in c++14.");
+#endif
+#if defined(__cpp_lib_invoke)
+  static_assert(false, "'__cpp_lib_is_invoke' should not be defined in c++14.");
 #endif
 }
 

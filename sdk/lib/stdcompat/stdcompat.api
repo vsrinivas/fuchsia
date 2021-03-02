@@ -1,11 +1,14 @@
 {
   "pkg/stdcompat/include/lib/stdcompat/bit.h": "b0500e052fd94194efaf72d9cbc97abf",
   "pkg/stdcompat/include/lib/stdcompat/cstddef.h": "555383442b1946dc6d958cf8b205fbb6",
+  "pkg/stdcompat/include/lib/stdcompat/functional.h": "7432ad237638e6acfe4f706dc03ddb29",
   "pkg/stdcompat/include/lib/stdcompat/internal/bit.h": "7217ebfac7c95f27b6d5f5e4fd5c2e7a",
   "pkg/stdcompat/include/lib/stdcompat/internal/constructors.h": "664276aef7a6132071fbf93b5ee3fe75",
   "pkg/stdcompat/include/lib/stdcompat/internal/exception.h": "36e3245793a2229c969370af46d7f692",
+  "pkg/stdcompat/include/lib/stdcompat/internal/functional.h": "b67ddbebef52db3d0035d1416efb6955",
   "pkg/stdcompat/include/lib/stdcompat/internal/span.h": "d399ab8571a00d08689e8a5e457cc7bb",
   "pkg/stdcompat/include/lib/stdcompat/internal/storage.h": "49ddf504b1b4a507bb845b56e2a8057f",
+  "pkg/stdcompat/include/lib/stdcompat/internal/type_traits.h": "5007a7aa97c74ee6fe2e4513cbcaebed",
   "pkg/stdcompat/include/lib/stdcompat/internal/utility.h": "22218049acc4308ff86c8fb72a9f1068",
   "pkg/stdcompat/include/lib/stdcompat/iterator.h": "434049cd05a08dffd2abcb1eb451e30a",
   "pkg/stdcompat/include/lib/stdcompat/memory.h": "4dd9c8ea023369d3ac601ce338571abb",
@@ -13,8 +16,8 @@
   "pkg/stdcompat/include/lib/stdcompat/source_location.h": "b9d7911760e33ad247dcf2424eef9595",
   "pkg/stdcompat/include/lib/stdcompat/span.h": "7a49d858da18f0e56f7cd1742b4341fb",
   "pkg/stdcompat/include/lib/stdcompat/string_view.h": "59119e48e390667040f87249819e2ddb",
-  "pkg/stdcompat/include/lib/stdcompat/type_traits.h": "a06d689fa7b6ec84020414e465231320",
+  "pkg/stdcompat/include/lib/stdcompat/type_traits.h": "7be28fb4d6394f01ce2e949625bf601d",
   "pkg/stdcompat/include/lib/stdcompat/utility.h": "82b39f27eedb1e037049b3a23414e2d3",
   "pkg/stdcompat/include/lib/stdcompat/variant.h": "cf495770e00de513d3a42449dd734443",
-  "pkg/stdcompat/include/lib/stdcompat/version.h": "411d175961f031aee305f24332f9a96e"
+  "pkg/stdcompat/include/lib/stdcompat/version.h": "87f5e00feef9a5077221cc24eaa224b8"
 }

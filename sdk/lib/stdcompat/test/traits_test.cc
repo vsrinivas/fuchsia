@@ -391,4 +391,212 @@ TEST(IsAggregateTest, IsAliasForStd) {
 
 #endif  // __cpp_lib_is_aggregate >= 201703L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
+constexpr auto noop = [] {};
+constexpr auto take_all = [](auto&&...) {};
+constexpr auto lambda_add_one = [](int i) { return i + 1; };
+
+int func_add_one(int i) { return i + 1; }
+
+struct member_pointers {
+  virtual int pmf_add_one(int i) { return i + 1; }
+  int (*pmd_add_one)(int) = func_add_one;
+};
+
+struct liar : member_pointers {
+  int pmf_add_one(int i) override { return i + 2; }
+};
+
+struct independent_liar {
+  int pmf_add_one(int i) { return i + 3; }
+};
+
+TEST(InvokeTraitsTest, IsInvocable) {
+  static_assert(cpp17::is_invocable_v<decltype(noop)> == true, "");
+  static_assert(cpp17::is_invocable_v<decltype(lambda_add_one), int> == true, "");
+  static_assert(cpp17::is_invocable_v<decltype(func_add_one), int> == true, "");
+
+  static_assert(cpp17::is_invocable_v<void> == false, "");
+  static_assert(cpp17::is_invocable_v<void*> == false, "");
+  static_assert(cpp17::is_invocable_v<char*> == false, "");
+  static_assert(cpp17::is_invocable_v<int, int> == false, "");
+  static_assert(cpp17::is_invocable_v<member_pointers, int> == false, "");
+
+  struct incomplete;
+  static_assert(cpp17::is_invocable_v<decltype(take_all), incomplete> == true, "");
+}
+
+TEST(InvokeTraitsTest, PmfIsInvocable) {
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one), member_pointers*, int> == true,
+      "");
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one), member_pointers&, int> == true,
+      "");
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one), member_pointers&&, int> ==
+          true,
+      "");
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one), member_pointers, int> == true,
+      "");
+  static_assert(cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one),
+                                      std::reference_wrapper<member_pointers>, int> == true,
+                "");
+  static_assert(cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one),
+                                      std::unique_ptr<member_pointers>, int> == true,
+                "");
+  static_assert(cpp17::is_invocable_v<decltype(std::mem_fn(&member_pointers::pmf_add_one)),
+                                      member_pointers, int> == true,
+                "");
+
+  static_assert(cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one), void*, int> == false,
+                "");
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one), std::nullptr_t, int> == false,
+      "");
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one), nothing, int> == false, "");
+  static_assert(cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one), int> == false, "");
+
+  static_assert(cpp17::is_invocable_v<decltype(&liar::pmf_add_one), liar, int> == true, "");
+  static_assert(
+      cpp17::is_invocable_v<decltype(&independent_liar::pmf_add_one), independent_liar, int> ==
+          true,
+      "");
+  static_assert(cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one), liar, int> == true,
+                "");
+  static_assert(cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one), liar*, int> == true,
+                "");
+  static_assert(cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one), liar&, int> == true,
+                "");
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one), std::unique_ptr<liar>, int> ==
+          true,
+      "");
+
+  static_assert(cpp17::is_invocable_v<decltype(&liar::pmf_add_one), member_pointers, int> == false,
+                "");
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmf_add_one), independent_liar, int> ==
+          false,
+      "");
+}
+
+TEST(InvokeTraitsTest, PmdIsInvocable) {
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmd_add_one), member_pointers> == true, "");
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmd_add_one), member_pointers*> == true, "");
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmd_add_one), member_pointers&> == true, "");
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmd_add_one), member_pointers&&> == true,
+      "");
+  static_assert(cpp17::is_invocable_v<decltype(&member_pointers::pmd_add_one), liar> == true, "");
+  static_assert(cpp17::is_invocable_v<decltype(&member_pointers::pmd_add_one),
+                                      std::reference_wrapper<liar>> == true,
+                "");
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmd_add_one), std::unique_ptr<liar>> == true,
+      "");
+
+  static_assert(
+      cpp17::is_invocable_v<decltype(&member_pointers::pmd_add_one), independent_liar> == false,
+      "");
+}
+
+TEST(InvokeTraitsTest, IsInvocableR) {
+  static_assert(std::is_same_v<cpp17::invoke_result_t<decltype(func_add_one), int>, int> == true,
+                "");
+  static_assert(cpp17::is_invocable_r_v<void, decltype(noop)> == true, "");
+  static_assert(cpp17::is_invocable_r_v<int, decltype(func_add_one), int> == true, "");
+  static_assert(cpp17::is_invocable_r_v<long, decltype(func_add_one), int> == true, "");
+  static_assert(cpp17::is_invocable_r_v<void, decltype(func_add_one), int> == true, "");
+  // Narrowing is allowed in both directions
+  static_assert(cpp17::is_invocable_r_v<char, decltype(func_add_one), long> == true, "");
+  // int -> void* is a valid conversion, but not implicitly.
+  static_assert(cpp17::is_invocable_r_v<void*, decltype(func_add_one), intptr_t> == false, "");
+}
+
+TEST(InvokeTraitsTest, InvokeResult) {
+  // Wrap in lambda so we can decltype() (also no explicit template parameter).
+  constexpr auto forward = [](auto&& t) -> decltype(auto) { return std::forward<decltype(t)>(t); };
+  static_assert(std::is_same_v<cpp17::invoke_result_t<decltype(noop)>, void> == true, "");
+  static_assert(std::is_same_v<cpp17::invoke_result_t<decltype(lambda_add_one), int>, int> == true,
+                "");
+  static_assert(std::is_same_v<cpp17::invoke_result_t<decltype(forward), int>, int&&> == true, "");
+  static_assert(std::is_same_v<cpp17::invoke_result_t<decltype(forward), int&&>, int&&> == true,
+                "");
+  static_assert(std::is_same_v<cpp17::invoke_result_t<decltype(forward), int&>, int&> == true, "");
+
+  static_assert(
+      std::is_same_v<
+          cpp17::invoke_result_t<decltype(&member_pointers::pmf_add_one), member_pointers, int>,
+          int> == true,
+      "");
+  static_assert(
+      std::is_same_v<
+          cpp17::invoke_result_t<decltype(&member_pointers::pmf_add_one), member_pointers, short>,
+          int> == true,
+      "");
+  static_assert(
+      std::is_same_v<cpp17::invoke_result_t<decltype(&member_pointers::pmf_add_one), liar, int>,
+                     int> == true,
+      "");
+
+  // Invoke PMD then invoke the result (it's a function pointer to func_add_one)
+  static_assert(std::is_same_v<
+                    cpp17::invoke_result_t<
+                        cpp17::invoke_result_t<decltype(&member_pointers::pmd_add_one), liar>, int>,
+                    int> == true,
+                "");
+
+  static_assert(std::is_same_v<cpp17::invoke_result_t<decltype(take_all)>, void> == true, "");
+  static_assert(std::is_same_v<cpp17::invoke_result_t<decltype(take_all), int>, void> == true, "");
+  static_assert(
+      std::is_same_v<
+          cpp17::invoke_result_t<decltype(take_all), void*, member_pointers, std::tuple<>>, void> ==
+          true,
+      "");
+
+  constexpr auto forward_all = [](auto&&... ts) {
+    return std::forward_as_tuple(std::forward<decltype(ts)>(ts)...);
+  };
+  static_assert(std::is_same_v<cpp17::invoke_result_t<decltype(forward_all), int, short, long>,
+                               std::tuple<int&&, short&&, long&&>> == true,
+                "");
+  static_assert(std::is_same_v<cpp17::invoke_result_t<decltype(forward_all), int, short&, long&&>,
+                               std::tuple<int&&, short&, long&&>> == true,
+                "");
+}
+
+#if __cpp_lib_is_invocable >= 201703L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+TEST(InvokeTraitsTest, IsAliasForStd) {
+  static_assert(std::is_same_v<cpp17::is_invocable<int>, std::is_invocable<int>>, "");
+  static_assert(
+      std::is_same_v<cpp17::is_invocable<void(int), int>, std::is_invocable<void(int), int>>, "");
+  static_assert(std::is_same_v<cpp17::is_nothrow_invocable<int>, std::is_nothrow_invocable<int>>,
+                "");
+  static_assert(std::is_same_v<cpp17::is_nothrow_invocable<void(int), int>,
+                               std::is_nothrow_invocable<void(int), int>>,
+                "");
+
+  static_assert(std::is_same_v<cpp17::is_invocable_r<int, int>, std::is_invocable_r<int, int>>, "");
+  static_assert(std::is_same_v<cpp17::is_invocable_r<void, void(int), int>,
+                               std::is_invocable_r<void, void(int), int>>,
+                "");
+  static_assert(std::is_same_v<cpp17::is_nothrow_invocable_r<int, int>,
+                               std::is_nothrow_invocable_r<int, int>>,
+                "");
+  static_assert(std::is_same_v<cpp17::is_nothrow_invocable_r<void, void(int), int>,
+                               std::is_nothrow_invocable_r<void, void(int), int>>,
+                "");
+
+  static_assert(
+      std::is_same_v<cpp17::invoke_result<void(int), int>, std::invoke_result<void(int), int>>, "");
+}
+
+#endif  // __cpp_lib_is_invocable >= 201703L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
 }  // namespace

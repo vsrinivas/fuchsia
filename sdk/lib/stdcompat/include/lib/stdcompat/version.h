@@ -58,6 +58,14 @@
 #define __cpp_lib_is_aggregate 201703L
 #endif
 
+#if !defined(__cpp_lib_is_invocable) && __cplusplus >= 201703L
+#define __cpp_lib_is_invocable 201703L
+#endif
+
+#if !defined(__cpp_lib_invoke) && __cplusplus >= 201411L
+#define __cpp_lib_invoke 201411L
+#endif
+
 #endif  // __has_include(<version>) && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_VERSION_H_
