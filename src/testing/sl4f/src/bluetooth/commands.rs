@@ -826,6 +826,10 @@ impl Facade for HfpFacade {
                 self.set_nrec_support(support).await;
                 Ok(to_value(())?)
             }
+            "GetState" => {
+                let result = self.get_state().await;
+                Ok(to_value(result)?)
+            }
             _ => bail!("Invalid Hfp FIDL method: {:?}", method),
         }
     }

@@ -10,13 +10,14 @@ use fidl_fuchsia_bluetooth_hfp::{
     CallManagerMarker, CallManagerProxy, CallMarker, CallRequest, CallRequestStream,
     CallState as FidlCallState, CallWatchStateResponder, DtmfCode, HeadsetGainProxy, HfpMarker,
     NetworkInformation, PeerHandlerRequest, PeerHandlerRequestStream,
-    PeerHandlerWaitForCallResponder, PeerHandlerWatchNetworkInformationResponder,
+    PeerHandlerWaitForCallResponder, PeerHandlerWatchNetworkInformationResponder, SignalStrength,
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client;
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon as zx;
 use futures::{lock::Mutex, stream::StreamExt, FutureExt};
+use serde::Serialize;
 use std::{collections::HashMap, sync::Arc};
 
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
@@ -92,6 +93,97 @@ impl CallState {
             self.reported_state = Some(state);
         }
         Ok(())
+    }
+}
+
+#[derive(Serialize)]
+pub struct StateSer {
+    manager: ManagerStateSer,
+    peers: HashMap<u64, PeerStateSer>,
+    calls: HashMap<CallId, CallStateSer>,
+}
+
+#[derive(Serialize)]
+pub struct ManagerStateSer {
+    network: NetworkInformationSer,
+    reported_network: Option<NetworkInformationSer>,
+    operator: String,
+    subscriber_numbers: Vec<String>,
+    nrec_support: bool,
+}
+
+#[derive(Serialize)]
+pub struct NetworkInformationSer {
+    service_available: Option<bool>,
+    signal_strength: Option<u8>,
+    roaming: Option<bool>,
+}
+
+impl From<NetworkInformation> for NetworkInformationSer {
+    fn from(info: NetworkInformation) -> Self {
+        let signal_strength = info.signal_strength.map(|strength| match strength {
+            SignalStrength::None => 0,
+            SignalStrength::VeryLow => 1,
+            SignalStrength::Low => 2,
+            SignalStrength::Medium => 3,
+            SignalStrength::High => 4,
+            SignalStrength::VeryHigh => 5,
+        });
+        Self { service_available: info.service_available, signal_strength, roaming: info.roaming }
+    }
+}
+
+impl From<&ManagerState> for ManagerStateSer {
+    fn from(state: &ManagerState) -> Self {
+        Self {
+            network: state.network.clone().into(),
+            reported_network: state.reported_network.clone().map(Into::into),
+            operator: state.operator.clone(),
+            subscriber_numbers: state.subscriber_numbers.clone(),
+            nrec_support: state.nrec_support.clone(),
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct PeerStateSer {
+    nrec_enabled: bool,
+    battery_level: u8,
+    speaker_gain: u8,
+    requested_speaker_gain: Option<u8>,
+    microphone_gain: u8,
+    requested_microphone_gain: Option<u8>,
+}
+
+impl From<&PeerState> for PeerStateSer {
+    fn from(state: &PeerState) -> Self {
+        Self {
+            nrec_enabled: state.nrec_enabled,
+            battery_level: state.battery_level,
+            speaker_gain: state.speaker_gain,
+            requested_speaker_gain: state.requested_speaker_gain,
+            microphone_gain: state.microphone_gain,
+            requested_microphone_gain: state.requested_microphone_gain,
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct CallStateSer {
+    remote: String,
+    state: String,
+    reported_state: Option<String>,
+    dtmf_codes: Vec<String>,
+}
+
+impl From<&CallState> for CallStateSer {
+    fn from(state: &CallState) -> Self {
+        Self {
+            remote: state.remote.clone(),
+            state: format!("{:?}", state.state),
+            reported_state: state.reported_state.clone().map(|s| format!("{:?}", s)),
+            dtmf_codes: state.dtmf_codes.iter().map(|code| format!("{:?}", code)).collect(),
+        }
     }
 }
 
@@ -665,6 +757,19 @@ impl HfpFacade {
 
     pub async fn set_nrec_support(&self, value: bool) {
         self.inner.lock().await.manager.nrec_support = value;
+    }
+
+    pub async fn get_state(&self) -> StateSer {
+        let inner = self.inner.lock().await;
+        StateSer {
+            manager: (&inner.manager).into(),
+            peers: inner
+                .peers
+                .iter()
+                .map(|(&PeerId { value: id }, peer)| (id, peer.into()))
+                .collect(),
+            calls: inner.calls.iter().map(|(&id, call)| (id, call.into())).collect(),
+        }
     }
 
     /// Cleanup any HFP related objects.
