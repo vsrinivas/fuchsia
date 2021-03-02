@@ -57,13 +57,14 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
     Thread* current_thread = Thread::Current::Get();
     char flagstr[5];
     vmm_pf_flags_to_string(flags, flagstr);
-    TRACEF("thread %s va %#" PRIxPTR ", flags 0x%x (%s)\n", current_thread->name(), addr, flags, flagstr);
+    TRACEF("thread %s va %#" PRIxPTR ", flags 0x%x (%s)\n", current_thread->name(), addr, flags,
+           flagstr);
   }
 
   // get the address space object this pointer is in
   VmAspace* aspace = VmAspace::vaddr_to_aspace(addr);
   if (!aspace) {
-    printf("PageFault: could not find address space\n");
+    printf("PageFault: Invalid virtual address\n");
     return ZX_ERR_NOT_FOUND;
   }
 
