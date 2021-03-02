@@ -184,6 +184,7 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
             Err(fidl_err) => {
                 let mut peer_guard = peer.write();
                 error!("Profile service connect error: {:?}", fidl_err);
+                peer_guard.inspect().metrics().connection_error();
                 peer_guard.reset_connection(false);
             }
             Ok(Ok(channel)) => {
@@ -192,6 +193,7 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
                     Ok(chan) => chan,
                     Err(e) => {
                         error!("Unable to make peer {} from socket: {:?}", peer_id, e);
+                        peer_guard.inspect().metrics().connection_error();
                         peer_guard.reset_connection(false);
                         return;
                     }
@@ -212,6 +214,7 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
             Ok(Err(e)) => {
                 error!("Couldn't connect to peer {}: {:?}", peer_id, e);
                 let mut peer_guard = peer.write();
+                peer_guard.inspect().metrics().connection_error();
                 if peer_guard.control_channel.is_connecting() {
                     peer_guard.reset_connection(false);
                 }

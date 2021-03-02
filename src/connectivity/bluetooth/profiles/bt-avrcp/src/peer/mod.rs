@@ -29,6 +29,7 @@ mod inspect;
 mod tasks;
 
 use crate::{
+    metrics::MetricsNode,
     packets::{Error as PacketError, *},
     peer_manager::TargetDelegate,
     profile::AvrcpService,
@@ -226,6 +227,10 @@ impl RemotePeer {
         self.peer_id
     }
 
+    fn inspect(&self) -> &RemotePeerInspect {
+        &self.inspect
+    }
+
     /// Caches the current value of this controller notification event for future controller event
     /// listeners and forwards the event to current controller listeners queues.
     fn handle_new_controller_notification_event(&mut self, event: ControllerEvent) {
@@ -306,6 +311,7 @@ impl RemotePeer {
         self.last_connected_time = Some(current_time);
         self.control_channel.connected(Arc::new(peer));
         self.cancel_tasks = true;
+        self.inspect.record_connected(current_time);
         self.wake_state_watcher();
     }
 
@@ -331,6 +337,10 @@ impl RemotePeer {
         // Record inspect controller features.
         self.inspect.record_controller_features(service);
         self.wake_state_watcher();
+    }
+
+    fn set_metrics_node(&mut self, node: MetricsNode) {
+        self.inspect.set_metrics_node(node);
     }
 
     fn wake_state_watcher(&self) {
@@ -460,6 +470,10 @@ impl RemotePeerHandle {
         self.peer.write().set_controller_descriptor(service);
     }
 
+    pub fn set_metrics_node(&self, node: MetricsNode) {
+        self.peer.write().set_metrics_node(node);
+    }
+
     pub fn is_connected(&self) -> bool {
         self.peer.read().control_connected()
     }
@@ -538,16 +552,22 @@ impl RemotePeerHandle {
 mod tests {
     use super::*;
     use crate::profile::{AvcrpTargetFeatures, AvrcpProtocolVersion};
-    use anyhow::Error;
-    use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_bredr::{
-        ProfileMarker, ProfileRequest, ProfileRequestStream, PSM_AVCTP,
+
+    use {
+        anyhow::Error,
+        fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_bluetooth::ErrorCode,
+        fidl_fuchsia_bluetooth_bredr::{
+            ProfileMarker, ProfileRequest, ProfileRequestStream, PSM_AVCTP,
+        },
+        fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+        fuchsia_bluetooth::types::Channel,
+        fuchsia_inspect::assert_inspect_tree,
+        fuchsia_inspect_derive::WithInspect,
+        fuchsia_zircon::DurationNum,
+        futures::{pin_mut, task::Poll},
+        std::convert::TryInto,
     };
-    use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
-    use fuchsia_bluetooth::types::Channel;
-    use fuchsia_zircon::{self as zx, DurationNum};
-    use futures::{pin_mut, task::Poll};
-    use std::convert::TryInto;
 
     fn setup_remote_peer(
         id: PeerId,
@@ -777,6 +797,110 @@ mod tests {
             x => panic!("Expected successful write but got {:?}", x),
         }
 
+        Ok(())
+    }
+
+    fn attach_inspect_with_metrics(
+        peer: &mut RemotePeerHandle,
+    ) -> (fuchsia_inspect::Inspector, MetricsNode) {
+        let inspect = fuchsia_inspect::Inspector::new();
+        let metrics_node = MetricsNode::default().with_inspect(inspect.root(), "metrics").unwrap();
+        peer.iattach(inspect.root(), "peer").unwrap();
+        peer.set_metrics_node(metrics_node.clone());
+        (inspect, metrics_node)
+    }
+
+    #[test]
+    fn outgoing_connection_error_updates_inspect() -> Result<(), Error> {
+        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        exec.set_fake_time(fasync::Time::from_nanos(5_000000000));
+
+        let id = PeerId(30789);
+        let (mut peer_handle, _target_delegate, mut profile_requests) = setup_remote_peer(id)?;
+        let (inspect, _metrics_node) = attach_inspect_with_metrics(&mut peer_handle);
+
+        // Set the descriptor to simulate service found for peer.
+        peer_handle.set_target_descriptor(AvrcpService::Target {
+            features: AvcrpTargetFeatures::CATEGORY1,
+            psm: PSM_AVCTP,
+            protocol_version: AvrcpProtocolVersion(1, 6),
+        });
+
+        let mut next_request_fut = Box::pin(profile_requests.next());
+        assert!(exec.run_until_stalled(&mut next_request_fut).is_pending());
+
+        // Advance time by the maximum amount of time it would take to establish a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        exec.wake_expired_timers();
+
+        // We expect to initiate an outbound connection through the profile server. Simulate error.
+        match exec.run_until_stalled(&mut next_request_fut) {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
+                responder.send(&mut Err(ErrorCode::Failed)).expect("Fidl response should be ok");
+            }
+            x => panic!("Expected ready profile connection, but got: {:?}", x),
+        };
+
+        // Run to update watcher state.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+
+        // Inspect tree should be updated with the connection error count.
+        assert_inspect_tree!(inspect, root: {
+            peer: contains {},
+            metrics: {
+                connection_errors: 1u64,
+                total_connections: 0u64,
+            }
+        });
+        Ok(())
+    }
+
+    #[test]
+    fn successful_inbound_connection_updates_inspect_metrics() -> Result<(), Error> {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let id = PeerId(842);
+        let (mut peer_handle, _target_delegate, _profile_requests) = setup_remote_peer(id)?;
+        let (inspect, _metrics_node) = attach_inspect_with_metrics(&mut peer_handle);
+
+        // Set the descriptor to simulate service found for peer.
+        peer_handle.set_target_descriptor(AvrcpService::Target {
+            features: AvcrpTargetFeatures::CATEGORY1,
+            psm: PSM_AVCTP,
+            protocol_version: AvrcpProtocolVersion(1, 6),
+        });
+        // Peer initiates connection to us.
+        let (_remote, channel) = Channel::create();
+        let peer = AvcPeer::new(channel);
+        peer_handle.set_control_connection(peer);
+        // Run to update watcher state.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+
+        // Inspect tree should be updated with the connection.
+        assert_inspect_tree!(inspect, root: {
+            peer: contains {
+                control: "Connected",
+            },
+            metrics: {
+                connection_errors: 0u64,
+                total_connections: 1u64,
+            }
+        });
+
+        // Peer disconnects.
+        drop(_remote);
+        // Run to update watcher state.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        // Inspect tree should be updated with the disconnection.
+        assert_inspect_tree!(inspect, root: {
+            peer: contains {
+                control: "Disconnected",
+            },
+            metrics: {
+                connection_errors: 0u64,
+                total_connections: 1u64,
+            }
+        });
         Ok(())
     }
 }

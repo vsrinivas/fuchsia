@@ -11,7 +11,7 @@ use {
     fuchsia_inspect_derive::{AttachError, Inspect},
 };
 
-use crate::profile::AvrcpService;
+use crate::{metrics::MetricsNode, profile::AvrcpService};
 
 /// The maximum number of feature sets we store for a remote peer.
 /// This is useful in the case of peer disconnecting/reconnecting, as we will
@@ -20,19 +20,18 @@ const MAX_FEATURE_SETS: usize = 3;
 
 #[derive(Default)]
 pub struct RemotePeerInspect {
+    // Information about this peer's target and controller services.
     target_info: Option<BoundedListNode>,
     controller_info: Option<BoundedListNode>,
     /// The last known connected time.
     last_connected: Option<TimeProperty>,
+    /// The shared node used to record cumulative metrics about any discovered peer.
+    metrics_node: MetricsNode,
     inspect_node: inspect::Node,
 }
 
 impl Inspect for &mut RemotePeerInspect {
-    fn iattach(
-        self,
-        parent: &fuchsia_inspect::Node,
-        name: impl AsRef<str>,
-    ) -> Result<(), AttachError> {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
         self.inspect_node = parent.create_child(name);
         self.target_info = Some(BoundedListNode::new(
             self.inspect_node.create_child("target_info"),
@@ -49,6 +48,11 @@ impl Inspect for &mut RemotePeerInspect {
 impl RemotePeerInspect {
     pub fn node(&self) -> &inspect::Node {
         &self.inspect_node
+    }
+
+    /// Sets this peer's node for metrics collection.
+    pub fn set_metrics_node(&mut self, metrics_node: MetricsNode) {
+        self.metrics_node = metrics_node;
     }
 
     pub fn record_target_features(&mut self, service: AvrcpService) {
@@ -82,6 +86,11 @@ impl RemotePeerInspect {
             self.last_connected =
                 Some(self.inspect_node.create_time_at("last_connected", at.into()));
         }
+        self.metrics_node.connected();
+    }
+
+    pub fn metrics(&self) -> &MetricsNode {
+        &self.metrics_node
     }
 }
 
@@ -89,6 +98,7 @@ impl RemotePeerInspect {
 mod tests {
     use super::*;
     use crate::profile::{AvcrpControllerFeatures, AvcrpTargetFeatures, AvrcpProtocolVersion};
+
     use {
         fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty},
         fuchsia_inspect_derive::WithInspect,

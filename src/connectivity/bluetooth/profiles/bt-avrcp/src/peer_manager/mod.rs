@@ -6,7 +6,6 @@ use {
     bt_avctp::{AvcPeer, AvctpPeer},
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp, fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::types::{Channel, PeerId},
-    fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{self, channel::oneshot},
     log::trace,
@@ -14,14 +13,16 @@ use {
     std::{collections::HashMap, sync::Arc},
 };
 
+mod inspect;
 mod target_delegate;
 
 use crate::{
+    metrics::MetricsNode,
     peer::{Controller, RemotePeerHandle},
     profile::AvrcpService,
     types::PeerError as Error,
 };
-
+use inspect::PeerManagerInspect;
 pub use target_delegate::TargetDelegate;
 
 #[derive(Debug)]
@@ -81,13 +82,16 @@ pub struct PeerManager {
     /// The delegate for the AVRCP target, where commands to this peer are sent.
     target_delegate: Arc<TargetDelegate>,
     /// The 'peers' node of this inspect tree. All known peers have a child node in this tree.
-    inspect: inspect::Node,
+    inspect: PeerManagerInspect,
 }
 
 impl Inspect for &mut PeerManager {
-    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect = parent.create_child(name);
-        Ok(())
+    fn iattach(
+        self,
+        parent: &fuchsia_inspect::Node,
+        name: impl AsRef<str>,
+    ) -> Result<(), AttachError> {
+        self.inspect.iattach(parent, name)
     }
 }
 
@@ -97,8 +101,12 @@ impl PeerManager {
             profile_proxy,
             peers: RwLock::new(HashMap::new()),
             target_delegate: Arc::new(TargetDelegate::new()),
-            inspect: inspect::Node::default(),
+            inspect: PeerManagerInspect::default(),
         }
+    }
+
+    pub fn set_metrics_node(&mut self, node: MetricsNode) {
+        self.inspect.set_metrics_node(node);
     }
 
     pub fn get_remote_peer(&self, peer_id: &PeerId) -> RemotePeerHandle {
@@ -111,7 +119,9 @@ impl PeerManager {
                     self.target_delegate.clone(),
                     self.profile_proxy.clone(),
                 );
-                let _ = handle.iattach(&self.inspect, inspect::unique_name("peer_"));
+                // The inspect node for this peer with a shared metrics node.
+                let _ = handle.iattach(self.inspect.node(), fuchsia_inspect::unique_name("peer_"));
+                handle.set_metrics_node(self.inspect.metrics_node().clone());
                 handle
             })
             .clone()

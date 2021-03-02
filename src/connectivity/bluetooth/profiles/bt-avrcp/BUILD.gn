@@ -44,6 +44,7 @@ rustc_binary("bin") {
 
   sources = [
     "src/main.rs",
+    "src/metrics/mod.rs",
     "src/packets/browsing/get_folder_items.rs",
     "src/packets/browsing/get_total_items.rs",
     "src/packets/browsing/mod.rs",
@@ -70,6 +71,7 @@ rustc_binary("bin") {
     "src/peer/mod.rs",
     "src/peer/tasks/mod.rs",
     "src/peer/tasks/notification_stream.rs",
+    "src/peer_manager/inspect.rs",
     "src/peer_manager/mod.rs",
     "src/peer_manager/target_delegate.rs",
     "src/profile.rs",

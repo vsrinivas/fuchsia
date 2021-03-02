@@ -14,6 +14,7 @@ use {
     std::convert::TryInto,
 };
 
+mod metrics;
 mod packets;
 mod peer;
 mod peer_manager;
@@ -25,6 +26,7 @@ mod types;
 mod tests;
 
 use crate::{
+    metrics::{MetricsNode, METRICS_NODE_NAME},
     peer_manager::PeerManager,
     profile::{protocol_to_channel_type, AvrcpService, ChannelType},
 };
@@ -52,6 +54,11 @@ async fn main() -> Result<(), Error> {
     if let Err(e) = peer_manager.iattach(inspect.root(), "peers") {
         warn!("Failed to attach to inspect: {:?}", e);
     }
+    let mut metrics_node = MetricsNode::default();
+    if let Err(e) = metrics_node.iattach(inspect.root(), METRICS_NODE_NAME) {
+        warn!("Failed to attach to inspect metrics: {:?}", e);
+    }
+    peer_manager.set_metrics_node(metrics_node);
 
     let mut service_fut = service::run_services(fs, client_sender)
         .expect("Unable to start AVRCP FIDL service")

@@ -74,22 +74,27 @@ src/connectivity/bluetooth/profiles/bt-avrcp --with
 
 The `bt-avrcp` component includes support for
 [component inspection](https://fuchsia.dev/fuchsia-src/development/diagnostics/inspect). To view
-the current state of the peers connected, use `fx iquery show bt-avrcp.cmx`.
+component metrics or the current state of any connected peers , use `fx iquery show bt-avrcp.cmx`.
 
 ### Hierarchy
 
 ```
- root:
-      peers:
-        peer_#:
-          browse = (connected / connecting / disconnected)
-          control = (connected / connecting / disconencted)
-          peer_id
-
+root:
+  peers:
+    peer_#:
+      peer_id
+      browse = (connected / connecting / disconnected)
+      control = (connected / connecting / disconnected)
+      target_info
+      controller_info
+      last_connected_time
+  metrics:
+    connection_errors
+    total_connections
 ```
 
-One peer child exists in the hierarchy for each peer that has been discovered, whether or not it
-is connected.
+One peer child exists in the hierarchy for each peer that has been discovered regardless of its
+current connection status.
 
 ## Code Layout
 
