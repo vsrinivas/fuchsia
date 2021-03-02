@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <efi/boot-services.h>
+#include <gmock/gmock.h>
 
 namespace efi {
 
@@ -21,7 +22,9 @@ namespace efi {
 // Some of the more trivial functionality will be implemented, but can still
 // be overridden by subclasses.
 //
-// See the associated test class for examples of how to mock out functions.
+// Tests that are willing to use gmock should generally prefer to use
+// MockBootServices instead, which hooks up the proper mock wrappers and adds
+// some additional utility functions.
 class StubBootServices {
  public:
   // IMPORTANT: only ONE StubBootServices can exist at a time. Since this is
@@ -125,6 +128,61 @@ class StubBootServices {
 
  private:
   efi_boot_services services_;
+};
+
+// gmock matcher for an efi_guid.
+//
+// We have to alias to <efi_guid> type explicitly because the compiler can't
+// deduce the efi_guid struct type from a generic aggregate initializer.
+//
+// Example usage:
+//   EXPECT_CALL(..., MatchGuid(EFI_FOO_PROTOCOL_GUID), ...);
+MATCHER_P(MatchGuidT, guid, "") { return memcmp(&guid, arg, sizeof(guid)) == 0; }
+constexpr auto MatchGuid = MatchGuidT<efi_guid>;
+
+// Subclasses StubBootServices to mock out methods using gmock.
+//
+// This will likely be the most common way to test boot services, but gmock
+// is significantly more complicated than gtest and some projects may prefer
+// to avoid it, so the base class is still available for direct use.
+class MockBootServices : public StubBootServices {
+ public:
+  MOCK_METHOD(efi_status, OpenProtocol,
+              (efi_handle handle, efi_guid* protocol, void** intf, efi_handle agent_handle,
+               efi_handle controller_handle, uint32_t attributes),
+              (override));
+  MOCK_METHOD(efi_status, CloseProtocol,
+              (efi_handle handle, efi_guid* protocol, efi_handle agent_handle,
+               efi_handle controller_handle),
+              (override));
+  MOCK_METHOD(efi_status, LocateHandleBuffer,
+              (efi_locate_search_type search_type, efi_guid* protocol, void* search_key,
+               size_t* num_handles, efi_handle** buf),
+              (override));
+
+  // Registers an expectation for protocol opening and closing.
+  //
+  // This sets up gmock expectations for the most common case, where a protocol
+  // is successfully opened and closed. See below for variants than open or
+  // close only.
+  //
+  // Currently |agent_handle|, |controller_handle|, and |attributes| parameters
+  // to OpenProtocol()/CloseProtocol() are not checked and can be anything.
+  //
+  // handle: expected handle.
+  // guid: expected protocol GUID.
+  // protocol: the protocol table to copy out from OpenProtocol().
+  void ExpectProtocol(efi_handle handle, efi_guid guid, void* protocol) {
+    ExpectOpenProtocol(handle, guid, protocol);
+    ExpectCloseProtocol(handle, guid);
+  }
+
+  // Registers expectations for protocol opening or closing only.
+  //
+  // Used less commonly, in cases like helper functions opening a protocol
+  // but then returning it to the caller rather than closing it.
+  void ExpectOpenProtocol(efi_handle handle, efi_guid guid, void* protocol);
+  void ExpectCloseProtocol(efi_handle handle, efi_guid guid);
 };
 
 }  // namespace efi

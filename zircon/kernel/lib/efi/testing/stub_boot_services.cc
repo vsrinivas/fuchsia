@@ -10,6 +10,11 @@ namespace efi {
 
 namespace {
 
+using ::testing::_;
+using ::testing::DoAll;
+using ::testing::Return;
+using ::testing::SetArgPointee;
+
 // We need to stash the global StubBootServices object here since there's
 // no "self" parameter to any of these functions.
 StubBootServices* active_stub = nullptr;
@@ -56,6 +61,15 @@ efi_status StubBootServices::AllocatePool(efi_memory_type /*pool_type*/, size_t 
 efi_status StubBootServices::FreePool(void* buf) {
   free(buf);
   return EFI_SUCCESS;
+}
+
+void MockBootServices::ExpectOpenProtocol(efi_handle handle, efi_guid guid, void* protocol) {
+  EXPECT_CALL(*this, OpenProtocol(handle, MatchGuid(guid), _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(protocol), Return(EFI_SUCCESS)));
+}
+
+void MockBootServices::ExpectCloseProtocol(efi_handle handle, efi_guid guid) {
+  EXPECT_CALL(*this, CloseProtocol(handle, MatchGuid(guid), _, _)).WillOnce(Return(EFI_SUCCESS));
 }
 
 }  // namespace efi

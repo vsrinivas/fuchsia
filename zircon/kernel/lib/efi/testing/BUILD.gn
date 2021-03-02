@@ -8,12 +8,18 @@ import("//build/test.gni")
 # Contains stubs/fakes/mocks that wrap EFI function tables so that unittests
 # can control the system behavior to test against.
 source_set("testing") {
+  testonly = true
+
   sources = [
     "fake_disk_io_protocol.cc",
     "stub_boot_services.cc",
   ]
   public_configs = [ ":testing_config" ]
-  public_deps = [ "//zircon/kernel/lib/efi" ]
+  public_deps = [
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/kernel/lib/efi",
+  ]
 }
 
 config("testing_config") {
@@ -29,6 +35,5 @@ test("efi_testing_test") {
   deps = [
     ":testing",
     "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
   ]
 }

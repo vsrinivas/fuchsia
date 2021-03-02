@@ -6,15 +6,11 @@
 #include <stdio.h>
 
 #include <efi/protocol/block-io.h>
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace efi {
 
 namespace {
-
-using testing::_;
-using testing::Return;
 
 // Creating a second is OK as long as the first has gone out of scope.
 TEST(StubBootServices, CreateTwice) {
@@ -38,62 +34,42 @@ TEST(StubBootServices, AllocateAndFreePool) {
   ASSERT_EQ(EFI_SUCCESS, stub.services()->FreePool(memory));
 }
 
-// Make sure mocking out the class works as expected. This ensures our code to
-// bounce the C callback into the C++ class is working properly.
-class MockBootServices : public StubBootServices {
- public:
-  MOCK_METHOD(efi_status, OpenProtocol,
-              (efi_handle handle, efi_guid* protocol, void** intf, efi_handle agent_handle,
-               efi_handle controller_handle, uint32_t attributes),
-              (override));
-  MOCK_METHOD(efi_status, CloseProtocol,
-              (efi_handle handle, efi_guid* protocol, efi_handle agent_handle,
-               efi_handle controller_handle),
-              (override));
-  MOCK_METHOD(efi_status, LocateHandleBuffer,
-              (efi_locate_search_type search_type, efi_guid* protocol, void* search_key,
-               size_t* num_handles, efi_handle** buf),
-              (override));
-};
+const efi_handle kTestHandle = reinterpret_cast<efi_handle>(0x10);
 
-const efi_handle kTestHandle1 = reinterpret_cast<efi_handle>(0x1);
-const efi_handle kTestHandle2 = reinterpret_cast<efi_handle>(0x2);
-const efi_handle kTestHandle3 = reinterpret_cast<efi_handle>(0x3);
+TEST(MockBootServices, ExpectProtocol) {
+  efi_guid guid = EFI_BLOCK_IO_PROTOCOL_GUID;
+  efi_block_io_protocol protocol;
 
-TEST(StubBootServices, OpenProtocol) {
   MockBootServices mock;
-  efi_guid protocol_guid = EFI_BLOCK_IO_PROTOCOL_GUID;
+  mock.ExpectProtocol(kTestHandle, guid, &protocol);
 
-  // Expect any non-zero return value so we can check that it worked.
-  EXPECT_CALL(mock,
-              OpenProtocol(kTestHandle1, &protocol_guid, _, kTestHandle2, kTestHandle3, 0xABCD))
-      .WillOnce(Return(EFI_TIMEOUT));
-
-  void* arg = nullptr;
-  EXPECT_EQ(EFI_TIMEOUT, mock.services()->OpenProtocol(kTestHandle1, &protocol_guid, &arg,
-                                                       kTestHandle2, kTestHandle3, 0xABCD));
+  void* protocol_out = nullptr;
+  EXPECT_EQ(EFI_SUCCESS,
+            mock.services()->OpenProtocol(kTestHandle, &guid, &protocol_out, nullptr, nullptr, 0));
+  EXPECT_EQ(protocol_out, &protocol);
+  EXPECT_EQ(EFI_SUCCESS, mock.services()->CloseProtocol(kTestHandle, &guid, nullptr, nullptr));
 }
 
-TEST(StubBootServices, CloseProtocol) {
+TEST(MockBootServices, ExpectOpenProtocol) {
+  efi_guid guid = EFI_BLOCK_IO_PROTOCOL_GUID;
+  efi_block_io_protocol protocol;
+
   MockBootServices mock;
-  efi_guid protocol_guid = EFI_BLOCK_IO_PROTOCOL_GUID;
+  mock.ExpectOpenProtocol(kTestHandle, guid, &protocol);
 
-  EXPECT_CALL(mock, CloseProtocol(kTestHandle1, &protocol_guid, kTestHandle2, kTestHandle3))
-      .WillOnce(Return(EFI_TIMEOUT));
-
-  EXPECT_EQ(EFI_TIMEOUT, mock.services()->CloseProtocol(kTestHandle1, &protocol_guid, kTestHandle2,
-                                                        kTestHandle3));
+  void* protocol_out = nullptr;
+  EXPECT_EQ(EFI_SUCCESS,
+            mock.services()->OpenProtocol(kTestHandle, &guid, &protocol_out, nullptr, nullptr, 0));
+  EXPECT_EQ(protocol_out, &protocol);
 }
 
-TEST(StubBootServices, LocateHandleBuffer) {
+TEST(MockBootServices, ExpectCloseProtocol) {
+  efi_guid guid = EFI_BLOCK_IO_PROTOCOL_GUID;
+
   MockBootServices mock;
-  efi_guid protocol_guid = EFI_BLOCK_IO_PROTOCOL_GUID;
+  mock.ExpectCloseProtocol(kTestHandle, guid);
 
-  EXPECT_CALL(mock, LocateHandleBuffer(ByProtocol, &protocol_guid, _, _, _))
-      .WillOnce(Return(EFI_TIMEOUT));
-
-  EXPECT_EQ(EFI_TIMEOUT, mock.services()->LocateHandleBuffer(ByProtocol, &protocol_guid, nullptr,
-                                                             nullptr, nullptr));
+  EXPECT_EQ(EFI_SUCCESS, mock.services()->CloseProtocol(kTestHandle, &guid, nullptr, nullptr));
 }
 
 }  // namespace
