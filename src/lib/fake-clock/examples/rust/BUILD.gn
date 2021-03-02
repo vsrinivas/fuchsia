@@ -29,13 +29,6 @@ rustc_binary("example_bin") {
   non_rust_deps = [ "//src/lib/fake-clock/lib" ]
 }
 
-fuchsia_component("rust_example") {
-  testonly = true
-  component_name = "rust_example"
-  manifest = "meta/example.cmx"
-  deps = [ ":example_bin" ]
-}
-
 rustc_test("test_bin") {
   name = "integ_test_bin"
   edition = "2018"
@@ -55,6 +48,15 @@ rustc_test("test_bin") {
   ]
 }
 
+# Components v1 setup
+
+fuchsia_component("rust_example") {
+  testonly = true
+  component_name = "rust_example"
+  manifest = "meta/example.cmx"
+  deps = [ ":example_bin" ]
+}
+
 fuchsia_component("rust_integ_test") {
   testonly = true
   component_name = "rust_integ_test"
@@ -70,7 +72,41 @@ fuchsia_test_package("fake-clock-rust") {
   ]
 }
 
+# Components v2 setup
+
+fuchsia_component("rust_example_v2") {
+  testonly = true
+  component_name = "rust_example_v2"
+  manifest = "meta/example.cml"
+  deps = [ ":example_bin" ]
+}
+
+fuchsia_component("rust_integ_test_v2_driver") {
+  testonly = true
+  component_name = "rust_integ_test_v2_driver"
+  manifest = "meta/test_driver.cml"
+  deps = [ ":test_bin" ]
+}
+
+fuchsia_component("rust_integ_test_v2") {
+  testonly = true
+  component_name = "rust_integ_test_v2"
+  manifest = "meta/test.cml"
+}
+
+fuchsia_test_package("fake-clock-rust-v2") {
+  test_components = [ ":rust_integ_test_v2" ]
+  deps = [
+    ":rust_example_v2",
+    ":rust_integ_test_v2_driver",
+    "//src/lib/fake-clock/svc:svc_v2",
+  ]
+}
+
 group("examples") {
-  deps = [ ":fake-clock-rust" ]
+  deps = [
+    ":fake-clock-rust",
+    ":fake-clock-rust-v2",
+  ]
   testonly = true
 }
