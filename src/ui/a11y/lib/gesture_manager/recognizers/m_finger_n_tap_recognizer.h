@@ -59,10 +59,6 @@ class MFingerNTapRecognizer : public GestureRecognizer {
   // screen.
   virtual void OnExcessFingers();
 
-  // Helper method invoked when the mth finger comes into contact with the
-  // screen at the start of a tap.
-  virtual void OnTapStarted();
-
   // Helper method invoked for valid MOVE events.
   virtual void OnMoveEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 

@@ -171,7 +171,7 @@ TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapWithDragDetectedExtraF
 
 // Tests the case in which the finger moves too far from its starting location
 // during one of the non-drag taps.
-TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapWithDragRejectedInvalidTap) {
+TEST_F(MFingerNTapDragRecognizerTest, OneFingerTripleTapWithDragRejectedInvalidTap) {
   CreateGestureRecognizer(1 /*number of fingers*/, 3 /*number of fingers*/);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
@@ -185,7 +185,7 @@ TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapWithDragRejectedInvali
 
 // Tests the case in which the gesture is accepted after the finger moves far from its starting
 // position on the last tap.
-TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapWithDragAggressiveAccept) {
+TEST_F(MFingerNTapDragRecognizerTest, OneFingerTripleTapWithDragAggressiveAccept) {
   CreateGestureRecognizer(1 /*number of fingers*/, 3 /*number of fingers*/);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
@@ -195,6 +195,30 @@ TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapWithDragAggressiveAcce
   // Once the finger has a displacement of more than .1f from its initial
   // location during the third tap, we should accept.
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
+}
+
+// Tests the case in which the gesture is rejected for a timeout on one of the taps that is NOT the
+// last.
+TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapRejectedEarlyTapLengthTimeout) {
+  CreateGestureRecognizer(3 /*number of fingers*/, 2 /*number of fingers*/);
+  recognizer_->OnContestStarted(member_.TakeInterface());
+
+  SendPointerEvents(DownEvents(1, {}));
+  RunLoopFor(a11y::MFingerNTapDragRecognizer::kTapTimeout);
+
+  EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
+}
+
+// Tests the case in which the gesture is rejected for a timeout on the last tap.
+TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapRejectedLastTapLengthTimeout) {
+  CreateGestureRecognizer(3 /*number of fingers*/, 2 /*number of fingers*/);
+  recognizer_->OnContestStarted(member_.TakeInterface());
+
+  SendPointerEvents(DownEvents(1, {}) + DownEvents(2, {}) + DownEvents(3, {}) + UpEvents(1, {}) +
+                    UpEvents(2, {}) + UpEvents(3, {}) + DownEvents(1, {}));
+  RunLoopFor(a11y::MFingerNTapDragRecognizer::kTapTimeout);
+
+  EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
 }
 
 }  // namespace

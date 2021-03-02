@@ -340,7 +340,7 @@ TEST_F(MFingerNTapRecognizerTest, OneFingerTripleTapDetected) {
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
 }
 
-// Tests successfulthree-finger double tap gesture detection.
+// Tests successful three-finger double tap gesture detection.
 TEST_F(MFingerNTapRecognizerTest, ThreeFingerDoubleTapDetected) {
   CreateGestureRecognizer(3 /*number of fingers*/, 2 /*number of fingers*/);
   recognizer_->OnContestStarted(member_.TakeInterface());
@@ -354,6 +354,17 @@ TEST_F(MFingerNTapRecognizerTest, ThreeFingerDoubleTapDetected) {
                      UpEvents(2, {}) + UpEvents(3, {})));
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
+}
+
+// Tests tap length timeout.
+TEST_F(MFingerNTapRecognizerTest, ThreeFingerDoubleTapRejected) {
+  CreateGestureRecognizer(3 /*number of fingers*/, 2 /*number of fingers*/);
+  recognizer_->OnContestStarted(member_.TakeInterface());
+
+  SendPointerEvents(DownEvents(1, {}));
+  RunLoopFor(a11y::MFingerNTapRecognizer::kTapTimeout);
+
+  EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
 }
 
 }  // namespace

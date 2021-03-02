@@ -17,7 +17,10 @@ namespace a11y {
 
 struct MFingerNTapDragRecognizer::Contest {
   Contest(std::unique_ptr<ContestMember> contest_member)
-      : member(std::move(contest_member)), reject_task(member.get()), accept_task(member.get()) {}
+      : member(std::move(contest_member)),
+        tap_length_timeout(member.get()),
+        tap_interval_timeout(member.get()),
+        accept_task(member.get()) {}
 
   std::unique_ptr<ContestMember> member;
   // Indicates whether m fingers have been on the screen at the same time
@@ -27,8 +30,14 @@ struct MFingerNTapDragRecognizer::Contest {
   uint32_t number_of_taps_detected = 0;
   // Indicaes whether the recognizer has successfully accepted the gesture.
   bool won = false;
-  // Async task used to schedule long-press timeout.
-  async::TaskClosureMethod<ContestMember, &ContestMember::Reject> reject_task;
+  // Async task to schedule tap length timeout.
+  // This task enforces a timeout between the first DOWN event and last UP event
+  // of a particular tap.
+  async::TaskClosureMethod<ContestMember, &ContestMember::Reject> tap_length_timeout;
+  // Async task used to schedule tap interval timeout.
+  // This task enforces a timeout between the last UP event of a tap and the
+  // first DOWN event of the next tap.
+  async::TaskClosureMethod<ContestMember, &ContestMember::Reject> tap_interval_timeout;
   // Async task to schedule delayed win for held tap.
   async::TaskClosureMethod<ContestMember, &ContestMember::Accept> accept_task;
 };
@@ -51,11 +60,10 @@ void MFingerNTapDragRecognizer::OnTapStarted() {
   // if the fingers are still on screen after kMinTapHoldDuration has elapsed.
   // Otherwise, if this tap is NOT the last in the gesture, post a task to
   // reject the gesture if the fingers have not lifted by the time kTapTimeout
-  // elapses.
+  // elapses. In this case, we also need to cancel the tap length timeout.
   if (contest_->number_of_taps_detected == number_of_taps_in_gesture_ - 1) {
+    contest_->tap_length_timeout.Cancel();
     contest_->accept_task.PostDelayed(async_get_default_dispatcher(), kMinTapHoldDuration);
-  } else {
-    contest_->reject_task.PostDelayed(async_get_default_dispatcher(), kTapTimeout);
   }
 }
 
@@ -123,10 +131,10 @@ void MFingerNTapDragRecognizer::OnUpEvent() {
     contest_->tap_in_progress = false;
 
     // Cancel task which was scheduled for detecting single tap.
-    contest_->reject_task.Cancel();
+    contest_->tap_length_timeout.Cancel();
 
     // Schedule task with delay of timeout_between_taps_.
-    contest_->reject_task.PostDelayed(async_get_default_dispatcher(), kTimeoutBetweenTaps);
+    contest_->tap_interval_timeout.PostDelayed(async_get_default_dispatcher(), kTimeoutBetweenTaps);
   }
 }
 
@@ -184,8 +192,12 @@ void MFingerNTapDragRecognizer::HandleEvent(
         break;
       }
 
-      // Cancel task which would be scheduled for timeout between taps.
-      contest_->reject_task.Cancel();
+      // On the first DOWN event of the tap, cancel the tap interval timeout and
+      // schedule the tap length timeout.
+      if (NumberOfFingersOnScreen(gesture_context_) == 1) {
+        contest_->tap_interval_timeout.Cancel();
+        contest_->tap_length_timeout.PostDelayed(async_get_default_dispatcher(), kTapTimeout);
+      }
 
       contest_->tap_in_progress =
           (NumberOfFingersOnScreen(gesture_context_) == number_of_fingers_in_gesture_);

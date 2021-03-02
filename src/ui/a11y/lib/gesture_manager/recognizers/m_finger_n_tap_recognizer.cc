@@ -17,7 +17,9 @@ namespace a11y {
 
 struct MFingerNTapRecognizer::Contest {
   Contest(std::unique_ptr<ContestMember> contest_member)
-      : member(std::move(contest_member)), reject_task(member.get()) {}
+      : member(std::move(contest_member)),
+        tap_length_timeout(member.get()),
+        tap_interval_timeout(member.get()) {}
 
   std::unique_ptr<ContestMember> member;
   // Indicates whether m fingers have been on the screen at the same time
@@ -25,9 +27,14 @@ struct MFingerNTapRecognizer::Contest {
   bool tap_in_progress = false;
   // Keeps the count of the number of taps detected so far, for the gesture.
   uint32_t number_of_taps_detected = 0;
-
-  // Async task used to schedule long-press timeout.
-  async::TaskClosureMethod<ContestMember, &ContestMember::Reject> reject_task;
+  // Async task used to reject taps that are held for too long.
+  // This task enforces a time limit between the first finger DOWN event and
+  // last finger UP event of a particular tap.
+  async::TaskClosureMethod<ContestMember, &ContestMember::Reject> tap_length_timeout;
+  // Async task used to schedule between-tap timeout.
+  // This task enforces a time limit between the last finger UP event of one tap
+  // and the first finger DOWN event of the next tap.
+  async::TaskClosureMethod<ContestMember, &ContestMember::Reject> tap_interval_timeout;
 };
 
 MFingerNTapRecognizer::MFingerNTapRecognizer(OnMFingerNTapCallback callback,
@@ -39,10 +46,6 @@ MFingerNTapRecognizer::MFingerNTapRecognizer(OnMFingerNTapCallback callback,
 MFingerNTapRecognizer::~MFingerNTapRecognizer() = default;
 
 void MFingerNTapRecognizer::OnExcessFingers() { ResetRecognizer(); }
-
-void MFingerNTapRecognizer::OnTapStarted() {
-  contest_->reject_task.PostDelayed(async_get_default_dispatcher(), kTapTimeout);
-}
 
 void MFingerNTapRecognizer::OnMoveEvent(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
@@ -62,16 +65,15 @@ void MFingerNTapRecognizer::OnUpEvent() {
   // simultaneously during the current gesture, and (2) The m fingers have
   // now been removed, without any interceding finger DOWN events.
   // Therefore, we can conclude that a complete m-finger tap has occurred.
+  // In this case, we should cancel the tap-length timeout.
   contest_->number_of_taps_detected++;
+  contest_->tap_in_progress = false;
+  contest_->tap_length_timeout.Cancel();
 
   // Check if this is not the last tap of the gesture.
   if (contest_->number_of_taps_detected < number_of_taps_in_gesture_) {
-    contest_->tap_in_progress = false;
-    // Cancel task which was scheduled for detecting single tap.
-    contest_->reject_task.Cancel();
-
     // Schedule task with delay of timeout_between_taps_.
-    contest_->reject_task.PostDelayed(async_get_default_dispatcher(), kTimeoutBetweenTaps);
+    contest_->tap_interval_timeout.PostDelayed(async_get_default_dispatcher(), kTimeoutBetweenTaps);
   } else {
     // Tap gesture is detected.
     contest_->member->Accept();
@@ -133,15 +135,16 @@ void MFingerNTapRecognizer::HandleEvent(
         break;
       }
 
-      // Cancel task which would be scheduled for timeout between taps.
-      contest_->reject_task.Cancel();
+      // Cancel task which would be scheduled for timeout between taps and
+      // schedule the timeout for this tap if this is the first DOWN event of
+      // the new tap.
+      if (NumberOfFingersOnScreen(gesture_context_) == 1) {
+        contest_->tap_interval_timeout.Cancel();
+        contest_->tap_length_timeout.PostDelayed(async_get_default_dispatcher(), kTapTimeout);
+      }
 
       contest_->tap_in_progress =
           (NumberOfFingersOnScreen(gesture_context_) == number_of_fingers_in_gesture_);
-      // Only start the timeout once all m fingers are on the screen together.
-      if (contest_->tap_in_progress) {
-        OnTapStarted();
-      }
 
       break;
 
