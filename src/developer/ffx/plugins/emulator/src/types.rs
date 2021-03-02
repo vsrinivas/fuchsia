@@ -380,6 +380,7 @@ pub struct VDLArgs {
     pub enable_hidpi_scaling: bool,
     pub grpcwebproxy_port: String,
     pub upscript: String,
+    pub start_package_server: bool,
     pub packages_to_serve: String,
     pub image_size: String,
     pub device_proto: String,
@@ -431,6 +432,7 @@ impl From<&StartCommand> for VDLArgs {
             tuntap: cmd.tuntap,
             enable_hidpi_scaling: cmd.hidpi_scaling,
             upscript: cmd.upscript.as_ref().unwrap_or(&String::from("")).to_string(),
+            start_package_server: !cmd.nopackageserver,
             packages_to_serve: cmd
                 .packages_to_serve
                 .as_ref()
@@ -489,12 +491,14 @@ mod tests {
             image_name: Some("qemu-x64".to_string()),
             vdl_version: None,
             emulator_log: None,
+            package_server_log: Some("/a/b/c/server.log".to_string()),
             port_map: None,
             vdl_output: None,
             nointeractive: false,
             cache_image: true,
             kernel_args: None,
             debugger: false,
+            nopackageserver: false,
         };
         let vdl_args: VDLArgs = start_command.into();
         assert_eq!(vdl_args.headless, false);
@@ -504,6 +508,7 @@ mod tests {
         assert_eq!(vdl_args.image_size, "2G");
         assert_eq!(vdl_args.device_proto, "");
         assert_eq!(vdl_args.gpu, "host");
+        assert_eq!(vdl_args.start_package_server, true);
         assert!(vdl_args.cache_root.as_path().ends_with("qemu-x64/0.20201130.3.1"));
     }
 

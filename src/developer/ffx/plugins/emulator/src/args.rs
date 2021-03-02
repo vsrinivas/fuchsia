@@ -62,10 +62,6 @@ pub struct StartCommand {
     #[argh(option, short = 'u')]
     pub upscript: Option<String>,
 
-    /// comma separated string of fuchsia package urls, extra packages to serve after starting FEMU.
-    #[argh(option)]
-    pub packages_to_serve: Option<String>,
-
     /// set pointing device used on emulator: mouse or touch screen. Allowed values are "touch", "mouse". Default is "touch".
     #[argh(option, short = 'p')]
     pub pointing_device: Option<String>,
@@ -172,6 +168,20 @@ pub struct StartCommand {
     /// bool, pause on launch and wait for a debugger process to attach before resuming
     #[argh(switch)]
     pub debugger: bool,
+
+    /// bool, disable automatically launching package server.
+    #[argh(switch)]
+    pub nopackageserver: bool,
+
+    /// comma separated string of fuchsia package urls, extra packages to serve after starting FEMU.
+    /// Requires --nopackageserver=false
+    #[argh(option)]
+    pub packages_to_serve: Option<String>,
+
+    /// file path to store package server log. Default is a stdout.
+    /// Requires --nopackageserver=false
+    #[argh(option)]
+    pub package_server_log: Option<String>,
 }
 
 fn default_window_height() -> usize {

@@ -296,7 +296,10 @@ impl VDLFiles {
             Some(location) => PathBuf::from(location),
             None => self.emulator_log.clone(),
         };
-
+        let package_server_log = match &start_command.package_server_log {
+            Some(location) => PathBuf::from(location),
+            None => PathBuf::new(),
+        };
         let vdl_output = match &start_command.vdl_output {
             Some(location) => PathBuf::from(location),
             None => self.output_proto.clone(),
@@ -334,6 +337,8 @@ impl VDLFiles {
             .arg(&vdl_output)
             .arg("--emu_log")
             .arg(&emu_log)
+            .arg("--package_server_log")
+            .arg(&package_server_log)
             .arg("--proto_file_path")
             .arg(&fvd)
             .arg("--audio=true")
@@ -343,6 +348,7 @@ impl VDLFiles {
             .arg(format!("--headless_mode={}", vdl_args.headless))
             .arg(format!("--tuntap={}", vdl_args.tuntap))
             .arg(format!("--upscript={}", vdl_args.upscript))
+            .arg(format!("--start_package_server={}", vdl_args.start_package_server))
             .arg(format!("--serve_packages={}", vdl_args.packages_to_serve))
             .arg(format!("--pointing_device={}", vdl_args.pointing_device))
             .arg(format!("--enable_webrtc={}", vdl_args.enable_grpcwebproxy))
@@ -543,6 +549,8 @@ mod tests {
             cache_image: false,
             debugger: false,
             kernel_args: None,
+            nopackageserver: false,
+            package_server_log: None,
         }
     }
 
