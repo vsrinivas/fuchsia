@@ -26,18 +26,17 @@ namespace network::internal {
 /// `status_t``.
 class FidlStatus {
  public:
-  explicit FidlStatus(const status_t& status)
-      : mtu_(status.mtu), flags_(netdev::wire::StatusFlags::TruncatingUnknown(status.flags)) {
-    builder_.set_flags(fidl::unowned_ptr(&flags_));
-    builder_.set_mtu(fidl::unowned_ptr(&mtu_));
+  explicit FidlStatus(const status_t& status) {
+    status_.Allocate(allocator_);
+    status_.set_flags(allocator_, netdev::wire::StatusFlags::TruncatingUnknown(status.flags))
+        .set_mtu(allocator_, status.mtu);
   }
 
-  netdev::wire::Status view() { return builder_.build(); }
+  netdev::Status&& Take() { return std::move(status_); }
 
  private:
-  uint32_t mtu_;
-  netdev::wire::StatusFlags flags_;
-  netdev::wire::Status::UnownedBuilder builder_;
+  fidl::FidlAllocator<128> allocator_;
+  netdev::wire::Status status_;
 };
 
 class StatusWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<StatusWatcher>>,

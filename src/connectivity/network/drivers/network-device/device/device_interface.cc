@@ -253,7 +253,7 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
 void DeviceInterface::GetStatus(GetStatusCompleter::Sync& completer) {
   status_t status;
   device_.GetStatus(&status);
-  completer.Reply(FidlStatus(status).view());
+  completer.Reply(FidlStatus(status).Take());
 }
 
 void DeviceInterface::OpenSession(::fidl::StringView session_name,

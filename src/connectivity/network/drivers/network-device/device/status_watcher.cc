@@ -83,7 +83,7 @@ void StatusWatcher::WatchStatus(WatchStatusCompleter::Sync& completer) {
         // Complete the last pending transaction with the old value and retain the new completer as
         // an async transaction.
         FidlStatus fidl(*last_observed_);
-        pending_txn_->Reply(fidl.view());
+        pending_txn_->Reply(fidl.Take());
         pending_txn_ = completer.ToAsync();
       } else {
         // If we already have a pending transaction that hasn't been resolved and we don't have a
@@ -99,7 +99,7 @@ void StatusWatcher::WatchStatus(WatchStatusCompleter::Sync& completer) {
     status_t status = queue_.front();
     queue_.pop();
     FidlStatus fidl(status);
-    completer.Reply(fidl.view());
+    completer.Reply(fidl.Take());
     last_observed_ = status;
   }
 }
@@ -120,7 +120,7 @@ void StatusWatcher::PushStatus(const status_t& status) {
   if (pending_txn_.has_value() && queue_.empty()) {
     FidlStatus fidl(status);
     last_observed_ = status;
-    pending_txn_->Reply(fidl.view());
+    pending_txn_->Reply(fidl.Take());
     pending_txn_.reset();
   } else {
     queue_.push(status);
