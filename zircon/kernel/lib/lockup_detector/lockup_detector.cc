@@ -25,6 +25,8 @@
 #include <ktl/array.h>
 #include <ktl/atomic.h>
 #include <ktl/iterator.h>
+#include <object/process_dispatcher.h>
+#include <object/thread_dispatcher.h>
 
 // Counter for the number of lockups detected.
 KCOUNTER(counter_lockup_cs_count, "lockup_detector.critical_section.count")
@@ -108,6 +110,32 @@ void heartbeat_callback(Timer* timer, zx_time_t now, void* arg) {
 // Periodic timer that invokes |check_heartbeats_callback|.
 Timer check_heartbeats_timer;
 
+void dump_diagnostics(cpu_num_t cpu) {
+  DEBUG_ASSERT(arch_ints_disabled());
+
+  auto& percpu = percpu::Get(cpu);
+  printf("timer_ints: %lu\n", percpu.stats.timer_ints);
+
+  if (ThreadLock::Get()->lock().HolderCpu() == cpu) {
+    printf("thread lock is held by cpu %u, skipping thread and scheduler diagnostics\n", cpu);
+    return;
+  }
+
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  percpu.scheduler.Dump();
+  Thread* thread = percpu.scheduler.active_thread();
+  if (thread != nullptr) {
+    printf("thread: pid=%lu tid=%lu\n", thread->pid(), thread->tid());
+    ThreadDispatcher* user_thread = thread->user_thread();
+    if (user_thread != nullptr) {
+      ProcessDispatcher* process = user_thread->process();
+      char name[ZX_MAX_NAME_LEN]{};
+      process->get_name(name);
+      printf("process: name=%s\n", name);
+    }
+  }
+}
+
 void check_heartbeat(LockupDetectorState* state, cpu_num_t cpu, zx_ticks_t now_ticks,
                      zx_time_t now_mono) {
   if (!state->heartbeat_active.load()) {
@@ -131,11 +159,7 @@ void check_heartbeat(LockupDetectorState* state, cpu_num_t cpu, zx_ticks_t now_t
     KERNEL_OOPS("lockup_detector: no heartbeat from CPU-%u in %" PRId64
                 " ms, last_heartbeat=%" PRId64 " now=%" PRId64 " (message rate limited)\n",
                 cpu, age / ZX_MSEC(1), last_heartbeat, now_mono);
-    {
-      Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
-      percpu::Get(cpu).scheduler.Dump();
-    }
-    // TODO(maniscalco): Print the contents of cpu's interrupt counters.
+    dump_diagnostics(cpu);
   }
 }
 
@@ -173,6 +197,7 @@ void check_critical_section(LockupDetectorState* state, cpu_num_t cpu, zx_ticks_
                 " now=%" PRId64 " (message rate limited)\n",
                 cpu, duration / ZX_MSEC(1), TicksToDuration(begin_ticks),
                 TicksToDuration(now_ticks));
+    dump_diagnostics(cpu);
   }
 }
 
@@ -231,7 +256,7 @@ void lockup_primary_init() {
   } else {
     dprintf(INFO,
             "lockup_detector: critical section threshold is %" PRId64 " ticks (%" PRId64 " ms)\n",
-            critical_section_ticks, ZX_MSEC(critical_section_duration));
+            critical_section_ticks, critical_section_duration / ZX_MSEC(1));
   }
 
   if (heartbeats_enabled()) {

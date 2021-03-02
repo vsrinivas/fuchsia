@@ -125,6 +125,9 @@ class Scheduler {
     return performance_scale_reciprocal_;
   }
 
+  // Returns a pointer to the currently running thread, if any.
+  Thread* active_thread() const TA_REQ(thread_lock) { return active_thread_; }
+
   // Public entry points.
 
   static void InitializeThread(Thread* thread, int priority);
