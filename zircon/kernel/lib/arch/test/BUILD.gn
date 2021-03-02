@@ -14,6 +14,7 @@ group("tests") {
 if (is_host) {
   test("arch-tests") {
     sources = [
+      "bug-tests.cc",
       "cpuid-basic-tests.cc",
       "cpuid-corpus-tests.cc",
       "fake-cpuid-tests.cc",

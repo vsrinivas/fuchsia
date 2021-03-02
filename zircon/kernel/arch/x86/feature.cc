@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <bits.h>
 #include <lib/arch/x86/boot-cpuid.h>
+#include <lib/arch/x86/bug.h>
 #include <lib/arch/x86/cache.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/cmdline.h>
@@ -205,6 +206,8 @@ void x86_cpu_feature_init() {
 
   // Evaluate speculative execution mitigation settings.
   g_disable_spec_mitigations = gBootOptions->disable_x86_spec_mitigations;
+  g_has_swapgs_bug = arch::HasX86SwapgsBug(arch::BootCpuidIo{});
+
   if (x86_vendor == X86_VENDOR_INTEL) {
     g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid, &msr);
     g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid, &msr);
@@ -224,7 +227,6 @@ void x86_cpu_feature_init() {
     g_has_md_clear = cpuid.ReadFeatures().HasFeature(cpu_id::Features::MD_CLEAR);
     g_md_clear_on_user_return = ((x86_get_disable_spec_mitigations() == false)) && g_has_mds_taa &&
                                 g_has_md_clear && gBootOptions->md_clear_on_user_return;
-    g_has_swapgs_bug = x86_intel_cpu_has_swapgs_bug(&cpuid);
     g_has_ssb = x86_intel_cpu_has_ssb(&cpuid, &msr);
     g_has_ssbd = x86_intel_cpu_has_ssbd(&cpuid, &msr);
     g_has_spec_ctrl = cpuid.ReadFeatures().HasFeature(cpu_id::Features::IBRS_IBPB) ||
@@ -592,7 +594,6 @@ static const x86_microarch_config_t cannon_lake_config{
     .has_meltdown = true,
     .has_l1tf = true,
     .has_mds = true,
-    .has_swapgs_bug = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -612,7 +613,6 @@ static const x86_microarch_config_t skylake_config{
     .has_meltdown = true,
     .has_l1tf = true,
     .has_mds = true,
-    .has_swapgs_bug = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -641,7 +641,6 @@ static const x86_microarch_config_t skylake_x_config{
     .has_meltdown = true,
     .has_l1tf = true,
     .has_mds = true,
-    .has_swapgs_bug = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -661,7 +660,6 @@ static const x86_microarch_config_t broadwell_config{
     .has_meltdown = true,
     .has_l1tf = true,
     .has_mds = true,
-    .has_swapgs_bug = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -680,7 +678,6 @@ static const x86_microarch_config_t haswell_config{
     .has_meltdown = true,
     .has_l1tf = true,
     .has_mds = true,
-    .has_swapgs_bug = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -699,7 +696,6 @@ static const x86_microarch_config_t ivybridge_config{
     .has_meltdown = true,
     .has_l1tf = true,
     .has_mds = true,
-    .has_swapgs_bug = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -718,7 +714,6 @@ static const x86_microarch_config_t sandybridge_config{
     .has_meltdown = true,
     .has_l1tf = true,
     .has_mds = true,
-    .has_swapgs_bug = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -737,7 +732,6 @@ static const x86_microarch_config_t westmere_config{
     .has_meltdown = true,
     .has_l1tf = true,
     .has_mds = true,
-    .has_swapgs_bug = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -756,7 +750,6 @@ static const x86_microarch_config_t nehalem_config{
     .has_meltdown = true,
     .has_l1tf = true,
     .has_mds = true,
-    .has_swapgs_bug = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -775,7 +768,6 @@ static const x86_microarch_config_t silvermont_config{
     .has_meltdown = false,
     .has_l1tf = false,
     .has_mds = true,
-    .has_swapgs_bug = true,
     .has_ssb = false,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -794,7 +786,6 @@ static const x86_microarch_config_t goldmont_config{
     .has_meltdown = true,
     .has_l1tf = false,
     .has_mds = false,
-    .has_swapgs_bug = true,
     .has_ssb = true,
     // [APL30] Apollo Lake SOCs (Goldmont) have an errata which causes stores to not always wake
     // MWAIT-ing cores. Prefer HLT to avoid the issue.
@@ -815,7 +806,6 @@ static const x86_microarch_config_t goldmont_plus_config{
     .has_meltdown = true,
     .has_l1tf = false,
     .has_mds = false,
-    .has_swapgs_bug = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -844,7 +834,6 @@ static const x86_microarch_config_t intel_default_config{
     .has_meltdown = true,
     .has_l1tf = true,
     .has_mds = true,
-    .has_swapgs_bug = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -865,7 +854,6 @@ static const x86_microarch_config_t zen_config{
     .has_meltdown = false,
     .has_l1tf = false,
     .has_mds = false,
-    .has_swapgs_bug = false,
     .has_ssb = true,
     // Zen SOCs save substantial power using HLT instead of MWAIT.
     // TODO(fxbug.dev/61265): Use a predictor/selection to use mwait for short sleeps.
@@ -886,7 +874,6 @@ static const x86_microarch_config_t jaguar_config{
     .has_meltdown = false,
     .has_l1tf = false,
     .has_mds = false,
-    .has_swapgs_bug = false,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -905,7 +892,6 @@ static const x86_microarch_config_t bulldozer_config{
     .has_meltdown = false,
     .has_l1tf = false,
     .has_mds = false,
-    .has_swapgs_bug = false,
     .has_ssb = true,
     // Excavator SOCs in particular save substantial power using HLT instead of MWAIT
     .idle_prefer_hlt = true,
@@ -925,7 +911,6 @@ static const x86_microarch_config_t amd_default_config{
     .has_meltdown = false,
     .has_l1tf = false,
     .has_mds = false,
-    .has_swapgs_bug = false,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -946,7 +931,6 @@ static const x86_microarch_config_t unknown_vendor_config{
     .has_meltdown = true,
     .has_l1tf = true,
     .has_mds = true,
-    .has_swapgs_bug = false,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =

@@ -43,13 +43,13 @@ static uint32_t microcode_checksum(uint32_t* patch, size_t dwords) {
 bool x86_intel_idle_state_may_empty_rsb(X86IdleState* state) {
   const x86_microarch_config_t* const microarch = x86_get_microarch_config();
   switch (microarch->x86_microarch) {
-  // C-states deeper than C6 may empty the return stack buffer on certain CPUs.
-  // Sequences of code that are sensitive to empty RSBs may wish to refill it when it is emptied;
-  // return true if a selected idle state may drain this structure.
-  case X86_MICROARCH_INTEL_SKYLAKE:
-    return state->MwaitHint() >= 0x20;
-  default:
-    return false;
+    // C-states deeper than C6 may empty the return stack buffer on certain CPUs.
+    // Sequences of code that are sensitive to empty RSBs may wish to refill it when it is emptied;
+    // return true if a selected idle state may drain this structure.
+    case X86_MICROARCH_INTEL_SKYLAKE:
+      return state->MwaitHint() >= 0x20;
+    default:
+      return false;
   }
 }
 
@@ -180,11 +180,6 @@ bool x86_intel_cpu_has_mds_taa(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
 
   auto* const microarch_config = get_microarch_config(cpuid);
   return microarch_config->has_mds || has_tsx;
-}
-
-bool x86_intel_cpu_has_swapgs_bug(const cpu_id::CpuId* cpuid) {
-  auto* const microarch_config = get_microarch_config(cpuid);
-  return microarch_config->has_swapgs_bug;
 }
 
 bool x86_intel_cpu_has_rsb_fallback(const cpu_id::CpuId* cpuid, MsrAccess* msr) {

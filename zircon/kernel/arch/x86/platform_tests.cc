@@ -406,44 +406,6 @@ static bool test_x64_mds_enumeration() {
   END_TEST;
 }
 
-static bool test_x64_swapgs_bug_enumeration() {
-  BEGIN_TEST;
-
-  fbl::AllocChecker ac;
-  {
-    // Test an Intel Xeon E5-2690 V4
-    cpu_id::FakeCpuId cpu(cpu_id::kTestDataXeon2690v4);
-    EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
-  }
-
-  {
-    // Intel(R) Xeon(R) Gold 6xxx has SWAPGS bug
-    auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
-    ASSERT_TRUE(ac.check(), "");
-    data->leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
-    data->leaf1 = {.reg = {0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
-    data->leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
-    data->leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
-
-    cpu_id::FakeCpuId cpu(*data.get());
-    EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
-  }
-
-  {
-    // Intel(R) Celeron(R) CPU J3455 (Goldmont) has SWAPGS bug
-    auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
-    ASSERT_TRUE(ac.check(), "");
-    data->leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
-    data->leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
-    data->leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
-    data->leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
-    cpu_id::FakeCpuId cpu(*data.get());
-    EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
-  }
-
-  END_TEST;
-}
-
 static bool test_x64_ssb_enumeration() {
   BEGIN_TEST;
 
@@ -780,7 +742,7 @@ static bool test_spectre_v2_mitigations() {
 static bool test_mds_mitigations() {
   BEGIN_TEST;
 
-  for (char *src : { &interrupt_maybe_mds_buff_overwrite, &syscall_maybe_mds_buff_overwrite }) {
+  for (char* src : {&interrupt_maybe_mds_buff_overwrite, &syscall_maybe_mds_buff_overwrite}) {
     unsigned char check_buffer[5];
     memcpy(check_buffer, src, sizeof(check_buffer));
     if (x86_cpu_should_md_clear_on_user_return()) {
@@ -874,7 +836,6 @@ UNITTEST("test uarch_config is correctly selected", test_x64_cpu_uarch_config_se
 UNITTEST("test enumeration of x64 Meltdown vulnerability", test_x64_meltdown_enumeration)
 UNITTEST("test enumeration of x64 L1TF vulnerability", test_x64_l1tf_enumeration)
 UNITTEST("test enumeration of x64 MDS vulnerability", test_x64_mds_enumeration)
-UNITTEST("test enumeration of x64 SWAPGS vulnerability", test_x64_swapgs_bug_enumeration)
 UNITTEST("test enumeration of x64 SSB vulnerability", test_x64_ssb_enumeration)
 UNITTEST("test mitigation of x64 SSB vulnerability", test_x64_ssb_disable)
 UNITTEST("test enumeration of x64 Spectre V2 flags", test_x64_spectre_v2_enumeration)
