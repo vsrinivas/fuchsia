@@ -83,10 +83,9 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
   }
   void SetUpProtocol() { SetProtocol(ZX_PROTOCOL_PCI, &fake_pci_.get_protocol()); }
   void SetUpBars() {
-    zx::vmo vmo;
-    uint64_t size = 0x4000;  // Capabilities need up to offset 0x3000 + 0x1000.
-    ASSERT_OK(zx::vmo::create(size, 0, &vmo));
-    fake_pci_.SetBar(4, size, std::move(vmo));
+    size_t bar_size = 0x3000 + 0x1000;  // 0x3000 is the offset of the last capability in the bar,
+                                        // and 0x1000 is the length.
+    fake_pci_.CreateBar(4, bar_size);
   }
 
   void SetUpCapabilities() {

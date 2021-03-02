@@ -28,6 +28,20 @@ class FakePciProtocolTests : public zxtest::Test {
   ddk::PciProtocolClient pci_;
 };
 
+TEST_F(FakePciProtocolTests, SetCreateBar) {
+  zx::vmo vmo;
+  size_t size = 8193;
+  ASSERT_OK(zx::vmo::create(size, 0, &vmo));
+  fake_pci().SetBar(0, size, std::move(vmo));
+  fake_pci().CreateBar(1, size);
+
+  pci_bar_t bar;
+  pci().GetBar(0, &bar);
+  EXPECT_EQ(size, bar.size);
+  pci().GetBar(1, &bar);
+  EXPECT_EQ(size, bar.size);
+}
+
 TEST_F(FakePciProtocolTests, ResetDevice) {
   uint32_t reset_cnt = 0;
   ASSERT_EQ(reset_cnt++, fake_pci().GetResetCount());

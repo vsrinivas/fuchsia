@@ -434,6 +434,16 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     return bars_[bar_id].vmo.borrow();
   }
 
+  zx::unowned_vmo CreateBar(uint32_t bar_id, size_t size) {
+    zx::vmo vmo;
+    zx_status_t status = zx::vmo::create(size, /*options=*/0, &vmo);
+    ZX_ASSERT_MSG(status == ZX_OK,
+                  "FakePciProtocol Error: failed to create VMO for bar (bar_id = %u, size = %#zx, "
+                  "status = %d)",
+                  bar_id, size, status);
+    return SetBar(bar_id, size, std::move(vmo));
+  }
+
   zx::unowned_vmo GetBar(uint32_t bar_id) {
     ZX_ASSERT_MSG(bar_id < PCI_DEVICE_BAR_COUNT,
                   "FakePciProtocol Error: valid BAR ids are [0, 5] (bar_id = %u)", bar_id);
