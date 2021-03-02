@@ -25,7 +25,7 @@ class EchoServerImpl : public ProtocolType::Interface {
 
 template <typename ProtocolType, typename BuilderFunc>
 bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
-  using FidlType = std::invoke_result_t<BuilderFunc>;
+  using FidlType = std::invoke_result_t<BuilderFunc, fidl::Allocator&>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   state->DeclareStep("Setup/WallTime");
@@ -42,7 +42,8 @@ bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   typename ProtocolType::SyncClient client(std::move(endpoints->client));
 
   while (state->KeepRunning()) {
-    fidl::aligned<FidlType> aligned_value = builder();
+    fidl::BufferThenHeapAllocator<65536> allocator;
+    fidl::aligned<FidlType> aligned_value = builder(allocator);
 
     state->NextStep();  // End: Setup. Begin: EchoCall.
 

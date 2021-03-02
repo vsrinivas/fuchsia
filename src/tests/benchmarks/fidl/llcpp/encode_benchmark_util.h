@@ -19,7 +19,7 @@ namespace llcpp_benchmarks {
 
 template <typename BuilderFunc>
 bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
-  using FidlType = std::invoke_result_t<BuilderFunc>;
+  using FidlType = std::invoke_result_t<BuilderFunc, fidl::Allocator&>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   state->DeclareStep("Setup/WallTime");
@@ -27,7 +27,8 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   state->DeclareStep("Teardown/WallTime");
 
   while (state->KeepRunning()) {
-    fidl::aligned<FidlType> aligned_value = builder();
+    fidl::BufferThenHeapAllocator<65536> allocator;
+    fidl::aligned<FidlType> aligned_value = builder(allocator);
 
     state->NextStep();  // End: Setup. Begin: Encode.
 

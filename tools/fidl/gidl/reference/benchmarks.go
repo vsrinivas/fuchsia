@@ -24,7 +24,7 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 namespace benchmark_suite {
 
 {{ range .Benchmarks }}
-[[maybe_unused]] {{ .Type }} Build_{{ .Name }}() {
+[[maybe_unused]] {{ .Type }} Build_{{ .Name }}(fidl::Allocator& allocator) {
 	{{ .ValueBuild }}
 	auto obj = {{ .ValueVar }};
 	return obj;
@@ -54,7 +54,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidl.Root, config gidlconfig.Gener
 		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
 			continue
 		}
-		valBuild, valVar := libllcpp.BuildValueHeap(gidlBenchmark.Value, decl, libllcpp.HandleReprRaw)
+		valBuild, valVar := libllcpp.BuildValueAllocator("allocator", gidlBenchmark.Value, decl, libllcpp.HandleReprRaw)
 		tmplInput.Benchmarks = append(tmplInput.Benchmarks, benchmark{
 			Path:       gidlBenchmark.Name,
 			Name:       benchmarkName(gidlBenchmark.Name),

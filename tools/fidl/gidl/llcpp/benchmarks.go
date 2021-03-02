@@ -39,34 +39,34 @@ std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
 	return {{ .HandleDefs }};
 }
 
-{{ .Type }} BuildFromHandles{{ .Name }}(const std::vector<zx_handle_t>& handle_defs) {
-  {{ .ValueBuildHeap }}
-  auto result =  {{ .ValueVarHeap }};
+{{ .Type }} BuildFromHandles{{ .Name }}(fidl::Allocator& allocator, const std::vector<zx_handle_t>& handle_defs) {
+  {{ .ValueBuild }}
+  auto result =  {{ .ValueVar }};
   return result;
 }
 
-{{ .Type }} Build{{ .Name }}Heap() {
-  return BuildFromHandles{{ .Name }}(BuildHandles{{ .Name }}());
+{{ .Type }} Build{{ .Name }}(fidl::Allocator& allocator) {
+  return BuildFromHandles{{ .Name }}(allocator, BuildHandles{{ .Name }}());
 }
 {{- else }}
 std::tuple<> BuildEmptyContext{{ .Name }}() {
 	return std::make_tuple();
 }
 
-{{ .Type }} BuildFromEmptyContext{{ .Name }}(std::tuple<> _context) {
-	{{ .ValueBuildHeap }}
-	auto result = {{ .ValueVarHeap }};
+{{ .Type }} BuildFromEmptyContext{{ .Name }}(fidl::Allocator& allocator, std::tuple<> _context) {
+	{{ .ValueBuild }}
+	auto result = {{ .ValueVar }};
 	return result;
 }
 
-{{ .Type }} Build{{ .Name }}Heap() {
-  {{ .ValueBuildHeap }}
-  auto result = {{ .ValueVarHeap }};
+{{ .Type }} Build{{ .Name }}(fidl::Allocator& allocator) {
+  {{ .ValueBuild }}
+  auto result = {{ .ValueVar }};
   return result;
 }
 {{- end }}
 
-bool BenchmarkBuilder{{ .Name }}Heap(perftest::RepeatState* state) {
+bool BenchmarkBuilder{{ .Name }}(perftest::RepeatState* state) {
 {{- if .HandleDefs }}
   return llcpp_benchmarks::BuilderBenchmark(state, BuildFromHandles{{ .Name }}, BuildHandles{{ .Name }});
 {{- else }}
@@ -75,26 +75,26 @@ bool BenchmarkBuilder{{ .Name }}Heap(perftest::RepeatState* state) {
 }
 
 bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }}Heap);
+	return llcpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }});
 }
 bool BenchmarkDecode{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }}Heap);
+	return llcpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }});
 }
 {{ if .EnableSendEventBenchmark }}
 bool BenchmarkSendEvent{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::SendEventBenchmark<{{ .EventProtocolType }}>(state, Build{{ .Name }}Heap);
+	return llcpp_benchmarks::SendEventBenchmark<{{ .EventProtocolType }}>(state, Build{{ .Name }});
 }
 {{- end -}}
 {{ if .EnableEchoCallBenchmark }}
 bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }}Heap);
+	return llcpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
 }
 {{- end -}}
 {{ end }}
 
 void RegisterTests() {
 	{{ range .Benchmarks }}
-	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/Steps", BenchmarkBuilder{{ .Name }}Heap);
+	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/Steps", BenchmarkBuilder{{ .Name }});
 	perftest::RegisterTest("LLCPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
 	perftest::RegisterTest("LLCPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
 	{{ if .EnableSendEventBenchmark }}
@@ -112,7 +112,7 @@ PERFTEST_CTOR(RegisterTests)
 
 type benchmark struct {
 	Path, Name, Type, EventProtocolType, EchoCallProtocolType string
-	ValueBuildHeap, ValueVarHeap                              string
+	ValueBuild, ValueVar                                      string
 	HandleDefs                                                string
 	EnableSendEventBenchmark, EnableEchoCallBenchmark         bool
 }
@@ -136,15 +136,15 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidl.Root, config gidlconfig.Gener
 		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
 			continue
 		}
-		valBuildHeap, valVarHeap := libllcpp.BuildValueHeap(gidlBenchmark.Value, decl, libllcpp.HandleReprRaw)
+		valBuild, valVar := libllcpp.BuildValueAllocator("allocator", gidlBenchmark.Value, decl, libllcpp.HandleReprRaw)
 		tmplInput.Benchmarks = append(tmplInput.Benchmarks, benchmark{
 			Path:                     gidlBenchmark.Name,
 			Name:                     benchmarkName(gidlBenchmark.Name),
 			Type:                     benchmarkTypeFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value),
 			EventProtocolType:        benchmarkProtocolFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value) + "EventProtocol",
 			EchoCallProtocolType:     benchmarkProtocolFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value) + "EchoCall",
-			ValueBuildHeap:           valBuildHeap,
-			ValueVarHeap:             valVarHeap,
+			ValueBuild:               valBuild,
+			ValueVar:                 valVar,
 			HandleDefs:               libhlcpp.BuildHandleDefs(gidlBenchmark.HandleDefs),
 			EnableSendEventBenchmark: gidlBenchmark.EnableSendEventBenchmark,
 			EnableEchoCallBenchmark:  gidlBenchmark.EnableEchoCallBenchmark,

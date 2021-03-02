@@ -41,8 +41,7 @@ TEST(C_Conformance, {{ .Name }}_LinearizeAndEncode) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
-	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
+	[[maybe_unused]] fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	const auto expected_bytes = {{ .Bytes }};
 	const auto expected_handles = {{ .Handles }};
@@ -60,8 +59,7 @@ TEST(C_Conformance, {{ .Name }}_EncodeIovec) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
-	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
+	[[maybe_unused]] fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	const auto expected_bytes = {{ .Bytes }};
 	const auto expected_handles = {{ .Handles }};
@@ -81,8 +79,7 @@ TEST(C_Conformance, {{ .Name }}_LinearizeAndEncode_Failure) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
-	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
+	[[maybe_unused]] fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
 	EXPECT_TRUE(c_conformance_utils::LinearizeAndEncodeFailure(obj.Type, &obj, {{ .ErrorCode }}));
@@ -103,8 +100,7 @@ TEST(C_Conformance, {{ .Name }}_EncodeIovec_Failure) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
-	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
+	[[maybe_unused]] fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
 	EXPECT_TRUE(c_conformance_utils::EncodeIovecFailure(obj.Type, &obj, {{ .ErrorCode }}));
@@ -127,8 +123,7 @@ TEST(C_Conformance, {{ .Name }}_Decode) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
-	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
+	[[maybe_unused]] fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	auto bytes = {{ .Bytes }};
 	auto handles = {{ .Handles }};
@@ -230,7 +225,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 			continue
 		}
 		handleDefs := libhlcpp.BuildHandleDefs(encodeSuccess.HandleDefs)
-		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator_ptr", encodeSuccess.Value, decl, libllcpp.HandleReprRaw)
+		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", encodeSuccess.Value, decl, libllcpp.HandleReprRaw)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeSuccess.HandleDefs) > 0
 		for _, encoding := range encodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
@@ -261,7 +256,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 			continue
 		}
 		handleDefs := libhlcpp.BuildHandleDefs(decodeSuccess.HandleDefs)
-		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator_ptr", decodeSuccess.Value, decl, libllcpp.HandleReprRaw)
+		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", decodeSuccess.Value, decl, libllcpp.HandleReprRaw)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
@@ -289,7 +284,7 @@ func encodeFailureCases(gidlEncodeFailurees []gidlir.EncodeFailure, schema gidlm
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
 		}
 		handleDefs := libhlcpp.BuildHandleDefs(encodeFailure.HandleDefs)
-		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator_ptr", encodeFailure.Value, decl, libllcpp.HandleReprRaw)
+		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", encodeFailure.Value, decl, libllcpp.HandleReprRaw)
 		errorCode := libllcpp.LlcppErrorCode(encodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
 		for _, wireFormat := range encodeFailure.WireFormats {

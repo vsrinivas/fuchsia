@@ -17,7 +17,7 @@ namespace encode_benchmark_util {
 
 template <typename BuilderFunc, typename EncodeFunc>
 bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFunc encode) {
-  using FidlType = std::invoke_result_t<BuilderFunc>;
+  using FidlType = std::invoke_result_t<BuilderFunc, fidl::Allocator&>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   state->DeclareStep("Setup/WallTime");
@@ -25,7 +25,8 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
   state->DeclareStep("Teardown/WallTime");
 
   while (state->KeepRunning()) {
-    fidl::aligned<FidlType> aligned_value = builder();
+    fidl::BufferThenHeapAllocator<65536> allocator;
+    fidl::aligned<FidlType> aligned_value = builder(allocator);
 
     state->NextStep();  // End: Setup. Begin: Encode.
 
@@ -39,11 +40,13 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
   }
 
   // Encode the input with fidl::Encode and compare againt encode().
-  fidl::aligned<FidlType> aligned_value = builder();
+  fidl::BufferThenHeapAllocator<65536> allocator;
+  fidl::aligned<FidlType> aligned_value = builder(allocator);
   ::fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value.value);
   ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
 
-  aligned_value = builder();
+  fidl::BufferThenHeapAllocator<65536> allocator2;
+  aligned_value = builder(allocator2);
   std::vector<uint8_t> reference_bytes;
   const char* error;
   if (!encode(&aligned_value.value, &error, [&reference_bytes](const uint8_t* bytes, size_t size) {

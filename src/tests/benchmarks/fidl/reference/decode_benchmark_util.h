@@ -19,10 +19,11 @@ namespace decode_benchmark_util {
 
 template <typename BuilderFunc, typename DecodeFunc>
 bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFunc decode) {
-  using FidlType = std::invoke_result_t<BuilderFunc>;
+  using FidlType = std::invoke_result_t<BuilderFunc, fidl::Allocator&>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
-  fidl::aligned<FidlType> aligned_value = builder();
+  fidl::BufferThenHeapAllocator<65536> allocator;
+  fidl::aligned<FidlType> aligned_value = builder(allocator);
   fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value.value);
   ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
   fidl::OutgoingByteMessage& encoded_message = encoded.GetOutgoingMessage();

@@ -14,20 +14,10 @@ import (
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-// Builds a LLCPP object using std::make_unique.
-func BuildValueHeap(value interface{}, decl gidlmixer.Declaration, handleRepr HandleRepr) (string, string) {
-	var builder allocatorBuilder
-	builder.allocationFunc = "std::make_unique"
-	builder.handleRepr = handleRepr
-	valueVar := builder.visit(value, decl, false)
-	valueBuild := builder.String()
-	return valueBuild, valueVar
-}
-
 // Builds an LLCPP object using fidl::Allocator.
 func BuildValueAllocator(allocatorVar string, value interface{}, decl gidlmixer.Declaration, handleRepr HandleRepr) (string, string) {
 	var builder allocatorBuilder
-	builder.allocationFunc = fmt.Sprintf("%s->make", allocatorVar)
+	builder.allocationFunc = fmt.Sprintf("%s.make", allocatorVar)
 	builder.handleRepr = handleRepr
 	valueVar := builder.visit(value, decl, false)
 	valueBuild := builder.String()
