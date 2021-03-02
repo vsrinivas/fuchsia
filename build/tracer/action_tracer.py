@@ -743,6 +743,10 @@ def main():
         # TODO(fangism): validate python imports under source control more
         # precisely
         ".py",
+        # TODO(fxb/71190): The following is a temporary symlink.
+        # fsatrace fails to detect writing this symlink, and trace analysis
+        # thinks it is a read that violates hermeticity, but it is ok.
+        "src/github.com/pkg",
     }
     ignored_path_parts = {
         # Python creates these directories with bytecode caches
