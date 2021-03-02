@@ -77,7 +77,7 @@ static_library("ddk") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-shared_library("ddk-metadata") {
+source_set("ddk-metadata") {
   sources = [ "include/ddk/usb-peripheral-config.h" ]
 
   public_deps = [
