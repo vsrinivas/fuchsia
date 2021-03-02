@@ -53,6 +53,9 @@
 #define BRCMF_SIGNAL_REPORT_TIMER_DUR_MS  ZX_MSEC(1000) /* Signal report dur */
 #define BRCMF_AP_START_TIMER_DUR_MS       ZX_MSEC(1000) /* AP start timer dur */
 #define BRCMF_CONNECT_TIMER_DUR_MS        ZX_MSEC(1500) /*connect timer dur*/
+#define BRCMF_CONNECT_LOG_DUR             ZX_SEC(30) /* 30 seconds */
+// Connect log will be printed out in the Signal report timer handler every 5 minutes
+#define BRCMF_CONNECT_LOG_COUNT           (BRCMF_CONNECT_LOG_DUR / BRCMF_SIGNAL_REPORT_TIMER_DUR_MS)
 
 #define WL_ESCAN_ACTION_START      1
 #define WL_ESCAN_ACTION_CONTINUE   2
@@ -385,6 +388,7 @@ enum brcmf_disconnect_mode {
  * @ap_start_timer: Timer used to wait for ap start confirmation.
  * @ap_start_timeout_work: Work structure for ap start timer
  * @next_sync_id: Counter for sync_ids used in firmware scan requests.
+ * @connect_log_cnt: Count used to determine when stats are logged.
  */
 struct brcmf_cfg80211_info {
   struct brcmf_cfg80211_conf* conf;
@@ -427,6 +431,7 @@ struct brcmf_cfg80211_info {
   Timer* ap_start_timer;
   WorkItem ap_start_timeout_work;
   std::atomic<uint16_t> next_sync_id;
+  uint32_t connect_log_cnt;
 };
 
 /**

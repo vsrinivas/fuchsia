@@ -1438,8 +1438,6 @@ void SimFirmware::DisassocLocalClient(uint32_t reason) {
     // Transmit the deauth frame clear AP state.
     simulation::SimDeauthFrame deauth_req_frame(srcAddr, bssid, reason);
     hw_.Tx(deauth_req_frame);
-  } else {
-    SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_FAIL, kClientIfidx);
   }
 
   AuthClearContext();
@@ -2837,6 +2835,7 @@ void SimFirmware::SendEventToDriver(size_t payload_size,
                                     char* ifname, uint16_t flags, uint32_t reason,
                                     std::optional<common::MacAddr> addr,
                                     std::optional<zx::duration> delay) {
+  BRCMF_DBG(SIM, "*****Sending Event: %d*****", event_type);
   brcmf_event_msg_be* msg_be;
   size_t payload_offset;
   // Assert if ifidx is not valid

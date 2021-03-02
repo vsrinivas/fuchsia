@@ -389,6 +389,8 @@ void brcmf_txfinalize(struct brcmf_if* ifp, const struct ethhdr* eh, bool succes
 
   if (!success) {
     ifp->ndev->stats.tx_errors++;
+  } else {
+    ifp->ndev->stats.tx_confirmed++;
   }
 }
 

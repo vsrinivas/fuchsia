@@ -1857,12 +1857,89 @@ done:
   return err;
 }
 
+static zx_status_t brcmf_get_ctrl_channel(brcmf_if* ifp, uint16_t* chanspec_out,
+                                          uint8_t* ctl_chan_out) {
+  bcme_status_t fw_err;
+  zx_status_t err;
+
+  // Get chanspec of the given IF from firmware.
+  err = brcmf_fil_iovar_data_get(ifp, "chanspec", chanspec_out, sizeof(uint16_t), &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Failed to retrieve chanspec: %s, fw err %s\n", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+    return err;
+  }
+
+  // Get the control channel given chanspec
+  err = chspec_ctlchan(*chanspec_out, ctl_chan_out);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Failed to get control channel from chanspec: 0x%x status: %s", *chanspec_out,
+              zx_status_get_string(err));
+    return err;
+  }
+  return ZX_OK;
+}
+
+// Log driver and FW packet counters along with current channel and signal strength
+static void brcmf_log_client_stats(net_device* ndev) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  bcme_status_t fw_err;
+  uint32_t is_up = 0;
+
+  // First check if the IF is up.
+  zx_status_t err =
+      brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_IS_IF_UP, &is_up, sizeof(is_up), &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_INFO("Unable to get IF status: %s fw err %s", zx_status_get_string(err),
+               brcmf_fil_get_errstr(fw_err));
+  }
+  // Get channel information from firmware.
+  uint16_t chanspec;
+  uint8_t ctl_chan = 0;
+  err = brcmf_get_ctrl_channel(ifp, &chanspec, &ctl_chan);
+
+  // Get the current rate
+  uint32_t rate = 0;
+  err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_RATE, &rate, sizeof(rate), &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_INFO("Unable to get rate: %s fw err %s", zx_status_get_string(err),
+               brcmf_fil_get_errstr(fw_err));
+  }
+
+  // Get the current noise floor
+  int32_t noise = 0;
+  err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_PHY_NOISE, &noise, sizeof(noise), &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_INFO("Unable to get noise: %s fw err %s", zx_status_get_string(err),
+               brcmf_fil_get_errstr(fw_err));
+  }
+  BRCMF_INFO("Client IF up: %d channel: %d Rate: %d Mbps RSSI: %d dBm SNR: %d dB  noise: %d dBm",
+             is_up, ctl_chan, rate / 2, ndev->last_known_rssi_dbm, ndev->last_known_snr_db, noise);
+
+  // Get the FW packet counts
+  brcmf_pktcnt_le fw_pktcnt = {};
+  err =
+      brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_GET_PKTCNTS, &fw_pktcnt, sizeof(fw_pktcnt), &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_INFO("Unable to get FW packet counts err: %s fw err %s", zx_status_get_string(err),
+               brcmf_fil_get_errstr(fw_err));
+  }
+  BRCMF_INFO("FW Stats: Rx - Good: %d Bad: %d Ocast: %d Tx - Good: %d Bad: %d",
+             fw_pktcnt.rx_good_pkt, fw_pktcnt.rx_bad_pkt, fw_pktcnt.rx_ocast_good_pkt,
+             fw_pktcnt.tx_good_pkt, fw_pktcnt.tx_bad_pkt);
+
+  BRCMF_INFO("Driver Stats: Rx - Good: %d Bad: %d Tx - Sent to FW: %d Conf: %d drop: %d Bad: %d",
+             ndev->stats.rx_packets, ndev->stats.rx_errors, ndev->stats.tx_packets,
+             ndev->stats.tx_confirmed, ndev->stats.tx_dropped, ndev->stats.tx_errors);
+}
+
 static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
   struct net_device* ndev = cfg_to_ndev(cfg);
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
 
   BRCMF_DBG(TRACE, "Enter");
+
   if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state)) {
     cfg->disconnect_timer->Stop();
     if (cfg->disconnect_mode == BRCMF_DISCONNECT_DEAUTH) {
@@ -1873,8 +1950,17 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
   }
   if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
     cfg->signal_report_timer->Stop();
+    // Log the client stats one last time before clearing out the counters
+    brcmf_log_client_stats(ndev);
     ndev->stats = {};
+    bcme_status_t fw_err;
+    zx_status_t status = brcmf_fil_iovar_data_get(ifp, "reset_cnts", nullptr, 0, &fw_err);
+    if (status != ZX_OK) {
+      BRCMF_WARN("Failed to clear counters: %s, fw err %s\n", zx_status_get_string(status),
+                 brcmf_fil_get_errstr(fw_err));
+    }
   }
+
   BRCMF_DBG(TRACE, "Exit");
 }
 
@@ -1923,6 +2009,12 @@ static void cfg80211_signal_ind(net_device* ndev) {
       ndev->last_known_rssi_dbm = rssi;
       ndev->last_known_snr_db = snr;
       wlanif_impl_ifc_signal_report(&ndev->if_proto, &signal_ind);
+    }
+    cfg->connect_log_cnt++;
+    if (cfg->connect_log_cnt >= BRCMF_CONNECT_LOG_COUNT) {
+      // Log the stats
+      brcmf_log_client_stats(ndev);
+      cfg->connect_log_cnt = 0;
     }
   } else if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
     // If client is not connected, stop the timer
@@ -4748,28 +4840,6 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
   }
   BRCMF_DBG(CONN, "req len (%d) resp len (%d)", conn_info->req_ie_len, conn_info->resp_ie_len);
   return err;
-}
-
-zx_status_t brcmf_get_ctrl_channel(brcmf_if* ifp, uint16_t* chanspec_out, uint8_t* ctl_chan_out) {
-  bcme_status_t fw_err;
-  zx_status_t err;
-
-  // Get chanspec of the given IF from firmware.
-  err = brcmf_fil_iovar_data_get(ifp, "chanspec", chanspec_out, sizeof(uint16_t), &fw_err);
-  if (err != ZX_OK) {
-    BRCMF_ERR("Failed to retrieve chanspec: %s, fw err %s\n", zx_status_get_string(err),
-              brcmf_fil_get_errstr(fw_err));
-    return err;
-  }
-
-  // Get the control channel given chanspec
-  err = chspec_ctlchan(*chanspec_out, ctl_chan_out);
-  if (err != ZX_OK) {
-    BRCMF_ERR("Failed to get control channel from chanspec: 0x%x status: %s", *chanspec_out,
-              zx_status_get_string(err));
-    return err;
-  }
-  return ZX_OK;
 }
 
 // Notify SME of channel switch

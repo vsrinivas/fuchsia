@@ -41,6 +41,7 @@
 
 namespace wlan::brcmfmac {
 
+const common::MacAddr kZeroMac({0x0, 0x0, 0x0, 0x0, 0x0, 0x0});
 // The amount of time we will wait for an association response after an association request
 constexpr zx::duration kAssocTimeout = zx::sec(1);
 // The amount of time we will wait for an authentication response after an authentication request

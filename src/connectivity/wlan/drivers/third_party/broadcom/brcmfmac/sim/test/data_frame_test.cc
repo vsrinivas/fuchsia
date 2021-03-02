@@ -540,7 +540,6 @@ TEST_F(DataFrameTest, RxDataFrame) {
   SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
                 data_context_.expected_received_data.back());
 
-  delay += kSsidEventDelay + zx::msec(100);
   // Run
   env_->Run();
 
@@ -661,8 +660,8 @@ TEST_F(DataFrameTest, RxUcastBeforeAssoc) {
   data_context_.expected_received_data.push_back(kSampleEthBody);
   auto frame = CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_IP), kSampleEthBody);
 
-  // Send the packet before the Link event is sent by SIM FW.
-  delay = delay + kLinkEventDelay / 2;
+  // Send the packet before the Assoc event is sent by SIM FW.
+  delay = delay + kAssocEventDelay / 2;
   SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame);
   // Run
   env_->Run();
