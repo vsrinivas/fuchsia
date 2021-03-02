@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1440
+From //build/config/BUILDCONFIG.gn:1433
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -146,7 +146,7 @@ Base) for a product. These packages are never evicted by the system.
 
 **Current value for `target_cpu = "arm64"`:** `["//bundles:kitchen_sink"]`
 
-From //out/not-default/args.gn:7
+From //out/not-default/args.gn:3
 
 **Overridden from the default:** `[]`
 
@@ -154,7 +154,7 @@ From //BUILD.gn:26
 
 **Current value for `target_cpu = "x64"`:** `["//bundles:kitchen_sink"]`
 
-From //out/not-default/args.gn:7
+From //out/not-default/args.gn:3
 
 **Overridden from the default:** `[]`
 
@@ -489,7 +489,7 @@ Board configuration of the current build
 
 **Current value for `target_cpu = "arm64"`:** `"arm64"`
 
-From //out/not-default/args.gn:8
+From //out/not-default/args.gn:4
 
 **Overridden from the default:** `"qemu-arm64"`
 
@@ -497,7 +497,7 @@ From //build/info/info.gni:12
 
 **Current value for `target_cpu = "x64"`:** `"x64"`
 
-From //out/not-default/args.gn:8
+From //out/not-default/args.gn:4
 
 **Overridden from the default:** `"x64"`
 
@@ -508,7 +508,7 @@ Product configuration of the current build
 
 **Current value for `target_cpu = "arm64"`:** `"bringup"`
 
-From //out/not-default/args.gn:9
+From //out/not-default/args.gn:5
 
 **Overridden from the default:** `""`
 
@@ -516,7 +516,7 @@ From //build/info/info.gni:9
 
 **Current value for `target_cpu = "x64"`:** `"bringup"`
 
-From //out/not-default/args.gn:9
+From //out/not-default/args.gn:5
 
 **Overridden from the default:** `""`
 
@@ -741,13 +741,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/8cdc852a9ef0a7db46878326117fc3c09b11ceea/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/9a7c3beeef7b20539bdddcc7f4e0d41a1b16ca13/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/8cdc852a9ef0a7db46878326117fc3c09b11ceea/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/9a7c3beeef7b20539bdddcc7f4e0d41a1b16ca13/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -1086,7 +1086,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1219
+From //build/config/BUILDCONFIG.gn:1212
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1555,7 +1555,7 @@ Debug build.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //out/not-default/args.gn:10
+From //out/not-default/args.gn:6
 
 **Overridden from the default:** `true`
 
@@ -1563,7 +1563,7 @@ From //build/config/BUILDCONFIG.gn:27
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //out/not-default/args.gn:10
+From //out/not-default/args.gn:6
 
 **Overridden from the default:** `true`
 
@@ -1776,7 +1776,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1094
+From //build/config/BUILDCONFIG.gn:1087
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2114,13 +2114,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/8cdc852a9ef0a7db46878326117fc3c09b11ceea/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/9a7c3beeef7b20539bdddcc7f4e0d41a1b16ca13/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/8cdc852a9ef0a7db46878326117fc3c09b11ceea/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/9a7c3beeef7b20539bdddcc7f4e0d41a1b16ca13/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -3041,7 +3041,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1430
+From //build/config/BUILDCONFIG.gn:1423
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3050,7 +3050,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1435
+From //build/config/BUILDCONFIG.gn:1428
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3082,7 +3082,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1265
+From //build/config/BUILDCONFIG.gn:1258
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3190,13 +3190,13 @@ From //src/testing/fuzzing/syzkaller/BUILD.gn:11
 
 **Current value for `target_cpu = "arm64"`:** `"arm64"`
 
-From //out/not-default/args.gn:11
+From //out/not-default/args.gn:7
 
 **Overridden from the default:** `""`
 
 **Current value for `target_cpu = "x64"`:** `"x64"`
 
-From //out/not-default/args.gn:11
+From //out/not-default/args.gn:7
 
 **Overridden from the default:** `""`
 
@@ -3362,7 +3362,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1249
+From //build/config/BUILDCONFIG.gn:1242
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3436,7 +3436,7 @@ Set to true to enable distributed compilation using Goma.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //out/not-default/args.gn:12
+From //out/not-default/args.gn:8
 
 **Overridden from the default:** `false`
 
@@ -3444,7 +3444,7 @@ From //build/toolchain/goma.gni:11
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //out/not-default/args.gn:12
+From //out/not-default/args.gn:8
 
 **Overridden from the default:** `false`
 
@@ -3750,23 +3750,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"default"`
 
-From //build/zircon/build_args.gni:21
-
-**Current value for `target_cpu = "arm64"`:** `{ }`
-
-From //out/not-default/args.gn:4
-
-**Overridden from the default:** `{ }`
-
-From //build/zircon/build_args.gni:8
-
-**Current value for `target_cpu = "x64"`:** `{ }`
-
-From //out/not-default/args.gn:4
-
-**Overridden from the default:** `{ }`
-
-From //build/zircon/build_args.gni:8
+From //build/zircon/build_args.gni:16
 
 ### zircon_kernel_disable_asserts
 Forcibly disable all assertions for the Zircon kernel. If this is set, the
@@ -3775,7 +3759,7 @@ building the kernel.
 
 **Current value (from the default):** `false`
 
-From //build/zircon/build_args.gni:14
+From //build/zircon/build_args.gni:9
 
 ### zircon_optimize
 Zircon optimization level. Same acceptable values as `optimize`.
@@ -3817,7 +3801,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //build/zircon/build_args.gni:18
+From //build/zircon/build_args.gni:13
 
 ### zvb_partition_name
 Partition name from where image will be verified
