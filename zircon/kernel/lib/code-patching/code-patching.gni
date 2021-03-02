@@ -4,10 +4,37 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/unification/global_variables.gni")
 import("//build/zircon/c_utils.gni")
 
-# Extracts the content of a ".code-patches" section from the dependent
-# executables.
+## This file provides the templates needed to extract code-patching directives
+## stored in a special ELF section, and needed to specify code patching
+## alternatives and the functions to be later patched by those alternatives.
+##
+## Example usage:
+## ```
+##  # Two possible patches for memset.
+##  code_patching_hermetic_alternative("memset_slow") {
+##    sources = ["memset_slow.c"]
+##  }
+##
+##  code_patching_hermetic_alternative("memset_fast") {
+##     sources = ["memset_fast.S"]
+##  }
+##
+##  # Generates an object file that defines a stub `memset` - requiring later
+##  # patching - filled with traps and just large enough to fit any of the
+##  # associated alternatives.
+##  code_patching_hermetic_stub("memset") {
+##
+##    # Aggregates metadata on alternatives.
+##    deps = [":memset_slow", ":memset_fast"]
+##  }
+## ```
+##
+
+# Extracts the content of the ".code-patches" sections from each of the
+# executables in $deps.
 #
 # Parameters
 #
@@ -45,16 +72,320 @@ template("code_patches") {
                              "metadata",
                            ])
     outputs = [ output_file ]
-    rebased_output = rebase_path(outputs[0], root_build_dir)
 
     utils = [ "objcopy" ]
     script = true
     args = [
-      "--dump-section=.code-patches=$rebased_output",
+      "--dump-section=.code-patches=" + rebase_path(outputs[0], root_build_dir),
       "@" + rebase_path(rspfile, root_build_dir),
       "/dev/null",
     ]
 
     deps = [ ":$rspfile_target" ]
+  }
+}
+
+# Defines a "hermetic leaf" code patching alternative, which is defined by the
+# following properties (enforced at link-time):
+#
+# * the named function (`entrypoint`) is first in the link order and all of the
+#   sources/deps together form a closed set that is collectively hermetic;
+# * no non-code (rodata or writable data) sections;
+# * no dynamic relocations.
+#
+# Used in conjunction with code_patching_hermetic_stub() (see below), several
+# alternatives may be defined so that code patching logic can make a runtime
+# decision of which one of these should be used.
+#
+# It produces a raw binary content of a position-indepdendent executable,
+# output to `target_out_dir` with an extension of "bin".
+#
+# Parameters
+#
+#   * entrypoint
+#     - Optional: The name of the symbol (or C function) providing this
+#       alternative and defined in `sources`.
+#     - Type: string
+#     - Default: $target_name.
+#
+# Other parameters are as for executable(), except for the `output_*`
+# parameters.
+#
+template("code_patching_hermetic_alternative") {
+  image_target = target_name
+  executable_target =
+      "_code_patching_hermetic_alternative.$target_name.executable"
+
+  if (defined(invoker.entrypoint)) {
+    entrypoint = invoker.entrypoint
+  } else {
+    entrypoint = target_name
+  }
+
+  executable(executable_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "output_name",
+                             "output_dir",
+                             "output_extension",
+                             "entrypoint",
+                             "visibility",
+                             "testonly",
+                           ])
+
+    output_name = entrypoint
+    output_dir = target_gen_dir
+
+    configs += [ "//zircon/kernel/lib/code-patching:hermetic-leaf.config" ]
+    configs += [ "//build/config/zircon:static-pie-link" ]
+    configs -= [ "//build/config/zircon:static-pie-link" ]
+
+    ldflags = [ "-Wl,-defsym,HERMETIC_LEAF_ENTRY=$entrypoint" ]
+  }
+
+  image_binary(image_target) {
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                           ])
+    deps = [ ":$executable_target" ]
+    output_name = entrypoint
+    output_dir = target_out_dir
+    output_extension = "bin"
+
+    # We expect no dynamic relocations.
+    pure = true
+
+    metadata = {
+      code_patching_hermetic_alternative_barrier = []
+      code_patching_hermetic_alternatives = [
+        {
+          label = get_label_info(":$image_target", "label_with_toolchain")
+          name = entrypoint
+          path = rebase_path("$output_dir/$output_name.$output_extension",
+                             root_build_dir)
+        },
+      ]
+    }
+  }
+}
+
+# Defines a function stub that is intended to be linked against and patched
+# later. Specifically, it is indended that it will be patched by one of the
+# code_patching_hermetic_alternative() targets in its dependency graph. The
+# function will have a size equal to the largest of its associated alternatives
+# and will initially be filled with trap instructions.
+#
+# This target should be regarded as an opaque source_set() that defines this
+# function alone.
+#
+# Parameters
+#
+#   * output_name
+#     - Optional: The name of the function stub to generate, which must be a
+#       valid C identifier.
+#     - Type: string
+#     - Default: $target_name.
+#
+#   * deps
+#     - Required: Dependencies to reach all
+#       code_patching_hermetic_alternative() targets the stub may resolve to at
+#       runtime.
+#     - Type: list(label)
+#
+#   * case_id_header
+#     - Optional: a header path that defines patch case IDs. These IDs are
+#       expected to be of the form "CASE_ID_${OUTPUT_NAME}", where
+#       "${OUTPUT_NAME}" is the upper-cased transformation of "${output_name}".
+#       This parameter is only expected to be explicitly set for tests that
+#       wish to supply their own case IDs.
+#     - Type: string
+#     - Default: "arch/code-patching/case-id.h"
+#
+# Other parameters are as for source_set().
+#
+template("code_patching_hermetic_stub") {
+  main_target = target_name
+  gen_target = "_code_patching_hermetic_stub.gen.$main_target"
+  metadata_target = "_code_patching_hermetic_stub.json.$main_target"
+
+  gen_file = "$target_gen_dir/$main_target.S"
+  metadata_file = "$target_gen_dir/$main_target.json"
+
+  source_set(main_target) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "visibility",
+                             "testonly",
+                             "case_id_header",
+                             "output_name",
+                             "deps",
+                           ])
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                           ])
+
+    sources = [ gen_file ]
+    deps = [
+      ":$gen_target",
+      "//zircon/kernel/lib/arch:headers",
+      "//zircon/kernel/lib/code-patching:headers",
+    ]
+  }
+
+  generated_file(metadata_target) {
+    visibility = [ ":$gen_target" ]
+    outputs = [ metadata_file ]
+
+    output_conversion = "json"
+    data_keys = [ "code_patching_hermetic_alternatives" ]
+    walk_keys = [ "code_patching_hermetic_alternative_barrier" ]
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+  }
+
+  action(gen_target) {
+    visibility = [ ":$main_target" ]
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "output_name",
+                             "case_id_header",
+                           ])
+    if (!defined(output_name)) {
+      output_name = main_target
+    }
+
+    if (!defined(case_id_header)) {
+      case_id_header = "arch/code-patching/case-id.h"
+
+      # Public to propagate to :main_target.
+      public_deps = [ "//zircon/kernel/arch/$zircon_cpu/code-patching:headers" ]
+    }
+
+    outputs = [ gen_file ]
+    sources = [ metadata_file ]
+    deps = [ ":$metadata_target" ]
+    depfile = "$gen_file.d"
+    script = "//zircon/kernel/lib/code-patching/hermetic-stub.py"
+    args = [
+      "--name",
+      output_name,
+      "--header",
+      case_id_header,
+      "--metadata-file",
+      rebase_path(metadata_file, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      "--outfile",
+      rebase_path(outputs[0], root_build_dir),
+    ]
+  }
+}
+
+# Providing a way of transporting the binary content of
+# code_patching_hermetic_alternative() targets, this template creates a
+# source_set() that defines the following function, which may be used to
+# access the instructions comprising a given alternativate:
+# ```
+# std::span<const std::byte> GetPatchAlternative(std::string_view name);
+# ```
+# It returns an empty span if the name is not recognized.
+#
+# TODO(68585): This means of transportation is purely a stop-gap; eventually
+# we will use a STORAGE_KERNEL ZBI item to supply code patching alternatives.
+#
+# Parameters
+#
+#   * deps
+#     - Required: The usual meaning, but with the added importance of
+#       transitively aggregating code_patching_hermetic_alternative() targets,
+#       whose metadata feeds into the generation logic.
+#     - Type: list(label)
+#
+#   * testonly, visibility
+#     - See source_set().
+#
+template("code_patching_hermetic_embedding") {
+  main_target = target_name
+  gen_target = "_code_patching_hermetic_embedding.gen.$main_target"
+  metadata_target = "_code_patching_hermetic_embedding.json.$main_target"
+  asm_gen_file = "$target_gen_dir/$main_target.S"
+  cpp_gen_file = "$target_gen_dir/$main_target.cc"
+  metadata_file = "$target_gen_dir/$main_target.json"
+
+  source_set(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                           ])
+    sources = [
+      asm_gen_file,
+      cpp_gen_file,
+    ]
+    deps = [
+      ":$gen_target",
+      "//zircon/kernel/lib/arch:headers",
+    ]
+
+    metadata = {
+      code_patching_hermetic_alternative_barrier = []
+    }
+  }
+
+  generated_file(metadata_target) {
+    visibility = [ ":$gen_target" ]
+    outputs = [ metadata_file ]
+
+    output_conversion = "json"
+    data_keys = [ "code_patching_hermetic_alternatives" ]
+    walk_keys = [ "code_patching_hermetic_alternative_barrier" ]
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+  }
+
+  action(gen_target) {
+    visibility = [ ":$main_target" ]
+    forward_variables_from(invoker,
+                           [
+                             "function_name",
+                             "testonly",
+                           ])
+
+    sources = [ metadata_file ]
+    outputs = [
+      asm_gen_file,
+      cpp_gen_file,
+    ]
+    deps = [ ":$metadata_target" ]
+    depfile = "$target_gen_dir/$main_target.d"
+    script = "//zircon/kernel/lib/code-patching/hermetic-embedding.py"
+    args = [
+      "--metadata-file",
+      rebase_path(sources[0], root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      "--asm-outfile",
+      rebase_path(outputs[0], root_build_dir),
+      "--cpp-outfile",
+      rebase_path(outputs[1], root_build_dir),
+    ]
   }
 }

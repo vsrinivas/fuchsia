@@ -37,8 +37,8 @@ struct CacheTypeEl0 : public SysRegBase<CacheTypeEl0> {
 
   // `dmin_line` gives log2 of the number of words in the smallest data cache
   // line. Similarly so for `imin_line`.
-  size_t dcache_line_size() const { return 1 << dmin_line() * sizeof(uint32_t); }
-  size_t icache_line_size() const { return 1 << imin_line() * sizeof(uint32_t); }
+  size_t dcache_line_size() const { return (1 << dmin_line()) * sizeof(uint32_t); }
+  size_t icache_line_size() const { return (1 << imin_line()) * sizeof(uint32_t); }
 };
 
 ARCH_ARM64_SYSREG(CacheTypeEl0, "ctr_el0");

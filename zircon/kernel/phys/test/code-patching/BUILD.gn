@@ -5,68 +5,92 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/testing/zbi_test.gni")
-import("//build/unification/global_variables.gni")
 import("//build/zbi/zbi_input.gni")
 import("//zircon/kernel/lib/code-patching/code-patching.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
-import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
-hwreg_asm_header("gen-case-id-asm") {
+code_patching_hermetic_alternative("multiply_by_two") {
   testonly = true
   visibility = [ ":*" ]
-  output_name = "case-id-asm.h"
-  sources = [ "gen-case-id-asm.cc" ]
-  deps = [ "//zircon/kernel/lib/code-patching" ]
+  sources = [ "multiply_by_two.S" ]
+  deps = [ "//zircon/kernel/lib/arch:headers" ]
 }
 
-if (toolchain.environment == "kernel.phys") {
-  zbi_executable("zbi-code-patching-test.executable") {
-    testonly = true
-    sources = [
-      "add-one.S",
-      "test.cc",
-    ]
+code_patching_hermetic_alternative("multiply_by_ten") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [ "multiply_by_ten.S" ]
+  deps = [ "//zircon/kernel/lib/arch:headers" ]
+}
 
-    deps = [
-      ":gen-case-id-asm",
-      "..:zbi-test-main",
-      "//zircon/kernel/lib/code-patching",
-      "//zircon/kernel/lib/ktl",
-      "//zircon/kernel/lib/libc",
-      "//zircon/system/ulib/zbitl",
-    ]
-  }
+code_patching_hermetic_stub("multiply_by_factor") {
+  case_id_header = "test.h"
+  testonly = true
+  visibility = [ ":*" ]
+  deps = [
+    ":multiply_by_ten",
+    ":multiply_by_two",
+  ]
+  include_dirs = [ "." ]
+}
 
-  code_patches("zbi-code-patching-test.patches") {
-    testonly = true
-    deps = [ ":zbi-code-patching-test.executable" ]
-  }
+code_patching_hermetic_embedding("embedding") {
+  testonly = true
+  deps = [ ":multiply_by_factor" ]
+}
 
-  zbi_input("zbi-code-patching-test.data") {
-    testonly = true
-    type = "ramdisk"
-    args = [ "--uncompressed" ]
-    sources = get_target_outputs(":zbi-code-patching-test.patches")
-    deps = [ ":zbi-code-patching-test.patches" ]
-  }
+zbi_executable("zbi-code-patching-test.executable") {
+  testonly = true
+  sources = [
+    "add-one.S",
+    "test.cc",
+  ]
 
-  zbi_test("zbi-code-patching-test") {
-    args = []
-    deps = [
-      ":zbi-code-patching-test.data",
-      ":zbi-code-patching-test.executable",
-      "..:dummy.txt",
-    ]
+  deps = [
+    ":embedding",
+    ":multiply_by_factor",
+    "..:zbi-test-main",
+    "//zircon/kernel/lib/code-patching",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/libc",
+    "//zircon/system/ulib/zbitl",
+  ]
 
-    # TODO(mcgrathr): enable on hardware too
-    device_types = [
-      "AEMU",
-      "QEMU",
-    ]
-  }
+  include_dirs = [ "." ]
+}
 
-  group("code-patching") {
-    testonly = true
-    deps = [ ":zbi-code-patching-test" ]
-  }
+code_patches("zbi-code-patching-test.patches") {
+  testonly = true
+  deps = [ ":zbi-code-patching-test.executable" ]
+}
+
+zbi_input("zbi-code-patching-test.data") {
+  testonly = true
+
+  # TODO(68585): package code-patches.bin in a STORAGE_KERNEL item along
+  # the hermetic alternatives when available.
+  type = "ramdisk"
+  args = [ "--uncompressed" ]
+  sources = get_target_outputs(":zbi-code-patching-test.patches")
+  deps = [ ":zbi-code-patching-test.patches" ]
+}
+
+zbi_test("zbi-code-patching-test") {
+  args = []
+  deps = [
+    ":zbi-code-patching-test.data",
+    ":zbi-code-patching-test.executable",
+    "..:dummy.txt",
+  ]
+
+  # TODO(mcgrathr): enable on hardware too
+  device_types = [
+    "AEMU",
+    "QEMU",
+  ]
+}
+
+group("code-patching") {
+  testonly = true
+  deps = [ ":zbi-code-patching-test" ]
 }

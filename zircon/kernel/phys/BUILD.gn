@@ -7,6 +7,7 @@
 import("//build/config/zircon/standard.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/unification/global_variables.gni")
+import("//zircon/kernel/arch/$zircon_cpu/phys/phys.gni")
 
 if (current_toolchain == default_toolchain) {
   # Default toolchain (current_cpu == "") just defines the phys environment.
@@ -25,7 +26,7 @@ if (current_toolchain == default_toolchain) {
 
       toolchain_tags = [ "kernel" ]
 
-      configs = [ "//zircon/kernel/phys:phys_config" ]
+      configs = [ "//zircon/kernel/phys:phys_config" ] + phys_configs
 
       # Always enable frame pointers. This works because frame_pointers
       # is added as part of :phys_config below.
@@ -41,7 +42,6 @@ if (current_toolchain == default_toolchain) {
 
       # Append the arch-specific lists.  The phys/phys.gni file in each
       # arch subdirectory defines phys_* lists to append to the parameters.
-      import("//zircon/kernel/arch/$kernel_cpu/phys/phys.gni")
       toolchain_tags += phys_tags
       exclude_variant_tags += phys_exclude_variant_tags
     }
@@ -71,13 +71,6 @@ if (current_toolchain == default_toolchain) {
 
     # Always enable frame pointers.
     configs += [ "//build/config/zircon:frame_pointers" ]
-
-    # Add arch-specific configs here. The reason this is not done
-    # in the zircon_toolchain_suite() call is because every config listed
-    # in toolchain_variant_args.configs 'foo' needs to have a corresponding
-    # 'foo_deps' group.
-    import("//zircon/kernel/arch/$kernel_cpu/phys/phys.gni")
-    configs += phys_configs
   }
 
   group("phys_config_deps") {

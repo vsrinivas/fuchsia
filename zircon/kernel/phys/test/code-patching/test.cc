@@ -14,6 +14,7 @@
 
 #include <ktl/byte.h>
 #include <ktl/span.h>
+#include <ktl/string_view.h>
 
 #include "../test-main.h"
 
@@ -22,11 +23,16 @@ const char Symbolize::kProgramName_[] = "code-patching-test";
 // Defined in add-one.S.
 extern "C" uint64_t AddOne(uint64_t x);
 
+// Defined by //zircon/kernel/phys/test/code-patching:multiply_by_factor.
+extern "C" uint64_t multiply_by_factor(uint64_t x);
+
 namespace {
+
+constexpr size_t kExpectedNumPatches = 2;
 
 // Returns the address range within this executable associated with a given
 // link-time, virtual range.
-fbl::Span<ktl::byte> GetInstructionRange(uint64_t range_start, size_t range_size) {
+ktl::span<ktl::byte> GetInstructionRange(uint64_t range_start, size_t range_size) {
 // If we are not static PIE, then we expect link-time addresses to already
 // be offset from PHYS_LOAD_ADDRESS; in that case, adjust.
 #ifndef ZX_STATIC_PIE
@@ -35,10 +41,65 @@ fbl::Span<ktl::byte> GetInstructionRange(uint64_t range_start, size_t range_size
 
   auto* loaded_start = reinterpret_cast<ktl::byte*>(const_cast<char*>(PHYS_LOAD_ADDRESS));
   const size_t loaded_size = static_cast<size_t>(_end - PHYS_LOAD_ADDRESS);
-  fbl::Span<ktl::byte> loaded_range{loaded_start, loaded_size};
+  ktl::span<ktl::byte> loaded_range{loaded_start, loaded_size};
   ZX_ASSERT(range_size <= loaded_range.size());
   ZX_ASSERT(range_start <= loaded_range.size() - range_size);
   return loaded_range.subspan(range_start, range_size);
+}
+
+int TestAddOnePatching(const code_patching::Directive& patch) {
+  ZX_ASSERT_MSG(patch.range_size == kAddOnePatchSize,
+                "Expected patch case #%u to cover %zu bytes; got %u", kAddOneCaseId,
+                kAddOnePatchSize, patch.range_size);
+
+  {
+    uint64_t result = AddOne(583);
+    ZX_ASSERT_MSG(result == 584, "AddOne(583) returned %lu; expected 584.\n", result);
+  }
+
+  // After patching (and synchronizing the instruction and data caches), we
+  // expect AddOne() to be the identity function.
+  auto insns = GetInstructionRange(patch.range_start, patch.range_size);
+  code_patching::NopFill(insns);
+  arch::CacheConsistencyContext().SyncRange(patch.range_start, patch.range_size);
+  {
+    uint64_t result = AddOne(583);
+    ZX_ASSERT_MSG(result == 583, "Patched AddOne(583) returned %lu; expected 583.\n", result);
+  }
+  return 0;
+}
+
+int TestMultiplyByFactorPatching(const code_patching::Directive& patch) {
+  ZX_ASSERT_MSG(patch.range_size == kMultiplyByFactorPatchSize,
+                "Expected patch case #%u to cover %zu bytes; got %u", kMultiplyByFactorCaseId,
+                kMultiplyByFactorPatchSize, patch.range_size);
+
+  auto insns = GetInstructionRange(patch.range_start, patch.range_size);
+
+  // After patching and synchronizing, we expect multiply_by_factor() to
+  // multiply by 2.
+  ktl::span<const ktl::byte> multiply_by_two = GetPatchAlternative("multiply_by_two");
+  code_patching::Patch(insns, multiply_by_two);
+  arch::CacheConsistencyContext().SyncRange(patch.range_start, patch.range_size);
+
+  {
+    uint64_t result = multiply_by_factor(583);
+    ZX_ASSERT_MSG(result == 2 * 583, "multiply_by_factor(583) returned %lu; expected %d.\n", result,
+                  2 * 583);
+  }
+
+  // After patching and synchronizing, we expect multiply_by_factor() to
+  // multiply by ten.
+  ktl::span<const ktl::byte> multiply_by_ten = GetPatchAlternative("multiply_by_ten");
+  code_patching::Patch(insns, multiply_by_ten);
+  arch::CacheConsistencyContext().SyncRange(patch.range_start, patch.range_size);
+  {
+    uint64_t result = multiply_by_factor(583);
+    ZX_ASSERT_MSG(result == 10 * 583, "multiply_by_factor(583) returned %lu; expected %d.\n",
+                  result, 10 * 583);
+  }
+
+  return 0;
 }
 
 }  // namespace
@@ -79,34 +140,28 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
            patch.range_start + patch.range_size, patch.range_size);
   }
 
-  if (patches.size() != 1) {
-    printf("Expected 1 code patch directive: got %zu", patches.size());
+  if (patches.size() != kExpectedNumPatches) {
+    printf("Expected %zu code patch directive: got %zu", kExpectedNumPatches, patches.size());
     return 1;
   }
 
-  if (patches[0].id != kAddOneCaseId) {
-    printf("Expected a patch case ID of %u: got %u", kAddOneCaseId, patches[0].id);
-    return 1;
-  } else if (patches[0].range_size != kAddOnePatchSize) {
-    printf("Expected patch case #%u to cover %zu bytes; got %u", kAddOneCaseId, kAddOnePatchSize,
-           patches[0].range_size);
-    return 1;
-  }
-
-  if (uint64_t result = AddOne(583); result != 584) {
-    printf("AddOne(583) returned %lu; expected 584.\n", result);
-    return 1;
-  }
-
-  // After patching (and synchronizing the instruction and data caches), we
-  // expect AddOne() to be the identity function.
-  auto instructions = GetInstructionRange(patches[0].range_start, patches[0].range_size);
-  code_patching::NopFill(instructions);
-  arch::CacheConsistencyContext().SyncRange(patches[0].range_start, patches[0].range_size);
-
-  if (uint64_t result = AddOne(583); result != 583) {
-    printf("Patched AddOne(583) returned %lu; expected 583.\n", result);
-    return 1;
+  for (size_t i = 0; i < patches.size(); ++i) {
+    const auto& patch = patches[i];
+    switch (patch.id) {
+      case kAddOneCaseId:
+        if (int result = TestAddOnePatching(patch); result != 0) {
+          return result;
+        }
+        break;
+      case kMultiplyByFactorCaseId:
+        if (int result = TestMultiplyByFactorPatching(patch); result != 0) {
+          return result;
+        }
+        break;
+      default:
+        printf("Unexpected patch case ID: %u\n", patch.id);
+        return 1;
+    }
   }
 
   return 0;

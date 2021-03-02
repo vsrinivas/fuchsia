@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <case-id-asm.h>
+#include <test.h>
 #include <lib/arch/asm.h>
 #include <lib/code-patching/asm.h>
 
@@ -14,19 +14,19 @@
 .function AddOne, global
 #if defined(__aarch64__)
 0:
-    add x0, x0, #1
+  add x0, x0, #1
 #elif defined(__x86_64__)
-    mov %rdi, %rax
+  mov %rdi, %rax
 0:
-    add $1, %rax
+  add $1, %rax
 #else
-    .error "unknown architecture"
+  .error "unknown architecture"
 #endif
 1:
-    .ifne 1b - 0b - ADD_ONE_PATCH_SIZE
-    .error "wrong size"
-    .endif
+  .ifne 1b - 0b - PATCH_SIZE_ADD_ONE
+  .error "wrong size"
+  .endif
 
-    .code_patching.range 0b, 1b, ADD_ONE_CASE_ID
-    ret
+  .code_patching.range 0b, 1b, CASE_ID_ADD_ONE
+  ret
 .end_function

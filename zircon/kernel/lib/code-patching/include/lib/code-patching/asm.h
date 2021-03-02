@@ -72,6 +72,43 @@ _.code_patching.end.reset
   .code_patching.range \start, \end, \ident
 .endm
 
+/// Defines a blob of instructions to be patched. The blob is initially
+/// filled with trap instructions.
+///
+/// Parameters
+///
+///   * size
+///     - Required: Size of the blob to be patched.
+///
+///   * ident
+///     - Required: Integer giving the associated patch case ID (i.e., a
+///       uint32_t), which corresponds to hard-coded details on how and when to
+///       patch.
+///
+.macro .code_patching.blob size, ident
+  // `\@` is a pseudo-variable holding the number of macros the assembler has
+  // executed thus far; we leverage it to create unique(-enough) labels across
+  // possibly many expansions of this macro.
+  .L.code_patching.\@:
+#if defined(__aarch64__)
+  .if \size % 4
+  .error ".code_patching.blob size \size not a multiple of instruction size"
+  .endif
+
+  .rept (\size) / 4
+  brk #1
+  .endr
+#elif defined(__x86_64__)
+  .rept \size
+  int3
+  .endr
+#else
+#error "unknown architecture"
+#endif
+  .L.code_patching.\@.end:
+  .code_patching.range .L.code_patching.\@, .L.code_patching.\@.end, \ident
+.endm  // .code_patching.blob
+
 #endif  // clang-format on
 
 #endif  // ZIRCON_KERNEL_LIB_CODE_PATCHING_INCLUDE_LIB_CODE_PATCHING_ASM_H_

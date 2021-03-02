@@ -4,7 +4,11 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("strict-align") {
+import("//build/toolchain/variant.gni")
+
+# This has to be variant() rather than config() to be used in the toolchain
+# configs list.
+variant("strict-align") {
   cflags = [ "-mstrict-align" ]
 }
 

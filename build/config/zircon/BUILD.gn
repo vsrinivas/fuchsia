@@ -9,6 +9,7 @@ import("//build/config/compiler.gni")
 import("//build/config/linker.gni")
 import("//build/config/zircon/levels.gni")
 import("//build/toolchain/goma.gni")
+import("//build/toolchain/variant.gni")
 
 # NOTE: This file provides the GN configs used by Zircon toolchains
 # exclusively. See //build/toolchain/zircon/zircon_toolchain.gni.
@@ -824,7 +825,9 @@ config("auto_var_init") {
   }
 }
 
-config("tiny") {
+# This has to be variant() rather than config() to be used in the toolchain
+# configs list.
+variant("tiny") {
   cflags = [ "-mcmodel=tiny" ]
   asmflags = cflags
   ldflags = cflags
@@ -977,9 +980,15 @@ config("standalone") {
 }
 
 # Statically linked posititon independent executable.
-config("static-pie") {
+#
+# These have to be variant() rather than config() to be used in the toolchain
+# configs list.
+variant("static-pie-compile") {
   cflags = [ "-fPIE" ]
   defines = [ "ZX_STATIC_PIE=1" ]
+}
+
+variant("static-pie-link") {
   ldflags = [
     "-Wl,-pie",
     "-Wl,--no-dynamic-linker",

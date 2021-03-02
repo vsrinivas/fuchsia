@@ -4,20 +4,42 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/cpp/library_headers.gni")
+
 source_set("code-patching") {
-  sources = []
-
-  public_deps = [
-    # <lib/code-patching/code-patching.h> includes <lib/arch/nop.h>.
-    "//zircon/kernel/lib/arch",
-
-    # <lib/code-patching/code-patching.h> includes <lib/fbl/span.h>.
-    "//zircon/system/ulib/fbl",
-  ]
-
-  public_configs = [ ":include" ]
+  public_deps = [ ":headers" ]
 }
 
-config("include") {
-  include_dirs = [ "include" ]
+library_headers("headers") {
+  headers = [
+    "lib/code-patching/asm.h",
+    "lib/code-patching/code-patching.h",
+  ]
+
+  public_deps = [
+    # code-patching.h includes <lib/arch/nop.h>.
+    "//zircon/kernel/lib/arch:headers",
+
+    # code-patching.h includes <lib/fbl/span.h>.
+    "//zircon/system/ulib/fbl:headers",
+  ]
+}
+
+config("hermetic-leaf.config") {
+  inputs = [ "hermetic-leaf.ld" ]
+
+  # Use a custom linker script rather than the default PIE layout.
+  ldflags = [ "-Wl,-T," + rebase_path(inputs[0], root_build_dir) ]
+
+  # lld defaults to PIE, while the GNU linkers do not.
+  if (!is_gcc) {
+    ldflags += [ "-Wl,--no-pie" ]
+  }
+
+  ldflags += [
+    # Don't add any additional sections or dependencies.
+    "-nostdlib",
+    "-Wl,--build-id=none",
+    "-Wl,--no-dynamic-linker",
+  ]
 }

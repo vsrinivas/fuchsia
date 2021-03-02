@@ -18,7 +18,8 @@ phys_configs = [
 
   # Compile as a position-independent executable. The code will apply its own
   # fixups during initialization.
-  "//build/config/zircon:static-pie",
+  "//build/config/zircon:static-pie-compile",
+  "//build/config/zircon:static-pie-link",
 ]
 phys_tags = [
   "strict-align",
