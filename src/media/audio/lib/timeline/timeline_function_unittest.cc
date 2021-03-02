@@ -12,13 +12,14 @@ namespace {
 // Verifies that a TimelineFunction instantiated with provided arguments has expected properties.
 void VerifyBasics(const TimelineFunction& under_test, int64_t subject_time, int64_t reference_time,
                   uint64_t subject_delta, uint64_t reference_delta) {
-  TimelineRate::Reduce(&subject_delta, &reference_delta);
+  TimelineRate reduced(subject_delta, reference_delta);
+
   EXPECT_EQ(reference_time, under_test.reference_time());
   EXPECT_EQ(subject_time, under_test.subject_time());
-  EXPECT_EQ(reference_delta, under_test.reference_delta());
-  EXPECT_EQ(subject_delta, under_test.subject_delta());
-  EXPECT_EQ(reference_delta, under_test.rate().reference_delta());
-  EXPECT_EQ(subject_delta, under_test.rate().subject_delta());
+  EXPECT_EQ(reduced.reference_delta(), under_test.reference_delta());
+  EXPECT_EQ(reduced.subject_delta(), under_test.subject_delta());
+  EXPECT_EQ(reduced.reference_delta(), under_test.rate().reference_delta());
+  EXPECT_EQ(reduced.subject_delta(), under_test.rate().subject_delta());
 }
 
 // Verifies that TimelineFunctions with given arguments (instantiated 3 different ways) have

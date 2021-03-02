@@ -94,29 +94,21 @@ const TimelineRate TimelineRate::Zero = TimelineRate(0, 1);
 // static
 const TimelineRate TimelineRate::NsPerSecond = TimelineRate(1'000'000'000L, 1);
 
-// static
-// Reduces the specified rate.
-void TimelineRate::Reduce(uint64_t* subject_delta, uint64_t* reference_delta) {
-  ReduceRatio(subject_delta, reference_delta);
+TimelineRate::TimelineRate(uint64_t subject_delta, uint64_t reference_delta)
+    : subject_delta_(subject_delta), reference_delta_(reference_delta) {
+  ZX_DEBUG_ASSERT(reference_delta != 0);
+  ReduceRatio(&subject_delta_, &reference_delta_);
 }
 
 // static
-// Multiplies two given rates. If exact, ASSERTs that the rate fits into a uint64-based ratio; else
-// reduces precision by simple right-shift as needed, until the result fits into uint64_t:uint64_t.
-void TimelineRate::Product(uint64_t a_subject_delta, uint64_t a_reference_delta,
-                           uint64_t b_subject_delta, uint64_t b_reference_delta,
-                           uint64_t* product_subject_delta, uint64_t* product_reference_delta,
-                           bool exact) {
-  ZX_DEBUG_ASSERT(a_reference_delta != 0);
-  ZX_DEBUG_ASSERT(b_reference_delta != 0);
-  ZX_DEBUG_ASSERT(product_subject_delta != nullptr);
-  ZX_DEBUG_ASSERT(product_reference_delta != nullptr);
-
-  auto subject_delta = static_cast<__uint128_t>(a_subject_delta) * b_subject_delta;
-  auto reference_delta = static_cast<__uint128_t>(a_reference_delta) * b_reference_delta;
+TimelineRate TimelineRate::Product(TimelineRate a, TimelineRate b, bool exact) {
+  auto subject_delta = static_cast<__uint128_t>(a.subject_delta()) * b.subject_delta();
+  auto reference_delta = static_cast<__uint128_t>(a.reference_delta()) * b.reference_delta();
 
   ReduceRatio(&subject_delta, &reference_delta);
 
+  // If exact, ASSERTs that the rate fits into a uint64-based ratio; else reduces precision by
+  // simple right-shift as needed, until the result fits into uint64_t:uint64_t.
   if (subject_delta > std::numeric_limits<uint64_t>::max() ||
       reference_delta > std::numeric_limits<uint64_t>::max()) {
     ZX_ASSERT(!exact);
@@ -134,9 +126,10 @@ void TimelineRate::Product(uint64_t a_subject_delta, uint64_t a_reference_delta,
 
     if (reference_delta == 0) {
       // Product is larger than we can represent. Return the largest value we can represent.
-      *product_subject_delta = std::numeric_limits<uint64_t>::max();
-      *product_reference_delta = 1;
-      return;
+      TimelineRate ret;
+      ret.subject_delta_ = std::numeric_limits<uint64_t>::max();
+      ret.reference_delta_ = 1;
+      return ret;
     }
 
     if constexpr (kDebugPrecisionLoss) {
@@ -149,8 +142,11 @@ void TimelineRate::Product(uint64_t a_subject_delta, uint64_t a_reference_delta,
     }
   }
 
-  *product_subject_delta = static_cast<uint64_t>(subject_delta);
-  *product_reference_delta = static_cast<uint64_t>(reference_delta);
+  // Don't use the subject/reference constructor: the ratio has already been reduced.
+  TimelineRate ret;
+  ret.subject_delta_ = static_cast<uint64_t>(subject_delta);
+  ret.reference_delta_ = static_cast<uint64_t>(reference_delta);
+  return ret;
 }
 
 // static
@@ -160,15 +156,30 @@ void TimelineRate::Product(uint64_t a_subject_delta, uint64_t a_reference_delta,
 // INT64_MIN * UINT64_MAX == INT128MIN     + INT64_MIN                 : plenty of room to spare
 // INT64_MAX * UINT64_MAX == UINT128_MAX   - (UINT64_MAX + INT64_MAX)  : even more extra space
 //
-// For consistency across positive and negative |value|, we round any fractional remainders toward
-// INT64_MIN. If |value| is negative, standard truncation ("round toward zero") cuts the wrong
-// direction (e.g. -1/2 == 0, we want -1), so round_down represents that adjustment, if needed.
-int64_t TimelineRate::Scale(int64_t value, uint64_t subject_delta, uint64_t reference_delta) {
-  ZX_ASSERT(reference_delta != 0ul);
+int64_t TimelineRate::Scale(int64_t value, RoundingMode rounding_mode) const {
+  __int128_t product = static_cast<__int128_t>(value) * subject_delta_;
+  __int128_t result;
 
-  __int128_t product = static_cast<__int128_t>(value) * subject_delta;
-  int round_down = (value < 0 && product % reference_delta != 0) ? -1 : 0;
-  __int128_t result = product / reference_delta + round_down;
+  switch (rounding_mode) {
+    case RoundingMode::Truncate:
+      result = product / reference_delta_;
+      break;
+
+    case RoundingMode::Floor: {
+      // If value is negative, truncation cuts the wrong direction (e.g. -1/2 == 0, we want -1),
+      // so round_down represents that adjustment, if needed.
+      int round_down = (value < 0 && product % reference_delta_ != 0) ? -1 : 0;
+      result = product / reference_delta_ + round_down;
+      break;
+    }
+
+    case RoundingMode::Ceiling: {
+      // As for Floor, but inverted for positive/negative.
+      int round_up = (value > 0 && product % reference_delta_ != 0) ? 1 : 0;
+      result = product / reference_delta_ + round_up;
+      break;
+    }
+  }
 
   if (result > std::numeric_limits<int64_t>::max() ||
       result < std::numeric_limits<int64_t>::min()) {

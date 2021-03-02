@@ -75,7 +75,7 @@ zx::time DriverOutput::SafeWriteFrameToRefTime(int64_t frame) const {
 
 TimelineRate DriverOutput::FramesPerRefTick() const {
   auto frac_frame_per_tick = driver_ref_time_to_frac_safe_read_or_write_frame().rate();
-  return frac_frame_per_tick * TimelineRate(1, Fixed(1).raw_value());
+  return TimelineRate::Product(frac_frame_per_tick, TimelineRate(1, Fixed(1).raw_value()));
 }
 
 zx_status_t DriverOutput::Init() {

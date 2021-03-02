@@ -48,7 +48,7 @@ TEST(SourceInfoTest, ResetPositions) {
   bookkeeping.denominator = 7;
 
   auto& info = mixer.source_info();
-  info.dest_frames_to_frac_source_frames = TimelineFunction(TimelineRate(17u));
+  info.dest_frames_to_frac_source_frames = TimelineFunction(TimelineRate(17u, 1u));
   // All these values will be overwritten
   info.next_dest_frame = -97;
   info.next_frac_source_frame = Fixed(7);

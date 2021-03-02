@@ -323,13 +323,13 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
 
     fifo_depth_frames_ = (fifo_depth_bytes + bytes_per_frame - 1) / bytes_per_frame;
     fifo_depth_duration_ =
-        zx::nsec(TimelineRate::Scale(fifo_depth_frames_, ZX_SEC(1), frames_per_second));
+        zx::nsec(TimelineRate(ZX_SEC(1), frames_per_second).Scale(fifo_depth_frames_));
 
     AUDIO_LOG(DEBUG) << "Received fifo depth response (in frames) of " << fifo_depth_frames_;
 
     // Figure out how many frames we need in our ring buffer.
-    int64_t min_frames_64 = TimelineRate::Scale(min_ring_buffer_duration_.to_nsecs(),
-                                                bytes_per_frame * frames_per_second, ZX_SEC(1));
+    TimelineRate bytes_per_nanosecond(bytes_per_frame * frames_per_second, ZX_SEC(1));
+    int64_t min_frames_64 = bytes_per_nanosecond.Scale(min_ring_buffer_duration_.to_nsecs());
     int64_t overhead = static_cast<int64_t>(fifo_depth_bytes) + bytes_per_frame - 1;
     bool overflow = ((min_frames_64 == TimelineRate::kOverflow) ||
                      (min_frames_64 > (std::numeric_limits<int64_t>::max() - overhead)));
