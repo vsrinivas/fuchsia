@@ -10,6 +10,7 @@ fidl("fuchsia.overnet.protocol") {
     "labels.fidl",
     "link_protocol.fidl",
     "peer_protocol.fidl",
+    "relay.fidl",
     "zircon_proxy.fidl",
   ]
   public_deps = [

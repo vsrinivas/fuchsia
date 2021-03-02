@@ -1,0 +1,23 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.overnet.protocol;
+
+using fuchsia.net;
+
+/// This capability is advertised via Overnet's peer discovery protocol when a given node is
+/// reachable via UDP.
+/// This allows discovery of UDP Overnet connectivity via Overnet, enabling for example:
+/// * Using a low bandwidth (serial? bluetooth?) link to discover and bootstrap a higher bandwidth
+///   UDP based link.
+/// * Using an intermediate UDP based node to discover and connect directly to other UDP based
+///   nodes.
+[Discoverable]
+protocol UdpReachable {
+    /// Hanging-get style returns the latest list of socket addresses that this node *may* be
+    /// reachable from.
+    /// This can change over time as extra sockets are added or removed, or NAT-ed addresses
+    /// for existing sockets are learned, or indeed as connected networks change.
+    GetPossibleAddressList() -> (vector<fuchsia.net.SocketAddress>:MAX address);
+};
