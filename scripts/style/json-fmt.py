@@ -20,7 +20,8 @@ def sort(data):
         return {
             key: (
                 sort(value) if key not in [
-                    "args", "arguments", "injected-services"
+                    "args", "arguments", "children", "injected-services",
+                    "networks", "setup", "test"
                 ] else value) for key, value in data.items()
         }
     elif isinstance(data, list):
