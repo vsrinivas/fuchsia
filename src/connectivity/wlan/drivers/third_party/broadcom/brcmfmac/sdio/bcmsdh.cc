@@ -317,8 +317,8 @@ zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t func, u
     if (result == ZX_ERR_TIMED_OUT) {
       zx_status_t err = sdiodev->drvr->recovery_trigger->sdio_timeout_.Inc();
       if (err != ZX_OK) {
-        BRCMF_ERR("Increase recovery trigger condition failed -- error: %s",
-                  zx_status_get_string(err));
+        BRCMF_WARN("Failed to trigger, recovery likely in progress - status: %s",
+                   zx_status_get_string(err));
       }
     }
     BRCMF_DBG(TEMP, "SDIO transaction failed: %s", zx_status_get_string(result));

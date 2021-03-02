@@ -216,6 +216,10 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
   // Stop and delete a SimInterface
   zx_status_t DeleteInterface(SimInterface* ifc);
 
+  // To notify simulator that an interface was destroyed.
+  // e.g. when going through crash recovery.
+  zx_status_t InterfaceDestroyed(SimInterface* sim_ifc);
+
   // Fake device manager
   std::unique_ptr<simulation::FakeDevMgr> dev_mgr_;
 

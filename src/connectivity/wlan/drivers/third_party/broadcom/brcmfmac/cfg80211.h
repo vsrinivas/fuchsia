@@ -443,6 +443,10 @@ struct brcmf_tlv {
 static inline struct net_device* cfg_to_ndev(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_cfg80211_vif* vif;
   vif = list_peek_head_type(&cfg->vif_list, struct brcmf_cfg80211_vif, list);
+  if (unlikely(!vif)) {
+    return nullptr;
+  }
+
   return vif->wdev.netdev;
 }
 

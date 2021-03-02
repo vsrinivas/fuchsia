@@ -758,12 +758,16 @@ static void brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
                                         bool aborted) {
   BRCMF_DBG(SCAN, "Enter");
 
+  struct net_device* ndev = cfg_to_ndev(cfg);
+  if (!ndev) {
+    BRCMF_WARN("Device does not exist, skipping escan complete notify.");
+    return;
+  }
+
   // Canceling if it's inactive is OK. Checking if it's active just invites race conditions.
   cfg->escan_timer->Stop();
-
   brcmf_scan_config_mpc(ifp, 1);
 
-  struct net_device* ndev = cfg_to_ndev(cfg);
   if (cfg->scan_request) {
     BRCMF_IFDBG(WLANIF, ndev, "ESCAN Completed scan: %s", aborted ? "Aborted" : "Done");
     // Now that we're done with this scan_request we can remove it
@@ -780,7 +784,7 @@ static zx_status_t brcmf_cfg80211_del_ap_iface(struct brcmf_cfg80211_info* cfg,
                                                struct wireless_dev* wdev) {
   struct net_device* ndev = wdev->netdev;
   struct brcmf_if* ifp = nullptr;
-  zx_status_t err;
+  zx_status_t err = ZX_OK;
 
   if (ndev)
     ifp = ndev_to_if(ndev);
@@ -794,26 +798,34 @@ static zx_status_t brcmf_cfg80211_del_ap_iface(struct brcmf_cfg80211_info* cfg,
     // deleted.
     return ZX_OK;
   }
+
+  // If we are in the process of resetting, then ap interface no longer exists
+  // in firmware (since fw has been reloaded). We can skip sending commands
+  // related to destorying the interface.
+  if (ifp->drvr->drvr_resetting.load()) {
+    goto skip_fw_cmds;
+  }
+
   brcmf_cfg80211_arm_vif_event(cfg, ifp->vif, BRCMF_E_IF_DEL);
 
   err = brcmf_fil_bsscfg_data_set(ifp, "interface_remove", nullptr, 0);
   if (err != ZX_OK) {
     BRCMF_ERR("interface_remove interface %d failed %d", ifp->ifidx, err);
-    goto err_unarm;
+    brcmf_cfg80211_disarm_vif_event(cfg);
+    return err;
   }
 
   /* wait for firmware event */
   err = brcmf_cfg80211_wait_vif_event(cfg, ZX_MSEC(BRCMF_VIF_EVENT_TIMEOUT_MSEC));
   if (err != ZX_OK) {
     BRCMF_ERR("BRCMF_VIF_EVENT timeout occurred");
-    err = ZX_ERR_IO;
-    goto err_unarm;
+    brcmf_cfg80211_disarm_vif_event(cfg);
+    return ZX_ERR_IO;
   }
-
-  brcmf_remove_interface(ifp, true);
-
-err_unarm:
   brcmf_cfg80211_disarm_vif_event(cfg);
+
+skip_fw_cmds:
+  brcmf_remove_interface(ifp, true);
   return err;
 }
 
@@ -2871,6 +2883,13 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
     return WLAN_STOP_RESULT_BSS_ALREADY_STOPPED;
   }
 
+  // If we are in the process of resetting, then ap interface no longer exists
+  // in firmware (since fw has been reloaded). We can skip sending commands
+  // related to destorying the interface.
+  if (ifp->drvr->drvr_resetting.load()) {
+    goto skip_fw_cmds;
+  }
+
   memset(&join_params, 0, sizeof(join_params));
   status =
       brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params), &fw_err);
@@ -2913,11 +2932,16 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
   }
   brcmf_vif_clear_mgmt_ies(ifp->vif);
   brcmf_configure_arp_nd_offload(ifp, true);
+
+  // ap_started must be unset for brcmf_enable_mpc() to take effect.
+  cfg->ap_started = false;
+  brcmf_enable_mpc(ifp, 1);
+
+skip_fw_cmds:
+  cfg->ap_started = false;
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
   brcmf_net_setcarrier(ifp, false);
-  cfg->ap_started = false;
-  brcmf_enable_mpc(ifp, 1);
 
   return result;
 }
@@ -4544,6 +4568,13 @@ void brcmf_if_wmm_status_req(net_device* ndev) {
   edcf_acparam_t ac_params[AC_COUNT];
   wlan_wmm_params_t resp;
   brcmf_if* ifp = ndev_to_if(ndev);
+
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- ignoring wmm status req");
+    return;
+  }
+
   if (ifp == nullptr) {
     BRCMF_ERR("ifp is null");
     wlanif_impl_ifc_on_wmm_status_resp(&ndev->if_proto, ZX_ERR_INTERNAL, &resp);
@@ -4551,7 +4582,6 @@ void brcmf_if_wmm_status_req(net_device* ndev) {
   }
 
   status = brcmf_fil_iovar_data_get(ifp, "wme_ac_sta", &ac_params, sizeof(ac_params), &fw_err);
-
   // TODO(fxbug.dev/67821): Check what happens when WMM is not enabled.
   if (status != ZX_OK) {
     BRCMF_ERR("could not get STA WMM status: %s, fw err %s", zx_status_get_string(status),
@@ -5921,10 +5951,12 @@ void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg) {
 zx_status_t brcmf_clear_states(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_pub* drvr = cfg->pub;
   struct brcmf_cfg80211_vif* client_vif = drvr->iflist[0]->vif;
+  struct net_device* client = client_vif->wdev.netdev;
   struct net_device* softap = cfg_to_softap_ndev(cfg);
   zx_status_t err = ZX_OK;
 
   // Stop all interfaces.
+  brcmf_if_stop(client);
   if (softap != nullptr)
     brcmf_if_stop(softap);
 

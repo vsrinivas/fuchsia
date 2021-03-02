@@ -485,6 +485,18 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
   return ZX_OK;
 }
 
+zx_status_t SimTest::InterfaceDestroyed(SimInterface* ifc) {
+  auto iter = iface_id_set_.find(ifc->iface_id_);
+
+  if (iter == iface_id_set_.end()) {
+    BRCMF_ERR("Iface id: %d does not exist", ifc->iface_id_);
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  iface_id_set_.erase(iter);
+  return ZX_OK;
+}
+
 zx_status_t SimTest::DeleteInterface(SimInterface* ifc) {
   auto iter = iface_id_set_.find(ifc->iface_id_);
   zx_status_t err;

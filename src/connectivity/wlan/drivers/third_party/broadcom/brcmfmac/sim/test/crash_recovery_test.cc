@@ -26,6 +26,7 @@ class CrashRecoveryTest : public SimTest {
   static constexpr zx::duration kTestDuration = zx::sec(50);
   void Init();
   void ScheduleCrash(zx::duration delay);
+  void RecreateClientIface();
   void VerifyScanResult(const uint64_t scan_id, size_t min_result_num,
                         wlan_scan_result_t expect_code);
   // Get the value of inspect counter of firmware recovery. It is used to verify the number of
@@ -46,6 +47,15 @@ void CrashRecoveryTest::Init() {
   client_ifp_ = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   client_ifc_.GetMacAddr(&client_mac_addr_);
   ASSERT_EQ(0U, GetFwRcvrInspectCount());
+}
+
+void CrashRecoveryTest::RecreateClientIface() {
+  // Since the interface was destroyed as part of the recovery process, we
+  // need to notify the sim about it before attempting to recreate.
+  SimTest::InterfaceDestroyed(&client_ifc_);
+  SimTest::StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
+  brcmf_simdev* sim = device_->GetSim();
+  client_ifp_ = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
 }
 
 void CrashRecoveryTest::ScheduleCrash(zx::duration delay) {
@@ -84,6 +94,21 @@ uint64_t CrashRecoveryTest::GetFwRcvrInspectCount() {
   return uint_property->value();
 }
 
+TEST_F(CrashRecoveryTest, DeviceDestroyOnCrash) {
+  Init();
+  uint32_t dev_count = dev_mgr_->DeviceCount();
+
+  ScheduleCrash(zx::msec(10));
+  env_->Run(kTestDuration);
+
+  // Since we currently have one client interface, that should have gotten destroyed.
+  ASSERT_EQ(dev_mgr_->DeviceCount(), dev_count - 1);
+
+  // Ensure RecreateClientIface brings it back.
+  RecreateClientIface();
+  ASSERT_EQ(dev_mgr_->DeviceCount(), dev_count);
+}
+
 // Verify that an association can be done correctly after a crash and a recovery happen after a scan
 // is started.
 TEST_F(CrashRecoveryTest, ConnectAfterCrashDuringScan) {
@@ -94,6 +119,8 @@ TEST_F(CrashRecoveryTest, ConnectAfterCrashDuringScan) {
                              zx::msec(10));
   // Crash before the first scan result is sent up.
   ScheduleCrash(zx::msec(15));
+  env_->ScheduleNotification(std::bind(&CrashRecoveryTest::RecreateClientIface, this),
+                             zx::msec(18));
   client_ifc_.AssociateWith(ap_, zx::msec(20));
 
   env_->Run(kTestDuration);
@@ -101,7 +128,7 @@ TEST_F(CrashRecoveryTest, ConnectAfterCrashDuringScan) {
   // Verify no scan result is received from SME
   EXPECT_EQ(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
 
-  // Verify that the association succeeded
+  // Verify that the association succeeded.
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
 
   // Verify inspect is updated.
@@ -115,11 +142,13 @@ TEST_F(CrashRecoveryTest, ConnectAfterCrashAfterConnect) {
 
   client_ifc_.AssociateWith(ap_, zx::msec(10));
   ScheduleCrash(zx::msec(20));
-  client_ifc_.AssociateWith(ap_, zx::msec(30));
+  env_->ScheduleNotification(std::bind(&CrashRecoveryTest::RecreateClientIface, this),
+                             zx::msec(30));
+  client_ifc_.AssociateWith(ap_, zx::msec(40));
 
   env_->Run(kTestDuration);
 
-  // Verify that both association succeeded
+  // Verify that both association succeeded.
   EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 2U);
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 2U);
 
@@ -138,8 +167,10 @@ TEST_F(CrashRecoveryTest, ScanAfterCrashAfterConnect) {
 
   client_ifc_.AssociateWith(ap_, zx::msec(10));
   ScheduleCrash(zx::msec(20));
-  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kScanId, false),
+  env_->ScheduleNotification(std::bind(&CrashRecoveryTest::RecreateClientIface, this),
                              zx::msec(30));
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kScanId, false),
+                             zx::msec(40));
 
   env_->Run(kTestDuration);
 

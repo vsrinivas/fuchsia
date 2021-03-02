@@ -20,6 +20,7 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <mutex>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
@@ -69,11 +70,15 @@ class Device : public ::ddk::Device<Device, ddk::Initializable, ddk::Messageable
   virtual zx_status_t DeviceGetMetadata(uint32_t type, void* buf, size_t buflen,
                                         size_t* actual) = 0;
 
+  // Helpers
+  void DestroyAllIfaces(void);
+
  protected:
   explicit Device(zx_device_t* parent);
 
  private:
   std::unique_ptr<brcmf_pub> brcmf_pub_;
+  std::mutex lock_;
 
   // Two fixed interfaces supported; the default instance as a client, and a second one as an AP.
   WlanInterface* client_interface_;

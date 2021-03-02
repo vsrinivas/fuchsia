@@ -607,6 +607,8 @@ void brcmf_recovery_worker(WorkItem* work) {
   }
 
   drvr->device->GetInspect()->LogFwRecovered();
+  drvr->device->DestroyAllIfaces();
+
 fail:
   // Clean the counters for all the trigger conditions at the end of the recovery process to ensure
   // all the counters are 0 after driver is recovered and start working. Skip it here for SIM to
@@ -765,10 +767,6 @@ zx_status_t brcmf_reset(brcmf_pub* drvr) {
 
   if (drvr == NULL) {
     return ZX_ERR_INTERNAL;
-  }
-  // Remove all interfaces other than the primary one.
-  for (int i = BRCMF_MAX_IFS - 1; i > 0; i--) {
-    brcmf_remove_interface(drvr->iflist[i], false);
   }
 
   if ((err = brcmf_clear_states(drvr->config)) != ZX_OK) {

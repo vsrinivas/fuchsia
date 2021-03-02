@@ -102,6 +102,7 @@ zx_status_t Device::WlanphyImplQuery(wlanphy_impl_info_t* out_info) {
 
 zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t* req,
                                            uint16_t* out_iface_id) {
+  std::lock_guard<std::mutex> lock(lock_);
   const char* role = req->role == WLAN_INFO_MAC_ROLE_CLIENT ? "client"
                      : req->role == WLAN_INFO_MAC_ROLE_AP   ? "ap"
                      : req->role == WLAN_INFO_MAC_ROLE_MESH ? "mesh"
@@ -194,12 +195,14 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
 }
 
 zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
+  std::lock_guard<std::mutex> lock(lock_);
   zx_status_t status = ZX_OK;
 
   BRCMF_DBG(WLANPHY, "Destroying interface %d", iface_id);
   switch (iface_id) {
     case kClientInterfaceId: {
       if (client_interface_ == nullptr) {
+        BRCMF_INFO("Client interface %d unavailable, skipping destroy.", iface_id);
         return ZX_ERR_NOT_FOUND;
       }
       wireless_dev* wdev = client_interface_->take_wdev();
@@ -217,6 +220,7 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
     }
     case kApInterfaceId: {
       if (ap_interface_ == nullptr) {
+        BRCMF_INFO("AP interface %d unavailable, skipping destroy.", iface_id);
         return ZX_ERR_NOT_FOUND;
       }
       wireless_dev* wdev = ap_interface_->take_wdev();
@@ -259,6 +263,20 @@ zx_status_t Device::WlanphyImplGetCountry(wlanphy_country_t* out_country) {
     return ZX_ERR_INVALID_ARGS;
   }
   return WlanInterface::GetCountry(brcmf_pub_.get(), out_country);
+}
+
+void Device::DestroyAllIfaces(void) {
+  zx_status_t status = WlanphyImplDestroyIface(kClientInterfaceId);
+  if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
+    BRCMF_ERR("Failed to destroy client iface %d status %s", kClientInterfaceId,
+              zx_status_get_string(status));
+  }
+
+  status = WlanphyImplDestroyIface(kApInterfaceId);
+  if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
+    BRCMF_ERR("Failed to destroy ap iface %d status %s", kApInterfaceId,
+              zx_status_get_string(status));
+  }
 }
 
 }  // namespace brcmfmac
