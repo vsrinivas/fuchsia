@@ -14,6 +14,10 @@
 
 #include "intel-dsp.h"
 
+namespace {
+namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
+}  // namespace
+
 namespace audio {
 namespace intel_hda {
 
@@ -39,273 +43,105 @@ IntelDspStream::IntelDspStream(uint32_t id, bool is_input, const DspPipeline& pi
   }
 }
 
-zx_status_t IntelDspStream::ProcessSetStreamFmt(const ihda_proto::SetStreamFmtResp& codec_resp,
-                                                zx::channel&& ring_buffer_channel) {
-  ZX_DEBUG_ASSERT(ring_buffer_channel.is_valid());
-
-  fbl::AutoLock lock(obj_lock());
-  zx_status_t res = ZX_OK;
-
-  // Are we shutting down?
-  if (!is_active()) {
-    return ZX_ERR_BAD_STATE;
-  }
-
+void IntelDspStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::Format format,
+                                      ::fidl::ServerEnd<audio_fidl::RingBuffer> ring_buffer,
+                                      StreamChannel::CreateRingBufferCompleter::Sync& completer) {
   // The DSP needs to coordinate with ring buffer commands. Set up an additional
-  // channel to intercept messages on the ring buffer channel.
+  // LLCPP server to intercept messages on the ring buffer channel.
 
-  zx::channel channel_local;
-  zx::channel channel_remote;
-  res = zx::channel::create(0, &channel_local, &channel_remote);
-  if (res != ZX_OK) {
-    return res;
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  if (!endpoints.is_ok()) {
+    LOG(ERROR, "Could not create end points in %s", __PRETTY_FUNCTION__);
+    completer.Close(ZX_ERR_NO_MEMORY);
+    return;
   }
+  auto [client, server] = *std::move(endpoints);
+  fidl::OnUnboundFn<audio_fidl::RingBuffer::Interface> on_unbound =
+      [this](audio_fidl::RingBuffer::Interface*, fidl::UnbindInfo,
+             fidl::ServerEnd<llcpp::fuchsia::hardware::audio::RingBuffer>) {
+        ring_buffer_.reset();
+      };
 
-  client_rb_channel_ = Channel::Create(std::move(channel_local));
-  if (client_rb_channel_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  fidl::BindServer<audio_fidl::RingBuffer::Interface>(dispatcher(), std::move(ring_buffer), this,
+                                                      std::move(on_unbound));
 
-  client_rb_channel_->SetHandler(
-      [stream = fbl::RefPtr(this)](async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                   zx_status_t status, const zx_packet_signal_t* signal) {
-        stream->ClientRingBufferChannelSignalled(dispatcher, wait, status, signal);
-      });
-
-  ZX_DEBUG_ASSERT(channel_remote.is_valid());
-
-  audio_proto::StreamSetFmtResp resp = {};
-  // Respond to the caller, transferring the DMA handle back in the process.
-  resp.hdr.cmd = AUDIO_STREAM_CMD_SET_FORMAT;
-  resp.hdr.transaction_id = set_format_tid();
-  resp.result = ZX_OK;
-  resp.external_delay_nsec = 0;  // report his properly based on the codec path delay.
-  res = stream_channel()->Write(&resp, sizeof(resp), std::move(channel_remote));
-  if (res != ZX_OK) {
-    return res;
-  }
-
-  rb_channel_ = Channel::Create(std::move(ring_buffer_channel));
-  if (rb_channel_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  rb_channel_->SetHandler([stream = fbl::RefPtr(this), channel = rb_channel_.get()](
-                              async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                              zx_status_t status, const zx_packet_signal_t* signal) {
-    stream->RingBufferChannelSignalled(dispatcher, wait, status, signal);
-  });
-
-  // We do not start the wait until we have rb_channel_ and client_rb_channel_ set.
-  res = client_rb_channel_->BeginWait(dispatcher());
-  if (res != ZX_OK) {
-    client_rb_channel_.reset();
-    rb_channel_.reset();
-    return res;
-  }
-  res = rb_channel_->BeginWait(dispatcher());
-  if (res != ZX_OK) {
-    rb_channel_.reset();
-    client_rb_channel_.reset();
-    return res;
-  }
-
-  // Let the implementation send the commands required to finish changing the
-  // stream format.
-  res = FinishChangeStreamFormatLocked(encoded_fmt());
-  if (res != ZX_OK) {
-    LOG(ERROR, "Failed to finish set format (enc fmt 0x%04hx res %d)\n", encoded_fmt(), res);
-    goto finished;
-  }
-
-  // If we don't have a set format operation in flight, or the stream channel
-  // has been closed, this set format operation has been canceled.  Do not
-  // return an error up the stack; we don't want to close the connection to
-  // our codec device.
-  if ((set_format_tid() == AUDIO_INVALID_TRANSACTION_ID) || (stream_channel() == nullptr)) {
-    goto finished;
-  }
-
-finished:
-  // Something went fatally wrong when trying to send the result back to the
-  // caller.  Close the stream channel.
-  if ((res != ZX_OK) && (stream_channel() != nullptr)) {
-    OnChannelDeactivateLocked(*stream_channel());
-    stream_channel() = nullptr;
-  }
-
-  // One way or the other, this set format operation is finished.  Clear out
-  // the in-flight transaction ID
-  SetFormatTidLocked(AUDIO_INVALID_TRANSACTION_ID);
-
-  return ZX_OK;
+  ring_buffer_ = std::move(client);
+  IntelHDAStreamBase::CreateRingBuffer(channel, std::move(format), std::move(server), completer);
 }
 
-void IntelDspStream::RingBufferChannelSignalled(async_dispatcher_t* dispatcher,
-                                                async::WaitBase* wait, zx_status_t status,
-                                                const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
-    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
-      return;
-    }
-  }
-  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
-  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
-  if (readable_asserted) {
-    fbl::AutoLock lock(obj_lock());
-    zx_status_t status = ProcessRbRequestLocked(rb_channel_.get());
-    if (status != ZX_OK) {
-      peer_closed_asserted = true;
-    }
-  }
-  if (peer_closed_asserted) {
-    ProcessRbDeactivate();
-  } else if (readable_asserted) {
-    wait->Begin(dispatcher);
+// Pass-through.
+void IntelDspStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
+  auto result = audio_fidl::RingBuffer::Call::GetProperties(ring_buffer_);
+  if (result.status() != ZX_OK) {
+    LOG(ERROR, "Error on GetProperties res = %d\n", result.status());
+    completer.Close(result.status());
+  } else {
+    completer.Reply(std::move(result->properties));
   }
 }
 
-void IntelDspStream::ClientRingBufferChannelSignalled(async_dispatcher_t* dispatcher,
-                                                      async::WaitBase* wait, zx_status_t status,
-                                                      const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
-    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
-      return;
-    }
-  }
-  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
-  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
-  if (readable_asserted) {
-    fbl::AutoLock lock(obj_lock());
-    zx_status_t status = ProcessClientRbRequestLocked(client_rb_channel_.get());
-    if (status != ZX_OK) {
-      peer_closed_asserted = true;
-    }
-  }
-  if (peer_closed_asserted) {
-    ProcessClientRbDeactivate();
-  } else if (readable_asserted) {
-    wait->Begin(dispatcher);
+// Pass-through.
+void IntelDspStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
+                            GetVmoCompleter::Sync& completer) {
+  auto result =
+      audio_fidl::RingBuffer::Call::GetVmo(ring_buffer_, min_frames, notifications_per_ring);
+  if (result.status() != ZX_OK) {
+    LOG(ERROR, "Error on GetVmo res = %d\n", result.status());
+    completer.ReplyError(audio_fidl::GetVmoError::INTERNAL_ERROR);
+  } else {
+    auto& response = result->result.mutable_response();
+    completer.ReplySuccess(response.num_frames, std::move(response.ring_buffer));
   }
 }
 
-zx_status_t IntelDspStream::ProcessRbRequestLocked(Channel* channel) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
-
-  // If we have lost our connection to the codec device, or are in the process
-  // of shutting down, there is nothing further we can do.  Fail the request
-  // and close the connection to the caller.
-  if (!is_active() || (rb_channel_ == nullptr) || (client_rb_channel_ == nullptr)) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  zx::handle rxed_handle;
-  uint32_t req_size;
-  union {
-    audio_proto::CmdHdr hdr;
-    audio_proto::RingBufGetFifoDepthResp get_fifo_depth;
-    audio_proto::RingBufGetBufferResp get_buffer;
-    audio_proto::RingBufStartResp start;
-    audio_proto::RingBufStopResp stop;
-  } req;
-  // TODO(johngro) : How large is too large?
-  static_assert(sizeof(req) <= 256, "Request buffer is too large to hold on the stack!");
-
-  zx_status_t res = channel->Read(&req, sizeof(req), &req_size, rxed_handle);
-  if (res != ZX_OK) {
-    return res;
-  }
-
-  switch (req.hdr.cmd) {
-    case AUDIO_RB_CMD_START: {
-      auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
-      Status status = dsp->StartPipeline(pipeline_);
-      if (!status.ok()) {
-        LOG(ERROR, "Failed to start ring buffer: %s\n", status.ToString().c_str());
-        audio_proto::RingBufStartResp resp = {};
-        resp.hdr = req.hdr;
-        resp.result = status.code();
-        return client_rb_channel_->Write(&resp, sizeof(resp));
-      }
-      break;
-    }
-    default:
-      break;
-  }
-
-  return client_rb_channel_->Write(&req, req_size, std::move(rxed_handle));
-}
-
-void IntelDspStream::ProcessRbDeactivate() {
+// Not just pass-through, we also start the DSP pipeline.
+void IntelDspStream::Start(StartCompleter::Sync& completer) {
   fbl::AutoLock lock(obj_lock());
-
-  LOG(DEBUG, "ProcessClientRbDeactivate\n");
-
-  rb_channel_ = nullptr;
-
-  // Deactivate the client channel.
-  if (client_rb_channel_ != nullptr) {
-    client_rb_channel_ = nullptr;
+  auto result = audio_fidl::RingBuffer::Call::Start(ring_buffer_);
+  if (result.status() != ZX_OK) {
+    LOG(ERROR, "Error on Start res = %d\n", result.status());
+    completer.Close(result.status());
+    return;
   }
+
+  auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
+  Status status = dsp->StartPipeline(pipeline_);
+  if (!status.ok()) {
+    LOG(ERROR, "Error on pipeline start res = %s\n", status.ToString().c_str());
+    completer.Close(status.code());
+    return;
+  }
+  completer.Reply(result->start_time);
 }
 
-zx_status_t IntelDspStream::ProcessClientRbRequestLocked(Channel* channel) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
-
-  // If we have lost our connection to the codec device, or are in the process
-  // of shutting down, there is nothing further we can do.  Fail the request
-  // and close the connection to the caller.
-  if (!is_active() || (rb_channel_ == nullptr) || (client_rb_channel_ == nullptr)) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  uint32_t req_size;
-  union {
-    audio_proto::CmdHdr hdr;
-    audio_proto::RingBufGetFifoDepthReq get_fifo_depth;
-    audio_proto::RingBufGetBufferReq get_buffer;
-    audio_proto::RingBufStartReq start;
-    audio_proto::RingBufStopReq stop;
-  } req;
-  // TODO(johngro) : How large is too large?
-  static_assert(sizeof(req) <= 256, "Request buffer is too large to hold on the stack!");
-
-  zx_status_t res = channel->Read(&req, sizeof(req), &req_size);
-  if (res != ZX_OK) {
-    return res;
-  }
-
-  switch (req.hdr.cmd) {
-    case AUDIO_RB_CMD_STOP: {
-      auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
-      Status status = dsp->PausePipeline(pipeline_);
-      if (!status.ok()) {
-        LOG(ERROR, "Failed to stop ring buffer: %s\n", status.ToString().c_str());
-        audio_proto::RingBufStopResp resp = {};
-        resp.hdr = req.hdr;
-        resp.result = status.code();
-        return channel->Write(&resp, sizeof(resp));
-      }
-      break;
-    }
-    default:
-      break;
-  }
-
-  return rb_channel_->Write(&req, req_size);
-}
-
-void IntelDspStream::ProcessClientRbDeactivate() {
+// Not just pass-through, we also pause the DSP pipeline.
+void IntelDspStream::Stop(StopCompleter::Sync& completer) {
   fbl::AutoLock lock(obj_lock());
-
-  LOG(DEBUG, "ProcessClientRbDeactivate\n");
-
-  client_rb_channel_ = nullptr;
-
-  // Deactivate the upstream channel.
-  if (rb_channel_ != nullptr) {
-    rb_channel_ = nullptr;
+  auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
+  Status status = dsp->PausePipeline(pipeline_);
+  if (!status.ok()) {
+    LOG(ERROR, "Error on pipeline pause res = %s\n", status.ToString().c_str());
+    completer.Close(status.code());
+    return;
   }
+
+  auto result = audio_fidl::RingBuffer::Call::Stop(ring_buffer_);
+  if (result.status() != ZX_OK) {
+    LOG(ERROR, "Error on Stop res = %d\n", result.status());
+    completer.Close(result.status());
+    return;
+  }
+  completer.Reply();
+}
+
+// Pass-through.
+void IntelDspStream::WatchClockRecoveryPositionInfo(
+    WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
+  auto result = audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(ring_buffer_);
+  if (result.status() != ZX_OK) {
+    LOG(ERROR, "Error on Watch clock recovery position res = %d\n", result.status());
+  }
+  completer.Reply(result->position_info);
 }
 
 zx_status_t IntelDspStream::OnActivateLocked() {
@@ -329,7 +165,7 @@ zx_status_t IntelDspStream::OnActivateLocked() {
 
 void IntelDspStream::OnDeactivateLocked() { LOG(DEBUG, "OnDeactivateLocked\n"); }
 
-void IntelDspStream::OnChannelDeactivateLocked(const Channel& channel) {
+void IntelDspStream::OnChannelDeactivateLocked(const StreamChannel& channel) {
   LOG(DEBUG, "OnChannelDeactivateLocked\n");
 }
 
@@ -356,7 +192,7 @@ zx_status_t IntelDspStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
   return ZX_OK;
 }
 
-void IntelDspStream::OnGetGainLocked(audio_proto::GetGainResp* out_resp) {
+void IntelDspStream::OnGetGainLocked(audio_proto::GainState* out_resp) {
   LOG(DEBUG, "OnGetGainLocked\n");
   IntelHDAStreamBase::OnGetGainLocked(out_resp);
 }
@@ -367,11 +203,10 @@ void IntelDspStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
   IntelHDAStreamBase::OnSetGainLocked(req, out_resp);
 }
 
-void IntelDspStream::OnPlugDetectLocked(Channel* response_channel,
-                                        const audio_proto::PlugDetectReq& req,
+void IntelDspStream::OnPlugDetectLocked(StreamChannel* response_channel,
                                         audio_proto::PlugDetectResp* out_resp) {
   LOG(DEBUG, "OnPlugDetectLocked\n");
-  IntelHDAStreamBase::OnPlugDetectLocked(response_channel, req, out_resp);
+  IntelHDAStreamBase::OnPlugDetectLocked(response_channel, out_resp);
 }
 
 void IntelDspStream::OnGetStringLocked(const audio_proto::GetStringReq& req,

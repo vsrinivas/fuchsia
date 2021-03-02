@@ -81,6 +81,7 @@ class IntelHDACodecDriverBase : public fbl::RefCounted<IntelHDACodecDriverBase> 
 
   // Debug logging
   virtual void PrintDebugPrefix() const;
+  void DeviceRelease();
 
  private:
   friend class fbl::RefPtr<IntelHDACodecDriverBase>;
@@ -91,8 +92,6 @@ class IntelHDACodecDriverBase : public fbl::RefCounted<IntelHDACodecDriverBase> 
     ihda_proto::RequestStreamResp request_stream;
     ihda_proto::SetStreamFmtResp set_stream_fmt;
   };
-
-  void DeviceRelease();
 
   // Thunks for dispatching channel events.
   zx_status_t ProcessClientRequest(Channel* channel);

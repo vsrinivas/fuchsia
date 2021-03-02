@@ -28,10 +28,10 @@ namespace audio::intel_hda {
 
 // Audio devices present in the system.
 struct SystemAudioDevices {
-  // Audio inputs, e.g., "/dev/class/audio-input/000".
+  // Audio inputs, e.g., "/dev/class/audio-input-2/000".
   std::vector<fbl::String> inputs;
 
-  // Audio outputs, e.g., "/dev/class/audio-output/000".
+  // Audio outputs, e.g., "/dev/class/audio-output-2/000".
   std::vector<fbl::String> outputs;
 
   // HDA controllers, e.g., "/dev/class/intel-hda/000".

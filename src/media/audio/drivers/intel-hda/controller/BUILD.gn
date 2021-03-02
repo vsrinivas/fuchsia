@@ -8,6 +8,7 @@ import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/unification/firmware.gni")
 import("//src/sys/build/components.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 bind_rules("ihda_controller_bind") {
   rules = "intel_hda.bind"
@@ -141,6 +142,24 @@ fuchsia_unittest_package("intel-hda-controller-test") {
   }
 }
 
+executable("intel-hda-stream-test-bin") {
+  testonly = true
+  sources = [ "intel-hda-stream-test.cc" ]
+  deps = [
+    ":src",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("intel-hda-stream-test") {
+  package_name = "intel-hda-stream-test"
+  deps = [ ":intel-hda-stream-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
 # Fuzz testing for NHLT parsing.
 #
 # Name needs to end with "-fuzzer" to be included in the Zircon fuzz test package.
@@ -165,5 +184,6 @@ group("tests") {
     ":ihda_controller_bind_test",
     ":intel-hda-controller-fuzzers",
     ":intel-hda-controller-test",
+    ":intel-hda-stream-test",
   ]
 }

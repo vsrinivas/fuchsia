@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_HDA_STREAM_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_HDA_STREAM_H_
 
+#include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -27,7 +28,8 @@ namespace audio {
 namespace intel_hda {
 
 class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
-                       public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStream>> {
+                       public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStream>>,
+                       public ::llcpp::fuchsia::hardware::audio::RingBuffer::Interface {
  public:
   using RefPtr = fbl::RefPtr<IntelHDAStream>;
   using Tree = fbl::WAVLTree<uint16_t, RefPtr>;
@@ -52,25 +54,23 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
     return static_cast<uint16_t>(id() - 1);
   }
   uint16_t GetKey() const { return id(); }
-  void ChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                        const zx_packet_signal_t* signal);
 
   zx_status_t SetStreamFormat(async_dispatcher_t* dispatcher, uint16_t encoded_fmt,
-                              zx::channel* client_endpoint_out) TA_EXCL(channel_lock_);
+                              zx::channel server_endpoint) TA_EXCL(channel_lock_);
   void Deactivate() TA_EXCL(channel_lock_);
 
   void ProcessStreamIRQ() TA_EXCL(notif_lock_);
 
- private:
-  friend class IntelHDAController;  // Controllers have access to stuff like Reset and Configure
-  friend class fbl::RefPtr<IntelHDAStream>;  // Only our ref ptrs may destruct us.
-
+ protected:
   IntelHDAStream(Type type, uint16_t id, MMIO_PTR hda_stream_desc_regs_t* regs,
                  const fbl::RefPtr<RefCountedBti>& pci_bti,
                  fbl::RefPtr<fzl::VmarManager> vmar_manager);
   ~IntelHDAStream();
-
   zx_status_t Initialize();
+
+ private:
+  friend class IntelHDAController;  // Controllers have access to stuff like Reset and Configure
+  friend class fbl::RefPtr<IntelHDAStream>;  // Only our ref ptrs may destruct us.
 
   void DeactivateLocked() TA_REQ(channel_lock_);
   void EnsureStoppedLocked() TA_REQ(channel_lock_) { EnsureStopped(regs_); }
@@ -78,12 +78,16 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
   // Client request handlers
   zx_status_t ProcessClientRequestLocked(Channel* channel) TA_REQ(channel_lock_);
   void ProcessClientDeactivate();
-  zx_status_t ProcessGetFifoDepthLocked(const audio_proto::RingBufGetFifoDepthReq& req)
-      TA_REQ(channel_lock_);
-  zx_status_t ProcessGetBufferLocked(const audio_proto::RingBufGetBufferReq& req)
-      TA_REQ(channel_lock_);
-  zx_status_t ProcessStartLocked(const audio_proto::RingBufStartReq& req) TA_REQ(channel_lock_);
-  zx_status_t ProcessStopLocked(const audio_proto::RingBufStopReq& req) TA_REQ(channel_lock_);
+
+  // fuchsia hardware audio RingBuffer Interface
+  void GetProperties(GetPropertiesCompleter::Sync& completer) override;
+  void GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
+              ::llcpp::fuchsia::hardware::audio::RingBuffer::Interface::GetVmoCompleter::Sync&
+                  completer) override;
+  void Start(StartCompleter::Sync& completer) override;
+  void Stop(StopCompleter::Sync& completer) override;
+  void WatchClockRecoveryPositionInfo(
+      WatchClockRecoveryPositionInfoCompleter::Sync& completer) override;
 
   // Release the client ring buffer (if one has been assigned)
   void ReleaseRingBufferLocked() TA_REQ(channel_lock_);
@@ -138,7 +142,7 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
   // The channel used by the application to talk to us once our format has
   // been set by the codec.
   fbl::Mutex channel_lock_;
-  fbl::RefPtr<Channel> channel_ TA_GUARDED(channel_lock_);
+  fbl::RefPtr<RingBufferChannel> channel_ TA_GUARDED(channel_lock_);
   fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(channel_lock_);
 
   // Parameters determined after stream format configuration.
@@ -155,7 +159,9 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
 
   // State used by the IRQ thread to deliver position update notifications.
   fbl::Mutex notif_lock_ TA_ACQ_AFTER(channel_lock_);
-  fbl::RefPtr<Channel> irq_channel_ TA_GUARDED(notif_lock_);
+  fbl::RefPtr<RingBufferChannel> irq_channel_ TA_GUARDED(notif_lock_);
+  std::optional<WatchClockRecoveryPositionInfoCompleter::Async> position_completer_
+      __TA_GUARDED(notif_lock_);
 };
 
 }  // namespace intel_hda

@@ -81,10 +81,10 @@ std::unique_ptr<T> CreateAndOpenStream(const char* device) {
 
 SystemAudioDevices GetSystemAudioDevices() {
   SystemAudioDevices results{};
-  if (auto inputs = GetFilesInDir("/dev/class/audio-input/"); inputs.ok()) {
+  if (auto inputs = GetFilesInDir("/dev/class/audio-input-2/"); inputs.ok()) {
     results.inputs = inputs.ValueOrDie();
   }
-  if (auto outputs = GetFilesInDir("/dev/class/audio-output/"); outputs.ok()) {
+  if (auto outputs = GetFilesInDir("/dev/class/audio-output-2/"); outputs.ok()) {
     results.outputs = outputs.ValueOrDie();
   }
   if (auto controllers = GetFilesInDir("/dev/class/intel-hda/"); controllers.ok()) {

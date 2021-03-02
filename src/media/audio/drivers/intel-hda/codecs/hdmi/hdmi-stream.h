@@ -33,7 +33,7 @@ class HdmiStream : public IntelHDAStreamBase {
   // IntelHDAStreamBase implementation
   zx_status_t OnActivateLocked() final __TA_REQUIRES(obj_lock());
   void OnDeactivateLocked() final __TA_REQUIRES(obj_lock());
-  void OnChannelDeactivateLocked(const Channel& channel) final __TA_REQUIRES(obj_lock());
+  void OnChannelDeactivateLocked(const StreamChannel& channel) final __TA_REQUIRES(obj_lock());
   zx_status_t OnDMAAssignedLocked() final __TA_REQUIRES(obj_lock());
   zx_status_t OnSolicitedResponseLocked(const CodecResponse& resp) final __TA_REQUIRES(obj_lock());
   zx_status_t OnUnsolicitedResponseLocked(const CodecResponse& resp) final
@@ -41,10 +41,10 @@ class HdmiStream : public IntelHDAStreamBase {
   zx_status_t BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt) final
       __TA_REQUIRES(obj_lock());
   zx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt) final __TA_REQUIRES(obj_lock());
-  void OnGetGainLocked(audio_proto::GetGainResp* out_resp) final __TA_REQUIRES(obj_lock());
+  void OnGetGainLocked(audio_proto::GainState* out_resp) final __TA_REQUIRES(obj_lock());
   void OnSetGainLocked(const audio_proto::SetGainReq& req, audio_proto::SetGainResp* out_resp) final
       __TA_REQUIRES(obj_lock());
-  void OnPlugDetectLocked(Channel* response_channel, const audio_proto::PlugDetectReq& req,
+  void OnPlugDetectLocked(StreamChannel* response_channel,
                           audio_proto::PlugDetectResp* out_resp) final __TA_REQUIRES(obj_lock());
   void OnGetStringLocked(const audio_proto::GetStringReq& req,
                          audio_proto::GetStringResp* out_resp) final __TA_REQUIRES(obj_lock());
@@ -107,15 +107,6 @@ class HdmiStream : public IntelHDAStreamBase {
     Command cmd_;
   };
 
-  // TODO(andresoportus) : Elminiate this complexity if/when we get to the point
-  // that audio streams have a 1:1 relationship with their clients (instead of
-  // 1:many)
-  struct NotifyTarget : fbl::DoublyLinkedListable<std::unique_ptr<NotifyTarget>> {
-    explicit NotifyTarget(fbl::RefPtr<Channel>&& ch) : channel(ch) {}
-    fbl::RefPtr<Channel> channel;
-  };
-  using NotifyTargetList = fbl::DoublyLinkedList<std::unique_ptr<NotifyTarget>>;
-
   // Bits used to track setup state machine progress.
   static constexpr uint32_t PIN_COMPLEX_SETUP_COMPLETE = (1u << 0);
   static constexpr uint32_t SAMPLE_FORMATS_COMPLETE = (1u << 1);
@@ -139,8 +130,6 @@ class HdmiStream : public IntelHDAStreamBase {
   zx_status_t UpdateConverterGainLocked(float target_gain) __TA_REQUIRES(obj_lock());
   float ComputeCurrentGainLocked() __TA_REQUIRES(obj_lock());
   zx_status_t SendGainUpdatesLocked() __TA_REQUIRES(obj_lock());
-  void AddPDNotificationTgtLocked(Channel& channel) __TA_REQUIRES(obj_lock());
-  void RemovePDNotificationTgtLocked(const Channel& channel) __TA_REQUIRES(obj_lock());
 
   // Setup state machine methods.
   zx_status_t UpdateSetupProgressLocked(uint32_t stage) __TA_REQUIRES(obj_lock());
@@ -180,7 +169,6 @@ class HdmiStream : public IntelHDAStreamBase {
   uint8_t eld_index_ = 0;
   fbl::Array<uint8_t> eld_data_;
   zx_time_t last_plug_time_ __TA_GUARDED(obj_lock()) = 0;
-  NotifyTargetList plug_notify_targets_ __TA_GUARDED(obj_lock());
 
   // Converter and pin complex capabilities.
   ConverterCaps conv_ __TA_GUARDED(obj_lock());

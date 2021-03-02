@@ -84,34 +84,6 @@ zx_status_t HdmiStream::SendGainUpdatesLocked() {
   return ZX_OK;
 }
 
-// TODO(andresoportus) : re: the plug_notify_targets_ list.  In theory, we could put
-// this in a tree indexed by the channel's owner context, or by the pointer
-// itself.  This would make add/remove operations simpler, and faster in the
-// case that we had lots of clients.  In reality, however, we are likely to
-// limit the interface moving forward so that we have only one client at a time
-// (in which case this becomes much simpler).  Moving forward, we need to come
-// back and either simplify or optimize (as the situation warrents) once we know
-// how we are proceeding.
-void HdmiStream::AddPDNotificationTgtLocked(Channel& channel) {
-  bool duplicate = false;
-  for (auto& tgt : plug_notify_targets_) {
-    duplicate = (tgt.channel.get() == &channel);
-    if (duplicate)
-      break;
-  }
-
-  if (!duplicate) {
-    fbl::RefPtr<Channel> c(&channel);
-    std::unique_ptr<NotifyTarget> tgt(new NotifyTarget(std::move(c)));
-    plug_notify_targets_.push_back(std::move(tgt));
-  }
-}
-
-void HdmiStream::RemovePDNotificationTgtLocked(const Channel& channel) {
-  plug_notify_targets_.erase_if(
-      [&channel](const NotifyTarget& target) { return target.channel.get() == &channel; });
-}
-
 // static
 uint8_t HdmiStream::ComputeGainSteps(const CommonCaps& caps, float target_gain) {
   if (!caps.has_amp || !caps.amp_caps.num_steps()) {
@@ -174,14 +146,9 @@ zx_status_t HdmiStream::RunCmdListLocked(const Command* list, size_t count, bool
   return total_res;
 }
 
-void HdmiStream::OnDeactivateLocked() {
-  plug_notify_targets_.clear();
-  DisableConverterLocked(true);
-}
+void HdmiStream::OnDeactivateLocked() { DisableConverterLocked(true); }
 
-void HdmiStream::OnChannelDeactivateLocked(const Channel& channel) {
-  RemovePDNotificationTgtLocked(channel);
-}
+void HdmiStream::OnChannelDeactivateLocked(const StreamChannel& channel) {}
 
 zx_status_t HdmiStream::OnDMAAssignedLocked() {
   return UpdateSetupProgressLocked(DMA_ASSIGNMENT_COMPLETE);
@@ -209,30 +176,7 @@ zx_status_t HdmiStream::OnUnsolicitedResponseLocked(const CodecResponse& resp) {
 
     // Inform anyone who has registered for notification.
     ZX_DEBUG_ASSERT(pc_.async_plug_det);
-    if (!plug_notify_targets_.is_empty()) {
-      audio_proto::PlugDetectNotify notif;
-
-      notif.hdr.cmd = AUDIO_STREAM_PLUG_DETECT_NOTIFY;
-      notif.hdr.transaction_id = AUDIO_INVALID_TRANSACTION_ID;
-      notif.flags = static_cast<audio_pd_notify_flags_t>(
-          (plug_state_ ? static_cast<uint32_t>(AUDIO_PDNF_PLUGGED) : 0) | AUDIO_PDNF_CAN_NOTIFY);
-      notif.plug_state_time = last_plug_time_;
-
-      for (auto iter = plug_notify_targets_.begin(); iter != plug_notify_targets_.end();) {
-        zx_status_t res;
-
-        ZX_DEBUG_ASSERT(iter->channel != nullptr);
-        res = iter->channel->Write(&notif, sizeof(notif));
-        if (res != ZX_OK) {
-          // If we have failed to send the notification over our
-          // client channel, something has gone fairly wrong.  Remove
-          // the client from the notification list.
-          plug_notify_targets_.erase(iter++);
-        } else {
-          ++iter;
-        }
-      }
-    }
+    NotifyPlugStateLocked(plug_state_, last_plug_time_);
   }
 
   bool eld_valid = resp.data & (1u << 1);  // ELD Valid, section 7.3.3.14.1.
@@ -290,7 +234,7 @@ zx_status_t HdmiStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) {
   return ZX_OK;
 }
 
-void HdmiStream::OnGetGainLocked(audio_proto::GetGainResp* out_resp) {
+void HdmiStream::OnGetGainLocked(audio_proto::GainState* out_resp) {
   ZX_DEBUG_ASSERT(out_resp);
 
   if (conv_.has_amp) {
@@ -346,27 +290,17 @@ void HdmiStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
   }
 }
 
-void HdmiStream::OnPlugDetectLocked(Channel* response_channel,
-                                    const audio_proto::PlugDetectReq& req,
+void HdmiStream::OnPlugDetectLocked(StreamChannel* response_channel,
                                     audio_proto::PlugDetectResp* out_resp) {
   ZX_DEBUG_ASSERT(response_channel != nullptr);
 
   // If our pin cannot perform presence detection, just fall back on the base class impl.
   if (!pc_.pin_caps.can_pres_detect()) {
-    IntelHDAStreamBase::OnPlugDetectLocked(response_channel, req, out_resp);
+    IntelHDAStreamBase::OnPlugDetectLocked(response_channel, out_resp);
     return;
   }
 
   if (pc_.async_plug_det) {
-    // If we are capible of asynch plug detection, add or remove this client
-    // to/from the notify list before reporting the current state.  Apps
-    // should not be setting both flags, but if they do, disable wins.
-    if (req.flags & AUDIO_PDF_DISABLE_NOTIFICATIONS) {
-      RemovePDNotificationTgtLocked(*response_channel);
-    } else if (req.flags & AUDIO_PDF_ENABLE_NOTIFICATIONS) {
-      AddPDNotificationTgtLocked(*response_channel);
-    }
-
     // Report the current plug detection state if the client expects a response.
     if (out_resp) {
       out_resp->flags = static_cast<audio_pd_notify_flags_t>(
@@ -384,8 +318,7 @@ void HdmiStream::OnPlugDetectLocked(Channel* response_channel,
     // For now, if our hardware does not support async plug detect, we
     // simply fall back on the default implementation which reports that we
     // are hardwired and always plugged in.
-    IntelHDAStreamBase::OnPlugDetectLocked(response_channel, req, out_resp);
-    return;
+    IntelHDAStreamBase::OnPlugDetectLocked(response_channel, out_resp);
   }
 }
 

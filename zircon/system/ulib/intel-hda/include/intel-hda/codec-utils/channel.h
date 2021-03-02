@@ -13,8 +13,7 @@
 
 namespace audio::intel_hda {
 
-class Channel : public fbl::DoublyLinkedListable<fbl::RefPtr<Channel>>,
-                public fbl::RefCounted<Channel> {
+class Channel : public fbl::RefCounted<Channel> {
  public:
   template <typename... ConstructorSignature>
   static fbl::RefPtr<Channel> Create(ConstructorSignature&&... args) {
@@ -60,6 +59,22 @@ class Channel : public fbl::DoublyLinkedListable<fbl::RefPtr<Channel>>,
 
   zx::channel channel_;
   async::Wait wait_;
+};
+
+class RingBufferChannel : public fbl::RefCounted<RingBufferChannel> {
+ public:
+  template <typename... ConstructorSignature>
+  static fbl::RefPtr<RingBufferChannel> Create(ConstructorSignature&&... args) {
+    fbl::AllocChecker ac;
+    auto ptr =
+        fbl::AdoptRef(new (&ac) RingBufferChannel(std::forward<ConstructorSignature>(args)...));
+
+    if (!ac.check()) {
+      return nullptr;
+    }
+
+    return ptr;
+  }
 };
 
 }  // namespace audio::intel_hda

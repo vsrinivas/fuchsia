@@ -309,7 +309,7 @@ void CodecConnection::GetChannelSignalled(async_dispatcher_t* dispatcher, async:
   }
 }
 
-#define PROCESS_CMD(_req_ack, _ioctl, _payload, _handler)                    \
+#define PROCESS_CMD_INNER(_req_ack, _ioctl, _payload, _handler)              \
   case _ioctl:                                                               \
     if (req_size != sizeof(req._payload)) {                                  \
       LOG(DEBUG, "Bad " #_payload " request length (%u != %zu)\n", req_size, \
@@ -321,8 +321,15 @@ void CodecConnection::GetChannelSignalled(async_dispatcher_t* dispatcher, async:
                  " requires acknowledgement, but the "                       \
                  "NOACK flag was set!\n");                                   \
       return ZX_ERR_INVALID_ARGS;                                            \
-    }                                                                        \
-    return _handler(channel, req._payload)
+    }
+
+#define PROCESS_CMD(_req_ack, _ioctl, _payload, _handler) \
+  PROCESS_CMD_INNER(_req_ack, _ioctl, _payload, _handler) \
+  return _handler(channel, req._payload)
+
+#define PROCESS_CMD_WITH_HANDLE(_req_ack, _ioctl, _payload, _handler) \
+  PROCESS_CMD_INNER(_req_ack, _ioctl, _payload, _handler)             \
+  return _handler(channel, req._payload, std::move(received_handle))
 
 zx_status_t CodecConnection::ProcessCodecRequest(Channel* channel) {
   zx_status_t res;
@@ -339,7 +346,8 @@ zx_status_t CodecConnection::ProcessCodecRequest(Channel* channel) {
 
   // Read the user request.
   ZX_DEBUG_ASSERT(channel != nullptr);
-  res = channel->Read(&req, sizeof(req), &req_size);
+  zx::handle received_handle;
+  res = channel->Read(&req, sizeof(req), &req_size, received_handle);
   if (res != ZX_OK) {
     LOG(DEBUG, "Failed to read user request (res %d)\n", res);
     return res;
@@ -365,7 +373,8 @@ zx_status_t CodecConnection::ProcessCodecRequest(Channel* channel) {
   switch (cmd_id) {
     PROCESS_CMD(true, IHDA_CODEC_REQUEST_STREAM, request_stream, ProcessRequestStream);
     PROCESS_CMD(false, IHDA_CODEC_RELEASE_STREAM, release_stream, ProcessReleaseStream);
-    PROCESS_CMD(false, IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt, ProcessSetStreamFmt);
+    PROCESS_CMD_WITH_HANDLE(false, IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt,
+                            ProcessSetStreamFmt);
     PROCESS_CMD(false, IHDA_CODEC_SEND_CORB_CMD, corb_cmd, ProcessSendCORBCmd);
     default:
       LOG(DEBUG, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
@@ -556,8 +565,16 @@ zx_status_t CodecConnection::ProcessReleaseStream(Channel* channel,
 }
 
 zx_status_t CodecConnection::ProcessSetStreamFmt(Channel* channel,
-                                                 const ihda_proto::SetStreamFmtReq& req) {
+                                                 const ihda_proto::SetStreamFmtReq& req,
+                                                 zx::handle received_handle) {
   ZX_DEBUG_ASSERT(channel != nullptr);
+
+  zx::channel server_channel;
+  zx_status_t res = ConvertHandle(&received_handle, &server_channel);
+  if (res != ZX_OK) {
+    LOG(DEBUG, "Failed to convert handle to channel (res %d)\n", res);
+    return res;
+  }
 
   // Sanity check the requested format.
   if (!StreamFormat(req.format).SanityCheck()) {
@@ -579,22 +596,20 @@ zx_status_t CodecConnection::ProcessSetStreamFmt(Channel* channel,
   if (stream == nullptr)
     return ZX_ERR_BAD_STATE;
 
-  // Set the stream format and assign the client channel to the stream.  If
+  // Set the stream format and assign the server channel to the stream.  If
   // this stream is already bound to a client, this will cause that connection
   // to be closed.
-  zx::channel client_channel;
-  zx_status_t res = stream->SetStreamFormat(loop_.dispatcher(), req.format, &client_channel);
+  res = stream->SetStreamFormat(loop_.dispatcher(), req.format, std::move(server_channel));
   if (res != ZX_OK) {
     LOG(DEBUG, "Failed to set stream format 0x%04hx for stream %hu (res %d)\n", req.format,
         req.stream_id, res);
     return res;
   }
 
-  // Send the channel back to the codec driver.
-  ZX_DEBUG_ASSERT(client_channel.is_valid());
+  // Reply to the codec driver.
   ihda_proto::SetStreamFmtResp resp;
   resp.hdr = req.hdr;
-  res = channel->Write(&resp, sizeof(resp), std::move(client_channel));
+  res = channel->Write(&resp, sizeof(resp));
 
   if (res != ZX_OK)
     LOG(DEBUG, "Failed to send stream channel back to codec driver (res %d)\n", res);

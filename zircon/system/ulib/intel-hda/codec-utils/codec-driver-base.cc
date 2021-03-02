@@ -176,6 +176,7 @@ void IntelHDACodecDriverBase::Shutdown() {
   DEBUG_LOG("Unlinking from controller\n");
   UnlinkFromController();
 
+  loop_.Shutdown();
   DEBUG_LOG("Shutdown complete\n");
 }
 
@@ -283,7 +284,6 @@ zx_status_t IntelHDACodecDriverBase::ProcessClientRequest(Channel* channel) {
 zx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
     const fbl::RefPtr<IntelHDAStreamBase>& stream, const CodecChannelResponses& resp,
     uint32_t resp_size, zx::handle&& rxed_handle) {
-  zx_status_t res;
   ZX_DEBUG_ASSERT(stream != nullptr);
 
   switch (resp.hdr.cmd) {
@@ -307,17 +307,7 @@ zx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
     case IHDA_CODEC_SET_STREAM_FORMAT: {
       CHECK_RESP_ALLOW_HANDLE(IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt);
 
-      zx::channel channel;
-      res = ConvertHandle(&rxed_handle, &channel);
-      if (res != ZX_OK) {
-        DEBUG_LOG(
-            "Invalid or non-Channel handle in IHDA_CODEC_SET_STREAM_FORMAT "
-            "response (res %d)\n",
-            res);
-        return res;
-      }
-
-      return stream->ProcessSetStreamFmt(resp.set_stream_fmt, std::move(channel));
+      return stream->ProcessSetStreamFmt(resp.set_stream_fmt);
     }
 
     default:

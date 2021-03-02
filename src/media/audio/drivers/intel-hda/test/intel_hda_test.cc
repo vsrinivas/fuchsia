@@ -29,6 +29,10 @@
 #include "sample_count_sink.h"
 #include "silence_generator.h"
 
+namespace {
+namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
+}  // namespace
+
 namespace audio::intel_hda {
 namespace {
 
@@ -40,13 +44,14 @@ void CheckBasicStreamInfo(AudioDeviceStream* stream) {
   // the empty string.
   StatusOr<fbl::String> result = GetStreamConfigString(stream, AUDIO_STREAM_STR_ID_MANUFACTURER);
   ASSERT_TRUE(result.ok());
-  EXPECT_GT(result.ValueOrDie().length(), 0);
+  auto& manufacturer = result.ValueOrDie();
+  EXPECT_GT(manufacturer.length(), 0);
 
-  // Fetch supported audio formats, and ensure it is non-empty.
-  fbl::Vector<audio_stream_format_range_t> formats;
-  zx_status_t status = stream->GetSupportedFormats(&formats);
-  ASSERT_OK(status);
-  EXPECT_GT(formats.size(), 0);
+  // Fetch supported audio formats, and ensure it is non-empty with some number of channels.
+  ASSERT_OK(stream->GetSupportedFormats([](const audio_fidl::SupportedFormats& formats) {
+    auto& pcm = formats.pcm_supported_formats();
+    EXPECT_GT(pcm.number_of_channels[0], 0);
+  }));
 }
 
 TEST(IntelHda, BasicStreamInfo) {
@@ -92,7 +97,8 @@ void TestAudioInputRecord(audio::utils::AudioInput* input) {
   format.channels = 2;
   format.frame_rate = 48'000U;
   format.sample_format = AUDIO_SAMPLE_FORMAT_16BIT;
-  input->SetFormat(format.frame_rate, format.channels, format.sample_format);
+  input->SetFormat(format.frame_rate, format.channels, AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED,
+                   format.sample_format);
 
   // Record a small number of samples of audio.
   //

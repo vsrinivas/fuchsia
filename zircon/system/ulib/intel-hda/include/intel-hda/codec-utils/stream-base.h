@@ -51,10 +51,83 @@ class IntelHDACodecDriverBase;
 
 class IntelHDAStreamBase;
 
+// IntelHdaStreamStream implements Device::Interface.
+// All this is serialized in the single threaded IntelHdaStreamStream's dispatcher() in loop_.
 class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
                            public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStreamBase>>,
                            public ::llcpp::fuchsia::hardware::audio::Device::Interface {
  public:
+  // StreamChannel (thread compatible) implements StreamConfig::Interface so the server for a
+  // StreamConfig channel is a StreamChannel instead of a IntelHDAStreamBase (as is the case for
+  // Device and RingBuffer channels), this way we can track which StreamConfig channel for gain
+  // changes notifications.
+  // In some methods, we pass "this" (StreamChannel*) to IntelHDAStreamBase that
+  // gets managed in IntelHDAStreamBase.
+  // All this is serialized in the single threaded IntelHDAStreamBase's dispatcher() in loop_.
+  // All the StreamConfig::Interface methods are forwarded to IntelHDAStreamBase.
+  class StreamChannel : public RingBufferChannel,
+                        public ::llcpp::fuchsia::hardware::audio::StreamConfig::Interface,
+                        public fbl::DoublyLinkedListable<fbl::RefPtr<StreamChannel>> {
+   public:
+    template <typename... ConstructorSignature>
+    static fbl::RefPtr<StreamChannel> Create(ConstructorSignature&&... args) {
+      fbl::AllocChecker ac;
+      auto ptr =
+          fbl::AdoptRef(new (&ac) StreamChannel(std::forward<ConstructorSignature>(args)...));
+
+      if (!ac.check()) {
+        return nullptr;
+      }
+
+      return ptr;
+    }
+    // Does not take ownership of stream, which must refer to a valid IntelHDAStreamBase that
+    // outlives this object.
+    explicit StreamChannel(IntelHDAStreamBase* stream) : stream_(*stream) {
+      last_reported_gain_state_.cur_gain = kInvalidGain;
+    }
+
+    // fuchsia hardware audio Stream Interface.
+    void GetProperties(GetPropertiesCompleter::Sync& completer) override {
+      stream_.GetProperties(this, completer);
+    }
+    void GetSupportedFormats(GetSupportedFormatsCompleter::Sync& completer) override {
+      stream_.GetSupportedFormats(completer);
+    }
+    void WatchGainState(WatchGainStateCompleter::Sync& completer) override {
+      stream_.WatchGainState(this, completer);
+    }
+    void WatchPlugState(WatchPlugStateCompleter::Sync& completer) override {
+      stream_.WatchPlugState(this, completer);
+    }
+    void SetGain(::llcpp::fuchsia::hardware::audio::GainState target_state,
+                 SetGainCompleter::Sync& completer) override {
+      stream_.SetGain(std::move(target_state), completer);
+    }
+    void CreateRingBuffer(
+        ::llcpp::fuchsia::hardware::audio::wire::Format format,
+        ::fidl::ServerEnd<::llcpp::fuchsia::hardware::audio::RingBuffer> ring_buffer,
+        CreateRingBufferCompleter::Sync& completer) override {
+      stream_.CreateRingBuffer(this, std::move(format), std::move(ring_buffer), completer);
+    }
+
+   private:
+    friend class IntelHDAStreamBase;
+    enum class Plugged : uint32_t {
+      kNotReported = 1,
+      kPlugged = 2,
+      kUnplugged = 3,
+    };
+
+    static constexpr float kInvalidGain = std::numeric_limits<float>::max();
+
+    IntelHDAStreamBase& stream_;
+    std::optional<StreamChannel::WatchPlugStateCompleter::Async> plug_completer_;
+    std::optional<StreamChannel::WatchGainStateCompleter::Async> gain_completer_;
+    Plugged last_reported_plugged_state_ = Plugged::kNotReported;
+    audio_proto::GainState last_reported_gain_state_ = {};
+  };
+
   zx_status_t Activate(fbl::RefPtr<IntelHDACodecDriverBase>&& parent_codec,
                        const fbl::RefPtr<Channel>& codec_channel) __TA_EXCLUDES(obj_lock_);
 
@@ -63,12 +136,11 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   zx_status_t ProcessResponse(const CodecResponse& resp) __TA_EXCLUDES(obj_lock_);
   zx_status_t ProcessRequestStream(const ihda_proto::RequestStreamResp& resp)
       __TA_EXCLUDES(obj_lock_);
-  virtual zx_status_t ProcessSetStreamFmt(const ihda_proto::SetStreamFmtResp& resp,
-                                          zx::channel&& ring_buffer_channel)
+  virtual zx_status_t ProcessSetStreamFmt(const ihda_proto::SetStreamFmtResp& resp)
       __TA_EXCLUDES(obj_lock_);
   void StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                               zx_status_t status, const zx_packet_signal_t* signal,
-                              Channel* channel, bool priviledged);
+                              StreamChannel* channel, bool priviledged);
 
   uint32_t id() const { return id_; }
   bool is_input() const { return is_input_; }
@@ -87,6 +159,12 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
 
   void SetPersistentUniqueId(const audio_stream_unique_id_t& id) __TA_EXCLUDES(obj_lock_);
   void SetPersistentUniqueIdLocked(const audio_stream_unique_id_t& id) __TA_REQUIRES(obj_lock_);
+  void SetFormatChangeInProgress(bool in_progress) __TA_REQUIRES(obj_lock_) {
+    format_change_in_progress_ = in_progress;
+  }
+  bool IsFormatChangeInProgress() const __TA_REQUIRES(obj_lock_) {
+    return format_change_in_progress_;
+  }
 
   // Properties available to subclasses.
   uint8_t dma_stream_tag() const __TA_REQUIRES(obj_lock_) { return dma_stream_tag_; }
@@ -102,8 +180,9 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   const Token& default_domain_token() const __TA_RETURN_CAPABILITY(domain_token_) {
     return domain_token_;
   }
-  fbl::RefPtr<Channel> stream_channel() const __TA_REQUIRES(obj_lock_) { return stream_channel_; }
-  uint32_t set_format_tid() const __TA_REQUIRES(obj_lock_) { return set_format_tid_; }
+  fbl::RefPtr<StreamChannel> stream_channel() const __TA_REQUIRES(obj_lock_) {
+    return stream_channel_;
+  }
   uint16_t encoded_fmt() const __TA_REQUIRES(obj_lock_) { return encoded_fmt_; }
 
   // Methods callable from subclasses
@@ -112,14 +191,11 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
       __TA_REQUIRES(obj_lock_) {
     supported_formats_ = std::move(formats);
   }
-  void SetFormatTidLocked(uint32_t set_format_tid) __TA_REQUIRES(obj_lock_) {
-    set_format_tid_ = set_format_tid;
-  }
 
   // Overloads to control stream behavior.
   virtual zx_status_t OnActivateLocked() __TA_REQUIRES(obj_lock_);
   virtual void OnDeactivateLocked() __TA_REQUIRES(obj_lock_);
-  virtual void OnChannelDeactivateLocked(const Channel& channel) __TA_REQUIRES(obj_lock_);
+  virtual void OnChannelDeactivateLocked(const StreamChannel& channel) __TA_REQUIRES(obj_lock_);
   virtual zx_status_t OnDMAAssignedLocked() __TA_REQUIRES(obj_lock_);
   virtual zx_status_t OnSolicitedResponseLocked(const CodecResponse& resp) __TA_REQUIRES(obj_lock_);
   virtual zx_status_t OnUnsolicitedResponseLocked(const CodecResponse& resp)
@@ -127,11 +203,12 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   virtual zx_status_t BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt)
       __TA_REQUIRES(obj_lock_);
   virtual zx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt) __TA_REQUIRES(obj_lock_);
-  virtual void OnGetGainLocked(audio_proto::GetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
+  // IntelHDAStreamBase assumes the derived classes do not update their gain on thier own.
+  virtual void OnGetGainLocked(audio_proto::GainState* out_resp) __TA_REQUIRES(obj_lock_);
   virtual void OnSetGainLocked(const audio_proto::SetGainReq& req,
                                audio_proto::SetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
-  virtual void OnPlugDetectLocked(Channel* response_channel, const audio_proto::PlugDetectReq& req,
-                                  audio_proto::PlugDetectResp* out_resp) __TA_REQUIRES(obj_lock_);
+  virtual void OnPlugDetectLocked(StreamChannel* channel, audio_proto::PlugDetectResp* out_resp)
+      __TA_REQUIRES(obj_lock_);
   virtual void OnGetStringLocked(const audio_proto::GetStringReq& req,
                                  audio_proto::GetStringResp* out_resp) __TA_REQUIRES(obj_lock_);
   virtual void OnGetClockDomainLocked(audio_proto::GetClockDomainResp* out_resp)
@@ -142,6 +219,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
 
   zx_status_t SendCodecCommandLocked(uint16_t nid, CodecVerb verb, Ack do_ack)
       __TA_REQUIRES(obj_lock_);
+  void NotifyPlugStateLocked(bool plugged, int64_t plug_time) __TA_REQUIRES(obj_lock_);
 
   zx_status_t SendCodecCommand(uint16_t nid, CodecVerb verb, Ack do_ack) __TA_EXCLUDES(obj_lock_) {
     fbl::AutoLock obj_lock(&obj_lock_);
@@ -151,36 +229,40 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   // Exposed to derived class for thread annotations.
   const fbl::Mutex& obj_lock() const __TA_RETURN_CAPABILITY(obj_lock_) { return obj_lock_; }
 
+  void ProcessClientDeactivateLocked(StreamChannel* channel) __TA_REQUIRES(obj_lock_);
   // Unsolicited tag allocation for streams.
   zx_status_t AllocateUnsolTagLocked(uint8_t* out_tag) __TA_REQUIRES(obj_lock_);
   void ReleaseUnsolTagLocked(uint8_t tag) __TA_REQUIRES(obj_lock_);
 
- private:
   // fuchsia.hardware.audio.Device
   void GetChannel(GetChannelCompleter::Sync& completer) override;
 
-  // Thunks for dispatching channel events.
-  zx_status_t ProcessClientRequest(Channel* channel, bool privileged);
-  void ProcessClientDeactivate(const Channel* channel, bool privileged);
+  // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)
+  void GetProperties(StreamChannel* channel,
+                     StreamChannel::GetPropertiesCompleter::Sync& completer);
+  void GetSupportedFormats(StreamChannel::GetSupportedFormatsCompleter::Sync& completer);
+  virtual void CreateRingBuffer(
+      StreamChannel* channel, ::llcpp::fuchsia::hardware::audio::wire::Format format,
+      ::fidl::ServerEnd<::llcpp::fuchsia::hardware::audio::RingBuffer> ring_buffer,
+      StreamChannel::CreateRingBufferCompleter::Sync& completer);
+  // If a derived class needs to update gain on its own, it can override this method.
+  void WatchGainState(StreamChannel* channel,
+                      StreamChannel::WatchGainStateCompleter::Sync& completer);
+  // Derived classes with async plug detect support can call NotifyPlugStateLocked and not
+  // override this method.
+  void WatchPlugState(StreamChannel* channel,
+                      StreamChannel::WatchPlugStateCompleter::Sync& completer);
+  void SetGain(::llcpp::fuchsia::hardware::audio::wire::GainState target_state,
+               StreamChannel::SetGainCompleter::Sync& completer);
 
-  zx_status_t DoGetStreamFormatsLocked(Channel* channel, bool privileged,
+ private:
+  void DeactivateStreamChannel(StreamChannel* channel);
+
+  zx_status_t DoGetStreamFormatsLocked(StreamChannel* channel, bool privileged,
                                        const audio_proto::StreamGetFmtsReq& req)
       __TA_REQUIRES(obj_lock_);
-  zx_status_t DoSetStreamFormatLocked(Channel* channel, bool privileged,
+  zx_status_t DoSetStreamFormatLocked(StreamChannel* channel, bool privileged,
                                       const audio_proto::StreamSetFmtReq& fmt)
-      __TA_REQUIRES(obj_lock_);
-  zx_status_t DoGetGainLocked(Channel* channel, bool privileged, const audio_proto::GetGainReq& req)
-      __TA_REQUIRES(obj_lock_);
-  zx_status_t DoSetGainLocked(Channel* channel, bool privileged, const audio_proto::SetGainReq& req)
-      __TA_REQUIRES(obj_lock_);
-  zx_status_t DoPlugDetectLocked(Channel* channel, bool privileged,
-                                 const audio_proto::PlugDetectReq& req) __TA_REQUIRES(obj_lock_);
-  zx_status_t DoGetUniqueIdLocked(Channel* channel, bool privileged,
-                                  const audio_proto::GetUniqueIdReq& req) __TA_REQUIRES(obj_lock_);
-  zx_status_t DoGetStringLocked(Channel* channel, bool privileged,
-                                const audio_proto::GetStringReq& req) __TA_REQUIRES(obj_lock_);
-  zx_status_t DoGetClockDomainLocked(Channel* channel, bool privileged,
-                                     const audio_proto::GetClockDomainReq& req)
       __TA_REQUIRES(obj_lock_);
 
   zx_status_t SetDMAStreamLocked(uint16_t id, uint8_t tag) __TA_REQUIRES(obj_lock_);
@@ -188,7 +270,6 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   const uint32_t id_;
   const bool is_input_;
   char dev_name_[ZX_DEVICE_NAME_MAX] = {0};
-
   fbl::Mutex obj_lock_;
 
   fbl::RefPtr<IntelHDACodecDriverBase> parent_codec_ __TA_GUARDED(obj_lock_);
@@ -200,10 +281,10 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   zx_device_t* parent_device_ __TA_GUARDED(obj_lock_) = nullptr;
   zx_device_t* stream_device_ __TA_GUARDED(obj_lock_) = nullptr;
 
-  fbl::RefPtr<Channel> stream_channel_ __TA_GUARDED(obj_lock_);
+  fbl::RefPtr<StreamChannel> stream_channel_ __TA_GUARDED(obj_lock_);
   fbl::Vector<audio_proto::FormatRange> supported_formats_ __TA_GUARDED(obj_lock_);
+  fbl::DoublyLinkedList<fbl::RefPtr<StreamChannel>> stream_channels_ __TA_GUARDED(obj_lock_);
 
-  uint32_t set_format_tid_ __TA_GUARDED(obj_lock_) = AUDIO_INVALID_TRANSACTION_ID;
   uint16_t encoded_fmt_ __TA_GUARDED(obj_lock_);
   uint32_t unsol_tag_count_ __TA_GUARDED(obj_lock_) = 0;
   audio_stream_unique_id_t persistent_unique_id_;
@@ -212,8 +293,12 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
                                         uint16_t* encoded_fmt_out);
 
   static zx_protocol_device_t STREAM_DEVICE_THUNKS;
-  async::Loop loop_;
   Token domain_token_;
+  bool format_change_in_progress_ = false;
+  ::fidl::ServerEnd<::llcpp::fuchsia::hardware::audio::RingBuffer> rb_channel_;
+  audio_proto::GainState cur_gain_state_ = {};
+  zx_time_t plug_time_ = 0;
+  async::Loop loop_;
 };
 
 }  // namespace codecs

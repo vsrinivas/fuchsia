@@ -106,7 +106,8 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   void ProcessClientDeactivate();
   zx_status_t ProcessRequestStream(Channel* channel, const ihda_proto::RequestStreamReq& req);
   zx_status_t ProcessReleaseStream(Channel* channel, const ihda_proto::ReleaseStreamReq& req);
-  zx_status_t ProcessSetStreamFmt(Channel* channel, const ihda_proto::SetStreamFmtReq& req);
+  zx_status_t ProcessSetStreamFmt(Channel* channel, const ihda_proto::SetStreamFmtReq& req,
+                                  zx::handle rxed_handle);
 
   zx_status_t CreateAndStartStreams();
 

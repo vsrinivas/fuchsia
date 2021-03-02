@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/llcpp/server.h>
+#include <lib/zx/clock.h>
 #include <string.h>
 
 #include <algorithm>
@@ -17,6 +19,10 @@
 #include <intel-hda/utils/intel-hda-proto.h>
 
 #include "debug-logging.h"
+
+namespace {
+namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
+}  // namespace
 
 namespace audio {
 namespace intel_hda {
@@ -36,6 +42,7 @@ zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = []() {
 
 IntelHDAStreamBase::IntelHDAStreamBase(uint32_t id, bool is_input)
     : id_(id), is_input_(is_input), loop_(&kAsyncLoopConfigNeverAttachToThread) {
+  plug_time_ = zx::clock::get_monotonic().get();
   snprintf(dev_name_, sizeof(dev_name_), "%s-stream-%03u", is_input_ ? "input" : "output", id_);
   loop_.StartThread("intel-hda-stream-loop");
 }
@@ -167,7 +174,7 @@ zx_status_t IntelHDAStreamBase::PublishDeviceLocked() {
   args.name = dev_name_;
   args.ctx = this;
   args.ops = &STREAM_DEVICE_THUNKS;
-  args.proto_id = (is_input() ? ZX_PROTOCOL_AUDIO_INPUT : ZX_PROTOCOL_AUDIO_OUTPUT);
+  args.proto_id = (is_input() ? ZX_PROTOCOL_AUDIO_INPUT_2 : ZX_PROTOCOL_AUDIO_OUTPUT_2);
 
   // Publish the device.
   zx_status_t res = device_add(parent_codec_->codec_device(), &args, &stream_device_);
@@ -220,12 +227,9 @@ zx_status_t IntelHDAStreamBase::ProcessRequestStream(const ihda_proto::RequestSt
   return OnDMAAssignedLocked();
 }
 
-zx_status_t IntelHDAStreamBase::ProcessSetStreamFmt(const ihda_proto::SetStreamFmtResp& codec_resp,
-                                                    zx::channel&& ring_buffer_channel) {
-  ZX_DEBUG_ASSERT(ring_buffer_channel.is_valid());
-
+zx_status_t IntelHDAStreamBase::ProcessSetStreamFmt(
+    const ihda_proto::SetStreamFmtResp& codec_resp) {
   fbl::AutoLock obj_lock(&obj_lock_);
-  audio_proto::StreamSetFmtResp resp = {};
   zx_status_t res = ZX_OK;
 
   // Are we shutting down?
@@ -236,7 +240,7 @@ zx_status_t IntelHDAStreamBase::ProcessSetStreamFmt(const ihda_proto::SetStreamF
   // has been closed, this set format operation has been canceled.  Do not
   // return an error up the stack; we don't want to close the connection to
   // our codec device.
-  if ((set_format_tid_ == AUDIO_INVALID_TRANSACTION_ID) || (stream_channel_ == nullptr))
+  if ((!IsFormatChangeInProgress()) || (stream_channel_ == nullptr))
     goto finished;
 
   // Let the implementation send the commands required to finish changing the
@@ -247,13 +251,6 @@ zx_status_t IntelHDAStreamBase::ProcessSetStreamFmt(const ihda_proto::SetStreamF
     goto finished;
   }
 
-  // Respond to the caller, transferring the DMA handle back in the process.
-  resp.hdr.cmd = AUDIO_STREAM_CMD_SET_FORMAT;
-  resp.hdr.transaction_id = set_format_tid_;
-  resp.result = ZX_OK;
-  resp.external_delay_nsec = 0;  // report his properly based on the codec path delay.
-  res = stream_channel_->Write(&resp, sizeof(resp), std::move(ring_buffer_channel));
-
 finished:
   // Something went fatally wrong when trying to send the result back to the
   // caller.  Close the stream channel.
@@ -262,9 +259,8 @@ finished:
     stream_channel_ = nullptr;
   }
 
-  // One way or the other, this set format operation is finished.  Clear out
-  // the in-flight transaction ID
-  set_format_tid_ = AUDIO_INVALID_TRANSACTION_ID;
+  // Set format operation is finished. There is no reply sent in CreateRingBuffer.
+  SetFormatChangeInProgress(false);
 
   return ZX_OK;
 }
@@ -329,7 +325,7 @@ void IntelHDAStreamBase::GetChannel(GetChannelCompleter::Sync& completer) {
   // that a portion of the TID is used for stream routing, while another
   // portion is used for requests like this.
   bool privileged = (stream_channel_ == nullptr);
-  if (privileged && (set_format_tid_ != AUDIO_INVALID_TRANSACTION_ID)) {
+  if (privileged && IsFormatChangeInProgress()) {
     completer.Close(ZX_ERR_SHOULD_WAIT);
     return;
   }
@@ -338,136 +334,196 @@ void IntelHDAStreamBase::GetChannel(GetChannelCompleter::Sync& completer) {
   // already have a stream_channel_, flag this channel is the privileged
   // connection (The connection which is allowed to do things like change
   // formats).
-  zx::channel stream_channel_local;
-  zx::channel stream_channel_remote;
-  auto status = zx::channel::create(0, &stream_channel_local, &stream_channel_remote);
-  if (status != ZX_OK) {
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
+  if (!endpoints.is_ok()) {
     completer.Close(ZX_ERR_NO_MEMORY);
     return;
   }
+  auto [stream_channel_remote, stream_channel_local] = *std::move(endpoints);
 
-  auto stream_channel = Channel::Create(std::move(stream_channel_local));
+  fbl::RefPtr<StreamChannel> stream_channel = StreamChannel::Create(this);
   if (stream_channel == nullptr) {
     completer.Close(ZX_ERR_NO_MEMORY);
     return;
   }
-  stream_channel_ = stream_channel;
-  // We only use the channels outside channel_lock_ when passing it into the channel handler
-  // below, this handler processing is protected by the domain.
-  stream_channel->SetHandler([stream = fbl::RefPtr(this), channel = stream_channel.get(),
-                              privileged](async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                          zx_status_t status, const zx_packet_signal_t* signal) {
-    ScopedToken t(stream->default_domain_token());
-    stream->StreamChannelSignalled(dispatcher, wait, status, signal, channel, privileged);
-  });
-  status = stream_channel->BeginWait(loop_.dispatcher());
-  if (status != ZX_OK) {
-    completer.Close(ZX_ERR_NO_MEMORY);
-    // We let stream_channel_remote go out of scope to trigger channel deactivation via peer close.
-    return;
+  stream_channels_.push_back(stream_channel);
+
+  fidl::OnUnboundFn<audio_fidl::StreamConfig::Interface> on_unbound =
+      [this, stream_channel](audio_fidl::StreamConfig::Interface*, fidl::UnbindInfo,
+                             fidl::ServerEnd<llcpp::fuchsia::hardware::audio::StreamConfig>) {
+        fbl::AutoLock channel_lock(&this->obj_lock_);
+        this->ProcessClientDeactivateLocked(stream_channel.get());
+      };
+
+  fidl::BindServer<audio_fidl::StreamConfig::Interface>(
+      loop_.dispatcher(), std::move(stream_channel_local), stream_channel.get(),
+      std::move(on_unbound));
+
+  if (privileged) {
+    stream_channel_ = stream_channel;
   }
 
   completer.Reply(std::move(stream_channel_remote));
 }
 
-void IntelHDAStreamBase::StreamChannelSignalled(async_dispatcher_t* dispatcher,
-                                                async::WaitBase* wait, zx_status_t status,
-                                                const zx_packet_signal_t* signal, Channel* channel,
-                                                bool priviledged) {
-  if (status != ZX_OK) {
-    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
-      return;
-    }
-  }
-  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
-  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
-  if (readable_asserted) {
-    zx_status_t status = ProcessClientRequest(channel, priviledged);
-    if (status != ZX_OK) {
-      return;
-    }
-    if (!peer_closed_asserted) {
-      wait->Begin(dispatcher);
-    }
-  }
-  if (peer_closed_asserted) {
-    ProcessClientDeactivate(channel, priviledged);
-  }
-}
-
-zx_status_t IntelHDAStreamBase::DoGetStreamFormatsLocked(Channel* channel, bool privileged,
-                                                         const audio_proto::StreamGetFmtsReq& req) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
-  size_t formats_sent = 0;
-  audio_proto::StreamGetFmtsResp resp = {};
+void IntelHDAStreamBase::GetSupportedFormats(
+    StreamChannel::GetSupportedFormatsCompleter::Sync& completer) {
+  fbl::AutoLock channel_lock(&obj_lock_);
 
   if (supported_formats_.size() > std::numeric_limits<uint16_t>::max()) {
     LOG("Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
         supported_formats_.size());
-    return ZX_ERR_INTERNAL;
+    return;
   }
 
-  resp.hdr = req.hdr;
-  resp.format_range_count = static_cast<uint16_t>(supported_formats_.size());
+  // Build formats compatible with FIDL from a vector of audio_stream_format_range_t.
+  // Needs to be alive until the reply is sent.
+  struct FidlCompatibleFormats {
+    fbl::Vector<uint8_t> number_of_channels;
+    fbl::Vector<audio_fidl::SampleFormat> sample_formats;
+    fbl::Vector<uint32_t> frame_rates;
+    fbl::Vector<uint8_t> valid_bits_per_sample;
+    fbl::Vector<uint8_t> bytes_per_sample;
+  };
+  fbl::Vector<FidlCompatibleFormats> fidl_compatible_formats;
+  for (auto& i : supported_formats_) {
+    auto formats = audio::utils::GetAllFormats(i.sample_formats);
+    ZX_ASSERT(formats.size() >= 1);
+    for (auto& j : formats) {
+      fbl::Vector<uint32_t> rates;
+      // Ignore flags if min and max are equal.
+      if (i.min_frames_per_second == i.max_frames_per_second) {
+        rates.push_back(i.min_frames_per_second);
+      } else {
+        ZX_DEBUG_ASSERT(!(i.flags & ASF_RANGE_FLAG_FPS_CONTINUOUS));
+        audio::utils::FrameRateEnumerator enumerator(i);
+        for (uint32_t rate : enumerator) {
+          rates.push_back(rate);
+        }
+      }
 
-  do {
-    size_t todo, payload_sz, __UNUSED to_send;
-    zx_status_t res;
+      fbl::Vector<uint8_t> number_of_channels;
+      for (uint8_t j = i.min_channels; j <= i.max_channels; ++j) {
+        number_of_channels.push_back(j);
+      }
 
-    todo = std::min<size_t>(supported_formats_.size() - formats_sent,
-                            AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
-    payload_sz = sizeof(resp.format_ranges[0]) * todo;
-    to_send = offsetof(audio_proto::StreamGetFmtsResp, format_ranges) + payload_sz;
-
-    resp.first_format_range_ndx = static_cast<uint16_t>(formats_sent);
-    ::memcpy(resp.format_ranges, supported_formats_.data() + formats_sent, payload_sz);
-
-    res = channel->Write(&resp, sizeof(resp));
-    if (res != ZX_OK) {
-      DEBUG_LOG("Failed to send get stream formats response (res %d)\n", res);
-      return res;
+      fidl_compatible_formats.push_back({
+          std::move(number_of_channels),
+          {j.format},
+          std::move(rates),
+          {j.valid_bits_per_sample},
+          {j.bytes_per_sample},
+      });
     }
+  }
 
-    formats_sent += todo;
-  } while (formats_sent < supported_formats_.size());
+  // Get FIDL PcmSupportedFormats from FIDL compatible vectors.
+  // Needs to be alive until the reply is sent.
+  fbl::Vector<audio_fidl::PcmSupportedFormats> fidl_pcm_formats;
+  for (auto& i : fidl_compatible_formats) {
+    audio_fidl::PcmSupportedFormats formats;
+    formats.number_of_channels = ::fidl::VectorView<uint8_t>(
+        fidl::unowned_ptr(i.number_of_channels.data()), i.number_of_channels.size());
+    formats.sample_formats = ::fidl::VectorView<audio_fidl::SampleFormat>(
+        fidl::unowned_ptr(i.sample_formats.data()), i.sample_formats.size());
+    formats.frame_rates =
+        ::fidl::VectorView<uint32_t>(fidl::unowned_ptr(i.frame_rates.data()), i.frame_rates.size());
+    formats.bytes_per_sample = ::fidl::VectorView<uint8_t>(
+        fidl::unowned_ptr(i.bytes_per_sample.data()), i.bytes_per_sample.size());
+    formats.valid_bits_per_sample = ::fidl::VectorView<uint8_t>(
+        fidl::unowned_ptr(i.valid_bits_per_sample.data()), i.valid_bits_per_sample.size());
+    fidl_pcm_formats.push_back(std::move(formats));
+  }
 
-  return ZX_OK;
+  // Get builders from PcmSupportedFormats tables.
+  // Needs to be alive until the reply is sent.
+  fbl::Vector<audio_fidl::SupportedFormats::UnownedBuilder> fidl_builders;
+  for (auto& i : fidl_pcm_formats) {
+    auto builder = audio_fidl::SupportedFormats::UnownedBuilder();
+    builder.set_pcm_supported_formats(fidl::unowned_ptr(&i));
+    fidl_builders.push_back(std::move(builder));
+  }
+
+  // Build FIDL SupportedFormats from PcmSupportedFormats's builders.
+  // Needs to be alive until the reply is sent.
+  fbl::Vector<audio_fidl::SupportedFormats> fidl_formats;
+  for (auto& i : fidl_builders) {
+    fidl_formats.push_back(i.build());
+  }
+
+  completer.Reply(::fidl::VectorView<audio_fidl::SupportedFormats>(
+      fidl::unowned_ptr(fidl_formats.data()), fidl_formats.size()));
 }
 
-zx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(Channel* channel, bool privileged,
-                                                        const audio_proto::StreamSetFmtReq& fmt) {
+void IntelHDAStreamBase::CreateRingBuffer(
+    StreamChannel* channel, audio_fidl::wire::Format format,
+    ::fidl::ServerEnd<audio_fidl::RingBuffer> ring_buffer,
+    StreamChannel::CreateRingBufferCompleter::Sync& completer) {
   ZX_DEBUG_ASSERT(channel != nullptr);
   ihda_proto::SetStreamFmtReq req;
   uint16_t encoded_fmt;
-  bool found_supported_format = false;
   zx_status_t res;
 
-  // Check to make sure that this channel is permitted to change formats.
-  if (!privileged) {
-    res = ZX_ERR_ACCESS_DENIED;
-    goto send_fail_response;
+  fbl::AutoLock channel_lock(&obj_lock_);
+  // Only the privileged stream channel is allowed to change the format.
+  if (channel != stream_channel_.get()) {
+    LOG("Unprivileged channel cannot set the format");
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   // If we don't have a DMA stream assigned to us, or there is already a set
   // format operation in flight, we cannot proceed.
-  if ((dma_stream_id_ == IHDA_INVALID_STREAM_ID) ||
-      (set_format_tid_ != AUDIO_INVALID_TRANSACTION_ID)) {
-    res = ZX_ERR_BAD_STATE;
-    goto send_fail_response;
+  if ((dma_stream_id_ == IHDA_INVALID_STREAM_ID) || IsFormatChangeInProgress()) {
+    completer.Close(ZX_ERR_BAD_STATE);
+    return;
   }
 
-  // Is the requested format compatible with this stream?
-  for (const auto& format_range : supported_formats_) {
-    found_supported_format = utils::FormatIsCompatible(fmt.frames_per_second, fmt.channels,
-                                                       fmt.sample_format, format_range);
-    if (found_supported_format)
+  auto format_pcm = format.pcm_format();
+  audio_sample_format_t sample_format = audio::utils::GetSampleFormat(
+      format_pcm.valid_bits_per_sample, 8 * format_pcm.bytes_per_sample);
+
+  if (sample_format == 0) {
+    LOG("Unsupported format: Invalid bits per sample (%u/%u)\n", format_pcm.valid_bits_per_sample,
+        8 * format_pcm.bytes_per_sample);
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  if (format_pcm.sample_format == audio_fidl::SampleFormat::PCM_FLOAT) {
+    sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
+    if (format_pcm.valid_bits_per_sample != 32 || format_pcm.bytes_per_sample != 4) {
+      LOG("Unsupported format: Not 32 per sample/channel for float\n");
+      completer.Close(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+  }
+
+  if (format_pcm.sample_format == audio_fidl::SampleFormat::PCM_UNSIGNED) {
+    sample_format |= AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
+  }
+
+  bool found_one = false;
+  // Check the format for compatibility
+  for (const auto& fmt : supported_formats_) {
+    if (audio::utils::FormatIsCompatible(format_pcm.frame_rate,
+                                         static_cast<uint16_t>(format_pcm.number_of_channels),
+                                         sample_format, fmt)) {
+      found_one = true;
       break;
+    }
   }
 
-  if (!found_supported_format) {
-    res = ZX_ERR_NOT_SUPPORTED;
-    goto send_fail_response;
+  if (!found_one) {
+    LOG("Could not find a suitable format in %s", __PRETTY_FUNCTION__);
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
+
+  audio_proto::StreamSetFmtReq fmt = {};
+  fmt.sample_format = sample_format;
+  fmt.channels = format_pcm.number_of_channels;
+  fmt.frames_per_second = format_pcm.frame_rate;
 
   // The upper level stream told us that they support this format, we had
   // better be able to encode it into an IHDA format specifier.
@@ -475,7 +531,8 @@ zx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(Channel* channel, bool p
   if (res != ZX_OK) {
     DEBUG_LOG("Failed to encode stream format %u:%hu:%s (res %d)\n", fmt.frames_per_second,
               fmt.channels, audio_proto::SampleFormatToString(fmt.sample_format), res);
-    goto send_fail_response;
+    completer.Close(res);
+    return;
   }
 
   // Let our implementation start the process of a format change.  This gives
@@ -485,7 +542,8 @@ zx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(Channel* channel, bool p
   if (res != ZX_OK) {
     DEBUG_LOG("Stream impl rejected stream format %u:%hu:%s (res %d)\n", fmt.frames_per_second,
               fmt.channels, audio_proto::SampleFormatToString(fmt.sample_format), res);
-    goto send_fail_response;
+    completer.Close(res);
+    return;
   }
 
   // Set the format of DMA stream.  This will stop any stream in progress and
@@ -498,189 +556,208 @@ zx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(Channel* channel, bool p
   req.hdr.transaction_id = id();
   req.stream_id = dma_stream_id_;
   req.format = encoded_fmt;
-  res = codec_channel_->Write(&req, sizeof(req));
+  res = codec_channel_->Write(&req, sizeof(req), ring_buffer.TakeChannel());
   if (res != ZX_OK) {
     DEBUG_LOG("Failed to write set stream format %u:%hu:%s to codec channel (res %d)\n",
               fmt.frames_per_second, fmt.channels,
               audio_proto::SampleFormatToString(fmt.sample_format), res);
-    return res;
+    completer.Close(res);
+    return;
   }
 
-  // Success!  Record the transaction ID of the request.  It indicates that the
-  // format change is in progress, and will be needed to send the final
-  // response back to the caller.
-  set_format_tid_ = fmt.hdr.transaction_id;
+  // Success!  Record that the format change is in progress.
+  SetFormatChangeInProgress(true);
   encoded_fmt_ = encoded_fmt;
-  return ZX_OK;
-
-send_fail_response:
-  audio_proto::StreamSetFmtResp resp = {};
-  resp.hdr = fmt.hdr;
-  resp.result = res;
-
-  ZX_DEBUG_ASSERT(channel != nullptr);
-  res = channel->Write(&resp, sizeof(resp));
-  if (res != ZX_OK)
-    DEBUG_LOG("Failing to write %zu bytes in response (res %d)\n", sizeof(resp), res);
-  return res;
 }
 
-zx_status_t IntelHDAStreamBase::DoGetGainLocked(Channel* channel, bool privileged,
-                                                const audio_proto::GetGainReq& req) {
-  // Fill out the response header, then let the stream implementation fill out
-  // the payload.
-  audio_proto::GetGainResp resp = {};
-  resp.hdr = req.hdr;
-  OnGetGainLocked(&resp);
+void IntelHDAStreamBase::WatchGainState(StreamChannel* channel,
+                                        StreamChannel::WatchGainStateCompleter::Sync& completer) {
+  ZX_DEBUG_ASSERT(!channel->gain_completer_);
+  channel->gain_completer_ = completer.ToAsync();
 
-  ZX_DEBUG_ASSERT(channel != nullptr);
-  return channel->Write(&resp, sizeof(resp));
-}
-
-zx_status_t IntelHDAStreamBase::DoSetGainLocked(Channel* channel, bool privileged,
-                                                const audio_proto::SetGainReq& req) {
-  if (req.hdr.cmd & AUDIO_FLAG_NO_ACK) {
-    OnSetGainLocked(req, nullptr);
-    return ZX_OK;
-  }
-
-  // Fill out the response header, then let the stream implementation fill out
-  // the payload.
-  audio_proto::SetGainResp resp = {};
-  resp.hdr = req.hdr;
-  OnSetGainLocked(req, &resp);
-
-  ZX_DEBUG_ASSERT(channel != nullptr);
-  return channel->Write(&resp, sizeof(resp));
-}
-
-zx_status_t IntelHDAStreamBase::DoPlugDetectLocked(Channel* channel, bool privileged,
-                                                   const audio_proto::PlugDetectReq& req) {
-  if (req.hdr.cmd & AUDIO_FLAG_NO_ACK) {
-    OnPlugDetectLocked(channel, req, nullptr);
-    return ZX_OK;
-  }
-
-  // Fill out the response header, then let the stream implementation fill out
-  // the payload.
-  audio_proto::PlugDetectResp resp = {};
-  resp.hdr = req.hdr;
-  OnPlugDetectLocked(channel, req, &resp);
-
-  ZX_DEBUG_ASSERT(channel != nullptr);
-  return channel->Write(&resp, sizeof(resp));
-}
-
-zx_status_t IntelHDAStreamBase::DoGetUniqueIdLocked(Channel* channel, bool privileged,
-                                                    const audio_proto::GetUniqueIdReq& req) {
-  audio_proto::GetUniqueIdResp resp = {};
-
-  resp.hdr = req.hdr;
-  resp.unique_id = persistent_unique_id_;
-
-  ZX_DEBUG_ASSERT(channel != nullptr);
-  return channel->Write(&resp, sizeof(resp));
-}
-
-zx_status_t IntelHDAStreamBase::DoGetStringLocked(Channel* channel, bool privileged,
-                                                  const audio_proto::GetStringReq& req) {
-  // Fill out the response header, then let the stream implementation fill out
-  // the payload.
-  audio_proto::GetStringResp resp = {};
-  resp.hdr = req.hdr;
-  resp.id = req.id;
-  OnGetStringLocked(req, &resp);
-
-  ZX_DEBUG_ASSERT(channel != nullptr);
-  return channel->Write(&resp, sizeof(resp));
-}
-
-zx_status_t IntelHDAStreamBase::DoGetClockDomainLocked(Channel* channel, bool privileged,
-                                                       const audio_proto::GetClockDomainReq& req) {
-  // Fill out the response header, then let the stream implementation fill out the payload.
-  audio_proto::GetClockDomainResp resp = {};
-  resp.hdr = req.hdr;
-  OnGetClockDomainLocked(&resp);
-
-  ZX_DEBUG_ASSERT(channel != nullptr);
-  return channel->Write(&resp, sizeof(resp));
-}
-
-#define HANDLE_REQ(_ioctl, _payload, _handler, _allow_noack)                                      \
-  case _ioctl:                                                                                    \
-    if (req_size != sizeof(req._payload)) {                                                       \
-      DEBUG_LOG("Bad " #_ioctl " response length (%u != %zu)\n", req_size, sizeof(req._payload)); \
-      return ZX_ERR_INVALID_ARGS;                                                                 \
-    }                                                                                             \
-    if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {                                     \
-      DEBUG_LOG("NO_ACK flag not allowed for " #_ioctl "\n");                                     \
-      return ZX_ERR_INVALID_ARGS;                                                                 \
-    }                                                                                             \
-    return _handler(channel, privileged, req._payload);
-zx_status_t IntelHDAStreamBase::ProcessClientRequest(Channel* channel, bool privileged) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
   fbl::AutoLock obj_lock(&obj_lock_);
+  OnGetGainLocked(&cur_gain_state_);
 
-  // If we have lost our connection to the codec device, or are in the process
-  // of shutting down, there is nothing further we can do.  Fail the request
-  // and close the connection to the caller.
-  if (!is_active() || (codec_channel_ == nullptr))
-    return ZX_ERR_BAD_STATE;
-
-  union {
-    audio_proto::CmdHdr hdr;
-    audio_proto::StreamGetFmtsReq get_formats;
-    audio_proto::StreamSetFmtReq set_format;
-    audio_proto::GetGainReq get_gain;
-    audio_proto::SetGainReq set_gain;
-    audio_proto::PlugDetectReq plug_detect;
-    audio_proto::GetUniqueIdReq get_unique_id;
-    audio_proto::GetStringReq get_string;
-    audio_proto::GetClockDomainReq get_clock_domain;
-    // TODO(johngro) : add more commands here
-  } req;
-
-  static_assert(sizeof(req) <= 256,
-                "Request buffer is getting to be too large to hold on the stack!");
-
-  uint32_t req_size;
-  zx_status_t res = channel->Read(&req, sizeof(req), &req_size);
-  if (res != ZX_OK)
-    return res;
-
-  if ((req_size < sizeof(req.hdr) || (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID)))
-    return ZX_ERR_INVALID_ARGS;
-
-  // Strip the NO_ACK flag from the request before selecting the dispatch target.
-  auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
-  switch (cmd) {
-    HANDLE_REQ(AUDIO_STREAM_CMD_GET_FORMATS, get_formats, DoGetStreamFormatsLocked, false);
-    HANDLE_REQ(AUDIO_STREAM_CMD_SET_FORMAT, set_format, DoSetStreamFormatLocked, false);
-    HANDLE_REQ(AUDIO_STREAM_CMD_GET_GAIN, get_gain, DoGetGainLocked, false);
-    HANDLE_REQ(AUDIO_STREAM_CMD_SET_GAIN, set_gain, DoSetGainLocked, true);
-    HANDLE_REQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, DoPlugDetectLocked, true);
-    HANDLE_REQ(AUDIO_STREAM_CMD_GET_UNIQUE_ID, get_unique_id, DoGetUniqueIdLocked, false);
-    HANDLE_REQ(AUDIO_STREAM_CMD_GET_STRING, get_string, DoGetStringLocked, false);
-    HANDLE_REQ(AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN, get_clock_domain, DoGetClockDomainLocked, false);
-    default:
-      DEBUG_LOG("Unrecognized stream command 0x%04x\n", req.hdr.cmd);
-      return ZX_ERR_NOT_SUPPORTED;
+  // Reply is delayed if there is no change since the last reported gain state.
+  if (channel->last_reported_gain_state_ != cur_gain_state_) {
+    auto builder = audio_fidl::GainState::UnownedBuilder();
+    fidl::aligned<bool> mute = cur_gain_state_.cur_mute;
+    fidl::aligned<bool> agc = cur_gain_state_.cur_agc;
+    fidl::aligned<float> gain = cur_gain_state_.cur_gain;
+    if (cur_gain_state_.can_mute) {
+      builder.set_muted(fidl::unowned_ptr(&mute));
+    }
+    if (cur_gain_state_.can_agc) {
+      builder.set_agc_enabled(fidl::unowned_ptr(&agc));
+    }
+    builder.set_gain_db(fidl::unowned_ptr(&gain));
+    channel->last_reported_gain_state_ = cur_gain_state_;
+    channel->gain_completer_->Reply(builder.build());
+    channel->gain_completer_.reset();
   }
 }
-#undef HANDLE_REQ
 
-void IntelHDAStreamBase::ProcessClientDeactivate(const Channel* channel, bool privileged) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
+void IntelHDAStreamBase::SetGain(audio_fidl::wire::GainState target_state,
+                                 StreamChannel::SetGainCompleter::Sync& completer) {
   fbl::AutoLock obj_lock(&obj_lock_);
+  OnGetGainLocked(&cur_gain_state_);
+
+  // Sanity check the request before passing it along
+  if (target_state.has_muted() && target_state.muted() && !cur_gain_state_.can_mute) {
+    LOG("Can't mute\n");
+    return;
+  }
+
+  if (target_state.has_agc_enabled() && target_state.agc_enabled() && !cur_gain_state_.can_agc) {
+    LOG("Can't enable AGC\n");
+    return;
+  }
+
+  if (target_state.has_gain_db() && ((target_state.gain_db() < cur_gain_state_.min_gain) ||
+                                     (target_state.gain_db() > cur_gain_state_.max_gain))) {
+    LOG("Can't set gain outside valid range\n");
+    return;
+  }
+
+  audio_stream_cmd_set_gain_req_t req = {};
+  cur_gain_state_.can_mute = target_state.has_muted();
+  if (cur_gain_state_.can_mute) {
+    req.flags |= AUDIO_SGF_MUTE_VALID;
+    if (target_state.muted()) {
+      req.flags |= AUDIO_SGF_MUTE;
+    }
+    cur_gain_state_.cur_mute = target_state.muted();
+  }
+  cur_gain_state_.can_agc = target_state.has_agc_enabled();
+  if (cur_gain_state_.can_agc) {
+    req.flags |= AUDIO_SGF_AGC_VALID;
+    if (target_state.agc_enabled()) {
+      req.flags |= AUDIO_SGF_AGC;
+    }
+    cur_gain_state_.cur_agc = target_state.agc_enabled();
+  }
+  if (target_state.has_gain_db()) {
+    req.flags |= AUDIO_SGF_GAIN_VALID;
+    req.gain = target_state.gain_db();
+    cur_gain_state_.cur_gain = req.gain;
+  }
+
+  audio_proto::SetGainResp out = {};
+  OnSetGainLocked(req, &out);
+  if (out.result != ZX_OK && out.result != ZX_ERR_NOT_SUPPORTED) {
+    LOG("Error setting the gain state %d\n", out.result);
+  }
+  for (auto& channel : stream_channels_) {
+    if (channel.gain_completer_) {
+      channel.gain_completer_->Reply(std::move(target_state));
+      channel.gain_completer_.reset();
+    }
+  }
+}
+
+void IntelHDAStreamBase::WatchPlugState(StreamChannel* channel,
+                                        StreamChannel::WatchPlugStateCompleter::Sync& completer) {
+  ZX_DEBUG_ASSERT(!channel->plug_completer_);
+  channel->plug_completer_ = completer.ToAsync();
+
+  audio_proto::PlugDetectResp plug = {};
+
+  fbl::AutoLock lock(obj_lock());
+  OnPlugDetectLocked(channel, &plug);
+
+  fidl::aligned<bool> plugged = plug.flags & AUDIO_PDNF_PLUGGED;
+  // Reply is delayed if there is no change since the last reported plugged state.
+  if (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kNotReported ||
+      (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kPlugged) != plugged) {
+    auto builder = audio_fidl::PlugState::UnownedBuilder();
+    builder.set_plugged(fidl::unowned_ptr(&plugged));
+    fidl::aligned<zx_time_t> plug_time = plug.plug_state_time;
+    builder.set_plug_state_time(fidl::unowned_ptr(&plug_time));
+    channel->last_reported_plugged_state_ =
+        plugged ? StreamChannel::Plugged::kPlugged : StreamChannel::Plugged::kUnplugged;
+    channel->plug_completer_->Reply(builder.build());
+    channel->plug_completer_.reset();
+  }
+}
+
+void IntelHDAStreamBase::NotifyPlugStateLocked(bool plugged, int64_t plug_time) {
+  auto builder = audio_fidl::PlugState::UnownedBuilder();
+  fidl::aligned<bool> plugged2 = plugged;
+  builder.set_plugged(fidl::unowned_ptr(&plugged2));
+  builder.set_plug_state_time(fidl::unowned_ptr(&plug_time));
+
+  for (auto& channel : stream_channels_) {
+    if (channel.plug_completer_) {
+      channel.plug_completer_->Reply(builder.build());
+      channel.plug_completer_.reset();
+    }
+  }
+}
+
+void IntelHDAStreamBase::GetProperties(
+    StreamChannel* channel,
+    audio_fidl::StreamConfig::Interface::GetPropertiesCompleter::Sync& completer) {
+  fbl::AutoLock obj_lock(&obj_lock_);
+  fidl::FidlAllocator allocator;
+  audio_fidl::StreamProperties response(allocator);
+
+  fidl::Array<uint8_t, audio_fidl::UNIQUE_ID_SIZE> unique_id = {};
+  for (size_t i = 0; i < audio_fidl::UNIQUE_ID_SIZE; ++i) {
+    unique_id.data_[i] = persistent_unique_id_.data[i];
+  }
+  response.set_unique_id(allocator, unique_id);
+  response.set_is_input(allocator, is_input());
+
+  OnGetGainLocked(&cur_gain_state_);
+
+  response.set_can_mute(allocator, cur_gain_state_.can_mute);
+  response.set_can_agc(allocator, cur_gain_state_.can_agc);
+  response.set_min_gain_db(allocator, cur_gain_state_.min_gain);
+  response.set_max_gain_db(allocator, cur_gain_state_.max_gain);
+  response.set_gain_step_db(allocator, cur_gain_state_.gain_step);
+
+  audio_proto::GetStringResp resp_product = {};
+  audio_proto::GetStringReq req = {};
+  req.id = AUDIO_STREAM_STR_ID_PRODUCT;
+  OnGetStringLocked(req, &resp_product);
+  fidl::StringView product(fidl::unowned_ptr(reinterpret_cast<char*>(resp_product.str)),
+                           resp_product.strlen);
+  response.set_product(fidl::unowned_ptr(&product));
+
+  req.id = AUDIO_STREAM_STR_ID_MANUFACTURER;
+  audio_proto::GetStringResp resp_manufacturer = {};
+  OnGetStringLocked(req, &resp_manufacturer);
+  fidl::StringView manufacturer(fidl::unowned_ptr(reinterpret_cast<char*>(resp_manufacturer.str)),
+                                resp_manufacturer.strlen);
+  response.set_manufacturer(fidl::unowned_ptr(&manufacturer));
+
+  audio_proto::GetClockDomainResp domain_resp = {};
+  OnGetClockDomainLocked(&domain_resp);
+  response.set_clock_domain(allocator, domain_resp.clock_domain);
+
+  audio_proto::PlugDetectResp plug = {};
+  OnPlugDetectLocked(channel, &plug);
+  if (plug.flags & AUDIO_PDNF_CAN_NOTIFY) {
+    response.set_plug_detect_capabilities(allocator,
+                                          audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+  } else if (plug.flags & AUDIO_PDNF_HARDWIRED) {
+    response.set_plug_detect_capabilities(allocator, audio_fidl::PlugDetectCapabilities::HARDWIRED);
+  }
+  completer.Reply(std::move(response));
+}
+
+void IntelHDAStreamBase::ProcessClientDeactivateLocked(StreamChannel* channel) {
+  ZX_DEBUG_ASSERT(channel != nullptr);
 
   // Let our subclass know that this channel is going away.
   OnChannelDeactivateLocked(*channel);
 
   // Is this the privileged stream channel?
-  if (privileged) {
-    ZX_DEBUG_ASSERT(channel == stream_channel_.get());
+  if (stream_channel_.get() == channel) {
     stream_channel_.reset();
   }
+
+  stream_channels_.erase(*channel);
 }
 
 zx_status_t IntelHDAStreamBase::AllocateUnsolTagLocked(uint8_t* out_tag) {
@@ -782,7 +859,7 @@ zx_status_t IntelHDAStreamBase::EncodeStreamFormat(const audio_proto::StreamSetF
 zx_status_t IntelHDAStreamBase::OnActivateLocked() { return ZX_OK; }
 
 void IntelHDAStreamBase::OnDeactivateLocked() {}
-void IntelHDAStreamBase::OnChannelDeactivateLocked(const Channel& channel) {}
+void IntelHDAStreamBase::OnChannelDeactivateLocked(const StreamChannel& channel) {}
 
 zx_status_t IntelHDAStreamBase::OnDMAAssignedLocked() { return PublishDeviceLocked(); }
 
@@ -803,7 +880,7 @@ zx_status_t IntelHDAStreamBase::FinishChangeStreamFormatLocked(uint16_t encoded_
   return ZX_ERR_INTERNAL;
 }
 
-void IntelHDAStreamBase::OnGetGainLocked(audio_proto::GetGainResp* out_resp) {
+void IntelHDAStreamBase::OnGetGainLocked(audio_proto::GainState* out_resp) {
   ZX_DEBUG_ASSERT(out_resp != nullptr);
 
   // By default we claim to have a fixed, un-mute-able gain stage.
@@ -835,12 +912,10 @@ void IntelHDAStreamBase::OnSetGainLocked(const audio_proto::SetGainReq& req,
   out_resp->result = (illegal_mute || illegal_agc || illegal_gain) ? ZX_ERR_INVALID_ARGS : ZX_OK;
 }
 
-void IntelHDAStreamBase::OnPlugDetectLocked(Channel* response_channel,
-                                            const audio_proto::PlugDetectReq& req,
+void IntelHDAStreamBase::OnPlugDetectLocked(StreamChannel* response_channel,
                                             audio_proto::PlugDetectResp* out_resp) {
   // Nothing to do if no response is expected.
   if (out_resp == nullptr) {
-    ZX_DEBUG_ASSERT(req.hdr.cmd & AUDIO_FLAG_NO_ACK);
     return;
   }
 

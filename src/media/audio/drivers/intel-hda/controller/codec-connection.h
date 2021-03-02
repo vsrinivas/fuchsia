@@ -120,8 +120,8 @@ class CodecConnection : public fbl::RefCounted<CodecConnection> {
   zx_status_t ProcessSendCORBCmd(Channel* channel, const ihda_proto::SendCORBCmdReq& req);
   zx_status_t ProcessRequestStream(Channel* channel, const ihda_proto::RequestStreamReq& req);
   zx_status_t ProcessReleaseStream(Channel* channel, const ihda_proto::ReleaseStreamReq& req);
-  zx_status_t ProcessSetStreamFmt(Channel* channel, const ihda_proto::SetStreamFmtReq& req);
-
+  zx_status_t ProcessSetStreamFmt(Channel* channel, const ihda_proto::SetStreamFmtReq& req,
+                                  zx::handle received_handle);
   // Reference to our owner.
   IntelHDAController& controller_;
 

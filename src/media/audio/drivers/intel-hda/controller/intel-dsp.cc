@@ -208,24 +208,32 @@ void IntelDsp::ChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase*
   }
 }
 
-#define PROCESS_CMD(_req_ack, _req_driver_chan, _ioctl, _payload, _handler)    \
-  case _ioctl:                                                                 \
-    if (req_size != sizeof(req._payload)) {                                    \
-      LOG(DEBUG, "Bad " #_payload " request length (%u != %zu)\n", req_size,   \
-          sizeof(req._payload));                                               \
-      return ZX_ERR_INVALID_ARGS;                                              \
-    }                                                                          \
-    if ((_req_ack) && (req.hdr.cmd & IHDA_NOACK_FLAG)) {                       \
-      LOG(DEBUG, "Cmd " #_payload                                              \
-                 " requires acknowledgement, but the "                         \
-                 "NOACK flag was set!\n");                                     \
-      return ZX_ERR_INVALID_ARGS;                                              \
-    }                                                                          \
-    if ((_req_driver_chan) && !is_driver_channel) {                            \
-      LOG(DEBUG, "Cmd " #_payload " requires a privileged driver channel.\n"); \
-      return ZX_ERR_ACCESS_DENIED;                                             \
-    }                                                                          \
-    return _handler(channel, req._payload)
+#define PROCESS_CMD_INNER(_req_ack, _req_driver_chan, _ioctl, _payload, _handler) \
+  case _ioctl:                                                                    \
+    if (req_size != sizeof(req._payload)) {                                       \
+      LOG(DEBUG, "Bad " #_payload " request length (%u != %zu)\n", req_size,      \
+          sizeof(req._payload));                                                  \
+      return ZX_ERR_INVALID_ARGS;                                                 \
+    }                                                                             \
+    if ((_req_ack) && (req.hdr.cmd & IHDA_NOACK_FLAG)) {                          \
+      LOG(DEBUG, "Cmd " #_payload                                                 \
+                 " requires acknowledgement, but the "                            \
+                 "NOACK flag was set!\n");                                        \
+      return ZX_ERR_INVALID_ARGS;                                                 \
+    }                                                                             \
+    if ((_req_driver_chan) && !is_driver_channel) {                               \
+      LOG(DEBUG, "Cmd " #_payload " requires a privileged driver channel.\n");    \
+      return ZX_ERR_ACCESS_DENIED;                                                \
+    }
+
+#define PROCESS_CMD(_req_ack, _req_driver_chan, _ioctl, _payload, _handler) \
+  PROCESS_CMD_INNER(_req_ack, _req_driver_chan, _ioctl, _payload, _handler) \
+  return _handler(channel, req._payload)
+
+#define PROCESS_CMD_WITH_HANDLE(_req_ack, _req_driver_chan, _ioctl, _payload, _handler) \
+  PROCESS_CMD_INNER(_req_ack, _req_driver_chan, _ioctl, _payload, _handler)             \
+  return _handler(channel, req._payload, std::move(rxed_handle))
+
 zx_status_t IntelDsp::ProcessClientRequest(bool is_driver_channel) {
   zx_status_t res;
   uint32_t req_size;
@@ -242,7 +250,8 @@ zx_status_t IntelDsp::ProcessClientRequest(bool is_driver_channel) {
   fbl::AutoLock lock(&codec_driver_channel_lock_);
   Channel* channel = codec_driver_channel_.get();
   ZX_DEBUG_ASSERT(channel != nullptr);
-  res = codec_driver_channel_->Read(&req, sizeof(req), &req_size);
+  zx::handle rxed_handle;
+  res = codec_driver_channel_->Read(&req, sizeof(req), &req_size, rxed_handle);
   if (res != ZX_OK) {
     LOG(DEBUG, "Failed to read client request (res %d)\n", res);
     return res;
@@ -268,13 +277,16 @@ zx_status_t IntelDsp::ProcessClientRequest(bool is_driver_channel) {
   switch (cmd_id) {
     PROCESS_CMD(true, true, IHDA_CODEC_REQUEST_STREAM, request_stream, ProcessRequestStream);
     PROCESS_CMD(false, true, IHDA_CODEC_RELEASE_STREAM, release_stream, ProcessReleaseStream);
-    PROCESS_CMD(false, true, IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt, ProcessSetStreamFmt);
+    PROCESS_CMD_WITH_HANDLE(false, true, IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt,
+                            ProcessSetStreamFmt);
     default:
       LOG(DEBUG, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
       return ZX_ERR_INVALID_ARGS;
   }
 }
 #undef PROCESS_CMD
+#undef PROCESS_CMD_INNER
+#undef PROCESS_CMD_WITH_HANDLE
 
 void IntelDsp::ProcessClientDeactivate() {
   // This should be the driver channel (client channels created with IOCTL do
@@ -367,9 +379,16 @@ zx_status_t IntelDsp::ProcessReleaseStream(Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t IntelDsp::ProcessSetStreamFmt(Channel* channel,
-                                          const ihda_proto::SetStreamFmtReq& req) {
+zx_status_t IntelDsp::ProcessSetStreamFmt(Channel* channel, const ihda_proto::SetStreamFmtReq& req,
+                                          zx::handle rxed_handle) {
   ZX_DEBUG_ASSERT(channel != nullptr);
+
+  zx::channel server_channel;
+  zx_status_t res = ConvertHandle(&rxed_handle, &server_channel);
+  if (res != ZX_OK) {
+    LOG(DEBUG, "Failed to convert handle to channel (res %d)\n", res);
+    return res;
+  }
 
   // Sanity check the requested format.
   if (!StreamFormat(req.format).SanityCheck()) {
@@ -394,19 +413,17 @@ zx_status_t IntelDsp::ProcessSetStreamFmt(Channel* channel,
   // Set the stream format and assign the client channel to the stream.  If
   // this stream is already bound to a client, this will cause that connection
   // to be closed.
-  zx::channel client_channel;
-  zx_status_t res = stream->SetStreamFormat(controller_->dispatcher(), req.format, &client_channel);
+  res = stream->SetStreamFormat(controller_->dispatcher(), req.format, std::move(server_channel));
   if (res != ZX_OK) {
     LOG(DEBUG, "Failed to set stream format 0x%04hx for stream %hu (res %d)\n", req.format,
         req.stream_id, res);
     return res;
   }
 
-  // Send the channel back to the codec driver.
-  ZX_DEBUG_ASSERT(client_channel.is_valid());
+  // Reply to the codec driver.
   ihda_proto::SetStreamFmtResp resp;
   resp.hdr = req.hdr;
-  res = channel->Write(&resp, sizeof(resp), std::move(client_channel));
+  res = channel->Write(&resp, sizeof(resp));
 
   if (res != ZX_OK)
     LOG(DEBUG, "Failed to send stream channel back to codec driver (res %d)\n", res);
