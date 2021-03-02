@@ -92,57 +92,63 @@ async fn recv_packet(
     Ok(())
 }
 
+async fn run_links(
+    node: &Weak<Router>,
+    discovered_peers: mpsc::Receiver<SocketAddrV6>,
+    rx_new_link: mpsc::Receiver<(SocketAddrV6, Endpoint, Option<Vec<u8>>)>,
+    connections: &Connections,
+    udp_socket: &UdpSocket,
+) -> Result<(), Error> {
+    futures::stream::select(
+        discovered_peers.map(|addr| (addr, Endpoint::Client, None)),
+        rx_new_link,
+    )
+    .for_each_concurrent(None, |(addr, endpoint, first_packet)| async move {
+        if let Err(e) = run_link(node, connections, addr, endpoint, first_packet, udp_socket).await
+        {
+            log::info!("link failed: {:?}", e)
+        }
+    })
+    .await;
+    Err(format_err!("No more incoming links"))
+}
+
+async fn route_incoming_frames(
+    connections: &Connections,
+    udp_socket: &UdpSocket,
+    mut tx_new_link: mpsc::Sender<(SocketAddrV6, Endpoint, Option<Vec<u8>>)>,
+) -> Result<(), Error> {
+    let mut buf = [0u8; MAX_FRAME_LENGTH];
+    loop {
+        let (length, sender) = udp_socket.recv_from(&mut buf).await?;
+        log::info!("got {}b packet from {:?}", length, sender);
+        if let Err(e) =
+            recv_packet(connections, normalize_addr(sender), &mut buf[..length], &mut tx_new_link)
+                .await
+        {
+            log::info!("error reading packet: {}", e);
+        }
+    }
+}
+
 pub async fn run_udp(
     node: Weak<Router>,
     discovered_peers: mpsc::Receiver<SocketAddrV6>,
     mut publish_addr: mpsc::Sender<SocketAddrV6>,
 ) -> Result<(), Error> {
-    let node = &node;
     let udp_socket = &UdpSocket::bind(&"[::]:0".parse().unwrap())?;
-    let connections = &Connections(Mutex::new(HashMap::new()));
 
     publish_addr.send(normalize_addr(udp_socket.local_addr()?)).await?;
 
-    let (mut tx_new_link, rx_new_link) = mpsc::channel(1);
+    let connections = Connections(Mutex::new(HashMap::new()));
+    let (tx_new_link, rx_new_link) = mpsc::channel(1);
 
-    let ((), ()) = futures::future::try_join(
-        async move {
-            futures::stream::select(
-                discovered_peers.map(|addr| (addr, Endpoint::Client, None)),
-                rx_new_link,
-            )
-            .for_each_concurrent(None, |(addr, endpoint, first_packet)| async move {
-                if let Err(e) =
-                    run_link(node, connections, addr, endpoint, first_packet, udp_socket).await
-                {
-                    log::info!("link failed: {:?}", e)
-                }
-            })
-            .await;
-            Err(format_err!("No more incoming links"))
-        },
-        async move {
-            let mut buf = [0u8; MAX_FRAME_LENGTH];
-            loop {
-                let (length, sender) = udp_socket.recv_from(&mut buf).await?;
-                log::info!("got {}b packet from {:?}", length, sender);
-                if let Err(e) = recv_packet(
-                    connections,
-                    normalize_addr(sender),
-                    &mut buf[..length],
-                    &mut tx_new_link,
-                )
-                .await
-                {
-                    log::info!("error reading packet: {}", e);
-                }
-            }
-        },
+    futures::future::try_join(
+        run_links(&node, discovered_peers, rx_new_link, &connections, &udp_socket),
+        route_incoming_frames(&connections, &udp_socket, tx_new_link),
     )
-    .await?;
-
-    drop(publish_addr);
-    Ok(())
+    .map_ok(drop)
+    .await
 }
 
 fn normalize_addr(addr: SocketAddr) -> SocketAddrV6 {
