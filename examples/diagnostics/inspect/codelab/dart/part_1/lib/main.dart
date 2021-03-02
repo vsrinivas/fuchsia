@@ -18,17 +18,19 @@ void main(List<String> args) async {
   // CODELAB: Initialize Inspect here.
 
   // [START serve_service]
-  final context = StartupContext.fromStartupInfo();
-  context.outgoing.addPublicService<fidl_codelab.Reverser>(
-    ReverserImpl.getDefaultBinder(),
-    fidl_codelab.Reverser.$serviceName,
-  );
+  final context = ComponentContext.create();
+  context.outgoing
+    ..addPublicService<fidl_codelab.Reverser>(
+      ReverserImpl.getDefaultBinder(),
+      fidl_codelab.Reverser.$serviceName,
+    )
+    ..serveFromStartupInfo();
   // [END serve_service]
 
   try {
     // [START connect_fizzbuzz]
     final fizzBuzz = fidl_codelab.FizzBuzzProxy();
-    context.incoming.connectToService(fizzBuzz);
+    context.svc.connectToService(fizzBuzz);
     final result = await fizzBuzz.execute(30);
     // [END connect_fizzbuzz]
     log.info('Got FizzBuzz: $result');

@@ -90,9 +90,11 @@ a proxy class and then bind it to the server:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/client/lib/main.dart" region_tag="main" highlight="4,5,6,7" %}
 ```
 
-Similar to the server code, the client uses `sys.StartupContext.fromStartupInfo()` to access the
-component's context. The difference is that the `incoming` property is used instead of the
-`outgoing` property, since the client is connecting to a protocol rather than offering one.
+Similar to the server code, the client uses `ComponentContext` to access the component's
+context. The difference is that the `incoming` property is used instead of the `outgoing`
+property, since the client is connecting to a protocol rather than offering one. Additionally,
+since no outgoing services are added, it uses the `ComponentContext.createAndServe()`
+convenience method.
 
 The `connectToService` call does a number of things under the hood:
 

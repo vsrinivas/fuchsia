@@ -184,12 +184,14 @@ class _ValidateImpl extends fidl_validate.Validate {
 }
 
 void main(List<String> args) {
-  final context = StartupContext.fromStartupInfo();
+  final context = ComponentContext.create();
   setupLogger();
   // Initialize & serve the inspect singleton before use in _ValidateImpl.
   Inspect().serve(context.outgoing);
   final validate = _ValidateImpl();
 
-  context.outgoing.addPublicService<fidl_validate.Validate>(
-      validate.bind, fidl_validate.Validate.$serviceName);
+  context.outgoing
+    ..addPublicService<fidl_validate.Validate>(
+        validate.bind, fidl_validate.Validate.$serviceName)
+    ..serveFromStartupInfo();
 }

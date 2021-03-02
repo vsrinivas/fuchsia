@@ -192,10 +192,10 @@ Then, the code calls the component manager to expose the `Echo` FIDL protocol to
 ```
 
 It does so using the `fuchsia_services` package, which provides an API to access the startup context
-of the component. Specifically, each component receives a startup handle that the component can
-use to both access capabilties *from* other components and expose capabilities *to* other
-components. The call to `sys.StartupContext.fromStartupInfo()` obtains an instance of this
-startup context, and the `outgoing` property is used to expose the `Echo` protocol.
+of the component. Specifically, each component receives a `ComponentContext` that the component can
+use to both access capabilties *from* other components and expose capabilities *to* other components.
+The call to `sys.ComponentContext.create()` obtains an instance of the component's context, and the
+`outgoing` property is used to expose the `Echo` protocol and later `serveFromStartupInfo()`.
 
 In order to add a service, the outgoing context needs to know:
 

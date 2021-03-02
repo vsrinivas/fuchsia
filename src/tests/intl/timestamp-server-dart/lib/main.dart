@@ -41,12 +41,13 @@ Future<void> main(List<String> args) async {
   setupLogger(name: 'timestamp_server_dart', globalTags: ['e2e', 'timezone']);
   log.info('Setting up.');
 
-  final context = StartupContext.fromStartupInfo();
+  final context = ComponentContext.create();
   final echo = _EchoImpl();
 
   var status = context.outgoing
       .addPublicService<fidl_echo.Echo>(echo.bind, fidl_echo.Echo.$serviceName);
   assert(status == ZX.OK);
+  context.outgoing.serveFromStartupInfo();
   log.info('Now serving.');
   // Serve the Echo endpoint for a little while, then exit.
   await Future.delayed(const Duration(minutes: 1));

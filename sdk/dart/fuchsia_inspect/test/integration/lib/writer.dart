@@ -55,9 +55,10 @@ class Table {
 }
 
 void main(List<String> args) {
-  var context = StartupContext.fromStartupInfo();
+  var context = ComponentContext.create();
   // ReadHierarchy Test
   var inspect = Inspect()..serve(context.outgoing);
+  context.outgoing.serveFromStartupInfo();
   var t1 = Table(inspect.root.child('t1'));
   var t2 = Table(inspect.root.child('t2'));
   t1

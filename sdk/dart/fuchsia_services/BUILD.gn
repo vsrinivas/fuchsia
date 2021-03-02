@@ -18,6 +18,7 @@ dart_library("fuchsia_services") {
 
   sources = [
     "services.dart",
+    "src/component_context.dart",
     "src/incoming.dart",
     "src/internal/_startup_context_impl.dart",
     "src/outgoing.dart",
@@ -38,6 +39,7 @@ dart_library("fuchsia_services") {
 
 flutter_test("fuchsia_services_package_unittests") {
   sources = [
+    "component_context_test.dart",
     "service_provider_impl_test.dart",
     "startup_context_test.dart",
   ]
@@ -54,6 +56,7 @@ dart_test_component("integration-test-component") {
   component_name = "fuchsia-services-integration-tests"
   manifest = "meta/fuchsia-services-integration-tests.cmx"
   sources = [
+    "component_context_test.dart",
     "incoming_test.dart",
     "launch_flow_test.dart",
     "outgoing_test.dart",

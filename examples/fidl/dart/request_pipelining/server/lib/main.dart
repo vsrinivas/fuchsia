@@ -79,14 +79,16 @@ class _EchoLauncherImpl extends fidl_echo.EchoLauncher {
 // [START main]
 void main(List<String> args) {
   setupLogger(name: 'echo-launcher-server');
-  final context = StartupContext.fromStartupInfo();
+  final context = ComponentContext.create();
   final echoLauncher = _EchoLauncherImpl();
   final binding = fidl_echo.EchoLauncherBinding();
 
   log.info('Running EchoLauncher server');
-  context.outgoing.addPublicService<fidl_echo.EchoLauncher>(
-      (fidl.InterfaceRequest<fidl_echo.EchoLauncher> serverEnd) =>
-          binding.bind(echoLauncher, serverEnd),
-      fidl_echo.EchoLauncher.$serviceName);
+  context.outgoing
+    ..addPublicService<fidl_echo.EchoLauncher>(
+        (fidl.InterfaceRequest<fidl_echo.EchoLauncher> serverEnd) =>
+            binding.bind(echoLauncher, serverEnd),
+        fidl_echo.EchoLauncher.$serviceName)
+    ..serveFromStartupInfo();
 }
 // [END main]

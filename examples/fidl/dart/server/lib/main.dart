@@ -51,6 +51,9 @@ class _EchoImpl extends fidl_echo.Echo {
 
 // [START main]
 void main(List<String> args) {
+  // Create the component context. We should not serve outgoing before we add
+  // the services.
+  final context = sys.ComponentContext.create();
   setupLogger(name: 'echo-server');
 
   // Each FIDL protocol class has an accompanying Binding class, which takes
@@ -61,11 +64,13 @@ void main(List<String> args) {
   log.info('Running Echo server');
   // Serves the implementation by passing it a handler for incoming requests,
   // and the name of the protocol it is providing.
-  final context = sys.StartupContext.fromStartupInfo();
   final echo = _EchoImpl();
-  context.outgoing.addPublicService<fidl_echo.Echo>(
-      (fidl.InterfaceRequest<fidl_echo.Echo> serverEnd) =>
-          binding.bind(echo, serverEnd),
-      fidl_echo.Echo.$serviceName);
+  // Add the outgoing service, and then serve the outgoing directory.
+  context.outgoing
+    ..addPublicService<fidl_echo.Echo>(
+        (fidl.InterfaceRequest<fidl_echo.Echo> serverEnd) =>
+            binding.bind(echo, serverEnd),
+        fidl_echo.Echo.$serviceName)
+    ..serveFromStartupInfo();
 }
 // [END main]

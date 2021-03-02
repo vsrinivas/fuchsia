@@ -9,10 +9,12 @@ import 'package:fidl_test_fuchsia_service_foo/fidl_async.dart' as foo;
 import 'package:fuchsia_services/services.dart';
 
 void main(List<String> args) {
-  final context = StartupContext.fromStartupInfo();
+  final context = ComponentContext.create();
   final fooImpl = _FooImpl();
 
-  context.outgoing.addPublicService(fooImpl.bind, foo.Foo.$serviceName);
+  context.outgoing
+    ..addPublicService(fooImpl.bind, foo.Foo.$serviceName)
+    ..serveFromStartupInfo();
 }
 
 class _FooImpl extends foo.Foo {

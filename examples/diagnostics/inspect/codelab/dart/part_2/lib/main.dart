@@ -11,7 +11,7 @@ import 'package:fuchsia_services/services.dart';
 import 'package:inspect_dart_codelab_part_2_lib/reverser.dart';
 
 void main(List<String> args) {
-  final context = StartupContext.fromStartupInfo();
+  final context = ComponentContext.create();
 
   setupLogger(name: 'inspect_dart_codelab', globalTags: ['part_2']);
 
@@ -28,7 +28,7 @@ void main(List<String> args) {
   // CODELAB: Instrument our connection to FizzBuzz using Inspect. Is there an error?
   // [START instrument_fizzbuzz]
   final fizzBuzz = fidl_codelab.FizzBuzzProxy();
-  context.incoming.connectToService(fizzBuzz);
+  context.svc.connectToService(fizzBuzz);
 
   fizzBuzz.execute(30).timeout(const Duration(seconds: 2), onTimeout: () {
     throw Exception('timeout');
@@ -41,9 +41,11 @@ void main(List<String> args) {
   // [END instrument_fizzbuzz]
 
   // [START part_1_new_child]
-  context.outgoing.addPublicService<fidl_codelab.Reverser>(
-    ReverserImpl.getDefaultBinder(inspector.root.child('reverser_service')),
-    fidl_codelab.Reverser.$serviceName,
-  );
+  context.outgoing
+    ..addPublicService<fidl_codelab.Reverser>(
+      ReverserImpl.getDefaultBinder(inspector.root.child('reverser_service')),
+      fidl_codelab.Reverser.$serviceName,
+    )
+    ..serveFromStartupInfo();
   // [END part_1_new_child]
 }

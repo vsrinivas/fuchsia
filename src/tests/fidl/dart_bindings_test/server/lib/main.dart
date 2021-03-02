@@ -248,16 +248,18 @@ class TestServerImpl extends TestServer {
   Stream<void> get neverEvent => null;
 }
 
-StartupContext _context;
+ComponentContext _context;
 TestServerImpl _server;
 TestServerBinding _binding;
 
 void main(List<String> args) {
-  _context = StartupContext.fromStartupInfo();
+  _context = ComponentContext.create();
 
   _server = TestServerImpl();
   _binding = TestServerBinding();
 
-  _context.outgoing.addPublicService<TestServer>(
-      (request) => _binding.bind(_server, request), TestServer.$serviceName);
+  _context.outgoing
+    ..addPublicService<TestServer>(
+        (request) => _binding.bind(_server, request), TestServer.$serviceName)
+    ..serveFromStartupInfo();
 }

@@ -15,6 +15,8 @@ class Outgoing {
   final vfs.PseudoDir _diagnostics = vfs.PseudoDir();
   final vfs.PseudoDir _ctrl = vfs.PseudoDir();
   bool _isClosed = false;
+  // TODO(fxbug.dev/71185): Remove after we stop using StartupContext.
+  bool _isServingStartupInfo = false;
 
   /// This will setup outgoing directory and add required
   /// directories to root of this class.
@@ -42,6 +44,19 @@ class Outgoing {
   void serve(InterfaceRequest<Node> request) {
     _ensureNotClosed();
     _root.serve(request);
+  }
+
+  /// Serves root dir to the out/ directory.
+  ///
+  /// This method should be called after all public services are added and may
+  /// only be called once.
+  void serveFromStartupInfo() {
+    if (_isServingStartupInfo) {
+      throw Exception(
+          'Attempted to call Outgoing.serveFromStartupInfo after serving. Ensure that Outgoing.serveFromStartupInfo is not called multiple times.');
+    }
+    // No-op for now since StartupContext is already serving /out.
+    _isServingStartupInfo = true;
   }
 
   /// Closes root directory

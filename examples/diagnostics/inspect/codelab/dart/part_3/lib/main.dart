@@ -9,7 +9,7 @@ import 'package:fuchsia_services/services.dart';
 import 'package:inspect_dart_codelab_part_3_lib/reverser.dart';
 
 void main(List<String> args) {
-  final context = StartupContext.fromStartupInfo();
+  final context = ComponentContext.create();
 
   setupLogger(name: 'inspect_dart_codelab', globalTags: ['part_3']);
 
@@ -22,7 +22,7 @@ void main(List<String> args) {
   inspector.root.stringProperty('version').setValue('part3');
 
   final fizzBuzz = fidl_codelab.FizzBuzzProxy();
-  context.incoming.connectToService(fizzBuzz);
+  context.svc.connectToService(fizzBuzz);
   fizzBuzz.execute(30).timeout(const Duration(seconds: 2), onTimeout: () {
     throw Exception('timeout');
   }).then((result) {
@@ -32,8 +32,10 @@ void main(List<String> args) {
     inspector.health.setUnhealthy('FizzBuzz connection closed');
   });
 
-  context.outgoing.addPublicService<fidl_codelab.Reverser>(
-    ReverserImpl.getDefaultBinder(inspector.root.child('reverser_service')),
-    fidl_codelab.Reverser.$serviceName,
-  );
+  context.outgoing
+    ..addPublicService<fidl_codelab.Reverser>(
+      ReverserImpl.getDefaultBinder(inspector.root.child('reverser_service')),
+      fidl_codelab.Reverser.$serviceName,
+    )
+    ..serveFromStartupInfo();
 }

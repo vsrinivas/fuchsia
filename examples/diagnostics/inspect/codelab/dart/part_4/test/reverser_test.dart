@@ -9,7 +9,8 @@ import 'package:test/test.dart';
 import 'package:inspect_dart_codelab_part_4_lib/reverser.dart';
 
 void main() {
-  final context = StartupContext.fromStartupInfo();
+  FakeVmoHolder vmo;
+  inspect.Inspect inspector;
 
   ReverserImpl openReverser(
     inspect.Node node,
@@ -18,10 +19,14 @@ void main() {
     return ReverserImpl(ReverserStats(node, globalRequestCount));
   }
 
+  setUpAll(() {
+    final context = ComponentContext.createAndServe();
+    vmo = FakeVmoHolder(256 * 1024);
+    inspector = inspect.Inspect.forTesting(vmo)..serve(context.outgoing);
+  });
+
   // [START reverser_test]
   test('reverser', () async {
-    final vmo = FakeVmoHolder(256 * 1024);
-    final inspector = inspect.Inspect.forTesting(vmo)..serve(context.outgoing);
     // [START_EXCLUDE]
     final node = inspector.root.child('reverser_service');
     final globalRequestCount = node.intProperty('total_requests')..setValue(0);

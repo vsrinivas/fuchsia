@@ -13,13 +13,14 @@ import 'package:fuchsia_logger/logger.dart';
 
 // [START main]
 Future<void> main(List<String> args) async {
-  final context = StartupContext.fromStartupInfo();
+  // Create our component context and serve the outgoing directory.
+  final context = ComponentContext.createAndServe();
   setupLogger(name: 'echo-client');
 
   // Bind. We bind EchoProxy, a generated proxy class, to the remote Echo
   // service.
   final client = fidl_echo.EchoProxy();
-  context.incoming.connectToService(client);
+  context.svc.connectToService(client);
 
   // Invoke echoString with a value and print its response.
   final response = await client.echoString('hello');

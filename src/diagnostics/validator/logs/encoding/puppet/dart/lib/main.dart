@@ -33,9 +33,11 @@ class _EncodingPuppetImpl extends fidl_validate.EncodingPuppet {
 
 void main(List<String> args) {
   setupLogger();
-  final context = StartupContext.fromStartupInfo();
+  final context = ComponentContext.create();
   final validate = _EncodingPuppetImpl();
 
-  context.outgoing.addPublicService<fidl_validate.EncodingPuppet>(
-      validate.bind, fidl_validate.EncodingPuppet.$serviceName);
+  context.outgoing
+    ..addPublicService<fidl_validate.EncodingPuppet>(
+        validate.bind, fidl_validate.EncodingPuppet.$serviceName)
+    ..serveFromStartupInfo();
 }

@@ -10,15 +10,11 @@ import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:fuchsia_services/services.dart';
 
 class EchoImpl extends Echo {
-  final StartupContext _context;
-
   final _binding = EchoBinding();
   final _echoEventStreamController = StreamController<Struct>();
 
   // Saves references to proxies from which we're expecting events.
   Map<String, EchoProxy> proxies = {};
-
-  EchoImpl(this._context);
 
   void bind(InterfaceRequest<Echo> request) {
     _binding.bind(this, request);
@@ -31,7 +27,7 @@ class EchoImpl extends Echo {
         url: url, directoryRequest: incoming.request().passChannel());
     final controller = ComponentControllerProxy();
     final launcher = LauncherProxy();
-    _context.incoming.connectToService(launcher);
+    Incoming.fromSvcPath().connectToService(launcher);
     await launcher.createComponent(launchInfo, controller.ctrl.request());
     final echo = EchoProxy();
     incoming.connectToService(echo);
@@ -184,7 +180,9 @@ class EchoImpl extends Echo {
 }
 
 void main(List<String> args) {
-  final StartupContext context = StartupContext.fromStartupInfo();
-  final EchoImpl echoImpl = EchoImpl(context);
-  context.outgoing.addPublicService(echoImpl.bind, Echo.$serviceName);
+  final context = ComponentContext.create();
+  final EchoImpl echoImpl = EchoImpl();
+  context.outgoing
+    ..addPublicService(echoImpl.bind, Echo.$serviceName)
+    ..serveFromStartupInfo();
 }

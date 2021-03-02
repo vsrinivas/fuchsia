@@ -11,12 +11,12 @@ import 'package:fuchsia_logger/logger.dart';
 
 // [START main]
 Future<void> main(List<String> args) async {
-  final context = StartupContext.fromStartupInfo();
+  final context = ComponentContext.createAndServe();
   setupLogger(name: 'echo-launcher-client');
 
   // Connect to the EchoLauncher service
   final echoLauncher = fidl_echo.EchoLauncherProxy();
-  context.incoming.connectToService(echoLauncher);
+  context.svc.connectToService(echoLauncher);
 
   // Non pipelined case: wait for EchoLauncher to respond with a client end, then bind it to the
   // proxy and make an EchoString request

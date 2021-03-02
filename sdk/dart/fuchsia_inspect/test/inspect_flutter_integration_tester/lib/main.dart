@@ -11,11 +11,12 @@ import 'package:fuchsia_services/services.dart';
 import 'src/inspect_integration_app.dart';
 
 void main() {
-  final context = StartupContext.fromStartupInfo();
+  final context = ComponentContext.create();
   setupLogger(name: 'inspect-integration');
   enableFlutterDriverExtension();
   // Initialize & serve the inspect singleton before use in
   // InspectIntegrationApp.
   Inspect().serve(context.outgoing);
+  context.outgoing.serveFromStartupInfo();
   runApp(InspectIntegrationApp());
 }

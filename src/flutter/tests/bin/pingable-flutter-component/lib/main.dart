@@ -15,9 +15,9 @@ void main() {
   // Launch a simple ping server so that we can connect to it in our tests
   final pinger = _PingerImpl();
 
-  StartupContext.fromStartupInfo()
-      .outgoing
-      .addPublicService(pinger.bind, fidl_ping.Pinger.$serviceName);
+  ComponentContext.create().outgoing
+    ..addPublicService(pinger.bind, fidl_ping.Pinger.$serviceName)
+    ..serveFromStartupInfo();
 
   runApp(
     MaterialApp(

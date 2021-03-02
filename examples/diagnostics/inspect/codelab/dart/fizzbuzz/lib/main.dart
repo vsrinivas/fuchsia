@@ -60,7 +60,7 @@ class _FizzBuzzImpl extends fidl_codelab.FizzBuzz {
 }
 
 void main(List<String> args) {
-  final context = StartupContext.fromStartupInfo();
+  final context = ComponentContext.create();
 
   setupLogger(name: 'inspect_dart_codelab', globalTags: ['fizzbuzz']);
 
@@ -69,6 +69,11 @@ void main(List<String> args) {
   final inspectNode = (inspect.Inspect()..serve(context.outgoing)).root;
   final fizzbuzz = _FizzBuzzImpl(inspectNode);
 
-  context.outgoing.addPublicService<fidl_codelab.FizzBuzz>(
-      fizzbuzz.bind, fidl_codelab.FizzBuzz.$serviceName);
+  // We need to call serveFromStartupInfo from outgoing after we add all public
+  // services. If there's no public services being exposed, we can use
+  // ComponentContext.createAndServe() for convenience.
+  context.outgoing
+    ..addPublicService<fidl_codelab.FizzBuzz>(
+        fizzbuzz.bind, fidl_codelab.FizzBuzz.$serviceName)
+    ..serveFromStartupInfo();
 }
