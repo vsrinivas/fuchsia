@@ -11,13 +11,13 @@
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/pointer.h>
-#include <src/lib/diagnostics/stream/cpp/log_message.h>
+#include <src/lib/diagnostics/accessor2logger/log_message.h>
 #include <src/lib/fsl/vmo/strings.h>
 
 using fuchsia::diagnostics::FormattedContent;
 using fuchsia::logger::LogMessage;
 
-namespace diagnostics::stream {
+namespace diagnostics::accessor2logger {
 
 namespace {
 const char kPidLabel[] = "pid";
@@ -199,4 +199,4 @@ ConvertFormattedContentToLogMessages(FormattedContent content) {
   return fit::ok(std::move(output));
 }
 
-}  // namespace diagnostics::stream
+}  // namespace diagnostics::accessor2logger

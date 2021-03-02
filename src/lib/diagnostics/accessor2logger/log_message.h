@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_DIAGNOSTICS_STREAM_CPP_LOG_MESSAGE_H_
-#define SRC_LIB_DIAGNOSTICS_STREAM_CPP_LOG_MESSAGE_H_
+#ifndef SRC_LIB_DIAGNOSTICS_ACCESSOR2LOGGER_LOG_MESSAGE_H_
+#define SRC_LIB_DIAGNOSTICS_ACCESSOR2LOGGER_LOG_MESSAGE_H_
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
@@ -11,11 +11,11 @@
 
 #include <vector>
 
-namespace diagnostics::stream {
+namespace diagnostics::accessor2logger {
 
 fit::result<std::vector<fit::result<fuchsia::logger::LogMessage, std::string>>, std::string>
 ConvertFormattedContentToLogMessages(fuchsia::diagnostics::FormattedContent content);
 
-}  // namespace diagnostics::stream
+}  // namespace diagnostics::accessor2logger
 
-#endif  // SRC_LIB_DIAGNOSTICS_STREAM_CPP_LOG_MESSAGE_H_
+#endif  // SRC_LIB_DIAGNOSTICS_ACCESSOR2LOGGER_LOG_MESSAGE_H_

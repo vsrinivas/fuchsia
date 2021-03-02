@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/diagnostics/stream/cpp/log_message.h"
+#include "src/lib/diagnostics/accessor2logger/log_message.h"
 #include "src/lib/files/path.h"
 
 namespace forensics {
@@ -29,7 +29,8 @@ SystemLogRecorder::SystemLogRecorder(async_dispatcher_t* archive_dispatcher,
 
 void SystemLogRecorder::Start() {
   archive_accessor_.Collect([this](fuchsia::diagnostics::FormattedContent chunk) {
-    auto log_messages = diagnostics::stream::ConvertFormattedContentToLogMessages(std::move(chunk));
+    auto log_messages =
+        diagnostics::accessor2logger::ConvertFormattedContentToLogMessages(std::move(chunk));
     if (log_messages.is_error()) {
       store_.Add(::fit::error(log_messages.take_error()));
       return;

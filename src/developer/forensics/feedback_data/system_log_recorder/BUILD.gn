@@ -58,7 +58,7 @@ source_set("src") {
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:constants",
-    "//src/lib/diagnostics/stream/cpp",
+    "//src/lib/diagnostics/accessor2logger",
     "//src/lib/files",
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",

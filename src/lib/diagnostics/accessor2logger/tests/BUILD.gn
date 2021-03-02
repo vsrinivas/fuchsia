@@ -11,7 +11,7 @@ test("stream_cpp_unittests") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/stdcompat",
-    "//src/lib/diagnostics/stream/cpp",
+    "//src/lib/diagnostics/accessor2logger",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

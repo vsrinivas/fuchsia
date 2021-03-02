@@ -19,7 +19,7 @@
 #include <gtest/gtest.h>
 
 #include "macros.h"
-#include "src/lib/diagnostics/stream/cpp/log_message.h"
+#include "src/lib/diagnostics/accessor2logger/log_message.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
@@ -42,7 +42,8 @@ class LogEngineTest : public RealLoopFixture {
       auto content = std::move(result.response().batch);
       for (auto& bot : content) {
         auto values =
-            diagnostics::stream::ConvertFormattedContentToLogMessages(std::move(bot)).value();
+            diagnostics::accessor2logger::ConvertFormattedContentToLogMessages(std::move(bot))
+                .value();
         for (auto& msg : values) {
           log_output_ << msg.value().msg;
         }

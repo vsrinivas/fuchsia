@@ -7,11 +7,11 @@
 #include <lib/stdcompat/optional.h>
 
 #include <gtest/gtest.h>
-#include <src/lib/diagnostics/stream/cpp/log_message.h>
+#include <src/lib/diagnostics/accessor2logger/log_message.h>
 #include <src/lib/fsl/vmo/strings.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
-using diagnostics::stream::ConvertFormattedContentToLogMessages;
+using diagnostics::accessor2logger::ConvertFormattedContentToLogMessages;
 using fuchsia::diagnostics::FormattedContent;
 using fuchsia::logger::LogMessage;
 

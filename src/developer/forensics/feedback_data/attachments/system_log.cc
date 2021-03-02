@@ -20,7 +20,7 @@
 #include "src/developer/forensics/utils/fit/promise.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/developer/forensics/utils/log_format.h"
-#include "src/lib/diagnostics/stream/cpp/log_message.h"
+#include "src/lib/diagnostics/accessor2logger/log_message.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
 namespace forensics {
@@ -54,7 +54,8 @@ struct LogMessage {
 
   // System log collection task.
   log_service->Collect([log_messages, AddError](fuchsia::diagnostics::FormattedContent chunk) {
-    auto chunk_result = diagnostics::stream::ConvertFormattedContentToLogMessages(std::move(chunk));
+    auto chunk_result =
+        diagnostics::accessor2logger::ConvertFormattedContentToLogMessages(std::move(chunk));
     if (chunk_result.is_error()) {
       AddError(
           fxl::StringPrintf("!!! Failed to format chunk: %s !!!", chunk_result.error().c_str()));
