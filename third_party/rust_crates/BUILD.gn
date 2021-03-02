@@ -738,6 +738,10 @@ group("tracing") {
   deps = [ ":tracing-v0_1_25" ]
 }
 
+group("tracing-core") {
+  deps = [ ":tracing-core-v0_1_17" ]
+}
+
 group("tracing-futures") {
   deps = [ ":tracing-futures-v0_2_5" ]
 }
