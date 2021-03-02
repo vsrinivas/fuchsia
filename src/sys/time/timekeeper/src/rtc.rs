@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Error},
     async_trait::async_trait,
-    chrono::prelude::*,
+    chrono::{prelude::*, LocalResult},
     fdio::service_connect,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_hardware_rtc as frtc,
@@ -94,11 +94,14 @@ impl RtcImpl {
     }
 }
 
-fn fidl_time_to_zx_time(fidl_time: frtc::Time) -> zx::Time {
+fn fidl_time_to_zx_time(fidl_time: frtc::Time) -> Result<zx::Time, Error> {
     let chrono = Utc
-        .ymd(fidl_time.year as i32, fidl_time.month as u32, fidl_time.day as u32)
-        .and_hms(fidl_time.hours as u32, fidl_time.minutes as u32, fidl_time.seconds as u32);
-    zx::Time::from_nanos(chrono.timestamp_nanos())
+        .ymd_opt(fidl_time.year as i32, fidl_time.month as u32, fidl_time.day as u32)
+        .and_hms_opt(fidl_time.hours as u32, fidl_time.minutes as u32, fidl_time.seconds as u32);
+    match chrono {
+        LocalResult::Single(t) => Ok(zx::Time::from_nanos(t.timestamp_nanos())),
+        _ => Err(anyhow!("Invalid RTC time: {:?}", fidl_time)),
+    }
 }
 
 fn zx_time_to_fidl_time(zx_time: zx::Time) -> frtc::Time {
@@ -122,7 +125,7 @@ impl Rtc for RtcImpl {
             .map_err(|err| anyhow!("FIDL error: {}", err))
             .on_timeout(zx::Time::after(FIDL_TIMEOUT), || Err(anyhow!("FIDL timeout on get")))
             .await
-            .map(fidl_time_to_zx_time)
+            .and_then(fidl_time_to_zx_time)
     }
 
     async fn set(&self, value: zx::Time) -> Result<(), Error> {
@@ -205,6 +208,10 @@ mod test {
 
     const TEST_FIDL_TIME: frtc::Time =
         frtc::Time { year: 2020, month: 8, day: 14, hours: 0, minutes: 0, seconds: 0 };
+    const INVALID_FIDL_TIME_1: frtc::Time =
+        frtc::Time { year: 2020, month: 14, day: 0, hours: 0, minutes: 0, seconds: 0 };
+    const INVALID_FIDL_TIME_2: frtc::Time =
+        frtc::Time { year: 2020, month: 8, day: 14, hours: 99, minutes: 99, seconds: 99 };
     const TEST_OFFSET: zx::Duration = zx::Duration::from_millis(250);
     const TEST_ZX_TIME: zx::Time = zx::Time::from_nanos(1_597_363_200_000_000_000);
     const DIFFERENT_ZX_TIME: zx::Time = zx::Time::from_nanos(1_597_999_999_000_000_000);
@@ -217,12 +224,15 @@ mod test {
         let to_fidl_2 = zx_time_to_fidl_time(TEST_ZX_TIME + 999.millis());
         assert_eq!(to_fidl_2, TEST_FIDL_TIME);
 
-        let to_zx = fidl_time_to_zx_time(TEST_FIDL_TIME);
+        let to_zx = fidl_time_to_zx_time(TEST_FIDL_TIME).unwrap();
         assert_eq!(to_zx, TEST_ZX_TIME);
+
+        assert_eq!(fidl_time_to_zx_time(INVALID_FIDL_TIME_1).is_err(), true);
+        assert_eq!(fidl_time_to_zx_time(INVALID_FIDL_TIME_2).is_err(), true);
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn rtc_impl_get() {
+    async fn rtc_impl_get_valid() {
         let (proxy, mut stream) = create_proxy_and_stream::<frtc::DeviceMarker>().unwrap();
 
         let rtc_impl = RtcImpl { proxy };
@@ -233,6 +243,20 @@ mod test {
             }
         });
         assert_eq!(rtc_impl.get().await.unwrap(), TEST_ZX_TIME);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn rtc_impl_get_invalid() {
+        let (proxy, mut stream) = create_proxy_and_stream::<frtc::DeviceMarker>().unwrap();
+
+        let rtc_impl = RtcImpl { proxy };
+        let _responder = fasync::Task::spawn(async move {
+            if let Some(Ok(frtc::DeviceRequest::Get { responder })) = stream.next().await {
+                let mut fidl_time = INVALID_FIDL_TIME_1;
+                responder.send(&mut fidl_time).expect("Failed response");
+            }
+        });
+        assert_eq!(rtc_impl.get().await.is_err(), true);
     }
 
     #[fasync::run_singlethreaded(test)]
