@@ -206,6 +206,12 @@ async fn switch_hardware_camera_disable(env: &TestInputEnvironment, disabled: bo
 
 // Perform a watch and watch2 and check that the mic mute state matches [expected_muted_state].
 async fn get_and_check_mic_mute(input_proxy: &InputProxy, expected_muted_state: bool) {
+    // TODO(fxb/66313): The following call is a no-op and only meant to delay the following watch
+    // below, giving enough time for any change made before invoking this function to take effect.
+    // This time issue is caused by the number of messages necessary to get a change from the fake
+    // services to the setting service vs a fidl call into the service. The correct fix is to either
+    // wait on the setting service for a completion event or run tests on an executor until idle.
+    input_proxy.set_states(&mut Vec::new().into_iter()).await.ok();
     let settings = input_proxy.watch().await.expect("watch completed");
     let settings2 = input_proxy.watch2().await.expect("watch2 completed");
 

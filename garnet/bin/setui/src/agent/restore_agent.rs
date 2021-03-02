@@ -5,12 +5,12 @@
 use crate::agent::base::{AgentError, Context, Invocation, InvocationResult, Lifespan};
 use crate::base::SettingType;
 use crate::blueprint_definition;
-use crate::handler::base::{Error, Request};
+use crate::handler::base::{Error, Payload as HandlerPayload, Request};
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::internal::agent::Payload;
 use crate::internal::event::{restore, Event, Publisher};
-use crate::internal::switchboard;
 use crate::message::base::{Audience, MessageEvent};
+use crate::service;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::StreamExt;
@@ -22,7 +22,7 @@ blueprint_definition!("restore_agent", crate::agent::restore_agent::RestoreAgent
 /// external sources to the last known value. It is invoked during startup.
 #[derive(Debug)]
 pub struct RestoreAgent {
-    switchboard_messenger: switchboard::message::Messenger,
+    messenger: service::message::Messenger,
     event_publisher: Publisher,
     available_components: HashSet<SettingType>,
 }
@@ -33,17 +33,8 @@ impl DeviceStorageAccess for RestoreAgent {
 
 impl RestoreAgent {
     async fn create(mut context: Context) {
-        let messenger = if let Ok(messenger) = context.create_switchboard_messenger().await {
-            messenger
-        } else {
-            context.get_publisher().send_event(Event::Custom(
-                "Could not acquire switchboard messenger in RestoreAgent",
-            ));
-            return;
-        };
-
         let mut agent = RestoreAgent {
-            switchboard_messenger: messenger,
+            messenger: context.create_messenger().await.expect("should acquire messenger"),
             event_publisher: context.get_publisher(),
             available_components: context.available_components.clone(),
         };
@@ -63,17 +54,14 @@ impl RestoreAgent {
             Lifespan::Initialization => {
                 for component in self.available_components.clone() {
                     let mut receptor = self
-                        .switchboard_messenger
+                        .messenger
                         .message(
-                            switchboard::Payload::Action(switchboard::Action::Request(
-                                component,
-                                Request::Restore,
-                            )),
-                            Audience::Address(switchboard::Address::Switchboard),
+                            HandlerPayload::Request(Request::Restore).into(),
+                            Audience::Address(service::Address::Handler(component)),
                         )
                         .send();
 
-                    if let switchboard::Payload::Action(switchboard::Action::Response(response)) =
+                    if let service::Payload::Setting(HandlerPayload::Response(response)) =
                         receptor.next_payload().await.map_err(|_| AgentError::UnexpectedError)?.0
                     {
                         match response {
