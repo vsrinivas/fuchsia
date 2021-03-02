@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
+
 # Device-side library. This doesn't play well with the host compiler, mostly
 # due to re-definition of a bunch of built-in types and functions, so as we
 # expand our host-side unittests we'll probably want to move more of the
@@ -18,20 +20,42 @@ if (is_efi_toolchain) {
       "stdlib.c",
       "string.c",
       "strings.c",
-      "xefi.c",
     ]
+    public_deps = [ ":shared" ]
     deps = [
-      ":shared",
-
       # This only actually adds anything to the profile build.
       "//zircon/kernel/lib/instrumentation:profile",
     ]
   }
 }
 
-# Shared library used by both the device-side lib and the host unittests.
+# Shared code used by both the device-side lib and the host unittests.
 source_set("shared") {
-  sources = [ "efi/guids.c" ]
+  sources = [
+    "efi/guids.c",
+    "xefi.c",
+  ]
 
   public_deps = [ "//zircon/kernel/lib/efi" ]
+
+  public_configs = [ ":shared_config" ]
+
+  cflags = [ "-fshort-wchar" ]
+}
+
+config("shared_config") {
+  include_dirs = [ "../include/shared" ]
+}
+
+test("gigaboot_shared_lib_test") {
+  sources = [ "xefi_test.cc" ]
+
+  deps = [
+    ":shared",
+    "../host",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//zircon/kernel/lib/efi",
+    "//zircon/kernel/lib/efi/testing",
+  ]
 }

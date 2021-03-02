@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_BOOTLOADER_INCLUDE_XEFI_H_
-#define ZIRCON_BOOTLOADER_INCLUDE_XEFI_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_INCLUDE_SHARED_XEFI_H_
+#define SRC_FIRMWARE_GIGABOOT_INCLUDE_SHARED_XEFI_H_
+
+#include <zircon/compiler.h>
 
 #include <efi/boot-services.h>
 #include <efi/protocol/device-path.h>
@@ -12,6 +14,8 @@
 #include <efi/protocol/simple-text-output.h>
 #include <efi/system-table.h>
 #include <efi/types.h>
+
+__BEGIN_CDECLS
 
 void xefi_init(efi_handle img, efi_system_table* sys);
 
@@ -61,4 +65,6 @@ extern xefi_global xefi_global_state;
 #define gConOut (xefi_global_state.conout)
 #define gSerial (xefi_global_state.serial)
 
-#endif  // ZIRCON_BOOTLOADER_INCLUDE_XEFI_H_
+__END_CDECLS
+
+#endif  // SRC_FIRMWARE_GIGABOOT_INCLUDE_SHARED_XEFI_H_

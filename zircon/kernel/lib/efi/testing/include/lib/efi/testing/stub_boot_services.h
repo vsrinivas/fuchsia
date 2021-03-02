@@ -116,7 +116,10 @@ class StubBootServices {
     return EFI_UNSUPPORTED;
   }
 
-  //   efi_status (*LocateProtocol)(efi_guid* protocol, void* registration, void** intf);
+  virtual efi_status LocateProtocol(efi_guid* protocol, void* registration, void** intf) {
+    return EFI_UNSUPPORTED;
+  }
+
   //   efi_status (*InstallMultipleProtocolInterfaces)(efi_handle* handle, ...);
   //   efi_status (*UninstallMultipleProtocolInterfaces)(efi_handle handle, ...);
   //   efi_status (*CalculateCrc32)(void* data, size_t len, uint32_t* crc32);
@@ -158,6 +161,8 @@ class MockBootServices : public StubBootServices {
   MOCK_METHOD(efi_status, LocateHandleBuffer,
               (efi_locate_search_type search_type, efi_guid* protocol, void* search_key,
                size_t* num_handles, efi_handle** buf),
+              (override));
+  MOCK_METHOD(efi_status, LocateProtocol, (efi_guid * protocol, void* registration, void** intf),
               (override));
 
   // Registers an expectation for protocol opening and closing.

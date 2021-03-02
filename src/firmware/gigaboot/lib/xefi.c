@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <printf.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <xefi.h>

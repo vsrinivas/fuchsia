@@ -98,6 +98,9 @@ if (is_efi_toolchain) {
   # instead, stubbing out the necessary functions.
   group("tests") {
     testonly = true
-    deps = [ "src:gigaboot_test($host_toolchain)" ]
+    deps = [
+      "lib:gigaboot_shared_lib_test($host_toolchain)",
+      "src:gigaboot_test($host_toolchain)",
+    ]
   }
 }

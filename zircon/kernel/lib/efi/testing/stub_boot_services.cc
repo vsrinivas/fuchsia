@@ -40,6 +40,7 @@ StubBootServices::StubBootServices()
           .OpenProtocol = Wrap<&StubBootServices::OpenProtocol>,
           .CloseProtocol = Wrap<&StubBootServices::CloseProtocol>,
           .LocateHandleBuffer = Wrap<&StubBootServices::LocateHandleBuffer>,
+          .LocateProtocol = Wrap<&StubBootServices::LocateProtocol>,
       } {
   if (active_stub) {
     // We cannot support multiple StubBootServices due to the global singleton

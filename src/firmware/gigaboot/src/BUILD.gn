@@ -27,6 +27,7 @@ source_set("src") {
   ]
   include_dirs = [ "." ]
   deps = [
+    "../lib",
     "//src/firmware/lib/abr",
     "//zircon/kernel/lib/efi",
     "//zircon/system/public",

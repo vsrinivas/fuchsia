@@ -12,6 +12,9 @@ namespace efi {
 
 namespace {
 
+using ::testing::_;
+using ::testing::Return;
+
 // Creating a second is OK as long as the first has gone out of scope.
 TEST(StubBootServices, CreateTwice) {
   StubBootServices();
@@ -70,6 +73,16 @@ TEST(MockBootServices, ExpectCloseProtocol) {
   mock.ExpectCloseProtocol(kTestHandle, guid);
 
   EXPECT_EQ(EFI_SUCCESS, mock.services()->CloseProtocol(kTestHandle, &guid, nullptr, nullptr));
+}
+
+TEST(StubBootServices, LocateProtocol) {
+  efi_guid protocol_guid = EFI_BLOCK_IO_PROTOCOL_GUID;
+  void* protocol = nullptr;
+
+  MockBootServices mock;
+  EXPECT_CALL(mock, LocateProtocol(&protocol_guid, _, &protocol)).WillOnce(Return(EFI_TIMEOUT));
+
+  EXPECT_EQ(EFI_TIMEOUT, mock.services()->LocateProtocol(&protocol_guid, nullptr, &protocol));
 }
 
 }  // namespace
