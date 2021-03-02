@@ -1413,6 +1413,93 @@ TEST(Sysmem, ComplicatedFormatModifiers) {
   ASSERT_EQ(allocation_status, ZX_OK, "");
 }
 
+TEST(Sysmem, CloseWithOutstandingWait) {
+  zx_status_t status;
+  zx::channel allocator2_client_1;
+  status = connect_to_sysmem_driver(&allocator2_client_1);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel token_client_1;
+  zx::channel token_server_1;
+  status = zx::channel::create(0, &token_client_1, &token_server_1);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client_1.get(),
+                                                            token_server_1.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel token_client_2;
+  zx::channel token_server_2;
+  status = zx::channel::create(0, &token_client_2, &token_server_2);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), ZX_RIGHT_SAME_RIGHTS,
+                                                         token_server_2.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel collection_client_1;
+  zx::channel collection_server_1;
+  status = zx::channel::create(0, &collection_client_1, &collection_server_1);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  ASSERT_NE(token_client_1.get(), ZX_HANDLE_INVALID, "");
+  status = fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  BufferCollectionConstraints constraints_1(BufferCollectionConstraints::Default);
+  constraints_1->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+  constraints_1->min_buffer_count_for_camping = 1;
+
+  constraints_1->image_format_constraints_count = 1;
+
+  fuchsia_sysmem_ImageFormatConstraints& image_constraints_1 =
+      constraints_1->image_format_constraints[0];
+
+  image_constraints_1.pixel_format.type = fuchsia_sysmem_PixelFormatType_R8G8B8A8;
+  image_constraints_1.pixel_format.has_format_modifier = true;
+  image_constraints_1.pixel_format.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
+  image_constraints_1.color_spaces_count = 1;
+  image_constraints_1.color_space[0] = fuchsia_sysmem_ColorSpace{
+      .type = fuchsia_sysmem_ColorSpaceType_SRGB,
+  };
+
+  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_1.get(), true,
+                                                         constraints_1.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  std::thread wait_thread([&collection_client_1]() {
+    zx_status_t allocation_status;
+    BufferCollectionInfo buffer_collection_info_1(BufferCollectionInfo::Default);
+    zx_status_t status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client_1.get(), &allocation_status, buffer_collection_info_1.get());
+    EXPECT_EQ(status, ZX_ERR_PEER_CLOSED, "");
+  });
+
+  // Try to wait until the wait has been processed by the server.
+  zx_nanosleep(zx_deadline_after(ZX_SEC(5)));
+
+  zx::channel collection_client_2;
+  zx::channel collection_server_2;
+  status = zx::channel::create(0, &collection_client_2, &collection_server_2);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_BufferCollectionSync(collection_client_1.get());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  ASSERT_NE(token_client_2.get(), ZX_HANDLE_INVALID, "");
+  status = fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator2_client_1.get(), token_client_2.release(), collection_server_2.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  collection_client_2.reset();
+
+  wait_thread.join();
+
+  status = verify_connectivity(allocator2_client_1);
+  ASSERT_EQ(status, ZX_OK, "");
+}
+
 TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
   zx_status_t status;
   zx::channel allocator2_client_1;

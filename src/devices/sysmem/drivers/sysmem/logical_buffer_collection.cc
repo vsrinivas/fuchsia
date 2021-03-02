@@ -731,8 +731,7 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
   auto self = token->parent_shared();
   ZX_DEBUG_ASSERT(self.get() == this);
   auto collection = BufferCollection::Create(self);
-  collection->SetDebugClientInfo(token->debug_name().data(), token->debug_name().size(),
-                                 token->debug_id());
+  collection->SetDebugClientInfo(token->debug_name(), token->debug_id());
   collection->SetErrorHandler([this, collection_ptr = collection.get()](zx_status_t status) {
     // status passed to an error handler is never ZX_OK.  Clean close is
     // ZX_ERR_PEER_CLOSED.

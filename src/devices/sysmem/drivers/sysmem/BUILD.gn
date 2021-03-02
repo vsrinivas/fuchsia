@@ -43,7 +43,6 @@ source_set("sysmem_common_srcs") {
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/banjo/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
     "//src/lib/ddk",
@@ -57,7 +56,6 @@ source_set("sysmem_common_srcs") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/closure-queue",
-    "//zircon/system/ulib/fidl-async-2",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/inspect",
@@ -66,7 +64,6 @@ source_set("sysmem_common_srcs") {
   ]
 
   deps = [
-    "//zircon/system/ulib/fidl-async-2",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/region-alloc",
@@ -135,7 +132,6 @@ test("sysmem-unittest-bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/closure-queue",
-    "//zircon/system/ulib/fidl-async-2",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/region-alloc",

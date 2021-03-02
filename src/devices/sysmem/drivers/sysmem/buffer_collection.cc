@@ -4,9 +4,6 @@
 
 #include "buffer_collection.h"
 
-#include <fuchsia/sysmem/c/fidl.h>
-#include <lib/fidl-async-2/fidl_struct.h>
-#include <lib/fidl-utils/bind.h>
 #include <lib/sysmem-version/sysmem-version.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
@@ -15,7 +12,6 @@
 
 #include <ddk/trace/event.h>
 
-#include "fuchsia/sysmem/c/fidl.h"
 #include "logical_buffer_collection.h"
 #include "macros.h"
 #include "utils.h"
@@ -23,11 +19,6 @@
 namespace sysmem_driver {
 
 namespace {
-
-using BufferCollectionInfo_v1 = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                                           llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>;
-
-constexpr uint32_t kConcurrencyCap = 64;
 
 // For max client vmo rights, we specify the RIGHT bits individually to avoid
 // picking up any newly-added rights unintentionally.  This is based on
@@ -51,58 +42,73 @@ const uint32_t kMaxClientVmoRights =
 
 }  // namespace
 
-const fuchsia_sysmem_BufferCollection_ops_t BufferCollection::kOps = {
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::SetEventSink>,
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::Sync>,
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::SetConstraints>,
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::WaitForBuffersAllocated>,
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::CheckBuffersAllocated>,
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::CloseSingleBuffer>,
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::AllocateSingleBuffer>,
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::WaitForSingleBufferAllocated>,
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::CheckSingleBufferAllocated>,
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::Close>,
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::SetName>,
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::SetDebugClientInfo>,
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::SetConstraintsAuxBuffers>,
-    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::GetAuxBuffers>,
-};
-
 BufferCollection::~BufferCollection() {
   TRACE_DURATION("gfx", "BufferCollection::~BufferCollection", "this", this, "parent",
                  parent_.get());
-  // Close() the SimpleBinding<> before deleting the list of pending Txn(s),
-  // so that ~Txn doesn't complain about being deleted without being
-  // completed.
-  //
-  // Don't run the error handler; if any error handler remains it'll just get
-  // deleted here.
-  (void)binding_.Close();
 }
 
-void BufferCollection::Bind(zx::channel server_request) {
+void BufferCollection::CloseChannel() {
+  error_handler_ = {};
+  if (server_binding_)
+    server_binding_->Close(ZX_ERR_PEER_CLOSED);
+  server_binding_ = {};
+}
+
+// static
+
+BindingHandle<BufferCollection> BufferCollection::Create(
+    fbl::RefPtr<LogicalBufferCollection> parent) {
+  return BindingHandle<BufferCollection>(
+      fbl::AdoptRef<BufferCollection>(new BufferCollection(std::move(parent))));
+}
+
+void BufferCollection::Bind(zx::channel channel) {
   zx_info_handle_basic_t info;
   zx_status_t status =
-      server_request.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+      channel.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status == ZX_OK) {
     node_.CreateUint("channel_koid", info.koid, &properties_);
   }
-  FidlServer::Bind(std::move(server_request));
+  auto res = fidl::BindServer(
+      parent_->parent_device()->dispatcher(), std::move(channel), this,
+      fidl::OnUnboundFn<BufferCollection>(
+          [this, this_ref = fbl::RefPtr<BufferCollection>(this)](
+              BufferCollection* collection, fidl::UnbindInfo info,
+              fidl::ServerEnd<llcpp::fuchsia::sysmem::BufferCollection> channel) {
+            // We need to keep a refptr to this class, since the unbind happens asynchronously and
+            // can run after the parent closes a handle to this class.
+            if (error_handler_) {
+              zx_status_t status = info.status;
+              if (async_failure_result_ && info.reason == fidl::UnbindInfo::kClose) {
+                // On kClose the error is always ZX_OK, so report the real error to
+                // LogicalBufferCollection if the close was caused by FailAsync or FailSync.
+                status = *async_failure_result_;
+              }
+
+              error_handler_(status);
+            }
+            // *this can be destroyed at this point.
+          }));
+  if (res.is_error()) {
+    return;
+  }
+  server_binding_ = res.take_value();
+  return;
 }
 
-zx_status_t BufferCollection::SetEventSink(zx_handle_t buffer_collection_events_client_param) {
-  zx::channel buffer_collection_events_client(buffer_collection_events_client_param);
+void BufferCollection::SetEventSink(
+    fidl::ClientEnd<llcpp::fuchsia::sysmem::BufferCollectionEvents> buffer_collection_events_client,
+    SetEventSinkCompleter::Sync& completer) {
   if (is_done_) {
     FailAsync(ZX_ERR_BAD_STATE, "BufferCollectionToken::SetEventSink() when already is_done_");
-    // We're failing async - no need to try to fail sync.
-    return ZX_OK;
+    return;
   }
   if (!buffer_collection_events_client) {
     zx_status_t status = ZX_ERR_INVALID_ARGS;
     FailAsync(status,
               "BufferCollection::SetEventSink() must be called "
               "with a non-zero handle.");
-    return status;
+    return;
   }
   if (is_set_constraints_seen_) {
     zx_status_t status = ZX_ERR_INVALID_ARGS;
@@ -111,86 +117,64 @@ zx_status_t BufferCollection::SetEventSink(zx_handle_t buffer_collection_events_
     FailAsync(status,
               "BufferCollection::SetEventSink() (if any) must be "
               "before SetConstraints().");
-    return status;
+    return;
   }
   if (events_) {
     zx_status_t status = ZX_ERR_INVALID_ARGS;
     FailAsync(status, "BufferCollection::SetEventSink() may only be called at most once.");
-    return status;
+    return;
   }
-  events_ = std::move(buffer_collection_events_client);
+
+  events_.emplace(std::move(buffer_collection_events_client));
   // We don't create BufferCollection until after processing all inbound
   // messages that were queued toward the server on the token channel of the
   // token that was used to create this BufferCollection, so we can send this
   // event now, as all the Duplicate() inbound from that token are done being
   // processed before here.
-  fuchsia_sysmem_BufferCollectionEventsOnDuplicatedTokensKnownByServer(events_.get());
-  return ZX_OK;
+  events_->OnDuplicatedTokensKnownByServer();
 }
 
-zx_status_t BufferCollection::Sync(fidl_txn_t* txn) {
-  BindingType::Txn::RecognizeTxn(txn);
-  return fuchsia_sysmem_BufferCollectionSync_reply(txn);
-}
+void BufferCollection::Sync(SyncCompleter::Sync& completer) { completer.Reply(); }
 
-zx_status_t BufferCollection::SetConstraintsAuxBuffers(
-    const fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers* constraints_param) {
-  ZX_DEBUG_ASSERT(constraints_param);
-
-  // Copy data and own handles.
-  static_assert(sizeof(llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers) ==
-                sizeof(fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers));
-  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers local_constraints;
-  memcpy(&local_constraints, constraints_param, sizeof(local_constraints));
-
+void BufferCollection::SetConstraintsAuxBuffers(
+    llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers local_constraints,
+    SetConstraintsAuxBuffersCompleter::Sync& completer) {
   if (is_set_constraints_aux_buffers_seen_) {
     FailAsync(ZX_ERR_NOT_SUPPORTED, "SetConstraintsAuxBuffers() can be called only once.");
-    return ZX_ERR_NOT_SUPPORTED;
+    return;
   }
   is_set_constraints_aux_buffers_seen_ = true;
   if (is_done_) {
     FailAsync(ZX_ERR_BAD_STATE,
               "BufferCollectionToken::SetConstraintsAuxBuffers() when already is_done_");
-    // We're failing async - no need to try to fail sync.
-    return ZX_OK;
+    return;
   }
   if (is_set_constraints_seen_) {
     FailAsync(ZX_ERR_NOT_SUPPORTED,
               "SetConstraintsAuxBuffers() after SetConstraints() causes failure.");
-    return ZX_ERR_NOT_SUPPORTED;
+    return;
   }
   ZX_DEBUG_ASSERT(!constraints_aux_buffers_);
   constraints_aux_buffers_.emplace(std::move(local_constraints));
   // LogicalBufferCollection doesn't care about "clear aux buffers" constraints until the last
   // SetConstraints(), so done for now.
-  return ZX_OK;
 }
 
-zx_status_t BufferCollection::SetConstraints(
-    bool has_constraints, const fuchsia_sysmem_BufferCollectionConstraints* constraints_param) {
+void BufferCollection::SetConstraints(
+    bool has_constraints, llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints,
+    SetConstraintsCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollection::SetConstraints", "this", this, "parent", parent_.get());
-  // Regardless of has_constraints or not, we need to unconditionally take
-  // ownership of any handles in constraints_param.  Not that there are
-  // necessarily any handles in here currently, but to avoid being fragile re.
-  // any handles potentially added later.
-  ZX_DEBUG_ASSERT(constraints_param);
-
-  // Copy data and own handles.
-  static_assert(sizeof(llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints) ==
-                sizeof(fuchsia_sysmem_BufferCollectionConstraints));
-  std::optional<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints> local_constraints;
-  local_constraints.emplace();
-  memcpy(&local_constraints.value(), constraints_param, sizeof(local_constraints.value()));
-
+  std::optional<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints> local_constraints(
+      std::move(constraints));
   if (is_set_constraints_seen_) {
     FailAsync(ZX_ERR_NOT_SUPPORTED, "2nd SetConstraints() causes failure.");
-    return ZX_ERR_NOT_SUPPORTED;
+    return;
   }
   is_set_constraints_seen_ = true;
   if (is_done_) {
     FailAsync(ZX_ERR_BAD_STATE, "BufferCollectionToken::SetConstraints() when already is_done_");
     // We're failing async - no need to try to fail sync.
-    return ZX_OK;
+    return;
   }
   if (!has_constraints) {
     // Not needed.
@@ -200,7 +184,7 @@ zx_status_t BufferCollection::SetConstraints(
       // I can't think of any reason why we'd need to support aux buffers constraints without main
       // constraints, so disallow at least for now.
       FailAsync(ZX_ERR_NOT_SUPPORTED, "SetConstraintsAuxBuffers() && !has_constraints");
-      return ZX_ERR_NOT_SUPPORTED;
+      return;
     }
   }
 
@@ -213,9 +197,9 @@ zx_status_t BufferCollection::SetConstraints(
         allocator_, local_constraints ? &local_constraints.value() : nullptr,
         constraints_aux_buffers_ ? &constraints_aux_buffers_.value() : nullptr);
     if (!result.is_ok()) {
-      parent_->LogClientError(FROM_HERE, &debug_info_,
-                              "V2CopyFromV1BufferCollectionConstraints() failed");
-      return ZX_ERR_INVALID_ARGS;
+      FailSync(FROM_HERE, completer, ZX_ERR_INVALID_ARGS,
+               "V2CopyFromV1BufferCollectionConstraints() failed");
+      return;
     }
     ZX_DEBUG_ASSERT(!result.value().IsEmpty() || !local_constraints);
     constraints_.emplace(result.take_value());
@@ -233,9 +217,9 @@ zx_status_t BufferCollection::SetConstraints(
     }
     auto result = sysmem::V2CopyFromV1BufferUsage(allocator_, *source_buffer_usage);
     if (!result.is_ok()) {
-      parent_->LogClientError(FROM_HERE, &debug_info_, "V2CopyFromV1BufferUsage failed");
       // Not expected given current impl of sysmem-version.
-      return ZX_ERR_INTERNAL;
+      FailSync(FROM_HERE, completer, ZX_ERR_INTERNAL, "V2CopyFromV1BufferUsage failed");
+      return;
     }
     usage_.emplace(result.take_value());
   }  // ~buffer_usage
@@ -249,163 +233,141 @@ zx_status_t BufferCollection::SetConstraints(
   parent()->OnSetConstraints();
   // |this| may be gone at this point, if the allocation failed.  Regardless,
   // SetConstraints() worked, so ZX_OK.
-  return ZX_OK;
 }
 
-zx_status_t BufferCollection::WaitForBuffersAllocated(fidl_txn_t* txn_param) {
+void BufferCollection::WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollection::WaitForBuffersAllocated", "this", this, "parent",
                  parent_.get());
-  BindingType::Txn::RecognizeTxn(txn_param);
   if (is_done_) {
-    FailAsync(ZX_ERR_BAD_STATE,
-              "BufferCollectionToken::WaitForBuffersAllocated() when already is_done_");
-    // We're failing async - no need to fail sync.
-    return ZX_OK;
+    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
+             "BufferCollectionToken::WaitForBuffersAllocated() when already is_done_");
+    return;
   }
-  // In general we're handling this async, so take ownership of the txn.
-  std::unique_ptr<BindingType::Txn> txn = BindingType::Txn::TakeTxn(txn_param);
   trace_async_id_t current_event_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("gfx", "BufferCollection::WaitForBuffersAllocated async", current_event_id,
                     "this", this, "parent", parent_.get());
   pending_wait_for_buffers_allocated_.emplace_back(
-      std::make_pair(current_event_id, std::move(txn)));
+      std::make_pair(current_event_id, completer.ToAsync()));
   // The allocation is a one-shot (once true, remains true) and may already be
   // done, in which case this immediately completes txn.
   MaybeCompleteWaitForBuffersAllocated();
-  return ZX_OK;
 }
 
-zx_status_t BufferCollection::CheckBuffersAllocated(fidl_txn_t* txn) {
-  BindingType::Txn::RecognizeTxn(txn);
+void BufferCollection::CheckBuffersAllocated(CheckBuffersAllocatedCompleter::Sync& completer) {
   if (is_done_) {
     FailAsync(ZX_ERR_BAD_STATE,
               "BufferCollectionToken::CheckBuffersAllocated() when "
               "already is_done_");
     // We're failing async - no need to try to fail sync.
-    return ZX_OK;
+    return;
   }
   LogicalBufferCollection::AllocationResult allocation_result = parent()->allocation_result();
   if (allocation_result.status == ZX_OK && !allocation_result.buffer_collection_info) {
-    return fuchsia_sysmem_BufferCollectionCheckBuffersAllocated_reply(txn, ZX_ERR_UNAVAILABLE);
+    completer.Reply(ZX_ERR_UNAVAILABLE);
+  } else {
+    completer.Reply(allocation_result.status);
   }
-  // Buffer collection has either been allocated or failed.
-  return fuchsia_sysmem_BufferCollectionCheckBuffersAllocated_reply(txn, allocation_result.status);
 }
 
-zx_status_t BufferCollection::GetAuxBuffers(fidl_txn_t* txn_param) {
-  BindingType::Txn::RecognizeTxn(txn_param);
+void BufferCollection::GetAuxBuffers(GetAuxBuffersCompleter::Sync& completer) {
   LogicalBufferCollection::AllocationResult allocation_result = parent()->allocation_result();
   if (allocation_result.status == ZX_OK && !allocation_result.buffer_collection_info) {
-    FailAsync(ZX_ERR_BAD_STATE, "GetAuxBuffers() called before allocation complete.",
-              ZX_ERR_BAD_STATE);
-    // We're failing async - no need to fail sync.
-    return ZX_OK;
+    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
+             "GetAuxBuffers() called before allocation complete.");
+    return;
   }
   if (allocation_result.status != ZX_OK) {
-    FailAsync(ZX_ERR_BAD_STATE, "GetAuxBuffers() called after allocation failure.",
-              ZX_ERR_BAD_STATE);
-    // We're failing async - no need to fail sync.
-    return ZX_OK;
+    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
+             "GetAuxBuffers() called after allocation failure.");
+    return;
   }
-  BufferCollection::V1CBufferCollectionInfo v1_c(
-      BufferCollection::V1CBufferCollectionInfo::Default);
   ZX_DEBUG_ASSERT(allocation_result.buffer_collection_info);
-  auto v1_c_result = CloneAuxBuffersResultForSendingV1(*allocation_result.buffer_collection_info);
-  if (!v1_c_result.is_ok()) {
-    // FailAsync() already called.
-    //
-    // We're failing async - no need to fail sync.
-    return ZX_OK;
+  auto v1_result = CloneAuxBuffersResultForSendingV1(*allocation_result.buffer_collection_info);
+  if (!v1_result.is_ok()) {
+    // Close to avoid assert.
+    FailSync(FROM_HERE, completer, ZX_ERR_INTERNAL, "CloneAuxBuffersResultForSendingV1() failed.");
+    return;
   }
-  v1_c = v1_c_result.take_value();
-  // Ownership of handles in to_send are transferred to _reply().
-  zx_status_t reply_status = fuchsia_sysmem_BufferCollectionGetAuxBuffers_reply(
-      txn_param, allocation_result.status, v1_c.release());
-  if (reply_status != ZX_OK) {
-    FailAsync(reply_status,
-              "fuchsia_sysmem_BufferCollectionGetAuxBuffers_reply failed - status: %d",
-              reply_status);
-    // We're failing async - no need to fail sync.
-    return ZX_OK;
-  }
-  return ZX_OK;
+  auto v1 = v1_result.take_value();
+  completer.Reply(allocation_result.status, std::move(v1));
 }
 
-zx_status_t BufferCollection::CloseSingleBuffer(uint64_t buffer_index) {
+void BufferCollection::CloseSingleBuffer(uint64_t buffer_index,
+                                         CloseSingleBufferCompleter::Sync& completer) {
   if (is_done_) {
-    FailAsync(ZX_ERR_BAD_STATE, "BufferCollectionToken::CloseSingleBuffer() when already is_done_");
-    // We're failing async - no need to try to fail sync.
-    return ZX_OK;
+    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
+             "BufferCollectionToken::CloseSingleBuffer() when already is_done_");
+    return;
   }
   // FailAsync() instead of returning a failure, mainly because FailAsync()
   // prints a message that's more obvious than the generic _dispatch() failure
   // would.
-  FailAsync(ZX_ERR_NOT_SUPPORTED, "CloseSingleBuffer() not yet implemented");
-  return ZX_OK;
+  FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED, "CloseSingleBuffer() not yet implemented");
 }
 
-zx_status_t BufferCollection::AllocateSingleBuffer(uint64_t buffer_index) {
+void BufferCollection::AllocateSingleBuffer(uint64_t buffer_index,
+                                            AllocateSingleBufferCompleter::Sync& completer) {
   if (is_done_) {
-    FailAsync(ZX_ERR_BAD_STATE,
-              "BufferCollectionToken::AllocateSingleBuffer() when already "
-              "is_done_");
-    // We're failing async - no need to try to fail sync.
-    return ZX_OK;
+    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
+             "BufferCollectionToken::AllocateSingleBuffer() when already "
+             "is_done_");
+    return;
   }
-  FailAsync(ZX_ERR_NOT_SUPPORTED, "AllocateSingleBuffer() not yet implemented");
-  return ZX_OK;
+  FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED,
+           "AllocateSingleBuffer() not yet implemented");
 }
 
-zx_status_t BufferCollection::WaitForSingleBufferAllocated(uint64_t buffer_index, fidl_txn_t* txn) {
-  BindingType::Txn::RecognizeTxn(txn);
+void BufferCollection::WaitForSingleBufferAllocated(
+    uint64_t buffer_index, WaitForSingleBufferAllocatedCompleter::Sync& completer) {
   if (is_done_) {
-    FailAsync(ZX_ERR_BAD_STATE,
-              "BufferCollectionToken::WaitForSingleBufferAllocated() when "
-              "already is_done_");
-    // We're failing async - no need to try to fail sync.
-    return ZX_OK;
+    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
+             "BufferCollectionToken::WaitForSingleBufferAllocated() when "
+             "already is_done_");
+    return;
   }
-  FailAsync(ZX_ERR_NOT_SUPPORTED, "WaitForSingleBufferAllocated() not yet implemented");
-  return ZX_OK;
+  FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED,
+           "WaitForSingleBufferAllocated() not yet implemented");
 }
 
-zx_status_t BufferCollection::CheckSingleBufferAllocated(uint64_t buffer_index) {
+void BufferCollection::CheckSingleBufferAllocated(
+    uint64_t buffer_index, CheckSingleBufferAllocatedCompleter::Sync& completer) {
   if (is_done_) {
-    FailAsync(ZX_ERR_BAD_STATE,
-              "BufferCollectionToken::CheckSingleBufferAllocated() when "
-              "already is_done_");
-    // We're failing async - no need to try to fail sync.
-    return ZX_OK;
+    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
+             "BufferCollectionToken::CheckSingleBufferAllocated() when "
+             "already is_done_");
+    return;
   }
-  FailAsync(ZX_ERR_NOT_SUPPORTED, "CheckSingleBufferAllocated() not yet implemented");
-  return ZX_OK;
+  FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED,
+           "CheckSingleBufferAllocated() not yet implemented");
 }
 
-zx_status_t BufferCollection::Close() {
+void BufferCollection::Close(CloseCompleter::Sync& completer) {
   if (is_done_) {
     FailAsync(ZX_ERR_BAD_STATE, "BufferCollection::Close() when already closed.");
-    return ZX_OK;
+    return;
   }
   // We still want to enforce that the client doesn't send any other messages
   // between Close() and closing the channel, so we just set is_done_ here and
   // do a FailAsync() if is_done_ is seen to be set while handling any other
   // message.
   is_done_ = true;
-  return ZX_OK;
 }
 
-zx_status_t BufferCollection::SetName(uint32_t priority, const char* name_data, size_t name_size) {
-  parent_->SetName(priority, std::string(name_data, name_size));
-  return ZX_OK;
+void BufferCollection::SetName(uint32_t priority, fidl::StringView name,
+                               SetNameCompleter::Sync& completer) {
+  parent_->SetName(priority, std::string(name.begin(), name.end()));
 }
 
-zx_status_t BufferCollection::SetDebugClientInfo(const char* name_data, size_t name_size,
-                                                 uint64_t id) {
-  debug_info_.name = std::string(name_data, name_size);
+void BufferCollection::SetDebugClientInfo(fidl::StringView name, uint64_t id,
+                                          SetDebugClientInfoCompleter::Sync& completer) {
+  SetDebugClientInfo(std::string(name.begin(), name.end()), id);
+}
+
+void BufferCollection::SetDebugClientInfo(std::string name, uint64_t id) {
+  debug_info_.name = std::move(name);
   debug_info_.id = id;
   debug_id_property_ = node_.CreateUint("debug_id", debug_info_.id);
   debug_name_property_ = node_.CreateString("debug_name", debug_info_.name);
-  return ZX_OK;
 }
 
 void BufferCollection::FailAsync(zx_status_t status, const char* format, ...) {
@@ -414,7 +376,25 @@ void BufferCollection::FailAsync(zx_status_t status, const char* format, ...) {
   parent_->VLogClientError(FROM_HERE, &debug_info_, format, args);
 
   va_end(args);
-  FidlServer::FailAsync(status, __FILE__, __LINE__, "");
+  // Idempotent, so only close once.
+  if (!server_binding_)
+    return;
+
+  async_failure_result_ = status;
+  server_binding_->Close(status);
+  server_binding_ = {};
+}
+
+template <typename Completer>
+void BufferCollection::FailSync(Location location, Completer& completer, zx_status_t status,
+                                const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  parent_->VLogClientError(location, &debug_info_, format, args);
+
+  va_end(args);
+  completer.Close(status);
+  async_failure_result_ = status;
 }
 
 fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo>
@@ -445,7 +425,8 @@ BufferCollection::CloneResultForSendingV2(
   return fit::ok(std::move(v2_b));
 }
 
-fit::result<BufferCollection::V1CBufferCollectionInfo> BufferCollection::CloneResultForSendingV1(
+fit::result<llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>
+BufferCollection::CloneResultForSendingV1(
     const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto v2_result = CloneResultForSendingV2(buffer_collection_info);
   if (!v2_result.is_ok()) {
@@ -458,13 +439,10 @@ fit::result<BufferCollection::V1CBufferCollectionInfo> BufferCollection::CloneRe
               "CloneResultForSendingV1() V1MoveFromV2BufferCollectionInfo() failed");
     return fit::error();
   }
-  V1CBufferCollectionInfo v1_c(V1CBufferCollectionInfo::Default);
-  // struct move
-  v1_c.BorrowAsLlcpp() = v1_result.take_value();
-  return fit::ok(std::move(v1_c));
+  return v1_result;
 }
 
-fit::result<BufferCollection::V1CBufferCollectionInfo>
+fit::result<llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>
 BufferCollection::CloneAuxBuffersResultForSendingV1(
     const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto v2_result = CloneResultForSendingV2(buffer_collection_info);
@@ -478,10 +456,7 @@ BufferCollection::CloneAuxBuffersResultForSendingV1(
               "CloneResultForSendingV1() V1MoveFromV2BufferCollectionInfo() failed");
     return fit::error();
   }
-  V1CBufferCollectionInfo v1_c(V1CBufferCollectionInfo::Default);
-  // struct move
-  v1_c.BorrowAsLlcpp() = v1_result.take_value();
-  return fit::ok(std::move(v1_c));
+  return fit::ok(v1_result.take_value());
 }
 
 void BufferCollection::OnBuffersAllocated() {
@@ -495,22 +470,18 @@ void BufferCollection::OnBuffersAllocated() {
     return;
   }
 
-  BufferCollection::V1CBufferCollectionInfo v1_c(
-      BufferCollection::V1CBufferCollectionInfo::Default);
+  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 v1;
   if (parent()->allocation_result().status == ZX_OK) {
     ZX_DEBUG_ASSERT(parent()->allocation_result().buffer_collection_info);
-    auto v1_c_result =
-        CloneResultForSendingV1(*parent()->allocation_result().buffer_collection_info);
-    if (!v1_c_result.is_ok()) {
+    auto v1_result = CloneResultForSendingV1(*parent()->allocation_result().buffer_collection_info);
+    if (!v1_result.is_ok()) {
       // FailAsync() already called.
       return;
     }
-    v1_c = v1_c_result.take_value();
+    v1 = v1_result.take_value();
   }
 
-  // Ownership of all handles in to_send is transferred to this function.
-  fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocated(
-      events_.get(), parent()->allocation_result().status, v1_c.release());
+  events_->OnBuffersAllocated(parent()->allocation_result().status, std::move(v1));
 }
 
 bool BufferCollection::has_constraints() { return !!constraints_; }
@@ -535,9 +506,7 @@ fbl::RefPtr<LogicalBufferCollection> BufferCollection::parent_shared() { return 
 bool BufferCollection::is_done() { return is_done_; }
 
 BufferCollection::BufferCollection(fbl::RefPtr<LogicalBufferCollection> parent)
-    : FidlServer(parent->parent_device()->dispatcher(), "BufferCollection", kConcurrencyCap),
-      parent_(parent),
-      allocator_(parent->fidl_allocator()) {
+    : parent_(parent), allocator_(parent->fidl_allocator()) {
   TRACE_DURATION("gfx", "BufferCollection::BufferCollection", "this", this, "parent",
                  parent_.get());
   ZX_DEBUG_ASSERT(parent_);
@@ -589,27 +558,24 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
     auto [async_id, txn] = std::move(pending_wait_for_buffers_allocated_.front());
     pending_wait_for_buffers_allocated_.pop_front();
 
-    BufferCollection::V1CBufferCollectionInfo v1_c(
-        BufferCollection::V1CBufferCollectionInfo::Default);
+    llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 v1;
     if (allocation_result.status == ZX_OK) {
       ZX_DEBUG_ASSERT(allocation_result.buffer_collection_info);
-      auto v1_c_result = CloneResultForSendingV1(*allocation_result.buffer_collection_info);
-      if (!v1_c_result.is_ok()) {
+      auto v1_result = CloneResultForSendingV1(*allocation_result.buffer_collection_info);
+      if (!v1_result.is_ok()) {
         // FailAsync() already called.
         return;
       }
-      v1_c = v1_c_result.take_value();
+      v1 = v1_result.take_value();
     }
     TRACE_ASYNC_END("gfx", "BufferCollection::WaitForBuffersAllocated async", async_id, "this",
                     this, "parent", parent_.get());
-    // Ownership of handles in to_send are transferred to _reply().
-    zx_status_t reply_status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated_reply(
-        &txn->raw_txn(), allocation_result.status, v1_c.release());
-    if (reply_status != ZX_OK) {
-      FailAsync(reply_status,
+    auto reply_status = txn.Reply(allocation_result.status, std::move(v1));
+    if (!reply_status.ok()) {
+      FailAsync(reply_status.status(),
                 "fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated_"
-                "reply failed - status: %d",
-                reply_status);
+                "reply failed - status: %s",
+                reply_status.error());
       return;
     }
     // ~txn

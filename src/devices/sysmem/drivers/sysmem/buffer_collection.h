@@ -8,49 +8,59 @@
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <fuchsia/sysmem2/llcpp/fidl.h>
-#include <lib/fidl-async-2/fidl_server.h>
-#include <lib/fidl-async-2/fidl_struct.h>
-#include <lib/fidl-async-2/simple_binding.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/heap_allocator.h>
 
 #include <list>
 
+#include "binding_handle.h"
 #include "logging.h"
 #include "logical_buffer_collection.h"
 
 namespace sysmem_driver {
 
-class BufferCollection
-    : public FidlServer<BufferCollection,
-                        SimpleBinding<BufferCollection, fuchsia_sysmem_BufferCollection_ops_t,
-                                      fuchsia_sysmem_BufferCollection_dispatch>,
-                        vLog> {
+class BufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interface,
+                         public fbl::RefCounted<BufferCollection> {
  public:
   ~BufferCollection();
 
-  void Bind(zx::channel server_request);
+  static BindingHandle<BufferCollection> Create(fbl::RefPtr<LogicalBufferCollection> parent);
+
+  void SetErrorHandler(fit::function<void(zx_status_t)> error_handler) {
+    error_handler_ = std::move(error_handler);
+  }
+  void Bind(zx::channel channel);
 
   //
   // fuchsia.sysmem.BufferCollection interface methods
   //
 
-  zx_status_t SetEventSink(zx_handle_t buffer_collection_events_client);
-  zx_status_t Sync(fidl_txn_t* txn);
-  zx_status_t SetConstraints(bool has_constraints,
-                             const fuchsia_sysmem_BufferCollectionConstraints* constraints);
-  zx_status_t WaitForBuffersAllocated(fidl_txn_t* txn);
-  zx_status_t CheckBuffersAllocated(fidl_txn_t* txn);
-  zx_status_t CloseSingleBuffer(uint64_t buffer_index);
-  zx_status_t AllocateSingleBuffer(uint64_t buffer_index);
-  zx_status_t WaitForSingleBufferAllocated(uint64_t buffer_index, fidl_txn_t* txn);
-  zx_status_t CheckSingleBufferAllocated(uint64_t buffer_index);
-  zx_status_t Close();
-  zx_status_t SetName(uint32_t priority, const char* name_data, size_t name_size);
-  zx_status_t SetDebugClientInfo(const char* name_data, size_t name_size, uint64_t id);
-  zx_status_t SetConstraintsAuxBuffers(
-      const fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers* constraints_aux_buffers);
-  zx_status_t GetAuxBuffers(fidl_txn_t* txn_param);
+  void SetEventSink(fidl::ClientEnd<llcpp::fuchsia::sysmem::BufferCollectionEvents>
+                        buffer_collection_events_client,
+                    SetEventSinkCompleter::Sync& completer) override;
+  void Sync(SyncCompleter::Sync& completer) override;
+  void SetConstraints(bool has_constraints,
+                      llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints,
+                      SetConstraintsCompleter::Sync& completer) override;
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) override;
+  void CheckBuffersAllocated(CheckBuffersAllocatedCompleter::Sync& completer) override;
+  void CloseSingleBuffer(uint64_t buffer_index,
+                         CloseSingleBufferCompleter::Sync& completer) override;
+  void AllocateSingleBuffer(uint64_t buffer_index,
+                            AllocateSingleBufferCompleter::Sync& completer) override;
+  void WaitForSingleBufferAllocated(
+      uint64_t buffer_index, WaitForSingleBufferAllocatedCompleter::Sync& completer) override;
+  void CheckSingleBufferAllocated(uint64_t buffer_index,
+                                  CheckSingleBufferAllocatedCompleter::Sync& completer) override;
+  void Close(CloseCompleter::Sync& completer) override;
+  void SetName(uint32_t priority, fidl::StringView name,
+               SetNameCompleter::Sync& completer) override;
+  void SetDebugClientInfo(fidl::StringView name, uint64_t id,
+                          SetDebugClientInfoCompleter::Sync& completer) override;
+  void SetConstraintsAuxBuffers(
+      llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers constraints_aux_buffers,
+      SetConstraintsAuxBuffersCompleter::Sync& completer) override;
+  void GetAuxBuffers(GetAuxBuffersCompleter::Sync& completer) override;
 
   //
   // LogicalBufferCollection uses these:
@@ -74,17 +84,16 @@ class BufferCollection
 
   fbl::RefPtr<LogicalBufferCollection> parent_shared();
 
+  void CloseChannel();
+
   bool is_done();
+
+  void SetDebugClientInfo(std::string name, uint64_t id);
 
   const std::string& debug_name() const { return debug_info_.name; }
   uint64_t debug_id() const { return debug_info_.id; }
 
  private:
-  using V1CBufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                                             llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>;
-
-  friend class FidlServer;
-
   explicit BufferCollection(fbl::RefPtr<LogicalBufferCollection> parent);
 
   // The rights attenuation mask driven by usage, so that read-only usage
@@ -95,20 +104,27 @@ class BufferCollection
   uint32_t GetClientAuxVmoRights();
   void MaybeCompleteWaitForBuffersAllocated();
 
-  // Hide parent method.
-  void FailAsync(zx_status_t status, const char* format, ...);
+  void FailAsync(zx_status_t status, const char* format, ...) __PRINTFLIKE(3, 4);
+  // FailSync must be used instead of FailAsync if the current method has a completer that needs a
+  // reply.
+  template <typename Completer>
+  void FailSync(Location location, Completer& completer, zx_status_t status, const char* format,
+                ...) __PRINTFLIKE(5, 6);
 
   fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo> CloneResultForSendingV2(
       const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
 
-  fit::result<V1CBufferCollectionInfo> CloneResultForSendingV1(
+  fit::result<llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2> CloneResultForSendingV1(
       const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
-  fit::result<BufferCollection::V1CBufferCollectionInfo> CloneAuxBuffersResultForSendingV1(
+  fit::result<llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>
+  CloneAuxBuffersResultForSendingV1(
       const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
 
   static const fuchsia_sysmem_BufferCollection_ops_t kOps;
 
   fbl::RefPtr<LogicalBufferCollection> parent_;
+  std::optional<zx_status_t> async_failure_result_;
+  fit::function<void(zx_status_t)> error_handler_;
 
   LogicalBufferCollection::FidlAllocator& allocator_;
 
@@ -120,10 +136,7 @@ class BufferCollection
   // This may remain non-set if SetEventSink() is never used by a client.  A
   // client may send SetEventSink() up to once.
   //
-  // For example:
-  // fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocated(
-  //     events_.get(), ...);
-  zx::channel events_;
+  std::optional<llcpp::fuchsia::sysmem::BufferCollectionEvents::SyncClient> events_;
 
   // Constraints as set by:
   //
@@ -157,10 +170,12 @@ class BufferCollection
   // TODO(fxbug.dev/50578): Finish plumbing this.
   uint32_t client_rights_attenuation_mask_ = std::numeric_limits<uint32_t>::max();
 
-  std::list<std::pair</*async_id*/ uint64_t, std::unique_ptr<BindingType::Txn>>>
+  std::list<std::pair</*async_id*/ uint64_t, WaitForBuffersAllocatedCompleter::Async>>
       pending_wait_for_buffers_allocated_;
 
   bool is_done_ = false;
+
+  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::sysmem::BufferCollection>> server_binding_;
 
   LogicalBufferCollection::ClientInfo debug_info_;
 

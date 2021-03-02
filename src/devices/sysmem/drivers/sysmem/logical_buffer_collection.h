@@ -53,7 +53,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   // number, so it'd be more fruitful to focus there before here.
   static constexpr size_t kBufferThenHeapAllocatorSize = 1;
   using FidlAllocator = fidl::BufferThenHeapAllocator<kBufferThenHeapAllocatorSize>;
-  using CollectionMap = std::map<BufferCollection*, std::unique_ptr<BufferCollection>>;
+  using CollectionMap = std::map<BufferCollection*, BindingHandle<BufferCollection>>;
 
   ~LogicalBufferCollection();
 
