@@ -655,6 +655,18 @@ impl HfpFacade {
         Ok(())
     }
 
+    pub async fn set_subscriber_number(&self, number: &str) {
+        self.inner.lock().await.manager.subscriber_numbers = vec![number.to_owned()];
+    }
+
+    pub async fn set_operator(&self, value: &str) {
+        self.inner.lock().await.manager.operator = value.to_owned();
+    }
+
+    pub async fn set_nrec_support(&self, value: bool) {
+        self.inner.lock().await.manager.nrec_support = value;
+    }
+
     /// Cleanup any HFP related objects.
     pub async fn cleanup(&self) {
         *self.inner.lock().await = HfpFacadeInner::default();

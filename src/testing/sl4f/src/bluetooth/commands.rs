@@ -811,6 +811,21 @@ impl Facade for HfpFacade {
                     .await?;
                 Ok(to_value(result)?)
             }
+            "SetSubscriberNumber" => {
+                let number = parse_arg!(args, as_str, "value")?;
+                self.set_subscriber_number(number).await;
+                Ok(to_value(())?)
+            }
+            "SetOperator" => {
+                let value = parse_arg!(args, as_str, "value")?;
+                self.set_operator(value).await;
+                Ok(to_value(())?)
+            }
+            "SetNrecSupport" => {
+                let support = parse_arg!(args, as_bool, "value")?;
+                self.set_nrec_support(support).await;
+                Ok(to_value(())?)
+            }
             _ => bail!("Invalid Hfp FIDL method: {:?}", method),
         }
     }
