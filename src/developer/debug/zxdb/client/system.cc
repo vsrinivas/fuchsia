@@ -911,7 +911,7 @@ void System::OnFilterMatches(Job* job, const std::vector<uint64_t>& matched_pids
 
     AttachToProcess(matched_pid, [matched_pid](fxl::WeakPtr<Target> target, const Err& err) {
       if (err.has_error()) {
-        FX_LOGS(ERROR) << "Could not attach to process " << matched_pid;
+        FX_LOGS(ERROR) << "Could not attach to process " << matched_pid << ": " << err.msg();
         return;
       }
     });

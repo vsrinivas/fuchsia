@@ -204,6 +204,8 @@ void main(List<String> arguments) {
 
       final lines = instance.stdoutString.split('\n\n');
 
+      expect(lines.length >= 3, isTrue, reason: instance.additionalResult);
+
       /// If we had use --remote-name twice, we would have a lot of messages between
       /// "Monitoring echo_client" and "Monitoring echo_server".
       /// With --extra-name for echo_client, we wait for echo_server before monitoring echo_client.
