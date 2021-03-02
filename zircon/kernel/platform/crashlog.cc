@@ -29,6 +29,14 @@ DECLARE_SINGLETON_SPINLOCK(uptime_updater_lock);
 Timer uptime_updater_timer TA_GUARDED(uptime_updater_lock::Get());
 bool uptime_updater_enabled TA_GUARDED(uptime_updater_lock::Get()) = false;
 
+// Make sure we print the crashlog status to the klog only once, no matter how
+// many times recover_crashlog is called.
+ktl::atomic<bool> crashlog_status_printed_to_klog{false};
+inline bool should_print_crashlog_status() {
+  bool expected = false;
+  return crashlog_status_printed_to_klog.compare_exchange_strong(expected, true);
+}
+
 void default_platform_stow_crashlog(zircon_crash_reason_t reason, const void* log, size_t len) {
   // We are not going to store more than 4GB of payload.  That is just not happening.
   if (len > ktl::numeric_limits<uint32_t>::max()) {
@@ -44,9 +52,48 @@ void default_platform_stow_crashlog(zircon_crash_reason_t reason, const void* lo
 size_t default_platform_recover_crashlog(size_t len, void* cookie,
                                          void (*func)(const void* data, size_t off, size_t len,
                                                       void* cookie)) {
-  // If we failed to recover any crashlog, simply report the size as 0. This is most likely a cold
-  // boot.
+  // If we failed to recover any crashlog, simply report the size as 0.
+  ZbiHwRebootReason hw_reason = platform_hw_reboot_reason();
+  const char* str_hw_reason;
+  char str_hw_reason_buf[16];
+  switch (hw_reason) {
+    case ZbiHwRebootReason::Undefined:
+      str_hw_reason = "UNKNOWN";
+      break;
+    case ZbiHwRebootReason::Cold:
+      str_hw_reason = "COLD BOOT";
+      break;
+    case ZbiHwRebootReason::Warm:
+      str_hw_reason = "WARM BOOT";
+      break;
+    case ZbiHwRebootReason::Brownout:
+      str_hw_reason = "BROWNOUT";
+      break;
+    case ZbiHwRebootReason::Watchdog:
+      str_hw_reason = "WATCHDOG";
+      break;
+    default:
+      snprintf(str_hw_reason_buf, sizeof(str_hw_reason_buf), "0x%08x",
+               static_cast<uint32_t>(hw_reason));
+      str_hw_reason = str_hw_reason_buf;
+      break;
+  }
+
   if (log_recovery_result != ZX_OK) {
+    // Do not bother to log any recovery errors if the log was "corrupt", and we
+    // either don't know the HW reboot reason, or we know that the reason is a
+    // cold boot.  We don't expect to recover any log during a cold boot, and
+    // systems which do not report a HW reboot reason via the ZBI will always
+    // just tell us "unknown".
+    if (should_print_crashlog_status()) {
+      if (!((log_recovery_result == ZX_ERR_IO_DATA_INTEGRITY) &&
+            ((hw_reason == ZbiHwRebootReason::Undefined) ||
+             (hw_reason == ZbiHwRebootReason::Cold)))) {
+        printf("Crashlog: Failed to recover crashlog.  Result %d, HW Reboot Reason %s\n",
+               log_recovery_result, str_hw_reason);
+      }
+    }
+
     return 0;
   }
 
@@ -65,7 +112,6 @@ size_t default_platform_recover_crashlog(size_t len, void* cookie,
   // just a loose convention.  Someday, it would be good to pass this data in a
   // much more structured form.
   const recovered_ram_crashlog_t& rlog = recovered_log;
-  ZbiHwRebootReason hw_reason = platform_hw_reboot_reason();
   const char* str_reason;
   char preamble[256];
   size_t offset = 0;
@@ -75,10 +121,8 @@ size_t default_platform_recover_crashlog(size_t len, void* cookie,
       // provided by way of the bootloader and the HW reboot reason register.
       switch (hw_reason) {
         case ZbiHwRebootReason::Brownout:
-          str_reason = "BROWNOUT";
-          break;
         case ZbiHwRebootReason::Watchdog:
-          str_reason = "HW WATCHDOG";
+          str_reason = str_hw_reason;
           break;
         default:
           str_reason = "UNKNOWN";
@@ -102,15 +146,24 @@ size_t default_platform_recover_crashlog(size_t len, void* cookie,
       break;
   }
 
+  if (should_print_crashlog_status()) {
+    // Provide some basic details about the crashlog we recovered in the kernel
+    // log.  This can assist in debugging failure in CI/CQ where we might have
+    // access to serial logs, but nothing else.
+    if (rlog.reason == ZirconCrashReason::NoCrash) {
+      printf("Crashlog: Clean reboot. Uptime (%ld ms) HW Reason \"%s\"\n", rlog.uptime,
+             str_hw_reason);
+    } else {
+      printf("Crashlog: Uptime (%ld ms) SW Reason \"%s\" HW Reason \"%s\" Payload %s PLen %u\n",
+             rlog.uptime, str_reason, str_hw_reason, rlog.payload_valid ? "valid" : "invalid",
+             rlog.payload_len);
+    }
+  }
+
   // First line must give the reboot reason, and be followed by two newlines.
   DEBUG_ASSERT(offset <= sizeof(preamble));
-  if (str_reason != nullptr) {
-    offset += snprintf(preamble + offset, sizeof(preamble) - offset,
-                       "ZIRCON REBOOT REASON (%s)\n\n", str_reason);
-  } else {
-    offset += snprintf(preamble + offset, sizeof(preamble) - offset,
-                       "ZIRCON REBOOT REASON (0x%08x)\n\n", static_cast<uint32_t>(rlog.reason));
-  }
+  offset += snprintf(preamble + offset, sizeof(preamble) - offset, "ZIRCON REBOOT REASON (%s)\n\n",
+                     str_reason);
 
   // Uptime estimate comes next with a newline between the tag and the actual number
   DEBUG_ASSERT(offset <= sizeof(preamble));
@@ -118,28 +171,6 @@ size_t default_platform_recover_crashlog(size_t len, void* cookie,
                      rlog.uptime / ZX_MSEC(1));
 
   // After this, we are basically just free form text.
-  const char* str_hw_reason;
-  switch (hw_reason) {
-    case ZbiHwRebootReason::Undefined:
-      str_hw_reason = "UNKNOWN";
-      break;
-    case ZbiHwRebootReason::Cold:
-      str_hw_reason = "COLD BOOT";
-      break;
-    case ZbiHwRebootReason::Warm:
-      str_hw_reason = "WARM BOOT";
-      break;
-    case ZbiHwRebootReason::Brownout:
-      str_hw_reason = "BROWNOUT";
-      break;
-    case ZbiHwRebootReason::Watchdog:
-      str_hw_reason = "WATCHDOG";
-      break;
-    default:
-      str_hw_reason = nullptr;
-      break;
-  }
-
   DEBUG_ASSERT(offset <= sizeof(preamble));
   if (str_hw_reason != nullptr) {
     offset += snprintf(preamble + offset, sizeof(preamble) - offset, "HW REBOOT REASON (%s)\n",
