@@ -767,10 +767,11 @@ def main():
     # Parse trace file.
     all_accesses = parse_fsatrace_output(raw_trace.splitlines())
 
-    # Ignore directory accesses.
+    # Ignore directory accesses, including symlinked dirs.
     # Files' contents are what matters for reproducibilty.
     file_accesses = [
-        access for access in all_accesses if not os.path.isdir(access.path)
+        access for access in all_accesses
+        if not os.path.isdir(os.path.realpath(access.path))
     ]
 
     # Filter out accesses we don't want to track.
