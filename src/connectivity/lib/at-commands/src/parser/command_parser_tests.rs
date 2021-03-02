@@ -4,10 +4,7 @@
 
 /// Tests for the AT command parser.
 use crate::{
-    lowlevel::{
-        arguments::{Argument, Arguments, PrimitiveArgument},
-        command::{Command, ExecuteArguments},
-    },
+    lowlevel::{Argument, Arguments, Command, ExecuteArguments, PrimitiveArgument},
     parser::command_parser,
 };
 

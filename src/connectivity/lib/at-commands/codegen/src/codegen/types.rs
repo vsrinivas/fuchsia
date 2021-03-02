@@ -43,6 +43,7 @@ pub fn codegen_commands<W: io::Write>(
     indent: u64,
     definitions: &[Definition],
 ) -> Result {
+    write_indented!(sink, indent, "#[derive(Clone, Debug, PartialEq, Eq)]\n")?;
     codegen_block(
         sink,
         indent,
@@ -66,6 +67,7 @@ pub fn codegen_responses<W: io::Write>(
     indent: u64,
     definitions: &[Definition],
 ) -> Result {
+    write_indented!(sink, indent, "#[derive(Clone, Debug, PartialEq, Eq)]\n")?;
     codegen_block(
         sink,
         indent,
@@ -106,7 +108,7 @@ fn codegen_enum<W: io::Write>(
     name: &str,
     variants: &[Variant],
 ) -> Result {
-    write_indented!(sink, indent, "#[derive(Copy, Clone, FromPrimitive)]\n")?;
+    write_indented!(sink, indent, "#[derive(Copy, Clone, Debug, FromPrimitive, PartialEq, Eq)]\n")?;
     codegen_block(
         sink,
         indent,

@@ -3,23 +3,39 @@
 // found in the LICENSE file.
 
 /// Link all modules needed for tests for the AT command library.
-
 mod lowlevel {
-    pub(crate) mod arguments;
-    pub(crate) mod command;
+    pub mod arguments;
+    pub mod command;
+    pub mod response;
+    pub mod write_to;
+
+    // Make these available in lowlevel to simplify generated code.
+    pub use arguments::{Argument, Arguments, PrimitiveArgument};
+    pub use command::{Command, ExecuteArguments};
+    pub use response::{HardcodedError, Response};
+
+    // Tests
     mod command_tests;
-    pub(crate) mod response;
     mod response_tests;
-    mod write_to;
 }
 
 mod parser {
     mod arguments_parser;
     mod command_grammar;
-    mod command_parser;
-    mod command_parser_tests;
-    mod common;
+    pub mod command_parser;
+    pub mod common;
     mod response_grammar;
-    mod response_parser;
+    pub mod response_parser;
+
+    // Tests
+    mod command_parser_tests;
     mod response_parser_tests;
 }
+
+mod generated;
+mod serde;
+mod translate_util;
+
+// Tests
+mod command_generated_tests;
+mod response_generated_tests;

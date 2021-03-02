@@ -26,12 +26,10 @@ use {
 pub enum ParseError<Rule: RuleType> {
     #[error("Unable to use pest to parse {string:?}: {pest_error:?}")]
     PestParseFailure { string: String, pest_error: PestError<Rule> },
-    #[error("Unable to parse \"{string:?}\".  Expected one of {expected_rules:?}, got nothing.")]
-    NextRuleMissing { string: String, expected_rules: Vec<Rule> },
-    #[error(
-        "Unable to parse \"{string:?}\".  Expected one of {expected_rules:?}, got {actual_rule:?}."
-    )]
-    NextRuleUnexpected { string: String, expected_rules: Vec<Rule>, actual_rule: Rule },
+    #[error("Expected one of {expected_rules:?}, got nothing.")]
+    NextRuleMissing { expected_rules: Vec<Rule> },
+    #[error("Expected one of {expected_rules:?}, got {actual_rule:?}.")]
+    NextRuleUnexpected { expected_rules: Vec<Rule>, actual_rule: Rule },
     #[error("Unable to parse \"{string:?}\" as an integer: {error:?}.")]
     InvalidInteger { string: String, error: ParseIntError },
     #[error("Unknown character after AT: \"{0}\"")]
@@ -47,15 +45,12 @@ pub fn next_match_one_of<'a, Rule: RuleType>(
     expected_rules: Vec<Rule>,
 ) -> ParseResult<Pair<'a, Rule>, Rule> {
     let pair_result = pairs.next();
-    let pair = pair_result.ok_or(ParseError::NextRuleMissing {
-        string: pairs.as_str().to_string(),
-        expected_rules: expected_rules.clone(),
-    })?;
+    let pair = pair_result
+        .ok_or(ParseError::NextRuleMissing { expected_rules: expected_rules.clone() })?;
 
     let pair_rule = pair.as_rule();
     if !expected_rules.contains(&pair_rule) {
         return Err(ParseError::NextRuleUnexpected {
-            string: pairs.as_str().to_string(),
             expected_rules: expected_rules.clone(),
             actual_rule: pair_rule,
         });

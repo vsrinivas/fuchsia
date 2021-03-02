@@ -5,19 +5,22 @@
 command { ATTESTEX }
 
 # Extension execute command with no arguments
-command { AT+TESTEXEXEXT }
+command { AT+TESTEXEXT }
 
 # Extension execute command with one argument, no trailing comma
-command { AT+TESTEXEXTFI=field: Integer, }
+command { AT+TESTEXEXTFI=field: Integer }
 
 # Extension execute command with one argument, with trailing comma
 command { AT+TESTEXEXTFIC=field: Integer, }
 
+# Extension execute command with one argument, no trailing comma
+command { AT+TESTEXEXTFS=field: String, }
+
 # Extension execute command with multiple arguments, no trailing comma
-command { AT+TESTEXEXTFII=field1: Integer, field2: Integer }
+command { AT+TESTEXEXTFSI=field1: String, field2: Integer }
 
 # Extension execute command with multiple arguments, with trailing comma
-command { AT+TESTEXEXTFIIC=field1: Integer, field2: Integer,}
+command { AT+TESTEXEXTFSIC=field1: String, field2: Integer,}
 
 # List type argument
 command { AT+TESTL=field: List<Integer>}
@@ -26,10 +29,17 @@ command { AT+TESTL=field: List<Integer>}
 command { AT+TESTM=field: Map<Integer, String> }
 
 # Paren delimited argument list
-command { AT+TESTP=(field1: Integer) }
+command { AT+TESTP=(field: Integer) }
 
 # Paren delimited multiple argment lists
-command { AT+TESTPP=(field1: Integer)(field2: String, field3: String) }
+command { AT+TESTPP=(field1: Integer)(field2: Integer, field3: String) }
+
+# Paren delimited multiple argment lists with map and lists
+command {
+    AT+TESTPMPIL=
+        (field1: Map<Integer, String>)
+        (field2: Integer, field3: List<Integer>)
+}
 
 # Read command
 command { ATTESTR? }
@@ -38,7 +48,7 @@ command { ATTESTR? }
 command { AT+TESTREX? }
 
 # Test command
-command { ATTESTR=? }
+command { ATTESTT=? }
 
 # Extension test command
 command { AT+TESTTEX=? }
@@ -55,17 +65,33 @@ response { +TESTI: field: Integer }
 # Extension response with one argument, with trailing comma
 response { +TESTIC: field: Integer, }
 
+# Extension response with one argument, no trailing comma
+response { +TESTS: field: String }
+
 # Extension response with multiple arguments, no trailing comma
-response { +TESTII: field1: Integer, field2: Integer }
+response { +TESTSI: field1: String, field2: Integer }
 
 # Extension response with multiple arguments, with trailing comma
-response { +TESTIIC: field1: Integer, field2: Integer,}
+response { +TESTSIC: field1: String, field2: Integer,}
+
+# List type arguments
+response { +TESTL: field: List<Integer> }
+
+# Map type arguments
+response { +TESTM: field: Map<Integer, String> }
 
 # Response with paren delimited argument list
-response { +TESTP: (field1: Integer) }
+response { +TESTP: (field: Integer) }
 
 # Response with paren delimited multiple argment lists
-response { +TESTPP: (field1: Integer)(field2: String, field3: String) }
+response { +TESTPP: (field1: Integer)(field2: Integer, field3: String) }
+
+# Paren delimited multiple argument lists with map and list
+response {
+    +TESTPMPIL:
+        (field1: Map<Integer, String>)
+        (field2: Integer, field3: List<Integer>)
+}
 
 # Enum with one variant
 enum TestOneVariant {

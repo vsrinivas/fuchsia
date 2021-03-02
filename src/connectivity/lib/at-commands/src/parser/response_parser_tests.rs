@@ -4,10 +4,7 @@
 
 /// Tests for the AT command response parser.
 use crate::{
-    lowlevel::{
-        arguments::{Argument, Arguments, PrimitiveArgument},
-        response::{HardcodedError, Response},
-    },
+    lowlevel::{Argument, Arguments, HardcodedError, PrimitiveArgument, Response},
     parser::response_parser,
 };
 

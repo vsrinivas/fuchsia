@@ -25,18 +25,25 @@ compiled_action("generate_sources") {
 # Copy existing rust source to the generated source directory
 copy("copy_sources") {
   sources = [
+    "src/command_generated_tests.rs",
     "src/lib.rs",
     "src/lowlevel/arguments.rs",
     "src/lowlevel/command.rs",
+    "src/lowlevel/command_tests.rs",
     "src/lowlevel/response.rs",
+    "src/lowlevel/response_tests.rs",
     "src/lowlevel/write_to.rs",
     "src/parser/arguments_parser.rs",
     "src/parser/command_grammar.rs",
     "src/parser/command_parser.rs",
+    "src/parser/command_parser_tests.rs",
     "src/parser/common.rs",
     "src/parser/response_grammar.rs",
     "src/parser/response_parser.rs",
+    "src/parser/response_parser_tests.rs",
+    "src/response_generated_tests.rs",
     "src/serde.rs",
+    "src/tests.rs",
     "src/translate_util.rs",
   ]
   outputs = [ "$target_gen_dir/{{source_target_relative}}" ]
@@ -90,29 +97,41 @@ group("tests") {
   ]
 }
 
+# Build the at command tests from the generated sources
 rustc_test("lib_tests") {
-  source_root = "src/tests.rs"
+  edition = "2018"
   deps = [
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:pest",
     "//third_party/rust_crates:pest_derive",
     "//third_party/rust_crates:thiserror",
   ]
+  non_rust_deps = [
+    ":copy_sources",
+    ":generate_sources",
+  ]
+  source_root = "$target_gen_dir/src/tests.rs"
   sources = [
-    "src/lowlevel/arguments.rs",
-    "src/lowlevel/command.rs",
-    "src/lowlevel/command_tests.rs",
-    "src/lowlevel/response.rs",
-    "src/lowlevel/response_tests.rs",
-    "src/lowlevel/write_to.rs",
-    "src/parser/arguments_parser.rs",
-    "src/parser/command_grammar.rs",
-    "src/parser/command_parser.rs",
-    "src/parser/command_parser_tests.rs",
-    "src/parser/common.rs",
-    "src/parser/response_grammar.rs",
-    "src/parser/response_parser.rs",
-    "src/parser/response_parser_tests.rs",
-    "src/tests.rs",
-    "src/translate_util.rs",
+    "$target_gen_dir/src/command_generated_tests.rs",
+    "$target_gen_dir/src/generated.rs",
+    "$target_gen_dir/src/lowlevel/arguments.rs",
+    "$target_gen_dir/src/lowlevel/command.rs",
+    "$target_gen_dir/src/lowlevel/command_tests.rs",
+    "$target_gen_dir/src/lowlevel/response.rs",
+    "$target_gen_dir/src/lowlevel/response_tests.rs",
+    "$target_gen_dir/src/lowlevel/write_to.rs",
+    "$target_gen_dir/src/parser/arguments_parser.rs",
+    "$target_gen_dir/src/parser/command_grammar.rs",
+    "$target_gen_dir/src/parser/command_parser.rs",
+    "$target_gen_dir/src/parser/command_parser_tests.rs",
+    "$target_gen_dir/src/parser/common.rs",
+    "$target_gen_dir/src/parser/response_grammar.rs",
+    "$target_gen_dir/src/parser/response_parser.rs",
+    "$target_gen_dir/src/parser/response_parser_tests.rs",
+    "$target_gen_dir/src/response_generated_tests.rs",
+    "$target_gen_dir/src/serde.rs",
+    "$target_gen_dir/src/tests.rs",
+    "$target_gen_dir/src/translate_util.rs",
   ]
 }

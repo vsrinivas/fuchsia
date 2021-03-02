@@ -11,7 +11,7 @@ mod lowlevel {
     // Make these available in lowlevel to simplify generated code.
     pub use arguments::{Argument, Arguments, PrimitiveArgument};
     pub use command::{Command, ExecuteArguments};
-    pub use response::Response;
+    pub use response::{HardcodedError, Response};
 }
 
 mod parser {
