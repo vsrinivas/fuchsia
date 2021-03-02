@@ -18,6 +18,18 @@ pub struct Channel {
     channel: super::Channel,
 }
 
+impl AsRef<super::Channel> for Channel {
+    fn as_ref(&self) -> &super::Channel {
+        &self.channel
+    }
+}
+
+impl super::AsHandleRef for Channel {
+    fn as_handle_ref(&self) -> super::HandleRef<'_> {
+        self.channel.as_handle_ref()
+    }
+}
+
 impl std::fmt::Debug for Channel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.channel.fmt(f)

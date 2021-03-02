@@ -20,6 +20,18 @@ pub struct Socket {
     socket: super::Socket,
 }
 
+impl AsRef<super::Socket> for Socket {
+    fn as_ref(&self) -> &super::Socket {
+        &self.socket
+    }
+}
+
+impl super::AsHandleRef for Socket {
+    fn as_handle_ref(&self) -> super::HandleRef<'_> {
+        self.socket.as_handle_ref()
+    }
+}
+
 impl std::fmt::Debug for Socket {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.socket.fmt(f)
