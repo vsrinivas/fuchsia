@@ -10,9 +10,6 @@
 #include <audio-proto-utils/format-utils.h>
 #include <fbl/algorithm.h>
 
-namespace {
-namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
-}  // namespace
 namespace audio {
 namespace utils {
 
@@ -62,50 +59,20 @@ uint32_t ComputeFrameSize(uint16_t channels, audio_sample_format_t sample_format
   }
 }
 
-std::vector<Format> GetAllFormats(audio_sample_format_t sample_format) {
-  ZX_DEBUG_ASSERT(!(sample_format & AUDIO_SAMPLE_FORMAT_BITSTREAM));
-  ZX_DEBUG_ASSERT(!(sample_format & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN));
-  std::vector<Format> all;
+SampleSize GetSampleSizes(audio_sample_format_t sample_format) {
   uint32_t fmt_noflags = sample_format & ~AUDIO_SAMPLE_FORMAT_FLAG_MASK;
-  while (fmt_noflags) {
-    audio_fidl::SampleFormat out_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
-    if (fmt_noflags & AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED) {
-      out_format = audio_fidl::wire::SampleFormat::PCM_UNSIGNED;
-    }
-    if (fmt_noflags & AUDIO_SAMPLE_FORMAT_8BIT) {
-      all.push_back({out_format, 8, 1});
-      fmt_noflags &= ~AUDIO_SAMPLE_FORMAT_8BIT;
-    }
-    if (fmt_noflags & AUDIO_SAMPLE_FORMAT_16BIT) {
-      all.push_back({out_format, 16, 2});
-      fmt_noflags &= ~AUDIO_SAMPLE_FORMAT_16BIT;
-    }
-    if (fmt_noflags & AUDIO_SAMPLE_FORMAT_24BIT_PACKED) {
-      all.push_back({out_format, 24, 3});
-      fmt_noflags &= ~AUDIO_SAMPLE_FORMAT_24BIT_PACKED;
-    }
-    if (fmt_noflags & AUDIO_SAMPLE_FORMAT_20BIT_IN32) {
-      all.push_back({out_format, 20, 4});
-      fmt_noflags &= ~AUDIO_SAMPLE_FORMAT_20BIT_IN32;
-    }
-    if (fmt_noflags & AUDIO_SAMPLE_FORMAT_24BIT_IN32) {
-      all.push_back({out_format, 24, 4});
-      fmt_noflags &= ~AUDIO_SAMPLE_FORMAT_24BIT_IN32;
-    }
-    if (fmt_noflags & AUDIO_SAMPLE_FORMAT_32BIT) {
-      all.push_back({out_format, 32, 4});
-      fmt_noflags &= ~AUDIO_SAMPLE_FORMAT_32BIT;
-    }
-    if (fmt_noflags & AUDIO_SAMPLE_FORMAT_32BIT_FLOAT) {
-      all.push_back({audio_fidl::SampleFormat::PCM_FLOAT, 32, 4});
-      fmt_noflags &= ~AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
-    }
-    // We expect all bits to have been processed.
-    if (fmt_noflags != 0) {
-      ZX_PANIC("Invalid audio_out_format_t: %X\n", sample_format);
-    }
+  switch (fmt_noflags) {
+    // clang-format off
+    case AUDIO_SAMPLE_FORMAT_8BIT:         return {8,  1 };
+    case AUDIO_SAMPLE_FORMAT_16BIT:        return {16, 2};
+    case AUDIO_SAMPLE_FORMAT_24BIT_PACKED: return {24, 3};
+    case AUDIO_SAMPLE_FORMAT_20BIT_IN32:   return {20, 4};
+    case AUDIO_SAMPLE_FORMAT_24BIT_IN32:   return {24, 4};
+    case AUDIO_SAMPLE_FORMAT_32BIT:        return {32, 4};
+    case AUDIO_SAMPLE_FORMAT_32BIT_FLOAT:  return {32, 4};
+    default:                               return {0,  0 };
+      // clang-format on
   }
-  return all;
 }
 
 audio_sample_format_t GetSampleFormat(uint8_t bits_per_sample, uint8_t bits_per_channel) {
