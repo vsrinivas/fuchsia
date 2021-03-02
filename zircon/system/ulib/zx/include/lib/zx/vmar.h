@@ -39,8 +39,12 @@ class vmar final : public object<vmar> {
     return zx_vmar_unmap(get(), address, len);
   }
 
-  zx_status_t protect2(zx_vm_option_t prot, uintptr_t address, size_t len) const {
+  zx_status_t protect(zx_vm_option_t prot, uintptr_t address, size_t len) const {
     return zx_vmar_protect(get(), prot, address, len);
+  }
+
+  zx_status_t protect2(zx_vm_option_t prot, uintptr_t address, size_t len) const {
+    return protect(prot, address, len);
   }
 
   zx_status_t op_range(uint32_t op, uint64_t offset, uint64_t size, void* buffer,
@@ -50,8 +54,13 @@ class vmar final : public object<vmar> {
 
   zx_status_t destroy() const { return zx_vmar_destroy(get()); }
 
+  zx_status_t allocate(uint32_t options, size_t offset, size_t size, vmar* child,
+                       uintptr_t* child_addr) const;
+
   zx_status_t allocate2(uint32_t options, size_t offset, size_t size, vmar* child,
-                        uintptr_t* child_addr) const;
+                        uintptr_t* child_addr) const {
+    return allocate(options, offset, size, child, child_addr);
+  }
 
   static inline unowned<vmar> root_self() { return unowned<vmar>(zx_vmar_root_self()); }
 };
