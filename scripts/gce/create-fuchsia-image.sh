@@ -7,9 +7,13 @@ if [[ -z $FUCHSIA_GCE_PROJECT ]]; then
   source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/env.sh
 fi
 
-$FUCHSIA_DIR/scripts/gce/gce make-fuchsia-image "$@" || exit 1
+diskimage="$(fx-command-run list-build-artifacts --type blk --name uefi-disk images)"
+diskimage=$FUCHSIA_BUILD_DIR/$diskimage
 
-diskimage="$FUCHSIA_OUT_DIR/$FUCHSIA_GCE_IMAGE.img"
+if [[ ! -f $diskimage ]]; then
+  echo "You need to build fuchsia" >&2
+  exit 1
+fi
 
 tmp="$(mktemp -d)"
 if [[ ! -d $tmp ]]; then
@@ -19,7 +23,7 @@ fi
 trap "rm -rf '$tmp'" EXIT
 
 cd "$tmp"
-mv "$diskimage" disk.raw
+cp "$diskimage" disk.raw
 
 tar -Scf "$FUCHSIA_OUT_DIR/$FUCHSIA_GCE_IMAGE.tar" disk.raw
 if [ -x "$(command -v pigz)" ]; then

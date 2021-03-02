@@ -9,4 +9,4 @@ fi
 
 # gcloud -q compute disks create "$FUCHSIA_GCE_DISK" --guest-os-features=UEFI_COMPATIBLE --image "$FUCHSIA_GCE_IMAGE" || exit
 # gcloud -q compute instances create "$FUCHSIA_GCE_INSTANCE" --metadata=serial-port-enable=1 --disk=auto-delete=yes,boot=yes,mode=rw,name="${FUCHSIA_GCE_DISK}" || exit
-gcloud -q compute instances create "$FUCHSIA_GCE_INSTANCE" --metadata=serial-port-enable=1 --image "${FUCHSIA_GCE_IMAGE}" || exit $?
+gcloud -q compute instances create "$FUCHSIA_GCE_INSTANCE" --metadata=serial-port-enable=1 --image "${FUCHSIA_GCE_IMAGE}" --machine-type=n2-standard-4 || exit $?
