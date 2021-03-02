@@ -744,22 +744,15 @@ func (c *Client) send(
 		switch err.(type) {
 		case nil:
 			result := <-ch
-			if result.Success {
-				linkAddress = result.LinkAddress
-			} else {
-				err = &tcpip.ErrTimeout{}
-			}
+			linkAddress = result.LinkAddress
+			err = result.Err
 		case *tcpip.ErrWouldBlock:
 			select {
 			case <-ctx.Done():
 				return fmt.Errorf("client address resolution: %w", ctx.Err())
 			case result := <-ch:
-				if result.Success {
-					linkAddress = result.LinkAddress
-					err = nil
-				} else {
-					err = &tcpip.ErrTimeout{}
-				}
+				linkAddress = result.LinkAddress
+				err = result.Err
 			}
 		}
 		if err != nil {

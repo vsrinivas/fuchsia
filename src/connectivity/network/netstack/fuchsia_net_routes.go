@@ -68,7 +68,7 @@ func (r *routesImpl) Resolve(ctx fidl.Context, destination net.IpAddress) (route
 		case nil, *tcpip.ErrWouldBlock:
 			select {
 			case result := <-ch:
-				if result.Success {
+				if result.Err == nil {
 					// Build our response with the resolved route.
 					nicID := route.NICID()
 					route := result.RouteInfo
@@ -92,6 +92,7 @@ func (r *routesImpl) Resolve(ctx fidl.Context, destination net.IpAddress) (route
 					}
 					return routes.StateResolveResultWithResponse(response)
 				}
+				err = result.Err
 			case <-ctx.Done():
 				switch ctx.Err() {
 				case context.Canceled:
@@ -100,7 +101,6 @@ func (r *routesImpl) Resolve(ctx fidl.Context, destination net.IpAddress) (route
 					return routes.StateResolveResultWithErr(int32(zx.ErrTimedOut))
 				}
 			}
-			err = &tcpip.ErrTimeout{}
 		}
 		logFn(".ResolvedFields(...)", err)
 		return routes.StateResolveResultWithErr(int32(zx.ErrAddressUnreachable))
