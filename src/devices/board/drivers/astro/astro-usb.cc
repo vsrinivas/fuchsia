@@ -84,6 +84,11 @@ static const pbus_boot_metadata_t usb_boot_metadata[] = {
         .zbi_type = DEVICE_METADATA_MAC_ADDRESS,
         .zbi_extra = MACADDR_BLUETOOTH,
     },
+    {
+        // Advertise serial number over USB
+        .zbi_type = DEVICE_METADATA_SERIAL_NUMBER,
+        .zbi_extra = 0,
+    },
 };
 
 static const pbus_dev_t dwc2_dev = []() {
