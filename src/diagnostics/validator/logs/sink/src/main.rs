@@ -4,7 +4,7 @@
 
 use anyhow::Error;
 use argh::FromArgs;
-use diagnostics_stream::{parse::parse_record, Argument, Record, Severity, Value};
+use diagnostics_log_encoding::{parse::parse_record, Argument, Record, Severity, Value};
 use fidl_fuchsia_diagnostics_stream::{MAX_ARGS, MAX_ARG_NAME_LENGTH};
 use fidl_fuchsia_logger::{LogSinkRequest, LogSinkRequestStream, MAX_DATAGRAM_LEN_BYTES};
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
@@ -203,7 +203,7 @@ fn vector_filter(vector: &TestVector) -> bool {
     // TODO(fxbug.dev/66785) avoid this overallocation by supporting growth of the vec
     let mut buf = Cursor::new(vec![0; 1_000_000]);
     {
-        diagnostics_stream::encode::Encoder::new(&mut buf).write_record(&record).unwrap();
+        diagnostics_log_encoding::encode::Encoder::new(&mut buf).write_record(&record).unwrap();
     }
 
     buf.position() < MAX_DATAGRAM_LEN_BYTES as u64
@@ -272,7 +272,7 @@ impl TestRecord {
         let Record { timestamp, severity, arguments } = parse_record(buf)?.0;
 
         let mut sorted_args = BTreeMap::new();
-        for diagnostics_stream::Argument { name, value } in arguments {
+        for Argument { name, value } in arguments {
             if severity >= Severity::Error {
                 if name == "file" {
                     sorted_args.insert(name, Value::Text(STUB_ERROR_FILENAME.to_owned()));

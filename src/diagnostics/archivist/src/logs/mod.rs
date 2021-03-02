@@ -26,7 +26,7 @@ mod tests {
         logs::{message::LegacySeverity, testing::*},
     };
     use diagnostics_data::{DROPPED_LABEL, MESSAGE_LABEL, PID_LABEL, TAG_LABEL, TID_LABEL};
-    use diagnostics_stream::{Argument, Record, Severity as StreamSeverity, Value};
+    use diagnostics_log_encoding::{Argument, Record, Severity as StreamSeverity, Value};
     use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
     use fuchsia_async as fasync;
     use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty};

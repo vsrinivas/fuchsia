@@ -4,7 +4,7 @@
 
 //! This module contains fuzzing targets for the diagnostic streams crate.
 
-use diagnostics_stream::parse;
+use diagnostics_log_encoding::parse;
 use fuzz::fuzz;
 
 #[fuzz]

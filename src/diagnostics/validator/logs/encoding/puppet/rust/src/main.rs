@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    diagnostics_stream::encode::{Encoder, EncodingError},
+    diagnostics_log_encoding::encode::{Encoder, EncodingError},
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_validate_logs::{EncodingPuppetRequest, EncodingPuppetRequestStream, PuppetError},
     fuchsia_async as fasync,

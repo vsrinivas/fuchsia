@@ -4,8 +4,8 @@
 
 use anyhow::Error;
 use argh::FromArgs;
+use diagnostics_log_encoding::Value;
 use diagnostics_reader::{ArchiveReader, Logs};
-use diagnostics_stream::Value;
 use fidl_fuchsia_diagnostics::Severity;
 use fidl_fuchsia_diagnostics_stream::{Argument, Record};
 use fidl_fuchsia_validate_logs::{LogSinkPuppetMarker, LogSinkPuppetProxy, PuppetInfo, RecordSpec};

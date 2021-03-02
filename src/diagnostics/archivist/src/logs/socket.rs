@@ -108,7 +108,7 @@ mod tests {
         TEST_IDENTITY,
     };
     use super::*;
-    use diagnostics_stream::{
+    use diagnostics_log_encoding::{
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
     use std::io::Cursor;

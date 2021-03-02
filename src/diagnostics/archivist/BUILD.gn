@@ -39,7 +39,7 @@ rustc_library("lib") {
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/derive",
     "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/diagnostics/stream/rust",
+    "//src/lib/diagnostics/log/encoding/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl_table_validation",

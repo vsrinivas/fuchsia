@@ -9,7 +9,7 @@ use crate::{
 use byteorder::{ByteOrder, LittleEndian};
 use diagnostics_data::{LogError, Timestamp};
 use diagnostics_hierarchy::DiagnosticsHierarchy;
-use diagnostics_stream::{Severity as StreamSeverity, Value, ValueUnknown};
+use diagnostics_log_encoding::{Severity as StreamSeverity, Value, ValueUnknown};
 use fidl_fuchsia_logger::{LogLevelFilter, LogMessage, MAX_DATAGRAM_LEN_BYTES};
 use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_syslog::COMPONENT_NAME_PLACEHOLDER_TAG;
@@ -231,7 +231,7 @@ impl Message {
     ///
     /// [log encoding] https://fuchsia.dev/fuchsia-src/development/logs/encodings
     pub fn from_structured(source: &ComponentIdentity, bytes: &[u8]) -> Result<Self, StreamError> {
-        let (record, _) = diagnostics_stream::parse::parse_record(bytes)?;
+        let (record, _) = diagnostics_log_encoding::parse::parse_record(bytes)?;
 
         let mut properties = vec![];
         let mut dropped_logs = 0;
@@ -645,7 +645,7 @@ impl fx_log_packet_t {
 mod tests {
     use super::*;
     use diagnostics_data::*;
-    use diagnostics_stream::{encode::Encoder, Argument, Record};
+    use diagnostics_log_encoding::{encode::Encoder, Argument, Record};
     use fuchsia_syslog::levels::{DEBUG, ERROR, INFO, TRACE, WARN};
     use std::io::Cursor;
 
