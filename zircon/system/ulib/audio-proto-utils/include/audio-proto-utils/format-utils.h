@@ -5,17 +5,20 @@
 #ifndef AUDIO_PROTO_UTILS_FORMAT_UTILS_H_
 #define AUDIO_PROTO_UTILS_FORMAT_UTILS_H_
 
+#include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/device/audio.h>
 #include <zircon/types.h>
 
 #include <utility>
+#include <vector>
 
 namespace audio {
 namespace utils {
 
-struct SampleSize {
+struct Format {
+  ::llcpp::fuchsia::hardware::audio::SampleFormat format;
   uint8_t valid_bits_per_sample;
   uint8_t bytes_per_sample;
 };
@@ -29,9 +32,8 @@ bool FrameRateIn441kFamily(uint32_t rate);
 // in the case of an error (bad channel count, bad sample format)
 uint32_t ComputeFrameSize(uint16_t channels, audio_sample_format_t sample_format);
 
-// Figure out the size of an audio sample and channel based on the sample format.  Returns {0, 0}
-// in the case of an error (bad sample format)
-SampleSize GetSampleSizes(audio_sample_format_t sample_format);
+// Expand a packed `audio_sample_format_t` into a vector of Formats.
+std::vector<Format> GetAllFormats(audio_sample_format_t sample_format);
 
 // Figure out the sample format based on the audio sample and channel sizes.  Returns 0
 // in the case of an error (bad sample and channel sizes)

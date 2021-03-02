@@ -8,5 +8,7 @@ zx_library("audio-proto-utils") {
   sdk = "source"
   sdk_headers = [ "audio-proto-utils/format-utils.h" ]
   sources = [ "format-utils.cc" ]
+  public_deps =
+      [ "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp" ]
   deps = [ "//zircon/public/lib/fbl" ]
 }

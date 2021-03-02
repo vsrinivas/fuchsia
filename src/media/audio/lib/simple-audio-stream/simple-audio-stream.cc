@@ -524,57 +524,41 @@ void SimpleAudioStream::GetSupportedFormats(
     fbl::Vector<uint8_t> bytes_per_sample;
   };
   fbl::Vector<FidlCompatibleFormats> fidl_compatible_formats;
-  for (auto& i : supported_formats_) {
-    audio_fidl::wire::SampleFormat sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
-    ZX_ASSERT(!(i.sample_formats & AUDIO_SAMPLE_FORMAT_BITSTREAM));
-    ZX_ASSERT(!(i.sample_formats & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN));
-
-    if (i.sample_formats & AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED) {
-      sample_format = audio_fidl::wire::SampleFormat::PCM_UNSIGNED;
-    }
-
-    auto noflag_format =
-        static_cast<audio_sample_format_t>(i.sample_formats & ~AUDIO_SAMPLE_FORMAT_FLAG_MASK);
-
-    auto sizes = audio::utils::GetSampleSizes(noflag_format);
-
-    ZX_ASSERT(sizes.valid_bits_per_sample != 0);
-    ZX_ASSERT(sizes.bytes_per_sample != 0);
-
-    if (noflag_format == AUDIO_SAMPLE_FORMAT_32BIT_FLOAT) {
-      sample_format = audio_fidl::wire::SampleFormat::PCM_FLOAT;
-    }
-
-    fbl::Vector<uint32_t> rates;
-    // Ignore flags if min and max are equal.
-    if (i.min_frames_per_second == i.max_frames_per_second) {
-      rates.push_back(i.min_frames_per_second);
-    } else {
-      ZX_ASSERT(!(i.flags & ASF_RANGE_FLAG_FPS_CONTINUOUS));
-      audio::utils::FrameRateEnumerator enumerator(i);
-      for (uint32_t rate : enumerator) {
-        rates.push_back(rate);
+  for (audio_stream_format_range_t& i : supported_formats_) {
+    std::vector<utils::Format> formats = audio::utils::GetAllFormats(i.sample_formats);
+    ZX_ASSERT(formats.size() >= 1);
+    for (utils::Format& j : formats) {
+      fbl::Vector<uint32_t> rates;
+      // Ignore flags if min and max are equal.
+      if (i.min_frames_per_second == i.max_frames_per_second) {
+        rates.push_back(i.min_frames_per_second);
+      } else {
+        ZX_ASSERT(!(i.flags & ASF_RANGE_FLAG_FPS_CONTINUOUS));
+        audio::utils::FrameRateEnumerator enumerator(i);
+        for (uint32_t rate : enumerator) {
+          rates.push_back(rate);
+        }
       }
-    }
 
-    fbl::Vector<uint8_t> number_of_channels;
-    for (uint8_t j = i.min_channels; j <= i.max_channels; ++j) {
-      number_of_channels.push_back(j);
-    }
+      fbl::Vector<uint8_t> number_of_channels;
+      for (uint8_t j = i.min_channels; j <= i.max_channels; ++j) {
+        number_of_channels.push_back(j);
+      }
 
-    fidl_compatible_formats.push_back({
-        std::move(number_of_channels),
-        {sample_format},
-        std::move(rates),
-        {sizes.valid_bits_per_sample},
-        {sizes.bytes_per_sample},
-    });
+      fidl_compatible_formats.push_back({
+          .number_of_channels = std::move(number_of_channels),
+          .sample_formats = {j.format},
+          .frame_rates = std::move(rates),
+          .valid_bits_per_sample = {j.valid_bits_per_sample},
+          .bytes_per_sample = {j.bytes_per_sample},
+      });
+    }
   }
 
   // Get FIDL PcmSupportedFormats from FIDL compatible vectors.
   // Needs to be alive until the reply is sent.
   fbl::Vector<audio_fidl::wire::PcmSupportedFormats> fidl_pcm_formats;
-  for (auto& i : fidl_compatible_formats) {
+  for (FidlCompatibleFormats& i : fidl_compatible_formats) {
     audio_fidl::wire::PcmSupportedFormats formats;
     formats.number_of_channels = ::fidl::VectorView<uint8_t>(
         fidl::unowned_ptr(i.number_of_channels.data()), i.number_of_channels.size());
@@ -592,7 +576,7 @@ void SimpleAudioStream::GetSupportedFormats(
   // Get builders from PcmSupportedFormats tables.
   // Needs to be alive until the reply is sent.
   fbl::Vector<audio_fidl::wire::SupportedFormats::UnownedBuilder> fidl_builders;
-  for (auto& i : fidl_pcm_formats) {
+  for (audio_fidl::wire::PcmSupportedFormats& i : fidl_pcm_formats) {
     auto builder = audio_fidl::wire::SupportedFormats::UnownedBuilder();
     builder.set_pcm_supported_formats(fidl::unowned_ptr(&i));
     fidl_builders.push_back(std::move(builder));
