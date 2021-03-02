@@ -124,11 +124,11 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
                 ClientInfo&& client_info)
         : constraints_(table_set, std::move(constraints)), client_info_(std::move(client_info)) {}
 
-    const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints() const {
+    const llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& constraints() const {
       return *constraints_;
     }
 
-    llcpp::fuchsia::sysmem2::BufferCollectionConstraints& mutate_constraints() {
+    llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& mutate_constraints() {
       return constraints_.mutate();
     }
 
@@ -239,7 +239,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   Device* parent_device_ = nullptr;
 
-  // We occasionally swap out the allocator for a fresh one, to avoid the possibilty of churn
+  // We occasionally swap out the allocator for a fresh one, to avoid the possibility of churn
   // leading to excessive un-used memory allocation in the allocator.  This is accomplished via
   // TableHolder and TableSet.
   TableSet table_set_;

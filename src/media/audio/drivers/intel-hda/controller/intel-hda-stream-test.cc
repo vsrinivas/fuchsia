@@ -158,7 +158,7 @@ TEST(HdaStreamTest, GetStreamPropertiesDefaults) {
   EXPECT_EQ(result->properties.can_mute(), false);
   EXPECT_EQ(result->properties.can_agc(), false);
   EXPECT_EQ(result->properties.plug_detect_capabilities(),
-            audio_fidl::PlugDetectCapabilities::HARDWIRED);
+            audio_fidl::wire::PlugDetectCapabilities::HARDWIRED);
   EXPECT_EQ(result->properties.clock_domain(), 0);
 
   codec->DeviceRelease();
@@ -185,7 +185,7 @@ TEST(HdaStreamTest, SetAndGetGainDefaults) {
 
   {
     fidl::aligned<float> target_gain = kTestGain;
-    auto builder = audio_fidl::GainState::UnownedBuilder();
+    auto builder = audio_fidl::wire::GainState::UnownedBuilder();
     builder.set_gain_db(fidl::unowned_ptr(&target_gain));
     auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
     EXPECT_OK(status.status());
@@ -292,7 +292,7 @@ TEST(HdaStreamTest, GetStreamProperties) {
   EXPECT_EQ(result->properties.can_mute(), true);
   EXPECT_EQ(result->properties.can_agc(), false);
   EXPECT_EQ(result->properties.plug_detect_capabilities(),
-            audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+            audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
   EXPECT_EQ(result->properties.clock_domain(), 0);
 
   codec->DeviceRelease();
@@ -319,7 +319,7 @@ TEST(HdaStreamTest, SetAndGetGain) {
 
   {
     fidl::aligned<float> target_gain = kTestGain;
-    auto builder = audio_fidl::GainState::UnownedBuilder();
+    auto builder = audio_fidl::wire::GainState::UnownedBuilder();
     builder.set_gain_db(fidl::unowned_ptr(&target_gain));
     auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
     EXPECT_OK(status.status());
@@ -335,7 +335,7 @@ TEST(HdaStreamTest, SetAndGetGain) {
       EXPECT_EQ(kTestGain2, gain_state->gain_state.gain_db());
     });
     fidl::aligned<float> target_gain = kTestGain2;
-    auto builder = audio_fidl::GainState::UnownedBuilder();
+    auto builder = audio_fidl::wire::GainState::UnownedBuilder();
     builder.set_gain_db(fidl::unowned_ptr(&target_gain));
     auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
     EXPECT_OK(status.status());

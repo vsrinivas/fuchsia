@@ -216,7 +216,7 @@ void BufferCollection::SetConstraints(
       return;
     }
     ZX_DEBUG_ASSERT(!result.value().IsEmpty() || !local_constraints);
-    constraints_.emplace(TableHolder<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>(
+    constraints_.emplace(TableHolder<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints>(
         table_set_, result.take_value()));
   }  // ~result
 

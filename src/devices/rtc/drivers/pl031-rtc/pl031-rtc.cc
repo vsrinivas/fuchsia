@@ -45,7 +45,7 @@ zx_status_t Pl031::Bind(void* /*unused*/, zx_device_t* dev) {
   }
 
   // Retrieve and sanitize the RTC value. Set the RTC to the value.
-  FidlRtc::Time rtc = SecondsToRtc(MmioRead32(&pl031_device->regs_->dr));
+  FidlRtc::wire::Time rtc = SecondsToRtc(MmioRead32(&pl031_device->regs_->dr));
   rtc = SanitizeRtc(rtc);
   status = pl031_device->SetRtc(rtc);
   if (status != ZX_OK) {
@@ -65,11 +65,13 @@ Pl031::Pl031(zx_device_t* parent, ddk::MmioBuffer mmio)
       regs_(reinterpret_cast<MMIO_PTR Pl031Regs*>(mmio_.get())) {}
 
 void Pl031::Get(GetCompleter::Sync& completer) {
-  FidlRtc::Time rtc = SecondsToRtc(MmioRead32(&regs_->dr));
+  FidlRtc::wire::Time rtc = SecondsToRtc(MmioRead32(&regs_->dr));
   completer.Reply(rtc);
 }
 
-void Pl031::Set(FidlRtc::Time rtc, SetCompleter::Sync& completer) { completer.Reply(SetRtc(rtc)); }
+void Pl031::Set(FidlRtc::wire::Time rtc, SetCompleter::Sync& completer) {
+  completer.Reply(SetRtc(rtc));
+}
 
 zx_status_t Pl031::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
@@ -79,7 +81,7 @@ zx_status_t Pl031::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 
 void Pl031::DdkRelease() { delete this; }
 
-zx_status_t Pl031::SetRtc(FidlRtc::Time rtc) {
+zx_status_t Pl031::SetRtc(FidlRtc::wire::Time rtc) {
   if (!IsRtcValid(rtc)) {
     return ZX_ERR_OUT_OF_RANGE;
   }

@@ -43,32 +43,32 @@ using UnderlyingTypeOrType_t = typename UnderlyingTypeOrType<T>::type;
 //
 // See fidl_struct.h's TakeAsLlcpp() for a way to convert from FIDL C to llcpp first.
 
-[[nodiscard]] llcpp::fuchsia::sysmem2::PixelFormat V2CopyFromV1PixelFormat(
+[[nodiscard]] llcpp::fuchsia::sysmem2::wire::PixelFormat V2CopyFromV1PixelFormat(
     fidl::AnyAllocator& allocator, const llcpp::fuchsia::sysmem::wire::PixelFormat& v1);
-[[nodiscard]] llcpp::fuchsia::sysmem2::PixelFormat V2CopyFromV1PixelFormat(
+[[nodiscard]] llcpp::fuchsia::sysmem2::wire::PixelFormat V2CopyFromV1PixelFormat(
     fidl::AnyAllocator& allocator, const fuchsia_sysmem_PixelFormat& v1);
 
-[[nodiscard]] llcpp::fuchsia::sysmem2::ColorSpace V2CopyFromV1ColorSpace(
+[[nodiscard]] llcpp::fuchsia::sysmem2::wire::ColorSpace V2CopyFromV1ColorSpace(
     fidl::AnyAllocator& allocator, const llcpp::fuchsia::sysmem::wire::ColorSpace& v1);
-[[nodiscard]] llcpp::fuchsia::sysmem2::ColorSpace V2CopyFromV1ColorSpace(
+[[nodiscard]] llcpp::fuchsia::sysmem2::wire::ColorSpace V2CopyFromV1ColorSpace(
     fidl::AnyAllocator& allocator, const fuchsia_sysmem_ColorSpace& v1);
 
-[[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::ImageFormatConstraints>
+[[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints>
 V2CopyFromV1ImageFormatConstraints(fidl::AnyAllocator& allocator,
                                    const llcpp::fuchsia::sysmem::wire::ImageFormatConstraints& v1);
-[[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::ImageFormatConstraints>
+[[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints>
 V2CopyFromV1ImageFormatConstraints(fidl::AnyAllocator& allocator,
                                    const fuchsia_sysmem_ImageFormatConstraints& v1);
 
-[[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::BufferUsage> V2CopyFromV1BufferUsage(
+[[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::wire::BufferUsage> V2CopyFromV1BufferUsage(
     fidl::AnyAllocator& allocator, const llcpp::fuchsia::sysmem::wire::BufferUsage& v1);
-[[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::BufferUsage> V2CopyFromV1BufferUsage(
+[[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::wire::BufferUsage> V2CopyFromV1BufferUsage(
     fidl::AnyAllocator& allocator, const fuchsia_sysmem_BufferUsage& v1);
 
-[[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::BufferMemoryConstraints>
+[[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints>
 V2CopyFromV1BufferMemoryConstraints(
     fidl::AnyAllocator& allocator, const llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints& v1);
-[[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::BufferMemoryConstraints>
+[[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::wire::BufferMemoryConstraints>
 V2CopyFromV1BufferMemoryConstraints(fidl::AnyAllocator& allocator,
                                     const fuchsia_sysmem_BufferMemoryConstraints& v1);
 
@@ -76,7 +76,7 @@ V2CopyFromV1BufferMemoryConstraints(fidl::AnyAllocator& allocator,
 V2CopyFromV1BufferCollectionConstraints(
     fidl::AnyAllocator& allocator,
     const llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints* v1,
-    const llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers* aux_buffers_v1);
+    const llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers* aux_buffers_v1);
 [[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints>
 V2CopyFromV1BufferCollectionConstraints(
     fidl::AnyAllocator& allocator, const fuchsia_sysmem_BufferCollectionConstraints* v1,

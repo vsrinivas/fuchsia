@@ -51,32 +51,33 @@ class TableHolderBase {
 template <typename Table>
 struct GetCloneFunction {};
 template <>
-struct GetCloneFunction<llcpp::fuchsia::sysmem2::HeapProperties> {
+struct GetCloneFunction<llcpp::fuchsia::sysmem2::wire::HeapProperties> {
   constexpr static auto value = sysmem::V2CloneHeapProperties;
 };
 template <>
-struct GetCloneFunction<llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers> {
+struct GetCloneFunction<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers> {
   constexpr static auto value =
       [](fidl::AnyAllocator& allocator,
-         const llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers& to_copy)
-      -> llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers {
+         const llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers& to_copy)
+      -> llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers {
     // struct copy; no allocator involvement
     return to_copy;
   };
 };
 template <>
-struct GetCloneFunction<llcpp::fuchsia::sysmem2::BufferCollectionConstraints> {
+struct GetCloneFunction<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints> {
   constexpr static auto value = sysmem::V2CloneBufferCollectionConstraints;
 };
 template <>
-struct GetCloneFunction<llcpp::fuchsia::sysmem2::BufferUsage> {
+struct GetCloneFunction<llcpp::fuchsia::sysmem2::wire::BufferUsage> {
   constexpr static auto value = sysmem::V2CloneBufferUsage;
 };
 template <>
-struct GetCloneFunction<llcpp::fuchsia::sysmem2::BufferCollectionInfo> {
-  constexpr static auto value = [](fidl::AnyAllocator& allocator,
-                                   const llcpp::fuchsia::sysmem2::BufferCollectionInfo& to_copy)
-      -> llcpp::fuchsia::sysmem2::BufferCollectionInfo {
+struct GetCloneFunction<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo> {
+  constexpr static auto value =
+      [](fidl::AnyAllocator& allocator,
+         const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& to_copy)
+      -> llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo {
     constexpr uint32_t kAllRights = std::numeric_limits<uint32_t>::max();
     auto result = sysmem::V2CloneBufferCollectionInfo(allocator, to_copy, kAllRights, kAllRights);
     // no reason for the clone to fail other than maybe low memory

@@ -149,7 +149,8 @@ class BufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interf
   //     SetConstraints()
   //
   // Either way, the constraints here are in v2 form.
-  std::optional<TableHolder<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>> constraints_;
+  std::optional<TableHolder<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints>>
+      constraints_;
 
   // Stash BufferUsage aside for benefit of GetUsageBasedRightsAttenuation() despite
   // TakeConstraints().
@@ -157,7 +158,7 @@ class BufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interf
 
   // Temporarily holds fuchsia.sysmem.BufferCollectionConstraintsAuxBuffers until SetConstraints()
   // arrives.
-  std::optional<TableHolder<llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>>
+  std::optional<TableHolder<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers>>
       constraints_aux_buffers_;
 
   // FIDL protocol enforcement.

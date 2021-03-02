@@ -100,7 +100,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
     void WatchPlugState(WatchPlugStateCompleter::Sync& completer) override {
       stream_.WatchPlugState(this, completer);
     }
-    void SetGain(::llcpp::fuchsia::hardware::audio::GainState target_state,
+    void SetGain(::llcpp::fuchsia::hardware::audio::wire::GainState target_state,
                  SetGainCompleter::Sync& completer) override {
       stream_.SetGain(std::move(target_state), completer);
     }

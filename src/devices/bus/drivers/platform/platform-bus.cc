@@ -576,14 +576,14 @@ zx_status_t PlatformBus::Init() {
     return status;
   }
   if (vmo.is_valid()) {
-    interrupt_controller_type_ = ::llcpp::fuchsia::sysinfo::InterruptControllerType::GIC_V2;
+    interrupt_controller_type_ = ::llcpp::fuchsia::sysinfo::wire::InterruptControllerType::GIC_V2;
   }
   status = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &vmo, &length);
   if (status != ZX_OK) {
     return status;
   }
   if (vmo.is_valid()) {
-    interrupt_controller_type_ = ::llcpp::fuchsia::sysinfo::InterruptControllerType::GIC_V3;
+    interrupt_controller_type_ = ::llcpp::fuchsia::sysinfo::wire::InterruptControllerType::GIC_V3;
   }
 #endif
 

@@ -68,7 +68,7 @@ std::vector<Format> GetAllFormats(audio_sample_format_t sample_format) {
   std::vector<Format> all;
   uint32_t fmt_noflags = sample_format & ~AUDIO_SAMPLE_FORMAT_FLAG_MASK;
   while (fmt_noflags) {
-    audio_fidl::SampleFormat out_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
+    audio_fidl::wire::SampleFormat out_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
     if (fmt_noflags & AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED) {
       out_format = audio_fidl::wire::SampleFormat::PCM_UNSIGNED;
     }
@@ -97,7 +97,7 @@ std::vector<Format> GetAllFormats(audio_sample_format_t sample_format) {
       fmt_noflags &= ~AUDIO_SAMPLE_FORMAT_32BIT;
     }
     if (fmt_noflags & AUDIO_SAMPLE_FORMAT_32BIT_FLOAT) {
-      all.push_back({audio_fidl::SampleFormat::PCM_FLOAT, 32, 4});
+      all.push_back({audio_fidl::wire::SampleFormat::PCM_FLOAT, 32, 4});
       fmt_noflags &= ~AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
     }
     // We expect all bits to have been processed.

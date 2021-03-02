@@ -90,7 +90,7 @@ zx_status_t PerfmonDevice::StageFixedConfig(const FidlPerfmonConfig* icfg, Stagi
   const unsigned ii = input_index;
   const EventId id = icfg->events[ii].event;
   EventRate rate = icfg->events[ii].rate;
-  fidl_perfmon::EventConfigFlags flags = icfg->events[ii].flags;
+  fidl_perfmon::wire::EventConfigFlags flags = icfg->events[ii].flags;
   bool uses_timebase = ocfg->timebase_event != kEventIdNone && rate == 0;
 
   // There's only one fixed counter on ARM64, the cycle counter.
@@ -126,10 +126,10 @@ zx_status_t PerfmonDevice::StageFixedConfig(const FidlPerfmonConfig* icfg, Stagi
   }
 
   uint32_t pmu_flags = 0;
-  if (flags & fidl_perfmon::EventConfigFlags::COLLECT_OS) {
+  if (flags & fidl_perfmon::wire::EventConfigFlags::COLLECT_OS) {
     pmu_flags |= kPmuConfigFlagOs;
   }
-  if (flags & fidl_perfmon::EventConfigFlags::COLLECT_USER) {
+  if (flags & fidl_perfmon::wire::EventConfigFlags::COLLECT_USER) {
     pmu_flags |= kPmuConfigFlagUser;
   }
   // TODO(fxbug.dev/33106): PC flag.
@@ -146,7 +146,7 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const FidlPerfmonConfig* icfg
   unsigned group = GetEventIdGroup(id);
   unsigned event = GetEventIdEvent(id);
   EventRate rate = icfg->events[ii].rate;
-  fidl_perfmon::EventConfigFlags flags = icfg->events[ii].flags;
+  fidl_perfmon::wire::EventConfigFlags flags = icfg->events[ii].flags;
   bool uses_timebase = ocfg->timebase_event != kEventIdNone && rate == 0;
 
   // TODO(dje): Verify no duplicates.
@@ -203,10 +203,10 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const FidlPerfmonConfig* icfg
   }
 
   uint32_t pmu_flags = 0;
-  if (flags & fidl_perfmon::EventConfigFlags::COLLECT_OS) {
+  if (flags & fidl_perfmon::wire::EventConfigFlags::COLLECT_OS) {
     pmu_flags |= kPmuConfigFlagOs;
   }
-  if (flags & fidl_perfmon::EventConfigFlags::COLLECT_USER) {
+  if (flags & fidl_perfmon::wire::EventConfigFlags::COLLECT_USER) {
     pmu_flags |= kPmuConfigFlagUser;
   }
   // TODO(fxbug.dev/33106): PC flag.

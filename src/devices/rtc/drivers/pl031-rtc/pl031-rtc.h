@@ -6,10 +6,10 @@
 #define SRC_DEVICES_RTC_DRIVERS_PL031_RTC_PL031_RTC_H_
 
 #include <fuchsia/hardware/rtc/llcpp/fidl.h>
+#include <lib/mmio/mmio.h>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
 
 namespace rtc {
 
@@ -37,14 +37,14 @@ class Pl031 : public FidlRtc::Device::Interface, public RtcDeviceType {
 
   // FidlRtc::Device::Interface:
   void Get(GetCompleter::Sync& completer) override;
-  void Set(FidlRtc::Time rtc, SetCompleter::Sync& completer) override;
+  void Set(FidlRtc::wire::Time rtc, SetCompleter::Sync& completer) override;
 
   // DDK bindings.
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
  private:
-  zx_status_t SetRtc(FidlRtc::Time rtc);
+  zx_status_t SetRtc(FidlRtc::wire::Time rtc);
 
   ddk::MmioBuffer mmio_;
   MMIO_PTR Pl031Regs* regs_;

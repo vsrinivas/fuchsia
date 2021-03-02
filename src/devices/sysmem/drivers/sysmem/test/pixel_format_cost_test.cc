@@ -124,10 +124,10 @@ TEST(PixelFormatCost, IntelTiling) {
 
   for (uint32_t i = 0; i < modifier_list.size(); ++i) {
     {
-      llcpp::fuchsia::sysmem2::ImageFormatConstraints image_format_constraints(allocator);
+      llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints image_format_constraints(allocator);
       {
-        llcpp::fuchsia::sysmem2::PixelFormat pixel_format(allocator);
-        pixel_format.set_type(allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32);
+        llcpp::fuchsia::sysmem2::wire::PixelFormat pixel_format(allocator);
+        pixel_format.set_type(allocator, llcpp::fuchsia::sysmem2::wire::PixelFormatType::BGRA32);
         pixel_format.set_format_modifier_value(allocator, modifier_list[i]);
         image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
       }

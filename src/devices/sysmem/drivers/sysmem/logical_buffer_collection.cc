@@ -1707,7 +1707,7 @@ LogicalBufferCollection::Allocate() {
   TRACE_DURATION("gfx", "LogicalBufferCollection:Allocate", "this", this);
   ZX_DEBUG_ASSERT(constraints_);
 
-  llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints = constraints_->mutate();
+  llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& constraints = constraints_->mutate();
   fidl::AnyAllocator& fidl_allocator = table_set_.allocator();
 
   llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo result(fidl_allocator);

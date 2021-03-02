@@ -227,7 +227,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     program_entries[1].key.Set(allocator, "colocate");
     program_entries[1].value.set_str(allocator, allocator, driver.colocate ? "true" : "false");
 
-    fdata::Dictionary program(allocator);
+    fdata::wire::Dictionary program(allocator);
     program.set_entries(allocator, std::move(program_entries));
 
     auto outgoing_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();

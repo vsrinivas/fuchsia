@@ -18,7 +18,7 @@ namespace audio {
 namespace utils {
 
 struct Format {
-  ::llcpp::fuchsia::hardware::audio::SampleFormat format;
+  ::llcpp::fuchsia::hardware::audio::wire::SampleFormat format;
   uint8_t valid_bits_per_sample;
   uint8_t bytes_per_sample;
 };

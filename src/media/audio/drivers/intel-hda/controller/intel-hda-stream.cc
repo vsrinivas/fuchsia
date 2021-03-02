@@ -240,7 +240,7 @@ void IntelHDAStream::ProcessStreamIRQ() {
     return;
 
   if (sts & HDA_SD_REG_STS8_BCIS) {
-    audio_fidl::RingBufferPositionInfo position_info = {};
+    audio_fidl::wire::RingBufferPositionInfo position_info = {};
     position_info.position = REG_RD(&regs_->lpib);
     position_info.timestamp = zx::clock::get_monotonic().get();
 
@@ -279,7 +279,7 @@ void IntelHDAStream::DeactivateLocked() {
 // Ring Buffer GetProperties.
 void IntelHDAStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
-  auto builder = audio_fidl::RingBufferProperties::UnownedBuilder();
+  auto builder = audio_fidl::wire::RingBufferProperties::UnownedBuilder();
   // We don't know what our FIFO depth is going to be if our format has not been set yet.
   fidl::aligned<uint32_t> fifo_depth = bytes_per_frame_ ? fifo_depth_ : 0;
   builder.set_fifo_depth(fidl::unowned_ptr(&fifo_depth));
@@ -304,7 +304,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   if (running_ || (bytes_per_frame_ == 0)) {
     LOG(DEBUG, "Bad state %s%s while setting buffer.", running_ ? "(running)" : "",
         bytes_per_frame_ == 0 ? "(not configured)" : "");
-    completer.ReplyError(audio_fidl::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
     return;
   }
 
@@ -320,7 +320,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
         "Invalid client args while setting buffer "
         "(min frames %u, notif/ring %u)\n",
         min_frames, notifications_per_ring);
-    completer.ReplyError(audio_fidl::GetVmoError::INVALID_ARGS);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::INVALID_ARGS);
     return;
   }
   rb_size = static_cast<uint32_t>(tmp);
@@ -332,7 +332,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   zx_status_t status = zx::vmo::create(rb_size, 0, &ring_buffer_vmo);
   if (status != ZX_OK) {
     LOG(DEBUG, "Failed to create %u byte VMO for ring buffer (res %d)\n", rb_size, status);
-    completer.ReplyError(audio_fidl::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
     return;
   }
 
@@ -345,7 +345,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   if (status != ZX_OK) {
     LOG(DEBUG, "Failed to commit and pin pages for %u bytes in ring buffer VMO (res %d)\n", rb_size,
         status);
-    completer.ReplyError(audio_fidl::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
     return;
   }
 
@@ -354,7 +354,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
     LOG(ERROR,
         "IntelHDA stream ring buffer is too fragmented (%u regions) to construct a valid BDL\n",
         pinned_ring_buffer_.region_count());
-    completer.ReplyError(audio_fidl::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
     return;
   }
 
@@ -374,7 +374,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
     LOG(DEBUG, "Failed duplicate ring buffer VMO handle! (res %d)\n", status);
 
     ReleaseRingBufferLocked();
-    completer.ReplyError(audio_fidl::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
     return;
   }
 
@@ -402,7 +402,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
     if (r.size > std::numeric_limits<uint32_t>::max()) {
       LOG(DEBUG, "VMO region too large! (%" PRIu64 " bytes)", r.size);
       ReleaseRingBufferLocked();
-      completer.ReplyError(audio_fidl::GetVmoError::INTERNAL_ERROR);
+      completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
       return;
     }
 
@@ -465,7 +465,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
     ZX_DEBUG_ASSERT(entry == MAX_BDL_LENGTH);
     LOG(DEBUG, "Ran out of BDL entires after %u/%u bytes of ring buffer\n", amt_done, rb_size);
     ReleaseRingBufferLocked();
-    completer.ReplyError(audio_fidl::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
     return;
   }
 
