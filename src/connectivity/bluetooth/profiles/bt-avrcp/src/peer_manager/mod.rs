@@ -8,7 +8,6 @@ use {
     fuchsia_bluetooth::types::{Channel, PeerId},
     fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{self, channel::oneshot},
-    log::trace,
     parking_lot::RwLock,
     std::{collections::HashMap, sync::Arc},
 };
@@ -138,12 +137,10 @@ impl PeerManager {
     pub fn new_browse_connection(&mut self, peer_id: &PeerId, channel: Channel) {
         let peer_handle = self.get_remote_peer(peer_id);
         let peer = AvctpPeer::new(channel);
-        trace!("new browse peer {:#?}", peer);
         peer_handle.set_browse_connection(peer);
     }
 
     pub fn services_found(&mut self, peer_id: &PeerId, services: Vec<AvrcpService>) {
-        trace!("ServicesDiscovered {} {:#?}", peer_id, services);
         let peer_handle = self.get_remote_peer(&peer_id);
         for service in services {
             match service {

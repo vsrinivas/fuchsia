@@ -18,7 +18,7 @@ use {
         stream::{StreamExt, TryStreamExt},
         Future,
     },
-    log::{error, info, warn},
+    log::{info, warn},
     std::collections::VecDeque,
 };
 
@@ -364,7 +364,7 @@ pub fn spawn_avrcp_client_controller(controller: Controller, fidl_stream: Contro
             Ok(())
         }
         .boxed()
-        .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| warn!("AVRCP client controller finished: {:?}", e)),
     )
     .detach();
 }
@@ -381,7 +381,7 @@ pub fn spawn_test_avrcp_client_controller(
             Ok(())
         }
         .boxed()
-        .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| warn!("AVRCP test client controller finished: {:?}", e)),
     )
     .detach();
 }
@@ -391,7 +391,7 @@ fn spawn_avrcp_client(stream: PeerManagerRequestStream, sender: mpsc::Sender<Ser
     info!("Spawning avrcp client handler");
     fasync::Task::spawn(
         avrcp_client_stream_handler(stream, sender, &spawn_avrcp_client_controller)
-            .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| warn!("AVRCP client handler finished: {:?}", e)),
     )
     .detach();
 }
@@ -409,13 +409,12 @@ where
     while let Some(req) = stream.try_next().await? {
         match req {
             PeerManagerRequest::GetControllerForTarget { peer_id, client, responder } => {
+                info!("Received client request for controller for peer {}", peer_id);
+
                 let client: fidl::endpoints::ServerEnd<ControllerMarker> = client;
-
-                info!("New connection request for {}", peer_id);
-
                 match client.into_stream() {
                     Err(err) => {
-                        warn!("Err unable to create server end point from stream {:?}", err);
+                        warn!("Unable to take client stream: {:?}", err);
                         responder.send(&mut Err(zx::Status::UNAVAILABLE.into_raw()))?;
                     }
                     Ok(client_stream) => {
@@ -430,6 +429,7 @@ where
                 }
             }
             PeerManagerRequest::SetAbsoluteVolumeHandler { handler, responder } => {
+                info!("Received client request to set absolute volume handler");
                 match handler.into_proxy() {
                     Ok(absolute_volume_handler) => {
                         let (response, register_absolute_volume_handler_request) =
@@ -448,6 +448,7 @@ where
                 };
             }
             PeerManagerRequest::RegisterTargetHandler { handler, responder } => {
+                info!("Received client request for registering Target Handler");
                 match handler.into_proxy() {
                     Ok(target_handler) => {
                         let (response, register_target_handler_request) =
@@ -476,7 +477,9 @@ fn spawn_test_avrcp_client(
     info!("Spawning test avrcp client handler");
     fasync::Task::spawn(
         test_avrcp_client_stream_handler(stream, sender, &spawn_test_avrcp_client_controller)
-            .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| {
+                warn!("Test AVRCP client handler finished: {:?}", e)
+            }),
     )
     .detach();
 }
@@ -499,7 +502,7 @@ where
 
                 match client.into_stream() {
                     Err(err) => {
-                        warn!("Err unable to create server end point from stream {:?}", err);
+                        warn!("Unable to take test client stream {:?}", err);
                         responder.send(&mut Err(zx::Status::UNAVAILABLE.into_raw()))?;
                     }
                     Ok(client_stream) => {

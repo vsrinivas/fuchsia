@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #![recursion_limit = "1024"]
 
 use {
@@ -76,11 +77,12 @@ async fn main() -> Result<(), Error> {
                 let channel = match channel.try_into() {
                     Ok(chan) => chan,
                     Err(e) => {
-                        info!("Couldn't convert channel: {:?}", e);
+                        warn!("Couldn't convert channel: {:?}", e);
                         continue;
                     }
                 };
                 let peer_id = peer_id.into();
+                info!("Incoming connection request from {:?} with protocol: {:?}", peer_id, protocol);
 
                 match protocol_to_channel_type(&protocol) {
                     Some(ChannelType::Control) => peer_manager.new_control_connection(&peer_id, channel),
@@ -109,7 +111,7 @@ async fn main() -> Result<(), Error> {
                 peer_manager.handle_service_request(request);
             },
             service_result = service_fut => {
-                error!("Publishing Service finished unexpectedly: {:?}", service_result);
+                error!("Service task finished unexpectedly: {:?}", service_result);
                 break;
             },
             complete => break,

@@ -11,7 +11,7 @@ use {
     fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::FutureExt, stream::StreamExt, Future},
-    log::{error, info, trace},
+    log::{info, trace, warn},
     packet_encoding::{Decodable, Encodable},
     parking_lot::RwLock,
     pin_utils::pin_mut,
@@ -240,8 +240,8 @@ impl RemotePeer {
         self.controller_listeners.retain(|i| !i.is_closed());
         for sender in self.controller_listeners.iter_mut() {
             if let Err(send_error) = sender.try_send(event.clone()) {
-                error!(
-                    "unable to send event to peer controller stream for {} {:?}",
+                warn!(
+                    "Error sending event to listener for peer {}: {:?}",
                     self.peer_id, send_error
                 );
             }
@@ -254,7 +254,7 @@ impl RemotePeer {
 
     /// Reset all known state about the remote peer to default values.
     fn reset_peer_state(&mut self) {
-        trace!("reset_peer_state {}", self.peer_id);
+        trace!("Resetting peer state for {}", self.peer_id);
         self.notification_cache.clear();
         self.browse_command_handler.reset();
         self.control_command_handler.reset();
@@ -292,7 +292,7 @@ impl RemotePeer {
 
     fn set_control_connection(&mut self, peer: AvcPeer) {
         let current_time = fasync::Time::now();
-        trace!("set_control_connection {:?} at {}", self.peer_id, current_time.into_nanos());
+        trace!("Set control connection for {} at: {}", self.peer_id, current_time.into_nanos());
 
         // If the current connection establishment is within a threshold amount of time from the
         // most recent connection establishment, both connections should be dropped, and should
@@ -300,14 +300,18 @@ impl RemotePeer {
         if let Some(previous_time) = self.last_connected_time.take() {
             let diff = (current_time - previous_time).into_nanos().abs();
             if diff < CONNECTION_THRESHOLD.into_nanos() {
-                trace!("Control connection establishment collision. Time diff: {}", diff);
+                trace!(
+                    "Collision in control connection establishment for {}. Time diff: {}",
+                    self.peer_id,
+                    diff
+                );
                 self.reset_connection(true);
                 return;
             }
         }
 
         self.reset_peer_state();
-        info!("Connected to peer {}", self.peer_id);
+        info!("{} connected control channel", self.peer_id);
         self.last_connected_time = Some(current_time);
         self.control_channel.connected(Arc::new(peer));
         self.cancel_tasks = true;
@@ -316,13 +320,13 @@ impl RemotePeer {
     }
 
     fn set_browse_connection(&mut self, peer: AvctpPeer) {
-        info!("Peer {} connected browse channel", self.peer_id);
+        info!("{} connected browse channel", self.peer_id);
         self.browse_channel.connected(Arc::new(peer));
         self.wake_state_watcher();
     }
 
     fn set_target_descriptor(&mut self, service: AvrcpService) {
-        trace!("set_target_descriptor {:?}", self.peer_id);
+        trace!("Set target descriptor for {}", self.peer_id);
         self.target_descriptor = Some(service);
         self.attempt_connection = true;
         // Record inspect target features.
@@ -331,7 +335,7 @@ impl RemotePeer {
     }
 
     fn set_controller_descriptor(&mut self, service: AvrcpService) {
-        trace!("set_controller_descriptor {:?}", self.peer_id);
+        trace!("Set controller descriptor for {}", self.peer_id);
         self.controller_descriptor = Some(service);
         self.attempt_connection = true;
         // Record inspect controller features.
@@ -344,7 +348,7 @@ impl RemotePeer {
     }
 
     fn wake_state_watcher(&self) {
-        trace!("wake_state_watcher {:?}", self.peer_id);
+        trace!("Waking state watcher for {}", self.peer_id);
         self.state_change_listener.state_changed();
     }
 }
@@ -394,7 +398,7 @@ async fn send_vendor_dependent_command_internal(
                 }
             }
             Err(e) => {
-                info!("Unable to parse vendor dependent preamble: {:?}", e);
+                warn!("Unable to parse vendor dependent preamble: {:?}", e);
                 return Err(Error::PacketError(e));
             }
         };
@@ -412,7 +416,7 @@ async fn get_supported_events_internal(
     peer: Arc<RwLock<RemotePeer>>,
 ) -> Result<Vec<NotificationEventId>, Error> {
     let cmd = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::EventsId);
-    trace!("get_capabilities(events) send command {:?}", cmd);
+    trace!("Getting supported events: {:?}", cmd);
     let buf = send_vendor_dependent_command_internal(peer.clone(), &cmd).await?;
     let capabilities =
         GetCapabilitiesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
@@ -491,18 +495,15 @@ impl RemotePeerHandle {
             match response {
                 Ok(AvcCommandResponse(AvcResponseType::Accepted, _)) => Ok(()),
                 Ok(AvcCommandResponse(AvcResponseType::Rejected, _)) => {
-                    info!("avrcp command rejected {:?}: {:?}", peer_id, response);
+                    info!("Command rejected for {:?}: {:?}", peer_id, response);
                     Err(Error::CommandNotSupported)
                 }
                 Err(e) => {
-                    error!("error sending avc command to {:?}: {:?}", peer_id, e);
+                    warn!("Error sending avc command to {:?}: {:?}", peer_id, e);
                     Err(Error::CommandFailed)
                 }
                 _ => {
-                    error!(
-                        "error sending avc command. unhandled response {:?}: {:?}",
-                        peer_id, response
-                    );
+                    warn!("Unhandled response for {:?}: {:?}", peer_id, response);
                     Err(Error::CommandFailed)
                 }
             }
@@ -533,8 +534,8 @@ impl RemotePeerHandle {
         let mut peer_guard = self.peer.write();
         for (_, event) in &peer_guard.notification_cache {
             if let Err(send_error) = sender.try_send(event.clone()) {
-                error!(
-                    "unable to send event to peer controller stream for {} {:?}",
+                warn!(
+                    "Error sending cached event to listener for {}: {:?}",
                     peer_guard.peer_id, send_error
                 );
             }

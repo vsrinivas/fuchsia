@@ -5,7 +5,7 @@
 use {
     bt_avctp::{self as avctp, AvctpCommand},
     futures::{self, Future},
-    log::{error, trace},
+    log::{trace, warn},
     packet_encoding::{Decodable, Encodable},
     std::{convert::TryFrom, sync::Arc},
 };
@@ -34,7 +34,7 @@ impl BrowseChannelHandler {
         let packet_body = command.body();
         if !command.header().is_type(&avctp::AvctpMessageType::Command) {
             // Invalid header type. Send back general reject.
-            trace!("Received AVCTP request that is not a command: {:?}", command.header());
+            trace!("Received invalid AVCTP request{:?}", command.header());
             return Err(Error::InvalidMessage);
         }
 
@@ -124,7 +124,7 @@ impl BrowseChannelHandler {
                 Ok(buf)
             }
             _ => {
-                trace!("Browse channel Pdu not handled: {:?}", pdu_id);
+                trace!("Browse channel command not handled: {:?}", pdu_id);
                 return Err(StatusCode::InvalidParameter);
             }
         }
@@ -175,7 +175,7 @@ impl BrowseChannelHandler {
             response_packet.encode(&mut response_buf[..]).expect("Encoding should work");
 
             if let Err(e) = command.send_response(&response_buf[..]) {
-                error!("Error sending response: {:?}", e);
+                warn!("[Browse Channel] Error sending response: {:?}", e);
             }
 
             Ok(())
@@ -194,7 +194,7 @@ fn send_general_reject(command: AvctpCommand, status_code: StatusCode) {
     let mut buf = vec![0; reject_response.encoded_len()];
     reject_response.encode(&mut buf[..]).expect("unable to encode reject packet");
     if let Err(e) = command.send_response(&buf[..]) {
-        error!("Error sending general reject: {:?}", e);
+        warn!("[Browse Channel] Error sending general reject: {:?}", e);
     }
 }
 

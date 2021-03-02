@@ -5,7 +5,7 @@
 use {
     bt_avctp::{AvcOpCode, AvcPacketType},
     fidl_fuchsia_bluetooth_avrcp::AvcPanelCommand,
-    log::{error, trace},
+    log::{trace, warn},
     packet_encoding::{Decodable, Encodable},
     std::convert::TryFrom,
     thiserror::Error,
@@ -71,7 +71,7 @@ macro_rules! decoder_enum {
                 match match_pdu() {
                     Ok(Some(command)) => Ok(command),
                     Ok(None) => {
-                        trace!("Received known but unhandled vendor command {:?}", pdu_id);
+                        trace!("Received unimplemented vendor command {:?}", pdu_id);
                         Err(DecodeError::VendorPduNotImplemented(u8::from(&pdu_id)))
                     }
                     Err(e) => {
@@ -139,8 +139,8 @@ impl VendorSpecificCommand {
 
         let end = offset + preamble.parameter_length as usize;
         if packet_body.len() < end {
-            error!(
-                "Received command is truncated. expected: {}, Received: {}",
+            warn!(
+                "Received command is truncated. Expected: {}, Received: {}",
                 preamble.parameter_length,
                 end - packet_body.len()
             );

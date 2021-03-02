@@ -10,7 +10,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_zircon::Duration,
     futures::future::Either,
-    log::{error, trace},
+    log::{trace, warn},
     parking_lot::Mutex,
     std::{
         collections::{
@@ -338,7 +338,7 @@ fn send_notification(
                 .send_response(success_response_type, &packet[..])
                 .map_err(|e| Error::AvctpError(e)),
             Err(e) => {
-                error!("unable to encode target response packet {:?}", e);
+                warn!("Unable to encode target response packet: {:?}", e);
                 send_avc_reject(
                     command,
                     PduId::RegisterNotification as u8,
@@ -371,7 +371,7 @@ async fn handle_notify_command(
 
     let notification: Notification = futures::select! {
         _ = interim_timer => {
-            error!("target handler timed out with interim response");
+            warn!("Target handler timed out with interim response");
             return send_avc_reject(&command, pdu_id, StatusCode::InternalError);
         }
         result = notification_fut => {
@@ -482,7 +482,7 @@ async fn handle_get_element_attributes(
                 response.playing_time = element_attributes.playing_time.clone();
             }
             _ => {
-                error!("Support for attribute {:?} not implemented.", attribute);
+                warn!("Support for attribute {:?} not implemented.", attribute);
             }
         }
     }
@@ -602,24 +602,23 @@ fn send_status_response(
     pdu_id: PduId,
 ) -> Result<(), Error> {
     match result {
-        Ok(encodable) => match encodable.encode_packets() {
-            Ok(mut packets) => {
-                let first_packet = packets.remove(0);
-                continuations.insert_remaining_packets(&pdu_id, packets);
-                command
-                    .send_response(AvcResponseType::ImplementedStable, &first_packet[..])
-                    .map_err(|e| Error::AvctpError(e))
+        Ok(encodable) => {
+            match encodable.encode_packets() {
+                Ok(mut packets) => {
+                    let first_packet = packets.remove(0);
+                    continuations.insert_remaining_packets(&pdu_id, packets);
+                    command
+                        .send_response(AvcResponseType::ImplementedStable, &first_packet[..])
+                        .map_err(|e| Error::AvctpError(e))
+                }
+                Err(e) => {
+                    warn!("Error encoding response packet. Sending InternalError rejection to peer {:?}", e);
+                    send_avc_reject(&command, u8::from(&pdu_id), StatusCode::InternalError)
+                }
             }
-            Err(e) => {
-                error!("Error trying to encode response packet. Sending internal_error rejection to peer {:?}", e);
-                send_avc_reject(&command, u8::from(&pdu_id), StatusCode::InternalError)
-            }
-        },
+        }
         Err(status_code) => {
-            error!(
-                "Error trying to encode response packet. Sending rejection to peer {:?}",
-                status_code
-            );
+            warn!("Error handling status command. Sending rejection to peer: {:?}", status_code);
             send_avc_reject(&command, u8::from(&pdu_id), status_code)
         }
     }
@@ -689,8 +688,8 @@ fn send_control_response(
 ) -> Result<(), Error> {
     let encodable = match result {
         Err(status_code) => {
-            error!(
-                "Error handling command for {:?} - responding {:?} to peer",
+            warn!(
+                "Error handling control command for {:?} - responding {:?} to peer",
                 pdu_id, status_code
             );
             return send_avc_reject(&command, u8::from(&pdu_id), status_code);
@@ -702,7 +701,7 @@ fn send_control_response(
             .send_response(AvcResponseType::Accepted, &packet[..])
             .map_err(|e| Error::AvctpError(e)),
         Err(e) => {
-            error!("Error encoding response - sending InternalError to peer: {:?}", e);
+            warn!("Error encoding response - sending InternalError to peer: {:?}", e);
             send_avc_reject(&command, u8::from(&pdu_id), StatusCode::InternalError)
         }
     }
