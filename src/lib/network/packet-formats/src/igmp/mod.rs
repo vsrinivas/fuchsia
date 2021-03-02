@@ -246,7 +246,7 @@ pub struct IgmpMessage<B: ByteSlice, M: MessageType<B>> {
 impl<B: ByteSlice, M: MessageType<B>> IgmpMessage<B, M> {
     /// Construct a builder with the same contents as this packet.
     pub fn builder(&self) -> IgmpPacketBuilder<B, M> {
-        IgmpPacketBuilder::new_with_resp_time(self.header.clone(), self.max_response_time())
+        IgmpPacketBuilder::new_with_resp_time(*self.header, self.max_response_time())
     }
 
     /// Gets the interpreted *Max Response Time* for the message
@@ -346,12 +346,8 @@ pub fn peek_message_type<MessageType: TryFrom<u8>>(
         bytes.len() > (core::mem::size_of::<HeaderPrefix>() + core::mem::size_of::<Ipv4Addr>());
     let (header, _) = LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_prefix(bytes)
         .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
-    let msg_type = MessageType::try_from(header.msg_type).or_else(|_| {
-        Err(debug_err!(
-            ParseError::NotSupported,
-            "unrecognized message type: {:x}",
-            header.msg_type,
-        ))
+    let msg_type = MessageType::try_from(header.msg_type).map_err(|_| {
+        debug_err!(ParseError::NotSupported, "unrecognized message type: {:x}", header.msg_type,)
     })?;
     Ok((msg_type, long_message))
 }
@@ -400,7 +396,7 @@ mod tests {
         check_ip: F,
         check_igmp: G,
     ) {
-        let orig_req = &pkt[..];
+        let orig_req = pkt;
 
         let ip = pkt.parse_with::<_, Ipv4Packet<_>>(()).unwrap();
         let src_ip = ip.src_ip();
@@ -427,7 +423,7 @@ mod tests {
             |ip| {
                 assert_eq!(ip.ttl(), 1);
                 assert_eq!(ip.iter_options().count(), 1);
-                let option = ip.iter_options().nth(0).unwrap();
+                let option = ip.iter_options().next().unwrap();
                 assert!(option.copied);
                 assert_eq!(option.data, Ipv4OptionData::RouterAlert { data: 0 });
                 assert_eq!(ip.header_len(), 24);
@@ -448,7 +444,7 @@ mod tests {
             |ip| {
                 assert_eq!(ip.ttl(), 1);
                 assert_eq!(ip.iter_options().count(), 1);
-                let option = ip.iter_options().nth(0).unwrap();
+                let option = ip.iter_options().next().unwrap();
                 assert!(option.copied);
                 assert_eq!(option.data, Ipv4OptionData::RouterAlert { data: 0 });
                 assert_eq!(ip.header_len(), 24);
@@ -469,7 +465,7 @@ mod tests {
             |ip| {
                 assert_eq!(ip.ttl(), 1);
                 assert_eq!(ip.iter_options().count(), 1);
-                let option = ip.iter_options().nth(0).unwrap();
+                let option = ip.iter_options().next().unwrap();
                 assert!(option.copied);
                 assert_eq!(option.data, Ipv4OptionData::RouterAlert { data: 0 });
                 assert_eq!(ip.header_len(), 24);

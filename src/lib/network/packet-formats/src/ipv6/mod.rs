@@ -180,6 +180,7 @@ const ECN_MAX: u8 = (1 << DS_OFFSET) - 1;
 const FLOW_LABEL_MAX: u32 = (1 << 20) - 1;
 
 impl FixedHeader {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         ds: u8,
         ecn: u8,
@@ -286,8 +287,8 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(buffer: BV, args: ()) -> IpParseResult<Ipv6, Self> {
-        Ipv6PacketRaw::parse(buffer, args).and_then(|r| Ipv6Packet::try_from_raw(r))
+    fn parse<BV: BufferView<B>>(buffer: BV, _args: ()) -> IpParseResult<Ipv6, Self> {
+        Ipv6PacketRaw::parse(buffer, ()).and_then(Ipv6Packet::try_from_raw)
     }
 }
 
@@ -364,7 +365,7 @@ impl<B: ByteSlice> FromRaw<Ipv6PacketRaw<B>, ()> for Ipv6Packet<B> {
 
 impl<B: ByteSlice> Ipv6Packet<B> {
     /// Returns an iterator over the extension headers.
-    pub fn iter_extension_hdrs<'a>(&'a self) -> impl Iterator<Item = Ipv6ExtensionHeader<'a>> {
+    pub fn iter_extension_hdrs(&self) -> impl Iterator<Item = Ipv6ExtensionHeader<'_>> {
         self.extension_hdrs.iter()
     }
 
@@ -754,13 +755,7 @@ impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>>
         let iter = options.into_iter();
         // https://tools.ietf.org/html/rfc2711#section-2.1 specifies that
         // an RouterAlert option can only appear once.
-        if iter
-            .clone()
-            .filter(|r| match r.data {
-                HopByHopOptionData::RouterAlert { .. } => true,
-                _ => false,
-            })
-            .count()
+        if iter.clone().filter(|r| matches!(r.data, HopByHopOptionData::RouterAlert { .. })).count()
             > 1
         {
             return None;
@@ -904,8 +899,7 @@ pub(crate) fn reassemble_fragmented_packet<
 
     // We know the call to `unwrap` will not fail because we just copied the header
     // bytes into `bytes`.
-    let mut header =
-        LayoutVerified::<_, FixedHeader>::new_unaligned_from_prefix(&mut bytes[..]).unwrap().0;
+    let mut header = LayoutVerified::<_, FixedHeader>::new_unaligned_from_prefix(bytes).unwrap().0;
 
     // Update the payload length field.
     header.payload_len.set(u16::try_from(payload_length).unwrap());
@@ -934,7 +928,7 @@ mod tests {
     fn test_parse_serialize_full_tcp() {
         use crate::testdata::syn_v6::*;
 
-        let mut buf = &ETHERNET_FRAME.bytes[..];
+        let mut buf = ETHERNET_FRAME.bytes;
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
@@ -956,7 +950,7 @@ mod tests {
     fn test_parse_serialize_full_udp() {
         use crate::testdata::dns_request_v6::*;
 
-        let mut buf = &ETHERNET_FRAME.bytes[..];
+        let mut buf = ETHERNET_FRAME.bytes;
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         verify_ethernet_frame(&frame, ETHERNET_FRAME);
 

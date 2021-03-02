@@ -46,6 +46,7 @@ const DATA_OFFSET_MAX: u8 = (1 << (16 - DATA_OFFSET_OFFSET)) - 1;
 const FLAGS_MAX: u16 = (1 << 9) - 1;
 
 impl HeaderPrefix {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         src_port: u16,
         dst_port: u16,
@@ -179,7 +180,7 @@ impl<B: ByteSlice, A: IpAddress> FromRaw<TcpSegmentRaw<B>, TcpParseArgs<A>> for 
 
 impl<B: ByteSlice> TcpSegment<B> {
     /// Iterate over the TCP header options.
-    pub fn iter_options<'a>(&'a self) -> impl Iterator<Item = options::TcpOption<'a>> {
+    pub fn iter_options(&self) -> impl Iterator<Item = options::TcpOption<'_>> {
         self.options.iter()
     }
 
@@ -652,7 +653,7 @@ mod tests {
     fn test_parse_serialize_full_ipv4() {
         use crate::testdata::tls_client_hello_v4::*;
 
-        let mut buf = &ETHERNET_FRAME.bytes[..];
+        let mut buf = ETHERNET_FRAME.bytes;
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
@@ -679,7 +680,7 @@ mod tests {
     fn test_parse_serialize_full_ipv6() {
         use crate::testdata::syn_v6::*;
 
-        let mut buf = &ETHERNET_FRAME.bytes[..];
+        let mut buf = ETHERNET_FRAME.bytes;
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
@@ -963,10 +964,8 @@ mod tests {
 
         b.iter(|| {
             black_box(
-                black_box(
-                    Buf::new(&mut buf[..], header_len..total_len).encapsulate(builder.clone()),
-                )
-                .serialize_no_alloc_outer(),
+                black_box(Buf::new(&mut buf[..], header_len..total_len).encapsulate(builder))
+                    .serialize_no_alloc_outer(),
             )
             .unwrap();
         })

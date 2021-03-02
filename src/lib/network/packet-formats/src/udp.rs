@@ -456,7 +456,7 @@ mod tests {
     fn test_parse_serialize_full_ipv6() {
         use crate::testdata::dns_request_v6::*;
 
-        let mut buf = &ETHERNET_FRAME.bytes[..];
+        let mut buf = ETHERNET_FRAME.bytes;
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
@@ -645,7 +645,7 @@ mod tests {
         let body = packet.body.as_ref().unwrap_incomplete();
         assert_eq!(header.flow.src_port.get(), 0);
         assert_eq!(header.flow.dst_port.get(), 0x0102);
-        assert_eq!(&header.rest[..], &buf[4..]);
+        assert_eq!(header.rest, &buf[4..]);
         assert_eq!(body, &[]);
         assert!(UdpPacket::try_from_raw_with(
             packet,
@@ -796,10 +796,8 @@ mod tests {
 
         b.iter(|| {
             black_box(
-                black_box(
-                    Buf::new(&mut buf[..], header_len..total_len).encapsulate(builder.clone()),
-                )
-                .serialize_no_alloc_outer(),
+                black_box(Buf::new(&mut buf[..], header_len..total_len).encapsulate(builder))
+                    .serialize_no_alloc_outer(),
             )
             .unwrap();
         })

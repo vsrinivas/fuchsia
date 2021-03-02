@@ -235,7 +235,7 @@ impl Icmpv4TimestampRequest {
     /// (`tx_timestamp`) indicates the time at which the Timestamp Reply was
     /// last processed before being sent.
     pub fn reply(&self, recv_timestamp: u32, tx_timestamp: u32) -> Icmpv4TimestampReply {
-        let mut ret = self.0.clone();
+        let mut ret = self.0;
         ret.timestamps.recv_timestamp = U32::new(recv_timestamp);
         ret.timestamps.tx_timestamp = U32::new(tx_timestamp);
         Icmpv4TimestampReply(ret)
@@ -318,7 +318,7 @@ mod tests {
         mut req: &[u8],
         check: F,
     ) {
-        let orig_req = &req[..];
+        let orig_req = req;
 
         let ip = req.parse::<Ipv4Packet<_>>().unwrap();
         let mut body = ip.body();

@@ -64,6 +64,7 @@ const FLAGS_MAX: u8 = (1 << (16 - FLAGS_OFFSET)) - 1;
 const FRAG_OFF_MAX: u16 = (1 << FLAGS_OFFSET) - 1;
 
 impl HeaderPrefix {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         ihl: u8,
         dscp: u8,
@@ -209,8 +210,8 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(buffer: BV, args: ()) -> IpParseResult<Ipv4, Self> {
-        Ipv4PacketRaw::<B>::parse(buffer, args).and_then(|u| Ipv4Packet::try_from_raw(u))
+    fn parse<BV: BufferView<B>>(buffer: BV, _args: ()) -> IpParseResult<Ipv4, Self> {
+        Ipv4PacketRaw::<B>::parse(buffer, ()).and_then(Ipv4Packet::try_from_raw)
     }
 }
 
@@ -272,7 +273,7 @@ fn compute_header_checksum(hdr_prefix: &[u8], options: &[u8]) -> [u8; 2] {
 
 impl<B: ByteSlice> Ipv4Packet<B> {
     /// Iterate over the IPv4 header options.
-    pub fn iter_options<'a>(&'a self) -> impl Iterator<Item = Ipv4Option<'a>> {
+    pub fn iter_options(&self) -> impl Iterator<Item = Ipv4Option<'_>> {
         self.options.iter()
     }
 
@@ -692,8 +693,7 @@ pub(crate) fn reassemble_fragmented_packet<
 
     // We know the call to `unwrap` will not fail because we just copied the header
     // bytes into `bytes`.
-    let mut header =
-        LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_prefix(&mut bytes[..]).unwrap().0;
+    let mut header = LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_prefix(bytes).unwrap().0;
 
     // Update the total length field.
     header.total_len.set(u16::try_from(byte_count).unwrap());
@@ -864,7 +864,7 @@ pub mod options {
         fn test_parse_router_alert() {
             let mut buffer: Vec<u8> = vec![148, 4, 0, 0];
             let options = Options::<_, Ipv4OptionsImpl>::parse(buffer.as_mut()).unwrap();
-            let rtralt = options.iter().nth(0).unwrap();
+            let rtralt = options.iter().next().unwrap();
             assert!(rtralt.copied);
             assert_eq!(rtralt.data, Ipv4OptionData::RouterAlert { data: 0 });
         }
@@ -907,7 +907,7 @@ mod tests {
     fn test_parse_serialize_full_tcp() {
         use crate::testdata::tls_client_hello_v4::*;
 
-        let mut buf = &ETHERNET_FRAME.bytes[..];
+        let mut buf = ETHERNET_FRAME.bytes;
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         verify_ethernet_frame(&frame, ETHERNET_FRAME);
 

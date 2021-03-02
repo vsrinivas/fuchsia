@@ -142,9 +142,8 @@ impl Ipv6ExtensionHeaderImpl {
         data: &mut BV,
         context: &Ipv6ExtensionHeaderParsingContext,
     ) -> Result<(u8, u8), Ipv6ExtensionHeaderParsingError> {
-        let next_header = data
-            .take_byte_front()
-            .ok_or_else(|| Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
+        let next_header =
+            data.take_byte_front().ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
 
         // Make sure we recognize the next header.
         // When parsing headers, if we encounter a next header value we don't
@@ -158,9 +157,8 @@ impl Ipv6ExtensionHeaderImpl {
             });
         }
 
-        let hdr_ext_len = data
-            .take_byte_front()
-            .ok_or_else(|| Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
+        let hdr_ext_len =
+            data.take_byte_front().ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
 
         Ok((next_header, hdr_ext_len))
     }
@@ -184,7 +182,7 @@ impl Ipv6ExtensionHeaderImpl {
 
         let options = data
             .take_front(expected_len)
-            .ok_or_else(|| Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
+            .ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
 
         let options_context = ExtensionHeaderOptionContext::new();
         let options = Records::parse_with_context(options, options_context).map_err(|e| {
@@ -226,7 +224,7 @@ impl Ipv6ExtensionHeaderImpl {
         // 4 bytes worth of data we need to look at.
         let (next_header, hdr_ext_len) = Self::get_next_hdr_and_len(data, context)?;
         let routing_data =
-            data.take_front(2).ok_or_else(|| Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
+            data.take_front(2).ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
         let segments_left = routing_data[1];
 
         // Currently we do not support any routing type.
@@ -246,7 +244,7 @@ impl Ipv6ExtensionHeaderImpl {
             // function returns.
             let expected_len = (hdr_ext_len as usize) * 8 + 4;
             data.take_front(expected_len)
-                .ok_or_else(|| Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
+                .ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
 
             // Update context
             context.next_header = next_header;
@@ -312,7 +310,7 @@ impl Ipv6ExtensionHeaderImpl {
 
         let options = data
             .take_front(expected_len)
-            .ok_or_else(|| Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
+            .ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
 
         let options_context = ExtensionHeaderOptionContext::new();
         let options = Records::parse_with_context(options, options_context).map_err(|e| {
@@ -365,8 +363,7 @@ impl<'a> RecordsImpl<'a> for Ipv6ExtensionHeaderImpl {
             Ipv6ExtHdrType::Routing => Self::parse_routing(data, context),
             Ipv6ExtHdrType::Fragment => Self::parse_fragment(data, context),
             Ipv6ExtHdrType::DestinationOptions => Self::parse_destination_options(data, context),
-
-            Ipv6ExtHdrType::Other(_) | _ => {
+            _ => {
                 if is_valid_next_header_upper_layer(expected_hdr) {
                     // Stop parsing extension headers when we find a Next Header value
                     // for a higher level protocol.
@@ -586,6 +583,7 @@ impl<'a> AlignedOptionsSerializerImpl<'a> for HopByHopOptionsImpl {
         assert!(length <= buf.len());
         assert!(length <= (core::u8::MAX as usize) + 2);
 
+        #[allow(clippy::comparison_chain)]
         if length == 1 {
             // Use Pad1
             buf[0] = 0
@@ -593,6 +591,7 @@ impl<'a> AlignedOptionsSerializerImpl<'a> for HopByHopOptionsImpl {
             // Use PadN
             buf[0] = 1;
             buf[1] = (length - 2) as u8;
+            #[allow(clippy::needless_range_loop)]
             for i in 2..length {
                 buf[i] = 0
             }
@@ -880,13 +879,12 @@ where
             return Ok(ParsedRecord::Skipped);
         }
 
-        let len = data
-            .take_byte_front()
-            .ok_or_else(|| ExtensionHeaderOptionParsingError::BufferExhausted)?;
+        let len =
+            data.take_byte_front().ok_or(ExtensionHeaderOptionParsingError::BufferExhausted)?;
 
         let data = data
             .take_front(len as usize)
-            .ok_or_else(|| ExtensionHeaderOptionParsingError::BufferExhausted)?;
+            .ok_or(ExtensionHeaderOptionParsingError::BufferExhausted)?;
 
         // If our kind is a PADN, consider it a NOP as well.
         if kind == Self::PADN {
@@ -1005,9 +1003,9 @@ impl TryFrom<u8> for ExtensionHeaderOptionAction {
     }
 }
 
-impl Into<u8> for ExtensionHeaderOptionAction {
-    fn into(self) -> u8 {
-        match self {
+impl From<ExtensionHeaderOptionAction> for u8 {
+    fn from(a: ExtensionHeaderOptionAction) -> u8 {
+        match a {
             ExtensionHeaderOptionAction::SkipAndContinue => 0,
             ExtensionHeaderOptionAction::DiscardPacket => 1,
             ExtensionHeaderOptionAction::DiscardPacketSendIcmp => 2,
@@ -2145,7 +2143,7 @@ mod tests {
 
         let options =
             Records::<_, HopByHopOptionsImpl>::parse_with_context(&buffer[..], context).unwrap();
-        let rtralrt = options.iter().nth(0).unwrap();
+        let rtralrt = options.iter().next().unwrap();
         assert!(!rtralrt.mutable);
         assert_eq!(rtralrt.action, ExtensionHeaderOptionAction::SkipAndContinue);
         assert_eq!(rtralrt.data, HopByHopOptionData::RouterAlert { data: 0 });
@@ -2178,7 +2176,7 @@ mod tests {
     fn trivial_hbh_options(lengths: &[Option<usize>]) -> Vec<HopByHopOption<'static>> {
         static ZEROES: [u8; 16] = [0u8; 16];
         lengths
-            .into_iter()
+            .iter()
             .map(|l| HopByHopOption {
                 mutable: false,
                 action: ExtensionHeaderOptionAction::SkipAndContinue,

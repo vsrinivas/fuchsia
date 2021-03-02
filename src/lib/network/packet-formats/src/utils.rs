@@ -16,6 +16,11 @@ pub struct NonZeroDuration(Duration);
 
 impl NonZeroDuration {
     /// Creates a non-zero without checking the value.
+    ///
+    /// # Safety
+    ///
+    /// If `d` is zero, unsafe code which relies on the invariant that
+    /// `NonZeroDuration` values are always zero may cause undefined behavior.
     pub const unsafe fn new_unchecked(d: Duration) -> NonZeroDuration {
         NonZeroDuration(d)
     }
@@ -35,9 +40,9 @@ impl NonZeroDuration {
     }
 }
 
-impl Into<Duration> for NonZeroDuration {
-    fn into(self) -> Duration {
-        self.0
+impl From<NonZeroDuration> for Duration {
+    fn from(NonZeroDuration(d): NonZeroDuration) -> Duration {
+        d
     }
 }
 

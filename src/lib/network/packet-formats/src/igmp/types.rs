@@ -158,7 +158,7 @@ mod tests {
             let response = IgmpResponseTimeV2::from_code(code);
             assert_eq!(response.as_code(), code);
             let dur = Duration::from(response);
-            let back = IgmpResponseTimeV2::try_from(dur.clone()).unwrap();
+            let back = IgmpResponseTimeV2::try_from(dur).unwrap();
             assert_eq!(dur.as_millis(), u128::from(code) * 100);
             assert_eq!(code, back.as_code());
         }
@@ -171,15 +171,15 @@ mod tests {
 
     #[test]
     pub fn parse_and_serialize_code_v3() {
-        let r = Duration::from(IgmpResponseTimeV3::from_code(0x80 | (0x00 << 4) | 0x01));
+        let r = Duration::from(IgmpResponseTimeV3::from_code(0x80 | 0x01));
         assert_eq!(r.as_millis(), 13600);
         let t = IgmpResponseTimeV3::try_from(Duration::from_millis((128 + 8) * 100)).unwrap();
-        assert_eq!(t.as_code(), (0x80 | (0x00 << 4) | 0x01));
+        assert_eq!(t.as_code(), (0x80 | 0x01));
         for code in 0..=255 {
             let response = IgmpResponseTimeV3::from_code(code);
             assert_eq!(response.as_code(), code);
             let dur = Duration::from(response);
-            let back = IgmpResponseTimeV3::try_from(dur.clone()).unwrap();
+            let back = IgmpResponseTimeV3::try_from(dur).unwrap();
             assert_eq!(code, back.as_code());
         }
 

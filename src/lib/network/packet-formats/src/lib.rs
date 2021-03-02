@@ -19,7 +19,7 @@
 // TODO(joshlf): Move into debug_err! and debug_err_fn! definitions once
 // attributes are allowed on expressions
 // (https://github.com/rust-lang/rust/issues/15701).
-#![allow(clippy::block_in_if_condition_stmt)]
+#![allow(clippy::blocks_in_if_conditions)]
 #![deny(missing_docs, unreachable_patterns)]
 
 extern crate alloc;

@@ -298,7 +298,7 @@ mod tests {
         mut req: &[u8],
         check: F,
     ) {
-        let orig_req = &req[..];
+        let orig_req = req;
 
         let ip = req.parse::<Ipv6Packet<_>>().unwrap();
         let mut body = ip.body();

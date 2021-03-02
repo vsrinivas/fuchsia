@@ -81,6 +81,7 @@ pub trait IcmpMldv1MessageType<B: ByteSlice>:
 /// to convert itself from/to `U16`
 pub trait MaxRespCode {
     /// Convert to `U16`
+    #[allow(clippy::wrong_self_convention)]
     fn as_code(self) -> U16;
 
     /// Convert from `U16`
@@ -157,7 +158,7 @@ impl<B: ByteSlice> Deref for Mldv1Body<B> {
     type Target = Mldv1Message;
 
     fn deref(&self) -> &Self::Target {
-        return &*self.0;
+        &*self.0
     }
 }
 
@@ -293,7 +294,7 @@ mod tests {
         check_ip: F,
         check_icmp: G,
     ) {
-        let orig_req = &req[..];
+        let orig_req = req;
 
         let ip = req.parse_with::<_, Ipv6Packet<_>>(()).unwrap();
         check_ip(&ip);
@@ -337,12 +338,12 @@ mod tests {
         assert_eq!(ip.src_ip(), src_ip);
         assert_eq!(ip.dst_ip(), dst_ip);
         assert_eq!(ip.iter_extension_hdrs().count(), 1);
-        let hbh = ip.iter_extension_hdrs().nth(0).unwrap();
+        let hbh = ip.iter_extension_hdrs().next().unwrap();
         match hbh.data() {
             Ipv6ExtensionHeaderData::HopByHopOptions { options } => {
                 assert_eq!(options.iter().count(), 1);
                 assert_eq!(
-                    options.iter().nth(0).unwrap(),
+                    options.iter().next().unwrap(),
                     HopByHopOption {
                         action: ExtensionHeaderOptionAction::SkipAndContinue,
                         mutable: false,

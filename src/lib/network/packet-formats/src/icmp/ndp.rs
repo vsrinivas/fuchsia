@@ -506,7 +506,7 @@ pub mod options {
 
         RedirectedHeader { original_packet: &'a [u8] },
 
-        MTU(u32),
+        Mtu(u32),
 
         RecursiveDnsServer(RecursiveDnsServer<'a>),
     }
@@ -518,7 +518,7 @@ pub mod options {
                 NdpOption::TargetLinkLayerAddress(_) => NdpOptionType::TargetLinkLayerAddress,
                 NdpOption::PrefixInformation(_) => NdpOptionType::PrefixInformation,
                 NdpOption::RedirectedHeader { .. } => NdpOptionType::RedirectedHeader,
-                NdpOption::MTU { .. } => NdpOptionType::Mtu,
+                NdpOption::Mtu { .. } => NdpOptionType::Mtu,
                 NdpOption::RecursiveDnsServer(_) => NdpOptionType::RecursiveDnsServer,
             }
         }
@@ -563,7 +563,7 @@ pub mod options {
                             original_packet: &data
                                 [REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH..],
                         },
-                        NdpOptionType::Mtu => NdpOption::MTU(NetworkEndian::read_u32(
+                        NdpOptionType::Mtu => NdpOption::Mtu(NetworkEndian::read_u32(
                             &data[MTU_OPTION_RESERVED_BYTES_LENGTH..],
                         )),
                         NdpOptionType::RecursiveDnsServer => {
@@ -615,7 +615,7 @@ pub mod options {
                 NdpOption::RedirectedHeader { original_packet } => {
                     REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH + original_packet.len()
                 }
-                NdpOption::MTU(_) => MTU_OPTION_LENGTH,
+                NdpOption::Mtu(_) => MTU_OPTION_LENGTH,
                 NdpOption::RecursiveDnsServer(RecursiveDnsServer { lifetime, addresses }) => {
                     RECURSIVE_DNS_SERVER_OPTION_RESERVED_BYTES_LENGTH
                         + core::mem::size_of_val(lifetime)
@@ -645,7 +645,7 @@ pub mod options {
                         .copy_from_slice(&[0; REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH]);
                     original_packet_bytes.copy_from_slice(original_packet);
                 }
-                NdpOption::MTU(mtu) => {
+                NdpOption::Mtu(mtu) => {
                     // As per RFC 4861 section 4.6.4, the first 2 bytes following the kind and length
                     // bytes are reserved so we zero them. The MTU field immediately follows.
                     let (reserved_bytes, mtu_bytes) =
@@ -717,7 +717,7 @@ mod tests {
     #[test]
     fn parse_serialize_mtu_option() {
         let expected_mtu = 5781;
-        let options = &[options::NdpOption::MTU(expected_mtu)];
+        let options = &[options::NdpOption::Mtu(expected_mtu)];
         let serialized = OptionsSerializer::<_>::new(options.iter())
             .into_serializer()
             .serialize_vec_outer()
@@ -733,7 +733,7 @@ mod tests {
         let parsed = Options::parse(&expected[..]).unwrap();
         let parsed = parsed.iter().collect::<Vec<options::NdpOption<'_>>>();
         assert_eq!(parsed.len(), 1);
-        assert_eq!(options::NdpOption::MTU(expected_mtu), parsed[0]);
+        assert_eq!(options::NdpOption::Mtu(expected_mtu), parsed[0]);
     }
 
     #[test]
@@ -860,7 +860,7 @@ mod tests {
     #[test]
     fn parse_neighbor_solicitation() {
         use crate::icmp::testdata::ndp_neighbor::*;
-        let mut buf = &SOLICITATION_IP_PACKET_BYTES[..];
+        let mut buf = SOLICITATION_IP_PACKET_BYTES;
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
         let ipv6_builder = ip.builder();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
@@ -899,7 +899,7 @@ mod tests {
     #[test]
     fn parse_neighbor_advertisement() {
         use crate::icmp::testdata::ndp_neighbor::*;
-        let mut buf = &ADVERTISEMENT_IP_PACKET_BYTES[..];
+        let mut buf = ADVERTISEMENT_IP_PACKET_BYTES;
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
         let ipv6_builder = ip.builder();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
@@ -930,7 +930,7 @@ mod tests {
     #[test]
     fn parse_router_advertisement() {
         use crate::icmp::testdata::ndp_router::*;
-        let mut buf = &ADVERTISEMENT_IP_PACKET_BYTES[..];
+        let mut buf = ADVERTISEMENT_IP_PACKET_BYTES;
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
         let ipv6_builder = ip.builder();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());

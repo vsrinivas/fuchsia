@@ -514,7 +514,7 @@ mod tests {
     use crate::igmp::testdata::*;
     use crate::testutil::set_logger_for_test;
 
-    const ALL_BUFFERS: [&'static [u8]; 6] = [
+    const ALL_BUFFERS: [&[u8]; 6] = [
         igmp_router_queries::v2::QUERY,
         igmp_router_queries::v3::QUERY,
         igmp_reports::v1::MEMBER_REPORT,
@@ -574,7 +574,7 @@ mod tests {
         mut req: &[u8],
         check: F,
     ) {
-        let orig_req = &req[..];
+        let orig_req = req;
 
         let igmp = req.parse_with::<_, IgmpMessage<_, M>>(()).unwrap();
         check(&igmp);

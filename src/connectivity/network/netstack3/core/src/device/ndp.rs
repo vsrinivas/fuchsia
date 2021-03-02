@@ -2525,7 +2525,7 @@ fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     //
     // See AdvLinkMtu in RFC 4861 section 6.2.1 for more information.
     if let Some(mtu) = router_configurations.get_advertised_link_mtu() {
-        options.push(NdpOption::MTU(mtu.get()));
+        options.push(NdpOption::Mtu(mtu.get()));
     }
 
     let prefix_list = router_configurations.get_advertised_prefix_list().clone();
@@ -2950,7 +2950,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                         // existing one.
                         ndp_state.neighbors.set_link_address(src_ip.get(), link_addr, false);
                     }
-                    NdpOption::MTU(mtu) => {
+                    NdpOption::Mtu(mtu) => {
                         trace!("receive_ndp_packet: mtu option with mtu = {:?}", mtu);
 
                         // TODO(ghanan): Make updating the MTU from an RA
@@ -5538,7 +5538,7 @@ mod tests {
     #[test]
     fn test_receiving_router_advertisement_mtu_option() {
         fn packet_buf(src_ip: Ipv6Addr, dst_ip: Ipv6Addr, mtu: u32) -> Buf<Vec<u8>> {
-            let options = &[NdpOption::MTU(mtu)];
+            let options = &[NdpOption::Mtu(mtu)];
             OptionsSerializer::new(options.iter())
                 .into_serializer()
                 .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
@@ -6462,7 +6462,7 @@ mod tests {
                     assert_eq!(p.body().iter().count(), 4);
 
                     let mtu = 1500;
-                    assert!(p.body().iter().any(|x| x == NdpOption::MTU(mtu)));
+                    assert!(p.body().iter().any(|x| x == NdpOption::Mtu(mtu)));
                     assert!(p.body().iter().any(|x| x == NdpOption::PrefixInformation(&prefix1)));
                     assert!(p.body().iter().any(|x| x == NdpOption::PrefixInformation(&prefix2)));
                     assert!(p

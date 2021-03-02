@@ -76,12 +76,8 @@ impl HeaderPrefix {
 pub fn peek_message_type<MessageType: TryFrom<u8>>(bytes: &[u8]) -> ParseResult<MessageType> {
     let (hdr_pfx, _) = LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_prefix(bytes)
         .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
-    MessageType::try_from(hdr_pfx.msg_type).or_else(|_| {
-        Err(debug_err!(
-            ParseError::NotSupported,
-            "unrecognized message type: {:x}",
-            hdr_pfx.msg_type,
-        ))
+    MessageType::try_from(hdr_pfx.msg_type).map_err(|_| {
+        debug_err!(ParseError::NotSupported, "unrecognized message type: {:x}", hdr_pfx.msg_type,)
     })
 }
 
@@ -221,6 +217,16 @@ pub trait MessageBody<B>: Sized {
     fn len(&self) -> usize
     where
         B: ByteSlice;
+
+    /// Is the body empty?
+    ///
+    /// `b.is_empty()` is equivalent to `b.len() == 0`.
+    fn is_empty(&self) -> bool
+    where
+        B: ByteSlice,
+    {
+        self.len() == 0
+    }
 
     /// Return the underlying bytes.
     fn bytes(&self) -> &[u8]
@@ -696,8 +702,8 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> PacketBuilder
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct IcmpUnusedCode;
 
-impl Into<u8> for IcmpUnusedCode {
-    fn into(self) -> u8 {
+impl From<IcmpUnusedCode> for u8 {
+    fn from(_: IcmpUnusedCode) -> u8 {
         0
     }
 }
