@@ -27,6 +27,7 @@ source_set("gtest") {
   deps = [ "//zircon/public/lib/async-cpp" ]
 
   public_deps = [
+    "//sdk/lib/stdcompat",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",

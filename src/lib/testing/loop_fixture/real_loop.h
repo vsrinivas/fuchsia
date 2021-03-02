@@ -9,6 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/function.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/zx/time.h>
 
 #include "src/lib/fxl/macros.h"
@@ -84,7 +85,7 @@ class RealLoop {
 template <typename PromiseType>
 typename PromiseType::result_type RealLoop::RunPromise(PromiseType promise) {
   async::Executor e(dispatcher());
-  fit::optional<typename PromiseType::result_type> res;
+  cpp17::optional<typename PromiseType::result_type> res;
   e.schedule_task(
       promise.then([&res](typename PromiseType::result_type& v) { res = std::move(v); }));
 
