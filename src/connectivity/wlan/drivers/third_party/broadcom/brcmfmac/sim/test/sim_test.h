@@ -10,6 +10,7 @@
 
 #include <set>
 
+#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
@@ -127,8 +128,7 @@ class SimInterface {
   void AssociateWith(const simulation::FakeAp& ap,
                      std::optional<zx::duration> delay = std::nullopt);
 
-  void DeauthenticateFrom(const common::MacAddr& bssid,
-                          wlanif_reason_code_t reason = WLANIF_REASON_CODE_UNSPECIFIED);
+  void DeauthenticateFrom(const common::MacAddr& bssid, reason_code_t reason);
 
   // Scan operations
   void StartScan(uint64_t txn_id = 0, bool active = false);

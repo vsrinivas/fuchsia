@@ -605,8 +605,8 @@ void AssocTest::DisassocClient(const common::MacAddr& mac_addr) {
 }
 
 void AssocTest::DeauthClient() {
-  wlanif_deauth_req_t deauth_req = {
-      .reason_code = static_cast<wlanif_reason_code_t>(kDefaultClientDeauthReason)};
+  wlanif_deauth_req_t deauth_req = {.reason_code =
+                                        static_cast<reason_code_t>(kDefaultClientDeauthReason)};
 
   std::memcpy(deauth_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
   client_ifc_.if_impl_ops_->deauth_req(client_ifc_.if_impl_ctx_, &deauth_req);

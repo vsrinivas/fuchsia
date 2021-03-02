@@ -16,7 +16,7 @@
 
 /* Toplevel file. Relies on dhd_linux.c to send commands to the dongle. */
 
-#include "cfg80211.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
@@ -31,33 +31,36 @@
 #include <optional>
 #include <vector>
 
+#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <ddk/metadata.h>
 #include <wifi/wifi-config.h>
+#include <wlan/common/ieee80211_codes.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/common/phy.h>
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/mac.h>
 
-#include "bits.h"
-#include "brcmu_d11.h"
-#include "brcmu_utils.h"
-#include "brcmu_wifi.h"
-#include "btcoex.h"
-#include "common.h"
-#include "core.h"
-#include "debug.h"
-#include "defs.h"
-#include "device.h"
-#include "feature.h"
-#include "fweh.h"
-#include "fwil.h"
-#include "fwil_types.h"
-#include "inspect/device_inspect.h"
-#include "linuxisms.h"
-#include "macros.h"
-#include "netbuf.h"
-#include "proto.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_utils.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/btcoex.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/feature.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fweh.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/device_inspect.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/proto.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/workqueue.h"
 #include "third_party/bcmdhd/crossdriver/dhd.h"
 #include "third_party/bcmdhd/crossdriver/include/proto/802.11.h"
 #include "third_party/bcmdhd/crossdriver/wlioctl.h"
@@ -1186,7 +1189,7 @@ static void brcmf_notify_disassoc(struct net_device* ndev, zx_status_t status) {
 
 // Send deauth_ind to SME (can be from client or softap)
 static void brcmf_notify_deauth_ind(net_device* ndev, const uint8_t mac_addr[ETH_ALEN],
-                                    uint16_t reason, bool locally_initiated) {
+                                    wlan_ieee80211::ReasonCode reason, bool locally_initiated) {
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping deauth ind callback");
@@ -1195,20 +1198,18 @@ static void brcmf_notify_deauth_ind(net_device* ndev, const uint8_t mac_addr[ETH
 
   wlanif_deauth_indication_t ind = {};
   BRCMF_IFDBG(WLANIF, ndev,
-              "Link Down: Sending deauth ind to SME. address: " MAC_FMT_STR
-              ",  "
-              "reason: %" PRIu16,
-              MAC_FMT_ARGS(mac_addr), reason);
+              "Link Down: Sending deauth ind to SME. address: " MAC_FMT_STR ",  reason: %d",
+              MAC_FMT_ARGS(mac_addr), static_cast<int>(reason));
 
   memcpy(ind.peer_sta_address, mac_addr, ETH_ALEN);
-  ind.reason_code = reason;
+  ind.reason_code = static_cast<reason_code_t>(reason);
   ind.locally_initiated = locally_initiated;
   wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &ind);
 }
 
 // Send disassoc_ind to SME (can be from client or softap)
 static void brcmf_notify_disassoc_ind(net_device* ndev, const uint8_t mac_addr[ETH_ALEN],
-                                      uint16_t reason, bool locally_initiated) {
+                                      wlan_ieee80211::ReasonCode reason, bool locally_initiated) {
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping disassoc ind callback");
@@ -1218,18 +1219,16 @@ static void brcmf_notify_disassoc_ind(net_device* ndev, const uint8_t mac_addr[E
   wlanif_disassoc_indication_t ind = {};
 
   BRCMF_IFDBG(WLANIF, ndev,
-              "Link Down: Sending disassoc ind to SME. address: " MAC_FMT_STR
-              ",  "
-              "reason: %" PRIu16,
-              MAC_FMT_ARGS(mac_addr), reason);
+              "Link Down: Sending disassoc ind to SME. address: " MAC_FMT_STR ",  reason: %d",
+              MAC_FMT_ARGS(mac_addr), static_cast<int>(reason));
   memcpy(ind.peer_sta_address, mac_addr, ETH_ALEN);
-  ind.reason_code = reason;
+  ind.reason_code = static_cast<reason_code_t>(reason);
   ind.locally_initiated = locally_initiated;
   wlanif_impl_ifc_disassoc_ind(&ndev->if_proto, &ind);
 }
 
-static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t event_reason,
-                                  uint16_t event_code) {
+static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif,
+                                  wlan_ieee80211::ReasonCode event_reason, uint16_t event_code) {
   struct net_device* ndev = vif->wdev.netdev;
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
@@ -1239,7 +1238,7 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t event
 
   struct brcmf_cfg80211_info* cfg = vif->ifp->drvr->config;
   BRCMF_DBG(CONN, "Link Down: address: " MAC_FMT_STR ", SME reason: %d",
-            MAC_FMT_ARGS(vif->profile.bssid), event_reason);
+            MAC_FMT_ARGS(vif->profile.bssid), static_cast<int>(event_reason));
 
   const bool sme_initiated_deauth =
       cfg->disconnect_mode == BRCMF_DISCONNECT_DEAUTH &&
@@ -1266,7 +1265,7 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t event
   cfg->disconnect_mode = BRCMF_DISCONNECT_NONE;
 }
 
-static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t event_reason,
+static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, wlan_ieee80211::ReasonCode event_reason,
                             uint16_t event_code) {
   struct brcmf_cfg80211_info* cfg = vif->ifp->drvr->config;
   zx_status_t err = ZX_OK;
@@ -2868,12 +2867,12 @@ bool brcmf_is_ap_start_pending(brcmf_cfg80211_info* cfg) {
   return brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &vif->sme_state);
 }
 
-// Returns an MLME result code (WLAN_STOP_RESULT_*)
-static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
+// Deauthenticate with specified STA.
+static wlan_stop_result_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   zx_status_t status;
   bcme_status_t fw_err = BCME_OK;
-  uint8_t result = WLAN_STOP_RESULT_SUCCESS;
+  wlan_stop_result_t result = WLAN_STOP_RESULT_SUCCESS;
   struct brcmf_join_params join_params;
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
@@ -3120,16 +3119,15 @@ fail:
   return WLAN_START_RESULT_NOT_SUPPORTED;
 }
 
-// Deauthenticate with specified STA. The reason provided should be from WLANIF_REASON_CODE_*
 static zx_status_t brcmf_cfg80211_del_station(struct net_device* ndev, const uint8_t* mac,
-                                              uint8_t reason) {
-  BRCMF_DBG(TRACE, "Enter: reason: %d", reason);
+                                              wlan_ieee80211::ReasonCode reason) {
+  BRCMF_DBG(TRACE, "Enter: reason: %d", static_cast<int>(reason));
 
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_scb_val_le scbval;
   memset(&scbval, 0, sizeof(scbval));
   memcpy(&scbval.ea, mac, ETH_ALEN);
-  scbval.val = reason;
+  scbval.val = static_cast<uint32_t>(reason);
   bcme_status_t fw_err = BCME_OK;
   zx_status_t status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SCB_DEAUTHENTICATE_FOR_REASON, &scbval,
                                               sizeof(scbval), &fw_err);
@@ -3355,19 +3353,19 @@ void brcmf_if_auth_resp(net_device* ndev, const wlanif_auth_resp_t* ind) {
     return;
   }
 
-  uint8_t reason;
+  wlan_ieee80211::ReasonCode reason = {};
   switch (ind->result_code) {
     case WLAN_AUTH_RESULT_REFUSED:
     case WLAN_AUTH_RESULT_REJECTED:
-      reason = WLANIF_REASON_CODE_NOT_AUTHENTICATED;
+      reason = wlan_ieee80211::ReasonCode::NOT_AUTHENTICATED;
       break;
     case WLAN_AUTH_RESULT_FAILURE_TIMEOUT:
-      reason = WLANIF_REASON_CODE_TIMEOUT;
+      reason = wlan_ieee80211::ReasonCode::TIMEOUT;
       break;
     case WLAN_AUTH_RESULT_ANTI_CLOGGING_TOKEN_REQUIRED:
     case WLAN_AUTH_RESULT_FINITE_CYCLIC_GROUP_NOT_SUPPORTED:
     default:
-      reason = WLANIF_REASON_CODE_UNSPECIFIED;
+      reason = wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
       break;
   }
   brcmf_cfg80211_del_station(ndev, ind->peer_sta_address, reason);
@@ -3452,13 +3450,13 @@ void brcmf_if_assoc_resp(net_device* ndev, const wlanif_assoc_resp_t* ind) {
 
   // TODO(fxb/62115): The translation here is poor because the set of result codes
   // available for an association response is too small.
-  uint8_t reason;
+  wlan_ieee80211::ReasonCode reason = {};
   switch (ind->result_code) {
     case WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED:
-      reason = WLANIF_REASON_CODE_NOT_AUTHENTICATED;
+      reason = wlan_ieee80211::ReasonCode::NOT_AUTHENTICATED;
       break;
     case WLAN_ASSOC_RESULT_REFUSED_CAPABILITIES_MISMATCH:
-      reason = WLANIF_REASON_CODE_INVALID_RSNE_CAPABILITIES;
+      reason = wlan_ieee80211::ReasonCode::INVALID_RSNE_CAPABILITIES;
       break;
     case WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED:
     case WLAN_ASSOC_RESULT_REFUSED_EXTERNAL_REASON:
@@ -3467,7 +3465,7 @@ void brcmf_if_assoc_resp(net_device* ndev, const wlanif_assoc_resp_t* ind) {
     case WLAN_ASSOC_RESULT_REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED:
     case WLAN_ASSOC_RESULT_REFUSED_TEMPORARILY:
     default:
-      reason = WLANIF_REASON_CODE_UNSPECIFIED;
+      reason = wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
       break;
   }
   brcmf_cfg80211_del_station(ndev, ind->peer_sta_address, reason);
@@ -4908,7 +4906,7 @@ static zx_status_t brcmf_clear_firmware_connection_state(brcmf_if* ifp) {
 
   struct brcmf_scb_val_le scbval;
   memcpy(&scbval.ea, ifp->bss.bssid, ETH_ALEN);
-  scbval.val = WLANIF_REASON_CODE_STA_LEAVING;
+  scbval.val = static_cast<uint32_t>(wlan_ieee80211::ReasonCode::STA_LEAVING);
   brcmf_set_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state);
   status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_DISASSOC, &scbval, sizeof(scbval), &fw_err);
   if (status != ZX_OK) {
@@ -5219,7 +5217,7 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
   BRCMF_INFO_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
   brcmf_bss_connect_done(ifp, connect_status);
   brcmf_disconnect_done(cfg);
-  brcmf_link_down(ifp->vif, e->reason, e->event_code);
+  brcmf_link_down(ifp->vif, wlan::common::ConvertReasonCode(e->reason), e->event_code);
   brcmf_clear_profile_on_client_disconnect(ndev_to_prof(ndev));
   if (ndev != cfg_to_ndev(cfg)) {
     sync_completion_signal(&cfg->vif_disabled);
@@ -5280,7 +5278,8 @@ static zx_status_t brcmf_process_deauth_event(struct brcmf_if* ifp, const struct
   brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
   if (brcmf_is_apmode(ifp->vif)) {
     if (e->event_code == BRCMF_E_DEAUTH_IND) {
-      brcmf_notify_deauth_ind(ifp->ndev, e->addr, e->reason, false);
+      brcmf_notify_deauth_ind(ifp->ndev, e->addr, wlan::common::ConvertReasonCode(e->reason),
+                              false);
     } else {
       // E_DEAUTH
       brcmf_notify_deauth(ifp->ndev, e->addr);
@@ -5306,7 +5305,8 @@ static zx_status_t brcmf_process_disassoc_ind_event(struct brcmf_if* ifp,
   brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
   if (brcmf_is_apmode(ifp->vif)) {
     if (e->event_code == BRCMF_E_DISASSOC_IND)
-      brcmf_notify_disassoc_ind(ifp->ndev, e->addr, e->reason, false);
+      brcmf_notify_disassoc_ind(ifp->ndev, e->addr, wlan::common::ConvertReasonCode(e->reason),
+                                false);
     else
       // E_DISASSOC
       brcmf_notify_disassoc(ifp->ndev, ZX_OK);
@@ -5707,7 +5707,7 @@ static zx_status_t __brcmf_cfg80211_down(struct brcmf_if* ifp) {
    * from AP to save power
    */
   if (check_vif_up(ifp->vif)) {
-    brcmf_link_down(ifp->vif, WLANIF_REASON_CODE_UNSPECIFIED, 0);
+    brcmf_link_down(ifp->vif, wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON, 0);
 
     /* Make sure WPA_Supplicant receives all the event
        generated due to DISASSOC call to the fw to keep
@@ -5835,7 +5835,7 @@ zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wir
       return brcmf_cfg80211_del_ap_iface(cfg, wdev);
     case WLAN_INFO_MAC_ROLE_CLIENT:
       // Dissconnect the client in an attempt to exit gracefully.
-      brcmf_link_down(ifp->vif, WLANIF_REASON_CODE_UNSPECIFIED, false);
+      brcmf_link_down(ifp->vif, wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON, false);
       // The default client iface 0 is always assumed to exist by the driver, and is never
       // explicitly deleted.
       ndev->sme_channel.reset();

@@ -6,6 +6,7 @@
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <zircon/errors.h>
 
+#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <gtest/gtest.h>
 
@@ -49,7 +50,7 @@ TEST_F(SimTest, Disassoc) {
   ASSERT_EQ(client_ifc.stats_.disassoc_indications.size(), 1U);
   const wlanif_disassoc_indication_t& disassoc_ind = client_ifc.stats_.disassoc_indications.front();
   // Verify reason code is propagated
-  EXPECT_EQ(disassoc_ind.reason_code, static_cast<wlanif_reason_code_t>(kDisassocReason));
+  EXPECT_EQ(disassoc_ind.reason_code, static_cast<reason_code_t>(kDisassocReason));
   // Disassociated by AP so not locally initiated
   EXPECT_EQ(disassoc_ind.locally_initiated, false);
 }

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/connectivity/wlan/drivers/wlanif/device.h"
+
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -13,8 +15,8 @@
 #include <optional>
 #include <tuple>
 
+#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <gtest/gtest.h>
-#include <src/connectivity/wlan/drivers/wlanif/device.h>
 #include <wlan/mlme/dispatcher.h>
 
 namespace wlan_internal = ::fuchsia::wlan::internal;
@@ -349,7 +351,7 @@ void EthernetTestFixture::TestEthernetAgainstRole(wlan_info_mac_role_t role) {
   device_.EthStart(&eth_proto_);
 
   SetEthernetOnline();
-  wlanif_deauth_indication_t deauth_ind{.reason_code = WLANIF_REASON_CODE_AP_INITIATED};
+  wlanif_deauth_indication_t deauth_ind{.reason_code = REASON_CODE_AP_INITIATED};
   device_.DeauthenticateInd(&deauth_ind);
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 
@@ -359,7 +361,7 @@ void EthernetTestFixture::TestEthernetAgainstRole(wlan_info_mac_role_t role) {
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 
   SetEthernetOnline();
-  wlanif_disassoc_indication_t disassoc_ind{.reason_code = WLANIF_REASON_CODE_AP_INITIATED};
+  wlanif_disassoc_indication_t disassoc_ind{.reason_code = REASON_CODE_AP_INITIATED};
   device_.DisassociateInd(&disassoc_ind);
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 

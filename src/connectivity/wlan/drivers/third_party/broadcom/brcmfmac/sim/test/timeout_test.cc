@@ -5,6 +5,7 @@
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <zircon/errors.h>
 
+#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wifi/wifi-config.h>
 
@@ -102,7 +103,7 @@ TEST_F(TimeoutTest, DisassocTimeout) {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_DISASSOC, ZX_OK, BCME_OK, client_ifc_.iface_id_);
   env_->ScheduleNotification(std::bind(&SimInterface::DeauthenticateFrom, &client_ifc_,
-                                       kDefaultBssid, WLANIF_REASON_CODE_UNSPECIFIED),
+                                       kDefaultBssid, REASON_CODE_UNSPECIFIED_REASON),
                              zx::msec(10));
 
   env_->Run(kTestDuration);
@@ -126,7 +127,7 @@ TEST_F(TimeoutTest, ScanAfterAssocTimeout) {
   // There are three timers for them, and all have been cancelled.
   client_ifc_.AssociateWith(ap, zx::msec(10));
   env_->ScheduleNotification(std::bind(&SimInterface::DeauthenticateFrom, &client_ifc_,
-                                       kDefaultBssid, WLANIF_REASON_CODE_UNSPECIFIED),
+                                       kDefaultBssid, REASON_CODE_UNSPECIFIED_REASON),
                              zx::sec(1));
   env_->ScheduleNotification(
       std::bind(&SimInterface::StartScan, &client_ifc_, kDefaultScanTxnId, false), zx::sec(3));
