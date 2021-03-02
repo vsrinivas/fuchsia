@@ -1,6 +1,6 @@
-(?P<copyright>Copyright 2005 Nokia\. All rights reserved\.)
+Copyright 2005 Nokia\. All rights reserved\.
 
-(?P<text>The portions of the attached software \("Contribution"\) is developed by
+The portions of the attached software \("Contribution"\) is developed by
 Nokia Corporation and is licensed pursuant to the OpenSSL open source
 license\.
 
@@ -21,4 +21,4 @@ THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND\. IN
 ADDITION TO THE DISCLAIMERS INCLUDED IN THE LICENSE, NOKIA
 SPECIFICALLY DISCLAIMS ANY LIABILITY FOR CLAIMS BROUGHT BY YOU OR ANY
 OTHER ENTITY BASED ON INFRINGEMENT OF INTELLECTUAL PROPERTY RIGHTS OR
-OTHERWISE\.)
+OTHERWISE\.

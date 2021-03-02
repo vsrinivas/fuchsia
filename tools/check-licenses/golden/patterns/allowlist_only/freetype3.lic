@@ -1,9 +1,9 @@
-(?P<text>The FreeType Project LICENSE
+The FreeType Project LICENSE
 
         [\d]{4}-[\w]{3}-[\d]{2}
 
-(?P<copyright>Copyright (.*) by
-David Turner, Robert Wilhelm, and Werner Lemberg)
+Copyright (.*) by
+David Turner, Robert Wilhelm, and Werner Lemberg
 
 Introduction
 ============
@@ -153,4 +153,4 @@ Legal Terms
 
     https:\/\/www\.freetype\.org
 
---- end of FTL\.TXT ---)
+--- end of FTL\.TXT ---

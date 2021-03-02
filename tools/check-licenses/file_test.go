@@ -89,26 +89,3 @@ func TestFileCreateNonExistent(t *testing.T) {
 		t.Errorf("%v(): got %v, want %v", t.Name(), f, nil)
 	}
 }
-
-func (f *File) equal(other *File) bool {
-	if f.Name != other.Name {
-		return false
-	}
-	if f.Path != other.Path {
-		return false
-	}
-	if f.Symlink != other.Symlink {
-		return false
-	}
-
-	if len(f.Licenses) != len(other.Licenses) {
-		return false
-	}
-	for i := range f.Licenses {
-		if f.Licenses[i] != other.Licenses[i] {
-			return false
-		}
-	}
-
-	return true
-}

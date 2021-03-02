@@ -1,4 +1,4 @@
-(?P<text>        pthreads-win32 - a POSIX threads library for Microsoft Windows
+        pthreads-win32 - a POSIX threads library for Microsoft Windows
 
 
 This file is Copyrighted
@@ -147,4 +147,4 @@ Why pthreads-win32 did not use the GNU General Public License
     broader goal of the project is to encourage the use of open
     standards, and in particular, to make it just a little easier
     for developers writing Win32 applications to consider
-    widening the potential market for their products\.)
+    widening the potential market for their products\.

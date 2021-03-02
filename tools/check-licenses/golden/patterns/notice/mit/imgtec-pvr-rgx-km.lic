@@ -1,6 +1,6 @@
-(?s)(?i)(.*)(?P<copyright>This software is Copyright \((?:c|C)\) Imagination Technologies Ltd\.)
+(?s)(?i)(.*)This software is Copyright \((?:c|C)\) Imagination Technologies Ltd\.
 
-(?P<text>You may use, distribute and copy this software under the terms of the MIT
+You may use, distribute and copy this software under the terms of the MIT
 license displayed below\.
 
 (.*)
@@ -23,6 +23,6 @@ BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
 PURPOSE AND NONINFRINGEMENT; AND \(B\) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE\.)
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE\.
 
 (.*)

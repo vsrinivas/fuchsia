@@ -3,12 +3,13 @@
       ".gitignore"
    ],
    "skipDirs":[
-      "{root}/skipMe",
-      "{root}/skipMeCompletely",
-      "{root}/dontSkip/skipMe"
+      ".git",
+      "skipMe",
+      "skipMeCompletely",
+      "dontSkip/skipMe"
    ],
    "dontSkipDirs":[
-      "{root}/skipMe/dontSkipMe"
+      "skipMe/dontSkipMe"
    ],
    "textExtensionList":[
       "go",

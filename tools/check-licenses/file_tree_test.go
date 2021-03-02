@@ -17,7 +17,7 @@ import (
 // represents an empty directory.
 func TestFileTreeCreateEmpty(t *testing.T) {
 	want, got := setupFileTreeTestDir("empty", t)
-	if !got.equal(want) {
+	if !got.Equal(want) {
 		t.Errorf("%v(): got %v, want %v", t.Name(), got, want)
 	}
 }
@@ -26,7 +26,7 @@ func TestFileTreeCreateEmpty(t *testing.T) {
 // represents the simple testdata directory.
 func TestFileTreeCreateSimple(t *testing.T) {
 	want, got := setupFileTreeTestDir("simple", t)
-	if !got.equal(want) {
+	if !got.Equal(want) {
 		t.Errorf("%v(): got %v, want %v", t.Name(), got, want)
 	}
 }
@@ -35,7 +35,7 @@ func TestFileTreeCreateSimple(t *testing.T) {
 // and propagated down from the parent tree properly.
 func TestFileTreeStrictAnalysis(t *testing.T) {
 	want, got := setupFileTreeTestDir("strictanalysis", t)
-	if !got.equal(want) {
+	if !got.Equal(want) {
 		t.Errorf("%v(): got %v, want %v", t.Name(), got, want)
 	}
 }
@@ -52,22 +52,9 @@ func TestFileTreeHasLowerPrefix(t *testing.T) {
 
 func TestFileTreeWithDontSkip(t *testing.T) {
 	want, got := setupFileTreeTestDir("skipdir", t)
-	if !got.equal(want) {
+	if !got.Equal(want) {
 		t.Errorf("%v(): got %v, want %v", t.Name(), got, want)
 	}
-}
-
-func loadFileAndReplace(path string, replacements map[string]string) (string, error) {
-	b, err := ioutil.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	text := string(b)
-
-	for k, v := range replacements {
-		text = strings.ReplaceAll(text, k, v)
-	}
-	return text, nil
 }
 
 func setupFileTreeTestDir(name string, t *testing.T) (*FileTree, *FileTree) {
@@ -80,15 +67,20 @@ func setupFileTreeTestDir(name string, t *testing.T) (*FileTree, *FileTree) {
 	// The filetree will be called on the subdirectory named "root".
 	root := filepath.Join(testDir, "root")
 
+	// Read the want.json file into a string.
+	wantJsonPath := filepath.Join(testDir, "want.json")
+	b, err := ioutil.ReadFile(wantJsonPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantJson := string(b)
+
 	// want.json contains variables that need to be replaced before it can be used.
 	replacements := map[string]string{
 		"{root}": root,
 	}
-
-	path := filepath.Join(testDir, "want.json")
-	wantJson, err := loadFileAndReplace(path, replacements)
-	if err != nil {
-		t.Fatal(err)
+	for k, v := range replacements {
+		wantJson = strings.ReplaceAll(wantJson, k, v)
 	}
 
 	// Create a FileTree object from the want.json file.
@@ -100,13 +92,8 @@ func setupFileTreeTestDir(name string, t *testing.T) (*FileTree, *FileTree) {
 	}
 
 	// Load the accompanying config file for this test type.
-	path = filepath.Join(testDir, "config.json")
-	configJson, err := loadFileAndReplace(path, replacements)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	config, err := NewConfigJson(configJson)
+	configPath := filepath.Join(testDir, "config.json")
+	config, err := NewConfig(configPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,52 +104,4 @@ func setupFileTreeTestDir(name string, t *testing.T) (*FileTree, *FileTree) {
 	}
 
 	return &want, got
-}
-
-func (ft *FileTree) equal(other *FileTree) bool {
-	if ft.Name != other.Name {
-		return false
-	}
-	if ft.Path != other.Path {
-		return false
-	}
-	if ft.StrictAnalysis != other.StrictAnalysis {
-		return false
-	}
-
-	if len(ft.SingleLicenseFiles) != len(other.SingleLicenseFiles) {
-		return false
-	}
-	for k := range ft.SingleLicenseFiles {
-		left := ft.SingleLicenseFiles[k]
-		right := other.SingleLicenseFiles[k]
-		if len(left) != len(right) {
-			return false
-		}
-		for i := range left {
-			if left[i] != right[i] {
-				return false
-			}
-		}
-	}
-
-	if len(ft.Files) != len(other.Files) {
-		return false
-	}
-	for i := range ft.Files {
-		if !ft.Files[i].equal(other.Files[i]) {
-			return false
-		}
-	}
-
-	if len(ft.Children) != len(other.Children) {
-		return false
-	}
-	for k := range ft.Children {
-		if ft.Children[k].equal(other.Children[k]) {
-			return false
-		}
-	}
-
-	return true
 }

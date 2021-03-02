@@ -1,7 +1,7 @@
-(?P<copyright>Copyright\(c\)1995,97 Mark Olesen \<olesen@me\.QueensU\.CA\>
-   Queen's Univ at Kingston \(Canada\))
+Copyright\(c\)1995,97 Mark Olesen \<olesen@me\.QueensU\.CA\>
+   Queen's Univ at Kingston \(Canada\)
 
-(?P<text>Permission to use, copy, modify, and distribute this software for
+Permission to use, copy, modify, and distribute this software for
 any purpose without fee is hereby granted, provided that this
 entire notice is included in all copies of any software which is
 or includes a copy or modification of this software and in all
@@ -20,4 +20,4 @@ copyright\)\.
 
 It is also implicitly understood that bug fixes and improvements
 should make their way back to the general Internet community so
-that everyone benefits\.)
+that everyone benefits\.

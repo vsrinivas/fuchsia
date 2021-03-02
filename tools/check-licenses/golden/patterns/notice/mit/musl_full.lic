@@ -1,7 +1,7 @@
-(?P<text>musl as a whole is licensed under the following standard MIT license:
+musl as a whole is licensed under the following standard MIT license:
 
 ----------------------------------------------------------------------
-(?P<copyright>Copyright © 2005-2014 Rich Felker, et al\.)
+Copyright © 2005-2014 Rich Felker, et al\.
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files \(the
@@ -126,4 +126,4 @@ the files covered by the above exception were sufficiently trivial not
 to be subject to copyright, resulting in confusion over whether it
 negated the permissions granted in the license\. In the spirit of
 permissive licensing, and of not having licensing issues being an
-obstacle to adoption, that text has been removed\.)
+obstacle to adoption, that text has been removed\.

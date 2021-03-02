@@ -7,27 +7,22 @@ package checklicenses
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime/trace"
 	"sort"
-	"sync"
+	"strings"
 )
 
-// Licenses is an object that facilitates operations on each License object in bulk.
+// Licenses is an object that facilitates operations on each License object in bulk
 type Licenses struct {
 	licenses []*License
-	notices  []*License
-
-	sync.RWMutex
 }
 
 // NewLicenses returns a Licenses object with each license pattern loaded from
-// the .lic folder location specified in the config file.
+// the .lic folder location specified in Config
 func NewLicenses(ctx context.Context, config *Config) (*Licenses, error) {
 	defer trace.StartRegion(ctx, "NewLicenses").End()
-
 	l := &Licenses{}
 	err := filepath.Walk(config.LicensePatternDir,
 		func(path string, info os.FileInfo, err error) error {
@@ -62,7 +57,7 @@ func (l *Licenses) GetFilesWithProhibitedLicenses() []string {
 			continue
 		}
 		for _, match := range license.matches {
-			for _, path := range match.Files {
+			for _, path := range match.files {
 				if _, found := set[path]; !found && !contains(license.AllowedDirs, path) {
 					set[path] = true
 					filesWithProhibitedLicenses = append(filesWithProhibitedLicenses, path)
@@ -70,8 +65,6 @@ func (l *Licenses) GetFilesWithProhibitedLicenses() []string {
 			}
 		}
 	}
-
-	sort.Strings(filesWithProhibitedLicenses)
 	return filesWithProhibitedLicenses
 }
 
@@ -88,8 +81,6 @@ func (l *Licenses) GetFilesWithBadLicenseUsage() []string {
 			}
 		}
 	}
-
-	sort.Strings(filesWithBadLicenseUsage)
 	return filesWithBadLicenseUsage
 }
 
@@ -104,42 +95,33 @@ func CheckLicenseAllowList(license *License, path string) bool {
 
 func (l *Licenses) MatchSingleLicenseFile(data []byte, path string, metrics *Metrics, ft *FileTree) {
 	for _, license := range l.licenses {
-		if ok, match := license.Search(data, path); ok && CheckLicenseAllowList(license, path) {
+		if license.Search(data, path) && CheckLicenseAllowList(license, path) {
 			metrics.increment("num_single_license_file_match")
 			ft.Lock()
 			ft.SingleLicenseFiles[path] = append(ft.SingleLicenseFiles[path], license)
-			ft.LicenseMatches[path] = append(ft.LicenseMatches[path], match)
 			ft.Unlock()
 		}
-	}
-}
-
-func (l *Licenses) MatchNoticeFile(data []byte, path string, metrics *Metrics, ft *FileTree) {
-	custom := NewCustomLicense(path)
-	l.Lock()
-	l.notices = append(l.notices, custom)
-	l.Unlock()
-
-	if ok, match := custom.Search(data, path); ok {
-		metrics.increment("num_single_license_file_match")
-		ft.Lock()
-		ft.SingleLicenseFiles[path] = append(ft.SingleLicenseFiles[path], custom)
-		ft.LicenseMatches[path] = append(ft.LicenseMatches[path], match)
-		ft.Unlock()
-	} else {
-		fmt.Printf("Error: failed to match custom license text '%v'\n", path)
 	}
 }
 
 // MatchFile returns true if any License matches input data
 // along with the license that matched. It returns false and nil
 // if there were no matches.
-func (l *Licenses) MatchFile(data []byte, path string, metrics *Metrics) (bool, *License, *Match) {
+func (l *Licenses) MatchFile(data []byte, path string, metrics *Metrics) (bool, *License) {
 	for _, license := range l.licenses {
-		if ok, match := license.Search(data, path); ok && CheckLicenseAllowList(license, path) {
+		if license.Search(data, path) && CheckLicenseAllowList(license, path) {
 			metrics.increment("num_licensed")
-			return true, license, match
+			return true, license
 		}
 	}
-	return false, nil, nil
+	return false, nil
+}
+
+func contains(matches []string, item string) bool {
+	for _, m := range matches {
+		if strings.Contains(item, m) {
+			return true
+		}
+	}
+	return false
 }

@@ -19,23 +19,19 @@ import (
 // saveToOutputFile writes to output the serialized licenses.
 //
 // It writes an uncompressed version too if a compressed version is requested.
-func saveToOutputFile(path string, licenses *Licenses, config *Config) error {
+func saveToOutputFile(path string, licenses *Licenses) error {
 	// Sort the licenses in alphabetical order for consistency.
 	sort.Slice(licenses.licenses, func(i, j int) bool { return licenses.licenses[i].Category < licenses.licenses[j].Category })
 	data := struct {
 		Used   []*License
 		Unused []*License
 	}{}
-
 	for _, l := range licenses.licenses {
 		if len(l.matches) == 0 {
 			data.Unused = append(data.Unused, l)
 		} else {
 			data.Used = append(data.Used, l)
 		}
-	}
-	for _, n := range licenses.notices {
-		data.Used = append(data.Used, n)
 	}
 
 	templateStr := ""
@@ -53,7 +49,7 @@ func saveToOutputFile(path string, licenses *Licenses, config *Config) error {
 		return fmt.Errorf("no template found for %s", path)
 	}
 	buf := bytes.Buffer{}
-	tmpl := template.Must(template.New("name").Funcs(getFuncMap(config)).Parse(templateStr))
+	tmpl := template.Must(template.New("name").Funcs(funcMap).Parse(templateStr))
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return err
 	}
@@ -88,89 +84,36 @@ func compressGZ(d []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func getFuncMap(config *Config) template.FuncMap {
-	return template.FuncMap{
-		"getPattern": func(l *License) string {
-			return l.pattern.String()
-		},
-		"getText": func(l *License, author string) string {
-			return l.matches[author].Text
-		},
-		"getEscapedText": func(l *License, author string) string {
-			return strings.Replace(l.matches[author].Text, "\"", "\\\"", -1)
-		},
-		"getCategory": func(l *License) string {
-			return strings.TrimSuffix(l.Category, ".lic")
-		},
-		"getFiles": func(l *License, author string) []string {
-			var files []string
-			for _, file := range l.matches[author].Files {
-				files = append(files, file)
-			}
-			sort.Strings(files)
-			return files
-		},
-		"getAuthors": func(l *License) []string {
-			var authors []string
-			for author := range l.matches {
-				authors = append(authors, author)
-			}
-			sort.Strings(authors)
-			return authors
-		},
-		"getHTMLText": func(m *Match) string {
-			txt := m.Text
-			txt = strings.Replace(txt, "\n", "<br />", -1)
-			txt = strings.ReplaceAll(txt, "<", "&lt")
-			txt = strings.ReplaceAll(txt, ">", "&gt")
-			return txt
-		},
-		"getMatches": func(l *License) []*Match {
-			sortedList := []*Match{}
-			for _, m := range l.matches {
-				sortedList = append(sortedList, m)
-			}
-			sort.Sort(matchByText(sortedList))
-
-			return sortedList
-		},
-		"getFilesFromMatch": func(m *Match) string {
-			result := ""
-			if config.PrintFiles && len(m.Files) > 0 {
-				result += "Files:\n"
-				sort.Strings(m.Files)
-				for _, s := range m.Files {
-					result += " -> " + s + "\n"
-				}
-			}
-			return result
-		},
-		"getProjectsFromMatch": func(m *Match) string {
-			result := ""
-			if config.PrintProjects && len(m.Projects) > 0 {
-				result += "Projects:\n"
-				sort.Strings(m.Projects)
-				for _, s := range m.Projects {
-					result += " -> " + s + "\n"
-				}
-			}
-			return result
-		},
-		"getCopyrights": func(m *Match) string {
-			sortedList := []string{}
-			for c := range m.Copyrights {
-				trim := strings.TrimSpace(c)
-				if trim != "" {
-					sortedList = append(sortedList, trim)
-				}
-			}
-			sort.Strings(sortedList)
-
-			result := ""
-			for _, s := range sortedList {
-				result += s + "\n"
-			}
-			return result
-		},
-	}
+var funcMap = template.FuncMap{
+	"getPattern": func(l *License) string {
+		return l.pattern.String()
+	},
+	"getText": func(l *License, author string) string {
+		return l.matches[author].GetText()
+	},
+	"getHTMLText": func(l *License, author string) string {
+		return strings.Replace(l.matches[author].GetText(), "\n", "<br />", -1)
+	},
+	"getEscapedText": func(l *License, author string) string {
+		return strings.Replace(l.matches[author].GetText(), "\"", "\\\"", -1)
+	},
+	"getCategory": func(l *License) string {
+		return strings.TrimSuffix(l.Category, ".lic")
+	},
+	"getFiles": func(l *License, author string) []string {
+		var files []string
+		for _, file := range l.matches[author].files {
+			files = append(files, file)
+		}
+		sort.Strings(files)
+		return files
+	},
+	"getAuthors": func(l *License) []string {
+		var authors []string
+		for author := range l.matches {
+			authors = append(authors, author)
+		}
+		sort.Strings(authors)
+		return authors
+	},
 }

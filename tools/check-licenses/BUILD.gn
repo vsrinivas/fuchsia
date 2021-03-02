@@ -52,15 +52,12 @@ go_library("lib") {
     "license_test.go",
     "licenses.go",
     "licenses_test.go",
-    "match.go",
     "metrics.go",
     "metrics_test.go",
-    "project.go",
     "template.go",
     "template_test.go",
     "traverse.go",
     "traverse_test.go",
-    "util.go",
   ]
 
   deps = [
