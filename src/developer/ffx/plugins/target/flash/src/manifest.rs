@@ -18,6 +18,7 @@ use {
     serde::{Deserialize, Serialize},
     serde_json::{from_value, Value},
     std::io::{Read, Write},
+    std::path::{Path, PathBuf},
     termion::{color, style},
 };
 
@@ -217,30 +218,50 @@ async fn handle_upload_progress_for_flashing<W: Write + Send>(
 
 async fn stage_file<W: Write + Send>(
     writer: &mut W,
+    path: &Path,
     file: &str,
     fastboot_proxy: &FastbootProxy,
 ) -> Result<()> {
     let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
-    writeln!(writer, "Preparing to stage {}", file)?;
+    let file_to_upload = get_file(path, file).context("reconciling file for upload")?;
+    writeln!(writer, "Preparing to stage {}", file_to_upload)?;
     try_join!(
-        fastboot_proxy.stage(file, prog_client).map_err(|e| anyhow!(e)),
+        fastboot_proxy.stage(&file_to_upload, prog_client).map_err(|e| anyhow!(e)),
         handle_upload_progress_for_staging(writer, prog_server),
     )
     .and_then(|(stage, _)| {
-        stage.map_err(|e| anyhow!("There was an error staging {}: {:?}", file, e))
+        stage.map_err(|e| anyhow!("There was an error staging {}: {:?}", file_to_upload, e))
     })
+}
+
+fn get_file(path: &Path, file: &str) -> Result<String> {
+    if PathBuf::from(file).is_absolute() {
+        Ok(file.to_string())
+    } else if let Some(p) = path.parent() {
+        let mut parent = p.to_path_buf();
+        parent.push(file);
+        if let Some(f) = parent.to_str() {
+            Ok(f.to_string())
+        } else {
+            bail!("Only UTF-8 strings are currently supported")
+        }
+    } else {
+        bail!("Could not get file to upload");
+    }
 }
 
 async fn flash_partition<W: Write + Send>(
     writer: &mut W,
+    path: &Path,
     name: &str,
     file: &str,
     fastboot_proxy: &FastbootProxy,
 ) -> Result<()> {
     let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
-    writeln!(writer, "Preparing to upload {}", file)?;
+    let file_to_upload = get_file(path, file).context("reconciling file for upload")?;
+    writeln!(writer, "Preparing to upload {}", file_to_upload)?;
     try_join!(
-        fastboot_proxy.flash(name, file, prog_client).map_err(|e| anyhow!(e)),
+        fastboot_proxy.flash(name, &file_to_upload, prog_client).map_err(|e| anyhow!(e)),
         handle_upload_progress_for_flashing(name, writer, prog_server),
     )
     .and_then(|(flash, prog)| {
@@ -253,7 +274,9 @@ async fn flash_partition<W: Write + Send>(
             writeln!(writer, "{}Done{}", color::Fg(color::Green), style::Reset)?;
             writer.flush()?;
         }
-        flash.map_err(|e| anyhow!("There was an error flashing \"{}\" - {}: {:?}", name, file, e))
+        flash.map_err(|e| {
+            anyhow!("There was an error flashing \"{}\" - {}: {:?}", name, file_to_upload, e)
+        })
     })
 }
 
@@ -268,6 +291,7 @@ impl Flash for FlashManifestV1 {
     where
         W: Write + Send,
     {
+        let path = Path::new(&cmd.manifest);
         let product = match cmd.product {
             Some(p) => {
                 if let Some(res) = self.0.iter().find(|product| product.name == p) {
@@ -285,7 +309,8 @@ impl Flash for FlashManifestV1 {
             }
         };
         for partition in &product.bootloader_partitions {
-            flash_partition(writer, partition.name(), partition.file(), &fastboot_proxy).await?;
+            flash_partition(writer, &path, partition.name(), partition.file(), &fastboot_proxy)
+                .await?;
         }
         if product.bootloader_partitions.len() > 0 {
             write!(writer, "Rebooting to bootloader... ")?;
@@ -315,17 +340,18 @@ impl Flash for FlashManifestV1 {
             })?;
         }
         for partition in &product.partitions {
-            flash_partition(writer, partition.name(), partition.file(), &fastboot_proxy).await?;
+            flash_partition(writer, &path, partition.name(), partition.file(), &fastboot_proxy)
+                .await?;
         }
         for oem_file in &product.oem_files {
-            stage_file(writer, oem_file.file(), &fastboot_proxy).await?;
+            stage_file(writer, &path, oem_file.file(), &fastboot_proxy).await?;
             writeln!(writer, "Sending command \"{}\"", oem_file.command())?;
             fastboot_proxy.oem(oem_file.command()).await?.map_err(|_| {
                 anyhow!("There was an error sending oem command \"{}\"", oem_file.command())
             })?;
         }
         for oem_file in &cmd.oem_stage {
-            stage_file(writer, oem_file.file(), &fastboot_proxy).await?;
+            stage_file(writer, &path, oem_file.file(), &fastboot_proxy).await?;
             writeln!(writer, "Sending command \"{}\"", oem_file.command())?;
             fastboot_proxy.oem(oem_file.command()).await?.map_err(|_| {
                 anyhow!("There was an error sending oem command \"{}\"", oem_file.command())
