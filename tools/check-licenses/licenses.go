@@ -7,16 +7,21 @@ package checklicenses
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime/trace"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // Licenses is an object that facilitates operations on each License object in bulk
 type Licenses struct {
 	licenses []*License
+	notices  []*License
+
+	sync.RWMutex
 }
 
 // NewLicenses returns a Licenses object with each license pattern loaded from
@@ -101,6 +106,22 @@ func (l *Licenses) MatchSingleLicenseFile(data []byte, path string, metrics *Met
 			ft.SingleLicenseFiles[path] = append(ft.SingleLicenseFiles[path], license)
 			ft.Unlock()
 		}
+	}
+}
+
+func (l *Licenses) MatchNoticeFile(data []byte, path string, metrics *Metrics, ft *FileTree) {
+	custom := NewCustomLicense(path)
+	l.Lock()
+	l.notices = append(l.notices, custom)
+	l.Unlock()
+
+	if ok := custom.Search(data, path); ok {
+		metrics.increment("num_single_license_file_match")
+		ft.Lock()
+		ft.SingleLicenseFiles[path] = append(ft.SingleLicenseFiles[path], custom)
+		ft.Unlock()
+	} else {
+		fmt.Printf("Error: failed to match custom license text '%v'\n", path)
 	}
 }
 

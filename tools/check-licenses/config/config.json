@@ -40,14 +40,8 @@
     "prebuilt/third_party/gcc",
     "prebuilt/third_party/qemu",
     "prebuilt/third_party/sysroot/linux",
-    "src/experiences",
-    "test",
-    "test-apps",
-    "testdata",
-    "testing",
     "tests",
     "tools/check-licenses/golden",
-    "vendor",
     "third_party/lz4/programs",
     "third_party/lz4/tests"
   ],
@@ -201,6 +195,7 @@
     "prebuilt/third_party/flutter/licenses_third_party"
   ],
   "noticeTxtFiles": [],
+  "noticeFiles": [],
   "licensePatternDir": "tools/check-licenses/golden/patterns",
   "baseDir": ".",
   "target": "all",

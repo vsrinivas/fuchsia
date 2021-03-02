@@ -33,6 +33,9 @@ func saveToOutputFile(path string, licenses *Licenses) error {
 			data.Used = append(data.Used, l)
 		}
 	}
+	for _, n := range licenses.notices {
+		data.Used = append(data.Used, n)
+	}
 
 	templateStr := ""
 	switch {

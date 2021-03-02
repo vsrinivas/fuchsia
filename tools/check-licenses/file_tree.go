@@ -292,36 +292,31 @@ func isSkippable(config *Config, path string, info os.FileInfo) (bool, error) {
 			return true, nil
 		}
 	}
-	for _, dontSkipDir := range config.DontSkipDirs {
-		if dirMatch(path, dontSkipDir) {
+	if info.IsDir() && len(info.Name()) > 1 && (strings.HasPrefix(info.Name(), ".") || strings.HasPrefix(info.Name(), "__")) {
+		return true, filepath.SkipDir
+	}
+
+	sep := string(filepath.Separator)
+	skippable := false
+	for _, skipDir := range config.SkipDirs {
+		if skipDir == path || strings.HasPrefix(path, skipDir+sep) {
+			skippable = true
+			break
+		}
+	}
+	if !skippable {
+		return false, nil
+	}
+
+	for _, keepDir := range config.DontSkipDirs {
+		if keepDir == path ||
+			strings.HasPrefix(path, keepDir+sep) ||
+			strings.HasPrefix(keepDir, path+sep) {
 			return false, nil
 		}
 	}
-
-	for _, skipDir := range config.SkipDirs {
-		var err error
-		if info.IsDir() {
-			err = filepath.SkipDir
-		}
-		for _, dontSkipDir := range config.DontSkipDirs {
-			// Check if there are `dontSkipDirs` within this `skipDir`.
-			// If there are none, then we can return `filepath.SkipDir`.
-			if strings.HasPrefix(dontSkipDir, skipDir) {
-				// There is a `dontSkipDir` within this `skipDir`, so we
-				// cannot return `filepath.SkipDir`.
-				err = nil
-			}
-		}
-		if dirMatch(path, skipDir) {
-			return true, err
-		}
+	if info.IsDir() {
+		return true, filepath.SkipDir
 	}
-	return false, nil
-}
-
-func dirMatch(path string, want string) bool {
-	osSeparator := string(filepath.Separator)
-	return strings.HasSuffix(path, osSeparator+want) ||
-		strings.Contains(path, osSeparator+want+osSeparator) ||
-		strings.HasPrefix(path, want+osSeparator)
+	return true, nil
 }

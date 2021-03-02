@@ -6,7 +6,7 @@ package checklicenses
 
 import (
 	"encoding/json"
-	"os"
+	"io/ioutil"
 	"strings"
 )
 
@@ -37,26 +37,30 @@ type Config struct {
 	CustomProjectLicenses        []CustomProjectLicense `json:"customProjectLicenses"`
 	FlutterLicenses              []string               `json:"flutterLicenses"`
 	NoticeTxtFiles               []string               `json:"noticeTxtFiles"`
+	NoticeFiles                  []string               `json:"noticeFiles"`
 	BaseDir                      string                 `json:"baseDir"`
 	Target                       string                 `json:"target"`
 	LogLevel                     string                 `json:"logLevel"`
 	LicenseAllowList             map[string][]string    `json:"licenseAllowList"`
 }
 
-// Init populates Config object with values found in the json config file.
-//
-// Both SkipFiles and SingleLicenseFiles are lowered.
+// NewConfig returns a config file representing the values found in the json file.
 func NewConfig(path string) (*Config, error) {
-	c := &Config{}
-
-	f, err := os.Open(path)
+	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-	d := json.NewDecoder(f)
+
+	return NewConfigJson(string(b))
+}
+
+// NewConfigJson allows us to modify the content of the config before using it in tests.
+func NewConfigJson(configJson string) (*Config, error) {
+	c := &Config{}
+
+	d := json.NewDecoder(strings.NewReader(configJson))
 	d.DisallowUnknownFields()
-	if err = d.Decode(c); err != nil {
+	if err := d.Decode(c); err != nil {
 		return nil, err
 	}
 	for i := range c.SingleLicenseFiles {
@@ -68,6 +72,12 @@ func NewConfig(path string) (*Config, error) {
 	if c.BaseDir == "" {
 		c.BaseDir = "."
 	}
+
+	// Ensure we aren't skipping any directories in the CustomProjectLicenses map.
+	for _, k := range c.CustomProjectLicenses {
+		c.DontSkipDirs = append(c.DontSkipDirs, k.ProjectRoot)
+	}
+
 	return c, nil
 }
 
@@ -103,6 +113,7 @@ func (c *Config) Merge(other *Config) {
 	c.CustomProjectLicenses = append(c.CustomProjectLicenses, other.CustomProjectLicenses...)
 	c.FlutterLicenses = append(c.FlutterLicenses, other.FlutterLicenses...)
 	c.NoticeTxtFiles = append(c.NoticeTxtFiles, other.NoticeTxtFiles...)
+	c.NoticeFiles = append(c.NoticeFiles, other.NoticeFiles...)
 	if c.BaseDir == "" {
 		c.BaseDir = other.BaseDir
 	}

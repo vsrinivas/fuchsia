@@ -57,6 +57,19 @@ func TestFileTreeWithDontSkip(t *testing.T) {
 	}
 }
 
+func loadFileAndReplace(path string, replacements map[string]string) (string, error) {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	text := string(b)
+
+	for k, v := range replacements {
+		text = strings.ReplaceAll(text, k, v)
+	}
+	return text, nil
+}
+
 func setupFileTreeTestDir(name string, t *testing.T) (*FileTree, *FileTree) {
 	// Find the right testdata directory for this test.
 	testDir, err := filepath.Abs(filepath.Join(*testDataDir, "filetree", name))
@@ -67,20 +80,14 @@ func setupFileTreeTestDir(name string, t *testing.T) (*FileTree, *FileTree) {
 	// The filetree will be called on the subdirectory named "root".
 	root := filepath.Join(testDir, "root")
 
-	// Read the want.json file into a string.
-	wantJsonPath := filepath.Join(testDir, "want.json")
-	b, err := ioutil.ReadFile(wantJsonPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	wantJson := string(b)
-
 	// want.json contains variables that need to be replaced before it can be used.
 	replacements := map[string]string{
 		"{root}": root,
 	}
-	for k, v := range replacements {
-		wantJson = strings.ReplaceAll(wantJson, k, v)
+	path := filepath.Join(testDir, "want.json")
+	wantJson, err := loadFileAndReplace(path, replacements)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// Create a FileTree object from the want.json file.
@@ -92,8 +99,13 @@ func setupFileTreeTestDir(name string, t *testing.T) (*FileTree, *FileTree) {
 	}
 
 	// Load the accompanying config file for this test type.
-	configPath := filepath.Join(testDir, "config.json")
-	config, err := NewConfig(configPath)
+	path = filepath.Join(testDir, "config.json")
+	configJson, err := loadFileAndReplace(path, replacements)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	config, err := NewConfigJson(configJson)
 	if err != nil {
 		t.Fatal(err)
 	}
