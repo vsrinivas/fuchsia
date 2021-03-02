@@ -5,7 +5,6 @@
 library fuchsia.ui.scenic.internal;
 
 using fuchsia.scenic.scheduling;
-using fuchsia.sysmem;
 using zx;
 
 // The set of error codes returned by Flatland::Present().
@@ -124,10 +123,6 @@ table ImageProperties {
 /// A user-defined identifier for a particular transform. See CreateTransform() and
 /// ReleaseTransform() for more information.
 alias TransformId = uint64;
-
-/// A user-defined identifier for a particular BufferCollection. See RegisterBufferCollection()
-/// for more information.
-alias BufferCollectionId = uint64;
 
 /// A user-defined identifier for a particular piece of Content. See Content creation functions
 /// (e.g. CreateLink(), CreateImage()) for more information.
@@ -372,23 +367,11 @@ protocol Flatland {
     CreateLink(ContentId link_id, ContentLinkToken token, LinkProperties properties,
                request<ContentLink> content_link);
 
-    /// A BufferCollection is a set of VMOs created by Sysmem and shared by a number of
-    /// participants, one of which is the Flatland Renderer. Some content, such as Images, use a
-    /// BufferCollection as their backing memory.
-    ///
-    /// Flatland participates in the allocation of buffers by setting constraints on the
-    /// BufferCollection referenced by the token. It will not block on buffers being allocated
-    /// until the client creates content using the BufferCollection.
-    ///
-    /// Zero is not a valid buffer collection id. All other values are valid, assuming they are not
-    /// already in use (see UnregisterBufferCollection() for more details).
-    RegisterBufferCollection(BufferCollectionId buffer_id,
-                             fuchsia.sysmem.BufferCollectionToken token);
-
     /// An Image is a bitmap backed by a specific VMO in a BufferCollection.
     ///
-    /// Image creation requires an allocated BufferCollection. This function will fail unless all
-    /// clients of the specified BufferCollection have set their constraints.
+    /// Image creation requires an allocated BufferCollection registered with Allocator. This
+    /// function will fail unless all clients of the specified BufferCollection have set their
+    /// constraints.
     ///
     /// The Image must reference a valid VMO index and must have ImageProperties that fall within
     /// the constraints specified by the backing BufferCollection (i.e. width and height within a
@@ -396,7 +379,7 @@ protocol Flatland {
     ///
     /// Zero is not a valid Image id. All other values are valid, assuming they are not already in
     /// use for another piece of Content (see ReleaseImage() for more details).
-    CreateImage(ContentId image_id, BufferCollectionId buffer_id, uint32 vmo_index,
+    CreateImage(ContentId image_id, BufferCollectionImportToken import_token, uint32 vmo_index,
                 ImageProperties properties);
 
     // Content management
@@ -451,19 +434,7 @@ protocol Flatland {
     /// Despite having a return type, this function is still feed-forward like LinkToParent() and
     /// requires a call to Present() to be executed. The ContentLinkToken will be returned after the
     /// presented operations have been executed.
-    ReleaseLink(ContentId link_id) -> (ContentLinkToken token);
-
-    /// Deregistered buffer collections will be garbage collected by the system when they are no
-    /// longer referenced by any Images, and thus no longer necessary for rendering. This includes
-    /// references from released Images that have not yet been fully garbage collected, such as
-    /// Images still referenced by a Transform or Images involved in a current or pending render.
-    ///
-    /// Once released, the id immediately goes out of scope for future function calls and can be
-    /// reused when creating new BufferCollections.
-    ///
-    /// It is an error to call functions with a released id (unless that id has been reused to
-    /// construct a new buffer collection).
-    DeregisterBufferCollection(BufferCollectionId id);
+    ReleaseLink(ContentId link_id) -> (ContentLinkToken tokid);
 
     /// Released Images will be garbage collected by the system once they are no longer necessary
     /// for rendering. For Images, this means the Image is no longer attached to any Transform and

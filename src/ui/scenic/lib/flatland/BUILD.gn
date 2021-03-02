@@ -10,6 +10,8 @@ config("glm_config") {
 
 source_set("flatland") {
   sources = [
+    "allocator.cc",
+    "allocator.h",
     "default_flatland_presenter.cc",
     "default_flatland_presenter.h",
     "flatland.cc",
@@ -55,6 +57,7 @@ source_set("flatland") {
     "//sdk/lib/sys/cpp",
     "//src/ui/scenic/lib/gfx:object_linker",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
+    "//src/ui/scenic/lib/utils",
     "//zircon/system/ulib/trace",
   ]
 }

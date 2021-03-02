@@ -19,6 +19,7 @@
 #include "src/ui/scenic/lib/flatland/renderer/null_renderer.h"
 #include "src/ui/scenic/lib/flatland/renderer/tests/common.h"
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
@@ -34,11 +35,7 @@ class DisplayTest : public gtest::RealLoopFixture {
     }
     gtest::RealLoopFixture::SetUp();
 
-    // Create the SysmemAllocator.
-    zx_status_t status = fdio_service_connect(
-        "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
-    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(),
-                                          fsl::GetCurrentProcessKoid());
+    sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr();
 
     async_set_default_dispatcher(dispatcher());
     executor_ = std::make_unique<async::Executor>(dispatcher());
@@ -238,6 +235,9 @@ VK_TEST_F(DisplayTest, SetDisplayImageTest) {
     ASSERT_EQ(import_image_status, ZX_OK);
     ASSERT_NE(image_ids[i], fuchsia::hardware::display::INVALID_DISP_ID);
   }
+
+  // It is safe to release buffer collection because we are not going to import any more images.
+  (*display_controller.get())->ReleaseBufferCollection(display_collection_id);
 
   // Create the events used by the display.
   zx::event display_wait_fence, display_signal_fence;

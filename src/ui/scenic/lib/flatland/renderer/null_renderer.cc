@@ -112,6 +112,7 @@ bool NullRenderer::ImportBufferImage(const ImageMetadata& metadata) {
     return false;
   }
 
+  image_map_[metadata.identifier] = image_constraints;
   return true;
 }
 
@@ -124,25 +125,18 @@ void NullRenderer::Render(const ImageMetadata& render_target,
                           const std::vector<ImageMetadata>& images,
                           const std::vector<zx::event>& release_fences) {
   for (const auto& image : images) {
-    auto collection_id = image.collection_id;
-    FX_DCHECK(collection_id != sysmem_util::kInvalidId);
+    auto image_id = image.identifier;
+    FX_DCHECK(image_id != sysmem_util::kInvalidId);
 
     // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
     std::unique_lock<std::mutex> lock(lock_);
 
-    const auto& collection_map_itr = collection_map_.find(collection_id);
-    FX_DCHECK(collection_map_itr != collection_map_.end());
+    const auto& image_map_itr_ = image_map_.find(image_id);
+    FX_DCHECK(image_map_itr_ != image_map_.end());
 
-    auto& collection = collection_map_itr->second;
-    FX_DCHECK(collection.BuffersAreAllocated());
-
-    const auto& sysmem_info = collection.GetSysmemInfo();
-
-    const auto vmo_count = sysmem_info.buffer_count;
-    auto image_constraints = sysmem_info.settings.image_format_constraints;
+    auto image_constraints = image_map_itr_->second;
 
     // Make sure the image conforms to the constraints of the collection.
-    FX_DCHECK(image.vmo_index < vmo_count);
     FX_DCHECK(image.width <= image_constraints.max_coded_width);
     FX_DCHECK(image.height <= image_constraints.max_coded_height);
   }

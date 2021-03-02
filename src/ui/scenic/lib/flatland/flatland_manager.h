@@ -16,6 +16,7 @@
 #include <thread>
 #include <unordered_map>
 
+#include "src/ui/scenic/lib/flatland/allocator.h"
 #include "src/ui/scenic/lib/flatland/flatland.h"
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
@@ -55,6 +56,9 @@ class FlatlandManager : public scheduling::SessionUpdater {
   // Removes the Flatland instance associated with |session_id|.
   void RemoveFlatlandInstance(scheduling::SessionId session_id);
 
+  // Creates or returns an Allocator instance.
+  std::shared_ptr<Allocator> CreateOrGetAllocator();
+
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
   std::shared_ptr<UberStructSystem> uber_struct_system_;
   std::shared_ptr<LinkSystem> link_system_;
@@ -73,6 +77,8 @@ class FlatlandManager : public scheduling::SessionUpdater {
     // the impl is destroyed in the default destruction order.
     std::shared_ptr<Flatland> impl;
   };
+
+  std::shared_ptr<Allocator> allocator_;
 
   // FlatlandInstances must be dynamically allocated because fidl::Binding is not movable.
   std::unordered_map<scheduling::SessionId, std::unique_ptr<FlatlandInstance>> flatland_instances_;

@@ -50,9 +50,11 @@ class NullRenderer final : public Renderer {
               const std::vector<zx::event>& release_fences = {}) override;
 
  private:
-  // This mutex is used to protect access to |collection_map_|.
+  // This mutex is used to protect access to |collection_map_| and |image_map|.
   std::mutex lock_;
   std::unordered_map<sysmem_util::GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;
+  std::unordered_map<sysmem_util::GlobalImageId, fuchsia::sysmem::ImageFormatConstraints>
+      image_map_;
 };
 
 }  // namespace flatland

@@ -49,11 +49,9 @@ struct ImageMetadata {
   }
 };
 
-// This interface is used for importing Flatland buffer collections
-// and images to external services that would like to also have access
-// to the collection and set their own constraints. This interface allows
-// Flatland to remain agnostic as to the implementation details of a
-// particular service.
+// This interface is used for importing Flatland buffer collections and images to external services
+// that would like to also have access to the collection and set their own constraints. This
+// interface allows Flatland to remain agnostic as to the implementation details of a
 class BufferCollectionImporter {
  public:
   // Allows the service to set its own constraints on the buffer collection. Must be set before
@@ -65,9 +63,8 @@ class BufferCollectionImporter {
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) = 0;
 
-  // Deregisters the buffer collection from the service. All images associated with the buffer
-  // collection referenced by |collection_id| should be released via calls to |ReleaseImage|
-  // before the buffer collection itself is released.
+  // Releases the buffer collection from the service. It may be called while there are associated
+  // Images alive.
   virtual void ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) = 0;
 
   // Has the service create an image for itself from the provided buffer collection. Returns
@@ -76,7 +73,7 @@ class BufferCollectionImporter {
   // TODO(62240): Give more detailed errors.
   virtual bool ImportBufferImage(const ImageMetadata& metadata) = 0;
 
-  // Deregisters the provided image from the service.
+  // Releases the provided image from the service.
   virtual void ReleaseBufferImage(sysmem_util::GlobalImageId image_id) = 0;
 
   virtual ~BufferCollectionImporter() = default;

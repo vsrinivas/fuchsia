@@ -25,6 +25,7 @@ executable("unittests") {
     "//src/ui/scenic/lib/display/tests:mocks",
     "//src/ui/scenic/lib/flatland/engine",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
+    "//src/ui/scenic/lib/utils",
     "//third_party/googletest:gmock",
   ]
 }

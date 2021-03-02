@@ -4,7 +4,10 @@
 
 #include "src/ui/scenic/lib/utils/helpers.h"
 
+#include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
+
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace utils {
 
@@ -56,6 +59,17 @@ std::vector<zx::event> CreateEventArray(size_t n) {
     events.push_back(CreateEvent());
   }
   return events;
+}
+
+fuchsia::sysmem::AllocatorSyncPtr CreateSysmemAllocatorSyncPtr(
+    const std::string& debug_name_suffix) {
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
+  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
+                                            sysmem_allocator.NewRequest().TakeChannel().release());
+  FX_DCHECK(status == ZX_OK);
+  sysmem_allocator->SetDebugClientInfo(fsl::GetCurrentProcessName() + debug_name_suffix,
+                                       fsl::GetCurrentProcessKoid());
+  return sysmem_allocator;
 }
 
 }  // namespace utils

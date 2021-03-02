@@ -8,7 +8,7 @@
 
 namespace sysmem_util {
 
-const GlobalBufferCollectionId kInvalidId = 0;
+const GlobalBufferCollectionId kInvalidId = ZX_KOID_INVALID;
 const GlobalImageId kInvalidImageId = 0;
 
 GlobalBufferCollectionId GenerateUniqueBufferCollectionId() {

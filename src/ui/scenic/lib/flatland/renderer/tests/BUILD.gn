@@ -34,6 +34,7 @@ executable("unittests") {
     "//src/ui/lib/escher/test/common:gtest_escher",
     "//src/ui/scenic/lib/display:display",
     "//src/ui/scenic/lib/flatland/renderer",
+    "//src/ui/scenic/lib/utils",
   ]
 
   # TODO(fxbug.dev/58615): Fix the leaks and remove this.

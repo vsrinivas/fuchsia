@@ -6,8 +6,9 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/fdio/directory.h>
 #include <lib/fit/function.h>
+
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace flatland {
 
@@ -35,24 +36,18 @@ void FlatlandManager::CreateFlatland(
   const scheduling::SessionId id = uber_struct_system_->GetNextInstanceId();
   FX_DCHECK(flatland_instances_.find(id) == flatland_instances_.end());
 
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
-  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
-                                            sysmem_allocator.NewRequest().TakeChannel().release());
-  FX_DCHECK(status == ZX_OK);
-
   // Allocate the worker Loop first so that the Flatland impl can be bound to it's dispatcher.
   auto result = flatland_instances_.emplace(id, std::make_unique<FlatlandInstance>());
   FX_DCHECK(result.second);
-
   auto& instance = result.first->second;
+
   instance->impl = std::make_shared<Flatland>(
       instance->loop.dispatcher(), std::move(request), id,
-      std::bind(&FlatlandManager::DestroyInstanceFunction, this, id), flatland_presenter_,
-      link_system_, uber_struct_system_->AllocateQueueForSession(id), buffer_collection_importers_,
-      std::move(sysmem_allocator));
+      std::bind(&FlatlandManager::DestroyInstanceFunction, this, id), CreateOrGetAllocator(),
+      flatland_presenter_, link_system_, uber_struct_system_->AllocateQueueForSession(id));
 
   const std::string name = "Flatland ID=" + std::to_string(id);
-  status = instance->loop.StartThread(name.c_str());
+  zx_status_t status = instance->loop.StartThread(name.c_str());
   FX_DCHECK(status == ZX_OK);
 
   // TODO(fxbug.dev/44211): this logic may move into FrameScheduler
@@ -140,6 +135,17 @@ void FlatlandManager::RemoveFlatlandInstance(scheduling::SessionId session_id) {
   flatland_instances_.erase(session_id);
   uber_struct_system_->RemoveSession(session_id);
   flatland_presenter_->RemoveSession(session_id);
+}
+
+std::shared_ptr<Allocator> FlatlandManager::CreateOrGetAllocator() {
+  if (allocator_)
+    return allocator_;
+
+  // TODO(fxbug.dev/70692): Define the scope of Allocator and add fidl bindings. Move this under
+  // scenic/app.cc.
+  allocator_ = std::make_shared<Allocator>(
+      buffer_collection_importers_, utils::CreateSysmemAllocatorSyncPtr("FlatlandAllocator"));
+  return allocator_;
 }
 
 void FlatlandManager::DestroyInstanceFunction(scheduling::SessionId session_id) {

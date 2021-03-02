@@ -5,13 +5,16 @@
 #ifndef SRC_UI_SCENIC_LIB_SYSMEM_ID_H_
 #define SRC_UI_SCENIC_LIB_SYSMEM_ID_H_
 
+#include <zircon/types.h>
+
 #include <cstdint>
 
 namespace sysmem_util {
-using GlobalBufferCollectionId = uint64_t;
+
+using GlobalBufferCollectionId = zx_koid_t;
 using GlobalImageId = uint64_t;
 
-// Used to indicate an invalid buffer collection.
+// Used to indicate an invalid buffer collection or image.
 extern const GlobalBufferCollectionId kInvalidId;
 extern const GlobalImageId kInvalidImageId;
 

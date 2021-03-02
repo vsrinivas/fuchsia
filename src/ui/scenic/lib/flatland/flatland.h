@@ -24,6 +24,7 @@
 // clang-format on
 
 #include "src/ui/lib/escher/flib/fence_queue.h"
+#include "src/ui/scenic/lib/flatland/allocator.h"
 #include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
@@ -52,15 +53,14 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // |flatland_presenter|, |link_system|, |uber_struct_queue|, and |buffer_collection_importers|
   // allow this Flatland object to access resources shared by all Flatland instances for actions
   // like frame scheduling, linking, buffer allocation, and presentation to the global scene graph.
-  explicit Flatland(
-      async_dispatcher_t* dispatcher,
-      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
-      scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
-      const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
-      const std::shared_ptr<LinkSystem>& link_system,
-      const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
-      const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers,
-      fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
+  explicit Flatland(async_dispatcher_t* dispatcher,
+                    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
+                    scheduling::SessionId session_id,
+                    std::function<void()> destroy_instance_function,
+                    const std::shared_ptr<Allocator>& allocator,
+                    const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
+                    const std::shared_ptr<LinkSystem>& link_system,
+                    const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue);
   ~Flatland();
 
   // Because this object captures its "this" pointer in internal closures, it is unsafe to copy or
@@ -103,11 +103,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
       fuchsia::ui::scenic::internal::LinkProperties properties,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void RegisterBufferCollection(
-      BufferCollectionId collection_id,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
-  void CreateImage(ContentId image_id, BufferCollectionId collection_id, uint32_t vmo_index,
+  void CreateImage(ContentId image_id,
+                   fuchsia::ui::scenic::internal::BufferCollectionImportToken import_token,
+                   uint32_t vmo_index,
                    fuchsia::ui::scenic::internal::ImageProperties properties) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void SetContentOnTransform(ContentId content_id, TransformId transform_id) override;
@@ -121,8 +119,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // |fuchsia::ui::scenic::internal::Flatland|
   void ReleaseLink(ContentId link_id,
                    fuchsia::ui::scenic::internal::Flatland::ReleaseLinkCallback callback) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
-  void DeregisterBufferCollection(BufferCollectionId collection_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void ReleaseImage(ContentId image_id) override;
 
@@ -171,6 +167,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // Uses WaitOnce since calling the handler will result in the destruction of this object.
   async::WaitOnce peer_closed_waiter_;
 
+  // Common allocator instance. May be shared across multiple Flatland instances.
+  std::shared_ptr<Allocator> allocator_;
+
   // A Present2Helper to facilitate sendng the appropriate OnFramePresented() callback to FIDL
   // clients when frames are presented to the display.
   scheduling::Present2Helper present2_helper_;
@@ -186,8 +185,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // UberStructSystem in order to have it seen by the global render loop.
   std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue_;
 
-  // Used to import Flatland buffer collections and images to external services that Flatland does
-  // not have knowledge of. Each importer is used for a different service.
+  // Used to import Flatland images to external services that Flatland does not have knowledge of.
+  // Each importer is used for a different service.
   std::vector<std::shared_ptr<BufferCollectionImporter>> buffer_collection_importers_;
 
   // A Sysmem allocator to faciliate buffer allocation with the Renderer.
@@ -278,20 +277,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A geometric transform for each TransformHandle. If not present, that TransformHandle has the
   // identity matrix for its transform.
   std::unordered_map<TransformHandle, MatrixData> matrices_;
-
-  // A mapping from user-generated buffer collection IDs to global buffer collection
-  // IDs.
-  std::unordered_map<BufferCollectionId, sysmem_util::GlobalBufferCollectionId>
-      buffer_collection_ids_;
-
-  // A mapping from global buffer collection ID to a size_t indicating how many images are currently
-  // using the given buffer. This count is used to determine in part when the buffer collection
-  // should be garbage collected.
-  std::unordered_map<sysmem_util::GlobalBufferCollectionId, size_t> buffer_usage_counts_;
-
-  // The set of sysmem_util::GlobalBufferCollectionIds associated with released BufferCollectionIds
-  // that have not yet been garbage collected.
-  std::unordered_set<sysmem_util::GlobalBufferCollectionId> released_buffer_collection_ids_;
 
   // A mapping from Flatland-generated TransformHandle to the ImageMetadata it represents.
   std::unordered_map<TransformHandle, ImageMetadata> image_metadatas_;

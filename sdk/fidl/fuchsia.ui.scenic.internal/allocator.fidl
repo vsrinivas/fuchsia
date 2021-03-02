@@ -1,0 +1,50 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.scenic.internal;
+
+using fuchsia.sysmem;
+using zx;
+
+// The set of error codes returned by Allocator::RegisterBufferCollection().
+enum RegisterBufferCollectionError {
+    BAD_OPERATION = 0;
+};
+
+/// A typed wrapper for an eventpair, representing the registry endpoint of a buffer collection.
+resource struct BufferCollectionExportToken {
+    zx.handle:EVENTPAIR value;
+};
+
+/// A typed wrapper for an eventpair, representing the Image import endpoint of a buffer
+/// collection.
+resource struct BufferCollectionImportToken {
+    zx.handle:EVENTPAIR value;
+};
+
+[Discoverable]
+protocol Allocator {
+    /// A BufferCollection is a set of VMOs created by Sysmem and shared by a number of
+    /// participants, one of which is the Flatland Renderer. Some content, such as Images, use a
+    /// BufferCollection as their backing memory.
+    ///
+    /// Clients can send `export_token` to register buffer collections with Allocator to be used
+    /// later in [`fuchsia.ui.scenic.internal/Flatland`] instances or other Scenic APIs. For
+    /// example, by passing a [`BufferCollectionImportToken`] containing the matching peer of
+    /// [`BufferCollectionExportToken`], they can create image resources via
+    /// [`fuchsia.ui.scenic.internal/Flatland.CreateImage`]. Clients should wait for the response
+    /// before using `export_token`.
+    ///
+    /// Flatland participates in the allocation of buffers by setting constraints on the
+    /// BufferCollection referenced by `buffer_collection_token`. It will not block on buffers
+    /// being allocated until the client creates content using the BufferCollection.
+    ///
+    /// The buffer collection registered with `export_token` is available and kept alive as long
+    /// as the client holds a valid [`BufferCollectionImportToken`]. They will be garbage collected
+    /// when all [`BufferCollectionImportToken`]s are closed and all the associated Image resources
+    /// are released.
+    RegisterBufferCollection(BufferCollectionExportToken export_token,
+                             fuchsia.sysmem.BufferCollectionToken buffer_collection_token)
+        -> () error RegisterBufferCollectionError;
+};

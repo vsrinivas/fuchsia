@@ -5,7 +5,6 @@
 #include "src/ui/scenic/lib/flatland/flatland.h"
 
 #include <lib/async/time.h>
-#include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <limits>
@@ -15,6 +14,8 @@
 #include "fuchsia/ui/scenic/internal/cpp/fidl.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/ui/scenic/lib/flatland/allocator.h"
+#include "src/ui/scenic/lib/flatland/buffers/buffer_collection_ref_pair.h"
 #include "src/ui/scenic/lib/flatland/buffers/mock_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
@@ -31,7 +32,9 @@ using ::testing::Return;
 using BufferCollectionId = flatland::Flatland::BufferCollectionId;
 using ContentId = flatland::Flatland::ContentId;
 using TransformId = flatland::Flatland::TransformId;
+using flatland::Allocator;
 using flatland::BufferCollectionImporter;
+using flatland::BufferCollectionRefPair;
 using flatland::Flatland;
 using flatland::FlatlandPresenter;
 using flatland::GlobalMatrixVector;
@@ -44,6 +47,9 @@ using flatland::TransformGraph;
 using flatland::TransformHandle;
 using flatland::UberStruct;
 using flatland::UberStructSystem;
+using fuchsia::ui::scenic::internal::Allocator_RegisterBufferCollection_Result;
+using fuchsia::ui::scenic::internal::BufferCollectionExportToken;
+using fuchsia::ui::scenic::internal::BufferCollectionImportToken;
 using fuchsia::ui::scenic::internal::ContentLink;
 using fuchsia::ui::scenic::internal::ContentLinkStatus;
 using fuchsia::ui::scenic::internal::ContentLinkToken;
@@ -88,8 +94,6 @@ struct GlobalIdPair {
   sysmem_util::GlobalBufferCollectionId collection_id;
   sysmem_util::GlobalImageId image_id;
 };
-
-}  // namespace
 
 // These macros works like functions that check a variety of conditions, but if those conditions
 // fail, the line number for the failure will appear in-line rather than in a function.
@@ -143,6 +147,23 @@ struct GlobalIdPair {
 #define PRESENT(flatland, expect_success) \
   { PRESENT_WITH_ARGS(flatland, PresentArgs(), expect_success); }
 
+#define REGISTER_BUFFER_COLLECTION(allocator, export_token, token, expect_success)                \
+  if (expect_success) {                                                                           \
+    EXPECT_CALL(*mock_buffer_collection_importer_,                                                \
+                ImportBufferCollection(fsl::GetKoid(export_token.value.get()), _, _))             \
+        .WillOnce(testing::Invoke(                                                                \
+            [](sysmem_util::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,           \
+               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>) { return true; })); \
+  }                                                                                               \
+  bool processed_callback = false;                                                                \
+  allocator->RegisterBufferCollection(                                                            \
+      std::move(export_token), token,                                                             \
+      [&processed_callback](Allocator_RegisterBufferCollection_Result result) {                   \
+        EXPECT_EQ(!expect_success, result.is_err());                                              \
+        processed_callback = true;                                                                \
+      });                                                                                         \
+  EXPECT_TRUE(processed_callback);
+
 // This macro searches for a local matrix associated with a specific TransformHandle.
 //
 // |uber_struct| is the UberStruct to search to find the matrix. |target_handle| is the
@@ -161,8 +182,6 @@ struct GlobalIdPair {
       }                                                                                          \
     }                                                                                            \
   }
-
-namespace {
 
 const float kDefaultSize = 1.f;
 const glm::vec2 kDefaultPixelScale = {1.f, 1.f};
@@ -220,11 +239,17 @@ class FlatlandTest : public gtest::TestLoopFixture {
               requested_presentation_times_[id_pair] = requested_presentation_time;
             }));
 
+    sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr();
+
     flatland_presenter_ = std::shared_ptr<FlatlandPresenter>(mock_flatland_presenter_);
 
     mock_buffer_collection_importer_ = new MockBufferCollectionImporter();
     buffer_collection_importer_ =
         std::shared_ptr<BufferCollectionImporter>(mock_buffer_collection_importer_);
+
+    // Capture uninteresting cleanup calls from Allocator dtor.
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_))
+        .Times(::testing::AtLeast(0));
   }
 
   void TearDown() override {
@@ -236,27 +261,32 @@ class FlatlandTest : public gtest::TestLoopFixture {
     buffer_collection_importer_.reset();
     flatland_presenter_.reset();
     flatlands_.clear();
-
-    // Move the channel to a local variable which will go out of scope
-    // and close when this function returns.
-    auto local = local_.release();
   }
 
-  Flatland CreateFlatland() {
-    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
+  std::shared_ptr<Allocator> CreateAllocator() {
+    std::vector<std::shared_ptr<BufferCollectionImporter>> importers;
+    importers.push_back(buffer_collection_importer_);
+    return std::make_shared<Allocator>(importers,
+                                       utils::CreateSysmemAllocatorSyncPtr("-allocator"));
+  }
+
+  Flatland CreateFlatland(std::shared_ptr<Allocator> allocator = nullptr) {
+    if (!allocator)
+      allocator = CreateAllocator();
     auto session_id = scheduling::GetNextSessionId();
     flatlands_.push_back({});
     return Flatland(
         dispatcher(), flatlands_.back().NewRequest(), session_id,
-        /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
-        uber_struct_system_->AllocateQueueForSession(session_id), {buffer_collection_importer_},
-        std::move(sysmem_allocator));
+        /*destroy_instance_functon=*/[]() {}, allocator, flatland_presenter_, link_system_,
+        uber_struct_system_->AllocateQueueForSession(session_id));
   }
 
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> CreateToken() {
-    zx::channel remote;
-    zx::channel::create(0, &local_, &remote);
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token{std::move(remote)};
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr token;
+    zx_status_t status = sysmem_allocator_->AllocateSharedCollection(token.NewRequest());
+    EXPECT_EQ(status, ZX_OK);
+    status = token->Sync();
+    EXPECT_EQ(status, ZX_OK);
     return token;
   }
 
@@ -385,21 +415,12 @@ class FlatlandTest : public gtest::TestLoopFixture {
   // Creates an image in |flatland| with the specified |image_id| and backing properties.
   // This function also returns the GlobalBufferCollectionId that will be in the ImageMetadata
   // struct for that Image.
-  GlobalIdPair CreateImage(Flatland* flatland, ContentId image_id, BufferCollectionId collection_id,
+  GlobalIdPair CreateImage(Flatland* flatland, Allocator* allocator, ContentId image_id,
+                           BufferCollectionRefPair buffer_collection_ref_pair,
                            ImageProperties properties) {
-    sysmem_util::GlobalBufferCollectionId global_collection_id = sysmem_util::kInvalidId;
-    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
-        .WillOnce(testing::Invoke(
-            [&global_collection_id](
-                sysmem_util::GlobalBufferCollectionId collection_id,
-                fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-              global_collection_id = collection_id;
-              return true;
-            }));
-
-    flatland->RegisterBufferCollection(collection_id, CreateToken());
-    EXPECT_NE(global_collection_id, sysmem_util::kInvalidId);
+    const auto koid = fsl::GetKoid(buffer_collection_ref_pair.export_token.value.get());
+    REGISTER_BUFFER_COLLECTION(allocator, buffer_collection_ref_pair.export_token, CreateToken(),
+                               true);
 
     FX_DCHECK(properties.has_width());
     FX_DCHECK(properties.has_height());
@@ -411,10 +432,10 @@ class FlatlandTest : public gtest::TestLoopFixture {
           return true;
         }));
 
-    flatland->CreateImage(image_id, collection_id, 0, std::move(properties));
+    flatland->CreateImage(image_id, std::move(buffer_collection_ref_pair.import_token), 0,
+                          std::move(properties));
     PRESENT((*flatland), true);
-
-    return {.collection_id = global_collection_id, image_id = global_image_id};
+    return {.collection_id = koid, image_id = global_image_id};
   }
 
  protected:
@@ -433,7 +454,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
   std::map<scheduling::SchedulingIdPair, std::vector<zx::event>> pending_release_fences_;
   std::map<scheduling::SchedulingIdPair, zx::time> requested_presentation_times_;
   std::unordered_map<scheduling::SessionId, scheduling::PresentId> pending_session_updates_;
-  zx::channel local_;
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 
 }  // namespace
@@ -2309,7 +2330,8 @@ TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
 }
 
 TEST_F(FlatlandTest, ReleaseLinkErrorCases) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
   // Zero is not a valid link_id.
   flatland.ReleaseLink(0, [](ContentLinkToken token) { EXPECT_TRUE(false); });
@@ -2322,13 +2344,13 @@ TEST_F(FlatlandTest, ReleaseLinkErrorCases) {
 
   // ContentId is not a Link.
   const ContentId kImageId = 2;
-  const BufferCollectionId kBufferCollectionId = 3;
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
 
   ImageProperties properties;
   properties.set_width(100);
   properties.set_height(200);
 
-  CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties));
+  CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
 
   flatland.ReleaseLink(kImageId, [](ContentLinkToken token) { EXPECT_TRUE(false); });
   PRESENT(flatland, false);
@@ -2667,7 +2689,8 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
 }
 
 TEST_F(FlatlandTest, SetLinkSizeErrorCases) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
   const ContentId kIdNotCreated = 1;
 
@@ -2688,13 +2711,13 @@ TEST_F(FlatlandTest, SetLinkSizeErrorCases) {
 
   // ContentId is not a Link.
   const ContentId kImageId = 2;
-  const BufferCollectionId kBufferCollectionId = 3;
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
 
   ImageProperties properties;
   properties.set_width(100);
   properties.set_height(200);
 
-  CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties));
+  CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
 
   flatland.SetLinkSize(kImageId, {1.f, 2.f});
   PRESENT(flatland, false);
@@ -2828,77 +2851,25 @@ TEST_F(FlatlandTest, EmptyLogicalSizePreservesOldSize) {
   EXPECT_MATRIX(uber_struct, link_handle, expected_scale_matrix);
 }
 
-TEST_F(FlatlandTest, RegisterBufferCollectionErrorCases) {
-  Flatland flatland = CreateFlatland();
+TEST_F(FlatlandTest, CreateImageValidCase) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
-  // Zero is not a valid buffer collection ID.
-  {
-    flatland.RegisterBufferCollection(0, CreateToken());
-    PRESENT(flatland, false);
-  }
+  // Setup a valid image.
+  const ContentId kImageId = 1;
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
+  const uint32_t kWidth = 100;
+  const uint32_t kHeight = 200;
+  ImageProperties properties;
+  properties.set_width(kWidth);
+  properties.set_height(kHeight);
 
-  // Passing an uninitiated token is not valid.
-  {
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
-    flatland.RegisterBufferCollection(0, std::move(token));
-    PRESENT(flatland, false);
-  }
-
-  // Passing a token whose channel(s) have closed or gone out of scope is
-  // also not valid.
-  {
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
-    {
-      zx::channel local;
-      zx::channel remote;
-      zx::channel::create(0, &local, &remote);
-      token = fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>(std::move(remote));
-    }
-
-    flatland.RegisterBufferCollection(0, std::move(token));
-    PRESENT(flatland, false);
-  }
-
-  // The buffer importer call can fail.
-  {
-    // Mock the importer call to fail.
-    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
-        .WillOnce(Return(false));
-
-    flatland.RegisterBufferCollection(1, CreateToken());
-    PRESENT(flatland, false);
-  }
-
-  // Two buffer collections cannot use the same ID.
-  {
-    const BufferCollectionId kId = 2;
-
-    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
-        .WillOnce(Return(true));
-
-    flatland.RegisterBufferCollection(kId, CreateToken());
-    PRESENT(flatland, true);
-
-    flatland.RegisterBufferCollection(kId, CreateToken());
-    PRESENT(flatland, false);
-  }
-}
-
-// Tests that Flatland passes the Sysmem token to the importer even if the client has not called
-// Present(). This is necessary since the client may block on buffers being allocated before
-// presenting.
-TEST_F(FlatlandTest, BufferImporterGetsSysmemTokenBeforePresent) {
-  Flatland flatland = CreateFlatland();
-
-  // Register a buffer collection and expect the mock buffer importer call, even without presenting.
-  const BufferCollectionId kId = 2;
-
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _)).Times(1);
-  flatland.RegisterBufferCollection(kId, CreateToken());
+  CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
 }
 
 TEST_F(FlatlandTest, CreateImageErrorCases) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
   // Default image properties.
   const uint32_t kDefaultVmoIndex = 1;
@@ -2906,39 +2877,24 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
   const uint32_t kDefaultHeight = 1000;
 
   // Setup a valid buffer collection.
-  const BufferCollectionId kBufferCollectionId = 1;
-  sysmem_util::GlobalBufferCollectionId global_collection_id;
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
-      .WillOnce(
-          testing::Invoke([&global_collection_id](
-                              sysmem_util::GlobalBufferCollectionId collection_id,
-                              fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                              fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-            global_collection_id = collection_id;
-            return true;
-          }));
-
-  flatland.RegisterBufferCollection(kBufferCollectionId, CreateToken());
-  PRESENT(flatland, true);
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
+  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
 
   // Zero is not a valid image ID.
   {
-    ImageProperties properties;
-    flatland.CreateImage(0, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    flatland.CreateImage(0, ref_pair.DuplicateImportToken(), kDefaultVmoIndex, ImageProperties());
     PRESENT(flatland, false);
   }
 
-  // The buffer collection ID must also be valid.
+  // The import token must also be valid.
   {
-    ImageProperties properties;
-    flatland.CreateImage(1, 0, kDefaultVmoIndex, std::move(properties));
+    flatland.CreateImage(1, BufferCollectionImportToken(), kDefaultVmoIndex, ImageProperties());
     PRESENT(flatland, false);
   }
 
   // The buffer collection can fail to create an image.
   {
-    ImageProperties properties;
-    flatland.CreateImage(1, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    flatland.CreateImage(1, ref_pair.DuplicateImportToken(), kDefaultVmoIndex, ImageProperties());
     PRESENT(flatland, false);
   }
 
@@ -2950,7 +2906,8 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     properties.set_width(kDefaultWidth);
     properties.set_height(kDefaultHeight);
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(false));
-    flatland.CreateImage(kId, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    flatland.CreateImage(kId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
+                         std::move(properties));
     PRESENT(flatland, false);
   }
 
@@ -2966,7 +2923,8 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     // the test doesn't erroneously fail.
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
 
-    flatland.CreateImage(kId, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    flatland.CreateImage(kId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
+                         std::move(properties));
     PRESENT(flatland, true);
   }
 
@@ -2978,7 +2936,8 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     // We shouldn't even make it to the BufferCollectionImporter here due to the duplicate
     // ID causing CreateImage() to return early.
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).Times(0);
-    flatland.CreateImage(kId, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    flatland.CreateImage(kId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
+                         std::move(properties));
     PRESENT(flatland, false);
   }
 
@@ -3000,18 +2959,41 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     image_properties.set_width(kDefaultWidth);
     image_properties.set_height(kDefaultHeight);
 
-    flatland.CreateImage(kLinkId, kBufferCollectionId, kDefaultVmoIndex,
+    flatland.CreateImage(kLinkId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
                          std::move(image_properties));
     PRESENT(flatland, false);
   }
 }
 
+TEST_F(FlatlandTest, CreateImageWithDuplicatedImportTokens) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
+
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
+  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
+
+  const int kNumImages = 3;
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+      .Times(kNumImages)
+      .WillRepeatedly(Return(true));
+
+  for (int i = 0; i < kNumImages; ++i) {
+    ImageProperties properties;
+    properties.set_width(150);
+    properties.set_height(175);
+    flatland.CreateImage(/*image_id*/ i + 1, ref_pair.DuplicateImportToken(), /*vmo_idx*/ i,
+                         std::move(properties));
+    PRESENT(flatland, true);
+  }
+}
+
 TEST_F(FlatlandTest, SetContentOnTransformErrorCases) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
   // Setup a valid image.
   const ContentId kImageId = 1;
-  const BufferCollectionId kBufferCollectionId = 1;
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
   const uint32_t kWidth = 100;
   const uint32_t kHeight = 200;
 
@@ -3019,7 +3001,7 @@ TEST_F(FlatlandTest, SetContentOnTransformErrorCases) {
   properties.set_width(kWidth);
   properties.set_height(kHeight);
 
-  CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties));
+  CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
 
   // Create a transform.
   const TransformId kTransformId = 1;
@@ -3041,18 +3023,21 @@ TEST_F(FlatlandTest, SetContentOnTransformErrorCases) {
 }
 
 TEST_F(FlatlandTest, ClearContentOnTransform) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
   // Setup a valid image.
   const ContentId kImageId = 1;
-  const BufferCollectionId kBufferCollectionId = 1;
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
 
   ImageProperties properties;
   properties.set_width(100);
   properties.set_height(200);
 
+  auto import_token_dup = ref_pair.DuplicateImportToken();
   auto global_collection_id =
-      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties)).collection_id;
+      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties))
+          .collection_id;
 
   const auto maybe_image_handle = flatland.GetContentHandle(kImageId);
   ASSERT_TRUE(maybe_image_handle.has_value());
@@ -3086,30 +3071,31 @@ TEST_F(FlatlandTest, ClearContentOnTransform) {
 }
 
 TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
   // Setup two valid images.
   const ContentId kImageId1 = 1;
-  const BufferCollectionId kBufferCollectionId1 = 1;
+  BufferCollectionRefPair ref_pair_1 = BufferCollectionRefPair::New();
 
   ImageProperties properties1;
   properties1.set_width(100);
   properties1.set_height(200);
 
-  CreateImage(&flatland, kImageId1, kBufferCollectionId1, std::move(properties1));
+  CreateImage(&flatland, allocator.get(), kImageId1, std::move(ref_pair_1), std::move(properties1));
 
   const auto maybe_image_handle1 = flatland.GetContentHandle(kImageId1);
   ASSERT_TRUE(maybe_image_handle1.has_value());
   const auto image_handle1 = maybe_image_handle1.value();
 
   const ContentId kImageId2 = 2;
-  const BufferCollectionId kBufferCollectionId2 = 2;
+  BufferCollectionRefPair ref_pair_2 = BufferCollectionRefPair::New();
 
   ImageProperties properties2;
   properties2.set_width(300);
   properties2.set_height(400);
 
-  CreateImage(&flatland, kImageId2, kBufferCollectionId2, std::move(properties2));
+  CreateImage(&flatland, allocator.get(), kImageId2, std::move(ref_pair_2), std::move(properties2));
 
   const auto maybe_image_handle2 = flatland.GetContentHandle(kImageId2);
   ASSERT_TRUE(maybe_image_handle2.has_value());
@@ -3167,191 +3153,96 @@ TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
   EXPECT_TRUE(expected_handle_order.empty());
 }
 
-TEST_F(FlatlandTest, DeregisterBufferCollectionErrorCases) {
-  Flatland flatland = CreateFlatland();
+// Tests that a buffer collection is released after CreateImage() if there are no more import
+// tokens.
+TEST_F(FlatlandTest, ReleaseBufferCollectionHappensAfterCreateImage) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
-  // Zero is not a buffer collection ID.
-  flatland.DeregisterBufferCollection(0);
-  PRESENT(flatland, false);
+  // Register a valid buffer collection.
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
+  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
 
-  // The buffer collection ID must exist.
-  flatland.DeregisterBufferCollection(1);
-  PRESENT(flatland, false);
+  const ContentId kImageId = 1;
+  ImageProperties properties;
+  properties.set_width(100);
+  properties.set_height(200);
 
-  // A buffer collection cannot be deregistered twice.
+  // Send our only import token to CreateImage(). Buffer collection should be released only after
+  // Image creation.
+  {
+    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_)).Times(1);
+    flatland.CreateImage(kImageId, std::move(ref_pair.import_token), 0, std::move(properties));
+    RunLoopUntilIdle();
+  }
+}
+
+TEST_F(FlatlandTest, ReleaseBufferCollectionCompletesAfterFlatlandDestruction) {
   sysmem_util::GlobalBufferCollectionId global_collection_id;
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
-      .WillOnce(
-          testing::Invoke([&global_collection_id](
-                              sysmem_util::GlobalBufferCollectionId collection_id,
-                              fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                              fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-            global_collection_id = collection_id;
-            return true;
-          }));
+  ContentId global_image_id;
+  {
+    std::shared_ptr<Allocator> allocator = CreateAllocator();
+    Flatland flatland = CreateFlatland(allocator);
 
-  const BufferCollectionId kBufferCollectionId = 3;
-  flatland.RegisterBufferCollection(kBufferCollectionId, CreateToken());
-  PRESENT(flatland, true);
+    const ContentId kImageId = 3;
+    BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
+    ImageProperties properties;
+    properties.set_width(200);
+    properties.set_height(200);
+    auto import_token_dup = ref_pair.DuplicateImportToken();
+    auto global_id_pair = CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair),
+                                      std::move(properties));
+    global_collection_id = global_id_pair.collection_id;
+    global_image_id = global_id_pair.image_id;
 
-  // The PRESENT macro triggers release fences, which in turn triggers the buffer importer call.
-  flatland.DeregisterBufferCollection(kBufferCollectionId);
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
-      .Times(1);
-  PRESENT(flatland, true);
+    // Release the image.
+    flatland.ReleaseImage(kImageId);
 
-  flatland.DeregisterBufferCollection(kBufferCollectionId);
-  PRESENT(flatland, false);
-}
+    // Release the buffer collection.
 
-TEST_F(FlatlandTest, DeregisterMultipleBufferCollectionsSameEvent) {
-  Flatland flatland = CreateFlatland();
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
+        .Times(1);
+    import_token_dup.value.reset();
+    RunLoopUntilIdle();
 
-  // Register the first buffer collection.
-  sysmem_util::GlobalBufferCollectionId global_collection_id_1;
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
-      .WillOnce(
-          testing::Invoke([&global_collection_id_1](
-                              sysmem_util::GlobalBufferCollectionId collection_id,
-                              fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                              fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-            global_collection_id_1 = collection_id;
-            return true;
-          }));
+    // Skip session updates to test that release fences are what trigger the importer calls.
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(global_image_id)).Times(0);
+    PresentArgs args;
+    args.skip_session_update_and_release_fences = true;
+    { PRESENT_WITH_ARGS(flatland, std::move(args), true); }
 
-  const BufferCollectionId kBufferCollectionId1 = 2;
-  { flatland.RegisterBufferCollection(kBufferCollectionId1, CreateToken()); }
+    // |flatland| falls out of scope.
+  }
 
-  // Register the second buffer collection.
-  sysmem_util::GlobalBufferCollectionId global_collection_id_2;
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
-      .WillOnce(
-          testing::Invoke([&global_collection_id_2](
-                              sysmem_util::GlobalBufferCollectionId collection_id,
-                              fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                              fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-            global_collection_id_2 = collection_id;
-            return true;
-          }));
+  // Reset the last known reference to the BufferImporter to demonstrate that the Wait keeps it
+  // alive.
+  buffer_collection_importer_.reset();
 
-  const BufferCollectionId kBufferCollectionId2 = 4;
-  { flatland.RegisterBufferCollection(kBufferCollectionId2, CreateToken()); }
-
-  PRESENT(flatland, true);
-
-  // Deregister both buffer collections so they're both waiting on the same release fence.
-  flatland.DeregisterBufferCollection(kBufferCollectionId1);
-  flatland.DeregisterBufferCollection(kBufferCollectionId2);
-
-  // Skip session updates to test that release fences are what trigger the buffer importer calls.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id_1))
-      .Times(0);
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id_2))
-      .Times(0);
-
-  PresentArgs args;
-  args.skip_session_update_and_release_fences = true;
-  PRESENT_WITH_ARGS(flatland, std::move(args), true);
-
-  // Signal the release fence.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id_1))
-      .Times(1);
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id_2))
-      .Times(1);
+  // Signal the release fences, which triggers the release call, even though the Flatland
+  // instance and BufferCollectionImporter associated with the call have been cleaned up.
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(global_image_id)).Times(1);
   ApplySessionUpdatesAndSignalFences();
   RunLoopUntilIdle();
 }
 
-TEST_F(FlatlandTest, DeregisteredBufferCollectionIdCanBeReused) {
-  Flatland flatland = CreateFlatland();
-
-  // Create a valid BufferCollectionId.
-  sysmem_util::GlobalBufferCollectionId global_collection_id_1;
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
-      .WillOnce(
-          testing::Invoke([&global_collection_id_1](
-                              sysmem_util::GlobalBufferCollectionId collection_id,
-                              fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                              fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-            global_collection_id_1 = collection_id;
-            return true;
-          }));
-
-  const BufferCollectionId kBufferCollectionId = 2;
-  {
-    flatland.RegisterBufferCollection(kBufferCollectionId, CreateToken());
-    PRESENT(flatland, true);
-  }
-
-  // Deregister it, but don't signal the release fence yet.
-  flatland.DeregisterBufferCollection(kBufferCollectionId);
-
-  {
-    // Skip session updates to test that release fences are what trigger the buffer importer calls.
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id_1))
-        .Times(0);
-
-    PresentArgs args;
-    args.skip_session_update_and_release_fences = true;
-    PRESENT_WITH_ARGS(flatland, std::move(args), true);
-  }
-
-  // Register another buffer collection with that same ID.
-  sysmem_util::GlobalBufferCollectionId global_collection_id_2;
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
-      .WillOnce(
-          testing::Invoke([&global_collection_id_2](
-                              sysmem_util::GlobalBufferCollectionId collection_id,
-                              fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                              fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-            global_collection_id_2 = collection_id;
-            return true;
-          }));
-
-  {
-    flatland.RegisterBufferCollection(kBufferCollectionId, CreateToken());
-
-    // Skip session updates to test that release fences are what trigger the buffer importer calls.
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id_1))
-        .Times(0);
-
-    PresentArgs args;
-    args.skip_session_update_and_release_fences = true;
-    PRESENT_WITH_ARGS(flatland, std::move(args), true);
-  }
-
-  // Signal the release fences, which should result deregister the first one from the importer.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id_1))
-      .Times(1);
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id_2))
-      .Times(0);
-  ApplySessionUpdatesAndSignalFences();
-  RunLoopUntilIdle();
-
-  // Deregister the second one, signal the release fences, and verify the second global ID was
-  // deregistered.
-  flatland.DeregisterBufferCollection(kBufferCollectionId);
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id_2))
-      .Times(1);
-  PRESENT(flatland, true);
-}
-
-// Tests that a buffer collection is not deregistered from the importer until it is not referenced
-// by any active Image (including released Images still on Transforms) and the release fence is
-// signaled.
-TEST_F(FlatlandTest, DeregisterBufferCollectionWaitsForReleaseFence) {
-  Flatland flatland = CreateFlatland();
+// Tests that an Image is not released from the importer until it is not referenced and the release
+// fence is signaled.
+TEST_F(FlatlandTest, ReleaseImageWaitsForReleaseFence) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
   // Setup a valid buffer collection and Image.
   const ContentId kImageId = 1;
-  const BufferCollectionId kBufferCollectionId = 2;
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
 
   ImageProperties properties;
   properties.set_width(100);
   properties.set_height(200);
 
+  auto import_token_dup = ref_pair.DuplicateImportToken();
   const auto global_id_pair =
-      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties));
+      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
   auto& global_collection_id = global_id_pair.collection_id;
 
   // Attach the Image to a transform.
@@ -3361,18 +3252,16 @@ TEST_F(FlatlandTest, DeregisterBufferCollectionWaitsForReleaseFence) {
   flatland.SetContentOnTransform(kImageId, kTransformId);
   PRESENT(flatland, true);
 
-  // Deregister the buffer collection, but ensure that the deregistration call on the importer has
+  // Release the buffer collection, but ensure that the ReleaseBufferImage call on the importer has
   // not happened.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
-      .Times(0);
+      .Times(1);
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(0);
-  flatland.DeregisterBufferCollection(kBufferCollectionId);
-  PRESENT(flatland, true);
+  import_token_dup.value.reset();
+  RunLoopUntilIdle();
 
   // Release the Image that referenced the buffer collection. Because the Image is still attached
   // to a Transform, the deregestration call should still not happen.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
-      .Times(0);
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(0);
   flatland.ReleaseImage(kImageId);
   PRESENT(flatland, true);
@@ -3380,8 +3269,6 @@ TEST_F(FlatlandTest, DeregisterBufferCollectionWaitsForReleaseFence) {
   // Remove the Image from the transform. This triggers the creation of the release fence, but
   // still does not result in a deregestration call. Skip session updates to test that release
   // fences are what trigger the importer calls.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
-      .Times(0);
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(0);
   flatland.SetContentOnTransform(0, kTransformId);
 
@@ -3389,56 +3276,8 @@ TEST_F(FlatlandTest, DeregisterBufferCollectionWaitsForReleaseFence) {
   args.skip_session_update_and_release_fences = true;
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
-  // Signal the release fences, which triggers the deregistration call.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
-      .Times(1);
+  // Signal the release fences, which triggers the release call.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(1);
-  ApplySessionUpdatesAndSignalFences();
-  RunLoopUntilIdle();
-}
-
-TEST_F(FlatlandTest, DeregisterCollectionCompletesAfterFlatlandDestruction) {
-  sysmem_util::GlobalBufferCollectionId global_collection_id;
-  ContentId global_image_id;
-  {
-    Flatland flatland = CreateFlatland();
-
-    const ContentId kImageId = 3;
-    const BufferCollectionId kBufferCollectionId = 2;
-    ImageProperties properties;
-    properties.set_width(200);
-    properties.set_height(200);
-    auto global_id_pair =
-        CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties));
-    global_collection_id = global_id_pair.collection_id;
-    global_image_id = global_id_pair.image_id;
-
-    // Release the image.
-    flatland.ReleaseImage(kImageId);
-
-    // Deregister the buffer collection.
-    flatland.DeregisterBufferCollection(kBufferCollectionId);
-
-    // Skip session updates to test that release fences are what trigger the importer calls.
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
-        .Times(0);
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(global_image_id)).Times(0);
-    PresentArgs args;
-    args.skip_session_update_and_release_fences = true;
-    PRESENT_WITH_ARGS(flatland, std::move(args), true);
-
-    // |flatland| falls out of scope.
-  }
-
-  // Reset the last known reference to the BufferImporter to demonstrate that the Wait keeps it
-  // alive.
-  buffer_collection_importer_.reset();
-
-  // Signal the release fences, which triggers the deregistration call, even though the Flatland
-  // instance and BufferCollectionImporter associated with the call have been cleaned up.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
-      .Times(1);
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(global_image_id)).Times(1);
   ApplySessionUpdatesAndSignalFences();
   RunLoopUntilIdle();
 }
@@ -3472,37 +3311,6 @@ TEST_F(FlatlandTest, ReleaseImageErrorCases) {
 }
 
 // If we have multiple BufferCollectionImporters, some of them may properly import
-// a buffer collection while others do not. We have to therefore make sure that if
-// improter A properly imports a buffer collection and then importer B fails, that
-// Flatland automatically releases the buffer collection from importer A.
-TEST_F(FlatlandTest, BufferCollectionImportPassesAndFailsOnDifferentImportersTest) {
-  // Create a second buffer collection importer.
-  auto local_mock_buffer_collection_importer = new MockBufferCollectionImporter();
-  auto local_buffer_collection_importer =
-      std::shared_ptr<BufferCollectionImporter>(local_mock_buffer_collection_importer);
-
-  // Create a flatland instance that has two BufferCollectionImporters.
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
-  auto session_id = scheduling::GetNextSessionId();
-  fuchsia::ui::scenic::internal::FlatlandPtr flatland_ptr;
-  auto flatland = Flatland(
-      dispatcher(), flatland_ptr.NewRequest(), session_id, /*destroy_instance_functon=*/[]() {},
-      flatland_presenter_, link_system_, uber_struct_system_->AllocateQueueForSession(session_id),
-      {buffer_collection_importer_, local_buffer_collection_importer}, std::move(sysmem_allocator));
-
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferCollection(_, _, _))
-      .WillOnce(Return(false));
-
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_)).Times(1);
-  EXPECT_CALL(*local_mock_buffer_collection_importer, ReleaseBufferCollection(_)).Times(0);
-
-  const auto kCollectionId = 2;
-  flatland.RegisterBufferCollection(kCollectionId, CreateToken());
-}
-
-// If we have multiple BufferCollectionImporters, some of them may properly import
 // an image while others do not. We have to therefore make sure that if importer A
 // properly imports an image and then importer B fails, that Flatland automatically
 // releases the image from importer A.
@@ -3512,31 +3320,22 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
   auto local_buffer_collection_importer =
       std::shared_ptr<BufferCollectionImporter>(local_mock_buffer_collection_importer);
 
-  // Create a flatland instance that has
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
+  // Create flatland and allocator instances that has two BufferCollectionImporters.
+  std::vector<std::shared_ptr<BufferCollectionImporter>> importers(
+      {buffer_collection_importer_, local_buffer_collection_importer});
+  std::shared_ptr<Allocator> allocator =
+      std::make_shared<Allocator>(importers, utils::CreateSysmemAllocatorSyncPtr());
   auto session_id = scheduling::GetNextSessionId();
   fuchsia::ui::scenic::internal::FlatlandPtr flatland_ptr;
   auto flatland = Flatland(
       dispatcher(), flatland_ptr.NewRequest(), session_id,
-      /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
-      uber_struct_system_->AllocateQueueForSession(session_id),
-      {buffer_collection_importer_, local_buffer_collection_importer}, std::move(sysmem_allocator));
-
-  sysmem_util::GlobalBufferCollectionId global_collection_id;
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
-      .WillOnce(
-          testing::Invoke([&global_collection_id](
-                              sysmem_util::GlobalBufferCollectionId collection_id,
-                              fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                              fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-            global_collection_id = collection_id;
-            return true;
-          }));
+      /*destroy_instance_functon=*/[]() {}, allocator, flatland_presenter_, link_system_,
+      uber_struct_system_->AllocateQueueForSession(session_id));
   EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferCollection(_, _, _))
       .WillOnce(Return(true));
 
-  const auto kCollectionId = 2;
-  flatland.RegisterBufferCollection(kCollectionId, CreateToken());
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
+  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
 
   ImageProperties properties;
   properties.set_width(100);
@@ -3547,18 +3346,18 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
   EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
   EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferImage(_)).WillOnce(Return(false));
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).WillOnce(Return());
-  flatland.CreateImage(/*image_id*/ 1, kCollectionId, /*vmo_idx*/ 0, std::move(properties));
+  flatland.CreateImage(/*image_id*/ 1, std::move(ref_pair.import_token), /*vmo_idx*/ 0,
+                       std::move(properties));
 }
 
 // Test to make sure that if a buffer collection importer returns |false|
 // on |ImportBufferImage()| that this is caught when we try to present.
 TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
-  const auto kCollectionId = 3;
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
-      .WillOnce(Return(true));
-  flatland.RegisterBufferCollection(kCollectionId, CreateToken());
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
+  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
 
   // Create a proper properties struct.
   ImageProperties properties;
@@ -3569,7 +3368,8 @@ TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
 
   // We've imported a proper image and we have the importer returning true, so
   // PRESENT should return true.
-  flatland.CreateImage(/*image_id*/ 1, kCollectionId, /*vmo_idx*/ 0, std::move(properties));
+  flatland.CreateImage(/*image_id*/ 1, ref_pair.DuplicateImportToken(), /*vmo_idx*/ 0,
+                       std::move(properties));
   PRESENT(flatland, true);
 
   // We're using the same buffer collection so we don't need to validate, only import.
@@ -3579,25 +3379,28 @@ TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
   // this and PRESENT should return false.
   properties.set_width(150);
   properties.set_height(175);
-  flatland.CreateImage(/*image_id*/ 2, kCollectionId, /*vmo_idx*/ 0, std::move(properties));
+  flatland.CreateImage(/*image_id*/ 2, ref_pair.DuplicateImportToken(), /*vmo_idx*/ 0,
+                       std::move(properties));
   PRESENT(flatland, false);
 }
 
 // Test to make sure that the release fences signal to the buffer importer
 // to release the image.
 TEST_F(FlatlandTest, BufferImporterImageReleaseTest) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
   // Setup a valid image.
   const ContentId kImageId = 1;
-  const BufferCollectionId kBufferCollectionId = 1;
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
 
   ImageProperties properties1;
   properties1.set_width(100);
   properties1.set_height(200);
 
   const sysmem_util::GlobalBufferCollectionId global_collection_id1 =
-      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties1)).collection_id;
+      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties1))
+          .collection_id;
 
   // Create a transform, make it the root transform, and attach the image.
   const TransformId kTransformId = 2;
@@ -3624,18 +3427,20 @@ TEST_F(FlatlandTest, BufferImporterImageReleaseTest) {
 }
 
 TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
   // Setup a valid image.
   const ContentId kImageId = 1;
-  const BufferCollectionId kBufferCollectionId = 1;
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
 
   ImageProperties properties1;
   properties1.set_width(100);
   properties1.set_height(200);
 
   const sysmem_util::GlobalBufferCollectionId global_collection_id =
-      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties1)).collection_id;
+      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties1))
+          .collection_id;
 
   const auto maybe_image_handle = flatland.GetContentHandle(kImageId);
   ASSERT_TRUE(maybe_image_handle.has_value());
@@ -3683,18 +3488,21 @@ TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
 }
 
 TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
   // Setup a valid image.
   const ContentId kImageId = 1;
-  const BufferCollectionId kBufferCollectionId = 1;
+  BufferCollectionRefPair ref_pair_1 = BufferCollectionRefPair::New();
 
   ImageProperties properties1;
   properties1.set_width(100);
   properties1.set_height(200);
 
   const sysmem_util::GlobalBufferCollectionId global_collection_id1 =
-      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties1)).collection_id;
+      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair_1),
+                  std::move(properties1))
+          .collection_id;
 
   const auto maybe_image_handle1 = flatland.GetContentHandle(kImageId);
   ASSERT_TRUE(maybe_image_handle1.has_value());
@@ -3711,12 +3519,15 @@ TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
 
   // The ContentId can be re-used even though the old image is still present. Add a second
   // transform so that both images show up in the global image vector.
+  BufferCollectionRefPair ref_pair_2 = BufferCollectionRefPair::New();
   ImageProperties properties2;
   properties2.set_width(300);
   properties2.set_height(400);
 
   const sysmem_util::GlobalBufferCollectionId global_collection_id2 =
-      CreateImage(&flatland, kImageId, 2, std::move(properties2)).collection_id;
+      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair_2),
+                  std::move(properties2))
+          .collection_id;
 
   const TransformId kTransformId2 = 3;
 
@@ -3744,18 +3555,20 @@ TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
 // Test that released Images, when attached to a Transform, are not garbage collected even if
 // the Transform is not part of the most recently presented global topology.
 TEST_F(FlatlandTest, ReleasedImagePersistsOutsideGlobalTopology) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
   // Setup a valid image.
   const ContentId kImageId = 1;
-  const BufferCollectionId kBufferCollectionId = 1;
+  BufferCollectionRefPair ref_pair = BufferCollectionRefPair::New();
 
   ImageProperties properties1;
   properties1.set_width(100);
   properties1.set_height(200);
 
   const sysmem_util::GlobalBufferCollectionId global_collection_id1 =
-      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties1)).collection_id;
+      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties1))
+          .collection_id;
 
   const auto maybe_image_handle = flatland.GetContentHandle(kImageId);
   ASSERT_TRUE(maybe_image_handle.has_value());
@@ -3793,18 +3606,22 @@ TEST_F(FlatlandTest, ReleasedImagePersistsOutsideGlobalTopology) {
 }
 
 TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland = CreateFlatland(allocator);
 
   // Setup a valid image.
   const ContentId kImageId = 1;
-  const BufferCollectionId kBufferCollectionId = 1;
+  BufferCollectionRefPair ref_pair_1 = BufferCollectionRefPair::New();
 
   ImageProperties properties1;
   properties1.set_width(100);
   properties1.set_height(200);
 
+  auto import_token_dup = ref_pair_1.DuplicateImportToken();
   const sysmem_util::GlobalBufferCollectionId global_collection_id1 =
-      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties1)).collection_id;
+      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair_1),
+                  std::move(properties1))
+          .collection_id;
 
   // Create a transform, make it the root transform, and attach the Image.
   const TransformId kTransformId = 2;
@@ -3816,19 +3633,23 @@ TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
 
   // Clear the graph, then signal the release fence and ensure the buffer collection is released.
   flatland.ClearGraph();
+  import_token_dup.value.reset();
 
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id1))
       .Times(1);
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(1);
   PRESENT(flatland, true);
 
-  // The buffer collection and Image ID should be available for re-use.
+  // The Image ID should be available for re-use.
+  BufferCollectionRefPair ref_pair_2 = BufferCollectionRefPair::New();
   ImageProperties properties2;
   properties2.set_width(400);
   properties2.set_height(800);
 
   const sysmem_util::GlobalBufferCollectionId global_collection_id2 =
-      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties2)).collection_id;
+      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair_2),
+                  std::move(properties2))
+          .collection_id;
 
   EXPECT_NE(global_collection_id1, global_collection_id2);
 
@@ -3864,6 +3685,7 @@ TEST_F(FlatlandTest, UnsquashableUpdates_ShouldBeReflectedInScheduleUpdates) {
 #undef EXPECT_MATRIX
 #undef PRESENT
 #undef PRESENT_WITH_ARGS
+#undef REGISTER_BUFFER_COLLECTION
 
 }  // namespace test
 }  // namespace flatland

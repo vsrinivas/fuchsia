@@ -5,7 +5,6 @@
 #include <lib/async-testing/test_loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
-#include <lib/fdio/directory.h>
 
 #include <cstdint>
 #include <thread>
@@ -15,12 +14,15 @@
 #include "src/ui/scenic/lib/flatland/renderer/null_renderer.h"
 #include "src/ui/scenic/lib/flatland/renderer/tests/common.h"
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
 
 namespace flatland {
 
+// TODO(fxbug.dev/52632): Move common functions to testing::WithParamInterface instead of function
+// calls.
 using NullRendererTest = RendererTest;
 using VulkanRendererTest = RendererTest;
 
@@ -189,6 +191,60 @@ void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
   EXPECT_FALSE(import_result);
 }
 
+// Test that calls ReleaseBufferCollection() before ReleaseBufferImage() and makes sure that
+// imported Image can still be rendered.
+void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
+                                                  fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+                                                  bool use_vulkan) {
+  auto tokens = SysmemTokens::Create(sysmem_allocator);
+
+  auto collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto result = renderer->RegisterRenderTargetCollection(collection_id, sysmem_allocator,
+                                                         std::move(tokens.dup_token));
+  EXPECT_TRUE(result);
+
+  std::vector<uint64_t> additional_format_modifiers;
+  if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
+    additional_format_modifiers.push_back(fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
+  }
+  const uint32_t kWidth = 64, kHeight = 32;
+  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(tokens.local_token),
+                                          /* image_count */ 2, /* width */ kWidth,
+                                          /* height */ kHeight, kNoneUsage,
+                                          additional_format_modifiers);
+
+  // Import render target.
+  ImageMetadata render_target = {.collection_id = collection_id,
+                                 .identifier = sysmem_util::GenerateUniqueImageId(),
+                                 .vmo_index = 0,
+                                 .width = kWidth,
+                                 .height = kHeight,
+                                 .is_render_target = true};
+  auto import_result = renderer->ImportBufferImage(render_target);
+  EXPECT_TRUE(import_result);
+
+  // Import image.
+  ImageMetadata image = {.collection_id = collection_id,
+                         .identifier = sysmem_util::GenerateUniqueImageId(),
+                         .vmo_index = 1,
+                         .width = kWidth,
+                         .height = kHeight,
+                         .is_render_target = false};
+  import_result = renderer->ImportBufferImage(image);
+  EXPECT_TRUE(import_result);
+
+  // Now deregister the collection.
+  renderer->DeregisterRenderTargetCollection(collection_id);
+
+  // We should still be able to render this image.
+  renderer->Render(render_target, {Rectangle2D(glm::vec2(0, 0), glm::vec2(kWidth, kHeight))},
+                   {image});
+  if (use_vulkan) {
+    auto vk_renderer = static_cast<VkRenderer*>(renderer);
+    vk_renderer->WaitIdle();
+  }
+}
+
 // Test to make sure we can call the functions RegisterTextureCollection(),
 // RegisterRenderTargetCollection() and ImportBufferImage() simultaneously from
 // multiple threads and have it work.
@@ -203,11 +259,7 @@ void MultithreadingTest(Renderer* renderer) {
     async::TestLoop loop;
 
     // Make an extra sysmem allocator for tokens.
-    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
-    zx_status_t status = fdio_service_connect(
-        "/svc/fuchsia.sysmem.Allocator", sysmem_allocator.NewRequest().TakeChannel().release());
-    sysmem_allocator->SetDebugClientInfo(fsl::GetCurrentProcessName(),
-                                         fsl::GetCurrentProcessKoid());
+    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
 
     auto tokens = SysmemTokens::Create(sysmem_allocator.get());
     auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
@@ -359,6 +411,12 @@ TEST_F(NullRendererTest, DeregistrationTest) {
   DeregistrationTest(&renderer, sysmem_allocator_.get());
 }
 
+TEST_F(NullRendererTest, RenderImageAfterBufferCollectionReleasedTest) {
+  NullRenderer renderer;
+  RenderImageAfterBufferCollectionReleasedTest(&renderer, sysmem_allocator_.get(),
+                                               /*use_vulkan*/ false);
+}
+
 TEST_F(NullRendererTest, DISABLED_MultithreadingTest) {
   NullRenderer renderer;
   MultithreadingTest(&renderer);
@@ -407,6 +465,15 @@ VK_TEST_F(VulkanRendererTest, DeregistrationTest) {
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(unique_escher->GetWeakPtr());
   DeregistrationTest(&renderer, sysmem_allocator_.get());
+}
+
+VK_TEST_F(VulkanRendererTest, RenderImageAfterBufferCollectionReleasedTest) {
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
+  VkRenderer renderer(unique_escher->GetWeakPtr());
+  RenderImageAfterBufferCollectionReleasedTest(&renderer, sysmem_allocator_.get(),
+                                               /*use_vulkan*/ true);
 }
 
 VK_TEST_F(VulkanRendererTest, DISABLED_MultithreadingTest) {

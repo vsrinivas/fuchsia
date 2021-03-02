@@ -250,6 +250,9 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
     EXPECT_EQ(image->size(), kWidth * kHeight * 4);
   }
 
+  // It is safe to release buffer collection because we are holding onto VkImage.
+  vk_device.destroyBufferCollectionFUCHSIA(vk_collection, nullptr, vk_loader);
+
   // Now we will read from the image and see if it matches what we wrote to it on the client side.
   BatchGpuDownloader downloader(escher->GetWeakPtr(), CommandBuffer::Type::kGraphics, 0);
   bool read_image_done = false;
@@ -300,8 +303,6 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(read_image_again_done);
   EXPECT_TRUE(batch_download_again_done);
-
-  vk_device.destroyBufferCollectionFUCHSIA(vk_collection, nullptr, vk_loader);
 }
 
 }  // namespace test

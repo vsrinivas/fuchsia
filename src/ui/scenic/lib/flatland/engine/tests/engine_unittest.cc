@@ -8,6 +8,7 @@
 #include "src/ui/scenic/lib/flatland/engine/tests/common.h"
 #include "src/ui/scenic/lib/flatland/engine/tests/mock_display_controller.h"
 #include "src/ui/scenic/lib/flatland/renderer/mock_renderer.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 using ::testing::_;
 using ::testing::Return;
@@ -36,12 +37,7 @@ class EngineTest : public EngineTestBase {
   void SetUp() override {
     EngineTestBase::SetUp();
 
-    // Create the SysmemAllocator.
-    zx_status_t status = fdio_service_connect(
-        "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
-    EXPECT_EQ(status, ZX_OK);
-    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(),
-                                          fsl::GetCurrentProcessKoid());
+    sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr();
 
     renderer_ = std::make_shared<flatland::MockRenderer>();
 
@@ -96,6 +92,7 @@ TEST_F(EngineTest, ImportAndReleaseBufferCollectionTest) {
     // Wait once for call to ImportBufferCollection, once for setting the
     // constraints, and once for call to ReleaseBufferCollection. Finally
     // one call for the deleter.
+    // TODO(fxbug.dev/71264): Use function call counters from display's MockDisplayController.
     for (uint32_t i = 0; i < 4; i++) {
       mock->WaitForMessage();
     }
@@ -128,6 +125,72 @@ TEST_F(EngineTest, ImportAndReleaseBufferCollectionTest) {
   engine_->ReleaseBufferCollection(kGlobalBufferCollectionId);
 
   EXPECT_CALL(*mock_display_controller_.get(), CheckConfig(_, _))
+      .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
+        fuchsia::hardware::display::ConfigResult result =
+            fuchsia::hardware::display::ConfigResult::OK;
+        std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+        callback(result, ops);
+      }));
+
+  engine_.reset();
+  server.join();
+}
+
+TEST_F(EngineTest, ImageIsValidAfterReleaseBufferCollection) {
+  auto mock = mock_display_controller_.get();
+  // Set the mock display controller functions and wait for messages.
+  std::thread server([&mock]() mutable {
+    // Wait once for call to ImportBufferCollection, once for setting the constraints, once for
+    // hardware, and once for call to ReleaseBufferCollection. Finally one call for the deleter.
+    // TODO(fxbug.dev/71264): Use function call counters from display's MockDisplayController.
+    for (uint32_t i = 0; i < 5; i++) {
+      mock->WaitForMessage();
+    }
+  });
+
+  const sysmem_util::GlobalBufferCollectionId kGlobalBufferCollectionId = 15;
+
+  // Import buffer collection.
+  EXPECT_CALL(*mock, ImportBufferCollection(kGlobalBufferCollectionId, _, _))
+      .WillOnce(testing::Invoke(
+          [](uint64_t, fidl::InterfaceHandle<class ::fuchsia::sysmem::BufferCollectionToken>,
+             MockDisplayController::ImportBufferCollectionCallback callback) { callback(ZX_OK); }));
+  EXPECT_CALL(*mock, SetBufferCollectionConstraints(kGlobalBufferCollectionId, _, _))
+      .WillOnce(testing::Invoke(
+          [](uint64_t collection_id, fuchsia::hardware::display::ImageConfig config,
+             MockDisplayController::SetBufferCollectionConstraintsCallback callback) {
+            callback(ZX_OK);
+          }));
+  EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
+      .WillOnce(Return(true));
+  engine_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
+                                  CreateToken());
+
+  // Import image.
+  ImageMetadata image_metadata = ImageMetadata{
+      .collection_id = kGlobalBufferCollectionId,
+      .identifier = 1,
+      .vmo_index = 0,
+      .width = 128,
+      .height = 256,
+  };
+  const uint64_t kDisplayImageId = 2;
+  EXPECT_CALL(*mock, ImportImage(_, kGlobalBufferCollectionId, 0, _))
+      .WillOnce(testing::Invoke([](fuchsia::hardware::display::ImageConfig, uint64_t, uint32_t,
+                                   MockDisplayController::ImportImageCallback callback) {
+        callback(ZX_OK, kDisplayImageId);
+      }));
+  EXPECT_CALL(*renderer_.get(), ImportBufferImage(image_metadata)).WillOnce(Return(true));
+  engine_->ImportBufferImage(image_metadata);
+
+  // Release buffer collection. Make sure that does not release Image.
+  EXPECT_CALL(*mock, ReleaseImage(kDisplayImageId)).Times(0);
+  EXPECT_CALL(*mock, ReleaseBufferCollection(kGlobalBufferCollectionId)).WillOnce(Return());
+  EXPECT_CALL(*renderer_.get(), ReleaseBufferCollection(kGlobalBufferCollectionId))
+      .WillOnce(Return());
+  engine_->ReleaseBufferCollection(kGlobalBufferCollectionId);
+
+  EXPECT_CALL(*mock, CheckConfig(_, _))
       .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
         fuchsia::hardware::display::ConfigResult result =
             fuchsia::hardware::display::ConfigResult::OK;
@@ -175,6 +238,7 @@ TEST_F(EngineTest, ImportImageErrorCases) {
     // invalid calls to ImportBufferImage() below, only 3 of them make it
     // all the way to the display controller, which is why we only
     // have to wait 3 times. Finally add one call for the deleter.
+    // TODO(fxbug.dev/71264): Use function call counters from display's MockDisplayController.
     for (uint32_t i = 0; i < 6; i++) {
       mock->WaitForMessage();
     }
@@ -374,6 +438,7 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
     // - 1 call to apply the config
     // - 1 call to DiscardConfig
     // -2 calls to destroy layer.
+    // TODO(fxbug.dev/71264): Use function call counters from display's MockDisplayController.
     for (uint32_t i = 0; i < 21; i++) {
       mock->WaitForMessage();
     }

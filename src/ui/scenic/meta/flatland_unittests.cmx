@@ -1,8 +1,20 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator"
+            ]
+        }
+    },
     "include": [
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "test/flatland_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sysmem.Allocator"
+        ]
     }
 }

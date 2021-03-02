@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_UTILS_HELPERS_H_
 #define SRC_UI_SCENIC_LIB_UTILS_HELPERS_H_
 
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/zx/event.h>
 
@@ -30,6 +31,10 @@ zx::event CopyEvent(const zx::event& event);
 
 // Synchronously checks whether the event has signalled any of the bits in |signal|.
 bool IsEventSignalled(const zx::event& event, zx_signals_t signal);
+
+// Create sysmem allocator.
+fuchsia::sysmem::AllocatorSyncPtr CreateSysmemAllocatorSyncPtr(
+    const std::string& debug_name_suffix = std::string());
 
 }  // namespace utils
 
