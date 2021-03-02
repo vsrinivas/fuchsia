@@ -97,6 +97,7 @@ pub fn ip_addr_test(attr: TokenStream, input: TokenStream) -> TokenStream {
     ip_test_inner(attr, input, "ip_addr_test", "IpAddress", "Ipv4Addr", "Ipv6Addr")
 }
 
+#[allow(clippy::too_many_arguments)]
 fn specialize_ip_inner(
     attr: TokenStream,
     input: TokenStream,
@@ -340,7 +341,7 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
     // of certain user errors. It's much more user-friendly to do it this way,
     // which allows the compiler's parser to output errors and point out where
     // the error originated.
-    let ItemFn { attrs, vis, sig, .. } = input.original.clone();
+    let ItemFn { attrs, vis, sig, .. } = input.original;
     // TODO(rheacock): strip `mut` keyword from arguments in the outer function
     quote!(
         #(#attrs)*
@@ -358,7 +359,7 @@ fn push_error<T: ToTokens, U: Display>(errors: &mut Vec<TokenStream2>, tokens: T
 // Parse the original input and perform all of the processing needed to get it
 // ready for serialization. This is the core of the proc macro.
 fn parse_input(input: ItemFn, cfg: &Config) -> Input {
-    let original = input.clone();
+    let original = input;
     let mut ipv4_block = *original.block.clone();
     let mut ipv6_block = *original.block.clone();
 
@@ -448,10 +449,7 @@ fn parse_input(input: ItemFn, cfg: &Config) -> Input {
         let mut result = None;
 
         attrs.retain(|attr| {
-            let attr_style_outer = match attr.style {
-                AttrStyle::Outer => true,
-                _ => false,
-            };
+            let attr_style_outer = matches!(attr.style, AttrStyle::Outer);
             let ip_attr = if attr.path.is_ident(&cfg.ipv4_attr_name) && attr_style_outer {
                 IpAttr::Ipv4
             } else if attr.path.is_ident(&cfg.ipv6_attr_name) && attr_style_outer {
