@@ -33,6 +33,7 @@
 #include <region-alloc/region-alloc.h>
 
 #include "memory_allocator.h"
+#include "table_set.h"
 
 namespace sysmem_driver {
 
@@ -82,6 +83,8 @@ class Device final : public DdkDeviceType,
   [[nodiscard]] zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size,
                                               zx::vmo* vmo_out) override;
   void CheckForUnbind() override;
+  TableSet& table_set() override;
+
   inspect::Node* heap_node() override { return &heaps_; }
 
   [[nodiscard]] zx_status_t Connect(zx_handle_t allocator_request);
@@ -160,6 +163,8 @@ class Device final : public DdkDeviceType,
   async::Loop loop_;
   thrd_t loop_thrd_;
 
+  TableSet table_set_;
+
   // Currently located at bootstrap/driver_manager:root/sysmem.
   inspect::Node sysmem_root_;
   inspect::Node heaps_;
@@ -182,9 +187,6 @@ class Device final : public DdkDeviceType,
   std::map<zx_koid_t, BufferCollectionToken*> tokens_by_koid_;
 
   std::deque<zx_koid_t> unfound_token_koids_;
-
-  // Used to allocate memory to store FIDL tables for MemoryAllocator.
-  fidl::HeapAllocator fidl_allocator_;
 
   // This map contains all registered memory allocators.
   std::map<llcpp::fuchsia::sysmem2::wire::HeapType, std::unique_ptr<MemoryAllocator>> allocators_;

@@ -4,14 +4,16 @@
 
 #include "memory_allocator.h"
 
+#include <lib/sysmem-version/sysmem-version.h>
 #include <zircon/assert.h>
 
 #include <atomic>
 
 namespace sysmem_driver {
 
-MemoryAllocator::MemoryAllocator(llcpp::fuchsia::sysmem2::wire::HeapProperties properties)
-    : heap_properties_(std::move(properties)) {
+MemoryAllocator::MemoryAllocator(TableSet& table_set,
+                                 llcpp::fuchsia::sysmem2::wire::HeapProperties properties)
+    : heap_properties_(table_set, std::move(properties)) {
   static std::atomic_uint64_t id;
   id_ = id++;
 }

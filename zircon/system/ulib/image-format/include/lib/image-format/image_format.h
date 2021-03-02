@@ -110,14 +110,14 @@ bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format
                                   zx_pixel_format_t* zx_pixel_format_out);
 
 fit::result<llcpp::fuchsia::sysmem2::wire::PixelFormat> ImageFormatConvertZxToSysmem_v2(
-    fidl::Allocator& allocator, zx_pixel_format_t zx_pixel_format);
+    fidl::AnyAllocator& allocator, zx_pixel_format_t zx_pixel_format);
 fit::result<llcpp::fuchsia::sysmem::wire::PixelFormat> ImageFormatConvertZxToSysmem_v1(
-    fidl::Allocator& allocator, zx_pixel_format_t zx_pixel_format);
+    fidl::AnyAllocator& allocator, zx_pixel_format_t zx_pixel_format);
 bool ImageFormatConvertZxToSysmem(zx_pixel_format_t zx_pixel_format,
                                   fuchsia_sysmem_PixelFormat* pixel_format_out);
 
 fit::result<llcpp::fuchsia::sysmem2::wire::ImageFormat> ImageConstraintsToFormat(
-    fidl::Allocator& allocator,
+    fidl::AnyAllocator& allocator,
     const llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints& constraints, uint32_t width,
     uint32_t height);
 fit::result<llcpp::fuchsia::sysmem::wire::ImageFormat_2> ImageConstraintsToFormat(

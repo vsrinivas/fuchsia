@@ -1115,6 +1115,18 @@ TEST(Sysmem, MultipleParticipants) {
   status = fuchsia_sysmem_BufferCollectionSync(collection_client_1.get());
   ASSERT_EQ(status, ZX_OK, "");
 
+  // For the moment, cause the server to count some fake churn, enough times to cause the server
+  // to re-alloc all the server's held FIDL tables 4 times before we continue.  These are
+  // synchronous calls, so the 4 re-allocs are done by the time this loop completes.
+  //
+  // TODO(fxbug.dev/33670): Switch to creating real churn instead, once we have new messages that
+  // can create real churn.
+  constexpr uint32_t kChurnCount = 256 * 2;  // 256 * 4;
+  for (uint32_t i = 0; i < kChurnCount; ++i) {
+    status = fuchsia_sysmem_BufferCollectionSync(collection_client_1.get());
+    ASSERT_EQ(status, ZX_OK, "");
+  }
+
   ASSERT_NE(token_client_2.get(), ZX_HANDLE_INVALID, "");
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
       allocator2_client_2.get(), token_client_2.release(), collection_server_2.release());

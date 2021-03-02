@@ -10,6 +10,7 @@
 #include <ddk/trace/event.h>
 #include <fbl/string_printf.h>
 
+#include "lib/fidl/llcpp/fidl_allocator.h"
 #include "macros.h"
 
 namespace sysmem_driver {
@@ -17,23 +18,21 @@ namespace sysmem_driver {
 zx::duration kGuardCheckInterval = zx::sec(5);
 namespace {
 
-llcpp::fuchsia::sysmem2::wire::HeapProperties BuildHeapProperties(bool is_cpu_accessible) {
+llcpp::fuchsia::sysmem2::wire::HeapProperties BuildHeapProperties(fidl::AnyAllocator& allocator,
+                                                                  bool is_cpu_accessible) {
   using llcpp::fuchsia::sysmem2::wire::CoherencyDomainSupport;
   using llcpp::fuchsia::sysmem2::wire::HeapProperties;
 
-  auto coherency_domain_support = std::make_unique<CoherencyDomainSupport>();
-  *coherency_domain_support =
-      CoherencyDomainSupport::Builder(std::make_unique<CoherencyDomainSupport::Frame>())
-          .set_cpu_supported(std::make_unique<bool>(is_cpu_accessible))
-          .set_ram_supported(std::make_unique<bool>(is_cpu_accessible))
-          .set_inaccessible_supported(std::make_unique<bool>(true))
-          .build();
+  auto coherency_domain_support = CoherencyDomainSupport(allocator);
+  coherency_domain_support.set_cpu_supported(allocator, is_cpu_accessible);
+  coherency_domain_support.set_ram_supported(allocator, is_cpu_accessible);
+  coherency_domain_support.set_inaccessible_supported(allocator, true);
 
-  return HeapProperties::Builder(std::make_unique<HeapProperties::Frame>())
-      .set_coherency_domain_support(std::move(coherency_domain_support))
-      // Contiguous non-protected VMOs need to be cleared.
-      .set_need_clear(std::make_unique<bool>(is_cpu_accessible))
-      .build();
+  auto heap_properties = HeapProperties(allocator);
+  heap_properties.set_coherency_domain_support(allocator, std::move(coherency_domain_support));
+  heap_properties.set_need_clear(allocator, is_cpu_accessible);
+
+  return heap_properties;
 }
 
 }  // namespace
@@ -42,7 +41,9 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
     Owner* parent_device, const char* allocation_name, inspect::Node* parent_node, uint64_t pool_id,
     uint64_t size, bool is_cpu_accessible, bool is_ready, bool can_be_torn_down,
     async_dispatcher_t* dispatcher)
-    : MemoryAllocator(BuildHeapProperties(is_cpu_accessible)),
+    : MemoryAllocator(
+          parent_device->table_set(),
+          BuildHeapProperties(parent_device->table_set().allocator(), is_cpu_accessible)),
       parent_device_(parent_device),
       allocation_name_(allocation_name),
       pool_id_(pool_id),

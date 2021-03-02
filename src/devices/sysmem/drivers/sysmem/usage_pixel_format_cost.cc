@@ -5,7 +5,7 @@
 #include "usage_pixel_format_cost.h"
 
 #include <fuchsia/sysmem2/llcpp/fidl.h>
-#include <lib/fidl/llcpp/allocator.h>
+#include <lib/fidl/llcpp/fidl_allocator.h>
 #include <lib/image-format/image_format.h>
 #include <zircon/assert.h>
 

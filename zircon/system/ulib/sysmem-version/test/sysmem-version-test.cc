@@ -13,6 +13,7 @@
 
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <random>
 #include <vector>
 
@@ -39,9 +40,9 @@ class LinearSnap {
   }
 
   // This value is similar to an in-place decode received LLCPP message, in that it can be moved out
-  // syntactically, but really any tracking_ptr<>(s) are non-owned, so callers should take care to
-  // not use the returned logical FidlType& (even if syntactically moved out) beyond ~LinearSnap.
-  FidlType& value() { return *reinterpret_cast<FidlType*>(&linear_data_); }
+  // syntatically, but really any tracking_ptr<>(s) are non-owned, so callers should take care to
+  // not use the returned logical FidlType& (even if syntatically moved out) beyond ~LinearSnap.
+  FidlType& value() { return *decoded_.value().PrimaryObject(); }
 
   const fidl::BytePart snap_bytes() const {
     return fidl::BytePart(const_cast<uint8_t*>(&snap_data_[0]), snap_data_size_, snap_data_size_);
@@ -52,52 +53,39 @@ class LinearSnap {
                                        snap_handles_count_, snap_handles_count_);
   }
 
-  ~LinearSnap() { fidl_close_handles(FidlType::Type, &linear_data_, nullptr); }
-
  private:
   explicit LinearSnap(FidlType&& to_move_in) {
     alignas(FIDL_ALIGNMENT) FidlType aligned = std::move(to_move_in);
     fidl::UnownedEncodedMessage<FidlType> encoded(linear_data_, kMaxDataSize, &aligned);
     ZX_ASSERT(encoded.ok());
     ZX_ASSERT(encoded.error() == nullptr);
-
     fidl::OutgoingByteMessage& outgoing_message = encoded.GetOutgoingMessage();
     ZX_ASSERT(outgoing_message.byte_actual() <= sizeof(snap_data_));
     memcpy(snap_data_, outgoing_message.bytes(), outgoing_message.byte_actual());
     snap_data_size_ = outgoing_message.byte_actual();
-
     ZX_ASSERT(outgoing_message.handle_actual() * sizeof(zx_handle_disposition_t) <=
               sizeof(snap_handles_));
     memcpy(snap_handles_, outgoing_message.handles(),
            outgoing_message.handle_actual() * sizeof(zx_handle_disposition_t));
     snap_handles_count_ = outgoing_message.handle_actual();
-
-    auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
-    ZX_ASSERT(converted.ok());
-    auto decoded = fidl::DecodedMessage<FidlType>(converted.incoming_message());
-    ZX_ASSERT(decoded.ok());
-    ZX_ASSERT(decoded.error() == nullptr);
-
-    memcpy(linear_data_, decoded.bytes(), decoded.byte_actual());
-
-    // Release the ownership of the primary object (the handles are closed by the LinearSnap
-    // destructor).
-    decoded.ReleasePrimaryObject();
-
-    // At this point, the handles are in linear_data_ and value_'s message() is stored directly in
-    // linear_data_.
-
-    converted.ReleaseHandles();  // Release handles so they aren't closed.
+    outgoing_to_incoming_result_.emplace(
+        fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage()));
+    ZX_ASSERT(outgoing_to_incoming_result_.value().ok());
+    decoded_.emplace(outgoing_to_incoming_result_.value().incoming_message());
+    ZX_ASSERT(decoded_.value().ok());
+    ZX_ASSERT(decoded_.value().error() == nullptr);
   }
 
-  // During MoveFrom, used for linearizing, encoding, decoding.  After MoveFrom(), holds the
-  // linearized decoded message (including owned handles).
+  // During MoveFrom, used for linearizing, encoding.
   alignas(FIDL_ALIGNMENT) uint8_t linear_data_[kMaxDataSize] = {};
 
   alignas(FIDL_ALIGNMENT) uint8_t snap_data_[kMaxDataSize] = {};
   zx_handle_disposition_t snap_handles_[kMaxHandleCount] = {};
   uint32_t snap_data_size_ = {};
   uint32_t snap_handles_count_ = {};
+
+  std::optional<fidl::OutgoingToIncomingMessageResult> outgoing_to_incoming_result_;
+  std::optional<fidl::DecodedMessage<FidlType>> decoded_;
 };
 
 template <typename FidlType>
@@ -420,8 +408,8 @@ TEST(SysmemVersion, EncodedEquality) {
 }
 
 TEST(SysmemVersion, BufferUsage) {
-  fidl::HeapAllocator allocator;
   for (uint32_t run = 0; run < kRunCount; ++run) {
+    fidl::FidlAllocator allocator;
     auto v1_1 = V1RandomBufferUsage();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2 = sysmem::V2CopyFromV1BufferUsage(allocator, snap_1->value()).take_value();
@@ -432,8 +420,8 @@ TEST(SysmemVersion, BufferUsage) {
 }
 
 TEST(SysmemVersion, PixelFormat) {
-  fidl::HeapAllocator allocator;
   for (uint32_t run = 0; run < kRunCount; ++run) {
+    fidl::FidlAllocator allocator;
     auto v1_1 = V1RandomPixelFormat();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1 = sysmem::V2CopyFromV1PixelFormat(allocator, snap_1->value());
@@ -445,8 +433,8 @@ TEST(SysmemVersion, PixelFormat) {
 }
 
 TEST(SysmemVersion, ColorSpace) {
-  fidl::HeapAllocator allocator;
   for (uint32_t run = 0; run < kRunCount; ++run) {
+    fidl::FidlAllocator allocator;
     auto v1_1 = V1RandomColorSpace();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1 = sysmem::V2CopyFromV1ColorSpace(allocator, snap_1->value());
@@ -458,8 +446,8 @@ TEST(SysmemVersion, ColorSpace) {
 }
 
 TEST(SysmemVersion, ImageFormatConstraints) {
-  fidl::HeapAllocator allocator;
   for (uint32_t run = 0; run < kRunCount; ++run) {
+    fidl::FidlAllocator allocator;
     auto v1_1 = V1RandomImageFormatConstraints();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1 = sysmem::V2CopyFromV1ImageFormatConstraints(allocator, snap_1->value()).take_value();
@@ -473,8 +461,8 @@ TEST(SysmemVersion, ImageFormatConstraints) {
 }
 
 TEST(SysmemVersion, BufferMemoryConstraints) {
-  fidl::HeapAllocator allocator;
   for (uint32_t run = 0; run < kRunCount; ++run) {
+    fidl::FidlAllocator allocator;
     auto v1_1 = V1RandomBufferMemoryConstraints();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2 = sysmem::V2CopyFromV1BufferMemoryConstraints(allocator, snap_1->value()).take_value();
@@ -487,8 +475,8 @@ TEST(SysmemVersion, BufferMemoryConstraints) {
 }
 
 TEST(SysmemVersion, ImageFormat) {
-  fidl::HeapAllocator allocator;
   for (uint32_t run = 0; run < kRunCount; ++run) {
+    fidl::FidlAllocator allocator;
     auto v1_1 = V1RandomImageFormat();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2 = sysmem::V2CopyFromV1ImageFormat(allocator, snap_1->value()).take_value();
@@ -501,8 +489,8 @@ TEST(SysmemVersion, ImageFormat) {
 }
 
 TEST(SysmemVersion, BufferMemorySettings) {
-  fidl::HeapAllocator allocator;
   for (uint32_t run = 0; run < kRunCount; ++run) {
+    fidl::FidlAllocator allocator;
     auto v1_1 = V1RandomBufferMemorySettings();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1 = sysmem::V2CopyFromV1BufferMemorySettings(allocator, snap_1->value());
@@ -514,8 +502,8 @@ TEST(SysmemVersion, BufferMemorySettings) {
 }
 
 TEST(SysmemVersion, SingleBufferSettings) {
-  fidl::HeapAllocator allocator;
   for (uint32_t run = 0; run < kRunCount; ++run) {
+    fidl::FidlAllocator allocator;
     auto v1_1 = V1RandomSingleBufferSettings();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1_result = sysmem::V2CopyFromV1SingleBufferSettings(allocator, snap_1->value());
@@ -540,8 +528,8 @@ TEST(SysmemVersion, SingleBufferSettings) {
 }
 
 TEST(SysmemVersion, VmoBuffer) {
-  fidl::HeapAllocator allocator;
   for (uint32_t run = 0; run < kRunCount; ++run) {
+    fidl::FidlAllocator allocator;
     auto v1_1 = V1RandomVmoBuffer();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1 = sysmem::V2MoveFromV1VmoBuffer(allocator, std::move(snap_1->value()));
@@ -562,8 +550,8 @@ TEST(SysmemVersion, VmoBuffer) {
 }
 
 TEST(SysmemVersion, BufferCollectionInfo) {
-  fidl::HeapAllocator allocator;
   for (uint32_t run = 0; run < kRunCount; ++run) {
+    fidl::FidlAllocator allocator;
     auto v1_1 = V1RandomBufferCollectionInfo();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1_result =
@@ -591,8 +579,8 @@ TEST(SysmemVersion, BufferCollectionInfo) {
 }
 
 TEST(SysmemVersion, BufferCollectionConstraints) {
-  fidl::HeapAllocator allocator;
   for (uint32_t run = 0; run < kRunCount; ++run) {
+    fidl::FidlAllocator allocator;
     auto v1_1 = V1RandomBufferCollectionConstraints();
     auto v1_aux_1 = V1RandomBufferCollectionConstraintsAuxBuffers();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
@@ -608,9 +596,14 @@ TEST(SysmemVersion, BufferCollectionConstraints) {
         has_aux ? &snap_aux_1->value() : nullptr;
     auto v2 = sysmem::V2CopyFromV1BufferCollectionConstraints(allocator, maybe_main, maybe_aux)
                   .take_value();
+    auto v2_clone = sysmem::V2CloneBufferCollectionConstraints(allocator, v2);
     auto v1_2_result = sysmem::V1CopyFromV2BufferCollectionConstraints(v2);
     EXPECT_TRUE(v1_2_result.is_ok());
     auto v1_2_pair = v1_2_result.take_value();
+
+    auto v2_snap = SnapMoveFrom(std::move(v2));
+    auto v2_clone_snap = SnapMoveFrom(std::move(v2_clone));
+    EXPECT_TRUE(IsEqual(*v2_snap, *v2_clone_snap));
 
     if (has_main) {
       auto v1_2_optional = std::move(v1_2_pair.first);
@@ -635,8 +628,8 @@ TEST(SysmemVersion, BufferCollectionConstraints) {
 }
 
 TEST(SysmemVersion, CoherencyDomainSupport) {
-  fidl::HeapAllocator allocator;
   for (uint32_t run = 0; run < kRunCount; ++run) {
+    fidl::FidlAllocator allocator;
     bool cpu_supported;
     bool ram_supported;
     bool inaccessible_supported;
@@ -661,8 +654,8 @@ TEST(SysmemVersion, CoherencyDomainSupport) {
 }
 
 TEST(SysmemVersion, HeapProperties) {
-  fidl::HeapAllocator allocator;
   for (uint32_t run = 0; run < kRunCount; ++run) {
+    fidl::FidlAllocator allocator;
     bool cpu_supported;
     bool ram_supported;
     bool inaccessible_supported;

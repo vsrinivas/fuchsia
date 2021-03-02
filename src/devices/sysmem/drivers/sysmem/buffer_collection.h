@@ -126,7 +126,8 @@ class BufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interf
   std::optional<zx_status_t> async_failure_result_;
   fit::function<void(zx_status_t)> error_handler_;
 
-  LogicalBufferCollection::FidlAllocator& allocator_;
+  // Cached from LogicalBufferCollection.
+  TableSet& table_set_;
 
   // Client end of a BufferCollectionEvents channel, for the local server to
   // send events to the remote client.  All of the messages in this interface
@@ -148,15 +149,15 @@ class BufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interf
   //     SetConstraints()
   //
   // Either way, the constraints here are in v2 form.
-  std::optional<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints> constraints_;
+  std::optional<TableHolder<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>> constraints_;
 
   // Stash BufferUsage aside for benefit of GetUsageBasedRightsAttenuation() despite
   // TakeConstraints().
-  std::optional<llcpp::fuchsia::sysmem2::wire::BufferUsage> usage_;
+  std::optional<TableHolder<llcpp::fuchsia::sysmem2::wire::BufferUsage>> usage_;
 
   // Temporarily holds fuchsia.sysmem.BufferCollectionConstraintsAuxBuffers until SetConstraints()
   // arrives.
-  std::optional<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers>
+  std::optional<TableHolder<llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>>
       constraints_aux_buffers_;
 
   // FIDL protocol enforcement.

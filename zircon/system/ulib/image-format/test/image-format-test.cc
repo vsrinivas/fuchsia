@@ -18,7 +18,7 @@ namespace sysmem_v1 = llcpp::fuchsia::sysmem;
 namespace sysmem_v2 = llcpp::fuchsia::sysmem2;
 
 TEST(ImageFormat, LinearComparison_V2_LLCPP) {
-  fidl::HeapAllocator allocator;
+  fidl::FidlAllocator allocator;
   sysmem_v2::wire::PixelFormat plain(allocator);
   plain.set_type(allocator, sysmem_v2::wire::PixelFormatType::BGRA32);
 
@@ -97,7 +97,7 @@ TEST(ImageFormat, LinearComparison_V1_C) {
 }
 
 TEST(ImageFormat, LinearRowBytes_V2_LLCPP) {
-  fidl::HeapAllocator allocator;
+  fidl::FidlAllocator allocator;
   sysmem_v2::wire::PixelFormat linear(allocator);
   linear.set_type(allocator, sysmem_v2::wire::PixelFormatType::BGRA32);
   linear.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR);
@@ -161,7 +161,7 @@ TEST(ImageFormat, LinearRowBytes_V1_C) {
 }
 
 TEST(ImageFormat, InvalidColorSpace_V1_LLCPP) {
-  fidl::HeapAllocator allocator;
+  fidl::FidlAllocator allocator;
   auto sysmem_format_result = ImageFormatConvertZxToSysmem_v1(allocator, ZX_PIXEL_FORMAT_RGB_565);
   EXPECT_TRUE(sysmem_format_result.is_ok());
   auto sysmem_format = sysmem_format_result.take_value();
@@ -172,7 +172,7 @@ TEST(ImageFormat, InvalidColorSpace_V1_LLCPP) {
 }
 
 TEST(ImageFormat, ZxPixelFormat_V2_LLCPP) {
-  fidl::HeapAllocator allocator;
+  fidl::FidlAllocator allocator;
   zx_pixel_format_t pixel_formats[] = {
       ZX_PIXEL_FORMAT_RGB_565,   ZX_PIXEL_FORMAT_RGB_332,  ZX_PIXEL_FORMAT_RGB_2220,
       ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888, ZX_PIXEL_FORMAT_MONO_8,
@@ -220,7 +220,7 @@ TEST(ImageFormat, ZxPixelFormat_V2_LLCPP) {
 }
 
 TEST(ImageFormat, ZxPixelFormat_V1_LLCPP) {
-  fidl::HeapAllocator allocator;
+  fidl::FidlAllocator allocator;
   zx_pixel_format_t pixel_formats[] = {
       ZX_PIXEL_FORMAT_RGB_565,   ZX_PIXEL_FORMAT_RGB_332,  ZX_PIXEL_FORMAT_RGB_2220,
       ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888, ZX_PIXEL_FORMAT_MONO_8,
@@ -316,7 +316,7 @@ TEST(ImageFormat, ZxPixelFormat_V1_C) {
 }
 
 TEST(ImageFormat, PlaneByteOffset_V2_LLCPP) {
-  fidl::HeapAllocator allocator;
+  fidl::FidlAllocator allocator;
   sysmem_v2::wire::PixelFormat linear(allocator);
   linear.set_type(allocator, sysmem_v2::wire::PixelFormatType::BGRA32);
   linear.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR);
@@ -468,7 +468,7 @@ TEST(ImageFormat, PlaneByteOffset_V1_C) {
 }
 
 TEST(ImageFormat, TransactionEliminationFormats_V2_LLCPP) {
-  fidl::HeapAllocator allocator;
+  fidl::FidlAllocator allocator;
   sysmem_v2::wire::PixelFormat format(allocator);
   format.set_type(allocator, sysmem_v2::wire::PixelFormatType::BGRA32);
   format.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR);
@@ -561,7 +561,7 @@ TEST(ImageFormat, TransactionEliminationFormats_V1_LLCPP) {
 }
 
 TEST(ImageFormat, BasicSizes_V2_LLCPP) {
-  fidl::HeapAllocator allocator;
+  fidl::FidlAllocator allocator;
   constexpr uint32_t kWidth = 64;
   constexpr uint32_t kHeight = 128;
   constexpr uint32_t kStride = kWidth * 6;

@@ -20,8 +20,8 @@ class BufferCollectionToken;
 
 class BufferCollectionToken
     : public llcpp::fuchsia::sysmem::BufferCollectionToken::RawChannelInterface,
-                              public LoggingMixin,
-                              public fbl::RefCounted<BufferCollectionToken> {
+      public LoggingMixin,
+      public fbl::RefCounted<BufferCollectionToken> {
  public:
   ~BufferCollectionToken();
 
@@ -75,6 +75,8 @@ class BufferCollectionToken
 
   Device* parent_device_ = nullptr;
   fbl::RefPtr<LogicalBufferCollection> parent_;
+  // Cached from parent_.
+  TableSet& table_set_;
   // 1 bit means the right is allowed.  0 bit means the right is attenuated.
   //
   // TODO(fxbug.dev/50578): Finish plumbing this.

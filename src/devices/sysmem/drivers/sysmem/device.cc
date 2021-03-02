@@ -86,11 +86,12 @@ llcpp::fuchsia::sysmem2::wire::HeapProperties BuildHeapPropertiesWithCoherencyDo
 class SystemRamMemoryAllocator : public MemoryAllocator {
  public:
   SystemRamMemoryAllocator(Owner* parent_device)
-      : MemoryAllocator(BuildHeapPropertiesWithCoherencyDomainSupport(
-            true /*cpu*/, true /*ram*/, true /*inaccessible*/,
-            // Zircon guarantees created VMO are filled with 0; sysmem doesn't
-            // need to clear it once again.
-            false /*need_clear*/)) {
+      : MemoryAllocator(parent_device->table_set(),
+                        BuildHeapPropertiesWithCoherencyDomainSupport(
+                            true /*cpu*/, true /*ram*/, true /*inaccessible*/,
+                            // Zircon guarantees created VMO are filled with 0; sysmem doesn't
+                            // need to clear it once again.
+                            false /*need_clear*/)) {
     node_ = parent_device->heap_node()->CreateChild("SysmemRamMemoryAllocator");
     node_.CreateUint("id", id(), &properties_);
   }
@@ -129,11 +130,12 @@ class SystemRamMemoryAllocator : public MemoryAllocator {
 class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
  public:
   explicit ContiguousSystemRamMemoryAllocator(Owner* parent_device)
-      : MemoryAllocator(BuildHeapPropertiesWithCoherencyDomainSupport(
-            true /*cpu*/, true /*ram*/, true /*inaccessible*/,
-            // Zircon guarantees contagious VMO created are filled with 0;
-            // sysmem doesn't need to clear it once again.
-            false /*need_clear*/)),
+      : MemoryAllocator(parent_device->table_set(),
+                        BuildHeapPropertiesWithCoherencyDomainSupport(
+                            true /*cpu*/, true /*ram*/, true /*inaccessible*/,
+                            // Zircon guarantees contagious VMO created are filled with 0;
+                            // sysmem doesn't need to clear it once again.
+                            false /*need_clear*/)),
         parent_device_(parent_device) {
     node_ = parent_device_->heap_node()->CreateChild("ContiguousSystemRamMemoryAllocator");
     node_.CreateUint("id", id(), &properties_);
@@ -314,6 +316,8 @@ void Device::CheckForUnbind() {
   loop_.Quit();
 }
 
+TableSet& Device::table_set() { return table_set_; }
+
 zx_status_t Device::Bind() {
   // Put everything under a node called "sysmem" because there's currently there's not a simple way
   // to distinguish (using a selector) which driver inspect information is coming from.
@@ -484,6 +488,7 @@ zx_status_t Device::SysmemConnect(zx::channel allocator_request) {
   // The Allocator is channel-owned / self-owned.
   return async::PostTask(loop_.dispatcher(),
                          [this, allocator_request = std::move(allocator_request)]() mutable {
+                           table_set_.MitigateChurn();
                            // The Allocator is channel-owned / self-owned.
                            Allocator::CreateChannelOwned(std::move(allocator_request), this);
                          });
@@ -499,6 +504,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
 
   return async::PostTask(
       loop_.dispatcher(), [this, heap, heap_connection = std::move(heap_connection)]() mutable {
+        table_set_.MitigateChurn();
         // Clean up heap allocator after peer closed channel.
         auto wait_for_close = std::make_unique<async::Wait>(
             heap_connection.get(), ZX_CHANNEL_PEER_CLOSED, 0,
@@ -532,7 +538,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
             // heap restart.
             device_->allocators_[heap_] = std::make_unique<ExternalMemoryAllocator>(
                 device_, std::move(*heap_client_), std::move(wait_for_close_),
-                sysmem::V2CloneHeapProperties(device_->fidl_allocator_, event->properties));
+                sysmem::V2CloneHeapProperties(device_->table_set_.allocator(), event->properties));
           }
 
           void Unbound(fidl::UnbindInfo info) override {
@@ -569,6 +575,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
   return async::PostTask(
       loop_.dispatcher(), [this, secure_mem_connection = std::move(secure_mem_connection),
                            close_is_abort = current_close_is_abort_]() mutable {
+        table_set_.MitigateChurn();
         // This code must run asynchronously for two reasons:
         // 1) It does synchronous IPCs to the secure mem device, so SysmemRegisterSecureMem must
         // have return so the call from the secure mem device is unblocked.
@@ -703,6 +710,7 @@ zx_status_t Device::SysmemUnregisterSecureMem() {
   current_close_is_abort_.reset();
   return async::PostTask(loop_.dispatcher(), [this]() {
     LOG(DEBUG, "begin UnregisterSecureMem()");
+    table_set_.MitigateChurn();
     secure_mem_.reset();
     LOG(DEBUG, "end UnregisterSecureMem()");
   });

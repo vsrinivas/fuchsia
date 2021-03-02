@@ -36,8 +36,10 @@ class FakeOwner : public MemoryAllocator::Owner {
     return zx::vmo::create(size, 0u, vmo_out);
   }
   inspect::Node* heap_node() override { return heap_node_; }
+  TableSet& table_set() override { return table_set_; }
 
  private:
+  TableSet table_set_;
   inspect::Node* heap_node_;
   zx::bti bti_;
 };

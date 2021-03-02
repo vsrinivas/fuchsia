@@ -148,6 +148,11 @@ class AnyAllocator {
 template <size_t initial_capacity = 512>
 class FidlAllocator : public AnyAllocator {
  public:
+  // Can't move because destructor pointers can point within initial_buffer_.
+  FidlAllocator(FidlAllocator&& to_move) = delete;
+  // Copying an allocator doesn't make sense.
+  FidlAllocator(FidlAllocator& to_copy) = delete;
+
   FidlAllocator() : AnyAllocator(initial_buffer_, initial_capacity) {}
 
   // Deallocate anything allocated by the allocator. After this call, the allocator is in the

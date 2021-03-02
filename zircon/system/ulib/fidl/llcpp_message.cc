@@ -322,6 +322,19 @@ OutgoingToIncomingMessageResult OutgoingToIncomingMessage(OutgoingMessage& input
       ZX_OK, std::move(buf_bytes), std::move(buf_handles));
 }
 
+OutgoingToIncomingMessageResult::OutgoingToIncomingMessageResult(
+    OutgoingToIncomingMessageResult&& to_move) {
+  // struct copy
+  incoming_message_ = to_move.incoming_message_;
+  // Prevent to_move from deleting handles.
+  to_move.incoming_message_.num_handles = 0;
+
+  status_ = to_move.status_;
+
+  buf_bytes_ = std::move(to_move.buf_bytes_);
+  buf_handles_ = std::move(to_move.buf_handles_);
+}
+
 OutgoingToIncomingMessageResult::~OutgoingToIncomingMessageResult() {
   // Ensure handles are closed before handle array is freed.
   FidlHandleInfoCloseMany(incoming_message_.handles, incoming_message_.num_handles);

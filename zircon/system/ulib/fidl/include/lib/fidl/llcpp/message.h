@@ -397,6 +397,7 @@ using DecodedMessage = typename FidlType::DecodedMessage;
 // conversion.
 class OutgoingToIncomingMessageResult {
  public:
+  OutgoingToIncomingMessageResult(OutgoingToIncomingMessageResult&& to_move);
   explicit OutgoingToIncomingMessageResult(fidl_incoming_msg_t incoming_message, zx_status_t status,
                                            std::unique_ptr<uint8_t[]> buf_bytes,
                                            std::unique_ptr<zx_handle_info_t[]> buf_handles)

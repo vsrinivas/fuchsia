@@ -69,6 +69,7 @@ void BufferCollectionToken::Duplicate(uint32_t rights_attenuation_mask,
                                       DuplicateCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollectionToken::Duplicate", "this", this, "parent", parent_.get());
   LogInfo(FROM_HERE, "BufferCollectionToken::Duplicate()");
+  table_set_.MitigateChurn();
   if (is_done_) {
     // Probably a Close() followed by Duplicate(), which is illegal and
     // causes the whole LogicalBufferCollection to fail.
@@ -87,6 +88,7 @@ void BufferCollectionToken::Duplicate(uint32_t rights_attenuation_mask,
 
 void BufferCollectionToken::Sync(SyncCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollectionToken::Sync", "this", this, "parent", parent_.get());
+  table_set_.MitigateChurn();
   if (is_done_) {
     // Probably a Close() followed by Sync(), which is illegal and
     // causes the whole LogicalBufferCollection to fail.
@@ -98,6 +100,7 @@ void BufferCollectionToken::Sync(SyncCompleter::Sync& completer) {
 
 // Clean token close without causing LogicalBufferCollection failure.
 void BufferCollectionToken::Close(CloseCompleter::Sync&) {
+  table_set_.MitigateChurn();
   if (is_done_ || buffer_collection_request_) {
     FailAsync(FROM_HERE, ZX_ERR_BAD_STATE,
               "BufferCollectionToken::Close() when already is_done_ || "
@@ -149,11 +152,13 @@ zx::channel BufferCollectionToken::TakeBufferCollectionRequest() {
 
 void BufferCollectionToken::SetName(uint32_t priority, fidl::StringView name,
                                     SetNameCompleter::Sync&) {
+  table_set_.MitigateChurn();
   parent_->SetName(priority, std::string(name.begin(), name.end()));
 }
 
 void BufferCollectionToken::SetDebugClientInfo(fidl::StringView name, uint64_t id,
                                                SetDebugClientInfoCompleter::Sync&) {
+  table_set_.MitigateChurn();
   SetDebugClientInfo(std::string(name.begin(), name.end()), id);
 }
 
@@ -172,6 +177,7 @@ void BufferCollectionToken::SetDebugClientInfo(std::string name, uint64_t id) {
 
 void BufferCollectionToken::SetDebugTimeoutLogDeadline(int64_t deadline,
                                                        SetDebugTimeoutLogDeadlineCompleter::Sync&) {
+  table_set_.MitigateChurn();
   parent_->SetDebugTimeoutLogDeadline(deadline);
 }
 
@@ -181,6 +187,7 @@ BufferCollectionToken::BufferCollectionToken(Device* parent_device,
     : LoggingMixin("BufferCollectionToken"),
       parent_device_(parent_device),
       parent_(parent),
+      table_set_(parent->table_set()),
       rights_attenuation_mask_(rights_attenuation_mask) {
   TRACE_DURATION("gfx", "BufferCollectionToken::BufferCollectionToken", "this", this, "parent",
                  parent_.get());

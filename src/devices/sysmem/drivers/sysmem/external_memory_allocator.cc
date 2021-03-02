@@ -13,7 +13,7 @@ ExternalMemoryAllocator::ExternalMemoryAllocator(
     MemoryAllocator::Owner* owner, fidl::Client<llcpp::fuchsia::sysmem2::Heap> heap,
     std::unique_ptr<async::Wait> wait_for_close,
     llcpp::fuchsia::sysmem2::wire::HeapProperties properties)
-    : MemoryAllocator(std::move(properties)),
+    : MemoryAllocator(owner->table_set(), std::move(properties)),
       owner_(owner),
       heap_(std::move(heap)),
       wait_for_close_(std::move(wait_for_close)) {

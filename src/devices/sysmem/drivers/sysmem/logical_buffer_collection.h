@@ -10,7 +10,7 @@
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl-async-2/fidl_struct.h>
-#include <lib/fidl/llcpp/heap_allocator.h>
+#include <lib/fidl/llcpp/fidl_allocator.h>
 #include <lib/zx/channel.h>
 
 #include <list>
@@ -23,6 +23,7 @@
 #include "binding_handle.h"
 #include "device.h"
 #include "logging.h"
+#include "table_set.h"
 
 namespace sysmem_driver {
 
@@ -44,15 +45,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
     zx_koid_t id{};
   };
 
-  // In sysmem_tests, the max needed was observed to be 12400 bytes, so if we wanted to avoid heap
-  // for allocating FIDL table fields, 32KiB would likely be enough most of the time.  However, the
-  // difference isn't even reliably measurable sign out of the ~410us +/- ~10us  it takes to
-  // allocate a collection with only 4KiB buffer space total on astro.
-  //
-  // The time cost of zeroing VMO buffer space is far higher than anything controlled by this
-  // number, so it'd be more fruitful to focus there before here.
-  static constexpr size_t kBufferThenHeapAllocatorSize = 1;
-  using FidlAllocator = fidl::BufferThenHeapAllocator<kBufferThenHeapAllocatorSize>;
+  using FidlAllocator = fidl::FidlAllocator<>;
   using CollectionMap = std::map<BufferCollection*, BindingHandle<BufferCollection>>;
 
   ~LogicalBufferCollection();
@@ -111,9 +104,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   const CollectionMap& collection_views() const { return collection_views_; }
 
-  // The returned allocator& lasts as long as the LogicalBufferCollection, which is long enough
-  // for child BufferCollection(s) to use the allocator.
-  FidlAllocator& fidl_allocator() { return allocator_; }
+  TableSet& table_set() { return table_set_; }
 
   std::optional<std::string> name() const {
     return name_ ? std::make_optional(name_->name) : std::optional<std::string>();
@@ -124,15 +115,29 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
  private:
   enum class CheckSanitizeStage { kInitial, kNotAggregated, kAggregated };
 
-  struct Constraints {
+  class Constraints {
+   public:
     Constraints(const Constraints&) = delete;
     Constraints(Constraints&&) = default;
-    Constraints(llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints&& constraints,
-                ClientInfo&& client)
-        : constraints(std::move(constraints)), client(std::move(client)) {}
+    Constraints(TableSet& table_set,
+                llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints&& constraints,
+                ClientInfo&& client_info)
+        : constraints_(table_set, std::move(constraints)), client_info_(std::move(client_info)) {}
 
-    llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints constraints;
-    ClientInfo client;
+    const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints() const {
+      return *constraints_;
+    }
+
+    llcpp::fuchsia::sysmem2::BufferCollectionConstraints& mutate_constraints() {
+      return constraints_.mutate();
+    }
+
+    ClientInfo& client_info() { return client_info_; }
+    const ClientInfo& client_info() const { return client_info_; }
+
+   private:
+    TableHolder<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints> constraints_;
+    ClientInfo client_info_;
   };
 
   struct CollectionName {
@@ -219,8 +224,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   bool IsColorSpaceEqual(const llcpp::fuchsia::sysmem2::wire::ColorSpace& a,
                          const llcpp::fuchsia::sysmem2::wire::ColorSpace& b);
 
-  fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo, zx_status_t> Allocate(
-      fidl::Allocator& result_allocator);
+  fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo, zx_status_t> Allocate();
 
   fit::result<zx::vmo> AllocateVmo(
       MemoryAllocator* allocator,
@@ -235,7 +239,10 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   Device* parent_device_ = nullptr;
 
-  FidlAllocator allocator_;
+  // We occasionally swap out the allocator for a fresh one, to avoid the possibilty of churn
+  // leading to excessive un-used memory allocation in the allocator.  This is accomplished via
+  // TableHolder and TableSet.
+  TableSet table_set_;
 
   using TokenMap = std::map<BufferCollectionToken*, BindingHandle<BufferCollectionToken>>;
   TokenMap token_views_;
@@ -248,14 +255,16 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   bool is_allocate_attempted_ = false;
 
-  std::optional<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints> constraints_;
+  std::optional<TableHolder<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints>>
+      constraints_;
 
   // Iff true, initial allocation has been attempted and has succeeded or
   // failed.  Both allocation_result_status_ and allocation_result_info_ are
   // not meaningful until has_allocation_result_ is true.
   bool has_allocation_result_ = false;
   zx_status_t allocation_result_status_ = ZX_OK;
-  std::optional<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo> allocation_result_info_;
+  std::optional<TableHolder<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo>>
+      allocation_result_info_;
 
   MemoryAllocator* memory_allocator_ = nullptr;
   std::optional<CollectionName> name_;
