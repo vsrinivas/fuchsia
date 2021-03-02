@@ -136,11 +136,7 @@
 // current compilation unit (either via direct calls, or function pointers).
 //
 // May help the compiler optimize calls to the function in some cases.
-#if !defined(__clang__)
 #define __LEAF_FN __attribute__((__leaf__))
-#else
-#define __LEAF_FN
-#endif
 
 // Mark the given function or variable as `constexpr`.
 //
