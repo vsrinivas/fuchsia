@@ -46,8 +46,6 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
     return fit::error(ZX_ERR_BAD_STATE);
   }
 
-  auto services = CreateAndServeSessionmgrServices();
-
   auto done = [this](SessionContextImpl::ShutDownReason shutdown_reason) {
     OnSessionShutdown(shutdown_reason);
   };
@@ -62,7 +60,7 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
       session_launcher_service_dir_.CloneChannel().TakeChannel();
   session_context_ = std::make_unique<SessionContextImpl>(
       launcher_, base_environment_, std::move(sessionmgr_app_config), config_accessor_,
-      std::move(view_token), std::move(services), std::move(services_from_session_launcher),
+      std::move(view_token), std::move(services_from_session_launcher),
       /*get_presentation=*/
       [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));
@@ -124,17 +122,6 @@ void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutd
   };
 
   delete_session_context();
-}
-
-fuchsia::sys::ServiceListPtr SessionProvider::CreateAndServeSessionmgrServices() {
-  fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
-  sessionmgr_service_dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-                                dir_handle.NewRequest().TakeChannel());
-
-  auto services = fuchsia::sys::ServiceList::New();
-  services->host_directory = dir_handle.TakeChannel();
-
-  return services;
 }
 
 }  // namespace modular

@@ -14,14 +14,14 @@
 
 namespace modular {
 
-SessionContextImpl::SessionContextImpl(
-    fuchsia::sys::Launcher* const launcher, fuchsia::sys::Environment* const base_environment,
-    fuchsia::modular::session::AppConfig sessionmgr_app_config,
-    const modular::ModularConfigAccessor* const config_accessor,
-    fuchsia::ui::views::ViewToken view_token,
-    fuchsia::sys::ServiceListPtr additional_services_for_sessionmgr,
-    fuchsia::sys::ServiceList additional_services_for_agents,
-    GetPresentationCallback get_presentation, OnSessionShutdownCallback on_session_shutdown)
+SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher,
+                                       fuchsia::sys::Environment* const base_environment,
+                                       fuchsia::modular::session::AppConfig sessionmgr_app_config,
+                                       const modular::ModularConfigAccessor* const config_accessor,
+                                       fuchsia::ui::views::ViewToken view_token,
+                                       fuchsia::sys::ServiceList additional_services_for_agents,
+                                       GetPresentationCallback get_presentation,
+                                       OnSessionShutdownCallback on_session_shutdown)
     : session_context_binding_(this),
       get_presentation_(std::move(get_presentation)),
       on_session_shutdown_(std::move(on_session_shutdown)),
@@ -57,7 +57,7 @@ SessionContextImpl::SessionContextImpl(
   // Launch Sessionmgr in the current environment.
   sessionmgr_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
       launcher, std::move(sessionmgr_app_config), data_origin,
-      std::move(additional_services_for_sessionmgr), std::move(config_namespace));
+      /*additional_services=*/nullptr, std::move(config_namespace));
 
   // Initialize the Sessionmgr service.
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());

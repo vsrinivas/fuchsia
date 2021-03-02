@@ -47,15 +47,10 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   using GetPresentationCallback =
       fit::function<void(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request)>;
 
-  // |additional_services| are services that will be installed into the
-  // Sessionmgr's namespace, including an implementation of
-  // `fuchsia.intl.PropertyProvider`.
-  SessionContextImpl(fuchsia::sys::Launcher* launcher,
-                     fuchsia::sys::Environment* base_environment,
+  SessionContextImpl(fuchsia::sys::Launcher* launcher, fuchsia::sys::Environment* base_environment,
                      fuchsia::modular::session::AppConfig sessionmgr_app_config,
                      const modular::ModularConfigAccessor* config_accessor,
                      fuchsia::ui::views::ViewToken view_token,
-                     fuchsia::sys::ServiceListPtr additional_services_for_sessionmgr,
                      fuchsia::sys::ServiceList additional_services_for_agents,
                      GetPresentationCallback get_presentation,
                      OnSessionShutdownCallback on_session_shutdown);

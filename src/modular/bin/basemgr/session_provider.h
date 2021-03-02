@@ -67,10 +67,6 @@ class SessionProvider {
   bool is_session_running() const { return !!session_context_; }
 
  private:
-  // Returns a service list for serving |fuchsia.intl.PropertyProvider| to sessionmgr,
-  // served from |sessionmgr_service_dir_|.
-  fuchsia::sys::ServiceListPtr CreateAndServeSessionmgrServices();
-
   Delegate* const delegate_;                                            // Neither owned nor copied.
   fuchsia::sys::Launcher* const launcher_;                              // Not owned.
   fuchsia::sys::Environment* const base_environment_;                   // Not owned.

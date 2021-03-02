@@ -13,9 +13,7 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.hardware.power.statecontrol.Admin",
-            "fuchsia.settings.Intl",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",

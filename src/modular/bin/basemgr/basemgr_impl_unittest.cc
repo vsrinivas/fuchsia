@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <fuchsia/devicesettings/cpp/fidl.h>
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
-#include <fuchsia/settings/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -21,7 +19,6 @@
 #include "src/lib/files/file.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
-#include "src/modular/lib/modular_test_harness/cpp/fake_settings_intl.h"
 
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 
@@ -39,11 +36,6 @@ class BasemgrImplTest : public sys::testing::TestWithEnvironment,
                                      "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"},
         fuchsia::cobalt::LoggerFactory::Name_);
 
-    env_services->AddServiceWithLaunchInfo(
-        fuchsia::sys::LaunchInfo{.url = "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
-                                        "device_settings_manager.cmx"},
-        fuchsia::devicesettings::DeviceSettingsManager::Name_);
-
     env_services->AddService(scenic_lifecycle_controller_bindings_.GetHandler(this));
     env_services->AddService(std::make_unique<vfs::Service>(
                                  [presenter_channels = std::vector<zx::channel>()](
@@ -51,9 +43,6 @@ class BasemgrImplTest : public sys::testing::TestWithEnvironment,
                                    presenter_channels.push_back(std::move(channel));
                                  }),
                              fuchsia::ui::policy::Presenter::Name_);
-
-    settings_ = modular_testing::FakeSettingsIntl::CreateWithDefaultOptions();
-    env_services->AddService(settings_->GetHandler(), fuchsia::settings::Intl::Name_);
 
     env_ = CreateNewEnclosingEnvironment("basemgr_impl_unittest_env", std::move(env_services),
                                          {.inherit_parent_services = true});
@@ -141,7 +130,6 @@ class BasemgrImplTest : public sys::testing::TestWithEnvironment,
   int ui_lifecycle_terminate_calls_ = 0;
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
-  std::unique_ptr<modular_testing::FakeSettingsIntl> settings_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fidl::BindingSet<fuchsia::ui::lifecycle::LifecycleController>
       scenic_lifecycle_controller_bindings_;
