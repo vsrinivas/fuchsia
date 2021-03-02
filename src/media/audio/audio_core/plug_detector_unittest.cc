@@ -77,7 +77,7 @@ class PlugDetectorTest : public gtest::RealLoopFixture,
     ASSERT_EQ(fdio_ns_get_installed(&ns_), ZX_OK);
     zx::channel c1, c2;
 
-    // Serve up the emulated audio-input[-2] directory
+    // Serve up the emulated audio-input[-n] directory
     ASSERT_EQ(zx::channel::create(0, &c1, &c2), ZX_OK);
     ASSERT_EQ(vfs_.Serve(input_dir_, fidl::ServerEnd<llcpp::fuchsia::io::Node>(std::move(c1)),
                          fs::VnodeConnectionOptions::ReadOnly()),
@@ -86,7 +86,7 @@ class PlugDetectorTest : public gtest::RealLoopFixture,
                            c2.release()),
               ZX_OK);
 
-    // Serve up the emulated audio-output[-2] directory
+    // Serve up the emulated audio-output[-n] directory
     ASSERT_EQ(zx::channel::create(0, &c1, &c2), ZX_OK);
     ASSERT_EQ(vfs_.Serve(output_dir_, fidl::ServerEnd<llcpp::fuchsia::io::Node>(std::move(c1)),
                          fs::VnodeConnectionOptions::ReadOnly()),
@@ -119,16 +119,16 @@ class PlugDetectorTest : public gtest::RealLoopFixture,
     }
   };
 
-  // Adds a |FakeAudioDevice| to the emulated 'audio-input[-2]' directory that has been installed in
-  // the local namespace at /dev/class/audio-input[-2].
+  // Adds a |FakeAudioDevice| to the emulated 'audio-input-n' directory that has been installed in
+  // the local namespace at /dev/class/audio-input-n.
   ScopedDirent AddInputDevice(FakeAudioDevice* device) {
     auto name = std::to_string(next_input_device_number_++);
     FX_CHECK(ZX_OK == input_dir_->AddEntry(name, device->AsService()));
     return {name, input_dir_};
   }
 
-  // Adds a |FakeAudioDevice| to the emulated 'audio-output' directory that has been installed in
-  // the local namespace at /dev/class/audio-output.
+  // Adds a |FakeAudioDevice| to the emulated 'audio-output-n' directory that has been installed in
+  // the local namespace at /dev/class/audio-output-n.
   ScopedDirent AddOutputDevice(FakeAudioDevice* device) {
     auto name = std::to_string(next_output_device_number_++);
     FX_CHECK(ZX_OK == output_dir_->AddEntry(name, device->AsService()));
@@ -201,8 +201,9 @@ TEST_P(PlugDetectorTest, DetectHotplugDevices) {
   plug_detector->Stop();
 }
 
-// This allows us to pick /dev/class/audio-input and /dev/class/audio-input-2 (similar for output).
-INSTANTIATE_TEST_SUITE_P(PlugDetectorTestInstance, PlugDetectorTest, ::testing::Values("", "-2"));
+// This allows us to pick /dev/class/audio-input-2 (similar for output) and extention for future
+// versions.
+INSTANTIATE_TEST_SUITE_P(PlugDetectorTestInstance, PlugDetectorTest, ::testing::Values("-2"));
 
 }  // namespace
 }  // namespace media::audio

@@ -29,12 +29,6 @@ static const struct {
   bool is_input;
   media::audio::AudioDriverVersion version;
 } AUDIO_DEVNODES[] = {
-    {.path = "/dev/class/audio-output",
-     .is_input = false,
-     .version = media::audio::AudioDriverVersion::V1},
-    {.path = "/dev/class/audio-input",
-     .is_input = true,
-     .version = media::audio::AudioDriverVersion::V1},
     {.path = "/dev/class/audio-output-2",
      .is_input = false,
      .version = media::audio::AudioDriverVersion::V2},

@@ -13,16 +13,13 @@ namespace media::audio {
 namespace {
 
 // These tests are templated to run on both driver types
-typedef ::testing::Types<testing::FakeAudioDriverV1, testing::FakeAudioDriverV2> DriverTypes;
+typedef ::testing::Types<testing::FakeAudioDriverV2> DriverTypes;
 
 // Enable gtest to pretty-print the driver type name
 class DriverTypeNames {
  public:
   template <typename T>
   static std::string GetName(int) {
-    if constexpr (std::is_same<T, testing::FakeAudioDriverV1>()) {
-      return "AudioDriverV1";
-    }
     if constexpr (std::is_same<T, testing::FakeAudioDriverV2>()) {
       return "AudioDriverV2";
     }
@@ -75,12 +72,6 @@ class AudioDriverTest : public testing::ThreadingModelFixture {
  private:
   template <typename U>
   std::unique_ptr<AudioDriver> CreateAudioDriver() {}
-
-  template <>
-  std::unique_ptr<AudioDriver> CreateAudioDriver<testing::FakeAudioDriverV1>() {
-    return std::make_unique<AudioDriverV1>(
-        device_.get(), [this](zx::duration delay) { last_late_command_ = delay; });
-  }
 
   template <>
   std::unique_ptr<AudioDriver> CreateAudioDriver<testing::FakeAudioDriverV2>() {

@@ -94,49 +94,6 @@ TEST_F(AudioCapturerTest, CanShutdownWithUnusedBuffer) {
   RunLoopUntilIdle();
 }
 
-// The capturer is routed after AddPayloadBuffer is called.
-TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
-  EXPECT_EQ(context().link_matrix().SourceLinkCount(*capturer_), 0u);
-
-  zx::vmo duplicate;
-  ASSERT_EQ(
-      vmo_.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE | ZX_RIGHT_READ | ZX_RIGHT_MAP, &duplicate),
-      ZX_OK);
-
-  zx::channel c1, c2;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
-  auto input =
-      AudioInput::Create("", zx::channel(), &threading_model(), &context().device_manager(),
-                         &context().link_matrix(), context().clock_manager());
-  auto fake_driver =
-      testing::FakeAudioDriverV1(std::move(c1), threading_model().FidlDomain().dispatcher());
-
-  auto vmo = fake_driver.CreateRingBuffer(PAGE_SIZE);
-
-  input->driver()->Init(std::move(c2));
-  fake_driver.Start();
-  input->driver()->GetDriverInfo();
-  RunLoopUntilIdle();
-
-  input->driver()->Start();
-  fake_driver.set_formats({audio_stream_format_range_t{
-      .sample_formats = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT,
-      .min_frames_per_second = 0,
-      .max_frames_per_second = 96000,
-      .min_channels = 1,
-      .max_channels = 100,
-      .flags = 0,
-  }});
-  context().route_graph().AddDevice(input.get());
-  RunLoopUntilIdle();
-  EXPECT_EQ(context().link_matrix().SourceLinkCount(*capturer_), 0u);
-
-  fidl_capturer_->AddPayloadBuffer(0, std::move(duplicate));
-
-  RunLoopUntilIdle();
-  EXPECT_EQ(context().link_matrix().SourceLinkCount(*capturer_), 1u);
-}
-
 TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffersDriverV2) {
   EXPECT_EQ(context().link_matrix().SourceLinkCount(*capturer_), 0u);
 

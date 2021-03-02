@@ -438,42 +438,19 @@ void AudioDeviceManager::UpdateDefaultDevice(bool input) {
 
 void AudioDeviceManager::AddDeviceByVersion(zx::channel device_channel, std::string device_name,
                                             bool is_input, AudioDriverVersion version) {
-  FX_LOGS(DEBUG) << "AddingByVersion (" << (version == AudioDriverVersion::V1 ? "V1" : "V2") << ")"
-                 << (is_input ? "input" : "output") << " '" << device_name << "'";
-  switch (version) {
-    case AudioDriverVersion::V1:
-      AddDeviceByChannel(std::move(device_channel), std::move(device_name), is_input);
-      break;
-    case AudioDriverVersion::V2:
-      fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
-      stream_config.set_channel(std::move(device_channel));
-      AddDeviceByChannel2(std::move(device_name), is_input, std::move(stream_config));
-      break;
-  }
+  ZX_DEBUG_ASSERT(version == AudioDriverVersion::V2);  // Only V2 supported.
+  FX_LOGS(DEBUG) << "AddingByVersion (V2)" << (is_input ? "input" : "output") << " '" << device_name
+                 << "'";
+  fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
+  stream_config.set_channel(std::move(device_channel));
+  AddDeviceByChannel2(std::move(device_name), is_input, std::move(stream_config));
 }
 
 void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::string device_name,
                                             bool is_input) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceByChannel");
-  FX_LOGS(INFO) << "Adding " << (is_input ? "input" : "output") << " '" << device_name << "'";
-
-  // Hand the stream off to the proper type of class to manage.
-  std::shared_ptr<AudioDevice> new_device;
-  if (is_input) {
-    new_device = AudioInput::Create(device_name, std::move(device_channel), &threading_model(),
-                                    this, &link_matrix_, clock_manager_);
-  } else {
-    new_device = std::make_shared<DriverOutput>(
-        device_name, &threading_model(), this, std::move(device_channel), &link_matrix_,
-        clock_manager_, process_config_.default_volume_curve());
-  }
-
-  if (new_device == nullptr) {
-    FX_LOGS(ERROR) << "Failed to instantiate audio " << (is_input ? "input" : "output") << " for '"
-                   << device_name << "'";
-  }
-
-  AddDevice(std::move(new_device));
+  FX_LOGS(ERROR) << "Not Adding " << (is_input ? "input" : "output") << " '" << device_name << "'";
+  FX_LOGS(ERROR) << "Deprecated API";
 }
 
 void AudioDeviceManager::AddDeviceByChannel2(

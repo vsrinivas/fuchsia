@@ -231,7 +231,7 @@ static const audio_stream_unique_id_t kUniqueId = {
 static const std::string kUniqueIdString = "000102030405060708090a0b0c0d0e0f";
 }  // namespace
 
-typedef ::testing::Types<testing::FakeAudioDriverV1, testing::FakeAudioDriverV2> DriverTypes;
+typedef ::testing::Types<testing::FakeAudioDriverV2> DriverTypes;
 TYPED_TEST_SUITE(AudioDeviceEnumeratorAddByChannelTest, DriverTypes);
 
 template <typename T>
@@ -251,11 +251,6 @@ class AudioDeviceEnumeratorAddByChannelTest : public HermeticAudioTest {
  private:
   template <typename U>
   void EnumeratorAddDevice(zx::channel remote_channel) {}
-
-  template <>
-  void EnumeratorAddDevice<testing::FakeAudioDriverV1>(zx::channel remote_channel) {
-    audio_device_enumerator_->AddDeviceByChannel(std::move(remote_channel), "test device", false);
-  }
 
   template <>
   void EnumeratorAddDevice<testing::FakeAudioDriverV2>(zx::channel remote_channel) {

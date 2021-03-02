@@ -20,6 +20,8 @@
 
 namespace media::audio {
 
+class AudioDriverV2;
+
 static constexpr zx::duration TRIM_PERIOD = zx::msec(10);
 
 // Throttle output may only be owned on the FIDL thread.
@@ -35,7 +37,8 @@ class ThrottleOutput : public AudioOutput {
   // implementation that calls into the AudioDriver, because we don't have an associated driver.
   ThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
                  std::shared_ptr<AudioClockManager> clock_manager)
-      : AudioOutput("throttle", threading_model, registry, link_matrix, clock_manager),
+      : AudioOutput("throttle", threading_model, registry, link_matrix, clock_manager,
+                    std::make_unique<AudioDriverV2>(this)),
         audio_clock_(clock_manager->CreateDeviceFixed(audio::clock::CloneOfMonotonic(),
                                                       AudioClock::kMonotonicDomain)) {
     const auto ref_now = reference_clock().Read();

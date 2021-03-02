@@ -63,7 +63,6 @@ source_set("audio_core_lib") {
     "audio_device_settings.cc",
     "audio_device_settings.h",
     "audio_driver.h",
-    "audio_driver_v1.cc",
     "audio_driver_v2.cc",
     "audio_impl.h",
     "audio_input.cc",

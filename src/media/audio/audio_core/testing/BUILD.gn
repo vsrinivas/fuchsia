@@ -13,7 +13,6 @@ source_set("testing") {
     "fake_audio_clock.h",
     "fake_audio_device.h",
     "fake_audio_driver.h",
-    "fake_audio_driver_v1.cc",
     "fake_audio_driver_v2.cc",
     "fake_audio_renderer.cc",
     "fake_audio_renderer.h",

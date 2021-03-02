@@ -13,6 +13,7 @@
 
 #include "src/media/audio/audio_core/audio_clock_manager.h"
 #include "src/media/audio/audio_core/audio_device.h"
+#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/output_pipeline.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/reporter.h"
@@ -40,8 +41,6 @@ class AudioOutput : public AudioDevice {
                    fuchsia::media::AudioGainValidFlags set_flags) override;
 
  protected:
-  AudioOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
-              LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager);
   AudioOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
               LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager,
               std::unique_ptr<AudioDriver>);

@@ -299,7 +299,6 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // the AudioDeviceManager gets to call Startup and Shutdown, no one else
   // (including derived classes) should be able to.
   friend class AudioDeviceManager;
-  friend class AudioDriverV1;
   friend class AudioDriverV2;
   friend struct PendingInitListTraits;
 
