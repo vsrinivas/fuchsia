@@ -11,6 +11,7 @@ pub use self::runtime::*;
 
 mod handle;
 pub use self::handle::channel::{Channel, RecvMsg};
+pub use self::handle::on_signals::OnSignals;
 pub use self::handle::socket::Socket;
 
 /// Asynchronous networking abstractions.
@@ -19,7 +20,6 @@ pub mod net;
 #[cfg(target_os = "fuchsia")]
 pub use self::handle::{
     fifo::{Fifo, FifoEntry, FifoReadable, FifoWritable, ReadEntry, WriteEntry},
-    on_signals::OnSignals,
     rwhandle::RWHandle,
 };
 
@@ -28,8 +28,8 @@ pub use self::handle::{
 pub mod emulated_handle {
     pub use super::handle::{
         AsHandleRef, Channel, EmulatedHandleRef, Handle, HandleBased, HandleDisposition,
-        HandleInfo, HandleOp, HandleRef, MessageBuf, MessageBufEtc, ObjectType, Rights, Socket,
-        SocketOpts,
+        HandleInfo, HandleOp, HandleRef, MessageBuf, MessageBufEtc, ObjectType, Peered, Rights,
+        Signals, Socket, SocketOpts,
     };
 }
 

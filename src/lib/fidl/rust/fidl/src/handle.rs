@@ -27,7 +27,9 @@ pub mod fuchsia_handles {
     pub use zx::HandleRef;
     pub use zx::MessageBufEtc;
     pub use zx::ObjectType;
+    pub use zx::Peered;
     pub use zx::Rights;
+    pub use zx::Signals;
     pub use zx::Status;
 
     pub use fuchsia_async::invoke_for_handle_types;
@@ -72,7 +74,7 @@ pub mod non_fuchsia_handles {
 
     pub use fuchsia_async::emulated_handle::{
         AsHandleRef, EmulatedHandleRef, Handle, HandleBased, HandleDisposition, HandleInfo,
-        HandleOp, HandleRef, MessageBufEtc, ObjectType, Rights, SocketOpts,
+        HandleOp, HandleRef, MessageBufEtc, ObjectType, Peered, Rights, Signals, SocketOpts,
     };
     pub use fuchsia_zircon_status::Status;
 

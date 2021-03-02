@@ -18,6 +18,9 @@ use std::cell::Cell;
 use std::sync::Mutex;
 use std::{
     collections::VecDeque,
+    future::Future,
+    marker::PhantomData,
+    pin::Pin,
     sync::atomic::{AtomicU64, AtomicUsize, Ordering},
     task::{Context, Poll, Waker},
 };
@@ -57,6 +60,11 @@ impl<'a> HandleRef<'a> {
     pub fn invalid() -> Self {
         Self(INVALID_HANDLE, std::marker::PhantomData)
     }
+
+    /// Signal an object
+    pub fn signal(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
+        with_handle(self.0, |mut h, side| h.as_hdl_data().signal(side, clear_mask, set_mask))
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -89,6 +97,11 @@ pub trait AsHandleRef {
         self.as_handle_ref().0
     }
 
+    /// Set and clear userspace-accessible signal bits on an object.
+    fn signal_handle(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
+        self.as_handle_ref().signal(clear_mask, set_mask)
+    }
+
     /// Wraps the
     /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
     /// syscall for the ZX_INFO_HANDLE_BASIC topic.
@@ -96,22 +109,29 @@ pub trait AsHandleRef {
         if self.is_invalid() {
             return Err(zx_status::Status::BAD_HANDLE);
         }
-        let (koid_left, rights, side) = with_handle(self.raw_handle(), |h, side| match h {
-            HdlRef::Channel(hdl) => (hdl.koid_left, hdl_rights(hdl, side), side),
-            HdlRef::StreamSocket(hdl) => (hdl.koid_left, hdl_rights(hdl, side), side),
-            HdlRef::DatagramSocket(hdl) => (hdl.koid_left, hdl_rights(hdl, side), side),
+        let (koids, rights) = with_handle(self.raw_handle(), |mut h, side| {
+            let h = h.as_hdl_data();
+            (h.koids(side), h.rights(side))
         });
-        let koids = match side {
-            Side::Left => (koid_left, koid_left + 1),
-            Side::Right => (koid_left + 1, koid_left),
-        };
         let (_, _, ty, _) = unpack_handle(self.raw_handle());
         Ok(HandleBasicInfo {
             koid: Koid(koids.0),
-            rights: rights,
+            rights,
             object_type: ty.object_type(),
             related_koid: Koid(koids.1),
             reserved: 0,
+        })
+    }
+}
+
+/// A trait implemented by all handles for objects which have a peer.
+pub trait Peered: HandleBased {
+    /// Set and clear userspace-accessible signal bits on the object's peer. Wraps the
+    /// [zx_object_signal_peer](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_signal.md)
+    /// syscall.
+    fn signal_peer(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
+        with_handle(self.raw_handle(), |mut h, side| {
+            h.as_hdl_data().signal(side.opposite(), clear_mask, set_mask)
         })
     }
 }
@@ -142,17 +162,7 @@ pub trait EmulatedHandleRef: AsHandleRef {
         if self.is_invalid() {
             (0, 0)
         } else {
-            with_handle(self.as_handle_ref().0, |h, side| {
-                let koid_left = match h {
-                    HdlRef::Channel(h) => h.koid_left,
-                    HdlRef::StreamSocket(h) => h.koid_left,
-                    HdlRef::DatagramSocket(h) => h.koid_left,
-                };
-                match side {
-                    Side::Left => (koid_left, koid_left + 1),
-                    Side::Right => (koid_left + 1, koid_left),
-                }
-            })
+            with_handle(self.as_handle_ref().0, |mut h, side| h.as_hdl_data().koids(side))
         }
     }
 
@@ -305,6 +315,8 @@ impl AsHandleRef for Channel {
     }
 }
 
+impl Peered for Channel {}
+
 impl Drop for Channel {
     fn drop(&mut self) {
         hdl_close(self.0);
@@ -353,8 +365,7 @@ impl Channel {
                     std::mem::swap(handles, &mut msg.handles);
                     Poll::Ready(Ok(()))
                 } else if obj.liveness.is_open() {
-                    *obj.wakers.side_mut(side.opposite()) = Some(cx.waker().clone());
-                    Poll::Pending
+                    obj.wakers.side_mut(side.opposite()).readable.pending(cx)
                 } else {
                     Poll::Ready(Err(zx_status::Status::PEER_CLOSED))
                 }
@@ -393,12 +404,8 @@ impl Channel {
         handle_infos.clear();
         handle_infos.extend(handles.into_iter().map(|handle| {
             let h_raw = handle.raw_handle();
-            let (_, _, ty, side) = unpack_handle(h_raw);
-            let rights = with_handle(h_raw, |href, _| match href {
-                HdlRef::Channel(h) => hdl_rights(h, side),
-                HdlRef::StreamSocket(h) => hdl_rights(h, side),
-                HdlRef::DatagramSocket(h) => hdl_rights(h, side),
-            });
+            let (_, _, ty, _) = unpack_handle(h_raw);
+            let rights = with_handle(h_raw, |mut href, side| href.as_hdl_data().rights(side));
             HandleInfo { handle, object_type: ty.object_type(), rights }
         }));
         Poll::Ready(Ok(()))
@@ -419,7 +426,7 @@ impl Channel {
                 obj.q
                     .side_mut(side)
                     .push_back(ChannelMessage { bytes: bytes_vec, handles: handles_vec });
-                obj.wakers.side_mut(side).take().map(|w| w.wake());
+                obj.wakers.side_mut(side).readable.wake();
                 Ok(())
             } else {
                 unreachable!();
@@ -458,7 +465,7 @@ impl Channel {
                 obj.q
                     .side_mut(side)
                     .push_back(ChannelMessage { bytes: bytes_vec, handles: handles_vec });
-                obj.wakers.side_mut(side).take().map(|w| w.wake());
+                obj.wakers.side_mut(side).readable.wake();
                 Ok(())
             } else {
                 unreachable!();
@@ -501,6 +508,8 @@ impl AsHandleRef for Socket {
     }
 }
 
+impl Peered for Socket {}
+
 impl Drop for Socket {
     fn drop(&mut self) {
         hdl_close(self.0);
@@ -538,14 +547,14 @@ impl Socket {
                         return Err(zx_status::Status::PEER_CLOSED);
                     }
                     obj.q.side_mut(side).extend(bytes);
-                    obj.wakers.side_mut(side).take().map(|w| w.wake());
+                    obj.wakers.side_mut(side).readable.wake();
                 }
                 HdlRef::DatagramSocket(obj) => {
                     if !obj.liveness.is_open() {
                         return Err(zx_status::Status::PEER_CLOSED);
                     }
                     obj.q.side_mut(side).push_back(bytes.to_vec());
-                    obj.wakers.side_mut(side).take().map(|w| w.wake());
+                    obj.wakers.side_mut(side).readable.wake();
                 }
                 _ => panic!("Non socket passed to Socket::write"),
             }
@@ -592,8 +601,7 @@ impl Socket {
                 let copy_bytes = std::cmp::min(bytes.len(), read.len());
                 if copy_bytes == 0 {
                     if obj.liveness.is_open() {
-                        *obj.wakers.side_mut(side.opposite()) = Some(ctx.waker().clone());
-                        return Poll::Pending;
+                        return obj.wakers.side_mut(side.opposite()).readable.pending(ctx);
                     } else {
                         return Poll::Ready(Err(zx_status::Status::PEER_CLOSED));
                     }
@@ -611,8 +619,7 @@ impl Socket {
                 } else if !obj.liveness.is_open() {
                     Poll::Ready(Err(zx_status::Status::PEER_CLOSED))
                 } else {
-                    *obj.wakers.side_mut(side.opposite()) = Some(ctx.waker().clone());
-                    Poll::Pending
+                    obj.wakers.side_mut(side.opposite()).readable.pending(ctx)
                 }
             }
             _ => panic!("Non socket passed to Socket::read"),
@@ -816,6 +823,85 @@ fn ensure_capacity<T>(vec: &mut Vec<T>, size: usize) {
     }
 }
 
+pub mod on_signals {
+    use super::*;
+
+    /// Wait for some signals to be raised.
+    #[must_use = "futures do nothing unless polled"]
+    pub struct OnSignals<'a> {
+        h: u32,
+        koid: u64,
+        signals: Signals,
+        _lifetime: PhantomData<&'a ()>,
+    }
+
+    impl Unpin for OnSignals<'_> {}
+
+    impl<'a> OnSignals<'a> {
+        /// Construct a new OnSignals
+        pub fn new<T: AsHandleRef>(handle: &'a T, signals: Signals) -> Self {
+            let h = handle.as_handle_ref().0;
+            with_handle(h, |mut hdl, side| Self {
+                h,
+                koid: hdl.as_hdl_data().koids(side).0,
+                signals,
+                _lifetime: PhantomData,
+            })
+        }
+
+        /// This function allows the `OnSignals` object to live for the `'static` lifetime.
+        ///
+        /// It is functionally a no-op, but callers of this method should note that
+        /// `OnSignals` will not fire if the handle that was used to create it is dropped or
+        /// transferred to another process.
+        pub fn extend_lifetime(self) -> OnSignals<'static> {
+            OnSignals { h: self.h, koid: self.koid, signals: self.signals, _lifetime: PhantomData }
+        }
+    }
+
+    impl Future for OnSignals<'_> {
+        type Output = Result<Signals, Status>;
+        fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+            with_handle(self.h, |mut h, side| {
+                let h = h.as_hdl_data();
+                if self.koid != h.koids(side).0 {
+                    return Poll::Pending;
+                }
+                h.poll_signals(ctx, side, self.signals)
+            })
+            .map(Ok)
+        }
+    }
+}
+
+bitflags! {
+    /// Signals that can be waited upon.
+    ///
+    /// See [rights](https://fuchsia.dev/fuchsia-src/concepts/kernel/rights) for more information.
+    /// Bit values are not the same as Zircon values.
+    #[repr(transparent)]
+    pub struct Signals : u32 {
+        /// All user signals
+        const USER_ALL = 0xff00;
+        /// User signal 0
+        const USER_0 = 1 << 8;
+        /// User signal 1
+        const USER_1 = 1 << 9;
+        /// User signal 2
+        const USER_2 = 1 << 10;
+        /// User signal 3
+        const USER_3 = 1 << 11;
+        /// User signal 4
+        const USER_4 = 1 << 12;
+        /// User signal 5
+        const USER_5 = 1 << 13;
+        /// User signal 6
+        const USER_6 = 1 << 14;
+        /// User signal 7
+        const USER_7 = 1 << 15;
+    }
+}
+
 bitflags! {
     /// Rights associated with a handle.
     ///
@@ -973,23 +1059,138 @@ impl Liveness {
             _ => false,
         }
     }
+
+    fn is_side_open(self, side: Side) -> bool {
+        match (self, side) {
+            (Liveness::Open, _) => true,
+            (Liveness::Left, Side::Left) => true,
+            (Liveness::Right, Side::Right) => true,
+            (Liveness::Left, Side::Right) => false,
+            (Liveness::Right, Side::Left) => false,
+        }
+    }
 }
 
-type Wakers = Sided<Option<Waker>>;
+#[derive(Default)]
+struct WakerSlot(Option<Waker>);
+
+impl WakerSlot {
+    fn wake(&mut self) {
+        self.0.take().map(|w| w.wake());
+    }
+
+    fn arm(&mut self, ctx: &mut Context<'_>) {
+        self.0 = Some(ctx.waker().clone())
+    }
+
+    fn pending<R>(&mut self, ctx: &mut Context<'_>) -> Poll<R> {
+        self.arm(ctx);
+        Poll::Pending
+    }
+}
+
+#[derive(Default)]
+struct Wakers {
+    readable: WakerSlot,
+    signals: [WakerSlot; 16],
+}
+
+impl Wakers {
+    fn for_signals_in(&mut self, signals: Signals, mut f: impl FnMut(&mut WakerSlot)) {
+        for i in 0..16 {
+            if signals.bits() & (1 << i) != 0 {
+                f(&mut self.signals[i])
+            }
+        }
+    }
+
+    fn wake(&mut self, signals: Signals) {
+        self.for_signals_in(signals, |w| w.wake())
+    }
+
+    fn arm(&mut self, signals: Signals, ctx: &mut Context<'_>) {
+        self.for_signals_in(signals, |w| w.arm(ctx))
+    }
+
+    fn pending<R>(&mut self, signals: Signals, ctx: &mut Context<'_>) -> Poll<R> {
+        self.arm(signals, ctx);
+        Poll::Pending
+    }
+}
+
+trait HdlData {
+    fn signal(&mut self, side: Side, clear_mask: Signals, set_mask: Signals) -> Result<(), Status>;
+    fn poll_signals(
+        &mut self,
+        ctx: &mut Context<'_>,
+        side: Side,
+        signals: Signals,
+    ) -> Poll<Signals>;
+    fn koids(&self, side: Side) -> (u64, u64);
+    fn rights(&self, side: Side) -> Rights;
+}
 
 struct Hdl<T> {
     q: Sided<VecDeque<T>>,
-    wakers: Wakers,
+    wakers: Sided<Wakers>,
     liveness: Liveness,
     koid_left: u64,
-    rights_left: Rights,
-    rights_right: Rights,
+    rights: Sided<Rights>,
+    signals: Sided<Signals>,
+}
+
+impl<T> HdlData for Hdl<T> {
+    fn signal(&mut self, side: Side, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
+        if !self.liveness.is_side_open(side) {
+            return Err(Status::PEER_CLOSED);
+        }
+        let signals = self.signals.side_mut(side);
+        signals.remove(clear_mask);
+        signals.insert(set_mask);
+        self.wakers.side_mut(side).wake(*signals);
+        Ok(())
+    }
+
+    fn poll_signals(
+        &mut self,
+        ctx: &mut Context<'_>,
+        side: Side,
+        signals: Signals,
+    ) -> Poll<Signals> {
+        let intersection = *self.signals.side(side) & signals;
+        if !intersection.is_empty() {
+            Poll::Ready(intersection)
+        } else {
+            self.wakers.side_mut(side).pending(signals, ctx)
+        }
+    }
+
+    fn koids(&self, side: Side) -> (u64, u64) {
+        match side {
+            Side::Left => (self.koid_left, self.koid_left + 1),
+            Side::Right => (self.koid_left + 1, self.koid_left),
+        }
+    }
+
+    fn rights(&self, side: Side) -> Rights {
+        *self.rights.side(side)
+    }
 }
 
 enum HdlRef<'a> {
     Channel(&'a mut Hdl<ChannelMessage>),
     StreamSocket(&'a mut Hdl<u8>),
     DatagramSocket(&'a mut Hdl<Vec<u8>>),
+}
+
+impl<'a> HdlRef<'a> {
+    fn as_hdl_data<'b>(&'b mut self) -> &'b mut dyn HdlData {
+        match self {
+            HdlRef::Channel(hdl) => *hdl,
+            HdlRef::StreamSocket(hdl) => *hdl,
+            HdlRef::DatagramSocket(hdl) => *hdl,
+        }
+    }
 }
 
 #[cfg(debug_assertions)]
@@ -1051,8 +1252,8 @@ impl<T> HandleTable<T> {
             wakers: Default::default(),
             liveness: Liveness::Open,
             koid_left: NEXT_KOID.fetch_add(2, Ordering::Relaxed),
-            rights_left: rights,
-            rights_right: rights,
+            rights: Sided { left: rights, right: rights },
+            signals: Sided { left: Signals::empty(), right: Signals::empty() },
         })
     }
 
@@ -1116,10 +1317,7 @@ fn table_replace<T>(
     match tbl_shard.get_mut(slot) {
         None => Err(zx_status::Status::BAD_HANDLE),
         Some(h) => {
-            let rights = match side {
-                Side::Left => &mut h.rights_left,
-                Side::Right => &mut h.rights_right,
-            };
+            let rights = h.rights.side_mut(side);
             if !rights.contains(target_rights) {
                 return Err(zx_status::Status::INVALID_ARGS);
             }
@@ -1139,19 +1337,12 @@ fn close_in_table<T>(tbl: &HandleTable<T>, shard: usize, slot: usize, side: Side
         None => Some(tbl.remove(slot)),
         Some(liveness) => {
             h.liveness = liveness;
-            h.wakers.side_mut(side).take().map(|w| w.wake());
+            h.wakers.side_mut(side).readable.wake();
             None
         }
     };
     drop(tbl);
     drop(removed);
-}
-
-fn hdl_rights<T>(hdl: &Hdl<T>, side: Side) -> Rights {
-    match side {
-        Side::Left => hdl.rights_left,
-        Side::Right => hdl.rights_right,
-    }
 }
 
 /// Close the handle: no action if hdl==INVALID_HANDLE
@@ -1171,6 +1362,7 @@ fn hdl_close(hdl: u32) {
 mod test {
     use super::*;
     use fuchsia_zircon_status as zx_status;
+    use futures::FutureExt;
     use zx_status::Status;
 
     #[test]
@@ -1472,5 +1664,27 @@ mod test {
 
         let new_basic_info = new_handle.basic_info().unwrap();
         assert_eq!(new_basic_info.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
+    }
+
+    #[test]
+    fn await_user_signal() {
+        let (c1, _) = Channel::create().unwrap();
+        let mut on_sig = on_signals::OnSignals::new(&c1, Signals::USER_0);
+        let (waker, count) = futures_test::task::new_count_waker();
+        let mut ctx = Context::from_waker(&waker);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Pending);
+        assert_eq!(count, 0);
+        c1.signal_handle(Signals::empty(), Signals::USER_1).unwrap();
+        assert_eq!(count, 0);
+        c1.signal_handle(Signals::empty(), Signals::USER_0).unwrap();
+        assert_eq!(count, 1);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Ready(Ok(Signals::USER_0)));
+        c1.signal_handle(Signals::USER_0, Signals::empty()).unwrap();
+        let mut on_sig = on_signals::OnSignals::new(&c1, Signals::USER_0);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Pending);
+        assert_eq!(count, 1);
+        c1.signal_handle(Signals::empty(), Signals::USER_0).unwrap();
+        assert_eq!(count, 2);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Ready(Ok(Signals::USER_0)));
     }
 }
