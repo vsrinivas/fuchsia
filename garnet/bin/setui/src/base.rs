@@ -50,49 +50,62 @@ pub enum SettingType {
     Setup,
 }
 
-/// Enumeration over the possible info types available in the service.
-#[derive(PartialEq, Debug, Clone)]
-pub enum SettingInfo {
-    /// This value is reserved for testing purposes.
-    #[cfg(test)]
-    Unknown(UnknownInfo),
-    Accessibility(AccessibilityInfo),
-    Audio(AudioInfo),
-    Brightness(DisplayInfo),
-    Device(DeviceInfo),
-    FactoryReset(FactoryResetInfo),
-    Light(LightInfo),
-    LightSensor(LightData),
-    DoNotDisturb(DoNotDisturbInfo),
-    Input(InputInfo),
-    Intl(IntlInfo),
-    NightMode(NightModeInfo),
-    Privacy(PrivacyInfo),
-    Setup(SetupInfo),
+/// This macro takes an enum, which has variants associated with exactly one data, and
+/// generates the same enum and implements a for_inspect method.
+/// The for_inspect method returns variants' names and formated data contents.
+#[macro_export]
+macro_rules! generate_inspect_with_info {
+    ($(#[$metas:meta])* pub enum $name:ident {
+        $(
+            $(#[doc = $str:expr])*
+            $(#[cfg($test:meta)])?
+            $variant:ident ( $data:ty )
+        ),* $(,)?
+    }
+    ) => {
+        $(#[$metas])*
+        pub enum $name {
+            $(
+                $(#[doc = $str])*
+                $(#[cfg($test)])?
+                $variant($data),
+            )*
+        }
+
+        impl $name {
+            /// Returns the name of the enum and its value, debug-formatted, for writing to inspect.
+            pub fn for_inspect(&self) -> (&'static str, String) {
+                match self {
+                    $(
+                        $(#[cfg($test)])?
+                        $name::$variant(info) => (stringify!($variant), format!("{:?}", info)),
+                    )*
+                }
+            }
+        }
+    };
 }
 
-impl SettingInfo {
-    /// Returns the name of the enum and its value, debug-formatted, for writing to inspect.
-    // TODO(fxbug.dev/56718): simplify this with a macro.
-    // TODO(fxbug.dev/66690): move this into InspectBroker
-    pub fn for_inspect(&self) -> (&'static str, String) {
-        match self {
-            #[cfg(test)]
-            SettingInfo::Unknown(info) => ("Unknown", format!("{:?}", info)),
-            SettingInfo::Accessibility(info) => ("Accessibility", format!("{:?}", info)),
-            SettingInfo::Audio(info) => ("Audio", format!("{:?}", info)),
-            SettingInfo::Brightness(info) => ("Brightness", format!("{:?}", info)),
-            SettingInfo::Device(info) => ("Device", format!("{:?}", info)),
-            SettingInfo::FactoryReset(info) => ("FactoryReset", format!("{:?}", info)),
-            SettingInfo::Light(info) => ("Light", format!("{:?}", info)),
-            SettingInfo::LightSensor(info) => ("LightSensor", format!("{:?}", info)),
-            SettingInfo::DoNotDisturb(info) => ("DoNotDisturb", format!("{:?}", info)),
-            SettingInfo::Input(info) => ("Input", format!("{:?}", info)),
-            SettingInfo::Intl(info) => ("Intl", format!("{:?}", info)),
-            SettingInfo::NightMode(info) => ("NightMode", format!("{:?}", info)),
-            SettingInfo::Privacy(info) => ("Privacy", format!("{:?}", info)),
-            SettingInfo::Setup(info) => ("Setup", format!("{:?}", info)),
-        }
+generate_inspect_with_info! {
+    /// Enumeration over the possible info types available in the service.
+    #[derive(PartialEq, Debug, Clone)]
+    pub enum SettingInfo {
+        /// This value is reserved for testing purposes.
+        #[cfg(test)]
+        Unknown(UnknownInfo),
+        Accessibility(AccessibilityInfo),
+        Audio(AudioInfo),
+        Brightness(DisplayInfo),
+        Device(DeviceInfo),
+        FactoryReset(FactoryResetInfo),
+        Light(LightInfo),
+        LightSensor(LightData),
+        DoNotDisturb(DoNotDisturbInfo),
+        Input(InputInfo),
+        Intl(IntlInfo),
+        NightMode(NightModeInfo),
+        Privacy(PrivacyInfo),
+        Setup(SetupInfo),
     }
 }
 

@@ -4,6 +4,7 @@
 
 use crate::audio::policy::{self as audio, State};
 use crate::base::SettingType;
+use crate::generate_inspect_with_info;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::core::message;
 use crate::policy::base::response::Response;
@@ -53,31 +54,14 @@ impl PolicyType {
     }
 }
 
-/// Enumeration over the possible policy state information for all policies.
-#[derive(PartialEq, Debug, Clone)]
-pub enum PolicyInfo {
-    /// This value is reserved for testing purposes.
-    #[cfg(test)]
-    Unknown(UnknownInfo),
-    Audio(State),
-}
-
-// TODO(fxbug.dev/56718): simplify this with a macro.
-impl PolicyInfo {
-    pub fn name(&self) -> &'static str {
-        match self {
-            #[cfg(test)]
-            PolicyInfo::Unknown(_) => "Unknown",
-            PolicyInfo::Audio(_) => "Audio",
-        }
-    }
-
-    pub fn value_str(&self) -> String {
-        match self {
-            #[cfg(test)]
-            PolicyInfo::Unknown(info) => format!("{:?}", info),
-            PolicyInfo::Audio(info) => format!("{:?}", info),
-        }
+generate_inspect_with_info! {
+    /// Enumeration over the possible policy state information for all policies.
+    #[derive(PartialEq, Debug, Clone)]
+    pub enum PolicyInfo {
+        /// This value is reserved for testing purposes.
+        #[cfg(test)]
+        Unknown(UnknownInfo),
+        Audio(State),
     }
 }
 

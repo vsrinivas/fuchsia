@@ -169,8 +169,7 @@ impl PolicyInspectBroker {
             };
 
         // Convert the response to a string for inspect.
-        let policy_name = policy_info.name();
-        let inspect_str = policy_info.value_str();
+        let (policy_name, inspect_str) = policy_info.for_inspect();
 
         let timestamp = clock::now()
             .duration_since(SystemTime::UNIX_EPOCH)

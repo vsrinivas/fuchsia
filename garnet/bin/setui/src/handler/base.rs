@@ -38,71 +38,110 @@ pub type GenerateHandler<T> =
     Box<dyn Fn(Context<T>) -> BoxFuture<'static, ControllerGenerateResult> + Send + Sync>;
 
 pub type Response = Result<Option<SettingInfo>, Error>;
-/// The possible requests that can be made on a setting. The sink will expect a
-/// subset of the values defined below based on the associated type.
-/// The types are arranged alphabetically.
-#[derive(PartialEq, Debug, Clone)]
-pub enum Request {
-    /// Returns the current setting information.
-    Get,
 
-    /// Requests ongoing updates when the setting changes.
-    Listen,
+/// This macro takes an enum, which has variants associated with various numbers of data, and
+/// generates the same enum and implements a for_inspect method.
+/// The for_inspect method returns variants' names.
+#[macro_export]
+macro_rules! generate_inspect {
+    (@underscore $_type:ty) => { _ };
+    ($(#[$metas:meta])* pub enum $name:ident {
+        $(
+            $(#[$variant_meta:meta])*
+            $variant:ident
+            $( ($($data:ty),+ $(,)?) )?
+        ),* $(,)?
+    }
+    ) => {
+        $(#[$metas])*
+        pub enum $name {
+            $(
+                $(#[$variant_meta])*
+                $variant$(($($data,)+))?,
+            )*
+        }
 
-    // Camera watcher events.
-    OnCameraSWState(bool),
+        impl $name {
+            pub fn for_inspect(&self) -> &'static str {
+                match self {
+                    $(
+                        $name::$variant $(
+                            ( $(generate_inspect!(@underscore $data)),+ )
+                        )? => stringify!($variant),
+                    )*
+                }
+            }
+        }
+    };
+}
 
-    // Input events.
-    OnButton(ButtonType),
-    OnVolume(VolumeGain),
+generate_inspect! {
+    /// The possible requests that can be made on a setting. The sink will expect a
+    /// subset of the values defined below based on the associated type.
+    /// The types are arranged alphabetically.
+    #[derive(PartialEq, Debug, Clone)]
+    pub enum Request {
+        /// Returns the current setting information.
+        Get,
 
-    // Accessibility requests.
-    SetAccessibilityInfo(AccessibilityInfo),
+        /// Requests ongoing updates when the setting changes.
+        Listen,
 
-    // Account requests
-    ScheduleClearAccounts,
+        // Camera watcher events.
+        OnCameraSWState(bool),
 
-    // Audio requests.
-    SetVolume(Vec<AudioStream>),
+        // Input events.
+        OnButton(ButtonType),
+        OnVolume(VolumeGain),
 
-    // Audio in requests.
-    SetMicMute(bool),
+        // Accessibility requests.
+        SetAccessibilityInfo(AccessibilityInfo),
 
-    // Display requests.
-    SetDisplayInfo(SetDisplayInfo),
+        // Account requests
+        ScheduleClearAccounts,
 
-    // Do not disturb requests.
-    SetDnD(DoNotDisturbInfo),
+        // Audio requests.
+        SetVolume(Vec<AudioStream>),
 
-    // Factory Reset requests.
-    SetLocalResetAllowed(bool),
+        // Audio in requests.
+        SetMicMute(bool),
 
-    // Input requests.
-    SetInputStates(Vec<InputDevice>),
+        // Display requests.
+        SetDisplayInfo(SetDisplayInfo),
 
-    // Intl requests.
-    SetIntlInfo(IntlInfo),
+        // Do not disturb requests.
+        SetDnD(DoNotDisturbInfo),
 
-    // Light requests.
-    SetLightGroupValue(String, Vec<LightState>),
+        // Factory Reset requests.
+        SetLocalResetAllowed(bool),
 
-    // Night mode requests.
-    SetNightModeInfo(NightModeInfo),
+        // Input requests.
+        SetInputStates(Vec<InputDevice>),
 
-    // Power requests.
-    Reboot,
+        // Intl requests.
+        SetIntlInfo(IntlInfo),
 
-    // Restores settings to outside dependencies.
-    Restore,
+        // Light requests.
+        SetLightGroupValue(String, Vec<LightState>),
 
-    // Instructs handler to rebroadcast its current value.
-    Rebroadcast,
+        // Night mode requests.
+        SetNightModeInfo(NightModeInfo),
 
-    // Privacy requests.
-    SetUserDataSharingConsent(Option<bool>),
+        // Power requests.
+        Reboot,
 
-    // Setup info requests.
-    SetConfigurationInterfaces(ConfigurationInterfaceFlags),
+        // Restores settings to outside dependencies.
+        Restore,
+
+        // Instructs handler to rebroadcast its current value.
+        Rebroadcast,
+
+        // Privacy requests.
+        SetUserDataSharingConsent(Option<bool>),
+
+        // Setup info requests.
+        SetConfigurationInterfaces(ConfigurationInterfaceFlags),
+    }
 }
 
 /// The data that is sent to and from setting handlers through the service
@@ -124,36 +163,6 @@ pub enum Payload {
 
 // Conversions for Handler Payload.
 payload_convert!(Setting, Payload);
-
-impl Request {
-    /// Returns the name of the enum, for writing to inspect.
-    /// TODO(fxbug.dev/56718): write a macro to simplify this
-    pub fn for_inspect(&self) -> &'static str {
-        match self {
-            Request::Get => "Get",
-            Request::Listen => "Listen",
-            Request::OnCameraSWState(_) => "OnCameraState",
-            Request::OnButton(_) => "OnButton",
-            Request::OnVolume(_) => "OnVolume",
-            Request::SetAccessibilityInfo(_) => "SetAccessibilityInfo",
-            Request::ScheduleClearAccounts => "ScheduleClearAccounts",
-            Request::SetVolume(_) => "SetVolume",
-            Request::SetMicMute(_) => "SetMicMute",
-            Request::SetDisplayInfo(_) => "SetDisplayInfo",
-            Request::SetLocalResetAllowed(_) => "SetLocalResetAllowed",
-            Request::SetDnD(_) => "SetDnD",
-            Request::SetInputStates(_) => "SetInputStates",
-            Request::SetIntlInfo(_) => "SetIntlInfo",
-            Request::SetLightGroupValue(_, _) => "SetLightGroupValue",
-            Request::SetNightModeInfo(_) => "SetNightModeInfo",
-            Request::Reboot => "Reboot",
-            Request::Rebroadcast => "Rebroadcast",
-            Request::Restore => "Restore",
-            Request::SetUserDataSharingConsent(_) => "SetUserDataSharingConsent",
-            Request::SetConfigurationInterfaces(_) => "SetConfigurationInterfaces",
-        }
-    }
-}
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq)]
 pub enum Error {
