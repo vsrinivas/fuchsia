@@ -60,28 +60,25 @@ constexpr uint8_t PageLevelBits(int8_t level) {
   return static_cast<uint8_t>(kPtBits + kBitsPerLevel * level);
 }
 
-// Supported page sizes.
-//
-// [intel/vol3]: Section 4.5: 4-Level Paging and 5-Level Paging
-enum class PageSize {
-  k4KiB = 1,
-  k2MiB = 2,
-  k1GiB = 3,
-};
-
-// Return the number of bytes in the given PageSize.
-constexpr uint64_t PageBytes(PageSize size) {
-  return uint64_t(1) << (kBitsPerLevel * static_cast<uint64_t>(size) + 3);
-}
-
 // Page size constants.
 constexpr uint64_t kPageSize4KiB = 4 * 1024;
 constexpr uint64_t kPageSize2MiB = 2 * 1024 * 1024;
 constexpr uint64_t kPageSize1GiB = 1024 * 1024 * 1024;
 
-static_assert(kPageSize4KiB == PageBytes(PageSize::k4KiB));
-static_assert(kPageSize2MiB == PageBytes(PageSize::k2MiB));
-static_assert(kPageSize1GiB == PageBytes(PageSize::k1GiB));
+// Supported page sizes.
+//
+// [intel/vol3]: Section 4.5: 4-Level Paging and 5-Level Paging
+enum class PageSize {
+  k4KiB = kPageSize4KiB,
+  k2MiB = kPageSize2MiB,
+  k1GiB = kPageSize1GiB,
+};
+
+// All page sizes on this architecture, in increasing size.
+constexpr std::array kPageSizes{PageSize::k4KiB, PageSize::k2MiB, PageSize::k1GiB};
+
+// Return the number of bytes in the given PageSize.
+constexpr uint64_t PageBytes(PageSize size) { return static_cast<uint64_t>(size); }
 
 // Determine if the given virtual address is in canonical form.
 //

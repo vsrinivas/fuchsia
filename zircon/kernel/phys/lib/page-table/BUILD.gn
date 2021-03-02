@@ -17,11 +17,15 @@ zx_library("page-table") {
   static = true
 
   sources = [
+    "arch/x86/builder.cc",
     "arch/x86/lookup.cc",
     "arch/x86/mmu.cc",
   ]
 
-  include_dirs = [ "include" ]
+  include_dirs = [
+    ".",
+    "include",
+  ]
 
   deps = [
     "//src/zircon/lib/zircon",
@@ -42,7 +46,9 @@ zx_library("page-table") {
 }
 
 test("page-table-test") {
+  include_dirs = [ "." ]
   sources = [
+    "arch/x86/builder_test.cc",
     "arch/x86/lookup_test.cc",
     "arch/x86/mmu_test.cc",
   ]

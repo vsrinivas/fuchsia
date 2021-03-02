@@ -6,6 +6,7 @@
 
 #include "lookup.h"
 
+#include <lib/page-table/arch/x86/builder.h>
 #include <lib/page-table/types.h>
 
 #include "mmu.h"
