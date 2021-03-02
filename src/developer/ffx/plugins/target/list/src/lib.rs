@@ -5,7 +5,7 @@
 use {
     crate::target_formatter::TargetFormatter,
     anyhow::{anyhow, Result},
-    ffx_core::ffx_plugin,
+    ffx_core::{ffx_bail, ffx_plugin},
     ffx_list_args::ListCommand,
     fidl_fuchsia_developer_bridge as bridge,
     std::convert::TryFrom,
@@ -38,7 +38,11 @@ async fn list_impl<W: Write>(
                     // output, that the message is not consumed. A stronger future strategy would
                     // have richer behavior dependent upon whether the user has a controlling
                     // terminal, which would require passing in more and richer IO delegates.
-                    eprintln!("No devices found.");
+                    if cmd.nodename.is_some() {
+                        ffx_bail!("No devices found.", 2);
+                    } else {
+                        eprintln!("No devices found.");
+                    }
                 }
                 _ => {
                     let formatter = Box::<dyn TargetFormatter>::try_from((cmd.format, r))?;
@@ -112,13 +116,15 @@ mod test {
         })
     }
 
-    async fn run_list_test(num_tests: usize, cmd: ListCommand) -> String {
+    async fn try_run_list_test(num_tests: usize, cmd: ListCommand) -> Result<String> {
         let mut output = String::new();
         let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
         let proxy = setup_fake_daemon_server(num_tests);
-        let result = list_impl(proxy, cmd, writer).await.unwrap();
-        assert_eq!(result, ());
-        output
+        list_impl(proxy, cmd, writer).await.map(|_| output)
+    }
+
+    async fn run_list_test(num_tests: usize, cmd: ListCommand) -> String {
+        try_run_list_test(num_tests, cmd).await.unwrap()
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -178,22 +184,16 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_with_one_device_and_not_matching_nodename() -> Result<()> {
-        let output = run_list_test(1, tab_list_cmd(Some("blarg".to_string()))).await;
-        let value = format!("Test {}", 0);
-        let node_listing = Regex::new(&value).expect("test regex");
-        assert_eq!(0, node_listing.find_iter(&output).count());
+        let output = try_run_list_test(1, tab_list_cmd(Some("blarg".to_string()))).await;
+        assert!(output.is_err());
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_with_multiple_devices_and_not_matching_nodename() -> Result<()> {
         let num_tests = 25;
-        let output = run_list_test(num_tests, tab_list_cmd(Some("blarg".to_string()))).await;
-        for x in 0..num_tests {
-            let value = format!("Test {}", x);
-            let node_listing = Regex::new(&value).expect("test regex");
-            assert_eq!(0, node_listing.find_iter(&output).count());
-        }
+        let output = try_run_list_test(num_tests, tab_list_cmd(Some("blarg".to_string()))).await;
+        assert!(output.is_err());
         Ok(())
     }
 

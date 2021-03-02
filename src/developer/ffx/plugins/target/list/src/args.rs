@@ -45,7 +45,12 @@ in early boot state such as fastboot, shows 'FastbootDevice' with the
 By default, the `list` command outputs in a tabular format. To override
 the format, pass `--format` and can take the following options: 'simple'
 , 'tabular|table|tab', 'addresses|addrs|addr', 'json|JSON' or in short form 's', 't',
- 'a', 'j'."
+ 'a', 'j'.",
+    error_code(
+        2,
+        "If a nodename is supplied, an error code of 2 will be returned \
+               if the nodename cannot be resolved"
+    )
 )]
 pub struct ListCommand {
     #[argh(positional)]
