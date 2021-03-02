@@ -20,6 +20,7 @@ type FileTree struct {
 	Name               string                `json:"name"`
 	Path               string                `json:"path"`
 	SingleLicenseFiles map[string][]*License `json:"project licenses"`
+	LicenseMatches     map[string][]*Match   `json:"project license matches"`
 	Files              []*File               `json:"files"`
 	Children           []*FileTree           `json:"children"`
 	Parent             *FileTree             `json:"-"`
@@ -41,6 +42,7 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 	defer trace.StartRegion(ctx, "NewFileTree").End()
 	ft := FileTree{
 		SingleLicenseFiles: make(map[string][]*License),
+		LicenseMatches:     make(map[string][]*Match),
 	}
 
 	abs, err := filepath.Abs(root)
@@ -69,6 +71,10 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 		}
 	}
 
+	// Some projects include a license file, but they aren't at the topmost folder of the project.
+	// Ideally, every project will also include a README.fuchsia file that points to the location
+	// of the license file. Until we can work on that, we maintain a list of mappings in the
+	// config.json file, mapping projects to their respective LICENSE files.
 	for _, customProjectLicense := range config.CustomProjectLicenses {
 		if strings.HasSuffix(root, customProjectLicense.ProjectRoot) {
 			metrics.increment("num_single_license_files")
@@ -102,6 +108,10 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 			return nil
 		}
 		newFile, err := NewFile(path, &ft)
+		if err != nil {
+			log.Printf("Warning: error creating file %v: %v\n", path, err)
+			return nil
+		}
 
 		// TODO(jcecil): a file named LICENSE in the fuchsia tree will be
 		// entirely skipped when running in strict analysis mode, since it
@@ -113,15 +123,20 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 			return nil
 		}
 
-		extensions := config.StrictTextExtensionList
+		// StrictAnalysis means don't rely on a project-level license. Verify that all source files
+		// include license information in their headers.
 		if !ft.StrictAnalysis {
-			extensions = append(extensions, config.TextExtensionList...)
-		}
-		if hasExt(info.Name(), extensions) {
-			metrics.increment("num_non_single_license_files")
-			if err == nil {
-				ft.Files = append(ft.Files, newFile)
+			// Add project-level license files (e.g. LICENSE.txt, NOTICE.txt) to the SingleLicenseFiles map.
+			if hasLowerPrefix(info.Name(), config.SingleLicenseFiles) {
+				metrics.increment("num_single_license_files")
+				ft.SingleLicenseFiles[path] = []*License{}
+				return nil
 			}
+		}
+
+		if newFile.shouldProcess(ft.StrictAnalysis, config) {
+			metrics.increment("num_non_single_license_files")
+			ft.Files = append(ft.Files, newFile)
 		} else {
 			log.Printf("ignoring: %s", path)
 			metrics.increment("num_extensions_excluded")
@@ -129,7 +144,6 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 		return nil
 	})
 	if err != nil {
-		// TODO(jcecil): This must be an error.
 		return nil, err
 	}
 
@@ -139,6 +153,9 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 	return &ft, nil
 }
 
+// License information from parent directories should be copied to each of its children, recursively,
+// until we hit a boundary that signifies we're in a directory that is no longer a part of the parent
+// project (e.g. hitting a "third_party" directory).
 func (ft *FileTree) propagateProjectLicenses(config *Config) {
 	propagate := true
 	for _, dirName := range config.StopLicensePropagation {
@@ -159,7 +176,23 @@ func (ft *FileTree) propagateProjectLicenses(config *Config) {
 	}
 }
 
-func (ft *FileTree) getSingleLicenseFileIterator() <-chan *FileTree {
+// Search the FileTree for a tree that matches the given path.
+func (ft *FileTree) findChild(path string) *FileTree {
+	if !strings.HasPrefix(ft.Path, path) {
+		return nil
+	}
+	if ft.Path == path {
+		return ft
+	}
+	for _, child := range ft.Children {
+		if strings.HasPrefix(child.Path, path) {
+			return child.findChild(path)
+		}
+	}
+	return nil
+}
+
+func (ft *FileTree) getFileTreeIterator() <-chan *FileTree {
 	ch := make(chan *FileTree, 1)
 	go func() {
 		var curr *FileTree
@@ -208,80 +241,6 @@ func (ft *FileTree) getFileIterator() <-chan *File {
 	}()
 	return ch
 }
-
-func (ft *FileTree) Equal(other *FileTree) bool {
-	if ft.Name != other.Name {
-		return false
-	}
-	if ft.Path != other.Path {
-		return false
-	}
-	if ft.StrictAnalysis != other.StrictAnalysis {
-		return false
-	}
-
-	if len(ft.SingleLicenseFiles) != len(other.SingleLicenseFiles) {
-		return false
-	}
-	for k := range ft.SingleLicenseFiles {
-		left := ft.SingleLicenseFiles[k]
-		right := other.SingleLicenseFiles[k]
-		if len(left) != len(right) {
-			return false
-		}
-		for i := range left {
-			if left[i] != right[i] {
-				return false
-			}
-		}
-	}
-
-	if len(ft.Files) != len(other.Files) {
-		return false
-	}
-	for i := range ft.Files {
-		if !ft.Files[i].Equal(other.Files[i]) {
-			return false
-		}
-	}
-
-	if len(ft.Children) != len(other.Children) {
-		return false
-	}
-	for k := range ft.Children {
-		if ft.Children[k].Equal(other.Children[k]) {
-			return false
-		}
-	}
-
-	return true
-}
-
-// hasExt returns true if path has one of the extensions in the list.
-func hasExt(path string, exts []string) bool {
-	if ext := filepath.Ext(path); ext != "" {
-		ext = ext[1:]
-		for _, e := range exts {
-			if e == ext {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// hasLowerPrefix returns true if the name has one of files as a prefix in
-// lower case.
-func hasLowerPrefix(name string, files []string) bool {
-	name = strings.ToLower(name)
-	for _, f := range files {
-		if strings.HasPrefix(name, f) {
-			return true
-		}
-	}
-	return false
-}
-
 func isSkippable(config *Config, path string, info os.FileInfo) (bool, error) {
 	if info.Size() == 0 {
 		// An empty file has no content to copyright. Skip.
@@ -292,36 +251,32 @@ func isSkippable(config *Config, path string, info os.FileInfo) (bool, error) {
 			return true, nil
 		}
 	}
-	for _, dontSkipDir := range config.DontSkipDirs {
-		if dirMatch(path, dontSkipDir) {
+
+	if info.IsDir() && len(info.Name()) > 1 && (strings.HasPrefix(info.Name(), ".") || strings.HasPrefix(info.Name(), "__")) {
+		return true, filepath.SkipDir
+	}
+
+	sep := string(filepath.Separator)
+	skippable := false
+	for _, skipDir := range config.SkipDirs {
+		if skipDir == path || strings.HasPrefix(path, skipDir+sep) {
+			skippable = true
+			break
+		}
+	}
+	if !skippable {
+		return false, nil
+	}
+
+	for _, keepDir := range config.DontSkipDirs {
+		if keepDir == path ||
+			strings.HasPrefix(path, keepDir+sep) ||
+			strings.HasPrefix(keepDir, path+sep) {
 			return false, nil
 		}
 	}
-
-	for _, skipDir := range config.SkipDirs {
-		var err error
-		if info.IsDir() {
-			err = filepath.SkipDir
-		}
-		for _, dontSkipDir := range config.DontSkipDirs {
-			// Check if there are `dontSkipDirs` within this `skipDir`.
-			// If there are none, then we can return `filepath.SkipDir`.
-			if strings.HasPrefix(dontSkipDir, skipDir) {
-				// There is a `dontSkipDir` within this `skipDir`, so we
-				// cannot return `filepath.SkipDir`.
-				err = nil
-			}
-		}
-		if dirMatch(path, skipDir) {
-			return true, err
-		}
+	if info.IsDir() {
+		return true, filepath.SkipDir
 	}
-	return false, nil
-}
-
-func dirMatch(path string, want string) bool {
-	osSeparator := string(filepath.Separator)
-	return strings.HasSuffix(path, osSeparator+want) ||
-		strings.Contains(path, osSeparator+want+osSeparator) ||
-		strings.HasPrefix(path, want+osSeparator)
+	return true, nil
 }

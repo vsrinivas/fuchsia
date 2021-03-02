@@ -9,5 +9,6 @@ group("testdata") {
     "filetree",
     "license",
     "licenses",
+    "template",
   ]
 }

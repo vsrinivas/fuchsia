@@ -3,23 +3,18 @@
       ".gitignore"
    ],
    "skipDirs":[
-      "{root}/skipMe",
-      "{root}/skipMeCompletely",
-      "{root}/dontSkip/skipMe"
+      ".git"
    ],
-   "dontSkipDirs":[
-      "{root}/skipMe/dontSkipMe"
-   ],
-   "textExtensionList":[
-      "go",
-      "py"
-   ],
+   "textExtensionList":[],
    "maxReadSize":6144,
    "outputFilePrefix":"NOTICE",
+   "outputFileExtensions":[
+       "txt"
+   ],
    "singleLicenseFiles":[
       "LICENSE"
    ],
-   "licensePatternDir":"golden/",
+   "licensePatternDir":"licenses/simple/patterns",
    "baseDir":".",
    "target":"all",
    "logLevel":"verbose",
@@ -28,5 +23,8 @@
          "projectRoot":"test",
          "licenseLocation":"test"
       }
-   ]
+   ],
+   "prohibitedLicenseTypes" :[
+    "gcc"
+  ]
 }

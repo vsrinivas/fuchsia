@@ -11,14 +11,14 @@ const TemplateHtml = `
 Table of Contents:
 <ol>{{ range $_, $license := .Used }}<li><a href="#{{ (getCategory $license) }}">{{ (getCategory $license) }}</a></li>{{ end }}</ol>
 {{ range $_, $license := .Used }}<br />
-{{ range $author := (getAuthors $license) }}
+{{ range $match := (getMatches $license) }}
 <div id="{{ (getCategory $license) }}" style="background-color: #eeeeee">
 <br>
 Notices for file(s), reference: {{ (getCategory $license) }}:<ul>
 <li> License Category: {{ (getCategory $license) }} </li>
-<li>Authors/Contributors: {{ $author }}</li>
+<li>Authors/Contributors: {{ (getCopyrights $match) }}</li>
 </ul>
-{{ (getHTMLText $license $author) }}<br />
+{{ (getHTMLText $match) }}<br />
 </div>
 {{ end }}
 {{ end }}

@@ -12,10 +12,11 @@ import (
 	"log"
 	"os"
 	"runtime/trace"
+	"sort"
 	"strings"
 	"time"
 
-	noticetxt "go.fuchsia.dev/fuchsia/tools/check-licenses/noticetxt"
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/noticetxt"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -25,14 +26,17 @@ type UnlicensedFiles struct {
 
 const exampleHeader = "# Copyright %d The Fuchsia Authors. All rights reserved.\n# Use of this source code is governed by a BSD-style license that can be\n# found in the LICENSE file."
 
-// Walk gathers all Licenses then checks for a match within each filtered file
-func Walk(ctx context.Context, config *Config) error {
+// Run executes the license verification according to the provided config file.
+func Run(ctx context.Context, config *Config) error {
 	var eg errgroup.Group
+	var err error
 	metrics := NewMetrics()
+
 	file_tree, err := NewFileTree(ctx, config.BaseDir, nil, config, metrics)
 	if err != nil {
 		return err
 	}
+
 	licenses, err := NewLicenses(ctx, config)
 	if err != nil {
 		return err
@@ -40,15 +44,15 @@ func Walk(ctx context.Context, config *Config) error {
 	unlicensedFiles := &UnlicensedFiles{}
 
 	r := trace.StartRegion(ctx, "singleLicenseFile walk")
-	for tree := range file_tree.getSingleLicenseFileIterator() {
+	for tree := range file_tree.getFileTreeIterator() {
 		tree := tree
-		for singleLicenseFile := range tree.SingleLicenseFiles {
-			singleLicenseFile := singleLicenseFile
+		for licenseFile := range tree.SingleLicenseFiles {
+			licenseFile := licenseFile
 			eg.Go(func() error {
-				if err := processSingleLicenseFile(singleLicenseFile, metrics, licenses, config, tree); err != nil {
+				if err := processLicenseFile(licenseFile, metrics, licenses, config, tree); err != nil {
 					// error safe to ignore because eg. io.EOF means symlink hasn't been handled yet
 					// TODO(jcecil): Correctly skip symlink.
-					log.Printf("warning: %s. Skipping file: %s.\n", err, singleLicenseFile)
+					log.Printf("warning: %s. Skipping file: %s.\n", err, licenseFile)
 				}
 				return nil
 			})
@@ -60,13 +64,13 @@ func Walk(ctx context.Context, config *Config) error {
 	file_tree.propagateProjectLicenses(config)
 
 	r = trace.StartRegion(ctx, "processFlutterLicenses")
-	if err := processFlutterLicenses(licenses, config, metrics, file_tree); err != nil {
+	if err = processFlutterLicenses(licenses, config, metrics, file_tree); err != nil {
 		log.Printf("error processing flutter licenses: %v", err)
 	}
 	r.End()
 
 	r = trace.StartRegion(ctx, "processNoticeTxtFiles")
-	if err := processNoticeTxtFiles(licenses, config, metrics, file_tree); err != nil {
+	if err = processNoticeTxtFiles(licenses, config, metrics, file_tree); err != nil {
 		log.Printf("error processing NOTICE.txt files: %v", err)
 	}
 	r.End()
@@ -90,6 +94,7 @@ func Walk(ctx context.Context, config *Config) error {
 	if config.ExitOnProhibitedLicenseTypes {
 		filesWithProhibitedLicenses := licenses.GetFilesWithProhibitedLicenses()
 		if len(filesWithProhibitedLicenses) > 0 {
+			sort.Strings(filesWithProhibitedLicenses)
 			files := strings.Join(filesWithProhibitedLicenses, "\n")
 			return fmt.Errorf("Encountered prohibited license types. File paths are:\n\n%v\n\nPlease remove the offending files, or reach out to //tools/check-licenses/OWNERS for license exceptions or errors.", files)
 		}
@@ -98,6 +103,7 @@ func Walk(ctx context.Context, config *Config) error {
 	header := fmt.Sprintf(exampleHeader, year)
 
 	if config.ExitOnUnlicensedFiles && len(unlicensedFiles.files) > 0 {
+		sort.Strings(unlicensedFiles.files)
 		files := strings.Join(unlicensedFiles.files, "\n")
 		return fmt.Errorf("Encountered files with licenses that are either malformed or missing. File paths are:\n\n%v\n\nPlease add license information to the headers of each file. If this is Fuchsia code (e.g. not in //prebuilt, //third_party, etc), paste this example header text into the top of each file (replacing '#' with the proper comment character for your file):\n\n%s\n\nReach out to //tools/check-licenses/OWNERS for file exceptions or errors.\n", files, header)
 	}
@@ -105,6 +111,7 @@ func Walk(ctx context.Context, config *Config) error {
 	if config.ExitOnDirRestrictedLicense {
 		filesWithBadLicenseUsage := licenses.GetFilesWithBadLicenseUsage()
 		if len(filesWithBadLicenseUsage) > 0 {
+			sort.Strings(filesWithBadLicenseUsage)
 			files := strings.Join(filesWithBadLicenseUsage, "\n")
 			return fmt.Errorf("Encountered files with licenses that may not be used in those directories. File paths are:\n\n%v\n\nPlease remove the offending files, or reach out to //tools/check-licenses/OWNERS for license exceptions or errors.", files)
 		}
@@ -113,7 +120,7 @@ func Walk(ctx context.Context, config *Config) error {
 	if config.OutputLicenseFile {
 		for _, extension := range config.OutputFileExtensions {
 			path := config.OutputFilePrefix + "." + extension
-			if err := saveToOutputFile(path, licenses); err != nil {
+			if err := saveToOutputFile(path, licenses, config); err != nil {
 				return err
 			}
 		}
@@ -122,13 +129,20 @@ func Walk(ctx context.Context, config *Config) error {
 	return nil
 }
 
-func processSingleLicenseFile(path string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) error {
-	// For singe license files, we read the whole file.
+func processLicenseFile(path string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) error {
+	// For license files, we read the whole file.
+	// TODO: "traverse.go" shouldn't have to worry about file access.
+	// Read file data in file.go, and pass around the file object everywhere.
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	licenses.MatchSingleLicenseFile(data, path, metrics, file_tree)
+	file, _ := NewFile(path, file_tree)
+	if contains(config.NoticeFiles, path) {
+		licenses.MatchNoticeFile(data, file.Path, metrics, file_tree)
+		return nil
+	}
+	licenses.MatchSingleLicenseFile(data, file.Path, metrics, file_tree)
 	return nil
 }
 
@@ -145,7 +159,7 @@ func processFile(file *File, metrics *Metrics, licenses *Licenses, unlicensedFil
 	}
 	data = data[:n]
 
-	isMatched, matchedLic := licenses.MatchFile(data, path, metrics)
+	isMatched, matchedLic, _ := licenses.MatchFile(data, file.Path, metrics)
 	if isMatched {
 		file.Licenses = append(file.Licenses, matchedLic)
 	} else {
@@ -169,19 +183,11 @@ func processFile(file *File, metrics *Metrics, licenses *Licenses, unlicensedFil
 				log.Printf("File license: missing. Project license: missing. path: %s\n", path)
 			} else {
 				metrics.increment("num_with_project_license")
-				for _, arr_license := range file_tree.SingleLicenseFiles {
-
-					for i, license := range arr_license {
-						license.Lock()
-						for author := range license.matches {
-							license.matches[author].files = append(license.matches[author].files, path)
-						}
-						license.Unlock()
-						if i == 0 {
-							metrics.increment("num_one_file_matched_to_one_single_license")
-						}
-						log.Printf("project license: %s", license.Category)
-						metrics.increment("num_one_file_matched_to_multiple_single_licenses")
+				for _, matches := range file_tree.LicenseMatches {
+					for _, match := range matches {
+						match.Lock()
+						match.Files = append(match.Files, path)
+						match.Unlock()
 					}
 				}
 				log.Printf("File license: missing. Project license: exists. path: %s", path)
@@ -207,12 +213,13 @@ func readFile(path string, d []byte) (int, error) {
 
 func processNoticeTxtFiles(licenses *Licenses, config *Config, metrics *Metrics, file_tree *FileTree) error {
 	for _, path := range config.NoticeTxtFiles {
+		file, _ := NewFile(path, file_tree)
 		data, err := noticetxt.ParseNoticeTxtFile(path)
 		if err != nil {
-			return nil
+			return err
 		}
 		for _, d := range data {
-			licenses.MatchSingleLicenseFile(d, path, metrics, file_tree)
+			licenses.MatchSingleLicenseFile(d, file.Path, metrics, file_tree)
 		}
 	}
 	return nil

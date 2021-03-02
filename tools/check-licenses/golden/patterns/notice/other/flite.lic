@@ -1,4 +1,4 @@
-(?s)(.*)
+(?s)(.*)(?P<text>
 Flite is free software\.
 
 We have kept the core code to BSD-like copyright, thus the system is
@@ -203,4 +203,4 @@ lang/cmu_grapheme_lex/grapheme_unitran_tables\.c
 /\* http://www\.apache\.org/licenses/LICENSE-2\.0                               \*/
 /\* Original table developed by Richard Sproat and Kyoung-young Kim          \*/
 /\* Ported for Festvox by Gopala Anumachipalli gopalakr@cs\.cmu\.edu Sep 2012  \*/
-/\* Then converted to C for CMU Flite \(cmuflite\.org\)                         \*/
+/\* Then converted to C for CMU Flite \(cmuflite\.org\)                         \*/)
