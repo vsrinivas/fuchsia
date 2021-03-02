@@ -19,12 +19,19 @@ class MockGestureHandler : public a11y::GestureHandler {
   ~MockGestureHandler() = default;
 
   // |GestureHandler|
+  bool BindMFingerNTapAction(uint32_t num_fingers, uint32_t num_taps,
+                             OnGestureCallback on_recognize) override;
   bool BindOneFingerSingleTapAction(OnGestureCallback callback) override;
   bool BindOneFingerDoubleTapAction(OnGestureCallback callback) override;
-  bool BindOneFingerDragAction(OnGestureCallback on_start, OnGestureCallback on_update,
+  bool BindOneFingerDragAction(OnGestureCallback on_recognize, OnGestureCallback on_update,
+                               OnGestureCallback on_complete) override;
+  bool BindTwoFingerDragAction(OnGestureCallback on_recognize, OnGestureCallback on_update,
                                OnGestureCallback on_complete) override;
   bool BindSwipeAction(OnGestureCallback callback, GestureType gesture_type) override;
   bool BindTwoFingerSingleTapAction(OnGestureCallback callback) override;
+  bool BindMFingerNTapDragAction(OnGestureCallback on_recognize, OnGestureCallback on_update,
+                                 OnGestureCallback on_complete, uint32_t num_fingers,
+                                 uint32_t num_taps) override;
 
   std::vector<GestureType>& bound_gestures() { return bound_gestures_; }
 

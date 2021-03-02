@@ -11,7 +11,9 @@
 #include <memory>
 #include <vector>
 
+#include "src/ui/a11y/lib/gesture_manager/recognizers/m_finger_n_tap_drag_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/two_finger_drag_recognizer.h"
 #include "src/ui/a11y/lib/testing/input.h"
 
 namespace accessibility_test {
@@ -45,6 +47,12 @@ class GestureManagerTest : public gtest::TestLoopFixture {
   bool three_finger_right_swipe_detected_ = false;
   bool single_tap_detected_ = false;
   bool double_tap_detected_ = false;
+  bool one_finger_drag_detected_ = false;
+  bool two_finger_drag_detected_ = false;
+  bool one_finger_triple_tap_detected_ = false;
+  bool one_finger_triple_tap_drag_detected_ = false;
+  bool three_finger_double_tap_detected_ = false;
+  bool three_finger_double_tap_drag_detected_ = false;
   zx_koid_t actual_viewref_koid_ = 0;
   fuchsia::math::PointF actual_point_ = {.x = 0, .y = 0};
   uint32_t actual_device_id_ = 0;
@@ -121,8 +129,62 @@ void GestureManagerTest::SetUp() {
     double_tap_detected_ = true;
   };
 
+  auto one_finger_triple_tap_callback = [this](zx_koid_t viewref_koid,
+                                               fuchsia::math::PointF point) {
+    actual_viewref_koid_ = viewref_koid;
+    actual_point_ = point;
+    one_finger_triple_tap_detected_ = true;
+  };
+
+  auto one_finger_triple_tap_drag_callback = [this](zx_koid_t viewref_koid,
+                                                    fuchsia::math::PointF point) {
+    actual_viewref_koid_ = viewref_koid;
+    actual_point_ = point;
+    one_finger_triple_tap_drag_detected_ = true;
+  };
+
+  auto three_finger_double_tap_callback = [this](zx_koid_t viewref_koid,
+                                                 fuchsia::math::PointF point) {
+    actual_viewref_koid_ = viewref_koid;
+    actual_point_ = point;
+    three_finger_double_tap_detected_ = true;
+  };
+
+  auto three_finger_double_tap_drag_callback = [this](zx_koid_t viewref_koid,
+                                                      fuchsia::math::PointF point) {
+    actual_viewref_koid_ = viewref_koid;
+    actual_point_ = point;
+    three_finger_double_tap_drag_detected_ = true;
+  };
+
+  auto one_finger_drag_callback = [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+    actual_viewref_koid_ = viewref_koid;
+    actual_point_ = point;
+    one_finger_drag_detected_ = true;
+  };
+
+  auto two_finger_drag_callback = [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+    actual_viewref_koid_ = viewref_koid;
+    actual_point_ = point;
+    two_finger_drag_detected_ = true;
+  };
+
   // Bind Gestures - Gesture with higher priority should be added first.
 
+  gesture_handler_->BindMFingerNTapAction(1, 3, std::move(one_finger_triple_tap_callback));
+  gesture_handler_->BindMFingerNTapAction(3, 2, std::move(three_finger_double_tap_callback));
+  gesture_handler_->BindMFingerNTapDragAction(
+      std::move(one_finger_triple_tap_drag_callback),
+      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {},
+      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {}, 1, 3);
+  gesture_handler_->BindMFingerNTapDragAction(
+      std::move(three_finger_double_tap_drag_callback),
+      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {},
+      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {}, 3, 2);
+  gesture_handler_->BindTwoFingerDragAction(
+      std::move(two_finger_drag_callback),
+      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {},
+      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {});
   gesture_handler_->BindSwipeAction(std::move(one_finger_up_swipe_callback),
                                     a11y::GestureHandler::kOneFingerUpSwipe);
   gesture_handler_->BindSwipeAction(std::move(one_finger_down_swipe_callback),
@@ -141,6 +203,10 @@ void GestureManagerTest::SetUp() {
                                     a11y::GestureHandler::kThreeFingerRightSwipe);
   gesture_handler_->BindOneFingerDoubleTapAction(std::move(double_tap_callback));
   gesture_handler_->BindOneFingerSingleTapAction(std::move(single_tap_callback));
+  gesture_handler_->BindOneFingerDragAction(
+      std::move(one_finger_drag_callback),
+      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {},
+      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {});
 }
 
 // Returns a default Accessibility Pointer Event.
@@ -187,14 +253,14 @@ void ExecuteOneFingerTapAction(
 void SendPointerEvents(fuchsia::ui::input::accessibility::PointerEventListenerPtr* listener,
                        const std::vector<PointerParams>& events) {
   for (const auto& event : events) {
-    auto pointer_event = ToPointerEvent(event, 0 /*event time (unused)*/);
+    auto pointer_event = ToPointerEvent(event, 0 /* event time (unused) */);
     pointer_event.set_device_id(kDefaultDeviceId);
     // pointer_event.set_pointer_id(kDefaultPointerId);
     pointer_event.set_viewref_koid(kDefaultKoid);
     pointer_event.set_local_point(kLocalPoint);
     (*listener)->OnEvent(std::move(pointer_event));
   }
-}  // namespace
+}
 
 TEST_F(GestureManagerTest, CallsActionOnSingleTap) {
   fuchsia::ui::input::accessibility::EventHandling actual_handled =
@@ -228,6 +294,12 @@ TEST_F(GestureManagerTest, CallsActionOnSingleTap) {
   EXPECT_FALSE(three_finger_down_swipe_detected_);
   EXPECT_FALSE(three_finger_left_swipe_detected_);
   EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
 }
 
 TEST_F(GestureManagerTest, CallsActionOnDoubleTap) {
@@ -264,6 +336,12 @@ TEST_F(GestureManagerTest, CallsActionOnDoubleTap) {
   EXPECT_FALSE(three_finger_down_swipe_detected_);
   EXPECT_FALSE(three_finger_left_swipe_detected_);
   EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
 }
 
 TEST_F(GestureManagerTest, CallsActionOnOneFingerUpSwipe) {
@@ -305,6 +383,12 @@ TEST_F(GestureManagerTest, CallsActionOnOneFingerUpSwipe) {
   EXPECT_FALSE(three_finger_down_swipe_detected_);
   EXPECT_FALSE(three_finger_left_swipe_detected_);
   EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
 }
 
 TEST_F(GestureManagerTest, CallsActionOnThreeFingerUpSwipe) {
@@ -350,6 +434,12 @@ TEST_F(GestureManagerTest, CallsActionOnThreeFingerUpSwipe) {
   EXPECT_FALSE(three_finger_down_swipe_detected_);
   EXPECT_FALSE(three_finger_left_swipe_detected_);
   EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
 }
 
 TEST_F(GestureManagerTest, CallsActionOnOneFingerDownSwipe) {
@@ -392,6 +482,12 @@ TEST_F(GestureManagerTest, CallsActionOnOneFingerDownSwipe) {
   EXPECT_FALSE(three_finger_down_swipe_detected_);
   EXPECT_FALSE(three_finger_left_swipe_detected_);
   EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
 }
 
 TEST_F(GestureManagerTest, CallsActionOnThreeFingerDownSwipe) {
@@ -434,6 +530,12 @@ TEST_F(GestureManagerTest, CallsActionOnThreeFingerDownSwipe) {
   EXPECT_TRUE(three_finger_down_swipe_detected_);
   EXPECT_FALSE(three_finger_left_swipe_detected_);
   EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
 }
 
 TEST_F(GestureManagerTest, CallsActionOnOneFingerLeftSwipe) {
@@ -476,6 +578,12 @@ TEST_F(GestureManagerTest, CallsActionOnOneFingerLeftSwipe) {
   EXPECT_FALSE(three_finger_down_swipe_detected_);
   EXPECT_FALSE(three_finger_left_swipe_detected_);
   EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
 }
 
 TEST_F(GestureManagerTest, CallsActionOnThreeFingerLeftSwipe) {
@@ -518,6 +626,12 @@ TEST_F(GestureManagerTest, CallsActionOnThreeFingerLeftSwipe) {
   EXPECT_FALSE(three_finger_down_swipe_detected_);
   EXPECT_TRUE(three_finger_left_swipe_detected_);
   EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
 }
 
 TEST_F(GestureManagerTest, CallsActionOnOneFingerRightSwipe) {
@@ -560,6 +674,12 @@ TEST_F(GestureManagerTest, CallsActionOnOneFingerRightSwipe) {
   EXPECT_FALSE(three_finger_down_swipe_detected_);
   EXPECT_FALSE(three_finger_left_swipe_detected_);
   EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
 }
 
 TEST_F(GestureManagerTest, CallsActionOnThreeFingerRightSwipe) {
@@ -602,6 +722,99 @@ TEST_F(GestureManagerTest, CallsActionOnThreeFingerRightSwipe) {
   EXPECT_FALSE(three_finger_down_swipe_detected_);
   EXPECT_FALSE(three_finger_left_swipe_detected_);
   EXPECT_TRUE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
+}
+
+TEST_F(GestureManagerTest, CallsActionOnOneFingerTripleTap) {
+  fuchsia::ui::input::accessibility::EventHandling actual_handled =
+      fuchsia::ui::input::accessibility::EventHandling::REJECTED;
+
+  auto listener_callback = [this, &actual_handled](
+                               uint32_t device_id, uint32_t pointer_id,
+                               fuchsia::ui::input::accessibility::EventHandling handled) {
+    actual_device_id_ = device_id;
+    actual_pointer_id_ = pointer_id;
+    actual_handled = handled;
+  };
+  listener_.events().OnStreamHandled = std::move(listener_callback);
+
+  ExecuteOneFingerTapAction(&listener_);
+  ExecuteOneFingerTapAction(&listener_);
+  ExecuteOneFingerTapAction(&listener_);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
+  EXPECT_EQ(actual_point_.x, kLocalPoint.x);
+  EXPECT_EQ(actual_point_.y, kLocalPoint.y);
+
+  EXPECT_EQ(actual_device_id_, kDefaultDeviceId);
+  EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
+  EXPECT_FALSE(single_tap_detected_);
+  EXPECT_FALSE(double_tap_detected_);
+  EXPECT_FALSE(one_finger_up_swipe_detected_);
+  EXPECT_FALSE(one_finger_down_swipe_detected_);
+  EXPECT_FALSE(one_finger_left_swipe_detected_);
+  EXPECT_FALSE(one_finger_right_swipe_detected_);
+  EXPECT_FALSE(three_finger_up_swipe_detected_);
+  EXPECT_FALSE(three_finger_down_swipe_detected_);
+  EXPECT_FALSE(three_finger_left_swipe_detected_);
+  EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_TRUE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
+}
+
+TEST_F(GestureManagerTest, CallsActionOnOneFingerTripleTapDrag) {
+  fuchsia::ui::input::accessibility::EventHandling actual_handled =
+      fuchsia::ui::input::accessibility::EventHandling::REJECTED;
+
+  auto listener_callback = [this, &actual_handled](
+                               uint32_t device_id, uint32_t pointer_id,
+                               fuchsia::ui::input::accessibility::EventHandling handled) {
+    actual_device_id_ = device_id;
+    actual_pointer_id_ = pointer_id;
+    actual_handled = handled;
+  };
+  listener_.events().OnStreamHandled = std::move(listener_callback);
+
+  ExecuteOneFingerTapAction(&listener_);
+  ExecuteOneFingerTapAction(&listener_);
+  auto event = GetDefaultPointerEvent();
+  event.set_pointer_id(kDefaultPointerId);
+  event.set_phase(Phase::DOWN);
+  listener_->OnEvent(std::move(event));
+  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinTapHoldDuration);
+
+  EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
+  EXPECT_EQ(actual_point_.x, kLocalPoint.x);
+  EXPECT_EQ(actual_point_.y, kLocalPoint.y);
+
+  EXPECT_EQ(actual_device_id_, kDefaultDeviceId);
+  EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
+  EXPECT_FALSE(single_tap_detected_);
+  EXPECT_FALSE(double_tap_detected_);
+  EXPECT_FALSE(one_finger_up_swipe_detected_);
+  EXPECT_FALSE(one_finger_down_swipe_detected_);
+  EXPECT_FALSE(one_finger_left_swipe_detected_);
+  EXPECT_FALSE(one_finger_right_swipe_detected_);
+  EXPECT_FALSE(three_finger_up_swipe_detected_);
+  EXPECT_FALSE(three_finger_down_swipe_detected_);
+  EXPECT_FALSE(three_finger_left_swipe_detected_);
+  EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_TRUE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
 }
 
 TEST_F(GestureManagerTest, NoGestureDetected) {
@@ -633,6 +846,153 @@ TEST_F(GestureManagerTest, NoGestureDetected) {
   EXPECT_FALSE(three_finger_down_swipe_detected_);
   EXPECT_FALSE(three_finger_left_swipe_detected_);
   EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
+}
+
+TEST_F(GestureManagerTest, CallsActionOnThreeFingerDoubleTap) {
+  fuchsia::ui::input::accessibility::EventHandling actual_handled =
+      fuchsia::ui::input::accessibility::EventHandling::REJECTED;
+
+  auto listener_callback = [this, &actual_handled](
+                               uint32_t device_id, uint32_t pointer_id,
+                               fuchsia::ui::input::accessibility::EventHandling handled) {
+    actual_device_id_ = device_id;
+    actual_pointer_id_ = pointer_id;
+    actual_handled = handled;
+  };
+  listener_.events().OnStreamHandled = std::move(listener_callback);
+  for (uint32_t finger = 0; finger < 3; finger++) {
+    SendPointerEvents(&listener_, DownEvents(finger, {}));
+  }
+  for (uint32_t finger = 0; finger < 3; finger++) {
+    SendPointerEvents(&listener_, UpEvents(finger, {.7f, 0}));
+  }
+  for (uint32_t finger = 0; finger < 3; finger++) {
+    SendPointerEvents(&listener_, DownEvents(finger, {}));
+  }
+  for (uint32_t finger = 0; finger < 3; finger++) {
+    SendPointerEvents(&listener_, UpEvents(finger, {.7f, 0}));
+  }
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
+  EXPECT_EQ(actual_point_.x, kLocalPoint.x);
+  EXPECT_EQ(actual_point_.y, kLocalPoint.y);
+
+  EXPECT_EQ(actual_device_id_, kDefaultDeviceId);
+  EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
+  EXPECT_FALSE(single_tap_detected_);
+  EXPECT_FALSE(double_tap_detected_);
+  EXPECT_FALSE(one_finger_up_swipe_detected_);
+  EXPECT_FALSE(one_finger_down_swipe_detected_);
+  EXPECT_FALSE(one_finger_left_swipe_detected_);
+  EXPECT_FALSE(one_finger_right_swipe_detected_);
+  EXPECT_FALSE(three_finger_up_swipe_detected_);
+  EXPECT_FALSE(three_finger_down_swipe_detected_);
+  EXPECT_FALSE(three_finger_left_swipe_detected_);
+  EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_TRUE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
+}
+
+TEST_F(GestureManagerTest, CallsActionOnThreeFingerDoubleTapDrag) {
+  fuchsia::ui::input::accessibility::EventHandling actual_handled =
+      fuchsia::ui::input::accessibility::EventHandling::REJECTED;
+
+  auto listener_callback = [this, &actual_handled](
+                               uint32_t device_id, uint32_t pointer_id,
+                               fuchsia::ui::input::accessibility::EventHandling handled) {
+    actual_device_id_ = device_id;
+    actual_pointer_id_ = pointer_id;
+    actual_handled = handled;
+  };
+  listener_.events().OnStreamHandled = std::move(listener_callback);
+  for (uint32_t finger = 0; finger < 3; finger++) {
+    SendPointerEvents(&listener_, DownEvents(finger, {}));
+  }
+  for (uint32_t finger = 0; finger < 3; finger++) {
+    SendPointerEvents(&listener_, UpEvents(finger, {.7f, 0}));
+  }
+  for (uint32_t finger = 0; finger < 3; finger++) {
+    SendPointerEvents(&listener_, DownEvents(finger, {}));
+  }
+  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinTapHoldDuration);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
+  EXPECT_EQ(actual_point_.x, kLocalPoint.x);
+  EXPECT_EQ(actual_point_.y, kLocalPoint.y);
+
+  EXPECT_EQ(actual_device_id_, kDefaultDeviceId);
+  EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
+  EXPECT_FALSE(single_tap_detected_);
+  EXPECT_FALSE(double_tap_detected_);
+  EXPECT_FALSE(one_finger_up_swipe_detected_);
+  EXPECT_FALSE(one_finger_down_swipe_detected_);
+  EXPECT_FALSE(one_finger_left_swipe_detected_);
+  EXPECT_FALSE(one_finger_right_swipe_detected_);
+  EXPECT_FALSE(three_finger_up_swipe_detected_);
+  EXPECT_FALSE(three_finger_down_swipe_detected_);
+  EXPECT_FALSE(three_finger_left_swipe_detected_);
+  EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_FALSE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_TRUE(three_finger_double_tap_drag_detected_);
+}
+
+TEST_F(GestureManagerTest, CallsActionOnTwoFingerDrag) {
+  fuchsia::ui::input::accessibility::EventHandling actual_handled =
+      fuchsia::ui::input::accessibility::EventHandling::REJECTED;
+
+  auto listener_callback = [this, &actual_handled](
+                               uint32_t device_id, uint32_t pointer_id,
+                               fuchsia::ui::input::accessibility::EventHandling handled) {
+    actual_device_id_ = device_id;
+    actual_pointer_id_ = pointer_id;
+    actual_handled = handled;
+  };
+  listener_.events().OnStreamHandled = std::move(listener_callback);
+  for (uint32_t finger = 0; finger < 2; finger++) {
+    SendPointerEvents(&listener_, DownEvents(finger, {}));
+  }
+
+  RunLoopFor(a11y::TwoFingerDragRecognizer::kDefaultMinDragDuration);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
+  EXPECT_EQ(actual_point_.x, kLocalPoint.x);
+  EXPECT_EQ(actual_point_.y, kLocalPoint.y);
+
+  EXPECT_EQ(actual_device_id_, kDefaultDeviceId);
+  EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
+  EXPECT_FALSE(single_tap_detected_);
+  EXPECT_FALSE(double_tap_detected_);
+  EXPECT_FALSE(one_finger_up_swipe_detected_);
+  EXPECT_FALSE(one_finger_down_swipe_detected_);
+  EXPECT_FALSE(one_finger_left_swipe_detected_);
+  EXPECT_FALSE(one_finger_right_swipe_detected_);
+  EXPECT_FALSE(three_finger_up_swipe_detected_);
+  EXPECT_FALSE(three_finger_down_swipe_detected_);
+  EXPECT_FALSE(three_finger_left_swipe_detected_);
+  EXPECT_FALSE(three_finger_right_swipe_detected_);
+  EXPECT_FALSE(one_finger_drag_detected_);
+  EXPECT_TRUE(two_finger_drag_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_detected_);
+  EXPECT_FALSE(one_finger_triple_tap_drag_detected_);
+  EXPECT_FALSE(three_finger_double_tap_detected_);
+  EXPECT_FALSE(three_finger_double_tap_drag_detected_);
 }
 
 TEST_F(GestureManagerTest, BindGestureMultipleTimes) {

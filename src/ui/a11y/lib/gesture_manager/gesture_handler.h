@@ -30,6 +30,8 @@ class GestureHandler {
     kUnknown,
     kOneFingerSingleTap,
     kOneFingerDoubleTap,
+    kOneFingerTripleTap,
+    kOneFingerTripleTapDrag,
     kOneFingerDrag,
     kOneFingerUpSwipe,
     kOneFingerDownSwipe,
@@ -39,7 +41,10 @@ class GestureHandler {
     kThreeFingerDownSwipe,
     kThreeFingerLeftSwipe,
     kThreeFingerRightSwipe,
+    kThreeFingerDoubleTap,
+    kThreeFingerDoubleTapDrag,
     kTwoFingerSingleTap,
+    kTwoFingerDrag,
   };
 
   // Some gestures need additional information about what was touched and where it was touched on
@@ -59,6 +64,11 @@ class GestureHandler {
   explicit GestureHandler(AddRecognizerToArenaCallback add_recognizer_callback);
   virtual ~GestureHandler() = default;
 
+  // Binds the action defined in |on_recognize| with the m-finger-n-tap gesture
+  // corresponding to |num_fingers| and |num_taps|.
+  virtual bool BindMFingerNTapAction(uint32_t num_fingers, uint32_t num_taps,
+                                     OnGestureCallback on_recognize);
+
   // Binds the action defined in |callback| with the gesture |kOneFingerSingleTap|. The action is
   // invoked only after the gesture is detected.
   virtual bool BindOneFingerSingleTapAction(OnGestureCallback callback);
@@ -72,6 +82,11 @@ class GestureHandler {
   virtual bool BindOneFingerDragAction(OnGestureCallback on_start, OnGestureCallback on_update,
                                        OnGestureCallback on_complete);
 
+  // Binds the actions with the gesture |kTwoFingerDrag|.
+  // They are called when the drag starts, updates and completes, respectively.
+  virtual bool BindTwoFingerDragAction(OnGestureCallback on_start, OnGestureCallback on_update,
+                                       OnGestureCallback on_complete);
+
   // Binds the action defined in |callback| with the |gesture_type|. Returns true if the |callback|
   // is bound, false otherwise
   virtual bool BindSwipeAction(OnGestureCallback callback, GestureType gesture_type);
@@ -79,6 +94,11 @@ class GestureHandler {
   // Binds the action defined in |callback| with the |kTwoFingerSingleTap|. The
   // action is invoked only after the gesture is detected.
   virtual bool BindTwoFingerSingleTapAction(OnGestureCallback callback);
+
+  // Binds the actions with the corresponding m-finger-n-tap-drag gesture.
+  virtual bool BindMFingerNTapDragAction(OnGestureCallback on_start, OnGestureCallback on_update,
+                                         OnGestureCallback on_complete, uint32_t num_fingers,
+                                         uint32_t num_taps);
 
   // Binds a recognizer that consumes everything.
   void ConsumeAll();
@@ -89,12 +109,12 @@ class GestureHandler {
 
   // The handlers for each gesture recognizer event.
   struct GestureEventHandlers {
-    OnGestureCallback on_start;
+    OnGestureCallback on_recognize;
     OnGestureCallback on_update;
     OnGestureCallback on_complete;
   };
 
-  enum class GestureEvent { kStart, kUpdate, kComplete };
+  enum class GestureEvent { kRecognize, kUpdate, kComplete };
 
  private:
   // Calls an action bound to |gesture_type| if it exists.

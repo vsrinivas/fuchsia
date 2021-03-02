@@ -8,9 +8,11 @@
 
 #include "src/ui/a11y/lib/gesture_manager/recognizers/any_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/directional_swipe_recognizers.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/m_finger_n_tap_drag_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/m_finger_n_tap_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_drag_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/two_finger_drag_recognizer.h"
 
 namespace a11y {
 
@@ -36,9 +38,9 @@ void GestureHandler::OnGesture(const GestureType gesture_type, const GestureEven
   // all gestures expect them, but they may be unnecessary for some gestures.
   if (args.viewref_koid && args.coordinates) {
     switch (gesture_event) {
-      case GestureEvent::kStart:
-        FX_DCHECK(it->second.on_start);
-        it->second.on_start(*args.viewref_koid, *args.coordinates);
+      case GestureEvent::kRecognize:
+        FX_DCHECK(it->second.on_recognize);
+        it->second.on_recognize(*args.viewref_koid, *args.coordinates);
         break;
       case GestureEvent::kUpdate:
         FX_DCHECK(it->second.on_update);
@@ -52,6 +54,55 @@ void GestureHandler::OnGesture(const GestureType gesture_type, const GestureEven
         break;
     }
   }
+}
+
+bool GestureHandler::BindMFingerNTapAction(uint32_t num_fingers, uint32_t num_taps,
+                                           OnGestureCallback on_recognize) {
+  GestureType gesture_type = kUnknown;
+
+  // This computation is just to make the switch statement cleaner.
+  // Since m and n are always <= 3, we can uniquely identify the type of an
+  // m-finger-n-tap with the integer (10m + n). E.g. a 3-finger-double-tap would
+  // be type 32.
+  auto gesture_type_id = 10 * num_fingers + num_taps;
+
+  switch (gesture_type_id) {
+    case 11:
+      gesture_type = kOneFingerSingleTap;
+      break;
+    case 12:
+      gesture_type = kOneFingerDoubleTap;
+      break;
+    case 13:
+      gesture_type = kOneFingerTripleTap;
+      break;
+    case 21:
+      gesture_type = kTwoFingerSingleTap;
+      break;
+    case 32:
+      gesture_type = kThreeFingerDoubleTap;
+      break;
+    default:
+      break;
+  }
+
+  if (gesture_recognizers_.find(gesture_type) != gesture_recognizers_.end()) {
+    FX_LOGS(INFO) << "Action already exists for GestureType: " << gesture_type;
+    return false;
+  }
+
+  gesture_handlers_[gesture_type].on_recognize = std::move(on_recognize);
+
+  gesture_recognizers_[gesture_type] = std::make_unique<MFingerNTapRecognizer>(
+      [this, gesture_type](GestureContext context) {
+        OnGesture(gesture_type, GestureEvent::kRecognize,
+                  {.viewref_koid = context.view_ref_koid,
+                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+      },
+      num_fingers, num_taps);
+  add_recognizer_callback_(gesture_recognizers_[gesture_type].get());
+
+  return true;
 }
 
 bool GestureHandler::BindOneFingerSingleTapAction(OnGestureCallback callback) {
@@ -93,33 +144,64 @@ bool GestureHandler::BindOneFingerNTapAction(OnGestureCallback callback, int num
   return true;
 }
 
-bool GestureHandler::BindOneFingerDragAction(OnGestureCallback on_start,
+bool GestureHandler::BindOneFingerDragAction(OnGestureCallback on_recognize,
                                              OnGestureCallback on_update,
                                              OnGestureCallback on_complete) {
   if (gesture_recognizers_.find(kOneFingerDrag) != gesture_recognizers_.end()) {
-    FX_LOGS(INFO) << "Action already exists for one-finger drag gesture.";
+    FX_LOGS(INFO) << "Action already exists for one finger drag.";
     return false;
   }
-  gesture_handlers_[kOneFingerDrag] = {std::move(on_start), std::move(on_update),
+  gesture_handlers_[kOneFingerDrag] = {std::move(on_recognize), std::move(on_update),
                                        std::move(on_complete)};
 
   gesture_recognizers_[kOneFingerDrag] = std::make_unique<OneFingerDragRecognizer>(
       [this](GestureContext context) {
-        OnGesture(kOneFingerDrag, GestureEvent::kStart,
+        OnGesture(kOneFingerDrag, GestureEvent::kRecognize,
                   {.viewref_koid = context.view_ref_koid,
                    .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
-      }, /* drag start callback */
+      }, /* on recognize */
       [this](GestureContext context) {
         OnGesture(kOneFingerDrag, GestureEvent::kUpdate,
                   {.viewref_koid = context.view_ref_koid,
                    .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
-      }, /* drag update callback */
+      }, /* on update */
       [this](GestureContext context) {
         OnGesture(kOneFingerDrag, GestureEvent::kComplete,
                   {.viewref_koid = context.view_ref_koid,
                    .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
-      } /* drag completion callback */);
+      } /* on complete */);
   add_recognizer_callback_(gesture_recognizers_[kOneFingerDrag].get());
+
+  return true;
+}
+
+bool GestureHandler::BindTwoFingerDragAction(OnGestureCallback on_recognize,
+                                             OnGestureCallback on_update,
+                                             OnGestureCallback on_complete) {
+  if (gesture_recognizers_.find(kTwoFingerDrag) != gesture_recognizers_.end()) {
+    FX_LOGS(INFO) << "Action already exists for two finger drag.";
+    return false;
+  }
+  gesture_handlers_[kTwoFingerDrag] = {std::move(on_recognize), std::move(on_update),
+                                       std::move(on_complete)};
+
+  gesture_recognizers_[kTwoFingerDrag] = std::make_unique<TwoFingerDragRecognizer>(
+      [this](GestureContext context) {
+        OnGesture(kTwoFingerDrag, GestureEvent::kRecognize,
+                  {.viewref_koid = context.view_ref_koid,
+                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+      }, /* drag start callback */
+      [this](GestureContext context) {
+        OnGesture(kTwoFingerDrag, GestureEvent::kUpdate,
+                  {.viewref_koid = context.view_ref_koid,
+                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+      }, /* drag update callback */
+      [this](GestureContext context) {
+        OnGesture(kTwoFingerDrag, GestureEvent::kComplete,
+                  {.viewref_koid = context.view_ref_koid,
+                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+      } /* drag completion callback */);
+  add_recognizer_callback_(gesture_recognizers_[kTwoFingerDrag].get());
 
   return true;
 }
@@ -294,6 +376,58 @@ bool GestureHandler::BindTwoFingerSingleTapAction(OnGestureCallback callback) {
       2,  // number of fingers
       1 /* number of taps */);
   add_recognizer_callback_(gesture_recognizers_[kTwoFingerSingleTap].get());
+
+  return true;
+}
+
+bool GestureHandler::BindMFingerNTapDragAction(OnGestureCallback on_recognize,
+                                               OnGestureCallback on_update,
+                                               OnGestureCallback on_complete, uint32_t num_fingers,
+                                               uint32_t num_taps) {
+  GestureType gesture_type = kUnknown;
+
+  // This computation is just to make the switch statement cleaner.
+  // Since m and n are always <= 3, we can uniquely identify the type of an
+  // m-finger-n-tap with the integer (10m + n). E.g. a 3-finger-double-tap would
+  // be type 32.
+  auto gesture_type_id = 10 * num_fingers + num_taps;
+
+  switch (gesture_type_id) {
+    case 13:
+      gesture_type = kOneFingerTripleTapDrag;
+      break;
+    case 32:
+      gesture_type = kThreeFingerDoubleTapDrag;
+      break;
+    default:
+      break;
+  }
+
+  if (gesture_recognizers_.find(gesture_type) != gesture_recognizers_.end()) {
+    FX_LOGS(INFO) << "Action already exists for GestureType: " << gesture_type;
+    return false;
+  }
+
+  gesture_handlers_[gesture_type].on_recognize = std::move(on_recognize);
+
+  gesture_recognizers_[gesture_type] = std::make_unique<MFingerNTapDragRecognizer>(
+      [this, gesture_type](GestureContext context) {
+        OnGesture(gesture_type, GestureEvent::kRecognize,
+                  {.viewref_koid = context.view_ref_koid,
+                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+      }, /* on recognize */
+      [this, gesture_type](GestureContext context) {
+        OnGesture(gesture_type, GestureEvent::kUpdate,
+                  {.viewref_koid = context.view_ref_koid,
+                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+      }, /* on update */
+      [this, gesture_type](GestureContext context) {
+        OnGesture(gesture_type, GestureEvent::kComplete,
+                  {.viewref_koid = context.view_ref_koid,
+                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+      }, /* on complete */
+      num_fingers, num_taps);
+  add_recognizer_callback_(gesture_recognizers_[gesture_type].get());
 
   return true;
 }

@@ -205,6 +205,6 @@ void TwoFingerDragRecognizer::OnContestStarted(std::unique_ptr<ContestMember> co
   contest_ = std::make_unique<Contest>(std::move(contest_member));
 }
 
-std::string TwoFingerDragRecognizer::DebugName() const { return "one_finger_drag_recognizer"; }
+std::string TwoFingerDragRecognizer::DebugName() const { return "two_finger_drag_recognizer"; }
 
 }  // namespace a11y

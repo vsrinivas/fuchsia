@@ -6,23 +6,60 @@
 
 namespace accessibility_test {
 
+bool MockGestureHandler::BindMFingerNTapAction(uint32_t num_fingers, uint32_t num_taps,
+                                               OnGestureCallback on_recognize) {
+  if (num_fingers == 1 && num_taps == 1) {
+    gesture_handlers_[GestureType::kOneFingerSingleTap] = {.on_recognize = std::move(on_recognize)};
+    return true;
+  }
+  if (num_fingers == 1 && num_taps == 2) {
+    gesture_handlers_[GestureType::kOneFingerDoubleTap] = {.on_recognize = std::move(on_recognize)};
+    return true;
+  }
+  if (num_fingers == 1 && num_taps == 3) {
+    gesture_handlers_[GestureType::kOneFingerTripleTap] = {.on_recognize = std::move(on_recognize)};
+    return true;
+  }
+  if (num_fingers == 2 && num_taps == 1) {
+    gesture_handlers_[GestureType::kTwoFingerSingleTap] = {.on_recognize = std::move(on_recognize)};
+    return true;
+  }
+  if (num_fingers == 3 && num_taps == 2) {
+    gesture_handlers_[GestureType::kThreeFingerDoubleTap] = {.on_recognize =
+                                                                 std::move(on_recognize)};
+    return true;
+  }
+
+  return false;
+}
+
 bool MockGestureHandler::BindOneFingerSingleTapAction(OnGestureCallback callback) {
   bound_gestures_.push_back(GestureType::kOneFingerSingleTap);
-  gesture_handlers_[GestureType::kOneFingerSingleTap] = {.on_complete = std::move(callback)};
+  gesture_handlers_[GestureType::kOneFingerSingleTap] = {.on_recognize = std::move(callback)};
+  return true;
+}
+
+bool MockGestureHandler::BindTwoFingerDragAction(OnGestureCallback on_recognize,
+                                                 OnGestureCallback on_update,
+                                                 OnGestureCallback on_complete) {
+  bound_gestures_.push_back(GestureType::kTwoFingerDrag);
+  gesture_handlers_[GestureType::kTwoFingerDrag] = {.on_recognize = std::move(on_recognize),
+                                                    .on_update = std::move(on_update),
+                                                    .on_complete = std::move(on_complete)};
   return true;
 }
 
 bool MockGestureHandler::BindOneFingerDoubleTapAction(OnGestureCallback callback) {
   bound_gestures_.push_back(GestureType::kOneFingerDoubleTap);
-  gesture_handlers_[GestureType::kOneFingerDoubleTap] = {.on_complete = std::move(callback)};
+  gesture_handlers_[GestureType::kOneFingerDoubleTap] = {.on_recognize = std::move(callback)};
   return true;
 }
 
-bool MockGestureHandler::BindOneFingerDragAction(OnGestureCallback on_start,
+bool MockGestureHandler::BindOneFingerDragAction(OnGestureCallback on_recognize,
                                                  OnGestureCallback on_update,
                                                  OnGestureCallback on_complete) {
   bound_gestures_.push_back(GestureType::kOneFingerDrag);
-  gesture_handlers_[GestureType::kOneFingerDrag] = {.on_start = std::move(on_start),
+  gesture_handlers_[GestureType::kOneFingerDrag] = {.on_recognize = std::move(on_recognize),
                                                     .on_update = std::move(on_update),
                                                     .on_complete = std::move(on_complete)};
   return true;
@@ -30,7 +67,7 @@ bool MockGestureHandler::BindOneFingerDragAction(OnGestureCallback on_start,
 
 bool MockGestureHandler::BindSwipeAction(OnGestureCallback callback, GestureType gesture_type) {
   bound_gestures_.push_back(gesture_type);
-  gesture_handlers_[gesture_type] = {.on_complete = std::move(callback)};
+  gesture_handlers_[gesture_type] = {.on_recognize = std::move(callback)};
   return true;
 }
 
@@ -38,8 +75,8 @@ void MockGestureHandler::TriggerGesture(GestureType gesture_type) {
   auto it = gesture_handlers_.find(gesture_type);
   FX_DCHECK(it != gesture_handlers_.end());
   // These values are not important and are here so that the callback can be invoked.
-  if (it->second.on_start) {
-    it->second.on_start(ZX_KOID_INVALID, {.x = 1, .y = 1});
+  if (it->second.on_recognize) {
+    it->second.on_recognize(ZX_KOID_INVALID, {.x = 1, .y = 1});
   }
   if (it->second.on_update) {
     it->second.on_update(ZX_KOID_INVALID, {.x = 1, .y = 1});
@@ -51,8 +88,30 @@ void MockGestureHandler::TriggerGesture(GestureType gesture_type) {
 
 bool MockGestureHandler::BindTwoFingerSingleTapAction(OnGestureCallback callback) {
   bound_gestures_.push_back(GestureType::kTwoFingerSingleTap);
-  gesture_handlers_[GestureType::kTwoFingerSingleTap] = {.on_complete = std::move(callback)};
+  gesture_handlers_[GestureType::kTwoFingerSingleTap] = {.on_recognize = std::move(callback)};
   return true;
+}
+
+bool MockGestureHandler::BindMFingerNTapDragAction(OnGestureCallback on_recognize,
+                                                   OnGestureCallback on_update,
+                                                   OnGestureCallback on_complete,
+                                                   uint32_t num_fingers, uint32_t num_taps) {
+  if (num_fingers == 1 && num_taps == 3) {
+    gesture_handlers_[GestureType::kOneFingerTripleTapDrag] = {
+        .on_recognize = std::move(on_recognize),
+        .on_update = std::move(on_update),
+        .on_complete = std::move(on_complete)};
+    return true;
+  }
+  if (num_fingers == 3 && num_taps == 2) {
+    gesture_handlers_[GestureType::kThreeFingerDoubleTapDrag] = {
+        .on_recognize = std::move(on_recognize),
+        .on_update = std::move(on_update),
+        .on_complete = std::move(on_complete)};
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace accessibility_test

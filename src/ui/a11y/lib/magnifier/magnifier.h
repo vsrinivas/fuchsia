@@ -17,6 +17,7 @@
 #include "src/lib/ui/input/gesture_detector.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
+#include "src/ui/a11y/lib/gesture_manager/gesture_handler.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 
 namespace a11y {
@@ -44,6 +45,9 @@ class Magnifier : public fuchsia::accessibility::Magnifier,
   // |fuchsia::accessibility::Magnifier|
   void RegisterHandler(
       fidl::InterfaceHandle<fuchsia::accessibility::MagnificationHandler> handler) override;
+
+  // Method to register recognizers in a gesture recognition arena.
+  void BindGestures(a11y::GestureHandler* gesture_handler);
 
   // Used when magnification is toggled off, to restore the presentation to an umagnified state.
   void ZoomOutIfMagnified();
