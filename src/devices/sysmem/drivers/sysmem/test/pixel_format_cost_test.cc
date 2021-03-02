@@ -56,7 +56,11 @@ TEST(PixelFormatCost, Afbc) {
 TEST(PixelFormatCost, IntelTiling) {
   fidl::FidlAllocator allocator;
 
+  constexpr uint32_t kUnknownPid = 0;
+  constexpr uint32_t kUnknownVid = 0;
+
   llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints constraints(allocator);
+
   constraints.set_image_format_constraints(allocator, allocator, 2);
   uint64_t tiling_types[] = {llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_X_TILED,
                              llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_YF_TILED,
@@ -83,8 +87,6 @@ TEST(PixelFormatCost, IntelTiling) {
       }
       constraints.image_format_constraints()[1] = std::move(image_format_constraints);
     }
-    constexpr uint32_t kUnknownPid = 0;
-    constexpr uint32_t kUnknownVid = 0;
     EXPECT_LT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 0, 1));
     EXPECT_GT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 1, 0));
     // Intel tiled formats aren't necessarily useful on AMLOGIC, but if some hardware supported them
@@ -109,6 +111,35 @@ TEST(PixelFormatCost, IntelTiling) {
     }
     EXPECT_LT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 0, 1));
     EXPECT_GT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 1, 0));
+  }
+
+  // Formats are in ascending preference order (descending cost order).
+  std::array modifier_list = {
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_X_TILED,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_Y_TILED,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_YF_TILED,
+  };
+  constraints.set_image_format_constraints(allocator, allocator, modifier_list.size());
+
+  for (uint32_t i = 0; i < modifier_list.size(); ++i) {
+    {
+      llcpp::fuchsia::sysmem2::ImageFormatConstraints image_format_constraints(allocator);
+      {
+        llcpp::fuchsia::sysmem2::PixelFormat pixel_format(allocator);
+        pixel_format.set_type(allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32);
+        pixel_format.set_format_modifier_value(allocator, modifier_list[i]);
+        image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
+      }
+      constraints.image_format_constraints()[i] = std::move(image_format_constraints);
+    }
+  }
+
+  for (uint32_t i = 1; i < modifier_list.size(); ++i) {
+    EXPECT_LT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, i - 1, i),
+              "i=%d", i);
+    EXPECT_GT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, i, i - 1),
+              "i=%d", i);
   }
 }
 

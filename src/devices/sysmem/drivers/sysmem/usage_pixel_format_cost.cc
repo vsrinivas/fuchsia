@@ -203,11 +203,11 @@ const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries =
 // These costs are expected to be true on every platform.
 const std::list<const UsagePixelFormatCostEntry> kGeneric_Cost_Entries = [] {
   std::list<const UsagePixelFormatCostEntry> result;
-  AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_X_TILED, 1000.0,
-                     result);
   AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_YF_TILED,
                      1000.0, result);
-  AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_Y_TILED, 1000.0,
+  AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_Y_TILED, 2000.0,
+                     result);
+  AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_X_TILED, 3000.0,
                      result);
   // LOG(INFO, "usage_pixel_format_cost.cc - allocator.debug_needed_buffer_size(): %zu",
   //    allocator.inner_allocator().debug_needed_buffer_size());
