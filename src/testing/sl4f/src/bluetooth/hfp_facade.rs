@@ -10,7 +10,7 @@ use fidl_fuchsia_bluetooth_hfp::{
     CallManagerMarker, CallManagerProxy, CallMarker, CallRequest, CallRequestStream,
     CallState as FidlCallState, CallWatchStateResponder, DtmfCode, HeadsetGainProxy, HfpMarker,
     NetworkInformation, PeerHandlerRequest, PeerHandlerRequestStream,
-    PeerHandlerWaitForCallResponder,
+    PeerHandlerWaitForCallResponder, PeerHandlerWatchNetworkInformationResponder,
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client;
@@ -28,6 +28,8 @@ type CallId = u64;
 struct ManagerState {
     proxy: Option<CallManagerProxy>,
     network: NetworkInformation,
+    reported_network: Option<NetworkInformation>,
+    network_responder: Option<PeerHandlerWatchNetworkInformationResponder>,
     operator: String,
     subscriber_numbers: Vec<String>,
     nrec_support: bool,
@@ -38,6 +40,8 @@ impl Default for ManagerState {
         Self {
             proxy: None,
             network: NetworkInformation::EMPTY,
+            reported_network: None,
+            network_responder: None,
             operator: String::new(),
             subscriber_numbers: vec![],
             nrec_support: true,
@@ -368,7 +372,13 @@ impl HfpFacade {
         fx_log_info!("Received Peer Handler request for {:?}: {:?}", id, request);
         match request {
             PeerHandlerRequest::WatchNetworkInformation { responder, .. } => {
-                responder.send(self.inner.lock().await.manager.network.clone())?;
+                let mut inner = self.inner.lock().await;
+                if Some(inner.manager.network.clone()) == inner.manager.reported_network {
+                    inner.manager.network_responder = Some(responder);
+                } else {
+                    responder.send(inner.manager.network.clone())?;
+                    inner.manager.reported_network = Some(inner.manager.network.clone());
+                }
             }
             PeerHandlerRequest::WaitForCall { responder, .. } => {
                 let mut inner = self.inner.lock().await;
@@ -613,6 +623,35 @@ impl HfpFacade {
                 gain_control.set_microphone_gain(value)?;
             }
         }
+        Ok(())
+    }
+
+    /// Update the facade's network information with the provided `network`.
+    /// Any fields in `network` that are `None` will not be updated.
+    ///
+    /// Arguments:
+    ///     `network`: The updated network information fields.
+    pub async fn update_network_information(
+        &self,
+        network: NetworkInformation,
+    ) -> Result<(), Error> {
+        let mut inner = self.inner.lock().await;
+
+        // Update network state
+        network
+            .service_available
+            .map(|update| inner.manager.network.service_available = Some(update));
+        network.signal_strength.map(|update| inner.manager.network.signal_strength = Some(update));
+        network.roaming.map(|update| inner.manager.network.roaming = Some(update));
+
+        // Update the client if a responder is present
+        if Some(inner.manager.network.clone()) != inner.manager.reported_network {
+            if let Some(responder) = inner.manager.network_responder.take() {
+                responder.send(inner.manager.network.clone())?;
+                inner.manager.reported_network = Some(inner.manager.network.clone());
+            }
+        }
+
         Ok(())
     }
 

@@ -6,6 +6,7 @@ use crate::server::Facade;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
+use fidl_fuchsia_bluetooth_hfp::{NetworkInformation, SignalStrength};
 use fidl_fuchsia_bluetooth_le::ScanFilter;
 use fidl_fuchsia_bluetooth_sys::{LeSecurityMode, Settings};
 use parking_lot::RwLock;
@@ -752,6 +753,45 @@ impl Facade for HfpFacade {
             "SetMicrophoneGain" => {
                 let value = parse_arg!(args, as_u64, "value")?;
                 let result = self.set_microphone_gain(value).await?;
+                Ok(to_value(result)?)
+            }
+            "SetServiceAvailable" => {
+                let service_available = Some(parse_arg!(args, as_bool, "value")?);
+                let result = self
+                    .update_network_information(NetworkInformation {
+                        service_available,
+                        ..NetworkInformation::EMPTY
+                    })
+                    .await?;
+                Ok(to_value(result)?)
+            }
+            "SetRoaming" => {
+                let roaming = Some(parse_arg!(args, as_bool, "value")?);
+                let result = self
+                    .update_network_information(NetworkInformation {
+                        roaming,
+                        ..NetworkInformation::EMPTY
+                    })
+                    .await?;
+                Ok(to_value(result)?)
+            }
+            "SetSignalStrength" => {
+                let signal_strength = parse_arg!(args, as_u64, "value")?;
+                let signal_strength = Some(match signal_strength {
+                    0 => SignalStrength::None,
+                    1 => SignalStrength::VeryLow,
+                    2 => SignalStrength::Low,
+                    3 => SignalStrength::Medium,
+                    4 => SignalStrength::High,
+                    5 => SignalStrength::VeryHigh,
+                    _ => panic!(""),
+                });
+                let result = self
+                    .update_network_information(NetworkInformation {
+                        signal_strength,
+                        ..NetworkInformation::EMPTY
+                    })
+                    .await?;
                 Ok(to_value(result)?)
             }
             _ => bail!("Invalid Hfp FIDL method: {:?}", method),
