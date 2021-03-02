@@ -227,6 +227,41 @@ TEST(LlcppTypesTests, ArrayLayoutTest) {
   EXPECT_EQ((&a[2] - &a[0]), (&b[2] - &b[0]));
 }
 
+TEST(LlcppTypesTests, StringView) {
+  fidl::FidlAllocator allocator;
+
+  fidl::StringView view;
+  EXPECT_TRUE(view.empty());
+  EXPECT_TRUE(view.is_null());
+
+  view.Set(allocator, "123");
+
+  EXPECT_FALSE(view.empty());
+  EXPECT_EQ(view.size(), 3);
+  EXPECT_BYTES_EQ(view.data(), "123", 3);
+
+  EXPECT_EQ(view.at(1), '2');
+}
+
+TEST(LlcppTypesTests, VectorView) {
+  fidl::FidlAllocator allocator;
+
+  fidl::VectorView<int> view;
+  EXPECT_TRUE(view.empty());
+  EXPECT_TRUE(view.data() == nullptr);
+
+  view.Allocate(allocator, 3);
+  const int data[] = {1, 2, 3};
+  view[0] = data[0];
+  view[1] = data[1];
+  view[2] = data[2];
+
+  EXPECT_EQ(view.count(), 3);
+  EXPECT_BYTES_EQ(view.data(), data, 3);
+
+  EXPECT_EQ(view.at(1), 2);
+}
+
 TEST(LlcppTypesTests, UninitializedBufferStackAllocationAlignmentTest) {
   fidl::internal::AlignedBuffer<1> array_of_1;
   ASSERT_EQ(sizeof(array_of_1), 8);

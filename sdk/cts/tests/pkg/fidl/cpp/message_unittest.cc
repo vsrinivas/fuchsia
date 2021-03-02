@@ -5,14 +5,11 @@
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_builder.h>
-#include <lib/fidl/llcpp/memory.h>
-#include <lib/fidl/llcpp/string_view.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 
+#include <fidl/test/handles/cpp/fidl.h>
 #include <zxtest/zxtest.h>
-
-#include "fidl_coded_types.h"
 
 namespace {
 
@@ -27,11 +24,11 @@ TEST(Message, BasicTests) {
   header->txid = 5u;
   header->ordinal = 42u;
 
-  fidl::StringView* view = builder.New<fidl::StringView>();
+  fidl_string_t* view = builder.New<fidl_string_t>();
 
   char* data = builder.NewArray<char>(4);
-  view->set_data(fidl::unowned_ptr(data));
-  view->set_size(4);
+  view->data = data;
+  view->size = 4;
 
   data[0] = 'a';
   data[1] = 'b';
@@ -45,7 +42,7 @@ TEST(Message, BasicTests) {
   EXPECT_EQ(outgoing_message.ordinal(), 42u);
 
   fidl::BytePart payload = outgoing_message.payload();
-  EXPECT_EQ(reinterpret_cast<fidl::StringView*>(payload.data()), view);
+  EXPECT_EQ(reinterpret_cast<fidl_string_t*>(payload.data()), view);
 
   zx::channel h1, h2;
   EXPECT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
@@ -111,7 +108,10 @@ TEST(MessageBuilder, BasicTests) {
   EXPECT_EQ(zx::event::create(0, &e), ZX_OK);
   EXPECT_NE(e.get(), ZX_HANDLE_INVALID);
 
-  fidl::MessageBuilder builder(&nonnullable_handle_message_type);
+  // Note: |MessageBuilder| takes a coding table which is strictly speaking
+  // internal API.
+  fidl::MessageBuilder builder(
+      &fidl::test::handles::_internal::fidl_test_handles_FooBarRequestTable);
   builder.header()->txid = 5u;
   builder.header()->ordinal = 42u;
 

@@ -49,6 +49,14 @@ cts_fidl("fidl_test") {
   sources = [ "fidl_test.test.fidl" ]
 }
 
+cts_fidl("fidl_test_handles") {
+  name = "fidl.test.handles"
+
+  testonly = true
+
+  sources = [ "fidl_test_handles.test.fidl" ]
+}
+
 cts_fidl("collision_test") {
   name = "fidl.test.collision"
 

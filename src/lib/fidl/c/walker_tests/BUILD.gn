@@ -28,13 +28,11 @@ foreach(gidl_file, conformance_suite_gidl_files) {
 source_set("test_sources") {
   testonly = true
   sources = [
-    "cpp_types_tests.cc",
     "decoding_tests.cc",
     "encoding_tests.cc",
     "fidl_align_tests.cc",
     "fidl_coded_types.cc",
     "formatting_tests.cc",
-    "message_tests.cc",
     "on_error_handle_tests.cc",
     "validating_tests.cc",
   ]
@@ -135,7 +133,6 @@ if (is_fuchsia) {
 source_set("host_test_sources") {
   testonly = true
   sources = [
-    "cpp_types_tests.cc",
     "decoding_tests.cc",
     "encoding_tests.cc",
     "fidl_align_tests.cc",
