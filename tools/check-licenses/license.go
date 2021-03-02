@@ -101,6 +101,21 @@ func NewLicense(path string, config *Config) (*License, error) {
 	}, nil
 }
 
+// NOTICE files currently need to be processed differently compared to regular single-license files.
+// This custom license type allows us to collect and present them properly in the final output file.
+func NewCustomLicense(name string) *License {
+	regex := "(?s)(?P<text>.*)"
+	re, _ := regexp.Compile(regex)
+
+	return &License{
+		pattern:         re,
+		Category:        "custom",
+		ValidType:       true,
+		matches:         map[string]*Match{},
+		BadLicenseUsage: []string{},
+	}
+}
+
 func (l *License) Search(data []byte, path string) bool {
 	if len(l.AllowedDirs) > 0 && !contains(l.AllowedDirs, path) {
 		return false

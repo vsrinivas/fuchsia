@@ -128,7 +128,11 @@ func processSingleLicenseFile(path string, metrics *Metrics, licenses *Licenses,
 	if err != nil {
 		return err
 	}
-	licenses.MatchSingleLicenseFile(data, path, metrics, file_tree)
+	if contains(config.NoticeFiles, path) {
+		licenses.MatchNoticeFile(data, path, metrics, file_tree)
+	} else {
+		licenses.MatchSingleLicenseFile(data, path, metrics, file_tree)
+	}
 	return nil
 }
 
