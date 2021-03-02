@@ -373,15 +373,18 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // The dest_buffer offset is based on the distance from mix job start to packet start (measured
     // in frac_frames), converted into frames in the destination timeline. As we scale the
     // frac_frame delta into dest frames, we want to "round up" any subframes that are present; any
-    // src subframes should push our dest frame up to the next integer. To do this, we subtract a
-    // single subframe (guaranteeing that the zero-fraction src case will truncate down), then scale
-    // the src delta to dest frames (which effectively truncates any resultant fraction in the
-    // computed dest frame), then add an additional 'round-up' frame (to account for initial
-    // subtract). Because we entered this IF in the first place, we have at least some fractional
-    // src delta, thus dest_offset_64 is guaranteed to become greater than zero.
+    // src subframes should push our dest frame up to the next integer. Because we entered this IF
+    // in the first place, we have at least some fractional src delta, thus dest_offset_64 is
+    // guaranteed to become greater than zero.
+    //
+    // When a position is round-trip converted to another timeline and back again, there is no
+    // guarantee that it will result in the exact original value. To make source -> dest -> source
+    // as accurate as possible (and critically, to ensure that source position does not move
+    // backward), we "round up" when translating from source (fractional) to dest (integral).
     Fixed first_source_mix_point =
         frac_source_for_first_packet_frame - frac_source_pos_edge_first_mix_frame;
-    dest_offset_64 = dest_to_src.Inverse().Scale(first_source_mix_point.raw_value() - 1) + 1;
+    dest_offset_64 = dest_to_src.Inverse().Scale(first_source_mix_point.raw_value(),
+                                                 TimelineRate::RoundingMode::Ceiling);
     FX_DCHECK(dest_offset_64 > 0);
 
     frac_source_offset_64 += Fixed::FromRaw(dest_to_src.Scale(dest_offset_64));

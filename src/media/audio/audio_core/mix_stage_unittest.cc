@@ -23,8 +23,8 @@ using testing::Each;
 using testing::FloatEq;
 
 namespace media::audio {
-namespace {
 
+namespace {
 enum class ClockMode { SAME, WITH_OFFSET, RATE_ADJUST };
 
 constexpr uint32_t kDefaultNumChannels = 2;
@@ -36,6 +36,7 @@ const Format kDefaultFormat =
                        .frames_per_second = kDefaultFrameRate,
                    })
         .take_value();
+}  // namespace
 
 class MixStageTest : public testing::ThreadingModelFixture {
  protected:
@@ -716,6 +717,46 @@ TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
   EXPECT_EQ(bookkeeping.denominator, 1u);
 }
 
-}  // namespace
+// This is a regression test for fxbug.dev/67996.
+TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
+  // Unused, but MixStage::ProcessMix needs this argument.
+  auto input = std::make_shared<testing::FakeStream>(kDefaultFormat, PAGE_SIZE);
+
+  // As summarized in the calculations at the link below, the following hard-coded source_info
+  // values result in dest_offset = 301. In order for this offset to not overflow the dest buffer,
+  // we need at least 302 frames in the MixStage output buffer.
+  // https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=67996#c22
+  //
+  // We use 480, which is 10ms at 48kHz.
+  mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, 480 /* block size in frames */,
+                                          timeline_function_, *device_clock_);
+
+  // The crash happened in PointSampler.
+  auto mixer = mix_stage_->AddInput(input, std::nullopt, Mixer::Resampler::SampleAndHold);
+
+  // First step of ReadLock.
+  memset(&mix_stage_->cur_mix_job_, 0, sizeof(mix_stage_->cur_mix_job_));
+
+  // The following values are derived from an actual crash. We set only the values needed by
+  // MixStage::ProcessMix. The crux of the bug is that the dest clock's adjusted rate of -1 PPM
+  // caused a rounding error. See discussion at fxbug.dev/67996#c22.
+  mix_stage_->cur_mix_job_.buf = &mix_stage_->output_buffer_[0];
+  mix_stage_->cur_mix_job_.buf_frames = mix_stage_->output_buffer_frames_;
+  mix_stage_->cur_mix_job_.dest_ref_clock_to_frac_dest_frame = TimelineFunction();
+  mixer->source_info().frames_produced = 0;
+  mixer->source_info().dest_frames_to_frac_source_frames =
+      TimelineFunction(3582737759, 0, 8192000, 999);
+  mixer->source_info().next_frac_source_frame = Fixed::FromRaw(2414202275419);
+  mixer->bookkeeping().step_size = Fixed(1).raw_value();
+  mixer->bookkeeping().rate_modulo = 0;
+  mixer->bookkeeping().denominator = 1;
+  mixer->bookkeeping().src_pos_modulo = 0;
+
+  char payload[10 * kDefaultNumChannels * sizeof(float)];
+  ReadableStream::Buffer buffer(Fixed::FromRaw(2414204747776), Fixed(10), payload, true,
+                                StreamUsageMask(), 0);
+
+  mix_stage_->ProcessMix(*mixer, *input, buffer);
+}
 
 }  // namespace media::audio

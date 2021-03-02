@@ -9,6 +9,8 @@
 #include <lib/async/cpp/time.h>
 #include <lib/zx/time.h>
 
+#include <gtest/gtest_prod.h>
+
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/cached_readable_stream_buffer.h"
@@ -41,6 +43,8 @@ class MixStage : public ReadableStream {
   void RemoveInput(const ReadableStream& stream);
 
  private:
+  FRIEND_TEST(MixStageTest, DontCrashOnDestOffsetRoundingError);
+
   void SetupMixBuffer(uint32_t max_mix_frames);
 
   struct MixJob {
