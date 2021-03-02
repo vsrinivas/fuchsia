@@ -188,10 +188,6 @@ has it locked.
   slices, since discarding VMOs in a clone hierarchy can lead to surprising
   behaviors. The `zx_vmo_create_child()` syscall will fail on discardable VMOs.
 
-- When mapping discardable VMOs, `zx_vmar_map()` will require the
-  `ZX_VM_ALLOW_FAULTS` flag. This forces the client to explicitly acknowledge
-  that they’re prepared to handle faults if the VMO is discarded.
-
 - The `ZX_VMO_DISCARDABLE` flag cannot be used in the `options` argument for
   `zx_pager_create_vmo()`. A major reason for this is that pager-backed VMOs can
   be cloned, and discardable VMOs cannot.  Moreover, discardability is implied
@@ -246,15 +242,15 @@ consider are mentioned later.
 
 #### Discard operation
 
-A “discard” is implemented on the kernel side as resizing the VMO to zero, and
-the old size is restored on a subsequent `ZX_VMO_OP_LOCK`. This gives us the
-ability to generate exceptions when a discarded unlocked VMO is accessed through
-a mapping, and also the ability to fail syscalls. Note that even though the
-internal view the kernel has indicates that the VMO has a size of zero, the
-client will always see the size of the VMO as the size it was created with, or
-explicitly set to with `zx_vmo_set_size()`. Resizing to zero is purely an
-implementation detail in the kernel, chosen for convenience, based on the
-desired behavior for failure cases.
+A “discard” is implemented on the kernel side by decommitting all the pages of
+the VMO, and setting the internal state of the VMO as `discarded`.
+`VmObjectPaged::GetPageLocked()` will fail with `ZX_ERR_NOT_FOUND` if the VMO's
+state is `discarded`. The `discarded` state is cleared on a subsequent
+`ZX_VMO_OP_LOCK` operation. `GetPageLocked()` is the function all accesses to a
+VMO's pages funnel down to, both through `zx_vmo_read/write` syscalls and page
+access via VM mappings. This gives us the ability to fail syscalls on a
+discarded unlocked VMO, and also to generate exceptions when a discarded
+unlocked VMO is accessed through a mapping.
 
 ## Implementation
 
@@ -325,21 +321,28 @@ discardable regions with individual VMOs can be prohibitive.
 
 ### Kernel implementation of discard
 
-When the kernel reclaims a discardable VMO, it essentially resizes it to zero.
-The other alternative here would be to leave the size of the VMO unaltered, and
-instead simply decommit its pages.  Resizing the VMO allows for a stricter
-failure model. For example, consider the case where a client had a discardable
-VMO mapped in its address space, which the kernel discarded at some point. If
-the client now tries to access the VMO via the mapping without first locking the
-VMO, it will incur a fatal page fault. Whereas if the kernel were to simply
-decommit pages, a subsequent unlocked access would simply result in a zero page
-being silently handed to the client. This could either go undetected, or result
-in more subtle errors due to unexpected zero pages.
+When the kernel reclaims a discardable VMO, it decommits its pages and tracks
+its state as `discarded`. Future unlocked requests for pages will fail in the
+`discarded` state; once the VMO is locked again, the `discarded` state is
+cleared. The other alternative here would be to simply decommit pages without
+explicitly tracking a state. However tracking the `discarded` state allows for a
+stricter failure model. For example, consider the case where a client had a
+discardable VMO mapped in its address space, which the kernel discarded at some
+point. If the client now tries to access the VMO via the mapping without first
+locking the VMO, it will incur a fatal page fault. Whereas if the kernel were to
+only decommit pages, a subsequent unlocked access would simply result in a zero
+page being silently handed to the client. This could either go undetected, or
+result in more subtle errors due to unexpected zero pages.
 
-We could also model the same behavior in the kernel via another mechanism that
-tracks the discarded state of the VMO, but the logic would likely look very
-similar to a resize to zero. Implementing a discard as a resize allows us to use
-existing logic that gives us the desired behavior for free.
+Another alternative here would be to internally resize the VMO to zero. This
+gives us the failure model we want by default, without having to do any explicit
+state tracking. However, this requires tracking an internal
+implementation-defined size of a VMO, in addition to an external size which is
+what the user sees. While having an internal implementation-defined size is a
+useful trick which could potentially also benefit other use cases in the future,
+having two separate notions of size is confusing and prone to bugs. So until we
+have other concrete use cases that would clearly benefit from having an internal
+size in addition to an external size, we choose to avoid taking that approach.
 
 ### Faster locking API with atomics
 
