@@ -36,7 +36,7 @@ macro_rules! invoke_for_handle_types {
         $x! {DebugLog, "Debug Log", LOG, 9, FuchsiaOnly}
         $x! {Socket, "Socket", SOCKET, 10, Everywhere}
         $x! {Resource, "Resource", RESOURCE, 12, FuchsiaOnly}
-        $x! {EventPair, "Event Pair", EVENTPAIR, 13, FuchsiaOnly}
+        $x! {EventPair, "Event Pair", EVENTPAIR, 13, Everywhere}
         $x! {Job, "Job", JOB, 14, FuchsiaOnly}
         $x! {Vmar, "VMAR", VMAR, 15, FuchsiaOnly}
         $x! {Fifo, "FIFO", FIFO, 16, FuchsiaOnly}

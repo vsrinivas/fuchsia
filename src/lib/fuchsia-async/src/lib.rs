@@ -27,7 +27,7 @@ pub use self::handle::{
 #[cfg(not(target_os = "fuchsia"))]
 pub mod emulated_handle {
     pub use super::handle::{
-        AsHandleRef, Channel, EmulatedHandleRef, Handle, HandleBased, HandleDisposition,
+        AsHandleRef, Channel, EmulatedHandleRef, EventPair, Handle, HandleBased, HandleDisposition,
         HandleInfo, HandleOp, HandleRef, MessageBuf, MessageBufEtc, ObjectType, Peered, Rights,
         Signals, Socket, SocketOpts,
     };

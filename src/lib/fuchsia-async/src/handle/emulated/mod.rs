@@ -178,6 +178,7 @@ pub trait EmulatedHandleRef: AsHandleRef {
                 HdlType::Channel => table_contains(&CHANNELS, shard, slot, side),
                 HdlType::StreamSocket => table_contains(&STREAM_SOCKETS, shard, slot, side),
                 HdlType::DatagramSocket => table_contains(&DATAGRAM_SOCKETS, shard, slot, side),
+                HdlType::EventPair => table_contains(&EVENT_PAIRS, shard, slot, side),
             };
             !present
         }
@@ -274,6 +275,7 @@ impl Handle {
             HdlType::DatagramSocket => {
                 table_replace(&DATAGRAM_SOCKETS, shard, slot, side, target_rights)
             }
+            HdlType::EventPair => table_replace(&EVENT_PAIRS, shard, slot, side, target_rights),
         };
         let (new_shard, new_slot) = match result {
             Ok(val) => val,
@@ -633,6 +635,50 @@ impl Socket {
             Poll::Ready(r) => r,
             Poll::Pending => Err(zx_status::Status::SHOULD_WAIT),
         }
+    }
+}
+
+/// Emulation of Zircon EventPair.
+#[derive(PartialEq, Eq, Debug, PartialOrd, Ord, Hash)]
+pub struct EventPair(u32);
+
+impl From<Handle> for EventPair {
+    fn from(mut hdl: Handle) -> EventPair {
+        let out = EventPair(hdl.0);
+        hdl.0 = INVALID_HANDLE;
+        out
+    }
+}
+impl From<EventPair> for Handle {
+    fn from(mut hdl: EventPair) -> Handle {
+        let out = unsafe { Handle::from_raw(hdl.0) };
+        hdl.0 = INVALID_HANDLE;
+        out
+    }
+}
+impl HandleBased for EventPair {}
+impl AsHandleRef for EventPair {
+    fn as_handle_ref<'a>(&'a self) -> HandleRef<'a> {
+        HandleRef(self.0, std::marker::PhantomData)
+    }
+}
+
+impl Peered for EventPair {}
+
+impl Drop for EventPair {
+    fn drop(&mut self) {
+        hdl_close(self.0);
+    }
+}
+
+impl EventPair {
+    /// Create an event pair.
+    pub fn create() -> Result<(EventPair, EventPair), Status> {
+        let rights = Rights::TRANSFER;
+        let (shard, slot) = EVENT_PAIRS.new_handle_slot(rights);
+        let left = pack_handle(shard, slot, HdlType::EventPair, Side::Left);
+        let right = pack_handle(shard, slot, HdlType::EventPair, Side::Right);
+        Ok((EventPair(left), EventPair(right)))
     }
 }
 
@@ -1007,6 +1053,7 @@ enum HdlType {
     Channel,
     StreamSocket,
     DatagramSocket,
+    EventPair,
 }
 
 impl HdlType {
@@ -1015,6 +1062,7 @@ impl HdlType {
             HdlType::Channel => ObjectType::CHANNEL,
             HdlType::StreamSocket => ObjectType::SOCKET,
             HdlType::DatagramSocket => ObjectType::SOCKET,
+            HdlType::EventPair => ObjectType::EVENTPAIR,
         }
     }
 }
@@ -1130,8 +1178,8 @@ trait HdlData {
     fn rights(&self, side: Side) -> Rights;
 }
 
-struct Hdl<T> {
-    q: Sided<VecDeque<T>>,
+struct Hdl<Q> {
+    q: Sided<Q>,
     wakers: Sided<Wakers>,
     liveness: Liveness,
     koid_left: u64,
@@ -1139,7 +1187,7 @@ struct Hdl<T> {
     signals: Sided<Signals>,
 }
 
-impl<T> HdlData for Hdl<T> {
+impl<Q> HdlData for Hdl<Q> {
     fn signal(&mut self, side: Side, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
         if !self.liveness.is_side_open(side) {
             return Err(Status::PEER_CLOSED);
@@ -1178,9 +1226,10 @@ impl<T> HdlData for Hdl<T> {
 }
 
 enum HdlRef<'a> {
-    Channel(&'a mut Hdl<ChannelMessage>),
-    StreamSocket(&'a mut Hdl<u8>),
-    DatagramSocket(&'a mut Hdl<Vec<u8>>),
+    Channel(&'a mut Hdl<VecDeque<ChannelMessage>>),
+    StreamSocket(&'a mut Hdl<VecDeque<u8>>),
+    DatagramSocket(&'a mut Hdl<VecDeque<Vec<u8>>>),
+    EventPair(&'a mut Hdl<()>),
 }
 
 impl<'a> HdlRef<'a> {
@@ -1189,6 +1238,7 @@ impl<'a> HdlRef<'a> {
             HdlRef::Channel(hdl) => *hdl,
             HdlRef::StreamSocket(hdl) => *hdl,
             HdlRef::DatagramSocket(hdl) => *hdl,
+            HdlRef::EventPair(hdl) => *hdl,
         }
     }
 }
@@ -1213,6 +1263,9 @@ fn with_handle<R>(handle: u32, f: impl FnOnce(HdlRef<'_>, Side) -> R) -> R {
             HdlRef::DatagramSocket(&mut DATAGRAM_SOCKETS.shards[shard].lock().unwrap()[slot]),
             side,
         ),
+        HdlType::EventPair => {
+            f(HdlRef::EventPair(&mut EVENT_PAIRS.shards[shard].lock().unwrap()[slot]), side)
+        }
     };
     #[cfg(debug_assertions)]
     IN_WITH_HANDLE.with(|iwh| assert_eq!(iwh.replace(false), true));
@@ -1228,9 +1281,10 @@ struct HandleTable<T> {
 }
 
 lazy_static::lazy_static! {
-    static ref CHANNELS: HandleTable<ChannelMessage> = Default::default();
-    static ref STREAM_SOCKETS: HandleTable<u8> = Default::default();
-    static ref DATAGRAM_SOCKETS: HandleTable<Vec<u8>> = Default::default();
+    static ref CHANNELS: HandleTable<VecDeque<ChannelMessage>> = Default::default();
+    static ref STREAM_SOCKETS: HandleTable<VecDeque<u8>> = Default::default();
+    static ref DATAGRAM_SOCKETS: HandleTable<VecDeque<Vec<u8>>> = Default::default();
+    static ref EVENT_PAIRS: HandleTable<()> = Default::default();
 }
 
 static NEXT_KOID: AtomicU64 = AtomicU64::new(1);
@@ -1245,7 +1299,7 @@ impl<T> Default for HandleTable<T> {
     }
 }
 
-impl<T> HandleTable<T> {
+impl<T: Default> HandleTable<T> {
     fn new_handle_slot(&self, rights: Rights) -> (usize, usize) {
         self.insert_hdl(Hdl {
             q: Default::default(),
@@ -1274,6 +1328,7 @@ fn pack_handle(shard: usize, slot: usize, ty: HdlType, side: Side) -> u32 {
         HdlType::Channel => 0,
         HdlType::StreamSocket => 1,
         HdlType::DatagramSocket => 2,
+        HdlType::EventPair => 3,
     };
     let shard_bits = shard as u32;
     let slot_bits = slot as u32;
@@ -1287,6 +1342,7 @@ fn unpack_handle(handle: u32) -> (usize, usize, HdlType, Side) {
         0 => HdlType::Channel,
         1 => HdlType::StreamSocket,
         2 => HdlType::DatagramSocket,
+        3 => HdlType::EventPair,
         x => panic!("Bad handle type {}", x),
     };
     let shard = ((handle >> 3) & 15) as usize;
@@ -1355,6 +1411,7 @@ fn hdl_close(hdl: u32) {
         HdlType::Channel => close_in_table(&CHANNELS, shard, slot, side),
         HdlType::StreamSocket => close_in_table(&STREAM_SOCKETS, shard, slot, side),
         HdlType::DatagramSocket => close_in_table(&DATAGRAM_SOCKETS, shard, slot, side),
+        HdlType::EventPair => close_in_table(&EVENT_PAIRS, shard, slot, side),
     }
 }
 
@@ -1668,7 +1725,7 @@ mod test {
 
     #[test]
     fn await_user_signal() {
-        let (c1, _) = Channel::create().unwrap();
+        let (c1, _) = EventPair::create().unwrap();
         let mut on_sig = on_signals::OnSignals::new(&c1, Signals::USER_0);
         let (waker, count) = futures_test::task::new_count_waker();
         let mut ctx = Context::from_waker(&waker);
