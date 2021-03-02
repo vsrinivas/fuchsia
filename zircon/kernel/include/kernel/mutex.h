@@ -102,6 +102,60 @@ class TA_CAP("mutex") Mutex {
   OwnedWaitQueue wait_;
 };
 
+// CriticalMutex is a mutex variant that disables preemption during the critical
+// section.
+//
+// This variant is useful for performance-sensitive critical sections where
+// completion is more important to system progress than strict fairness or
+// priority observance and where a spinlock is not a viable alternative, due to
+// long tail critical section duration or blocking requirements.
+//
+// Good candidates for CriticalMutex are global or widely shared locks that
+// typically, but not necessarily always, have very short critical sections
+// (tens of microseconds or less) and high contention under load.
+//
+// CriticalMutex differs from SpinLock in the following ways:
+// * Threads contending a CriticalMutex will block after the spin interval is
+//   exceeded, avoiding extended monopolization of multiple CPUs.
+// * Threads may block while holding a CriticalMutex, simplifying maintaining
+//   invariants in slow paths.
+// * Interrupts may remain enabled while holding a CriticalMutex, avoiding
+//   undesirable IRQ latency.
+//
+class TA_CAP("mutex") CriticalMutex {
+ public:
+  CriticalMutex() = default;
+  ~CriticalMutex() = default;
+
+  CriticalMutex(const CriticalMutex&) = delete;
+  CriticalMutex& operator=(const CriticalMutex&) = delete;
+  CriticalMutex(CriticalMutex&&) = delete;
+  CriticalMutex& operator=(CriticalMutex&&) = delete;
+
+  // Acquire the mutex.
+  void Acquire(zx_duration_t spin_max_duration = Mutex::SPIN_MAX_DURATION) TA_ACQ()
+      TA_EXCL(thread_lock) {
+    Thread::Current::preemption_state().PreemptDisable();
+    mutex_.Acquire(spin_max_duration);
+  }
+
+  // Release the mutex. Must be held by the current thread.
+  void Release() TA_REL() TA_EXCL(thread_lock) {
+    mutex_.Release();
+    Thread::Current::preemption_state().PreemptReenable();
+  }
+
+  // Returns true if the current thread owns the mutex.
+  bool IsHeld() const { return mutex_.IsHeld(); }
+
+  // Asserts that the current thread owns the mutex. Static analysis will
+  // believe the lock is held after this call succeeds.
+  void AssertHeld() const TA_ASSERT() { mutex_.AssertHeld(); }
+
+ private:
+  Mutex mutex_;
+};
+
 // Lock policy for kernel mutexes
 //
 struct MutexPolicy {
@@ -151,6 +205,7 @@ struct MutexPolicy {
 
 // Configure the lockdep::Guard for kernel mutexes to use MutexPolicy.
 LOCK_DEP_POLICY(Mutex, MutexPolicy);
+LOCK_DEP_POLICY(CriticalMutex, MutexPolicy);
 
 // Declares a Mutex member of the struct or class |containing_type|.
 //
@@ -162,6 +217,9 @@ LOCK_DEP_POLICY(Mutex, MutexPolicy);
 //
 #define DECLARE_MUTEX(containing_type, ...) \
   LOCK_DEP_INSTRUMENT(containing_type, ::Mutex, ##__VA_ARGS__)
+
+#define DECLARE_CRITICAL_MUTEX(containing_type, ...) \
+  LOCK_DEP_INSTRUMENT(containing_type, ::CriticalMutex, ##__VA_ARGS__)
 
 // Declares a |lock_type| member of the struct or class |containing_type|.
 //
@@ -182,6 +240,9 @@ LOCK_DEP_POLICY(Mutex, MutexPolicy);
 //  DECLARE_SINGLETON_MUTEX(MyGlobalLock [, LockFlags]);
 //
 #define DECLARE_SINGLETON_MUTEX(name, ...) LOCK_DEP_SINGLETON_LOCK(name, ::Mutex, ##__VA_ARGS__)
+
+#define DECLARE_SINGLETON_CRITICAL_MUTEX(name, ...) \
+  LOCK_DEP_SINGLETON_LOCK(name, ::CriticalMutex, ##__VA_ARGS__)
 
 // Declares a singleton |lock_type| with the name |name|.
 //
