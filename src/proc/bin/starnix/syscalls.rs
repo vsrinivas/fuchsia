@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_zircon::Task, zerocopy::AsBytes};
+use {fuchsia_zircon::Task, log::info, zerocopy::AsBytes};
 
 use crate::executive::*;
 use crate::types::*;
@@ -16,7 +16,7 @@ pub fn sys_write(
     let process = &ctx.process;
     let mut local = vec![0; count];
     process.read_memory(buffer, &mut local)?;
-    println!("starnix: write: {}", String::from_utf8_lossy(&local));
+    info!("write: {}", String::from_utf8_lossy(&local));
     Ok(count.into())
 }
 
@@ -50,7 +50,7 @@ pub fn sys_mprotect(
 }
 
 pub fn sys_brk(ctx: &ThreadContext, addr: UserAddress) -> Result<SyscallResult, Errno> {
-    // println!("starnix: brk: addr={}", addr);
+    // info!("brk: addr={}", addr);
     Ok(ctx.process.mm.set_program_break(addr).map_err(Errno::from)?.into())
 }
 
@@ -60,7 +60,7 @@ pub fn sys_writev(
     iovec: UserAddress,
     iovec_count: i32,
 ) -> Result<SyscallResult, Errno> {
-    println!("starnix: writev: fd={} iovec={} iovec_count={}", fd, iovec, iovec_count);
+    info!("writev: fd={} iovec={} iovec_count={}", fd, iovec, iovec_count);
     Err(ENOSYS)
 }
 
@@ -69,12 +69,12 @@ pub fn sys_access(
     path: UserAddress,
     mode: i32,
 ) -> Result<SyscallResult, Errno> {
-    println!("starnix: access: path={} mode={}", path, mode);
+    info!("access: path={} mode={}", path, mode);
     Err(ENOSYS)
 }
 
 pub fn sys_exit(ctx: &ThreadContext, error_code: i32) -> Result<SyscallResult, Errno> {
-    println!("starnix: exit: error_code={}", error_code);
+    info!("exit: error_code={}", error_code);
     // TODO: Set the error_code on the process.
     ctx.process.handle.kill().map_err(Errno::from)?;
     Ok(SUCCESS)
@@ -110,8 +110,8 @@ pub fn sys_readlink(
     _buffer: UserAddress,
     _buffer_size: usize,
 ) -> Result<SyscallResult, Errno> {
-    // println!(
-    //     "starnix: readlink: path={} buffer={} buffer_size={}",
+    // info!(
+    //     "readlink: path={} buffer={} buffer_size={}",
     //     path, buffer, buffer_size
     // );
     Err(EINVAL)
@@ -144,14 +144,14 @@ pub fn sys_arch_prctl(
             Ok(SUCCESS)
         }
         _ => {
-            println!("starnix: arch_prctl: Unknown code: code=0x{:x} addr={}", code, addr);
+            info!("arch_prctl: Unknown code: code=0x{:x} addr={}", code, addr);
             Err(ENOSYS)
         }
     }
 }
 
 pub fn sys_exit_group(ctx: &ThreadContext, error_code: i32) -> Result<SyscallResult, Errno> {
-    println!("starnix: exit_group: error_code={}", error_code);
+    info!("exit_group: error_code={}", error_code);
     // TODO: Set the error_code on the process.
     ctx.process.handle.kill().map_err(Errno::from)?;
     Ok(SUCCESS)
@@ -161,15 +161,15 @@ pub fn sys_unknown(
     ctx: &ThreadContext,
     syscall_number: syscall_number_t,
 ) -> Result<SyscallResult, Errno> {
-    println!("starnix: UNKNOWN syscall: {}", syscall_number);
-    println!("starnix: rip={:#x}", ctx.registers.rip);
-    println!("starnix: rax={:#x}", ctx.registers.rax);
-    println!("starnix: rdi={:#x}", ctx.registers.rdi);
-    println!("starnix: rsi={:#x}", ctx.registers.rsi);
-    println!("starnix: rdx={:#x}", ctx.registers.rdx);
-    println!("starnix: r10={:#x}", ctx.registers.r10);
-    println!("starnix: r8={:#x}", ctx.registers.r8);
-    println!("starnix: r9={:#x}", ctx.registers.r9);
+    info!("UNKNOWN syscall: {}", syscall_number);
+    info!("rip={:#x}", ctx.registers.rip);
+    info!("rax={:#x}", ctx.registers.rax);
+    info!("rdi={:#x}", ctx.registers.rdi);
+    info!("rsi={:#x}", ctx.registers.rsi);
+    info!("rdx={:#x}", ctx.registers.rdx);
+    info!("r10={:#x}", ctx.registers.r10);
+    info!("r8={:#x}", ctx.registers.r8);
+    info!("r9={:#x}", ctx.registers.r9);
     // TODO: We should send SIGSYS once we have signals.
     Err(ENOSYS)
 }

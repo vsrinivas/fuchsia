@@ -1,0 +1,19 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/starnix",
+    },
+    capabilities: [
+        {
+            runner: "starnix",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+    ],
+    expose: [
+        {
+            runner: "starnix",
+            from: "self",
+        },
+    ],
+}

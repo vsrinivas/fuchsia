@@ -7,7 +7,10 @@ import("//build/rust/rustc_test.gni")
 import("//src/sys/build/components.gni")
 
 group("starnix") {
-  deps = [ ":pkg" ]
+  deps = [
+    ":hello_starnix",
+    ":pkg",
+  ]
 }
 
 if (target_cpu == "x64") {
@@ -18,8 +21,10 @@ if (target_cpu == "x64") {
 
     source_root = "main.rs"
     deps = [
+      "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
       "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
       "//src/lib/fdio/rust:fdio",
+      "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
       "//src/lib/fuchsia-component",
       "//src/lib/fuchsia-runtime",
@@ -27,6 +32,8 @@ if (target_cpu == "x64") {
       "//src/lib/syslog/rust:syslog",
       "//src/lib/zerocopy",
       "//src/lib/zircon/rust:fuchsia-zircon",
+      "//src/sys/lib/library_loader",
+      "//src/sys/lib/runner",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
@@ -42,33 +49,51 @@ if (target_cpu == "x64") {
     ]
   }
 
-  # Add this prebuilt binary to test locally.
-  #
-  # resource("hello_word") {
-  #   sources = [ "fixtures/hello_world.bin" ]
-  #   outputs = [ "bin/{{source_file_part}}" ]
-  # }
-
   fuchsia_component("starnix_component") {
     component_name = "starnix"
-    deps = [
-      # ":hello_word",
-      ":starnix_bin",
-    ]
-    manifest = "meta/starnix.cmx"
+    deps = [ ":starnix_bin" ]
+    manifest = "meta/starnix.cml"
   }
 
   fuchsia_unittest_package("starnix-tests") {
-    manifest = "meta/starnix-tests.cmx"
+    manifest = "meta/starnix-tests.cml"
     deps = [ ":starnix_bin_test" ]
   }
+}
+
+resource("hello_starnix_bin") {
+  # Switch these two |sources| declarations to test locally.
+  sources = [ "fixtures/hello_starnix.c" ]
+
+  # sources = [ "fixtures/hello_starnix.bin" ]
+
+  # We need to have this output in the package even when we do not actually have a
+  # hello_starnix.bin file in order for hello_starnix.cml to pass validation.
+  outputs = [ "bin/hello_starnix.bin" ]
+}
+
+fuchsia_component("hello_starnix_component") {
+  component_name = "hello_starnix"
+  manifest = "meta/hello_starnix.cml"
+
+  deps = [ ":hello_starnix_bin" ]
+}
+
+fuchsia_package("hello_starnix") {
+  deps = [ ":hello_starnix_component" ]
+}
+
+fuchsia_component("starnix_manager") {
+  manifest = "meta/starnix_manager.cml"
 }
 
 fuchsia_package("pkg") {
   package_name = "starnix"
 
+  deps = [ ":starnix_manager" ]
+
   if (target_cpu == "x64") {
-    deps = [ ":starnix_component" ]
+    deps += [ ":starnix_component" ]
   }
 }
 

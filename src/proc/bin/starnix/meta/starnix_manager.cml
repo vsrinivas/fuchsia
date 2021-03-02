@@ -1,0 +1,33 @@
+{
+    children: [
+        {
+            name: "starnix",
+            url: "fuchsia-pkg://fuchsia.com/starnix#meta/starnix.cm",
+        },
+        {
+            name: "hello_starnix",
+            url: "fuchsia-pkg://fuchsia.com/hello_starnix#meta/hello_starnix.cm",
+            startup: "eager",
+            environment: "#starnix-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#starnix" ],
+        },
+    ],
+    environments: [
+        {
+            name: "starnix-env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "starnix",
+                    from: "#starnix",
+                },
+            ],
+        },
+    ],
+}

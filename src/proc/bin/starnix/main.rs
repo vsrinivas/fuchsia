@@ -3,13 +3,23 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    anyhow::{anyhow, Error},
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_component_runner::{
+        self as fcrunner, ComponentControllerMarker, ComponentStartInfo,
+    },
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_syslog,
     fuchsia_zircon::{
         self as zx, sys::zx_exception_info_t, sys::zx_thread_state_general_regs_t,
         sys::ZX_EXCEPTION_STATE_HANDLED, sys::ZX_EXCEPTION_STATE_TRY_NEXT,
         sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
     },
+    futures::{StreamExt, TryStreamExt},
+    library_loader,
+    log::info,
+    runner,
     std::ffi::CString,
     std::mem,
     std::sync::Arc,
@@ -79,7 +89,7 @@ async fn run_process(process: Arc<ProcessContext>) -> Result<(), Error> {
 
         if info.type_ != 0x8208 {
             // ZX_EXCP_POLICY_ERROR
-            println!("starnix: exception type: 0x{:x}", info.type_);
+            info!("exception type: 0x{:x}", info.type_);
             exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?;
             continue;
         }
@@ -93,7 +103,7 @@ async fn run_process(process: Arc<ProcessContext>) -> Result<(), Error> {
         let report = ctx.handle.get_exception_report()?;
 
         if report.context.synth_code != ZX_EXCP_POLICY_CODE_BAD_SYSCALL {
-            println!("starnix: exception synth_code: {}", report.context.synth_code);
+            info!("exception synth_code: {}", report.context.synth_code);
             exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?;
             continue;
         }
@@ -116,23 +126,73 @@ async fn run_process(process: Arc<ProcessContext>) -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    const HELLO_WORLD_BIN: &'static str = "/pkg/bin/hello_world.bin";
-    let file =
-        fdio::open_fd(HELLO_WORLD_BIN, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE)?;
-    let executable = fdio::get_vmo_exec_from_file(&file)?;
+async fn start_component(
+    start_info: ComponentStartInfo,
+    _controller: ServerEnd<ComponentControllerMarker>,
+) -> Result<(), Error> {
+    info!(
+        "start_component: {}",
+        start_info.resolved_url.clone().unwrap_or("<unknown>".to_string())
+    );
+
+    let binary_path = runner::get_program_binary(&start_info)?;
+
+    let ns = start_info.ns.ok_or_else(|| anyhow!("Missing namespace"))?;
+
+    let pkg_proxy = ns
+        .into_iter()
+        .find(|entry| entry.path == Some("/pkg".to_string()))
+        .ok_or_else(|| anyhow!("Missing /pkg entry in namespace"))?
+        .directory
+        .ok_or_else(|| anyhow!("Missing directory handlee in pkg namespace entry"))?
+        .into_proxy()?;
+    let executable_vmo = library_loader::load_vmo(&pkg_proxy, &binary_path).await?;
+
     let parent_job = fuchsia_runtime::job_default();
     let job = parent_job.create_child_job()?;
 
     let params = ProcessParameters {
-        name: CString::new(HELLO_WORLD_BIN.to_owned())?,
-        argv: vec![CString::new(HELLO_WORLD_BIN).unwrap()],
+        name: CString::new(binary_path.clone())?,
+        argv: vec![CString::new(binary_path.clone())?],
         environ: vec![],
         aux: vec![AT_UID, 3, AT_EUID, 3, AT_GID, 3, AT_EGID, 3, AT_SECURE, 0],
     };
 
-    run_process(Arc::new(load_executable(&job, executable, &params).await?)).await?;
+    run_process(Arc::new(load_executable(&job, executable_vmo, &params).await?)).await?;
+    Ok(())
+}
 
+async fn start_runner(
+    mut request_stream: fcrunner::ComponentRunnerRequestStream,
+) -> Result<(), Error> {
+    while let Some(event) = request_stream.try_next().await? {
+        match event {
+            fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
+                fasync::Task::local(async move {
+                    start_component(start_info, controller)
+                        .await
+                        .expect("failed to start component")
+                })
+                .detach();
+            }
+        }
+    }
+    Ok(())
+}
+
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["starnix"]).expect("failed to initialize logger");
+    info!("main");
+
+    let mut fs = ServiceFs::new_local();
+    fs.dir("svc").add_fidl_service(move |stream| {
+        fasync::Task::local(
+            async move { start_runner(stream).await.expect("failed to start runner.") },
+        )
+        .detach();
+    });
+    fs.take_and_serve_directory_handle()?;
+    fs.collect::<()>().await;
     Ok(())
 }
