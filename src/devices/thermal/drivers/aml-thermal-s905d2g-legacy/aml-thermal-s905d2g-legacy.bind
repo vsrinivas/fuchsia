@@ -11,4 +11,5 @@ fuchsia.BIND_PLATFORM_DEV_DID == amlogic.platform.BIND_PLATFORM_DEV_DID.THERMAL_
 accept fuchsia.BIND_PLATFORM_DEV_PID {
   amlogic.platform.BIND_PLATFORM_DEV_PID.T931,
   amlogic.platform.BIND_PLATFORM_DEV_PID.S905D3,
+  amlogic.platform.BIND_PLATFORM_DEV_PID.A311D,
 }

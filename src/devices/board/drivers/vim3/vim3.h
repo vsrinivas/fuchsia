@@ -71,6 +71,7 @@ class Vim3 : public Vim3Type {
   zx_status_t SdioInit();
   zx_status_t Start();
   zx_status_t SysmemInit();
+  zx_status_t ThermalInit();
   zx_status_t NnaInit();
   zx_status_t UsbInit();
   zx_status_t MaliInit();

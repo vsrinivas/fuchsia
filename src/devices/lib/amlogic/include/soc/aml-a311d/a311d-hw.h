@@ -155,6 +155,7 @@
 #define A311D_USB1_IRQ 63
 #define A311D_PARSER_IRQ 64
 #define A311D_TS_PLL_IRQ 67
+#define A311D_TS_DDR_IRQ 68
 #define A311D_I2C_M3_IRQ 71
 #define A311D_DOS_MBOX_0_IRQ 75
 #define A311D_DOS_MBOX_1_IRQ 76
@@ -209,6 +210,19 @@
 // Mali G52 MP4 r0p0
 #define A311D_MALI_BASE 0xffe40000
 #define A311D_MALI_LENGTH 0x40000
+
+// Temperature
+#define A311D_TEMP_SENSOR_PLL_BASE 0xff634800
+#define A311D_TEMP_SENSOR_PLL_LENGTH 0x80
+
+#define A311D_TEMP_SENSOR_DDR_BASE 0xff634c00
+#define A311D_TEMP_SENSOR_DDR_LENGTH 0x80
+
+// These registers are used to derive calibration data for the temperature sensors. The registers
+// are not documented in the datasheet - they were copied over from u-boot/Cast code.
+#define A311D_TEMP_SENSOR_PLL_TRIM 0xff800268
+#define A311D_TEMP_SENSOR_DDR_TRIM 0xff800230
+#define A311D_TEMP_SENSOR_TRIM_LENGTH 0x4
 
 // Display Related
 #define A311D_DMC_BASE 0xff638000

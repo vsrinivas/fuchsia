@@ -110,6 +110,10 @@
 #define A311D_GPIOAO_3_M0_SDA_FN 1
 #define A311D_GPIOAO_9_MCLK_FN 5
 
+// GPIOE pin alternate functions
+#define A311D_GPIOE_1_PWM_D_FN 3
+#define A311D_GPIOE_2_PWM_D_FN 3
+
 #define A311D_PAD_PULL_UP_EN_REG0 0x48
 #define A311D_PAD_PULL_UP_EN_REG1 0x49
 #define A311D_PAD_PULL_UP_EN_REG2 0x4a

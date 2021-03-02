@@ -35,6 +35,7 @@ driver_module("vim3") {
     "vim3-sd.cc",
     "vim3-sdio.cc",
     "vim3-sysmem.cc",
+    "vim3-thermal.cc",
     "vim3-usb.cc",
     "vim3.cc",
   ]

@@ -188,20 +188,33 @@ TEST_F(DeviceEnumerationTest, Vim2Test) {
 
 TEST_F(DeviceEnumerationTest, Vim3Test) {
   static const char* kDevicePaths[] = {
-      "sys/platform/vim3", "sys/platform/00:00:1b/sysmem", "sys/platform/05:06:1/aml-axg-gpio",
-      "sys/platform/05:00:14/clocks", "sys/platform/05:00:2/aml-i2c",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-81/rtc", "dwmac/eth_phy/phy_null_device",
-      "dwmac/Designware-MAC/ethernet", "aml_sd/aml-sd-emmc",
+      "sys/platform/vim3",
+      "sys/platform/00:00:1b/sysmem",
+      "sys/platform/05:06:1/aml-axg-gpio",
+      "sys/platform/05:00:14/clocks",
+      "sys/platform/05:00:2/aml-i2c",
+      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-81/rtc",
+      "dwmac/eth_phy/phy_null_device",
+      "dwmac/Designware-MAC/ethernet",
+      "aml_sd/aml-sd-emmc",
       "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
-      "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2", "aml-nna",
+      "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
+      "aml-nna",
       "sys/platform/00:00:29",  // registers device
       /* TODO(fxb/70442): re-enable when USB is fixed
       "aml-usb-phy-v2",
       "dwc2/dwc2/usb-peripheral/function-000/cdc-eth-function",
       */
-      "mali/aml-gpu", "sys/platform/05:00:10/aml-canvas",
+      "mali/aml-gpu",
+      "sys/platform/05:00:10/aml-canvas",
       "display/amlogic-display/display-controller",
       "sys/platform/05:06:1d",  // pwm
+
+      // Thermal
+      "sys/platform/05:06:28",
+      "sys/platform/05:06:a",
+      "class/thermal/000",
+      "class/thermal/001",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
