@@ -19,12 +19,6 @@ outputs streams is exclusive to the application owner of the stream. Mixing of
 audio is not a service provided by the audio stream interface.
 
 {% comment %}
-> TODO(fxbug.dev/35523):
-> The pre-FIDL serialization still in use as of 2020/02/04
-> is defined in [audio_streaming_original.md](audio_streaming_original.md),
-> that file is a copy for reference of this file at 34d6afd26d0.
-> Remove this paragraph once conversion of all users to FIDL is done.
-
 > TODO: extend this interface to support the concept of low-latency hardware
 > mixers.
 {% endcomment %}
