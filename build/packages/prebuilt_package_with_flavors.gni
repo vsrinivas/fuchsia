@@ -73,6 +73,10 @@ declare_args() {
 # `some/path/to/snazzy/with_hooks` as the implementation for that
 # package.
 #
+# Which package flavors were chosen is emitted in the build output, at
+# $out_dir/prebuilt_package_flavor_selections.json.  This is
+# performed by the //:prebuilt_package_flavors build_api() target.
+#
 # Parameters
 #
 #  default (required; string)
