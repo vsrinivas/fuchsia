@@ -24,7 +24,7 @@ use {
             rights::{Rights, READ_RIGHTS, WRITE_RIGHTS},
             routing::router::{
                 AllowedSourcesBuilder, CapabilityVisitor, ErrorNotFoundFromParent,
-                ErrorNotFoundInChild, ExposeVisitor, OfferVisitor, Router,
+                ErrorNotFoundInChild, ExposeVisitor, OfferVisitor, RoutingStrategy,
             },
             storage,
             walk_state::WalkState,
@@ -441,11 +441,16 @@ pub async fn route_protocol(
 
         let env_moniker = env_component_instance.abs_moniker.clone();
 
-        let source = Router::new()
-            .registration(registration_decl, env_component_instance)
+        let source = RoutingStrategy::new()
+            .registration::<DebugRegistration>()
             .offer::<OfferProtocolDecl>()
             .expose::<ExposeProtocolDecl>()
-            .route(allowed_sources, &mut ProtocolVisitor)
+            .route(
+                registration_decl,
+                env_component_instance.clone(),
+                allowed_sources,
+                &mut ProtocolVisitor,
+            )
             .await?;
 
         target.try_get_context()?.policy().can_route_debug_capability(
@@ -456,11 +461,11 @@ pub async fn route_protocol(
         )?;
         return Ok(source);
     } else {
-        Router::new()
-            .use_(use_decl, target.clone())
+        RoutingStrategy::new()
+            .use_::<UseProtocolDecl>()
             .offer::<OfferProtocolDecl>()
             .expose::<ExposeProtocolDecl>()
-            .route(allowed_sources, &mut ProtocolVisitor)
+            .route(use_decl, target.clone(), allowed_sources, &mut ProtocolVisitor)
             .await
     }
 }
@@ -476,9 +481,11 @@ pub async fn route_protocol_from_expose(
         .namespace()
         .component()
         .capability();
-    Router::new()
-        .start_expose(expose_decl, target.clone())
-        .route(allowed_sources, &mut ProtocolVisitor)
+    RoutingStrategy::new()
+        .use_::<UseProtocolDecl>()
+        .offer::<OfferProtocolDecl>()
+        .expose::<ExposeProtocolDecl>()
+        .route_from_expose(expose_decl, target.clone(), allowed_sources, &mut ProtocolVisitor)
         .await
 }
 
@@ -571,11 +578,11 @@ pub async fn route_directory(
         .builtin(InternalCapability::Directory)
         .namespace()
         .component();
-    let source = Router::new()
-        .use_(use_decl, target.clone())
+    let source = RoutingStrategy::new()
+        .use_::<UseDirectoryDecl>()
         .offer::<OfferDirectoryDecl>()
         .expose::<ExposeDirectoryDecl>()
-        .route(allowed_sources, &mut state)
+        .route(use_decl, target.clone(), allowed_sources, &mut state)
         .await?;
     Ok((source, state))
 }
@@ -593,9 +600,11 @@ pub async fn route_directory_from_expose(
         .builtin(InternalCapability::Directory)
         .namespace()
         .component();
-    let source = Router::new()
-        .start_expose(expose_decl, target.clone())
-        .route(allowed_sources, &mut state)
+    let source = RoutingStrategy::new()
+        .use_::<UseDirectoryDecl>()
+        .offer::<OfferDirectoryDecl>()
+        .expose::<ExposeDirectoryDecl>()
+        .route_from_expose(expose_decl, target.clone(), allowed_sources, &mut state)
         .await?;
     Ok((source, state))
 }
@@ -674,10 +683,10 @@ async fn route_storage(
     target: &Arc<ComponentInstance>,
 ) -> Result<(storage::StorageCapabilitySource, RelativeMoniker), ModelError> {
     let allowed_sources = AllowedSourcesBuilder::new().component();
-    let storage_source = Router::new()
-        .use_(use_decl, target.clone())
+    let storage_source = RoutingStrategy::new()
+        .use_::<UseStorageDecl>()
         .offer::<OfferStorageDecl>()
-        .route(allowed_sources, &mut StorageVisitor)
+        .route(use_decl, target.clone(), allowed_sources, &mut StorageVisitor)
         .await?;
     target
         .try_get_context()?
@@ -745,11 +754,11 @@ pub async fn route_storage_backing_directory(
     // Storage rights are always READ+WRITE.
     let mut state = DirectoryState::new(*READ_RIGHTS | *WRITE_RIGHTS, None);
     let allowed_sources = AllowedSourcesBuilder::new().component().namespace();
-    let source = Router::new()
-        .registration::<StorageDeclAsRegistration>(storage_decl.clone().into(), target)
+    let source = RoutingStrategy::new()
+        .registration::<StorageDeclAsRegistration>()
         .offer::<OfferDirectoryDecl>()
         .expose::<ExposeDirectoryDecl>()
-        .route(allowed_sources, &mut state)
+        .route(storage_decl.clone().into(), target, allowed_sources, &mut state)
         .await?;
 
     let (dir_source_path, dir_source_instance) = match source {
@@ -809,11 +818,11 @@ pub async fn route_runner(
 
     let allowed_sources =
         AllowedSourcesBuilder::new().builtin(InternalCapability::Runner).component();
-    Router::new()
-        .registration(registration_decl, env_component_instance)
+    RoutingStrategy::new()
+        .registration::<RunnerRegistration>()
         .offer::<OfferRunnerDecl>()
         .expose::<ExposeRunnerDecl>()
-        .route(allowed_sources, &mut RunnerVisitor)
+        .route(registration_decl, env_component_instance, allowed_sources, &mut RunnerVisitor)
         .await
 }
 
@@ -830,11 +839,11 @@ pub async fn route_resolver(
 ) -> Result<CapabilitySource, ModelError> {
     let allowed_sources =
         AllowedSourcesBuilder::new().builtin(InternalCapability::Resolver).component();
-    Router::new()
-        .registration(registration, target.clone())
+    RoutingStrategy::new()
+        .registration::<ResolverRegistration>()
         .offer::<OfferResolverDecl>()
         .expose::<ExposeResolverDecl>()
-        .route(allowed_sources, &mut ResolverVisitor)
+        .route(registration, target.clone(), allowed_sources, &mut ResolverVisitor)
         .await
 }
 
@@ -882,10 +891,10 @@ pub async fn route_event(
     let allowed_sources = AllowedSourcesBuilder::<()>::new()
         .framework(InternalCapability::Event)
         .builtin(InternalCapability::Event);
-    let source = Router::new()
-        .use_(use_decl, target.clone())
+    let source = RoutingStrategy::new()
+        .use_::<UseEventDecl>()
         .offer::<OfferEventDecl>()
-        .route(allowed_sources, &mut state)
+        .route(use_decl, target.clone(), allowed_sources, &mut state)
         .await?;
     target.try_get_context()?.policy().can_route_capability(&source, &target.abs_moniker)?;
     Ok(source)
