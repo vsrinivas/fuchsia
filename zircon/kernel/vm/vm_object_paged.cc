@@ -967,6 +967,9 @@ zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, 
   // Track our two offsets.
   uint64_t src_offset = offset;
   size_t dest_offset = 0;
+  // Record the current generation count, we can use this to attempt to avoid re-performing checks
+  // whilst copying.
+  uint64_t gen_count = GetHierarchyGenerationCountLocked();
   while (len > 0) {
     const size_t page_offset = src_offset % PAGE_SIZE;
     const size_t tocopy = ktl::min(PAGE_SIZE - page_offset, len);
@@ -1000,12 +1003,19 @@ zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, 
     char* page_ptr = reinterpret_cast<char*>(paddr_to_physmap(pa));
 
     // Call the copy routine. If the copy was successful then ZX_OK is returned, otherwise
-    // ZX_ERR_SHOULD_WAIT may be returned to indicate the copy failed but we can retry it.
-    status = copyfunc(page_ptr + page_offset, dest_offset, tocopy, guard);
+    // ZX_ERR_SHOULD_WAIT may be returned to indicate the copy failed but we can retry it. if we
+    // can retry, but our generation count hasn't changed, then we know that this VMO is unchanged
+    // and we don't need to re-perform checks or lookup the page again.
+    do {
+      status = copyfunc(page_ptr + page_offset, dest_offset, tocopy, guard);
+    } while (
+        unlikely(status == ZX_ERR_SHOULD_WAIT && gen_count == GetHierarchyGenerationCountLocked()));
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      // Recheck properties. If all is good we cannot simply retry the copy as the underlying page
-      // could have changed, so we retry the loop from the top.
+      // The generation count changed so we must recheck properties. If all is good we cannot simply
+      // retry the copy. As the underlying page could have changed, so we retry the loop from the
+      // top, stashing the new generation count.
+      gen_count = GetHierarchyGenerationCountLocked();
       status = check();
       if (status == ZX_OK) {
         continue;
