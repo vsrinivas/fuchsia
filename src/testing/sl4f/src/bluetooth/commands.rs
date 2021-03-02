@@ -23,7 +23,8 @@ use crate::bluetooth::gatt_server_facade::GattServerFacade;
 use crate::bluetooth::hfp_facade::HfpFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 use crate::bluetooth::types::{
-    BleAdvertiseResponse, BleConnectPeripheralResponse, GattcDiscoverCharacteristicResponse,
+    BleAdvertiseResponse, BleConnectPeripheralResponse,
+    CustomPlayerApplicationSettingsAttributeIds, GattcDiscoverCharacteristicResponse,
 };
 
 use crate::common_utils::common::{
@@ -508,6 +509,18 @@ impl Facade for AvrcpFacade {
                 let result = self.get_play_status().await?;
                 Ok(to_value(result)?)
             }
+            "AvrcpGetPlayerApplicationSettings" => {
+                let attribute_ids: CustomPlayerApplicationSettingsAttributeIds =
+                    match from_value(args.clone()) {
+                        Ok(attribute_ids) => attribute_ids,
+                        _ => bail!(
+                            "Invalid json argument to AvrcpGetPlayerApplicationSettings! - {}",
+                            args
+                        ),
+                    };
+                let result = self.get_player_application_settings(attribute_ids.clone()).await?;
+                Ok(to_value(result)?)
+            }
             "AvrcpSendCommand" => {
                 let command_str = parse_arg!(args, as_str, "command")?;
                 let result = self.send_command(command_str.to_string().into()).await?;
@@ -526,6 +539,10 @@ impl Facade for AvrcpFacade {
             _ => bail!("Invalid AVRCP FIDL method: {:?}", method),
         }
     }
+
+    fn cleanup(&self) {}
+
+    fn print(&self) {}
 }
 
 async fn start_scan_async(

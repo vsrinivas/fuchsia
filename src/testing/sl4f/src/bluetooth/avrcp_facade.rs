@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::types::{CustomAvcPanelCommand, CustomPlayStatus};
+use super::types::{
+    CustomAvcPanelCommand, CustomPlayStatus, CustomPlayerApplicationSettings,
+    CustomPlayerApplicationSettingsAttributeIds,
+};
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use anyhow::Error;
 use fidl::endpoints::create_endpoints;
@@ -12,7 +15,6 @@ use fidl_fuchsia_bluetooth_avrcp::{
 use fuchsia_component::client;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use parking_lot::RwLock;
-
 /// AvrcpFacadeInner contains the proxies used by the AvrcpFacade.
 #[derive(Debug)]
 struct AvrcpFacadeInner {
@@ -114,7 +116,7 @@ impl AvrcpFacade {
     /// Sends an AVCPanelCommand to the controller.
     ///
     /// # Arguments
-    /// * `command` - an enum representing the AVCPanelCommand
+    /// * `command` - an enum representing the AVCPanelCommand.
     pub async fn send_command(&self, command: CustomAvcPanelCommand) -> Result<(), Error> {
         let tag = "AvrcpFacade::send_command";
         let result = match self.inner.read().controller_proxy.clone() {
@@ -132,7 +134,7 @@ impl AvrcpFacade {
     /// Sends an AVCPanelCommand to the controller.
     ///
     /// # Arguments
-    /// * `absolute_volume` - the value to which the volume is set
+    /// * `absolute_volume` - the value to which the volume is set.
     pub async fn set_absolute_volume(&self, absolute_volume: u8) -> Result<u8, Error> {
         let tag = "AvrcpFacade::set_absolute_volume";
         let result = match self.inner.read().controller_proxy.clone() {
@@ -144,6 +146,30 @@ impl AvrcpFacade {
             Err(err) => {
                 fx_err_and_bail!(&with_line!(tag), format!("Error setting volume:{:?}", err))
             }
+        }
+    }
+
+    /// Returns the player application settings from the controller.
+    ///
+    /// # Arguments
+    /// * `attribute_ids` - the attribute ids for the application settings to return.  If empty, returns all.
+    pub async fn get_player_application_settings(
+        &self,
+        attribute_ids: CustomPlayerApplicationSettingsAttributeIds,
+    ) -> Result<CustomPlayerApplicationSettings, Error> {
+        let tag = "AvrcpFacade::get_player_application_settings";
+        match self.inner.read().controller_proxy.clone() {
+            Some(proxy) => match proxy
+                .get_player_application_settings(&mut attribute_ids.to_vec().into_iter())
+                .await?
+            {
+                Ok(player_application_settings) => Ok(player_application_settings.into()),
+                Err(e) => fx_err_and_bail!(
+                    &with_line!(tag),
+                    format!("Error fetching player application settings: {:?}", e)
+                ),
+            },
+            None => fx_err_and_bail!(&with_line!(tag), "No AVRCP service proxy available"),
         }
     }
 
@@ -162,6 +188,11 @@ impl AvrcpFacade {
 
 #[cfg(test)]
 mod tests {
+    use super::super::types::{
+        CustomCustomAttributeValue, CustomCustomPlayerApplicationSetting, CustomEqualizer,
+        CustomPlayStatus, CustomPlayerApplicationSettings,
+        CustomPlayerApplicationSettingsAttributeIds, CustomRepeatStatusMode, CustomScanMode,
+    };
     use super::*;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_avrcp::{ControllerRequest, PlayStatus};
@@ -177,6 +208,24 @@ mod tests {
             song_position: Some(10),
             playback_status: Some(4),
         };
+        static ref PLAYER_APPLICATION_SETTINGS: CustomPlayerApplicationSettings =
+            CustomPlayerApplicationSettings {
+                equalizer: Some(CustomEqualizer::Off),
+                repeat_status_mode: Some(CustomRepeatStatusMode::AllTrackRepeat),
+                shuffle_mode: None,
+                scan_mode: Some(CustomScanMode::GroupScan),
+                custom_settings: Some(vec![CustomCustomPlayerApplicationSetting {
+                    attribute_id: Some(1),
+                    attribute_name: Some("attribute".to_string()),
+                    possible_values: Some(vec![CustomCustomAttributeValue {
+                        description: "description".to_string(),
+                        value: 5
+                    }]),
+                    current_value: Some(5),
+                }])
+            };
+        static ref PLAYER_APPLICATION_SETTINGS_ATTRIBUTE_IDS: CustomPlayerApplicationSettingsAttributeIds =
+            CustomPlayerApplicationSettingsAttributeIds { attribute_ids: Some(vec![1]) };
     }
     struct MockAvrcpTester {
         expected_state: Vec<Box<dyn FnOnce(ControllerRequest) + Send + 'static>>,
@@ -219,6 +268,20 @@ mod tests {
                 _ => {}
             })
         }
+
+        fn expect_get_player_application_settings(
+            self,
+            result: CustomPlayerApplicationSettings,
+            input: &'static CustomPlayerApplicationSettingsAttributeIds,
+        ) -> Self {
+            self.push(move |req| match req {
+                ControllerRequest::GetPlayerApplicationSettings { attribute_ids, responder } => {
+                    assert_eq!(attribute_ids, input.to_vec());
+                    responder.send(&mut Ok(result.into())).unwrap();
+                }
+                _ => {}
+            })
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -230,5 +293,23 @@ mod tests {
             assert_eq!(play_status, *PLAY_STATUS);
         };
         future::join(facade_fut, play_status_fut).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_player_application_settings() {
+        let (facade, application_settings_fut) = MockAvrcpTester::new()
+            .expect_get_player_application_settings(
+                PLAYER_APPLICATION_SETTINGS.clone(),
+                &PLAYER_APPLICATION_SETTINGS_ATTRIBUTE_IDS,
+            )
+            .build_controller();
+        let facade_fut = async move {
+            let application_settings = facade
+                .get_player_application_settings(PLAYER_APPLICATION_SETTINGS_ATTRIBUTE_IDS.clone())
+                .await
+                .unwrap();
+            assert_eq!(application_settings, *PLAYER_APPLICATION_SETTINGS);
+        };
+        future::join(facade_fut, application_settings_fut).await;
     }
 }

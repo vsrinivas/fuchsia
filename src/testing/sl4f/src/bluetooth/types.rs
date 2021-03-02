@@ -4,7 +4,11 @@
 
 use anyhow::{format_err, Error};
 use fidl_fuchsia_bluetooth_avdtp::PeerControllerProxy;
-use fidl_fuchsia_bluetooth_avrcp::{AvcPanelCommand, PlayStatus, PlaybackStatus};
+use fidl_fuchsia_bluetooth_avrcp::{
+    AvcPanelCommand, CustomAttributeValue, CustomPlayerApplicationSetting, Equalizer, PlayStatus,
+    PlaybackStatus, PlayerApplicationSettingAttributeId, PlayerApplicationSettings,
+    RepeatStatusMode, ScanMode, ShuffleMode,
+};
 use fidl_fuchsia_bluetooth_gatt::{
     AttributePermissions, Characteristic, Descriptor, ReadByTypeResult, SecurityRequirements,
     ServiceInfo,
@@ -500,4 +504,247 @@ impl From<String> for CustomAvcPanelCommand {
 #[derive(Deserialize)]
 pub struct AbsoluteVolumeCommand {
     pub absolute_volume: u8,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct CustomPlayerApplicationSettingsAttributeIds {
+    pub attribute_ids: Option<Vec<u8>>,
+}
+
+impl CustomPlayerApplicationSettingsAttributeIds {
+    pub fn to_vec(&self) -> Vec<PlayerApplicationSettingAttributeId> {
+        match &self.attribute_ids {
+            Some(vec) => vec
+                .into_iter()
+                .map(|u8| match u8 {
+                    1 => PlayerApplicationSettingAttributeId::Equalizer,
+                    2 => PlayerApplicationSettingAttributeId::RepeatStatusMode,
+                    3 => PlayerApplicationSettingAttributeId::ShuffleMode,
+                    4 => PlayerApplicationSettingAttributeId::ScanMode,
+                    invalid => panic!(
+                        "Invalid value for PlayerApplicationSettingAttributeId {:?}",
+                        invalid
+                    ),
+                })
+                .collect(),
+            None => Vec::new(),
+        }
+    }
+}
+#[derive(Clone, Debug, Serialize)]
+pub enum CustomPlayerApplicationSettingsAttributeId {
+    Equalizer = 1,
+    RepeatStatusMode = 2,
+    ShuffleMode = 3,
+    ScanMode = 4,
+}
+
+impl From<u8> for CustomPlayerApplicationSettingsAttributeId {
+    fn from(attribute_id: u8) -> CustomPlayerApplicationSettingsAttributeId {
+        match attribute_id {
+            1 => CustomPlayerApplicationSettingsAttributeId::Equalizer,
+            2 => CustomPlayerApplicationSettingsAttributeId::RepeatStatusMode,
+            3 => CustomPlayerApplicationSettingsAttributeId::ShuffleMode,
+            4 => CustomPlayerApplicationSettingsAttributeId::ScanMode,
+            _ => panic!("Invalid attribute id: {:?}", attribute_id),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
+pub struct CustomPlayerApplicationSettings {
+    pub equalizer: Option<CustomEqualizer>,
+    pub repeat_status_mode: Option<CustomRepeatStatusMode>,
+    pub shuffle_mode: Option<CustomShuffleMode>,
+    pub scan_mode: Option<CustomScanMode>,
+    pub custom_settings: Option<Vec<CustomCustomPlayerApplicationSetting>>,
+}
+
+#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
+pub struct CustomCustomPlayerApplicationSetting {
+    pub attribute_id: Option<u8>,
+    pub attribute_name: Option<String>,
+    pub possible_values: Option<Vec<CustomCustomAttributeValue>>,
+    pub current_value: Option<u8>,
+}
+
+#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
+pub struct CustomCustomAttributeValue {
+    pub description: String,
+    pub value: u8,
+}
+#[derive(Clone, Debug, Serialize, Eq, PartialEq, Copy)]
+pub enum CustomEqualizer {
+    Off = 1,
+    On = 2,
+}
+
+#[derive(Clone, Debug, Serialize, Eq, PartialEq, Copy)]
+pub enum CustomRepeatStatusMode {
+    Off = 1,
+    SingleTrackRepeat = 2,
+    AllTrackRepeat = 3,
+    GroupRepeat = 4,
+}
+#[derive(Clone, Debug, Serialize, Eq, PartialEq, Copy)]
+pub enum CustomShuffleMode {
+    Off = 1,
+    AllTrackShuffle = 2,
+    GroupShuffle = 3,
+}
+#[derive(Clone, Debug, Serialize, Eq, PartialEq, Copy)]
+pub enum CustomScanMode {
+    Off = 1,
+    AllTrackScan = 2,
+    GroupScan = 3,
+}
+
+impl From<PlayerApplicationSettings> for CustomPlayerApplicationSettings {
+    fn from(settings: PlayerApplicationSettings) -> CustomPlayerApplicationSettings {
+        CustomPlayerApplicationSettings {
+            equalizer: match settings.equalizer {
+                Some(equalizer) => match equalizer {
+                    Equalizer::Off => Some(CustomEqualizer::Off),
+                    Equalizer::On => Some(CustomEqualizer::On),
+                },
+                None => None,
+            },
+            repeat_status_mode: match settings.repeat_status_mode {
+                Some(repeat_status_mode) => match repeat_status_mode {
+                    RepeatStatusMode::Off => Some(CustomRepeatStatusMode::Off),
+                    RepeatStatusMode::SingleTrackRepeat => {
+                        Some(CustomRepeatStatusMode::SingleTrackRepeat)
+                    }
+                    RepeatStatusMode::AllTrackRepeat => {
+                        Some(CustomRepeatStatusMode::AllTrackRepeat)
+                    }
+                    RepeatStatusMode::GroupRepeat => Some(CustomRepeatStatusMode::GroupRepeat),
+                },
+                None => None,
+            },
+            shuffle_mode: match settings.shuffle_mode {
+                Some(shuffle_mode) => match shuffle_mode {
+                    ShuffleMode::Off => Some(CustomShuffleMode::Off),
+                    ShuffleMode::AllTrackShuffle => Some(CustomShuffleMode::AllTrackShuffle),
+                    ShuffleMode::GroupShuffle => Some(CustomShuffleMode::GroupShuffle),
+                },
+                None => None,
+            },
+            scan_mode: match settings.scan_mode {
+                Some(scan_mode) => match scan_mode {
+                    ScanMode::Off => Some(CustomScanMode::Off),
+                    ScanMode::AllTrackScan => Some(CustomScanMode::AllTrackScan),
+                    ScanMode::GroupScan => Some(CustomScanMode::GroupScan),
+                },
+                None => None,
+            },
+            custom_settings: match settings.custom_settings {
+                Some(custom_settings_vec) => Some(
+                    custom_settings_vec
+                        .into_iter()
+                        .map(|custom_settings| CustomCustomPlayerApplicationSetting {
+                            attribute_id: custom_settings.attribute_id,
+                            attribute_name: custom_settings.attribute_name,
+                            possible_values: match custom_settings.possible_values {
+                                Some(possible_values) => Some(
+                                    possible_values
+                                        .into_iter()
+                                        .map(|possible_value| possible_value.into())
+                                        .collect(),
+                                ),
+                                None => None,
+                            },
+                            current_value: custom_settings.current_value,
+                        })
+                        .collect(),
+                ),
+                None => None,
+            },
+        }
+    }
+}
+
+impl From<CustomPlayerApplicationSettings> for PlayerApplicationSettings {
+    fn from(settings: CustomPlayerApplicationSettings) -> PlayerApplicationSettings {
+        PlayerApplicationSettings {
+            equalizer: match settings.equalizer {
+                Some(equalizer) => match equalizer {
+                    CustomEqualizer::Off => Some(Equalizer::Off),
+                    CustomEqualizer::On => Some(Equalizer::On),
+                },
+                None => None,
+            },
+            repeat_status_mode: match settings.repeat_status_mode {
+                Some(repeat_status_mode) => match repeat_status_mode {
+                    CustomRepeatStatusMode::Off => Some(RepeatStatusMode::Off),
+                    CustomRepeatStatusMode::SingleTrackRepeat => {
+                        Some(RepeatStatusMode::SingleTrackRepeat)
+                    }
+                    CustomRepeatStatusMode::AllTrackRepeat => {
+                        Some(RepeatStatusMode::AllTrackRepeat)
+                    }
+                    CustomRepeatStatusMode::GroupRepeat => Some(RepeatStatusMode::GroupRepeat),
+                },
+                None => None,
+            },
+            shuffle_mode: match settings.shuffle_mode {
+                Some(shuffle_mode) => match shuffle_mode {
+                    CustomShuffleMode::Off => Some(ShuffleMode::Off),
+                    CustomShuffleMode::AllTrackShuffle => Some(ShuffleMode::AllTrackShuffle),
+                    CustomShuffleMode::GroupShuffle => Some(ShuffleMode::GroupShuffle),
+                },
+                None => None,
+            },
+            scan_mode: match settings.scan_mode {
+                Some(scan_mode) => match scan_mode {
+                    CustomScanMode::Off => Some(ScanMode::Off),
+                    CustomScanMode::AllTrackScan => Some(ScanMode::AllTrackScan),
+                    CustomScanMode::GroupScan => Some(ScanMode::GroupScan),
+                },
+                None => None,
+            },
+            custom_settings: match settings.custom_settings {
+                Some(custom_settings_vec) => Some(
+                    custom_settings_vec
+                        .into_iter()
+                        .map(|custom_settings| CustomPlayerApplicationSetting {
+                            attribute_id: custom_settings.attribute_id,
+                            attribute_name: custom_settings.attribute_name,
+                            possible_values: match custom_settings.possible_values {
+                                Some(possible_values) => Some(
+                                    possible_values
+                                        .into_iter()
+                                        .map(|possible_value| possible_value.into())
+                                        .collect(),
+                                ),
+                                None => None,
+                            },
+                            current_value: custom_settings.current_value,
+                            ..CustomPlayerApplicationSetting::EMPTY
+                        })
+                        .collect(),
+                ),
+                None => None,
+            },
+            ..PlayerApplicationSettings::EMPTY
+        }
+    }
+}
+
+impl From<CustomCustomAttributeValue> for CustomAttributeValue {
+    fn from(attribute_value: CustomCustomAttributeValue) -> CustomAttributeValue {
+        CustomAttributeValue {
+            description: attribute_value.description,
+            value: attribute_value.value,
+        }
+    }
+}
+
+impl From<CustomAttributeValue> for CustomCustomAttributeValue {
+    fn from(attribute_value: CustomAttributeValue) -> CustomCustomAttributeValue {
+        CustomCustomAttributeValue {
+            description: attribute_value.description,
+            value: attribute_value.value,
+        }
+    }
 }
