@@ -34,7 +34,8 @@ type AcquiredFunc func(lost, acquired tcpip.AddressWithPrefix, cfg Config)
 
 // Client is a DHCP client.
 type Client struct {
-	stack *stack.Stack
+	stack           *stack.Stack
+	networkEndpoint stack.NetworkEndpoint
 
 	// info holds the Client's state as type Info.
 	info atomic.Value
@@ -111,6 +112,8 @@ type Info struct {
 	State dhcpClientState
 	// Assigned is the network address added by the client to its stack.
 	Assigned tcpip.AddressWithPrefix
+
+	xid xid
 }
 
 // NewClient creates a DHCP client.
@@ -126,14 +129,19 @@ func NewClient(
 	retransmission time.Duration,
 	acquiredFunc AcquiredFunc,
 ) *Client {
+	ep, err := s.GetNetworkEndpoint(nicid, header.IPv4ProtocolNumber)
+	if err != nil {
+		panic(fmt.Sprintf("stack.GetNetworkEndpoint(%d, header.IPv4ProtocolNumber): %s", nicid, err))
+	}
 	c := &Client{
-		stack:          s,
-		acquiredFunc:   acquiredFunc,
-		sem:            make(chan struct{}, 1),
-		rand:           rand.New(rand.NewSource(time.Now().UnixNano())),
-		retransTimeout: time.After,
-		acquire:        acquire,
-		now:            time.Now,
+		stack:           s,
+		networkEndpoint: ep,
+		acquiredFunc:    acquiredFunc,
+		sem:             make(chan struct{}, 1),
+		rand:            rand.New(rand.NewSource(time.Now().UnixNano())),
+		retransTimeout:  time.After,
+		acquire:         acquire,
+		now:             time.Now,
 	}
 	c.info.Store(Info{
 		NICID:          nicid,
@@ -390,11 +398,6 @@ func (c *Client) exponentialBackoff(iteration uint) time.Duration {
 }
 
 func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config, error) {
-	netEP, err := c.stack.GetNetworkEndpoint(info.NICID, header.IPv4ProtocolNumber)
-	if err != nil {
-		return Config{}, fmt.Errorf("stack.GetNetworkEndpoint(%d, header.IPv4ProtocolNumber): %s", info.NICID, err)
-	}
-
 	// https://tools.ietf.org/html/rfc2131#section-4.3.6 Client messages:
 	//
 	// ---------------------------------------------------------------------
@@ -437,8 +440,7 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 	c.wq.EventRegister(&we, waiter.EventIn)
 	defer c.wq.EventUnregister(&we)
 
-	var xid [4]byte
-	if _, err := c.rand.Read(xid[:]); err != nil {
+	if _, err := c.rand.Read(info.xid[:]); err != nil {
 		return Config{}, fmt.Errorf("c.rand.Read(): %w", err)
 	}
 
@@ -465,10 +467,8 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 				ctx,
 				nicName,
 				info,
-				netEP,
 				discOpts,
 				writeTo,
-				xid[:],
 				false, /* broadcast */
 				false, /* ciaddr */
 			); err != nil {
@@ -480,7 +480,7 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 			// Receive a DHCPOFFER message from a responding DHCP server.
 			retransmit := c.retransTimeout(c.exponentialBackoff(i))
 			for {
-				result, retransmit, err := c.recv(ctx, nicName, ep, ch, xid[:], retransmit)
+				result, retransmit, err := c.recv(ctx, nicName, ep, ch, info.xid[:], retransmit)
 				if err != nil {
 					if retransmit {
 						c.stats.RecvOfferAcquisitionTimeout.Increment()
@@ -560,10 +560,8 @@ retransmitRequest:
 			ctx,
 			nicName,
 			info,
-			netEP,
 			reqOpts,
 			writeTo,
-			xid[:],
 			false,                       /* broadcast */
 			info.State != initSelecting, /* ciaddr */
 		); err != nil {
@@ -601,7 +599,7 @@ retransmitRequest:
 		// Receive a DHCPACK/DHCPNAK from the server.
 		retransmit := c.retransTimeout(retransmitAfter)
 		for {
-			result, retransmit, err := c.recv(ctx, nicName, ep, ch, xid[:], retransmit)
+			result, retransmit, err := c.recv(ctx, nicName, ep, ch, info.xid[:], retransmit)
 			if err != nil {
 				if retransmit {
 					c.stats.RecvAckAcquisitionTimeout.Increment()
@@ -624,11 +622,10 @@ retransmitRequest:
 					return Config{}, fmt.Errorf("%s decode: %w", result.typ, err)
 				}
 				prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
-				addr := tcpip.AddressWithPrefix{
+				if addr := (tcpip.AddressWithPrefix{
 					Address:   result.yiaddr,
 					PrefixLen: prefixLen,
-				}
-				if addr != requestedAddr {
+				}); addr != requestedAddr {
 					c.stats.RecvAckAddrErrors.Increment()
 					return Config{}, fmt.Errorf("%s with unexpected address=%s expected=%s", result.typ, addr, requestedAddr)
 				}
@@ -662,10 +659,8 @@ func (c *Client) send(
 	ctx context.Context,
 	nicName string,
 	info *Info,
-	ep stack.NetworkEndpoint,
 	opts options,
 	writeTo tcpip.FullAddress,
-	xid []byte,
 	broadcast,
 	ciaddr bool,
 ) error {
@@ -674,8 +669,8 @@ func (c *Client) send(
 	dhcpPayload := hdr(b.Prepend(dhcpLength))
 	dhcpPayload.init()
 	dhcpPayload.setOp(opRequest)
-	if l := copy(dhcpPayload.xidbytes(), xid); l != len(xid) {
-		panic(fmt.Sprintf("failed to copy xid bytes, want=%d got=%d", len(xid), l))
+	if l := copy(dhcpPayload.xidbytes(), info.xid[:]); l != len(info.xid) {
+		panic(fmt.Sprintf("failed to copy xid bytes, want=%d got=%d", len(info.xid), l))
 	}
 	if broadcast {
 		dhcpPayload.setBroadcast()
@@ -733,7 +728,7 @@ func (c *Client) send(
 		TotalLength: uint16(b.UsedLength()),
 		Flags:       header.IPv4FlagDontFragment,
 		ID:          0,
-		TTL:         ep.DefaultTTL(),
+		TTL:         c.networkEndpoint.DefaultTTL(),
 		TOS:         stack.DefaultTOS,
 		Protocol:    uint8(header.UDPProtocolNumber),
 		SrcAddr:     info.Assigned.Address,
@@ -757,6 +752,8 @@ func (c *Client) send(
 			}
 		case *tcpip.ErrWouldBlock:
 			select {
+			case <-ctx.Done():
+				return fmt.Errorf("client address resolution: %w", ctx.Err())
 			case result := <-ch:
 				if result.Success {
 					linkAddress = result.LinkAddress
@@ -764,8 +761,6 @@ func (c *Client) send(
 				} else {
 					err = &tcpip.ErrTimeout{}
 				}
-			case <-ctx.Done():
-				return fmt.Errorf("client address resolution: %w", ctx.Err())
 			}
 		}
 		if err != nil {
@@ -923,7 +918,7 @@ func (c *Client) recv(
 			return recvResult{}, false, fmt.Errorf("op-code=%s, want=%s", h, opReply)
 		}
 
-		if !bytes.Equal(h.xidbytes(), xid[:]) {
+		if !bytes.Equal(h.xidbytes(), xid) {
 			// This message is for another client, ignore silently.
 			continue
 		}

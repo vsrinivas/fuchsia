@@ -130,9 +130,20 @@ const (
 
 var magicCookie = []byte{99, 130, 83, 99} // RFC 1497
 
-type xid uint32
-
 type hdr []byte
+
+// Per https://tools.ietf.org/html/rfc2131#section-2:
+//
+// FIELD      OCTETS       DESCRIPTION
+// -----      ------       -----------
+//
+// ...
+//
+// xid           4  Transaction ID, a random number chosen by the
+//                  client, used by the client and server to associate
+//                  messages and responses between a client and a
+//                  server.
+type xid [4]byte
 
 func (h hdr) init() {
 	h[1] = 0x01       // htype
@@ -157,8 +168,8 @@ func (h hdr) isValid() bool {
 
 func (h hdr) op() op           { return op(h[0]) }
 func (h hdr) setOp(o op)       { h[0] = byte(o) }
-func (h hdr) xidbytes() []byte { return h[4:8] }
-func (h hdr) xid() xid         { return xid(h[4])<<24 | xid(h[5])<<16 | xid(h[6])<<8 | xid(h[7]) }
+func (h hdr) xidbytes() []byte { return h[4:][:len(xid{})] }
+func (h hdr) xid() uint32      { return binary.BigEndian.Uint32(h.xidbytes()) }
 func (h hdr) setBroadcast()    { h[10] |= 1 << 7 }
 func (h hdr) broadcast() bool  { return h[10]&1<<7 != 0 }
 func (h hdr) ciaddr() []byte   { return h[12:16] }

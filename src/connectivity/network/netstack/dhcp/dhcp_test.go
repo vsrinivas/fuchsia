@@ -478,6 +478,10 @@ func TestDelayRetransmission(t *testing.T) {
 }
 
 func TestExponentialBackoff(t *testing.T) {
+	s := stack.New(stack.Options{})
+	if err := s.CreateNIC(testNICID, &endpoint{}); err != nil {
+		t.Fatalf("s.CreateNIC(_, nil) = %s", err)
+	}
 	for _, tc := range []struct {
 		retran    time.Duration
 		iteration uint
@@ -497,7 +501,7 @@ func TestExponentialBackoff(t *testing.T) {
 		{retran: time.Second, iteration: 10, want: 64 * time.Second},
 	} {
 		t.Run(fmt.Sprintf("baseRetransmission=%s,jitter=%s,iteration=%d", tc.retran, tc.jitter, tc.iteration), func(t *testing.T) {
-			c := NewClient(nil, 0, "", 0, 0, tc.retran, nil)
+			c := NewClient(s, testNICID, "", 0, 0, tc.retran, nil)
 			// When used to add jitter to backoff, 1s is subtracted from random number
 			// to map [0s, +2s] -> [-1s, +1s], so add 1s here to compensate for that.
 			c.rand = rand.New(&randSourceStub{src: int64(time.Second + tc.jitter)})

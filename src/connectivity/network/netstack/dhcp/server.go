@@ -400,6 +400,6 @@ const (
 type serverLease struct {
 	start time.Time
 	addr  tcpip.Address
-	xid   xid
+	xid   uint32
 	state leaseState
 }
