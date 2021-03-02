@@ -559,6 +559,12 @@ impl HfpFacade {
                 });
                 let mut inner = self.inner.lock().await;
                 let peer = inner.peers.get_mut(&id).ok_or(format_err!("peer removed: {:?}", id))?;
+                if let Some(requested) = peer.requested_speaker_gain.take() {
+                    proxy_.set_speaker_gain(requested)?;
+                }
+                if let Some(requested) = peer.requested_microphone_gain.take() {
+                    proxy_.set_microphone_gain(requested)?;
+                }
                 peer.gain_control_watcher = Some(task);
                 peer.gain_control = Some(proxy_);
             }
@@ -692,10 +698,11 @@ impl HfpFacade {
         let value = value as u8;
         let mut inner = self.inner.lock().await;
         let peer = inner.active_peer_mut().ok_or(format_err!("No active peer"))?;
-        peer.requested_speaker_gain = Some(value);
         if peer.speaker_gain != value {
             if let Some(gain_control) = &peer.gain_control {
                 gain_control.set_speaker_gain(value)?;
+            } else {
+                peer.requested_speaker_gain = Some(value);
             }
         }
         Ok(())
@@ -709,10 +716,11 @@ impl HfpFacade {
         let value = value as u8;
         let mut inner = self.inner.lock().await;
         let peer = inner.active_peer_mut().ok_or(format_err!("No active peer"))?;
-        peer.requested_microphone_gain = Some(value);
         if peer.microphone_gain != value {
             if let Some(gain_control) = &peer.gain_control {
                 gain_control.set_microphone_gain(value)?;
+            } else {
+                peer.requested_microphone_gain = Some(value);
             }
         }
         Ok(())
