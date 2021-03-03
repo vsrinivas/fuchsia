@@ -197,9 +197,7 @@ impl IfaceManagerService {
                 // ifaces, use the first available unconfigured iface.
                 if let Some(removal_index) = self.clients.iter().position(|client_container| {
                     client_container.config.is_none()
-                        && client_container
-                            .driver_features
-                            .contains(&fidl_fuchsia_wlan_common::DriverFeature::SaeDriverAuth)
+                        && wpa3_in_features(&client_container.driver_features)
                 }) {
                     return Ok(self.clients.remove(removal_index));
                 }
@@ -415,9 +413,7 @@ impl IfaceManagerService {
             }
             None => {
                 // Check if the iface supports WPA3
-                let wpa3_supported = client_iface
-                    .driver_features
-                    .contains(&fidl_fuchsia_wlan_common::DriverFeature::SaeDriverAuth);
+                let wpa3_supported = wpa3_in_features(&client_iface.driver_features);
                 // Create the state machine and controller.
                 let (new_client, fut) = create_client_state_machine(
                     client_iface.iface_id,
@@ -821,6 +817,14 @@ impl IfaceManagerService {
         let guard = self.phy_manager.lock().await;
         return guard.has_wpa3_client_iface();
     }
+}
+
+/// Returns whether the list of DriverFeatures contains one that indicates WPA3 support.
+pub fn wpa3_in_features(driver_features: &Vec<fidl_fuchsia_wlan_common::DriverFeature>) -> bool {
+    driver_features.iter().any(|feature| {
+        feature == &fidl_fuchsia_wlan_common::DriverFeature::SaeDriverAuth
+            || feature == &fidl_fuchsia_wlan_common::DriverFeature::SaeSmeAuth
+    })
 }
 
 async fn initiate_network_selection(
@@ -1777,8 +1781,11 @@ mod tests {
 
     /// Tests the case where connect is called for a WPA3 connection an there is an unconfigured
     /// WPA3 iface available.
-    #[test]
-    fn test_connect_with_unconfigured_wpa3_iface() {
+    #[test_case(fidl_fuchsia_wlan_common::DriverFeature::SaeDriverAuth)]
+    #[test_case(fidl_fuchsia_wlan_common::DriverFeature::SaeSmeAuth)]
+    fn test_connect_with_unconfigured_wpa3_iface(
+        wpa3_feature: fidl_fuchsia_wlan_common::DriverFeature,
+    ) {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         let mut test_values = test_setup(&mut exec);
@@ -1787,9 +1794,7 @@ mod tests {
         // PhyManager for an iface.
         let (mut iface_manager, mut _sme_stream) =
             create_iface_manager_with_client(&test_values, false);
-        iface_manager.clients[0]
-            .driver_features
-            .push(fidl_fuchsia_wlan_common::DriverFeature::SaeDriverAuth);
+        iface_manager.clients[0].driver_features.push(wpa3_feature);
 
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join(rand_string());

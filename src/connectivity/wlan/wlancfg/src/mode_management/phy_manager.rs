@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::regulatory_manager::REGION_CODE_LEN,
+    crate::{
+        mode_management::iface_manager::wpa3_in_features, regulatory_manager::REGION_CODE_LEN,
+    },
     async_trait::async_trait,
     eui48::MacAddress,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device as fidl_device,
@@ -455,7 +457,7 @@ impl PhyManagerApi for PhyManager {
         // Search phys for a client iface with the driver feature indicating WPA3 support.
         for (_, phy) in self.phys.iter() {
             for (iface_id, driver_features) in phy.client_ifaces.iter() {
-                if driver_features.contains(&fidl_common::DriverFeature::SaeDriverAuth) {
+                if wpa3_in_features(&driver_features) {
                     return Some(*iface_id);
                 }
             }
@@ -561,7 +563,7 @@ impl PhyManagerApi for PhyManager {
         // Search phys for a client iface with the driver feature indicating WPA3 support.
         for (_, phy) in self.phys.iter() {
             for (_, driver_features) in phy.client_ifaces.iter() {
-                if driver_features.contains(&fidl_common::DriverFeature::SaeDriverAuth) {
+                if wpa3_in_features(driver_features) {
                     return true;
                 }
             }
@@ -1499,8 +1501,10 @@ mod tests {
     /// Tests the response of the PhyManager when a wpa3 capable client iface is requested and
     /// a matching client iface is present.  The expectation is that the PhyManager should reply
     /// with the iface ID of the client iface.
-    #[run_singlethreaded(test)]
-    async fn get_configured_wpa3_client() {
+    #[test_case(fidl_common::DriverFeature::SaeDriverAuth)]
+    #[test_case(fidl_common::DriverFeature::SaeSmeAuth)]
+    fn get_configured_wpa3_client(wpa3_feature: fidl_common::DriverFeature) {
+        let _exec = Executor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1512,7 +1516,7 @@ mod tests {
         let mut phy_container = PhyContainer::new(phy_info);
         // Insert the fake iface
         let fake_iface_id = 1;
-        let driver_features = vec![fidl_common::DriverFeature::SaeDriverAuth];
+        let driver_features = vec![wpa3_feature];
         phy_container.client_ifaces.insert(fake_iface_id, driver_features);
 
         phy_manager.phys.insert(fake_phy_id, phy_container);
@@ -2304,15 +2308,14 @@ mod tests {
         }
     }
 
-    #[run_singlethreaded(test)]
-    async fn has_wpa3_client_iface() {
+    #[test_case(fidl_common::DriverFeature::SaeDriverAuth)]
+    #[test_case(fidl_common::DriverFeature::SaeSmeAuth)]
+    fn has_wpa3_client_iface(wpa3_feature: fidl_common::DriverFeature) {
+        let _exec = Executor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         // Create a phy with the feature that indicates WPA3 support.
-        let driver_features = vec![
-            fidl_common::DriverFeature::ScanOffload,
-            fidl_common::DriverFeature::SaeDriverAuth,
-        ];
+        let driver_features = vec![fidl_common::DriverFeature::ScanOffload, wpa3_feature];
         let fake_phy_id = 0;
         let phy_info = fake_phy_info(fake_phy_id, Vec::new());
 
@@ -2334,8 +2337,9 @@ mod tests {
         assert_eq!(phy_manager.has_wpa3_client_iface(), true);
     }
 
-    #[run_singlethreaded(test)]
-    async fn has_no_wpa3_capable_client_iface() {
+    #[test]
+    fn has_no_wpa3_capable_client_iface() {
+        let _exec = Executor::new().expect("failed to create an executor");
         let test_values = test_setup();
         // Create a phy with driver features, but not the one that indicates WPA3 support.
         let driver_features =
