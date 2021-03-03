@@ -114,7 +114,7 @@ TEST(DwarfSymbolFactory, PtrToMemberFunction) {
 // to the "this" parameter being omitted since it doesn't contain any meaningful
 // attributes. To facilitate the Clang roll, we will temporarily disable this
 // test, then re-enable it with a fix after the roll.
-TEST(DwarfSymbolFactory, DISABLED_InlinedMemberFunction) {
+TEST(DwarfSymbolFactory, InlinedMemberFunction) {
   TestSymbolModule setup(TestSymbolModule::kBuilt);
   ASSERT_TRUE(setup.Init().ok());
 
@@ -131,14 +131,25 @@ TEST(DwarfSymbolFactory, DISABLED_InlinedMemberFunction) {
 
   EXPECT_EQ("ForInline::InlinedFunction", inline_func->GetFullName());
 
-  // The inline function should have two parameters, "this" and "param".
-  ASSERT_EQ(2u, inline_func->parameters().size());
-  const Variable* this_param = inline_func->parameters()[0].Get()->AsVariable();
-  ASSERT_TRUE(this_param);
-  EXPECT_EQ("this", this_param->GetAssignedName());
-  const Variable* param_param = inline_func->parameters()[1].Get()->AsVariable();
-  ASSERT_TRUE(param_param);
-  EXPECT_EQ("param", param_param->GetAssignedName());
+  // The inline function should have two parameters, "this" and "param".  ASSERT_EQ(2u,
+  // inline_func->parameters().size());
+  const Variable* param0 = inline_func->parameters()[0].Get()->AsVariable();
+  ASSERT_TRUE(param0);
+  const Variable* param1 = inline_func->parameters()[1].Get()->AsVariable();
+  ASSERT_TRUE(param1);
+
+  // They can appear in either order. Because it's an inlined function, the abtract origin can
+  // contribute to these parameters which can mean the iteration order is not clearly defined.
+  // Normally the parameters are in order.
+  const Variable* this_param = nullptr;
+  if (param0->GetAssignedName() == "this") {
+    this_param = param0;
+    EXPECT_EQ("param", param1->GetAssignedName());
+  } else {
+    EXPECT_EQ("param", param0->GetAssignedName());
+    EXPECT_EQ("this", param1->GetAssignedName());
+    this_param = param1;
+  }
 
   // The object pointer on the function should refer to the "this" pointer retrieved above. This is
   // tricky because normally the object pointer is on the "abstract origin" of the inlined routine,

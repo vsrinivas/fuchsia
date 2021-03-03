@@ -18,6 +18,7 @@
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_abstract_child_iterator.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_binary.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_die_decoder.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_location.h"
@@ -297,7 +298,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
   std::vector<LazySymbol> inner_blocks;
   std::vector<LazySymbol> variables;
   std::vector<LazySymbol> template_params;
-  for (const llvm::DWARFDie& child : die) {
+  for (const llvm::DWARFDie& child : DwarfAbstractChildIterator(die)) {
     switch (child.getTag()) {
       case llvm::dwarf::DW_TAG_formal_parameter:
         parameters.push_back(MakeLazy(child));
