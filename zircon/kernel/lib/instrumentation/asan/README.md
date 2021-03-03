@@ -42,7 +42,7 @@ accesses will result in a system crash.
 
 # Implementation
 
-## Early Boot Setup
+## Early Boot Setup (x86-64)
 
 When kASAN is enabled, all compiled kernel code is instrumented; so we need a
 valid shadow map very early in boot, before C code is called.  Currently the
@@ -73,7 +73,7 @@ The map in x86_64 looks like this:
 With this structure, all poison checks inside the kernel address space will
 succeed, as all shadow map memory is marked as unpoisoned.
 
-## Late Boot Setup
+## Late Boot Setup (x86-64)
 
 In order to allow memory poisoning / tracking validity of kernel memory, asan
 needs to have writable pages backing portions of the shadow that cover the
@@ -88,6 +88,25 @@ allocated shadow pages. All the remaining early boot mappings remain the same.
 
 We register the entire physmap and the kernel data/rodata/bss (sections with
 global variables) for instrumentation with asan during boot.
+
+## Early Boot Setup (arm64)
+
+kasan for arm64 does nothing to setup the shadow during early boot. This means
+that fuchsia doesn't support kasan with inline instrumentation on arm64, as
+there is no shadow setup. Instead, the asan functions check for a global
+variable to signal when the shadow has been initialized.
+
+## Late Boot Setup (arm64)
+
+After the VM subsystem is enabled, asan creates a vmar covering the entire shadow
+and maps it to the shadow address range. This vmar will be mostly unmapped. As
+the kernel creates memory mappings, asan will map memory pages to the
+corresponding parts of the shadow vmar, allowing reads and writes for poisoning
+and checks.
+
+The two main differences with x86-64 are that we don't setup an early boot
+shadow, and that we use the memory subsystem to handle the shadow memory instead
+of doing manual page table manipulations.
 
 ## Runtime
 

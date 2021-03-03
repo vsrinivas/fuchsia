@@ -76,9 +76,9 @@ size_t asan_heap_redzone_size(size_t size);
 // Adds the virtual region defined by [start, start+size) to the regions
 // instrumented by asan. After calling this function, users can call
 // asan_poison_shadow on the bytes in the newly added region.
-// This function can only be called before SMP is set up.
+// On x86-64 This function can only be called before SMP is set up.
 // TODO(fxbug.dev/30033): Allow calling after SMP is set up.
-void asan_remap_shadow(uintptr_t start, size_t size);
+void asan_map_shadow_for(uintptr_t start, size_t size);
 
 // Distinguished kasan poison values.
 // LLVM defines userspace equivalents of these in compiler-rt/lib/asan/asan_internal.h

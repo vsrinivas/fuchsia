@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <lib/counters.h>
 #include <lib/heap.h>
+#include <lib/instrumentation/asan.h>
 #include <lib/ktrace.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1124,6 +1125,12 @@ zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
     DEBUG_ASSERT(*mapped <= count);
   }
 
+#if __has_feature(address_sanitizer)
+  if (ret >= 0 && flags_ & ARCH_ASPACE_FLAG_KERNEL) {
+    asan_map_shadow_for(vaddr, ret);
+  }
+#endif  // __has_feature(address_sanitizer)
+
   return (ret < 0) ? (zx_status_t)ret : ZX_OK;
 }
 
@@ -1204,6 +1211,12 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
   if (mapped) {
     *mapped = total_mapped;
   }
+
+#if __has_feature(address_sanitizer)
+  if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
+    asan_map_shadow_for(vaddr, total_mapped * PAGE_SIZE);
+  }
+#endif  // __has_feature(address_sanitizer)
 
   return ZX_OK;
 }

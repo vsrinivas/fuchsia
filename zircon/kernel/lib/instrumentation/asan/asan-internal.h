@@ -49,8 +49,9 @@ constexpr vaddr_t kAsanEndAddress = PHYSMAP_BASE + PHYSMAP_SIZE;
 
 // Returns the address of the shadow byte corresponding to |address|.
 static inline uint8_t* addr2shadow(uintptr_t address) {
-  DEBUG_ASSERT(address >= KERNEL_ASPACE_BASE);
-  DEBUG_ASSERT(address <= KERNEL_ASPACE_BASE + KERNEL_ASPACE_SIZE - 1);
+  DEBUG_ASSERT_MSG(address >= KERNEL_ASPACE_BASE, "address: 0x%016lx", address);
+  DEBUG_ASSERT_MSG(address <= KERNEL_ASPACE_BASE + KERNEL_ASPACE_SIZE - 1, "address: 0x%016lx",
+                   address);
 
   uint8_t* const kasan_shadow_map = reinterpret_cast<uint8_t*>(KASAN_SHADOW_OFFSET);
   uint8_t* const shadow_byte_address =

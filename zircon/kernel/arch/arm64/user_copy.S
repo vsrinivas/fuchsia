@@ -43,7 +43,7 @@ FUNCTION(_arm64_user_copy)
     // code does: it never moves the stack pointer, and it never touches
     // the registers we're using for saved_fault_return_ptr and saved_lr.
     str temp, [fault_return_ptr]
-    bl memcpy
+    bl __unsanitized_memcpy
     // Store a successful status for the return. In this case since we do not set x1 the value of
     // the fault address in the return struct is undefined.
     mov x0, #ZX_OK

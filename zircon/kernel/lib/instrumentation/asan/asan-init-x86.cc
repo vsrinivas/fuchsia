@@ -14,6 +14,7 @@
 
 #include <arch/x86/mmu.h>
 #include <arch/x86/page_tables/constants.h>
+#include <ktl/atomic.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
@@ -30,6 +31,8 @@ extern volatile pt_entry_t kasan_shadow_pt[];
 extern volatile pt_entry_t kasan_shadow_pd[];
 
 namespace {
+
+ktl::atomic<bool> g_asan_can_map_shadow_for = true;
 
 paddr_t get_or_allocate_page_table(volatile pt_entry_t* table, size_t i,
                                    volatile pt_entry_t* initial_value) {
@@ -51,7 +54,7 @@ paddr_t get_or_allocate_page_table(volatile pt_entry_t* table, size_t i,
   return pd_page_paddr;
 }
 
-// asan_remap_shadow updates the kASAN shadow map to allow poisoning in the region [start,
+// asan_remap_shadow_internal updates the kASAN shadow map to allow poisoning in the region [start,
 // start+size)
 void asan_remap_shadow_internal(volatile pt_entry_t* pdp, uintptr_t start, size_t size) {
   const vaddr_t start_shadow = reinterpret_cast<vaddr_t>(addr2shadow(start));
@@ -120,7 +123,11 @@ void asan_remap_shadow_internal(volatile pt_entry_t* pdp, uintptr_t start, size_
 
 }  // namespace
 
-void asan_remap_shadow(uintptr_t start, size_t size) {
+void asan_map_shadow_for(uintptr_t start, size_t size) {
+  // TODO(fxbug.dev/30033): Allow calling map_shadow_for after early boot.
+  if (!g_asan_can_map_shadow_for) {
+    return;
+  }
   asan_remap_shadow_internal(pdp_high, start, size);
 }
 
@@ -129,7 +136,7 @@ void arch_asan_reallocate_shadow() {
     pmm_arena_info_t arena = {};
     pmm_get_arena_info(1, i, &arena, sizeof(arena));
     uintptr_t address = reinterpret_cast<uintptr_t>(paddr_to_physmap(arena.base));
-    asan_remap_shadow(address, arena.size);
+    asan_map_shadow_for(address, arena.size);
   }
 }
 
@@ -142,4 +149,5 @@ void arch_asan_late_init() {
   auto status =
       VmAspace::kernel_aspace()->ReserveSpace("kasan-shadow", kAsanShadowSize, KASAN_SHADOW_OFFSET);
   ZX_ASSERT(status == ZX_OK);
+  g_asan_can_map_shadow_for = false;
 }

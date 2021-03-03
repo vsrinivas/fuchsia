@@ -181,7 +181,7 @@ void vm_init() {
     ASSERT(status == ZX_OK);
 
 #if __has_feature(address_sanitizer)
-    asan_remap_shadow(region.base, region.size);
+    asan_map_shadow_for(region.base, region.size);
 #endif  // __has_feature(address_sanitizer)
   }
 

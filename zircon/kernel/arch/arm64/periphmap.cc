@@ -7,6 +7,7 @@
 
 #include <align.h>
 #include <lib/console.h>
+#include <lib/instrumentation/asan.h>
 
 #include <arch/arm64/mmu.h>
 #include <ktl/optional.h>
@@ -317,7 +318,12 @@ void reserve_periph_ranges() {
     if (range.length == 0) {
       break;
     }
+
     VmAspace::kernel_aspace()->ReserveSpace("periph", range.length, range.base_virt);
+
+#if __has_feature(address_sanitizer)
+    asan_map_shadow_for(range.base_virt, range.length);
+#endif  // __has_feature(address_sanitizer)
   }
 }
 

@@ -143,6 +143,7 @@ if (toolchain.environment == "physmem" ||
       "//zircon/kernel/lib/counters",
       "//zircon/kernel/lib/crashlog",
       "//zircon/kernel/lib/init",
+      "//zircon/kernel/lib/instrumentation",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/perfmon",
       "//zircon/kernel/lib/syscalls",

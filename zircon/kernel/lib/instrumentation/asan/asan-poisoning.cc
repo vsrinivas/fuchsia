@@ -88,7 +88,9 @@ void print_error_shadow(uintptr_t address, size_t bytes, bool is_write, void* ca
     start_addr += 8;
   }
   // Dump additional VM Page state - this is useful to debug use-after-state-change bugs.
-  paddr_to_vm_page(vaddr_to_paddr(reinterpret_cast<void*>(address)))->dump();
+  // TODO(fxbug.dev/30033): This is disabled because we could panic while holding one of the
+  // aspace locks, causing an error. Figure out how to dump vm_page_t info from here.
+  // paddr_to_vm_page(vaddr_to_paddr(reinterpret_cast<void*>(address)))->dump();
 }
 
 inline bool RangesOverlap(uintptr_t offset1, size_t len1, uintptr_t offset2, size_t len2) {
@@ -158,6 +160,7 @@ uintptr_t asan_region_is_poisoned(uintptr_t address, size_t size) {
       return address + i;
     }
   }
+
   panic("Unreachable code\n");
 }
 
@@ -166,10 +169,12 @@ void asan_check(uintptr_t address, size_t bytes, bool is_write, void* caller) {
   if (!g_asan_initialized.load(ktl::memory_order_relaxed)) {
     return;
   }
+
   const uintptr_t poisoned_addr = asan_region_is_poisoned(address, bytes);
   if (!poisoned_addr) {
     return;
   }
+
   platform_panic_start();
   print_error_shadow(address, bytes, is_write, caller, poisoned_addr);
   panic("kasan\n");

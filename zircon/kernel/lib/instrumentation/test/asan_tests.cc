@@ -21,8 +21,7 @@
 #include <vm/pmm.h>
 #include <vm/vm_address_region.h>
 
-// TODO(fxbug.dev/30033): Enable kasan tests for arm.
-#if __has_feature(address_sanitizer) && defined(__x86_64__)
+#if __has_feature(address_sanitizer)
 
 #include "../asan/asan-internal.h"
 
@@ -30,12 +29,15 @@ namespace {
 
 unsigned char global_buffer[8];
 
-static inline uint8_t* test_addr2shadow(uintptr_t address) {
+// TODO(fxbug.dev/30033): Enable for x86_64 once it can add shadow mappings after early init.
+#if !defined(__x86_64__)
+inline uint8_t* test_addr2shadow(uintptr_t address) {
   uint8_t* const kasan_shadow_map = reinterpret_cast<uint8_t*>(KASAN_SHADOW_OFFSET);
   uint8_t* const shadow_byte_address =
       kasan_shadow_map + ((address - KERNEL_ASPACE_BASE) >> kAsanShift);
   return shadow_byte_address;
 }
+#endif  // !defined(__x86_64__)
 
 // Makes sure that a region returned by malloc are unpoisoned.
 bool kasan_test_malloc_poisons() {
@@ -235,22 +237,28 @@ bool kasan_test_quarantine() {
 bool kasan_test_walk_shadow() {
   BEGIN_TEST;
 
+// This test is only valid on x86-64, because it has the full shadow memory
+// mapped (with some parts as read-only).
+#if defined(__x86_64__)
   uint8_t* const start = reinterpret_cast<uint8_t*>(KASAN_SHADOW_OFFSET);
   uint8_t* const end = reinterpret_cast<uint8_t*>(KASAN_SHADOW_OFFSET + kAsanShadowSize);
   for (volatile uint8_t* p = start; p < end; p += PAGE_SIZE) {
     p[0];  // Read one byte from each page of the shadow.
   }
+#endif  // defined(__x64_64__)
 
   END_TEST;
 }
 
-// Test that asan_remap_shadow makes a writable shadow region for address ranges.
+// Test that asan_map_shadow_for makes a writable shadow region for address ranges.
 //
 // asan_remap_shadow is normally only allowed to be called in early boot; this test is safe
 // to use it, however, because it only runs on one CPU.
-bool kasan_test_remap_shadow() {
+NO_ASAN bool kasan_test_map_shadow_for() {
   BEGIN_TEST;
 
+// TODO(fxbug.dev/30033): Enable for x86_64 once it can add shadow mappings after early init.
+#if !defined(__x86_64__)
   auto kernel_vmar = VmAspace::kernel_aspace()->RootVmar()->as_vm_address_region();
   fbl::RefPtr<VmAddressRegion> test_vmar;
   auto status = kernel_vmar->CreateSubVmar(
@@ -259,26 +267,20 @@ bool kasan_test_remap_shadow() {
       &test_vmar);
   ASSERT_EQ(ZX_OK, status);
 
-  // Walk the shadow before asan_remap_shadow to ensure that the shadow is present and to
-  // create TLB entries for the shadow map pointing to non-writable (old) pages.
   uint8_t* test_vmar_shadow_start = test_addr2shadow(test_vmar->base());
   uint8_t* test_vmar_shadow_end = test_addr2shadow(test_vmar->base() + test_vmar->size());
-  uint8_t sum = 0;
-  for (uint8_t* p = test_vmar_shadow_start; p < test_vmar_shadow_end; p += PAGE_SIZE) {
-    sum += p[0];
-  }
-  EXPECT_EQ(0, sum);
 
-  asan_remap_shadow(test_vmar->base(), test_vmar->size());
+  asan_map_shadow_for(test_vmar->base(), test_vmar->size());
 
-  // Walk the shadow after asan_remap_shadow and write to every page. The write should succeed and
+  // Walk the shadow after asan_map_shadow_for and write to every page. The write should succeed and
   // write to newly-allocated shadow pages.
   for (volatile uint8_t* p = test_vmar_shadow_start; p < test_vmar_shadow_end; p += PAGE_SIZE) {
     p[0] = 1;
   }
-  memset(test_vmar_shadow_start, 0, test_vmar_shadow_end - test_vmar_shadow_start);
+  __unsanitized_memset(test_vmar_shadow_start, 0, test_vmar_shadow_end - test_vmar_shadow_start);
 
   test_vmar->Destroy();
+#endif  // !defined(__x86_64__)
   END_TEST;
 }
 
@@ -315,7 +317,7 @@ UNITTEST("test_poisoning_heap", kasan_test_poison_heap)
 UNITTEST("test_poisoning_heap_partial", kasan_test_poison_heap_partial)
 UNITTEST("test_quarantine", kasan_test_quarantine)
 UNITTEST("test_walk_shadow", kasan_test_walk_shadow)
-UNITTEST("test_asan_remap_shadow", kasan_test_remap_shadow)
+UNITTEST("test_asan_map_shadow_for", kasan_test_map_shadow_for)
 UNITTEST("test_globals", kasan_test_globals_are_poisoned)
 UNITTEST("memcpy_dst_src_equal", kasan_test_memcpy_dst_src_equal)
 UNITTEST_END_TESTCASE(kasan_tests, "kasan", "Kernel Address Sanitizer Tests")
