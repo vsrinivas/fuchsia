@@ -123,7 +123,7 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptStoryShell(InterceptOptions opt
 }
 
 TestHarnessBuilder& TestHarnessBuilder::InterceptSessionLauncherComponent(
-    InterceptOptions options, fit::optional<std::vector<std::string>> args) {
+    InterceptOptions options, cpp17::optional<std::vector<std::string>> args) {
   spec_.mutable_basemgr_config()->mutable_session_launcher()->set_url(options.url);
   if (args.has_value()) {
     spec_.mutable_basemgr_config()->mutable_session_launcher()->set_args(std::move(args.value()));

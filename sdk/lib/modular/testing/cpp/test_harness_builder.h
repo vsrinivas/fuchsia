@@ -7,7 +7,7 @@
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <lib/fit/optional.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
@@ -112,7 +112,7 @@ class TestHarnessBuilder final {
   // Convenience variant of InterceptComponent() which sets the `session_launcher` URL
   // in the ModularConfig to |options.url|, and optionally, the `session_launcher` args.
   TestHarnessBuilder& InterceptSessionLauncherComponent(
-      InterceptOptions options, fit::optional<std::vector<std::string>> args = fit::nullopt);
+      InterceptOptions options, cpp17::optional<std::vector<std::string>> args = cpp17::nullopt);
 
   // Make a service named |service_name| available in the test harness
   // environment. |connector| is called every time a client requests to
