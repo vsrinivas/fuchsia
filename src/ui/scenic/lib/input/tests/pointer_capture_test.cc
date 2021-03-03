@@ -132,7 +132,7 @@ TEST_F(PointerCaptureTest, RegisterAttemptAfterDisconnect_ShouldSucceed) {
 }
 
 // Sets up a scene with a single view, which listens to the pointer capture protocol. The test then
-// checks that events are delivered on both channels.
+// checks that events (except for focus) are delivered on both channels.
 TEST_F(PointerCaptureTest, IfNoOtherView_ThenListenerShouldGetAllInput) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto [root_session, root_resources] = CreateScene();
@@ -163,7 +163,10 @@ TEST_F(PointerCaptureTest, IfNoOtherView_ThenListenerShouldGetAllInput) {
   }
 
   // Regular input path.
-  EXPECT_EQ(client->events().size(), 1u);
+  EXPECT_EQ(client->events().size(), 2u);
+  EXPECT_TRUE(client->events()[0].is_pointer());
+  EXPECT_TRUE(client->events()[1].is_focus());
+
   // Pointer capture listener path.
   EXPECT_EQ(client->listener_.events_.size(), 1u);
 }
@@ -210,51 +213,10 @@ TEST_F(PointerCaptureTest, IfAnotherViewGetsInput_ListenerShouldOnlyGetCapturedI
     RequestToPresent(session);
   }
 
-  EXPECT_EQ(regularClient.events().size(), 1u);
+  EXPECT_EQ(regularClient.events().size(), 2u);
+  EXPECT_TRUE(regularClient.events()[0].is_pointer());
+  EXPECT_TRUE(regularClient.events()[1].is_focus());
   EXPECT_TRUE(pointerCaptureClient->events().empty());
-  EXPECT_EQ(pointerCaptureClient->listener_.events_.size(), 1u);
-}
-
-TEST_F(PointerCaptureTest, DISABLED_WhenParellelDispatchOn_ShouldOnlyGetOneEvent) {
-  auto [view_token1, view_holder_token1] = scenic::ViewTokenPair::New();
-  auto [view_token2, view_holder_token2] = scenic::ViewTokenPair::New();
-  auto [root_session, root_resources] = CreateScene();
-  uint32_t compositor_id = root_resources.compositor.id();
-  scenic::Session* const session = root_session.session();
-
-  {
-    scenic::ViewHolder holder_1(session, std::move(view_holder_token1), "holder_1"),
-        holder_2(session, std::move(view_holder_token2), "holder_2");
-
-    holder_1.SetViewProperties(k5x5x1);
-    holder_2.SetViewProperties(k5x5x1);
-
-    root_resources.scene.AddChild(holder_1);
-    root_resources.scene.AddChild(holder_2);
-
-    // Translate clients so they're not overlapping, but both would be hit by the same input.
-    holder_1.SetTranslation(0, 0, -1);
-    holder_2.SetTranslation(0, 0, 1);
-
-    RequestToPresent(session);
-  }
-
-  SessionWrapper regularClient = CreateClient("view", std::move(view_token1));
-  std::unique_ptr<ListenerSessionWrapper> pointerCaptureClient =
-      CreatePointerCaptureListener("view", std::move(view_token2));
-
-  // Scene is now set up, send in the input.
-  {
-    PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
-                                    /*pointer id*/ 1, PointerEventType::TOUCH);
-    // Sent in as device (display) coordinates.
-    session->Enqueue(pointer.Add(4, 4));
-
-    RequestToPresent(session);
-  }
-
-  EXPECT_EQ(regularClient.events().size(), 1u);
-  EXPECT_EQ(pointerCaptureClient->events().size(), 1u);
   EXPECT_EQ(pointerCaptureClient->listener_.events_.size(), 1u);
 }
 
@@ -296,7 +258,9 @@ TEST_F(PointerCaptureTest, WhenListenerDisconnects_OtherClientsShouldStillWork) 
       RequestToPresent(session);
     }
 
-    EXPECT_EQ(regularClient.events().size(), 1u);
+    EXPECT_EQ(regularClient.events().size(), 2u);
+    EXPECT_TRUE(regularClient.events()[0].is_pointer());
+    EXPECT_TRUE(regularClient.events()[1].is_focus());
     EXPECT_EQ(pointerCaptureClient->listener_.events_.size(), 1u);
   }  // pointerCaptureClient goes out of scope
 
@@ -545,7 +509,7 @@ TEST_F(PointerCaptureTest, TransformedListenerView_ShouldGetTransformedInput) {
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // Sent in as device (display) coordinates.
-    session->Enqueue(pointer.Add(0, 0));
+    session->Enqueue(pointer.Add(0.5, 0.5));
     session->Enqueue(pointer.Down(5, 0));
     session->Enqueue(pointer.Move(5, 5));
     session->Enqueue(pointer.Up(0, 5));
@@ -558,7 +522,7 @@ TEST_F(PointerCaptureTest, TransformedListenerView_ShouldGetTransformedInput) {
     ASSERT_EQ(events.size(), 4u);
 
     // Verify capture client gets properly transformed input coordinates.
-    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::ADD, 0.0 / 2.0, 1.0 / 3.0));
+    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::ADD, 0.5 / 2.0, 0.5 / 3.0));
     EXPECT_TRUE(PointerMatches(events[1], 1u, PointerEventPhase::DOWN, 0.0 / 2.0, -4.0 / 3.0));
     EXPECT_TRUE(PointerMatches(events[2], 1u, PointerEventPhase::MOVE, 5.0 / 2.0, -4.0 / 3.0));
     EXPECT_TRUE(PointerMatches(events[3], 1u, PointerEventPhase::UP, 5.0 / 2.0, 1.0 / 3.0));
@@ -655,7 +619,7 @@ TEST_F(PointerCaptureTest, ClipSpaceTransformedListenerView_ShouldGetTransformed
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // Sent in as device (display) coordinates.
-    session->Enqueue(pointer.Add(0, 0));
+    session->Enqueue(pointer.Add(0.5, 0.5));
     session->Enqueue(pointer.Down(5, 0));
     session->Enqueue(pointer.Move(5, 5));
     session->Enqueue(pointer.Up(0, 5));
@@ -668,7 +632,7 @@ TEST_F(PointerCaptureTest, ClipSpaceTransformedListenerView_ShouldGetTransformed
     ASSERT_EQ(events.size(), 4u);
 
     // Verify capture client gets properly transformed input coordinates.
-    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::ADD, 0, 0));
+    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::ADD, 0.25, 0.25));
     EXPECT_TRUE(PointerMatches(events[1], 1u, PointerEventPhase::DOWN, 2.5, 0));
     EXPECT_TRUE(PointerMatches(events[2], 1u, PointerEventPhase::MOVE, 2.5, 2.5));
     EXPECT_TRUE(PointerMatches(events[3], 1u, PointerEventPhase::UP, 0, 2.5));

@@ -25,11 +25,15 @@ bool IntersectRayBox(const escher::ray4& ray, const escher::BoundingBox& box,
   float t_min, t_max, ty_min, ty_max, tz_min, tz_max;
 
   // Bootstrap with x. Any coordinate axis would work just as well.
-  t_min = ((idx < 0 ? box.max() : box.min()).x - ray.origin.x) * idx;
-  t_max = ((idx < 0 ? box.min() : box.max()).x - ray.origin.x) * idx;
+  const float x_max_plus_epsilon = box.max().x + kIntersectionEpsilon;
+  const float x_min_minus_epsilon = box.min().x - kIntersectionEpsilon;
+  t_min = ((idx < 0 ? x_max_plus_epsilon : x_min_minus_epsilon) - ray.origin.x) * idx;
+  t_max = ((idx < 0 ? x_min_minus_epsilon : x_max_plus_epsilon) - ray.origin.x) * idx;
 
-  ty_min = ((idy < 0 ? box.max() : box.min()).y - ray.origin.y) * idy;
-  ty_max = ((idy < 0 ? box.min() : box.max()).y - ray.origin.y) * idy;
+  const float y_max_plus_epsilon = box.max().y + kIntersectionEpsilon;
+  const float y_min_minus_epsilon = box.min().y - kIntersectionEpsilon;
+  ty_min = ((idy < 0 ? y_max_plus_epsilon : y_min_minus_epsilon) - ray.origin.y) * idy;
+  ty_max = ((idy < 0 ? y_min_minus_epsilon : y_max_plus_epsilon) - ray.origin.y) * idy;
 
   if (t_min > ty_max || ty_min > t_max) {
     // The parameter ranges of the "x-axis projection" and "y-axis projection"
@@ -43,8 +47,10 @@ bool IntersectRayBox(const escher::ray4& ray, const escher::BoundingBox& box,
   if (ty_max < t_max)
     t_max = ty_max;
 
-  tz_min = ((idz < 0 ? box.max() : box.min()).z - ray.origin.z) * idz;
-  tz_max = ((idz < 0 ? box.min() : box.max()).z - ray.origin.z) * idz;
+  const float z_max_plus_epsilon = box.max().z + kIntersectionEpsilon;
+  const float z_min_minus_epsilon = box.min().z - kIntersectionEpsilon;
+  tz_min = ((idz < 0 ? z_max_plus_epsilon : z_min_minus_epsilon) - ray.origin.z) * idz;
+  tz_max = ((idz < 0 ? z_min_minus_epsilon : z_max_plus_epsilon) - ray.origin.z) * idz;
 
   if (t_min > tz_max || tz_min > t_max)
     return false;
@@ -89,7 +95,7 @@ bool IntersectRayTriangle(const escher::ray4& ray, const glm::vec3& v0, const gl
   // with the normal. If it is 0, that indicates that the ray direction vector is
   // 90 degrees from the normal, meaning it is parallel to the plane.
   float dot_ray_norm = glm::dot(norm, dir);
-  if (fabs(dot_ray_norm) < kEpsilon) {
+  if (fabs(dot_ray_norm) < kIntersectionEpsilon) {
     return false;
   }
 

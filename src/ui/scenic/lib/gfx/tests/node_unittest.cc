@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "lib/ui/scenic/cpp/commands.h"
+#include "src/ui/lib/escher/geometry/intersection.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/entity_node.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/shape_node.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/view_node.h"
@@ -174,8 +175,8 @@ TEST(ViewNodeTest, GetIntersection_HitOnBoundingBox) {
   // Should still not register as a hit, but should tell us to continue with its children.
   EXPECT_FALSE(result.did_hit);
   EXPECT_TRUE(result.continue_with_children);
-  EXPECT_EQ(result.interval.min(), 20.0f);
-  EXPECT_EQ(result.interval.max(), 100.0f);
+  EXPECT_EQ(result.interval.min(), 20.0f - escher::kIntersectionEpsilon);
+  EXPECT_EQ(result.interval.max(), 100.0f + escher::kIntersectionEpsilon);
 }
 
 }  // namespace test
