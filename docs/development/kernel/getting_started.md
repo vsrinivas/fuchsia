@@ -21,14 +21,9 @@ fx set bringup.arm64
 
 Fuchsia uses the concept of
 [products](/docs/concepts/build_system/boards_and_products.md#products) to
-create a collection of build targets. The `bringup` product is the smallest
-product with a minimal feature set. The `bringup` product identifies only the
-Zircon components and excludes all other Fuchsia components from the build. For
-instance, becasue it lacks most network capabilities, the `bringup` product
-cannot use the `fx` commands, such as
-<code>[fx serve](/docs/development/build/fx.md#serve-a-build)</code> and
-<code>[fx shell](/docs/development/build/fx.md#connect-to-a-target-shell)</code>,
-that require network connectivity.
+create a collection of build targets. The
+[bringup product](/docs/concepts/build_system/boards_and_products.md#bringup-product)
+is the smallest product with a minimal feature set.
 
 The following command prints a list of other product configurations:
 

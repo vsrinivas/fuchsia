@@ -71,22 +71,28 @@ images. All members of `base` and `cache` are inherently also members of
 There are many more than below, but the following three particularly
 important configurations to be familiar with:
 
-* `bringup` is a minimal feature set product that is focused on being very
-  simple and very lean. It exists to provide fast builds and small images
-  (primarily used in a [netboot][fx-netboot] rather than [paved][fx-paving]
-  fashion), and is great for working on very low-level facilities, such as
-  the Zircon kernel or board-specific drivers and configurations. It lacks
-  most network capabilities, and therefore is not able to add new software at
-  runtime or upgrade itself. This also means some `fx` commands such as
-  <code>[fx serve][fx-serve]</code> and <code>[fx shell][fx-shell]</code>
-  cannot be used with the `bringup` product.
-* `core` is a minimal feature set that can install additional software (such as
-  items added to the "universe" dependency set). It is the starting point for
-  all higher-level product configurations. It has common network capabilities
-  and can update a system over-the-air.
-* `workstation` is a basis for a general purpose development environment, good
-  for working on UI, media and many other high-level features. This is also
-  the best environment for enthusiasts to play with and explore.
+### Bringup {#bringup-product}
+
+The `bringup` product is the most minimal viable target for development.
+Because it lacks most network capabilities, the `bringup` product
+cannot use the `fx` commands, such as
+<code>[fx serve](/docs/development/build/fx.md#serve-a-build)</code> and
+<code>[fx shell](/docs/development/build/fx.md#connect-to-a-target-shell)</code>,
+that require network connectivity.
+
+For more see [Bringup Product Definition](/docs/concepts/build_system/bringup.md)
+
+### Core {#core-product}
+`core` is a minimal feature set that can install additional software (such as
+items added to the "universe" dependency set). It is the starting point for
+all higher-level product configurations. It has common network capabilities
+and can update a system over-the-air.
+
+### Workstation {#workstation-product}
+
+`workstation` is a basis for a general purpose development environment, good
+for working on UI, media and many other high-level features. This is also
+the best environment for enthusiasts to play with and explore.
 
 [products-source]: /products/
 [boards-source]: /boards/
