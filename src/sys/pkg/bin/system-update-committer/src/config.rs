@@ -30,8 +30,6 @@ impl Default for Mode {
 }
 
 impl Config {
-    // FIXME(http://fxbug.dev/64595) This will be used once that ticket is implemented.
-    #[allow(dead_code)]
     pub fn blobfs(&self) -> &Mode {
         &self.blobfs
     }
