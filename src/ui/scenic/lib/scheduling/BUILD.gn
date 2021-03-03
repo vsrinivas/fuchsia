@@ -48,7 +48,7 @@ source_set("frame_scheduler") {
     ":present2_info",
     ":vsync_timing",
     "//src/lib/cobalt/cpp:cobalt_logger",
-    "//third_party/cobalt/src/registry:buckets_config",
+    "//third_party/cobalt/src/lib/client/cpp:buckets_config",
     "//zircon/system/ulib/trace",
   ]
 
