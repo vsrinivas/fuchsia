@@ -205,11 +205,6 @@ zx_status_t Gt92xxDevice::Init() {
   // Hardware reset
   HWReset();
 
-  zx_status_t status = UpdateFirmwareIfNeeded();
-  if (status != ZX_OK) {
-    return status;
-  }
-
   uint8_t fw = Read(GT_REG_FIRMWARE);
   if (fw != GT_FIRMWARE_MAGIC) {
     zxlogf(ERROR, "Invalid gt92xx firmware configuration!");
@@ -230,7 +225,7 @@ zx_status_t Gt92xxDevice::Init() {
                   (GT_REG_CONFIG_REFRESH - GT_REG_CONFIG_DATA + 1));
 
   // Write conf data to registers
-  status = i2c_.WriteReadSync(&Conf[0], Conf.size(), NULL, 0);
+  zx_status_t status = i2c_.WriteReadSync(&Conf[0], Conf.size(), NULL, 0);
   if (status != ZX_OK) {
     return status;
   }
@@ -289,21 +284,6 @@ void Gt92xxDevice::HWReset() {
   zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
   int_gpio_.ConfigIn(0);                         // Make interrupt pin an input again;
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));  // Wait for reset to complete
-}
-
-zx_status_t Gt92xxDevice::UpdateFirmwareIfNeeded() {
-  zx::vmo firmware_vmo;
-  size_t firmware_size = 0;
-  zx_status_t status = load_firmware(parent(), GT9293_ASTRO_FIRMWARE_PATH,
-                                     firmware_vmo.reset_and_get_address(), &firmware_size);
-  if (status != ZX_OK) {
-    zxlogf(WARNING, "Failed to load firmware: %d", status);
-    return ZX_OK;
-  }
-
-  // TODO(b/181266286): Implement the firmware download process.
-
-  return ZX_OK;
 }
 
 zx_status_t Gt92xxDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
