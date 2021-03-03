@@ -222,11 +222,11 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
     completer.Reply(table_builder.build());
   }
 
-  Server(async_dispatcher_t* dispatcher, zx::channel channel)
+  Server(async_dispatcher_t* dispatcher, fidl::ServerEnd<test::ReceiveFlexibleEnvelope> channel)
       : async_wait_t({
             .state = ASYNC_STATE_INIT,
             .handler = &MessageHandler,
-            .object = channel.release(),
+            .object = channel.TakeChannel().release(),
             .trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
             .options = 0,
         }),
@@ -234,7 +234,7 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
     async_begin_wait(dispatcher_, this);
   }
 
-  ~Server() {
+  ~Server() override {
     async_cancel_wait(dispatcher_, this);
     zx_handle_close(async_wait_t::object);
   }
@@ -291,8 +291,9 @@ class FlexibleEnvelopeTest : public ::testing::Test {
   virtual void SetUp() {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
     ASSERT_EQ(loop_->StartThread("test_llcpp_flexible_envelope_server"), ZX_OK);
-    ASSERT_EQ(zx::channel::create(0, &client_end_, &server_end_), ZX_OK);
-    server_ = std::make_unique<Server>(loop_->dispatcher(), std::move(server_end_));
+    zx::status server_end = fidl::CreateEndpoints(&client_end_);
+    ASSERT_EQ(server_end.status_value(), ZX_OK);
+    server_ = std::make_unique<Server>(loop_->dispatcher(), std::move(*server_end));
   }
 
   virtual void TearDown() {
@@ -308,8 +309,7 @@ class FlexibleEnvelopeTest : public ::testing::Test {
  private:
   std::unique_ptr<async::Loop> loop_;
   std::unique_ptr<Server> server_;
-  zx::channel client_end_;
-  zx::channel server_end_;
+  fidl::ClientEnd<test::ReceiveFlexibleEnvelope> client_end_;
 };
 
 static_assert(fidl::internal::ClampedMessageSize<

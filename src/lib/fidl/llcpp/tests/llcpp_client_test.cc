@@ -122,8 +122,9 @@ TEST(ClientBindingTestCase, AsyncTxn) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
@@ -155,7 +156,7 @@ TEST(ClientBindingTestCase, AsyncTxn) {
   EXPECT_TRUE(client->IsPending(context.Txid()));
   fidl_message_header_t hdr;
   fidl_init_txn_header(&hdr, context.Txid(), 0);
-  ASSERT_OK(remote.write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
+  ASSERT_OK(remote.channel().write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
 
   // Trigger unbound handler.
   remote.reset();
@@ -166,8 +167,9 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
@@ -198,12 +200,12 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
   std::thread threads[10];
   for (int i = 0; i < 10; ++i) {
     contexts.emplace_back(std::make_unique<TestResponseContext>(client.get()));
-    threads[i] = std::thread([context = contexts[i].get(), &remote, &client] {
+    threads[i] = std::thread([context = contexts[i].get(), remote = &remote.channel(), &client] {
       client->PrepareAsyncTxn(context);
       EXPECT_TRUE(client->IsPending(context->Txid()));
       fidl_message_header_t hdr;
       fidl_init_txn_header(&hdr, context->Txid(), 0);
-      ASSERT_OK(remote.write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
+      ASSERT_OK(remote->write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
     });
   }
   for (int i = 0; i < 10; ++i)
@@ -218,8 +220,9 @@ TEST(ClientBindingTestCase, ForgetAsyncTxn) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   Client<TestProtocol> client(std::move(local), loop.dispatcher());
 
@@ -237,8 +240,9 @@ TEST(ClientBindingTestCase, UnknownResponseTxid) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
@@ -267,7 +271,7 @@ TEST(ClientBindingTestCase, UnknownResponseTxid) {
   ASSERT_EQ(0, client->GetTxidCount());
   fidl_message_header_t hdr;
   fidl_init_txn_header(&hdr, 1, 0);
-  ASSERT_OK(remote.write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
+  ASSERT_OK(remote.channel().write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
 
   // on_unbound should be triggered by the erroneous response.
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
@@ -277,8 +281,9 @@ TEST(ClientBindingTestCase, Events) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
@@ -306,10 +311,10 @@ TEST(ClientBindingTestCase, Events) {
   // In parallel, send 10 event messages from the remote end of the channel.
   std::thread threads[10];
   for (int i = 0; i < 10; ++i) {
-    threads[i] = std::thread([&remote] {
+    threads[i] = std::thread([remote = &remote.channel()] {
       fidl_message_header_t hdr;
       fidl_init_txn_header(&hdr, 0, 0);
-      ASSERT_OK(remote.write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
+      ASSERT_OK(remote->write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
     });
   }
   for (int i = 0; i < 10; ++i)
@@ -324,8 +329,9 @@ TEST(ClientBindingTestCase, Unbind) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t unbound;
 
@@ -355,8 +361,9 @@ TEST(ClientBindingTestCase, UnbindOnDestroy) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t unbound;
 
@@ -386,8 +393,9 @@ TEST(ClientBindingTestCase, UnbindWhileActiveChannelRefs) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t unbound;
 
@@ -659,8 +667,9 @@ TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnDestroy) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   auto* client = new Client<TestProtocol>(std::move(local), loop.dispatcher());
 
@@ -677,8 +686,9 @@ TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnUnbound) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   Client<TestProtocol> client(std::move(local), loop.dispatcher());
 
@@ -695,8 +705,9 @@ TEST(ClientBindingTestCase, Epitaph) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t unbound;
 
@@ -718,7 +729,7 @@ TEST(ClientBindingTestCase, Epitaph) {
                               std::make_shared<EventHandler>(unbound));
 
   // Send an epitaph and wait for on_unbound to run.
-  ASSERT_OK(fidl_epitaph_write(remote.get(), ZX_ERR_BAD_STATE));
+  ASSERT_OK(fidl_epitaph_write(remote.channel().get(), ZX_ERR_BAD_STATE));
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
@@ -726,8 +737,9 @@ TEST(ClientBindingTestCase, PeerClosedNoEpitaph) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t unbound;
 

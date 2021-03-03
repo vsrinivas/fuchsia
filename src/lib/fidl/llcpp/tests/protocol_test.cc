@@ -130,10 +130,11 @@ class FrobinatorImpl : public test::Frobinator::Interface {
 };
 
 TEST(MagicNumberTest, RequestWrite) {
-  zx::channel h1, h2;
-  ASSERT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
+  auto endpoints = fidl::CreateEndpoints<test::Frobinator>();
+  ASSERT_EQ(endpoints.status_value(), ZX_OK);
+  auto [local, remote] = std::move(*endpoints);
   std::string s = "hi";
-  test::Frobinator::Call::Frob(zx::unowned_channel(h1), fidl::unowned_str(s));
+  test::Frobinator::Call::Frob(local, fidl::unowned_str(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
 
@@ -143,8 +144,9 @@ TEST(MagicNumberTest, RequestWrite) {
       .num_bytes = 0u,
       .num_handles = 0u,
   };
-  auto status = zx_channel_read_etc(h2.get(), 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
-                                    ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
+  auto status =
+      remote.channel().read_etc(0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
+                                ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
   ASSERT_EQ(status, ZX_OK);
   ASSERT_GE(msg.num_bytes, sizeof(fidl_message_header_t));
 
@@ -190,7 +192,7 @@ TEST(MagicNumberTest, ResponseWrite) {
 
   fidl::Buffer<test::Frobinator::GrobRequest> request;
   fidl::Buffer<test::Frobinator::GrobResponse> response;
-  auto result = test::Frobinator::Call::Grob(endpoints->client.channel().borrow(), request.view(),
+  auto result = test::Frobinator::Call::Grob(endpoints->client, request.view(),
                                              fidl::unowned_str(s), response.view());
   ASSERT_TRUE(result.ok());
   auto hdr = reinterpret_cast<fidl_message_header_t*>(response.data());
@@ -200,14 +202,15 @@ TEST(MagicNumberTest, ResponseWrite) {
 // Send an event with an incompatible magic number and check that the event
 // handler returns ZX_ERR_PROTOCOL_NOT_SUPPORTED
 TEST(MagicNumberTest, EventRead) {
-  zx::channel h1, h2;
-  ASSERT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
+  auto endpoints = fidl::CreateEndpoints<test::Frobinator>();
+  ASSERT_EQ(endpoints.status_value(), ZX_OK);
+  auto [local, remote] = std::move(*endpoints);
   std::string s = "foo";
   test::Frobinator::HrobResponse _response(fidl::unowned_str(s));
   // Set an incompatible magic number
   _response._hdr.magic_number = 0;
   fidl::OwnedEncodedMessage<test::Frobinator::HrobResponse> encoded(&_response);
-  encoded.Write(h1.get());
+  encoded.Write(remote.channel());
   ASSERT_TRUE(encoded.ok());
 
   class EventHandler : public test::Frobinator::SyncEventHandler {
@@ -223,8 +226,7 @@ TEST(MagicNumberTest, EventRead) {
   };
 
   EventHandler event_handler;
-  ASSERT_EQ(event_handler.HandleOneEvent(zx::unowned_channel(h2)).status(),
-            ZX_ERR_PROTOCOL_NOT_SUPPORTED);
+  ASSERT_EQ(event_handler.HandleOneEvent(local).status(), ZX_ERR_PROTOCOL_NOT_SUPPORTED);
 }
 
 TEST(SyncClientTest, DefaultInitializationError) {

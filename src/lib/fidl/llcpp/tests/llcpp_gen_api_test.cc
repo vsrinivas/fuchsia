@@ -36,8 +36,9 @@ class Server : public Example::Interface {
 };
 
 TEST(GenAPITestCase, TwoWayAsyncManaged) {
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
@@ -85,8 +86,9 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
     size_t size_;
   };
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
@@ -108,8 +110,9 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
 }
 
 TEST(GenAPITestCase, EventManaged) {
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
@@ -151,8 +154,9 @@ TEST(GenAPITestCase, Epitaph) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t unbound;
 
@@ -174,7 +178,7 @@ TEST(GenAPITestCase, Epitaph) {
                                std::make_shared<EventHandler>(unbound));
 
   // Send an epitaph and wait for on_unbound to run.
-  ASSERT_OK(fidl_epitaph_write(remote.get(), ZX_ERR_BAD_STATE));
+  ASSERT_OK(fidl_epitaph_write(remote.channel().get(), ZX_ERR_BAD_STATE));
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
@@ -194,8 +198,9 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
     void OneWay(fidl::StringView, OneWayCompleter::Sync&) override {}
   };
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
@@ -224,8 +229,9 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
 }
 
 TEST(GenAPITestCase, UnbindInfoDecodeError) {
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
@@ -257,8 +263,8 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
   Example::OnEventResponse resp{fidl::StringView("", 0)};
   fidl::OwnedEncodedMessage<Example::OnEventResponse> encoded(&resp);
   ASSERT_TRUE(encoded.ok());
-  ASSERT_OK(remote.write(0, encoded.GetOutgoingMessage().bytes(), sizeof(fidl_message_header_t),
-                         nullptr, 0));
+  ASSERT_OK(remote.channel().write(0, encoded.GetOutgoingMessage().bytes(),
+                                   sizeof(fidl_message_header_t), nullptr, 0));
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }
