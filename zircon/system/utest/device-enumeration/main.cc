@@ -358,8 +358,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2", "sys/platform/00:00:1e/dw-dsi",
       "display/amlogic-display/display-controller", "class/dsi-base/000", "ti-ina231-mlb/ti-ina231",
       "ti-ina231-speakers/ti-ina231",
-      // TODO(fxbug.dev/70649): Get SHTV3 working on PVT devices and re-enable this check.
-      // "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-112/shtv3",
+      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-112/shtv3",
       "gt6853-touch/gt6853",
 
       // Amber LED.
