@@ -7,10 +7,10 @@ use {
         happy_eyeballs::{self, RealSocketConnector},
         HyperConnectorFuture, TcpOptions, TcpStream,
     },
+    fidl_connector::{Connect, ServiceReconnector},
     fidl_fuchsia_net::{NameLookupMarker, NameLookupProxy},
     fidl_fuchsia_posix_socket::{ProviderMarker, ProviderProxy},
     fuchsia_async::{self, net},
-    fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx,
     futures::{
         future::{Future, FutureExt},
@@ -45,7 +45,7 @@ impl HyperConnector {
     }
 
     pub fn from_tcp_options(tcp_options: TcpOptions) -> Self {
-        Self { tcp_options, provider: RealServiceConnector }
+        Self { tcp_options, provider: RealServiceConnector::new() }
     }
 }
 
@@ -129,11 +129,23 @@ trait NameLookupConnector {
 }
 
 #[derive(Clone)]
-struct RealServiceConnector;
+struct RealServiceConnector {
+    socket_provider_connector: ServiceReconnector<ProviderMarker>,
+    name_lookup_connector: ServiceReconnector<NameLookupMarker>,
+}
+
+impl RealServiceConnector {
+    fn new() -> Self {
+        RealServiceConnector {
+            socket_provider_connector: ServiceReconnector::<ProviderMarker>::new(),
+            name_lookup_connector: ServiceReconnector::<NameLookupMarker>::new(),
+        }
+    }
+}
 
 impl ProviderConnector for RealServiceConnector {
     fn connect(&self) -> Result<ProviderProxy, io::Error> {
-        connect_to_service::<ProviderMarker>().map_err(|err| {
+        self.socket_provider_connector.connect().map_err(|err| {
             io::Error::new(
                 io::ErrorKind::Other,
                 format!("failed to connect to socket provider service: {}", err),
@@ -144,7 +156,7 @@ impl ProviderConnector for RealServiceConnector {
 
 impl NameLookupConnector for RealServiceConnector {
     fn connect(&self) -> Result<NameLookupProxy, io::Error> {
-        connect_to_service::<NameLookupMarker>().map_err(|err| {
+        self.name_lookup_connector.connect().map_err(|err| {
             io::Error::new(
                 io::ErrorKind::Other,
                 format!("failed to connect to name lookup service: {}", err),
@@ -425,20 +437,21 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_parse_ipv6_addr_with_zone_supports_interface_names() {
+        let connector = RealServiceConnector::new();
         let expected = "fe80::1:2:3:4".parse::<Ipv6Addr>().unwrap();
 
         assert_matches!(
-            parse_ip_addr(&RealServiceConnector, "[fe80::1:2:3:4%25lo]", 8080).await,
+            parse_ip_addr(&connector, "[fe80::1:2:3:4%25lo]", 8080).await,
             Ok(Some(addr)) if addr == SocketAddr::V6(SocketAddrV6::new(expected, 8080, 0, 1))
         );
 
         assert_matches!(
-            parse_ip_addr(&RealServiceConnector, "[fe80::1:2:3:4%25]", 8080).await,
+            parse_ip_addr(&connector, "[fe80::1:2:3:4%25]", 8080).await,
             Err(err) if err.kind() == io::ErrorKind::NotFound
         );
 
         assert_matches!(
-            parse_ip_addr(&RealServiceConnector, "[fe80::1:2:3:4%25unknownif]", 8080).await,
+            parse_ip_addr(&connector, "[fe80::1:2:3:4%25unknownif]", 8080).await,
             Err(err) if err.kind() == io::ErrorKind::NotFound
         );
     }
