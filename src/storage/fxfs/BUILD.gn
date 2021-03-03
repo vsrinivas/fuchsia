@@ -1,0 +1,25 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+fxfs_deps = [
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:async-trait",
+  "//third_party/rust_crates:serde",
+]
+
+fxfs_sources = [
+  "src/lib.rs",
+  "src/lsm_tree.rs",
+  "src/lsm_tree/types.rs",
+]
+
+rustc_library("lib") {
+  edition = "2018"
+  name = "fxfs"
+
+  deps = fxfs_deps
+  sources = fxfs_sources
+}
