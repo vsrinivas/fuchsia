@@ -85,7 +85,7 @@ needs are routed to the `session_manager` from `appmgr`.
 
 ## Current areas of focus
 
-Last updated: **January 2021**
+Last updated: **February 2021**
 
 Components v2 migrations are happening throughout the system. However there is
 currently additional focus on:
@@ -94,8 +94,12 @@ currently additional focus on:
     the package cache and package resolver.
 -   The Netstack2 components, including migration of Netemul and associated
     tests to Test Runner Framework.
+-   The Bluetooth components and associated tests.
 -   A subset of components under [sysmgr](/docs/glossary.md#sysmgr) that are
-    straightforward to migrate.
+    straightforward to migrate in terms of reimplementing their sandbox
+    capabilities in v2 terms.
+-   Scaling migrations by creating and expanding a
+    [self-service guide][migrating-sys-components].
 
 [appmgr]: /src/sys/appmgr
 [cfv1]: /docs/glossary.md#components-v1
@@ -108,5 +112,6 @@ currently additional focus on:
 [fuchsia-sys]: https://fuchsia.dev/reference/fidl/fuchsia.sys
 [initial-processes]: /docs/concepts/booting/everything_between_power_on_and_your_component.md#initial-processes
 [intro]: /docs/concepts/components/v2/introduction.md
+[migrating-sys-components]: /docs/development/components/v2/migration.md
 [session-framework]: /docs/concepts/session/introduction.md
 [sysmgr]: /docs/glossary.md#sysmgr
