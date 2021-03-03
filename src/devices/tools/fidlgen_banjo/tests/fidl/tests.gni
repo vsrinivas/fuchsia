@@ -40,11 +40,18 @@ _simple_libraries = [
   },
   {
     name = "buffer"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "cpp",
+    ]
   },
   {
     name = "callback"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "cpp",
+      "cpp_internal",
+    ]
     deps = [ "//zircon/vdso/zx" ]
   },
   {
@@ -55,6 +62,8 @@ _simple_libraries = [
     name = "empty"
     backends = [
       "c",
+      "cpp",
+      "cpp_internal",
       "rust",
     ]
   },
@@ -97,6 +106,8 @@ _simple_libraries = [
     name = "example4"
     backends = [
       "c",
+      "cpp",
+      "cpp_internal",
       "rust",
     ]
   },
@@ -104,6 +115,8 @@ _simple_libraries = [
     name = "example6"
     backends = [
       "c",
+      "cpp",
+      "cpp_internal",
       "rust",
     ]
   },
@@ -111,6 +124,8 @@ _simple_libraries = [
     name = "example7"
     backends = [
       "c",
+      "cpp",
+      "cpp_internal",
       "rust",
     ]
   },
@@ -125,6 +140,8 @@ _simple_libraries = [
     name = "example9"
     backends = [
       "c",
+      "cpp",
+      "cpp_internal",
       "rust",
     ]
     deps = [ "//zircon/vdso/zx" ]
@@ -136,12 +153,20 @@ _simple_libraries = [
   },
   {
     name = "handles"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "cpp",
+      "cpp_internal",
+    ]
     deps = [ "//zircon/vdso/zx" ]
   },
   {
     name = "interface"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "cpp",
+      "cpp_internal",
+    ]
     deps = [ "//zircon/vdso/zx" ]
   },
 
@@ -171,7 +196,10 @@ _simple_libraries = [
   # Note: parameterattributes is an AST-only test, the tested feature is supported by FIDL.
   {
     name = "passcallback"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "cpp_mock",
+    ]
     deps = [ "//zircon/vdso/zx" ]
   },
   {
@@ -187,35 +215,68 @@ _simple_libraries = [
   },
   {
     name = "protocolarray"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "cpp",
+      "cpp_internal",
+      "cpp_mock",
+    ]
     deps = [ "//zircon/vdso/zx" ]
   },
   {
     name = "protocolbase"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "cpp",
+      "cpp_internal",
+      "cpp_mock",
+    ]
     deps = [ "//zircon/vdso/zx" ]
   },
   {
     name = "protocolhandle"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "cpp",
+      "cpp_internal",
+      "cpp_mock",
+    ]
     deps = [ "//zircon/vdso/zx" ]
   },
   {
     name = "protocolothertypes"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "cpp",
+      "cpp_internal",
+      "cpp_mock",
+    ]
   },
   {
     name = "protocolprimitive"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "cpp",
+      "cpp_internal",
+      "cpp_mock",
+    ]
   },
   {
     name = "protocolvector"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "cpp",
+      "cpp_internal",
+      "cpp_mock",
+    ]
     deps = [ "//zircon/vdso/zx" ]
   },
   {
     name = "references"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "cpp",
+    ]
   },
   {
     name = "rustderive"
@@ -225,6 +286,8 @@ _simple_libraries = [
     name = "simple"
     backends = [
       "c",
+      "cpp",
+      "cpp_internal",
       "rust",
     ]
     deps = [ "//zircon/vdso/zx" ]
@@ -253,6 +316,8 @@ _simple_libraries = [
     name = "view"
     backends = [
       "c",
+      "cpp",
+      "cpp_internal",
       "rust",
     ]
     deps = [ ":point" ]
@@ -304,6 +369,16 @@ foreach(lib, _enabled_libraries) {
       goldens = []
       if (lib.backends + [ "c" ] - [ "c" ] != lib.backends) {
         goldens += [ "$_base_label/c/$_name.h" ]
+      }
+      if (lib.backends + [ "cpp" ] - [ "cpp" ] != lib.backends) {
+        goldens += [ "$_base_label/cpp/$_name.h" ]
+      }
+      if (lib.backends + [ "cpp_internal" ] - [ "cpp_internal" ] !=
+          lib.backends) {
+        goldens += [ "$_base_label/cpp/$_name-internal.h" ]
+      }
+      if (lib.backends + [ "cpp_mock" ] - [ "cpp_mock" ] != lib.backends) {
+        goldens += [ "$_base_label/cpp/mock-$_name.h" ]
       }
       if (lib.backends + [ "rust" ] - [ "rust" ] != lib.backends) {
         goldens += [ "$_base_label/rust/$_name.rs" ]

@@ -1,0 +1,1 @@
+../../../../../banjo/src/backends/templates/cpp/internal_protocol.h

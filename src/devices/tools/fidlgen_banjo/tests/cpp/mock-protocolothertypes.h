@@ -1,0 +1,1 @@
+../../../banjo/test/cpp/mock-protocol-other-types.h

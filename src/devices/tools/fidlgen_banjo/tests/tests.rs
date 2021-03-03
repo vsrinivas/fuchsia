@@ -112,3 +112,71 @@ mod rust {
     rust_test!(types);
     rust_test!(view);
 }
+
+mod cpp {
+    // macro_rules! cpp_test {
+    //     ( $id:ident ) => {
+    //         codegen_test!($id, CppBackend, concat!("cpp/", stringify!($id), ".h"));
+    //     };
+    // }
+
+    // cpp_test!(buffer);
+    // cpp_test!(callback);
+    // cpp_test!(empty);
+    // cpp_test!(example4);
+    // cpp_test!(example6);
+    // cpp_test!(example7);
+    // cpp_test!(example9);
+    // cpp_test!(handles);
+    // cpp_test!(interface);
+    // cpp_test!(protocolarray);
+    // cpp_test!(protocolbase);
+    // cpp_test!(protocolhandle);
+    // cpp_test!(protocolothertypes);
+    // cpp_test!(protocolprimitive);
+    // cpp_test!(protocolvector);
+    // cpp_test!(references);
+    // cpp_test!(simple);
+    // cpp_test!(view);
+}
+
+mod cpp_internal {
+    // macro_rules! cpp_internal_test {
+    //     ( $id:ident ) => {
+    //         codegen_test!($id, CppInternalBackend, concat!("cpp/", stringify!($id), "-internal.h"));
+    //     };
+    // }
+
+    // cpp_internal_test!(callback);
+    // cpp_internal_test!(empty);
+    // cpp_internal_test!(example4);
+    // cpp_internal_test!(example6);
+    // cpp_internal_test!(example7);
+    // cpp_internal_test!(example9);
+    // cpp_internal_test!(handles);
+    // cpp_internal_test!(interface);
+    // cpp_internal_test!(protocolarray);
+    // cpp_internal_test!(protocolbase);
+    // cpp_internal_test!(protocolhandle);
+    // cpp_internal_test!(protocolothertypes);
+    // cpp_internal_test!(protocolprimitive);
+    // cpp_internal_test!(protocolvector);
+    // cpp_internal_test!(simple);
+    // cpp_internal_test!(view);
+}
+
+mod cpp_mock {
+    // macro_rules! cpp_mock_test {
+    //     ( $id:ident ) => {
+    //         codegen_test!($id, CppMockBackend, concat!("cpp/mock-", stringify!($id), ".h"));
+    //     };
+    // }
+
+    // cpp_mock_test!(passcallback);
+    // cpp_mock_test!(protocolarray);
+    // cpp_mock_test!(protocolbase);
+    // cpp_mock_test!(protocolhandle);
+    // cpp_mock_test!(protocolothertypes);
+    // cpp_mock_test!(protocolprimitive);
+    // cpp_mock_test!(protocolvector);
+}
