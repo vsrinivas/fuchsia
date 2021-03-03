@@ -12,7 +12,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_runtime::job_default,
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::future::abortable,
     futures::{future::BoxFuture, prelude::*},
@@ -149,10 +149,16 @@ impl Component {
 #[async_trait]
 impl runner::component::Controllable for ComponentRuntime {
     async fn kill(mut self) {
+        if let Some(component) = &self.component {
+            fx_log_info!("kill request component: {}", component.url);
+        }
         self.kill_self();
     }
 
     fn stop<'a>(&mut self) -> BoxFuture<'a, ()> {
+        if let Some(component) = &self.component {
+            fx_log_info!("stop request component: {}", component.url);
+        }
         self.kill_self();
         async move {}.boxed()
     }
@@ -160,6 +166,9 @@ impl runner::component::Controllable for ComponentRuntime {
 
 impl Drop for ComponentRuntime {
     fn drop(&mut self) {
+        if let Some(component) = &self.component {
+            fx_log_info!("drop component: {}", component.url);
+        }
         self.kill_self();
     }
 }
@@ -197,7 +206,9 @@ impl ComponentRuntime {
 
     fn kill_self(&mut self) {
         // drop component.
-        self.component.take();
+        if let Some(component) = self.component.take() {
+            fx_log_info!("killing component: {}", component.url);
+        }
 
         // kill outgoing server.
         if let Some(h) = self.outgoing_abortable_handle.take() {
