@@ -96,11 +96,11 @@ impl DocCompiler {
         self.errors.push('\n');
 
         // Displays carets bellow the error.
-        self.errors.extend(std::iter::repeat(' ').take(location.start - start_of_line));
+        self.errors.push_str(&" ".repeat(column));
         let end = cmp::min(location.end, end_of_line);
         // When the location is after the last text character, we still want to display one caret.
         let end = cmp::max(end, location.start + 1);
-        self.errors.extend(std::iter::repeat('^').take(end - location.start));
+        self.errors.push_str(&"^".repeat(end - location.start));
         self.errors.push('\n');
 
         // Displays the error.
@@ -108,7 +108,7 @@ impl DocCompiler {
             "{}: {}:{}: {}\n",
             location.source.file_name,
             location.source.line + line,
-            location.source.column + column,
+            location.source.column + (column as u32),
             message
         ));
     }

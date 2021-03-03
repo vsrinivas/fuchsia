@@ -43,6 +43,93 @@ pub enum LexicalContent {
     /// A standalone double quote.
     DoubleQuote,
 
+    /// A comma.
+    Comma,
+
+    /// A semicolon.
+    Semicolon,
+
+    /// The plus character.
+    Plus,
+
+    /// The minus character.
+    Minus,
+
+    /// The asterisk character.
+    Asterisk,
+
+    /// The slash character (not immediately following a name).
+    Slash,
+
+    /// The percent character.
+    Percent,
+
+    /// The backslash character.
+    BackSlash,
+
+    /// The ampersand character.
+    Ampersand,
+
+    /// The hash (number sign) character.
+    Hash,
+
+    /// Two hash characters in a row.
+    HashHash,
+
+    /// The pipe character.
+    Pipe,
+
+    /// The tilde character.
+    Tilde,
+
+    /// The caret character.
+    Caret,
+
+    /// The dollar character.
+    Dollar,
+
+    /// The at sign character.
+    AtSign,
+
+    /// The unicode paragraph character.
+    Paragraph,
+
+    /// The equal character.
+    Equal,
+
+    /// Two equal characters in a row.
+    EqualEqual,
+
+    /// The left angle bracket.
+    LowerThan,
+
+    // The left angle bracket followed by an equal.
+    LowerOrEqual,
+
+    // The right angle bracket.
+    GreaterThan,
+
+    // The right angle bracket followed by an equal.
+    GreaterOrEqual,
+
+    /// A left parenthesis.
+    LeftParenthesis,
+
+    /// A Right parenthesis.
+    RightParenthesis,
+
+    /// A left bracket (square).
+    LeftBracket,
+
+    /// A Right bracket (square).
+    RightBracket,
+
+    /// A left brace (curly bracket).
+    LeftBrace,
+
+    /// A Right brace (curly bracket).
+    RightBrace,
+
     /// The end of an english sentence.
     /// For example ".", ":", "!", "?".
     EndOfSentence(char),
@@ -83,6 +170,181 @@ pub fn reduce_lexems(compiler: &mut DocCompiler, source: &Rc<Source>) -> Option<
             '"' => {
                 reduce_double_quote_string(compiler, &mut items, &source, index, &mut iter, &mut ok)
             }
+            ',' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::Comma,
+            ),
+            ';' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::Semicolon,
+            ),
+            '+' => {
+                reduce_single_character(&mut items, &source, index, &mut iter, LexicalContent::Plus)
+            }
+            '-' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::Minus,
+            ),
+            '*' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::Asterisk,
+            ),
+            '/' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::Slash,
+            ),
+            '%' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::Percent,
+            ),
+            '\\' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::BackSlash,
+            ),
+            '&' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::Ampersand,
+            ),
+            '#' => reduce_one_or_two_characters(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::Hash,
+                '#',
+                LexicalContent::HashHash,
+            ),
+            '|' => {
+                reduce_single_character(&mut items, &source, index, &mut iter, LexicalContent::Pipe)
+            }
+            '~' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::Tilde,
+            ),
+            '^' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::Caret,
+            ),
+            '$' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::Dollar,
+            ),
+            '@' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::AtSign,
+            ),
+            '§' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::Paragraph,
+            ),
+            '=' => reduce_one_or_two_characters(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::Equal,
+                '=',
+                LexicalContent::EqualEqual,
+            ),
+            '<' => reduce_one_or_two_characters(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::LowerThan,
+                '=',
+                LexicalContent::LowerOrEqual,
+            ),
+            '>' => reduce_one_or_two_characters(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::GreaterThan,
+                '=',
+                LexicalContent::GreaterOrEqual,
+            ),
+            '(' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::LeftParenthesis,
+            ),
+            ')' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::RightParenthesis,
+            ),
+            '[' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::LeftBracket,
+            ),
+            ']' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::RightBracket,
+            ),
+            '{' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::LeftBrace,
+            ),
+            '}' => reduce_single_character(
+                &mut items,
+                &source,
+                index,
+                &mut iter,
+                LexicalContent::RightBrace,
+            ),
             '.' | ':' | '!' | '?' => {
                 items.push(LexicalItem {
                     location: Location { source: Rc::clone(&source), start: index, end: index },
@@ -402,6 +664,56 @@ fn reduce_double_quote_string(
     current
 }
 
+/// Reduce a single character.
+///
+/// The caller already found what character it is. Only adds the content to items and returns the
+/// next character to reduce.
+fn reduce_single_character(
+    items: &mut Vec<LexicalItem>,
+    source: &Rc<Source>,
+    start: usize,
+    iter: &mut CharIndices<'_>,
+    content: LexicalContent,
+) -> Option<(usize, char)> {
+    items.push(LexicalItem {
+        location: Location { source: Rc::clone(&source), start, end: start },
+        content,
+    });
+    iter.next()
+}
+
+/// Reduce one or two characters.
+///
+/// Add either one_character_content or two_character_content to items based on whether the next
+/// character matches second_character.
+fn reduce_one_or_two_characters(
+    items: &mut Vec<LexicalItem>,
+    source: &Rc<Source>,
+    start: usize,
+    iter: &mut CharIndices<'_>,
+    one_character_content: LexicalContent,
+    second_character: char,
+    two_character_content: LexicalContent,
+) -> Option<(usize, char)> {
+    let current = iter.next();
+    if let Some((_, character)) = current {
+        if character == second_character {
+            let current = iter.next();
+            let end = if let Some((index, _)) = current { index } else { source.text.len() };
+            items.push(LexicalItem {
+                location: Location { source: Rc::clone(&source), start, end },
+                content: two_character_content,
+            });
+            return current;
+        }
+    }
+    items.push(LexicalItem {
+        location: Location { source: Rc::clone(&source), start, end: start },
+        content: one_character_content,
+    });
+    current
+}
+
 /// Reduces spaces (at least one).
 fn reduce_spaces(
     items: &mut Vec<LexicalItem>,
@@ -504,6 +816,69 @@ mod test {
                 }
                 LexicalContent::DoubleQuote => {
                     compiler.add_error(&item.location, "DoubleQuote".to_owned())
+                }
+                LexicalContent::Comma => compiler.add_error(&item.location, "Comma".to_owned()),
+                LexicalContent::Semicolon => {
+                    compiler.add_error(&item.location, "Semicolon".to_owned())
+                }
+                LexicalContent::Plus => compiler.add_error(&item.location, "Plus".to_owned()),
+                LexicalContent::Minus => compiler.add_error(&item.location, "Minus".to_owned()),
+                LexicalContent::Asterisk => {
+                    compiler.add_error(&item.location, "Asterisk".to_owned())
+                }
+                LexicalContent::Slash => compiler.add_error(&item.location, "Slash".to_owned()),
+                LexicalContent::Percent => compiler.add_error(&item.location, "Percent".to_owned()),
+                LexicalContent::BackSlash => {
+                    compiler.add_error(&item.location, "BackSlash".to_owned())
+                }
+                LexicalContent::Ampersand => {
+                    compiler.add_error(&item.location, "Ampersand".to_owned())
+                }
+                LexicalContent::Hash => compiler.add_error(&item.location, "Hash".to_owned()),
+                LexicalContent::HashHash => {
+                    compiler.add_error(&item.location, "HashHash".to_owned())
+                }
+                LexicalContent::Pipe => compiler.add_error(&item.location, "Pipe".to_owned()),
+                LexicalContent::Tilde => compiler.add_error(&item.location, "Tilde".to_owned()),
+                LexicalContent::Caret => compiler.add_error(&item.location, "Caret".to_owned()),
+                LexicalContent::Dollar => compiler.add_error(&item.location, "Dollar".to_owned()),
+                LexicalContent::AtSign => compiler.add_error(&item.location, "AtSign".to_owned()),
+                LexicalContent::Paragraph => {
+                    compiler.add_error(&item.location, "Paragraph".to_owned())
+                }
+                LexicalContent::Equal => compiler.add_error(&item.location, "Equal".to_owned()),
+                LexicalContent::EqualEqual => {
+                    compiler.add_error(&item.location, "EqualEqual".to_owned())
+                }
+                LexicalContent::LowerThan => {
+                    compiler.add_error(&item.location, "LowerThan".to_owned())
+                }
+                LexicalContent::LowerOrEqual => {
+                    compiler.add_error(&item.location, "LowerOrEqual".to_owned())
+                }
+                LexicalContent::GreaterThan => {
+                    compiler.add_error(&item.location, "GreaterThan".to_owned())
+                }
+                LexicalContent::GreaterOrEqual => {
+                    compiler.add_error(&item.location, "GreaterOrEqual".to_owned())
+                }
+                LexicalContent::LeftParenthesis => {
+                    compiler.add_error(&item.location, "LeftParenthesis".to_owned())
+                }
+                LexicalContent::RightParenthesis => {
+                    compiler.add_error(&item.location, "RightParenthesis".to_owned())
+                }
+                LexicalContent::LeftBracket => {
+                    compiler.add_error(&item.location, "LeftBracket".to_owned())
+                }
+                LexicalContent::RightBracket => {
+                    compiler.add_error(&item.location, "RightBracket".to_owned())
+                }
+                LexicalContent::LeftBrace => {
+                    compiler.add_error(&item.location, "LeftBrace".to_owned())
+                }
+                LexicalContent::RightBrace => {
+                    compiler.add_error(&item.location, "RightBrace".to_owned())
                 }
                 LexicalContent::EndOfSentence(character) => {
                     compiler.add_error(&item.location, format!("EndOfSentence <{}>", character))
@@ -830,6 +1205,112 @@ sdk/foo/foo.fidl: 10:4: Unterminated string (character <\"> expected).
     }
 
     #[test]
+    fn lexer_symbols_and_punctuation() {
+        let mut compiler = DocCompiler::new();
+        let source = Rc::new(Source::new(
+            "sdk/foo/foo.fidl".to_owned(),
+            10,
+            4,
+            ", ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\".to_owned(),
+        ));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(!items.is_none());
+        lexical_items_to_errors(&mut compiler, &items.unwrap(), /*with_spaces=*/ false);
+        assert_eq!(
+            compiler.errors,
+            "\
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+^
+sdk/foo/foo.fidl: 10:4: Comma
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+  ^
+sdk/foo/foo.fidl: 10:6: Semicolon
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+    ^
+sdk/foo/foo.fidl: 10:8: Plus
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+      ^
+sdk/foo/foo.fidl: 10:10: Minus
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+        ^
+sdk/foo/foo.fidl: 10:12: Asterisk
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+          ^
+sdk/foo/foo.fidl: 10:14: Slash
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+            ^
+sdk/foo/foo.fidl: 10:16: Percent
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+              ^
+sdk/foo/foo.fidl: 10:18: Ampersand
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                ^
+sdk/foo/foo.fidl: 10:20: Hash
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                  ^^
+sdk/foo/foo.fidl: 10:22: HashHash
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                     ^
+sdk/foo/foo.fidl: 10:25: Pipe
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                       ^
+sdk/foo/foo.fidl: 10:27: Tilde
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                         ^
+sdk/foo/foo.fidl: 10:29: Caret
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                           ^
+sdk/foo/foo.fidl: 10:31: Dollar
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                             ^
+sdk/foo/foo.fidl: 10:33: AtSign
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                               ^
+sdk/foo/foo.fidl: 10:35: Paragraph
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                                 ^
+sdk/foo/foo.fidl: 10:37: Equal
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                                   ^^
+sdk/foo/foo.fidl: 10:39: EqualEqual
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                                      ^
+sdk/foo/foo.fidl: 10:42: LowerThan
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                                        ^^
+sdk/foo/foo.fidl: 10:44: LowerOrEqual
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                                           ^
+sdk/foo/foo.fidl: 10:47: GreaterThan
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                                             ^^
+sdk/foo/foo.fidl: 10:49: GreaterOrEqual
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                                                ^
+sdk/foo/foo.fidl: 10:52: LeftParenthesis
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                                                  ^
+sdk/foo/foo.fidl: 10:54: RightParenthesis
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                                                    ^
+sdk/foo/foo.fidl: 10:56: LeftBracket
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                                                      ^
+sdk/foo/foo.fidl: 10:58: RightBracket
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                                                        ^
+sdk/foo/foo.fidl: 10:60: LeftBrace
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                                                          ^
+sdk/foo/foo.fidl: 10:62: RightBrace
+, ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
+                                                            ^
+sdk/foo/foo.fidl: 10:64: BackSlash
+"
+        );
+    }
+
+    #[test]
     fn lexer_end_of_sentence() {
         let mut compiler = DocCompiler::new();
         let source = Rc::new(Source::new(
@@ -924,20 +1405,16 @@ sdk/foo/foo.fidl: 13:17: End
     #[test]
     fn lexer_bad_character() {
         let mut compiler = DocCompiler::new();
-        let source = Rc::new(Source::new(
-            "sdk/foo/foo.fidl".to_owned(),
-            10,
-            4,
-            "Some $documentation.\n".to_owned(),
-        ));
+        let source =
+            Rc::new(Source::new("sdk/foo/foo.fidl".to_owned(), 10, 4, "En dash —.\n".to_owned()));
         let items = reduce_lexems(&mut compiler, &source);
         assert!(items.is_none());
         assert_eq!(
             compiler.errors,
             "\
-Some $documentation.
-     ^
-sdk/foo/foo.fidl: 10:9: Unknown character <$>
+En dash —.
+        ^
+sdk/foo/foo.fidl: 10:12: Unknown character <—>
 "
         );
     }
