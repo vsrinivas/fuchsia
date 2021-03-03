@@ -25,9 +25,9 @@ use fuchsia_component::{
 };
 use fuchsia_zircon::{self as zx, HandleBased, Rights};
 use futures::{
-    channel::mpsc::{channel, Receiver, Sender},
+    channel::mpsc::Sender,
     stream::{Stream, StreamExt, TryStreamExt},
-    FutureExt, SinkExt,
+    Future, FutureExt, SinkExt,
 };
 use lazy_static::lazy_static;
 use log::{debug, info};
@@ -74,68 +74,83 @@ enum InjectedServices {
 
 /// A `PushSource` that allows a single client and can be controlled by a test.
 pub struct PushSourcePuppet {
-    /// Channel through which connection requests are received.
-    client_recv: Receiver<ServerEnd<PushSourceMarker>>,
-    /// Push source implementation.
-    push_source: Arc<PushSource<TestUpdateAlgorithm>>,
-    /// Sender to push updates to `push_source`.
-    update_sink: Sender<Update>,
-    /// Task for retrieving updates in `push_source`.
-    /// Kept in memory to ensure that the push source serves requests.
-    _update_task: fasync::Task<()>,
-    /// Task serving the client.
-    client_task: Option<fasync::Task<()>>,
+    /// Internal state for the current PushSource. May be dropped and replaced
+    /// to clear all state.
+    inner: Mutex<PushSourcePuppetInner>,
+    /// The number of client connections received over the lifetime of the puppet.
+    cumulative_clients: Mutex<u32>,
 }
 
 impl PushSourcePuppet {
-    /// Create a new `PushSourcePuppet` that receives new client channels through `client_recv`.
-    fn new(client_recv: Receiver<ServerEnd<PushSourceMarker>>) -> Self {
-        let (update_algorithm, update_sink) = TestUpdateAlgorithm::new();
-        let push_source = Arc::new(PushSource::new(update_algorithm, Status::Ok).unwrap());
-        let push_source_clone = Arc::clone(&push_source);
-        let update_task = fasync::Task::spawn(async move {
-            push_source_clone.poll_updates().await.unwrap();
-        });
-        Self { client_recv, push_source, update_sink, _update_task: update_task, client_task: None }
+    /// Create a new `PushSourcePuppet`.
+    fn new() -> Self {
+        Self { inner: Mutex::new(PushSourcePuppetInner::new()), cumulative_clients: Mutex::new(0) }
+    }
+
+    /// Serve the `PushSource` service to a client.
+    fn serve_client(&self, server_end: ServerEnd<PushSourceMarker>) {
+        self.inner.lock().serve_client(server_end);
+        *self.cumulative_clients.lock() += 1;
     }
 
     /// Set the next sample reported by the time source.
-    pub async fn set_sample(&mut self, sample: TimeSample) {
-        self.ensure_client().await;
-        self.update_sink.send(sample.into()).await.unwrap();
+    pub async fn set_sample(&self, sample: TimeSample) {
+        self.inner.lock().update(sample.into()).await;
     }
 
     /// Set the next status reported by the time source.
-    #[allow(dead_code)]
-    pub async fn set_status(&mut self, status: Status) {
-        self.ensure_client().await;
-        self.update_sink.send(status.into()).await.unwrap();
-    }
-
-    /// Wait for a client to connect if there's no existing client.
-    pub async fn ensure_client(&mut self) {
-        if self.client_task.is_none() {
-            let server_end = self.client_recv.next().await.unwrap();
-            let push_source_clone = Arc::clone(&self.push_source);
-            self.client_task.replace(fasync::Task::spawn(async move {
-                push_source_clone
-                    .handle_requests_for_stream(server_end.into_stream().unwrap())
-                    .await
-                    .unwrap();
-            }));
-        }
+    pub async fn set_status(&self, status: Status) {
+        self.inner.lock().update(status.into()).await;
     }
 
     /// Simulate a crash by closing client channels and wiping state.
-    pub async fn simulate_crash(&mut self) {
+    pub fn simulate_crash(&self) {
+        *self.inner.lock() = PushSourcePuppetInner::new();
+        // This drops the old inner and cleans up any tasks it owns.
+    }
+
+    /// Returns the number of cumulative connections served. This allows asserting
+    /// behavior such as whether Timekeeper has restarted a connection.
+    pub fn lifetime_served_connections(&self) -> u32 {
+        *self.cumulative_clients.lock()
+    }
+}
+
+/// Internal state for a PushSourcePuppet. This struct contains a PushSource and
+/// all Tasks needed for it to serve requests,
+struct PushSourcePuppetInner {
+    push_source: Arc<PushSource<TestUpdateAlgorithm>>,
+    /// Tasks serving PushSource clients.
+    tasks: Vec<fasync::Task<()>>,
+    /// Sink through which updates are passed to the PushSource.
+    update_sink: Sender<Update>,
+}
+
+impl PushSourcePuppetInner {
+    fn new() -> Self {
         let (update_algorithm, update_sink) = TestUpdateAlgorithm::new();
-        self.update_sink = update_sink;
-        self.push_source = Arc::new(PushSource::new(update_algorithm, Status::Ok).unwrap());
-        self.client_task.take();
-        let push_source_clone = Arc::clone(&self.push_source);
-        self._update_task = fasync::Task::spawn(async move {
+        let push_source = Arc::new(PushSource::new(update_algorithm, Status::Ok).unwrap());
+        let push_source_clone = Arc::clone(&push_source);
+        let tasks = vec![fasync::Task::spawn(async move {
             push_source_clone.poll_updates().await.unwrap();
-        });
+        })];
+        Self { push_source, tasks, update_sink }
+    }
+
+    /// Serve the `PushSource` service to a client.
+    fn serve_client(&mut self, server_end: ServerEnd<PushSourceMarker>) {
+        let push_source_clone = Arc::clone(&self.push_source);
+        self.tasks.push(fasync::Task::spawn(async move {
+            push_source_clone
+                .handle_requests_for_stream(server_end.into_stream().unwrap())
+                .await
+                .unwrap();
+        }));
+    }
+
+    /// Send an update to the PushSource.
+    async fn update(&mut self, update: Update) {
+        self.update_sink.send(update).await.unwrap()
     }
 }
 
@@ -182,7 +197,8 @@ impl NestedTimekeeper {
         clock: Arc<zx::Clock>,
         initial_rtc_time: Option<zx::Time>,
         use_fake_clock: bool,
-    ) -> (Self, PushSourcePuppet, RtcUpdates, LoggerQuerierProxy, Option<FakeClockController>) {
+    ) -> (Self, Arc<PushSourcePuppet>, RtcUpdates, LoggerQuerierProxy, Option<FakeClockController>)
+    {
         let mut service_fs = ServiceFs::new();
         // Route logs for components in nested env to the same logsink as the test.
         service_fs.add_proxy_service::<LogSinkMarker, _>();
@@ -255,7 +271,8 @@ impl NestedTimekeeper {
             .spawn(nested_environment.launcher())
             .unwrap();
 
-        let (server_end_send, server_end_recv) = channel(0);
+        let push_source_puppet = Arc::new(PushSourcePuppet::new());
+        let puppet_clone = Arc::clone(&push_source_puppet);
 
         let injected_service_fut = async move {
             service_fs
@@ -263,7 +280,7 @@ impl NestedTimekeeper {
                     match conn_req {
                         InjectedServices::TimeSourceControl(stream) => {
                             debug!("Time source control service connected.");
-                            Self::serve_test_control(server_end_send.clone(), stream).await;
+                            Self::serve_test_control(&*puppet_clone, stream).await;
                         }
                         InjectedServices::Maintenance(stream) => {
                             debug!("Maintenance service connected.");
@@ -281,23 +298,14 @@ impl NestedTimekeeper {
             _task: fasync::Task::spawn(injected_service_fut),
         };
 
-        (
-            nested_timekeeper,
-            PushSourcePuppet::new(server_end_recv),
-            rtc_updates,
-            cobalt_querier,
-            fake_clock_control,
-        )
+        (nested_timekeeper, push_source_puppet, rtc_updates, cobalt_querier, fake_clock_control)
     }
 
-    async fn serve_test_control(
-        server_end_sender: Sender<ServerEnd<PushSourceMarker>>,
-        stream: TimeSourceControlRequestStream,
-    ) {
+    async fn serve_test_control(puppet: &PushSourcePuppet, stream: TimeSourceControlRequestStream) {
         stream
             .try_for_each_concurrent(None, |req| async {
                 let TimeSourceControlRequest::ConnectPushSource { push_source, .. } = req;
-                server_end_sender.clone().send(push_source).await.unwrap();
+                puppet.serve_client(push_source);
                 Ok(())
             })
             .await
@@ -396,4 +404,27 @@ pub fn create_cobalt_event_stream(
     .map(futures::stream::iter)
     .flatten()
     .boxed()
+}
+
+const RETRY_WAIT_DURATION: zx::Duration = zx::Duration::from_millis(10);
+
+/// Poll `poll_fn` until it returns Some() and return the returned value.
+pub async fn poll_until<T, F, Fut>(poll_fn: F) -> T
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = Option<T>>,
+{
+    loop {
+        match poll_fn().await {
+            Some(value) => return value,
+            None => fasync::Timer::new(fasync::Time::after(RETRY_WAIT_DURATION)).await,
+        }
+    }
+}
+
+/// Poll `poll_fn` until it returns true.
+pub async fn wait_until<F: Fn() -> bool>(poll_fn: F) {
+    while !poll_fn() {
+        fasync::Timer::new(fasync::Time::after(RETRY_WAIT_DURATION)).await;
+    }
 }

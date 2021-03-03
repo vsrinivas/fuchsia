@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use crate::{
-    create_cobalt_event_stream, new_clock, rtc_time_to_zx_time, NestedTimekeeper, PushSourcePuppet,
-    RtcUpdates, BACKSTOP_TIME, BEFORE_BACKSTOP_TIME, BETWEEN_SAMPLES, STD_DEV, VALID_RTC_TIME,
-    VALID_TIME, VALID_TIME_2,
+    create_cobalt_event_stream, new_clock, poll_until, rtc_time_to_zx_time, wait_until,
+    NestedTimekeeper, PushSourcePuppet, RtcUpdates, BACKSTOP_TIME, BEFORE_BACKSTOP_TIME,
+    BETWEEN_SAMPLES, STD_DEV, VALID_RTC_TIME, VALID_TIME, VALID_TIME_2,
 };
 use fidl_fuchsia_cobalt::CobaltEvent;
 use fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierProxy};
@@ -33,7 +33,7 @@ use time_metrics_registry::{
 /// provided with handles to manipulate the time source and observe changes to the RTC and cobalt.
 fn timekeeper_test<F, Fut>(clock: Arc<zx::Clock>, initial_rtc_time: Option<zx::Time>, test_fn: F)
 where
-    F: FnOnce(PushSourcePuppet, RtcUpdates, LoggerQuerierProxy) -> Fut,
+    F: FnOnce(Arc<PushSourcePuppet>, RtcUpdates, LoggerQuerierProxy) -> Fut,
     Fut: Future,
 {
     let mut executor = fasync::Executor::new().unwrap();
@@ -49,37 +49,10 @@ where
     });
 }
 
-/// Retry an async `poll_fn` until it returns Some. Returns the contents of the `Some` value
-/// produced by `poll_fn`.
-async fn poll_until<T, F, Fut>(poll_fn: F) -> T
-where
-    F: Fn() -> Fut,
-    Fut: Future<Output = Option<T>>,
-{
-    const RETRY_WAIT_DURATION: zx::Duration = zx::Duration::from_millis(10);
-    loop {
-        match poll_fn().await {
-            Some(value) => return value,
-            None => fasync::Timer::new(fasync::Time::after(RETRY_WAIT_DURATION)).await,
-        }
-    }
-}
-
-/// Poll `poll_fn` until it returns true.
-async fn wait_until<F: Fn() -> bool>(poll_fn: F) {
-    poll_until(|| async {
-        match poll_fn() {
-            false => None,
-            true => Some(()),
-        }
-    })
-    .await;
-}
-
 #[fuchsia::test]
 fn test_no_rtc_start_clock_from_time_source() {
     let clock = new_clock();
-    timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _, cobalt| async move {
+    timekeeper_test(Arc::clone(&clock), None, |push_source_controller, _, cobalt| async move {
         let before_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
 
         let sample_monotonic = zx::Time::get_monotonic();
@@ -138,7 +111,7 @@ fn test_invalid_rtc_start_clock_from_time_source() {
     timekeeper_test(
         Arc::clone(&clock),
         Some(*BEFORE_BACKSTOP_TIME),
-        |mut push_source_controller, rtc_updates, cobalt| async move {
+        |push_source_controller, rtc_updates, cobalt| async move {
             let mut cobalt_event_stream =
                 create_cobalt_event_stream(Arc::new(cobalt), LogMethod::LogCobaltEvent);
             // Timekeeper should reject the RTC time.
@@ -214,7 +187,7 @@ fn test_start_clock_from_rtc() {
     timekeeper_test(
         Arc::clone(&clock),
         Some(*VALID_RTC_TIME),
-        |mut push_source_controller, rtc_updates, cobalt| async move {
+        |push_source_controller, rtc_updates, cobalt| async move {
             let mut cobalt_event_stream =
                 create_cobalt_event_stream(Arc::new(cobalt), LogMethod::LogCobaltEvent);
 
@@ -325,7 +298,7 @@ fn test_start_clock_from_rtc() {
 #[fuchsia::test]
 fn test_reject_before_backstop() {
     let clock = new_clock();
-    timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _, cobalt| async move {
+    timekeeper_test(Arc::clone(&clock), None, |push_source_controller, _, cobalt| async move {
         let cobalt_event_stream =
             create_cobalt_event_stream(Arc::new(cobalt), LogMethod::LogCobaltEvent);
 
@@ -365,7 +338,7 @@ fn test_slew_clock() {
     let error_for_slew = SLEW_DURATION * NOMINAL_SLEW_PPM / 1_000_000;
 
     let clock = new_clock();
-    timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _, _| async move {
+    timekeeper_test(Arc::clone(&clock), None, |push_source_controller, _, _| async move {
         // Let the first sample be slightly in the past so later samples are not in the future.
         let sample_1_monotonic = zx::Time::get_monotonic() - BETWEEN_SAMPLES;
         let sample_1_utc = *VALID_TIME;
@@ -411,7 +384,7 @@ fn test_slew_clock() {
 fn test_step_clock() {
     const STEP_ERROR: zx::Duration = zx::Duration::from_hours(1);
     let clock = new_clock();
-    timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _, _| async move {
+    timekeeper_test(Arc::clone(&clock), None, |push_source_controller, _, _| async move {
         // Let the first sample be slightly in the past so later samples are not in the future.
         let monotonic_before = zx::Time::get_monotonic();
         let sample_1_monotonic = monotonic_before - BETWEEN_SAMPLES;
@@ -473,7 +446,7 @@ fn avg(time_1: zx::Time, time_2: zx::Time) -> zx::Time {
 #[fuchsia::test]
 fn test_restart_crashed_time_source() {
     let clock = new_clock();
-    timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _, _| async move {
+    timekeeper_test(Arc::clone(&clock), None, |push_source_controller, _, _| async move {
         // Let the first sample be slightly in the past so later samples are not in the future.
         let monotonic_before = zx::Time::get_monotonic();
         let sample_1_monotonic = monotonic_before - BETWEEN_SAMPLES;
@@ -492,7 +465,7 @@ fn test_restart_crashed_time_source() {
         let last_generation_counter = clock.get_details().unwrap().generation_counter;
 
         // After a time source crashes, timekeeper should restart it and accept samples from it.
-        push_source_controller.simulate_crash().await;
+        push_source_controller.simulate_crash();
         let sample_2_utc = *VALID_TIME_2;
         let sample_2_monotonic = sample_1_monotonic + BETWEEN_SAMPLES;
         push_source_controller

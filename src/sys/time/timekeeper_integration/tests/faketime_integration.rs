@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use crate::{
-    create_cobalt_event_stream, new_clock, FakeClockController, NestedTimekeeper, PushSourcePuppet,
-    STD_DEV, VALID_TIME,
+    create_cobalt_event_stream, new_clock, poll_until, wait_until, FakeClockController,
+    NestedTimekeeper, PushSourcePuppet, STD_DEV, VALID_TIME,
 };
 use fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierProxy};
 use fidl_fuchsia_testing::Increment;
-use fidl_fuchsia_time_external::TimeSample;
+use fidl_fuchsia_time_external::{Status, TimeSample};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx};
 use futures::{Future, StreamExt};
@@ -32,7 +32,7 @@ use time_metrics_registry::{
 /// passed to cobalt, and manipulate the fake time.
 fn faketime_test<F, Fut>(clock: Arc<zx::Clock>, test_fn: F)
 where
-    F: FnOnce(PushSourcePuppet, LoggerQuerierProxy, FakeClockController) -> Fut,
+    F: FnOnce(Arc<PushSourcePuppet>, LoggerQuerierProxy, FakeClockController) -> Fut,
     Fut: Future<Output = ()>,
 {
     let mut executor = fasync::Executor::new().expect("Failed to create executor");
@@ -45,13 +45,31 @@ where
     });
 }
 
+/// Start freely running the fake time at 60,000x the real time.
+async fn freerun_time_fast(fake_clock: &FakeClockController) {
+    fake_clock.pause().await.expect("Failed to pause time");
+    fake_clock
+        .resume_with_increments(
+            zx::Duration::from_millis(1).into_nanos(),
+            &mut Increment::Determined(zx::Duration::from_minutes(1).into_nanos()),
+        )
+        .await
+        .expect("Failed to resume time")
+        .expect("Resume returned error");
+}
+
+/// The duration after which timekeeper restarts an inactive time source.
+const INACTIVE_SOURCE_RESTART_DURATION: zx::Duration = zx::Duration::from_hours(1);
+
 #[fuchsia::test]
-fn test_kill_inactive_time_source() {
+fn test_restart_inactive_time_source_that_claims_healthy() {
     let clock = new_clock();
-    faketime_test(Arc::clone(&clock), |mut push_source_controller, cobalt, fake_time| async move {
+    faketime_test(Arc::clone(&clock), |push_source_controller, cobalt, fake_time| async move {
         let cobalt_event_stream =
             create_cobalt_event_stream(Arc::new(cobalt), LogMethod::LogCobaltEvent);
 
+        let mono_before =
+            zx::Time::from_nanos(fake_time.get_monotonic().await.expect("Failed to get time"));
         push_source_controller
             .set_sample(TimeSample {
                 utc: Some(VALID_TIME.into_nanos()),
@@ -64,24 +82,25 @@ fn test_kill_inactive_time_source() {
             .await
             .expect("Failed to wait for CLOCK_STARTED");
 
+        assert_eq!(push_source_controller.lifetime_served_connections(), 1);
+
         // Timekeeper should restart the time source after approximately an hour of inactivity.
-        // Here, we run time at 60,000x rather than leaping forward in one step. This is done as
+        // Here, we run time quickly rather than leaping forward in one step. This is done as
         // Timekeeper reads the time, then calculates an hour from there. If time is jumped
         // forward in a single step, the timeout will not occur in the case Timekeeper reads the
         // time after we jump time forward.
-        fake_time.pause().await.expect("Failed to pause time");
-        let mono_before =
-            zx::Time::from_nanos(fake_time.get_monotonic().await.expect("Failed to get time"));
-        fake_time
-            .resume_with_increments(
-                zx::Duration::from_millis(1).into_nanos(),
-                &mut Increment::Determined(zx::Duration::from_minutes(1).into_nanos()),
-            )
-            .await
-            .expect("Failed to resume time")
-            .expect("Resume returned error");
+        freerun_time_fast(&fake_time).await;
 
-        // Wait for Timekeeper to report the restarted event.
+        // Wait for Timekeeper to restart the time source. This is visible to the test as a second
+        // connection to the fake time source.
+        wait_until(|| push_source_controller.lifetime_served_connections() > 1).await;
+
+        // At least an hour should've passed.
+        let mono_after =
+            zx::Time::from_nanos(fake_time.get_monotonic().await.expect("Failed to get time"));
+        assert_geq!(mono_after, mono_before + INACTIVE_SOURCE_RESTART_DURATION);
+
+        // Timekeeper should report the restarted event to Cobalt.
         let restart_event = cobalt_event_stream
             .skip_while(|event| {
                 let is_restart_event = event.metric_id == TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID
@@ -97,10 +116,41 @@ fn test_kill_inactive_time_source() {
         assert!(restart_event
             .event_codes
             .contains(&(TimeSourceEvent::RestartedSampleTimeOut as u32)));
+    });
+}
 
-        // At least an hour should've passed.
-        let mono_after =
+#[fuchsia::test]
+fn test_dont_restart_inactive_time_source_with_unhealthy_dependency() {
+    let clock = new_clock();
+    faketime_test(Arc::clone(&clock), |push_source_controller, _, fake_time| async move {
+        push_source_controller
+            .set_sample(TimeSample {
+                utc: Some(VALID_TIME.into_nanos()),
+                monotonic: Some(fake_time.get_monotonic().await.expect("Failed to get time")),
+                standard_deviation: Some(STD_DEV.into_nanos()),
+                ..TimeSample::EMPTY
+            })
+            .await;
+        fasync::OnSignals::new(&*clock, zx::Signals::CLOCK_STARTED)
+            .await
+            .expect("Failed to wait for CLOCK_STARTED");
+        // Report unhealthy after first sample accepted.
+        push_source_controller.set_status(Status::Network).await;
+
+        freerun_time_fast(&fake_time).await;
+
+        // Wait longer than the usual restart duration.
+        let mono_before =
             zx::Time::from_nanos(fake_time.get_monotonic().await.expect("Failed to get time"));
-        assert_geq!(mono_after, mono_before + zx::Duration::from_minutes(60));
+        poll_until(|| async {
+            let mono_now =
+                zx::Time::from_nanos(fake_time.get_monotonic().await.expect("Failed to get time"));
+            let time_elapsed = mono_now - mono_before > INACTIVE_SOURCE_RESTART_DURATION * 4;
+            time_elapsed.then(|| ())
+        })
+        .await;
+
+        // Since there should be no restart attempts, only one connection was made to our fake.
+        assert_eq!(push_source_controller.lifetime_served_connections(), 1);
     });
 }
