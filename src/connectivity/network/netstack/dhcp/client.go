@@ -180,7 +180,7 @@ func (c *Client) Run(ctx context.Context) {
 	defer func() { <-c.sem }()
 	defer func() {
 		_ = syslog.InfoTf(tag, "%s: client is stopping, cleaning up", nicName)
-		c.cleanup(&info)
+		c.cleanup(&info, nicName, true /* release */)
 		// cleanup mutates info.
 		c.info.Store(info)
 	}()
@@ -229,7 +229,7 @@ func (c *Client) Run(ctx context.Context) {
 			}
 			if cfg.Declined {
 				c.stats.ReacquireAfterNAK.Increment()
-				c.cleanup(&info)
+				c.cleanup(&info, nicName, false /* release */)
 				// Reset all the times so the client will re-acquire.
 				c.leaseExpirationTime = time.Time{}
 				c.renewTime = time.Time{}
@@ -342,7 +342,7 @@ func (c *Client) Run(ctx context.Context) {
 
 		if info.State != initSelecting && next == initSelecting {
 			_ = syslog.WarnTf(tag, "%s: lease time expired, cleaning up", nicName)
-			c.cleanup(&info)
+			c.cleanup(&info, nicName, true /* release */)
 		}
 
 		info.State = next
@@ -359,7 +359,44 @@ func (c *Client) assign(info *Info, acquired tcpip.AddressWithPrefix, config Con
 	info.Assigned = acquired
 }
 
-func (c *Client) cleanup(info *Info) {
+func (c *Client) cleanup(info *Info, nicName string, release bool) {
+	if release && info.Assigned != (tcpip.AddressWithPrefix{}) {
+		if err := func() error {
+			// As per RFC 2131 section 4.4.1,
+			//
+			//  Option                     DHCPRELEASE
+			//  ------                     -----------
+			//  DHCP message type          DHCPRELEASE
+			//
+			//  Requested IP address       MUST NOT
+			//
+			//  Server identifier          MUST
+			//
+			//  Client identifier          MAY
+			if err := c.send(
+				context.Background(),
+				nicName,
+				info,
+				options{
+					{optDHCPMsgType, []byte{byte(dhcpRELEASE)}},
+					{optDHCPServer, []byte(info.Server)},
+				},
+				tcpip.FullAddress{
+					Addr: info.Server,
+					Port: ServerPort,
+					NIC:  info.NICID,
+				},
+				false, /* broadcast */
+				true,  /* ciaddr */
+			); err != nil {
+				return fmt.Errorf("%s: %w", dhcpRELEASE, err)
+			}
+			return nil
+		}(); err != nil {
+			_ = syslog.ErrorTf(tag, "%s, continuing", err)
+		}
+	}
+
 	c.assign(info, tcpip.AddressWithPrefix{}, Config{})
 }
 

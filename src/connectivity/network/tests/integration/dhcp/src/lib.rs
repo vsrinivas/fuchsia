@@ -72,7 +72,7 @@ struct DhcpTestEndpoint<'a> {
     /// static_addr is the static address configured on the endpoint before any
     /// server or client is started.
     static_addr: Option<fidl_fuchsia_net::Subnet>,
-    /// want_addr is the address expected after a successfull address acquisition
+    /// want_addr is the address expected after a successful address acquisition
     /// from a DHCP client.
     want_addr: Option<fidl_fuchsia_net::Subnet>,
 }
@@ -543,13 +543,14 @@ fn param_name(param: &fidl_fuchsia_net_dhcp::Parameter) -> fidl_fuchsia_net_dhcp
     }
 }
 
-// This test guards against regression for the issue found in fxbug.dev/62989. The test attempts to
-// create an inconsistent state on the dhcp server by allowing the server to complete a transaction
-// with a client, thereby creating a record of a lease. The server is then restarted; if the linked
-// issue has not been fixed, then the server will inadvertently erase its configuration parameters
-// from persistent storage, which will lead to an inconsistent server state on the next restart.
-// Finally, the server is restarted one more time, and then its clear_leases() function is
-// triggered, which will cause a panic if the server is in an inconsistent state.
+// This test guards against regression for the issue found in https://fxbug.dev/62989. The test
+// attempts to create an inconsistent state on the dhcp server by allowing the server to complete a
+// transaction with a client, thereby creating a record of a lease. The server is then restarted;
+// if the linked issue has not been fixed, then the server will inadvertently erase its
+// configuration parameters from persistent storage, which will lead to an inconsistent server
+// state on the next restart.  Finally, the server is restarted one more time, and then its
+// clear_leases() function is triggered, which will cause a panic if the server is in an
+// inconsistent state.
 #[variants_test]
 async fn acquire_persistent_dhcp_server_after_restart<E: netemul::Endpoint>(name: &str) -> Result {
     let mode = PersistenceMode::Persistent;
@@ -606,7 +607,7 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
 
     let client_env = sandbox
         .create_netstack_environment::<Netstack2, _>(format!("{}_client", name))
-        .context("failed to create client environemnt")?;
+        .context("failed to create client environment")?;
 
     let network = sandbox.create_network(name).await.context("failed to create network")?;
     let _server_ep = server_env

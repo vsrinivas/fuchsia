@@ -381,10 +381,9 @@ func TestDHCP(t *testing.T) {
 	}
 }
 
-func mustMsgType(t *testing.T, b buffer.View) dhcpMsgType {
+func mustMsgType(t *testing.T, h hdr) dhcpMsgType {
 	t.Helper()
 
-	h := hdr(b)
 	if !h.isValid() {
 		t.Fatalf("invalid header: %s", h)
 	}
@@ -433,7 +432,7 @@ func TestDelayRetransmission(t *testing.T) {
 			_, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
 			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 				func() {
-					switch mustMsgType(t, pkt.Data.ToView()) {
+					switch mustMsgType(t, hdr(pkt.Data.ToView())) {
 					case dhcpOFFER:
 						if !tc.cancelBeforeOffer {
 							return
@@ -478,7 +477,7 @@ func TestDelayRetransmission(t *testing.T) {
 }
 
 func TestExponentialBackoff(t *testing.T) {
-	s := stack.New(stack.Options{})
+	s := createTestStack()
 	if err := s.CreateNIC(testNICID, &endpoint{}); err != nil {
 		t.Fatalf("s.CreateNIC(_, nil) = %s", err)
 	}
@@ -607,7 +606,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 
 			var ackCnt uint32
 			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
-				if mustMsgType(t, pkt.Data.ToView()) != dhcpACK {
+				if mustMsgType(t, hdr(pkt.Data.ToView())) != dhcpACK {
 					return pkt
 				}
 
@@ -1273,7 +1272,7 @@ func TestStateTransition(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			s := stack.New(stack.Options{})
+			s := createTestStack()
 			if err := s.CreateNIC(testNICID, &endpoint{}); err != nil {
 				t.Fatalf("s.CreateNIC(_, nil) = %s", err)
 			}
@@ -1334,6 +1333,9 @@ func TestStateTransition(t *testing.T) {
 
 			wg.Add(1)
 			go func() {
+				// Avoid waiting for ARP on sending DHCPRELEASE.
+				s.AddStaticNeighbor(testNICID, header.IPv4ProtocolNumber, c.Info().Server, tcpip.LinkAddress([]byte{0, 1, 2, 3, 4, 5}))
+
 				c.Run(ctx)
 				wg.Done()
 			}()
@@ -1394,7 +1396,7 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	s := stack.New(stack.Options{})
+	s := createTestStack()
 	if err := s.CreateNIC(testNICID, &endpoint{}); err != nil {
 		t.Fatalf("s.CreateNIC(_, nil) = %s", err)
 	}
@@ -1449,6 +1451,9 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
+		// Avoid waiting for ARP on sending DHCPRELEASE.
+		s.AddStaticNeighbor(testNICID, header.IPv4ProtocolNumber, c.Info().Server, tcpip.LinkAddress([]byte{0, 1, 2, 3, 4, 5}))
+
 		c.Run(ctx)
 		wg.Done()
 	}()
@@ -1563,44 +1568,128 @@ func TestClientRestartIPHeader(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	_, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg)
+	clientStack, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg)
 
-	sourcesByType := make(map[dhcpMsgType]map[tcpip.Address]int)
-	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
-		ip := header.IPv4(pkt.Data.ToView())
-		typ := mustMsgType(t, header.UDP(ip.Payload()).Payload())
-		countsBySource, ok := sourcesByType[typ]
-		if !ok {
-			countsBySource = make(map[tcpip.Address]int)
-			sourcesByType[typ] = countsBySource
+	type Packet struct {
+		Addresses struct {
+			Source, Destination tcpip.Address
 		}
-		countsBySource[ip.SourceAddress()]++
+		Ports struct {
+			Source, Destination uint16
+		}
+		Options options
+	}
+
+	types := []dhcpMsgType{
+		dhcpDISCOVER,
+		dhcpREQUEST,
+		dhcpRELEASE,
+	}
+
+	const iterations = 3
+
+	packets := make(chan Packet, len(types)*iterations)
+	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
+		var packet Packet
+		ipv4Packet := header.IPv4(pkt.Data.ToView())
+		packet.Addresses.Source = ipv4Packet.SourceAddress()
+		packet.Addresses.Destination = ipv4Packet.DestinationAddress()
+		udpPacket := header.UDP(ipv4Packet.Payload())
+		packet.Ports.Source = udpPacket.SourcePort()
+		packet.Ports.Destination = udpPacket.DestinationPort()
+		dhcpPacket := hdr(udpPacket.Payload())
+		options, err := dhcpPacket.options()
+		if err != nil {
+			t.Errorf("dhcpPacket.options(): %s", err)
+		}
+		packet.Options = options
+		packets <- packet
 
 		return pkt
 	}
 
-	const iterations = 3
 	for i := 0; i < iterations; i++ {
 		func() {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
-			c.acquiredFunc = func(_, _ tcpip.AddressWithPrefix, _ Config) {
+			c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
+				if acquired != lost {
+					if lost != (tcpip.AddressWithPrefix{}) {
+						if err := clientStack.RemoveAddress(testNICID, lost.Address); err != nil {
+							t.Fatalf("RemoveAddress(%s): %s", lost.Address, err)
+						}
+					}
+					if acquired != (tcpip.AddressWithPrefix{}) {
+						protocolAddress := tcpip.ProtocolAddress{
+							Protocol:          ipv4.ProtocolNumber,
+							AddressWithPrefix: acquired,
+						}
+						if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
+							t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
+						}
+					}
+				}
 				cancel()
 			}
 
 			c.Run(ctx)
 		}()
 	}
+	close(packets)
 
-	if diff := cmp.Diff(sourcesByType, map[dhcpMsgType]map[tcpip.Address]int{
-		dhcpDISCOVER: {
-			header.IPv4Any: iterations,
-		},
-		dhcpREQUEST: {
-			header.IPv4Any: iterations,
-		},
-	}); diff != "" {
-		t.Errorf("got source address diff (-want +got):\n%s", diff)
+	i := 0
+	for packet := range packets {
+		typ := types[i%len(types)]
+
+		expected := Packet{
+			Options: options{
+				{optDHCPMsgType, []byte{byte(typ)}},
+			},
+		}
+		expected.Ports.Source = ClientPort
+		expected.Ports.Destination = ServerPort
+		switch typ {
+		case dhcpDISCOVER, dhcpREQUEST:
+			expected.Addresses.Source = header.IPv4Any
+			expected.Addresses.Destination = header.IPv4Broadcast
+			expected.Options = append(expected.Options, option{
+				optParamReq,
+				[]byte{
+					1,  // request subnet mask
+					3,  // request router
+					15, // domain name
+					6,  // domain name server
+				},
+			})
+			if typ == dhcpREQUEST {
+				expected.Options = append(expected.Options, option{
+					optDHCPServer,
+					[]byte(serverAddr),
+				})
+			}
+			// Only the very first DISCOVER doesn't request a specific address.
+			if i != 0 {
+				expected.Options = append(expected.Options, option{
+					optReqIPAddr,
+					[]byte(defaultClientAddrs[0]),
+				})
+			}
+		case dhcpRELEASE:
+			expected.Addresses.Source = defaultClientAddrs[0]
+			expected.Addresses.Destination = serverAddr
+			expected.Options = append(expected.Options, option{
+				optDHCPServer,
+				[]byte(serverAddr),
+			})
+		default:
+			t.Fatalf("unhandled client message type %s", typ)
+		}
+
+		if diff := cmp.Diff(expected, packet, cmp.AllowUnexported(option{})); diff != "" {
+			t.Errorf("%s packet mismatch (-want +got):\n%s", typ, diff)
+		}
+
+		i++
 	}
 }
