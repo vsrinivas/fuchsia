@@ -20,16 +20,11 @@ TEST(NamespaceTest, CreateAndConnect) {
 
   auto pkg = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
   EXPECT_EQ(ZX_OK, pkg.status_value());
-  frunner::wire::ComponentNamespaceEntry ns_entries[] = {
-      frunner::wire::ComponentNamespaceEntry::Builder(
-          std::make_unique<frunner::wire::ComponentNamespaceEntry::Frame>())
-          .set_path(std::make_unique<fidl::StringView>("/pkg"))
-          .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>(
-              std::move(pkg->client)))
-          .build(),
-  };
-  auto ns_vec = fidl::unowned_vec(ns_entries);
-  auto ns = Namespace::Create(ns_vec);
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);
+  ns_entries[0].Allocate(allocator);
+  ns_entries[0].set_path(allocator, "/pkg").set_directory(allocator, std::move(pkg->client));
+  auto ns = Namespace::Create(ns_entries);
   ASSERT_TRUE(ns.is_ok());
 
   TestDirectory pkg_directory;
@@ -58,14 +53,10 @@ TEST(NamespaceTest, CreateAndConnect) {
 TEST(NamespaceTest, CreateFailed) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
-  frunner::wire::ComponentNamespaceEntry ns_entries[] = {
-      frunner::wire::ComponentNamespaceEntry::Builder(
-          std::make_unique<frunner::wire::ComponentNamespaceEntry::Frame>())
-          .set_path(std::make_unique<fidl::StringView>("/pkg"))
-          .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>())
-          .build(),
-  };
-  auto ns_vec = fidl::unowned_vec(ns_entries);
-  auto ns = Namespace::Create(ns_vec);
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);
+  ns_entries[0].Allocate(allocator);
+  ns_entries[0].set_path(allocator, "/pkg").set_directory(allocator);
+  auto ns = Namespace::Create(ns_entries);
   ASSERT_TRUE(ns.is_error());
 }
