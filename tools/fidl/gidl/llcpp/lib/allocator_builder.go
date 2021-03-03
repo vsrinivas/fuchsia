@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -14,18 +14,17 @@ import (
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-// Builds an LLCPP object using fidl::Allocator.
 func BuildValueAllocator(allocatorVar string, value interface{}, decl gidlmixer.Declaration, handleRepr HandleRepr) (string, string) {
 	var builder allocatorBuilder
-	builder.allocationFunc = fmt.Sprintf("%s.make", allocatorVar)
+	builder.allocatorVar = allocatorVar
 	builder.handleRepr = handleRepr
-	valueVar := builder.visit(value, decl, false)
+	valueVar := builder.visit(value, decl)
 	valueBuild := builder.String()
 	return valueBuild, valueVar
 }
 
 type allocatorBuilder struct {
-	allocationFunc string
+	allocatorVar string
 	strings.Builder
 	varidx     int
 	handleRepr HandleRepr
@@ -40,18 +39,19 @@ func (a *allocatorBuilder) newVar() string {
 	return fmt.Sprintf("var%d", a.varidx)
 }
 
-func (a *allocatorBuilder) assignNew(typename string, isPointer bool, str string, vals ...interface{}) string {
-	rhs := a.construct(typename, isPointer, str, vals...)
+func (a *allocatorBuilder) assignNew(typename string, isPointer bool, fmtStr string, vals ...interface{}) string {
+	rhs := a.construct(typename, isPointer, fmtStr, vals...)
 	newVar := a.newVar()
 	a.write("auto %s = %s;\n", newVar, rhs)
 	return newVar
 }
 
-func (a *allocatorBuilder) construct(typename string, isPointer bool, str string, args ...interface{}) string {
-	if isPointer {
-		return fmt.Sprintf("%s<%s>(%s)", a.allocationFunc, typename, fmt.Sprintf(str, args...))
+func (a *allocatorBuilder) construct(typename string, isPointer bool, fmtStr string, args ...interface{}) string {
+	val := fmt.Sprintf(fmtStr, args...)
+	if !isPointer {
+		return fmt.Sprintf("%s(%s)", typename, val)
 	}
-	return fmt.Sprintf("%s(%s)", typename, fmt.Sprintf(str, args...))
+	return fmt.Sprintf("fidl::ObjectView<%s>(%s, %s)", typename, a.allocatorVar, val)
 }
 
 func formatPrimitive(value interface{}) string {
@@ -69,13 +69,13 @@ func formatPrimitive(value interface{}) string {
 	panic("Unreachable")
 }
 
-func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration, isAlwaysPointer bool) string {
+func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration) string {
 	// Unions, StringView and VectorView in LLCPP represent nullability within the object rather than as
 	// as pointer to the object.
 	_, isUnion := decl.(*gidlmixer.UnionDecl)
 	_, isString := decl.(*gidlmixer.StringDecl)
 	_, isVector := decl.(*gidlmixer.VectorDecl)
-	isPointer := (decl.IsNullable() && !isUnion && !isString && !isVector) || isAlwaysPointer
+	isPointer := (decl.IsNullable() && !isUnion && !isString && !isVector)
 
 	switch value := value.(type) {
 	case bool:
@@ -128,10 +128,15 @@ func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration, 
 }
 
 func (a *allocatorBuilder) visitStruct(value gidlir.Record, decl *gidlmixer.StructDecl, isPointer bool) string {
-	s := a.assignNew(typeNameIgnoreNullable(decl), isPointer, "")
-	op := "."
+	s := a.newVar()
+	structRaw := fmt.Sprintf("%s{}", typeNameIgnoreNullable(decl))
+	var op string
 	if isPointer {
 		op = "->"
+		a.write("auto %s = fidl::ObjectView<%s>(%s, %s);\n", s, typeNameIgnoreNullable(decl), a.allocatorVar, structRaw)
+	} else {
+		op = "."
+		a.write("auto %s = %s;\n", s, structRaw)
 	}
 
 	for _, field := range value.Fields {
@@ -139,7 +144,7 @@ func (a *allocatorBuilder) visitStruct(value gidlir.Record, decl *gidlmixer.Stru
 		if !ok {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
 		}
-		fieldRhs := a.visit(field.Value, fieldDecl, false)
+		fieldRhs := a.visit(field.Value, fieldDecl)
 		a.write("%s%s%s = %s;\n", s, op, field.Key.Name, fieldRhs)
 	}
 
@@ -147,8 +152,7 @@ func (a *allocatorBuilder) visitStruct(value gidlir.Record, decl *gidlmixer.Stru
 }
 
 func (a *allocatorBuilder) visitTable(value gidlir.Record, decl *gidlmixer.TableDecl, isPointer bool) string {
-	frame := a.construct(fmt.Sprintf("%s::Frame", declName(decl)), true, "")
-	t := a.assignNew(fmt.Sprintf("%s::Builder", declName(decl)), isPointer, "%s", frame)
+	t := a.assignNew(declName(decl), isPointer, "%s", a.allocatorVar)
 	op := "."
 	if isPointer {
 		op = "->"
@@ -159,14 +163,11 @@ func (a *allocatorBuilder) visitTable(value gidlir.Record, decl *gidlmixer.Table
 		if !ok {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
 		}
-		fieldRhs := a.visit(field.Value, fieldDecl, true)
-		a.write("%s%sset_%s(%s);\n", t, op, field.Key.Name, fieldRhs)
+		fieldRhs := a.visit(field.Value, fieldDecl)
+		a.write("%s%sset_%s(%s, %s);\n", t, op, field.Key.Name, a.allocatorVar, fieldRhs)
 	}
 
-	if isPointer {
-		return a.construct(typeName(decl), true, "%s->build()", t)
-	}
-	return fmt.Sprintf("%s.build()", t)
+	return fmt.Sprintf("std::move(%s)", t)
 }
 
 func (a *allocatorBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.UnionDecl, isPointer bool) string {
@@ -182,32 +183,31 @@ func (a *allocatorBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.Union
 		if !ok {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
 		}
-		fieldRhs := a.visit(field.Value, fieldDecl, true)
-		a.write("%s%sset_%s(%s);\n", union, op, field.Key.Name, fieldRhs)
+		fieldRhs := a.visit(field.Value, fieldDecl)
+		a.write("%s%sset_%s(%s, %s);\n", union, op, field.Key.Name, a.allocatorVar, fieldRhs)
 	}
 
 	return fmt.Sprintf("std::move(%s)", union)
 }
 
 func (a *allocatorBuilder) visitArray(value []interface{}, decl *gidlmixer.ArrayDecl, isPointer bool) string {
-	var elemList []string
-	elemDecl := decl.Elem()
-	for _, item := range value {
-		elemList = append(elemList, a.visit(item, elemDecl, false))
-	}
-	elems := strings.Join(elemList, ", ")
+	array := a.assignNew(typeNameIgnoreNullable(decl), isPointer, "")
+	op := ""
 	if isPointer {
-		return fmt.Sprintf("%s<%s>(%s{%s})", a.allocationFunc, typeNameIgnoreNullable(decl), typeNameIgnoreNullable(decl), elems)
+		op = ".get()"
 	}
-	return fmt.Sprintf("%s{%s}", typeName(decl), elems)
+	for i, item := range value {
+		elem := a.visit(item, decl.Elem())
+		a.write("%s%s[%d] = %s;\n", array, op, i, elem)
+	}
+	return fmt.Sprintf("std::move(%s)", array)
 }
 
 func (a *allocatorBuilder) visitVector(value []interface{}, decl *gidlmixer.VectorDecl, isPointer bool) string {
-	elemDecl := decl.Elem()
-	array := a.assignNew(fmt.Sprintf("%s[]", typeName(elemDecl)), true, "%d", len(value))
+	vector := a.assignNew(typeName(decl), isPointer, "%s, %d", a.allocatorVar, len(value))
 	for i, item := range value {
-		elem := a.visit(item, elemDecl, false)
-		a.write("%s[%d] = %s;\n", array, i, elem)
+		elem := a.visit(item, decl.Elem())
+		a.write("%s[%d] = %s;\n", vector, i, elem)
 	}
-	return a.construct(typeName(decl), isPointer, "std::move(%s), %d", array, len(value))
+	return fmt.Sprintf("std::move(%s)", vector)
 }

@@ -41,7 +41,7 @@ TEST(C_Conformance, {{ .Name }}_LinearizeAndEncode) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	[[maybe_unused]] fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	const auto expected_bytes = {{ .Bytes }};
 	const auto expected_handles = {{ .Handles }};
@@ -59,7 +59,7 @@ TEST(C_Conformance, {{ .Name }}_EncodeIovec) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	[[maybe_unused]] fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	const auto expected_bytes = {{ .Bytes }};
 	const auto expected_handles = {{ .Handles }};
@@ -79,7 +79,7 @@ TEST(C_Conformance, {{ .Name }}_LinearizeAndEncode_Failure) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	[[maybe_unused]] fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
 	EXPECT_TRUE(c_conformance_utils::LinearizeAndEncodeFailure(obj.Type, &obj, {{ .ErrorCode }}));
@@ -100,7 +100,7 @@ TEST(C_Conformance, {{ .Name }}_EncodeIovec_Failure) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	[[maybe_unused]] fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
 	EXPECT_TRUE(c_conformance_utils::EncodeIovecFailure(obj.Type, &obj, {{ .ErrorCode }}));
@@ -123,7 +123,7 @@ TEST(C_Conformance, {{ .Name }}_Decode) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	[[maybe_unused]] fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	auto bytes = {{ .Bytes }};
 	auto handles = {{ .Handles }};

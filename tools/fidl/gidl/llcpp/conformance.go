@@ -42,7 +42,7 @@ TEST(Conformance, {{ .Name }}_Encode) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	[[maybe_unused]] fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	const auto expected_bytes = {{ .Bytes }};
 	const auto expected_handles = {{ .Handles }};
@@ -63,7 +63,7 @@ TEST(Conformance, {{ .Name }}_Decode) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_info_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	[[maybe_unused]] fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	auto bytes = {{ .Bytes }};
 	auto handles = {{ .Handles }};
@@ -83,7 +83,7 @@ TEST(Conformance, {{ .Name }}_Encode_Failure) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	[[maybe_unused]] fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	auto obj = {{ .ValueVar }};
 	EXPECT_TRUE(llcpp_conformance_utils::EncodeFailure(&obj, {{ .ErrorCode }}));

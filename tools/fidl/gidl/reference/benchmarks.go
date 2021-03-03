@@ -24,7 +24,7 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 namespace benchmark_suite {
 
 {{ range .Benchmarks }}
-[[maybe_unused]] {{ .Type }} Build_{{ .Name }}(fidl::Allocator& allocator) {
+[[maybe_unused]] {{ .Type }} Build_{{ .Name }}(fidl::AnyAllocator& allocator) {
 	{{ .ValueBuild }}
 	auto obj = {{ .ValueVar }};
 	return obj;

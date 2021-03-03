@@ -19,7 +19,7 @@ namespace llcpp_benchmarks {
 
 template <typename BuilderFunc>
 bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
-  using FidlType = std::invoke_result_t<BuilderFunc, fidl::Allocator&>;
+  using FidlType = std::invoke_result_t<BuilderFunc, fidl::AnyAllocator&>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   state->DeclareStep("Setup/WallTime");
@@ -29,7 +29,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   while (state->KeepRunning()) {
     // construct a new object each iteration, so that the handle close cost is included in the
     // decode time.
-    fidl::BufferThenHeapAllocator<65536> allocator;
+    fidl::FidlAllocator<65536> allocator;
     fidl::aligned<FidlType> aligned_value = builder(allocator);
     // encode the value.
     fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value.value);
