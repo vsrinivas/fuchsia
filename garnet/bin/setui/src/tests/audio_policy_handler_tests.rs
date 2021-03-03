@@ -380,11 +380,7 @@ async fn test_handler_restore_persisted_state() {
     // Persisted state with only one stream and transform.
     let mut persisted_state =
         StateBuilder::new().add_property(AudioStreamType::Media, TransformFlags::all()).build();
-    persisted_state
-        .properties()
-        .get_mut(&AudioStreamType::Media)
-        .expect("failed to get property")
-        .add_transform(expected_transform);
+    persisted_state.add_transform(modified_property, expected_transform);
 
     let core_messenger_factory = core::message::create_hub();
     let (core_messenger, _) = core_messenger_factory

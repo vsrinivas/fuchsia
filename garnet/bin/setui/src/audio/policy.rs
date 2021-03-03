@@ -5,7 +5,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_settings_policy::{PolicyParameters, Volume};
@@ -21,7 +20,7 @@ pub mod volume_policy_fidl_handler;
 pub type PropertyTarget = AudioStreamType;
 
 /// Unique identifier for a policy.
-#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PolicyId(u32);
 
 impl PolicyId {
@@ -92,6 +91,32 @@ impl State {
             .values_mut()
             .find_map(|property| property.remove_policy(policy_id).map(|_| property.target))
     }
+
+    /// Attempts to add a new policy transform to the given target. Returns the [`PolicyId`] of the
+    /// new policy, or None if the target doesn't exist.
+    pub fn add_transform(
+        &mut self,
+        target: PropertyTarget,
+        transform: Transform,
+    ) -> Option<PolicyId> {
+        let next_id = self.next_id();
+
+        self.properties.get_mut(&target)?.add_transform(transform, next_id);
+
+        Some(next_id)
+    }
+
+    /// Returns next [`PolicyId`] to assign for a new transform. The ID will be unique and the
+    /// highest of any existing policy.
+    fn next_id(&self) -> PolicyId {
+        let PolicyId(highest_id) = self
+            .properties
+            .values()
+            .filter_map(|property| property.highest_id())
+            .max()
+            .unwrap_or(PolicyId::create(0));
+        PolicyId::create(highest_id + 1)
+    }
 }
 
 impl DeviceStorageCompatible for State {
@@ -120,17 +145,9 @@ impl Property {
         Self { target: stream_type, available_transforms, active_policies: vec![] }
     }
 
-    /// Adds the given transform to this property and returns its PolicyId.
-    pub fn add_transform(&mut self, transform: Transform) -> PolicyId {
-        // Static atomic counter ensures each policy has a unique ID. Declared locally so nothing
-        // else has access.
-        static POLICY_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
-        let policy_id = PolicyId(POLICY_ID_COUNTER.fetch_add(1, Ordering::Relaxed));
-        let policy = Policy { id: policy_id, transform };
-
-        self.active_policies.push(policy);
-
-        policy_id
+    /// Adds the given transform to this property.
+    fn add_transform(&mut self, transform: Transform, id: PolicyId) {
+        self.active_policies.push(Policy { id, transform });
     }
 
     /// Attempts to find the policy with the given ID in this property. Returns the policy if it
@@ -146,6 +163,12 @@ impl Property {
             Some(index) => Some(self.active_policies.remove(index)),
             None => None,
         }
+    }
+
+    /// Returns the highest [`PolicyId`] in the active policies of this property, or None if there
+    /// are no active policies.
+    pub fn highest_id(&self) -> Option<PolicyId> {
+        self.active_policies.iter().map(|policy| policy.id).max()
     }
 }
 
@@ -378,6 +401,36 @@ mod tests {
         }
     }
 
+    // Verifies that the next ID for a new transform is 1 when the state is empty.
+    #[test]
+    fn test_state_next_id_when_empty() {
+        let state = StateBuilder::new()
+            .add_property(AudioStreamType::Background, TransformFlags::TRANSFORM_MAX)
+            .build();
+
+        assert_eq!(state.next_id(), PolicyId::create(1));
+    }
+
+    // Verifies that the audio policy state produces increasing IDs when adding transforms.
+    #[test]
+    fn test_state_add_transform_ids_increasing() {
+        let target = AudioStreamType::Background;
+        let mut state =
+            StateBuilder::new().add_property(target, TransformFlags::TRANSFORM_MAX).build();
+
+        let mut last_id = PolicyId::create(0);
+
+        // Verify that each new policy ID is larger than the last.
+        for _ in 0..10 {
+            let next_id = state.next_id();
+            let id = state.add_transform(target, Transform::Min(0.0)).expect("target found");
+            assert!(id > last_id);
+            assert_eq!(next_id, id);
+            // Each new ID should also be the highest ID.
+            last_id = id;
+        }
+    }
+
     // Verifies that adding transforms to policy properties works.
     #[test]
     fn test_property_transforms() {
@@ -387,8 +440,8 @@ mod tests {
         let mut property2 = Property::new(AudioStreamType::Background, supported_transforms);
 
         for transform in transforms.iter().cloned() {
-            property.add_transform(transform);
-            property2.add_transform(transform);
+            property.add_transform(transform, PolicyId::create(0));
+            property2.add_transform(transform, PolicyId::create(1));
         }
 
         // Ensure policy size matches transforms specified.
@@ -398,9 +451,6 @@ mod tests {
         let mut retrieved_ids: HashSet<PolicyId> =
             HashSet::from_iter(property.active_policies.iter().map(|policy| policy.id));
         retrieved_ids.extend(property2.active_policies.iter().map(|policy| policy.id));
-
-        // Make sure all ids are unique, even across properties.
-        assert_eq!(retrieved_ids.len(), transforms.len() * 2);
 
         // Verify transforms are present.
         let retrieved_transforms: Vec<Transform> =

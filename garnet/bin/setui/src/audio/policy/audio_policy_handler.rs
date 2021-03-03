@@ -334,17 +334,13 @@ impl AudioPolicyHandler {
         let external_volume = self.calculate_external_volume(target, stream.user_volume_level);
 
         // Add the transform the policy state.
-        let policy_id = self
-            .state
-            .properties
-            .get_mut(&target)
-            // TODO(fxbug.dev/60925): once policy targets are configurable, test this error case.
-            .ok_or(PolicyError::InvalidArgument(
+        // TODO(fxbug.dev/60925): once policy targets are configurable, test this error case.
+        let policy_id =
+            self.state.add_transform(target, transform).ok_or(PolicyError::InvalidArgument(
                 self.client_proxy.policy_type(),
                 "target".into(),
                 format!("{:?}", target).into(),
-            ))?
-            .add_transform(transform);
+            ))?;
 
         // Persist the policy state.
         self.client_proxy.write(&self.state, false).await?;

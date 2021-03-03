@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use crate::audio::default_audio_info;
-use crate::audio::policy::{PropertyTarget, StateBuilder, Transform, TransformFlags};
+use crate::audio::policy::{
+    PolicyId, PropertyTarget, State, StateBuilder, Transform, TransformFlags,
+};
 use crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType};
 use crate::base::SettingType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
@@ -36,7 +38,15 @@ struct TestEnvironment {
 
 /// Creates an environment for audio policy.
 async fn create_test_environment() -> TestEnvironment {
-    let storage_factory = Arc::new(InMemoryStorageFactory::new());
+    create_test_environment_with_data(None).await
+}
+
+/// Creates an environment for audio policy with initial data in storage.
+async fn create_test_environment_with_data(data: Option<&State>) -> TestEnvironment {
+    let storage_factory = Arc::new(match data {
+        None => InMemoryStorageFactory::new(),
+        Some(data) => InMemoryStorageFactory::with_initial_data(data),
+    });
 
     let service_registry = ServiceRegistry::create();
 
@@ -240,6 +250,37 @@ async fn test_policy_add_policy() {
             }
             _ => panic!("unexpected target type"),
         }
+    }
+}
+
+// Tests that starting the service with existing transforms then adding new policies still
+// unique policy IDs.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_policy_add_policy_ids_unique_across_restart() {
+    let target = AudioStreamType::Media;
+    let transform = Transform::Min(0.0);
+
+    // Create an initial state with several transforms added to simulate data that was already
+    // persisted before the service started.
+    let mut state = StateBuilder::new().add_property(target, TransformFlags::TRANSFORM_MIN).build();
+
+    // Keep track of all IDs that are seen.
+    let mut ids_seen = HashSet::new();
+    for _ in 0..10 {
+        let id = state.add_transform(target, transform).expect("failed to add transform");
+        // Verify the ID has not been seen before. Insert returns false if it's not a new member
+        // of the set.
+        assert!(ids_seen.insert(id));
+    }
+
+    let env = create_test_environment_with_data(Some(&state)).await;
+
+    // Add more policy transforms.
+    for _ in 0..10 {
+        let id = add_policy(&env, target, transform).await;
+        // Verify the ID has not been seen before. Insert returns false if it's not a new member
+        // of the set.
+        assert!(ids_seen.insert(PolicyId::create(id)));
     }
 }
 
