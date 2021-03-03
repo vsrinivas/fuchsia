@@ -62,7 +62,14 @@ func invocationLevelArtifacts(outputRoot string) map[string]*sinkpb.Artifact {
 	rootPath, _ := filepath.Abs(outputRoot)
 	artifacts := map[string]*sinkpb.Artifact{}
 
-	for _, invocationLog := range [...]string{"syslog.txt", "serial_log.txt", "triage_output"} {
+	// TODO(yuanzhi) Make this an argument that the recipe can pass to the resultdb uploader
+	// instead of hardcoding here.
+	for _, invocationLog := range [...]string{
+		"infra_and_test_std_and_klog.txt",
+		"serial_log.txt",
+		"syslog.txt",
+		"triage_output",
+	} {
 		logFile := filepath.Join(rootPath, invocationLog)
 		if isReadable(logFile) {
 			artifacts[invocationLog] = &sinkpb.Artifact{
