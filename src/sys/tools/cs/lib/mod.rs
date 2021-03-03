@@ -8,6 +8,12 @@ pub mod v2;
 
 use {crate::io::Directory, fuchsia_async::TimeoutExt, futures::future::FutureExt};
 
+#[derive(Copy, Debug, Eq, PartialEq, Clone)]
+pub enum IncludeDetails {
+    Yes,
+    No,
+}
+
 static CAPABILITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
 
 pub(crate) async fn get_capabilities(capability_dir: Directory) -> Vec<String> {

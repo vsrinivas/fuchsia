@@ -11,7 +11,7 @@ mod log_stats;
 
 use {
     anyhow::Error,
-    cs::{io::Directory, v2::V2Component},
+    cs::{io::Directory, v2::V2Component, IncludeDetails},
     freq::BlobFrequencies,
     fuchsia_async as fasync,
     log_stats::{LogSeverity, LogStats},
@@ -76,13 +76,13 @@ async fn main() -> Result<(), Error> {
         }
         Opt::Info { filter } => {
             if let Some(hub_dir) = validate_hub_directory() {
-                let component = V2Component::explore(hub_dir).await;
+                let component = V2Component::explore(hub_dir, IncludeDetails::Yes).await;
                 component.print_details(&filter);
             }
         }
         Opt::Tree => {
             if let Some(hub_dir) = validate_hub_directory() {
-                let component = V2Component::explore(hub_dir).await;
+                let component = V2Component::explore(hub_dir, IncludeDetails::No).await;
                 component.print_tree();
             }
         }

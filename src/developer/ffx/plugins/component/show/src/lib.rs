@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Result},
-    cs::{io::Directory, v2::V2Component},
+    cs::{io::Directory, v2::V2Component, IncludeDetails},
     ffx_component_show_args::ComponentShowCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
@@ -25,7 +25,7 @@ async fn show_impl(rcs_proxy: rc::RemoteControlProxy, filter: &str) -> Result<()
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
-    let component = V2Component::explore(hub_dir).await;
+    let component = V2Component::explore(hub_dir, IncludeDetails::Yes).await;
     component.print_details(&filter);
     Ok(())
 }
