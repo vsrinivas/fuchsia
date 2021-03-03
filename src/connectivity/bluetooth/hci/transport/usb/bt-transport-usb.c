@@ -307,6 +307,10 @@ static void hci_acl_read_complete(void* ctx, usb_request_t* req) {
   zxlogf(TRACE, "bt-transport-usb: ACL frame received");
   mtx_lock(&hci->mutex);
 
+  if (req->response.status == ZX_ERR_IO_INVALID) {
+    zxlogf(TRACE, "bt-transport-usb: request stalled, ignoring.");
+    goto finish;
+  }
   if (req->response.status != ZX_OK) {
     zxlogf(ERROR, "bt-transport-usb: request completed with error status %d (%s). Removing device",
            req->response.status, zx_status_get_string(req->response.status));
@@ -338,6 +342,7 @@ static void hci_acl_read_complete(void* ctx, usb_request_t* req) {
   snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_ACL, true), buffer,
                              req->response.actual);
 
+finish:
   status = usb_req_list_add_head(&hci->free_acl_read_reqs, req, hci->parent_req_size);
   ZX_DEBUG_ASSERT(status == ZX_OK);
   queue_acl_read_requests_locked(hci);

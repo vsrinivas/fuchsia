@@ -23,8 +23,9 @@ class FakeDevice : public ddk::UsbProtocol<FakeDevice> {
     usb::ConfigurationBuilder config_builder(0);
     usb::InterfaceBuilder interface_builder(0);
     usb::EndpointBuilder in_endpoint_builder(0, USB_ENDPOINT_BULK, 0, true);
+    bulk_in_addr_ = usb::EpIndexToAddress(usb::kInEndpointStart);
     usb::EndpointBuilder out_endpoint_builder(0, USB_ENDPOINT_BULK, 0, false);
-    usb::EndpointBuilder int_endpoint_builder(1, USB_ENDPOINT_INTERRUPT, 0, true);
+    usb::EndpointBuilder int_endpoint_builder(1, USB_ENDPOINT_INTERRUPT, 1, true);
     interface_builder.AddEndpoint(in_endpoint_builder);
     interface_builder.AddEndpoint(out_endpoint_builder);
     interface_builder.AddEndpoint(int_endpoint_builder);
@@ -117,6 +118,31 @@ class FakeDevice : public ddk::UsbProtocol<FakeDevice> {
     dev_ops_ = ops;
   }
 
+  void StallOneBulkRequest() {
+    std::optional<usb::BorrowedRequest<>> value;
+    while (true) {
+      {
+        fbl::AutoLock<fbl::Mutex> lock(&mutex_);
+        value = queue_.pop();
+        if (!value.has_value()) {
+          break;
+        }
+      }
+
+      // If this is a bulk request, complete it with ZX_ERR_IO_INVALID, which indicates a stall.
+      if (value->request()->header.ep_address == bulk_in_addr_) {
+        value->Complete(ZX_ERR_IO_INVALID, 0);
+        break;
+      }
+
+      // If this was not a bulk request, just put it back on the queue - we'll deal with it later.
+      {
+        fbl::AutoLock<fbl::Mutex> lock(&mutex_);
+        queue_.push(std::move(*value));
+      }
+    }
+  }
+
  private:
   fbl::Mutex mutex_;
   bool unplugged __TA_GUARDED(mutex_) = false;
@@ -124,11 +150,13 @@ class FakeDevice : public ddk::UsbProtocol<FakeDevice> {
   void* dev_context_;
   zx_protocol_device_t dev_ops_;
   std::vector<uint8_t> descriptor_;
+  uint8_t bulk_in_addr_;
 };
 
 class Binder : public fake_ddk::Bind {
  public:
-  zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id, void* protocol) {
+  zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
+                                void* protocol) override {
     auto context = reinterpret_cast<const FakeDevice*>(device);
     if (proto_id == ZX_PROTOCOL_USB) {
       *reinterpret_cast<usb_protocol_t*>(protocol) = context->proto();
@@ -136,17 +164,28 @@ class Binder : public fake_ddk::Bind {
     }
     return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
   }
-  zx_status_t DeviceRemove(zx_device_t* device) { return ZX_OK; }
-
-  void DeviceInitReply(zx_device_t* device, zx_status_t status,
-                       const device_init_reply_args_t* args) {}
-
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) {
-    auto context = reinterpret_cast<FakeDevice*>(parent);
-    context->SetDevOps(args->ctx, *args->ops);
+  zx_status_t DeviceRemove(zx_device_t* device) override {
+    removed_ = true;
     return ZX_OK;
   }
+
+  void DeviceAsyncRemove(zx_device_t* device) override {
+    removed_ = true;
+    fake_ddk::Bind::DeviceAsyncRemove(device);
+  }
+
+  void DeviceInitReply(zx_device_t* device, zx_status_t status,
+                       const device_init_reply_args_t* args) override {}
+
+  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
+                        zx_device_t** out) override {
+    auto context = reinterpret_cast<FakeDevice*>(parent);
+    context->SetDevOps(args->ctx, *args->ops);
+    *out = fake_ddk::kFakeDevice;
+    return ZX_OK;
+  }
+
+  bool removed_ = false;
 };
 
 extern "C" {
@@ -163,9 +202,13 @@ class BTHarness : public zxtest::Test {
   void TearDown() override { ctx->Unplug(); }
   std::unique_ptr<FakeDevice> ctx;
 
- private:
   Binder bind;
 };
 
 TEST_F(BTHarness, DoesNotCrash) {}
+
+TEST_F(BTHarness, IgnoresStalledRequest) {
+  ctx->StallOneBulkRequest();
+  ZX_ASSERT(bind.remove_called() == false);
+}
 }  // namespace
