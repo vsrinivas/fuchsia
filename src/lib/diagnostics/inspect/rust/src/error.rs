@@ -7,10 +7,10 @@ use anyhow;
 use fuchsia_zircon as zx;
 
 /// Errors that Inspect API functions can return.
-#[derive(Debug, thiserror::Error)]
+#[derive(Clone, Debug, thiserror::Error)]
 pub enum Error {
-    #[error("FIDL error")]
-    Fidl(#[source] anyhow::Error),
+    #[error("FIDL error: {0}")]
+    Fidl(String),
 
     #[error("Failed to allocate vmo")]
     AllocateVmo(#[source] zx::Status),
@@ -95,6 +95,10 @@ pub enum Error {
 }
 
 impl Error {
+    pub fn fidl(err: anyhow::Error) -> Self {
+        Self::Fidl(format!("{}", err))
+    }
+
     pub fn free(value_type: &'static str, index: u32, error: Error) -> Self {
         Self::Free { value_type, index, error: Box::new(error) }
     }

@@ -283,7 +283,7 @@ impl Inspector {
         service_fs: &mut ServiceFs<ServiceObjTy>,
     ) -> Result<(), Error> {
         let (proxy, server) = fidl::endpoints::create_proxy::<DirectoryMarker>()
-            .map_err(|e| Error::Fidl(e.into()))?;
+            .map_err(|e| Error::fidl(e.into()))?;
         let inspector_clone = self.clone();
         let dir = pseudo_directory! {
             TreeMarker::SERVICE_NAME => pseudo_fs_service::host(move |stream| {
