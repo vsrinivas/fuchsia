@@ -46,32 +46,18 @@ namespace test {
 namespace placementofattributes {
 namespace wire {
 class ExampleXUnion;
-}  // namespace wire
-using ExampleXUnion =
-    ::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion;
-namespace wire {
+
 class ExampleUnion;
-}  // namespace wire
-using ExampleUnion =
-    ::llcpp::fidl::test::placementofattributes::wire::ExampleUnion;
-namespace wire {
+
 class ExampleTable;
 
 struct ExampleStruct;
-}  // namespace wire
-using ExampleStruct =
-    ::llcpp::fidl::test::placementofattributes::wire::ExampleStruct;
-namespace wire {
 
 enum class ExampleEnum : uint32_t {
 
   MEMBER = 1u,
 };
-}  // namespace wire
-using ExampleEnum =
-    ::llcpp::fidl::test::placementofattributes::wire::ExampleEnum;
 
-namespace wire {
 // |ExampleBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -177,10 +163,8 @@ constexpr inline void ExampleBits::operator^=(
         other) {
   this->value_ ^= other.value_;
 }
-}  // namespace wire
-using ExampleBits =
-    ::llcpp::fidl::test::placementofattributes::wire::ExampleBits;
 
+}  // namespace wire
 class ExampleProtocol;
 namespace wire {
 
@@ -754,10 +738,6 @@ class ExampleTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   ExampleTable::Frame frame_;
 };
-}  // namespace wire
-using ExampleTable =
-    ::llcpp::fidl::test::placementofattributes::wire::ExampleTable;
-namespace wire {
 
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleStructTable;
 
@@ -928,9 +908,8 @@ struct ExampleStruct {
 };
 
 constexpr uint32_t EXAMPLE_CONST = 0u;
-}  // namespace wire
-constexpr uint32_t EXAMPLE_CONST = 0u;
 
+}  // namespace wire
 extern "C" const fidl_type_t
     fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
 

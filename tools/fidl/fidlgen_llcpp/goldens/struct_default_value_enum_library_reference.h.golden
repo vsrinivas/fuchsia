@@ -45,10 +45,6 @@ namespace test {
 namespace structdefaultvalueenumlibraryreference {
 namespace wire {
 struct Foo;
-}  // namespace wire
-using Foo =
-    ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::wire::Foo;
-namespace wire {
 
 extern "C" const fidl_type_t
     fidl_test_structdefaultvalueenumlibraryreference_FooTable;

@@ -44,9 +44,6 @@ namespace test {
 namespace byteandbytes {
 namespace wire {
 struct ByteAndBytes;
-}  // namespace wire
-using ByteAndBytes = ::llcpp::fidl::test::byteandbytes::wire::ByteAndBytes;
-namespace wire {
 
 extern "C" const fidl_type_t fidl_test_byteandbytes_ByteAndBytesTable;
 

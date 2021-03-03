@@ -64,9 +64,10 @@ constexpr const {{ $ }} {{ $.Name }}::{{ $member.Name }} =
 {{- end }}
 {{ end }}
 
+{{- if .WireAlias }}
 {{- EnsureNamespace .WireAlias }}
 using {{ .WireAlias.Name }} = {{ . }};
-
+{{- end }}
 {{ end }}
 
 {{- define "EnumTraits" }}

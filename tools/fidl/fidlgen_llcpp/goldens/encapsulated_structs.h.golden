@@ -45,33 +45,16 @@ namespace test {
 namespace encapsulatedstructs {
 namespace wire {
 struct NonInlineStructTestStruct;
-}  // namespace wire
-using NonInlineStructTestStruct =
-    ::llcpp::fidl::test::encapsulatedstructs::wire::NonInlineStructTestStruct;
-namespace wire {
+
 struct Int8Int32;
-}  // namespace wire
-using Int8Int32 = ::llcpp::fidl::test::encapsulatedstructs::wire::Int8Int32;
-namespace wire {
+
 struct Int16Int8;
-}  // namespace wire
-using Int16Int8 = ::llcpp::fidl::test::encapsulatedstructs::wire::Int16Int8;
-namespace wire {
+
 struct ArrayInt16Int8;
-}  // namespace wire
-using ArrayInt16Int8 =
-    ::llcpp::fidl::test::encapsulatedstructs::wire::ArrayInt16Int8;
-namespace wire {
+
 struct StructPaddingTestStruct;
-}  // namespace wire
-using StructPaddingTestStruct =
-    ::llcpp::fidl::test::encapsulatedstructs::wire::StructPaddingTestStruct;
-namespace wire {
+
 struct TopLevelStruct;
-}  // namespace wire
-using TopLevelStruct =
-    ::llcpp::fidl::test::encapsulatedstructs::wire::TopLevelStruct;
-namespace wire {
 
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t

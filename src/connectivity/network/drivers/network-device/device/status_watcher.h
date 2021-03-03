@@ -32,7 +32,7 @@ class FidlStatus {
         .set_mtu(allocator_, status.mtu);
   }
 
-  netdev::Status&& Take() { return std::move(status_); }
+  netdev::wire::Status&& Take() { return std::move(status_); }
 
  private:
   fidl::FidlAllocator<128> allocator_;

@@ -134,14 +134,9 @@ enum class obj_type : uint32_t {
 
   MSI_INTERRUPT = 33u,
 };
-}  // namespace wire
-using obj_type = ::llcpp::fidl::test::handles::wire::obj_type;
 
-namespace wire {
 struct Handles;
 }  // namespace wire
-using Handles = ::llcpp::fidl::test::handles::wire::Handles;
-
 class SomeProtocol;
 namespace wire {
 

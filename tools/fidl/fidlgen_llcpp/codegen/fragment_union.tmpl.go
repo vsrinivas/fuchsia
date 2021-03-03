@@ -8,8 +8,10 @@ const fragmentUnionTmpl = `
 {{- define "UnionForwardDeclaration" }}
 {{ EnsureNamespace . }}
 class {{ .Name }};
+{{- if .WireAlias }}
 {{- EnsureNamespace .WireAlias }}
 using {{ .WireAlias.Name }} = {{ . }};
+{{- end }}
 {{- end }}
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia

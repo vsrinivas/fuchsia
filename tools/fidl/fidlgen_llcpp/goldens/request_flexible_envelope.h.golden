@@ -45,14 +45,9 @@ namespace test {
 namespace requestflexibleenvelope {
 namespace wire {
 class StrictFoo;
-}  // namespace wire
-using StrictFoo = ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo;
-namespace wire {
+
 class FlexibleFoo;
 }  // namespace wire
-using FlexibleFoo =
-    ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo;
-
 class Protocol;
 namespace wire {
 

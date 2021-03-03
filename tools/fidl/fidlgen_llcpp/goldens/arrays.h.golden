@@ -44,25 +44,16 @@ namespace test {
 namespace arrays {
 namespace wire {
 class UnionSmallArray;
-}  // namespace wire
-using UnionSmallArray = ::llcpp::fidl::test::arrays::wire::UnionSmallArray;
-namespace wire {
+
 class UnionLargeArray;
-}  // namespace wire
-using UnionLargeArray = ::llcpp::fidl::test::arrays::wire::UnionLargeArray;
-namespace wire {
+
 class TableSmallArray;
 
 class TableLargeArray;
 
 struct StructSmallArray;
-}  // namespace wire
-using StructSmallArray = ::llcpp::fidl::test::arrays::wire::StructSmallArray;
-namespace wire {
+
 struct StructLargeArray;
-}  // namespace wire
-using StructLargeArray = ::llcpp::fidl::test::arrays::wire::StructLargeArray;
-namespace wire {
 
 extern "C" const fidl_type_t fidl_test_arrays_UnionSmallArrayTable;
 
@@ -637,9 +628,6 @@ class TableSmallArray::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   TableSmallArray::Frame frame_;
 };
-}  // namespace wire
-using TableSmallArray = ::llcpp::fidl::test::arrays::wire::TableSmallArray;
-namespace wire {
 
 extern "C" const fidl_type_t fidl_test_arrays_TableLargeArrayTable;
 
@@ -1003,9 +991,6 @@ class TableLargeArray::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   TableLargeArray::Frame frame_;
 };
-}  // namespace wire
-using TableLargeArray = ::llcpp::fidl::test::arrays::wire::TableLargeArray;
-namespace wire {
 
 extern "C" const fidl_type_t fidl_test_arrays_StructSmallArrayTable;
 

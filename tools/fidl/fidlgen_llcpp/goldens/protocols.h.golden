@@ -53,35 +53,17 @@ enum class obj_type : uint32_t {
 
   SOCKET = 14u,
 };
-}  // namespace wire
-using obj_type = ::llcpp::fidl::test::protocols::wire::obj_type;
 
-namespace wire {
 struct WithErrorSyntax_ResponseAsStruct_Response;
-}  // namespace wire
-using WithErrorSyntax_ResponseAsStruct_Response = ::llcpp::fidl::test::
-    protocols::wire::WithErrorSyntax_ResponseAsStruct_Response;
-namespace wire {
+
 class WithErrorSyntax_ResponseAsStruct_Result;
-}  // namespace wire
-using WithErrorSyntax_ResponseAsStruct_Result = ::llcpp::fidl::test::protocols::
-    wire::WithErrorSyntax_ResponseAsStruct_Result;
-namespace wire {
+
 struct WithErrorSyntax_ErrorAsPrimitive_Response;
-}  // namespace wire
-using WithErrorSyntax_ErrorAsPrimitive_Response = ::llcpp::fidl::test::
-    protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Response;
-namespace wire {
+
 class WithErrorSyntax_ErrorAsPrimitive_Result;
-}  // namespace wire
-using WithErrorSyntax_ErrorAsPrimitive_Result = ::llcpp::fidl::test::protocols::
-    wire::WithErrorSyntax_ErrorAsPrimitive_Result;
-namespace wire {
+
 struct WithErrorSyntax_ErrorAsEnum_Response;
 }  // namespace wire
-using WithErrorSyntax_ErrorAsEnum_Response =
-    ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Response;
-
 class Transitional;
 
 class ChannelProtocol;
@@ -95,15 +77,9 @@ enum class ErrorEnun : uint32_t {
 
   ERR_BAR = 2u,
 };
-}  // namespace wire
-using ErrorEnun = ::llcpp::fidl::test::protocols::wire::ErrorEnun;
 
-namespace wire {
 class WithErrorSyntax_ErrorAsEnum_Result;
 }  // namespace wire
-using WithErrorSyntax_ErrorAsEnum_Result =
-    ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result;
-
 class WithErrorSyntax;
 namespace wire {
 

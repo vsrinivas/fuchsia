@@ -146,31 +146,17 @@ constexpr inline void BitsType::operator^=(
     const ::llcpp::fidl::test::bitsconstants::wire::BitsType& other) {
   this->value_ ^= other.value_;
 }
-}  // namespace wire
-using BitsType = ::llcpp::fidl::test::bitsconstants::wire::BitsType;
-
-namespace wire {
 
 constexpr ::llcpp::fidl::test::bitsconstants::wire::BitsType Const3 =
     static_cast<::llcpp::fidl::test::bitsconstants::wire::BitsType>(131);
-}  // namespace wire
-constexpr ::llcpp::fidl::test::bitsconstants::wire::BitsType Const3 =
-    static_cast<::llcpp::fidl::test::bitsconstants::wire::BitsType>(131);
-namespace wire {
 
 constexpr ::llcpp::fidl::test::bitsconstants::wire::BitsType Const2 =
     static_cast<::llcpp::fidl::test::bitsconstants::wire::BitsType>(129);
-}  // namespace wire
-constexpr ::llcpp::fidl::test::bitsconstants::wire::BitsType Const2 =
-    static_cast<::llcpp::fidl::test::bitsconstants::wire::BitsType>(129);
-namespace wire {
 
 constexpr ::llcpp::fidl::test::bitsconstants::wire::BitsType Const1 =
     ::llcpp::fidl::test::bitsconstants::wire::BitsType::A;
-}  // namespace wire
-constexpr ::llcpp::fidl::test::bitsconstants::wire::BitsType Const1 =
-    ::llcpp::fidl::test::bitsconstants::wire::BitsType::A;
 
+}  // namespace wire
 }  // namespace bitsconstants
 }  // namespace test
 }  // namespace fidl

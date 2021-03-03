@@ -41,36 +41,36 @@ class GpioLight : public GpioLightType,
   void SetBrightnessValue(uint32_t index, double value,
                           SetBrightnessValueCompleter::Sync& completer);
   void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync& completer);
-  void SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb value,
+  void SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::wire::Rgb value,
                    SetRgbValueCompleter::Sync& completer);
 
   void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync& completer) {
-    completer.ReplyError(llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
+    completer.ReplyError(llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
   }
   void GetGroupCurrentSimpleValue(uint32_t group_id,
                                   GetGroupCurrentSimpleValueCompleter::Sync& completer) {
-    completer.ReplyError(llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
+    completer.ReplyError(llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
   }
   void SetGroupSimpleValue(uint32_t group_id, ::fidl::VectorView<bool> values,
                            SetGroupSimpleValueCompleter::Sync& completer) {
-    completer.ReplyError(llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
+    completer.ReplyError(llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
   }
   void GetGroupCurrentBrightnessValue(uint32_t group_id,
                                       GetGroupCurrentBrightnessValueCompleter::Sync& completer) {
-    completer.ReplyError(llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
+    completer.ReplyError(llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
   }
   void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
                                SetGroupBrightnessValueCompleter::Sync& completer) {
-    completer.ReplyError(llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
+    completer.ReplyError(llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
   }
   void GetGroupCurrentRgbValue(uint32_t group_id,
                                GetGroupCurrentRgbValueCompleter::Sync& completer) {
-    completer.ReplyError(llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
+    completer.ReplyError(llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
   }
   void SetGroupRgbValue(uint32_t group_id,
-                        ::fidl::VectorView<llcpp::fuchsia::hardware::light::Rgb> values,
+                        ::fidl::VectorView<llcpp::fuchsia::hardware::light::wire::Rgb> values,
                         SetGroupRgbValueCompleter::Sync& completer) {
-    completer.ReplyError(llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
+    completer.ReplyError(llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
   }
 
  private:

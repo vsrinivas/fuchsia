@@ -44,9 +44,6 @@ namespace test {
 namespace bindingsdenylist {
 namespace wire {
 class OnlyLlcpp;
-}  // namespace wire
-using OnlyLlcpp = ::llcpp::fidl::test::bindingsdenylist::wire::OnlyLlcpp;
-namespace wire {
 
 extern "C" const fidl_type_t fidl_test_bindingsdenylist_OnlyLlcppTable;
 
@@ -152,9 +149,8 @@ class OnlyLlcpp {
 };
 
 constexpr uint32_t AllBindings = 0u;
-}  // namespace wire
-constexpr uint32_t AllBindings = 0u;
 
+}  // namespace wire
 }  // namespace bindingsdenylist
 }  // namespace test
 }  // namespace fidl

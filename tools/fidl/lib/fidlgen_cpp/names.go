@@ -114,15 +114,6 @@ func (d DeclVariant) AppendNamespace(part string) DeclVariant {
 	}
 }
 
-// DropLastNamespaceComponent returns a new DeclVariant with the same name but with the final
-// component of the namespace removed.
-func (d DeclVariant) DropLastNamespaceComponent() DeclVariant {
-	return DeclVariant{
-		name:      d.name,
-		namespace: d.namespace.DropLastComponent(),
-	}
-}
-
 type DeclName struct {
 	Natural DeclVariant
 	Wire    DeclVariant

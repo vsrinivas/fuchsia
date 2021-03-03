@@ -44,50 +44,22 @@ namespace test {
 namespace unionsandwich {
 namespace wire {
 class UnionSize8Alignment4;
-}  // namespace wire
-using UnionSize8Alignment4 =
-    ::llcpp::fidl::test::unionsandwich::wire::UnionSize8Alignment4;
-namespace wire {
+
 struct SandwichUnionSize8Alignment4;
-}  // namespace wire
-using SandwichUnionSize8Alignment4 =
-    ::llcpp::fidl::test::unionsandwich::wire::SandwichUnionSize8Alignment4;
-namespace wire {
+
 class UnionSize36Alignment4;
-}  // namespace wire
-using UnionSize36Alignment4 =
-    ::llcpp::fidl::test::unionsandwich::wire::UnionSize36Alignment4;
-namespace wire {
+
 struct SandwichUnionSize36Alignment4;
-}  // namespace wire
-using SandwichUnionSize36Alignment4 =
-    ::llcpp::fidl::test::unionsandwich::wire::SandwichUnionSize36Alignment4;
-namespace wire {
+
 class UnionSize12Alignment4;
-}  // namespace wire
-using UnionSize12Alignment4 =
-    ::llcpp::fidl::test::unionsandwich::wire::UnionSize12Alignment4;
-namespace wire {
+
 struct SandwichUnionSize12Alignment4;
-}  // namespace wire
-using SandwichUnionSize12Alignment4 =
-    ::llcpp::fidl::test::unionsandwich::wire::SandwichUnionSize12Alignment4;
-namespace wire {
+
 struct StructSize16Alignment8;
-}  // namespace wire
-using StructSize16Alignment8 =
-    ::llcpp::fidl::test::unionsandwich::wire::StructSize16Alignment8;
-namespace wire {
+
 class UnionSize24Alignment8;
-}  // namespace wire
-using UnionSize24Alignment8 =
-    ::llcpp::fidl::test::unionsandwich::wire::UnionSize24Alignment8;
-namespace wire {
+
 struct SandwichUnionSize24Alignment8;
-}  // namespace wire
-using SandwichUnionSize24Alignment8 =
-    ::llcpp::fidl::test::unionsandwich::wire::SandwichUnionSize24Alignment8;
-namespace wire {
 
 extern "C" const fidl_type_t fidl_test_unionsandwich_UnionSize8Alignment4Table;
 

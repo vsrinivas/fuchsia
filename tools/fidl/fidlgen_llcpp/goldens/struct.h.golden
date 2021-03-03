@@ -44,13 +44,8 @@ namespace test {
 namespace struct_ {
 namespace wire {
 struct Simple;
-}  // namespace wire
-using Simple = ::llcpp::fidl::test::struct_::wire::Simple;
-namespace wire {
+
 struct BasicStruct;
-}  // namespace wire
-using BasicStruct = ::llcpp::fidl::test::struct_::wire::BasicStruct;
-namespace wire {
 
 extern "C" const fidl_type_t fidl_test_struct_SimpleTable;
 
