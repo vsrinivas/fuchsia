@@ -126,13 +126,6 @@ extern Cmdline gCmdline;
 namespace kernel_option {
 static constexpr const char kBufferchainReservePages[] = "kernel.bufferchain.reserve-pages";
 static constexpr const char kBypassDebuglog[] = "kernel.bypass-debuglog";
-static constexpr const char kCprngReseedRequireHwRng[] = "kernel.cprng-reseed-require.hw-rng";
-static constexpr const char kCprngReseedRequireJitterEntropy[] =
-    "kernel.cprng-reseed-require.jitterentropy";
-static constexpr const char kCprngSeedRequireCmdline[] = "kernel.cprng-seed-require.cmdline";
-static constexpr const char kCprngSeedRequireHwRng[] = "kernel.cprng-seed-require.hw-rng";
-static constexpr const char kCprngSeedRequireJitterEntropy[] =
-    "kernel.cprng-seed-require.jitterentropy";
 static constexpr const char kDebugUartPoll[] = "kernel.debug_uart_poll";
 static constexpr const char kEnableDebuggingSyscalls[] = "kernel.enable-debugging-syscalls";
 static constexpr const char kEnableSerialSysaclls[] = "kernel.enable-serial-syscalls";

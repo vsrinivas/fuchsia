@@ -24,6 +24,27 @@ the randomization. Higher entropy results in a sparser address space and uses
 more memory for page tables. Valid values range from 0-36.
 )""")
 
+DEFINE_OPTION("kernel.cprng-reseed-require.hw-rng", bool, cprng_reseed_require_hw_rng, {false}, R"""(
+When enabled and if HW RNG fails at reseeding, CPRNG panics.
+)""")
+
+DEFINE_OPTION("kernel.cprng-reseed-require.jitterentropy", bool, cprng_reseed_require_jitterentropy, {false}, R"""(
+When enabled and if jitterentropy fails at reseeding, CPRNG panics.
+)""")
+
+DEFINE_OPTION("kernel.cprng-seed-require.hw-rng", bool, cprng_seed_require_hw_rng, {false}, R"""(
+When enabled and if HW RNG fails at initial seeding, CPRNG panics.
+)""")
+
+DEFINE_OPTION("kernel.cprng-seed-require.jitterentropy", bool, cprng_seed_require_jitterentropy, {false}, R"""(
+When enabled and if jitterentrop fails initial seeding, CPRNG panics.
+)""")
+
+DEFINE_OPTION("kernel.cprng-seed-require.cmdline", bool, cprng_seed_require_cmdline, {false}, R"""(
+When enabled and if you do not provide entropy input from the kernel command
+line, CPRNG panics.
+)""")
+
 // RedactedHex parses an arbitrary-length (but bounded like SmallString) string
 // of ASCII hex digits, and then overwrites those digits in the original
 // command line text in the ZBI's physical memory so the entropy_mixin string

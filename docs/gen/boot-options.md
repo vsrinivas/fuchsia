@@ -17,6 +17,32 @@ For address spaces that use ASLR this controls the number of bits of entropy in
 the randomization. Higher entropy results in a sparser address space and uses
 more memory for page tables. Valid values range from 0-36.
 
+### kernel.cprng-reseed-require.hw-rng=\<bool>
+**Default:** `false`
+
+When enabled and if HW RNG fails at reseeding, CPRNG panics.
+
+### kernel.cprng-reseed-require.jitterentropy=\<bool>
+**Default:** `false`
+
+When enabled and if jitterentropy fails at reseeding, CPRNG panics.
+
+### kernel.cprng-seed-require.hw-rng=\<bool>
+**Default:** `false`
+
+When enabled and if HW RNG fails at initial seeding, CPRNG panics.
+
+### kernel.cprng-seed-require.jitterentropy=\<bool>
+**Default:** `false`
+
+When enabled and if jitterentrop fails initial seeding, CPRNG panics.
+
+### kernel.cprng-seed-require.cmdline=\<bool>
+**Default:** `false`
+
+When enabled and if you do not provide entropy input from the kernel command
+line, CPRNG panics.
+
 ### kernel.entropy-mixin=\<hexadecimal>
 
 Provides entropy to be mixed into the kernel's CPRNG.  The value must be a

@@ -7,7 +7,6 @@
 #include <assert.h>
 #include <ctype.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/cmdline.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
 #include <lib/crypto/entropy/jitterentropy_collector.h>
@@ -156,12 +155,12 @@ static void EarlyBootSeed(uint level) {
   entropy::Collector* collector = nullptr;
   if (entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
     successful++;
-  } else if (gCmdline.GetBool(kernel_option::kCprngSeedRequireHwRng, false)) {
+  } else if (gBootOptions->cprng_seed_require_hw_rng) {
     panic("Failed to seed PRNG from required entropy source: hw-rng\n");
   }
   if (entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
     successful++;
-  } else if (gCmdline.GetBool(kernel_option::kCprngSeedRequireJitterEntropy, false)) {
+  } else if (gBootOptions->cprng_seed_require_jitterentropy) {
     panic("Failed to seed PRNG from required entropy source: jitterentropy\n");
   }
 
@@ -170,7 +169,7 @@ static void EarlyBootSeed(uint level) {
 
   if (IntegrateCmdlineEntropy()) {
     successful++;
-  } else if (zbi_items == 0 && gCmdline.GetBool(kernel_option::kCprngSeedRequireCmdline, false)) {
+  } else if (zbi_items == 0 && gBootOptions->cprng_seed_require_cmdline) {
     panic("Failed to seed PRNG from required entropy source: cmdline\n");
   }
 
@@ -204,12 +203,12 @@ static int ReseedPRNG(void* arg) {
     // Reseed using HW RNG and jitterentropy;
     if (entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
       successful++;
-    } else if (gCmdline.GetBool(kernel_option::kCprngReseedRequireHwRng, false)) {
+    } else if (gBootOptions->cprng_reseed_require_hw_rng) {
       panic("Failed to reseed PRNG from required entropy source: hw-rng\n");
     }
     if (entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
       successful++;
-    } else if (gCmdline.GetBool(kernel_option::kCprngReseedRequireJitterEntropy, false)) {
+    } else if (gBootOptions->cprng_reseed_require_jitterentropy) {
       panic("Failed to reseed PRNG from required entropy source: jitterentropy\n");
     }
 
