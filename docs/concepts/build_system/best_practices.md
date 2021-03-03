@@ -175,6 +175,8 @@ template("coffee") {
 }
 
 # //src/drinks/tests/BUILD.gni
+import("//src/drinks/coffee.gni")
+
 coffee("coffee_for_test") {
   ...
 }
