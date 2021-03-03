@@ -1,0 +1,20 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/brightness_manager"
+    },
+    "sandbox": {
+        "dev": [
+            "class/backlight",
+            "class/input"
+        ],
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.ui.brightness.Control"
+        ]
+    }
+}

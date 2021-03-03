@@ -15,7 +15,7 @@ use fidl_fuchsia_ui_brightness::{
     ControlWatchAutoBrightnessResponder, ControlWatchCurrentBrightnessResponder,
 };
 use fuchsia_async::{self as fasync, DurationExt};
-use fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn};
+use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use fuchsia_zircon::sys::ZX_ERR_NOT_SUPPORTED;
 use fuchsia_zircon::{Duration, DurationNum};
 use futures::channel::mpsc::UnboundedSender;
@@ -165,7 +165,7 @@ impl Control {
         let default_table_points = &*BRIGHTNESS_TABLE.lock().await.points;
         let brightness_table = read_brightness_table_file(BRIGHTNESS_TABLE_FILE_PATH)
             .unwrap_or_else(|e| {
-                fx_log_warn!("Error occurred when trying to read existing settings: {}, using default table instead.", e);
+                fx_log_err!("Error occurred when trying to read existing settings: {}, using default table instead.", e);
                 BrightnessTable { points: default_table_points.to_vec() }
             });
 
@@ -581,7 +581,7 @@ async fn get_current_brightness(backlight: Arc<Mutex<dyn BacklightControl>>) -> 
         Ok(brightness) => brightness as f32,
         Err(e) => {
             if *GET_BRIGHTNESS_FAILED_FIRST.lock().await {
-                fx_log_warn!("Failed to get backlight: {}. assuming 1.0", e);
+                fx_log_err!("Failed to get backlight: {}. assuming 1.0", e);
                 *GET_BRIGHTNESS_FAILED_FIRST.lock().await = false;
             }
             *LAST_SET_BRIGHTNESS.lock().await
