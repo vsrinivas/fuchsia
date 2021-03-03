@@ -182,7 +182,7 @@ impl InputControllerInner {
         );
 
         // Store the newly set value.
-        write(&self.client, input_info, false).await.into_handler_result()
+        write(&self.client, input_info, true).await.into_handler_result()
     }
 
     /// Sets the hardware mic state to `muted`.
@@ -214,7 +214,7 @@ impl InputControllerInner {
             DeviceStateSource::SOFTWARE,
             if disabled { DeviceState::MUTED } else { DeviceState::AVAILABLE },
         );
-        write(&self.client, input_info, false).await.into_handler_result()
+        write(&self.client, input_info, true).await.into_handler_result()
     }
 
     // A helper for setting the hw state for a |device_type| given the
@@ -264,7 +264,7 @@ impl InputControllerInner {
         );
 
         // Store the newly set value.
-        write(&self.client, input_info, false).await.into_handler_result()
+        write(&self.client, input_info, true).await.into_handler_result()
     }
 
     /// Sets state for the given input devices.
@@ -299,7 +299,7 @@ impl InputControllerInner {
         }
 
         // Store the newly set value.
-        write(&self.client, input_info, false).await.into_handler_result()
+        write(&self.client, input_info, true).await.into_handler_result()
     }
 
     /// Pulls the current software state of the camera from the device state.
