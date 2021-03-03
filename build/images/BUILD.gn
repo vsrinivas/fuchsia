@@ -1622,54 +1622,54 @@ action("flash_script") {
   parts = [
     [
       zircon_a_partition,
-      rebase_path(image),
+      rebase_path(image, root_build_dir),
     ],
     [
       zircon_b_partition,
-      rebase_path(image),
+      rebase_path(image, root_build_dir),
     ],
     [
       zircon_r_partition,
-      rebase_path(recovery_image),
+      rebase_path(recovery_image, root_build_dir),
     ],
     [
       vbmeta_a_partition,
-      rebase_path(vbmeta),
+      rebase_path(vbmeta, root_build_dir),
     ],
     [
       vbmeta_b_partition,
-      rebase_path(vbmeta),
+      rebase_path(vbmeta, root_build_dir),
     ],
     [
       vbmeta_r_partition,
-      rebase_path(recovery_vbmeta),
+      rebase_path(recovery_vbmeta, root_build_dir),
     ],
   ]
 
   recovery_parts = [
     [
       zircon_a_partition,
-      rebase_path(recovery_image),
+      rebase_path(recovery_image, root_build_dir),
     ],
     [
       zircon_b_partition,
-      rebase_path(recovery_image),
+      rebase_path(recovery_image, root_build_dir),
     ],
     [
       zircon_r_partition,
-      rebase_path(recovery_image),
+      rebase_path(recovery_image, root_build_dir),
     ],
     [
       vbmeta_a_partition,
-      rebase_path(recovery_vbmeta),
+      rebase_path(recovery_vbmeta, root_build_dir),
     ],
     [
       vbmeta_b_partition,
-      rebase_path(recovery_vbmeta),
+      rebase_path(recovery_vbmeta, root_build_dir),
     ],
     [
       vbmeta_r_partition,
-      rebase_path(recovery_vbmeta),
+      rebase_path(recovery_vbmeta, root_build_dir),
     ],
   ]
 
@@ -1705,7 +1705,7 @@ action("flash_script") {
     deps += [ ":${info.name}" ]
     bootloader_parts += [ [
           info.partition,
-          rebase_path("$root_out_dir/${info.out_path}"),
+          rebase_path("$root_out_dir/${info.out_path}", root_build_dir),
         ] ]
   }
 
@@ -1718,7 +1718,7 @@ action("flash_script") {
     deps += [ ":fvm.fastboot.blk" ]
     parts += [ [
           fvm_partition,
-          rebase_path(image_path[0]),
+          rebase_path(image_path[0], root_build_dir),
         ] ]
   }
 
