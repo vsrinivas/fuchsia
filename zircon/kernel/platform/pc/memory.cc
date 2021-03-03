@@ -108,7 +108,7 @@ static zx_status_t mem_arena_init(ktl::span<zbi_mem_range_t> ranges) {
     }
 
     mark_mmio_region_to_reserve(base, static_cast<size_t>(size));
-    zx_status_t status;
+    zx_status_t status = ZX_OK;
     if (have_limit) {
       status = memory_limit_add_range(base, size, base_arena);
     }

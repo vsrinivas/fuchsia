@@ -127,7 +127,7 @@ class InterruptManager {
     } else if (!x86_vector && handler) {
       /* If the x86 vector is invalid, and we are registering a handler,
        * attempt to get a new x86 vector from the pool. */
-      uint range_start;
+      uint range_start = 0;
 
       /* Right now, there is not much we can do if the allocation fails.  In
        * debug builds, we ASSERT that everything went well.  In release

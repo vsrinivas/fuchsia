@@ -111,6 +111,13 @@ if (current_toolchain == default_toolchain) {
       # some product configurations may decide to change it).
       remove_common_configs += [ "//build/config/zircon:default_assert_level" ]
       configs += [ "//build/config/zircon:assert_level_$kernel_debug_level" ]
+
+      # As a special case, never build the kernel with -O0, since it will
+      # crash immediately on boot. Use -Og instead, which allows debugging the
+      # kernel through QEMU. TODO(fxbug.dev/71321): Find a better way to deal with this.
+      if (optimize == "none") {
+        optimize_override = "debug"
+      }
     }
   }
 }

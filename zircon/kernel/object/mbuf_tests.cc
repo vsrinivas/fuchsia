@@ -232,7 +232,7 @@ static bool stream_write_too_much() {
   // Read it all back out and see we get back the same number of bytes we wrote.
   size_t total_read = 0;
   size_t bytes_read = 0;
-  zx_status_t status;
+  zx_status_t status = ZX_OK;
   while (!chain.is_empty() &&
          ((status = chain.Read(mem_out, kWriteLen, false, &bytes_read)) == ZX_OK) &&
          bytes_read > 0) {
@@ -468,7 +468,7 @@ static bool datagram_write_too_much() {
   EXPECT_EQ(kWriteLen * num_datagrams_written, chain.size());
   // Read it all back out and see that there's none left over.
   int num_datagrams_read = 0;
-  zx_status_t status;
+  zx_status_t status = ZX_OK;
   size_t actual;
   while (!chain.is_empty() && ((status = chain.Read(mem_out, kWriteLen, true, &actual)) == ZX_OK) &&
          actual > 0) {
