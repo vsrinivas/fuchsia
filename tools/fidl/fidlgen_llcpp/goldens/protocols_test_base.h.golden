@@ -3,20 +3,17 @@
 #pragma once
 
 #include <fidl/test/protocols/llcpp/fidl.h>
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace protocols {
+namespace fidl_test_protocols {
 namespace testing {
 
 class Transitional_TestBase
-    : public ::llcpp::fidl::test::protocols::Transitional::Interface {
+    : public ::fidl_test_protocols::Transitional::Interface {
  public:
   virtual ~Transitional_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::llcpp::fidl::test::protocols::Transitional::Interface;
+  using Interface = ::fidl_test_protocols::Transitional::Interface;
   virtual void Request(int64_t x,
                        Interface::RequestCompleter::Sync& completer) override {
     NotImplemented_("Request", completer);
@@ -28,13 +25,13 @@ class Transitional_TestBase
 };
 
 class ChannelProtocol_TestBase
-    : public ::llcpp::fidl::test::protocols::ChannelProtocol::Interface {
+    : public ::fidl_test_protocols::ChannelProtocol::Interface {
  public:
   virtual ~ChannelProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::llcpp::fidl::test::protocols::ChannelProtocol::Interface;
+  using Interface = ::fidl_test_protocols::ChannelProtocol::Interface;
   virtual void MethodA(int64_t a, int64_t b,
                        Interface::MethodACompleter::Sync& completer) override {
     NotImplemented_("MethodA", completer);
@@ -56,15 +53,14 @@ class ChannelProtocol_TestBase
 };
 
 class WithAndWithoutRequestResponse_TestBase
-    : public ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
-          Interface {
+    : public ::fidl_test_protocols::WithAndWithoutRequestResponse::Interface {
  public:
   virtual ~WithAndWithoutRequestResponse_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
   using Interface =
-      ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::Interface;
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::Interface;
   virtual void NoRequestNoResponse(
       Interface::NoRequestNoResponseCompleter::Sync& completer) override {
     NotImplemented_("NoRequestNoResponse", completer);
@@ -95,13 +91,13 @@ class WithAndWithoutRequestResponse_TestBase
 };
 
 class WithErrorSyntax_TestBase
-    : public ::llcpp::fidl::test::protocols::WithErrorSyntax::Interface {
+    : public ::fidl_test_protocols::WithErrorSyntax::Interface {
  public:
   virtual ~WithErrorSyntax_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::llcpp::fidl::test::protocols::WithErrorSyntax::Interface;
+  using Interface = ::fidl_test_protocols::WithErrorSyntax::Interface;
   virtual void ResponseAsStruct(
       Interface::ResponseAsStructCompleter::Sync& completer) override {
     NotImplemented_("ResponseAsStruct", completer);
@@ -116,7 +112,4 @@ class WithErrorSyntax_TestBase
   }
 };
 }  // namespace testing
-}  // namespace protocols
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_protocols

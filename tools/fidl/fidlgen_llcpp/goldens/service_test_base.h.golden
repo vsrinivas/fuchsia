@@ -3,20 +3,17 @@
 #pragma once
 
 #include <fidl/test/service/llcpp/fidl.h>
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace service {
+namespace fidl_test_service {
 namespace testing {
 
 class SecondProtocol_TestBase
-    : public ::llcpp::fidl::test::service::SecondProtocol::Interface {
+    : public ::fidl_test_service::SecondProtocol::Interface {
  public:
   virtual ~SecondProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::llcpp::fidl::test::service::SecondProtocol::Interface;
+  using Interface = ::fidl_test_service::SecondProtocol::Interface;
   virtual void MethodOnSecond(
       Interface::MethodOnSecondCompleter::Sync& completer) override {
     NotImplemented_("MethodOnSecond", completer);
@@ -24,20 +21,17 @@ class SecondProtocol_TestBase
 };
 
 class FirstProtocol_TestBase
-    : public ::llcpp::fidl::test::service::FirstProtocol::Interface {
+    : public ::fidl_test_service::FirstProtocol::Interface {
  public:
   virtual ~FirstProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::llcpp::fidl::test::service::FirstProtocol::Interface;
+  using Interface = ::fidl_test_service::FirstProtocol::Interface;
   virtual void MethodOnFirst(
       Interface::MethodOnFirstCompleter::Sync& completer) override {
     NotImplemented_("MethodOnFirst", completer);
   }
 };
 }  // namespace testing
-}  // namespace service
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_service

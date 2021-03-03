@@ -4,8 +4,7 @@
 
 #include <memory>
 
-void ::llcpp::fidl::test::arrays::wire::UnionSmallArray::
-    SizeAndOffsetAssertionHelper() {
+void ::fidl_test_arrays::wire::UnionSmallArray::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionSmallArray) == sizeof(fidl_xunion_t));
   static_assert(offsetof(UnionSmallArray, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
@@ -13,8 +12,7 @@ void ::llcpp::fidl::test::arrays::wire::UnionSmallArray::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::arrays::wire::UnionLargeArray::
-    SizeAndOffsetAssertionHelper() {
+void ::fidl_test_arrays::wire::UnionLargeArray::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionLargeArray) == sizeof(fidl_xunion_t));
   static_assert(offsetof(UnionLargeArray, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));

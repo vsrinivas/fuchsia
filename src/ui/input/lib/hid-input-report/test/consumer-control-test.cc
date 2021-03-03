@@ -14,8 +14,6 @@
 #include "src/ui/input/lib/hid-input-report/device.h"
 #include "src/ui/input/lib/hid-input-report/test/test.h"
 
-namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
-
 TEST(ConsumerControlTest, HidButtonsTest) {
   const uint8_t* descriptor_data;
   size_t descriptor_size = get_buttons_report_desc(&descriptor_data);

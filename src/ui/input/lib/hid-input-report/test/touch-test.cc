@@ -13,8 +13,6 @@
 #include "src/ui/input/lib/hid-input-report/device.h"
 #include "src/ui/input/lib/hid-input-report/test/test.h"
 
-namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
-
 // Each test parses the report descriptor for the touchscreen and then sends one
 // report to ensure that it has been parsed correctly.
 

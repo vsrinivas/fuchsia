@@ -39,10 +39,7 @@
 #include <middle/llcpp/fidl.h>
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace transitivedependencies {
+namespace fidl_test_transitivedependencies {
 namespace wire {
 struct Baz;
 
@@ -56,7 +53,7 @@ struct Baz {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
-  ::llcpp::middle::wire::Bar g = {};
+  ::middle::wire::Bar g = {};
 
  private:
   class UnownedEncodedByteMessage final {
@@ -213,31 +210,30 @@ struct Baz {
 };
 
 }  // namespace wire
-}  // namespace transitivedependencies
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_transitivedependencies
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::transitivedependencies::wire::Baz>
+struct IsFidlType<::fidl_test_transitivedependencies::wire::Baz>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::transitivedependencies::wire::Baz>
+struct IsStruct<::fidl_test_transitivedependencies::wire::Baz>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::transitivedependencies::wire::Baz>);
-static_assert(offsetof(::llcpp::fidl::test::transitivedependencies::wire::Baz,
-                       g) == 0);
 static_assert(
-    sizeof(::llcpp::fidl::test::transitivedependencies::wire::Baz) ==
-    ::llcpp::fidl::test::transitivedependencies::wire::Baz::PrimarySize);
+    std::is_standard_layout_v<::fidl_test_transitivedependencies::wire::Baz>);
+static_assert(offsetof(::fidl_test_transitivedependencies::wire::Baz, g) == 0);
+static_assert(sizeof(::fidl_test_transitivedependencies::wire::Baz) ==
+              ::fidl_test_transitivedependencies::wire::Baz::PrimarySize);
 }  // namespace fidl
+namespace fidl_test_transitivedependencies {
+namespace wire {}  // namespace wire
+}  // namespace fidl_test_transitivedependencies
 namespace llcpp {
 namespace fidl {
 namespace test {
 namespace transitivedependencies {
-namespace wire {}  // namespace wire
+using namespace ::fidl_test_transitivedependencies;
+
 }  // namespace transitivedependencies
 }  // namespace test
 }  // namespace fidl

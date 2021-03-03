@@ -4,15 +4,14 @@
 
 #include <memory>
 
-void ::llcpp::fidl::test::union_::wire::Union::SizeAndOffsetAssertionHelper() {
+void ::fidl_test_union::wire::Union::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(Union) == sizeof(fidl_xunion_t));
   static_assert(offsetof(Union, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(Union, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::wire::StrictUnion::
-    SizeAndOffsetAssertionHelper() {
+void ::fidl_test_union::wire::StrictUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictUnion, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
@@ -20,7 +19,7 @@ void ::llcpp::fidl::test::union_::wire::StrictUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::wire::StrictSimpleXUnion::
+void ::fidl_test_union::wire::StrictSimpleXUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictSimpleXUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictSimpleXUnion, ordinal_) ==
@@ -29,15 +28,14 @@ void ::llcpp::fidl::test::union_::wire::StrictSimpleXUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::wire::StrictFoo::
-    SizeAndOffsetAssertionHelper() {
+void ::fidl_test_union::wire::StrictFoo::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictFoo) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictFoo, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(StrictFoo, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion::
+void ::fidl_test_union::wire::StrictBoundedXUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictBoundedXUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictBoundedXUnion, ordinal_) ==
@@ -46,7 +44,7 @@ void ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::wire::ReverseOrdinalUnion::
+void ::fidl_test_union::wire::ReverseOrdinalUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ReverseOrdinalUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ReverseOrdinalUnion, ordinal_) ==
@@ -55,7 +53,7 @@ void ::llcpp::fidl::test::union_::wire::ReverseOrdinalUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::wire::StrictPizzaOrPasta::
+void ::fidl_test_union::wire::StrictPizzaOrPasta::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictPizzaOrPasta) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictPizzaOrPasta, ordinal_) ==
@@ -64,16 +62,14 @@ void ::llcpp::fidl::test::union_::wire::StrictPizzaOrPasta::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::wire::PizzaOrPasta::
-    SizeAndOffsetAssertionHelper() {
+void ::fidl_test_union::wire::PizzaOrPasta::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(PizzaOrPasta) == sizeof(fidl_xunion_t));
   static_assert(offsetof(PizzaOrPasta, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(PizzaOrPasta, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::llcpp::fidl::test::union_::wire::FlexiblePizzaOrPasta::which() const
-    -> Tag {
+auto ::fidl_test_union::wire::FlexiblePizzaOrPasta::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kPizza:
@@ -84,7 +80,7 @@ auto ::llcpp::fidl::test::union_::wire::FlexiblePizzaOrPasta::which() const
   }
 }
 
-void ::llcpp::fidl::test::union_::wire::FlexiblePizzaOrPasta::
+void ::fidl_test_union::wire::FlexiblePizzaOrPasta::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(FlexiblePizzaOrPasta) == sizeof(fidl_xunion_t));
   static_assert(offsetof(FlexiblePizzaOrPasta, ordinal_) ==
@@ -93,7 +89,7 @@ void ::llcpp::fidl::test::union_::wire::FlexiblePizzaOrPasta::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::wire::ExplicitPizzaOrPasta::
+void ::fidl_test_union::wire::ExplicitPizzaOrPasta::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExplicitPizzaOrPasta) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExplicitPizzaOrPasta, ordinal_) ==
@@ -101,7 +97,7 @@ void ::llcpp::fidl::test::union_::wire::ExplicitPizzaOrPasta::
   static_assert(offsetof(ExplicitPizzaOrPasta, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::llcpp::fidl::test::union_::wire::OlderSimpleUnion::which() const -> Tag {
+auto ::fidl_test_union::wire::OlderSimpleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kI:
@@ -112,8 +108,7 @@ auto ::llcpp::fidl::test::union_::wire::OlderSimpleUnion::which() const -> Tag {
   }
 }
 
-void ::llcpp::fidl::test::union_::wire::OlderSimpleUnion::
-    SizeAndOffsetAssertionHelper() {
+void ::fidl_test_union::wire::OlderSimpleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(OlderSimpleUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(OlderSimpleUnion, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
@@ -121,10 +116,7 @@ void ::llcpp::fidl::test::union_::wire::OlderSimpleUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace union_ {
+namespace fidl_test_union {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t
@@ -148,11 +140,10 @@ extern "C" const fidl_type_t
 
 }  // namespace
 #ifdef __Fuchsia__
-::llcpp::fidl::test::union_::TestProtocol::ResultOf::
+::fidl_test_union::TestProtocol::ResultOf::
     StrictXUnionHenceResponseMayBeStackAllocated::
         StrictXUnionHenceResponseMayBeStackAllocated(
-            ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-                _client) {
+            ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client) {
   ::fidl::internal::EncodedMessageTypes<
       StrictXUnionHenceResponseMayBeStackAllocatedRequest>::OwnedByte
       _request(zx_txid_t(0));
@@ -166,11 +157,10 @@ extern "C" const fidl_type_t
   error_ = _request.error();
 }
 
-::llcpp::fidl::test::union_::TestProtocol::ResultOf::
+::fidl_test_union::TestProtocol::ResultOf::
     StrictXUnionHenceResponseMayBeStackAllocated::
         StrictXUnionHenceResponseMayBeStackAllocated(
-            ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-                _client,
+            ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
             zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<
       StrictXUnionHenceResponseMayBeStackAllocatedRequest>::OwnedByte
@@ -188,11 +178,10 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::union_::TestProtocol::UnownedResultOf::
+::fidl_test_union::TestProtocol::UnownedResultOf::
     StrictXUnionHenceResponseMayBeStackAllocated::
         StrictXUnionHenceResponseMayBeStackAllocated(
-            ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-                _client,
+            ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
             uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ::fidl::internal::EncodedMessageTypes<
@@ -207,11 +196,10 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::union_::TestProtocol::ResultOf::
+::fidl_test_union::TestProtocol::ResultOf::
     FlexibleXUnionHenceResponseMustBeHeapAllocated::
         FlexibleXUnionHenceResponseMustBeHeapAllocated(
-            ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-                _client)
+            ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   ::fidl::internal::EncodedMessageTypes<
@@ -224,11 +212,10 @@ extern "C" const fidl_type_t
   error_ = _request.error();
 }
 
-::llcpp::fidl::test::union_::TestProtocol::ResultOf::
+::fidl_test_union::TestProtocol::ResultOf::
     FlexibleXUnionHenceResponseMustBeHeapAllocated::
         FlexibleXUnionHenceResponseMustBeHeapAllocated(
-            ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-                _client,
+            ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
             zx_time_t _deadline)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
@@ -244,11 +231,10 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::union_::TestProtocol::UnownedResultOf::
+::fidl_test_union::TestProtocol::UnownedResultOf::
     FlexibleXUnionHenceResponseMustBeHeapAllocated::
         FlexibleXUnionHenceResponseMustBeHeapAllocated(
-            ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-                _client,
+            ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
             uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ::fidl::internal::EncodedMessageTypes<
@@ -263,47 +249,47 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::union_::TestProtocol::ResultOf::
+::fidl_test_union::TestProtocol::ResultOf::
     StrictXUnionHenceResponseMayBeStackAllocated
     TestProtocol::ClientImpl::
         StrictXUnionHenceResponseMayBeStackAllocated_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>(
+        ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol>(
             _channel->handle()));
   }
-  return ::llcpp::fidl::test::union_::TestProtocol::ResultOf::
+  return ::fidl_test_union::TestProtocol::ResultOf::
       StrictXUnionHenceResponseMayBeStackAllocated(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::union_::TestProtocol::UnownedResultOf::
+::fidl_test_union::TestProtocol::UnownedResultOf::
     StrictXUnionHenceResponseMayBeStackAllocated
     TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated_Sync(
         ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>(
+        ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol>(
             _channel->handle()),
         _response_buffer.data, _response_buffer.capacity);
   }
-  return ::llcpp::fidl::test::union_::TestProtocol::UnownedResultOf::
+  return ::fidl_test_union::TestProtocol::UnownedResultOf::
       StrictXUnionHenceResponseMayBeStackAllocated(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::union_::TestProtocol::
+::fidl_test_union::TestProtocol::
     StrictXUnionHenceResponseMayBeStackAllocatedResponseContext::
         StrictXUnionHenceResponseMayBeStackAllocatedResponseContext()
     : ::fidl::internal::ResponseContext(
           StrictXUnionHenceResponseMayBeStackAllocatedResponse::Type,
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal) {}
 
-void ::llcpp::fidl::test::union_::TestProtocol::
+void ::fidl_test_union::TestProtocol::
     StrictXUnionHenceResponseMayBeStackAllocatedResponseContext::OnReply(
         uint8_t* reply) {
   OnReply(
@@ -359,41 +345,41 @@ TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated(
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::union_::TestProtocol::ResultOf::
+::fidl_test_union::TestProtocol::ResultOf::
     FlexibleXUnionHenceResponseMustBeHeapAllocated
     TestProtocol::ClientImpl::
         FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>(
+        ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol>(
             _channel->handle()));
   }
-  return ::llcpp::fidl::test::union_::TestProtocol::ResultOf::
+  return ::fidl_test_union::TestProtocol::ResultOf::
       FlexibleXUnionHenceResponseMustBeHeapAllocated(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::union_::TestProtocol::UnownedResultOf::
+::fidl_test_union::TestProtocol::UnownedResultOf::
     FlexibleXUnionHenceResponseMustBeHeapAllocated
     TestProtocol::ClientImpl::
         FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync(
             ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>(
+        ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol>(
             _channel->handle()),
         _response_buffer.data, _response_buffer.capacity);
   }
-  return ::llcpp::fidl::test::union_::TestProtocol::UnownedResultOf::
+  return ::fidl_test_union::TestProtocol::UnownedResultOf::
       FlexibleXUnionHenceResponseMustBeHeapAllocated(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::union_::TestProtocol::
+::fidl_test_union::TestProtocol::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext::
         FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext()
     : ::fidl::internal::ResponseContext(
@@ -401,7 +387,7 @@ TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated(
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal) {
 }
 
-void ::llcpp::fidl::test::union_::TestProtocol::
+void ::fidl_test_union::TestProtocol::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext::OnReply(
         uint8_t* reply) {
   OnReply(
@@ -470,21 +456,19 @@ namespace methods {
 
 void TestProtocolDispatchStrictXUnionHenceResponseMayBeStackAllocated(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  ::llcpp::fidl::test::union_::TestProtocol::Interface::
+  ::fidl_test_union::TestProtocol::Interface::
       StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync completer(
           txn);
-  reinterpret_cast<::llcpp::fidl::test::union_::TestProtocol::Interface*>(
-      interface)
+  reinterpret_cast<::fidl_test_union::TestProtocol::Interface*>(interface)
       ->StrictXUnionHenceResponseMayBeStackAllocated(completer);
 }
 
 void TestProtocolDispatchFlexibleXUnionHenceResponseMustBeHeapAllocated(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  ::llcpp::fidl::test::union_::TestProtocol::Interface::
+  ::fidl_test_union::TestProtocol::Interface::
       FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync completer(
           txn);
-  reinterpret_cast<::llcpp::fidl::test::union_::TestProtocol::Interface*>(
-      interface)
+  reinterpret_cast<::fidl_test_union::TestProtocol::Interface*>(interface)
       ->FlexibleXUnionHenceResponseMustBeHeapAllocated(completer);
 }
 
@@ -494,11 +478,11 @@ namespace entries {
 
 ::fidl::internal::MethodEntry TestProtocol[] = {
     {kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
-     ::llcpp::fidl::test::union_::TestProtocol::
+     ::fidl_test_union::TestProtocol::
          StrictXUnionHenceResponseMayBeStackAllocatedRequest::Type,
      methods::TestProtocolDispatchStrictXUnionHenceResponseMayBeStackAllocated},
     {kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
-     ::llcpp::fidl::test::union_::TestProtocol::
+     ::fidl_test_union::TestProtocol::
          FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::Type,
      methods::
          TestProtocolDispatchFlexibleXUnionHenceResponseMustBeHeapAllocated},
@@ -538,7 +522,7 @@ namespace entries {
 #ifdef __Fuchsia__
 ::fidl::Result TestProtocol::Interface::
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
-        ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion xu) {
+        ::fidl_test_union::wire::StrictBoundedXUnion xu) {
   ::fidl::internal::EncodedMessageTypes<
       StrictXUnionHenceResponseMayBeStackAllocatedResponse>::OwnedByte
       _response{xu};
@@ -550,7 +534,7 @@ namespace entries {
 ::fidl::Result TestProtocol::Interface::
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::fidl::BufferSpan _buffer,
-        ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion xu) {
+        ::fidl_test_union::wire::StrictBoundedXUnion xu) {
   StrictXUnionHenceResponseMayBeStackAllocatedResponse::UnownedEncodedMessage
       _response(_buffer.data, _buffer.capacity, xu);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -560,7 +544,7 @@ namespace entries {
 #ifdef __Fuchsia__
 ::fidl::Result TestProtocol::Interface::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
-        ::llcpp::fidl::test::union_::wire::OlderSimpleUnion xu) {
+        ::fidl_test_union::wire::OlderSimpleUnion xu) {
   ::fidl::internal::EncodedMessageTypes<
       FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::OwnedByte
       _response{xu};
@@ -572,14 +556,14 @@ namespace entries {
 ::fidl::Result TestProtocol::Interface::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
         ::fidl::BufferSpan _buffer,
-        ::llcpp::fidl::test::union_::wire::OlderSimpleUnion xu) {
+        ::fidl_test_union::wire::OlderSimpleUnion xu) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::UnownedEncodedMessage
       _response(_buffer.data, _buffer.capacity, xu);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif
 
-void ::llcpp::fidl::test::union_::TestProtocol::
+void ::fidl_test_union::TestProtocol::
     StrictXUnionHenceResponseMayBeStackAllocatedRequest::_InitHeader(
         zx_txid_t _txid) {
   fidl_init_txn_header(
@@ -587,14 +571,14 @@ void ::llcpp::fidl::test::union_::TestProtocol::
       kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
 }
 
-void ::llcpp::fidl::test::union_::TestProtocol::
+void ::fidl_test_union::TestProtocol::
     StrictXUnionHenceResponseMayBeStackAllocatedResponse::_InitHeader() {
   fidl_init_txn_header(
       &_hdr, 0,
       kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
 }
 
-void ::llcpp::fidl::test::union_::TestProtocol::
+void ::fidl_test_union::TestProtocol::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::_InitHeader(
         zx_txid_t _txid) {
   fidl_init_txn_header(
@@ -602,7 +586,7 @@ void ::llcpp::fidl::test::union_::TestProtocol::
       kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
 }
 
-void ::llcpp::fidl::test::union_::TestProtocol::
+void ::fidl_test_union::TestProtocol::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::_InitHeader() {
   fidl_init_txn_header(
       &_hdr, 0,
@@ -611,12 +595,9 @@ void ::llcpp::fidl::test::union_::TestProtocol::
 
 #ifdef __Fuchsia__
 #endif
-}  // namespace union_
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_union
 
-auto ::llcpp::fidl::test::union_::wire::NewerSimpleUnion::which() const -> Tag {
+auto ::fidl_test_union::wire::NewerSimpleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kI:
@@ -628,15 +609,14 @@ auto ::llcpp::fidl::test::union_::wire::NewerSimpleUnion::which() const -> Tag {
   }
 }
 
-void ::llcpp::fidl::test::union_::wire::NewerSimpleUnion::
-    SizeAndOffsetAssertionHelper() {
+void ::fidl_test_union::wire::NewerSimpleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(NewerSimpleUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(NewerSimpleUnion, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(NewerSimpleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::llcpp::fidl::test::union_::wire::FlexibleUnion::which() const -> Tag {
+auto ::fidl_test_union::wire::FlexibleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kPrimitive:
@@ -648,15 +628,14 @@ auto ::llcpp::fidl::test::union_::wire::FlexibleUnion::which() const -> Tag {
   }
 }
 
-void ::llcpp::fidl::test::union_::wire::FlexibleUnion::
-    SizeAndOffsetAssertionHelper() {
+void ::fidl_test_union::wire::FlexibleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(FlexibleUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(FlexibleUnion, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(FlexibleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::llcpp::fidl::test::union_::wire::FlexibleFoo::which() const -> Tag {
+auto ::fidl_test_union::wire::FlexibleFoo::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kS:
@@ -667,8 +646,7 @@ auto ::llcpp::fidl::test::union_::wire::FlexibleFoo::which() const -> Tag {
   }
 }
 
-void ::llcpp::fidl::test::union_::wire::FlexibleFoo::
-    SizeAndOffsetAssertionHelper() {
+void ::fidl_test_union::wire::FlexibleFoo::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(FlexibleFoo) == sizeof(fidl_xunion_t));
   static_assert(offsetof(FlexibleFoo, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
@@ -676,15 +654,14 @@ void ::llcpp::fidl::test::union_::wire::FlexibleFoo::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::wire::FieldCollision::
-    SizeAndOffsetAssertionHelper() {
+void ::fidl_test_union::wire::FieldCollision::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(FieldCollision) == sizeof(fidl_xunion_t));
   static_assert(offsetof(FieldCollision, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(FieldCollision, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::llcpp::fidl::test::union_::wire::ExplicitXUnion::which() const -> Tag {
+auto ::fidl_test_union::wire::ExplicitXUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kI:
@@ -695,8 +672,7 @@ auto ::llcpp::fidl::test::union_::wire::ExplicitXUnion::which() const -> Tag {
   }
 }
 
-void ::llcpp::fidl::test::union_::wire::ExplicitXUnion::
-    SizeAndOffsetAssertionHelper() {
+void ::fidl_test_union::wire::ExplicitXUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExplicitXUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExplicitXUnion, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
@@ -704,8 +680,7 @@ void ::llcpp::fidl::test::union_::wire::ExplicitXUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::wire::ExplicitUnion::
-    SizeAndOffsetAssertionHelper() {
+void ::fidl_test_union::wire::ExplicitUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExplicitUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExplicitUnion, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
@@ -713,7 +688,7 @@ void ::llcpp::fidl::test::union_::wire::ExplicitUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::wire::ExplicitStrictFoo::
+void ::fidl_test_union::wire::ExplicitStrictFoo::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExplicitStrictFoo) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExplicitStrictFoo, ordinal_) ==
@@ -721,7 +696,7 @@ void ::llcpp::fidl::test::union_::wire::ExplicitStrictFoo::
   static_assert(offsetof(ExplicitStrictFoo, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::llcpp::fidl::test::union_::wire::ExplicitFoo::which() const -> Tag {
+auto ::fidl_test_union::wire::ExplicitFoo::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kS:
@@ -732,8 +707,7 @@ auto ::llcpp::fidl::test::union_::wire::ExplicitFoo::which() const -> Tag {
   }
 }
 
-void ::llcpp::fidl::test::union_::wire::ExplicitFoo::
-    SizeAndOffsetAssertionHelper() {
+void ::fidl_test_union::wire::ExplicitFoo::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExplicitFoo) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExplicitFoo, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
@@ -741,8 +715,8 @@ void ::llcpp::fidl::test::union_::wire::ExplicitFoo::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-auto ::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct::which()
-    const -> Tag {
+auto ::fidl_test_union::wire::XUnionContainingEmptyStruct::which() const
+    -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kEmpty:
@@ -752,7 +726,7 @@ auto ::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct::which()
   }
 }
 
-void ::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct::
+void ::fidl_test_union::wire::XUnionContainingEmptyStruct::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(XUnionContainingEmptyStruct) == sizeof(fidl_xunion_t));
   static_assert(offsetof(XUnionContainingEmptyStruct, ordinal_) ==

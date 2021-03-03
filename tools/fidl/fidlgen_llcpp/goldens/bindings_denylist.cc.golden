@@ -4,7 +4,7 @@
 
 #include <memory>
 
-void ::llcpp::fidl::test::bindingsdenylist::wire::OnlyLlcpp::
+void ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(OnlyLlcpp) == sizeof(fidl_xunion_t));
   static_assert(offsetof(OnlyLlcpp, ordinal_) == offsetof(fidl_xunion_t, tag));

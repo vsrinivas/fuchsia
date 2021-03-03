@@ -38,10 +38,7 @@
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace enum_ {
+namespace fidl_test_enum {
 namespace wire {
 
 enum class MyStrictEnum : uint32_t {
@@ -85,17 +82,15 @@ class MyFlexibleEnumWithCustomUnknown final {
  private:
   uint32_t value_;
 };
-constexpr const ::llcpp::fidl::test::enum_::wire::
-    MyFlexibleEnumWithCustomUnknown MyFlexibleEnumWithCustomUnknown::FOO =
-        ::llcpp::fidl::test::enum_::wire::MyFlexibleEnumWithCustomUnknown(1u);
-constexpr const ::llcpp::fidl::test::enum_::wire::
-    MyFlexibleEnumWithCustomUnknown MyFlexibleEnumWithCustomUnknown::BAR =
-        ::llcpp::fidl::test::enum_::wire::MyFlexibleEnumWithCustomUnknown(2u);
-constexpr const ::llcpp::fidl::test::enum_::wire::
-    MyFlexibleEnumWithCustomUnknown
-        MyFlexibleEnumWithCustomUnknown::CUSTOM_UNKNOWN =
-            ::llcpp::fidl::test::enum_::wire::MyFlexibleEnumWithCustomUnknown(
-                3u);
+constexpr const ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown
+    MyFlexibleEnumWithCustomUnknown::FOO =
+        ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown(1u);
+constexpr const ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown
+    MyFlexibleEnumWithCustomUnknown::BAR =
+        ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown(2u);
+constexpr const ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown
+    MyFlexibleEnumWithCustomUnknown::CUSTOM_UNKNOWN =
+        ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown(3u);
 
 class MyFlexibleEnum final {
  public:
@@ -127,36 +122,36 @@ class MyFlexibleEnum final {
  private:
   uint32_t value_;
 };
-constexpr const ::llcpp::fidl::test::enum_::wire::MyFlexibleEnum
-    MyFlexibleEnum::FOO = ::llcpp::fidl::test::enum_::wire::MyFlexibleEnum(1u);
-constexpr const ::llcpp::fidl::test::enum_::wire::MyFlexibleEnum
-    MyFlexibleEnum::BAR = ::llcpp::fidl::test::enum_::wire::MyFlexibleEnum(2u);
+constexpr const ::fidl_test_enum::wire::MyFlexibleEnum MyFlexibleEnum::FOO =
+    ::fidl_test_enum::wire::MyFlexibleEnum(1u);
+constexpr const ::fidl_test_enum::wire::MyFlexibleEnum MyFlexibleEnum::BAR =
+    ::fidl_test_enum::wire::MyFlexibleEnum(2u);
 
 }  // namespace wire
-}  // namespace enum_
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_enum
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::enum_::wire::MyStrictEnum>
+struct IsFidlType<::fidl_test_enum::wire::MyStrictEnum>
     : public std::true_type {};
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::enum_::wire::MyFlexibleEnumWithCustomUnknown>
+struct IsFidlType<::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown>
     : public std::true_type {};
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::enum_::wire::MyFlexibleEnum>
+struct IsFidlType<::fidl_test_enum::wire::MyFlexibleEnum>
     : public std::true_type {};
 }  // namespace fidl
+namespace fidl_test_enum {
+namespace wire {}  // namespace wire
+}  // namespace fidl_test_enum
 namespace llcpp {
 namespace fidl {
 namespace test {
 namespace enum_ {
-namespace wire {}  // namespace wire
+using namespace ::fidl_test_enum;
+
 }  // namespace enum_
 }  // namespace test
 }  // namespace fidl

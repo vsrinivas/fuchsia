@@ -41,10 +41,7 @@
 #include <middle/llcpp/fidl.h>
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace foreigntypeinresponseusedthroughcompose {
+namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 class Top;
 
 extern "C" const fidl_type_t
@@ -60,15 +57,14 @@ class Top final {
   struct GetFooResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::bottom::wire::Foo foo;
-    explicit GetFooResponse(::llcpp::bottom::wire::Foo& foo)
-        : foo(std::move(foo)) {
+    ::bottom::wire::Foo foo;
+    explicit GetFooResponse(::bottom::wire::Foo& foo) : foo(std::move(foo)) {
       _InitHeader();
     }
     GetFooResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::
+        &::fidl_test_foreigntypeinresponseusedthroughcompose::
             fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
@@ -82,7 +78,7 @@ class Top final {
     class UnownedEncodedByteMessage final {
      public:
       UnownedEncodedByteMessage(uint8_t* _bytes, uint32_t _byte_size,
-                                ::llcpp::bottom::wire::Foo& foo)
+                                ::bottom::wire::Foo& foo)
           : message_(_bytes, _byte_size, sizeof(GetFooResponse), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL GetFooResponse _response{foo};
@@ -126,7 +122,7 @@ class Top final {
                                  uint32_t iovec_size,
                                  fidl_iovec_substitution_t* substitutions,
                                  uint32_t substitutions_size,
-                                 ::llcpp::bottom::wire::Foo& foo)
+                                 ::bottom::wire::Foo& foo)
           : message_(::fidl::OutgoingIovecMessage::constructor_args{
                 .iovecs = iovecs,
                 .iovecs_actual = 0,
@@ -188,7 +184,7 @@ class Top final {
 
     class OwnedEncodedByteMessage final {
      public:
-      explicit OwnedEncodedByteMessage(::llcpp::bottom::wire::Foo& foo)
+      explicit OwnedEncodedByteMessage(::bottom::wire::Foo& foo)
           : message_(bytes_, sizeof(bytes_), foo) {}
       explicit OwnedEncodedByteMessage(GetFooResponse* response)
           : message_(bytes_, sizeof(bytes_), response) {}
@@ -224,7 +220,7 @@ class Top final {
 
     class OwnedEncodedIovecMessage final {
      public:
-      explicit OwnedEncodedIovecMessage(::llcpp::bottom::wire::Foo& foo)
+      explicit OwnedEncodedIovecMessage(::bottom::wire::Foo& foo)
           : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
                      substitutions_, ::fidl::internal::kIovecBufferSize, foo) {}
       explicit OwnedEncodedIovecMessage(GetFooResponse* response)
@@ -552,15 +548,13 @@ class Top final {
    public:
     class GetFoo final : public ::fidl::Result {
      public:
-      explicit GetFoo(
-          ::fidl::UnownedClientEnd<
-              ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>
-              _client);
-      GetFoo(
-          ::fidl::UnownedClientEnd<
-              ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>
-              _client,
-          zx_time_t _deadline);
+      explicit GetFoo(::fidl::UnownedClientEnd<
+                      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+                          _client);
+      GetFoo(::fidl::UnownedClientEnd<
+                 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+                 _client,
+             zx_time_t _deadline);
       explicit GetFoo(const ::fidl::Result& result) : ::fidl::Result(result) {}
       GetFoo(GetFoo&&) = delete;
       GetFoo(const GetFoo&) = delete;
@@ -603,7 +597,7 @@ class Top final {
      public:
       explicit GetFoo(
           ::fidl::UnownedClientEnd<
-              ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>
+              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
               _client,
           uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit GetFoo(const ::fidl::Result& result) : ::fidl::Result(result) {}
@@ -638,7 +632,7 @@ class Top final {
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
-  // |fidl::ClientEnd<::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>|,
+  // |fidl::ClientEnd<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>|,
   // avoiding setting up a client.
   class Call final {
     Call() = delete;
@@ -648,7 +642,7 @@ class Top final {
     // necessary.
     static ResultOf::GetFoo GetFoo(
         ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>
+            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
             _client_end) {
       return ResultOf::GetFoo(_client_end);
     }
@@ -657,7 +651,7 @@ class Top final {
     // response buffers.
     static UnownedResultOf::GetFoo GetFoo(
         ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>
+            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
             _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::GetFoo(_client_end, _response_buffer.data,
@@ -726,9 +720,8 @@ class Top final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(::llcpp::bottom::wire::Foo foo);
-      ::fidl::Result Reply(::fidl::BufferSpan _buffer,
-                           ::llcpp::bottom::wire::Foo foo);
+      ::fidl::Result Reply(::bottom::wire::Foo foo);
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::bottom::wire::Foo foo);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -775,46 +768,39 @@ class Top final {
   class WeakEventSender;
 };
 
-}  // namespace foreigntypeinresponseusedthroughcompose
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::
-                      Top::GetFooRequest> : public std::true_type {};
+struct IsFidlType<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooRequest>
+    : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
-        GetFooRequest> : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
-               GetFooRequest) ==
-    ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
-        GetFooRequest::PrimarySize);
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooRequest>
+    : public std::true_type {};
+static_assert(sizeof(::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+                         GetFooRequest) ==
+              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+                  GetFooRequest::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::
-                      Top::GetFooResponse> : public std::true_type {};
+struct IsFidlType<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooResponse>
+    : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
-        GetFooResponse> : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
-               GetFooResponse) ==
-    ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
-        GetFooResponse::PrimarySize);
-static_assert(
-    offsetof(::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
-                 GetFooResponse,
-             foo) == 16);
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooResponse>
+    : public std::true_type {};
+static_assert(sizeof(::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+                         GetFooResponse) ==
+              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+                  GetFooResponse::PrimarySize);
+static_assert(offsetof(::fidl_test_foreigntypeinresponseusedthroughcompose::
+                           Top::GetFooResponse,
+                       foo) == 16);
 }  // namespace fidl
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace foreigntypeinresponseusedthroughcompose {
+namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 
 #ifdef __Fuchsia__
 class Top::AsyncEventHandler : public Top::EventHandlerInterface {
@@ -881,10 +867,9 @@ class Top::EventSender {
   // Constructs an event sender with an invalid channel.
   EventSender() = default;
 
-  explicit EventSender(
-      ::fidl::ServerEnd<
-          ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>
-          server_end)
+  explicit EventSender(::fidl::ServerEnd<
+                       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+                           server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
@@ -913,6 +898,13 @@ class Top::WeakEventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding<Top>> binding_;
 };
 #endif
+
+}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
+namespace llcpp {
+namespace fidl {
+namespace test {
+namespace foreigntypeinresponseusedthroughcompose {
+using namespace ::fidl_test_foreigntypeinresponseusedthroughcompose;
 
 }  // namespace foreigntypeinresponseusedthroughcompose
 }  // namespace test

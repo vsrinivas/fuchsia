@@ -5,15 +5,14 @@
 #include <memory>
 
 #ifdef __Fuchsia__
-void ::llcpp::fidl::test::encapsulatedstructs::wire::NonInlineStructTestStruct::
+void ::fidl_test_encapsulatedstructs::wire::NonInlineStructTestStruct::
     _CloseHandles() {
   h.reset();
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void ::llcpp::fidl::test::encapsulatedstructs::wire::TopLevelStruct::
-    _CloseHandles() {
+void ::fidl_test_encapsulatedstructs::wire::TopLevelStruct::_CloseHandles() {
   b._CloseHandles();
 }
 #endif  // __Fuchsia__

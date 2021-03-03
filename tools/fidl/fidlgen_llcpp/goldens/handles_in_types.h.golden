@@ -39,10 +39,7 @@
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace handlesintypes {
+namespace fidl_test_handlesintypes {
 namespace wire {
 
 enum class obj_type : uint32_t {
@@ -561,11 +558,9 @@ struct HandlesInTypes {
   ::fidl::VectorView<::fidl::Array<::zx::vmo, 5>> handle_in_mixed_vec_array =
       {};
 
-  ::llcpp::fidl::test::handlesintypes::wire::TableWithHandle table_with_handle =
-      {};
+  ::fidl_test_handlesintypes::wire::TableWithHandle table_with_handle = {};
 
-  ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle union_with_handle =
-      {};
+  ::fidl_test_handlesintypes::wire::UnionWithHandle union_with_handle = {};
 
   void _CloseHandles();
 
@@ -740,79 +735,73 @@ struct HandlesInTypes {
 #endif  // __Fuchsia__
 
 }  // namespace wire
-}  // namespace handlesintypes
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_handlesintypes
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::handlesintypes::wire::obj_type>
+struct IsFidlType<::fidl_test_handlesintypes::wire::obj_type>
     : public std::true_type {};
 
 #ifdef __Fuchsia__
 template <>
-struct IsFidlType<::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle>
+struct IsFidlType<::fidl_test_handlesintypes::wire::UnionWithHandle>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle>
+struct IsUnion<::fidl_test_handlesintypes::wire::UnionWithHandle>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle>);
+              ::fidl_test_handlesintypes::wire::UnionWithHandle>);
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 template <>
-struct IsFidlType<::llcpp::fidl::test::handlesintypes::wire::TableWithHandle>
+struct IsFidlType<::fidl_test_handlesintypes::wire::TableWithHandle>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::handlesintypes::wire::TableWithHandle>
+struct IsTable<::fidl_test_handlesintypes::wire::TableWithHandle>
     : public std::true_type {};
 template <>
 struct IsTableBuilder<
-    ::llcpp::fidl::test::handlesintypes::wire::TableWithHandle::Builder>
+    ::fidl_test_handlesintypes::wire::TableWithHandle::Builder>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::handlesintypes::wire::TableWithHandle>);
+              ::fidl_test_handlesintypes::wire::TableWithHandle>);
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 template <>
-struct IsFidlType<::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes>
+struct IsFidlType<::fidl_test_handlesintypes::wire::HandlesInTypes>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes>
+struct IsStruct<::fidl_test_handlesintypes::wire::HandlesInTypes>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes>);
-static_assert(
-    offsetof(::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes,
-             normal_handle) == 0);
-static_assert(
-    offsetof(::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes,
-             handle_in_vec) == 8);
-static_assert(
-    offsetof(::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes,
-             handle_in_array) == 24);
-static_assert(
-    offsetof(::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes,
-             handle_in_mixed_vec_array) == 48);
-static_assert(
-    offsetof(::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes,
-             table_with_handle) == 64);
-static_assert(
-    offsetof(::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes,
-             union_with_handle) == 80);
-static_assert(
-    sizeof(::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes) ==
-    ::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes::PrimarySize);
+              ::fidl_test_handlesintypes::wire::HandlesInTypes>);
+static_assert(offsetof(::fidl_test_handlesintypes::wire::HandlesInTypes,
+                       normal_handle) == 0);
+static_assert(offsetof(::fidl_test_handlesintypes::wire::HandlesInTypes,
+                       handle_in_vec) == 8);
+static_assert(offsetof(::fidl_test_handlesintypes::wire::HandlesInTypes,
+                       handle_in_array) == 24);
+static_assert(offsetof(::fidl_test_handlesintypes::wire::HandlesInTypes,
+                       handle_in_mixed_vec_array) == 48);
+static_assert(offsetof(::fidl_test_handlesintypes::wire::HandlesInTypes,
+                       table_with_handle) == 64);
+static_assert(offsetof(::fidl_test_handlesintypes::wire::HandlesInTypes,
+                       union_with_handle) == 80);
+static_assert(sizeof(::fidl_test_handlesintypes::wire::HandlesInTypes) ==
+              ::fidl_test_handlesintypes::wire::HandlesInTypes::PrimarySize);
 #endif  // __Fuchsia__
 }  // namespace fidl
+namespace fidl_test_handlesintypes {
+namespace wire {}  // namespace wire
+}  // namespace fidl_test_handlesintypes
 namespace llcpp {
 namespace fidl {
 namespace test {
 namespace handlesintypes {
-namespace wire {}  // namespace wire
+using namespace ::fidl_test_handlesintypes;
+
 }  // namespace handlesintypes
 }  // namespace test
 }  // namespace fidl

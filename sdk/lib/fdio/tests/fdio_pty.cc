@@ -12,7 +12,7 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-namespace fpty = ::llcpp::fuchsia::hardware::pty;
+namespace fpty = fuchsia_hardware_pty;
 
 TEST(PtyTest, WindowSize) {
   zx::channel device_client_end, device_server_end;

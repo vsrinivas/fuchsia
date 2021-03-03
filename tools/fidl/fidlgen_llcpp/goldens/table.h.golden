@@ -38,10 +38,7 @@
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace table {
+namespace fidl_test_table {
 namespace wire {
 class SimpleTable;
 
@@ -2190,80 +2187,74 @@ class EmptyTable::UnownedBuilder final {
 };
 
 }  // namespace wire
-}  // namespace table
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_table
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::table::wire::SimpleTable>
+struct IsFidlType<::fidl_test_table::wire::SimpleTable>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::table::wire::SimpleTable>
+struct IsTable<::fidl_test_table::wire::SimpleTable> : public std::true_type {};
+template <>
+struct IsTableBuilder<::fidl_test_table::wire::SimpleTable::Builder>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl_test_table::wire::SimpleTable>);
+
+template <>
+struct IsFidlType<::fidl_test_table::wire::ReverseOrdinalTable>
     : public std::true_type {};
 template <>
-struct IsTableBuilder<::llcpp::fidl::test::table::wire::SimpleTable::Builder>
+struct IsTable<::fidl_test_table::wire::ReverseOrdinalTable>
+    : public std::true_type {};
+template <>
+struct IsTableBuilder<::fidl_test_table::wire::ReverseOrdinalTable::Builder>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::table::wire::SimpleTable>);
+    std::is_standard_layout_v<::fidl_test_table::wire::ReverseOrdinalTable>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::table::wire::ReverseOrdinalTable>
+struct IsFidlType<::fidl_test_table::wire::OlderSimpleTable>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::table::wire::ReverseOrdinalTable>
+struct IsTable<::fidl_test_table::wire::OlderSimpleTable>
     : public std::true_type {};
 template <>
-struct IsTableBuilder<
-    ::llcpp::fidl::test::table::wire::ReverseOrdinalTable::Builder>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::table::wire::ReverseOrdinalTable>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::table::wire::OlderSimpleTable>
-    : public std::true_type {};
-template <>
-struct IsTable<::llcpp::fidl::test::table::wire::OlderSimpleTable>
-    : public std::true_type {};
-template <>
-struct IsTableBuilder<
-    ::llcpp::fidl::test::table::wire::OlderSimpleTable::Builder>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::table::wire::OlderSimpleTable>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::table::wire::NewerSimpleTable>
-    : public std::true_type {};
-template <>
-struct IsTable<::llcpp::fidl::test::table::wire::NewerSimpleTable>
-    : public std::true_type {};
-template <>
-struct IsTableBuilder<
-    ::llcpp::fidl::test::table::wire::NewerSimpleTable::Builder>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::table::wire::NewerSimpleTable>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::table::wire::EmptyTable>
-    : public std::true_type {};
-template <>
-struct IsTable<::llcpp::fidl::test::table::wire::EmptyTable>
-    : public std::true_type {};
-template <>
-struct IsTableBuilder<::llcpp::fidl::test::table::wire::EmptyTable::Builder>
+struct IsTableBuilder<::fidl_test_table::wire::OlderSimpleTable::Builder>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::table::wire::EmptyTable>);
+    std::is_standard_layout_v<::fidl_test_table::wire::OlderSimpleTable>);
+
+template <>
+struct IsFidlType<::fidl_test_table::wire::NewerSimpleTable>
+    : public std::true_type {};
+template <>
+struct IsTable<::fidl_test_table::wire::NewerSimpleTable>
+    : public std::true_type {};
+template <>
+struct IsTableBuilder<::fidl_test_table::wire::NewerSimpleTable::Builder>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_table::wire::NewerSimpleTable>);
+
+template <>
+struct IsFidlType<::fidl_test_table::wire::EmptyTable> : public std::true_type {
+};
+template <>
+struct IsTable<::fidl_test_table::wire::EmptyTable> : public std::true_type {};
+template <>
+struct IsTableBuilder<::fidl_test_table::wire::EmptyTable::Builder>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl_test_table::wire::EmptyTable>);
 }  // namespace fidl
+namespace fidl_test_table {
+namespace wire {}  // namespace wire
+}  // namespace fidl_test_table
 namespace llcpp {
 namespace fidl {
 namespace test {
 namespace table {
-namespace wire {}  // namespace wire
+using namespace ::fidl_test_table;
+
 }  // namespace table
 }  // namespace test
 }  // namespace fidl

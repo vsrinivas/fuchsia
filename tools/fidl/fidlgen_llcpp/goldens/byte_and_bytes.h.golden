@@ -38,10 +38,7 @@
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace byteandbytes {
+namespace fidl_test_byteandbytes {
 namespace wire {
 struct ByteAndBytes;
 
@@ -221,37 +218,37 @@ struct ByteAndBytes {
 };
 
 }  // namespace wire
-}  // namespace byteandbytes
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_byteandbytes
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::byteandbytes::wire::ByteAndBytes>
+struct IsFidlType<::fidl_test_byteandbytes::wire::ByteAndBytes>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::byteandbytes::wire::ByteAndBytes>
+struct IsStruct<::fidl_test_byteandbytes::wire::ByteAndBytes>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::byteandbytes::wire::ByteAndBytes>);
-static_assert(offsetof(::llcpp::fidl::test::byteandbytes::wire::ByteAndBytes,
-                       single_byte) == 0);
-static_assert(offsetof(::llcpp::fidl::test::byteandbytes::wire::ByteAndBytes,
-                       many_bytes) == 8);
-static_assert(offsetof(::llcpp::fidl::test::byteandbytes::wire::ByteAndBytes,
-                       only_one_k_bytes) == 24);
-static_assert(offsetof(::llcpp::fidl::test::byteandbytes::wire::ByteAndBytes,
-                       opt_only_one_k_bytes) == 40);
 static_assert(
-    sizeof(::llcpp::fidl::test::byteandbytes::wire::ByteAndBytes) ==
-    ::llcpp::fidl::test::byteandbytes::wire::ByteAndBytes::PrimarySize);
+    std::is_standard_layout_v<::fidl_test_byteandbytes::wire::ByteAndBytes>);
+static_assert(offsetof(::fidl_test_byteandbytes::wire::ByteAndBytes,
+                       single_byte) == 0);
+static_assert(offsetof(::fidl_test_byteandbytes::wire::ByteAndBytes,
+                       many_bytes) == 8);
+static_assert(offsetof(::fidl_test_byteandbytes::wire::ByteAndBytes,
+                       only_one_k_bytes) == 24);
+static_assert(offsetof(::fidl_test_byteandbytes::wire::ByteAndBytes,
+                       opt_only_one_k_bytes) == 40);
+static_assert(sizeof(::fidl_test_byteandbytes::wire::ByteAndBytes) ==
+              ::fidl_test_byteandbytes::wire::ByteAndBytes::PrimarySize);
 }  // namespace fidl
+namespace fidl_test_byteandbytes {
+namespace wire {}  // namespace wire
+}  // namespace fidl_test_byteandbytes
 namespace llcpp {
 namespace fidl {
 namespace test {
 namespace byteandbytes {
-namespace wire {}  // namespace wire
+using namespace ::fidl_test_byteandbytes;
+
 }  // namespace byteandbytes
 }  // namespace test
 }  // namespace fidl

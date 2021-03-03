@@ -3,40 +3,33 @@
 #pragma once
 
 #include <fidl/test/inheritance/llcpp/fidl.h>
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace inheritance {
+namespace fidl_test_inheritance {
 namespace testing {
 
-class super_TestBase
-    : public ::llcpp::fidl::test::inheritance::super::Interface {
+class super_TestBase : public ::fidl_test_inheritance::super::Interface {
  public:
   virtual ~super_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::llcpp::fidl::test::inheritance::super::Interface;
+  using Interface = ::fidl_test_inheritance::super::Interface;
   virtual void foo(::fidl::StringView s,
                    Interface::fooCompleter::Sync& completer) override {
     NotImplemented_("foo", completer);
   }
 };
 
-class sub_TestBase : public ::llcpp::fidl::test::inheritance::sub::Interface {
+class sub_TestBase : public ::fidl_test_inheritance::sub::Interface {
  public:
   virtual ~sub_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::llcpp::fidl::test::inheritance::sub::Interface;
+  using Interface = ::fidl_test_inheritance::sub::Interface;
   virtual void foo(::fidl::StringView s,
                    Interface::fooCompleter::Sync& completer) override {
     NotImplemented_("foo", completer);
   }
 };
 }  // namespace testing
-}  // namespace inheritance
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_inheritance

@@ -18,8 +18,6 @@
 #include "src/ui/input/lib/hid-input-report/test/test.h"
 #include "src/ui/lib/key_util/key_util.h"
 
-namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
-
 namespace {
 
 // This is a keyboard with multiple keys of the same usage.

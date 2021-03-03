@@ -4,7 +4,7 @@
 
 #include <memory>
 
-void ::llcpp::fidl::test::doccomments::wire::StrictUnion::
+void ::fidl_test_doccomments::wire::StrictUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictUnion, ordinal_) ==
@@ -13,10 +13,7 @@ void ::llcpp::fidl::test::doccomments::wire::StrictUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace doccomments {
+namespace fidl_test_doccomments {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kInterface_Method_Ordinal =
@@ -34,9 +31,8 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 
 }  // namespace
 #ifdef __Fuchsia__
-::llcpp::fidl::test::doccomments::Interface::ResultOf::Method::Method(
-    ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>
-        _client) {
+::fidl_test_doccomments::Interface::ResultOf::Method::Method(
+    ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client) {
   ::fidl::internal::EncodedMessageTypes<MethodRequest>::OwnedByte _request(
       zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
@@ -49,7 +45,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 ::fidl::Result Interface::ClientImpl::Method() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::Method(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>(
+        ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface>(
             _channel->handle()));
     return ::fidl::Result(_res.status(), _res.error());
   }
@@ -86,8 +82,7 @@ std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
 #endif
 
 ::fidl::Result Interface::SyncEventHandler::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>
-        client_end) {
+    ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
@@ -166,10 +161,9 @@ namespace methods {
 
 void InterfaceDispatchMethod(void* interface, void* bytes,
                              ::fidl::Transaction* txn) {
-  ::llcpp::fidl::test::doccomments::Interface::Interface::MethodCompleter::Sync
+  ::fidl_test_doccomments::Interface::Interface::MethodCompleter::Sync
       completer(txn);
-  reinterpret_cast<::llcpp::fidl::test::doccomments::Interface::Interface*>(
-      interface)
+  reinterpret_cast<::fidl_test_doccomments::Interface::Interface*>(interface)
       ->Method(completer);
 }
 
@@ -179,7 +173,7 @@ namespace entries {
 
 ::fidl::internal::MethodEntry Interface[] = {
     {kInterface_Method_Ordinal,
-     ::llcpp::fidl::test::doccomments::Interface::MethodRequest::Type,
+     ::fidl_test_doccomments::Interface::MethodRequest::Type,
      methods::InterfaceDispatchMethod},
 };
 
@@ -214,13 +208,12 @@ namespace entries {
 }
 #endif
 
-void ::llcpp::fidl::test::doccomments::Interface::MethodRequest::_InitHeader(
+void ::fidl_test_doccomments::Interface::MethodRequest::_InitHeader(
     zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kInterface_Method_Ordinal);
 }
 
-void ::llcpp::fidl::test::doccomments::Interface::OnEventResponse::
-    _InitHeader() {
+void ::fidl_test_doccomments::Interface::OnEventResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kInterface_OnEvent_Ordinal);
 }
 
@@ -232,8 +225,7 @@ zx_status_t Interface::EventSender::OnEvent() const {
 }
 
 #endif
-auto ::llcpp::fidl::test::doccomments::wire::FlexibleUnion::which() const
-    -> Tag {
+auto ::fidl_test_doccomments::wire::FlexibleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kField:
@@ -243,7 +235,7 @@ auto ::llcpp::fidl::test::doccomments::wire::FlexibleUnion::which() const
   }
 }
 
-void ::llcpp::fidl::test::doccomments::wire::FlexibleUnion::
+void ::fidl_test_doccomments::wire::FlexibleUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(FlexibleUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(FlexibleUnion, ordinal_) ==
@@ -252,7 +244,4 @@ void ::llcpp::fidl::test::doccomments::wire::FlexibleUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-}  // namespace doccomments
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_doccomments

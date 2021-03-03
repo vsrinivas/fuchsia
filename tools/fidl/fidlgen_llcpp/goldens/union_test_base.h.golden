@@ -3,20 +3,17 @@
 #pragma once
 
 #include <fidl/test/union/llcpp/fidl.h>
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace union_ {
+namespace fidl_test_union {
 namespace testing {
 
 class TestProtocol_TestBase
-    : public ::llcpp::fidl::test::union_::TestProtocol::Interface {
+    : public ::fidl_test_union::TestProtocol::Interface {
  public:
   virtual ~TestProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::llcpp::fidl::test::union_::TestProtocol::Interface;
+  using Interface = ::fidl_test_union::TestProtocol::Interface;
   virtual void StrictXUnionHenceResponseMayBeStackAllocated(
       Interface::StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync&
           completer) override {
@@ -30,7 +27,4 @@ class TestProtocol_TestBase
   }
 };
 }  // namespace testing
-}  // namespace union_
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_union

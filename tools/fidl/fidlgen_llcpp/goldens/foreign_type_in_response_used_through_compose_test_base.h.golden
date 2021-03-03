@@ -3,28 +3,22 @@
 #pragma once
 
 #include <fidl/test/foreigntypeinresponseusedthroughcompose/llcpp/fidl.h>
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace foreigntypeinresponseusedthroughcompose {
+namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 namespace testing {
 
 class Top_TestBase
-    : public ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
+    : public ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
           Interface {
  public:
   virtual ~Top_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::llcpp::fidl::test::
-      foreigntypeinresponseusedthroughcompose::Top::Interface;
+  using Interface =
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::Interface;
   virtual void GetFoo(Interface::GetFooCompleter::Sync& completer) override {
     NotImplemented_("GetFoo", completer);
   }
 };
 }  // namespace testing
-}  // namespace foreigntypeinresponseusedthroughcompose
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose

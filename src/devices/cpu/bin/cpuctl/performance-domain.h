@@ -14,7 +14,6 @@
 #include <vector>
 
 namespace cpuctrl = ::llcpp::fuchsia::hardware::cpu::ctrl;
-namespace fuchsia_device = ::llcpp::fuchsia::device;
 
 class CpuPerformanceDomain {
  public:

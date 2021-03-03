@@ -4,10 +4,7 @@
 
 #include <memory>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace transitivedependenciescompose {
+namespace fidl_test_transitivedependenciescompose {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 3210163844600846111lu;
@@ -20,10 +17,9 @@ extern "C" const fidl_type_t
 
 }  // namespace
 #ifdef __Fuchsia__
-::llcpp::fidl::test::transitivedependenciescompose::Top::ResultOf::GetFoo::
-    GetFoo(::fidl::UnownedClientEnd<
-           ::llcpp::fidl::test::transitivedependenciescompose::Top>
-               _client) {
+::fidl_test_transitivedependenciescompose::Top::ResultOf::GetFoo::GetFoo(
+    ::fidl::UnownedClientEnd<::fidl_test_transitivedependenciescompose::Top>
+        _client) {
   ::fidl::internal::EncodedMessageTypes<GetFooRequest>::OwnedByte _request(
       zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetFooResponse>(
@@ -33,11 +29,10 @@ extern "C" const fidl_type_t
   error_ = _request.error();
 }
 
-::llcpp::fidl::test::transitivedependenciescompose::Top::ResultOf::GetFoo::
-    GetFoo(::fidl::UnownedClientEnd<
-               ::llcpp::fidl::test::transitivedependenciescompose::Top>
-               _client,
-           zx_time_t _deadline) {
+::fidl_test_transitivedependenciescompose::Top::ResultOf::GetFoo::GetFoo(
+    ::fidl::UnownedClientEnd<::fidl_test_transitivedependenciescompose::Top>
+        _client,
+    zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<GetFooRequest>::OwnedByte _request(
       zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetFooResponse>(
@@ -49,11 +44,10 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::transitivedependenciescompose::Top::UnownedResultOf::
-    GetFoo::GetFoo(::fidl::UnownedClientEnd<
-                       ::llcpp::fidl::test::transitivedependenciescompose::Top>
-                       _client,
-                   uint8_t* _response_bytes, uint32_t _response_byte_capacity)
+::fidl_test_transitivedependenciescompose::Top::UnownedResultOf::GetFoo::GetFoo(
+    ::fidl::UnownedClientEnd<::fidl_test_transitivedependenciescompose::Top>
+        _client,
+    uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ::fidl::internal::EncodedMessageTypes<GetFooRequest>::OwnedByte _request(
       zx_txid_t(0));
@@ -65,43 +59,40 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::transitivedependenciescompose::Top::ResultOf::GetFoo
+::fidl_test_transitivedependenciescompose::Top::ResultOf::GetFoo
 Top::ClientImpl::GetFoo_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::GetFoo(
-        ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::transitivedependenciescompose::Top>(
-            _channel->handle()));
+    return ResultOf::GetFoo(::fidl::UnownedClientEnd<
+                            ::fidl_test_transitivedependenciescompose::Top>(
+        _channel->handle()));
   }
-  return ::llcpp::fidl::test::transitivedependenciescompose::Top::ResultOf::
+  return ::fidl_test_transitivedependenciescompose::Top::ResultOf::GetFoo(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+}
+#endif
+
+#ifdef __Fuchsia__
+::fidl_test_transitivedependenciescompose::Top::UnownedResultOf::GetFoo
+Top::ClientImpl::GetFoo_Sync(::fidl::BufferSpan _response_buffer) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return UnownedResultOf::GetFoo(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_transitivedependenciescompose::Top>(_channel->handle()),
+        _response_buffer.data, _response_buffer.capacity);
+  }
+  return ::fidl_test_transitivedependenciescompose::Top::UnownedResultOf::
       GetFoo(::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::transitivedependenciescompose::Top::UnownedResultOf::GetFoo
-Top::ClientImpl::GetFoo_Sync(::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return UnownedResultOf::GetFoo(
-        ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::transitivedependenciescompose::Top>(
-            _channel->handle()),
-        _response_buffer.data, _response_buffer.capacity);
-  }
-  return ::llcpp::fidl::test::transitivedependenciescompose::Top::
-      UnownedResultOf::GetFoo(
-          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
-}
-#endif
-
-#ifdef __Fuchsia__
-::llcpp::fidl::test::transitivedependenciescompose::Top::GetFooResponseContext::
+::fidl_test_transitivedependenciescompose::Top::GetFooResponseContext::
     GetFooResponseContext()
     : ::fidl::internal::ResponseContext(GetFooResponse::Type,
                                         kTop_GetFoo_Ordinal) {}
 
-void ::llcpp::fidl::test::transitivedependenciescompose::Top::
-    GetFooResponseContext::OnReply(uint8_t* reply) {
+void ::fidl_test_transitivedependenciescompose::Top::GetFooResponseContext::
+    OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<GetFooResponse*>(reply));
 }
 
@@ -151,10 +142,9 @@ std::optional<::fidl::UnbindInfo> Top::ClientImpl::DispatchEvent(
 namespace methods {
 
 void TopDispatchGetFoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
-  ::llcpp::fidl::test::transitivedependenciescompose::Top::Interface::
-      GetFooCompleter::Sync completer(txn);
-  reinterpret_cast<
-      ::llcpp::fidl::test::transitivedependenciescompose::Top::Interface*>(
+  ::fidl_test_transitivedependenciescompose::Top::Interface::GetFooCompleter::
+      Sync completer(txn);
+  reinterpret_cast<::fidl_test_transitivedependenciescompose::Top::Interface*>(
       interface)
       ->GetFoo(completer);
 }
@@ -165,8 +155,7 @@ namespace entries {
 
 ::fidl::internal::MethodEntry Top[] = {
     {kTop_GetFoo_Ordinal,
-     ::llcpp::fidl::test::transitivedependenciescompose::Top::GetFooRequest::
-         Type,
+     ::fidl_test_transitivedependenciescompose::Top::GetFooRequest::Type,
      methods::TopDispatchGetFoo},
 };
 
@@ -202,7 +191,7 @@ namespace entries {
 
 #ifdef __Fuchsia__
 ::fidl::Result Top::Interface::GetFooCompleterBase::Reply(
-    ::llcpp::bottom::wire::Foo foo) {
+    ::bottom::wire::Foo foo) {
   ::fidl::internal::EncodedMessageTypes<GetFooResponse>::OwnedByte _response{
       foo};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -211,19 +200,19 @@ namespace entries {
 
 #ifdef __Fuchsia__
 ::fidl::Result Top::Interface::GetFooCompleterBase::Reply(
-    ::fidl::BufferSpan _buffer, ::llcpp::bottom::wire::Foo foo) {
+    ::fidl::BufferSpan _buffer, ::bottom::wire::Foo foo) {
   GetFooResponse::UnownedEncodedMessage _response(_buffer.data,
                                                   _buffer.capacity, foo);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif
 
-void ::llcpp::fidl::test::transitivedependenciescompose::Top::GetFooRequest::
-    _InitHeader(zx_txid_t _txid) {
+void ::fidl_test_transitivedependenciescompose::Top::GetFooRequest::_InitHeader(
+    zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kTop_GetFoo_Ordinal);
 }
 
-void ::llcpp::fidl::test::transitivedependenciescompose::Top::GetFooResponse::
+void ::fidl_test_transitivedependenciescompose::Top::GetFooResponse::
     _InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kTop_GetFoo_Ordinal);
 }
@@ -231,7 +220,4 @@ void ::llcpp::fidl::test::transitivedependenciescompose::Top::GetFooResponse::
 #ifdef __Fuchsia__
 #endif
 
-}  // namespace transitivedependenciescompose
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_transitivedependenciescompose

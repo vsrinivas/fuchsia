@@ -5,8 +5,7 @@
 #include <memory>
 
 #ifdef __Fuchsia__
-auto ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle::which() const
-    -> Tag {
+auto ::fidl_test_handlesintypes::wire::UnionWithHandle::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kH:
@@ -16,7 +15,7 @@ auto ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle::which() const
   }
 }
 
-void ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle::
+void ::fidl_test_handlesintypes::wire::UnionWithHandle::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionWithHandle) == sizeof(fidl_xunion_t));
   static_assert(offsetof(UnionWithHandle, ordinal_) ==
@@ -24,8 +23,7 @@ void ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle::
   static_assert(offsetof(UnionWithHandle, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-void ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle::
-    _CloseHandles() {
+void ::fidl_test_handlesintypes::wire::UnionWithHandle::_CloseHandles() {
   switch (ordinal_) {
     case Ordinal::kH: {
       mutable_h().reset();
@@ -38,8 +36,7 @@ void ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void ::llcpp::fidl::test::handlesintypes::wire::TableWithHandle::
-    _CloseHandles() {
+void ::fidl_test_handlesintypes::wire::TableWithHandle::_CloseHandles() {
   if (has_h()) {
     h().reset();
   }
@@ -47,8 +44,7 @@ void ::llcpp::fidl::test::handlesintypes::wire::TableWithHandle::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void ::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes::
-    _CloseHandles() {
+void ::fidl_test_handlesintypes::wire::HandlesInTypes::_CloseHandles() {
   normal_handle.reset();
   {
     ::zx::vmo* handle_in_vec_element = handle_in_vec.mutable_data();

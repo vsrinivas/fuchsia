@@ -41,10 +41,7 @@
 #include <zircon/fidl.h>
 #include <zx/llcpp/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace nullable {
+namespace fidl_test_nullable {
 namespace wire {
 struct StructWithNullableVector;
 
@@ -405,7 +402,7 @@ struct StructWithNullableUnion {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
-  ::llcpp::fidl::test::nullable::wire::SimpleUnion val = {};
+  ::fidl_test_nullable::wire::SimpleUnion val = {};
 
  private:
   class UnownedEncodedByteMessage final {
@@ -574,8 +571,7 @@ struct StructWithNullableStruct {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
-  ::fidl::tracking_ptr<::llcpp::fidl::test::nullable::wire::Int32Wrapper> val =
-      {};
+  ::fidl::tracking_ptr<::fidl_test_nullable::wire::Int32Wrapper> val = {};
 
  private:
   class UnownedEncodedByteMessage final {
@@ -916,7 +912,7 @@ struct StructWithNullableRequest {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
-  ::fidl::ServerEnd<::llcpp::fidl::test::nullable::SimpleProtocol> val = {};
+  ::fidl::ServerEnd<::fidl_test_nullable::SimpleProtocol> val = {};
 
   void _CloseHandles();
 
@@ -1100,7 +1096,7 @@ struct StructWithNullableProtocol {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
-  ::fidl::ClientEnd<::llcpp::fidl::test::nullable::SimpleProtocol> val = {};
+  ::fidl::ClientEnd<::fidl_test_nullable::SimpleProtocol> val = {};
 
   void _CloseHandles();
 
@@ -1473,7 +1469,7 @@ class SimpleProtocol final {
     AddResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &::llcpp::fidl::test::nullable::
+        &::fidl_test_nullable::
             fidl_test_nullable_SimpleProtocolAddResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
@@ -1713,8 +1709,7 @@ class SimpleProtocol final {
     explicit AddRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &::llcpp::fidl::test::nullable::
-            fidl_test_nullable_SimpleProtocolAddRequestTable;
+        &::fidl_test_nullable::fidl_test_nullable_SimpleProtocolAddRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1962,12 +1957,11 @@ class SimpleProtocol final {
    public:
     class Add final : public ::fidl::Result {
      public:
-      explicit Add(::fidl::UnownedClientEnd<
-                       ::llcpp::fidl::test::nullable::SimpleProtocol>
-                       _client,
-                   int32_t a, int32_t b);
-      Add(::fidl::UnownedClientEnd<
-              ::llcpp::fidl::test::nullable::SimpleProtocol>
+      explicit Add(
+          ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>
+              _client,
+          int32_t a, int32_t b);
+      Add(::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>
               _client,
           int32_t a, int32_t b, zx_time_t _deadline);
       explicit Add(const ::fidl::Result& result) : ::fidl::Result(result) {}
@@ -2009,12 +2003,12 @@ class SimpleProtocol final {
    public:
     class Add final : public ::fidl::Result {
      public:
-      explicit Add(::fidl::UnownedClientEnd<
-                       ::llcpp::fidl::test::nullable::SimpleProtocol>
-                       _client,
-                   uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-                   int32_t a, int32_t b, uint8_t* _response_bytes,
-                   uint32_t _response_byte_capacity);
+      explicit Add(
+          ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity, int32_t a,
+          int32_t b, uint8_t* _response_bytes,
+          uint32_t _response_byte_capacity);
       explicit Add(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Add(Add&&) = delete;
       Add(const Add&) = delete;
@@ -2047,8 +2041,8 @@ class SimpleProtocol final {
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
-  // |fidl::ClientEnd<::llcpp::fidl::test::nullable::SimpleProtocol>|, avoiding
-  // setting up a client.
+  // |fidl::ClientEnd<::fidl_test_nullable::SimpleProtocol>|, avoiding setting
+  // up a client.
   class Call final {
     Call() = delete;
 
@@ -2056,7 +2050,7 @@ class SimpleProtocol final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::Add Add(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::nullable::SimpleProtocol>
+        ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>
             _client_end,
         int32_t a, int32_t b) {
       return ResultOf::Add(_client_end, a, b);
@@ -2065,7 +2059,7 @@ class SimpleProtocol final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::Add Add(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::nullable::SimpleProtocol>
+        ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>
             _client_end,
         ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
         ::fidl::BufferSpan _response_buffer) {
@@ -2359,182 +2353,158 @@ struct Int32Wrapper {
 };
 
 }  // namespace wire
-}  // namespace nullable
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_nullable
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::nullable::wire::StructWithNullableVector>
+struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableVector>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::nullable::wire::StructWithNullableVector>
+struct IsStruct<::fidl_test_nullable::wire::StructWithNullableVector>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::nullable::wire::StructWithNullableVector>);
-static_assert(
-    offsetof(::llcpp::fidl::test::nullable::wire::StructWithNullableVector,
-             val) == 0);
-static_assert(
-    sizeof(::llcpp::fidl::test::nullable::wire::StructWithNullableVector) ==
-    ::llcpp::fidl::test::nullable::wire::StructWithNullableVector::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::nullable::wire::StructWithNullableUnion>
-    : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::fidl::test::nullable::wire::StructWithNullableUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::nullable::wire::StructWithNullableUnion>);
-static_assert(
-    offsetof(::llcpp::fidl::test::nullable::wire::StructWithNullableUnion,
-             val) == 0);
-static_assert(
-    sizeof(::llcpp::fidl::test::nullable::wire::StructWithNullableUnion) ==
-    ::llcpp::fidl::test::nullable::wire::StructWithNullableUnion::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::nullable::wire::StructWithNullableStruct>
-    : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::fidl::test::nullable::wire::StructWithNullableStruct>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::nullable::wire::StructWithNullableStruct>);
-static_assert(
-    offsetof(::llcpp::fidl::test::nullable::wire::StructWithNullableStruct,
-             val) == 0);
-static_assert(
-    sizeof(::llcpp::fidl::test::nullable::wire::StructWithNullableStruct) ==
-    ::llcpp::fidl::test::nullable::wire::StructWithNullableStruct::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::nullable::wire::StructWithNullableString>
-    : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::fidl::test::nullable::wire::StructWithNullableString>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::nullable::wire::StructWithNullableString>);
-static_assert(
-    offsetof(::llcpp::fidl::test::nullable::wire::StructWithNullableString,
-             val) == 0);
-static_assert(
-    sizeof(::llcpp::fidl::test::nullable::wire::StructWithNullableString) ==
-    ::llcpp::fidl::test::nullable::wire::StructWithNullableString::PrimarySize);
-
-#ifdef __Fuchsia__
-template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::nullable::wire::StructWithNullableRequest>
-    : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::fidl::test::nullable::wire::StructWithNullableRequest>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::nullable::wire::StructWithNullableRequest>);
-static_assert(
-    offsetof(::llcpp::fidl::test::nullable::wire::StructWithNullableRequest,
-             val) == 0);
-static_assert(
-    sizeof(::llcpp::fidl::test::nullable::wire::StructWithNullableRequest) ==
-    ::llcpp::fidl::test::nullable::wire::StructWithNullableRequest::
-        PrimarySize);
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::nullable::wire::StructWithNullableProtocol>
-    : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::fidl::test::nullable::wire::StructWithNullableProtocol>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::nullable::wire::StructWithNullableProtocol>);
-static_assert(
-    offsetof(::llcpp::fidl::test::nullable::wire::StructWithNullableProtocol,
-             val) == 0);
-static_assert(
-    sizeof(::llcpp::fidl::test::nullable::wire::StructWithNullableProtocol) ==
-    ::llcpp::fidl::test::nullable::wire::StructWithNullableProtocol::
-        PrimarySize);
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-struct IsFidlType<::llcpp::fidl::test::nullable::wire::StructWithNullableHandle>
-    : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::fidl::test::nullable::wire::StructWithNullableHandle>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::nullable::wire::StructWithNullableHandle>);
-static_assert(
-    offsetof(::llcpp::fidl::test::nullable::wire::StructWithNullableHandle,
-             val) == 0);
-static_assert(
-    sizeof(::llcpp::fidl::test::nullable::wire::StructWithNullableHandle) ==
-    ::llcpp::fidl::test::nullable::wire::StructWithNullableHandle::PrimarySize);
-#endif  // __Fuchsia__
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::nullable::SimpleProtocol::AddRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fidl::test::nullable::SimpleProtocol::AddRequest>
-    : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::fidl::test::nullable::SimpleProtocol::AddRequest) ==
-    ::llcpp::fidl::test::nullable::SimpleProtocol::AddRequest::PrimarySize);
-static_assert(
-    offsetof(::llcpp::fidl::test::nullable::SimpleProtocol::AddRequest, a) ==
-    16);
-static_assert(
-    offsetof(::llcpp::fidl::test::nullable::SimpleProtocol::AddRequest, b) ==
-    20);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::nullable::SimpleProtocol::AddResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fidl::test::nullable::SimpleProtocol::AddResponse>
-    : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::fidl::test::nullable::SimpleProtocol::AddResponse) ==
-    ::llcpp::fidl::test::nullable::SimpleProtocol::AddResponse::PrimarySize);
-static_assert(
-    offsetof(::llcpp::fidl::test::nullable::SimpleProtocol::AddResponse, sum) ==
-    16);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::nullable::wire::SimpleUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::nullable::wire::SimpleUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::nullable::wire::SimpleUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::nullable::wire::Int32Wrapper>
-    : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::fidl::test::nullable::wire::Int32Wrapper>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::nullable::wire::Int32Wrapper>);
-static_assert(offsetof(::llcpp::fidl::test::nullable::wire::Int32Wrapper,
+              ::fidl_test_nullable::wire::StructWithNullableVector>);
+static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableVector,
                        val) == 0);
-static_assert(sizeof(::llcpp::fidl::test::nullable::wire::Int32Wrapper) ==
-              ::llcpp::fidl::test::nullable::wire::Int32Wrapper::PrimarySize);
+static_assert(
+    sizeof(::fidl_test_nullable::wire::StructWithNullableVector) ==
+    ::fidl_test_nullable::wire::StructWithNullableVector::PrimarySize);
+
+template <>
+struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableUnion>
+    : public std::true_type {};
+template <>
+struct IsStruct<::fidl_test_nullable::wire::StructWithNullableUnion>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_nullable::wire::StructWithNullableUnion>);
+static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableUnion,
+                       val) == 0);
+static_assert(sizeof(::fidl_test_nullable::wire::StructWithNullableUnion) ==
+              ::fidl_test_nullable::wire::StructWithNullableUnion::PrimarySize);
+
+template <>
+struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableStruct>
+    : public std::true_type {};
+template <>
+struct IsStruct<::fidl_test_nullable::wire::StructWithNullableStruct>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_nullable::wire::StructWithNullableStruct>);
+static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableStruct,
+                       val) == 0);
+static_assert(
+    sizeof(::fidl_test_nullable::wire::StructWithNullableStruct) ==
+    ::fidl_test_nullable::wire::StructWithNullableStruct::PrimarySize);
+
+template <>
+struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableString>
+    : public std::true_type {};
+template <>
+struct IsStruct<::fidl_test_nullable::wire::StructWithNullableString>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_nullable::wire::StructWithNullableString>);
+static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableString,
+                       val) == 0);
+static_assert(
+    sizeof(::fidl_test_nullable::wire::StructWithNullableString) ==
+    ::fidl_test_nullable::wire::StructWithNullableString::PrimarySize);
+
+#ifdef __Fuchsia__
+template <>
+struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::fidl_test_nullable::wire::StructWithNullableRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_nullable::wire::StructWithNullableRequest>);
+static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableRequest,
+                       val) == 0);
+static_assert(
+    sizeof(::fidl_test_nullable::wire::StructWithNullableRequest) ==
+    ::fidl_test_nullable::wire::StructWithNullableRequest::PrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableProtocol>
+    : public std::true_type {};
+template <>
+struct IsStruct<::fidl_test_nullable::wire::StructWithNullableProtocol>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_nullable::wire::StructWithNullableProtocol>);
+static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableProtocol,
+                       val) == 0);
+static_assert(
+    sizeof(::fidl_test_nullable::wire::StructWithNullableProtocol) ==
+    ::fidl_test_nullable::wire::StructWithNullableProtocol::PrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableHandle>
+    : public std::true_type {};
+template <>
+struct IsStruct<::fidl_test_nullable::wire::StructWithNullableHandle>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_nullable::wire::StructWithNullableHandle>);
+static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableHandle,
+                       val) == 0);
+static_assert(
+    sizeof(::fidl_test_nullable::wire::StructWithNullableHandle) ==
+    ::fidl_test_nullable::wire::StructWithNullableHandle::PrimarySize);
+#endif  // __Fuchsia__
+
+template <>
+struct IsFidlType<::fidl_test_nullable::SimpleProtocol::AddRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl_test_nullable::SimpleProtocol::AddRequest>
+    : public std::true_type {};
+static_assert(sizeof(::fidl_test_nullable::SimpleProtocol::AddRequest) ==
+              ::fidl_test_nullable::SimpleProtocol::AddRequest::PrimarySize);
+static_assert(offsetof(::fidl_test_nullable::SimpleProtocol::AddRequest, a) ==
+              16);
+static_assert(offsetof(::fidl_test_nullable::SimpleProtocol::AddRequest, b) ==
+              20);
+
+template <>
+struct IsFidlType<::fidl_test_nullable::SimpleProtocol::AddResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl_test_nullable::SimpleProtocol::AddResponse>
+    : public std::true_type {};
+static_assert(sizeof(::fidl_test_nullable::SimpleProtocol::AddResponse) ==
+              ::fidl_test_nullable::SimpleProtocol::AddResponse::PrimarySize);
+static_assert(offsetof(::fidl_test_nullable::SimpleProtocol::AddResponse,
+                       sum) == 16);
+
+template <>
+struct IsFidlType<::fidl_test_nullable::wire::SimpleUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_nullable::wire::SimpleUnion>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_nullable::wire::SimpleUnion>);
+
+template <>
+struct IsFidlType<::fidl_test_nullable::wire::Int32Wrapper>
+    : public std::true_type {};
+template <>
+struct IsStruct<::fidl_test_nullable::wire::Int32Wrapper>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_nullable::wire::Int32Wrapper>);
+static_assert(offsetof(::fidl_test_nullable::wire::Int32Wrapper, val) == 0);
+static_assert(sizeof(::fidl_test_nullable::wire::Int32Wrapper) ==
+              ::fidl_test_nullable::wire::Int32Wrapper::PrimarySize);
 }  // namespace fidl
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace nullable {
+namespace fidl_test_nullable {
 namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
@@ -2608,8 +2578,7 @@ class SimpleProtocol::EventSender {
   EventSender() = default;
 
   explicit EventSender(
-      ::fidl::ServerEnd<::llcpp::fidl::test::nullable::SimpleProtocol>
-          server_end)
+      ::fidl::ServerEnd<::fidl_test_nullable::SimpleProtocol> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
@@ -2643,6 +2612,13 @@ class SimpleProtocol::WeakEventSender {
 #endif
 
 namespace wire {}  // namespace wire
+}  // namespace fidl_test_nullable
+namespace llcpp {
+namespace fidl {
+namespace test {
+namespace nullable {
+using namespace ::fidl_test_nullable;
+
 }  // namespace nullable
 }  // namespace test
 }  // namespace fidl

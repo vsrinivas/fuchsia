@@ -3,26 +3,20 @@
 #pragma once
 
 #include <fidl/test/doccomments/llcpp/fidl.h>
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace doccomments {
+namespace fidl_test_doccomments {
 namespace testing {
 
 class Interface_TestBase
-    : public ::llcpp::fidl::test::doccomments::Interface::Interface {
+    : public ::fidl_test_doccomments::Interface::Interface {
  public:
   virtual ~Interface_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::llcpp::fidl::test::doccomments::Interface::Interface;
+  using Interface = ::fidl_test_doccomments::Interface::Interface;
   virtual void Method(Interface::MethodCompleter::Sync& completer) override {
     NotImplemented_("Method", completer);
   }
 };
 }  // namespace testing
-}  // namespace doccomments
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_doccomments

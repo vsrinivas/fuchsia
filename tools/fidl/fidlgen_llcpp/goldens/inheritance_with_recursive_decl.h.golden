@@ -39,10 +39,7 @@
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace inheritancewithrecursivedecl {
+namespace fidl_test_inheritancewithrecursivedecl {
 class Parent;
 
 class Child;
@@ -60,19 +57,18 @@ class Parent final {
   struct FirstRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::fidl::ServerEnd<::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
-        request;
+    ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
     explicit FirstRequest(
         zx_txid_t _txid,
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>& request)
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request)
         : request(std::move(request)) {
       _InitHeader(_txid);
     }
     explicit FirstRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &::llcpp::fidl::test::inheritancewithrecursivedecl::
+        &::fidl_test_inheritancewithrecursivedecl::
             fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
@@ -90,8 +86,7 @@ class Parent final {
      public:
       UnownedEncodedByteMessage(
           uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
           : message_(_bytes, _byte_size, sizeof(FirstRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
@@ -139,8 +134,7 @@ class Parent final {
           zx_channel_iovec_t* iovecs, uint32_t iovec_size,
           fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
           zx_txid_t _txid,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
           : message_(::fidl::OutgoingIovecMessage::constructor_args{
                 .iovecs = iovecs,
@@ -209,8 +203,7 @@ class Parent final {
      public:
       explicit OwnedEncodedByteMessage(
           zx_txid_t _txid,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
           : message_(bytes_, sizeof(bytes_), _txid, request) {}
       explicit OwnedEncodedByteMessage(FirstRequest* request)
@@ -249,8 +242,7 @@ class Parent final {
      public:
       explicit OwnedEncodedIovecMessage(
           zx_txid_t _txid,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
           : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
                      substitutions_, ::fidl::internal::kIovecBufferSize, _txid,
@@ -349,10 +341,9 @@ class Parent final {
      public:
       explicit First(
           ::fidl::UnownedClientEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+              ::fidl_test_inheritancewithrecursivedecl::Parent>
               _client,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request);
       explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
       First(First&&) = delete;
@@ -375,11 +366,10 @@ class Parent final {
      public:
       explicit First(
           ::fidl::UnownedClientEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+              ::fidl_test_inheritancewithrecursivedecl::Parent>
               _client,
           uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request);
       explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
       First(First&&) = delete;
@@ -392,7 +382,7 @@ class Parent final {
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
-  // |fidl::ClientEnd<::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>|,
+  // |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>|,
   // avoiding setting up a client.
   class Call final {
     Call() = delete;
@@ -402,10 +392,9 @@ class Parent final {
     // necessary.
     static ResultOf::First First(
         ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+            ::fidl_test_inheritancewithrecursivedecl::Parent>
             _client_end,
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
       return ResultOf::First(_client_end, request);
     }
@@ -414,11 +403,10 @@ class Parent final {
     // response buffers.
     static UnownedResultOf::First First(
         ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+            ::fidl_test_inheritancewithrecursivedecl::Parent>
             _client_end,
         ::fidl::BufferSpan _request_buffer,
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
       return UnownedResultOf::First(_client_end, _request_buffer.data,
                                     _request_buffer.capacity, request);
@@ -445,8 +433,7 @@ class Parent final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::First First(
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
       return ResultOf::First(this->client_end(), request);
     }
@@ -455,8 +442,7 @@ class Parent final {
     // response buffers.
     UnownedResultOf::First First(
         ::fidl::BufferSpan _request_buffer,
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
       return UnownedResultOf::First(this->client_end(), _request_buffer.data,
                                     _request_buffer.capacity, request);
@@ -485,8 +471,7 @@ class Parent final {
     using FirstCompleter = ::fidl::Completer<>;
 
     virtual void First(
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request,
         FirstCompleter::Sync& _completer) = 0;
 
@@ -546,19 +531,18 @@ class Child final {
   struct FirstRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::fidl::ServerEnd<::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
-        request;
+    ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
     explicit FirstRequest(
         zx_txid_t _txid,
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>& request)
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request)
         : request(std::move(request)) {
       _InitHeader(_txid);
     }
     explicit FirstRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &::llcpp::fidl::test::inheritancewithrecursivedecl::
+        &::fidl_test_inheritancewithrecursivedecl::
             fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
@@ -576,8 +560,7 @@ class Child final {
      public:
       UnownedEncodedByteMessage(
           uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
           : message_(_bytes, _byte_size, sizeof(FirstRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
@@ -625,8 +608,7 @@ class Child final {
           zx_channel_iovec_t* iovecs, uint32_t iovec_size,
           fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
           zx_txid_t _txid,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
           : message_(::fidl::OutgoingIovecMessage::constructor_args{
                 .iovecs = iovecs,
@@ -695,8 +677,7 @@ class Child final {
      public:
       explicit OwnedEncodedByteMessage(
           zx_txid_t _txid,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
           : message_(bytes_, sizeof(bytes_), _txid, request) {}
       explicit OwnedEncodedByteMessage(FirstRequest* request)
@@ -735,8 +716,7 @@ class Child final {
      public:
       explicit OwnedEncodedIovecMessage(
           zx_txid_t _txid,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
           : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
                      substitutions_, ::fidl::internal::kIovecBufferSize, _txid,
@@ -822,19 +802,18 @@ class Child final {
   struct SecondRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::fidl::ServerEnd<::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
-        request;
+    ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
     explicit SecondRequest(
         zx_txid_t _txid,
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>& request)
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
+            request)
         : request(std::move(request)) {
       _InitHeader(_txid);
     }
     explicit SecondRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &::llcpp::fidl::test::inheritancewithrecursivedecl::
+        &::fidl_test_inheritancewithrecursivedecl::
             fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
@@ -852,8 +831,7 @@ class Child final {
      public:
       UnownedEncodedByteMessage(
           uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
           : message_(_bytes, _byte_size, sizeof(SecondRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
@@ -901,8 +879,7 @@ class Child final {
           zx_channel_iovec_t* iovecs, uint32_t iovec_size,
           fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
           zx_txid_t _txid,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
           : message_(::fidl::OutgoingIovecMessage::constructor_args{
                 .iovecs = iovecs,
@@ -971,8 +948,7 @@ class Child final {
      public:
       explicit OwnedEncodedByteMessage(
           zx_txid_t _txid,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
           : message_(bytes_, sizeof(bytes_), _txid, request) {}
       explicit OwnedEncodedByteMessage(SecondRequest* request)
@@ -1011,8 +987,7 @@ class Child final {
      public:
       explicit OwnedEncodedIovecMessage(
           zx_txid_t _txid,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
           : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
                      substitutions_, ::fidl::internal::kIovecBufferSize, _txid,
@@ -1111,10 +1086,9 @@ class Child final {
      public:
       explicit First(
           ::fidl::UnownedClientEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+              ::fidl_test_inheritancewithrecursivedecl::Child>
               _client,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request);
       explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
       First(First&&) = delete;
@@ -1129,10 +1103,9 @@ class Child final {
      public:
       explicit Second(
           ::fidl::UnownedClientEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+              ::fidl_test_inheritancewithrecursivedecl::Child>
               _client,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request);
       explicit Second(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Second(Second&&) = delete;
@@ -1155,11 +1128,10 @@ class Child final {
      public:
       explicit First(
           ::fidl::UnownedClientEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+              ::fidl_test_inheritancewithrecursivedecl::Child>
               _client,
           uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request);
       explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
       First(First&&) = delete;
@@ -1172,11 +1144,10 @@ class Child final {
      public:
       explicit Second(
           ::fidl::UnownedClientEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+              ::fidl_test_inheritancewithrecursivedecl::Child>
               _client,
           uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-          ::fidl::ServerEnd<
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request);
       explicit Second(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Second(Second&&) = delete;
@@ -1189,7 +1160,7 @@ class Child final {
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
-  // |fidl::ClientEnd<::llcpp::fidl::test::inheritancewithrecursivedecl::Child>|,
+  // |fidl::ClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>|,
   // avoiding setting up a client.
   class Call final {
     Call() = delete;
@@ -1199,10 +1170,9 @@ class Child final {
     // necessary.
     static ResultOf::First First(
         ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+            ::fidl_test_inheritancewithrecursivedecl::Child>
             _client_end,
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
       return ResultOf::First(_client_end, request);
     }
@@ -1211,11 +1181,10 @@ class Child final {
     // response buffers.
     static UnownedResultOf::First First(
         ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+            ::fidl_test_inheritancewithrecursivedecl::Child>
             _client_end,
         ::fidl::BufferSpan _request_buffer,
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
       return UnownedResultOf::First(_client_end, _request_buffer.data,
                                     _request_buffer.capacity, request);
@@ -1225,10 +1194,9 @@ class Child final {
     // necessary.
     static ResultOf::Second Second(
         ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+            ::fidl_test_inheritancewithrecursivedecl::Child>
             _client_end,
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
       return ResultOf::Second(_client_end, request);
     }
@@ -1237,11 +1205,10 @@ class Child final {
     // response buffers.
     static UnownedResultOf::Second Second(
         ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+            ::fidl_test_inheritancewithrecursivedecl::Child>
             _client_end,
         ::fidl::BufferSpan _request_buffer,
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
       return UnownedResultOf::Second(_client_end, _request_buffer.data,
                                      _request_buffer.capacity, request);
@@ -1268,8 +1235,7 @@ class Child final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::First First(
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
       return ResultOf::First(this->client_end(), request);
     }
@@ -1278,8 +1244,7 @@ class Child final {
     // response buffers.
     UnownedResultOf::First First(
         ::fidl::BufferSpan _request_buffer,
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
       return UnownedResultOf::First(this->client_end(), _request_buffer.data,
                                     _request_buffer.capacity, request);
@@ -1288,8 +1253,7 @@ class Child final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::Second Second(
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
       return ResultOf::Second(this->client_end(), request);
     }
@@ -1298,8 +1262,7 @@ class Child final {
     // response buffers.
     UnownedResultOf::Second Second(
         ::fidl::BufferSpan _request_buffer,
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request) {
       return UnownedResultOf::Second(this->client_end(), _request_buffer.data,
                                      _request_buffer.capacity, request);
@@ -1328,16 +1291,14 @@ class Child final {
     using FirstCompleter = ::fidl::Completer<>;
 
     virtual void First(
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request,
         FirstCompleter::Sync& _completer) = 0;
 
     using SecondCompleter = ::fidl::Completer<>;
 
     virtual void Second(
-        ::fidl::ServerEnd<
-            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+        ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
             request,
         SecondCompleter::Sync& _completer) = 0;
 
@@ -1378,67 +1339,56 @@ class Child final {
   class WeakEventSender;
 };
 
-}  // namespace inheritancewithrecursivedecl
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_inheritancewithrecursivedecl
 namespace fidl {
 
 template <>
 struct IsFidlType<
-    ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::FirstRequest>
+    ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::FirstRequest>
+    ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::
-                         FirstRequest) ==
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::
-                  FirstRequest::PrimarySize);
 static_assert(
-    offsetof(
-        ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::FirstRequest,
-        request) == 16);
+    sizeof(::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest) ==
+    ::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest::
+        PrimarySize);
+static_assert(
+    offsetof(::fidl_test_inheritancewithrecursivedecl::Parent::FirstRequest,
+             request) == 16);
+
+template <>
+struct IsFidlType<::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest) ==
+    ::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest::PrimarySize);
+static_assert(
+    offsetof(::fidl_test_inheritancewithrecursivedecl::Child::FirstRequest,
+             request) == 16);
 
 template <>
 struct IsFidlType<
-    ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::FirstRequest>
+    ::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::FirstRequest>
+    ::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
-                         FirstRequest) ==
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
-                  FirstRequest::PrimarySize);
 static_assert(
-    offsetof(
-        ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::FirstRequest,
-        request) == 16);
-
-template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::SecondRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::SecondRequest>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
-                         SecondRequest) ==
-              ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
-                  SecondRequest::PrimarySize);
+    sizeof(::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest) ==
+    ::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest::
+        PrimarySize);
 static_assert(
-    offsetof(
-        ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::SecondRequest,
-        request) == 16);
+    offsetof(::fidl_test_inheritancewithrecursivedecl::Child::SecondRequest,
+             request) == 16);
 }  // namespace fidl
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace inheritancewithrecursivedecl {
+namespace fidl_test_inheritancewithrecursivedecl {
 
 #ifdef __Fuchsia__
 class Parent::AsyncEventHandler : public Parent::EventHandlerInterface {
@@ -1453,15 +1403,13 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result First(
-      ::fidl::ServerEnd<
-          ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request);
 
   // Caller provides the backing storage for FIDL message via request buffer.
   ::fidl::Result First(
       ::fidl::BufferSpan _request_buffer,
-      ::fidl::ServerEnd<
-          ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request);
 
   AsyncEventHandler* event_handler() const { return event_handler_.get(); }
@@ -1489,8 +1437,7 @@ class Parent::EventSender {
   EventSender() = default;
 
   explicit EventSender(
-      ::fidl::ServerEnd<
-          ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           server_end)
       : server_end_(std::move(server_end)) {}
 
@@ -1534,29 +1481,25 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result First(
-      ::fidl::ServerEnd<
-          ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request);
 
   // Caller provides the backing storage for FIDL message via request buffer.
   ::fidl::Result First(
       ::fidl::BufferSpan _request_buffer,
-      ::fidl::ServerEnd<
-          ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request);
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result Second(
-      ::fidl::ServerEnd<
-          ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request);
 
   // Caller provides the backing storage for FIDL message via request buffer.
   ::fidl::Result Second(
       ::fidl::BufferSpan _request_buffer,
-      ::fidl::ServerEnd<
-          ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request);
 
   AsyncEventHandler* event_handler() const { return event_handler_.get(); }
@@ -1583,9 +1526,9 @@ class Child::EventSender {
   // Constructs an event sender with an invalid channel.
   EventSender() = default;
 
-  explicit EventSender(::fidl::ServerEnd<
-                       ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
-                           server_end)
+  explicit EventSender(
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Child>
+          server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
@@ -1614,6 +1557,13 @@ class Child::WeakEventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding<Child>> binding_;
 };
 #endif
+
+}  // namespace fidl_test_inheritancewithrecursivedecl
+namespace llcpp {
+namespace fidl {
+namespace test {
+namespace inheritancewithrecursivedecl {
+using namespace ::fidl_test_inheritancewithrecursivedecl;
 
 }  // namespace inheritancewithrecursivedecl
 }  // namespace test

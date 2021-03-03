@@ -3,56 +3,45 @@
 #pragma once
 
 #include <fidl/test/inheritancewithrecursivedecl/llcpp/fidl.h>
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace inheritancewithrecursivedecl {
+namespace fidl_test_inheritancewithrecursivedecl {
 namespace testing {
 
-class Parent_TestBase : public ::llcpp::fidl::test::
-                            inheritancewithrecursivedecl::Parent::Interface {
+class Parent_TestBase
+    : public ::fidl_test_inheritancewithrecursivedecl::Parent::Interface {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface =
-      ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::Interface;
+  using Interface = ::fidl_test_inheritancewithrecursivedecl::Parent::Interface;
   virtual void First(
-      ::fidl::ServerEnd<
-          ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request,
       Interface::FirstCompleter::Sync& completer) override {
     NotImplemented_("First", completer);
   }
 };
 
-class Child_TestBase : public ::llcpp::fidl::test::
-                           inheritancewithrecursivedecl::Child::Interface {
+class Child_TestBase
+    : public ::fidl_test_inheritancewithrecursivedecl::Child::Interface {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface =
-      ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::Interface;
+  using Interface = ::fidl_test_inheritancewithrecursivedecl::Child::Interface;
   virtual void First(
-      ::fidl::ServerEnd<
-          ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request,
       Interface::FirstCompleter::Sync& completer) override {
     NotImplemented_("First", completer);
   }
   virtual void Second(
-      ::fidl::ServerEnd<
-          ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request,
       Interface::SecondCompleter::Sync& completer) override {
     NotImplemented_("Second", completer);
   }
 };
 }  // namespace testing
-}  // namespace inheritancewithrecursivedecl
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_inheritancewithrecursivedecl

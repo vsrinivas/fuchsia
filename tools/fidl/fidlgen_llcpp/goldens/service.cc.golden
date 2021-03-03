@@ -4,10 +4,7 @@
 
 #include <memory>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace service {
+namespace fidl_test_service {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal =
@@ -21,10 +18,8 @@ extern "C" const fidl_type_t
 
 }  // namespace
 #ifdef __Fuchsia__
-::llcpp::fidl::test::service::SecondProtocol::ResultOf::MethodOnSecond::
-    MethodOnSecond(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::service::SecondProtocol>
-            _client) {
+::fidl_test_service::SecondProtocol::ResultOf::MethodOnSecond::MethodOnSecond(
+    ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> _client) {
   ::fidl::internal::EncodedMessageTypes<MethodOnSecondRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
@@ -37,7 +32,7 @@ extern "C" const fidl_type_t
 ::fidl::Result SecondProtocol::ClientImpl::MethodOnSecond() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::MethodOnSecond(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::service::SecondProtocol>(
+        ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol>(
             _channel->handle()));
     return ::fidl::Result(_res.status(), _res.error());
   }
@@ -59,10 +54,9 @@ namespace methods {
 
 void SecondProtocolDispatchMethodOnSecond(void* interface, void* bytes,
                                           ::fidl::Transaction* txn) {
-  ::llcpp::fidl::test::service::SecondProtocol::Interface::
-      MethodOnSecondCompleter::Sync completer(txn);
-  reinterpret_cast<::llcpp::fidl::test::service::SecondProtocol::Interface*>(
-      interface)
+  ::fidl_test_service::SecondProtocol::Interface::MethodOnSecondCompleter::Sync
+      completer(txn);
+  reinterpret_cast<::fidl_test_service::SecondProtocol::Interface*>(interface)
       ->MethodOnSecond(completer);
 }
 
@@ -72,7 +66,7 @@ namespace entries {
 
 ::fidl::internal::MethodEntry SecondProtocol[] = {
     {kSecondProtocol_MethodOnSecond_Ordinal,
-     ::llcpp::fidl::test::service::SecondProtocol::MethodOnSecondRequest::Type,
+     ::fidl_test_service::SecondProtocol::MethodOnSecondRequest::Type,
      methods::SecondProtocolDispatchMethodOnSecond},
 };
 
@@ -107,8 +101,8 @@ namespace entries {
 }
 #endif
 
-void ::llcpp::fidl::test::service::SecondProtocol::MethodOnSecondRequest::
-    _InitHeader(zx_txid_t _txid) {
+void ::fidl_test_service::SecondProtocol::MethodOnSecondRequest::_InitHeader(
+    zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kSecondProtocol_MethodOnSecond_Ordinal);
 }
 
@@ -128,10 +122,8 @@ extern "C" const fidl_type_t
 
 }  // namespace
 #ifdef __Fuchsia__
-::llcpp::fidl::test::service::FirstProtocol::ResultOf::MethodOnFirst::
-    MethodOnFirst(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::service::FirstProtocol>
-            _client) {
+::fidl_test_service::FirstProtocol::ResultOf::MethodOnFirst::MethodOnFirst(
+    ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> _client) {
   ::fidl::internal::EncodedMessageTypes<MethodOnFirstRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
@@ -144,7 +136,7 @@ extern "C" const fidl_type_t
 ::fidl::Result FirstProtocol::ClientImpl::MethodOnFirst() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::MethodOnFirst(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::service::FirstProtocol>(
+        ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol>(
             _channel->handle()));
     return ::fidl::Result(_res.status(), _res.error());
   }
@@ -166,10 +158,9 @@ namespace methods {
 
 void FirstProtocolDispatchMethodOnFirst(void* interface, void* bytes,
                                         ::fidl::Transaction* txn) {
-  ::llcpp::fidl::test::service::FirstProtocol::Interface::
-      MethodOnFirstCompleter::Sync completer(txn);
-  reinterpret_cast<::llcpp::fidl::test::service::FirstProtocol::Interface*>(
-      interface)
+  ::fidl_test_service::FirstProtocol::Interface::MethodOnFirstCompleter::Sync
+      completer(txn);
+  reinterpret_cast<::fidl_test_service::FirstProtocol::Interface*>(interface)
       ->MethodOnFirst(completer);
 }
 
@@ -179,7 +170,7 @@ namespace entries {
 
 ::fidl::internal::MethodEntry FirstProtocol[] = {
     {kFirstProtocol_MethodOnFirst_Ordinal,
-     ::llcpp::fidl::test::service::FirstProtocol::MethodOnFirstRequest::Type,
+     ::fidl_test_service::FirstProtocol::MethodOnFirstRequest::Type,
      methods::FirstProtocolDispatchMethodOnFirst},
 };
 
@@ -214,15 +205,12 @@ namespace entries {
 }
 #endif
 
-void ::llcpp::fidl::test::service::FirstProtocol::MethodOnFirstRequest::
-    _InitHeader(zx_txid_t _txid) {
+void ::fidl_test_service::FirstProtocol::MethodOnFirstRequest::_InitHeader(
+    zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kFirstProtocol_MethodOnFirst_Ordinal);
 }
 
 #ifdef __Fuchsia__
 #endif
 
-}  // namespace service
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_service

@@ -42,9 +42,6 @@
 
 namespace {
 
-namespace fuchsia_tee = ::llcpp::fuchsia::tee;
-namespace fuchsia_io = ::llcpp::fuchsia::io;
-
 constexpr const char kTaFileExtension[] = ".ta";
 
 // The length of a path to a trusted app consists of its UUID and file extension

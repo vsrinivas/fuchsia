@@ -38,10 +38,7 @@
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace bindingsdenylist {
+namespace fidl_test_bindingsdenylist {
 namespace wire {
 class OnlyLlcpp;
 
@@ -151,26 +148,27 @@ class OnlyLlcpp {
 constexpr uint32_t AllBindings = 0u;
 
 }  // namespace wire
-}  // namespace bindingsdenylist
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_bindingsdenylist
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::bindingsdenylist::wire::OnlyLlcpp>
+struct IsFidlType<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::bindingsdenylist::wire::OnlyLlcpp>
+struct IsUnion<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::bindingsdenylist::wire::OnlyLlcpp>);
+static_assert(
+    std::is_standard_layout_v<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>);
 }  // namespace fidl
+namespace fidl_test_bindingsdenylist {
+namespace wire {}  // namespace wire
+}  // namespace fidl_test_bindingsdenylist
 namespace llcpp {
 namespace fidl {
 namespace test {
 namespace bindingsdenylist {
-namespace wire {}  // namespace wire
+using namespace ::fidl_test_bindingsdenylist;
+
 }  // namespace bindingsdenylist
 }  // namespace test
 }  // namespace fidl

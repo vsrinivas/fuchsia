@@ -3,20 +3,16 @@
 #pragma once
 
 #include <fidl/test/protocolrequest/llcpp/fidl.h>
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace protocolrequest {
+namespace fidl_test_protocolrequest {
 namespace testing {
 
-class Parent_TestBase
-    : public ::llcpp::fidl::test::protocolrequest::Parent::Interface {
+class Parent_TestBase : public ::fidl_test_protocolrequest::Parent::Interface {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::llcpp::fidl::test::protocolrequest::Parent::Interface;
+  using Interface = ::fidl_test_protocolrequest::Parent::Interface;
   virtual void GetChild(
       Interface::GetChildCompleter::Sync& completer) override {
     NotImplemented_("GetChild", completer);
@@ -26,28 +22,24 @@ class Parent_TestBase
     NotImplemented_("GetChildRequest", completer);
   }
   virtual void TakeChild(
-      ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c,
+      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c,
       Interface::TakeChildCompleter::Sync& completer) override {
     NotImplemented_("TakeChild", completer);
   }
   virtual void TakeChildRequest(
-      ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r,
+      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r,
       Interface::TakeChildRequestCompleter::Sync& completer) override {
     NotImplemented_("TakeChildRequest", completer);
   }
 };
 
-class Child_TestBase
-    : public ::llcpp::fidl::test::protocolrequest::Child::Interface {
+class Child_TestBase : public ::fidl_test_protocolrequest::Child::Interface {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::llcpp::fidl::test::protocolrequest::Child::Interface;
+  using Interface = ::fidl_test_protocolrequest::Child::Interface;
 };
 }  // namespace testing
-}  // namespace protocolrequest
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_protocolrequest

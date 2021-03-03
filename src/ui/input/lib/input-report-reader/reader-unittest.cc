@@ -9,8 +9,6 @@
 
 #include <zxtest/zxtest.h>
 
-namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
-
 struct MouseReport {
   int64_t movement_x;
   int64_t movement_y;

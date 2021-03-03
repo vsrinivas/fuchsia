@@ -39,10 +39,7 @@
 #include <dependent/llcpp/fidl.h>
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace structdefaultvalueenumlibraryreference {
+namespace fidl_test_structdefaultvalueenumlibraryreference {
 namespace wire {
 struct Foo;
 
@@ -57,7 +54,7 @@ struct Foo {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
-  ::llcpp::dependent::wire::MyEnum field = {};
+  ::dependent::wire::MyEnum field = {};
 
  private:
   class UnownedEncodedByteMessage final {
@@ -214,37 +211,33 @@ struct Foo {
 };
 
 }  // namespace wire
-}  // namespace structdefaultvalueenumlibraryreference
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_structdefaultvalueenumlibraryreference
 namespace fidl {
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::wire::Foo>
+struct IsFidlType<::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo>
     : public std::true_type {};
 template <>
-struct IsStruct<
-    ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::wire::Foo>
+struct IsStruct<::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::
-                  wire::Foo>);
+              ::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo>);
 static_assert(
-    offsetof(
-        ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::wire::Foo,
-        field) == 0);
-static_assert(sizeof(::llcpp::fidl::test::
-                         structdefaultvalueenumlibraryreference::wire::Foo) ==
-              ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::
-                  wire::Foo::PrimarySize);
+    offsetof(::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo,
+             field) == 0);
+static_assert(
+    sizeof(::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo) ==
+    ::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo::PrimarySize);
 }  // namespace fidl
+namespace fidl_test_structdefaultvalueenumlibraryreference {
+namespace wire {}  // namespace wire
+}  // namespace fidl_test_structdefaultvalueenumlibraryreference
 namespace llcpp {
 namespace fidl {
 namespace test {
 namespace structdefaultvalueenumlibraryreference {
-namespace wire {}  // namespace wire
+using namespace ::fidl_test_structdefaultvalueenumlibraryreference;
+
 }  // namespace structdefaultvalueenumlibraryreference
 }  // namespace test
 }  // namespace fidl

@@ -107,6 +107,11 @@ const fileHeaderTmpl = `
 {{- end }}
 {{ "" }}
 
+{{- if .LibraryNamespaceAlias }}
+{{ EnsureNamespace .LibraryNamespaceAlias }}
+using namespace {{ .LibraryCommonNamespace }};
+{{- end }}
+
 {{ EndOfFile }}
 {{ end }}
 `

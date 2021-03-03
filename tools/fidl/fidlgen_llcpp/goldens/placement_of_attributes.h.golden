@@ -40,10 +40,7 @@
 #include <exampleusing/llcpp/fidl.h>
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace placementofattributes {
+namespace fidl_test_placementofattributes {
 namespace wire {
 class ExampleXUnion;
 
@@ -109,58 +106,52 @@ class ExampleBits final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits
+constexpr const ::fidl_test_placementofattributes::wire::ExampleBits
     ExampleBits::MEMBER =
-        ::llcpp::fidl::test::placementofattributes::wire::ExampleBits(1u);
-constexpr const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits
+        ::fidl_test_placementofattributes::wire::ExampleBits(1u);
+constexpr const ::fidl_test_placementofattributes::wire::ExampleBits
     ExampleBits::kMask =
-        ::llcpp::fidl::test::placementofattributes::wire::ExampleBits(1u);
+        ::fidl_test_placementofattributes::wire::ExampleBits(1u);
 
-constexpr inline ::llcpp::fidl::test::placementofattributes::wire::ExampleBits
+constexpr inline ::fidl_test_placementofattributes::wire::ExampleBits
 ExampleBits::operator~() const {
-  return ::llcpp::fidl::test::placementofattributes::wire::ExampleBits(
+  return ::fidl_test_placementofattributes::wire::ExampleBits(
       static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::placementofattributes::wire::ExampleBits
+constexpr inline ::fidl_test_placementofattributes::wire::ExampleBits
 ExampleBits::operator|(
-    const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits& other)
-    const {
-  return ::llcpp::fidl::test::placementofattributes::wire::ExampleBits(
+    const ::fidl_test_placementofattributes::wire::ExampleBits& other) const {
+  return ::fidl_test_placementofattributes::wire::ExampleBits(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::placementofattributes::wire::ExampleBits
+constexpr inline ::fidl_test_placementofattributes::wire::ExampleBits
 ExampleBits::operator&(
-    const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits& other)
-    const {
-  return ::llcpp::fidl::test::placementofattributes::wire::ExampleBits(
+    const ::fidl_test_placementofattributes::wire::ExampleBits& other) const {
+  return ::fidl_test_placementofattributes::wire::ExampleBits(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::placementofattributes::wire::ExampleBits
+constexpr inline ::fidl_test_placementofattributes::wire::ExampleBits
 ExampleBits::operator^(
-    const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits& other)
-    const {
-  return ::llcpp::fidl::test::placementofattributes::wire::ExampleBits(
+    const ::fidl_test_placementofattributes::wire::ExampleBits& other) const {
+  return ::fidl_test_placementofattributes::wire::ExampleBits(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void ExampleBits::operator|=(
-    const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits&
-        other) {
+    const ::fidl_test_placementofattributes::wire::ExampleBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void ExampleBits::operator&=(
-    const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits&
-        other) {
+    const ::fidl_test_placementofattributes::wire::ExampleBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void ExampleBits::operator^=(
-    const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits&
-        other) {
+    const ::fidl_test_placementofattributes::wire::ExampleBits& other) {
   this->value_ ^= other.value_;
 }
 
@@ -923,16 +914,15 @@ class ExampleProtocol final {
   struct MethodRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::exampleusing::wire::Empty arg;
-    explicit MethodRequest(zx_txid_t _txid,
-                           ::llcpp::exampleusing::wire::Empty& arg)
+    ::exampleusing::wire::Empty arg;
+    explicit MethodRequest(zx_txid_t _txid, ::exampleusing::wire::Empty& arg)
         : arg(std::move(arg)) {
       _InitHeader(_txid);
     }
     explicit MethodRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &::llcpp::fidl::test::placementofattributes::
+        &::fidl_test_placementofattributes::
             fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
@@ -949,7 +939,7 @@ class ExampleProtocol final {
      public:
       UnownedEncodedByteMessage(uint8_t* _bytes, uint32_t _byte_size,
                                 zx_txid_t _txid,
-                                ::llcpp::exampleusing::wire::Empty& arg)
+                                ::exampleusing::wire::Empty& arg)
           : message_(_bytes, _byte_size, sizeof(MethodRequest), nullptr, 0, 0) {
         FIDL_ALIGNDECL MethodRequest _request(_txid, arg);
         message_.Encode<MethodRequest>(&_request);
@@ -992,7 +982,7 @@ class ExampleProtocol final {
                                  uint32_t iovec_size,
                                  fidl_iovec_substitution_t* substitutions,
                                  uint32_t substitutions_size, zx_txid_t _txid,
-                                 ::llcpp::exampleusing::wire::Empty& arg)
+                                 ::exampleusing::wire::Empty& arg)
           : message_(::fidl::OutgoingIovecMessage::constructor_args{
                 .iovecs = iovecs,
                 .iovecs_actual = 0,
@@ -1055,7 +1045,7 @@ class ExampleProtocol final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid,
-                                       ::llcpp::exampleusing::wire::Empty& arg)
+                                       ::exampleusing::wire::Empty& arg)
           : message_(bytes_, sizeof(bytes_), _txid, arg) {}
       explicit OwnedEncodedByteMessage(MethodRequest* request)
           : message_(bytes_, sizeof(bytes_), request) {}
@@ -1092,7 +1082,7 @@ class ExampleProtocol final {
     class OwnedEncodedIovecMessage final {
      public:
       explicit OwnedEncodedIovecMessage(zx_txid_t _txid,
-                                        ::llcpp::exampleusing::wire::Empty& arg)
+                                        ::exampleusing::wire::Empty& arg)
           : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
                      substitutions_, ::fidl::internal::kIovecBufferSize, _txid,
                      arg) {}
@@ -1183,11 +1173,10 @@ class ExampleProtocol final {
    public:
     class Method final : public ::fidl::Result {
      public:
-      explicit Method(
-          ::fidl::UnownedClientEnd<
-              ::llcpp::fidl::test::placementofattributes::ExampleProtocol>
-              _client,
-          ::llcpp::exampleusing::wire::Empty& arg);
+      explicit Method(::fidl::UnownedClientEnd<
+                          ::fidl_test_placementofattributes::ExampleProtocol>
+                          _client,
+                      ::exampleusing::wire::Empty& arg);
       explicit Method(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Method(Method&&) = delete;
       Method(const Method&) = delete;
@@ -1207,12 +1196,11 @@ class ExampleProtocol final {
    public:
     class Method final : public ::fidl::Result {
      public:
-      explicit Method(
-          ::fidl::UnownedClientEnd<
-              ::llcpp::fidl::test::placementofattributes::ExampleProtocol>
-              _client,
-          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-          ::llcpp::exampleusing::wire::Empty& arg);
+      explicit Method(::fidl::UnownedClientEnd<
+                          ::fidl_test_placementofattributes::ExampleProtocol>
+                          _client,
+                      uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+                      ::exampleusing::wire::Empty& arg);
       explicit Method(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Method(Method&&) = delete;
       Method(const Method&) = delete;
@@ -1224,7 +1212,7 @@ class ExampleProtocol final {
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
   // const reference to a
-  // |fidl::ClientEnd<::llcpp::fidl::test::placementofattributes::ExampleProtocol>|,
+  // |fidl::ClientEnd<::fidl_test_placementofattributes::ExampleProtocol>|,
   // avoiding setting up a client.
   class Call final {
     Call() = delete;
@@ -1234,9 +1222,9 @@ class ExampleProtocol final {
     // necessary.
     static ResultOf::Method Method(
         ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::placementofattributes::ExampleProtocol>
+            ::fidl_test_placementofattributes::ExampleProtocol>
             _client_end,
-        ::llcpp::exampleusing::wire::Empty arg) {
+        ::exampleusing::wire::Empty arg) {
       return ResultOf::Method(_client_end, arg);
     }
 
@@ -1244,10 +1232,9 @@ class ExampleProtocol final {
     // response buffers.
     static UnownedResultOf::Method Method(
         ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::placementofattributes::ExampleProtocol>
+            ::fidl_test_placementofattributes::ExampleProtocol>
             _client_end,
-        ::fidl::BufferSpan _request_buffer,
-        ::llcpp::exampleusing::wire::Empty arg) {
+        ::fidl::BufferSpan _request_buffer, ::exampleusing::wire::Empty arg) {
       return UnownedResultOf::Method(_client_end, _request_buffer.data,
                                      _request_buffer.capacity, arg);
     }
@@ -1274,14 +1261,14 @@ class ExampleProtocol final {
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    ResultOf::Method Method(::llcpp::exampleusing::wire::Empty arg) {
+    ResultOf::Method Method(::exampleusing::wire::Empty arg) {
       return ResultOf::Method(this->client_end(), arg);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::Method Method(::fidl::BufferSpan _request_buffer,
-                                   ::llcpp::exampleusing::wire::Empty arg) {
+                                   ::exampleusing::wire::Empty arg) {
       return UnownedResultOf::Method(this->client_end(), _request_buffer.data,
                                      _request_buffer.capacity, arg);
     }
@@ -1308,7 +1295,7 @@ class ExampleProtocol final {
 
     using MethodCompleter = ::fidl::Completer<>;
 
-    virtual void Method(::llcpp::exampleusing::wire::Empty arg,
+    virtual void Method(::exampleusing::wire::Empty arg,
                         MethodCompleter::Sync& _completer) = 0;
 
    private:
@@ -1348,96 +1335,83 @@ class ExampleProtocol final {
   class WeakEventSender;
 };
 
-}  // namespace placementofattributes
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_placementofattributes
 namespace fidl {
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion>
+struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleXUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion>);
-
-template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::placementofattributes::wire::ExampleUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::placementofattributes::wire::ExampleUnion>
+struct IsUnion<::fidl_test_placementofattributes::wire::ExampleXUnion>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::placementofattributes::wire::ExampleUnion>);
+              ::fidl_test_placementofattributes::wire::ExampleXUnion>);
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::placementofattributes::wire::ExampleTable>
+struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleUnion>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::placementofattributes::wire::ExampleTable>
+struct IsUnion<::fidl_test_placementofattributes::wire::ExampleUnion>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_placementofattributes::wire::ExampleUnion>);
+
+template <>
+struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleTable>
+    : public std::true_type {};
+template <>
+struct IsTable<::fidl_test_placementofattributes::wire::ExampleTable>
     : public std::true_type {};
 template <>
 struct IsTableBuilder<
-    ::llcpp::fidl::test::placementofattributes::wire::ExampleTable::Builder>
+    ::fidl_test_placementofattributes::wire::ExampleTable::Builder>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::placementofattributes::wire::ExampleTable>);
+              ::fidl_test_placementofattributes::wire::ExampleTable>);
+
+template <>
+struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleStruct>
+    : public std::true_type {};
+template <>
+struct IsStruct<::fidl_test_placementofattributes::wire::ExampleStruct>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_placementofattributes::wire::ExampleStruct>);
+static_assert(offsetof(::fidl_test_placementofattributes::wire::ExampleStruct,
+                       member) == 0);
+static_assert(
+    sizeof(::fidl_test_placementofattributes::wire::ExampleStruct) ==
+    ::fidl_test_placementofattributes::wire::ExampleStruct::PrimarySize);
+
+template <>
+struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleEnum>
+    : public std::true_type {};
+
+template <>
+struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleBits>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_placementofattributes::wire::ExampleBits>);
+static_assert(sizeof(::fidl_test_placementofattributes::wire::ExampleBits) ==
+              sizeof(uint32_t));
 
 template <>
 struct IsFidlType<
-    ::llcpp::fidl::test::placementofattributes::wire::ExampleStruct>
-    : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::fidl::test::placementofattributes::wire::ExampleStruct>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::placementofattributes::wire::ExampleStruct>);
-static_assert(
-    offsetof(::llcpp::fidl::test::placementofattributes::wire::ExampleStruct,
-             member) == 0);
-static_assert(
-    sizeof(::llcpp::fidl::test::placementofattributes::wire::ExampleStruct) ==
-    ::llcpp::fidl::test::placementofattributes::wire::ExampleStruct::
-        PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::placementofattributes::wire::ExampleEnum>
-    : public std::true_type {};
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::placementofattributes::wire::ExampleBits>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::placementofattributes::wire::ExampleBits>);
-static_assert(
-    sizeof(::llcpp::fidl::test::placementofattributes::wire::ExampleBits) ==
-    sizeof(uint32_t));
-
-template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::placementofattributes::ExampleProtocol::MethodRequest>
+    ::fidl_test_placementofattributes::ExampleProtocol::MethodRequest>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::llcpp::fidl::test::placementofattributes::ExampleProtocol::MethodRequest>
+    ::fidl_test_placementofattributes::ExampleProtocol::MethodRequest>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::placementofattributes::
-                         ExampleProtocol::MethodRequest) ==
-              ::llcpp::fidl::test::placementofattributes::ExampleProtocol::
-                  MethodRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::placementofattributes::
-                           ExampleProtocol::MethodRequest,
-                       arg) == 16);
+static_assert(
+    sizeof(::fidl_test_placementofattributes::ExampleProtocol::MethodRequest) ==
+    ::fidl_test_placementofattributes::ExampleProtocol::MethodRequest::
+        PrimarySize);
+static_assert(
+    offsetof(::fidl_test_placementofattributes::ExampleProtocol::MethodRequest,
+             arg) == 16);
 }  // namespace fidl
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace placementofattributes {
+namespace fidl_test_placementofattributes {
 namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
@@ -1453,11 +1427,11 @@ class ExampleProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result Method(::llcpp::exampleusing::wire::Empty arg);
+  ::fidl::Result Method(::exampleusing::wire::Empty arg);
 
   // Caller provides the backing storage for FIDL message via request buffer.
   ::fidl::Result Method(::fidl::BufferSpan _request_buffer,
-                        ::llcpp::exampleusing::wire::Empty arg);
+                        ::exampleusing::wire::Empty arg);
 
   AsyncEventHandler* event_handler() const { return event_handler_.get(); }
 
@@ -1484,8 +1458,7 @@ class ExampleProtocol::EventSender {
   EventSender() = default;
 
   explicit EventSender(
-      ::fidl::ServerEnd<
-          ::llcpp::fidl::test::placementofattributes::ExampleProtocol>
+      ::fidl::ServerEnd<::fidl_test_placementofattributes::ExampleProtocol>
           server_end)
       : server_end_(std::move(server_end)) {}
 
@@ -1518,6 +1491,13 @@ class ExampleProtocol::WeakEventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding<ExampleProtocol>> binding_;
 };
 #endif
+
+}  // namespace fidl_test_placementofattributes
+namespace llcpp {
+namespace fidl {
+namespace test {
+namespace placementofattributes {
+using namespace ::fidl_test_placementofattributes;
 
 }  // namespace placementofattributes
 }  // namespace test

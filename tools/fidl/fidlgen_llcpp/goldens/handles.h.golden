@@ -66,10 +66,7 @@
 #include <zircon/fidl.h>
 #include <zx/llcpp/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace handles {
+namespace fidl_test_handles {
 namespace wire {
 
 enum class obj_type : uint32_t {
@@ -212,11 +209,10 @@ struct Handles {
 
   ::zx::vmo aliased_rights_handle_field = {};
 
-  ::fidl::ClientEnd<::llcpp::fidl::test::handles::SomeProtocol> some_protocol =
-      {};
+  ::fidl::ClientEnd<::fidl_test_handles::SomeProtocol> some_protocol = {};
 
-  ::fidl::ServerEnd<::llcpp::fidl::test::handles::SomeProtocol>
-      request_some_protocol = {};
+  ::fidl::ServerEnd<::fidl_test_handles::SomeProtocol> request_some_protocol =
+      {};
 
   void _CloseHandles();
 
@@ -415,9 +411,8 @@ class SomeProtocol final {
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::llcpp::fidl::test::handles::SomeProtocol>|, avoiding
-  // setting up a client.
+  // const reference to a |fidl::ClientEnd<::fidl_test_handles::SomeProtocol>|,
+  // avoiding setting up a client.
   class Call final {
     Call() = delete;
 
@@ -500,99 +495,76 @@ class SomeProtocol final {
   class WeakEventSender;
 };
 
-}  // namespace handles
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_handles
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::handles::wire::obj_type>
-    : public std::true_type {};
+struct IsFidlType<::fidl_test_handles::wire::obj_type> : public std::true_type {
+};
 
 #ifdef __Fuchsia__
 template <>
-struct IsFidlType<::llcpp::fidl::test::handles::wire::Handles>
-    : public std::true_type {};
+struct IsFidlType<::fidl_test_handles::wire::Handles> : public std::true_type {
+};
 template <>
-struct IsStruct<::llcpp::fidl::test::handles::wire::Handles>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::handles::wire::Handles>);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       plain_handle) == 0);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       bti_handle) == 4);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       channel_handle) == 8);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       clock_handle) == 12);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       debuglog_handle) == 16);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       event_handle) == 20);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       eventpair_handle) == 24);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       exception_handle) == 28);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       fifo_handle) == 32);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       guest_handle) == 36);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       interrupt_handle) == 40);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       iommu_handle) == 44);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       job_handle) == 48);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       pager_handle) == 52);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       pcidevice_handle) == 56);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       pmt_handle) == 60);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       port_handle) == 64);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       process_handle) == 68);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       profile_handle) == 72);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       resource_handle) == 76);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       socket_handle) == 80);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
+struct IsStruct<::fidl_test_handles::wire::Handles> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl_test_handles::wire::Handles>);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, plain_handle) == 0);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, bti_handle) == 4);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, channel_handle) ==
+              8);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, clock_handle) == 12);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, debuglog_handle) ==
+              16);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, event_handle) == 20);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, eventpair_handle) ==
+              24);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, exception_handle) ==
+              28);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, fifo_handle) == 32);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, guest_handle) == 36);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, interrupt_handle) ==
+              40);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, iommu_handle) == 44);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, job_handle) == 48);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, pager_handle) == 52);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, pcidevice_handle) ==
+              56);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, pmt_handle) == 60);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, port_handle) == 64);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, process_handle) ==
+              68);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, profile_handle) ==
+              72);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, resource_handle) ==
+              76);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, socket_handle) ==
+              80);
+static_assert(offsetof(::fidl_test_handles::wire::Handles,
                        suspendtoken_handle) == 84);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       thread_handle) == 88);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       timer_handle) == 92);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       vcpu_handle) == 96);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       vmar_handle) == 100);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       vmo_handle) == 104);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       rights_handle) == 108);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
+static_assert(offsetof(::fidl_test_handles::wire::Handles, thread_handle) ==
+              88);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, timer_handle) == 92);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, vcpu_handle) == 96);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, vmar_handle) == 100);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, vmo_handle) == 104);
+static_assert(offsetof(::fidl_test_handles::wire::Handles, rights_handle) ==
+              108);
+static_assert(offsetof(::fidl_test_handles::wire::Handles,
                        aliased_plain_handle_field) == 112);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
+static_assert(offsetof(::fidl_test_handles::wire::Handles,
                        aliased_subtype_handle_field) == 116);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
+static_assert(offsetof(::fidl_test_handles::wire::Handles,
                        aliased_rights_handle_field) == 120);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
-                       some_protocol) == 124);
-static_assert(offsetof(::llcpp::fidl::test::handles::wire::Handles,
+static_assert(offsetof(::fidl_test_handles::wire::Handles, some_protocol) ==
+              124);
+static_assert(offsetof(::fidl_test_handles::wire::Handles,
                        request_some_protocol) == 128);
-static_assert(sizeof(::llcpp::fidl::test::handles::wire::Handles) ==
-              ::llcpp::fidl::test::handles::wire::Handles::PrimarySize);
+static_assert(sizeof(::fidl_test_handles::wire::Handles) ==
+              ::fidl_test_handles::wire::Handles::PrimarySize);
 #endif  // __Fuchsia__
 }  // namespace fidl
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace handles {
+namespace fidl_test_handles {
 namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
@@ -631,7 +603,7 @@ class SomeProtocol::EventSender {
   EventSender() = default;
 
   explicit EventSender(
-      ::fidl::ServerEnd<::llcpp::fidl::test::handles::SomeProtocol> server_end)
+      ::fidl::ServerEnd<::fidl_test_handles::SomeProtocol> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
@@ -662,6 +634,13 @@ class SomeProtocol::WeakEventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding<SomeProtocol>> binding_;
 };
 #endif
+
+}  // namespace fidl_test_handles
+namespace llcpp {
+namespace fidl {
+namespace test {
+namespace handles {
+using namespace ::fidl_test_handles;
 
 }  // namespace handles
 }  // namespace test

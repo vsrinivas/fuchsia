@@ -39,10 +39,7 @@
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace inheritance {
+namespace fidl_test_inheritance {
 class super;
 
 class sub;
@@ -63,8 +60,7 @@ class super final {
     fooResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &::llcpp::fidl::test::inheritance::
-            fidl_test_inheritance_superfooResponseTable;
+        &::fidl_test_inheritance::fidl_test_inheritance_superfooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -302,8 +298,7 @@ class super final {
     explicit fooRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &::llcpp::fidl::test::inheritance::
-            fidl_test_inheritance_superfooRequestTable;
+        &::fidl_test_inheritance::fidl_test_inheritance_superfooRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -558,11 +553,9 @@ class super final {
     class foo final : public ::fidl::Result {
      public:
       explicit foo(
-          ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super>
-              _client,
+          ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client,
           const ::fidl::StringView& s);
-      foo(::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super>
-              _client,
+      foo(::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client,
           const ::fidl::StringView& s, zx_time_t _deadline);
       explicit foo(const ::fidl::Result& result) : ::fidl::Result(result) {}
       foo(foo&&) = delete;
@@ -604,8 +597,7 @@ class super final {
     class foo final : public ::fidl::Result {
      public:
       explicit foo(
-          ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super>
-              _client,
+          ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client,
           uint8_t* _request_bytes, uint32_t _request_byte_capacity,
           const ::fidl::StringView& s, uint8_t* _response_bytes,
           uint32_t _response_byte_capacity);
@@ -640,9 +632,8 @@ class super final {
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::llcpp::fidl::test::inheritance::super>|, avoiding
-  // setting up a client.
+  // const reference to a |fidl::ClientEnd<::fidl_test_inheritance::super>|,
+  // avoiding setting up a client.
   class Call final {
     Call() = delete;
 
@@ -650,8 +641,7 @@ class super final {
     // Allocates 24 bytes of response buffer on the stack. Request is
     // heap-allocated.
     static ResultOf::foo foo(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super>
-            _client_end,
+        ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client_end,
         ::fidl::StringView s) {
       return ResultOf::foo(_client_end, s);
     }
@@ -659,8 +649,7 @@ class super final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::foo foo(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super>
-            _client_end,
+        ::fidl::UnownedClientEnd<::fidl_test_inheritance::super> _client_end,
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::foo(
@@ -799,8 +788,7 @@ class sub final {
     fooResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &::llcpp::fidl::test::inheritance::
-            fidl_test_inheritance_subfooResponseTable;
+        &::fidl_test_inheritance::fidl_test_inheritance_subfooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1038,8 +1026,7 @@ class sub final {
     explicit fooRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &::llcpp::fidl::test::inheritance::
-            fidl_test_inheritance_subfooRequestTable;
+        &::fidl_test_inheritance::fidl_test_inheritance_subfooRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1294,11 +1281,9 @@ class sub final {
     class foo final : public ::fidl::Result {
      public:
       explicit foo(
-          ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub>
-              _client,
+          ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client,
           const ::fidl::StringView& s);
-      foo(::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub>
-              _client,
+      foo(::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client,
           const ::fidl::StringView& s, zx_time_t _deadline);
       explicit foo(const ::fidl::Result& result) : ::fidl::Result(result) {}
       foo(foo&&) = delete;
@@ -1340,8 +1325,7 @@ class sub final {
     class foo final : public ::fidl::Result {
      public:
       explicit foo(
-          ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub>
-              _client,
+          ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client,
           uint8_t* _request_bytes, uint32_t _request_byte_capacity,
           const ::fidl::StringView& s, uint8_t* _response_bytes,
           uint32_t _response_byte_capacity);
@@ -1376,9 +1360,8 @@ class sub final {
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::llcpp::fidl::test::inheritance::sub>|, avoiding setting
-  // up a client.
+  // const reference to a |fidl::ClientEnd<::fidl_test_inheritance::sub>|,
+  // avoiding setting up a client.
   class Call final {
     Call() = delete;
 
@@ -1386,8 +1369,7 @@ class sub final {
     // Allocates 24 bytes of response buffer on the stack. Request is
     // heap-allocated.
     static ResultOf::foo foo(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub>
-            _client_end,
+        ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client_end,
         ::fidl::StringView s) {
       return ResultOf::foo(_client_end, s);
     }
@@ -1395,8 +1377,7 @@ class sub final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::foo foo(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub>
-            _client_end,
+        ::fidl::UnownedClientEnd<::fidl_test_inheritance::sub> _client_end,
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::foo(
@@ -1519,61 +1500,50 @@ class sub final {
   class WeakEventSender;
 };
 
-}  // namespace inheritance
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_inheritance
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::inheritance::super::fooRequest>
+struct IsFidlType<::fidl_test_inheritance::super::fooRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::inheritance::super::fooRequest>
+struct IsFidlMessage<::fidl_test_inheritance::super::fooRequest>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::inheritance::super::fooRequest) ==
-              ::llcpp::fidl::test::inheritance::super::fooRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::inheritance::super::fooRequest,
-                       s) == 16);
+static_assert(sizeof(::fidl_test_inheritance::super::fooRequest) ==
+              ::fidl_test_inheritance::super::fooRequest::PrimarySize);
+static_assert(offsetof(::fidl_test_inheritance::super::fooRequest, s) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::inheritance::super::fooResponse>
+struct IsFidlType<::fidl_test_inheritance::super::fooResponse>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::inheritance::super::fooResponse>
+struct IsFidlMessage<::fidl_test_inheritance::super::fooResponse>
     : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::fidl::test::inheritance::super::fooResponse) ==
-    ::llcpp::fidl::test::inheritance::super::fooResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::inheritance::super::fooResponse,
-                       y) == 16);
+static_assert(sizeof(::fidl_test_inheritance::super::fooResponse) ==
+              ::fidl_test_inheritance::super::fooResponse::PrimarySize);
+static_assert(offsetof(::fidl_test_inheritance::super::fooResponse, y) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::inheritance::sub::fooRequest>
+struct IsFidlType<::fidl_test_inheritance::sub::fooRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::inheritance::sub::fooRequest>
+struct IsFidlMessage<::fidl_test_inheritance::sub::fooRequest>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::inheritance::sub::fooRequest) ==
-              ::llcpp::fidl::test::inheritance::sub::fooRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::inheritance::sub::fooRequest, s) ==
-              16);
+static_assert(sizeof(::fidl_test_inheritance::sub::fooRequest) ==
+              ::fidl_test_inheritance::sub::fooRequest::PrimarySize);
+static_assert(offsetof(::fidl_test_inheritance::sub::fooRequest, s) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::inheritance::sub::fooResponse>
+struct IsFidlType<::fidl_test_inheritance::sub::fooResponse>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::inheritance::sub::fooResponse>
+struct IsFidlMessage<::fidl_test_inheritance::sub::fooResponse>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::inheritance::sub::fooResponse) ==
-              ::llcpp::fidl::test::inheritance::sub::fooResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::inheritance::sub::fooResponse, y) ==
-              16);
+static_assert(sizeof(::fidl_test_inheritance::sub::fooResponse) ==
+              ::fidl_test_inheritance::sub::fooResponse::PrimarySize);
+static_assert(offsetof(::fidl_test_inheritance::sub::fooResponse, y) == 16);
 }  // namespace fidl
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace inheritance {
+namespace fidl_test_inheritance {
 
 #ifdef __Fuchsia__
 class super::AsyncEventHandler : public super::EventHandlerInterface {
@@ -1644,7 +1614,7 @@ class super::EventSender {
   EventSender() = default;
 
   explicit EventSender(
-      ::fidl::ServerEnd<::llcpp::fidl::test::inheritance::super> server_end)
+      ::fidl::ServerEnd<::fidl_test_inheritance::super> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
@@ -1743,7 +1713,7 @@ class sub::EventSender {
   EventSender() = default;
 
   explicit EventSender(
-      ::fidl::ServerEnd<::llcpp::fidl::test::inheritance::sub> server_end)
+      ::fidl::ServerEnd<::fidl_test_inheritance::sub> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
@@ -1772,6 +1742,13 @@ class sub::WeakEventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding<sub>> binding_;
 };
 #endif
+
+}  // namespace fidl_test_inheritance
+namespace llcpp {
+namespace fidl {
+namespace test {
+namespace inheritance {
+using namespace ::fidl_test_inheritance;
 
 }  // namespace inheritance
 }  // namespace test

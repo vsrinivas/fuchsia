@@ -38,10 +38,7 @@
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace bitsconstants {
+namespace fidl_test_bitsconstants {
 namespace wire {
 // |BitsType| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
@@ -96,86 +93,84 @@ class BitsType final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::llcpp::fidl::test::bitsconstants::wire::BitsType BitsType::A =
-    ::llcpp::fidl::test::bitsconstants::wire::BitsType(1u);
-constexpr const ::llcpp::fidl::test::bitsconstants::wire::BitsType BitsType::B =
-    ::llcpp::fidl::test::bitsconstants::wire::BitsType(128u);
-constexpr const ::llcpp::fidl::test::bitsconstants::wire::BitsType BitsType::C =
-    ::llcpp::fidl::test::bitsconstants::wire::BitsType(2u);
-constexpr const ::llcpp::fidl::test::bitsconstants::wire::BitsType
-    BitsType::kMask = ::llcpp::fidl::test::bitsconstants::wire::BitsType(131u);
+constexpr const ::fidl_test_bitsconstants::wire::BitsType BitsType::A =
+    ::fidl_test_bitsconstants::wire::BitsType(1u);
+constexpr const ::fidl_test_bitsconstants::wire::BitsType BitsType::B =
+    ::fidl_test_bitsconstants::wire::BitsType(128u);
+constexpr const ::fidl_test_bitsconstants::wire::BitsType BitsType::C =
+    ::fidl_test_bitsconstants::wire::BitsType(2u);
+constexpr const ::fidl_test_bitsconstants::wire::BitsType BitsType::kMask =
+    ::fidl_test_bitsconstants::wire::BitsType(131u);
 
-constexpr inline ::llcpp::fidl::test::bitsconstants::wire::BitsType
-BitsType::operator~() const {
-  return ::llcpp::fidl::test::bitsconstants::wire::BitsType(
+constexpr inline ::fidl_test_bitsconstants::wire::BitsType BitsType::operator~()
+    const {
+  return ::fidl_test_bitsconstants::wire::BitsType(
       static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::bitsconstants::wire::BitsType
-BitsType::operator|(
-    const ::llcpp::fidl::test::bitsconstants::wire::BitsType& other) const {
-  return ::llcpp::fidl::test::bitsconstants::wire::BitsType(
+constexpr inline ::fidl_test_bitsconstants::wire::BitsType BitsType::operator|(
+    const ::fidl_test_bitsconstants::wire::BitsType& other) const {
+  return ::fidl_test_bitsconstants::wire::BitsType(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::bitsconstants::wire::BitsType
-BitsType::operator&(
-    const ::llcpp::fidl::test::bitsconstants::wire::BitsType& other) const {
-  return ::llcpp::fidl::test::bitsconstants::wire::BitsType(
+constexpr inline ::fidl_test_bitsconstants::wire::BitsType BitsType::operator&(
+    const ::fidl_test_bitsconstants::wire::BitsType& other) const {
+  return ::fidl_test_bitsconstants::wire::BitsType(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::bitsconstants::wire::BitsType
-BitsType::operator^(
-    const ::llcpp::fidl::test::bitsconstants::wire::BitsType& other) const {
-  return ::llcpp::fidl::test::bitsconstants::wire::BitsType(
+constexpr inline ::fidl_test_bitsconstants::wire::BitsType BitsType::operator^(
+    const ::fidl_test_bitsconstants::wire::BitsType& other) const {
+  return ::fidl_test_bitsconstants::wire::BitsType(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void BitsType::operator|=(
-    const ::llcpp::fidl::test::bitsconstants::wire::BitsType& other) {
+    const ::fidl_test_bitsconstants::wire::BitsType& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void BitsType::operator&=(
-    const ::llcpp::fidl::test::bitsconstants::wire::BitsType& other) {
+    const ::fidl_test_bitsconstants::wire::BitsType& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void BitsType::operator^=(
-    const ::llcpp::fidl::test::bitsconstants::wire::BitsType& other) {
+    const ::fidl_test_bitsconstants::wire::BitsType& other) {
   this->value_ ^= other.value_;
 }
 
-constexpr ::llcpp::fidl::test::bitsconstants::wire::BitsType Const3 =
-    static_cast<::llcpp::fidl::test::bitsconstants::wire::BitsType>(131);
+constexpr ::fidl_test_bitsconstants::wire::BitsType Const3 =
+    static_cast<::fidl_test_bitsconstants::wire::BitsType>(131);
 
-constexpr ::llcpp::fidl::test::bitsconstants::wire::BitsType Const2 =
-    static_cast<::llcpp::fidl::test::bitsconstants::wire::BitsType>(129);
+constexpr ::fidl_test_bitsconstants::wire::BitsType Const2 =
+    static_cast<::fidl_test_bitsconstants::wire::BitsType>(129);
 
-constexpr ::llcpp::fidl::test::bitsconstants::wire::BitsType Const1 =
-    ::llcpp::fidl::test::bitsconstants::wire::BitsType::A;
+constexpr ::fidl_test_bitsconstants::wire::BitsType Const1 =
+    ::fidl_test_bitsconstants::wire::BitsType::A;
 
 }  // namespace wire
-}  // namespace bitsconstants
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_bitsconstants
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::bitsconstants::wire::BitsType>
+struct IsFidlType<::fidl_test_bitsconstants::wire::BitsType>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::bitsconstants::wire::BitsType>);
-static_assert(sizeof(::llcpp::fidl::test::bitsconstants::wire::BitsType) ==
+static_assert(
+    std::is_standard_layout_v<::fidl_test_bitsconstants::wire::BitsType>);
+static_assert(sizeof(::fidl_test_bitsconstants::wire::BitsType) ==
               sizeof(uint32_t));
 }  // namespace fidl
+namespace fidl_test_bitsconstants {
+namespace wire {}  // namespace wire
+}  // namespace fidl_test_bitsconstants
 namespace llcpp {
 namespace fidl {
 namespace test {
 namespace bitsconstants {
-namespace wire {}  // namespace wire
+using namespace ::fidl_test_bitsconstants;
+
 }  // namespace bitsconstants
 }  // namespace test
 }  // namespace fidl

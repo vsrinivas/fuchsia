@@ -3,29 +3,22 @@
 #pragma once
 
 #include <fidl/test/placementofattributes/llcpp/fidl.h>
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace placementofattributes {
+namespace fidl_test_placementofattributes {
 namespace testing {
 
 class ExampleProtocol_TestBase
-    : public ::llcpp::fidl::test::placementofattributes::ExampleProtocol::
-          Interface {
+    : public ::fidl_test_placementofattributes::ExampleProtocol::Interface {
  public:
   virtual ~ExampleProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
   using Interface =
-      ::llcpp::fidl::test::placementofattributes::ExampleProtocol::Interface;
-  virtual void Method(::llcpp::exampleusing::wire::Empty arg,
+      ::fidl_test_placementofattributes::ExampleProtocol::Interface;
+  virtual void Method(::exampleusing::wire::Empty arg,
                       Interface::MethodCompleter::Sync& completer) override {
     NotImplemented_("Method", completer);
   }
 };
 }  // namespace testing
-}  // namespace placementofattributes
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_placementofattributes

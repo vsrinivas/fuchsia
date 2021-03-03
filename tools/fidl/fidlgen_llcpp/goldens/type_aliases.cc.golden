@@ -5,8 +5,7 @@
 #include <memory>
 
 #ifdef __Fuchsia__
-void ::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases::
-    _CloseHandles() {
+void ::fidl_test_typealiases::wire::ExampleOfUseOfAliases::_CloseHandles() {
   field_of_channel.reset();
   field_of_client_end.reset();
   field_of_nullable_client_end.reset();

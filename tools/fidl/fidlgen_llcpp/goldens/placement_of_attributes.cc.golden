@@ -4,8 +4,8 @@
 
 #include <memory>
 
-auto ::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion::which()
-    const -> Tag {
+auto ::fidl_test_placementofattributes::wire::ExampleXUnion::which() const
+    -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kVariant:
@@ -15,7 +15,7 @@ auto ::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion::which()
   }
 }
 
-void ::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion::
+void ::fidl_test_placementofattributes::wire::ExampleXUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExampleXUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExampleXUnion, ordinal_) ==
@@ -24,7 +24,7 @@ void ::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::placementofattributes::wire::ExampleUnion::
+void ::fidl_test_placementofattributes::wire::ExampleUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExampleUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExampleUnion, ordinal_) ==
@@ -33,10 +33,7 @@ void ::llcpp::fidl::test::placementofattributes::wire::ExampleUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace placementofattributes {
+namespace fidl_test_placementofattributes {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kExampleProtocol_Method_Ordinal =
@@ -50,11 +47,10 @@ extern "C" const fidl_type_t
 
 }  // namespace
 #ifdef __Fuchsia__
-::llcpp::fidl::test::placementofattributes::ExampleProtocol::ResultOf::Method::
-    Method(::fidl::UnownedClientEnd<
-               ::llcpp::fidl::test::placementofattributes::ExampleProtocol>
-               _client,
-           ::llcpp::exampleusing::wire::Empty& arg) {
+::fidl_test_placementofattributes::ExampleProtocol::ResultOf::Method::Method(
+    ::fidl::UnownedClientEnd<::fidl_test_placementofattributes::ExampleProtocol>
+        _client,
+    ::exampleusing::wire::Empty& arg) {
   ::fidl::internal::EncodedMessageTypes<MethodRequest>::OwnedByte _request(
       zx_txid_t(0), arg);
   _request.GetOutgoingMessage().Write(_client);
@@ -64,13 +60,12 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::placementofattributes::ExampleProtocol::UnownedResultOf::
-    Method::Method(
-        ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::placementofattributes::ExampleProtocol>
-            _client,
-        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-        ::llcpp::exampleusing::wire::Empty& arg) {
+::fidl_test_placementofattributes::ExampleProtocol::UnownedResultOf::Method::
+    Method(::fidl::UnownedClientEnd<
+               ::fidl_test_placementofattributes::ExampleProtocol>
+               _client,
+           uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+           ::exampleusing::wire::Empty& arg) {
   ::fidl::internal::EncodedMessageTypes<MethodRequest>::UnownedByte _request(
       _request_bytes, _request_byte_capacity, 0, arg);
   _request.GetOutgoingMessage().Write(_client);
@@ -81,11 +76,11 @@ extern "C" const fidl_type_t
 
 #ifdef __Fuchsia__
 ::fidl::Result ExampleProtocol::ClientImpl::Method(
-    ::llcpp::exampleusing::wire::Empty arg) {
+    ::exampleusing::wire::Empty arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::Method(
         ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::placementofattributes::ExampleProtocol>(
+            ::fidl_test_placementofattributes::ExampleProtocol>(
             _channel->handle()),
         arg);
     return ::fidl::Result(_res.status(), _res.error());
@@ -96,12 +91,11 @@ extern "C" const fidl_type_t
 
 #ifdef __Fuchsia__
 ::fidl::Result ExampleProtocol::ClientImpl::Method(
-    ::fidl::BufferSpan _request_buffer,
-    ::llcpp::exampleusing::wire::Empty arg) {
+    ::fidl::BufferSpan _request_buffer, ::exampleusing::wire::Empty arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::Method(
         ::fidl::UnownedClientEnd<
-            ::llcpp::fidl::test::placementofattributes::ExampleProtocol>(
+            ::fidl_test_placementofattributes::ExampleProtocol>(
             _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, arg);
     return ::fidl::Result(_res.status(), _res.error());
@@ -124,13 +118,13 @@ namespace methods {
 
 void ExampleProtocolDispatchMethod(void* interface, void* bytes,
                                    ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<::llcpp::fidl::test::placementofattributes::
-                                      ExampleProtocol::MethodRequest*>(bytes);
-  ::llcpp::fidl::test::placementofattributes::ExampleProtocol::Interface::
+  auto message = reinterpret_cast<
+      ::fidl_test_placementofattributes::ExampleProtocol::MethodRequest*>(
+      bytes);
+  ::fidl_test_placementofattributes::ExampleProtocol::Interface::
       MethodCompleter::Sync completer(txn);
   reinterpret_cast<
-      ::llcpp::fidl::test::placementofattributes::ExampleProtocol::Interface*>(
-      interface)
+      ::fidl_test_placementofattributes::ExampleProtocol::Interface*>(interface)
       ->Method(std::move(message->arg), completer);
 }
 
@@ -140,8 +134,7 @@ namespace entries {
 
 ::fidl::internal::MethodEntry ExampleProtocol[] = {
     {kExampleProtocol_Method_Ordinal,
-     ::llcpp::fidl::test::placementofattributes::ExampleProtocol::
-         MethodRequest::Type,
+     ::fidl_test_placementofattributes::ExampleProtocol::MethodRequest::Type,
      methods::ExampleProtocolDispatchMethod},
 };
 
@@ -176,15 +169,12 @@ namespace entries {
 }
 #endif
 
-void ::llcpp::fidl::test::placementofattributes::ExampleProtocol::
-    MethodRequest::_InitHeader(zx_txid_t _txid) {
+void ::fidl_test_placementofattributes::ExampleProtocol::MethodRequest::
+    _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kExampleProtocol_Method_Ordinal);
 }
 
 #ifdef __Fuchsia__
 #endif
 
-}  // namespace placementofattributes
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_placementofattributes

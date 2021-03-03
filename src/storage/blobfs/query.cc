@@ -11,7 +11,6 @@
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/runner.h"
 
-namespace fuchsia_fs = ::llcpp::fuchsia::fs;
 using fuchsia_fs::wire::FilesystemInfoQuery;
 
 namespace blobfs {

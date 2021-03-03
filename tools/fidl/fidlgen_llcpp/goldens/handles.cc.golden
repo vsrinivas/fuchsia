@@ -5,7 +5,7 @@
 #include <memory>
 
 #ifdef __Fuchsia__
-void ::llcpp::fidl::test::handles::wire::Handles::_CloseHandles() {
+void ::fidl_test_handles::wire::Handles::_CloseHandles() {
   plain_handle.reset();
   bti_handle.reset();
   channel_handle.reset();
@@ -42,10 +42,7 @@ void ::llcpp::fidl::test::handles::wire::Handles::_CloseHandles() {
 }
 #endif  // __Fuchsia__
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace handles {
+namespace fidl_test_handles {
 namespace {}  // namespace
 
 #ifdef __Fuchsia__
@@ -92,7 +89,4 @@ namespace entries {
 #ifdef __Fuchsia__
 #endif
 
-}  // namespace handles
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_handles

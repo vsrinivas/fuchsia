@@ -26,9 +26,6 @@
 
 #include <tee-client-api/tee_client_api.h>
 
-namespace fuchsia_tee = ::llcpp::fuchsia::tee;
-namespace fuchsia_hardware_tee = ::llcpp::fuchsia::hardware::tee;
-
 namespace {
 
 // LLCPP FIDL Type Construction Helpers

@@ -39,10 +39,7 @@
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace union_ {
+namespace fidl_test_union {
 namespace wire {
 class Union;
 
@@ -1263,7 +1260,7 @@ class StrictPizzaOrPasta {
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static StrictPizzaOrPasta WithPizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>&& val) {
+      ::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>&& val) {
     StrictPizzaOrPasta result;
     result.set_pizza(std::move(val));
     return result;
@@ -1273,23 +1270,20 @@ class StrictPizzaOrPasta {
   static StrictPizzaOrPasta WithPizza(::fidl::AnyAllocator& allocator,
                                       Args&&... args) {
     StrictPizzaOrPasta result;
-    result.set_pizza(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pizza>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
   template <typename... Args>
   static StrictPizzaOrPasta WithPizza(::fidl::Allocator& allocator,
                                       Args&&... args) {
     StrictPizzaOrPasta result;
-    result.set_pizza(
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pizza(::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_pizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>&& elem) {
+  void set_pizza(::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
@@ -1297,31 +1291,29 @@ class StrictPizzaOrPasta {
   template <typename... Args>
   void set_pizza(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPizza;
-    set_pizza(::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pizza>(
+    set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza>(
         allocator, std::forward<Args>(args)...));
   }
   template <typename... Args>
   void set_pizza(::fidl::Allocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPizza;
-    set_pizza(::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>(
+    set_pizza(::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::llcpp::fidl::test::union_::wire::Pizza& mutable_pizza() {
+  ::fidl_test_union::wire::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pizza*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union_::wire::Pizza& pizza() const {
+  const ::fidl_test_union::wire::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pizza*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static StrictPizzaOrPasta WithPasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>&& val) {
+      ::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>&& val) {
     StrictPizzaOrPasta result;
     result.set_pasta(std::move(val));
     return result;
@@ -1331,23 +1323,20 @@ class StrictPizzaOrPasta {
   static StrictPizzaOrPasta WithPasta(::fidl::AnyAllocator& allocator,
                                       Args&&... args) {
     StrictPizzaOrPasta result;
-    result.set_pasta(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pasta>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
   template <typename... Args>
   static StrictPizzaOrPasta WithPasta(::fidl::Allocator& allocator,
                                       Args&&... args) {
     StrictPizzaOrPasta result;
-    result.set_pasta(
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pasta(::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_pasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>&& elem) {
+  void set_pasta(::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
@@ -1355,25 +1344,23 @@ class StrictPizzaOrPasta {
   template <typename... Args>
   void set_pasta(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPasta;
-    set_pasta(::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pasta>(
+    set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta>(
         allocator, std::forward<Args>(args)...));
   }
   template <typename... Args>
   void set_pasta(::fidl::Allocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPasta;
-    set_pasta(::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>(
+    set_pasta(::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::llcpp::fidl::test::union_::wire::Pasta& mutable_pasta() {
+  ::fidl_test_union::wire::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pasta*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union_::wire::Pasta& pasta() const {
+  const ::fidl_test_union::wire::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pasta*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -1398,16 +1385,14 @@ class StrictPizzaOrPasta {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>
-            to_destroy = static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>>(
+        ::fidl::tracking_ptr<::fidl_test_union::wire::Pizza> to_destroy =
+            static_cast<::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>>(
                 std::move(envelope_.data));
         break;
       }
       case 2: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>
-            to_destroy = static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>>(
+        ::fidl::tracking_ptr<::fidl_test_union::wire::Pasta> to_destroy =
+            static_cast<::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>>(
                 std::move(envelope_.data));
         break;
       }
@@ -1443,7 +1428,7 @@ class PizzaOrPasta {
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static PizzaOrPasta WithPizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>&& val) {
+      ::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>&& val) {
     PizzaOrPasta result;
     result.set_pizza(std::move(val));
     return result;
@@ -1453,22 +1438,19 @@ class PizzaOrPasta {
   static PizzaOrPasta WithPizza(::fidl::AnyAllocator& allocator,
                                 Args&&... args) {
     PizzaOrPasta result;
-    result.set_pizza(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pizza>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
   template <typename... Args>
   static PizzaOrPasta WithPizza(::fidl::Allocator& allocator, Args&&... args) {
     PizzaOrPasta result;
-    result.set_pizza(
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pizza(::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_pizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>&& elem) {
+  void set_pizza(::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
@@ -1476,31 +1458,29 @@ class PizzaOrPasta {
   template <typename... Args>
   void set_pizza(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPizza;
-    set_pizza(::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pizza>(
+    set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza>(
         allocator, std::forward<Args>(args)...));
   }
   template <typename... Args>
   void set_pizza(::fidl::Allocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPizza;
-    set_pizza(::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>(
+    set_pizza(::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::llcpp::fidl::test::union_::wire::Pizza& mutable_pizza() {
+  ::fidl_test_union::wire::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pizza*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union_::wire::Pizza& pizza() const {
+  const ::fidl_test_union::wire::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pizza*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static PizzaOrPasta WithPasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>&& val) {
+      ::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>&& val) {
     PizzaOrPasta result;
     result.set_pasta(std::move(val));
     return result;
@@ -1510,22 +1490,19 @@ class PizzaOrPasta {
   static PizzaOrPasta WithPasta(::fidl::AnyAllocator& allocator,
                                 Args&&... args) {
     PizzaOrPasta result;
-    result.set_pasta(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pasta>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
   template <typename... Args>
   static PizzaOrPasta WithPasta(::fidl::Allocator& allocator, Args&&... args) {
     PizzaOrPasta result;
-    result.set_pasta(
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pasta(::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_pasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>&& elem) {
+  void set_pasta(::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
@@ -1533,25 +1510,23 @@ class PizzaOrPasta {
   template <typename... Args>
   void set_pasta(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPasta;
-    set_pasta(::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pasta>(
+    set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta>(
         allocator, std::forward<Args>(args)...));
   }
   template <typename... Args>
   void set_pasta(::fidl::Allocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPasta;
-    set_pasta(::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>(
+    set_pasta(::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::llcpp::fidl::test::union_::wire::Pasta& mutable_pasta() {
+  ::fidl_test_union::wire::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pasta*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union_::wire::Pasta& pasta() const {
+  const ::fidl_test_union::wire::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pasta*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -1575,16 +1550,14 @@ class PizzaOrPasta {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>
-            to_destroy = static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>>(
+        ::fidl::tracking_ptr<::fidl_test_union::wire::Pizza> to_destroy =
+            static_cast<::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>>(
                 std::move(envelope_.data));
         break;
       }
       case 2: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>
-            to_destroy = static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>>(
+        ::fidl::tracking_ptr<::fidl_test_union::wire::Pasta> to_destroy =
+            static_cast<::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>>(
                 std::move(envelope_.data));
         break;
       }
@@ -1621,7 +1594,7 @@ class FlexiblePizzaOrPasta {
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static FlexiblePizzaOrPasta WithPizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>&& val) {
+      ::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>&& val) {
     FlexiblePizzaOrPasta result;
     result.set_pizza(std::move(val));
     return result;
@@ -1631,23 +1604,20 @@ class FlexiblePizzaOrPasta {
   static FlexiblePizzaOrPasta WithPizza(::fidl::AnyAllocator& allocator,
                                         Args&&... args) {
     FlexiblePizzaOrPasta result;
-    result.set_pizza(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pizza>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
   template <typename... Args>
   static FlexiblePizzaOrPasta WithPizza(::fidl::Allocator& allocator,
                                         Args&&... args) {
     FlexiblePizzaOrPasta result;
-    result.set_pizza(
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pizza(::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_pizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>&& elem) {
+  void set_pizza(::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
@@ -1655,31 +1625,29 @@ class FlexiblePizzaOrPasta {
   template <typename... Args>
   void set_pizza(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPizza;
-    set_pizza(::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pizza>(
+    set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza>(
         allocator, std::forward<Args>(args)...));
   }
   template <typename... Args>
   void set_pizza(::fidl::Allocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPizza;
-    set_pizza(::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>(
+    set_pizza(::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::llcpp::fidl::test::union_::wire::Pizza& mutable_pizza() {
+  ::fidl_test_union::wire::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pizza*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union_::wire::Pizza& pizza() const {
+  const ::fidl_test_union::wire::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pizza*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static FlexiblePizzaOrPasta WithPasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>&& val) {
+      ::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>&& val) {
     FlexiblePizzaOrPasta result;
     result.set_pasta(std::move(val));
     return result;
@@ -1689,23 +1657,20 @@ class FlexiblePizzaOrPasta {
   static FlexiblePizzaOrPasta WithPasta(::fidl::AnyAllocator& allocator,
                                         Args&&... args) {
     FlexiblePizzaOrPasta result;
-    result.set_pasta(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pasta>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
   template <typename... Args>
   static FlexiblePizzaOrPasta WithPasta(::fidl::Allocator& allocator,
                                         Args&&... args) {
     FlexiblePizzaOrPasta result;
-    result.set_pasta(
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pasta(::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_pasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>&& elem) {
+  void set_pasta(::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
@@ -1713,25 +1678,23 @@ class FlexiblePizzaOrPasta {
   template <typename... Args>
   void set_pasta(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPasta;
-    set_pasta(::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pasta>(
+    set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta>(
         allocator, std::forward<Args>(args)...));
   }
   template <typename... Args>
   void set_pasta(::fidl::Allocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPasta;
-    set_pasta(::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>(
+    set_pasta(::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::llcpp::fidl::test::union_::wire::Pasta& mutable_pasta() {
+  ::fidl_test_union::wire::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pasta*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union_::wire::Pasta& pasta() const {
+  const ::fidl_test_union::wire::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pasta*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
   }
   Tag which() const;
 
@@ -1753,16 +1716,14 @@ class FlexiblePizzaOrPasta {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>
-            to_destroy = static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>>(
+        ::fidl::tracking_ptr<::fidl_test_union::wire::Pizza> to_destroy =
+            static_cast<::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>>(
                 std::move(envelope_.data));
         break;
       }
       case 2: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>
-            to_destroy = static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>>(
+        ::fidl::tracking_ptr<::fidl_test_union::wire::Pasta> to_destroy =
+            static_cast<::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>>(
                 std::move(envelope_.data));
         break;
       }
@@ -1798,7 +1759,7 @@ class ExplicitPizzaOrPasta {
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static ExplicitPizzaOrPasta WithPizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>&& val) {
+      ::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>&& val) {
     ExplicitPizzaOrPasta result;
     result.set_pizza(std::move(val));
     return result;
@@ -1808,23 +1769,20 @@ class ExplicitPizzaOrPasta {
   static ExplicitPizzaOrPasta WithPizza(::fidl::AnyAllocator& allocator,
                                         Args&&... args) {
     ExplicitPizzaOrPasta result;
-    result.set_pizza(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pizza>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
   template <typename... Args>
   static ExplicitPizzaOrPasta WithPizza(::fidl::Allocator& allocator,
                                         Args&&... args) {
     ExplicitPizzaOrPasta result;
-    result.set_pizza(
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pizza(::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_pizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>&& elem) {
+  void set_pizza(::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
@@ -1832,31 +1790,29 @@ class ExplicitPizzaOrPasta {
   template <typename... Args>
   void set_pizza(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPizza;
-    set_pizza(::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pizza>(
+    set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza>(
         allocator, std::forward<Args>(args)...));
   }
   template <typename... Args>
   void set_pizza(::fidl::Allocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPizza;
-    set_pizza(::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>(
+    set_pizza(::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::llcpp::fidl::test::union_::wire::Pizza& mutable_pizza() {
+  ::fidl_test_union::wire::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pizza*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union_::wire::Pizza& pizza() const {
+  const ::fidl_test_union::wire::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pizza*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static ExplicitPizzaOrPasta WithPasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>&& val) {
+      ::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>&& val) {
     ExplicitPizzaOrPasta result;
     result.set_pasta(std::move(val));
     return result;
@@ -1866,23 +1822,20 @@ class ExplicitPizzaOrPasta {
   static ExplicitPizzaOrPasta WithPasta(::fidl::AnyAllocator& allocator,
                                         Args&&... args) {
     ExplicitPizzaOrPasta result;
-    result.set_pasta(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pasta>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
   template <typename... Args>
   static ExplicitPizzaOrPasta WithPasta(::fidl::Allocator& allocator,
                                         Args&&... args) {
     ExplicitPizzaOrPasta result;
-    result.set_pasta(
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>(
-            allocator, std::forward<Args>(args)...));
+    result.set_pasta(::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_pasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>&& elem) {
+  void set_pasta(::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
@@ -1890,25 +1843,23 @@ class ExplicitPizzaOrPasta {
   template <typename... Args>
   void set_pasta(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPasta;
-    set_pasta(::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Pasta>(
+    set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta>(
         allocator, std::forward<Args>(args)...));
   }
   template <typename... Args>
   void set_pasta(::fidl::Allocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kPasta;
-    set_pasta(::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>(
+    set_pasta(::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::llcpp::fidl::test::union_::wire::Pasta& mutable_pasta() {
+  ::fidl_test_union::wire::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pasta*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union_::wire::Pasta& pasta() const {
+  const ::fidl_test_union::wire::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Pasta*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -1933,16 +1884,14 @@ class ExplicitPizzaOrPasta {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>
-            to_destroy = static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pizza>>(
+        ::fidl::tracking_ptr<::fidl_test_union::wire::Pizza> to_destroy =
+            static_cast<::fidl::tracking_ptr<::fidl_test_union::wire::Pizza>>(
                 std::move(envelope_.data));
         break;
       }
       case 4: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>
-            to_destroy = static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Pasta>>(
+        ::fidl::tracking_ptr<::fidl_test_union::wire::Pasta> to_destroy =
+            static_cast<::fidl::tracking_ptr<::fidl_test_union::wire::Pasta>>(
                 std::move(envelope_.data));
         break;
       }
@@ -3526,7 +3475,7 @@ class XUnionContainingEmptyStruct {
   bool is_empty() const { return ordinal_ == Ordinal::kEmpty; }
 
   static XUnionContainingEmptyStruct WithEmpty(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Empty>&& val) {
+      ::fidl::tracking_ptr<::fidl_test_union::wire::Empty>&& val) {
     XUnionContainingEmptyStruct result;
     result.set_empty(std::move(val));
     return result;
@@ -3536,23 +3485,20 @@ class XUnionContainingEmptyStruct {
   static XUnionContainingEmptyStruct WithEmpty(::fidl::AnyAllocator& allocator,
                                                Args&&... args) {
     XUnionContainingEmptyStruct result;
-    result.set_empty(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Empty>(
-            allocator, std::forward<Args>(args)...));
+    result.set_empty(::fidl::ObjectView<::fidl_test_union::wire::Empty>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
   template <typename... Args>
   static XUnionContainingEmptyStruct WithEmpty(::fidl::Allocator& allocator,
                                                Args&&... args) {
     XUnionContainingEmptyStruct result;
-    result.set_empty(
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Empty>(
-            allocator, std::forward<Args>(args)...));
+    result.set_empty(::fidl::tracking_ptr<::fidl_test_union::wire::Empty>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_empty(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Empty>&& elem) {
+  void set_empty(::fidl::tracking_ptr<::fidl_test_union::wire::Empty>&& elem) {
     ordinal_ = Ordinal::kEmpty;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
@@ -3560,25 +3506,23 @@ class XUnionContainingEmptyStruct {
   template <typename... Args>
   void set_empty(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kEmpty;
-    set_empty(::fidl::ObjectView<::llcpp::fidl::test::union_::wire::Empty>(
+    set_empty(::fidl::ObjectView<::fidl_test_union::wire::Empty>(
         allocator, std::forward<Args>(args)...));
   }
   template <typename... Args>
   void set_empty(::fidl::Allocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kEmpty;
-    set_empty(::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Empty>(
+    set_empty(::fidl::tracking_ptr<::fidl_test_union::wire::Empty>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::llcpp::fidl::test::union_::wire::Empty& mutable_empty() {
+  ::fidl_test_union::wire::Empty& mutable_empty() {
     ZX_ASSERT(ordinal_ == Ordinal::kEmpty);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Empty*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Empty*>(envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union_::wire::Empty& empty() const {
+  const ::fidl_test_union::wire::Empty& empty() const {
     ZX_ASSERT(ordinal_ == Ordinal::kEmpty);
-    return *static_cast<::llcpp::fidl::test::union_::wire::Empty*>(
-        envelope_.data.get());
+    return *static_cast<::fidl_test_union::wire::Empty*>(envelope_.data.get());
   }
   Tag which() const;
 
@@ -3599,9 +3543,8 @@ class XUnionContainingEmptyStruct {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Empty>
-            to_destroy = static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::wire::Empty>>(
+        ::fidl::tracking_ptr<::fidl_test_union::wire::Empty> to_destroy =
+            static_cast<::fidl::tracking_ptr<::fidl_test_union::wire::Empty>>(
                 std::move(envelope_.data));
         break;
       }
@@ -3626,7 +3569,7 @@ struct StructWithNullableXUnion {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
-  ::llcpp::fidl::test::union_::wire::OlderSimpleUnion x1 = {};
+  ::fidl_test_union::wire::OlderSimpleUnion x1 = {};
 
  private:
   class UnownedEncodedByteMessage final {
@@ -4137,16 +4080,16 @@ class TestProtocol final {
   struct StrictXUnionHenceResponseMayBeStackAllocatedResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion xu;
+    ::fidl_test_union::wire::StrictBoundedXUnion xu;
     explicit StrictXUnionHenceResponseMayBeStackAllocatedResponse(
-        ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion& xu)
+        ::fidl_test_union::wire::StrictBoundedXUnion& xu)
         : xu(std::move(xu)) {
       _InitHeader();
     }
     StrictXUnionHenceResponseMayBeStackAllocatedResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &::llcpp::fidl::test::union_::
+        &::fidl_test_union::
             fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
@@ -4161,7 +4104,7 @@ class TestProtocol final {
      public:
       UnownedEncodedByteMessage(
           uint8_t* _bytes, uint32_t _byte_size,
-          ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion& xu)
+          ::fidl_test_union::wire::StrictBoundedXUnion& xu)
           : message_(
                 _bytes, _byte_size,
                 sizeof(StrictXUnionHenceResponseMayBeStackAllocatedResponse),
@@ -4213,7 +4156,7 @@ class TestProtocol final {
       UnownedEncodedIovecMessage(
           zx_channel_iovec_t* iovecs, uint32_t iovec_size,
           fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
-          ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion& xu)
+          ::fidl_test_union::wire::StrictBoundedXUnion& xu)
           : message_(::fidl::OutgoingIovecMessage::constructor_args{
                 .iovecs = iovecs,
                 .iovecs_actual = 0,
@@ -4278,7 +4221,7 @@ class TestProtocol final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(
-          ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion& xu)
+          ::fidl_test_union::wire::StrictBoundedXUnion& xu)
           : message_(bytes_, sizeof(bytes_), xu) {}
       explicit OwnedEncodedByteMessage(
           StrictXUnionHenceResponseMayBeStackAllocatedResponse* response)
@@ -4316,7 +4259,7 @@ class TestProtocol final {
     class OwnedEncodedIovecMessage final {
      public:
       explicit OwnedEncodedIovecMessage(
-          ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion& xu)
+          ::fidl_test_union::wire::StrictBoundedXUnion& xu)
           : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
                      substitutions_, ::fidl::internal::kIovecBufferSize, xu) {}
       explicit OwnedEncodedIovecMessage(
@@ -4655,16 +4598,16 @@ class TestProtocol final {
   struct FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::union_::wire::OlderSimpleUnion xu;
+    ::fidl_test_union::wire::OlderSimpleUnion xu;
     explicit FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(
-        ::llcpp::fidl::test::union_::wire::OlderSimpleUnion& xu)
+        ::fidl_test_union::wire::OlderSimpleUnion& xu)
         : xu(std::move(xu)) {
       _InitHeader();
     }
     FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &::llcpp::fidl::test::union_::
+        &::fidl_test_union::
             fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
@@ -4677,9 +4620,8 @@ class TestProtocol final {
    private:
     class UnownedEncodedByteMessage final {
      public:
-      UnownedEncodedByteMessage(
-          uint8_t* _bytes, uint32_t _byte_size,
-          ::llcpp::fidl::test::union_::wire::OlderSimpleUnion& xu)
+      UnownedEncodedByteMessage(uint8_t* _bytes, uint32_t _byte_size,
+                                ::fidl_test_union::wire::OlderSimpleUnion& xu)
           : message_(
                 _bytes, _byte_size,
                 sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse),
@@ -4728,10 +4670,11 @@ class TestProtocol final {
 
     class UnownedEncodedIovecMessage final {
      public:
-      UnownedEncodedIovecMessage(
-          zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-          fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
-          ::llcpp::fidl::test::union_::wire::OlderSimpleUnion& xu)
+      UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs,
+                                 uint32_t iovec_size,
+                                 fidl_iovec_substitution_t* substitutions,
+                                 uint32_t substitutions_size,
+                                 ::fidl_test_union::wire::OlderSimpleUnion& xu)
           : message_(::fidl::OutgoingIovecMessage::constructor_args{
                 .iovecs = iovecs,
                 .iovecs_actual = 0,
@@ -4796,7 +4739,7 @@ class TestProtocol final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(
-          ::llcpp::fidl::test::union_::wire::OlderSimpleUnion& xu)
+          ::fidl_test_union::wire::OlderSimpleUnion& xu)
           : message_(bytes_, sizeof(bytes_), xu) {}
       explicit OwnedEncodedByteMessage(
           FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* response)
@@ -4834,7 +4777,7 @@ class TestProtocol final {
     class OwnedEncodedIovecMessage final {
      public:
       explicit OwnedEncodedIovecMessage(
-          ::llcpp::fidl::test::union_::wire::OlderSimpleUnion& xu)
+          ::fidl_test_union::wire::OlderSimpleUnion& xu)
           : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
                      substitutions_, ::fidl::internal::kIovecBufferSize, xu) {}
       explicit OwnedEncodedIovecMessage(
@@ -5186,11 +5129,9 @@ class TestProtocol final {
         : public ::fidl::Result {
      public:
       explicit StrictXUnionHenceResponseMayBeStackAllocated(
-          ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-              _client);
+          ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client);
       StrictXUnionHenceResponseMayBeStackAllocated(
-          ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-              _client,
+          ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
           zx_time_t _deadline);
       explicit StrictXUnionHenceResponseMayBeStackAllocated(
           const ::fidl::Result& result)
@@ -5252,11 +5193,9 @@ class TestProtocol final {
         : public ::fidl::Result {
      public:
       explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-              _client);
+          ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client);
       FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-              _client,
+          ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
           zx_time_t _deadline);
       explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
           const ::fidl::Result& result)
@@ -5325,8 +5264,7 @@ class TestProtocol final {
         : public ::fidl::Result {
      public:
       explicit StrictXUnionHenceResponseMayBeStackAllocated(
-          ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-              _client,
+          ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
           uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit StrictXUnionHenceResponseMayBeStackAllocated(
           const ::fidl::Result& result)
@@ -5385,8 +5323,7 @@ class TestProtocol final {
         : public ::fidl::Result {
      public:
       explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-              _client,
+          ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
           uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
           const ::fidl::Result& result)
@@ -5444,9 +5381,8 @@ class TestProtocol final {
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::llcpp::fidl::test::union_::TestProtocol>|, avoiding
-  // setting up a client.
+  // const reference to a |fidl::ClientEnd<::fidl_test_union::TestProtocol>|,
+  // avoiding setting up a client.
   class Call final {
     Call() = delete;
 
@@ -5455,8 +5391,7 @@ class TestProtocol final {
     // necessary.
     static ResultOf::StrictXUnionHenceResponseMayBeStackAllocated
     StrictXUnionHenceResponseMayBeStackAllocated(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-            _client_end) {
+        ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client_end) {
       return ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
           _client_end);
     }
@@ -5465,8 +5400,7 @@ class TestProtocol final {
     // response buffers.
     static UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
     StrictXUnionHenceResponseMayBeStackAllocated(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-            _client_end,
+        ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
           _client_end, _response_buffer.data, _response_buffer.capacity);
@@ -5476,8 +5410,7 @@ class TestProtocol final {
     // heap-allocated.
     static ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-            _client_end) {
+        ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client_end) {
       return ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
           _client_end);
     }
@@ -5486,8 +5419,7 @@ class TestProtocol final {
     // response buffers.
     static UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
-            _client_end,
+        ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
           _client_end, _response_buffer.data, _response_buffer.capacity);
@@ -5582,11 +5514,9 @@ class TestProtocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(
-          ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion xu);
-      ::fidl::Result Reply(
-          ::fidl::BufferSpan _buffer,
-          ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion xu);
+      ::fidl::Result Reply(::fidl_test_union::wire::StrictBoundedXUnion xu);
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer,
+                           ::fidl_test_union::wire::StrictBoundedXUnion xu);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -5613,11 +5543,9 @@ class TestProtocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(
-          ::llcpp::fidl::test::union_::wire::OlderSimpleUnion xu);
-      ::fidl::Result Reply(
-          ::fidl::BufferSpan _buffer,
-          ::llcpp::fidl::test::union_::wire::OlderSimpleUnion xu);
+      ::fidl::Result Reply(::fidl_test_union::wire::OlderSimpleUnion xu);
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer,
+                           ::fidl_test_union::wire::OlderSimpleUnion xu);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -5679,7 +5607,7 @@ struct NullableUnionStruct {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
-  ::llcpp::fidl::test::union_::wire::Union the_union = {};
+  ::fidl_test_union::wire::Union the_union = {};
 
  private:
   class UnownedEncodedByteMessage final {
@@ -6006,327 +5934,294 @@ struct Empty {
 };
 
 }  // namespace wire
-}  // namespace union_
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_union
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::Union>
-    : public std::true_type {};
+struct IsFidlType<::fidl_test_union::wire::Union> : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::Union>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::Union>);
+struct IsUnion<::fidl_test_union::wire::Union> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl_test_union::wire::Union>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::StructWithNullableXUnion>
+struct IsFidlType<::fidl_test_union::wire::StructWithNullableXUnion>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::union_::wire::StructWithNullableXUnion>
+struct IsStruct<::fidl_test_union::wire::StructWithNullableXUnion>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::StructWithNullableXUnion>);
-static_assert(
-    offsetof(::llcpp::fidl::test::union_::wire::StructWithNullableXUnion, x1) ==
-    0);
-static_assert(
-    sizeof(::llcpp::fidl::test::union_::wire::StructWithNullableXUnion) ==
-    ::llcpp::fidl::test::union_::wire::StructWithNullableXUnion::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::StrictUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::StrictUnion>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::StrictUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::StrictSimpleXUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::StrictSimpleXUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::StrictSimpleXUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::StrictFoo>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::StrictFoo>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::StrictFoo>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::StrictBoundedXUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::StrictBoundedXUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::ReverseOrdinalUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::ReverseOrdinalUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::ReverseOrdinalUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::Pizza>
-    : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::fidl::test::union_::wire::Pizza>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::Pizza>);
-static_assert(offsetof(::llcpp::fidl::test::union_::wire::Pizza, toppings) ==
+              ::fidl_test_union::wire::StructWithNullableXUnion>);
+static_assert(offsetof(::fidl_test_union::wire::StructWithNullableXUnion, x1) ==
               0);
-static_assert(sizeof(::llcpp::fidl::test::union_::wire::Pizza) ==
-              ::llcpp::fidl::test::union_::wire::Pizza::PrimarySize);
+static_assert(sizeof(::fidl_test_union::wire::StructWithNullableXUnion) ==
+              ::fidl_test_union::wire::StructWithNullableXUnion::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::Pasta>
+struct IsFidlType<::fidl_test_union::wire::StrictUnion>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::union_::wire::Pasta>
+struct IsUnion<::fidl_test_union::wire::StrictUnion> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl_test_union::wire::StrictUnion>);
+
+template <>
+struct IsFidlType<::fidl_test_union::wire::StrictSimpleXUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_union::wire::StrictSimpleXUnion>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::Pasta>);
-static_assert(offsetof(::llcpp::fidl::test::union_::wire::Pasta, sauce) == 0);
-static_assert(sizeof(::llcpp::fidl::test::union_::wire::Pasta) ==
-              ::llcpp::fidl::test::union_::wire::Pasta::PrimarySize);
+    std::is_standard_layout_v<::fidl_test_union::wire::StrictSimpleXUnion>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::StrictPizzaOrPasta>
-    : public std::true_type {};
+struct IsFidlType<::fidl_test_union::wire::StrictFoo> : public std::true_type {
+};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::StrictPizzaOrPasta>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::StrictPizzaOrPasta>);
+struct IsUnion<::fidl_test_union::wire::StrictFoo> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl_test_union::wire::StrictFoo>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::PizzaOrPasta>
+struct IsFidlType<::fidl_test_union::wire::StrictBoundedXUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::PizzaOrPasta>
+struct IsUnion<::fidl_test_union::wire::StrictBoundedXUnion>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::PizzaOrPasta>);
+    std::is_standard_layout_v<::fidl_test_union::wire::StrictBoundedXUnion>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::FlexiblePizzaOrPasta>
+struct IsFidlType<::fidl_test_union::wire::ReverseOrdinalUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::FlexiblePizzaOrPasta>
+struct IsUnion<::fidl_test_union::wire::ReverseOrdinalUnion>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::FlexiblePizzaOrPasta>);
+static_assert(
+    std::is_standard_layout_v<::fidl_test_union::wire::ReverseOrdinalUnion>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::ExplicitPizzaOrPasta>
-    : public std::true_type {};
+struct IsFidlType<::fidl_test_union::wire::Pizza> : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::ExplicitPizzaOrPasta>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::ExplicitPizzaOrPasta>);
+struct IsStruct<::fidl_test_union::wire::Pizza> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl_test_union::wire::Pizza>);
+static_assert(offsetof(::fidl_test_union::wire::Pizza, toppings) == 0);
+static_assert(sizeof(::fidl_test_union::wire::Pizza) ==
+              ::fidl_test_union::wire::Pizza::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::OlderSimpleUnion>
-    : public std::true_type {};
+struct IsFidlType<::fidl_test_union::wire::Pasta> : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::OlderSimpleUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::OlderSimpleUnion>);
+struct IsStruct<::fidl_test_union::wire::Pasta> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl_test_union::wire::Pasta>);
+static_assert(offsetof(::fidl_test_union::wire::Pasta, sauce) == 0);
+static_assert(sizeof(::fidl_test_union::wire::Pasta) ==
+              ::fidl_test_union::wire::Pasta::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::TestProtocol::
+struct IsFidlType<::fidl_test_union::wire::StrictPizzaOrPasta>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_union::wire::StrictPizzaOrPasta>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_union::wire::StrictPizzaOrPasta>);
+
+template <>
+struct IsFidlType<::fidl_test_union::wire::PizzaOrPasta>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_union::wire::PizzaOrPasta> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::fidl_test_union::wire::PizzaOrPasta>);
+
+template <>
+struct IsFidlType<::fidl_test_union::wire::FlexiblePizzaOrPasta>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_union::wire::FlexiblePizzaOrPasta>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_union::wire::FlexiblePizzaOrPasta>);
+
+template <>
+struct IsFidlType<::fidl_test_union::wire::ExplicitPizzaOrPasta>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_union::wire::ExplicitPizzaOrPasta>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_union::wire::ExplicitPizzaOrPasta>);
+
+template <>
+struct IsFidlType<::fidl_test_union::wire::OlderSimpleUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_union::wire::OlderSimpleUnion>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_union::wire::OlderSimpleUnion>);
+
+template <>
+struct IsFidlType<::fidl_test_union::TestProtocol::
                       StrictXUnionHenceResponseMayBeStackAllocatedRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::union_::TestProtocol::
+struct IsFidlMessage<::fidl_test_union::TestProtocol::
                          StrictXUnionHenceResponseMayBeStackAllocatedRequest>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::fidl::test::union_::TestProtocol::
+    sizeof(::fidl_test_union::TestProtocol::
                StrictXUnionHenceResponseMayBeStackAllocatedRequest) ==
-    ::llcpp::fidl::test::union_::TestProtocol::
+    ::fidl_test_union::TestProtocol::
         StrictXUnionHenceResponseMayBeStackAllocatedRequest::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::TestProtocol::
+struct IsFidlType<::fidl_test_union::TestProtocol::
                       StrictXUnionHenceResponseMayBeStackAllocatedResponse>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::union_::TestProtocol::
+struct IsFidlMessage<::fidl_test_union::TestProtocol::
                          StrictXUnionHenceResponseMayBeStackAllocatedResponse>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::fidl::test::union_::TestProtocol::
+    sizeof(::fidl_test_union::TestProtocol::
                StrictXUnionHenceResponseMayBeStackAllocatedResponse) ==
-    ::llcpp::fidl::test::union_::TestProtocol::
+    ::fidl_test_union::TestProtocol::
         StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::union_::TestProtocol::
+static_assert(offsetof(::fidl_test_union::TestProtocol::
                            StrictXUnionHenceResponseMayBeStackAllocatedResponse,
                        xu) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::TestProtocol::
+struct IsFidlType<::fidl_test_union::TestProtocol::
                       FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::union_::TestProtocol::
+struct IsFidlMessage<::fidl_test_union::TestProtocol::
                          FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::fidl::test::union_::TestProtocol::
+    sizeof(::fidl_test_union::TestProtocol::
                FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest) ==
-    ::llcpp::fidl::test::union_::TestProtocol::
+    ::fidl_test_union::TestProtocol::
         FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::TestProtocol::
+struct IsFidlType<::fidl_test_union::TestProtocol::
                       FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::union_::TestProtocol::
+struct IsFidlMessage<::fidl_test_union::TestProtocol::
                          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::fidl::test::union_::TestProtocol::
+    sizeof(::fidl_test_union::TestProtocol::
                FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse) ==
-    ::llcpp::fidl::test::union_::TestProtocol::
+    ::fidl_test_union::TestProtocol::
         FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::PrimarySize);
 static_assert(
-    offsetof(::llcpp::fidl::test::union_::TestProtocol::
+    offsetof(::fidl_test_union::TestProtocol::
                  FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse,
              xu) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::NullableUnionStruct>
+struct IsFidlType<::fidl_test_union::wire::NullableUnionStruct>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::union_::wire::NullableUnionStruct>
+struct IsStruct<::fidl_test_union::wire::NullableUnionStruct>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::NullableUnionStruct>);
-static_assert(offsetof(::llcpp::fidl::test::union_::wire::NullableUnionStruct,
+static_assert(
+    std::is_standard_layout_v<::fidl_test_union::wire::NullableUnionStruct>);
+static_assert(offsetof(::fidl_test_union::wire::NullableUnionStruct,
                        the_union) == 0);
-static_assert(
-    sizeof(::llcpp::fidl::test::union_::wire::NullableUnionStruct) ==
-    ::llcpp::fidl::test::union_::wire::NullableUnionStruct::PrimarySize);
+static_assert(sizeof(::fidl_test_union::wire::NullableUnionStruct) ==
+              ::fidl_test_union::wire::NullableUnionStruct::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::NewerSimpleUnion>
+struct IsFidlType<::fidl_test_union::wire::NewerSimpleUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::NewerSimpleUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::NewerSimpleUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::FlexibleUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::FlexibleUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::FlexibleUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::FlexibleFoo>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::FlexibleFoo>
+struct IsUnion<::fidl_test_union::wire::NewerSimpleUnion>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::FlexibleFoo>);
+    std::is_standard_layout_v<::fidl_test_union::wire::NewerSimpleUnion>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::FieldCollision>
+struct IsFidlType<::fidl_test_union::wire::FlexibleUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::FieldCollision>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::FieldCollision>);
+struct IsUnion<::fidl_test_union::wire::FlexibleUnion> : public std::true_type {
+};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_union::wire::FlexibleUnion>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::ExplicitXUnion>
+struct IsFidlType<::fidl_test_union::wire::FlexibleFoo>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::ExplicitXUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::ExplicitXUnion>);
+struct IsUnion<::fidl_test_union::wire::FlexibleFoo> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl_test_union::wire::FlexibleFoo>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::ExplicitUnion>
+struct IsFidlType<::fidl_test_union::wire::FieldCollision>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::ExplicitUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::ExplicitUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::ExplicitStrictFoo>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::ExplicitStrictFoo>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::ExplicitStrictFoo>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::ExplicitFoo>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::ExplicitFoo>
+struct IsUnion<::fidl_test_union::wire::FieldCollision>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::ExplicitFoo>);
+    std::is_standard_layout_v<::fidl_test_union::wire::FieldCollision>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::wire::Empty>
+struct IsFidlType<::fidl_test_union::wire::ExplicitXUnion>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::union_::wire::Empty>
+struct IsUnion<::fidl_test_union::wire::ExplicitXUnion>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::Empty>);
-static_assert(offsetof(::llcpp::fidl::test::union_::wire::Empty, __reserved) ==
-              0);
-static_assert(sizeof(::llcpp::fidl::test::union_::wire::Empty) ==
-              ::llcpp::fidl::test::union_::wire::Empty::PrimarySize);
+    std::is_standard_layout_v<::fidl_test_union::wire::ExplicitXUnion>);
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct>
+struct IsFidlType<::fidl_test_union::wire::ExplicitUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct>
+struct IsUnion<::fidl_test_union::wire::ExplicitUnion> : public std::true_type {
+};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_union::wire::ExplicitUnion>);
+
+template <>
+struct IsFidlType<::fidl_test_union::wire::ExplicitStrictFoo>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_union::wire::ExplicitStrictFoo>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_union::wire::ExplicitStrictFoo>);
+
+template <>
+struct IsFidlType<::fidl_test_union::wire::ExplicitFoo>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_union::wire::ExplicitFoo> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl_test_union::wire::ExplicitFoo>);
+
+template <>
+struct IsFidlType<::fidl_test_union::wire::Empty> : public std::true_type {};
+template <>
+struct IsStruct<::fidl_test_union::wire::Empty> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl_test_union::wire::Empty>);
+static_assert(offsetof(::fidl_test_union::wire::Empty, __reserved) == 0);
+static_assert(sizeof(::fidl_test_union::wire::Empty) ==
+              ::fidl_test_union::wire::Empty::PrimarySize);
+
+template <>
+struct IsFidlType<::fidl_test_union::wire::XUnionContainingEmptyStruct>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_union::wire::XUnionContainingEmptyStruct>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct>);
+              ::fidl_test_union::wire::XUnionContainingEmptyStruct>);
 }  // namespace fidl
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace union_ {
+namespace fidl_test_union {
 namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
@@ -6453,7 +6348,7 @@ class TestProtocol::EventSender {
   EventSender() = default;
 
   explicit EventSender(
-      ::fidl::ServerEnd<::llcpp::fidl::test::union_::TestProtocol> server_end)
+      ::fidl::ServerEnd<::fidl_test_union::TestProtocol> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
@@ -6486,6 +6381,13 @@ class TestProtocol::WeakEventSender {
 #endif
 
 namespace wire {}  // namespace wire
+}  // namespace fidl_test_union
+namespace llcpp {
+namespace fidl {
+namespace test {
+namespace union_ {
+using namespace ::fidl_test_union;
+
 }  // namespace union_
 }  // namespace test
 }  // namespace fidl

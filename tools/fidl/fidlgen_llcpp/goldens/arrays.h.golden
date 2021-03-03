@@ -38,10 +38,7 @@
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace arrays {
+namespace fidl_test_arrays {
 namespace wire {
 class UnionSmallArray;
 
@@ -1329,87 +1326,84 @@ struct StructLargeArray {
 };
 
 }  // namespace wire
-}  // namespace arrays
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_arrays
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::arrays::wire::UnionSmallArray>
+struct IsFidlType<::fidl_test_arrays::wire::UnionSmallArray>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::arrays::wire::UnionSmallArray>
+struct IsUnion<::fidl_test_arrays::wire::UnionSmallArray>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::arrays::wire::UnionSmallArray>);
+static_assert(
+    std::is_standard_layout_v<::fidl_test_arrays::wire::UnionSmallArray>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::arrays::wire::UnionLargeArray>
+struct IsFidlType<::fidl_test_arrays::wire::UnionLargeArray>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::arrays::wire::UnionLargeArray>
+struct IsUnion<::fidl_test_arrays::wire::UnionLargeArray>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::arrays::wire::UnionLargeArray>);
+static_assert(
+    std::is_standard_layout_v<::fidl_test_arrays::wire::UnionLargeArray>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::arrays::wire::TableSmallArray>
+struct IsFidlType<::fidl_test_arrays::wire::TableSmallArray>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::arrays::wire::TableSmallArray>
+struct IsTable<::fidl_test_arrays::wire::TableSmallArray>
     : public std::true_type {};
 template <>
-struct IsTableBuilder<
-    ::llcpp::fidl::test::arrays::wire::TableSmallArray::Builder>
+struct IsTableBuilder<::fidl_test_arrays::wire::TableSmallArray::Builder>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::arrays::wire::TableSmallArray>);
+static_assert(
+    std::is_standard_layout_v<::fidl_test_arrays::wire::TableSmallArray>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::arrays::wire::TableLargeArray>
+struct IsFidlType<::fidl_test_arrays::wire::TableLargeArray>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::arrays::wire::TableLargeArray>
+struct IsTable<::fidl_test_arrays::wire::TableLargeArray>
     : public std::true_type {};
 template <>
-struct IsTableBuilder<
-    ::llcpp::fidl::test::arrays::wire::TableLargeArray::Builder>
+struct IsTableBuilder<::fidl_test_arrays::wire::TableLargeArray::Builder>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::arrays::wire::TableLargeArray>);
+static_assert(
+    std::is_standard_layout_v<::fidl_test_arrays::wire::TableLargeArray>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::arrays::wire::StructSmallArray>
+struct IsFidlType<::fidl_test_arrays::wire::StructSmallArray>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::arrays::wire::StructSmallArray>
+struct IsStruct<::fidl_test_arrays::wire::StructSmallArray>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::arrays::wire::StructSmallArray>);
-static_assert(offsetof(::llcpp::fidl::test::arrays::wire::StructSmallArray,
-                       a) == 0);
-static_assert(sizeof(::llcpp::fidl::test::arrays::wire::StructSmallArray) ==
-              ::llcpp::fidl::test::arrays::wire::StructSmallArray::PrimarySize);
+static_assert(
+    std::is_standard_layout_v<::fidl_test_arrays::wire::StructSmallArray>);
+static_assert(offsetof(::fidl_test_arrays::wire::StructSmallArray, a) == 0);
+static_assert(sizeof(::fidl_test_arrays::wire::StructSmallArray) ==
+              ::fidl_test_arrays::wire::StructSmallArray::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::arrays::wire::StructLargeArray>
+struct IsFidlType<::fidl_test_arrays::wire::StructLargeArray>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::arrays::wire::StructLargeArray>
+struct IsStruct<::fidl_test_arrays::wire::StructLargeArray>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::arrays::wire::StructLargeArray>);
-static_assert(offsetof(::llcpp::fidl::test::arrays::wire::StructLargeArray,
-                       a) == 0);
-static_assert(sizeof(::llcpp::fidl::test::arrays::wire::StructLargeArray) ==
-              ::llcpp::fidl::test::arrays::wire::StructLargeArray::PrimarySize);
+static_assert(
+    std::is_standard_layout_v<::fidl_test_arrays::wire::StructLargeArray>);
+static_assert(offsetof(::fidl_test_arrays::wire::StructLargeArray, a) == 0);
+static_assert(sizeof(::fidl_test_arrays::wire::StructLargeArray) ==
+              ::fidl_test_arrays::wire::StructLargeArray::PrimarySize);
 }  // namespace fidl
+namespace fidl_test_arrays {
+namespace wire {}  // namespace wire
+}  // namespace fidl_test_arrays
 namespace llcpp {
 namespace fidl {
 namespace test {
 namespace arrays {
-namespace wire {}  // namespace wire
+using namespace ::fidl_test_arrays;
+
 }  // namespace arrays
 }  // namespace test
 }  // namespace fidl

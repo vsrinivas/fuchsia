@@ -39,10 +39,7 @@
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace doccomments {
+namespace fidl_test_doccomments {
 namespace wire {
 class Table;
 
@@ -127,55 +124,54 @@ class MyStrictBits final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::llcpp::fidl::test::doccomments::wire::MyStrictBits
+constexpr const ::fidl_test_doccomments::wire::MyStrictBits
     MyStrictBits::MY_FIRST_BIT =
-        ::llcpp::fidl::test::doccomments::wire::MyStrictBits(1u);
-constexpr const ::llcpp::fidl::test::doccomments::wire::MyStrictBits
+        ::fidl_test_doccomments::wire::MyStrictBits(1u);
+constexpr const ::fidl_test_doccomments::wire::MyStrictBits
     MyStrictBits::MY_OTHER_BIT =
-        ::llcpp::fidl::test::doccomments::wire::MyStrictBits(2u);
-constexpr const ::llcpp::fidl::test::doccomments::wire::MyStrictBits
-    MyStrictBits::kMask =
-        ::llcpp::fidl::test::doccomments::wire::MyStrictBits(3u);
+        ::fidl_test_doccomments::wire::MyStrictBits(2u);
+constexpr const ::fidl_test_doccomments::wire::MyStrictBits
+    MyStrictBits::kMask = ::fidl_test_doccomments::wire::MyStrictBits(3u);
 
-constexpr inline ::llcpp::fidl::test::doccomments::wire::MyStrictBits
+constexpr inline ::fidl_test_doccomments::wire::MyStrictBits
 MyStrictBits::operator~() const {
-  return ::llcpp::fidl::test::doccomments::wire::MyStrictBits(
+  return ::fidl_test_doccomments::wire::MyStrictBits(
       static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::doccomments::wire::MyStrictBits
+constexpr inline ::fidl_test_doccomments::wire::MyStrictBits
 MyStrictBits::operator|(
-    const ::llcpp::fidl::test::doccomments::wire::MyStrictBits& other) const {
-  return ::llcpp::fidl::test::doccomments::wire::MyStrictBits(
+    const ::fidl_test_doccomments::wire::MyStrictBits& other) const {
+  return ::fidl_test_doccomments::wire::MyStrictBits(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::doccomments::wire::MyStrictBits
+constexpr inline ::fidl_test_doccomments::wire::MyStrictBits
 MyStrictBits::operator&(
-    const ::llcpp::fidl::test::doccomments::wire::MyStrictBits& other) const {
-  return ::llcpp::fidl::test::doccomments::wire::MyStrictBits(
+    const ::fidl_test_doccomments::wire::MyStrictBits& other) const {
+  return ::fidl_test_doccomments::wire::MyStrictBits(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::doccomments::wire::MyStrictBits
+constexpr inline ::fidl_test_doccomments::wire::MyStrictBits
 MyStrictBits::operator^(
-    const ::llcpp::fidl::test::doccomments::wire::MyStrictBits& other) const {
-  return ::llcpp::fidl::test::doccomments::wire::MyStrictBits(
+    const ::fidl_test_doccomments::wire::MyStrictBits& other) const {
+  return ::fidl_test_doccomments::wire::MyStrictBits(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void MyStrictBits::operator|=(
-    const ::llcpp::fidl::test::doccomments::wire::MyStrictBits& other) {
+    const ::fidl_test_doccomments::wire::MyStrictBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void MyStrictBits::operator&=(
-    const ::llcpp::fidl::test::doccomments::wire::MyStrictBits& other) {
+    const ::fidl_test_doccomments::wire::MyStrictBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void MyStrictBits::operator^=(
-    const ::llcpp::fidl::test::doccomments::wire::MyStrictBits& other) {
+    const ::fidl_test_doccomments::wire::MyStrictBits& other) {
   this->value_ ^= other.value_;
 }
 
@@ -218,12 +214,10 @@ class MyFlexibleEnum final {
  private:
   uint32_t value_;
 };
-constexpr const ::llcpp::fidl::test::doccomments::wire::MyFlexibleEnum
-    MyFlexibleEnum::FOO =
-        ::llcpp::fidl::test::doccomments::wire::MyFlexibleEnum(1u);
-constexpr const ::llcpp::fidl::test::doccomments::wire::MyFlexibleEnum
-    MyFlexibleEnum::BAR =
-        ::llcpp::fidl::test::doccomments::wire::MyFlexibleEnum(2u);
+constexpr const ::fidl_test_doccomments::wire::MyFlexibleEnum
+    MyFlexibleEnum::FOO = ::fidl_test_doccomments::wire::MyFlexibleEnum(1u);
+constexpr const ::fidl_test_doccomments::wire::MyFlexibleEnum
+    MyFlexibleEnum::BAR = ::fidl_test_doccomments::wire::MyFlexibleEnum(2u);
 
 // flexible bits comment #1
 //
@@ -286,55 +280,54 @@ class MyFlexibleBits final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits
+constexpr const ::fidl_test_doccomments::wire::MyFlexibleBits
     MyFlexibleBits::MY_FIRST_BIT =
-        ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits(1u);
-constexpr const ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits
+        ::fidl_test_doccomments::wire::MyFlexibleBits(1u);
+constexpr const ::fidl_test_doccomments::wire::MyFlexibleBits
     MyFlexibleBits::MY_OTHER_BIT =
-        ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits(2u);
-constexpr const ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits
-    MyFlexibleBits::kMask =
-        ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits(3u);
+        ::fidl_test_doccomments::wire::MyFlexibleBits(2u);
+constexpr const ::fidl_test_doccomments::wire::MyFlexibleBits
+    MyFlexibleBits::kMask = ::fidl_test_doccomments::wire::MyFlexibleBits(3u);
 
-constexpr inline ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits
+constexpr inline ::fidl_test_doccomments::wire::MyFlexibleBits
 MyFlexibleBits::operator~() const {
-  return ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits(
+  return ::fidl_test_doccomments::wire::MyFlexibleBits(
       static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits
+constexpr inline ::fidl_test_doccomments::wire::MyFlexibleBits
 MyFlexibleBits::operator|(
-    const ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits& other) const {
-  return ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits(
+    const ::fidl_test_doccomments::wire::MyFlexibleBits& other) const {
+  return ::fidl_test_doccomments::wire::MyFlexibleBits(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits
+constexpr inline ::fidl_test_doccomments::wire::MyFlexibleBits
 MyFlexibleBits::operator&(
-    const ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits& other) const {
-  return ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits(
+    const ::fidl_test_doccomments::wire::MyFlexibleBits& other) const {
+  return ::fidl_test_doccomments::wire::MyFlexibleBits(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits
+constexpr inline ::fidl_test_doccomments::wire::MyFlexibleBits
 MyFlexibleBits::operator^(
-    const ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits& other) const {
-  return ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits(
+    const ::fidl_test_doccomments::wire::MyFlexibleBits& other) const {
+  return ::fidl_test_doccomments::wire::MyFlexibleBits(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void MyFlexibleBits::operator|=(
-    const ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits& other) {
+    const ::fidl_test_doccomments::wire::MyFlexibleBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void MyFlexibleBits::operator&=(
-    const ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits& other) {
+    const ::fidl_test_doccomments::wire::MyFlexibleBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void MyFlexibleBits::operator^=(
-    const ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits& other) {
+    const ::fidl_test_doccomments::wire::MyFlexibleBits& other) {
   this->value_ ^= other.value_;
 }
 
@@ -1613,7 +1606,7 @@ class Interface final {
     // Blocks to consume exactly one message from the channel, then call the
     // corresponding virtual method.
     ::fidl::Result HandleOneEvent(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>
+        ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface>
             client_end);
   };
 
@@ -1626,8 +1619,7 @@ class Interface final {
     class Method final : public ::fidl::Result {
      public:
       explicit Method(
-          ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>
-              _client);
+          ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client);
       explicit Method(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Method(Method&&) = delete;
       Method(const Method&) = delete;
@@ -1648,8 +1640,7 @@ class Interface final {
     class Method final : public ::fidl::Result {
      public:
       explicit Method(
-          ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>
-              _client);
+          ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client);
       explicit Method(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Method(Method&&) = delete;
       Method(const Method&) = delete;
@@ -1660,9 +1651,8 @@ class Interface final {
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a
-  // |fidl::ClientEnd<::llcpp::fidl::test::doccomments::Interface>|, avoiding
-  // setting up a client.
+  // const reference to a |fidl::ClientEnd<::fidl_test_doccomments::Interface>|,
+  // avoiding setting up a client.
   class Call final {
     Call() = delete;
 
@@ -1673,7 +1663,7 @@ class Interface final {
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::Method Method(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>
+        ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface>
             _client_end) {
       return ResultOf::Method(_client_end);
     }
@@ -1797,8 +1787,8 @@ class Service final {
         : dir_(std::move(dir)), connect_func_(connect_func) {}
 
     // Connects to the member protocol "interface".
-    // Returns a |fidl::ClientEnd<::llcpp::fidl::test::doccomments::Interface>|
-    // on success, which can be used with |fidl::BindSyncClient| to create a
+    // Returns a |fidl::ClientEnd<::fidl_test_doccomments::Interface>| on
+    // success, which can be used with |fidl::BindSyncClient| to create a
     // synchronous client, or |fidl::Client| to create a client that supports
     // both asynchronous and synchronous operations.
     //
@@ -1811,10 +1801,10 @@ class Service final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end
     // will not result in a failure of this method. Any errors sent by the
     // remote will appear on the |ClientEnd| returned from this method.
-    ::zx::status<::fidl::ClientEnd<::llcpp::fidl::test::doccomments::Interface>>
+    ::zx::status<::fidl::ClientEnd<::fidl_test_doccomments::Interface>>
     connect_interface() {
-      auto endpoints = ::fidl::CreateEndpoints<
-          ::llcpp::fidl::test::doccomments::Interface>();
+      auto endpoints =
+          ::fidl::CreateEndpoints<::fidl_test_doccomments::Interface>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
@@ -1847,7 +1837,7 @@ class Service final {
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_interface(::fidl::ServiceHandlerInterface::MemberHandler<
-                                 ::llcpp::fidl::test::doccomments::Interface>
+                                 ::fidl_test_doccomments::Interface>
                                      handler) {
       return service_handler_->AddMember("interface", std::move(handler));
     }
@@ -1864,104 +1854,91 @@ namespace wire {
 constexpr int32_t C = 4u;
 
 }  // namespace wire
-}  // namespace doccomments
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_doccomments
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::doccomments::wire::Table>
+struct IsFidlType<::fidl_test_doccomments::wire::Table>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::doccomments::wire::Table>
+struct IsTable<::fidl_test_doccomments::wire::Table> : public std::true_type {};
+template <>
+struct IsTableBuilder<::fidl_test_doccomments::wire::Table::Builder>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl_test_doccomments::wire::Table>);
+
+template <>
+struct IsFidlType<::fidl_test_doccomments::wire::Struct>
     : public std::true_type {};
 template <>
-struct IsTableBuilder<::llcpp::fidl::test::doccomments::wire::Table::Builder>
+struct IsStruct<::fidl_test_doccomments::wire::Struct> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::fidl_test_doccomments::wire::Struct>);
+static_assert(offsetof(::fidl_test_doccomments::wire::Struct, Field) == 0);
+static_assert(sizeof(::fidl_test_doccomments::wire::Struct) ==
+              ::fidl_test_doccomments::wire::Struct::PrimarySize);
+
+template <>
+struct IsFidlType<::fidl_test_doccomments::wire::StrictUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_doccomments::wire::StrictUnion>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::doccomments::wire::Table>);
+    std::is_standard_layout_v<::fidl_test_doccomments::wire::StrictUnion>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::doccomments::wire::Struct>
+struct IsFidlType<::fidl_test_doccomments::Interface::MethodRequest>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::doccomments::wire::Struct>
+struct IsFidlMessage<::fidl_test_doccomments::Interface::MethodRequest>
+    : public std::true_type {};
+static_assert(sizeof(::fidl_test_doccomments::Interface::MethodRequest) ==
+              ::fidl_test_doccomments::Interface::MethodRequest::PrimarySize);
+
+template <>
+struct IsFidlType<::fidl_test_doccomments::Interface::OnEventResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl_test_doccomments::Interface::OnEventResponse>
+    : public std::true_type {};
+static_assert(sizeof(::fidl_test_doccomments::Interface::OnEventResponse) ==
+              ::fidl_test_doccomments::Interface::OnEventResponse::PrimarySize);
+
+template <>
+struct IsFidlType<::fidl_test_doccomments::wire::MyStrictEnum>
+    : public std::true_type {};
+
+template <>
+struct IsFidlType<::fidl_test_doccomments::wire::MyStrictBits>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::doccomments::wire::Struct>);
-static_assert(offsetof(::llcpp::fidl::test::doccomments::wire::Struct, Field) ==
-              0);
-static_assert(sizeof(::llcpp::fidl::test::doccomments::wire::Struct) ==
-              ::llcpp::fidl::test::doccomments::wire::Struct::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::doccomments::wire::StrictUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::doccomments::wire::StrictUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::doccomments::wire::StrictUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::doccomments::Interface::MethodRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fidl::test::doccomments::Interface::MethodRequest>
-    : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::fidl::test::doccomments::Interface::MethodRequest) ==
-    ::llcpp::fidl::test::doccomments::Interface::MethodRequest::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::doccomments::Interface::OnEventResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::llcpp::fidl::test::doccomments::Interface::OnEventResponse>
-    : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::fidl::test::doccomments::Interface::OnEventResponse) ==
-    ::llcpp::fidl::test::doccomments::Interface::OnEventResponse::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::doccomments::wire::MyStrictEnum>
-    : public std::true_type {};
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::doccomments::wire::MyStrictBits>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::doccomments::wire::MyStrictBits>);
-static_assert(sizeof(::llcpp::fidl::test::doccomments::wire::MyStrictBits) ==
+    std::is_standard_layout_v<::fidl_test_doccomments::wire::MyStrictBits>);
+static_assert(sizeof(::fidl_test_doccomments::wire::MyStrictBits) ==
               sizeof(uint32_t));
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::doccomments::wire::MyFlexibleEnum>
+struct IsFidlType<::fidl_test_doccomments::wire::MyFlexibleEnum>
     : public std::true_type {};
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::doccomments::wire::MyFlexibleBits>
+struct IsFidlType<::fidl_test_doccomments::wire::MyFlexibleBits>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits>);
-static_assert(sizeof(::llcpp::fidl::test::doccomments::wire::MyFlexibleBits) ==
+static_assert(
+    std::is_standard_layout_v<::fidl_test_doccomments::wire::MyFlexibleBits>);
+static_assert(sizeof(::fidl_test_doccomments::wire::MyFlexibleBits) ==
               sizeof(uint32_t));
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::doccomments::wire::FlexibleUnion>
+struct IsFidlType<::fidl_test_doccomments::wire::FlexibleUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::doccomments::wire::FlexibleUnion>
+struct IsUnion<::fidl_test_doccomments::wire::FlexibleUnion>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::doccomments::wire::FlexibleUnion>);
+static_assert(
+    std::is_standard_layout_v<::fidl_test_doccomments::wire::FlexibleUnion>);
 }  // namespace fidl
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace doccomments {
+namespace fidl_test_doccomments {
 namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
@@ -2007,7 +1984,7 @@ class Interface::EventSender {
   EventSender() = default;
 
   explicit EventSender(
-      ::fidl::ServerEnd<::llcpp::fidl::test::doccomments::Interface> server_end)
+      ::fidl::ServerEnd<::fidl_test_doccomments::Interface> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
@@ -2053,6 +2030,13 @@ class Interface::WeakEventSender {
 #endif
 
 namespace wire {}  // namespace wire
+}  // namespace fidl_test_doccomments
+namespace llcpp {
+namespace fidl {
+namespace test {
+namespace doccomments {
+using namespace ::fidl_test_doccomments;
+
 }  // namespace doccomments
 }  // namespace test
 }  // namespace fidl

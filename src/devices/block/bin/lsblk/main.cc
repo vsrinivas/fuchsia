@@ -37,7 +37,6 @@
 #define DEV_BLOCK "/dev/class/block"
 #define DEV_SKIP_BLOCK "/dev/class/skip-block"
 
-namespace fuchsia_device = ::llcpp::fuchsia::device;
 namespace fuchsia_block = ::llcpp::fuchsia::hardware::block;
 namespace fuchsia_partition = ::llcpp::fuchsia::hardware::block::partition;
 namespace fuchsia_skipblock = ::llcpp::fuchsia::hardware::skipblock;

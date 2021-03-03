@@ -3,32 +3,26 @@
 #pragma once
 
 #include <fidl/test/emptystruct/llcpp/fidl.h>
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace emptystruct {
+namespace fidl_test_emptystruct {
 namespace testing {
 
 class EmptyProtocol_TestBase
-    : public ::llcpp::fidl::test::emptystruct::EmptyProtocol::Interface {
+    : public ::fidl_test_emptystruct::EmptyProtocol::Interface {
  public:
   virtual ~EmptyProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = ::llcpp::fidl::test::emptystruct::EmptyProtocol::Interface;
-  virtual void Send(::llcpp::fidl::test::emptystruct::wire::Empty e,
+  using Interface = ::fidl_test_emptystruct::EmptyProtocol::Interface;
+  virtual void Send(::fidl_test_emptystruct::wire::Empty e,
                     Interface::SendCompleter::Sync& completer) override {
     NotImplemented_("Send", completer);
   }
   virtual void SendAndReceive(
-      ::llcpp::fidl::test::emptystruct::wire::Empty e,
+      ::fidl_test_emptystruct::wire::Empty e,
       Interface::SendAndReceiveCompleter::Sync& completer) override {
     NotImplemented_("SendAndReceive", completer);
   }
 };
 }  // namespace testing
-}  // namespace emptystruct
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_emptystruct

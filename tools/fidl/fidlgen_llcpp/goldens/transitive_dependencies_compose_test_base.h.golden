@@ -3,27 +3,20 @@
 #pragma once
 
 #include <fidl/test/transitivedependenciescompose/llcpp/fidl.h>
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace transitivedependenciescompose {
+namespace fidl_test_transitivedependenciescompose {
 namespace testing {
 
-class Top_TestBase : public ::llcpp::fidl::test::transitivedependenciescompose::
-                         Top::Interface {
+class Top_TestBase
+    : public ::fidl_test_transitivedependenciescompose::Top::Interface {
  public:
   virtual ~Top_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 
-  using Interface =
-      ::llcpp::fidl::test::transitivedependenciescompose::Top::Interface;
+  using Interface = ::fidl_test_transitivedependenciescompose::Top::Interface;
   virtual void GetFoo(Interface::GetFooCompleter::Sync& completer) override {
     NotImplemented_("GetFoo", completer);
   }
 };
 }  // namespace testing
-}  // namespace transitivedependenciescompose
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_transitivedependenciescompose

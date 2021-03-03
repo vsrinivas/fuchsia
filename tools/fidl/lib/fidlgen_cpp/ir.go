@@ -634,14 +634,16 @@ func (p Parameter) NameAndType() (string, Type) {
 }
 
 type Root struct {
-	PrimaryHeader   string
-	IncludeStem     string
-	Headers         []string
-	FuzzerHeaders   []string
-	HandleTypes     []string
-	Library         fidl.LibraryIdentifier
-	LibraryReversed fidl.LibraryIdentifier
-	Decls           []Decl
+	PrimaryHeader          string
+	IncludeStem            string
+	Headers                []string
+	FuzzerHeaders          []string
+	HandleTypes            []string
+	Library                fidl.LibraryIdentifier
+	LibraryReversed        fidl.LibraryIdentifier
+	LibraryCommonNamespace Namespace
+	LibraryNamespaceAlias  Namespace
+	Decls                  []Decl
 }
 
 // Holds information about error results on methods
@@ -1000,22 +1002,18 @@ func libraryParts(library fidl.LibraryIdentifier, identifierTransform identifier
 	return parts
 }
 
-func llLibraryParts(library fidl.LibraryIdentifier, identifierTransform identifierTransform) []string {
+func oldLlLibraryNamepace(library fidl.LibraryIdentifier) Namespace {
 	parts := libraryParts(library, changePartIfReserved)
 	// Avoid user-defined llcpp library colliding with the llcpp namespace, by appending underscore.
 	if len(parts) > 0 && parts[0] == "llcpp" {
 		parts[0] = "llcpp_"
 	}
-	return append([]string{"llcpp"}, parts...)
-}
-
-func llLibraryNamepace(library fidl.LibraryIdentifier) Namespace {
-	parts := llLibraryParts(library, changePartIfReserved)
+	parts = append([]string{"llcpp"}, parts...)
 	return Namespace(parts)
 }
 
 func wireLibraryNamespace(library fidl.LibraryIdentifier) Namespace {
-	return llLibraryNamepace(library).Append("wire")
+	return commonLibraryNamespace(library).Append("wire")
 }
 
 func hlLibraryNamespace(library fidl.LibraryIdentifier) Namespace {
@@ -1029,6 +1027,10 @@ func naturalLibraryNamespace(library fidl.LibraryIdentifier) Namespace {
 func formatLibrary(library fidl.LibraryIdentifier, sep string, identifierTransform identifierTransform) string {
 	name := strings.Join(libraryParts(library, identifierTransform), sep)
 	return changeIfReserved(fidl.Identifier(name), "")
+}
+
+func commonLibraryNamespace(library fidl.LibraryIdentifier) Namespace {
+	return Namespace([]string{formatLibrary(library, "_", keepPartIfReserved)})
 }
 
 func formatLibraryPrefix(library fidl.LibraryIdentifier) string {
@@ -1048,49 +1050,49 @@ func codingTableName(ident fidl.EncodedCompoundIdentifier) string {
 
 var wireAliasAllowed = map[string]struct{}{
 	// For //third_party/android/device/generic/goldfish-opengl
-	"::llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverPingMessage": {},
-	"::llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType":        {},
-	"::llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType":                   {},
-	"::llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType":              {},
-	"::llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params":                {},
-	"::llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params":           {},
-	"::llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL":       {},
-	"::llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE":       {},
-	"::llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_HANGUP":                      {},
-	"::llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_READABLE":                    {},
-	"::llcpp::fuchsia::io::wire::OPEN_FLAG_CREATE":                                   {},
-	"::llcpp::fuchsia::io::wire::OPEN_RIGHT_WRITABLE":                                {},
-	"::llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints":                    {},
-	"::llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2":                         {},
-	"::llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints":                        {},
-	"::llcpp::fuchsia::sysmem::wire::ColorSpaceType":                                 {},
-	"::llcpp::fuchsia::sysmem::wire::cpuUsageRead":                                   {},
-	"::llcpp::fuchsia::sysmem::wire::cpuUsageReadOften":                              {},
-	"::llcpp::fuchsia::sysmem::wire::cpuUsageWrite":                                  {},
-	"::llcpp::fuchsia::sysmem::wire::cpuUsageWriteOften":                             {},
-	"::llcpp::fuchsia::sysmem::wire::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL":        {},
-	"::llcpp::fuchsia::sysmem::wire::FORMAT_MODIFIER_LINEAR":                         {},
-	"::llcpp::fuchsia::sysmem::wire::HeapType":                                       {},
-	"::llcpp::fuchsia::sysmem::wire::ImageFormatConstraints":                         {},
-	"::llcpp::fuchsia::sysmem::wire::PixelFormatType":                                {},
-	"::llcpp::fuchsia::sysmem::wire::VULKAN_BUFFER_USAGE_INDEX_BUFFER":               {},
-	"::llcpp::fuchsia::sysmem::wire::VULKAN_BUFFER_USAGE_INDIRECT_BUFFER":            {},
-	"::llcpp::fuchsia::sysmem::wire::VULKAN_BUFFER_USAGE_STORAGE_BUFFER":             {},
-	"::llcpp::fuchsia::sysmem::wire::VULKAN_BUFFER_USAGE_STORAGE_TEXEL_BUFFER":       {},
-	"::llcpp::fuchsia::sysmem::wire::VULKAN_BUFFER_USAGE_TRANSFER_DST":               {},
-	"::llcpp::fuchsia::sysmem::wire::VULKAN_BUFFER_USAGE_TRANSFER_SRC":               {},
-	"::llcpp::fuchsia::sysmem::wire::VULKAN_BUFFER_USAGE_UNIFORM_BUFFER":             {},
-	"::llcpp::fuchsia::sysmem::wire::VULKAN_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER":       {},
-	"::llcpp::fuchsia::sysmem::wire::VULKAN_BUFFER_USAGE_VERTEX_BUFFER":              {},
-	"::llcpp::fuchsia::sysmem::wire::VULKAN_IMAGE_USAGE_COLOR_ATTACHMENT":            {},
-	"::llcpp::fuchsia::sysmem::wire::VULKAN_IMAGE_USAGE_SAMPLED":                     {},
-	"::llcpp::fuchsia::sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST":                {},
-	"::llcpp::fuchsia::sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_SRC":                {},
+	"::fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverPingMessage": {},
+	"::fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType":        {},
+	"::fuchsia_hardware_goldfish::wire::BufferHandleType":                   {},
+	"::fuchsia_hardware_goldfish::wire::ColorBufferFormatType":              {},
+	"::fuchsia_hardware_goldfish::wire::CreateBuffer2Params":                {},
+	"::fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params":           {},
+	"::fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL":       {},
+	"::fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE":       {},
+	"::fuchsia_hardware_goldfish::wire::SIGNAL_HANGUP":                      {},
+	"::fuchsia_hardware_goldfish::wire::SIGNAL_READABLE":                    {},
+	"::fuchsia_io::wire::OPEN_FLAG_CREATE":                                  {},
+	"::fuchsia_io::wire::OPEN_RIGHT_WRITABLE":                               {},
+	"::fuchsia_sysmem::wire::BufferCollectionConstraints":                   {},
+	"::fuchsia_sysmem::wire::BufferCollectionInfo_2":                        {},
+	"::fuchsia_sysmem::wire::BufferMemoryConstraints":                       {},
+	"::fuchsia_sysmem::wire::ColorSpaceType":                                {},
+	"::fuchsia_sysmem::wire::cpuUsageRead":                                  {},
+	"::fuchsia_sysmem::wire::cpuUsageReadOften":                             {},
+	"::fuchsia_sysmem::wire::cpuUsageWrite":                                 {},
+	"::fuchsia_sysmem::wire::cpuUsageWriteOften":                            {},
+	"::fuchsia_sysmem::wire::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL":       {},
+	"::fuchsia_sysmem::wire::FORMAT_MODIFIER_LINEAR":                        {},
+	"::fuchsia_sysmem::wire::HeapType":                                      {},
+	"::fuchsia_sysmem::wire::ImageFormatConstraints":                        {},
+	"::fuchsia_sysmem::wire::PixelFormatType":                               {},
+	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_INDEX_BUFFER":              {},
+	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_INDIRECT_BUFFER":           {},
+	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_STORAGE_BUFFER":            {},
+	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_STORAGE_TEXEL_BUFFER":      {},
+	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_TRANSFER_DST":              {},
+	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_TRANSFER_SRC":              {},
+	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_UNIFORM_BUFFER":            {},
+	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER":      {},
+	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_VERTEX_BUFFER":             {},
+	"::fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_COLOR_ATTACHMENT":           {},
+	"::fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_SAMPLED":                    {},
+	"::fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST":               {},
+	"::fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_SRC":               {},
 	// also
-	"::llcpp::fuchsia::hardware::sharedmemory::wire::SharedVmoBuffer": {},
-	"::llcpp::fuchsia::hardware::sharedmemory::wire::SharedVmoRight":  {},
-	"::llcpp::fuchsia::hardware::spi::wire::MAX_TRANSFER_SIZE":        {},
-	"::llcpp::fuchsia::mem::wire::Range":                              {},
+	"::fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer": {},
+	"::fuchsia_hardware_sharedmemory::wire::SharedVmoRight":  {},
+	"::fuchsia_hardware_spi::wire::MAX_TRANSFER_SIZE":        {},
+	"::fuchsia_mem::wire::Range":                             {},
 }
 
 func wireAlias(name DeclName) *DeclVariant {
@@ -1112,6 +1114,7 @@ type compiler struct {
 	naturalNamespace libraryNamespaceFunc
 	wireNamespace    libraryNamespaceFunc
 	commonNamespace  libraryNamespaceFunc
+	aliasNamespace   libraryNamespaceFunc
 	resultForStruct  map[fidl.EncodedCompoundIdentifier]*Result
 	resultForUnion   map[fidl.EncodedCompoundIdentifier]*Result
 }
@@ -1800,7 +1803,7 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 	return r
 }
 
-func compile(r fidl.Root, commonNsFormatter libraryNamespaceFunc) Root {
+func compile(r fidl.Root, commonNsFormatter libraryNamespaceFunc, aliasNsFormatter libraryNamespaceFunc) Root {
 	root := Root{}
 	library := make(fidl.LibraryIdentifier, 0)
 	rawLibrary := make(fidl.LibraryIdentifier, 0)
@@ -1817,11 +1820,16 @@ func compile(r fidl.Root, commonNsFormatter libraryNamespaceFunc) Root {
 		naturalNamespace: naturalLibraryNamespace,
 		wireNamespace:    wireLibraryNamespace,
 		commonNamespace:  commonNsFormatter,
+		aliasNamespace:   aliasNsFormatter,
 		resultForStruct:  make(map[fidl.EncodedCompoundIdentifier]*Result),
 		resultForUnion:   make(map[fidl.EncodedCompoundIdentifier]*Result),
 	}
 
 	root.Library = library
+	if c.aliasNamespace != nil {
+		root.LibraryNamespaceAlias = c.aliasNamespace(library)
+	}
+	root.LibraryCommonNamespace = c.commonNamespace(fidl.ParseLibraryName(r.Name))
 	libraryReversed := make(fidl.LibraryIdentifier, len(library))
 	for i, j := 0, len(library)-1; i < len(library); i, j = i+1, j-1 {
 		libraryReversed[i] = library[j]
@@ -1913,13 +1921,13 @@ func compile(r fidl.Root, commonNsFormatter libraryNamespaceFunc) Root {
 }
 
 func CompileHL(r fidl.Root) Root {
-	return compile(r.ForBindings("hlcpp"), hlLibraryNamespace)
+	return compile(r.ForBindings("hlcpp"), hlLibraryNamespace, nil)
 }
 
 func CompileLL(r fidl.Root) Root {
-	return compile(r.ForBindings("llcpp"), llLibraryNamepace)
+	return compile(r.ForBindings("llcpp"), commonLibraryNamespace, oldLlLibraryNamepace)
 }
 
 func CompileLibFuzzer(r fidl.Root) Root {
-	return compile(r.ForBindings("libfuzzer"), hlLibraryNamespace)
+	return compile(r.ForBindings("libfuzzer"), hlLibraryNamespace, nil)
 }

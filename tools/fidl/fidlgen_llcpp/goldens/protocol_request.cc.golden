@@ -4,10 +4,7 @@
 
 #include <memory>
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace protocolrequest {
+namespace fidl_test_protocolrequest {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kParent_GetChild_Ordinal =
@@ -45,9 +42,8 @@ extern "C" const fidl_type_t
 
 }  // namespace
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::ResultOf::GetChild::GetChild(
-    ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
-        _client) {
+::fidl_test_protocolrequest::Parent::ResultOf::GetChild::GetChild(
+    ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client) {
   ::fidl::internal::EncodedMessageTypes<GetChildRequest>::OwnedByte _request(
       zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildResponse>(
@@ -57,9 +53,8 @@ extern "C" const fidl_type_t
   error_ = _request.error();
 }
 
-::llcpp::fidl::test::protocolrequest::Parent::ResultOf::GetChild::GetChild(
-    ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
-        _client,
+::fidl_test_protocolrequest::Parent::ResultOf::GetChild::GetChild(
+    ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
     zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<GetChildRequest>::OwnedByte _request(
       zx_txid_t(0));
@@ -73,11 +68,9 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::UnownedResultOf::GetChild::
-    GetChild(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
-            _client,
-        uint8_t* _response_bytes, uint32_t _response_byte_capacity)
+::fidl_test_protocolrequest::Parent::UnownedResultOf::GetChild::GetChild(
+    ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
+    uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ::fidl::internal::EncodedMessageTypes<GetChildRequest>::OwnedByte _request(
       zx_txid_t(0));
@@ -89,10 +82,8 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::ResultOf::GetChildRequest::
-    GetChildRequest(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
-            _client) {
+::fidl_test_protocolrequest::Parent::ResultOf::GetChildRequest::GetChildRequest(
+    ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client) {
   ::fidl::internal::EncodedMessageTypes<GetChildRequestRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildRequestResponse>(
@@ -103,11 +94,9 @@ extern "C" const fidl_type_t
   error_ = _request.error();
 }
 
-::llcpp::fidl::test::protocolrequest::Parent::ResultOf::GetChildRequest::
-    GetChildRequest(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
-            _client,
-        zx_time_t _deadline) {
+::fidl_test_protocolrequest::Parent::ResultOf::GetChildRequest::GetChildRequest(
+    ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
+    zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<GetChildRequestRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildRequestResponse>(
@@ -121,10 +110,9 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::UnownedResultOf::GetChildRequest::
+::fidl_test_protocolrequest::Parent::UnownedResultOf::GetChildRequest::
     GetChildRequest(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
-            _client,
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ::fidl::internal::EncodedMessageTypes<GetChildRequestRequest>::OwnedByte
@@ -137,10 +125,9 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::ResultOf::TakeChild::TakeChild(
-    ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
-        _client,
-    ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child>& c) {
+::fidl_test_protocolrequest::Parent::ResultOf::TakeChild::TakeChild(
+    ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
+    ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>& c) {
   ::fidl::internal::EncodedMessageTypes<TakeChildRequest>::OwnedByte _request(
       zx_txid_t(0), c);
   _request.GetOutgoingMessage().Write(_client);
@@ -150,12 +137,10 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::UnownedResultOf::TakeChild::
-    TakeChild(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
-            _client,
-        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-        ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child>& c) {
+::fidl_test_protocolrequest::Parent::UnownedResultOf::TakeChild::TakeChild(
+    ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
+    uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+    ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>& c) {
   ::fidl::internal::EncodedMessageTypes<TakeChildRequest>::UnownedByte _request(
       _request_bytes, _request_byte_capacity, 0, c);
   _request.GetOutgoingMessage().Write(_client);
@@ -165,11 +150,10 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::ResultOf::TakeChildRequest::
+::fidl_test_protocolrequest::Parent::ResultOf::TakeChildRequest::
     TakeChildRequest(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
-            _client,
-        ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child>& r) {
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
+        ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>& r) {
   ::fidl::internal::EncodedMessageTypes<TakeChildRequestRequest>::OwnedByte
       _request(zx_txid_t(0), r);
   _request.GetOutgoingMessage().Write(_client);
@@ -179,12 +163,11 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::UnownedResultOf::
-    TakeChildRequest::TakeChildRequest(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
-            _client,
+::fidl_test_protocolrequest::Parent::UnownedResultOf::TakeChildRequest::
+    TakeChildRequest(
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
         uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-        ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child>& r) {
+        ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>& r) {
   ::fidl::internal::EncodedMessageTypes<TakeChildRequestRequest>::UnownedByte
       _request(_request_bytes, _request_byte_capacity, 0, r);
   _request.GetOutgoingMessage().Write(_client);
@@ -194,40 +177,40 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::ResultOf::GetChild
+::fidl_test_protocolrequest::Parent::ResultOf::GetChild
 Parent::ClientImpl::GetChild_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::GetChild(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
             _channel->handle()));
   }
-  return ::llcpp::fidl::test::protocolrequest::Parent::ResultOf::GetChild(
+  return ::fidl_test_protocolrequest::Parent::ResultOf::GetChild(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::UnownedResultOf::GetChild
+::fidl_test_protocolrequest::Parent::UnownedResultOf::GetChild
 Parent::ClientImpl::GetChild_Sync(::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::GetChild(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
             _channel->handle()),
         _response_buffer.data, _response_buffer.capacity);
   }
-  return ::llcpp::fidl::test::protocolrequest::Parent::UnownedResultOf::
-      GetChild(::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::fidl_test_protocolrequest::Parent::UnownedResultOf::GetChild(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::GetChildResponseContext::
+::fidl_test_protocolrequest::Parent::GetChildResponseContext::
     GetChildResponseContext()
     : ::fidl::internal::ResponseContext(GetChildResponse::Type,
                                         kParent_GetChild_Ordinal) {}
 
-void ::llcpp::fidl::test::protocolrequest::Parent::GetChildResponseContext::
-    OnReply(uint8_t* reply) {
+void ::fidl_test_protocolrequest::Parent::GetChildResponseContext::OnReply(
+    uint8_t* reply) {
   OnReply(reinterpret_cast<GetChildResponse*>(reply));
 }
 
@@ -267,42 +250,40 @@ void ::llcpp::fidl::test::protocolrequest::Parent::GetChildResponseContext::
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::ResultOf::GetChildRequest
+::fidl_test_protocolrequest::Parent::ResultOf::GetChildRequest
 Parent::ClientImpl::GetChildRequest_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::GetChildRequest(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
             _channel->handle()));
   }
-  return ::llcpp::fidl::test::protocolrequest::Parent::ResultOf::
-      GetChildRequest(
-          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::fidl_test_protocolrequest::Parent::ResultOf::GetChildRequest(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::UnownedResultOf::GetChildRequest
+::fidl_test_protocolrequest::Parent::UnownedResultOf::GetChildRequest
 Parent::ClientImpl::GetChildRequest_Sync(::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::GetChildRequest(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
             _channel->handle()),
         _response_buffer.data, _response_buffer.capacity);
   }
-  return ::llcpp::fidl::test::protocolrequest::Parent::UnownedResultOf::
-      GetChildRequest(
-          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::fidl_test_protocolrequest::Parent::UnownedResultOf::GetChildRequest(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif
 
 #ifdef __Fuchsia__
-::llcpp::fidl::test::protocolrequest::Parent::GetChildRequestResponseContext::
+::fidl_test_protocolrequest::Parent::GetChildRequestResponseContext::
     GetChildRequestResponseContext()
     : ::fidl::internal::ResponseContext(GetChildRequestResponse::Type,
                                         kParent_GetChildRequest_Ordinal) {}
 
-void ::llcpp::fidl::test::protocolrequest::Parent::
-    GetChildRequestResponseContext::OnReply(uint8_t* reply) {
+void ::fidl_test_protocolrequest::Parent::GetChildRequestResponseContext::
+    OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<GetChildRequestResponse*>(reply));
 }
 
@@ -344,10 +325,10 @@ void ::llcpp::fidl::test::protocolrequest::Parent::
 
 #ifdef __Fuchsia__
 ::fidl::Result Parent::ClientImpl::TakeChild(
-    ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c) {
+    ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::TakeChild(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
             _channel->handle()),
         c);
     return ::fidl::Result(_res.status(), _res.error());
@@ -359,10 +340,10 @@ void ::llcpp::fidl::test::protocolrequest::Parent::
 #ifdef __Fuchsia__
 ::fidl::Result Parent::ClientImpl::TakeChild(
     ::fidl::BufferSpan _request_buffer,
-    ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c) {
+    ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::TakeChild(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
             _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, c);
     return ::fidl::Result(_res.status(), _res.error());
@@ -373,10 +354,10 @@ void ::llcpp::fidl::test::protocolrequest::Parent::
 
 #ifdef __Fuchsia__
 ::fidl::Result Parent::ClientImpl::TakeChildRequest(
-    ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r) {
+    ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::TakeChildRequest(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
             _channel->handle()),
         r);
     return ::fidl::Result(_res.status(), _res.error());
@@ -388,10 +369,10 @@ void ::llcpp::fidl::test::protocolrequest::Parent::
 #ifdef __Fuchsia__
 ::fidl::Result Parent::ClientImpl::TakeChildRequest(
     ::fidl::BufferSpan _request_buffer,
-    ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r) {
+    ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::TakeChildRequest(
-        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
             _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, r);
     return ::fidl::Result(_res.status(), _res.error());
@@ -414,42 +395,38 @@ namespace methods {
 
 void ParentDispatchGetChild(void* interface, void* bytes,
                             ::fidl::Transaction* txn) {
-  ::llcpp::fidl::test::protocolrequest::Parent::Interface::GetChildCompleter::
-      Sync completer(txn);
-  reinterpret_cast<::llcpp::fidl::test::protocolrequest::Parent::Interface*>(
-      interface)
+  ::fidl_test_protocolrequest::Parent::Interface::GetChildCompleter::Sync
+      completer(txn);
+  reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(interface)
       ->GetChild(completer);
 }
 
 void ParentDispatchGetChildRequest(void* interface, void* bytes,
                                    ::fidl::Transaction* txn) {
-  ::llcpp::fidl::test::protocolrequest::Parent::Interface::
-      GetChildRequestCompleter::Sync completer(txn);
-  reinterpret_cast<::llcpp::fidl::test::protocolrequest::Parent::Interface*>(
-      interface)
+  ::fidl_test_protocolrequest::Parent::Interface::GetChildRequestCompleter::Sync
+      completer(txn);
+  reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(interface)
       ->GetChildRequest(completer);
 }
 
 void ParentDispatchTakeChild(void* interface, void* bytes,
                              ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<
-      ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequest*>(bytes);
-  ::llcpp::fidl::test::protocolrequest::Parent::Interface::TakeChildCompleter::
-      Sync completer(txn);
-  reinterpret_cast<::llcpp::fidl::test::protocolrequest::Parent::Interface*>(
-      interface)
+  auto message =
+      reinterpret_cast<::fidl_test_protocolrequest::Parent::TakeChildRequest*>(
+          bytes);
+  ::fidl_test_protocolrequest::Parent::Interface::TakeChildCompleter::Sync
+      completer(txn);
+  reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(interface)
       ->TakeChild(std::move(message->c), completer);
 }
 
 void ParentDispatchTakeChildRequest(void* interface, void* bytes,
                                     ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
-      ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequestRequest*>(
-      bytes);
-  ::llcpp::fidl::test::protocolrequest::Parent::Interface::
-      TakeChildRequestCompleter::Sync completer(txn);
-  reinterpret_cast<::llcpp::fidl::test::protocolrequest::Parent::Interface*>(
-      interface)
+      ::fidl_test_protocolrequest::Parent::TakeChildRequestRequest*>(bytes);
+  ::fidl_test_protocolrequest::Parent::Interface::TakeChildRequestCompleter::
+      Sync completer(txn);
+  reinterpret_cast<::fidl_test_protocolrequest::Parent::Interface*>(interface)
       ->TakeChildRequest(std::move(message->r), completer);
 }
 
@@ -459,17 +436,16 @@ namespace entries {
 
 ::fidl::internal::MethodEntry Parent[] = {
     {kParent_GetChild_Ordinal,
-     ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequest::Type,
+     ::fidl_test_protocolrequest::Parent::GetChildRequest::Type,
      methods::ParentDispatchGetChild},
     {kParent_GetChildRequest_Ordinal,
-     ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequestRequest::Type,
+     ::fidl_test_protocolrequest::Parent::GetChildRequestRequest::Type,
      methods::ParentDispatchGetChildRequest},
     {kParent_TakeChild_Ordinal,
-     ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequest::Type,
+     ::fidl_test_protocolrequest::Parent::TakeChildRequest::Type,
      methods::ParentDispatchTakeChild},
     {kParent_TakeChildRequest_Ordinal,
-     ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequestRequest::
-         Type,
+     ::fidl_test_protocolrequest::Parent::TakeChildRequestRequest::Type,
      methods::ParentDispatchTakeChildRequest},
 };
 
@@ -506,7 +482,7 @@ namespace entries {
 
 #ifdef __Fuchsia__
 ::fidl::Result Parent::Interface::GetChildCompleterBase::Reply(
-    ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c) {
+    ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c) {
   ::fidl::internal::EncodedMessageTypes<GetChildResponse>::OwnedByte _response{
       c};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -516,7 +492,7 @@ namespace entries {
 #ifdef __Fuchsia__
 ::fidl::Result Parent::Interface::GetChildCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
-    ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c) {
+    ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c) {
   GetChildResponse::UnownedEncodedMessage _response(_buffer.data,
                                                     _buffer.capacity, c);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -525,7 +501,7 @@ namespace entries {
 
 #ifdef __Fuchsia__
 ::fidl::Result Parent::Interface::GetChildRequestCompleterBase::Reply(
-    ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r) {
+    ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r) {
   ::fidl::internal::EncodedMessageTypes<GetChildRequestResponse>::OwnedByte
       _response{r};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -535,59 +511,56 @@ namespace entries {
 #ifdef __Fuchsia__
 ::fidl::Result Parent::Interface::GetChildRequestCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
-    ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r) {
+    ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r) {
   GetChildRequestResponse::UnownedEncodedMessage _response(_buffer.data,
                                                            _buffer.capacity, r);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif
 
-void ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequest::_InitHeader(
+void ::fidl_test_protocolrequest::Parent::GetChildRequest::_InitHeader(
     zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kParent_GetChild_Ordinal);
 }
 
-void ::llcpp::fidl::test::protocolrequest::Parent::GetChildResponse::
-    _InitHeader() {
+void ::fidl_test_protocolrequest::Parent::GetChildResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kParent_GetChild_Ordinal);
 }
 
-void ::llcpp::fidl::test::protocolrequest::Parent::GetChildResponse::
-    _CloseHandles() {
+void ::fidl_test_protocolrequest::Parent::GetChildResponse::_CloseHandles() {
   c.reset();
 }
 
-void ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequestRequest::
-    _InitHeader(zx_txid_t _txid) {
+void ::fidl_test_protocolrequest::Parent::GetChildRequestRequest::_InitHeader(
+    zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kParent_GetChildRequest_Ordinal);
 }
 
-void ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequestResponse::
+void ::fidl_test_protocolrequest::Parent::GetChildRequestResponse::
     _InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kParent_GetChildRequest_Ordinal);
 }
 
-void ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequestResponse::
+void ::fidl_test_protocolrequest::Parent::GetChildRequestResponse::
     _CloseHandles() {
   r.reset();
 }
 
-void ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequest::
-    _InitHeader(zx_txid_t _txid) {
+void ::fidl_test_protocolrequest::Parent::TakeChildRequest::_InitHeader(
+    zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kParent_TakeChild_Ordinal);
 }
 
-void ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequest::
-    _CloseHandles() {
+void ::fidl_test_protocolrequest::Parent::TakeChildRequest::_CloseHandles() {
   c.reset();
 }
 
-void ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequestRequest::
-    _InitHeader(zx_txid_t _txid) {
+void ::fidl_test_protocolrequest::Parent::TakeChildRequestRequest::_InitHeader(
+    zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kParent_TakeChildRequest_Ordinal);
 }
 
-void ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequestRequest::
+void ::fidl_test_protocolrequest::Parent::TakeChildRequestRequest::
     _CloseHandles() {
   r.reset();
 }
@@ -641,7 +614,4 @@ namespace entries {
 #ifdef __Fuchsia__
 #endif
 
-}  // namespace protocolrequest
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+}  // namespace fidl_test_protocolrequest
