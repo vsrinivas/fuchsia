@@ -27,7 +27,7 @@ UsbAudioControlInterface::~UsbAudioControlInterface() {}
 
 std::unique_ptr<UsbAudioControlInterface> UsbAudioControlInterface::Create(UsbAudioDevice* parent) {
   if (parent == nullptr) {
-    GLOBAL_LOG(ERROR, "null parent passed to %s\n", __PRETTY_FUNCTION__);
+    GLOBAL_LOG(ERROR, "null parent passed");
     return nullptr;
   }
 
@@ -46,7 +46,7 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
 
   // It is an error to attempt to initialize this class twice.
   if (desc_list_ != nullptr) {
-    LOG(ERROR, "Attempted to initialize control interface twice\n");
+    LOG(ERROR, "Attempted to initialize control interface twice");
     return ZX_ERR_BAD_STATE;
   }
 
@@ -73,7 +73,7 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
 
     auto hdr = iter->hdr_as<usb_audio_desc_header>();
     if (!hdr) {
-      LOG(WARNING, "Badly formed audio control descriptor header @ offset %zu\n", iter->offset());
+      LOG(WARNING, "Badly formed audio control descriptor header @ offset %zu", iter->offset());
       continue;
     }
 
@@ -81,12 +81,11 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
       if (class_hdr_ == nullptr) {
         class_hdr_ = iter->hdr_as<usb_audio_ac_header_desc>();
         if (class_hdr_ == nullptr) {
-          LOG(WARNING, "Badly formed audio control class specific header @ offset %zu\n",
+          LOG(WARNING, "Badly formed audio control class specific header @ offset %zu",
               iter->offset());
         }
       } else {
-        LOG(WARNING, "Duplicate audio control class specific header @ offset %zu\n",
-            iter->offset());
+        LOG(WARNING, "Duplicate audio control class specific header @ offset %zu", iter->offset());
       }
 
       continue;
@@ -94,7 +93,7 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
 
     auto unit = AudioUnit::Create(*iter, interface_hdr_->bInterfaceNumber);
     if (unit == nullptr) {
-      LOG(WARNING, "Failed to create audio Terminal/Unit (type %u) @ offset %zu\n",
+      LOG(WARNING, "Failed to create audio Terminal/Unit (type %u) @ offset %zu",
           hdr->bDescriptorSubtype, iter->offset());
     } else {
       // Add our new unit to the collection we are building up.  There
@@ -104,7 +103,7 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
       // best we can).
       uint32_t id = unit->id();
       if (!units_.insert_or_find(std::move(unit))) {
-        LOG(WARNING, "Collision when attempting to add unit id %u; skipping this unit\n", id);
+        LOG(WARNING, "Collision when attempting to add unit id %u; skipping this unit", id);
       }
     }
   }
@@ -114,8 +113,7 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
   for (auto& unit : units_) {
     zx_status_t res = unit.Probe(parent_.usb_proto());
     if (res != ZX_OK) {
-      LOG(ERROR, "Failed to probe %s (id %u) during initialization!\n", unit.type_name(),
-          unit.id());
+      LOG(ERROR, "Failed to probe %s (id %u) during initialization!", unit.type_name(), unit.id());
       return res;
     }
   }
@@ -149,19 +147,19 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
 
     // Do the search.  If it succeed, we will get a reference to an
     // AudioPath object back.
-    LOG(DEBUG, "Beginning trace for Output Terminal id %u\n", iter->id());
+    LOG(DEBUG, "Beginning trace for Output Terminal id %u", iter->id());
     auto path = TracePath(static_cast<const OutputTerminal&>(*iter), iter);
     if (path != nullptr) {
-      LOG(DEBUG, "Found valid path!\n");
+      LOG(DEBUG, "Found valid path!");
 
       zx_status_t status = path->Setup(parent_.usb_proto());
       if (status != ZX_OK) {
-        LOG(DEBUG, "Failed to setup path! (status %d)\n", status);
+        LOG(DEBUG, "Failed to setup path! (status %d)", status);
       } else {
         paths_.push_back(std::move(path));
       }
     } else {
-      LOG(DEBUG, "No valid path found\n");
+      LOG(DEBUG, "No valid path found");
     }
   }
 
@@ -190,7 +188,7 @@ std::unique_ptr<AudioPath> UsbAudioControlInterface::TracePath(const OutputTermi
   auto cleanup = fbl::MakeAutoCall([&current]() { current->visited() = false; });
   ZX_DEBUG_ASSERT(!current->visited());
   current->visited() = true;
-  LOG(DEBUG, "Visiting unit id %u, type %s\n", current->id(), current->type_name());
+  LOG(DEBUG, "Visiting unit id %u, type %s", current->id(), current->type_name());
 
   // If we have reached an input terminal, then check to see if it is of the
   // proper type.  If so, create a new path object and start to unwind the
@@ -211,7 +209,7 @@ std::unique_ptr<AudioPath> UsbAudioControlInterface::TracePath(const OutputTermi
       return ret;
     }
 
-    LOG(DEBUG, "Skipping incompatible input terminal (in type 0x%04hx, out type 0x%04hx)\n",
+    LOG(DEBUG, "Skipping incompatible input terminal (in type 0x%04hx, out type 0x%04hx)",
         in_term.terminal_type(), out_term.terminal_type());
     return nullptr;
   }
@@ -220,13 +218,13 @@ std::unique_ptr<AudioPath> UsbAudioControlInterface::TracePath(const OutputTermi
     uint32_t source_id = current->source_id(i);
     auto next = units_.find(source_id);
     if (!next.IsValid()) {
-      LOG(WARNING, "Can't find upstream unit id %u while tracing from unit id %u.\n", source_id,
+      LOG(WARNING, "Can't find upstream unit id %u while tracing from unit id %u.", source_id,
           current->id());
       continue;
     }
 
     if (next->visited()) {
-      LOG(DEBUG, "Skipping already visited unit id %u while tracing from unit id %u\n", source_id,
+      LOG(DEBUG, "Skipping already visited unit id %u while tracing from unit id %u", source_id,
           current->id());
       continue;
     }

@@ -126,7 +126,7 @@ Status IntelDsp::Init(zx_device_t* dsp_dev) {
   if (!result.ok()) {
     return PrependMessage("Error parsing NHLT", result);
   }
-  LOG(DEBUG, "parse success, found %zu formats\n", nhlt_->i2s_configs().size());
+  LOG(DEBUG, "parse success, found %zu formats", nhlt_->i2s_configs().size());
 
   // Perform hardware initialization in a thread.
   state_ = State::INITIALIZING;
@@ -135,7 +135,7 @@ Status IntelDsp::Init(zx_device_t* dsp_dev) {
   if (c11_res < 0) {
     state_ = State::ERROR;
     return Status(ZX_ERR_INTERNAL,
-                  fbl::StringPrintf("Failed to create init thread (res = %d)\n", c11_res));
+                  fbl::StringPrintf("Failed to create init thread (res = %d)", c11_res));
   }
 
   return OkStatus();
@@ -208,22 +208,21 @@ void IntelDsp::ChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase*
   }
 }
 
-#define PROCESS_CMD_INNER(_req_ack, _req_driver_chan, _ioctl, _payload, _handler) \
-  case _ioctl:                                                                    \
-    if (req_size != sizeof(req._payload)) {                                       \
-      LOG(DEBUG, "Bad " #_payload " request length (%u != %zu)\n", req_size,      \
-          sizeof(req._payload));                                                  \
-      return ZX_ERR_INVALID_ARGS;                                                 \
-    }                                                                             \
-    if ((_req_ack) && (req.hdr.cmd & IHDA_NOACK_FLAG)) {                          \
-      LOG(DEBUG, "Cmd " #_payload                                                 \
-                 " requires acknowledgement, but the "                            \
-                 "NOACK flag was set!\n");                                        \
-      return ZX_ERR_INVALID_ARGS;                                                 \
-    }                                                                             \
-    if ((_req_driver_chan) && !is_driver_channel) {                               \
-      LOG(DEBUG, "Cmd " #_payload " requires a privileged driver channel.\n");    \
-      return ZX_ERR_ACCESS_DENIED;                                                \
+#define PROCESS_CMD_INNER(_req_ack, _req_driver_chan, _ioctl, _payload, _handler)                 \
+  case _ioctl:                                                                                    \
+    if (req_size != sizeof(req._payload)) {                                                       \
+      LOG(DEBUG, "Bad " #_payload " request length (%u != %zu)", req_size, sizeof(req._payload)); \
+      return ZX_ERR_INVALID_ARGS;                                                                 \
+    }                                                                                             \
+    if ((_req_ack) && (req.hdr.cmd & IHDA_NOACK_FLAG)) {                                          \
+      LOG(DEBUG, "Cmd " #_payload                                                                 \
+                 " requires acknowledgement, but the "                                            \
+                 "NOACK flag was set!");                                                          \
+      return ZX_ERR_INVALID_ARGS;                                                                 \
+    }                                                                                             \
+    if ((_req_driver_chan) && !is_driver_channel) {                                               \
+      LOG(DEBUG, "Cmd " #_payload " requires a privileged driver channel.");                      \
+      return ZX_ERR_ACCESS_DENIED;                                                                \
     }
 
 #define PROCESS_CMD(_req_ack, _req_driver_chan, _ioctl, _payload, _handler) \
@@ -253,25 +252,24 @@ zx_status_t IntelDsp::ProcessClientRequest(bool is_driver_channel) {
   zx::handle rxed_handle;
   res = codec_driver_channel_->Read(&req, sizeof(req), &req_size, rxed_handle);
   if (res != ZX_OK) {
-    LOG(DEBUG, "Failed to read client request (res %d)\n", res);
+    LOG(DEBUG, "Failed to read client request (res %d)", res);
     return res;
   }
 
   // Sanity checks.
   if (req_size < sizeof(req.hdr)) {
-    LOG(DEBUG, "Client request too small to contain header (%u < %zu)\n", req_size,
-        sizeof(req.hdr));
+    LOG(DEBUG, "Client request too small to contain header (%u < %zu)", req_size, sizeof(req.hdr));
     return ZX_ERR_INVALID_ARGS;
   }
 
   auto cmd_id = static_cast<ihda_cmd_t>(req.hdr.cmd & ~IHDA_NOACK_FLAG);
   if (req.hdr.transaction_id == IHDA_INVALID_TRANSACTION_ID) {
-    LOG(DEBUG, "Invalid transaction ID in client request 0x%04x\n", cmd_id);
+    LOG(DEBUG, "Invalid transaction ID in client request 0x%04x", cmd_id);
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Dispatch
-  LOG(TRACE, "Client Request (cmd 0x%04x tid %u) len %u\n", req.hdr.cmd, req.hdr.transaction_id,
+  LOG(TRACE, "Client Request (cmd 0x%04x tid %u) len %u", req.hdr.cmd, req.hdr.transaction_id,
       req_size);
 
   switch (cmd_id) {
@@ -280,7 +278,7 @@ zx_status_t IntelDsp::ProcessClientRequest(bool is_driver_channel) {
     PROCESS_CMD_WITH_HANDLE(false, true, IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt,
                             ProcessSetStreamFmt);
     default:
-      LOG(DEBUG, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
+      LOG(DEBUG, "Unrecognized command ID 0x%04x", req.hdr.cmd);
       return ZX_ERR_INVALID_ARGS;
   }
 }
@@ -323,7 +321,7 @@ zx_status_t IntelDsp::ProcessRequestStream(Channel* channel,
   auto stream = controller_->AllocateStream(type);
 
   if (stream != nullptr) {
-    LOG(DEBUG, "Decouple stream #%u\n", stream->id());
+    LOG(DEBUG, "Decouple stream #%u", stream->id());
     // Decouple stream
     REG_SET_BITS<uint32_t>(&pp_regs_->ppctl, (1 << stream->dma_id()));
 
@@ -361,7 +359,7 @@ zx_status_t IntelDsp::ProcessReleaseStream(Channel* channel,
   if (stream == nullptr)
     return ZX_ERR_BAD_STATE;
 
-  LOG(DEBUG, "Couple stream #%u\n", stream->id());
+  LOG(DEBUG, "Couple stream #%u", stream->id());
 
   // Couple stream
   REG_CLR_BITS<uint32_t>(&pp_regs_->ppctl, (1 << stream->dma_id()));
@@ -386,13 +384,13 @@ zx_status_t IntelDsp::ProcessSetStreamFmt(Channel* channel, const ihda_proto::Se
   zx::channel server_channel;
   zx_status_t res = ConvertHandle(&rxed_handle, &server_channel);
   if (res != ZX_OK) {
-    LOG(DEBUG, "Failed to convert handle to channel (res %d)\n", res);
+    LOG(DEBUG, "Failed to convert handle to channel (res %d)", res);
     return res;
   }
 
   // Sanity check the requested format.
   if (!StreamFormat(req.format).SanityCheck()) {
-    LOG(DEBUG, "Invalid encoded stream format 0x%04hx!\n", req.format);
+    LOG(DEBUG, "Invalid encoded stream format 0x%04hx!", req.format);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -415,7 +413,7 @@ zx_status_t IntelDsp::ProcessSetStreamFmt(Channel* channel, const ihda_proto::Se
   // to be closed.
   res = stream->SetStreamFormat(controller_->dispatcher(), req.format, std::move(server_channel));
   if (res != ZX_OK) {
-    LOG(DEBUG, "Failed to set stream format 0x%04hx for stream %hu (res %d)\n", req.format,
+    LOG(DEBUG, "Failed to set stream format 0x%04hx for stream %hu (res %d)", req.format,
         req.stream_id, res);
     return res;
   }
@@ -426,7 +424,7 @@ zx_status_t IntelDsp::ProcessSetStreamFmt(Channel* channel, const ihda_proto::Se
   res = channel->Write(&resp, sizeof(resp));
 
   if (res != ZX_OK)
-    LOG(DEBUG, "Failed to send stream channel back to codec driver (res %d)\n", res);
+    LOG(DEBUG, "Failed to send stream channel back to codec driver (res %d)", res);
 
   return res;
 }
@@ -440,12 +438,12 @@ Status IntelDsp::SetupDspDevice() {
   ddk::Pci pci(*controller_->pci());
   zx_status_t res = pci.MapMmio(4u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (res != ZX_OK) {
-    LOG(ERROR, "Failed to fetch and map DSP register (err %u)\n", res);
+    LOG(ERROR, "Failed to fetch and map DSP register (err %u)", res);
     return Status(res);
   }
 
   if (mmio->get_size() < sizeof(adsp_registers_t)) {
-    LOG(ERROR, "Bad register window size (expected 0x%zx got 0x%zx)\n", sizeof(adsp_registers_t),
+    LOG(ERROR, "Bad register window size (expected 0x%zx got 0x%zx)", sizeof(adsp_registers_t),
         mmio->get_size());
     return Status(res);
   }
@@ -506,7 +504,7 @@ int IntelDsp::InitThread() {
   // when the Tensilica Core is out of reset, but halted.
   zx_status_t st = Boot();
   if (st != ZX_OK) {
-    LOG(ERROR, "Error in DSP boot (err %d)\n", st);
+    LOG(ERROR, "Error in DSP boot (err %d)", st);
     return -1;
   }
 
@@ -516,7 +514,7 @@ int IntelDsp::InitThread() {
             ADSP_FW_STATUS_STATE_INITIALIZATION_DONE);
   });
   if (st != ZX_OK) {
-    LOG(ERROR, "Error waiting for DSP ROM init (err %d)\n", st);
+    LOG(ERROR, "Error waiting for DSP ROM init (err %d)", st);
     return -1;
   }
 
@@ -526,17 +524,17 @@ int IntelDsp::InitThread() {
   // Load DSP Firmware
   st = LoadFirmware();
   if (st != ZX_OK) {
-    LOG(ERROR, "Error loading firmware (err %d)\n", st);
+    LOG(ERROR, "Error loading firmware (err %d)", st);
     return -1;
   }
 
   // DSP Firmware is now ready.
-  LOG(INFO, "DSP firmware ready\n");
+  LOG(INFO, "DSP firmware ready");
 
   // Create and publish streams.
   st = CreateAndStartStreams();
   if (st != ZX_OK) {
-    LOG(ERROR, "Error starting DSP streams\n");
+    LOG(ERROR, "Error starting DSP streams");
     return -1;
   }
 
@@ -549,37 +547,37 @@ zx_status_t IntelDsp::Boot() {
 
   // Put core into reset
   if ((st = ResetCore(ADSP_REG_ADSPCS_CORE0_MASK)) != ZX_OK) {
-    LOG(ERROR, "Error attempting to enter reset on core 0 (err %d)\n", st);
+    LOG(ERROR, "Error attempting to enter reset on core 0 (err %d)", st);
     return st;
   }
 
   // Power down core
   if ((st = PowerDownCore(ADSP_REG_ADSPCS_CORE0_MASK)) != ZX_OK) {
-    LOG(ERROR, "Error attempting to power down core 0 (err %d)\n", st);
+    LOG(ERROR, "Error attempting to power down core 0 (err %d)", st);
     return st;
   }
 
   // Power up core
   if ((st = PowerUpCore(ADSP_REG_ADSPCS_CORE0_MASK)) != ZX_OK) {
-    LOG(ERROR, "Error attempting to power up core 0 (err %d)\n", st);
+    LOG(ERROR, "Error attempting to power up core 0 (err %d)", st);
     return st;
   }
 
   // Take core out of reset
   if ((st = UnResetCore(ADSP_REG_ADSPCS_CORE0_MASK)) != ZX_OK) {
-    LOG(ERROR, "Error attempting to take core 0 out of reset (err %d)\n", st);
+    LOG(ERROR, "Error attempting to take core 0 out of reset (err %d)", st);
     return st;
   }
 
   // Run core
   RunCore(ADSP_REG_ADSPCS_CORE0_MASK);
   if (!IsCoreEnabled(ADSP_REG_ADSPCS_CORE0_MASK)) {
-    LOG(ERROR, "Failed to start core 0\n");
+    LOG(ERROR, "Failed to start core 0");
     ResetCore(ADSP_REG_ADSPCS_CORE0_MASK);
     return st;
   }
 
-  LOG(DEBUG, "DSP core 0 booted!\n");
+  LOG(DEBUG, "DSP core 0 booted!");
   return ZX_OK;
 }
 
@@ -615,7 +613,7 @@ zx_status_t IntelDsp::LoadFirmware() {
   IntelDspCodeLoader loader(&regs()->cldma, controller_->pci_bti());
   zx_status_t st = loader.Initialize();
   if (st != ZX_OK) {
-    LOG(ERROR, "Error initializing firmware code loader (err %d)\n", st);
+    LOG(ERROR, "Error initializing firmware code loader (err %d)", st);
     return st;
   }
 
@@ -624,14 +622,14 @@ zx_status_t IntelDsp::LoadFirmware() {
   size_t fw_size;
   st = load_firmware(codec_device(), ADSP_FIRMWARE_PATH, fw_vmo.reset_and_get_address(), &fw_size);
   if (st != ZX_OK) {
-    LOG(ERROR, "Error fetching firmware (err %d)\n", st);
+    LOG(ERROR, "Error fetching firmware (err %d)", st);
     return st;
   }
 
   // The max length of the firmware is 256 pages, assuming a fully distinguous VMO.
   constexpr size_t MAX_FW_BYTES = PAGE_SIZE * IntelDspCodeLoader::MAX_BDL_LENGTH;
   if (fw_size > MAX_FW_BYTES) {
-    LOG(ERROR, "DSP firmware is too big (0x%zx bytes > 0x%zx bytes)\n", fw_size, MAX_FW_BYTES);
+    LOG(ERROR, "DSP firmware is too big (0x%zx bytes > 0x%zx bytes)", fw_size, MAX_FW_BYTES);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -645,14 +643,14 @@ zx_status_t IntelDsp::LoadFirmware() {
   fzl::VmoMapper stripped_fw;
   st = stripped_fw.CreateAndMap(fw_size, CPU_MAP_FLAGS, nullptr, &stripped_vmo);
   if (st != ZX_OK) {
-    LOG(ERROR, "Error creating DSP firmware VMO (err %d)\n", st);
+    LOG(ERROR, "Error creating DSP firmware VMO (err %d)", st);
     return st;
   }
 
   size_t stripped_size = fw_size;
   st = StripFirmware(fw_vmo, stripped_fw.start(), &stripped_size);
   if (st != ZX_OK) {
-    LOG(ERROR, "Error stripping DSP firmware (err %d)\n", st);
+    LOG(ERROR, "Error stripping DSP firmware (err %d)", st);
     return st;
   }
 
@@ -662,7 +660,7 @@ zx_status_t IntelDsp::LoadFirmware() {
   fzl::PinnedVmo pinned_fw;
   st = pinned_fw.Pin(stripped_vmo, controller_->pci_bti()->initiator(), DSP_MAP_FLAGS);
   if (st != ZX_OK) {
-    LOG(ERROR, "Failed to pin pages for DSP firmware (res %d)\n", st);
+    LOG(ERROR, "Failed to pin pages for DSP firmware (res %d)", st);
     return st;
   }
 
@@ -683,7 +681,7 @@ zx_status_t IntelDsp::LoadFirmware() {
                                ADSP_FW_STATUS_STATE_ENTER_BASE_FW);
                      });
   if (st != ZX_OK) {
-    LOG(ERROR, "Error waiting for DSP base firmware entry (err %d, fw_status = 0x%08x)\n", st,
+    LOG(ERROR, "Error waiting for DSP base firmware entry (err %d, fw_status = 0x%08x)", st,
         REG_RD(&fw_regs()->fw_status));
     return st;
   }
@@ -696,7 +694,7 @@ zx_status_t IntelDsp::LoadFirmware() {
   // receiving the IPC are required for the DSP to be operational.
   sync_completion_wait(&firmware_ready_, INTEL_ADSP_BASE_FW_INIT_TIMEOUT_NSEC);
   if (st != ZX_OK) {
-    LOG(ERROR, "Error waiting for FW Ready IPC (err %d, fw_status = 0x%08x)\n", st,
+    LOG(ERROR, "Error waiting for FW Ready IPC (err %d, fw_status = 0x%08x)", st,
         REG_RD(&fw_regs()->fw_status));
     return st;
   }
@@ -712,11 +710,11 @@ void IntelDsp::DspNotificationReceived(NotificationType type) {
       break;
 
     case NotificationType::EXCEPTION_CAUGHT:
-      LOG(ERROR, "DSP reported exception.\n");
+      LOG(ERROR, "DSP reported exception.");
       break;
 
     default:
-      LOG(DEBUG, "Received unknown notification type %d from DSP.\n", static_cast<int>(type));
+      LOG(DEBUG, "Received unknown notification type %d from DSP.", static_cast<int>(type));
       break;
   }
 }
@@ -779,7 +777,7 @@ void IntelDsp::ProcessIrq() {
   }
   uint32_t adspis = REG_RD(&regs()->adspis);
   if (adspis & ADSP_REG_ADSPIC_CLDMA) {
-    LOG(DEBUG, "Got CLDMA irq\n");
+    LOG(DEBUG, "Got CLDMA irq");
     uint32_t w = REG_RD(&regs()->cldma.stream.ctl_sts.w);
     REG_WR(&regs()->cldma.stream.ctl_sts.w, w);
   }

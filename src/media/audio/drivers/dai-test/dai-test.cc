@@ -32,18 +32,18 @@ DaiTest::DaiTest(zx_device_t* parent, bool is_input)
 zx_status_t DaiTest::InitPDev() {
   proto_client_ = ddk::DaiProtocolClient(parent(), is_input ? "dai-in" : "dai-out");
   if (!proto_client_.is_valid()) {
-    zxlogf(ERROR, "%s could not get DAI fragment", __FILE__);
+    zxlogf(ERROR, "could not get DAI fragment");
     return ZX_ERR_NO_RESOURCES;
   }
   zx::channel channel_remote, channel_local;
   zx_status_t status = zx::channel::create(0, &channel_local, &channel_remote);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not create channel", __FILE__);
+    zxlogf(ERROR, "could not create channel");
     return status;
   }
   status = proto_client_.Connect(std::move(channel_remote));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not coonect to DAI protocol", __FILE__);
+    zxlogf(ERROR, "could not coonect to DAI protocol");
     return status;
   }
   dai_.Bind(std::move(channel_local));
@@ -75,7 +75,7 @@ void DaiTest::GetChannel(GetChannelCompleter::Sync& completer) {
   zx::channel channel_remote, channel_local;
   auto status = zx::channel::create(0, &channel_local, &channel_remote);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not create channel", __FILE__);
+    zxlogf(ERROR, "could not create channel");
     return;
   }
 
@@ -149,23 +149,23 @@ static zx_status_t daitest_bind(void* ctx, zx_device_t* device) {
   auto status =
       device_get_metadata(device, DEVICE_METADATA_PRIVATE, &is_input, sizeof(is_input), &actual);
   if (status != ZX_OK || sizeof(is_input) != actual) {
-    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
+    zxlogf(ERROR, "device_get_metadata failed %d", status);
     return status;
   }
   auto dai = std::make_unique<audio::daitest::DaiTest>(device, is_input);
   if (dai == nullptr) {
-    zxlogf(ERROR, "%s Could not create DAI driver", __FILE__);
+    zxlogf(ERROR, "Could not create DAI driver");
     return ZX_ERR_NO_MEMORY;
   }
 
   status = dai->InitPDev();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Could not init device", __FILE__);
+    zxlogf(ERROR, "Could not init device");
     return status;
   }
   status = dai->DdkAdd(is_input ? "dai-test-in" : "dai-test-out");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Could not add DAI driver to the DDK", __FILE__);
+    zxlogf(ERROR, "Could not add DAI driver to the DDK");
     return status;
   }
   __UNUSED auto dummy = dai.release();

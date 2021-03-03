@@ -60,7 +60,7 @@ zx_status_t Tas5782::Reset() {
   for (auto& i : defaults) {
     auto status = WriteReg(i[0], i[1]);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s Failed to write I2C register 0x%02X", __FILE__, i[0]);
+      zxlogf(ERROR, "Failed to write I2C register 0x%02X", i[0]);
       return status;
     }
   }
@@ -93,7 +93,7 @@ zx_status_t Tas5782::Create(zx_device_t* parent) {
   // Only I2C fragment is required.
   ddk::I2cChannel i2c(parent, "i2c");
   if (!i2c.is_valid()) {
-    zxlogf(ERROR, "%s Could not get i2c protocol", __FILE__);
+    zxlogf(ERROR, "Could not get i2c protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -121,7 +121,7 @@ DaiSupportedFormats Tas5782::GetDaiFormats() { return kSupportedDaiFormats; }
 
 zx_status_t Tas5782::SetDaiFormat(const DaiFormat& format) {
   if (!IsDaiFormatSupported(format, kSupportedDaiFormats)) {
-    zxlogf(ERROR, "%s unsupported format", __FILE__);
+    zxlogf(ERROR, "unsupported format");
     return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_OK;
@@ -150,7 +150,7 @@ void Tas5782::SetGainState(GainState gain_state) {
     return;
   }
   if (gain_state.agc_enabled) {
-    zxlogf(ERROR, "%s AGC enable not supported", __FILE__);
+    zxlogf(ERROR, "AGC enable not supported");
     gain_state.agc_enabled = false;
   }
   gain_state_ = gain_state;
@@ -183,8 +183,7 @@ zx_status_t Tas5782::WriteReg(uint8_t reg, uint8_t value) {
   constexpr zx::duration kRetryDelay = zx::msec(1);
   auto ret = i2c_.WriteSyncRetries(write_buf, countof(write_buf), kNumberOfRetries, kRetryDelay);
   if (ret.status != ZX_OK) {
-    zxlogf(ERROR, "%s I2C write reg 0x%02X error %d, %d retries", __FILE__, reg, ret.status,
-           ret.retries);
+    zxlogf(ERROR, "I2C write reg 0x%02X error %d, %d retries", reg, ret.status, ret.retries);
   }
   return ret.status;
 #endif

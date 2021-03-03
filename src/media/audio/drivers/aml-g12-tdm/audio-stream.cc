@@ -61,7 +61,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
   zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
                                            sizeof(metadata::AmlConfig), &actual);
   if (status != ZX_OK || sizeof(metadata::AmlConfig) != actual) {
-    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
+    zxlogf(ERROR, "device_get_metadata failed %d", status);
     return status;
   }
 
@@ -72,13 +72,13 @@ zx_status_t AmlG12TdmStream::InitPDev() {
   InitDaiFormats();
 
   if (!pdev_.is_valid()) {
-    zxlogf(ERROR, "%s could not get pdev", __FILE__);
+    zxlogf(ERROR, "could not get pdev");
     return ZX_ERR_NO_RESOURCES;
   }
 
   status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not obtain bti - %d", __func__, status);
+    zxlogf(ERROR, "could not obtain bti - %d", status);
     return status;
   }
 
@@ -89,7 +89,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
     snprintf(fragment_name, 32, "codec-%02lu", i + 1);
     status = codecs_[i].SetProtocol(ddk::CodecProtocolClient(parent(), fragment_name));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s could set protocol - %s - %d", __func__, fragment_name, status);
+      zxlogf(ERROR, "could set protocol - %s - %d", fragment_name, status);
       return status;
     }
   }
@@ -97,68 +97,68 @@ zx_status_t AmlG12TdmStream::InitPDev() {
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev_.MapMmio(0, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get mmio %d", __func__, status);
+    zxlogf(ERROR, "could not get mmio %d", status);
     return status;
   }
 
   aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, *std::move(mmio));
   if (aml_audio_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create TDM device with config", __func__);
+    zxlogf(ERROR, "failed to create TDM device with config");
     return ZX_ERR_NO_MEMORY;
   }
   // Initial setup of one page of buffer, just to be safe.
   status = InitBuffer(PAGE_SIZE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to init buffer %d", __FILE__, status);
+    zxlogf(ERROR, "failed to init buffer %d", status);
     return status;
   }
   status = aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
                                  pinned_ring_buffer_.region(0).size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to set buffer %d", __FILE__, status);
+    zxlogf(ERROR, "failed to set buffer %d", status);
     return status;
   }
 
   status = aml_audio_->InitHW(metadata_, channels_to_use_, frame_rate_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to init tdm hardware %d\n", __FILE__, status);
+    zxlogf(ERROR, "failed to init tdm hardware %d", status);
     return status;
   }
 
   for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
     auto info = codecs_[i].GetInfo();
     if (info.is_error()) {
-      zxlogf(ERROR, "%s could get codec info %d", __func__, status);
+      zxlogf(ERROR, "could get codec info %d", status);
       return info.error_value();
     }
 
     // Reset and initialize codec after we have configured I2S.
     status = codecs_[i].Reset();
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s could not reset codec %d", __func__, status);
+      zxlogf(ERROR, "could not reset codec %d", status);
       return status;
     }
 
     auto supported_formats = codecs_[i].GetDaiFormats();
     if (supported_formats.is_error()) {
-      zxlogf(ERROR, "%s supported formats error %d", __func__, status);
+      zxlogf(ERROR, "supported formats error %d", status);
       return supported_formats.error_value();
     }
 
     if (!IsDaiFormatSupported(dai_formats_[i], supported_formats.value())) {
-      zxlogf(ERROR, "%s codec does not support DAI format\n", __FILE__);
+      zxlogf(ERROR, "codec does not support DAI format");
       return ZX_ERR_NOT_SUPPORTED;
     }
 
     status = codecs_[i].SetDaiFormat(dai_formats_[i]);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s could not set DAI format %d", __func__, status);
+      zxlogf(ERROR, "could not set DAI format %d", status);
       return status;
     }
 
     codecs_[i].Start();
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s could not start codec %d", __func__, status);
+      zxlogf(ERROR, "could not start codec %d", status);
       return status;
     }
   }
@@ -195,7 +195,7 @@ zx_status_t AmlG12TdmStream::InitCodecsGain() {
     for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
       auto format = codecs_[i].GetGainFormat();
       if (format.is_error()) {
-        zxlogf(ERROR, "%s Could not get gain format %d", __FILE__, format.error_value());
+        zxlogf(ERROR, "Could not get gain format %d", format.error_value());
         return format.error_value();
       }
       min_gain = std::max(min_gain, format->min_gain);
@@ -208,7 +208,7 @@ zx_status_t AmlG12TdmStream::InitCodecsGain() {
     // Use first codec as reference initial gain.
     auto state = codecs_[0].GetGainState();
     if (state.is_error()) {
-      zxlogf(ERROR, "%s Could not get gain state %d", __FILE__, state.error_value());
+      zxlogf(ERROR, "Could not get gain state %d", state.error_value());
       return state.error_value();
     }
     cur_gain_state_.cur_gain = state->gain;
@@ -311,7 +311,7 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
       // Put codecs in safe state for rate change
       auto status = codecs_[i].Stop();
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s failed to stop the codec", __FILE__);
+        zxlogf(ERROR, "failed to stop the codec");
         return status;
       }
     }
@@ -323,20 +323,20 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
     channels_to_use_ = req.channels_to_use_bitmask;
     auto status = aml_audio_->InitHW(metadata_, channels_to_use_, frame_rate_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s failed to reinitialize the HW", __FILE__);
+      zxlogf(ERROR, "failed to reinitialize the HW");
       return status;
     }
     for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
       status = codecs_[i].SetDaiFormat(dai_formats_[i]);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s failed to set the DAI format", __FILE__);
+        zxlogf(ERROR, "failed to set the DAI format");
         return status;
       }
 
       // Restart codec
       status = codecs_[i].Start();
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s failed to restart the codec", __FILE__);
+        zxlogf(ERROR, "failed to restart the codec");
         return status;
       }
     }
@@ -382,19 +382,19 @@ zx_status_t AmlG12TdmStream::GetBuffer(const audio_proto::RingBufGetBufferReq& r
   size_t vmo_size = fbl::round_up<size_t, size_t>(ring_buffer_size, PAGE_SIZE);
   auto status = InitBuffer(vmo_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to init buffer %d", __FILE__, status);
+    zxlogf(ERROR, "failed to init buffer %d", status);
     return status;
   }
 
   constexpr uint32_t rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER;
   status = ring_buffer_vmo_.duplicate(rights, out_buffer);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to duplicate VMO %d", __FILE__, status);
+    zxlogf(ERROR, "failed to duplicate VMO %d", status);
     return status;
   }
   status = aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, ring_buffer_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to set buffer %d", __FILE__, status);
+    zxlogf(ERROR, "failed to set buffer %d", status);
     return status;
   }
   // This is safe because of the overflow check we made above.
@@ -463,24 +463,24 @@ zx_status_t AmlG12TdmStream::InitBuffer(size_t size) {
 #endif
   auto status = bti_.release_quarantine();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not release quarantine bti - %d", __func__, status);
+    zxlogf(ERROR, "could not release quarantine bti - %d", status);
     return status;
   }
   pinned_ring_buffer_.Unpin();
   status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __func__, status);
+    zxlogf(ERROR, "failed to allocate ring buffer vmo - %d", status);
     return status;
   }
 
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d", __func__, status);
+    zxlogf(ERROR, "failed to pin ring buffer vmo - %d", status);
     return status;
   }
   if (pinned_ring_buffer_.region_count() != 1) {
     if (!AllowNonContiguousRingBuffer()) {
-      zxlogf(ERROR, "%s buffer is not contiguous", __func__);
+      zxlogf(ERROR, "buffer is not contiguous");
       return ZX_ERR_NO_MEMORY;
     }
   }
@@ -494,7 +494,7 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
   auto status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &metadata,
                                     sizeof(metadata::AmlConfig), &actual);
   if (status != ZX_OK || sizeof(metadata::AmlConfig) != actual) {
-    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
+    zxlogf(ERROR, "device_get_metadata failed %d", status);
     return status;
   }
   if (metadata.is_input) {
@@ -502,7 +502,7 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
         device, true, ddk::PDev::FromFragment(device),
         ddk::GpioProtocolClient(device, "gpio-enable"));
     if (stream == nullptr) {
-      zxlogf(ERROR, "%s Could not create aml-g12-tdm driver", __FILE__);
+      zxlogf(ERROR, "Could not create aml-g12-tdm driver");
       return ZX_ERR_NO_MEMORY;
     }
     __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
@@ -511,7 +511,7 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
         device, false, ddk::PDev::FromFragment(device),
         ddk::GpioProtocolClient(device, "gpio-enable"));
     if (stream == nullptr) {
-      zxlogf(ERROR, "%s Could not create aml-g12-tdm driver", __FILE__);
+      zxlogf(ERROR, "Could not create aml-g12-tdm driver");
       return ZX_ERR_NO_MEMORY;
     }
     __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);

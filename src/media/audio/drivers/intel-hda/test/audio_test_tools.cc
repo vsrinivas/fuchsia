@@ -70,7 +70,7 @@ std::unique_ptr<T> CreateAndOpenStream(const char* device) {
   // Open the stream.
   zx_status_t status = stream->Open();
   if (status != ZX_OK) {
-    std::cerr << "Failed to open audio stream: " << zx_status_get_string(status) << "\n";
+    std::cerr << "Failed to open audio stream: " << zx_status_get_string(status) << "";
     return nullptr;
   }
 

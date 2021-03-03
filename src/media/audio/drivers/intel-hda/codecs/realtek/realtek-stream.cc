@@ -112,7 +112,7 @@ zx_status_t RealtekStream::RunCmdLocked(const Command& cmd) {
   }
 
   zx_status_t res = SendCodecCommandLocked(cmd.nid, cmd.verb, want_response ? Ack::YES : Ack::NO);
-  VERBOSE_LOG("SEND: nid %2hu verb 0x%05x%s\n", cmd.nid, cmd.verb.val, want_response ? "*" : "");
+  VERBOSE_LOG("SEND: nid %2hu verb 0x%05x%s", cmd.nid, cmd.verb.val, want_response ? "*" : "");
 
   if ((res == ZX_OK) && want_response)
     pending_cmds_.push_back(std::move(pending_cmd));
@@ -149,12 +149,12 @@ zx_status_t RealtekStream::OnDMAAssignedLocked() {
 
 zx_status_t RealtekStream::OnSolicitedResponseLocked(const CodecResponse& resp) {
   if (pending_cmds_.is_empty()) {
-    LOG("Received solicited response (0x%08x), but no commands are pending!\n", resp.data);
+    LOG("Received solicited response (0x%08x), but no commands are pending!", resp.data);
     return ZX_ERR_BAD_STATE;
   }
 
   auto pending_cmd = pending_cmds_.pop_front();
-  VERBOSE_LOG("RECV: nid %2hu verb 0x%05x --> 0x%08x\n", pending_cmd->cmd().nid,
+  VERBOSE_LOG("RECV: nid %2hu verb 0x%05x --> 0x%08x", pending_cmd->cmd().nid,
               pending_cmd->cmd().verb.val, resp.data);
   return pending_cmd->Invoke(this, resp);
 }
@@ -395,7 +395,7 @@ zx_status_t RealtekStream::FinalizeSetupLocked() {
   zx_status_t res =
       MakeFormatRangeList(conv_.sample_caps, conv_.widget_caps.ch_count(), &supported_formats);
   if (res != ZX_OK) {
-    DEBUG_LOG("Failed to compute supported format ranges!  (res = %d)\n", res);
+    DEBUG_LOG("Failed to compute supported format ranges!  (res = %d)", res);
     return res;
   }
 
@@ -404,7 +404,7 @@ zx_status_t RealtekStream::FinalizeSetupLocked() {
   if (!supported_formats.size()) {
     DEBUG_LOG(
         "WARNING - no sample encodings are supported by this audio stream!  "
-        "(formats = 0x%08x, size/rates = 0x%08x)\n",
+        "(formats = 0x%08x, size/rates = 0x%08x)",
         conv_.sample_caps.pcm_formats_, conv_.sample_caps.pcm_size_rate_);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -449,8 +449,8 @@ void RealtekStream::DumpStreamPublishedLocked() {
       {IHDA_PCM_SIZE_16BITS, 16}, {IHDA_PCM_SIZE_8BITS, 8},
   };
 
-  LOG("Setup complete, publishing %s stream\n", props_.is_input ? "input" : "output");
-  LOG("Channels          : %u\n", conv_.widget_caps.ch_count());
+  LOG("Setup complete, publishing %s stream", props_.is_input ? "input" : "output");
+  LOG("Channels          : %u", conv_.widget_caps.ch_count());
 
   LOG("Sample rates      :");
   for (size_t i = 0; i < countof(RATE_LUT); ++i) {
@@ -472,19 +472,19 @@ void RealtekStream::DumpStreamPublishedLocked() {
   DumpAmpCaps(pc_, "PC");
 
   if (pc_.pin_caps.can_pres_detect()) {
-    LOG("Plug Detect       : %s (current state %s)\n",
+    LOG("Plug Detect       : %s (current state %s)",
         pc_.async_plug_det ? "Asynchronous" : "Poll-only", plug_state_ ? "Plugged" : "Unplugged");
   } else {
-    LOG("Plug Detect       : No\n");
+    LOG("Plug Detect       : No");
   }
 }
 
 void RealtekStream::DumpAmpCaps(const CommonCaps& caps, const char* tag) {
   if (caps.has_amp) {
-    LOG("%4s Gain control : [%.2f, %.2f] dB in %.2f dB steps (%s mute).\n", tag, caps.min_gain,
+    LOG("%4s Gain control : [%.2f, %.2f] dB in %.2f dB steps (%s mute).", tag, caps.min_gain,
         caps.max_gain, caps.gain_step, caps.amp_caps.can_mute() ? "can" : "cannot");
   } else {
-    LOG("%4s Gain control : 0dB fixed (cannot mute)\n", tag);
+    LOG("%4s Gain control : 0dB fixed (cannot mute)", tag);
   }
 }
 
@@ -552,7 +552,7 @@ zx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecRespons
   // Sanity check out input/output configuration.
   if (!(is_input() ? pc_.pin_caps.can_input() : pc_.pin_caps.can_output())) {
     const char* tag = is_input() ? "input" : "output";
-    LOG("ERROR: Stream configured for %s, but pin complex cannot %s\n", tag, tag);
+    LOG("ERROR: Stream configured for %s, but pin complex cannot %s", tag, tag);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -575,7 +575,7 @@ zx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecRespons
   if (!pc_.pin_caps.can_pres_detect() || pc_.pin_caps.trig_required()) {
     if (pc_.pin_caps.trig_required()) {
       LOG("WARNING : Triggered impedence sense plug detect not supported.  "
-          "Stream will always appear to be plugged in.\n");
+          "Stream will always appear to be plugged in.");
     }
     return UpdateSetupProgressLocked(PLUG_STATE_SETUP_COMPLETE);
   }
@@ -594,7 +594,7 @@ zx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecRespons
     } else {
       LOG("WARNING : Failed to allocate unsolicited response tag from "
           "codec pool (res %d).  Asynchronous plug detection will be "
-          "disabled.\n",
+          "disabled.",
           res);
       pc_.async_plug_det = false;
     }

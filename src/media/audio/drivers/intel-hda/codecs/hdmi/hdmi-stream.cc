@@ -116,7 +116,7 @@ zx_status_t HdmiStream::RunCmdLocked(const Command& cmd) {
   }
 
   zx_status_t res = SendCodecCommandLocked(cmd.nid, cmd.verb, want_response ? Ack::YES : Ack::NO);
-  zxlogf(DEBUG, "SEND: nid %2hu verb 0x%05x%s\n", cmd.nid, cmd.verb.val, want_response ? "*" : "");
+  zxlogf(DEBUG, "SEND: nid %2hu verb 0x%05x%s", cmd.nid, cmd.verb.val, want_response ? "*" : "");
 
   if ((res == ZX_OK) && want_response) {
     pending_cmds_.push_back(std::move(pending_cmd));
@@ -156,13 +156,12 @@ zx_status_t HdmiStream::OnDMAAssignedLocked() {
 
 zx_status_t HdmiStream::OnSolicitedResponseLocked(const CodecResponse& resp) {
   if (pending_cmds_.is_empty()) {
-    zxlogf(ERROR, "Received solicited response (0x%08x), but no commands are pending!\n",
-           resp.data);
+    zxlogf(ERROR, "Received solicited response (0x%08x), but no commands are pending!", resp.data);
     return ZX_ERR_BAD_STATE;
   }
 
   auto pending_cmd = pending_cmds_.pop_front();
-  zxlogf(DEBUG, "RECV: nid %2hu verb 0x%05x --> 0x%08x\n", pending_cmd->cmd().nid,
+  zxlogf(DEBUG, "RECV: nid %2hu verb 0x%05x --> 0x%08x", pending_cmd->cmd().nid,
          pending_cmd->cmd().verb.val, resp.data);
   return pending_cmd->Invoke(this, resp);
 }
@@ -385,7 +384,7 @@ zx_status_t HdmiStream::FinalizeSetupLocked() {
   zx_status_t res =
       MakeFormatRangeList(merged_sample_caps_, conv_.widget_caps.ch_count(), &supported_formats);
   if (res != ZX_OK) {
-    zxlogf(ERROR, "Failed to compute supported format ranges!  (res = %d)\n", res);
+    zxlogf(ERROR, "Failed to compute supported format ranges!  (res = %d)", res);
     return res;
   }
 
@@ -394,7 +393,7 @@ zx_status_t HdmiStream::FinalizeSetupLocked() {
   if (!supported_formats.size()) {
     zxlogf(WARNING,
            "no sample encodings are supported by this audio stream!  "
-           "(formats = 0x%08x, size/rates = 0x%08x)\n",
+           "(formats = 0x%08x, size/rates = 0x%08x)",
            merged_sample_caps_.pcm_formats_, merged_sample_caps_.pcm_size_rate_);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -528,7 +527,7 @@ zx_status_t HdmiStream::ProcessPinCaps(const Command& cmd, const CodecResponse& 
 
   // Sanity check out input/output configuration.
   if (!pc_.pin_caps.can_output()) {
-    zxlogf(ERROR, "Output stream, but pin complex cannot output\n");
+    zxlogf(ERROR, "Output stream, but pin complex cannot output");
     return ZX_ERR_BAD_STATE;
   }
 
@@ -552,7 +551,7 @@ zx_status_t HdmiStream::ProcessPinCaps(const Command& cmd, const CodecResponse& 
     if (pc_.pin_caps.trig_required()) {
       zxlogf(WARNING,
              "Triggered impedence sense plug detect not supported.  "
-             "Stream will always appear to be plugged in.\n");
+             "Stream will always appear to be plugged in.");
     }
     return UpdateSetupProgressLocked(PLUG_STATE_SETUP_COMPLETE);
   }
@@ -573,7 +572,7 @@ zx_status_t HdmiStream::ProcessPinCaps(const Command& cmd, const CodecResponse& 
       zxlogf(WARNING,
              "Failed to allocate unsolicited response tag from "
              "codec pool (res %d).  Asynchronous plug detection will be "
-             "disabled.\n",
+             "disabled.",
              res);
       pc_.async_plug_det = false;
     }

@@ -65,7 +65,7 @@ fbl::RefPtr<UsbAudioStream> UsbAudioStream::Create(UsbAudioDevice* parent,
   fbl::AllocChecker ac;
   auto stream = fbl::AdoptRef(new (&ac) UsbAudioStream(parent, std::move(ifc)));
   if (!ac.check()) {
-    LOG_EX(ERROR, *parent, "Out of memory while attempting to allocate UsbAudioStream\n");
+    LOG_EX(ERROR, *parent, "Out of memory while attempting to allocate UsbAudioStream");
     return nullptr;
   }
 
@@ -90,8 +90,8 @@ zx_status_t UsbAudioStream::Bind() {
       usb_request_t* req;
       zx_status_t status = usb_request_alloc(&req, ifc_->max_req_size(), ifc_->ep_addr(), req_size);
       if (status != ZX_OK) {
-        LOG(ERROR, "Failed to allocate usb request %u/%u (size %u): %d\n", i + 1,
-            MAX_OUTSTANDING_REQ, ifc_->max_req_size(), status);
+        LOG(ERROR, "Failed to allocate usb request %u/%u (size %u): %d", i + 1, MAX_OUTSTANDING_REQ,
+            ifc_->max_req_size(), status);
         return status;
       }
 
@@ -112,7 +112,7 @@ zx_status_t UsbAudioStream::Bind() {
     // Manually increase our reference count to account for this.
     this->AddRef();
   } else {
-    LOG(ERROR, "Failed to publish UsbAudioStream device node (name \"%s\", status %d)\n", name,
+    LOG(ERROR, "Failed to publish UsbAudioStream device node (name \"%s\", status %d)", name,
         status);
   }
 
@@ -131,7 +131,7 @@ zx_status_t UsbAudioStream::Bind() {
       profile_handle_.reset_and_get_address());
 
   if (status != ZX_OK) {
-    LOG(ERROR, "Failed to retrieve profile, status %d\n", status);
+    LOG(ERROR, "Failed to retrieve profile, status %d", status);
     return status;
   }
 
@@ -281,7 +281,7 @@ void UsbAudioStream::GetSupportedFormats(
     StreamChannel::GetSupportedFormatsCompleter::Sync& completer) {
   const fbl::Vector<UsbAudioStreamInterface::FormatMapEntry>& formats = ifc_->formats();
   if (formats.size() > std::numeric_limits<uint16_t>::max()) {
-    LOG(ERROR, "Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
+    LOG(ERROR, "Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!",
         formats.size());
     return;
   }
@@ -382,7 +382,7 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
 
   if (req.channels_to_use_bitmask != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED &&
       req.channels_to_use_bitmask != ((1 << req.number_of_channels) - 1)) {
-    LOG(ERROR, "Unsupported format: Invalid channels to use bitmask (0x%lX)\n",
+    LOG(ERROR, "Unsupported format: Invalid channels to use bitmask (0x%lX)",
         req.channels_to_use_bitmask);
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
@@ -392,7 +392,7 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
       audio::utils::GetSampleFormat(req.valid_bits_per_sample, 8 * req.bytes_per_sample);
 
   if (sample_format == 0) {
-    LOG(ERROR, "Unsupported format: Invalid bits per sample (%u/%u)\n", req.valid_bits_per_sample,
+    LOG(ERROR, "Unsupported format: Invalid bits per sample (%u/%u)", req.valid_bits_per_sample,
         8 * req.bytes_per_sample);
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
@@ -401,7 +401,7 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
   if (req.sample_format == audio_fidl::wire::SampleFormat::PCM_FLOAT) {
     sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
     if (req.valid_bits_per_sample != 32 || req.bytes_per_sample != 4) {
-      LOG(ERROR, "Unsupported format: Not 32 per sample/channel for float\n");
+      LOG(ERROR, "Unsupported format: Not 32 per sample/channel for float");
       completer.Close(ZX_ERR_INVALID_ARGS);
       return;
     }
@@ -417,7 +417,7 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
   zx_status_t status =
       ifc_->LookupFormat(req.frame_rate, req.number_of_channels, sample_format, &format_ndx);
   if (status != ZX_OK) {
-    LOG(ERROR, "Could not find a suitable format in %s", __PRETTY_FUNCTION__);
+    LOG(ERROR, "Could not find a suitable format");
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -729,7 +729,7 @@ void UsbAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   // Create the ring buffer vmo we will use to share memory with the client.
   zx_status_t status = zx::vmo::create(ring_buffer_size_, 0, &ring_buffer_vmo_);
   if (status != ZX_OK) {
-    LOG(ERROR, "Failed to create ring buffer (size %u, res %d)\n", ring_buffer_size_, status);
+    LOG(ERROR, "Failed to create ring buffer (size %u, res %d)", ring_buffer_size_, status);
     return;
   }
 
@@ -744,7 +744,7 @@ void UsbAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   status = zx::vmar::root_self()->map(map_flags, 0, ring_buffer_vmo_, 0, ring_buffer_size_,
                                       reinterpret_cast<uintptr_t*>(&ring_buffer_virt_));
   if (status != ZX_OK) {
-    LOG(ERROR, "Failed to map ring buffer (size %u, res %d)\n", ring_buffer_size_, status);
+    LOG(ERROR, "Failed to map ring buffer (size %u, res %d)", ring_buffer_size_, status);
     return;
   }
 
@@ -755,7 +755,7 @@ void UsbAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
 
   status = ring_buffer_vmo_.duplicate(client_rights, &client_rb_handle);
   if (status != ZX_OK) {
-    LOG(ERROR, "Failed to duplicate ring buffer handle (res %d)\n", status);
+    LOG(ERROR, "Failed to duplicate ring buffer handle (res %d)", status);
     return;
   }
 
@@ -921,8 +921,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
 
       case RingBufferState::STOPPED:
       default:
-        LOG(ERROR, "Invalid state (%u) in %s\n", static_cast<uint32_t>(ring_buffer_state_),
-            __PRETTY_FUNCTION__);
+        LOG(ERROR, "Invalid state (%u)", static_cast<uint32_t>(ring_buffer_state_));
         ZX_DEBUG_ASSERT(false);
         break;
     }

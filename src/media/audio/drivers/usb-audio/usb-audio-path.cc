@@ -45,14 +45,13 @@ zx_status_t AudioPath::Setup(const usb_protocol_t& proto) {
   // be an output terminal while the last element in the array must be an
   // input terminal.  Check all of this before proceeding.
   if ((units_ == nullptr) || (unit_count_ < 2)) {
-    GLOBAL_LOG(ERROR, "Bad units array during %s (ptr %p, count %u)\n", __PRETTY_FUNCTION__,
-               units_.get(), unit_count_);
+    GLOBAL_LOG(ERROR, "Bad units array (ptr %p, count %u)", units_.get(), unit_count_);
     return ZX_ERR_INTERNAL;
   }
 
   for (uint32_t i = 0; i < unit_count_; ++i) {
     if (units_[i] == nullptr) {
-      GLOBAL_LOG(ERROR, "Empty unit slot %s (ndx %u)\n", __PRETTY_FUNCTION__, i);
+      GLOBAL_LOG(ERROR, "Empty unit slot (ndx %u)", i);
       return ZX_ERR_INTERNAL;
     }
   }
@@ -61,7 +60,7 @@ zx_status_t AudioPath::Setup(const usb_protocol_t& proto) {
   if (first_unit.type() != AudioUnit::Type::OutputTerminal) {
     GLOBAL_LOG(ERROR,
                "First element of audio path must be an OutputTerminal, "
-               "but a unit of type \"%s\" was discovered instead!\n",
+               "but a unit of type \"%s\" was discovered instead!",
                first_unit.type_name());
     return ZX_ERR_INTERNAL;
   }
@@ -70,7 +69,7 @@ zx_status_t AudioPath::Setup(const usb_protocol_t& proto) {
   if (last_unit.type() != AudioUnit::Type::InputTerminal) {
     GLOBAL_LOG(ERROR,
                "First element of audio path must be an InputTerminal, "
-               "but a unit of type \"%s\" was discovered instead!\n",
+               "but a unit of type \"%s\" was discovered instead!",
                last_unit.type_name());
     return ZX_ERR_INTERNAL;
   }
@@ -85,7 +84,7 @@ zx_status_t AudioPath::Setup(const usb_protocol_t& proto) {
   const auto& out_term = static_cast<const OutputTerminal&>(first_unit);
   const auto& in_term = static_cast<const InputTerminal&>(last_unit);
   if (out_term.is_stream_terminal() == in_term.is_stream_terminal()) {
-    GLOBAL_LOG(ERROR, "%s stream terminals found in audio path!\n",
+    GLOBAL_LOG(ERROR, "%s stream terminals found in audio path!",
                out_term.is_stream_terminal() ? "Multiple" : "No");
     return ZX_ERR_INTERNAL;
   }
@@ -129,7 +128,7 @@ zx_status_t AudioPath::Setup(const usb_protocol_t& proto) {
     if (unit->in_use()) {
       GLOBAL_LOG(ERROR,
                  "AudioPath with in/out term ids = (%u/%u) encountered a %s "
-                 "(id %u) which is already in use by another path.\n",
+                 "(id %u) which is already in use by another path.",
                  in_term.id(), out_term.id(), unit->type_name(), unit->id());
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -143,7 +142,7 @@ zx_status_t AudioPath::Setup(const usb_protocol_t& proto) {
       if (status != ZX_OK) {
         GLOBAL_LOG(ERROR,
                    "AudioPath with in/out term ids = (%u/%u) failed to set "
-                   "selector id %u to source from upstream unit id %u (status %d)\n",
+                   "selector id %u to source from upstream unit id %u (status %d)",
                    in_term.id(), out_term.id(), unit->id(), upstream_id, status);
         return status;
       }
@@ -156,7 +155,7 @@ zx_status_t AudioPath::Setup(const usb_protocol_t& proto) {
         GLOBAL_LOG(ERROR,
                    "AudioPath with in/out term ids = (%u/%u) encountered "
                    "a multiple feature units in the path.  We encountered "
-                   "id %u, but already have id %u cached.\n",
+                   "id %u, but already have id %u cached.",
                    in_term.id(), out_term.id(), unit->id(), feature_unit_->id());
         return ZX_ERR_NOT_SUPPORTED;
       }

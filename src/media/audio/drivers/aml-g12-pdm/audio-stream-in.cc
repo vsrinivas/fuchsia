@@ -30,7 +30,7 @@ AudioStreamIn::AudioStreamIn(zx_device_t* parent) : SimpleAudioStream(parent, tr
 zx_status_t AudioStreamIn::Create(void* ctx, zx_device_t* parent) {
   auto stream = audio::SimpleAudioStream::Create<AudioStreamIn>(parent);
   if (stream == nullptr) {
-    zxlogf(ERROR, "%s Could not create aml-g12-pdm driver", __FILE__);
+    zxlogf(ERROR, "Could not create aml-g12-pdm driver");
     return ZX_ERR_NO_MEMORY;
   }
   __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
@@ -77,38 +77,38 @@ zx_status_t AudioStreamIn::InitPDev() {
   auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
                                     sizeof(metadata::AmlPdmConfig), &actual);
   if (status != ZX_OK || sizeof(metadata::AmlPdmConfig) != actual) {
-    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
+    zxlogf(ERROR, "device_get_metadata failed %d", status);
     return status;
   }
 
   pdev_protocol_t pdev;
   status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
   if (status) {
-    zxlogf(ERROR, "%s get pdev protocol failed %d", __FILE__, status);
+    zxlogf(ERROR, "get pdev protocol failed %d", status);
     return status;
   }
 
   ddk::PDev pdev2(&pdev);
   if (!pdev2.is_valid()) {
-    zxlogf(ERROR, "%s could not get pdev", __FILE__);
+    zxlogf(ERROR, "could not get pdev");
     return ZX_ERR_NO_RESOURCES;
   }
 
   status = pdev2.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not obtain bti %d", __FUNCTION__, status);
+    zxlogf(ERROR, "could not obtain bti %d", status);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> mmio0, mmio1;
   status = pdev2.MapMmio(0, &mmio0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not map mmio0 %d", __FUNCTION__, status);
+    zxlogf(ERROR, "could not map mmio0 %d", status);
     return status;
   }
   status = pdev2.MapMmio(1, &mmio1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not map mmio1 %d", __FUNCTION__, status);
+    zxlogf(ERROR, "could not map mmio1 %d", status);
     return status;
   }
 
@@ -116,20 +116,20 @@ zx_status_t AudioStreamIn::InitPDev() {
                               metadata_.sysClockDivFactor - 1, metadata_.dClockDivFactor - 1,
                               TODDR_B, metadata_.version);
   if (lib_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create audio device", __FUNCTION__);
+    zxlogf(ERROR, "failed to create audio device");
     return ZX_ERR_NO_MEMORY;
   }
 
   // Initial setup of one page of buffer, just to be safe.
   status = InitBuffer(PAGE_SIZE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to init buffer %d", __FILE__, status);
+    zxlogf(ERROR, "failed to init buffer %d", status);
     return status;
   }
   status =
       lib_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, pinned_ring_buffer_.region(0).size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to set buffer %d", __FILE__, status);
+    zxlogf(ERROR, "failed to set buffer %d", status);
     return status;
   }
 
@@ -181,19 +181,19 @@ zx_status_t AudioStreamIn::GetBuffer(const audio_proto::RingBufGetBufferReq& req
   size_t vmo_size = fbl::round_up<size_t, size_t>(ring_buffer_size, PAGE_SIZE);
   auto status = InitBuffer(vmo_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to init buffer %d", __FILE__, status);
+    zxlogf(ERROR, "failed to init buffer %d", status);
     return status;
   }
 
   constexpr uint32_t rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER;
   status = ring_buffer_vmo_.duplicate(rights, out_buffer);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to duplicate vmo", __FUNCTION__);
+    zxlogf(ERROR, "failed to duplicate vmo");
     return status;
   }
   status = lib_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, ring_buffer_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to set buffer %d", __FILE__, status);
+    zxlogf(ERROR, "failed to set buffer %d", status);
     return status;
   }
   // This is safe because of the overflow check we made above.
@@ -270,17 +270,17 @@ zx_status_t AudioStreamIn::InitBuffer(size_t size) {
   auto status =
       zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __func__, status);
+    zxlogf(ERROR, "failed to allocate ring buffer vmo - %d", status);
     return status;
   }
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d", __func__, status);
+    zxlogf(ERROR, "failed to pin ring buffer vmo - %d", status);
     return status;
   }
   if (pinned_ring_buffer_.region_count() != 1) {
     if (!AllowNonContiguousRingBuffer()) {
-      zxlogf(ERROR, "%s buffer is not contiguous", __func__);
+      zxlogf(ERROR, "buffer is not contiguous");
       return ZX_ERR_NO_MEMORY;
     }
   }

@@ -67,7 +67,7 @@ void AmlG12TdmDai::Reset(ResetCallback callback) {
   auto status =
       aml_audio_->InitHW(metadata_, dai_format_.channels_to_use_bitmask, dai_format_.frame_rate);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to init tdm hardware %d\n", __FILE__, status);
+    zxlogf(ERROR, "failed to init tdm hardware %d", status);
   }
   callback();
 }
@@ -77,7 +77,7 @@ zx_status_t AmlG12TdmDai::InitPDev() {
   auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
                                     sizeof(metadata::AmlConfig), &actual);
   if (status != ZX_OK || sizeof(metadata::AmlConfig) != actual) {
-    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
+    zxlogf(ERROR, "device_get_metadata failed %d", status);
     return status;
   }
   status = AmlTdmConfigDevice::Normalize(metadata_);
@@ -89,24 +89,24 @@ zx_status_t AmlG12TdmDai::InitPDev() {
   pdev_protocol_t pdev;
   status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get pdev %d", __FILE__, status);
+    zxlogf(ERROR, "could not get pdev %d", status);
     return status;
   }
   auto pdev2 = ddk::PDev(&pdev);
   status = pdev2.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not obtain bti %d", __FILE__, status);
+    zxlogf(ERROR, "could not obtain bti %d", status);
     return status;
   }
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev2.MapMmio(0, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get mmio %d", __FILE__, status);
+    zxlogf(ERROR, "could not get mmio %d", status);
     return status;
   }
   aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, *std::move(mmio));
   if (aml_audio_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create TDM device with config", __func__);
+    zxlogf(ERROR, "failed to create TDM device with config");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -132,7 +132,7 @@ void AmlG12TdmDai::Shutdown() {
 void AmlG12TdmDai::GetVmo(uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring,
                           GetVmoCallback callback) {
   if (rb_started_) {
-    zxlogf(ERROR, "%s GetVmo failed, ring buffer started", __FILE__);
+    zxlogf(ERROR, "GetVmo failed, ring buffer started");
     ringbuffer_binding_->Unbind();
     return;
   }
@@ -141,13 +141,13 @@ void AmlG12TdmDai::GetVmo(uint32_t min_frames, uint32_t clock_recovery_notificat
       min_frames * frame_size_, std::lcm(frame_size_, aml_audio_->GetBufferAlignment()));
   size_t out_frames = ring_buffer_size / frame_size_;
   if (out_frames > std::numeric_limits<uint32_t>::max()) {
-    zxlogf(ERROR, "%s out frames too big %zu", __FILE__, out_frames);
+    zxlogf(ERROR, "out frames too big %zu", out_frames);
     ringbuffer_binding_->Unbind();
     return;
   }
   auto status = InitBuffer(ring_buffer_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to init buffer %d", __FILE__, status);
+    zxlogf(ERROR, "failed to init buffer %d", status);
     ringbuffer_binding_->Unbind();
     return;
   }
@@ -156,14 +156,14 @@ void AmlG12TdmDai::GetVmo(uint32_t min_frames, uint32_t clock_recovery_notificat
   zx::vmo buffer;
   status = ring_buffer_vmo_.duplicate(rights, &buffer);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s GetVmo failed, could not duplicate VMO", __FILE__);
+    zxlogf(ERROR, "GetVmo failed, could not duplicate VMO");
     ringbuffer_binding_->Unbind();
     return;
   }
 
   status = aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, ring_buffer_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to set buffer %d", __FILE__, status);
+    zxlogf(ERROR, "failed to set buffer %d", status);
     ringbuffer_binding_->Unbind();
     return;
   }
@@ -178,7 +178,7 @@ void AmlG12TdmDai::GetVmo(uint32_t min_frames, uint32_t clock_recovery_notificat
 void AmlG12TdmDai::Start(StartCallback callback) {
   uint64_t start_time = 0;
   if (rb_started_ || !rb_fetched_) {
-    zxlogf(ERROR, "Could not start %s\n", __FILE__);
+    zxlogf(ERROR, "Could not start");
     callback(start_time);
     return;
   }
@@ -201,7 +201,7 @@ void AmlG12TdmDai::Start(StartCallback callback) {
 
 void AmlG12TdmDai::Stop(StopCallback callback) {
   if (!rb_started_) {
-    zxlogf(ERROR, "Could not stop %s\n", __FILE__);
+    zxlogf(ERROR, "Could not stop");
     callback();
     return;
   }
@@ -221,24 +221,24 @@ zx_status_t AmlG12TdmDai::InitBuffer(size_t size) {
 #endif
   auto status = bti_.release_quarantine();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not release quarantine bti - %d", __FILE__, status);
+    zxlogf(ERROR, "could not release quarantine bti - %d", status);
     return status;
   }
   pinned_ring_buffer_.Unpin();
   status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __FILE__, status);
+    zxlogf(ERROR, "failed to allocate ring buffer vmo - %d", status);
     return status;
   }
 
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d", __FILE__, status);
+    zxlogf(ERROR, "failed to pin ring buffer vmo - %d", status);
     return status;
   }
   if (pinned_ring_buffer_.region_count() != 1) {
     if (!AllowNonContiguousRingBuffer()) {
-      zxlogf(ERROR, "%s buffer is not contiguous", __func__);
+      zxlogf(ERROR, "buffer is not contiguous");
       return ZX_ERR_NO_MEMORY;
     }
   }
@@ -345,7 +345,7 @@ void AmlG12TdmDai::ProcessRingNotification() {
 
 void AmlG12TdmDai::WatchClockRecoveryPositionInfo(WatchClockRecoveryPositionInfoCallback callback) {
   if (!expected_notifications_per_ring_.load()) {
-    zxlogf(ERROR, "%s no notifications per ring", __FILE__);
+    zxlogf(ERROR, "no notifications per ring");
   }
   position_callback_ = std::move(callback);
 }
@@ -356,18 +356,18 @@ static zx_status_t dai_bind(void* ctx, zx_device_t* device) {
   auto status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &metadata,
                                     sizeof(metadata::AmlConfig), &actual);
   if (status != ZX_OK || sizeof(metadata::AmlConfig) != actual) {
-    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
+    zxlogf(ERROR, "device_get_metadata failed %d", status);
     return status;
   }
   auto dai = std::make_unique<audio::aml_g12::AmlG12TdmDai>(device);
   if (dai == nullptr) {
-    zxlogf(ERROR, "%s Could not create DAI driver", __FILE__);
+    zxlogf(ERROR, "Could not create DAI driver");
     return ZX_ERR_NO_MEMORY;
   }
 
   status = dai->InitPDev();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Could not init device", __FILE__);
+    zxlogf(ERROR, "Could not init device");
     return status;
   }
   zx_device_prop_t props[] = {
@@ -382,7 +382,7 @@ static zx_status_t dai_bind(void* ctx, zx_device_t* device) {
   }
   status = dai->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Could not add DAI driver to the DDK", __FILE__);
+    zxlogf(ERROR, "Could not add DAI driver to the DDK");
     return status;
   }
   __UNUSED auto dummy = dai.release();

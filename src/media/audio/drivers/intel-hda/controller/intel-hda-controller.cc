@@ -204,7 +204,7 @@ zx_status_t IntelHDAController::DeviceGetProtocol(uint32_t proto_id, void* proto
       return ZX_OK;
     }
     default:
-      LOG(ERROR, "Unsupported protocol 0x%08x\n", proto_id);
+      LOG(ERROR, "Unsupported protocol 0x%08x", proto_id);
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -323,23 +323,22 @@ zx_status_t IntelHDAController::ProcessClientRequest(Channel* channel) {
   ZX_DEBUG_ASSERT(channel != nullptr);
   res = channel->Read(&req, sizeof(req), &req_size);
   if (res != ZX_OK) {
-    LOG(DEBUG, "Failed to read client request (res %d)\n", res);
+    LOG(DEBUG, "Failed to read client request (res %d)", res);
     return res;
   }
 
   // Sanity checks
   if (req_size < sizeof(req.hdr)) {
-    LOG(DEBUG, "Client request too small to contain header (%u < %zu)\n", req_size,
-        sizeof(req.hdr));
+    LOG(DEBUG, "Client request too small to contain header (%u < %zu)", req_size, sizeof(req.hdr));
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Dispatch
-  LOG(TRACE, "Client Request 0x%04x len %u\n", req.hdr.cmd, req_size);
+  LOG(TRACE, "Client Request 0x%04x len %u", req.hdr.cmd, req_size);
   switch (req.hdr.cmd) {
     case IHDA_CMD_GET_IDS: {
       if (req_size != sizeof(req.get_ids)) {
-        LOG(DEBUG, "Bad GET_IDS request length (%u != %zu)\n", req_size, sizeof(req.get_ids));
+        LOG(DEBUG, "Bad GET_IDS request length (%u != %zu)", req_size, sizeof(req.get_ids));
         return ZX_ERR_INVALID_ARGS;
       }
 
@@ -360,7 +359,7 @@ zx_status_t IntelHDAController::ProcessClientRequest(Channel* channel) {
 
     case IHDA_CONTROLLER_CMD_SNAPSHOT_REGS:
       if (req_size != sizeof(req.snapshot_regs)) {
-        LOG(DEBUG, "Bad SNAPSHOT_REGS request length (%u != %zu)\n", req_size,
+        LOG(DEBUG, "Bad SNAPSHOT_REGS request length (%u != %zu)", req_size,
             sizeof(req.snapshot_regs));
         return ZX_ERR_INVALID_ARGS;
       }

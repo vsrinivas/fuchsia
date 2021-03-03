@@ -65,12 +65,12 @@ zx_status_t As370AudioStreamIn::Init() {
 zx_status_t As370AudioStreamIn::InitPDev() {
   pdev_ = ddk::PDev::FromFragment(parent());
   if (!pdev_.is_valid()) {
-    zxlogf(ERROR, "%s could not get pdev", __FILE__);
+    zxlogf(ERROR, "could not get pdev");
     return ZX_ERR_NO_RESOURCES;
   }
   clks_[kAvpll0Clk] = ddk::ClockProtocolClient(parent(), "clock");
   if (!clks_[kAvpll0Clk].is_valid()) {
-    zxlogf(ERROR, "%s could not get clk", __FILE__);
+    zxlogf(ERROR, "could not get clk");
     return ZX_ERR_NO_RESOURCES;
   }
   // PLL0 = 196.608MHz = e.g. 48K (FSYNC) * 64 (BCLK) * 8 (MCLK) * 8.
@@ -79,7 +79,7 @@ zx_status_t As370AudioStreamIn::InitPDev() {
 
   ddk::SharedDmaProtocolClient dma(parent(), "dma");
   if (!dma.is_valid()) {
-    zxlogf(ERROR, "%s could not get DMA", __FILE__);
+    zxlogf(ERROR, "could not get DMA");
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -100,7 +100,7 @@ zx_status_t As370AudioStreamIn::InitPDev() {
   lib_ = SynAudioInDevice::Create(*std::move(mmio_global), *std::move(mmio_avio_global),
                                   *std::move(mmio_i2s), dma);
   if (lib_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create Syn audio device", __FUNCTION__);
+    zxlogf(ERROR, "failed to create Syn audio device");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -109,7 +109,7 @@ zx_status_t As370AudioStreamIn::InitPDev() {
       kMaxRate * sizeof(uint16_t) * SynAudioInDevice::kNumberOfChannels, ZX_PAGE_SIZE);
   status = lib_->GetBuffer(kRingBufferSize, &ring_buffer_vmo_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to Init buffer %d", __FILE__, status);
+    zxlogf(ERROR, "failed to Init buffer %d", status);
     return status;
   }
 

@@ -153,7 +153,7 @@ zx::status<DriverIds> Tas5720::Initialize() {
   auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &instance_count_,
                                     sizeof(instance_count_), &actual);
   if (status != ZX_OK || sizeof(instance_count_) != actual) {
-    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
+    zxlogf(ERROR, "device_get_metadata failed %d", status);
     return zx::error(status);
   }
 

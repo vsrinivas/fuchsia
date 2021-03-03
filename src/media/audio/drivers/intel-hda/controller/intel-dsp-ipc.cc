@@ -315,7 +315,7 @@ std::optional<fit::inline_function<void()>> HardwareDspChannel::CreateNotificati
 
 void HardwareDspChannel::ProcessIpcReply(const IpcMessage& reply) {
   if (ipc_queue_.is_empty()) {
-    LOG(INFO, "got spurious reply message\n");
+    LOG(INFO, "got spurious reply message");
     return;
   }
   Txn& pending = ipc_queue_.front();
@@ -323,7 +323,7 @@ void HardwareDspChannel::ProcessIpcReply(const IpcMessage& reply) {
   // Check if the reply matches the pending request.
   IpcMessage* req = &pending.request;
   if ((req->msg_tgt() != reply.msg_tgt()) || (req->type() != reply.type())) {
-    LOG(INFO, "reply msg mismatch, got pri 0x%08x ext 0x%08x, expect pri 0x%08x ext 0x%08x\n",
+    LOG(INFO, "reply msg mismatch, got pri 0x%08x ext 0x%08x, expect pri 0x%08x ext 0x%08x",
         reply.primary, reply.extension, req->primary, req->extension);
     return;
   }
@@ -333,7 +333,7 @@ void HardwareDspChannel::ProcessIpcReply(const IpcMessage& reply) {
   pending.reply = reply;
   pending.done = true;
 
-  LOG(TRACE, "got reply (status %u) for pending msg, pri 0x%08x ext 0x%08x\n",
+  LOG(TRACE, "got reply (status %u) for pending msg, pri 0x%08x ext 0x%08x",
       to_underlying(reply.status()), reply.primary, reply.extension);
 
   if (reply.msg_tgt() == MsgTarget::MODULE_MSG) {
@@ -360,7 +360,7 @@ void HardwareDspChannel::ProcessLargeConfigGetReply(Txn* txn) {
                       "large_param_id mismatch, expected %u got %u\n",
                       txn->request.large_param_id(), txn->reply.large_param_id());
 
-  LOG(TRACE, "got LARGE_CONFIG_GET reply, id %u init_block %d final_block %d data_off_size %u\n",
+  LOG(TRACE, "got LARGE_CONFIG_GET reply, id %u init_block %d final_block %d data_off_size %u",
       txn->reply.large_param_id(), txn->reply.init_block(), txn->reply.final_block(),
       txn->reply.data_off_size());
 

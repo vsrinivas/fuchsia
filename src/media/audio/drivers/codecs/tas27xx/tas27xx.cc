@@ -45,7 +45,7 @@ Tas27xx::Tas27xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClie
   auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
                                     sizeof(metadata_), &actual);
   if (status != ZX_OK) {
-    zxlogf(DEBUG, "%s device_get_metadata failed %d", __FILE__, status);
+    zxlogf(DEBUG, "device_get_metadata failed %d", status);
   }
 }
 
@@ -310,8 +310,7 @@ zx_status_t Tas27xx::Reset() {
       auto status =
           WriteReg(metadata_.init_sequence1[i].address, metadata_.init_sequence1[i].value);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__,
-               metadata_.init_sequence1[i].address, __func__);
+        zxlogf(ERROR, "Failed to write I2C register 0x%02X", metadata_.init_sequence1[i].address);
         return status;
       }
     }
@@ -321,8 +320,7 @@ zx_status_t Tas27xx::Reset() {
   for (size_t i = 0; i < metadata_.number_of_writes2; ++i) {
     auto status = WriteReg(metadata_.init_sequence2[i].address, metadata_.init_sequence2[i].value);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__,
-             metadata_.init_sequence2[i].address, __func__);
+      zxlogf(ERROR, "Failed to write I2C register 0x%02X", metadata_.init_sequence2[i].address);
       return status;
     }
   }

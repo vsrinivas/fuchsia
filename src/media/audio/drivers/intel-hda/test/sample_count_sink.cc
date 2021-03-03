@@ -29,12 +29,12 @@ zx_status_t SampleCountSink::SetFormat(const Format& format) {
 
 zx_status_t SampleCountSink::PutFrames(const void* buffer, uint32_t bytes) {
   if (!format_.has_value()) {
-    std::cerr << "SetFormat() not called.\n";
+    std::cerr << "SetFormat() not called.";
     return ZX_ERR_BAD_STATE;
   }
   uint32_t frame_size = audio::utils::ComputeFrameSize(format_->channels, format_->sample_format);
   if (bytes % frame_size != 0) {
-    std::cerr << "Passed a buffer with a fractional number of samples.\n";
+    std::cerr << "Passed a buffer with a fractional number of samples.";
     return ZX_ERR_INVALID_ARGS;
   }
 

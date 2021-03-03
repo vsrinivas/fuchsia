@@ -69,7 +69,7 @@ Tas58xx::Tas58xx(zx_device_t* device, const ddk::I2cChannel& i2c)
   auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
                                     sizeof(metadata_), &actual);
   if (status != ZX_OK) {
-    zxlogf(DEBUG, "%s device_get_metadata failed %d", __FILE__, status);
+    zxlogf(DEBUG, "device_get_metadata failed %d", status);
   }
 }
 
@@ -104,8 +104,7 @@ zx_status_t Tas58xx::Reset() {
         auto status =
             WriteReg(metadata_.init_sequence1[i].address, metadata_.init_sequence1[i].value);
         if (status != ZX_OK) {
-          zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__,
-                 metadata_.init_sequence1[i].address, __func__);
+          zxlogf(ERROR, "Failed to write I2C register 0x%02X", metadata_.init_sequence1[i].address);
           return status;
         }
       }
@@ -119,7 +118,7 @@ zx_status_t Tas58xx::Reset() {
       for (auto& i : kDefaultsStart) {
         auto status = WriteReg(i[0], i[1]);
         if (status != ZX_OK) {
-          zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__, i[0], __func__);
+          zxlogf(ERROR, "Failed to write I2C register 0x%02X", i[0]);
           return status;
         }
       }
@@ -132,8 +131,7 @@ zx_status_t Tas58xx::Reset() {
       auto status =
           WriteReg(metadata_.init_sequence2[i].address, metadata_.init_sequence2[i].value);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__,
-               metadata_.init_sequence2[i].address, __func__);
+        zxlogf(ERROR, "Failed to write I2C register 0x%02X", metadata_.init_sequence2[i].address);
         return status;
       }
     }
@@ -152,7 +150,7 @@ zx_status_t Tas58xx::Reset() {
     for (auto& i : kDefaultsEnd) {
       auto status = WriteReg(i[0], i[1]);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__, i[0], __func__);
+        zxlogf(ERROR, "Failed to write I2C register 0x%02X", i[0]);
         return status;
       }
     }
@@ -174,7 +172,7 @@ zx::status<DriverIds> Tas58xx::Initialize() {
 zx_status_t Tas58xx::Create(zx_device_t* parent) {
   ddk::I2cChannel i2c(parent, "i2c");
   if (!i2c.is_valid()) {
-    zxlogf(ERROR, "%s Could not get i2c protocol", __FILE__);
+    zxlogf(ERROR, "Could not get i2c protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -190,7 +188,7 @@ Info Tas58xx::GetInfo() {
   uint8_t die_id = 0;
   zx_status_t status = ReadReg(kRegDieId, &die_id);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Failed to read DIE ID %d", __FILE__, status);
+    zxlogf(ERROR, "Failed to read DIE ID %d", status);
   }
   const char* name = nullptr;
   if (die_id == 0x95) {
@@ -215,18 +213,18 @@ DaiSupportedFormats Tas58xx::GetDaiFormats() { return kSupportedDaiDaiFormats; }
 
 zx_status_t Tas58xx::SetDaiFormat(const DaiFormat& format) {
   if (!IsDaiFormatSupported(format, kSupportedDaiDaiFormats)) {
-    zxlogf(ERROR, "%s unsupported format", __FILE__);
+    zxlogf(ERROR, "unsupported format");
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (format.number_of_channels == 2 && format.channels_to_use_bitmask != 3) {
-    zxlogf(ERROR, "%s DAI format channels to use not supported %u 0x%lX", __FILE__,
-           format.number_of_channels, format.channels_to_use_bitmask);
+    zxlogf(ERROR, "DAI format channels to use not supported %u 0x%lX", format.number_of_channels,
+           format.channels_to_use_bitmask);
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (format.number_of_channels == 4 && format.channels_to_use_bitmask != 3 &&
       format.channels_to_use_bitmask != 0xc) {
-    zxlogf(ERROR, "%s DAI format channels to use not supported %u 0x%lX", __FILE__,
-           format.number_of_channels, format.channels_to_use_bitmask);
+    zxlogf(ERROR, "DAI format channels to use not supported %u 0x%lX", format.number_of_channels,
+           format.channels_to_use_bitmask);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -264,7 +262,7 @@ void Tas58xx::SetGainState(GainState gain_state) {
     return;
   }
   if (gain_state.agc_enabled) {
-    zxlogf(ERROR, "%s AGC enable not supported", __FILE__);
+    zxlogf(ERROR, "AGC enable not supported");
     gain_state.agc_enabled = false;
   }
   gain_state_ = gain_state;
@@ -291,8 +289,7 @@ zx_status_t Tas58xx::WriteReg(uint8_t reg, uint8_t value) {
   constexpr zx::duration kRetryDelay = zx::msec(1);
   auto ret = i2c_.WriteSyncRetries(write_buf, countof(write_buf), kNumberOfRetries, kRetryDelay);
   if (ret.status != ZX_OK) {
-    zxlogf(ERROR, "%s I2C write reg 0x%02X error %d, %d retries", __FILE__, reg, ret.status,
-           ret.retries);
+    zxlogf(ERROR, "I2C write reg 0x%02X error %d, %d retries", reg, ret.status, ret.retries);
   }
   return ret.status;
 #endif
@@ -303,8 +300,7 @@ zx_status_t Tas58xx::ReadReg(uint8_t reg, uint8_t* value) {
   constexpr zx::duration kRetryDelay = zx::msec(1);
   auto ret = i2c_.WriteReadSyncRetries(&reg, 1, value, 1, kNumberOfRetries, kRetryDelay);
   if (ret.status != ZX_OK) {
-    zxlogf(ERROR, "%s I2C read reg 0x%02X error %d, %d retries", __FILE__, reg, ret.status,
-           ret.retries);
+    zxlogf(ERROR, "I2C read reg 0x%02X error %d, %d retries", reg, ret.status, ret.retries);
   }
 #ifdef TRACE_I2C
   printf("Read register 0x%02X, value %02X\n", reg, *value);

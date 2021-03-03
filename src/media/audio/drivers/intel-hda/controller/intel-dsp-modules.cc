@@ -34,8 +34,8 @@ namespace {
 zx_status_t LargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance_id,
                            BaseFWParamType large_param_id, fbl::Span<uint8_t> buffer,
                            size_t* bytes_received) {
-  GLOBAL_LOG(TRACE, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u)\n", module_id,
-             instance_id, to_underlying(large_param_id));
+  GLOBAL_LOG(TRACE, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u)", module_id, instance_id,
+             to_underlying(large_param_id));
 
   if (buffer.size_bytes() > IPC_EXT_DATA_OFF_MAX_SIZE) {
     buffer = buffer.subspan(0, IPC_EXT_DATA_OFF_MAX_SIZE);
@@ -49,13 +49,13 @@ zx_status_t LargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance
                                              static_cast<uint32_t>(buffer.size())),
                         fbl::Span<const uint8_t>(), buffer, &bytes_received_local);
   if (!result.ok()) {
-    GLOBAL_LOG(ERROR, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u) failed: %s\n", module_id,
+    GLOBAL_LOG(ERROR, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u) failed: %s", module_id,
                instance_id, to_underlying(large_param_id), result.ToString().c_str());
     return result.code();
   }
 
   GLOBAL_LOG(TRACE,
-             "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u) success: received %ld byte(s).\n",
+             "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u) success: received %ld byte(s).",
              module_id, instance_id, to_underlying(large_param_id), bytes_received_local);
   if (bytes_received != nullptr) {
     *bytes_received = bytes_received_local;
@@ -91,7 +91,7 @@ StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
     auto [_, success] = modules.insert({name, std::move(entry)});
     if (!success) {
       return Status(ZX_ERR_INTERNAL,
-                    fbl::StringPrintf("Duplicate module name: '%s'.\n", name.c_str()));
+                    fbl::StringPrintf("Duplicate module name: '%s'.", name.c_str()));
     }
   }
 
@@ -117,7 +117,7 @@ StatusOr<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
   if (!instance_id.ok()) {
     return instance_id.status();
   }
-  GLOBAL_LOG(TRACE, "CreateModule(type %u, inst %u)\n", type, instance_id.ValueOrDie());
+  GLOBAL_LOG(TRACE, "CreateModule(type %u, inst %u)", type, instance_id.ValueOrDie());
 
   // Create the module.
   Status result = channel_->SendWithData(
@@ -127,7 +127,7 @@ StatusOr<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
                             static_cast<uint16_t>(data.size())),
       data, fbl::Span<uint8_t>(), nullptr);
   if (!result.ok()) {
-    GLOBAL_LOG(TRACE, "CreateModule failed: %s\n", result.ToString().c_str());
+    GLOBAL_LOG(TRACE, "CreateModule failed: %s", result.ToString().c_str());
     return PrependMessage(fbl::StringPrintf("Failed to create module of type %u (instance #%u)",
                                             type, instance_id.ValueOrDie()),
                           result);
@@ -146,7 +146,7 @@ StatusOr<DspPipelineId> DspModuleController::CreatePipeline(uint8_t priority, ui
     return Status(ZX_ERR_NO_RESOURCES, "Too many pipelines created.");
   }
   uint8_t id = pipelines_allocated_++;
-  GLOBAL_LOG(TRACE, "CreatePipeline(inst %u)\n", id);
+  GLOBAL_LOG(TRACE, "CreatePipeline(inst %u)", id);
 
   // Create the pipeline.
   Status result = channel_->Send(IPC_CREATE_PIPELINE_PRI(id, priority, memory_pages),
@@ -162,9 +162,8 @@ StatusOr<DspPipelineId> DspModuleController::CreatePipeline(uint8_t priority, ui
 // Connect an output pin of one module to the input pin of another.
 Status DspModuleController::BindModules(DspModuleId source_module, uint8_t src_output_pin,
                                         DspModuleId dest_module, uint8_t dest_input_pin) {
-  GLOBAL_LOG(TRACE, "BindModules (mod %u inst %u):%u --> (mod %u, inst %u):%u\n",
-             source_module.type, source_module.id, src_output_pin, dest_module.type, dest_module.id,
-             dest_input_pin);
+  GLOBAL_LOG(TRACE, "BindModules (mod %u inst %u):%u --> (mod %u, inst %u):%u", source_module.type,
+             source_module.id, src_output_pin, dest_module.type, dest_module.id, dest_input_pin);
 
   Status result = channel_->Send(
       IPC_PRI(MsgTarget::MODULE_MSG, MsgDir::MSG_REQUEST, ModuleMsgType::BIND, source_module.id,
@@ -181,7 +180,7 @@ Status DspModuleController::BindModules(DspModuleId source_module, uint8_t src_o
 // Enable/disable the given pipeline.
 Status DspModuleController::SetPipelineState(DspPipelineId pipeline, PipelineState state,
                                              bool sync_stop_start) {
-  GLOBAL_LOG(TRACE, "SetPipelineStatus(pipeline=%u, state=%u, sync_stop_start=%s)\n", pipeline.id,
+  GLOBAL_LOG(TRACE, "SetPipelineStatus(pipeline=%u, state=%u, sync_stop_start=%s)", pipeline.id,
              static_cast<unsigned int>(state), sync_stop_start ? "true" : "false");
 
   Status result = channel_->Send(IPC_SET_PIPELINE_STATE_PRI(pipeline.id, state),
@@ -229,9 +228,9 @@ DspModuleController::ReadModuleDetails() {
 
   // If tracing is enabled, print basic module information.
   if (zxlog_level_enabled(DEBUG)) {
-    GLOBAL_LOG(DEBUG, "DSP firmware has %ld module(s) configured.\n", modules.size());
+    GLOBAL_LOG(DEBUG, "DSP firmware has %ld module(s) configured.", modules.size());
     for (const auto& elem : modules) {
-      GLOBAL_LOG(DEBUG, "  module %s (id=%d)\n", elem.first.c_str(), elem.second->module_id);
+      GLOBAL_LOG(DEBUG, "  module %s (id=%d)", elem.first.c_str(), elem.second->module_id);
     }
   }
 

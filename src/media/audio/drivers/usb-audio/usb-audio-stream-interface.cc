@@ -40,11 +40,10 @@ std::unique_ptr<UsbAudioStreamInterface> UsbAudioStreamInterface::Create(
       return ret;
     }
     LOG_EX(ERROR, *parent,
-           "Failed to add initial interface (id %u) to UsbAudioStreamInterface (res %d)\n", iid,
-           res);
+           "Failed to add initial interface (id %u) to UsbAudioStreamInterface (res %d)", iid, res);
   } else {
     iter->Next();  // Success or failure, we are expected to consume this header.
-    LOG_EX(ERROR, *parent, "Out of memory attempting to allocate UsbAudioStreamInterface (id %u)\n",
+    LOG_EX(ERROR, *parent, "Out of memory attempting to allocate UsbAudioStreamInterface (id %u)",
            iid);
   }
 
@@ -70,7 +69,7 @@ zx_status_t UsbAudioStreamInterface::AddInterface(DescriptorListMemory::Iterator
   if (fmt_iter.IsValid() || ((idle_hdr_ && (idle_hdr_->bAlternateSetting == alt_id)))) {
     LOG(WARNING,
         "Skipping duplicate alternate setting ID in streaming interface descriptor.  "
-        "(iid %u, alt_id %u)\n",
+        "(iid %u, alt_id %u)",
         ihdr->bInterfaceNumber, alt_id);
     // Don't return an error if we encounter a malformed header.  Just skip
     // it and do the best we can with what we have.
@@ -91,7 +90,7 @@ zx_status_t UsbAudioStreamInterface::AddInterface(DescriptorListMemory::Iterator
     if (aud_hdr == nullptr) {
       LOG(WARNING,
           "Skipping badly formed alternate setting ID in streaming interface descriptor "
-          "(iid %u, alt_id %u).\n",
+          "(iid %u, alt_id %u).",
           ihdr->bInterfaceNumber, alt_id);
       return ZX_OK;
     }
@@ -99,13 +98,13 @@ zx_status_t UsbAudioStreamInterface::AddInterface(DescriptorListMemory::Iterator
     fbl::AllocChecker ac;
     auto format = fbl::make_unique_checked<Format>(&ac, this, iter->desc_list(), ihdr, aud_hdr);
     if (!ac.check()) {
-      LOG(ERROR, "Out of memory attempt to add Format to StreamInterface\n");
+      LOG(ERROR, "Out of memory attempt to add Format to StreamInterface");
       return ZX_ERR_NO_MEMORY;
     }
 
     zx_status_t status = format->Init(iter);
     if (status != ZX_OK) {
-      LOG(WARNING, "Skipping bad format streaming interface descriptor.  (iid %u, alt_id %u)\n",
+      LOG(WARNING, "Skipping bad format streaming interface descriptor.  (iid %u, alt_id %u)",
           ihdr->bInterfaceNumber, alt_id);
       return ZX_OK;
     }
@@ -125,7 +124,7 @@ zx_status_t UsbAudioStreamInterface::AddInterface(DescriptorListMemory::Iterator
       if (format->term_link() != term_link_) {
         LOG(WARNING,
             "Skipping format (iid %u, alt_id %u) with non-uniform terminal ID "
-            "(expected %u, got %u)\n",
+            "(expected %u, got %u)",
             ihdr->bInterfaceNumber, alt_id, term_link_, format->term_link());
         return ZX_OK;
       }
@@ -133,7 +132,7 @@ zx_status_t UsbAudioStreamInterface::AddInterface(DescriptorListMemory::Iterator
       if ((format->ep_addr() != ep_addr_) || (format->ep_attr() != ep_attr_)) {
         LOG(ERROR,
             "Skipping format (iid %u, alt_id %u) with non-uniform endpoint "
-            "address/attributes (expected 0x%02x/0x%02x, got 0x%02x/0x%02x)\n",
+            "address/attributes (expected 0x%02x/0x%02x, got 0x%02x/0x%02x)",
             ihdr->bInterfaceNumber, alt_id, ep_addr_, ep_attr_, format->ep_addr(),
             format->ep_attr());
         return ZX_OK;
@@ -152,7 +151,7 @@ zx_status_t UsbAudioStreamInterface::AddInterface(DescriptorListMemory::Iterator
     } else {
       LOG(WARNING,
           "Skipping duplicate \"idle\" interface descriptor in streaming interface "
-          "descriptor.  (iid %u, alt_id %u)\n",
+          "descriptor.  (iid %u, alt_id %u)",
           ihdr->bInterfaceNumber, ihdr->bAlternateSetting);
     }
   }
@@ -162,7 +161,7 @@ zx_status_t UsbAudioStreamInterface::AddInterface(DescriptorListMemory::Iterator
 
 zx_status_t UsbAudioStreamInterface::BuildFormatMap() {
   if (format_map_.size()) {
-    LOG(WARNING, "Attempted to re-build format map for streaming interface (iid %u)\n", iid());
+    LOG(WARNING, "Attempted to re-build format map for streaming interface (iid %u)", iid());
     return ZX_ERR_BAD_STATE;
   }
 
@@ -183,7 +182,7 @@ zx_status_t UsbAudioStreamInterface::BuildFormatMap() {
   fbl::AllocChecker ac;
   format_map_.reserve(worst_case_map_entries, &ac);
   if (!ac.check()) {
-    LOG(ERROR, "Out of memory attempting to reserve %zu format ranges\n", worst_case_map_entries);
+    LOG(ERROR, "Out of memory attempting to reserve %zu format ranges", worst_case_map_entries);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -202,7 +201,7 @@ zx_status_t UsbAudioStreamInterface::BuildFormatMap() {
     auto tag = fmt.format_tag();
     if (tag == USB_AUDIO_AS_FT_PCM8) {
       if ((fmt.bit_resolution() != 8) || (fmt.subframe_bytes() != 1)) {
-        LOG(WARNING, "Skipping PCM8 format with invalid bit res/subframe size (%u/%u)\n",
+        LOG(WARNING, "Skipping PCM8 format with invalid bit res/subframe size (%u/%u)",
             fmt.bit_resolution(), fmt.subframe_bytes());
         continue;
       }
@@ -210,7 +209,7 @@ zx_status_t UsbAudioStreamInterface::BuildFormatMap() {
                                                                 AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED);
     } else if (tag == USB_AUDIO_AS_FT_IEEE_FLOAT) {
       if ((fmt.bit_resolution() != 32) || (fmt.subframe_bytes() != 4)) {
-        LOG(WARNING, "Skipping IEEE_FLOAT format with invalid bit res/subframe size (%u/%u)\n",
+        LOG(WARNING, "Skipping IEEE_FLOAT format with invalid bit res/subframe size (%u/%u)",
             fmt.bit_resolution(), fmt.subframe_bytes());
         continue;
       }
@@ -223,7 +222,7 @@ zx_status_t UsbAudioStreamInterface::BuildFormatMap() {
           if (fmt.subframe_bytes() != (fmt.bit_resolution() >> 3)) {
             LOG(WARNING,
                 "Skipping PCM format.  Subframe size (%u bytes) does not "
-                "match Bit Res (%u bits)\n",
+                "match Bit Res (%u bits)",
                 fmt.bit_resolution(), fmt.subframe_bytes());
             continue;
           }
@@ -245,7 +244,7 @@ zx_status_t UsbAudioStreamInterface::BuildFormatMap() {
           if ((fmt.subframe_bytes() != 3) && (fmt.subframe_bytes() != 4)) {
             LOG(WARNING,
                 "Skipping PCM format.  %u-bit audio must be packed into a 3 "
-                "or 4 byte subframe (Subframe size %u)\n",
+                "or 4 byte subframe (Subframe size %u)",
                 fmt.bit_resolution(), fmt.subframe_bytes());
             continue;
           }
@@ -262,12 +261,12 @@ zx_status_t UsbAudioStreamInterface::BuildFormatMap() {
         } break;
 
         default:
-          LOG(WARNING, "Skipping PCM format with unsupported bit res (%u bits)\n",
+          LOG(WARNING, "Skipping PCM format with unsupported bit res (%u bits)",
               fmt.bit_resolution());
           continue;
       }
     } else {
-      LOG(WARNING, "Skipping unsupported format tag (%u)\n", tag);
+      LOG(WARNING, "Skipping unsupported format tag (%u)", tag);
       continue;
     }
 
@@ -306,7 +305,7 @@ zx_status_t UsbAudioStreamInterface::BuildFormatMap() {
   // If we failed to encode *any* valid format ranges, log a warning and
   // return an error.  This stream interface is not going to be useful to us.
   if (format_map_.is_empty()) {
-    LOG(WARNING, "Failed to find any usable formats for streaming interface (iid %u)\n", iid());
+    LOG(WARNING, "Failed to find any usable formats for streaming interface (iid %u)", iid());
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -349,7 +348,7 @@ zx_status_t UsbAudioStreamInterface::ActivateFormat(size_t ndx, uint32_t frames_
   if (status != ZX_OK) {
     LOG(ERROR,
         "Failed to select interface (id %u, alt %u, ep %u) "
-        "when configuring format ndx %zu (status %d)\n",
+        "when configuring format ndx %zu (status %d)",
         iid(), f.alt_id_, f.ep_addr_, ndx, status);
     return status;
   }
@@ -382,7 +381,7 @@ zx_status_t UsbAudioStreamInterface::ActivateFormat(size_t ndx, uint32_t frames_
         usb_reset_endpoint(&parent_.usb_proto(), f.ep_addr_);
       }
 
-      LOG(ERROR, "Failed to set frame rate %u for ep address %u (status %d)\n", frames_per_second,
+      LOG(ERROR, "Failed to set frame rate %u for ep address %u (status %d)", frames_per_second,
           f.ep_addr_, status);
 
       return status;
@@ -425,7 +424,7 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
     default:
       LOG(ERROR,
           "Unsupported format tag (0x%04hx) in class specific audio stream interface "
-          "(iid %u, alt_id %u)\n",
+          "(iid %u, alt_id %u)",
           class_hdr_->wFormatTag, interface_hdr_->bInterfaceNumber, alt_id());
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -465,7 +464,7 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
       if (fmt_hdr->bFormatType != USB_AUDIO_FORMAT_TYPE_I) {
         LOG(ERROR,
             "Unsupported format type (%u) in class specific audio stream format type "
-            "interface (iid %u, alt_id %u)\n",
+            "interface (iid %u, alt_id %u)",
             fmt_hdr->bFormatType, interface_hdr_->bInterfaceNumber, alt_id());
         return ZX_ERR_NOT_SUPPORTED;
       }
@@ -474,7 +473,7 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
       if ((fmt_desc_ != nullptr) || (fmt_desc == nullptr)) {
         LOG(ERROR,
             "Malformed or duplicate type 1 format type descriptor in class specific audio "
-            "interface (iid %u, alt_id %u)\n",
+            "interface (iid %u, alt_id %u)",
             interface_hdr_->bInterfaceNumber, alt_id());
         return ZX_ERR_NOT_SUPPORTED;
       }
@@ -487,7 +486,7 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
       if (ep_desc == nullptr) {
         LOG(ERROR,
             "Malformed standard endpoint descriptor in class specific audio interface "
-            "(iid %u, alt_id %u)\n",
+            "(iid %u, alt_id %u)",
             interface_hdr_->bInterfaceNumber, alt_id());
         return ZX_ERR_NOT_SUPPORTED;
       }
@@ -502,14 +501,14 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
       if (ep_desc_ != nullptr) {
         LOG(WARNING,
             "Skipping duplicate standard endpoint descriptor in class specific audio "
-            "interface (iid %u, alt_id %u, ep_addr %u)\n",
+            "interface (iid %u, alt_id %u, ep_addr %u)",
             interface_hdr_->bInterfaceNumber, alt_id(), ep_desc->bEndpointAddress);
       } else {
         if ((usb_ep_type(ep_desc) != USB_ENDPOINT_ISOCHRONOUS) ||
             (usb_ep_sync_type(ep_desc) == USB_ENDPOINT_NO_SYNCHRONIZATION)) {
           LOG(WARNING,
               "Skipping endpoint descriptor with unsupported attributes "
-              "interface (iid %u, alt_id %u, ep_attr 0x%02x)\n",
+              "interface (iid %u, alt_id %u, ep_attr 0x%02x)",
               interface_hdr_->bInterfaceNumber, alt_id(), ep_desc->bmAttributes);
         } else {
           ep_desc_ = ep_desc;
@@ -526,7 +525,7 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
       if (class_ep_desc == nullptr) {
         LOG(ERROR,
             "Malformed or class specific endpoint descriptor in class specific audio "
-            "interface (iid %u, alt_id %u)\n",
+            "interface (iid %u, alt_id %u)",
             interface_hdr_->bInterfaceNumber, alt_id());
         return ZX_ERR_NOT_SUPPORTED;
       }
@@ -534,7 +533,7 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
       if (class_ep_desc_ != nullptr) {
         LOG(WARNING,
             "Skipping duplicate class specific endpoint descriptor in class specific "
-            "audio interface (iid %u, alt_id %u\n",
+            "audio interface (iid %u, alt_id %u",
             interface_hdr_->bInterfaceNumber, alt_id());
       } else {
         class_ep_desc_ = class_ep_desc;
@@ -562,7 +561,7 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
   if ((fmt_desc_ == nullptr) || (ep_desc_ == nullptr) || (class_ep_desc_ == nullptr)) {
     LOG(ERROR,
         "Missing one or more required descriptors in audio interface (iid %u, alt_id %u); "
-        "Missing%s%s%s\n",
+        "Missing%s%s%s",
         interface_hdr_->bInterfaceNumber, alt_id(),
         (fmt_desc_ == nullptr) ? " [Type I Format Type Descriptor]" : "",
         (ep_desc_ == nullptr) ? " [Standard Endpoint Descriptor]" : "",
@@ -580,7 +579,7 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
   if (expected_bytes != extra_bytes) {
     LOG(ERROR,
         "Bad frame rate table size in type 1 audio format type descriptor in audio interface "
-        "(iid %u, alt_id %u).  Expected %zu, Got %zu\n",
+        "(iid %u, alt_id %u).  Expected %zu, Got %zu",
         interface_hdr_->bInterfaceNumber, alt_id(), expected_bytes, extra_bytes);
     return ZX_ERR_INTERNAL;
   }
@@ -589,7 +588,7 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
   if ((frame_rate_cnt() == 0) && (min_cont_frame_rate() > max_cont_frame_rate())) {
     LOG(ERROR,
         "Invalid continuous frame rate range [%u, %u] type 1 audio format type descriptor in "
-        "audio interface (iid %u, alt_id %u).\n",
+        "audio interface (iid %u, alt_id %u).",
         min_cont_frame_rate(), max_cont_frame_rate(), interface_hdr_->bInterfaceNumber, alt_id());
     return ZX_ERR_INTERNAL;
   }

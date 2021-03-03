@@ -51,7 +51,7 @@ void IntelDspStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   if (!endpoints.is_ok()) {
-    LOG(ERROR, "Could not create end points in %s", __PRETTY_FUNCTION__);
+    LOG(ERROR, "Could not create end points");
     completer.Close(ZX_ERR_NO_MEMORY);
     return;
   }
@@ -73,7 +73,7 @@ void IntelDspStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
 void IntelDspStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
   auto result = audio_fidl::RingBuffer::Call::GetProperties(ring_buffer_);
   if (result.status() != ZX_OK) {
-    LOG(ERROR, "Error on GetProperties res = %d\n", result.status());
+    LOG(ERROR, "Error on GetProperties res = %d", result.status());
     completer.Close(result.status());
   } else {
     completer.Reply(std::move(result->properties));
@@ -86,7 +86,7 @@ void IntelDspStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   auto result =
       audio_fidl::RingBuffer::Call::GetVmo(ring_buffer_, min_frames, notifications_per_ring);
   if (result.status() != ZX_OK) {
-    LOG(ERROR, "Error on GetVmo res = %d\n", result.status());
+    LOG(ERROR, "Error on GetVmo res = %d", result.status());
     completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
   } else {
     auto& response = result->result.mutable_response();
@@ -99,7 +99,7 @@ void IntelDspStream::Start(StartCompleter::Sync& completer) {
   fbl::AutoLock lock(obj_lock());
   auto result = audio_fidl::RingBuffer::Call::Start(ring_buffer_);
   if (result.status() != ZX_OK) {
-    LOG(ERROR, "Error on Start res = %d\n", result.status());
+    LOG(ERROR, "Error on Start res = %d", result.status());
     completer.Close(result.status());
     return;
   }
@@ -107,7 +107,7 @@ void IntelDspStream::Start(StartCompleter::Sync& completer) {
   auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
   Status status = dsp->StartPipeline(pipeline_);
   if (!status.ok()) {
-    LOG(ERROR, "Error on pipeline start res = %s\n", status.ToString().c_str());
+    LOG(ERROR, "Error on pipeline start res = %s", status.ToString().c_str());
     completer.Close(status.code());
     return;
   }
@@ -120,14 +120,14 @@ void IntelDspStream::Stop(StopCompleter::Sync& completer) {
   auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
   Status status = dsp->PausePipeline(pipeline_);
   if (!status.ok()) {
-    LOG(ERROR, "Error on pipeline pause res = %s\n", status.ToString().c_str());
+    LOG(ERROR, "Error on pipeline pause res = %s", status.ToString().c_str());
     completer.Close(status.code());
     return;
   }
 
   auto result = audio_fidl::RingBuffer::Call::Stop(ring_buffer_);
   if (result.status() != ZX_OK) {
-    LOG(ERROR, "Error on Stop res = %d\n", result.status());
+    LOG(ERROR, "Error on Stop res = %d", result.status());
     completer.Close(result.status());
     return;
   }
@@ -139,7 +139,7 @@ void IntelDspStream::WatchClockRecoveryPositionInfo(
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
   auto result = audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(ring_buffer_);
   if (result.status() != ZX_OK) {
-    LOG(ERROR, "Error on Watch clock recovery position res = %d\n", result.status());
+    LOG(ERROR, "Error on Watch clock recovery position res = %d", result.status());
   }
   completer.Reply(result->position_info);
 }
@@ -163,14 +163,14 @@ zx_status_t IntelDspStream::OnActivateLocked() {
   return ZX_OK;
 }
 
-void IntelDspStream::OnDeactivateLocked() { LOG(DEBUG, "OnDeactivateLocked\n"); }
+void IntelDspStream::OnDeactivateLocked() { LOG(DEBUG, "OnDeactivateLocked"); }
 
 void IntelDspStream::OnChannelDeactivateLocked(const StreamChannel& channel) {
-  LOG(DEBUG, "OnChannelDeactivateLocked\n");
+  LOG(DEBUG, "OnChannelDeactivateLocked");
 }
 
 zx_status_t IntelDspStream::OnDMAAssignedLocked() {
-  LOG(DEBUG, "OnDMAAssignedLocked\n");
+  LOG(DEBUG, "OnDMAAssignedLocked");
   return PublishDeviceLocked();
 }
 
@@ -183,29 +183,29 @@ zx_status_t IntelDspStream::OnUnsolicitedResponseLocked(const CodecResponse& res
 }
 
 zx_status_t IntelDspStream::BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& req) {
-  LOG(DEBUG, "BeginChangeStreamFormatLocked\n");
+  LOG(DEBUG, "BeginChangeStreamFormatLocked");
   return ZX_OK;
 }
 
 zx_status_t IntelDspStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) {
-  LOG(DEBUG, "FinishChangeStreamFormatLocked\n");
+  LOG(DEBUG, "FinishChangeStreamFormatLocked");
   return ZX_OK;
 }
 
 void IntelDspStream::OnGetGainLocked(audio_proto::GainState* out_resp) {
-  LOG(DEBUG, "OnGetGainLocked\n");
+  LOG(DEBUG, "OnGetGainLocked");
   IntelHDAStreamBase::OnGetGainLocked(out_resp);
 }
 
 void IntelDspStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
                                      audio_proto::SetGainResp* out_resp) {
-  LOG(DEBUG, "OnSetGainLocked\n");
+  LOG(DEBUG, "OnSetGainLocked");
   IntelHDAStreamBase::OnSetGainLocked(req, out_resp);
 }
 
 void IntelDspStream::OnPlugDetectLocked(StreamChannel* response_channel,
                                         audio_proto::PlugDetectResp* out_resp) {
-  LOG(DEBUG, "OnPlugDetectLocked\n");
+  LOG(DEBUG, "OnPlugDetectLocked");
   IntelHDAStreamBase::OnPlugDetectLocked(response_channel, out_resp);
 }
 

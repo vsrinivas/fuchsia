@@ -41,7 +41,7 @@ fbl::RefPtr<DescriptorListMemory> DescriptorListMemory::Create(usb_protocol_t* p
   usb_get_descriptors(proto, reinterpret_cast<uint8_t*>(ret->data_), desc_length, &ret->size_);
 
   if (zxlog_level_enabled(TRACE)) {
-    GLOBAL_LOG(TRACE, "Descriptor List is %zu bytes long\n", ret->size_);
+    GLOBAL_LOG(TRACE, "Descriptor List is %zu bytes long", ret->size_);
     hexdump8_ex(ret->data_, ret->size_, 0u);
   }
 
@@ -87,7 +87,7 @@ bool DescriptorListMemory::Iterator::ValidateOffset() {
   if (space < sizeof(usb_descriptor_header_t)) {
     GLOBAL_LOG(WARNING,
                "Insufficient space at offset %zu to contain even the most basic USB descriptor "
-               "(space needed %zu, space left %zu)\n",
+               "(space needed %zu, space left %zu)",
                offset_, sizeof(usb_descriptor_header_t), space);
     return false;
   }
@@ -97,12 +97,12 @@ bool DescriptorListMemory::Iterator::ValidateOffset() {
   if (h->bLength > space) {
     GLOBAL_LOG(WARNING,
                "Malformed USB descriptor header (type %u) at offset %zu.  "
-               "Header indicates that it is %u bytes long, but there %zu bytes remaining\n",
+               "Header indicates that it is %u bytes long, but there %zu bytes remaining",
                h->bDescriptorType, offset_, h->bLength, space);
     return false;
   }
 
-  GLOBAL_LOG(TRACE, "Found Descriptor [type 0x%02x, len 0x%02x] at offset 0x%zx/0x%zx\n",
+  GLOBAL_LOG(TRACE, "Found Descriptor [type 0x%02x, len 0x%02x] at offset 0x%zx/0x%zx",
              h->bDescriptorType, h->bLength, offset_, mem_->size());
 
   cleanup.cancel();

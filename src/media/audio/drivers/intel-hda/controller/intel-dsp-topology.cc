@@ -369,7 +369,7 @@ zx_status_t IntelDsp::CreateAndStartStreams() {
   StatusOr<PixelbookEvePipelines> pipelines =
       SetUpPixelbookEvePipelines(*nhlt_, module_controller_.get());
   if (!pipelines.ok()) {
-    LOG(ERROR, "Failed to set up DSP pipelines: %s\n", pipelines.status().ToString().c_str());
+    LOG(ERROR, "Failed to set up DSP pipelines: %s", pipelines.status().ToString().c_str());
     return pipelines.status().code();
   }
 

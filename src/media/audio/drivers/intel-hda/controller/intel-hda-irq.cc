@@ -63,7 +63,7 @@ void IntelHDAController::SnapshotRIRB() {
 
   ZX_DEBUG_ASSERT(!pending);
 
-  LOG(TRACE, "RIRB has %u pending responses; WP is @%u\n", rirb_snapshot_cnt_, rirb_wr_ptr);
+  LOG(TRACE, "RIRB has %u pending responses; WP is @%u", rirb_snapshot_cnt_, rirb_wr_ptr);
 
   if (rirbsts & HDA_REG_RIRBSTS_OIS) {
     // TODO(johngro) : Implement retry behavior for codec command and
@@ -91,7 +91,7 @@ void IntelHDAController::SnapshotRIRB() {
     // Right now, we just log the error, ack the IRQ and move on.
     LOG(ERROR,
         "CRITICAL ERROR: controller overrun detected while "
-        "attempting to write to response input ring buffer.\n");
+        "attempting to write to response input ring buffer.");
   }
 }
 
@@ -111,7 +111,7 @@ void IntelHDAController::ProcessRIRB() {
     if (caddr >= countof(codecs_)) {
       LOG(ERROR,
           "Received %ssolicited response with illegal codec address (%u) "
-          "[0x%08x, 0x%08x]\n",
+          "[0x%08x, 0x%08x]",
           resp.unsolicited() ? "un" : "", caddr, resp.data, resp.data_ex);
       continue;
     }
@@ -120,12 +120,12 @@ void IntelHDAController::ProcessRIRB() {
     if (!codec) {
       LOG(ERROR,
           "Received %ssolicited response for non-existent codec address (%u) "
-          "[0x%08x, 0x%08x]\n",
+          "[0x%08x, 0x%08x]",
           resp.unsolicited() ? "un" : "", caddr, resp.data, resp.data_ex);
       continue;
     }
 
-    LOG(DEBUG, "RX[%2u]: 0x%08x%s\n", caddr, resp.data, resp.unsolicited() ? " (unsolicited)" : "");
+    LOG(DEBUG, "RX[%2u]: 0x%08x%s", caddr, resp.data, resp.unsolicited() ? " (unsolicited)" : "");
 
     if (!resp.unsolicited()) {
       std::unique_ptr<CodecCmdJob> job;
@@ -139,7 +139,7 @@ void IntelHDAController::ProcessRIRB() {
         if (in_flight_corb_jobs_.is_empty()) {
           LOG(ERROR,
               "Received solicited response for codec address (%u) [0x%08x, 0x%08x] "
-              "but no in-flight job is waiting for it\n",
+              "but no in-flight job is waiting for it",
               caddr, resp.data, resp.data_ex);
           continue;
         }
@@ -156,7 +156,7 @@ void IntelHDAController::ProcessRIRB() {
       if (!codec) {
         LOG(ERROR,
             "Received unsolicited response for non-existent codec address (%u) "
-            "[0x%08x, 0x%08x]\n",
+            "[0x%08x, 0x%08x]",
             caddr, resp.data, resp.data_ex);
         continue;
       }
@@ -189,7 +189,7 @@ void IntelHDAController::SendCodecCmdLocked(CodecCommand cmd) {
 
 zx_status_t IntelHDAController::QueueCodecCmd(std::unique_ptr<CodecCmdJob>&& job) {
   ZX_DEBUG_ASSERT(job != nullptr);
-  LOG(DEBUG, "TX: Codec ID %u Node ID %hu Verb 0x%05x\n", job->codec_id(), job->nid(),
+  LOG(DEBUG, "TX: Codec ID %u Node ID %hu Verb 0x%05x", job->codec_id(), job->nid(),
       job->verb().val);
 
   // Enter the lock, then check out the state of the ring buffer.  If the
@@ -242,7 +242,7 @@ void IntelHDAController::ProcessCORB() {
     //
     LOG(ERROR,
         "CRITICAL ERROR: controller encountered an unrecoverable "
-        "error attempting to read from system memory!\n");
+        "error attempting to read from system memory!");
     ZX_DEBUG_ASSERT(false);
   }
 
@@ -252,7 +252,7 @@ void IntelHDAController::ProcessCORB() {
   // While we have room in the CORB, and still have commands which are waiting
   // to be sent out, move commands from the pending queue into the in-flight
   // queue.
-  LOG(TRACE, "CORB has space for %u commands; WP is @%u\n", corb_space_, corb_wr_ptr_);
+  LOG(TRACE, "CORB has space for %u commands; WP is @%u", corb_space_, corb_wr_ptr_);
   while (corb_space_ && !pending_corb_jobs_.is_empty()) {
     auto job = pending_corb_jobs_.pop_front();
 
@@ -260,7 +260,7 @@ void IntelHDAController::ProcessCORB() {
 
     in_flight_corb_jobs_.push_back(std::move(job));
   }
-  LOG(TRACE, "Update CORB WP; WP is @%u\n", corb_wr_ptr_);
+  LOG(TRACE, "Update CORB WP; WP is @%u", corb_wr_ptr_);
 
   // Update the CORB write pointer.
   CommitCORBLocked();
@@ -337,7 +337,7 @@ void IntelHDAController::ProcessControllerIRQ() {
 void IntelHDAController::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq,
                                    zx_status_t status, const zx_packet_interrupt_t* interrupt) {
   if (GetState() != State::OPERATING) {
-    LOG(WARNING, "IRQ Handler shutting down due to invalid state (%u)!\n",
+    LOG(WARNING, "IRQ Handler shutting down due to invalid state (%u)!",
         static_cast<uint32_t>(GetState()));
     return;
   }

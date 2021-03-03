@@ -72,20 +72,20 @@ zx_status_t Mt8167AudioStreamIn::InitPdev() {
 
   codec_reset_ = ddk::GpioProtocolClient(parent(), "gpio");
   if (!codec_reset_.is_valid()) {
-    zxlogf(ERROR, "%s failed to allocate gpio", __FUNCTION__);
+    zxlogf(ERROR, "failed to allocate gpio");
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::I2cChannel i2c(parent(), "i2c");
   codec_ = Tlv320adc::Create(i2c, 0);  // ADC for TDM in.
   if (!codec_) {
-    zxlogf(ERROR, "%s could not get Tlv320adc", __func__);
+    zxlogf(ERROR, "could not get Tlv320adc");
     return ZX_ERR_NO_RESOURCES;
   }
 
   zx_status_t status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not obtain bti %d", __func__, status);
+    zxlogf(ERROR, "could not obtain bti %d", status);
     return status;
   }
 
@@ -106,7 +106,7 @@ zx_status_t Mt8167AudioStreamIn::InitPdev() {
   mt_audio_ = MtAudioInDevice::Create(*std::move(mmio_audio), *std::move(mmio_clk),
                                       *std::move(mmio_pll), MtAudioInDevice::I2S6);
   if (mt_audio_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create device", __FUNCTION__);
+    zxlogf(ERROR, "failed to create device");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -218,17 +218,17 @@ zx_status_t Mt8167AudioStreamIn::InitBuffer(size_t size) {
   zx_status_t status =
       zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __func__, status);
+    zxlogf(ERROR, "failed to allocate ring buffer vmo - %d", status);
     return status;
   }
 
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d", __func__, status);
+    zxlogf(ERROR, "failed to pin ring buffer vmo - %d", status);
     return status;
   }
   if (pinned_ring_buffer_.region_count() != 1) {
-    zxlogf(ERROR, "%s buffer is not contiguous", __func__);
+    zxlogf(ERROR, "buffer is not contiguous");
     return ZX_ERR_NO_MEMORY;
   }
 

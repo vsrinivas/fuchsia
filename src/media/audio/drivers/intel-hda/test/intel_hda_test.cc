@@ -73,7 +73,7 @@ TEST(IntelHda, BasicStreamInfo) {
 TEST(IntelHda, PlaySilence) {
   for (const auto& path : GetSystemAudioDevices().outputs) {
     // Open the stream.
-    std::cerr << "Playing silence on device '" << path.c_str() << "'\n";
+    std::cerr << "Playing silence on device '" << path.c_str() << "'";
     std::unique_ptr<audio::utils::AudioOutput> output = CreateAndOpenOutputStream(path.c_str());
 
     // Set the output stream format.
@@ -116,7 +116,7 @@ void TestAudioInputRecord(audio::utils::AudioInput* input) {
 TEST(IntelHda, RecordData) {
   for (const auto& path : GetSystemAudioDevices().inputs) {
     // Open the stream.
-    std::cerr << "Recording input from device '" << path.c_str() << "'\n";
+    std::cerr << "Recording input from device '" << path.c_str() << "'";
     std::unique_ptr<audio::utils::AudioInput> input = CreateAndOpenInputStream(path.c_str());
     TestAudioInputRecord(input.get());
   }
@@ -128,7 +128,7 @@ TEST(IntelHda, RecordData) {
 int main(int argc, char** argv) {
   // Only run tests on systems that have Intel HDA hardware present.
   if (audio::intel_hda::GetSystemAudioDevices().controllers.empty()) {
-    std::cerr << "No Intel HDA hardware found. Skipping tests.\n";
+    std::cerr << "No Intel HDA hardware found. Skipping tests.";
     return 0;
   }
 

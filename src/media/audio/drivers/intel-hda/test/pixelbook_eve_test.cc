@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
   fbl::String board_name;
   zx_status_t status = audio::intel_hda::GetBoardName(&board_name);
   if (status != ZX_OK) {
-    std::cerr << "Unable to determine hardware platform: " << zx_status_get_string(status) << ".\n";
+    std::cerr << "Unable to determine hardware platform: " << zx_status_get_string(status) << ".";
     return status;
   }
   if (board_name != "Eve") {

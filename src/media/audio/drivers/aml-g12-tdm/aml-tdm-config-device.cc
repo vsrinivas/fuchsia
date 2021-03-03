@@ -105,7 +105,7 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
   for (size_t i = 0; i < kMaxLanes; ++i) {
     status = device_->ConfigTdmLane(i, metadata.lanes_enable_mask[i], lanes_mutes[i]);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s could not configure TDM lane %d", __FILE__, status);
+      zxlogf(ERROR, "could not configure TDM lane %d", status);
       return status;
     }
   }
@@ -124,7 +124,7 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
     uint32_t mdiv = metadata.mClockDivFactor / ((frame_rate == 96'000) ? 2 : 1);
     status = device_->SetMclkDiv(mdiv - 1);  // register val is div - 1;
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s could not configure MCLK %d", __FILE__, status);
+      zxlogf(ERROR, "could not configure MCLK %d", status);
       return status;
     }
     device_->SetMClkPad(MCLK_PAD_0);
@@ -146,7 +146,7 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
                                  (metadata.dai.bits_per_slot * metadata.dai.number_of_channels) - 1,
                                  !metadata.dai.sclk_on_raising);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
+      zxlogf(ERROR, "could not configure SCLK %d", status);
       return status;
     }
   }
@@ -169,13 +169,13 @@ zx_status_t AmlTdmConfigDevice::Normalize(metadata::AmlConfig& metadata) {
   }
   // Only 16 bits samples supported.
   if (metadata.ring_buffer.bytes_per_sample != 2) {
-    zxlogf(ERROR, "%s metadata unsupported bytes per sample %u", __FILE__,
+    zxlogf(ERROR, "metadata unsupported bytes per sample %u",
            metadata.ring_buffer.bytes_per_sample);
     return ZX_ERR_NOT_SUPPORTED;
   }
   // Only the PCM signed sample format is supported.
   if (metadata.dai.sample_format != metadata::SampleFormat::PcmSigned) {
-    zxlogf(ERROR, "%s metadata unsupported sample type %d", __FILE__,
+    zxlogf(ERROR, "metadata unsupported sample type %d",
            static_cast<int>(metadata.dai.sample_format));
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -190,17 +190,16 @@ zx_status_t AmlTdmConfigDevice::Normalize(metadata::AmlConfig& metadata) {
     metadata.dai.bits_per_slot = 32;
   }
   if (metadata.dai.bits_per_slot != 32 && metadata.dai.bits_per_slot != 16) {
-    zxlogf(ERROR, "%s metadata unsupported bits per slot %d", __FILE__, metadata.dai.bits_per_slot);
+    zxlogf(ERROR, "metadata unsupported bits per slot %d", metadata.dai.bits_per_slot);
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (metadata.dai.bits_per_sample != 32 && metadata.dai.bits_per_sample != 16) {
-    zxlogf(ERROR, "%s metadata unsupported bits per sample %d", __FILE__,
-           metadata.dai.bits_per_sample);
+    zxlogf(ERROR, "metadata unsupported bits per sample %d", metadata.dai.bits_per_sample);
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (metadata.dai.bits_per_sample > metadata.dai.bits_per_slot) {
-    zxlogf(ERROR, "%s metadata unsupported bits per sample bits per slot combination %u/%u",
-           __FILE__, metadata.dai.bits_per_sample, metadata.dai.bits_per_slot);
+    zxlogf(ERROR, "metadata unsupported bits per sample bits per slot combination %u/%u",
+           metadata.dai.bits_per_sample, metadata.dai.bits_per_slot);
     return ZX_ERR_NOT_SUPPORTED;
   }
 

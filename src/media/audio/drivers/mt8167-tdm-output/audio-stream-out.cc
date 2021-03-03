@@ -45,19 +45,19 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
   zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &codec,
                                            sizeof(metadata::CodecType), &actual);
   if (status != ZX_OK || sizeof(metadata::CodecType) != actual) {
-    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
+    zxlogf(ERROR, "device_get_metadata failed %d", status);
     return status;
   }
 
   status = codec_.SetProtocol(ddk::CodecProtocolClient(parent(), "codec"));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could set codec protocol %d", __FUNCTION__, status);
+    zxlogf(ERROR, "could set codec protocol %d", status);
     return ZX_ERR_NO_RESOURCES;
   }
 
   status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not obtain bti %d", __FUNCTION__, status);
+    zxlogf(ERROR, "could not obtain bti %d", status);
     return status;
   }
 
@@ -78,7 +78,7 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
   // I2S2 corresponds to I2S_8CH.
   mt_audio_ = MtAudioOutDevice::Create(*std::move(mmio_audio), MtAudioOutDevice::I2S2);
   if (mt_audio_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create device", __FUNCTION__);
+    zxlogf(ERROR, "failed to create device");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -139,7 +139,7 @@ zx_status_t Mt8167AudioStreamOut::Init() {
   // Get our gain capabilities.
   auto state = codec_.GetGainState();
   if (state.is_error()) {
-    zxlogf(ERROR, "%s failed to get gain state", __FILE__);
+    zxlogf(ERROR, "failed to get gain state");
     return state.error_value();
   }
   cur_gain_state_.cur_gain = state->gain;
@@ -148,7 +148,7 @@ zx_status_t Mt8167AudioStreamOut::Init() {
 
   auto format = codec_.GetGainFormat();
   if (format.is_error()) {
-    zxlogf(ERROR, "%s failed to get gain format", __FILE__);
+    zxlogf(ERROR, "failed to get gain format");
     return format.error_value();
   }
 
@@ -274,17 +274,17 @@ zx_status_t Mt8167AudioStreamOut::InitBuffer(size_t size) {
   zx_status_t status;
   status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __FUNCTION__, status);
+    zxlogf(ERROR, "failed to allocate ring buffer vmo - %d", status);
     return status;
   }
 
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d", __FUNCTION__, status);
+    zxlogf(ERROR, "failed to pin ring buffer vmo - %d", status);
     return status;
   }
   if (pinned_ring_buffer_.region_count() != 1) {
-    zxlogf(ERROR, "%s buffer is not contiguous", __FUNCTION__);
+    zxlogf(ERROR, "buffer is not contiguous");
     return ZX_ERR_NO_MEMORY;
   }
 

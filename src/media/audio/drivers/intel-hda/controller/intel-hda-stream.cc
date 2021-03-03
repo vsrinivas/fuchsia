@@ -78,7 +78,7 @@ zx_status_t IntelHDAStream::Initialize() {
   res = bdl_cpu_mem_.CreateAndMap(PAGE_SIZE, CPU_MAP_FLAGS, vmar_manager_, &bdl_vmo,
                                   ZX_RIGHT_SAME_RIGHTS, ZX_CACHE_POLICY_UNCACHED_DEVICE);
   if (res != ZX_OK) {
-    LOG(ERROR, "Failed to create and map %u bytes for stream BDL! (res %d)\n", PAGE_SIZE, res);
+    LOG(ERROR, "Failed to create and map %u bytes for stream BDL! (res %d)", PAGE_SIZE, res);
     return res;
   }
 
@@ -88,7 +88,7 @@ zx_status_t IntelHDAStream::Initialize() {
   ZX_DEBUG_ASSERT(pci_bti_ != nullptr);
   res = bdl_hda_mem_.Pin(bdl_vmo, pci_bti_->initiator(), HDA_MAP_FLAGS);
   if (res != ZX_OK) {
-    LOG(ERROR, "Failed to pin pages for stream BDL! (res %d)\n", res);
+    LOG(ERROR, "Failed to pin pages for stream BDL! (res %d)", res);
     return res;
   }
 
@@ -135,7 +135,7 @@ void IntelHDAStream::Reset(MMIO_PTR hda_stream_desc_regs_t* regs) {
   });
 
   if (res != ZX_OK) {
-    GLOBAL_LOG(ERROR, "Failed to place stream descriptor HW into reset! (res %d)\n", res);
+    GLOBAL_LOG(ERROR, "Failed to place stream descriptor HW into reset! (res %d)", res);
   }
 
   // Leave the reset state.  To do this, we...
@@ -151,7 +151,7 @@ void IntelHDAStream::Reset(MMIO_PTR hda_stream_desc_regs_t* regs) {
   });
 
   if (res != ZX_OK) {
-    GLOBAL_LOG(ERROR, "Failed to release stream descriptor HW from reset! (res %d)\n", res);
+    GLOBAL_LOG(ERROR, "Failed to release stream descriptor HW from reset! (res %d)", res);
   }
 }
 
@@ -196,7 +196,7 @@ zx_status_t IntelHDAStream::SetStreamFormat(async_dispatcher_t* dispatcher, uint
   hw_mb();
   fifo_depth_ = REG_RD(&regs_->fifod);
 
-  LOG(DEBUG, "Stream format set 0x%04hx; fifo is %hu bytes deep\n", encoded_fmt_, fifo_depth_);
+  LOG(DEBUG, "Stream format set 0x%04hx; fifo is %hu bytes deep", encoded_fmt_, fifo_depth_);
 
   // Record our new client channel
   bytes_per_frame_ = StreamFormat(encoded_fmt).bytes_per_frame();
@@ -210,7 +210,7 @@ void IntelHDAStream::Deactivate() {
 }
 
 void IntelHDAStream::ProcessClientDeactivate() {
-  LOG(DEBUG, "Client closed channel to stream\n");
+  LOG(DEBUG, "Client closed channel to stream");
   fbl::AutoLock channel_lock(&channel_lock_);
   DeactivateLocked();
 }
@@ -233,7 +233,7 @@ void IntelHDAStream::ProcessStreamIRQ() {
   // that their stream was ruined and that they need to restart it.
   if (sts & (HDA_SD_REG_STS8_FIFOE | HDA_SD_REG_STS8_DESE)) {
     REG_CLR_BITS(&regs_->ctl_sts.w, HDA_SD_REG_CTRL_RUN);
-    LOG(ERROR, "Fatal stream error, shutting down DMA!  (IRQ status 0x%02x)\n", sts);
+    LOG(ERROR, "Fatal stream error, shutting down DMA!  (IRQ status 0x%02x)", sts);
   }
 
   if (irq_channel_ == nullptr)
@@ -273,7 +273,7 @@ void IntelHDAStream::DeactivateLocked() {
   // Release any assigned ring buffer.
   ReleaseRingBufferLocked();
 
-  LOG(DEBUG, "Stream deactivated\n");
+  LOG(DEBUG, "Stream deactivated");
 }
 
 // Ring Buffer GetProperties.
@@ -318,7 +318,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
       (notifications_per_ring > MAX_BDL_LENGTH)) {
     LOG(DEBUG,
         "Invalid client args while setting buffer "
-        "(min frames %u, notif/ring %u)\n",
+        "(min frames %u, notif/ring %u)",
         min_frames, notifications_per_ring);
     completer.ReplyError(audio_fidl::wire::GetVmoError::INVALID_ARGS);
     return;
@@ -331,7 +331,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   // Attempt to allocate a VMO for the ring buffer.
   zx_status_t status = zx::vmo::create(rb_size, 0, &ring_buffer_vmo);
   if (status != ZX_OK) {
-    LOG(DEBUG, "Failed to create %u byte VMO for ring buffer (res %d)\n", rb_size, status);
+    LOG(DEBUG, "Failed to create %u byte VMO for ring buffer (res %d)", rb_size, status);
     completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
     return;
   }
@@ -343,7 +343,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
 
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo, pci_bti_->initiator(), hda_rights);
   if (status != ZX_OK) {
-    LOG(DEBUG, "Failed to commit and pin pages for %u bytes in ring buffer VMO (res %d)\n", rb_size,
+    LOG(DEBUG, "Failed to commit and pin pages for %u bytes in ring buffer VMO (res %d)", rb_size,
         status);
     completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
     return;
@@ -352,7 +352,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   ZX_DEBUG_ASSERT(pinned_ring_buffer_.region_count() >= 1);
   if (pinned_ring_buffer_.region_count() > MAX_BDL_LENGTH) {
     LOG(ERROR,
-        "IntelHDA stream ring buffer is too fragmented (%u regions) to construct a valid BDL\n",
+        "IntelHDA stream ring buffer is too fragmented (%u regions) to construct a valid BDL",
         pinned_ring_buffer_.region_count());
     completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
     return;
@@ -371,7 +371,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
                                      &client_rb_handle);
 
   if (status != ZX_OK) {
-    LOG(DEBUG, "Failed duplicate ring buffer VMO handle! (res %d)\n", status);
+    LOG(DEBUG, "Failed duplicate ring buffer VMO handle! (res %d)", status);
 
     ReleaseRingBufferLocked();
     completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
@@ -453,17 +453,17 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   }
 
   if (zxlog_level_enabled(DEBUG)) {
-    LOG(DEBUG, "DMA Scatter/Gather used %u entries for %u/%u bytes of ring buffer\n", entry,
-        amt_done, rb_size);
+    LOG(DEBUG, "DMA Scatter/Gather used %u entries for %u/%u bytes of ring buffer", entry, amt_done,
+        rb_size);
     for (uint32_t i = 0; i < entry; ++i) {
-      LOG(DEBUG, "[%2u] : %016" PRIx64 " - 0x%04x %sIRQ\n", i, bdl()[i].address, bdl()[i].length,
+      LOG(DEBUG, "[%2u] : %016" PRIx64 " - 0x%04x %sIRQ", i, bdl()[i].address, bdl()[i].length,
           bdl()[i].flags ? "" : "NO ");
     }
   }
 
   if (amt_done < rb_size) {
     ZX_DEBUG_ASSERT(entry == MAX_BDL_LENGTH);
-    LOG(DEBUG, "Ran out of BDL entires after %u/%u bytes of ring buffer\n", amt_done, rb_size);
+    LOG(DEBUG, "Ran out of BDL entires after %u/%u bytes of ring buffer", amt_done, rb_size);
     ReleaseRingBufferLocked();
     completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
     return;
@@ -492,7 +492,7 @@ void IntelHDAStream::Start(StartCompleter::Sync& completer) {
   // We cannot start unless we have configured the ring buffer and are not already started.
   bool ring_buffer_valid = pinned_ring_buffer_.region_count() >= 1;
   if (!ring_buffer_valid || running_) {
-    LOG(DEBUG, "Bad state during start request %s%s.\n",
+    LOG(DEBUG, "Bad state during start request %s%s.",
         !ring_buffer_valid ? "(ring buffer not configured)" : "",
         running_ ? "(already running)" : "");
     completer.Close(ZX_ERR_INTERNAL);

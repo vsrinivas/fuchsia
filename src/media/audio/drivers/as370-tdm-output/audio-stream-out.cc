@@ -40,12 +40,12 @@ As370AudioStreamOut::As370AudioStreamOut(zx_device_t* parent)
 zx_status_t As370AudioStreamOut::InitPdev() {
   pdev_ = ddk::PDev::FromFragment(parent());
   if (!pdev_.is_valid()) {
-    zxlogf(ERROR, "%s could not get pdev", __FILE__);
+    zxlogf(ERROR, "could not get pdev");
     return ZX_ERR_NO_RESOURCES;
   }
   clks_[kAvpll0Clk] = ddk::ClockProtocolClient(parent(), "clock");
   if (!clks_[kAvpll0Clk].is_valid()) {
-    zxlogf(ERROR, "%s GetClk failed", __FILE__);
+    zxlogf(ERROR, "GetClk failed");
     return ZX_ERR_NO_RESOURCES;
   }
   // PLL0 = 196.608MHz = e.g. 48K (FSYNC) * 64 (BCLK) * 8 (MCLK) * 8.
@@ -54,7 +54,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
 
   ddk::SharedDmaProtocolClient dma(parent(), "dma");
   if (!dma.is_valid()) {
-    zxlogf(ERROR, "%s could not get DMA", __FILE__);
+    zxlogf(ERROR, "could not get DMA");
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -75,7 +75,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
   lib_ = SynAudioOutDevice::Create(*std::move(mmio_global), *std::move(mmio_avio_global),
                                    *std::move(mmio_i2s), dma);
   if (lib_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create Syn audio device", __FILE__);
+    zxlogf(ERROR, "failed to create Syn audio device");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -84,13 +84,13 @@ zx_status_t As370AudioStreamOut::InitPdev() {
       kWantedFrameRate * sizeof(uint16_t) * kNumberOfChannels, ZX_PAGE_SIZE);
   status = InitBuffer(kRingBufferSize);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to Init buffer %d", __FILE__, status);
+    zxlogf(ERROR, "failed to Init buffer %d", status);
     return status;
   }
 
   status = codec_.SetProtocol(ddk::CodecProtocolClient(parent(), "codec"));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could set codec protocol %d", __FUNCTION__, status);
+    zxlogf(ERROR, "could set codec protocol %d", status);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -128,14 +128,14 @@ zx_status_t As370AudioStreamOut::Init() {
 
   status = AddFormats();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not add formats", __FILE__);
+    zxlogf(ERROR, "could not add formats");
     return status;
   }
 
   // Get our gain capabilities.
   auto state = codec_.GetGainState();
   if (state.is_error()) {
-    zxlogf(ERROR, "%s failed to get gain state", __FILE__);
+    zxlogf(ERROR, "failed to get gain state");
     return state.error_value();
   }
   cur_gain_state_.cur_gain = state->gain;
@@ -144,7 +144,7 @@ zx_status_t As370AudioStreamOut::Init() {
 
   auto format = codec_.GetGainFormat();
   if (format.is_error()) {
-    zxlogf(ERROR, "%s failed to get gain format", __FILE__);
+    zxlogf(ERROR, "failed to get gain format");
     return format.error_value();
   }
 
@@ -270,7 +270,7 @@ zx_status_t As370AudioStreamOut::AddFormats() {
 zx_status_t As370AudioStreamOut::InitBuffer(size_t size) {
   auto status = lib_->GetBuffer(size, &ring_buffer_vmo_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get ring buffer", __FILE__);
+    zxlogf(ERROR, "could not get ring buffer");
   }
   return status;
 }

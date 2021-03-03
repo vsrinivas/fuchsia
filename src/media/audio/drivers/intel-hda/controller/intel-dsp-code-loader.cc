@@ -26,17 +26,17 @@ constexpr uint32_t DMA_ALIGN_MASK = DMA_ALIGN - 1;
 }  // namespace
 
 void IntelDspCodeLoader::DumpRegisters() {
-  LOG(INFO, "CTL_STS=0x%08x\n", REG_RD(&regs_->stream.ctl_sts.w));
-  LOG(INFO, "   LPIB=0x%08x\n", REG_RD(&regs_->stream.lpib));
-  LOG(INFO, "    CBL=0x%08x\n", REG_RD(&regs_->stream.cbl));
-  LOG(INFO, "    LVI=0x%04x\n", REG_RD(&regs_->stream.lvi));
-  LOG(INFO, "  FIFOD=0x%04x\n", REG_RD(&regs_->stream.fifod));
-  LOG(INFO, "    FMT=0x%04x\n", REG_RD(&regs_->stream.fmt));
-  LOG(INFO, "   BDPL=0x%08x\n", REG_RD(&regs_->stream.bdpl));
-  LOG(INFO, "   BDPU=0x%08x\n", REG_RD(&regs_->stream.bdpu));
-  LOG(INFO, " SPBFCH=0x%08x\n", REG_RD(&regs_->spbfch));
-  LOG(INFO, "SPBFCTL=0x%08x\n", REG_RD(&regs_->spbfctl));
-  LOG(INFO, "   SPIB=0x%08x\n", REG_RD(&regs_->spib));
+  LOG(INFO, "CTL_STS=0x%08x", REG_RD(&regs_->stream.ctl_sts.w));
+  LOG(INFO, "   LPIB=0x%08x", REG_RD(&regs_->stream.lpib));
+  LOG(INFO, "    CBL=0x%08x", REG_RD(&regs_->stream.cbl));
+  LOG(INFO, "    LVI=0x%04x", REG_RD(&regs_->stream.lvi));
+  LOG(INFO, "  FIFOD=0x%04x", REG_RD(&regs_->stream.fifod));
+  LOG(INFO, "    FMT=0x%04x", REG_RD(&regs_->stream.fmt));
+  LOG(INFO, "   BDPL=0x%08x", REG_RD(&regs_->stream.bdpl));
+  LOG(INFO, "   BDPU=0x%08x", REG_RD(&regs_->stream.bdpu));
+  LOG(INFO, " SPBFCH=0x%08x", REG_RD(&regs_->spbfch));
+  LOG(INFO, "SPBFCTL=0x%08x", REG_RD(&regs_->spbfctl));
+  LOG(INFO, "   SPIB=0x%08x", REG_RD(&regs_->spib));
 }
 
 IntelDspCodeLoader::IntelDspCodeLoader(MMIO_PTR adsp_code_loader_registers_t* regs,
@@ -61,7 +61,7 @@ zx_status_t IntelDspCodeLoader::Initialize() {
   res = bdl_cpu_mem_.CreateAndMap(PAGE_SIZE, CPU_MAP_FLAGS, NULL, &bdl_vmo, ZX_RIGHT_SAME_RIGHTS,
                                   ZX_CACHE_POLICY_UNCACHED_DEVICE);
   if (res != ZX_OK) {
-    LOG(ERROR, "Failed to create and map %u bytes for code loader BDL (res %d)\n", PAGE_SIZE, res);
+    LOG(ERROR, "Failed to create and map %u bytes for code loader BDL (res %d)", PAGE_SIZE, res);
     return res;
   }
 
@@ -71,7 +71,7 @@ zx_status_t IntelDspCodeLoader::Initialize() {
   ZX_DEBUG_ASSERT(pci_bti_ != nullptr);
   res = bdl_dsp_mem_.Pin(bdl_vmo, pci_bti_->initiator(), DSP_MAP_FLAGS);
   if (res != ZX_OK) {
-    LOG(ERROR, "Failed to pin pages for code loader BDL (res %d)\n", res);
+    LOG(ERROR, "Failed to pin pages for code loader BDL (res %d)", res);
     return res;
   }
 
@@ -99,7 +99,7 @@ zx_status_t IntelDspCodeLoader::TransferFirmware(const fzl::PinnedVmo& pinned_fw
     const auto& r = pinned_fw.region(num_region);
 
     if (r.size > std::numeric_limits<uint32_t>::max()) {
-      LOG(ERROR, "VMO region too large (%" PRIu64 " bytes)\n", r.size);
+      LOG(ERROR, "VMO region too large (%" PRIu64 " bytes)", r.size);
       return ZX_ERR_INTERNAL;
     }
 

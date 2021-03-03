@@ -47,13 +47,13 @@ zx_status_t RealtekCodec::Start() {
   // Fetch the implementation ID register from the main audio function group
   res = SendCodecCommand(1u, GET_IMPLEMENTATION_ID, false);
   if (res != ZX_OK)
-    LOG("Failed to send get impl id command (res %d)\n", res);
+    LOG("Failed to send get impl id command (res %d)", res);
   return res;
 }
 
 zx_status_t RealtekCodec::ProcessSolicitedResponse(const CodecResponse& resp) {
   if (!waiting_for_impl_id_) {
-    LOG("Unexpected solicited codec response %08x\n", resp.data);
+    LOG("Unexpected solicited codec response %08x", resp.data);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -82,7 +82,7 @@ zx_status_t RealtekCodec::ProcessSolicitedResponse(const CodecResponse& resp) {
       res = SetupAcer12();
       break;
     default:
-      LOG("Unrecognized implementation ID %08x!  No streams will be published.\n", resp.data);
+      LOG("Unrecognized implementation ID %08x!  No streams will be published.", resp.data);
       res = ZX_OK;
       break;
   }
@@ -169,7 +169,7 @@ zx_status_t RealtekCodec::SetupCommon() {
   zx_status_t res = RunCommandList(START_CMDS, countof(START_CMDS));
 
   if (res != ZX_OK)
-    LOG("Failed to send common startup commands (res %d)\n", res);
+    LOG("Failed to send common startup commands (res %d)", res);
 
   return res;
 }
@@ -177,7 +177,7 @@ zx_status_t RealtekCodec::SetupCommon() {
 zx_status_t RealtekCodec::SetupAcer12() {
   zx_status_t res;
 
-  DEBUG_LOG("Setting up for Acer12\n");
+  DEBUG_LOG("Setting up for Acer12");
 
   res = SetupCommon();
   if (res != ZX_OK)
@@ -214,7 +214,7 @@ zx_status_t RealtekCodec::SetupAcer12() {
 
   res = RunCommandList(START_CMDS, countof(START_CMDS));
   if (res != ZX_OK) {
-    LOG("Failed to send startup command for Acer12 (res %d)\n", res);
+    LOG("Failed to send startup command for Acer12 (res %d)", res);
     return res;
   }
 
@@ -265,7 +265,7 @@ zx_status_t RealtekCodec::SetupAcer12() {
 
   res = CreateAndStartStreams(STREAMS, countof(STREAMS));
   if (res != ZX_OK) {
-    LOG("Failed to create and publish streams for Acer12 (res %d)\n", res);
+    LOG("Failed to create and publish streams for Acer12 (res %d)", res);
     return res;
   }
 
@@ -275,7 +275,7 @@ zx_status_t RealtekCodec::SetupAcer12() {
 zx_status_t RealtekCodec::SetupIntelNUC() {
   zx_status_t res;
 
-  DEBUG_LOG("Setting up for Intel NUC\n");
+  DEBUG_LOG("Setting up for Intel NUC");
 
   res = SetupCommon();
   if (res != ZX_OK)
@@ -307,7 +307,7 @@ zx_status_t RealtekCodec::SetupIntelNUC() {
 
   res = RunCommandList(START_CMDS, countof(START_CMDS));
   if (res != ZX_OK) {
-    LOG("Failed to send startup command for Intel NUC (res %d)\n", res);
+    LOG("Failed to send startup command for Intel NUC (res %d)", res);
     return res;
   }
 
@@ -344,7 +344,7 @@ zx_status_t RealtekCodec::SetupIntelNUC() {
 
   res = CreateAndStartStreams(STREAMS, countof(STREAMS));
   if (res != ZX_OK) {
-    LOG("Failed to create and publish streams for Intel NUC (res %d)\n", res);
+    LOG("Failed to create and publish streams for Intel NUC (res %d)", res);
     return res;
   }
 
@@ -359,10 +359,10 @@ zx_status_t RealtekCodec::RunCommandList(const CommandListEntry* cmds, size_t cm
 
   for (size_t i = 0; i < cmd_count; ++i) {
     const auto& cmd = cmds[i];
-    VERBOSE_LOG("SEND: nid %2hu verb 0x%05x\n", cmd.nid, cmd.verb.val);
+    VERBOSE_LOG("SEND: nid %2hu verb 0x%05x", cmd.nid, cmd.verb.val);
     res = SendCodecCommand(cmd.nid, cmd.verb, true);
     if (res != ZX_OK) {
-      LOG("Failed to send codec command %zu/%zu (nid %hu verb 0x%05x) (res %d)\n", i + 1, cmd_count,
+      LOG("Failed to send codec command %zu/%zu (nid %hu verb 0x%05x) (res %d)", i + 1, cmd_count,
           cmd.nid, cmd.verb.val, res);
       return res;
     }
