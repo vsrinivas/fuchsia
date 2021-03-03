@@ -101,10 +101,6 @@ def main():
         '--cgo', help='Whether to enable CGo', action='store_true')
     args = parser.parse_args()
 
-    # The path to --go-cache could contain an environment variable, resolve them
-    # here.
-    args.go_cache = os.path.expandvars(args.go_cache)
-
     try:
         os.makedirs(args.go_cache)
     except OSError as e:
