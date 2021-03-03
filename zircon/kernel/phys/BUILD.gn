@@ -86,11 +86,24 @@ if (toolchain.environment == "kernel.phys" ||
     defines = [ "LK_DEBUGLEVEL=2" ]
   }
 
-  source_set("phys_executable.headers") {
+  source_set("symbolize") {
     public = [
       "frame-pointer.h",
       "stack.h",
       "symbolize.h",
+    ]
+
+    sources = [
+      "frame-pointer.cc",
+      "panic.cc",
+      "stack.cc",
+      "symbolize.cc",
+    ]
+
+    deps = [
+      "//zircon/kernel/arch/$zircon_cpu/phys",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
     ]
 
     public_deps = [
@@ -102,19 +115,7 @@ if (toolchain.environment == "kernel.phys" ||
   # This is used implicitly by phys_executable() targets,
   # including zbi_executable() targets.
   source_set("phys_executable.deps") {
-    sources = [
-      "frame-pointer.cc",
-      "panic.cc",
-      "stack.cc",
-      "symbolize.cc",
-    ]
-    deps = [
-      ":main",
-      ":phys_executable.headers",
-      "//zircon/kernel/arch/$zircon_cpu/phys",
-      "//zircon/kernel/lib/ktl",
-      "//zircon/kernel/lib/libc",
-    ]
+    deps = [ ":symbolize" ]
   }
 
   # This is used implicitly by zbi_executable() targets.
@@ -222,6 +223,7 @@ if (toolchain.environment == "kernel.phys" ||
     sources = [ "boot-zbi.cc" ]
     deps = [ "//zircon/kernel/lib/arch" ]
     public_deps = [
+      ":allocation",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
       "//zircon/system/ulib/zbitl",
@@ -233,6 +235,7 @@ if (toolchain.environment == "kernel.phys" ||
 group("tests") {
   testonly = true
   deps = [
+    "boot-shim:tests",
     "lib:tests",
     "test",
   ]

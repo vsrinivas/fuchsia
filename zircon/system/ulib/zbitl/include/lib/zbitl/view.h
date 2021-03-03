@@ -5,6 +5,7 @@
 #ifndef LIB_ZBITL_VIEW_H_
 #define LIB_ZBITL_VIEW_H_
 
+#include <inttypes.h>
 #include <lib/cksum.h>
 #include <lib/fitx/result.h>
 #include <zircon/assert.h>
@@ -452,7 +453,9 @@ class View {
       Assert(__func__);
       view_->StartIteration();
       ZX_DEBUG_ASSERT(offset_ >= sizeof(zbi_header_t));
-      ZX_DEBUG_ASSERT(offset_ <= view_->limit_);
+      ZX_DEBUG_ASSERT_MSG(offset_ <= view_->limit_,
+                          "zbitl::View::iterator offset_ %#" PRIx32 " > limit_ %#" PRIx32, offset_,
+                          view_->limit_);
       ZX_DEBUG_ASSERT(offset_ % ZBI_ALIGNMENT == 0);
       if (view_->limit_ - offset_ < sizeof(zbi_header_t)) {
         // Reached the end of the container.

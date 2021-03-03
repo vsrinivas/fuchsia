@@ -44,7 +44,7 @@ if (current_toolchain != default_toolchain) {
     public = [ "test-main.h" ]
     public_deps = [
       "..:main",
-      "..:phys_executable.headers",
+      "..:symbolize",
       "//zircon/kernel/lib/arch:headers",
     ]
   }
@@ -190,7 +190,6 @@ if (current_toolchain != default_toolchain) {
     sources = [ "hello-world-test.cc" ]
     deps = [
       ":test-main",
-      "..:phys_executable.headers",
       "//zircon/kernel/lib/libc",
     ]
   }
@@ -199,7 +198,6 @@ if (current_toolchain != default_toolchain) {
     sources = [ "backtrace-test.cc" ]
     deps = [
       ":test-main",
-      "..:phys_executable.headers",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/libc",
     ]

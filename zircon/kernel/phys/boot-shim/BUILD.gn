@@ -1,0 +1,59 @@
+# Copyright 2021 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/testing/zbi_test.gni")
+import("//zircon/kernel/phys/zbi_executable.gni")
+
+group("boot-shim") {
+  if (current_cpu != "x64") {
+    deps = [ ":zbi-boot-shim" ]
+  }
+}
+
+zbi_executable("zbi-boot-shim") {
+  deps = [ ":noop-boot-shim" ]
+}
+
+if (toolchain.environment == "kernel.phys") {
+  source_set("noop-boot-shim") {
+    sources = [ "zbi-boot-shim.cc" ]
+    include_dirs = [ "//zircon/kernel/phys" ]
+    deps = [
+      "//zircon/kernel/phys:allocation",
+      "//zircon/kernel/phys:boot-zbi",
+      "//zircon/kernel/phys:main",
+      "//zircon/kernel/phys:symbolize",
+      "//zircon/kernel/phys:zbi-memory",
+      "//zircon/system/ulib/zbitl",
+    ]
+  }
+}
+
+group("tests") {
+  testonly = true
+
+  # TODO(mcgrathr): not compatible with legacy fixed-address ZBI booting
+  if (current_cpu != "x64") {
+    deps = [
+      ":zbi-boot-shim-core-tests",
+      ":zbi-boot-shim-phys-unittests",
+    ]
+  }
+}
+
+zbi_test("zbi-boot-shim-phys-unittests") {
+  deps = [
+    ":zbi-boot-shim",
+    "//zircon/kernel/phys/test:zbi-phys-unittests.zbi(//zircon/kernel/phys:kernel.phys_$current_cpu)",
+  ]
+}
+
+zbi_test("zbi-boot-shim-core-tests") {
+  deps = [
+    ":zbi-boot-shim",
+    "//zircon/system/utest/core:core-tests.zbi($default_toolchain)",
+  ]
+}

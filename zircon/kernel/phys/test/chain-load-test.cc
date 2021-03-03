@@ -59,6 +59,8 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
     }
   }
 
+  const auto rest_size_bytes = zbi.size_bytes() - rest.item_offset();
+
   if (auto result = zbi.take_error(); result.is_error()) {
     printf("ZBI error finding RAMDISK: ");
     zbitl::PrintViewError(result.error_value());
@@ -71,7 +73,9 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
   }
 
   const auto length = zbitl::UncompressedLength(*(*loadit).header);
-  auto load_buffer = Allocate(BootZbi::SuggestedAllocation(length), "payload");
+  auto load_buffer_size = BootZbi::SuggestedAllocation(length);
+  load_buffer_size.size += rest_size_bytes;
+  auto load_buffer = Allocate(load_buffer_size, "payload");
   if (!load_buffer) {
     return 1;
   }
@@ -86,44 +90,23 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
   printf("ZBI payload item of %u bytes decompressed into %zu of %u bytes\n",
          (*loadit).header->length, load_zbi.size_bytes(), length);
 
-  BootZbi::Sizes sizes;
-  if (auto result = BootZbi::GetSizes(load_zbi); result.is_ok()) {
-    sizes = result.value();
-  } else {
-    printf("Cannot read payload ZBI: ");
+  BootZbi boot;
+  if (auto result = boot.Init(load_zbi); result.is_error()) {
+    stdout->Write("Payload ZBI not bootable: ");
     zbitl::PrintViewCopyError(result.error_value());
     return 1;
   }
 
-  Allocation kernel;
-  if (sizes.kernel.size > 0) {
-    kernel = Allocate(sizes.kernel, "kernel");
-    if (!kernel) {
-      return 1;
-    }
-  }
-
-  size_t rest_size = zbi.size_bytes() - rest.item_offset();
-  printf("BootZbi requests kernel %#zx bytes and data %#zx + rest %#zx.\n", sizes.kernel.size,
-         sizes.data.size, rest_size);
-
-  sizes.data.size += rest_size;
-  Allocation data = Allocate(sizes.data, "data ZBI");
-  if (!data) {
-    return 1;
-  }
-
-  BootZbi boot{kernel.data(), data.data()};
-  if (auto result = boot.Load(load_zbi); result.is_error()) {
-    stdout->Write("Cannot load payload ZBI: ");
+  if (auto result = boot.Load(rest_size_bytes); result.is_error()) {
+    stdout->Write("Failed to load payload ZBI: ");
     zbitl::PrintViewCopyError(result.error_value());
     return 1;
   }
 
   printf("Loaded kernel and data; data ZBI occupies %#zx of %#zx bytes.\n",
-         boot.data().size_bytes(), boot.data().storage().size());
+         boot.DataZbi().size_bytes(), boot.DataZbi().storage().size());
 
-  if (auto result = boot.data().Extend(rest, zbi.end()); result.is_error()) {
+  if (auto result = boot.DataZbi().Extend(rest, zbi.end()); result.is_error()) {
     stdout->Write("Cannot append boot loader ZBI items: ");
     zbitl::PrintViewCopyError(result.error_value());
     return 1;
