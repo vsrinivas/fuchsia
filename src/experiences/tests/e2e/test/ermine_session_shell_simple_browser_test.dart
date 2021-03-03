@@ -41,6 +41,7 @@ void main() {
     // Starts hosting a local http website.
     // ignore: unawaited_futures
     ermine.component.launch(testserverUrl);
+    expect(await ermine.isRunning(testserverUrl), isTrue);
   });
 
   tearDownAll(() async {
