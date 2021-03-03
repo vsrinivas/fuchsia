@@ -27,15 +27,15 @@ int main(int argc, const char** argv) {
   // Connect to the |fuchsia.examples/Echo| protocol, here we demonstrate
   // using |service::ConnectAt| relative to some service directory.
   // One may also directly call |Connect| to use the default service directory.
-  auto client_end = service::ConnectAt<::llcpp::fuchsia::examples::Echo>(*svc);
+  auto client_end = service::ConnectAt<::fuchsia_examples::Echo>(*svc);
   ZX_ASSERT(client_end.status_value() == ZX_OK);
 
   // Define the event handler for the client. The OnString event handler prints the event.
-  class EventHandler : public llcpp::fuchsia::examples::Echo::AsyncEventHandler {
+  class EventHandler : public fuchsia_examples::Echo::AsyncEventHandler {
    public:
     explicit EventHandler(async::Loop& loop) : loop_(loop) {}
 
-    void OnString(llcpp::fuchsia::examples::Echo::OnStringResponse* event) override {
+    void OnString(fuchsia_examples::Echo::OnStringResponse* event) override {
       std::string response(event->response.data(), event->response.size());
       std::cout << "Got event: " << response << std::endl;
       loop_.Quit();
@@ -49,8 +49,8 @@ int main(int argc, const char** argv) {
   fidl::Client client(std::move(*client_end), dispatcher, std::make_shared<EventHandler>(loop));
 
   // Make an EchoString call, passing it a lambda to handle the response asynchronously.
-  auto result_async = client->EchoString(
-      "hello", [&](llcpp::fuchsia::examples::Echo::EchoStringResponse* response) {
+  auto result_async =
+      client->EchoString("hello", [&](fuchsia_examples::Echo::EchoStringResponse* response) {
         std::string reply(response->response.data(), response->response.size());
         std::cout << "Got response: " << reply << std::endl;
         loop.Quit();

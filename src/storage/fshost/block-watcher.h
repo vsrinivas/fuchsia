@@ -67,7 +67,7 @@ class BlockWatcher {
   std::thread thread_;
 };
 
-class BlockWatcherServer final : public llcpp::fuchsia::fshost::BlockWatcher::Interface {
+class BlockWatcherServer final : public fuchsia_fshost::BlockWatcher::Interface {
  public:
   // Creates a new fs::Service backed by a new BlockWatcherServer, to be inserted into
   // a pseudo fs. |watcher| is unowned and must outlive the returned instance.

@@ -54,7 +54,7 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
 }  // namespace
 
 void DeviceControllerConnection::CompleteCompatibilityTests(
-    llcpp::fuchsia::device::manager::wire::CompatibilityTestStatus status,
+    fuchsia_device_manager::wire::CompatibilityTestStatus status,
     CompleteCompatibilityTestsCompleter::Sync& _completer) {
   if (auto compat_conn = dev()->PopTestCompatibilityConn(); compat_conn) {
     compat_conn(static_cast<zx_status_t>(status));
@@ -99,8 +99,7 @@ void DeviceControllerConnection::Resume(uint32_t target_system_state,
     }
     if (status != ZX_OK &&
         (out_power_state ==
-         static_cast<uint8_t>(
-             llcpp::fuchsia::device::wire::DevicePowerState::DEVICE_POWER_STATE_D0))) {
+         static_cast<uint8_t>(fuchsia_device::wire::DevicePowerState::DEVICE_POWER_STATE_D0))) {
       // Do not fail system resume, when the device is unable to go into a particular performance
       // state, but resumed to a working state.
       status = ZX_OK;
@@ -192,8 +191,8 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync& completer) {
 
   this->dev()->unbind_cb = [dev = this->dev(), completer = completer.ToAsync(),
                             trace = std::move(trace)](zx_status_t status) mutable {
-    llcpp::fuchsia::device::manager::wire::DeviceController_Unbind_Result result;
-    fidl::aligned<llcpp::fuchsia::device::manager::wire::DeviceController_Unbind_Response> response;
+    fuchsia_device_manager::wire::DeviceController_Unbind_Result result;
+    fidl::aligned<fuchsia_device_manager::wire::DeviceController_Unbind_Response> response;
     if (status != ZX_OK && dev->parent()) {
       // If unbind returns an error, and if client is waiting for unbind to complete,
       // inform the client.
@@ -212,9 +211,8 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync& completer) {
 void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync& completer) {
   ZX_ASSERT(this->dev()->removal_cb == nullptr);
   this->dev()->removal_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
-    llcpp::fuchsia::device::manager::wire::DeviceController_CompleteRemoval_Result result;
-    fidl::aligned<llcpp::fuchsia::device::manager::wire::DeviceController_CompleteRemoval_Response>
-        response;
+    fuchsia_device_manager::wire::DeviceController_CompleteRemoval_Result result;
+    fidl::aligned<fuchsia_device_manager::wire::DeviceController_CompleteRemoval_Response> response;
     result.set_response(fidl::unowned_ptr(&response));
     completer.Reply(std::move(result));
   };
@@ -224,7 +222,7 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync&
 
 DeviceControllerConnection::DeviceControllerConnection(
     DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
-    fidl::Client<llcpp::fuchsia::device::manager::Coordinator> coordinator_client)
+    fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client)
     : driver_host_context_(ctx),
       dev_(std::move(dev)),
       coordinator_client_(std::move(coordinator_client)) {
@@ -244,7 +242,7 @@ DeviceControllerConnection::~DeviceControllerConnection() {
 
 zx_status_t DeviceControllerConnection::Create(
     DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel controller_rpc,
-    fidl::Client<llcpp::fuchsia::device::manager::Coordinator> coordinator_client,
+    fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client,
     std::unique_ptr<DeviceControllerConnection>* conn) {
   *conn = std::make_unique<DeviceControllerConnection>(
       ctx, std::move(dev), std::move(controller_rpc), std::move(coordinator_client));
@@ -338,12 +336,12 @@ zx_status_t DeviceControllerConnection::HandleRead() {
   uint64_t ordinal = hdr->ordinal;
   // llcpp (intentionally!) does not expose the fidl ordinal, so this is a hacky way to get it
   // anyway for backwards compatibility for porting code from the old C bindings.
-  static llcpp::fuchsia::io::Directory::OpenRequest for_ordinal(zx_txid_t(0));
+  static fuchsia_io::Directory::OpenRequest for_ordinal(zx_txid_t(0));
   if (ordinal == for_ordinal._hdr.ordinal) {
     VLOGD(1, *dev(), "Opening device %p", dev().get());
     zx::unowned_channel conn = channel();
     DevmgrFidlTxn txn(std::move(conn), hdr->txid);
-    fuchsia::io::Directory::Dispatch(this, &fidl_msg, &txn);
+    fuchsia_io::Directory::Dispatch(this, &fidl_msg, &txn);
     if (status != ZX_OK) {
       return txn.Status();
     }
@@ -351,6 +349,6 @@ zx_status_t DeviceControllerConnection::HandleRead() {
   }
 
   DevmgrFidlTxn txn(std::move(conn), hdr->txid);
-  fuchsia::device::manager::DeviceController::Dispatch(this, &fidl_msg, &txn);
+  fuchsia_device_manager::DeviceController::Dispatch(this, &fidl_msg, &txn);
   return txn.Status();
 }

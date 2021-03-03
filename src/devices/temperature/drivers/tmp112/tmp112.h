@@ -38,7 +38,7 @@ constexpr float kTemperatureResolution = 0.0625;
 
 class Tmp112Device;
 using DdkDeviceType = ddk::Device<Tmp112Device, ddk::Unbindable, ddk::Messageable>;
-namespace temperature_fidl = llcpp::fuchsia::hardware::temperature;
+namespace temperature_fidl = fuchsia_hardware_temperature;
 
 class Tmp112Device : public DdkDeviceType,
                      public temperature_fidl::Device::Interface,

@@ -25,7 +25,7 @@
 namespace blobfs {
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 zx_rights_t get_rights(const zx::object_base& handle) {
   zx_info_handle_basic_t info;
@@ -36,7 +36,7 @@ zx_rights_t get_rights(const zx::object_base& handle) {
 class ExecutableMountTest : public FdioTest {
  public:
   ExecutableMountTest() {
-    auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::kernel::VmexResource>();
+    auto endpoints = fidl::CreateEndpoints<fuchsia_kernel::VmexResource>();
     ZX_ASSERT(endpoints.status_value() == ZX_OK);
     auto [local, remote] = *std::move(endpoints);
 
@@ -44,7 +44,7 @@ class ExecutableMountTest : public FdioTest {
         fdio_service_connect("/svc/fuchsia.kernel.VmexResource", remote.TakeChannel().release());
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to connect to fuchsia.kernel.VmexResource: %u", status);
 
-    auto client = llcpp::fuchsia::kernel::VmexResource::SyncClient{std::move(local)};
+    auto client = fuchsia_kernel::VmexResource::SyncClient{std::move(local)};
     auto result = client.Get();
     ZX_ASSERT_MSG(result.ok(), "fuchsia.kernel.VmexResource.Get() failed: %u", result.status());
 

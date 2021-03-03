@@ -18,10 +18,10 @@
 
 #include <gtest/gtest.h>
 
-namespace fdata = llcpp::fuchsia::data;
+namespace fdata = fuchsia_data;
 namespace fdf = fuchsia::driver::framework;
 namespace fio = fuchsia::io;
-namespace frunner = llcpp::fuchsia::component::runner;
+namespace frunner = fuchsia_component_runner;
 namespace fsys = fuchsia::sys2;
 
 using namespace testing;
@@ -230,7 +230,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     fdata::wire::Dictionary program(allocator);
     program.set_entries(allocator, std::move(program_entries));
 
-    auto outgoing_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+    auto outgoing_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_EQ(ZX_OK, outgoing_endpoints.status_value());
 
     frunner::wire::ComponentStartInfo start_info(allocator);

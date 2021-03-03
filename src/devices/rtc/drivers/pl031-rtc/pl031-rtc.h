@@ -15,7 +15,7 @@ namespace rtc {
 
 class Pl031;
 using RtcDeviceType = ddk::Device<Pl031, ddk::Messageable>;
-namespace FidlRtc = llcpp::fuchsia::hardware::rtc;
+namespace FidlRtc = fuchsia_hardware_rtc;
 
 struct Pl031Regs {
   uint32_t dr;

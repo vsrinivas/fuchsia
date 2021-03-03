@@ -18,7 +18,7 @@
 #include "src/storage/fshost/fshost-fs-provider.h"
 #include "src/storage/fshost/pkgfs-loader-service.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 namespace devmgr {
 

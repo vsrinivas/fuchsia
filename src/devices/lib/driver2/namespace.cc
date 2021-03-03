@@ -7,7 +7,7 @@
 #include <zircon/device/vfs.h>
 
 zx::status<Namespace> Namespace::Create(
-    fidl::VectorView<llcpp::fuchsia::component::runner::wire::ComponentNamespaceEntry>& entries) {
+    fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry>& entries) {
   fdio_ns_t* ns;
   zx_status_t status = fdio_ns_create(&ns);
   if (status != ZX_OK) {

@@ -34,7 +34,7 @@
 namespace fs_test {
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 // Tests using MinfsTest will get tested with and without FVM.
 using MinfsTest = FilesystemTest;

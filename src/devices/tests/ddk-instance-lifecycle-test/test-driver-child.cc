@@ -10,7 +10,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
-using llcpp::fuchsia::device::instancelifecycle::test::Lifecycle;
+using fuchsia_device_instancelifecycle_test::Lifecycle;
 
 void TestLifecycleDriverChild::DdkRelease() {
   zx_status_t status = lifecycle_.OnRelease();

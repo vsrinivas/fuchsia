@@ -17,15 +17,15 @@
 
 namespace thermal {
 
-using llcpp::fuchsia::hardware::thermal::wire::PowerDomain;
-using llcpp::fuchsia::hardware::thermal::wire::ThermalDeviceInfo;
+using fuchsia_hardware_thermal::wire::PowerDomain;
+using fuchsia_hardware_thermal::wire::ThermalDeviceInfo;
 
 class As370Thermal;
 using DeviceType = ddk::Device<As370Thermal, ddk::Messageable, ddk::Unbindable>;
 
 class As370Thermal : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL>,
-                     public llcpp::fuchsia::hardware::thermal::Device::Interface {
+                     public fuchsia_hardware_thermal::Device::Interface {
  public:
   As370Thermal(zx_device_t* parent, ddk::MmioBuffer mmio, const ThermalDeviceInfo& device_info,
                const ddk::ClockProtocolClient& cpu_clock, const ddk::PowerProtocolClient& cpu_power)

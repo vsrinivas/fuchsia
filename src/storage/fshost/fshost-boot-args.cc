@@ -24,7 +24,7 @@ std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
                       "environment and continuing";
     return std::make_shared<FshostBootArgs>(std::nullopt);
   }
-  auto path = fbl::StringPrintf("/svc/%s", llcpp::fuchsia::boot::Arguments::Name);
+  auto path = fbl::StringPrintf("/svc/%s", fuchsia_boot::Arguments::Name);
   status = fdio_service_connect(path.data(), remote.release());
   if (status != ZX_OK) {
     // This service might be missing if we're running in a test environment. Log
@@ -34,17 +34,16 @@ std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
                       "environment and continuing";
     return std::make_shared<FshostBootArgs>(std::nullopt);
   }
-  return std::make_shared<FshostBootArgs>(
-      llcpp::fuchsia::boot::Arguments::SyncClient(std::move(local)));
+  return std::make_shared<FshostBootArgs>(fuchsia_boot::Arguments::SyncClient(std::move(local)));
 }
 
-FshostBootArgs::FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::SyncClient> boot_args)
+FshostBootArgs::FshostBootArgs(std::optional<fuchsia_boot::Arguments::SyncClient> boot_args)
     : boot_args_(std::move(boot_args)) {
   if (!boot_args_) {
     return;
   }
 
-  llcpp::fuchsia::boot::wire::BoolPair defaults[] = {
+  fuchsia_boot::wire::BoolPair defaults[] = {
       {fidl::StringView{"netsvc.netboot"}, netsvc_netboot_},
       {fidl::StringView{"zircon.system.disable-automount"}, zircon_system_disable_automount_},
       {fidl::StringView{"zircon.system.filesystem-check"}, zircon_system_filesystem_check_},

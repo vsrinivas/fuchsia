@@ -22,7 +22,7 @@
 
 namespace {
 
-namespace wlantap = ::llcpp::fuchsia::wlan::tap;
+namespace wlantap = ::fuchsia_wlan_tap;
 
 class WlantapDriver {
  public:

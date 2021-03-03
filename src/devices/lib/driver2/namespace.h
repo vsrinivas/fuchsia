@@ -14,7 +14,7 @@ class Namespace {
  public:
   // Creates a namespace from `DriverStartArgs::ns`.
   static zx::status<Namespace> Create(
-      fidl::VectorView<llcpp::fuchsia::component::runner::wire::ComponentNamespaceEntry>& entries);
+      fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry>& entries);
 
   Namespace() = default;
   ~Namespace();

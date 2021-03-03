@@ -76,25 +76,24 @@ constexpr AbrData kInitAbrData = {
         },
 };
 
-class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
-                  public ::llcpp::fuchsia::paver::BootManager::Interface,
-                  public ::llcpp::fuchsia::paver::DynamicDataSink::RawChannelInterface {
+class FakePaver : public ::fuchsia_paver::Paver::RawChannelInterface,
+                  public ::fuchsia_paver::BootManager::Interface,
+                  public ::fuchsia_paver::DynamicDataSink::RawChannelInterface {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     dispatcher_ = dispatcher;
-    return fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::Paver::RawChannelInterface>(
+    return fidl::BindSingleInFlightOnly<::fuchsia_paver::Paver::RawChannelInterface>(
         dispatcher, std::move(request), this);
   }
 
   void FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync& _completer) override {
-    fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::DynamicDataSink::RawChannelInterface>(
+    fidl::BindSingleInFlightOnly<::fuchsia_paver::DynamicDataSink::RawChannelInterface>(
         dispatcher_, std::move(data_sink), this);
   }
 
   void UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink,
                       UseBlockDeviceCompleter::Sync& _completer) override {
-    auto result =
-        ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(zx::unowned(block_device));
+    auto result = ::fuchsia_device::Controller::Call::GetTopologicalPath(zx::unowned(block_device));
     if (!result.ok() || result->result.is_err()) {
       return;
     }
@@ -102,7 +101,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
     if (std::string(path.data(), path.size()) != expected_block_device_) {
       return;
     }
-    fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::DynamicDataSink::RawChannelInterface>(
+    fidl::BindSingleInFlightOnly<::fuchsia_paver::DynamicDataSink::RawChannelInterface>(
         dispatcher_, std::move(dynamic_data_sink), this);
   }
 
@@ -110,113 +109,110 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
                        FindBootManagerCompleter::Sync& _completer) override {
     AppendCommand(Command::kInitializeAbr);
     if (abr_supported_) {
-      fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::BootManager::Interface>(
+      fidl::BindSingleInFlightOnly<::fuchsia_paver::BootManager::Interface>(
           dispatcher_, std::move(boot_manager), this);
     }
   }
 
   void QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync& completer) override {
     AppendCommand(Command::kQueryCurrentConfiguration);
-    completer.ReplySuccess(::llcpp::fuchsia::paver::wire::Configuration::A);
+    completer.ReplySuccess(::fuchsia_paver::wire::Configuration::A);
   }
 
   void FindSysconfig(zx::channel sysconfig, FindSysconfigCompleter::Sync& _completer) override {}
 
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync& completer) override {
     AppendCommand(Command::kQueryActiveConfiguration);
-    completer.ReplySuccess(::llcpp::fuchsia::paver::wire::Configuration::A);
+    completer.ReplySuccess(::fuchsia_paver::wire::Configuration::A);
   }
 
-  void QueryConfigurationStatus(::llcpp::fuchsia::paver::wire::Configuration configuration,
+  void QueryConfigurationStatus(::fuchsia_paver::wire::Configuration configuration,
                                 QueryConfigurationStatusCompleter::Sync& completer) override {
     AppendCommand(Command::kQueryConfigurationStatus);
-    completer.ReplySuccess(::llcpp::fuchsia::paver::wire::ConfigurationStatus::HEALTHY);
+    completer.ReplySuccess(::fuchsia_paver::wire::ConfigurationStatus::HEALTHY);
   }
 
-  void SetConfigurationActive(::llcpp::fuchsia::paver::wire::Configuration configuration,
+  void SetConfigurationActive(::fuchsia_paver::wire::Configuration configuration,
                               SetConfigurationActiveCompleter::Sync& completer) override {
     AppendCommand(Command::kSetConfigurationActive);
     zx_status_t status;
     switch (configuration) {
-      case ::llcpp::fuchsia::paver::wire::Configuration::A:
+      case ::fuchsia_paver::wire::Configuration::A:
         abr_data_.slot_a.active = true;
         abr_data_.slot_a.unbootable = false;
         status = ZX_OK;
         break;
 
-      case ::llcpp::fuchsia::paver::wire::Configuration::B:
+      case ::fuchsia_paver::wire::Configuration::B:
         abr_data_.slot_b.active = true;
         abr_data_.slot_b.unbootable = false;
         status = ZX_OK;
         break;
 
-      case ::llcpp::fuchsia::paver::wire::Configuration::RECOVERY:
+      case ::fuchsia_paver::wire::Configuration::RECOVERY:
         status = ZX_ERR_INVALID_ARGS;
         break;
     }
     completer.Reply(status);
   }
 
-  void SetConfigurationUnbootable(::llcpp::fuchsia::paver::wire::Configuration configuration,
+  void SetConfigurationUnbootable(::fuchsia_paver::wire::Configuration configuration,
                                   SetConfigurationUnbootableCompleter::Sync& completer) override {
     AppendCommand(Command::kSetConfigurationUnbootable);
     zx_status_t status;
     switch (configuration) {
-      case ::llcpp::fuchsia::paver::wire::Configuration::A:
+      case ::fuchsia_paver::wire::Configuration::A:
         abr_data_.slot_a.unbootable = true;
         status = ZX_OK;
         break;
 
-      case ::llcpp::fuchsia::paver::wire::Configuration::B:
+      case ::fuchsia_paver::wire::Configuration::B:
         abr_data_.slot_b.unbootable = true;
         status = ZX_OK;
         break;
 
-      case ::llcpp::fuchsia::paver::wire::Configuration::RECOVERY:
+      case ::fuchsia_paver::wire::Configuration::RECOVERY:
         status = ZX_ERR_INVALID_ARGS;
         break;
     }
     completer.Reply(status);
   }
 
-  void SetConfigurationHealthy(::llcpp::fuchsia::paver::wire::Configuration configuration,
+  void SetConfigurationHealthy(::fuchsia_paver::wire::Configuration configuration,
                                SetConfigurationHealthyCompleter::Sync& completer) override {
     AppendCommand(Command::kSetConfigurationHealthy);
     completer.Reply(ZX_OK);
   }
 
-  void Flush(::llcpp::fuchsia::paver::DynamicDataSink::RawChannelInterface::FlushCompleter::Sync&
-                 completer) override {
+  void Flush(::fuchsia_paver::DynamicDataSink::RawChannelInterface::FlushCompleter::Sync& completer)
+      override {
     AppendCommand(Command::kDataSinkFlush);
     completer.Reply(ZX_OK);
   }
 
-  void Flush(
-      ::llcpp::fuchsia::paver::BootManager::Interface::FlushCompleter::Sync& completer) override {
+  void Flush(::fuchsia_paver::BootManager::Interface::FlushCompleter::Sync& completer) override {
     AppendCommand(Command::kBootManagerFlush);
     completer.Reply(ZX_OK);
   }
 
-  void ReadAsset(::llcpp::fuchsia::paver::wire::Configuration configuration,
-                 ::llcpp::fuchsia::paver::wire::Asset asset,
-                 ReadAssetCompleter::Sync& completer) override {
+  void ReadAsset(::fuchsia_paver::wire::Configuration configuration,
+                 ::fuchsia_paver::wire::Asset asset, ReadAssetCompleter::Sync& completer) override {
     AppendCommand(Command::kReadAsset);
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void WriteAsset(::llcpp::fuchsia::paver::wire::Configuration configuration,
-                  ::llcpp::fuchsia::paver::wire::Asset asset,
-                  ::llcpp::fuchsia::mem::wire::Buffer payload,
+  void WriteAsset(::fuchsia_paver::wire::Configuration configuration,
+                  ::fuchsia_paver::wire::Asset asset, ::fuchsia_mem::wire::Buffer payload,
                   WriteAssetCompleter::Sync& completer) override {
     AppendCommand(Command::kWriteAsset);
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
 
-  void WriteFirmware(::llcpp::fuchsia::paver::wire::Configuration configuration,
-                     fidl::StringView type, ::llcpp::fuchsia::mem::wire::Buffer payload,
+  void WriteFirmware(::fuchsia_paver::wire::Configuration configuration, fidl::StringView type,
+                     ::fuchsia_mem::wire::Buffer payload,
                      WriteFirmwareCompleter::Sync& completer) override {
-    using ::llcpp::fuchsia::paver::wire::WriteFirmwareResult;
+    using ::fuchsia_paver::wire::WriteFirmwareResult;
     AppendCommand(Command::kWriteFirmware);
     last_firmware_type_ = std::string(type.data(), type.size());
 
@@ -239,7 +235,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
       completer.Reply(status);
       return;
     }
-    ::llcpp::fuchsia::paver::PayloadStream::SyncClient stream(std::move(payload_stream));
+    ::fuchsia_paver::PayloadStream::SyncClient stream(std::move(payload_stream));
     auto result = stream.RegisterVmo(std::move(vmo));
     status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {
@@ -263,11 +259,11 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
           }
           const auto& response = result.value();
           switch (response.result.which()) {
-            case ::llcpp::fuchsia::paver::wire::ReadResult::Tag::kErr:
+            case ::fuchsia_paver::wire::ReadResult::Tag::kErr:
               return response.result.err();
-            case ::llcpp::fuchsia::paver::wire::ReadResult::Tag::kEof:
+            case ::fuchsia_paver::wire::ReadResult::Tag::kEof:
               return data_transferred == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
-            case ::llcpp::fuchsia::paver::wire::ReadResult::Tag::kInfo:
+            case ::fuchsia_paver::wire::ReadResult::Tag::kInfo:
               data_transferred += response.result.info().size;
               continue;
             default:
@@ -283,14 +279,14 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
     completer.Reply(status);
   }
 
-  void WriteBootloader(::llcpp::fuchsia::mem::wire::Buffer payload,
+  void WriteBootloader(::fuchsia_mem::wire::Buffer payload,
                        WriteBootloaderCompleter::Sync& completer) override {
     AppendCommand(Command::kWriteBootloader);
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
 
-  void WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::wire::Buffer payload,
+  void WriteDataFile(fidl::StringView filename, ::fuchsia_mem::wire::Buffer payload,
                      WriteDataFileCompleter::Sync& completer) override {
     AppendCommand(Command::kWriteDataFile);
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
@@ -355,7 +351,7 @@ class FakeSvc {
  public:
   explicit FakeSvc(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher), vfs_(dispatcher) {
     auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-    root_dir->AddEntry(::llcpp::fuchsia::paver::Paver::Name,
+    root_dir->AddEntry(::fuchsia_paver::Paver::Name,
                        fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
                          return fake_paver_.Connect(dispatcher_, std::move(request));
                        }));

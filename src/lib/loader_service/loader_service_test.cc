@@ -24,7 +24,7 @@ namespace loader {
 namespace test {
 namespace {
 
-namespace fldsvc = ::llcpp::fuchsia::ldsvc;
+namespace fldsvc = ::fuchsia_ldsvc;
 
 TEST_F(LoaderServiceTest, ConnectBindDone) {
   std::shared_ptr<LoaderService> loader;

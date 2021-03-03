@@ -41,10 +41,11 @@ namespace blobfs {
 
 // This will only decompress a set of complete chunks, if the beginning or end
 // of the range are not chunk aligned this operation will fail.
-zx_status_t DecompressChunkedPartial(
-    const fzl::OwnedVmoMapper& decompressed_mapper, const fzl::OwnedVmoMapper& compressed_mapper,
-    const llcpp::fuchsia::blobfs::internal::wire::Range decompressed,
-    const llcpp::fuchsia::blobfs::internal::wire::Range compressed, size_t* bytes_decompressed) {
+zx_status_t DecompressChunkedPartial(const fzl::OwnedVmoMapper& decompressed_mapper,
+                                     const fzl::OwnedVmoMapper& compressed_mapper,
+                                     const fuchsia_blobfs_internal::wire::Range decompressed,
+                                     const fuchsia_blobfs_internal::wire::Range compressed,
+                                     size_t* bytes_decompressed) {
   const uint8_t* src = static_cast<const uint8_t*>(compressed_mapper.start()) + compressed.offset;
   uint8_t* dst = static_cast<uint8_t*>(decompressed_mapper.start()) + decompressed.offset;
   chunked_compression::ChunkedDecompressor decompressor;
@@ -68,20 +69,20 @@ zx_status_t DecompressFull(const fzl::OwnedVmoMapper& decompressed_mapper,
 // The actual handling of a request on the fifo.
 void HandleFifo(const fzl::OwnedVmoMapper& compressed_mapper,
                 const fzl::OwnedVmoMapper& decompressed_mapper,
-                const llcpp::fuchsia::blobfs::internal::wire::DecompressRequest* request,
-                llcpp::fuchsia::blobfs::internal::wire::DecompressResponse* response) {
+                const fuchsia_blobfs_internal::wire::DecompressRequest* request,
+                fuchsia_blobfs_internal::wire::DecompressResponse* response) {
   TRACE_DURATION("decompressor", "HandleFifo", "length", request->decompressed.size);
   size_t bytes_decompressed = 0;
   switch (request->algorithm) {
-    case llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::CHUNKED_PARTIAL:
+    case fuchsia_blobfs_internal::wire::CompressionAlgorithm::CHUNKED_PARTIAL:
       response->status =
           DecompressChunkedPartial(decompressed_mapper, compressed_mapper, request->decompressed,
                                    request->compressed, &bytes_decompressed);
       break;
-    case llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::LZ4:
-    case llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::ZSTD:
-    case llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::ZSTD_SEEKABLE:
-    case llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::CHUNKED:
+    case fuchsia_blobfs_internal::wire::CompressionAlgorithm::LZ4:
+    case fuchsia_blobfs_internal::wire::CompressionAlgorithm::ZSTD:
+    case fuchsia_blobfs_internal::wire::CompressionAlgorithm::ZSTD_SEEKABLE:
+    case fuchsia_blobfs_internal::wire::CompressionAlgorithm::CHUNKED:
       if (request->decompressed.offset != 0 || request->compressed.offset != 0) {
         bytes_decompressed = 0;
         response->status = ZX_ERR_NOT_SUPPORTED;
@@ -93,7 +94,7 @@ void HandleFifo(const fzl::OwnedVmoMapper& compressed_mapper,
                            request->compressed.size, algorithm, &bytes_decompressed);
       }
       break;
-    case llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::UNCOMPRESSED:
+    case fuchsia_blobfs_internal::wire::CompressionAlgorithm::UNCOMPRESSED:
       response->status = ZX_ERR_NOT_SUPPORTED;
       break;
   }
@@ -115,13 +116,13 @@ void WatchFifo(zx::fifo fifo, fzl::OwnedVmoMapper compressed_mapper,
     if ((signal & ZX_FIFO_PEER_CLOSED) != 0) {
       break;
     }
-    llcpp::fuchsia::blobfs::internal::wire::DecompressRequest request;
+    fuchsia_blobfs_internal::wire::DecompressRequest request;
     zx_status_t status = fifo.read(sizeof(request), &request, 1, nullptr);
     if (status != ZX_OK) {
       break;
     }
 
-    llcpp::fuchsia::blobfs::internal::wire::DecompressResponse response;
+    fuchsia_blobfs_internal::wire::DecompressResponse response;
     HandleFifo(compressed_mapper, decompressed_mapper, &request, &response);
 
     fifo.wait_one(kFifoWriteSignals, zx::time::infinite(), &signal);

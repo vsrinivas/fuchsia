@@ -25,7 +25,7 @@
 
 #include <zxtest/zxtest.h>
 
-class PhyServer : public llcpp::fuchsia::hardware::registers::Device::Interface {
+class PhyServer : public fuchsia_hardware_registers::Device::Interface {
  public:
   PhyServer() : loop_(&kAsyncLoopConfigNeverAttachToThread) {
     zx::channel channels[2];

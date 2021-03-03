@@ -9,7 +9,7 @@
 
 namespace rtc {
 
-namespace FidlRtc = llcpp::fuchsia::hardware::rtc;
+namespace FidlRtc = fuchsia_hardware_rtc;
 
 enum Month {
   JANUARY = 1,  // 31 days

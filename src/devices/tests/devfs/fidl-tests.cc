@@ -20,7 +20,7 @@
 
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 void OpenHelper(const zx::channel& directory, const char* path, zx::channel* response_channel) {
   // Open the requested path from the provded directory, and wait for the open

@@ -33,7 +33,7 @@ using ControlType = ddk::Device<Control, ddk::Unbindable, ddk::Messageable, ddk:
 
 class Control : public ControlType,
                 public ddk::GoldfishControlProtocol<Control, ddk::base_protocol>,
-                public llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface {
+                public fuchsia_hardware_goldfish::ControlDevice::Interface {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -46,37 +46,35 @@ class Control : public ControlType,
   void FreeBufferHandle(uint64_t id);
 
   using CreateColorBuffer2Result =
-      fit::result<llcpp::fuchsia::hardware::goldfish::ControlDevice::CreateColorBuffer2Response,
+      fit::result<fuchsia_hardware_goldfish::ControlDevice::CreateColorBuffer2Response,
                   zx_status_t>;
 
   CreateColorBuffer2Result CreateColorBuffer2(
-      zx::vmo vmo,
-      llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params create_params);
+      zx::vmo vmo, fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params);
 
-  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
-  void CreateColorBuffer2(
-      zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params create_params,
-      CreateColorBuffer2Completer::Sync& completer) override;
+  // |fuchsia_hardware_goldfish::ControlDevice::Interface|
+  void CreateColorBuffer2(zx::vmo vmo,
+                          fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params,
+                          CreateColorBuffer2Completer::Sync& completer) override;
 
   using CreateBuffer2Result =
-      fit::result<llcpp::fuchsia::hardware::goldfish::wire::ControlDevice_CreateBuffer2_Result,
-                  zx_status_t>;
+      fit::result<fuchsia_hardware_goldfish::wire::ControlDevice_CreateBuffer2_Result, zx_status_t>;
 
   CreateBuffer2Result CreateBuffer2(
-      zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params create_params);
+      zx::vmo vmo, fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params);
 
-  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
+  // |fuchsia_hardware_goldfish::ControlDevice::Interface|
   void CreateBuffer2(zx::vmo vmo,
-                     llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params create_params,
+                     fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params,
                      CreateBuffer2Completer::Sync& completer) override;
 
-  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
+  // |fuchsia_hardware_goldfish::ControlDevice::Interface|
   void CreateSyncFence(zx::eventpair event, CreateSyncFenceCompleter::Sync& completer) override;
 
-  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
+  // |fuchsia_hardware_goldfish::ControlDevice::Interface|
   void GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& completer) override;
 
-  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
+  // |fuchsia_hardware_goldfish::ControlDevice::Interface|
   void GetBufferHandleInfo(zx::vmo vmo, GetBufferHandleInfoCompleter::Sync& completer) override;
 
   // Device protocol implementation.
@@ -90,8 +88,7 @@ class Control : public ControlType,
   // Used by heaps. Removes a specific heap from the linked list.
   void RemoveHeap(Heap* heap);
 
-  llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::SyncClient* address_space_child()
-      const {
+  fuchsia_hardware_goldfish::AddressSpaceChildDriver::SyncClient* address_space_child() const {
     return address_space_child_.get();
   }
 
@@ -105,7 +102,7 @@ class Control : public ControlType,
   // Create a pair of channel and register a sysmem Heap of |heap_type| using
   // the channel pair. The client-side channel is sent to sysmem, and the
   // server-side channel is bound to |heap|.
-  zx_status_t RegisterAndBindHeap(llcpp::fuchsia::sysmem2::wire::HeapType heap_type, Heap* heap);
+  zx_status_t RegisterAndBindHeap(fuchsia_sysmem2::wire::HeapType heap_type, Heap* heap);
 
   int32_t WriteLocked(uint32_t cmd_size, int32_t* consumed_size) TA_REQ(lock_);
   void WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
@@ -144,15 +141,15 @@ class Control : public ControlType,
 
   zx::event pipe_event_;
 
-  std::unique_ptr<llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::SyncClient>
+  std::unique_ptr<fuchsia_hardware_goldfish::AddressSpaceChildDriver::SyncClient>
       address_space_child_;
-  std::unique_ptr<llcpp::fuchsia::hardware::goldfish::SyncTimeline::SyncClient> sync_timeline_;
+  std::unique_ptr<fuchsia_hardware_goldfish::SyncTimeline::SyncClient> sync_timeline_;
 
   // TODO(fxbug.dev/3213): This should be std::unordered_map.
   std::map<zx_koid_t, uint32_t> buffer_handles_ TA_GUARDED(lock_);
 
   struct BufferHandleInfo {
-    llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType type;
+    fuchsia_hardware_goldfish::wire::BufferHandleType type;
     uint32_t memory_property;
   };
   std::map<uint32_t, BufferHandleInfo> buffer_handle_info_ TA_GUARDED(lock_);

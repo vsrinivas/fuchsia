@@ -75,9 +75,9 @@ TEST(LauncherTest, OutgoingServices) {
   ASSERT_NE(devmgr.svc_root_dir().channel(), ZX_HANDLE_INVALID);
 
   // Test we are able to connect to at least one of the default services.
-  auto svc_dir = service::ConnectAt<llcpp::fuchsia::io::Directory>(devmgr.svc_root_dir(), "svc");
+  auto svc_dir = service::ConnectAt<fuchsia_io::Directory>(devmgr.svc_root_dir(), "svc");
   ASSERT_OK(svc_dir.status_value());
-  auto local = service::ConnectAt<llcpp::fuchsia::device::manager::DebugDumper>(*svc_dir);
+  auto local = service::ConnectAt<fuchsia_device_manager::DebugDumper>(*svc_dir);
   ASSERT_OK(local.status_value());
 
   zx::vmo debug_vmo;

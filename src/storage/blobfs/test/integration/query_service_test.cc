@@ -24,8 +24,8 @@
 namespace blobfs {
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
-namespace fuchsia_fs = ::llcpp::fuchsia::fs;
+namespace fio = ::fuchsia_io;
+namespace fuchsia_fs = ::fuchsia_fs;
 
 using fuchsia_fs::wire::FilesystemInfoQuery;
 

@@ -24,12 +24,12 @@ class FsMetrics : public Metrics {
   DISALLOW_COPY_ASSIGN_AND_MOVE(FsMetrics);
 
   FsMetrics() = default;
-  explicit FsMetrics(const ::llcpp::fuchsia::storage::metrics::wire::FsMetrics* metrics);
+  explicit FsMetrics(const ::fuchsia_storage_metrics::wire::FsMetrics* metrics);
   explicit FsMetrics(const fuchsia_storage_metrics_FsMetrics* metrics);
   ~FsMetrics() = default;
 
   // Copies to fields of fidl structure the corresponding fields of FsMetrics.
-  void CopyToFidl(::llcpp::fuchsia::storage::metrics::wire::FsMetrics* metrics) const;
+  void CopyToFidl(::fuchsia_storage_metrics::wire::FsMetrics* metrics) const;
 
   // Copies to fields of fidl structure the corresponding fields of FsMetrics.
   void CopyToFidl(fuchsia_storage_metrics_FsMetrics* metrics) const;

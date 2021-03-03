@@ -11,7 +11,7 @@
 
 namespace spi {
 
-namespace sharedmemory = ::llcpp::fuchsia::hardware::sharedmemory;
+namespace sharedmemory = ::fuchsia_hardware_sharedmemory;
 
 void SpiChild::TransmitVector(::fidl::VectorView<uint8_t> data,
                               TransmitVectorCompleter::Sync& completer) {
@@ -52,7 +52,7 @@ void SpiChild::ExchangeVector(::fidl::VectorView<uint8_t> txdata,
   }
 }
 
-void SpiChild::RegisterVmo(uint32_t vmo_id, ::llcpp::fuchsia::mem::wire::Range vmo,
+void SpiChild::RegisterVmo(uint32_t vmo_id, ::fuchsia_mem::wire::Range vmo,
                            sharedmemory::wire::SharedVmoRight rights,
                            RegisterVmoCompleter::Sync& completer) {
   sharedmemory::wire::SharedVmoRegister_RegisterVmo_Result result;
@@ -129,7 +129,7 @@ void SpiChild::Exchange(sharedmemory::wire::SharedVmoBuffer tx_buffer,
 
 zx_status_t SpiChild::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::spi::Device::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_spi::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

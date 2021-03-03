@@ -115,10 +115,9 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
 
   ~CompositeDevice();
 
-  static zx_status_t Create(
-      const fbl::StringPiece& name,
-      llcpp::fuchsia::device::manager::wire::CompositeDeviceDescriptor comp_desc,
-      std::unique_ptr<CompositeDevice>* out);
+  static zx_status_t Create(const fbl::StringPiece& name,
+                            fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
+                            std::unique_ptr<CompositeDevice>* out);
 
   const fbl::String& name() const { return name_; }
   const fbl::Array<const zx_device_prop_t>& properties() const { return properties_; }

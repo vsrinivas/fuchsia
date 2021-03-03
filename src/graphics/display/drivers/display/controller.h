@@ -92,7 +92,7 @@ class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
                    public ddk::DisplayCaptureInterfaceProtocol<Controller>,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER>,
-                   private llcpp::fuchsia::hardware::display::Provider::RawChannelInterface {
+                   private fuchsia_hardware_display::Provider::RawChannelInterface {
  public:
   Controller(zx_device_t* parent);
   ~Controller();
@@ -200,8 +200,8 @@ class Controller : public ControllerParent,
   bool vc_ready_ __TA_GUARDED(mtx());
   ClientProxy* primary_client_ __TA_GUARDED(mtx()) = nullptr;
   bool primary_ready_ __TA_GUARDED(mtx());
-  llcpp::fuchsia::hardware::display::wire::VirtconMode vc_mode_ __TA_GUARDED(mtx()) =
-      llcpp::fuchsia::hardware::display::wire::VirtconMode::INACTIVE;
+  fuchsia_hardware_display::wire::VirtconMode vc_mode_ __TA_GUARDED(mtx()) =
+      fuchsia_hardware_display::wire::VirtconMode::INACTIVE;
   ClientProxy* active_client_ __TA_GUARDED(mtx()) = nullptr;
 
   async::Loop loop_;

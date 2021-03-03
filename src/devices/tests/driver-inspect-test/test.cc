@@ -19,9 +19,9 @@
 
 namespace {
 using driver_integration_test::IsolatedDevmgr;
+using fuchsia_device::Controller;
+using fuchsia_device_inspect_test::TestInspect;
 using inspect::InspectTestHelper;
-using llcpp::fuchsia::device::Controller;
-using llcpp::fuchsia::device::inspect::test::TestInspect;
 
 class InspectTestCase : public InspectTestHelper, public zxtest::Test {
  public:

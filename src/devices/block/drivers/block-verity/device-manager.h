@@ -33,9 +33,8 @@ using DeviceManagerType =
 // `fuchsia.hardware.block.verified`.  It manages the lifecycle of a child block
 // device which represents either a mutable or verified view of another block
 // device.
-class DeviceManager final
-    : public DeviceManagerType,
-      public llcpp::fuchsia::hardware::block::verified::DeviceManager::Interface {
+class DeviceManager final : public DeviceManagerType,
+                            public fuchsia_hardware_block_verified::DeviceManager::Interface {
  public:
   explicit DeviceManager(zx_device_t* parent)
       : DeviceManagerType(parent),
@@ -66,12 +65,12 @@ class DeviceManager final
   void DdkChildPreRelease(void* child_ctx);
 
   // implement `DeviceManager::Interface`
-  void OpenForWrite(llcpp::fuchsia::hardware::block::verified::wire::Config config,
+  void OpenForWrite(fuchsia_hardware_block_verified::wire::Config config,
                     OpenForWriteCompleter::Sync& completer) override __TA_EXCLUDES(mtx_);
   void CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync& completer) override
       __TA_EXCLUDES(mtx_);
-  void OpenForVerifiedRead(llcpp::fuchsia::hardware::block::verified::wire::Config config,
-                           llcpp::fuchsia::hardware::block::verified::wire::Seal seal,
+  void OpenForVerifiedRead(fuchsia_hardware_block_verified::wire::Config config,
+                           fuchsia_hardware_block_verified::wire::Seal seal,
                            OpenForVerifiedReadCompleter::Sync& completer) override
       __TA_EXCLUDES(mtx_);
   void Close(CloseCompleter::Sync& completer) override __TA_EXCLUDES(mtx_);

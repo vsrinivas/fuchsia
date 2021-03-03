@@ -10,13 +10,13 @@
 
 #include <zxtest/zxtest.h>
 
-namespace ram_metrics = ::llcpp::fuchsia::hardware::ram::metrics;
+namespace ram_metrics = ::fuchsia_hardware_ram_metrics;
 
 namespace ram_info {
 // fake register value used in test.
 constexpr uint32_t TEST_REGISTER_VALUE = 42;
 
-class FakeRamDevice : public ::llcpp::fuchsia::hardware::ram::metrics::Device::Interface {
+class FakeRamDevice : public ::fuchsia_hardware_ram_metrics::Device::Interface {
  public:
   FakeRamDevice() = default;
 

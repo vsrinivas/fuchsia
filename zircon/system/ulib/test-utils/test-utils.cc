@@ -32,8 +32,8 @@
 
 #define TU_FAIL_ERRCODE 10
 
-namespace fprocess = ::llcpp::fuchsia::process;
-namespace fio = ::llcpp::fuchsia::io;
+namespace fprocess = ::fuchsia_process;
+namespace fio = ::fuchsia_io;
 
 void tu_fatal(const char* what, zx_status_t status) {
   const char* reason = zx_status_get_string(status);

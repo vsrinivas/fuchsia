@@ -21,7 +21,7 @@
 
 namespace {
 
-namespace fio = llcpp::fuchsia::io;
+namespace fio = fuchsia_io;
 
 class TestServerBase : public fio::File::RawChannelInterface {
  public:
@@ -51,7 +51,7 @@ class TestServerBase : public fio::File::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void SetAttr(uint32_t flags, llcpp::fuchsia::io::wire::NodeAttributes attribute,
+  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attribute,
                SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -73,7 +73,7 @@ class TestServerBase : public fio::File::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Seek(int64_t offset, llcpp::fuchsia::io::wire::SeekOrigin start,
+  void Seek(int64_t offset, fuchsia_io::wire::SeekOrigin start,
             SeekCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -198,7 +198,7 @@ TEST_F(File, WaitForReadable) {
   ASSERT_NO_FAILURES(OpenFile());
 
   zxio_signals_t observed = ZX_SIGNAL_NONE;
-  ASSERT_OK(server->event().signal(ZX_SIGNAL_NONE, llcpp::fuchsia::io::wire::FILE_SIGNAL_READABLE));
+  ASSERT_OK(server->event().signal(ZX_SIGNAL_NONE, fuchsia_io::wire::FILE_SIGNAL_READABLE));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_READABLE, observed);
 }
@@ -209,7 +209,7 @@ TEST_F(File, WaitForWritable) {
   ASSERT_NO_FAILURES(OpenFile());
 
   zxio_signals_t observed = ZX_SIGNAL_NONE;
-  ASSERT_OK(server->event().signal(ZX_SIGNAL_NONE, llcpp::fuchsia::io::wire::FILE_SIGNAL_WRITABLE));
+  ASSERT_OK(server->event().signal(ZX_SIGNAL_NONE, fuchsia_io::wire::FILE_SIGNAL_WRITABLE));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_WRITABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
 }
@@ -223,7 +223,7 @@ TEST_F(File, GetVmoPropagatesError) {
   class TestServer : public TestServerBase {
    public:
     void GetAttr(GetAttrCompleter::Sync& completer) override {
-      completer.Reply(kGetAttrError, ::llcpp::fuchsia::io::wire::NodeAttributes{});
+      completer.Reply(kGetAttrError, ::fuchsia_io::wire::NodeAttributes{});
     }
     void GetBuffer(uint32_t flags, GetBufferCompleter::Sync& completer) override {
       completer.Reply(kGetBufferError, nullptr);

@@ -152,7 +152,7 @@ zx_status_t UsbMidiSink::DdkWrite(const void* data, size_t length, zx_off_t offs
 }
 
 void UsbMidiSink::GetInfo(GetInfoCompleter::Sync& completer) {
-  llcpp::fuchsia::hardware::midi::wire::Info info = {
+  fuchsia_hardware_midi::wire::Info info = {
       .is_sink = true,
       .is_source = false,
   };
@@ -161,7 +161,7 @@ void UsbMidiSink::GetInfo(GetInfoCompleter::Sync& completer) {
 
 zx_status_t UsbMidiSink::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::midi::Device::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_midi::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

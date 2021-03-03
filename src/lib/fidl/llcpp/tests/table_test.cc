@@ -15,7 +15,7 @@ fidl::HeapAllocator allocator;
 }  // namespace
 
 TEST(Table, UnownedBuilderBuildTablePrimitive) {
-  namespace test = llcpp::fidl::llcpp::types::test;
+  namespace test = fidl_llcpp_types_test;
   fidl::aligned<uint8_t> x = 3;
   fidl::aligned<uint8_t> y = 100;
   auto builder = test::wire::SampleTable::UnownedBuilder()
@@ -31,7 +31,7 @@ TEST(Table, UnownedBuilderBuildTablePrimitive) {
 }
 
 TEST(Table, BuilderBuildTablePrimitive) {
-  namespace test = llcpp::fidl::llcpp::types::test;
+  namespace test = fidl_llcpp_types_test;
   fidl::aligned<uint8_t> x = 3;
   fidl::aligned<uint8_t> y = 100;
   test::wire::SampleTable::Frame frame;
@@ -48,7 +48,7 @@ TEST(Table, BuilderBuildTablePrimitive) {
 }
 
 TEST(Table, UnownedBuilderBuildTableVectorOfStruct) {
-  namespace test = llcpp::fidl::llcpp::types::test;
+  namespace test = fidl_llcpp_types_test;
   std::vector<test::wire::CopyableStruct> structs = {
       {.x = 30},
       {.x = 42},
@@ -67,7 +67,7 @@ TEST(Table, UnownedBuilderBuildTableVectorOfStruct) {
 }
 
 TEST(Table, BuilderBuildTableVectorOfStruct) {
-  namespace test = llcpp::fidl::llcpp::types::test;
+  namespace test = fidl_llcpp_types_test;
   std::vector<test::wire::CopyableStruct> structs = {
       {.x = 30},
       {.x = 42},
@@ -87,14 +87,14 @@ TEST(Table, BuilderBuildTableVectorOfStruct) {
 }
 
 TEST(Table, UnownedBuilderBuildEmptyTable) {
-  namespace test = llcpp::fidl::llcpp::types::test;
+  namespace test = fidl_llcpp_types_test;
   auto builder = test::wire::SampleEmptyTable::UnownedBuilder();
   const auto& table = builder.build();
   ASSERT_TRUE(table.IsEmpty());
 }
 
 TEST(Table, BuilderBuildEmptyTable) {
-  namespace test = llcpp::fidl::llcpp::types::test;
+  namespace test = fidl_llcpp_types_test;
   fidl::aligned<test::wire::SampleEmptyTable::Frame> frame;
   auto builder = test::wire::SampleEmptyTable::Builder(fidl::unowned_ptr(&frame));
   const auto& table = builder.build();
@@ -102,7 +102,7 @@ TEST(Table, BuilderBuildEmptyTable) {
 }
 
 TEST(Table, BuilderGetters) {
-  namespace test = llcpp::fidl::llcpp::types::test;
+  namespace test = fidl_llcpp_types_test;
   fidl::aligned<test::wire::SampleTable::Frame> frame;
   fidl::aligned<uint8_t> x = 3;
   fidl::aligned<uint8_t> x2 = 4;
@@ -122,7 +122,7 @@ TEST(Table, BuilderGetters) {
 }
 
 TEST(Table, UnownedBuilderGetters) {
-  namespace test = llcpp::fidl::llcpp::types::test;
+  namespace test = fidl_llcpp_types_test;
   fidl::aligned<uint8_t> x = 3;
   fidl::aligned<uint8_t> x2 = 4;
   auto builder = test::wire::SampleTable::UnownedBuilder();
@@ -141,7 +141,7 @@ TEST(Table, UnownedBuilderGetters) {
 }
 
 TEST(Table, BuilderGetBuilder) {
-  namespace test = llcpp::fidl::llcpp::types::test;
+  namespace test = fidl_llcpp_types_test;
   auto builder = test::wire::TableWithSubTables::Builder(
       allocator.make<test::wire::TableWithSubTables::Frame>());
   EXPECT_FALSE(builder.has_t());
@@ -204,7 +204,7 @@ TEST(Table, BuilderGetBuilder) {
 }
 
 TEST(Table, UnownedBuilderGetBuilder) {
-  namespace test = llcpp::fidl::llcpp::types::test;
+  namespace test = fidl_llcpp_types_test;
   test::wire::TableWithSubTables::UnownedBuilder builder;
   EXPECT_FALSE(builder.has_t());
   builder.set_t(allocator.make<test::wire::SampleTable>(
@@ -266,7 +266,7 @@ TEST(Table, UnownedBuilderGetBuilder) {
 }
 
 TEST(Table, UnknownHandlesResource) {
-  namespace test = llcpp::fidl::llcpp::types::test;
+  namespace test = fidl_llcpp_types_test;
 
   auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,  // txn header
@@ -296,7 +296,7 @@ TEST(Table, UnknownHandlesResource) {
 }
 
 TEST(Table, UnknownHandlesNonResource) {
-  namespace test = llcpp::fidl::llcpp::types::test;
+  namespace test = fidl_llcpp_types_test;
 
   auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,  // txn header

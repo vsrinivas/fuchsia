@@ -72,7 +72,7 @@ TEST(NetStreamTest, RaceClose) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client;
+  ::fuchsia_posix_socket::StreamSocket::SyncClient client;
   zx_status_t status =
       fdio_fd_transfer(fd.release(), client.mutable_channel()->reset_and_get_address());
   ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
@@ -103,7 +103,7 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client;
+  ::fuchsia_posix_socket::StreamSocket::SyncClient client;
   zx_status_t status;
   ASSERT_EQ(
       status = fdio_fd_transfer(fd.release(), client.mutable_channel()->reset_and_get_address()),
@@ -112,8 +112,8 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
 
   auto response = client.Describe();
   ASSERT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
-  const ::llcpp::fuchsia::io::wire::NodeInfo& node_info = response.Unwrap()->info;
-  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::wire::NodeInfo::Tag::kStreamSocket);
+  const ::fuchsia_io::wire::NodeInfo& node_info = response.Unwrap()->info;
+  ASSERT_EQ(node_info.which(), ::fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
 
   const zx::socket& socket = node_info.stream_socket().socket;
 
@@ -127,25 +127,24 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
       << zx_status_get_string(status);
 }
 
-static const zx::socket& stream_handle(const ::llcpp::fuchsia::io::wire::NodeInfo& node_info) {
+static const zx::socket& stream_handle(const ::fuchsia_io::wire::NodeInfo& node_info) {
   return node_info.stream_socket().socket;
 }
 
-static const zx::eventpair& datagram_handle(const ::llcpp::fuchsia::io::wire::NodeInfo& node_info) {
+static const zx::eventpair& datagram_handle(const ::fuchsia_io::wire::NodeInfo& node_info) {
   return node_info.datagram_socket().event;
 }
 
-template <int Type, typename ClientType, ::llcpp::fuchsia::io::wire::NodeInfo::Tag Tag,
-          typename HandleType,
-          const HandleType& (*GetHandle)(const ::llcpp::fuchsia::io::wire::NodeInfo& node_info),
+template <int Type, typename ClientType, ::fuchsia_io::wire::NodeInfo::Tag Tag, typename HandleType,
+          const HandleType& (*GetHandle)(const ::fuchsia_io::wire::NodeInfo& node_info),
           zx_signals_t PeerClosed>
 struct SocketImpl {
   using Client = ClientType;
   using Handle = HandleType;
 
   static int type() { return Type; };
-  static ::llcpp::fuchsia::io::wire::NodeInfo::Tag tag() { return Tag; }
-  static const Handle& handle(const ::llcpp::fuchsia::io::wire::NodeInfo& node_info) {
+  static ::fuchsia_io::wire::NodeInfo::Tag tag() { return Tag; }
+  static const Handle& handle(const ::fuchsia_io::wire::NodeInfo& node_info) {
     return GetHandle(node_info);
   }
   static zx_signals_t peer_closed() { return PeerClosed; };
@@ -176,14 +175,13 @@ class SocketTest : public testing::Test {
   struct sockaddr_in addr_;
 };
 
-using StreamSocketImpl =
-    SocketImpl<SOCK_STREAM, ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient,
-               ::llcpp::fuchsia::io::wire::NodeInfo::Tag::kStreamSocket, zx::socket, stream_handle,
-               ZX_SOCKET_PEER_CLOSED>;
+using StreamSocketImpl = SocketImpl<SOCK_STREAM, ::fuchsia_posix_socket::StreamSocket::SyncClient,
+                                    ::fuchsia_io::wire::NodeInfo::Tag::kStreamSocket, zx::socket,
+                                    stream_handle, ZX_SOCKET_PEER_CLOSED>;
 
 using DatagramSocketImpl =
-    SocketImpl<SOCK_DGRAM, ::llcpp::fuchsia::posix::socket::DatagramSocket::SyncClient,
-               ::llcpp::fuchsia::io::wire::NodeInfo::Tag::kDatagramSocket, zx::eventpair, datagram_handle,
+    SocketImpl<SOCK_DGRAM, ::fuchsia_posix_socket::DatagramSocket::SyncClient,
+               ::fuchsia_io::wire::NodeInfo::Tag::kDatagramSocket, zx::eventpair, datagram_handle,
                ZX_EVENTPAIR_PEER_CLOSED>;
 
 class SocketTestNames {
@@ -216,7 +214,7 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
 
   auto describe_response = client.Describe();
   ASSERT_EQ(status = describe_response.status(), ZX_OK) << zx_status_get_string(status);
-  const ::llcpp::fuchsia::io::wire::NodeInfo& node_info = describe_response.Unwrap()->info;
+  const ::fuchsia_io::wire::NodeInfo& node_info = describe_response.Unwrap()->info;
   ASSERT_EQ(node_info.which(), TypeParam::tag());
 
   zx_signals_t observed;
@@ -281,7 +279,7 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
   ASSERT_TRUE(connfd = fbl::unique_fd(accept(serverfd.get(), nullptr, nullptr))) << strerror(errno);
   ASSERT_EQ(close(serverfd.release()), 0) << strerror(errno);
 
-  ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client;
+  ::fuchsia_posix_socket::StreamSocket::SyncClient client;
   zx_status_t status;
   ASSERT_EQ(status = fdio_fd_transfer(connfd.release(),
                                       client.mutable_channel()->reset_and_get_address()),
@@ -290,8 +288,8 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
 
   auto response = client.Describe();
   ASSERT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
-  const ::llcpp::fuchsia::io::wire::NodeInfo& node_info = response.Unwrap()->info;
-  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::wire::NodeInfo::Tag::kStreamSocket);
+  const ::fuchsia_io::wire::NodeInfo& node_info = response.Unwrap()->info;
+  ASSERT_EQ(node_info.which(), ::fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
 
   const zx::socket& socket = node_info.stream_socket().socket;
 
@@ -372,7 +370,7 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
 
   // Now that the socket's endpoint has been closed, clone the socket again to increase the
   // endpoint's reference count, then close all copies of the socket.
-  std::array<::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient, 10> clients;
+  std::array<::fuchsia_posix_socket::StreamSocket::SyncClient, 10> clients;
   for (auto& client : clients) {
     zx_status_t status;
     ASSERT_EQ(

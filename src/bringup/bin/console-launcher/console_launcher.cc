@@ -103,10 +103,10 @@ zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
   return zx::ok(std::move(launcher));
 }
 
-std::optional<Arguments> GetArguments(llcpp::fuchsia::boot::Arguments::SyncClient* client) {
+std::optional<Arguments> GetArguments(fuchsia_boot::Arguments::SyncClient* client) {
   Arguments ret;
 
-  llcpp::fuchsia::boot::wire::BoolPair bool_keys[]{
+  fuchsia_boot::wire::BoolPair bool_keys[]{
       {fidl::StringView{"console.shell"}, false},
       {fidl::StringView{"kernel.shell"}, false},
       {fidl::StringView{"console.is_virtio"}, false},
@@ -171,8 +171,7 @@ std::optional<fbl::unique_fd> ConsoleLauncher::GetVirtioFd(const Arguments& args
     return std::nullopt;
   }
 
-  ::llcpp::fuchsia::hardware::virtioconsole::Device::SyncClient virtio_client(
-      std::move(virtio_channel));
+  ::fuchsia_hardware_virtioconsole::Device::SyncClient virtio_client(std::move(virtio_channel));
   virtio_client.GetChannel(std::move(remote));
 
   fdio_t* fdio;

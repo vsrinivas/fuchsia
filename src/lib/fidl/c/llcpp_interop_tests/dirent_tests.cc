@@ -29,7 +29,7 @@
 #include <fidl/test/llcpp/dirent/llcpp/fidl.h>
 
 // Namespace shorthand for bindings generated code
-namespace gen = ::llcpp::fidl::test::llcpp::dirent;
+namespace gen = ::fidl_test_llcpp_dirent;
 
 // Toy test data
 namespace {

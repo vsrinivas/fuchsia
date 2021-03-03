@@ -15,7 +15,7 @@
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "zx_device.h"
 
-class DevfsVnode : public fs::Vnode, public llcpp::fuchsia::device::Controller::Interface {
+class DevfsVnode : public fs::Vnode, public fuchsia_device::Controller::Interface {
  public:
   explicit DevfsVnode(fbl::RefPtr<zx_device> dev) : dev_(std::move(dev)) {}
 
@@ -32,7 +32,7 @@ class DevfsVnode : public fs::Vnode, public llcpp::fuchsia::device::Controller::
                                      fs::VnodeRepresentation* info) override;
   void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) override;
 
-  // llcpp::fuchsia::device::Controller::Interface methods
+  // fuchsia_device::Controller::Interface methods
   void Bind(::fidl::StringView driver, BindCompleter::Sync& _completer) override;
   void Rebind(::fidl::StringView driver, RebindCompleter::Sync& _completer) override;
   void UnbindChildren(UnbindChildrenCompleter::Sync& completer) override;
@@ -51,15 +51,14 @@ class DevfsVnode : public fs::Vnode, public llcpp::fuchsia::device::Controller::
   void GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync& _completer) override;
   void SetPerformanceState(uint32_t requested_state,
                            SetPerformanceStateCompleter::Sync& _completer) override;
-  void ConfigureAutoSuspend(bool enable,
-                            ::llcpp::fuchsia::device::wire::DevicePowerState requested_state,
+  void ConfigureAutoSuspend(bool enable, ::fuchsia_device::wire::DevicePowerState requested_state,
                             ConfigureAutoSuspendCompleter::Sync& _completer) override;
 
   void UpdatePowerStateMapping(
-      ::fidl::Array<::llcpp::fuchsia::device::wire::SystemPowerStateInfo, 7> mapping,
+      ::fidl::Array<::fuchsia_device::wire::SystemPowerStateInfo, 7> mapping,
       UpdatePowerStateMappingCompleter::Sync& _completer) override;
   void GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& _completer) override;
-  void Suspend(::llcpp::fuchsia::device::wire::DevicePowerState requested_state,
+  void Suspend(::fuchsia_device::wire::DevicePowerState requested_state,
                SuspendCompleter::Sync& _completer) override;
   void Resume(ResumeCompleter::Sync& _complete) override;
 

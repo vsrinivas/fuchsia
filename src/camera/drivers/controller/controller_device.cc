@@ -29,13 +29,12 @@ void ControllerDevice::DdkRelease() { delete this; }
 
 zx_status_t ControllerDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::camera::Device::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_camera::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 
-void ControllerDevice::GetChannel2(
-    ::fidl::ServerEnd<::llcpp::fuchsia::camera2::hal::Controller> server_end,
-    GetChannel2Completer::Sync& completer) {
+void ControllerDevice::GetChannel2(::fidl::ServerEnd<::fuchsia_camera2_hal::Controller> server_end,
+                                   GetChannel2Completer::Sync& completer) {
   if (!server_end.is_valid()) {
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;

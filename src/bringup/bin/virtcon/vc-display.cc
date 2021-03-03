@@ -34,9 +34,9 @@
 
 #include "vc.h"
 
-namespace fhd = ::llcpp::fuchsia::hardware::display;
-namespace sysmem = ::llcpp::fuchsia::sysmem;
-namespace fio = ::llcpp::fuchsia::io;
+namespace fhd = ::fuchsia_hardware_display;
+namespace sysmem = ::fuchsia_sysmem;
+namespace fio = ::fuchsia_io;
 
 using fhd::wire::VirtconMode;
 
@@ -799,7 +799,7 @@ bool vc_display_init(async_dispatcher_t* dispatcher, bool hide_on_boot) {
 }
 
 bool vc_sysmem_connect() {
-  auto sysmem_client = service::Connect<llcpp::fuchsia::sysmem::Allocator>();
+  auto sysmem_client = service::Connect<fuchsia_sysmem::Allocator>();
   if (sysmem_client.is_error()) {
     return false;
   }

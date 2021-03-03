@@ -27,8 +27,7 @@ class BlobCorruptionNotifier {
   // Creates a single instance of BlobCorruptionNotifier for all blobs.
   static zx_status_t Create(std::unique_ptr<BlobCorruptionNotifier>* out);
 
-  void SetCorruptBlobHandler(
-      fidl::ClientEnd<llcpp::fuchsia::blobfs::CorruptBlobHandler> blobfs_handler);
+  void SetCorruptBlobHandler(fidl::ClientEnd<fuchsia_blobfs::CorruptBlobHandler> blobfs_handler);
 
   // Notifies corrupt blob to the corruption handler service.
   // If handler is not registered, simply ignore notifying and continue.
@@ -36,7 +35,7 @@ class BlobCorruptionNotifier {
 
  private:
   BlobCorruptionNotifier() {}
-  fidl::ClientEnd<llcpp::fuchsia::blobfs::CorruptBlobHandler> corruption_handler_;
+  fidl::ClientEnd<fuchsia_blobfs::CorruptBlobHandler> corruption_handler_;
 };
 
 }  // namespace blobfs

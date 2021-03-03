@@ -55,9 +55,9 @@ int main(int argc, char** argv) {
         << "Failed to redirect stdout to debuglog, assuming test environment and continuing";
   }
 
-  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  fuchsia_boot::Arguments::SyncClient boot_args;
   {
-    auto client = service::Connect<llcpp::fuchsia::boot::Arguments>();
+    auto client = service::Connect<fuchsia_boot::Arguments>();
     if (client.is_error()) {
       fprintf(stderr, "vc: failed to connect to fuchsia.boot.Arguments\n");
       return 1;
@@ -91,10 +91,10 @@ int main(int argc, char** argv) {
     return -1;
   }
   status = outgoing.svc_dir()->AddEntry(
-      llcpp::fuchsia::virtualconsole::SessionManager::Name,
+      fuchsia_virtualconsole::SessionManager::Name,
       fbl::MakeRefCounted<fs::Service>(
           [&virtcon_server](
-              fidl::ServerEnd<llcpp::fuchsia::virtualconsole::SessionManager> request) mutable {
+              fidl::ServerEnd<fuchsia_virtualconsole::SessionManager> request) mutable {
             zx_status_t status = virtcon_server.Bind(std::move(request));
             if (status != ZX_OK) {
               printf("vc: error binding new server: %d\n", status);
@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
           }));
 
   {
-    auto local = service::Connect<llcpp::fuchsia::boot::ReadOnlyLog>();
+    auto local = service::Connect<fuchsia_boot::ReadOnlyLog>();
     if (local.is_error()) {
       fprintf(stderr, "vc: unable to connect to fuchsia.boot.ReadOnlyLog %d\n", status);
       return -1;

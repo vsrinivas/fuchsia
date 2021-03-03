@@ -63,13 +63,13 @@ class LoaderServiceTest : public gtest::RealLoopFixture {
   // Exercise a LoadObject call and assert that the result matches `expected`.
   //
   // This takes a non-const reference because LLCPP SyncClient's generated methods are non-const.
-  void LoadObject(llcpp::fuchsia::ldsvc::Loader::SyncClient& client, std::string name,
+  void LoadObject(fuchsia_ldsvc::Loader::SyncClient& client, std::string name,
                   zx::status<std::string> expected);
 
   // Exercise a Config call and assert that the result matches `expected`.
   //
   // This takes a non-const reference because LLCPP SyncClient's generated methods are non-const.
-  void Config(llcpp::fuchsia::ldsvc::Loader::SyncClient& client, std::string config,
+  void Config(fuchsia_ldsvc::Loader::SyncClient& client, std::string config,
               zx::status<zx_status_t> expected);
 
   // Helper function to interact with fuchsia.kernel.VmexResource

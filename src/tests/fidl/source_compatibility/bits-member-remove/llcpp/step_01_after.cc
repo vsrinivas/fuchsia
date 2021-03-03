@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/bitsmemberremove/llcpp/fidl.h>  // nogncheck
-namespace fidl_test = llcpp::fidl::test::bitsmemberremove;
+namespace fidl_test = fidl_test_bitsmemberremove;
 
 // [START contents]
 void use_member(fidl_test::wire::Flags bits) {

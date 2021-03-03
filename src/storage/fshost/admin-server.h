@@ -17,7 +17,7 @@ namespace devmgr {
 
 class FsManager;
 
-class AdminServer final : public llcpp::fuchsia::fshost::Admin::Interface {
+class AdminServer final : public fuchsia_fshost::Admin::Interface {
  public:
   AdminServer(devmgr::FsManager* fs_manager) : fs_manager_(fs_manager) {}
 

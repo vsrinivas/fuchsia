@@ -8,7 +8,7 @@
 
 #include "ram-info.h"
 
-namespace ram_metrics = ::llcpp::fuchsia::hardware::ram::metrics;
+namespace ram_metrics = ::fuchsia_hardware_ram_metrics;
 
 static constexpr char kVersionString[] = "1";
 
@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  ::llcpp::fuchsia::hardware::ram::metrics::wire::BandwidthMeasurementConfig config = {};
+  ::fuchsia_hardware_ram_metrics::wire::BandwidthMeasurementConfig config = {};
   config.cycles_to_measure =
       cycles_to_measure ? *cycles_to_measure : device_info.default_cycles_to_measure;
 

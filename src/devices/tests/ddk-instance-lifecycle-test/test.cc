@@ -17,9 +17,9 @@
 namespace {
 
 using driver_integration_test::IsolatedDevmgr;
-using llcpp::fuchsia::device::instancelifecycle::test::InstanceDevice;
-using llcpp::fuchsia::device::instancelifecycle::test::Lifecycle;
-using llcpp::fuchsia::device::instancelifecycle::test::TestDevice;
+using fuchsia_device_instancelifecycle_test::InstanceDevice;
+using fuchsia_device_instancelifecycle_test::Lifecycle;
+using fuchsia_device_instancelifecycle_test::TestDevice;
 
 class InstanceLifecycleTest : public zxtest::Test {
  public:

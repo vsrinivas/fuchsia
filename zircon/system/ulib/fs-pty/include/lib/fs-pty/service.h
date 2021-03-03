@@ -21,10 +21,8 @@ namespace fs_pty {
 
 namespace internal {
 
-void DispatchPtyDeviceMessage(
-    ::llcpp::fuchsia::hardware::pty::Device::RawChannelInterface* interface,
-    fidl_incoming_msg_t* msg, fidl::Transaction* txn);
-
+void DispatchPtyDeviceMessage(::fuchsia_hardware_pty::Device::RawChannelInterface* interface,
+                              fidl_incoming_msg_t* msg, fidl::Transaction* txn);
 }
 
 // This is roughly the same as fs::Service, but GetNodeInfo returns a TTY type
@@ -39,8 +37,8 @@ class Service : public fs::Vnode {
  public:
   using SelfType = Service<PtyDeviceImpl, ConsoleOps, Console>;
 
-  static_assert(std::is_base_of<::llcpp::fuchsia::hardware::pty::Device::RawChannelInterface,
-                                PtyDeviceImpl>::value);
+  static_assert(
+      std::is_base_of<::fuchsia_hardware_pty::Device::RawChannelInterface, PtyDeviceImpl>::value);
 
   explicit Service(Console console) : pty_device_impl_(console), console_(console) {}
 
@@ -64,7 +62,7 @@ class Service : public fs::Vnode {
   // From fs::Vnode
   void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) override {
     auto pty_device_interface =
-        static_cast<llcpp::fuchsia::hardware::pty::Device::RawChannelInterface*>(&pty_device_impl_);
+        static_cast<fuchsia_hardware_pty::Device::RawChannelInterface*>(&pty_device_impl_);
     internal::DispatchPtyDeviceMessage(pty_device_interface, msg, txn);
   }
 

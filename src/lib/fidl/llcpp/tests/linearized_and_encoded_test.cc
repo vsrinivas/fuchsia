@@ -8,7 +8,7 @@
 #include <fidl/llcpp/linearized/test/llcpp/fidl.h>
 #include <gtest/gtest.h>
 
-namespace fidl_linearized = ::llcpp::fidl::llcpp::linearized::test;
+namespace fidl_linearized = ::fidl_llcpp_linearized_test;
 
 TEST(LinearizedAndEncoded, FullyLinearizedAndEncoded) {
   fidl_linearized::wire::InnerStruct inner = {.x = 1};

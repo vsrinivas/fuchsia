@@ -200,11 +200,10 @@ zx_status_t Session::Init(netdev::wire::Fifos* out) {
 zx_status_t Session::Bind(fidl::ServerEnd<netdev::Session> channel) {
   auto result = fidl::BindServer(
       dispatcher_, std::move(channel), this,
-      fidl::OnUnboundFn<Session>(
-          [](Session* self, fidl::UnbindInfo info,
-             fidl::ServerEnd<llcpp::fuchsia::hardware::network::Session> server_end) {
-            self->OnUnbind(info.reason, std::move(server_end));
-          }));
+      fidl::OnUnboundFn<Session>([](Session* self, fidl::UnbindInfo info,
+                                    fidl::ServerEnd<fuchsia_hardware_network::Session> server_end) {
+        self->OnUnbind(info.reason, std::move(server_end));
+      }));
   if (result.is_error()) {
     return result.error();
   }

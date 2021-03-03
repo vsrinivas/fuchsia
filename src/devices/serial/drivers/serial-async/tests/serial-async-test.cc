@@ -170,12 +170,12 @@ class SerialDeviceTest : public zxtest::Test {
  public:
   SerialDeviceTest();
   ~SerialDeviceTest();
-  llcpp::fuchsia::hardware::serial::NewDevice::SyncClient& fidl() {
+  fuchsia_hardware_serial::NewDevice::SyncClient& fidl() {
     if (!fidl_.has_value()) {
       // Connect
-      auto connection = fidl::BindSyncClient(
-          tester_.ddk().FidlClient<llcpp::fuchsia::hardware::serial::NewDeviceProxy>());
-      auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::hardware::serial::NewDevice>();
+      auto connection =
+          fidl::BindSyncClient(tester_.ddk().FidlClient<fuchsia_hardware_serial::NewDeviceProxy>());
+      auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_serial::NewDevice>();
       connection.GetChannel(std::move(endpoints->server));
       fidl_ = fidl::BindSyncClient(std::move(endpoints->client));
     }
@@ -187,7 +187,7 @@ class SerialDeviceTest : public zxtest::Test {
   // DISALLOW_COPY_ASSIGN_AND_MOVE(SerialDeviceTest);
 
  private:
-  std::optional<llcpp::fuchsia::hardware::serial::NewDevice::SyncClient> fidl_;
+  std::optional<fuchsia_hardware_serial::NewDevice::SyncClient> fidl_;
   SerialTester tester_;
   serial::SerialDevice* device_;
 };
@@ -203,7 +203,7 @@ SerialDeviceTest::SerialDeviceTest() {
 
 SerialDeviceTest::~SerialDeviceTest() { device_->DdkRelease(); }
 
-static zx_status_t SerialWrite(llcpp::fuchsia::hardware::serial::NewDevice::SyncClient* interface,
+static zx_status_t SerialWrite(fuchsia_hardware_serial::NewDevice::SyncClient* interface,
                                std::vector<uint8_t>* data) {
   zx_status_t status = interface->Write(fidl::unowned_vec(*data)).status();
   if (status != ZX_OK) {
@@ -212,7 +212,7 @@ static zx_status_t SerialWrite(llcpp::fuchsia::hardware::serial::NewDevice::Sync
   return ZX_OK;
 }
 
-static zx_status_t Read(llcpp::fuchsia::hardware::serial::NewDevice::SyncClient* interface,
+static zx_status_t Read(fuchsia_hardware_serial::NewDevice::SyncClient* interface,
                         std::vector<uint8_t>* data) {
   auto result = interface->Read();
   if (result.status() != ZX_OK) {

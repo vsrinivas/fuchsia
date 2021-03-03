@@ -33,7 +33,7 @@
 #include "src/devices/lib/audio/audio.h"
 #include "src/graphics/display/drivers/display/display-bind.h"
 
-namespace fidl_display = llcpp::fuchsia::hardware::display;
+namespace fidl_display = fuchsia_hardware_display;
 
 namespace {
 

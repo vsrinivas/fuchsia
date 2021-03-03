@@ -27,8 +27,8 @@ class PrimaryWrapper {
   magma_status_t CreateContext(uint32_t context_id);
   magma_status_t DestroyContext(uint32_t context_id);
   magma_status_t ExecuteCommandBufferWithResources(
-      uint32_t context_id, ::llcpp::fuchsia::gpu::magma::wire::CommandBuffer command_buffer,
-      ::fidl::VectorView<::llcpp::fuchsia::gpu::magma::wire::Resource> resources,
+      uint32_t context_id, ::fuchsia_gpu_magma::wire::CommandBuffer command_buffer,
+      ::fidl::VectorView<::fuchsia_gpu_magma::wire::Resource> resources,
       ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores);
   magma_status_t ExecuteImmediateCommands(uint32_t context_id,
                                           ::fidl::VectorView<uint8_t> command_data,
@@ -37,14 +37,14 @@ class PrimaryWrapper {
                               uint64_t page_count, uint64_t flags);
   magma_status_t UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va);
   magma_status_t CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count);
-  magma_status_t BufferRangeOp(uint64_t buffer_id, llcpp::fuchsia::gpu::magma::wire::BufferOp op,
+  magma_status_t BufferRangeOp(uint64_t buffer_id, fuchsia_gpu_magma::wire::BufferOp op,
                                uint64_t start, uint64_t length);
   magma_status_t AccessPerformanceCounters(zx::event event);
   magma_status_t EnablePerformanceCounters(fidl::VectorView<uint64_t> counters);
   magma_status_t CreatePerformanceCounterBufferPool(uint64_t pool_id, zx::channel event_channel);
   magma_status_t ReleasePerformanceCounterBufferPool(uint64_t pool_id);
   magma_status_t AddPerformanceCounterBufferOffsetsToPool(
-      uint64_t pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::wire::BufferOffset> offsets);
+      uint64_t pool_id, fidl::VectorView<fuchsia_gpu_magma::wire::BufferOffset> offsets);
   magma_status_t RemovePerformanceCounterBufferFromPool(uint64_t pool_id, uint64_t buffer_id);
   magma_status_t DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id);
   magma_status_t ClearPerformanceCounters(fidl::VectorView<uint64_t> counters);
@@ -68,7 +68,7 @@ class PrimaryWrapper {
   void FlowControl(uint64_t new_bytes = 0) MAGMA_REQUIRES(flow_control_mutex_);
   void UpdateFlowControl(uint64_t new_bytes = 0) MAGMA_REQUIRES(flow_control_mutex_);
 
-  llcpp::fuchsia::gpu::magma::Primary::SyncClient client_;
+  fuchsia_gpu_magma::Primary::SyncClient client_;
   const uint64_t max_inflight_messages_;
   const uint64_t max_inflight_bytes_;
   bool flow_control_enabled_ = false;

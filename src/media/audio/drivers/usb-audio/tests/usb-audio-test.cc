@@ -16,7 +16,7 @@
 #include "../usb-audio-stream.h"
 
 namespace {
-namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
+namespace audio_fidl = ::fuchsia_hardware_audio;
 
 audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
   audio_fidl::wire::PcmFormat format;

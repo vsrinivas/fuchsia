@@ -22,7 +22,7 @@
 // Create a subclass to access the test-only constructor on FshostBootArgs.
 class FshostBootArgsForTest : public devmgr::FshostBootArgs {
  public:
-  explicit FshostBootArgsForTest(llcpp::fuchsia::boot::Arguments::SyncClient boot_args)
+  explicit FshostBootArgsForTest(fuchsia_boot::Arguments::SyncClient boot_args)
       : FshostBootArgs(std::move(boot_args)) {}
 };
 
@@ -32,7 +32,7 @@ class FshostBootArgsTest : public zxtest::Test {
 
   void CreateFshostBootArgs(std::map<std::string, std::string> config) {
     boot_args_server_ = mock_boot_arguments::Server{std::move(config)};
-    llcpp::fuchsia::boot::Arguments::SyncClient client;
+    fuchsia_boot::Arguments::SyncClient client;
     boot_args_server_.CreateClient(loop_.dispatcher(), &client);
 
     ASSERT_OK(loop_.StartThread());

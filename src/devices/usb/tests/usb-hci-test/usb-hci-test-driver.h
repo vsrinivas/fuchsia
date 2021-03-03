@@ -24,7 +24,7 @@ using HciTestBase = ddk::Device<HciTest, ddk::Unbindable, ddk::Messageable, ddk:
 
 class HciTest : public HciTestBase,
                 public ddk::EmptyProtocol<ZX_PROTOCOL_USB_HCI_TEST>,
-                public llcpp::fuchsia::hardware::usb::hcitest::Device::Interface {
+                public fuchsia_hardware_usb_hcitest::Device::Interface {
  public:
   HciTest(zx_device_t* parent, const ddk::UsbProtocolClient& usb)
       : HciTestBase(parent), usb_(usb) {}
@@ -45,7 +45,7 @@ class HciTest : public HciTestBase,
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    llcpp::fuchsia::hardware::usb::hcitest::Device::Dispatch(this, msg, &transaction);
+    fuchsia_hardware_usb_hcitest::Device::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
 

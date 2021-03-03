@@ -6,7 +6,7 @@
 
 #include "src/sys/appmgr/integration_tests/sandbox/namespace_test.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 // TODO: All of the non-strict tests here are due to bugs. Once all of the bugs are fixed, we should
 // switch this to always do a strict test.

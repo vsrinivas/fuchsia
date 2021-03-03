@@ -45,7 +45,7 @@
 #include "src/storage/fshost/deprecated-loader-service.h"
 #include "src/storage/lib/utils/use_debug_log.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 namespace devmgr {
 namespace {

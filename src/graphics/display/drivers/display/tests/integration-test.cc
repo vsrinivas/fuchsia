@@ -32,7 +32,7 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace sysmem = ::llcpp::fuchsia::sysmem;
+namespace sysmem = ::fuchsia_sysmem;
 
 namespace display {
 class IntegrationTest : public TestBase {

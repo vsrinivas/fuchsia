@@ -17,7 +17,7 @@
 #include "common_utils.h"
 #include "dirent_iterator.h"
 
-namespace fio2 = llcpp::fuchsia::io2;
+namespace fio2 = fuchsia_io2;
 
 namespace {
 

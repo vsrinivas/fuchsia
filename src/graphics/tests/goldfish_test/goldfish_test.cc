@@ -20,21 +20,21 @@
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace {
-llcpp::fuchsia::sysmem::Allocator::SyncClient CreateSysmemAllocator() {
+fuchsia_sysmem::Allocator::SyncClient CreateSysmemAllocator() {
   zx::channel allocator_client;
   zx::channel allocator_server;
   EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
   EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
             ZX_OK);
 
-  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+  fuchsia_sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
 
   allocator.SetDebugClientInfo(fidl::unowned_str(fsl::GetCurrentProcessName()),
                                fsl::GetCurrentProcessKoid());
   return allocator;
 }
 
-void SetDefaultCollectionName(llcpp::fuchsia::sysmem::BufferCollection::SyncClient& collection) {
+void SetDefaultCollectionName(fuchsia_sysmem::BufferCollection::SyncClient& collection) {
   constexpr uint32_t kTestNamePriority = 1000u;
   std::string test_name = ::testing::UnitTest::GetInstance()->current_test_info()->name();
   EXPECT_TRUE(collection.SetName(kTestNamePriority, fidl::unowned_str(test_name)).ok());
@@ -52,10 +52,10 @@ TEST(GoldfishPipeTests, GoldfishPipeTest) {
   zx::channel pipe_server;
   EXPECT_EQ(zx::channel::create(0, &pipe_client, &pipe_server), ZX_OK);
 
-  llcpp::fuchsia::hardware::goldfish::PipeDevice::SyncClient pipe_device(std::move(channel));
+  fuchsia_hardware_goldfish::PipeDevice::SyncClient pipe_device(std::move(channel));
   EXPECT_TRUE(pipe_device.OpenPipe(std::move(pipe_server)).ok());
 
-  llcpp::fuchsia::hardware::goldfish::Pipe::SyncClient pipe(std::move(pipe_client));
+  fuchsia_hardware_goldfish::Pipe::SyncClient pipe(std::move(pipe_client));
   const size_t kSize = 3 * 4096;
   {
     auto result = pipe.SetBufferSize(kSize);
@@ -169,11 +169,11 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
   EXPECT_TRUE(
       allocator.BindSharedCollection(std::move(token_client), std::move(collection_server)).ok());
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.usage.vulkan = llcpp::fuchsia::sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints{
+  constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
       .min_size_bytes = 4 * 1024,
       .max_size_bytes = 4 * 1024,
       .physically_contiguous_required = false,
@@ -182,14 +182,14 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
       .cpu_domain_supported = false,
       .inaccessible_domain_supported = true,
       .heap_permitted_count = 1,
-      .heap_permitted = {llcpp::fuchsia::sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
+      .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
 
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 info;
+  fuchsia_sysmem::wire::BufferCollectionInfo_2 info;
   {
     auto result = collection.WaitForBuffersAllocated();
     ASSERT_TRUE(result.ok());
@@ -208,19 +208,17 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
   zx::vmo vmo_copy;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
+  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(channel));
   {
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(64))
             .set_height(std::make_unique<uint32_t>(64))
-            .set_format(
-                std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType>(
-                    llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::BGRA))
+            .set_format(std::make_unique<fuchsia_hardware_goldfish::wire::ColorBufferFormatType>(
+                fuchsia_hardware_goldfish::wire::ColorBufferFormatType::BGRA))
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
+                fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
             .build();
 
     auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
@@ -237,7 +235,7 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
     EXPECT_EQ(result.Unwrap()->res, ZX_OK);
     EXPECT_NE(result.Unwrap()->id, 0u);
     EXPECT_EQ(result.Unwrap()->type,
-              llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::COLOR_BUFFER);
+              fuchsia_hardware_goldfish::wire::BufferHandleType::COLOR_BUFFER);
   }
 
   zx::vmo vmo_copy3;
@@ -245,16 +243,14 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
 
   {
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(64))
             .set_height(std::make_unique<uint32_t>(64))
-            .set_format(
-                std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType>(
-                    llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::BGRA))
+            .set_format(std::make_unique<fuchsia_hardware_goldfish::wire::ColorBufferFormatType>(
+                fuchsia_hardware_goldfish::wire::ColorBufferFormatType::BGRA))
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
+                fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
             .build();
 
     auto result = control.CreateColorBuffer2(std::move(vmo_copy3), std::move(create_params));
@@ -286,11 +282,11 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible) {
 
   const size_t kMinSizeBytes = 4 * 1024;
   const size_t kMaxSizeBytes = 4 * 4096;
-  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.usage.vulkan = llcpp::fuchsia::sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints{
+  constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
       .min_size_bytes = kMinSizeBytes,
       .max_size_bytes = kMaxSizeBytes,
       .physically_contiguous_required = false,
@@ -299,31 +295,29 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible) {
       .cpu_domain_supported = true,
       .inaccessible_domain_supported = false,
       .heap_permitted_count = 1,
-      .heap_permitted = {llcpp::fuchsia::sysmem::wire::HeapType::GOLDFISH_HOST_VISIBLE}};
+      .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_HOST_VISIBLE}};
   constraints.image_format_constraints_count = 1;
-  constraints.image_format_constraints[0] =
-      llcpp::fuchsia::sysmem::wire::ImageFormatConstraints{
-          .pixel_format =
-              llcpp::fuchsia::sysmem::wire::PixelFormat{
-                  .type = llcpp::fuchsia::sysmem::wire::PixelFormatType::BGRA32,
-                  .has_format_modifier = false,
-                  .format_modifier = {},
-              },
-          .color_spaces_count = 1,
-          .color_space =
-              {
-                  llcpp::fuchsia::sysmem::wire::ColorSpace{
-                      .type = llcpp::fuchsia::sysmem::wire::ColorSpaceType::SRGB},
-              },
-          .min_coded_width = 32,
-          .min_coded_height = 32,
-      };
+  constraints.image_format_constraints[0] = fuchsia_sysmem::wire::ImageFormatConstraints{
+      .pixel_format =
+          fuchsia_sysmem::wire::PixelFormat{
+              .type = fuchsia_sysmem::wire::PixelFormatType::BGRA32,
+              .has_format_modifier = false,
+              .format_modifier = {},
+          },
+      .color_spaces_count = 1,
+      .color_space =
+          {
+              fuchsia_sysmem::wire::ColorSpace{.type = fuchsia_sysmem::wire::ColorSpaceType::SRGB},
+          },
+      .min_coded_width = 32,
+      .min_coded_height = 32,
+  };
 
-  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 info;
+  fuchsia_sysmem::wire::BufferCollectionInfo_2 info;
   {
     auto result = collection.WaitForBuffersAllocated();
     ASSERT_TRUE(result.ok());
@@ -333,7 +327,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible) {
     EXPECT_EQ(info.buffer_count, 1U);
     EXPECT_TRUE(info.buffers[0].vmo.is_valid());
     EXPECT_EQ(info.settings.buffer_settings.coherency_domain,
-              llcpp::fuchsia::sysmem::wire::CoherencyDomain::CPU);
+              fuchsia_sysmem::wire::CoherencyDomain::CPU);
   }
 
   zx::vmo vmo = std::move(info.buffers[0].vmo);
@@ -366,8 +360,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible) {
 }
 
 TEST(GoldfishControlTests, GoldfishControlTest_HostVisible_MultiClients) {
-  using llcpp::fuchsia::sysmem::BufferCollection;
-  using llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints;
+  using fuchsia_sysmem::BufferCollection;
+  using fuchsia_sysmem::wire::BufferCollectionConstraints;
 
   int fd = open("/dev/class/goldfish-control/000", O_RDWR);
   EXPECT_GE(fd, 0);
@@ -388,9 +382,9 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible_MultiClients) {
   EXPECT_EQ(zx::channel::create(0, &token_client[1], &token_server[1]), ZX_OK);
   EXPECT_TRUE(allocator.AllocateSharedCollection(std::move(token_server[0])).ok());
 
-  llcpp::fuchsia::sysmem::BufferCollectionToken::Call::Duplicate(token_client[0].borrow(), 0,
-                                                                 std::move(token_server[1]));
-  llcpp::fuchsia::sysmem::BufferCollectionToken::Call::Sync(token_client[0].borrow());
+  fuchsia_sysmem::BufferCollectionToken::Call::Duplicate(token_client[0].borrow(), 0,
+                                                         std::move(token_server[1]));
+  fuchsia_sysmem::BufferCollectionToken::Call::Sync(token_client[0].borrow());
 
   for (size_t i = 0; i < kNumClients; i++) {
     EXPECT_EQ(zx::channel::create(0, &collection_client[i], &collection_server[i]), ZX_OK);
@@ -404,36 +398,34 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible_MultiClients) {
   const size_t kTargetSizeBytes = 4 * 1024 * 512;
   BufferCollectionConstraints constraints[kNumClients];
   for (size_t i = 0; i < kNumClients; i++) {
-    constraints[i].usage.vulkan = llcpp::fuchsia::sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
+    constraints[i].usage.vulkan = fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
     constraints[i].min_buffer_count = 1;
     constraints[i].has_buffer_memory_constraints = true;
-    constraints[i].buffer_memory_constraints =
-        llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints{
-            .min_size_bytes = kMinSizeBytes,
-            .max_size_bytes = kMaxSizeBytes,
-            .physically_contiguous_required = false,
-            .secure_required = false,
-            .ram_domain_supported = false,
-            .cpu_domain_supported = true,
-            .inaccessible_domain_supported = false,
-            .heap_permitted_count = 1,
-            .heap_permitted = {llcpp::fuchsia::sysmem::wire::HeapType::GOLDFISH_HOST_VISIBLE}};
+    constraints[i].buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
+        .min_size_bytes = kMinSizeBytes,
+        .max_size_bytes = kMaxSizeBytes,
+        .physically_contiguous_required = false,
+        .secure_required = false,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        .heap_permitted_count = 1,
+        .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_HOST_VISIBLE}};
     constraints[i].image_format_constraints_count = 1;
-    constraints[i].image_format_constraints[0] =
-        llcpp::fuchsia::sysmem::wire::ImageFormatConstraints{
-            .pixel_format =
-                llcpp::fuchsia::sysmem::wire::PixelFormat{
-                    .type = llcpp::fuchsia::sysmem::wire::PixelFormatType::BGRA32,
-                    .has_format_modifier = false,
-                    .format_modifier = {},
-                },
-            .color_spaces_count = 1,
-            .color_space =
-                {
-                    llcpp::fuchsia::sysmem::wire::ColorSpace{
-                        .type = llcpp::fuchsia::sysmem::wire::ColorSpaceType::SRGB},
-                },
-        };
+    constraints[i].image_format_constraints[0] = fuchsia_sysmem::wire::ImageFormatConstraints{
+        .pixel_format =
+            fuchsia_sysmem::wire::PixelFormat{
+                .type = fuchsia_sysmem::wire::PixelFormatType::BGRA32,
+                .has_format_modifier = false,
+                .format_modifier = {},
+            },
+        .color_spaces_count = 1,
+        .color_space =
+            {
+                fuchsia_sysmem::wire::ColorSpace{.type =
+                                                     fuchsia_sysmem::wire::ColorSpaceType::SRGB},
+            },
+    };
   }
 
   // Set different min_coded_width and required_max_coded_width for each client.
@@ -451,7 +443,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible_MultiClients) {
     EXPECT_TRUE(collection[i].SetConstraints(true, std::move(constraints[i])).ok());
   };
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 info;
+  fuchsia_sysmem::wire::BufferCollectionInfo_2 info;
   {
     auto result = collection[0].WaitForBuffersAllocated();
     ASSERT_TRUE(result.ok());
@@ -461,7 +453,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible_MultiClients) {
     EXPECT_EQ(info.buffer_count, 1u);
     EXPECT_TRUE(info.buffers[0].vmo.is_valid());
     EXPECT_EQ(info.settings.buffer_settings.coherency_domain,
-              llcpp::fuchsia::sysmem::wire::CoherencyDomain::CPU);
+              fuchsia_sysmem::wire::CoherencyDomain::CPU);
 
     const auto& image_format_constraints =
         result.value().buffer_collection_info.settings.image_format_constraints;
@@ -531,11 +523,11 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisibleBuffer) {
 
   const size_t kMinSizeBytes = 4 * 1024;
   const size_t kMaxSizeBytes = 4 * 4096;
-  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.usage.vulkan = llcpp::fuchsia::sysmem::wire::vulkanUsageTransferDst;
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = fuchsia_sysmem::wire::vulkanUsageTransferDst;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints{
+  constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
       .min_size_bytes = kMinSizeBytes,
       .max_size_bytes = kMaxSizeBytes,
       .physically_contiguous_required = false,
@@ -544,14 +536,14 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisibleBuffer) {
       .cpu_domain_supported = true,
       .inaccessible_domain_supported = false,
       .heap_permitted_count = 1,
-      .heap_permitted = {llcpp::fuchsia::sysmem::wire::HeapType::GOLDFISH_HOST_VISIBLE}};
+      .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_HOST_VISIBLE}};
   constraints.image_format_constraints_count = 0;
 
-  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 info;
+  fuchsia_sysmem::wire::BufferCollectionInfo_2 info;
   {
     auto result = collection.WaitForBuffersAllocated();
     ASSERT_TRUE(result.ok());
@@ -561,7 +553,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisibleBuffer) {
     EXPECT_EQ(info.buffer_count, 1U);
     EXPECT_TRUE(info.buffers[0].vmo.is_valid());
     EXPECT_EQ(info.settings.buffer_settings.coherency_domain,
-              llcpp::fuchsia::sysmem::wire::CoherencyDomain::CPU);
+              fuchsia_sysmem::wire::CoherencyDomain::CPU);
   }
 
   zx::vmo vmo = std::move(info.buffers[0].vmo);
@@ -615,11 +607,11 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
       allocator.BindSharedCollection(std::move(token_client), std::move(collection_server)).ok());
 
   constexpr size_t kBufferSizeBytes = 4 * 1024;
-  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.usage.vulkan = llcpp::fuchsia::sysmem::wire::VULKAN_BUFFER_USAGE_TRANSFER_DST;
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_TRANSFER_DST;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints{
+  constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
       .min_size_bytes = kBufferSizeBytes,
       .max_size_bytes = kBufferSizeBytes,
       .physically_contiguous_required = false,
@@ -628,13 +620,13 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
       .cpu_domain_supported = false,
       .inaccessible_domain_supported = true,
       .heap_permitted_count = 1,
-      .heap_permitted = {llcpp::fuchsia::sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
+      .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 info;
+  fuchsia_sysmem::wire::BufferCollectionInfo_2 info;
   {
     auto result = collection.WaitForBuffersAllocated();
     ASSERT_TRUE(result.ok());
@@ -653,15 +645,14 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
   zx::vmo vmo_copy;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
+  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(channel));
   {
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateBuffer2Params::Frame>())
             .set_size(std::make_unique<uint64_t>(kBufferSizeBytes))
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
+                fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
             .build();
 
     auto result = control.CreateBuffer2(std::move(vmo_copy), std::move(create_params));
@@ -677,8 +668,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
     ASSERT_TRUE(result.ok());
     EXPECT_EQ(result.Unwrap()->res, ZX_OK);
     EXPECT_NE(result.Unwrap()->id, 0u);
-    EXPECT_EQ(result.Unwrap()->type,
-              llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::BUFFER);
+    EXPECT_EQ(result.Unwrap()->type, fuchsia_hardware_goldfish::wire::BufferHandleType::BUFFER);
   }
 
   zx::vmo vmo_copy3;
@@ -686,16 +676,14 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
 
   {
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(64))
             .set_height(std::make_unique<uint32_t>(64))
-            .set_format(
-                std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType>(
-                    llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::BGRA))
+            .set_format(std::make_unique<fuchsia_hardware_goldfish::wire::ColorBufferFormatType>(
+                fuchsia_hardware_goldfish::wire::ColorBufferFormatType::BGRA))
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
+                fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
             .build();
 
     auto result = control.CreateColorBuffer2(std::move(vmo_copy3), std::move(create_params));
@@ -708,12 +696,11 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
 
   {
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateBuffer2Params::Frame>())
             .set_size(std::make_unique<uint64_t>(kBufferSizeBytes))
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
+                fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
             .build();
 
     auto result = control.CreateBuffer2(std::move(vmo_copy4), std::move(create_params));
@@ -743,19 +730,17 @@ TEST(GoldfishControlTests, GoldfishControlTest_InvalidVmo) {
   zx::vmo vmo_copy;
   EXPECT_EQ(non_sysmem_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
+  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(channel));
   {
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(16))
             .set_height(std::make_unique<uint32_t>(16))
-            .set_format(
-                std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType>(
-                    llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::BGRA))
+            .set_format(std::make_unique<fuchsia_hardware_goldfish::wire::ColorBufferFormatType>(
+                fuchsia_hardware_goldfish::wire::ColorBufferFormatType::BGRA))
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
+                fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
             .build();
 
     auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
@@ -805,11 +790,11 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
   // ----------------------------------------------------------------------//
   // Use device local heap which only *registers* the koid of vmo to control
   // device.
-  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.usage.vulkan = llcpp::fuchsia::sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints{
+  constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
       .min_size_bytes = 4 * 1024,
       .max_size_bytes = 4 * 1024,
       .physically_contiguous_required = false,
@@ -818,13 +803,13 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
       .cpu_domain_supported = false,
       .inaccessible_domain_supported = true,
       .heap_permitted_count = 1,
-      .heap_permitted = {llcpp::fuchsia::sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
+      .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 info;
+  fuchsia_sysmem::wire::BufferCollectionInfo_2 info;
   {
     auto result = collection.WaitForBuffersAllocated();
     ASSERT_TRUE(result.ok());
@@ -843,22 +828,20 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
   // ----------------------------------------------------------------------//
   // Try creating color buffer.
   zx::vmo vmo_copy;
-  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(control_channel));
+  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(control_channel));
 
   {
     // Verify that a CreateColorBuffer2() call without width will fail.
     EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Frame>())
             // Without width
             .set_height(std::make_unique<uint32_t>(64))
-            .set_format(
-                std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType>(
-                    llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::BGRA))
+            .set_format(std::make_unique<fuchsia_hardware_goldfish::wire::ColorBufferFormatType>(
+                fuchsia_hardware_goldfish::wire::ColorBufferFormatType::BGRA))
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
+                fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
             .build();
     auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
 
@@ -871,16 +854,14 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
     // Verify that a CreateColorBuffer2() call without height will fail.
     EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(64))
             // Without height
-            .set_format(
-                std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType>(
-                    llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::BGRA))
+            .set_format(std::make_unique<fuchsia_hardware_goldfish::wire::ColorBufferFormatType>(
+                fuchsia_hardware_goldfish::wire::ColorBufferFormatType::BGRA))
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
+                fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
             .build();
     auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
 
@@ -893,14 +874,13 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
     // Verify that a CreateColorBuffer2() call without color format will fail.
     EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(64))
             .set_height(std::make_unique<uint32_t>(64))
             // Without format
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
+                fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
             .build();
     auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
 
@@ -913,14 +893,12 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
     // Verify that a CreateColorBuffer2() call without memory property will fail.
     EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(64))
             .set_height(std::make_unique<uint32_t>(64))
-            .set_format(
-                std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType>(
-                    llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::BGRA))
+            .set_format(std::make_unique<fuchsia_hardware_goldfish::wire::ColorBufferFormatType>(
+                fuchsia_hardware_goldfish::wire::ColorBufferFormatType::BGRA))
             // Without memory property
             .build();
     auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
@@ -961,11 +939,11 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateBuffer2Args) {
   // ----------------------------------------------------------------------//
   // Use device local heap which only *registers* the koid of vmo to control
   // device.
-  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.usage.vulkan = llcpp::fuchsia::sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints{
+  constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
       .min_size_bytes = 4 * 1024,
       .max_size_bytes = 4 * 1024,
       .physically_contiguous_required = false,
@@ -974,13 +952,13 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateBuffer2Args) {
       .cpu_domain_supported = false,
       .inaccessible_domain_supported = true,
       .heap_permitted_count = 1,
-      .heap_permitted = {llcpp::fuchsia::sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
+      .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 info;
+  fuchsia_sysmem::wire::BufferCollectionInfo_2 info;
   {
     auto result = collection.WaitForBuffersAllocated();
     ASSERT_TRUE(result.ok());
@@ -999,18 +977,17 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateBuffer2Args) {
   // ----------------------------------------------------------------------//
   // Try creating data buffers.
   zx::vmo vmo_copy;
-  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(control_channel));
+  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(control_channel));
 
   {
     // Verify that a CreateBuffer2() call without width will fail.
     EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateBuffer2Params::Frame>())
             // Without size
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
+                fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
             .build();
     auto result = control.CreateBuffer2(std::move(vmo_copy), std::move(create_params));
 
@@ -1023,9 +1000,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateBuffer2Args) {
     // Verify that a CreateBuffer2() call without memory property will fail.
     EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateBuffer2Params::Frame>())
             .set_size(std::make_unique<uint64_t>(4096))
             // Without memory property
             .build();
@@ -1063,11 +1039,11 @@ TEST(GoldfishControlTests, GoldfishControlTest_GetNotCreatedColorBuffer) {
   EXPECT_TRUE(
       allocator.BindSharedCollection(std::move(token_client), std::move(collection_server)).ok());
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.usage.vulkan = llcpp::fuchsia::sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints{
+  constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
       .min_size_bytes = 4 * 1024,
       .max_size_bytes = 4 * 1024,
       .physically_contiguous_required = false,
@@ -1076,13 +1052,13 @@ TEST(GoldfishControlTests, GoldfishControlTest_GetNotCreatedColorBuffer) {
       .cpu_domain_supported = false,
       .inaccessible_domain_supported = true,
       .heap_permitted_count = 1,
-      .heap_permitted = {llcpp::fuchsia::sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
+      .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 info;
+  fuchsia_sysmem::wire::BufferCollectionInfo_2 info;
   {
     auto result = collection.WaitForBuffersAllocated();
     ASSERT_TRUE(result.ok());
@@ -1101,7 +1077,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_GetNotCreatedColorBuffer) {
   zx::vmo vmo_copy;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
+  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(channel));
   {
     auto result = control.GetBufferHandle(std::move(vmo_copy));
     ASSERT_TRUE(result.ok());
@@ -1120,18 +1096,17 @@ TEST(GoldfishAddressSpaceTests, GoldfishAddressSpaceTest) {
   zx::channel child_channel2;
   EXPECT_EQ(zx::channel::create(0, &child_channel, &child_channel2), ZX_OK);
 
-  llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::SyncClient asd_parent(
-      std::move(parent_channel));
+  fuchsia_hardware_goldfish::AddressSpaceDevice::SyncClient asd_parent(std::move(parent_channel));
   {
     auto result = asd_parent.OpenChildDriver(
-        llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType::DEFAULT,
+        fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType::DEFAULT,
         std::move(child_channel));
     ASSERT_TRUE(result.ok());
   }
 
   constexpr uint64_t kHeapSize = 16ULL * 1048576ULL;
 
-  llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::SyncClient asd_child(
+  fuchsia_hardware_goldfish::AddressSpaceChildDriver::SyncClient asd_child(
       std::move(child_channel2));
   uint64_t paddr = 0;
   zx::vmo vmo;
@@ -1198,7 +1173,7 @@ TEST(GoldfishAddressSpaceTests, GoldfishAddressSpaceTest) {
 
   const size_t overlaps_to_test = sizeof(overlap_offsets) / sizeof(overlap_offsets[0]);
 
-  using llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverPingMessage;
+  using fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverPingMessage;
 
   AddressSpaceChildDriverPingMessage msg;
   msg.metadata = 0;
@@ -1294,11 +1269,10 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
   zx::channel child_channel2;
   EXPECT_EQ(zx::channel::create(0, &child_channel, &child_channel2), ZX_OK);
 
-  llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::SyncClient asd_parent(
-      std::move(parent_channel));
+  fuchsia_hardware_goldfish::AddressSpaceDevice::SyncClient asd_parent(std::move(parent_channel));
   {
     auto result = asd_parent.OpenChildDriver(
-        llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType::DEFAULT,
+        fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType::DEFAULT,
         std::move(child_channel));
     ASSERT_TRUE(result.ok());
   }
@@ -1306,7 +1280,7 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
   // Allocate device memory block using address space device.
   constexpr uint64_t kHeapSize = 32768ULL;
 
-  llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::SyncClient asd_child(
+  fuchsia_hardware_goldfish::AddressSpaceChildDriver::SyncClient asd_child(
       std::move(child_channel2));
   uint64_t physical_addr = 0;
   zx::vmo address_space_vmo;
@@ -1328,11 +1302,11 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
   // ----------------------------------------------------------------------//
   // Use device local heap which only *registers* the koid of vmo to control
   // device.
-  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.usage.vulkan = llcpp::fuchsia::sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints{
+  constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
       .min_size_bytes = 4 * 1024,
       .max_size_bytes = 4 * 1024,
       .physically_contiguous_required = false,
@@ -1341,13 +1315,13 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
       .cpu_domain_supported = false,
       .inaccessible_domain_supported = true,
       .heap_permitted_count = 1,
-      .heap_permitted = {llcpp::fuchsia::sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
+      .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 info;
+  fuchsia_sysmem::wire::BufferCollectionInfo_2 info;
   {
     auto result = collection.WaitForBuffersAllocated();
     ASSERT_TRUE(result.ok());
@@ -1368,21 +1342,19 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
   zx::vmo vmo_copy;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(control_channel));
+  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(control_channel));
   {
     // Verify that a CreateColorBuffer2() call with host-visible memory property,
     // but without physical address will fail.
     auto create_info =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(64))
             .set_height(std::make_unique<uint32_t>(64))
-            .set_format(
-                std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType>(
-                    llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::BGRA))
+            .set_format(std::make_unique<fuchsia_hardware_goldfish::wire::ColorBufferFormatType>(
+                fuchsia_hardware_goldfish::wire::ColorBufferFormatType::BGRA))
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE))
+                fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE))
             // Without physical address
             .build();
     auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_info));
@@ -1395,14 +1367,12 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
   {
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(64))
             .set_height(std::make_unique<uint32_t>(64))
-            .set_format(
-                std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType>(
-                    llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::BGRA))
+            .set_format(std::make_unique<fuchsia_hardware_goldfish::wire::ColorBufferFormatType>(
+                fuchsia_hardware_goldfish::wire::ColorBufferFormatType::BGRA))
             .set_memory_property(std::make_unique<uint32_t>(0x02u))
             .set_physical_address(std::make_unique<uint64_t>(physical_addr))
             .build();
@@ -1422,7 +1392,7 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
     EXPECT_EQ(result.Unwrap()->res, ZX_OK);
     EXPECT_NE(result.Unwrap()->id, 0u);
     EXPECT_EQ(result.Unwrap()->type,
-              llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::COLOR_BUFFER);
+              fuchsia_hardware_goldfish::wire::BufferHandleType::COLOR_BUFFER);
   }
 
   // Cleanup.
@@ -1434,7 +1404,7 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
 }
 
 using GoldfishCreateColorBufferTest =
-    testing::TestWithParam<llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType>;
+    testing::TestWithParam<fuchsia_hardware_goldfish::wire::ColorBufferFormatType>;
 
 TEST_P(GoldfishCreateColorBufferTest, CreateColorBufferWithFormat) {
   int fd = open("/dev/class/goldfish-control/000", O_RDWR);
@@ -1457,11 +1427,11 @@ TEST_P(GoldfishCreateColorBufferTest, CreateColorBufferWithFormat) {
   EXPECT_TRUE(
       allocator.BindSharedCollection(std::move(token_client), std::move(collection_server)).ok());
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.usage.vulkan = llcpp::fuchsia::sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::wire::BufferMemoryConstraints{
+  constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
       .min_size_bytes = 4 * 1024,
       .max_size_bytes = 4 * 1024,
       .physically_contiguous_required = false,
@@ -1470,13 +1440,13 @@ TEST_P(GoldfishCreateColorBufferTest, CreateColorBufferWithFormat) {
       .cpu_domain_supported = false,
       .inaccessible_domain_supported = true,
       .heap_permitted_count = 1,
-      .heap_permitted = {llcpp::fuchsia::sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
+      .heap_permitted = {fuchsia_sysmem::wire::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
-  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
   SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 info;
+  fuchsia_sysmem::wire::BufferCollectionInfo_2 info;
   {
     auto result = collection.WaitForBuffersAllocated();
     ASSERT_TRUE(result.ok());
@@ -1495,19 +1465,17 @@ TEST_P(GoldfishCreateColorBufferTest, CreateColorBufferWithFormat) {
   zx::vmo vmo_copy;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
-  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
+  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(channel));
   {
     auto create_params =
-        llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Builder(
-            std::make_unique<
-                llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params::Frame>())
+        fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Builder(
+            std::make_unique<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params::Frame>())
             .set_width(std::make_unique<uint32_t>(64))
             .set_height(std::make_unique<uint32_t>(64))
-            .set_format(
-                std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType>(
-                    GetParam()))
+            .set_format(std::make_unique<fuchsia_hardware_goldfish::wire::ColorBufferFormatType>(
+                GetParam()))
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
+                fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
             .build();
 
     auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
@@ -1524,7 +1492,7 @@ TEST_P(GoldfishCreateColorBufferTest, CreateColorBufferWithFormat) {
     EXPECT_EQ(result.Unwrap()->res, ZX_OK);
     EXPECT_NE(result.Unwrap()->id, 0u);
     EXPECT_EQ(result.Unwrap()->type,
-              llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::COLOR_BUFFER);
+              fuchsia_hardware_goldfish::wire::BufferHandleType::COLOR_BUFFER);
   }
 }
 
@@ -1539,7 +1507,7 @@ TEST(GoldfishControlTests, CreateSyncKhr) {
   zx::channel channel;
   EXPECT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK);
 
-  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
+  fuchsia_hardware_goldfish::ControlDevice::SyncClient control(std::move(channel));
 
   zx::eventpair event_client, event_server;
   zx_status_t status = zx::eventpair::create(0u, &event_client, &event_server);
@@ -1555,20 +1523,20 @@ TEST(GoldfishControlTests, CreateSyncKhr) {
 
 INSTANTIATE_TEST_SUITE_P(
     ColorBufferTests, GoldfishCreateColorBufferTest,
-    testing::Values(llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::RGBA,
-                    llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::BGRA,
-                    llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::RG,
-                    llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::LUMINANCE),
+    testing::Values(fuchsia_hardware_goldfish::wire::ColorBufferFormatType::RGBA,
+                    fuchsia_hardware_goldfish::wire::ColorBufferFormatType::BGRA,
+                    fuchsia_hardware_goldfish::wire::ColorBufferFormatType::RG,
+                    fuchsia_hardware_goldfish::wire::ColorBufferFormatType::LUMINANCE),
     [](const testing::TestParamInfo<GoldfishCreateColorBufferTest::ParamType>& info)
         -> std::string {
       switch (info.param) {
-        case llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::RGBA:
+        case fuchsia_hardware_goldfish::wire::ColorBufferFormatType::RGBA:
           return "RGBA";
-        case llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::BGRA:
+        case fuchsia_hardware_goldfish::wire::ColorBufferFormatType::BGRA:
           return "BGRA";
-        case llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::RG:
+        case fuchsia_hardware_goldfish::wire::ColorBufferFormatType::RG:
           return "RG";
-        case llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::LUMINANCE:
+        case fuchsia_hardware_goldfish::wire::ColorBufferFormatType::LUMINANCE:
           return "LUMINANCE";
       }
     });

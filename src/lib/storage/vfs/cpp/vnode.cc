@@ -18,7 +18,7 @@
 
 #include "src/lib/storage/vfs/cpp/mount_channel.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 #endif  // __Fuchsia__
 
@@ -214,17 +214,15 @@ zx_status_t Vnode::AttachRemote(MountChannel h) { return ZX_ERR_NOT_SUPPORTED; }
 
 bool Vnode::IsRemote() const { return false; }
 
-fidl::ClientEnd<llcpp::fuchsia::io::Directory> Vnode::DetachRemote() {
-  return fidl::ClientEnd<llcpp::fuchsia::io::Directory>();
+fidl::ClientEnd<fuchsia_io::Directory> Vnode::DetachRemote() {
+  return fidl::ClientEnd<fuchsia_io::Directory>();
 }
 
-fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> Vnode::GetRemote() const {
-  return fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory>(ZX_HANDLE_INVALID);
+fidl::UnownedClientEnd<fuchsia_io::Directory> Vnode::GetRemote() const {
+  return fidl::UnownedClientEnd<fuchsia_io::Directory>(ZX_HANDLE_INVALID);
 }
 
-void Vnode::SetRemote(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote) {
-  ZX_DEBUG_ASSERT(false);
-}
+void Vnode::SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote) { ZX_DEBUG_ASSERT(false); }
 
 #endif  // __Fuchsia__
 

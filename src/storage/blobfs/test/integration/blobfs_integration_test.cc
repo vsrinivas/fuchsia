@@ -50,7 +50,7 @@
 namespace blobfs {
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 using BlobfsIntegrationTest = ParameterizedBlobfsTest;
 using ::testing::UnitTest;
 
@@ -1153,7 +1153,7 @@ void OpenBlockDevice(const std::string& path,
   fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   ASSERT_TRUE(fd) << "Unable to open block device";
 
-  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Node>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [channel, server] = *std::move(endpoints);
 

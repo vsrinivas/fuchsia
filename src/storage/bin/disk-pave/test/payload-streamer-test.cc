@@ -18,7 +18,7 @@ constexpr char kFileData[] = "lalalala";
 
 TEST(PayloadStreamerTest, TrivialLifetime) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto stream = fidl::CreateEndpoints<::llcpp::fuchsia::paver::PayloadStream>();
+  auto stream = fidl::CreateEndpoints<::fuchsia_paver::PayloadStream>();
   ASSERT_OK(stream.status_value());
   disk_pave::PayloadStreamer streamer(std::move(stream->server), fbl::unique_fd());
 }
@@ -33,7 +33,7 @@ class PayloadStreamerTest : public zxtest::Test {
     ASSERT_EQ(write(src.get(), kFileData, sizeof(kFileData)), sizeof(kFileData));
     lseek(src.get(), 0, SEEK_SET);
 
-    auto stream = fidl::CreateEndpoints<::llcpp::fuchsia::paver::PayloadStream>();
+    auto stream = fidl::CreateEndpoints<::fuchsia_paver::PayloadStream>();
     ASSERT_OK(stream.status_value());
     streamer_.emplace(std::move(stream->server), std::move(src));
     client_.emplace(std::move(stream->client));
@@ -45,7 +45,7 @@ class PayloadStreamerTest : public zxtest::Test {
  protected:
   async::Loop loop_;
   std::optional<disk_pave::PayloadStreamer> streamer_;
-  std::optional<::llcpp::fuchsia::paver::PayloadStream::SyncClient> client_;
+  std::optional<::fuchsia_paver::PayloadStream::SyncClient> client_;
 
  private:
   char tempfile_name_[20] = "/tmp/payload.XXXXXX";
@@ -82,7 +82,7 @@ TEST_F(PayloadStreamerTest, RegisterInvalidVmo) {
 TEST_F(PayloadStreamerTest, ReadNoVmoRegistered) {
   auto call_result = client_->ReadData();
   ASSERT_OK(call_result.status());
-  const ::llcpp::fuchsia::paver::wire::ReadResult& result = call_result.value().result;
+  const ::fuchsia_paver::wire::ReadResult& result = call_result.value().result;
   ASSERT_TRUE(result.is_err());
   EXPECT_NE(result.err(), ZX_OK);
 }
@@ -113,7 +113,7 @@ TEST_F(PayloadStreamerTest, ReadEof) {
   EXPECT_OK(register_result.value().status);
 
   {
-    ::llcpp::fuchsia::paver::PayloadStream::ResultOf::ReadData call_result = client_->ReadData();
+    ::fuchsia_paver::PayloadStream::ResultOf::ReadData call_result = client_->ReadData();
     ASSERT_OK(call_result.status());
     ASSERT_TRUE(call_result->result.is_info());
   }

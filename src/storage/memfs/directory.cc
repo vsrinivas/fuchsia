@@ -45,12 +45,12 @@ zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
 
-zx_status_t VnodeDir::QueryFilesystem(::llcpp::fuchsia::io::wire::FilesystemInfo* info) {
-  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::wire::MAX_FS_NAME_BUFFER,
+zx_status_t VnodeDir::QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* info) {
+  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::fuchsia_io::wire::MAX_FS_NAME_BUFFER,
                 "Memfs name too long");
   *info = {};
   strlcpy(reinterpret_cast<char*>(info->name.data()), kFsName,
-          ::llcpp::fuchsia::io::wire::MAX_FS_NAME_BUFFER);
+          ::fuchsia_io::wire::MAX_FS_NAME_BUFFER);
   info->block_size = kMemfsBlksize;
   info->max_filename_size = kDnodeNameMax;
   info->fs_type = VFS_TYPE_MEMFS;
@@ -78,15 +78,13 @@ zx_status_t VnodeDir::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
 
 bool VnodeDir::IsRemote() const { return remoter_.IsRemote(); }
 
-fidl::ClientEnd<llcpp::fuchsia::io::Directory> VnodeDir::DetachRemote() {
-  return remoter_.DetachRemote();
-}
+fidl::ClientEnd<fuchsia_io::Directory> VnodeDir::DetachRemote() { return remoter_.DetachRemote(); }
 
-fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> VnodeDir::GetRemote() const {
+fidl::UnownedClientEnd<::fuchsia_io::Directory> VnodeDir::GetRemote() const {
   return remoter_.GetRemote();
 }
 
-void VnodeDir::SetRemote(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote) {
+void VnodeDir::SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote) {
   return remoter_.SetRemote(std::move(remote));
 }
 

@@ -31,7 +31,7 @@
 #include "local-connection.h"
 #include "local-vnode.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 // The |mode| argument used for |fuchsia.io.Directory/Open| calls.
 #define FDIO_CONNECT_MODE ((uint32_t)0755)

@@ -21,7 +21,7 @@ using magma::Status;
 namespace magma_sysmem {
 
 namespace {
-uint32_t SysmemToMagmaFormat(llcpp::fuchsia::sysmem::wire::PixelFormatType format) {
+uint32_t SysmemToMagmaFormat(fuchsia_sysmem::wire::PixelFormatType format) {
   // The values are required to be identical.
   return static_cast<uint32_t>(format);
 }
@@ -31,12 +31,12 @@ uint32_t SysmemToMagmaFormat(llcpp::fuchsia::sysmem::wire::PixelFormatType forma
 class ZirconPlatformBufferDescription : public PlatformBufferDescription {
  public:
   ZirconPlatformBufferDescription(uint32_t buffer_count,
-                                  llcpp::fuchsia::sysmem::wire::SingleBufferSettings settings)
+                                  fuchsia_sysmem::wire::SingleBufferSettings settings)
       : buffer_count_(buffer_count), settings_(settings) {}
   ~ZirconPlatformBufferDescription() override {}
 
   bool IsValid() {
-    using llcpp::fuchsia::sysmem::wire::CoherencyDomain;
+    using fuchsia_sysmem::wire::CoherencyDomain;
     switch (settings_.buffer_settings.coherency_domain) {
       case CoherencyDomain::RAM:
       case CoherencyDomain::CPU:
@@ -65,7 +65,7 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
     return settings_.image_format_constraints.pixel_format.format_modifier.value;
   }
   uint32_t coherency_domain() const override {
-    using llcpp::fuchsia::sysmem::wire::CoherencyDomain;
+    using fuchsia_sysmem::wire::CoherencyDomain;
     switch (settings_.buffer_settings.coherency_domain) {
       case CoherencyDomain::RAM:
         return MAGMA_COHERENCY_DOMAIN_RAM;
@@ -105,7 +105,7 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
       planes_out[i].bytes_per_row = 0;
     }
 
-    std::optional<llcpp::fuchsia::sysmem::wire::ImageFormat_2> image_format =
+    std::optional<fuchsia_sysmem::wire::ImageFormat_2> image_format =
         image_format::ConstraintsToFormat(settings_.image_format_constraints,
                                           magma::to_uint32(width), magma::to_uint32(height));
     if (!image_format) {
@@ -134,7 +134,7 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
 
  private:
   uint32_t buffer_count_;
-  llcpp::fuchsia::sysmem::wire::SingleBufferSettings settings_;
+  fuchsia_sysmem::wire::SingleBufferSettings settings_;
 };
 
 class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
@@ -144,15 +144,15 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
   ZirconPlatformBufferConstraints(const magma_buffer_format_constraints_t* constraints) {
     constraints_.min_buffer_count = constraints->count;
     // Ignore input usage
-    llcpp::fuchsia::sysmem::wire::BufferUsage usage;
-    usage.vulkan = llcpp::fuchsia::sysmem::wire::vulkanUsageTransientAttachment |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageStencilAttachment |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageInputAttachment |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageColorAttachment |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageTransferSrc |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageTransferDst |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageStorage |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageSampled;
+    fuchsia_sysmem::wire::BufferUsage usage;
+    usage.vulkan = fuchsia_sysmem::wire::vulkanUsageTransientAttachment |
+                   fuchsia_sysmem::wire::vulkanUsageStencilAttachment |
+                   fuchsia_sysmem::wire::vulkanUsageInputAttachment |
+                   fuchsia_sysmem::wire::vulkanUsageColorAttachment |
+                   fuchsia_sysmem::wire::vulkanUsageTransferSrc |
+                   fuchsia_sysmem::wire::vulkanUsageTransferDst |
+                   fuchsia_sysmem::wire::vulkanUsageStorage |
+                   fuchsia_sysmem::wire::vulkanUsageSampled;
     constraints_.usage = usage;
     constraints_.has_buffer_memory_constraints = true;
     // No buffer constraints, except those passed directly through from the client. These two
@@ -170,8 +170,8 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
 
   Status SetImageFormatConstraints(
       uint32_t index, const magma_image_format_constraints_t* format_constraints) override {
-    using llcpp::fuchsia::sysmem::wire::ColorSpaceType;
-    using llcpp::fuchsia::sysmem::wire::PixelFormatType;
+    using fuchsia_sysmem::wire::ColorSpaceType;
+    using fuchsia_sysmem::wire::PixelFormatType;
 
     if (index != raw_image_constraints_.size())
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Format constraint gaps or changes not allowed");
@@ -179,7 +179,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
                       "Setting format constraints on merged constraints.");
 
-    llcpp::fuchsia::sysmem::wire::ImageFormatConstraints constraints;
+    fuchsia_sysmem::wire::ImageFormatConstraints constraints;
     constraints.min_coded_width = 0u;
     constraints.max_coded_width = 16384;
     constraints.min_coded_height = 0u;
@@ -238,8 +238,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
 
     constraints.pixel_format.has_format_modifier = true;
     if (!format_constraints->has_format_modifier) {
-      constraints.pixel_format.format_modifier.value =
-          llcpp::fuchsia::sysmem::wire::FORMAT_MODIFIER_LINEAR;
+      constraints.pixel_format.format_modifier.value = fuchsia_sysmem::wire::FORMAT_MODIFIER_LINEAR;
     } else {
       constraints.pixel_format.format_modifier.value = format_constraints->format_modifier;
     }
@@ -255,14 +254,13 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     if (index >= raw_image_constraints_.size()) {
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Format constraints must be set first");
     }
-    if (color_space_count >
-        llcpp::fuchsia::sysmem::wire::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES) {
+    if (color_space_count > fuchsia_sysmem::wire::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES) {
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Too many color spaces: %d", color_space_count);
     }
     auto& constraints = raw_image_constraints_[index];
     for (uint32_t i = 0; i < color_space_count; i++) {
       constraints.color_space[i].type =
-          static_cast<llcpp::fuchsia::sysmem::wire::ColorSpaceType>(color_spaces[i]);
+          static_cast<fuchsia_sysmem::wire::ColorSpaceType>(color_spaces[i]);
     }
     constraints.color_spaces_count = color_space_count;
     return MAGMA_STATUS_OK;
@@ -320,7 +318,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
           std::max(in_constraints.bytes_per_row_divisor, out_constraints.bytes_per_row_divisor);
 
       // Union the sets of color spaces to ensure that they're all still legal.
-      std::unordered_set<llcpp::fuchsia::sysmem::wire::ColorSpaceType> color_spaces;
+      std::unordered_set<fuchsia_sysmem::wire::ColorSpaceType> color_spaces;
       for (uint32_t j = 0; j < out_constraints.color_spaces_count; j++) {
         color_spaces.insert(out_constraints.color_space[j].type);
       }
@@ -341,20 +339,20 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     return true;
   }
 
-  const llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints& constraints() {
+  const fuchsia_sysmem::wire::BufferCollectionConstraints& constraints() {
     DASSERT(merge_result_);
     DASSERT(*merge_result_);
     return constraints_;
   }
 
-  const std::vector<llcpp::fuchsia::sysmem::wire::ImageFormatConstraints>& raw_image_constraints() {
+  const std::vector<fuchsia_sysmem::wire::ImageFormatConstraints>& raw_image_constraints() {
     return raw_image_constraints_;
   }
 
  private:
   std::optional<bool> merge_result_;
-  llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints_ = {};
-  std::vector<llcpp::fuchsia::sysmem::wire::ImageFormatConstraints> raw_image_constraints_;
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints_ = {};
+  std::vector<fuchsia_sysmem::wire::ImageFormatConstraints> raw_image_constraints_;
 };
 
 class ZirconPlatformBufferCollection : public PlatformBufferCollection {
@@ -364,7 +362,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
       collection_->Close();
   }
 
-  Status Bind(llcpp::fuchsia::sysmem::Allocator::SyncClient& allocator, uint32_t token_handle) {
+  Status Bind(fuchsia_sysmem::Allocator::SyncClient& allocator, uint32_t token_handle) {
     DASSERT(!collection_);
     zx::channel h1;
     zx::channel h2;
@@ -376,8 +374,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
     if (status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Internal error: %d", status);
 
-    collection_ =
-        std::make_unique<llcpp::fuchsia::sysmem::BufferCollection::SyncClient>(std::move(h1));
+    collection_ = std::make_unique<fuchsia_sysmem::BufferCollection::SyncClient>(std::move(h1));
 
     return MAGMA_STATUS_OK;
   }
@@ -414,8 +411,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d",
                       result.status());
 
-    llcpp::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse* response =
-        result.Unwrap();
+    fuchsia_sysmem::BufferCollection::WaitForBuffersAllocatedResponse* response = result.Unwrap();
 
     if (response->status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "WaitForBuffersAllocated failed: %d",
@@ -437,8 +433,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d",
                       result.status());
 
-    llcpp::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse* response =
-        result.Unwrap();
+    fuchsia_sysmem::BufferCollection::WaitForBuffersAllocatedResponse* response = result.Unwrap();
 
     if (response->status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "WaitForBuffersAllocated failed: %d",
@@ -455,12 +450,12 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
   }
 
  private:
-  std::unique_ptr<llcpp::fuchsia::sysmem::BufferCollection::SyncClient> collection_;
+  std::unique_ptr<fuchsia_sysmem::BufferCollection::SyncClient> collection_;
 };
 
 class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
  public:
-  ZirconPlatformSysmemConnection(llcpp::fuchsia::sysmem::Allocator::SyncClient allocator)
+  ZirconPlatformSysmemConnection(fuchsia_sysmem::Allocator::SyncClient allocator)
       : sysmem_allocator_(std::move(allocator)) {
     sysmem_allocator_.SetDebugClientInfo(
         fidl::unowned_str(magma::PlatformProcessHelper::GetCurrentProcessName()),
@@ -469,23 +464,23 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
 
   magma_status_t AllocateBuffer(uint32_t flags, size_t size,
                                 std::unique_ptr<magma::PlatformBuffer>* buffer_out) override {
-    llcpp::fuchsia::sysmem::wire::BufferUsage usage;
-    usage.vulkan = llcpp::fuchsia::sysmem::wire::vulkanUsageTransientAttachment |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageStencilAttachment |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageInputAttachment |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageColorAttachment |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageTransferSrc |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageTransferDst |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageStorage |
-                   llcpp::fuchsia::sysmem::wire::vulkanUsageSampled;
+    fuchsia_sysmem::wire::BufferUsage usage;
+    usage.vulkan = fuchsia_sysmem::wire::vulkanUsageTransientAttachment |
+                   fuchsia_sysmem::wire::vulkanUsageStencilAttachment |
+                   fuchsia_sysmem::wire::vulkanUsageInputAttachment |
+                   fuchsia_sysmem::wire::vulkanUsageColorAttachment |
+                   fuchsia_sysmem::wire::vulkanUsageTransferSrc |
+                   fuchsia_sysmem::wire::vulkanUsageTransferDst |
+                   fuchsia_sysmem::wire::vulkanUsageStorage |
+                   fuchsia_sysmem::wire::vulkanUsageSampled;
     if (flags & MAGMA_SYSMEM_FLAG_PROTECTED) {
-      usage.video = llcpp::fuchsia::sysmem::wire::videoUsageHwProtected;
+      usage.video = fuchsia_sysmem::wire::videoUsageHwProtected;
     }
     if (flags & MAGMA_SYSMEM_FLAG_DISPLAY) {
-      usage.display = llcpp::fuchsia::sysmem::wire::displayUsageLayer;
+      usage.display = fuchsia_sysmem::wire::displayUsageLayer;
     }
 
-    llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints;
+    fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
     constraints.usage = usage;
     constraints.min_buffer_count_for_camping = 1;
     constraints.has_buffer_memory_constraints = true;
@@ -510,7 +505,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
       // directly.
       buffer_name += "ForClient";
     }
-    llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 info;
+    fuchsia_sysmem::wire::BufferCollectionInfo_2 info;
     magma_status_t result = AllocateBufferCollection(constraints, buffer_name, &info);
     if (result != MAGMA_STATUS_OK)
       return DRET(result);
@@ -569,8 +564,8 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
 
  private:
   magma_status_t AllocateBufferCollection(
-      const llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints& constraints,
-      std::string name, llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2* info_out) {
+      const fuchsia_sysmem::wire::BufferCollectionConstraints& constraints, std::string name,
+      fuchsia_sysmem::wire::BufferCollectionInfo_2* info_out) {
     zx::channel h1;
     zx::channel h2;
     zx_status_t status = zx::channel::create(0, &h1, &h2);
@@ -581,7 +576,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     if (status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to allocate buffer: %d", status);
 
-    llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(h1));
+    fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(h1));
 
     if (!name.empty()) {
       collection.SetName(10, fidl::unowned_str(name));
@@ -599,8 +594,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d",
                       result.status());
 
-    llcpp::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse* response =
-        result.Unwrap();
+    fuchsia_sysmem::BufferCollection::WaitForBuffersAllocatedResponse* response = result.Unwrap();
 
     if (response->status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d",
@@ -610,13 +604,13 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     return MAGMA_STATUS_OK;
   }
 
-  llcpp::fuchsia::sysmem::Allocator::SyncClient sysmem_allocator_;
+  fuchsia_sysmem::Allocator::SyncClient sysmem_allocator_;
 };
 
 // static
 std::unique_ptr<PlatformSysmemConnection> PlatformSysmemConnection::Import(uint32_t handle) {
   zx::channel channel = zx::channel(handle);
-  llcpp::fuchsia::sysmem::Allocator::SyncClient sysmem_allocator(std::move(channel));
+  fuchsia_sysmem::Allocator::SyncClient sysmem_allocator(std::move(channel));
   return std::make_unique<ZirconPlatformSysmemConnection>(std::move(sysmem_allocator));
 }
 
@@ -626,10 +620,10 @@ magma_status_t PlatformSysmemConnection::DecodeBufferDescription(
     std::unique_ptr<PlatformBufferDescription>* buffer_description_out) {
   std::vector<uint8_t> copy_message(image_data, image_data + image_data_size);
   const char* error = nullptr;
-  static_assert(llcpp::fuchsia::sysmem::wire::SingleBufferSettings::MaxNumHandles == 0,
+  static_assert(fuchsia_sysmem::wire::SingleBufferSettings::MaxNumHandles == 0,
                 "Can't decode a buffer with handles");
   zx_status_t status =
-      fidl_decode(llcpp::fuchsia::sysmem::wire::SingleBufferSettings::Type, copy_message.data(),
+      fidl_decode(fuchsia_sysmem::wire::SingleBufferSettings::Type, copy_message.data(),
                   magma::to_uint32(copy_message.size()), nullptr, 0, &error);
 
   if (status != ZX_OK)
@@ -637,8 +631,7 @@ magma_status_t PlatformSysmemConnection::DecodeBufferDescription(
                     error);
 
   const auto& buffer_settings =
-      *reinterpret_cast<const llcpp::fuchsia::sysmem::wire::SingleBufferSettings*>(
-          copy_message.data());
+      *reinterpret_cast<const fuchsia_sysmem::wire::SingleBufferSettings*>(copy_message.data());
 
   if (!buffer_settings.has_image_format_constraints) {
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Buffer is not image");

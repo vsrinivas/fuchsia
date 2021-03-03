@@ -19,7 +19,7 @@
 
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 TEST(Service, ConstructWithRawChannelConnector) {
   auto svc = fbl::MakeRefCounted<fs::Service>([](zx::channel channel) { return ZX_OK; });

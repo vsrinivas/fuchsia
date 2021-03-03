@@ -14,9 +14,9 @@
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 
-namespace fdf = llcpp::fuchsia::driver::framework;
-namespace fio = llcpp::fuchsia::io;
-namespace frunner = llcpp::fuchsia::component::runner;
+namespace fdf = fuchsia_driver_framework;
+namespace fio = fuchsia_io;
+namespace frunner = fuchsia_component_runner;
 
 namespace {
 
@@ -70,8 +70,7 @@ Driver::~Driver() {
   }
 }
 
-void Driver::set_binding(
-    fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Driver> binding) {
+void Driver::set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver> binding) {
   binding_.emplace(std::move(binding));
 }
 
@@ -123,7 +122,7 @@ zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc
 }
 
 void DriverHost::Start(fdf::wire::DriverStartArgs start_args,
-                       fidl::ServerEnd<llcpp::fuchsia::driver::framework::Driver> request,
+                       fidl::ServerEnd<fuchsia_driver_framework::Driver> request,
                        StartCompleter::Sync& completer) {
   if (!start_args.has_url()) {
     LOGF(ERROR, "Failed to start driver, missing 'url' argument");

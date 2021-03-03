@@ -14,9 +14,9 @@
 
 namespace {
 
-class Server final : public llcpp::fuchsia::io::testing::Node_TestBase {
+class Server final : public fuchsia_io::testing::Node_TestBase {
  public:
-  explicit Server(llcpp::fuchsia::io::wire::NodeInfo describe_info)
+  explicit Server(fuchsia_io::wire::NodeInfo describe_info)
       : describe_info_(std::move(describe_info)) {}
 
   void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) override {
@@ -24,7 +24,7 @@ class Server final : public llcpp::fuchsia::io::testing::Node_TestBase {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  using Interface = llcpp::fuchsia::io::Node::Interface;
+  using Interface = fuchsia_io::Node::Interface;
 
   void Close(Interface::CloseCompleter::Sync& completer) override {
     EXPECT_OK(completer.Reply(ZX_OK).status());
@@ -39,12 +39,12 @@ class Server final : public llcpp::fuchsia::io::testing::Node_TestBase {
   }
 
  private:
-  cpp17::optional<llcpp::fuchsia::io::wire::NodeInfo> describe_info_;
+  cpp17::optional<fuchsia_io::wire::NodeInfo> describe_info_;
 };
 
 // Serves |node_info| over |server_channel| to |client_channel| using a |Server| instance by
 // creating a file descriptor from |client_channel| and immediately closing it.
-void ServeAndExerciseFileDescriptionTeardown(llcpp::fuchsia::io::wire::NodeInfo node_info,
+void ServeAndExerciseFileDescriptionTeardown(fuchsia_io::wire::NodeInfo node_info,
                                              zx::channel client_channel,
                                              zx::channel server_channel) {
   Server server(std::move(node_info));
@@ -68,8 +68,8 @@ TEST(SocketCleanup, Datagram) {
   zx::eventpair client_event, server_event;
   ASSERT_OK(zx::eventpair::create(0, &client_event, &server_event));
 
-  llcpp::fuchsia::io::wire::DatagramSocket dgram_info{.event = std::move(client_event)};
-  llcpp::fuchsia::io::wire::NodeInfo node_info;
+  fuchsia_io::wire::DatagramSocket dgram_info{.event = std::move(client_event)};
+  fuchsia_io::wire::NodeInfo node_info;
   node_info.set_datagram_socket(fidl::unowned_ptr(&dgram_info));
 
   zx::unowned_channel client_handle(client_channel);
@@ -89,8 +89,8 @@ TEST(SocketCleanup, Stream) {
   zx::socket client_socket, server_socket;
   ASSERT_OK(zx::socket::create(0, &client_socket, &server_socket));
 
-  llcpp::fuchsia::io::wire::StreamSocket stream_info{.socket = std::move(client_socket)};
-  llcpp::fuchsia::io::wire::NodeInfo node_info;
+  fuchsia_io::wire::StreamSocket stream_info{.socket = std::move(client_socket)};
+  fuchsia_io::wire::NodeInfo node_info;
   node_info.set_stream_socket(fidl::unowned_ptr(&stream_info));
 
   zx::unowned_channel client_handle(client_channel);

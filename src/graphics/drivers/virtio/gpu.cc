@@ -26,7 +26,7 @@
 
 #define LOCAL_TRACE 0
 
-namespace sysmem = llcpp::fuchsia::sysmem;
+namespace sysmem = fuchsia_sysmem;
 
 namespace virtio {
 

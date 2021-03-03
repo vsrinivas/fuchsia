@@ -143,8 +143,8 @@ static void test_shutdown(uint32_t iters) {
     magma::TestDeviceBase test_base(MAGMA_VENDOR_ID_INTEL);
 
     {
-      auto result = llcpp::fuchsia::gpu::magma::Device::Call::Query2(
-          test_base.channel()->borrow(), MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED);
+      auto result = fuchsia_gpu_magma::Device::Call::Query2(test_base.channel()->borrow(),
+                                                            MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED);
       uint64_t is_supported = result->result.response().result;
       if (result.status() != ZX_OK || !is_supported) {
         printf("Test restart not supported: status %d is_supported %lu\n", result.status(),
@@ -160,8 +160,7 @@ static void test_shutdown(uint32_t iters) {
     while (complete_count < kMaxCount) {
       if (complete_count > count) {
         // TODO(fxbug.dev/13126) replace this with a request to devmgr to restart the driver
-        auto result =
-            llcpp::fuchsia::gpu::magma::Device::Call::TestRestart(test_base.channel()->borrow());
+        auto result = fuchsia_gpu_magma::Device::Call::TestRestart(test_base.channel()->borrow());
         EXPECT_EQ(ZX_OK, result.status());
         count += kRestartCount;
       }

@@ -22,17 +22,17 @@ class MountChannel {
  public:
   constexpr MountChannel() = default;
 
-  explicit MountChannel(fidl::ClientEnd<llcpp::fuchsia::io::Directory> channel)
+  explicit MountChannel(fidl::ClientEnd<fuchsia_io::Directory> channel)
       : client_end_(std::move(channel)) {}
 
   MountChannel(MountChannel&& other) : client_end_(std::move(other.client_end_)) {}
 
   ~MountChannel();
 
-  fidl::ClientEnd<llcpp::fuchsia::io::Directory>& client_end() { return client_end_; }
+  fidl::ClientEnd<fuchsia_io::Directory>& client_end() { return client_end_; }
 
  private:
-  fidl::ClientEnd<llcpp::fuchsia::io::Directory> client_end_;
+  fidl::ClientEnd<fuchsia_io::Directory> client_end_;
 };
 
 }  // namespace fs

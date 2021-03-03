@@ -12,7 +12,7 @@
 
 namespace {
 
-class Server : public ::llcpp::fidl::test::simple::Simple::Interface {
+class Server : public ::fidl_test_simple::Simple::Interface {
  public:
   explicit Server(sync_completion_t* destroyed) : destroyed_(destroyed) {}
   Server(Server&& other) = delete;
@@ -59,7 +59,7 @@ TEST(BindTestCase, UniquePtrDestroyOnServerClose) {
   ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(remote), std::move(server)));
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
-  auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
+  auto result = ::fidl_test_simple::Simple::Call::Close(zx::unowned_channel{local});
   ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
   // Make sure the other end closed
   ASSERT_OK(local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr));
@@ -102,7 +102,7 @@ TEST(BindTestCase, CallbackDestroyOnServerClose) {
                                          std::move(cb)));
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
-  auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
+  auto result = ::fidl_test_simple::Simple::Call::Close(zx::unowned_channel{local});
   ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
 
   ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
@@ -125,7 +125,7 @@ class PlaceholderBase2 {
 };
 
 class MultiInheritanceServer : public PlaceholderBase1,
-                               public ::llcpp::fidl::test::simple::Simple::Interface,
+                               public ::fidl_test_simple::Simple::Interface,
                                public PlaceholderBase2 {
  public:
   explicit MultiInheritanceServer(sync_completion_t* destroyed) : destroyed_(destroyed) {}
@@ -159,7 +159,7 @@ TEST(BindTestCase, MultipleInheritanceServer) {
   ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(remote), std::move(server)));
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
-  auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
+  auto result = ::fidl_test_simple::Simple::Call::Close(zx::unowned_channel{local});
   ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
   // Make sure the other end closed
   ASSERT_OK(local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr));

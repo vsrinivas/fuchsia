@@ -94,11 +94,10 @@ void CpuStatsFetcherImpl::InitializeKernelStats() {
                    << "Cannot open fuchsia.kernel.Stats: " << zx_status_get_string(status);
     return;
   }
-  cpu_stats_buffer_ =
-      std::make_unique<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>();
+  cpu_stats_buffer_ = std::make_unique<fidl::Buffer<fuchsia_kernel::Stats::GetCpuStatsResponse>>();
   last_cpu_stats_buffer_ =
-      std::make_unique<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>();
-  stats_service_ = std::make_unique<llcpp::fuchsia::kernel::Stats::SyncClient>(std::move(local));
+      std::make_unique<fidl::Buffer<fuchsia_kernel::Stats::GetCpuStatsResponse>>();
+  stats_service_ = std::make_unique<fuchsia_kernel::Stats::SyncClient>(std::move(local));
 }
 
 }  // namespace cobalt

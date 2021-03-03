@@ -25,7 +25,7 @@ zx_status_t BlobCorruptionNotifier::Create(std::unique_ptr<BlobCorruptionNotifie
 }
 
 void BlobCorruptionNotifier::SetCorruptBlobHandler(
-    fidl::ClientEnd<llcpp::fuchsia::blobfs::CorruptBlobHandler> blobfs_handler) {
+    fidl::ClientEnd<fuchsia_blobfs::CorruptBlobHandler> blobfs_handler) {
   corruption_handler_.reset();
   corruption_handler_ = std::move(blobfs_handler);
 }
@@ -44,7 +44,7 @@ zx_status_t BlobCorruptionNotifier::NotifyCorruptBlob(const uint8_t* blob_root_h
   }
 
   FX_LOGS(INFO) << "Notifying corruption handler service";
-  auto result = llcpp::fuchsia::blobfs::CorruptBlobHandler::Call::CorruptBlob(
+  auto result = fuchsia_blobfs::CorruptBlobHandler::Call::CorruptBlob(
       corruption_handler_,
       fidl::VectorView<uint8_t>(fidl::unowned_ptr(const_cast<uint8_t*>(blob_root_hash)),
                                 blob_root_len));

@@ -21,7 +21,7 @@
 namespace goldfish {
 
 class Control;
-using HeapInterface = ::llcpp::fuchsia::sysmem2::Heap::Interface;
+using HeapInterface = ::fuchsia_sysmem2::Heap::Interface;
 
 // LLCPP synchronous server of a goldfish device-local Fuchsia sysmem Heap
 // interface.
@@ -31,15 +31,14 @@ class HostVisibleHeap : public Heap {
 
   ~HostVisibleHeap() override;
 
-  // |llcpp::fuchsia::sysmem2::Heap::Interface|
+  // |fuchsia_sysmem2::Heap::Interface|
   void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& completer) override;
 
-  // |llcpp::fuchsia::sysmem2::Heap::Interface|
-  void CreateResource(::zx::vmo vmo,
-                      llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings,
+  // |fuchsia_sysmem2::Heap::Interface|
+  void CreateResource(::zx::vmo vmo, fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings,
                       CreateResourceCompleter::Sync& completer) override;
 
-  // |llcpp::fuchsia::sysmem2::Heap::Interface|
+  // |fuchsia_sysmem2::Heap::Interface|
   void DestroyResource(uint64_t id, DestroyResourceCompleter::Sync& completer) override;
 
   // |Heap|

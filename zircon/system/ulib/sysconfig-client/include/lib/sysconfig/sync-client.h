@@ -19,7 +19,7 @@
 
 namespace sysconfig {
 
-namespace skipblock = ::llcpp::fuchsia::hardware::skipblock;
+namespace skipblock = ::fuchsia_hardware_skipblock;
 
 // This class provides a synchronous read and write interface into sub-partitions of the sysconfig
 // skip-block partition.
@@ -84,7 +84,7 @@ class __EXPORT SyncClient {
   const sysconfig_header* GetHeader(zx_status_t* status_out = nullptr);
 
  private:
-  SyncClient(::llcpp::fuchsia::hardware::skipblock::SkipBlock::SyncClient skip_block)
+  SyncClient(::fuchsia_hardware_skipblock::SkipBlock::SyncClient skip_block)
       : skip_block_(std::move(skip_block)) {}
 
   zx_status_t InitializeReadMapper();
@@ -97,7 +97,7 @@ class __EXPORT SyncClient {
 
   zx_status_t LoadFromStorage();
 
-  ::llcpp::fuchsia::hardware::skipblock::SkipBlock::SyncClient skip_block_;
+  ::fuchsia_hardware_skipblock::SkipBlock::SyncClient skip_block_;
 
   // Lazily initialized on reads.
   fzl::OwnedVmoMapper read_mapper_;

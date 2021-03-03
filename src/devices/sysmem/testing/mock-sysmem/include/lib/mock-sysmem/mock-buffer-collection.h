@@ -11,15 +11,15 @@
 
 namespace mock_sysmem {
 
-class MockBufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interface {
+class MockBufferCollection : public fuchsia_sysmem::BufferCollection::Interface {
  public:
-  void SetEventSink(fidl::ClientEnd<llcpp::fuchsia::sysmem::BufferCollectionEvents> events,
+  void SetEventSink(fidl::ClientEnd<fuchsia_sysmem::BufferCollectionEvents> events,
                     SetEventSinkCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
   void Sync(SyncCompleter::Sync& _completer) override { EXPECT_TRUE(false); }
   void SetConstraints(bool has_constraints,
-                      llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints,
+                      fuchsia_sysmem::wire::BufferCollectionConstraints constraints,
                       SetConstraintsCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
@@ -52,7 +52,7 @@ class MockBufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::In
   void SetDebugClientInfo(fidl::StringView name, uint64_t id,
                           SetDebugClientInfoCompleter::Sync& completer) override {}
   void SetConstraintsAuxBuffers(
-      llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers constraints,
+      fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers constraints,
       SetConstraintsAuxBuffersCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }

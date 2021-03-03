@@ -20,8 +20,7 @@
 
 #include "fifo.h"
 
-class Console : public llcpp::fuchsia::logger::LogListenerSafe::Interface,
-                public fbl::RefCounted<Console> {
+class Console : public fuchsia_logger::LogListenerSafe::Interface, public fbl::RefCounted<Console> {
  public:
   // Maximum amount of data that will be written to tx_sink_() per call.
   static constexpr size_t kMaxWriteSize = 256;
@@ -49,7 +48,7 @@ class Console : public llcpp::fuchsia::logger::LogListenerSafe::Interface,
   zx_status_t Write(const void* data, size_t len, size_t* out_actual);
 
   // Used to implement fuchsia.log.LogListenerSafe/{Log,LogMany}
-  zx_status_t Log(llcpp::fuchsia::logger::wire::LogMessage log);
+  zx_status_t Log(fuchsia_logger::wire::LogMessage log);
 
   // Return the event for a connection to this console
   zx_status_t GetEvent(zx::eventpair* event) const;
@@ -59,8 +58,8 @@ class Console : public llcpp::fuchsia::logger::LogListenerSafe::Interface,
   void DebugReaderThread();
 
   // Functions to handle fuchsia.log.LogListenerSafe
-  void Log(llcpp::fuchsia::logger::wire::LogMessage log, LogCompleter::Sync& completer) override;
-  void LogMany(fidl::VectorView<llcpp::fuchsia::logger::wire::LogMessage> logs,
+  void Log(fuchsia_logger::wire::LogMessage log, LogCompleter::Sync& completer) override;
+  void LogMany(fidl::VectorView<fuchsia_logger::wire::LogMessage> logs,
                LogManyCompleter::Sync& completer) override;
   void Done(DoneCompleter::Sync& completer) override;
 

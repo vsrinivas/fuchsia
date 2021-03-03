@@ -18,11 +18,11 @@ namespace blobfs {
 
 // HealthCheckService is a service which clients can use to ask blobfs to perform basic
 // self-checks of runtime behaviour (such as reading, writing files).
-class HealthCheckService : public llcpp::fuchsia::update::verify::BlobfsVerifier::Interface,
+class HealthCheckService : public fuchsia_update_verify::BlobfsVerifier::Interface,
                            public fs::Service {
  public:
   // fuchsia.update.verify.BlobfsVerifier interface
-  void Verify(llcpp::fuchsia::update::verify::wire::VerifyOptions options,
+  void Verify(fuchsia_update_verify::wire::VerifyOptions options,
               VerifyCompleter::Sync& completer) final;
 
  protected:

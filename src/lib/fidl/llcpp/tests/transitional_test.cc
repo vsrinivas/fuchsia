@@ -12,7 +12,7 @@
 #include <gtest/gtest.h>
 #include <llcpptest/transitional/test/llcpp/fidl.h>
 
-namespace test = ::llcpp::llcpptest::transitional::test;
+namespace test = ::llcpptest_transitional_test;
 
 namespace {
 

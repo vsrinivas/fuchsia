@@ -35,7 +35,7 @@ void FdioTest::SetUp() {
                              }),
             ZX_OK);
 
-  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [export_root_client, export_root_server] = *std::move(endpoints);
 
@@ -63,8 +63,8 @@ void FdioTest::SetUp() {
 void FdioTest::TearDown() {
   zx::channel root_client;
   ASSERT_EQ(fdio_fd_transfer(root_fd_.release(), root_client.reset_and_get_address()), ZX_OK);
-  ASSERT_EQ(llcpp::fuchsia::io::DirectoryAdmin::Call::Unmount(
-                fidl::ClientEnd<llcpp::fuchsia::io::DirectoryAdmin>(std::move(root_client)))
+  ASSERT_EQ(fuchsia_io::DirectoryAdmin::Call::Unmount(
+                fidl::ClientEnd<fuchsia_io::DirectoryAdmin>(std::move(root_client)))
                 .status(),
             ZX_OK);
 }

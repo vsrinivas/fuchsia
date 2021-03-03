@@ -20,7 +20,7 @@
 
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);

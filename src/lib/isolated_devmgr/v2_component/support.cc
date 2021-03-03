@@ -44,7 +44,7 @@ int main(void) {
           [&boot_arguments](zx::channel request, async_dispatcher_t* dispatcher) {
             fidl::BindSingleInFlightOnly(dispatcher, std::move(request), &boot_arguments);
           }),
-      llcpp::fuchsia::boot::Arguments::Name);
+      fuchsia_boot::Arguments::Name);
 
   context->outgoing()->AddPublicService(
       std::make_unique<vfs::Service>([](zx::channel request, async_dispatcher_t* dispatcher) {
@@ -52,7 +52,7 @@ int main(void) {
             reinterpret_cast<fidl_dispatch_t*>(fuchsia_kernel_RootJob_dispatch);
         fidl_bind(dispatcher, request.release(), root_job_dispatch, nullptr, &kRootJobOps);
       }),
-      llcpp::fuchsia::kernel::RootJob::Name);
+      fuchsia_kernel::RootJob::Name);
 
   loop.Run();
   return 0;

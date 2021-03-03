@@ -7,7 +7,7 @@
 #include <string>
 
 #include <fidl/test/unionmemberadd/llcpp/fidl.h>  // nogncheck
-namespace fidl_test = llcpp::fidl::test::unionmemberadd;
+namespace fidl_test = fidl_test_unionmemberadd;
 
 std::optional<int32_t> parse_as_int(const std::string& s) {
   char* end;

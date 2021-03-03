@@ -157,7 +157,7 @@ class ServerInterpreter : public Interpreter {
 };
 
 // Defines a connection from a client to the interpreter.
-class Service final : public llcpp::fuchsia::shell::Shell::Interface {
+class Service final : public fuchsia_shell::Shell::Interface {
  public:
   explicit Service(Server* server)
       : server_(server), interpreter_(std::make_unique<ServerInterpreter>(this)) {}
@@ -169,11 +169,11 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   // Sets the binding related to this connection which allows sending events.
   // It should be called right after message dispatching is scheduled
   // to happen on this Service.
-  void set_binding(fidl::ServerBindingRef<llcpp::fuchsia::shell::Shell> binding) {
+  void set_binding(fidl::ServerBindingRef<fuchsia_shell::Shell> binding) {
     binding_.emplace(std::move(binding));
   }
 
-  fidl::ServerBindingRef<llcpp::fuchsia::shell::Shell>& binding() { return binding_.value(); }
+  fidl::ServerBindingRef<fuchsia_shell::Shell>& binding() { return binding_.value(); }
 
   // Called by |Server| to notify that the |Server| object will be destroyed.
   // The service should close its connection and schedule its destruction too.
@@ -182,7 +182,7 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   void CreateExecutionContext(uint64_t context_id,
                               CreateExecutionContextCompleter::Sync& completer) override;
   void AddNodes(uint64_t context_id,
-                ::fidl::VectorView<::llcpp::fuchsia::shell::wire::NodeDefinition> nodes,
+                ::fidl::VectorView<::fuchsia_shell::wire::NodeDefinition> nodes,
                 AddNodesCompleter::Sync& _completer) override;
   void DumpExecutionContext(uint64_t context_id,
                             DumpExecutionContextCompleter::Sync& completer) override;
@@ -191,22 +191,20 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   void Shutdown(ShutdownCompleter::Sync& completer) override;
 
   // Helpers to be able to send events to the client.
-  zx_status_t OnError(uint64_t context_id,
-                      std::vector<llcpp::fuchsia::shell::wire::Location>& locations,
+  zx_status_t OnError(uint64_t context_id, std::vector<fuchsia_shell::wire::Location>& locations,
                       const std::string& error_message) {
     return binding_.value()->OnError(context_id, fidl::unowned_vec(locations),
                                      fidl::unowned_str(error_message));
   }
 
   zx_status_t OnError(uint64_t context_id, const std::string& error_message) {
-    std::vector<llcpp::fuchsia::shell::wire::Location> locations;
+    std::vector<fuchsia_shell::wire::Location> locations;
     return OnError(context_id, locations, error_message);
   }
 
   zx_status_t OnDumpDone(uint64_t context_id) { return binding_.value()->OnDumpDone(context_id); }
 
-  zx_status_t OnExecutionDone(uint64_t context_id,
-                              llcpp::fuchsia::shell::wire::ExecuteResult result) {
+  zx_status_t OnExecutionDone(uint64_t context_id, fuchsia_shell::wire::ExecuteResult result) {
     return binding_.value()->OnExecutionDone(context_id, result);
   }
 
@@ -214,8 +212,7 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
     return binding_.value()->OnTextResult(context_id, fidl::unowned_str(result), partial_result);
   }
 
-  zx_status_t OnResult(uint64_t context_id,
-                       fidl::VectorView<llcpp::fuchsia::shell::wire::Node>&& nodes,
+  zx_status_t OnResult(uint64_t context_id, fidl::VectorView<fuchsia_shell::wire::Node>&& nodes,
                        bool partial_result) {
     return binding_.value()->OnResult(context_id, std::move(nodes), partial_result);
   }
@@ -223,30 +220,28 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
  private:
   // Helpers to be able to create AST nodes.
   void AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
-                         uint64_t node_node_id,
-                         const llcpp::fuchsia::shell::wire::IntegerLiteral& node, bool root_node);
+                         uint64_t node_node_id, const fuchsia_shell::wire::IntegerLiteral& node,
+                         bool root_node);
 
   void AddVariableDefinition(ServerInterpreterContext* context, uint64_t node_file_id,
                              uint64_t node_node_id,
-                             const llcpp::fuchsia::shell::wire::VariableDefinition& node,
-                             bool root_node);
+                             const fuchsia_shell::wire::VariableDefinition& node, bool root_node);
 
   void AddObjectSchema(ServerInterpreterContext* context, uint64_t node_file_id,
                        uint64_t node_node_id,
-                       const llcpp::fuchsia::shell::wire::ObjectSchemaDefinition& node,
-                       bool root_node);
+                       const fuchsia_shell::wire::ObjectSchemaDefinition& node, bool root_node);
 
-  void AddObjectSchemaField(
-      ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
-      const llcpp::fuchsia::shell::wire::ObjectFieldSchemaDefinition& field_type, bool root_node);
+  void AddObjectSchemaField(ServerInterpreterContext* context, uint64_t node_file_id,
+                            uint64_t node_node_id,
+                            const fuchsia_shell::wire::ObjectFieldSchemaDefinition& field_type,
+                            bool root_node);
 
   void AddObject(ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
-                 const llcpp::fuchsia::shell::wire::ObjectDefinition& node, bool root_node);
+                 const fuchsia_shell::wire::ObjectDefinition& node, bool root_node);
 
   void AddObjectField(ServerInterpreterContext* context, uint64_t node_file_id,
                       uint64_t node_node_id,
-                      const llcpp::fuchsia::shell::wire::ObjectFieldDefinition& field_type,
-                      bool root_node);
+                      const fuchsia_shell::wire::ObjectFieldDefinition& field_type, bool root_node);
 
   void AddStringLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
                         uint64_t node_node_id, const ::fidl::StringView& node, bool root_node);
@@ -255,21 +250,21 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
                    const fidl::StringView& name, bool root_node);
 
   void AddEmitResult(ServerInterpreterContext* context, uint64_t node_file_id,
-                     uint64_t node_node_id, const llcpp::fuchsia::shell::wire::NodeId& node,
+                     uint64_t node_node_id, const fuchsia_shell::wire::NodeId& node,
                      bool root_node);
 
   void AddAssignment(ServerInterpreterContext* context, uint64_t node_file_id,
-                     uint64_t node_node_id, const llcpp::fuchsia::shell::wire::Assignment& node,
+                     uint64_t node_node_id, const fuchsia_shell::wire::Assignment& node,
                      bool root_node);
 
   void AddAddition(ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
-                   const llcpp::fuchsia::shell::wire::Addition& node, bool root_node);
+                   const fuchsia_shell::wire::Addition& node, bool root_node);
 
   // The server which created this service.
   Server* server_;
   // The binding reference which allows controlling the message dispatching
   // of this connection and sending events.
-  cpp17::optional<fidl::ServerBindingRef<llcpp::fuchsia::shell::Shell>> binding_;
+  cpp17::optional<fidl::ServerBindingRef<fuchsia_shell::Shell>> binding_;
   // The interpreter associated with this service. An interpreter can only be associated to one
   // service.
   std::unique_ptr<ServerInterpreter> interpreter_;

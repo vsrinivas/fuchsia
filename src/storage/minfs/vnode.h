@@ -57,7 +57,7 @@ class Minfs;
 class VnodeMinfs : public fs::Vnode,
                    public fbl::SinglyLinkedListable<VnodeMinfs*>,
                    public fbl::Recyclable<VnodeMinfs>,
-                   llcpp::fuchsia::minfs::Minfs::Interface {
+                   fuchsia_minfs::Minfs::Interface {
 #else
 class VnodeMinfs : public fs::Vnode,
                    public fbl::SinglyLinkedListable<VnodeMinfs*>,
@@ -244,7 +244,7 @@ class VnodeMinfs : public fs::Vnode,
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t SetAttributes(fs::VnodeAttributesUpdate a) final;
 #ifdef __Fuchsia__
-  zx_status_t QueryFilesystem(llcpp::fuchsia::io::wire::FilesystemInfo* out) final;
+  zx_status_t QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out) final;
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
 #endif
 

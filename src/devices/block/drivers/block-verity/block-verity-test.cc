@@ -41,7 +41,7 @@ const char* kDriverLib = "/boot/driver/block-verity.so";
 // Bind the block verity driver to the ramdisk.
 zx_status_t BindVerityDriver(zx::unowned_channel ramdisk_chan) {
   zx_status_t rc;
-  auto resp = llcpp::fuchsia::device::Controller::Call::Bind(
+  auto resp = fuchsia_device::Controller::Call::Bind(
       std::move(ramdisk_chan), ::fidl::unowned_str(kDriverLib, strlen(kDriverLib)));
   rc = resp.status();
   if (rc == ZX_OK) {
@@ -81,14 +81,12 @@ class BlockVerityTest : public zxtest::Test {
   }
 
   void CloseAndGenerateSeal(
-      llcpp::fuchsia::hardware::block::verified::wire::DeviceManager_CloseAndGenerateSeal_Result*
-          out) {
+      fuchsia_hardware_block_verified::wire::DeviceManager_CloseAndGenerateSeal_Result* out) {
     ASSERT_OK(vvc_->CloseAndGenerateSeal(&seal_response_buffer_, out));
   }
 
-  zx_status_t OpenForVerifiedRead(
-      const llcpp::fuchsia::hardware::block::verified::wire::Seal& expected_seal,
-      fbl::unique_fd& verified_block_fd) {
+  zx_status_t OpenForVerifiedRead(const fuchsia_hardware_block_verified::wire::Seal& expected_seal,
+                                  fbl::unique_fd& verified_block_fd) {
     uint8_t buf[block_verity::kHashOutputSize];
     memcpy(buf, expected_seal.sha256().superblock_hash.begin(), block_verity::kHashOutputSize);
     digest::Digest digest(buf);
@@ -108,8 +106,7 @@ class BlockVerityTest : public zxtest::Test {
 
   IsolatedDevmgr devmgr_;
   std::unique_ptr<fvm::RamdiskRef> ramdisk_;
-  fidl::Buffer<
-      llcpp::fuchsia::hardware::block::verified::DeviceManager::CloseAndGenerateSealResponse>
+  fidl::Buffer<fuchsia_hardware_block_verified::DeviceManager::CloseAndGenerateSealResponse>
       seal_response_buffer_;
 
   std::unique_ptr<block_verity::VerifiedVolumeClient> vvc_;
@@ -203,7 +200,7 @@ TEST_F(BlockVerityTest, BasicSeal) {
   OpenForAuthoring(mutable_block_fd);
 
   // Close and generate a seal over the all-zeroes data section.
-  llcpp::fuchsia::hardware::block::verified::wire::DeviceManager_CloseAndGenerateSeal_Result result;
+  fuchsia_hardware_block_verified::wire::DeviceManager_CloseAndGenerateSeal_Result result;
   CloseAndGenerateSeal(&result);
   ASSERT_TRUE(result.is_response());
 
@@ -355,11 +352,11 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
   OpenForAuthoring(mutable_block_fd);
 
   // Close and generate a seal over the all-zeroes data section.
-  llcpp::fuchsia::hardware::block::verified::wire::DeviceManager_CloseAndGenerateSeal_Result result;
+  fuchsia_hardware_block_verified::wire::DeviceManager_CloseAndGenerateSeal_Result result;
   CloseAndGenerateSeal(&result);
   ASSERT_TRUE(result.is_response());
 
-  const llcpp::fuchsia::hardware::block::verified::wire::Seal& seal = result.response().seal;
+  const fuchsia_hardware_block_verified::wire::Seal& seal = result.response().seal;
   fbl::unique_fd verified_block_fd;
 
   // Prepare to read every block.
@@ -443,12 +440,12 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
 
   // Attempt to open the superblock with a different seal.  Expect failure,
   // because the superblock hash doesn't match.
-  llcpp::fuchsia::hardware::block::verified::wire::Sha256Seal mangled_sha256_seal;
+  fuchsia_hardware_block_verified::wire::Sha256Seal mangled_sha256_seal;
   memset(mangled_sha256_seal.superblock_hash.begin(), 0xff, 32);
-  fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::Sha256Seal> mangled_aligned =
+  fidl::aligned<fuchsia_hardware_block_verified::wire::Sha256Seal> mangled_aligned =
       std::move(mangled_sha256_seal);
-  auto mangled_seal = llcpp::fuchsia::hardware::block::verified::wire::Seal::WithSha256(
-      fidl::unowned_ptr(&mangled_aligned));
+  auto mangled_seal =
+      fuchsia_hardware_block_verified::wire::Seal::WithSha256(fidl::unowned_ptr(&mangled_aligned));
   ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, OpenForVerifiedRead(mangled_seal, verified_block_fd));
 
   // Corrupt the superblock, then attempt to open the superblock with the last working seal.

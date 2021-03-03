@@ -62,7 +62,7 @@
 namespace blobfs {
 
 using block_client::BlockDevice;
-using llcpp::fuchsia::io::wire::FilesystemInfo;
+using fuchsia_io::wire::FilesystemInfo;
 
 constexpr char kOutgoingDataRoot[] = "root";
 
@@ -216,8 +216,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   // Corruption notifier related.
   const BlobCorruptionNotifier* GetCorruptBlobNotifier() { return blob_corruption_notifier_.get(); }
-  void SetCorruptBlobHandler(
-      fidl::ClientEnd<llcpp::fuchsia::blobfs::CorruptBlobHandler> blobfs_handler) {
+  void SetCorruptBlobHandler(fidl::ClientEnd<fuchsia_blobfs::CorruptBlobHandler> blobfs_handler) {
     blob_corruption_notifier_->SetCorruptBlobHandler(std::move(blobfs_handler));
   }
 

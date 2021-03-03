@@ -27,7 +27,7 @@ struct Arguments {
   std::string autorun_system;
 };
 
-std::optional<Arguments> GetArguments(llcpp::fuchsia::boot::Arguments::SyncClient* client);
+std::optional<Arguments> GetArguments(fuchsia_boot::Arguments::SyncClient* client);
 
 class ConsoleLauncher {
  public:

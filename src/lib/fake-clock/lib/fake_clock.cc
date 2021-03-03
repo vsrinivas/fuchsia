@@ -11,7 +11,7 @@
 
 #include <thread>
 
-namespace fake_clock = llcpp::fuchsia::testing;
+namespace fake_clock = fuchsia_testing;
 
 namespace {
 zx::unowned_channel GetService() {

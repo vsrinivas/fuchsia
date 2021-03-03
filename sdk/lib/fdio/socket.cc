@@ -19,9 +19,9 @@
 #include "fdio_unistd.h"
 #include "private-socket.h"
 
-namespace fio = ::llcpp::fuchsia::io;
-namespace fsocket = ::llcpp::fuchsia::posix::socket;
-namespace fnet = ::llcpp::fuchsia::net;
+namespace fio = ::fuchsia_io;
+namespace fsocket = ::fuchsia_posix_socket;
+namespace fnet = ::fuchsia_net;
 
 namespace {
 
@@ -667,7 +667,7 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t zx_signals, uint32_t*
 using zxio_datagram_socket_t = struct zxio_datagram_socket {
   zxio_t io;
   zx::eventpair event;
-  ::llcpp::fuchsia::posix::socket::DatagramSocket::SyncClient client;
+  ::fuchsia_posix_socket::DatagramSocket::SyncClient client;
 };
 
 static_assert(sizeof(zxio_datagram_socket_t) <= sizeof(zxio_storage_t),
@@ -967,8 +967,8 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   return ops;
 }();
 
-fdio_t* fdio_datagram_socket_create(
-    zx::eventpair event, llcpp::fuchsia::posix::socket::DatagramSocket::SyncClient client) {
+fdio_t* fdio_datagram_socket_create(zx::eventpair event,
+                                    fuchsia_posix_socket::DatagramSocket::SyncClient client) {
   fdio_t* io = fdio_alloc(&fdio_datagram_socket_ops);
   if (io == nullptr) {
     return nullptr;
@@ -989,7 +989,7 @@ using zxio_stream_socket_t = struct zxio_stream_socket {
 
   zxio_pipe_t pipe;
 
-  ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client;
+  ::fuchsia_posix_socket::StreamSocket::SyncClient client;
 };
 
 static_assert(sizeof(zxio_stream_socket_t) <= sizeof(zxio_storage_t),
@@ -1209,7 +1209,7 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
 }();
 
 fdio_t* fdio_stream_socket_create(zx::socket socket,
-                                  llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client,
+                                  fuchsia_posix_socket::StreamSocket::SyncClient client,
                                   zx_info_socket_t info) {
   fdio_t* io = fdio_alloc(&fdio_stream_socket_ops);
   if (io == nullptr) {

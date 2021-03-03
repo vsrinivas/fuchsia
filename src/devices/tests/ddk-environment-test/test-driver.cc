@@ -20,7 +20,7 @@
 
 namespace {
 
-using llcpp::fuchsia::device::environment::test::TestDevice;
+using fuchsia_device_environment_test::TestDevice;
 
 class TestEnvironmentDriver;
 using DeviceType = ddk::Device<TestEnvironmentDriver, ddk::Unbindable, ddk::Messageable>;

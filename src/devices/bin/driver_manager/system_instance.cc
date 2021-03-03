@@ -36,7 +36,7 @@
 
 struct ConsoleStarterArgs {
   SystemInstance* instance;
-  llcpp::fuchsia::boot::Arguments::SyncClient* boot_args;
+  fuchsia_boot::Arguments::SyncClient* boot_args;
 };
 
 struct ServiceStarterArgs {
@@ -48,7 +48,7 @@ struct ServiceStarterParams {
   std::string clock_backstop;
 };
 
-ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::SyncClient* client) {
+ServiceStarterParams GetServiceStarterParams(fuchsia_boot::Arguments::SyncClient* client) {
   fidl::StringView string_keys[]{
       "clock.backstop",
   };

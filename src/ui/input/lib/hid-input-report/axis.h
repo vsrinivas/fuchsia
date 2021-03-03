@@ -13,7 +13,7 @@
 
 namespace hid_input_report {
 
-namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
+namespace fuchsia_input_report = ::fuchsia_input_report;
 
 fuchsia_input_report::wire::Unit HidUnitToLlcppUnit(hid::unit::UnitType unit);
 

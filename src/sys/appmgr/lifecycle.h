@@ -19,7 +19,7 @@ namespace component {
 
 class Appmgr;
 
-class LifecycleServer final : public llcpp::fuchsia::process::lifecycle::Lifecycle::Interface {
+class LifecycleServer final : public fuchsia_process_lifecycle::Lifecycle::Interface {
  public:
   LifecycleServer(Appmgr* appmgr, fit::function<void(zx_status_t)> stop_callback)
       : appmgr_(appmgr) {
@@ -36,7 +36,7 @@ class LifecycleServer final : public llcpp::fuchsia::process::lifecycle::Lifecyc
  private:
   Appmgr* appmgr_;
   fit::function<void(zx_status_t)> stop_callback_;
-  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::process::lifecycle::Lifecycle>> lifecycle_;
+  std::optional<fidl::ServerBindingRef<fuchsia_process_lifecycle::Lifecycle>> lifecycle_;
 
   // For safe-keeping until appmgr shutsdown.
   std::vector<std::shared_ptr<fuchsia::process::lifecycle::LifecyclePtr>> child_lifecycles_;

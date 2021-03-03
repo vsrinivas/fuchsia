@@ -143,7 +143,7 @@ class DevicePartitionerFactory {
   // |block_device| is root block device whichs contains the logical partitions we wish to operate
   // against. It's only meaningful for EFI and CROS devices which may have multiple storage devices.
   static std::unique_ptr<DevicePartitioner> Create(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
       Arch arch, std::shared_ptr<Context> context, zx::channel block_device = zx::channel());
 
   static void Register(std::unique_ptr<DevicePartitionerFactory> factory);
@@ -154,7 +154,7 @@ class DevicePartitionerFactory {
   // This method is overridden by derived classes that implement different kinds
   // of DevicePartitioners.
   virtual zx::status<std::unique_ptr<DevicePartitioner>> New(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
       Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) = 0;
 
   static std::vector<std::unique_ptr<DevicePartitionerFactory>>* registered_factory_list();
@@ -200,7 +200,7 @@ class FixedDevicePartitioner : public DevicePartitioner {
 class DefaultPartitionerFactory : public DevicePartitionerFactory {
  public:
   zx::status<std::unique_ptr<DevicePartitioner>> New(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
       Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };
 

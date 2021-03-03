@@ -11,7 +11,7 @@
 #include <gtest/gtest.h>
 #include <llcpptest/flexible/test/llcpp/fidl.h>
 
-namespace test = ::llcpp::llcpptest::flexible::test;
+namespace test = ::llcpptest_flexible_test;
 
 // The only difference between StrictUnboundedXUnion and StrictBoundedXUnion is that
 // StrictBoundedXUnion limits the vector payload length to 200 bytes. Therefore, by observing that

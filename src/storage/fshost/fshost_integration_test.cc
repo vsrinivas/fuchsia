@@ -39,7 +39,7 @@ void FshostIntegrationTest::SetUp() {
   ASSERT_EQ(status.status_value(), ZX_OK);
   status = zx::make_status(
       exposed_dir_->Open(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE, 0,
-                         llcpp::fuchsia::fshost::BlockWatcher::Name,
+                         fuchsia_fshost::BlockWatcher::Name,
                          fidl::InterfaceRequest<fuchsia::io::Node>(std::move(request))));
   ASSERT_EQ(status.status_value(), ZX_OK);
 }
@@ -53,13 +53,13 @@ void FshostIntegrationTest::TearDown() {
 }
 
 void FshostIntegrationTest::PauseWatcher() const {
-  auto result = llcpp::fuchsia::fshost::BlockWatcher::Call::Pause(watcher_channel_.borrow());
+  auto result = fuchsia_fshost::BlockWatcher::Call::Pause(watcher_channel_.borrow());
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->status, ZX_OK);
 }
 
 void FshostIntegrationTest::ResumeWatcher() const {
-  auto result = llcpp::fuchsia::fshost::BlockWatcher::Call::Resume(watcher_channel_.borrow());
+  auto result = fuchsia_fshost::BlockWatcher::Call::Resume(watcher_channel_.borrow());
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->status, ZX_OK);
 }

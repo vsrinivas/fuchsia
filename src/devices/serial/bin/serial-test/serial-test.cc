@@ -18,8 +18,6 @@
 
 #define DEV_SERIAL "/dev/class/serial"
 
-namespace fuchsia = ::llcpp::fuchsia;
-
 static void serial_print(int fd, const char* str) { write(fd, str, strlen(str)); }
 
 int main(int argc, char** argv) {
@@ -45,11 +43,11 @@ int main(int argc, char** argv) {
     }
 
     fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
-    auto result = fuchsia::hardware::serial::Device::Call::GetClass(
+    auto result = fuchsia_hardware_serial::Device::Call::GetClass(
         zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)));
-    fuchsia::hardware::serial::wire::Class device_class = result->device_class;
+    fuchsia_hardware_serial::wire::Class device_class = result->device_class;
     fdio_unsafe_release(fdio);
-    if (!result.ok() || device_class != fuchsia::hardware::serial::wire::Class::GENERIC) {
+    if (!result.ok() || device_class != fuchsia_hardware_serial::wire::Class::GENERIC) {
       close(fd);
       continue;
     } else {

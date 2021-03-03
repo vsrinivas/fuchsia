@@ -17,9 +17,8 @@ namespace {
 using storage_metrics::CallStat;
 
 // Compare CallStat fields with the corresponding fields in
-// ::llcpp::fuchsia::storage::metrics::wire::CallStat structure
-void ExpectCallStatMatchFidlStat(CallStat& cs,
-                                 ::llcpp::fuchsia::storage::metrics::wire::CallStat& cs_fidl) {
+// ::fuchsia_storage_metrics::wire::CallStat structure
+void ExpectCallStatMatchFidlStat(CallStat& cs, ::fuchsia_storage_metrics::wire::CallStat& cs_fidl) {
   EXPECT_EQ(cs.minimum_latency(true), cs_fidl.success.minimum_latency);
   EXPECT_EQ(cs.maximum_latency(true), cs_fidl.success.maximum_latency);
   EXPECT_EQ(cs.total_time_spent(true), cs_fidl.success.total_time_spent);
@@ -42,13 +41,13 @@ void ExpectCallStatMatchFidlStat(CallStat& cs,
   EXPECT_EQ(cs.bytes_transferred(),
             (cs_fidl.success.bytes_transferred + cs_fidl.failure.bytes_transferred));
 
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat tmp;
+  ::fuchsia_storage_metrics::wire::CallStat tmp;
   cs.CopyToFidl(&tmp);
 }
 
-// Deep campares two ::llcpp::fuchsia::storage::metrics::wire::CallStatRaw structures. Can be
-void ExpectFidlCallStatRawMatch(const ::llcpp::fuchsia::storage::metrics::wire::CallStatRaw& lhs,
-                                const ::llcpp::fuchsia::storage::metrics::wire::CallStatRaw& rhs) {
+// Deep campares two ::fuchsia_storage_metrics::wire::CallStatRaw structures. Can be
+void ExpectFidlCallStatRawMatch(const ::fuchsia_storage_metrics::wire::CallStatRaw& lhs,
+                                const ::fuchsia_storage_metrics::wire::CallStatRaw& rhs) {
   EXPECT_EQ(lhs.total_calls, rhs.total_calls);
   EXPECT_EQ(lhs.total_time_spent, rhs.total_time_spent);
   EXPECT_EQ(lhs.minimum_latency, rhs.minimum_latency);
@@ -56,18 +55,17 @@ void ExpectFidlCallStatRawMatch(const ::llcpp::fuchsia::storage::metrics::wire::
   EXPECT_EQ(lhs.bytes_transferred, rhs.bytes_transferred);
 }
 
-// Compares two ::llcpp::fuchsia::storage::metrics::wire::CallStat structures
-void ExpectMetricsMatchCallStat(const ::llcpp::fuchsia::storage::metrics::wire::CallStat& lhs,
-                                const ::llcpp::fuchsia::storage::metrics::wire::CallStat& rhs) {
+// Compares two ::fuchsia_storage_metrics::wire::CallStat structures
+void ExpectMetricsMatchCallStat(const ::fuchsia_storage_metrics::wire::CallStat& lhs,
+                                const ::fuchsia_storage_metrics::wire::CallStat& rhs) {
   ExpectFidlCallStatRawMatch(lhs.success, rhs.success);
   ExpectFidlCallStatRawMatch(lhs.failure, rhs.failure);
 }
 
-// Compares all ::llcpp::fuchsia::storage::metrics::wire::CallStat fields within |fidl_fs_metrics|,
+// Compares all ::fuchsia_storage_metrics::wire::CallStat fields within |fidl_fs_metrics|,
 // with |fidl_call_stat|
-void CompareFidlFsStatAll(
-    const ::llcpp::fuchsia::storage::metrics::wire::FsMetrics& fidl_fs_metrics,
-    const ::llcpp::fuchsia::storage::metrics::wire::CallStat& fidl_call_stat) {
+void CompareFidlFsStatAll(const ::fuchsia_storage_metrics::wire::FsMetrics& fidl_fs_metrics,
+                          const ::fuchsia_storage_metrics::wire::CallStat& fidl_call_stat) {
   ExpectMetricsMatchCallStat(fidl_fs_metrics.create, fidl_call_stat);
   ExpectMetricsMatchCallStat(fidl_fs_metrics.read, fidl_call_stat);
   ExpectMetricsMatchCallStat(fidl_fs_metrics.write, fidl_call_stat);
@@ -105,8 +103,8 @@ void FsMetricsUpdate(storage_metrics::FsMetrics& metrics, zx_ticks_t minimum_lat
 
 // Expects if |fidl_fs_metrics| is properly initialized.
 void ExpectFsMetricsInitialState(
-    const ::llcpp::fuchsia::storage::metrics::wire::FsMetrics& fidl_fs_metrics) {
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat fidl_call_stat = {};
+    const ::fuchsia_storage_metrics::wire::FsMetrics& fidl_fs_metrics) {
+  ::fuchsia_storage_metrics::wire::CallStat fidl_call_stat = {};
   fidl_call_stat.success.minimum_latency = storage_metrics::kUninitializedMinimumLatency;
   fidl_call_stat.failure.minimum_latency = storage_metrics::kUninitializedMinimumLatency;
   CompareFidlFsStatAll(fidl_fs_metrics, fidl_call_stat);
@@ -135,11 +133,11 @@ void BlockDeviceMetricsUpdate(storage_metrics::BlockDeviceMetrics& metrics,
   UpdateAllBlockDeviceMetricsRaw(metrics, false, maximum_latency, bytes_transferred2);
 }
 
-// Compares all ::llcpp::fuchsia::storage::metrics::wire::CallStat fields within
+// Compares all ::fuchsia_storage_metrics::wire::CallStat fields within
 // |fidl_block_device_metrics|, with |fidl_call_stat|
 void CompareFidlBlockDeviceStatAll(
-    const ::llcpp::fuchsia::hardware::block::wire::BlockStats& fidl_block_device_metrics,
-    const ::llcpp::fuchsia::storage::metrics::wire::CallStat& fidl_call_stat) {
+    const ::fuchsia_hardware_block::wire::BlockStats& fidl_block_device_metrics,
+    const ::fuchsia_storage_metrics::wire::CallStat& fidl_call_stat) {
   ExpectMetricsMatchCallStat(fidl_block_device_metrics.read, fidl_call_stat);
   ExpectMetricsMatchCallStat(fidl_block_device_metrics.write, fidl_call_stat);
   ExpectMetricsMatchCallStat(fidl_block_device_metrics.flush, fidl_call_stat);
@@ -150,8 +148,8 @@ void CompareFidlBlockDeviceStatAll(
 
 // Expects if |fidl_fs_metrics| is properly initialized.
 void ExpectBlockDeviceMetricsInitialState(
-    const ::llcpp::fuchsia::hardware::block::wire::BlockStats& fidl_block_device_metrics) {
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat fidl_call_stat = {};
+    const ::fuchsia_hardware_block::wire::BlockStats& fidl_block_device_metrics) {
+  ::fuchsia_storage_metrics::wire::CallStat fidl_call_stat = {};
   fidl_call_stat.success.minimum_latency = storage_metrics::kUninitializedMinimumLatency;
   fidl_call_stat.failure.minimum_latency = storage_metrics::kUninitializedMinimumLatency;
   CompareFidlBlockDeviceStatAll(fidl_block_device_metrics, fidl_call_stat);
@@ -210,7 +208,7 @@ TEST(BlockStatEqual, LargerWriteBytesTransferred) {
 
 TEST(CallStatTest, UpdateSuccess) {
   storage_metrics::CallStat cs = {};
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat fidl_stat;
+  ::fuchsia_storage_metrics::wire::CallStat fidl_stat;
 
   // Copy initial state
   cs.CopyToFidl(&fidl_stat);
@@ -226,7 +224,7 @@ TEST(CallStatTest, UpdateSuccess) {
 
 TEST(CallStatTest, UpdateFailure) {
   storage_metrics::CallStat cs = {};
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat fidl_stat;
+  ::fuchsia_storage_metrics::wire::CallStat fidl_stat;
 
   // Copy initial state
   cs.CopyToFidl(&fidl_stat);
@@ -243,7 +241,7 @@ TEST(CallStatTest, UpdateFailure) {
 
 TEST(CallStatTest, UpdateBytesTransferred) {
   storage_metrics::CallStat cs = {};
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat fidl_stat;
+  ::fuchsia_storage_metrics::wire::CallStat fidl_stat;
 
   // Copy initial state
   cs.CopyToFidl(&fidl_stat);
@@ -260,7 +258,7 @@ TEST(CallStatTest, UpdateBytesTransferred) {
 
 TEST(CallStatTest, UpdateMinimumLatency) {
   storage_metrics::CallStat cs = {};
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat fidl_stat;
+  ::fuchsia_storage_metrics::wire::CallStat fidl_stat;
 
   // Copy initial state
   cs.CopyToFidl(&fidl_stat);
@@ -278,7 +276,7 @@ TEST(CallStatTest, UpdateMinimumLatency) {
 
 TEST(CallStatTest, UpdateFailedMaximumLatency) {
   storage_metrics::CallStat cs = {};
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat fidl_stat;
+  ::fuchsia_storage_metrics::wire::CallStat fidl_stat;
 
   // Copy initial state
   cs.CopyToFidl(&fidl_stat);
@@ -296,7 +294,7 @@ TEST(CallStatTest, UpdateFailedMaximumLatency) {
 
 TEST(CallStatTest, UpdateTimeSpent) {
   storage_metrics::CallStat cs = {};
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat fidl_stat;
+  ::fuchsia_storage_metrics::wire::CallStat fidl_stat;
 
   // Copy initial state
   cs.CopyToFidl(&fidl_stat);
@@ -313,7 +311,7 @@ TEST(CallStatTest, UpdateTimeSpent) {
 
 TEST(CallStatTest, Reset) {
   storage_metrics::CallStat cs = {};
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat fidl_stat;
+  ::fuchsia_storage_metrics::wire::CallStat fidl_stat;
 
   cs.UpdateCallStat(true, 20, 100);
   cs.UpdateCallStat(false, 20, 100);
@@ -327,7 +325,7 @@ TEST(CallStatTest, Reset) {
 }
 
 TEST(CallStatTest, TestCopyToFidl) {
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat f = {};
+  ::fuchsia_storage_metrics::wire::CallStat f = {};
   storage_metrics::CallStat cs;
 
   // Set max latency
@@ -341,7 +339,7 @@ TEST(CallStatTest, TestCopyToFidl) {
 }
 
 TEST(CallStatTest, TestCopyFromFidl) {
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat f;
+  ::fuchsia_storage_metrics::wire::CallStat f;
   storage_metrics::CallStat cs;
 
   f.success.total_calls = 3;
@@ -373,8 +371,8 @@ TEST(MetricsTest, SetEnable) {
 // Test initial state of FsMetrics
 TEST(FsMetricsTest, DefaultValues) {
   storage_metrics::FsMetrics metrics;
-  ::llcpp::fuchsia::storage::metrics::wire::FsMetrics fidl_fs_metrics;
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat fidl_call_stat = {};
+  ::fuchsia_storage_metrics::wire::FsMetrics fidl_fs_metrics;
+  ::fuchsia_storage_metrics::wire::CallStat fidl_call_stat = {};
   fidl_call_stat.success.minimum_latency = storage_metrics::kUninitializedMinimumLatency;
   fidl_call_stat.failure.minimum_latency = storage_metrics::kUninitializedMinimumLatency;
 
@@ -387,7 +385,7 @@ TEST(FsMetricsTest, DefaultValues) {
 // Tests no-updates are made when metrics is disabled
 TEST(FsMetricsTest, DisabledMetricsIgnoreUpdates) {
   storage_metrics::FsMetrics metrics;
-  ::llcpp::fuchsia::storage::metrics::wire::FsMetrics fidl_fs_metrics;
+  ::fuchsia_storage_metrics::wire::FsMetrics fidl_fs_metrics;
 
   EXPECT_TRUE(metrics.Enabled());
 
@@ -404,9 +402,9 @@ TEST(FsMetricsTest, DisabledMetricsIgnoreUpdates) {
 // Tests updates to fs metrics
 TEST(FsMetricsTest, EnabledMetricsCollectOnUpdate) {
   storage_metrics::FsMetrics metrics;
-  ::llcpp::fuchsia::storage::metrics::wire::FsMetrics fidl_fs_metrics;
-  ::llcpp::fuchsia::storage::metrics::wire::CallStatRaw fidl_call_stat_raw = {};
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat fidl_call_stat;
+  ::fuchsia_storage_metrics::wire::FsMetrics fidl_fs_metrics;
+  ::fuchsia_storage_metrics::wire::CallStatRaw fidl_call_stat_raw = {};
+  ::fuchsia_storage_metrics::wire::CallStat fidl_call_stat;
   EXPECT_TRUE(metrics.Enabled());
 
   zx_ticks_t minimum_latency = 10;
@@ -440,7 +438,7 @@ TEST(FsMetricsTest, EnabledMetricsCollectOnUpdate) {
 // Test initial state of BlockDeviceMetrics
 TEST(BlockDeviceMetricsTest, DefaultValues) {
   storage_metrics::BlockDeviceMetrics metrics;
-  ::llcpp::fuchsia::hardware::block::wire::BlockStats fidl_block_metrics;
+  ::fuchsia_hardware_block::wire::BlockStats fidl_block_metrics;
 
   EXPECT_TRUE(metrics.Enabled());
 
@@ -451,7 +449,7 @@ TEST(BlockDeviceMetricsTest, DefaultValues) {
 // Tests no-updates are made when metrics is disabled
 TEST(BlockDeviceMetricsTest, DisabledMetricsIgnoreUpdates) {
   storage_metrics::BlockDeviceMetrics metrics;
-  ::llcpp::fuchsia::hardware::block::wire::BlockStats fidl_block_metrics;
+  ::fuchsia_hardware_block::wire::BlockStats fidl_block_metrics;
 
   ASSERT_TRUE(metrics.Enabled());
   metrics.CopyToFidl(&fidl_block_metrics);
@@ -470,9 +468,9 @@ TEST(BlockDeviceMetricsTest, DisabledMetricsIgnoreUpdates) {
 // Tests updates to block device metrics
 TEST(BlockDeviceMetricsTest, EnabledMetricsCollectOnUpdate) {
   storage_metrics::BlockDeviceMetrics metrics;
-  ::llcpp::fuchsia::hardware::block::wire::BlockStats fidl_block_metrics;
-  ::llcpp::fuchsia::storage::metrics::wire::CallStatRaw fidl_call_stat_raw = {};
-  ::llcpp::fuchsia::storage::metrics::wire::CallStat fidl_call_stat;
+  ::fuchsia_hardware_block::wire::BlockStats fidl_block_metrics;
+  ::fuchsia_storage_metrics::wire::CallStatRaw fidl_call_stat_raw = {};
+  ::fuchsia_storage_metrics::wire::CallStat fidl_call_stat;
   ASSERT_TRUE(metrics.Enabled());
 
   zx_ticks_t minimum_latency = 10;

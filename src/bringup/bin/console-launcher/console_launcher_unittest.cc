@@ -25,7 +25,7 @@ TEST(SystemInstanceTest, CheckBootArgParsing) {
   mock_boot_arguments::Server boot_server(std::move(arguments));
   loop.StartThread();
 
-  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  fuchsia_boot::Arguments::SyncClient boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
   std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(&boot_args);
@@ -49,7 +49,7 @@ TEST(SystemInstanceTest, CheckBootArgDefaultStrings) {
   mock_boot_arguments::Server boot_server(std::move(arguments));
   loop.StartThread();
 
-  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  fuchsia_boot::Arguments::SyncClient boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
   std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(&boot_args);

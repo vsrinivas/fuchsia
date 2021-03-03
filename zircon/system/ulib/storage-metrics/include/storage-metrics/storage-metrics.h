@@ -17,8 +17,8 @@
 
 namespace storage_metrics {
 constexpr zx_ticks_t kUninitializedMinimumLatency = std::numeric_limits<zx_ticks_t>::max();
-using CallStatFidl = ::llcpp::fuchsia::storage::metrics::wire::CallStat;
-using CallStatRawFidl = ::llcpp::fuchsia::storage::metrics::wire::CallStatRaw;
+using CallStatFidl = ::fuchsia_storage_metrics::wire::CallStat;
+using CallStatRawFidl = ::fuchsia_storage_metrics::wire::CallStatRaw;
 
 // Compares total_calls and bytes_transferred. Returns false if they don't match.
 bool RawCallStatEqual(const CallStatRawFidl& lhs, const CallStatRawFidl& rhs);

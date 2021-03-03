@@ -28,14 +28,14 @@ constexpr zx::duration kDefaultPollInterval = zx::sec(3);
 
 namespace thermal {
 
-using llcpp::fuchsia::hardware::thermal::wire::PowerDomain;
+using fuchsia_hardware_thermal::wire::PowerDomain;
 
 class Vs680Thermal;
 using DeviceType = ddk::Device<Vs680Thermal, ddk::Messageable>;
 
 class Vs680Thermal : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL>,
-                     public llcpp::fuchsia::hardware::thermal::Device::Interface {
+                     public fuchsia_hardware_thermal::Device::Interface {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 

@@ -29,8 +29,8 @@ namespace {
 
 using uuid::Uuid;
 
-namespace partition = ::llcpp::fuchsia::hardware::block::partition;
-namespace skipblock = ::llcpp::fuchsia::hardware::skipblock;
+namespace partition = ::fuchsia_hardware_block_partition;
+namespace skipblock = ::fuchsia_hardware_skipblock;
 
 }  // namespace
 
@@ -49,8 +49,8 @@ BlockWatcherPauser::~BlockWatcherPauser() {
 }
 
 zx::status<BlockWatcherPauser> BlockWatcherPauser::Create(
-    fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root) {
-  auto local = service::ConnectAt<llcpp::fuchsia::fshost::BlockWatcher>(svc_root);
+    fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root) {
+  auto local = service::ConnectAt<fuchsia_fshost::BlockWatcher>(svc_root);
   if (!local.is_ok()) {
     return local.take_error();
   }
@@ -243,7 +243,7 @@ zx::status<> IsBoard(const fbl::unique_fd& devfs_root, fbl::StringPiece board_na
     return status.take_error();
   }
 
-  auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBoardName(zx::unowned(local));
+  auto result = ::fuchsia_sysinfo::SysInfo::Call::GetBoardName(zx::unowned(local));
   status = zx::make_status(result.ok() ? result->status : result.status());
   if (status.is_error()) {
     return status.take_error();
@@ -269,7 +269,7 @@ zx::status<> IsBootloader(const fbl::unique_fd& devfs_root, fbl::StringPiece ven
     return status.take_error();
   }
 
-  auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBootloaderVendor(zx::unowned(local));
+  auto result = ::fuchsia_sysinfo::SysInfo::Call::GetBootloaderVendor(zx::unowned(local));
   status = zx::make_status(result.ok() ? result->status : result.status());
   if (status.is_error()) {
     return status.take_error();

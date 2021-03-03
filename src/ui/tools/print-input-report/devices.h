@@ -12,7 +12,7 @@
 
 namespace print_input_report {
 
-zx::status<fidl::Client<llcpp::fuchsia::input::report::InputReportsReader>> GetReaderClient(
+zx::status<fidl::Client<fuchsia_input_report::InputReportsReader>> GetReaderClient(
     fidl::Client<fuchsia_input_report::InputDevice>* client, async_dispatcher_t* dispatcher);
 
 zx_status_t PrintInputDescriptor(

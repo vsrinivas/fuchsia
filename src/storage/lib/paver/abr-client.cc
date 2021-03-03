@@ -24,16 +24,16 @@
 
 namespace abr {
 
-using ::llcpp::fuchsia::paver::wire::Asset;
-using ::llcpp::fuchsia::paver::wire::Configuration;
+using ::fuchsia_paver::wire::Asset;
+using ::fuchsia_paver::wire::Configuration;
 
 zx::status<Configuration> QueryBootConfig(
-    fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root) {
-  auto endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::boot::Arguments>();
+    fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root) {
+  auto endpoints = fidl::CreateEndpoints<::fuchsia_boot::Arguments>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  auto client_end = service::ConnectAt<::llcpp::fuchsia::boot::Arguments>(svc_root);
+  auto client_end = service::ConnectAt<::fuchsia_boot::Arguments>(svc_root);
   if (!client_end.is_ok()) {
     return client_end.take_error();
   }
@@ -66,8 +66,7 @@ zx::status<Configuration> QueryBootConfig(
 
 namespace {
 
-zx::status<> SupportsVerifiedBoot(
-    fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root) {
+zx::status<> SupportsVerifiedBoot(fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root) {
   return zx::make_status(QueryBootConfig(svc_root).status_value());
 }
 }  // namespace
@@ -123,7 +122,7 @@ std::vector<std::unique_ptr<ClientFactory>>* ClientFactory::registered_factory_l
 }
 
 zx::status<std::unique_ptr<abr::Client>> ClientFactory::Create(
-    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   if (auto status = SupportsVerifiedBoot(svc_root); status.is_error()) {
     return status.take_error();

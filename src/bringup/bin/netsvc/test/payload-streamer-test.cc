@@ -31,7 +31,7 @@ class PayloadStreamerTest : public zxtest::Test {
   }
 
   async::Loop loop_;
-  std::optional<::llcpp::fuchsia::paver::PayloadStream::SyncClient> client_;
+  std::optional<::fuchsia_paver::PayloadStream::SyncClient> client_;
   std::optional<netsvc::PayloadStreamer> payload_streamer_;
 };
 

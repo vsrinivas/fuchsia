@@ -30,7 +30,7 @@
 
 #include "src/lib/fsl/io/device_watcher.h"
 
-namespace fuchsia_partition = ::llcpp::fuchsia::hardware::block::partition;
+namespace fuchsia_partition = ::fuchsia_hardware_block_partition;
 
 using devmgr_integration_test::RecursiveWaitForFile;
 

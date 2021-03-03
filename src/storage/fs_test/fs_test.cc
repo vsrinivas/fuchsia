@@ -731,14 +731,14 @@ zx::status<> TestFilesystem::Fsck() { return filesystem_->Fsck(); }
 
 zx::status<std::string> TestFilesystem::DevicePath() const { return filesystem_->DevicePath(); }
 
-zx::status<llcpp::fuchsia::io::wire::FilesystemInfo> TestFilesystem::GetFsInfo() {
+zx::status<fuchsia_io::wire::FilesystemInfo> TestFilesystem::GetFsInfo() {
   fbl::unique_fd fd(open(mount_path().c_str(), O_RDONLY | O_DIRECTORY));
   if (!fd) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = llcpp::fuchsia::io::DirectoryAdmin::Call::QueryFilesystem(
+  auto result = fuchsia_io::DirectoryAdmin::Call::QueryFilesystem(
       zx::unowned_channel(caller.borrow_channel()));
   if (result.status() != ZX_OK) {
     return zx::error(result.status());

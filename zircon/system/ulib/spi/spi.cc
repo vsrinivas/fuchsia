@@ -9,8 +9,8 @@
 __BEGIN_CDECLS
 
 zx_status_t spilib_transmit(zx_handle_t channel, void* data, size_t length) {
-  auto result = ::llcpp::fuchsia::hardware::spi::Device::Call::TransmitVector(
-      fidl::UnownedClientEnd<::llcpp::fuchsia::hardware::spi::Device>(channel),
+  auto result = ::fuchsia_hardware_spi::Device::Call::TransmitVector(
+      fidl::UnownedClientEnd<::fuchsia_hardware_spi::Device>(channel),
       fidl::VectorView(fidl::unowned_ptr_t<uint8_t>(reinterpret_cast<uint8_t*>(data)), length));
   if (result.status() != ZX_OK) {
     return result.status();
@@ -22,8 +22,8 @@ zx_status_t spilib_transmit(zx_handle_t channel, void* data, size_t length) {
 }
 
 zx_status_t spilib_receive(zx_handle_t channel, void* data, size_t length) {
-  auto result = ::llcpp::fuchsia::hardware::spi::Device::Call::ReceiveVector(
-      fidl::UnownedClientEnd<::llcpp::fuchsia::hardware::spi::Device>(channel), length);
+  auto result = ::fuchsia_hardware_spi::Device::Call::ReceiveVector(
+      fidl::UnownedClientEnd<::fuchsia_hardware_spi::Device>(channel), length);
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -35,8 +35,8 @@ zx_status_t spilib_receive(zx_handle_t channel, void* data, size_t length) {
 }
 
 zx_status_t spilib_exchange(zx_handle_t channel, void* txdata, void* rxdata, size_t length) {
-  auto result = ::llcpp::fuchsia::hardware::spi::Device::Call::ExchangeVector(
-      fidl::UnownedClientEnd<::llcpp::fuchsia::hardware::spi::Device>(channel),
+  auto result = ::fuchsia_hardware_spi::Device::Call::ExchangeVector(
+      fidl::UnownedClientEnd<::fuchsia_hardware_spi::Device>(channel),
       fidl::VectorView(fidl::unowned_ptr_t<uint8_t>(reinterpret_cast<uint8_t*>(txdata)), length));
   if (result.status() != ZX_OK) {
     return result.status();

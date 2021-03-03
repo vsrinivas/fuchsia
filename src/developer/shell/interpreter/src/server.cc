@@ -31,12 +31,12 @@ inline std::string_view GetView(const ::fidl::StringView& view) {
 
 std::unique_ptr<Type> GetType(ServerInterpreterContext* context, uint64_t node_file_id,
                               uint64_t node_node_id,
-                              const llcpp::fuchsia::shell::wire::ShellType& shell_type) {
+                              const fuchsia_shell::wire::ShellType& shell_type) {
   if (shell_type.is_undef()) {
     return std::make_unique<TypeUndefined>();
   }
   if (shell_type.is_builtin_type()) {
-    using llcpp::fuchsia::shell::wire::BuiltinType;
+    using fuchsia_shell::wire::BuiltinType;
     switch (shell_type.builtin_type()) {
       case BuiltinType::BOOL:
         return std::make_unique<TypeBool>();
@@ -89,18 +89,16 @@ class SerializeHelper {
  public:
   SerializeHelper() = default;
 
-  fidl::VectorView<llcpp::fuchsia::shell::wire::Node> nodes() {
-    return builder_.NodesAsVectorView();
-  }
+  fidl::VectorView<fuchsia_shell::wire::Node> nodes() { return builder_.NodesAsVectorView(); }
 
   struct TypeAndValue {
     shell::console::AstBuilder::NodeId value_id;
-    llcpp::fuchsia::shell::wire::ShellType type;
+    fuchsia_shell::wire::ShellType type;
   };
 
   TypeAndValue Set(const Value& value) {
     TypeAndValue id;
-    using llcpp::fuchsia::shell::wire::BuiltinType;
+    using fuchsia_shell::wire::BuiltinType;
     switch (value.type()) {
       case ValueType::kUndef: {
         id.value_id.file_id = -1;
@@ -163,7 +161,7 @@ class SerializeHelper {
     return id;
   }
 
-  llcpp::fuchsia::shell::wire::ShellType GetBuiltin(llcpp::fuchsia::shell::wire::BuiltinType type) {
+  fuchsia_shell::wire::ShellType GetBuiltin(fuchsia_shell::wire::BuiltinType type) {
     return builder_.TypeBuiltin(type);
   }
 
@@ -219,11 +217,10 @@ void ServerInterpreter::EmitError(ExecutionContext* context, std::string error_m
 void ServerInterpreter::EmitError(ExecutionContext* context, NodeId node_id,
                                   std::string error_message) {
   FX_DCHECK(context != nullptr);
-  std::vector<llcpp::fuchsia::shell::wire::Location> locations;
-  llcpp::fuchsia::shell::wire::NodeId fidl_node_id{.file_id = node_id.file_id,
-                                                   .node_id = node_id.node_id};
-  auto builder = llcpp::fuchsia::shell::wire::Location::UnownedBuilder().set_node_id(
-      fidl::unowned_ptr(&fidl_node_id));
+  std::vector<fuchsia_shell::wire::Location> locations;
+  fuchsia_shell::wire::NodeId fidl_node_id{.file_id = node_id.file_id, .node_id = node_id.node_id};
+  auto builder =
+      fuchsia_shell::wire::Location::UnownedBuilder().set_node_id(fidl::unowned_ptr(&fidl_node_id));
   locations.emplace_back(builder.build());
   service_->OnError(context->id(), locations, std::move(error_message));
   context->set_has_errors();
@@ -236,19 +233,17 @@ void ServerInterpreter::DumpDone(ExecutionContext* context) {
 
 void ServerInterpreter::ContextDone(ExecutionContext* context) {
   FX_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(), llcpp::fuchsia::shell::wire::ExecuteResult::OK);
+  service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::OK);
 }
 
 void ServerInterpreter::ContextDoneWithAnalysisError(ExecutionContext* context) {
   FX_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(),
-                            llcpp::fuchsia::shell::wire::ExecuteResult::ANALYSIS_ERROR);
+  service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR);
 }
 
 void ServerInterpreter::ContextDoneWithExecutionError(ExecutionContext* context) {
   FX_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(),
-                            llcpp::fuchsia::shell::wire::ExecuteResult::EXECUTION_ERROR);
+  service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::EXECUTION_ERROR);
 }
 
 void ServerInterpreter::TextResult(ExecutionContext* context, std::string_view text) {
@@ -399,7 +394,7 @@ void Service::CreateExecutionContext(uint64_t context_id,
 }
 
 void Service::AddNodes(uint64_t context_id,
-                       ::fidl::VectorView<::llcpp::fuchsia::shell::wire::NodeDefinition> nodes,
+                       ::fidl::VectorView<::fuchsia_shell::wire::NodeDefinition> nodes,
                        AddNodesCompleter::Sync& _completer) {
   auto context = interpreter_->GetServerContext(context_id);
   if (context == nullptr) {
@@ -495,8 +490,7 @@ void Service::Shutdown(ShutdownCompleter::Sync& completer) {
 
 void Service::AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
                                 uint64_t node_node_id,
-                                const llcpp::fuchsia::shell::wire::IntegerLiteral& node,
-                                bool root_node) {
+                                const fuchsia_shell::wire::IntegerLiteral& node, bool root_node) {
   if (node.absolute_value.count() > 1) {
     interpreter_->EmitError(context->execution_context(),
                             "Infinite precision integers not supported for node " +
@@ -515,7 +509,7 @@ void Service::AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node
 
 void Service::AddObjectSchema(ServerInterpreterContext* context, uint64_t node_file_id,
                               uint64_t node_node_id,
-                              const llcpp::fuchsia::shell::wire::ObjectSchemaDefinition& node,
+                              const fuchsia_shell::wire::ObjectSchemaDefinition& node,
                               bool root_node) {
   std::vector<std::shared_ptr<ObjectFieldSchema>> fields;
   for (auto& field : node.fields) {
@@ -529,7 +523,7 @@ void Service::AddObjectSchema(ServerInterpreterContext* context, uint64_t node_f
 
 void Service::AddObjectSchemaField(
     ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
-    const llcpp::fuchsia::shell::wire::ObjectFieldSchemaDefinition& field_type, bool root_node) {
+    const fuchsia_shell::wire::ObjectFieldSchemaDefinition& field_type, bool root_node) {
   auto definition = std::make_shared<ObjectFieldSchema>(
       interpreter(), node_file_id, node_node_id, field_type.name.data(),
       GetType(context, node_file_id, node_node_id, field_type.type));
@@ -537,8 +531,8 @@ void Service::AddObjectSchemaField(
 }
 
 void Service::AddObject(ServerInterpreterContext* context, uint64_t node_file_id,
-                        uint64_t node_node_id,
-                        const llcpp::fuchsia::shell::wire::ObjectDefinition& node, bool root_node) {
+                        uint64_t node_node_id, const fuchsia_shell::wire::ObjectDefinition& node,
+                        bool root_node) {
   NodeId schema_node_id(node.object_schema.file_id, node.object_schema.node_id);
 
   std::shared_ptr<ObjectSchema> object_schema =
@@ -564,7 +558,7 @@ void Service::AddObject(ServerInterpreterContext* context, uint64_t node_file_id
 
 void Service::AddObjectField(ServerInterpreterContext* context, uint64_t node_file_id,
                              uint64_t node_node_id,
-                             const llcpp::fuchsia::shell::wire::ObjectFieldDefinition& node,
+                             const fuchsia_shell::wire::ObjectFieldDefinition& node,
                              bool root_node) {
   NodeId schema_id(node.object_field_schema.file_id, node.object_field_schema.node_id);
   std::shared_ptr<ObjectFieldSchema> field_schema =
@@ -579,7 +573,7 @@ void Service::AddObjectField(ServerInterpreterContext* context, uint64_t node_fi
 
 void Service::AddVariableDefinition(ServerInterpreterContext* context, uint64_t node_file_id,
                                     uint64_t node_node_id,
-                                    const llcpp::fuchsia::shell::wire::VariableDefinition& node,
+                                    const fuchsia_shell::wire::VariableDefinition& node,
                                     bool root_node) {
   std::unique_ptr<Expression> initial_value = interpreter_->GetNullableExpression(
       context, NodeId(node.initial_value.file_id, node.initial_value.node_id));
@@ -611,7 +605,7 @@ void Service::AddVariable(ServerInterpreterContext* context, uint64_t node_file_
 }
 
 void Service::AddEmitResult(ServerInterpreterContext* context, uint64_t node_file_id,
-                            uint64_t node_node_id, const llcpp::fuchsia::shell::wire::NodeId& node,
+                            uint64_t node_node_id, const fuchsia_shell::wire::NodeId& node,
                             bool root_node) {
   std::unique_ptr<Expression> expression =
       interpreter_->GetExpression(context, NodeId(node_file_id, node_node_id), "expression",
@@ -622,8 +616,8 @@ void Service::AddEmitResult(ServerInterpreterContext* context, uint64_t node_fil
 }
 
 void Service::AddAssignment(ServerInterpreterContext* context, uint64_t node_file_id,
-                            uint64_t node_node_id,
-                            const llcpp::fuchsia::shell::wire::Assignment& node, bool root_node) {
+                            uint64_t node_node_id, const fuchsia_shell::wire::Assignment& node,
+                            bool root_node) {
   std::unique_ptr<Expression> destination =
       interpreter_->GetExpression(context, NodeId(node_file_id, node_node_id), "destination",
                                   NodeId(node.destination.file_id, node.destination.node_id));
@@ -636,7 +630,7 @@ void Service::AddAssignment(ServerInterpreterContext* context, uint64_t node_fil
 }
 
 void Service::AddAddition(ServerInterpreterContext* context, uint64_t node_file_id,
-                          uint64_t node_node_id, const llcpp::fuchsia::shell::wire::Addition& node,
+                          uint64_t node_node_id, const fuchsia_shell::wire::Addition& node,
                           bool root_node) {
   std::unique_ptr<Expression> left =
       interpreter_->GetExpression(context, NodeId(node_file_id, node_node_id), "left",

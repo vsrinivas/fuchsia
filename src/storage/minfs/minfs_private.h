@@ -69,7 +69,7 @@ constexpr uint32_t kExtentCount = 6;
 namespace minfs {
 
 #ifdef __Fuchsia__
-using MountState = llcpp::fuchsia::minfs::wire::MountState;
+using MountState = fuchsia_minfs::wire::MountState;
 
 // How frequently we synchronize the journal. Without this, the journal will only get flushed when
 // there is no room for a new transaction, or it is explicitly asked to by some other mechanism.
@@ -348,7 +348,7 @@ class Minfs :
 
 #ifdef __Fuchsia__
   // Acquire a copy of the collected metrics.
-  [[nodiscard]] zx_status_t GetMetrics(::llcpp::fuchsia::minfs::wire::Metrics* out) const {
+  [[nodiscard]] zx_status_t GetMetrics(::fuchsia_minfs::wire::Metrics* out) const {
     if (metrics_.Enabled()) {
       metrics_.CopyToFidl(out);
       return ZX_OK;

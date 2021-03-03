@@ -43,7 +43,7 @@ inline void CopyNotification(const msd_notification_t* src, msd_notification_t* 
   }
 }
 
-class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::RawChannelInterface,
+class ZirconPlatformConnection : public fuchsia_gpu_magma::Primary::RawChannelInterface,
                                  public PlatformConnection {
  public:
   struct AsyncWait : public async_wait {
@@ -146,8 +146,8 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Raw
   void CreateContext(uint32_t context_id, CreateContextCompleter::Sync& _completer) override;
   void DestroyContext(uint32_t context_id, DestroyContextCompleter::Sync& _completer) override;
   void ExecuteCommandBufferWithResources(
-      uint32_t context_id, llcpp::fuchsia::gpu::magma::wire::CommandBuffer fidl_command_buffer,
-      ::fidl::VectorView<llcpp::fuchsia::gpu::magma::wire::Resource> fidl_resources,
+      uint32_t context_id, fuchsia_gpu_magma::wire::CommandBuffer fidl_command_buffer,
+      ::fidl::VectorView<fuchsia_gpu_magma::wire::Resource> fidl_resources,
       ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores,
       ExecuteCommandBufferWithResourcesCompleter::Sync& _completer) override;
   void ExecuteImmediateCommands(uint32_t context_id, ::fidl::VectorView<uint8_t> command_data_vec,
@@ -160,9 +160,8 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Raw
                       UnmapBufferGpuCompleter::Sync& _completer) override;
   void CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count,
                     CommitBufferCompleter::Sync& _completer) override;
-  void BufferRangeOp(uint64_t buffer_id, llcpp::fuchsia::gpu::magma::wire::BufferOp op,
-                     uint64_t start, uint64_t length,
-                     BufferRangeOpCompleter::Sync& completer) override;
+  void BufferRangeOp(uint64_t buffer_id, fuchsia_gpu_magma::wire::BufferOp op, uint64_t start,
+                     uint64_t length, BufferRangeOpCompleter::Sync& completer) override;
   void AccessPerformanceCounters(zx::event event,
                                  AccessPerformanceCountersCompleter::Sync& completer) override;
   void IsPerformanceCounterAccessEnabled(
@@ -182,7 +181,7 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Raw
   void ReleasePerformanceCounterBufferPool(
       uint64_t pool_id, ReleasePerformanceCounterBufferPoolCompleter::Sync& completer) override;
   void AddPerformanceCounterBufferOffsetsToPool(
-      uint64_t pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::wire::BufferOffset> offsets,
+      uint64_t pool_id, fidl::VectorView<fuchsia_gpu_magma::wire::BufferOffset> offsets,
       AddPerformanceCounterBufferOffsetsToPoolCompleter::Sync& completer) override;
   void RemovePerformanceCounterBufferFromPool(
       uint64_t pool_id, uint64_t buffer_id,
@@ -200,7 +199,7 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Raw
 
   // The binding will be valid after a successful |fidl::BindServer| operation,
   // and back to invalid after this class is unbound from the FIDL dispatcher.
-  cpp17::optional<fidl::ServerBindingRef<llcpp::fuchsia::gpu::magma::Primary>> server_binding_;
+  cpp17::optional<fidl::ServerBindingRef<fuchsia_gpu_magma::Primary>> server_binding_;
 
   std::unique_ptr<Delegate> delegate_;
   zx::channel client_endpoint_;

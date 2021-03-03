@@ -22,8 +22,8 @@ typedef struct custom_layer {
 
   bool done;
 
-  ::llcpp::fuchsia::hardware::display::wire::Frame src;
-  ::llcpp::fuchsia::hardware::display::wire::Frame dest;
+  ::fuchsia_hardware_display::wire::Frame src;
+  ::fuchsia_hardware_display::wire::Frame dest;
 
   image_import_t import_info[2];
 } custom_layer_t;
@@ -31,7 +31,7 @@ typedef struct custom_layer {
 // A layer whose output can appear on multiple displays.
 class VirtualLayer {
  public:
-  typedef ::llcpp::fuchsia::hardware::display::Controller Controller;
+  typedef ::fuchsia_hardware_display::Controller Controller;
 
   explicit VirtualLayer(Display* display);
   explicit VirtualLayer(const fbl::Vector<Display>& displays, bool tiled = true);
@@ -63,7 +63,7 @@ class VirtualLayer {
         return layers_[i].id;
       }
     }
-    return ::llcpp::fuchsia::hardware::display::wire::INVALID_DISP_ID;
+    return ::fuchsia_hardware_display::wire::INVALID_DISP_ID;
   }
 
   // Gets the ID of the image on the given display.
@@ -155,7 +155,7 @@ class PrimaryLayer : public VirtualLayer {
         return layers_[i].import_info[alt_image_].id;
       }
     }
-    return ::llcpp::fuchsia::hardware::display::wire::INVALID_DISP_ID;
+    return ::fuchsia_hardware_display::wire::INVALID_DISP_ID;
   }
 
  private:
@@ -172,9 +172,9 @@ class PrimaryLayer : public VirtualLayer {
   uint32_t fgcolor_;
   uint32_t bgcolor_;
 
-  ::llcpp::fuchsia::hardware::display::wire::Frame src_frame_ = {};
-  ::llcpp::fuchsia::hardware::display::wire::Frame dest_frame_ = {};
-  typedef ::llcpp::fuchsia::hardware::display::wire::Transform Transform;
+  ::fuchsia_hardware_display::wire::Frame src_frame_ = {};
+  ::fuchsia_hardware_display::wire::Frame dest_frame_ = {};
+  typedef ::fuchsia_hardware_display::wire::Transform Transform;
   Transform rotation_ = Transform::IDENTITY;
   bool layer_flipping_ = false;
   bool pan_src_ = false;
@@ -184,7 +184,7 @@ class PrimaryLayer : public VirtualLayer {
   bool alpha_enable_ = false;
   float alpha_val_ = 0.f;
   bool scaling_ = false;
-  uint64_t modifier_ = ::llcpp::fuchsia::sysmem::wire::FORMAT_MODIFIER_LINEAR;
+  uint64_t modifier_ = ::fuchsia_sysmem::wire::FORMAT_MODIFIER_LINEAR;
   bool mirrors_ = false;
 
   bool alt_image_ = false;
@@ -212,7 +212,7 @@ class CursorLayer : public VirtualLayer {
         return layers_[i].import_info[0].id;
       }
     }
-    return ::llcpp::fuchsia::hardware::display::wire::INVALID_DISP_ID;
+    return ::fuchsia_hardware_display::wire::INVALID_DISP_ID;
   }
 
  private:
@@ -236,7 +236,7 @@ class ColorLayer : public VirtualLayer {
   void* GetCurrentImageBuf() override { return nullptr; }
   size_t GetCurrentImageSize() override { return 0; }
   uint64_t image_id(uint64_t display_id) const override {
-    return ::llcpp::fuchsia::hardware::display::wire::INVALID_DISP_ID;
+    return ::fuchsia_hardware_display::wire::INVALID_DISP_ID;
   }
   virtual bool is_done() const override { return true; }
 };

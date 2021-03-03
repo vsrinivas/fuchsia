@@ -18,7 +18,7 @@
 namespace mock_boot_arguments {
 
 void Server::CreateClient(async_dispatcher* dispatcher,
-                          llcpp::fuchsia::boot::Arguments::SyncClient* argclient) {
+                          fuchsia_boot::Arguments::SyncClient* argclient) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
@@ -26,7 +26,7 @@ void Server::CreateClient(async_dispatcher* dispatcher,
         "mock_boot_arguments: failed to create client for mock boot arguments, failed to create "
         "channel: %s\n",
         zx_status_get_string(status));
-    *argclient = llcpp::fuchsia::boot::Arguments::SyncClient{zx::channel()};
+    *argclient = fuchsia_boot::Arguments::SyncClient{zx::channel()};
     return;
   }
 
@@ -36,11 +36,11 @@ void Server::CreateClient(async_dispatcher* dispatcher,
         "mock_boot_arguments: failed to create client for mock boot arguments, failed to bind: "
         "%s\n",
         zx_status_get_string(status));
-    *argclient = llcpp::fuchsia::boot::Arguments::SyncClient{zx::channel()};
+    *argclient = fuchsia_boot::Arguments::SyncClient{zx::channel()};
     return;
   }
 
-  *argclient = llcpp::fuchsia::boot::Arguments::SyncClient{std::move(local)};
+  *argclient = fuchsia_boot::Arguments::SyncClient{std::move(local)};
 }
 
 void Server::GetString(fidl::StringView view, GetStringCompleter::Sync& completer) {
@@ -70,7 +70,7 @@ void Server::GetBool(fidl::StringView view, bool defaultval, GetBoolCompleter::S
   completer.Reply(StrToBool(view, defaultval));
 }
 
-void Server::GetBools(fidl::VectorView<llcpp::fuchsia::boot::wire::BoolPair> keys,
+void Server::GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair> keys,
                       GetBoolsCompleter::Sync& completer) {
   // The vector<bool> optimisation means we have to use a manually-allocated array.
   std::unique_ptr<bool[]> ret = std::make_unique<bool[]>(keys.count());

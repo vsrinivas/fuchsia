@@ -11,18 +11,18 @@
 class TestLifecycleDriverChild;
 using DeviceType = ddk::Device<TestLifecycleDriverChild, ddk::Unbindable, ddk::Messageable,
                                ddk::Openable, ddk::Closable>;
-using llcpp::fuchsia::device::instancelifecycle::test::Lifecycle;
+using fuchsia_device_instancelifecycle_test::Lifecycle;
 
 class TestLifecycleDriverChild : public DeviceType {
  public:
   static zx_status_t Create(
       zx_device_t* parent,
-      fidl::ServerEnd<llcpp::fuchsia::device::instancelifecycle::test::Lifecycle> lifecycle_client,
+      fidl::ServerEnd<fuchsia_device_instancelifecycle_test::Lifecycle> lifecycle_client,
       zx::channel instance_client);
 
   explicit TestLifecycleDriverChild(
       zx_device_t* parent,
-      fidl::ServerEnd<llcpp::fuchsia::device::instancelifecycle::test::Lifecycle> lifecycle_client)
+      fidl::ServerEnd<fuchsia_device_instancelifecycle_test::Lifecycle> lifecycle_client)
       : DeviceType(parent), lifecycle_(std::move(lifecycle_client)) {}
   ~TestLifecycleDriverChild() = default;
 
@@ -40,13 +40,13 @@ class TestLifecycleDriverChild : public DeviceType {
 
  private:
   // Connection to a Lifecycle client
-  llcpp::fuchsia::device::instancelifecycle::test::Lifecycle::EventSender lifecycle_;
+  fuchsia_device_instancelifecycle_test::Lifecycle::EventSender lifecycle_;
 };
 
 class TestLifecycleDriverChildInstance;
 using InstanceDeviceType = ddk::Device<TestLifecycleDriverChildInstance, ddk::Unbindable,
                                        ddk::Messageable, ddk::Openable, ddk::Closable>;
-using llcpp::fuchsia::device::instancelifecycle::test::InstanceDevice;
+using fuchsia_device_instancelifecycle_test::InstanceDevice;
 
 class TestLifecycleDriverChildInstance : public InstanceDeviceType,
                                          public InstanceDevice::Interface {
@@ -77,5 +77,5 @@ class TestLifecycleDriverChildInstance : public InstanceDeviceType,
   TestLifecycleDriverChild* parent_ctx_;
 
   // Connection to a Lifecycle client
-  llcpp::fuchsia::device::instancelifecycle::test::Lifecycle::EventSender lifecycle_;
+  fuchsia_device_instancelifecycle_test::Lifecycle::EventSender lifecycle_;
 };

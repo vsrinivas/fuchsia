@@ -8,7 +8,7 @@ Given the library declaration:
 library fuchsia.examples;
 ```
 
-Bindings code for this library is generated in the `llcpp::fuchsia::examples`
+Bindings code for this library is generated in the `fuchsia_examples`
 namespace, and [test scaffolding](#test-scaffolding) is generated in the
 `fuchsia::examples::testing` namespace.
 
@@ -1078,8 +1078,8 @@ When an object is allocated and initialized,
 `fidl::OwnedEncodedMessage<FidlType>` can be used to encode it. For example:
 
 ```c++
-void Encode(::llcpp::fuchsia::examples::User& user) {
-  ::fidl::OwnedEncodedMessage<::llcpp::fuchsia::examples::User> encoded(&user);
+void Encode(::fuchsia_examples::User& user) {
+  ::fidl::OwnedEncodedMessage<::fuchsia_examples::User> encoded(&user);
   if (!encoded.ok()) {
     // Do something about the error.
     return;
@@ -1107,13 +1107,13 @@ Once an object has been encoded (and eventually stored somewhere),
 
 ```c++
 void UseEncodedUser(std::vector<uint8_t> buffer) {
-  fidl::DecodedMessage<::llcpp::fuchsia::examples::User> decoded(
+  fidl::DecodedMessage<::fuchsia_examples::User> decoded(
       buffer.data(), static_cast<uint32_t>(buffer.size()));
   if (!decoded.ok()) {
     // Display an error.
     return;
   }
-  ::llcpp::fuchsia::examples::User* user = decoded.PrimaryObject();
+  ::fuchsia_examples::User* user = decoded.PrimaryObject();
   // Do something with the table (user).
 }
 ```
@@ -1128,7 +1128,7 @@ type:
 * `void decoded.ReleasePrimaryObject()`
 
 The FIDL type is the type used by the templated class (in the example above:
-`::llcpp::fuchsia::examples::User`).
+`::fuchsia_examples::User`).
 
 The primary object is decoded in place within the provided buffer. This is also
 the case of all the secondary objects. That means that the provided buffer must

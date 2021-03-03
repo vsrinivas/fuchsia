@@ -29,7 +29,7 @@ class ScopedInterpreter {
     loop_.StartThread("shell worker");
 
     zx::channel client_channel(client_ch);
-    client_ = std::make_unique<llcpp::fuchsia::shell::Shell::SyncClient>(std::move(client_channel));
+    client_ = std::make_unique<fuchsia_shell::Shell::SyncClient>(std::move(client_channel));
   }
 
   ~ScopedInterpreter() {
@@ -39,12 +39,12 @@ class ScopedInterpreter {
   }
 
   // Returns a pointer to the SyncClient that is valid during the lifetime of this object.
-  llcpp::fuchsia::shell::Shell::SyncClient* client() { return client_.get(); }
+  fuchsia_shell::Shell::SyncClient* client() { return client_.get(); }
 
  private:
   async::Loop loop_;
   shell::interpreter::server::Server server_;
-  std::unique_ptr<llcpp::fuchsia::shell::Shell::SyncClient> client_;
+  std::unique_ptr<fuchsia_shell::Shell::SyncClient> client_;
 };
 
 }  // namespace shell::console

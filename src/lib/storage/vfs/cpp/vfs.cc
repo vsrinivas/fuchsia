@@ -36,7 +36,7 @@
 #include "src/lib/storage/vfs/cpp/remote_file_connection.h"
 #include "src/lib/storage/vfs/cpp/stream_file_connection.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 #endif
 
@@ -464,7 +464,7 @@ zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, fbl::String
   return ZX_OK;
 }
 
-zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<llcpp::fuchsia::io::Node> channel,
+zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Node> channel,
                        VnodeConnectionOptions options) {
   auto result = vnode->ValidateOptions(options);
   if (result.is_error()) {
@@ -473,8 +473,7 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<llcpp::fuchsia:
   return Serve(std::move(vnode), std::move(channel), result.value());
 }
 
-zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode,
-                       fidl::ServerEnd<llcpp::fuchsia::io::Node> server_end,
+zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Node> server_end,
                        Vnode::ValidatedOptions options) {
   // |ValidateOptions| was called, hence at least one protocol must be supported.
   auto candidate_protocols = options->protocols() & vnode->GetProtocols();
@@ -569,7 +568,7 @@ void Vfs::OnConnectionClosedRemotely(internal::Connection* connection) {
 }
 
 zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
-                                fidl::ServerEnd<::llcpp::fuchsia::io::Directory> server_end,
+                                fidl::ServerEnd<::fuchsia_io::Directory> server_end,
                                 Rights rights) {
   VnodeConnectionOptions options;
   options.flags.directory = true;

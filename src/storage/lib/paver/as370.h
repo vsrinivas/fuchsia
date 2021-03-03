@@ -45,7 +45,7 @@ class As370Partitioner : public DevicePartitioner {
 class As370PartitionerFactory : public DevicePartitionerFactory {
  public:
   zx::status<std::unique_ptr<DevicePartitioner>> New(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
       Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };
 

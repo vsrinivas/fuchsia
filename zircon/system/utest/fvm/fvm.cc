@@ -69,7 +69,7 @@
 
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 using volume_info_t = fuchsia_hardware_block_volume_VolumeInfo;
 
@@ -171,7 +171,7 @@ void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slic
   zx::channel fvm_channel;
   ASSERT_OK(fdio_get_service_handle(fd.get(), fvm_channel.reset_and_get_address()));
 
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+  auto resp = ::fuchsia_device::Controller::Call::Bind(
       zx::unowned_channel(fvm_channel.get()),
       ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
   ASSERT_OK(resp.status());
@@ -185,7 +185,7 @@ void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slic
 void FvmTest::FVMRebind(const partition_entry_t* entries, size_t entry_count) {
   fdio_cpp::UnownedFdioCaller disk_caller(ramdisk_get_block_fd(ramdisk_));
 
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(
+  auto resp = ::fuchsia_device::Controller::Call::Rebind(
       zx::unowned_channel(disk_caller.borrow_channel()),
       ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
   ASSERT_OK(resp.status());
@@ -536,7 +536,7 @@ TEST_F(FvmTest, TestLarge) {
 
   ASSERT_EQ(fvm_init(fd.get(), slice_size), ZX_OK);
 
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+  auto resp = ::fuchsia_device::Controller::Call::Bind(
       zx::unowned_channel(channel->get()),
       ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
   ASSERT_OK(resp.status());
@@ -2555,7 +2555,7 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   ASSERT_OK(fdio_get_service_handle(ramdisk_fd.get(), fvm_channel.reset_and_get_address()));
 
   // Bind should return ZX_ERR_IO when the load of a driver fails.
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+  auto resp = ::fuchsia_device::Controller::Call::Bind(
       zx::unowned_channel(fvm_channel.get()),
       ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
   ASSERT_OK(resp.status());
@@ -2569,7 +2569,7 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   // unloaded but Controller::Bind above does not wait until
   // the device is removed. Controller::Rebind ensures nothing is
   // bound to the device, before it tries to bind the driver again.
-  auto resp2 = ::llcpp::fuchsia::device::Controller::Call::Rebind(
+  auto resp2 = ::fuchsia_device::Controller::Call::Rebind(
       zx::unowned_channel(fvm_channel.get()),
       ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
   ASSERT_OK(resp2.status());

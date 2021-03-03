@@ -23,7 +23,7 @@
 namespace fdio_internal {
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 // The directory represents a local directory (either "/" or
 // some directory between "/" and a mount point), so it has

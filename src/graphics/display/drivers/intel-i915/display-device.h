@@ -24,7 +24,7 @@ namespace i915 {
 
 class Controller;
 class DisplayDevice;
-namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
+namespace FidlBacklight = fuchsia_hardware_backlight;
 
 // Thread safe weak-ref to the DisplayDevice, because the backlight device
 // lifecycle is managed by devmgr but the DisplayDevice lifecycle is managed

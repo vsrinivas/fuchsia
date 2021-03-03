@@ -29,7 +29,7 @@ typedef enum {
 } DevicePacketEnum;
 
 // TODO (jiamingw): change the name of FIDL protocol in next CL.
-class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface {
+class Device : ::fuchsia_hardware_telephony_transport::Qmi::Interface {
  public:
   explicit Device(zx_device_t* device);
 
@@ -37,7 +37,7 @@ class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface 
 
   virtual void ReplyCtrlMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uint32_t resp_size) = 0;
   virtual void SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
-                            ::llcpp::fuchsia::telephony::snoop::wire::Direction direction) = 0;
+                            ::fuchsia_telephony_snoop::wire::Direction direction) = 0;
 
   zx_status_t FidlDispatch(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
@@ -48,7 +48,7 @@ class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface 
   zx_status_t SetChannelToDevice(zx::channel transport);
   zx_status_t SetNetworkStatusToDevice(bool connected);
   zx_status_t SetSnoopChannelToDevice(
-      ::fidl::ClientEnd<::llcpp::fuchsia::telephony::snoop::Publisher> channel);
+      ::fidl::ClientEnd<::fuchsia_telephony_snoop::Publisher> channel);
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t CloseCtrlChannel();
 
@@ -69,12 +69,12 @@ class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface 
  private:
   void SetChannel(::zx::channel transport, SetChannelCompleter::Sync& completer) override;
   void SetNetwork(bool connected, SetNetworkCompleter::Sync& completer) override;
-  void SetSnoopChannel(::fidl::ClientEnd<::llcpp::fuchsia::telephony::snoop::Publisher> interface,
+  void SetSnoopChannel(::fidl::ClientEnd<::fuchsia_telephony_snoop::Publisher> interface,
                        SetSnoopChannelCompleter::Sync& completer) override;
 
   zx::channel ctrl_channel_;
   zx::port ctrl_channel_port_;
-  fidl::ClientEnd<::llcpp::fuchsia::telephony::snoop::Publisher> snoop_client_end_;
+  fidl::ClientEnd<::fuchsia_telephony_snoop::Publisher> snoop_client_end_;
   zx::port snoop_port_;
   std::thread fake_ctrl_thread_;
   bool connected_;

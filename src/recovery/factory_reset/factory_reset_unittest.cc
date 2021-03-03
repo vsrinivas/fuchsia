@@ -189,7 +189,7 @@ class FactoryResetTest : public Test {
   zx_status_t AttachDriver(const fbl::unique_fd& fd, const fbl::StringPiece& driver) {
     fdio_cpp::UnownedFdioCaller connection(fd.get());
     zx_status_t call_status = ZX_OK;
-    auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+    auto resp = ::fuchsia_device::Controller::Call::Bind(
         zx::unowned_channel(connection.borrow_channel()),
         ::fidl::unowned_str(driver.data(), driver.length()));
     zx_status_t io_status = resp.status();

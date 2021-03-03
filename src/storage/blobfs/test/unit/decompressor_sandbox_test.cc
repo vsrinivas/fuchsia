@@ -21,7 +21,7 @@
 namespace blobfs {
 namespace {
 
-using namespace llcpp::fuchsia::blobfs::internal;
+using namespace fuchsia_blobfs_internal;
 
 // These settings currently achieve about 60% compression.
 constexpr int kCompressionLevel = 5;
@@ -152,7 +152,7 @@ TEST_F(DecompressorSandboxTest, ChunkedFullDecompression) {
   wire::DecompressRequest request = {
       {0, kDataSize},
       {0, compressed_size},
-      llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::CHUNKED,
+      fuchsia_blobfs_internal::wire::CompressionAlgorithm::CHUNKED,
   };
 
   wire::DecompressResponse response;
@@ -188,7 +188,7 @@ TEST_F(DecompressorSandboxTest, ChunkedPartialDecompression) {
     wire::DecompressRequest request = {
         {mapping.decompressed_offset, mapping.decompressed_length},
         {mapping.compressed_offset, mapping.compressed_length},
-        llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::CHUNKED_PARTIAL,
+        fuchsia_blobfs_internal::wire::CompressionAlgorithm::CHUNKED_PARTIAL,
     };
     wire::DecompressResponse response;
     SendRequest(&request, &response);

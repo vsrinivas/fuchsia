@@ -31,13 +31,11 @@ class CpuStatsFetcherImpl : public CpuStatsFetcher {
   size_t num_cpu_cores_ = 0;
   std::chrono::time_point<std::chrono::high_resolution_clock> cpu_fetch_time_;
   std::chrono::time_point<std::chrono::high_resolution_clock> last_cpu_fetch_time_;
-  std::unique_ptr<llcpp::fuchsia::kernel::Stats::SyncClient> stats_service_;
-  std::unique_ptr<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>
-      cpu_stats_buffer_;
-  llcpp::fuchsia::kernel::wire::CpuStats* cpu_stats_ = nullptr;
-  std::unique_ptr<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>
-      last_cpu_stats_buffer_;
-  llcpp::fuchsia::kernel::wire::CpuStats* last_cpu_stats_ = nullptr;
+  std::unique_ptr<fuchsia_kernel::Stats::SyncClient> stats_service_;
+  std::unique_ptr<fidl::Buffer<fuchsia_kernel::Stats::GetCpuStatsResponse>> cpu_stats_buffer_;
+  fuchsia_kernel::wire::CpuStats* cpu_stats_ = nullptr;
+  std::unique_ptr<fidl::Buffer<fuchsia_kernel::Stats::GetCpuStatsResponse>> last_cpu_stats_buffer_;
+  fuchsia_kernel::wire::CpuStats* last_cpu_stats_ = nullptr;
 };
 
 }  // namespace cobalt

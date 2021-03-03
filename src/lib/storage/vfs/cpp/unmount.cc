@@ -12,11 +12,11 @@
 
 #include "src/lib/storage/vfs/cpp/vfs.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 namespace fs {
 
-zx_status_t Vfs::UnmountHandle(fidl::ClientEnd<llcpp::fuchsia::io::DirectoryAdmin> handle,
+zx_status_t Vfs::UnmountHandle(fidl::ClientEnd<fuchsia_io::DirectoryAdmin> handle,
                                zx::time deadline) {
   fio::DirectoryAdmin::ResultOf::Unmount result(handle, deadline.get());
   if (!result.ok()) {

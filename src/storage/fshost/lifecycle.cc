@@ -9,9 +9,8 @@
 
 namespace devmgr {
 
-zx_status_t LifecycleServer::Create(
-    async_dispatcher_t* dispatcher, devmgr::FsManager* fs_manager,
-    fidl::ServerEnd<llcpp::fuchsia::process::lifecycle::Lifecycle> chan) {
+zx_status_t LifecycleServer::Create(async_dispatcher_t* dispatcher, devmgr::FsManager* fs_manager,
+                                    fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> chan) {
   zx_status_t status = fidl::BindSingleInFlightOnly(dispatcher, std::move(chan),
                                                     std::make_unique<LifecycleServer>(fs_manager));
   if (status != ZX_OK) {

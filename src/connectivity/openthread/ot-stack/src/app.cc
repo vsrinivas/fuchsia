@@ -283,7 +283,7 @@ zx_status_t OtStackApp::SetupFidlService() {
         auto binding = fidl::BindServer(
             loop_.dispatcher(), std::move(request), fidl_request_handler_ptr_.get(),
             [](LowpanSpinelDeviceFidlImpl* /*unused*/, fidl::UnbindInfo info,
-               fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> /*unused*/) {
+               fidl::ServerEnd<fuchsia_lowpan_spinel::Device> /*unused*/) {
               FX_LOGS(INFO) << "channel handle unbound with reason: "
                             << static_cast<uint32_t>(info.reason);
             });
@@ -420,14 +420,14 @@ zx_status_t OtStackApp::SetDeviceSetupClientInDevmgr(const std::string& path) {
 
 // Get the spinel setup client from a file path. Set `client_ptr_` on success.
 zx_status_t OtStackApp::SetDeviceSetupClientInIsolatedDevmgr(const std::string& path) {
-  auto isolated_devfs = service::Connect<llcpp::fuchsia::openthread::devmgr::IsolatedDevmgr>();
+  auto isolated_devfs = service::Connect<fuchsia_openthread_devmgr::IsolatedDevmgr>();
   if (isolated_devfs.is_error()) {
     FX_LOGS(ERROR) << "failed to connect to isolated devmgr: " << isolated_devfs.status_string();
     return isolated_devfs.status_value();
   }
   // IsolatedDevmgr composes fuchsia.io.Directory, but FIDL bindings don't know.
   auto client_end = service::ConnectAt<fidl_spinel::DeviceSetup>(
-      fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory>(isolated_devfs->channel().borrow()),
+      fidl::UnownedClientEnd<fuchsia_io::Directory>(isolated_devfs->channel().borrow()),
       path.c_str());
   if (client_end.is_error()) {
     FX_LOGS(ERROR) << "failed to connect to device setup: " << client_end.status_string();

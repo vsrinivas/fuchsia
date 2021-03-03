@@ -13,7 +13,7 @@
 #include "osd.h"
 #include "zxtest/zxtest.h"
 
-namespace sysmem = llcpp::fuchsia::sysmem;
+namespace sysmem = fuchsia_sysmem;
 
 class MockBufferCollection : public mock_sysmem::MockBufferCollection {
  public:

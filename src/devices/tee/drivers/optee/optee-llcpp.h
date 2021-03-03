@@ -16,7 +16,7 @@
 
 namespace optee {
 
-namespace fuchsia_tee = ::llcpp::fuchsia::tee;
+namespace fuchsia_tee = ::fuchsia_tee;
 
 class OsRevision {
  public:

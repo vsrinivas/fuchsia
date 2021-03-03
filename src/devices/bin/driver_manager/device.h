@@ -94,7 +94,7 @@ struct DeviceAllDevicesListTag {};
 
 class Device
     : public fbl::RefCounted<Device>,
-      public llcpp::fuchsia::device::manager::Coordinator::RawChannelInterface,
+      public fuchsia_device_manager::Coordinator::RawChannelInterface,
       public AsyncLoopRefCountedRpcHandler<Device>,
       public fbl::ContainableBaseClasses<
           fbl::TaggedDoublyLinkedListable<Device*, internal::DeviceChildListTag>,
@@ -106,17 +106,16 @@ class Device
   using AllDevicesListTag = internal::DeviceAllDevicesListTag;
 
   void AddDevice(::zx::channel coordinator, ::zx::channel device_controller,
-                 ::fidl::VectorView<llcpp::fuchsia::device::manager::wire::DeviceProperty> props,
+                 ::fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty> props,
                  ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path,
                  ::fidl::StringView args,
-                 llcpp::fuchsia::device::manager::wire::AddDeviceConfig device_add_config,
-                 bool has_init, ::zx::vmo inspect, ::zx::channel client_remote,
+                 fuchsia_device_manager::wire::AddDeviceConfig device_add_config, bool has_init,
+                 ::zx::vmo inspect, ::zx::channel client_remote,
                  AddDeviceCompleter::Sync& _completer) override;
   void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync& _completer) override;
-  void AddCompositeDevice(
-      ::fidl::StringView name,
-      llcpp::fuchsia::device::manager::wire::CompositeDeviceDescriptor comp_desc,
-      AddCompositeDeviceCompleter::Sync& _completer) override;
+  void AddCompositeDevice(::fidl::StringView name,
+                          fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
+                          AddCompositeDeviceCompleter::Sync& _completer) override;
   void PublishMetadata(::fidl::StringView device_path, uint32_t key,
                        ::fidl::VectorView<uint8_t> data,
                        PublishMetadataCompleter::Sync& _completer) override;

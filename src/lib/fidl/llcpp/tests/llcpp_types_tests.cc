@@ -17,7 +17,7 @@
 #include <fidl/test/coding/fuchsia/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
 
-using ::llcpp::fidl::test::coding::fuchsia::TypesTest;
+using ::fidl_test_coding_fuchsia::TypesTest;
 using NonNullableChannelRequest = TypesTest::NonNullableChannelRequest;
 
 namespace {

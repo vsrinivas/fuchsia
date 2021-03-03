@@ -41,7 +41,7 @@ class Transaction : public fidl::Transaction {
   sync_completion_t* signal_;
 };
 
-using Completer = ::llcpp::fidl::test::coding::fuchsia::Llcpp::Interface::ActionCompleter::Sync;
+using Completer = ::fidl_test_coding_fuchsia::Llcpp::Interface::ActionCompleter::Sync;
 
 // A completer being destroyed without replying (but needing one) should crash
 TEST(LlcppTransaction, no_reply_asserts) {
@@ -98,10 +98,9 @@ TEST(LlcppTransaction, concurrent_access_asserts) {
 // If there is a serialization error, it does not need to be closed or replied to.
 TEST(LlcppTransaction, transaction_error) {
   Transaction txn{};
-  ::llcpp::fidl::test::coding::fuchsia::Llcpp::Interface::EnumActionCompleter::Sync completer(&txn);
+  ::fidl_test_coding_fuchsia::Llcpp::Interface::EnumActionCompleter::Sync completer(&txn);
   // We are using the fact that 2 isn't a valid enum value to cause an error.
-  fidl::Result result =
-      completer.Reply(static_cast<llcpp::fidl::test::coding::fuchsia::wire::TestEnum>(2));
+  fidl::Result result = completer.Reply(static_cast<fidl_test_coding_fuchsia::wire::TestEnum>(2));
   ASSERT_FALSE(result.ok());
 }
 

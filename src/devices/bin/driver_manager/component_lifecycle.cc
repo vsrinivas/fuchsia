@@ -10,7 +10,7 @@
 #include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
 #include "src/devices/lib/log/log.h"
 
-namespace power_fidl = llcpp::fuchsia::hardware::power;
+namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 
 namespace devmgr {
 

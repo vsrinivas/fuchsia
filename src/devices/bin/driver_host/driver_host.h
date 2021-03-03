@@ -34,8 +34,6 @@
 #include "lock.h"
 #include "zx_device.h"
 
-namespace fuchsia = ::llcpp::fuchsia;
-
 // Nothing outside of devmgr/{devmgr,driver_host,rpc-device}.c
 // should be calling internal::*() APIs, as this could
 // violate the internal locking design.
@@ -50,7 +48,7 @@ void RegisterContextForApi(DriverHostContext* context);
 
 class DevhostControllerConnection
     : public AsyncLoopOwnedRpcHandler<DevhostControllerConnection>,
-      public fuchsia::device::manager::DevhostController::RawChannelInterface {
+      public fuchsia_device_manager::DevhostController::RawChannelInterface {
  public:
   // |ctx| must outlive this connection
   explicit DevhostControllerConnection(DriverHostContext* ctx) : driver_host_context_(ctx) {}
@@ -65,11 +63,10 @@ class DevhostControllerConnection
                     ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy,
                     ::fidl::StringView proxy_args, uint64_t local_device_id,
                     CreateDeviceCompleter::Sync& completer) override;
-  void CreateCompositeDevice(
-      zx::channel coordinator_client, zx::channel device_controller_rpc,
-      ::fidl::VectorView<::llcpp::fuchsia::device::manager::wire::Fragment> fragments,
-      ::fidl::StringView name, uint64_t local_device_id,
-      CreateCompositeDeviceCompleter::Sync& completer) override;
+  void CreateCompositeDevice(zx::channel coordinator_client, zx::channel device_controller_rpc,
+                             ::fidl::VectorView<::fuchsia_device_manager::wire::Fragment> fragments,
+                             ::fidl::StringView name, uint64_t local_device_id,
+                             CreateCompositeDeviceCompleter::Sync& completer) override;
   void CreateDeviceStub(zx::channel coordinator_client, zx::channel device_controller_rpc,
                         uint32_t protocol_id, uint64_t local_device_id,
                         CreateDeviceStubCompleter::Sync& completer) override;

@@ -20,8 +20,8 @@
 
 namespace {
 
-using llcpp::fuchsia::device::lifecycle::test::Lifecycle;
-using llcpp::fuchsia::device::lifecycle::test::TestDevice;
+using fuchsia_device_lifecycle_test::Lifecycle;
+using fuchsia_device_lifecycle_test::TestDevice;
 
 class TestLifecycleDriver;
 using DeviceType =

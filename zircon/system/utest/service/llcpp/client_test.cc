@@ -19,8 +19,8 @@
 
 namespace {
 
-using Echo = ::llcpp::fidl::service::test::Echo;
-using EchoService = ::llcpp::fidl::service::test::EchoService;
+using Echo = ::fidl_service_test::Echo;
+using EchoService = ::fidl_service_test::EchoService;
 
 class EchoCommon : public Echo::Interface {
  public:
@@ -87,7 +87,7 @@ class MockEchoService {
     vfs_.ServeDirectory(root_dir, std::move(*svc_remote));
   }
 
-  fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> svc() { return svc_local_; }
+  fidl::UnownedClientEnd<fuchsia_io::Directory> svc() { return svc_local_; }
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -96,7 +96,7 @@ class MockEchoService {
   EchoCommon default_bar_{"default-bar"};
   EchoCommon other_foo_{"other-foo"};
   EchoCommon other_bar_{"other-bar"};
-  fidl::ClientEnd<llcpp::fuchsia::io::Directory> svc_local_;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
 };
 
 }  // namespace
@@ -114,7 +114,7 @@ class ClientTest : public zxtest::Test {
 
   async::Loop loop_;
   MockEchoService echo_service_;
-  fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> svc_;
+  fidl::UnownedClientEnd<fuchsia_io::Directory> svc_;
 };
 
 TEST_F(ClientTest, ConnectsToDefault) {
@@ -209,7 +209,7 @@ TEST(SingletonService, ConnectAt) {
   auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   root_dir->AddEntry(MockProtocol::Name, std::move(protocol));
 
-  auto directory = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  auto directory = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(directory.status_value());
   ASSERT_OK(vfs.ServeDirectory(root_dir, std::move(directory->server)));
   loop.StartThread("SingletonService/ConnectAt");
@@ -233,7 +233,7 @@ TEST_F(ClientTest, CloneServiceDirectory) {
   auto svc_clone = service::Clone(svc_);
   ASSERT_OK(svc_clone.status_value());
   static_assert(
-      std::is_same_v<decltype(svc_clone.value()), fidl::ClientEnd<llcpp::fuchsia::io::Directory>&>);
+      std::is_same_v<decltype(svc_clone.value()), fidl::ClientEnd<fuchsia_io::Directory>&>);
   ASSERT_NE(svc_.channel(), svc_clone->channel().get());
 
   // Test that we can connect to services in the |svc_clone| directory.
@@ -249,7 +249,7 @@ TEST_F(ClientTest, CloneServiceDirectory) {
 }
 
 TEST(CloneService, Error) {
-  auto bad_endpoint = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  auto bad_endpoint = fidl::CreateEndpoints<fuchsia_io::Directory>();
   bad_endpoint->server.reset();
 
   auto failure = service::Clone(bad_endpoint->client);

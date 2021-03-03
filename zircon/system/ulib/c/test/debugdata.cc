@@ -40,7 +40,7 @@ namespace {
 
 const char kTestHelper[] = "/bin/debugdata-test-helper";
 
-struct DebugData : public ::llcpp::fuchsia::debugdata::DebugData::Interface {
+struct DebugData : public ::fuchsia_debugdata::DebugData::Interface {
   std::unordered_map<std::string, zx::vmo> data;
   std::unordered_map<std::string, zx::vmo> configs;
 
@@ -64,7 +64,7 @@ struct DebugData : public ::llcpp::fuchsia::debugdata::DebugData::Interface {
     auto node = fbl::MakeRefCounted<fs::Service>([dispatcher, this](zx::channel channel) {
       return fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), this);
     });
-    dir->AddEntry(::llcpp::fuchsia::debugdata::DebugData::Name, node);
+    dir->AddEntry(::fuchsia_debugdata::DebugData::Name, node);
 
     zx::channel server;
     ASSERT_OK(zx::channel::create(0, client, &server));
@@ -183,7 +183,7 @@ TEST(DebugDataTests, LoadConfigWithoutSvc) {
 // fuchsia-io-constants.h to call fuchsia.io.Directory/Open(). Confirm that the
 // local copy matches the canonical definition here.
 TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
-  namespace fio = ::llcpp::fuchsia::io;
+  namespace fio = ::fuchsia_io;
 
   ASSERT_EQ(fuchsia_io_MAX_PATH, fio::wire::MAX_PATH);
   ASSERT_EQ(fuchsia_io_OPEN_RIGHT_READABLE, fio::wire::OPEN_RIGHT_READABLE);

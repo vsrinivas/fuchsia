@@ -78,7 +78,7 @@ int debuglog_init() {
   if (status != ZX_OK) {
     return status;
   }
-  llcpp::fuchsia::boot::ReadOnlyLog::SyncClient read_only_log(std::move(local));
+  fuchsia_boot::ReadOnlyLog::SyncClient read_only_log(std::move(local));
   auto result = read_only_log.Get();
   if (result.status() != ZX_OK) {
     return result.status();

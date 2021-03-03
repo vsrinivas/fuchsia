@@ -92,7 +92,7 @@ zx_status_t zxio_vmo_init(zxio_storage_t* file, zx::vmo vmo, zx::stream stream);
 
 // vmofile ---------------------------------------------------------------------
 
-zx_status_t zxio_vmofile_init(zxio_storage_t* file, ::llcpp::fuchsia::io::File::SyncClient control,
+zx_status_t zxio_vmofile_init(zxio_storage_t* file, ::fuchsia_io::File::SyncClient control,
                               zx::vmo vmo, zx_off_t offset, zx_off_t length, zx_off_t seek);
 
 // pipe ------------------------------------------------------------------------

@@ -25,14 +25,14 @@ class TestDeviceBase {
   // Get a channel to the parent device, so we can rebind the driver to it. This
   // can require sandbox access to /dev/sys.
   zx::channel GetParentDevice() {
-    char path[llcpp::fuchsia::device::wire::MAX_DEVICE_PATH_LEN + 1];
-    auto res = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(channel());
+    char path[fuchsia_device::wire::MAX_DEVICE_PATH_LEN + 1];
+    auto res = fuchsia_device::Controller::Call::GetTopologicalPath(channel());
 
     EXPECT_EQ(ZX_OK, res.status());
     EXPECT_TRUE(res->result.is_response());
 
     auto& response = res->result.response();
-    EXPECT_LE(response.path.size(), llcpp::fuchsia::device::wire::MAX_DEVICE_PATH_LEN);
+    EXPECT_LE(response.path.size(), fuchsia_device::wire::MAX_DEVICE_PATH_LEN);
 
     memcpy(path, response.path.data(), response.path.size());
     path[response.path.size()] = 0;
@@ -48,8 +48,7 @@ class TestDeviceBase {
   }
 
   static void UnbindChildren(const zx::channel& parent_device) {
-    auto res = llcpp::fuchsia::device::Controller::Call::UnbindChildren(
-        zx::unowned_channel(parent_device));
+    auto res = fuchsia_device::Controller::Call::UnbindChildren(zx::unowned_channel(parent_device));
     EXPECT_EQ(ZX_OK, res.status());
     EXPECT_TRUE(res->result.is_response());
   }
@@ -67,8 +66,8 @@ class TestDeviceBase {
     while (retry_count++ < kMaxRetryCount) {
       // Don't use rebind because we need the recreate delay above. Also, the parent device may have
       // other children that shouldn't be unbound.
-      auto res = llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned_channel(parent_device),
-                                                                fidl::unowned_str(path));
+      auto res = fuchsia_device::Controller::Call::Bind(zx::unowned_channel(parent_device),
+                                                        fidl::unowned_str(path));
       EXPECT_EQ(ZX_OK, res.status());
       if (res->result.is_err() && res->result.err() == ZX_ERR_ALREADY_BOUND) {
         zx::nanosleep(zx::deadline_after(zx::msec(10)));
@@ -83,7 +82,7 @@ class TestDeviceBase {
   }
 
   void Unbind() {
-    auto res = llcpp::fuchsia::device::Controller::Call::ScheduleUnbind(channel());
+    auto res = fuchsia_device::Controller::Call::ScheduleUnbind(channel());
     fprintf(stderr, "Result: %d\n", res.status());
   }
 
@@ -112,11 +111,10 @@ TEST(TestRunner, RunTests) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
   ASSERT_OK(fdio_service_connect("/tmp", remote.release()));
 
-  auto set_output_res =
-      llcpp::fuchsia::hardware::mediacodec::Tester::Call::SetOutputDirectoryHandle(
-          test_device2->channel(), std::move(local));
+  auto set_output_res = fuchsia_hardware_mediacodec::Tester::Call::SetOutputDirectoryHandle(
+      test_device2->channel(), std::move(local));
   EXPECT_OK(set_output_res.status());
-  auto res = llcpp::fuchsia::hardware::mediacodec::Tester::Call::RunTests(test_device2->channel());
+  auto res = fuchsia_hardware_mediacodec::Tester::Call::RunTests(test_device2->channel());
   EXPECT_OK(res.status());
   if (res.ok())
     EXPECT_OK(res->result);

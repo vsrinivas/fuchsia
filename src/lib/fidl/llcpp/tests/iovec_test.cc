@@ -10,7 +10,7 @@
 #include <fidl/llcpp/linearized/test/llcpp/fidl.h>
 #include <gtest/gtest.h>
 
-namespace fidl_linearized = ::llcpp::fidl::llcpp::linearized::test;
+namespace fidl_linearized = ::fidl_llcpp_linearized_test;
 
 void RunTest(const std::function<void(fidl::OutgoingIovecMessage*,
                                       fidl_linearized::wire::FullyLinearizedStruct*,

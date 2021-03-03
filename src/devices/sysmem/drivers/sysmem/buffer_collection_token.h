@@ -18,10 +18,9 @@ namespace sysmem_driver {
 
 class BufferCollectionToken;
 
-class BufferCollectionToken
-    : public llcpp::fuchsia::sysmem::BufferCollectionToken::RawChannelInterface,
-      public LoggingMixin,
-      public fbl::RefCounted<BufferCollectionToken> {
+class BufferCollectionToken : public fuchsia_sysmem::BufferCollectionToken::RawChannelInterface,
+                              public LoggingMixin,
+                              public fbl::RefCounted<BufferCollectionToken> {
  public:
   ~BufferCollectionToken();
 
@@ -93,8 +92,7 @@ class BufferCollectionToken
 
   bool was_unfound_token_ = false;
 
-  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::sysmem::BufferCollectionToken>>
-      server_binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_sysmem::BufferCollectionToken>> server_binding_;
 
   // This is set up to once during
   // LogicalBufferCollection::BindSharedCollection(), and essentially curries

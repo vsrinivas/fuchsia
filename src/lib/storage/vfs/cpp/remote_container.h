@@ -20,12 +20,12 @@ class RemoteContainer {
  public:
   constexpr RemoteContainer() = default;
   bool IsRemote() const;
-  fidl::ClientEnd<llcpp::fuchsia::io::Directory> DetachRemote();
-  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> GetRemote() const;
-  void SetRemote(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote);
+  fidl::ClientEnd<fuchsia_io::Directory> DetachRemote();
+  fidl::UnownedClientEnd<::fuchsia_io::Directory> GetRemote() const;
+  void SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote);
 
  private:
-  fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote_;
+  fidl::ClientEnd<fuchsia_io::Directory> remote_;
 };
 
 }  // namespace fs

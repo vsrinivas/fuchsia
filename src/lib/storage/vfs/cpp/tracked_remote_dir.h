@@ -40,7 +40,7 @@ class TrackedRemoteDir : public RemoteDir {
   friend fbl::RefPtr<TrackedRemoteDir>;
 
   // Create a directory which is accessed remotely through |remote|.
-  explicit TrackedRemoteDir(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> remote);
+  explicit TrackedRemoteDir(fidl::ClientEnd<::fuchsia_io::Directory> remote);
 
   ~TrackedRemoteDir() override = default;
 

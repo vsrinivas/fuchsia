@@ -211,7 +211,7 @@ void Metrics::SetEnable(bool enable) { enabled_ = enable; }
 
 bool Metrics::Enabled() const { return enabled_; }
 
-FsMetrics::FsMetrics(const ::llcpp::fuchsia::storage::metrics::wire::FsMetrics* metrics) {
+FsMetrics::FsMetrics(const ::fuchsia_storage_metrics::wire::FsMetrics* metrics) {
   create_.CopyFromFidl(&metrics->create);
   read_.CopyFromFidl(&metrics->read);
   write_.CopyFromFidl(&metrics->write);
@@ -237,7 +237,7 @@ FsMetrics::FsMetrics(const fuchsia_storage_metrics_FsMetrics* metrics) {
   SetEnable(true);
 }
 
-void FsMetrics::CopyToFidl(::llcpp::fuchsia::storage::metrics::wire::FsMetrics* metrics) const {
+void FsMetrics::CopyToFidl(::fuchsia_storage_metrics::wire::FsMetrics* metrics) const {
   create_.CopyToFidl(&metrics->create);
   read_.CopyToFidl(&metrics->read);
   write_.CopyToFidl(&metrics->write);

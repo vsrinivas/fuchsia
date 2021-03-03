@@ -22,10 +22,10 @@
 
 #include "src/devices/tests/ddk-power/test-power-child-bind.h"
 
-using llcpp::fuchsia::device::power::test::TestDevice;
-using llcpp::fuchsia::device::wire::DevicePerformanceStateInfo;
-using llcpp::fuchsia::device::wire::DevicePowerState;
-using llcpp::fuchsia::device::wire::DevicePowerStateInfo;
+using fuchsia_device::wire::DevicePerformanceStateInfo;
+using fuchsia_device::wire::DevicePowerState;
+using fuchsia_device::wire::DevicePowerStateInfo;
+using fuchsia_device_power_test::TestDevice;
 
 class TestPowerDriverChild;
 using DeviceType =
@@ -49,13 +49,13 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   void GetCurrentDeviceAutoSuspendConfig(
       GetCurrentDeviceAutoSuspendConfigCompleter::Sync& completer) override;
 
-  void SetTestStatusInfo(::llcpp::fuchsia::device::power::test::wire::TestStatusInfo test_info,
+  void SetTestStatusInfo(::fuchsia_device_power_test::wire::TestStatusInfo test_info,
                          SetTestStatusInfoCompleter::Sync& completer) override;
 
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    ::llcpp::fuchsia::device::power::test::TestDevice::Dispatch(this, msg, &transaction);
+    ::fuchsia_device_power_test::TestDevice::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
   void DdkInit(ddk::InitTxn txn);
@@ -201,7 +201,7 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(
 }
 
 void TestPowerDriverChild::SetTestStatusInfo(
-    llcpp::fuchsia::device::power::test::wire::TestStatusInfo status_info,
+    fuchsia_device_power_test::wire::TestStatusInfo status_info,
     SetTestStatusInfoCompleter::Sync& completer) {
   reply_suspend_status_ = status_info.suspend_status;
   reply_resume_status_ = status_info.resume_status;

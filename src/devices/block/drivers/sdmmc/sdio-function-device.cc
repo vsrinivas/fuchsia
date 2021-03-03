@@ -12,7 +12,7 @@
 
 namespace sdmmc {
 
-using ::llcpp::fuchsia::hardware::sdio::wire::SdioHwInfo;
+using ::fuchsia_hardware_sdio::wire::SdioHwInfo;
 
 zx_status_t SdioFunctionDevice::Create(zx_device_t* parent, SdioControllerDevice* sdio_parent,
                                        std::unique_ptr<SdioFunctionDevice>* out_dev) {

@@ -33,7 +33,7 @@
 namespace blobfs {
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 // Uses the default layout of kDataRootOnly.
 using DataMountTest = BlobfsTest;

@@ -27,7 +27,7 @@ struct HasCopyAsLlcpp<
 
 }  // namespace
 
-using namespace ::llcpp::fidl::types::test;
+using namespace ::fidl_types_test;
 
 TEST(FidlStruct, CopyableStruct) {
   constexpr int32_t kNewFieldValue = 12;

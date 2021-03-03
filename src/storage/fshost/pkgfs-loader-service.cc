@@ -12,7 +12,7 @@
 
 #include "src/lib/files/path.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 namespace devmgr {
 

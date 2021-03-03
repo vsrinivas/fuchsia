@@ -47,20 +47,15 @@ class IsolatedDevmgr {
   // Get a fd to the root of the isolate devmgr's devfs.  This fd
   // may be used with openat() and fdio_watch_directory().
   const fbl::unique_fd& devfs_root() const { return devfs_root_; }
-  fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> svc_root_dir() const {
-    return svc_root_dir_;
-  }
-  fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> fshost_outgoing_dir() const {
+  fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root_dir() const { return svc_root_dir_; }
+  fidl::UnownedClientEnd<fuchsia_io::Directory> fshost_outgoing_dir() const {
     return fshost_outgoing_dir_;
   }
-  fidl::UnownedClientEnd<llcpp::fuchsia::process::lifecycle::Lifecycle> component_lifecycle_svc()
-      const {
+  fidl::UnownedClientEnd<fuchsia_process_lifecycle::Lifecycle> component_lifecycle_svc() const {
     return component_lifecycle_client_;
   }
 
-  fidl::ClientEnd<llcpp::fuchsia::io::Directory> TakeSvcRootDir() {
-    return std::move(svc_root_dir_);
-  }
+  fidl::ClientEnd<fuchsia_io::Directory> TakeSvcRootDir() { return std::move(svc_root_dir_); }
 
   // Expose devfs in component outgoing directory.
   zx_status_t AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_dir);
@@ -82,8 +77,8 @@ class IsolatedDevmgr {
 
   // Opaque structure for the internal state used for serving /svc
   struct SvcLoopState;
-  zx_status_t SetupSvcLoop(fidl::ServerEnd<llcpp::fuchsia::io::Directory> bootsvc_server,
-                           fidl::ClientEnd<llcpp::fuchsia::io::Directory> fshost_outgoing_client,
+  zx_status_t SetupSvcLoop(fidl::ServerEnd<fuchsia_io::Directory> bootsvc_server,
+                           fidl::ClientEnd<fuchsia_io::Directory> fshost_outgoing_client,
                            GetBootItemFunction get_boot_item,
                            std::map<std::string, std::string>&& boot_args);
 
@@ -97,16 +92,16 @@ class IsolatedDevmgr {
   zx::job job_;
 
   // Channel for the root of outgoing services
-  fidl::ClientEnd<llcpp::fuchsia::io::Directory> svc_root_dir_;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root_dir_;
 
   // Channel for the root of fshost
-  fidl::ClientEnd<llcpp::fuchsia::io::Directory> fshost_outgoing_dir_;
+  fidl::ClientEnd<fuchsia_io::Directory> fshost_outgoing_dir_;
 
   // FD to the root of devmgr's devfs
   fbl::unique_fd devfs_root_;
 
   // Channel for component lifecycle events
-  fidl::ClientEnd<llcpp::fuchsia::process::lifecycle::Lifecycle> component_lifecycle_client_;
+  fidl::ClientEnd<fuchsia_process_lifecycle::Lifecycle> component_lifecycle_client_;
 
   // Opaque state associated with the async_loop_
   std::unique_ptr<SvcLoopState> svc_loop_state_;

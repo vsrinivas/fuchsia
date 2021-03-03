@@ -84,8 +84,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  auto resp =
-      ::llcpp::fuchsia::device::Controller::Call::ScheduleUnbind(zx::unowned_channel(local.get()));
+  auto resp = ::fuchsia_device::Controller::Call::ScheduleUnbind(zx::unowned_channel(local.get()));
   status = resp.status();
 
   if (status == ZX_OK) {

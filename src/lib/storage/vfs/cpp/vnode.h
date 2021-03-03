@@ -323,7 +323,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
 #ifdef __Fuchsia__
   // Return information about the underlying filesystem, if desired.
-  virtual zx_status_t QueryFilesystem(llcpp::fuchsia::io::wire::FilesystemInfo* out);
+  virtual zx_status_t QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out);
 
   // Returns the name of the device backing the filesystem, if one exists.
   virtual zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len);
@@ -337,9 +337,9 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
   // The vnode is acting as a mount point for a remote filesystem or device.
   virtual bool IsRemote() const;
-  virtual fidl::ClientEnd<llcpp::fuchsia::io::Directory> DetachRemote();
-  virtual fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> GetRemote() const;
-  virtual void SetRemote(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote);
+  virtual fidl::ClientEnd<fuchsia_io::Directory> DetachRemote();
+  virtual fidl::UnownedClientEnd<::fuchsia_io::Directory> GetRemote() const;
+  virtual void SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote);
 #endif  // __Fuchsia__
 
   // Invoked by internal Connections to account transactions

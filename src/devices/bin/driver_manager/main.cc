@@ -61,8 +61,8 @@ struct DriverManagerParams {
   std::vector<fbl::String> eager_fallback_drivers;
 };
 
-DriverManagerParams GetDriverManagerParams(llcpp::fuchsia::boot::Arguments::SyncClient& client) {
-  llcpp::fuchsia::boot::wire::BoolPair bool_req[]{
+DriverManagerParams GetDriverManagerParams(fuchsia_boot::Arguments::SyncClient& client) {
+  fuchsia_boot::wire::BoolPair bool_req[]{
       // TODO(bwb): remove this or figure out how to make it work
       {"devmgr.devhost.asan", false},
       {"devmgr.devhost.strict-linking", false},
@@ -239,14 +239,14 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     return status;
   }
-  auto path = fbl::StringPrintf("/svc/%s", llcpp::fuchsia::boot::Arguments::Name);
+  auto path = fbl::StringPrintf("/svc/%s", fuchsia_boot::Arguments::Name);
   status = fdio_service_connect(path.data(), remote.release());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to get boot arguments service handle: %s", zx_status_get_string(status));
     return status;
   }
 
-  auto boot_args = llcpp::fuchsia::boot::Arguments::SyncClient{std::move(local)};
+  auto boot_args = fuchsia_boot::Arguments::SyncClient{std::move(local)};
   auto driver_manager_params = GetDriverManagerParams(boot_args);
   auto driver_manager_args = ParseDriverManagerArgs(argc, argv);
 
@@ -292,8 +292,8 @@ int main(int argc, char** argv) {
   // TODO(fxbug.dev/33183): Replace this with a driver_index component.
   std::optional<DriverIndex> driver_index;
   if (driver_manager_args.use_driver_runner) {
-    const auto realm_path = fbl::StringPrintf("/svc/%s", llcpp::fuchsia::sys2::Realm::Name);
-    auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::sys2::Realm>();
+    const auto realm_path = fbl::StringPrintf("/svc/%s", fuchsia_sys2::Realm::Name);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_sys2::Realm>();
     if (endpoints.is_error()) {
       return endpoints.status_value();
     }

@@ -6,7 +6,7 @@
 
 namespace svchost {
 
-zx_status_t ParseArgs(llcpp::fuchsia::boot::Arguments::SyncClient& client, Arguments* out) {
+zx_status_t ParseArgs(fuchsia_boot::Arguments::SyncClient& client, Arguments* out) {
   auto result = client.GetBool(fidl::StringView{"devmgr.require-system"}, false);
   if (!result.ok()) {
     return result.status();

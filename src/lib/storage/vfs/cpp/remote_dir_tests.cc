@@ -11,10 +11,10 @@
 namespace {
 
 TEST(RemoteDir, ApiTest) {
-  auto dir_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::io::Directory>();
+  auto dir_endpoints = fidl::CreateEndpoints<::fuchsia_io::Directory>();
   ASSERT_EQ(ZX_OK, dir_endpoints.status_value());
 
-  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> unowned_client =
+  fidl::UnownedClientEnd<::fuchsia_io::Directory> unowned_client =
       dir_endpoints->client.channel().borrow();
   auto dir = fbl::MakeRefCounted<fs::RemoteDir>(std::move(dir_endpoints->client));
 

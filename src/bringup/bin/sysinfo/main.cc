@@ -35,7 +35,7 @@ int main(int argc, const char** argv) {
     return -1;
   }
   status = outgoing.svc_dir()->AddEntry(
-      ::llcpp::fuchsia::sysinfo::SysInfo::Name,
+      ::fuchsia_sysinfo::SysInfo::Name,
       fbl::MakeRefCounted<fs::Service>([dispatcher, sysinfo](zx::channel svc_request) mutable {
         zx_status_t status =
             fidl::BindSingleInFlightOnly(dispatcher, std::move(svc_request), &sysinfo);

@@ -26,7 +26,7 @@ void ExceptionHandler::SetUpClient() {
     return;
   }
 
-  auto exception_handler_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::exception::Handler>();
+  auto exception_handler_endpoints = fidl::CreateEndpoints<fuchsia_exception::Handler>();
   if (!exception_handler_endpoints.is_ok()) {
     LogError("Failed to create channel for fuchsia.exception.Handler",
              exception_handler_endpoints.status_value());
@@ -34,7 +34,7 @@ void ExceptionHandler::SetUpClient() {
     return;
   }
 
-  class EventHandler : public llcpp::fuchsia::exception::Handler::AsyncEventHandler {
+  class EventHandler : public fuchsia_exception::Handler::AsyncEventHandler {
    public:
     EventHandler(ExceptionHandler* handler) : handler_(handler) {}
 
@@ -44,7 +44,7 @@ void ExceptionHandler::SetUpClient() {
     ExceptionHandler* handler_;
   };
 
-  connection_ = fidl::Client<llcpp::fuchsia::exception::Handler>();
+  connection_ = fidl::Client<fuchsia_exception::Handler>();
   connection_.Bind(std::move(exception_handler_endpoints->client), dispatcher_,
                    std::make_shared<EventHandler>(this));
   server_endpoint_ = std::move(exception_handler_endpoints->server);
@@ -75,7 +75,7 @@ void ExceptionHandler::ConnectToServer() {
   }
 
   if (const zx_status_t status =
-          fdio_service_connect_at(exception_handler_svc_, llcpp::fuchsia::exception::Handler::Name,
+          fdio_service_connect_at(exception_handler_svc_, fuchsia_exception::Handler::Name,
                                   server_endpoint_.channel().release());
       status != ZX_OK) {
     LogError("unable to connect to fuchsia.exception.Handler", status);
@@ -91,14 +91,14 @@ void ExceptionHandler::Handle(zx::exception exception, const zx_exception_info_t
 
   ConnectToServer();
 
-  llcpp::fuchsia::exception::wire::ExceptionInfo exception_info;
+  fuchsia_exception::wire::ExceptionInfo exception_info;
   exception_info.process_koid = info.pid;
   exception_info.thread_koid = info.tid;
-  exception_info.type = static_cast<llcpp::fuchsia::exception::wire::ExceptionType>(info.type);
+  exception_info.type = static_cast<fuchsia_exception::wire::ExceptionType>(info.type);
 
   if (const auto result = connection_->OnException(
           std::move(exception), exception_info,
-          [](llcpp::fuchsia::exception::Handler::OnExceptionResponse* response) {});
+          [](fuchsia_exception::Handler::OnExceptionResponse* response) {});
       result.status() != ZX_OK) {
     LogError("Failed to pass exception to handler", info, result.status());
   }

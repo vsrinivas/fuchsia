@@ -34,7 +34,7 @@ TEST(AstroAbrTests, CreateFails) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-  fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root;
+  fidl::ClientEnd<::fuchsia_io::Directory> svc_root;
   ASSERT_NOT_OK(
       paver::AstroAbrClientFactory().New(devmgr.devfs_root().duplicate(), svc_root, nullptr));
 }
@@ -50,8 +50,7 @@ TEST(SherlockAbrTests, CreateFails) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-  auto svc_root =
-      service::ConnectAt<llcpp::fuchsia::io::Directory>(devmgr.fshost_outgoing_dir(), "svc");
+  auto svc_root = service::ConnectAt<fuchsia_io::Directory>(devmgr.fshost_outgoing_dir(), "svc");
   ASSERT_OK(svc_root.status_value());
 
   ASSERT_NOT_OK(paver::SherlockAbrClientFactory().Create(devmgr.devfs_root().duplicate(), *svc_root,
@@ -69,8 +68,7 @@ TEST(LuisAbrTests, CreateFails) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-  auto svc_root =
-      service::ConnectAt<llcpp::fuchsia::io::Directory>(devmgr.fshost_outgoing_dir(), "svc");
+  auto svc_root = service::ConnectAt<fuchsia_io::Directory>(devmgr.fshost_outgoing_dir(), "svc");
   ASSERT_OK(svc_root.status_value());
 
   ASSERT_NOT_OK(
@@ -88,8 +86,7 @@ TEST(X64AbrTests, CreateFails) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-  auto svc_root =
-      service::ConnectAt<llcpp::fuchsia::io::Directory>(devmgr.fshost_outgoing_dir(), "svc");
+  auto svc_root = service::ConnectAt<fuchsia_io::Directory>(devmgr.fshost_outgoing_dir(), "svc");
   ASSERT_OK(svc_root.status_value());
 
   ASSERT_NOT_OK(

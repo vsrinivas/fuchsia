@@ -130,7 +130,7 @@ zx_status_t Dnode::ReaddirStart(fs::DirentFiller* df, void* cookie) {
 
   if (c->order == 0) {
     // TODO(smklein): Return the real ino.
-    uint64_t ino = ::llcpp::fuchsia::io::wire::INO_UNKNOWN;
+    uint64_t ino = ::fuchsia_io::wire::INO_UNKNOWN;
     if ((r = df->Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR), ino)) != ZX_OK) {
       return r;
     }

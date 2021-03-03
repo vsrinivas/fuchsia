@@ -20,8 +20,8 @@
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 
-namespace v1 = llcpp::fuchsia::sysmem;
-namespace v2 = llcpp::fuchsia::sysmem2;
+namespace v1 = fuchsia_sysmem;
+namespace v2 = fuchsia_sysmem2;
 
 namespace {
 
@@ -252,7 +252,7 @@ v1::wire::BufferMemoryConstraints V1RandomBufferMemoryConstraints() {
   random(&r.inaccessible_domain_supported);
   random(&r.heap_permitted_count);
   r.heap_permitted_count %=
-      llcpp::fuchsia::sysmem::wire::MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED;
+      fuchsia_sysmem::wire::MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED;
   for (uint32_t i = 0; i < r.heap_permitted_count; ++i) {
     random(&r.heap_permitted[i]);
   }
@@ -279,8 +279,7 @@ v1::wire::ImageFormatConstraints V1RandomImageFormatConstraints() {
   v1::wire::ImageFormatConstraints r{};
   r.pixel_format = V1RandomPixelFormat();
   random(&r.color_spaces_count);
-  r.color_spaces_count %=
-      llcpp::fuchsia::sysmem::wire::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES;
+  r.color_spaces_count %= fuchsia_sysmem::wire::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES;
   for (uint32_t i = 0; i < r.color_spaces_count; ++i) {
     r.color_space[i] = V1RandomColorSpace();
   }
@@ -382,8 +381,8 @@ v1::wire::BufferCollectionConstraints V1RandomBufferCollectionConstraints() {
     r.buffer_memory_constraints = V1RandomBufferMemoryConstraints();
   }
   random(&r.image_format_constraints_count);
-  r.image_format_constraints_count %= llcpp::fuchsia::sysmem::wire::
-      MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS;
+  r.image_format_constraints_count %=
+      fuchsia_sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS;
   for (uint32_t i = 0; i < r.image_format_constraints_count; ++i) {
     r.image_format_constraints[i] = V1RandomImageFormatConstraints();
   }

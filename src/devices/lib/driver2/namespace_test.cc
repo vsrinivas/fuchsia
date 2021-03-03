@@ -13,12 +13,12 @@
 #include "src/devices/lib/driver2/test_base.h"
 
 namespace fio = fuchsia::io;
-namespace frunner = llcpp::fuchsia::component::runner;
+namespace frunner = fuchsia_component_runner;
 
 TEST(NamespaceTest, CreateAndConnect) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
-  auto pkg = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  auto pkg = fidl::CreateEndpoints<fuchsia_io::Directory>();
   EXPECT_EQ(ZX_OK, pkg.status_value());
   fidl::FidlAllocator allocator;
   fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);

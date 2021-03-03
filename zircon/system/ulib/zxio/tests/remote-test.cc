@@ -18,7 +18,7 @@
 
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 class TestServerBase : public fio::Node::RawChannelInterface {
  public:
@@ -48,7 +48,7 @@ class TestServerBase : public fio::Node::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void SetAttr(uint32_t flags, llcpp::fuchsia::io::wire::NodeAttributes attribute,
+  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attribute,
                SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -105,8 +105,8 @@ TEST_F(Remote, ServiceGetAttributes) {
   class TestServer : public TestServerBase {
    public:
     void GetAttr(GetAttrCompleter::Sync& completer) override {
-      completer.Reply(ZX_OK, ::llcpp::fuchsia::io::wire::NodeAttributes{
-                                 .mode = ::llcpp::fuchsia::io::wire::MODE_TYPE_SERVICE});
+      completer.Reply(
+          ZX_OK, ::fuchsia_io::wire::NodeAttributes{.mode = ::fuchsia_io::wire::MODE_TYPE_SERVICE});
     }
   };
   ASSERT_NO_FAILURES(StartServer<TestServer>());

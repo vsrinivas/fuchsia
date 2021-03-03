@@ -32,7 +32,8 @@
 namespace usb_virtual_bus {
 namespace {
 
-namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
+namespace usb_peripheral = ::fuchsia_hardware_usb_peripheral;
+namespace usb_peripheral_block = ::fuchsia_hardware_usb_peripheral_block;
 
 constexpr const char kManufacturer[] = "Google";
 constexpr const char kProduct[] = "USB test drive";
@@ -70,7 +71,7 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 // Initialize UMS. Asserts on failure.
 void USBVirtualBus::InitUMS(fbl::String* devpath) {
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
+      ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
   // auto device_desc = GetDeviceDescriptor();
   usb_peripheral::wire::FunctionDescriptor ums_function_desc = {
       .interface_class = USB_CLASS_MSC,
@@ -106,7 +107,7 @@ class BlockDeviceController {
 
   void Connect() {
     using ConfigurationDescriptor =
-        ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
+        ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
     // auto device_desc = GetDeviceDescriptor();
     usb_peripheral::wire::FunctionDescriptor ums_function_desc = {
         .interface_class = USB_CLASS_MSC,
@@ -150,13 +151,11 @@ class BlockDeviceController {
   }
 
  private:
-  llcpp::fuchsia::hardware::usb::virtual_::bus::Bus::SyncClient& virtual_bus() {
-    return bus_->virtual_bus();
-  }
+  fuchsia_hardware_usb_virtual_bus::Bus::SyncClient& virtual_bus() { return bus_->virtual_bus(); }
   usb_peripheral::Device::SyncClient& peripheral() { return bus_->peripheral(); }
 
   USBVirtualBus* bus_;
-  std::optional<usb_peripheral::block::Device::SyncClient> cachecontrol_;
+  std::optional<usb_peripheral_block::Device::SyncClient> cachecontrol_;
 };
 
 class UmsTest : public zxtest::Test {
@@ -242,7 +241,7 @@ TEST_F(UmsTest, DISABLED_CachedWriteWithNoFlushShouldBeDiscarded) {
   uint32_t blk_size;
   {
     fdio_cpp::UnownedFdioCaller caller(fd.get());
-    auto result = ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo(caller.channel());
+    auto result = ::fuchsia_hardware_block::Block::Call::GetInfo(caller.channel());
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
     blk_size = result->info->block_size;
   }
@@ -283,7 +282,7 @@ TEST_F(UmsTest, DISABLED_UncachedWriteShouldBePersistedToBlockDevice) {
   uint32_t blk_size;
   {
     fdio_cpp::UnownedFdioCaller caller(fd.get());
-    auto result = ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo(caller.channel());
+    auto result = ::fuchsia_hardware_block::Block::Call::GetInfo(caller.channel());
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
     blk_size = result->info->block_size;
   }

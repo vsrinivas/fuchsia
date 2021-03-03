@@ -40,8 +40,8 @@
 #include "lib/zx/time.h"
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace fhd = llcpp::fuchsia::hardware::display;
-namespace sysmem = llcpp::fuchsia::sysmem;
+namespace fhd = fuchsia_hardware_display;
+namespace sysmem = fuchsia_sysmem;
 
 namespace {
 
@@ -1485,26 +1485,25 @@ void Client::AcknowledgeVsync(uint64_t cookie, AcknowledgeVsyncCompleter::Sync& 
   zxlogf(TRACE, "Cookie %ld Acked\n", cookie);
 }
 
-fit::result<fidl::ServerBindingRef<llcpp::fuchsia::hardware::display::Controller>, zx_status_t>
-Client::Init(zx::channel server_channel) {
+fit::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_status_t> Client::Init(
+    zx::channel server_channel) {
   zx_status_t status;
 
   server_handle_ = server_channel.get();
 
-  fidl::OnUnboundFn<Client> cb =
-      [](Client* client, fidl::UnbindInfo info,
-         fidl::ServerEnd<llcpp::fuchsia::hardware::display::Controller> ch) {
-        sync_completion_signal(client->fidl_unbound());
-        // DdkRelease will cancel the FIDL binding before destroying the client. Therefore, we
-        // should TearDown() so that no further tasks are scheduled on the controller loop.
-        switch (info.reason) {
-          case fidl::UnbindInfo::kUnbind:
-          case fidl::UnbindInfo::kClose:
-            break;
-          default:
-            client->TearDown();
-        }
-      };
+  fidl::OnUnboundFn<Client> cb = [](Client* client, fidl::UnbindInfo info,
+                                    fidl::ServerEnd<fuchsia_hardware_display::Controller> ch) {
+    sync_completion_signal(client->fidl_unbound());
+    // DdkRelease will cancel the FIDL binding before destroying the client. Therefore, we
+    // should TearDown() so that no further tasks are scheduled on the controller loop.
+    switch (info.reason) {
+      case fidl::UnbindInfo::kUnbind:
+      case fidl::UnbindInfo::kClose:
+        break;
+      default:
+        client->TearDown();
+    }
+  };
 
   auto res = fidl::BindServer(controller_->loop().dispatcher(), std::move(server_channel), this,
                               std::move(cb));

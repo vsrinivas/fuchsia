@@ -316,7 +316,7 @@ class SkipBlockTest : public zxtest::Test {
   Binder ddk_;
   FakeNand nand_;
   FakeBadBlock bad_block_;
-  std::optional<::llcpp::fuchsia::hardware::skipblock::SkipBlock::SyncClient> client_;
+  std::optional<::fuchsia_hardware_skipblock::SkipBlock::SyncClient> client_;
 };
 
 TEST_F(SkipBlockTest, Create) { ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent())); }

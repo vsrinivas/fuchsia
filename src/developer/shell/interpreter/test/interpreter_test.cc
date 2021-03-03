@@ -20,7 +20,7 @@
 shell::console::AstBuilder::NodePair AddObject(
     shell::console::AstBuilder& builder, std::vector<std::string>& names,
     std::vector<shell::console::AstBuilder::NodeId>& values,
-    std::vector<llcpp::fuchsia::shell::wire::ShellType>&& types) {
+    std::vector<fuchsia_shell::wire::ShellType>&& types) {
   EXPECT_EQ(names.size(), values.size())
       << "Test incorrect - mismatch in keys and values for constructing object";
   EXPECT_EQ(names.size(), types.size())
@@ -32,7 +32,7 @@ shell::console::AstBuilder::NodePair AddObject(
   return builder.CloseObject();
 }
 
-llcpp::fuchsia::shell::wire::ExecuteResult InterpreterTestContext::GetResult() const {
+fuchsia_shell::wire::ExecuteResult InterpreterTestContext::GetResult() const {
   std::string string = error_stream.str();
   if (!string.empty()) {
     std::cout << string;
@@ -105,7 +105,7 @@ void InterpreterTest::Finish(FinishAction action, const std::vector<std::string>
 }
 
 void InterpreterTest::Run(FinishAction action) {
-  class EventHandler : public llcpp::fuchsia::shell::Shell::SyncEventHandler {
+  class EventHandler : public fuchsia_shell::Shell::SyncEventHandler {
    public:
     EventHandler(InterpreterTest* test, FinishAction action) : test_(test), action_(action) {}
 
@@ -113,7 +113,7 @@ void InterpreterTest::Run(FinishAction action) {
     bool done() const { return done_; }
     bool ok() const { return ok_; }
 
-    void OnError(llcpp::fuchsia::shell::Shell::OnErrorResponse* event) override {
+    void OnError(fuchsia_shell::Shell::OnErrorResponse* event) override {
       if (action_ == kError) {
         done_ = true;
       }
@@ -139,7 +139,7 @@ void InterpreterTest::Run(FinishAction action) {
       }
     }
 
-    void OnDumpDone(llcpp::fuchsia::shell::Shell::OnDumpDoneResponse* event) override {
+    void OnDumpDone(fuchsia_shell::Shell::OnDumpDoneResponse* event) override {
       if (action_ == kDump) {
         done_ = true;
       }
@@ -150,7 +150,7 @@ void InterpreterTest::Run(FinishAction action) {
       }
     }
 
-    void OnExecutionDone(llcpp::fuchsia::shell::Shell::OnExecutionDoneResponse* event) override {
+    void OnExecutionDone(fuchsia_shell::Shell::OnExecutionDoneResponse* event) override {
       if (action_ != kExecute) {
         msg_ = "Expected action: kExecute was: " + std::to_string(action_);
         ok_ = false;
@@ -167,7 +167,7 @@ void InterpreterTest::Run(FinishAction action) {
       context->result = event->result;
     }
 
-    void OnTextResult(llcpp::fuchsia::shell::Shell::OnTextResultResponse* event) override {
+    void OnTextResult(fuchsia_shell::Shell::OnTextResultResponse* event) override {
       if (action_ == kTextResult) {
         done_ = true;
       }
@@ -191,7 +191,7 @@ void InterpreterTest::Run(FinishAction action) {
       test_->last_text_result_partial_ = event->partial_result;
     }
 
-    void OnResult(llcpp::fuchsia::shell::Shell::OnResultResponse* event) override {
+    void OnResult(fuchsia_shell::Shell::OnResultResponse* event) override {
       InterpreterTestContext* context = test_->GetContext(event->context_id);
       if (context == nullptr) {
         msg_ = "context == nullptr in on_text_result";
@@ -245,7 +245,7 @@ void InterpreterTest::SetUp() {
   zx_handle_t server_ch;
   zx_channel_create(0, &client_ch, &server_ch);
   zx::channel client_channel(client_ch);
-  shell_ = std::make_unique<llcpp::fuchsia::shell::Shell::SyncClient>(std::move(client_channel));
+  shell_ = std::make_unique<fuchsia_shell::Shell::SyncClient>(std::move(client_channel));
 
   // Reset context ids.
   last_context_id_ = 0;

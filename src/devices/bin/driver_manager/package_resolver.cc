@@ -14,7 +14,7 @@
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 
-namespace fio = llcpp::fuchsia::io;
+namespace fio = fuchsia_io;
 
 namespace internal {
 
@@ -43,12 +43,12 @@ zx_status_t PackageResolver::ConnectToResolverService() {
   if (status != ZX_OK) {
     return status;
   }
-  const auto path = fbl::StringPrintf("/svc/%s", ::llcpp::fuchsia::pkg::PackageResolver::Name);
+  const auto path = fbl::StringPrintf("/svc/%s", ::fuchsia_pkg::PackageResolver::Name);
   status = fdio_service_connect(path.c_str(), remote.release());
   if (status != ZX_OK) {
     return status;
   }
-  resolver_client_ = ::llcpp::fuchsia::pkg::PackageResolver::SyncClient(std::move(local));
+  resolver_client_ = ::fuchsia_pkg::PackageResolver::SyncClient(std::move(local));
   return ZX_OK;
 }
 
@@ -65,8 +65,8 @@ zx::status<fio::Directory::SyncClient> PackageResolver::Resolve(
     LOGF(ERROR, "Failed to parse package url: %s", package_url.data());
     return zx::error(ZX_ERR_INTERNAL);
   }
-  ::llcpp::fuchsia::pkg::wire::UpdatePolicy update_policy{.fetch_if_absent = true,
-                                                          .allow_old_versions = false};
+  ::fuchsia_pkg::wire::UpdatePolicy update_policy{.fetch_if_absent = true,
+                                                  .allow_old_versions = false};
   ::fidl::VectorView<::fidl::StringView> selectors;
 
   // This is synchronous for now so we can get the proof of concept working.

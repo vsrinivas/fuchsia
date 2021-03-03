@@ -75,16 +75,16 @@ FsManager::~FsManager() {
 }
 
 zx_status_t FsManager::SetupLifecycleServer(
-    fidl::ServerEnd<::llcpp::fuchsia::process::lifecycle::Lifecycle> lifecycle_request) {
+    fidl::ServerEnd<::fuchsia_process_lifecycle::Lifecycle> lifecycle_request) {
   return devmgr::LifecycleServer::Create(global_loop_->dispatcher(), this,
                                          std::move(lifecycle_request));
 }
 
 // Sets up the outgoing directory, and runs it on the PA_DIRECTORY_REQUEST
 // handle if it exists. See fshost.cml for a list of what's in the directory.
-zx_status_t FsManager::SetupOutgoingDirectory(
-    fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request,
-    std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher) {
+zx_status_t FsManager::SetupOutgoingDirectory(fidl::ServerEnd<::fuchsia_io::Directory> dir_request,
+                                              std::shared_ptr<loader::LoaderServiceBase> loader,
+                                              BlockWatcher& watcher) {
   auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
   // TODO(unknown): fshost exposes two separate service directories, one here and one in
@@ -101,21 +101,20 @@ zx_status_t FsManager::SetupOutgoingDirectory(
     // name matches the protocol name. This is an implementation of
     // fuchsia.ldsvc.Loader, and is renamed to make it easier to identify that
     // this implementation comes from fshost.
-    svc_dir_->AddEntry("fuchsia.fshost.Loader",
-                       fbl::MakeRefCounted<fs::Service>(
-                           [loader](fidl::ServerEnd<::llcpp::fuchsia::ldsvc::Loader> chan) {
-                             auto status = loader->Bind(std::move(chan));
-                             if (status.is_error()) {
-                               FX_LOGS(ERROR)
-                                   << "failed to attach loader service: " << status.status_string();
-                             }
-                             return status.status_value();
-                           }));
+    svc_dir_->AddEntry(
+        "fuchsia.fshost.Loader",
+        fbl::MakeRefCounted<fs::Service>([loader](fidl::ServerEnd<::fuchsia_ldsvc::Loader> chan) {
+          auto status = loader->Bind(std::move(chan));
+          if (status.is_error()) {
+            FX_LOGS(ERROR) << "failed to attach loader service: " << status.status_string();
+          }
+          return status.status_value();
+        }));
   }
-  svc_dir_->AddEntry(llcpp::fuchsia::fshost::Admin::Name,
+  svc_dir_->AddEntry(fuchsia_fshost::Admin::Name,
                      AdminServer::Create(this, global_loop_->dispatcher()));
 
-  svc_dir_->AddEntry(llcpp::fuchsia::fshost::BlockWatcher::Name,
+  svc_dir_->AddEntry(fuchsia_fshost::BlockWatcher::Name,
                      BlockWatcherServer::Create(global_loop_->dispatcher(), watcher));
 
   outgoing_dir->AddEntry("svc", svc_dir_);
@@ -174,9 +173,9 @@ zx_status_t FsManager::SetupOutgoingDirectory(
 }
 
 zx_status_t FsManager::Initialize(
-    fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request,
-    fidl::ServerEnd<::llcpp::fuchsia::process::lifecycle::Lifecycle> lifecycle_request,
-    fidl::ClientEnd<::llcpp::fuchsia::device::manager::Administrator> driver_admin,
+    fidl::ServerEnd<::fuchsia_io::Directory> dir_request,
+    fidl::ServerEnd<::fuchsia_process_lifecycle::Lifecycle> lifecycle_request,
+    fidl::ClientEnd<::fuchsia_device_manager::Administrator> driver_admin,
     std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher) {
   zx_status_t status = memfs::Vfs::Create("<root>", &root_vfs_, &global_root_);
   if (status != ZX_OK) {
@@ -226,8 +225,8 @@ zx_status_t FsManager::Initialize(
     }
   }
   if (driver_admin.is_valid()) {
-    driver_admin_ = fidl::Client<llcpp::fuchsia::device::manager::Administrator>(
-        std::move(driver_admin), global_loop_->dispatcher());
+    driver_admin_ = fidl::Client<fuchsia_device_manager::Administrator>(std::move(driver_admin),
+                                                                        global_loop_->dispatcher());
   }
   return ZX_OK;
 }
@@ -256,7 +255,7 @@ zx_status_t FsManager::SetFsExportRoot(MountPoint point, zx::channel export_root
   return ZX_OK;
 }
 
-zx_status_t FsManager::ServeRoot(fidl::ServerEnd<::llcpp::fuchsia::io::Directory> server) {
+zx_status_t FsManager::ServeRoot(fidl::ServerEnd<::fuchsia_io::Directory> server) {
   fs::Rights rights;
   rights.read = true;
   rights.write = true;
@@ -274,8 +273,8 @@ void FsManager::RemoveSystemDrivers(fit::callback<void(zx_status_t)> callback) {
 
   auto callback_ptr = std::make_shared<fit::callback<void(zx_status_t)>>(std::move(callback));
   auto res = driver_admin_->UnregisterSystemStorageForShutdown(
-      [callback_ptr](llcpp::fuchsia::device::manager::Administrator::
-                         UnregisterSystemStorageForShutdownResponse* res) {
+      [callback_ptr](
+          fuchsia_device_manager::Administrator::UnregisterSystemStorageForShutdownResponse* res) {
         if (res->status != ZX_OK) {
           FX_LOGS(ERROR) << "RemoveSystemDevices returned error: "
                          << zx_status_get_string(res->status);

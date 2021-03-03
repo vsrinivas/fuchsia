@@ -49,7 +49,7 @@ class Runner : public VfsType {
 
   // Serves the root directory of the filesystem using |root| as the server-end
   // of an IPC connection.
-  zx_status_t ServeRoot(fidl::ServerEnd<llcpp::fuchsia::io::Directory> root, ServeLayout layout);
+  zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout);
 
  private:
   Runner(async::Loop* loop, std::unique_ptr<Blobfs> fs);

@@ -17,7 +17,7 @@
 
 namespace input {
 
-namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
+namespace fuchsia_input_report = ::fuchsia_input_report;
 
 template <class Report>
 class InputReportReader;
@@ -146,7 +146,7 @@ std::unique_ptr<InputReportReader<Report>> InputReportReader<Report>::Create(
     zx::channel server) {
   fidl::OnUnboundFn<InputReportReader> unbound_fn(
       [](InputReportReader* reader, fidl::UnbindInfo info,
-         fidl::ServerEnd<llcpp::fuchsia::input::report::InputReportsReader> channel) {
+         fidl::ServerEnd<fuchsia_input_report::InputReportsReader> channel) {
         reader->manager_->RemoveReaderFromList(reader);
       });
 

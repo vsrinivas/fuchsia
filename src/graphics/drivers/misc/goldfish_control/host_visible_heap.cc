@@ -33,19 +33,18 @@ namespace {
 
 static const char* kTag = "goldfish-host-visible-heap";
 
-llcpp::fuchsia::sysmem2::wire::HeapProperties GetHeapProperties() {
-  auto coherency_domain_support =
-      std::make_unique<llcpp::fuchsia::sysmem2::wire::CoherencyDomainSupport>();
+fuchsia_sysmem2::wire::HeapProperties GetHeapProperties() {
+  auto coherency_domain_support = std::make_unique<fuchsia_sysmem2::wire::CoherencyDomainSupport>();
   *coherency_domain_support =
-      llcpp::fuchsia::sysmem2::wire::CoherencyDomainSupport::Builder(
-          std::make_unique<llcpp::fuchsia::sysmem2::wire::CoherencyDomainSupport::Frame>())
+      fuchsia_sysmem2::wire::CoherencyDomainSupport::Builder(
+          std::make_unique<fuchsia_sysmem2::wire::CoherencyDomainSupport::Frame>())
           .set_cpu_supported(std::make_unique<bool>(true))
           .set_ram_supported(std::make_unique<bool>(true))
           .set_inaccessible_supported(std::make_unique<bool>(false))
           .build();
 
-  return llcpp::fuchsia::sysmem2::wire::HeapProperties::Builder(
-             std::make_unique<llcpp::fuchsia::sysmem2::wire::HeapProperties::Frame>())
+  return fuchsia_sysmem2::wire::HeapProperties::Builder(
+             std::make_unique<fuchsia_sysmem2::wire::HeapProperties::Frame>())
       .set_coherency_domain_support(std::move(coherency_domain_support))
       // Allocated VMOs are not directly writeable since they are physical
       // VMOs on MMIO; Also, contents of VMOs allocated by this Heap are only
@@ -57,7 +56,7 @@ llcpp::fuchsia::sysmem2::wire::HeapProperties GetHeapProperties() {
 }
 
 zx_status_t CheckSingleBufferSettings(
-    const llcpp::fuchsia::sysmem2::wire::SingleBufferSettings& single_buffer_settings) {
+    const fuchsia_sysmem2::wire::SingleBufferSettings& single_buffer_settings) {
   bool has_image_format_constraints = single_buffer_settings.has_image_format_constraints();
   bool has_buffer_settings = single_buffer_settings.has_buffer_settings();
 
@@ -93,12 +92,12 @@ zx_status_t CheckSingleBufferSettings(
   return ZX_OK;
 }
 
-fit::result<llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params, zx_status_t>
-GetCreateColorBuffer2Params(
-    const llcpp::fuchsia::sysmem2::wire::SingleBufferSettings& buffer_settings, uint64_t paddr) {
-  using llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType;
-  using llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params;
-  using llcpp::fuchsia::sysmem2::wire::PixelFormatType;
+fit::result<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params, zx_status_t>
+GetCreateColorBuffer2Params(const fuchsia_sysmem2::wire::SingleBufferSettings& buffer_settings,
+                            uint64_t paddr) {
+  using fuchsia_hardware_goldfish::wire::ColorBufferFormatType;
+  using fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params;
+  using fuchsia_sysmem2::wire::PixelFormatType;
 
   ZX_DEBUG_ASSERT(buffer_settings.has_image_format_constraints());
   const auto& image_constraints = buffer_settings.image_format_constraints();
@@ -144,17 +143,16 @@ GetCreateColorBuffer2Params(
           .set_width(std::make_unique<uint32_t>(width))
           .set_height(std::make_unique<uint32_t>(height))
           .set_memory_property(std::make_unique<uint32_t>(
-              llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE))
+              fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE))
           .set_physical_address(std::make_unique<uint64_t>(paddr))
           .set_format(std::make_unique<ColorBufferFormatType>(color_buffer_format))
           .build());
 }
 
-llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params GetCreateBuffer2Params(
-    const llcpp::fuchsia::sysmem2::wire::SingleBufferSettings& single_buffer_settings,
-    uint64_t paddr) {
-  using llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params;
-  using llcpp::fuchsia::sysmem2::wire::PixelFormatType;
+fuchsia_hardware_goldfish::wire::CreateBuffer2Params GetCreateBuffer2Params(
+    const fuchsia_sysmem2::wire::SingleBufferSettings& single_buffer_settings, uint64_t paddr) {
+  using fuchsia_hardware_goldfish::wire::CreateBuffer2Params;
+  using fuchsia_sysmem2::wire::PixelFormatType;
 
   ZX_DEBUG_ASSERT(single_buffer_settings.has_buffer_settings());
 
@@ -164,8 +162,8 @@ llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params GetCreateBuffer2Pa
   uint64_t size_bytes = buffer_settings.size_bytes();
   return CreateBuffer2Params::Builder(std::make_unique<CreateBuffer2Params::Frame>())
       .set_size(std::make_unique<uint64_t>(size_bytes))
-      .set_memory_property(std::make_unique<uint32_t>(
-          llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE))
+      .set_memory_property(
+          std::make_unique<uint32_t>(fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE))
       .set_physical_address(std::make_unique<uint64_t>(paddr))
       .build();
 }
@@ -262,12 +260,12 @@ void HostVisibleHeap::DeallocateVmo(zx_koid_t koid) {
   }
 }
 
-void HostVisibleHeap::CreateResource(
-    ::zx::vmo vmo, llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings,
-    CreateResourceCompleter::Sync& completer) {
-  using llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType;
-  using llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params;
-  using llcpp::fuchsia::sysmem2::wire::PixelFormatType;
+void HostVisibleHeap::CreateResource(::zx::vmo vmo,
+                                     fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings,
+                                     CreateResourceCompleter::Sync& completer) {
+  using fuchsia_hardware_goldfish::wire::ColorBufferFormatType;
+  using fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params;
+  using fuchsia_sysmem2::wire::PixelFormatType;
 
   ZX_DEBUG_ASSERT(vmo.is_valid());
 

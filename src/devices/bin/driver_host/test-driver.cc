@@ -21,7 +21,7 @@
 #include "src/devices/bin/driver_host/test-devhost-parent-bind.h"
 #include "src/devices/bin/driver_host/test-metadata.h"
 
-using llcpp::fuchsia::device::restarttest::TestDevice;
+using fuchsia_device_restarttest::TestDevice;
 
 class TestDevhostDriver;
 using DeviceType =

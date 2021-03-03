@@ -12,7 +12,7 @@
 #include "zircon_platform_handle.h"
 
 // clang-format off
-using llcpp::fuchsia::gpu::magma::wire::QueryId;
+using fuchsia_gpu_magma::wire::QueryId;
 static_assert(static_cast<uint32_t>(QueryId::VENDOR_ID) == MAGMA_QUERY_VENDOR_ID, "mismatch");
 static_assert(static_cast<uint32_t>(QueryId::DEVICE_ID) == MAGMA_QUERY_DEVICE_ID, "mismatch");
 static_assert(static_cast<uint32_t>(QueryId::IS_TEST_RESTART_SUPPORTED) == MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, "mismatch");
@@ -47,8 +47,8 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
     zx::channel client_endpoint;
     zx_status_t status = zx::channel::create(0, &client_endpoint, &server_endpoint_);
     if (status == ZX_OK)
-      perf_counter_events_ = llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::SyncClient(
-          std::move(client_endpoint));
+      perf_counter_events_ =
+          fuchsia_gpu_magma::PerformanceCounterEvents::SyncClient(std::move(client_endpoint));
     return status;
   }
   uint64_t pool_id() override { return pool_id_; }
@@ -74,8 +74,7 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
       return DRET(MAGMA_STATUS_CONNECTION_LOST);
     }
 
-    class EventHandler
-        : public llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::SyncEventHandler {
+    class EventHandler : public fuchsia_gpu_magma::PerformanceCounterEvents::SyncEventHandler {
      public:
       EventHandler(uint32_t* trigger_id_out, uint64_t* buffer_id_out, uint32_t* buffer_offset_out,
                    uint64_t* time_out, uint32_t* result_flags_out)
@@ -86,8 +85,8 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
             result_flags_out_(result_flags_out) {}
 
       void OnPerformanceCounterReadCompleted(
-          llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::
-              OnPerformanceCounterReadCompletedResponse* event) override {
+          fuchsia_gpu_magma::PerformanceCounterEvents::OnPerformanceCounterReadCompletedResponse*
+              event) override {
         *trigger_id_out_ = event->trigger_id;
         *buffer_id_out_ = event->buffer_id;
         *buffer_offset_out_ = event->buffer_offset;
@@ -115,7 +114,7 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
  private:
   uint64_t pool_id_;
 
-  llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::SyncClient perf_counter_events_;
+  fuchsia_gpu_magma::PerformanceCounterEvents::SyncClient perf_counter_events_;
   zx::channel server_endpoint_;
 };
 
@@ -202,8 +201,8 @@ magma_status_t PrimaryWrapper::DestroyContext(uint32_t context_id) {
 }
 
 magma_status_t PrimaryWrapper::ExecuteCommandBufferWithResources(
-    uint32_t context_id, ::llcpp::fuchsia::gpu::magma::wire::CommandBuffer command_buffer,
-    ::fidl::VectorView<::llcpp::fuchsia::gpu::magma::wire::Resource> resources,
+    uint32_t context_id, ::fuchsia_gpu_magma::wire::CommandBuffer command_buffer,
+    ::fidl::VectorView<::fuchsia_gpu_magma::wire::Resource> resources,
     ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
@@ -267,8 +266,8 @@ magma_status_t PrimaryWrapper::CommitBuffer(uint64_t buffer_id, uint64_t page_of
 }
 
 magma_status_t PrimaryWrapper::BufferRangeOp(uint64_t buffer_id,
-                                             llcpp::fuchsia::gpu::magma::wire::BufferOp op,
-                                             uint64_t start, uint64_t length) {
+                                             fuchsia_gpu_magma::wire::BufferOp op, uint64_t start,
+                                             uint64_t length) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
   zx_status_t status = client_.BufferRangeOp(buffer_id, op, start, length).status();
@@ -321,7 +320,7 @@ magma_status_t PrimaryWrapper::ReleasePerformanceCounterBufferPool(uint64_t pool
 }
 
 magma_status_t PrimaryWrapper::AddPerformanceCounterBufferOffsetsToPool(
-    uint64_t pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::wire::BufferOffset> offsets) {
+    uint64_t pool_id, fidl::VectorView<fuchsia_gpu_magma::wire::BufferOffset> offsets) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
   zx_status_t status =
@@ -411,17 +410,17 @@ void PrimaryWrapper::FlowControl(uint64_t new_bytes) {
     if ((pending & ZX_CHANNEL_READABLE) == 0)
       return;
 
-    class EventHandler : public llcpp::fuchsia::gpu::magma::Primary::SyncEventHandler {
+    class EventHandler : public fuchsia_gpu_magma::Primary::SyncEventHandler {
      public:
       explicit EventHandler(PrimaryWrapper* primary_wrapper) : primary_wrapper_(primary_wrapper) {}
 
       void OnNotifyMessagesConsumed(
-          llcpp::fuchsia::gpu::magma::Primary::OnNotifyMessagesConsumedResponse* event) override {
+          fuchsia_gpu_magma::Primary::OnNotifyMessagesConsumedResponse* event) override {
         primary_wrapper_->inflight_count_ -= event->count;
       }
 
       void OnNotifyMemoryImported(
-          llcpp::fuchsia::gpu::magma::Primary::OnNotifyMemoryImportedResponse* event) override {
+          fuchsia_gpu_magma::Primary::OnNotifyMemoryImportedResponse* event) override {
         primary_wrapper_->inflight_bytes_ -= event->bytes;
       }
 
@@ -544,11 +543,11 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
                                          magma_system_command_buffer* command_buffer,
                                          magma_system_exec_resource* resources,
                                          uint64_t* semaphores) override {
-    llcpp::fuchsia::gpu::magma::wire::CommandBuffer fidl_command_buffer = {
+    fuchsia_gpu_magma::wire::CommandBuffer fidl_command_buffer = {
         .batch_buffer_resource_index = command_buffer->batch_buffer_resource_index,
         .batch_start_offset = command_buffer->batch_start_offset};
 
-    std::vector<llcpp::fuchsia::gpu::magma::wire::Resource> fidl_resources;
+    std::vector<fuchsia_gpu_magma::wire::Resource> fidl_resources;
     fidl_resources.reserve(command_buffer->resource_count);
 
     for (uint32_t i = 0; i < command_buffer->resource_count; i++) {
@@ -601,9 +600,8 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
       // Tally up the number of commands to send in this batch.
       uint64_t command_bytes = 0;
       uint32_t num_semaphores = 0;
-      int buffers_to_send =
-          FitCommands(llcpp::fuchsia::gpu::magma::wire::kReceiveBufferSize, num_buffers, buffers,
-                      buffers_sent, &command_bytes, &num_semaphores);
+      int buffers_to_send = FitCommands(fuchsia_gpu_magma::wire::kReceiveBufferSize, num_buffers,
+                                        buffers, buffers_sent, &command_bytes, &num_semaphores);
 
       // TODO(fxbug.dev/13144): Figure out how to move command and semaphore bytes across the FIDL
       //               interface without copying.
@@ -683,13 +681,13 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   magma_status_t BufferRangeOp(uint64_t buffer_id, uint32_t options, uint64_t start,
                                uint64_t length) override {
     DLOG("ZirconPlatformConnectionClient::BufferOpRange");
-    llcpp::fuchsia::gpu::magma::wire::BufferOp op;
+    fuchsia_gpu_magma::wire::BufferOp op;
     switch (options) {
       case MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES:
-        op = llcpp::fuchsia::gpu::magma::wire::BufferOp::DEPOPULATE_TABLES;
+        op = fuchsia_gpu_magma::wire::BufferOp::DEPOPULATE_TABLES;
         break;
       case MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES:
-        op = llcpp::fuchsia::gpu::magma::wire::BufferOp::POPULATE_TABLES;
+        op = fuchsia_gpu_magma::wire::BufferOp::POPULATE_TABLES;
         break;
       default:
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid buffer op %d", options);
@@ -759,13 +757,13 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   magma::Status AddPerformanceCounterBufferOffsetsToPool(uint64_t pool_id,
                                                          const magma_buffer_offset* offsets,
                                                          uint64_t offset_count) override {
-    DASSERT(sizeof(*offsets) == sizeof(llcpp::fuchsia::gpu::magma::wire::BufferOffset));
+    DASSERT(sizeof(*offsets) == sizeof(fuchsia_gpu_magma::wire::BufferOffset));
     // The LLCPP FIDL bindings don't take const pointers, but they don't modify the data unless it
     // contains handles.
-    auto fidl_offsets = const_cast<llcpp::fuchsia::gpu::magma::wire::BufferOffset*>(
-        reinterpret_cast<const llcpp::fuchsia::gpu::magma::wire::BufferOffset*>(offsets));
+    auto fidl_offsets = const_cast<fuchsia_gpu_magma::wire::BufferOffset*>(
+        reinterpret_cast<const fuchsia_gpu_magma::wire::BufferOffset*>(offsets));
     magma_status_t result = client_.AddPerformanceCounterBufferOffsetsToPool(
-        pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::wire::BufferOffset>(
+        pool_id, fidl::VectorView<fuchsia_gpu_magma::wire::BufferOffset>(
                      fidl::unowned_ptr(fidl_offsets), offset_count));
     if (result != MAGMA_STATUS_OK)
       return DRET(result);
@@ -858,7 +856,7 @@ std::unique_ptr<magma::PlatformHandle> PlatformConnectionClient::RetrieveAccessT
     magma::PlatformHandle* channel) {
   if (!channel)
     return DRETP(nullptr, "No channel");
-  auto rsp = llcpp::fuchsia::gpu::magma::PerformanceCounterAccess::Call::GetPerformanceCountToken(
+  auto rsp = fuchsia_gpu_magma::PerformanceCounterAccess::Call::GetPerformanceCountToken(
       zx::unowned_channel(static_cast<const ZirconPlatformHandle*>(channel)->get()));
   if (!rsp.ok()) {
     return DRETP(nullptr, "GetPerformanceCountToken failed");

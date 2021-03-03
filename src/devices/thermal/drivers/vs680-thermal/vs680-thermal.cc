@@ -20,12 +20,12 @@
 
 namespace {
 
-using ::llcpp::fuchsia::hardware::thermal::wire::OperatingPoint;
-using ::llcpp::fuchsia::hardware::thermal::wire::OperatingPointEntry;
+using ::fuchsia_hardware_thermal::wire::OperatingPoint;
+using ::fuchsia_hardware_thermal::wire::OperatingPointEntry;
 
 constexpr OperatingPoint kOperatingPoints = {
     .opp =
-        fidl::Array<OperatingPointEntry, ::llcpp::fuchsia::hardware::thermal::wire::MAX_DVFS_OPPS>{
+        fidl::Array<OperatingPointEntry, ::fuchsia_hardware_thermal::wire::MAX_DVFS_OPPS>{
             // TODO(bradenkell): This is the initial CPU frequency coming out of the bootloader. Add
             //                   the other operating points when we have more information.
             OperatingPointEntry{.freq_hz = 1'800'000'000, .volt_uv = 800'000},
@@ -101,7 +101,7 @@ void Vs680Thermal::DdkRelease() {
 
 zx_status_t Vs680Thermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::thermal::Device::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_thermal::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

@@ -18,7 +18,7 @@ class AstroPartitioner : public DevicePartitioner {
   enum class AbrWearLevelingOption { ON, OFF };
 
   static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
       std::shared_ptr<Context> context);
 
   bool IsFvmWithinFtl() const override { return true; }
@@ -63,14 +63,14 @@ class AstroPartitioner : public DevicePartitioner {
 class AstroPartitionerFactory : public DevicePartitionerFactory {
  public:
   zx::status<std::unique_ptr<DevicePartitioner>> New(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
       Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };
 
 class AstroAbrClientFactory : public abr::ClientFactory {
  public:
   zx::status<std::unique_ptr<abr::Client>> New(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
       std::shared_ptr<paver::Context> context) final;
 };
 
@@ -87,7 +87,7 @@ class AstroSysconfigPartitionClientBuffered : public BlockDevicePartitionClient 
   zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx::status<> Trim() final;
   zx::status<> Flush() final;
-  fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> GetChannel() final;
+  fidl::ClientEnd<::fuchsia_hardware_block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.
@@ -107,8 +107,7 @@ class AstroSysconfigPartitionClientBuffered : public BlockDevicePartitionClient 
 // quirk.
 class Bl2PartitionClient final : public SkipBlockPartitionClient {
  public:
-  explicit Bl2PartitionClient(
-      fidl::ClientEnd<::llcpp::fuchsia::hardware::skipblock::SkipBlock> partition)
+  explicit Bl2PartitionClient(fidl::ClientEnd<::fuchsia_hardware_skipblock::SkipBlock> partition)
       : SkipBlockPartitionClient(std::move(partition)) {}
 
   zx::status<size_t> GetBlockSize() final;

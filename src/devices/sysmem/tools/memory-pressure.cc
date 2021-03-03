@@ -14,7 +14,7 @@
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/command_line.h"
 
-namespace sysmem = llcpp::fuchsia::sysmem;
+namespace sysmem = fuchsia_sysmem;
 
 void PrintHelp() {
   Log(""

@@ -38,7 +38,7 @@ constexpr uint16_t kBrightnessLsbMask = (0x1 << kBrightnessLsbBits) - 1;
 
 class Sgm37603a;
 using DeviceType = ddk::Device<Sgm37603a, ddk::Messageable>;
-namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
+namespace FidlBacklight = fuchsia_hardware_backlight;
 
 class Sgm37603a : public DeviceType,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT>,

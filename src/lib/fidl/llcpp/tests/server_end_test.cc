@@ -14,7 +14,7 @@
 #include <gtest/gtest.h>
 #include <llcpptest/protocol/test/llcpp/fidl.h>
 
-namespace llcpp_test = ::llcpp::llcpptest::protocol::test;
+namespace llcpp_test = ::llcpptest_protocol_test;
 
 TEST(ServerEnd, Trivial) {
   fidl::ServerEnd<llcpp_test::Frobinator> server_end;

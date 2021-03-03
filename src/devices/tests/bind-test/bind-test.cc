@@ -38,7 +38,7 @@ class BindCompilerTest : public testing::Test {
         devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "test/test", &root_fd);
     ASSERT_EQ(status, ZX_OK);
 
-    ::llcpp::fuchsia::device::test::RootDevice::SyncClient root_device{zx::channel{}};
+    ::fuchsia_device_test::RootDevice::SyncClient root_device{zx::channel{}};
     status = fdio_get_service_handle(root_fd.release(),
                                      root_device.mutable_channel()->reset_and_get_address());
     ASSERT_EQ(status, ZX_OK);
@@ -58,7 +58,7 @@ class BindCompilerTest : public testing::Test {
 
     // Bind the test driver to the new device.
     driver_libpath_ = kDriverTestDir + "/" + kDriverLibname;
-    auto response = ::llcpp::fuchsia::device::Controller::Call::Bind(
+    auto response = ::fuchsia_device::Controller::Call::Bind(
         zx::unowned_channel(device_channel_.get()), ::fidl::unowned_str(driver_libpath_));
     status = response.status();
     if (status == ZX_OK) {
@@ -82,7 +82,7 @@ class BindCompilerTest : public testing::Test {
   }
 
   void TearDown() override {
-    ::llcpp::fuchsia::device::test::Device::Call::Destroy(zx::unowned_channel{device_channel_});
+    ::fuchsia_device_test::Device::Call::Destroy(zx::unowned_channel{device_channel_});
   }
 
   IsolatedDevmgr devmgr_;

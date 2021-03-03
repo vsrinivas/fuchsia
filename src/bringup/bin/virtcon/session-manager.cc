@@ -19,7 +19,7 @@
 
 namespace virtcon {
 
-namespace fpty = ::llcpp::fuchsia::hardware::pty;
+namespace fpty = ::fuchsia_hardware_pty;
 
 namespace {
 
@@ -145,7 +145,7 @@ zx::status<vc_t*> SessionManager::CreateSession(fidl::ServerEnd<fpty::Device> se
 }
 
 zx_status_t SessionManager::Bind(
-    fidl::ServerEnd<::llcpp::fuchsia::virtualconsole::SessionManager> request) {
+    fidl::ServerEnd<::fuchsia_virtualconsole::SessionManager> request) {
   auto result = fidl::BindServer(dispatcher_, std::move(request), this);
   if (!result.is_ok()) {
     return result.error();

@@ -11,30 +11,30 @@
 
 namespace benchmark_suite {
 
-llcpp::benchmarkfidl::wire::ByteVector Build_ByteVector_16(fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::ByteVector Build_ByteVector_256(fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::ByteVector Build_ByteVector_4096(fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::Table1Struct Build_Table_AllSet_1(fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::Table16Struct Build_Table_AllSet_16(fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::Table256Struct Build_Table_AllSet_256(fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::Table1Struct Build_Table_Unset_1(fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::Table16Struct Build_Table_Unset_16(fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::Table256Struct Build_Table_Unset_256(fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::Table1Struct Build_Table_SingleSet_1_of_1(
+benchmarkfidl::wire::ByteVector Build_ByteVector_16(fidl::AnyAllocator& allocator);
+benchmarkfidl::wire::ByteVector Build_ByteVector_256(fidl::AnyAllocator& allocator);
+benchmarkfidl::wire::ByteVector Build_ByteVector_4096(fidl::AnyAllocator& allocator);
+benchmarkfidl::wire::Table1Struct Build_Table_AllSet_1(fidl::AnyAllocator& allocator);
+benchmarkfidl::wire::Table16Struct Build_Table_AllSet_16(fidl::AnyAllocator& allocator);
+benchmarkfidl::wire::Table256Struct Build_Table_AllSet_256(fidl::AnyAllocator& allocator);
+benchmarkfidl::wire::Table1Struct Build_Table_Unset_1(fidl::AnyAllocator& allocator);
+benchmarkfidl::wire::Table16Struct Build_Table_Unset_16(fidl::AnyAllocator& allocator);
+benchmarkfidl::wire::Table256Struct Build_Table_Unset_256(fidl::AnyAllocator& allocator);
+benchmarkfidl::wire::Table1Struct Build_Table_SingleSet_1_of_1(
     fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::Table16Struct Build_Table_SingleSet_1_of_16(
+benchmarkfidl::wire::Table16Struct Build_Table_SingleSet_1_of_16(
     fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::Table16Struct Build_Table_SingleSet_16_of_16(
+benchmarkfidl::wire::Table16Struct Build_Table_SingleSet_16_of_16(
     fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::Table256Struct Build_Table_SingleSet_1_of_256(
+benchmarkfidl::wire::Table256Struct Build_Table_SingleSet_1_of_256(
     fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::Table256Struct Build_Table_SingleSet_16_of_256(
+benchmarkfidl::wire::Table256Struct Build_Table_SingleSet_16_of_256(
     fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::Table256Struct Build_Table_SingleSet_256_of_256(
+benchmarkfidl::wire::Table256Struct Build_Table_SingleSet_256_of_256(
     fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::PaddedStructTree8 Build_PaddedStructTree_Depth8(
+benchmarkfidl::wire::PaddedStructTree8 Build_PaddedStructTree_Depth8(
     fidl::AnyAllocator& allocator);
-llcpp::benchmarkfidl::wire::StructTree8 Build_StructTree_Depth8(fidl::AnyAllocator& allocator);
+benchmarkfidl::wire::StructTree8 Build_StructTree_Depth8(fidl::AnyAllocator& allocator);
 
 }  // namespace benchmark_suite
 

@@ -12,17 +12,17 @@
 
 namespace paver {
 
-class Sysconfig : public ::llcpp::fuchsia::paver::Sysconfig::Interface {
+class Sysconfig : public ::fuchsia_paver::Sysconfig::Interface {
  public:
   explicit Sysconfig(std::unique_ptr<PartitionClient> client) : partitioner_(std::move(client)) {}
 
   static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                   fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+                   fidl::ClientEnd<::fuchsia_io::Directory> svc_root,
                    std::shared_ptr<Context> context, zx::channel server);
 
   void Read(ReadCompleter::Sync& completer) override;
 
-  void Write(::llcpp::fuchsia::mem::wire::Buffer payload, WriteCompleter::Sync& completer) override;
+  void Write(::fuchsia_mem::wire::Buffer payload, WriteCompleter::Sync& completer) override;
 
   void GetPartitionSize(GetPartitionSizeCompleter::Sync& completer) override;
 

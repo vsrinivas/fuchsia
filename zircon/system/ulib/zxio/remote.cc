@@ -14,7 +14,7 @@
 #include "lib/zxio/types.h"
 #include "private.h"
 
-namespace fio = llcpp::fuchsia::io;
+namespace fio = fuchsia_io;
 
 namespace {
 
@@ -197,7 +197,7 @@ class Remote {
 };
 
 zxio_node_protocols_t ToZxioNodeProtocols(uint32_t mode) {
-  switch (mode & (S_IFMT | llcpp::fuchsia::io::wire::MODE_TYPE_SERVICE)) {
+  switch (mode & (S_IFMT | fuchsia_io::wire::MODE_TYPE_SERVICE)) {
     case S_IFDIR:
       return ZXIO_NODE_PROTOCOL_DIRECTORY;
     case S_IFCHR:
@@ -210,7 +210,7 @@ zxio_node_protocols_t ToZxioNodeProtocols(uint32_t mode) {
       return ZXIO_NODE_PROTOCOL_PIPE;
       // fuchsia::io has mode type service which breaks stat.
       // TODO(fxbug.dev/52930): return ZXIO_NODE_PROTOCOL_CONNECTOR instead.
-    case llcpp::fuchsia::io::wire::MODE_TYPE_SERVICE:
+    case fuchsia_io::wire::MODE_TYPE_SERVICE:
       return ZXIO_NODE_PROTOCOL_FILE;
     case S_IFLNK:
       // Symbolic links are not supported on Fuchsia.
@@ -723,7 +723,7 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo
   if (response->s != ZX_OK) {
     return response->s;
   }
-  llcpp::fuchsia::mem::wire::Buffer* buffer = response->buffer.get();
+  fuchsia_mem::wire::Buffer* buffer = response->buffer.get();
   if (!buffer) {
     return ZX_ERR_IO;
   }

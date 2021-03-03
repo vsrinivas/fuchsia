@@ -19,9 +19,9 @@ namespace internal {
 // Note: Everything on this namespace is internal, no external users should rely
 // on the behaviour of any of these classes.
 // A value pair which represents a bucket index and the count for such index.
-using HistogramBucket = ::llcpp::fuchsia::cobalt::wire::HistogramBucket;
+using HistogramBucket = ::fuchsia_cobalt::wire::HistogramBucket;
 
-static_assert(::llcpp::fuchsia::cobalt::wire::MAX_EVENT_CODE_COUNT == MetricOptions::kMaxEventCodes);
+static_assert(::fuchsia_cobalt::wire::MAX_EVENT_CODE_COUNT == MetricOptions::kMaxEventCodes);
 
 // Interface for Logger class. There is no requirement on what to do with the data
 // in the logging buffer, that is up to the implementation.

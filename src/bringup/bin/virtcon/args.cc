@@ -12,7 +12,7 @@
 
 #include <cstring>
 
-zx_status_t ParseArgs(llcpp::fuchsia::boot::Arguments::SyncClient& client, Arguments* out) {
+zx_status_t ParseArgs(fuchsia_boot::Arguments::SyncClient& client, Arguments* out) {
   fidl::StringView string_keys[]{
       fidl::StringView{"virtcon.colorscheme"},
       fidl::StringView{"virtcon.font"},
@@ -55,7 +55,7 @@ zx_status_t ParseArgs(llcpp::fuchsia::boot::Arguments::SyncClient& client, Argum
     out->keymap = qwerty_map;
   }
 
-  llcpp::fuchsia::boot::wire::BoolPair bool_keys[]{
+  fuchsia_boot::wire::BoolPair bool_keys[]{
       {fidl::StringView{"virtcon.keep-log-visible"}, false},
       {fidl::StringView{"virtcon.disable"}, false},
       {fidl::StringView{"virtcon.keyrepeat"}, true},

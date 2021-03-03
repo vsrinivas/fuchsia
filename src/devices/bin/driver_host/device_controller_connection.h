@@ -17,21 +17,18 @@
 class DriverHostContext;
 struct zx_device;
 
-class DeviceControllerConnection
-    : public AsyncLoopOwnedRpcHandler<DeviceControllerConnection>,
-      public llcpp::fuchsia::device::manager::DeviceController::Interface,
-      public llcpp::fuchsia::io::Directory::RawChannelInterface {
+class DeviceControllerConnection : public AsyncLoopOwnedRpcHandler<DeviceControllerConnection>,
+                                   public fuchsia_device_manager::DeviceController::Interface,
+                                   public fuchsia_io::Directory::RawChannelInterface {
  public:
   // |ctx| must outlive this connection
-  DeviceControllerConnection(
-      DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
-      fidl::Client<llcpp::fuchsia::device::manager::Coordinator> coordinator_client);
+  DeviceControllerConnection(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
+                             fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client);
 
   // |ctx| must outlive this connection
-  static zx_status_t Create(
-      DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
-      fidl::Client<llcpp::fuchsia::device::manager::Coordinator> coordinator_client,
-      std::unique_ptr<DeviceControllerConnection>* conn);
+  static zx_status_t Create(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
+                            fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client,
+                            std::unique_ptr<DeviceControllerConnection>* conn);
 
   ~DeviceControllerConnection();
 
@@ -47,7 +44,7 @@ class DeviceControllerConnection
   const fbl::RefPtr<zx_device> dev_;
 
  private:
-  fidl::Client<llcpp::fuchsia::device::manager::Coordinator> coordinator_client_;
+  fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client_;
   // Fidl methods
   void BindDriver(::fidl::StringView driver_path, ::zx::vmo driver,
                   BindDriverCompleter::Sync& _completer) override;
@@ -57,18 +54,16 @@ class DeviceControllerConnection
   void Resume(uint32_t target_system_state, ResumeCompleter::Sync& _completer) override;
   void Unbind(UnbindCompleter::Sync& _completer) override;
   void CompleteRemoval(CompleteRemovalCompleter::Sync& _completer) override;
-  void CompleteCompatibilityTests(
-      llcpp::fuchsia::device::manager::wire::CompatibilityTestStatus status,
-      CompleteCompatibilityTestsCompleter::Sync& _completer) override;
+  void CompleteCompatibilityTests(fuchsia_device_manager::wire::CompatibilityTestStatus status,
+                                  CompleteCompatibilityTestsCompleter::Sync& _completer) override;
 
   // Io.fidl methods
   void Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object,
             OpenCompleter::Sync& _completer) override;
 
   // All methods below are intentionally unimplemented.
-  void AddInotifyFilter(::llcpp::fuchsia::io2::wire::InotifyWatchMask filters,
-                        ::fidl::StringView path, uint32_t watch_descriptor, ::zx::socket socket,
-                        ::zx::channel controller,
+  void AddInotifyFilter(::fuchsia_io2::wire::InotifyWatchMask filters, ::fidl::StringView path,
+                        uint32_t watch_descriptor, ::zx::socket socket, ::zx::channel controller,
                         AddInotifyFilterCompleter::Sync& _completer) override {}
 
   void Clone(uint32_t flags, ::zx::channel object, CloneCompleter::Sync& _completer) override {}
@@ -78,7 +73,7 @@ class DeviceControllerConnection
   void Rewind(RewindCompleter::Sync& _completer) override {}
   void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& _completer) override {}
   void Unlink(::fidl::StringView path, UnlinkCompleter::Sync& _completer) override {}
-  void SetAttr(uint32_t flags, llcpp::fuchsia::io::wire::NodeAttributes attributes,
+  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
                SetAttrCompleter::Sync& _completer) override {}
   void Sync(SyncCompleter::Sync& _completer) override {}
   void GetAttr(GetAttrCompleter::Sync& _completer) override {}

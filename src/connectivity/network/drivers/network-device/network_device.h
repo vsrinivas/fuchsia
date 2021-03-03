@@ -25,7 +25,7 @@ using DeviceType = ddk::Device<NetworkDevice, ddk::Messageable, ddk::Unbindable>
 
 class NetworkDevice : public DeviceType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_NETWORK_DEVICE>,
-                      public llcpp::fuchsia::hardware::network::DeviceInstance::Interface {
+                      public fuchsia_hardware_network::DeviceInstance::Interface {
  public:
   explicit NetworkDevice(zx_device_t* parent)
       : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
@@ -39,9 +39,9 @@ class NetworkDevice : public DeviceType,
 
   void DdkRelease();
 
-  void GetDevice(fidl::ServerEnd<llcpp::fuchsia::hardware::network::Device> device,
+  void GetDevice(fidl::ServerEnd<fuchsia_hardware_network::Device> device,
                  GetDeviceCompleter::Sync& _completer) override;
-  void GetMacAddressing(fidl::ServerEnd<llcpp::fuchsia::hardware::network::MacAddressing> mac,
+  void GetMacAddressing(fidl::ServerEnd<fuchsia_hardware_network::MacAddressing> mac,
                         GetMacAddressingCompleter::Sync& _completer) override;
 
  private:

@@ -13,7 +13,7 @@ struct Arguments {
   bool require_system = false;
 };
 
-zx_status_t ParseArgs(llcpp::fuchsia::boot::Arguments::SyncClient& client, Arguments* out);
+zx_status_t ParseArgs(fuchsia_boot::Arguments::SyncClient& client, Arguments* out);
 
 }  // namespace svchost
 

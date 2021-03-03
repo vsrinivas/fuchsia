@@ -27,9 +27,9 @@
 #include "internal.h"
 #include "src/network/getifaddrs.h"
 
-namespace fio = ::llcpp::fuchsia::io;
-namespace fnet = ::llcpp::fuchsia::net;
-namespace fsocket = ::llcpp::fuchsia::posix::socket;
+namespace fio = ::fuchsia_io;
+namespace fnet = ::fuchsia_net;
+namespace fsocket = ::fuchsia_posix_socket;
 
 #define MAKE_GET_SERVICE(fn_name, symbol)                                     \
   zx_status_t fn_name(symbol::SyncClient** out) {                             \

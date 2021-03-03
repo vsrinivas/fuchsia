@@ -252,7 +252,7 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   }
 }
 
-zx::status<fidl::ClientEnd<llcpp::fuchsia::io::Directory>> ManagedEnvironment::OpenVdevDirectory(
+zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ManagedEnvironment::OpenVdevDirectory(
     const std::string& path) {
   return virtual_devices_.OpenAsDirectory(path);
 }

@@ -51,7 +51,7 @@ struct SharedVector {
 using LegacyIrqs = std::unordered_map<uint32_t, pci_legacy_irq>;
 // A map of vector -> SharedVector for use in handling interrupts.
 using SharedIrqMap = std::unordered_map<uint32_t, std::unique_ptr<SharedVector>>;
-namespace PciFidl = llcpp::fuchsia::hardware::pci;
+namespace PciFidl = fuchsia_hardware_pci;
 
 // A tree of all pci Device objects in the bus topology.
 using DeviceTree =

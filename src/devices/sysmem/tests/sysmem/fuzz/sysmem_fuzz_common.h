@@ -15,11 +15,10 @@
 #include "src/devices/sysmem/drivers/sysmem/device.h"
 #include "src/devices/sysmem/drivers/sysmem/driver.h"
 
-using BufferCollectionConstraints =
-    FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-               llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints>;
-using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                                        llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>;
+using BufferCollectionConstraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
+                                               fuchsia_sysmem::wire::BufferCollectionConstraints>;
+using BufferCollectionInfo =
+    FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2, fuchsia_sysmem::wire::BufferCollectionInfo_2>;
 
 class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
  public:

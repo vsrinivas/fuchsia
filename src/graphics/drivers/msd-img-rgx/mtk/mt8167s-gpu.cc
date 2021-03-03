@@ -40,7 +40,7 @@
 void magma_indriver_test(zx_device_t* device, void* driver_device_handle);
 #endif
 
-using FidlStatus = llcpp::fuchsia::gpu::magma::wire::Status;
+using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
 namespace {
 struct FragmentDescription {
@@ -160,7 +160,7 @@ void Mt8167sGpu::DdkRelease() { delete this; }
 
 zx_status_t Mt8167sGpu::DdkMessage(fidl_incoming_msg_t* message, fidl_txn_t* transaction) {
   DdkTransaction ddk_transaction(transaction);
-  llcpp::fuchsia::gpu::magma::Device::Dispatch(this, message, &ddk_transaction);
+  fuchsia_gpu_magma::Device::Dispatch(this, message, &ddk_transaction);
   return ddk_transaction.Status();
 }
 // Power on the asynchronous memory interface between the GPU and the DDR controller.

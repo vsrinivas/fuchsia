@@ -26,7 +26,7 @@
 
 namespace {
 
-namespace fboot = ::llcpp::fuchsia::boot;
+namespace fboot = ::fuchsia_boot;
 
 void InitArgvAndActions(zx_handle_t* handles, uint32_t* types, size_t len,
                         fdio_spawn_action_t* actions_out) {

@@ -4,7 +4,7 @@
 
 #include "common_utils.h"
 
-namespace fio2 = llcpp::fuchsia::io2;
+namespace fio2 = fuchsia_io2;
 
 using fio2::wire::NodeProtocols;
 using fio2::wire::Operations;

@@ -16,8 +16,8 @@
 
 #include <ddktl/fidl.h>
 
-namespace fidl_tel_transport = llcpp::fuchsia::hardware::telephony::transport;
-namespace fidl_tel_snoop = llcpp::fuchsia::telephony::snoop;
+namespace fidl_tel_transport = fuchsia_hardware_telephony_transport;
+namespace fidl_tel_snoop = fuchsia_telephony_snoop;
 
 namespace tel_fake {
 

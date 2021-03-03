@@ -19,7 +19,7 @@ int main(int argc, const char** argv) {
   ZX_ASSERT(svc.is_ok());
 
   // Connect to the fuchsia.examples.Echo protocol.
-  auto client_end = service::ConnectAt<llcpp::fuchsia::examples::Echo>(*svc);
+  auto client_end = service::ConnectAt<fuchsia_examples::Echo>(*svc);
   ZX_ASSERT(client_end.is_ok());
 
   // Create a synchronous-only client to the Echo protocol.
@@ -39,11 +39,11 @@ int main(int argc, const char** argv) {
     // Check that the request was sent successfully.
     ZX_ASSERT(result.ok());
 
-    class EventHandler : public llcpp::fuchsia::examples::Echo::SyncEventHandler {
+    class EventHandler : public fuchsia_examples::Echo::SyncEventHandler {
      public:
       EventHandler() = default;
 
-      void OnString(llcpp::fuchsia::examples::Echo::OnStringResponse* event) override {
+      void OnString(fuchsia_examples::Echo::OnStringResponse* event) override {
         std::string reply_string(event->response.data(), event->response.size());
         std::cout << "Got event: " << reply_string << std::endl;
       }

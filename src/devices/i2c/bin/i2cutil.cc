@@ -41,7 +41,7 @@ static zx_status_t convert_args(char** argv, size_t length, uint8_t* buffer) {
   return ZX_OK;
 }
 
-static zx_status_t write_bytes(llcpp::fuchsia::hardware::i2c::Device2::SyncClient client,
+static zx_status_t write_bytes(fuchsia_hardware_i2c::Device2::SyncClient client,
                                fbl::Span<uint8_t> write_buffer) {
   bool is_write[] = {true};
   fidl::VectorView<bool> segments_is_write(fidl::unowned_ptr(is_write), countof(is_write));
@@ -60,7 +60,7 @@ static zx_status_t write_bytes(llcpp::fuchsia::hardware::i2c::Device2::SyncClien
   return status;
 }
 
-static zx_status_t read_byte(llcpp::fuchsia::hardware::i2c::Device2::SyncClient client,
+static zx_status_t read_byte(fuchsia_hardware_i2c::Device2::SyncClient client,
                              fbl::Span<uint8_t> address, uint8_t* out_byte) {
   bool is_write[] = {true, false};
   fidl::VectorView<bool> segments_is_write(fidl::unowned_ptr(is_write), countof(is_write));
@@ -83,7 +83,7 @@ static zx_status_t read_byte(llcpp::fuchsia::hardware::i2c::Device2::SyncClient 
   return status;
 }
 
-static zx_status_t transact(llcpp::fuchsia::hardware::i2c::Device2::SyncClient client, int argc,
+static zx_status_t transact(fuchsia_hardware_i2c::Device2::SyncClient client, int argc,
                             char** argv) {
   size_t n_elements = argc - 3;
   size_t n_segments = 0;
@@ -108,9 +108,8 @@ static zx_status_t transact(llcpp::fuchsia::hardware::i2c::Device2::SyncClient c
     usage(argv[0]);
     return -1;
   }
-  if (n_segments > llcpp::fuchsia::hardware::i2c::wire::MAX_COUNT_SEGMENTS) {
-    printf("No more than %u segments allowed\n",
-           llcpp::fuchsia::hardware::i2c::wire::MAX_COUNT_SEGMENTS);
+  if (n_segments > fuchsia_hardware_i2c::wire::MAX_COUNT_SEGMENTS) {
+    printf("No more than %u segments allowed\n", fuchsia_hardware_i2c::wire::MAX_COUNT_SEGMENTS);
     return -1;
   }
 
@@ -230,7 +229,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
   }
 
   zx::channel channel(svc);
-  llcpp::fuchsia::hardware::i2c::Device2::SyncClient client(std::move(channel));
+  fuchsia_hardware_i2c::Device2::SyncClient client(std::move(channel));
 
   zx_status_t status = ZX_OK;
 

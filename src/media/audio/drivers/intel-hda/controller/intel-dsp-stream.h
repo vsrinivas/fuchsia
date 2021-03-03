@@ -17,7 +17,7 @@ namespace audio {
 namespace intel_hda {
 
 class IntelDspStream : public codecs::IntelHDAStreamBase,
-                       public ::llcpp::fuchsia::hardware::audio::RingBuffer::Interface {
+                       public ::fuchsia_hardware_audio::RingBuffer::Interface {
  public:
   IntelDspStream(uint32_t id, bool is_input, const DspPipeline& pipeline, fbl::String name,
                  const audio_stream_unique_id_t* unique_id = nullptr);
@@ -45,16 +45,15 @@ class IntelDspStream : public codecs::IntelHDAStreamBase,
   void OnGetStringLocked(const audio_proto::GetStringReq& req, audio_proto::GetStringResp* out_resp)
       __TA_REQUIRES(obj_lock()) final;
 
-  void CreateRingBuffer(
-      StreamChannel* channel, ::llcpp::fuchsia::hardware::audio::wire::Format format,
-      ::fidl::ServerEnd<::llcpp::fuchsia::hardware::audio::RingBuffer> ring_buffer,
-      StreamChannel::CreateRingBufferCompleter::Sync& completer) override;
+  void CreateRingBuffer(StreamChannel* channel, ::fuchsia_hardware_audio::wire::Format format,
+                        ::fidl::ServerEnd<::fuchsia_hardware_audio::RingBuffer> ring_buffer,
+                        StreamChannel::CreateRingBufferCompleter::Sync& completer) override;
 
   // fuchsia hardware audio RingBuffer Interface
   void GetProperties(GetPropertiesCompleter::Sync& completer) override;
-  void GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
-              ::llcpp::fuchsia::hardware::audio::RingBuffer::Interface::GetVmoCompleter::Sync&
-                  completer) override;
+  void GetVmo(
+      uint32_t min_frames, uint32_t notifications_per_ring,
+      ::fuchsia_hardware_audio::RingBuffer::Interface::GetVmoCompleter::Sync& completer) override;
   void Start(StartCompleter::Sync& completer) override;
   void Stop(StopCompleter::Sync& completer) override;
   void WatchClockRecoveryPositionInfo(
@@ -69,7 +68,7 @@ class IntelDspStream : public codecs::IntelHDAStreamBase,
   // Log prefix storage
   char log_prefix_[LOG_PREFIX_STORAGE] = {0};
   const DspPipeline pipeline_;
-  fidl::ClientEnd<::llcpp::fuchsia::hardware::audio::RingBuffer> ring_buffer_;
+  fidl::ClientEnd<::fuchsia_hardware_audio::RingBuffer> ring_buffer_;
 };
 
 }  // namespace intel_hda

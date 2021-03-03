@@ -8,7 +8,7 @@
 
 #include "gtest/gtest.h"
 
-namespace test = llcpp::fidl::llcpp::types::test;
+namespace test = fidl_llcpp_types_test;
 
 // There's no actual code in here, but if it compiles, success.
 TEST(Traits, NotConst) {

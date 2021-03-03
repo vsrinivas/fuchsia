@@ -13,8 +13,7 @@
 
 namespace devmgr {
 using SuspendCallback = fit::callback<void(zx_status_t)>;
-class ComponentLifecycleServer final
-    : public llcpp::fuchsia::process::lifecycle::Lifecycle::Interface {
+class ComponentLifecycleServer final : public fuchsia_process_lifecycle::Lifecycle::Interface {
  public:
   explicit ComponentLifecycleServer(Coordinator* dev_coord, SuspendCallback callback)
       : dev_coord_(dev_coord), suspend_callback_(std::move(callback)) {}

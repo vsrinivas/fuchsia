@@ -11,8 +11,8 @@
 #include "src/devices/lib/driver2/record.h"
 #include "src/devices/lib/driver2/start_args.h"
 
-namespace fdf = llcpp::fuchsia::driver::framework;
-namespace ftest = llcpp::fuchsia::driverhost::test;
+namespace fdf = fuchsia_driver_framework;
+namespace ftest = fuchsia_driverhost_test;
 
 class TestDriver {
  public:

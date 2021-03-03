@@ -7,10 +7,10 @@
 
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 
-bool IsWriteUsage(const llcpp::fuchsia::sysmem2::wire::BufferUsage& buffer_usage);
+bool IsWriteUsage(const fuchsia_sysmem2::wire::BufferUsage& buffer_usage);
 
-bool IsCpuUsage(const llcpp::fuchsia::sysmem2::wire::BufferUsage& buffer_usage);
+bool IsCpuUsage(const fuchsia_sysmem2::wire::BufferUsage& buffer_usage);
 
-bool IsAnyUsage(const llcpp::fuchsia::sysmem2::wire::BufferUsage& buffer_usage);
+bool IsAnyUsage(const fuchsia_sysmem2::wire::BufferUsage& buffer_usage);
 
 #endif  // SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_UTILS_H_

@@ -46,7 +46,7 @@ static bool run_blink_test(void* ctx, zx_device_t* parent, zx_handle_t channel) 
 
 bool Lp50xxLight::BlinkTest() {
   zx_status_t status;
-  llcpp::fuchsia::hardware::light::wire::Rgb rgb = {};
+  fuchsia_hardware_light::wire::Rgb rgb = {};
 
   for (uint32_t led = 0; led < led_count_; led++) {
     // incrementing color in steps of 16 to reduce time taken for the test
@@ -118,8 +118,7 @@ zx_status_t Lp50xxLight::Lp50xxRegConfig() {
   return ZX_OK;
 }
 
-zx_status_t Lp50xxLight::SetRgbValue(uint32_t index,
-                                     llcpp::fuchsia::hardware::light::wire::Rgb rgb) {
+zx_status_t Lp50xxLight::SetRgbValue(uint32_t index, fuchsia_hardware_light::wire::Rgb rgb) {
   if ((rgb.red > 1.0) || (rgb.green > 1.0) || (rgb.blue > 1.0) || (rgb.red < 0.0) ||
       (rgb.green < 0.0) || (rgb.blue < 0.0) || std::isnan(rgb.red) || std::isnan(rgb.green) ||
       std::isnan(rgb.blue)) {
@@ -150,8 +149,7 @@ zx_status_t Lp50xxLight::SetRgbValue(uint32_t index,
   return ZX_OK;
 }
 
-zx_status_t Lp50xxLight::GetRgbValue(uint32_t index,
-                                     llcpp::fuchsia::hardware::light::wire::Rgb* rgb) {
+zx_status_t Lp50xxLight::GetRgbValue(uint32_t index, fuchsia_hardware_light::wire::Rgb* rgb) {
   auto red = RedColorReg::Get(led_color_addr_, index).FromValue(0);
   auto green = GreenColorReg::Get(led_color_addr_, index).FromValue(0);
   auto blue = BlueColorReg::Get(led_color_addr_, index).FromValue(0);
@@ -178,7 +176,7 @@ void Lp50xxLight::GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer)
 
 void Lp50xxLight::GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) {
   if (index >= led_count_) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::INVALID_INDEX);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::INVALID_INDEX);
     return;
   }
 
@@ -193,7 +191,7 @@ void Lp50xxLight::GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) {
 
   completer.ReplySuccess({
       .name = ::fidl::StringView(name, strlen(name)),
-      .capability = ::llcpp::fuchsia::hardware::light::wire::Capability::RGB,
+      .capability = ::fuchsia_hardware_light::wire::Capability::RGB,
   });
 
   return;
@@ -201,47 +199,47 @@ void Lp50xxLight::GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) {
 
 void Lp50xxLight::GetCurrentSimpleValue(uint32_t index,
                                         GetCurrentSimpleValueCompleter::Sync& completer) {
-  completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
+  completer.ReplyError(::fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
 }
 
 void Lp50xxLight::SetSimpleValue(uint32_t index, bool value,
                                  SetSimpleValueCompleter::Sync& completer) {
-  completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
+  completer.ReplyError(::fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
 }
 
 void Lp50xxLight::GetCurrentBrightnessValue(uint32_t index,
                                             GetCurrentBrightnessValueCompleter::Sync& completer) {
-  completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
+  completer.ReplyError(::fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
 }
 
 void Lp50xxLight::SetBrightnessValue(uint32_t index, double value,
                                      SetBrightnessValueCompleter::Sync& completer) {
-  completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
+  completer.ReplyError(::fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
 }
 
 void Lp50xxLight::GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync& completer) {
-  llcpp::fuchsia::hardware::light::wire::Rgb rgb = {};
+  fuchsia_hardware_light::wire::Rgb rgb = {};
   if (index >= led_count_) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::INVALID_INDEX);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::INVALID_INDEX);
     return;
   }
 
   if (GetRgbValue(index, &rgb) != ZX_OK) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::FAILED);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::FAILED);
   } else {
     completer.ReplySuccess(rgb);
   }
 }
 
-void Lp50xxLight::SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::wire::Rgb value,
+void Lp50xxLight::SetRgbValue(uint32_t index, fuchsia_hardware_light::wire::Rgb value,
                               SetRgbValueCompleter::Sync& completer) {
   if (index >= led_count_) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::INVALID_INDEX);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::INVALID_INDEX);
     return;
   }
 
   if (SetRgbValue(index, value) != ZX_OK) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::FAILED);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::FAILED);
   } else {
     completer.ReplySuccess();
   }
@@ -249,7 +247,7 @@ void Lp50xxLight::SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::w
 
 void Lp50xxLight::GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync& completer) {
   if (group_id >= group2led_.size()) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::INVALID_INDEX);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::INVALID_INDEX);
     return;
   }
 
@@ -264,47 +262,47 @@ void Lp50xxLight::GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync& c
   completer.ReplySuccess({
       .name = ::fidl::StringView(name, strlen(name)),
       .count = static_cast<uint32_t>(group2led_[group_id].size()),
-      .capability = ::llcpp::fuchsia::hardware::light::wire::Capability::RGB,
+      .capability = ::fuchsia_hardware_light::wire::Capability::RGB,
   });
 }
 
 void Lp50xxLight::GetGroupCurrentSimpleValue(uint32_t group_id,
                                              GetGroupCurrentSimpleValueCompleter::Sync& completer) {
-  completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
+  completer.ReplyError(::fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
 }
 
 void Lp50xxLight::SetGroupSimpleValue(uint32_t group_id, ::fidl::VectorView<bool> values,
                                       SetGroupSimpleValueCompleter::Sync& completer) {
-  completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
+  completer.ReplyError(::fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
 }
 
 void Lp50xxLight::GetGroupCurrentBrightnessValue(
     uint32_t group_id, GetGroupCurrentBrightnessValueCompleter::Sync& completer) {
-  completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
+  completer.ReplyError(::fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
 }
 
 void Lp50xxLight::SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
                                           SetGroupBrightnessValueCompleter::Sync& completer) {
-  completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
+  completer.ReplyError(::fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
 }
 
 void Lp50xxLight::GetGroupCurrentRgbValue(uint32_t group_id,
                                           GetGroupCurrentRgbValueCompleter::Sync& completer) {
-  ::fidl::VectorView<::llcpp::fuchsia::hardware::light::wire::Rgb> empty(nullptr, 0);
+  ::fidl::VectorView<::fuchsia_hardware_light::wire::Rgb> empty(nullptr, 0);
   if (group_id >= group2led_.size()) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::INVALID_INDEX);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::INVALID_INDEX);
     return;
   }
 
   zx_status_t status = ZX_OK;
-  std::vector<::llcpp::fuchsia::hardware::light::wire::Rgb> out;
+  std::vector<::fuchsia_hardware_light::wire::Rgb> out;
   for (auto led : group2led_[group_id]) {
     if (led >= led_count_) {
-      completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::INVALID_INDEX);
+      completer.ReplyError(::fuchsia_hardware_light::wire::LightError::INVALID_INDEX);
       return;
     }
 
-    llcpp::fuchsia::hardware::light::wire::Rgb rgb = {};
+    fuchsia_hardware_light::wire::Rgb rgb = {};
     if ((status = GetRgbValue(led, &rgb)) != ZX_OK) {
       break;
     }
@@ -312,25 +310,25 @@ void Lp50xxLight::GetGroupCurrentRgbValue(uint32_t group_id,
   }
 
   if (status != ZX_OK) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::FAILED);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::FAILED);
   } else {
-    completer.ReplySuccess(::fidl::VectorView<::llcpp::fuchsia::hardware::light::wire::Rgb>(
+    completer.ReplySuccess(::fidl::VectorView<::fuchsia_hardware_light::wire::Rgb>(
         fidl::unowned_ptr(out.data()), out.size()));
   }
 }
 
-void Lp50xxLight::SetGroupRgbValue(
-    uint32_t group_id, ::fidl::VectorView<llcpp::fuchsia::hardware::light::wire::Rgb> values,
-    SetGroupRgbValueCompleter::Sync& completer) {
+void Lp50xxLight::SetGroupRgbValue(uint32_t group_id,
+                                   ::fidl::VectorView<fuchsia_hardware_light::wire::Rgb> values,
+                                   SetGroupRgbValueCompleter::Sync& completer) {
   if (group_id >= group2led_.size()) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::INVALID_INDEX);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::INVALID_INDEX);
     return;
   }
 
   zx_status_t status = ZX_OK;
   for (uint32_t i = 0; i < group2led_[group_id].size(); i++) {
     if (group2led_[group_id][i] >= led_count_) {
-      completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::INVALID_INDEX);
+      completer.ReplyError(::fuchsia_hardware_light::wire::LightError::INVALID_INDEX);
       return;
     }
 
@@ -339,7 +337,7 @@ void Lp50xxLight::SetGroupRgbValue(
     }
   }
   if (status != ZX_OK) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::FAILED);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::FAILED);
   } else {
     completer.ReplySuccess();
   }
@@ -347,7 +345,7 @@ void Lp50xxLight::SetGroupRgbValue(
 
 zx_status_t Lp50xxLight::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::light::Light::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_light::Light::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

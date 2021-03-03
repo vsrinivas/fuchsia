@@ -13,15 +13,15 @@
 namespace shell::common {
 
 std::unique_ptr<ResultNode> DeserializeResult::Deserialize(
-    const fidl::VectorView<llcpp::fuchsia::shell::wire::Node>& nodes) {
+    const fidl::VectorView<fuchsia_shell::wire::Node>& nodes) {
   FX_DCHECK(!nodes.empty());
   return DeserializeNode(nodes, nodes.count());
 }
 
 std::unique_ptr<ResultNode> DeserializeResult::DeserializeNode(
-    const fidl::VectorView<llcpp::fuchsia::shell::wire::Node>& nodes, uint64_t node_id) {
+    const fidl::VectorView<fuchsia_shell::wire::Node>& nodes, uint64_t node_id) {
   FX_DCHECK(node_id <= nodes.count());
-  const llcpp::fuchsia::shell::wire::Node& node = nodes[node_id - 1];
+  const fuchsia_shell::wire::Node& node = nodes[node_id - 1];
   if (node.is_integer_literal()) {
     return std::make_unique<ResultNodeIntegerLiteral>(node.integer_literal().absolute_value,
                                                       node.integer_literal().negative);
@@ -36,7 +36,7 @@ std::unique_ptr<ResultNode> DeserializeResult::DeserializeNode(
       for (const auto& field_id : node.object().fields) {
         FX_DCHECK(field_id.file_id == 1U);
         FX_DCHECK(field_id.node_id <= nodes.count());
-        const llcpp::fuchsia::shell::wire::Node& field_node = nodes[field_id.node_id - 1];
+        const fuchsia_shell::wire::Node& field_node = nodes[field_id.node_id - 1];
         FX_DCHECK(field_node.is_object_field());
         FX_DCHECK(field_node.object_field().object_field_schema.file_id == 1U);
         auto field_schema =
@@ -54,7 +54,7 @@ std::unique_ptr<ResultNode> DeserializeResult::DeserializeNode(
 }
 
 std::shared_ptr<ResultSchema> DeserializeResult::DeserializeSchema(
-    const fidl::VectorView<llcpp::fuchsia::shell::wire::Node>& nodes, uint64_t node_id) {
+    const fidl::VectorView<fuchsia_shell::wire::Node>& nodes, uint64_t node_id) {
   if (node_id == 0) {
     return nullptr;
   }
@@ -63,7 +63,7 @@ std::shared_ptr<ResultSchema> DeserializeResult::DeserializeSchema(
     return schema->second;
   }
   FX_DCHECK(node_id <= nodes.count());
-  const llcpp::fuchsia::shell::wire::Node& schema_node = nodes[node_id - 1];
+  const fuchsia_shell::wire::Node& schema_node = nodes[node_id - 1];
   if (!schema_node.is_object_schema()) {
     return nullptr;
   }
@@ -73,7 +73,7 @@ std::shared_ptr<ResultSchema> DeserializeResult::DeserializeSchema(
     FX_DCHECK(field.file_id == 1U);
     uint64_t field_id = field.node_id;
     FX_DCHECK(field_id <= nodes.count());
-    const llcpp::fuchsia::shell::wire::Node& schema_field_node = nodes[field_id - 1];
+    const fuchsia_shell::wire::Node& schema_field_node = nodes[field_id - 1];
     if (schema_field_node.is_field_schema()) {
       result->AddField(field_id, schema_field_node.field_schema().name,
                        DeserializeType(nodes, schema_field_node.field_schema().type));
@@ -83,13 +83,13 @@ std::shared_ptr<ResultSchema> DeserializeResult::DeserializeSchema(
 }
 
 std::unique_ptr<ResultType> DeserializeResult::DeserializeType(
-    const fidl::VectorView<llcpp::fuchsia::shell::wire::Node>& nodes,
-    const llcpp::fuchsia::shell::wire::ShellType& shell_type) {
+    const fidl::VectorView<fuchsia_shell::wire::Node>& nodes,
+    const fuchsia_shell::wire::ShellType& shell_type) {
   if (shell_type.is_builtin_type()) {
     switch (shell_type.builtin_type()) {
-      case llcpp::fuchsia::shell::wire::BuiltinType::UINT64:
+      case fuchsia_shell::wire::BuiltinType::UINT64:
         return std::make_unique<ResultTypeUint64>();
-      case llcpp::fuchsia::shell::wire::BuiltinType::STRING:
+      case fuchsia_shell::wire::BuiltinType::STRING:
         return std::make_unique<ResultTypeString>();
       default:
         return nullptr;

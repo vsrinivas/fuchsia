@@ -11,7 +11,7 @@
 
 #include "fence.h"
 
-namespace fhd = llcpp::fuchsia::hardware::display;
+namespace fhd = fuchsia_hardware_display;
 
 namespace display {
 

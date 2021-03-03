@@ -12,7 +12,7 @@
 
 namespace devmgr_integration_test {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 // static
 __EXPORT

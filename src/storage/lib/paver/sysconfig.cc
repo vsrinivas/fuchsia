@@ -44,7 +44,7 @@ zx::status<> SysconfigPartitionClient::Trim() { return zx::error(ZX_ERR_NOT_SUPP
 
 zx::status<> SysconfigPartitionClient::Flush() { return zx::ok(); }
 
-fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> SysconfigPartitionClient::GetChannel() {
+fidl::ClientEnd<::fuchsia_hardware_block::Block> SysconfigPartitionClient::GetChannel() {
   return {};
 }
 

@@ -29,7 +29,7 @@
 
 namespace {
 
-class Server final : public llcpp::fuchsia::posix::socket::testing::StreamSocket_TestBase {
+class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase {
  public:
   explicit Server(zx::socket peer) : peer_(std::move(peer)) {
     // We need the FDIO to act like it's connected.
@@ -42,7 +42,7 @@ class Server final : public llcpp::fuchsia::posix::socket::testing::StreamSocket
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  using Interface = llcpp::fuchsia::posix::socket::StreamSocket::Interface;
+  using Interface = fuchsia_posix_socket::StreamSocket::Interface;
 
   void Close(Interface::CloseCompleter::Sync& completer) override {
     completer.Reply(ZX_OK);
@@ -50,13 +50,13 @@ class Server final : public llcpp::fuchsia::posix::socket::testing::StreamSocket
   }
 
   void Describe(Interface::DescribeCompleter::Sync& completer) override {
-    llcpp::fuchsia::io::wire::StreamSocket stream_socket;
+    fuchsia_io::wire::StreamSocket stream_socket;
     zx_status_t status =
         peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &stream_socket.socket);
     if (status != ZX_OK) {
       return completer.Close(status);
     }
-    llcpp::fuchsia::io::wire::NodeInfo info;
+    fuchsia_io::wire::NodeInfo info;
     info.set_stream_socket(fidl::unowned_ptr(&stream_socket));
     completer.Reply(std::move(info));
   }

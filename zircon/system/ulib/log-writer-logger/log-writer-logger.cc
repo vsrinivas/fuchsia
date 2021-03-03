@@ -53,7 +53,7 @@ bool connect_to_logger(zx::socket* socket) {
   if (zx::channel::create(0, &logger, &logger_request) != ZX_OK) {
     return false;
   }
-  ::llcpp::fuchsia::logger::LogSink::SyncClient logger_client(std::move(logger));
+  ::fuchsia_logger::LogSink::SyncClient logger_client(std::move(logger));
   if (fdio_service_connect("/svc/fuchsia.logger.LogSink", logger_request.release()) != ZX_OK) {
     return false;
   }

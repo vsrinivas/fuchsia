@@ -28,7 +28,6 @@
 
 namespace fvm {
 namespace {
-namespace fuchsia = ::llcpp::fuchsia;
 
 constexpr char kRamdiskCtlPath[] = "misc/ramctl";
 constexpr zx::duration kDeviceWaitTime = zx::sec(3);
@@ -146,8 +145,8 @@ zx_status_t RamdiskRef::Grow(uint64_t target_size) {
 }
 
 void BlockDeviceAdapter::WriteAt(const fbl::Array<uint8_t>& data, uint64_t offset) {
-  fuchsia::io::File::ResultOf::WriteAt result =
-      fuchsia::io::File::Call::WriteAt(device()->channel(), ToFidlVector(data), offset);
+  fuchsia_io::File::ResultOf::WriteAt result =
+      fuchsia_io::File::Call::WriteAt(device()->channel(), ToFidlVector(data), offset);
 
   ASSERT_OK(result.status(), "Failed to communicate with block device.");
   ASSERT_OK(result->s);
@@ -155,8 +154,8 @@ void BlockDeviceAdapter::WriteAt(const fbl::Array<uint8_t>& data, uint64_t offse
 }
 
 void BlockDeviceAdapter::ReadAt(uint64_t offset, fbl::Array<uint8_t>* out_data) {
-  fuchsia::io::File::ResultOf::ReadAt result =
-      fuchsia::io::File::Call::ReadAt(device()->channel(), out_data->size(), offset);
+  fuchsia_io::File::ResultOf::ReadAt result =
+      fuchsia_io::File::Call::ReadAt(device()->channel(), out_data->size(), offset);
 
   ASSERT_OK(result.status(), "Failed to communicate with block device.");
   ASSERT_OK(result->s);
@@ -273,7 +272,7 @@ std::unique_ptr<FvmAdapter> FvmAdapter::CreateGrowable(const fbl::unique_fd& dev
   }
 
   zx_status_t status = ZX_OK;
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+  auto resp = ::fuchsia_device::Controller::Call::Bind(
       zx::unowned_channel(device->channel()->get()),
       ::fidl::StringView(kFvmDriverLib, fbl::constexpr_strlen(kFvmDriverLib)));
   zx_status_t fidl_status = resp.status();
@@ -349,7 +348,7 @@ zx_status_t FvmAdapter::Rebind(fbl::Vector<VPartitionAdapter*> vpartitions) {
     return status;
   }
 
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+  auto resp = ::fuchsia_device::Controller::Call::Bind(
       zx::unowned_channel(block_device_->channel()->get()),
       ::fidl::StringView(kFvmDriverLib, fbl::constexpr_strlen(kFvmDriverLib)));
   zx_status_t fidl_status = resp.status();

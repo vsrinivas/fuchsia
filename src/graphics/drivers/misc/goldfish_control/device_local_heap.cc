@@ -24,19 +24,18 @@ namespace {
 
 static const char* kTag = "goldfish-device-local-heap";
 
-llcpp::fuchsia::sysmem2::wire::HeapProperties GetHeapProperties() {
-  auto coherency_domain_support =
-      std::make_unique<llcpp::fuchsia::sysmem2::wire::CoherencyDomainSupport>();
+fuchsia_sysmem2::wire::HeapProperties GetHeapProperties() {
+  auto coherency_domain_support = std::make_unique<fuchsia_sysmem2::wire::CoherencyDomainSupport>();
   *coherency_domain_support =
-      llcpp::fuchsia::sysmem2::wire::CoherencyDomainSupport::Builder(
-          std::make_unique<llcpp::fuchsia::sysmem2::wire::CoherencyDomainSupport::Frame>())
+      fuchsia_sysmem2::wire::CoherencyDomainSupport::Builder(
+          std::make_unique<fuchsia_sysmem2::wire::CoherencyDomainSupport::Frame>())
           .set_cpu_supported(std::make_unique<bool>(false))
           .set_ram_supported(std::make_unique<bool>(false))
           .set_inaccessible_supported(std::make_unique<bool>(true))
           .build();
 
-  return llcpp::fuchsia::sysmem2::wire::HeapProperties::Builder(
-             std::make_unique<llcpp::fuchsia::sysmem2::wire::HeapProperties::Frame>())
+  return fuchsia_sysmem2::wire::HeapProperties::Builder(
+             std::make_unique<fuchsia_sysmem2::wire::HeapProperties::Frame>())
       .set_coherency_domain_support(std::move(coherency_domain_support))
       .set_need_clear(std::make_unique<bool>(false))
       .build();
@@ -65,9 +64,9 @@ void DeviceLocalHeap::AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& com
   }
 }
 
-void DeviceLocalHeap::CreateResource(
-    ::zx::vmo vmo, llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings,
-    CreateResourceCompleter::Sync& completer) {
+void DeviceLocalHeap::CreateResource(::zx::vmo vmo,
+                                     fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings,
+                                     CreateResourceCompleter::Sync& completer) {
   uint64_t id = control()->RegisterBufferHandle(vmo);
   if (id == ZX_KOID_INVALID) {
     completer.Reply(ZX_ERR_INVALID_ARGS, 0u);

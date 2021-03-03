@@ -28,7 +28,7 @@ void usage(char* argv[]) {
   printf("         path: Path to dsi-base interface (/dev/class/dsi-base/000)\n\n");
 }
 
-namespace fidl_dsi = ::llcpp::fuchsia::hardware::dsi;
+namespace fidl_dsi = ::fuchsia_hardware_dsi;
 
 }  // namespace
 int main(int argc, char* argv[]) {

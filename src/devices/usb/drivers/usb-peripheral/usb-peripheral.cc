@@ -33,7 +33,7 @@
 #include "src/devices/usb/drivers/usb-peripheral/usb_peripheral-bind.h"
 #include "usb-function.h"
 
-namespace peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
+namespace peripheral = ::fuchsia_hardware_usb_peripheral;
 
 namespace usb_peripheral {
 

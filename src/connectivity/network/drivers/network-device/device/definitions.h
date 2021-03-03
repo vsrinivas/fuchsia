@@ -13,7 +13,7 @@
 #include "src/lib/vmo_store/vmo_store.h"
 
 namespace network {
-namespace netdev = llcpp::fuchsia::hardware::network;
+namespace netdev = fuchsia_hardware_network;
 constexpr uint16_t kMaxFifoDepth = ZX_PAGE_SIZE / sizeof(uint16_t);
 
 namespace internal {

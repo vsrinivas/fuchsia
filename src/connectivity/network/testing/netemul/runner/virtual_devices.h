@@ -30,8 +30,7 @@ class VirtualDevices {
   // at the relative path |path|.
   //
   // If the directory does not exist, it will be created.
-  zx::status<fidl::ClientEnd<llcpp::fuchsia::io::Directory>> OpenAsDirectory(
-      const std::string& path);
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpenAsDirectory(const std::string& path);
 
  private:
   // Get the directory at the relative path specified by |parts|.

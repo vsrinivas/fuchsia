@@ -34,7 +34,7 @@
 namespace devmgr {
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 std::unique_ptr<cobalt_client::Collector> MakeCollector() {
   return std::make_unique<cobalt_client::Collector>(
@@ -63,10 +63,10 @@ TEST(VnodeTestCase, AddFilesystem) {
 
   // Adds a new filesystem to the fshost service node.
   // This filesystem should appear as a new entry within |dir|.
-  auto endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::io::Directory>();
+  auto endpoints = fidl::CreateEndpoints<::fuchsia_io::Directory>();
   ASSERT_OK(endpoints.status_value());
 
-  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> client_value = endpoints->client.borrow();
+  fidl::UnownedClientEnd<::fuchsia_io::Directory> client_value = endpoints->client.borrow();
   ASSERT_OK(fshost_vn->AddFilesystem(std::move(endpoints->client)));
   fbl::RefPtr<fs::Vnode> node;
   ASSERT_OK(dir->Lookup("0", &node));
@@ -78,7 +78,7 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   // set up registry service
-  auto registry_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::fshost::Registry>();
+  auto registry_endpoints = fidl::CreateEndpoints<::fuchsia_fshost::Registry>();
   ASSERT_OK(registry_endpoints.status_value());
   auto [registry_client, registry_server] = std::move(registry_endpoints.value());
 
@@ -89,7 +89,7 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   ASSERT_TRUE(server_binding.is_ok());
 
   // make a new "vfs" "client" that doesn't really point anywhere.
-  auto vfs_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::io::Directory>();
+  auto vfs_endpoints = fidl::CreateEndpoints<::fuchsia_io::Directory>();
   ASSERT_OK(vfs_endpoints.status_value());
   auto [vfs_client, vfs_server] = std::move(vfs_endpoints.value());
   zx_info_handle_basic_t vfs_client_info;
@@ -97,8 +97,8 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
                                           sizeof(vfs_client_info), nullptr, nullptr));
 
   // register the filesystem through the fidl interface
-  auto resp = ::llcpp::fuchsia::fshost::Registry::Call::RegisterFilesystem(registry_client,
-                                                                           std::move(vfs_client));
+  auto resp =
+      ::fuchsia_fshost::Registry::Call::RegisterFilesystem(registry_client, std::move(vfs_client));
   ASSERT_TRUE(resp.ok());
   ASSERT_OK(resp.value().s);
 
@@ -112,8 +112,7 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   EXPECT_EQ(vfs_remote_info.koid, vfs_client_info.koid);
 }
 
-class FakeDriverManagerAdmin final
-    : public llcpp::fuchsia::device::manager::Administrator::Interface {
+class FakeDriverManagerAdmin final : public fuchsia_device_manager::Administrator::Interface {
  public:
   void Suspend(uint32_t flags, SuspendCompleter::Sync& completer) override {
     completer.Reply(ZX_OK);
@@ -138,7 +137,7 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   FakeDriverManagerAdmin driver_admin;
-  auto admin_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::device::manager::Administrator>();
+  auto admin_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Administrator>();
   ASSERT_TRUE(admin_endpoints.is_ok());
   ASSERT_TRUE(fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin)
                   .is_ok());
@@ -183,7 +182,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   FakeDriverManagerAdmin driver_admin;
-  auto admin_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::device::manager::Administrator>();
+  auto admin_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Administrator>();
   ASSERT_TRUE(admin_endpoints.is_ok());
   ASSERT_TRUE(fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin)
                   .is_ok());
@@ -198,7 +197,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
   EXPECT_FALSE(manager.IsShutdown());
 
   // Call stop on the lifecycle channel
-  llcpp::fuchsia::process::lifecycle::Lifecycle::SyncClient client(std::move(lifecycle));
+  fuchsia_process_lifecycle::Lifecycle::SyncClient client(std::move(lifecycle));
   auto result = client.Stop();
   ASSERT_OK(result.status());
 
@@ -224,13 +223,13 @@ class MockDirectoryAdminOpener : public fio::DirectoryAdmin::Interface {
   // Below here are a pile of stubs that aren't called in this test. Only Open() above is used.
 
   // fuchsia.io/Node:
-  void Clone(uint32_t flags, fidl::ServerEnd<llcpp::fuchsia::io::Node> object,
+  void Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> object,
              CloneCompleter::Sync& completer) override {}
   void Close(CloseCompleter::Sync& completer) override {}
   void Describe(DescribeCompleter::Sync& completer) override {}
   void Sync(SyncCompleter::Sync& completer) override {}
   void GetAttr(GetAttrCompleter::Sync& completer) override {}
-  void SetAttr(uint32_t flags, llcpp::fuchsia::io::wire::NodeAttributes attributes,
+  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
                SetAttrCompleter::Sync& completer) override {}
   void NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) override {}
   void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) override {}
@@ -246,15 +245,15 @@ class MockDirectoryAdminOpener : public fio::DirectoryAdmin::Interface {
             LinkCompleter::Sync& completer) override {}
   void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
              WatchCompleter::Sync& completer) override {}
-  void AddInotifyFilter(llcpp::fuchsia::io2::wire::InotifyWatchMask filters, fidl::StringView path,
+  void AddInotifyFilter(fuchsia_io2::wire::InotifyWatchMask filters, fidl::StringView path,
                         uint32_t watch_descriptor, zx::socket socket,
-                        fidl::ServerEnd<llcpp::fuchsia::io2::Inotifier> controller,
+                        fidl::ServerEnd<fuchsia_io2::Inotifier> controller,
                         AddInotifyFilterCompleter::Sync& completer) override {}
 
   // fuchsia.io/DirectoryAdmin:
-  void Mount(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote,
+  void Mount(fidl::ClientEnd<fuchsia_io::Directory> remote,
              MountCompleter::Sync& completer) override {}
-  void MountAndCreate(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote, fidl::StringView name,
+  void MountAndCreate(fidl::ClientEnd<fuchsia_io::Directory> remote, fidl::StringView name,
                       uint32_t flags, MountAndCreateCompleter::Sync& completer) override {}
   void Unmount(UnmountCompleter::Sync& completer) override {}
   void UnmountNode(UnmountNodeCompleter::Sync& completer) override {}

@@ -104,13 +104,13 @@ static bool vc_handle_device_control_keys(uint8_t keycode, int modifiers) {
     case HID_USAGE_KEY_DELETE:
       // Provide a CTRL-ALT-DEL reboot sequence
       if ((modifiers & MOD_CTRL) && (modifiers & MOD_ALT)) {
-        auto local = service::Connect<llcpp::fuchsia::hardware::power::statecontrol::Admin>();
+        auto local = service::Connect<fuchsia_hardware_power_statecontrol::Admin>();
         if (local.is_error()) {
           return true;
         }
-        auto response = fidl::BindSyncClient(std::move(*local))
-                            .Reboot(llcpp::fuchsia::hardware::power::statecontrol::wire::
-                                        RebootReason::USER_REQUEST);
+        auto response =
+            fidl::BindSyncClient(std::move(*local))
+                .Reboot(fuchsia_hardware_power_statecontrol::wire::RebootReason::USER_REQUEST);
         if (response.status() != ZX_OK) {
           fprintf(stderr, "Failed to reboot, status:%d\n", response.status());
           return true;

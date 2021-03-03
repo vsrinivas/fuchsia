@@ -17,7 +17,7 @@
 
 #include <zxtest/zxtest.h>
 
-namespace fpty = ::llcpp::fuchsia::hardware::pty;
+namespace fpty = ::fuchsia_hardware_pty;
 
 // returns an int to avoid sign errors from ASSERT_*()
 static int fd_signals(const fbl::unique_fd& fd, uint32_t wait_for_any, zx::time deadline) {

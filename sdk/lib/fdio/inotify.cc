@@ -31,7 +31,7 @@
 #include "fdio_unistd.h"
 #include "internal.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 namespace {
 

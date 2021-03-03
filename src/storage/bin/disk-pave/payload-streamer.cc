@@ -9,7 +9,7 @@
 
 namespace disk_pave {
 
-PayloadStreamer::PayloadStreamer(fidl::ServerEnd<llcpp::fuchsia::paver::PayloadStream> server_end,
+PayloadStreamer::PayloadStreamer(fidl::ServerEnd<fuchsia_paver::PayloadStream> server_end,
                                  fbl::unique_fd payload)
     : payload_(std::move(payload)) {
   fidl::BindSingleInFlightOnly(async_get_default_dispatcher(), std::move(server_end), this);
@@ -43,7 +43,7 @@ void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& compl
 }
 
 void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
-  ::llcpp::fuchsia::paver::wire::ReadResult result = {};
+  ::fuchsia_paver::wire::ReadResult result = {};
   if (!vmo_) {
     zx_status_t status = ZX_ERR_BAD_STATE;
     result.set_err(fidl::unowned_ptr(&status));
@@ -68,7 +68,7 @@ void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
   } else {
     // completer.Reply must be called from within this else block since otherwise
     // |info| will go out of scope
-    ::llcpp::fuchsia::paver::wire::ReadInfo info{.offset = 0, .size = static_cast<uint64_t>(n)};
+    ::fuchsia_paver::wire::ReadInfo info{.offset = 0, .size = static_cast<uint64_t>(n)};
     result.set_info(fidl::unowned_ptr(&info));
     completer.Reply(std::move(result));
   }

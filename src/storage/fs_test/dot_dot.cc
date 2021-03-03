@@ -19,7 +19,7 @@ namespace {
 
 using DotDotTest = FilesystemTest;
 
-namespace fio = llcpp::fuchsia::io;
+namespace fio = fuchsia_io;
 
 // Test cases of '..' where the path can be canonicalized on the client.
 TEST_P(DotDotTest, DotDotClient) {

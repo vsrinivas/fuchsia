@@ -37,7 +37,7 @@ void GpioLight::GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer) {
 
 void GpioLight::GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) {
   if (index >= gpio_count_) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::INVALID_INDEX);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::INVALID_INDEX);
     return;
   }
 
@@ -51,20 +51,20 @@ void GpioLight::GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) {
 
   completer.ReplySuccess({
       .name = ::fidl::StringView(name, strlen(name)),
-      .capability = ::llcpp::fuchsia::hardware::light::wire::Capability::SIMPLE,
+      .capability = ::fuchsia_hardware_light::wire::Capability::SIMPLE,
   });
 }
 
 void GpioLight::GetCurrentSimpleValue(uint32_t index,
                                       GetCurrentSimpleValueCompleter::Sync& completer) {
   if (index >= gpio_count_) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::INVALID_INDEX);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::INVALID_INDEX);
     return;
   }
 
   uint8_t value;
   if (gpios_[index].Read(&value) != ZX_OK) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::FAILED);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::FAILED);
   } else {
     completer.ReplySuccess(value);
   }
@@ -73,12 +73,12 @@ void GpioLight::GetCurrentSimpleValue(uint32_t index,
 void GpioLight::SetSimpleValue(uint32_t index, bool value,
                                SetSimpleValueCompleter::Sync& completer) {
   if (index >= gpio_count_) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::INVALID_INDEX);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::INVALID_INDEX);
     return;
   }
 
   if (gpios_[index].Write(value) != ZX_OK) {
-    completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::FAILED);
+    completer.ReplyError(::fuchsia_hardware_light::wire::LightError::FAILED);
   } else {
     completer.ReplySuccess();
   }
@@ -86,26 +86,26 @@ void GpioLight::SetSimpleValue(uint32_t index, bool value,
 
 void GpioLight::GetCurrentBrightnessValue(uint32_t index,
                                           GetCurrentBrightnessValueCompleter::Sync& completer) {
-  completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
+  completer.ReplyError(::fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
 }
 
 void GpioLight::SetBrightnessValue(uint32_t index, double value,
                                    SetBrightnessValueCompleter::Sync& completer) {
-  completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
+  completer.ReplyError(::fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
 }
 
 void GpioLight::GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync& completer) {
-  completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
+  completer.ReplyError(::fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
 }
 
-void GpioLight::SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::wire::Rgb value,
+void GpioLight::SetRgbValue(uint32_t index, fuchsia_hardware_light::wire::Rgb value,
                             SetRgbValueCompleter::Sync& completer) {
-  completer.ReplyError(::llcpp::fuchsia::hardware::light::wire::LightError::NOT_SUPPORTED);
+  completer.ReplyError(::fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
 }
 
 zx_status_t GpioLight::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::light::Light::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_light::Light::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

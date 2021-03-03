@@ -12,7 +12,7 @@ MountChannel::~MountChannel() {
   if (client_end_.is_valid()) {
     // Note: this is best-effort, and would fail if the remote endpoint does not speak the
     // |fuchsia.io/DirectoryAdmin| protocol.
-    fidl::ClientEnd<llcpp::fuchsia::io::DirectoryAdmin> admin(client_end_.TakeChannel());
+    fidl::ClientEnd<fuchsia_io::DirectoryAdmin> admin(client_end_.TakeChannel());
     Vfs::UnmountHandle(std::move(admin), zx::time::infinite());
   }
 }

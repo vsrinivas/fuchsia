@@ -21,7 +21,7 @@
 #include "test-metadata.h"
 
 using driver_integration_test::IsolatedDevmgr;
-using llcpp::fuchsia::device::Controller;
+using fuchsia_device::Controller;
 
 // TODO(fxbug.dev/38095): Fix flakiness and re-enable.
 TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookSuccess) {

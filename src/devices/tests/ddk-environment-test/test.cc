@@ -13,7 +13,7 @@
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;
-using llcpp::fuchsia::device::environment::test::TestDevice;
+using fuchsia_device_environment_test::TestDevice;
 
 class EnvironmentTest : public zxtest::Test {
  public:

@@ -14,7 +14,7 @@ namespace block_verity {
 // Checks that `config` specifies both a root hash and a block size, and that
 // the block size matches the one observed in `blk`.  Returns ZX_OK on success,
 // ZX_ERR_INVALID_ARGS otherwise.
-zx_status_t CheckConfig(const llcpp::fuchsia::hardware::block::verified::wire::Config& config,
+zx_status_t CheckConfig(const fuchsia_hardware_block_verified::wire::Config& config,
                         const block_info_t& blk);
 
 }  // namespace block_verity

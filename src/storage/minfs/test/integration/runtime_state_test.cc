@@ -20,7 +20,7 @@ TEST_P(MountStateTest, ReadWriteWithJournal) {
   fbl::unique_fd fd(open(fs().mount_path().c_str(), O_DIRECTORY | O_RDONLY));
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = ::llcpp::fuchsia::minfs::Minfs::Call::GetMountState(caller.channel());
+  auto result = ::fuchsia_minfs::Minfs::Call::GetMountState(caller.channel());
   ASSERT_TRUE(result.ok());
   ASSERT_EQ(result.value().status, ZX_OK);
   ASSERT_NE(result.value().mount_state, nullptr);

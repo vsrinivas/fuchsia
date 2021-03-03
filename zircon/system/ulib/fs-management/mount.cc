@@ -35,8 +35,8 @@
 #include "admin.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 
-namespace fblock = ::llcpp::fuchsia::hardware::block;
-namespace fio = ::llcpp::fuchsia::io;
+namespace fblock = ::fuchsia_hardware_block;
+namespace fio = ::fuchsia_io;
 
 namespace fs_management {
 namespace {

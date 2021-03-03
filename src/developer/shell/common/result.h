@@ -195,21 +195,20 @@ class DeserializeResult {
   DeserializeResult() = default;
 
   // Deserializes a result from a vector of nodes.
-  std::unique_ptr<ResultNode> Deserialize(
-      const fidl::VectorView<llcpp::fuchsia::shell::wire::Node>& nodes);
+  std::unique_ptr<ResultNode> Deserialize(const fidl::VectorView<fuchsia_shell::wire::Node>& nodes);
 
   // Deserializes a node (value).
   std::unique_ptr<ResultNode> DeserializeNode(
-      const fidl::VectorView<llcpp::fuchsia::shell::wire::Node>& nodes, uint64_t node_id);
+      const fidl::VectorView<fuchsia_shell::wire::Node>& nodes, uint64_t node_id);
 
   // Deserializes an object schema.
   std::shared_ptr<ResultSchema> DeserializeSchema(
-      const fidl::VectorView<llcpp::fuchsia::shell::wire::Node>& nodes, uint64_t node_id);
+      const fidl::VectorView<fuchsia_shell::wire::Node>& nodes, uint64_t node_id);
 
   // Deserializes a type.
   std::unique_ptr<ResultType> DeserializeType(
-      const fidl::VectorView<llcpp::fuchsia::shell::wire::Node>& nodes,
-      const llcpp::fuchsia::shell::wire::ShellType& shell_type);
+      const fidl::VectorView<fuchsia_shell::wire::Node>& nodes,
+      const fuchsia_shell::wire::ShellType& shell_type);
 
  private:
   // All the schema which have already been deserialized.

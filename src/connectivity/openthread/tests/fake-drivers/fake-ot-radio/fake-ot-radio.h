@@ -36,7 +36,7 @@ constexpr uint32_t kBitMaskHigherFourBits = 0xF0;
 constexpr uint32_t kBitMaskLowerFourBits = 0x0F;
 
 class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable, ddk::Messageable>,
-                          public llcpp::fuchsia::lowpan::spinel::DeviceSetup::Interface {
+                          public fuchsia_lowpan_spinel::DeviceSetup::Interface {
  public:
   explicit FakeOtRadioDevice(zx_device_t* device);
 
@@ -55,7 +55,7 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
 
  private:
   // FIDL request handlers
-  void SetChannel(fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> request,
+  void SetChannel(fidl::ServerEnd<fuchsia_lowpan_spinel::Device> request,
                   SetChannelCompleter::Sync& _completer) override;
   // Loop
   zx_status_t RadioThread();
@@ -68,11 +68,11 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
   static uint8_t ValidateSpinelHeaderAndGetTid(const uint8_t* data, uint32_t len);
 
   // Nested class for FIDL implementation
-  class LowpanSpinelDeviceFidlImpl : public llcpp::fuchsia::lowpan::spinel::Device::Interface {
+  class LowpanSpinelDeviceFidlImpl : public fuchsia_lowpan_spinel::Device::Interface {
    public:
     explicit LowpanSpinelDeviceFidlImpl(FakeOtRadioDevice& ot_radio);
     zx_status_t Bind(async_dispatcher_t* dispatcher,
-                     fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> channel);
+                     fidl::ServerEnd<fuchsia_lowpan_spinel::Device> channel);
 
    private:
     // FIDL request handlers
@@ -100,7 +100,7 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
   uint32_t outbound_allowance_ = kOutboundAllowanceInit;
   uint64_t inbound_cnt_ = 0;
   uint64_t outbound_cnt_ = 0;
-  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::lowpan::spinel::Device>> fidl_binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_lowpan_spinel::Device>> fidl_binding_;
   std::unique_ptr<LowpanSpinelDeviceFidlImpl> fidl_impl_obj_ = 0;
   ot_radio_power_status_e power_status_ = OT_SPINEL_DEVICE_OFF;
 };

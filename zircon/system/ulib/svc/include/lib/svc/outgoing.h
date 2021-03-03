@@ -23,7 +23,7 @@ class Outgoing {
   const fbl::RefPtr<fs::PseudoDir>& svc_dir() const { return svc_dir_; }
 
   // Start serving the root directory on the given channel.
-  zx_status_t Serve(fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_server_end);
+  zx_status_t Serve(fidl::ServerEnd<::fuchsia_io::Directory> dir_server_end);
 
   // Start serving the root directory on the channel provided to this process at
   // startup as PA_DIRECTORY_REQUEST.

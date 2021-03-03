@@ -23,8 +23,6 @@
 
 namespace serial {
 
-namespace fuchsia = ::llcpp::fuchsia;
-
 zx_status_t SerialDevice::SerialGetInfo(serial_port_info_t* info) { return serial_.GetInfo(info); }
 
 zx_status_t SerialDevice::SerialConfig(uint32_t baud_rate, uint32_t flags) {
@@ -32,7 +30,7 @@ zx_status_t SerialDevice::SerialConfig(uint32_t baud_rate, uint32_t flags) {
 }
 
 void SerialDevice::GetClass(GetClassCompleter::Sync& completer) {
-  completer.Reply(static_cast<fuchsia::hardware::serial::wire::Class>(serial_class_));
+  completer.Reply(static_cast<fuchsia_hardware_serial::wire::Class>(serial_class_));
 }
 
 void SerialDevice::Read(ReadCompleter::Sync& completer) {
@@ -58,7 +56,7 @@ void SerialDevice::Read(ReadCompleter::Sync& completer) {
       this);
 }
 
-void SerialDevice::GetChannel(fidl::ServerEnd<llcpp::fuchsia::hardware::serial::NewDevice> req,
+void SerialDevice::GetChannel(fidl::ServerEnd<fuchsia_hardware_serial::NewDevice> req,
                               GetChannelCompleter::Sync& completer) {
   if (loop_.has_value()) {
     if (loop_->GetState() == ASYNC_LOOP_SHUTDOWN) {
@@ -72,19 +70,18 @@ void SerialDevice::GetChannel(fidl::ServerEnd<llcpp::fuchsia::hardware::serial::
   loop_->StartThread("serial-thread");
 
   // Invoked when the channel is closed or on any binding-related error.
-  fidl::OnUnboundFn<llcpp::fuchsia::hardware::serial::NewDevice::Interface> unbound_fn(
-      [](llcpp::fuchsia::hardware::serial::NewDevice::Interface* dev, fidl::UnbindInfo,
-         fidl::ServerEnd<llcpp::fuchsia::hardware::serial::NewDevice>) {
+  fidl::OnUnboundFn<fuchsia_hardware_serial::NewDevice::Interface> unbound_fn(
+      [](fuchsia_hardware_serial::NewDevice::Interface* dev, fidl::UnbindInfo,
+         fidl::ServerEnd<fuchsia_hardware_serial::NewDevice>) {
         auto* device = static_cast<SerialDevice*>(dev);
         device->loop_->Quit();
         // Unblock DdkRelease() if it was invoked.
         sync_completion_signal(&device->on_unbind_);
       });
 
-  auto binding =
-      fidl::BindServer(loop_->dispatcher(), std::move(req),
-                       static_cast<llcpp::fuchsia::hardware::serial::NewDevice::Interface*>(this),
-                       std::move(unbound_fn));
+  auto binding = fidl::BindServer(loop_->dispatcher(), std::move(req),
+                                  static_cast<fuchsia_hardware_serial::NewDevice::Interface*>(this),
+                                  std::move(unbound_fn));
   if (binding.is_error()) {
     loop_.reset();
     return;
@@ -114,12 +111,12 @@ void SerialDevice::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& c
       this);
 }
 
-void SerialDevice::SetConfig(fuchsia::hardware::serial::wire::Config config,
+void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
                              SetConfigCompleter::Sync& completer) {
-  using fuchsia::hardware::serial::wire::CharacterWidth;
-  using fuchsia::hardware::serial::wire::FlowControl;
-  using fuchsia::hardware::serial::wire::Parity;
-  using fuchsia::hardware::serial::wire::StopWidth;
+  using fuchsia_hardware_serial::wire::CharacterWidth;
+  using fuchsia_hardware_serial::wire::FlowControl;
+  using fuchsia_hardware_serial::wire::Parity;
+  using fuchsia_hardware_serial::wire::StopWidth;
   uint32_t flags = 0;
   switch (config.character_width) {
     case CharacterWidth::BITS_5:
@@ -172,7 +169,7 @@ void SerialDevice::SetConfig(fuchsia::hardware::serial::wire::Config config,
 
 zx_status_t SerialDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia::hardware::serial::NewDeviceProxy::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_serial::NewDeviceProxy::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

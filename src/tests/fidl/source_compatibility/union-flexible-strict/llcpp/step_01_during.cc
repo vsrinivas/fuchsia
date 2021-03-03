@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/unionflexiblestrict/llcpp/fidl.h>  // nogncheck
-namespace fidl_test = llcpp::fidl::test::unionflexiblestrict;
+namespace fidl_test = fidl_test_unionflexiblestrict;
 
 // [START contents]
 void use_union(fidl_test::wire::JsonValue* value) {

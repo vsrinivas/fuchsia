@@ -113,7 +113,7 @@ TEST_F(HidDriverTest, BootMouseTest) {
   // Open a FIDL channel to the HID device
   zx::channel chan;
   ASSERT_OK(fdio_get_service_handle(fd_device.get(), chan.reset_and_get_address()));
-  auto client = llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(chan));
+  auto client = fuchsia_hardware_input::Device::SyncClient(std::move(chan));
 
   // Get the report event.
   zx::event report_event;

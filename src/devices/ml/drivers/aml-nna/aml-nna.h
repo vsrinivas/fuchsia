@@ -74,7 +74,7 @@ class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTO
   ddk::MmioBuffer hiu_mmio_;
   ddk::MmioBuffer power_mmio_;
   ddk::MmioBuffer memory_pd_mmio_;
-  ::llcpp::fuchsia::hardware::registers::Device::SyncClient reset_;
+  ::fuchsia_hardware_registers::Device::SyncClient reset_;
 
   pdev_protocol_t parent_pdev_;
 

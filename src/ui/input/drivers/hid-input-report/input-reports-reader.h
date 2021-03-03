@@ -17,7 +17,7 @@
 
 namespace hid_input_report_dev {
 
-namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
+namespace fuchsia_input_report = ::fuchsia_input_report;
 
 class InputReportsReader;
 
@@ -26,7 +26,7 @@ class InputReportBase {
   virtual void RemoveReaderFromList(InputReportsReader* reader) = 0;
 };
 
-class InputReportsReader : public ::llcpp::fuchsia::input::report::InputReportsReader::Interface {
+class InputReportsReader : public ::fuchsia_input_report::InputReportsReader::Interface {
  public:
   // The InputReportBase has to exist for the lifetime of the InputReportsReader.
   // The pointer to InputReportBase is unowned.
@@ -57,7 +57,7 @@ class InputReportsReader : public ::llcpp::fuchsia::input::report::InputReportsR
   fbl::Mutex readers_lock_;
   std::optional<InputReportsReader::ReadInputReportsCompleter::Async> waiting_read_
       __TA_GUARDED(readers_lock_);
-  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::input::report::InputReportsReader>> binding_
+  std::optional<fidl::ServerBindingRef<fuchsia_input_report::InputReportsReader>> binding_
       __TA_GUARDED(readers_lock_);
   fidl::FidlAllocator<kFidlReportBufferSize> report_allocator_ __TA_GUARDED(readers_lock_);
   fbl::RingBuffer<fuchsia_input_report::wire::InputReport,

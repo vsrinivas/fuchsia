@@ -17,8 +17,8 @@
 
 namespace amlogic_cpu {
 
-namespace fuchsia_cpuctrl = ::llcpp::fuchsia::hardware::cpu::ctrl;
-namespace fuchsia_thermal = ::llcpp::fuchsia::hardware::thermal;
+namespace fuchsia_cpuctrl = ::fuchsia_hardware_cpu_ctrl;
+namespace fuchsia_thermal = ::fuchsia_hardware_thermal;
 
 class AmlCpu;
 using DeviceType =

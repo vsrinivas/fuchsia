@@ -29,7 +29,7 @@ class Blobfs;
 
 // The root directory of blobfs. This directory is a flat container of all blobs in the filesystem.
 #ifdef __Fuchsia__
-class Directory final : public fs::Vnode, llcpp::fuchsia::blobfs::Blobfs::Interface {
+class Directory final : public fs::Vnode, fuchsia_blobfs::Blobfs::Interface {
 #else
 class Directory final : public fs::Vnode {
 #endif
@@ -50,7 +50,7 @@ class Directory final : public fs::Vnode {
   zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) final;
-  zx_status_t QueryFilesystem(::llcpp::fuchsia::io::wire::FilesystemInfo* out) final;
+  zx_status_t QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* out) final;
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
   zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
   void Sync(SyncCallback closure) final;
@@ -58,7 +58,7 @@ class Directory final : public fs::Vnode {
 #ifdef __Fuchsia__
   void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) final;
   void GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) final;
-  void SetCorruptBlobHandler(fidl::ClientEnd<llcpp::fuchsia::blobfs::CorruptBlobHandler> handler,
+  void SetCorruptBlobHandler(fidl::ClientEnd<fuchsia_blobfs::CorruptBlobHandler> handler,
                              SetCorruptBlobHandlerCompleter::Sync& completer) final;
 #endif
 

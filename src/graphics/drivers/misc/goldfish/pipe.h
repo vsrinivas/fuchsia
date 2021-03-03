@@ -22,7 +22,7 @@
 namespace goldfish {
 
 // An instance of this class serves a Pipe connection.
-class Pipe : public llcpp::fuchsia::hardware::goldfish::Pipe::Interface {
+class Pipe : public fuchsia_hardware_goldfish::Pipe::Interface {
  public:
   using OnBindFn = fit::function<void(Pipe*)>;
   using OnCloseFn = fit::function<void(Pipe*)>;
@@ -45,22 +45,22 @@ class Pipe : public llcpp::fuchsia::hardware::goldfish::Pipe::Interface {
     zx_paddr_t phys;
   };
 
-  // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
+  // |fuchsia_hardware_goldfish::Pipe::Interface|
   void SetBufferSize(uint64_t size, SetBufferSizeCompleter::Sync& completer) override;
 
-  // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
+  // |fuchsia_hardware_goldfish::Pipe::Interface|
   void SetEvent(::zx::event event, SetEventCompleter::Sync& completer) override;
 
-  // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
+  // |fuchsia_hardware_goldfish::Pipe::Interface|
   void GetBuffer(GetBufferCompleter::Sync& completer) override;
 
-  // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
+  // |fuchsia_hardware_goldfish::Pipe::Interface|
   void Read(uint64_t count, uint64_t offset, ReadCompleter::Sync& completer) override;
 
-  // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
+  // |fuchsia_hardware_goldfish::Pipe::Interface|
   void Write(uint64_t count, uint64_t offset, WriteCompleter::Sync& completer) override;
 
-  // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
+  // |fuchsia_hardware_goldfish::Pipe::Interface|
   void DoCall(uint64_t count, uint64_t offset, uint64_t read_count, uint64_t read_offset,
               DoCallCompleter::Sync& completer) override;
 
@@ -72,7 +72,7 @@ class Pipe : public llcpp::fuchsia::hardware::goldfish::Pipe::Interface {
   // Close current bounded channel and send an epitaph to the client.
   void FailAsync(zx_status_t epitaph, const char* file, int line, const char* format, ...);
 
-  std::unique_ptr<fidl::ServerBindingRef<llcpp::fuchsia::hardware::goldfish::Pipe>> binding_ref_;
+  std::unique_ptr<fidl::ServerBindingRef<fuchsia_hardware_goldfish::Pipe>> binding_ref_;
   const OnBindFn on_bind_;
   const OnCloseFn on_close_;
 

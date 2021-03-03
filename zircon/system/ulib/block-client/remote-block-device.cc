@@ -9,7 +9,7 @@
 
 #include <block-client/cpp/remote-block-device.h>
 
-namespace fio = llcpp::fuchsia::io;
+namespace fio = fuchsia_io;
 
 namespace block_client {
 namespace {
@@ -66,8 +66,8 @@ zx_status_t RemoteBlockDevice::GetDevicePath(size_t buffer_len, char* out_name,
   }
   zx_status_t status, io_status;
 
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
-      zx::unowned_channel(device_.get()));
+  auto resp =
+      ::fuchsia_device::Controller::Call::GetTopologicalPath(zx::unowned_channel(device_.get()));
 
   io_status = resp.status();
   if (io_status != ZX_OK) {

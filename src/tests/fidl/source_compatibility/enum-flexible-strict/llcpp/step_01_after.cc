@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/enumflexiblestrict/llcpp/fidl.h>  // nogncheck
-namespace fidl_test = llcpp::fidl::test::enumflexiblestrict;
+namespace fidl_test = fidl_test_enumflexiblestrict;
 
 // [START contents]
 fidl_test::wire::Color complement(fidl_test::wire::Color color) {

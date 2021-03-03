@@ -38,7 +38,7 @@
 #include "src/graphics/display/drivers/amlogic-display/amlogic-display-bind.h"
 #include "vpp-regs.h"
 
-namespace sysmem = llcpp::fuchsia::sysmem;
+namespace sysmem = fuchsia_sysmem;
 
 namespace amlogic_display {
 

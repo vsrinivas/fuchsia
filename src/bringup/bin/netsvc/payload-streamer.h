@@ -20,7 +20,7 @@ namespace netsvc {
 using ReadCallback = fbl::Function<zx_status_t(void* /*buf*/, size_t /*offset*/, size_t /*size*/,
                                                size_t* /*actual*/)>;
 
-class PayloadStreamer : public ::llcpp::fuchsia::paver::PayloadStream::Interface {
+class PayloadStreamer : public ::fuchsia_paver::PayloadStream::Interface {
  public:
   PayloadStreamer(zx::channel chan, ReadCallback callback);
 

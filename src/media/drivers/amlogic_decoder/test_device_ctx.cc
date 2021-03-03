@@ -18,7 +18,7 @@
 class AmlogicTestDevice;
 using DdkDeviceType = ddk::Device<AmlogicTestDevice, ddk::Messageable>;
 
-class AmlogicTestDevice : public llcpp::fuchsia::hardware::mediacodec::Tester::Interface,
+class AmlogicTestDevice : public fuchsia_hardware_mediacodec::Tester::Interface,
                           public DdkDeviceType {
  public:
   AmlogicTestDevice(zx_device_t* parent) : DdkDeviceType(parent) {}
@@ -27,7 +27,7 @@ class AmlogicTestDevice : public llcpp::fuchsia::hardware::mediacodec::Tester::I
   void DdkRelease() { delete this; }
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    llcpp::fuchsia::hardware::mediacodec::Tester::Dispatch(this, msg, &transaction);
+    fuchsia_hardware_mediacodec::Tester::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
 

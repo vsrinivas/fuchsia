@@ -72,7 +72,7 @@ For instance for [SPI](/src/devices/spi/drivers/spi/spi.h):
 ```
 using SpiChildType = ddk::Device<SpiChild, ddk::Messageable>;
 class SpiChild : public SpiChildType,
-                 public llcpp::fuchsia::hardware::spi::Device::Interface,
+                 public fuchsia_hardware_spi::Device::Interface,
                  public ddk::SpiProtocol<SpiChild, ddk::base_protocol> {
 ...
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
@@ -94,7 +94,7 @@ choice, for C++:
 For example for I2C in [i2cutil](/src/devices/i2c/bin) using LLCPP we have:
 
 ```
-llcpp::fuchsia::hardware::i2c::Device2::SyncClient client((zx::channel(channel)));
+fuchsia_hardware_i2c::Device2::SyncClient client((zx::channel(channel)));
 auto read = client.Transfer(...);
 ```
 

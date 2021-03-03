@@ -21,7 +21,7 @@
 #include "debug-logging.h"
 
 namespace {
-namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
+namespace audio_fidl = ::fuchsia_hardware_audio;
 }  // namespace
 
 namespace audio {
@@ -34,7 +34,7 @@ zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = []() {
   sdt.message = [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     IntelHDAStreamBase* thiz = static_cast<IntelHDAStreamBase*>(ctx);
     DdkTransaction transaction(txn);
-    llcpp::fuchsia::hardware::audio::Device::Dispatch(thiz, msg, &transaction);
+    fuchsia_hardware_audio::Device::Dispatch(thiz, msg, &transaction);
     return transaction.Status();
   };
   return sdt;
@@ -350,7 +350,7 @@ void IntelHDAStreamBase::GetChannel(GetChannelCompleter::Sync& completer) {
 
   fidl::OnUnboundFn<audio_fidl::StreamConfig::Interface> on_unbound =
       [this, stream_channel](audio_fidl::StreamConfig::Interface*, fidl::UnbindInfo,
-                             fidl::ServerEnd<llcpp::fuchsia::hardware::audio::StreamConfig>) {
+                             fidl::ServerEnd<fuchsia_hardware_audio::StreamConfig>) {
         fbl::AutoLock channel_lock(&this->obj_lock_);
         this->ProcessClientDeactivateLocked(stream_channel.get());
       };

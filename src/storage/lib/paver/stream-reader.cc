@@ -23,8 +23,8 @@ zx::status<std::unique_ptr<StreamReader>> StreamReader::Create(zx::channel strea
     ERROR("Unable to duplicate vmo.\n");
     return status.take_error();
   }
-  auto result = ::llcpp::fuchsia::paver::PayloadStream::Call::RegisterVmo(zx::unowned(stream),
-                                                                          std::move(dup));
+  auto result =
+      ::fuchsia_paver::PayloadStream::Call::RegisterVmo(zx::unowned(stream), std::move(dup));
   status = zx::make_status(result.ok() ? result.value().status : result.status());
   if (status.is_error()) {
     ERROR("Unable to register vmo: %d\n", status.error_value());
@@ -39,14 +39,14 @@ zx_status_t StreamReader::Read(void* buf, size_t buf_size, size_t* size_actual) 
     if (call_result.status() != ZX_OK) {
       return call_result.status();
     }
-    const ::llcpp::fuchsia::paver::wire::ReadResult& read_result = call_result.value().result;
+    const ::fuchsia_paver::wire::ReadResult& read_result = call_result.value().result;
     switch (read_result.which()) {
-      case llcpp::fuchsia::paver::wire::ReadResult::Tag::kErr:
+      case fuchsia_paver::wire::ReadResult::Tag::kErr:
         return read_result.err();
-      case llcpp::fuchsia::paver::wire::ReadResult::Tag::kEof:
+      case fuchsia_paver::wire::ReadResult::Tag::kEof:
         *size_actual = 0;
         return ZX_OK;
-      case llcpp::fuchsia::paver::wire::ReadResult::Tag::kInfo:
+      case fuchsia_paver::wire::ReadResult::Tag::kInfo:
         offset_ = read_result.info().offset;
         size_ = read_result.info().size;
         break;

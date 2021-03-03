@@ -12,7 +12,7 @@
 #include <lib/zx/process.h>
 
 zx_status_t log_to_debuglog() {
-  auto local = service::Connect<llcpp::fuchsia::boot::WriteOnlyLog>();
+  auto local = service::Connect<fuchsia_boot::WriteOnlyLog>();
   if (local.is_error()) {
     return local.error_value();
   }

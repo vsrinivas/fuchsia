@@ -13,9 +13,9 @@
 #include "lib/zx/channel.h"
 #include "private-socket.h"
 
-namespace fio = ::llcpp::fuchsia::io;
-namespace fsocket = ::llcpp::fuchsia::posix::socket;
-namespace fdevice = ::llcpp::fuchsia::device;
+namespace fio = ::fuchsia_io;
+namespace fsocket = ::fuchsia_posix_socket;
+namespace fdevice = ::fuchsia_device;
 
 #define ZXDEBUG 0
 

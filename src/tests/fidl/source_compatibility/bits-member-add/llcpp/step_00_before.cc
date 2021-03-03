@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/bitsmemberadd/llcpp/fidl.h>  // nogncheck
-namespace fidl_test = llcpp::fidl::test::bitsmemberadd;
+namespace fidl_test = fidl_test_bitsmemberadd;
 
 // [START contents]
 void use_bits(fidl_test::wire::Flags bits) {

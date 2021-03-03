@@ -68,8 +68,8 @@ zx_status_t ExternalDecompressorClient::Prepare() {
   zx::fifo remote_fifo;
   // Sized for 4 elements, allows enough pipelining to keep the remote process
   // from descheduling to have 2 in flight requests/response pairs.
-  status = zx::fifo::create(4, sizeof(llcpp::fuchsia::blobfs::internal::wire::DecompressRequest), 0,
-                            &fifo_, &remote_fifo);
+  status = zx::fifo::create(4, sizeof(fuchsia_blobfs_internal::wire::DecompressRequest), 0, &fifo_,
+                            &remote_fifo);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed create fifo for external decompressor: "
                    << zx_status_get_string(status);
@@ -125,9 +125,9 @@ zx_status_t ExternalDecompressorClient::PrepareDecompressorCreator() {
 }
 
 zx_status_t ExternalDecompressorClient::SendMessage(
-    const llcpp::fuchsia::blobfs::internal::wire::DecompressRequest& request) {
+    const fuchsia_blobfs_internal::wire::DecompressRequest& request) {
   zx_status_t status;
-  llcpp::fuchsia::blobfs::internal::wire::DecompressResponse response;
+  fuchsia_blobfs_internal::wire::DecompressResponse response;
   status = Prepare();
   if (status != ZX_OK) {
     return status;
@@ -167,8 +167,8 @@ zx_status_t ExternalDecompressorClient::SendMessage(
 }
 
 CompressionAlgorithm ExternalDecompressorClient::CompressionAlgorithmFidlToLocal(
-    const llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm algorithm) {
-  using Fidl = llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm;
+    const fuchsia_blobfs_internal::wire::CompressionAlgorithm algorithm) {
+  using Fidl = fuchsia_blobfs_internal::wire::CompressionAlgorithm;
   switch (algorithm) {
     case Fidl::UNCOMPRESSED:
       return CompressionAlgorithm::UNCOMPRESSED;
@@ -184,9 +184,9 @@ CompressionAlgorithm ExternalDecompressorClient::CompressionAlgorithmFidlToLocal
   }
 }
 
-llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm
+fuchsia_blobfs_internal::wire::CompressionAlgorithm
 ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm algorithm) {
-  using Fidl = llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm;
+  using Fidl = fuchsia_blobfs_internal::wire::CompressionAlgorithm;
   switch (algorithm) {
     case CompressionAlgorithm::UNCOMPRESSED:
       return Fidl::UNCOMPRESSED;
@@ -201,12 +201,12 @@ ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm
   }
 }
 
-zx::status<llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm>
+zx::status<fuchsia_blobfs_internal::wire::CompressionAlgorithm>
 ExternalDecompressorClient::CompressionAlgorithmLocalToFidlForPartial(
     CompressionAlgorithm algorithm) {
   switch (algorithm) {
     case CompressionAlgorithm::CHUNKED:
-      return zx::ok(llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm::CHUNKED_PARTIAL);
+      return zx::ok(fuchsia_blobfs_internal::wire::CompressionAlgorithm::CHUNKED_PARTIAL);
     case CompressionAlgorithm::UNCOMPRESSED:
     case CompressionAlgorithm::LZ4:
     case CompressionAlgorithm::ZSTD:
@@ -238,8 +238,7 @@ zx_status_t ExternalSeekableDecompressor::DecompressRange(size_t compressed_offs
   if (!algorithm_or.is_ok()) {
     return algorithm_or.status_value();
   }
-  llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm fidl_algorithm =
-      algorithm_or.value();
+  fuchsia_blobfs_internal::wire::CompressionAlgorithm fidl_algorithm = algorithm_or.value();
 
   return client_->SendMessage({
       {0, uncompressed_size},

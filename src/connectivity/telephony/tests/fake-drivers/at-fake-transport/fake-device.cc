@@ -16,7 +16,7 @@
 
 #include <ddktl/fidl.h>
 
-namespace fidl_tel_snoop = ::llcpp::fuchsia::telephony::snoop;
+namespace fidl_tel_snoop = ::fuchsia_telephony_snoop;
 
 namespace at_fake {
 static const std::string kAtCmdReqAtdStr = "ATD";

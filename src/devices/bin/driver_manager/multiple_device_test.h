@@ -16,25 +16,25 @@
 #include "coordinator_test_utils.h"
 #include "src/devices/lib/log/log.h"
 
-class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interface {
+class MockFshostAdminServer final : public fuchsia_fshost::Admin::Interface {
  public:
   MockFshostAdminServer() : has_been_shutdown_(false) {}
 
-  fidl::Client<llcpp::fuchsia::fshost::Admin> CreateClient(async_dispatcher* dispatcher) {
+  fidl::Client<fuchsia_fshost::Admin> CreateClient(async_dispatcher* dispatcher) {
     zx::channel client, server;
     zx_status_t status = zx::channel::create(0, &client, &server);
     if (status != ZX_OK) {
-      return fidl::Client<llcpp::fuchsia::fshost::Admin>();
+      return fidl::Client<fuchsia_fshost::Admin>();
     }
 
     status = fidl::BindSingleInFlightOnly(dispatcher, std::move(server), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to create client for mock fshost admin, failed to bind: %s",
            zx_status_get_string(status));
-      return fidl::Client<llcpp::fuchsia::fshost::Admin>();
+      return fidl::Client<fuchsia_fshost::Admin>();
     }
 
-    return fidl::Client<llcpp::fuchsia::fshost::Admin>(std::move(client), dispatcher);
+    return fidl::Client<fuchsia_fshost::Admin>(std::move(client), dispatcher);
   }
 
   void Shutdown(ShutdownCompleter::Sync& completer) override {
@@ -89,7 +89,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
  public:
   static CoordinatorConfig CreateConfig(async_dispatcher_t* bootargs_dispatcher,
                                         mock_boot_arguments::Server* boot_args,
-                                        llcpp::fuchsia::boot::Arguments::SyncClient* client,
+                                        fuchsia_boot::Arguments::SyncClient* client,
                                         bool enable_ephemeral) {
     auto config = DefaultConfig(bootargs_dispatcher, boot_args, client);
     config.enable_ephemeral = enable_ephemeral;
@@ -175,7 +175,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
   bool coordinator_loop_thread_running_ = false;
 
   mock_boot_arguments::Server boot_args_{{}};
-  llcpp::fuchsia::boot::Arguments::SyncClient args_client_{zx::channel()};
+  fuchsia_boot::Arguments::SyncClient args_client_{zx::channel()};
 
   // The admin/bootargs servers need their own loop/thread, because if we schedule them
   // on coordinator_loop then coordinator will deadlock waiting

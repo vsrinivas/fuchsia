@@ -23,7 +23,7 @@ using UsbMidiSinkBase = ddk::Device<UsbMidiSink, ddk::Unbindable, ddk::Openable,
                                     ddk::Writable, ddk::Messageable>;
 
 class UsbMidiSink : public UsbMidiSinkBase,
-                    public llcpp::fuchsia::hardware::midi::Device::Interface,
+                    public fuchsia_hardware_midi::Device::Interface,
                     public ddk::EmptyProtocol<ZX_PROTOCOL_MIDI> {
  public:
   using UsbDevice = ::usb::UsbDevice;

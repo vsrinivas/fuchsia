@@ -36,7 +36,7 @@ extern "C" zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_o
 
 namespace {
 
-namespace fuchsia_io = ::llcpp::fuchsia::io;
+namespace fuchsia_io = ::fuchsia_io;
 
 struct Context {
   zx::vmo vmo;
@@ -137,7 +137,7 @@ class TestServer final : public fuchsia_io::File::Interface {
       return;
     }
 
-    llcpp::fuchsia::mem::wire::Buffer buffer = {};
+    fuchsia_mem::wire::Buffer buffer = {};
     buffer.size = context->content_size;
 
     zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;

@@ -39,7 +39,7 @@ class SkipBlockDevicePartitioner {
 class SkipBlockPartitionClient : public PartitionClient {
  public:
   explicit SkipBlockPartitionClient(
-      fidl::ClientEnd<::llcpp::fuchsia::hardware::skipblock::SkipBlock> partition)
+      fidl::ClientEnd<::fuchsia_hardware_skipblock::SkipBlock> partition)
       : partition_(std::move(partition)) {}
 
   zx::status<size_t> GetBlockSize() override;
@@ -49,7 +49,7 @@ class SkipBlockPartitionClient : public PartitionClient {
   zx::status<> Trim() override;
   zx::status<> Flush() override;
 
-  fidl::ClientEnd<::llcpp::fuchsia::hardware::skipblock::SkipBlock> GetChannel();
+  fidl::ClientEnd<::fuchsia_hardware_skipblock::SkipBlock> GetChannel();
 
   fbl::unique_fd block_fd() override;
 
@@ -65,8 +65,8 @@ class SkipBlockPartitionClient : public PartitionClient {
  private:
   zx::status<> ReadPartitionInfo();
 
-  ::llcpp::fuchsia::hardware::skipblock::SkipBlock::SyncClient partition_;
-  std::optional<::llcpp::fuchsia::hardware::skipblock::wire::PartitionInfo> partition_info_;
+  ::fuchsia_hardware_skipblock::SkipBlock::SyncClient partition_;
+  std::optional<::fuchsia_hardware_skipblock::wire::PartitionInfo> partition_info_;
 };
 
 }  // namespace paver

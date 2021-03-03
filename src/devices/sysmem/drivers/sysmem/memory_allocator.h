@@ -33,8 +33,7 @@ class MemoryAllocator {
     virtual TableSet& table_set() = 0;
   };
 
-  explicit MemoryAllocator(TableSet& table_set,
-                           llcpp::fuchsia::sysmem2::wire::HeapProperties properties);
+  explicit MemoryAllocator(TableSet& table_set, fuchsia_sysmem2::wire::HeapProperties properties);
 
   virtual ~MemoryAllocator();
 
@@ -56,7 +55,7 @@ class MemoryAllocator {
   // during Delete().
   virtual zx_status_t SetupChildVmo(
       const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-      llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings) = 0;
+      fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings) = 0;
 
   // This also should clean up any tracking of child_vmo by child_vmo's koid.
   // The child_vmo object itself, and all handles to it, are completely gone by
@@ -71,9 +70,7 @@ class MemoryAllocator {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  const llcpp::fuchsia::sysmem2::wire::HeapProperties& heap_properties() const {
-    return *heap_properties_;
-  }
+  const fuchsia_sysmem2::wire::HeapProperties& heap_properties() const { return *heap_properties_; }
 
   // These avoid the possibility of trying to use a sysmem-configured secure
   // heap before the TEE has told the HW to make the physical range
@@ -98,7 +95,7 @@ class MemoryAllocator {
  private:
   // This is a unique ID for the allocator on this system.
   uint64_t id_{};
-  TableHolder<llcpp::fuchsia::sysmem2::wire::HeapProperties> heap_properties_;
+  TableHolder<fuchsia_sysmem2::wire::HeapProperties> heap_properties_;
 };
 
 }  // namespace sysmem_driver

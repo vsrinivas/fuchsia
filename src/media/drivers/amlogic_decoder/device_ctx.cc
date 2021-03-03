@@ -48,14 +48,14 @@ zx_status_t DeviceCtx::Bind() { return DdkAdd("amlogic_video"); }
 
 zx_status_t DeviceCtx::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction ddk_transaction(txn);
-  llcpp::fuchsia::hardware::mediacodec::Device::Dispatch(this, msg, &ddk_transaction);
+  fuchsia_hardware_mediacodec::Device::Dispatch(this, msg, &ddk_transaction);
   return ddk_transaction.Status();
 }
 
 void DeviceCtx::GetCodecFactory(zx::channel request, GetCodecFactoryCompleter::Sync& completer) {
   device_fidl()->ConnectChannelBoundCodecFactory(std::move(request));
 }
-void DeviceCtx::SetAuxServiceDirectory(fidl::ClientEnd<llcpp::fuchsia::io::Directory> directory,
+void DeviceCtx::SetAuxServiceDirectory(fidl::ClientEnd<fuchsia_io::Directory> directory,
                                        SetAuxServiceDirectoryCompleter::Sync& completer) {
   driver_->SetAuxServiceDirectory(
       fidl::InterfaceHandle<fuchsia::io::Directory>(directory.TakeChannel()));

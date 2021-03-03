@@ -39,9 +39,9 @@ static int magma_start(sysdrv_device_t* dev);
 static int magma_stop(sysdrv_device_t* dev);
 #endif
 
-using FidlStatus = llcpp::fuchsia::gpu::magma::wire::Status;
+using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
-struct sysdrv_device_t : public llcpp::fuchsia::gpu::magma::Device::Interface {
+struct sysdrv_device_t : public fuchsia_gpu_magma::Device::Interface {
  public:
   void Query(uint64_t query_id, QueryCompleter::Sync& _completer) override {}  // Deprecated
 
@@ -165,7 +165,7 @@ static zx_status_t sysdrv_gpu_message(void* context, fidl_incoming_msg_t* messag
                                       fidl_txn_t* transaction) {
   sysdrv_device_t* device = get_device(context);
   DdkTransaction ddk_transaction(transaction);
-  llcpp::fuchsia::gpu::magma::Device::Dispatch(device, message, &ddk_transaction);
+  fuchsia_gpu_magma::Device::Dispatch(device, message, &ddk_transaction);
   return ddk_transaction.Status();
 }
 

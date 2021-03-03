@@ -32,7 +32,7 @@ using ChildDriverType = ddk::Device<AddressSpaceChildDriver, ddk::Messageable>;
 class AddressSpaceDevice
     : public DeviceType,
       public ddk::GoldfishAddressSpaceProtocol<AddressSpaceDevice, ddk::base_protocol>,
-      public llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::RawChannelInterface {
+      public fuchsia_hardware_goldfish::AddressSpaceDevice::RawChannelInterface {
   using Interface::OpenChildDriver;
 
  public:
@@ -56,12 +56,12 @@ class AddressSpaceDevice
   zx_status_t GoldfishAddressSpaceOpenChildDriver(address_space_child_driver_type_t type,
                                                   zx::channel request) {
     return OpenChildDriver(
-        static_cast<llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType>(type),
+        static_cast<fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType>(type),
         std::move(request));
   }
 
-  // |llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface|
-  void OpenChildDriver(llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType type,
+  // |fuchsia_hardware_goldfish::AddressSpaceDevice::Interface|
+  void OpenChildDriver(fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType type,
                        zx::channel request, OpenChildDriverCompleter::Sync& completer) override {
     zx_status_t result = OpenChildDriver(type, std::move(request));
     completer.Close(result);
@@ -72,9 +72,8 @@ class AddressSpaceDevice
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
  private:
-  zx_status_t OpenChildDriver(
-      llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType type,
-      zx::channel request);
+  zx_status_t OpenChildDriver(fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType type,
+                              zx::channel request);
 
   uint32_t CommandMmioLocked(uint32_t cmd) TA_REQ(mmio_lock_);
 
@@ -91,12 +90,11 @@ class AddressSpaceDevice
 
 class AddressSpaceChildDriver
     : public ChildDriverType,
-      public llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::Interface {
+      public fuchsia_hardware_goldfish::AddressSpaceChildDriver::Interface {
  public:
   explicit AddressSpaceChildDriver(
-      llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType type,
-      AddressSpaceDevice* device, uint64_t dma_region_paddr, ddk::IoBuffer&& io_buffer,
-      uint32_t child_device_handle);
+      fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType type, AddressSpaceDevice* device,
+      uint64_t dma_region_paddr, ddk::IoBuffer&& io_buffer, uint32_t child_device_handle);
 
   // AddressSpaceChildDriver is destroyed when the fidl channel it binds to
   // is disconnected by the client (the goldfish Vulkan ICD) when the client
@@ -110,13 +108,13 @@ class AddressSpaceChildDriver
 
   zx_status_t Bind();
 
-  // |llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::Interface|
+  // |fuchsia_hardware_goldfish::AddressSpaceChildDriver::Interface|
   void AllocateBlock(uint64_t size, AllocateBlockCompleter::Sync& completer) override;
   void DeallocateBlock(uint64_t paddr, DeallocateBlockCompleter::Sync& completer) override;
   void ClaimSharedBlock(uint64_t offset, uint64_t size,
                         ClaimSharedBlockCompleter::Sync& completer) override;
   void UnclaimSharedBlock(uint64_t offset, UnclaimSharedBlockCompleter::Sync& completer) override;
-  void Ping(llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverPingMessage ping,
+  void Ping(fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverPingMessage ping,
             PingCompleter::Sync& completer) override;
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);

@@ -32,7 +32,7 @@ constexpr zx_time_t IHDA_SD_RESET_POLL_TIME_NSEC = 100000u;   // 100uSec
 constexpr zx_time_t IHDA_SD_STOP_HOLD_TIME_NSEC = 100000u;
 constexpr uint32_t DMA_ALIGN = 128;
 constexpr uint32_t DMA_ALIGN_MASK = DMA_ALIGN - 1;
-namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
+namespace audio_fidl = ::fuchsia_hardware_audio;
 }  // namespace
 
 fbl::RefPtr<IntelHDAStream> IntelHDAStream::Create(Type type, uint16_t id,
@@ -181,11 +181,11 @@ zx_status_t IntelHDAStream::SetStreamFormat(async_dispatcher_t* dispatcher, uint
 
   fidl::OnUnboundFn<audio_fidl::RingBuffer::Interface> on_unbound =
       [this](audio_fidl::RingBuffer::Interface*, fidl::UnbindInfo,
-             fidl::ServerEnd<llcpp::fuchsia::hardware::audio::RingBuffer>) {
+             fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer>) {
         this->ProcessClientDeactivate();
       };
 
-  fidl::ServerEnd<llcpp::fuchsia::hardware::audio::RingBuffer> server(std::move(server_endpoint));
+  fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer> server(std::move(server_endpoint));
   fidl::BindServer<audio_fidl::RingBuffer::Interface>(dispatcher, std::move(server), this,
                                                       std::move(on_unbound));
 

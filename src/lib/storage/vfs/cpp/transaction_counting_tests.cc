@@ -26,7 +26,7 @@
 
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 // Vnode that gives us control of when it replies to messages
 class TestVnode : public fs::Vnode {

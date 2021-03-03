@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-using llcpp::fuchsia::device::wire::MAX_DEVICE_PERFORMANCE_STATES;
+using fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES;
 
 std::variant<zx_status_t, CpuPerformanceDomain> CpuPerformanceDomain::CreateFromPath(
     const std::string& path) {

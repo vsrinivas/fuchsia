@@ -30,7 +30,7 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 static_assert(fio::wire::OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE ==
                   (fio::wire::OPEN_FLAG_DIRECTORY | fio::wire::OPEN_FLAG_NOT_DIRECTORY |

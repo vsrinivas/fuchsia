@@ -22,7 +22,7 @@
 
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 zx_status_t DummyReader(fbl::String* output) { return ZX_OK; }
 

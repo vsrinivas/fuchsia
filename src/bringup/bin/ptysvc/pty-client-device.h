@@ -15,7 +15,7 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
-class PtyClientDevice : public ::llcpp::fuchsia::hardware::pty::Device::RawChannelInterface {
+class PtyClientDevice : public ::fuchsia_hardware_pty::Device::RawChannelInterface {
  public:
   explicit PtyClientDevice(fbl::RefPtr<PtyClient> client) : client_(std::move(client)) {}
 
@@ -27,7 +27,7 @@ class PtyClientDevice : public ::llcpp::fuchsia::hardware::pty::Device::RawChann
   void GetWindowSize(GetWindowSizeCompleter::Sync& completer) final;
   void MakeActive(uint32_t client_pty_id, MakeActiveCompleter::Sync& completer) final;
   void ReadEvents(ReadEventsCompleter::Sync& completer) final;
-  void SetWindowSize(::llcpp::fuchsia::hardware::pty::wire::WindowSize size,
+  void SetWindowSize(::fuchsia_hardware_pty::wire::WindowSize size,
                      SetWindowSizeCompleter::Sync& completer) final;
 
   // fuchsia.io.File methods
@@ -38,7 +38,7 @@ class PtyClientDevice : public ::llcpp::fuchsia::hardware::pty::Device::RawChann
   void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
                WriteAtCompleter::Sync& completer) final;
 
-  void Seek(int64_t offset, ::llcpp::fuchsia::io::wire::SeekOrigin start,
+  void Seek(int64_t offset, ::fuchsia_io::wire::SeekOrigin start,
             SeekCompleter::Sync& completer) final;
   void Truncate(uint64_t length, TruncateCompleter::Sync& completer) final;
   void GetFlags(GetFlagsCompleter::Sync& completer) final;
@@ -50,7 +50,7 @@ class PtyClientDevice : public ::llcpp::fuchsia::hardware::pty::Device::RawChann
   void Describe(DescribeCompleter::Sync& completer) final;
   void Sync(SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrCompleter::Sync& completer) final;
-  void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::wire::NodeAttributes attributes,
+  void SetAttr(uint32_t flags, ::fuchsia_io::wire::NodeAttributes attributes,
                SetAttrCompleter::Sync& completer) final;
 
  private:

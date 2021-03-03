@@ -27,6 +27,6 @@ struct Arguments {
   const keychar_t* keymap = qwerty_map;
 };
 
-zx_status_t ParseArgs(llcpp::fuchsia::boot::Arguments::SyncClient& client, Arguments* out);
+zx_status_t ParseArgs(fuchsia_boot::Arguments::SyncClient& client, Arguments* out);
 
 #endif  // SRC_BRINGUP_BIN_VIRTCON_ARGS_H_

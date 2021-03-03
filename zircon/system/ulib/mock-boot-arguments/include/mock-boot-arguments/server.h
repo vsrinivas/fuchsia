@@ -12,19 +12,18 @@
 
 namespace mock_boot_arguments {
 
-class Server final : public llcpp::fuchsia::boot::Arguments::Interface {
+class Server final : public fuchsia_boot::Arguments::Interface {
  public:
   explicit Server(std::map<std::string, std::string>&& args) : arguments{args} {}
   explicit Server() : arguments{} {}
 
-  void CreateClient(async_dispatcher* dispatcher,
-                    llcpp::fuchsia::boot::Arguments::SyncClient* argclient);
+  void CreateClient(async_dispatcher* dispatcher, fuchsia_boot::Arguments::SyncClient* argclient);
 
   void GetString(fidl::StringView view, GetStringCompleter::Sync& completer) override;
   void GetStrings(fidl::VectorView<fidl::StringView> keys,
                   GetStringsCompleter::Sync& completer) override;
   void GetBool(fidl::StringView view, bool defaultval, GetBoolCompleter::Sync& completer) override;
-  void GetBools(fidl::VectorView<llcpp::fuchsia::boot::wire::BoolPair> keys,
+  void GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair> keys,
                 GetBoolsCompleter::Sync& completer) override;
   void Collect(fidl::StringView prefix, CollectCompleter::Sync& completer) override;
 

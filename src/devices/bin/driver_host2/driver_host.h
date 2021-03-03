@@ -15,7 +15,7 @@
 #include "src/devices/lib/driver2/record.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
-class Driver : public llcpp::fuchsia::driver::framework::Driver::Interface,
+class Driver : public fuchsia_driver_framework::Driver::Interface,
                public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
  public:
   static zx::status<std::unique_ptr<Driver>> Load(std::string url, std::string binary, zx::vmo vmo);
@@ -25,7 +25,7 @@ class Driver : public llcpp::fuchsia::driver::framework::Driver::Interface,
 
   const std::string& url() const { return url_; }
   const std::string& binary() const { return binary_; }
-  void set_binding(fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Driver> binding);
+  void set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver> binding);
 
   // Starts the driver.
   //
@@ -38,10 +38,10 @@ class Driver : public llcpp::fuchsia::driver::framework::Driver::Interface,
   void* library_;
   DriverRecordV1* record_;
   void* opaque_ = nullptr;
-  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Driver>> binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Driver>> binding_;
 };
 
-class DriverHost : public llcpp::fuchsia::driver::framework::DriverHost::Interface {
+class DriverHost : public fuchsia_driver_framework::DriverHost::Interface {
  public:
   // DriverHost does not take ownership of |loop|.
   DriverHost(inspect::Inspector* inspector, async::Loop* loop);
@@ -50,9 +50,9 @@ class DriverHost : public llcpp::fuchsia::driver::framework::DriverHost::Interfa
   fit::promise<inspect::Inspector> Inspect();
 
  private:
-  // llcpp::fuchsia::driver::framework::DriverHost::Interface
-  void Start(llcpp::fuchsia::driver::framework::wire::DriverStartArgs start_args,
-             fidl::ServerEnd<llcpp::fuchsia::driver::framework::Driver> request,
+  // fuchsia_driver_framework::DriverHost::Interface
+  void Start(fuchsia_driver_framework::wire::DriverStartArgs start_args,
+             fidl::ServerEnd<fuchsia_driver_framework::Driver> request,
              StartCompleter::Sync& completer) override;
 
   async::Loop* const loop_;

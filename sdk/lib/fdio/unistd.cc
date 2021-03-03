@@ -37,8 +37,8 @@
 #include "fdio_unistd.h"
 #include "internal.h"
 
-namespace fio = ::llcpp::fuchsia::io;
-namespace fsocket = ::llcpp::fuchsia::posix::socket;
+namespace fio = ::fuchsia_io;
+namespace fsocket = ::fuchsia_posix_socket;
 
 static_assert(IOFLAG_CLOEXEC == FD_CLOEXEC, "Unexpected fdio flags value");
 

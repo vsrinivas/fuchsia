@@ -22,8 +22,8 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
 
     uint32_t device_handle;
     uint32_t device_notification_handle;
-    auto result = llcpp::fuchsia::gpu::magma::Device::Call::Connect(channel_.borrow(),
-                                                                    magma::PlatformThreadId().id());
+    auto result =
+        fuchsia_gpu_magma::Device::Call::Connect(channel_.borrow(), magma::PlatformThreadId().id());
     if (result.status() != ZX_OK)
       return DRETP(nullptr, "magma_DeviceConnect failed: %d", result.status());
 
@@ -38,7 +38,7 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
   }
 
   bool Query(uint64_t query_id, uint64_t* result_out) {
-    auto result = llcpp::fuchsia::gpu::magma::Device::Call::Query2(channel_.borrow(), query_id);
+    auto result = fuchsia_gpu_magma::Device::Call::Query2(channel_.borrow(), query_id);
 
     if (result.status() != ZX_OK)
       return DRETF(false, "magma_DeviceQuery failed: %d", result.status());
@@ -51,8 +51,7 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
 
   bool QueryReturnsBuffer(uint64_t query_id, magma_handle_t* buffer_out) {
     *buffer_out = ZX_HANDLE_INVALID;
-    auto result =
-        llcpp::fuchsia::gpu::magma::Device::Call::QueryReturnsBuffer(channel_.borrow(), query_id);
+    auto result = fuchsia_gpu_magma::Device::Call::QueryReturnsBuffer(channel_.borrow(), query_id);
     if (result.status() != ZX_OK)
       return DRETF(false, "magma_DeviceQueryReturnsBuffer failed: %d", result.status());
     if (result->result.is_err())

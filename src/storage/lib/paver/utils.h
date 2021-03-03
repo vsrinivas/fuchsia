@@ -34,15 +34,15 @@ class BlockWatcherPauser {
 
   // This is the function used for creating the BlockWatcherPauser.
   static zx::status<BlockWatcherPauser> Create(
-      fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root);
+      fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root);
 
  private:
   // Create a new Pauser. This should immediately be followed by a call to Pause().
-  explicit BlockWatcherPauser(fidl::ClientEnd<llcpp::fuchsia::fshost::BlockWatcher> chan)
+  explicit BlockWatcherPauser(fidl::ClientEnd<fuchsia_fshost::BlockWatcher> chan)
       : watcher_(fidl::BindSyncClient(std::move(chan))), valid_(false) {}
   zx::status<> Pause();
 
-  llcpp::fuchsia::fshost::BlockWatcher::SyncClient watcher_;
+  fuchsia_fshost::BlockWatcher::SyncClient watcher_;
   bool valid_;
 };
 
@@ -59,13 +59,12 @@ zx::status<zx::channel> OpenPartition(const fbl::unique_fd& devfs_root, const ch
                                       fbl::Function<bool(const zx::channel&)> should_filter_file,
                                       zx_duration_t timeout);
 
-zx::status<fidl::ClientEnd<::llcpp::fuchsia::hardware::block::partition::Partition>>
-OpenBlockPartition(const fbl::unique_fd& devfs_root, std::optional<uuid::Uuid> unique_guid,
-                   std::optional<uuid::Uuid> type_guid, zx_duration_t timeout);
+zx::status<fidl::ClientEnd<::fuchsia_hardware_block_partition::Partition>> OpenBlockPartition(
+    const fbl::unique_fd& devfs_root, std::optional<uuid::Uuid> unique_guid,
+    std::optional<uuid::Uuid> type_guid, zx_duration_t timeout);
 
-zx::status<fidl::ClientEnd<::llcpp::fuchsia::hardware::skipblock::SkipBlock>>
-OpenSkipBlockPartition(const fbl::unique_fd& devfs_root, const uuid::Uuid& type_guid,
-                       zx_duration_t timeout);
+zx::status<fidl::ClientEnd<::fuchsia_hardware_skipblock::SkipBlock>> OpenSkipBlockPartition(
+    const fbl::unique_fd& devfs_root, const uuid::Uuid& type_guid, zx_duration_t timeout);
 
 bool HasSkipBlockDevice(const fbl::unique_fd& devfs_root);
 

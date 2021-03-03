@@ -11,15 +11,15 @@
 
 #include "src/lib/storage/vfs/cpp/service.h"
 
-namespace fuv = ::llcpp::fuchsia::update::verify;
+namespace fuv = ::fuchsia_update_verify;
 
 namespace blobfs {
 
 HealthCheckService::HealthCheckService(async_dispatcher_t* dispatcher)
-    : fs::Service([dispatcher, this](
-                      fidl::ServerEnd<llcpp::fuchsia::update::verify::BlobfsVerifier> server_end) {
-        return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
-      }) {}
+    : fs::Service(
+          [dispatcher, this](fidl::ServerEnd<fuchsia_update_verify::BlobfsVerifier> server_end) {
+            return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
+          }) {}
 
 void HealthCheckService::Verify(fuv::wire::VerifyOptions options,
                                 VerifyCompleter::Sync& completer) {

@@ -218,9 +218,8 @@ uint32_t AddressSpaceDevice::ChildDriverPing(uint32_t handle) {
 }
 
 zx_status_t AddressSpaceDevice::OpenChildDriver(
-    llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType type,
-    zx::channel request) {
-  using llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverPingMessage;
+    fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType type, zx::channel request) {
+  using fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverPingMessage;
 
   ddk::IoBuffer io_buffer;
   uint32_t handle;
@@ -257,7 +256,7 @@ void AddressSpaceDevice::DdkRelease() { delete this; }
 
 zx_status_t AddressSpaceDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_goldfish::AddressSpaceDevice::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 
@@ -267,9 +266,8 @@ uint32_t AddressSpaceDevice::CommandMmioLocked(uint32_t cmd) {
 }
 
 AddressSpaceChildDriver::AddressSpaceChildDriver(
-    llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverType type,
-    AddressSpaceDevice* device, uint64_t dma_region_paddr, ddk::IoBuffer&& io_buffer,
-    uint32_t child_device_handle)
+    fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType type, AddressSpaceDevice* device,
+    uint64_t dma_region_paddr, ddk::IoBuffer&& io_buffer, uint32_t child_device_handle)
     : Device(device->zxdev()),
       device_(device),
       dma_region_paddr_(dma_region_paddr),
@@ -386,9 +384,9 @@ void AddressSpaceChildDriver::UnclaimSharedBlock(uint64_t offset,
 };
 
 void AddressSpaceChildDriver::Ping(
-    llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverPingMessage ping,
+    fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverPingMessage ping,
     PingCompleter::Sync& completer) {
-  using llcpp::fuchsia::hardware::goldfish::wire::AddressSpaceChildDriverPingMessage;
+  using fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverPingMessage;
   AddressSpaceChildDriverPingMessage* output =
       reinterpret_cast<AddressSpaceChildDriverPingMessage*>(io_buffer_.virt());
   *output = ping;
@@ -401,7 +399,7 @@ void AddressSpaceChildDriver::Ping(
 // Device protocol implementation.
 zx_status_t AddressSpaceChildDriver::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_goldfish::AddressSpaceChildDriver::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

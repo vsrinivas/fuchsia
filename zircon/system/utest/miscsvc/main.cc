@@ -16,7 +16,7 @@
 
 namespace {
 
-using llcpp::fuchsia::paver::Paver;
+using fuchsia_paver::Paver;
 
 TEST(MiscSvcTest, PaverSvccEnumeratesSuccessfully) {
   zx::channel svc_local, svc_remote;

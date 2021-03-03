@@ -750,7 +750,7 @@ void UsbDevice::GetConfigurationDescriptor(uint8_t config,
 
 void UsbDevice::GetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
                                     GetStringDescriptorCompleter::Sync& completer) {
-  char buffer[llcpp::fuchsia::hardware::usb::device::wire::MAX_STRING_DESC_SIZE];
+  char buffer[fuchsia_hardware_usb_device::wire::MAX_STRING_DESC_SIZE];
   size_t actual = 0;
   auto status = UsbGetStringDescriptor(desc_id, lang_id, &lang_id,
                                        reinterpret_cast<uint8_t*>(buffer), sizeof(buffer), &actual);
@@ -785,7 +785,7 @@ void UsbDevice::SetConfiguration(uint8_t configuration,
 
 zx_status_t UsbDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::usb::device::Device::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_usb_device::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

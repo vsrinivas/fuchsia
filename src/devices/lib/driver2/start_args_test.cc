@@ -6,9 +6,9 @@
 
 #include <gtest/gtest.h>
 
-namespace fdata = llcpp::fuchsia::data;
-namespace fdf = llcpp::fuchsia::driver::framework;
-namespace frunner = llcpp::fuchsia::component::runner;
+namespace fdata = fuchsia_data;
+namespace fdf = fuchsia_driver_framework;
+namespace frunner = fuchsia_component_runner;
 
 TEST(StartArgsTest, SymbolValue) {
   fidl::FidlAllocator allocator;
@@ -40,7 +40,7 @@ TEST(StartArgsTest, ProgramValue) {
 }
 
 TEST(StartArgsTest, NsValue) {
-  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(ZX_OK, endpoints.status_value());
   fidl::FidlAllocator allocator;
   fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);

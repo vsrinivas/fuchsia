@@ -18,19 +18,19 @@
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;
-using llcpp::fuchsia::device::Controller;
-using llcpp::fuchsia::device::wire::DEVICE_PERFORMANCE_STATE_P0;
-using llcpp::fuchsia::device::wire::MAX_DEVICE_PERFORMANCE_STATES;
-using llcpp::fuchsia::device::wire::MAX_DEVICE_POWER_STATES;
-using llcpp::fuchsia::device::power::test::TestDevice;
-using llcpp::fuchsia::device::wire::DevicePerformanceStateInfo;
-using llcpp::fuchsia::device::wire::DevicePowerState;
-using llcpp::fuchsia::device::wire::DevicePowerStateInfo;
-using llcpp::fuchsia::device::wire::SystemPowerStateInfo;
-using llcpp::fuchsia::hardware::power::statecontrol::wire::MAX_SYSTEM_POWER_STATES;
-using llcpp::fuchsia::hardware::power::statecontrol::wire::SystemPowerState;
-namespace device_manager_fidl = ::llcpp::fuchsia::device::manager;
-namespace lifecycle_fidl = ::llcpp::fuchsia::process::lifecycle;
+using fuchsia_device::Controller;
+using fuchsia_device::wire::DEVICE_PERFORMANCE_STATE_P0;
+using fuchsia_device::wire::DevicePerformanceStateInfo;
+using fuchsia_device::wire::DevicePowerState;
+using fuchsia_device::wire::DevicePowerStateInfo;
+using fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES;
+using fuchsia_device::wire::MAX_DEVICE_POWER_STATES;
+using fuchsia_device::wire::SystemPowerStateInfo;
+using fuchsia_device_power_test::TestDevice;
+using fuchsia_hardware_power_statecontrol::wire::MAX_SYSTEM_POWER_STATES;
+using fuchsia_hardware_power_statecontrol::wire::SystemPowerState;
+namespace device_manager_fidl = ::fuchsia_device_manager;
+namespace lifecycle_fidl = ::fuchsia_process_lifecycle;
 
 class PowerTestCase : public zxtest::Test {
  public:
@@ -106,7 +106,7 @@ class PowerTestCase : public zxtest::Test {
 
   void SetTerminationSystemState(SystemPowerState state) {
     ASSERT_NE(devmgr.svc_root_dir().channel(), ZX_HANDLE_INVALID);
-    auto svc = service::ConnectAt<llcpp::fuchsia::io::Directory>(devmgr.svc_root_dir(), "svc");
+    auto svc = service::ConnectAt<fuchsia_io::Directory>(devmgr.svc_root_dir(), "svc");
     ASSERT_OK(svc.status_value());
     auto local = service::ConnectAt<device_manager_fidl::SystemStateTransition>(*svc);
     ASSERT_OK(local.status_value());
@@ -1287,7 +1287,7 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToWorking) {
   ASSERT_OK(call_status);
   ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
 
-  ::llcpp::fuchsia::device::power::test::wire::TestStatusInfo info;
+  ::fuchsia_device_power_test::wire::TestStatusInfo info;
   info.resume_status = ZX_ERR_IO;
   info.out_power_state = static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D3COLD);
   info.out_performance_state = 1;
@@ -1357,7 +1357,7 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToPerformanceState) {
   ASSERT_OK(call_status);
   ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
 
-  ::llcpp::fuchsia::device::power::test::wire::TestStatusInfo info;
+  ::fuchsia_device_power_test::wire::TestStatusInfo info;
   info.resume_status = ZX_ERR_IO;
   info.out_power_state = static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0);
   // The previous performance_state set was 1.

@@ -17,7 +17,7 @@
 #include <threads.h>
 #include <zircon/types.h>
 
-zx_status_t fdio_get_socket_provider(::llcpp::fuchsia::posix::socket::Provider::SyncClient** out);
+zx_status_t fdio_get_socket_provider(::fuchsia_posix_socket::Provider::SyncClient** out);
 
 using fdio_t = struct fdio;
 using fdio_ns_t = struct fdio_namespace;
@@ -241,14 +241,14 @@ fdio_t* fdio_vmo_create(zx::vmo vmo, zx::stream stream);
 // * |length| is the number of bytes in the file.
 // * |seek| is the initial seek offset within the file (i.e., relative to
 //   |offset| within the underlying VMO).
-fdio_t* fdio_vmofile_create(llcpp::fuchsia::io::File::SyncClient control, zx::vmo vmo,
-                            zx_off_t offset, zx_off_t length, zx_off_t seek);
+fdio_t* fdio_vmofile_create(fuchsia_io::File::SyncClient control, zx::vmo vmo, zx_off_t offset,
+                            zx_off_t length, zx_off_t seek);
 
-fdio_t* fdio_datagram_socket_create(
-    zx::eventpair event, llcpp::fuchsia::posix::socket::DatagramSocket::SyncClient client);
+fdio_t* fdio_datagram_socket_create(zx::eventpair event,
+                                    fuchsia_posix_socket::DatagramSocket::SyncClient client);
 
 fdio_t* fdio_stream_socket_create(zx::socket socket,
-                                  llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client,
+                                  fuchsia_posix_socket::StreamSocket::SyncClient client,
                                   zx_info_socket_t info);
 
 // Creates a message port and pair of simple io fdio_t's
@@ -285,7 +285,7 @@ zx_status_t fdio_validate_path(const char* path, size_t* out_length);
 // Upon success, |out_io| receives ownership of all handles.
 //
 // Upon failure, consumes all handles.
-zx_status_t fdio_from_node_info(zx::channel handle, llcpp::fuchsia::io::wire::NodeInfo info,
+zx_status_t fdio_from_node_info(zx::channel handle, fuchsia_io::wire::NodeInfo info,
                                 fdio_t** out_io);
 
 // Creates an |fdio_t| from a Zircon channel object.

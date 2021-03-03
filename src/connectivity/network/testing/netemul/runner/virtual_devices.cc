@@ -95,9 +95,9 @@ fbl::RefPtr<fs::PseudoDir> VirtualDevices::GetDirectory(
   return dir;
 }
 
-zx::status<fidl::ClientEnd<llcpp::fuchsia::io::Directory>> VirtualDevices::OpenAsDirectory(
+zx::status<fidl::ClientEnd<fuchsia_io::Directory>> VirtualDevices::OpenAsDirectory(
     const std::string& path) {
-  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (endpoints.is_error()) {
     return zx::error_status(endpoints.status_value());
   }

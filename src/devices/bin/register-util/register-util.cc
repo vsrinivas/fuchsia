@@ -12,7 +12,7 @@
 #include <zircon/status.h>
 
 int run(int argc, const char** argv, zx::channel channel) {
-  llcpp::fuchsia::hardware::registers::Device::SyncClient device(std::move(channel));
+  fuchsia_hardware_registers::Device::SyncClient device(std::move(channel));
   size_t address = strtoul(argv[2], nullptr, 16);
   zx_status_t status = ZX_OK;
   if (argc == 4) {

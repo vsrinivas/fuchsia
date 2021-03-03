@@ -19,7 +19,7 @@
 #include "registers-ovl.h"
 #include "src/graphics/display/drivers/mt8167s-display/mt8167s-display-bind.h"
 
-namespace sysmem = llcpp::fuchsia::sysmem;
+namespace sysmem = fuchsia_sysmem;
 
 namespace mt8167s_display {
 

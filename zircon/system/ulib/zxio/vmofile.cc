@@ -12,7 +12,7 @@
 
 #include "private.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 typedef struct zxio_vmofile {
   // The |zxio_t| control structure for this object.

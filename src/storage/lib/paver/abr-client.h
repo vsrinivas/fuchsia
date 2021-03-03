@@ -21,15 +21,15 @@
 
 namespace abr {
 
-zx::status<llcpp::fuchsia::paver::wire::Configuration> QueryBootConfig(
-    fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root);
+zx::status<fuchsia_paver::wire::Configuration> QueryBootConfig(
+    fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root);
 
 // Interface for interacting with ABR data.
 class Client {
  public:
   // Factory create method.
   static zx::status<std::unique_ptr<abr::Client>> Create(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
       std::shared_ptr<paver::Context> context);
   virtual ~Client() = default;
 
@@ -93,7 +93,7 @@ class ClientFactory {
  public:
   // Factory create method.
   static zx::status<std::unique_ptr<abr::Client>> Create(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
       std::shared_ptr<paver::Context> context);
 
   static void Register(std::unique_ptr<ClientFactory> factory);
@@ -102,7 +102,7 @@ class ClientFactory {
 
  private:
   virtual zx::status<std::unique_ptr<abr::Client>> New(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
       std::shared_ptr<paver::Context> context) = 0;
 
   static std::vector<std::unique_ptr<ClientFactory>>* registered_factory_list();

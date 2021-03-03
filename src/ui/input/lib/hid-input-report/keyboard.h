@@ -42,13 +42,12 @@ class Keyboard : public Device {
   uint8_t input_report_id_ = 0;
 
   // The ordered, unique list of key values.
-  std::set<::llcpp::fuchsia::ui::input2::wire::Key> key_values_;
+  std::set<::fuchsia_ui_input2::wire::Key> key_values_;
   // The ordered, unique list of key values.
-  std::set<::llcpp::fuchsia::input::wire::Key> key_3_values_;
+  std::set<::fuchsia_input::wire::Key> key_3_values_;
 
   // Fields for the output reports.
-  std::array<hid::ReportField, ::llcpp::fuchsia::input::report::wire::KEYBOARD_MAX_NUM_LEDS>
-      led_fields_;
+  std::array<hid::ReportField, ::fuchsia_input_report::wire::KEYBOARD_MAX_NUM_LEDS> led_fields_;
   size_t num_leds_ = 0;
   uint8_t output_report_id_ = 0;
   size_t output_report_size_ = 0;

@@ -14,7 +14,7 @@
 
 namespace {
 
-using ::llcpp::fuchsia::hardware::gpio::Gpio;
+using ::fuchsia_hardware_gpio::Gpio;
 
 class FakeGpio : public Gpio::Interface {
  public:
@@ -24,9 +24,9 @@ class FakeGpio : public Gpio::Interface {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
-  void ConfigIn(::llcpp::fuchsia::hardware::gpio::wire::GpioFlags flags,
+  void ConfigIn(::fuchsia_hardware_gpio::wire::GpioFlags flags,
                 ConfigInCompleter::Sync& completer) {
-    if (flags != ::llcpp::fuchsia::hardware::gpio::wire::GpioFlags::NO_PULL) {
+    if (flags != ::fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }
@@ -113,18 +113,18 @@ TEST_F(GpioUtilTest, ReadTest) {
   GpioFunc func;
   uint8_t write_value, out_value;
   uint64_t ds_ua;
-  ::llcpp::fuchsia::hardware::gpio::wire::GpioFlags in_flag;
+  ::fuchsia_hardware_gpio::wire::GpioFlags in_flag;
   EXPECT_EQ(
       ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value, &ds_ua),
       0);
   EXPECT_EQ(func, 0);
   EXPECT_EQ(write_value, 0);
-  EXPECT_EQ(in_flag, ::llcpp::fuchsia::hardware::gpio::wire::GpioFlags::NO_PULL);
+  EXPECT_EQ(in_flag, ::fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL);
   EXPECT_EQ(out_value, 0);
   EXPECT_EQ(ds_ua, 0);
 
   gpio_->MockRead().ExpectCall(ZX_OK);
-  EXPECT_EQ(ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient(std::move(client_)), func,
+  EXPECT_EQ(ClientCall(::fuchsia_hardware_gpio::Gpio::SyncClient(std::move(client_)), func,
                        write_value, in_flag, out_value, ds_ua),
             0);
 }
@@ -136,18 +136,18 @@ TEST_F(GpioUtilTest, WriteTest) {
   GpioFunc func;
   uint8_t write_value, out_value;
   uint64_t ds_ua;
-  ::llcpp::fuchsia::hardware::gpio::wire::GpioFlags in_flag;
+  ::fuchsia_hardware_gpio::wire::GpioFlags in_flag;
   EXPECT_EQ(
       ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value, &ds_ua),
       0);
   EXPECT_EQ(func, 1);
   EXPECT_EQ(write_value, 7);
-  EXPECT_EQ(in_flag, ::llcpp::fuchsia::hardware::gpio::wire::GpioFlags::NO_PULL);
+  EXPECT_EQ(in_flag, ::fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL);
   EXPECT_EQ(out_value, 0);
   EXPECT_EQ(ds_ua, 0);
 
   gpio_->MockWrite().ExpectCall(ZX_OK);
-  EXPECT_EQ(ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient(std::move(client_)), func,
+  EXPECT_EQ(ClientCall(::fuchsia_hardware_gpio::Gpio::SyncClient(std::move(client_)), func,
                        write_value, in_flag, out_value, ds_ua),
             0);
 }
@@ -159,18 +159,18 @@ TEST_F(GpioUtilTest, ConfigInTest) {
   GpioFunc func;
   uint8_t write_value, out_value;
   uint64_t ds_ua;
-  ::llcpp::fuchsia::hardware::gpio::wire::GpioFlags in_flag;
+  ::fuchsia_hardware_gpio::wire::GpioFlags in_flag;
   EXPECT_EQ(
       ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value, &ds_ua),
       0);
   EXPECT_EQ(func, 2);
   EXPECT_EQ(write_value, 0);
-  EXPECT_EQ(in_flag, ::llcpp::fuchsia::hardware::gpio::wire::GpioFlags::NO_PULL);
+  EXPECT_EQ(in_flag, ::fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL);
   EXPECT_EQ(out_value, 0);
   EXPECT_EQ(ds_ua, 0);
 
   gpio_->MockConfigIn().ExpectCall(ZX_OK);
-  EXPECT_EQ(ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient(std::move(client_)), func,
+  EXPECT_EQ(ClientCall(::fuchsia_hardware_gpio::Gpio::SyncClient(std::move(client_)), func,
                        write_value, in_flag, out_value, ds_ua),
             0);
 }
@@ -182,18 +182,18 @@ TEST_F(GpioUtilTest, ConfigOutTest) {
   GpioFunc func;
   uint8_t write_value, out_value;
   uint64_t ds_ua;
-  ::llcpp::fuchsia::hardware::gpio::wire::GpioFlags in_flag;
+  ::fuchsia_hardware_gpio::wire::GpioFlags in_flag;
   EXPECT_EQ(
       ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value, &ds_ua),
       0);
   EXPECT_EQ(func, 3);
   EXPECT_EQ(write_value, 0);
-  EXPECT_EQ(in_flag, ::llcpp::fuchsia::hardware::gpio::wire::GpioFlags::NO_PULL);
+  EXPECT_EQ(in_flag, ::fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL);
   EXPECT_EQ(out_value, 3);
   EXPECT_EQ(ds_ua, 0);
 
   gpio_->MockConfigOut().ExpectCall(ZX_OK);
-  EXPECT_EQ(ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient(std::move(client_)), func,
+  EXPECT_EQ(ClientCall(::fuchsia_hardware_gpio::Gpio::SyncClient(std::move(client_)), func,
                        write_value, in_flag, out_value, ds_ua),
             0);
 }
@@ -205,18 +205,18 @@ TEST_F(GpioUtilTest, SetDriveStrengthTest) {
   GpioFunc func;
   uint8_t write_value, out_value;
   uint64_t ds_ua;
-  ::llcpp::fuchsia::hardware::gpio::wire::GpioFlags in_flag;
+  ::fuchsia_hardware_gpio::wire::GpioFlags in_flag;
   EXPECT_EQ(
       ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value, &ds_ua),
       0);
   EXPECT_EQ(func, 4);
   EXPECT_EQ(write_value, 0);
-  EXPECT_EQ(in_flag, ::llcpp::fuchsia::hardware::gpio::wire::GpioFlags::NO_PULL);
+  EXPECT_EQ(in_flag, ::fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL);
   EXPECT_EQ(out_value, 0);
   EXPECT_EQ(ds_ua, 2000);
 
   gpio_->MockSetDriveStrength().ExpectCall(ZX_OK);
-  EXPECT_EQ(ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient(std::move(client_)), func,
+  EXPECT_EQ(ClientCall(::fuchsia_hardware_gpio::Gpio::SyncClient(std::move(client_)), func,
                        write_value, in_flag, out_value, ds_ua),
             0);
 }

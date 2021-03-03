@@ -52,7 +52,7 @@ class FakeCpuDevice : TestDeviceType,
     return ZX_OK;
   }
 
-  // llcpp::fuchsia::device::Controller::Interface methods
+  // fuchsia_device::Controller::Interface methods
   // We only implement the following methods for now
   void SetPerformanceState(uint32_t requested_state,
                            SetPerformanceStateCompleter::Sync& _completer) override;
@@ -74,14 +74,13 @@ class FakeCpuDevice : TestDeviceType,
   void RunCompatibilityTests(int64_t hook_wait_time,
                              RunCompatibilityTestsCompleter::Sync& _completer) override {}
   void GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync& _completer) override {}
-  void ConfigureAutoSuspend(bool enable,
-                            ::llcpp::fuchsia::device::wire::DevicePowerState requested_state,
+  void ConfigureAutoSuspend(bool enable, ::fuchsia_device::wire::DevicePowerState requested_state,
                             ConfigureAutoSuspendCompleter::Sync& _completer) override {}
   void UpdatePowerStateMapping(
-      ::fidl::Array<::llcpp::fuchsia::device::wire::SystemPowerStateInfo, 7> mapping,
+      ::fidl::Array<::fuchsia_device::wire::SystemPowerStateInfo, 7> mapping,
       UpdatePowerStateMappingCompleter::Sync& _completer) override {}
   void GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& _completer) override {}
-  void Suspend(::llcpp::fuchsia::device::wire::DevicePowerState requested_state,
+  void Suspend(::fuchsia_device::wire::DevicePowerState requested_state,
                SuspendCompleter::Sync& _completer) override {}
   void Resume(ResumeCompleter::Sync& _complete) override {}
 
@@ -149,7 +148,7 @@ void FakeCpuDevice::SetPerformanceState(uint32_t requested_state,
 
 void FakeCpuDevice::GetDevicePerformanceStates(
     GetDevicePerformanceStatesCompleter::Sync& completer) {
-  ::fidl::Array<::llcpp::fuchsia::device::wire::DevicePerformanceStateInfo,
+  ::fidl::Array<::fuchsia_device::wire::DevicePerformanceStateInfo,
                 fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES>
       states{};
 

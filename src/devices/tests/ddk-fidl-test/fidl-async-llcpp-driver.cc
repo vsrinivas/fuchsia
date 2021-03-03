@@ -19,8 +19,6 @@
 
 namespace fidl {
 
-namespace fuchsia = ::llcpp::fuchsia;
-
 zx_status_t DdkFidlDevice::Create(void* ctx, zx_device_t* dev) {
   fbl::AllocChecker ac;
   std::unique_ptr<DdkFidlDevice> test_dev(new (&ac) DdkFidlDevice(dev));
@@ -45,7 +43,7 @@ zx_status_t DdkFidlDevice::Create(void* ctx, zx_device_t* dev) {
 
 zx_status_t DdkFidlDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia::hardware::test::Device::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_test::Device::Dispatch(this, msg, &transaction);
   return ZX_ERR_ASYNC;
 }
 

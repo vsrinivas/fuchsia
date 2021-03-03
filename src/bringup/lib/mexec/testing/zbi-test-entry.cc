@@ -25,7 +25,7 @@
 
 constexpr const char* kMexecZbi = "/boot/testdata/mexec-child.zbi";
 
-namespace devmgr = llcpp::fuchsia::device::manager;
+namespace devmgr = fuchsia_device_manager;
 
 namespace {
 

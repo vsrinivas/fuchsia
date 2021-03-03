@@ -63,7 +63,7 @@ std::string GetNewFirmwareVersion();
 #endif
 
 class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Messageable>,
-                      public llcpp::fuchsia::lowpan::spinel::DeviceSetup::Interface {
+                      public fuchsia_lowpan_spinel::DeviceSetup::Interface {
  public:
   explicit OtRadioDevice(zx_device_t* device);
 
@@ -118,7 +118,7 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Me
   } thrd_status_ = {false, false};
 
   // FIDL request handlers
-  void SetChannel(fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> request,
+  void SetChannel(fidl::ServerEnd<fuchsia_lowpan_spinel::Device> request,
                   SetChannelCompleter::Sync& _completer) override;
 
   thrd_t thread_;
@@ -129,11 +129,11 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Me
   uint16_t spi_tx_buffer_len_ = 0;
   uint8_t spi_tx_buffer_[kMaxFrameSize];
 
-  class LowpanSpinelDeviceFidlImpl : public llcpp::fuchsia::lowpan::spinel::Device::Interface {
+  class LowpanSpinelDeviceFidlImpl : public fuchsia_lowpan_spinel::Device::Interface {
    public:
     LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio);
     zx_status_t Bind(async_dispatcher_t* dispatcher,
-                     fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> channel);
+                     fidl::ServerEnd<fuchsia_lowpan_spinel::Device> channel);
 
    private:
     // FIDL request handlers
@@ -151,7 +151,7 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Me
   uint32_t outbound_allowance_ = kOutboundAllowanceInit;
   uint64_t inbound_cnt_ = 0;
   uint64_t outbound_cnt_ = 0;
-  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::lowpan::spinel::Device>> fidl_binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_lowpan_spinel::Device>> fidl_binding_;
   std::unique_ptr<LowpanSpinelDeviceFidlImpl> fidl_impl_obj_ = 0;
   ot_radio_power_status_e power_status_ = OT_SPINEL_DEVICE_OFF;
 };

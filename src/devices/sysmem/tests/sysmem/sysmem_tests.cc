@@ -40,14 +40,13 @@
 // We assume one sysmem since boot, for now.
 const char* kSysmemDevicePath = "/dev/class/sysmem/000";
 
-using BufferCollectionConstraints =
-    FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-               llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints>;
+using BufferCollectionConstraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
+                                               fuchsia_sysmem::wire::BufferCollectionConstraints>;
 using BufferCollectionConstraintsAuxBuffers =
     FidlStruct<fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers,
-               llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers>;
-using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                                        llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>;
+               fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers>;
+using BufferCollectionInfo =
+    FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2, fuchsia_sysmem::wire::BufferCollectionInfo_2>;
 
 namespace {
 
@@ -3168,7 +3167,7 @@ TEST(Sysmem, TooManyBuffers) {
   VerifyServerAlive(allocator_client);
 }
 
-class EventSinkServer : public llcpp::fuchsia::sysmem::BufferCollectionEvents::Interface {
+class EventSinkServer : public fuchsia_sysmem::BufferCollectionEvents::Interface {
  public:
   explicit EventSinkServer(async::Loop& loop) : loop_(loop) {}
 
@@ -3179,10 +3178,9 @@ class EventSinkServer : public llcpp::fuchsia::sysmem::BufferCollectionEvents::I
     loop_.Quit();
   }
 
-  void OnBuffersAllocated(
-      zx_status_t status,
-      llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 buffer_collection_info,
-      OnBuffersAllocatedCompleter::Sync& completer) override {
+  void OnBuffersAllocated(zx_status_t status,
+                          fuchsia_sysmem::wire::BufferCollectionInfo_2 buffer_collection_info,
+                          OnBuffersAllocatedCompleter::Sync& completer) override {
     EXPECT_TRUE(!status_);
     status_ = status;
     buffer_collection_info_ = std::move(buffer_collection_info);
@@ -3190,7 +3188,7 @@ class EventSinkServer : public llcpp::fuchsia::sysmem::BufferCollectionEvents::I
   }
 
   void OnAllocateSingleBufferDone(zx_status_t status,
-                                  llcpp::fuchsia::sysmem::wire::SingleBufferInfo single_buffer_info,
+                                  fuchsia_sysmem::wire::SingleBufferInfo single_buffer_info,
                                   OnAllocateSingleBufferDoneCompleter::Sync& completer) override {
     EXPECT_TRUE(false);
   }
@@ -3200,7 +3198,7 @@ class EventSinkServer : public llcpp::fuchsia::sysmem::BufferCollectionEvents::I
     ZX_DEBUG_ASSERT(status_);
     return *status_;
   }
-  const llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2& buffer_collection_info() {
+  const fuchsia_sysmem::wire::BufferCollectionInfo_2& buffer_collection_info() {
     return buffer_collection_info_;
   }
 
@@ -3208,7 +3206,7 @@ class EventSinkServer : public llcpp::fuchsia::sysmem::BufferCollectionEvents::I
   async::Loop& loop_;
   bool got_tokens_known_ = false;
   std::optional<zx_status_t> status_;
-  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 buffer_collection_info_;
+  fuchsia_sysmem::wire::BufferCollectionInfo_2 buffer_collection_info_;
 };
 
 TEST(Sysmem, EventSink) {
@@ -3223,16 +3221,15 @@ TEST(Sysmem, EventSink) {
                                                         event_channel_client.release()));
   EventSinkServer server(loop);
   bool was_unbound = false;
-  EXPECT_TRUE(
-      fidl::BindServer(
-          loop.dispatcher(), std::move(event_channel_server), &server,
-          [&was_unbound, &loop](EventSinkServer* server, fidl::UnbindInfo info,
-                                fidl::ServerEnd<llcpp::fuchsia::sysmem::BufferCollectionEvents>) {
-            was_unbound = true;
-            EXPECT_EQ(info.reason, fidl::UnbindInfo::kPeerClosed);
-            loop.Quit();
-          })
-          .is_ok());
+  EXPECT_TRUE(fidl::BindServer(
+                  loop.dispatcher(), std::move(event_channel_server), &server,
+                  [&was_unbound, &loop](EventSinkServer* server, fidl::UnbindInfo info,
+                                        fidl::ServerEnd<fuchsia_sysmem::BufferCollectionEvents>) {
+                    was_unbound = true;
+                    EXPECT_EQ(info.reason, fidl::UnbindInfo::kPeerClosed);
+                    loop.Quit();
+                  })
+                  .is_ok());
   loop.Run();
   EXPECT_TRUE(server.got_tokens_known());
   loop.ResetQuit();

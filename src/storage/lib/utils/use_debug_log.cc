@@ -19,7 +19,7 @@
 namespace storage {
 namespace {
 
-zx_status_t LogToDebugLog(llcpp::fuchsia::boot::WriteOnlyLog::SyncClient log_client) {
+zx_status_t LogToDebugLog(fuchsia_boot::WriteOnlyLog::SyncClient log_client) {
   auto result = log_client.Get();
   if (result.status() != ZX_OK) {
     return result.status();
@@ -41,7 +41,7 @@ zx_status_t LogToDebugLog(llcpp::fuchsia::boot::WriteOnlyLog::SyncClient log_cli
   return fx_log_reconfigure(&logger_config);
 }
 
-zx::status<llcpp::fuchsia::boot::WriteOnlyLog::SyncClient> ConnectToWriteLog() {
+zx::status<fuchsia_boot::WriteOnlyLog::SyncClient> ConnectToWriteLog() {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
@@ -52,7 +52,7 @@ zx::status<llcpp::fuchsia::boot::WriteOnlyLog::SyncClient> ConnectToWriteLog() {
     return zx::error(status);
   }
 
-  return zx::ok(llcpp::fuchsia::boot::WriteOnlyLog::SyncClient(std::move(local)));
+  return zx::ok(fuchsia_boot::WriteOnlyLog::SyncClient(std::move(local)));
 }
 
 }  // namespace

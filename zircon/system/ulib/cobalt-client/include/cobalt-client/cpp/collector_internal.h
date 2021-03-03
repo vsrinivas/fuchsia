@@ -67,7 +67,7 @@ class CobaltLogger final : public Logger {
   // Set of options for this logger.
   CobaltOptions options_;
 
-  llcpp::fuchsia::cobalt::Logger::SyncClient logger_;
+  fuchsia_cobalt::Logger::SyncClient logger_;
 };
 
 }  // namespace internal

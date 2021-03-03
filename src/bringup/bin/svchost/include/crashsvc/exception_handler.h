@@ -37,10 +37,10 @@ class ExceptionHandler {
   // Becomes true if exceptions cannot be sent to the exception handling service. Once we reach that
   // state, we will never handle exceptions again.
   bool drop_exceptions_;
-  fidl::Client<llcpp::fuchsia::exception::Handler> connection_;
+  fidl::Client<fuchsia_exception::Handler> connection_;
 
   // The other endpoint of |connection_| before it has been sent to the server.
-  fidl::ServerEnd<llcpp::fuchsia::exception::Handler> server_endpoint_;
+  fidl::ServerEnd<fuchsia_exception::Handler> server_endpoint_;
 };
 
 #endif  // SRC_BRINGUP_BIN_SVCHOST_INCLUDE_CRASHSVC_EXCEPTION_HANDLER_H_

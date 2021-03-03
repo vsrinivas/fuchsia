@@ -62,12 +62,12 @@ constexpr size_t kDevPathSize = 128;
 struct input_args_t {
   Command command;
 
-  std::optional<llcpp::fuchsia::hardware::input::Device::SyncClient> sync_client;
+  std::optional<fuchsia_hardware_input::Device::SyncClient> sync_client;
 
   char devpath[kDevPathSize];
   size_t num_reads;
 
-  llcpp::fuchsia::hardware::input::wire::ReportType report_type;
+  fuchsia_hardware_input::wire::ReportType report_type;
   uint8_t report_id;
 
   const char** data;
@@ -108,19 +108,19 @@ static zx_status_t parse_uint_arg(const char* arg, uint32_t min, uint32_t max, u
   return ZX_OK;
 }
 
-static zx_status_t parse_input_report_type(
-    const char* arg, llcpp::fuchsia::hardware::input::wire::ReportType* out_type) {
+static zx_status_t parse_input_report_type(const char* arg,
+                                           fuchsia_hardware_input::wire::ReportType* out_type) {
   if ((arg == NULL) || (out_type == NULL)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   static const struct {
     const char* name;
-    llcpp::fuchsia::hardware::input::wire::ReportType type;
+    fuchsia_hardware_input::wire::ReportType type;
   } LUT[] = {
-      {.name = "in", .type = llcpp::fuchsia::hardware::input::wire::ReportType::INPUT},
-      {.name = "out", .type = llcpp::fuchsia::hardware::input::wire::ReportType::OUTPUT},
-      {.name = "feature", .type = llcpp::fuchsia::hardware::input::wire::ReportType::FEATURE},
+      {.name = "in", .type = fuchsia_hardware_input::wire::ReportType::INPUT},
+      {.name = "out", .type = fuchsia_hardware_input::wire::ReportType::OUTPUT},
+      {.name = "feature", .type = fuchsia_hardware_input::wire::ReportType::FEATURE},
   };
 
   for (size_t i = 0; i < std::size(LUT); ++i) {
@@ -256,7 +256,7 @@ static int hid_read_reports(input_args_t* args) {
   }
   report_event = std::move(result->event);
 
-  std::vector<uint8_t> report(llcpp::fuchsia::hardware::input::wire::MAX_REPORT_LEN);
+  std::vector<uint8_t> report(fuchsia_hardware_input::wire::MAX_REPORT_LEN);
   for (uint32_t i = 0; i < args->num_reads; i++) {
     size_t returned_size;
     status =
@@ -314,7 +314,7 @@ static zx_status_t hid_input_device_added(int dirfd, int event, const char* fn, 
   if (status != ZX_OK) {
     return status;
   }
-  args->sync_client = llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(chan));
+  args->sync_client = fuchsia_hardware_input::Device::SyncClient(std::move(chan));
 
   // TODO: support setting num_reads across all devices. requires a way to
   // signal shutdown to all input threads.
@@ -440,7 +440,7 @@ zx_status_t parse_input_args(int argc, const char** argv, input_args_t* args) {
   if (status != ZX_OK) {
     return status;
   }
-  args->sync_client = llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(chan));
+  args->sync_client = fuchsia_hardware_input::Device::SyncClient(std::move(chan));
   snprintf(args->devpath, kDevPathSize, "%s", argv[1]);
 
   if (args->command == Command::descriptor) {
@@ -472,7 +472,7 @@ zx_status_t parse_input_args(int argc, const char** argv, input_args_t* args) {
   }
 
   // Parse ReportType argument.
-  llcpp::fuchsia::hardware::input::wire::ReportType report_type;
+  fuchsia_hardware_input::wire::ReportType report_type;
   status = parse_input_report_type(argv[2], &report_type);
   if (status != ZX_OK) {
     return status;

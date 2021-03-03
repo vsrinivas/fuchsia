@@ -46,7 +46,7 @@ using PlatformBusType =
 class PlatformBus : public PlatformBusType,
                     public ddk::PBusProtocol<PlatformBus, ddk::base_protocol>,
                     public ddk::IommuProtocol<PlatformBus>,
-                    public ::llcpp::fuchsia::sysinfo::SysInfo::Interface {
+                    public ::fuchsia_sysinfo::SysInfo::Interface {
  public:
   static zx_status_t Create(zx_device_t* parent, const char* name, zx::channel items_svc);
 
@@ -116,8 +116,8 @@ class PlatformBus : public PlatformBusType,
   std::vector<GetBootloaderVendorCompleter::Async> bootloader_vendor_completer_
       __TA_GUARDED(bootloader_info_lock_);
 
-  ::llcpp::fuchsia::sysinfo::wire::InterruptControllerType interrupt_controller_type_ =
-      ::llcpp::fuchsia::sysinfo::wire::InterruptControllerType::UNKNOWN;
+  ::fuchsia_sysinfo::wire::InterruptControllerType interrupt_controller_type_ =
+      ::fuchsia_sysinfo::wire::InterruptControllerType::UNKNOWN;
 
   // Protocols that are optionally provided by the board driver.
   std::optional<ddk::ClockImplProtocolClient> clock_;

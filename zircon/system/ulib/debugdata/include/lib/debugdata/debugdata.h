@@ -23,7 +23,7 @@
 
 namespace debugdata {
 
-class DebugData : public ::llcpp::fuchsia::debugdata::DebugData::Interface {
+class DebugData : public ::fuchsia_debugdata::DebugData::Interface {
  public:
   explicit DebugData(fbl::unique_fd root_dir_fd);
   ~DebugData() = default;

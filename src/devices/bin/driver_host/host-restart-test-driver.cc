@@ -21,7 +21,7 @@
 
 namespace {
 
-using llcpp::fuchsia::device::restarttest::TestDevice;
+using fuchsia_device_restarttest::TestDevice;
 
 class TestHostRestartDriver;
 using DeviceType = ddk::Device<TestHostRestartDriver, ddk::Unbindable, ddk::Messageable>;

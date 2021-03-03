@@ -139,27 +139,26 @@ void usage(const char* prog_name) {
 }
 
 void dump_formats(const audio::utils::AudioDeviceStream& stream) {
-  stream.GetSupportedFormats(
-      [](const ::llcpp::fuchsia::hardware::audio::wire::SupportedFormats& formats) {
-        auto& pcm = formats.pcm_supported_formats();
-        printf("\nNumber of channels      :");
-        for (auto i : pcm.number_of_channels) {
-          printf(" %u", i);
-        }
-        printf("\nFrame rate              :");
-        for (auto i : pcm.frame_rates) {
-          printf(" %uHz", i);
-        }
-        printf("\nBits per channel        :");
-        for (auto i : pcm.bytes_per_sample) {
-          printf(" %u", 8 * i);
-        }
-        printf("\nValid bits per channel  :");
-        for (auto i : pcm.valid_bits_per_sample) {
-          printf(" %u", i);
-        }
-        printf("\n");
-      });
+  stream.GetSupportedFormats([](const ::fuchsia_hardware_audio::wire::SupportedFormats& formats) {
+    auto& pcm = formats.pcm_supported_formats();
+    printf("\nNumber of channels      :");
+    for (auto i : pcm.number_of_channels) {
+      printf(" %u", i);
+    }
+    printf("\nFrame rate              :");
+    for (auto i : pcm.frame_rates) {
+      printf(" %uHz", i);
+    }
+    printf("\nBits per channel        :");
+    for (auto i : pcm.bytes_per_sample) {
+      printf(" %u", 8 * i);
+    }
+    printf("\nValid bits per channel  :");
+    for (auto i : pcm.valid_bits_per_sample) {
+      printf(" %u", i);
+    }
+    printf("\n");
+  });
 }
 
 static void FixupStringRequest(audio_stream_cmd_get_string_resp_t* resp, zx_status_t res) {

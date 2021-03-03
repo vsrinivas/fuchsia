@@ -23,7 +23,7 @@
 
 namespace test {
 
-namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
+namespace fuchsia_input_report = ::fuchsia_input_report;
 
 class FakePrinter : public print_input_report::Printer {
  public:

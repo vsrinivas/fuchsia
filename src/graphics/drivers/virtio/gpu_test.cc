@@ -15,7 +15,7 @@
 
 #include <zxtest/zxtest.h>
 
-namespace sysmem = llcpp::fuchsia::sysmem;
+namespace sysmem = fuchsia_sysmem;
 
 namespace {
 // Use a stub buffer collection instead of the real sysmem since some tests may

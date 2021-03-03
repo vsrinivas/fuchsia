@@ -25,7 +25,7 @@
 
 namespace ui_input {
 
-namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
+namespace fuchsia_input_report = ::fuchsia_input_report;
 
 namespace {
 

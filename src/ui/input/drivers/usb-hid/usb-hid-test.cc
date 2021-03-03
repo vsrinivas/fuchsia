@@ -33,19 +33,18 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 
   // Initialize a Usb HID device. Asserts on failure.
   void InitUsbHid(fbl::String* devpath,
-                  ::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor desc);
+                  ::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor desc);
 
   // Unbinds Usb HID driver from host.
   void Unbind(fbl::String devpath);
 };
 
 // Initialize a Usb HID device. Asserts on failure.
-void USBVirtualBus::InitUsbHid(
-    fbl::String* devpath,
-    ::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor desc) {
-  namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
+void USBVirtualBus::InitUsbHid(fbl::String* devpath,
+                               ::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor desc) {
+  namespace usb_peripheral = ::fuchsia_hardware_usb_peripheral;
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
+      ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
   usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);
   device_desc.b_max_packet_size0 = 64;
@@ -72,8 +71,8 @@ void USBVirtualBus::Unbind(fbl::String devpath) {
   ASSERT_GE(fd_input.get(), 0);
   zx::channel input_channel;
   ASSERT_OK(fdio_get_service_handle(fd_input.release(), input_channel.reset_and_get_address()));
-  auto hid_device_path_response = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
-      zx::unowned_channel(input_channel));
+  auto hid_device_path_response =
+      fuchsia_device::Controller::Call::GetTopologicalPath(zx::unowned_channel(input_channel));
   ASSERT_OK(hid_device_path_response.status());
   zx::channel usbhid_channel;
   std::string hid_device_path = hid_device_path_response->result.response().path.data();
@@ -91,7 +90,7 @@ void USBVirtualBus::Unbind(fbl::String devpath) {
   std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
   ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd_usb_hid_parent), &watcher));
   auto result =
-      llcpp::fuchsia::device::Controller::Call::ScheduleUnbind(zx::unowned_channel(usbhid_channel));
+      fuchsia_device::Controller::Call::ScheduleUnbind(zx::unowned_channel(usbhid_channel));
   ASSERT_OK(result.status());
   ASSERT_OK(watcher->WaitForRemoval("usb-hid", zx::duration::infinite()));
 }
@@ -99,7 +98,7 @@ void USBVirtualBus::Unbind(fbl::String devpath) {
 class UsbOneEndpointTest : public zxtest::Test {
  public:
   void SetUp() override {
-    ::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor usb_hid_function_desc = {
+    ::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor usb_hid_function_desc = {
         .interface_class = USB_CLASS_HID,
         .interface_subclass = 0,
         .interface_protocol = USB_PROTOCOL_TEST_HID_ONE_ENDPOINT,
@@ -112,7 +111,7 @@ class UsbOneEndpointTest : public zxtest::Test {
     zx::channel input_channel;
     ASSERT_OK(fdio_get_service_handle(fd_input.release(), input_channel.reset_and_get_address()));
 
-    sync_client_ = llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(input_channel));
+    sync_client_ = fuchsia_hardware_input::Device::SyncClient(std::move(input_channel));
   }
 
   void TearDown() override {
@@ -125,13 +124,13 @@ class UsbOneEndpointTest : public zxtest::Test {
  protected:
   USBVirtualBus bus_;
   fbl::String devpath_;
-  std::optional<llcpp::fuchsia::hardware::input::Device::SyncClient> sync_client_;
+  std::optional<fuchsia_hardware_input::Device::SyncClient> sync_client_;
 };
 
 class UsbTwoEndpointTest : public zxtest::Test {
  public:
   void SetUp() override {
-    ::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor usb_hid_function_desc = {
+    ::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor usb_hid_function_desc = {
         .interface_class = USB_CLASS_HID,
         .interface_subclass = 0,
         .interface_protocol = USB_PROTOCOL_TEST_HID_TWO_ENDPOINT,
@@ -144,7 +143,7 @@ class UsbTwoEndpointTest : public zxtest::Test {
     zx::channel input_channel;
     ASSERT_OK(fdio_get_service_handle(fd_input.release(), input_channel.reset_and_get_address()));
 
-    sync_client_ = llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(input_channel));
+    sync_client_ = fuchsia_hardware_input::Device::SyncClient(std::move(input_channel));
   }
 
   void TearDown() override {
@@ -157,16 +156,15 @@ class UsbTwoEndpointTest : public zxtest::Test {
  protected:
   USBVirtualBus bus_;
   fbl::String devpath_;
-  std::optional<llcpp::fuchsia::hardware::input::Device::SyncClient> sync_client_;
+  std::optional<fuchsia_hardware_input::Device::SyncClient> sync_client_;
 };
 
 TEST_F(UsbOneEndpointTest, SetAndGetReport) {
   uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
 
-  auto set_result = sync_client_->SetReport(
-      ::llcpp::fuchsia::hardware::input::wire::ReportType::INPUT, 0, fidl::unowned_vec(buf));
-  auto get_result =
-      sync_client_->GetReport(::llcpp::fuchsia::hardware::input::wire::ReportType::INPUT, 0);
+  auto set_result = sync_client_->SetReport(::fuchsia_hardware_input::wire::ReportType::INPUT, 0,
+                                            fidl::unowned_vec(buf));
+  auto get_result = sync_client_->GetReport(::fuchsia_hardware_input::wire::ReportType::INPUT, 0);
 
   ASSERT_OK(set_result.status());
   ASSERT_OK(set_result->status);
@@ -185,10 +183,9 @@ TEST_F(UsbOneEndpointTest, UnBind) { ASSERT_NO_FATAL_FAILURES(bus_.Unbind(devpat
 TEST_F(UsbTwoEndpointTest, SetAndGetReport) {
   uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
 
-  auto set_result = sync_client_->SetReport(
-      ::llcpp::fuchsia::hardware::input::wire::ReportType::INPUT, 0, fidl::unowned_vec(buf));
-  auto get_result =
-      sync_client_->GetReport(::llcpp::fuchsia::hardware::input::wire::ReportType::INPUT, 0);
+  auto set_result = sync_client_->SetReport(::fuchsia_hardware_input::wire::ReportType::INPUT, 0,
+                                            fidl::unowned_vec(buf));
+  auto get_result = sync_client_->GetReport(::fuchsia_hardware_input::wire::ReportType::INPUT, 0);
 
   ASSERT_OK(set_result.status());
   ASSERT_OK(set_result->status);

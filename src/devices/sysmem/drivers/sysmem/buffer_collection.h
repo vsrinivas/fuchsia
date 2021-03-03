@@ -19,7 +19,7 @@
 
 namespace sysmem_driver {
 
-class BufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interface,
+class BufferCollection : public fuchsia_sysmem::BufferCollection::Interface,
                          public fbl::RefCounted<BufferCollection> {
  public:
   ~BufferCollection();
@@ -35,12 +35,12 @@ class BufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interf
   // fuchsia.sysmem.BufferCollection interface methods
   //
 
-  void SetEventSink(fidl::ClientEnd<llcpp::fuchsia::sysmem::BufferCollectionEvents>
-                        buffer_collection_events_client,
-                    SetEventSinkCompleter::Sync& completer) override;
+  void SetEventSink(
+      fidl::ClientEnd<fuchsia_sysmem::BufferCollectionEvents> buffer_collection_events_client,
+      SetEventSinkCompleter::Sync& completer) override;
   void Sync(SyncCompleter::Sync& completer) override;
   void SetConstraints(bool has_constraints,
-                      llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints,
+                      fuchsia_sysmem::wire::BufferCollectionConstraints constraints,
                       SetConstraintsCompleter::Sync& completer) override;
   void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) override;
   void CheckBuffersAllocated(CheckBuffersAllocatedCompleter::Sync& completer) override;
@@ -58,7 +58,7 @@ class BufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interf
   void SetDebugClientInfo(fidl::StringView name, uint64_t id,
                           SetDebugClientInfoCompleter::Sync& completer) override;
   void SetConstraintsAuxBuffers(
-      llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers constraints_aux_buffers,
+      fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers constraints_aux_buffers,
       SetConstraintsAuxBuffersCompleter::Sync& completer) override;
   void GetAuxBuffers(GetAuxBuffersCompleter::Sync& completer) override;
 
@@ -73,12 +73,12 @@ class BufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interf
   // has_constraints() must be true to call this.
   //
   // this can only be called if TakeConstraints() hasn't been called yet.
-  const llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& constraints();
+  const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints();
 
   // has_constraints() must be true to call this.
   //
   // this can only be called once
-  llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints TakeConstraints();
+  fuchsia_sysmem2::wire::BufferCollectionConstraints TakeConstraints();
 
   LogicalBufferCollection* parent();
 
@@ -111,14 +111,13 @@ class BufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interf
   void FailSync(Location location, Completer& completer, zx_status_t status, const char* format,
                 ...) __PRINTFLIKE(5, 6);
 
-  fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo> CloneResultForSendingV2(
-      const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
+  fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo> CloneResultForSendingV2(
+      const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
 
-  fit::result<llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2> CloneResultForSendingV1(
-      const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
-  fit::result<llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>
-  CloneAuxBuffersResultForSendingV1(
-      const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
+  fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2> CloneResultForSendingV1(
+      const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
+  fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2> CloneAuxBuffersResultForSendingV1(
+      const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
 
   static const fuchsia_sysmem_BufferCollection_ops_t kOps;
 
@@ -137,7 +136,7 @@ class BufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interf
   // This may remain non-set if SetEventSink() is never used by a client.  A
   // client may send SetEventSink() up to once.
   //
-  std::optional<llcpp::fuchsia::sysmem::BufferCollectionEvents::SyncClient> events_;
+  std::optional<fuchsia_sysmem::BufferCollectionEvents::SyncClient> events_;
 
   // Constraints as set by:
   //
@@ -149,16 +148,15 @@ class BufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interf
   //     SetConstraints()
   //
   // Either way, the constraints here are in v2 form.
-  std::optional<TableHolder<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints>>
-      constraints_;
+  std::optional<TableHolder<fuchsia_sysmem2::wire::BufferCollectionConstraints>> constraints_;
 
   // Stash BufferUsage aside for benefit of GetUsageBasedRightsAttenuation() despite
   // TakeConstraints().
-  std::optional<TableHolder<llcpp::fuchsia::sysmem2::wire::BufferUsage>> usage_;
+  std::optional<TableHolder<fuchsia_sysmem2::wire::BufferUsage>> usage_;
 
   // Temporarily holds fuchsia.sysmem.BufferCollectionConstraintsAuxBuffers until SetConstraints()
   // arrives.
-  std::optional<TableHolder<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers>>
+  std::optional<TableHolder<fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers>>
       constraints_aux_buffers_;
 
   // FIDL protocol enforcement.
@@ -177,7 +175,7 @@ class BufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interf
 
   bool is_done_ = false;
 
-  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::sysmem::BufferCollection>> server_binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_sysmem::BufferCollection>> server_binding_;
 
   LogicalBufferCollection::ClientInfo debug_info_;
 

@@ -31,7 +31,7 @@
 
 namespace optee {
 
-namespace fuchsia_hardware_tee = ::llcpp::fuchsia::hardware::tee;
+namespace fuchsia_hardware_tee = ::fuchsia_hardware_tee;
 
 class OpteeClient;
 class OpteeDeviceInfo;
@@ -87,8 +87,8 @@ class OpteeController : public OpteeControllerBase,
   // `DeviceConnector` FIDL protocol
   void ConnectToDeviceInfo(::zx::channel device_info_request,
                            ConnectToDeviceInfoCompleter::Sync& _completer) override;
-  void ConnectToApplication(llcpp::fuchsia::tee::wire::Uuid application_uuid,
-                            zx::channel service_provider, zx::channel application_request,
+  void ConnectToApplication(fuchsia_tee::wire::Uuid application_uuid, zx::channel service_provider,
+                            zx::channel application_request,
                             ConnectToApplicationCompleter::Sync& _completer) override;
 
   CallResult CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) override;

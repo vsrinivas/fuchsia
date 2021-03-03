@@ -16,7 +16,7 @@
 
 namespace sdmmc {
 
-using ::llcpp::fuchsia::hardware::sdio::wire::SdioRwTxn;
+using ::fuchsia_hardware_sdio::wire::SdioRwTxn;
 
 class SdioControllerDevice;
 
@@ -25,7 +25,7 @@ using SdioFunctionDeviceType = ddk::Device<SdioFunctionDevice, ddk::Messageable>
 
 class SdioFunctionDevice : public SdioFunctionDeviceType,
                            public ddk::SdioProtocol<SdioFunctionDevice, ddk::base_protocol>,
-                           public ::llcpp::fuchsia::hardware::sdio::Device::Interface {
+                           public ::fuchsia_hardware_sdio::Device::Interface {
  public:
   SdioFunctionDevice(zx_device_t* parent, SdioControllerDevice* sdio_parent)
       : SdioFunctionDeviceType(parent), sdio_parent_(sdio_parent) {}
@@ -59,7 +59,7 @@ class SdioFunctionDevice : public SdioFunctionDeviceType,
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    ::llcpp::fuchsia::hardware::sdio::Device::Dispatch(this, msg, &transaction);
+    ::fuchsia_hardware_sdio::Device::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
 

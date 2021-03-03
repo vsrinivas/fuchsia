@@ -18,7 +18,7 @@
 
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 // Note that these are the rights that the ExpectPathSupportsRights call itself supports generally.
 // The rights that are checked for a specific path are provided by the caller and must be <= these.

@@ -22,9 +22,9 @@
 #include "src/devices/cpu/drivers/aml-cpu-legacy/aml-cpu-legacy-bind.h"
 
 namespace {
-using llcpp::fuchsia::device::wire::MAX_DEVICE_PERFORMANCE_STATES;
-using llcpp::fuchsia::hardware::thermal::wire::MAX_DVFS_DOMAINS;
-using llcpp::fuchsia::hardware::thermal::wire::PowerDomain;
+using fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES;
+using fuchsia_hardware_thermal::wire::MAX_DVFS_DOMAINS;
+using fuchsia_hardware_thermal::wire::PowerDomain;
 
 constexpr zx_off_t kCpuVersionOffset = 0x220;
 
@@ -242,7 +242,7 @@ void AmlCpu::GetPerformanceStateInfo(uint32_t state,
 
   const uint16_t pstate = PstateToOperatingPoint(state, opps.count);
 
-  llcpp::fuchsia::hardware::cpu::ctrl::wire::CpuPerformanceStateInfo result;
+  fuchsia_hardware_cpu_ctrl::wire::CpuPerformanceStateInfo result;
   result.frequency_hz = opps.opp[pstate].freq_hz;
   result.voltage_uv = opps.opp[pstate].volt_uv;
   completer.ReplySuccess(result);

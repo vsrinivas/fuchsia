@@ -12,8 +12,8 @@
 namespace storage {
 
 zx::status<std::string> GetTopologicalPath(
-    fidl::UnownedClientEnd<llcpp::fuchsia::device::Controller> channel) {
-  auto result = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(channel);
+    fidl::UnownedClientEnd<fuchsia_device::Controller> channel) {
+  auto result = fuchsia_device::Controller::Call::GetTopologicalPath(channel);
   if (!result.ok())
     return zx::error(result.status());
   if (result->result.is_err())

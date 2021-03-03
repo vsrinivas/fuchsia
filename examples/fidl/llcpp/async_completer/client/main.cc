@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
   async_dispatcher_t* dispatcher = loop.dispatcher();
   int num_responses = 0;
 
-  auto client_end = service::Connect<llcpp::fuchsia::examples::Echo>();
+  auto client_end = service::Connect<fuchsia_examples::Echo>();
   ZX_ASSERT(client_end.is_ok());
   fidl::Client client(std::move(*client_end), dispatcher);
 
@@ -30,7 +30,7 @@ int main(int argc, const char** argv) {
   // Make |kNumEchoes| EchoString requests to the server, and print the result when
   // it is received.
   for (int i = 0; i < kNumEchoes; i++) {
-    client->EchoString("hello", [&](llcpp::fuchsia::examples::Echo::EchoStringResponse* response) {
+    client->EchoString("hello", [&](fuchsia_examples::Echo::EchoStringResponse* response) {
       std::string reply(response->response.data(), response->response.size());
       std::cout << "Got response after " << time(nullptr) - start << " seconds" << std::endl;
       if (++num_responses == kNumEchoes) {

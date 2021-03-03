@@ -23,7 +23,7 @@
 #include <llcpptest/handles/test/llcpp/fidl.h>
 #include <src/lib/fidl/llcpp/tests/types_test_utils.h>
 
-namespace test = ::llcpp::llcpptest::handles::test;
+namespace test = ::llcpptest_handles_test;
 
 // All the tests in this file check that when a result is freed, all the handles inside the result
 // are closed.

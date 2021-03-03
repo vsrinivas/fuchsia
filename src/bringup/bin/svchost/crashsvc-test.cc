@@ -164,7 +164,7 @@ void AnalyzeCrash(async::Loop* loop, const zx::job& parent_job, const zx::job& j
 
 // Crashsvc will attemp to connect to a |fuchsia.exception.Handler| when it catches an exception.
 // We use this fake in order to verify that behaviour.
-class StubExceptionHandler final : public llcpp::fuchsia::exception::Handler::Interface {
+class StubExceptionHandler final : public fuchsia_exception::Handler::Interface {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     auto binding = fidl::BindServer(dispatcher, std::move(request), this);
@@ -176,7 +176,7 @@ class StubExceptionHandler final : public llcpp::fuchsia::exception::Handler::In
   }
 
   // fuchsia.exception.Handler
-  void OnException(::zx::exception exception, llcpp::fuchsia::exception::wire::ExceptionInfo info,
+  void OnException(::zx::exception exception, fuchsia_exception::wire::ExceptionInfo info,
                    OnExceptionCompleter::Sync& completer) override {
     exception_count_++;
     if (respond_sync_) {
@@ -210,7 +210,7 @@ class StubExceptionHandler final : public llcpp::fuchsia::exception::Handler::In
   int exception_count() const { return exception_count_; }
 
  private:
-  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::exception::Handler>> binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_exception::Handler>> binding_;
 
   int exception_count_ = 0;
   bool respond_sync_{true};
@@ -224,7 +224,7 @@ class FakeService {
  public:
   FakeService(async_dispatcher_t* dispatcher) : vfs_(dispatcher) {
     auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-    root_dir->AddEntry(llcpp::fuchsia::exception::Handler::Name,
+    root_dir->AddEntry(fuchsia_exception::Handler::Name,
                        fbl::MakeRefCounted<fs::Service>([this, dispatcher](zx::channel request) {
                          return exception_handler_.Connect(dispatcher, std::move(request));
                        }));

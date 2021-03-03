@@ -22,8 +22,8 @@ static const char* kTag = "GoldfishPipe";
 
 constexpr size_t DEFAULT_BUFFER_SIZE = 8192;
 
-constexpr zx_signals_t SIGNALS = llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_READABLE |
-                                 llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_WRITABLE;
+constexpr zx_signals_t SIGNALS = fuchsia_hardware_goldfish::wire::SIGNAL_READABLE |
+                                 fuchsia_hardware_goldfish::wire::SIGNAL_WRITABLE;
 
 }  // namespace
 
@@ -110,7 +110,7 @@ void Pipe::Init() {
 }
 
 void Pipe::Bind(zx::channel server_request) {
-  using PipeProtocol = llcpp::fuchsia::hardware::goldfish::Pipe;
+  using PipeProtocol = fuchsia_hardware_goldfish::Pipe;
   using PipeInterface = PipeProtocol::Interface;
   auto on_unbound = [this](PipeInterface*, fidl::UnbindInfo info, fidl::ServerEnd<PipeProtocol>) {
     switch (info.reason) {
@@ -138,9 +138,8 @@ void Pipe::Bind(zx::channel server_request) {
       on_close_(this);
     }
   } else {
-    binding_ref_ =
-        std::make_unique<fidl::ServerBindingRef<llcpp::fuchsia::hardware::goldfish::Pipe>>(
-            result.take_value());
+    binding_ref_ = std::make_unique<fidl::ServerBindingRef<fuchsia_hardware_goldfish::Pipe>>(
+        result.take_value());
   }
 }
 
@@ -206,7 +205,7 @@ void Pipe::Read(uint64_t count, uint64_t offset, ReadCompleter::Sync& completer)
 
   size_t actual;
   zx_status_t status = TransferLocked(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
-                                      llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_READABLE,
+                                      fuchsia_hardware_goldfish::wire::SIGNAL_READABLE,
                                       buffer_.phys + offset, count, 0, 0, &actual);
   completer.Reply(status, actual);
 }
@@ -223,7 +222,7 @@ void Pipe::Write(uint64_t count, uint64_t offset, WriteCompleter::Sync& complete
 
   size_t actual;
   zx_status_t status = TransferLocked(PIPE_CMD_CODE_WRITE, PIPE_CMD_CODE_WAKE_ON_WRITE,
-                                      llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_WRITABLE,
+                                      fuchsia_hardware_goldfish::wire::SIGNAL_WRITABLE,
                                       buffer_.phys + offset, count, 0, 0, &actual);
   completer.Reply(status, actual);
 }

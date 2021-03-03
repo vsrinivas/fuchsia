@@ -72,7 +72,7 @@ func declName(decl gidlmixer.NamedDeclaration) string {
 
 func ConformanceType(gidlTypeString string) string {
 	// Note: only works for domain objects (not protocols & services)
-	return "llcpp::conformance::wire::" + gidlTypeString
+	return "conformance::wire::" + gidlTypeString
 }
 
 func LlcppErrorCode(code gidlir.ErrorCode) string {

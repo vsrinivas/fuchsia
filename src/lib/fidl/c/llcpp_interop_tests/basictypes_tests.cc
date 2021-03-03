@@ -25,7 +25,7 @@
 // Interface under test
 #include <fidl/test/llcpp/basictypes/llcpp/fidl.h>
 
-namespace basictypes = llcpp::fidl::test::llcpp::basictypes;
+namespace basictypes = fidl_test_llcpp_basictypes;
 
 // test utility functions
 namespace {
@@ -296,7 +296,7 @@ TEST(BasicTypesTest, SyncCallerAllocateCallStruct) {
 // LLCPP sync server tests: interop between C client and LLCPP server
 namespace {
 
-namespace gen = llcpp::fidl::test::llcpp::basictypes;
+namespace gen = fidl_test_llcpp_basictypes;
 
 class Server : public gen::TestInterface::Interface {
  public:

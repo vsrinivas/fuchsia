@@ -8,15 +8,15 @@ namespace fs {
 
 bool RemoteContainer::IsRemote() const { return remote_.is_valid(); }
 
-fidl::ClientEnd<llcpp::fuchsia::io::Directory> RemoteContainer::DetachRemote() {
+fidl::ClientEnd<fuchsia_io::Directory> RemoteContainer::DetachRemote() {
   return std::move(remote_);
 }
 
-fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> RemoteContainer::GetRemote() const {
+fidl::UnownedClientEnd<::fuchsia_io::Directory> RemoteContainer::GetRemote() const {
   return remote_.borrow();
 }
 
-void RemoteContainer::SetRemote(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote) {
+void RemoteContainer::SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote) {
   ZX_DEBUG_ASSERT(!remote_.is_valid());
   remote_ = std::move(remote);
 }

@@ -14,7 +14,7 @@ namespace start_args {
 
 template <typename T>
 zx::status<T> SymbolValue(
-    const fidl::VectorView<llcpp::fuchsia::driver::framework::wire::NodeSymbol>& symbols,
+    const fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol>& symbols,
     std::string_view path) {
   static_assert(sizeof(T) == sizeof(zx_vaddr_t), "T must match zx_vaddr_t in size");
   for (auto& symbol : symbols) {
@@ -27,7 +27,7 @@ zx::status<T> SymbolValue(
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-inline zx::status<std::string> ProgramValue(const llcpp::fuchsia::data::wire::Dictionary& program,
+inline zx::status<std::string> ProgramValue(const fuchsia_data::wire::Dictionary& program,
                                             std::string_view key) {
   if (program.has_entries()) {
     for (auto& entry : program.entries()) {
@@ -44,9 +44,8 @@ inline zx::status<std::string> ProgramValue(const llcpp::fuchsia::data::wire::Di
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-inline zx::status<fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory>> NsValue(
-    const fidl::VectorView<llcpp::fuchsia::component::runner::wire::ComponentNamespaceEntry>&
-        entries,
+inline zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
+    const fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry>& entries,
     std::string_view path) {
   for (auto& entry : entries) {
     if (std::equal(path.begin(), path.end(), entry.path().begin())) {

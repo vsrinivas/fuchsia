@@ -20,7 +20,7 @@
 namespace goldfish {
 
 class Control;
-using HeapInterface = ::llcpp::fuchsia::sysmem2::Heap::Interface;
+using HeapInterface = ::fuchsia_sysmem2::Heap::Interface;
 
 // LLCPP synchronous server of a goldfish device-local Fuchsia sysmem Heap
 // interface.
@@ -28,18 +28,17 @@ using HeapInterface = ::llcpp::fuchsia::sysmem2::Heap::Interface;
 // Each Heap service runs on its own thread and has its own async loop.
 class Heap : public HeapInterface, public fbl::DoublyLinkedListable<std::unique_ptr<Heap>> {
  public:
-  // |llcpp::fuchsia::sysmem2::Heap::Interface|
+  // |fuchsia_sysmem2::Heap::Interface|
   ~Heap() override;
 
-  // |llcpp::fuchsia::sysmem2::Heap::Interface|
+  // |fuchsia_sysmem2::Heap::Interface|
   void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& completer) override = 0;
 
-  // |llcpp::fuchsia::sysmem2::Heap::Interface|
-  void CreateResource(::zx::vmo vmo,
-                      llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings,
+  // |fuchsia_sysmem2::Heap::Interface|
+  void CreateResource(::zx::vmo vmo, fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings,
                       CreateResourceCompleter::Sync& completer) override = 0;
 
-  // |llcpp::fuchsia::sysmem2::Heap::Interface|
+  // |fuchsia_sysmem2::Heap::Interface|
   void DestroyResource(uint64_t id, DestroyResourceCompleter::Sync& completer) override = 0;
 
   // Bind the server to a FIDL channel.
@@ -54,7 +53,7 @@ class Heap : public HeapInterface, public fbl::DoublyLinkedListable<std::unique_
   // This helper method is used only by subclasses to bind to sysmem using
   // given channel and send |heap_properties| to sysmem.
   void BindWithHeapProperties(zx::channel server_request,
-                              llcpp::fuchsia::sysmem2::wire::HeapProperties heap_properties);
+                              fuchsia_sysmem2::wire::HeapProperties heap_properties);
 
   Control* control() const { return control_; }
 

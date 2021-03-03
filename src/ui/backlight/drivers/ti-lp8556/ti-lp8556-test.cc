@@ -105,8 +105,8 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
   }
 
  protected:
-  ::llcpp::fuchsia::hardware::backlight::Device::SyncClient client() {
-    return ::llcpp::fuchsia::hardware::backlight::Device::SyncClient(std::move(messenger_.local()));
+  ::fuchsia_hardware_backlight::Device::SyncClient client() {
+    return ::fuchsia_hardware_backlight::Device::SyncClient(std::move(messenger_.local()));
   }
 
   mock_i2c::MockI2c mock_i2c_;
@@ -276,7 +276,7 @@ TEST_F(Lp8556DeviceTest, ReadDefaultCurrentScale) {
 
   EXPECT_OK(dev_->Init());
 
-  ::llcpp::fuchsia::hardware::backlight::Device::SyncClient backlight_client(client());
+  ::fuchsia_hardware_backlight::Device::SyncClient backlight_client(client());
   auto result = backlight_client.GetNormalizedBrightnessScale();
   EXPECT_TRUE(result.ok());
   EXPECT_FALSE(result.value().result.is_err());
@@ -298,7 +298,7 @@ TEST_F(Lp8556DeviceTest, SetCurrentScale) {
 
   EXPECT_OK(dev_->Init());
 
-  ::llcpp::fuchsia::hardware::backlight::Device::SyncClient backlight_client(client());
+  ::fuchsia_hardware_backlight::Device::SyncClient backlight_client(client());
 
   mock_i2c_.ExpectWrite({kCfgReg}).ExpectReadStop({0x7e}).ExpectWriteStop(
       {kCurrentLsbReg, 0xab, 0x72});
@@ -335,7 +335,7 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
 
   EXPECT_OK(dev_->Init());
 
-  ::llcpp::fuchsia::hardware::backlight::Device::SyncClient backlight_client(client());
+  ::fuchsia_hardware_backlight::Device::SyncClient backlight_client(client());
 
   mock_i2c_.ExpectWrite({kCfgReg}).ExpectReadStop({0x7e}).ExpectWriteStop(
       {kCurrentLsbReg, 0xab, 0x72});

@@ -22,7 +22,7 @@
 
 namespace devmgr {
 
-namespace fio = llcpp::fuchsia::io;
+namespace fio = fuchsia_io;
 
 zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t* hnd,
                                         uint32_t* ids, size_t len, uint32_t fs_flags) {
@@ -192,7 +192,7 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device, const mount_o
                    << zx_status_get_string(status);
   }
   status = fshost_.ForwardFsService(FsManager::MountPoint::kBlob,
-                                    llcpp::fuchsia::update::verify::BlobfsVerifier::Name);
+                                    fuchsia_update_verify::BlobfsVerifier::Name);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to forward BlobfsVerifier service for blobfs: "
                    << zx_status_get_string(status);

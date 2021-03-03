@@ -23,7 +23,7 @@ class SysconfigPartitionClient final : public BlockDevicePartitionClient {
   zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx::status<> Trim() final;
   zx::status<> Flush() final;
-  fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> GetChannel() final;
+  fidl::ClientEnd<::fuchsia_hardware_block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.

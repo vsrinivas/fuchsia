@@ -45,14 +45,13 @@ zx::status<zx::job> GetRootJob(const zx::channel& svc_root) {
             zx_status_get_string(status));
     return zx::error(status);
   }
-  status = fdio_service_connect_at(svc_root.get(), llcpp::fuchsia::kernel::RootJob::Name,
-                                   remote.release());
+  status = fdio_service_connect_at(svc_root.get(), fuchsia_kernel::RootJob::Name, remote.release());
   if (status != ZX_OK) {
     fprintf(stderr, "svchost: unable to connect to fuchsia.kernel.RootJob\n");
     return zx::error(status);
   }
 
-  llcpp::fuchsia::kernel::RootJob::SyncClient job_client(std::move(local));
+  fuchsia_kernel::RootJob::SyncClient job_client(std::move(local));
   auto job_result = job_client.Get();
   if (!job_result.ok()) {
     fprintf(stderr, "svchost: unable to get root job\n");
@@ -68,14 +67,14 @@ zx::status<zx::resource> GetRootResource(const zx::channel& svc_root) {
             zx_status_get_string(status));
     return zx::error(status);
   }
-  status = fdio_service_connect_at(svc_root.get(), llcpp::fuchsia::boot::RootResource::Name,
-                                   remote.release());
+  status =
+      fdio_service_connect_at(svc_root.get(), fuchsia_boot::RootResource::Name, remote.release());
   if (status != ZX_OK) {
     fprintf(stderr, "svchost: unable to connect to fuchsia.boot.RootResource\n");
     return zx::error(status);
   }
 
-  llcpp::fuchsia::boot::RootResource::SyncClient client(std::move(local));
+  fuchsia_boot::RootResource::SyncClient client(std::move(local));
   auto result = client.Get();
   if (!result.ok()) {
     fprintf(stderr, "svchost: unable to get root resource\n");
@@ -214,7 +213,7 @@ int main(int argc, char** argv) {
   svc::Outgoing outgoing(dispatcher);
 
   // Parse boot arguments.
-  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  fuchsia_boot::Arguments::SyncClient boot_args;
   {
     zx::channel local, remote;
     zx_status_t status = zx::channel::create(0, &local, &remote);
@@ -223,13 +222,13 @@ int main(int argc, char** argv) {
               zx_status_get_string(status));
       return 1;
     }
-    status = fdio_service_connect_at(caller.channel()->get(), llcpp::fuchsia::boot::Arguments::Name,
+    status = fdio_service_connect_at(caller.channel()->get(), fuchsia_boot::Arguments::Name,
                                      remote.release());
     if (status != ZX_OK) {
       fprintf(stderr, "svchost: unable to connect to fuchsia.boot.Arguments");
       return 1;
     }
-    boot_args = llcpp::fuchsia::boot::Arguments::SyncClient(std::move(local));
+    boot_args = fuchsia_boot::Arguments::SyncClient(std::move(local));
   }
   svchost::Arguments args;
   zx_status_t status = svchost::ParseArgs(boot_args, &args);

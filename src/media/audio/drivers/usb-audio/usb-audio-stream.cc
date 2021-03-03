@@ -32,7 +32,7 @@
 namespace audio {
 namespace usb {
 
-namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
+namespace audio_fidl = ::fuchsia_hardware_audio;
 
 static constexpr uint32_t MAX_OUTSTANDING_REQ = 3;
 
@@ -243,7 +243,7 @@ void UsbAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
   stream_channels_.push_back(stream_channel);
   fidl::OnUnboundFn<audio_fidl::StreamConfig::Interface> on_unbound =
       [this, stream_channel](audio_fidl::StreamConfig::Interface*, fidl::UnbindInfo,
-                             fidl::ServerEnd<llcpp::fuchsia::hardware::audio::StreamConfig>) {
+                             fidl::ServerEnd<fuchsia_hardware_audio::StreamConfig>) {
         fbl::AutoLock channel_lock(&lock_);
         this->DeactivateStreamChannelLocked(stream_channel.get());
       };
@@ -522,7 +522,7 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
 
   fidl::OnUnboundFn<audio_fidl::RingBuffer::Interface> on_unbound =
       [this](audio_fidl::RingBuffer::Interface*, fidl::UnbindInfo,
-             fidl::ServerEnd<llcpp::fuchsia::hardware::audio::RingBuffer>) {
+             fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer>) {
         fbl::AutoLock lock(&lock_);
         this->DeactivateRingBufferChannelLocked(rb_channel_.get());
       };

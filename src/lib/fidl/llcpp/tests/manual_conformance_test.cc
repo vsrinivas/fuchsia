@@ -15,7 +15,7 @@
 
 #include "src/lib/fidl/llcpp/tests/test_utils.h"
 
-namespace llcpp_misc = ::llcpp::fidl::test::misc;
+namespace llcpp_misc = ::fidl_test_misc;
 
 TEST(InlineXUnionInStruct, Success) {
   // clang-format off

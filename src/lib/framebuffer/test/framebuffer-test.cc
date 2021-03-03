@@ -21,8 +21,8 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace fhd = llcpp::fuchsia::hardware::display;
-namespace sysmem = ::llcpp::fuchsia::sysmem;
+namespace fhd = fuchsia_hardware_display;
+namespace sysmem = ::fuchsia_sysmem;
 
 zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
                                  zx::channel dc_client_channel);

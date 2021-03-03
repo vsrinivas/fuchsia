@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/bitsstrictflexible/llcpp/fidl.h>  // nogncheck
-namespace fidl_test = llcpp::fidl::test::bitsstrictflexible;
+namespace fidl_test = fidl_test_bitsstrictflexible;
 
 // [START contents]
 uint32_t use_bits(fidl_test::wire::Flags bits) {

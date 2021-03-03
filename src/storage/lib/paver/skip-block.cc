@@ -25,9 +25,9 @@ namespace {
 
 using uuid::Uuid;
 
-namespace block = ::llcpp::fuchsia::hardware::block;
-namespace device = ::llcpp::fuchsia::device;
-namespace skipblock = ::llcpp::fuchsia::hardware::skipblock;
+namespace block = ::fuchsia_hardware_block;
+namespace device = ::fuchsia_device;
+namespace skipblock = ::fuchsia_hardware_skipblock;
 
 }  // namespace
 
@@ -242,8 +242,7 @@ zx::status<> SkipBlockPartitionClient::Trim() { return zx::error(ZX_ERR_NOT_SUPP
 
 zx::status<> SkipBlockPartitionClient::Flush() { return zx::ok(); }
 
-fidl::ClientEnd<::llcpp::fuchsia::hardware::skipblock::SkipBlock>
-SkipBlockPartitionClient::GetChannel() {
+fidl::ClientEnd<::fuchsia_hardware_skipblock::SkipBlock> SkipBlockPartitionClient::GetChannel() {
   return service::MaybeClone(partition_.client_end(), service::AssumeProtocolComposesNode);
 }
 

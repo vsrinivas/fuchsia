@@ -26,7 +26,7 @@ class TestDeviceBase {
   explicit TestDeviceBase(uint64_t vendor_id) { InitializeFromVendorId(vendor_id); }
 
   void InitializeFromFileName(const char* device_name) {
-    auto client = service::Connect<llcpp::fuchsia::device::Controller>(device_name);
+    auto client = service::Connect<fuchsia_device::Controller>(device_name);
     ASSERT_TRUE(client.is_ok());
     device_controller_ = client->borrow();
     EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(client->TakeChannel().release(), &device_));
@@ -48,15 +48,15 @@ class TestDeviceBase {
 
   // Get a channel to the parent device, so we can rebind the driver to it. This
   // requires sandbox access to /dev/sys.
-  fidl::ClientEnd<llcpp::fuchsia::device::Controller> GetParentDevice() {
-    char path[llcpp::fuchsia::device::wire::MAX_DEVICE_PATH_LEN + 1];
-    auto res = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(device_controller_);
+  fidl::ClientEnd<fuchsia_device::Controller> GetParentDevice() {
+    char path[fuchsia_device::wire::MAX_DEVICE_PATH_LEN + 1];
+    auto res = fuchsia_device::Controller::Call::GetTopologicalPath(device_controller_);
 
     EXPECT_EQ(ZX_OK, res.status());
     EXPECT_TRUE(res->result.is_response());
 
     auto& response = res->result.response();
-    EXPECT_LE(response.path.size(), llcpp::fuchsia::device::wire::MAX_DEVICE_PATH_LEN);
+    EXPECT_LE(response.path.size(), fuchsia_device::wire::MAX_DEVICE_PATH_LEN);
 
     memcpy(path, response.path.data(), response.path.size());
     path[response.path.size()] = 0;
@@ -65,19 +65,19 @@ class TestDeviceBase {
     printf("Parent device path: %s\n", path);
     zx::channel local_channel, remote_channel;
 
-    auto parent = service::Connect<llcpp::fuchsia::device::Controller>(path);
+    auto parent = service::Connect<fuchsia_device::Controller>(path);
 
     EXPECT_EQ(ZX_OK, parent.status_value());
     return std::move(*parent);
   }
 
   void ShutdownDevice() {
-    auto res = llcpp::fuchsia::device::Controller::Call::ScheduleUnbind(device_controller_);
+    auto res = fuchsia_device::Controller::Call::ScheduleUnbind(device_controller_);
     EXPECT_EQ(ZX_OK, res.status());
     EXPECT_TRUE(res->result.is_response());
   }
 
-  static void BindDriver(fidl::UnownedClientEnd<llcpp::fuchsia::device::Controller> parent_device,
+  static void BindDriver(fidl::UnownedClientEnd<fuchsia_device::Controller> parent_device,
                          std::string path) {
     // Rebinding the device immediately after unbinding it sometimes causes the new device to be
     // created before the old one is released, which can cause problems since the old device can
@@ -92,8 +92,7 @@ class TestDeviceBase {
       ASSERT_TRUE(retry_count++ < kMaxRetryCount) << "Timed out rebinding driver";
       // Don't use rebind because we need the recreate delay above. Also, the parent device may have
       // other children that shouldn't be unbound.
-      auto res =
-          llcpp::fuchsia::device::Controller::Call::Bind(parent_device, fidl::unowned_str(path));
+      auto res = fuchsia_device::Controller::Call::Bind(parent_device, fidl::unowned_str(path));
       ASSERT_EQ(ZX_OK, res.status());
       if (res->result.is_err() && res->result.err() == ZX_ERR_ALREADY_BOUND) {
         zx::nanosleep(zx::deadline_after(zx::msec(10)));
@@ -113,7 +112,7 @@ class TestDeviceBase {
 
  private:
   magma_device_t device_ = 0;
-  fidl::UnownedClientEnd<llcpp::fuchsia::device::Controller> device_controller_{ZX_HANDLE_INVALID};
+  fidl::UnownedClientEnd<fuchsia_device::Controller> device_controller_{ZX_HANDLE_INVALID};
 };
 
 }  // namespace magma

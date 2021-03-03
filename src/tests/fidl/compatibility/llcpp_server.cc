@@ -21,10 +21,7 @@
 
 constexpr const char kEchoInterfaceName[] = "fidl.test.compatibility.Echo";
 
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace compatibility {
+using namespace fidl_test_compatibility;
 
 class EchoClientApp {
  public:
@@ -120,8 +117,7 @@ class EchoClientApp {
 
  private:
   // Called once upon construction to launch and connect to the server.
-  ::fidl::ClientEnd<llcpp::fidl::test::compatibility::Echo> ConnectTo(
-      ::fidl::StringView server_url) {
+  ::fidl::ClientEnd<fidl_test_compatibility::Echo> ConnectTo(::fidl::StringView server_url) {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = std::string(server_url.data(), server_url.size());
     echo_provider_ = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
@@ -130,7 +126,7 @@ class EchoClientApp {
     context_->svc()->Connect(launcher.NewRequest());
     launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
 
-    auto echo_ends = ::fidl::CreateEndpoints<llcpp::fidl::test::compatibility::Echo>();
+    auto echo_ends = ::fidl::CreateEndpoints<fidl_test_compatibility::Echo>();
     ZX_ASSERT(echo_ends.is_ok());
     ZX_ASSERT(echo_provider_->Connect(kEchoInterfaceName, echo_ends->server.TakeChannel()) ==
               ZX_OK);
@@ -362,24 +358,18 @@ class EchoConnection final : public Echo::Interface {
   cpp17::optional<::fidl::ServerBindingRef<Echo>> server_binding_;
 };
 
-}  // namespace compatibility
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
-
 int main(int argc, const char** argv) {
   // The FIDL support lib requires async_get_default_dispatcher() to return
   // non-null.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  std::vector<std::unique_ptr<llcpp::fidl::test::compatibility::EchoConnection>> connections;
+  std::vector<std::unique_ptr<EchoConnection>> connections;
 
   context->outgoing()->AddPublicService(
       std::make_unique<vfs::Service>([&](zx::channel request, async_dispatcher_t* dispatcher) {
-        auto conn = std::make_unique<llcpp::fidl::test::compatibility::EchoConnection>();
+        auto conn = std::make_unique<EchoConnection>();
         auto result = ::fidl::BindServer(
-            dispatcher,
-            ::fidl::ServerEnd<llcpp::fidl::test::compatibility::Echo>(std::move(request)),
+            dispatcher, ::fidl::ServerEnd<fidl_test_compatibility::Echo>(std::move(request)),
             conn.get());
         ZX_ASSERT(result.is_ok());
         conn->set_server_binding(result.take_value());

@@ -23,8 +23,8 @@
 #include "fdio_unistd.h"
 #include "internal.h"
 
-namespace fio = ::llcpp::fuchsia::io;
-namespace fpty = ::llcpp::fuchsia::hardware::pty;
+namespace fio = ::fuchsia_io;
+namespace fpty = ::fuchsia_hardware_pty;
 
 static zx_status_t fdio_zxio_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode,
                                   fdio_t** out_io) {

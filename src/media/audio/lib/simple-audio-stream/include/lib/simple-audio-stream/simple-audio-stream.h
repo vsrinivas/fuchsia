@@ -32,7 +32,7 @@
 
 namespace audio {
 
-namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
+namespace audio_fidl = ::fuchsia_hardware_audio;
 
 // Thread safety token.
 //

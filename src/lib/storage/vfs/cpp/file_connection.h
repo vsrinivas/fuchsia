@@ -20,7 +20,7 @@ namespace fs {
 
 namespace internal {
 
-class FileConnection : public Connection, public llcpp::fuchsia::io::File::Interface {
+class FileConnection : public Connection, public fuchsia_io::File::Interface {
  public:
   // Refer to documentation for |Connection::Connection|.
   FileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
@@ -33,13 +33,13 @@ class FileConnection : public Connection, public llcpp::fuchsia::io::File::Inter
   // |fuchsia.io/Node| operations.
   //
 
-  void Clone(uint32_t flags, fidl::ServerEnd<llcpp::fuchsia::io::Node> object,
+  void Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> object,
              CloneCompleter::Sync& completer) final;
   void Close(CloseCompleter::Sync& completer) final;
   void Describe(DescribeCompleter::Sync& completer) final;
   void Sync(SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrCompleter::Sync& completer) final;
-  void SetAttr(uint32_t flags, llcpp::fuchsia::io::wire::NodeAttributes attributes,
+  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
                SetAttrCompleter::Sync& completer) final;
   void NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) final;
   void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) final;

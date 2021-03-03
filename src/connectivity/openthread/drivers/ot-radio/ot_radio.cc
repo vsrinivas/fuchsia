@@ -30,7 +30,7 @@
 #include "src/connectivity/openthread/drivers/ot-radio/ot_radio_bootloader.h"
 
 namespace ot {
-namespace lowpan_spinel_fidl = ::llcpp::fuchsia::lowpan::spinel;
+namespace lowpan_spinel_fidl = ::fuchsia_lowpan_spinel;
 
 OtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio)
     : ot_radio_obj_(ot_radio) {}
@@ -134,7 +134,7 @@ zx_status_t OtRadioDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn)
   return transaction.Status();
 }
 
-void OtRadioDevice::SetChannel(fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> request,
+void OtRadioDevice::SetChannel(fidl::ServerEnd<fuchsia_lowpan_spinel::Device> request,
                                SetChannelCompleter::Sync& completer) {
   if (fidl_impl_obj_ != nullptr) {
     zxlogf(ERROR, "ot-radio: channel already set");

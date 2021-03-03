@@ -13,7 +13,7 @@ namespace paver {
 class EfiDevicePartitioner : public DevicePartitioner {
  public:
   static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
       Arch arch, const fbl::unique_fd& block_device);
 
   bool IsFvmWithinFtl() const override { return false; }
@@ -50,14 +50,14 @@ class EfiDevicePartitioner : public DevicePartitioner {
 class X64PartitionerFactory : public DevicePartitionerFactory {
  public:
   zx::status<std::unique_ptr<DevicePartitioner>> New(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
       Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };
 
 class X64AbrClientFactory : public abr::ClientFactory {
  public:
   zx::status<std::unique_ptr<abr::Client>> New(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
       std::shared_ptr<paver::Context> context) final;
 };
 

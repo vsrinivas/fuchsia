@@ -24,8 +24,7 @@ RegistryVnode::RegistryVnode(async_dispatcher_t* dispatcher, fbl::RefPtr<fs::Pse
       filesystem_counter_(0),
       dispatcher_(dispatcher) {}
 
-zx_status_t RegistryVnode::AddFilesystem(
-    fidl::ClientEnd<::llcpp::fuchsia::io::Directory> directory) {
+zx_status_t RegistryVnode::AddFilesystem(fidl::ClientEnd<::fuchsia_io::Directory> directory) {
   char buf[32];
   snprintf(buf, sizeof(buf), "%" PRIu64 "", filesystem_counter_++);
 
@@ -34,9 +33,8 @@ zx_status_t RegistryVnode::AddFilesystem(
   return directory_vnode->AddAsTrackedEntry(dispatcher_, filesystems_.get(), fbl::String(buf));
 }
 
-void RegistryVnode::RegisterFilesystem(
-    fidl::ClientEnd<::llcpp::fuchsia::io::Directory> public_export,
-    RegisterFilesystemCompleter::Sync& completer) {
+void RegistryVnode::RegisterFilesystem(fidl::ClientEnd<::fuchsia_io::Directory> public_export,
+                                       RegisterFilesystemCompleter::Sync& completer) {
   completer.Reply(AddFilesystem(std::move(public_export)));
 }
 

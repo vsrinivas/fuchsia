@@ -32,7 +32,7 @@ TEST_F(InterpreterTest, NoPendingInstruction) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
 
   std::string error_result = context->error_stream.str();
   ASSERT_EQ("No pending instruction to execute.\n", error_result);
@@ -51,7 +51,7 @@ TEST_F(InterpreterTest, GlobalExpression) {
 
   Finish(kExecute);
 
-  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
 
   std::string error_result = context->error_stream.str();
   ASSERT_EQ("Node 1:1 can't be a root node.\n", error_result);
@@ -69,7 +69,7 @@ TEST_F(InterpreterTest, BadAst) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
 
   std::string error_result = context->error_stream.str();
   ASSERT_EQ("Pending AST nodes for execution context 1.\n", error_result);
@@ -150,7 +150,7 @@ TEST_F(InterpreterTest, Objects) {
   {
     std::vector<std::string> names;
     std::vector<shell::console::AstBuilder::NodeId> values;
-    std::vector<llcpp::fuchsia::shell::wire::ShellType> types;
+    std::vector<fuchsia_shell::wire::ShellType> types;
     shell::console::AstBuilder::NodePair object_pair =
         AddObject(builder, names, values, std::move(types));
     builder.AddVariableDeclaration("obj1", builder.TypeObject(object_pair.schema_node),
@@ -161,7 +161,7 @@ TEST_F(InterpreterTest, Objects) {
     std::vector<std::string> names{"alpha", "beta"};
     std::vector<shell::console::AstBuilder::NodeId> values{builder.AddIntegerLiteral(4, false),
                                                            builder.AddIntegerLiteral(5, false)};
-    std::vector<llcpp::fuchsia::shell::wire::ShellType> types;
+    std::vector<fuchsia_shell::wire::ShellType> types;
     types.emplace_back(builder.TypeUint64());
     types.emplace_back(builder.TypeUint64());
     shell::console::AstBuilder::NodePair object_pair =
@@ -173,7 +173,7 @@ TEST_F(InterpreterTest, Objects) {
     std::vector<std::string> names{"alpha", "beta"};
     std::vector<shell::console::AstBuilder::NodeId> values{builder.AddStringLiteral("Hello"),
                                                            builder.AddStringLiteral("world!")};
-    std::vector<llcpp::fuchsia::shell::wire::ShellType> types;
+    std::vector<fuchsia_shell::wire::ShellType> types;
     types.emplace_back(builder.TypeString());
     types.emplace_back(builder.TypeString());
     shell::console::AstBuilder::NodePair object_pair =
@@ -185,7 +185,7 @@ TEST_F(InterpreterTest, Objects) {
     std::vector<std::string> inner_names{"alpha", "beta"};
     std::vector<shell::console::AstBuilder::NodeId> inner_values{
         builder.AddStringLiteral("Hello"), builder.AddStringLiteral("world!")};
-    std::vector<llcpp::fuchsia::shell::wire::ShellType> inner_types;
+    std::vector<fuchsia_shell::wire::ShellType> inner_types;
     inner_types.emplace_back(builder.TypeString());
     inner_types.emplace_back(builder.TypeString());
     shell::console::AstBuilder::NodePair inner_object_pair =
@@ -193,7 +193,7 @@ TEST_F(InterpreterTest, Objects) {
     std::vector<std::string> outer_names{"inner", "extra"};
     std::vector<shell::console::AstBuilder::NodeId> outer_values{
         inner_object_pair.value_node, builder.AddStringLiteral("Extra value")};
-    std::vector<llcpp::fuchsia::shell::wire::ShellType> outer_types;
+    std::vector<fuchsia_shell::wire::ShellType> outer_types;
     outer_types.emplace_back(builder.TypeObject(inner_object_pair.schema_node));
     outer_types.emplace_back(builder.TypeString());
     shell::console::AstBuilder::NodePair outer_object_pair =
@@ -212,7 +212,7 @@ TEST_F(InterpreterTest, Objects) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
 
   CHECK_RESULT(0, "{}");
   CHECK_RESULT(1, "{alpha: uint64(4), beta: uint64(5)}");
@@ -243,7 +243,7 @@ TEST_F(InterpreterTest, VariableOk) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
 
   CHECK_RESULT(0, "1");
   CHECK_RESULT(1, "10");
@@ -264,7 +264,7 @@ TEST_F(InterpreterTest, VariableNoType) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
 
   Finish(kExecute);
-  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
 
   std::string error_result = context->error_stream.str();
   ASSERT_EQ(
@@ -286,7 +286,7 @@ TEST_F(InterpreterTest, VariableDefinedTwice) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
 
   Finish(kExecute);
-  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
 
   std::string error_result = context->error_stream.str();
   ASSERT_EQ(
@@ -340,7 +340,7 @@ TEST_F(InterpreterTest, BadIntegerLiterals) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
 
   Finish(kExecute);
-  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
 
   std::string error_result = context->error_stream.str();
   ASSERT_EQ(
@@ -410,5 +410,5 @@ TEST_F(InterpreterTest, GoodIntegerLiterals) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
 }

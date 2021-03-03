@@ -51,7 +51,7 @@ TEST(I2cChildTest, Write3BytesOnce) {
   };
   ddk::I2cImplProtocolClient i2c = {};
   I2cChildTest server(fake_ddk::kFakeParent, fbl::AdoptRef<I2cBus>(new I2cBusTest(i2c, 0)), 0);
-  llcpp::fuchsia::hardware::i2c::Device2::SyncClient client_wrap(std::move(tester.FidlClient()));
+  fuchsia_hardware_i2c::Device2::SyncClient client_wrap(std::move(tester.FidlClient()));
 
   bool is_write[] = {true};  // 1 write segment.
   fidl::VectorView<bool> segments_is_write(fidl::unowned_ptr(is_write), countof(is_write));
@@ -101,7 +101,7 @@ TEST(I2cChildTest, Read3BytesOnce) {
   };
   ddk::I2cImplProtocolClient i2c = {};
   I2cChildTest server(fake_ddk::kFakeParent, fbl::AdoptRef<I2cBus>(new I2cBusTest(i2c, 0)), 0);
-  llcpp::fuchsia::hardware::i2c::Device2::SyncClient client_wrap(std::move(tester.FidlClient()));
+  fuchsia_hardware_i2c::Device2::SyncClient client_wrap(std::move(tester.FidlClient()));
 
   bool is_write[] = {false};  // 1 read segment.
   fidl::VectorView<bool> segments_is_write(fidl::unowned_ptr(is_write), countof(is_write));
@@ -159,7 +159,7 @@ TEST(I2cChildTest, Write1ByteOnceRead1Byte3Times) {
   };
   ddk::I2cImplProtocolClient i2c = {};
   I2cChildTest server(fake_ddk::kFakeParent, fbl::AdoptRef<I2cBus>(new I2cBusTest(i2c, 0)), 0);
-  llcpp::fuchsia::hardware::i2c::Device2::SyncClient client_wrap(std::move(tester.FidlClient()));
+  fuchsia_hardware_i2c::Device2::SyncClient client_wrap(std::move(tester.FidlClient()));
 
   bool is_write[] = {true, false, false, false};  // 1 write, 3 reads.
   fidl::VectorView<bool> segments_is_write(fidl::unowned_ptr(is_write), countof(is_write));
@@ -197,7 +197,7 @@ TEST(I2cChildTest, BadTransfers) {
   ddk::I2cImplProtocolClient i2c = {};
   I2cChildTest server(fake_ddk::kFakeParent,
                       fbl::AdoptRef<I2cBus>(new I2cBus(fake_ddk::kFakeParent, i2c, 0)), 0);
-  llcpp::fuchsia::hardware::i2c::Device2::SyncClient client_wrap(std::move(tester.FidlClient()));
+  fuchsia_hardware_i2c::Device2::SyncClient client_wrap(std::move(tester.FidlClient()));
 
   {
     // 2 write segments, inconsistent with 1 segment write below.

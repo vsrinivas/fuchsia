@@ -32,7 +32,7 @@
 
 namespace optee {
 
-namespace fuchsia_tee = ::llcpp::fuchsia::tee;
+namespace fuchsia_tee = ::fuchsia_tee;
 
 static bool IsOpteeApi(const tee_smc::TrustedOsCallUidResult& returned_uid) {
   return returned_uid.uid_0_3 == kOpteeApiUid_0 && returned_uid.uid_4_7 == kOpteeApiUid_1 &&
@@ -402,7 +402,7 @@ void OpteeController::ConnectToDeviceInfo(
 }
 
 void OpteeController::ConnectToApplication(
-    llcpp::fuchsia::tee::wire::Uuid application_uuid, zx::channel service_provider,
+    fuchsia_tee::wire::Uuid application_uuid, zx::channel service_provider,
     zx::channel application_request,
     [[maybe_unused]] ConnectToApplicationCompleter::Sync& _completer) {
   ConnectToApplicationInternal(Uuid(application_uuid), std::move(service_provider),

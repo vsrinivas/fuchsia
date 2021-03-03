@@ -212,7 +212,7 @@ TEST_F(SyncDeviceTest, TriggerHostWait) {
   ASSERT_OK(zx::channel::create(0u, &tl_req, &tl_client));
   ASSERT_OK(dut_->GoldfishSyncCreateTimeline(std::move(tl_req)));
 
-  llcpp::fuchsia::hardware::goldfish::SyncTimeline::SyncClient tl(std::move(tl_client));
+  fuchsia_hardware_goldfish::SyncTimeline::SyncClient tl(std::move(tl_client));
 
   uint64_t kGlSyncHandle = 0xabcd'1234'5678'90abUL;
   uint64_t kSyncThreadHandle = 0xdcba'9876'5432'01feUL;
@@ -510,7 +510,7 @@ TEST_F(SyncDeviceTest, TriggerHostWaitAndSignalFence) {
   ASSERT_OK(zx::channel::create(0u, &tl_req, &tl_client));
   ASSERT_OK(dut_->GoldfishSyncCreateTimeline(std::move(tl_req)));
 
-  llcpp::fuchsia::hardware::goldfish::SyncTimeline::SyncClient tl(std::move(tl_client));
+  fuchsia_hardware_goldfish::SyncTimeline::SyncClient tl(std::move(tl_client));
 
   uint64_t kGlSyncHandle = 0xabcd'1234'5678'90abUL;
   uint64_t kSyncThreadHandle = 0xdcba'9876'5432'01feUL;

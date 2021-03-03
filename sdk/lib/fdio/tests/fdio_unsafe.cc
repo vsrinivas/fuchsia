@@ -25,8 +25,8 @@ TEST(UnsafeTest, BorrowChannel) {
 
   zx::channel h1, h2;
   ASSERT_OK(zx::channel::create(0, &h1, &h2));
-  auto result = ::llcpp::fuchsia::io::Node::Call::Clone(
-      std::move(dir), ::llcpp::fuchsia::io::wire::CLONE_FLAG_SAME_RIGHTS, std::move(h1));
+  auto result = ::fuchsia_io::Node::Call::Clone(
+      std::move(dir), ::fuchsia_io::wire::CLONE_FLAG_SAME_RIGHTS, std::move(h1));
   ASSERT_OK(result.status());
 
   fdio_unsafe_release(io);

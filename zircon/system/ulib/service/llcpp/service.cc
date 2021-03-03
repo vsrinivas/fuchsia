@@ -12,8 +12,8 @@
 
 namespace service {
 
-::zx::status<::fidl::ClientEnd<::llcpp::fuchsia::io::Directory>> OpenServiceRoot(const char* path) {
-  return ::service::Connect<::llcpp::fuchsia::io::Directory>(path);
+::zx::status<::fidl::ClientEnd<::fuchsia_io::Directory>> OpenServiceRoot(const char* path) {
+  return ::service::Connect<::fuchsia_io::Directory>(path);
 }
 
 namespace internal {
@@ -29,8 +29,8 @@ namespace internal {
   return ::zx::ok(std::move(client_end));
 }
 
-::zx::status<zx::channel> ConnectAtRaw(
-    ::fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_dir, const char* protocol_name) {
+::zx::status<zx::channel> ConnectAtRaw(::fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_dir,
+                                       const char* protocol_name) {
   ::zx::channel client_end, server_end;
   if (zx_status_t status = ::zx::channel::create(0, &client_end, &server_end); status != ZX_OK) {
     return ::zx::error(status);
@@ -64,7 +64,7 @@ namespace llcpp::sys {
 
 namespace {
 
-constexpr uint64_t kMaxFilename = ::llcpp::fuchsia::io::wire::MAX_FILENAME;
+constexpr uint64_t kMaxFilename = ::fuchsia_io::wire::MAX_FILENAME;
 
 // Max path length will be two path components, separated by a file separator.
 constexpr uint64_t kMaxPath = (2 * kMaxFilename) + 1;
@@ -99,17 +99,16 @@ namespace internal {
 
 ::zx::status<> DirectoryOpenFunc(::zx::unowned_channel dir, ::fidl::StringView path,
                                  ::zx::channel remote) {
-  constexpr uint32_t flags = ::llcpp::fuchsia::io::wire::OPEN_RIGHT_READABLE |
-                             ::llcpp::fuchsia::io::wire::OPEN_RIGHT_WRITABLE;
-  ::llcpp::fuchsia::io::Directory::ResultOf::Open result =
-      ::llcpp::fuchsia::io::Directory::Call::Open(dir, flags, uint32_t(0755), std::move(path),
-                                                  std::move(remote));
+  constexpr uint32_t flags =
+      ::fuchsia_io::wire::OPEN_RIGHT_READABLE | ::fuchsia_io::wire::OPEN_RIGHT_WRITABLE;
+  ::fuchsia_io::Directory::ResultOf::Open result = ::fuchsia_io::Directory::Call::Open(
+      dir, flags, uint32_t(0755), std::move(path), std::move(remote));
   return ::zx::make_status(result.status());
 }
 
 }  // namespace internal
 
-::zx::status<> OpenNamedServiceAt(::fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> dir,
+::zx::status<> OpenNamedServiceAt(::fidl::UnownedClientEnd<::fuchsia_io::Directory> dir,
                                   cpp17::string_view service, cpp17::string_view instance,
                                   ::zx::channel remote) {
   ::fidl::Array<char, kMaxPath> path_buffer;

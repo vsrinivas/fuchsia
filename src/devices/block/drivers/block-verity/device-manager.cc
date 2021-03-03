@@ -93,7 +93,7 @@ void DeviceManager::DdkRelease() { delete this; }
 
 zx_status_t DeviceManager::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::block::verified::DeviceManager::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_block_verified::DeviceManager::Dispatch(this, msg, &transaction);
   return ZX_ERR_ASYNC;
 }
 
@@ -161,7 +161,7 @@ void DeviceManager::DdkChildPreRelease(void* child_ctx) {
   }
 }
 
-void DeviceManager::OpenForWrite(llcpp::fuchsia::hardware::block::verified::wire::Config config,
+void DeviceManager::OpenForWrite(fuchsia_hardware_block_verified::wire::Config config,
                                  OpenForWriteCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
@@ -219,7 +219,7 @@ void DeviceManager::OpenForWrite(llcpp::fuchsia::hardware::block::verified::wire
 void DeviceManager::CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
-  llcpp::fuchsia::hardware::block::verified::wire::Seal seal;
+  fuchsia_hardware_block_verified::wire::Seal seal;
   if (state_ != kAuthoring) {
     async_completer.ReplyError(ZX_ERR_BAD_STATE);
     return;
@@ -243,13 +243,12 @@ void DeviceManager::OnSealCompleted(zx_status_t status, const uint8_t* seal_buf,
 
   if (status == ZX_OK) {
     // Assemble the result struct and reply with success
-    llcpp::fuchsia::hardware::block::verified::wire::Sha256Seal sha256;
+    fuchsia_hardware_block_verified::wire::Sha256Seal sha256;
     memcpy(sha256.superblock_hash.begin(), seal_buf, seal_len);
 
-    fidl::aligned<llcpp::fuchsia::hardware::block::verified::wire::Sha256Seal> aligned =
-        std::move(sha256);
-    seal_completer_->ReplySuccess(llcpp::fuchsia::hardware::block::verified::wire::Seal::WithSha256(
-        fidl::unowned_ptr(&aligned)));
+    fidl::aligned<fuchsia_hardware_block_verified::wire::Sha256Seal> aligned = std::move(sha256);
+    seal_completer_->ReplySuccess(
+        fuchsia_hardware_block_verified::wire::Seal::WithSha256(fidl::unowned_ptr(&aligned)));
   } else {
     zxlogf(WARNING, "Sealer returned failure: %s", zx_status_get_string(status));
     seal_completer_->ReplyError(status);
@@ -329,10 +328,9 @@ void DeviceManager::CompleteOpenForVerifiedRead(zx_status_t status) {
   superblock_verifier_.reset();
 }
 
-void DeviceManager::OpenForVerifiedRead(
-    llcpp::fuchsia::hardware::block::verified::wire::Config config,
-    llcpp::fuchsia::hardware::block::verified::wire::Seal seal,
-    OpenForVerifiedReadCompleter::Sync& completer) {
+void DeviceManager::OpenForVerifiedRead(fuchsia_hardware_block_verified::wire::Config config,
+                                        fuchsia_hardware_block_verified::wire::Seal seal,
+                                        OpenForVerifiedReadCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
   if (state_ != kClosed) {

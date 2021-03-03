@@ -48,7 +48,7 @@ void start_appmgr() {
     return;
   }
 
-  llcpp::fuchsia::appmgr::Startup::SyncClient client(std::move(local));
+  fuchsia_appmgr::Startup::SyncClient client(std::move(local));
   client.LaunchAppmgr();
 }
 
@@ -67,7 +67,7 @@ void start_session_manager() {
     return;
   }
 
-  llcpp::fuchsia::sessionmanager::Startup::SyncClient client(std::move(local));
+  fuchsia_sessionmanager::Startup::SyncClient client(std::move(local));
   client.LaunchSessionManager();
 }
 }  // namespace

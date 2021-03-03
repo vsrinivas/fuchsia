@@ -18,7 +18,7 @@
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
-namespace ram_metrics = ::llcpp::fuchsia::hardware::ram::metrics;
+namespace ram_metrics = ::fuchsia_hardware_ram_metrics;
 
 namespace amlogic_ram {
 

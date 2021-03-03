@@ -17,19 +17,18 @@ namespace {
 
 constexpr char kFshostAdminPath[] = "/svc/fuchsia.fshost.Admin";
 
-fidl::Client<llcpp::fuchsia::fshost::Admin> ConnectToFshostAdminServer(
-    async_dispatcher_t* dispatcher) {
+fidl::Client<fuchsia_fshost::Admin> ConnectToFshostAdminServer(async_dispatcher_t* dispatcher) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
-    return fidl::Client<llcpp::fuchsia::fshost::Admin>();
+    return fidl::Client<fuchsia_fshost::Admin>();
   }
   status = fdio_service_connect(kFshostAdminPath, remote.release());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to connect to fuchsia.fshost.Admin: %s", zx_status_get_string(status));
-    return fidl::Client<llcpp::fuchsia::fshost::Admin>();
+    return fidl::Client<fuchsia_fshost::Admin>();
   }
-  return fidl::Client<llcpp::fuchsia::fshost::Admin>(std::move(local), dispatcher);
+  return fidl::Client<fuchsia_fshost::Admin>(std::move(local), dispatcher);
 }
 
 void SuspendFallback(const zx::resource& root_resource, uint32_t flags) {
@@ -194,7 +193,7 @@ void SuspendHandler::ShutdownFilesystems(fit::callback<void(zx_status_t)> callba
   auto callback_ptr = std::make_shared<fit::callback<void(zx_status_t)>>(std::move(callback));
 
   auto result = fshost_admin_client_->Shutdown(
-      [callback_ptr](llcpp::fuchsia::fshost::Admin::ShutdownResponse* response) {
+      [callback_ptr](fuchsia_fshost::Admin::ShutdownResponse* response) {
         LOGF(INFO, "Successfully waited for VFS exit completion\n");
         if (*callback_ptr) {
           (*callback_ptr)(ZX_OK);

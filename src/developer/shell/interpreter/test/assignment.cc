@@ -25,7 +25,7 @@ TEST_F(InterpreterTest, AssignUnknown) {
   shell().ExecuteExecutionContext(context->id);
   Finish(kExecute);
 
-  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::ANALYSIS_ERROR, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->GetResult());
   std::string error_result = context->error_stream.str();
   ASSERT_EQ("node 1:1 Can't infer type for assignment's destination.\n", error_result);
 }
@@ -44,7 +44,7 @@ TEST_F(InterpreterTest, AssignConstant) {
   shell().ExecuteExecutionContext(context->id);
   Finish(kExecute);
 
-  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::ANALYSIS_ERROR, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->GetResult());
   std::string error_result = context->error_stream.str();
   ASSERT_EQ("node 1:3 Can't assign constant hello.\n", error_result);
 }
@@ -65,7 +65,7 @@ TEST_F(InterpreterTest, AssignString) {
   shell().ExecuteExecutionContext(context->id);
   Finish(kExecute);
 
-  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
 
   CHECK_RESULT(0, "\"not good\"");
   CHECK_RESULT(1, "\"now good\"");
@@ -94,7 +94,7 @@ TEST_F(InterpreterTest, AssignString) {
     shell().ExecuteExecutionContext(context->id);                                         \
     Finish(kExecute);                                                                     \
                                                                                           \
-    ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::OK, context->GetResult());      \
+    ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());              \
                                                                                           \
     CHECK_RESULT(0, #initial_value);                                                      \
     CHECK_RESULT(1, #modified_value);                                                     \
@@ -122,7 +122,7 @@ TEST_F(InterpreterTest, AssignObject) {
     std::vector<std::string> names{"alpha", "beta"};
     std::vector<shell::console::AstBuilder::NodeId> values{builder.AddIntegerLiteral(10, false),
                                                            builder.AddIntegerLiteral(20, false)};
-    std::vector<llcpp::fuchsia::shell::wire::ShellType> types;
+    std::vector<fuchsia_shell::wire::ShellType> types;
     types.emplace_back(builder.TypeUint64());
     types.emplace_back(builder.TypeUint64());
     shell::console::AstBuilder::NodePair object_pair =
@@ -136,7 +136,7 @@ TEST_F(InterpreterTest, AssignObject) {
     std::vector<std::string> names{"alpha", "beta"};
     std::vector<shell::console::AstBuilder::NodeId> values{builder.AddIntegerLiteral(4, false),
                                                            builder.AddIntegerLiteral(5, false)};
-    std::vector<llcpp::fuchsia::shell::wire::ShellType> types;
+    std::vector<fuchsia_shell::wire::ShellType> types;
     types.emplace_back(builder.TypeUint64());
     types.emplace_back(builder.TypeUint64());
     shell::console::AstBuilder::NodePair object_pair =
@@ -149,7 +149,7 @@ TEST_F(InterpreterTest, AssignObject) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(llcpp::fuchsia::shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
 
   CHECK_RESULT(0, "{alpha: uint64(10), beta: uint64(20)}");
   CHECK_RESULT(1, "{alpha: uint64(4), beta: uint64(5)}");

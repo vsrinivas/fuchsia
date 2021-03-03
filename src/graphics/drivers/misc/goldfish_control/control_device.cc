@@ -216,7 +216,7 @@ zx_status_t Control::InitAddressSpaceDeviceLocked() {
   }
 
   address_space_child_ =
-      std::make_unique<llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::SyncClient>(
+      std::make_unique<fuchsia_hardware_goldfish::AddressSpaceChildDriver::SyncClient>(
           std::move(address_space_child_client));
 
   return ZX_OK;
@@ -242,13 +242,12 @@ zx_status_t Control::InitSyncDeviceLocked() {
     return status;
   }
 
-  sync_timeline_ = std::make_unique<llcpp::fuchsia::hardware::goldfish::SyncTimeline::SyncClient>(
+  sync_timeline_ = std::make_unique<fuchsia_hardware_goldfish::SyncTimeline::SyncClient>(
       std::move(timeline_client));
   return ZX_OK;
 }
 
-zx_status_t Control::RegisterAndBindHeap(llcpp::fuchsia::sysmem2::wire::HeapType heap_type,
-                                         Heap* heap) {
+zx_status_t Control::RegisterAndBindHeap(fuchsia_sysmem2::wire::HeapType heap_type, Heap* heap) {
   zx::channel heap_request, heap_connection;
   zx_status_t status = zx::channel::create(0, &heap_request, &heap_connection);
   if (status != ZX_OK) {
@@ -289,14 +288,14 @@ zx_status_t Control::Bind() {
   std::unique_ptr<DeviceLocalHeap> device_local_heap = DeviceLocalHeap::Create(this);
   DeviceLocalHeap* device_local_heap_ptr = device_local_heap.get();
   heaps_.push_back(std::move(device_local_heap));
-  RegisterAndBindHeap(llcpp::fuchsia::sysmem2::wire::HeapType::GOLDFISH_DEVICE_LOCAL,
+  RegisterAndBindHeap(fuchsia_sysmem2::wire::HeapType::GOLDFISH_DEVICE_LOCAL,
                       device_local_heap_ptr);
 
   // Serve goldfish host-visible heap allocations.
   std::unique_ptr<HostVisibleHeap> host_visible_heap = HostVisibleHeap::Create(this);
   HostVisibleHeap* host_visible_heap_ptr = host_visible_heap.get();
   heaps_.push_back(std::move(host_visible_heap));
-  RegisterAndBindHeap(llcpp::fuchsia::sysmem2::wire::HeapType::GOLDFISH_HOST_VISIBLE,
+  RegisterAndBindHeap(fuchsia_sysmem2::wire::HeapType::GOLDFISH_HOST_VISIBLE,
                       host_visible_heap_ptr);
 
   return DdkAdd(ddk::DeviceAddArgs("goldfish-control").set_proto_id(ZX_PROTOCOL_GOLDFISH_CONTROL));
@@ -330,8 +329,8 @@ void Control::FreeBufferHandle(uint64_t id) {
 }
 
 Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
-    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params create_params) {
-  using llcpp::fuchsia::hardware::goldfish::ControlDevice;
+    zx::vmo vmo, fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params) {
+  using fuchsia_hardware_goldfish::ControlDevice;
 
   // Check argument validity.
   if (!create_params.has_width() || !create_params.has_height() || !create_params.has_format() ||
@@ -342,7 +341,7 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
     return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_ERR_INVALID_ARGS, -1));
   }
   if ((create_params.memory_property() &
-       llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE) &&
+       fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE) &&
       !create_params.has_physical_address()) {
     zxlogf(ERROR, "%s: invalid arguments: memory_property %d, no physical address\n", kTag,
            create_params.memory_property());
@@ -391,7 +390,7 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
 
   int32_t hw_address_page_offset = -1;
   if (create_params.memory_property() &
-      llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE) {
+      fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE) {
     uint64_t vmo_size;
     status = vmo.get_size(&vmo_size);
     if (status != ZX_OK) {
@@ -412,14 +411,14 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
   close_color_buffer.cancel();
   it->second = id;
   buffer_handle_info_[id] = {
-      .type = llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::COLOR_BUFFER,
+      .type = fuchsia_hardware_goldfish::wire::BufferHandleType::COLOR_BUFFER,
       .memory_property = create_params.memory_property()};
 
   return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_OK, hw_address_page_offset));
 }
 
 void Control::CreateColorBuffer2(
-    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::wire::CreateColorBuffer2Params create_params,
+    zx::vmo vmo, fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params,
     CreateColorBuffer2Completer::Sync& completer) {
   auto result = CreateColorBuffer2(std::move(vmo), std::move(create_params));
   if (result.is_ok()) {
@@ -430,10 +429,10 @@ void Control::CreateColorBuffer2(
 }
 
 Control::CreateBuffer2Result Control::CreateBuffer2(
-    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params create_params) {
-  using llcpp::fuchsia::hardware::goldfish::ControlDevice;
-  using llcpp::fuchsia::hardware::goldfish::wire::ControlDevice_CreateBuffer2_Response;
-  using llcpp::fuchsia::hardware::goldfish::wire::ControlDevice_CreateBuffer2_Result;
+    zx::vmo vmo, fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params) {
+  using fuchsia_hardware_goldfish::ControlDevice;
+  using fuchsia_hardware_goldfish::wire::ControlDevice_CreateBuffer2_Response;
+  using fuchsia_hardware_goldfish::wire::ControlDevice_CreateBuffer2_Result;
 
   // Check argument validity.
   if (!create_params.has_size() || !create_params.has_memory_property()) {
@@ -443,7 +442,7 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
         std::make_unique<zx_status_t>(ZX_ERR_INVALID_ARGS)));
   }
   if ((create_params.memory_property() &
-       llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE) &&
+       fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE) &&
       !create_params.has_physical_address()) {
     zxlogf(ERROR, "%s: invalid arguments: memory_property %d, no physical address\n", kTag,
            create_params.memory_property());
@@ -486,7 +485,7 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
 
   int32_t hw_address_page_offset = -1;
   if (create_params.memory_property() &
-      llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE) {
+      fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE) {
     uint64_t vmo_size;
     status = vmo.get_size(&vmo_size);
     if (status != ZX_OK) {
@@ -506,18 +505,17 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
 
   close_buffer.cancel();
   it->second = id;
-  buffer_handle_info_[id] = {
-      .type = llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::BUFFER,
-      .memory_property = create_params.memory_property()};
+  buffer_handle_info_[id] = {.type = fuchsia_hardware_goldfish::wire::BufferHandleType::BUFFER,
+                             .memory_property = create_params.memory_property()};
 
   return fit::ok(ControlDevice_CreateBuffer2_Result::WithResponse(
       std::make_unique<ControlDevice_CreateBuffer2_Response>(
           ControlDevice_CreateBuffer2_Response{.hw_address_page_offset = hw_address_page_offset})));
 }
 
-void Control::CreateBuffer2(
-    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params create_params,
-    CreateBuffer2Completer::Sync& completer) {
+void Control::CreateBuffer2(zx::vmo vmo,
+                            fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params,
+                            CreateBuffer2Completer::Sync& completer) {
   auto result = CreateBuffer2(std::move(vmo), std::move(create_params));
   if (result.is_ok()) {
     completer.Reply(result.take_value());
@@ -545,7 +543,7 @@ void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& compl
   }
 
   uint32_t handle = kInvalidBufferHandle;
-  auto handle_type = llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::INVALID;
+  auto handle_type = fuchsia_hardware_goldfish::wire::BufferHandleType::INVALID;
 
   fbl::AutoLock lock(&lock_);
 
@@ -574,9 +572,9 @@ void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& compl
 }
 
 void Control::GetBufferHandleInfo(zx::vmo vmo, GetBufferHandleInfoCompleter::Sync& completer) {
-  using llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType;
-  using llcpp::fuchsia::hardware::goldfish::wire::ControlDevice_GetBufferHandleInfo_Response;
-  using llcpp::fuchsia::hardware::goldfish::wire::ControlDevice_GetBufferHandleInfo_Result;
+  using fuchsia_hardware_goldfish::wire::BufferHandleType;
+  using fuchsia_hardware_goldfish::wire::ControlDevice_GetBufferHandleInfo_Response;
+  using fuchsia_hardware_goldfish::wire::ControlDevice_GetBufferHandleInfo_Result;
 
   TRACE_DURATION("gfx", "Control::FidlGetBufferHandleInfo");
 
@@ -611,8 +609,8 @@ void Control::GetBufferHandleInfo(zx::vmo vmo, GetBufferHandleInfoCompleter::Syn
 
   ControlDevice_GetBufferHandleInfo_Response response;
   auto builder =
-      llcpp::fuchsia::hardware::goldfish::wire::BufferHandleInfo::Builder(
-          std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::BufferHandleInfo::Frame>())
+      fuchsia_hardware_goldfish::wire::BufferHandleInfo::Builder(
+          std::make_unique<fuchsia_hardware_goldfish::wire::BufferHandleInfo::Frame>())
           .set_id(std::make_unique<uint32_t>(handle))
           .set_memory_property(std::make_unique<uint32_t>(it_types->second.memory_property))
           .set_type(std::make_unique<BufferHandleType>(it_types->second.type));
@@ -630,7 +628,7 @@ void Control::DdkRelease() { delete this; }
 
 zx_status_t Control::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::goldfish::ControlDevice::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_goldfish::ControlDevice::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 
@@ -743,10 +741,9 @@ zx_status_t Control::ReadResultLocked(void* result, size_t size) {
     ZX_DEBUG_ASSERT(!buffer->status);
 
     // Wait for pipe to become readable.
-    zx_status_t status =
-        pipe_event_.wait_one(llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_HANGUP |
-                                 llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_READABLE,
-                             zx::time::infinite(), nullptr);
+    zx_status_t status = pipe_event_.wait_one(fuchsia_hardware_goldfish::wire::SIGNAL_HANGUP |
+                                                  fuchsia_hardware_goldfish::wire::SIGNAL_READABLE,
+                                              zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
       if (status != ZX_ERR_CANCELED) {
         zxlogf(ERROR, "%s: zx_object_wait_one failed: %d", kTag, status);
@@ -793,10 +790,10 @@ void Control::CloseBufferOrColorBufferLocked(uint32_t id) {
   ZX_DEBUG_ASSERT(buffer_handle_info_.find(id) != buffer_handle_info_.end());
   auto buffer_type = buffer_handle_info_.at(id).type;
   switch (buffer_type) {
-    case llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::BUFFER:
+    case fuchsia_hardware_goldfish::wire::BufferHandleType::BUFFER:
       CloseBufferLocked(id);
       break;
-    case llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::COLOR_BUFFER:
+    case fuchsia_hardware_goldfish::wire::BufferHandleType::COLOR_BUFFER:
       CloseColorBufferLocked(id);
       break;
     default:

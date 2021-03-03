@@ -30,7 +30,7 @@
 #include "silence_generator.h"
 
 namespace {
-namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
+namespace audio_fidl = ::fuchsia_hardware_audio;
 }  // namespace
 
 namespace audio::intel_hda {

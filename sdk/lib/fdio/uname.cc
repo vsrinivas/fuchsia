@@ -19,8 +19,8 @@
 #include "fdio_unistd.h"
 #include "internal.h"
 
-static zx_status_t get_name_provider(llcpp::fuchsia::device::NameProvider::SyncClient** out) {
-  static llcpp::fuchsia::device::NameProvider::SyncClient* saved;
+static zx_status_t get_name_provider(fuchsia_device::NameProvider::SyncClient** out) {
+  static fuchsia_device::NameProvider::SyncClient* saved;
 
   {
     static std::once_flag once;
@@ -31,12 +31,11 @@ static zx_status_t get_name_provider(llcpp::fuchsia::device::NameProvider::SyncC
       if (status != ZX_OK) {
         return;
       }
-      status = fdio_service_connect_by_name(llcpp::fuchsia::device::NameProvider::Name,
-                                            request.release());
+      status = fdio_service_connect_by_name(fuchsia_device::NameProvider::Name, request.release());
       if (status != ZX_OK) {
         return;
       }
-      static llcpp::fuchsia::device::NameProvider::SyncClient client(std::move(out));
+      static fuchsia_device::NameProvider::SyncClient client(std::move(out));
       saved = &client;
     });
     if (status != ZX_OK) {
@@ -54,7 +53,7 @@ extern "C" __EXPORT int uname(utsname* uts) {
   }
 
   // Avoid overwriting caller's memory until after all fallible operations have succeeded.
-  llcpp::fuchsia::device::NameProvider::SyncClient* name_provider;
+  fuchsia_device::NameProvider::SyncClient* name_provider;
   zx_status_t status = get_name_provider(&name_provider);
   if (status != ZX_OK) {
     return ERROR(status);

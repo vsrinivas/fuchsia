@@ -30,7 +30,7 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 namespace fs {
 
@@ -110,8 +110,7 @@ void DirectoryConnection::GetAttr(GetAttrCompleter::Sync& completer) {
   }
 }
 
-void DirectoryConnection::SetAttr(uint32_t flags,
-                                  ::llcpp::fuchsia::io::wire::NodeAttributes attributes,
+void DirectoryConnection::SetAttr(uint32_t flags, ::fuchsia_io::wire::NodeAttributes attributes,
                                   SetAttrCompleter::Sync& completer) {
   auto result = Connection::NodeSetAttr(flags, attributes);
   if (result.is_error()) {
@@ -356,7 +355,7 @@ void DirectoryConnection::UnmountNode(UnmountNodeCompleter::Sync& completer) {
     completer.Reply(ZX_ERR_ACCESS_DENIED, zx::channel());
     return;
   }
-  fidl::ClientEnd<llcpp::fuchsia::io::Directory> c;
+  fidl::ClientEnd<fuchsia_io::Directory> c;
   zx_status_t status = vfs()->UninstallRemote(vnode(), &c);
   completer.Reply(status, std::move(c));
 }

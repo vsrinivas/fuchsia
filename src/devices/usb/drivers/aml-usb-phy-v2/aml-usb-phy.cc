@@ -358,7 +358,7 @@ zx_status_t AmlUsbPhy::Init() {
   }
   reset_register.Connect(std::move(register_server_end));
   reset_register_ =
-      ::llcpp::fuchsia::hardware::registers::Device::SyncClient(std::move(register_client_end));
+      ::fuchsia_hardware_registers::Device::SyncClient(std::move(register_client_end));
 
   size_t actual;
   status = DdkGetMetadata(DEVICE_METADATA_PRIVATE, pll_settings_, sizeof(pll_settings_), &actual);

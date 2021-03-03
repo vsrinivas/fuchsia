@@ -90,8 +90,8 @@ zx::status<> As370Partitioner::ValidatePayload(const PartitionSpec& spec,
 }
 
 zx::status<std::unique_ptr<DevicePartitioner>> As370PartitionerFactory::New(
-    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
-    Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root, Arch arch,
+    std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return As370Partitioner::Initialize(std::move(devfs_root));
 }
 

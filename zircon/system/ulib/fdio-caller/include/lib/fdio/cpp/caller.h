@@ -77,18 +77,18 @@ class FdioCaller {
   zx::unowned_channel channel() const { return zx::unowned_channel(borrow_channel()); }
 
   // Same as borrow_channel, but wrapped as a fuchsia.io/Node client channel.
-  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Node> node() const {
-    return borrow_as<::llcpp::fuchsia::io::Node>();
+  fidl::UnownedClientEnd<::fuchsia_io::Node> node() const {
+    return borrow_as<::fuchsia_io::Node>();
   }
 
   // Same as borrow_channel, but wrapped as a fuchsia.io/File client channel.
-  fidl::UnownedClientEnd<::llcpp::fuchsia::io::File> file() const {
-    return borrow_as<::llcpp::fuchsia::io::File>();
+  fidl::UnownedClientEnd<::fuchsia_io::File> file() const {
+    return borrow_as<::fuchsia_io::File>();
   }
 
   // Same as borrow_channel, but wrapped as a fuchsia.io/Directory client channel.
-  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> directory() const {
-    return borrow_as<::llcpp::fuchsia::io::Directory>();
+  fidl::UnownedClientEnd<::fuchsia_io::Directory> directory() const {
+    return borrow_as<::fuchsia_io::Directory>();
   }
 
   // Same as borrow_channel but wrapped in a typed client channel.
@@ -135,18 +135,18 @@ class UnownedFdioCaller {
   zx::unowned_channel channel() const { return zx::unowned_channel(borrow_channel()); }
 
   // Same as borrow_channel, but wrapped as a fuchsia.io/Node client channel.
-  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Node> node() const {
-    return borrow_as<::llcpp::fuchsia::io::Node>();
+  fidl::UnownedClientEnd<::fuchsia_io::Node> node() const {
+    return borrow_as<::fuchsia_io::Node>();
   }
 
   // Same as borrow_channel, but wrapped as a fuchsia.io/File client channel.
-  fidl::UnownedClientEnd<::llcpp::fuchsia::io::File> file() const {
-    return borrow_as<::llcpp::fuchsia::io::File>();
+  fidl::UnownedClientEnd<::fuchsia_io::File> file() const {
+    return borrow_as<::fuchsia_io::File>();
   }
 
   // Same as borrow_channel, but wrapped as a fuchsia.io/Directory client channel.
-  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> directory() const {
-    return borrow_as<::llcpp::fuchsia::io::Directory>();
+  fidl::UnownedClientEnd<::fuchsia_io::Directory> directory() const {
+    return borrow_as<::fuchsia_io::Directory>();
   }
 
   // Same as borrow_channel but wrapped in a typed client channel.

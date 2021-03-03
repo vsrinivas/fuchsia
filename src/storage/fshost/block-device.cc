@@ -131,7 +131,7 @@ int OpenVerityDeviceThread(void* arg) {
 
 std::string GetTopologicalPath(int fd) {
   fdio_cpp::UnownedFdioCaller disk_connection(fd);
-  auto resp = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
+  auto resp = fuchsia_device::Controller::Call::GetTopologicalPath(
       zx::unowned_channel(disk_connection.borrow_channel()));
   if (resp.status() != ZX_OK) {
     FX_LOGS(WARNING) << "Unable to get topological path (fidl error): "
@@ -174,7 +174,7 @@ const std::string& BlockDevice::partition_name() const {
   // The block device might not support the partition protocol in which case the connection will be
   // closed, so clone the channel in case that happens.
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
-  fidl::ClientEnd<llcpp::fuchsia::hardware::block::partition::Partition> channel(
+  fidl::ClientEnd<fuchsia_hardware_block_partition::Partition> channel(
       zx::channel(fdio_service_clone(connection.borrow_channel())));
   auto resp = fidl::BindSyncClient(std::move(channel)).GetName();
   if (resp.status() != ZX_OK) {
@@ -253,9 +253,9 @@ zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
   FX_LOGS(INFO) << "Binding: " << driver;
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
   zx_status_t call_status = ZX_OK;
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
-      zx::unowned_channel(connection.borrow_channel()),
-      ::fidl::unowned_str(driver.data(), driver.length()));
+  auto resp =
+      ::fuchsia_device::Controller::Call::Bind(zx::unowned_channel(connection.borrow_channel()),
+                                               ::fidl::unowned_str(driver.data(), driver.length()));
   zx_status_t io_status = resp.status();
   if (io_status != ZX_OK) {
     return io_status;

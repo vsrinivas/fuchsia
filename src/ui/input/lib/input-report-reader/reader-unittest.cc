@@ -266,7 +266,7 @@ TEST_F(InputReportReaderTests, ReadInputReportsHangingGetTest) {
   async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
 
   // Get an async InputReportsReader.
-  fidl::Client<llcpp::fuchsia::input::report::InputReportsReader> reader;
+  fidl::Client<fuchsia_input_report::InputReportsReader> reader;
   {
     zx::channel server, client;
     ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
@@ -277,7 +277,7 @@ TEST_F(InputReportReaderTests, ReadInputReportsHangingGetTest) {
 
   // Read the report. This will hang until a report is sent.
   auto status = reader->ReadInputReports(
-      [&](::llcpp::fuchsia::input::report::InputReportsReader::ReadInputReportsResponse* response) {
+      [&](::fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* response) {
         ASSERT_FALSE(response->result.is_err());
         auto& reports = response->result.response().reports;
         ASSERT_EQ(1, reports.count());
@@ -310,7 +310,7 @@ TEST_F(InputReportReaderTests, CloseReaderWithOutstandingRead) {
   async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
 
   // Get an async InputReportsReader.
-  fidl::Client<llcpp::fuchsia::input::report::InputReportsReader> reader;
+  fidl::Client<fuchsia_input_report::InputReportsReader> reader;
   {
     zx::channel server, client;
     ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
@@ -321,7 +321,7 @@ TEST_F(InputReportReaderTests, CloseReaderWithOutstandingRead) {
 
   // Queue a read.
   auto status = reader->ReadInputReports(
-      [&](::llcpp::fuchsia::input::report::InputReportsReader::ReadInputReportsResponse* response) {
+      [&](::fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* response) {
         ASSERT_TRUE(response->result.is_err());
       });
   ASSERT_OK(status.status());

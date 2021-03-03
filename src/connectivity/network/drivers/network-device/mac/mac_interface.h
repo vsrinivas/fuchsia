@@ -26,9 +26,9 @@ namespace network {
 
 constexpr mode_t kSupportedModesMask =
     MODE_PROMISCUOUS | MODE_MULTICAST_PROMISCUOUS | MODE_MULTICAST_FILTER;
-using MacAddress = llcpp::fuchsia::net::wire::MacAddress;
+using MacAddress = fuchsia_net::wire::MacAddress;
 
-namespace netdev = llcpp::fuchsia::hardware::network;
+namespace netdev = fuchsia_hardware_network;
 
 namespace internal {
 

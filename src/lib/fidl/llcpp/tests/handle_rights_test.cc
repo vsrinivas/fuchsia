@@ -12,7 +12,7 @@
 #include <gtest/gtest.h>
 #include <llcpptest/handlerights/test/llcpp/fidl.h>
 
-namespace test = ::llcpp::llcpptest::handlerights::test;
+namespace test = ::llcpptest_handlerights_test;
 
 class HandleRightsServer : public test::HandleRights::Interface {
  public:

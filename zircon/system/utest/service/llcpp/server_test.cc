@@ -22,8 +22,8 @@
 
 namespace {
 
-using Echo = ::llcpp::fidl::service::test::Echo;
-using EchoService = ::llcpp::fidl::service::test::EchoService;
+using Echo = ::fidl_service_test::Echo;
+using EchoService = ::fidl_service_test::EchoService;
 
 class EchoCommon : public Echo::Interface {
  public:

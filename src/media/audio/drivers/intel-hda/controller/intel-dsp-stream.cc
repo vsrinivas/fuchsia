@@ -15,7 +15,7 @@
 #include "intel-dsp.h"
 
 namespace {
-namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
+namespace audio_fidl = ::fuchsia_hardware_audio;
 }  // namespace
 
 namespace audio {
@@ -58,9 +58,7 @@ void IntelDspStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
   auto [client, server] = *std::move(endpoints);
   fidl::OnUnboundFn<audio_fidl::RingBuffer::Interface> on_unbound =
       [this](audio_fidl::RingBuffer::Interface*, fidl::UnbindInfo,
-             fidl::ServerEnd<llcpp::fuchsia::hardware::audio::RingBuffer>) {
-        ring_buffer_.reset();
-      };
+             fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer>) { ring_buffer_.reset(); };
 
   fidl::BindServer<audio_fidl::RingBuffer::Interface>(dispatcher(), std::move(ring_buffer), this,
                                                       std::move(on_unbound));

@@ -53,7 +53,7 @@ uint64_t MinfsProperties::FsBytesToBlocks(uint64_t bytes) const {
 
 // Update total_calls and bytes_transferred stats.
 void MinfsProperties::AddIoStats(uint64_t total_calls, uint64_t blocks_transferred,
-                                 llcpp::fuchsia::storage::metrics::wire::CallStat* out) const {
+                                 fuchsia_storage_metrics::wire::CallStat* out) const {
   out->success.total_calls += total_calls;
   out->success.bytes_transferred += FsBlockToBytes(blocks_transferred);
 }

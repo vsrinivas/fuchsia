@@ -41,7 +41,7 @@ class USBVirtualBusQmi : public usb_virtual_bus::USBVirtualBusBase {
 };
 
 void USBVirtualBusQmi::InitUsbQmi(fbl::String* devpath) {
-  namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
+  namespace usb_peripheral = ::fuchsia_hardware_usb_peripheral;
   usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);
   device_desc.b_device_class = 0;
@@ -101,7 +101,7 @@ TEST_F(UsbQmiTest, RequestImei) {
   // set QMI channel to driver
   zx::channel channel_local, channel_remote;
   ASSERT_EQ(zx::channel::create(0, &channel_local, &channel_remote), ZX_OK);
-  auto result = llcpp::fuchsia::hardware::telephony::transport::Qmi::Call::SetChannel(
+  auto result = fuchsia_hardware_telephony_transport::Qmi::Call::SetChannel(
       qmi_fdio_caller_.channel(), std::move(channel_remote));
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->result.is_err(), false);

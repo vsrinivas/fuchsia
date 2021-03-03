@@ -23,7 +23,7 @@ namespace x86 {
 
 // This is the main class for the X86 platform bus driver.
 class X86 : public ddk::Device<X86, ddk::Messageable>,
-            public ::llcpp::fuchsia::hardware::acpi::Acpi::Interface {
+            public ::fuchsia_hardware_acpi::Acpi::Interface {
  public:
   explicit X86(zx_device_t* parent, pbus_protocol_t* pbus, zx_device_t* sys_root)
       : ddk::Device<X86, ddk::Messageable>(parent), pbus_(pbus), sys_root_(sys_root) {}
@@ -50,8 +50,7 @@ class X86 : public ddk::Device<X86, ddk::Messageable>,
   // Add the list of ACPI entries present in the system to |entries|.
   //
   // Requires that ACPI has been initialised.
-  zx_status_t GetAcpiTableEntries(
-      fbl::Vector<::llcpp::fuchsia::hardware::acpi::wire::TableInfo>* entries);
+  zx_status_t GetAcpiTableEntries(fbl::Vector<::fuchsia_hardware_acpi::wire::TableInfo>* entries);
 
  private:
   X86(const X86&) = delete;

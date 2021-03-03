@@ -13,11 +13,10 @@
 
 #include "src/devices/sysmem/tests/sysmem/fuzz/sysmem_fuzz_common.h"
 
-using BufferCollectionConstraints =
-    FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-               llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints>;
-using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                                        llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>;
+using BufferCollectionConstraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
+                                               fuchsia_sysmem::wire::BufferCollectionConstraints>;
+using BufferCollectionInfo =
+    FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2, fuchsia_sysmem::wire::BufferCollectionInfo_2>;
 
 #define DBGRTN 0
 

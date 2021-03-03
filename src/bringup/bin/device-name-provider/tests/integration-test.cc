@@ -18,13 +18,13 @@ namespace {
 TEST(NameProviderTest, GetHostNameDefault) {
   char hostname[HOST_NAME_MAX];
   ASSERT_EQ(gethostname(hostname, sizeof(hostname)), 0) << strerror(errno);
-  ASSERT_STREQ(hostname, llcpp::fuchsia::device::wire::DEFAULT_DEVICE_NAME);
+  ASSERT_STREQ(hostname, fuchsia_device::wire::DEFAULT_DEVICE_NAME);
 }
 
 TEST(NameProviderTest, UnameDefault) {
   utsname uts;
   ASSERT_EQ(uname(&uts), 0) << strerror(errno);
-  ASSERT_STREQ(uts.nodename, llcpp::fuchsia::device::wire::DEFAULT_DEVICE_NAME);
+  ASSERT_STREQ(uts.nodename, fuchsia_device::wire::DEFAULT_DEVICE_NAME);
 }
 
 TEST(NameProviderTest, GetDeviceName) {
@@ -33,11 +33,11 @@ TEST(NameProviderTest, GetDeviceName) {
 
   ASSERT_EQ(status = zx::channel::create(0, &c0, &c1), ZX_OK) << zx_status_get_string(status);
   ASSERT_EQ(status = sys::ServiceDirectory::CreateFromNamespace()->Connect(
-                llcpp::fuchsia::device::NameProvider::Name, std::move(c1)),
+                fuchsia_device::NameProvider::Name, std::move(c1)),
             ZX_OK)
       << zx_status_get_string(status);
 
-  llcpp::fuchsia::device::NameProvider::SyncClient name_provider(std::move(c0));
+  fuchsia_device::NameProvider::SyncClient name_provider(std::move(c0));
   auto response = name_provider.GetDeviceName();
   ASSERT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
   auto result = std::move(response.Unwrap()->result);
@@ -46,8 +46,8 @@ TEST(NameProviderTest, GetDeviceName) {
   auto& name = result.response().name;
 
   // regression test: ensure that no additional data is present past the last null byte
-  EXPECT_EQ(name.size(), strlen(llcpp::fuchsia::device::wire::DEFAULT_DEVICE_NAME));
-  EXPECT_EQ(memcmp(name.data(), llcpp::fuchsia::device::wire::DEFAULT_DEVICE_NAME, name.size()), 0);
+  EXPECT_EQ(name.size(), strlen(fuchsia_device::wire::DEFAULT_DEVICE_NAME));
+  EXPECT_EQ(memcmp(name.data(), fuchsia_device::wire::DEFAULT_DEVICE_NAME, name.size()), 0);
 }
 
 }  // namespace

@@ -19,10 +19,10 @@
 #include "usb-virtual-bus-helper.h"
 
 namespace usb_virtual_bus {
-using llcpp::fuchsia::hardware::usb::peripheral::wire::DeviceDescriptor;
-using llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor;
+using fuchsia_hardware_usb_peripheral::wire::DeviceDescriptor;
+using fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor;
 using ConfigurationDescriptor =
-    ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::wire::FunctionDescriptor>;
+    ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
 
 class USBVirtualBusBase {
  public:
@@ -33,19 +33,15 @@ class USBVirtualBusBase {
   void ClearPeripheralDeviceFunctions();
   int GetRootFd();
   fbl::unique_fd& devfs_root() { return devfs_; };
-  llcpp::fuchsia::hardware::usb::peripheral::Device::SyncClient& peripheral() {
-    return peripheral_.value();
-  }
-  llcpp::fuchsia::hardware::usb::virtual_::bus::Bus::SyncClient& virtual_bus() {
-    return virtual_bus_.value();
-  }
+  fuchsia_hardware_usb_peripheral::Device::SyncClient& peripheral() { return peripheral_.value(); }
+  fuchsia_hardware_usb_virtual_bus::Bus::SyncClient& virtual_bus() { return virtual_bus_.value(); }
 
  private:
   fbl::unique_fd devfs_;
   std::shared_ptr<sys::ServiceDirectory> services_;
   fidl::InterfacePtr<fuchsia::sys::ComponentController> ctlr_;
-  std::optional<llcpp::fuchsia::hardware::usb::peripheral::Device::SyncClient> peripheral_;
-  std::optional<llcpp::fuchsia::hardware::usb::virtual_::bus::Bus::SyncClient> virtual_bus_;
+  std::optional<fuchsia_hardware_usb_peripheral::Device::SyncClient> peripheral_;
+  std::optional<fuchsia_hardware_usb_virtual_bus::Bus::SyncClient> virtual_bus_;
   DISALLOW_COPY_ASSIGN_AND_MOVE(USBVirtualBusBase);
 };
 

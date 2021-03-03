@@ -9,37 +9,37 @@
 // The pty server half only supports OpenClient and SetWindowSize. Return ZX_ERR_NOT_SUPPORTED for
 // all of the others
 
-void PtyServerDevice::SetWindowSize(::llcpp::fuchsia::hardware::pty::wire::WindowSize size,
+void PtyServerDevice::SetWindowSize(::fuchsia_hardware_pty::wire::WindowSize size,
                                     SetWindowSizeCompleter::Sync& completer) {
-  fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::SetWindowSizeResponse> buf;
+  fidl::Buffer<::fuchsia_hardware_pty::Device::SetWindowSizeResponse> buf;
   server_->set_window_size({.width = size.width, .height = size.height});
   completer.Reply(buf.view(), ZX_OK);
 }
 void PtyServerDevice::OpenClient(uint32_t id, zx::channel client,
                                  OpenClientCompleter::Sync& completer) {
-  fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::OpenClientResponse> buf;
+  fidl::Buffer<::fuchsia_hardware_pty::Device::OpenClientResponse> buf;
   completer.Reply(buf.view(), server_->CreateClient(id, std::move(client)));
 }
 
 void PtyServerDevice::ClrSetFeature(uint32_t clr, uint32_t set,
                                     ClrSetFeatureCompleter::Sync& completer) {
-  fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::ClrSetFeatureResponse> buf;
+  fidl::Buffer<::fuchsia_hardware_pty::Device::ClrSetFeatureResponse> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, 0);
 }
 
 void PtyServerDevice::GetWindowSize(GetWindowSizeCompleter::Sync& completer) {
-  fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::GetWindowSizeResponse> buf;
-  ::llcpp::fuchsia::hardware::pty::wire::WindowSize wsz = {.width = 0, .height = 0};
+  fidl::Buffer<::fuchsia_hardware_pty::Device::GetWindowSizeResponse> buf;
+  ::fuchsia_hardware_pty::wire::WindowSize wsz = {.width = 0, .height = 0};
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, wsz);
 }
 
 void PtyServerDevice::MakeActive(uint32_t client_pty_id, MakeActiveCompleter::Sync& completer) {
-  fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::MakeActiveResponse> buf;
+  fidl::Buffer<::fuchsia_hardware_pty::Device::MakeActiveResponse> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
 }
 
 void PtyServerDevice::ReadEvents(ReadEventsCompleter::Sync& completer) {
-  fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::ReadEventsResponse> buf;
+  fidl::Buffer<::fuchsia_hardware_pty::Device::ReadEventsResponse> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, 0);
 }
 
@@ -72,7 +72,7 @@ void PtyServerDevice::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Seek(int64_t offset, ::llcpp::fuchsia::io::wire::SeekOrigin start,
+void PtyServerDevice::Seek(int64_t offset, ::fuchsia_io::wire::SeekOrigin start,
                            SeekCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
@@ -91,7 +91,7 @@ void PtyServerDevice::GetBuffer(uint32_t flags, GetBufferCompleter::Sync& comple
 
 void PtyServerDevice::Sync(SyncCompleter::Sync& completer) { ZX_ASSERT(false); }
 
-void PtyServerDevice::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::wire::NodeAttributes attributes,
+void PtyServerDevice::SetAttr(uint32_t flags, ::fuchsia_io::wire::NodeAttributes attributes,
                               SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

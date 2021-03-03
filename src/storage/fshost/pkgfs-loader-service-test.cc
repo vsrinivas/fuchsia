@@ -16,12 +16,12 @@ namespace {
 
 using namespace loader::test;
 
-namespace fldsvc = ::llcpp::fuchsia::ldsvc;
+namespace fldsvc = ::fuchsia_ldsvc;
 
 // Create a subclass to access the test-only constructor on FshostBootArgs.
 class FshostBootArgsForTest : public FshostBootArgs {
  public:
-  explicit FshostBootArgsForTest(llcpp::fuchsia::boot::Arguments::SyncClient boot_args)
+  explicit FshostBootArgsForTest(fuchsia_boot::Arguments::SyncClient boot_args)
       : FshostBootArgs(std::move(boot_args)) {}
 };
 
@@ -34,7 +34,7 @@ class PkgfsLoaderServiceTest : public LoaderServiceTest {
     ASSERT_NO_FATAL_FAILURE(CreateTestDirectory(std::move(blobfs_config), &blobfs_fd));
 
     boot_args_server_ = mock_boot_arguments::Server{std::move(boot_args_config)};
-    llcpp::fuchsia::boot::Arguments::SyncClient client;
+    fuchsia_boot::Arguments::SyncClient client;
     // We can run the mock boot args server on the same loop as the memfs directory, since they
     // don't interact. The loop was already started by CreateTestDirectory.
     boot_args_server_.CreateClient(fs_loop().dispatcher(), &client);

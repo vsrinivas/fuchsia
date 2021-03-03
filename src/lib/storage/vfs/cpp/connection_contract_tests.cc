@@ -71,7 +71,7 @@ class NoOpVfsBad : public NoOpVfs {
 template <typename Vfs>
 void RunTest(async::Loop* loop, Vfs&& vfs) {
   auto root = fbl::MakeRefCounted<fs::PseudoDir>();
-  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Node>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(endpoints.status_value());
 
   ASSERT_OK(vfs.Serve(root, std::move(endpoints->server), fs::VnodeConnectionOptions::ReadOnly()));

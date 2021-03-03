@@ -24,10 +24,10 @@
 struct ConnectRequestContext {
   bool quiet;
   async_dispatcher_t* dispatcher;
-  std::unique_ptr<llcpp::fidl::examples::echo::Echo::Interface> server;
+  std::unique_ptr<fidl_examples_echo::Echo::Interface> server;
 };
 
-class Server final : public llcpp::fidl::examples::echo::Echo::Interface {
+class Server final : public fidl_examples_echo::Echo::Interface {
  public:
   void EchoString(::fidl::StringView value, EchoStringCompleter::Sync& completer) override {
     completer.Reply(std::move(value));
@@ -40,8 +40,7 @@ static void connect(void* untyped_context, const char* service_name, zx_handle_t
     std::cout << "echo_server_llcpp: Incoming connection for " << service_name << std::endl;
   }
   fidl::BindSingleInFlightOnly(
-      context->dispatcher,
-      fidl::ServerEnd<llcpp::fidl::examples::echo::Echo>(zx::channel(service_request)),
+      context->dispatcher, fidl::ServerEnd<fidl_examples_echo::Echo>(zx::channel(service_request)),
       context->server.get());
 }
 

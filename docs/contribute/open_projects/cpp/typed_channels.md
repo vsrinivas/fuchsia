@@ -36,9 +36,9 @@ to the following:
 ```c++
 struct Record {
     // Now it's clear that |c| is a client channel endpoint speaking the |Calculator| protocol.
-    fidl::ClientEnd<llcpp::foo::Calculator> c;
+    fidl::ClientEnd<foo::Calculator> c;
     // Similarly, |s| is a server channel endpoint for that protocol.
-    fidl::ServerEnd<llcpp::foo::Calculator> s;
+    fidl::ServerEnd<foo::Calculator> s;
 };
 ```
 
@@ -212,7 +212,7 @@ created ergonomic wrappers: [`service::Connect<Protocol>`][service-connect],
   status = fdio_service_connect("/svc", server_end.release());
   if (status != ZX_OK)
     return status;
-  fidl::Client<::llcpp::fuchsia::io::Directory> dir(std::move(client_end));
+  fidl::Client<::fuchsia_io::Directory> dir(std::move(client_end));
   ```
 
 * {After}
@@ -220,7 +220,7 @@ created ergonomic wrappers: [`service::Connect<Protocol>`][service-connect],
   ```c++
   // The channel creation and service connection is done in one function.
   // Opens "/svc" and returns the client endpoint, as a
-  // |zx::status<fidl::ClientEnd<::llcpp::fuchsia::io::Directory>>|.
+  // |zx::status<fidl::ClientEnd<::fuchsia_io::Directory>>|.
   auto client_end = service::OpenServiceRoot<Foo>();
   if (!client_end.is_ok())
     return client_end.status_value();
@@ -246,7 +246,7 @@ migrating a `zx::unowned_channel`:
   ```c++
   // |client| should speak the |fuchsia.foobar/Baz| protocol.
   zx_status_t DoThing(zx::unowned_channel client, int64_t args) {
-    return llcpp::fuchsia::foobar::Baz::Call::Method(std::move(client), args).status();
+    return fuchsia_foobar::Baz::Call::Method(std::move(client), args).status();
   }
   ```
 
@@ -254,8 +254,8 @@ migrating a `zx::unowned_channel`:
 
   ```c++
   // The intended protocol is encoded in the type system. No need for comment.
-  zx_status_t DoThing(fidl::UnownedClientEnd<llcpp::fuchsia::foobar::Baz> client, int64_t args) {
-    return llcpp::fuchsia::foobar::Baz::Call::Method(client, args).status();
+  zx_status_t DoThing(fidl::UnownedClientEnd<fuchsia_foobar::Baz> client, int64_t args) {
+    return fuchsia_foobar::Baz::Call::Method(client, args).status();
   }
   ```
 
@@ -309,13 +309,13 @@ You may add one of ianloic@, yifeit@ if need specific review from the FIDL team.
 
 ```c++
 fdio_cpp::UnownedFdioCaller connection(fd);
-auto resp = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
-    fidl::UnownedClientEnd<llcpp::fuchsia::device::Controller>(
+auto resp = fuchsia_device::Controller::Call::GetTopologicalPath(
+    fidl::UnownedClientEnd<fuchsia_device::Controller>(
         connection.borrow_channel()));
 ```
 
 * Converting between HLCPP and LLCPP endpoint types is tricky. We would like
-  `fidl::ClientEnd<::llcpp::my::thing::Protocol>` and
+  `fidl::ClientEnd<::my_thing::Protocol>` and
   `fidl::InterfaceHandle<my::thing::Protocol>` to easily convert into one
   another, and same for servers.
 * HLCPP and V1 component framework APIs (`sys::ServiceDirectory`,

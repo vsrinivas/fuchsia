@@ -16,7 +16,7 @@
 #include <src/lib/fidl/llcpp/tests/test_utils.h>
 #include <src/lib/fidl/llcpp/tests/types_test_utils.h>
 
-namespace llcpp_test = ::llcpp::fidl::llcpp::types::test;
+namespace llcpp_test = ::fidl_llcpp_types_test;
 
 TEST(XUnionPayload, Primitive) {
   {

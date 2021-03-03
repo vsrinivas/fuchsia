@@ -21,7 +21,7 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
                                                  uint32_t result_flags) override {
     zx_status_t status = event_sender_.OnPerformanceCounterReadCompleted(
         trigger_id, buffer_id, buffer_offset, time,
-        llcpp::fuchsia::gpu::magma::wire::ResultFlags::TruncatingUnknown(result_flags));
+        fuchsia_gpu_magma::wire::ResultFlags::TruncatingUnknown(result_flags));
     switch (status) {
       case ZX_OK:
         return MAGMA_STATUS_OK;
@@ -36,13 +36,13 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
 
  private:
   uint64_t pool_id_;
-  llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::EventSender event_sender_;
+  fuchsia_gpu_magma::PerformanceCounterEvents::EventSender event_sender_;
 };
 
 bool ZirconPlatformConnection::Bind(zx::channel server_endpoint) {
   fidl::OnUnboundFn<ZirconPlatformConnection> unbind_callback =
       [](ZirconPlatformConnection* self, fidl::UnbindInfo unbind_info,
-         fidl::ServerEnd<llcpp::fuchsia::gpu::magma::Primary> server_channel) {
+         fidl::ServerEnd<fuchsia_gpu_magma::Primary> server_channel) {
         // |kDispatcherError| indicates the async loop itself is shutting down,
         // which could only happen when |interface| is being destructed.
         // Therefore, we must avoid using the same object.
@@ -53,7 +53,7 @@ bool ZirconPlatformConnection::Bind(zx::channel server_endpoint) {
         self->async_loop()->Quit();
       };
 
-  fit::result<fidl::ServerBindingRef<llcpp::fuchsia::gpu::magma::Primary>, zx_status_t> result =
+  fit::result<fidl::ServerBindingRef<fuchsia_gpu_magma::Primary>, zx_status_t> result =
       fidl::BindServer(async_loop()->dispatcher(), std::move(server_endpoint), this,
                        std::move(unbind_callback));
 
@@ -209,8 +209,8 @@ void ZirconPlatformConnection::DestroyContext(uint32_t context_id,
 }
 
 void ZirconPlatformConnection::ExecuteCommandBufferWithResources(
-    uint32_t context_id, llcpp::fuchsia::gpu::magma::wire::CommandBuffer fidl_command_buffer,
-    ::fidl::VectorView<llcpp::fuchsia::gpu::magma::wire::Resource> fidl_resources,
+    uint32_t context_id, fuchsia_gpu_magma::wire::CommandBuffer fidl_command_buffer,
+    ::fidl::VectorView<fuchsia_gpu_magma::wire::Resource> fidl_resources,
     ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores,
     ExecuteCommandBufferWithResourcesCompleter::Sync& _completer) {
   FlowControl();
@@ -306,17 +306,17 @@ void ZirconPlatformConnection::CommitBuffer(uint64_t buffer_id, uint64_t page_of
 }
 
 void ZirconPlatformConnection::BufferRangeOp(uint64_t buffer_id,
-                                             llcpp::fuchsia::gpu::magma::wire::BufferOp op,
-                                             uint64_t start, uint64_t length,
+                                             fuchsia_gpu_magma::wire::BufferOp op, uint64_t start,
+                                             uint64_t length,
                                              BufferRangeOpCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection:::BufferOp %d", static_cast<uint32_t>(op));
   FlowControl();
   uint32_t buffer_op;
   switch (op) {
-    case llcpp::fuchsia::gpu::magma::wire::BufferOp::POPULATE_TABLES:
+    case fuchsia_gpu_magma::wire::BufferOp::POPULATE_TABLES:
       buffer_op = MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES;
       break;
-    case llcpp::fuchsia::gpu::magma::wire::BufferOp::DEPOPULATE_TABLES:
+    case fuchsia_gpu_magma::wire::BufferOp::DEPOPULATE_TABLES:
       buffer_op = MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES;
       break;
     default:
@@ -378,7 +378,7 @@ void ZirconPlatformConnection::ReleasePerformanceCounterBufferPool(
 }
 
 void ZirconPlatformConnection::AddPerformanceCounterBufferOffsetsToPool(
-    uint64_t pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::wire::BufferOffset> offsets,
+    uint64_t pool_id, fidl::VectorView<fuchsia_gpu_magma::wire::BufferOffset> offsets,
     AddPerformanceCounterBufferOffsetsToPoolCompleter::Sync& completer) {
   FlowControl();
   for (auto& offset : offsets) {

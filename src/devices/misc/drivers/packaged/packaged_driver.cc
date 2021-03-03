@@ -12,7 +12,7 @@
 
 namespace {
 
-namespace fdf = llcpp::fuchsia::driver::framework;
+namespace fdf = fuchsia_driver_framework;
 
 class PackagedDriver {
  public:

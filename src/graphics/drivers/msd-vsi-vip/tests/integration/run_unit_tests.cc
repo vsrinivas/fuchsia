@@ -34,8 +34,7 @@ TEST(UnitTests, UnitTests) {
 
   test_base = std::make_unique<magma::TestDeviceBase>(MAGMA_VENDOR_ID_VSI);
 
-  auto result =
-      llcpp::fuchsia::gpu::magma::Device::Call::GetUnitTestStatus(test_base->channel()->borrow());
+  auto result = fuchsia_gpu_magma::Device::Call::GetUnitTestStatus(test_base->channel()->borrow());
   EXPECT_EQ(ZX_OK, result.status()) << "Device connection lost, check syslog for any errors.";
   EXPECT_EQ(ZX_OK, result->status) << "Tests reported errors, check syslog.";
 

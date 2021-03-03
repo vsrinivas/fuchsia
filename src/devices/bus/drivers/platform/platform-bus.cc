@@ -162,7 +162,7 @@ zx_status_t PlatformBus::PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev
 
 zx_status_t PlatformBus::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::sysinfo::SysInfo::Dispatch(this, msg, &transaction);
+  fuchsia_sysinfo::SysInfo::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 
@@ -196,7 +196,7 @@ void PlatformBus::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync& comple
 }
 
 void PlatformBus::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync& completer) {
-  ::llcpp::fuchsia::sysinfo::wire::InterruptControllerInfo info = {
+  ::fuchsia_sysinfo::wire::InterruptControllerInfo info = {
       .type = interrupt_controller_type_,
   };
   completer.Reply(ZX_OK, fidl::unowned_ptr(&info));
@@ -385,7 +385,7 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
 
 zx_status_t PlatformBus::GetBootItem(uint32_t type, uint32_t extra, zx::vmo* vmo,
                                      uint32_t* length) {
-  auto result = llcpp::fuchsia::boot::Items::Call::Get(zx::unowned(items_svc_), type, extra);
+  auto result = fuchsia_boot::Items::Call::Get(zx::unowned(items_svc_), type, extra);
   if (result.ok()) {
     *vmo = std::move(result->payload);
     *length = result->length;
@@ -569,21 +569,21 @@ zx_status_t PlatformBus::Init() {
   zx::vmo vmo;
   uint32_t length;
 #if __x86_64__
-  interrupt_controller_type_ = ::llcpp::fuchsia::sysinfo::wire::InterruptControllerType::APIC;
+  interrupt_controller_type_ = ::fuchsia_sysinfo::wire::InterruptControllerType::APIC;
 #else
   status = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &vmo, &length);
   if (status != ZX_OK) {
     return status;
   }
   if (vmo.is_valid()) {
-    interrupt_controller_type_ = ::llcpp::fuchsia::sysinfo::wire::InterruptControllerType::GIC_V2;
+    interrupt_controller_type_ = ::fuchsia_sysinfo::wire::InterruptControllerType::GIC_V2;
   }
   status = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &vmo, &length);
   if (status != ZX_OK) {
     return status;
   }
   if (vmo.is_valid()) {
-    interrupt_controller_type_ = ::llcpp::fuchsia::sysinfo::wire::InterruptControllerType::GIC_V3;
+    interrupt_controller_type_ = ::fuchsia_sysinfo::wire::InterruptControllerType::GIC_V3;
   }
 #endif
 

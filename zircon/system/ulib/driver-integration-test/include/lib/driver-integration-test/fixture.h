@@ -64,16 +64,15 @@ class IsolatedDevmgr {
   // may be used with openat() and fdio_watch_directory().
   const fbl::unique_fd& devfs_root() const { return devmgr_.devfs_root(); }
 
-  fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> svc_root_dir() const {
+  fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root_dir() const {
     return devmgr_.svc_root_dir();
   }
 
-  fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> fshost_outgoing_dir() const {
+  fidl::UnownedClientEnd<fuchsia_io::Directory> fshost_outgoing_dir() const {
     return devmgr_.fshost_outgoing_dir();
   }
 
-  fidl::UnownedClientEnd<llcpp::fuchsia::process::lifecycle::Lifecycle> component_lifecycle_svc()
-      const {
+  fidl::UnownedClientEnd<fuchsia_process_lifecycle::Lifecycle> component_lifecycle_svc() const {
     return devmgr_.component_lifecycle_svc();
   }
 

@@ -27,7 +27,7 @@
 
 namespace otstack {
 
-namespace fidl_spinel = llcpp::fuchsia::lowpan::spinel;
+namespace fidl_spinel = fuchsia_lowpan_spinel;
 
 constexpr uint32_t kOutboundAllowanceInit = 4;
 constexpr uint32_t kOutboundAllowanceInc = 2;

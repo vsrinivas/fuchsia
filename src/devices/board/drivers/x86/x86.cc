@@ -24,8 +24,8 @@
 #include "src/devices/board/drivers/x86/include/sysmem.h"
 #include "src/devices/board/drivers/x86/x64-bind.h"
 
-using ::llcpp::fuchsia::hardware::acpi::wire::MAX_ACPI_TABLE_ENTRIES;
-using ::llcpp::fuchsia::hardware::acpi::wire::TableInfo;
+using ::fuchsia_hardware_acpi::wire::MAX_ACPI_TABLE_ENTRIES;
+using ::fuchsia_hardware_acpi::wire::TableInfo;
 
 zx_handle_t root_resource_handle;
 
@@ -199,7 +199,7 @@ bool X86::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel) {
 
 zx_status_t X86::DdkMessage(fidl_incoming_msg* message, fidl_txn* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::acpi::Acpi::Dispatch(this, message, &transaction);
+  fuchsia_hardware_acpi::Acpi::Dispatch(this, message, &transaction);
   return transaction.Status();
 }
 

@@ -15,10 +15,10 @@
 
 #include "src/devices/tests/ddk-power/test-power-bind.h"
 
-using llcpp::fuchsia::device::power::test::TestDevice;
-using llcpp::fuchsia::device::wire::DevicePerformanceStateInfo;
-using llcpp::fuchsia::device::wire::DevicePowerState;
-using llcpp::fuchsia::device::wire::DevicePowerStateInfo;
+using fuchsia_device::wire::DevicePerformanceStateInfo;
+using fuchsia_device::wire::DevicePowerState;
+using fuchsia_device::wire::DevicePowerStateInfo;
+using fuchsia_device_power_test::TestDevice;
 
 class TestPowerDriver;
 using DeviceType =
@@ -38,7 +38,7 @@ class TestPowerDriver : public DeviceType,
   }
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    ::llcpp::fuchsia::device::power::test::TestDevice::Dispatch(this, msg, &transaction);
+    ::fuchsia_device_power_test::TestDevice::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
 
@@ -62,7 +62,7 @@ class TestPowerDriver : public DeviceType,
   void GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync& completer) override;
   void GetCurrentDeviceAutoSuspendConfig(
       GetCurrentDeviceAutoSuspendConfigCompleter::Sync& completer) override;
-  void SetTestStatusInfo(llcpp::fuchsia::device::power::test::wire::TestStatusInfo status_info,
+  void SetTestStatusInfo(fuchsia_device_power_test::wire::TestStatusInfo status_info,
                          SetTestStatusInfoCompleter::Sync& completer) override;
 
  private:
@@ -99,9 +99,8 @@ void TestPowerDriver::GetCurrentDeviceAutoSuspendConfig(
   completer.ReplySuccess(auto_suspend_enabled_,
                          static_cast<DevicePowerState>(deepest_autosuspend_sleep_state_));
 }
-void TestPowerDriver::SetTestStatusInfo(
-    llcpp::fuchsia::device::power::test::wire::TestStatusInfo status_info,
-    SetTestStatusInfoCompleter::Sync& completer) {
+void TestPowerDriver::SetTestStatusInfo(fuchsia_device_power_test::wire::TestStatusInfo status_info,
+                                        SetTestStatusInfoCompleter::Sync& completer) {
   reply_suspend_status_ = status_info.suspend_status;
   reply_resume_status_ = status_info.resume_status;
   completer.ReplySuccess();

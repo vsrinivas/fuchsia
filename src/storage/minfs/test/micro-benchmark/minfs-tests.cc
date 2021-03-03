@@ -69,8 +69,8 @@ class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {
     ASSERT_TRUE(fd);
 
     fdio_cpp::FdioCaller caller(std::move(fd));
-    auto result = llcpp::fuchsia::hardware::block::Block::Call::GetStats(caller.channel(),
-                                                                         reset == Reset::kReset);
+    auto result =
+        fuchsia_hardware_block::Block::Call::GetStats(caller.channel(), reset == Reset::kReset);
     ASSERT_EQ(result.status(), ZX_OK);
     *out_stats = *result->stats;
   }
@@ -80,7 +80,7 @@ class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {
     EXPECT_TRUE(fd);
 
     fdio_cpp::FdioCaller caller(std::move(fd));
-    auto mount_state_or = ::llcpp::fuchsia::minfs::Minfs::Call::GetMountState(caller.channel());
+    auto mount_state_or = ::fuchsia_minfs::Minfs::Call::GetMountState(caller.channel());
     EXPECT_TRUE(mount_state_or.ok());
     EXPECT_EQ(mount_state_or.value().status, ZX_OK);
     EXPECT_NE(mount_state_or.value().mount_state, nullptr);

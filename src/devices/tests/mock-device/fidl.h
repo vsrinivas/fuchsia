@@ -14,7 +14,7 @@
 
 namespace mock_device {
 
-namespace device_mock = ::llcpp::fuchsia::device::mock;
+namespace device_mock = ::fuchsia_device_mock;
 
 // Returns ZX_ERR_STOP if channel has been closed
 // Returns ZX_OK and populates |actions_out| on success.

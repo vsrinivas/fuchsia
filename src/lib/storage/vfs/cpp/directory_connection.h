@@ -18,8 +18,7 @@ namespace fs {
 
 namespace internal {
 
-class DirectoryConnection final : public Connection,
-                                  public llcpp::fuchsia::io::DirectoryAdmin::Interface {
+class DirectoryConnection final : public Connection, public fuchsia_io::DirectoryAdmin::Interface {
  public:
   // Refer to documentation for |Connection::Connection|.
   DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
@@ -32,13 +31,13 @@ class DirectoryConnection final : public Connection,
   // |fuchsia.io/Node| operations.
   //
 
-  void Clone(uint32_t flags, fidl::ServerEnd<llcpp::fuchsia::io::Node> object,
+  void Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> object,
              CloneCompleter::Sync& completer) final;
   void Close(CloseCompleter::Sync& completer) final;
   void Describe(DescribeCompleter::Sync& completer) final;
   void Sync(SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrCompleter::Sync& completer) final;
-  void SetAttr(uint32_t flags, llcpp::fuchsia::io::wire::NodeAttributes attributes,
+  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
                SetAttrCompleter::Sync& completer) final;
   void NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) final;
   void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) final;
@@ -48,7 +47,7 @@ class DirectoryConnection final : public Connection,
   //
 
   void Open(uint32_t flags, uint32_t mode, fidl::StringView path,
-            fidl::ServerEnd<llcpp::fuchsia::io::Node> object, OpenCompleter::Sync& completer) final;
+            fidl::ServerEnd<fuchsia_io::Node> object, OpenCompleter::Sync& completer) final;
   void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) final;
   void ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sync& completer) final;
   void Rewind(RewindCompleter::Sync& completer) final;
@@ -59,18 +58,17 @@ class DirectoryConnection final : public Connection,
             LinkCompleter::Sync& completer) final;
   void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
              WatchCompleter::Sync& completer) final;
-  void AddInotifyFilter(llcpp::fuchsia::io2::wire::InotifyWatchMask filters, fidl::StringView path,
+  void AddInotifyFilter(fuchsia_io2::wire::InotifyWatchMask filters, fidl::StringView path,
                         uint32_t watch_descriptor, zx::socket socket,
-                        fidl::ServerEnd<llcpp::fuchsia::io2::Inotifier> controller,
+                        fidl::ServerEnd<fuchsia_io2::Inotifier> controller,
                         AddInotifyFilterCompleter::Sync& completer) final {}
 
   //
   // |fuchsia.io/DirectoryAdmin| operations.
   //
 
-  void Mount(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote,
-             MountCompleter::Sync& completer) final;
-  void MountAndCreate(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote, fidl::StringView name,
+  void Mount(fidl::ClientEnd<fuchsia_io::Directory> remote, MountCompleter::Sync& completer) final;
+  void MountAndCreate(fidl::ClientEnd<fuchsia_io::Directory> remote, fidl::StringView name,
                       uint32_t flags, MountAndCreateCompleter::Sync& completer) final;
   void Unmount(UnmountCompleter::Sync& completer) final;
   void UnmountNode(UnmountNodeCompleter::Sync& completer) final;

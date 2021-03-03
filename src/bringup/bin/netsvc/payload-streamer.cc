@@ -28,7 +28,7 @@ void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& compl
 }
 
 void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
-  using ::llcpp::fuchsia::paver::wire::ReadResult;
+  using ::fuchsia_paver::wire::ReadResult;
   ReadResult result;
   if (!vmo_) {
     zx_status_t status = ZX_ERR_BAD_STATE;
@@ -54,7 +54,7 @@ void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
   } else {
     // completer.Reply must be called from within this else block since otherwise
     // |info| will go out of scope
-    ::llcpp::fuchsia::paver::wire::ReadInfo info{.offset = 0, .size = actual};
+    ::fuchsia_paver::wire::ReadInfo info{.offset = 0, .size = actual};
     result.set_info(fidl::unowned_ptr(&info));
     read_offset_ += actual;
     completer.Reply(std::move(result));

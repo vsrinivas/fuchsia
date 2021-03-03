@@ -61,7 +61,7 @@
 #include "src/devices/lib/log/log.h"
 #include "vmo_writer.h"
 
-namespace fio = llcpp::fuchsia::io;
+namespace fio = fuchsia_io;
 
 namespace {
 
@@ -94,7 +94,7 @@ constexpr char kAsanEnvironment[] =
 
 }  // namespace
 
-namespace power_fidl = llcpp::fuchsia::hardware::power;
+namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 
 Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manager,
                          async_dispatcher_t* dispatcher)
@@ -138,7 +138,7 @@ zx_status_t Coordinator::RegisterWithPowerManager(zx::channel devfs_handle) {
     return status;
   }
   std::string registration_svc =
-      "/svc/" + std::string(llcpp::fuchsia::power::manager::DriverManagerRegistration::Name);
+      "/svc/" + std::string(fuchsia_power_manager::DriverManagerRegistration::Name);
 
   status = fdio_service_connect(registration_svc.c_str(), remote.release());
   if (status != ZX_OK) {
@@ -451,12 +451,14 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
 // Add a new device to a parent device (same driver_host)
 // New device is published in devfs.
 // Caller closes handles on error, so we don't have to.
-zx_status_t Coordinator::AddDevice(
-    const fbl::RefPtr<Device>& parent, zx::channel device_controller, zx::channel coordinator,
-    const llcpp::fuchsia::device::manager::wire::DeviceProperty* props_data, size_t props_count,
-    fbl::StringPiece name, uint32_t protocol_id, fbl::StringPiece driver_path,
-    fbl::StringPiece args, bool invisible, bool skip_autobind, bool has_init, bool always_init,
-    zx::vmo inspect, zx::channel client_remote, fbl::RefPtr<Device>* new_device) {
+zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
+                                   zx::channel coordinator,
+                                   const fuchsia_device_manager::wire::DeviceProperty* props_data,
+                                   size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
+                                   fbl::StringPiece driver_path, fbl::StringPiece args,
+                                   bool invisible, bool skip_autobind, bool has_init,
+                                   bool always_init, zx::vmo inspect, zx::channel client_remote,
+                                   fbl::RefPtr<Device>* new_device) {
   // If this is true, then |name_data|'s size is properly bounded.
   static_assert(fuchsia_device_manager_DEVICE_NAME_MAX == ZX_DEVICE_NAME_MAX);
   static_assert(fuchsia_device_manager_PROPERTIES_MAX <= UINT32_MAX);
@@ -762,7 +764,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
 
 zx_status_t Coordinator::AddCompositeDevice(
     const fbl::RefPtr<Device>& dev, fbl::StringPiece name,
-    llcpp::fuchsia::device::manager::wire::CompositeDeviceDescriptor comp_desc) {
+    fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc) {
   // Only the platform bus driver should be able to use this.  It is the
   // descendant of the sys device node.
   if (dev->parent() != sys_device_) {
@@ -1516,22 +1518,22 @@ void Coordinator::BindDrivers() { AddAndBindDrivers(std::move(drivers_)); }
 // TODO(fxbug.dev/42257): Temporary helper to convert state to flags.
 // Will be removed eventually.
 uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
-    power_fidl::statecontrol::wire::SystemPowerState state) {
+    statecontrol_fidl::wire::SystemPowerState state) {
   switch (state) {
-    case power_fidl::statecontrol::wire::SystemPowerState::FULLY_ON:
+    case statecontrol_fidl::wire::SystemPowerState::FULLY_ON:
       return 0;
-    case power_fidl::statecontrol::wire::SystemPowerState::REBOOT:
-      return power_fidl::statecontrol::wire::SUSPEND_FLAG_REBOOT;
-    case power_fidl::statecontrol::wire::SystemPowerState::REBOOT_BOOTLOADER:
-      return power_fidl::statecontrol::wire::SUSPEND_FLAG_REBOOT_BOOTLOADER;
-    case power_fidl::statecontrol::wire::SystemPowerState::REBOOT_RECOVERY:
-      return power_fidl::statecontrol::wire::SUSPEND_FLAG_REBOOT_RECOVERY;
-    case power_fidl::statecontrol::wire::SystemPowerState::POWEROFF:
-      return power_fidl::statecontrol::wire::SUSPEND_FLAG_POWEROFF;
-    case power_fidl::statecontrol::wire::SystemPowerState::MEXEC:
-      return power_fidl::statecontrol::wire::SUSPEND_FLAG_MEXEC;
-    case power_fidl::statecontrol::wire::SystemPowerState::SUSPEND_RAM:
-      return power_fidl::statecontrol::wire::SUSPEND_FLAG_SUSPEND_RAM;
+    case statecontrol_fidl::wire::SystemPowerState::REBOOT:
+      return statecontrol_fidl::wire::SUSPEND_FLAG_REBOOT;
+    case statecontrol_fidl::wire::SystemPowerState::REBOOT_BOOTLOADER:
+      return statecontrol_fidl::wire::SUSPEND_FLAG_REBOOT_BOOTLOADER;
+    case statecontrol_fidl::wire::SystemPowerState::REBOOT_RECOVERY:
+      return statecontrol_fidl::wire::SUSPEND_FLAG_REBOOT_RECOVERY;
+    case statecontrol_fidl::wire::SystemPowerState::POWEROFF:
+      return statecontrol_fidl::wire::SUSPEND_FLAG_POWEROFF;
+    case statecontrol_fidl::wire::SystemPowerState::MEXEC:
+      return statecontrol_fidl::wire::SUSPEND_FLAG_MEXEC;
+    case statecontrol_fidl::wire::SystemPowerState::SUSPEND_RAM:
+      return statecontrol_fidl::wire::SUSPEND_FLAG_SUSPEND_RAM;
     default:
       return 0;
   }
@@ -1555,9 +1557,9 @@ void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
     return;
   }
 
-  std::vector<llcpp::fuchsia::device::manager::wire::BindInstruction> instructions;
+  std::vector<fuchsia_device_manager::wire::BindInstruction> instructions;
   for (uint32_t i = 0; i < count; i++) {
-    instructions.push_back(llcpp::fuchsia::device::manager::wire::BindInstruction{
+    instructions.push_back(fuchsia_device_manager::wire::BindInstruction{
         .op = driver->binding[i].op,
         .arg = driver->binding[i].arg,
         .debug = driver->binding[i].debug,
@@ -1566,7 +1568,7 @@ void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
   completer.ReplySuccess(::fidl::unowned_vec(instructions));
 }
 
-void Coordinator::Register(::llcpp::fuchsia::pkg::wire::PackageUrl driver_url,
+void Coordinator::Register(::fuchsia_pkg::wire::PackageUrl driver_url,
                            RegisterCompleter::Sync& completer) {
   std::string driver_url_str(driver_url.url.data(), driver_url.url.size());
   zx_status_t status = LoadEphemeralDriver(&package_resolver_, driver_url_str);
@@ -1609,9 +1611,9 @@ void Coordinator::GetDeviceProperties(::fidl::StringView device_path,
     return;
   }
 
-  std::vector<llcpp::fuchsia::device::manager::wire::DeviceProperty> props;
+  std::vector<fuchsia_device_manager::wire::DeviceProperty> props;
   for (const auto& prop : device->props()) {
-    props.push_back(llcpp::fuchsia::device::manager::wire::DeviceProperty{
+    props.push_back(fuchsia_device_manager::wire::DeviceProperty{
         .id = prop.id,
         .reserved = prop.reserved,
         .value = prop.value,
@@ -1666,53 +1668,49 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   }
 
   const auto system_state_manager_register = [this](zx::channel request) {
-    auto status = fidl::BindSingleInFlightOnly<
-        llcpp::fuchsia::device::manager::SystemStateTransition::Interface>(
-        dispatcher_, std::move(request), std::make_unique<SystemStateManager>(this));
+    auto status =
+        fidl::BindSingleInFlightOnly<fuchsia_device_manager::SystemStateTransition::Interface>(
+            dispatcher_, std::move(request), std::make_unique<SystemStateManager>(this));
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           llcpp::fuchsia::device::manager::SystemStateTransition::Name,
-           zx_status_get_string(status));
+           fuchsia_device_manager::SystemStateTransition::Name, zx_status_get_string(status));
     }
     return status;
   };
-  status = svc_dir->AddEntry(llcpp::fuchsia::device::manager::SystemStateTransition::Name,
+  status = svc_dir->AddEntry(fuchsia_device_manager::SystemStateTransition::Name,
                              fbl::MakeRefCounted<fs::Service>(system_state_manager_register));
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to add entry in service directory for '%s': %s",
-         llcpp::fuchsia::device::manager::SystemStateTransition::Name,
-         zx_status_get_string(status));
+         fuchsia_device_manager::SystemStateTransition::Name, zx_status_get_string(status));
     return status;
   }
 
   const auto bind_debugger = [this](zx::channel request) {
-    auto status =
-        fidl::BindSingleInFlightOnly<llcpp::fuchsia::device::manager::BindDebugger::Interface>(
-            dispatcher_, std::move(request), this);
+    auto status = fidl::BindSingleInFlightOnly<fuchsia_device_manager::BindDebugger::Interface>(
+        dispatcher_, std::move(request), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           llcpp::fuchsia::device::manager::BindDebugger::Name, zx_status_get_string(status));
+           fuchsia_device_manager::BindDebugger::Name, zx_status_get_string(status));
     }
     return status;
   };
-  status = svc_dir->AddEntry(llcpp::fuchsia::device::manager::BindDebugger::Name,
+  status = svc_dir->AddEntry(fuchsia_device_manager::BindDebugger::Name,
                              fbl::MakeRefCounted<fs::Service>(bind_debugger));
   if (status != ZX_OK) {
     return status;
   }
 
   const auto driver_host_dev = [this](zx::channel request) {
-    auto status = fidl::BindSingleInFlightOnly<
-        llcpp::fuchsia::device::manager::DriverHostDevelopment::Interface>(
-        dispatcher_, std::move(request), this);
+    auto status =
+        fidl::BindSingleInFlightOnly<fuchsia_device_manager::DriverHostDevelopment::Interface>(
+            dispatcher_, std::move(request), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           llcpp::fuchsia::device::manager::DriverHostDevelopment::Name,
-           zx_status_get_string(status));
+           fuchsia_device_manager::DriverHostDevelopment::Name, zx_status_get_string(status));
     }
     return status;
   };
-  status = svc_dir->AddEntry(llcpp::fuchsia::device::manager::DriverHostDevelopment::Name,
+  status = svc_dir->AddEntry(fuchsia_device_manager::DriverHostDevelopment::Name,
                              fbl::MakeRefCounted<fs::Service>(driver_host_dev));
   if (status != ZX_OK) {
     return status;
@@ -1720,18 +1718,17 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 
   if (config_.enable_ephemeral) {
     const auto driver_registrar = [this](zx::channel request) {
-      auto result = fidl::BindServer<llcpp::fuchsia::driver::registrar::DriverRegistrar::Interface>(
+      auto result = fidl::BindServer<fuchsia_driver_registrar::DriverRegistrar::Interface>(
           dispatcher_, std::move(request), this);
       if (!result.is_ok()) {
         LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-             llcpp::fuchsia::driver::registrar::DriverRegistrar::Name,
-             zx_status_get_string(result.error()));
+             fuchsia_driver_registrar::DriverRegistrar::Name, zx_status_get_string(result.error()));
         return result.error();
       }
       driver_registrar_binding_ = result.take_value();
       return ZX_OK;
     };
-    status = svc_dir->AddEntry(llcpp::fuchsia::driver::registrar::DriverRegistrar::Name,
+    status = svc_dir->AddEntry(fuchsia_driver_registrar::DriverRegistrar::Name,
                                fbl::MakeRefCounted<fs::Service>(driver_registrar));
     if (status != ZX_OK) {
       return status;

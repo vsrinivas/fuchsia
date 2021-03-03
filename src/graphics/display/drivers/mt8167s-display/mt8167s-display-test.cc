@@ -22,7 +22,7 @@
 #include "mt-dsi-host.h"
 #include "mt-sysconfig.h"
 
-namespace sysmem = llcpp::fuchsia::sysmem;
+namespace sysmem = fuchsia_sysmem;
 
 namespace mt8167s_display {
 

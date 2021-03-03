@@ -17,7 +17,7 @@
 namespace fs_test {
 namespace {
 
-namespace fio = llcpp::fuchsia::io;
+namespace fio = fuchsia_io;
 
 using OpenTest = FilesystemTest;
 

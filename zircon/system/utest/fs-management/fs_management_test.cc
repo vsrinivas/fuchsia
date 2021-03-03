@@ -39,7 +39,7 @@
 
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 const mount_options_t& test_mount_options() {
   static mount_options_t* options = []() {

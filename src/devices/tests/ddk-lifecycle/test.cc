@@ -20,12 +20,12 @@
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;
-using llcpp::fuchsia::device::Controller;
-using llcpp::fuchsia::device::lifecycle::test::Lifecycle;
-using llcpp::fuchsia::device::lifecycle::test::TestDevice;
-using llcpp::fuchsia::hardware::serial::Device;
-using llcpp::fuchsia::io::Directory;
-using llcpp::fuchsia::io::File;
+using fuchsia_device::Controller;
+using fuchsia_device_lifecycle_test::Lifecycle;
+using fuchsia_device_lifecycle_test::TestDevice;
+using fuchsia_hardware_serial::Device;
+using fuchsia_io::Directory;
+using fuchsia_io::File;
 
 class LifecycleTest : public zxtest::Test {
  public:

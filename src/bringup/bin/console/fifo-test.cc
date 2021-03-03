@@ -14,7 +14,7 @@ namespace {
 
 bool IsReadable(const zx::eventpair& event) {
   zx_status_t status =
-      event.wait_one(::llcpp::fuchsia::io::wire::DEVICE_SIGNAL_READABLE, zx::time(), nullptr);
+      event.wait_one(::fuchsia_io::wire::DEVICE_SIGNAL_READABLE, zx::time(), nullptr);
   return status == ZX_OK;
 }
 

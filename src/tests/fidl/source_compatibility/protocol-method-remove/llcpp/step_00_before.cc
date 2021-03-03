@@ -5,7 +5,7 @@
 #include <lib/fidl/llcpp/client.h>
 
 #include <fidl/test/protocolmethodremove/llcpp/fidl.h>  // nogncheck
-namespace fidl_test = llcpp::fidl::test::protocolmethodremove;
+namespace fidl_test = fidl_test_protocolmethodremove;
 
 // [START contents]
 class Server final : public fidl_test::Example::Interface {

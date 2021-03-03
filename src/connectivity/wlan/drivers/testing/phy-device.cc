@@ -40,7 +40,7 @@ static wlanphy_protocol_ops_t wlanphy_test_ops = {
     .dummy = nullptr,
 };
 
-class DeviceConnector : public llcpp::fuchsia::wlan::device::Connector::RawChannelInterface {
+class DeviceConnector : public fuchsia_wlan_device::Connector::RawChannelInterface {
  public:
   DeviceConnector(PhyDevice* device) : device_(device) {}
   void Connect(::zx::channel request, ConnectCompleter::Sync& _completer) override {
@@ -90,7 +90,7 @@ zx_status_t PhyDevice::Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   DeviceConnector connector(this);
 
-  llcpp::fuchsia::wlan::device::Connector::Dispatch(&connector, msg, &transaction);
+  fuchsia_wlan_device::Connector::Dispatch(&connector, msg, &transaction);
   return transaction.Status();
 }
 

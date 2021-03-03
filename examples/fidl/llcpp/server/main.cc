@@ -20,11 +20,11 @@
 // [START impl]
 // An implementation of the Echo protocol. Protocols are implemented in LLCPP by
 // creating a subclass of the ::Interface class for the protocol.
-class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
+class EchoImpl final : public fuchsia_examples::Echo::Interface {
  public:
   // Bind this implementation to a channel.
   zx_status_t Bind(async_dispatcher_t* dispatcher,
-                   fidl::ServerEnd<llcpp::fuchsia::examples::Echo> request) {
+                   fidl::ServerEnd<fuchsia_examples::Echo> request) {
     auto result = fidl::BindServer(dispatcher, std::move(request), this);
     if (!result.is_ok()) {
       return result.error();
@@ -48,7 +48,7 @@ class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
 
   // A reference back to the Binding that this class is bound to, which is used
   // to send events to the client.
-  cpp17::optional<fidl::ServerBindingRef<llcpp::fuchsia::examples::Echo>> binding_;
+  cpp17::optional<fidl::ServerBindingRef<fuchsia_examples::Echo>> binding_;
 };
 // [END impl]
 
@@ -73,11 +73,10 @@ int main(int argc, char** argv) {
 
   // Register a handler for components trying to connect to fuchsia.examples.Echo.
   status = outgoing.svc_dir()->AddEntry(
-      llcpp::fuchsia::examples::Echo::Name,
+      fuchsia_examples::Echo::Name,
       fbl::MakeRefCounted<fs::Service>(
-          [&server, dispatcher](fidl::ServerEnd<llcpp::fuchsia::examples::Echo> request) mutable {
-            std::cout << "Incoming connection for " << llcpp::fuchsia::examples::Echo::Name
-                      << std::endl;
+          [&server, dispatcher](fidl::ServerEnd<fuchsia_examples::Echo> request) mutable {
+            std::cout << "Incoming connection for " << fuchsia_examples::Echo::Name << std::endl;
             zx_status_t status = server.Bind(dispatcher, std::move(request));
             if (status != ZX_OK) {
               std::cerr << "error binding new server: " << status << std::endl;

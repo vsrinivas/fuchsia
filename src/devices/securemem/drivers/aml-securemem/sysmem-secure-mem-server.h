@@ -17,7 +17,7 @@
 #include "secmem-session.h"
 
 // This is used with fidl::BindSingleInFlightOnly() to dispatch fuchsia::sysmem::Tee requests.
-class SysmemSecureMemServer : public llcpp::fuchsia::sysmem::SecureMem::Interface {
+class SysmemSecureMemServer : public fuchsia_sysmem::SecureMem::Interface {
  public:
   using SecureMemServerDone = fit::callback<void(bool is_success)>;
 
@@ -29,14 +29,14 @@ class SysmemSecureMemServer : public llcpp::fuchsia::sysmem::SecureMem::Interfac
                         SecureMemServerDone secure_mem_server_done);
   void StopAsync();
 
-  // llcpp::fuchsia::sysmem::SecureMem::Interface impl
+  // fuchsia_sysmem::SecureMem::Interface impl
   void GetPhysicalSecureHeaps(
-      llcpp::fuchsia::sysmem::SecureMem::Interface::GetPhysicalSecureHeapsCompleter::Sync&
-          completer) override;
+      fuchsia_sysmem::SecureMem::Interface::GetPhysicalSecureHeapsCompleter::Sync& completer)
+      override;
   void SetPhysicalSecureHeaps(
-      llcpp::fuchsia::sysmem::wire::PhysicalSecureHeaps heaps,
-      llcpp::fuchsia::sysmem::SecureMem::Interface::SetPhysicalSecureHeapsCompleter::Sync&
-          completer) override;
+      fuchsia_sysmem::wire::PhysicalSecureHeaps heaps,
+      fuchsia_sysmem::SecureMem::Interface::SetPhysicalSecureHeapsCompleter::Sync& completer)
+      override;
 
  private:
   void PostToLoop(fit::closure to_run);
@@ -44,10 +44,8 @@ class SysmemSecureMemServer : public llcpp::fuchsia::sysmem::SecureMem::Interfac
   bool TrySetupSecmemSession();
   void EnsureLoopDone(bool is_success);
 
-  zx_status_t GetPhysicalSecureHeapsInternal(
-      llcpp::fuchsia::sysmem::wire::PhysicalSecureHeaps* heaps);
-  zx_status_t SetPhysicalSecureHeapsInternal(
-      llcpp::fuchsia::sysmem::wire::PhysicalSecureHeaps heaps);
+  zx_status_t GetPhysicalSecureHeapsInternal(fuchsia_sysmem::wire::PhysicalSecureHeaps* heaps);
+  zx_status_t SetPhysicalSecureHeapsInternal(fuchsia_sysmem::wire::PhysicalSecureHeaps heaps);
 
   // Call secmem TA to setup the one physical secure heap that's configured by the TEE Controller.
   zx_status_t SetupVdec(uint64_t* physical_address, uint64_t* size_bytes);

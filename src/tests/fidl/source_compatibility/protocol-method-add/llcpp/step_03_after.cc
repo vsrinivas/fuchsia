@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/protocolmethodadd/llcpp/fidl.h>  // nogncheck
-namespace fidl_test = llcpp::fidl::test::protocolmethodadd;
+namespace fidl_test = fidl_test_protocolmethodadd;
 
 // [START contents]
 class Server final : public fidl_test::Example::Interface {

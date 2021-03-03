@@ -72,7 +72,7 @@ class MinfsProperties {
 
   // Update total_calls and bytes_transferred stats.
   void AddIoStats(uint64_t total_calls, uint64_t blocks_transferred,
-                  llcpp::fuchsia::storage::metrics::wire::CallStat* out) const;
+                  fuchsia_storage_metrics::wire::CallStat* out) const;
 
   void AddMultipleBlocksReadCosts(uint64_t block_count, BlockFidlMetrics* out) const;
 

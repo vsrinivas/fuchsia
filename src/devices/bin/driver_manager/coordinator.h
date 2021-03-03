@@ -51,10 +51,10 @@
 #include "unbind_task.h"
 #include "vmo_writer.h"
 
-namespace power_fidl = llcpp::fuchsia::hardware::power;
-using power_fidl::statecontrol::wire::SystemPowerState;
-namespace device_manager_fidl = llcpp::fuchsia::device::manager;
-namespace power_manager_fidl = llcpp::fuchsia::power::manager;
+namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
+using statecontrol_fidl::wire::SystemPowerState;
+namespace device_manager_fidl = fuchsia_device_manager;
+namespace power_manager_fidl = fuchsia_power_manager;
 
 class DriverHostLoaderService;
 class FsProvider;
@@ -123,7 +123,7 @@ struct CoordinatorConfig {
   // Event that is signaled by the kernel in OOM situation.
   zx::event oom_event;
   // Client for the Arguments service.
-  llcpp::fuchsia::boot::Arguments::SyncClient* boot_args;
+  fuchsia_boot::Arguments::SyncClient* boot_args;
   // Whether we require /system.
   bool require_system = false;
   // Whether we require ASan drivers.
@@ -153,7 +153,7 @@ struct CoordinatorConfig {
 
 class Coordinator : public device_manager_fidl::BindDebugger::Interface,
                     public device_manager_fidl::DriverHostDevelopment::Interface,
-                    public llcpp::fuchsia::driver::registrar::DriverRegistrar::Interface {
+                    public fuchsia_driver_registrar::DriverRegistrar::Interface {
  public:
   Coordinator(const Coordinator&) = delete;
   Coordinator& operator=(const Coordinator&) = delete;
@@ -205,7 +205,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   // TODO(fxbug.dev/43370): remove |always_init| once init tasks can be enabled for all devices.
   zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
                         zx::channel coordinator,
-                        const llcpp::fuchsia::device::manager::wire::DeviceProperty* props_data,
+                        const fuchsia_device_manager::wire::DeviceProperty* props_data,
                         size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
                         fbl::StringPiece driver_path, fbl::StringPiece args, bool invisible,
                         bool skip_autobind, bool has_init, bool always_init, zx::vmo inspect,
@@ -236,9 +236,8 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
                           uint32_t length);
   zx_status_t PublishMetadata(const fbl::RefPtr<Device>& dev, const char* path, uint32_t type,
                               const void* data, uint32_t length);
-  zx_status_t AddCompositeDevice(
-      const fbl::RefPtr<Device>& dev, fbl::StringPiece name,
-      llcpp::fuchsia::device::manager::wire::CompositeDeviceDescriptor comp_desc);
+  zx_status_t AddCompositeDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece name,
+                                 fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc);
 
   // Implementation of fuchsia::device::manager::DriverHostDevelopment FIDL protocol.
   // Restart all Driver Hosts containing a driver specified by |driver_path|.
@@ -255,7 +254,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }
-  llcpp::fuchsia::boot::Arguments::SyncClient* boot_args() const { return config_.boot_args; }
+  fuchsia_boot::Arguments::SyncClient* boot_args() const { return config_.boot_args; }
   bool require_system() const { return config_.require_system; }
   bool suspend_fallback() const { return config_.suspend_fallback; }
   SystemPowerState shutdown_system_state() const { return shutdown_system_state_; }
@@ -378,7 +377,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
                            GetDevicePropertiesCompleter::Sync& completer) override;
 
   // Driver registrar interface
-  void Register(::llcpp::fuchsia::pkg::wire::PackageUrl driver_url,
+  void Register(::fuchsia_pkg::wire::PackageUrl driver_url,
                 RegisterCompleter::Sync& completer) override;
 
   void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
@@ -391,7 +390,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   // driver is used for binding against fragments of composite devices
   const Driver* fragment_driver_ = nullptr;
 
-  cpp17::optional<fidl::ServerBindingRef<llcpp::fuchsia::driver::registrar::DriverRegistrar>>
+  cpp17::optional<fidl::ServerBindingRef<fuchsia_driver_registrar::DriverRegistrar>>
       driver_registrar_binding_;
   internal::PackageResolver package_resolver_;
 

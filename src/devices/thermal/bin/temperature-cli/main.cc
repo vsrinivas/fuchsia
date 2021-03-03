@@ -21,8 +21,8 @@ constexpr char kUsageMessage[] = R"""(Usage: temperature-cli <device> <command>
     temperature-cli /dev/class/adc/000 resolution
 )""";
 
-namespace FidlTemperature = llcpp::fuchsia::hardware::temperature;
-namespace FidlAdc = llcpp::fuchsia::hardware::adc;
+namespace FidlTemperature = fuchsia_hardware_temperature;
+namespace FidlAdc = fuchsia_hardware_adc;
 
 int main(int argc, char** argv) {
   if (argc < 2) {

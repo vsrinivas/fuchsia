@@ -17,7 +17,7 @@ namespace blobfs {
 constexpr const char kFsName[] = "blobfs";
 
 QueryService::QueryService(async_dispatcher_t* dispatcher, Blobfs* blobfs, Runner* runner)
-    : fs::Service([dispatcher, this](fidl::ServerEnd<llcpp::fuchsia::fs::Query> server_end) {
+    : fs::Service([dispatcher, this](fidl::ServerEnd<fuchsia_fs::Query> server_end) {
         return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
       }),
       blobfs_(blobfs),
@@ -88,11 +88,11 @@ void QueryService::GetInfo(FilesystemInfoQuery query, GetInfoCompleter::Sync& co
   }
 
   fidl::StringView device_path;
-  char name_buf[llcpp::fuchsia::io2::wire::MAX_PATH_LENGTH];
+  char name_buf[fuchsia_io2::wire::MAX_PATH_LENGTH];
   size_t name_len;
   if (query & FilesystemInfoQuery::DEVICE_PATH) {
-    zx_status_t status = blobfs_->Device()->GetDevicePath(
-        llcpp::fuchsia::io2::wire::MAX_PATH_LENGTH, name_buf, &name_len);
+    zx_status_t status =
+        blobfs_->Device()->GetDevicePath(fuchsia_io2::wire::MAX_PATH_LENGTH, name_buf, &name_len);
     if (status != ZX_OK) {
       completer.ReplyError(status);
       return;

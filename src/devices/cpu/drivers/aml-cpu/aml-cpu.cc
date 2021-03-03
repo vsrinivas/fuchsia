@@ -357,7 +357,7 @@ void AmlCpu::GetPerformanceStateInfo(uint32_t state,
     return;
   }
 
-  llcpp::fuchsia::hardware::cpu::ctrl::wire::CpuPerformanceStateInfo result;
+  fuchsia_hardware_cpu_ctrl::wire::CpuPerformanceStateInfo result;
   result.frequency_hz = operating_points_[state].freq_hz;
   result.voltage_uv = operating_points_[state].volt_uv;
 

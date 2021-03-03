@@ -18,11 +18,11 @@
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 
-namespace fdata = llcpp::fuchsia::data;
-namespace fdf = llcpp::fuchsia::driver::framework;
-namespace fio = llcpp::fuchsia::io;
-namespace frunner = llcpp::fuchsia::component::runner;
-namespace fsys = llcpp::fuchsia::sys2;
+namespace fdata = fuchsia_data;
+namespace fdf = fuchsia_driver_framework;
+namespace fio = fuchsia_io;
+namespace frunner = fuchsia_component_runner;
+namespace fsys = fuchsia_sys2;
 
 using InspectStack = std::stack<std::pair<inspect::Node*, Node*>>;
 
@@ -96,7 +96,7 @@ DriverComponent::DriverComponent(fidl::ClientEnd<fio::Directory> exposed_dir,
 DriverComponent::~DriverComponent() { UnbindAndReset(node_binding_); }
 
 void DriverComponent::set_driver_binding(
-    fidl::ServerBindingRef<llcpp::fuchsia::component::runner::ComponentController> driver_binding) {
+    fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_binding) {
   driver_binding_.emplace(std::move(driver_binding));
 }
 

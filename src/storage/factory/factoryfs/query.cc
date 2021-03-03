@@ -12,7 +12,7 @@
 
 namespace factoryfs {
 
-namespace fuchsia_fs = ::llcpp::fuchsia::fs;
+namespace fuchsia_fs = ::fuchsia_fs;
 using fuchsia_fs::wire::FilesystemInfoQuery;
 
 constexpr const char kFsName[] = "factoryfs";
@@ -92,11 +92,11 @@ void QueryService::GetInfo(FilesystemInfoQuery query, GetInfoCompleter::Sync& co
   }
 
   fidl::StringView device_path;
-  char name_buf[llcpp::fuchsia::io2::wire::MAX_PATH_LENGTH];
+  char name_buf[fuchsia_io2::wire::MAX_PATH_LENGTH];
   size_t name_len;
   if (query & FilesystemInfoQuery::DEVICE_PATH) {
-    zx_status_t status = factoryfs_->Device().GetDevicePath(
-        llcpp::fuchsia::io2::wire::MAX_PATH_LENGTH, name_buf, &name_len);
+    zx_status_t status =
+        factoryfs_->Device().GetDevicePath(fuchsia_io2::wire::MAX_PATH_LENGTH, name_buf, &name_len);
     if (status != ZX_OK) {
       completer.ReplyError(status);
       return;

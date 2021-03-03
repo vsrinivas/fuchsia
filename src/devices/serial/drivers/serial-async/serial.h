@@ -26,8 +26,8 @@ class SerialDevice;
 using DeviceType = ddk::Device<SerialDevice, ddk::Messageable>;
 
 class SerialDevice : public DeviceType,
-                     public llcpp::fuchsia::hardware::serial::NewDevice::Interface,
-                     public llcpp::fuchsia::hardware::serial::NewDeviceProxy::Interface {
+                     public fuchsia_hardware_serial::NewDevice::Interface,
+                     public fuchsia_hardware_serial::NewDeviceProxy::Interface {
  public:
   explicit SerialDevice(zx_device_t* parent) : DeviceType(parent), serial_(parent) {}
 
@@ -44,12 +44,12 @@ class SerialDevice : public DeviceType,
   zx_status_t SerialConfig(uint32_t baud_rate, uint32_t flags);
   void Read(ReadCompleter::Sync& completer) override;
   void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) override;
-  void GetChannel(fidl::ServerEnd<llcpp::fuchsia::hardware::serial::NewDevice> req,
+  void GetChannel(fidl::ServerEnd<fuchsia_hardware_serial::NewDevice> req,
                   GetChannelCompleter::Sync& completer) override;
 
   // Fidl protocol implementation.
   void GetClass(GetClassCompleter::Sync& completer) override;
-  void SetConfig(llcpp::fuchsia::hardware::serial::wire::Config config,
+  void SetConfig(fuchsia_hardware_serial::wire::Config config,
                  SetConfigCompleter::Sync& completer) override;
 
  private:
@@ -59,7 +59,7 @@ class SerialDevice : public DeviceType,
   std::optional<async::Loop> loop_;
   std::optional<ReadCompleter::Async> read_completer_;
   std::optional<WriteCompleter::Async> write_completer_;
-  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::hardware::serial::NewDevice>> binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_hardware_serial::NewDevice>> binding_;
   sync_completion_t on_unbind_;  // Signaled on Unbind() to allow DdkRelease() to proceed.
 };
 

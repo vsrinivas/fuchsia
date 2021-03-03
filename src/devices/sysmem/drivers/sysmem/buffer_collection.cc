@@ -74,7 +74,7 @@ void BufferCollection::Bind(zx::channel channel) {
       fidl::OnUnboundFn<BufferCollection>(
           [this, this_ref = fbl::RefPtr<BufferCollection>(this)](
               BufferCollection* collection, fidl::UnbindInfo info,
-              fidl::ServerEnd<llcpp::fuchsia::sysmem::BufferCollection> channel) {
+              fidl::ServerEnd<fuchsia_sysmem::BufferCollection> channel) {
             // We need to keep a refptr to this class, since the unbind happens asynchronously and
             // can run after the parent closes a handle to this class.
             if (error_handler_) {
@@ -97,7 +97,7 @@ void BufferCollection::Bind(zx::channel channel) {
 }
 
 void BufferCollection::SetEventSink(
-    fidl::ClientEnd<llcpp::fuchsia::sysmem::BufferCollectionEvents> buffer_collection_events_client,
+    fidl::ClientEnd<fuchsia_sysmem::BufferCollectionEvents> buffer_collection_events_client,
     SetEventSinkCompleter::Sync& completer) {
   table_set_.MitigateChurn();
   if (is_done_) {
@@ -149,7 +149,7 @@ void BufferCollection::Sync(SyncCompleter::Sync& completer) {
 }
 
 void BufferCollection::SetConstraintsAuxBuffers(
-    llcpp::fuchsia::sysmem::wire::BufferCollectionConstraintsAuxBuffers local_constraints,
+    fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers local_constraints,
     SetConstraintsAuxBuffersCompleter::Sync& completer) {
   table_set_.MitigateChurn();
   if (is_set_constraints_aux_buffers_seen_) {
@@ -173,12 +173,12 @@ void BufferCollection::SetConstraintsAuxBuffers(
   // SetConstraints(), so done for now.
 }
 
-void BufferCollection::SetConstraints(
-    bool has_constraints, llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints,
-    SetConstraintsCompleter::Sync& completer) {
+void BufferCollection::SetConstraints(bool has_constraints,
+                                      fuchsia_sysmem::wire::BufferCollectionConstraints constraints,
+                                      SetConstraintsCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollection::SetConstraints", "this", this, "parent", parent_.get());
   table_set_.MitigateChurn();
-  std::optional<llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints> local_constraints(
+  std::optional<fuchsia_sysmem::wire::BufferCollectionConstraints> local_constraints(
       std::move(constraints));
   if (is_set_constraints_seen_) {
     FailAsync(ZX_ERR_NOT_SUPPORTED, "2nd SetConstraints() causes failure.");
@@ -216,7 +216,7 @@ void BufferCollection::SetConstraints(
       return;
     }
     ZX_DEBUG_ASSERT(!result.value().IsEmpty() || !local_constraints);
-    constraints_.emplace(TableHolder<llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints>(
+    constraints_.emplace(TableHolder<fuchsia_sysmem2::wire::BufferCollectionConstraints>(
         table_set_, result.take_value()));
   }  // ~result
 
@@ -226,8 +226,8 @@ void BufferCollection::SetConstraints(
   // Stash BufferUsage also, for benefit of GetUsageBasedRightsAttenuation() depsite
   // TakeConstraints().
   {  // scope buffer_usage
-    llcpp::fuchsia::sysmem::wire::BufferUsage empty_buffer_usage{};
-    llcpp::fuchsia::sysmem::wire::BufferUsage* source_buffer_usage = &empty_buffer_usage;
+    fuchsia_sysmem::wire::BufferUsage empty_buffer_usage{};
+    fuchsia_sysmem::wire::BufferUsage* source_buffer_usage = &empty_buffer_usage;
     if (local_constraints) {
       source_buffer_usage = &local_constraints.value().usage;
     }
@@ -423,9 +423,8 @@ void BufferCollection::FailSync(Location location, Completer& completer, zx_stat
   async_failure_result_ = status;
 }
 
-fit::result<llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo>
-BufferCollection::CloneResultForSendingV2(
-    const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
+fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo> BufferCollection::CloneResultForSendingV2(
+    const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto clone_result =
       sysmem::V2CloneBufferCollectionInfo(table_set_.allocator(), buffer_collection_info,
                                           GetClientVmoRights(), GetClientAuxVmoRights());
@@ -452,9 +451,8 @@ BufferCollection::CloneResultForSendingV2(
   return fit::ok(std::move(v2_b));
 }
 
-fit::result<llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>
-BufferCollection::CloneResultForSendingV1(
-    const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
+fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2> BufferCollection::CloneResultForSendingV1(
+    const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto v2_result = CloneResultForSendingV2(buffer_collection_info);
   if (!v2_result.is_ok()) {
     // FailAsync() already called.
@@ -469,9 +467,9 @@ BufferCollection::CloneResultForSendingV1(
   return v1_result;
 }
 
-fit::result<llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2>
+fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2>
 BufferCollection::CloneAuxBuffersResultForSendingV1(
-    const llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
+    const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto v2_result = CloneResultForSendingV2(buffer_collection_info);
   if (!v2_result.is_ok()) {
     // FailAsync() already called.
@@ -497,7 +495,7 @@ void BufferCollection::OnBuffersAllocated() {
     return;
   }
 
-  llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 v1;
+  fuchsia_sysmem::wire::BufferCollectionInfo_2 v1;
   if (parent()->allocation_result().status == ZX_OK) {
     ZX_DEBUG_ASSERT(parent()->allocation_result().buffer_collection_info);
     auto v1_result = CloneResultForSendingV1(*parent()->allocation_result().buffer_collection_info);
@@ -513,15 +511,14 @@ void BufferCollection::OnBuffersAllocated() {
 
 bool BufferCollection::has_constraints() { return !!constraints_; }
 
-const llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints& BufferCollection::constraints() {
+const fuchsia_sysmem2::wire::BufferCollectionConstraints& BufferCollection::constraints() {
   ZX_DEBUG_ASSERT(has_constraints());
   return **constraints_;
 }
 
-llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints BufferCollection::TakeConstraints() {
+fuchsia_sysmem2::wire::BufferCollectionConstraints BufferCollection::TakeConstraints() {
   ZX_DEBUG_ASSERT(has_constraints());
-  llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints result =
-      std::move(constraints_->mutate());
+  fuchsia_sysmem2::wire::BufferCollectionConstraints result = std::move(constraints_->mutate());
   constraints_.reset();
   return result;
 }
@@ -585,7 +582,7 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
     auto [async_id, txn] = std::move(pending_wait_for_buffers_allocated_.front());
     pending_wait_for_buffers_allocated_.pop_front();
 
-    llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 v1;
+    fuchsia_sysmem::wire::BufferCollectionInfo_2 v1;
     if (allocation_result.status == ZX_OK) {
       ZX_DEBUG_ASSERT(allocation_result.buffer_collection_info);
       auto v1_result = CloneResultForSendingV1(*allocation_result.buffer_collection_info);

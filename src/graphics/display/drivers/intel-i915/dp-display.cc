@@ -1313,7 +1313,7 @@ bool DpDisplay::HandleHotplug(bool long_pulse) {
 
 bool DpDisplay::HasBacklight() { return controller()->igd_opregion().IsEdp(ddi()); }
 
-namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
+namespace FidlBacklight = fuchsia_hardware_backlight;
 
 zx_status_t DpDisplay::SetBacklightState(bool power, double brightness) {
   SetBacklightOn(power);

@@ -8,7 +8,7 @@
 #include <lib/fdio/vfs.h>
 #include <lib/fit/function.h>
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 namespace fs {
 

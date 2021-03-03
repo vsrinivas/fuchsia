@@ -120,7 +120,7 @@ class DisplayConfig : public IdMappable<std::unique_ptr<DisplayConfig>> {
 // or an |EventSender| that owns the channel, both of which allows sending
 // events without unsafe channel borrowing.
 class DisplayControllerBindingState {
-  using Protocol = llcpp::fuchsia::hardware::display::Controller;
+  using Protocol = fuchsia_hardware_display::Controller;
 
  public:
   // Constructs an invalid binding state. The user must populate it with an
@@ -175,7 +175,7 @@ class DisplayControllerBindingState {
 // The Client class manages all state associated with an open display client
 // connection. Other than initialization, all methods of this class execute on
 // on the controller's looper, so no synchronization is necessary.
-class Client : public llcpp::fuchsia::hardware::display::Controller::RawChannelInterface {
+class Client : public fuchsia_hardware_display::Controller::RawChannelInterface {
  public:
   // |controller| must outlive this and |proxy|.
   Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t id);
@@ -186,8 +186,8 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::RawChannelI
 
   ~Client();
 
-  fit::result<fidl::ServerBindingRef<llcpp::fuchsia::hardware::display::Controller>, zx_status_t>
-  Init(zx::channel server_channel);
+  fit::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_status_t> Init(
+      zx::channel server_channel);
 
   void OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
                          const uint64_t* displays_removed, size_t removed_count);
@@ -219,12 +219,10 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::RawChannelI
   size_t GetGammaTableSize() const { return gamma_table_map_.size(); }
 
  private:
-  void ImportVmoImage(llcpp::fuchsia::hardware::display::wire::ImageConfig image_config,
-                      zx::vmo vmo, int32_t offset,
-                      ImportVmoImageCompleter::Sync& _completer) override;
-  void ImportImage(llcpp::fuchsia::hardware::display::wire::ImageConfig image_config,
-                   uint64_t collection_id, uint32_t index,
-                   ImportImageCompleter::Sync& _completer) override;
+  void ImportVmoImage(fuchsia_hardware_display::wire::ImageConfig image_config, zx::vmo vmo,
+                      int32_t offset, ImportVmoImageCompleter::Sync& _completer) override;
+  void ImportImage(fuchsia_hardware_display::wire::ImageConfig image_config, uint64_t collection_id,
+                   uint32_t index, ImportImageCompleter::Sync& _completer) override;
   void ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync& _completer) override;
   void ImportEvent(zx::event event, uint64_t id, ImportEventCompleter::Sync& _completer) override;
   void ReleaseEvent(uint64_t id, ReleaseEventCompleter::Sync& _completer) override;
@@ -235,7 +233,7 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::RawChannelI
                         ImportGammaTableCompleter::Sync& _completer) override;
   void ReleaseGammaTable(uint64_t gamma_table_id,
                          ReleaseGammaTableCompleter::Sync& _completer) override;
-  void SetDisplayMode(uint64_t display_id, llcpp::fuchsia::hardware::display::wire::Mode mode,
+  void SetDisplayMode(uint64_t display_id, fuchsia_hardware_display::wire::Mode mode,
                       SetDisplayModeCompleter::Sync& _completer) override;
   void SetDisplayColorConversion(uint64_t display_id, ::fidl::Array<float, 3> preoffsets,
                                  ::fidl::Array<float, 9> coefficients,
@@ -246,18 +244,17 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::RawChannelI
   void SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids,
                         SetDisplayLayersCompleter::Sync& _completer) override;
   void SetLayerPrimaryConfig(uint64_t layer_id,
-                             llcpp::fuchsia::hardware::display::wire::ImageConfig image_config,
+                             fuchsia_hardware_display::wire::ImageConfig image_config,
                              SetLayerPrimaryConfigCompleter::Sync& _completer) override;
   void SetLayerPrimaryPosition(uint64_t layer_id,
-                               llcpp::fuchsia::hardware::display::wire::Transform transform,
-                               llcpp::fuchsia::hardware::display::wire::Frame src_frame,
-                               llcpp::fuchsia::hardware::display::wire::Frame dest_frame,
+                               fuchsia_hardware_display::wire::Transform transform,
+                               fuchsia_hardware_display::wire::Frame src_frame,
+                               fuchsia_hardware_display::wire::Frame dest_frame,
                                SetLayerPrimaryPositionCompleter::Sync& _completer) override;
-  void SetLayerPrimaryAlpha(uint64_t layer_id,
-                            llcpp::fuchsia::hardware::display::wire::AlphaMode mode, float val,
-                            SetLayerPrimaryAlphaCompleter::Sync& _completer) override;
+  void SetLayerPrimaryAlpha(uint64_t layer_id, fuchsia_hardware_display::wire::AlphaMode mode,
+                            float val, SetLayerPrimaryAlphaCompleter::Sync& _completer) override;
   void SetLayerCursorConfig(uint64_t layer_id,
-                            llcpp::fuchsia::hardware::display::wire::ImageConfig image_config,
+                            fuchsia_hardware_display::wire::ImageConfig image_config,
                             SetLayerCursorConfigCompleter::Sync& _completer) override;
   void SetLayerCursorPosition(uint64_t layer_id, int32_t x, int32_t y,
                               SetLayerCursorPositionCompleter::Sync& _completer) override;
@@ -274,13 +271,13 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::RawChannelI
   void ImportBufferCollection(uint64_t collection_id, zx::channel collection_token,
                               ImportBufferCollectionCompleter::Sync& _completer) override;
   void SetBufferCollectionConstraints(
-      uint64_t collection_id, llcpp::fuchsia::hardware::display::wire::ImageConfig config,
+      uint64_t collection_id, fuchsia_hardware_display::wire::ImageConfig config,
       SetBufferCollectionConstraintsCompleter::Sync& _completer) override;
   void ReleaseBufferCollection(uint64_t collection_id,
                                ReleaseBufferCollectionCompleter::Sync& _completer) override;
 
   void IsCaptureSupported(IsCaptureSupportedCompleter::Sync& _completer) override;
-  void ImportImageForCapture(llcpp::fuchsia::hardware::display::wire::ImageConfig image_config,
+  void ImportImageForCapture(fuchsia_hardware_display::wire::ImageConfig image_config,
                              uint64_t collection_id, uint32_t index,
                              ImportImageForCaptureCompleter::Sync& _completer) override;
 
@@ -320,14 +317,14 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::RawChannelI
   uint8_t client_minimum_rgb_ = 0;
   sync_completion_t fidl_unbound_;
 
-  llcpp::fuchsia::sysmem::Allocator::SyncClient sysmem_allocator_;
+  fuchsia_sysmem::Allocator::SyncClient sysmem_allocator_;
 
   struct Collections {
     // Sent to the hardware driver.
-    llcpp::fuchsia::sysmem::BufferCollection::SyncClient driver;
+    fuchsia_sysmem::BufferCollection::SyncClient driver;
     // If the VC is using this, |kernel| is the collection used for setting
     // it as kernel framebuffer.
-    llcpp::fuchsia::sysmem::BufferCollection::SyncClient kernel;
+    fuchsia_sysmem::BufferCollection::SyncClient kernel;
   };
   std::map<uint64_t, Collections> collection_map_;
 
@@ -341,8 +338,8 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::RawChannelI
 
   void NotifyDisplaysChanged(const int32_t* displays_added, uint32_t added_count,
                              const int32_t* displays_removed, uint32_t removed_count);
-  bool CheckConfig(llcpp::fuchsia::hardware::display::wire::ConfigResult* res,
-                   std::vector<llcpp::fuchsia::hardware::display::wire::ClientCompositionOp>* ops);
+  bool CheckConfig(fuchsia_hardware_display::wire::ConfigResult* res,
+                   std::vector<fuchsia_hardware_display::wire::ClientCompositionOp>* ops);
 
   uint64_t GetActiveCaptureImage() { return current_capture_image_; }
 

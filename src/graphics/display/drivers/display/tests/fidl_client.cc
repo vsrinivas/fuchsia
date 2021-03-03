@@ -9,8 +9,8 @@
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
-namespace fhd = ::llcpp::fuchsia::hardware::display;
-namespace sysmem = ::llcpp::fuchsia::sysmem;
+namespace fhd = ::fuchsia_hardware_display;
+namespace sysmem = ::fuchsia_sysmem;
 
 namespace display {
 

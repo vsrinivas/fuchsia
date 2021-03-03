@@ -217,7 +217,7 @@ TEST(SyslogTestsEdgeCases, test_global_tag_limit) {
 }
 
 TEST(SyslogTestsEdgeCases, test_msg_length_limit) {
-  constexpr size_t kMessageSize = llcpp::fuchsia::logger::wire::MAX_DATAGRAM_LEN_BYTES + 5;
+  constexpr size_t kMessageSize = fuchsia_logger::wire::MAX_DATAGRAM_LEN_BYTES + 5;
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");

@@ -18,10 +18,10 @@ namespace sysmem_driver {
 zx::duration kGuardCheckInterval = zx::sec(5);
 namespace {
 
-llcpp::fuchsia::sysmem2::wire::HeapProperties BuildHeapProperties(fidl::AnyAllocator& allocator,
-                                                                  bool is_cpu_accessible) {
-  using llcpp::fuchsia::sysmem2::wire::CoherencyDomainSupport;
-  using llcpp::fuchsia::sysmem2::wire::HeapProperties;
+fuchsia_sysmem2::wire::HeapProperties BuildHeapProperties(fidl::AnyAllocator& allocator,
+                                                          bool is_cpu_accessible) {
+  using fuchsia_sysmem2::wire::CoherencyDomainSupport;
+  using fuchsia_sysmem2::wire::HeapProperties;
 
   auto coherency_domain_support = CoherencyDomainSupport(allocator);
   coherency_domain_support.set_cpu_supported(allocator, is_cpu_accessible);
@@ -331,7 +331,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
 
 zx_status_t ContiguousPooledMemoryAllocator::SetupChildVmo(
     const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-    llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings) {
+    fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings) {
   // nothing to do here
   return ZX_OK;
 }

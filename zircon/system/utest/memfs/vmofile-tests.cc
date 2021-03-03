@@ -29,7 +29,7 @@
 
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 // These are rights that are common to the various rights checks below.
 const uint32_t kCommonExpectedRights =
@@ -89,7 +89,7 @@ TEST(VmofileTests, test_vmofile_basic) {
     auto get_result = fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::wire::VMO_FLAG_READ);
     ASSERT_EQ(get_result.status(), ZX_OK);
     ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
-    llcpp::fuchsia::mem::wire::Buffer* buffer = get_result.Unwrap()->buffer.get();
+    fuchsia_mem::wire::Buffer* buffer = get_result.Unwrap()->buffer.get();
     ASSERT_TRUE(buffer->vmo.is_valid());
     ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights);
     ASSERT_EQ(buffer->size, 13);
@@ -100,7 +100,7 @@ TEST(VmofileTests, test_vmofile_basic) {
         zx::unowned_channel(h), fio::wire::VMO_FLAG_READ | fio::wire::VMO_FLAG_PRIVATE);
     ASSERT_EQ(get_result.status(), ZX_OK);
     ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
-    llcpp::fuchsia::mem::wire::Buffer* buffer = get_result.Unwrap()->buffer.get();
+    fuchsia_mem::wire::Buffer* buffer = get_result.Unwrap()->buffer.get();
     ASSERT_TRUE(buffer->vmo.is_valid());
     ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights | ZX_RIGHT_SET_PROPERTY);
     ASSERT_EQ(buffer->size, 13);
@@ -178,7 +178,7 @@ TEST(VmofileTests, test_vmofile_exec) {
     auto get_result = fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::wire::VMO_FLAG_READ);
     ASSERT_EQ(get_result.status(), ZX_OK);
     ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
-    llcpp::fuchsia::mem::wire::Buffer* buffer = get_result.Unwrap()->buffer.get();
+    fuchsia_mem::wire::Buffer* buffer = get_result.Unwrap()->buffer.get();
     ASSERT_TRUE(buffer->vmo.is_valid());
     ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights);
     ASSERT_EQ(buffer->size, 13);

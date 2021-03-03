@@ -24,16 +24,16 @@ int main(int argc, char* argv[]) {
   }
 
   const auto svc_path =
-      fbl::StringPrintf("/svc/%s", llcpp::fuchsia::driver::registrar::DriverRegistrar::Name);
+      fbl::StringPrintf("/svc/%s", fuchsia_driver_registrar::DriverRegistrar::Name);
   status = fdio_service_connect(svc_path.c_str(), remote.release());
   if (status != ZX_OK) {
     fprintf(stderr, "fdio_service_connect failed, pathc %s, status %d\n", svc_path.c_str(), status);
     return status;
   }
-  llcpp::fuchsia::driver::registrar::DriverRegistrar::SyncClient client(std::move(local));
+  fuchsia_driver_registrar::DriverRegistrar::SyncClient client(std::move(local));
 
-  auto resp = client.Register(
-      llcpp::fuchsia::pkg::wire::PackageUrl{fidl::unowned_str(argv[1], strlen(argv[1]))});
+  auto resp =
+      client.Register(fuchsia_pkg::wire::PackageUrl{fidl::unowned_str(argv[1], strlen(argv[1]))});
   if (!resp.ok()) {
     fprintf(stderr, "Failed to call DriverRegistrar::Register for driver package %s\n", argv[1]);
     return -1;

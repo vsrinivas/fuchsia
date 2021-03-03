@@ -132,12 +132,12 @@ class Vfs {
   // Begins serving VFS messages over the specified channel. If the vnode supports multiple
   // protocols and the client requested more than one of them, it would use |Vnode::Negotiate| to
   // tie-break and obtain the resulting protocol.
-  zx_status_t Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<llcpp::fuchsia::io::Node> server_end,
+  zx_status_t Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Node> server_end,
                     VnodeConnectionOptions options) FS_TA_EXCLUDES(vfs_lock_);
 
   // Begins serving VFS messages over the specified channel. This version takes an |options|
   // that have been validated.
-  zx_status_t Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<llcpp::fuchsia::io::Node> server_end,
+  zx_status_t Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Node> server_end,
                     Vnode::ValidatedOptions options) FS_TA_EXCLUDES(vfs_lock_);
 
   // Called by a VFS connection when it is closed remotely. The VFS is now responsible for
@@ -147,12 +147,11 @@ class Vfs {
   // Serves a Vnode over the specified channel (used for creating new filesystems); the Vnode must
   // be a directory.
   zx_status_t ServeDirectory(fbl::RefPtr<Vnode> vn,
-                             fidl::ServerEnd<::llcpp::fuchsia::io::Directory> server_end,
-                             Rights rights);
+                             fidl::ServerEnd<::fuchsia_io::Directory> server_end, Rights rights);
 
   // Convenience wrapper over |ServeDirectory| with maximum rights.
   zx_status_t ServeDirectory(fbl::RefPtr<Vnode> vn,
-                             fidl::ServerEnd<::llcpp::fuchsia::io::Directory> server_end) {
+                             fidl::ServerEnd<::fuchsia_io::Directory> server_end) {
     return ServeDirectory(vn, std::move(server_end), fs::Rights::All());
   }
 
@@ -169,14 +168,12 @@ class Vfs {
                          uint32_t flags) FS_TA_EXCLUDES(vfs_lock_);
 
   // Unpin a handle to a remote filesystem from a vnode, if one exists.
-  zx_status_t UninstallRemote(fbl::RefPtr<Vnode> vn,
-                              fidl::ClientEnd<llcpp::fuchsia::io::Directory>* h)
+  zx_status_t UninstallRemote(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fuchsia_io::Directory>* h)
       FS_TA_EXCLUDES(vfs_lock_);
 
   // Forwards an open request to a remote handle. If the remote handle is closed (handing off
   // returns ZX_ERR_PEER_CLOSED), it is automatically unmounted.
-  zx_status_t ForwardOpenRemote(fbl::RefPtr<Vnode> vn,
-                                fidl::ServerEnd<llcpp::fuchsia::io::Node> channel,
+  zx_status_t ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd<fuchsia_io::Node> channel,
                                 fbl::StringPiece path, VnodeConnectionOptions options,
                                 uint32_t mode) FS_TA_EXCLUDES(vfs_lock_);
 
@@ -187,7 +184,7 @@ class Vfs {
   // Shuts down a remote filesystem, by sending a |fuchsia.io/DirectoryAdmin.Unmount| request to the
   // filesystem serving |handle| and awaits a response. |deadline| is the deadline for waiting for
   // response.
-  static zx_status_t UnmountHandle(fidl::ClientEnd<llcpp::fuchsia::io::DirectoryAdmin> handle,
+  static zx_status_t UnmountHandle(fidl::ClientEnd<fuchsia_io::DirectoryAdmin> handle,
                                    zx::time deadline);
 
   bool IsTokenAssociatedWithVnode(zx::event token) FS_TA_EXCLUDES(vfs_lock_);
@@ -242,7 +239,7 @@ class Vfs {
   zx_status_t TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) FS_TA_REQUIRES(vfs_lock_);
   zx_status_t InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) FS_TA_REQUIRES(vfs_lock_);
   zx_status_t UninstallRemoteLocked(fbl::RefPtr<Vnode> vn,
-                                    fidl::ClientEnd<llcpp::fuchsia::io::Directory>* h)
+                                    fidl::ClientEnd<fuchsia_io::Directory>* h)
       FS_TA_REQUIRES(vfs_lock_);
 
   fbl::HashTable<zx_koid_t, std::unique_ptr<VnodeToken>> vnode_tokens_;
@@ -255,7 +252,7 @@ class Vfs {
     ~MountNode();
 
     void SetNode(fbl::RefPtr<Vnode> vn);
-    fidl::ClientEnd<llcpp::fuchsia::io::Directory> ReleaseRemote();
+    fidl::ClientEnd<fuchsia_io::Directory> ReleaseRemote();
     bool VnodeMatch(fbl::RefPtr<Vnode> vn) const;
 
    private:

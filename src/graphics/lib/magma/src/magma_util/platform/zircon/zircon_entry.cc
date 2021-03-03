@@ -35,11 +35,11 @@ zx_status_t magma_indriver_test(zx_device_t* device);
 
 class GpuDevice;
 
-using FidlStatus = llcpp::fuchsia::gpu::magma::wire::Status;
+using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
 using DdkDeviceType = ddk::Device<GpuDevice, ddk::Messageable, ddk::Unbindable, ddk::Initializable>;
 
-class GpuDevice : public llcpp::fuchsia::gpu::magma::Device::Interface,
+class GpuDevice : public fuchsia_gpu_magma::Device::Interface,
                   public DdkDeviceType,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_GPU> {
  public:
@@ -244,7 +244,7 @@ zx_status_t GpuDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   }
 
   DdkTransaction ddk_transaction(txn);
-  llcpp::fuchsia::gpu::magma::Device::Dispatch(this, msg, &ddk_transaction);
+  fuchsia_gpu_magma::Device::Dispatch(this, msg, &ddk_transaction);
   return ddk_transaction.Status();
 }
 

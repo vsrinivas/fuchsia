@@ -73,8 +73,8 @@ enum class Command {
 struct Flags {
   Command cmd;
   const char* cmd_name = nullptr;
-  ::llcpp::fuchsia::paver::wire::Configuration configuration;
-  ::llcpp::fuchsia::paver::wire::Asset asset;
+  ::fuchsia_paver::wire::Configuration configuration;
+  ::fuchsia_paver::wire::Asset asset;
   fbl::unique_fd payload_fd;
   const char* path = nullptr;
   const char* block_device = nullptr;
@@ -100,32 +100,32 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
     flags->cmd = Command::kBootloader;
   } else if (!strcmp(argv[0], "install-kernc")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::A;
-    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::KERNEL;
+    flags->configuration = ::fuchsia_paver::wire::Configuration::A;
+    flags->asset = ::fuchsia_paver::wire::Asset::KERNEL;
   } else if (!strcmp(argv[0], "install-zircona")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::A;
-    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::KERNEL;
+    flags->configuration = ::fuchsia_paver::wire::Configuration::A;
+    flags->asset = ::fuchsia_paver::wire::Asset::KERNEL;
   } else if (!strcmp(argv[0], "install-zirconb")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::B;
-    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::KERNEL;
+    flags->configuration = ::fuchsia_paver::wire::Configuration::B;
+    flags->asset = ::fuchsia_paver::wire::Asset::KERNEL;
   } else if (!strcmp(argv[0], "install-zirconr")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::RECOVERY;
-    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::KERNEL;
+    flags->configuration = ::fuchsia_paver::wire::Configuration::RECOVERY;
+    flags->asset = ::fuchsia_paver::wire::Asset::KERNEL;
   } else if (!strcmp(argv[0], "install-vbmetaa")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::A;
-    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::VERIFIED_BOOT_METADATA;
+    flags->configuration = ::fuchsia_paver::wire::Configuration::A;
+    flags->asset = ::fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA;
   } else if (!strcmp(argv[0], "install-vbmetab")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::B;
-    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::VERIFIED_BOOT_METADATA;
+    flags->configuration = ::fuchsia_paver::wire::Configuration::B;
+    flags->asset = ::fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA;
   } else if (!strcmp(argv[0], "install-vbmetar")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = ::llcpp::fuchsia::paver::wire::Configuration::RECOVERY;
-    flags->asset = ::llcpp::fuchsia::paver::wire::Asset::VERIFIED_BOOT_METADATA;
+    flags->configuration = ::fuchsia_paver::wire::Configuration::RECOVERY;
+    flags->asset = ::fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA;
   } else if (!strcmp(argv[0], "install-data-file")) {
     flags->cmd = Command::kDataFile;
   } else if (!strcmp(argv[0], "install-fvm")) {
@@ -182,7 +182,7 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
 #undef SHIFT_ARGS
 }
 
-zx_status_t ReadFileToVmo(fbl::unique_fd payload_fd, ::llcpp::fuchsia::mem::wire::Buffer* payload) {
+zx_status_t ReadFileToVmo(fbl::unique_fd payload_fd, ::fuchsia_mem::wire::Buffer* payload) {
   constexpr size_t VmoSize = fbl::round_up(1LU << 20, ZX_PAGE_SIZE);
   fzl::ResizeableVmoMapper mapper;
   zx_status_t status;
@@ -227,17 +227,17 @@ struct UseBlockDeviceError {
 // together with a status.
 template <typename Protocol>
 fitx::result<UseBlockDeviceError<Protocol>> UseBlockDevice(
-    llcpp::fuchsia::paver::Paver::SyncClient& paver_client, const char* block_device_path,
+    fuchsia_paver::Paver::SyncClient& paver_client, const char* block_device_path,
     fidl::ServerEnd<Protocol> data_sink_remote) {
-  static_assert(std::is_same_v<Protocol, ::llcpp::fuchsia::paver::DataSink> ||
-                std::is_same_v<Protocol, ::llcpp::fuchsia::paver::DynamicDataSink>);
+  static_assert(std::is_same_v<Protocol, ::fuchsia_paver::DataSink> ||
+                std::is_same_v<Protocol, ::fuchsia_paver::DynamicDataSink>);
 
-  auto block_device = service::Connect<::llcpp::fuchsia::hardware::block::Block>(block_device_path);
+  auto block_device = service::Connect<::fuchsia_hardware_block::Block>(block_device_path);
   if (block_device.is_ok()) {
     paver_client.UseBlockDevice(
         std::move(*block_device),
         // Note: manually converting any DataSink protocol into a DynamicDataSink.
-        fidl::ServerEnd<::llcpp::fuchsia::paver::DynamicDataSink>(data_sink_remote.TakeChannel()));
+        fidl::ServerEnd<::fuchsia_paver::DynamicDataSink>(data_sink_remote.TakeChannel()));
     return fitx::ok();
   }
 
@@ -251,7 +251,7 @@ fitx::result<UseBlockDeviceError<Protocol>> UseBlockDevice(
 }
 
 zx_status_t RealMain(Flags flags) {
-  auto paver_svc = service::Connect<::llcpp::fuchsia::paver::Paver>();
+  auto paver_svc = service::Connect<::fuchsia_paver::Paver>();
   if (!paver_svc.is_ok()) {
     ERROR("Unable to open /svc/fuchsia.paver.Paver.\n");
     return paver_svc.error_value();
@@ -260,7 +260,7 @@ zx_status_t RealMain(Flags flags) {
 
   switch (flags.cmd) {
     case Command::kFvm: {
-      auto data_sink = fidl::CreateEndpoints<::llcpp::fuchsia::paver::DataSink>();
+      auto data_sink = fidl::CreateEndpoints<::fuchsia_paver::DataSink>();
       if (data_sink.is_error()) {
         ERROR("Unable to create channels.\n");
         return data_sink.status_value();
@@ -268,7 +268,7 @@ zx_status_t RealMain(Flags flags) {
       auto [data_sink_local, data_sink_remote] = std::move(*data_sink);
       paver_client.FindDataSink(std::move(data_sink_remote));
 
-      auto streamer_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::paver::PayloadStream>();
+      auto streamer_endpoints = fidl::CreateEndpoints<::fuchsia_paver::PayloadStream>();
       if (streamer_endpoints.is_error()) {
         return streamer_endpoints.status_value();
       }
@@ -290,7 +290,7 @@ zx_status_t RealMain(Flags flags) {
       return ZX_OK;
     }
     case Command::kWipe: {
-      auto data_sink = fidl::CreateEndpoints<::llcpp::fuchsia::paver::DataSink>();
+      auto data_sink = fidl::CreateEndpoints<::fuchsia_paver::DataSink>();
       if (data_sink.is_error()) {
         ERROR("Unable to create channels.\n");
         return data_sink.status_value();
@@ -332,7 +332,7 @@ zx_status_t RealMain(Flags flags) {
         return ZX_ERR_INVALID_ARGS;
       }
 
-      auto data_sink = fidl::CreateEndpoints<::llcpp::fuchsia::paver::DynamicDataSink>();
+      auto data_sink = fidl::CreateEndpoints<::fuchsia_paver::DynamicDataSink>();
       if (data_sink.is_error()) {
         ERROR("Unable to create channels.\n");
         return data_sink.status_value();
@@ -361,7 +361,7 @@ zx_status_t RealMain(Flags flags) {
         return ZX_ERR_INVALID_ARGS;
       }
 
-      auto data_sink = fidl::CreateEndpoints<::llcpp::fuchsia::paver::DynamicDataSink>();
+      auto data_sink = fidl::CreateEndpoints<::fuchsia_paver::DynamicDataSink>();
       if (data_sink.is_error()) {
         ERROR("Unable to create channels.\n");
         return data_sink.status_value();
@@ -387,13 +387,13 @@ zx_status_t RealMain(Flags flags) {
       break;
   }
 
-  ::llcpp::fuchsia::mem::wire::Buffer payload;
+  ::fuchsia_mem::wire::Buffer payload;
   zx_status_t status = ReadFileToVmo(std::move(flags.payload_fd), &payload);
   if (status != ZX_OK) {
     return status;
   }
 
-  auto data_sink_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::paver::DataSink>();
+  auto data_sink_endpoints = fidl::CreateEndpoints<::fuchsia_paver::DataSink>();
   if (data_sink_endpoints.is_error()) {
     ERROR("Unable to create channels.\n");
     return data_sink_endpoints.status_value();

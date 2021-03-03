@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/enummemberadd/llcpp/fidl.h>  // nogncheck
-namespace fidl_test = llcpp::fidl::test::enummemberadd;
+namespace fidl_test = fidl_test_enummemberadd;
 
 // [START contents]
 fidl_test::wire::Color writer(std::string s) {

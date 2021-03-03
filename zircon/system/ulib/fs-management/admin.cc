@@ -22,8 +22,8 @@
 #include "path.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 
-namespace fio = ::llcpp::fuchsia::io;
-namespace fshost = ::llcpp::fuchsia::fshost;
+namespace fio = ::fuchsia_io;
+namespace fshost = ::fuchsia_fshost;
 
 namespace fs_management {
 namespace {

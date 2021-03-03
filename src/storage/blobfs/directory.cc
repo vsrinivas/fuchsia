@@ -87,7 +87,7 @@ zx_status_t Directory::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out
 zx_status_t Directory::GetAttributes(fs::VnodeAttributes* a) {
   *a = fs::VnodeAttributes();
   a->mode = V_TYPE_DIR | V_IRUSR;
-  a->inode = ::llcpp::fuchsia::io::wire::INO_UNKNOWN;
+  a->inode = ::fuchsia_io::wire::INO_UNKNOWN;
   a->content_size = 0;
   a->storage_size = 0;
   a->link_count = 1;
@@ -120,7 +120,7 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
 
 #ifdef __Fuchsia__
 
-zx_status_t Directory::QueryFilesystem(::llcpp::fuchsia::io::wire::FilesystemInfo* info) {
+zx_status_t Directory::QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* info) {
   blobfs_->GetFilesystemInfo(info);
   return ZX_OK;
 }
@@ -170,14 +170,14 @@ void Directory::Sync(SyncCallback closure) {
 #ifdef __Fuchsia__
 
 void Directory::HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
-  llcpp::fuchsia::blobfs::Blobfs::Dispatch(this, msg, txn);
+  fuchsia_blobfs::Blobfs::Dispatch(this, msg, txn);
 }
 
 void Directory::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) {
-  static_assert(sizeof(llcpp::fuchsia::blobfs::wire::BlockRegion) == sizeof(BlockRegion));
-  static_assert(offsetof(llcpp::fuchsia::blobfs::wire::BlockRegion, offset) ==
+  static_assert(sizeof(fuchsia_blobfs::wire::BlockRegion) == sizeof(BlockRegion));
+  static_assert(offsetof(fuchsia_blobfs::wire::BlockRegion, offset) ==
                 offsetof(BlockRegion, offset));
-  static_assert(offsetof(llcpp::fuchsia::blobfs::wire::BlockRegion, length) ==
+  static_assert(offsetof(fuchsia_blobfs::wire::BlockRegion, length) ==
                 offsetof(BlockRegion, length));
   zx::vmo vmo;
   zx_status_t status = ZX_OK;
@@ -196,9 +196,8 @@ void Directory::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& complete
   }
 }
 
-void Directory::SetCorruptBlobHandler(
-    fidl::ClientEnd<llcpp::fuchsia::blobfs::CorruptBlobHandler> handler,
-    SetCorruptBlobHandlerCompleter::Sync& completer) {
+void Directory::SetCorruptBlobHandler(fidl::ClientEnd<fuchsia_blobfs::CorruptBlobHandler> handler,
+                                      SetCorruptBlobHandlerCompleter::Sync& completer) {
   blobfs_->SetCorruptBlobHandler(std::move(handler));
   completer.Reply(ZX_OK);
 }

@@ -46,16 +46,15 @@ class Keyboard {
 
   // Have the keyboard start watching a given device.
   // |caller| represents the keyboard device.
-  zx_status_t Setup(llcpp::fuchsia::input::report::InputDevice::SyncClient keyboard_client);
+  zx_status_t Setup(fuchsia_input_report::InputDevice::SyncClient keyboard_client);
 
   // Process a given set of keys and send them to the handler.
-  void ProcessInput(const ::llcpp::fuchsia::input::report::wire::InputReport& report);
+  void ProcessInput(const ::fuchsia_input_report::wire::InputReport& report);
 
  private:
   // The callback for when key-repeat is triggered.
   void TimerCallback(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status);
-  void InputCallback(
-      llcpp::fuchsia::input::report::wire::InputReportsReader_ReadInputReports_Result result);
+  void InputCallback(fuchsia_input_report::wire::InputReportsReader_ReadInputReports_Result result);
 
   // This is the callback if reader_client_ is unbound. This tries to reconnect and
   // will delete Keyboard if reconnecting fails.
@@ -73,15 +72,14 @@ class Keyboard {
   keypress_handler_t handler_ = {};
 
   zx::duration repeat_interval_ = zx::duration::infinite();
-  std::optional<llcpp::fuchsia::input::report::InputDevice::SyncClient> keyboard_client_;
-  fidl::Client<llcpp::fuchsia::input::report::InputReportsReader> reader_client_;
+  std::optional<fuchsia_input_report::InputDevice::SyncClient> keyboard_client_;
+  fidl::Client<fuchsia_input_report::InputReportsReader> reader_client_;
 
   int modifiers_ = 0;
   bool repeat_enabled_ = true;
   bool is_repeating_ = false;
   uint8_t repeating_keycode_;
-  std::array<llcpp::fuchsia::ui::input2::wire::Key,
-             llcpp::fuchsia::input::report::wire::KEYBOARD_MAX_PRESSED_KEYS>
+  std::array<fuchsia_ui_input2::wire::Key, fuchsia_input_report::wire::KEYBOARD_MAX_PRESSED_KEYS>
       last_pressed_keys_;
   size_t last_pressed_keys_size_ = 0;
 };
@@ -101,9 +99,7 @@ class KeyboardWatcher {
   zx_status_t OpenFile(uint8_t evt, char* name);
 
   // The channel representing the directory this is watching.
-  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> Directory() {
-    return dir_caller_.directory();
-  }
+  fidl::UnownedClientEnd<::fuchsia_io::Directory> Directory() { return dir_caller_.directory(); }
 
   bool repeat_keys_ = true;
   keypress_handler_t handler_ = {};

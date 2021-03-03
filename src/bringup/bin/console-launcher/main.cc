@@ -21,7 +21,7 @@ namespace {
 
 #define LOGF(severity, message...) FX_LOGF(severity, nullptr, message)
 
-zx_status_t log_to_debuglog(llcpp::fuchsia::boot::WriteOnlyLog::SyncClient* log_client) {
+zx_status_t log_to_debuglog(fuchsia_boot::WriteOnlyLog::SyncClient* log_client) {
   auto result = log_client->Get();
   if (result.status() != ZX_OK) {
     return result.status();
@@ -43,7 +43,7 @@ zx_status_t log_to_debuglog(llcpp::fuchsia::boot::WriteOnlyLog::SyncClient* log_
   return fx_log_reconfigure(&logger_config);
 }
 
-zx_status_t ConnectToBootArgs(llcpp::fuchsia::boot::Arguments::SyncClient* out_client) {
+zx_status_t ConnectToBootArgs(fuchsia_boot::Arguments::SyncClient* out_client) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
@@ -54,11 +54,11 @@ zx_status_t ConnectToBootArgs(llcpp::fuchsia::boot::Arguments::SyncClient* out_c
     return status;
   }
 
-  *out_client = llcpp::fuchsia::boot::Arguments::SyncClient(std::move(local));
+  *out_client = fuchsia_boot::Arguments::SyncClient(std::move(local));
   return ZX_OK;
 }
 
-zx_status_t ConnectToWriteLog(llcpp::fuchsia::boot::WriteOnlyLog::SyncClient* out_client) {
+zx_status_t ConnectToWriteLog(fuchsia_boot::WriteOnlyLog::SyncClient* out_client) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
@@ -69,7 +69,7 @@ zx_status_t ConnectToWriteLog(llcpp::fuchsia::boot::WriteOnlyLog::SyncClient* ou
     return status;
   }
 
-  *out_client = llcpp::fuchsia::boot::WriteOnlyLog::SyncClient(std::move(local));
+  *out_client = fuchsia_boot::WriteOnlyLog::SyncClient(std::move(local));
   return ZX_OK;
 }
 
@@ -86,7 +86,7 @@ int main(int argv, char** argc) {
   // they will make it to the debuglog.
   printf("console-launcher: running\n");
 
-  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  fuchsia_boot::Arguments::SyncClient boot_args;
   status = ConnectToBootArgs(&boot_args);
   if (status != ZX_OK) {
     fprintf(stderr, "console-launcher: failed to get boot args: %s\n",
@@ -94,7 +94,7 @@ int main(int argv, char** argc) {
     return 1;
   }
 
-  llcpp::fuchsia::boot::WriteOnlyLog::SyncClient log_client;
+  fuchsia_boot::WriteOnlyLog::SyncClient log_client;
   status = ConnectToWriteLog(&log_client);
   if (status != ZX_OK) {
     fprintf(stderr, "console-launcher: failed to get write log: %s\n",

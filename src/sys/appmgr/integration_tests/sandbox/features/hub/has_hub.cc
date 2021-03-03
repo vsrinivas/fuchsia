@@ -10,7 +10,7 @@
 
 #include "src/sys/appmgr/integration_tests/sandbox/namespace_test.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 TEST_F(NamespaceTest, HasHub) {
   ExpectExists("/hub/");

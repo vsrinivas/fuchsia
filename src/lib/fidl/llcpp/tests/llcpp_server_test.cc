@@ -18,7 +18,7 @@
 
 namespace {
 
-using ::llcpp::fidl::test::coding::fuchsia::Simple;
+using ::fidl_test_coding_fuchsia::Simple;
 
 constexpr uint32_t kNumberOfAsyncs = 10;
 constexpr int32_t kExpectedReply = 7;
@@ -622,7 +622,7 @@ TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
 // threads while unbinding is occurring, and that those event sending operations
 // return |ZX_ERR_CANCELED| after the server has been unbound.
 TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
-  using ::llcpp::fidl::test::coding::fuchsia::Example;
+  using ::fidl_test_coding_fuchsia::Example;
   class Server : public Example::Interface {
    public:
     void TwoWay(fidl::StringView in, TwoWayCompleter::Sync& completer) override {

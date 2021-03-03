@@ -14,7 +14,7 @@ namespace devmgr {
 fbl::RefPtr<fs::Service> AdminServer::Create(devmgr::FsManager* fs_manager,
                                              async_dispatcher* dispatcher) {
   return fbl::MakeRefCounted<fs::Service>(
-      [dispatcher, fs_manager](fidl::ServerEnd<::llcpp::fuchsia::fshost::Admin> chan) {
+      [dispatcher, fs_manager](fidl::ServerEnd<::fuchsia_fshost::Admin> chan) {
         zx_status_t status = fidl::BindSingleInFlightOnly(
             dispatcher, std::move(chan), std::make_unique<AdminServer>(fs_manager));
         if (status != ZX_OK) {

@@ -85,7 +85,7 @@ TEST(ConsoleTestCase, Log) {
   ASSERT_OK(Console::Create(std::move(rx_source), std::move(tx_sink), {}, &console));
 
   fidl::StringView tag = "tag";
-  llcpp::fuchsia::logger::wire::LogMessage log{
+  fuchsia_logger::wire::LogMessage log{
       .pid = 1,
       .tid = 2,
       .time = 4321000000,
@@ -114,7 +114,7 @@ TEST(ConsoleTestCase, LogDenyTag) {
   ASSERT_OK(Console::Create(std::move(rx_source), std::move(tx_sink), {"deny-tag"}, &console));
 
   fidl::StringView tag = "deny-tag";
-  llcpp::fuchsia::logger::wire::LogMessage log{
+  fuchsia_logger::wire::LogMessage log{
       .pid = 1,
       .tid = 2,
       .time = 4321000000,

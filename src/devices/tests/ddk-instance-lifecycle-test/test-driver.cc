@@ -18,8 +18,8 @@
 
 namespace {
 
-using llcpp::fuchsia::device::instancelifecycle::test::Lifecycle;
-using llcpp::fuchsia::device::instancelifecycle::test::TestDevice;
+using fuchsia_device_instancelifecycle_test::Lifecycle;
+using fuchsia_device_instancelifecycle_test::TestDevice;
 
 class TestLifecycleDriver;
 using DeviceType = ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::Messageable>;

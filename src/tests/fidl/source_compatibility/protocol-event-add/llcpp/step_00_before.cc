@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/protocoleventadd/llcpp/fidl.h>  // nogncheck
-namespace fidl_test = llcpp::fidl::test::protocoleventadd;
+namespace fidl_test = fidl_test_protocoleventadd;
 
 // [START contents]
 class AsyncEventHandler : public fidl_test::Example::AsyncEventHandler {

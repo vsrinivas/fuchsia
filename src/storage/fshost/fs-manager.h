@@ -45,11 +45,10 @@ class FsManager {
                      std::unique_ptr<FsHostMetrics> metrics);
   ~FsManager();
 
-  zx_status_t Initialize(
-      fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request,
-      fidl::ServerEnd<::llcpp::fuchsia::process::lifecycle::Lifecycle> lifecycle_request,
-      fidl::ClientEnd<::llcpp::fuchsia::device::manager::Administrator> driver_admin,
-      std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher);
+  zx_status_t Initialize(fidl::ServerEnd<::fuchsia_io::Directory> dir_request,
+                         fidl::ServerEnd<::fuchsia_process_lifecycle::Lifecycle> lifecycle_request,
+                         fidl::ClientEnd<::fuchsia_device_manager::Administrator> driver_admin,
+                         std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher);
 
   // TODO(fxbug.dev/39588): delete this
   // Starts servicing the delayed portion of the outgoing directory, called once
@@ -89,7 +88,7 @@ class FsManager {
   zx_status_t SetFsExportRoot(MountPoint mount_point, zx::channel export_root_directory);
 
   // Serves connection to the root directory ("/") on |server|.
-  zx_status_t ServeRoot(fidl::ServerEnd<::llcpp::fuchsia::io::Directory> server);
+  zx_status_t ServeRoot(fidl::ServerEnd<::fuchsia_io::Directory> server);
 
   // Serves connection to the fshost directory (exporting the "fuchsia.fshost" services) on
   // |server|.
@@ -121,12 +120,12 @@ class FsManager {
   zx_status_t ForwardFsService(MountPoint point, const char* service_name);
 
  private:
-  zx_status_t SetupOutgoingDirectory(fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request,
+  zx_status_t SetupOutgoingDirectory(fidl::ServerEnd<::fuchsia_io::Directory> dir_request,
                                      std::shared_ptr<loader::LoaderServiceBase> loader,
                                      BlockWatcher& watcher);
 
   zx_status_t SetupLifecycleServer(
-      fidl::ServerEnd<::llcpp::fuchsia::process::lifecycle::Lifecycle> lifecycle_request);
+      fidl::ServerEnd<::fuchsia_process_lifecycle::Lifecycle> lifecycle_request);
 
   struct MountNode {
     // Set by |InstallFs()|.
@@ -182,7 +181,7 @@ class FsManager {
   std::mutex lock_;
   bool shutdown_called_ TA_GUARDED(lock_) = false;
   sync_completion_t shutdown_;
-  fidl::Client<llcpp::fuchsia::device::manager::Administrator> driver_admin_;
+  fidl::Client<fuchsia_device_manager::Administrator> driver_admin_;
 };
 
 }  // namespace devmgr

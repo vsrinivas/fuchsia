@@ -17,8 +17,7 @@ namespace hid_driver {
 
 class HidDevice;
 
-class DeviceReportsReader
-    : public ::llcpp::fuchsia::hardware::input::DeviceReportsReader::Interface {
+class DeviceReportsReader : public ::fuchsia_hardware_input::DeviceReportsReader::Interface {
  public:
   // The pointer to `base` must stay alive for as long as DeviceReportsReader
   // is alive.
@@ -44,7 +43,7 @@ class DeviceReportsReader
   fbl::Mutex reader_lock_;
   static constexpr size_t kDataFifoSize = 4096;
   fbl::RingBuffer<uint8_t, kDataFifoSize> data_fifo_ __TA_GUARDED(reader_lock_);
-  fbl::RingBuffer<zx_time_t, llcpp::fuchsia::hardware::input::wire::MAX_REPORTS_COUNT> timestamps_
+  fbl::RingBuffer<zx_time_t, fuchsia_hardware_input::wire::MAX_REPORTS_COUNT> timestamps_
       __TA_GUARDED(reader_lock_);
 
   std::optional<ReadReportsCompleter::Async> waiting_read_ __TA_GUARDED(reader_lock_);

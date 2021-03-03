@@ -14,7 +14,7 @@
 
 namespace network {
 
-namespace netdev = llcpp::fuchsia::hardware::network;
+namespace netdev = fuchsia_hardware_network;
 
 class MacAddrDeviceInterface {
  public:

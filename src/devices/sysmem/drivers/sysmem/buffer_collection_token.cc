@@ -45,18 +45,19 @@ void BufferCollectionToken::Bind(zx::channel channel) {
   if (status == ZX_OK) {
     node_.CreateUint("channel_koid", info.koid, &properties_);
   }
-  auto res = fidl::BindServer(
-      parent_device_->dispatcher(), std::move(channel), this,
-      fidl::OnUnboundFn<BufferCollectionToken>(
-          [this, this_ref = fbl::RefPtr<BufferCollectionToken>(this)](
-              BufferCollectionToken* token, fidl::UnbindInfo info,
-              fidl::ServerEnd<llcpp::fuchsia::sysmem::BufferCollectionToken> channel) {
-            // We need to keep a refptr to this class, since the unbind happens asynchronously and
-            // can run after the parent closes a handle to this class.
-            if (error_handler_)
-              error_handler_(info.status);
-            // *this can be destroyed at this point.
-          }));
+  auto res =
+      fidl::BindServer(parent_device_->dispatcher(), std::move(channel), this,
+                       fidl::OnUnboundFn<BufferCollectionToken>(
+                           [this, this_ref = fbl::RefPtr<BufferCollectionToken>(this)](
+                               BufferCollectionToken* token, fidl::UnbindInfo info,
+                               fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> channel) {
+                             // We need to keep a refptr to this class, since the unbind happens
+                             // asynchronously and can run after the parent closes a handle to this
+                             // class.
+                             if (error_handler_)
+                               error_handler_(info.status);
+                             // *this can be destroyed at this point.
+                           }));
   if (res.is_error()) {
     return;
   }

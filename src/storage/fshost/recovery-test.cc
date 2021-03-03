@@ -16,7 +16,7 @@
 namespace devmgr {
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 constexpr uint32_t kBlockCount = 1024 * 256;
 constexpr uint32_t kBlockSize = 512;

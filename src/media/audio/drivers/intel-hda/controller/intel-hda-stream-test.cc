@@ -18,7 +18,7 @@
 #include <zxtest/zxtest.h>
 
 namespace {
-namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
+namespace audio_fidl = ::fuchsia_hardware_audio;
 const char* kTestString = "testastic";
 constexpr int64_t kTestTime = 0x12345;
 constexpr float kTestGain = -12.f;

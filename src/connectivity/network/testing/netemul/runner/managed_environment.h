@@ -60,8 +60,7 @@ class ManagedEnvironment : public fuchsia::netemul::environment::ManagedEnvironm
   // at the relative path |path| from the virtual devices directory.
   //
   // If the directory does not yet exist, it will be created.
-  zx::status<fidl::ClientEnd<llcpp::fuchsia::io::Directory>> OpenVdevDirectory(
-      const std::string& path);
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpenVdevDirectory(const std::string& path);
 
  private:
   explicit ManagedEnvironment(SandboxEnv::Ptr sandbox_env);

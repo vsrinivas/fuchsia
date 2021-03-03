@@ -20,7 +20,7 @@
 #include "src/graphics/drivers/msd-img-rgx/no_hardware/msd_img_rgx_no_hardware-bind.h"
 #include "sys_driver/magma_driver.h"
 
-using FidlStatus = llcpp::fuchsia::gpu::magma::wire::Status;
+using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
 NoHardwareGpu::~NoHardwareGpu() {
   std::lock_guard<std::mutex> lock(magma_mutex_);
@@ -43,7 +43,7 @@ void NoHardwareGpu::DdkRelease() { delete this; }
 
 zx_status_t NoHardwareGpu::DdkMessage(fidl_incoming_msg_t* message, fidl_txn_t* transaction) {
   DdkTransaction ddk_transaction(transaction);
-  llcpp::fuchsia::gpu::magma::Device::Dispatch(this, message, &ddk_transaction);
+  fuchsia_gpu_magma::Device::Dispatch(this, message, &ddk_transaction);
   return ddk_transaction.Status();
 }
 

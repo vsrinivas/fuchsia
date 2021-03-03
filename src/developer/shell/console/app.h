@@ -23,7 +23,7 @@ class App : public shell::console::Console::Client {
     std::optional<std::string> command;
   };
 
-  App(llcpp::fuchsia::shell::Shell::SyncClient* client, async_dispatcher_t* dispatcher);
+  App(fuchsia_shell::Shell::SyncClient* client, async_dispatcher_t* dispatcher);
   ~App() override;
 
   // Initialize the application.

@@ -28,7 +28,7 @@ struct CreationContext {
   fbl::RefPtr<zx_device_t> parent;
   fbl::RefPtr<zx_device_t> child;
   zx::unowned_channel device_controller_rpc;
-  llcpp::fuchsia::device::manager::Coordinator::ClientImpl* coordinator_client;
+  fuchsia_device_manager::Coordinator::ClientImpl* coordinator_client;
 };
 
 void set_bind_context(internal::BindContext* ctx);

@@ -43,7 +43,7 @@ int main(int argc, const char** argv) {{ return 0; }}
 llcpp_init = '''
 
 #include <fidl/test/{library_name}/llcpp/fidl.h>  // nogncheck
-namespace fidl_test = llcpp::fidl::test::{library_name};
+namespace fidl_test = fidl_test::{library_name};
 
 // [START contents]
 // INSERT TEST CODE HERE

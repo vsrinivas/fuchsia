@@ -62,7 +62,7 @@ zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
       auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
       outgoing->AddEntry("svc", svc_dir);
       query_svc_ = fbl::MakeRefCounted<QueryService>(loop_->dispatcher(), factoryfs_.get(), this);
-      svc_dir->AddEntry(::llcpp::fuchsia::fs::Query::Name, query_svc_);
+      svc_dir->AddEntry(::fuchsia_fs::Query::Name, query_svc_);
       export_root = std::move(outgoing);
       break;
   }

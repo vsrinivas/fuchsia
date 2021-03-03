@@ -35,7 +35,7 @@
 
 #define INPUT_PATH "/input"
 
-namespace power_fidl = llcpp::fuchsia::hardware::power;
+namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 
 namespace {
 
@@ -83,7 +83,7 @@ zx_status_t FindSystemPowerDown(const hid::DeviceDescriptor* desc, uint8_t* repo
 }
 
 struct PowerButtonInfo {
-  std::optional<llcpp::fuchsia::hardware::input::Device::SyncClient> client;
+  std::optional<fuchsia_hardware_input::Device::SyncClient> client;
   uint8_t report_id;
   size_t bit_offset;
   bool has_report_id_byte;
@@ -118,7 +118,7 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
     printf("pwrbtn-monitor: service handle conversion failed: %d\n", status);
     return status;
   }
-  auto client = llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(chan));
+  auto client = fuchsia_hardware_input::Device::SyncClient(std::move(chan));
 
   // Get the report descriptor.
   auto result = client.GetReportDesc();
@@ -156,14 +156,14 @@ zx_status_t send_poweroff() {
     return ZX_ERR_INTERNAL;
   }
 
-  auto service = fbl::StringPrintf("/svc/%s", power_fidl::statecontrol::Admin::Name);
+  auto service = fbl::StringPrintf("/svc/%s", statecontrol_fidl::Admin::Name);
   status = fdio_service_connect(service.c_str(), channel_remote.release());
   if (status != ZX_OK) {
     printf("pwrbtn-monitor: failed to connect to service %s: %d\n", service.c_str(), status);
     return ZX_ERR_INTERNAL;
   }
 
-  auto admin_client = power_fidl::statecontrol::Admin::SyncClient(std::move(channel_local));
+  auto admin_client = statecontrol_fidl::Admin::SyncClient(std::move(channel_local));
   auto resp = admin_client.Poweroff();
 
   if (resp.status() != ZX_OK) {

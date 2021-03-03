@@ -122,7 +122,7 @@ zx_status_t PartitionDevice::BlockPartitionGetName(char* out_name, size_t capaci
 
 zx_status_t RpmbDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::rpmb::Rpmb::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_rpmb::Rpmb::Dispatch(this, msg, &transaction);
   return ZX_ERR_ASYNC;
 }
 
@@ -141,8 +141,8 @@ void RpmbDevice::RpmbConnectServer(zx::channel server) {
 }
 
 void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
-  using DeviceInfo = ::llcpp::fuchsia::hardware::rpmb::wire::DeviceInfo;
-  using EmmcDeviceInfo = ::llcpp::fuchsia::hardware::rpmb::wire::EmmcDeviceInfo;
+  using DeviceInfo = ::fuchsia_hardware_rpmb::wire::DeviceInfo;
+  using EmmcDeviceInfo = ::fuchsia_hardware_rpmb::wire::EmmcDeviceInfo;
 
   EmmcDeviceInfo emmc_info = {};
   memcpy(emmc_info.cid.data(), cid_.data(), cid_.size() * sizeof(cid_[0]));
@@ -155,7 +155,7 @@ void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   completer.ToAsync().Reply(DeviceInfo::WithEmmcInfo(emmc_info_ptr));
 }
 
-void RpmbDevice::Request(::llcpp::fuchsia::hardware::rpmb::wire::Request request,
+void RpmbDevice::Request(::fuchsia_hardware_rpmb::wire::Request request,
                          RequestCompleter::Sync& completer) {
   RpmbRequestInfo info = {
       .tx_frames = std::move(request.tx_frames),
@@ -480,7 +480,7 @@ zx_status_t SdmmcBlockDevice::Trim(const block_trim_t& txn, const EmmcPartition 
 }
 
 zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
-  using ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
+  using ::fuchsia_hardware_rpmb::wire::FRAME_SIZE;
 
   const uint64_t tx_frame_count = request.tx_frames.size / FRAME_SIZE;
   const uint64_t rx_frame_count =
@@ -635,7 +635,7 @@ void SdmmcBlockDevice::Queue(BlockOperation txn) {
 }
 
 void SdmmcBlockDevice::RpmbQueue(RpmbRequestInfo info) {
-  using ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
+  using ::fuchsia_hardware_rpmb::wire::FRAME_SIZE;
 
   if (info.tx_frames.size % FRAME_SIZE != 0) {
     zxlogf(ERROR, "sdmmc: tx frame buffer size not a multiple of %u", FRAME_SIZE);

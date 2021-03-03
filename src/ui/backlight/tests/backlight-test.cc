@@ -17,7 +17,7 @@
 
 namespace backlight {
 
-namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
+namespace FidlBacklight = fuchsia_hardware_backlight;
 
 class BacklightDevice {
  public:

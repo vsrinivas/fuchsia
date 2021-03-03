@@ -15,7 +15,7 @@
 namespace storage {
 
 zx::status<std::string> GetTopologicalPath(
-    fidl::UnownedClientEnd<llcpp::fuchsia::device::Controller> channel);
+    fidl::UnownedClientEnd<fuchsia_device::Controller> channel);
 zx::status<std::string> GetTopologicalPath(const std::string& path);
 
 }  // namespace storage

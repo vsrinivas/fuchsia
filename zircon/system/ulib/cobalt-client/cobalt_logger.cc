@@ -24,9 +24,8 @@ namespace cobalt_client {
 namespace internal {
 namespace {
 
-::llcpp::fuchsia::cobalt::wire::CobaltEvent MetricIntoToCobaltEvent(
-    const MetricOptions& metric_info) {
-  llcpp::fuchsia::cobalt::wire::CobaltEvent event;
+::fuchsia_cobalt::wire::CobaltEvent MetricIntoToCobaltEvent(const MetricOptions& metric_info) {
+  fuchsia_cobalt::wire::CobaltEvent event;
   event.metric_id = metric_info.metric_id;
   event.component = fidl::unowned_str(metric_info.component);
   // Safe to do so, since the request is read only.
@@ -38,16 +37,14 @@ namespace {
 
 }  // namespace
 
-std::string_view CobaltLogger::GetServiceName() {
-  return ::llcpp::fuchsia::cobalt::LoggerFactory::Name;
-}
+std::string_view CobaltLogger::GetServiceName() { return ::fuchsia_cobalt::LoggerFactory::Name; }
 
 bool CobaltLogger::TryObtainLogger() {
   if (logger_.client_end().is_valid()) {
     return true;
   }
 
-  auto factory_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::cobalt::LoggerFactory>();
+  auto factory_endpoints = fidl::CreateEndpoints<::fuchsia_cobalt::LoggerFactory>();
   if (factory_endpoints.is_error()) {
     return false;
   }
@@ -59,16 +56,15 @@ bool CobaltLogger::TryObtainLogger() {
   }
 
   // Obtain a logger service for the project ID.
-  auto logger_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::cobalt::Logger>();
+  auto logger_endpoints = fidl::CreateEndpoints<::fuchsia_cobalt::Logger>();
   if (logger_endpoints.is_error()) {
     return false;
   }
   auto [logger_client, logger_server] = *std::move(logger_endpoints);
-  auto create_logger_result =
-      ::llcpp::fuchsia::cobalt::LoggerFactory::Call::CreateLoggerFromProjectId(
-          logger_factory_client, options_.project_id, std::move(logger_server));
+  auto create_logger_result = ::fuchsia_cobalt::LoggerFactory::Call::CreateLoggerFromProjectId(
+      logger_factory_client, options_.project_id, std::move(logger_server));
   if (create_logger_result.status() == ZX_OK &&
-      create_logger_result->status == ::llcpp::fuchsia::cobalt::wire::Status::OK) {
+      create_logger_result->status == ::fuchsia_cobalt::wire::Status::OK) {
     logger_ = fidl::BindSyncClient(std::move(logger_client));
     return true;
   }
@@ -90,8 +86,7 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, const HistogramBucket* 
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }
-  return log_result.status() == ZX_OK &&
-         log_result->status == ::llcpp::fuchsia::cobalt::wire::Status::OK;
+  return log_result.status() == ZX_OK && log_result->status == ::fuchsia_cobalt::wire::Status::OK;
 }
 
 bool CobaltLogger::Log(const MetricOptions& metric_info, RemoteCounter::Type count) {
@@ -99,15 +94,14 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, RemoteCounter::Type cou
     return false;
   }
   auto event = MetricIntoToCobaltEvent(metric_info);
-  llcpp::fuchsia::cobalt::wire::CountEvent event_count{.period_duration_micros = 0, .count = count};
+  fuchsia_cobalt::wire::CountEvent event_count{.period_duration_micros = 0, .count = count};
   event.payload.set_event_count(fidl::unowned_ptr(&event_count));
 
   auto log_result = logger_.LogCobaltEvent(std::move(event));
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }
-  return log_result.status() == ZX_OK &&
-         log_result->status == ::llcpp::fuchsia::cobalt::wire::Status::OK;
+  return log_result.status() == ZX_OK && log_result->status == ::fuchsia_cobalt::wire::Status::OK;
 }
 
 bool CobaltLogger::LogInteger(const MetricOptions& metric_info, RemoteCounter::Type value) {
@@ -126,8 +120,7 @@ bool CobaltLogger::LogInteger(const MetricOptions& metric_info, RemoteCounter::T
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }
-  return log_result.status() == ZX_OK &&
-         log_result->status == ::llcpp::fuchsia::cobalt::wire::Status::OK;
+  return log_result.status() == ZX_OK && log_result->status == ::fuchsia_cobalt::wire::Status::OK;
 }
 
 }  // namespace internal

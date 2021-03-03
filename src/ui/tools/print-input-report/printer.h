@@ -13,7 +13,7 @@
 
 namespace print_input_report {
 
-namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
+namespace fuchsia_input_report = ::fuchsia_input_report;
 
 static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::NONE) == 0);
 static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::OTHER) == 1);

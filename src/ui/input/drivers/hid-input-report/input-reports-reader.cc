@@ -17,7 +17,7 @@ std::unique_ptr<InputReportsReader> InputReportsReader::Create(InputReportBase* 
   // Invoked when the channel is closed or on any binding-related error.
   fidl::OnUnboundFn<InputReportsReader> unbound_fn(
       [](InputReportsReader* device, fidl::UnbindInfo info,
-         fidl::ServerEnd<llcpp::fuchsia::input::report::InputReportsReader>) {
+         fidl::ServerEnd<fuchsia_input_report::InputReportsReader>) {
         {
           fbl::AutoLock lock(&device->readers_lock_);
           // Any pending LLCPP completer must be either replied to or closed before we destroy it.

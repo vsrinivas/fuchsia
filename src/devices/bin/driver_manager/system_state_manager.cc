@@ -18,8 +18,7 @@ zx_status_t SystemStateManager::Create(async_dispatcher_t* dispatcher, Coordinat
   // We would need to reboot in that case.
   fidl::OnUnboundFn<device_manager_fidl::SystemStateTransition::Interface> unbound_fn(
       [](device_manager_fidl::SystemStateTransition::Interface* sys_state_manager,
-         fidl::UnbindInfo info,
-         fidl::ServerEnd<llcpp::fuchsia::device::manager::SystemStateTransition>) {
+         fidl::UnbindInfo info, fidl::ServerEnd<fuchsia_device_manager::SystemStateTransition>) {
         LOGF(ERROR, "system state transition channel with power manager got unbound:%d",
              static_cast<uint32_t>(info.reason));
         SystemStateManager* system_state_manager =
@@ -45,10 +44,10 @@ zx_status_t SystemStateManager::Create(async_dispatcher_t* dispatcher, Coordinat
 }
 
 void SystemStateManager::SetTerminationSystemState(
-    power_fidl::statecontrol::wire::SystemPowerState state,
+    statecontrol_fidl::wire::SystemPowerState state,
     device_manager_fidl::SystemStateTransition::Interface::SetTerminationSystemStateCompleter::Sync&
         completer) {
-  if (state == power_fidl::statecontrol::wire::SystemPowerState::FULLY_ON) {
+  if (state == statecontrol_fidl::wire::SystemPowerState::FULLY_ON) {
     LOGF(INFO, "Invalid termination state");
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;

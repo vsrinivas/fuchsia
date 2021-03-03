@@ -20,7 +20,7 @@
 
 namespace {
 
-namespace fio2 = ::llcpp::fuchsia::io2;
+namespace fio2 = ::fuchsia_io2;
 
 class TestServerBase : public fio2::File::Interface {
  public:

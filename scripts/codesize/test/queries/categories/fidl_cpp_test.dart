@@ -88,8 +88,7 @@ void main() {
             reason: '`$name` should not match any of the symbol name regexes '
                 'for HLCPP domain objects');
     test('Empty', neg(''));
-    test('LLCPP',
-        neg('llcpp::fuchsia::io::Directory::Call(fidl::DecodedMessage)'));
+    test('LLCPP', neg('fuchsia_io::Directory::Call(fidl::DecodedMessage)'));
   });
 
   group('isNameHlcppRuntime', () {
@@ -147,6 +146,6 @@ void main() {
             reason: '`$name` should not match any of the symbol name regexes '
                 'for HLCPP runtime');
     test('LLCPP Domain Object',
-        neg(r'fidl::DecodeResult<llcpp::fuchsia::hardware::usb::peripheral::Device::SetConfigurationRequest> fidl::Decode<llcpp::fuchsia::hardware::usb::peripheral::Device::SetConfigurationRequest>(fidl::EncodedMessage<llcpp::fuchsia::hardware::usb::peripheral::Device::SetConfigurationRequest>)'));
+        neg(r'fidl::DecodeResult<fuchsia_hardware_usb_peripheral::Device::SetConfigurationRequest> fidl::Decode<fuchsia_hardware_usb_peripheral::Device::SetConfigurationRequest>(fidl::EncodedMessage<fuchsia_hardware_usb_peripheral::Device::SetConfigurationRequest>)'));
   });
 }

@@ -36,18 +36,18 @@ class ExternalDecompressorClient {
   // the resulting size and reporting the status passed from the server. This
   // succeeds only if the resulting decompressed size matches the
   // `decompressed.size`. Starts by calling `Prepare()`.
-  zx_status_t SendMessage(const llcpp::fuchsia::blobfs::internal::wire::DecompressRequest& request);
+  zx_status_t SendMessage(const fuchsia_blobfs_internal::wire::DecompressRequest& request);
 
   // Convert from fidl compatible enum to local.
   static CompressionAlgorithm CompressionAlgorithmFidlToLocal(
-      llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm algorithm);
+      fuchsia_blobfs_internal::wire::CompressionAlgorithm algorithm);
 
   // Convert to fidl compatible enum from local.
-  static llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm
-  CompressionAlgorithmLocalToFidl(CompressionAlgorithm algorithm);
+  static fuchsia_blobfs_internal::wire::CompressionAlgorithm CompressionAlgorithmLocalToFidl(
+      CompressionAlgorithm algorithm);
 
   // Convert to fidl compatible enum from local for partial decompression.
-  static zx::status<llcpp::fuchsia::blobfs::internal::wire::CompressionAlgorithm>
+  static zx::status<fuchsia_blobfs_internal::wire::CompressionAlgorithm>
   CompressionAlgorithmLocalToFidlForPartial(CompressionAlgorithm algorithm);
 
  private:

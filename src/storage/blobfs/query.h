@@ -19,11 +19,11 @@ namespace blobfs {
 class Blobfs;
 class Runner;
 
-class QueryService final : public llcpp::fuchsia::fs::Query::Interface, public fs::Service {
+class QueryService final : public fuchsia_fs::Query::Interface, public fs::Service {
  public:
   QueryService(async_dispatcher_t* dispatcher, Blobfs* blobfs, Runner* runner);
 
-  void GetInfo(llcpp::fuchsia::fs::wire::FilesystemInfoQuery query,
+  void GetInfo(fuchsia_fs::wire::FilesystemInfoQuery query,
                GetInfoCompleter::Sync& completer) final;
 
   void IsNodeInFilesystem(zx::event token, IsNodeInFilesystemCompleter::Sync& completer) final;

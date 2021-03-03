@@ -21,7 +21,7 @@ namespace {
 // Keep in sync with test-firmware.txt
 constexpr const char TEST_FIRMWARE_CONTENTS[] = "this is some firmware\n";
 
-using llcpp::fuchsia::device::firmware::test::TestDevice;
+using fuchsia_device_firmware_test::TestDevice;
 
 class TestFirmwareDriver;
 using DeviceType = ddk::Device<TestFirmwareDriver, ddk::Unbindable, ddk::Messageable>;

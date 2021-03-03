@@ -54,8 +54,7 @@ void Runner::Shutdown(fs::Vfs::ShutdownCallback cb) {
   });
 }
 
-zx_status_t Runner::ServeRoot(fidl::ServerEnd<llcpp::fuchsia::io::Directory> root,
-                              ServeLayout layout) {
+zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout) {
   fbl::RefPtr<fs::Vnode> vn;
   zx_status_t status = blobfs_->OpenRootNode(&vn);
   if (status != ZX_OK) {
@@ -91,10 +90,10 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<llcpp::fuchsia::io::Directory> roo
       outgoing->AddEntry("svc", svc_dir);
 
       query_svc_ = fbl::MakeRefCounted<QueryService>(loop_->dispatcher(), blobfs_.get(), this);
-      svc_dir->AddEntry(llcpp::fuchsia::fs::Query::Name, query_svc_);
+      svc_dir->AddEntry(fuchsia_fs::Query::Name, query_svc_);
 
       health_check_svc_ = fbl::MakeRefCounted<HealthCheckService>(loop_->dispatcher());
-      svc_dir->AddEntry(llcpp::fuchsia::update::verify::BlobfsVerifier::Name, health_check_svc_);
+      svc_dir->AddEntry(fuchsia_update_verify::BlobfsVerifier::Name, health_check_svc_);
 
       export_root = std::move(outgoing);
       break;

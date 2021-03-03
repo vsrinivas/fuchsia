@@ -22,7 +22,7 @@
 
 #include <fbl/unique_fd.h>
 
-namespace fio = llcpp::fuchsia::io;
+namespace fio = fuchsia_io;
 
 int usage(void) {
   fprintf(stderr, "usage: df [ <option>* ] [paths]\n");

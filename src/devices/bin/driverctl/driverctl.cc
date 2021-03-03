@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
 
   if (argc == 3) {
     auto response =
-        llcpp::fuchsia::device::Controller::Call::GetDriverLogFlags(zx::unowned_channel(device));
+        fuchsia_device::Controller::Call::GetDriverLogFlags(zx::unowned_channel(device));
     if (response.status() != ZX_OK || response->status != ZX_OK) {
       fprintf(stderr, "GetDriverLogFlags failed for %s\n", path);
       return -1;
@@ -121,8 +121,8 @@ int main(int argc, char** argv) {
     fprintf(stderr, "Unknown log severity \"%s\"\n", arg);
     return -1;
   }
-  auto response = llcpp::fuchsia::device::Controller::Call::SetDriverLogFlags(
-      zx::unowned_channel(device), 0, flags);
+  auto response =
+      fuchsia_device::Controller::Call::SetDriverLogFlags(zx::unowned_channel(device), 0, flags);
   if (response.status() != ZX_OK || response->status != ZX_OK) {
     fprintf(stderr, "SetDriverLogFlags failed for %s\n", path);
   }

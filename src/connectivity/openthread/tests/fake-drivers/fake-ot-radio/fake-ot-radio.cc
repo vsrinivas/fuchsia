@@ -22,7 +22,7 @@
 #include "src/connectivity/openthread/tests/fake-drivers/fake-ot-radio/fake_ot_radio_bind.h"
 
 namespace fake_ot {
-namespace lowpan_spinel_fidl = ::llcpp::fuchsia::lowpan::spinel;
+namespace lowpan_spinel_fidl = ::fuchsia_lowpan_spinel;
 
 enum {
   PORT_KEY_EXIT_THREAD,
@@ -63,11 +63,10 @@ FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(
     : ot_radio_obj_(ot_radio) {}
 
 zx_status_t FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(
-    async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> channel) {
+    async_dispatcher_t* dispatcher, fidl::ServerEnd<fuchsia_lowpan_spinel::Device> channel) {
   fidl::OnUnboundFn<LowpanSpinelDeviceFidlImpl> on_unbound =
       [](LowpanSpinelDeviceFidlImpl* server, fidl::UnbindInfo /*unused*/,
-         fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> /*unused*/) {
+         fidl::ServerEnd<fuchsia_lowpan_spinel::Device> /*unused*/) {
         server->ot_radio_obj_.fidl_impl_obj_.reset();
       };
   auto res = fidl::BindServer(dispatcher, std::move(channel), this, std::move(on_unbound));
@@ -165,7 +164,7 @@ zx_status_t FakeOtRadioDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* 
   return transaction.Status();
 }
 
-void FakeOtRadioDevice::SetChannel(fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> request,
+void FakeOtRadioDevice::SetChannel(fidl::ServerEnd<fuchsia_lowpan_spinel::Device> request,
                                    SetChannelCompleter::Sync& completer) {
   if (fidl_impl_obj_ != nullptr) {
     zxlogf(ERROR, "ot-audio: channel already set");

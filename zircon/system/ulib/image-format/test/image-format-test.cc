@@ -14,8 +14,8 @@
 #include "fuchsia/sysmem/llcpp/fidl.h"
 #include "fuchsia/sysmem2/llcpp/fidl.h"
 
-namespace sysmem_v1 = llcpp::fuchsia::sysmem;
-namespace sysmem_v2 = llcpp::fuchsia::sysmem2;
+namespace sysmem_v1 = fuchsia_sysmem;
+namespace sysmem_v2 = fuchsia_sysmem2;
 
 TEST(ImageFormat, LinearComparison_V2_LLCPP) {
   fidl::FidlAllocator allocator;

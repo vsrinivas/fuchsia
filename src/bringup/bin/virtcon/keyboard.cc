@@ -32,7 +32,7 @@
 
 #include "src/ui/lib/key_util/key_util.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 namespace {
 
@@ -44,19 +44,19 @@ constexpr zx::duration kLowRepeatKeyFreq = zx::msec(250);
 // remove the global watcher and use lambdas.
 KeyboardWatcher main_watcher;
 
-int modifiers_from_fuchsia_key(llcpp::fuchsia::ui::input2::wire::Key key) {
+int modifiers_from_fuchsia_key(fuchsia_ui_input2::wire::Key key) {
   switch (key) {
-    case llcpp::fuchsia::ui::input2::wire::Key::LEFT_SHIFT:
+    case fuchsia_ui_input2::wire::Key::LEFT_SHIFT:
       return MOD_LSHIFT;
-    case llcpp::fuchsia::ui::input2::wire::Key::RIGHT_SHIFT:
+    case fuchsia_ui_input2::wire::Key::RIGHT_SHIFT:
       return MOD_RSHIFT;
-    case llcpp::fuchsia::ui::input2::wire::Key::LEFT_ALT:
+    case fuchsia_ui_input2::wire::Key::LEFT_ALT:
       return MOD_LALT;
-    case llcpp::fuchsia::ui::input2::wire::Key::RIGHT_ALT:
+    case fuchsia_ui_input2::wire::Key::RIGHT_ALT:
       return MOD_RALT;
-    case llcpp::fuchsia::ui::input2::wire::Key::LEFT_CTRL:
+    case fuchsia_ui_input2::wire::Key::LEFT_CTRL:
       return MOD_LCTRL;
-    case llcpp::fuchsia::ui::input2::wire::Key::RIGHT_CTRL:
+    case fuchsia_ui_input2::wire::Key::RIGHT_CTRL:
       return MOD_RCTRL;
     default:
       return 0;
@@ -89,8 +89,8 @@ int modifiers_from_keycode(uint8_t keycode) {
 
 bool keycode_is_modifier(uint8_t keycode) { return modifiers_from_keycode(keycode) != 0; }
 
-bool is_key_in_set(llcpp::fuchsia::ui::input2::wire::Key key,
-                   const fidl::VectorView<llcpp::fuchsia::ui::input2::wire::Key>& set) {
+bool is_key_in_set(fuchsia_ui_input2::wire::Key key,
+                   const fidl::VectorView<fuchsia_ui_input2::wire::Key>& set) {
   for (auto s : set) {
     if (key == s) {
       return true;
@@ -125,23 +125,23 @@ void Keyboard::SetCapsLockLed(bool caps_lock) {
   // Generate the OutputReport.
   fidl::FidlAllocator allocator;
 
-  fidl::VectorView<llcpp::fuchsia::input::report::wire::LedType> led_view;
+  fidl::VectorView<fuchsia_input_report::wire::LedType> led_view;
   if (caps_lock) {
-    led_view = fidl::VectorView<llcpp::fuchsia::input::report::wire::LedType>(allocator, 1);
-    led_view[0] = llcpp::fuchsia::input::report::wire::LedType::CAPS_LOCK;
+    led_view = fidl::VectorView<fuchsia_input_report::wire::LedType>(allocator, 1);
+    led_view[0] = fuchsia_input_report::wire::LedType::CAPS_LOCK;
   }
 
-  llcpp::fuchsia::input::report::wire::KeyboardOutputReport keyboard_report(allocator);
+  fuchsia_input_report::wire::KeyboardOutputReport keyboard_report(allocator);
   keyboard_report.set_enabled_leds(allocator, std::move(led_view));
 
-  llcpp::fuchsia::input::report::wire::OutputReport report(allocator);
+  fuchsia_input_report::wire::OutputReport report(allocator);
   report.set_keyboard(allocator, std::move(keyboard_report));
 
   keyboard_client_->SendOutputReport(std::move(report));
 }
 
 // returns true if key was pressed and none were released
-void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::wire::InputReport& report) {
+void Keyboard::ProcessInput(const ::fuchsia_input_report::wire::InputReport& report) {
   if (!report.has_keyboard()) {
     return;
   }
@@ -156,7 +156,7 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::wire::InputRe
                                      last_pressed_keys_size_);
 
   // Process the released keys.
-  for (llcpp::fuchsia::ui::input2::wire::Key prev_key : last_pressed_keys) {
+  for (fuchsia_ui_input2::wire::Key prev_key : last_pressed_keys) {
     if (!is_key_in_set(prev_key, report.keyboard().pressed_keys())) {
       modifiers_ &= ~modifiers_from_fuchsia_key(prev_key);
 
@@ -171,10 +171,10 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::wire::InputRe
   }
 
   // Process the pressed keys.
-  for (llcpp::fuchsia::ui::input2::wire::Key key : report.keyboard().pressed_keys()) {
+  for (fuchsia_ui_input2::wire::Key key : report.keyboard().pressed_keys()) {
     if (!is_key_in_set(key, last_pressed_keys)) {
       modifiers_ |= modifiers_from_fuchsia_key(key);
-      if (key == llcpp::fuchsia::ui::input2::wire::Key::CAPS_LOCK) {
+      if (key == fuchsia_ui_input2::wire::Key::CAPS_LOCK) {
         modifiers_ ^= MOD_CAPSLOCK;
         SetCapsLockLed(modifiers_ & MOD_CAPSLOCK);
       }
@@ -194,14 +194,14 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::wire::InputRe
 
   // Store the previous state.
   size_t i = 0;
-  for (llcpp::fuchsia::ui::input2::wire::Key key : report.keyboard().pressed_keys()) {
+  for (fuchsia_ui_input2::wire::Key key : report.keyboard().pressed_keys()) {
     last_pressed_keys_[i++] = key;
   }
   last_pressed_keys_size_ = i;
 }
 
 void Keyboard::InputCallback(
-    llcpp::fuchsia::input::report::wire::InputReportsReader_ReadInputReports_Result result) {
+    fuchsia_input_report::wire::InputReportsReader_ReadInputReports_Result result) {
   if (result.is_err()) {
     printf("vc: InputCallback returns error: %d!\n", result.err());
     return;
@@ -211,14 +211,13 @@ void Keyboard::InputCallback(
   }
 
   reader_client_->ReadInputReports(
-      [this](
-          llcpp::fuchsia::input::report::InputReportsReader::ReadInputReportsResponse* response) {
+      [this](fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* response) {
         InputCallback(std::move(response->result));
       });
 }
 
 zx_status_t Keyboard::StartReading() {
-  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::input::report::InputReportsReader>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
   if (endpoints.is_error()) {
     return endpoints.status_value();
   }
@@ -228,7 +227,7 @@ zx_status_t Keyboard::StartReading() {
     return result.status();
   }
 
-  class EventHandler : public llcpp::fuchsia::input::report::InputReportsReader::AsyncEventHandler {
+  class EventHandler : public fuchsia_input_report::InputReportsReader::AsyncEventHandler {
    public:
     explicit EventHandler(Keyboard* keyboard) : keyboard_(keyboard) {}
 
@@ -249,8 +248,7 @@ zx_status_t Keyboard::StartReading() {
 
   // Queue up the first read.
   reader_client_->ReadInputReports(
-      [this](
-          llcpp::fuchsia::input::report::InputReportsReader::ReadInputReportsResponse* response) {
+      [this](fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* response) {
         InputCallback(std::move(response->result));
       });
   return ZX_OK;
@@ -263,8 +261,7 @@ void Keyboard::InputReaderUnbound(fidl::UnbindInfo info) {
   }
 }
 
-zx_status_t Keyboard::Setup(
-    llcpp::fuchsia::input::report::InputDevice::SyncClient keyboard_client) {
+zx_status_t Keyboard::Setup(fuchsia_input_report::InputDevice::SyncClient keyboard_client) {
   keyboard_client_ = std::move(keyboard_client);
   // XXX - check for LEDS here.
 
@@ -287,15 +284,14 @@ zx_status_t KeyboardWatcher::OpenFile(uint8_t evt, char* name) {
     return ZX_OK;
   }
 
-  auto client_end =
-      service::ConnectAt<llcpp::fuchsia::input::report::InputDevice>(Directory(), name);
+  auto client_end = service::ConnectAt<fuchsia_input_report::InputDevice>(Directory(), name);
   if (client_end.is_error()) {
     return ZX_OK;
   }
 
   auto keyboard_client = fidl::BindSyncClient(std::move(*client_end));
 
-  llcpp::fuchsia::input::report::InputDevice::ResultOf::GetDescriptor result =
+  fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result =
       keyboard_client.GetDescriptor();
   if (result.status() != ZX_OK) {
     return result.status();

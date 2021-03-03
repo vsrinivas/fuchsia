@@ -24,7 +24,7 @@ class I2cChild;
 
 using I2cChildType = ddk::Device<I2cChild, ddk::Unbindable, ddk::Messageable>;
 
-namespace fidl_i2c = llcpp::fuchsia::hardware::i2c;
+namespace fidl_i2c = fuchsia_hardware_i2c;
 
 class I2cChild : public I2cChildType,
                  public ddk::I2cProtocol<I2cChild, ddk::base_protocol>,
@@ -39,7 +39,7 @@ class I2cChild : public I2cChildType,
   void DdkRelease();
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    llcpp::fuchsia::hardware::i2c::Device2::Dispatch(this, msg, &transaction);
+    fuchsia_hardware_i2c::Device2::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
 

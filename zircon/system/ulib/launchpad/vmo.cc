@@ -14,7 +14,7 @@
 #include <fbl/unique_fd.h>
 #include <launchpad/vmo.h>
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 __EXPORT
 zx_status_t launchpad_vmo_from_file(const char* filename, zx_handle_t* out) {

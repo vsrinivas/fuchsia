@@ -28,7 +28,7 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 namespace fs {
 
@@ -76,7 +76,7 @@ void FileConnection::GetAttr(GetAttrCompleter::Sync& completer) {
   }
 }
 
-void FileConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::wire::NodeAttributes attributes,
+void FileConnection::SetAttr(uint32_t flags, ::fuchsia_io::wire::NodeAttributes attributes,
                              SetAttrCompleter::Sync& completer) {
   auto result = Connection::NodeSetAttr(flags, attributes);
   if (result.is_error()) {
@@ -148,7 +148,7 @@ void FileConnection::GetBuffer(uint32_t flags, GetBufferCompleter::Sync& complet
   } else if (!options().rights.read) {
     completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
   } else {
-    ::llcpp::fuchsia::mem::wire::Buffer buffer;
+    ::fuchsia_mem::wire::Buffer buffer;
     zx_status_t status = vnode()->GetVmo(flags, &buffer.vmo, &buffer.size);
     completer.Reply(status, status == ZX_OK ? fidl::unowned_ptr(&buffer) : nullptr);
   }

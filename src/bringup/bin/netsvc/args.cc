@@ -42,21 +42,20 @@ int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** e
     return -1;
   }
 
-  status = fdio_service_connect_at(svc_root.get(), llcpp::fuchsia::boot::Arguments::Name,
-                                   remote.release());
+  status = fdio_service_connect_at(svc_root.get(), fuchsia_boot::Arguments::Name, remote.release());
   if (status != ZX_OK) {
     *error = "netsvc: unable to connect to fuchsia.boot.Arguments";
     return -1;
   }
 
-  llcpp::fuchsia::boot::Arguments::SyncClient client(std::move(local));
+  fuchsia_boot::Arguments::SyncClient client(std::move(local));
   auto string_resp = client.GetString(fidl::StringView{"netsvc.interface"});
   if (string_resp.ok()) {
     auto& value = string_resp->value;
     out->interface = std::string{value.data(), value.size()};
   }
 
-  llcpp::fuchsia::boot::wire::BoolPair bool_keys[]{
+  fuchsia_boot::wire::BoolPair bool_keys[]{
       {fidl::StringView{"netsvc.disable"}, true},
       {fidl::StringView{"netsvc.netboot"}, false},
       {fidl::StringView{"netsvc.advertise"}, true},

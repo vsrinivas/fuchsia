@@ -56,20 +56,20 @@ class PartitionClient {
 class BlockDevicePartitionClient : public PartitionClient {
  public:
   // Returns a channel to the partition, when backed by a block device.
-  virtual fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> GetChannel() = 0;
+  virtual fidl::ClientEnd<::fuchsia_hardware_block::Block> GetChannel() = 0;
 };
 
 class BlockPartitionClient final : public BlockDevicePartitionClient {
  public:
-  explicit BlockPartitionClient(fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> partition)
+  explicit BlockPartitionClient(fidl::ClientEnd<::fuchsia_hardware_block::Block> partition)
       : partition_(std::move(partition)) {}
 
   // Note: converting from |fuchsia.hardware.block.partition/Partition|
   // to |fuchsia.hardware.block/Block|.
   explicit BlockPartitionClient(
-      fidl::ClientEnd<::llcpp::fuchsia::hardware::block::partition::Partition> partition)
+      fidl::ClientEnd<::fuchsia_hardware_block_partition::Partition> partition)
       : BlockPartitionClient(
-            fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block>(partition.TakeChannel())) {}
+            fidl::ClientEnd<::fuchsia_hardware_block::Block>(partition.TakeChannel())) {}
 
   ~BlockPartitionClient();
 
@@ -81,7 +81,7 @@ class BlockPartitionClient final : public BlockDevicePartitionClient {
   zx::status<> Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset, size_t vmo_offset);
   zx::status<> Trim() final;
   zx::status<> Flush() final;
-  fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> GetChannel() final;
+  fidl::ClientEnd<::fuchsia_hardware_block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.
@@ -96,9 +96,9 @@ class BlockPartitionClient final : public BlockDevicePartitionClient {
   zx::status<vmoid_t> RegisterVmo(const zx::vmo& vmo);
   zx::status<> ReadBlockInfo();
 
-  ::llcpp::fuchsia::hardware::block::Block::SyncClient partition_;
+  ::fuchsia_hardware_block::Block::SyncClient partition_;
   std::optional<block_client::Client> client_;
-  std::optional<::llcpp::fuchsia::hardware::block::wire::BlockInfo> block_info_;
+  std::optional<::fuchsia_hardware_block::wire::BlockInfo> block_info_;
 };
 
 // A variant of BlockPartitionClient that reads/writes starting from a fixed offset in
@@ -109,8 +109,8 @@ class BlockPartitionClient final : public BlockDevicePartitionClient {
 class FixedOffsetBlockPartitionClient final : public BlockDevicePartitionClient {
  public:
   explicit FixedOffsetBlockPartitionClient(
-      fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> partition,
-      size_t offset_partition_in_blocks, size_t offset_buffer_in_blocks)
+      fidl::ClientEnd<::fuchsia_hardware_block::Block> partition, size_t offset_partition_in_blocks,
+      size_t offset_buffer_in_blocks)
       : client_(std::move(partition)),
         offset_partition_in_blocks_(offset_partition_in_blocks),
         offset_buffer_in_blocks_(offset_buffer_in_blocks) {}
@@ -118,10 +118,10 @@ class FixedOffsetBlockPartitionClient final : public BlockDevicePartitionClient 
   // Note: converting from |fuchsia.hardware.block.partition/Partition|
   // to |fuchsia.hardware.block/Block|.
   explicit FixedOffsetBlockPartitionClient(
-      fidl::ClientEnd<::llcpp::fuchsia::hardware::block::partition::Partition> partition,
+      fidl::ClientEnd<::fuchsia_hardware_block_partition::Partition> partition,
       size_t offset_partition_in_blocks, size_t offset_buffer_in_blocks)
       : FixedOffsetBlockPartitionClient(
-            fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block>(partition.TakeChannel()),
+            fidl::ClientEnd<::fuchsia_hardware_block::Block>(partition.TakeChannel()),
             offset_partition_in_blocks, offset_buffer_in_blocks) {}
 
   zx::status<size_t> GetBlockSize() final;
@@ -130,7 +130,7 @@ class FixedOffsetBlockPartitionClient final : public BlockDevicePartitionClient 
   zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx::status<> Trim() final;
   zx::status<> Flush() final;
-  fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> GetChannel() final;
+  fidl::ClientEnd<::fuchsia_hardware_block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.
@@ -162,7 +162,7 @@ class PartitionCopyClient final : public BlockDevicePartitionClient {
   zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx::status<> Trim() final;
   zx::status<> Flush() final;
-  fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> GetChannel() final;
+  fidl::ClientEnd<::fuchsia_hardware_block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.

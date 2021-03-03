@@ -64,10 +64,10 @@ T AlignUp(T value, T divisor) {
 }
 
 // Helper function to build owned HeapProperties table with coherency domain support.
-llcpp::fuchsia::sysmem2::wire::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
+fuchsia_sysmem2::wire::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
     bool cpu_supported, bool ram_supported, bool inaccessible_supported, bool need_clear) {
-  using llcpp::fuchsia::sysmem2::wire::CoherencyDomainSupport;
-  using llcpp::fuchsia::sysmem2::wire::HeapProperties;
+  using fuchsia_sysmem2::wire::CoherencyDomainSupport;
+  using fuchsia_sysmem2::wire::HeapProperties;
 
   auto coherency_domain_support = std::make_unique<CoherencyDomainSupport>();
   *coherency_domain_support =
@@ -107,9 +107,8 @@ class SystemRamMemoryAllocator : public MemoryAllocator {
     return status;
   }
 
-  zx_status_t SetupChildVmo(
-      const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-      llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings) override {
+  zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
+                            fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings) override {
     // nothing to do here
     return ZX_OK;
   }
@@ -176,7 +175,7 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
   }
   virtual zx_status_t SetupChildVmo(
       const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-      llcpp::fuchsia::sysmem2::wire::SingleBufferSettings buffer_settings) override {
+      fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings) override {
     // nothing to do here
     return ZX_OK;
   }
@@ -375,7 +374,7 @@ zx_status_t Device::Bind() {
   protected_memory_size = AlignUp(protected_memory_size, kMinProtectedAlignment);
   contiguous_memory_size = AlignUp(contiguous_memory_size, static_cast<int64_t>(ZX_PAGE_SIZE));
 
-  allocators_[llcpp::fuchsia::sysmem2::wire::HeapType::SYSTEM_RAM] =
+  allocators_[fuchsia_sysmem2::wire::HeapType::SYSTEM_RAM] =
       std::make_unique<SystemRamMemoryAllocator>(this);
 
   status = pdev_.GetBti(0, &bti_);
@@ -431,10 +430,8 @@ zx_status_t Device::Bind() {
       DRIVER_ERROR("Failed to init allocator for amlogic protected memory: %d", status);
       return status;
     }
-    secure_allocators_[llcpp::fuchsia::sysmem2::wire::HeapType::AMLOGIC_SECURE] =
-        amlogic_allocator.get();
-    allocators_[llcpp::fuchsia::sysmem2::wire::HeapType::AMLOGIC_SECURE] =
-        std::move(amlogic_allocator);
+    secure_allocators_[fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE] = amlogic_allocator.get();
+    allocators_[fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE] = std::move(amlogic_allocator);
   }
 
   ddk::PBusProtocolClient pbus;
@@ -500,7 +497,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
     DRIVER_ERROR("Invalid external heap");
     return ZX_ERR_INVALID_ARGS;
   }
-  auto heap = static_cast<llcpp::fuchsia::sysmem2::wire::HeapType>(heap_param);
+  auto heap = static_cast<fuchsia_sysmem2::wire::HeapType>(heap_param);
 
   return async::PostTask(
       loop_.dispatcher(), [this, heap, heap_connection = std::move(heap_connection)]() mutable {
@@ -519,18 +516,18 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
           return;
         }
 
-        class EventHandler : public llcpp::fuchsia::sysmem2::Heap::AsyncEventHandler {
+        class EventHandler : public fuchsia_sysmem2::Heap::AsyncEventHandler {
          public:
           EventHandler(Device* device,
-                       std::unique_ptr<fidl::Client<llcpp::fuchsia::sysmem2::Heap>> heap_client,
-                       llcpp::fuchsia::sysmem2::wire::HeapType heap,
+                       std::unique_ptr<fidl::Client<fuchsia_sysmem2::Heap>> heap_client,
+                       fuchsia_sysmem2::wire::HeapType heap,
                        std::unique_ptr<async::Wait> wait_for_close)
               : device_(device),
                 heap_client_(std::move(heap_client)),
                 heap_(heap),
                 wait_for_close_(std::move(wait_for_close)) {}
 
-          void OnRegister(llcpp::fuchsia::sysmem2::Heap::OnRegisterResponse* event) override {
+          void OnRegister(fuchsia_sysmem2::Heap::OnRegisterResponse* event) override {
             // A heap should not be registered twice.
             ZX_DEBUG_ASSERT(heap_client_);
             // This replaces any previously registered allocator for heap (also cancels the old
@@ -552,12 +549,12 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
 
          private:
           Device* const device_;
-          std::unique_ptr<fidl::Client<llcpp::fuchsia::sysmem2::Heap>> heap_client_;
-          const llcpp::fuchsia::sysmem2::wire::HeapType heap_;
+          std::unique_ptr<fidl::Client<fuchsia_sysmem2::Heap>> heap_client_;
+          const fuchsia_sysmem2::wire::HeapType heap_;
           std::unique_ptr<async::Wait> wait_for_close_;
         };
 
-        auto heap_client = std::make_unique<fidl::Client<llcpp::fuchsia::sysmem2::Heap>>();
+        auto heap_client = std::make_unique<fidl::Client<fuchsia_sysmem2::Heap>>();
         auto heap_client_ptr = heap_client.get();
         status =
             heap_client_ptr->Bind(std::move(heap_connection), loop_.dispatcher(),
@@ -617,7 +614,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
         // At this point secure_allocators_ has only the secure heaps that are configured via sysmem
         // (not those configured via the TEE), and the memory for these is not yet protected.  Tell
         // the TEE about these.
-        ::llcpp::fuchsia::sysmem::wire::PhysicalSecureHeaps sysmem_configured_heaps;
+        ::fuchsia_sysmem::wire::PhysicalSecureHeaps sysmem_configured_heaps;
         for (const auto& [heap_type, allocator] : secure_allocators_) {
           uint64_t base;
           uint64_t size;
@@ -629,14 +626,14 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
               " size: %016" PRIx64,
               static_cast<uint64_t>(heap_type), base, size);
 
-          ::llcpp::fuchsia::sysmem::wire::PhysicalSecureHeap& heap =
+          ::fuchsia_sysmem::wire::PhysicalSecureHeap& heap =
               sysmem_configured_heaps.heaps[sysmem_configured_heaps.heaps_count];
-          heap.heap = static_cast<::llcpp::fuchsia::sysmem::wire::HeapType>(heap_type);
+          heap.heap = static_cast<::fuchsia_sysmem::wire::HeapType>(heap_type);
           heap.physical_address = base;
           heap.size_bytes = size;
           ++sysmem_configured_heaps.heaps_count;
         }
-        auto set_result = ::llcpp::fuchsia::sysmem::SecureMem::Call::SetPhysicalSecureHeaps(
+        auto set_result = ::fuchsia_sysmem::SecureMem::Call::SetPhysicalSecureHeaps(
             zx::unowned_channel(secure_mem_->channel()), std::move(sysmem_configured_heaps));
         // For now the FIDL IPC failing is fatal.  Among the reasons is without that
         // call succeeding, we haven't told the HW to secure/protect the physical
@@ -659,7 +656,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
         }
 
         // Now we get the secure heaps that are configured via the TEE.
-        auto get_result = ::llcpp::fuchsia::sysmem::SecureMem::Call::GetPhysicalSecureHeaps(
+        auto get_result = ::fuchsia_sysmem::SecureMem::Call::GetPhysicalSecureHeaps(
             zx::unowned_channel(secure_mem_->channel()));
         if (!get_result.ok()) {
           // For now this is fatal, since this case is very unexpected, and in this case rebooting
@@ -668,11 +665,11 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           return;
         }
         ZX_ASSERT(get_result->result.is_response());
-        const ::llcpp::fuchsia::sysmem::wire::PhysicalSecureHeaps& tee_configured_heaps =
+        const ::fuchsia_sysmem::wire::PhysicalSecureHeaps& tee_configured_heaps =
             get_result->result.response().heaps;
 
         for (uint32_t heap_index = 0; heap_index < tee_configured_heaps.heaps_count; ++heap_index) {
-          const ::llcpp::fuchsia::sysmem::wire::PhysicalSecureHeap& heap =
+          const ::fuchsia_sysmem::wire::PhysicalSecureHeap& heap =
               tee_configured_heaps.heaps[heap_index];
           constexpr bool kIsCpuAccessible = false;
           constexpr bool kIsReady = true;
@@ -686,7 +683,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           LOG(DEBUG,
               "created secure allocator: heap_type: %08lx base: %016" PRIx64 " size: %016" PRIx64,
               static_cast<uint64_t>(heap.heap), heap.physical_address, heap.size_bytes);
-          auto heap_type = static_cast<llcpp::fuchsia::sysmem2::wire::HeapType>(heap.heap);
+          auto heap_type = static_cast<fuchsia_sysmem2::wire::HeapType>(heap.heap);
           ZX_ASSERT(secure_allocators_.find(heap_type) == secure_allocators_.end());
           secure_allocators_[heap_type] = secure_allocator.get();
           ZX_ASSERT(allocators_.find(heap_type) == allocators_.end());
@@ -786,9 +783,8 @@ BufferCollectionToken* Device::FindTokenByServerChannelKoid(zx_koid_t token_serv
   return iter->second;
 }
 
-MemoryAllocator* Device::GetAllocator(
-    const llcpp::fuchsia::sysmem2::wire::BufferMemorySettings& settings) {
-  if (settings.heap() == llcpp::fuchsia::sysmem2::wire::HeapType::SYSTEM_RAM &&
+MemoryAllocator* Device::GetAllocator(const fuchsia_sysmem2::wire::BufferMemorySettings& settings) {
+  if (settings.heap() == fuchsia_sysmem2::wire::HeapType::SYSTEM_RAM &&
       settings.is_physically_contiguous()) {
     return contiguous_system_ram_allocator_.get();
   }
@@ -800,8 +796,8 @@ MemoryAllocator* Device::GetAllocator(
   return iter->second.get();
 }
 
-const llcpp::fuchsia::sysmem2::wire::HeapProperties& Device::GetHeapProperties(
-    llcpp::fuchsia::sysmem2::wire::HeapType heap) const {
+const fuchsia_sysmem2::wire::HeapProperties& Device::GetHeapProperties(
+    fuchsia_sysmem2::wire::HeapType heap) const {
   ZX_DEBUG_ASSERT(allocators_.find(heap) != allocators_.end());
   return allocators_.at(heap)->heap_properties();
 }

@@ -19,7 +19,7 @@
 #include "fdio_unistd.h"
 #include "internal.h"
 
-namespace fio2 = llcpp::fuchsia::io2;
+namespace fio2 = fuchsia_io2;
 
 #define FDIO_EVENT_READABLE static_cast<zx_signals_t>(fio2::wire::DeviceSignal::READABLE)
 #define FDIO_EVENT_WRITABLE static_cast<zx_signals_t>(fio2::wire::DeviceSignal::WRITABLE)

@@ -36,7 +36,7 @@
 
 namespace insntrace {
 
-namespace fuchsia_insntrace = ::llcpp::fuchsia::hardware::cpu::insntrace;
+namespace fuchsia_insntrace = ::fuchsia_hardware_cpu_insntrace;
 
 // Shorten some long fidl names.
 using BufferConfig = fuchsia_insntrace::wire::BufferConfig;

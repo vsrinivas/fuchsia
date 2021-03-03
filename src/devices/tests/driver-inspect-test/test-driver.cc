@@ -18,7 +18,7 @@
 
 namespace {
 
-using llcpp::fuchsia::device::inspect::test::TestInspect;
+using fuchsia_device_inspect_test::TestInspect;
 
 class TestInspectDriver;
 using DeviceType = ddk::Device<TestInspectDriver, ddk::Messageable>;

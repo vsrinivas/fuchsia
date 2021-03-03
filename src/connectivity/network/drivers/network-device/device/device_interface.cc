@@ -904,7 +904,7 @@ zx_status_t DeviceInterface::Binding::Bind(DeviceInterface* interface,
       interface->dispatcher_, std::move(channel), interface,
       fidl::OnUnboundFn<DeviceInterface>(
           [binding_ptr](DeviceInterface* interface, fidl::UnbindInfo /*unused*/,
-                        fidl::ServerEnd<llcpp::fuchsia::hardware::network::Device> /*unused*/) {
+                        fidl::ServerEnd<fuchsia_hardware_network::Device> /*unused*/) {
             bool bindings_empty;
             interface->teardown_lock_.Acquire();
             {

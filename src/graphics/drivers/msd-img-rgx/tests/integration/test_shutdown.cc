@@ -89,8 +89,7 @@ static void test_shutdown(uint32_t iters) {
     while (complete_count < kMaxCount) {
       if (complete_count > count) {
         // Should replace this with a request to devmgr to restart the driver
-        auto result =
-            llcpp::fuchsia::gpu::magma::Device::Call::TestRestart(test_base.channel()->borrow());
+        auto result = fuchsia_gpu_magma::Device::Call::TestRestart(test_base.channel()->borrow());
         EXPECT_EQ(ZX_OK, result.status());
 
         count += kRestartCount;

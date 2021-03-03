@@ -342,8 +342,8 @@ void FtdiDevice::DdkRelease() {
   delete this;
 }
 
-void FtdiDevice::CreateI2C(::llcpp::fuchsia::hardware::ftdi::wire::I2cBusLayout layout,
-                           ::llcpp::fuchsia::hardware::ftdi::wire::I2cDevice device,
+void FtdiDevice::CreateI2C(::fuchsia_hardware_ftdi::wire::I2cBusLayout layout,
+                           ::fuchsia_hardware_ftdi::wire::I2cDevice device,
                            CreateI2CCompleter::Sync& completer) {
   // Set the chip to run in MPSSE mode.
   zx_status_t status = this->SetBitMode(0, 0);
@@ -362,7 +362,7 @@ void FtdiDevice::CreateI2C(::llcpp::fuchsia::hardware::ftdi::wire::I2cBusLayout 
 
 zx_status_t FtdiDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  ::llcpp::fuchsia::hardware::ftdi::Device::Dispatch(this, msg, &transaction);
+  ::fuchsia_hardware_ftdi::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

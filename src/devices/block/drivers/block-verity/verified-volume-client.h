@@ -54,11 +54,9 @@ class VerifiedVolumeClient {
   // written into the caller-owned `out` buffer, so the caller can persist it
   // somewhere.
   zx_status_t CloseAndGenerateSeal(
-      fidl::Buffer<
-          llcpp::fuchsia::hardware::block::verified::DeviceManager::CloseAndGenerateSealResponse>*
+      fidl::Buffer<fuchsia_hardware_block_verified::DeviceManager::CloseAndGenerateSealResponse>*
           seal_response_buffer,
-      llcpp::fuchsia::hardware::block::verified::wire::DeviceManager_CloseAndGenerateSeal_Result*
-          out);
+      fuchsia_hardware_block_verified::wire::DeviceManager_CloseAndGenerateSeal_Result* out);
 
   // Requests that the volume be opened for verified reads, with the expectation
   // that the volume superblock matches the seal provided.  If successful,

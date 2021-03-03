@@ -39,7 +39,7 @@
 
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 static fbl::Vector<fbl::String> arguments;
 

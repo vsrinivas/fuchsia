@@ -56,8 +56,8 @@ class HidButtonsButtonsFunction;
 using ButtonsFunctionType = ddk::Device<HidButtonsButtonsFunction, ddk::Unbindable>;
 class ButtonsNotifyInterface;
 
-using Buttons = ::llcpp::fuchsia::buttons::Buttons;
-using ButtonType = ::llcpp::fuchsia::buttons::wire::ButtonType;
+using Buttons = ::fuchsia_buttons::Buttons;
+using ButtonType = ::fuchsia_buttons::wire::ButtonType;
 
 class HidButtonsDevice : public DeviceType {
  public:
@@ -222,9 +222,7 @@ class ButtonsNotifyInterface : public Buttons::Interface {
   zx_status_t Init(async_dispatcher_t* dispatcher, zx::channel chan) {
     fidl::OnUnboundFn<ButtonsNotifyInterface> unbound =
         [this](ButtonsNotifyInterface*, fidl::UnbindInfo,
-               fidl::ServerEnd<llcpp::fuchsia::buttons::Buttons>) {
-          device_->ClosingChannel(this);
-        };
+               fidl::ServerEnd<fuchsia_buttons::Buttons>) { device_->ClosingChannel(this); };
     auto res = fidl::BindServer(dispatcher, std::move(chan), this, std::move(unbound));
     if (res.is_error())
       return res.error();

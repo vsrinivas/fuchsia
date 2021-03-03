@@ -78,7 +78,7 @@ class FtdiDevice;
 using DeviceType =
     ddk::Device<FtdiDevice, ddk::Unbindable, ddk::Messageable, ddk::Writable, ddk::Readable>;
 class FtdiDevice : public DeviceType,
-                   public ::llcpp::fuchsia::hardware::ftdi::Device::Interface,
+                   public ::fuchsia_hardware_ftdi::Device::Interface,
                    public ddk::SerialImplProtocol<FtdiDevice, ddk::base_protocol> {
  public:
   explicit FtdiDevice(zx_device_t* parent) : DeviceType(parent), usb_client_(parent) {}
@@ -115,13 +115,13 @@ class FtdiDevice : public DeviceType,
   zx_status_t SerialImplSetNotifyCallback(const serial_notify_t* cb);
 
  private:
-  void CreateI2C(::llcpp::fuchsia::hardware::ftdi::wire::I2cBusLayout layout,
-                 ::llcpp::fuchsia::hardware::ftdi::wire::I2cDevice device,
+  void CreateI2C(::fuchsia_hardware_ftdi::wire::I2cBusLayout layout,
+                 ::fuchsia_hardware_ftdi::wire::I2cDevice device,
                  CreateI2CCompleter::Sync& _completer) override;
 
-  static zx_status_t FidlCreateI2c(
-      void* ctx, const ::llcpp::fuchsia::hardware::ftdi::wire::I2cBusLayout* layout,
-      const ::llcpp::fuchsia::hardware::ftdi::wire::I2cDevice* device);
+  static zx_status_t FidlCreateI2c(void* ctx,
+                                   const ::fuchsia_hardware_ftdi::wire::I2cBusLayout* layout,
+                                   const ::fuchsia_hardware_ftdi::wire::I2cDevice* device);
   zx_status_t Reset();
   zx_status_t SetBaudrate(uint32_t baudrate);
   zx_status_t CalcDividers(uint32_t* baudrate, uint32_t clock, uint32_t divisor,

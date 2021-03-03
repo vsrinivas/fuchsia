@@ -19,8 +19,8 @@
 
 #include <zxtest/zxtest.h>
 
-namespace fboot = ::llcpp::fuchsia::boot;
-namespace fkernel = ::llcpp::fuchsia::kernel;
+namespace fboot = ::fuchsia_boot;
+namespace fkernel = ::fuchsia_kernel;
 
 namespace {
 
@@ -52,7 +52,7 @@ class FakeBootArgsServer final : public fboot::Arguments::Interface {
 
   void SetBool(std::string key, bool value) { values_.insert_or_assign(key, value); }
 
-  // llcpp::fuchsia::boot::Arguments::Interface methods:
+  // fuchsia_boot::Arguments::Interface methods:
   void GetString(::fidl::StringView key, GetStringCompleter::Sync& completer) {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }

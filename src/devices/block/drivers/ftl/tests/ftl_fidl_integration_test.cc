@@ -19,7 +19,7 @@
 
 namespace {
 
-namespace block_fidl = ::llcpp::fuchsia::hardware::block;
+namespace block_fidl = ::fuchsia_hardware_block;
 
 TEST(FtlFidlTest, GetVmoReturnsVmoWithCounters) {
   std::vector<std::string> property_list = {

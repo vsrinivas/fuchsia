@@ -17,7 +17,7 @@ void usage(char* argv[]) {
   printf("options:\n    <brightness-val>: 0.0-1.0\n");
 }
 
-namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
+namespace FidlBacklight = fuchsia_hardware_backlight;
 
 }  // namespace
 

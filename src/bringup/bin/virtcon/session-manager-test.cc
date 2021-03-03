@@ -27,7 +27,7 @@ void vc_toggle_framebuffer() {}
 TEST(VirtconSessionManager, LifeTimeTest) {
   async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
   virtcon::SessionManager sessions(loop.dispatcher(), false, &color_schemes[kDefaultColorScheme]);
-  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::hardware::pty::Device>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
   ASSERT_EQ(ZX_OK, endpoints.status_value());
   auto [local, remote] = *std::move(endpoints);
   ASSERT_EQ(ZX_OK, sessions.CreateSession(std::move(remote)).status_value());
@@ -38,7 +38,7 @@ TEST(VirtconSessionManager, LifeTimeTest) {
 TEST(VirtconSessionManager, TestWriting) {
   async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
   virtcon::SessionManager sessions(loop.dispatcher(), false, &color_schemes[kDefaultColorScheme]);
-  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::hardware::pty::Device>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
   ASSERT_EQ(ZX_OK, endpoints.status_value());
   auto [local, remote] = *std::move(endpoints);
 
@@ -71,7 +71,7 @@ TEST(VirtconSessionManager, TestWriting) {
 TEST(VirtconSessionManager, TestWritingMultipleClients) {
   async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
   virtcon::SessionManager sessions(loop.dispatcher(), false, &color_schemes[kDefaultColorScheme]);
-  auto endpoints1 = fidl::CreateEndpoints<llcpp::fuchsia::hardware::pty::Device>();
+  auto endpoints1 = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
   ASSERT_EQ(ZX_OK, endpoints1.status_value());
   auto [local1, remote1] = *std::move(endpoints1);
   vc_t* session_one = nullptr;
@@ -82,7 +82,7 @@ TEST(VirtconSessionManager, TestWritingMultipleClients) {
   }
   auto pty_one = fidl::Client(std::move(local1), loop.dispatcher());
 
-  auto endpoints2 = fidl::CreateEndpoints<llcpp::fuchsia::hardware::pty::Device>();
+  auto endpoints2 = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
   ASSERT_EQ(ZX_OK, endpoints2.status_value());
   auto [local2, remote2] = *std::move(endpoints2);
   vc_t* session_two = nullptr;
@@ -142,7 +142,7 @@ TEST(VirtconSessionManager, KeepLogVisibleSessionStaysActive) {
   virtcon::SessionManager sessions(loop.dispatcher(), true, &color_schemes[kDefaultColorScheme]);
 
   // Create the first session and check that it's not active.
-  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::hardware::pty::Device>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
   ASSERT_EQ(ZX_OK, endpoints.status_value());
   auto [local_one, remote] = *std::move(endpoints);
 
@@ -172,7 +172,7 @@ TEST(VirtconSessionManager, DontKeepLogVisibleSessionActivity) {
   virtcon::SessionManager sessions(loop.dispatcher(), false, &color_schemes[kDefaultColorScheme]);
 
   // Create the first session and check that it's active.
-  auto endpoints_one = fidl::CreateEndpoints<llcpp::fuchsia::hardware::pty::Device>();
+  auto endpoints_one = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
   ASSERT_EQ(ZX_OK, endpoints_one.status_value());
   auto [local_one, remote_one] = *std::move(endpoints_one);
 
@@ -186,7 +186,7 @@ TEST(VirtconSessionManager, DontKeepLogVisibleSessionActivity) {
   ASSERT_TRUE(vc_one->active);
 
   // Create the second session and check that it's not active.
-  auto endpoints_two = fidl::CreateEndpoints<llcpp::fuchsia::hardware::pty::Device>();
+  auto endpoints_two = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
   ASSERT_EQ(ZX_OK, endpoints_two.status_value());
   auto [local_two, remote_two] = *std::move(endpoints_two);
   vc_t* vc_two;

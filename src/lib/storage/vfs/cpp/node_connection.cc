@@ -28,7 +28,7 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 namespace fs {
 
@@ -38,7 +38,7 @@ NodeConnection::NodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, Vnode
                                VnodeConnectionOptions options)
     : Connection(vfs, std::move(vnode), protocol, options, FidlProtocol::Create<fio::Node>(this)) {}
 
-void NodeConnection::Clone(uint32_t clone_flags, fidl::ServerEnd<llcpp::fuchsia::io::Node> object,
+void NodeConnection::Clone(uint32_t clone_flags, fidl::ServerEnd<fuchsia_io::Node> object,
                            CloneCompleter::Sync& completer) {
   Connection::NodeClone(clone_flags, std::move(object));
 }
@@ -77,7 +77,7 @@ void NodeConnection::GetAttr(GetAttrCompleter::Sync& completer) {
   }
 }
 
-void NodeConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::wire::NodeAttributes attributes,
+void NodeConnection::SetAttr(uint32_t flags, ::fuchsia_io::wire::NodeAttributes attributes,
                              SetAttrCompleter::Sync& completer) {
   auto result = Connection::NodeSetAttr(flags, attributes);
   if (result.is_error()) {

@@ -37,9 +37,9 @@
 #define DEV_BLOCK "/dev/class/block"
 #define DEV_SKIP_BLOCK "/dev/class/skip-block"
 
-namespace fuchsia_block = ::llcpp::fuchsia::hardware::block;
-namespace fuchsia_partition = ::llcpp::fuchsia::hardware::block::partition;
-namespace fuchsia_skipblock = ::llcpp::fuchsia::hardware::skipblock;
+namespace fuchsia_block = ::fuchsia_hardware_block;
+namespace fuchsia_partition = ::fuchsia_hardware_block_partition;
+namespace fuchsia_skipblock = ::fuchsia_hardware_skipblock;
 
 static char* size_to_cstring(char* str, size_t maxlen, uint64_t size) {
   const char* unit;

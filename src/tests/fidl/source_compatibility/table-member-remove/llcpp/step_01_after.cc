@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/tablememberremove/llcpp/fidl.h>  // nogncheck
-namespace fidl_test = llcpp::fidl::test::tablememberremove;
+namespace fidl_test = fidl_test_tablememberremove;
 
 // [START contents]
 void use_table(const fidl_test::wire::Profile& profile) {

@@ -17,7 +17,7 @@
 #include "interrupts.h"
 #include "zxtest/zxtest.h"
 
-namespace sysmem = llcpp::fuchsia::sysmem;
+namespace sysmem = fuchsia_sysmem;
 
 static void empty_callback(void* ctx, uint32_t master_interrupt_control, uint64_t timestamp) {}
 

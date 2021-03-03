@@ -180,7 +180,7 @@ TEST(PbusTest, BoardInfo) {
   zx::channel channel;
   ASSERT_OK(fdio_get_service_handle(platform_bus.release(), channel.reset_and_get_address()));
 
-  ::llcpp::fuchsia::sysinfo::SysInfo::SyncClient client(std::move(channel));
+  ::fuchsia_sysinfo::SysInfo::SyncClient client(std::move(channel));
   // Get board name.
   auto board_info = client.GetBoardName();
   EXPECT_OK(board_info.status());

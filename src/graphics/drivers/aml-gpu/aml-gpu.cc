@@ -281,7 +281,7 @@ zx_status_t AmlGpu::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 
 zx_status_t AmlGpu::ProcessMetadata(std::vector<uint8_t> raw_metadata) {
   properties_ = {};
-  fidl::DecodedMessage<llcpp::fuchsia::hardware::gpu::amlogic::wire::Metadata> decoded(
+  fidl::DecodedMessage<fuchsia_hardware_gpu_amlogic::wire::Metadata> decoded(
       raw_metadata.data(), static_cast<uint32_t>(raw_metadata.size()));
   if (!decoded.ok() || (decoded.error() != nullptr)) {
     GPU_ERROR("Unable to parse metadata %s", decoded.error());
@@ -296,13 +296,12 @@ zx_status_t AmlGpu::ProcessMetadata(std::vector<uint8_t> raw_metadata) {
 
 zx_status_t AmlGpu::Bind() {
   size_t size;
-  zx_status_t status =
-      DdkGetMetadataSize(llcpp::fuchsia::hardware::gpu::amlogic::wire::MALI_METADATA, &size);
+  zx_status_t status = DdkGetMetadataSize(fuchsia_hardware_gpu_amlogic::wire::MALI_METADATA, &size);
   if (status == ZX_OK) {
     std::vector<uint8_t> raw_metadata(size);
     size_t actual;
-    status = DdkGetMetadata(llcpp::fuchsia::hardware::gpu::amlogic::wire::MALI_METADATA,
-                            raw_metadata.data(), size, &actual);
+    status = DdkGetMetadata(fuchsia_hardware_gpu_amlogic::wire::MALI_METADATA, raw_metadata.data(),
+                            size, &actual);
     if (status != ZX_OK) {
       GPU_ERROR("Failed to get metadata");
       return status;
@@ -373,7 +372,7 @@ zx_status_t AmlGpu::Bind() {
   }
   reset_register.Connect(std::move(register_server_end));
   reset_register_ =
-      ::llcpp::fuchsia::hardware::registers::Device::SyncClient(std::move(register_client_end));
+      ::fuchsia_hardware_registers::Device::SyncClient(std::move(register_client_end));
 
   if (info.pid == PDEV_PID_AMLOGIC_S905D3 && properties_.supports_protected_mode) {
     // S905D3 needs to use an SMC into the TEE to do protected mode switching.

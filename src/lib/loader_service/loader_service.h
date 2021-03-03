@@ -32,8 +32,8 @@ class LoaderServiceBase : public std::enable_shared_from_this<LoaderServiceBase>
 
   // Bind and Connect create a new connection to the loader service. Connect is identical to
   // Bind but creates the channel for the caller.
-  zx::status<> Bind(fidl::ServerEnd<llcpp::fuchsia::ldsvc::Loader> channel);
-  zx::status<fidl::ClientEnd<llcpp::fuchsia::ldsvc::Loader>> Connect();
+  zx::status<> Bind(fidl::ServerEnd<fuchsia_ldsvc::Loader> channel);
+  zx::status<fidl::ClientEnd<fuchsia_ldsvc::Loader>> Connect();
 
  protected:
   LoaderServiceBase(async_dispatcher_t* dispatcher, std::string name)
@@ -73,16 +73,16 @@ class LoaderServiceBase : public std::enable_shared_from_this<LoaderServiceBase>
 //
 // Connections have a strong reference to the server object (through std::shared_ptr), which keeps
 // the loader service alive as long as any open client connections exist.
-class LoaderConnection : public llcpp::fuchsia::ldsvc::Loader::Interface {
+class LoaderConnection : public fuchsia_ldsvc::Loader::Interface {
  public:
   LoaderConnection(std::shared_ptr<LoaderServiceBase> server) : server_(server) {}
 
-  // llcpp::fuchsia::ldsvc::Loader::Interface implementation
+  // fuchsia_ldsvc::Loader::Interface implementation
   virtual void Done(DoneCompleter::Sync& completer) override;
   virtual void LoadObject(fidl::StringView object_name,
                           LoadObjectCompleter::Sync& completer) override;
   virtual void Config(fidl::StringView config, ConfigCompleter::Sync& completer) override;
-  virtual void Clone(fidl::ServerEnd<llcpp::fuchsia::ldsvc::Loader> loader,
+  virtual void Clone(fidl::ServerEnd<fuchsia_ldsvc::Loader> loader,
                      CloneCompleter::Sync& completer) override;
 
  private:

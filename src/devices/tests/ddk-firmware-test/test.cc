@@ -13,7 +13,7 @@
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;
-using llcpp::fuchsia::device::firmware::test::TestDevice;
+using fuchsia_device_firmware_test::TestDevice;
 
 constexpr const char TEST_FIRMWARE_PATH[] = "test-firmware";
 class FirmwareTest : public zxtest::Test {

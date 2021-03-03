@@ -13,7 +13,7 @@
 
 namespace {
 
-using ::llcpp::fidl::test::coding::fuchsia::Simple;
+using ::fidl_test_coding_fuchsia::Simple;
 
 class Server : public Simple::Interface {
  public:

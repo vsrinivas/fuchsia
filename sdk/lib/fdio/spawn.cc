@@ -39,8 +39,8 @@
 
 #include "internal.h"
 
-namespace fio = ::llcpp::fuchsia::io;
-namespace fprocess = ::llcpp::fuchsia::process;
+namespace fio = ::fuchsia_io;
+namespace fprocess = ::fuchsia_process;
 
 #define FDIO_RESOLVE_PREFIX "#!resolve "
 #define FDIO_RESOLVE_PREFIX_LEN 10

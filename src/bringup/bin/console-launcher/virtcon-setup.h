@@ -15,12 +15,12 @@ struct VirtconArgs {
   bool should_launch = false;
   bool need_debuglog = false;
 };
-zx::status<VirtconArgs> GetVirtconArgs(llcpp::fuchsia::boot::Arguments::SyncClient* boot_args);
+zx::status<VirtconArgs> GetVirtconArgs(fuchsia_boot::Arguments::SyncClient* boot_args);
 
-zx_status_t SetupVirtconEtc(llcpp::fuchsia::virtualconsole::SessionManager::SyncClient& virtcon,
+zx_status_t SetupVirtconEtc(fuchsia_virtualconsole::SessionManager::SyncClient& virtcon,
                             const VirtconArgs& args);
 
-zx_status_t SetupVirtcon(llcpp::fuchsia::boot::Arguments::SyncClient* boot_args);
+zx_status_t SetupVirtcon(fuchsia_boot::Arguments::SyncClient* boot_args);
 
 }  // namespace console_launcher
 

@@ -21,8 +21,6 @@
 
 namespace serial {
 
-namespace fuchsia = ::llcpp::fuchsia;
-
 enum {
   WAIT_ITEM_SOCKET,
   WAIT_ITEM_EVENT,
@@ -294,15 +292,15 @@ zx_status_t SerialDevice::DdkWrite(const void* buf, size_t count, zx_off_t off, 
 }
 
 void SerialDevice::GetClass(GetClassCompleter::Sync& completer) {
-  completer.Reply(static_cast<fuchsia::hardware::serial::wire::Class>(serial_class_));
+  completer.Reply(static_cast<fuchsia_hardware_serial::wire::Class>(serial_class_));
 }
 
-void SerialDevice::SetConfig(fuchsia::hardware::serial::wire::Config config,
+void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
                              SetConfigCompleter::Sync& completer) {
-  using fuchsia::hardware::serial::wire::CharacterWidth;
-  using fuchsia::hardware::serial::wire::FlowControl;
-  using fuchsia::hardware::serial::wire::Parity;
-  using fuchsia::hardware::serial::wire::StopWidth;
+  using fuchsia_hardware_serial::wire::CharacterWidth;
+  using fuchsia_hardware_serial::wire::FlowControl;
+  using fuchsia_hardware_serial::wire::Parity;
+  using fuchsia_hardware_serial::wire::StopWidth;
   uint32_t flags = 0;
   switch (config.character_width) {
     case CharacterWidth::BITS_5:
@@ -355,7 +353,7 @@ void SerialDevice::SetConfig(fuchsia::hardware::serial::wire::Config config,
 
 zx_status_t SerialDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia::hardware::serial::Device::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_serial::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

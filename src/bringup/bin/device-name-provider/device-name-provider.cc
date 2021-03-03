@@ -91,7 +91,7 @@ void device_id_get(unsigned char mac[6], char out[HOST_NAME_MAX], uint32_t gener
   }
 }
 
-class DeviceNameProviderServer final : public llcpp::fuchsia::device::NameProvider::Interface {
+class DeviceNameProviderServer final : public fuchsia_device::NameProvider::Interface {
   const char* name;
   const size_t size;
 
@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
     uint8_t mac[6];
     const char* interface = args.interface.empty() ? nullptr : args.interface.c_str();
     if ((err = netifc_discover(args.ethdir.c_str(), interface, nullptr, mac))) {
-      strlcpy(device_name, llcpp::fuchsia::device::wire::DEFAULT_DEVICE_NAME, sizeof(device_name));
+      strlcpy(device_name, fuchsia_device::wire::DEFAULT_DEVICE_NAME, sizeof(device_name));
       printf(
           "device-name-provider: using default name \"%s\": netifc_discover(\"%s\", ...) = %d: "
           "%s\n",
@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
   DeviceNameProviderServer server(device_name, strnlen(device_name, sizeof(device_name)));
 
   outgoing.svc_dir()->AddEntry(
-      llcpp::fuchsia::device::NameProvider::Name,
+      fuchsia_device::NameProvider::Name,
       fbl::MakeRefCounted<fs::Service>([dispatcher, server](zx::channel svc_request) mutable {
         zx_status_t status =
             fidl::BindSingleInFlightOnly(dispatcher, std::move(svc_request), &server);

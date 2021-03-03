@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  auto result = llcpp::fuchsia::gpu::magma::Device::Call::DumpState(
+  auto result = fuchsia_gpu_magma::Device::Call::DumpState(
       zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)), dump_type);
   fdio_unsafe_release(fdio);
 

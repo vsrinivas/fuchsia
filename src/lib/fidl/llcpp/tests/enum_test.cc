@@ -5,8 +5,8 @@
 #include <fidl/llcpp/types/test/llcpp/fidl.h>
 #include <gtest/gtest.h>
 
-using llcpp::fidl::llcpp::types::test::wire::FlexibleEnum;
-using llcpp::fidl::llcpp::types::test::wire::StrictEnum;
+using fidl_llcpp_types_test::wire::FlexibleEnum;
+using fidl_llcpp_types_test::wire::StrictEnum;
 
 TEST(Enum, Defaults) {
   using StrictType = StrictEnum;

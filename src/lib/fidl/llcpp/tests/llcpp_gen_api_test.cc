@@ -16,7 +16,7 @@
 
 namespace {
 
-using ::llcpp::fidl::test::coding::fuchsia::Example;
+using ::fidl_test_coding_fuchsia::Example;
 
 class Server : public Example::Interface {
  public:
@@ -209,7 +209,7 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
   sync_completion_t done;
   fidl::OnUnboundFn<ErrorServer> on_unbound =
       [&done](ErrorServer*, fidl::UnbindInfo info,
-              fidl::ServerEnd<llcpp::fidl::test::coding::fuchsia::Example>) {
+              fidl::ServerEnd<fidl_test_coding_fuchsia::Example>) {
         EXPECT_EQ(fidl::UnbindInfo::kEncodeError, info.reason);
         EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, info.status);
         sync_completion_signal(&done);

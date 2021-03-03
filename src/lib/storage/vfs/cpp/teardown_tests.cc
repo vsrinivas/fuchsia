@@ -99,8 +99,8 @@ class AsyncTearDownVnode : public FdCountVnode {
 
 void SendSync(const zx::channel& client) {
   FIDL_ALIGNDECL
-  llcpp::fuchsia::io::Node::SyncRequest request(5);
-  fidl::OwnedEncodedMessage<llcpp::fuchsia::io::Node::SyncRequest> encoded(&request);
+  fuchsia_io::Node::SyncRequest request(5);
+  fidl::OwnedEncodedMessage<fuchsia_io::Node::SyncRequest> encoded(&request);
   ASSERT_OK(encoded.status());
   encoded.Write(client.get());
   ASSERT_OK(encoded.status());
@@ -271,7 +271,7 @@ TEST(Teardown, TeardownSlowClone) {
 
   zx::channel client2, server2;
   ASSERT_OK(zx::channel::create(0, &client2, &server2));
-  llcpp::fuchsia::io::Node::SyncClient fidl_client2(std::move(client2));
+  fuchsia_io::Node::SyncClient fidl_client2(std::move(client2));
   ASSERT_OK(fidl_client2.Clone(0, std::move(server2)).status());
 
   // The connection is now:

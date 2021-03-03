@@ -16,10 +16,10 @@
 
 namespace board_as370 {
 
-using llcpp::fuchsia::hardware::thermal::OperatingPoint;
-using llcpp::fuchsia::hardware::thermal::OperatingPointEntry;
-using llcpp::fuchsia::hardware::thermal::PowerDomain;
-using llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo;
+using fuchsia_hardware_thermal::OperatingPoint;
+using fuchsia_hardware_thermal::OperatingPointEntry;
+using fuchsia_hardware_thermal::PowerDomain;
+using fuchsia_hardware_thermal::ThermalDeviceInfo;
 
 zx_status_t As370::ThermalInit() {
   constexpr pbus_mmio_t thermal_mmios[] = {

@@ -27,7 +27,7 @@ inline constexpr Arch GetCurrentArch() {
 }  // namespace
 
 void Sysconfig::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                     fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+                     fidl::ClientEnd<::fuchsia_io::Directory> svc_root,
                      std::shared_ptr<Context> context, zx::channel server) {
   auto device_partitioner = DevicePartitionerFactory::Create(
       devfs_root.duplicate(), std::move(svc_root), GetCurrentArch(), context);
@@ -72,11 +72,11 @@ void Sysconfig::Read(ReadCompleter::Sync& completer) {
     return;
   }
 
-  completer.ReplySuccess(::llcpp::fuchsia::mem::wire::Buffer{std::move(vmo), partition_size});
+  completer.ReplySuccess(::fuchsia_mem::wire::Buffer{std::move(vmo), partition_size});
   LOG("Completed successfully\n");
 }
 
-void Sysconfig::Write(::llcpp::fuchsia::mem::wire::Buffer payload, WriteCompleter::Sync& completer) {
+void Sysconfig::Write(::fuchsia_mem::wire::Buffer payload, WriteCompleter::Sync& completer) {
   LOG("Writing sysconfig-data partition.\n");
 
   if (auto status = partitioner_->Write(payload.vmo, payload.size); status.is_error()) {

@@ -17,7 +17,7 @@
 
 namespace fio = fuchsia::io;
 namespace flogger = fuchsia::logger;
-namespace frunner = llcpp::fuchsia::component::runner;
+namespace frunner = fuchsia_component_runner;
 
 constexpr char kName[] = "my-name";
 constexpr char kMessage[] = "my-message";
@@ -67,7 +67,7 @@ TEST(LoggerTest, CreateAndLog) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
   // Setup namespace.
-  auto svc = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  auto svc = fidl::CreateEndpoints<fuchsia_io::Directory>();
   EXPECT_EQ(ZX_OK, svc.status_value());
   fidl::FidlAllocator allocator;
   fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);
@@ -117,7 +117,7 @@ TEST(LoggerTest, Create_NoLogSink) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
   // Setup namespace.
-  auto pkg = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  auto pkg = fidl::CreateEndpoints<fuchsia_io::Directory>();
   EXPECT_EQ(ZX_OK, pkg.status_value());
   fidl::FidlAllocator allocator;
   fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);

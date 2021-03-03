@@ -22,12 +22,12 @@
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
-namespace fdata = llcpp::fuchsia::data;
-namespace fdf = llcpp::fuchsia::driver::framework;
+namespace fdata = fuchsia_data;
+namespace fdf = fuchsia_driver_framework;
 namespace fio = fuchsia::io;
 namespace fmem = fuchsia::mem;
-namespace frunner = llcpp::fuchsia::component::runner;
-namespace ftest = llcpp::fuchsia::driverhost::test;
+namespace frunner = fuchsia_component_runner;
+namespace ftest = fuchsia_driverhost_test;
 
 using Completer = fdf::DriverHost::Interface::StartCompleter::Sync;
 using namespace inspect::testing;
@@ -57,7 +57,7 @@ class TestFile : public fio::testing::File_TestBase {
     EXPECT_EQ(ZX_OK, fdio_open(path_.data(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
                                server_end.release()));
 
-    llcpp::fuchsia::io::File::SyncClient file(std::move(client_end));
+    fuchsia_io::File::SyncClient file(std::move(client_end));
     auto result = file.GetBuffer(flags);
     EXPECT_TRUE(result.ok());
     auto buffer = fmem::Buffer::New();
@@ -133,17 +133,16 @@ class DriverHostTest : public gtest::TestLoopFixture {
                                         fbl::MakeRefCounted<fs::Service>(std::move(connector))));
   }
 
-  StartDriverResult StartDriver(
-      fidl::VectorView<fdf::wire::NodeSymbol> symbols = {},
-      fidl::ClientEnd<llcpp::fuchsia::driver::framework::Node>* node = nullptr,
-      zx_status_t expected_epitaph = ZX_OK) {
+  StartDriverResult StartDriver(fidl::VectorView<fdf::wire::NodeSymbol> symbols = {},
+                                fidl::ClientEnd<fuchsia_driver_framework::Node>* node = nullptr,
+                                zx_status_t expected_epitaph = ZX_OK) {
     zx_status_t epitaph = ZX_OK;
     TestTransaction transaction(&epitaph);
     fidl::FidlAllocator allocator;
 
-    auto pkg_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+    auto pkg_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_TRUE(pkg_endpoints.is_ok());
-    auto svc_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+    auto svc_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_TRUE(svc_endpoints.is_ok());
 
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 2);
@@ -171,7 +170,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
     program_entries[0].key.Set(allocator, "binary");
     program_entries[0].value.set_str(allocator, "driver/library.so");
 
-    auto outgoing_dir_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+    auto outgoing_dir_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_TRUE(outgoing_dir_endpoints.is_ok());
     auto driver_endpoints = fidl::CreateEndpoints<fdf::Driver>();
     EXPECT_TRUE(driver_endpoints.is_ok());
@@ -354,7 +353,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> entries1(allocator, 1);
     entries1[0].Allocate(allocator);
     entries1[0].set_path(allocator, "/pkg");
-    entries1[0].set_directory(allocator, fidl::ClientEnd<llcpp::fuchsia::io::Directory>());
+    entries1[0].set_directory(allocator, fidl::ClientEnd<fuchsia_io::Directory>());
 
     fdf::wire::DriverStartArgs driver_start_args(allocator);
     driver_start_args.set_url(allocator, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
@@ -373,7 +372,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> entries2(allocator, 1);
     entries2[0].Allocate(allocator);
     entries2[0].set_path(allocator, "/pkg");
-    entries2[0].set_directory(allocator, fidl::ClientEnd<llcpp::fuchsia::io::Directory>());
+    entries2[0].set_directory(allocator, fidl::ClientEnd<fuchsia_io::Directory>());
 
     fdf::wire::DriverStartArgs driver_start_args(allocator);
     driver_start_args.set_url(allocator, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
@@ -414,8 +413,8 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
   fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);
   ns_entries[0].Allocate(allocator);
   ns_entries[0].set_path(allocator, "/pkg");
-  ns_entries[0].set_directory(
-      allocator, fidl::ClientEnd<llcpp::fuchsia::io::Directory>(std::move(pkg_client_end)));
+  ns_entries[0].set_directory(allocator,
+                              fidl::ClientEnd<fuchsia_io::Directory>(std::move(pkg_client_end)));
   TestFile file("/pkg/driver/test_not_driver.so");
   fidl::Binding<fio::File> file_binding(&file);
   TestDirectory pkg_directory;

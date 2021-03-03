@@ -17,7 +17,7 @@
 // If it ever gets out of sync, that would be surfaced by a linker error.
 void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension_ops_t* ops);
 
-class TestServerBase : public llcpp::fuchsia::io::Node::RawChannelInterface {
+class TestServerBase : public fuchsia_io::Node::RawChannelInterface {
  public:
   virtual ~TestServerBase() = default;
 
@@ -43,7 +43,7 @@ class TestServerBase : public llcpp::fuchsia::io::Node::RawChannelInterface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void SetAttr(uint32_t flags, llcpp::fuchsia::io::wire::NodeAttributes attribute,
+  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attribute,
                SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -76,8 +76,8 @@ class ExtensionNode : public zxtest::Test {
     if (result.is_error()) {
       return nullptr;
     }
-    binding_ = std::make_unique<fidl::ServerBindingRef<llcpp::fuchsia::io::Node>>(
-        std::move(result.value()));
+    binding_ =
+        std::make_unique<fidl::ServerBindingRef<fuchsia_io::Node>>(std::move(result.value()));
     return static_cast<ServerImpl*>(server_.get());
   }
 
@@ -85,7 +85,7 @@ class ExtensionNode : public zxtest::Test {
   zx::channel control_client_end_;
   zx::channel control_server_end_;
   std::unique_ptr<TestServerBase> server_;
-  std::unique_ptr<fidl::ServerBindingRef<llcpp::fuchsia::io::Node>> binding_;
+  std::unique_ptr<fidl::ServerBindingRef<fuchsia_io::Node>> binding_;
   std::unique_ptr<async::Loop> loop_;
 };
 
@@ -197,7 +197,7 @@ TEST_F(ExtensionNode, GetAttr) {
     void GetAttr(GetAttrCompleter::Sync& completer) override {
       ASSERT_FALSE(called());
       called_.store(true);
-      llcpp::fuchsia::io::wire::NodeAttributes attr = {};
+      fuchsia_io::wire::NodeAttributes attr = {};
       attr.content_size = kContentSize;
       completer.Reply(ZX_OK, attr);
     }

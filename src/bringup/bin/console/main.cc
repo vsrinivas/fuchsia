@@ -46,7 +46,7 @@ zx::resource GetRootResource() {
   if (status != ZX_OK) {
     return {};
   }
-  auto path = fbl::StringPrintf("/svc/%s", llcpp::fuchsia::boot::RootResource::Name);
+  auto path = fbl::StringPrintf("/svc/%s", fuchsia_boot::RootResource::Name);
   status = fdio_service_connect(path.data(), remote.release());
   if (status != ZX_OK) {
     printf("console: Could not connect to RootResource service: %s\n",
@@ -54,7 +54,7 @@ zx::resource GetRootResource() {
     return {};
   }
 
-  llcpp::fuchsia::boot::RootResource::SyncClient client(std::move(local));
+  fuchsia_boot::RootResource::SyncClient client(std::move(local));
   auto result = client.Get();
   if (result.status() != ZX_OK) {
     printf("console: Could not retrieve RootResource: %s\n", zx_status_get_string(result.status()));
@@ -70,21 +70,21 @@ zx_status_t ConnectListener(zx::channel listener, std::vector<std::string> allow
     return status;
   }
 
-  auto path = fbl::StringPrintf("/svc/%s", llcpp::fuchsia::logger::Log::Name);
+  auto path = fbl::StringPrintf("/svc/%s", fuchsia_logger::Log::Name);
   status = fdio_service_connect(path.data(), server.release());
   if (status != ZX_OK) {
     printf("console: fdio_service_connect() = %s\n", zx_status_get_string(status));
     return status;
   }
-  llcpp::fuchsia::logger::Log::SyncClient log(std::move(client));
+  fuchsia_logger::Log::SyncClient log(std::move(client));
   std::vector<fidl::StringView> tags;
   for (auto& tag : allowed_log_tags) {
     tags.emplace_back(fidl::unowned_str(tag));
   }
-  llcpp::fuchsia::logger::wire::LogFilterOptions options{
+  fuchsia_logger::wire::LogFilterOptions options{
       .filter_by_pid = false,
       .filter_by_tid = false,
-      .min_severity = llcpp::fuchsia::logger::wire::LogLevelFilter::TRACE,
+      .min_severity = fuchsia_logger::wire::LogLevelFilter::TRACE,
       .tags = fidl::unowned_vec(tags),
   };
   auto result = log.ListenSafe(std::move(listener), fidl::unowned_ptr(&options));

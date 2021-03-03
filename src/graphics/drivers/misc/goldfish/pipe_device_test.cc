@@ -33,7 +33,7 @@ constexpr uint32_t kGoldfishBtiId = 0x80888088;
 constexpr uint32_t kPipeMinDeviceVersion = 2;
 constexpr uint32_t kMaxSignalledPipes = 64;
 
-using llcpp::fuchsia::sysmem::wire::HeapType;
+using fuchsia_sysmem::wire::HeapType;
 constexpr HeapType kSysmemHeaps[] = {
     HeapType::SYSTEM_RAM,
     HeapType::GOLDFISH_DEVICE_LOCAL,
@@ -367,18 +367,18 @@ TEST_F(PipeDeviceTest, TransferObservedSignals) {
   ASSERT_OK(dut_->GoldfishPipeSetEvent(id, std::move(old_event_dup)));
 
   // Trigger signals on "old" event.
-  old_event.signal(0u, llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_READABLE);
+  old_event.signal(0u, fuchsia_hardware_goldfish::wire::SIGNAL_READABLE);
 
   zx::event new_event, new_event_dup;
   ASSERT_OK(zx::event::create(0u, &new_event));
   // Clear the target signal.
-  ASSERT_OK(new_event.signal(llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_READABLE, 0u));
+  ASSERT_OK(new_event.signal(fuchsia_hardware_goldfish::wire::SIGNAL_READABLE, 0u));
   ASSERT_OK(new_event.duplicate(ZX_RIGHT_SAME_RIGHTS, &new_event_dup));
   ASSERT_OK(dut_->GoldfishPipeSetEvent(id, std::move(new_event_dup)));
 
   // Wait for `SIGNAL_READABLE` signal on the new event.
   zx_signals_t observed;
-  ASSERT_OK(new_event.wait_one(llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_READABLE,
+  ASSERT_OK(new_event.wait_one(fuchsia_hardware_goldfish::wire::SIGNAL_READABLE,
                                zx::time::infinite_past(), &observed));
 
   dut_->DdkAsyncRemove();

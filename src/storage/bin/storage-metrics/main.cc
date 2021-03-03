@@ -29,8 +29,8 @@
 
 namespace {
 
-using MinfsFidlMetrics = ::llcpp::fuchsia::minfs::wire::Metrics;
-namespace fio = ::llcpp::fuchsia::io;
+using MinfsFidlMetrics = ::fuchsia_minfs::wire::Metrics;
+namespace fio = ::fuchsia_io;
 
 int Usage() {
   fprintf(stdout, "usage: storage-metrics [ <option>* ] [paths]\n");
@@ -93,7 +93,7 @@ zx_status_t GetFsMetrics(const char* path, MinfsFidlMetrics* out_metrics) {
   }
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = llcpp::fuchsia::minfs::Minfs::Call::GetMetrics(caller.channel());
+  auto result = fuchsia_minfs::Minfs::Call::GetMetrics(caller.channel());
   if (!result.ok()) {
     fprintf(stderr, "Error getting metrics for %s, status %d\n", path, result.status());
     return result.status();

@@ -20,7 +20,7 @@
 #include <gtest/gtest.h>
 #include <llcpptest/protocol/test/llcpp/fidl.h>
 
-namespace test = ::llcpp::llcpptest::protocol::test;
+namespace test = ::llcpptest_protocol_test;
 
 namespace {
 zx_status_t kErrorStatus = 271;

@@ -26,7 +26,7 @@
 namespace {
 
 using driver_integration_test::IsolatedDevmgr;
-using llcpp::fuchsia::device::restarttest::TestDevice;
+using fuchsia_device_restarttest::TestDevice;
 
 void SetupEnvironment(board_test::DeviceEntry dev, driver_integration_test::IsolatedDevmgr* devmgr,
                       fuchsia::device::manager::DriverHostDevelopmentSyncPtr* development_) {

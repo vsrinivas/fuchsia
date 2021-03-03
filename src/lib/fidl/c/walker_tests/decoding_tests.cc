@@ -1525,9 +1525,8 @@ TEST(UnknownEnvelope, NumUnknownHandlesOverflows) {
   zx_handle_t handles[1] = {};
 
   const char* error = nullptr;
-  auto status =
-      fidl_decode(&llcpp::fidl::test::coding::wire::fidl_test_coding_ResourceSimpleTableTable,
-                  bytes, ArrayCount(bytes), handles, ArrayCount(handles), &error);
+  auto status = fidl_decode(&fidl_test_coding::wire::fidl_test_coding_ResourceSimpleTableTable,
+                            bytes, ArrayCount(bytes), handles, ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "number of unknown handles overflows");
@@ -1548,9 +1547,8 @@ TEST(UnknownEnvelope, NumUnknownHandlesExceedsUnknownArraySize) {
   };
 
   const char* error = nullptr;
-  auto status =
-      fidl_decode(&llcpp::fidl::test::coding::wire::fidl_test_coding_ResourceSimpleTableTable,
-                  bytes, ArrayCount(bytes), nullptr, 0, &error);
+  auto status = fidl_decode(&fidl_test_coding::wire::fidl_test_coding_ResourceSimpleTableTable,
+                            bytes, ArrayCount(bytes), nullptr, 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "number of unknown handles exceeds unknown handle array size");
@@ -1573,8 +1571,8 @@ TEST(UnknownEnvelope, DecodeUnknownHandle) {
   zx_handle_t handles[1] = {};
   ASSERT_EQ(ZX_OK, zx_port_create(0, handles));
   const char* error = nullptr;
-  auto status = fidl_decode(&llcpp::fidl::test::coding::wire::fidl_test_coding_SimpleTableTable,
-                            bytes, ArrayCount(bytes), handles, 1, &error);
+  auto status = fidl_decode(&fidl_test_coding::wire::fidl_test_coding_SimpleTableTable, bytes,
+                            ArrayCount(bytes), handles, 1, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_EQ(zx_object_get_info(handles[0], ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr),
@@ -1600,8 +1598,8 @@ TEST(UnknownEnvelope, DecodeEtcUnknownHandle) {
   }};
   ASSERT_EQ(ZX_OK, zx_port_create(0, &handles[0].handle));
   const char* error = nullptr;
-  auto status = fidl_decode_etc(&llcpp::fidl::test::coding::wire::fidl_test_coding_SimpleTableTable,
-                                bytes, ArrayCount(bytes), handles, 1, &error);
+  auto status = fidl_decode_etc(&fidl_test_coding::wire::fidl_test_coding_SimpleTableTable, bytes,
+                                ArrayCount(bytes), handles, 1, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_EQ(
@@ -1629,8 +1627,8 @@ TEST(UnknownEnvelope, DecodeEtcSkipUnknownHandle) {
   ASSERT_EQ(ZX_OK, zx_port_create(0, &handles[0].handle));
   const char* error = nullptr;
   auto status = fidl_decode_etc_skip_unknown_handles(
-      &llcpp::fidl::test::coding::wire::fidl_test_coding_ResourceSimpleTableTable, bytes,
-      ArrayCount(bytes), handles, 1, &error);
+      &fidl_test_coding::wire::fidl_test_coding_ResourceSimpleTableTable, bytes, ArrayCount(bytes),
+      handles, 1, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_EQ(

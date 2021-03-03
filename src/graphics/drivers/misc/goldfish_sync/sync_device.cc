@@ -154,7 +154,7 @@ void SyncDevice::DdkRelease() { delete this; }
 
 zx_status_t SyncDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::goldfish::SyncDevice::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_goldfish::SyncDevice::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 
@@ -315,7 +315,7 @@ SyncTimeline::~SyncTimeline() = default;
 zx_status_t SyncTimeline::Bind(zx::channel request) {
   zx_handle_t server_handle = request.release();
   return async::PostTask(dispatcher_, [server_handle, this]() mutable {
-    using SyncTimelineProtocol = llcpp::fuchsia::hardware::goldfish::SyncTimeline;
+    using SyncTimelineProtocol = fuchsia_hardware_goldfish::SyncTimeline;
     auto result = fidl::BindServer(dispatcher_, zx::channel(server_handle), this,
                                    [](SyncTimeline* self, fidl::UnbindInfo info,
                                       fidl::ServerEnd<SyncTimelineProtocol> server_end) {

@@ -11,7 +11,7 @@
 
 CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,
                                 mock_boot_arguments::Server* boot_args,
-                                llcpp::fuchsia::boot::Arguments::SyncClient* client) {
+                                fuchsia_boot::Arguments::SyncClient* client) {
   // The DummyFsProvider is stateless.  Create a single static one here so that we don't need to
   // manage pointer lifetime for it below.
   static DummyFsProvider dummy_fs_provider;
@@ -31,7 +31,7 @@ CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,
   config.resume_timeout = zx::sec(2);
   config.path_prefix = "/pkg/";
   // Should be MEXEC to verify the test behavior without rebooting.
-  config.default_shutdown_system_state = power_fidl::statecontrol::wire::SystemPowerState::MEXEC;
+  config.default_shutdown_system_state = statecontrol_fidl::wire::SystemPowerState::MEXEC;
   return config;
 }
 

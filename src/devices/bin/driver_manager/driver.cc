@@ -29,7 +29,7 @@
 
 namespace {
 
-namespace fio = llcpp::fuchsia::io;
+namespace fio = fuchsia_io;
 
 struct AddContext {
   const char* libname;

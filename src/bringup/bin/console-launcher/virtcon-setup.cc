@@ -52,7 +52,7 @@ zx::status<zx::channel> StartShell(const char* cmd) {
 
 // Start a shell with a given command, and send it to virtcon.
 // If `cmd` is null, then the shell is launched interactively.
-zx_status_t StartVirtconShell(llcpp::fuchsia::virtualconsole::SessionManager::SyncClient& virtcon,
+zx_status_t StartVirtconShell(fuchsia_virtualconsole::SessionManager::SyncClient& virtcon,
                               const char* cmd) {
   auto result = StartShell(cmd);
   if (!result.is_ok()) {
@@ -76,8 +76,8 @@ zx_status_t StartVirtconShell(llcpp::fuchsia::virtualconsole::SessionManager::Sy
 
 }  // namespace
 
-zx::status<VirtconArgs> GetVirtconArgs(llcpp::fuchsia::boot::Arguments::SyncClient* boot_args) {
-  llcpp::fuchsia::boot::wire::BoolPair bool_keys[]{
+zx::status<VirtconArgs> GetVirtconArgs(fuchsia_boot::Arguments::SyncClient* boot_args) {
+  fuchsia_boot::wire::BoolPair bool_keys[]{
       {fidl::StringView{"netsvc.disable"}, true},
       {fidl::StringView{"netsvc.netboot"}, false},
       {fidl::StringView{"devmgr.require-system"}, false},
@@ -101,7 +101,7 @@ zx::status<VirtconArgs> GetVirtconArgs(llcpp::fuchsia::boot::Arguments::SyncClie
   return zx::ok(std::move(args));
 }
 
-zx_status_t SetupVirtconEtc(llcpp::fuchsia::virtualconsole::SessionManager::SyncClient& virtcon,
+zx_status_t SetupVirtconEtc(fuchsia_virtualconsole::SessionManager::SyncClient& virtcon,
                             const VirtconArgs& args) {
   if (!args.should_launch) {
     return ZX_OK;
@@ -123,7 +123,7 @@ zx_status_t SetupVirtconEtc(llcpp::fuchsia::virtualconsole::SessionManager::Sync
   return ZX_OK;
 }
 
-zx_status_t SetupVirtcon(llcpp::fuchsia::boot::Arguments::SyncClient* boot_args) {
+zx_status_t SetupVirtcon(fuchsia_boot::Arguments::SyncClient* boot_args) {
   auto result = GetVirtconArgs(boot_args);
   if (!result.is_ok()) {
     return result.status_value();
@@ -134,7 +134,7 @@ zx_status_t SetupVirtcon(llcpp::fuchsia::boot::Arguments::SyncClient* boot_args)
     return ZX_OK;
   }
 
-  llcpp::fuchsia::virtualconsole::SessionManager::SyncClient virtcon;
+  fuchsia_virtualconsole::SessionManager::SyncClient virtcon;
   {
     zx::channel local, remote;
     zx_status_t status = zx::channel::create(0, &local, &remote);
@@ -145,10 +145,10 @@ zx_status_t SetupVirtcon(llcpp::fuchsia::boot::Arguments::SyncClient* boot_args)
     status = fdio_service_connect("/svc/fuchsia.virtualconsole.SessionManager", remote.release());
     if (status != ZX_OK) {
       fprintf(stderr, "console-launcher: unable to connect to %s: %d\n",
-              llcpp::fuchsia::virtualconsole::SessionManager::Name, status);
+              fuchsia_virtualconsole::SessionManager::Name, status);
       return status;
     }
-    virtcon = llcpp::fuchsia::virtualconsole::SessionManager::SyncClient(std::move(local));
+    virtcon = fuchsia_virtualconsole::SessionManager::SyncClient(std::move(local));
   }
 
   return SetupVirtconEtc(virtcon, args);

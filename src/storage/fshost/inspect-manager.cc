@@ -9,7 +9,7 @@
 
 #include "src/lib/storage/vfs/cpp/service.h"
 
-namespace fio = ::llcpp::fuchsia::io;
+namespace fio = ::fuchsia_io;
 
 namespace devmgr {
 
@@ -137,7 +137,7 @@ void InspectManager::FillFileTreeSizes(fidl::ClientEnd<fio::Directory> current_d
       if (entry->is_dir) {
         work_stack.push_back(PendingDirectory{
             .entries_iterator = std::make_unique<DirectoryEntriesIterator>(
-                fidl::ClientEnd<::llcpp::fuchsia::io::Directory>(entry->node.TakeChannel())),
+                fidl::ClientEnd<::fuchsia_io::Directory>(entry->node.TakeChannel())),
             .node = current.node.CreateChild(entry->name),
             .total_size = 0,
         });

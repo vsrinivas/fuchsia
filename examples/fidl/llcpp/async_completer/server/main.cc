@@ -17,7 +17,7 @@
 #include <iostream>
 
 // [START impl]
-class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
+class EchoImpl final : public fuchsia_examples::Echo::Interface {
  public:
   explicit EchoImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
   // SendString is not used in this example, so requests are just ignored.
@@ -51,7 +51,7 @@ static void connect(void* untyped_context, const char* service_name, zx_handle_t
   auto context = static_cast<ConnectRequestContext*>(untyped_context);
   std::cout << "echo_server_llcpp: Incoming connection for " << service_name << std::endl;
   fidl::BindServer(context->dispatcher,
-                   fidl::ServerEnd<llcpp::fuchsia::examples::Echo>(zx::channel(service_request)),
+                   fidl::ServerEnd<fuchsia_examples::Echo>(zx::channel(service_request)),
                    context->server.get());
 }
 

@@ -24,9 +24,9 @@ namespace {
 constexpr uint64_t kBlockSize = 512;
 constexpr uint64_t kSliceSize = 1 << 20;
 
-// using Partition = llcpp::fuchsia::hardware::block::partition::Partition;
-using Volume = ::llcpp::fuchsia::hardware::block::volume::Volume;
-using VolumeManager = ::llcpp::fuchsia::hardware::block::volume::VolumeManager;
+// using Partition = fuchsia_hardware_block_partition::Partition;
+using Volume = ::fuchsia_hardware_block_volume::Volume;
+using VolumeManager = ::fuchsia_hardware_block_volume::VolumeManager;
 
 class FvmVolumeManagerApiTest : public zxtest::Test {
  public:
@@ -121,11 +121,11 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   ASSERT_TRUE(fvm);
 
   // Type GUID for partition.
-  llcpp::fuchsia::hardware::block::partition::wire::GUID type_guid;
+  fuchsia_hardware_block_partition::wire::GUID type_guid;
   std::fill(std::begin(type_guid.value), std::end(type_guid.value), 0x11);
 
   // Instance GUID for partition.
-  llcpp::fuchsia::hardware::block::partition::wire::GUID guid;
+  fuchsia_hardware_block_partition::wire::GUID guid;
   std::fill(std::begin(guid.value), std::end(guid.value), 0x12);
 
   // The partition hasn't been created yet, the result should be "not found".

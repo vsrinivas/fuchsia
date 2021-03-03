@@ -35,7 +35,7 @@ class StreamReader : public fvm::ReaderInterface {
   StreamReader(StreamReader&&) = delete;
   StreamReader& operator=(StreamReader&&) = delete;
 
-  ::llcpp::fuchsia::paver::PayloadStream::SyncClient stream_;
+  ::fuchsia_paver::PayloadStream::SyncClient stream_;
   zx::vmo vmo_;
   zx_off_t offset_ = 0;
   size_t size_ = 0;

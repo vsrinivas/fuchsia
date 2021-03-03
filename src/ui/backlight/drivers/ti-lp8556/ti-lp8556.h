@@ -59,7 +59,7 @@ constexpr int kMilliampPerAmp = 1000;
 
 class Lp8556Device;
 using DeviceType = ddk::Device<Lp8556Device, ddk::Unbindable, ddk::Messageable>;
-namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
+namespace FidlBacklight = fuchsia_hardware_backlight;
 
 class BrightnessStickyReg : public hwreg::RegisterBase<BrightnessStickyReg, uint32_t> {
  public:

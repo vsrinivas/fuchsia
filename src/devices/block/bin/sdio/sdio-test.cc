@@ -14,7 +14,7 @@
 
 namespace sdio {
 
-class SdioTest : public zxtest::Test, public ::llcpp::fuchsia::hardware::sdio::Device::Interface {
+class SdioTest : public zxtest::Test, public ::fuchsia_hardware_sdio::Device::Interface {
  public:
   SdioTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
     zx::channel server;

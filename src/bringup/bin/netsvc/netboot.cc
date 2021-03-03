@@ -74,7 +74,7 @@ bool ConnectToService(const char* service, zx::channel& channel) {
 };
 
 bool GetMexecResource(zx::resource* resource) {
-  using Resource = llcpp::fuchsia::boot::RootResource;
+  using Resource = fuchsia_boot::RootResource;
 
   zx::channel local;
   if (!ConnectToService(Resource::Name, local)) {
@@ -301,7 +301,7 @@ static zx_status_t do_dmctl_mexec() {
     return ZX_ERR_INTERNAL;
   }
   zx::channel devmgr_channel;
-  if (!ConnectToService(llcpp::fuchsia::device::manager::Administrator::Name, devmgr_channel)) {
+  if (!ConnectToService(fuchsia_device_manager::Administrator::Name, devmgr_channel)) {
     return ZX_ERR_INTERNAL;
   }
 
@@ -317,7 +317,7 @@ static zx_status_t do_dmctl_mexec() {
 }
 
 static zx_status_t reboot() {
-  namespace statecontrol = llcpp::fuchsia::hardware::power::statecontrol;
+  namespace statecontrol = fuchsia_hardware_power_statecontrol;
 
   zx::channel local;
   if (!ConnectToService(statecontrol::Admin::Name, local)) {

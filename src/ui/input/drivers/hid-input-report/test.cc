@@ -202,13 +202,13 @@ TEST_F(HidDevTest, ReadInputReportsTest) {
   auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
 
   // Get an InputReportsReader.
-  llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+  fuchsia_input_report::InputReportsReader::SyncClient reader;
   {
     zx::channel token_server, token_client;
     ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
     auto result = sync_client.GetInputReportsReader(std::move(token_server));
     ASSERT_OK(result.status());
-    reader = llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+    reader = fuchsia_input_report::InputReportsReader::SyncClient(std::move(token_client));
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 
@@ -253,7 +253,7 @@ TEST_F(HidDevTest, ReadInputReportsHangingGetTest) {
   // Get an InputReportsReader.
 
   async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fidl::Client<llcpp::fuchsia::input::report::InputReportsReader> reader;
+  fidl::Client<fuchsia_input_report::InputReportsReader> reader;
   {
     zx::channel token_server, token_client;
     ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
@@ -265,7 +265,7 @@ TEST_F(HidDevTest, ReadInputReportsHangingGetTest) {
 
   // Read the report. This will hang until a report is sent.
   auto status = reader->ReadInputReports(
-      [&](::llcpp::fuchsia::input::report::InputReportsReader::ReadInputReportsResponse* response) {
+      [&](::fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* response) {
         ASSERT_FALSE(response->result.is_err());
         auto& reports = response->result.response().reports;
         ASSERT_EQ(1, reports.count());
@@ -303,7 +303,7 @@ TEST_F(HidDevTest, CloseReaderWithOutstandingRead) {
   // Get an InputReportsReader.
 
   async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fidl::Client<llcpp::fuchsia::input::report::InputReportsReader> reader;
+  fidl::Client<fuchsia_input_report::InputReportsReader> reader;
   {
     zx::channel token_server, token_client;
     ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
@@ -315,7 +315,7 @@ TEST_F(HidDevTest, CloseReaderWithOutstandingRead) {
 
   // Queue a report.
   auto status = reader->ReadInputReports(
-      [&](::llcpp::fuchsia::input::report::InputReportsReader::ReadInputReportsResponse* response) {
+      [&](::fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* response) {
         ASSERT_TRUE(response->result.is_err());
       });
   ASSERT_OK(status.status());
@@ -359,13 +359,13 @@ TEST_F(HidDevTest, SensorTest) {
   ASSERT_EQ(sensor_desc.values()[3].axis.unit.type, fuchsia_input_report::wire::UnitType::NONE);
 
   // Get an InputReportsReader.
-  llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+  fuchsia_input_report::InputReportsReader::SyncClient reader;
   {
     zx::channel token_server, token_client;
     ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
     auto result = sync_client.GetInputReportsReader(std::move(token_server));
     ASSERT_OK(result.status());
-    reader = llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+    reader = fuchsia_input_report::InputReportsReader::SyncClient(std::move(token_client));
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 
@@ -419,13 +419,13 @@ TEST_F(HidDevTest, GetTouchInputReportTest) {
   auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
 
   // Get an InputReportsReader.
-  llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+  fuchsia_input_report::InputReportsReader::SyncClient reader;
   {
     zx::channel token_server, token_client;
     ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
     auto result = sync_client.GetInputReportsReader(std::move(token_server));
     ASSERT_OK(result.status());
-    reader = llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+    reader = fuchsia_input_report::InputReportsReader::SyncClient(std::move(token_client));
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 
@@ -493,13 +493,13 @@ TEST_F(HidDevTest, KeyboardTest) {
   auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
 
   // Get an InputReportsReader.
-  llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+  fuchsia_input_report::InputReportsReader::SyncClient reader;
   {
     zx::channel token_server, token_client;
     ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
     auto result = sync_client.GetInputReportsReader(std::move(token_server));
     ASSERT_OK(result.status());
-    reader = llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+    reader = fuchsia_input_report::InputReportsReader::SyncClient(std::move(token_client));
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 
@@ -527,12 +527,12 @@ TEST_F(HidDevTest, KeyboardTest) {
   ASSERT_TRUE(keyboard.has_pressed_keys());
   ASSERT_EQ(3, keyboard.pressed_keys().count());
   ASSERT_EQ(3, keyboard.pressed_keys3().count());
-  EXPECT_EQ(llcpp::fuchsia::ui::input2::wire::Key::A, keyboard.pressed_keys()[0]);
-  EXPECT_EQ(llcpp::fuchsia::ui::input2::wire::Key::UP, keyboard.pressed_keys()[1]);
-  EXPECT_EQ(llcpp::fuchsia::ui::input2::wire::Key::B, keyboard.pressed_keys()[2]);
-  EXPECT_EQ(llcpp::fuchsia::input::wire::Key::A, keyboard.pressed_keys3()[0]);
-  EXPECT_EQ(llcpp::fuchsia::input::wire::Key::UP, keyboard.pressed_keys3()[1]);
-  EXPECT_EQ(llcpp::fuchsia::input::wire::Key::B, keyboard.pressed_keys3()[2]);
+  EXPECT_EQ(fuchsia_ui_input2::wire::Key::A, keyboard.pressed_keys()[0]);
+  EXPECT_EQ(fuchsia_ui_input2::wire::Key::UP, keyboard.pressed_keys()[1]);
+  EXPECT_EQ(fuchsia_ui_input2::wire::Key::B, keyboard.pressed_keys()[2]);
+  EXPECT_EQ(fuchsia_input::wire::Key::A, keyboard.pressed_keys3()[0]);
+  EXPECT_EQ(fuchsia_input::wire::Key::UP, keyboard.pressed_keys3()[1]);
+  EXPECT_EQ(fuchsia_input::wire::Key::B, keyboard.pressed_keys3()[2]);
 }
 
 TEST_F(HidDevTest, KeyboardOutputReportTest) {
@@ -603,24 +603,24 @@ TEST_F(HidDevTest, ConsumerControlTest) {
   ASSERT_EQ(5, consumer_control_desc.buttons().count());
 
   ASSERT_EQ(consumer_control_desc.buttons()[0],
-            llcpp::fuchsia::input::report::wire::ConsumerControlButton::VOLUME_UP);
+            fuchsia_input_report::wire::ConsumerControlButton::VOLUME_UP);
   ASSERT_EQ(consumer_control_desc.buttons()[1],
-            llcpp::fuchsia::input::report::wire::ConsumerControlButton::VOLUME_DOWN);
+            fuchsia_input_report::wire::ConsumerControlButton::VOLUME_DOWN);
   ASSERT_EQ(consumer_control_desc.buttons()[2],
-            llcpp::fuchsia::input::report::wire::ConsumerControlButton::REBOOT);
+            fuchsia_input_report::wire::ConsumerControlButton::REBOOT);
   ASSERT_EQ(consumer_control_desc.buttons()[3],
-            llcpp::fuchsia::input::report::wire::ConsumerControlButton::CAMERA_DISABLE);
+            fuchsia_input_report::wire::ConsumerControlButton::CAMERA_DISABLE);
   ASSERT_EQ(consumer_control_desc.buttons()[4],
-            llcpp::fuchsia::input::report::wire::ConsumerControlButton::MIC_MUTE);
+            fuchsia_input_report::wire::ConsumerControlButton::MIC_MUTE);
 
   // Get an InputReportsReader.
-  llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+  fuchsia_input_report::InputReportsReader::SyncClient reader;
   {
     zx::channel token_server, token_client;
     ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
     auto result = sync_client.GetInputReportsReader(std::move(token_server));
     ASSERT_OK(result.status());
-    reader = llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+    reader = fuchsia_input_report::InputReportsReader::SyncClient(std::move(token_client));
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 
@@ -661,11 +661,11 @@ TEST_F(HidDevTest, ConsumerControlTest) {
     EXPECT_EQ(3, report.pressed_buttons().count());
 
     EXPECT_EQ(report.pressed_buttons()[0],
-              llcpp::fuchsia::input::report::wire::ConsumerControlButton::VOLUME_UP);
+              fuchsia_input_report::wire::ConsumerControlButton::VOLUME_UP);
     EXPECT_EQ(report.pressed_buttons()[1],
-              llcpp::fuchsia::input::report::wire::ConsumerControlButton::REBOOT);
+              fuchsia_input_report::wire::ConsumerControlButton::REBOOT);
     EXPECT_EQ(report.pressed_buttons()[2],
-              llcpp::fuchsia::input::report::wire::ConsumerControlButton::MIC_MUTE);
+              fuchsia_input_report::wire::ConsumerControlButton::MIC_MUTE);
   }
 }
 
@@ -695,14 +695,13 @@ TEST_F(HidDevTest, ConsumerControlTwoClientsTest) {
   // Get an input reader and check reports.
   {
     // Get an InputReportsReader.
-    llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+    fuchsia_input_report::InputReportsReader::SyncClient reader;
     {
       zx::channel token_server, token_client;
       ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
       auto result = client.GetInputReportsReader(std::move(token_server));
       ASSERT_OK(result.status());
-      reader =
-          llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+      reader = fuchsia_input_report::InputReportsReader::SyncClient(std::move(token_client));
     }
 
     auto report_result = reader.ReadInputReports();
@@ -719,14 +718,13 @@ TEST_F(HidDevTest, ConsumerControlTwoClientsTest) {
 
   {
     // Get an InputReportsReader.
-    llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+    fuchsia_input_report::InputReportsReader::SyncClient reader;
     {
       zx::channel token_server, token_client;
       ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
       auto result = client.GetInputReportsReader(std::move(token_server));
       ASSERT_OK(result.status());
-      reader =
-          llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+      reader = fuchsia_input_report::InputReportsReader::SyncClient(std::move(token_client));
       ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
     }
 
