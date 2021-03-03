@@ -17,6 +17,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_SIM_FW_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_SIM_FW_H_
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <zircon/types.h>
@@ -419,7 +420,7 @@ class SimFirmware {
   void SetAssocState(AssocState::AssocStateName state);
   void AssocClearContext();
   void AuthClearContext();
-  void AssocHandleFailure();
+  void AssocHandleFailure(::fuchsia::wlan::ieee80211::StatusCode status);
   void AuthHandleFailure();
   void DisassocStart(brcmf_scb_val_le* scb_val);
   void DisassocLocalClient(::fuchsia::wlan::ieee80211::ReasonCode reason);

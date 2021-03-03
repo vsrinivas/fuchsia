@@ -248,18 +248,18 @@ void FakeAp::RxMgmtFrame(std::shared_ptr<const SimManagementFrame> mgmt_frame) {
         return;
       }
 
-      if ((assoc_req_frame->ssid_.len != ssid_.len) ||
-          memcmp(assoc_req_frame->ssid_.ssid, ssid_.ssid, ssid_.len)) {
-        ScheduleAssocResp(StatusCode::REFUSED_REASON_UNSPECIFIED, assoc_req_frame->src_addr_);
-        return;
-      }
-
       if (assoc_handling_mode_ == ASSOC_REFUSED_TEMPORARILY) {
         ScheduleAssocResp(StatusCode::REFUSED_TEMPORARILY, assoc_req_frame->src_addr_);
         return;
       }
 
       if (assoc_handling_mode_ == ASSOC_REFUSED) {
+        ScheduleAssocResp(StatusCode::REFUSED_REASON_UNSPECIFIED, assoc_req_frame->src_addr_);
+        return;
+      }
+
+      if ((assoc_req_frame->ssid_.len != ssid_.len) ||
+          memcmp(assoc_req_frame->ssid_.ssid, ssid_.ssid, ssid_.len)) {
         ScheduleAssocResp(StatusCode::REFUSED_REASON_UNSPECIFIED, assoc_req_frame->src_addr_);
         return;
       }
