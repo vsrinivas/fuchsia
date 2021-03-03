@@ -129,6 +129,8 @@ pub enum LexicalContent {
 
     /// A Right brace (curly bracket).
     RightBrace,
+    /// A standalone unicode symbol like: ⮬ or ⮯.
+    UnicodeCharacter(char),
 
     /// The end of an english sentence.
     /// For example ".", ":", "!", "?".
@@ -345,6 +347,17 @@ pub fn reduce_lexems(compiler: &mut DocCompiler, source: &Rc<Source>) -> Option<
                 &mut iter,
                 LexicalContent::RightBrace,
             ),
+            '⮬' => reduce_unicode_character(&mut items, &source, index, &mut iter, character),
+            '⮯' => reduce_unicode_character(&mut items, &source, index, &mut iter, character),
+            '⮫' => reduce_unicode_character(&mut items, &source, index, &mut iter, character),
+            '⮨' => reduce_unicode_character(&mut items, &source, index, &mut iter, character),
+            '⮭' => reduce_unicode_character(&mut items, &source, index, &mut iter, character),
+            '⮮' => reduce_unicode_character(&mut items, &source, index, &mut iter, character),
+            '⮪' => reduce_unicode_character(&mut items, &source, index, &mut iter, character),
+            '⮩' => reduce_unicode_character(&mut items, &source, index, &mut iter, character),
+            '↵' => reduce_unicode_character(&mut items, &source, index, &mut iter, character),
+            '⌘' => reduce_unicode_character(&mut items, &source, index, &mut iter, character),
+            // Reduces a sentence end character.
             '.' | ':' | '!' | '?' => {
                 items.push(LexicalItem {
                     location: Location { source: Rc::clone(&source), start: index, end: index },
@@ -714,6 +727,21 @@ fn reduce_one_or_two_characters(
     current
 }
 
+/// Reduce a single unicode character.
+fn reduce_unicode_character(
+    items: &mut Vec<LexicalItem>,
+    source: &Rc<Source>,
+    start: usize,
+    iter: &mut CharIndices<'_>,
+    character: char,
+) -> Option<(usize, char)> {
+    items.push(LexicalItem {
+        location: Location { source: Rc::clone(&source), start, end: start },
+        content: LexicalContent::UnicodeCharacter(character),
+    });
+    iter.next()
+}
+
 /// Reduces spaces (at least one).
 fn reduce_spaces(
     items: &mut Vec<LexicalItem>,
@@ -879,6 +907,9 @@ mod test {
                 }
                 LexicalContent::RightBrace => {
                     compiler.add_error(&item.location, "RightBrace".to_owned())
+                }
+                LexicalContent::UnicodeCharacter(character) => {
+                    compiler.add_error(&item.location, format!("UnicodeCharacter <{}>", character))
                 }
                 LexicalContent::EndOfSentence(character) => {
                     compiler.add_error(&item.location, format!("EndOfSentence <{}>", character))
@@ -1306,6 +1337,55 @@ sdk/foo/foo.fidl: 10:62: RightBrace
 , ; + - * / % & # ## | ~ ^ $ @ § = == < <= > >= ( ) [ ] { } \\
                                                             ^
 sdk/foo/foo.fidl: 10:64: BackSlash
+"
+        );
+    }
+
+    #[test]
+    fn lexer_unicode_symbols() {
+        let mut compiler = DocCompiler::new();
+        let source = Rc::new(Source::new(
+            "sdk/foo/foo.fidl".to_owned(),
+            10,
+            4,
+            "⮬ ⮯ ⮫ ⮨ ⮭ ⮮ ⮪ ⮩ ↵ ⌘".to_owned(),
+        ));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(!items.is_none());
+        lexical_items_to_errors(&mut compiler, &items.unwrap(), /*with_spaces=*/ false);
+        assert_eq!(
+            compiler.errors,
+            "\
+⮬ ⮯ ⮫ ⮨ ⮭ ⮮ ⮪ ⮩ ↵ ⌘
+^
+sdk/foo/foo.fidl: 10:4: UnicodeCharacter <⮬>
+⮬ ⮯ ⮫ ⮨ ⮭ ⮮ ⮪ ⮩ ↵ ⌘
+  ^
+sdk/foo/foo.fidl: 10:6: UnicodeCharacter <⮯>
+⮬ ⮯ ⮫ ⮨ ⮭ ⮮ ⮪ ⮩ ↵ ⌘
+    ^
+sdk/foo/foo.fidl: 10:8: UnicodeCharacter <⮫>
+⮬ ⮯ ⮫ ⮨ ⮭ ⮮ ⮪ ⮩ ↵ ⌘
+      ^
+sdk/foo/foo.fidl: 10:10: UnicodeCharacter <⮨>
+⮬ ⮯ ⮫ ⮨ ⮭ ⮮ ⮪ ⮩ ↵ ⌘
+        ^
+sdk/foo/foo.fidl: 10:12: UnicodeCharacter <⮭>
+⮬ ⮯ ⮫ ⮨ ⮭ ⮮ ⮪ ⮩ ↵ ⌘
+          ^
+sdk/foo/foo.fidl: 10:14: UnicodeCharacter <⮮>
+⮬ ⮯ ⮫ ⮨ ⮭ ⮮ ⮪ ⮩ ↵ ⌘
+            ^
+sdk/foo/foo.fidl: 10:16: UnicodeCharacter <⮪>
+⮬ ⮯ ⮫ ⮨ ⮭ ⮮ ⮪ ⮩ ↵ ⌘
+              ^
+sdk/foo/foo.fidl: 10:18: UnicodeCharacter <⮩>
+⮬ ⮯ ⮫ ⮨ ⮭ ⮮ ⮪ ⮩ ↵ ⌘
+                ^
+sdk/foo/foo.fidl: 10:20: UnicodeCharacter <↵>
+⮬ ⮯ ⮫ ⮨ ⮭ ⮮ ⮪ ⮩ ↵ ⌘
+                  ^
+sdk/foo/foo.fidl: 10:22: UnicodeCharacter <⌘>
 "
         );
     }
