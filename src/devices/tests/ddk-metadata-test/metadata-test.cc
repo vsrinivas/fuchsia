@@ -4,11 +4,12 @@
 
 #include <limits.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <zxtest/zxtest.h>
+
+#include "src/devices/tests/ddk-metadata-test/metadata-test-bind.h"
 
 namespace {
 
@@ -124,8 +125,4 @@ static zx_driver_ops_t metadata_test_driver_ops = {
 
 }  // namespace
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(metadata_test, metadata_test_driver_ops, "zircon", "0.1", 2)
-BI_ABORT_IF_AUTOBIND,
-BI_MATCH(),
-ZIRCON_DRIVER_END(metadata_test)
+ZIRCON_DRIVER(metadata_test, metadata_test_driver_ops, "zircon", "0.1");

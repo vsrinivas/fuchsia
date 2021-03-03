@@ -2,9 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
+
+bind_rules("metadata-test-bind") {
+  disable_autobind = true
+  output = "metadata-test-bind.h"
+}
 
 driver_module("driver") {
   output_name = "ddk-metadata-test"
@@ -15,12 +21,10 @@ driver_module("driver") {
   ]
   sources = [ "metadata-test.cc" ]
   deps = [
+    ":metadata-test-bind",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
@@ -37,6 +41,7 @@ test("tests") {
   testonly = true
   sources = [ "test.cc" ]
   deps = [
+    ":metadata-test-bind",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
