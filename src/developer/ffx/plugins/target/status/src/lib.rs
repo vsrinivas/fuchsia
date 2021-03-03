@@ -113,6 +113,12 @@ async fn gather_build_info_status(build: ProviderProxy) -> Result<StatusEntry> {
             StatusEntry::str_value("Version", "version", "Build version.", &info.version),
             StatusEntry::str_value("Product", "product", "Product config.", &info.product_config),
             StatusEntry::str_value("Board", "board", "Board config.", &info.board_config),
+            StatusEntry::str_value(
+                "Commit",
+                "commit",
+                "Integration Commit Date",
+                &info.latest_commit_date,
+            ),
         ],
     ))
 }
@@ -302,6 +308,7 @@ mod tests {
         \n    Version: \"fake_version\"\
         \n    Product: \"fake_product\"\
         \n    Board: \"fake_board\"\
+        \n    Commit: \"fake_commit\"\
         \nFeedback: \
         \n    Device ID: \"fake_device_id\"\
         \n";
@@ -322,6 +329,7 @@ mod tests {
                         version: Some("fake_version".to_string()),
                         product_config: Some("fake_product".to_string()),
                         board_config: Some("fake_board".to_string()),
+                        latest_commit_date: Some("fake_commit".to_string()),
                         ..BuildInfo::EMPTY
                     })
                     .unwrap();
@@ -393,7 +401,7 @@ mod tests {
         assert_eq!(v[1]["child"].as_array().unwrap().len(), 3);
         assert_eq!(v[2]["child"].as_array().unwrap().len(), 16);
         assert_eq!(v[3]["child"].as_array().unwrap().len(), 2);
-        assert_eq!(v[4]["child"].as_array().unwrap().len(), 3);
+        assert_eq!(v[4]["child"].as_array().unwrap().len(), 4);
         assert_eq!(v[5]["child"].as_array().unwrap().len(), 1);
     }
 
