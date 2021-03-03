@@ -38,6 +38,11 @@ isolated_devmgr_unittest_v2_component("block-client-tests-component") {
 }
 
 fuchsia_test_package("block-client-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   test_components = [ ":block-client-tests-component" ]
 }
 

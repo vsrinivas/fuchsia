@@ -109,6 +109,11 @@ test("blobfs_unittest") {
 }
 
 fuchsia_unittest_package("blobfs-unittest") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   manifest = "meta/blobfs_unittest.cml"
   deps = [
     ":blobfs_unittest",
@@ -316,6 +321,11 @@ blobfs_large_integration_test("blobfs-use-second-bitmap") {
 }
 
 fuchsia_test_package("blobfs-integration-package") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   package_name = "blobs-integration"
   test_components = [
     ":blobfs-fragmentation-component",
