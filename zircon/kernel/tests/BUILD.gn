@@ -88,6 +88,7 @@ if (toolchain.environment == "kernel") {
       "pi_tests.cc",
       "pow2_tests.cc",
       "preempt_disable_tests.cc",
+      "range_check_tests.cc",
       "relaxed_atomic_tests.cc",
       "relocation_tests.cc",
       "resource_tests.cc",

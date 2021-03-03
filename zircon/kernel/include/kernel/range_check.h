@@ -36,6 +36,13 @@ static inline bool InRange(O offset, L len, O max) {
   return true;
 }
 
+// Is the range [offset, offset + len] fully inside the range [min, max]?
+template <typename O, typename L>
+static inline bool InRange(O offset, L len, O min, O max) {
+  // Underflow is not tested as it gets caught in the next call.
+  return InRange(offset - min, len, max - min);
+}
+
 // utility function to trim offset + len to trim_to_len
 // returns new length in *len_out
 // returns false if out of range
