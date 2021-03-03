@@ -13,6 +13,32 @@ from typing import AbstractSet, Iterable
 import action_tracer
 
 
+class ToolCommandTests(unittest.TestCase):
+
+    def test_empty_command(self):
+        with self.assertRaises(IndexError):
+            action_tracer.ToolCommand().tool
+
+    def test_command_no_args(self):
+        command = action_tracer.ToolCommand(tokens=['echo'])
+        self.assertEqual(command.env_tokens, [])
+        self.assertEqual(command.tool, 'echo')
+        self.assertEqual(command.args, [])
+
+    def test_command_with_env(self):
+        command = action_tracer.ToolCommand(tokens=['TMPDIR=/my/tmp', 'echo'])
+        self.assertEqual(command.env_tokens, ['TMPDIR=/my/tmp'])
+        self.assertEqual(command.tool, 'echo')
+        self.assertEqual(command.args, [])
+
+    def test_command_with_args(self):
+        command = action_tracer.ToolCommand(
+            tokens=['ln', '-f', '-s', 'foo', 'bar'])
+        self.assertEqual(command.env_tokens, [])
+        self.assertEqual(command.tool, 'ln')
+        self.assertEqual(command.args, ['-f', '-s', 'foo', 'bar'])
+
+
 class DepEdgesParseTests(unittest.TestCase):
 
     def test_invalid_input(self):
@@ -598,7 +624,7 @@ def abspaths(container: Iterable[str]) -> AbstractSet[str]:
 class AccessConstraintsTests(unittest.TestCase):
 
     def test_empty_action(self):
-        action = action_tracer.Action(script="script.sh")
+        action = action_tracer.Action(inputs=["script.sh"])
         self.assertEqual(
             action.access_constraints(),
             action_tracer.AccessConstraints(
@@ -606,14 +632,14 @@ class AccessConstraintsTests(unittest.TestCase):
 
     def test_have_inputs(self):
         action = action_tracer.Action(
-            script="script.sh", inputs=["input.txt", "main.cc"])
+            inputs=["script.sh", "input.txt", "main.cc"])
         self.assertEqual(
             action.access_constraints(),
             action_tracer.AccessConstraints(
                 allowed_reads=abspaths({"script.sh", "input.txt", "main.cc"})))
 
     def test_have_outputs(self):
-        action = action_tracer.Action(script="script.sh", outputs=["main.o"])
+        action = action_tracer.Action(inputs=["script.sh"], outputs=["main.o"])
         self.assertEqual(
             action.access_constraints(),
             action_tracer.AccessConstraints(
@@ -623,7 +649,7 @@ class AccessConstraintsTests(unittest.TestCase):
 
     def test_have_sources(self):
         action = action_tracer.Action(
-            script="script.sh", sources=["input.src", "main.h"])
+            inputs=["script.sh"], sources=["input.src", "main.h"])
         self.assertEqual(
             action.access_constraints(),
             action_tracer.AccessConstraints(
@@ -631,14 +657,14 @@ class AccessConstraintsTests(unittest.TestCase):
 
     def test_have_response_file(self):
         action = action_tracer.Action(
-            script="script.sh", response_file_name="response.out")
+            inputs=["script.sh"], response_file_name="response.out")
         self.assertEqual(
             action.access_constraints(),
             action_tracer.AccessConstraints(
                 allowed_reads=abspaths({"script.sh", "response.out"})))
 
     def test_have_depfile_writeable_inputs(self):
-        action = action_tracer.Action(script="script.sh", depfile="foo.d")
+        action = action_tracer.Action(inputs=["script.sh"], depfile="foo.d")
         with mock.patch.object(os.path, 'exists',
                                return_value=True) as mock_exists:
             with mock.patch("builtins.open", mock.mock_open(
@@ -656,7 +682,7 @@ class AccessConstraintsTests(unittest.TestCase):
                 allowed_writes=abspaths({"foo.d", "foo.o", "foo.cc", "foo.h"})))
 
     def test_have_depfile_nonwritable_inputs(self):
-        action = action_tracer.Action(script="script.sh", depfile="foo.d")
+        action = action_tracer.Action(inputs=["script.sh"], depfile="foo.d")
         with mock.patch.object(os.path, 'exists',
                                return_value=True) as mock_exists:
             with mock.patch("builtins.open", mock.mock_open(
@@ -678,7 +704,7 @@ class AccessConstraintsTests(unittest.TestCase):
         def fake_realpath(s: str) -> str:
             return f'test/realpath/{s}'
 
-        action = action_tracer.Action(script="script.sh", depfile="foo.d")
+        action = action_tracer.Action(inputs=["script.sh"], depfile="foo.d")
         with mock.patch.object(os.path, 'exists',
                                return_value=True) as mock_exists:
             with mock.patch("builtins.open", mock.mock_open(
@@ -989,12 +1015,11 @@ class UnexpectedFreshOutputsTests(unittest.TestCase):
 class MainArgParserTests(unittest.TestCase):
 
     # These args are required, and there's nothing interesting about them to test.
-    required_args = "--script s.sh --trace-output t.out --label //pkg:tgt "
+    required_args = "--trace-output t.out --label //pkg:tgt "
 
     def test_only_required_args(self):
         parser = action_tracer.main_arg_parser()
         args = parser.parse_args(self.required_args.split())
-        self.assertEqual(args.script, "s.sh")
         self.assertEqual(args.trace_output, "t.out")
         self.assertEqual(args.label, "//pkg:tgt")
         # Make sure all checks are enabled by default

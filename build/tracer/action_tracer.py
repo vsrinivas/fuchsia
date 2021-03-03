@@ -58,6 +58,47 @@ class MatchConditions(object):
         return False
 
 
+def _find_first_index(
+        iterable: Iterable[Any], pred: Callable[[Any], bool]) -> int:
+    """Returns the index of the first element that satisfies the predicate, or -1."""
+    for n, item in enumerate(iterable):
+        if pred(item):
+            return n
+    return -1
+
+
+@dataclasses.dataclass
+class ToolCommand(object):
+    """This models a command for invoking a tool in a shell.
+
+    A command consists of the following components in order:
+      * an optional list of environment variable overrides like 'HOME=/path'
+      * one tool (script or binary in PATH)
+      * an optional list of flags and arguments passed to the tool
+    """
+    tokens: Sequence[str] = dataclasses.field(default_factory=list)
+
+    @property
+    def _tool_index(self) -> int:
+        # The first token that isn't 'X=Y' is the tool/script.
+        return _find_first_index(self.tokens, lambda x: '=' not in x)
+
+    @property
+    def env_tokens(self):
+        """Returns the environment overrides (X=Y) of a shell command."""
+        return self.tokens[:self._tool_index]
+
+    @property
+    def tool(self):
+        """Returns the tool/script of the command."""
+        return self.tokens[self._tool_index]
+
+    @property
+    def args(self):
+        """Returns all options and arguments after the tool of the command."""
+        return self.tokens[self._tool_index + 1:]
+
+
 @dataclasses.dataclass
 class FSAccess(object):
     """Represents a single file system access."""
@@ -217,16 +258,17 @@ class AccessConstraints(object):
 @dataclasses.dataclass
 class Action(object):
     """Represents a set of parameters of a single build action."""
-    script: str
     inputs: Sequence[str] = dataclasses.field(default_factory=list)
     outputs: Collection[str] = dataclasses.field(default_factory=list)
     sources: Sequence[str] = dataclasses.field(default_factory=list)
+    # TODO(fangism): combine sources->inputs since this script has no reason
+    # to distinguish between them.
     depfile: Optional[str] = None
     response_file_name: Optional[str] = None
 
     @property
     def all_declared_inputs(self):
-        return set([self.script] + self.inputs + self.sources)
+        return set(self.inputs + self.sources)
 
     def access_constraints(
             self, writeable_depfile_inputs=False) -> AccessConstraints:
@@ -600,8 +642,8 @@ def main_arg_parser() -> argparse.ArgumentParser:
         default="action",
         help="Type of target being wrapped",
     )
-    parser.add_argument("--script", required=True, help="action#script")
-    parser.add_argument("--response-file-name", help="action#script")
+    parser.add_argument(
+        "--response-file-name", help="action#response_file_name")
     parser.add_argument("--inputs", nargs="*", help="action#inputs")
     parser.add_argument("--sources", nargs="*", help="action#sources")
     parser.add_argument("--outputs", nargs="*", help="action#outputs")
@@ -659,14 +701,17 @@ def main_arg_parser() -> argparse.ArgumentParser:
         default=False,  # Goal: always True (remove this flag)
         help="Check that inputs do not belong to the set of ignored files")
 
-    # Positional args are the command to run and trace.
-    parser.add_argument("args", nargs="*", help="action#args")
+    # Positional args are the command (tool+args) to run and trace.
+    parser.add_argument("command", nargs="*", help="action#command")
     return parser
 
 
 def main():
     parser = main_arg_parser()
     args = parser.parse_args()
+
+    command = ToolCommand(tokens=args.command)
+    script = command.tool
 
     # Ensure trace_output directory exists
     trace_output_dir = os.path.dirname(args.trace_output)
@@ -679,12 +724,11 @@ def main():
             "erwmdt",
             args.trace_output,
             "--",
-            args.script,
-        ] + args.args)
+        ] + command.tokens)
 
     # Scripts with known issues
     # TODO(shayba): file bugs for the suppressions below
-    ignored_scripts = [
+    ignored_scripts = {
         "sdk_build_id.py",
         # TODO(shayba): it's not the wrapper script that's the problem but some
         # of its usages. Refine the suppression or just fix the underlying
@@ -696,24 +740,23 @@ def main():
         "ln",
         # fxbug.dev/61771
         # "analysis_options.yaml",
-    ]
-    if os.path.basename(args.script) in ignored_scripts:
+    }
+    if os.path.basename(script) in ignored_scripts:
         return retval
 
     # `compiled_action()` programs with known issues
     # TODO(shayba): file bugs for the suppressions below
-    ignored_compiled_actions = [
+    ignored_compiled_actions = {
         # fxbug.dev/61770
         "banjo_bin",
         "strings_to_json",
-    ]
-    if args.script == "../../build/gn_run_binary.sh":
-        if os.path.basename(args.args[1]) in ignored_compiled_actions:
+    }
+    if os.path.basename(script) == "gn_run_binary.sh":
+        if os.path.basename(command.args[1]) in ignored_compiled_actions:
             return retval
 
     # Compute constraints from action properties (from args).
     action = Action(
-        script=args.script,
         inputs=args.inputs,
         outputs=args.outputs,
         sources=args.sources,
