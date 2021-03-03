@@ -22,7 +22,8 @@ Example: Compare two clean builds with same output dir:
   fx clean-build
   cp -p -r out/default out/default.bkp
   fx clean-build
-  $0 out/default.bkp out/default
+  cp -p -r out/default out/default.bkp2
+  $0 out/default.bkp out/default.bkp2
 
 EOF
 }
@@ -58,6 +59,27 @@ function diff_text() {
 
 function diff_binary() {
   diff -q "$1" "$2"
+}
+
+function exe_unstripped_expect() {
+  # Print "diff/match/unknown" depending on whether this file is known to be
+  # reproducible across identical builds.
+  local path="$1"
+  # e.g. exe.unstripped/tool_name
+  base="$(basename "$path")"
+  case "$base" in
+    archivist* | \
+    base_resolver | \
+    cobalt | \
+    cobalt_app_unittests | \
+    codec_runner_sw_aac | \
+    component_manager | \
+    component_manager_boot_env | \
+    component_manager_test)
+    # TODO(fangism): add many more cases of known diffs
+          echo "diff" ;;
+    *) echo "match" ;;
+  esac
 }
 
 function diff_file_relpath() {
@@ -107,8 +129,13 @@ function diff_file_relpath() {
     # C++ object files (binary)
     *.o)
       case "$common_path" in
+        efi_x64/obj/src/firmware/*.c.o) expect=diff ;;
         efi_x64/obj/src/*.c.o) expect=unknown ;;
+
+        efi_x64/obj/zircon/system/ulib/*.c.o) expect=diff ;;
+        efi_x64/obj/zircon/third_party/ulib/cksum/*.c.o) expect=diff ;;
         efi_x64/obj/zircon/*.c.o) expect=unknown ;;
+
         obj/third_party/android/platform/external/aac/*.cpp.o) expect=unknown ;;
         *) expect=match ;;
       esac
@@ -148,7 +175,7 @@ function diff_file_relpath() {
     meta.far) expect=unknown; diff_binary "$left" "$right" ;;
     meta.far.merkle) expect=unknown; diff_binary "$left" "$right" ;;
     contents) expect=unknown; diff_binary "$left" "$right" ;;
-    blobs.json) expect=unknown; diff_binary "$left" "$right" ;;
+    blobs.json) expect=diff; diff_binary "$left" "$right" ;;
     blob.manifest) expect=diff; diff_binary "$left" "$right" ;;  # many hashes
     blobs.manifest) expect=unknown; diff_binary "$left" "$right" ;;
     package_manifest.json) expect=unknown; diff_binary "$left" "$right" ;;
@@ -214,8 +241,10 @@ function diff_file_relpath() {
     *_trace.txt) expect=ignore ;;
 
     # like exe.unstripped/*.map files
-    # Many of these (but not all) reference mktemp paths.
-    *.map) expect=unknown; diff_binary "$left" "$right" ;;
+    # .map files are side-effect outputs of linking binaries, and not consumed
+    # anywhere else important.
+    # Many of these (but not all) reference mktemp paths (Rust toolchain).
+    *.map) expect=ignore ;;
 
     # Ignore stamp files.
     *.stamp) expect=ignore ;;
@@ -237,7 +266,12 @@ function diff_file_relpath() {
         # ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV),... dynamically linked, interpreter ld.so.1, no section header
         # Mach-O universal binary with 2 architectures: [x86_64:Mach-O 64-bit executable x86_64] [arm64e:Mach-O 64-bit executable arm64e]
         *ELF*executable* | *Mach-O*binary*)
-          expect=unknown; diff_binary "$left" "$right" ;;
+          case "$common_path" in
+            exe.unstripped/*) expect="$(exe_unstripped_expect "$common_path")" ;;
+            *) expect=unknown ;;
+          esac
+          diff_binary "$left" "$right"
+          ;;
         # Assume non-binaries are text.
         *) expect=match; diff_text "$left" "$right" ;;
       esac
