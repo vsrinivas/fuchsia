@@ -1,3 +1,23 @@
+# Version 4.0.3
+
+- Document the return value of `Runnable::run()` better.
+
+# Version 4.0.2
+
+- Nits in the docs.
+
+# Version 4.0.1
+
+- Nits in the docs.
+
+# Version 4.0.0
+
+- Rename `Task` to `Runnable`.
+- Rename `JoinHandle` to `Task`.
+- Cancel `Task` on drop.
+- Add `Task::detach()` and `Task::cancel()`.
+- Add `spawn_unchecked()`.
+
 # Version 3.0.0
 
 - Use `ThreadId` in `spawn_local` because OS-provided IDs can get recycled.

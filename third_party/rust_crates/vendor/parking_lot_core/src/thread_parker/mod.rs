@@ -1,5 +1,5 @@
 use cfg_if::cfg_if;
-use std::time::Instant;
+use instant::Instant;
 
 /// Trait for the platform thread parker implementation.
 ///
@@ -75,9 +75,6 @@ cfg_if! {
         mod imp;
     } else if #[cfg(target_arch = "wasm32")] {
         #[path = "wasm.rs"]
-        mod imp;
-    } else if #[cfg(all(feature = "nightly", target_os = "cloudabi"))] {
-        #[path = "cloudabi.rs"]
         mod imp;
     } else {
         #[path = "generic.rs"]

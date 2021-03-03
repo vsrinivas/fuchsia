@@ -1,82 +1,69 @@
-<h1 align="center">async-task</h1>
-<div align="center">
-  <strong>
-    A task abstraction for building executors.
-  </strong>
-</div>
+# async-task
 
-<br />
+[![Build](https://github.com/stjepang/async-task/workflows/Build%20and%20test/badge.svg)](
+https://github.com/stjepang/async-task/actions)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](
+https://github.com/stjepang/async-task)
+[![Cargo](https://img.shields.io/crates/v/async-task.svg)](
+https://crates.io/crates/async-task)
+[![Documentation](https://docs.rs/async-task/badge.svg)](
+https://docs.rs/async-task)
 
-<div align="center">
-  <!-- Crates version -->
-  <a href="https://crates.io/crates/async-task">
-    <img src="https://img.shields.io/crates/v/async-task.svg?style=flat-square"
-    alt="Crates.io version" />
-  </a>
-  <!-- Downloads -->
-  <a href="https://crates.io/crates/async-task">
-    <img src="https://img.shields.io/crates/d/async-task.svg?style=flat-square"
-      alt="Download" />
-  </a>
-  <!-- docs.rs docs -->
-  <a href="https://docs.rs/async-task">
-    <img src="https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square"
-      alt="docs.rs docs" />
-  </a>
-  <a href="https://discord.gg/JvZeVNe">
-    <img src="https://img.shields.io/discord/598880689856970762.svg?logo=discord&style=flat-square"
-      alt="chat" />
-  </a>
-</div>
+Task abstraction for building executors.
 
-<div align="center">
-  <h3>
-    <a href="https://docs.rs/async-task">
-      API Docs
-    </a>
-    <span> | </span>
-    <a href="https://github.com/async-rs/async-task/releases">
-      Releases
-    </a>
-    <span> | </span>
-    <a href="https://async.rs/contribute">
-      Contributing
-    </a>
-  </h3>
-</div>
+To spawn a future onto an executor, we first need to allocate it on the heap and keep some
+state attached to it. The state indicates whether the future is ready for polling, waiting to
+be woken up, or completed. Such a stateful future is called a *task*.
 
-## Installation
+All executors have a queue that holds scheduled tasks:
 
-With [cargo add][cargo-add] installed run:
-
-```sh
-$ cargo add async-task
+```rust
+let (sender, receiver) = flume::unbounded();
 ```
 
-[cargo-add]: https://github.com/killercup/cargo-edit
+A task is created using either `spawn()`, `spawn_local()`, or `spawn_unchecked()` which
+return a `Runnable` and a `Task`:
 
-## Contributing
-Want to join us? Check out our ["Contributing" guide][contributing] and take a
-look at some of these issues:
+```rust
+// A future that will be spawned.
+let future = async { 1 + 2 };
 
-- [Issues labeled "good first issue"][good-first-issue]
-- [Issues labeled "help wanted"][help-wanted]
+// A function that schedules the task when it gets woken up.
+let schedule = move |runnable| sender.send(runnable).unwrap();
 
-[contributing]: https://github.com/async-rs/async-task/blob/master.github/CONTRIBUTING.md
-[good-first-issue]: https://github.com/async-rs/async-task/labels/good%20first%20issue
-[help-wanted]: https://github.com/async-rs/async-task/labels/help%20wanted
+// Construct a task.
+let (runnable, task) = async_task::spawn(future, schedule);
+
+// Push the task into the queue by invoking its schedule function.
+runnable.schedule();
+```
+
+The `Runnable` is used to poll the task's future, and the `Task` is used to await its
+output.
+
+Finally, we need a loop that takes scheduled tasks from the queue and runs them:
+
+```rust
+for runnable in receiver {
+    runnable.run();
+}
+```
+
+Method `run()` polls the task's future once. Then, the `Runnable`
+vanishes and only reappears when its `Waker` wakes the task, thus
+scheduling it to be run again.
 
 ## License
 
-<sup>
-Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
-2.0</a> or <a href="LICENSE-MIT">MIT license</a> at your option.
-</sup>
+Licensed under either of
 
-<br/>
+ * Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
-<sub>
+at your option.
+
+#### Contribution
+
 Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in this crate by you, as defined in the Apache-2.0 license, shall
-be dual licensed as above, without any additional terms or conditions.
-</sub>
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.

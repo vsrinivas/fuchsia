@@ -4,41 +4,38 @@ use std::cell::Cell;
 use std::future::Future;
 use std::rc::Rc;
 
-use crossbeam::channel::{unbounded, Receiver, Sender};
-
-type Task = async_task::Task<()>;
-type JoinHandle<T> = async_task::JoinHandle<T, ()>;
+use async_task::{Runnable, Task};
 
 thread_local! {
-    // A channel that holds scheduled tasks.
-    static QUEUE: (Sender<Task>, Receiver<Task>) = unbounded();
+    // A queue that holds scheduled tasks.
+    static QUEUE: (flume::Sender<Runnable>, flume::Receiver<Runnable>) = flume::unbounded();
 }
 
 /// Spawns a future on the executor.
-fn spawn<F, R>(future: F) -> JoinHandle<R>
+fn spawn<F, T>(future: F) -> Task<T>
 where
-    F: Future<Output = R> + 'static,
-    R: 'static,
+    F: Future<Output = T> + 'static,
+    T: 'static,
 {
-    // Create a task that is scheduled by sending itself into the channel.
-    let schedule = |t| QUEUE.with(|(s, _)| s.send(t).unwrap());
-    let (task, handle) = async_task::spawn_local(future, schedule, ());
+    // Create a task that is scheduled by pushing itself into the queue.
+    let schedule = |runnable| QUEUE.with(|(s, _)| s.send(runnable).unwrap());
+    let (runnable, task) = async_task::spawn_local(future, schedule);
 
-    // Schedule the task by sending it into the queue.
-    task.schedule();
+    // Schedule the task by pushing it into the queue.
+    runnable.schedule();
 
-    handle
+    task
 }
 
 /// Runs a future to completion.
-fn run<F, R>(future: F) -> R
+fn run<F, T>(future: F) -> T
 where
-    F: Future<Output = R> + 'static,
-    R: 'static,
+    F: Future<Output = T> + 'static,
+    T: 'static,
 {
     // Spawn a task that sends its result through a channel.
-    let (s, r) = unbounded();
-    spawn(async move { s.send(future.await).unwrap() });
+    let (s, r) = flume::unbounded();
+    spawn(async move { drop(s.send(future.await)) }).detach();
 
     loop {
         // If the original task has completed, return its result.
@@ -59,7 +56,7 @@ fn main() {
         let val = val.clone();
         async move {
             // Spawn a future that increments the value.
-            let handle = spawn({
+            let task = spawn({
                 let val = val.clone();
                 async move {
                     val.set(dbg!(val.get()) + 1);
@@ -67,7 +64,7 @@ fn main() {
             });
 
             val.set(dbg!(val.get()) + 1);
-            handle.await;
+            task.await;
         }
     });
 

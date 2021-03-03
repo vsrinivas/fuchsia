@@ -3,11 +3,8 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::task::{Context, Poll};
 
-use async_task::Task;
-use crossbeam::atomic::AtomicCell;
-use crossbeam::channel;
-use futures::future::{self, FutureExt};
-use lazy_static::lazy_static;
+use async_task::Runnable;
+use smol::future;
 
 // Creates a future with event counters.
 //
@@ -18,10 +15,8 @@ use lazy_static::lazy_static;
 // When it gets dropped, `DROP` is incremented.
 macro_rules! future {
     ($name:pat, $poll:ident, $drop:ident) => {
-        lazy_static! {
-            static ref $poll: AtomicCell<usize> = AtomicCell::new(0);
-            static ref $drop: AtomicCell<usize> = AtomicCell::new(0);
-        }
+        static $poll: AtomicUsize = AtomicUsize::new(0);
+        static $drop: AtomicUsize = AtomicUsize::new(0);
 
         let $name = {
             struct Fut(Box<i32>);
@@ -30,14 +25,14 @@ macro_rules! future {
                 type Output = Box<i32>;
 
                 fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
-                    $poll.fetch_add(1);
+                    $poll.fetch_add(1, Ordering::SeqCst);
                     Poll::Ready(Box::new(0))
                 }
             }
 
             impl Drop for Fut {
                 fn drop(&mut self) {
-                    $drop.fetch_add(1);
+                    $drop.fetch_add(1, Ordering::SeqCst);
                 }
             }
 
@@ -55,297 +50,216 @@ macro_rules! future {
 // When it gets dropped, `DROP` is incremented.
 macro_rules! schedule {
     ($name:pat, $sched:ident, $drop:ident) => {
-        lazy_static! {
-            static ref $sched: AtomicCell<usize> = AtomicCell::new(0);
-            static ref $drop: AtomicCell<usize> = AtomicCell::new(0);
-        }
+        static $drop: AtomicUsize = AtomicUsize::new(0);
+        static $sched: AtomicUsize = AtomicUsize::new(0);
 
         let $name = {
             struct Guard(Box<i32>);
 
             impl Drop for Guard {
                 fn drop(&mut self) {
-                    $drop.fetch_add(1);
+                    $drop.fetch_add(1, Ordering::SeqCst);
                 }
             }
 
             let guard = Guard(Box::new(0));
-            move |_task| {
+            move |_runnable| {
                 &guard;
-                $sched.fetch_add(1);
+                $sched.fetch_add(1, Ordering::SeqCst);
             }
         };
     };
 }
 
-// Creates a task with event counters.
-//
-// Usage: `task!(task, handle f, s, DROP)`
-//
-// A task with future `f` and schedule function `s` is created.
-// The `Task` and `JoinHandle` are bound to `task` and `handle`, respectively.
-// When the tag inside the task gets dropped, `DROP` is incremented.
-macro_rules! task {
-    ($task:pat, $handle: pat, $future:expr, $schedule:expr, $drop:ident) => {
-        lazy_static! {
-            static ref $drop: AtomicCell<usize> = AtomicCell::new(0);
-        }
-
-        let ($task, $handle) = {
-            struct Tag(Box<i32>);
-
-            impl Drop for Tag {
-                fn drop(&mut self) {
-                    $drop.fetch_add(1);
-                }
-            }
-
-            async_task::spawn($future, $schedule, Tag(Box::new(0)))
-        };
-    };
+fn try_await<T>(f: impl Future<Output = T>) -> Option<T> {
+    future::block_on(future::poll_once(f))
 }
 
 #[test]
-fn cancel_and_drop_handle() {
+fn drop_and_detach() {
     future!(f, POLL, DROP_F);
     schedule!(s, SCHEDULE, DROP_S);
-    task!(task, handle, f, s, DROP_T);
+    let (runnable, task) = async_task::spawn(f, s);
 
-    assert_eq!(POLL.load(), 0);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 0);
-    assert_eq!(DROP_S.load(), 0);
-    assert_eq!(DROP_T.load(), 0);
+    assert_eq!(POLL.load(Ordering::SeqCst), 0);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 0);
 
-    task.cancel();
-    assert_eq!(POLL.load(), 0);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 0);
-    assert_eq!(DROP_S.load(), 0);
-    assert_eq!(DROP_T.load(), 0);
+    drop(runnable);
+    assert_eq!(POLL.load(Ordering::SeqCst), 0);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 1);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 0);
 
-    drop(handle);
-    assert_eq!(POLL.load(), 0);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 0);
-    assert_eq!(DROP_S.load(), 0);
-    assert_eq!(DROP_T.load(), 0);
-
-    drop(task);
-    assert_eq!(POLL.load(), 0);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 1);
-    assert_eq!(DROP_S.load(), 1);
-    assert_eq!(DROP_T.load(), 1);
+    task.detach();
+    assert_eq!(POLL.load(Ordering::SeqCst), 0);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 1);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 1);
 }
 
 #[test]
-fn run_and_drop_handle() {
+fn detach_and_drop() {
     future!(f, POLL, DROP_F);
     schedule!(s, SCHEDULE, DROP_S);
-    task!(task, handle, f, s, DROP_T);
+    let (runnable, task) = async_task::spawn(f, s);
 
-    drop(handle);
-    assert_eq!(POLL.load(), 0);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 0);
-    assert_eq!(DROP_S.load(), 0);
-    assert_eq!(DROP_T.load(), 0);
+    task.detach();
+    assert_eq!(POLL.load(Ordering::SeqCst), 0);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 0);
 
-    task.run();
-    assert_eq!(POLL.load(), 1);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 1);
-    assert_eq!(DROP_S.load(), 1);
-    assert_eq!(DROP_T.load(), 1);
+    drop(runnable);
+    assert_eq!(POLL.load(Ordering::SeqCst), 0);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 1);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 1);
 }
 
 #[test]
-fn drop_handle_and_run() {
+fn detach_and_run() {
     future!(f, POLL, DROP_F);
     schedule!(s, SCHEDULE, DROP_S);
-    task!(task, handle, f, s, DROP_T);
+    let (runnable, task) = async_task::spawn(f, s);
 
-    drop(handle);
-    assert_eq!(POLL.load(), 0);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 0);
-    assert_eq!(DROP_S.load(), 0);
-    assert_eq!(DROP_T.load(), 0);
+    task.detach();
+    assert_eq!(POLL.load(Ordering::SeqCst), 0);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 0);
 
-    task.run();
-    assert_eq!(POLL.load(), 1);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 1);
-    assert_eq!(DROP_S.load(), 1);
-    assert_eq!(DROP_T.load(), 1);
+    runnable.run();
+    assert_eq!(POLL.load(Ordering::SeqCst), 1);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 1);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn run_and_detach() {
+    future!(f, POLL, DROP_F);
+    schedule!(s, SCHEDULE, DROP_S);
+    let (runnable, task) = async_task::spawn(f, s);
+
+    runnable.run();
+    assert_eq!(POLL.load(Ordering::SeqCst), 1);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 1);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 0);
+
+    task.detach();
+    assert_eq!(POLL.load(Ordering::SeqCst), 1);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 1);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 1);
 }
 
 #[test]
 fn cancel_and_run() {
     future!(f, POLL, DROP_F);
     schedule!(s, SCHEDULE, DROP_S);
-    task!(task, handle, f, s, DROP_T);
+    let (runnable, task) = async_task::spawn(f, s);
 
-    handle.cancel();
-    assert_eq!(POLL.load(), 0);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 0);
-    assert_eq!(DROP_S.load(), 0);
-    assert_eq!(DROP_T.load(), 0);
+    drop(task);
+    assert_eq!(POLL.load(Ordering::SeqCst), 0);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 0);
 
-    drop(handle);
-    assert_eq!(POLL.load(), 0);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 0);
-    assert_eq!(DROP_S.load(), 0);
-    assert_eq!(DROP_T.load(), 0);
-
-    task.run();
-    assert_eq!(POLL.load(), 0);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 1);
-    assert_eq!(DROP_S.load(), 1);
-    assert_eq!(DROP_T.load(), 1);
+    runnable.run();
+    assert_eq!(POLL.load(Ordering::SeqCst), 0);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 1);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 1);
 }
 
 #[test]
 fn run_and_cancel() {
     future!(f, POLL, DROP_F);
     schedule!(s, SCHEDULE, DROP_S);
-    task!(task, handle, f, s, DROP_T);
+    let (runnable, task) = async_task::spawn(f, s);
 
-    task.run();
-    assert_eq!(POLL.load(), 1);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 1);
-    assert_eq!(DROP_S.load(), 0);
-    assert_eq!(DROP_T.load(), 0);
+    runnable.run();
+    assert_eq!(POLL.load(Ordering::SeqCst), 1);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 1);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 0);
 
-    handle.cancel();
-    assert_eq!(POLL.load(), 1);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 1);
-    assert_eq!(DROP_S.load(), 0);
-    assert_eq!(DROP_T.load(), 0);
-
-    drop(handle);
-    assert_eq!(POLL.load(), 1);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 1);
-    assert_eq!(DROP_S.load(), 1);
-    assert_eq!(DROP_T.load(), 1);
+    drop(task);
+    assert_eq!(POLL.load(Ordering::SeqCst), 1);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 1);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 1);
 }
 
 #[test]
-fn cancel_and_poll() {
+fn cancel_join() {
     future!(f, POLL, DROP_F);
     schedule!(s, SCHEDULE, DROP_S);
-    task!(task, handle, f, s, DROP_T);
+    let (runnable, mut task) = async_task::spawn(f, s);
 
-    handle.cancel();
-    assert_eq!(POLL.load(), 0);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 0);
-    assert_eq!(DROP_S.load(), 0);
-    assert_eq!(DROP_T.load(), 0);
+    assert!(try_await(&mut task).is_none());
+    assert_eq!(POLL.load(Ordering::SeqCst), 0);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 0);
 
-    let mut handle = handle;
-    assert!((&mut handle).now_or_never().is_none());
+    runnable.run();
+    assert_eq!(POLL.load(Ordering::SeqCst), 1);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 1);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 0);
 
-    task.run();
-    assert_eq!(POLL.load(), 0);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 1);
-    assert_eq!(DROP_S.load(), 0);
-    assert_eq!(DROP_T.load(), 0);
+    assert!(try_await(&mut task).is_some());
+    assert_eq!(POLL.load(Ordering::SeqCst), 1);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 1);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 0);
 
-    assert!((&mut handle).now_or_never().is_some());
-    assert_eq!(POLL.load(), 0);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 1);
-    assert_eq!(DROP_S.load(), 0);
-    assert_eq!(DROP_T.load(), 0);
-
-    drop(handle);
-    assert_eq!(POLL.load(), 0);
-    assert_eq!(SCHEDULE.load(), 0);
-    assert_eq!(DROP_F.load(), 1);
-    assert_eq!(DROP_S.load(), 1);
-    assert_eq!(DROP_T.load(), 1);
+    drop(task);
+    assert_eq!(POLL.load(Ordering::SeqCst), 1);
+    assert_eq!(SCHEDULE.load(Ordering::SeqCst), 0);
+    assert_eq!(DROP_F.load(Ordering::SeqCst), 1);
+    assert_eq!(DROP_S.load(Ordering::SeqCst), 1);
 }
 
 #[test]
 fn schedule() {
-    let (s, r) = channel::unbounded();
-    let schedule = move |t| s.send(t).unwrap();
-    let (task, _handle) = async_task::spawn(
-        future::poll_fn(|_| Poll::<()>::Pending),
-        schedule,
-        Box::new(0),
-    );
+    let (s, r) = flume::unbounded();
+    let schedule = move |runnable| s.send(runnable).unwrap();
+    let (runnable, _task) = async_task::spawn(future::poll_fn(|_| Poll::<()>::Pending), schedule);
 
     assert!(r.is_empty());
-    task.schedule();
+    runnable.schedule();
 
-    let task = r.recv().unwrap();
+    let runnable = r.recv().unwrap();
     assert!(r.is_empty());
-    task.schedule();
+    runnable.schedule();
 
-    let task = r.recv().unwrap();
+    let runnable = r.recv().unwrap();
     assert!(r.is_empty());
-    task.schedule();
-
-    r.recv().unwrap();
-}
-
-#[test]
-fn tag() {
-    let (s, r) = channel::unbounded();
-    let schedule = move |t| s.send(t).unwrap();
-    let (task, handle) = async_task::spawn(
-        future::poll_fn(|_| Poll::<()>::Pending),
-        schedule,
-        AtomicUsize::new(7),
-    );
-
-    assert!(r.is_empty());
-    task.schedule();
-
-    let task = r.recv().unwrap();
-    assert!(r.is_empty());
-    handle.tag().fetch_add(1, Ordering::SeqCst);
-    task.schedule();
-
-    let task = r.recv().unwrap();
-    assert_eq!(task.tag().load(Ordering::SeqCst), 8);
-    assert!(r.is_empty());
-    task.schedule();
+    runnable.schedule();
 
     r.recv().unwrap();
 }
 
 #[test]
 fn schedule_counter() {
-    let (s, r) = channel::unbounded();
-    let schedule = move |t: Task<AtomicUsize>| {
-        t.tag().fetch_add(1, Ordering::SeqCst);
-        s.send(t).unwrap();
+    static COUNT: AtomicUsize = AtomicUsize::new(0);
+
+    let (s, r) = flume::unbounded();
+    let schedule = move |runnable: Runnable| {
+        COUNT.fetch_add(1, Ordering::SeqCst);
+        s.send(runnable).unwrap();
     };
-    let (task, handle) = async_task::spawn(
-        future::poll_fn(|_| Poll::<()>::Pending),
-        schedule,
-        AtomicUsize::new(0),
-    );
-    task.schedule();
+    let (runnable, _task) = async_task::spawn(future::poll_fn(|_| Poll::<()>::Pending), schedule);
+    runnable.schedule();
 
-    assert_eq!(handle.tag().load(Ordering::SeqCst), 1);
     r.recv().unwrap().schedule();
-
-    assert_eq!(handle.tag().load(Ordering::SeqCst), 2);
     r.recv().unwrap().schedule();
-
-    assert_eq!(handle.tag().load(Ordering::SeqCst), 3);
+    assert_eq!(COUNT.load(Ordering::SeqCst), 3);
     r.recv().unwrap();
 }
 
@@ -359,50 +273,27 @@ fn drop_inside_schedule() {
     }
     let guard = DropGuard(AtomicUsize::new(0));
 
-    let (task, _) = async_task::spawn(
-        async {},
-        move |task| {
-            assert_eq!(guard.0.load(Ordering::SeqCst), 0);
-            drop(task);
-            assert_eq!(guard.0.load(Ordering::SeqCst), 0);
-        },
-        (),
-    );
-    task.schedule();
+    let (runnable, _) = async_task::spawn(async {}, move |runnable| {
+        assert_eq!(guard.0.load(Ordering::SeqCst), 0);
+        drop(runnable);
+        assert_eq!(guard.0.load(Ordering::SeqCst), 0);
+    });
+    runnable.schedule();
 }
 
 #[test]
 fn waker() {
-    let (s, r) = channel::unbounded();
-    let schedule = move |t| s.send(t).unwrap();
-    let (task, handle) = async_task::spawn(
-        future::poll_fn(|_| Poll::<()>::Pending),
-        schedule,
-        Box::new(0),
-    );
+    let (s, r) = flume::unbounded();
+    let schedule = move |runnable| s.send(runnable).unwrap();
+    let (runnable, _task) = async_task::spawn(future::poll_fn(|_| Poll::<()>::Pending), schedule);
 
     assert!(r.is_empty());
-    let w = task.waker();
-    task.run();
-    w.wake();
+    let waker = runnable.waker();
+    runnable.run();
+    waker.wake_by_ref();
 
-    let task = r.recv().unwrap();
-    task.run();
-    handle.waker().wake();
-
+    let runnable = r.recv().unwrap();
+    runnable.run();
+    waker.wake();
     r.recv().unwrap();
-}
-
-#[test]
-fn raw() {
-    let (task, _handle) = async_task::spawn(async {}, |_| panic!(), Box::new(AtomicUsize::new(7)));
-
-    let a = task.into_raw();
-    let task = unsafe {
-        (*a).fetch_add(1, Ordering::SeqCst);
-        Task::from_raw(a)
-    };
-
-    assert_eq!(task.tag().load(Ordering::SeqCst), 8);
-    task.run();
 }

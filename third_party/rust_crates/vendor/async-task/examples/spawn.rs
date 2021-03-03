@@ -4,50 +4,45 @@ use std::future::Future;
 use std::panic::catch_unwind;
 use std::thread;
 
-use crossbeam::channel::{unbounded, Sender};
-use futures::executor;
-use lazy_static::lazy_static;
-
-type Task = async_task::Task<()>;
-type JoinHandle<T> = async_task::JoinHandle<T, ()>;
+use async_task::{Runnable, Task};
+use once_cell::sync::Lazy;
+use smol::future;
 
 /// Spawns a future on the executor.
-fn spawn<F, R>(future: F) -> JoinHandle<R>
+fn spawn<F, T>(future: F) -> Task<T>
 where
-    F: Future<Output = R> + Send + 'static,
-    R: Send + 'static,
+    F: Future<Output = T> + Send + 'static,
+    T: Send + 'static,
 {
-    lazy_static! {
-        // A channel that holds scheduled tasks.
-        static ref QUEUE: Sender<Task> = {
-            let (sender, receiver) = unbounded::<Task>();
+    // A queue that holds scheduled tasks.
+    static QUEUE: Lazy<flume::Sender<Runnable>> = Lazy::new(|| {
+        let (sender, receiver) = flume::unbounded::<Runnable>();
 
-            // Start the executor thread.
-            thread::spawn(|| {
-                for task in receiver {
-                    // Ignore panics for simplicity.
-                    let _ignore_panic = catch_unwind(|| task.run());
-                }
-            });
+        // Start the executor thread.
+        thread::spawn(|| {
+            for runnable in receiver {
+                // Ignore panics inside futures.
+                let _ignore_panic = catch_unwind(|| runnable.run());
+            }
+        });
 
-            sender
-        };
-    }
+        sender
+    });
 
-    // Create a task that is scheduled by sending itself into the channel.
-    let schedule = |t| QUEUE.send(t).unwrap();
-    let (task, handle) = async_task::spawn(future, schedule, ());
+    // Create a task that is scheduled by pushing it into the queue.
+    let schedule = |runnable| QUEUE.send(runnable).unwrap();
+    let (runnable, task) = async_task::spawn(future, schedule);
 
-    // Schedule the task by sending it into the channel.
-    task.schedule();
+    // Schedule the task by pushing it into the queue.
+    runnable.schedule();
 
-    handle
+    task
 }
 
 fn main() {
     // Spawn a future and await its result.
-    let handle = spawn(async {
+    let task = spawn(async {
         println!("Hello, world!");
     });
-    executor::block_on(handle);
+    future::block_on(task);
 }

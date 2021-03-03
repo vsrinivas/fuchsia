@@ -1,366 +1,383 @@
 use core::fmt;
 use core::future::Future;
-use core::marker::PhantomData;
+use core::marker::{PhantomData, Unpin};
 use core::mem;
+use core::pin::Pin;
 use core::ptr::NonNull;
 use core::sync::atomic::Ordering;
-use core::task::Waker;
+use core::task::{Context, Poll};
 
 use crate::header::Header;
-use crate::raw::RawTask;
 use crate::state::*;
-use crate::JoinHandle;
 
-/// Creates a new task.
+/// A spawned task.
 ///
-/// This constructor returns a [`Task`] reference that runs the future and a [`JoinHandle`] that
-/// awaits its result.
+/// A [`Task`] can be awaited to retrieve the output of its future.
 ///
-/// When run, the task polls `future`. When woken up, it gets scheduled for running by the
-/// `schedule` function. Argument `tag` is an arbitrary piece of data stored inside the task.
+/// Dropping a [`Task`] cancels it, which means its future won't be polled again. To drop the
+/// [`Task`] handle without canceling it, use [`detach()`][`Task::detach()`] instead. To cancel a
+/// task gracefully and wait until it is fully destroyed, use the [`cancel()`][Task::cancel()]
+/// method.
 ///
-/// The schedule function should not attempt to run the task nor to drop it. Instead, it should
-/// push the task into some kind of queue so that it can be processed later.
-///
-/// If you need to spawn a future that does not implement [`Send`], consider using the
-/// [`spawn_local`] function instead.
-///
-/// [`Task`]: struct.Task.html
-/// [`JoinHandle`]: struct.JoinHandle.html
-/// [`Send`]: https://doc.rust-lang.org/std/marker/trait.Send.html
-/// [`spawn_local`]: fn.spawn_local.html
+/// Note that canceling a task actually wakes it and reschedules one last time. Then, the executor
+/// can destroy the task by simply dropping its [`Runnable`][`super::Runnable`] or by invoking
+/// [`run()`][`super::Runnable::run()`].
 ///
 /// # Examples
 ///
 /// ```
-/// use crossbeam::channel;
+/// use smol::{future, Executor};
+/// use std::thread;
 ///
-/// // The future inside the task.
-/// let future = async {
-///     println!("Hello, world!");
-/// };
+/// let ex = Executor::new();
 ///
-/// // If the task gets woken up, it will be sent into this channel.
-/// let (s, r) = channel::unbounded();
-/// let schedule = move |task| s.send(task).unwrap();
+/// // Spawn a future onto the executor.
+/// let task = ex.spawn(async {
+///     println!("Hello from a task!");
+///     1 + 2
+/// });
 ///
-/// // Create a task with the future and the schedule function.
-/// let (task, handle) = async_task::spawn(future, schedule, ());
+/// // Run an executor thread.
+/// thread::spawn(move || future::block_on(ex.run(future::pending::<()>())));
+///
+/// // Wait for the task's output.
+/// assert_eq!(future::block_on(task), 3);
 /// ```
-pub fn spawn<F, R, S, T>(future: F, schedule: S, tag: T) -> (Task<T>, JoinHandle<R, T>)
-where
-    F: Future<Output = R> + Send + 'static,
-    R: Send + 'static,
-    S: Fn(Task<T>) + Send + Sync + 'static,
-    T: Send + Sync + 'static,
-{
-    // Allocate large futures on the heap.
-    let raw_task = if mem::size_of::<F>() >= 2048 {
-        let future = alloc::boxed::Box::pin(future);
-        RawTask::<_, R, S, T>::allocate(future, schedule, tag)
-    } else {
-        RawTask::<F, R, S, T>::allocate(future, schedule, tag)
-    };
+#[must_use = "tasks get canceled when dropped, use `.detach()` to run them in the background"]
+pub struct Task<T> {
+    /// A raw task pointer.
+    pub(crate) ptr: NonNull<()>,
 
-    let task = Task {
-        raw_task,
-        _marker: PhantomData,
-    };
-    let handle = JoinHandle {
-        raw_task,
-        _marker: PhantomData,
-    };
-    (task, handle)
+    /// A marker capturing generic type `T`.
+    pub(crate) _marker: PhantomData<T>,
 }
 
-/// Creates a new local task.
-///
-/// This constructor returns a [`Task`] reference that runs the future and a [`JoinHandle`] that
-/// awaits its result.
-///
-/// When run, the task polls `future`. When woken up, it gets scheduled for running by the
-/// `schedule` function. Argument `tag` is an arbitrary piece of data stored inside the task.
-///
-/// The schedule function should not attempt to run the task nor to drop it. Instead, it should
-/// push the task into some kind of queue so that it can be processed later.
-///
-/// Unlike [`spawn`], this function does not require the future to implement [`Send`]. If the
-/// [`Task`] reference is run or dropped on a thread it was not created on, a panic will occur.
-///
-/// **NOTE:** This function is only available when the `std` feature for this crate is enabled (it
-/// is by default).
-///
-/// [`Task`]: struct.Task.html
-/// [`JoinHandle`]: struct.JoinHandle.html
-/// [`spawn`]: fn.spawn.html
-/// [`Send`]: https://doc.rust-lang.org/std/marker/trait.Send.html
-///
-/// # Examples
-///
-/// ```
-/// use crossbeam::channel;
-///
-/// // The future inside the task.
-/// let future = async {
-///     println!("Hello, world!");
-/// };
-///
-/// // If the task gets woken up, it will be sent into this channel.
-/// let (s, r) = channel::unbounded();
-/// let schedule = move |task| s.send(task).unwrap();
-///
-/// // Create a task with the future and the schedule function.
-/// let (task, handle) = async_task::spawn_local(future, schedule, ());
-/// ```
+unsafe impl<T: Send> Send for Task<T> {}
+unsafe impl<T> Sync for Task<T> {}
+
+impl<T> Unpin for Task<T> {}
+
 #[cfg(feature = "std")]
-pub fn spawn_local<F, R, S, T>(future: F, schedule: S, tag: T) -> (Task<T>, JoinHandle<R, T>)
-where
-    F: Future<Output = R> + 'static,
-    R: 'static,
-    S: Fn(Task<T>) + Send + Sync + 'static,
-    T: Send + Sync + 'static,
-{
-    extern crate std;
+impl<T> std::panic::UnwindSafe for Task<T> {}
+#[cfg(feature = "std")]
+impl<T> std::panic::RefUnwindSafe for Task<T> {}
 
-    use std::mem::ManuallyDrop;
-    use std::pin::Pin;
-    use std::task::{Context, Poll};
-    use std::thread::{self, ThreadId};
-    use std::thread_local;
+impl<T> Task<T> {
+    /// Detaches the task to let it keep running in the background.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use smol::{Executor, Timer};
+    /// use std::time::Duration;
+    ///
+    /// let ex = Executor::new();
+    ///
+    /// // Spawn a deamon future.
+    /// ex.spawn(async {
+    ///     loop {
+    ///         println!("I'm a daemon task looping forever.");
+    ///         Timer::after(Duration::from_secs(1)).await;
+    ///     }
+    /// })
+    /// .detach();
+    /// ```
+    pub fn detach(self) {
+        let mut this = self;
+        let _out = this.set_detached();
+        mem::forget(this);
+    }
 
-    #[inline]
-    fn thread_id() -> ThreadId {
-        thread_local! {
-            static ID: ThreadId = thread::current().id();
+    /// Cancels the task and waits for it to stop running.
+    ///
+    /// Returns the task's output if it was completed just before it got canceled, or [`None`] if
+    /// it didn't complete.
+    ///
+    /// While it's possible to simply drop the [`Task`] to cancel it, this is a cleaner way of
+    /// canceling because it also waits for the task to stop running.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use smol::{future, Executor, Timer};
+    /// use std::thread;
+    /// use std::time::Duration;
+    ///
+    /// let ex = Executor::new();
+    ///
+    /// // Spawn a deamon future.
+    /// let task = ex.spawn(async {
+    ///     loop {
+    ///         println!("Even though I'm in an infinite loop, you can still cancel me!");
+    ///         Timer::after(Duration::from_secs(1)).await;
+    ///     }
+    /// });
+    ///
+    /// // Run an executor thread.
+    /// thread::spawn(move || future::block_on(ex.run(future::pending::<()>())));
+    ///
+    /// future::block_on(async {
+    ///     Timer::after(Duration::from_secs(3)).await;
+    ///     task.cancel().await;
+    /// });
+    /// ```
+    pub async fn cancel(self) -> Option<T> {
+        let mut this = self;
+        this.set_canceled();
+
+        struct Fut<T>(Task<T>);
+
+        impl<T> Future for Fut<T> {
+            type Output = Option<T>;
+
+            fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+                self.0.poll_task(cx)
+            }
         }
-        ID.try_with(|id| *id)
-            .unwrap_or_else(|_| thread::current().id())
+
+        Fut(this).await
     }
 
-    struct Checked<F> {
-        id: ThreadId,
-        inner: ManuallyDrop<F>,
-    }
+    /// Puts the task in canceled state.
+    fn set_canceled(&mut self) {
+        let ptr = self.ptr.as_ptr();
+        let header = ptr as *const Header;
 
-    impl<F> Drop for Checked<F> {
-        fn drop(&mut self) {
-            assert!(
-                self.id == thread_id(),
-                "local task dropped by a thread that didn't spawn it"
-            );
-            unsafe {
-                ManuallyDrop::drop(&mut self.inner);
+        unsafe {
+            let mut state = (*header).state.load(Ordering::Acquire);
+
+            loop {
+                // If the task has been completed or closed, it can't be canceled.
+                if state & (COMPLETED | CLOSED) != 0 {
+                    break;
+                }
+
+                // If the task is not scheduled nor running, we'll need to schedule it.
+                let new = if state & (SCHEDULED | RUNNING) == 0 {
+                    (state | SCHEDULED | CLOSED) + REFERENCE
+                } else {
+                    state | CLOSED
+                };
+
+                // Mark the task as closed.
+                match (*header).state.compare_exchange_weak(
+                    state,
+                    new,
+                    Ordering::AcqRel,
+                    Ordering::Acquire,
+                ) {
+                    Ok(_) => {
+                        // If the task is not scheduled nor running, schedule it one more time so
+                        // that its future gets dropped by the executor.
+                        if state & (SCHEDULED | RUNNING) == 0 {
+                            ((*header).vtable.schedule)(ptr);
+                        }
+
+                        // Notify the awaiter that the task has been closed.
+                        if state & AWAITER != 0 {
+                            (*header).notify(None);
+                        }
+
+                        break;
+                    }
+                    Err(s) => state = s,
+                }
             }
         }
     }
 
-    impl<F: Future> Future for Checked<F> {
-        type Output = F::Output;
-
-        fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-            assert!(
-                self.id == thread_id(),
-                "local task polled by a thread that didn't spawn it"
-            );
-            unsafe { self.map_unchecked_mut(|c| &mut *c.inner).poll(cx) }
-        }
-    }
-
-    // Wrap the future into one that which thread it's on.
-    let future = Checked {
-        id: thread_id(),
-        inner: ManuallyDrop::new(future),
-    };
-
-    // Allocate large futures on the heap.
-    let raw_task = if mem::size_of::<F>() >= 2048 {
-        let future = alloc::boxed::Box::pin(future);
-        RawTask::<_, R, S, T>::allocate(future, schedule, tag)
-    } else {
-        RawTask::<_, R, S, T>::allocate(future, schedule, tag)
-    };
-
-    let task = Task {
-        raw_task,
-        _marker: PhantomData,
-    };
-    let handle = JoinHandle {
-        raw_task,
-        _marker: PhantomData,
-    };
-    (task, handle)
-}
-
-/// A task reference that runs its future.
-///
-/// At any moment in time, there is at most one [`Task`] reference associated with a particular
-/// task. Running consumes the [`Task`] reference and polls its internal future. If the future is
-/// still pending after getting polled, the [`Task`] reference simply won't exist until a [`Waker`]
-/// notifies the task. If the future completes, its result becomes available to the [`JoinHandle`].
-///
-/// When a task is woken up, its [`Task`] reference is recreated and passed to the schedule
-/// function. In most executors, scheduling simply pushes the [`Task`] reference into a queue of
-/// runnable tasks.
-///
-/// If the [`Task`] reference is dropped without getting run, the task is automatically canceled.
-/// When canceled, the task won't be scheduled again even if a [`Waker`] wakes it. It is possible
-/// for the [`JoinHandle`] to cancel while the [`Task`] reference exists, in which case an attempt
-/// to run the task won't do anything.
-///
-/// [`run()`]: struct.Task.html#method.run
-/// [`JoinHandle`]: struct.JoinHandle.html
-/// [`Task`]: struct.Task.html
-/// [`Waker`]: https://doc.rust-lang.org/std/task/struct.Waker.html
-pub struct Task<T> {
-    /// A pointer to the heap-allocated task.
-    pub(crate) raw_task: NonNull<()>,
-
-    /// A marker capturing the generic type `T`.
-    pub(crate) _marker: PhantomData<T>,
-}
-
-unsafe impl<T> Send for Task<T> {}
-unsafe impl<T> Sync for Task<T> {}
-
-impl<T> Task<T> {
-    /// Schedules the task.
-    ///
-    /// This is a convenience method that simply reschedules the task by passing it to its schedule
-    /// function.
-    ///
-    /// If the task is canceled, this method won't do anything.
-    pub fn schedule(self) {
-        let ptr = self.raw_task.as_ptr();
-        let header = ptr as *const Header;
-        mem::forget(self);
-
-        unsafe {
-            ((*header).vtable.schedule)(ptr);
-        }
-    }
-
-    /// Runs the task.
-    ///
-    /// Returns `true` if the task was woken while running, in which case it gets rescheduled at
-    /// the end of this method invocation.
-    ///
-    /// This method polls the task's future. If the future completes, its result will become
-    /// available to the [`JoinHandle`]. And if the future is still pending, the task will have to
-    /// be woken up in order to be rescheduled and run again.
-    ///
-    /// If the task was canceled by a [`JoinHandle`] before it gets run, then this method won't do
-    /// anything.
-    ///
-    /// It is possible that polling the future panics, in which case the panic will be propagated
-    /// into the caller. It is advised that invocations of this method are wrapped inside
-    /// [`catch_unwind`]. If a panic occurs, the task is automatically canceled.
-    ///
-    /// [`JoinHandle`]: struct.JoinHandle.html
-    /// [`catch_unwind`]: https://doc.rust-lang.org/std/panic/fn.catch_unwind.html
-    pub fn run(self) -> bool {
-        let ptr = self.raw_task.as_ptr();
-        let header = ptr as *const Header;
-        mem::forget(self);
-
-        unsafe { ((*header).vtable.run)(ptr) }
-    }
-
-    /// Cancels the task.
-    ///
-    /// When canceled, the task won't be scheduled again even if a [`Waker`] wakes it. An attempt
-    /// to run it won't do anything.
-    ///
-    /// [`Waker`]: https://doc.rust-lang.org/std/task/struct.Waker.html
-    pub fn cancel(&self) {
-        let ptr = self.raw_task.as_ptr();
+    /// Puts the task in detached state.
+    fn set_detached(&mut self) -> Option<T> {
+        let ptr = self.ptr.as_ptr();
         let header = ptr as *const Header;
 
         unsafe {
-            (*header).cancel();
+            // A place where the output will be stored in case it needs to be dropped.
+            let mut output = None;
+
+            // Optimistically assume the `Task` is being detached just after creating the task.
+            // This is a common case so if the `Task` is datached, the overhead of it is only one
+            // compare-exchange operation.
+            if let Err(mut state) = (*header).state.compare_exchange_weak(
+                SCHEDULED | TASK | REFERENCE,
+                SCHEDULED | REFERENCE,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            ) {
+                loop {
+                    // If the task has been completed but not yet closed, that means its output
+                    // must be dropped.
+                    if state & COMPLETED != 0 && state & CLOSED == 0 {
+                        // Mark the task as closed in order to grab its output.
+                        match (*header).state.compare_exchange_weak(
+                            state,
+                            state | CLOSED,
+                            Ordering::AcqRel,
+                            Ordering::Acquire,
+                        ) {
+                            Ok(_) => {
+                                // Read the output.
+                                output =
+                                    Some((((*header).vtable.get_output)(ptr) as *mut T).read());
+
+                                // Update the state variable because we're continuing the loop.
+                                state |= CLOSED;
+                            }
+                            Err(s) => state = s,
+                        }
+                    } else {
+                        // If this is the last reference to the task and it's not closed, then
+                        // close it and schedule one more time so that its future gets dropped by
+                        // the executor.
+                        let new = if state & (!(REFERENCE - 1) | CLOSED) == 0 {
+                            SCHEDULED | CLOSED | REFERENCE
+                        } else {
+                            state & !TASK
+                        };
+
+                        // Unset the `TASK` flag.
+                        match (*header).state.compare_exchange_weak(
+                            state,
+                            new,
+                            Ordering::AcqRel,
+                            Ordering::Acquire,
+                        ) {
+                            Ok(_) => {
+                                // If this is the last reference to the task, we need to either
+                                // schedule dropping its future or destroy it.
+                                if state & !(REFERENCE - 1) == 0 {
+                                    if state & CLOSED == 0 {
+                                        ((*header).vtable.schedule)(ptr);
+                                    } else {
+                                        ((*header).vtable.destroy)(ptr);
+                                    }
+                                }
+
+                                break;
+                            }
+                            Err(s) => state = s,
+                        }
+                    }
+                }
+            }
+
+            output
         }
     }
 
-    /// Returns a reference to the tag stored inside the task.
-    pub fn tag(&self) -> &T {
-        let offset = Header::offset_tag::<T>();
-        let ptr = self.raw_task.as_ptr();
-
-        unsafe {
-            let raw = (ptr as *mut u8).add(offset) as *const T;
-            &*raw
-        }
-    }
-
-    /// Converts this task into a raw pointer to the tag.
-    pub fn into_raw(self) -> *const T {
-        let offset = Header::offset_tag::<T>();
-        let ptr = self.raw_task.as_ptr();
-        mem::forget(self);
-
-        unsafe { (ptr as *mut u8).add(offset) as *const T }
-    }
-
-    /// Converts a raw pointer to the tag into a task.
+    /// Polls the task to retrieve its output.
     ///
-    /// This method should only be used with raw pointers returned from [`into_raw`].
+    /// Returns `Some` if the task has completed or `None` if it was closed.
     ///
-    /// [`into_raw`]: #method.into_raw
-    pub unsafe fn from_raw(raw: *const T) -> Task<T> {
-        let offset = Header::offset_tag::<T>();
-        let ptr = (raw as *mut u8).sub(offset) as *mut ();
-
-        Task {
-            raw_task: NonNull::new_unchecked(ptr),
-            _marker: PhantomData,
-        }
-    }
-
-    /// Returns a waker associated with this task.
-    pub fn waker(&self) -> Waker {
-        let ptr = self.raw_task.as_ptr();
+    /// A task becomes closed in the following cases:
+    ///
+    /// 1. It gets canceled by `Runnable::drop()`, `Task::drop()`, or `Task::cancel()`.
+    /// 2. Its output gets awaited by the `Task`.
+    /// 3. It panics while polling the future.
+    /// 4. It is completed and the `Task` gets dropped.
+    fn poll_task(&mut self, cx: &mut Context<'_>) -> Poll<Option<T>> {
+        let ptr = self.ptr.as_ptr();
         let header = ptr as *const Header;
 
         unsafe {
-            let raw_waker = ((*header).vtable.clone_waker)(ptr);
-            Waker::from_raw(raw_waker)
+            let mut state = (*header).state.load(Ordering::Acquire);
+
+            loop {
+                // If the task has been closed, notify the awaiter and return `None`.
+                if state & CLOSED != 0 {
+                    // If the task is scheduled or running, we need to wait until its future is
+                    // dropped.
+                    if state & (SCHEDULED | RUNNING) != 0 {
+                        // Replace the waker with one associated with the current task.
+                        (*header).register(cx.waker());
+
+                        // Reload the state after registering. It is possible changes occurred just
+                        // before registration so we need to check for that.
+                        state = (*header).state.load(Ordering::Acquire);
+
+                        // If the task is still scheduled or running, we need to wait because its
+                        // future is not dropped yet.
+                        if state & (SCHEDULED | RUNNING) != 0 {
+                            return Poll::Pending;
+                        }
+                    }
+
+                    // Even though the awaiter is most likely the current task, it could also be
+                    // another task.
+                    (*header).notify(Some(cx.waker()));
+                    return Poll::Ready(None);
+                }
+
+                // If the task is not completed, register the current task.
+                if state & COMPLETED == 0 {
+                    // Replace the waker with one associated with the current task.
+                    (*header).register(cx.waker());
+
+                    // Reload the state after registering. It is possible that the task became
+                    // completed or closed just before registration so we need to check for that.
+                    state = (*header).state.load(Ordering::Acquire);
+
+                    // If the task has been closed, restart.
+                    if state & CLOSED != 0 {
+                        continue;
+                    }
+
+                    // If the task is still not completed, we're blocked on it.
+                    if state & COMPLETED == 0 {
+                        return Poll::Pending;
+                    }
+                }
+
+                // Since the task is now completed, mark it as closed in order to grab its output.
+                match (*header).state.compare_exchange(
+                    state,
+                    state | CLOSED,
+                    Ordering::AcqRel,
+                    Ordering::Acquire,
+                ) {
+                    Ok(_) => {
+                        // Notify the awaiter. Even though the awaiter is most likely the current
+                        // task, it could also be another task.
+                        if state & AWAITER != 0 {
+                            (*header).notify(Some(cx.waker()));
+                        }
+
+                        // Take the output from the task.
+                        let output = ((*header).vtable.get_output)(ptr) as *mut T;
+                        return Poll::Ready(Some(output.read()));
+                    }
+                    Err(s) => state = s,
+                }
+            }
         }
     }
 }
 
 impl<T> Drop for Task<T> {
     fn drop(&mut self) {
-        let ptr = self.raw_task.as_ptr();
-        let header = ptr as *const Header;
+        self.set_canceled();
+        self.set_detached();
+    }
+}
 
-        unsafe {
-            // Cancel the task.
-            (*header).cancel();
+impl<T> Future for Task<T> {
+    type Output = T;
 
-            // Drop the future.
-            ((*header).vtable.drop_future)(ptr);
-
-            // Mark the task as unscheduled.
-            let state = (*header).state.fetch_and(!SCHEDULED, Ordering::AcqRel);
-
-            // Notify the awaiter that the future has been dropped.
-            if state & AWAITER != 0 {
-                (*header).notify(None);
-            }
-
-            // Drop the task reference.
-            ((*header).vtable.drop_task)(ptr);
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        match self.poll_task(cx) {
+            Poll::Ready(t) => Poll::Ready(t.expect("task has failed")),
+            Poll::Pending => Poll::Pending,
         }
     }
 }
 
-impl<T: fmt::Debug> fmt::Debug for Task<T> {
+impl<T> fmt::Debug for Task<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let ptr = self.raw_task.as_ptr();
+        let ptr = self.ptr.as_ptr();
         let header = ptr as *const Header;
 
         f.debug_struct("Task")
             .field("header", unsafe { &(*header) })
-            .field("tag", self.tag())
             .finish()
     }
 }

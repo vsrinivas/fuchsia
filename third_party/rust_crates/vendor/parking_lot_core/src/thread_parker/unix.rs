@@ -11,11 +11,9 @@ use core::{
     cell::{Cell, UnsafeCell},
     mem::MaybeUninit,
 };
+use instant::Instant;
 use libc;
-use std::{
-    thread,
-    time::{Duration, Instant},
-};
+use std::{thread, time::Duration};
 
 // x32 Linux uses a non-standard type for tv_nsec in timespec.
 // See https://sourceware.org/bugzilla/show_bug.cgi?id=16437
@@ -158,17 +156,9 @@ impl Drop for ThreadParker {
         // this behaviour no longer occurs. The same applies to condvars.
         unsafe {
             let r = libc::pthread_mutex_destroy(self.mutex.get());
-            if cfg!(target_os = "dragonfly") {
-                debug_assert!(r == 0 || r == libc::EINVAL);
-            } else {
-                debug_assert_eq!(r, 0);
-            }
+            debug_assert!(r == 0 || r == libc::EINVAL);
             let r = libc::pthread_cond_destroy(self.condvar.get());
-            if cfg!(target_os = "dragonfly") {
-                debug_assert!(r == 0 || r == libc::EINVAL);
-            } else {
-                debug_assert_eq!(r, 0);
-            }
+            debug_assert!(r == 0 || r == libc::EINVAL);
         }
     }
 }
