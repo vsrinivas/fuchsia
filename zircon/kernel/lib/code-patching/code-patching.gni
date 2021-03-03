@@ -205,7 +205,7 @@ template("code_patching_hermetic_alternative") {
 #       This parameter is only expected to be explicitly set for tests that
 #       wish to supply their own case IDs.
 #     - Type: string
-#     - Default: "arch/code-patching/case-id.h"
+#     - Default: "arch/code-patches/case-id.h"
 #
 # Other parameters are as for source_set().
 #
@@ -269,7 +269,7 @@ template("code_patching_hermetic_stub") {
     }
 
     if (!defined(case_id_header)) {
-      case_id_header = "arch/code-patching/case-id.h"
+      case_id_header = "arch/code-patches/case-id.h"
 
       # Public to propagate to :main_target.
       public_deps = [ "//zircon/kernel/arch/$zircon_cpu/code-patching:headers" ]

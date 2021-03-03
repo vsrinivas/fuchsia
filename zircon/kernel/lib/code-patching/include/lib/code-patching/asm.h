@@ -33,7 +33,15 @@
   // to use the current section's section group (if any). Inside `.function`,
   // that ensures that the .code-patches data is attached to the function and
   // gets GC'd if and only if the function itself gets GC'd.
+  //
+  // TODO(67615): While code-patching remains in the kernel, it is most
+  // straightforward to make .code-patches as an allocated section and access
+  // its contents directly in memory.
+#ifdef _KERNEL
+  .pushsection .code-patches, "aM?", %progbits, 16
+#else
   .pushsection .code-patches, "M?", %progbits, 16
+#endif
   .quad \begin
   .int \end - \begin
   .int \ident

@@ -6,6 +6,12 @@
 
 import("//build/cpp/library_headers.gni")
 
+source_set("code-patches") {
+  sources = []
+  public_deps = [ ":headers" ]
+}
+
 library_headers("headers") {
-  headers = [ "arch/code-patching/case-id.h" ]
+  headers = [ "arch/code-patches/case-id.h" ]
+  public_deps = [ "//zircon/kernel/lib/code-patching:headers" ]
 }

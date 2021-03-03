@@ -50,7 +50,6 @@ bool g_has_l1tf;
 bool g_l1d_flush_on_vmentry;
 bool g_has_mds_taa;
 bool g_has_swapgs_bug;
-bool g_swapgs_bug_mitigated;
 bool g_has_ssb;
 bool g_has_ssbd;
 bool g_ssb_mitigated;
@@ -439,7 +438,6 @@ void x86_feature_debug(void) {
   print_property("md_clear", g_has_md_clear);
   print_property("md_clear_user_return", g_md_clear_on_user_return);
   print_property("swapgs_bug", g_has_swapgs_bug);
-  print_property("swapgs_bug_mitigated", g_swapgs_bug_mitigated);
   print_property("pcid_good", g_x86_feature_pcid_good);
   print_property("pti_enabled", x86_kpti_is_enabled());
   print_property("spec_ctrl", g_has_spec_ctrl);
@@ -1052,21 +1050,6 @@ void x86_cpu_maybe_l1d_flush(zx_status_t syscall_return) {
     if (x86_feature_test(X86_FEATURE_L1D_FLUSH)) {
       write_msr(X86_MSR_IA32_FLUSH_CMD, 1);
     }
-  }
-}
-
-const uint8_t kNop = 0x90;
-CODE_TEMPLATE(kLfence, "lfence")
-void swapgs_bug_postfence(const CodePatchInfo* patch) {
-  const size_t kSize = 3;
-  DEBUG_ASSERT(patch->dest_size == kSize);
-  DEBUG_ASSERT(kLfenceEnd - kLfence == kSize);
-
-  if ((x86_get_disable_spec_mitigations() == false) && g_has_swapgs_bug) {
-    memcpy(patch->dest_addr, kLfence, kSize);
-    g_swapgs_bug_mitigated = true;
-  } else {
-    memset(patch->dest_addr, kNop, kSize);
   }
 }
 

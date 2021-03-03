@@ -4,12 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_ARCH_X86_CODE_PATCHING_INCLUDE_ARCH_CODE_PATCHING_CASE_ID_H_
-#define ZIRCON_KERNEL_ARCH_X86_CODE_PATCHING_INCLUDE_ARCH_CODE_PATCHING_CASE_ID_H_
+#ifndef ZIRCON_KERNEL_ARCH_ARM64_CODE_PATCHES_INCLUDE_ARCH_CODE_PATCHES_CASE_ID_H_
+#define ZIRCON_KERNEL_ARCH_ARM64_CODE_PATCHES_INCLUDE_ARCH_CODE_PATCHES_CASE_ID_H_
 
-// Defines x86 code patching case IDs. IDs corresponding to the cases
+// Defines arm64 code patching case IDs. IDs corresponding to the cases
 // involving the wholesale patching of a specific function are expected to be
 // defined as `CASE_ID_${NAME}`, where `${NAME}` is the upper-cased version of
 // the function name.
 
-#endif  // ZIRCON_KERNEL_ARCH_X86_CODE_PATCHING_INCLUDE_ARCH_CODE_PATCHING_CASE_ID_H_
+#endif  // ZIRCON_KERNEL_ARCH_ARM64_CODE_PATCHES_INCLUDE_ARCH_CODE_PATCHES_CASE_ID_H_

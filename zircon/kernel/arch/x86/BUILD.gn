@@ -161,8 +161,8 @@ zx_library("x86") {
   deps = [
     ":syscall",
     ":tests",
+    "code-patches",
     "cpuid",
-    "//zircon/kernel/arch/x86/cpuid",
     "//zircon/kernel/dev/hw_rng",
     "//zircon/kernel/dev/iommu/dummy",
     "//zircon/kernel/dev/iommu/intel",
@@ -170,6 +170,7 @@ zx_library("x86") {
     "//zircon/kernel/lib/arch",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/code-patching:headers",
     "//zircon/kernel/lib/code_patching",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/counters",

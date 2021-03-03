@@ -17,6 +17,8 @@ library_headers("headers") {
   ]
 
   public_deps = [
+    "//zircon/kernel/lib/ktl:headers",
+
     # code-patching.h includes <lib/arch/nop.h>.
     "//zircon/kernel/lib/arch:headers",
 

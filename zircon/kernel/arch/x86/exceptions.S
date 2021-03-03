@@ -8,9 +8,11 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch/asm_macros.h>
+#include <arch/code-patches/case-id.h>
 #include <arch/x86/descriptor.h>
 #include <lib/arch/asm.h>
 #include <lib/code_patching.h>
+#include <lib/code-patching/asm.h>
 
 // This is called 256 times in a row, with isr.current set to the iteration
 // count starting at 0.  This is inside the definition for the ISR table,
@@ -102,11 +104,10 @@
   // Swap %gs.base to kernel space.
   swapgs
 1:
-  // Certain processors may speculative past a conditional swapgs, with a
-  // caller-controlled %gs.base register. This may allow callers to infer the
-  // contents of kernel offsets or data.  Execute a dispatch-serializing fence
-  // to constrain speculation and mitigate the leak.
-  APPLY_CODE_PATCH_FUNC(swapgs_bug_postfence, 3)
+  // Mitigates the swapgs bug. See <arch/code-patches/case-id.h>.
+  .code_patching.start CASE_ID_SWAPGS_MITIGATION
+  lfence
+  .code_patching.end
 
   // Save general purpose registers.
   push_reg %r15
@@ -162,7 +163,10 @@
   /* swap gs back to user space */
   swapgs
 1:
-  APPLY_CODE_PATCH_FUNC(swapgs_bug_postfence, 3)
+  // Mitigates the swapgs bug. See <arch/code-patches/case-id.h>.
+  .code_patching.start CASE_ID_SWAPGS_MITIGATION
+  lfence
+  .code_patching.end
 
   // Drop vector number and error code.
   add_to_sp 16

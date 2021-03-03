@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/code-patching/code-patches.h>
 #include <lib/code_patching.h>
 
 #include <arch/ops.h>
@@ -12,12 +13,29 @@
 extern const CodePatchInfo __start_code_patch_table[];
 extern const CodePatchInfo __stop_code_patch_table[];
 
-static void apply_startup_code_patches(uint level) {
+// TODO(68585): While v2 code-patching remains in the kernel, the .code-patches
+// section will be allocated and the directives within can be accessed directly.
+// (In physboot, this will be accessed via a STORAGE_KERNEL item.)
+extern "C" const code_patching::Directive __start_code_patches[];
+extern "C" const code_patching::Directive __stop_code_patches[];
+
+namespace {
+
+ktl::span<const code_patching::Directive> GetPatchDirectives() {
+  return {__start_code_patches, static_cast<size_t>(__stop_code_patches - __start_code_patches)};
+}
+
+void apply_startup_code_patches(uint level) {
   for (const CodePatchInfo* patch = __start_code_patch_table; patch < __stop_code_patch_table;
        ++patch) {
     patch->apply_func(patch);
     arch_sync_cache_range((vaddr_t)patch->dest_addr, patch->dest_size);
   }
+  // TODO(67615): This is the v2 patching that will incrementally eat the v1
+  // patching.
+  ArchPatchCode(GetPatchDirectives());
 }
+
+}  // namespace
 
 LK_INIT_HOOK(code_patching, apply_startup_code_patches, LK_INIT_LEVEL_PLATFORM_PREVM)

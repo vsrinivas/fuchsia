@@ -34,4 +34,4 @@ TEST(BugTests, Swapgs) {
   }
 }
 
-} // namespace
+}  // namespace

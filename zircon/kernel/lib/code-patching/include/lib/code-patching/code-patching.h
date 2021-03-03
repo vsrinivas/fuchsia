@@ -15,6 +15,8 @@
 
 #include <fbl/span.h>
 
+// This file is concerned with the facilities of code-patching.
+
 namespace code_patching {
 
 // A patch directive, giving the 'what' of an instruction range and the 'how'
