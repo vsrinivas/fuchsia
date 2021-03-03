@@ -28,7 +28,8 @@ constexpr int8_t LevelForPageSize(PageSize size) {
 
 }  // namespace
 
-std::optional<Paddr> LookupPage(MemoryManager& allocator, PageTableNode* node, Vaddr virt_addr) {
+std::optional<LookupResult> LookupPage(MemoryManager& allocator, PageTableNode* node,
+                                       Vaddr virt_addr) {
   ZX_ASSERT(IsCanonicalVaddr(virt_addr));
 
   for (int8_t level = kPageTableLevels - 1; level >= 0; level--) {
@@ -44,7 +45,11 @@ std::optional<Paddr> LookupPage(MemoryManager& allocator, PageTableNode* node, V
     // If this is a page, we have found the page.
     if (entry.is_page(level)) {
       uint64_t page_offset = virt_addr.value() & Mask(PageLevelBits(level));
-      return Paddr(entry.page_paddr(level) | page_offset);
+      return LookupResult{
+          .phys_addr = Paddr(entry.page_paddr(level) | page_offset),
+          .entry = entry,
+          .level = level,
+      };
     }
 
     // Otherwise, we keep walking down the tree.

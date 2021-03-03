@@ -57,7 +57,8 @@ TEST(Builder, SinglePage) {
   EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0xaaaa'0000), kPageSize4KiB), ZX_OK);
 
   // Ensure we can lookup the page.
-  EXPECT_EQ(LookupPage(allocator, builder->root_node(), Vaddr(0x0)), Paddr(0xaaaa'0000u));
+  EXPECT_EQ(LookupPage(allocator, builder->root_node(), Vaddr(0x0))->phys_addr,
+            Paddr(0xaaaa'0000u));
 }
 
 TEST(Builder, MultiplePages) {
@@ -70,9 +71,12 @@ TEST(Builder, MultiplePages) {
   EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0xaaaa'0000), kPageSize4KiB * kNumPages), ZX_OK);
 
   // Ensure we can look up the pages.
-  EXPECT_EQ(LookupPage(allocator, builder->root_node(), Vaddr(0x0000)), Paddr(0xaaaa'0000));
-  EXPECT_EQ(LookupPage(allocator, builder->root_node(), Vaddr(0x1000)), Paddr(0xaaaa'1000));
-  EXPECT_EQ(LookupPage(allocator, builder->root_node(), Vaddr(0xc000)), Paddr(0xaaaa'c000));
+  EXPECT_EQ(LookupPage(allocator, builder->root_node(), Vaddr(0x0000))->phys_addr,
+            Paddr(0xaaaa'0000));
+  EXPECT_EQ(LookupPage(allocator, builder->root_node(), Vaddr(0x1000))->phys_addr,
+            Paddr(0xaaaa'1000));
+  EXPECT_EQ(LookupPage(allocator, builder->root_node(), Vaddr(0xc000))->phys_addr,
+            Paddr(0xaaaa'c000));
   EXPECT_EQ(LookupPage(allocator, builder->root_node(), Vaddr(0xd000)), std::nullopt);
 }
 

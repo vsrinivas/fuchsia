@@ -20,7 +20,18 @@ namespace page_table::x86 {
 //
 // No allocations will be performed, but the allocator is need to translate
 // addresses.
-std::optional<Paddr> LookupPage(MemoryManager& allocator, PageTableNode* node, Vaddr virt_addr);
+struct LookupResult {
+  // The physical address of `virt_addr`.
+  Paddr phys_addr;
+
+  // The PageTableEntry referencing the page.
+  PageTableEntry entry;
+
+  // The level the PageTableEntry is on.
+  int8_t level;
+};
+std::optional<LookupResult> LookupPage(MemoryManager& allocator, PageTableNode* node,
+                                       Vaddr virt_addr);
 
 // Map a single page from `virt_addr` to `phys_addr`, allocating nodes as
 // required.

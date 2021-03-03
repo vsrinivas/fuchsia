@@ -135,6 +135,14 @@ struct alignas(sizeof(uint64_t)) PageTableEntry {
   uint64_t page_paddr(int8_t level) const;
   PageTableEntry& set_page_paddr(int8_t level, uint64_t value);
 
+  // Basic equality/inequality operators.
+  friend bool operator==(const PageTableEntry& a, const PageTableEntry& b) {
+    return a.raw == b.raw;
+  }
+  friend bool operator!=(const PageTableEntry& a, const PageTableEntry& b) {
+    return !(a == b);
+  }
+
  private:
   // Location of the PAT bit at different levels.
   static constexpr std::array<int, kPageTableLevels> kPatBitIndex = {7, 12, 12, -1};
