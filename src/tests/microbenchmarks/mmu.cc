@@ -10,6 +10,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <vector>
 
 #include <fbl/algorithm.h>
 #include <perftest/perftest.h>
@@ -29,7 +30,14 @@ struct Helper {
     ASSERT_OK(zx::vmar::root_self()->allocate(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_SPECIFIC, 0,
                                               GB(1), &vmar, &vmar_base));
 
-    ASSERT_OK(zx::vmo::create(MB(4), 0, &vmo));
+    const uint64_t vmo_size = MB(4);
+    ASSERT_OK(zx::vmo::create(vmo_size, 0, &vmo));
+
+    // Write random contents to the VMO to ensure it has backing pages so that mappings will happen.
+    std::vector<char> buffer(vmo_size);
+    zx_cprng_draw(buffer.data(), buffer.size());
+
+    ASSERT_OK(vmo.write(buffer.data(), 0, buffer.size()));
   }
 
   ~Helper() { vmar.destroy(); }
