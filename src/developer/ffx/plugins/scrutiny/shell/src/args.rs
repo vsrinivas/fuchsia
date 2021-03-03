@@ -6,7 +6,20 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "shell", description = "Run the scrutiny shell")]
+#[argh(
+    subcommand,
+    name = "shell",
+    description = "Launch the scrutiny shell",
+    example = "To start an interactive shell session:
+
+    $ ffx scrutiny shell",
+    note = "Launches an interactive scrutiny shell where scrutiny specific
+commands can be run. This will also launch a server on port 127.0.0.1:8080
+by default that provides visual auditing tools.
+
+Inside the shell run help for a full list of available commands. If you wish to
+integrate Scrutiny as part of a wider script check out the --script option."
+)]
 pub struct ScrutinyShellCommand {
     #[argh(positional)]
     pub command: Option<String>,

@@ -1,19 +1,19 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_scrutiny") {
+ffx_plugin("ffx_scrutiny_blobfs") {
   version = "0.1.0"
   edition = "2018"
-  plugin_deps = [
-    "extract:ffx_scrutiny_extract",
-    "shell:ffx_scrutiny_shell",
-    "verify:ffx_scrutiny_verify",
-  ]
+  with_unit_tests = true
+
   deps = [ "//src/security/scrutiny/lib/frontend" ]
   non_rust_deps = [ "//src/lib/chunked-compression" ]
 
-  sources = [ "src/args.rs" ]
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
 }
