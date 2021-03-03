@@ -242,6 +242,9 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 		return cmd, nil
 	}
 
+	if cmd.useCcache && cmd.useGoma {
+		return nil, fmt.Errorf("--goma and --ccache are mutually exclusive")
+	}
 	if cmd.useCcache && cmd.noCcache {
 		return nil, fmt.Errorf("--ccache and --no-ccache are mutually exclusive")
 	}

@@ -142,6 +142,11 @@ func TestParseArgsAndEnv(t *testing.T) {
 			},
 		},
 		{
+			name:      "rejects --goma and --ccache",
+			args:      []string{"core.x64", "--goma", "--ccache"},
+			expectErr: true,
+		},
+		{
 			name:      "rejects --goma and --no-goma",
 			args:      []string{"core.x64", "--goma", "--no-goma"},
 			expectErr: true,

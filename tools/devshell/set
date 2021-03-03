@@ -423,6 +423,9 @@ function main {
     elif [[ -n "${CCACHE_DIR}" ]] && [[ -d "${CCACHE_DIR}" ]]; then
       ccache=1
     fi
+  elif [[ "${use_goma}" -eq 1 ]] && [[ "${ccache}" -eq 1 ]]; then
+    fx-error "--goma and --ccache are mutually exclusive, pick one."
+    return 1
   fi
 
   # Add goma or ccache settings as appropriate.
