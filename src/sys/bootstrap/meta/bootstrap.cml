@@ -191,7 +191,10 @@
             to: [ "#fshost" ],
         },
         {
-            protocol: [ "fuchsia.boot.Arguments" ],
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.pkg.rewrite.Engine",
+            ],
             from: "parent",
             to: [ "#live_usb" ],
         },

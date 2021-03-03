@@ -70,15 +70,18 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost-rustc",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
+    "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-url",
     "//src/lib/storage/fuchsia-watch",
     "//src/lib/storage/ramdevice_client",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
     "//src/sys/lib/payload_streamer",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -94,6 +97,7 @@ rustc_binary("bin") {
     "src/fvm.rs",
     "src/gpt.rs",
     "src/main.rs",
+    "src/pkg.rs",
   ]
 }
 
@@ -105,4 +109,9 @@ isolated_devmgr_unittest_v2_component("live-usb-test") {
 
 fuchsia_test_package("live-usb-unittests") {
   test_components = [ ":live-usb-test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

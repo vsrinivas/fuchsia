@@ -5,6 +5,7 @@
 mod block_wrapper;
 mod fvm;
 mod gpt;
+mod pkg;
 
 use {
     crate::fvm::{get_partition_size, FvmRamdisk},
@@ -116,6 +117,8 @@ async fn inner_main() -> Result<(), Error> {
         .context("creating FVM ramdisk")?;
     // Write FVM to the ramdisk.
     ramdisk.pave_fvm().await.context("paving FVM")?;
+
+    pkg::disable_updates().await.context("disabling updates")?;
 
     Ok(())
 }

@@ -11,6 +11,7 @@
         { protocol: "fuchsia.boot.Arguments" },
         { protocol: "fuchsia.fshost.BlockWatcher" },
         { protocol: "fuchsia.paver.Paver" },
+        { protocol: "fuchsia.pkg.rewrite.Engine" },
 
         // For block device access.
         {
