@@ -14,10 +14,11 @@
 #include <sstream>
 #include <vector>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
+
+#include "src/graphics/display/drivers/goldfish-display/goldfish-display-bind.h"
 
 namespace goldfish {
 namespace {
@@ -1068,9 +1069,4 @@ static constexpr zx_driver_ops_t goldfish_display_driver_ops = []() -> zx_driver
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(goldfish_display, goldfish_display_driver_ops, "zircon",
-                    "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_CONTROL),
-ZIRCON_DRIVER_END(goldfish_display)
-    // clang-format on
+ZIRCON_DRIVER(goldfish_display, goldfish_display_driver_ops, "zircon", "0.1");

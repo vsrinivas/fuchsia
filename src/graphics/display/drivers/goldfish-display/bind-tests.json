@@ -1,0 +1,16 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.goldfish.BIND_PROTOCOL.CONTROL"
+        },
+        "expected": "match",
+        "name": "Right protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Wrong protocol"
+    }
+]
