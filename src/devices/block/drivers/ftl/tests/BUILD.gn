@@ -4,6 +4,7 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
+import("//build/toolchain/variant_shared_library_redirect.gni")
 import("//src/sys/build/components.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
@@ -110,6 +111,14 @@ fuzzers_package("ftl-fuzzers") {
   cpp_fuzzers = [ ":ftl-read-write-fuzzer" ]
 }
 
+variant_shared_library_redirect("devmgr-integration-test") {
+  library = "//zircon/system/ulib/devmgr-integration-test"
+}
+
+variant_shared_library_redirect("devmgr-launcher") {
+  library = "//zircon/system/ulib/devmgr-launcher"
+}
+
 isolated_devmgr_unittest_package("ftl-integration-package") {
   package_name = "ftl-integration"
   executable_path = "test/ftl-integration-test"
@@ -118,6 +127,8 @@ isolated_devmgr_unittest_package("ftl-integration-package") {
     environments = []
   }
   deps = [
+    ":devmgr-integration-test",
+    ":devmgr-launcher",
     ":ftl-integration",
     "//src/devices/block/bin/blktest",
     "//src/devices/block/bin/iochk",
@@ -128,7 +139,5 @@ isolated_devmgr_unittest_package("ftl-integration-package") {
     "//src/devices/nand/drivers/nand",
     "//src/devices/nand/drivers/ram-nand",
     "//src/devices/tests/sysdev",
-    "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/devmgr-launcher",
   ]
 }

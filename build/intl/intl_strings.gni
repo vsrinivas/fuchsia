@@ -214,11 +214,20 @@ template("intl_strings") {
     }
   }
 
+  # This lists the resources without the FIDL library.
+  resource_deps = group_deps
+
   # This group target has the same name as the template invoker, and contains
   # all generated targets as its deps, so that all the deps are executed when
   # the template is expanded.
   group_deps += [ ":${strings_to_fidl_name}($fidl_toolchain)" ]
   group(target_name) {
     public_deps = group_deps
+
+    metadata = {
+      # Used by distribution_manifest() template. Ensure that the resources,
+      # but not the library is installed in a package that depends on this target.
+      distribution_entries_barrier = resource_deps
+    }
   }
 }

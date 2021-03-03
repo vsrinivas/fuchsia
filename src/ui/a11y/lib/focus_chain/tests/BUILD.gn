@@ -4,10 +4,7 @@
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":focus_chain_manager_tests",
-    "mocks",
-  ]
+  public_deps = [ ":focus_chain_manager_tests" ]
 }
 
 executable("focus_chain_manager_tests") {

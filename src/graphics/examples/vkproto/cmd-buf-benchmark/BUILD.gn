@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/toolchain/variant_shared_library_redirect.gni")
 import("//src/graphics/examples/vkproto/common/common.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
@@ -17,16 +18,20 @@ resource("shaders") {
   outputs = [ "data/shaders/{{source_file_part}}" ]
 }
 
+variant_shared_library_redirect("libvulkan") {
+  library = "//third_party/Vulkan-Loader:libvulkan"
+}
+
 fuchsia_component("cmd-buf-benchmark-component") {
   testonly = true
   component_name = "cmd-buf-benchmark"
   manifest = "meta/cmd-buf-benchmark.cmx"
   deps = [
     ":bin",
+    ":libvulkan",
     ":shaders",
     "//src/lib/vulkan:image-pipe-swapchain-fb",
     "//src/lib/vulkan:validation-layers",
-    "//third_party/Vulkan-Loader:libvulkan",
   ]
 }
 

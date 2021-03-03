@@ -147,6 +147,12 @@ template("sdk") {
     outputs = [ final_manifest_file ]
 
     deps = [ ":$verify_api_target_name" ]
+
+    metadata = {
+      # Used by distribution_manifest() template. Ensure that dependencies are not
+      # installed into Fuchsia packages that depend on the current target.
+      distribution_entries_barrier = []
+    }
   }
 
   # Verifies that the manifest is valid.

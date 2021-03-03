@@ -4,6 +4,7 @@
 
 import("//build/config.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/toolchain/variant_shared_library_redirect.gni")
 import("//src/diagnostics/sampler/build/config_generator.gni")
 import("//src/sys/build/components.gni")
 
@@ -89,11 +90,15 @@ fuchsia_component("sampler-component") {
   manifest = "meta/sampler.cml"
 }
 
+variant_shared_library_redirect("sampler_lib") {
+  library = ":lib"
+}
+
 fuchsia_component("sampler-v1") {
   component_name = "sampler"
   manifest = "meta/sampler.cmx"
   deps = [
-    ":lib",
+    ":sampler_lib",
     "//src/diagnostics/launcher:bin",
   ]
 }
