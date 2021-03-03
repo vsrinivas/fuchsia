@@ -273,7 +273,11 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 						"own directory name with fx --dir for a complex configuration")
 			}
 		}
-		nameComponents := append([]string{productDotBoard}, cmd.variants...)
+		nameComponents := []string{productDotBoard}
+		nameComponents = append(nameComponents, cmd.variants...)
+		if cmd.isRelease {
+			nameComponents = append(nameComponents, "release")
+		}
 		cmd.buildDir = filepath.Join("out", strings.Join(nameComponents, "-"))
 	}
 

@@ -193,6 +193,17 @@ func TestParseArgsAndEnv(t *testing.T) {
 			},
 		},
 		{
+			name: "auto dir and release",
+			args: []string{"core.x64", "--auto-dir", "--variant", "foo", "--release"},
+			expected: setArgs{
+				product:   "core",
+				board:     "x64",
+				isRelease: true,
+				buildDir:  "out/core.x64-foo-release",
+				variants:  []string{"foo"},
+			},
+		},
+		{
 			name:      "auto dir with complex variants",
 			args:      []string{"core.x64", "--auto-dir", "--variant", "asan-fuzzer/foo"},
 			expectErr: true,
