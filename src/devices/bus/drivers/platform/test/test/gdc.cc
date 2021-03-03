@@ -124,4 +124,4 @@ constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace gdc
 
-ZIRCON_DRIVER_BEGIN(test_gdc, gdc::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(test_gdc, gdc::driver_ops, "zircon", "0.1");
