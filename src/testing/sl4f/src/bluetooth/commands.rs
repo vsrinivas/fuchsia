@@ -497,8 +497,8 @@ impl Facade for AvrcpFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.as_ref() {
             "AvrcpInit" => {
-                let target_id = parse_arg!(args, as_str, "target_id")?;
-                let result = self.init_avrcp(target_id.to_string()).await?;
+                let target_id = parse_arg!(args, as_u64, "target_id")?;
+                let result = self.init_avrcp(target_id).await?;
                 Ok(to_value(result)?)
             }
             "AvrcpGetMediaAttributes" => {

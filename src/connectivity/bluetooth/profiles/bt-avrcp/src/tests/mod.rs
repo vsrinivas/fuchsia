@@ -258,14 +258,13 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
 
     let (controller_proxy, controller_server) = create_proxy()?;
     let get_controller_fut = peer_manager_proxy
-        .get_controller_for_target(&fake_peer_id.to_string(), controller_server)
+        .get_controller_for_target(&mut fake_peer_id.into(), controller_server)
         .fuse();
     pin_mut!(get_controller_fut);
 
     let (controller_ext_proxy, controller_ext_server) = create_proxy()?;
-    let get_test_controller_fut = ext_proxy
-        .get_controller_for_target(&fake_peer_id.to_string(), controller_ext_server)
-        .fuse();
+    let get_test_controller_fut =
+        ext_proxy.get_controller_for_target(&mut fake_peer_id.into(), controller_ext_server).fuse();
     pin_mut!(get_test_controller_fut);
 
     let is_connected_fut = controller_ext_proxy.is_connected().fuse();

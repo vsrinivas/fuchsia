@@ -11,9 +11,7 @@ using zx;
 protocol PeerManager {
     /// Returns a controller client to a remote target (TG) service at the peer specified by
     /// `peer_id`.
-    /// TODO (fxbug.dev/898): change peer_id to fuchsia.bluetooth.PeerId type after BrEdr profile service
-    /// switches.
-    GetControllerForTarget(bt.PeerIdString peer_id, request<Controller> client) -> () error zx.status;
+    GetControllerForTarget(bt.PeerId peer_id, request<Controller> client) -> () error zx.status;
 
     /// Set the absolute volume handler.  Only one handler may be set  at at time.
     /// If a second handler is registered it will be dropped and an error will

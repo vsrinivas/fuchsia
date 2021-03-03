@@ -15,6 +15,7 @@ use {
     fidl_fuchsia_bluetooth_avrcp_test::{
         ControllerExtMarker, ControllerExtProxy, PeerManagerExtMarker,
     },
+    fuchsia_bluetooth::types::PeerId,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     futures::{
@@ -41,8 +42,8 @@ static CLEAR_LINE: &str = "\x1b[2K";
 #[argh(description = "Bluetooth AVRCP Controller CLI")]
 struct Options {
     /// target device id.
-    #[argh(positional)]
-    device: String,
+    #[argh(positional, from_str_fn(PeerId::from))]
+    device: PeerId,
 }
 
 async fn send_passthrough<'a>(
@@ -389,7 +390,7 @@ async fn run_repl<'a>(
 async fn main() -> Result<(), Error> {
     let opt: Options = argh::from_env();
 
-    let device_id = &opt.device.replace("-", "").to_lowercase();
+    let device_id = opt.device;
 
     // Connect to test controller service first so we fail early if it's not available.
 
@@ -400,7 +401,7 @@ async fn main() -> Result<(), Error> {
     let (t_client, t_server) =
         create_endpoints::<ControllerExtMarker>().expect("Error creating Test Controller endpoint");
 
-    let _status = test_avrcp_svc.get_controller_for_target(&device_id.as_str(), t_server).await?;
+    let _status = test_avrcp_svc.get_controller_for_target(&mut device_id.into(), t_server).await?;
     eprintln!(
         "Test controller obtained to device \"{device}\" AVRCP remote target service",
         device = &device_id,
@@ -415,7 +416,7 @@ async fn main() -> Result<(), Error> {
     let (c_client, c_server) =
         create_endpoints::<ControllerMarker>().expect("Error creating Controller endpoint");
 
-    let _status = avrcp_svc.get_controller_for_target(&device_id.as_str(), c_server).await?;
+    let _status = avrcp_svc.get_controller_for_target(&mut device_id.into(), c_server).await?;
     eprintln!(
         "Controller obtained to device \"{device}\" AVRCP remote target service",
         device = &device_id,

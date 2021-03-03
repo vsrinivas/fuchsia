@@ -283,7 +283,7 @@ async fn connect_avrcp(
 ) -> Result<avrcp::ControllerProxy, Error> {
     let (controller, server) = endpoints::create_proxy()?;
 
-    let _ = avrcp.get_controller_for_target(&peer_id.to_string(), server).await?;
+    let _ = avrcp.get_controller_for_target(&mut peer_id.into(), server).await?;
 
     controller.set_notification_filter(
         avrcp::Notifications::PlaybackStatus

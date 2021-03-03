@@ -9,6 +9,7 @@ use super::types::{
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use anyhow::Error;
 use fidl::endpoints::create_endpoints;
+use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_avrcp::{
     ControllerMarker, ControllerProxy, PeerManagerMarker, PeerManagerProxy,
 };
@@ -67,8 +68,8 @@ impl AvrcpFacade {
     /// Initialize the AVRCP service and retrieve the controller for the provided Bluetooth target id.
     ///
     /// # Arguments
-    /// * `target_id` - a string id representing the target peer
-    pub async fn init_avrcp(&self, target_id: String) -> Result<(), Error> {
+    /// * `id` - A u64 representing the device ID.
+    pub async fn init_avrcp(&self, id: u64) -> Result<(), Error> {
         let tag = "AvrcpFacade::init_avrcp";
         self.inner.write().avrcp_service_proxy = Some(self.create_avrcp_service_proxy().await?);
         let avrcp_service_proxy = match &self.inner.read().avrcp_service_proxy {
@@ -76,8 +77,9 @@ impl AvrcpFacade {
             None => fx_err_and_bail!(&with_line!(tag), "No AVRCP service proxy created"),
         };
         let (cont_client, cont_server) = create_endpoints::<ControllerMarker>()?;
-        let _status =
-            avrcp_service_proxy.get_controller_for_target(&target_id.as_str(), cont_server).await?;
+        let _status = avrcp_service_proxy
+            .get_controller_for_target(&mut PeerId { value: id }, cont_server)
+            .await?;
         self.inner.write().controller_proxy =
             Some(cont_client.into_proxy().expect("Error obtaining controller client proxy"));
         Ok(())

@@ -409,6 +409,7 @@ where
     while let Some(req) = stream.try_next().await? {
         match req {
             PeerManagerRequest::GetControllerForTarget { peer_id, client, responder } => {
+                let peer_id = peer_id.into();
                 info!("Received client request for controller for peer {}", peer_id);
 
                 let client: fidl::endpoints::ServerEnd<ControllerMarker> = client;
@@ -418,8 +419,6 @@ where
                         responder.send(&mut Err(zx::Status::UNAVAILABLE.into_raw()))?;
                     }
                     Ok(client_stream) => {
-                        // TODO(fxbug.dev/46796): eliminate this parsing with an API Update
-                        let peer_id: PeerId = peer_id.parse()?;
                         let (response, pcr) = ServiceRequest::new_controller_request(peer_id);
                         sender.try_send(pcr)?;
                         let controller = response.into_future().await?;
@@ -497,7 +496,7 @@ where
         match req {
             PeerManagerExtRequest::GetControllerForTarget { peer_id, client, responder } => {
                 let client: fidl::endpoints::ServerEnd<ControllerExtMarker> = client;
-
+                let peer_id: PeerId = peer_id.into();
                 info!("New test connection request for {}", peer_id);
 
                 match client.into_stream() {
@@ -506,7 +505,6 @@ where
                         responder.send(&mut Err(zx::Status::UNAVAILABLE.into_raw()))?;
                     }
                     Ok(client_stream) => {
-                        let peer_id: PeerId = peer_id.parse()?;
                         let (response, pcr) = ServiceRequest::new_controller_request(peer_id);
                         sender.try_send(pcr)?;
                         let controller = response.into_future().await?;
@@ -621,7 +619,8 @@ mod tests {
 
         let (_c_proxy, controller_server) = create_proxy().expect("Controller proxy creation");
 
-        let request_fut = peer_manager_proxy.get_controller_for_target(&"123", controller_server);
+        let request_fut = peer_manager_proxy
+            .get_controller_for_target(&mut PeerId(123).into(), controller_server);
         pin_mut!(request_fut);
 
         let handler_fut =
@@ -684,8 +683,8 @@ mod tests {
 
         let (_c_proxy, controller_server) = create_proxy().expect("Controller proxy creation");
 
-        let request_fut =
-            peer_manager_ext_proxy.get_controller_for_target(&"123", controller_server);
+        let request_fut = peer_manager_ext_proxy
+            .get_controller_for_target(&mut PeerId(123).into(), controller_server);
         pin_mut!(request_fut);
 
         let handler_fut = test_avrcp_client_stream_handler(
