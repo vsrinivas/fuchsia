@@ -154,13 +154,6 @@ static constexpr const char kMemoryLimitDbg[] = "kernel.memory-limit-dbg";
 static constexpr const char kMemoryLimitMb[] = "kernel.memory-limit-mb";
 static constexpr const char kMexecForceHighRamdisk[] = "kernel.mexec-force-high-ramdisk";
 static constexpr const char kMexecPciShutdown[] = "kernel.mexec-pci-shutdown";
-static constexpr const char kOomBehavior[] = "kernel.oom.behavior";
-static constexpr const char kOomCriticalMb[] = "kernel.oom.critical-mb";
-static constexpr const char kOomDebounceMb[] = "kernel.oom.debounce-mb";
-static constexpr const char kOomEnable[] = "kernel.oom.enable";
-static constexpr const char kOomEvictAtWarning[] = "kernel.oom.evict-at-warning";
-static constexpr const char kOomOutOfMemoryMb[] = "kernel.oom.outofmemory-mb";
-static constexpr const char kOomWarningMb[] = "kernel.oom.warning-mb";
 static constexpr const char kPageScannerEnableEviction[] = "kernel.page-scanner.enable-eviction";
 static constexpr const char kPageScannerDiscardableEvictionsPercent[] =
     "kernel.page-scanner.discardable-evictions-percent";

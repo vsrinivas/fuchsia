@@ -345,6 +345,14 @@ void BootOptions::PrintValue(const uart::all::Driver& value, FILE* out) {
   std::visit([out](const auto& uart) { uart.Unparse(out); }, value);
 }
 
+void BootOptions::Parse(std::string_view value, OomBehavior BootOptions::*member) {
+  Enum<OomBehavior>(EnumParser{value, &(this->*member)});
+}
+
+void BootOptions::PrintValue(const OomBehavior& value, FILE* out) {
+  Enum<OomBehavior>(EnumPrinter{value, out});
+}
+
 #if BOOT_OPTIONS_TESTONLY_OPTIONS
 
 void BootOptions::Parse(std::string_view value, TestEnum BootOptions::*member) {

@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/boot-options/boot-options.h>
 #include <lib/debuglog.h>
 #include <lib/zircon-internal/macros.h>
 
@@ -69,22 +70,8 @@ void MemoryWatchdog::EvictionTrigger() {
 
 // Helper called by the memory pressure thread when OOM state is entered.
 void MemoryWatchdog::OnOom() {
-  const char* oom_behavior_str = gCmdline.GetString(kernel_option::kOomBehavior);
-
-  // Default to reboot if not set or set to an unexpected value. See fxbug.dev/33429 for the product
-  // details on when this path vs. the reboot should be used.
-  enum class OomBehavior {
-    kReboot,
-    kJobKill,
-  } oom_behavior = OomBehavior::kReboot;
-
-  if (oom_behavior_str && strcmp(oom_behavior_str, "jobkill") == 0) {
-    oom_behavior = OomBehavior::kJobKill;
-  }
-
-  switch (oom_behavior) {
+  switch (gBootOptions->oom_behavior) {
     case OomBehavior::kJobKill:
-
       if (!executor_->GetRootJobDispatcher()->KillJobWithKillOnOOM()) {
         printf("memory-pressure: no alive job has a kill bit\n");
       }
@@ -254,7 +241,7 @@ void MemoryWatchdog::Init(Executor* executor) {
     mem_pressure_events_[i] = event.release();
   }
 
-  if (gCmdline.GetBool(kernel_option::kOomEnable, true)) {
+  if (gBootOptions->oom_enabled) {
     constexpr auto kNumWatermarks = PressureLevel::kNumLevels - 1;
     ktl::array<uint64_t, kNumWatermarks> mem_watermarks;
 
@@ -262,14 +249,12 @@ void MemoryWatchdog::Init(Executor* executor) {
     // patterns. Consider moving to percentages of total memory instead of absolute numbers - will
     // be easier to maintain across platforms.
     mem_watermarks[PressureLevel::kOutOfMemory] =
-        gCmdline.GetUInt64(kernel_option::kOomOutOfMemoryMb, 50) * MB;
-    mem_watermarks[PressureLevel::kCritical] =
-        gCmdline.GetUInt64(kernel_option::kOomCriticalMb, 150) * MB;
-    mem_watermarks[PressureLevel::kWarning] =
-        gCmdline.GetUInt64(kernel_option::kOomWarningMb, 300) * MB;
-    uint64_t watermark_debounce = gCmdline.GetUInt64(kernel_option::kOomDebounceMb, 1) * MB;
+        (gBootOptions->oom_out_of_memory_threshold_mb) * MB;
+    mem_watermarks[PressureLevel::kCritical] = (gBootOptions->oom_critical_threshold_mb) * MB;
+    mem_watermarks[PressureLevel::kWarning] = (gBootOptions->oom_warning_threshold_mb) * MB;
 
-    if (gCmdline.GetBool(kernel_option::kOomEvictAtWarning, false)) {
+    uint64_t watermark_debounce = gBootOptions->oom_debounce_mb * MB;
+    if (gBootOptions->oom_evict_at_warning) {
       max_eviction_level_ = PressureLevel::kWarning;
     }
     // Set our eviction target to be such that we try to get completely out of the max eviction

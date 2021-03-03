@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_BOOT_OPTIONS_ENUM_H_
 #define ZIRCON_KERNEL_LIB_BOOT_OPTIONS_ENUM_H_
 
+#include <lib/boot-options/types.h>
 #include <stdio.h>
 
 #include <optional>
@@ -26,6 +27,13 @@ constexpr auto Enum<TestEnum> = [](auto&& Switch) {
       .Case("value2", TestEnum::kValue2);
 };
 #endif
+
+template <>
+constexpr auto Enum<OomBehavior> = [](auto&& Switch) {
+  Switch  //
+      .Case("reboot", OomBehavior::kReboot)
+      .Case("jobkill", OomBehavior::kJobKill);
+};
 
 // Helpers for enum overrides.
 

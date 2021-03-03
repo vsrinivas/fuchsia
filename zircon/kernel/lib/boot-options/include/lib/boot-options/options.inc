@@ -74,6 +74,76 @@ that even when set to false, the CPRNG will re-process the samples, so the
 processing inside of jitterentropy is somewhat redundant.
 )""")
 
+DEFINE_OPTION("kernel.oom.behavior", OomBehavior, oom_behavior, {OomBehavior::kReboot}, R"""(
+This option can be used to configure the behavior of the kernel when
+encountering an out-of-memory (OOM) situation. Valid values are `jobkill`, and
+`reboot`.
+
+If set to `jobkill`, when encountering OOM, the kernel attempts to kill jobs that
+have the `ZX_PROP_JOB_KILL_ON_OOM` bit set to recover memory.
+
+If set to `reboot`, when encountering OOM, the kernel signals an out-of-memory
+event (see `zx_system_get_event()`), delays briefly, and then reboots the system.
+)""")
+
+DEFINE_OPTION("kernel.oom.enable", bool, oom_enabled, {true}, R"""(
+This option turns on the out-of-memory (OOM) kernel thread, which kills
+processes or reboots the system (per `kernel.oom.behavior`), when the PMM has
+less than `kernel.oom.outofmemory-mb` free memory.
+
+An OOM can be manually triggered by the command `k pmm oom`, which will cause
+free memory to fall below the `kernel.oom.outofmemory-mb` threshold. An
+allocation rate can be provided with `k pmm oom <rate>`, where `<rate>` is in MB.
+This will cause the specified amount of memory to be allocated every second,
+which can be useful for observing memory pressure state transitions.
+
+Refer to `kernel.oom.outofmemory-mb`, `kernel.oom.critical-mb`,
+`kernel.oom.warning-mb`, and `zx_system_get_event()` for further details on
+memory pressure state transitions.
+
+The current memory availability state can be queried with the command
+`k pmm mem_avail_state info`.
+)""")
+
+DEFINE_OPTION("kernel.oom.outofmemory-mb", uint64_t, oom_out_of_memory_threshold_mb, {50}, R"""(
+This option specifies the free-memory threshold at which the out-of-memory (OOM)
+thread will trigger an out-of-memory event and begin killing processes, or
+rebooting the system.
+)""")
+
+DEFINE_OPTION("kernel.oom.critical-mb", uint64_t, oom_critical_threshold_mb, {150}, R"""(
+This option specifies the free-memory threshold at which the out-of-memory
+(OOM) thread will trigger a critical memory pressure event, signaling that
+processes should free up memory.
+)""")
+
+DEFINE_OPTION("kernel.oom.warning-mb", uint64_t, oom_warning_threshold_mb, {300}, R"""(
+This option specifies the free-memory threshold at which the out-of-memory
+(OOM) thread will trigger a warning memory pressure event, signaling that
+processes should slow down memory allocations.
+)""")
+
+DEFINE_OPTION("kernel.oom.debounce-mb", uint64_t, oom_debounce_mb, {1}, R"""(
+This option specifies the memory debounce value used when computing the memory
+pressure state based on the free-memory thresholds
+(`kernel.oom.outofmemory-mb`, `kernel.oom.critical-mb` and
+`kernel.oom.warning-mb`). Transitions between memory availability states are
+debounced by not leaving a state until the amount of free memory is at least
+`kernel.oom.debounce-mb` outside of that state.
+
+For example, consider the case where `kernel.oom.critical-mb` is set to 100 MB
+and `kernel.oom.debounce-mb` set to 5 MB. If we currently have 90 MB of free
+memory on the system, i.e. we're in the Critical state, free memory will have to
+increase to at least 105 MB (100 MB + 5 MB) for the state to change from
+Critical to Warning.
+)""")
+
+DEFINE_OPTION("kernel.oom.evict-at-warning", bool, oom_evict_at_warning, {false}, R"""(
+This option triggers eviction of file pages at the Warning pressure state,
+in addition to the default behavior, which is to evict at the Critical and OOM
+states.
+)""")
+
 DEFINE_OPTION("kernel.serial", uart::all::Driver, serial, {}, R"""(
 TODO(53594)
 )""")

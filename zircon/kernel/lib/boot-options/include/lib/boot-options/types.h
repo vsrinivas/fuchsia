@@ -44,4 +44,7 @@ struct RedactedHex {
   size_t len = 0;
 };
 
+// See kernel.oom.behavior.
+enum class OomBehavior { kReboot, kJobKill };
+
 #endif  // ZIRCON_KERNEL_LIB_BOOT_OPTIONS_INCLUDE_LIB_BOOT_OPTIONS_TYPES_H_

@@ -110,6 +110,7 @@ struct BootOptions {
   OPTION_TYPE(uint8_t);
   OPTION_TYPE(SmallString);
   OPTION_TYPE(RedactedHex);
+  OPTION_TYPE(OomBehavior);
 #if BOOT_OPTIONS_TESTONLY_OPTIONS
   OPTION_TYPE(TestEnum);
   OPTION_TYPE(TestStruct);
