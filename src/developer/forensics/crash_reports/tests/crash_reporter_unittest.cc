@@ -954,6 +954,25 @@ TEST_F(CrashReporterTest, Skip_HourlySnapshotIfPending) {
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
 
+TEST_F(CrashReporterTest, Skip_HourlySnapshotIfNegativeConsent) {
+  SetUpCrashReporter(
+      Config{/*crash_server=*/
+             {
+                 /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
+             },
+             /*daily_per_product_quota=*/kDailyPerProductQuota,
+             /*houry_snapshot=*/true},
+      std::vector<CrashServer::UploadStatus>({}));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
+  SetUpDataProviderServer(
+      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+  SetUpPrivacySettingsServer(std::make_unique<fakes::PrivacySettings>());
+  SetPrivacySettings(kUserOptOutDataSharing);
+
+  RunLoopFor(zx::min(5));
+}
+
 TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));

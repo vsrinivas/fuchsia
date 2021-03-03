@@ -166,12 +166,6 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
     return;
   }
 
-  if (reporting_policy_watcher_->CurrentPolicy() == ReportingPolicy::kDoNotFileAndDelete) {
-    callback(::fit::ok());
-    info_.LogCrashState(cobalt::CrashState::kDeleted);
-    return;
-  }
-
   // Execute the callback informing the client the report has been filed. The rest of the async flow
   // can take quite some time and blocking clients would defeat the purpose of sharing the snapshot.
   callback(::fit::ok());
@@ -180,6 +174,11 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
 };
 
 void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_hourly_snapshot) {
+  if (reporting_policy_watcher_->CurrentPolicy() == ReportingPolicy::kDoNotFileAndDelete) {
+    info_.LogCrashState(cobalt::CrashState::kDeleted);
+    return;
+  }
+
   const std::string program_name = report.program_name();
   const auto report_id = next_report_id_++;
 
