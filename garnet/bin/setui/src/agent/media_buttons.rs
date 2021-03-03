@@ -7,14 +7,14 @@ use crate::agent::base::{
 };
 use crate::base::SettingType;
 use crate::blueprint_definition;
-use crate::handler::base::Request;
+use crate::handler::base::{Payload as HandlerPayload, Request};
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::input::common::ButtonType;
 use crate::input::{monitor_media_buttons, VolumeGain};
 use crate::internal::agent::Payload;
 use crate::internal::event::{media_buttons, Event, Publisher};
-use crate::internal::switchboard;
 use crate::message::base::Audience;
+use crate::service;
 use crate::service_context::ServiceContextHandle;
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use fuchsia_async as fasync;
@@ -32,7 +32,7 @@ fn get_event_setting_types() -> HashSet<SettingType> {
 
 pub struct MediaButtonsAgent {
     publisher: Publisher,
-    switchboard_messenger: switchboard::message::Messenger,
+    messenger: service::message::Messenger,
 
     /// Settings to send media buttons events to.
     recipient_settings: HashSet<SettingType>,
@@ -44,19 +44,9 @@ impl DeviceStorageAccess for MediaButtonsAgent {
 
 impl MediaButtonsAgent {
     pub async fn create(context: AgentContext) {
-        let switchboard_messenger =
-            if let Ok(messenger) = context.create_switchboard_messenger().await {
-                messenger
-            } else {
-                context.get_publisher().send_event(Event::Custom(
-                    "Could not acquire switchboard messenger in MediaButtonsAgent",
-                ));
-                return;
-            };
-
         let mut agent = MediaButtonsAgent {
             publisher: context.get_publisher(),
-            switchboard_messenger,
+            messenger: context.create_messenger().await.expect("media button messenger created"),
             recipient_settings: context
                 .available_components
                 .intersection(&get_event_setting_types())
@@ -96,7 +86,7 @@ impl MediaButtonsAgent {
 
         let event_handler = EventHandler {
             publisher: self.publisher.clone(),
-            switchboard_messenger: self.switchboard_messenger.clone(),
+            messenger: self.messenger.clone(),
             recipient_settings: self.recipient_settings.clone(),
         };
         fasync::Task::spawn(async move {
@@ -112,7 +102,7 @@ impl MediaButtonsAgent {
 
 struct EventHandler {
     publisher: Publisher,
-    switchboard_messenger: switchboard::message::Messenger,
+    messenger: service::message::Messenger,
     recipient_settings: HashSet<SettingType>,
 }
 
@@ -153,13 +143,10 @@ impl EventHandler {
 
         // Send the event to all the interested setting types that are also available.
         for setting_type in self.recipient_settings.iter() {
-            self.switchboard_messenger
+            self.messenger
                 .message(
-                    switchboard::Payload::Action(switchboard::Action::Request(
-                        *setting_type,
-                        setting_request.clone(),
-                    )),
-                    Audience::Address(switchboard::Address::Switchboard),
+                    HandlerPayload::Request(setting_request.clone()).into(),
+                    Audience::Address(service::Address::Handler(*setting_type)),
                 )
                 .send();
         }
@@ -171,12 +158,11 @@ mod tests {
     use super::*;
     use crate::input::common::MediaButtonsEventBuilder;
     use crate::internal::event;
-    use crate::internal::switchboard;
     use crate::message::base::{MessageEvent, MessengerType};
+    use crate::service;
     use crate::service_context::ServiceContext;
     use crate::tests::fakes::service_registry::ServiceRegistry;
-    use std::collections::HashMap;
-    use std::iter::FromIterator;
+    //    use std::collections::HashMap;
 
     // TODO(fxbug.dev/62860): Refactor tests, could use a common setup helper.
 
@@ -185,18 +171,17 @@ mod tests {
     async fn initialization_lifespan_is_unhandled() {
         // Setup messengers needed to construct the agent.
         let event_message_hub = event::message::create_hub();
-        let switchboard_message_hub = switchboard::message::create_hub();
+        let service_message_hub = service::message::create_hub();
         let publisher = Publisher::create(&event_message_hub, MessengerType::Unbound).await;
-
-        let (switchboard_messenger, _) = switchboard_message_hub
-            .create(MessengerType::Addressable(switchboard::Address::Switchboard))
-            .await
-            .expect("Unable to create switchboard messenger");
 
         // Construct the agent.
         let mut agent = MediaButtonsAgent {
             publisher,
-            switchboard_messenger,
+            messenger: service_message_hub
+                .create(MessengerType::Unbound)
+                .await
+                .expect("should create messenger")
+                .0,
             recipient_settings: HashSet::new(),
         };
 
@@ -216,18 +201,17 @@ mod tests {
     async fn when_media_buttons_inaccessible_returns_err() {
         // Setup messengers needed to construct the agent.
         let event_message_hub = event::message::create_hub();
-        let switchboard_message_hub = switchboard::message::create_hub();
+        let service_message_hub = service::message::create_hub();
         let publisher = Publisher::create(&event_message_hub, MessengerType::Unbound).await;
-
-        let (switchboard_messenger, _) = switchboard_message_hub
-            .create(MessengerType::Addressable(switchboard::Address::Switchboard))
-            .await
-            .expect("Unable to create switchboard messenger");
 
         // Construct the agent.
         let mut agent = MediaButtonsAgent {
             publisher,
-            switchboard_messenger,
+            messenger: service_message_hub
+                .create(MessengerType::Unbound)
+                .await
+                .expect("should create messenger")
+                .0,
             recipient_settings: HashSet::new(),
         };
 
@@ -247,7 +231,8 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn event_handler_proxies_event() {
         let event_message_hub = event::message::create_hub();
-        let switchboard_message_hub = switchboard::message::create_hub();
+        let service_message_hub = service::message::create_hub();
+        let target_setting_type = SettingType::Unknown;
 
         // Get the messenger's signature and the receptor for agents. We need
         // a different messenger below because a broadcast would not send a message
@@ -261,26 +246,22 @@ mod tests {
 
         let publisher = Publisher::create(&event_message_hub, MessengerType::Unbound).await;
 
-        // Get the messenger's signature and the receptor for agents. We need
-        // a different messenger below because a broadcast would not send a message
-        // to itself. The signature is used to delete the original messenger for this
-        // receptor.
-        let switchboard_receptor = switchboard_message_hub
-            .create(MessengerType::Addressable(switchboard::Address::Switchboard))
+        // Create receptor representing handler endpoint.
+        let handler_receptor = service_message_hub
+            .create(MessengerType::Addressable(service::Address::Handler(target_setting_type)))
             .await
-            .expect("Unable to create switchboard receptor")
+            .expect("Unable to create receptor")
             .1;
-        let (switchboard_messenger, _) = switchboard_message_hub
-            .create(MessengerType::Unbound)
-            .await
-            .expect("Unable to create switchboard messenger");
 
         // Make all setting types available.
-        let available_components = HashSet::from_iter(get_event_setting_types());
         let event_handler = EventHandler {
             publisher,
-            switchboard_messenger,
-            recipient_settings: available_components,
+            messenger: service_message_hub
+                .create(MessengerType::Unbound)
+                .await
+                .expect("should create messenger")
+                .0,
+            recipient_settings: vec![target_setting_type].into_iter().collect(),
         };
 
         // Send the events.
@@ -294,7 +275,7 @@ mod tests {
 
         // Delete the messengers for the receptors we're selecting below. This
         // will allow the `select!` to eventually hit the `complete` case.
-        switchboard_message_hub.delete(switchboard_receptor.get_signature());
+        service_message_hub.delete(handler_receptor.get_signature());
         event_message_hub.delete(event_receptor.get_signature());
 
         let (
@@ -303,11 +284,11 @@ mod tests {
             mut agent_received_camera_disable,
         ) = (false, false, false);
 
-        let mut received_events: HashMap<SettingType, u32> = HashMap::new();
+        let mut received_events: usize = 0;
 
         let fused_event = event_receptor.fuse();
-        let fused_switchboard = switchboard_receptor.fuse();
-        futures::pin_mut!(fused_event, fused_switchboard);
+        let fused_handler = handler_receptor.fuse();
+        futures::pin_mut!(fused_event, fused_handler);
 
         // Loop over the select so we can handle the messages as they come in. When all messages
         // have been handled, due to the messengers being deleted above, the complete branch should
@@ -339,16 +320,15 @@ mod tests {
                         }
                     }
                 },
-                message = fused_switchboard.select_next_some() => {
+                message = fused_handler.select_next_some() => {
                     if let MessageEvent::Message(
-                        switchboard::Payload::Action(switchboard::Action::Request(
-                            setting_type,
+                        service::Payload::Setting(HandlerPayload::Request(
                             Request::OnButton(_button),
                         )),
                         _,
                     ) = message
                     {
-                        *received_events.entry(setting_type).or_default() += 1;
+                        received_events += 1;
                     }
                 }
                 complete => break,
@@ -359,37 +339,34 @@ mod tests {
         assert!(agent_received_mic_mute);
         assert!(agent_received_camera_disable);
 
-        // Verify that we received events for eacn of the expected settings.
-        for setting_type in get_event_setting_types() {
-            // Each setting should have received two events, one for mic and one for camera.
-            assert_eq!(*received_events.entry(setting_type).or_default(), 2);
-        }
+        // setting should have received two events, one for mic and one for camera.
+        assert_eq!(received_events, 2);
     }
 
     // Tests that events are not sent to unavailable settings.
     #[fuchsia_async::run_until_stalled(test)]
     async fn event_handler_sends_no_events_if_no_settings_available() {
         let event_message_hub = event::message::create_hub();
-        let switchboard_message_hub = switchboard::message::create_hub();
+        let service_message_hub = service::message::create_hub();
         let publisher = Publisher::create(&event_message_hub, MessengerType::Unbound).await;
 
-        // Get the messenger's signature and the receptor for agents. We need
-        // a different messenger below because a broadcast would not send a message
-        // to itself. The signature is used to delete the original messenger for this
-        // receptor.
-        let mut switchboard_receptor = switchboard_message_hub
-            .create(MessengerType::Addressable(switchboard::Address::Switchboard))
+        // Create messenger to represent unavailable setting handler.
+        let mut handler_receptor = service_message_hub
+            .create(MessengerType::Addressable(service::Address::Handler(SettingType::Unknown)))
             .await
-            .expect("Unable to create switchboard receptor")
+            .expect("Unable to create receptor")
             .1;
-        let (switchboard_messenger, _) = switchboard_message_hub
-            .create(MessengerType::Unbound)
-            .await
-            .expect("Unable to create switchboard messenger");
 
         // Declare all settings as unavailable so that no events are sent.
-        let event_handler =
-            EventHandler { publisher, switchboard_messenger, recipient_settings: HashSet::new() };
+        let event_handler = EventHandler {
+            publisher,
+            messenger: service_message_hub
+                .create(MessengerType::Unbound)
+                .await
+                .expect("should create messenger")
+                .0,
+            recipient_settings: HashSet::new(),
+        };
 
         // Send the events
         event_handler.handle_event(
@@ -400,87 +377,21 @@ mod tests {
                 .build(),
         );
 
-        let mut received_events: HashMap<SettingType, u32> = HashMap::new();
+        let mut received_events: usize = 0;
 
         // Delete the messengers for the receptors we're selecting below. This will allow the while
         // loop below to eventually finish.
-        switchboard_message_hub.delete(switchboard_receptor.get_signature());
+        service_message_hub.delete(handler_receptor.get_signature());
 
-        while let Some(message) = switchboard_receptor.next().await {
-            if let MessageEvent::Message(
-                switchboard::Payload::Action(switchboard::Action::Request(setting_type, _)),
-                _,
-            ) = message
+        while let Some(message) = handler_receptor.next().await {
+            if let MessageEvent::Message(service::Payload::Setting(HandlerPayload::Request(_)), _) =
+                message
             {
-                *received_events.entry(setting_type).or_default() += 1;
+                received_events += 1;
             }
         }
 
-        // No events were received via the switchboard.
-        assert!(received_events.is_empty());
-    }
-
-    // Tests that events are only sent to settings that are available and none others.
-    #[fuchsia_async::run_until_stalled(test)]
-    async fn event_handler_sends_events_to_available_settings() {
-        let event_message_hub = event::message::create_hub();
-        let switchboard_message_hub = switchboard::message::create_hub();
-        let publisher = Publisher::create(&event_message_hub, MessengerType::Unbound).await;
-
-        let (_, mut switchboard_receptor) = switchboard_message_hub
-            .create(MessengerType::Addressable(switchboard::Address::Switchboard))
-            .await
-            .expect("Unable to create switchboard receptor");
-
-        // Run through the test once for each individual setting type among the ones that media
-        // buttons sends events to.
-        for setting_type in get_event_setting_types() {
-            // Get the messenger's signature and the receptor for agents. We need
-            // a different messenger below because a broadcast would not send a message
-            // to itself. The signature is used to delete the original messenger for this
-            // receptor.
-            let (event_messenger, _) = switchboard_message_hub
-                .create(MessengerType::Unbound)
-                .await
-                .expect("Unable to create switchboard messenger");
-
-            // Declare only a single setting as available so that only it receives events.
-            let mut available_components = HashSet::new();
-            available_components.insert(setting_type);
-            let event_handler = EventHandler {
-                publisher: publisher.clone(),
-                switchboard_messenger: event_messenger,
-                recipient_settings: available_components,
-            };
-
-            // Send the events
-            event_handler.handle_event(
-                MediaButtonsEventBuilder::new()
-                    .set_volume(1)
-                    .set_mic_mute(true)
-                    .set_camera_disable(true)
-                    .build(),
-            );
-
-            let mut received_events: HashMap<SettingType, u32> = HashMap::new();
-
-            while let Some(message) = switchboard_receptor.next().await {
-                if let MessageEvent::Message(
-                    switchboard::Payload::Action(switchboard::Action::Request(setting_type, _)),
-                    _,
-                ) = message
-                {
-                    *received_events.entry(setting_type).or_default() += 1;
-                }
-                // Only check the first event. If unexpected events were queued up, they'll be
-                // detected in additional iterations.
-                return;
-            }
-
-            // Only one setting type received events.
-            assert_eq!(received_events.len(), 1);
-            // All events were received by our specified setting type: for mic, volume, and camera.
-            assert_eq!(*received_events.entry(setting_type).or_default(), 3);
-        }
+        // No events were received via the setting handler.
+        assert_eq!(received_events, 0);
     }
 }
