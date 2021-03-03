@@ -21,7 +21,9 @@ message Static {
     // See http://go/totw-4 for more info.
     // TODO(olivernewman): Link to a public explanation if and when it becomes
     // available.
-    OPTIMIZE_UNSPECIFIED = 0; DEBUG = 1; RELEASE = 2;
+    OPTIMIZE_UNSPECIFIED = 0;
+    DEBUG = 1;
+    RELEASE = 2;
   }
 
   // The optimization level for the build.
@@ -33,27 +35,23 @@ message Static {
   // The product file to build.
   string product = 3;
 
-  // Whether to skip building the basic images needed to boot and test on
-  // Fuchsia.
-  bool exclude_images = 4;
-
   // Extra args to pass to gn gen.
-  repeated string gn_args = 5;
+  repeated string gn_args = 4;
 
   // Extra targets to pass to Ninja.
-  repeated string ninja_targets = 6;
+  repeated string ninja_targets = 5;
 
   // Fuchsia packages to build and include in the base set.
-  repeated string base_packages = 7;
+  repeated string base_packages = 6;
 
   // Fuchsia packages to build and include in the cache set.
-  repeated string cache_packages = 8;
+  repeated string cache_packages = 7;
 
   // Fuchsia packages to build and include in the universe set.
-  repeated string universe_packages = 9;
+  repeated string universe_packages = 8;
 
-  // Whether to build host tests.
-  bool include_host_tests = 10;
+  // Host-only targets to build.
+  repeated string host_labels = 9;
 
   enum Arch {
     ARCH_UNSPECIFIED = 0;  // See OPTIMIZE_UNSPECIFIED for rationale.
@@ -62,51 +60,55 @@ message Static {
   }
 
   // The target CPU architecture.
-  Arch target_arch = 11;
+  Arch target_arch = 10;
 
   // Values of select_variant GN argument.
-  repeated string variants = 12;
+  repeated string variants = 11;
+
+  // Whether to build images for paving (rather than netbooting). Ignored if
+  // `exclude_images` is true.
+  bool pave = 12;
+
+  // Whether to skip building the basic images needed to boot and test on
+  // Fuchsia.
+  bool exclude_images = 13;
+
+  // Whether to build host tests.
+  bool include_host_tests = 14;
 
   // Whether to include archives in the build.
-  bool include_archives = 13;
+  bool include_archives = 15;
 
   // Whether to skip the ninja build if we're running in CQ and none of the
   // changed files affect the build.
-  bool skip_if_unaffected = 14;
+  bool skip_if_unaffected = 16;
 
   // The path within the checkout of a file containing historical test duration
   // data specific to the current build config.
-  string test_durations_file = 15;
+  string test_durations_file = 17;
 
   // If `test_durations_file` doesn't exist within the checkout, use this file
   // instead. It's not specific to the current build config, but it can be
   // assumed to always exist.
-  string default_test_durations_file = 16;
+  string default_test_durations_file = 18;
 
   // Whether to use goma for running ninja. Will be ignored (and goma will not
   // be used) when building with some experimental toolchain versions.
-  bool use_goma = 17;
+  bool use_goma = 19;
 
   // Whether to generate a listing of the commands run during the build.
-  bool generate_compdb = 18;
-
-  // Host-only targets to build.
-  repeated string host_labels = 21;
+  bool generate_compdb = 20;
 
   // Whether to use a go cache when building.
-  bool enable_go_cache = 22;
+  bool enable_go_cache = 21;
 
   // Whether to use a rust cache when building.
-  bool enable_rust_cache = 23;
+  bool enable_rust_cache = 22;
 
   // Which IDE files to generate.
-  repeated string ide_files = 24;
+  repeated string ide_files = 23;
 
   // Passed to --json-ide-script GN flag; GN will execute each of these scripts
   // after regenerating the project.json IDE file.
-  repeated string json_ide_scripts = 25;
-
-  // Whether to build images for paving (rather than netbooting). Ignored if
-  // `exclude_images` is true.
-  bool pave = 26;
+  repeated string json_ide_scripts = 24;
 }
