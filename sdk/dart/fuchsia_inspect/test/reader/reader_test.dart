@@ -4,7 +4,7 @@
 
 // @dart = 2.9
 
-import 'package:dart-archive-reader/reader.dart';
+import 'package:fuchsia_inspect/reader.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:fidl_fuchsia_diagnostics/fidl_async.dart' as diagnostics;
 import 'package:fidl_fuchsia_sys/fidl_async.dart';
@@ -15,7 +15,7 @@ const serverName = 'dart-inspect-wrapper-test';
 
 const testComponentName = 'inspect_test_component.cmx';
 const testComponentUrl =
-    'fuchsia-pkg://fuchsia.com/diagnostics-reader-tests#meta/$testComponentName';
+    'fuchsia-pkg://fuchsia.com/dart-archive-reader-test#meta/$testComponentName';
 
 void main() async {
   test('no_selector', () async {
