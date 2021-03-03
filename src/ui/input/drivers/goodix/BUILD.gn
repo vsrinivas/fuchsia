@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/driver_package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
@@ -14,13 +16,20 @@ bind_rules("gt92xx_bind") {
   deps = [ "//src/devices/bind/fuchsia.google.platform" ]
 }
 
-driver_module("goodix") {
+astro_firmware_path =
+    "gt9293-astro/GT9293_6105(6E43)_Official_Release_20180917.bin"
+if (internal_access) {
+  astro_firmware_name = "gt9293-astro/GT9293_6105_Official_Release_20180917.bin"
+}
+
+driver_module("goodix-module") {
+  output_name = "goodix"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "gt92xx.cc" ]
+  defines = [ "GT9293_ASTRO_FIRMWARE_PATH=\"$astro_firmware_path\"" ]
   deps = [
     ":gt92xx_bind",
     "//sdk/banjo/fuchsia.hardware.clock",
@@ -44,6 +53,37 @@ driver_module("goodix") {
   ]
 }
 
+if (internal_access) {
+  copy("astro-firmware-copy") {
+    sources = [ "//prebuilt/touch/$astro_firmware_path" ]
+    outputs = [ "$root_out_dir/firmware/$astro_firmware_path" ]
+  }
+}
+
+driver_package("goodix") {
+  deps = [ ":goodix-module" ]
+
+  drivers = [
+    {
+      name = "goodix.so"
+    },
+  ]
+
+  libraries = []
+
+  if (internal_access) {
+    deps += [ ":astro-firmware-copy" ]
+
+    libraries += [
+      {
+        name = "firmware/$astro_firmware_name"
+        source = "firmware/$astro_firmware_path"
+        dest = "firmware/$astro_firmware_path"
+      },
+    ]
+  }
+}
+
 group("test") {
   testonly = true
   deps = [ ":gt92xx-test" ]
@@ -57,6 +97,7 @@ test("gt92xx-test") {
     "gt92xx-test.cc",
     "gt92xx.cc",
   ]
+  defines = [ "GT9293_ASTRO_FIRMWARE_PATH=\"$astro_firmware_path\"" ]
   deps = [
     ":gt92xx_bind",
     "//sdk/banjo/fuchsia.hardware.gpio",
