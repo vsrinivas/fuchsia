@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    create_cobalt_event_stream, new_clock, poll_until, wait_until, FakeClockController,
+    create_cobalt_event_stream, new_clock, poll_until, poll_until_async, FakeClockController,
     NestedTimekeeper, PushSourcePuppet, STD_DEV, VALID_TIME,
 };
 use fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierProxy};
@@ -93,7 +93,7 @@ fn test_restart_inactive_time_source_that_claims_healthy() {
 
         // Wait for Timekeeper to restart the time source. This is visible to the test as a second
         // connection to the fake time source.
-        wait_until(|| push_source_controller.lifetime_served_connections() > 1).await;
+        poll_until(|| push_source_controller.lifetime_served_connections() > 1).await;
 
         // At least an hour should've passed.
         let mono_after =
@@ -142,11 +142,10 @@ fn test_dont_restart_inactive_time_source_with_unhealthy_dependency() {
         // Wait longer than the usual restart duration.
         let mono_before =
             zx::Time::from_nanos(fake_time.get_monotonic().await.expect("Failed to get time"));
-        poll_until(|| async {
+        poll_until_async(|| async {
             let mono_now =
                 zx::Time::from_nanos(fake_time.get_monotonic().await.expect("Failed to get time"));
-            let time_elapsed = mono_now - mono_before > INACTIVE_SOURCE_RESTART_DURATION * 4;
-            time_elapsed.then(|| ())
+            mono_now - mono_before > INACTIVE_SOURCE_RESTART_DURATION * 4
         })
         .await;
 

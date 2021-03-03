@@ -409,13 +409,12 @@ pub fn create_cobalt_event_stream(
 const RETRY_WAIT_DURATION: zx::Duration = zx::Duration::from_millis(10);
 
 /// Poll `poll_fn` until it returns Some() and return the returned value.
-pub async fn poll_until<T, F, Fut>(poll_fn: F) -> T
+pub async fn poll_until_some<T, F>(poll_fn: F) -> T
 where
-    F: Fn() -> Fut,
-    Fut: Future<Output = Option<T>>,
+    F: Fn() -> Option<T>,
 {
     loop {
-        match poll_fn().await {
+        match poll_fn() {
             Some(value) => return value,
             None => fasync::Timer::new(fasync::Time::after(RETRY_WAIT_DURATION)).await,
         }
@@ -423,8 +422,17 @@ where
 }
 
 /// Poll `poll_fn` until it returns true.
-pub async fn wait_until<F: Fn() -> bool>(poll_fn: F) {
-    while !poll_fn() {
-        fasync::Timer::new(fasync::Time::after(RETRY_WAIT_DURATION)).await;
+pub async fn poll_until_async<F, Fut>(poll_fn: F)
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = bool>,
+{
+    while !poll_fn().await {
+        fasync::Timer::new(fasync::Time::after(RETRY_WAIT_DURATION)).await
     }
+}
+
+/// Poll `poll_fn` until it returns true.
+pub async fn poll_until<F: Fn() -> bool>(poll_fn: F) {
+    poll_until_async(|| futures::future::ready(poll_fn())).await
 }
