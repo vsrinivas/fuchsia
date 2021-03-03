@@ -73,7 +73,7 @@ rapidjson::Document JSONParser::ParseFromString(const std::string& data, const s
   data_ = data;
   file_ = file;
   rapidjson::Document document;
-  document.Parse(data_);
+  document.Parse<rapidjson::kParseIterativeFlag>(data_);
   if (document.HasParseError()) {
     ReportErrorInternal(document.GetErrorOffset(), GetParseError_En(document.GetParseError()));
   }
