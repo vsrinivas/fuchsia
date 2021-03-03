@@ -180,12 +180,13 @@ impl TestContext {
 
     fn show_reports_if_failed(
         &self,
+        timeout: Duration,
         f: impl FnOnce() -> Result<(), Error> + Send + 'static,
     ) -> Result<(), Error> {
         let (tx, rx) = std::sync::mpsc::channel();
         let j = std::thread::spawn(move || tx.send(f()));
         let r = (|| -> Result<(), Error> {
-            rx.recv_timeout(Duration::from_secs(120))
+            rx.recv_timeout(timeout)
                 .context("receiving completion notificiation")?
                 .context("running test code")?;
             j.join()
@@ -372,7 +373,7 @@ mod tests {
     pub fn echo_test(args: TestArgs) -> Result<(), Error> {
         let ctx = TestContext::new(args);
         let mut ascendd = Ascendd::new(&ctx).context("creating ascendd")?;
-        ctx.clone().show_reports_if_failed(move || {
+        ctx.clone().show_reports_if_failed(args.timeout, move || {
             ascendd.add_echo_server().context("starting server")?;
             ctx.run_client(ascendd.echo_client()).context("running client")?;
             ctx.run_client(ascendd.onet_client("full-map", &["--exclude-self", "true"]))
@@ -390,7 +391,7 @@ mod tests {
         let ctx = TestContext::new(args);
         let mut ascendd1 = Ascendd::new(&ctx).context("creating ascendd 1")?;
         let mut ascendd2 = Ascendd::new(&ctx).context("creating ascendd 2")?;
-        ctx.clone().show_reports_if_failed(move || {
+        ctx.clone().show_reports_if_failed(args.timeout, move || {
             bridge(&mut ascendd1, &mut ascendd2).context("bridging ascendds")?;
             ascendd1.add_echo_server().context("starting server")?;
             ctx.run_client(ascendd1.echo_client()).context("running client")?;
@@ -431,7 +432,7 @@ mod tests {
     pub fn interface_passing_test(args: TestArgs) -> Result<(), Error> {
         let ctx = TestContext::new(args);
         let mut ascendd = Ascendd::new(&ctx).context("creating ascendd")?;
-        ctx.clone().show_reports_if_failed(move || {
+        ctx.clone().show_reports_if_failed(args.timeout, move || {
             ascendd.add_interface_passing_server().context("starting server")?;
             ctx.run_client(ascendd.interface_passing_client()).context("running client")?;
             let output = ctx
@@ -476,7 +477,7 @@ mod tests {
     pub fn socket_passing_test(args: TestArgs, config: SocketPassingArgs) -> Result<(), Error> {
         let ctx = TestContext::new(args);
         let mut ascendd = Ascendd::new(&ctx).context("creating ascendd")?;
-        ctx.clone().show_reports_if_failed(move || {
+        ctx.clone().show_reports_if_failed(args.timeout, move || {
             ascendd.add_socket_passing_server(&config).context("starting server")?;
             ctx.run_client(ascendd.socket_passing_client(&config)).context("running client")?;
             ctx.run_client(ascendd.onet_client("full-map", &["--exclude-self", "false"]))
@@ -486,13 +487,15 @@ mod tests {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct TestArgs {
     capture_output: bool,
+    timeout: Duration,
 }
 
 impl Default for TestArgs {
     fn default() -> Self {
-        TestArgs { capture_output: true }
+        TestArgs { capture_output: true, timeout: Duration::from_secs(120) }
     }
 }
 
@@ -514,11 +517,18 @@ struct Args {
     #[argh(option)]
     /// enable log capture (default true)
     capture_output: Option<bool>,
+
+    #[argh(option)]
+    /// timeout for one job to run (in seconds, default 120)
+    timeout: Option<u64>,
 }
 
 impl Args {
     fn test_args(&self) -> TestArgs {
-        TestArgs { capture_output: self.capture_output.unwrap_or(true) }
+        TestArgs {
+            capture_output: self.capture_output.unwrap_or(true),
+            timeout: Duration::from_secs(self.timeout.unwrap_or(120)),
+        }
     }
 }
 
