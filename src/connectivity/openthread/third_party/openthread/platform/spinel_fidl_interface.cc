@@ -53,11 +53,11 @@ otError SpinelFidlInterface::SendFrame(uint8_t *aFrame, uint16_t aLength) {
   otError ret_val = OT_ERROR_NONE;
   if (ot_stack_callback_ptr_.has_value()) {
     ot_stack_callback_ptr_.value()->SendOneFrameToRadio(aFrame, aLength);
-    otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM,
+    otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM,
               "spinel-fidl: sending outbound frame to radio, data:");
     printHexArr(aFrame, aLength, "tx to radio");
   } else {
-    otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM,
+    otPlatLog(OT_LOG_LEVEL_CRIT, OT_LOG_REGION_PLATFORM,
               "spinel-fidl: sending frame before init, data:");
     ret_val = OT_ERROR_INVALID_STATE;
   }
@@ -86,10 +86,10 @@ otError SpinelFidlInterface::WaitForFrame(uint64_t aTimeoutUs) {
     std::vector<uint8_t> vec = ot_stack_callback_ptr_.value()->WaitForFrameFromRadio(aTimeoutUs);
     if (vec.size() == 0) {
       // This is okay, since ot-lib request with a relatively short timeout.
-      otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM, "spinel-fidl: failed to receive frame");
+      otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM, "spinel-fidl: failed to receive frame");
       return OT_ERROR_RESPONSE_TIMEOUT;
     }
-    otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM,
+    otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM,
               "spinel-fidl: WaitForFrame() received inbound frame from radio, data:");
     printHexArr(vec.data(), vec.size(), "rx from radio");
     WriteToRxFrameBuffer(vec);
@@ -99,7 +99,6 @@ otError SpinelFidlInterface::WaitForFrame(uint64_t aTimeoutUs) {
     ret_val = OT_ERROR_INVALID_STATE;
     OT_ASSERT(0);
   }
-  otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM, "spinel-fidl: WaitForFrame() exited");
   return ret_val;
 }
 
@@ -108,10 +107,10 @@ void SpinelFidlInterface::Process(const otRadioSpinelContext &aContext) {
   if (ot_stack_callback_ptr_.has_value()) {
     std::vector<uint8_t> vec = ot_stack_callback_ptr_.value()->Process();
     if (vec.size() == 0) {
-      otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM, "spinel-fidl: no new frame");
+      otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM, "spinel-fidl: no new frame");
       return;
     }
-    otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM,
+    otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM,
               "spinel-fidl: Process() received inbound frame from radio, data:");
     printHexArr(vec.data(), vec.size(), "rx from radio (event)");
     WriteToRxFrameBuffer(vec);
@@ -120,7 +119,6 @@ void SpinelFidlInterface::Process(const otRadioSpinelContext &aContext) {
               "spinel-fidl: waiting for frame before init");
     OT_ASSERT(0);
   }
-  otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM, "spinel-fidl: Process() exited");
 }
 
 }  // namespace Fuchsia

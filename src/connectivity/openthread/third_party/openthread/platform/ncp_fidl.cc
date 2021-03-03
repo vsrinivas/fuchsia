@@ -49,12 +49,12 @@ static void printHexArr(const uint8_t *buf, uint16_t buf_len, const char *str) {
 void NcpFidl::HandleFidlReceiveDone(const uint8_t *buf, uint16_t buf_len) {
   printHexArr(buf, buf_len, "rx from client");
   NcpBase::HandleReceive(buf, buf_len);
-  otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM,
+  otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM,
             "ncp-fidl: new msg from client rcvd & handled");
 }
 
 void NcpFidl::HandleFidlSendDone(void) {
-  otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM, "ncp-fidl: HandleFidlSendDone() called");
+  otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM, "ncp-fidl: HandleFidlSendDone() called");
 }
 
 OtStackCallBack *NcpFidl::OtStackCallbackPtr() {
@@ -76,16 +76,14 @@ void NcpFidl::HandleFrameAddedToNcpBuffer(void *aContext, Spinel::Buffer::FrameT
     OT_ASSERT(0);
   }
   static_cast<NcpFidl *>(aContext)->OtStackCallbackPtr()->PostNcpFidlInboundTask();
-  otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM, "ncp-fidl: inbound task posted");
 }
 
 void NcpFidl::HandleFrameAddedToNcpBuffer(void) {
-  otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM, "ncp-fidl: entered inbound task");
   // Send back the frame
   if (ot_stack_callback_ptr_.has_value()) {
     OT_ASSERT(!mTxFrameBuffer.IsEmpty());
     if (auto ret = mTxFrameBuffer.OutFrameBegin() != OT_ERROR_NONE) {
-      otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM,
+      otPlatLog(OT_LOG_LEVEL_CRIT, OT_LOG_REGION_PLATFORM,
                 "ncp-fidl: error calling mTxFrameBuffer.OutFrameBegin()");
       return;
     }
@@ -95,17 +93,17 @@ void NcpFidl::HandleFrameAddedToNcpBuffer(void) {
     uint16_t read_length = mTxFrameBuffer.OutFrameRead(frame_length, buffer);
     OT_ASSERT(frame_length == read_length);
 
-    otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM,
+    otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM,
               "ncp-fidl: prep to send to client: frame_length:%u,read_length:%u", frame_length,
               read_length);
     printHexArr(buffer, read_length, "tx to client");
     ot_stack_callback_ptr_.value()->SendOneFrameToClient(buffer, frame_length);
     otError error = mTxFrameBuffer.OutFrameRemove();
     if (error != OT_ERROR_NONE) {
-      otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM, "ncp-fidl: error removing out fram");
+      otPlatLog(OT_LOG_LEVEL_CRIT, OT_LOG_REGION_PLATFORM, "ncp-fidl: error removing out fram");
     }
   } else {
-    otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM, "ncp-fidl: client not connected");
+    otPlatLog(OT_LOG_LEVEL_WARN, OT_LOG_REGION_PLATFORM, "ncp-fidl: client not connected");
   }
 }
 

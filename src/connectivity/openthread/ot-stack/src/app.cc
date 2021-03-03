@@ -156,12 +156,10 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
 }
 
 void OtStackApp::PushFrameToOtLib() {
-  FX_LOGS(INFO) << "ot-stack: entering push frame to ot-lib task";
   assert(!client_outbound_queue_.empty());
   ot::Ncp::otNcpGetInstance()->HandleFidlReceiveDone(client_outbound_queue_.front().data(),
                                                      client_outbound_queue_.front().size());
   client_outbound_queue_.pop_front();
-  FX_LOGS(INFO) << "ot-stack: leaving push frame to ot-lib task";
 }
 
 void OtStackApp::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uint8_t> data,
@@ -170,7 +168,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uint8_
     FX_LOGS(ERROR) << "ot-radio not connected";
     return;
   }
-  FX_LOGS(INFO) << "ot-stack: SendFrame() received";
+  FX_LOGS(DEBUG) << "ot-stack: SendFrame() received";
   app_.UpdateClientOutboundAllowance();
   // Invoke ot-lib
   app_.client_outbound_queue_.emplace_back(data.cbegin(), data.cend());
@@ -202,7 +200,7 @@ void OtStackApp::OtStackCallBackImpl::SendOneFrameToRadio(uint8_t* buffer, uint3
 }
 
 std::vector<uint8_t> OtStackApp::OtStackCallBackImpl::WaitForFrameFromRadio(uint64_t timeout_us) {
-  FX_LOGS(INFO) << "ot-stack-callbackform: radio-callback: waiting for frame";
+  FX_LOGS(DEBUG) << "ot-stack-callbackform: radio-callback: waiting for frame";
   {
     fbl::AutoLock lock(&app_.radio_q_mtx_);
     if (app_.radio_inbound_queue_.empty()) {
@@ -211,7 +209,6 @@ std::vector<uint8_t> OtStackApp::OtStackCallBackImpl::WaitForFrameFromRadio(uint
   }
   zx_status_t res = sync_completion_wait(&app_.radio_rx_complete_, ZX_USEC(timeout_us));
   sync_completion_reset(&app_.radio_rx_complete_);
-  FX_PLOGS(INFO, res) << "ot-stack-callbackform: radio-callback: waiting end";
   if (res == ZX_ERR_TIMED_OUT) {
     // This method will be called multiple times by ot-lib. It is okay to timeout here.
     return std::vector<uint8_t>{};
@@ -228,13 +225,12 @@ std::vector<uint8_t> OtStackApp::OtStackCallBackImpl::WaitForFrameFromRadio(uint
 }
 
 std::vector<uint8_t> OtStackApp::OtStackCallBackImpl::Process() {
-  FX_LOGS(INFO) << "ot-stack-callbackform: radio-callback: checking for frame";
   std::vector<uint8_t> vec;
   fbl::AutoLock lock(&app_.radio_q_mtx_);
   if (!app_.radio_inbound_queue_.empty()) {
     vec = std::move(app_.radio_inbound_queue_.front());
     app_.radio_inbound_queue_.pop_front();
-    FX_LOGS(INFO) << "ot-stack-callbackform: radio-callback: check for frame: new frame";
+    FX_LOGS(DEBUG) << "ot-stack-callbackform: radio-callback: check for frame: new frame";
   }
   return vec;
 }
@@ -492,7 +488,6 @@ void OtStackApp::EventLoopHandleInboundFrame(::fidl::VectorView<uint8_t> data) {
   async::PostTask(loop_.dispatcher(), [this]() {
     platformRadioProcess(static_cast<otInstance*>(this->ot_instance_ptr_.value()));
   });
-  FX_LOGS(INFO) << "signaled ot-stack-callbackform";
 }
 
 void OtStackApp::OnReadyForSendFrames(fidl_spinel::Device::OnReadyForSendFramesResponse* event) {
