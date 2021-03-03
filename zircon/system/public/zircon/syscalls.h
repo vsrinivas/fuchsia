@@ -5,6 +5,7 @@
 #ifndef SYSROOT_ZIRCON_SYSCALLS_H_
 #define SYSROOT_ZIRCON_SYSCALLS_H_
 
+#include <zircon/compiler.h>
 #include <zircon/string_view.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/pci.h>
@@ -15,8 +16,8 @@
 __BEGIN_CDECLS
 
 #define _ZX_SYSCALL_DECL(name, type, attrs, nargs, arglist, prototype) \
-  extern attrs type zx_##name prototype;                               \
-  extern attrs type _zx_##name prototype;
+  extern attrs __LEAF_FN type zx_##name prototype;                     \
+  extern attrs __LEAF_FN type _zx_##name prototype;
 
 #ifdef __clang__
 #define _ZX_SYSCALL_ANNO(attr) __attribute__((attr))
