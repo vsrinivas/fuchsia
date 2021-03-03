@@ -189,6 +189,7 @@ function main {
         exit 1
       fi
       gn_args+=" import(\"//${board}\") import(\"//${product}\")"
+      gn_args+=" build_info_board=\"${board_name}\" build_info_product=\"${product_name}\""
       ;;
     *)
       fx-error Unable to parse PRODUCT.BOARD goal \"$1\"
@@ -427,8 +428,11 @@ function main {
   # Add goma or ccache settings as appropriate.
   if [[ "${use_goma}" -eq 1 ]]; then
     gn_args+=" use_goma=true"
-  elif [[ "${ccache}" -eq 1 ]]; then
-    gn_args+=" use_ccache=true"
+  else
+    gn_args+=" use_goma=false"
+    if [[ "${ccache}" -eq 1 ]]; then
+      gn_args+=" use_ccache=true"
+    fi
   fi
 
   gn_args+="
