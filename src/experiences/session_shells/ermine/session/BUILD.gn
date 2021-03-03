@@ -72,6 +72,11 @@ fuchsia_package_with_single_component("workstation_session") {
 }
 
 fuchsia_unittest_package("workstation_session_tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   manifest = "meta/workstation_session_bin_test.cml"
   deps = [ ":bin_test" ]
 }
