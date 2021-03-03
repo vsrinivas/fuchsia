@@ -12,6 +12,8 @@ toc:
     path: /docs/development/components/v1/verbose_logging.md
 - title: "Components v2"
   section:
+  - title: "Migrating system components"
+    path: /docs/development/components/v2/migration.md
   - title: "Troubleshooting components"
     path: /docs/development/components/v2/troubleshooting.md
 - title: "Build components"
