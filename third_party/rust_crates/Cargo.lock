@@ -402,6 +402,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "chrono-english"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4233ee19352739cfdcb5d7c2085005b166f6170ef2845ed9eef27a8fa5f95206"
+dependencies = [
+ "chrono",
+ "scanlex",
+ "time",
+]
+
+[[package]]
 name = "chunked_transfer"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -913,6 +924,7 @@ dependencies = [
  "bytes",
  "cargo_metadata",
  "chrono",
+ "chrono-english",
  "clap",
  "concurrent-queue",
  "crc",
@@ -2917,6 +2929,12 @@ checksum = "8f20c4be53a8a1ff4c1f1b2bd14570d2f634628709752f0702ecdd2b3f9a5267"
 dependencies = [
  "winapi-util",
 ]
+
+[[package]]
+name = "scanlex"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "088c5d71572124929ea7549a8ce98e1a6fd33d0a38367b09027b382e67c033db"
 
 [[package]]
 name = "schannel"

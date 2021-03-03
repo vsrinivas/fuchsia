@@ -68,6 +68,10 @@ group("chrono") {
   deps = [ ":chrono-v0_4_11" ]
 }
 
+group("chrono-english") {
+  deps = [ ":chrono-english-v0_1_4" ]
+}
+
 group("clap") {
   deps = [ ":clap-v2_33_0" ]
 }
@@ -1880,6 +1884,30 @@ rust_library("chrono-v0_4_11") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"time\"",
+  ]
+}
+
+rust_library("chrono-english-v0_1_4") {
+  crate_name = "chrono_english"
+  crate_root = "//third_party/rust_crates/vendor/chrono-english/src/lib.rs"
+  output_name = "chrono_english-d51fdb87bc2739a0"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":scanlex-v0_1_4" ]
+  deps += [ ":time-v0_1_42" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=d51fdb87bc2739a0",
+    "-Cextra-filename=-d51fdb87bc2739a0",
   ]
 }
 
@@ -7768,6 +7796,27 @@ rust_library("same-file-v1_0_4") {
     "--edition=2015",
     "-Cmetadata=460d9eb4eb179eea",
     "-Cextra-filename=-460d9eb4eb179eea",
+  ]
+}
+
+rust_library("scanlex-v0_1_4") {
+  crate_name = "scanlex"
+  crate_root = "//third_party/rust_crates/vendor/scanlex/src/lib.rs"
+  output_name = "scanlex-d586196f33c095ac"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=d586196f33c095ac",
+    "-Cextra-filename=-d586196f33c095ac",
   ]
 }
 
