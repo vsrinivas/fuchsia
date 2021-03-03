@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1433
+From //build/config/BUILDCONFIG.gn:1434
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/732d9dc2a4330b792d816ec394669a9e52671be4/src/intel/vulkan/BUILD.gn#26)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/9440a98c523ea74a54be077f7f84c97a4f5ad37e/src/intel/vulkan/BUILD.gn#26)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/732d9dc2a4330b792d816ec394669a9e52671be4/src/intel/vulkan/BUILD.gn#28)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/9440a98c523ea74a54be077f7f84c97a4f5ad37e/src/intel/vulkan/BUILD.gn#28)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -1086,7 +1086,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1212
+From //build/config/BUILDCONFIG.gn:1213
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1776,7 +1776,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1087
+From //build/config/BUILDCONFIG.gn:1088
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3041,7 +3041,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1423
+From //build/config/BUILDCONFIG.gn:1424
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3050,7 +3050,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1428
+From //build/config/BUILDCONFIG.gn:1429
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3082,7 +3082,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1258
+From //build/config/BUILDCONFIG.gn:1259
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3362,7 +3362,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1242
+From //build/config/BUILDCONFIG.gn:1243
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
