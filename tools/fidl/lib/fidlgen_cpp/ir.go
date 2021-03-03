@@ -189,6 +189,7 @@ type Const struct {
 	Decorator string
 	Type      Type
 	Value     ConstantValue
+	WireAlias DeclVariant
 
 	// Kind should be default initialized.
 	Kind constKind
@@ -1081,12 +1082,12 @@ func (c *compiler) compileDeclName(eci fidl.EncodedCompoundIdentifier) DeclName 
 	}
 	declType := declInfo.Type
 	switch declType {
-	case fidl.BitsDeclType, fidl.EnumDeclType, fidl.StructDeclType, fidl.TableDeclType, fidl.UnionDeclType:
+	case fidl.ConstDeclType, fidl.BitsDeclType, fidl.EnumDeclType, fidl.StructDeclType, fidl.TableDeclType, fidl.UnionDeclType:
 		return DeclName{
 			Natural: NewDeclVariant(name, c.naturalNamespace(ci.Library)),
 			Wire:    NewDeclVariant(name, c.wireNamespace(ci.Library)),
 		}
-	case fidl.ConstDeclType, fidl.ProtocolDeclType, fidl.ServiceDeclType:
+	case fidl.ProtocolDeclType, fidl.ServiceDeclType:
 		return CommonDeclName(NewDeclVariant(name, c.commonNamespace(ci.Library)))
 	}
 	panic("Unknown decl type: " + string(declType))
@@ -1346,28 +1347,27 @@ func (c *compiler) compileBits(val fidl.Bits) Bits {
 }
 
 func (c *compiler) compileConst(val fidl.Const) Const {
+	n := c.compileDeclName(val.Name)
+	v := Const{Attributes: val.Attributes,
+		DeclName:  n,
+		WireAlias: n.Wire.DropLastNamespaceComponent(),
+	}
 	if val.Type.Kind == fidl.StringType {
-		return Const{
-			Attributes: val.Attributes,
-			DeclName:   c.compileDeclName(val.Name),
-			Extern:     true,
-			Decorator:  "const",
-			Type: Type{
-				TypeName: PrimitiveTypeName("char*"),
-			},
-			Value: c.compileConstant(val.Value, nil, val.Type),
+		v.Extern = true
+		v.Decorator = "const"
+		v.Type = Type{
+			TypeName: PrimitiveTypeName("char*"),
 		}
+		v.Value = c.compileConstant(val.Value, nil, val.Type)
 	} else {
 		t := c.compileType(val.Type)
-		return Const{
-			Attributes: val.Attributes,
-			DeclName:   c.compileDeclName(val.Name),
-			Extern:     false,
-			Decorator:  "constexpr",
-			Type:       t,
-			Value:      c.compileConstant(val.Value, &t, val.Type),
-		}
+		v.Extern = false
+		v.Decorator = "constexpr"
+		v.Type = t
+		v.Value = c.compileConstant(val.Value, &t, val.Type)
 	}
+
+	return v
 }
 
 func (c *compiler) compileEnum(val fidl.Enum) Enum {

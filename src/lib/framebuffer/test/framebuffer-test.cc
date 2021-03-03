@@ -228,14 +228,14 @@ class StubDisplayController : public fhd::Controller::RawChannelInterface {
       uint64_t collection_id, fhd::wire::ImageConfig config,
       SetBufferCollectionConstraintsCompleter::Sync& _completer) override {
     sysmem::wire::BufferCollectionConstraints constraints;
-    constraints.usage.cpu = sysmem::cpuUsageWriteOften | sysmem::cpuUsageRead;
+    constraints.usage.cpu = sysmem::wire::cpuUsageWriteOften | sysmem::wire::cpuUsageRead;
     constraints.min_buffer_count = 1;
     constraints.image_format_constraints_count = 1;
     auto& image_constraints = constraints.image_format_constraints[0];
     image_constraints = image_format::GetDefaultImageFormatConstraints();
     image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
     image_constraints.pixel_format.has_format_modifier = true;
-    image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
+    image_constraints.pixel_format.format_modifier.value = sysmem::wire::FORMAT_MODIFIER_LINEAR;
     image_constraints.color_spaces_count = 1;
     image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
     image_constraints.max_coded_width = 0xffffffff;

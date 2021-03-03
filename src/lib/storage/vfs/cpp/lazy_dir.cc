@@ -47,7 +47,7 @@ zx_status_t LazyDir::Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redi
 zx_status_t LazyDir::GetAttributes(VnodeAttributes* attr) {
   *attr = VnodeAttributes();
   attr->mode = V_TYPE_DIR | V_IRUSR;
-  attr->inode = fio::INO_UNKNOWN;
+  attr->inode = fio::wire::INO_UNKNOWN;
   attr->link_count = 1;
   return ZX_OK;
 }
@@ -71,7 +71,7 @@ zx_status_t LazyDir::Readdir(VdirCookie* cookie, void* dirents, size_t len, size
   fs::DirentFiller df(dirents, len);
   zx_status_t r = 0;
 
-  const uint64_t ino = fio::INO_UNKNOWN;
+  const uint64_t ino = fio::wire::INO_UNKNOWN;
   if (DoDot(cookie)) {
     if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR), ino)) != ZX_OK) {
       *out_actual = df.BytesFilled();

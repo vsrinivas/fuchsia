@@ -44,7 +44,7 @@ std::pair<int, int> init_tty(void) {
     // faithfully to the client for forwarding to the remote shell
     // (instead of closing the client side).
     auto result = fpty::Device::Call::ClrSetFeature(
-        zx::unowned_channel(fdio_unsafe_borrow_channel(io)), 0, fpty::FEATURE_RAW);
+        zx::unowned_channel(fdio_unsafe_borrow_channel(io)), 0, fpty::wire::FEATURE_RAW);
 
     if (result.status() != ZX_OK || result->status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to set FEATURE_RAW, some features may not work.";
@@ -60,7 +60,7 @@ void reset_tty(void) {
   if (isatty(STDIN_FILENO)) {
     fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
     auto result = fpty::Device::Call::ClrSetFeature(
-        zx::unowned_channel(fdio_unsafe_borrow_channel(io)), fpty::FEATURE_RAW, 0);
+        zx::unowned_channel(fdio_unsafe_borrow_channel(io)), fpty::wire::FEATURE_RAW, 0);
 
     if (result.status() != ZX_OK || result->status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to reset FEATURE_RAW";

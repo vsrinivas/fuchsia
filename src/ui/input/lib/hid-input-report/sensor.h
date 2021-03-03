@@ -24,7 +24,7 @@ class Sensor : public Device {
   DeviceType GetDeviceType() const override { return DeviceType::kSensor; }
 
  private:
-  hid::Attributes values_[fuchsia_input_report::SENSOR_MAX_VALUES] = {};
+  hid::Attributes values_[fuchsia_input_report::wire::SENSOR_MAX_VALUES] = {};
   size_t num_values_ = 0;
 
   size_t report_size_ = 0;

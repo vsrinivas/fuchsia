@@ -25,7 +25,7 @@ QueryService::QueryService(async_dispatcher_t* dispatcher, Blobfs* blobfs, Runne
       runner_(runner) {}
 
 void QueryService::GetInfo(FilesystemInfoQuery query, GetInfoCompleter::Sync& completer) {
-  static_assert(fbl::constexpr_strlen(kFsName) < fuchsia_fs::MAX_FS_NAME_LENGTH,
+  static_assert(fbl::constexpr_strlen(kFsName) < fuchsia_fs::wire::MAX_FS_NAME_LENGTH,
                 "Blobfs name too long");
 
   fuchsia_fs::wire::FilesystemInfo::UnownedBuilder builder;
@@ -89,11 +89,11 @@ void QueryService::GetInfo(FilesystemInfoQuery query, GetInfoCompleter::Sync& co
   }
 
   fidl::StringView device_path;
-  char name_buf[llcpp::fuchsia::io2::MAX_PATH_LENGTH];
+  char name_buf[llcpp::fuchsia::io2::wire::MAX_PATH_LENGTH];
   size_t name_len;
   if (query & FilesystemInfoQuery::DEVICE_PATH) {
-    zx_status_t status =
-        blobfs_->Device()->GetDevicePath(llcpp::fuchsia::io2::MAX_PATH_LENGTH, name_buf, &name_len);
+    zx_status_t status = blobfs_->Device()->GetDevicePath(
+        llcpp::fuchsia::io2::wire::MAX_PATH_LENGTH, name_buf, &name_len);
     if (status != ZX_OK) {
       completer.ReplyError(status);
       return;

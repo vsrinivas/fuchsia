@@ -199,7 +199,7 @@ TEST(PtyTests, pty_test) {
   auto result2 = fpty::Device::Call::ReadEvents(pc_io.channel());
   ASSERT_EQ(result2.status(), ZX_OK, "");
   ASSERT_EQ(result2->status, ZX_OK, "");
-  ASSERT_EQ(result2->events, fpty::EVENT_INTERRUPT, "");
+  ASSERT_EQ(result2->events, fpty::wire::EVENT_INTERRUPT, "");
 
   // should vanish once we read it
   auto result3 = fpty::Device::Call::ReadEvents(pc_io.channel());
@@ -216,7 +216,7 @@ TEST(PtyTests, pty_test) {
   auto result4 = fpty::Device::Call::ReadEvents(pc_io.channel());
   ASSERT_EQ(result4.status(), ZX_OK, "");
   ASSERT_EQ(result4->status, ZX_OK, "");
-  ASSERT_EQ(result4->events, fpty::EVENT_INTERRUPT, "");
+  ASSERT_EQ(result4->events, fpty::wire::EVENT_INTERRUPT, "");
 
   auto ws_result1 = fpty::Device::Call::GetWindowSize(pc_io.channel());
   ASSERT_EQ(ws_result1.status(), ZX_OK, "");
@@ -237,10 +237,10 @@ TEST(PtyTests, pty_test) {
   ASSERT_EQ(ws_result2->size.height, 25u, "");
 
   // verify that we don't get events for special chars in raw mode
-  auto result6 = fpty::Device::Call::ClrSetFeature(pc_io.channel(), 0, fpty::FEATURE_RAW);
+  auto result6 = fpty::Device::Call::ClrSetFeature(pc_io.channel(), 0, fpty::wire::FEATURE_RAW);
   ASSERT_EQ(result6.status(), ZX_OK, "");
   ASSERT_EQ(result6->status, ZX_OK, "");
-  ASSERT_EQ(result6->features & fpty::FEATURE_RAW, fpty::FEATURE_RAW, "");
+  ASSERT_EQ(result6->features & fpty::wire::FEATURE_RAW, fpty::wire::FEATURE_RAW, "");
   ASSERT_EQ(write(ps.get(), "\x03", 1), 1, "");
   ASSERT_EQ(read(pc.get(), tmp, 1), 1, "");
   ASSERT_EQ(tmp[0], '\x03', "");
@@ -294,7 +294,7 @@ TEST(PtyTests, pty_test) {
   auto result11 = fpty::Device::Call::ReadEvents(pc_io.channel());
   ASSERT_EQ(result11.status(), ZX_OK, "");
   ASSERT_EQ(result11->status, ZX_OK, "");
-  ASSERT_EQ(result11->events, fpty::EVENT_HANGUP, "");
+  ASSERT_EQ(result11->events, fpty::wire::EVENT_HANGUP, "");
 
   // verify that server observes departure of last client
   pc_io.reset();

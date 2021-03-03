@@ -98,7 +98,8 @@ zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
     }
     const auto& response = result.value();
     const uint8_t type[] = GUID_SYS_CONFIG_VALUE;
-    if (memcmp(response.partition_info.partition_guid.data(), type, skipblock::GUID_LEN) != 0) {
+    if (memcmp(response.partition_info.partition_guid.data(), type, skipblock::wire::GUID_LEN) !=
+        0) {
       return ZX_OK;
     }
 

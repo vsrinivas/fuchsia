@@ -91,7 +91,7 @@ zx_status_t File::GetAttributes(fs::VnodeAttributes* attributes) {
   attributes->mode = (V_TYPE_FILE | V_IRUSR);
   attributes->content_size = directory_entry_->GetDataSize();
   // There is no concept of inode number in factoryfs
-  attributes->inode = ::llcpp::fuchsia::io::INO_UNKNOWN;
+  attributes->inode = ::llcpp::fuchsia::io::wire::INO_UNKNOWN;
   attributes->storage_size =
       fbl::round_up<uint32_t>(directory_entry_->GetDataSize(), kFactoryfsBlockSize);
   attributes->link_count = 1;

@@ -132,7 +132,7 @@ class InputReportReader : public fuchsia_input_report::InputReportsReader::Inter
   fbl::Mutex report_lock_;
   std::optional<ReadInputReportsCompleter::Async> completer_ TA_GUARDED(&report_lock_);
   fidl::FidlAllocator<kInputReportBufferSize> report_allocator_ __TA_GUARDED(report_lock_);
-  fbl::RingBuffer<Report, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT> reports_data_
+  fbl::RingBuffer<Report, fuchsia_input_report::wire::MAX_DEVICE_REPORT_COUNT> reports_data_
       __TA_GUARDED(report_lock_);
 
   const size_t reader_id_;
@@ -192,7 +192,8 @@ void InputReportReader<Report>::ReadInputReports(ReadInputReportsCompleter::Sync
 
 template <class Report>
 void InputReportReader<Report>::ReplyWithReports(ReadInputReportsCompleterBase& completer) {
-  std::array<fuchsia_input_report::wire::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
+  std::array<fuchsia_input_report::wire::InputReport,
+             fuchsia_input_report::wire::MAX_DEVICE_REPORT_COUNT>
       reports;
 
   TRACE_DURATION("input", "InputReportInstance GetReports", "instance_id", reader_id_);

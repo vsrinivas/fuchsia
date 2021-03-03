@@ -209,8 +209,8 @@ const Driver* Coordinator::LibnameToDriver(const fbl::StringPiece& libname) cons
 
 static zx_status_t load_vmo(const fbl::String& libname, zx::vmo* out_vmo) {
   int fd = -1;
-  zx_status_t r =
-      fdio_open_fd(libname.data(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd);
+  zx_status_t r = fdio_open_fd(
+      libname.data(), fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE, &fd);
   if (r != ZX_OK) {
     LOGF(ERROR, "Cannot open driver '%s'", libname.data());
     return ZX_ERR_IO;
@@ -358,7 +358,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
                                             size_t max) const {
   // TODO: Remove VLA.
   char tmp[max];
-  char name_buf[fio::MAX_FILENAME + strlen("dev/")];
+  char name_buf[fio::wire::MAX_FILENAME + strlen("dev/")];
   char* path = tmp + max - 1;
   *path = 0;
   size_t total = 1;
@@ -374,7 +374,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
       name = "dev";
     } else if (itr->composite() != nullptr) {
       strcpy(name_buf, "dev/");
-      strncpy(name_buf + strlen("dev/"), itr->name().data(), fio::MAX_FILENAME);
+      strncpy(name_buf + strlen("dev/"), itr->name().data(), fio::wire::MAX_FILENAME);
       name_buf[sizeof(name_buf) - 1] = 0;
       name = name_buf;
     } else {
@@ -1599,17 +1599,17 @@ uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
     case power_fidl::statecontrol::wire::SystemPowerState::FULLY_ON:
       return 0;
     case power_fidl::statecontrol::wire::SystemPowerState::REBOOT:
-      return power_fidl::statecontrol::SUSPEND_FLAG_REBOOT;
+      return power_fidl::statecontrol::wire::SUSPEND_FLAG_REBOOT;
     case power_fidl::statecontrol::wire::SystemPowerState::REBOOT_BOOTLOADER:
-      return power_fidl::statecontrol::SUSPEND_FLAG_REBOOT_BOOTLOADER;
+      return power_fidl::statecontrol::wire::SUSPEND_FLAG_REBOOT_BOOTLOADER;
     case power_fidl::statecontrol::wire::SystemPowerState::REBOOT_RECOVERY:
-      return power_fidl::statecontrol::SUSPEND_FLAG_REBOOT_RECOVERY;
+      return power_fidl::statecontrol::wire::SUSPEND_FLAG_REBOOT_RECOVERY;
     case power_fidl::statecontrol::wire::SystemPowerState::POWEROFF:
-      return power_fidl::statecontrol::SUSPEND_FLAG_POWEROFF;
+      return power_fidl::statecontrol::wire::SUSPEND_FLAG_POWEROFF;
     case power_fidl::statecontrol::wire::SystemPowerState::MEXEC:
-      return power_fidl::statecontrol::SUSPEND_FLAG_MEXEC;
+      return power_fidl::statecontrol::wire::SUSPEND_FLAG_MEXEC;
     case power_fidl::statecontrol::wire::SystemPowerState::SUSPEND_RAM:
-      return power_fidl::statecontrol::SUSPEND_FLAG_SUSPEND_RAM;
+      return power_fidl::statecontrol::wire::SUSPEND_FLAG_SUSPEND_RAM;
     default:
       return 0;
   }

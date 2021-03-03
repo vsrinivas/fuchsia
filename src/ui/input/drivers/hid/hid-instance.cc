@@ -89,7 +89,7 @@ void HidInstance::ReadReport(ReadReportCompleter::Sync& completer) {
     return;
   }
 
-  std::array<uint8_t, ::llcpp::fuchsia::hardware::input::MAX_REPORT_DATA> buf;
+  std::array<uint8_t, ::llcpp::fuchsia::hardware::input::wire::MAX_REPORT_DATA> buf;
   zx_time_t time = 0;
   size_t report_size = 0;
   zx_status_t status;
@@ -111,7 +111,7 @@ void HidInstance::ReadReports(ReadReportsCompleter::Sync& completer) {
     return;
   }
 
-  std::array<uint8_t, ::llcpp::fuchsia::hardware::input::MAX_REPORT_DATA> buf;
+  std::array<uint8_t, ::llcpp::fuchsia::hardware::input::wire::MAX_REPORT_DATA> buf;
   size_t buf_index = 0;
   zx_status_t status = ZX_OK;
   zx_time_t time;

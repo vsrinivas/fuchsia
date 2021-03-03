@@ -36,7 +36,7 @@ void PtyClientDevice::ClrSetFeature(uint32_t clr, uint32_t set,
                                     ClrSetFeatureCompleter::Sync& completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::ClrSetFeatureResponse> buf;
 
-  constexpr uint32_t kAllowedFeatureBits = ::llcpp::fuchsia::hardware::pty::FEATURE_RAW;
+  constexpr uint32_t kAllowedFeatureBits = ::llcpp::fuchsia::hardware::pty::wire::FEATURE_RAW;
 
   zx_status_t status = ZX_OK;
   if ((clr & ~kAllowedFeatureBits) || (set & ~kAllowedFeatureBits)) {

@@ -21,8 +21,8 @@ zx_status_t PtyServer::Create(fbl::RefPtr<PtyServer>* out, fs::Vfs* vfs) {
   // Create the FIFO in the "hung-up" state.  Note that this is considered
   // "readable" so that clients will try to read and see an EOF condition via a
   // 0-byte response with ZX_OK.
-  local.signal_peer(0, ::llcpp::fuchsia::device::DEVICE_SIGNAL_READABLE |
-                           ::llcpp::fuchsia::device::DEVICE_SIGNAL_HANGUP);
+  local.signal_peer(0, ::llcpp::fuchsia::device::wire::DEVICE_SIGNAL_READABLE |
+                           ::llcpp::fuchsia::device::wire::DEVICE_SIGNAL_HANGUP);
   *out = fbl::MakeRefCounted<PtyServer>(std::move(local), std::move(remote), vfs);
   return ZX_OK;
 }
@@ -42,7 +42,7 @@ zx_status_t PtyServer::Read(void* data, size_t count, size_t* out_actual) {
       eof = true;
     } else if (length > 0) {
       // We only need to clear the READABLE signal if we read anything.
-      local_.signal_peer(::llcpp::fuchsia::device::DEVICE_SIGNAL_READABLE, 0);
+      local_.signal_peer(::llcpp::fuchsia::device::wire::DEVICE_SIGNAL_READABLE, 0);
     }
   }
   if (was_full && length > 0) {
@@ -111,8 +111,8 @@ zx_status_t PtyServer::CreateClient(uint32_t id, zx::channel client_request) {
     // if there were no clients, make sure we take server
     // out of HANGUP and READABLE, where it landed if all
     // its clients had closed
-    local_.signal_peer(::llcpp::fuchsia::device::DEVICE_SIGNAL_READABLE |
-                           ::llcpp::fuchsia::device::DEVICE_SIGNAL_HANGUP,
+    local_.signal_peer(::llcpp::fuchsia::device::wire::DEVICE_SIGNAL_READABLE |
+                           ::llcpp::fuchsia::device::wire::DEVICE_SIGNAL_HANGUP,
                        0);
   }
 
@@ -141,9 +141,9 @@ void PtyServer::RemoveClient(PtyClient* client) {
 
   // signal server, if the last client has gone away
   if (clients_.is_empty()) {
-    local_.signal_peer(::llcpp::fuchsia::device::DEVICE_SIGNAL_WRITABLE,
-                       ::llcpp::fuchsia::device::DEVICE_SIGNAL_READABLE |
-                           ::llcpp::fuchsia::device::DEVICE_SIGNAL_HANGUP);
+    local_.signal_peer(::llcpp::fuchsia::device::wire::DEVICE_SIGNAL_WRITABLE,
+                       ::llcpp::fuchsia::device::wire::DEVICE_SIGNAL_READABLE |
+                           ::llcpp::fuchsia::device::wire::DEVICE_SIGNAL_HANGUP);
   }
 }
 
@@ -156,7 +156,7 @@ zx_status_t PtyServer::Recv(const void* data, size_t len, size_t* actual, bool* 
   bool was_empty = rx_fifo_.is_empty();
   *actual = rx_fifo_.Write(data, len, false);
   if (was_empty && *actual) {
-    local_.signal_peer(0, ::llcpp::fuchsia::device::DEVICE_SIGNAL_READABLE);
+    local_.signal_peer(0, ::llcpp::fuchsia::device::wire::DEVICE_SIGNAL_READABLE);
   }
 
   *is_full = rx_fifo_.is_full();
@@ -198,7 +198,7 @@ zx_status_t PtyServer::Send(const void* data, size_t len, size_t* actual) {
       // The ASCII code that Ctrl-C generates
       constexpr uint8_t kCtrlC = 0x3;
       if (*ch++ == kCtrlC) {
-        evt = ::llcpp::fuchsia::hardware::pty::EVENT_INTERRUPT;
+        evt = ::llcpp::fuchsia::hardware::pty::wire::EVENT_INTERRUPT;
         break;
       }
       n++;
@@ -218,7 +218,7 @@ zx_status_t PtyServer::Send(const void* data, size_t len, size_t* actual) {
     active_->AssertReadableSignal();
   }
   if (client_fifo->is_full()) {
-    local_.signal_peer(::llcpp::fuchsia::device::DEVICE_SIGNAL_WRITABLE, 0);
+    local_.signal_peer(::llcpp::fuchsia::device::wire::DEVICE_SIGNAL_WRITABLE, 0);
   }
   return ZX_OK;
 }
@@ -244,12 +244,12 @@ void PtyServer::MakeActive(fbl::RefPtr<PtyClient> client) {
   active_ = std::move(client);
   active_->AssertWritableSignal();
 
-  zx_signals_t to_clear = ::llcpp::fuchsia::device::DEVICE_SIGNAL_HANGUP;
+  zx_signals_t to_clear = ::llcpp::fuchsia::device::wire::DEVICE_SIGNAL_HANGUP;
   zx_signals_t to_set = 0;
   if (active_->rx_fifo()->is_full()) {
-    to_clear |= ::llcpp::fuchsia::device::DEVICE_SIGNAL_WRITABLE;
+    to_clear |= ::llcpp::fuchsia::device::wire::DEVICE_SIGNAL_WRITABLE;
   } else {
-    to_set |= ::llcpp::fuchsia::device::DEVICE_SIGNAL_WRITABLE;
+    to_set |= ::llcpp::fuchsia::device::wire::DEVICE_SIGNAL_WRITABLE;
   }
 
   local_.signal_peer(to_clear, to_set);
@@ -267,7 +267,7 @@ uint32_t PtyServer::DrainEvents() {
   uint32_t events = events_;
   events_ = 0;
   if (active_ == nullptr) {
-    events |= ::llcpp::fuchsia::hardware::pty::EVENT_HANGUP;
+    events |= ::llcpp::fuchsia::hardware::pty::wire::EVENT_HANGUP;
   }
   control_->DeAssertEventSignal();
   return events;

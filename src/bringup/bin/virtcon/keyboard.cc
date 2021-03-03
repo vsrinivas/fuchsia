@@ -283,7 +283,7 @@ zx_status_t Keyboard::Setup(
 }
 
 zx_status_t KeyboardWatcher::OpenFile(uint8_t evt, char* name) {
-  if ((evt != fio::WATCH_EVENT_EXISTING) && (evt != fio::WATCH_EVENT_ADDED)) {
+  if ((evt != fio::wire::WATCH_EVENT_EXISTING) && (evt != fio::wire::WATCH_EVENT_ADDED)) {
     return ZX_OK;
   }
 
@@ -328,7 +328,7 @@ void KeyboardWatcher::DirCallback(async_dispatcher_t* dispatcher, async::WaitBas
   // Buffer contains events { Opcode, Len, Name[Len] }
   // See zircon/device/vfs.h for more detail
   // extra byte is for temporary NUL
-  std::array<uint8_t, fio::MAX_BUF + 1> buffer;
+  std::array<uint8_t, fio::wire::MAX_BUF + 1> buffer;
   uint32_t len;
   if (zx_channel_read(wait->object(), 0, buffer.data(), nullptr, buffer.size() - 1, 0, &len,
                       nullptr) < 0) {
@@ -375,7 +375,7 @@ zx_status_t KeyboardWatcher::Setup(async_dispatcher_t* dispatcher, keypress_hand
 
   dir_caller_ = fdio_cpp::FdioCaller(std::move(fd));
 
-  auto result = fio::Directory::Call::Watch(dir_caller_.directory(), fio::WATCH_MASK_ALL, 0,
+  auto result = fio::Directory::Call::Watch(dir_caller_.directory(), fio::wire::WATCH_MASK_ALL, 0,
                                             std::move(server));
   if (result.status() != ZX_OK) {
     return result.status();

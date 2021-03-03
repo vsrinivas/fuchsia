@@ -1104,11 +1104,11 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
   std::vector<fuchsia::device::manager::wire::DeviceFragment> compvec = {};
   for (size_t i = 0; i < comp_desc->fragments_count; i++) {
     ::fidl::Array<fuchsia::device::manager::wire::DeviceFragmentPart,
-                  fuchsia::device::manager::DEVICE_FRAGMENT_PARTS_MAX>
+                  fuchsia::device::manager::wire::DEVICE_FRAGMENT_PARTS_MAX>
         parts{};
     for (uint32_t j = 0; j < comp_desc->fragments[i].parts_count; j++) {
       ::fidl::Array<fuchsia::device::manager::wire::BindInstruction,
-                    fuchsia::device::manager::DEVICE_FRAGMENT_PART_INSTRUCTIONS_MAX>
+                    fuchsia::device::manager::wire::DEVICE_FRAGMENT_PART_INSTRUCTIONS_MAX>
           bind_instructions{};
       for (uint32_t k = 0; k < comp_desc->fragments[i].parts[j].instruction_count; k++) {
         bind_instructions[k] = fuchsia::device::manager::wire::BindInstruction{

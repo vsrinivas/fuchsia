@@ -53,7 +53,7 @@ std::optional<fuchsia_input_report::wire::ConsumerControlButton> HidToConsumerCo
 
 ParseResult ConsumerControl::ParseInputReportDescriptor(
     const hid::ReportDescriptor& hid_report_descriptor) {
-  std::array<hid::ReportField, fuchsia_input_report::CONSUMER_CONTROL_MAX_NUM_BUTTONS>
+  std::array<hid::ReportField, fuchsia_input_report::wire::CONSUMER_CONTROL_MAX_NUM_BUTTONS>
       button_fields;
   size_t num_buttons = 0;
 
@@ -114,7 +114,8 @@ ParseResult ConsumerControl::ParseInputReport(
     fuchsia_input_report::wire::InputReport& input_report) {
   fuchsia_input_report::wire::ConsumerControlInputReport consumer_report(allocator);
 
-  std::array<ConsumerControlButton, fuchsia_input_report::CONSUMER_CONTROL_MAX_NUM_BUTTONS> buttons;
+  std::array<ConsumerControlButton, fuchsia_input_report::wire::CONSUMER_CONTROL_MAX_NUM_BUTTONS>
+      buttons;
   size_t buttons_size = 0;
 
   for (const hid::ReportField& field : button_fields_) {

@@ -122,9 +122,9 @@ class IntelTiledFormats : public ImageFormatSet {
       return false;
     }
     switch (pixel_format.format_modifier_value()) {
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_X_TILED:
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_Y_TILED:
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_YF_TILED:
+      case llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_X_TILED:
+      case llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED:
+      case llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_YF_TILED:
         return true;
       default:
         return false;
@@ -142,19 +142,19 @@ class IntelTiledFormats : public ImageFormatSet {
     constexpr uint32_t kIntelYFTileHeight = 4096 / (kIntelYFTilePixelWidth * 4);
     ZX_DEBUG_ASSERT(IsSupported(image_format.pixel_format()));
     switch (image_format.pixel_format().format_modifier_value()) {
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_X_TILED:
+      case llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_X_TILED:
         return fbl::round_up(image_format.coded_width(), kIntelXTilePixelWidth) /
                kIntelXTilePixelWidth *
                fbl::round_up(image_format.coded_height(), kIntelXTileHeight) / kIntelXTileHeight *
                kIntelTileByteSize;
 
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_Y_TILED:
+      case llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED:
         return fbl::round_up(image_format.coded_width(), kIntelYTilePixelWidth) /
                kIntelYTilePixelWidth *
                fbl::round_up(image_format.coded_height(), kIntelYTileHeight) / kIntelYTileHeight *
                kIntelTileByteSize;
 
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_YF_TILED:
+      case llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_YF_TILED:
         return fbl::round_up(image_format.coded_width(), kIntelYFTilePixelWidth) /
                kIntelYFTilePixelWidth *
                fbl::round_up(image_format.coded_height(), kIntelYFTileHeight) / kIntelYFTileHeight *
@@ -187,12 +187,12 @@ class AfbcFormats : public ImageFormatSet {
   const char* Name() const override { return "AfbcFormats"; }
 
   static constexpr uint64_t kAfbcModifierMask =
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TE_BIT |
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_SPLIT_BLOCK_BIT |
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_SPARSE_BIT |
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_YUV_BIT |
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_BCH_BIT |
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT;
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_TE_BIT |
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_SPLIT_BLOCK_BIT |
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_SPARSE_BIT |
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_YUV_BIT |
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_BCH_BIT |
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT;
   bool IsSupported(const PixelFormat& pixel_format) const override {
     if (!pixel_format.has_format_modifier_value())
       return false;
@@ -203,8 +203,8 @@ class AfbcFormats : public ImageFormatSet {
       return false;
     }
     switch (pixel_format.format_modifier_value() & ~kAfbcModifierMask) {
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16:
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8:
+      case llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16:
+      case llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_32X8:
         return true;
       default:
         return false;
@@ -225,10 +225,10 @@ class AfbcFormats : public ImageFormatSet {
     uint32_t width_alignment;
     uint32_t height_alignment;
     bool tiled_header = image_format.pixel_format().format_modifier_value() &
-                        llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT;
+                        llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT;
 
     switch (image_format.pixel_format().format_modifier_value() & ~kAfbcModifierMask) {
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16:
+      case llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16:
         block_width = 16;
         block_height = 16;
         if (!tiled_header) {
@@ -240,7 +240,7 @@ class AfbcFormats : public ImageFormatSet {
         }
         break;
 
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8:
+      case llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_32X8:
         block_width = 32;
         block_height = 8;
         if (!tiled_header) {
@@ -275,7 +275,7 @@ class AfbcFormats : public ImageFormatSet {
   uint64_t ImageFormatImageSize(const ImageFormat& image_format) const override {
     uint64_t size = NonTESize(image_format);
     if (image_format.pixel_format().format_modifier_value() &
-        llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TE_BIT) {
+        llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_TE_BIT) {
       size += arm_transaction_elimination_buffer_size(size, image_format.coded_width(),
                                                       image_format.coded_height());
     }
@@ -341,7 +341,8 @@ class LinearFormats : public ImageFormatSet {
 
   bool IsSupported(const PixelFormat& pixel_format) const override {
     if (pixel_format.has_format_modifier_value() &&
-        pixel_format.format_modifier_value() != llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR) {
+        pixel_format.format_modifier_value() !=
+            llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_LINEAR) {
       return false;
     }
     ZX_DEBUG_ASSERT(pixel_format.has_type());
@@ -456,7 +457,7 @@ class GoldfishFormats : public ImageFormatSet {
       return false;
     }
     switch (pixel_format.format_modifier_value()) {
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL:
+      case llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL:
         return true;
       default:
         return false;
@@ -501,7 +502,7 @@ class ArmTELinearFormats : public ImageFormatSet {
       return false;
     }
     if (pixel_format.format_modifier_value() !=
-        llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_LINEAR_TE)
+        llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_LINEAR_TE)
       return false;
     switch (pixel_format.type()) {
       case PixelFormatType::INVALID:
@@ -588,10 +589,10 @@ bool ImageFormatIsPixelFormatEqual(const llcpp::fuchsia::sysmem2::wire::PixelFor
   }
   uint64_t format_modifier_a = a.has_format_modifier_value()
                                    ? a.format_modifier_value()
-                                   : llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_NONE;
+                                   : llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_NONE;
   uint64_t format_modifier_b = b.has_format_modifier_value()
                                    ? b.format_modifier_value()
-                                   : llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_NONE;
+                                   : llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_NONE;
   if (format_modifier_a != format_modifier_b) {
     return false;
   }
@@ -1001,9 +1002,9 @@ bool ImageFormatMinimumRowBytes(
   // Bytes per row is not well-defined for tiled types.
   if (constraints.pixel_format().has_format_modifier_value() &&
       constraints.pixel_format().format_modifier_value() !=
-          llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR &&
+          llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_LINEAR &&
       constraints.pixel_format().format_modifier_value() !=
-          llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_LINEAR_TE) {
+          llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_LINEAR_TE) {
     return false;
   }
   if ((constraints.has_min_coded_width() && width < constraints.min_coded_width()) ||
@@ -1052,7 +1053,8 @@ bool ImageFormatMinimumRowBytes(
 bool ImageFormatConvertSysmemToZx(const llcpp::fuchsia::sysmem2::wire::PixelFormat& pixel_format,
                                   zx_pixel_format_t* zx_pixel_format_out) {
   if (pixel_format.has_format_modifier_value() &&
-      (pixel_format.format_modifier_value() != llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR)) {
+      (pixel_format.format_modifier_value() !=
+       llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_LINEAR)) {
     return false;
   }
   switch (pixel_format.type()) {
@@ -1109,7 +1111,7 @@ bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format
 fit::result<llcpp::fuchsia::sysmem2::wire::PixelFormat> ImageFormatConvertZxToSysmem_v2(
     fidl::AnyAllocator& allocator, zx_pixel_format_t zx_pixel_format) {
   PixelFormat v2b = PixelFormat(allocator);
-  v2b.set_format_modifier_value(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR);
+  v2b.set_format_modifier_value(allocator, llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_LINEAR);
   PixelFormatType out_type;
   switch (zx_pixel_format) {
     case ZX_PIXEL_FORMAT_RGB_565:
@@ -1338,11 +1340,11 @@ bool ImageFormatCompatibleWithProtectedMemory(
   constexpr uint64_t kArmLinearFormat = 0x0800000000000000ul;
   switch (pixel_format.format_modifier_value() & ~AfbcFormats::kAfbcModifierMask) {
     case kArmLinearFormat:
-    case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16:
-    case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8:
+    case llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16:
+    case llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_32X8:
       // TE formats occasionally need CPU writes to the TE buffer.
       return !(pixel_format.format_modifier_value() &
-               llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TE_BIT);
+               llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_TE_BIT);
 
     default:
       return true;

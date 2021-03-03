@@ -374,7 +374,7 @@ static zx_status_t create_buffer_collection(
   }
 
   sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.usage.cpu = sysmem::cpuUsageWriteOften | sysmem::cpuUsageRead;
+  constraints.usage.cpu = sysmem::wire::cpuUsageWriteOften | sysmem::wire::cpuUsageRead;
   constraints.min_buffer_count = 1;
   constraints.has_buffer_memory_constraints = true;
   constraints.buffer_memory_constraints = image_format::GetDefaultBufferMemoryConstraints();
@@ -622,7 +622,7 @@ void initialize_display_channel(fidl::ClientEnd<fhd::Controller> channel) {
 #else
 
 static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
-  if ((evt != fio::WATCH_EVENT_EXISTING) && (evt != fio::WATCH_EVENT_ADDED)) {
+  if ((evt != fio::wire::WATCH_EVENT_EXISTING) && (evt != fio::wire::WATCH_EVENT_ADDED)) {
     return ZX_OK;
   }
 
@@ -705,7 +705,7 @@ zx_status_t handle_device_dir_event(zx_handle_t handle, zx_signals_t signals,
   // Buffer contains events { Opcode, Len, Name[Len] }
   // See zircon/device/vfs.h for more detail
   // extra byte is for temporary NUL
-  uint8_t buf[fio::MAX_BUF + 1];
+  uint8_t buf[fio::wire::MAX_BUF + 1];
   uint32_t len;
   if (zx_channel_read(handle, 0, buf, nullptr, sizeof(buf) - 1, 0, &len, nullptr) < 0) {
     printf("vc: failed to read from device directory\n");
@@ -761,7 +761,7 @@ static void vc_find_display_controller() {
 
   fdio_cpp::UnownedFdioCaller dir_caller(dc_dir_fd);
 
-  auto result = fio::Directory::Call::Watch(dir_caller.directory(), fio::WATCH_MASK_ALL, 0,
+  auto result = fio::Directory::Call::Watch(dir_caller.directory(), fio::wire::WATCH_MASK_ALL, 0,
                                             server.TakeChannel());
   if (result.status() != ZX_OK) {
     printf("vc: Failed to watch dc directory\n");

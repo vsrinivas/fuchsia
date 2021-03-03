@@ -22,8 +22,8 @@
 #include "src/devices/cpu/drivers/aml-cpu-legacy/aml-cpu-legacy-bind.h"
 
 namespace {
-using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
-using llcpp::fuchsia::hardware::thermal::MAX_DVFS_DOMAINS;
+using llcpp::fuchsia::device::wire::MAX_DEVICE_PERFORMANCE_STATES;
+using llcpp::fuchsia::hardware::thermal::wire::MAX_DVFS_DOMAINS;
 using llcpp::fuchsia::hardware::thermal::wire::PowerDomain;
 
 constexpr zx_off_t kCpuVersionOffset = 0x220;

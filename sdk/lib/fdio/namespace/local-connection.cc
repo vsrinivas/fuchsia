@@ -114,7 +114,7 @@ struct local_dir_dirent_iterator {
 zx_status_t local_dir_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
                                            zxio_t* directory) {
   auto dir_iterator = new (iterator) local_dir_dirent_iterator;
-  size_t capacity_of_one = sizeof(zxio_dirent_t) + fio::MAX_FILENAME + 1;
+  size_t capacity_of_one = sizeof(zxio_dirent_t) + fio::wire::MAX_FILENAME + 1;
   dir_iterator->buffer = malloc(capacity_of_one);
   dir_iterator->capacity = capacity_of_one;
   return ZX_OK;

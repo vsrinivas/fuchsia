@@ -1160,7 +1160,7 @@ void OpenBlockDevice(const std::string& path,
   fdio_cpp::FdioCaller caller(std::move(fd));
   ASSERT_EQ(fio::Node::Call::Clone(
                 fidl::UnownedClientEnd<fio::Node>(zx::unowned_channel(caller.borrow_channel())),
-                fio::CLONE_FLAG_SAME_RIGHTS, std::move(server))
+                fio::wire::CLONE_FLAG_SAME_RIGHTS, std::move(server))
                 .status(),
             ZX_OK);
   ASSERT_EQ(block_client::RemoteBlockDevice::Create(channel.TakeChannel(), block_device), ZX_OK);

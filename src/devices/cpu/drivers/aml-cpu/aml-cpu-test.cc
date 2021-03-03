@@ -18,7 +18,7 @@
 
 namespace amlogic_cpu {
 
-using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
+using llcpp::fuchsia::device::wire::MAX_DEVICE_PERFORMANCE_STATES;
 using CpuCtrlClient = fuchsia_cpuctrl::Device::SyncClient;
 using inspect::InspectTestHelper;
 

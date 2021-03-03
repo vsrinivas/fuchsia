@@ -49,14 +49,14 @@ class TestDeviceBase {
   // Get a channel to the parent device, so we can rebind the driver to it. This
   // requires sandbox access to /dev/sys.
   fidl::ClientEnd<llcpp::fuchsia::device::Controller> GetParentDevice() {
-    char path[llcpp::fuchsia::device::MAX_DEVICE_PATH_LEN + 1];
+    char path[llcpp::fuchsia::device::wire::MAX_DEVICE_PATH_LEN + 1];
     auto res = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(device_controller_);
 
     EXPECT_EQ(ZX_OK, res.status());
     EXPECT_TRUE(res->result.is_response());
 
     auto& response = res->result.response();
-    EXPECT_LE(response.path.size(), llcpp::fuchsia::device::MAX_DEVICE_PATH_LEN);
+    EXPECT_LE(response.path.size(), llcpp::fuchsia::device::wire::MAX_DEVICE_PATH_LEN);
 
     memcpy(path, response.path.data(), response.path.size());
     path[response.path.size()] = 0;

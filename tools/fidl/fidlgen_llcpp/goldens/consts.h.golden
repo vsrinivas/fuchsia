@@ -157,48 +157,111 @@ constexpr inline void BitsType::operator^=(
 }  // namespace wire
 using BitsType = ::llcpp::fidl::test::consts::wire::BitsType;
 
+namespace wire {
+
 extern const char* USERNAME;
+}  // namespace wire
+extern const char* USERNAME;
+namespace wire {
 
 constexpr uint32_t POPULATION_USA_2018 = 330000000u;
+}  // namespace wire
+constexpr uint32_t POPULATION_USA_2018 = 330000000u;
+namespace wire {
 
 constexpr int8_t OFFSET = -33;
+}  // namespace wire
+constexpr int8_t OFFSET = -33;
+namespace wire {
 
 constexpr float MIN_TEMP = -273.15f;
+}  // namespace wire
+constexpr float MIN_TEMP = -273.15f;
+namespace wire {
 
 constexpr uint64_t FUCHSIA = 4054509061583223046u;
+}  // namespace wire
+constexpr uint64_t FUCHSIA = 4054509061583223046u;
+namespace wire {
 
 constexpr ::llcpp::fidl::test::consts::wire::EnumType enumVal =
     ::llcpp::fidl::test::consts::wire::EnumType::VALUE;
+}  // namespace wire
+constexpr ::llcpp::fidl::test::consts::wire::EnumType enumVal =
+    ::llcpp::fidl::test::consts::wire::EnumType::VALUE;
+namespace wire {
 
 constexpr ::llcpp::fidl::test::consts::wire::EnumType enumTrue =
     ::llcpp::fidl::test::consts::wire::EnumType::true_;
+}  // namespace wire
+constexpr ::llcpp::fidl::test::consts::wire::EnumType enumTrue =
+    ::llcpp::fidl::test::consts::wire::EnumType::true_;
+namespace wire {
 
 constexpr int32_t enumPrimitiveVal =
     ::llcpp::fidl::test::consts::wire::EnumType::VALUE;
+}  // namespace wire
+constexpr int32_t enumPrimitiveVal =
+    ::llcpp::fidl::test::consts::wire::EnumType::VALUE;
+namespace wire {
 
 constexpr int32_t enumPrimitiveTrue =
     ::llcpp::fidl::test::consts::wire::EnumType::true_;
+}  // namespace wire
+constexpr int32_t enumPrimitiveTrue =
+    ::llcpp::fidl::test::consts::wire::EnumType::true_;
+namespace wire {
 
 constexpr bool ENABLED_FLAG = true;
+}  // namespace wire
+constexpr bool ENABLED_FLAG = true;
+namespace wire {
 
 constexpr uint64_t DIAMOND = 1746410393481133080u;
+}  // namespace wire
+constexpr uint64_t DIAMOND = 1746410393481133080u;
+namespace wire {
 
 constexpr double CONVERSION_FACTOR = 1.41421;
+}  // namespace wire
+constexpr double CONVERSION_FACTOR = 1.41421;
+namespace wire {
 
 constexpr ::llcpp::fidl::test::consts::wire::BitsType bitsVal =
     ::llcpp::fidl::test::consts::wire::BitsType::VALUE;
+}  // namespace wire
+constexpr ::llcpp::fidl::test::consts::wire::BitsType bitsVal =
+    ::llcpp::fidl::test::consts::wire::BitsType::VALUE;
+namespace wire {
 
 constexpr ::llcpp::fidl::test::consts::wire::BitsType bitsTrue =
     ::llcpp::fidl::test::consts::wire::BitsType::true_;
+}  // namespace wire
+constexpr ::llcpp::fidl::test::consts::wire::BitsType bitsTrue =
+    ::llcpp::fidl::test::consts::wire::BitsType::true_;
+namespace wire {
 
 constexpr int32_t bitsPrimitiveVal =
     ::llcpp::fidl::test::consts::wire::BitsType::VALUE;
+}  // namespace wire
+constexpr int32_t bitsPrimitiveVal =
+    ::llcpp::fidl::test::consts::wire::BitsType::VALUE;
+namespace wire {
 
 constexpr int32_t bitsPrimitiveTrue =
     ::llcpp::fidl::test::consts::wire::BitsType::true_;
+}  // namespace wire
+constexpr int32_t bitsPrimitiveTrue =
+    ::llcpp::fidl::test::consts::wire::BitsType::true_;
+namespace wire {
 
 constexpr uint16_t ANSWER_IN_BINARY = 42u;
+}  // namespace wire
+constexpr uint16_t ANSWER_IN_BINARY = 42u;
+namespace wire {
 
+constexpr uint16_t ANSWER = 42u;
+}  // namespace wire
 constexpr uint16_t ANSWER = 42u;
 
 }  // namespace consts
@@ -223,11 +286,7 @@ namespace llcpp {
 namespace fidl {
 namespace test {
 namespace consts {
-
 namespace wire {}  // namespace wire
-
-namespace wire {}  // namespace wire
-
 }  // namespace consts
 }  // namespace test
 }  // namespace fidl

@@ -22,21 +22,22 @@ namespace fio = ::llcpp::fuchsia::io;
 
 // Note that these are the rights that the ExpectPathSupportsRights call itself supports generally.
 // The rights that are checked for a specific path are provided by the caller and must be <= these.
-constexpr uint32_t kKnownFsRights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE |
-                                    fio::OPEN_RIGHT_EXECUTABLE | fio::OPEN_RIGHT_ADMIN;
+constexpr uint32_t kKnownFsRights = fio::wire::OPEN_RIGHT_READABLE |
+                                    fio::wire::OPEN_RIGHT_WRITABLE |
+                                    fio::wire::OPEN_RIGHT_EXECUTABLE | fio::wire::OPEN_RIGHT_ADMIN;
 
 std::string rights_str(uint32_t rights) {
   std::string str;
-  if (rights & fio::OPEN_RIGHT_READABLE) {
+  if (rights & fio::wire::OPEN_RIGHT_READABLE) {
     str.push_back('r');
   }
-  if (rights & fio::OPEN_RIGHT_WRITABLE) {
+  if (rights & fio::wire::OPEN_RIGHT_WRITABLE) {
     str.push_back('w');
   }
-  if (rights & fio::OPEN_RIGHT_EXECUTABLE) {
+  if (rights & fio::wire::OPEN_RIGHT_EXECUTABLE) {
     str.push_back('x');
   }
-  if (rights & fio::OPEN_RIGHT_ADMIN) {
+  if (rights & fio::wire::OPEN_RIGHT_ADMIN) {
     str.push_back('a');
   }
   return str;

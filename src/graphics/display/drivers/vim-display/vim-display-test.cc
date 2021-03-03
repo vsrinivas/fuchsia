@@ -35,7 +35,7 @@ class MockBufferCollection : public mock_sysmem::MockBufferCollection {
     sysmem::wire::ImageFormatConstraints& constraints = info.settings.image_format_constraints;
     constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
     constraints.pixel_format.has_format_modifier = true;
-    constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
+    constraints.pixel_format.format_modifier.value = sysmem::wire::FORMAT_MODIFIER_LINEAR;
     constraints.max_coded_width = 1000;
     constraints.max_bytes_per_row = 4000;
     constraints.bytes_per_row_divisor = 1;

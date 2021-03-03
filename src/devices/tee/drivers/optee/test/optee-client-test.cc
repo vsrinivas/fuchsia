@@ -316,7 +316,7 @@ TEST_F(OpteeClientTestRpmb, InvalidRequestCommand) {
 TEST_F(OpteeClientTestRpmb, RpmbError) {
   int req_cnt = 0;
   tx_frames_size_ = sizeof(RpmbReq) + sizeof(RpmbFrame);
-  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
   RpmbReq *rpmb_req = reinterpret_cast<RpmbReq *>(GetTxBuffer());
   rpmb_req->cmd = RpmbReq::kCmdDataRequest;
 
@@ -337,7 +337,7 @@ TEST_F(OpteeClientTestRpmb, RpmbError) {
 
 TEST_F(OpteeClientTestRpmb, RpmbCommunicationError) {
   tx_frames_size_ = sizeof(RpmbReq) + sizeof(RpmbFrame);
-  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
   RpmbReq *rpmb_req = reinterpret_cast<RpmbReq *>(GetTxBuffer());
   rpmb_req->cmd = RpmbReq::kCmdDataRequest;
 
@@ -402,7 +402,7 @@ TEST_F(OpteeClientTestRpmb, GetDeviceInfoWrongFrameSize) {
 
 TEST_F(OpteeClientTestRpmb, InvalidDataRequest) {
   tx_frames_size_ = sizeof(RpmbReq) + sizeof(RpmbFrame);
-  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
   RpmbReq *rpmb_req = reinterpret_cast<RpmbReq *>(GetTxBuffer());
   rpmb_req->cmd = RpmbReq::kCmdDataRequest;
 
@@ -417,7 +417,7 @@ TEST_F(OpteeClientTestRpmb, InvalidDataRequest) {
 
 TEST_F(OpteeClientTestRpmb, InvalidDataRequestFrameSize) {
   tx_frames_size_ = sizeof(RpmbReq) + sizeof(RpmbFrame) + 1;
-  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
   RpmbReq *rpmb_req = reinterpret_cast<RpmbReq *>(GetTxBuffer());
   rpmb_req->cmd = RpmbReq::kCmdDataRequest;
 
@@ -432,10 +432,10 @@ TEST_F(OpteeClientTestRpmb, InvalidDataRequestFrameSize) {
 
 TEST_F(OpteeClientTestRpmb, RequestKeyOk) {
   int req_cnt = 0;
-  uint8_t data[::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE];
+  uint8_t data[::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE];
 
   tx_frames_size_ = sizeof(RpmbReq) + sizeof(RpmbFrame);
-  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
   RpmbReq *rpmb_req = reinterpret_cast<RpmbReq *>(GetTxBuffer());
   rpmb_req->cmd = RpmbReq::kCmdDataRequest;
 
@@ -444,16 +444,16 @@ TEST_F(OpteeClientTestRpmb, RequestKeyOk) {
 
   fake_rpmb_->SetRequestCallback([&](auto &request, auto &completer) {
     if (req_cnt == 0) {  // first call
-      EXPECT_EQ(request.tx_frames.size, ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE);
+      EXPECT_EQ(request.tx_frames.size, ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE);
       EXPECT_FALSE(request.rx_frames);
 
       EXPECT_OK(request.tx_frames.vmo.read(data, request.tx_frames.offset, sizeof(kMarker)));
       EXPECT_EQ(memcmp(data, kMarker, sizeof(kMarker)), 0);
 
     } else if (req_cnt == 1) {  // second call
-      EXPECT_EQ(request.tx_frames.size, ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE);
+      EXPECT_EQ(request.tx_frames.size, ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE);
       EXPECT_TRUE(request.rx_frames);
-      EXPECT_EQ(request.rx_frames->size, ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE);
+      EXPECT_EQ(request.rx_frames->size, ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE);
 
       EXPECT_OK(request.tx_frames.vmo.read(data, request.tx_frames.offset, sizeof(data)));
       RpmbFrame *frame = reinterpret_cast<RpmbFrame *>(data);
@@ -477,7 +477,7 @@ TEST_F(OpteeClientTestRpmb, RequestKeyOk) {
 TEST_F(OpteeClientTestRpmb, RequestKeyInvalid) {
   int req_cnt = 0;
   tx_frames_size_ = sizeof(RpmbReq) + sizeof(RpmbFrame);
-  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE * 2;
+  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE * 2;
   RpmbReq *rpmb_req = reinterpret_cast<RpmbReq *>(GetTxBuffer());
   rpmb_req->cmd = RpmbReq::kCmdDataRequest;
 
@@ -501,7 +501,7 @@ TEST_F(OpteeClientTestRpmb, RequestWCounterOk) {
   uint8_t data[sizeof(kMarker)];
 
   tx_frames_size_ = sizeof(RpmbReq) + sizeof(RpmbFrame);
-  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
   RpmbReq *rpmb_req = reinterpret_cast<RpmbReq *>(GetTxBuffer());
   rpmb_req->cmd = RpmbReq::kCmdDataRequest;
 
@@ -509,9 +509,9 @@ TEST_F(OpteeClientTestRpmb, RequestWCounterOk) {
   memcpy(rpmb_req->frames->stuff, kMarker, sizeof(kMarker));
 
   fake_rpmb_->SetRequestCallback([&](auto &request, auto &completer) {
-    EXPECT_EQ(request.tx_frames.size, ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE);
+    EXPECT_EQ(request.tx_frames.size, ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE);
     EXPECT_TRUE(request.rx_frames);
-    EXPECT_EQ(request.rx_frames->size, ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE);
+    EXPECT_EQ(request.rx_frames->size, ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE);
 
     EXPECT_OK(request.tx_frames.vmo.read(data, request.tx_frames.offset, sizeof(kMarker)));
     EXPECT_EQ(memcmp(data, kMarker, sizeof(kMarker)), 0);
@@ -532,7 +532,7 @@ TEST_F(OpteeClientTestRpmb, RequestWCounterOk) {
 
 TEST_F(OpteeClientTestRpmb, RequestWCounterInvalid) {
   tx_frames_size_ = sizeof(RpmbReq) + sizeof(RpmbFrame);
-  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE * 2;
+  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE * 2;
   int req_cnt = 0;
 
   RpmbReq *rpmb_req = reinterpret_cast<RpmbReq *>(GetTxBuffer());
@@ -558,7 +558,7 @@ TEST_F(OpteeClientTestRpmb, ReadDataOk) {
   uint8_t data[sizeof(kMarker)];
 
   tx_frames_size_ = sizeof(RpmbReq) + sizeof(RpmbFrame);
-  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE * 2;
+  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE * 2;
   RpmbReq *rpmb_req = reinterpret_cast<RpmbReq *>(GetTxBuffer());
   rpmb_req->cmd = RpmbReq::kCmdDataRequest;
 
@@ -566,7 +566,7 @@ TEST_F(OpteeClientTestRpmb, ReadDataOk) {
   memcpy(rpmb_req->frames->stuff, kMarker, sizeof(kMarker));
 
   fake_rpmb_->SetRequestCallback([&](auto &request, auto &completer) {
-    EXPECT_EQ(request.tx_frames.size, ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE);
+    EXPECT_EQ(request.tx_frames.size, ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE);
     EXPECT_TRUE(request.rx_frames);
 
     EXPECT_OK(request.tx_frames.vmo.read(data, request.tx_frames.offset, sizeof(kMarker)));
@@ -588,8 +588,8 @@ TEST_F(OpteeClientTestRpmb, ReadDataOk) {
 
 TEST_F(OpteeClientTestRpmb, RequestReadInvalid) {
   tx_frames_size_ =
-      sizeof(RpmbReq) + sizeof(RpmbFrame) + ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
-  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+      sizeof(RpmbReq) + sizeof(RpmbFrame) + ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
+  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
   int req_cnt = 0;
 
   RpmbReq *rpmb_req = reinterpret_cast<RpmbReq *>(GetTxBuffer());
@@ -612,10 +612,10 @@ TEST_F(OpteeClientTestRpmb, RequestReadInvalid) {
 
 TEST_F(OpteeClientTestRpmb, WriteDataOk) {
   int req_cnt = 0;
-  uint8_t data[::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE];
+  uint8_t data[::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE];
 
   tx_frames_size_ = sizeof(RpmbReq) + sizeof(RpmbFrame);
-  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
   RpmbReq *rpmb_req = reinterpret_cast<RpmbReq *>(GetTxBuffer());
   rpmb_req->cmd = RpmbReq::kCmdDataRequest;
 
@@ -624,16 +624,16 @@ TEST_F(OpteeClientTestRpmb, WriteDataOk) {
 
   fake_rpmb_->SetRequestCallback([&](auto &request, auto &completer) {
     if (req_cnt == 0) {  // first call
-      EXPECT_EQ(request.tx_frames.size, ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE);
+      EXPECT_EQ(request.tx_frames.size, ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE);
       EXPECT_FALSE(request.rx_frames);
 
       EXPECT_OK(request.tx_frames.vmo.read(data, request.tx_frames.offset, sizeof(kMarker)));
       EXPECT_EQ(memcmp(data, kMarker, sizeof(kMarker)), 0);
 
     } else if (req_cnt == 1) {  // second call
-      EXPECT_EQ(request.tx_frames.size, ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE);
+      EXPECT_EQ(request.tx_frames.size, ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE);
       EXPECT_TRUE(request.rx_frames);
-      EXPECT_EQ(request.rx_frames->size, ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE);
+      EXPECT_EQ(request.rx_frames->size, ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE);
 
       EXPECT_OK(request.tx_frames.vmo.read(data, request.tx_frames.offset, sizeof(data)));
       RpmbFrame *frame = reinterpret_cast<RpmbFrame *>(data);
@@ -656,7 +656,7 @@ TEST_F(OpteeClientTestRpmb, WriteDataOk) {
 
 TEST_F(OpteeClientTestRpmb, RequestWriteInvalid) {
   tx_frames_size_ = sizeof(RpmbReq) + sizeof(RpmbFrame);
-  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE * 2;
+  rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE * 2;
   int req_cnt = 0;
 
   RpmbReq *rpmb_req = reinterpret_cast<RpmbReq *>(GetTxBuffer());

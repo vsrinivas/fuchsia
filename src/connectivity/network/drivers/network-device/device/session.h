@@ -138,7 +138,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   zx_status_t FetchRxDescriptors();
 
   async_dispatcher_t* dispatcher_;
-  std::array<char, netdev::MAX_SESSION_NAME + 1> name_{};
+  std::array<char, netdev::wire::MAX_SESSION_NAME + 1> name_{};
   // `MAX_VMOS` is used as a marker for invalid VMO identifier.
   // The destructor checks that vmo_id is set to `MAX_VMOS`, which verifies that `ReleaseDataVmo`
   // was called before destruction.
@@ -160,7 +160,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   uint16_t descriptor_count_;
   uint64_t descriptor_length_;
   netdev::wire::SessionFlags flags_;
-  std::array<uint8_t, netdev::MAX_FRAME_TYPES> frame_types_{};
+  std::array<uint8_t, netdev::wire::MAX_FRAME_TYPES> frame_types_{};
   uint32_t frame_type_count_;
   // Pointer to parent network device, not owned.
   DeviceInterface* parent_;

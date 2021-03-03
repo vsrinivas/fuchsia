@@ -100,9 +100,9 @@ void BlockWatcher::Thread() {
       return;
     }
 
-    auto mask = fio::WATCH_MASK_ALL;
+    auto mask = fio::wire::WATCH_MASK_ALL;
     if (ignore_existing) {
-      mask &= ~fio::WATCH_MASK_EXISTING;
+      mask &= ~fio::wire::WATCH_MASK_EXISTING;
     }
     auto result = fio::Directory::Call::Watch(caller.channel(), mask, 0, std::move(server));
     if (result.status() != ZX_OK) {
@@ -124,7 +124,7 @@ void BlockWatcher::Thread() {
     }
 
     // +1 for the NUL terminator at the end of the last name.
-    uint8_t buf[fio::MAX_BUF + 1];
+    uint8_t buf[fio::wire::MAX_BUF + 1];
     fbl::Span buf_span(buf, std::size(buf) - 1);
 
     zx_signals_t signals;
@@ -243,8 +243,8 @@ zx_status_t BlockWatcher::Resume() {
 }
 
 bool BlockWatcher::Callback(int dirfd, int event, const char* name) {
-  if (event != fio::WATCH_EVENT_ADDED && event != fio::WATCH_EVENT_EXISTING &&
-      event != fio::WATCH_EVENT_IDLE) {
+  if (event != fio::wire::WATCH_EVENT_ADDED && event != fio::wire::WATCH_EVENT_EXISTING &&
+      event != fio::wire::WATCH_EVENT_IDLE) {
     return false;
   }
 
@@ -252,7 +252,7 @@ bool BlockWatcher::Callback(int dirfd, int event, const char* name) {
   // Note that WATCH_EVENT_EXISTING is only received on the first run of the watcher,
   // so we don't need to worry about ignoring it on subsequent runs.
   std::lock_guard guard(lock_);
-  if (event == fio::WATCH_EVENT_IDLE && pause_count_ > 0) {
+  if (event == fio::wire::WATCH_EVENT_IDLE && pause_count_ > 0) {
     return true;
   }
   // If we lost the race and the watcher was paused sometime between
@@ -301,7 +301,7 @@ bool BlockWatcher::ProcessWatchMessages(fbl::Span<uint8_t> buf, int dirfd) {
       // Bail out early.
       return true;
     }
-    if (event == fio::WATCH_EVENT_IDLE) {
+    if (event == fio::wire::WATCH_EVENT_IDLE) {
       // WATCH_EVENT_IDLE - but the watcher is not paused. Finish processing this set of messages,
       // but return true once we're done to indicate that we should start checking for the pause
       // signal.

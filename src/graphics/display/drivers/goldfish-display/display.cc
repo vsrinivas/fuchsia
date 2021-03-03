@@ -721,8 +721,8 @@ zx_status_t Display::WriteLocked(uint32_t cmd_size) {
 
     // Wait for pipe to become writable.
     zx_status_t status =
-        pipe_event_.wait_one(llcpp::fuchsia::hardware::goldfish::SIGNAL_HANGUP |
-                                 llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE,
+        pipe_event_.wait_one(llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_HANGUP |
+                                 llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_WRITABLE,
                              zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
       if (status != ZX_ERR_CANCELED) {
@@ -772,8 +772,8 @@ zx_status_t Display::ReadResultLocked(uint32_t* result, uint32_t count) {
 
     // Wait for pipe to become readable.
     zx_status_t status =
-        pipe_event_.wait_one(llcpp::fuchsia::hardware::goldfish::SIGNAL_HANGUP |
-                                 llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE,
+        pipe_event_.wait_one(llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_HANGUP |
+                                 llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_READABLE,
                              zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
       if (status != ZX_ERR_CANCELED) {

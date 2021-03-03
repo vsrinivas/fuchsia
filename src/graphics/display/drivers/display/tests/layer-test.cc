@@ -27,7 +27,7 @@ class LayerTest : public TestBase {
         .width = kDisplayWidth,
         .height = kDisplayHeight,
         .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
-        .type = fhd::TYPE_SIMPLE,
+        .type = fhd::wire::TYPE_SIMPLE,
         .handle = 0,
     };
     EXPECT_OK(display()->ImportVmoImage(&dc_image, zx::vmo(0), 0));
@@ -51,7 +51,7 @@ TEST_F(LayerTest, PrimaryBasic) {
   fhd::wire::ImageConfig image_config = {.width = kDisplayWidth,
                                          .height = kDisplayHeight,
                                          .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
-                                         .type = fhd::TYPE_SIMPLE};
+                                         .type = fhd::wire::TYPE_SIMPLE};
   fhd::wire::Frame frame = {.width = kDisplayWidth, .height = kDisplayHeight};
   l.SetPrimaryConfig(image_config);
   l.SetPrimaryPosition(fhd::wire::Transform::IDENTITY, frame, frame);

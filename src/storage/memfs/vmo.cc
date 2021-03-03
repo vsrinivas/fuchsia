@@ -116,7 +116,7 @@ zx_status_t VnodeVmo::GetAttributes(fs::VnodeAttributes* attr) {
 }
 
 zx_status_t VnodeVmo::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
-  if (flags & ::llcpp::fuchsia::io::VMO_FLAG_WRITE) {
+  if (flags & ::llcpp::fuchsia::io::wire::VMO_FLAG_WRITE) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -129,11 +129,11 @@ zx_status_t VnodeVmo::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
 
   // Let clients map their VMOs.
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
-  rights |= (flags & ::llcpp::fuchsia::io::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
-  rights |= (flags & ::llcpp::fuchsia::io::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+  rights |= (flags & ::llcpp::fuchsia::io::wire::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
+  rights |= (flags & ::llcpp::fuchsia::io::wire::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
 
   zx_handle_t vmo;
-  if (flags & ::llcpp::fuchsia::io::VMO_FLAG_PRIVATE) {
+  if (flags & ::llcpp::fuchsia::io::wire::VMO_FLAG_PRIVATE) {
     // Only allow object_set_property on private VMO.
     rights |= ZX_RIGHT_SET_PROPERTY;
     // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO has it. Adding

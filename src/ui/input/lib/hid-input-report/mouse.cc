@@ -21,7 +21,7 @@ ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
   std::optional<hid::Attributes> position_x;
   std::optional<hid::Attributes> position_y;
   std::optional<hid::Attributes> scroll_v;
-  hid::Attributes buttons[fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS];
+  hid::Attributes buttons[fuchsia_input_report::wire::MOUSE_MAX_NUM_BUTTONS];
   uint8_t num_buttons = 0;
 
   for (size_t i = 0; i < hid_report_descriptor.input_count; i++) {
@@ -45,7 +45,7 @@ ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
                hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kWheel)) {
       scroll_v = field.attr;
     } else if (field.attr.usage.page == hid::usage::Page::kButton) {
-      if (num_buttons == fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS) {
+      if (num_buttons == fuchsia_input_report::wire::MOUSE_MAX_NUM_BUTTONS) {
         return ParseResult::kTooManyItems;
       }
       buttons[num_buttons++] = field.attr;
@@ -144,7 +144,7 @@ ParseResult Mouse::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyAl
     mouse_report.set_scroll_v(Extract<int64_t>(data, len, *scroll_v_, allocator));
   }
 
-  std::array<uint8_t, fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS> buttons;
+  std::array<uint8_t, fuchsia_input_report::wire::MOUSE_MAX_NUM_BUTTONS> buttons;
   size_t buttons_size = 0;
   for (size_t i = 0; i < num_buttons_; i++) {
     double value_out;

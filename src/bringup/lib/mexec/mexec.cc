@@ -61,7 +61,8 @@ zx_status_t Boot(zx::resource resource, zx::channel devmgr_channel, zx::vmo kern
     namespace devmgr = llcpp::fuchsia::device::manager;
 
     devmgr::Administrator::SyncClient client(std::move(devmgr_channel));
-    if (zx_status_t status = client.Suspend(devmgr::SUSPEND_FLAG_MEXEC).status(); status != ZX_OK) {
+    if (zx_status_t status = client.Suspend(devmgr::wire::SUSPEND_FLAG_MEXEC).status();
+        status != ZX_OK) {
       printf("mexec::Boot: failed to suspend devices: %s\n", zx_status_get_string(status));
       return ZX_ERR_INTERNAL;
     }

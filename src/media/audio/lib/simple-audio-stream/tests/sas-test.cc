@@ -39,7 +39,7 @@ class MockSimpleAudio : public SimpleAudioStream {
   static constexpr uint32_t kTestFrameRate = 48000;
   static constexpr uint8_t kTestNumberOfChannels = 2;
   static constexpr uint32_t kTestFifoDepth = 16;
-  static constexpr uint32_t kTestClockDomain = audio_fidl::CLOCK_DOMAIN_EXTERNAL;
+  static constexpr uint32_t kTestClockDomain = audio_fidl::wire::CLOCK_DOMAIN_EXTERNAL;
   static constexpr uint32_t kTestPositionNotify = 4;
   static constexpr float kTestGain = 1.2345f;
 

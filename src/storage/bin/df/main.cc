@@ -183,7 +183,7 @@ int main(int argc, const char** argv) {
       continue;
     }
     info = *result->info;
-    info.name[fio::MAX_FS_NAME_BUFFER - 1] = '\0';
+    info.name[fio::wire::MAX_FS_NAME_BUFFER - 1] = '\0';
 
     auto result2 = fio::DirectoryAdmin::Call::GetDevicePath(
         fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));

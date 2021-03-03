@@ -33,7 +33,7 @@ TEST(PixelFormatCost, Afbc) {
       llcpp::fuchsia::sysmem2::wire::PixelFormat pixel_format(allocator);
       pixel_format.set_type(allocator, llcpp::fuchsia::sysmem2::wire::PixelFormatType::BGRA32);
       pixel_format.set_format_modifier_value(
-          allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8);
+          allocator, llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_32X8);
       image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
     }
     constraints.image_format_constraints()[1] = std::move(image_format_constraints);
@@ -62,17 +62,17 @@ TEST(PixelFormatCost, IntelTiling) {
   llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints constraints(allocator);
 
   constraints.set_image_format_constraints(allocator, allocator, 2);
-  uint64_t tiling_types[] = {llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_X_TILED,
-                             llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_YF_TILED,
-                             llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_Y_TILED};
+  uint64_t tiling_types[] = {llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_X_TILED,
+                             llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_YF_TILED,
+                             llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED};
   for (auto modifier : tiling_types) {
     {
       llcpp::fuchsia::sysmem2::wire::ImageFormatConstraints image_format_constraints(allocator);
       {
         llcpp::fuchsia::sysmem2::wire::PixelFormat pixel_format(allocator);
         pixel_format.set_type(allocator, llcpp::fuchsia::sysmem2::wire::PixelFormatType::BGRA32);
-        pixel_format.set_format_modifier_value(allocator,
-                                               llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR);
+        pixel_format.set_format_modifier_value(
+            allocator, llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_LINEAR);
         image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
       }
       constraints.image_format_constraints()[0] = std::move(image_format_constraints);
@@ -98,7 +98,7 @@ TEST(PixelFormatCost, IntelTiling) {
 
     // Explicit linear should be treated the same as no format modifier value.
     constraints.image_format_constraints()[0].pixel_format().format_modifier_value() =
-        llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_NONE;
+        llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_NONE;
     EXPECT_LT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 0, 1));
     EXPECT_GT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 1, 0));
 
@@ -115,10 +115,10 @@ TEST(PixelFormatCost, IntelTiling) {
 
   // Formats are in ascending preference order (descending cost order).
   std::array modifier_list = {
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR,
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_X_TILED,
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_Y_TILED,
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_YF_TILED,
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_LINEAR,
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_X_TILED,
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED,
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_YF_TILED,
   };
   constraints.set_image_format_constraints(allocator, allocator, modifier_list.size());
 
@@ -154,7 +154,7 @@ TEST(PixelFormatCost, ArmTransactionElimination) {
       llcpp::fuchsia::sysmem2::wire::PixelFormat pixel_format(allocator);
       pixel_format.set_type(allocator, llcpp::fuchsia::sysmem2::wire::PixelFormatType::BGRA32);
       pixel_format.set_format_modifier_value(
-          allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8);
+          allocator, llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_32X8);
       image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
     }
     constraints.image_format_constraints()[0] = std::move(image_format_constraints);
@@ -165,7 +165,7 @@ TEST(PixelFormatCost, ArmTransactionElimination) {
       llcpp::fuchsia::sysmem2::wire::PixelFormat pixel_format(allocator);
       pixel_format.set_type(allocator, llcpp::fuchsia::sysmem2::wire::PixelFormatType::BGRA32);
       pixel_format.set_format_modifier_value(
-          allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8_TE);
+          allocator, llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_32X8_TE);
       image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
     }
     constraints.image_format_constraints()[1] = std::move(image_format_constraints);
@@ -184,13 +184,14 @@ TEST(PixelFormatCost, AfbcWithFlags) {
 
   // Formats are in ascending preference order (descending cost order).
   std::array modifier_list = {
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR,
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16,
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV,
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TILED_HEADER,
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_TE,
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE,
-      llcpp::fuchsia::sysmem2::
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_LINEAR,
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16,
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV,
+      llcpp::fuchsia::sysmem2::wire::
+          FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TILED_HEADER,
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_TE,
+      llcpp::fuchsia::sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE,
+      llcpp::fuchsia::sysmem2::wire::
           FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE_TILED_HEADER,
   };
   llcpp::fuchsia::sysmem2::wire::BufferCollectionConstraints constraints(allocator);

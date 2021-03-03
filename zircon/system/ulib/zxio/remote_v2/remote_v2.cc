@@ -325,7 +325,7 @@ static zx_status_t zxio_remote_do_vector(const RemoteV2& rio, const zx_iovec_t* 
                           auto buffer = static_cast<uint8_t*>(data);
                           size_t total = 0;
                           while (capacity > 0) {
-                            size_t chunk = std::min(capacity, fio2::MAX_TRANSFER_SIZE);
+                            size_t chunk = std::min(capacity, fio2::wire::MAX_TRANSFER_SIZE);
                             size_t actual;
                             zx_status_t status = fn(rio.control(), buffer, chunk, &actual);
                             if (status != ZX_OK) {

@@ -1879,10 +1879,13 @@ class Service final {
     ::fidl::ServiceHandlerInterface* service_handler_;  // Not owned.
   };
 };
+namespace wire {
 
 // const comment #1
 //
 // const comment #3
+constexpr int32_t C = 4u;
+}  // namespace wire
 constexpr int32_t C = 4u;
 
 }  // namespace doccomments
@@ -2074,7 +2077,6 @@ class Interface::WeakEventSender {
 #endif
 
 namespace wire {}  // namespace wire
-
 }  // namespace doccomments
 }  // namespace test
 }  // namespace fidl

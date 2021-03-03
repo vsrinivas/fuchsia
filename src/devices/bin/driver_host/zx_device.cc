@@ -102,11 +102,11 @@ const zx_device::SystemPowerStateMapping& zx_device::GetSystemPowerStateMapping(
 
 zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_states,
                                       uint8_t count) {
-  if (count < ::llcpp::fuchsia::device::MIN_DEVICE_POWER_STATES ||
-      count > ::llcpp::fuchsia::device::MAX_DEVICE_POWER_STATES) {
+  if (count < ::llcpp::fuchsia::device::wire::MIN_DEVICE_POWER_STATES ||
+      count > ::llcpp::fuchsia::device::wire::MAX_DEVICE_POWER_STATES) {
     return ZX_ERR_INVALID_ARGS;
   }
-  bool visited[::llcpp::fuchsia::device::MAX_DEVICE_POWER_STATES] = {false};
+  bool visited[::llcpp::fuchsia::device::wire::MAX_DEVICE_POWER_STATES] = {false};
   for (uint8_t i = 0; i < count; i++) {
     const auto& info = power_states[i];
     if (info.state_id >= std::size(visited)) {

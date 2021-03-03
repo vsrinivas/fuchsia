@@ -204,7 +204,7 @@ void DirectoryConnection::ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sy
     completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
     return;
   }
-  if (max_out > fio::MAX_BUF) {
+  if (max_out > fio::wire::MAX_BUF) {
     completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
     return;
   }
@@ -377,7 +377,7 @@ void DirectoryConnection::GetDevicePath(GetDevicePathCompleter::Sync& completer)
     return;
   }
 
-  char name[fio::MAX_PATH];
+  char name[fio::wire::MAX_PATH];
   size_t actual = 0;
   zx_status_t status = vnode()->GetDevicePath(sizeof(name), name, &actual);
   completer.Reply(status, fidl::StringView(name, actual));

@@ -31,7 +31,7 @@
 
 #include "performance-domain.h"
 
-using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
+using llcpp::fuchsia::device::wire::MAX_DEVICE_PERFORMANCE_STATES;
 using ListCb = std::function<void(const char*)>;
 
 constexpr char kCpuDevicePath[] = "/dev/class/cpu-ctrl";
@@ -44,7 +44,7 @@ constexpr uint64_t kDefaultStressTestTimeoutMs =
     100;  // Milliseconds to wait before issuing another dvfs opp.
 
 void print_frequency(const cpuctrl::wire::CpuPerformanceStateInfo& info) {
-  if (info.frequency_hz == cpuctrl::FREQUENCY_UNKNOWN) {
+  if (info.frequency_hz == cpuctrl::wire::FREQUENCY_UNKNOWN) {
     std::cout << "(unknown)";
   } else {
     std::cout << info.frequency_hz << "hz";
@@ -52,7 +52,7 @@ void print_frequency(const cpuctrl::wire::CpuPerformanceStateInfo& info) {
 }
 
 void print_voltage(const cpuctrl::wire::CpuPerformanceStateInfo& info) {
-  if (info.voltage_uv == cpuctrl::VOLTAGE_UNKNOWN) {
+  if (info.voltage_uv == cpuctrl::wire::VOLTAGE_UNKNOWN) {
     std::cout << "(unknown)";
   } else {
     std::cout << info.voltage_uv << "uv";

@@ -107,7 +107,7 @@ Session::Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo* info
       flags_(info->options),
       frame_type_count_(static_cast<uint32_t>(info->rx_frames.count())),
       parent_(parent) {
-  ZX_ASSERT(frame_type_count_ <= netdev::MAX_FRAME_TYPES);
+  ZX_ASSERT(frame_type_count_ <= netdev::wire::MAX_FRAME_TYPES);
   for (uint32_t i = 0; i < frame_type_count_; i++) {
     frame_types_[i] = static_cast<uint8_t>(info->rx_frames[i]);
   }
@@ -403,7 +403,7 @@ zx_status_t Session::FetchTx() {
 
     // chain_length is the number of buffers to follow, so it must be strictly less than the maximum
     // descriptor chain value.
-    if (desc->chain_length >= netdev::MAX_DESCRIPTOR_CHAIN) {
+    if (desc->chain_length >= netdev::wire::MAX_DESCRIPTOR_CHAIN) {
       LOGF_ERROR("network-device(%s): received invalid chain length: %d", name(),
                  desc->chain_length);
       return ZX_ERR_IO_INVALID;
@@ -611,7 +611,7 @@ zx_status_t Session::FillRxSpace(uint16_t descriptor_index, rx_space_buffer_t* b
 
   // chain_length is the number of buffers to follow, so it must be strictly less than the maximum
   // descriptor chain value.
-  if (desc->chain_length >= netdev::MAX_DESCRIPTOR_CHAIN) {
+  if (desc->chain_length >= netdev::wire::MAX_DESCRIPTOR_CHAIN) {
     LOGF_ERROR("network-device(%s): received invalid chain length: %d", name(), desc->chain_length);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -840,7 +840,7 @@ zx_status_t Session::LoadRxInfo(uint16_t descriptor_index, const rx_buffer_t* bu
   }
   desc->frame_type = buff->meta.frame_type;
   desc->inbound_flags = buff->meta.flags;
-  if (desc->chain_length >= netdev::MAX_DESCRIPTOR_CHAIN) {
+  if (desc->chain_length >= netdev::wire::MAX_DESCRIPTOR_CHAIN) {
     LOGF_ERROR("network-device(%s): invalid descriptor %d chain length %d", name(),
                descriptor_index, desc->chain_length);
     return ZX_ERR_INVALID_ARGS;

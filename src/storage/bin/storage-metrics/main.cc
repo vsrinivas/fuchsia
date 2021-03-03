@@ -188,7 +188,7 @@ void RunFsMetrics(const char* path, const StorageMetricOptions options) {
 
   // Skip any filesystems that aren't minfs
   fio::wire::FilesystemInfo* info = result.value().info.get();
-  info->name[fio::MAX_FS_NAME_BUFFER - 1] = '\0';
+  info->name[fio::wire::MAX_FS_NAME_BUFFER - 1] = '\0';
   const char* name = reinterpret_cast<const char*>(info->name.data());
   if (strcmp(name, "minfs") != 0) {
     fprintf(stderr, "storage-metrics does not support filesystem type %s\n", name);

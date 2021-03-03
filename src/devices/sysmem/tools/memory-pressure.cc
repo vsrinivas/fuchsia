@@ -68,16 +68,16 @@ int MemoryPressureCommand(fxl::CommandLine command_line, bool sleep) {
   std::string usage;
   if (command_line.GetOptionValue("usage", &usage)) {
     if (usage == "vulkan") {
-      constraints.usage.vulkan = sysmem::vulkanUsageTransferDst;
+      constraints.usage.vulkan = sysmem::wire::vulkanUsageTransferDst;
     } else if (usage == "cpu") {
-      constraints.usage.cpu = sysmem::cpuUsageRead;
+      constraints.usage.cpu = sysmem::wire::cpuUsageRead;
     } else {
       LogError("Invalid usage %s\n", usage.c_str());
       PrintHelp();
       return 1;
     }
   } else {
-    constraints.usage.vulkan = sysmem::vulkanUsageTransferDst;
+    constraints.usage.vulkan = sysmem::wire::vulkanUsageTransferDst;
   }
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;

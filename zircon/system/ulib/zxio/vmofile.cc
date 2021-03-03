@@ -73,7 +73,7 @@ static zx_status_t zxio_vmofile_clone(zxio_t* io, zx_handle_t* out_handle) {
   if (status != ZX_OK) {
     return status;
   }
-  auto result = file->control.Clone(fio::CLONE_FLAG_SAME_RIGHTS, std::move(remote));
+  auto result = file->control.Clone(fio::wire::CLONE_FLAG_SAME_RIGHTS, std::move(remote));
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -172,23 +172,23 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, uint32_
   // rather than from a File.GetBuffer call.
 
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
-  rights |= flags & fio::VMO_FLAG_READ ? ZX_RIGHT_READ : 0;
-  rights |= flags & fio::VMO_FLAG_WRITE ? ZX_RIGHT_WRITE : 0;
-  rights |= flags & fio::VMO_FLAG_EXEC ? ZX_RIGHT_EXECUTE : 0;
+  rights |= flags & fio::wire::VMO_FLAG_READ ? ZX_RIGHT_READ : 0;
+  rights |= flags & fio::wire::VMO_FLAG_WRITE ? ZX_RIGHT_WRITE : 0;
+  rights |= flags & fio::wire::VMO_FLAG_EXEC ? ZX_RIGHT_EXECUTE : 0;
 
-  if (flags & fio::VMO_FLAG_PRIVATE) {
+  if (flags & fio::wire::VMO_FLAG_PRIVATE) {
     // Allow SET_PROPERTY only if creating a private child VMO so that the user
     // can set ZX_PROP_NAME (or similar).
     rights |= ZX_RIGHT_SET_PROPERTY;
 
     uint32_t options = ZX_VMO_CHILD_COPY_ON_WRITE;
-    if (flags & fio::VMO_FLAG_EXEC) {
+    if (flags & fio::wire::VMO_FLAG_EXEC) {
       // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the
       // parent VMO has it, and we can't arbitrary add EXECUTE here on the
       // client side. Adding CHILD_NO_WRITE still creates a snapshot and a new
       // VMO object, which e.g. can have a unique ZX_PROP_NAME value, but the
       // returned handle lacks WRITE and maintains EXECUTE.
-      if (flags & fio::VMO_FLAG_WRITE) {
+      if (flags & fio::wire::VMO_FLAG_WRITE) {
         return ZX_ERR_NOT_SUPPORTED;
       }
       options |= ZX_VMO_CHILD_NO_WRITE;

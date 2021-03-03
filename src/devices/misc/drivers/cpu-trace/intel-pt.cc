@@ -600,8 +600,8 @@ zx_status_t InsntraceDevice::X86PtAllocBuffer(const BufferConfig* config,
 
   // TODO(dje): insntrace.fidl can't use vectors (yet) so the address ranges
   // are individually spelled out.
-  static_assert(fuchsia_insntrace::MAX_NUM_ADDR_RANGES == 2);
-  static_assert(fuchsia_insntrace::MAX_NUM_ADDR_RANGES == IPT_MAX_NUM_ADDR_RANGES);
+  static_assert(fuchsia_insntrace::wire::MAX_NUM_ADDR_RANGES == 2);
+  static_assert(fuchsia_insntrace::wire::MAX_NUM_ADDR_RANGES == IPT_MAX_NUM_ADDR_RANGES);
   per_trace->addr_ranges[0].a = config->address_range_0.start;
   per_trace->addr_ranges[0].b = config->address_range_0.end;
   per_trace->addr_ranges[1].a = config->address_range_1.start;
@@ -716,7 +716,7 @@ zx_status_t InsntraceDevice::IptInitialize(const fuchsia_insntrace::wire::Alloca
       return ZX_ERR_INVALID_ARGS;
   }
 
-  if (allocation->num_traces > fuchsia_insntrace::MAX_NUM_TRACES)
+  if (allocation->num_traces > fuchsia_insntrace::wire::MAX_NUM_TRACES)
     return ZX_ERR_INVALID_ARGS;
   if (internal_mode == IPT_MODE_CPU) {
     // TODO(dje): KISS. No point in allowing anything else for now.
@@ -836,8 +836,8 @@ zx_status_t InsntraceDevice::IptGetBufferConfig(BufferDescriptor descriptor,
   out_config->address_space_match = per_trace->cr3_match;
   // TODO(dje): insntrace.fidl can't use vectors (yet) so the address ranges
   // are individually spelled out.
-  static_assert(fuchsia_insntrace::MAX_NUM_ADDR_RANGES == 2);
-  static_assert(fuchsia_insntrace::MAX_NUM_ADDR_RANGES == IPT_MAX_NUM_ADDR_RANGES);
+  static_assert(fuchsia_insntrace::wire::MAX_NUM_ADDR_RANGES == 2);
+  static_assert(fuchsia_insntrace::wire::MAX_NUM_ADDR_RANGES == IPT_MAX_NUM_ADDR_RANGES);
   out_config->address_range_0.start = per_trace->addr_ranges[0].a;
   out_config->address_range_0.end = per_trace->addr_ranges[0].b;
   out_config->address_range_1.start = per_trace->addr_ranges[1].a;

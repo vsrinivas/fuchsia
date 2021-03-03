@@ -79,7 +79,7 @@ zx_status_t Directory::Close() { return ZX_OK; }
 constexpr const char kFsName[] = "factoryfs";
 
 zx_status_t Directory::QueryFilesystem(::llcpp::fuchsia::io::wire::FilesystemInfo* info) {
-  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER,
+  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::wire::MAX_FS_NAME_BUFFER,
                 "Factoryfs name too long");
   *info = {};
   info->block_size = kFactoryfsBlockSize;
@@ -91,7 +91,7 @@ zx_status_t Directory::QueryFilesystem(::llcpp::fuchsia::io::wire::FilesystemInf
   info->total_nodes = Info().directory_entries;
   info->used_nodes = Info().directory_entries;
   strlcpy(reinterpret_cast<char*>(info->name.data()), kFsName,
-          ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER);
+          ::llcpp::fuchsia::io::wire::MAX_FS_NAME_BUFFER);
   return ZX_OK;
 }
 
@@ -106,7 +106,7 @@ const factoryfs::Superblock& Directory::Info() const { return factoryfs_.Info();
 zx_status_t Directory::GetAttributes(fs::VnodeAttributes* attributes) {
   *attributes = fs::VnodeAttributes();
   attributes->mode = (V_TYPE_DIR | V_IRUSR);
-  attributes->inode = ::llcpp::fuchsia::io::INO_UNKNOWN;
+  attributes->inode = ::llcpp::fuchsia::io::wire::INO_UNKNOWN;
   attributes->content_size = Info().directory_ent_blocks * kFactoryfsBlockSize;
   attributes->storage_size = Info().directory_ent_blocks * kFactoryfsBlockSize;
   attributes->link_count = 1;

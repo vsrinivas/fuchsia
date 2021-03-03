@@ -72,7 +72,8 @@ TEST(ConsumerControlTest, HidButtonsTest) {
 }
 
 TEST(ConsumerControlTest, MaxButtonsTest) {
-  constexpr uint32_t kMaxButtons = llcpp::fuchsia::input::report::CONSUMER_CONTROL_MAX_NUM_BUTTONS;
+  constexpr uint32_t kMaxButtons =
+      llcpp::fuchsia::input::report::wire::CONSUMER_CONTROL_MAX_NUM_BUTTONS;
 
   hid::ReportDescriptor descriptor = {};
   descriptor.input_count = kMaxButtons;
@@ -91,7 +92,7 @@ TEST(ConsumerControlTest, MaxButtonsTest) {
 
 TEST(ConsumerControlTest, OverMaxButtonsTest) {
   constexpr uint32_t kOverMaxButtons =
-      1 + llcpp::fuchsia::input::report::CONSUMER_CONTROL_MAX_NUM_BUTTONS;
+      1 + llcpp::fuchsia::input::report::wire::CONSUMER_CONTROL_MAX_NUM_BUTTONS;
 
   hid::ReportDescriptor descriptor = {};
   descriptor.input_count = kOverMaxButtons;

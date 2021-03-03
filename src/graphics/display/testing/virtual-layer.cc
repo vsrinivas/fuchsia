@@ -375,7 +375,7 @@ bool CursorLayer::Init(fhd::Controller::SyncClient* dc) {
     image_config.height = info.height;
     image_config.width = info.width;
     image_config.pixel_format = info.pixel_format;
-    image_config.type = fhd::TYPE_SIMPLE;
+    image_config.type = fhd::wire::TYPE_SIMPLE;
     auto result = dc->SetLayerCursorConfig(layer->id, image_config);
     if (!result.ok()) {
       printf("Setting layer config failed\n");

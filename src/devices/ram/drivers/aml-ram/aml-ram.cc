@@ -40,7 +40,7 @@ zx_status_t ValidateRequest(const ram_metrics::wire::BandwidthMeasurementConfig&
 
   int enabled_count = 0;
 
-  for (size_t ix = 0; ix != ram_metrics::MAX_COUNT_CHANNELS; ++ix) {
+  for (size_t ix = 0; ix != ram_metrics::wire::MAX_COUNT_CHANNELS; ++ix) {
     auto& channel = config.channels[ix];
 
     if ((ix >= MEMBW_MAX_CHANNELS) && (channel != 0)) {

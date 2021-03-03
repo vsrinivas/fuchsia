@@ -668,7 +668,7 @@ void VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out) {
 constexpr const char kFsName[] = "minfs";
 
 zx_status_t VnodeMinfs::QueryFilesystem(::llcpp::fuchsia::io::wire::FilesystemInfo* info) {
-  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER,
+  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::wire::MAX_FS_NAME_BUFFER,
                 "Minfs name too long");
   uint32_t reserved_blocks = Vfs()->BlocksReserved();
   Transaction transaction(fs_);
@@ -689,7 +689,7 @@ zx_status_t VnodeMinfs::QueryFilesystem(::llcpp::fuchsia::io::wire::FilesystemIn
   }
 
   strlcpy(reinterpret_cast<char*>(info->name.data()), kFsName,
-          ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER);
+          ::llcpp::fuchsia::io::wire::MAX_FS_NAME_BUFFER);
   return ZX_OK;
 }
 

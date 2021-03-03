@@ -520,7 +520,7 @@ TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
   // Create the watcher and make sure it's been registered.
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_OK(devfs_watch(root_node, std::move(remote), llcpp::fuchsia::io::WATCH_MASK_ADDED));
+  ASSERT_OK(devfs_watch(root_node, std::move(remote), llcpp::fuchsia::io::wire::WATCH_MASK_ADDED));
   ASSERT_TRUE(devfs_has_watchers(root_node));
 
   // Free our channel and make sure it gets de-registered.

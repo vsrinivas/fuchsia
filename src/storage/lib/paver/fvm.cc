@@ -152,7 +152,7 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vm
 zx_status_t FlushClient(block_client::Client* client) {
   block_fifo_request_t request;
   request.group = 0;
-  request.vmoid = block::VMOID_INVALID;
+  request.vmoid = block::wire::VMOID_INVALID;
   request.opcode = BLOCKIO_FLUSH;
   request.length = 0;
   request.vmo_offset = 0;
@@ -581,7 +581,7 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
     alloc_req_t alloc = {};
     // Allocate this partition as inactive so it gets deleted on the next
     // reboot if this stream fails.
-    alloc.flags = (*parts)[p].active ? 0 : volume::ALLOCATE_PARTITION_FLAG_INACTIVE;
+    alloc.flags = (*parts)[p].active ? 0 : volume::wire::ALLOCATE_PARTITION_FLAG_INACTIVE;
     alloc.slice_count = ext.slice_count;
     memcpy(&alloc.type, (*parts)[p].pd->type, sizeof(alloc.type));
     memcpy(&alloc.guid, uuid::Uuid::Generate().bytes(), uuid::kUuidSize);

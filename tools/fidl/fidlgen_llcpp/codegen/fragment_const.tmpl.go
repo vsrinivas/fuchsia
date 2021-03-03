@@ -12,8 +12,12 @@ const fragmentConstTmpl = `
 {{- end }}
 {{- if .Extern }}
 extern {{ .Decorator }} {{ .Type }} {{ .Name }};
+{{- EnsureNamespace .WireAlias }}
+extern {{ .Decorator }} {{ .Type }} {{ .WireAlias.Name }};
 {{- else }}
 {{ .Decorator }} {{ .Type }} {{ .Name }} = {{ .Value }};
+{{- EnsureNamespace .WireAlias }}
+{{ .Decorator }} {{ .Type }} {{ .WireAlias.Name }} = {{ .Value }};
 {{- end }}
 {{- end }}
 
@@ -21,6 +25,7 @@ extern {{ .Decorator }} {{ .Type }} {{ .Name }};
 {{- if .Extern }}
 {{ EnsureNamespace "::" }}
 {{ .Decorator }} {{ .Type }} {{ . }} = {{ .Value }};
+{{ .Decorator }} {{ .Type }} {{ .WireAlias }} = {{ .Value }};
 {{- end }}
 {{- end }}
 `

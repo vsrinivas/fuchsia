@@ -68,7 +68,7 @@ FakeNetworkDeviceImpl::FakeNetworkDeviceImpl()
   rx_types_[0] = static_cast<uint8_t>(netdev::wire::FrameType::ETHERNET);
   tx_types_[0].type = static_cast<uint8_t>(netdev::wire::FrameType::ETHERNET);
   tx_types_[0].supported_flags = 0;
-  tx_types_[0].features = netdev::FRAME_FEATURES_RAW;
+  tx_types_[0].features = netdev::wire::FRAME_FEATURES_RAW;
 
   ASSERT_OK(zx::event::create(0, &event_));
 }

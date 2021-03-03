@@ -475,11 +475,12 @@ void SimpleAudioStream::GetProperties(
     audio_fidl::StreamConfig::Interface::GetPropertiesCompleter::Sync& completer) {
   ScopedToken t(domain_token());
   auto builder = audio_fidl::wire::StreamProperties::UnownedBuilder();
-  fidl::Array<uint8_t, audio_fidl::UNIQUE_ID_SIZE> unique_id = {};
-  for (size_t i = 0; i < audio_fidl::UNIQUE_ID_SIZE; ++i) {
+  fidl::Array<uint8_t, audio_fidl::wire::UNIQUE_ID_SIZE> unique_id = {};
+  for (size_t i = 0; i < audio_fidl::wire::UNIQUE_ID_SIZE; ++i) {
     unique_id.data_[i] = unique_id_.data[i];
   }
-  fidl::aligned<fidl::Array<uint8_t, audio_fidl::UNIQUE_ID_SIZE>> aligned_unique_id = unique_id;
+  fidl::aligned<fidl::Array<uint8_t, audio_fidl::wire::UNIQUE_ID_SIZE>> aligned_unique_id =
+      unique_id;
   builder.set_unique_id(fidl::unowned_ptr(&aligned_unique_id));
   fidl::aligned<bool> input = is_input();
   builder.set_is_input(fidl::unowned_ptr(&input));

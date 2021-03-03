@@ -182,7 +182,7 @@ zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
   // Ensure that the number of parameters returned by the TEE does not exceed the parameter set
   // array of parameters.
   const size_t count = header()->num_params - starting_param_index;
-  if (count > fuchsia_tee::MAX_PARAMETERSET_COUNT) {
+  if (count > fuchsia_tee::wire::MAX_PARAMETERSET_COUNT) {
     LOG(ERROR, "Message contained more parameters (%zd) than allowed", count);
     return ZX_ERR_INVALID_ARGS;
   }

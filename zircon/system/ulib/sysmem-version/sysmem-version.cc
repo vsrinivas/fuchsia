@@ -502,7 +502,7 @@ V1CopyFromV2BufferCollectionConstraints(
   ZX_DEBUG_ASSERT(!v1.image_format_constraints_count);
   if (v2.has_image_format_constraints()) {
     if (v2.image_format_constraints().count() >
-        llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS) {
+        llcpp::fuchsia::sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS) {
       LOG(ERROR,
           "v2 image_format_constraints count > v1 "
           "MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS");
@@ -545,7 +545,7 @@ V1CopyFromV2BufferMemoryConstraints(
   ZX_DEBUG_ASSERT(!v1.heap_permitted_count);
   if (v2.has_heap_permitted()) {
     if (v2.heap_permitted().count() >
-        llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED) {
+        llcpp::fuchsia::sysmem::wire::MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED) {
       LOG(ERROR, "v2 heap_permitted count > v1 MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED");
       return fit::error();
     }
@@ -606,10 +606,10 @@ V1CopyFromV2ImageFormatConstraints(
   ZX_DEBUG_ASSERT(!v1.color_spaces_count);
   if (v2.has_color_spaces()) {
     if (v2.color_spaces().count() >
-        llcpp::fuchsia::sysmem::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES) {
+        llcpp::fuchsia::sysmem::wire::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES) {
       LOG(ERROR,
           "v2.color_spaces().count() > "
-          "llcpp::fuchsia::sysmem::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES");
+          "llcpp::fuchsia::sysmem::wire::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES");
       return fit::error();
     }
     v1.color_spaces_count = v2.color_spaces().count();
@@ -721,10 +721,10 @@ fit::result<llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2> V1MoveFromV2Bu
   llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo v2 = std::move(to_move_v2);
   llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 v1;
   if (v2.has_buffers()) {
-    if (v2.buffers().count() > llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
+    if (v2.buffers().count() > llcpp::fuchsia::sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
       LOG(ERROR,
           "v2.buffers().count() > "
-          "llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS");
+          "llcpp::fuchsia::sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS");
       return fit::error();
     }
     v1.buffer_count = v2.buffers().count();
@@ -751,10 +751,10 @@ V1AuxBuffersMoveFromV2BufferCollectionInfo(
   llcpp::fuchsia::sysmem2::wire::BufferCollectionInfo v2 = std::move(to_move_v2);
   llcpp::fuchsia::sysmem::wire::BufferCollectionInfo_2 v1;
   if (v2.has_buffers()) {
-    if (v2.buffers().count() > llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
+    if (v2.buffers().count() > llcpp::fuchsia::sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
       LOG(ERROR,
           "v2.buffers().count() > "
-          "llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS");
+          "llcpp::fuchsia::sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS");
       return fit::error();
     }
     v1.buffer_count = v2.buffers().count();

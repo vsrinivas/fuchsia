@@ -64,7 +64,7 @@ namespace llcpp::sys {
 
 namespace {
 
-constexpr uint64_t kMaxFilename = ::llcpp::fuchsia::io::MAX_FILENAME;
+constexpr uint64_t kMaxFilename = ::llcpp::fuchsia::io::wire::MAX_FILENAME;
 
 // Max path length will be two path components, separated by a file separator.
 constexpr uint64_t kMaxPath = (2 * kMaxFilename) + 1;
@@ -99,8 +99,8 @@ namespace internal {
 
 ::zx::status<> DirectoryOpenFunc(::zx::unowned_channel dir, ::fidl::StringView path,
                                  ::zx::channel remote) {
-  constexpr uint32_t flags =
-      ::llcpp::fuchsia::io::OPEN_RIGHT_READABLE | ::llcpp::fuchsia::io::OPEN_RIGHT_WRITABLE;
+  constexpr uint32_t flags = ::llcpp::fuchsia::io::wire::OPEN_RIGHT_READABLE |
+                             ::llcpp::fuchsia::io::wire::OPEN_RIGHT_WRITABLE;
   ::llcpp::fuchsia::io::Directory::ResultOf::Open result =
       ::llcpp::fuchsia::io::Directory::Call::Open(dir, flags, uint32_t(0755), std::move(path),
                                                   std::move(remote));

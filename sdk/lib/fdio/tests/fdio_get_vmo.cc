@@ -141,16 +141,16 @@ class TestServer final : public fuchsia_io::File::Interface {
     buffer.size = context->content_size;
 
     zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
-    rights |= (flags & fuchsia_io::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
-    rights |= (flags & fuchsia_io::VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
-    rights |= (flags & fuchsia_io::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+    rights |= (flags & fuchsia_io::wire::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
+    rights |= (flags & fuchsia_io::wire::VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
+    rights |= (flags & fuchsia_io::wire::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
 
     zx_status_t status = ZX_OK;
     zx::vmo result;
-    if (flags & fuchsia_io::VMO_FLAG_PRIVATE) {
+    if (flags & fuchsia_io::wire::VMO_FLAG_PRIVATE) {
       rights |= ZX_RIGHT_SET_PROPERTY;
       uint32_t options = ZX_VMO_CHILD_COPY_ON_WRITE;
-      if (flags & fuchsia_io::VMO_FLAG_EXEC) {
+      if (flags & fuchsia_io::wire::VMO_FLAG_EXEC) {
         // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO has it,
         // but NO_WRITE changes this behavior so that the new handle doesn't have WRITE and
         // preserves EXECUTE.
@@ -241,7 +241,7 @@ TEST(GetVMOTest, Remote) {
   EXPECT_OK(fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
   EXPECT_EQ(get_koid(context.vmo), get_koid(received));
   EXPECT_EQ(get_rights(received), expected_rights);
-  EXPECT_EQ(fuchsia_io::VMO_FLAG_READ | fuchsia_io::VMO_FLAG_EXACT, context.last_flags);
+  EXPECT_EQ(fuchsia_io::wire::VMO_FLAG_READ | fuchsia_io::wire::VMO_FLAG_EXACT, context.last_flags);
   context.last_flags = 0;
 
   // The rest of these tests exercise methods which use VMO_FLAG_PRIVATE, in which case the returned
@@ -251,21 +251,24 @@ TEST(GetVMOTest, Remote) {
   EXPECT_OK(fdio_get_vmo_clone(fd.get(), received.reset_and_get_address()));
   EXPECT_NE(get_koid(context.vmo), get_koid(received));
   EXPECT_EQ(get_rights(received), expected_rights);
-  EXPECT_EQ(fuchsia_io::VMO_FLAG_READ | fuchsia_io::VMO_FLAG_PRIVATE, context.last_flags);
+  EXPECT_EQ(fuchsia_io::wire::VMO_FLAG_READ | fuchsia_io::wire::VMO_FLAG_PRIVATE,
+            context.last_flags);
   EXPECT_TRUE(vmo_starts_with(received, "abcd"));
   context.last_flags = 0;
 
   EXPECT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
   EXPECT_NE(get_koid(context.vmo), get_koid(received));
   EXPECT_EQ(get_rights(received), expected_rights);
-  EXPECT_EQ(fuchsia_io::VMO_FLAG_READ | fuchsia_io::VMO_FLAG_PRIVATE, context.last_flags);
+  EXPECT_EQ(fuchsia_io::wire::VMO_FLAG_READ | fuchsia_io::wire::VMO_FLAG_PRIVATE,
+            context.last_flags);
   EXPECT_TRUE(vmo_starts_with(received, "abcd"));
   context.last_flags = 0;
 
   EXPECT_OK(fdio_get_vmo_exec(fd.get(), received.reset_and_get_address()));
   EXPECT_NE(get_koid(context.vmo), get_koid(received));
   EXPECT_EQ(get_rights(received), expected_rights | ZX_RIGHT_EXECUTE);
-  EXPECT_EQ(fuchsia_io::VMO_FLAG_READ | fuchsia_io::VMO_FLAG_EXEC | fuchsia_io::VMO_FLAG_PRIVATE,
+  EXPECT_EQ(fuchsia_io::wire::VMO_FLAG_READ | fuchsia_io::wire::VMO_FLAG_EXEC |
+                fuchsia_io::wire::VMO_FLAG_PRIVATE,
             context.last_flags);
   EXPECT_TRUE(vmo_starts_with(received, "abcd"));
   context.last_flags = 0;
@@ -275,7 +278,8 @@ TEST(GetVMOTest, Remote) {
   EXPECT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
   EXPECT_NE(get_koid(context.vmo), get_koid(received));
   EXPECT_EQ(get_rights(received), expected_rights);
-  EXPECT_EQ(fuchsia_io::VMO_FLAG_READ | fuchsia_io::VMO_FLAG_PRIVATE, context.last_flags);
+  EXPECT_EQ(fuchsia_io::wire::VMO_FLAG_READ | fuchsia_io::wire::VMO_FLAG_PRIVATE,
+            context.last_flags);
   EXPECT_TRUE(vmo_starts_with(received, "abcd"));
   context.last_flags = 0;
 }
@@ -361,7 +365,7 @@ TEST(MmapFileTest, ProtExecWorks) {
   zx_vm_option_t zx_options = PROT_READ | PROT_EXEC;
   uintptr_t ptr;
   ASSERT_OK(_mmap_file(offset, len, zx_options, MAP_SHARED, fd.get(), fd_off, &ptr));
-  EXPECT_EQ(context.last_flags, fuchsia_io::VMO_FLAG_READ | fuchsia_io::VMO_FLAG_EXEC);
+  EXPECT_EQ(context.last_flags, fuchsia_io::wire::VMO_FLAG_READ | fuchsia_io::wire::VMO_FLAG_EXEC);
 }
 
 }  // namespace

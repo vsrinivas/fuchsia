@@ -308,13 +308,13 @@ bool devnode_is_local(Devnode* dn) {
 // been added to a Devnode's watchers list.
 void devfs_notify_single(std::unique_ptr<Watcher>* watcher, const fbl::String& name, unsigned op) {
   size_t len = name.length();
-  if (!*watcher || len > fio::MAX_FILENAME) {
+  if (!*watcher || len > fio::wire::MAX_FILENAME) {
     return;
   }
 
   ZX_ASSERT(!(*watcher)->InContainer());
 
-  uint8_t msg[fio::MAX_FILENAME + 2];
+  uint8_t msg[fio::wire::MAX_FILENAME + 2];
   const uint32_t msg_len = static_cast<uint32_t>(len + 2);
   msg[0] = static_cast<uint8_t>(op);
   msg[1] = static_cast<uint8_t>(len);
@@ -338,11 +338,11 @@ void devfs_notify(Devnode* dn, const fbl::String& name, unsigned op) {
   }
 
   size_t len = name.length();
-  if (len > fio::MAX_FILENAME) {
+  if (len > fio::wire::MAX_FILENAME) {
     return;
   }
 
-  uint8_t msg[fio::MAX_FILENAME + 2];
+  uint8_t msg[fio::wire::MAX_FILENAME + 2];
   const uint32_t msg_len = static_cast<uint32_t>(len + 2);
   msg[0] = static_cast<uint8_t>(op);
   msg[1] = static_cast<uint8_t>(len);
@@ -378,15 +378,15 @@ zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
 
   // If the watcher has asked for all existing entries, send it all of them
   // followed by the end-of-existing marker (IDLE).
-  if (mask & fio::WATCH_MASK_EXISTING) {
+  if (mask & fio::wire::WATCH_MASK_EXISTING) {
     for (const auto& child : dn->children) {
       if (child.device && (child.device->flags & DEV_CTX_INVISIBLE)) {
         continue;
       }
       // TODO: send multiple per write
-      devfs_notify_single(&watcher, child.name, fio::WATCH_EVENT_EXISTING);
+      devfs_notify_single(&watcher, child.name, fio::wire::WATCH_EVENT_EXISTING);
     }
-    devfs_notify_single(&watcher, "", fio::WATCH_EVENT_IDLE);
+    devfs_notify_single(&watcher, "", fio::wire::WATCH_EVENT_IDLE);
   }
 
   // Watcher may have been freed by devfs_notify_single, so check before
@@ -593,7 +593,7 @@ void devfs_remove(Devnode* dn) {
 
   // notify own file watcher
   if ((dn->device == nullptr) || !(dn->device->flags & DEV_CTX_INVISIBLE)) {
-    devfs_notify(dn, "", fio::WATCH_EVENT_DELETED);
+    devfs_notify(dn, "", fio::wire::WATCH_EVENT_DELETED);
   }
 
   // disconnect from device and notify parent/link directory watchers
@@ -603,7 +603,7 @@ void devfs_remove(Devnode* dn) {
 
       if ((dn->device->parent() != nullptr) && (dn->device->parent()->self != nullptr) &&
           !(dn->device->flags & DEV_CTX_INVISIBLE)) {
-        devfs_notify(dn->device->parent()->self, dn->name, fio::WATCH_EVENT_REMOVED);
+        devfs_notify(dn->device->parent()->self, dn->name, fio::wire::WATCH_EVENT_REMOVED);
       }
     }
     if (dn->device->link == dn) {
@@ -611,7 +611,7 @@ void devfs_remove(Devnode* dn) {
 
       if (!(dn->device->flags & DEV_CTX_INVISIBLE)) {
         Devnode* dir = proto_dir(dn->device->protocol_id());
-        devfs_notify(dir, dn->name, fio::WATCH_EVENT_REMOVED);
+        devfs_notify(dir, dn->name, fio::wire::WATCH_EVENT_REMOVED);
       }
     }
     dn->device = nullptr;
@@ -665,10 +665,10 @@ zx_status_t DcIostate::Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::c
 void devfs_advertise(const fbl::RefPtr<Device>& dev) {
   if (dev->link) {
     Devnode* dir = proto_dir(dev->protocol_id());
-    devfs_notify(dir, dev->link->name, fio::WATCH_EVENT_ADDED);
+    devfs_notify(dir, dev->link->name, fio::wire::WATCH_EVENT_ADDED);
   }
   if (dev->self->parent) {
-    devfs_notify(dev->self->parent, dev->self->name, fio::WATCH_EVENT_ADDED);
+    devfs_notify(dev->self->parent, dev->self->name, fio::wire::WATCH_EVENT_ADDED);
   }
 }
 
@@ -676,12 +676,12 @@ void devfs_advertise(const fbl::RefPtr<Device>& dev) {
 void devfs_advertise_modified(const fbl::RefPtr<Device>& dev) {
   if (dev->link) {
     Devnode* dir = proto_dir(dev->protocol_id());
-    devfs_notify(dir, dev->link->name, fio::WATCH_EVENT_REMOVED);
-    devfs_notify(dir, dev->link->name, fio::WATCH_EVENT_ADDED);
+    devfs_notify(dir, dev->link->name, fio::wire::WATCH_EVENT_REMOVED);
+    devfs_notify(dir, dev->link->name, fio::wire::WATCH_EVENT_ADDED);
   }
   if (dev->self->parent) {
-    devfs_notify(dev->self->parent, dev->self->name, fio::WATCH_EVENT_REMOVED);
-    devfs_notify(dev->self->parent, dev->self->name, fio::WATCH_EVENT_ADDED);
+    devfs_notify(dev->self->parent, dev->self->name, fio::wire::WATCH_EVENT_REMOVED);
+    devfs_notify(dev->self->parent, dev->self->name, fio::wire::WATCH_EVENT_ADDED);
   }
 }
 
@@ -789,8 +789,8 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
 
 void DevfsFidlServer::Open(uint32_t flags, uint32_t mode, fidl::StringView path,
                            fidl::ServerEnd<fio::Node> object, OpenCompleter::Sync& completer) {
-  if (path.size() <= fio::MAX_PATH) {
-    fbl::StringBuffer<fio::MAX_PATH + 1> terminated_path;
+  if (path.size() <= fio::wire::MAX_PATH) {
+    fbl::StringBuffer<fio::wire::MAX_PATH + 1> terminated_path;
     terminated_path.Append(path.data(), path.size());
     devfs_open(owner_->devnode_, current_dispatcher_, object.TakeChannel().release(),
                terminated_path.data(), flags);
@@ -809,14 +809,14 @@ void DevfsFidlServer::Clone(uint32_t flags, fidl::ServerEnd<fio::Node> object,
 
 void DevfsFidlServer::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
   fidl::tracking_ptr<fio::wire::FilesystemInfo> info(std::make_unique<fio::wire::FilesystemInfo>());
-  strlcpy(reinterpret_cast<char*>(info->name.data()), "devfs", fio::MAX_FS_NAME_BUFFER);
+  strlcpy(reinterpret_cast<char*>(info->name.data()), "devfs", fio::wire::MAX_FS_NAME_BUFFER);
   completer.Reply(ZX_OK, std::move(info));
 }
 
 void DevfsFidlServer::Watch(uint32_t mask, uint32_t options, zx::channel watcher,
                             WatchCompleter::Sync& completer) {
   zx_status_t status;
-  if (mask & (~fio::WATCH_MASK_ALL) || options != 0) {
+  if (mask & (~fio::wire::WATCH_MASK_ALL) || options != 0) {
     status = ZX_ERR_INVALID_ARGS;
   } else {
     status = devfs_watch(owner_->devnode_, std::move(watcher), mask);
@@ -830,12 +830,12 @@ void DevfsFidlServer::Rewind(RewindCompleter::Sync& completer) {
 }
 
 void DevfsFidlServer::ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) {
-  if (max_bytes > fio::MAX_BUF) {
+  if (max_bytes > fio::wire::MAX_BUF) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
   }
 
-  uint8_t data[fio::MAX_BUF];
+  uint8_t data[fio::wire::MAX_BUF];
   size_t actual = 0;
   zx_status_t status = devfs_readdir(owner_->devnode_, &owner_->readdir_ino_, data, max_bytes);
   if (status >= 0) {

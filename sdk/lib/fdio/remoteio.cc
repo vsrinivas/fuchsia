@@ -21,15 +21,15 @@ namespace fdevice = ::llcpp::fuchsia::device;
 
 static_assert(FDIO_CHUNK_SIZE >= PATH_MAX, "FDIO_CHUNK_SIZE must be large enough to contain paths");
 
-static_assert(fio::VMO_FLAG_READ == ZX_VM_PERM_READ, "Vmar / Vmo flags should be aligned");
-static_assert(fio::VMO_FLAG_WRITE == ZX_VM_PERM_WRITE, "Vmar / Vmo flags should be aligned");
-static_assert(fio::VMO_FLAG_EXEC == ZX_VM_PERM_EXECUTE, "Vmar / Vmo flags should be aligned");
+static_assert(fio::wire::VMO_FLAG_READ == ZX_VM_PERM_READ, "Vmar / Vmo flags should be aligned");
+static_assert(fio::wire::VMO_FLAG_WRITE == ZX_VM_PERM_WRITE, "Vmar / Vmo flags should be aligned");
+static_assert(fio::wire::VMO_FLAG_EXEC == ZX_VM_PERM_EXECUTE, "Vmar / Vmo flags should be aligned");
 
-static_assert(fio::DEVICE_SIGNAL_READABLE == fdevice::DEVICE_SIGNAL_READABLE);
-static_assert(fio::DEVICE_SIGNAL_OOB == fdevice::DEVICE_SIGNAL_OOB);
-static_assert(fio::DEVICE_SIGNAL_WRITABLE == fdevice::DEVICE_SIGNAL_WRITABLE);
-static_assert(fio::DEVICE_SIGNAL_ERROR == fdevice::DEVICE_SIGNAL_ERROR);
-static_assert(fio::DEVICE_SIGNAL_HANGUP == fdevice::DEVICE_SIGNAL_HANGUP);
+static_assert(fio::wire::DEVICE_SIGNAL_READABLE == fdevice::wire::DEVICE_SIGNAL_READABLE);
+static_assert(fio::wire::DEVICE_SIGNAL_OOB == fdevice::wire::DEVICE_SIGNAL_OOB);
+static_assert(fio::wire::DEVICE_SIGNAL_WRITABLE == fdevice::wire::DEVICE_SIGNAL_WRITABLE);
+static_assert(fio::wire::DEVICE_SIGNAL_ERROR == fdevice::wire::DEVICE_SIGNAL_ERROR);
+static_assert(fio::wire::DEVICE_SIGNAL_HANGUP == fdevice::wire::DEVICE_SIGNAL_HANGUP);
 
 // The |mode| argument used for |fuchsia.io.Directory/Open| calls.
 #define FDIO_CONNECT_MODE ((uint32_t)0755)
@@ -65,7 +65,7 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
   if (dir == ZX_HANDLE_INVALID) {
     return ZX_ERR_UNAVAILABLE;
   }
-  uint32_t flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+  uint32_t flags = fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE;
   return fio::Directory::Call::Open(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
                                     fidl::unowned_str(path, length), std::move(request))
       .status();
@@ -414,7 +414,7 @@ zx_status_t fdio_remote_clone(zx_handle_t node, fdio_t** out_io) {
   }
 
   status = fio::Node::Call::Clone(zx::unowned_channel(node),
-                                  fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE,
+                                  fio::wire::CLONE_FLAG_SAME_RIGHTS | fio::wire::OPEN_FLAG_DESCRIBE,
                                   std::move(request))
                .status();
   if (status != ZX_OK) {

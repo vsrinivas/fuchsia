@@ -18,13 +18,13 @@ namespace {
 TEST(NameProviderTest, GetHostNameDefault) {
   char hostname[HOST_NAME_MAX];
   ASSERT_EQ(gethostname(hostname, sizeof(hostname)), 0) << strerror(errno);
-  ASSERT_STREQ(hostname, llcpp::fuchsia::device::DEFAULT_DEVICE_NAME);
+  ASSERT_STREQ(hostname, llcpp::fuchsia::device::wire::DEFAULT_DEVICE_NAME);
 }
 
 TEST(NameProviderTest, UnameDefault) {
   utsname uts;
   ASSERT_EQ(uname(&uts), 0) << strerror(errno);
-  ASSERT_STREQ(uts.nodename, llcpp::fuchsia::device::DEFAULT_DEVICE_NAME);
+  ASSERT_STREQ(uts.nodename, llcpp::fuchsia::device::wire::DEFAULT_DEVICE_NAME);
 }
 
 TEST(NameProviderTest, GetDeviceName) {
@@ -46,8 +46,8 @@ TEST(NameProviderTest, GetDeviceName) {
   auto& name = result.response().name;
 
   // regression test: ensure that no additional data is present past the last null byte
-  EXPECT_EQ(name.size(), strlen(llcpp::fuchsia::device::DEFAULT_DEVICE_NAME));
-  EXPECT_EQ(memcmp(name.data(), llcpp::fuchsia::device::DEFAULT_DEVICE_NAME, name.size()), 0);
+  EXPECT_EQ(name.size(), strlen(llcpp::fuchsia::device::wire::DEFAULT_DEVICE_NAME));
+  EXPECT_EQ(memcmp(name.data(), llcpp::fuchsia::device::wire::DEFAULT_DEVICE_NAME, name.size()), 0);
 }
 
 }  // namespace

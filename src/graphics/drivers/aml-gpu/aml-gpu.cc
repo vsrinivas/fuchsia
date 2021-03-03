@@ -297,11 +297,11 @@ zx_status_t AmlGpu::ProcessMetadata(std::vector<uint8_t> raw_metadata) {
 zx_status_t AmlGpu::Bind() {
   size_t size;
   zx_status_t status =
-      DdkGetMetadataSize(llcpp::fuchsia::hardware::gpu::amlogic::MALI_METADATA, &size);
+      DdkGetMetadataSize(llcpp::fuchsia::hardware::gpu::amlogic::wire::MALI_METADATA, &size);
   if (status == ZX_OK) {
     std::vector<uint8_t> raw_metadata(size);
     size_t actual;
-    status = DdkGetMetadata(llcpp::fuchsia::hardware::gpu::amlogic::MALI_METADATA,
+    status = DdkGetMetadata(llcpp::fuchsia::hardware::gpu::amlogic::wire::MALI_METADATA,
                             raw_metadata.data(), size, &actual);
     if (status != ZX_OK) {
       GPU_ERROR("Failed to get metadata");

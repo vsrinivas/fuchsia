@@ -750,7 +750,7 @@ void UsbDevice::GetConfigurationDescriptor(uint8_t config,
 
 void UsbDevice::GetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
                                     GetStringDescriptorCompleter::Sync& completer) {
-  char buffer[llcpp::fuchsia::hardware::usb::device::MAX_STRING_DESC_SIZE];
+  char buffer[llcpp::fuchsia::hardware::usb::device::wire::MAX_STRING_DESC_SIZE];
   size_t actual = 0;
   auto status = UsbGetStringDescriptor(desc_id, lang_id, &lang_id,
                                        reinterpret_cast<uint8_t*>(buffer), sizeof(buffer), &actual);

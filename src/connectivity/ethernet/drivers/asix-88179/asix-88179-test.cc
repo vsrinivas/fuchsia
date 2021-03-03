@@ -144,8 +144,8 @@ class UsbAx88179Test : public zxtest::Test {
     // order, confirm that we get to online eventually.
     for (int tries = 0; tries < 2; ++tries) {
       zx_signals_t pending;
-      ASSERT_OK(rx_fifo_.wait_one(ethernet::SIGNAL_STATUS, zx::time::infinite(), &pending));
-      ASSERT_EQ((pending & ethernet::SIGNAL_STATUS), ethernet::SIGNAL_STATUS);
+      ASSERT_OK(rx_fifo_.wait_one(ethernet::wire::SIGNAL_STATUS, zx::time::infinite(), &pending));
+      ASSERT_EQ((pending & ethernet::wire::SIGNAL_STATUS), ethernet::wire::SIGNAL_STATUS);
       if (GetDeviceStatus() & ethernet::wire::DeviceStatus::ONLINE) {
         return;
       }

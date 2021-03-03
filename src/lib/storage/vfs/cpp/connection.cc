@@ -32,12 +32,12 @@
 
 namespace fio = ::llcpp::fuchsia::io;
 
-static_assert(fio::OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE ==
-                  (fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_NOT_DIRECTORY |
-                   fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_NODE_REFERENCE),
+static_assert(fio::wire::OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE ==
+                  (fio::wire::OPEN_FLAG_DIRECTORY | fio::wire::OPEN_FLAG_NOT_DIRECTORY |
+                   fio::wire::OPEN_FLAG_DESCRIBE | fio::wire::OPEN_FLAG_NODE_REFERENCE),
               "OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE value mismatch");
-static_assert(PATH_MAX == fio::MAX_PATH, "POSIX PATH_MAX inconsistent with Fuchsia MAX_PATH");
-static_assert(NAME_MAX == fio::MAX_FILENAME,
+static_assert(PATH_MAX == fio::wire::MAX_PATH, "POSIX PATH_MAX inconsistent with Fuchsia MAX_PATH");
+static_assert(NAME_MAX == fio::wire::MAX_FILENAME,
               "POSIX NAME_MAX inconsistent with Fuchsia MAX_FILENAME");
 
 namespace fs {
@@ -67,10 +67,10 @@ bool PrevalidateFlags(uint32_t flags) {
     return false;
   }
 
-  if (flags & fio::OPEN_FLAG_NODE_REFERENCE) {
+  if (flags & fio::wire::OPEN_FLAG_NODE_REFERENCE) {
     constexpr uint32_t kValidFlagsForNodeRef =
-        fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_NOT_DIRECTORY |
-        fio::OPEN_FLAG_DESCRIBE;
+        fio::wire::OPEN_FLAG_NODE_REFERENCE | fio::wire::OPEN_FLAG_DIRECTORY |
+        fio::wire::OPEN_FLAG_NOT_DIRECTORY | fio::wire::OPEN_FLAG_DESCRIBE;
     // Explicitly reject VNODE_REF_ONLY together with any invalid flags.
     if (flags & ~kValidFlagsForNodeRef) {
       return false;
@@ -379,18 +379,18 @@ Connection::Result<> Connection::NodeSetAttr(uint32_t flags,
   if (!options().rights.write) {
     return fit::error(ZX_ERR_BAD_HANDLE);
   }
-  constexpr uint32_t supported_flags =
-      fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME | fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME;
+  constexpr uint32_t supported_flags = fio::wire::NODE_ATTRIBUTE_FLAG_CREATION_TIME |
+                                       fio::wire::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME;
   if (flags & ~supported_flags) {
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
   zx_status_t status = vnode_->SetAttributes(
       fs::VnodeAttributesUpdate()
-          .set_creation_time(flags & fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME
+          .set_creation_time(flags & fio::wire::NODE_ATTRIBUTE_FLAG_CREATION_TIME
                                  ? std::make_optional(attributes.creation_time)
                                  : std::nullopt)
-          .set_modification_time(flags & fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME
+          .set_modification_time(flags & fio::wire::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME
                                      ? std::make_optional(attributes.modification_time)
                                      : std::nullopt));
   return FromStatus(status);

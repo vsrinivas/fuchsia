@@ -115,7 +115,7 @@ size_t StorageWatchdog::GetStorageUsage() {
     FX_LOGS(WARNING) << "storage_watchdog: cannot query filesystem: " << status;
     return 0;
   }
-  info.name[fio::MAX_FS_NAME_BUFFER - 1] = '\0';
+  info.name[fio::wire::MAX_FS_NAME_BUFFER - 1] = '\0';
 
   // The number of bytes which may be allocated plus the number of bytes which
   // have been allocated

@@ -480,7 +480,7 @@ zx_status_t SdmmcBlockDevice::Trim(const block_trim_t& txn, const EmmcPartition 
 }
 
 zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
-  using ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+  using ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
 
   const uint64_t tx_frame_count = request.tx_frames.size / FRAME_SIZE;
   const uint64_t rx_frame_count =
@@ -635,7 +635,7 @@ void SdmmcBlockDevice::Queue(BlockOperation txn) {
 }
 
 void SdmmcBlockDevice::RpmbQueue(RpmbRequestInfo info) {
-  using ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+  using ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
 
   if (info.tx_frames.size % FRAME_SIZE != 0) {
     zxlogf(ERROR, "sdmmc: tx frame buffer size not a multiple of %u", FRAME_SIZE);

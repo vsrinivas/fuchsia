@@ -23,7 +23,7 @@ class MockBufferCollection : public mock_sysmem::MockBufferCollection {
     EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
     EXPECT_EQ(64u, constraints.image_format_constraints[0].bytes_per_row_divisor);
     EXPECT_EQ(4u, constraints.image_format_constraints_count);
-    EXPECT_EQ(sysmem::FORMAT_MODIFIER_ARM_LINEAR_TE,
+    EXPECT_EQ(sysmem::wire::FORMAT_MODIFIER_ARM_LINEAR_TE,
               constraints.image_format_constraints[1].pixel_format.format_modifier.value);
     set_constraints_called_ = true;
   }

@@ -957,7 +957,7 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
     if (status != ZX_OK) {
       return status;
     }
-    status = zs->client.Clone(fio::CLONE_FLAG_SAME_RIGHTS, std::move(remote)).status();
+    status = zs->client.Clone(fio::wire::CLONE_FLAG_SAME_RIGHTS, std::move(remote)).status();
     if (status != ZX_OK) {
       return status;
     }
@@ -1179,7 +1179,7 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     if (status != ZX_OK) {
       return status;
     }
-    status = zs->client.Clone(fio::CLONE_FLAG_SAME_RIGHTS, std::move(remote)).status();
+    status = zs->client.Clone(fio::wire::CLONE_FLAG_SAME_RIGHTS, std::move(remote)).status();
     if (status != ZX_OK) {
       return status;
     }

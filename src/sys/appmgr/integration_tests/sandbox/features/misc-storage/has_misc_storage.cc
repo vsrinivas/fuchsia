@@ -10,5 +10,6 @@ namespace fio = ::llcpp::fuchsia::io;
 
 TEST_F(NamespaceTest, HasMiscData) {
   ExpectExists("/misc");
-  ExpectPathSupportsStrictRights("/misc", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
+  ExpectPathSupportsStrictRights("/misc",
+                                 fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE);
 }

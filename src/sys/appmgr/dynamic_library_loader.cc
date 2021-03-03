@@ -34,10 +34,11 @@ zx::status<fidl::ClientEnd<::llcpp::fuchsia::ldsvc::Loader>> Start(int package_f
   }
 
   fbl::unique_fd lib_fd;
-  zx_status_t status = fdio_open_fd_at(
-      package_fd, "lib",
-      fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
-      lib_fd.reset_and_get_address());
+  zx_status_t status =
+      fdio_open_fd_at(package_fd, "lib",
+                      fio::wire::OPEN_FLAG_DIRECTORY | fio::wire::OPEN_RIGHT_READABLE |
+                          fio::wire::OPEN_RIGHT_EXECUTABLE,
+                      lib_fd.reset_and_get_address());
   if (status != ZX_OK) {
     return zx::error(status);
   }

@@ -104,7 +104,8 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreate) {
   zx::channel local, remote;
   ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
   auto result = fio::Directory::Call::Open(
-      caller.channel(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+      caller.channel(),
+      fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE | fio::wire::OPEN_FLAG_CREATE,
       0755, fidl::StringView("."), std::move(remote));
   ASSERT_EQ(result.status(), ZX_OK);
 
@@ -122,11 +123,11 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreateIfAbsent) {
   // Opening with OPEN_FLAG_CREATE_IF_ABSENT should fail.
   zx::channel local, remote;
   ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
-  auto result =
-      fio::Directory::Call::Open(caller.channel(),
-                                 fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE |
-                                     fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT,
-                                 0755, fidl::StringView("."), std::move(remote));
+  auto result = fio::Directory::Call::Open(
+      caller.channel(),
+      fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE |
+          fio::wire::OPEN_FLAG_CREATE | fio::wire::OPEN_FLAG_CREATE_IF_ABSENT,
+      0755, fidl::StringView("."), std::move(remote));
   ASSERT_EQ(result.status(), ZX_OK);
 
   auto close_result2 = fio::Directory::Call::Close(local.borrow());

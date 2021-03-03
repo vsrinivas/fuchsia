@@ -350,7 +350,7 @@ zx_status_t device_get_dev_power_state_from_mapping(
 
 uint32_t get_perf_state(const fbl::RefPtr<zx_device>& dev, uint32_t requested_perf_state) {
   // Give preference to the performance state that is explicitly for this device.
-  if (dev->current_performance_state() != ::llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0) {
+  if (dev->current_performance_state() != ::llcpp::fuchsia::device::wire::DEVICE_PERFORMANCE_STATE_P0) {
     return dev->current_performance_state();
   }
   return requested_perf_state;
@@ -782,7 +782,7 @@ void DriverHostContext::DeviceSystemResume(const fbl::RefPtr<zx_device>& dev,
     status = ZX_OK;
   }
   dev->resume_cb(status, static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0),
-                 llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
+                 llcpp::fuchsia::device::wire::DEVICE_PERFORMANCE_STATE_P0);
 }
 
 void DriverHostContext::DeviceSuspendNew(const fbl::RefPtr<zx_device>& dev,
@@ -832,19 +832,19 @@ void DriverHostContext::DeviceResumeNew(const fbl::RefPtr<zx_device>& dev) {
     LOGF(INFO, "Failed to resume device %p '%s', auto suspend is enabled", dev.get(), dev->name());
     dev->resume_cb(ZX_ERR_NOT_SUPPORTED,
                    static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0),
-                   llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
+                   llcpp::fuchsia::device::wire::DEVICE_PERFORMANCE_STATE_P0);
     return;
   }
   // If new resume hook is implemented, prefer that.
   if (dev->ops()->resume) {
     uint32_t requested_perf_state =
-        internal::get_perf_state(dev, llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
+        internal::get_perf_state(dev, llcpp::fuchsia::device::wire::DEVICE_PERFORMANCE_STATE_P0);
     dev->ops()->resume(dev->ctx, requested_perf_state);
     return;
   }
   dev->resume_cb(ZX_ERR_NOT_SUPPORTED,
                  static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0),
-                 llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
+                 llcpp::fuchsia::device::wire::DEVICE_PERFORMANCE_STATE_P0);
 }
 
 zx_status_t DriverHostContext::DeviceConfigureAutoSuspend(const fbl::RefPtr<zx_device>& dev,

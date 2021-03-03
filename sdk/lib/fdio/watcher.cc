@@ -42,8 +42,8 @@ static zx_status_t fdio_watcher_create(int dirfd, fdio_watcher_t** out) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto result = fio::Directory::Call::Watch(zx::unowned_channel(dir_channel), fio::WATCH_MASK_ALL,
-                                            0, std::move(server));
+  auto result = fio::Directory::Call::Watch(zx::unowned_channel(dir_channel),
+                                            fio::wire::WATCH_MASK_ALL, 0, std::move(server));
   fdio_unsafe_release(io);
   status = result.status();
   if (status != ZX_OK) {
@@ -74,14 +74,14 @@ static zx_status_t fdio_watcher_process(fdio_watcher_t* w, uint8_t* msg, size_t 
     }
 
     switch (event) {
-      case fio::WATCH_EVENT_ADDED:
-      case fio::WATCH_EVENT_EXISTING:
+      case fio::wire::WATCH_EVENT_ADDED:
+      case fio::wire::WATCH_EVENT_EXISTING:
         event = WATCH_EVENT_ADD_FILE;
         break;
-      case fio::WATCH_EVENT_REMOVED:
+      case fio::wire::WATCH_EVENT_REMOVED:
         event = WATCH_EVENT_REMOVE_FILE;
         break;
-      case fio::WATCH_EVENT_IDLE:
+      case fio::wire::WATCH_EVENT_IDLE:
         event = WATCH_EVENT_WAITING;
         break;
       default:
@@ -107,8 +107,8 @@ static zx_status_t fdio_watcher_process(fdio_watcher_t* w, uint8_t* msg, size_t 
 static zx_status_t fdio_watcher_loop(fdio_watcher_t* w, zx_time_t deadline) {
   for (;;) {
     // extra byte for watcher process use
-    uint8_t msg[fio::MAX_BUF + 1];
-    uint32_t sz = fio::MAX_BUF;
+    uint8_t msg[fio::wire::MAX_BUF + 1];
+    uint32_t sz = fio::wire::MAX_BUF;
     zx_status_t status;
     if ((status = zx_channel_read(w->h, 0, msg, nullptr, sz, 0, &sz, nullptr)) < 0) {
       if (status != ZX_ERR_SHOULD_WAIT) {

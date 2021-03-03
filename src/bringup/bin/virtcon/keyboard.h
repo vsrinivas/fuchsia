@@ -81,7 +81,7 @@ class Keyboard {
   bool is_repeating_ = false;
   uint8_t repeating_keycode_;
   std::array<llcpp::fuchsia::ui::input2::wire::Key,
-             llcpp::fuchsia::input::report::KEYBOARD_MAX_PRESSED_KEYS>
+             llcpp::fuchsia::input::report::wire::KEYBOARD_MAX_PRESSED_KEYS>
       last_pressed_keys_;
   size_t last_pressed_keys_size_ = 0;
 };

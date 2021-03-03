@@ -169,8 +169,8 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
       collection_info.settings.image_format_constraints.pixel_format.format_modifier.value;
 
   switch (format_modifier) {
-    case sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16:
-    case sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_TE: {
+    case sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16:
+    case sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_TE: {
       // AFBC does not use canvas.
       uint64_t offset = collection_info.buffers[index].vmo_usable_start;
       size_t size =
@@ -192,8 +192,8 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
       import_info->image_width = image->width;
       import_info->is_afbc = true;
     } break;
-    case sysmem::FORMAT_MODIFIER_LINEAR:
-    case sysmem::FORMAT_MODIFIER_ARM_LINEAR_TE: {
+    case sysmem::wire::FORMAT_MODIFIER_LINEAR:
+    case sysmem::wire::FORMAT_MODIFIER_ARM_LINEAR_TE: {
       uint32_t minimum_row_bytes;
       if (!image_format::GetMinimumRowBytes(collection_info.settings.image_format_constraints,
                                             image->width, &minimum_row_bytes)) {
@@ -485,9 +485,9 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   sysmem::wire::BufferCollectionConstraints constraints = {};
   const char* buffer_name;
   if (config->type == IMAGE_TYPE_CAPTURE) {
-    constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
+    constraints.usage.cpu = sysmem::wire::cpuUsageReadOften | sysmem::wire::cpuUsageWriteOften;
   } else {
-    constraints.usage.display = sysmem::displayUsageLayer;
+    constraints.usage.display = sysmem::wire::displayUsageLayer;
   }
   constraints.has_buffer_memory_constraints = true;
   sysmem::wire::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
@@ -510,7 +510,7 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     if (config->type == IMAGE_TYPE_CAPTURE) {
       ZX_DEBUG_ASSERT(i == 0);
       image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGR24;
-      image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
+      image_constraints.pixel_format.format_modifier.value = sysmem::wire::FORMAT_MODIFIER_LINEAR;
       image_constraints.min_coded_width = vout_->display_width();
       image_constraints.max_coded_width = vout_->display_width();
       image_constraints.min_coded_height = vout_->display_height();
@@ -529,22 +529,23 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
       switch (i) {
         case 0:
           image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
-          image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
+          image_constraints.pixel_format.format_modifier.value =
+              sysmem::wire::FORMAT_MODIFIER_LINEAR;
           break;
         case 1:
           image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
           image_constraints.pixel_format.format_modifier.value =
-              sysmem::FORMAT_MODIFIER_ARM_LINEAR_TE;
+              sysmem::wire::FORMAT_MODIFIER_ARM_LINEAR_TE;
           break;
         case 2:
           image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::R8G8B8A8;
           image_constraints.pixel_format.format_modifier.value =
-              sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16;
+              sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16;
           break;
         case 3:
           image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::R8G8B8A8;
           image_constraints.pixel_format.format_modifier.value =
-              sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_TE;
+              sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_TE;
           break;
       }
       buffer_name = "Display";

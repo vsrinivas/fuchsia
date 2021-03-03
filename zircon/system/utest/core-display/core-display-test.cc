@@ -222,7 +222,7 @@ void CoreDisplayTest::FinalizeClientConstraints() {
 
   // token has been returned. Let's set contraints
   sysmem::wire::BufferCollectionConstraints constraints = {};
-  constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
+  constraints.usage.cpu = sysmem::wire::cpuUsageReadOften | sysmem::wire::cpuUsageWriteOften;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = false;
   constraints.image_format_constraints_count = 1;

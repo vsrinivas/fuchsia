@@ -19,15 +19,15 @@
 
 using driver_integration_test::IsolatedDevmgr;
 using llcpp::fuchsia::device::Controller;
-using llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0;
-using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
-using llcpp::fuchsia::device::MAX_DEVICE_POWER_STATES;
+using llcpp::fuchsia::device::wire::DEVICE_PERFORMANCE_STATE_P0;
+using llcpp::fuchsia::device::wire::MAX_DEVICE_PERFORMANCE_STATES;
+using llcpp::fuchsia::device::wire::MAX_DEVICE_POWER_STATES;
 using llcpp::fuchsia::device::power::test::TestDevice;
 using llcpp::fuchsia::device::wire::DevicePerformanceStateInfo;
 using llcpp::fuchsia::device::wire::DevicePowerState;
 using llcpp::fuchsia::device::wire::DevicePowerStateInfo;
 using llcpp::fuchsia::device::wire::SystemPowerStateInfo;
-using llcpp::fuchsia::hardware::power::statecontrol::MAX_SYSTEM_POWER_STATES;
+using llcpp::fuchsia::hardware::power::statecontrol::wire::MAX_SYSTEM_POWER_STATES;
 using llcpp::fuchsia::hardware::power::statecontrol::wire::SystemPowerState;
 namespace device_manager_fidl = ::llcpp::fuchsia::device::manager;
 namespace lifecycle_fidl = ::llcpp::fuchsia::process::lifecycle;

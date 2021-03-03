@@ -291,7 +291,7 @@ void Client::SetBufferCollectionConstraints(
 
     // Constraints to be used with zx_framebuffer_set_range.
     sysmem::wire::BufferCollectionConstraints constraints;
-    constraints.usage.display = sysmem::displayUsageLayer;
+    constraints.usage.display = sysmem::wire::displayUsageLayer;
     constraints.has_buffer_memory_constraints = true;
     sysmem::wire::BufferMemoryConstraints& buffer_constraints =
         constraints.buffer_memory_constraints;
@@ -307,7 +307,7 @@ void Client::SetBufferCollectionConstraints(
       case ZX_PIXEL_FORMAT_ARGB_8888:
         image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
         image_constraints.pixel_format.has_format_modifier = true;
-        image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
+        image_constraints.pixel_format.format_modifier.value = sysmem::wire::FORMAT_MODIFIER_LINEAR;
         break;
     }
 

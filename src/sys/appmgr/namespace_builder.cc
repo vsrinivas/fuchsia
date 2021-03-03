@@ -208,7 +208,7 @@ void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
 void NamespaceBuilder::PushDirectoryFromPathAs(std::string src_path, std::string dst_path) {
   PushDirectoryFromPathAsWithPermissions(
       std::move(src_path), std::move(dst_path),
-      fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_POSIX | fio::OPEN_RIGHT_READABLE);
+      fio::wire::OPEN_FLAG_DIRECTORY | fio::wire::OPEN_FLAG_POSIX | fio::wire::OPEN_RIGHT_READABLE);
 }
 
 void NamespaceBuilder::PushDirectoryFromPathAsWithPermissions(std::string src_path,

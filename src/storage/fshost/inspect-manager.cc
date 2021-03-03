@@ -205,7 +205,7 @@ std::optional<DirectoryEntry> DirectoryEntriesIterator::MaybeMakeEntry(
   }
   fio::Node::GetAttrResponse* response = result.Unwrap();
 
-  bool is_dir = response->attributes.mode & fio::MODE_TYPE_DIRECTORY;
+  bool is_dir = response->attributes.mode & fio::wire::MODE_TYPE_DIRECTORY;
   return std::optional<DirectoryEntry>{{
       .name = entry_name,
       .node = std::move(child_chan),
@@ -216,7 +216,7 @@ std::optional<DirectoryEntry> DirectoryEntriesIterator::MaybeMakeEntry(
 
 // Reads the next set of dirents and loads them into `pending_entries_`.
 void DirectoryEntriesIterator::RefreshPendingEntries() {
-  auto result = fio::Directory::Call::ReadDirents(directory_, fio::MAX_BUF);
+  auto result = fio::Directory::Call::ReadDirents(directory_, fio::wire::MAX_BUF);
   if (result.status() != ZX_OK) {
     return;
   }

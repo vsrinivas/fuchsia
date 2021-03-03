@@ -7,17 +7,17 @@
 #include <inttypes.h>
 
 bool IsWriteUsage(const llcpp::fuchsia::sysmem2::wire::BufferUsage& buffer_usage) {
-  const uint32_t kCpuWriteBits =
-      llcpp::fuchsia::sysmem2::CPU_USAGE_WRITE_OFTEN | llcpp::fuchsia::sysmem2::CPU_USAGE_WRITE;
+  const uint32_t kCpuWriteBits = llcpp::fuchsia::sysmem2::wire::CPU_USAGE_WRITE_OFTEN |
+                                 llcpp::fuchsia::sysmem2::wire::CPU_USAGE_WRITE;
   // This list may not be complete.
-  const uint32_t kVulkanWriteBits = llcpp::fuchsia::sysmem2::VULKAN_USAGE_TRANSFER_DST |
-                                    llcpp::fuchsia::sysmem2::VULKAN_USAGE_STORAGE;
+  const uint32_t kVulkanWriteBits = llcpp::fuchsia::sysmem2::wire::VULKAN_USAGE_TRANSFER_DST |
+                                    llcpp::fuchsia::sysmem2::wire::VULKAN_USAGE_STORAGE;
   // Display usages don't include any writing.
   const uint32_t kDisplayWriteBits = 0;
-  const uint32_t kVideoWriteBits = llcpp::fuchsia::sysmem2::VIDEO_USAGE_HW_DECODER |
-                                   llcpp::fuchsia::sysmem2::VIDEO_USAGE_HW_DECODER_INTERNAL |
-                                   llcpp::fuchsia::sysmem2::VIDEO_USAGE_DECRYPTOR_OUTPUT |
-                                   llcpp::fuchsia::sysmem2::VIDEO_USAGE_HW_ENCODER;
+  const uint32_t kVideoWriteBits = llcpp::fuchsia::sysmem2::wire::VIDEO_USAGE_HW_DECODER |
+                                   llcpp::fuchsia::sysmem2::wire::VIDEO_USAGE_HW_DECODER_INTERNAL |
+                                   llcpp::fuchsia::sysmem2::wire::VIDEO_USAGE_DECRYPTOR_OUTPUT |
+                                   llcpp::fuchsia::sysmem2::wire::VIDEO_USAGE_HW_ENCODER;
 
   uint32_t cpu = buffer_usage.has_cpu() ? buffer_usage.cpu() : 0;
   uint32_t vulkan = buffer_usage.has_vulkan() ? buffer_usage.vulkan() : 0;

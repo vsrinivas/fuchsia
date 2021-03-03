@@ -37,7 +37,7 @@ class Keyboard : public Device {
   // Ranges of keys will have the |kArray| flag set and will send a single key
   // value on each report. Single keys will be 1 if pressed, 0 if unpressed.
   size_t num_key_fields_;
-  std::array<hid::ReportField, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS> key_fields_;
+  std::array<hid::ReportField, fuchsia_input_report::wire::KEYBOARD_MAX_NUM_KEYS> key_fields_;
   size_t input_report_size_ = 0;
   uint8_t input_report_id_ = 0;
 
@@ -47,7 +47,8 @@ class Keyboard : public Device {
   std::set<::llcpp::fuchsia::input::wire::Key> key_3_values_;
 
   // Fields for the output reports.
-  std::array<hid::ReportField, ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_LEDS> led_fields_;
+  std::array<hid::ReportField, ::llcpp::fuchsia::input::report::wire::KEYBOARD_MAX_NUM_LEDS>
+      led_fields_;
   size_t num_leds_ = 0;
   uint8_t output_report_id_ = 0;
   size_t output_report_size_ = 0;

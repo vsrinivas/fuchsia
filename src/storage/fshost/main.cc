@@ -200,9 +200,11 @@ std::shared_ptr<loader::LoaderServiceBase> SetUpLoaderService(const async::Loop&
   // TODO(fxbug.dev/34633): This loader is DEPRECATED and should be deleted. Do not add new
   // usages.
   fbl::unique_fd root_fd;
-  if (zx_status_t status = fdio_open_fd(
-          "/", fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
-          root_fd.reset_and_get_address());
+  if (zx_status_t status =
+          fdio_open_fd("/",
+                       fio::wire::OPEN_FLAG_DIRECTORY | fio::wire::OPEN_RIGHT_READABLE |
+                           fio::wire::OPEN_RIGHT_EXECUTABLE,
+                       root_fd.reset_and_get_address());
       status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to open namespace root: " << zx_status_get_string(status);
     return nullptr;

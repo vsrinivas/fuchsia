@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
     uint8_t mac[6];
     const char* interface = args.interface.empty() ? nullptr : args.interface.c_str();
     if ((err = netifc_discover(args.ethdir.c_str(), interface, nullptr, mac))) {
-      strlcpy(device_name, llcpp::fuchsia::device::DEFAULT_DEVICE_NAME, sizeof(device_name));
+      strlcpy(device_name, llcpp::fuchsia::device::wire::DEFAULT_DEVICE_NAME, sizeof(device_name));
       printf(
           "device-name-provider: using default name \"%s\": netifc_discover(\"%s\", ...) = %d: "
           "%s\n",

@@ -4,4 +4,5 @@
 
 #include <memory>
 
+const char* ::llcpp::fidl::test::consts::wire::USERNAME = "\"squeenze\"";
 const char* ::llcpp::fidl::test::consts::USERNAME = "\"squeenze\"";

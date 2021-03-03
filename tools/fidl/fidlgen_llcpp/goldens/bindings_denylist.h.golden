@@ -150,8 +150,9 @@ class OnlyLlcpp {
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
-}  // namespace wire
 
+constexpr uint32_t AllBindings = 0u;
+}  // namespace wire
 constexpr uint32_t AllBindings = 0u;
 
 }  // namespace bindingsdenylist
@@ -174,7 +175,6 @@ namespace fidl {
 namespace test {
 namespace bindingsdenylist {
 namespace wire {}  // namespace wire
-
 }  // namespace bindingsdenylist
 }  // namespace test
 }  // namespace fidl

@@ -405,7 +405,7 @@ TEST_P(BufferTest, TestCreate2) {
   constexpr uint64_t kPhysicalAddress = 0x12345678abcd0000;
   const auto memory_property = GetParam();
   const bool is_host_visible =
-      memory_property == llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE;
+      memory_property == llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE;
 
   zx::vmo buffer_vmo;
   ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
@@ -463,15 +463,15 @@ TEST_P(BufferTest, TestCreate2) {
 
 INSTANTIATE_TEST_SUITE_P(
     ControlDeviceTest, BufferTest,
-    testing::Values(llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL,
-                    llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE),
+    testing::Values(llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL,
+                    llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE),
     [](const testing::TestParamInfo<BufferTest::ParamType>& info) {
       std::string memory_property;
       switch (info.param) {
-        case llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL:
+        case llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL:
           memory_property = "DEVICE_LOCAL";
           break;
-        case llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE:
+        case llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE:
           memory_property = "HOST_VISIBLE";
           break;
         default:
@@ -494,7 +494,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_AlreadyExists) {
           std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
           .set_size(std::make_unique<uint64_t>(kSize))
           .set_memory_property(std::make_unique<uint32_t>(
-              llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
+              llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
           .build();
   auto create_buffer_result =
       fidl_client_.CreateBuffer2(std::move(buffer_vmo), std::move(create_params));
@@ -507,7 +507,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_AlreadyExists) {
           std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
           .set_size(std::make_unique<uint64_t>(kSize))
           .set_memory_property(std::make_unique<uint32_t>(
-              llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
+              llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
           .build();
   auto create_copy_buffer_result =
       fidl_client_.CreateBuffer2(std::move(copy_vmo), std::move(create_params2));
@@ -533,7 +533,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidArgs) {
                 llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
             // missing size
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
+                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
             .build();
     auto result = fidl_client_.CreateBuffer2(std::move(buffer_vmo), std::move(create_params));
     ASSERT_TRUE(result.ok());
@@ -577,7 +577,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidVmo) {
           std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
           .set_size(std::make_unique<uint64_t>(kSize))
           .set_memory_property(std::make_unique<uint32_t>(
-              llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
+              llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
           .build();
   auto create_unregistered_buffer_result =
       fidl_client_.CreateBuffer2(std::move(buffer_vmo), std::move(create_params));
@@ -591,7 +591,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidVmo) {
           std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
           .set_size(std::make_unique<uint64_t>(kSize))
           .set_memory_property(std::make_unique<uint32_t>(
-              llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
+              llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
           .build();
   auto create_invalid_buffer_result =
       fidl_client_.CreateBuffer2(zx::vmo(), std::move(create_params2));
@@ -613,7 +613,7 @@ TEST_P(ColorBufferTest, TestCreate) {
   const auto format = std::get<0>(GetParam());
   const auto memory_property = std::get<1>(GetParam());
   const bool is_host_visible =
-      memory_property == llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE;
+      memory_property == llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE;
 
   zx::vmo buffer_vmo;
   ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
@@ -695,8 +695,8 @@ INSTANTIATE_TEST_SUITE_P(
                         llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::RGBA,
                         llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::BGRA,
                         llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::LUMINANCE),
-        testing::Values(llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL,
-                        llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE)),
+        testing::Values(llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL,
+                        llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE)),
     [](const testing::TestParamInfo<ColorBufferTest::ParamType>& info) {
       std::string format;
       switch (std::get<0>(info.param)) {
@@ -718,10 +718,10 @@ INSTANTIATE_TEST_SUITE_P(
 
       std::string memory_property;
       switch (std::get<1>(info.param)) {
-        case llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL:
+        case llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL:
           memory_property = "DEVICE_LOCAL";
           break;
-        case llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE:
+        case llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE:
           memory_property = "HOST_VISIBLE";
           break;
         default:
@@ -736,7 +736,8 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_AlreadyExists) {
   constexpr uint32_t kHeight = 768u;
   constexpr uint32_t kSize = kWidth * kHeight * 4;
   constexpr auto kFormat = llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::RGBA;
-  constexpr auto kMemoryProperty = llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL;
+  constexpr auto kMemoryProperty =
+      llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL;
 
   zx::vmo buffer_vmo;
   ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
@@ -785,7 +786,8 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
   constexpr uint32_t kHeight = 768u;
   constexpr uint32_t kSize = kWidth * kHeight * 4;
   constexpr auto kFormat = llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::RGBA;
-  constexpr auto kMemoryProperty = llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL;
+  constexpr auto kMemoryProperty =
+      llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL;
 
   {
     zx::vmo buffer_vmo;
@@ -915,7 +917,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
                 std::make_unique<llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType>(
                     kFormat))
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE))
+                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE))
             // missing physical address
             .build();
     auto create_color_buffer_result =
@@ -933,7 +935,8 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidVmo) {
   constexpr uint32_t kHeight = 768u;
   constexpr uint32_t kSize = kWidth * kHeight * 4;
   constexpr auto kFormat = llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::RGBA;
-  constexpr auto kMemoryProperty = llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL;
+  constexpr auto kMemoryProperty =
+      llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL;
 
   zx::vmo buffer_vmo;
   ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
@@ -993,7 +996,7 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
                 llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params::Frame>())
             .set_size(std::make_unique<uint64_t>(kSize))
             .set_memory_property(std::make_unique<uint32_t>(
-                llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
+                llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL))
             .build();
     auto create_buffer_result =
         fidl_client_.CreateBuffer2(std::move(copy_vmo), std::move(create_params));
@@ -1009,7 +1012,7 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
     constexpr uint32_t kSize = kWidth * kHeight * 4;
     constexpr auto kFormat = llcpp::fuchsia::hardware::goldfish::wire::ColorBufferFormatType::RGBA;
     constexpr auto kMemoryProperty =
-        llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL;
+        llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL;
 
     ASSERT_OK(zx::vmo::create(kSize, 0u, &color_buffer_vmo));
     ASSERT_OK(color_buffer_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &color_buffer_vmo_dup));
@@ -1062,7 +1065,7 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
   EXPECT_EQ(buffer_handle_info.type(),
             llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::BUFFER);
   EXPECT_EQ(buffer_handle_info.memory_property(),
-            llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL);
+            llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL);
 
   auto get_color_buffer_handle_info_result =
       fidl_client_.GetBufferHandleInfo(std::move(color_buffer_vmo_dup));
@@ -1075,7 +1078,7 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
   EXPECT_EQ(color_buffer_handle_info.type(),
             llcpp::fuchsia::hardware::goldfish::wire::BufferHandleType::COLOR_BUFFER);
   EXPECT_EQ(color_buffer_handle_info.memory_property(),
-            llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL);
+            llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL);
 }
 
 TEST_F(ControlDeviceTest, GetBufferHandle_Invalid) {

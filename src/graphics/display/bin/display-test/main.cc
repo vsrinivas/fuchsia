@@ -81,7 +81,7 @@ enum Platforms {
 };
 
 Platforms platform = UNKNOWN_PLATFORM;
-fbl::StringBuffer<sysinfo::BOARD_NAME_LEN> board_name;
+fbl::StringBuffer<sysinfo::wire::BOARD_NAME_LEN> board_name;
 
 Platforms GetPlatform();
 void Usage();
@@ -197,7 +197,7 @@ bool update_display_layers(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
 
   for (auto& layer : layers) {
     uint64_t id = layer->id(display.id());
-    if (id != fhd::INVALID_DISP_ID) {
+    if (id != fhd::wire::INVALID_DISP_ID) {
       new_layers.push_back(id);
     }
   }
@@ -397,7 +397,7 @@ zx_status_t capture_setup() {
 
   // set buffer constraints
   fhd::wire::ImageConfig image_config = {};
-  image_config.type = fhd::TYPE_CAPTURE;
+  image_config.type = fhd::wire::TYPE_CAPTURE;
   auto constraints_resp = dc->SetBufferCollectionConstraints(kCollectionId, image_config);
   if (constraints_resp.status() != ZX_OK) {
     printf("Could not set capture constraints %s\n", constraints_resp.error());
@@ -422,7 +422,7 @@ zx_status_t capture_setup() {
 
   // finally setup our constraints
   sysmem::wire::BufferCollectionConstraints constraints = {};
-  constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
+  constraints.usage.cpu = sysmem::wire::cpuUsageReadOften | sysmem::wire::cpuUsageWriteOften;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
   constraints.buffer_memory_constraints.ram_domain_supported = true;
@@ -945,7 +945,7 @@ int main(int argc, const char* argv[]) {
   if (testbundle == INTEL) {
     // Intel only supports 90/270 rotation for Y-tiled images, so enable it for testing.
     constexpr uint64_t kIntelYTilingModifier =
-        ::llcpp::fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+        ::llcpp::fuchsia::sysmem::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
 
     // Color layer which covers all displays
     std::unique_ptr<ColorLayer> layer0 = fbl::make_unique_checked<ColorLayer>(&ac, displays);
@@ -1060,7 +1060,7 @@ int main(int argc, const char* argv[]) {
     }
     layer1->SetLayerFlipping(true);
     if (enable_compression) {
-      layer1->SetFormatModifier(::llcpp::fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16);
+      layer1->SetFormatModifier(::llcpp::fuchsia::sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16);
     }
     layers.push_back(std::move(layer1));
   } else if (testbundle == SIMPLE) {
@@ -1073,7 +1073,7 @@ int main(int argc, const char* argv[]) {
     }
 
     if (enable_compression) {
-      layer1->SetFormatModifier(::llcpp::fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16);
+      layer1->SetFormatModifier(::llcpp::fuchsia::sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16);
     }
     if (apply_config_once) {
       max_apply_configs = 1;

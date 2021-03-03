@@ -106,7 +106,7 @@ zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountC
           return result;
         } else {
           if (result.vnode->IsRemote()) {
-            if (flags & fio::MOUNT_CREATE_FLAG_REPLACE) {
+            if (flags & fio::wire::MOUNT_CREATE_FLAG_REPLACE) {
               // There is an old remote handle on this vnode; shut it down and replace it with our
               // own.
               fidl::ClientEnd<fio::Directory> old_remote;

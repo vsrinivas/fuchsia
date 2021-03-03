@@ -172,7 +172,7 @@ static zx_status_t OpenObjectInDirectory(zx::unowned_channel root_channel, uint3
   ZX_DEBUG_ASSERT(out_channel_node != nullptr);
 
   // Ensure `OPEN_FLAG_DESCRIBE` is passed
-  flags |= fuchsia_io::OPEN_FLAG_DESCRIBE;
+  flags |= fuchsia_io::wire::OPEN_FLAG_DESCRIBE;
 
   // Create temporary channel ends to make FIDL call
   zx::channel channel_client_end;
@@ -212,8 +212,8 @@ static zx_status_t OpenObjectInDirectory(zx::unowned_channel root_channel, uint3
 template <uint32_t kOpenFlags>
 static zx_status_t RecursivelyWalkPath(zx::unowned_channel& root_channel,
                                        std::filesystem::path path, zx::channel* out_node_channel) {
-  static_assert((kOpenFlags & fuchsia_io::OPEN_FLAG_NOT_DIRECTORY) == 0,
-                "kOpenFlags must not include fuchsia_io::OPEN_FLAG_NOT_DIRECTORY");
+  static_assert((kOpenFlags & fuchsia_io::wire::OPEN_FLAG_NOT_DIRECTORY) == 0,
+                "kOpenFlags must not include fuchsia_io::wire::OPEN_FLAG_NOT_DIRECTORY");
   ZX_DEBUG_ASSERT(root_channel->is_valid());
   ZX_DEBUG_ASSERT(out_node_channel != nullptr);
 
@@ -231,7 +231,7 @@ static zx_status_t RecursivelyWalkPath(zx::unowned_channel& root_channel,
     }
 
     auto result = fuchsia_io::Directory::Call::Clone(zx::unowned_channel(*root_channel),
-                                                     fuchsia_io::CLONE_FLAG_SAME_RIGHTS,
+                                                     fuchsia_io::wire::CLONE_FLAG_SAME_RIGHTS,
                                                      std::move(server_channel));
     status = result.status();
     if (status != ZX_OK) {
@@ -241,7 +241,7 @@ static zx_status_t RecursivelyWalkPath(zx::unowned_channel& root_channel,
     zx::unowned_channel current_channel(root_channel);
     for (const auto& fragment : path) {
       zx::channel temporary_channel;
-      static constexpr uint32_t kOpenMode = fuchsia_io::MODE_TYPE_DIRECTORY;
+      static constexpr uint32_t kOpenMode = fuchsia_io::wire::MODE_TYPE_DIRECTORY;
       status = OpenObjectInDirectory(std::move(current_channel), kOpenFlags, kOpenMode,
                                      fragment.string(), &temporary_channel);
       if (status != ZX_OK) {
@@ -260,16 +260,16 @@ static zx_status_t RecursivelyWalkPath(zx::unowned_channel& root_channel,
 template <typename... Args>
 static inline zx_status_t CreateDirectory(Args&&... args) {
   static constexpr uint32_t kCreateFlags =
-      fuchsia_io::OPEN_RIGHT_READABLE | fuchsia_io::OPEN_RIGHT_WRITABLE |
-      fuchsia_io::OPEN_FLAG_CREATE | fuchsia_io::OPEN_FLAG_DIRECTORY;
+      fuchsia_io::wire::OPEN_RIGHT_READABLE | fuchsia_io::wire::OPEN_RIGHT_WRITABLE |
+      fuchsia_io::wire::OPEN_FLAG_CREATE | fuchsia_io::wire::OPEN_FLAG_DIRECTORY;
   return RecursivelyWalkPath<kCreateFlags>(std::forward<Args>(args)...);
 }
 
 template <typename... Args>
 static inline zx_status_t OpenDirectory(Args&&... args) {
-  static constexpr uint32_t kOpenFlags = fuchsia_io::OPEN_RIGHT_READABLE |
-                                         fuchsia_io::OPEN_RIGHT_WRITABLE |
-                                         fuchsia_io::OPEN_FLAG_DIRECTORY;
+  static constexpr uint32_t kOpenFlags = fuchsia_io::wire::OPEN_RIGHT_READABLE |
+                                         fuchsia_io::wire::OPEN_RIGHT_WRITABLE |
+                                         fuchsia_io::wire::OPEN_FLAG_DIRECTORY;
   return RecursivelyWalkPath<kOpenFlags>(std::forward<Args>(args)...);
 }
 
@@ -994,7 +994,7 @@ zx_status_t OpteeClient::RpmbRouteFrames(std::optional<SharedMemoryView> tx_fram
   ZX_DEBUG_ASSERT(tx_frames.has_value());
   ZX_DEBUG_ASSERT(rx_frames.has_value());
 
-  using ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+  using ::llcpp::fuchsia::hardware::rpmb::wire::FRAME_SIZE;
 
   zx_status_t status;
   RpmbFrame* frame = reinterpret_cast<RpmbFrame*>(tx_frames->vaddr());
@@ -1337,9 +1337,9 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
 
   zx::channel file_channel;
   static constexpr uint32_t kOpenFlags =
-      fuchsia_io::OPEN_RIGHT_READABLE | fuchsia_io::OPEN_RIGHT_WRITABLE |
-      fuchsia_io::OPEN_FLAG_NOT_DIRECTORY | fuchsia_io::OPEN_FLAG_DESCRIBE;
-  static constexpr uint32_t kOpenMode = fuchsia_io::MODE_TYPE_FILE;
+      fuchsia_io::wire::OPEN_RIGHT_READABLE | fuchsia_io::wire::OPEN_RIGHT_WRITABLE |
+      fuchsia_io::wire::OPEN_FLAG_NOT_DIRECTORY | fuchsia_io::wire::OPEN_FLAG_DESCRIBE;
+  static constexpr uint32_t kOpenMode = fuchsia_io::wire::MODE_TYPE_FILE;
   status = OpenObjectInDirectory(zx::unowned_channel(storage_channel), kOpenFlags, kOpenMode,
                                  path.filename().string(), &file_channel);
   if (status == ZX_ERR_NOT_FOUND) {
@@ -1386,9 +1386,9 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCreateFile(
 
   zx::channel file_channel;
   static constexpr uint32_t kCreateFlags =
-      fuchsia_io::OPEN_RIGHT_READABLE | fuchsia_io::OPEN_RIGHT_WRITABLE |
-      fuchsia_io::OPEN_FLAG_CREATE | fuchsia_io::OPEN_FLAG_DESCRIBE;
-  static constexpr uint32_t kCreateMode = fuchsia_io::MODE_TYPE_FILE;
+      fuchsia_io::wire::OPEN_RIGHT_READABLE | fuchsia_io::wire::OPEN_RIGHT_WRITABLE |
+      fuchsia_io::wire::OPEN_FLAG_CREATE | fuchsia_io::wire::OPEN_FLAG_DESCRIBE;
+  static constexpr uint32_t kCreateMode = fuchsia_io::wire::MODE_TYPE_FILE;
   status = OpenObjectInDirectory(zx::unowned_channel(storage_channel), kCreateFlags, kCreateMode,
                                  path.filename().string(), &file_channel);
   if (status != ZX_OK) {
@@ -1451,7 +1451,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
   fidl::Buffer<fuchsia_io::File::ReadAtRequest> request_buffer;
   fidl::Buffer<fuchsia_io::File::ReadAtResponse> response_buffer;
   while (bytes_left > 0) {
-    uint64_t read_chunk_request = std::min(bytes_left, fuchsia_io::MAX_BUF);
+    uint64_t read_chunk_request = std::min(bytes_left, fuchsia_io::wire::MAX_BUF);
     uint64_t read_chunk_actual = 0;
 
     auto result =
@@ -1510,7 +1510,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
   uint64_t offset = message->file_offset();
   size_t bytes_left = message->file_contents_memory_size();
   while (bytes_left > 0) {
-    uint64_t write_chunk_request = std::min(bytes_left, fuchsia_io::MAX_BUF);
+    uint64_t write_chunk_request = std::min(bytes_left, fuchsia_io::wire::MAX_BUF);
 
     auto result = fuchsia_io::File::Call::WriteAt(
         zx::unowned_channel(file_channel),
@@ -1642,9 +1642,9 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
   if (!message->should_overwrite()) {
     zx::channel destination_channel;
     static constexpr uint32_t kCheckRenameFlags =
-        fuchsia_io::OPEN_RIGHT_READABLE | fuchsia_io::OPEN_FLAG_DESCRIBE;
+        fuchsia_io::wire::OPEN_RIGHT_READABLE | fuchsia_io::wire::OPEN_FLAG_DESCRIBE;
     static constexpr uint32_t kCheckRenameMode =
-        fuchsia_io::MODE_TYPE_FILE | fuchsia_io::MODE_TYPE_DIRECTORY;
+        fuchsia_io::wire::MODE_TYPE_FILE | fuchsia_io::wire::MODE_TYPE_DIRECTORY;
     status = OpenObjectInDirectory(zx::unowned_channel(new_storage_channel), kCheckRenameFlags,
                                    kCheckRenameMode, new_name, &destination_channel);
     if (status == ZX_OK) {

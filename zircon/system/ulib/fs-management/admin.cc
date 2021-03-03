@@ -184,8 +184,9 @@ zx_status_t fs_register(zx_handle_t export_root) {
     return status;
   }
 
-  auto clone_resp = fio::Node::Call::Clone(zx::unowned_channel(export_root),
-                                           fio::CLONE_FLAG_SAME_RIGHTS, std::move(export_server));
+  auto clone_resp =
+      fio::Node::Call::Clone(zx::unowned_channel(export_root), fio::wire::CLONE_FLAG_SAME_RIGHTS,
+                             std::move(export_server));
   if (!clone_resp.ok()) {
     return clone_resp.status();
   }
@@ -219,7 +220,7 @@ zx_status_t fs_root_handle(zx_handle_t export_root, zx_handle_t* out_root) {
   // read-only connections do not.
   auto handle_or = fs_management::GetFsRootHandle(
       zx::unowned_channel(export_root),
-      fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX | fio::OPEN_RIGHT_ADMIN);
+      fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_FLAG_POSIX | fio::wire::OPEN_RIGHT_ADMIN);
   if (handle_or.is_error())
     return handle_or.status_value();
   *out_root = handle_or.value().release();

@@ -18,7 +18,8 @@ namespace fio = ::llcpp::fuchsia::io;
 
 TEST_F(NamespaceTest, HasCacheStorage) {
   ExpectExists("/cache");
-  ExpectPathSupportsStrictRights("/cache", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
+  ExpectPathSupportsStrictRights("/cache",
+                                 fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE);
 }
 
 TEST_F(NamespaceTest, CanClearCacheStorage) {

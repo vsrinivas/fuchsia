@@ -87,7 +87,7 @@ zx_status_t Directory::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out
 zx_status_t Directory::GetAttributes(fs::VnodeAttributes* a) {
   *a = fs::VnodeAttributes();
   a->mode = V_TYPE_DIR | V_IRUSR;
-  a->inode = ::llcpp::fuchsia::io::INO_UNKNOWN;
+  a->inode = ::llcpp::fuchsia::io::wire::INO_UNKNOWN;
   a->content_size = 0;
   a->storage_size = 0;
   a->link_count = 1;

@@ -139,8 +139,8 @@ std::shared_ptr<LoaderService> LoaderService::Create(async_dispatcher_t* dispatc
 }
 
 zx::status<zx::vmo> LoaderService::LoadObjectImpl(std::string path) {
-  const uint32_t kFlags =
-      fio::OPEN_FLAG_NOT_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
+  const uint32_t kFlags = fio::wire::OPEN_FLAG_NOT_DIRECTORY | fio::wire::OPEN_RIGHT_READABLE |
+                          fio::wire::OPEN_RIGHT_EXECUTABLE;
 
   fbl::unique_fd fd;
   zx_status_t status = fdio_open_fd_at(dir_.get(), path.data(), kFlags, fd.reset_and_get_address());

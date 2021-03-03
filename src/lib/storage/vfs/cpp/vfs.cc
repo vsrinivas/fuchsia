@@ -255,7 +255,7 @@ zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
     return status;
   }
 #ifdef __Fuchsia__
-  vndir->Notify(path, fio::WATCH_EVENT_ADDED);
+  vndir->Notify(path, fio::wire::WATCH_EVENT_ADDED);
 #endif
   *did_create = true;
   return ZX_OK;
@@ -284,7 +284,7 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path) {
     return r;
   }
 #ifdef __Fuchsia__
-  vndir->Notify(path, fio::WATCH_EVENT_REMOVED);
+  vndir->Notify(path, fio::wire::WATCH_EVENT_REMOVED);
 #endif
   return ZX_OK;
 }
@@ -409,8 +409,8 @@ zx_status_t Vfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent, fbl::Stri
   if (r != ZX_OK) {
     return r;
   }
-  oldparent->Notify(oldStr, fio::WATCH_EVENT_REMOVED);
-  newparent->Notify(newStr, fio::WATCH_EVENT_ADDED);
+  oldparent->Notify(oldStr, fio::wire::WATCH_EVENT_REMOVED);
+  newparent->Notify(newStr, fio::wire::WATCH_EVENT_ADDED);
   return ZX_OK;
 }
 
@@ -460,7 +460,7 @@ zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, fbl::String
   if (r != ZX_OK) {
     return r;
   }
-  newparent->Notify(newStr, fio::WATCH_EVENT_ADDED);
+  newparent->Notify(newStr, fio::wire::WATCH_EVENT_ADDED);
   return ZX_OK;
 }
 

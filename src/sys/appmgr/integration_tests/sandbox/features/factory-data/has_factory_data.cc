@@ -10,5 +10,5 @@ namespace fio = ::llcpp::fuchsia::io;
 
 TEST_F(NamespaceTest, HasFactoryFolder) {
   ExpectExists("/factory");
-  ExpectPathSupportsStrictRights("/factory", fio::OPEN_RIGHT_READABLE);
+  ExpectPathSupportsStrictRights("/factory", fio::wire::OPEN_RIGHT_READABLE);
 }

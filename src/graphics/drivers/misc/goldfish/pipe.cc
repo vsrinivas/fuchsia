@@ -22,8 +22,8 @@ static const char* kTag = "GoldfishPipe";
 
 constexpr size_t DEFAULT_BUFFER_SIZE = 8192;
 
-constexpr zx_signals_t SIGNALS = llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE |
-                                 llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE;
+constexpr zx_signals_t SIGNALS = llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_READABLE |
+                                 llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_WRITABLE;
 
 }  // namespace
 
@@ -206,7 +206,7 @@ void Pipe::Read(uint64_t count, uint64_t offset, ReadCompleter::Sync& completer)
 
   size_t actual;
   zx_status_t status = TransferLocked(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
-                                      llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE,
+                                      llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_READABLE,
                                       buffer_.phys + offset, count, 0, 0, &actual);
   completer.Reply(status, actual);
 }
@@ -223,7 +223,7 @@ void Pipe::Write(uint64_t count, uint64_t offset, WriteCompleter::Sync& complete
 
   size_t actual;
   zx_status_t status = TransferLocked(PIPE_CMD_CODE_WRITE, PIPE_CMD_CODE_WAKE_ON_WRITE,
-                                      llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE,
+                                      llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_WRITABLE,
                                       buffer_.phys + offset, count, 0, 0, &actual);
   completer.Reply(status, actual);
 }

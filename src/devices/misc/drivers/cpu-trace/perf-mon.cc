@@ -142,10 +142,10 @@ void PerfmonDevice::FreeBuffersForTrace(PmuPerTraceState* per_trace, uint32_t nu
 void PerfmonDevice::PmuGetProperties(FidlPerfmonProperties* props) {
   zxlogf(DEBUG, "%s called", __func__);
 
-  props->api_version = fidl_perfmon::API_VERSION;
+  props->api_version = fidl_perfmon::wire::API_VERSION;
   props->pm_version = pmu_hw_properties_.common.pm_version;
-  static_assert(perfmon::kMaxNumEvents == fidl_perfmon::MAX_NUM_EVENTS);
-  props->max_num_events = fidl_perfmon::MAX_NUM_EVENTS;
+  static_assert(perfmon::kMaxNumEvents == fidl_perfmon::wire::MAX_NUM_EVENTS);
+  props->max_num_events = fidl_perfmon::wire::MAX_NUM_EVENTS;
 
   // These numbers are for informational/debug purposes. There can be
   // further restrictions and limitations.

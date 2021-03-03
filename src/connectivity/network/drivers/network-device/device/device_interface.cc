@@ -85,8 +85,8 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
   }
 
   device_.GetInfo(&device_info_);
-  if (device_info_.rx_types_count > netdev::MAX_FRAME_TYPES ||
-      device_info_.tx_types_count > netdev::MAX_FRAME_TYPES) {
+  if (device_info_.rx_types_count > netdev::wire::MAX_FRAME_TYPES ||
+      device_info_.tx_types_count > netdev::wire::MAX_FRAME_TYPES) {
     LOGF_ERROR("network-device: bind: device '%s' reports too many supported frame types",
                parent_name);
     return ZX_ERR_NOT_SUPPORTED;
@@ -107,8 +107,8 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
   std::copy_n(device_info_.tx_types_list, device_info_.tx_types_count, supported_tx_.begin());
   device_info_.tx_types_list = supported_tx_.data();
 
-  if (device_info_.rx_accel_count > netdev::MAX_ACCEL_FLAGS ||
-      device_info_.tx_accel_count > netdev::MAX_ACCEL_FLAGS) {
+  if (device_info_.rx_accel_count > netdev::wire::MAX_ACCEL_FLAGS ||
+      device_info_.tx_accel_count > netdev::wire::MAX_ACCEL_FLAGS) {
     LOGF_ERROR("network-device: bind: device '%s' reports too many acceleration flags",
                parent_name);
     return ZX_ERR_NOT_SUPPORTED;
@@ -216,8 +216,8 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
       .min_tx_buffer_tail = device_info_.tx_tail_length,
   };
 
-  std::array<netdev::wire::FrameType, netdev::MAX_FRAME_TYPES> rx;
-  std::array<netdev::wire::FrameTypeSupport, netdev::MAX_FRAME_TYPES> tx;
+  std::array<netdev::wire::FrameType, netdev::wire::MAX_FRAME_TYPES> rx;
+  std::array<netdev::wire::FrameTypeSupport, netdev::wire::MAX_FRAME_TYPES> tx;
   for (size_t i = 0; i < device_info_.rx_types_count; i++) {
     rx[i] = static_cast<netdev::wire::FrameType>(device_info_.rx_types_list[i]);
   }
@@ -234,8 +234,8 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
   info.tx_types.set_count(device_info_.tx_types_count);
   info.tx_types.set_data(fidl::unowned_ptr(tx.data()));
 
-  std::array<netdev::wire::RxAcceleration, netdev::MAX_ACCEL_FLAGS> rx_accel;
-  std::array<netdev::wire::TxAcceleration, netdev::MAX_ACCEL_FLAGS> tx_accel;
+  std::array<netdev::wire::RxAcceleration, netdev::wire::MAX_ACCEL_FLAGS> rx_accel;
+  std::array<netdev::wire::TxAcceleration, netdev::wire::MAX_ACCEL_FLAGS> tx_accel;
   for (size_t i = 0; i < device_info_.rx_accel_count; i++) {
     rx_accel[i] = static_cast<netdev::wire::RxAcceleration>(device_info_.rx_accel_list[i]);
   }

@@ -342,7 +342,7 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
     return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_ERR_INVALID_ARGS, -1));
   }
   if ((create_params.memory_property() &
-       llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE) &&
+       llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE) &&
       !create_params.has_physical_address()) {
     zxlogf(ERROR, "%s: invalid arguments: memory_property %d, no physical address\n", kTag,
            create_params.memory_property());
@@ -391,7 +391,7 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
 
   int32_t hw_address_page_offset = -1;
   if (create_params.memory_property() &
-      llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE) {
+      llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE) {
     uint64_t vmo_size;
     status = vmo.get_size(&vmo_size);
     if (status != ZX_OK) {
@@ -443,7 +443,7 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
         std::make_unique<zx_status_t>(ZX_ERR_INVALID_ARGS)));
   }
   if ((create_params.memory_property() &
-       llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE) &&
+       llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE) &&
       !create_params.has_physical_address()) {
     zxlogf(ERROR, "%s: invalid arguments: memory_property %d, no physical address\n", kTag,
            create_params.memory_property());
@@ -486,7 +486,7 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
 
   int32_t hw_address_page_offset = -1;
   if (create_params.memory_property() &
-      llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE) {
+      llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE) {
     uint64_t vmo_size;
     status = vmo.get_size(&vmo_size);
     if (status != ZX_OK) {
@@ -744,8 +744,8 @@ zx_status_t Control::ReadResultLocked(void* result, size_t size) {
 
     // Wait for pipe to become readable.
     zx_status_t status =
-        pipe_event_.wait_one(llcpp::fuchsia::hardware::goldfish::SIGNAL_HANGUP |
-                                 llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE,
+        pipe_event_.wait_one(llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_HANGUP |
+                                 llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_READABLE,
                              zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
       if (status != ZX_ERR_CANCELED) {

@@ -172,11 +172,11 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   zx::event& token() { return token_; }
 
   // Flags which can be modified by SetFlags.
-  constexpr static uint32_t kSettableStatusFlags = llcpp::fuchsia::io::OPEN_FLAG_APPEND;
+  constexpr static uint32_t kSettableStatusFlags = llcpp::fuchsia::io::wire::OPEN_FLAG_APPEND;
 
   // All flags which indicate state of the connection (excluding rights).
   constexpr static uint32_t kStatusFlags =
-      kSettableStatusFlags | llcpp::fuchsia::io::OPEN_FLAG_NODE_REFERENCE;
+      kSettableStatusFlags | llcpp::fuchsia::io::wire::OPEN_FLAG_NODE_REFERENCE;
 
   // |Result| is a result type used as the return value of the shared Node methods. The
   // |zx_status_t| indicates application error i.e. in case of error, it should be returned via the

@@ -150,10 +150,10 @@ void FakeCpuDevice::SetPerformanceState(uint32_t requested_state,
 void FakeCpuDevice::GetDevicePerformanceStates(
     GetDevicePerformanceStatesCompleter::Sync& completer) {
   ::fidl::Array<::llcpp::fuchsia::device::wire::DevicePerformanceStateInfo,
-                fuchsia_device::MAX_DEVICE_PERFORMANCE_STATES>
+                fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES>
       states{};
 
-  for (size_t i = 0; i < fuchsia_device::MAX_DEVICE_PERFORMANCE_STATES; i++) {
+  for (size_t i = 0; i < fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES; i++) {
     states[i].is_supported = (i < countof(kTestPstates));
     states[i].state_id = static_cast<uint32_t>(i);
   }

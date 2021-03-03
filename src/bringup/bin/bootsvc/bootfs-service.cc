@@ -158,8 +158,8 @@ zx_status_t BootfsService::Open(const char* path, bool executable, zx::vmo* vmo,
 
   // memfs doesn't currently do anything different for VMO_FLAG_PRIVATE, but it may in the future,
   // and this matches the flags used by fdio_get_vmo_clone/exec.
-  uint32_t vmo_flags = fio::VMO_FLAG_READ | fio::VMO_FLAG_PRIVATE;
-  vmo_flags |= executable ? fio::VMO_FLAG_EXEC : 0;
+  uint32_t vmo_flags = fio::wire::VMO_FLAG_READ | fio::wire::VMO_FLAG_PRIVATE;
+  vmo_flags |= executable ? fio::wire::VMO_FLAG_EXEC : 0;
   return node->GetVmo(vmo_flags, vmo, size);
 }
 

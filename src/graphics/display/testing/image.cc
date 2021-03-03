@@ -95,7 +95,7 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
     display_token_handle = client.release();
   }
 
-  static uint32_t next_collection_id = fhd::INVALID_DISP_ID + 1;
+  static uint32_t next_collection_id = fhd::wire::INVALID_DISP_ID + 1;
   uint32_t collection_id = next_collection_id++;
   if (!token->Sync().ok()) {
     fprintf(stderr, "Failed to sync token\n");
@@ -131,7 +131,7 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
   }
 
   sysmem::wire::BufferCollectionConstraints constraints = {};
-  constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
+  constraints.usage.cpu = sysmem::wire::cpuUsageReadOften | sysmem::wire::cpuUsageWriteOften;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
   sysmem::wire::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
@@ -196,7 +196,7 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
   zx::vmo vmo(std::move(buffer_collection_info.buffers[0].vmo));
 
   uint32_t minimum_row_bytes;
-  if (modifier == sysmem::FORMAT_MODIFIER_LINEAR) {
+  if (modifier == sysmem::wire::FORMAT_MODIFIER_LINEAR) {
     bool result = image_format::GetMinimumRowBytes(
         buffer_collection_info.settings.image_format_constraints, width, &minimum_row_bytes);
     if (!result) {
@@ -222,7 +222,7 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
   for (unsigned i = 0; i < buffer_size / sizeof(uint32_t); i++) {
     ptr[i] = bg_color;
   }
-  if (modifier == sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16) {
+  if (modifier == sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16) {
     uint32_t width_in_tiles = (width + kAfbcTilePixelWidth - 1) / kAfbcTilePixelWidth;
     uint32_t height_in_tiles = (height + kAfbcTilePixelHeight - 1) / kAfbcTilePixelHeight;
     uint32_t tile_count = width_in_tiles * height_in_tiles;
@@ -269,7 +269,7 @@ void Image::Render(int32_t prev_step, int32_t step_num) {
         return color;
       };
 
-      if (modifier_ == sysmem::FORMAT_MODIFIER_LINEAR) {
+      if (modifier_ == sysmem::wire::FORMAT_MODIFIER_LINEAR) {
         RenderLinear(pixel_generator, start, end);
       } else {
         RenderTiled(pixel_generator, start, end);
@@ -282,7 +282,7 @@ void Image::Render(int32_t prev_step, int32_t step_num) {
         return color;
       };
 
-      if (modifier_ == sysmem::FORMAT_MODIFIER_LINEAR) {
+      if (modifier_ == sysmem::wire::FORMAT_MODIFIER_LINEAR) {
         RenderLinear(pixel_generator, start, end);
       } else {
         RenderTiled(pixel_generator, start, end);
@@ -342,12 +342,12 @@ void Image::RenderTiled(T pixel_generator, uint32_t start_y, uint32_t end_y) {
   uint32_t tile_pixel_height = 0u;
   uint8_t* body = nullptr;
   switch (modifier_) {
-    case sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED: {
+    case sysmem::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED: {
       tile_pixel_width = kIntelTilePixelWidth;
       tile_pixel_height = kIntelTilePixelHeight;
       body = static_cast<uint8_t*>(buf_);
     } break;
-    case sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+    case sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16: {
       tile_pixel_width = kAfbcTilePixelWidth;
       tile_pixel_height = kAfbcTilePixelHeight;
       uint32_t width_in_tiles = (width_ + tile_pixel_width - 1) / tile_pixel_width;
@@ -377,7 +377,7 @@ void Image::RenderTiled(T pixel_generator, uint32_t start_y, uint32_t end_y) {
         uint32_t tile_idx = (y / tile_pixel_height) * width_in_tiles + (x / tile_pixel_width);
         ptr += (tile_num_pixels * tile_idx);
         switch (modifier_) {
-          case sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED: {
+          case sysmem::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED: {
             constexpr uint32_t kSubtileColumnWidth = 4u;
             // Add the offset within the pixel's tile
             uint32_t subtile_column_offset =
@@ -386,7 +386,7 @@ void Image::RenderTiled(T pixel_generator, uint32_t start_y, uint32_t end_y) {
                 (subtile_column_offset + (y % tile_pixel_height)) * kSubtileColumnWidth;
             ptr += subtile_line_offset + (x % kSubtileColumnWidth);
           } break;
-          case sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+          case sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16: {
             constexpr uint32_t kAfbcSubtileOffset[4][4] = {
                 {2u, 1u, 14u, 13u},
                 {3u, 0u, 15u, 12u},
@@ -417,7 +417,7 @@ void Image::RenderTiled(T pixel_generator, uint32_t start_y, uint32_t end_y) {
       zx_cache_flush(body + offset, tile_num_bytes, ZX_CACHE_FLUSH_DATA);
 
       // We also need to update block header when using AFBC.
-      if (modifier_ == sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16) {
+      if (modifier_ == sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16) {
         unsigned hdr_offset = kAfbcBytesPerBlockHeader * (j * width_in_tiles + i);
         uint8_t* hdr_ptr = reinterpret_cast<uint8_t*>(buf_) + hdr_offset;
         // Store offset of uncompressed tile memory in byte 0-3.
@@ -437,7 +437,7 @@ void Image::GetConfig(fhd::wire::ImageConfig* config_out) {
   config_out->height = height_;
   config_out->width = width_;
   config_out->pixel_format = format_;
-  if (modifier_ != sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED) {
+  if (modifier_ != sysmem::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED) {
     config_out->type = IMAGE_TYPE_SIMPLE;
   } else {
     config_out->type = 2;  // IMAGE_TYPE_Y_LEGACY
@@ -446,7 +446,7 @@ void Image::GetConfig(fhd::wire::ImageConfig* config_out) {
 
 bool Image::Import(fhd::Controller::SyncClient* dc, image_import_t* info_out) {
   for (int i = 0; i < 2; i++) {
-    static int event_id = fhd::INVALID_DISP_ID + 1;
+    static int event_id = fhd::wire::INVALID_DISP_ID + 1;
     zx::event e1, e2;
     if (zx::event::create(0, &e1) != ZX_OK || e1.duplicate(ZX_RIGHT_SAME_RIGHTS, &e2) != ZX_OK) {
       printf("Failed to create event\n");

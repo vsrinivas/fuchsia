@@ -36,7 +36,8 @@ WatcherContainer::WatcherContainer() = default;
 WatcherContainer::~WatcherContainer() = default;
 
 WatcherContainer::VnodeWatcher::VnodeWatcher(zx::channel h, uint32_t mask)
-    : h(std::move(h)), mask(mask & ~(fio::WATCH_MASK_EXISTING | fio::WATCH_MASK_IDLE)) {}
+    : h(std::move(h)),
+      mask(mask & ~(fio::wire::WATCH_MASK_EXISTING | fio::wire::WATCH_MASK_IDLE)) {}
 
 WatcherContainer::VnodeWatcher::~VnodeWatcher() {}
 
@@ -52,7 +53,7 @@ class WatchBuffer {
 
  private:
   size_t watch_buf_size_ = 0;
-  char watch_buf_[fio::MAX_BUF]{};
+  char watch_buf_[fio::wire::MAX_BUF]{};
 };
 
 zx_status_t WatchBuffer::AddMsg(const zx::channel& c, unsigned event, fbl::StringPiece name) {
@@ -88,7 +89,7 @@ zx_status_t WatchBuffer::Send(const zx::channel& c) {
 
 zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint32_t options,
                                        zx::channel channel) {
-  if ((mask & fio::WATCH_MASK_ALL) == 0) {
+  if ((mask & fio::wire::WATCH_MASK_ALL) == 0) {
     // No events to watch
     return ZX_ERR_INVALID_ARGS;
   }
@@ -99,13 +100,13 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
     return ZX_ERR_NO_MEMORY;
   }
 
-  if (mask & fio::WATCH_MASK_EXISTING) {
+  if (mask & fio::wire::WATCH_MASK_EXISTING) {
     VdirCookie dircookie;
     memset(&dircookie, 0, sizeof(dircookie));
     char readdir_buf[FDIO_CHUNK_SIZE];
     WatchBuffer wb;
     {
-      // Send "fio::WATCH_EVENT_EXISTING" for all entries in readdir.
+      // Send "fio::wire::WATCH_EVENT_EXISTING" for all entries in readdir.
       while (true) {
         size_t actual;
         zx_status_t status =
@@ -117,7 +118,7 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
         while (actual >= sizeof(vdirent_t)) {
           auto dirent = reinterpret_cast<vdirent_t*>(ptr);
           if (dirent->name[0]) {
-            wb.AddMsg(watcher->h, fio::WATCH_EVENT_EXISTING,
+            wb.AddMsg(watcher->h, fio::wire::WATCH_EVENT_EXISTING,
                       fbl::StringPiece(dirent->name, dirent->size));
           }
           size_t entry_len = dirent->size + sizeof(vdirent_t);
@@ -129,9 +130,9 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
       }
     }
 
-    // Send fio::WATCH_EVENT_IDLE to signify that readdir has completed.
-    if (mask & fio::WATCH_MASK_IDLE) {
-      wb.AddMsg(watcher->h, fio::WATCH_EVENT_IDLE, "");
+    // Send fio::wire::WATCH_EVENT_IDLE to signify that readdir has completed.
+    if (mask & fio::wire::WATCH_MASK_IDLE) {
+      wb.AddMsg(watcher->h, fio::wire::WATCH_EVENT_IDLE, "");
     }
 
     wb.Send(watcher->h);
@@ -143,7 +144,7 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
 }
 
 void WatcherContainer::Notify(fbl::StringPiece name, unsigned event) {
-  if (name.length() > fio::MAX_FILENAME) {
+  if (name.length() > fio::wire::MAX_FILENAME) {
     return;
   }
 
@@ -153,7 +154,7 @@ void WatcherContainer::Notify(fbl::StringPiece name, unsigned event) {
     return;
   }
 
-  uint8_t msg[sizeof(vfs_watch_msg_t) + fio::MAX_FILENAME];
+  uint8_t msg[sizeof(vfs_watch_msg_t) + fio::wire::MAX_FILENAME];
   size_t msg_length = sizeof(vfs_watch_msg_t) + name.length();
   vfs_watch_msg_t* vmsg = reinterpret_cast<vfs_watch_msg_t*>(msg);
   vmsg->event = static_cast<uint8_t>(event);

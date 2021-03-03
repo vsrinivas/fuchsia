@@ -1006,7 +1006,7 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
     // Completely empty constraints are permitted, so convert to NONE_USAGE to avoid triggering the
     // check applied to non-empty constraints where at least one usage bit must be set (NONE_USAGE
     // counts for that check, and doesn't constrain anything).
-    FIELD_DEFAULT(constraints.usage(), none, llcpp::fuchsia::sysmem2::NONE_USAGE);
+    FIELD_DEFAULT(constraints.usage(), none, llcpp::fuchsia::sysmem2::wire::NONE_USAGE);
   }
   FIELD_DEFAULT_ZERO(constraints, min_buffer_count_for_camping);
   FIELD_DEFAULT_ZERO(constraints, min_buffer_count_for_dedicated_slack);
@@ -1724,10 +1724,10 @@ LogicalBufferCollection::Allocate() {
              min_buffer_count, max_buffer_count);
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
-  if (min_buffer_count > llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
+  if (min_buffer_count > llcpp::fuchsia::sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
     LogError(FROM_HERE,
              "aggregate min_buffer_count (%d) > MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS (%d)",
-             min_buffer_count, llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS);
+             min_buffer_count, llcpp::fuchsia::sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS);
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
 

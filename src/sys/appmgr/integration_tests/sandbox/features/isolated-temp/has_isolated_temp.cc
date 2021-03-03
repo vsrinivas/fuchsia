@@ -10,7 +10,8 @@ namespace fio = ::llcpp::fuchsia::io;
 
 TEST_F(NamespaceTest, HasIsolatedTemp) {
   ExpectExists("/tmp");
-  ExpectPathSupportsStrictRights("/tmp", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
+  ExpectPathSupportsStrictRights("/tmp",
+                                 fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE);
 }
 
 TEST_F(NamespaceTest, TempDoesNotMapToGlobalTemp) { ExpectDoesNotExist("/tmp/r"); }

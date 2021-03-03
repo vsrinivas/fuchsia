@@ -14,7 +14,7 @@ namespace {
 
 namespace fuchsia_io = ::llcpp::fuchsia::io;
 
-const uint32_t kReadFlags = fuchsia_io::OPEN_RIGHT_READABLE;
+const uint32_t kReadFlags = fuchsia_io::wire::OPEN_RIGHT_READABLE;
 
 TEST(DirectoryTest, ServiceConnect) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, fdio_service_connect(nullptr, ZX_HANDLE_INVALID));

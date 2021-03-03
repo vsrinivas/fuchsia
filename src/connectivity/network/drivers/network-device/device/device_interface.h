@@ -181,10 +181,10 @@ class DeviceInterface : public netdev::Device::Interface,
   // dispatcher used for slow-path operations:
   async_dispatcher_t* const dispatcher_;
   const ddk::NetworkDeviceImplProtocolClient device_;
-  std::array<uint8_t, netdev::MAX_FRAME_TYPES> supported_rx_{};
-  std::array<tx_support_t, netdev::MAX_FRAME_TYPES> supported_tx_{};
-  std::array<uint8_t, netdev::MAX_ACCEL_FLAGS> accel_rx_{};
-  std::array<uint8_t, netdev::MAX_ACCEL_FLAGS> accel_tx_{};
+  std::array<uint8_t, netdev::wire::MAX_FRAME_TYPES> supported_rx_{};
+  std::array<tx_support_t, netdev::wire::MAX_FRAME_TYPES> supported_tx_{};
+  std::array<uint8_t, netdev::wire::MAX_ACCEL_FLAGS> accel_rx_{};
+  std::array<uint8_t, netdev::wire::MAX_ACCEL_FLAGS> accel_tx_{};
 
   fbl::Mutex sessions_lock_ __TA_ACQUIRED_BEFORE(dead_sessions_lock_)
       __TA_ACQUIRED_BEFORE(vmos_lock_);

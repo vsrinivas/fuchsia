@@ -701,8 +701,8 @@ void IntelHDAStreamBase::GetProperties(
   fidl::FidlAllocator allocator;
   audio_fidl::wire::StreamProperties response(allocator);
 
-  fidl::Array<uint8_t, audio_fidl::UNIQUE_ID_SIZE> unique_id = {};
-  for (size_t i = 0; i < audio_fidl::UNIQUE_ID_SIZE; ++i) {
+  fidl::Array<uint8_t, audio_fidl::wire::UNIQUE_ID_SIZE> unique_id = {};
+  for (size_t i = 0; i < audio_fidl::wire::UNIQUE_ID_SIZE; ++i) {
     unique_id.data_[i] = persistent_unique_id_.data[i];
   }
   response.set_unique_id(allocator, unique_id);

@@ -144,7 +144,7 @@ GetCreateColorBuffer2Params(
           .set_width(std::make_unique<uint32_t>(width))
           .set_height(std::make_unique<uint32_t>(height))
           .set_memory_property(std::make_unique<uint32_t>(
-              llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE))
+              llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE))
           .set_physical_address(std::make_unique<uint64_t>(paddr))
           .set_format(std::make_unique<ColorBufferFormatType>(color_buffer_format))
           .build());
@@ -165,7 +165,7 @@ llcpp::fuchsia::hardware::goldfish::wire::CreateBuffer2Params GetCreateBuffer2Pa
   return CreateBuffer2Params::Builder(std::make_unique<CreateBuffer2Params::Frame>())
       .set_size(std::make_unique<uint64_t>(size_bytes))
       .set_memory_property(std::make_unique<uint32_t>(
-          llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE))
+          llcpp::fuchsia::hardware::goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE))
       .set_physical_address(std::make_unique<uint64_t>(paddr))
       .build();
 }

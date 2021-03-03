@@ -49,7 +49,7 @@ ParseResult Keyboard::ParseInputReportDescriptor(
   // Use a set to make it easy to create a list of sorted and unique keys.
   std::set<::llcpp::fuchsia::ui::input2::wire::Key> key_values;
   std::set<::llcpp::fuchsia::input::wire::Key> key_3_values;
-  std::array<hid::ReportField, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS> key_fields;
+  std::array<hid::ReportField, fuchsia_input_report::wire::KEYBOARD_MAX_NUM_KEYS> key_fields;
   size_t num_key_fields = 0;
 
   for (size_t i = 0; i < hid_report_descriptor.input_count; i++) {
@@ -68,13 +68,13 @@ ParseResult Keyboard::ParseInputReportDescriptor(
       }
 
       key_fields[num_key_fields++] = field;
-      if (num_key_fields == fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS) {
+      if (num_key_fields == fuchsia_input_report::wire::KEYBOARD_MAX_NUM_KEYS) {
         return ParseResult::kTooManyItems;
       }
     }
   }
 
-  if (key_values.size() >= fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS) {
+  if (key_values.size() >= fuchsia_input_report::wire::KEYBOARD_MAX_NUM_KEYS) {
     return ParseResult::kTooManyItems;
   }
 
@@ -93,13 +93,14 @@ ParseResult Keyboard::ParseInputReportDescriptor(
 
 ParseResult Keyboard::ParseOutputReportDescriptor(
     const hid::ReportDescriptor& hid_report_descriptor) {
-  std::array<hid::ReportField, ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_LEDS> led_fields;
+  std::array<hid::ReportField, ::llcpp::fuchsia::input::report::wire::KEYBOARD_MAX_NUM_LEDS>
+      led_fields;
   size_t num_leds = 0;
 
   for (size_t i = 0; i < hid_report_descriptor.output_count; i++) {
     const hid::ReportField& field = hid_report_descriptor.output_fields[i];
     if (field.attr.usage.page == hid::usage::Page::kLEDs) {
-      if (num_leds == ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_LEDS) {
+      if (num_leds == ::llcpp::fuchsia::input::report::wire::KEYBOARD_MAX_NUM_LEDS) {
         return ParseResult::kTooManyItems;
       }
       led_fields[num_leds++] = field;
@@ -185,9 +186,10 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len,
 
   size_t num_pressed_keys = 0;
   size_t num_pressed_keys_3 = 0;
-  std::array<::llcpp::fuchsia::ui::input2::wire::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS>
+  std::array<::llcpp::fuchsia::ui::input2::wire::Key,
+             fuchsia_input_report::wire::KEYBOARD_MAX_NUM_KEYS>
       pressed_keys;
-  std::array<::llcpp::fuchsia::input::wire::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS>
+  std::array<::llcpp::fuchsia::input::wire::Key, fuchsia_input_report::wire::KEYBOARD_MAX_NUM_KEYS>
       pressed_keys_3;
   for (hid::ReportField& field : fbl::Span(key_fields_.data(), num_key_fields_)) {
     double val_out_double;

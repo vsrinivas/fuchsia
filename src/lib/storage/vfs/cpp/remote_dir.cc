@@ -26,7 +26,7 @@ VnodeProtocolSet RemoteDir::GetProtocols() const { return VnodeProtocol::kDirect
 zx_status_t RemoteDir::GetAttributes(VnodeAttributes* attr) {
   *attr = VnodeAttributes();
   attr->mode = V_TYPE_DIR | V_IRUSR;
-  attr->inode = fio::INO_UNKNOWN;
+  attr->inode = fio::wire::INO_UNKNOWN;
   attr->link_count = 1;
   return ZX_OK;
 }

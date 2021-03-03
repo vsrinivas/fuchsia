@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
+using llcpp::fuchsia::device::wire::MAX_DEVICE_PERFORMANCE_STATES;
 
 std::variant<zx_status_t, CpuPerformanceDomain> CpuPerformanceDomain::CreateFromPath(
     const std::string& path) {
@@ -51,8 +51,8 @@ std::pair<zx_status_t, uint64_t> CpuPerformanceDomain::GetNumLogicalCores() {
 std::tuple<zx_status_t, uint64_t, cpuctrl::wire::CpuPerformanceStateInfo>
 CpuPerformanceDomain::GetCurrentPerformanceState() {
   constexpr cpuctrl::wire::CpuPerformanceStateInfo kEmptyPstate = {
-      .frequency_hz = cpuctrl::FREQUENCY_UNKNOWN,
-      .voltage_uv = cpuctrl::VOLTAGE_UNKNOWN,
+      .frequency_hz = cpuctrl::wire::FREQUENCY_UNKNOWN,
+      .voltage_uv = cpuctrl::wire::VOLTAGE_UNKNOWN,
   };
   auto resp = device_client_.GetCurrentPerformanceState();
 

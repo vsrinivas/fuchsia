@@ -24,11 +24,11 @@ TEST(ImageFormat, LinearComparison_V2_LLCPP) {
 
   sysmem_v2::wire::PixelFormat linear(allocator);
   linear.set_type(allocator, sysmem_v2::wire::PixelFormatType::BGRA32);
-  linear.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR);
+  linear.set_format_modifier_value(allocator, sysmem_v2::wire::FORMAT_MODIFIER_LINEAR);
 
   sysmem_v2::wire::PixelFormat x_tiled(allocator);
   x_tiled.set_type(allocator, sysmem_v2::wire::PixelFormatType::BGRA32);
-  x_tiled.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_INTEL_I915_X_TILED);
+  x_tiled.set_format_modifier_value(allocator, sysmem_v2::wire::FORMAT_MODIFIER_INTEL_I915_X_TILED);
 
   EXPECT_TRUE(ImageFormatIsPixelFormatEqual(plain, plain));
   EXPECT_TRUE(ImageFormatIsPixelFormatEqual(linear, linear));
@@ -49,13 +49,13 @@ TEST(ImageFormat, LinearComparison_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat linear = {
       .type = sysmem_v1::wire::PixelFormatType::BGRA32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR,
+      .format_modifier.value = sysmem_v1::wire::FORMAT_MODIFIER_LINEAR,
   };
 
   sysmem_v1::wire::PixelFormat x_tiled = {
       .type = sysmem_v1::wire::PixelFormatType::BGRA32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_INTEL_I915_X_TILED,
+      .format_modifier.value = sysmem_v1::wire::FORMAT_MODIFIER_INTEL_I915_X_TILED,
   };
 
   EXPECT_TRUE(ImageFormatIsPixelFormatEqual(plain, plain));
@@ -100,7 +100,7 @@ TEST(ImageFormat, LinearRowBytes_V2_LLCPP) {
   fidl::FidlAllocator allocator;
   sysmem_v2::wire::PixelFormat linear(allocator);
   linear.set_type(allocator, sysmem_v2::wire::PixelFormatType::BGRA32);
-  linear.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR);
+  linear.set_format_modifier_value(allocator, sysmem_v2::wire::FORMAT_MODIFIER_LINEAR);
   sysmem_v2::wire::ImageFormatConstraints constraints(allocator);
   constraints.set_pixel_format(allocator, std::move(linear));
   constraints.set_min_coded_width(allocator, 12u);
@@ -120,7 +120,7 @@ TEST(ImageFormat, LinearRowBytes_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat linear = {
       .type = sysmem_v1::wire::PixelFormatType::BGRA32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR,
+      .format_modifier.value = sysmem_v1::wire::FORMAT_MODIFIER_LINEAR,
   };
   sysmem_v1::wire::ImageFormatConstraints constraints = {
       .pixel_format = linear,
@@ -191,7 +191,7 @@ TEST(ImageFormat, ZxPixelFormat_V2_LLCPP) {
       EXPECT_EQ(back_format, format);
     }
     EXPECT_TRUE(sysmem_format.has_format_modifier_value());
-    EXPECT_EQ(sysmem_v2::FORMAT_MODIFIER_LINEAR,
+    EXPECT_EQ(sysmem_v2::wire::FORMAT_MODIFIER_LINEAR,
               static_cast<uint64_t>(sysmem_format.format_modifier_value()));
 
     sysmem_v2::wire::ColorSpace color_space(allocator);
@@ -209,7 +209,8 @@ TEST(ImageFormat, ZxPixelFormat_V2_LLCPP) {
 
   sysmem_v2::wire::PixelFormat other_format(allocator);
   other_format.set_type(allocator, sysmem_v2::wire::PixelFormatType::BGRA32);
-  other_format.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_INTEL_I915_X_TILED);
+  other_format.set_format_modifier_value(allocator,
+                                         sysmem_v2::wire::FORMAT_MODIFIER_INTEL_I915_X_TILED);
 
   zx_pixel_format_t back_format;
   EXPECT_FALSE(ImageFormatConvertSysmemToZx(other_format, &back_format));
@@ -258,7 +259,7 @@ TEST(ImageFormat, ZxPixelFormat_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat other_format = {
       .type = sysmem_v1::wire::PixelFormatType::BGRA32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_INTEL_I915_X_TILED,
+      .format_modifier.value = sysmem_v1::wire::FORMAT_MODIFIER_INTEL_I915_X_TILED,
   };
 
   zx_pixel_format_t back_format;
@@ -319,7 +320,7 @@ TEST(ImageFormat, PlaneByteOffset_V2_LLCPP) {
   fidl::FidlAllocator allocator;
   sysmem_v2::wire::PixelFormat linear(allocator);
   linear.set_type(allocator, sysmem_v2::wire::PixelFormatType::BGRA32);
-  linear.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR);
+  linear.set_format_modifier_value(allocator, sysmem_v2::wire::FORMAT_MODIFIER_LINEAR);
   sysmem_v2::wire::ImageFormatConstraints constraints(allocator);
   constraints.set_pixel_format(allocator, std::move(linear));
   constraints.set_min_coded_width(allocator, 12u);
@@ -370,7 +371,7 @@ TEST(ImageFormat, PlaneByteOffset_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat linear = {
       .type = sysmem_v1::wire::PixelFormatType::BGRA32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR,
+      .format_modifier.value = sysmem_v1::wire::FORMAT_MODIFIER_LINEAR,
   };
   sysmem_v1::wire::ImageFormatConstraints constraints = {
       .pixel_format = linear,
@@ -471,12 +472,12 @@ TEST(ImageFormat, TransactionEliminationFormats_V2_LLCPP) {
   fidl::FidlAllocator allocator;
   sysmem_v2::wire::PixelFormat format(allocator);
   format.set_type(allocator, sysmem_v2::wire::PixelFormatType::BGRA32);
-  format.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR);
+  format.set_format_modifier_value(allocator, sysmem_v2::wire::FORMAT_MODIFIER_LINEAR);
 
   EXPECT_TRUE(ImageFormatCompatibleWithProtectedMemory(format));
 
   auto format2 = sysmem::V2ClonePixelFormat(allocator, format);
-  format2.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_ARM_LINEAR_TE);
+  format2.set_format_modifier_value(allocator, sysmem_v2::wire::FORMAT_MODIFIER_ARM_LINEAR_TE);
 
   EXPECT_FALSE(ImageFormatCompatibleWithProtectedMemory(format2));
 
@@ -517,12 +518,12 @@ TEST(ImageFormat, TransactionEliminationFormats_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat format = {
       .type = sysmem_v1::wire::PixelFormatType::BGRA32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR,
+      .format_modifier.value = sysmem_v1::wire::FORMAT_MODIFIER_LINEAR,
   };
   EXPECT_TRUE(image_format::FormatCompatibleWithProtectedMemory(format));
   EXPECT_TRUE(ImageFormatCompatibleWithProtectedMemory(format));
 
-  format.format_modifier.value = sysmem_v1::FORMAT_MODIFIER_ARM_LINEAR_TE;
+  format.format_modifier.value = sysmem_v1::wire::FORMAT_MODIFIER_ARM_LINEAR_TE;
   EXPECT_FALSE(image_format::FormatCompatibleWithProtectedMemory(format));
   EXPECT_FALSE(ImageFormatCompatibleWithProtectedMemory(format));
 
@@ -655,7 +656,8 @@ TEST(ImageFormat, AfbcFlagFormats_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat format = {
       .type = sysmem_v1::wire::PixelFormatType::BGRA32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE,
+      .format_modifier.value =
+          sysmem_v1::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE,
   };
 
   EXPECT_FALSE(image_format::FormatCompatibleWithProtectedMemory(format));
@@ -677,7 +679,7 @@ TEST(ImageFormat, AfbcFlagFormats_V1_LLCPP) {
       .type = sysmem_v1::wire::PixelFormatType::BGRA32,
       .has_format_modifier = true,
       .format_modifier.value =
-          sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TILED_HEADER,
+          sysmem_v1::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TILED_HEADER,
   };
 
   constraints.pixel_format = tiled_format;
@@ -695,7 +697,7 @@ TEST(ImageFormat, R8G8Formats_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat format = {
       .type = sysmem_v1::wire::PixelFormatType::R8G8,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR,
+      .format_modifier.value = sysmem_v1::wire::FORMAT_MODIFIER_LINEAR,
   };
 
   sysmem_v1::wire::ImageFormatConstraints constraints = {
@@ -741,8 +743,8 @@ TEST(ImageFormat, GoldfishOptimal_V2_LLCPP) {
   {
     sysmem_v2::wire::PixelFormat pixel_format(allocator);
     pixel_format.set_type(allocator, sysmem_v2::wire::PixelFormatType::BGRA32);
-    pixel_format.set_format_modifier_value(allocator,
-                                           sysmem_v2::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
+    pixel_format.set_format_modifier_value(
+        allocator, sysmem_v2::wire::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
     goldfish_optimal_image_format_bgra32.set_pixel_format(allocator, std::move(pixel_format));
   }
   goldfish_optimal_image_format_bgra32.set_coded_width(allocator, kWidth);
@@ -759,11 +761,12 @@ TEST(ImageFormat, GoldfishOptimal_V2_LLCPP) {
 }
 
 TEST(ImageFormat, CorrectModifiers) {
-  EXPECT_EQ(sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER,
-            sysmem_v2::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER);
-  EXPECT_EQ(sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER,
-            sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16 | sysmem_v1::FORMAT_MODIFIER_ARM_YUV_BIT |
-                sysmem_v1::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT);
-  EXPECT_EQ(sysmem_v1::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL,
-            sysmem_v2::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
+  EXPECT_EQ(sysmem_v1::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER,
+            sysmem_v2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER);
+  EXPECT_EQ(sysmem_v1::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER,
+            sysmem_v1::wire::FORMAT_MODIFIER_ARM_AFBC_16X16 |
+                sysmem_v1::wire::FORMAT_MODIFIER_ARM_YUV_BIT |
+                sysmem_v1::wire::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT);
+  EXPECT_EQ(sysmem_v1::wire::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL,
+            sysmem_v2::wire::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
 }

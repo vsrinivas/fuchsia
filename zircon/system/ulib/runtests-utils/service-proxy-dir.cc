@@ -27,7 +27,7 @@ void ServiceProxyDir::AddEntry(std::string name, fbl::RefPtr<fs::Vnode> node) {
 zx_status_t ServiceProxyDir::GetAttributes(fs::VnodeAttributes* attr) {
   *attr = fs::VnodeAttributes();
   attr->mode = V_TYPE_DIR | V_IRUSR;
-  attr->inode = fio::INO_UNKNOWN;
+  attr->inode = fio::wire::INO_UNKNOWN;
   attr->link_count = 1;
   return ZX_OK;
 }
@@ -51,13 +51,14 @@ zx_status_t ServiceProxyDir::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode
     return ZX_OK;
   }
 
-  entries_.emplace(
-      entry_name, *out = fbl::MakeRefCounted<fs::Service>([this, entry_name](zx::channel request) {
-        return fio::Directory::Call::Open(zx::unowned_channel(proxy_dir_),
-                                          fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, 0755,
-                                          fidl::unowned_str(entry_name), std::move(request))
-            .status();
-      }));
+  entries_.emplace(entry_name,
+                   *out = fbl::MakeRefCounted<fs::Service>([this, entry_name](zx::channel request) {
+                     return fio::Directory::Call::Open(
+                                zx::unowned_channel(proxy_dir_),
+                                fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE,
+                                0755, fidl::unowned_str(entry_name), std::move(request))
+                         .status();
+                   }));
 
   return ZX_OK;
 }

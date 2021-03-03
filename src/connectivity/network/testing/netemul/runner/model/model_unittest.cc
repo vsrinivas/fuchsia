@@ -343,7 +343,7 @@ TEST_F(ModelTest, TestBadLoggerFilterOptions) {
   ExpectFailedParse(json, "test with non array for logger_options.filters.tags");
 
   std::string json_string = R"({"environment": {"logger_options": {"filters": {"tags": [)";
-  for (int i = 0; i < llcpp::fuchsia::logger::MAX_TAGS + 1; ++i) {
+  for (int i = 0; i < llcpp::fuchsia::logger::wire::MAX_TAGS + 1; ++i) {
     char tag[] = R"(, "a")";
     tag[3] += i;
     json_string.append(i == 0 ? tag + 2 : tag);

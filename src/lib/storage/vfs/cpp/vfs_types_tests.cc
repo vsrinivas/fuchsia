@@ -92,11 +92,11 @@ TEST(VnodeConnectionOptions, ValidateOptionsForDirectory) {
   };
 
   TestDirectory vnode;
-  EXPECT_RESULT_OK(
-      vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_DIRECTORY)));
+  EXPECT_RESULT_OK(vnode.ValidateOptions(
+      fs::VnodeConnectionOptions::FromIoV1Flags(fio::wire::OPEN_FLAG_DIRECTORY)));
   EXPECT_RESULT_ERROR(ZX_ERR_NOT_FILE,
-                      vnode.ValidateOptions(
-                          fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_NOT_DIRECTORY)));
+                      vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(
+                          fio::wire::OPEN_FLAG_NOT_DIRECTORY)));
 }
 
 TEST(VnodeConnectionOptions, ValidateOptionsForService) {
@@ -106,11 +106,11 @@ TEST(VnodeConnectionOptions, ValidateOptionsForService) {
   };
 
   TestConnector vnode;
-  EXPECT_RESULT_ERROR(
-      ZX_ERR_NOT_DIR,
-      vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_DIRECTORY)));
+  EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR,
+                      vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(
+                          fio::wire::OPEN_FLAG_DIRECTORY)));
   EXPECT_RESULT_OK(vnode.ValidateOptions(
-      fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_NOT_DIRECTORY)));
+      fs::VnodeConnectionOptions::FromIoV1Flags(fio::wire::OPEN_FLAG_NOT_DIRECTORY)));
 }
 
 TEST(VnodeConnectionOptions, ValidateOptionsForFile) {
@@ -120,11 +120,11 @@ TEST(VnodeConnectionOptions, ValidateOptionsForFile) {
   };
 
   TestFile vnode;
-  EXPECT_RESULT_ERROR(
-      ZX_ERR_NOT_DIR,
-      vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_DIRECTORY)));
+  EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR,
+                      vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(
+                          fio::wire::OPEN_FLAG_DIRECTORY)));
   EXPECT_RESULT_OK(vnode.ValidateOptions(
-      fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_NOT_DIRECTORY)));
+      fs::VnodeConnectionOptions::FromIoV1Flags(fio::wire::OPEN_FLAG_NOT_DIRECTORY)));
 }
 
 TEST(VnodeProtocolSet, Union) {

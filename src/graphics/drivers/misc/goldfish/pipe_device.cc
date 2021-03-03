@@ -209,8 +209,8 @@ zx_status_t PipeDevice::GoldfishPipeSetEvent(int32_t id, zx::event pipe_event) {
   ZX_DEBUG_ASSERT(pipes_.count(id) == 1);
   ZX_DEBUG_ASSERT(pipe_event.is_valid());
 
-  zx_signals_t kSignals = llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE |
-                          llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE;
+  zx_signals_t kSignals = llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_READABLE |
+                          llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_WRITABLE;
 
   zx_signals_t observed = 0u;
   // If old pipe event exists, transfer observed signal to new pipe event.
@@ -331,13 +331,13 @@ void PipeDevice::Pipe::SignalEvent(uint32_t flags) const {
 
   zx_signals_t state_set = 0;
   if (flags & PIPE_WAKE_FLAG_CLOSED) {
-    state_set |= llcpp::fuchsia::hardware::goldfish::SIGNAL_HANGUP;
+    state_set |= llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_HANGUP;
   }
   if (flags & PIPE_WAKE_FLAG_READ) {
-    state_set |= llcpp::fuchsia::hardware::goldfish::SIGNAL_READABLE;
+    state_set |= llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_READABLE;
   }
   if (flags & PIPE_WAKE_FLAG_WRITE) {
-    state_set |= llcpp::fuchsia::hardware::goldfish::SIGNAL_WRITABLE;
+    state_set |= llcpp::fuchsia::hardware::goldfish::wire::SIGNAL_WRITABLE;
   }
 
   zx_status_t status = pipe_event.signal(/*clear_mask=*/0u, state_set);

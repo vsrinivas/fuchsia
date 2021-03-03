@@ -76,7 +76,7 @@ class FakeMmio {
 
 using CpuCtrlSyncClient = fuchsia_cpuctrl::Device::SyncClient;
 using ThermalSyncClient = fuchsia_thermal::Device::SyncClient;
-using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
+using llcpp::fuchsia::device::wire::MAX_DEVICE_PERFORMANCE_STATES;
 
 constexpr size_t kBigClusterIdx =
     static_cast<size_t>(fuchsia_thermal::wire::PowerDomain::BIG_CLUSTER_POWER_DOMAIN);

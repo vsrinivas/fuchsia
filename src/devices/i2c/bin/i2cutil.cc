@@ -108,8 +108,9 @@ static zx_status_t transact(llcpp::fuchsia::hardware::i2c::Device2::SyncClient c
     usage(argv[0]);
     return -1;
   }
-  if (n_segments > llcpp::fuchsia::hardware::i2c::MAX_COUNT_SEGMENTS) {
-    printf("No more than %u segments allowed\n", llcpp::fuchsia::hardware::i2c::MAX_COUNT_SEGMENTS);
+  if (n_segments > llcpp::fuchsia::hardware::i2c::wire::MAX_COUNT_SEGMENTS) {
+    printf("No more than %u segments allowed\n",
+           llcpp::fuchsia::hardware::i2c::wire::MAX_COUNT_SEGMENTS);
     return -1;
   }
 

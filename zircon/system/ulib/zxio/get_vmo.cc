@@ -135,14 +135,16 @@ zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size
 }
 
 zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
-  return zxio_vmo_get(io, fio::VMO_FLAG_READ | fio::VMO_FLAG_PRIVATE, out_vmo, out_size);
+  return zxio_vmo_get(io, fio::wire::VMO_FLAG_READ | fio::wire::VMO_FLAG_PRIVATE, out_vmo,
+                      out_size);
 }
 
 zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
-  return zxio_vmo_get(io, fio::VMO_FLAG_READ | fio::VMO_FLAG_EXACT, out_vmo, out_size);
+  return zxio_vmo_get(io, fio::wire::VMO_FLAG_READ | fio::wire::VMO_FLAG_EXACT, out_vmo, out_size);
 }
 
 zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
-  return zxio_vmo_get(io, fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC | fio::VMO_FLAG_PRIVATE, out_vmo,
-                      out_size);
+  return zxio_vmo_get(
+      io, fio::wire::VMO_FLAG_READ | fio::wire::VMO_FLAG_EXEC | fio::wire::VMO_FLAG_PRIVATE,
+      out_vmo, out_size);
 }

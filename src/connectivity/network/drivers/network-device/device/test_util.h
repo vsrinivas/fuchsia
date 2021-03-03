@@ -147,8 +147,8 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
 
  private:
   std::array<zx::vmo, MAX_VMOS> vmos_;
-  std::array<uint8_t, netdev::MAX_FRAME_TYPES> rx_types_;
-  std::array<tx_support_t, netdev::MAX_FRAME_TYPES> tx_types_;
+  std::array<uint8_t, netdev::wire::MAX_FRAME_TYPES> rx_types_;
+  std::array<tx_support_t, netdev::wire::MAX_FRAME_TYPES> tx_types_;
   device_info_t info_{};
   status_t status_{};
   ddk::NetworkDeviceIfcProtocolClient device_client_;

@@ -44,7 +44,7 @@ class DeviceReportsReader
   fbl::Mutex reader_lock_;
   static constexpr size_t kDataFifoSize = 4096;
   fbl::RingBuffer<uint8_t, kDataFifoSize> data_fifo_ __TA_GUARDED(reader_lock_);
-  fbl::RingBuffer<zx_time_t, llcpp::fuchsia::hardware::input::MAX_REPORTS_COUNT> timestamps_
+  fbl::RingBuffer<zx_time_t, llcpp::fuchsia::hardware::input::wire::MAX_REPORTS_COUNT> timestamps_
       __TA_GUARDED(reader_lock_);
 
   std::optional<ReadReportsCompleter::Async> waiting_read_ __TA_GUARDED(reader_lock_);

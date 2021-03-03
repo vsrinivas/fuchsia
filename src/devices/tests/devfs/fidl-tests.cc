@@ -27,9 +27,10 @@ void OpenHelper(const zx::channel& directory, const char* path, zx::channel* res
   // response on the accompanying channel.
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
-  auto result = fio::Directory::Call::Open(
-      zx::unowned_channel(directory), fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE, 0,
-      fidl::unowned_str(path, strlen(path)), std::move(server));
+  auto result =
+      fio::Directory::Call::Open(zx::unowned_channel(directory),
+                                 fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_FLAG_DESCRIBE, 0,
+                                 fidl::unowned_str(path, strlen(path)), std::move(server));
   ASSERT_EQ(result.status(), ZX_OK);
   zx_signals_t pending;
   ASSERT_EQ(
@@ -127,8 +128,8 @@ TEST(FidlTestCase, Open) {
     ASSERT_OK(fdio_ns_get_installed(&ns));
     ASSERT_OK(fdio_ns_connect(ns, "/dev", ZX_FS_RIGHT_READABLE, dev_server.release()));
     ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "zero", fio::wire::NodeInfo::Tag::kDevice, 1));
-    ASSERT_NO_FAILURES(
-        FidlOpenValidator(dev_client, "class/platform-bus/000", fio::wire::NodeInfo::Tag::kDevice, 1));
+    ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "class/platform-bus/000",
+                                         fio::wire::NodeInfo::Tag::kDevice, 1));
     ASSERT_NO_FAILURES(FidlOpenErrorValidator(dev_client, "this-path-better-not-actually-exist"));
     ASSERT_NO_FAILURES(
         FidlOpenErrorValidator(dev_client, "zero/this-path-better-not-actually-exist"));
@@ -140,7 +141,8 @@ TEST(FidlTestCase, Open) {
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
     ASSERT_OK(fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, dev_server.release()));
-    ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "lib", fio::wire::NodeInfo::Tag::kDirectory, 0));
+    ASSERT_NO_FAILURES(
+        FidlOpenValidator(dev_client, "lib", fio::wire::NodeInfo::Tag::kDirectory, 0));
     ASSERT_NO_FAILURES(FidlOpenErrorValidator(dev_client, "this-path-better-not-actually-exist"));
   }
 }
@@ -169,8 +171,8 @@ TEST(FidlTestCase, Basic) {
 
 typedef struct {
   // Buffer containing cached messages
-  uint8_t buf[fio::MAX_BUF];
-  uint8_t name_buf[fio::MAX_FILENAME + 1];
+  uint8_t buf[fio::wire::MAX_BUF];
+  uint8_t name_buf[fio::wire::MAX_FILENAME + 1];
   // Offset into 'buf' of next message
   uint8_t* ptr;
   // Maximum size of buffer
@@ -218,7 +220,7 @@ TEST(FidlTestCase, DirectoryWatcherExisting) {
   ASSERT_OK(zx::channel::create(0, &watcher, &remote_watcher));
   ASSERT_OK(fdio_service_connect("/dev/class", request.release()));
 
-  auto result = fio::Directory::Call::Watch(zx::unowned_channel(h), fio::WATCH_MASK_ALL, 0,
+  auto result = fio::Directory::Call::Watch(zx::unowned_channel(h), fio::wire::WATCH_MASK_ALL, 0,
                                             std::move(remote_watcher));
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_OK(result->s);
@@ -229,11 +231,11 @@ TEST(FidlTestCase, DirectoryWatcherExisting) {
     const char* name = nullptr;
     uint8_t event = 0;
     ASSERT_NO_FAILURES(ReadEvent(&wb, watcher, &name, &event));
-    if (event == fio::WATCH_EVENT_IDLE) {
+    if (event == fio::wire::WATCH_EVENT_IDLE) {
       ASSERT_STR_EQ(name, "");
       break;
     }
-    ASSERT_EQ(event, fio::WATCH_EVENT_EXISTING);
+    ASSERT_EQ(event, fio::wire::WATCH_EVENT_EXISTING);
     ASSERT_STR_NE(name, "");
   }
 }
@@ -252,7 +254,7 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
   watcher.reset();
 
   {
-    auto result = fio::Directory::Call::Watch(zx::unowned_channel(h), fio::WATCH_MASK_ALL, 0,
+    auto result = fio::Directory::Call::Watch(zx::unowned_channel(h), fio::wire::WATCH_MASK_ALL, 0,
                                               std::move(remote_watcher));
     ASSERT_EQ(result.status(), ZX_OK);
     ASSERT_OK(result->s);
@@ -262,7 +264,7 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
   {
     // Create a new watcher, and see if it's functional at all
     ASSERT_OK(zx::channel::create(0, &watcher, &remote_watcher));
-    auto result = fio::Directory::Call::Watch(zx::unowned_channel(h), fio::WATCH_MASK_ALL, 0,
+    auto result = fio::Directory::Call::Watch(zx::unowned_channel(h), fio::wire::WATCH_MASK_ALL, 0,
                                               std::move(remote_watcher));
     ASSERT_EQ(result.status(), ZX_OK);
     ASSERT_OK(result->s);
@@ -272,7 +274,7 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
   const char* name = nullptr;
   uint8_t event = 0;
   ASSERT_NO_FAILURES(ReadEvent(&wb, watcher, &name, &event));
-  ASSERT_EQ(event, fio::WATCH_EVENT_EXISTING);
+  ASSERT_EQ(event, fio::wire::WATCH_EVENT_EXISTING);
 }
 
 }  // namespace

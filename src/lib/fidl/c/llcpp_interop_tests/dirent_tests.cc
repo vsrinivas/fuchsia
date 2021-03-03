@@ -34,9 +34,9 @@ namespace gen = ::llcpp::fidl::test::llcpp::dirent;
 // Toy test data
 namespace {
 
-static_assert(gen::SMALL_DIR_VECTOR_SIZE == 3);
+static_assert(gen::wire::SMALL_DIR_VECTOR_SIZE == 3);
 
-gen::wire::DirEnt golden_dirents_array[gen::SMALL_DIR_VECTOR_SIZE] = {
+gen::wire::DirEnt golden_dirents_array[gen::wire::SMALL_DIR_VECTOR_SIZE] = {
     gen::wire::DirEnt{
         .is_dir = false,
         .name = fidl::StringView{"ab"},
@@ -377,7 +377,7 @@ fidl::Array<gen::wire::DirEnt, kNumDirents> RandomlyFillDirEnt(char* name) {
   Random random;
   fidl::Array<gen::wire::DirEnt, kNumDirents> dirents;
   for (size_t i = 0; i < kNumDirents; i++) {
-    int str_len = random.UpTo(gen::TEST_MAX_PATH) + 1;
+    int str_len = random.UpTo(gen::wire::TEST_MAX_PATH) + 1;
     bool is_dir = random.UpTo(2) == 0;
     int32_t flags = static_cast<int32_t>(random.UpTo(1000));
     dirents[i] = gen::wire::DirEnt{.is_dir = is_dir,
@@ -396,8 +396,8 @@ void SimpleCountNumDirectories() {
   gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
 
   constexpr size_t kNumDirents = 80;
-  std::unique_ptr<char[]> name(new char[gen::TEST_MAX_PATH]);
-  for (uint32_t i = 0; i < gen::TEST_MAX_PATH; i++) {
+  std::unique_ptr<char[]> name(new char[gen::wire::TEST_MAX_PATH]);
+  for (uint32_t i = 0; i < gen::wire::TEST_MAX_PATH; i++) {
     name[i] = 'A';
   }
   ASSERT_EQ(server.CountNumDirectoriesNumCalls(), 0);
@@ -428,8 +428,8 @@ void CallerAllocateCountNumDirectories() {
 
   Random random;
   constexpr size_t kNumDirents = 80;
-  std::unique_ptr<char[]> name(new char[gen::TEST_MAX_PATH]);
-  for (uint32_t i = 0; i < gen::TEST_MAX_PATH; i++) {
+  std::unique_ptr<char[]> name(new char[gen::wire::TEST_MAX_PATH]);
+  for (uint32_t i = 0; i < gen::wire::TEST_MAX_PATH; i++) {
     name[i] = 'B';
   }
   ASSERT_EQ(server.CountNumDirectoriesNumCalls(), 0);
@@ -602,8 +602,8 @@ TEST(DirentServerTest, CFlavorSendOnDirents) {
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
 
   constexpr size_t kNumDirents = 80;
-  std::unique_ptr<char[]> name(new char[gen::TEST_MAX_PATH]);
-  for (uint32_t i = 0; i < gen::TEST_MAX_PATH; i++) {
+  std::unique_ptr<char[]> name(new char[gen::wire::TEST_MAX_PATH]);
+  for (uint32_t i = 0; i < gen::wire::TEST_MAX_PATH; i++) {
     name[i] = 'A';
   }
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
@@ -618,8 +618,8 @@ TEST(DirentServerTest, CallerAllocateSendOnDirents) {
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
 
   constexpr size_t kNumDirents = 80;
-  std::unique_ptr<char[]> name(new char[gen::TEST_MAX_PATH]);
-  for (uint32_t i = 0; i < gen::TEST_MAX_PATH; i++) {
+  std::unique_ptr<char[]> name(new char[gen::wire::TEST_MAX_PATH]);
+  for (uint32_t i = 0; i < gen::wire::TEST_MAX_PATH; i++) {
     name[i] = 'B';
   }
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());

@@ -36,10 +36,10 @@ static constexpr uint8_t kRxFrameTypes[] = {static_cast<uint8_t>(netdev::wire::F
                                             static_cast<uint8_t>(netdev::wire::FrameType::IPV6)};
 static constexpr tx_support_t kTxFrameSupport[] = {
     {.type = static_cast<uint8_t>(netdev::wire::FrameType::IPV4),
-     .features = netdev::FRAME_FEATURES_RAW,
+     .features = netdev::wire::FRAME_FEATURES_RAW,
      .supported_flags = 0},
     {.type = static_cast<uint8_t>(netdev::wire::FrameType::IPV4),
-     .features = netdev::FRAME_FEATURES_RAW,
+     .features = netdev::wire::FRAME_FEATURES_RAW,
      .supported_flags = 0}};
 
 SerialPpp::SerialPpp(zx_device_t* parent) : SerialPpp(parent, parent) {}

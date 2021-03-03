@@ -40,7 +40,7 @@ zx_status_t PseudoFile::GetAttributes(VnodeAttributes* attr) {
     attr->mode |= V_IRUSR;
   if (write_handler_)
     attr->mode |= V_IWUSR;
-  attr->inode = fio::INO_UNKNOWN;
+  attr->inode = fio::wire::INO_UNKNOWN;
   attr->link_count = 1;
   return ZX_OK;
 }

@@ -779,8 +779,8 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
   {
     zx::channel remote;
     ASSERT_OK(zx::channel::create(0, &watcher, &remote));
-    ASSERT_OK(
-        devfs_watch(coordinator().root_device()->self, std::move(remote), fio::WATCH_MASK_ADDED));
+    ASSERT_OK(devfs_watch(coordinator().root_device()->self, std::move(remote),
+                          fio::wire::WATCH_MASK_ADDED));
   }
 
   size_t device_indexes[2];
@@ -809,11 +809,11 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
       kCompositeDevName, device_indexes, std::size(device_indexes), fragment_device_indexes,
       &composite_remote_coordinator, &composite_remote_controller));
 
-  uint8_t msg[fio::MAX_FILENAME + 2];
+  uint8_t msg[fio::wire::MAX_FILENAME + 2];
   uint32_t msg_len = 0;
   ASSERT_OK(watcher.read(0, msg, nullptr, sizeof(msg), 0, &msg_len, nullptr));
   ASSERT_EQ(msg_len, 2 + strlen(kCompositeDevName));
-  ASSERT_EQ(msg[0], fio::WATCH_EVENT_ADDED);
+  ASSERT_EQ(msg[0], fio::wire::WATCH_EVENT_ADDED);
   ASSERT_EQ(msg[1], strlen(kCompositeDevName));
   ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(kCompositeDevName), msg + 2, msg[1]);
 }

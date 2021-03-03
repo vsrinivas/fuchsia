@@ -49,11 +49,11 @@ void RemoteFileConnection::Read(uint64_t count, ReadCompleter::Sync& completer) 
     completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
     return;
   }
-  if (count > fio::MAX_BUF) {
+  if (count > fio::wire::MAX_BUF) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
   }
-  uint8_t data[fio::MAX_BUF];
+  uint8_t data[fio::wire::MAX_BUF];
   size_t actual = 0;
   zx_status_t status = vnode()->Read(data, count, offset_, &actual);
   if (status == ZX_OK) {
@@ -75,11 +75,11 @@ void RemoteFileConnection::ReadAt(uint64_t count, uint64_t offset,
     completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
     return;
   }
-  if (count > fio::MAX_BUF) {
+  if (count > fio::wire::MAX_BUF) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
   }
-  uint8_t data[fio::MAX_BUF];
+  uint8_t data[fio::wire::MAX_BUF];
   size_t actual = 0;
   zx_status_t status = vnode()->Read(data, count, offset, &actual);
   if (status == ZX_OK) {

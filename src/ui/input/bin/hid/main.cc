@@ -256,7 +256,7 @@ static int hid_read_reports(input_args_t* args) {
   }
   report_event = std::move(result->event);
 
-  std::vector<uint8_t> report(llcpp::fuchsia::hardware::input::MAX_REPORT_LEN);
+  std::vector<uint8_t> report(llcpp::fuchsia::hardware::input::wire::MAX_REPORT_LEN);
   for (uint32_t i = 0; i < args->num_reads; i++) {
     size_t returned_size;
     status =

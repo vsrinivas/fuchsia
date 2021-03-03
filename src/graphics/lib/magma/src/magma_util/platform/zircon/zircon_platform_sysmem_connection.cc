@@ -145,14 +145,14 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     constraints_.min_buffer_count = constraints->count;
     // Ignore input usage
     llcpp::fuchsia::sysmem::wire::BufferUsage usage;
-    usage.vulkan = llcpp::fuchsia::sysmem::vulkanUsageTransientAttachment |
-                   llcpp::fuchsia::sysmem::vulkanUsageStencilAttachment |
-                   llcpp::fuchsia::sysmem::vulkanUsageInputAttachment |
-                   llcpp::fuchsia::sysmem::vulkanUsageColorAttachment |
-                   llcpp::fuchsia::sysmem::vulkanUsageTransferSrc |
-                   llcpp::fuchsia::sysmem::vulkanUsageTransferDst |
-                   llcpp::fuchsia::sysmem::vulkanUsageStorage |
-                   llcpp::fuchsia::sysmem::vulkanUsageSampled;
+    usage.vulkan = llcpp::fuchsia::sysmem::wire::vulkanUsageTransientAttachment |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageStencilAttachment |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageInputAttachment |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageColorAttachment |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageTransferSrc |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageTransferDst |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageStorage |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageSampled;
     constraints_.usage = usage;
     constraints_.has_buffer_memory_constraints = true;
     // No buffer constraints, except those passed directly through from the client. These two
@@ -239,7 +239,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     constraints.pixel_format.has_format_modifier = true;
     if (!format_constraints->has_format_modifier) {
       constraints.pixel_format.format_modifier.value =
-          llcpp::fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+          llcpp::fuchsia::sysmem::wire::FORMAT_MODIFIER_LINEAR;
     } else {
       constraints.pixel_format.format_modifier.value = format_constraints->format_modifier;
     }
@@ -256,7 +256,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Format constraints must be set first");
     }
     if (color_space_count >
-        llcpp::fuchsia::sysmem::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES) {
+        llcpp::fuchsia::sysmem::wire::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES) {
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Too many color spaces: %d", color_space_count);
     }
     auto& constraints = raw_image_constraints_[index];
@@ -470,19 +470,19 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
   magma_status_t AllocateBuffer(uint32_t flags, size_t size,
                                 std::unique_ptr<magma::PlatformBuffer>* buffer_out) override {
     llcpp::fuchsia::sysmem::wire::BufferUsage usage;
-    usage.vulkan = llcpp::fuchsia::sysmem::vulkanUsageTransientAttachment |
-                   llcpp::fuchsia::sysmem::vulkanUsageStencilAttachment |
-                   llcpp::fuchsia::sysmem::vulkanUsageInputAttachment |
-                   llcpp::fuchsia::sysmem::vulkanUsageColorAttachment |
-                   llcpp::fuchsia::sysmem::vulkanUsageTransferSrc |
-                   llcpp::fuchsia::sysmem::vulkanUsageTransferDst |
-                   llcpp::fuchsia::sysmem::vulkanUsageStorage |
-                   llcpp::fuchsia::sysmem::vulkanUsageSampled;
+    usage.vulkan = llcpp::fuchsia::sysmem::wire::vulkanUsageTransientAttachment |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageStencilAttachment |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageInputAttachment |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageColorAttachment |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageTransferSrc |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageTransferDst |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageStorage |
+                   llcpp::fuchsia::sysmem::wire::vulkanUsageSampled;
     if (flags & MAGMA_SYSMEM_FLAG_PROTECTED) {
-      usage.video = llcpp::fuchsia::sysmem::videoUsageHwProtected;
+      usage.video = llcpp::fuchsia::sysmem::wire::videoUsageHwProtected;
     }
     if (flags & MAGMA_SYSMEM_FLAG_DISPLAY) {
-      usage.display = llcpp::fuchsia::sysmem::displayUsageLayer;
+      usage.display = llcpp::fuchsia::sysmem::wire::displayUsageLayer;
     }
 
     llcpp::fuchsia::sysmem::wire::BufferCollectionConstraints constraints;

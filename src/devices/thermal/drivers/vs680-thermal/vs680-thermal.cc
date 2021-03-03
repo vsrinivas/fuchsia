@@ -25,7 +25,7 @@ using ::llcpp::fuchsia::hardware::thermal::wire::OperatingPointEntry;
 
 constexpr OperatingPoint kOperatingPoints = {
     .opp =
-        fidl::Array<OperatingPointEntry, ::llcpp::fuchsia::hardware::thermal::MAX_DVFS_OPPS>{
+        fidl::Array<OperatingPointEntry, ::llcpp::fuchsia::hardware::thermal::wire::MAX_DVFS_OPPS>{
             // TODO(bradenkell): This is the initial CPU frequency coming out of the bootloader. Add
             //                   the other operating points when we have more information.
             OperatingPointEntry{.freq_hz = 1'800'000'000, .volt_uv = 800'000},
