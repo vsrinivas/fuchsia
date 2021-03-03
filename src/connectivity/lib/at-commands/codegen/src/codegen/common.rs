@@ -8,6 +8,19 @@
 
 use {super::error::Result, std::io};
 
+pub mod type_names {
+    pub static HIGHLEVEL_COMMAND_TYPE: &str = "Command";
+    pub static HIGHLEVEL_SUCCESS_TYPE: &str = "Success";
+
+    pub static LOWLEVEL_COMMAND_TYPE: &str = "Command";
+    pub static LOWLEVEL_EXECUTE_COMMAND_VARIANT: &str = "Execute";
+    pub static LOWLEVEL_READ_COMMAND_VARIANT: &str = "Read";
+    pub static LOWLEVEL_TEST_COMMAND_VARIANT: &str = "Test";
+
+    pub static LOWLEVEL_RESPONSE_TYPE: &str = "Response";
+    pub static LOWLEVEL_RESPONSE_VARIANT: &str = "Success";
+}
+
 /// The amount to increase indentation when generating a new block.
 pub static TABSTOP: u64 = 4;
 

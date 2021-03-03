@@ -15,7 +15,7 @@
 /// match the parse tree defined in argument_grammar.rs.
 use {
     crate::{
-        lowlevel::arguments::{Argument, Arguments, PrimitiveArgument},
+        lowlevel::{Argument, Arguments, PrimitiveArgument},
         parser::common::{
             next_match, next_match_one_of, next_match_rep, parse_integer, parse_string, ParseResult,
         },

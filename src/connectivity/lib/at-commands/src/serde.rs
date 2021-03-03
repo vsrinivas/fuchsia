@@ -11,9 +11,10 @@
 pub use crate::parser::common::ParseError;
 use {
     crate::{
-        generated,
-        lowlevel::{arguments::Arguments, command::Command, response::Response, write_to::WriteTo},
+        highlevel, lowlevel,
+        lowlevel::write_to::WriteTo as _,
         parser::{command_parser, response_parser},
+        translate,
     },
     pest,
     std::io,
@@ -31,11 +32,11 @@ pub enum DeserializeError {
     #[error("IO error: {0:?}")]
     IoError(io::Error),
     #[error("Parsed unknown command: {0:?}")]
-    UnknownCommand(Command),
+    UnknownCommand(lowlevel::Command),
     #[error("Parsed unknown response: {0:?}")]
-    UnknownResponse(Response),
+    UnknownResponse(lowlevel::Response),
     #[error("Parsed arguments do not match argument definition: {0:?}")]
-    UnknownArguments(Arguments),
+    UnknownArguments(lowlevel::Arguments),
 }
 
 impl<RT: pest::RuleType> From<ParseError<RT>> for DeserializeError {
@@ -72,38 +73,38 @@ pub trait SerDe {
     fn serialize<W: io::Write>(&self, sink: &mut W) -> Result<(), SerializeError>;
 }
 
-impl SerDe for generated::types::Command {
+impl SerDe for highlevel::Command {
     fn deserialize<R: io::Read>(source: &mut R) -> Result<Self, DeserializeError> {
         //TODO(fxb/66041) Remove this intermediate String and parse directly from the Read.
         let mut string: String = String::new();
         source.read_to_string(&mut string)?;
         let lowlevel = command_parser::parse(&string)?;
-        let highlevel = generated::translate::raise_command(&lowlevel)?;
+        let highlevel = translate::raise_command(&lowlevel)?;
 
         Ok(highlevel)
     }
 
     fn serialize<W: io::Write>(&self, sink: &mut W) -> Result<(), SerializeError> {
-        let lowlevel = generated::translate::lower_command(self);
+        let lowlevel = translate::lower_command(self);
         lowlevel.write_to(sink)?;
 
         Ok(())
     }
 }
 
-impl SerDe for generated::types::Response {
+impl SerDe for highlevel::Response {
     fn deserialize<R: io::Read>(source: &mut R) -> Result<Self, DeserializeError> {
         //TODO(fxb/66041) Remove this intermediate String and parse directly from the Read.
         let mut string: String = String::new();
         source.read_to_string(&mut string)?;
         let lowlevel = response_parser::parse(&string)?;
-        let highlevel = generated::translate::raise_response(&lowlevel)?;
+        let highlevel = translate::raise_response(&lowlevel)?;
 
         Ok(highlevel)
     }
 
     fn serialize<W: io::Write>(&self, sink: &mut W) -> Result<(), SerializeError> {
-        let lowlevel = generated::translate::lower_response(self);
+        let lowlevel = translate::lower_response(self);
         lowlevel.write_to(sink)?;
 
         Ok(())

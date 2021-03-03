@@ -55,7 +55,7 @@ impl WriteTo for Response {
     }
 }
 
-// Hardedcoded error indications described in HFP v1.8 Section 4.34.2
+// Hardecoded error indications described in HFP v1.8 Section 4.34.2
 #[derive(Debug, Clone, PartialEq)]
 pub enum HardcodedError {
     NoCarrier,

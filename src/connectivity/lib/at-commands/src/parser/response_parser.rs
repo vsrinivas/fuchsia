@@ -8,7 +8,7 @@
 /// expected element is not found.  This should only happen if the code here does not correctly
 /// match the parse tree defined in response_grammar.rs.
 use {
-    crate::lowlevel::response::{HardcodedError, Response},
+    crate::lowlevel::{HardcodedError, Response},
     crate::parser::{
         arguments_parser::ArgumentsParser,
         common::{

@@ -11,24 +11,20 @@ use {
 };
 
 // This code just confirms we've correctly linked in the parsers.
-static SOME_CODE: &'static str = r#"use crate::parser::{command_parser, response_parser};
-
-pub fn unused() {
-    let _ = command_parser::parse(&String::from(""));
-    let _ = response_parser::parse(&String::from(""));
-}
-"#;
-
 #[derive(argh::FromArgs)]
 /// Generate rust code for AT command parsing from description files.
 struct Args {
     /// path to an input file specifying AT commands
-    #[argh(option, short = 'i')]
+    #[argh(option)]
     input: Vec<PathBuf>,
 
-    /// path to an output file to generate code into
-    #[argh(option, short = 'o')]
-    output: PathBuf,
+    /// path to an output file to generate type definition code into
+    #[argh(option)]
+    output_types: PathBuf,
+
+    /// path to an output file to generate translation code into
+    #[argh(option)]
+    output_translate: PathBuf,
 }
 
 fn main() -> Result<()> {
@@ -44,17 +40,21 @@ fn main() -> Result<()> {
         parsed_definitions.append(&mut parsed_definition);
     }
 
-    let mut output_file =
-        File::create(&args.output) // Create or truncate file.
-            .with_context(|| format!("Unable to open output file {:?}", &args.output))?;
-    info!("Writing generated AT code to {:?} ", &args.output);
+    let mut output_types_file =
+        File::create(&args.output_types) // Create or truncate file.
+            .with_context(|| format!("Unable to open output file {:?}", &args.output_types))?;
+    info!("Writing generated AT type definitions to {:?} ", &args.output_types);
 
-    codegen::codegen(&mut output_file, &parsed_definitions)?;
+    let mut output_translate_file =
+        File::create(&args.output_translate) // Create or truncate file.
+            .with_context(|| format!("Unable to open output file {:?}", &args.output_translate))?;
+    info!("Writing generated AT translation code to {:?} ", &args.output_translate);
+
+    codegen::codegen(&mut output_types_file, &mut output_translate_file, &parsed_definitions)?;
 
     info!(
-        "Successfully wrote {:} bytes of generated AT code to {:?} ",
-        SOME_CODE.len(),
-        &args.output
+        "Successfully wrote generated AT code to {:?} and {:?}",
+        &args.output_types, &args.output_translate,
     );
 
     Ok(())

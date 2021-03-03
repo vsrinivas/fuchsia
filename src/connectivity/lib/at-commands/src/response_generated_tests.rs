@@ -7,8 +7,8 @@
 
 use {
     crate::{
-        generated::translate, generated::types as highlevel, lowlevel, lowlevel::write_to::WriteTo,
-        parser::response_parser, serde::SerDe,
+        highlevel, lowlevel, lowlevel::write_to::WriteTo as _, parser::response_parser,
+        serde::SerDe, translate,
     },
     std::{collections::HashMap, io::Cursor},
 };
@@ -101,14 +101,83 @@ fn test_roundtrips(highlevel: highlevel::Response, lowlevel: lowlevel::Response,
     assert_eq!(string, string_from_highlevel);
 }
 
-// TODO(fdb/70295) Add tests for nonsuccess cases, such as OK, ERROR,
-// hardcoded responses like NO CARRIER and CME ERRORS.
+// Ok response
+#[test]
+fn ok() {
+    test_roundtrips(highlevel::Response::Ok, lowlevel::Response::Ok, cr_lf_delimit("OK"))
+}
+
+// Error response
+#[test]
+fn error() {
+    test_roundtrips(highlevel::Response::Error, lowlevel::Response::Error, cr_lf_delimit("ERROR"))
+}
+
+// Hardcoded error response NO CARRIER
+#[test]
+fn no_carrier() {
+    test_roundtrips(
+        highlevel::Response::HardcodedError(highlevel::HardcodedError::NoCarrier),
+        lowlevel::Response::HardcodedError(lowlevel::HardcodedError::NoCarrier),
+        cr_lf_delimit("NO CARRIER"),
+    )
+}
+
+// Hardcoded error response BUSY
+#[test]
+fn busy() {
+    test_roundtrips(
+        highlevel::Response::HardcodedError(highlevel::HardcodedError::Busy),
+        lowlevel::Response::HardcodedError(lowlevel::HardcodedError::Busy),
+        cr_lf_delimit("BUSY"),
+    )
+}
+
+// Hardcoded error response NO ANSWER
+#[test]
+fn no_answer() {
+    test_roundtrips(
+        highlevel::Response::HardcodedError(highlevel::HardcodedError::NoAnswer),
+        lowlevel::Response::HardcodedError(lowlevel::HardcodedError::NoAnswer),
+        cr_lf_delimit("NO ANSWER"),
+    )
+}
+
+// Hardcoded error response DELAYED
+#[test]
+fn delayed() {
+    test_roundtrips(
+        highlevel::Response::HardcodedError(highlevel::HardcodedError::Delayed),
+        lowlevel::Response::HardcodedError(lowlevel::HardcodedError::Delayed),
+        cr_lf_delimit("DELAYED"),
+    )
+}
+
+// Hardcoded error response BLACKLIST
+#[test]
+fn blacklist() {
+    test_roundtrips(
+        highlevel::Response::HardcodedError(highlevel::HardcodedError::Blacklist),
+        lowlevel::Response::HardcodedError(lowlevel::HardcodedError::Blacklist),
+        cr_lf_delimit("BLACKLIST"),
+    )
+}
+
+// +CME error
+#[test]
+fn cme_error() {
+    test_roundtrips(
+        highlevel::Response::CmeError(1),
+        lowlevel::Response::CmeError(1),
+        cr_lf_delimit("+CME ERROR: 1"),
+    )
+}
 
 // Response with no arguments
 #[test]
 fn no_args() {
     test_roundtrips(
-        highlevel::Response::Test {},
+        highlevel::Response::Success(highlevel::Success::Test {}),
         lowlevel::Response::Success {
             name: String::from("TEST"),
             is_extension: false,
@@ -122,7 +191,7 @@ fn no_args() {
 #[test]
 fn ext_no_args() {
     test_roundtrips(
-        highlevel::Response::Testext {},
+        highlevel::Response::Success(highlevel::Success::Testext {}),
         lowlevel::Response::Success {
             name: String::from("TESTEXT"),
             is_extension: true,
@@ -136,7 +205,7 @@ fn ext_no_args() {
 #[test]
 fn one_int_arg() {
     test_roundtrips(
-        highlevel::Response::Testi { field: 1 },
+        highlevel::Response::Success(highlevel::Success::Testi { field: 1 }),
         lowlevel::Response::Success {
             name: String::from("TESTI"),
             is_extension: true,
@@ -152,7 +221,7 @@ fn one_int_arg() {
 #[test]
 fn one_string_arg() {
     test_roundtrips(
-        highlevel::Response::Tests { field: String::from("abc") },
+        highlevel::Response::Success(highlevel::Success::Tests { field: String::from("abc") }),
         lowlevel::Response::Success {
             name: String::from("TESTS"),
             is_extension: true,
@@ -173,7 +242,7 @@ fn one_kv_arg() {
     map.insert(1, String::from("abc"));
 
     test_roundtrips(
-        highlevel::Response::Testm { field: map },
+        highlevel::Response::Success(highlevel::Success::Testm { field: map }),
         lowlevel::Response::Success {
             name: String::from("TESTM"),
             is_extension: true,
@@ -192,7 +261,7 @@ fn one_kv_arg() {
 #[test]
 fn args_list() {
     test_roundtrips(
-        highlevel::Response::Testl { field: vec![1, 2] },
+        highlevel::Response::Success(highlevel::Success::Testl { field: vec![1, 2] }),
         lowlevel::Response::Success {
             name: String::from("TESTL"),
             is_extension: true,
@@ -209,7 +278,10 @@ fn args_list() {
 #[test]
 fn args() {
     test_roundtrips(
-        highlevel::Response::Testsi { field1: String::from("abc"), field2: 1 },
+        highlevel::Response::Success(highlevel::Success::Testsi {
+            field1: String::from("abc"),
+            field2: 1,
+        }),
         lowlevel::Response::Success {
             name: String::from("TESTSI"),
             is_extension: true,
@@ -228,7 +300,7 @@ fn args() {
 #[test]
 fn paren_args() {
     test_roundtrips(
-        highlevel::Response::Testp { field: 1 },
+        highlevel::Response::Success(highlevel::Success::Testp { field: 1 }),
         lowlevel::Response::Success {
             name: String::from("TESTP"),
             is_extension: true,
@@ -244,7 +316,11 @@ fn paren_args() {
 #[test]
 fn multiple_paren_args() {
     test_roundtrips(
-        highlevel::Response::Testpp { field1: 1, field2: 2, field3: String::from("abc") },
+        highlevel::Response::Success(highlevel::Success::Testpp {
+            field1: 1,
+            field2: 2,
+            field3: String::from("abc"),
+        }),
         lowlevel::Response::Success {
             name: String::from("TESTPP"),
             is_extension: true,
@@ -270,7 +346,11 @@ fn multiple_paren_kv_args() {
     let mut map = HashMap::new();
     map.insert(1, String::from("abc"));
     test_roundtrips(
-        highlevel::Response::Testpmpil { field1: map, field2: 2, field3: vec![3, 4] },
+        highlevel::Response::Success(highlevel::Success::Testpmpil {
+            field1: map,
+            field2: 2,
+            field3: vec![3, 4],
+        }),
         lowlevel::Response::Success {
             name: String::from("TESTPMPIL"),
             is_extension: true,

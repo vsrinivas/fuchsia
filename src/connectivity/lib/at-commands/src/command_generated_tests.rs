@@ -9,7 +9,7 @@
 
 use {
     crate::{
-        generated::translate, generated::types as highlevel, lowlevel, lowlevel::write_to::WriteTo,
+        generated::translate, highlevel, lowlevel, lowlevel::write_to::WriteTo,
         parser::command_parser, serde::SerDe,
     },
     std::{collections::HashMap, io::Cursor},

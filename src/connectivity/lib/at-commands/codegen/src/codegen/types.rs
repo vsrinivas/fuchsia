@@ -6,7 +6,11 @@
 
 use {
     super::{
-        common::{codegen_block, to_initial_capital, write_indent, write_newline},
+        common::{
+            codegen_block, to_initial_capital,
+            type_names::{HIGHLEVEL_COMMAND_TYPE, HIGHLEVEL_SUCCESS_TYPE},
+            write_indent, write_newline,
+        },
         error::{Error, Result},
     },
     crate::definition::{
@@ -48,7 +52,7 @@ pub fn codegen_commands<W: io::Write>(
         sink,
         indent,
         Some("pub enum"),
-        "Command",
+        HIGHLEVEL_COMMAND_TYPE,
         |sink, indent| {
             for definition in definitions {
                 if let Definition::Command(command) = definition {
@@ -72,7 +76,7 @@ pub fn codegen_responses<W: io::Write>(
         sink,
         indent,
         Some("pub enum"),
-        "Response",
+        HIGHLEVEL_SUCCESS_TYPE,
         |sink, indent| {
             for definition in definitions {
                 if let Definition::Response { name, arguments, .. } = definition {

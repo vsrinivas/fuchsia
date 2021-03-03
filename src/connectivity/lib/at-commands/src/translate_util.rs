@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::lowlevel::arguments::{Argument, Arguments, PrimitiveArgument};
+use crate::lowlevel::{Argument, Arguments, PrimitiveArgument};
 use crate::serde::DeserializeError;
 
 pub fn extract_vec_from_args(arguments: &Arguments) -> Result<&Vec<Argument>, DeserializeError> {

@@ -11,7 +11,7 @@ use {
     super::raise as codegen_raise,
     super::types as codegen_types,
     super::{
-        common::{write_indent, write_newline, TABSTOP},
+        common::{write_indent, write_newline},
         error::Result,
     },
     crate::definition::Definition,
@@ -25,30 +25,35 @@ static PRELUDE: &str = r"// Copyright 2021 The Fuchsia Authors. All rights reser
 // This file is generated code.  Please do not edit it; instead edit the AT
 // command definitions used to generate it.";
 
-pub fn codegen<W: io::Write>(sink: &mut W, definitions: &[Definition]) -> Result {
+pub fn codegen<W: io::Write>(
+    type_sink: &mut W,
+    translate_sink: &mut W,
+    definitions: &[Definition],
+) -> Result {
     let indent = 0;
 
-    sink.write_all(PRELUDE.as_bytes())?;
-    write_newline(sink)?;
-    write_newline(sink)?;
+    // Write type definitions.
+    type_sink.write_all(PRELUDE.as_bytes())?;
+    write_newline(type_sink)?;
+    write_newline(type_sink)?;
 
-    write_indented!(sink, indent, "pub mod types {{\n")?;
-    write_indented!(sink, indent + TABSTOP, "use num_derive::FromPrimitive;\n\n")?;
+    write_indented!(type_sink, indent, "use num_derive::FromPrimitive;\n\n")?;
 
-    codegen_types::codegen(sink, indent + TABSTOP, definitions)?;
+    codegen_types::codegen(type_sink, indent, definitions)?;
 
-    write_indented!(sink, indent, "}}\n\n")?;
-    write_indented!(sink, indent, "pub mod translate {{\n")?;
-    write_indented!(sink, indent + TABSTOP, "use crate::lowlevel;\n")?;
-    write_indented!(sink, indent + TABSTOP, "use crate::generated::types as highlevel;\n")?;
-    write_indented!(sink, indent + TABSTOP, "use crate::serde::DeserializeError;\n")?;
-    write_indented!(sink, indent + TABSTOP, "use crate::translate_util::*;\n")?;
-    write_indented!(sink, indent + TABSTOP, "use num_traits::FromPrimitive;\n\n")?;
+    // Write generated translation code.
+    translate_sink.write_all(PRELUDE.as_bytes())?;
+    write_newline(translate_sink)?;
+    write_newline(translate_sink)?;
 
-    codegen_raise::codegen(sink, indent + TABSTOP, definitions)?;
-    codegen_lower::codegen(sink, indent + TABSTOP, definitions)?;
+    write_indented!(translate_sink, indent, "use crate::lowlevel;\n")?;
+    write_indented!(translate_sink, indent, "use crate::highlevel;\n")?;
+    write_indented!(translate_sink, indent, "use crate::serde::DeserializeError;\n")?;
+    write_indented!(translate_sink, indent, "use crate::translate_util::*;\n")?;
+    write_indented!(translate_sink, indent, "use num_traits::FromPrimitive;\n\n")?;
 
-    write_indented!(sink, indent, "}}\n")?;
+    codegen_raise::codegen(translate_sink, indent, definitions)?;
+    codegen_lower::codegen(translate_sink, indent, definitions)?;
 
     Ok(())
 }

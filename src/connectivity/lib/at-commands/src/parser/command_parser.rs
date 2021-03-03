@@ -9,7 +9,7 @@
 /// match the parse tree defined in command_grammar.rs.
 use {
     crate::{
-        lowlevel::command::{Command, ExecuteArguments},
+        lowlevel::{Command, ExecuteArguments},
         parser::{
             arguments_parser::ArgumentsParser,
             command_grammar::{Grammar, Rule},

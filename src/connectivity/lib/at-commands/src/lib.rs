@@ -2,16 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// Export all the lowlevel types in one module to simplify generated code.
 mod lowlevel {
-    pub mod arguments;
-    pub mod command;
-    pub mod response;
+    mod arguments;
+    mod command;
+    mod response;
+
     pub mod write_to;
 
-    // Make these available in lowlevel to simplify generated code.
     pub use arguments::{Argument, Arguments, PrimitiveArgument};
     pub use command::{Command, ExecuteArguments};
     pub use response::{HardcodedError, Response};
+}
+
+mod generated {
+    pub mod translate;
+    pub mod types;
+}
+
+// Reexport all the highlevel types in one module to simplify generated code.
+mod highlevel {
+    pub use crate::generated::types::{Command, Success};
+    pub use crate::response::{HardcodedError, Response};
+}
+
+mod translate {
+    pub use crate::generated::translate::{lower_command, raise_command};
+    pub use crate::translate_response::{lower_response, raise_response};
 }
 
 mod parser {
@@ -23,10 +40,13 @@ mod parser {
     pub mod response_parser;
 }
 
-mod generated;
+mod response;
 mod serde;
+mod translate_response;
 mod translate_util;
 
 // Reexport generated high level types and functions for use by clients.
+pub use generated::translate::*;
 pub use generated::types::*;
+pub use response::*;
 pub use serde::*;

@@ -7,7 +7,7 @@
 
 use {
     super::{
-        common::{to_initial_capital, write_indent, write_newline, TABSTOP},
+        common::{to_initial_capital, type_names::*, write_indent, write_newline, TABSTOP},
         error::Result,
     },
     crate::definition::{
@@ -62,9 +62,10 @@ fn codegen_command<W: io::Write>(sink: &mut W, indent: u64, command: &Command) -
             codegen_match_branch(
                 sink,
                 indent,
-                "Command",
-                "Execute",
                 name,
+                LOWLEVEL_COMMAND_TYPE,
+                LOWLEVEL_EXECUTE_COMMAND_VARIANT,
+                HIGHLEVEL_COMMAND_TYPE,
                 &command.type_name(),
                 *is_extension,
                 arguments.as_ref(),
@@ -74,9 +75,10 @@ fn codegen_command<W: io::Write>(sink: &mut W, indent: u64, command: &Command) -
             codegen_match_branch(
                 sink,
                 indent,
-                "Command",
-                "Read",
                 name,
+                LOWLEVEL_COMMAND_TYPE,
+                LOWLEVEL_READ_COMMAND_VARIANT,
+                HIGHLEVEL_COMMAND_TYPE,
                 &command.type_name(),
                 *is_extension,
                 None::<&ExecuteArguments>,
@@ -86,9 +88,10 @@ fn codegen_command<W: io::Write>(sink: &mut W, indent: u64, command: &Command) -
             codegen_match_branch(
                 sink,
                 indent,
-                "Command",
-                "Test",
                 name,
+                LOWLEVEL_COMMAND_TYPE,
+                LOWLEVEL_TEST_COMMAND_VARIANT,
+                HIGHLEVEL_COMMAND_TYPE,
                 &command.type_name(),
                 *is_extension,
                 None::<&ExecuteArguments>,
@@ -105,7 +108,8 @@ fn codegen_responses<W: io::Write>(
     indent: u64,
     definitions: &[Definition],
 ) -> Result {
-    write_indented!(sink, indent, "pub fn raise_response(lowlevel: &lowlevel::Response) -> Result<highlevel::Response, DeserializeError> {{\n")?;
+    write_indented!(sink, indent, "// Clients are responsible for ensuring this is only called with lowlevel::Result::Success.\n")?;
+    write_indented!(sink, indent, "pub fn raise_success(lowlevel: &lowlevel::Response) -> Result<highlevel::Success, DeserializeError> {{\n")?;
 
     // Increment indent
     {
@@ -123,15 +127,16 @@ fn codegen_responses<W: io::Write>(
                     codegen_match_branch(
                         sink,
                         indent,
-                        "Response",
-                        "Success",
                         name,
+                        LOWLEVEL_RESPONSE_TYPE,
+                        LOWLEVEL_RESPONSE_VARIANT,
+                        HIGHLEVEL_SUCCESS_TYPE,
                         &type_name,
                         *is_extension,
                         Some(arguments),
                     )?;
+                    write_newline(sink)?;
                 };
-                write_newline(sink)?;
             }
 
             write_indented!(
@@ -152,10 +157,11 @@ fn codegen_responses<W: io::Write>(
 fn codegen_match_branch<W: io::Write, A: CodegenArguments>(
     sink: &mut W,
     indent: u64,
-    typ: &str,
-    variant: &str,
     name: &str,
-    type_name: &str,
+    lowlevel_type: &str,
+    lowlevel_variant: &str,
+    highlevel_type: &str,
+    highlevel_variant: &str,
     is_extension: bool,
     arguments: Option<&A>,
 ) -> Result {
@@ -163,8 +169,8 @@ fn codegen_match_branch<W: io::Write, A: CodegenArguments>(
         sink,
         indent,
         "lowlevel::{}::{} {{ name, is_extension: {}",
-        typ,
-        variant,
+        lowlevel_type,
+        lowlevel_variant,
         is_extension
     )?;
 
@@ -184,7 +190,13 @@ fn codegen_match_branch<W: io::Write, A: CodegenArguments>(
             arguments.codegen_arguments_extraction(sink, indent)?;
         }
 
-        write_indented!(sink, indent, "Ok(highlevel::{}::{} {{", typ, type_name)?;
+        write_indented!(
+            sink,
+            indent,
+            "Ok(highlevel::{}::{} {{",
+            highlevel_type,
+            highlevel_variant
+        )?;
 
         if let Some(arguments) = arguments {
             write_newline(sink)?;

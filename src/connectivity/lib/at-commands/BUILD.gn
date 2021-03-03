@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# This file builds the AT command library and tests.  It has several steps.
+#
+# 1. Building the at_command_gen tool is an external depedency, defined
+#    in codegen/BUILD.gn
+#
+# 2. Once built, the at_command_gen tool is used to build generated/types.rs
+#    and generated/translate.rs into $target_gen_dir.
+#
+# 3. The other source files are copied into $target_gen_dir.
+#
+# 4. Ether the at-commands library or the tests are built from the the copied
+#    and generated files.
+
 import("//build/compiled_action.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/rust/rustc_library.gni")
@@ -14,11 +27,21 @@ compiled_action("generate_sources") {
     "definitions/example1.at",
     "definitions/example2.at",
   ]
-  output = "$target_gen_dir/src/generated.rs"
-  outputs = [ output ]
-  args = [ "-o" ] + [ rebase_path(output) ]
+  output_dir = "$target_gen_dir/src/generated/"
+  output_types = output_dir + "types.rs"
+  output_translate = output_dir + "translate.rs"
+  outputs = [
+    output_types,
+    output_translate,
+  ]
+  args = [
+    "--output-types",
+    rebase_path(output_types),
+    "--output-translate",
+    rebase_path(output_translate),
+  ]
   foreach(input, rebase_path(sources)) {
-    args += [ "-i" ] + [ input ]
+    args += [ "--input" ] + [ input ]
   }
 }
 
@@ -41,9 +64,11 @@ copy("copy_sources") {
     "src/parser/response_grammar.rs",
     "src/parser/response_parser.rs",
     "src/parser/response_parser_tests.rs",
+    "src/response.rs",
     "src/response_generated_tests.rs",
     "src/serde.rs",
     "src/tests.rs",
+    "src/translate_response.rs",
     "src/translate_util.rs",
   ]
   outputs = [ "$target_gen_dir/{{source_target_relative}}" ]
@@ -66,7 +91,8 @@ rustc_library("lib") {
   ]
   source_root = "$target_gen_dir/src/lib.rs"
   sources = [
-    "$target_gen_dir/src/generated.rs",
+    "$target_gen_dir/src/generated/translate.rs",
+    "$target_gen_dir/src/generated/types.rs",
     "$target_gen_dir/src/lib.rs",
     "$target_gen_dir/src/lowlevel/arguments.rs",
     "$target_gen_dir/src/lowlevel/command.rs",
@@ -78,7 +104,9 @@ rustc_library("lib") {
     "$target_gen_dir/src/parser/common.rs",
     "$target_gen_dir/src/parser/response_grammar.rs",
     "$target_gen_dir/src/parser/response_parser.rs",
+    "$target_gen_dir/src/response.rs",
     "$target_gen_dir/src/serde.rs",
+    "$target_gen_dir/src/translate_response.rs",
     "$target_gen_dir/src/translate_util.rs",
   ]
 }
@@ -114,7 +142,8 @@ rustc_test("lib_tests") {
   source_root = "$target_gen_dir/src/tests.rs"
   sources = [
     "$target_gen_dir/src/command_generated_tests.rs",
-    "$target_gen_dir/src/generated.rs",
+    "$target_gen_dir/src/generated/translate.rs",
+    "$target_gen_dir/src/generated/types.rs",
     "$target_gen_dir/src/lowlevel/arguments.rs",
     "$target_gen_dir/src/lowlevel/command.rs",
     "$target_gen_dir/src/lowlevel/command_tests.rs",
@@ -129,9 +158,11 @@ rustc_test("lib_tests") {
     "$target_gen_dir/src/parser/response_grammar.rs",
     "$target_gen_dir/src/parser/response_parser.rs",
     "$target_gen_dir/src/parser/response_parser_tests.rs",
+    "$target_gen_dir/src/response.rs",
     "$target_gen_dir/src/response_generated_tests.rs",
     "$target_gen_dir/src/serde.rs",
     "$target_gen_dir/src/tests.rs",
+    "$target_gen_dir/src/translate_response.rs",
     "$target_gen_dir/src/translate_util.rs",
   ]
 }
