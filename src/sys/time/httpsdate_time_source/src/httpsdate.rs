@@ -80,7 +80,7 @@ where
                     self.diagnostics.record(Event::NetworkCheckSuccessful);
                 }
                 Err(e) => {
-                    warn!("Network check failed, polling for time anyway: {:?}", e);
+                    error!("Network check failed, polling for time anyway: {:?}", e);
                     sink.send(Status::Network.into()).await?;
                 }
             }
@@ -252,7 +252,7 @@ mod test {
         })
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_retry_strategy() {
         let strategy = RetryStrategy {
             min_between_failures: zx::Duration::from_seconds(1),
@@ -274,7 +274,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_update_task_blocks_until_update_processed() {
         // Tests that our update loop blocks execution when run using a channel with zero capacity
         // as is done from PushSource. This verifies that each update is processed before another
@@ -314,7 +314,7 @@ mod test {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_successful_updates() {
         let expected_samples = vec![TEST_SAMPLE_1.clone(), TEST_SAMPLE_2.clone()];
         let (sampler, response_complete_fut) =
@@ -358,7 +358,7 @@ mod test {
         diagnostics.assert_events(expected_events);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_retry_until_successful() {
         let injected_responses = vec![
             Err(HttpsDateError::new(HttpsDateErrorType::NetworkError)),
@@ -411,7 +411,7 @@ mod test {
         diagnostics.assert_events_starts_with(expected_events);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_poll_even_if_network_check_fails() {
         let injected_responses = vec![Ok(TEST_SAMPLE_1.clone())];
         let (sampler, response_complete_fut) = FakeSampler::with_responses(injected_responses);
@@ -445,7 +445,7 @@ mod test {
         diagnostics.assert_events_starts_with(vec![Event::Phase(Phase::Initial)]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_phases() {
         let expected_num_samples = 1 /*initial*/ + CONVERGE_SAMPLES + 1 /*maintain*/;
         let expected_samples = vec![TEST_SAMPLE_1.clone(); expected_num_samples];

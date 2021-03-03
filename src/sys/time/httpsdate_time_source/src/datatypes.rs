@@ -84,7 +84,7 @@ mod test {
     use super::*;
     use std::sync::Arc;
 
-    #[test]
+    #[fuchsia::test]
     fn test_https_sample_into_update() {
         let utc_time = zx::Time::from_nanos(111_111_111_111);
         let monotonic_time = zx::Time::from_nanos(222_222_222_222);

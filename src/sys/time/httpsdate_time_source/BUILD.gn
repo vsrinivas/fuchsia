@@ -18,6 +18,7 @@ rustc_binary("bin") {
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
@@ -66,6 +67,11 @@ fuchsia_component("service") {
 fuchsia_unittest_package("httpsdate-time-source-tests") {
   manifest = "meta/unittests.cmx"
   deps = [ ":bin_test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fuchsia_package("httpsdate-time-source") {

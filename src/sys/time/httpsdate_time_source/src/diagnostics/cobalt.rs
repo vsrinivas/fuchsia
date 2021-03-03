@@ -142,7 +142,6 @@ mod test {
     use super::*;
     use crate::datatypes::Poll;
     use fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload};
-    use fuchsia_async as fasync;
     use futures::{channel::mpsc, stream::StreamExt};
     use lazy_static::lazy_static;
     use std::{collections::HashSet, iter::FromIterator};
@@ -185,7 +184,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_round_trip_time_bucket() {
         let bucket_1_rtt = RTT_BUCKET_FLOOR + ONE_MICROS;
         let bucket_5_rtt_1 = bucket_1_rtt + RTT_BUCKET_SIZE * 4;
@@ -203,7 +202,7 @@ mod test {
         assert_eq!(CobaltDiagnostics::round_trip_time_bucket(&underflow_rtt), 0);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_offset_rtt_bucket() {
         let bucket_1_offset_rtt = POLL_OFFSET_RTT_FLOOR + ONE_MICROS;
         let bucket_5_offset_rtt_1 = bucket_1_offset_rtt + POLL_OFFSET_RTT_BUCKET_SIZE * 4;
@@ -227,7 +226,7 @@ mod test {
         assert_eq!(CobaltDiagnostics::poll_offset_rtt_bucket(&underflow_offset_rtt), 0);
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_success_single_poll() {
         let (cobalt, event_recv) = diagnostics_for_test();
         cobalt.record(Event::Success(&HttpsSample {
@@ -262,7 +261,7 @@ mod test {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_success_after_phase_update() {
         let (cobalt, mut event_recv) = diagnostics_for_test();
         cobalt.record(Event::Success(&HttpsSample {
@@ -287,7 +286,7 @@ mod test {
         assert_eq!(events[0].event_codes, vec![CobaltPhase::Converge as u32]);
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_success_multiple_rtt() {
         let (cobalt, event_recv) = diagnostics_for_test();
         cobalt.record(Event::Success(&HttpsSample {
@@ -329,7 +328,7 @@ mod test {
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_success_with_offsets() {
         let (cobalt, event_recv) = diagnostics_for_test();
         let expected_offset = zx::Duration::from_micros(125);
@@ -378,7 +377,7 @@ mod test {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_success_overflow_rtt() {
         let (cobalt, event_recv) = diagnostics_for_test();
         cobalt.record(Event::Success(&HttpsSample {

@@ -11,7 +11,7 @@ use fuchsia_inspect::{
 };
 use fuchsia_zircon as zx;
 use httpdate_hyper::HttpsDateErrorType;
-use log::warn;
+use log::error;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 
@@ -149,7 +149,7 @@ impl SampleMetric {
     fn new(node: Node, sample: &HttpsSample) -> Self {
         let round_trip_times = node.create_int_array("round_trip_times", SAMPLE_POLLS);
         if sample.polls.len() > SAMPLE_POLLS {
-            warn!(
+            error!(
                 "Truncating {:?} round trip time entries to {:?} to fit in inspect",
                 sample.polls.len(),
                 SAMPLE_POLLS
@@ -169,7 +169,7 @@ impl SampleMetric {
     /// Update the recorded values in the inspect Node.
     fn update(&self, sample: &HttpsSample) {
         if sample.polls.len() > SAMPLE_POLLS {
-            warn!(
+            error!(
                 "Truncating {:?} round trip time entries to {:?} to fit in inspect",
                 sample.polls.len(),
                 SAMPLE_POLLS
@@ -219,7 +219,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_successes() {
         let inspector = Inspector::new();
         let inspect = InspectDiagnostics::new(inspector.root());
@@ -267,7 +267,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_success_overwrite_on_overflow() {
         let inspector = Inspector::new();
         let inspect = InspectDiagnostics::new(inspector.root());
@@ -317,7 +317,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_failure() {
         let inspector = Inspector::new();
         let inspect = InspectDiagnostics::new(inspector.root());
@@ -354,7 +354,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_phase() {
         let inspector = Inspector::new();
         let inspect = InspectDiagnostics::new(inspector.root());
@@ -375,7 +375,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_network_check() {
         let inspector = Inspector::new();
         let inspect = InspectDiagnostics::new(inspector.root());

@@ -365,7 +365,7 @@ mod test {
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_produce_sample_one_poll() {
         let sampler = HttpsSamplerImpl::new_with_client(
             TEST_URI.clone(),
@@ -390,7 +390,7 @@ mod test {
         assert!(sample.polls[0].center_offset.is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_produce_sample_multiple_polls() {
         let sampler = HttpsSamplerImpl::new_with_client(
             TEST_URI.clone(),
@@ -422,7 +422,7 @@ mod test {
         assert!(sample.polls.iter().all(|poll| poll.center_offset.is_none()));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_produce_sample_offsets() {
         // Create our own test clock that exactly matches the offsets reported by the test
         // client. (Both report UTC time as (monotonic + offset))
@@ -461,7 +461,7 @@ mod test {
         assert!(sample.polls.iter().skip(2).all(|poll| poll.center_offset.is_none()));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_produce_sample_fails_if_initial_poll_fails() {
         let sampler = HttpsSamplerImpl::new_with_client(
             TEST_URI.clone(),
@@ -476,7 +476,7 @@ mod test {
         };
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_produce_sample_succeeds_if_subsequent_poll_fails() {
         let sampler = HttpsSamplerImpl::new_with_client(
             TEST_URI.clone(),
@@ -491,7 +491,7 @@ mod test {
         assert_eq!(sample.polls.len(), 2);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_produce_sample_takes_later_poll_if_polls_disagree() {
         let expected_offset = TEST_UTC_OFFSET + zx::Duration::from_hours(1);
         let sampler = HttpsSamplerImpl::new_with_client(
@@ -512,7 +512,7 @@ mod test {
         assert!(sample.utc <= monotonic_after + expected_offset + ONE_SECOND);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_ideal_poll_time_in_future() {
         let future_monotonic = zx::Time::get_monotonic() + zx::Duration::from_hours(100);
         let bound_1 = Bound {
@@ -558,7 +558,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_ideal_poll_time_in_past() {
         let monotonic_now = zx::Time::get_monotonic();
         let past_monotonic = zx::Time::from_nanos(0);
@@ -576,7 +576,7 @@ mod test {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_fake_sampler() {
         let expected_responses = vec![
             Ok(HttpsSample {

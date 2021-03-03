@@ -102,7 +102,7 @@ mod test {
     const TEST_FAILURE: Event<'static> = Event::Failure(HttpsDateErrorType::NetworkError);
     const TEST_PHASE: Event<'static> = Event::Phase(Phase::Converge);
 
-    #[test]
+    #[fuchsia::test]
     fn log_and_reset_events() {
         let diagnostics = FakeDiagnostics::new();
         diagnostics.assert_events(vec![]);
@@ -118,7 +118,7 @@ mod test {
         diagnostics.assert_events(vec![]);
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn log_events_wrong_event_type() {
         let diagnostics = FakeDiagnostics::new();
@@ -128,7 +128,7 @@ mod test {
         diagnostics.assert_events(vec![TEST_FAILURE]);
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn log_events_wrong_sample() {
         let diagnostics = FakeDiagnostics::new();
@@ -138,7 +138,7 @@ mod test {
         diagnostics.assert_events(vec![*TEST_SUCCESS_2]);
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn log_events_wrong_event_count() {
         let diagnostics = FakeDiagnostics::new();

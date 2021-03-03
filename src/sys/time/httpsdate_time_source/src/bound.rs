@@ -79,7 +79,7 @@ mod test {
         assert_eq!(bound_1.combine(bound_2), bound_2.combine(bound_1))
     }
 
-    #[test]
+    #[fuchsia::test]
     fn combine_bounds_with_same_monotonic_times() {
         let earlier_utc_bound = Bound {
             monotonic: MONOTONIC_TIME,
@@ -115,7 +115,7 @@ mod test {
         assert_combine_commutative(&enclosed_utc_bound, &enclosing_utc_bound);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn combine_bounds_with_different_monotonic_times() {
         let earlier = Bound {
             monotonic: MONOTONIC_TIME,
@@ -171,7 +171,7 @@ mod test {
         assert_combine_commutative(&earlier_enclosed, &later_enclosing);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn combine_bounds_no_overlap() {
         let earlier_utc = Bound {
             monotonic: MONOTONIC_TIME,

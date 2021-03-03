@@ -51,7 +51,7 @@ mod test {
     const TEST_FAILURE: Event<'static> = Event::Failure(HttpsDateErrorType::NetworkError);
     const TEST_PHASE: Event<'static> = Event::Phase(Phase::Converge);
 
-    #[test]
+    #[fuchsia::test]
     fn record_events() {
         let left = Arc::new(FakeDiagnostics::new());
         let right = Arc::new(FakeDiagnostics::new());
