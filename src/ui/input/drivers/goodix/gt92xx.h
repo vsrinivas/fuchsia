@@ -99,6 +99,8 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
   // performs hardware reset using gpio
   void HWReset();
 
+  zx_status_t UpdateFirmwareIfNeeded();
+
   uint8_t Read(uint16_t addr);
   zx_status_t Read(uint16_t addr, uint8_t* buf, uint8_t len);
   zx_status_t Write(uint16_t addr, uint8_t val);
