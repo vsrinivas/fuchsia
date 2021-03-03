@@ -25,6 +25,7 @@ void WritePreamble(LogBuffer* buffer) {
 void BeginRecord(LogBuffer* buffer, syslog::LogSeverity severity, const char* file,
                  unsigned int line, const char* msg, const char* condition) {
   auto header = MsgHeader::CreatePtr(buffer);
+  header->buffer = buffer;
   header->Init(buffer, severity);
 #ifndef __Fuchsia__
   auto severity_string = GetNameForLogSeverity(severity);

@@ -75,4 +75,12 @@ TEST(StructuredLogging, Overflow) {
   ASSERT_FALSE(syslog_backend::FlushRecord(&buffer));
 }
 
+TEST(StructuredLogging, LOGS) {
+  std::string str;
+  // 5mb log shouldn't crash
+  str.resize(1000 * 5000);
+  memset(str.data(), 's', str.size() - 1);
+  FX_LOGS(INFO) << str;
+}
+
 }  // namespace syslog
