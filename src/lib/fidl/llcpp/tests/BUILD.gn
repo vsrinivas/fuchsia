@@ -195,6 +195,7 @@ executable("fidl_llcpp_dispatcher_tests_bin") {
 
   deps = [
     ":fidl.test.coding.fuchsia_llcpp",
+    "//sdk/lib/stdcompat",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 #include <lib/async/cpp/task.h>
 #include <lib/fit/bridge.h>
-#include <lib/fit/optional.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <unistd.h>
 

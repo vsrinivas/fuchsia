@@ -9,11 +9,11 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 
 #include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "fuchsia/debugdata/cpp/fidl.h"
-#include "lib/fit/optional.h"
 
 /// Maintains a cache of (moniker, tets url) pair and deletes the cache on frequent intervals. This
 /// uses a variant of LRU algorithm to delete cache entries.

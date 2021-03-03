@@ -685,7 +685,7 @@ config("no_fuzzer") {
   }
 }
 
-# TODO(fxbug.dev/27266) Remove this once the warning with fit::variant/fit::optional is addressed.
+# TODO(fxbug.dev/27266) Remove this once the warning with fit::variant is addressed.
 config("no_maybe_uninitialized") {
   if (is_gcc) {
     cflags = [ "-Wno-maybe-uninitialized" ]

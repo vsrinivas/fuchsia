@@ -107,16 +107,6 @@ These sections explain why certain features are in FIT.
   system.
 - So we should create a simple way to invoke a function on scope exit.
 
-### fit::optional
-
-- std::optional is very useful but it requires C++ 17.
-- We have observed several re-implementations of the same idea throughout the
-  system and it's also a building block for other features such as
-  fit::nullable.
-- So we should create a poly-fill for std::optional on C++ 14.
-- TODO(fxbug.dev/28041): The initial implementation only covers a minimal subset of the
-  std::optional API.  Flesh this out more fully.
-
 ### fit::nullable
 
 - Case study: fit::defer has a need to store a closure that may be nullable.

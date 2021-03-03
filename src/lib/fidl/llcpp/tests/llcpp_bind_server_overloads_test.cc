@@ -5,6 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/sync/completion.h>
 
 #include <fidl/test/coding/fuchsia/llcpp/fidl.h>
@@ -148,7 +149,7 @@ TEST_F(BindServerOverloads, RawPtrWithoutUnboundHook) {
   sync_completion_t destroyed;
   sync_completion_t unbound;
 
-  fit::optional<Server> server{&destroyed};
+  cpp17::optional<Server> server{&destroyed};
   auto result = fidl::BindServer(dispatcher(), std::move(endpoints()->server), &server.value());
 
   // Trigger binding destruction before loop's destruction.
@@ -169,7 +170,7 @@ TEST_F(BindServerOverloads, RawPtrWithUnboundHook) {
   sync_completion_t destroyed;
   sync_completion_t unbound;
 
-  fit::optional<Server> server{&destroyed};
+  cpp17::optional<Server> server{&destroyed};
   auto result = fidl::BindServer(
       dispatcher(), std::move(endpoints()->server), &server.value(),
       [&unbound, &destroyed](Server*, fidl::UnbindInfo info, fidl::ServerEnd<Simple> server_end) {

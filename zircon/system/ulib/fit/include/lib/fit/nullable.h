@@ -6,11 +6,10 @@
 #define LIB_FIT_NULLABLE_H_
 
 #include <assert.h>
+#include <lib/stdcompat/optional.h>
 
 #include <type_traits>
 #include <utility>
-
-#include "optional.h"
 
 namespace fit {
 
@@ -58,9 +57,9 @@ struct is_nullable<void> : public std::false_type {};
 // - sizeof(fit::nullable<int>) == sizeof(struct { bool; int; })
 // - sizeof(std::optional<int>) == sizeof(struct { bool; int; })
 //
-// TODO(fxbug.dev/4681): fit::nullable does not precisely mirror fit::optional now that
-// fit::optional is closer to standards compliant. This should be corrected to
-// avoid surprises when switching between the types.
+// TODO(fxbug.dev/4681): fit::nullable does not precisely mirror
+// cpp17::optional. This should be corrected to avoid surprises when switching
+// between the types.
 template <typename T, bool = (is_nullable<T>::value && std::is_constructible<T, T&&>::value &&
                               std::is_assignable<T&, T&&>::value)>
 class nullable final {
@@ -112,7 +111,7 @@ class nullable final {
   constexpr void swap(nullable& other) { opt_.swap(other.opt_); }
 
  private:
-  optional<T> opt_;
+  cpp17::optional<T> opt_;
 };
 
 template <typename T>

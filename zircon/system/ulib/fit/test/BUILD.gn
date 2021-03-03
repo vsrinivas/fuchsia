@@ -62,7 +62,6 @@ test("fit") {
     "function_traits_tests.cc",
     "future_tests.cc",
     "nullable_tests.cc",
-    "optional_tests.cc",
     "pending_task_tests.cc",
     "promise_examples.cc",
     "promise_tests.cc",

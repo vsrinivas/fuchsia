@@ -6,6 +6,7 @@
 #define LIB_FIT_PROMISE_INTERNAL_H_
 
 #include <assert.h>
+#include <lib/stdcompat/optional.h>
 
 #include <tuple>
 #include <type_traits>
@@ -40,8 +41,8 @@ struct is_result<::fit::result<V, E>> : std::true_type {};
 // Deduces a continuation's result.
 // Also ensures that the continuation has a compatible signature.
 template <typename Continuation,
-          typename = std::enable_if_t<is_result<decltype(
-              std::declval<Continuation&>()(std::declval<::fit::context&>()))>::value>>
+          typename = std::enable_if_t<is_result<decltype(std::declval<Continuation&>()(
+              std::declval<::fit::context&>()))>::value>>
 struct continuation_traits {
   using type = Continuation;
   using result_type = decltype(std::declval<Continuation&>()(std::declval<::fit::context&>()));
@@ -127,7 +128,7 @@ class movable_handler {
   constexpr void reset() { handler_.reset(); }
 
  private:
-  optional<Handler> handler_;
+  cpp17::optional<Handler> handler_;
 };
 
 // Wraps a handler function and adapts its return type to a fit::result

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/stdcompat/optional.h>
+
 #include <fidl/test/misc/cpp/fidl.h>
 #include <zxtest/zxtest.h>
 
@@ -96,13 +98,15 @@ TEST(FlexibleBits, FlexibleBitwiseOperators) {
   FlexibleBits b_and_not_e = FlexibleBits::B & ~FlexibleBits::E;
   EXPECT_EQ(static_cast<uint8_t>(b_and_not_e), 2u /* 2 & 6*/);
 
-  FlexibleBits b_or_d_and_b_or_e = (FlexibleBits::B | FlexibleBits::D) & (FlexibleBits::B | FlexibleBits::E);
+  FlexibleBits b_or_d_and_b_or_e =
+      (FlexibleBits::B | FlexibleBits::D) & (FlexibleBits::B | FlexibleBits::E);
   EXPECT_EQ(static_cast<uint8_t>(b_or_d_and_b_or_e), 2u /* 6 & 10*/);
 
   FlexibleBits b_xor_not_e = FlexibleBits::B ^ ~FlexibleBits::E;
   EXPECT_EQ(static_cast<uint8_t>(b_xor_not_e), 4u /* 4 ^ 6*/);
 
-  FlexibleBits b_or_d_xor_b_or_e = (FlexibleBits::B | FlexibleBits::D) ^ (FlexibleBits::B | FlexibleBits::E);
+  FlexibleBits b_or_d_xor_b_or_e =
+      (FlexibleBits::B | FlexibleBits::D) ^ (FlexibleBits::B | FlexibleBits::E);
   EXPECT_EQ(static_cast<uint8_t>(b_or_d_xor_b_or_e), 12u /* 6 ^ 10*/);
 }
 
@@ -139,7 +143,6 @@ TEST(FlexibleBits, CanConvertFlexibleBitsToBool) {
   EXPECT_TRUE(result);
 }
 
-
 // The following APIs tested are only available on strict bits;
 
 TEST(StrictBits, IsConstexprAndMask) {
@@ -161,10 +164,10 @@ TEST(FlexibleBits, TryFrom) {
   using BitsType = fidl::test::misc::FlexibleBits;
   // The bits type only has 2, 4, and 8 defined.
   auto result = BitsType::TryFrom(1);
-  EXPECT_EQ(result, fit::nullopt);
+  EXPECT_EQ(result, cpp17::nullopt);
 
   auto result_ok = BitsType::TryFrom(2);
-  EXPECT_EQ(result_ok, fit::optional<BitsType>(BitsType::B));
+  EXPECT_EQ(result_ok, cpp17::optional<BitsType>(BitsType::B));
 }
 
 TEST(FlexibleBits, QueryingUnknown) {

@@ -7,6 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/stdcompat/optional.h>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
@@ -38,7 +39,7 @@ class Server final : public llcpp::fuchsia::io::testing::Node_TestBase {
   }
 
  private:
-  fit::optional<llcpp::fuchsia::io::wire::NodeInfo> describe_info_;
+  cpp17::optional<llcpp::fuchsia::io::wire::NodeInfo> describe_info_;
 };
 
 // Serves |node_info| over |server_channel| to |client_channel| using a |Server| instance by

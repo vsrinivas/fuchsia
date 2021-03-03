@@ -18,7 +18,6 @@ zx_library("fit") {
     "lib/fit/function_traits.h",
     "lib/fit/in_place_internal.h",
     "lib/fit/nullable.h",
-    "lib/fit/optional.h",
     "lib/fit/promise.h",
     "lib/fit/promise_internal.h",
     "lib/fit/result.h",
