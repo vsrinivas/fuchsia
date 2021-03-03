@@ -88,7 +88,7 @@ function diff_file_relpath() {
   # Leave blank for ignored files (not compared).
   # "unknown" means unclassified and could contain a mix of matches/diffs.
   # Goal:
-  #   * Identify and classify known differences.
+  #   * Identify and classify known differences (eliminate unknowns).
   #   * Gradually reduce sources of differences.
   #
   # TODO(fangism): different expectations in clean-vs-clean /
@@ -107,60 +107,103 @@ function diff_file_relpath() {
     # C++ object files (binary)
     *.o)
       case "$common_path" in
-        efi_x64/obj/src/*.c.o)
-          expect=unknown; diff_binary "$left" "$right" ;;
-        *) expect=match; diff_binary "$left" "$right" ;;
+        efi_x64/obj/src/*.c.o) expect=unknown ;;
+        efi_x64/obj/zircon/*.c.o) expect=unknown ;;
+        obj/third_party/android/platform/external/aac/*.cpp.o) expect=unknown ;;
+        *) expect=match ;;
       esac
+      diff_binary "$left" "$right"
       # TODO(fangism): compare objdumps for details
       ;;
+    *.so) expect=unknown; diff_binary "$left" "$right" ;;
 
     # Ignore .a differences until .o differences have been eliminated.
     # Eventually, use diff_binary.
     *.a) expect=ignore ;;
 
     # Rust libraries (binary)
-    *.rlib) expect=match; diff_binary "$left" "$right" ;;
+    *.rlib)
+      case "$common_path" in
+        host_arm64/obj/*.rlib) expect=unknown ;;
+        *) expect=match ;;
+      esac
+      diff_binary "$left" "$right"
+      ;;
 
     # Generated code
     *.rs)
       case "$common_path" in
         gen/src/*/qmi-protocol.rs)
-          expect=diff; diff_text "$left" "$right" ;;  # ordering diff
-        *) expect=match; diff_text "$left" "$right" ;;
+          expect=diff ;;  # ordering diff
+        *) expect=match ;;
       esac
+      diff_text "$left" "$right"
       ;;
 
     memory_metrics_registry.cb.h)
       expect=diff; diff_text "$left" "$right" ;;  # ordering diff
 
-
     # The following groups of files have known huge diffs,
     # so omit details from the general report, and diff_binary.
-    meta.far) expect=diff; diff_binary "$left" "$right" ;;
-    meta.far.merkle) expect=diff; diff_binary "$left" "$right" ;;
-    contents) expect=diff; diff_binary "$left" "$right" ;;
-    blobs.json) expect=diff; diff_binary "$left" "$right" ;;
-    blobs.manifest) expect=diff; diff_binary "$left" "$right" ;;
-    package_manifest.json) expect=diff; diff_binary "$left" "$right" ;;
+    meta.far) expect=unknown; diff_binary "$left" "$right" ;;
+    meta.far.merkle) expect=unknown; diff_binary "$left" "$right" ;;
+    contents) expect=unknown; diff_binary "$left" "$right" ;;
+    blobs.json) expect=unknown; diff_binary "$left" "$right" ;;
+    blob.manifest) expect=diff; diff_binary "$left" "$right" ;;  # many hashes
+    blobs.manifest) expect=unknown; diff_binary "$left" "$right" ;;
+    package_manifest.json) expect=unknown; diff_binary "$left" "$right" ;;
     targets.json)
       case "$common_path" in
-        gen/gopaths/*)
-          expect=match; diff_binary "$left" "$right" ;;
-        *) expect=diff; diff_binary "$left" "$right" ;;  # diffs: many hashes
+        gen/gopaths/*) expect=match ;;
+        *) expect=diff ;;  # diffs: many hashes
       esac
+      diff_json "$left" "$right"
       ;;
 
-    timestamp.json) expect=diff; diff_json "$left" "$right" ;;  # diffs: sig, expires, version
+    snapshot.json) expect=diff; diff_json "$left" "$right" ;;  # diffs: sig, expires, version
+    timestamp.json)
+      case "$common_path" in
+        amber-files/repository/timestamp.json) expect=diff ;; # diffs: sig, expires, version
+        *) expect=match ;;
+      esac
+      diff_json "$left" "$right"
+      ;;
     elf_sizes.json) expect=diff; diff_json "$left" "$right" ;;  # diffs: build_id
+    recovery-eng_blobs.json) expect=diff; diff_json "$left" "$right" ;;  # diffs: bytes, merkle, size (ordering)
     filesystem_sizes.json) expect=diff; diff_json "$left" "$right" ;;  # diffs: value
     *.zbi.json) expect=unknown; diff_json "$left" "$right" ;;  # diffs: crc32, size
+    update_prime_packages.manifest.json) expect=diff; diff_json "$left" "$right" ;;  # hashes
+    update_packages.manifest.json) expect=diff; diff_json "$left" "$right" ;;  # hashes
 
     # Diff formatted JSON for readability.
-    *.json) expect=match; diff_json "$left" "$right" ;;
+    *.json)
+      case "$common_path" in
+        host-tools/goroot/src/cmd/interna/test2json/testdata/*.json)
+          expect=unknown ;;
+        *) expect=match ;;
+      esac
+      diff_json "$left" "$right"
+      ;;
     *.json.formatted) expect=ignore ;;  # This is remant from an earlier diff.
 
-    # Binary.
+    system.snapshot) expect=diff; diff_text "$left" "$right" ;;  # hashes
+
+    # recovery things
+    recovery-eng_devmgr_config.txt) expect=diff; diff_text "$left" "$right" ;;  # hashes
+    recovery-eng_pkgsvr_index) expect=diff; diff_text "$left" "$right" ;;  # hashes
+
+    update_prime_packages.manifest) expect=diff; diff_text "$left" "$right" ;;  # hashes
+    update_packages.manifest) expect=diff; diff_text "$left" "$right" ;;  # hashes
+
+    # Various binaries.
     *.blk) expect=unknown; diff_binary "$left" "$right" ;;
+    *.vboot) expect=unknown; diff_binary "$left" "$right" ;;
+    *.zbi) expect=unknown; diff_binary "$left" "$right" ;;
+
+    # Most archives carry timestamp information.
+    # One way to make this reproducible is to force a magic date/time
+    # while archiving, which effectively removes time variance.
+    *.tar | *.tar.gz | *.tgz) expect=unknown; diff_binary "$left" "$right" ;;
 
     # Ignore ninja logs, as they bear timestamps,
     # and are non-essential build artifacts.
@@ -199,7 +242,7 @@ function diff_file_relpath() {
         *) expect=match; diff_text "$left" "$right" ;;
       esac
   esac
-  # Record unexpected differences.
+  # Record unexpected and unclassified differences/matches.
   diff_status="$?"
   case "$expect" in
     match)
@@ -288,7 +331,7 @@ fi
 
 if test "${#unclassified_diffs[@]}" != 0
 then
-  echo "unclassified diffs: (action: classify them as expect=diff)"
+  echo "UNCLASSIFIED DIFFS: (action: classify them as expect=diff)"
   for path in "${unclassified_diffs[@]}"
   do echo "  $path"
   done
@@ -298,7 +341,7 @@ fi
 
 if test "${#unclassified_matches[@]}" != 0
 then
-  echo "unclassified matches: (action: classify them as expect=match)"
+  echo "UNCLASSIFIED MATCHES: (action: classify them as expect=match)"
   for path in "${unclassified_matches[@]}"
   do echo "  $path"
   done
