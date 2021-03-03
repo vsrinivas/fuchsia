@@ -48,11 +48,24 @@ fuchsia_test_package("log-sink-validator-cpp") {
   test_components = [ ":sink-validator-for-cpp" ]
 }
 
+### Rust ###
+
+fuchsia_component("sink-validator-for-rust") {
+  manifest = "meta/validator-rust.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_package("log-sink-validator-rust") {
+  deps = [ "puppet/rust:component" ]
+  test_components = [ ":sink-validator-for-rust" ]
+}
+
 group("tests") {
   testonly = true
 
   deps = [
     ":log-sink-validator-cpp",
+    ":log-sink-validator-rust",
     ":sink-validator-tests",
   ]
 }

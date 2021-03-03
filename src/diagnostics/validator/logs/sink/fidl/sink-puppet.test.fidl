@@ -12,6 +12,7 @@ using fuchsia.diagnostics.stream;
 const uint32 MAX_ARG_NAME_LENGTH = 256;
 
 struct PuppetInfo {
+    string? tag;
     zx.koid pid;
     zx.koid tid;
 };

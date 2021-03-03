@@ -8,6 +8,7 @@
 
 use bitfield::bitfield;
 use std::convert::TryFrom;
+use tracing::{Level, Metadata};
 
 pub use fidl_fuchsia_diagnostics::Severity;
 pub use fidl_fuchsia_diagnostics_stream::{Argument, Record, Value, ValueUnknown};
@@ -122,6 +123,24 @@ impl<'a> Into<String> for StringRef<'a> {
 impl<'a> ToString for StringRef<'a> {
     fn to_string(&self) -> String {
         self.clone().into()
+    }
+}
+
+/// A type which has a `Severity`.
+pub trait SeverityExt {
+    /// Return the severity of this value.
+    fn severity(&self) -> Severity;
+}
+
+impl SeverityExt for Metadata<'_> {
+    fn severity(&self) -> Severity {
+        match self.level() {
+            &Level::ERROR => Severity::Error,
+            &Level::WARN => Severity::Warn,
+            &Level::INFO => Severity::Info,
+            &Level::DEBUG => Severity::Debug,
+            &Level::TRACE => Severity::Trace,
+        }
     }
 }
 

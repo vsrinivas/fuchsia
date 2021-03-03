@@ -21,25 +21,9 @@ async fn launch_example_and_read_hello_world() {
     pin_utils::pin_mut!(logs);
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
-    assert_eq!(next.severity, syslog::levels::DEBUG);
-    assert_eq!(next.tags, vec!["rust_logs_example"]);
-    assert_eq!(next.msg, "should print ");
-    assert_ne!(next.pid, 0);
-    assert_ne!(next.tid, 0);
-
-    assert_eq!(new_next.metadata.severity, Severity::Debug);
-    // TODO(fxbug.dev/65319) uncomment when built-in archivist has attribution again
-    // assert_eq!(new_next.metadata.component_url, url);
-    // assert_eq!(new_next.moniker, "rust-logs-example.cmx");
-    assert_data_tree!(new_next.payload.unwrap(), root: contains {
-        "tag": "rust_logs_example",
-        "message": "should print ",
-    });
-
-    let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
     assert_eq!(next.severity, syslog::levels::INFO);
-    assert_eq!(next.tags, vec!["rust_logs_example"]);
-    assert_eq!(next.msg, "hello, world! foo=1 bar=\"baz\" ");
+    assert_eq!(next.tags, vec!["rust-logs-example.cmx"]);
+    assert_eq!(next.msg, "should print");
     assert_ne!(next.pid, 0);
     assert_ne!(next.tid, 0);
 
@@ -48,14 +32,29 @@ async fn launch_example_and_read_hello_world() {
     // assert_eq!(new_next.metadata.component_url, url);
     // assert_eq!(new_next.moniker, "rust-logs-example.cmx");
     assert_data_tree!(new_next.payload.unwrap(), root: contains {
-        "tag": "rust_logs_example",
-        // note that the frontend is still stringifying the structured fields, will tackle soon
-        "message": "hello, world! foo=1 bar=\"baz\" ",
+        "message": "should print",
+    });
+
+    let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
+    assert_eq!(next.severity, syslog::levels::INFO);
+    assert_eq!(next.tags, vec!["rust-logs-example.cmx"]);
+    assert_eq!(next.msg, "hello, world! bar=baz foo=1");
+    assert_ne!(next.pid, 0);
+    assert_ne!(next.tid, 0);
+
+    assert_eq!(new_next.metadata.severity, Severity::Info);
+    // TODO(fxbug.dev/65319) uncomment when built-in archivist has attribution again
+    // assert_eq!(new_next.metadata.component_url, url);
+    // assert_eq!(new_next.moniker, "rust-logs-example.cmx");
+    assert_data_tree!(new_next.payload.unwrap(), root: contains {
+        "message": "hello, world!",
+        "foo": 1u64,
+        "bar": "baz",
     });
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
     assert_eq!(next.severity, syslog::levels::WARN);
-    assert_eq!(next.tags, vec!["rust_logs_example"]);
+    assert_eq!(next.tags, vec!["rust-logs-example.cmx"]);
     assert_eq!(next.msg, "warning: using old api");
     assert_ne!(next.pid, 0);
     assert_ne!(next.tid, 0);
@@ -65,7 +64,6 @@ async fn launch_example_and_read_hello_world() {
     // assert_eq!(new_next.metadata.component_url, url);
     // assert_eq!(new_next.moniker, "rust-logs-example.cmx");
     assert_data_tree!(new_next.payload.unwrap(), root: contains {
-        "tag": "rust_logs_example",
         "message": "warning: using old api",
     });
 }

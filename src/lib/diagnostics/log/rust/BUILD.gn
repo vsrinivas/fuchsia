@@ -1,0 +1,48 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//src/sys/build/components.gni")
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":diagnostics-log-tests" ]
+}
+
+rustc_library("rust") {
+  name = "diagnostics_log"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/lib/diagnostics/syslog:client_includes",
+    "//src/lib/diagnostics/log/encoding/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:arc-swap",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:once_cell",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:tracing-core",
+    "//third_party/rust_crates:tracing-log",
+    "//third_party/rust_crates:tracing-subscriber",
+  ]
+
+  test_deps = [ "//src/lib/fuchsia-async" ]
+
+  sources = [
+    "src/filter.rs",
+    "src/lib.rs",
+    "src/sink.rs",
+  ]
+}
+
+fuchsia_unittest_package("diagnostics-log-tests") {
+  deps = [ ":rust_test" ]
+}

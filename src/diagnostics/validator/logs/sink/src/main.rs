@@ -305,6 +305,9 @@ struct RecordAssertion {
 impl RecordAssertion {
     fn new(info: &PuppetInfo, severity: Severity) -> RecordAssertionBuilder {
         let mut builder = RecordAssertionBuilder { severity, arguments: BTreeMap::new() };
+        if let Some(tag) = &info.tag {
+            builder.add_string("tag", tag);
+        }
         builder.add_unsigned("pid", info.pid);
         builder.add_unsigned("tid", info.tid);
 

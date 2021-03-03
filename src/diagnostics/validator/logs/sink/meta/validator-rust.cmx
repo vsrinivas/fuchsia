@@ -1,0 +1,19 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "--url",
+            "fuchsia-pkg://fuchsia.com/log-sink-validator-rust#meta/sink-validator-rust-puppet.cmx"
+        ],
+        "binary": "bin/sink_validator"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

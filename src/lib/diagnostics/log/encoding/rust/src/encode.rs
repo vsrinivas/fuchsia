@@ -4,10 +4,16 @@
 
 //! Encoding diagnostic records using the Fuchsia Tracing format.
 
-use crate::{ArgType, Header, StringRef};
+use crate::{ArgType, Header, SeverityExt, StringRef};
+use fidl_fuchsia_diagnostics::Severity;
 use fidl_fuchsia_diagnostics_stream::{Argument, Record, Value};
+use fuchsia_zircon as zx;
+use std::fmt::Debug;
 use std::{array::TryFromSliceError, io::Cursor};
 use thiserror::Error;
+use tracing::Event;
+use tracing_core::field::{Field, Visit};
+use tracing_log::NormalizeEvent;
 
 /// An `Encoder` wraps any value implementing `BufMutShared` and writes diagnostic stream records
 /// into it.
@@ -24,12 +30,63 @@ where
         Self { buf }
     }
 
+    /// Returns a reference to the underlying buffer being used for encoding.
+    pub fn inner(&self) -> &B {
+        &self.buf
+    }
+
+    /// Writes a [`tracing::Event`] to the buffer as a record.
+    ///
+    /// Fails if there is insufficient space in the buffer for encoding.
+    pub fn write_event(
+        &mut self,
+        event: &Event<'_>,
+        process_name: &str,
+        pid: zx::Koid,
+        tid: zx::Koid,
+        dropped: u32,
+    ) -> Result<(), EncodingError> {
+        let builder = RecordBuilder::from_tracing_event(
+            event,
+            process_name,
+            pid.raw_koid() as u64,
+            tid.raw_koid() as u64,
+            dropped,
+        );
+        self.write_record(&builder.inner)
+    }
+
+    /// Writes a `Record` to the buffer, including extra fields to match the behavior for recording
+    /// an event.
+    pub fn write_record_for_test(
+        &mut self,
+        record: &Record,
+        process_name: &str,
+        pid: zx::Koid,
+        tid: zx::Koid,
+        file: &str,
+        line: u32,
+        dropped: u32,
+    ) -> Result<(), EncodingError> {
+        let mut builder = RecordBuilder::new(
+            record.severity,
+            process_name,
+            pid.raw_koid() as u64,
+            tid.raw_koid() as u64,
+            Some(file),
+            Some(line),
+            dropped,
+        );
+        builder.inner.arguments.extend(record.arguments.iter().cloned());
+        self.write_record(&builder.inner)
+    }
+
     /// Write a record with this encoder.
     ///
     /// Fails if there is insufficient space in the buffer for encoding, but it does not yet attempt
     /// to zero out any partial record writes.
     pub fn write_record(&mut self, record: &Record) -> Result<(), EncodingError> {
-        // TODO(adamperry): on failure, zero out the region we were using
+        // TODO(fxbug.dev/59992): on failure, zero out the region we were using
         let starting_idx = self.buf.cursor();
 
         let header_slot = self.buf.put_slot(std::mem::size_of::<u64>())?;
@@ -113,11 +170,106 @@ where
         unsafe {
             let align = std::mem::size_of::<u64>();
             let num_padding_bytes = (align - src.len() % align) % align;
-            // TODO(adamperry) need to enforce that the buffer is zeroed
+            // TODO(fxbug.dev/59993) need to enforce that the buffer is zeroed
             self.buf.advance_cursor(num_padding_bytes);
         }
         Ok(())
     }
+}
+
+struct RecordBuilder {
+    inner: Record,
+}
+
+macro_rules! arg {
+    ($name:expr, $ty:ident($value:expr)) => {
+        Argument { name: $name.into(), value: Value::$ty($value.into()) }
+    };
+}
+
+impl RecordBuilder {
+    fn new(
+        severity: Severity,
+        process_name: &str,
+        pid: u64,
+        tid: u64,
+        file: Option<&str>,
+        line: Option<u32>,
+        dropped: u32,
+    ) -> Self {
+        let timestamp = zx::Time::get_monotonic().into_nanos();
+        let mut arguments = vec![];
+
+        arguments.push(arg!("tag", Text(process_name.to_string())));
+        arguments.push(arg!("pid", UnsignedInt(pid)));
+        arguments.push(arg!("tid", UnsignedInt(tid)));
+
+        if dropped > 0 {
+            arguments.push(arg!("num_dropped", UnsignedInt(dropped)));
+        }
+
+        if severity >= Severity::Error {
+            if let Some(file) = file {
+                arguments.push(arg!("file", Text(file)));
+            }
+
+            if let Some(line) = line {
+                arguments.push(arg!("line", UnsignedInt(line)));
+            }
+        }
+
+        Self { inner: Record { timestamp, severity, arguments } }
+    }
+
+    fn push_arg(&mut self, field: &Field, make_arg: impl FnOnce() -> Argument) {
+        if !matches!(field.name(), "log.target" | "log.module_path" | "log.file" | "log.line") {
+            self.inner.arguments.push(make_arg());
+        }
+    }
+
+    fn from_tracing_event(
+        event: &Event<'_>,
+        process_name: &str,
+        pid: u64,
+        tid: u64,
+        dropped: u32,
+    ) -> Self {
+        // normalizing is needed to get log records to show up in trace metadata correctly
+        let metadata = event.normalized_metadata();
+        let metadata = if let Some(ref m) = metadata { m } else { event.metadata() };
+
+        // TODO(fxbug.dev/56090) do this without allocating all the intermediate values
+        let mut builder = Self::new(
+            metadata.severity(),
+            process_name,
+            pid,
+            tid,
+            metadata.file(),
+            metadata.line(),
+            dropped,
+        );
+        event.record(&mut builder);
+        builder
+    }
+}
+
+impl Visit for RecordBuilder {
+    fn record_debug(&mut self, field: &Field, value: &dyn Debug) {
+        self.push_arg(field, || arg!(field.name(), Text(format!("{:?}", value))));
+    }
+
+    fn record_str(&mut self, field: &Field, value: &str) {
+        self.push_arg(field, || arg!(field.name(), Text(value.to_string())));
+    }
+
+    fn record_i64(&mut self, field: &Field, value: i64) {
+        self.push_arg(field, || arg!(field.name(), SignedInt(value)));
+    }
+
+    fn record_u64(&mut self, field: &Field, value: u64) {
+        self.push_arg(field, || arg!(field.name(), UnsignedInt(value)));
+    }
+    // TODO(fxbug.dev/56049) support bools natively and impl record_bool
 }
 
 /// Analogous to `bytes::BufMut`, but immutably-sized and appropriate for use in shared memory.
@@ -349,5 +501,134 @@ pub enum EncodingError {
 impl From<TryFromSliceError> for EncodingError {
     fn from(_: TryFromSliceError) -> Self {
         EncodingError::BufferTooSmall
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use once_cell::sync::Lazy;
+    use std::sync::Mutex;
+    use tracing::Subscriber;
+    use tracing_subscriber::{
+        layer::{Context, Layer, SubscriberExt},
+        Registry,
+    };
+
+    #[test]
+    fn build_basic_record() {
+        let builder = RecordBuilder::new(Severity::Info, "foo.cm", 0, 0, None, None, 0);
+        assert_eq!(
+            builder.inner,
+            Record {
+                timestamp: builder.inner.timestamp,
+                severity: Severity::Info,
+                arguments: vec![
+                    Argument { name: "tag".into(), value: Value::Text("foo.cm".into()) },
+                    Argument { name: "pid".into(), value: Value::UnsignedInt(0) },
+                    Argument { name: "tid".into(), value: Value::UnsignedInt(0) }
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn build_records_with_location() {
+        let info = RecordBuilder::new(Severity::Info, "foo.cm", 0, 0, Some("foo.rs"), Some(10), 0);
+        assert_eq!(
+            info.inner,
+            Record {
+                timestamp: info.inner.timestamp,
+                severity: Severity::Info,
+                arguments: vec![
+                    Argument { name: "tag".into(), value: Value::Text("foo.cm".into()) },
+                    Argument { name: "pid".into(), value: Value::UnsignedInt(0) },
+                    Argument { name: "tid".into(), value: Value::UnsignedInt(0) },
+                ]
+            }
+        );
+
+        let error =
+            RecordBuilder::new(Severity::Error, "foo.cm", 0, 0, Some("foo.rs"), Some(10), 0);
+        assert_eq!(
+            error.inner,
+            Record {
+                timestamp: error.inner.timestamp,
+                severity: Severity::Error,
+                arguments: vec![
+                    Argument { name: "tag".into(), value: Value::Text("foo.cm".into()) },
+                    Argument { name: "pid".into(), value: Value::UnsignedInt(0) },
+                    Argument { name: "tid".into(), value: Value::UnsignedInt(0) },
+                    Argument { name: "file".into(), value: Value::Text("foo.rs".into()) },
+                    Argument { name: "line".into(), value: Value::UnsignedInt(10) },
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn build_record_with_dropped_count() {
+        let builder = RecordBuilder::new(Severity::Info, "foo.cm", 0, 0, None, None, 7);
+        assert_eq!(
+            builder.inner,
+            Record {
+                timestamp: builder.inner.timestamp,
+                severity: Severity::Info,
+                arguments: vec![
+                    Argument { name: "tag".into(), value: Value::Text("foo.cm".into()) },
+                    Argument { name: "pid".into(), value: Value::UnsignedInt(0) },
+                    Argument { name: "tid".into(), value: Value::UnsignedInt(0) },
+                    Argument { name: "num_dropped".into(), value: Value::UnsignedInt(7) },
+                ]
+            }
+        );
+    }
+
+    // TODO(fxbug.dev/71242) remove tracing-specific test code
+    #[test]
+    fn build_record_from_tracing_event() {
+        #[derive(Debug)]
+        struct PrintMe(u32);
+
+        struct RecordBuilderLayer;
+        impl<S: Subscriber> Layer<S> for RecordBuilderLayer {
+            fn on_event(&self, event: &Event<'_>, _cx: Context<'_, S>) {
+                *LAST_RECORD.lock().unwrap() =
+                    Some(RecordBuilder::from_tracing_event(event, "foo.cm", 0, 0, 0));
+            }
+        }
+        static LAST_RECORD: Lazy<Mutex<Option<RecordBuilder>>> = Lazy::new(|| Mutex::new(None));
+
+        tracing::subscriber::set_global_default(Registry::default().with(RecordBuilderLayer))
+            .unwrap();
+        tracing::info!(
+            is_a_str = "hahaha",
+            is_debug = ?PrintMe(5),
+            is_signed = -500,
+            is_unsigned = 1000u64,
+            "blarg this is a message"
+        );
+
+        let last_record = LAST_RECORD.lock().unwrap().as_ref().unwrap().inner.clone();
+        assert_eq!(
+            last_record,
+            Record {
+                timestamp: last_record.timestamp,
+                severity: Severity::Info,
+                arguments: vec![
+                    Argument { name: "tag".into(), value: Value::Text("foo.cm".into()) },
+                    Argument { name: "pid".into(), value: Value::UnsignedInt(0) },
+                    Argument { name: "tid".into(), value: Value::UnsignedInt(0) },
+                    Argument {
+                        name: "message".into(),
+                        value: Value::Text("blarg this is a message".into())
+                    },
+                    Argument { name: "is_a_str".into(), value: Value::Text("hahaha".into()) },
+                    Argument { name: "is_debug".into(), value: Value::Text("PrintMe(5)".into()) },
+                    Argument { name: "is_signed".into(), value: Value::SignedInt(-500) },
+                    Argument { name: "is_unsigned".into(), value: Value::UnsignedInt(1000) },
+                ]
+            }
+        );
     }
 }

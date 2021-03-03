@@ -30,6 +30,14 @@ rustc_library("rust") {
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:nom",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:tracing-core",
+    "//third_party/rust_crates:tracing-log",
+  ]
+
+  test_deps = [
+    "//third_party/rust_crates:once_cell",
+    "//third_party/rust_crates:tracing-subscriber",
   ]
 
   sources = [

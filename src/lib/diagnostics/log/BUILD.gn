@@ -2,10 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 group("log") {
-  deps = [ "encoding" ]
+  deps = [
+    "encoding",
+    "rust",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ "encoding:tests" ]
+  deps = [
+    "encoding:tests",
+    "rust:tests",
+  ]
 }

@@ -58,7 +58,7 @@ void LogTester::GetInfo(GetInfoCompleter::Sync& completer) {
   ::llcpp::fuchsia::validate::logs::wire::PuppetInfo info;
   info.pid = GetKoid(zx_process_self());
   info.tid = GetKoid(zx_thread_self());
-  completer.Reply(info);
+  completer.Reply(std::move(info));
 }
 
 void LogTester::EmitLog(::llcpp::fuchsia::validate::logs::wire::RecordSpec spec,
