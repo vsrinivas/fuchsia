@@ -35,13 +35,13 @@ mod test {
     const SLEW_RATE_PPM: i32 = 750;
     const ONE_MILLION: i32 = 1_000_000;
 
-    #[test]
+    #[fuchsia::test]
     fn time_at_monotonic_clock_not_started() {
         let clock = zx::Clock::create(zx::ClockOpts::empty(), Some(BACKSTOP)).unwrap();
         assert_eq!(time_at_monotonic(&clock, zx::Time::get_monotonic() + TIME_DIFF), BACKSTOP);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn time_at_monotonic_clock_started() {
         let clock = zx::Clock::create(zx::ClockOpts::empty(), Some(BACKSTOP)).unwrap();
 
@@ -57,7 +57,7 @@ mod test {
         assert_leq!(clock_time, BACKSTOP + TIME_DIFF + mono_radius);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn time_at_monotonic_clock_slew_fast() {
         let clock = zx::Clock::create(zx::ClockOpts::empty(), Some(BACKSTOP)).unwrap();
 
@@ -75,7 +75,7 @@ mod test {
         assert_leq!(clock_time, expected_clock_time + mono_radius);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn time_at_monotonic_clock_slew_slow() {
         let clock = zx::Clock::create(zx::ClockOpts::empty(), Some(BACKSTOP)).unwrap();
 

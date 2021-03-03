@@ -524,7 +524,7 @@ mod tests {
         (InspectDiagnostics::new(inspector.root(), &primary, &monitor), primary.clock)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn valid_clock_details_conversion() {
         let details = ClockDetails::from(zx::ClockDetails::from(VALID_DETAILS.clone()));
         assert_eq!(details.generation_counter, GENERATION_COUNTER);
@@ -534,7 +534,7 @@ mod tests {
         assert_eq!(details.error_bounds, ERROR_BOUNDS);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn invalid_clock_details_conversion() {
         let mut zx_details = zx::ClockDetails::from(VALID_DETAILS.clone());
         zx_details.mono_to_synthetic.rate.synthetic_ticks = 1000;
@@ -547,7 +547,7 @@ mod tests {
         assert_eq!(details.error_bounds, ERROR_BOUNDS);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn after_initialization() {
         let inspector = &Inspector::new();
         let (_inspect_diagnostics, _) = create_test_object(&inspector, false);
@@ -582,7 +582,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn after_update() {
         let inspector = &Inspector::new();
         let (inspect_diagnostics, clock) = create_test_object(&inspector, false);
@@ -637,7 +637,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn real_time_clock() {
         let inspector = &Inspector::new();
         let (inspect_diagnostics, _) = create_test_object(&inspector, false);
@@ -673,7 +673,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn time_sources() {
         let inspector = &Inspector::new();
         let (test, _) = create_test_object(&inspector, true);
@@ -720,7 +720,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn tracks() {
         let inspector = &Inspector::new();
         let (test, _) = create_test_object(&inspector, true);

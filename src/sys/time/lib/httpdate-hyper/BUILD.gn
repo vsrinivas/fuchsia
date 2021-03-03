@@ -34,6 +34,7 @@ rustc_library("httpdate-hyper") {
   sources = [ "src/lib.rs" ]
 
   test_deps = [
+    "//src/lib/fuchsia",
     "//third_party/rust_crates:base64",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",

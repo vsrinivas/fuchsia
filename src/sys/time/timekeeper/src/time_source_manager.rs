@@ -249,7 +249,6 @@ mod test {
         crate::enums::{SampleValidationError as SVE, TimeSourceError as TSE},
         crate::time_source::FakeTimeSource,
         anyhow::anyhow,
-        fuchsia_async as fasync,
     };
 
     const BACKSTOP_FACTOR: i64 = 100;
@@ -327,7 +326,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn role_accessor() {
         let time_source = FakeTimeSource::failing();
         let diagnostics = Arc::new(FakeDiagnostics::new());
@@ -335,7 +334,7 @@ mod test {
         assert_eq!(manager.role(), TEST_ROLE);
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn event_in_future() {
         let time_source = FakeTimeSource::events(vec![
             TimeSourceEvent::StatusChange { status: Status::Ok },
@@ -360,7 +359,7 @@ mod test {
         ]);
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn sample_implies_ok() {
         let time_source = FakeTimeSource::events(vec![
             // Should be accepted even though time source is not currently OK.
@@ -385,7 +384,7 @@ mod test {
         ]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn restart_on_watch_error() {
         let time_source = FakeTimeSource::result_collections(vec![
             vec![
@@ -415,7 +414,7 @@ mod test {
         ]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn restart_on_channel_close() {
         let time_source = FakeTimeSource::event_collections(vec![
             vec![
@@ -440,7 +439,7 @@ mod test {
         ]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn restart_on_launch_failure() {
         let time_source = FakeTimeSource::failing();
         let diagnostics = Arc::new(FakeDiagnostics::new());
@@ -469,7 +468,7 @@ mod test {
         }]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn validate_sample_failures() {
         let mut manager =
             create_manager(FakeTimeSource::failing(), Arc::new(FakeDiagnostics::new()));

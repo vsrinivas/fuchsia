@@ -139,7 +139,7 @@ mod test {
     const START_CLOCK_EVENT: Event =
         Event::StartClock { track: Track::Primary, source: StartClockSource::Rtc };
 
-    #[test]
+    #[fuchsia::test]
     fn log_and_reset_events() {
         let diagnostics = FakeDiagnostics::new();
         diagnostics.assert_events(&[]);
@@ -157,7 +157,7 @@ mod test {
         diagnostics.assert_events(&[START_CLOCK_EVENT]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn match_wildcards() {
         let diagnostics = FakeDiagnostics::new();
         let test_event = Event::EstimateUpdated {

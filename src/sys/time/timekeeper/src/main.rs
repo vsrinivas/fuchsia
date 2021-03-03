@@ -331,7 +331,7 @@ mod tests {
         (Arc::new(clock), initial_update_ticks)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn successful_update_with_monitor() {
         let mut executor = fasync::Executor::new().unwrap();
         let (primary_clock, primary_ticks) = create_clock();
@@ -410,7 +410,7 @@ mod tests {
         ]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn no_update_invalid_rtc() {
         let mut executor = fasync::Executor::new().unwrap();
         let (clock, initial_update_ticks) = create_clock();
@@ -447,7 +447,7 @@ mod tests {
         ]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn no_update_valid_rtc() {
         let mut executor = fasync::Executor::new().unwrap();
         let (clock, initial_update_ticks) = create_clock();
@@ -486,7 +486,7 @@ mod tests {
         ]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn no_update_clock_already_running() {
         let mut executor = fasync::Executor::new().unwrap();
 
@@ -526,7 +526,7 @@ mod tests {
         ]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_initial_clock_state() {
         let clock =
             zx::Clock::create(zx::ClockOpts::empty(), Some(zx::Time::from_nanos(1_000))).unwrap();

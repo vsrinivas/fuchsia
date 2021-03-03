@@ -489,7 +489,7 @@ mod tests {
         ClockManager::new(clock, time_source_manager, rtc, diagnostics, *TEST_TRACK)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn determine_strategy_fn() {
         for sign in vec![-1, 1] {
             let (strategy, slew) = determine_strategy((sign * 5).micros());
@@ -514,7 +514,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn clock_updates_for_slew_fn() {
         let executor = fasync::Executor::new_with_fake_time().unwrap();
         executor.set_fake_time(fasync::Time::from_nanos(0));
@@ -610,7 +610,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn single_update_with_rtc() {
         let mut executor = fasync::Executor::new().unwrap();
 
@@ -651,7 +651,7 @@ mod tests {
         ]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn single_update_without_rtc() {
         let mut executor = fasync::Executor::new().unwrap();
 
@@ -701,7 +701,7 @@ mod tests {
         ]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn subsequent_updates_accepted() {
         let mut executor = fasync::Executor::new().unwrap();
 
@@ -759,7 +759,7 @@ mod tests {
         ]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn correction_by_slew() {
         let mut executor = fasync::Executor::new().unwrap();
 

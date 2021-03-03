@@ -244,7 +244,7 @@ mod test {
         EventPayload::EventCount(CountEvent { period_duration_micros: 0, count })
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn record_initialization_events() {
         let (diagnostics, mut mpsc_receiver) = create_test_object();
 
@@ -260,7 +260,7 @@ mod test {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn record_clock_events() {
         let (diagnostics, mut mpsc_receiver) = create_test_object();
 
@@ -283,7 +283,7 @@ mod test {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn record_rtc_events() {
         let (diagnostics, mut mpsc_receiver) = create_test_object();
 
@@ -311,7 +311,7 @@ mod test {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn record_time_source_events() {
         let (diagnostics, mut mpsc_receiver) = create_test_object();
 
@@ -352,7 +352,7 @@ mod test {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn record_time_track_events() {
         let (diagnostics, mut mpsc_receiver) = create_test_object();
 
@@ -417,7 +417,7 @@ mod test {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn record_update_clock_events() {
         let (diagnostics, mut mpsc_receiver) = create_test_object();
 

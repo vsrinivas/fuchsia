@@ -368,7 +368,7 @@ mod test {
         parsed
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_network_time() {
         let set_time = *CERT_NOT_BEFORE + chrono::Duration::days(1);
         let open_port = serve_fake(set_time.clone());
@@ -380,7 +380,7 @@ mod test {
         assert_eq!(date, set_time);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_network_err() {
         let open_port = serve_crash();
 
@@ -393,7 +393,7 @@ mod test {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_untrusted_cert() {
         let time = *CERT_NOT_BEFORE + chrono::Duration::days(1);
         let open_port = serve_fake(time);
@@ -410,7 +410,7 @@ mod test {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_time_after_cert_expired() {
         let time = *CERT_NOT_AFTER + chrono::Duration::days(2);
         let open_port = serve_fake(time);
@@ -424,7 +424,7 @@ mod test {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_http_rejected() {
         let mut client = NetworkTimeClient::new_with_trust_anchors(&TEST_TLS_SERVER_ROOTS);
         let url = "http://localhost/".parse::<hyper::Uri>().unwrap();
@@ -434,7 +434,7 @@ mod test {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_bad_timezone() {
         let set_time = (*CERT_NOT_BEFORE + chrono::Duration::days(1))
             .with_timezone(&chrono::FixedOffset::east(1 * 60 * 60));

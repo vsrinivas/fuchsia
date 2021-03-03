@@ -22,7 +22,10 @@ rustc_library("time-util") {
 
   sources = [ "src/lib.rs" ]
 
-  test_deps = [ "//src/lib/test_util" ]
+  test_deps = [
+    "//src/lib/fuchsia",
+    "//src/lib/test_util",
+  ]
 }
 
 fuchsia_unittest_package("time-util-tests") {

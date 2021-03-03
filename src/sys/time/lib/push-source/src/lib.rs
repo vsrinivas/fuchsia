@@ -313,7 +313,7 @@ mod test {
     // focus primarily on behavior specific to PushSource and ensuring multiple clients are
     // supported.
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_watch_sample_closes_on_multiple_watches() {
         let mut harness = TestHarness::new();
         let proxy = harness.new_proxy();
@@ -331,7 +331,7 @@ mod test {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_watch_status_closes_on_multiple_watches() {
         let mut harness = TestHarness::new();
         let proxy = harness.new_proxy();
@@ -351,7 +351,7 @@ mod test {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_watch_sample() {
         let mut harness = TestHarness::new();
         let proxy = harness.new_proxy();
@@ -400,7 +400,7 @@ mod test {
         assert!(proxy.watch_sample().now_or_never().is_none());
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_watch_sample_sent_to_all_clients() {
         let mut harness = TestHarness::new();
         let proxy = harness.new_proxy();
@@ -479,7 +479,7 @@ mod test {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_watch_status() {
         let mut harness = TestHarness::new();
         let proxy = harness.new_proxy();
@@ -496,7 +496,7 @@ mod test {
         assert!(proxy.watch_status().now_or_never().is_none());
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_watch_status_sent_to_all_clients() {
         let mut harness = TestHarness::new();
         let proxy = harness.new_proxy();
@@ -518,7 +518,7 @@ mod test {
         assert_eq!(proxy_3.watch_status().await.unwrap(), Status::Hardware);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_property_updates_sent_to_update_algorithm() {
         let mut harness = TestHarness::new();
         let proxy = harness.new_proxy();

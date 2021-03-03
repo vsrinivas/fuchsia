@@ -209,7 +209,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn initialize() {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let estimator = Estimator::new(
@@ -230,7 +230,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn apply_update() {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let mut estimator = Estimator::new(
@@ -257,7 +257,7 @@ mod test {
         ]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn kalman_filter_performance() {
         // Note: The expected outputs for these test inputs have been validated using the time
         // synchronization simulator we created during algorithm development.
@@ -297,7 +297,7 @@ mod test {
         ]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn covariance_minimum() {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let mut estimator = Estimator::new(
@@ -314,7 +314,7 @@ mod test {
         ]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn earlier_monotonic_ignored() {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let mut estimator = Estimator::new(
@@ -329,7 +329,7 @@ mod test {
         diagnostics.assert_events(&[create_estimate_event(OFFSET_1, SQRT_COV_1)]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn error_bound_increase_fn() {
         assert_eq!(error_bound_increase(1.minute()), 1800000);
         assert_eq!(error_bound_increase(1.hour()), 108000000);

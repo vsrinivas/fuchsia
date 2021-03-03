@@ -27,7 +27,7 @@ const WEATHER_REPORT_1: WeatherReport =
 const WEATHER_REPORT_2: WeatherReport =
     WeatherReport { temp: -3, pressure: 987, precipitation: 100, summary: Summary::Raining };
 
-#[test]
+#[fuchsia::test]
 fn valid_struct() {
     let inspector = &Inspector::new();
     let root = inspector.root();

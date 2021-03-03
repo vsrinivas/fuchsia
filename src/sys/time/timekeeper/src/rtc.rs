@@ -216,7 +216,7 @@ mod test {
     const TEST_ZX_TIME: zx::Time = zx::Time::from_nanos(1_597_363_200_000_000_000);
     const DIFFERENT_ZX_TIME: zx::Time = zx::Time::from_nanos(1_597_999_999_000_000_000);
 
-    #[test]
+    #[fuchsia::test]
     fn time_conversion() {
         let to_fidl = zx_time_to_fidl_time(TEST_ZX_TIME);
         assert_eq!(to_fidl, TEST_FIDL_TIME);
@@ -231,7 +231,7 @@ mod test {
         assert_eq!(fidl_time_to_zx_time(INVALID_FIDL_TIME_2).is_err(), true);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn rtc_impl_get_valid() {
         let (proxy, mut stream) = create_proxy_and_stream::<frtc::DeviceMarker>().unwrap();
 
@@ -245,7 +245,7 @@ mod test {
         assert_eq!(rtc_impl.get().await.unwrap(), TEST_ZX_TIME);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn rtc_impl_get_invalid() {
         let (proxy, mut stream) = create_proxy_and_stream::<frtc::DeviceMarker>().unwrap();
 
@@ -259,7 +259,7 @@ mod test {
         assert_eq!(rtc_impl.get().await.is_err(), true);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn rtc_impl_set_whole_second() {
         let (proxy, mut stream) = create_proxy_and_stream::<frtc::DeviceMarker>().unwrap();
 
@@ -281,7 +281,7 @@ mod test {
         assert_lt!(span, 50.millis());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn rtc_impl_set_partial_second() {
         let (proxy, mut stream) = create_proxy_and_stream::<frtc::DeviceMarker>().unwrap();
 
@@ -304,7 +304,7 @@ mod test {
         assert_gt!(span, TEST_OFFSET / 2);
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn valid_fake() {
         let fake = FakeRtc::valid(TEST_ZX_TIME);
         assert_eq!(fake.get().await.unwrap(), TEST_ZX_TIME);
@@ -316,7 +316,7 @@ mod test {
         assert_eq!(fake.get().await.unwrap(), TEST_ZX_TIME);
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn invalid_fake() {
         let message = "I'm designed to fail".to_string();
         let fake = FakeRtc::invalid(message.clone());

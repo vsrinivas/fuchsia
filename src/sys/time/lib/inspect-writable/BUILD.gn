@@ -28,6 +28,7 @@ rustc_test("test_bin") {
   deps = [
     ":inspect-writable",
     "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fuchsia",
   ]
 
   sources = [ "tests/derive_test.rs" ]

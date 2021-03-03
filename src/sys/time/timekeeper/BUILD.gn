@@ -66,6 +66,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/connectivity/lib/net-declare",
+    "//src/lib/fuchsia",
     "//src/lib/test_util",
   ]
 }
@@ -118,6 +119,9 @@ fuchsia_unittest_package("timekeeper-tests") {
   ]
   test_specs = {
     environments = [ nuc_env ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 

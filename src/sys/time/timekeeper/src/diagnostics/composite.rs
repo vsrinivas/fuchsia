@@ -43,7 +43,7 @@ mod test {
     const TIME_SOURCE_FAILED_EVENT: Event =
         Event::TimeSourceFailed { role: Role::Primary, error: TimeSourceError::CallFailed };
 
-    #[test]
+    #[fuchsia::test]
     fn log_events() {
         let left = Arc::new(FakeDiagnostics::new());
         let right = Arc::new(FakeDiagnostics::new());

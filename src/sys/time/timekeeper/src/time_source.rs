@@ -228,7 +228,7 @@ mod test {
         });
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn single_event_set() -> Result<(), Error> {
         let fake = FakeTimeSource::events(vec![*STATUS_EVENT_1, *SAMPLE_EVENT_1, *SAMPLE_EVENT_2]);
         let mut events = fake.launch().context("Fake should launch without error")?;
@@ -241,7 +241,7 @@ mod test {
         Ok(())
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn double_event_set() -> Result<(), Error> {
         let fake = FakeTimeSource::event_collections(vec![
             vec![*STATUS_EVENT_1, *SAMPLE_EVENT_1],
@@ -259,7 +259,7 @@ mod test {
         Ok(())
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     #[should_panic]
     async fn fake_no_events_then_pending() {
         let fake = FakeTimeSource::events(vec![]);
@@ -268,20 +268,20 @@ mod test {
         events.next().await;
     }
 
-    #[test]
+    #[fuchsia::test]
     fn fake_failing() {
         let fake = FakeTimeSource::failing();
         assert!(fake.launch().is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn new_push_time_source() {
         const COMPONENT_NAME: &str = "alfred";
         let time_source = PushTimeSource::new(COMPONENT_NAME.to_string());
         assert_eq!(time_source.component, COMPONENT_NAME);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn push_time_source_events() {
         let (proxy, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<ftexternal::PushSourceMarker>().unwrap();
@@ -313,7 +313,7 @@ mod test {
         assert_eq!(events.next().await.unwrap().unwrap(), *SAMPLE_EVENT_1);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn push_time_source_failure() {
         let (proxy, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<ftexternal::PushSourceMarker>().unwrap();
