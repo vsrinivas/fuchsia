@@ -470,16 +470,16 @@ int main(int argc, char** argv) {
     load_driver(driver, fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
   }
 
-  if (coordinator.require_system() && !coordinator.system_loaded()) {
-    LOGF(INFO, "Full system required, ignoring fallback drivers until '/system' is loaded");
-  } else {
-    coordinator.UseFallbackDrivers();
-  }
-
   coordinator.PrepareProxy(coordinator.sys_device(), nullptr);
   coordinator.PrepareProxy(coordinator.test_device(), nullptr);
+
   // Initial bind attempt for drivers enumerated at startup.
   coordinator.BindDrivers();
+  if (coordinator.require_system()) {
+    LOGF(INFO, "Full system required, fallback drivers will be loaded after '/system' is loaded");
+  } else {
+    coordinator.BindFallbackDrivers();
+  }
 
   outgoing.root_dir()->AddEntry("dev",
                                 fbl::MakeRefCounted<fs::RemoteDir>(system_instance.CloneFs("dev")));

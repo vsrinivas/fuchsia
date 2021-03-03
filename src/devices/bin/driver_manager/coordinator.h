@@ -36,6 +36,7 @@
 #include "device.h"
 #include "driver.h"
 #include "driver_host.h"
+#include "driver_loader.h"
 #include "fbl/auto_lock.h"
 #include "fuchsia/device/manager/llcpp/fidl.h"
 #include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
@@ -169,9 +170,13 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   bool InSuspend() const;
   bool InResume() const;
 
-  zx_status_t ScanSystemDrivers();
+  // Start searching the system for non-boot drivers.
+  // This will start a new thread to load non-boot drivers asynchronously.
+  void StartLoadingNonBootDrivers();
+
+  void BindFallbackDrivers();
+  void AddAndBindDrivers(fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers);
   void BindDrivers();
-  void UseFallbackDrivers();
   void DriverAdded(Driver* drv, const char* version);
   void DriverAddedInit(Driver* drv, const char* version);
   zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
@@ -260,11 +265,8 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   void set_shutdown_system_state(SystemPowerState state) { shutdown_system_state_ = state; }
 
   void set_running(bool running) { running_ = running; }
-  bool system_available() const { return system_available_; }
-  void set_system_available(bool system_available) { system_available_ = system_available; }
   void set_power_manager_registered(bool registered) { power_manager_registered_ = registered; }
   bool power_manager_registered() { return power_manager_registered_; }
-  bool system_loaded() const { return system_loaded_; }
 
   void set_loader_service_connector(LoaderServiceConnector loader_service_connector) {
     loader_service_connector_ = std::move(loader_service_connector);
@@ -337,20 +339,16 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   async_dispatcher_t* const dispatcher_;
   bool running_ = false;
   bool launched_first_driver_host_ = false;
-  bool system_available_ = false;
-  bool system_loaded_ = false;
   bool power_manager_registered_ = false;
   LoaderServiceConnector loader_service_connector_;
   fidl::Client<power_manager_fidl::DriverManagerRegistration> power_manager_client_;
+  DriverLoader driver_loader_;
 
   // All Drivers
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;
 
   // Drivers to try last
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> fallback_drivers_;
-
-  // List of drivers loaded from /system by system_driver_loader()
-  fbl::DoublyLinkedList<std::unique_ptr<Driver>> system_drivers_;
 
   // All DriverHosts
   fbl::DoublyLinkedList<DriverHost*> driver_hosts_;
@@ -413,8 +411,6 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
     return BindDriver(drv, fit::bind_member(this, &Coordinator::AttemptBind));
   }
   zx_status_t AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev);
-  void BindSystemDrivers();
-  void DriverAddedSys(Driver* drv, const char* version);
 
   zx_status_t GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                                  size_t buflen, size_t* size);

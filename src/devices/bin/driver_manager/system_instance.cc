@@ -146,12 +146,6 @@ void SystemInstance::InstallDevFsIntoNamespace() {
                 zx_status_get_string(r));
 }
 
-// Thread trampoline for WaitForSystemAvailable, which ServiceStarter spawns
-int wait_for_system_available(void* arg) {
-  auto args = std::unique_ptr<ServiceStarterArgs>(static_cast<ServiceStarterArgs*>(arg));
-  return args->instance->WaitForSystemAvailable(args->coordinator);
-}
-
 void SystemInstance::ServiceStarter(Coordinator* coordinator) {
   auto params = GetServiceStarterParams(coordinator->boot_args());
   if (!params.clock_backstop.empty()) {
@@ -170,36 +164,7 @@ void SystemInstance::ServiceStarter(Coordinator* coordinator) {
     LOGF(WARNING, "Unable to RegisterWithPowerManager: %d", status);
   }
 
-  auto starter_args = std::make_unique<ServiceStarterArgs>();
-  starter_args->instance = this;
-  starter_args->coordinator = coordinator;
-  thrd_t t;
-  int ret = thrd_create_with_name(&t, wait_for_system_available, starter_args.release(),
-                                  "wait-for-system-available");
-  if (ret == thrd_success) {
-    thrd_detach(t);
-  }
-}
-
-int SystemInstance::WaitForSystemAvailable(Coordinator* coordinator) {
-  // Block this thread until /system-delayed is available. Note that this is
-  // only used for coordinating events between fshost and devcoordinator, the
-  // /system path is used for loading drivers and appmgr below.
-  // TODO: It's pretty wasteful to create a thread just so it can sit blocked in
-  // sync I/O opening '/system-delayed'. Once a simple async I/O wrapper exists
-  // this should switch to use that
-  int fd = open("/system-delayed", O_RDONLY);
-  if (fd < 0) {
-    LOGF(WARNING, "Unabled to open '/system-delayed', system drivers are disabled");
-    return ZX_ERR_IO;
-  }
-  close(fd);
-
-  // Load in drivers from /system
-  coordinator->set_system_available(true);
-  coordinator->ScanSystemDrivers();
-
-  return 0;
+  coordinator->StartLoadingNonBootDrivers();
 }
 
 // TODO(fxbug.dev/34633): DEPRECATED. Do not add new dependencies on the fshost loader service!

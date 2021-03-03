@@ -207,36 +207,6 @@ const Driver* Coordinator::LibnameToDriver(const fbl::StringPiece& libname) cons
   return nullptr;
 }
 
-static zx_status_t load_vmo(const fbl::String& libname, zx::vmo* out_vmo) {
-  int fd = -1;
-  zx_status_t r = fdio_open_fd(
-      libname.data(), fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE, &fd);
-  if (r != ZX_OK) {
-    LOGF(ERROR, "Cannot open driver '%s'", libname.data());
-    return ZX_ERR_IO;
-  }
-  zx::vmo vmo;
-  r = fdio_get_vmo_exec(fd, vmo.reset_and_get_address());
-  close(fd);
-  if (r != ZX_OK) {
-    LOGF(ERROR, "Cannot get driver VMO '%s'", libname.data());
-    return r;
-  }
-  const char* vmo_name = strrchr(libname.data(), '/');
-  if (vmo_name != nullptr) {
-    ++vmo_name;
-  } else {
-    vmo_name = libname.data();
-  }
-  r = vmo.set_property(ZX_PROP_NAME, vmo_name, strlen(vmo_name));
-  if (r != ZX_OK) {
-    LOGF(ERROR, "Cannot set name on driver VMO to '%s'", libname.data());
-    return r;
-  }
-  *out_vmo = std::move(vmo);
-  return r;
-}
-
 zx_status_t Coordinator::LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const {
   const Driver* drv = LibnameToDriver(libname);
   if (drv == nullptr) {
@@ -1332,18 +1302,10 @@ std::unique_ptr<Driver> Coordinator::ValidateDriver(std::unique_ptr<Driver> drv)
 // devcoordinator has started.  The driver is added to the new-drivers
 // list and work is queued to process it.
 void Coordinator::DriverAdded(Driver* drv, const char* version) {
-  auto driver = ValidateDriver(std::unique_ptr<Driver>(drv));
-  if (!driver) {
-    return;
-  }
-  async::PostTask(dispatcher_, [this, drv = std::move(driver)]() mutable {
-    Driver* borrow_ref = drv.get();
-    drivers_.push_back(std::move(drv));
-    zx_status_t status = BindDriver(borrow_ref);
-    if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
-      LOGF(ERROR, "Failed to bind driver '%s': %s", borrow_ref->name.data(),
-           zx_status_get_string(status));
-    }
+  fbl::DoublyLinkedList<std::unique_ptr<Driver>> driver_list;
+  driver_list.push_back(std::unique_ptr<Driver>(drv));
+  async::PostTask(dispatcher_, [this, driver_list = std::move(driver_list)]() mutable {
+    AddAndBindDrivers(std::move(driver_list));
   });
 }
 
@@ -1387,29 +1349,6 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
     drivers_.push_front(std::move(driver));
   } else {
     drivers_.push_back(std::move(driver));
-  }
-}
-
-// Drivers added during system scan (from the dedicated thread)
-// are added to system_drivers for bulk processing once
-// CTL_ADD_SYSTEM is sent.
-//
-// TODO: fancier priority management
-void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
-  auto driver = ValidateDriver(std::unique_ptr<Driver>(drv));
-  if (!driver) {
-    return;
-  }
-  LOGF(INFO, "Adding system driver '%s' '%s'", driver->name.data(), driver->libname.data());
-  if (load_vmo(driver->libname.data(), &driver->dso_vmo)) {
-    LOGF(ERROR, "System driver '%s' '%s' could not cache DSO", driver->name.data(),
-         driver->libname.data());
-  }
-  if (version[0] == '*') {
-    // de-prioritize drivers that are "fallback"
-    system_drivers_.push_back(std::move(driver));
-  } else {
-    system_drivers_.push_front(std::move(driver));
   }
 }
 
@@ -1544,52 +1483,35 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringP
   return ZX_OK;
 }
 
-zx_status_t Coordinator::ScanSystemDrivers() {
-  if (system_loaded_) {
-    return ZX_ERR_BAD_STATE;
-  }
-  system_loaded_ = true;
-  // Scan/load system drivers are in a standalone thread created by ServiceStarter.
-  // This avoids deadlocks between the driver_hosts hosting the block devices that
-  // these drivers may be served from and the devcoordinator loading them.
-  find_loadable_drivers("/system/driver", fit::bind_member(this, &Coordinator::DriverAddedSys));
-  async::PostTask(dispatcher_, [this] { this->BindSystemDrivers(); });
-  return ZX_OK;
-}
-
-void Coordinator::BindSystemDrivers() {
-  std::unique_ptr<Driver> drv;
-  // Bind system drivers.
-  while ((drv = system_drivers_.pop_front()) != nullptr) {
-    Driver* borrow_ref = drv.get();
-    drivers_.push_back(std::move(drv));
-    zx_status_t status = BindDriver(borrow_ref);
-    if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
-      LOGF(ERROR, "Failed to bind driver '%s': %s", drv->name.data(), zx_status_get_string(status));
+void Coordinator::AddAndBindDrivers(fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers) {
+  std::unique_ptr<Driver> driver;
+  while ((driver = drivers.pop_front()) != nullptr) {
+    driver = ValidateDriver(std::move(driver));
+    if (!driver) {
+      continue;
     }
-  }
-  // Bind remaining fallback drivers.
-  while ((drv = fallback_drivers_.pop_front()) != nullptr) {
-    LOGF(INFO, "Fallback driver '%s' is available", drv->name.data());
-    Driver* borrow_ref = drv.get();
-    drivers_.push_back(std::move(drv));
-    zx_status_t status = BindDriver(borrow_ref);
+    Driver* driver_ptr = driver.get();
+    drivers_.push_back(std::move(driver));
+
+    zx_status_t status = BindDriver(driver_ptr);
     if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
-      LOGF(ERROR, "Failed to bind driver '%s': %s", drv->name.data(), zx_status_get_string(status));
+      LOGF(ERROR, "Failed to bind driver '%s': %s", driver_ptr->name.data(),
+           zx_status_get_string(status));
     }
   }
 }
 
-void Coordinator::BindDrivers() {
-  for (Driver& drv : drivers_) {
-    zx_status_t status = BindDriver(&drv);
-    if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
-      LOGF(ERROR, "Failed to bind driver '%s': %s", drv.name.data(), zx_status_get_string(status));
-    }
+void Coordinator::StartLoadingNonBootDrivers() { driver_loader_.StartLoadingThread(this); }
+
+void Coordinator::BindFallbackDrivers() {
+  for (auto& driver : fallback_drivers_) {
+    LOGF(INFO, "Fallback driver '%s' is available", driver.name.data());
   }
+
+  AddAndBindDrivers(std::move(fallback_drivers_));
 }
 
-void Coordinator::UseFallbackDrivers() { drivers_.splice(drivers_.end(), fallback_drivers_); }
+void Coordinator::BindDrivers() { AddAndBindDrivers(std::move(drivers_)); }
 
 // TODO(fxbug.dev/42257): Temporary helper to convert state to flags.
 // Will be removed eventually.

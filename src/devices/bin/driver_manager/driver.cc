@@ -6,6 +6,9 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +28,8 @@
 #include "src/devices/lib/log/log.h"
 
 namespace {
+
+namespace fio = llcpp::fuchsia::io;
 
 struct AddContext {
   const char* libname;
@@ -138,6 +143,36 @@ zx_status_t load_driver_vmo(std::string_view libname, zx::vmo vmo, DriverLoadCal
     LOGF(ERROR, "Failed to read info from driver '%s': %s", libname, zx_status_get_string(status));
   }
   return status;
+}
+
+zx_status_t load_vmo(std::string_view libname, zx::vmo* out_vmo) {
+  int fd = -1;
+  zx_status_t r = fdio_open_fd(
+      libname.data(), fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE, &fd);
+  if (r != ZX_OK) {
+    LOGF(ERROR, "Cannot open driver '%s'", libname.data());
+    return ZX_ERR_IO;
+  }
+  zx::vmo vmo;
+  r = fdio_get_vmo_exec(fd, vmo.reset_and_get_address());
+  close(fd);
+  if (r != ZX_OK) {
+    LOGF(ERROR, "Cannot get driver VMO '%s'", libname.data());
+    return r;
+  }
+  const char* vmo_name = strrchr(libname.data(), '/');
+  if (vmo_name != nullptr) {
+    ++vmo_name;
+  } else {
+    vmo_name = libname.data();
+  }
+  r = vmo.set_property(ZX_PROP_NAME, vmo_name, strlen(vmo_name));
+  if (r != ZX_OK) {
+    LOGF(ERROR, "Cannot set name on driver VMO to '%s'", libname.data());
+    return r;
+  }
+  *out_vmo = std::move(vmo);
+  return r;
 }
 
 void load_driver(const char* path, DriverLoadCallback func) {

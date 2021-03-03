@@ -37,6 +37,8 @@ source_set("lib") {
     "driver_host.h",
     "driver_host_loader_service.cc",
     "driver_host_loader_service.h",
+    "driver_loader.cc",
+    "driver_loader.h",
     "driver_test_reporter.cc",
     "driver_test_reporter.h",
     "env.cc",
