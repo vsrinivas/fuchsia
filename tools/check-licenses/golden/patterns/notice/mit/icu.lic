@@ -1,8 +1,8 @@
-ICU License - ICU 1\.8\.1 and later
+(?P<text>ICU License - ICU 1\.8\.1 and later
 
 COPYRIGHT AND PERMISSION NOTICE
 
-Copyright \((?:c|C)\) 1995-2009 International Business Machines Corporation and others
+(?P<copyright>Copyright \((?:c|C)\) 1995-2009 International Business Machines Corporation and others)
 
 All rights reserved\.
 
@@ -29,4 +29,4 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE\.
 Except as contained in this notice, the name of a copyright holder
 shall not be used in advertising or otherwise to promote the sale, use
 or other dealings in this Software without prior written authorization
-of the copyright holder\.
+of the copyright holder\.)

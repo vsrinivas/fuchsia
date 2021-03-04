@@ -1,4 +1,4 @@
-# License \/ Copyright Information
+(?P<text># License \/ Copyright Information
 
 The Mesa distribution consists of several components\. Different copyrights and
 licenses apply to different components\. For example, the GLX client code uses
@@ -11,7 +11,7 @@ This allows integration with the XFree86, Xorg and DRI projects\.
 
 The default Mesa license is as follows:
 
-Copyright \((?:c|C)\) 1999-2007  Brian Paul   All Rights Reserved\.
+(?P<copyright>Copyright \((?:c|C)\) 1999-2007  Brian Paul   All Rights Reserved\.)
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files \(the "Software"\),
@@ -153,4 +153,4 @@ FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT\. IN NO EVENT
 SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE
 FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE\.
+DEALINGS IN THE SOFTWARE\.)

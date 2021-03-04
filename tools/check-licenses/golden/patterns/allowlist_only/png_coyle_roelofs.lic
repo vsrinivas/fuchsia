@@ -1,8 +1,8 @@
-      Copyright \(c\) 2004 Stuart Coyle
+      (?P<copyright>Copyright \(c\) 2004 Stuart Coyle
 
-      Copyright \(c\) 1998-2001 Greg Roelofs\.  All rights reserved\.
+      Copyright \(c\) 1998-2001 Greg Roelofs\.  All rights reserved\.)
 
-      This software is provided "as is," without warranty of any kind,
+(?P<text>      This software is provided "as is," without warranty of any kind,
       express or implied\.  In no event shall the author or contributors
       be held liable for any damages arising in any way from the use of
       this software\.
@@ -42,4 +42,4 @@
   limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
   and/or sell copies of the Software, and to permit persons who receive
   copies from any such party to do so, with the only requirement being
-  that this copyright notice remain intact\.
+  that this copyright notice remain intact\.)

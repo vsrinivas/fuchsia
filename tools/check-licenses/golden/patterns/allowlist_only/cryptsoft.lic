@@ -1,7 +1,7 @@
-Copyright \(C\) [\d]{4}(-[\d]{4})? Eric Young \(eay@cryptsoft\.com\)
-All rights reserved\.
+(?P<copyright>Copyright \(C\) [\d]{4}(-[\d]{4})? Eric Young \(eay@cryptsoft\.com\)
+All rights reserved\.)
 
-This package is an SSL implementation written
+(?P<text>This package is an SSL implementation written
 by Eric Young \(eay@cryptsoft\.com\)\.
 The implementation was written so as to conform with Netscapes SSL\.
 
@@ -52,4 +52,4 @@ SUCH DAMAGE\.
 The licence and distribution terms for any publically available version or
 derivative of this code cannot be changed\.  i\.e\. this code cannot simply be
 copied and put under another distribution licence
-\[including the GNU Public Licence\.\]
+\[including the GNU Public Licence\.\])

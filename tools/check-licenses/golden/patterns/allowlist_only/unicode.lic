@@ -1,7 +1,7 @@
-Copyright © [\d]{4}(-[\d]{4})? Unicode, Inc\. All rights reserved\.
-Distributed under the Terms of Use in https:\/\/www\.unicode\.org\/copyright\.html\.
+(?P<copyright>Copyright © [\d]{4}(-[\d]{4})? Unicode, Inc\. All rights reserved\.
+Distributed under the Terms of Use in https:\/\/www\.unicode\.org\/copyright\.html\.)
 
-Permission is hereby granted, free of charge, to any person obtaining
+(?P<text>Permission is hereby granted, free of charge, to any person obtaining
 a copy of the Unicode data files and any associated documentation
 \(the "Data Files"\) or Unicode software and any associated documentation
 \(the "Software"\) to deal in the Data Files or Software
@@ -28,4 +28,4 @@ PERFORMANCE OF THE DATA FILES OR SOFTWARE\.
 Except as contained in this notice, the name of a copyright holder
 shall not be used in advertising or otherwise to promote the sale,
 use or other dealings in these Data Files or Software without prior
-written authorization of the copyright holder\.
+written authorization of the copyright holder\.)
