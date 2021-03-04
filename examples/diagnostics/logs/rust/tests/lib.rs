@@ -11,41 +11,37 @@ use futures::{channel::mpsc, prelude::*};
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_example_and_read_hello_world() {
-    let url = "fuchsia-pkg://fuchsia.com/rust-logs-example-tests#meta/rust-logs-example.cmx";
-    let launcher = fuchsia_component::client::launcher().unwrap();
-    let mut app = fuchsia_component::client::launch(&launcher, url.into(), None).unwrap();
-    let status = app.wait().await.unwrap();
-    assert!(status.success());
+    let url = "fuchsia-pkg://fuchsia.com/rust_logs_example_tests#meta/rust_logs_example.cm";
+    // launch our sibling by opening the path, this will cause CM to launch it even though its a dud
+    std::fs::File::open("/svc/fake.just.for.Binding").ok();
 
     let (logs, mut new_logs, _tasks) = listen_to_logs();
     pin_utils::pin_mut!(logs);
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
     assert_eq!(next.severity, syslog::levels::INFO);
-    assert_eq!(next.tags, vec!["rust-logs-example.cmx"]);
+    assert_eq!(next.tags, vec!["rust_logs_example.cm"]);
     assert_eq!(next.msg, "should print");
     assert_ne!(next.pid, 0);
     assert_ne!(next.tid, 0);
 
     assert_eq!(new_next.metadata.severity, Severity::Info);
-    // TODO(fxbug.dev/65319) uncomment when built-in archivist has attribution again
-    // assert_eq!(new_next.metadata.component_url, url);
-    // assert_eq!(new_next.moniker, "rust-logs-example.cmx");
+    assert_eq!(new_next.metadata.component_url, url);
+    assert_eq!(new_next.moniker, "logs_example");
     assert_data_tree!(new_next.payload.unwrap(), root: contains {
         "message": "should print",
     });
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
     assert_eq!(next.severity, syslog::levels::INFO);
-    assert_eq!(next.tags, vec!["rust-logs-example.cmx"]);
+    assert_eq!(next.tags, vec!["rust_logs_example.cm"]);
     assert_eq!(next.msg, "hello, world! bar=baz foo=1");
     assert_ne!(next.pid, 0);
     assert_ne!(next.tid, 0);
 
     assert_eq!(new_next.metadata.severity, Severity::Info);
-    // TODO(fxbug.dev/65319) uncomment when built-in archivist has attribution again
-    // assert_eq!(new_next.metadata.component_url, url);
-    // assert_eq!(new_next.moniker, "rust-logs-example.cmx");
+    assert_eq!(new_next.metadata.component_url, url);
+    assert_eq!(new_next.moniker, "logs_example");
     assert_data_tree!(new_next.payload.unwrap(), root: contains {
         "message": "hello, world!",
         "foo": 1u64,
@@ -54,15 +50,14 @@ async fn launch_example_and_read_hello_world() {
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
     assert_eq!(next.severity, syslog::levels::WARN);
-    assert_eq!(next.tags, vec!["rust-logs-example.cmx"]);
+    assert_eq!(next.tags, vec!["rust_logs_example.cm"]);
     assert_eq!(next.msg, "warning: using old api");
     assert_ne!(next.pid, 0);
     assert_ne!(next.tid, 0);
 
     assert_eq!(new_next.metadata.severity, Severity::Warn);
-    // TODO(fxbug.dev/65319) uncomment when built-in archivist has attribution again
-    // assert_eq!(new_next.metadata.component_url, url);
-    // assert_eq!(new_next.moniker, "rust-logs-example.cmx");
+    assert_eq!(new_next.metadata.component_url, url);
+    assert_eq!(new_next.moniker, "logs_example");
     assert_data_tree!(new_next.payload.unwrap(), root: contains {
         "message": "warning: using old api",
     });

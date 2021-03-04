@@ -12,7 +12,7 @@ group("rust") {
 
 group("tests") {
   testonly = true
-  deps = [ ":rust-logs-example-tests" ]
+  deps = [ ":rust_logs_example_tests" ]
 }
 
 rustc_binary("bin") {
@@ -31,7 +31,7 @@ rustc_binary("bin") {
 }
 
 rustc_test("test") {
-  name = "rust-logs-example-tests"
+  name = "rust_logs_example_tests"
   source_root = "tests/lib.rs"
 
   deps = [
@@ -50,20 +50,29 @@ rustc_test("test") {
 }
 
 fuchsia_component("component") {
-  component_name = "rust-logs-example"
-  manifest = "meta/rust-logs-example.cmx"
+  component_name = "rust_logs_example"
+  manifest = "meta/rust_logs_example.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_component("test_component") {
   testonly = true
-  component_name = "rust-logs-example-tests"
-  manifest = "meta/rust-logs-example-tests.cmx"
+  component_name = "rust_logs_example_tests_root"
+  manifest = "meta/rust_logs_example_tests_root.cml"
+}
+
+fuchsia_component("test_driver") {
+  testonly = true
+  component_name = "rust_logs_example_tests"
+  manifest = "meta/rust_logs_example_tests.cml"
   deps = [ ":test" ]
 }
 
-# Run with `fx test rust-logs-example-tests`.
-fuchsia_test_package("rust-logs-example-tests") {
+# Run with `fx test rust_logs_example_tests`.
+fuchsia_test_package("rust_logs_example_tests") {
   test_components = [ ":test_component" ]
-  deps = [ ":component" ]
+  deps = [
+    ":component",
+    ":test_driver",
+  ]
 }

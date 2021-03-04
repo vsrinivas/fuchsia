@@ -1,0 +1,41 @@
+{
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/rust_logs_example_tests#meta/rust_logs_example_tests.cm",
+        },
+        {
+            name: "logs_example",
+            url: "fuchsia-pkg://fuchsia.com/rust_logs_example_tests#meta/rust_logs_example.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fake.just.for.Binding",
+            from: "#logs_example",
+            to: [ "#test_driver" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#logs_example",
+                "#test_driver",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.logger.Log",
+            ],
+            from: "parent",
+            to: [ "#test_driver" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test_driver",
+        },
+    ],
+}

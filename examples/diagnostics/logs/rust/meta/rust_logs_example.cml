@@ -1,0 +1,18 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/rust_logs_example",
+    },
+    capabilities: [
+        {
+            protocol: [ "fake.just.for.Binding" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fake.just.for.Binding",
+            from: "self",
+        },
+    ],
+}

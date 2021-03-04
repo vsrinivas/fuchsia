@@ -1,0 +1,18 @@
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/rust_logs_example_tests",
+    },
+    use: [
+        {
+            protocol: [
+                "fake.just.for.Binding",
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.logger.Log",
+            ],
+        },
+    ],
+}
