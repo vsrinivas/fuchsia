@@ -23,32 +23,34 @@ bool NestedCriticalSectionTest() {
       [orig = lockup_get_cs_threshold_ticks()]() { lockup_set_cs_threshold_ticks(orig); });
   lockup_set_cs_threshold_ticks(INT64_MAX);
 
-  LockupDetectorState* state = &get_local_percpu()->lockup_detector_state;
-  EXPECT_EQ(0u, state->critical_section_depth);
-  EXPECT_EQ(0u, state->begin_ticks);
+  const LockupDetectorState& state = get_local_percpu()->lockup_detector_state;
+  const auto& cs_state = state.critical_section;
+
+  EXPECT_EQ(0u, cs_state.depth);
+  EXPECT_EQ(0u, cs_state.begin_ticks);
 
   zx_ticks_t now = current_ticks();
 
   lockup_begin();
-  EXPECT_EQ(1u, state->critical_section_depth);
+  EXPECT_EQ(1u, cs_state.depth);
 
-  const zx_ticks_t begin_ticks = state->begin_ticks;
-  EXPECT_GE(state->begin_ticks, now);
+  const zx_ticks_t begin_ticks = cs_state.begin_ticks;
+  EXPECT_GE(cs_state.begin_ticks, now);
 
   lockup_begin();
-  EXPECT_EQ(2u, state->critical_section_depth);
+  EXPECT_EQ(2u, cs_state.depth);
 
   // No change because only the outer most critical section is tracked.
-  EXPECT_EQ(begin_ticks, state->begin_ticks);
+  EXPECT_EQ(begin_ticks, cs_state.begin_ticks);
 
   lockup_end();
-  EXPECT_EQ(1u, state->critical_section_depth);
+  EXPECT_EQ(1u, cs_state.depth);
 
-  EXPECT_EQ(begin_ticks, state->begin_ticks);
+  EXPECT_EQ(begin_ticks, cs_state.begin_ticks);
 
   lockup_end();
-  EXPECT_EQ(0u, state->critical_section_depth);
-  EXPECT_EQ(0, state->begin_ticks);
+  EXPECT_EQ(0u, cs_state.depth);
+  EXPECT_EQ(0, cs_state.begin_ticks);
 
   END_TEST;
 }
