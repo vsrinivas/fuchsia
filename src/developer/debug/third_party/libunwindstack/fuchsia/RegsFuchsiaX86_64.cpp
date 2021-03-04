@@ -60,9 +60,10 @@ zx_status_t RegsFuchsia::Read(zx_handle_t thread) {
 }
 
 uint64_t RegsFuchsia::GetPcAdjustment(uint64_t rel_pc, Elf* elf) {
-  // Android uses this to "fix" the IP (source of the call instead of the
-  // return address). But we expect no adjustment.
-  return 0;
+  if (rel_pc == 0) {
+    return 0;
+  }
+  return 1;
 }
 
 bool RegsFuchsia::SetPcFromReturnAddress(Memory* process_memory) {

@@ -172,7 +172,15 @@ zx_status_t UnwindStackAndroid(const ProcessHandle& process, const ModuleList& m
       break;
 
     debug_ipc::StackFrame* dest = &stack->emplace_back();
-    dest->ip = src.pc;
+    // unwindstack will adjust the pc for all frames except the bottom-most one. The logic lives in
+    // RegsFuchsia::GetPcAdjustment and is required in order to get the correct cfa_offset. However,
+    // it's not ideal for us because we want return addresses rather than call sites for previous
+    // frames. So we restore the pc here.
+    if (i == 0) {
+      dest->ip = src.pc;
+    } else {
+      dest->ip = src.pc + unwind_regs.GetPcAdjustment(src.pc, nullptr);
+    }
     dest->sp = src.sp;
     if (src.regs) {
       src.regs->IterateRegisters([&dest](const char* name, uint64_t val) {

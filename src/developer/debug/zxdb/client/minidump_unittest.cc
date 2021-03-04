@@ -576,8 +576,8 @@ TEST_F(MinidumpTest, Backtrace) {
 
   ASSERT_EQ(3u, reply.record.frames.size());
   EXPECT_EQ(0x6df7cb8a10a3u, reply.record.frames[0].ip);
-  EXPECT_EQ(0x6df7cb8a1062u, reply.record.frames[1].ip);
-  EXPECT_EQ(0x575953094967u, reply.record.frames[2].ip);
+  EXPECT_EQ(0x6df7cb8a1063u, reply.record.frames[1].ip);
+  EXPECT_EQ(0x575953094968u, reply.record.frames[2].ip);
 }
 
 }  // namespace zxdb

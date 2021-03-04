@@ -12,12 +12,12 @@
 #include <algorithm>
 #include <cstring>
 
-#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/UcontextArm64.h"
-#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/UcontextX86_64.h"
-#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/Unwinder.h"
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/decode_exception.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/UcontextArm64.h"
+#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/UcontextX86_64.h"
+#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/Unwinder.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -1029,7 +1029,15 @@ void MinidumpRemoteAPI::ThreadStatus(
   for (size_t i = 0; i < unwinder.NumFrames(); i++) {
     const auto& src = unwinder.frames()[i];
     debug_ipc::StackFrame& dest = reply.record.frames[i];
-    dest.ip = src.pc;
+    // unwindstack will adjust the pc for all frames except the bottom-most one. The logic lives in
+    // RegsFuchsia::GetPcAdjustment and is required in order to get the correct cfa_offset. However,
+    // it's not ideal for us because we want return addresses rather than call sites for previous
+    // frames. So we restore the pc here.
+    if (i == 0) {
+      dest.ip = src.pc;
+    } else {
+      dest.ip = src.pc + regs->GetPcAdjustment(src.pc, nullptr);;
+    }
     dest.sp = src.sp;
     if (src.regs) {
       src.regs->IterateRegisters([&dest](const char* name, uint64_t val) {
