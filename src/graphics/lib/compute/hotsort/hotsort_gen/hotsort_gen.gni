@@ -289,6 +289,5 @@ template("hotsort_gen_target") {
       rebase_path(invoker.output_dir, root_build_dir),
     ]
     args += _hs_target_gen_args
-    hermetic_deps = false
   }
 }

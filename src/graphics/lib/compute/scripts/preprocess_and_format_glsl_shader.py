@@ -2,13 +2,13 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Preprocess and clang-format a single GLSL shader script."""
 
 import argparse
 import os
 import subprocess
 import sys
+
 
 def _Panic(msg):
     sys.stderr.write('ERROR: %s\n' % msg)
@@ -23,9 +23,10 @@ def main(argv):
         default='glslangValidator',
         help='Use specific glslangValidator tool path.')
 
-    parser.add_argument('--clang-format-tool',
-                        default='clang-format',
-                        help='Use specific clang-format tool path.')
+    parser.add_argument(
+        '--clang-format-tool',
+        default='clang-format',
+        help='Use specific clang-format tool path.')
 
     parser.add_argument(
         '-I',
@@ -44,7 +45,7 @@ def main(argv):
     cmd_args = [args.glslangValidator_tool, '-E', args.input]
 
     # For some reason, this is defined when compiling, but not pre-processing!
-    cmd_args += [ '-DVULKAN' ]
+    cmd_args += ['-DVULKAN']
 
     for include_dir in args.include_dir:
         cmd_args.append('-I%s' % include_dir)
@@ -54,9 +55,10 @@ def main(argv):
         _Panic('Preprocessing error: %s' % e)
 
     try:
-        p = subprocess.Popen([args.clang_format_tool],
-                             stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE)
+        p = subprocess.Popen(
+            [args.clang_format_tool, "--style=Chromium"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE)
         formatted_script, _ = p.communicate(preprocessed_script)
     except subprocess.CalledProcessError as e:
         _Panic('Formatting error: %s' % e)

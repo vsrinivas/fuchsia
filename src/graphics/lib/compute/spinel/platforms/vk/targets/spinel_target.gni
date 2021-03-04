@@ -114,11 +114,15 @@ template("spinel_target") {
     _spn_target_dir + "/spn_config.h",
     "${graphics_compute_dir}/hotsort/platforms/vk/targets/hs_glsl_macros.h",
     "${graphics_compute_dir}/spinel/core.h",
+    "${graphics_compute_dir}/spinel/include/spinel/spinel_opcodes.h",
     "${graphics_compute_dir}/spinel/platforms/vk/vk_layouts.h",
+    "${graphics_compute_dir}/spinel/platforms/vk/expand_x.h",
     "${graphics_compute_dir}/spinel/platforms/vk/shaders/core_glsl.h",
     "${graphics_compute_dir}/spinel/platforms/vk/shaders/partition.h",
     "${graphics_compute_dir}/spinel/platforms/vk/shaders/spn_macros_glsl.h",
     "${graphics_compute_dir}/spinel/platforms/vk/shaders/rasterize.comp",
+    "$target_gen_dir/hotsort/hs_config.h",
+    "$target_gen_dir/hotsort/hs_glsl_macros_config.h",
   ]
 
   _spn_comp_include_dirs = [
@@ -165,7 +169,6 @@ template("spinel_target") {
     args = rebase_path(outputs, root_build_dir) +
            rebase_path(sources, root_build_dir)
     public_deps = [ ":gen_spv" ]
-    hermetic_deps = false
   }
 
   #
@@ -194,7 +197,6 @@ template("spinel_target") {
       outputs = [ "$target_gen_dir/spn_target.bin" ]
       args = rebase_path(outputs, root_build_dir)
       public_deps = [ ":$_spn_target_dump_name" ]
-      hermetic_deps = false
     }
 
     #

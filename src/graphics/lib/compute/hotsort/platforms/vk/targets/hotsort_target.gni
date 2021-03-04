@@ -150,7 +150,7 @@ template("hotsort_target_internal") {
       "vulkan1.1",
     ]
     include_dirs = _hs_target_include_dirs
-    deps = [
+    public_deps = [
       ":${_gen_comp_target_name}",
       ":${_gen_copy_target_name}",
     ]
@@ -166,7 +166,7 @@ template("hotsort_target_internal") {
     outputs = _hs_target_gen_inlines
     args = rebase_path(outputs, root_build_dir) +
            rebase_path(inputs, root_build_dir)
-    deps = [ ":${_gen_spv_target_name}" ]
+    public_deps = [ ":${_gen_spv_target_name}" ]
   }
 
   #
@@ -221,7 +221,7 @@ template("hotsort_target_internal") {
       sources = _hs_target_sources
       include_dirs = _hs_target_include_dirs
       public_configs = [ ":${_config_name}" ]
-      deps = [
+      public_deps = [
         ":${_gen_comp_target_name}",
         ":${_gen_modules_target_name}",
         ":${_gen_spv_target_name}",
