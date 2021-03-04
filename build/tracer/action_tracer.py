@@ -721,7 +721,6 @@ def main():
     # Scripts with known issues
     # TODO(shayba): file bugs for the suppressions below
     ignored_scripts = {
-        "sdk_build_id.py",
         # TODO(shayba): it's not the wrapper script that's the problem but some
         # of its usages. Refine the suppression or just fix the underlying
         # issues.
@@ -773,10 +772,6 @@ def main():
         os.path.join(src_root, "integration", ".git"),
     }
     ignored_suffixes = {
-        # Allow actions to access Python code such as via imports
-        # TODO(fangism): validate python imports under source control more
-        # precisely
-        ".py",
         # TODO(fxb/71190): The following is a temporary symlink.
         # fsatrace fails to detect writing this symlink, and trace analysis
         # thinks it is a read that violates hermeticity, but it is ok.

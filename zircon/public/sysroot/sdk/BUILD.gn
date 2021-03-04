@@ -118,6 +118,10 @@ action("sysroot-meta") {
   hermetic_deps = false
   script = "//build/zircon/sdk_build_id.py"
   sources = [ sysroot_meta_json_file ]
+  inputs = [
+    "//build/cpp/binaries.py",
+    "//build/images/elfinfo.py",
+  ]
   outputs = [
     "$target_out_dir/sysroot.meta.out.json",
     "$target_out_dir/sysroot.debug.manifest",

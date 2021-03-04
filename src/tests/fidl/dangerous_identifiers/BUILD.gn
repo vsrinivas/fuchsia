@@ -89,7 +89,6 @@ template("generate_dangerous_fidl") {
     script = "generate/generate.py"
     sources = [
       "generate/common.py",
-      "generate/generate.py",
       "generate/identifiers.py",
       "generate/styles.py",
       "generate/uses.py",

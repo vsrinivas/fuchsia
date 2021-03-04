@@ -4,6 +4,9 @@
 
 # Generates FFX subcommand with a plugin commands
 #
+
+import("//build/python/python.gni")
+
 template("command") {
   output_name = target_name
   if (defined(invoker.output_name)) {
@@ -35,7 +38,8 @@ template("command") {
     ]
 
     # Rebuild if the template changes
-    inputs = [ "//src/developer/ffx/build/templates/command.md" ]
+    inputs = [ "//src/developer/ffx/build/templates/command.md" ] +
+             third_party_jinja2_srcs + third_party_markupsafe_srcs
     outputs = [ generated_file ]
   }
 }

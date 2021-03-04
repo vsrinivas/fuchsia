@@ -174,7 +174,10 @@ template("sdk") {
 
     script = "//build/sdk/generate_meta.py"
 
-    inputs = [ final_manifest_file ]
+    inputs = [
+      final_manifest_file,
+      "//build/sdk/sdk_common.py",
+    ]
 
     outputs = [ sdk_meta_file ]
 

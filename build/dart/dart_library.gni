@@ -7,6 +7,7 @@ import("//build/dart/dart.gni")
 import("//build/dart/dart_package_config.gni")
 import("//build/dart/toolchain.gni")
 import("//build/json/validate_json.gni")
+import("//build/python/python.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/toolchain/concurrent_jobs.gni")
 
@@ -264,6 +265,8 @@ if (current_toolchain == dart_toolchain) {
     action(source_verification_target_name) {
       script = "//build/dart/verify_sources.py"
 
+      inputs = third_party_yaml_lib3_srcs
+
       outputs = [ output_file ]
 
       args = [
@@ -356,7 +359,7 @@ if (current_toolchain == dart_toolchain) {
                    _packages_path,
                    options_file,
                    source_file,
-                 ] + rebased_sources
+                 ] + rebased_sources + third_party_yaml_lib3_srcs
 
         outputs = [ output_file ]
 
@@ -597,7 +600,7 @@ if (current_toolchain == dart_toolchain) {
       action(metadata_target_name) {
         script = "//build/dart/sdk/gen_meta_file.py"
 
-        inputs = sdk_metas + third_party_pubspecs
+        inputs = sdk_metas + third_party_pubspecs + third_party_yaml_lib3_srcs
 
         outputs = [ metadata_file ]
 

@@ -204,7 +204,10 @@ template("sdk_static_library") {
   action(metadata_target_name) {
     script = "//build/cpp/gen_sdk_prebuilt_meta_file.py"
 
-    inputs = sdk_metas
+    inputs = sdk_metas + [
+               "//build/cpp/binaries.py",
+               "//build/images/elfinfo.py",
+             ]
 
     outputs = [ metadata_file ]
 
