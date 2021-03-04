@@ -603,18 +603,6 @@ async fn test_set_multiple_fields_success() {
     assert_eq!(settings_result, settings);
 }
 
-macro_rules! async_property_test {
-    ($test_func:ident => [$($test_name:ident($($args:expr),+$(,)?)),+$(,)?]) => {
-        $(paste::paste!{
-            #[allow(non_snake_case)]
-            #[fuchsia_async::run_until_stalled(test)]
-            async fn [<$test_func ___ $test_name>]() {
-                $test_func($($args,)+).await;
-            }
-        })+
-    }
-}
-
 // Validate that we cannot set auto_brightness to true or screen_enabled to false
 // when a brightness value is manually set. All other combinations should be ok.
 async_property_test!(test_set_multiple_fields_brightness => [
