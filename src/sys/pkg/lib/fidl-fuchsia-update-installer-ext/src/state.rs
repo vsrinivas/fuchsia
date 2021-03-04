@@ -122,6 +122,7 @@ pub struct UpdateInfoAndProgressBuilderWithInfoAndProgress {
 pub enum PrepareFailureReason {
     Internal,
     OutOfSpace,
+    UnsupportedDowngrade,
 }
 
 #[derive(Arbitrary, Copy, Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -449,6 +450,9 @@ impl From<fidl::PrepareFailureReason> for PrepareFailureReason {
         match reason {
             fidl::PrepareFailureReason::Internal => PrepareFailureReason::Internal,
             fidl::PrepareFailureReason::OutOfSpace => PrepareFailureReason::OutOfSpace,
+            fidl::PrepareFailureReason::UnsupportedDowngrade => {
+                PrepareFailureReason::UnsupportedDowngrade
+            }
         }
     }
 }
@@ -458,6 +462,9 @@ impl From<PrepareFailureReason> for fidl::PrepareFailureReason {
         match reason {
             PrepareFailureReason::Internal => fidl::PrepareFailureReason::Internal,
             PrepareFailureReason::OutOfSpace => fidl::PrepareFailureReason::OutOfSpace,
+            PrepareFailureReason::UnsupportedDowngrade => {
+                fidl::PrepareFailureReason::UnsupportedDowngrade
+            }
         }
     }
 }

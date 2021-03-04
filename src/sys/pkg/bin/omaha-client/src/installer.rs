@@ -31,6 +31,7 @@ use thiserror::Error;
 pub enum InstallerFailureReason {
     Internal,
     OutOfSpace,
+    UnsupportedDowngrade,
 }
 
 impl From<FetchFailureReason> for InstallerFailureReason {
@@ -47,6 +48,9 @@ impl From<PrepareFailureReason> for InstallerFailureReason {
         match r {
             PrepareFailureReason::Internal => InstallerFailureReason::Internal,
             PrepareFailureReason::OutOfSpace => InstallerFailureReason::OutOfSpace,
+            PrepareFailureReason::UnsupportedDowngrade => {
+                InstallerFailureReason::UnsupportedDowngrade
+            }
         }
     }
 }
@@ -499,7 +503,7 @@ mod tests {
 
         installer.perform_reboot().await.unwrap();
         assert_matches!(installer.reboot_controller, None);
-        assert_matches!(stream.next().await, Some(Ok(RebootControllerRequest::Unblock{..})));
+        assert_matches!(stream.next().await, Some(Ok(RebootControllerRequest::Unblock { .. })));
         assert_matches!(stream.next().await, None);
     }
 }

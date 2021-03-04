@@ -225,6 +225,11 @@ enum PrepareFailureReason {
     /// The prepare failed because the system does not have enough space to fetch
     /// the update package.
     OUT_OF_SPACE = 1;
+
+    /// The prepare failed because the system cannot downgrade across a version boundary. Not all
+    /// unsupported downgrades will fail with this error -- just the ones the system can detect. For
+    /// more context, see [RFC-0071](/docs/contribute/governance/rfcs/0071_ota_backstop.md).
+    UNSUPPORTED_DOWNGRADE = 2;
 };
 
 /// The set of values provided when an installation attempt fails on [`State.fetch`].
