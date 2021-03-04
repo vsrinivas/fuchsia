@@ -20,6 +20,15 @@
 namespace fidl {
 namespace utils {
 
+// An enumeration of supported syntaxes for the purposes of the ongoing
+// old-to-new migration. The kOld represents the syntax as of Jan 1, 2021 and
+// the kNew is the new syntax per FTP-050 and its amendments.
+// TODO(fxbug.dev/70247): Remove this when old syntax support is removed
+enum struct Syntax {
+  kOld,
+  kNew,
+};
+
 using reporter::Reporter;
 
 constexpr char kWhitespaceChars[] = " \t\n\v\f\r";

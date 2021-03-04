@@ -778,12 +778,25 @@ std::unique_ptr<raw::Parameter> Parser::ParseParameter() {
   auto attributes = MaybeParseAttributeList(/*for_parameter=*/true);
   if (!Ok())
     return Fail();
-  auto type_ctor = ParseTypeConstructor();
-  if (!Ok())
-    return Fail();
-  auto identifier = ParseIdentifier();
-  if (!Ok())
-    return Fail();
+
+  // TODO(fxbug.dev/70247): remove branching
+  std::unique_ptr<raw::TypeConstructor> type_ctor;
+  std::unique_ptr<raw::Identifier> identifier;
+  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax)) {
+    identifier = ParseIdentifier();
+    if (!Ok())
+      return Fail();
+    type_ctor = ParseTypeConstructor();
+    if (!Ok())
+      return Fail();
+  } else {
+    type_ctor = ParseTypeConstructor();
+    if (!Ok())
+      return Fail();
+    identifier = ParseIdentifier();
+    if (!Ok())
+      return Fail();
+  }
 
   return std::make_unique<raw::Parameter>(scope.GetSourceElement(), std::move(type_ctor),
                                           std::move(identifier), std::move(attributes));
@@ -999,12 +1012,25 @@ std::unique_ptr<raw::ResourceProperty> Parser::ParseResourcePropertyDeclaration(
   auto attributes = MaybeParseAttributeList();
   if (!Ok())
     return Fail();
-  auto type_ctor = ParseTypeConstructor();
-  if (!Ok())
-    return Fail();
-  auto identifier = ParseIdentifier();
-  if (!Ok())
-    return Fail();
+
+  // TODO(fxbug.dev/70247): remove branching
+  std::unique_ptr<raw::TypeConstructor> type_ctor;
+  std::unique_ptr<raw::Identifier> identifier;
+  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax)) {
+    identifier = ParseIdentifier();
+    if (!Ok())
+      return Fail();
+    type_ctor = ParseTypeConstructor();
+    if (!Ok())
+      return Fail();
+  } else {
+    type_ctor = ParseTypeConstructor();
+    if (!Ok())
+      return Fail();
+    identifier = ParseIdentifier();
+    if (!Ok())
+      return Fail();
+  }
 
   return std::make_unique<raw::ResourceProperty>(scope.GetSourceElement(), std::move(type_ctor),
                                                  std::move(identifier), std::move(attributes));
@@ -1097,12 +1123,25 @@ std::unique_ptr<raw::ServiceMember> Parser::ParseServiceMember() {
   auto attributes = MaybeParseAttributeList();
   if (!Ok())
     return Fail();
-  auto type_ctor = ParseTypeConstructor();
-  if (!Ok())
-    return Fail();
-  auto identifier = ParseIdentifier();
-  if (!Ok())
-    return Fail();
+
+  // TODO(fxbug.dev/70247): remove branching
+  std::unique_ptr<raw::TypeConstructor> type_ctor;
+  std::unique_ptr<raw::Identifier> identifier;
+  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax)) {
+    identifier = ParseIdentifier();
+    if (!Ok())
+      return Fail();
+    type_ctor = ParseTypeConstructor();
+    if (!Ok())
+      return Fail();
+  } else {
+    type_ctor = ParseTypeConstructor();
+    if (!Ok())
+      return Fail();
+    identifier = ParseIdentifier();
+    if (!Ok())
+      return Fail();
+  }
 
   return std::make_unique<raw::ServiceMember>(scope.GetSourceElement(), std::move(type_ctor),
                                               std::move(identifier), std::move(attributes));
@@ -1614,7 +1653,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       std::move(protocol_declaration_list), std::move(resource_declaration_list),
       std::move(service_declaration_list), std::move(struct_declaration_list),
       std::move(table_declaration_list), std::move(union_declaration_list), std::move(type_decls),
-      std::move(comment_tokens_));
+      std::move(comment_tokens_), fidl::utils::Syntax::kOld);
 }
 
 std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::Layout::Kind kind) {
@@ -1788,15 +1827,38 @@ std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
       case CASE_TOKEN(Token::Kind::kEndOfFile):
         return Done;
 
+      case CASE_IDENTIFIER(Token::Subkind::kAlias): {
+        done_with_library_imports = true;
+        add(&alias_list,
+            [&] { return ParseAliasDeclaration(std::move(attributes), scope, Modifiers()); });
+        return More;
+      }
+
       case CASE_IDENTIFIER(Token::Subkind::kType): {
         done_with_library_imports = true;
         add(&type_decls, [&] { return ParseTypeDecl(scope); });
         return More;
+      }
 
-        // TODO(fxbug.dev/65978): Parse protocol declarations (`protocol ...`).
-        // TODO(fxbug.dev/65978): Parse type aliases (`alias ...`).
-        // TODO(fxbug.dev/65978): Parse resource definition declarations (`resource_definition
-        // ...`).
+      case CASE_IDENTIFIER(Token::Subkind::kProtocol): {
+        done_with_library_imports = true;
+        add(&protocol_declaration_list,
+            [&] { return ParseProtocolDeclaration(std::move(attributes), scope, Modifiers()); });
+        return More;
+      }
+
+      case CASE_IDENTIFIER(Token::Subkind::kResourceDefinition): {
+        done_with_library_imports = true;
+        add(&resource_declaration_list,
+            [&] { return ParseResourceDeclaration(std::move(attributes), scope, Modifiers()); });
+        return More;
+      }
+
+      case CASE_IDENTIFIER(Token::Subkind::kService): {
+        done_with_library_imports = true;
+        add(&service_declaration_list,
+            [&] { return ParseServiceDeclaration(std::move(attributes), scope, Modifiers()); });
+        return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kUsing): {
@@ -1835,7 +1897,7 @@ std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
       std::move(protocol_declaration_list), std::move(resource_declaration_list),
       std::move(service_declaration_list), std::move(struct_declaration_list),
       std::move(table_declaration_list), std::move(union_declaration_list), std::move(type_decls),
-      std::move(comment_tokens_));
+      std::move(comment_tokens_), fidl::utils::Syntax::kNew);
 }
 
 bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {

@@ -123,13 +123,14 @@ struct TypeConstructor final {
   TypeConstructor(Name name, std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
                   std::optional<Name> handle_subtype_identifier,
                   std::unique_ptr<Constant> handle_rights, std::unique_ptr<Constant> maybe_size,
-                  types::Nullability nullability)
+                  types::Nullability nullability, fidl::utils::Syntax syntax)
       : name(std::move(name)),
         maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
         handle_subtype_identifier(std::move(handle_subtype_identifier)),
         handle_rights(std::move(handle_rights)),
         maybe_size(std::move(maybe_size)),
-        nullability(nullability) {}
+        nullability(nullability),
+        syntax(syntax) {}
 
   // Returns a type constructor for the size type (used for bounds).
   static std::unique_ptr<TypeConstructor> CreateSizeType();
@@ -141,6 +142,7 @@ struct TypeConstructor final {
   const std::unique_ptr<Constant> handle_rights;
   const std::unique_ptr<Constant> maybe_size;
   const types::Nullability nullability;
+  const fidl::utils::Syntax syntax;
 
   // Set during compilation.
   bool compiling = false;
@@ -810,7 +812,7 @@ class Library {
   std::optional<Name> CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier);
   bool RegisterDecl(std::unique_ptr<Decl> decl);
 
-  ConsumeStep StartConsumeStep();
+  ConsumeStep StartConsumeStep(fidl::utils::Syntax syntax);
   CompileStep StartCompileStep();
   VerifyResourcenessStep StartVerifyResourcenessStep();
   VerifyAttributesStep StartVerifyAttributesStep();
@@ -818,21 +820,27 @@ class Library {
   bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
                        std::unique_ptr<Constant>* out_constant);
   bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor, SourceSpan span,
+                              fidl::utils::Syntax syntax,
                               std::unique_ptr<TypeConstructor>* out_type);
 
-  void ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
-  bool ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration);
-  bool ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive);
+  void ConsumeUsing(std::unique_ptr<raw::Using> using_directive, fidl::utils::Syntax syntax);
+  bool ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration,
+                        fidl::utils::Syntax syntax);
+  bool ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive, fidl::utils::Syntax syntax);
   void ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration);
   void ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
   void ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
-  void ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
-  bool ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration);
+  void ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration,
+                                  fidl::utils::Syntax syntax);
+  bool ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration,
+                                  fidl::utils::Syntax syntax);
   bool ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
-                            bool anonymous, Struct** out_struct_decl);
+                            bool anonymous, fidl::utils::Syntax syntax, Struct** out_struct_decl);
   bool CreateMethodResult(const Name& protocol_name, SourceSpan response_span,
-                          raw::ProtocolMethod* method, Struct* in_response, Struct** out_response);
-  void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
+                          raw::ProtocolMethod* method, Struct* in_response,
+                          fidl::utils::Syntax syntax, Struct** out_response);
+  void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl,
+                                 fidl::utils::Syntax syntax);
   void ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
   void ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
   void ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
@@ -843,7 +851,8 @@ class Library {
   const Type* TypeResolve(const Type* type);
   bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
   std::unique_ptr<TypeConstructor> IdentifierTypeForDecl(const Decl* decl,
-                                                         types::Nullability nullability);
+                                                         types::Nullability nullability,
+                                                         fidl::utils::Syntax syntax);
 
   bool AddConstantDependencies(const Constant* constant, std::set<Decl*>* out_edges);
   bool DeclDependencies(Decl* decl, std::set<Decl*>* out_edges);
@@ -984,33 +993,46 @@ class StepBase {
   bool done_;
 };
 
+// The input to the consume step (raw::File) stores the syntax that it is written
+// in. This syntax needs to get propagated through the two paths that the consume
+// step consists of:
+// * decls that go through RegisterDecl
+// * flat::TypeConstructors that get created in ConsumeTypeConstructor
+// To do so, ConsumeFile passes the raw::File's syntax to the ConsumeStep class,
+// which then passes it through to the various ConsumeFooDecl as necessary. Note
+// that only the Consume functions that correspond to nodes present in both the
+// old and new syntax (e.g. Service, Resource) need the extra Syntax parameter -
+// nodes that only appear in the old or new syntax (e.g. UnionDeclaration for
+// old, Layout for new), don't need the parameter because they can hardcode the
+// syntax inside the implementation.
 class ConsumeStep : public StepBase {
  public:
-  ConsumeStep(Library* library) : StepBase(library) {}
+  ConsumeStep(Library* library, fidl::utils::Syntax syntax) : StepBase(library), syntax(syntax) {}
 
   void ForAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> alias_declaration) {
-    library_->ConsumeTypeAlias(std::move(alias_declaration));
+    library_->ConsumeTypeAlias(std::move(alias_declaration), syntax);
   }
   void ForUsing(std::unique_ptr<raw::Using> using_directive) {
-    library_->ConsumeUsing(std::move(using_directive));
+    library_->ConsumeUsing(std::move(using_directive), syntax);
   }
   void ForBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration) {
     library_->ConsumeBitsDeclaration(std::move(bits_declaration));
   }
-  void ForConstDeclaration(std::unique_ptr<raw::ConstDeclaration> bits_declaration) {
-    library_->ConsumeConstDeclaration(std::move(bits_declaration));
+  void ForConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
+    // TODO(fxbug.dev/71178): pipe syntax through
+    library_->ConsumeConstDeclaration(std::move(const_declaration));
   }
   void ForEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration) {
     library_->ConsumeEnumDeclaration(std::move(enum_declaration));
   }
   void ForProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
-    library_->ConsumeProtocolDeclaration(std::move(protocol_declaration));
+    library_->ConsumeProtocolDeclaration(std::move(protocol_declaration), syntax);
   }
   void ForResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration) {
-    library_->ConsumeResourceDeclaration(std::move(resource_declaration));
+    library_->ConsumeResourceDeclaration(std::move(resource_declaration), syntax);
   }
   void ForServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
-    library_->ConsumeServiceDeclaration(std::move(service_decl));
+    library_->ConsumeServiceDeclaration(std::move(service_decl), syntax);
   }
   void ForStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
     library_->ConsumeStructDeclaration(std::move(struct_declaration));
@@ -1024,6 +1046,8 @@ class ConsumeStep : public StepBase {
   void ForTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
     library_->ConsumeTypeDecl(std::move(type_decl));
   }
+
+  fidl::utils::Syntax syntax;
 };
 
 class CompileStep : public StepBase {

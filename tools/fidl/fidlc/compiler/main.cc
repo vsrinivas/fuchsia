@@ -20,7 +20,6 @@
 
 #include <fidl/c_generator.h>
 #include <fidl/converter.h>
-#include <fidl/conversion.h>
 #include <fidl/experimental_flags.h>
 #include <fidl/flat_ast.h>
 #include <fidl/json_generator.h>
@@ -275,10 +274,9 @@ bool Parse(const fidl::SourceFile& source_file, fidl::Reporter* reporter,
   return true;
 }
 
-std::unique_ptr<fidl::raw::File> ParseIntoRaw(
-    const fidl::SourceFile& source_file,
-    fidl::Reporter* reporter,
-    const fidl::ExperimentalFlags& experimental_flags) {
+std::unique_ptr<fidl::raw::File> ParseIntoRaw(const fidl::SourceFile& source_file,
+                                              fidl::Reporter* reporter,
+                                              const fidl::ExperimentalFlags& experimental_flags) {
   fidl::Lexer lexer(source_file, reporter);
   fidl::Parser parser(&lexer, reporter, experimental_flags);
   return parser.Parse();
@@ -501,7 +499,8 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
         // same file, can then be used to create the visitor that performs the
         // syntax conversion.
         auto ast = ParseIntoRaw(*sf, reporter, experimental_flags);
-        fidl::conv::ConvertingTreeVisitor visitor = fidl::conv::ConvertingTreeVisitor(fidl::conv::Conversion::Syntax::kNew, final_library);
+        fidl::conv::ConvertingTreeVisitor visitor =
+            fidl::conv::ConvertingTreeVisitor(fidl::utils::Syntax::kNew, final_library);
         visitor.OnFile(ast);
         std::ostringstream o;
         o << *visitor.converted_output();

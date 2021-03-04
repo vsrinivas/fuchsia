@@ -9,7 +9,7 @@
 
 namespace {
 std::string Convert(const std::string& in, const std::vector<std::string>& deps,
-                    fidl::ExperimentalFlags flags, fidl::conv::Conversion::Syntax syntax) {
+                    fidl::ExperimentalFlags flags, fidl::utils::Syntax syntax) {
   // Convert the test file, along with its deps, into a flat AST.
   SharedAmongstLibraries shared;
   TestLibrary flat_lib("example.fidl", in, &shared, flags);
@@ -67,33 +67,33 @@ resource_definition handle : uint32 {
 std::string ToOldSyntax(const std::string& in) {
   fidl::ExperimentalFlags flags;
   std::vector<std::string> deps;
-  return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kOld);
+  return Convert(in, deps, flags, fidl::utils::Syntax::kOld);
 }
 
 std::string ToOldSyntax(const std::string& in, fidl::ExperimentalFlags flags) {
   std::vector<std::string> deps;
-  return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kOld);
+  return Convert(in, deps, flags, fidl::utils::Syntax::kOld);
 }
 
 std::string ToOldSyntax(const std::string& in, const std::vector<std::string>& deps,
                         fidl::ExperimentalFlags flags) {
-  return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kOld);
+  return Convert(in, deps, flags, fidl::utils::Syntax::kOld);
 }
 
 std::string ToNewSyntax(const std::string& in) {
   fidl::ExperimentalFlags flags;
   std::vector<std::string> deps;
-  return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kNew);
+  return Convert(in, deps, flags, fidl::utils::Syntax::kNew);
 }
 
 std::string ToNewSyntax(const std::string& in, fidl::ExperimentalFlags flags) {
   std::vector<std::string> deps;
-  return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kNew);
+  return Convert(in, deps, flags, fidl::utils::Syntax::kNew);
 }
 
 std::string ToNewSyntax(const std::string& in, const std::vector<std::string>& deps,
                         fidl::ExperimentalFlags flags) {
-  return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kNew);
+  return Convert(in, deps, flags, fidl::utils::Syntax::kNew);
 }
 
 TEST(ConverterTests, AliasOfArray) {

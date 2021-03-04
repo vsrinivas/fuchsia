@@ -23,7 +23,7 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   friend Converting;
 
  public:
-  explicit ConvertingTreeVisitor(Conversion::Syntax syntax, const flat::Library* library)
+  explicit ConvertingTreeVisitor(fidl::utils::Syntax syntax, const flat::Library* library)
       : to_syntax_(syntax), last_conversion_end_(nullptr), last_comment_(0), library_(library) {}
 
   // The following block of visitors are purposeful noops. Their nodes are
@@ -47,8 +47,8 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // TODO(azaslavsky): I'll eventually remove the commented out block below.  At
   //   the moment it serves as a useful list of TreeVisitor methods that are
   //   intended to be left unmodified by the ConvertingTreeVisitor.
-  // void OnBinaryOperatorConstant(std::unique_ptr<BinaryOperatorConstant> const& element) override {}
-  // void OnCompoundIdentifier(std::unique_ptr<CompoundIdentifier> const& element) override {}
+  // void OnBinaryOperatorConstant(std::unique_ptr<BinaryOperatorConstant> const& element) override
+  // {} void OnCompoundIdentifier(std::unique_ptr<CompoundIdentifier> const& element) override {}
   // void OnConstant(std::unique_ptr<Constant> const& element) override {}
   // void OnIdentifier(std::unique_ptr<Identifier> const& element) override;
   // void OnIdentifierConstant(std::unique_ptr<IdentifierConstant> const& element) override {}
@@ -105,8 +105,8 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // Tracks which syntax we will be converting to.  Setting this value to
   // kExisting is useful to validate that ConvertingTreeVisitor is working
   // properly: any compile-able FIDL file should be returned from this converter
-  // with no changes if kExisting is used.
-  const Conversion::Syntax to_syntax_;
+  // with no changes if kOld is used.
+  const fidl::utils::Syntax to_syntax_;
 
   // A stack of currently active conversions.  Each conversion in the stack
   // operates on a set of characters that are strictly contained within those of

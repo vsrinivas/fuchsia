@@ -14,6 +14,7 @@
 #include "source_span.h"
 #include "token.h"
 #include "types.h"
+#include "utils.h"
 
 // ASTs fresh out of the oven. This is a tree-shaped bunch of nodes
 // pretty much exactly corresponding to the grammar of a single fidl
@@ -811,7 +812,7 @@ class File final : public SourceElement {
        std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list,
        std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list,
        std::vector<std::unique_ptr<TypeDecl>> type_decls,
-       std::vector<std::unique_ptr<Token>> comment_tokens_list)
+       std::vector<std::unique_ptr<Token>> comment_tokens_list, fidl::utils::Syntax syntax)
       : SourceElement(element),
         attributes(std::move(attributes)),
         library_name(std::move(library_name)),
@@ -828,7 +829,8 @@ class File final : public SourceElement {
         union_declaration_list(std::move(union_declaration_list)),
         type_decls(std::move(type_decls)),
         comment_tokens_list(std::move(comment_tokens_list)),
-        end_(end) {}
+        end_(end),
+        syntax(syntax) {}
 
   void Accept(TreeVisitor* visitor) const;
 
@@ -852,6 +854,7 @@ class File final : public SourceElement {
   //   tool has been removed, this member should be removed as well.
   std::vector<std::unique_ptr<Token>> comment_tokens_list;
   Token end_;
+  fidl::utils::Syntax syntax;
 };
 
 }  // namespace raw

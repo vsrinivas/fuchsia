@@ -1423,7 +1423,9 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   return true;
 }
 
-ConsumeStep Library::StartConsumeStep() { return ConsumeStep(this); }
+ConsumeStep Library::StartConsumeStep(fidl::utils::Syntax syntax) {
+  return ConsumeStep(this, syntax);
+}
 CompileStep Library::StartCompileStep() { return CompileStep(this); }
 VerifyResourcenessStep Library::StartVerifyResourcenessStep() {
   return VerifyResourcenessStep(this);
@@ -1472,7 +1474,7 @@ bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
 }
 
 bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
-                                     SourceSpan span,
+                                     SourceSpan span, fidl::utils::Syntax syntax,
                                      std::unique_ptr<TypeConstructor>* out_type_ctor) {
   auto name = CompileCompoundIdentifier(raw_type_ctor->identifier.get());
   if (!name)
@@ -1480,7 +1482,7 @@ bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_t
 
   std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
   if (raw_type_ctor->maybe_arg_type_ctor != nullptr) {
-    if (!ConsumeTypeConstructor(std::move(raw_type_ctor->maybe_arg_type_ctor), span,
+    if (!ConsumeTypeConstructor(std::move(raw_type_ctor->maybe_arg_type_ctor), span, syntax,
                                 &maybe_arg_type_ctor))
       return false;
   }
@@ -1505,13 +1507,14 @@ bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_t
 
   *out_type_ctor = std::make_unique<TypeConstructor>(
       std::move(name.value()), std::move(maybe_arg_type_ctor), std::move(handle_subtype_identifier),
-      std::move(handle_rights), std::move(maybe_size), raw_type_ctor->nullability);
+      std::move(handle_rights), std::move(maybe_size), raw_type_ctor->nullability, syntax);
   return true;
 }
 
-void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
+void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive,
+                           fidl::utils::Syntax syntax) {
   if (using_directive->maybe_type_ctor) {
-    ConsumeTypeAlias(std::move(using_directive));
+    ConsumeTypeAlias(std::move(using_directive), syntax);
     return;
   }
 
@@ -1544,27 +1547,30 @@ void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
   declarations_.insert(declarations.begin(), declarations.end());
 }
 
-bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration) {
+bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration,
+                               fidl::utils::Syntax syntax) {
   assert(alias_declaration->alias && alias_declaration->type_ctor);
 
   auto alias_name = Name::CreateSourced(this, alias_declaration->alias->span());
   std::unique_ptr<TypeConstructor> type_ctor_;
   if (!ConsumeTypeConstructor(std::move(alias_declaration->type_ctor), alias_declaration->span(),
-                              &type_ctor_))
+                              syntax, &type_ctor_))
     return false;
   return RegisterDecl(std::make_unique<TypeAlias>(std::move(alias_declaration->attributes),
                                                   std::move(alias_name), std::move(type_ctor_),
                                                   false /* allow_partial_type_ctor */));
 }
 
-bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
+bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive,
+                               fidl::utils::Syntax syntax) {
   assert(using_directive->maybe_type_ctor);
+  assert(syntax == fidl::utils::Syntax::kOld && "new syntax shouldn't use using aliases");
 
   auto span = using_directive->using_path->components[0]->span();
   auto alias_name = Name::CreateSourced(this, span);
   std::unique_ptr<TypeConstructor> partial_type_ctor_;
   if (!ConsumeTypeConstructor(std::move(using_directive->maybe_type_ctor), span,
-                              &partial_type_ctor_))
+                              fidl::utils::Syntax::kOld, &partial_type_ctor_))
     return false;
   return RegisterDecl(std::make_unique<TypeAlias>(
       std::move(using_directive->attributes), std::move(alias_name), std::move(partial_type_ctor_),
@@ -1587,7 +1593,7 @@ void Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_
   std::unique_ptr<TypeConstructor> type_ctor;
   if (bits_declaration->maybe_type_ctor) {
     if (!ConsumeTypeConstructor(std::move(bits_declaration->maybe_type_ctor),
-                                bits_declaration->span(), &type_ctor))
+                                bits_declaration->span(), fidl::utils::Syntax::kOld, &type_ctor))
       return;
   } else {
     type_ctor = TypeConstructor::CreateSizeType();
@@ -1604,7 +1610,8 @@ void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
   auto span = const_declaration->identifier->span();
   auto name = Name::CreateSourced(this, span);
   std::unique_ptr<TypeConstructor> type_ctor;
-  if (!ConsumeTypeConstructor(std::move(const_declaration->type_ctor), span, &type_ctor))
+  if (!ConsumeTypeConstructor(std::move(const_declaration->type_ctor), span,
+                              fidl::utils::Syntax::kOld, &type_ctor))
     return;
 
   std::unique_ptr<Constant> constant;
@@ -1631,7 +1638,7 @@ void Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
   std::unique_ptr<TypeConstructor> type_ctor;
   if (enum_declaration->maybe_type_ctor) {
     if (!ConsumeTypeConstructor(std::move(enum_declaration->maybe_type_ctor),
-                                enum_declaration->span(), &type_ctor))
+                                enum_declaration->span(), fidl::utils::Syntax::kOld, &type_ctor))
       return;
   } else {
     type_ctor = TypeConstructor::CreateSizeType();
@@ -1645,11 +1652,12 @@ void Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
 
 bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_span,
                                  raw::ProtocolMethod* method, Struct* in_response,
-                                 Struct** out_response) {
+                                 fidl::utils::Syntax syntax, Struct** out_response) {
   // Compile the error type.
   auto error_span = method->maybe_error_ctor->span();
   std::unique_ptr<TypeConstructor> error_type_ctor;
-  if (!ConsumeTypeConstructor(std::move(method->maybe_error_ctor), error_span, &error_type_ctor))
+  if (!ConsumeTypeConstructor(std::move(method->maybe_error_ctor), error_span, syntax,
+                              &error_type_ctor))
     return false;
 
   // Make the Result union containing the response struct and the
@@ -1664,7 +1672,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
   raw::SourceElement sourceElement = raw::SourceElement(fidl::Token(), fidl::Token());
   Union::Member response_member{
       std::make_unique<raw::Ordinal64>(sourceElement, 1),  // success case explicitly has ordinal 1
-      IdentifierTypeForDecl(in_response, types::Nullability::kNonnullable),
+      IdentifierTypeForDecl(in_response, types::Nullability::kNonnullable, syntax),
       GeneratedSimpleName("response"), nullptr};
   Union::Member error_member{
       std::make_unique<raw::Ordinal64>(sourceElement, 2),  // error case explicitly has ordinal 2
@@ -1687,7 +1695,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
   // result union.
   std::vector<Struct::Member> response_members;
   response_members.push_back(
-      Struct::Member(IdentifierTypeForDecl(result_decl, types::Nullability::kNonnullable),
+      Struct::Member(IdentifierTypeForDecl(result_decl, types::Nullability::kNonnullable, syntax),
                      GeneratedSimpleName("result"), nullptr, nullptr));
 
   auto struct_decl = std::make_unique<Struct>(
@@ -1702,7 +1710,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
 }
 
 void Library::ConsumeProtocolDeclaration(
-    std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
+    std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration, fidl::utils::Syntax syntax) {
   auto attributes = std::move(protocol_declaration->attributes);
   auto name = Name::CreateSourced(this, protocol_declaration->identifier->span());
 
@@ -1736,7 +1744,7 @@ void Library::ConsumeProtocolDeclaration(
       auto request_span = method->maybe_request->span();
       auto request_name = Name::CreateDerived(this, request_span, NextAnonymousName());
       if (!ConsumeParameterList(std::move(request_name), std::move(method->maybe_request), true,
-                                &maybe_request))
+                                syntax, &maybe_request))
         return;
     }
 
@@ -1750,11 +1758,12 @@ void Library::ConsumeProtocolDeclaration(
           has_error ? StringJoin({name.decl_name(), method_name.data(), "Response"}, "_")
                     : NextAnonymousName());
       if (!ConsumeParameterList(std::move(response_name), std::move(method->maybe_response),
-                                !has_error, &maybe_response))
+                                !has_error, syntax, &maybe_response))
         return;
 
       if (has_error) {
-        if (!CreateMethodResult(name, response_span, method.get(), maybe_response, &maybe_response))
+        if (!CreateMethodResult(name, response_span, method.get(), maybe_response, syntax,
+                                &maybe_response))
           return;
       }
     }
@@ -1770,12 +1779,12 @@ void Library::ConsumeProtocolDeclaration(
 }
 
 bool Library::ConsumeResourceDeclaration(
-    std::unique_ptr<raw::ResourceDeclaration> resource_declaration) {
+    std::unique_ptr<raw::ResourceDeclaration> resource_declaration, fidl::utils::Syntax syntax) {
   std::vector<Resource::Property> properties;
   for (auto& property : resource_declaration->properties) {
     std::unique_ptr<TypeConstructor> type_ctor;
     auto span = property->identifier->span();
-    if (!ConsumeTypeConstructor(std::move(property->type_ctor), span, &type_ctor))
+    if (!ConsumeTypeConstructor(std::move(property->type_ctor), span, syntax, &type_ctor))
       return false;
     auto attributes = std::move(property->attributes);
     properties.emplace_back(std::move(type_ctor), property->identifier->span(),
@@ -1785,7 +1794,7 @@ bool Library::ConsumeResourceDeclaration(
   std::unique_ptr<TypeConstructor> type_ctor;
   if (resource_declaration->maybe_type_ctor) {
     if (!ConsumeTypeConstructor(std::move(resource_declaration->maybe_type_ctor),
-                                resource_declaration->span(), &type_ctor))
+                                resource_declaration->span(), syntax, &type_ctor))
       return false;
   } else {
     type_ctor = TypeConstructor::CreateSizeType();
@@ -1798,20 +1807,22 @@ bool Library::ConsumeResourceDeclaration(
 }
 
 std::unique_ptr<TypeConstructor> Library::IdentifierTypeForDecl(const Decl* decl,
-                                                                types::Nullability nullability) {
+                                                                types::Nullability nullability,
+                                                                fidl::utils::Syntax syntax) {
   return std::make_unique<TypeConstructor>(decl->name, nullptr /* maybe_arg_type */,
                                            std::optional<Name>() /* handle_subtype_identifier */,
                                            nullptr /* handle_rights */, nullptr /* maybe_size */,
-                                           nullability);
+                                           nullability, syntax);
 }
 
 bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
-                                   bool is_request_or_response, Struct** out_struct_decl) {
+                                   bool is_request_or_response, fidl::utils::Syntax syntax,
+                                   Struct** out_struct_decl) {
   std::vector<Struct::Member> members;
   for (auto& parameter : parameter_list->parameter_list) {
     const SourceSpan name = parameter->identifier->span();
     std::unique_ptr<TypeConstructor> type_ctor;
-    if (!ConsumeTypeConstructor(std::move(parameter->type_ctor), name, &type_ctor))
+    if (!ConsumeTypeConstructor(std::move(parameter->type_ctor), name, syntax, &type_ctor))
       return false;
     ValidateAttributesPlacement(AttributeSchema::Placement::kStructMember,
                                 parameter->attributes.get());
@@ -1827,7 +1838,8 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
   return true;
 }
 
-void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
+void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl,
+                                        fidl::utils::Syntax syntax) {
   auto attributes = std::move(service_decl->attributes);
   auto name = Name::CreateSourced(this, service_decl->identifier->span());
 
@@ -1835,7 +1847,7 @@ void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
   for (auto& member : service_decl->members) {
     std::unique_ptr<TypeConstructor> type_ctor;
     auto span = member->identifier->span();
-    if (!ConsumeTypeConstructor(std::move(member->type_ctor), span, &type_ctor))
+    if (!ConsumeTypeConstructor(std::move(member->type_ctor), span, syntax, &type_ctor))
       return;
     members.emplace_back(std::move(type_ctor), member->identifier->span(),
                          std::move(member->attributes));
@@ -1853,7 +1865,8 @@ void Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
   for (auto& member : struct_declaration->members) {
     std::unique_ptr<TypeConstructor> type_ctor;
     auto span = member->identifier->span();
-    if (!ConsumeTypeConstructor(std::move(member->type_ctor), span, &type_ctor))
+    if (!ConsumeTypeConstructor(std::move(member->type_ctor), span, fidl::utils::Syntax::kOld,
+                                &type_ctor))
       return;
     std::unique_ptr<Constant> maybe_default_value;
     if (member->maybe_default_value != nullptr) {
@@ -1880,7 +1893,7 @@ void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
     if (member->maybe_used) {
       std::unique_ptr<TypeConstructor> type_ctor;
       if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), member->span(),
-                                  &type_ctor))
+                                  fidl::utils::Syntax::kOld, &type_ctor))
         return;
       std::unique_ptr<Constant> maybe_default_value;
       if (member->maybe_used->maybe_default_value) {
@@ -1919,7 +1932,8 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
     if (member->maybe_used) {
       auto span = member->maybe_used->identifier->span();
       std::unique_ptr<TypeConstructor> type_ctor;
-      if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), span, &type_ctor))
+      if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), span,
+                                  fidl::utils::Syntax::kOld, &type_ctor))
         return;
       if (member->maybe_used->maybe_default_value) {
         const auto default_value = member->maybe_used->maybe_default_value.get();
@@ -1968,7 +1982,7 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
               /*maybe_arg_type_ctor=*/nullptr,
               /*handle_subtype_identifier=*/std::nullopt,
               /*handle_rights=*/nullptr,
-              /*maybe_size=*/nullptr, types::Nullability::kNonnullable);
+              /*maybe_size=*/nullptr, types::Nullability::kNonnullable, fidl::utils::Syntax::kNew);
           type_ctors.emplace_back(std::move(type_ctor));
           break;
         }
@@ -1977,7 +1991,8 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
           // TODO(fxbug.dev/65978): Double check the below, which was copied
           // from other methods. Why not `member->type_ctor->span();`?
           auto span = member->identifier->span();
-          if (!ConsumeTypeConstructor(std::move(member->layout->type_ctor), span, &type_ctor))
+          if (!ConsumeTypeConstructor(std::move(member->layout->type_ctor), span,
+                                      fidl::utils::Syntax::kNew, &type_ctor))
             return;
           type_ctors.emplace_back(std::move(type_ctor));
           break;
@@ -2058,7 +2073,10 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     library_name_ = new_name;
   }
 
-  auto step = StartConsumeStep();
+  auto step = StartConsumeStep(file->syntax);
+
+  // TODO(fxbug.dev/70247): remove this comment and the ones below
+  // nodes that appear in old syntax only
 
   auto using_list = std::move(file->using_list);
   for (auto& using_directive : using_list) {
@@ -2114,6 +2132,8 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   for (auto& union_declaration : union_declaration_list) {
     step.ForUnionDeclaration(std::move(union_declaration));
   }
+
+  // nodes that appear in new syntax only
 
   auto type_decls = std::move(file->type_decls);
   for (auto& type_decl : type_decls) {
@@ -4017,7 +4037,7 @@ std::unique_ptr<TypeConstructor> TypeConstructor::CreateSizeType() {
   return std::make_unique<TypeConstructor>(
       Name::CreateIntrinsic("uint32"), nullptr /* maybe_arg_type */,
       std::optional<Name>() /* handle_subtype_identifier */, nullptr /* handle_rights */,
-      nullptr /* maybe_size */, types::Nullability::kNonnullable);
+      nullptr /* maybe_size */, types::Nullability::kNonnullable, fidl::utils::Syntax::kOld);
 }
 
 }  // namespace flat

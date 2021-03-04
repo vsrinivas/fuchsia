@@ -9,9 +9,9 @@
 
 namespace fidl::conv {
 
-std::string TypeConversion::Write(Syntax syntax) {
+std::string TypeConversion::Write(fidl::utils::Syntax syntax) {
   std::string original = type_ctor_->copy_to_str();
-  if (syntax == Syntax::kOld) {
+  if (syntax == fidl::utils::Syntax::kOld) {
     return prefix() + original;
   }
 
@@ -106,18 +106,18 @@ std::string TypeConversion::Write(Syntax syntax) {
   return out;
 };
 
-std::string NameAndTypeConversion::Write(Syntax syntax) {
+std::string NameAndTypeConversion::Write(fidl::utils::Syntax syntax) {
   std::string ctor = !type_text_.empty() ? type_text_ : type_ctor_->copy_to_str();
-  if (syntax == Syntax::kOld) {
+  if (syntax == fidl::utils::Syntax::kOld) {
     return prefix() + ctor + " " + identifier_->copy_to_str();
   }
 
   return prefix() + identifier_->copy_to_str() + " " + ctor;
 };
 
-std::string MemberedDeclarationConversion::Write(Syntax syntax) {
+std::string MemberedDeclarationConversion::Write(fidl::utils::Syntax syntax) {
   std::string out;
-  if (syntax == Syntax::kOld) {
+  if (syntax == fidl::utils::Syntax::kOld) {
     out += prefix() + get_decl_str() + " " + identifier_->copy_to_str();
   } else {
     out += prefix() + "type " + identifier_->copy_to_str() + " = " + get_decl_str();
@@ -128,14 +128,14 @@ std::string MemberedDeclarationConversion::Write(Syntax syntax) {
   return out;
 };
 
-std::string BitsDeclarationConversion::Write(Syntax syntax) {
+std::string BitsDeclarationConversion::Write(fidl::utils::Syntax syntax) {
   std::string out;
   Token name_token = identifier_->start_;
   const char* start_pos = name_token.span().data().data();
   const char* end_pos = name_token.span().data().data() + name_token.span().data().length();
   std::string name = std::string(start_pos, end_pos);
 
-  if (syntax == Syntax::kOld) {
+  if (syntax == fidl::utils::Syntax::kOld) {
     out += prefix() + get_decl_str() + " " + name + get_wrapped_type();
   } else {
     out += prefix() + "type " + name + " = " + get_decl_str() + get_wrapped_type();

@@ -14,6 +14,7 @@
 
 #include "raw_ast.h"
 #include "underlying_type.h"
+#include "utils.h"
 
 namespace fidl::conv {
 
@@ -33,14 +34,6 @@ class Conversion {
  public:
   Conversion() = default;
   virtual ~Conversion() = default;
-
-  // An enumeration of supported syntaxes.  There are currently two available:
-  // kNew is the "new" syntax, while kOld is the "valid" FIDL syntax as of
-  // Jan 1, 2021.
-  enum struct Syntax {
-    kOld,
-    kNew,
-  };
 
   // Some conversions start with a span of text that can be copied character for
   // character.  For example, consider the following const declaration, written
@@ -77,7 +70,7 @@ class Conversion {
   // Write produces a string of converted text, and contains the logic for
   // taking the SourceElement of the node being converted, along with any child
   // text that has been attached, and creating the converted output.
-  virtual std::string Write(Syntax syntax) = 0;
+  virtual std::string Write(fidl::utils::Syntax syntax) = 0;
 
  protected:
   std::string prefix() {
@@ -108,7 +101,7 @@ class TypeConversion : public Conversion {
 
   void AddChildText(std::string child) override { wrapped_type_text_ = child; }
 
-  std::string Write(Syntax syntax) override;
+  std::string Write(fidl::utils::Syntax syntax) override;
 };
 
 // Handles the application of the "types come second" rule specified by FTP-050.
@@ -127,7 +120,7 @@ class NameAndTypeConversion : public Conversion {
 
   void AddChildText(std::string child) override { type_text_ = child; }
 
-  std::string Write(Syntax syntax) override;
+  std::string Write(fidl::utils::Syntax syntax) override;
 };
 
 // An abstract class for the conversion of "membered" types, ie types that may
@@ -152,7 +145,7 @@ class MemberedDeclarationConversion : public Conversion {
 
   void AddChildText(std::string child) override { members_.push_back(child); }
 
-  std::string Write(Syntax syntax) override;
+  std::string Write(fidl::utils::Syntax syntax) override;
 
  protected:
   virtual std::string get_fidl_type() = 0;
@@ -242,7 +235,7 @@ class BitsDeclarationConversion : public MemberedDeclarationConversion {
 
   void AddChildText(std::string child) override {}
 
-  std::string Write(Syntax syntax) override;
+  std::string Write(fidl::utils::Syntax syntax) override;
 
  private:
   std::string get_fidl_type() override { return "bits"; }
