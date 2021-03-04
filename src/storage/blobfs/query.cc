@@ -14,7 +14,8 @@
 using fuchsia_fs::wire::FilesystemInfoQuery;
 
 namespace blobfs {
-constexpr const char kFsName[] = "blobfs";
+
+constexpr char kFsName[] = "blobfs";
 
 QueryService::QueryService(async_dispatcher_t* dispatcher, Blobfs* blobfs, Runner* runner)
     : fs::Service([dispatcher, this](fidl::ServerEnd<fuchsia_fs::Query> server_end) {
@@ -24,8 +25,7 @@ QueryService::QueryService(async_dispatcher_t* dispatcher, Blobfs* blobfs, Runne
       runner_(runner) {}
 
 void QueryService::GetInfo(FilesystemInfoQuery query, GetInfoCompleter::Sync& completer) {
-  static_assert(fbl::constexpr_strlen(kFsName) < fuchsia_fs::wire::MAX_FS_NAME_LENGTH,
-                "Blobfs name too long");
+  static_assert(sizeof(kFsName) < fuchsia_fs::wire::MAX_FS_NAME_LENGTH, "Blobfs name too long");
 
   fuchsia_fs::wire::FilesystemInfo::UnownedBuilder builder;
 

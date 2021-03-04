@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include <fbl/array.h>
@@ -31,7 +32,7 @@ using RamdiskClient = ramdisk_client_t;
 
 constexpr uint64_t kPathMax = PATH_MAX;
 
-constexpr char kFvmDriverLib[] = "/boot/driver/fvm.so";
+constexpr const char kFvmDriverLib[] = "/boot/driver/fvm.so";
 
 // Convenient wrapper over uint8_t array.
 class Guid {

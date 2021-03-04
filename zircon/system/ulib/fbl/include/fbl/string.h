@@ -52,12 +52,12 @@ class __OWNER(char) String {
   // Creates a string from the contents of a null-terminated C string.
   // Allocates heap memory only if |data| is non-empty.
   // |data| must not be null.
-  String(const char* data) { Init(data, constexpr_strlen(data)); }
+  String(const char* data) { Init(data, std::string_view(data).size()); }
 
   // Creates a string from the contents of a null-terminated C string.
   // Allocates heap memory only if |data| is non-empty.
   // |data| and |ac| must not be null.
-  String(const char* data, AllocChecker* ac) { Init(data, constexpr_strlen(data), ac); }
+  String(const char* data, AllocChecker* ac) { Init(data, std::string_view(data).size(), ac); }
 
   // Creates a string from the contents of a character array of given length.
   // Allocates heap memory only if |length| is non-zero.
@@ -171,12 +171,12 @@ class __OWNER(char) String {
   // Assigns this string from the contents of a null-terminated C string.
   // Allocates heap memory only if |data| is non-empty.
   // |data| must not be null.
-  void Set(const char* data) { Set(data, constexpr_strlen(data)); }
+  void Set(const char* data) { Set(data, std::string_view(data).size()); }
 
   // Assigns this string from the contents of a null-terminated C string.
   // Allocates heap memory only if |data| is non-empty.
   // |data| and |ac| must not be null.
-  void Set(const char* data, AllocChecker* ac) { Set(data, constexpr_strlen(data), ac); }
+  void Set(const char* data, AllocChecker* ac) { Set(data, std::string_view(data).size(), ac); }
 
   // Assigns this string from the contents of a character array of given length.
   // Allocates heap memory only if |length| is non-zero.

@@ -323,7 +323,6 @@ test("persist_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
   ]
 }
 

@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/array.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+
+#include <string_view>
 #include <utility>
+
+#include <fbl/array.h>
 #include <zxtest/zxtest.h>
 
 namespace {
 
-constexpr char kMsg1[] = "12345";
-constexpr uint32_t kMsg1Len = fbl::constexpr_strlen(kMsg1);
-constexpr char kMsg2[] = "abcde";
-constexpr uint32_t kMsg2Len = fbl::constexpr_strlen(kMsg2);
-constexpr char kMsg3[] = "fghij";
-constexpr uint32_t kMsg3Len = fbl::constexpr_strlen(kMsg3);
+constexpr std::string_view kMsg1 = "12345";
+constexpr std::string_view kMsg2 = "abcde";
+constexpr std::string_view kMsg3 = "fghij";
 
 zx_signals_t GetSignals(const zx::socket& socket) {
   zx_signals_t pending = 0;
@@ -340,7 +340,7 @@ TEST(SocketTest, ShutdownWrite) {
   EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
   EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
 
-  EXPECT_OK(remote.write(0u, kMsg1, kMsg1Len, &count));
+  EXPECT_OK(remote.write(0u, kMsg1.data(), kMsg1.size(), &count));
   EXPECT_EQ(count, 5);
 
   EXPECT_OK(remote.shutdown(ZX_SOCKET_SHUTDOWN_WRITE));
@@ -349,18 +349,18 @@ TEST(SocketTest, ShutdownWrite) {
             ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED);
   EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITE_DISABLED);
 
-  EXPECT_OK(local.write(0u, kMsg2, kMsg2Len, &count));
+  EXPECT_OK(local.write(0u, kMsg2.data(), kMsg2.size(), &count));
   EXPECT_EQ(count, 5);
 
   EXPECT_EQ(GetSignals(remote), ZX_SOCKET_READABLE | ZX_SOCKET_WRITE_DISABLED);
 
-  EXPECT_EQ(remote.write(0u, kMsg3, kMsg3Len, &count), ZX_ERR_BAD_STATE);
+  EXPECT_EQ(remote.write(0u, kMsg3.data(), kMsg3.size(), &count), ZX_ERR_BAD_STATE);
 
   char rbuf[10] = {0};
 
   EXPECT_OK(local.read(0u, rbuf, sizeof(rbuf), &count));
   EXPECT_EQ(count, 5);
-  EXPECT_BYTES_EQ(rbuf, kMsg1, kMsg1Len);
+  EXPECT_BYTES_EQ(rbuf, kMsg1.data(), kMsg1.size());
 
   EXPECT_EQ(local.read(0u, rbuf, 1u, &count), ZX_ERR_BAD_STATE);
 
@@ -368,7 +368,7 @@ TEST(SocketTest, ShutdownWrite) {
 
   EXPECT_OK(remote.read(0u, rbuf, sizeof(rbuf), &count));
   EXPECT_EQ(count, 5);
-  EXPECT_BYTES_EQ(rbuf, kMsg2, kMsg2Len);
+  EXPECT_BYTES_EQ(rbuf, kMsg2.data(), kMsg2.size());
 
   local.reset();
 
@@ -389,7 +389,7 @@ TEST(SocketTest, ShutdownRead) {
   EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
   EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
 
-  EXPECT_OK(remote.write(0u, kMsg1, kMsg1Len, &count));
+  EXPECT_OK(remote.write(0u, kMsg1.data(), kMsg1.size(), &count));
   EXPECT_EQ(count, 5);
 
   EXPECT_OK(local.shutdown(ZX_SOCKET_SHUTDOWN_READ));
@@ -398,25 +398,25 @@ TEST(SocketTest, ShutdownRead) {
             ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED);
   EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITE_DISABLED);
 
-  EXPECT_OK(local.write(0u, kMsg2, kMsg2Len, &count));
+  EXPECT_OK(local.write(0u, kMsg2.data(), kMsg2.size(), &count));
   EXPECT_EQ(count, 5);
 
   EXPECT_EQ(GetSignals(remote), ZX_SOCKET_READABLE | ZX_SOCKET_WRITE_DISABLED);
 
-  EXPECT_EQ(remote.write(0u, kMsg3, kMsg3Len, &count), ZX_ERR_BAD_STATE);
+  EXPECT_EQ(remote.write(0u, kMsg3.data(), kMsg3.size(), &count), ZX_ERR_BAD_STATE);
 
   char rbuf[10] = {0};
 
   EXPECT_OK(local.read(0u, rbuf, sizeof(rbuf), &count));
   EXPECT_EQ(count, 5);
-  EXPECT_BYTES_EQ(rbuf, kMsg1, kMsg1Len);
+  EXPECT_BYTES_EQ(rbuf, kMsg1.data(), kMsg1.size());
 
   EXPECT_EQ(local.read(0u, rbuf, 1u, &count), ZX_ERR_BAD_STATE);
   EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_WRITE_DISABLED);
 
   EXPECT_OK(remote.read(0u, rbuf, sizeof(rbuf), &count));
   EXPECT_EQ(count, 5);
-  EXPECT_BYTES_EQ(rbuf, kMsg2, kMsg2Len);
+  EXPECT_BYTES_EQ(rbuf, kMsg2.data(), kMsg2.size());
 }
 
 TEST(SocketTest, BytesOutstanding) {
@@ -460,7 +460,7 @@ TEST(SocketTest, ShutdownWriteBytesOutstanding) {
   ASSERT_OK(zx::socket::create(0, &local, &remote));
 
   EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
-  EXPECT_OK(remote.write(0u, kMsg1, kMsg1Len, &count));
+  EXPECT_OK(remote.write(0u, kMsg1.data(), kMsg1.size(), &count));
   EXPECT_EQ(count, 5);
 
   EXPECT_OK(remote.shutdown(ZX_SOCKET_SHUTDOWN_WRITE));
@@ -469,12 +469,12 @@ TEST(SocketTest, ShutdownWriteBytesOutstanding) {
             ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED);
   EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITE_DISABLED);
 
-  EXPECT_OK(local.write(0u, kMsg2, kMsg2Len, &count));
+  EXPECT_OK(local.write(0u, kMsg2.data(), kMsg2.size(), &count));
   EXPECT_EQ(count, 5);
 
   EXPECT_EQ(GetSignals(remote), ZX_SOCKET_READABLE | ZX_SOCKET_WRITE_DISABLED);
 
-  EXPECT_EQ(remote.write(0u, kMsg3, kMsg3Len, &count), ZX_ERR_BAD_STATE);
+  EXPECT_EQ(remote.write(0u, kMsg3.data(), kMsg3.size(), &count), ZX_ERR_BAD_STATE);
 
   char rbuf[10] = {0};
 
@@ -486,7 +486,7 @@ TEST(SocketTest, ShutdownWriteBytesOutstanding) {
 
   EXPECT_OK(local.read(0u, rbuf, sizeof(rbuf), &count));
   EXPECT_EQ(count, 5);
-  EXPECT_BYTES_EQ(rbuf, kMsg1, kMsg1Len);
+  EXPECT_BYTES_EQ(rbuf, kMsg1.data(), kMsg1.size());
 
   EXPECT_EQ(local.read(0u, rbuf, 1u, &count), ZX_ERR_BAD_STATE);
 
@@ -494,7 +494,7 @@ TEST(SocketTest, ShutdownWriteBytesOutstanding) {
 
   EXPECT_OK(remote.read(0u, rbuf, sizeof(rbuf), &count));
   EXPECT_EQ(count, 5);
-  EXPECT_BYTES_EQ(rbuf, kMsg2, kMsg2Len);
+  EXPECT_BYTES_EQ(rbuf, kMsg2.data(), kMsg2.size());
 }
 
 TEST(SocketTest, ShutdownReadBytesOutstanding) {
@@ -505,7 +505,7 @@ TEST(SocketTest, ShutdownReadBytesOutstanding) {
   EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
   EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
 
-  EXPECT_OK(remote.write(0u, kMsg1, kMsg1Len, &count));
+  EXPECT_OK(remote.write(0u, kMsg1.data(), kMsg1.size(), &count));
   EXPECT_EQ(count, 5);
 
   EXPECT_OK(local.shutdown(ZX_SOCKET_SHUTDOWN_READ));
@@ -514,12 +514,12 @@ TEST(SocketTest, ShutdownReadBytesOutstanding) {
             ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED);
   EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITE_DISABLED);
 
-  EXPECT_OK(local.write(0u, kMsg2, kMsg2Len, &count));
+  EXPECT_OK(local.write(0u, kMsg2.data(), kMsg2.size(), &count));
   EXPECT_EQ(count, 5);
 
   EXPECT_EQ(GetSignals(remote), ZX_SOCKET_READABLE | ZX_SOCKET_WRITE_DISABLED);
 
-  EXPECT_EQ(remote.write(0u, kMsg3, kMsg3Len, &count), ZX_ERR_BAD_STATE);
+  EXPECT_EQ(remote.write(0u, kMsg3.data(), kMsg3.size(), &count), ZX_ERR_BAD_STATE);
 
   char rbuf[10] = {0};
 
@@ -531,7 +531,7 @@ TEST(SocketTest, ShutdownReadBytesOutstanding) {
 
   EXPECT_OK(local.read(0u, rbuf, sizeof(rbuf), &count));
   EXPECT_EQ(count, 5);
-  EXPECT_BYTES_EQ(rbuf, kMsg1, kMsg1Len);
+  EXPECT_BYTES_EQ(rbuf, kMsg1.data(), kMsg1.size());
 
   EXPECT_EQ(local.read(0u, rbuf, 1u, &count), ZX_ERR_BAD_STATE);
 
@@ -539,7 +539,7 @@ TEST(SocketTest, ShutdownReadBytesOutstanding) {
 
   EXPECT_OK(remote.read(0u, rbuf, sizeof(rbuf), &count));
   EXPECT_EQ(count, 5);
-  EXPECT_BYTES_EQ(rbuf, kMsg2, kMsg2Len);
+  EXPECT_BYTES_EQ(rbuf, kMsg2.data(), kMsg2.size());
 }
 
 TEST(SocketTest, ShortWrite) {

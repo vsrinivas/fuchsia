@@ -5,13 +5,14 @@
 #ifndef FBL_STRING_BUFFER_H_
 #define FBL_STRING_BUFFER_H_
 
-#include "string.h"
 #include <stdarg.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
 
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
-#include <zircon/assert.h>
-#include <zircon/compiler.h>
+
+#include "string.h"
 
 namespace fbl {
 namespace internal {
@@ -94,7 +95,7 @@ class __OWNER(char) StringBuffer final {
   // The result is truncated if the appended content does not fit completely.
   // |data| must not be null.
   StringBuffer& Append(const char* data) {
-    Append(data, constexpr_strlen(data));
+    Append(data, std::string_view(data).size());
     return *this;
   }
 

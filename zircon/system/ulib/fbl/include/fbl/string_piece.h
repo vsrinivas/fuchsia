@@ -15,14 +15,6 @@
 
 namespace fbl {
 
-constexpr static size_t constexpr_strlen(const char* str) {
-#if defined(_MSC_VER)
-#error "__builtin_strlen not defined for MSVC++"
-#else
-  return __builtin_strlen(str);
-#endif
-}
-
 // A string-like object that points to a sized piece of memory.
 //
 // fbl::StringPiece is an extension of std::string_view. Beyond the standard API,

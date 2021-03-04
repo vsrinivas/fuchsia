@@ -13,12 +13,12 @@
 #include <zircon/device/vfs.h>
 
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/string_piece.h>
 
 #include "dnode.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
@@ -27,7 +27,7 @@
 namespace memfs {
 namespace {
 
-constexpr const char kFsName[] = "memfs";
+constexpr std::string_view kFsName = "memfs";
 
 }
 
@@ -46,11 +46,7 @@ zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx
 }
 
 zx_status_t VnodeDir::QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* info) {
-  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::fuchsia_io::wire::MAX_FS_NAME_BUFFER,
-                "Memfs name too long");
   *info = {};
-  strlcpy(reinterpret_cast<char*>(info->name.data()), kFsName,
-          ::fuchsia_io::wire::MAX_FS_NAME_BUFFER);
   info->block_size = kMemfsBlksize;
   info->max_filename_size = kDnodeNameMax;
   info->fs_type = VFS_TYPE_MEMFS;
@@ -69,6 +65,9 @@ zx_status_t VnodeDir::QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* info) 
   uint64_t ino_count = GetInoCounter();
   ZX_DEBUG_ASSERT(ino_count >= deleted_ino_count);
   info->used_nodes = ino_count - deleted_ino_count;
+  static_assert(kFsName.size() + 1 < ::fuchsia_io::wire::MAX_FS_NAME_BUFFER, "Memfs name too long");
+  info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
+                          ::fuchsia_io::wire::MAX_FS_NAME_BUFFER - 1)] = '\0';
   return ZX_OK;
 }
 

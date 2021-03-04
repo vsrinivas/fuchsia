@@ -28,12 +28,12 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <string_view>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string.h>
-#include <fbl/string_piece.h>  // for constexpr_strlen
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
@@ -378,11 +378,12 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   // Strip off the leading /dev/; because we use an isolated devmgr, we need
   // relative paths, but ControllerGetTopologicalPath returns an absolute path
   // with the assumption that devfs is rooted at /dev.
-  size_t header_len = fbl::constexpr_strlen("/dev/");
-  ASSERT_TRUE(out_len > header_len);
-  ASSERT_TRUE(strncmp(fvm_part_path_, "/dev/", header_len) == 0);
-  memmove(fvm_part_path_, fvm_part_path_ + header_len, out_len - header_len);
-  fvm_part_path_[out_len - header_len] = 0;
+  static constexpr std::string_view kHeader = "/dev/";
+  ASSERT_TRUE(out_len > kHeader.size());
+  ASSERT_TRUE(kHeader ==
+              std::string_view(fvm_part_path_, std::min(kHeader.size(), strlen(fvm_part_path_))));
+  memmove(fvm_part_path_, fvm_part_path_ + kHeader.size(), out_len - kHeader.size());
+  fvm_part_path_[out_len - kHeader.size()] = 0;
 }
 
 void TestDevice::Connect() {

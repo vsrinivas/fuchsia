@@ -26,6 +26,7 @@
 
 #include <limits>
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <block-client/cpp/pass-through-read-only-device.h>
@@ -750,11 +751,8 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   return ZX_OK;
 }
 
-constexpr const char kFsName[] = "blobfs";
+constexpr std::string_view kFsName = "blobfs";
 void Blobfs::GetFilesystemInfo(FilesystemInfo* info) const {
-  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::fuchsia_io::wire::MAX_FS_NAME_BUFFER,
-                "Blobfs name too long");
-
   *info = {};
   info->block_size = kBlobfsBlockSize;
   info->max_filename_size = digest::kSha256HexLength;
@@ -764,8 +762,11 @@ void Blobfs::GetFilesystemInfo(FilesystemInfo* info) const {
   info->used_bytes = Info().alloc_block_count * Info().block_size;
   info->total_nodes = Info().inode_count;
   info->used_nodes = Info().alloc_inode_count;
-  strlcpy(reinterpret_cast<char*>(info->name.data()), kFsName,
-          ::fuchsia_io::wire::MAX_FS_NAME_BUFFER);
+
+  static_assert(kFsName.size() + 1 < ::fuchsia_io::wire::MAX_FS_NAME_BUFFER,
+                "Blobfs name too long");
+  info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
+                          ::fuchsia_io::wire::MAX_FS_NAME_BUFFER - 1)] = '\0';
 }
 
 zx::status<BlockIterator> Blobfs::BlockIteratorByNodeIndex(uint32_t node_index) {

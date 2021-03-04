@@ -8,7 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include <fbl/string_piece.h>
+#include <string_view>
 
 namespace fuzzing {
 namespace {
@@ -93,13 +93,13 @@ int EngineImpl::Initialize(int *argc, char ***argv) {
   }
 
   // Extract the consumer labels.
-  static const char *kLabel = "--label=";
+  static constexpr std::string_view kLabel = "--label=";
   for (int i = 0; i < *argc; ++i) {
     std::string arg((*argv)[i]);
     if (arg == "-h" || arg == "--help") {
       Usage((*argv)[0]);
     } else if (arg.rfind(kLabel, 0) == 0) {
-      data_provider_.AddConsumerLabel(arg.substr(fbl::constexpr_strlen(kLabel)));
+      data_provider_.AddConsumerLabel(arg.substr(kLabel.size()));
     } else {
       argv_.push_back((*argv)[i]);
     }

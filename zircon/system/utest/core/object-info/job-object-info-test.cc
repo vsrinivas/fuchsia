@@ -10,6 +10,7 @@
 #include <zircon/syscalls/object.h>
 
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <fbl/vector.h>
@@ -23,8 +24,8 @@ namespace {
 // ZX_INFO_JOB_PROCESS/ZX_INFO_JOB_CHILDREN tests
 constexpr size_t kChildProcs = 3;
 constexpr size_t kChildJobs = 2;
-constexpr char kChildrenName[] = "child";
-constexpr char kGrandChildrenName[] = "grandchild";
+constexpr std::string_view kChildrenName = "child";
+constexpr std::string_view kGrandChildrenName = "grandchild";
 
 // Sets out_job to point towards the singleton instance of a job:
 // - returned job
@@ -45,8 +46,8 @@ class JobFixutre : public zxtest::Test {
     for (size_t i = 0; i < kChildProcs; ++i) {
       zx::process process;
       zx::vmar vmar;
-      ASSERT_OK(zx::process::create(root_, kChildrenName, fbl::constexpr_strlen(kChildrenName), 0,
-                                    &process, &vmar),
+      ASSERT_OK(zx::process::create(root_, kChildrenName.data(), kChildrenName.size(), 0, &process,
+                                    &vmar),
                 "Failed to create %zu child", i);
       child_processes_.push_back(std::move(process));
       vmar_.push_back(std::move(vmar));
@@ -59,8 +60,8 @@ class JobFixutre : public zxtest::Test {
       zx::process process;
       zx::vmar vmar;
 
-      ASSERT_OK(zx::process::create(job, kGrandChildrenName,
-                                    fbl::constexpr_strlen(kGrandChildrenName), 0, &process, &vmar),
+      ASSERT_OK(zx::process::create(job, kGrandChildrenName.data(), kGrandChildrenName.size(), 0,
+                                    &process, &vmar),
                 "Failed to create %zu process grandchild", i);
 
       zx::job subjob;

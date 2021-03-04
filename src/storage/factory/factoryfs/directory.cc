@@ -76,11 +76,9 @@ zx_status_t Directory::Close() { return ZX_OK; }
 
 #ifdef __Fuchsia__
 
-constexpr const char kFsName[] = "factoryfs";
+constexpr std::string_view kFsName = "factoryfs";
 
 zx_status_t Directory::QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* info) {
-  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::fuchsia_io::wire::MAX_FS_NAME_BUFFER,
-                "Factoryfs name too long");
   *info = {};
   info->block_size = kFactoryfsBlockSize;
   info->max_filename_size = kFactoryfsMaxNameSize;
@@ -90,8 +88,10 @@ zx_status_t Directory::QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* info)
   info->used_bytes = Info().data_blocks * kFactoryfsBlockSize;
   info->total_nodes = Info().directory_entries;
   info->used_nodes = Info().directory_entries;
-  strlcpy(reinterpret_cast<char*>(info->name.data()), kFsName,
-          ::fuchsia_io::wire::MAX_FS_NAME_BUFFER);
+  static_assert(kFsName.size() + 1 < ::fuchsia_io::wire::MAX_FS_NAME_BUFFER,
+                "Factoryfs name too long");
+  info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
+                          ::fuchsia_io::wire::MAX_FS_NAME_BUFFER - 1)] = '\0';
   return ZX_OK;
 }
 

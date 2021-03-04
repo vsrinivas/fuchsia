@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
+#include <string_view>
+#include <utility>
+
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
@@ -17,8 +20,6 @@
 #include <fs-test-utils/perftest.h>
 #include <perftest/perftest.h>
 #include <unittest/unittest.h>
-
-#include <utility>
 
 namespace fs_bench {
 namespace {
@@ -70,12 +71,10 @@ bool ReadBigFile(ssize_t data_size, perftest::RepeatState* state, Fixture* fixtu
   END_HELPER;
 }
 
-constexpr char kBaseComponent[] = "/aaa";
-
-constexpr size_t kComponentLength = fbl::constexpr_strlen(kBaseComponent);
+constexpr std::string_view kBaseComponent = "/aaa";
 
 struct PathComponentGen {
-  PathComponentGen() { memcpy(current, kBaseComponent, kComponentLength + 1); }
+  PathComponentGen() { current[kBaseComponent.copy(current, kBaseComponent.size())] = '\0'; }
 
   // Advances current to the next component, following alphabetical order.
   // E.g: /aaa -> /aab ..../aaz -> /aba
@@ -91,7 +90,7 @@ struct PathComponentGen {
     }
   }
   // Add extra byte for null termination.
-  char current[kComponentLength + 1];
+  char current[kBaseComponent.size() + 1];
 };
 
 bool PathWalkDown(const fbl::String& op_name, const fbl::Function<int(const char*)>& op,
@@ -115,7 +114,7 @@ bool PathWalkUp(const fbl::String& op_name, const fbl::Function<int(const char*)
   BEGIN_HELPER;
   while (state->KeepRunning() && *path != fixture->fs_path()) {
     ASSERT_EQ(op(path->c_str()), 0, path->c_str());
-    uint32_t new_size = static_cast<uint32_t>(path->length() - kComponentLength);
+    uint32_t new_size = static_cast<uint32_t>(path->length() - kBaseComponent.size());
     path->Resize(new_size);
   }
   END_HELPER;

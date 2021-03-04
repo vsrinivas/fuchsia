@@ -16,11 +16,11 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <vector>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
@@ -30,12 +30,10 @@ namespace {
 
 using PersistTest = FilesystemTest;
 
-constexpr bool IsDirectory(const char* const path) {
-  return path[fbl::constexpr_strlen(path) - 1] == '/';
-}
+constexpr bool IsDirectory(std::string_view path) { return path.back() == '/'; }
 
 TEST_P(PersistTest, Simple) {
-  const char* const relative_paths[] = {
+  const std::string_view relative_paths[] = {
       "abc", "def/", "def/def_subdir/", "def/def_subdir/def_subfile",
       "ghi", "jkl",  "mnopqrstuvxyz"};
   std::string paths[std::size(relative_paths)];

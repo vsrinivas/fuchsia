@@ -14,6 +14,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string_view>
 
 #include <fbl/algorithm.h>
 #include <fbl/string_piece.h>
@@ -665,11 +666,9 @@ void VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out) {
 
 #ifdef __Fuchsia__
 
-constexpr const char kFsName[] = "minfs";
+constexpr std::string_view kFsName = "minfs";
 
 zx_status_t VnodeMinfs::QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* info) {
-  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::fuchsia_io::wire::MAX_FS_NAME_BUFFER,
-                "Minfs name too long");
   uint32_t reserved_blocks = Vfs()->BlocksReserved();
   Transaction transaction(fs_);
   *info = {};
@@ -688,8 +687,9 @@ zx_status_t VnodeMinfs::QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* info
     info->free_shared_pool_bytes = fvm_info.slice_size * free_slices;
   }
 
-  strlcpy(reinterpret_cast<char*>(info->name.data()), kFsName,
-          ::fuchsia_io::wire::MAX_FS_NAME_BUFFER);
+  static_assert(kFsName.size() + 1 < ::fuchsia_io::wire::MAX_FS_NAME_BUFFER, "Minfs name too long");
+  info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
+                          ::fuchsia_io::wire::MAX_FS_NAME_BUFFER - 1)] = '\0';
   return ZX_OK;
 }
 

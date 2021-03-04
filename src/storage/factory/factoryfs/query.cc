@@ -15,7 +15,7 @@ namespace factoryfs {
 namespace fuchsia_fs = ::fuchsia_fs;
 using fuchsia_fs::wire::FilesystemInfoQuery;
 
-constexpr const char kFsName[] = "factoryfs";
+constexpr char kFsName[] = "factoryfs";
 
 QueryService::QueryService(async_dispatcher_t* dispatcher, Factoryfs* factoryfs, Runner* runner)
     : fs::Service([dispatcher, this](zx::channel server_end) {
@@ -25,8 +25,7 @@ QueryService::QueryService(async_dispatcher_t* dispatcher, Factoryfs* factoryfs,
       runner_(runner) {}
 
 void QueryService::GetInfo(FilesystemInfoQuery query, GetInfoCompleter::Sync& completer) {
-  static_assert(fbl::constexpr_strlen(kFsName) < fuchsia_fs::wire::MAX_FS_NAME_LENGTH,
-                "Factoryfs name too long");
+  static_assert(sizeof(kFsName) < fuchsia_fs::wire::MAX_FS_NAME_LENGTH, "Factoryfs name too long");
 
   fuchsia_fs::wire::FilesystemInfo::UnownedBuilder builder;
 
