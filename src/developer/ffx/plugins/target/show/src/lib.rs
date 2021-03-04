@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::status::{StatusEntry, StatusValue},
+    crate::show::{ShowEntry, ShowValue},
     anyhow::{bail, Result},
     ffx_core::ffx_plugin,
-    ffx_target_status_args as args,
+    ffx_target_show_args as args,
     fidl_fuchsia_buildinfo::ProviderProxy,
     fidl_fuchsia_feedback::DeviceIdProviderProxy,
     fidl_fuchsia_hwinfo::{BoardProxy, DeviceProxy, ProductProxy},
@@ -15,9 +15,9 @@ use {
     std::io::{stdout, Write},
 };
 
-mod status;
+mod show;
 
-/// Main entry point for the `status` subcommand.
+/// Main entry point for the `show` subcommand.
 #[ffx_plugin(
     ChannelControlProxy = "core/appmgr:out:fuchsia.update.channelcontrol.ChannelControl",
     BoardProxy = "core/appmgr:out:fuchsia.hwinfo.Board",
@@ -26,74 +26,74 @@ mod status;
     ProviderProxy = "core/appmgr:out:fuchsia.buildinfo.Provider",
     DeviceIdProviderProxy = "core/appmgr:out:fuchsia.feedback.DeviceIdProvider"
 )]
-pub async fn status_cmd(
+pub async fn show_cmd(
     channel_control_proxy: ChannelControlProxy,
     board_proxy: BoardProxy,
     device_proxy: DeviceProxy,
     product_proxy: ProductProxy,
     build_info_proxy: ProviderProxy,
     device_id_proxy: DeviceIdProviderProxy,
-    target_status_args: args::TargetStatus,
+    target_show_args: args::TargetShow,
 ) -> Result<()> {
-    status_cmd_impl(
+    show_cmd_impl(
         channel_control_proxy,
         board_proxy,
         device_proxy,
         product_proxy,
         build_info_proxy,
         device_id_proxy,
-        target_status_args,
+        target_show_args,
         Box::new(stdout()),
     )
     .await
 }
 
-// Implementation of the target status command.
-async fn status_cmd_impl<W: Write>(
+// Implementation of the target show command.
+async fn show_cmd_impl<W: Write>(
     channel_control_proxy: ChannelControlProxy,
     board_proxy: BoardProxy,
     device_proxy: DeviceProxy,
     product_proxy: ProductProxy,
     build_info_proxy: ProviderProxy,
     device_id_proxy: DeviceIdProviderProxy,
-    target_status_args: args::TargetStatus,
+    target_show_args: args::TargetShow,
     mut writer: W,
 ) -> Result<()> {
-    if target_status_args.version {
-        println!("ffx target status version 0.1");
+    if target_show_args.version {
+        println!("ffx target show version 0.1");
         return Ok(());
     }
-    // To add more status information, add a `gather_*_status(*) call to this
+    // To add more show information, add a `gather_*_show(*) call to this
     // list, as well as the labels in the Ok() and vec![] just below.
-    let status = match futures::try_join!(
-        gather_board_status(board_proxy),
-        gather_device_status(device_proxy),
-        gather_product_status(product_proxy),
-        gather_update_status(channel_control_proxy),
-        gather_build_info_status(build_info_proxy),
-        gather_device_id_status(device_id_proxy),
+    let show = match futures::try_join!(
+        gather_board_show(board_proxy),
+        gather_device_show(device_proxy),
+        gather_product_show(product_proxy),
+        gather_update_show(channel_control_proxy),
+        gather_build_info_show(build_info_proxy),
+        gather_device_id_show(device_id_proxy),
     ) {
         Ok((board, build, device, device_id, product, update)) => {
             vec![board, build, device, device_id, product, update]
         }
         Err(e) => bail!(e),
     };
-    if target_status_args.json {
-        status::output_for_machine(&status, &target_status_args, &mut writer)?;
+    if target_show_args.json {
+        show::output_for_machine(&show, &target_show_args, &mut writer)?;
     } else {
-        status::output_for_human(&status, &target_status_args, &mut writer)?;
+        show::output_for_human(&show, &target_show_args, &mut writer)?;
     }
     Ok(())
 }
 
 /// Determine the device id for the target.
-async fn gather_device_id_status(device_id: DeviceIdProviderProxy) -> Result<StatusEntry> {
+async fn gather_device_id_show(device_id: DeviceIdProviderProxy) -> Result<ShowEntry> {
     let info = device_id.get_id().await?;
-    Ok(StatusEntry::group(
+    Ok(ShowEntry::group(
         "Feedback",
         "feedback",
         "",
-        vec![StatusEntry::str_value(
+        vec![ShowEntry::str_value(
             "Device ID",
             "device_id",
             "Feedback Device ID for target.",
@@ -103,17 +103,17 @@ async fn gather_device_id_status(device_id: DeviceIdProviderProxy) -> Result<Sta
 }
 
 /// Determine the build info for the target.
-async fn gather_build_info_status(build: ProviderProxy) -> Result<StatusEntry> {
+async fn gather_build_info_show(build: ProviderProxy) -> Result<ShowEntry> {
     let info = build.get_build_info().await?;
-    Ok(StatusEntry::group(
+    Ok(ShowEntry::group(
         "Build",
         "build",
         "",
         vec![
-            StatusEntry::str_value("Version", "version", "Build version.", &info.version),
-            StatusEntry::str_value("Product", "product", "Product config.", &info.product_config),
-            StatusEntry::str_value("Board", "board", "Board config.", &info.board_config),
-            StatusEntry::str_value(
+            ShowEntry::str_value("Version", "version", "Build version.", &info.version),
+            ShowEntry::str_value("Product", "product", "Product config.", &info.product_config),
+            ShowEntry::str_value("Board", "board", "Board config.", &info.board_config),
+            ShowEntry::str_value(
                 "Commit",
                 "commit",
                 "Integration Commit Date",
@@ -124,40 +124,40 @@ async fn gather_build_info_status(build: ProviderProxy) -> Result<StatusEntry> {
 }
 
 /// Determine the device info for the device.
-async fn gather_board_status(board: BoardProxy) -> Result<StatusEntry> {
+async fn gather_board_show(board: BoardProxy) -> Result<ShowEntry> {
     let info = board.get_info().await?;
-    Ok(StatusEntry::group(
+    Ok(ShowEntry::group(
         "Board",
         "board",
         "",
         vec![
-            StatusEntry::str_value("Name", "name", "SOC board name.", &info.name),
-            StatusEntry::str_value("Revision", "revision", "SOC revision.", &info.revision),
+            ShowEntry::str_value("Name", "name", "SOC board name.", &info.name),
+            ShowEntry::str_value("Revision", "revision", "SOC revision.", &info.revision),
         ],
     ))
 }
 
 /// Determine the device info for the device.
-async fn gather_device_status(device: DeviceProxy) -> Result<StatusEntry> {
+async fn gather_device_show(device: DeviceProxy) -> Result<ShowEntry> {
     let info = device.get_info().await?;
-    Ok(StatusEntry::group(
+    Ok(ShowEntry::group(
         "Device",
         "device",
         "",
         vec![
-            StatusEntry::str_value(
+            ShowEntry::str_value(
                 "Serial number",
                 "serial_number",
                 "Unique ID for device.",
                 &info.serial_number,
             ),
-            StatusEntry::str_value(
+            ShowEntry::str_value(
                 "Retail SKU",
                 "retail_sku",
                 "Stock Keeping Unit ID number.",
                 &info.retail_sku,
             ),
-            StatusEntry::bool_value(
+            ShowEntry::bool_value(
                 "Is retail demo",
                 "is_retail_demo",
                 "true if demonstration unit.",
@@ -168,94 +168,94 @@ async fn gather_device_status(device: DeviceProxy) -> Result<StatusEntry> {
 }
 
 /// Determine the product info for the device.
-async fn gather_product_status(product: ProductProxy) -> Result<StatusEntry> {
+async fn gather_product_show(product: ProductProxy) -> Result<ShowEntry> {
     let info = product.get_info().await?;
 
     let mut regulatory_domain =
-        StatusEntry::new("Regulatory domain", "regulatory_domain", "Domain designation.");
+        ShowEntry::new("Regulatory domain", "regulatory_domain", "Domain designation.");
     if let Some(RegulatoryDomain { country_code: Some(country_code), .. }) = info.regulatory_domain
     {
-        regulatory_domain.value = Some(StatusValue::StringValue(country_code.to_string()));
+        regulatory_domain.value = Some(ShowValue::StringValue(country_code.to_string()));
     }
 
-    let mut locale_list = StatusEntry::new("Locale list", "locale_list", "Locales supported.");
+    let mut locale_list = ShowEntry::new("Locale list", "locale_list", "Locales supported.");
     if let Some(input) = info.locale_list {
-        locale_list.value = Some(StatusValue::StringListValue(
+        locale_list.value = Some(ShowValue::StringListValue(
             input.into_iter().map(|locale| locale.id.to_string()).collect(),
         ));
     }
 
-    Ok(StatusEntry::group(
+    Ok(ShowEntry::group(
         "Product",
         "product",
         "",
         vec![
-            StatusEntry::str_value(
+            ShowEntry::str_value(
                 "Audio amplifier",
                 "audio_amplifier",
                 "Type of audio amp.",
                 &info.audio_amplifier,
             ),
-            StatusEntry::str_value(
+            ShowEntry::str_value(
                 "Build date",
                 "build_date",
                 "When product was built.",
                 &info.build_date,
             ),
-            StatusEntry::str_value("Build name", "build_name", "Reference name.", &info.build_name),
-            StatusEntry::str_value("Colorway", "colorway", "Colorway.", &info.colorway),
-            StatusEntry::str_value("Display", "display", "Info about display.", &info.display),
-            StatusEntry::str_value(
+            ShowEntry::str_value("Build name", "build_name", "Reference name.", &info.build_name),
+            ShowEntry::str_value("Colorway", "colorway", "Colorway.", &info.colorway),
+            ShowEntry::str_value("Display", "display", "Info about display.", &info.display),
+            ShowEntry::str_value(
                 "EMMC storage",
                 "emmc_storage",
                 "Size of storage.",
                 &info.emmc_storage,
             ),
-            StatusEntry::str_value("Language", "language", "language.", &info.language),
+            ShowEntry::str_value("Language", "language", "language.", &info.language),
             regulatory_domain,
             locale_list,
-            StatusEntry::str_value(
+            ShowEntry::str_value(
                 "Manufacturer",
                 "manufacturer",
                 "Manufacturer of product.",
                 &info.manufacturer,
             ),
-            StatusEntry::str_value(
+            ShowEntry::str_value(
                 "Microphone",
                 "microphone",
                 "Type of microphone.",
                 &info.microphone,
             ),
-            StatusEntry::str_value("Model", "model", "Model of the product.", &info.model),
-            StatusEntry::str_value("Name", "name", "Name of the product.", &info.name),
-            StatusEntry::str_value(
+            ShowEntry::str_value("Model", "model", "Model of the product.", &info.model),
+            ShowEntry::str_value("Name", "name", "Name of the product.", &info.name),
+            ShowEntry::str_value(
                 "NAND storage",
                 "nand_storage",
                 "Size of storage.",
                 &info.nand_storage,
             ),
-            StatusEntry::str_value("Memory", "memory", "Amount of RAM.", &info.memory),
-            StatusEntry::str_value("SKU", "sku", "SOC board name.", &info.sku),
+            ShowEntry::str_value("Memory", "memory", "Amount of RAM.", &info.memory),
+            ShowEntry::str_value("SKU", "sku", "SOC board name.", &info.sku),
         ],
     ))
 }
 
-/// Determine the update status of the device, including update channels.
-async fn gather_update_status(channel_control: ChannelControlProxy) -> Result<StatusEntry> {
+/// Determine the update show of the device, including update channels.
+async fn gather_update_show(channel_control: ChannelControlProxy) -> Result<ShowEntry> {
     let current_channel = channel_control.get_current().await?;
     let next_channel = channel_control.get_target().await?;
-    Ok(StatusEntry::group(
+    Ok(ShowEntry::group(
         "Update",
         "update",
         "",
         vec![
-            StatusEntry::str_value(
+            ShowEntry::str_value(
                 "Current channel",
                 "current_channel",
                 "Channel that is currently in use.",
                 &Some(current_channel),
             ),
-            StatusEntry::str_value(
+            ShowEntry::str_value(
                 "Next channel",
                 "next_channel",
                 "Channel used for the next update.",
@@ -353,38 +353,38 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_status_cmd_impl() {
+    async fn test_show_cmd_impl() {
         let mut output = Vec::new();
-        status_cmd_impl(
+        show_cmd_impl(
             setup_fake_channel_control_server(),
             setup_fake_board_server(),
             setup_fake_device_server(),
             setup_fake_product_server(),
             setup_fake_build_info_server(),
             setup_fake_device_id_server(),
-            args::TargetStatus::default(),
+            args::TargetShow::default(),
             &mut output,
         )
         .await
-        .expect("status_cmd_impl");
+        .expect("show_cmd_impl");
         assert_eq!(output, TEST_OUTPUT_HUMAN);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_status_cmd_impl_json() {
+    async fn test_show_cmd_impl_json() {
         let mut output = Vec::new();
-        status_cmd_impl(
+        show_cmd_impl(
             setup_fake_channel_control_server(),
             setup_fake_board_server(),
             setup_fake_device_server(),
             setup_fake_product_server(),
             setup_fake_build_info_server(),
             setup_fake_device_id_server(),
-            args::TargetStatus { json: true, ..Default::default() },
+            args::TargetShow { json: true, ..Default::default() },
             &mut output,
         )
         .await
-        .expect("status_cmd_impl");
+        .expect("show_cmd_impl");
         let v: Value =
             serde_json::from_str(std::str::from_utf8(&output).unwrap()).expect("Valid JSON");
         assert!(v.is_array());
@@ -406,16 +406,16 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_gather_board_status() {
+    async fn test_gather_board_show() {
         let test_proxy = setup_fake_board_server();
-        let result = gather_board_status(test_proxy).await.expect("gather board status");
+        let result = gather_board_show(test_proxy).await.expect("gather board show");
         assert_eq!(result.title, "Board");
         assert_eq!(result.child[0].title, "Name");
-        assert_eq!(result.child[0].value, Some(StatusValue::StringValue("fake_name".to_string())));
+        assert_eq!(result.child[0].value, Some(ShowValue::StringValue("fake_name".to_string())));
         assert_eq!(result.child[1].title, "Revision");
         assert_eq!(
             result.child[1].value,
-            Some(StatusValue::StringValue("fake_revision".to_string()))
+            Some(ShowValue::StringValue("fake_revision".to_string()))
         );
     }
 
@@ -435,19 +435,16 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_gather_device_status() {
+    async fn test_gather_device_show() {
         let test_proxy = setup_fake_device_server();
-        let result = gather_device_status(test_proxy).await.expect("gather device status");
+        let result = gather_device_show(test_proxy).await.expect("gather device show");
         assert_eq!(result.title, "Device");
         assert_eq!(result.child[0].title, "Serial number");
-        assert_eq!(
-            result.child[0].value,
-            Some(StatusValue::StringValue("fake_serial".to_string()))
-        );
+        assert_eq!(result.child[0].value, Some(ShowValue::StringValue("fake_serial".to_string())));
         assert_eq!(result.child[1].title, "Retail SKU");
-        assert_eq!(result.child[1].value, Some(StatusValue::StringValue("fake_sku".to_string())));
+        assert_eq!(result.child[1].value, Some(ShowValue::StringValue("fake_sku".to_string())));
         assert_eq!(result.child[2].title, "Is retail demo");
-        assert_eq!(result.child[2].value, Some(StatusValue::BoolValue(false)))
+        assert_eq!(result.child[2].value, Some(ShowValue::BoolValue(false)))
     }
 
     fn setup_fake_product_server() -> ProductProxy {
@@ -482,29 +479,29 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_gather_product_status() {
+    async fn test_gather_product_show() {
         let test_proxy = setup_fake_product_server();
-        let result = gather_product_status(test_proxy).await.expect("gather device status");
+        let result = gather_product_show(test_proxy).await.expect("gather device show");
         assert_eq!(result.title, "Product");
         assert_eq!(result.child[0].title, "Audio amplifier");
         assert_eq!(
             result.child[0].value,
-            Some(StatusValue::StringValue("fake_audio_amplifier".to_string()))
+            Some(ShowValue::StringValue("fake_audio_amplifier".to_string()))
         );
         assert_eq!(result.child[1].title, "Build date");
         assert_eq!(
             result.child[1].value,
-            Some(StatusValue::StringValue("fake_build_date".to_string()))
+            Some(ShowValue::StringValue("fake_build_date".to_string()))
         );
         assert_eq!(result.child[2].title, "Build name");
         assert_eq!(
             result.child[2].value,
-            Some(StatusValue::StringValue("fake_build_name".to_string()))
+            Some(ShowValue::StringValue("fake_build_name".to_string()))
         );
         assert_eq!(result.child[3].title, "Colorway");
         assert_eq!(
             result.child[3].value,
-            Some(StatusValue::StringValue("fake_colorway".to_string()))
+            Some(ShowValue::StringValue("fake_colorway".to_string()))
         );
     }
 
@@ -521,19 +518,13 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_gather_update_status() {
+    async fn test_gather_update_show() {
         let test_proxy = setup_fake_channel_control_server();
-        let result = gather_update_status(test_proxy).await.expect("gather update status");
+        let result = gather_update_show(test_proxy).await.expect("gather update show");
         assert_eq!(result.title, "Update");
         assert_eq!(result.child[0].title, "Current channel");
-        assert_eq!(
-            result.child[0].value,
-            Some(StatusValue::StringValue("fake_channel".to_string()))
-        );
+        assert_eq!(result.child[0].value, Some(ShowValue::StringValue("fake_channel".to_string())));
         assert_eq!(result.child[1].title, "Next channel");
-        assert_eq!(
-            result.child[1].value,
-            Some(StatusValue::StringValue("fake_target".to_string()))
-        );
+        assert_eq!(result.child[1].value, Some(ShowValue::StringValue("fake_target".to_string())));
     }
 }
