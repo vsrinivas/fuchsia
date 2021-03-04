@@ -4,10 +4,9 @@
 
 import 'dart:math';
 import 'package:flutter_driver/flutter_driver.dart';
-import 'package:fuchsia_logger/logger.dart' as logger;
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
-import 'package:webdriver/sync_io.dart' show By;
+import 'package:webdriver/sync_io.dart';
 
 import 'ermine_driver.dart';
 
@@ -20,6 +19,7 @@ const testserverUrl =
 void main() {
   Sl4f sl4f;
   ErmineDriver ermine;
+  WebDriverConnector webDriverConnector;
 
   final newTabFinder = find.text('NEW TAB');
   final indexTabFinder = find.text('Localhost');
@@ -31,12 +31,14 @@ void main() {
   final blueTabFinder = find.text('Blue Page');
 
   setUpAll(() async {
-    logger.setupLogger(name: 'simple_browser_e2e_test');
     sl4f = Sl4f.fromEnvironment();
     await sl4f.startServer();
 
     ermine = ErmineDriver(sl4f);
     await ermine.setUp();
+
+    webDriverConnector = WebDriverConnector('runtime_deps/chromedriver', sl4f);
+    await webDriverConnector.initialize();
 
     // Starts hosting a local http website.
     // ignore: unawaited_futures
@@ -62,9 +64,9 @@ void main() {
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     expect(await ermine.isStopped(testserverUrl), isTrue);
 
+    await webDriverConnector?.tearDown();
     await ermine.tearDown();
-
-    await sl4f.stopServer();
+    await sl4f?.stopServer();
     sl4f?.close();
   });
 
@@ -78,7 +80,8 @@ void main() {
     await browser.requestData('http://127.0.0.1:8080/index.html');
 
     await browser.waitFor(indexTabFinder, timeout: _timeout);
-    final webdriver = await ermine.getWebDriverFor('127.0.0.1');
+    final webdriver =
+        (await webDriverConnector.webDriversForHost('127.0.0.1')).single;
 
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(indexTabFinder), isNotNull);
