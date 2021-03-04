@@ -740,7 +740,6 @@ def main():
     ignored_compiled_actions = {
         # fxbug.dev/61770
         "banjo_bin",
-        "strings_to_json",
     }
     if os.path.basename(script) == "gn_run_binary.sh":
         if os.path.basename(command.args[1]) in ignored_compiled_actions:

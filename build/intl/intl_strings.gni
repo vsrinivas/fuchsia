@@ -130,7 +130,10 @@ template("intl_strings") {
       tool = "//src/intl/strings_to_json:strings_to_json_bin"
       tool_output_name = "strings_to_json"
 
-      sources = [ source ]
+      sources = [
+        source,
+        target_strings_file,
+      ]
 
       outputs = [ output_file_name ]
 
