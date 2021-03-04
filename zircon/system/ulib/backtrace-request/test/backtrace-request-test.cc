@@ -143,9 +143,7 @@ TEST(BacktraceRequest, IgnoreNormalException) {
     exit_address = &&exit;   // clang and gcc extension to obtain address of a label.
     ASSERT_OK(zx::thread::self()->create_exception_channel(0, &exception_channel));
     ASSERT_OK(event.signal(0, kChannelReadySignal));
-    // Segfault.
-    volatile int* p = 0;
-    *p = 0;
+    *(volatile int*)1 = 0;  // Segfault!
   exit:
     ;
   });

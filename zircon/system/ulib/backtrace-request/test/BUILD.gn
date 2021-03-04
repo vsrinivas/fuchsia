@@ -7,13 +7,10 @@ import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":backtrace-request-integration-test-pkg" ]
-
-  # TODO(fxbug.dev/71222): Re-enable this test in profile build when it passes
-  # with optimization.
-  if (select_variant + [ "profile" ] - [ "profile" ] == select_variant) {
-    deps += [ ":backtrace-request-test-pkg" ]
-  }
+  deps = [
+    ":backtrace-request-integration-test-pkg",
+    ":backtrace-request-test-pkg",
+  ]
 }
 
 test("backtrace-request-test") {
