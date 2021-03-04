@@ -96,3 +96,37 @@ group("acts_tests") {
   testonly = true
   deps = test_labels
 }
+
+dart_test("acts_bt_astro_test") {
+  sources = [ "acts_test.dart" ]
+
+  deps = [
+    "//third_party/dart-pkg/pub/archive",
+    "//third_party/dart-pkg/pub/args",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  non_dart_deps = [ ":acts($host_toolchain)" ]
+
+  environments = [
+    {
+      dimensions = {
+        testbed = "bt_astro_astro"
+        pool = "fuchsia.tests.connectivity"
+        device_type = "Astro"
+      }
+
+      tags = "acts-connectivity-astro"
+    },
+  ]
+
+  args = [
+    "--timeout=15",
+    "--tests=BtFuchsiaEPTest",
+  ]
+}
+
+group("astro_bt_tests") {
+  testonly = true
+  deps = [ ":acts_bt_astro_test($host_toolchain)" ]
+}

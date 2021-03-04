@@ -68,6 +68,12 @@ test_platforms = [
     cpu = "arm64"
   },
   {
+    testbed = "bt_astro_astro"
+    cpu = "arm64"
+    pool = "fuchsia.tests.connectivity"
+    device_type = "Astro"
+  },
+  {
     testbed = "bt_rf_chamber_nuc_phone"
     cpu = "x64"
     pool = "fuchsia.tests.connectivity"
