@@ -358,23 +358,22 @@ func toNeighborEntry(nicID tcpip.NICID, n stack.NeighborEntry) (neighbor.Entry, 
 		// Unknown is an internal state used by the netstack to represent a newly
 		// created or deleted entry. Clients do not need to be concerned with this
 		// in-between state; all transitions into and out of the Unknown state
-		// triggers an event.
+		// trigger an event.
 		return e, false
 	case stack.Incomplete:
-		e.SetState(neighbor.EntryStateWithIncomplete(neighbor.IncompleteState{}))
+		e.SetState(neighbor.EntryStateIncomplete)
 	case stack.Reachable:
-		// TODO(https://fxbug.dev/59372): Populate expires_at.
-		e.SetState(neighbor.EntryStateWithReachable(neighbor.ReachableState{}))
+		e.SetState(neighbor.EntryStateReachable)
 	case stack.Stale:
-		e.SetState(neighbor.EntryStateWithStale(neighbor.StaleState{}))
+		e.SetState(neighbor.EntryStateStale)
 	case stack.Delay:
-		e.SetState(neighbor.EntryStateWithDelay(neighbor.DelayState{}))
+		e.SetState(neighbor.EntryStateDelay)
 	case stack.Probe:
-		e.SetState(neighbor.EntryStateWithProbe(neighbor.ProbeState{}))
+		e.SetState(neighbor.EntryStateProbe)
 	case stack.Static:
-		e.SetState(neighbor.EntryStateWithStatic(neighbor.StaticState{}))
+		e.SetState(neighbor.EntryStateStatic)
 	case stack.Unreachable:
-		e.SetState(neighbor.EntryStateWithUnreachable(neighbor.UnreachableState{}))
+		e.SetState(neighbor.EntryStateUnreachable)
 	default:
 		panic(fmt.Sprintf("invalid NeighborState = %d: %#v", n.State, n))
 	}

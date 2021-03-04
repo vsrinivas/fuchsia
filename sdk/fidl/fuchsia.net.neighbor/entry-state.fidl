@@ -4,8 +4,6 @@
 
 library fuchsia.net.neighbor;
 
-using zx;
-
 /// Neighbor table entry state.
 ///
 /// Modeled after RFC 4861 section 7.3.2. Descriptions are kept
@@ -17,14 +15,14 @@ using zx;
 /// | Reachability Probe        | ARP Request | Neighbor Solicitation  |
 /// | Reachability Confirmation | ARP Reply   | Neighbor Advertisement |
 /// `---------------------------+-------------+------------------------'
-union EntryState {
+enum EntryState : uint8 {
     /// Reachability is in the process of being confirmed for a newly created,
     /// non-static entry.
-    1: IncompleteState incomplete;
+    INCOMPLETE = 1;
 
     /// Positive reachability has been confirmed; the path to the neighbor is
     /// functioning properly.
-    2: ReachableState reachable;
+    REACHABLE = 2;
 
     /// Reachability is considered unknown.
     ///
@@ -33,56 +31,27 @@ union EntryState {
     ///      confirmation was received.
     ///   2. Received a reachability confirmation from a neighbor with a
     ///      different MAC address than the one cached.
-    3: StaleState stale;
+    STALE = 3;
 
     /// A packet was recently sent while reachability was considered unknown.
     ///
     /// This state is an optimization that gives non-Neighbor-Discovery related
     /// protocols time to confirm reachability after the last confirmation of
     /// reachability has expired due to lack of recent traffic.
-    4: DelayState delay;
+    DELAY = 4;
 
     /// A reachability confirmation is actively sought by periodically
     /// retransmitting reachability probes until a reachability confirmation is
     /// received, or until the maximum number of probes has been sent.
-    5: ProbeState probe;
+    PROBE = 5;
 
     /// Static entries are explicitly added with [`Controller.AddEntry`]. They
     /// do not expire and are not deleted until explicitly removed with
     /// [`Controller.RemoveEntry`].
-    6: StaticState static;
+    STATIC = 6;
 
     /// Negative reachability has been confirmed; the path to the neighbor may
     /// not be functioning properly. A reachability confirmation was not received
     /// after transmitting the maximum number of reachability probes.
-    7: UnreachableState unreachable;
-};
-
-table IncompleteState {
-};
-
-table ReachableState {
-    /// When reachability expires and the entry should be considered stale; when
-    /// to transition from `reachable` to `stale` [`EntryState`].
-    ///
-    /// This is not the only way to transition into [`EntryState.stale`]. The
-    /// entry will transition into `stale` before this time when an unsolicited
-    /// reachability confirmation is received with a different MAC address than
-    /// the one cached.
-    1: zx.time expires_at;
-};
-
-table StaleState {
-};
-
-table DelayState {
-};
-
-table ProbeState {
-};
-
-table StaticState {
-};
-
-table UnreachableState {
+    UNREACHABLE = 7;
 };

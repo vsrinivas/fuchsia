@@ -803,8 +803,14 @@ mod tests {
     use fidl_fuchsia_net as net;
     use fuchsia_async::{self as fasync, TimeoutExt as _};
     use futures::prelude::*;
-    use net_declare::fidl_ip;
+    use net_declare::{fidl_mac, fidl_subnet};
     use {super::*, fidl_fuchsia_net_stack::*, fidl_fuchsia_netstack::*};
+
+    const SUBNET_V4: net::Subnet = fidl_subnet!("192.168.0.1/32");
+    const SUBNET_V6: net::Subnet = fidl_subnet!("fd00::1/128");
+
+    const MAC_1: net::MacAddress = fidl_mac!("01:02:03:04:05:06");
+    const MAC_2: net::MacAddress = fidl_mac!("02:03:04:05:06:07");
 
     fn get_fake_interface(id: u64, name: &str) -> InterfaceInfo {
         InterfaceInfo {
@@ -876,7 +882,7 @@ mod tests {
             IfEnum::Addr(IfAddr {
                 addr_cmd: IfAddrEnum::Del(IfAddrDel {
                     id: 1,
-                    addr: String::from("192.168.0.1"),
+                    addr: net_ext::IpAddress::from(SUBNET_V4.addr).to_string(),
                     prefix: None, // The prefix should be set to the default of 32 for IPv4.
                 }),
             }),
@@ -887,13 +893,7 @@ mod tests {
             // Verify that the first request is as expected and return OK.
             let (id, addr, responder) = next_request(&mut requests).await;
             assert_eq!(id, 1);
-            assert_eq!(
-                addr,
-                net::Subnet {
-                    addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 0, 1] }),
-                    prefix_len: 32
-                }
-            );
+            assert_eq!(addr, SUBNET_V4);
             responder.send(&mut Ok(())).map_err(anyhow::Error::new)
         };
         let ((), ()) = futures::future::try_join(success_response, succeeds)
@@ -905,7 +905,7 @@ mod tests {
             IfEnum::Addr(IfAddr {
                 addr_cmd: IfAddrEnum::Del(IfAddrDel {
                     id: 2,
-                    addr: String::from("fd00::1"),
+                    addr: net_ext::IpAddress::from(SUBNET_V6.addr).to_string(),
                     prefix: None, // The prefix should be set to the default of 128 for IPv6.
                 }),
             }),
@@ -916,15 +916,7 @@ mod tests {
             // Verify that the second request is as expected and return a NotFound error.
             let (id, addr, responder) = next_request(&mut requests).await;
             assert_eq!(id, 2);
-            assert_eq!(
-                addr,
-                net::Subnet {
-                    addr: net::IpAddress::Ipv6(net::Ipv6Address {
-                        addr: [0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
-                    }),
-                    prefix_len: 128
-                }
-            );
+            assert_eq!(addr, SUBNET_V6);
             responder
                 .send(&mut Err(fidl_fuchsia_net_stack::Error::NotFound))
                 .map_err(anyhow::Error::new)
@@ -1223,25 +1215,18 @@ mod tests {
     }
 
     async fn test_neigh_one(watch_for_changes: bool, want: fn(neighbor_ext::Entry) -> String) {
-        fn new_entry(expires_at: i64, updated_at: i64) -> neighbor::Entry {
+        fn new_entry(updated_at: i64) -> neighbor::Entry {
             neighbor::Entry {
                 interface: Some(1),
-                neighbor: Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 0, 1] })),
-                state: Some(neighbor::EntryState::Reachable(neighbor::ReachableState {
-                    expires_at: Some(expires_at),
-                    ..neighbor::ReachableState::EMPTY
-                })),
-                mac: Some(net::MacAddress { octets: [1, 2, 3, 4, 5, 6] }),
+                neighbor: Some(SUBNET_V4.addr),
+                state: Some(neighbor::EntryState::Reachable),
+                mac: Some(MAC_1),
                 updated_at: Some(updated_at),
                 ..neighbor::Entry::EMPTY
             }
         }
 
         let now = fuchsia_runtime::utc_time();
-        let expires_at = {
-            let later = now + zx::Duration::from_minutes(3) + zx::Duration::from_seconds(1);
-            later.into_nanos()
-        };
         let updated_at = {
             let past = now - zx::Duration::from_minutes(1);
             past.into_nanos()
@@ -1250,10 +1235,10 @@ mod tests {
         test_get_neigh_entries(
             watch_for_changes,
             vec![vec![
-                neighbor::EntryIteratorItem::Existing(new_entry(expires_at, updated_at)),
+                neighbor::EntryIteratorItem::Existing(new_entry(updated_at)),
                 neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {}),
             ]],
-            want(neighbor_ext::Entry::from(new_entry(expires_at, updated_at))),
+            want(neighbor_ext::Entry::from(new_entry(updated_at))),
         )
         .await
     }
@@ -1279,30 +1264,18 @@ mod tests {
         watch_for_changes: bool,
         want: fn(neighbor_ext::Entry, neighbor_ext::Entry) -> String,
     ) {
-        fn new_entry(
-            ip: [u8; 4],
-            mac: [u8; 6],
-            expires_at: i64,
-            updated_at: i64,
-        ) -> neighbor::Entry {
+        fn new_entry(ip: net::IpAddress, mac: net::MacAddress, updated_at: i64) -> neighbor::Entry {
             neighbor::Entry {
                 interface: Some(1),
-                neighbor: Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: ip })),
-                state: Some(neighbor::EntryState::Reachable(neighbor::ReachableState {
-                    expires_at: Some(expires_at),
-                    ..neighbor::ReachableState::EMPTY
-                })),
-                mac: Some(net::MacAddress { octets: mac }),
+                neighbor: Some(ip),
+                state: Some(neighbor::EntryState::Reachable),
+                mac: Some(mac),
                 updated_at: Some(updated_at),
                 ..neighbor::Entry::EMPTY
             }
         }
 
         let now = fuchsia_runtime::utc_time();
-        let expires_at = {
-            let later = now + zx::Duration::from_minutes(3) + zx::Duration::from_seconds(1);
-            later.into_nanos()
-        };
         let updated_at = {
             let past = now - zx::Duration::from_minutes(1);
             past.into_nanos()
@@ -1312,33 +1285,17 @@ mod tests {
         test_get_neigh_entries(
             watch_for_changes,
             vec![vec![
+                neighbor::EntryIteratorItem::Existing(new_entry(SUBNET_V4.addr, MAC_1, updated_at)),
                 neighbor::EntryIteratorItem::Existing(new_entry(
-                    [192, 168, 0, 1],
-                    [1, 2, 3, 4, 5, 6],
-                    expires_at,
-                    updated_at,
-                )),
-                neighbor::EntryIteratorItem::Existing(new_entry(
-                    [192, 168, 0, 2],
-                    [2, 3, 4, 5, 6, 7],
-                    expires_at - offset,
+                    SUBNET_V6.addr,
+                    MAC_2,
                     updated_at - offset,
                 )),
                 neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {}),
             ]],
             want(
-                neighbor_ext::Entry::from(new_entry(
-                    [192, 168, 0, 1],
-                    [1, 2, 3, 4, 5, 6],
-                    expires_at,
-                    updated_at,
-                )),
-                neighbor_ext::Entry::from(new_entry(
-                    [192, 168, 0, 2],
-                    [2, 3, 4, 5, 6, 7],
-                    expires_at - offset,
-                    updated_at - offset,
-                )),
+                neighbor_ext::Entry::from(new_entry(SUBNET_V4.addr, MAC_1, updated_at)),
+                neighbor_ext::Entry::from(new_entry(SUBNET_V6.addr, MAC_2, updated_at - offset)),
             ),
         )
         .await
@@ -1363,15 +1320,13 @@ mod tests {
     }
 
     const INTERFACE_ID: u64 = 1;
-    const IP_ADDRESS: net::IpAddress = fidl_ip!("192.168.0.1");
     const IP_VERSION: net::IpVersion = net::IpVersion::V4;
-    const MAC: net::MacAddress = net::MacAddress { octets: [1, 2, 3, 4, 5, 6] };
 
     #[fasync::run_singlethreaded(test)]
     async fn test_neigh_add() {
         let (controller, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>().unwrap();
-        let neigh = do_neigh_add(INTERFACE_ID, IP_ADDRESS, MAC, controller);
+        let neigh = do_neigh_add(INTERFACE_ID, SUBNET_V4.addr, MAC_1, controller);
         let neigh_succeeds = async {
             let (got_interface_id, got_ip_address, got_mac, responder) = requests
                 .try_next()
@@ -1381,8 +1336,8 @@ mod tests {
                 .into_add_entry()
                 .expect("request should be of type AddEntry");
             assert_eq!(got_interface_id, INTERFACE_ID);
-            assert_eq!(got_ip_address, IP_ADDRESS);
-            assert_eq!(got_mac, MAC);
+            assert_eq!(got_ip_address, SUBNET_V4.addr);
+            assert_eq!(got_mac, MAC_1);
             let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
             Ok(())
         };
@@ -1418,7 +1373,7 @@ mod tests {
     async fn test_neigh_del() {
         let (controller, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>().unwrap();
-        let neigh = do_neigh_del(INTERFACE_ID, IP_ADDRESS, controller);
+        let neigh = do_neigh_del(INTERFACE_ID, SUBNET_V4.addr, controller);
         let neigh_succeeds = async {
             let (got_interface_id, got_ip_address, responder) = requests
                 .try_next()
@@ -1428,7 +1383,7 @@ mod tests {
                 .into_remove_entry()
                 .expect("request should be of type RemoveEntry");
             assert_eq!(got_interface_id, INTERFACE_ID);
-            assert_eq!(got_ip_address, IP_ADDRESS);
+            assert_eq!(got_ip_address, SUBNET_V4.addr);
             let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
             Ok(())
         };

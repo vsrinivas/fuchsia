@@ -6,14 +6,8 @@
 
 #![deny(missing_docs)]
 
-use std::convert::TryInto as _;
-
 use fidl_fuchsia_net_ext::{IpAddress, MacAddress};
 use fidl_fuchsia_net_neighbor as fidl;
-
-use chrono::{Local, SecondsFormat, TimeZone};
-
-const NANOS_PER_SEC: i64 = 1_000_000_000;
 
 /// Information on a neighboring device in the local network.
 pub struct Entry(fidl::Entry);
@@ -48,39 +42,13 @@ impl std::fmt::Display for Entry {
         write_field!(f, "MAC", mac.map(MacAddress::from), "|");
         match state {
             None => write!(f, "?"),
-            Some(fidl::EntryState::Incomplete(fidl::IncompleteState { .. })) => {
-                write!(f, "INCOMPLETE")
-            }
-            Some(fidl::EntryState::Reachable(fidl::ReachableState { expires_at, .. })) => {
-                write!(f, "REACHABLE | ")?;
-                match expires_at {
-                    None => write!(f, "Expiration unknown"),
-                    Some(expires_at) => {
-                        let sec = expires_at / NANOS_PER_SEC;
-                        let ns = expires_at % NANOS_PER_SEC;
-                        match ns.try_into() {
-                            Err(std::num::TryFromIntError { .. }) => {
-                                write!(f, "Invalid nanosecond expiration of {}", ns)
-                            }
-                            Ok(ns) => match Local.timestamp_opt(sec, ns).single() {
-                                None => write!(f, "Invalid expiration"),
-                                Some(exp) => write!(
-                                    f,
-                                    "Expires at {}",
-                                    exp.to_rfc3339_opts(SecondsFormat::Secs, true)
-                                ),
-                            },
-                        }
-                    }
-                }
-            }
-            Some(fidl::EntryState::Stale(fidl::StaleState { .. })) => write!(f, "STALE"),
-            Some(fidl::EntryState::Delay(fidl::DelayState { .. })) => write!(f, "DELAY"),
-            Some(fidl::EntryState::Probe(fidl::ProbeState { .. })) => write!(f, "PROBE"),
-            Some(fidl::EntryState::Static_(fidl::StaticState { .. })) => write!(f, "STATIC"),
-            Some(fidl::EntryState::Unreachable(fidl::UnreachableState { .. })) => {
-                write!(f, "UNREACHABLE")
-            }
+            Some(fidl::EntryState::Incomplete) => write!(f, "INCOMPLETE"),
+            Some(fidl::EntryState::Reachable) => write!(f, "REACHABLE"),
+            Some(fidl::EntryState::Stale) => write!(f, "STALE"),
+            Some(fidl::EntryState::Delay) => write!(f, "DELAY"),
+            Some(fidl::EntryState::Probe) => write!(f, "PROBE"),
+            Some(fidl::EntryState::Static) => write!(f, "STATIC"),
+            Some(fidl::EntryState::Unreachable) => write!(f, "UNREACHABLE"),
         }
     }
 }

@@ -261,29 +261,11 @@ async fn exchange_dgrams(
     Ok(())
 }
 
-fn assert_incomplete_entry(
+fn assert_entry(
     entry: fidl_fuchsia_net_neighbor::Entry,
     match_interface: u64,
     match_neighbor: fidl_fuchsia_net::IpAddress,
-) {
-    matches::assert_matches!(
-        entry,
-        fidl_fuchsia_net_neighbor::Entry {
-            interface: Some(interface),
-            neighbor: Some(neighbor),
-            state: Some(fidl_fuchsia_net_neighbor::EntryState::Incomplete(
-                fidl_fuchsia_net_neighbor::IncompleteState { .. },
-            )),
-            mac: None,
-            updated_at: Some(updated_at), ..
-        } if interface == match_interface && neighbor == match_neighbor && updated_at != 0
-    );
-}
-
-fn assert_reachable_entry(
-    entry: fidl_fuchsia_net_neighbor::Entry,
-    match_interface: u64,
-    match_neighbor: fidl_fuchsia_net::IpAddress,
+    match_state: fidl_fuchsia_net_neighbor::EntryState,
     match_mac: fidl_fuchsia_net::MacAddress,
 ) {
     matches::assert_matches!(
@@ -291,73 +273,10 @@ fn assert_reachable_entry(
         fidl_fuchsia_net_neighbor::Entry {
             interface: Some(interface),
             neighbor: Some(neighbor),
-            state: Some(fidl_fuchsia_net_neighbor::EntryState::Reachable(
-                // TODO(fxbug.dev/59372): Capture and assert expiration
-                // value
-                fidl_fuchsia_net_neighbor::ReachableState { expires_at: None, .. },
-            )),
+            state: Some(state),
             mac: Some(mac),
             updated_at: Some(updated_at), ..
-        } if interface == match_interface && neighbor == match_neighbor && mac == match_mac && updated_at != 0
-    );
-}
-
-fn assert_stale_entry(
-    entry: fidl_fuchsia_net_neighbor::Entry,
-    match_interface: u64,
-    match_neighbor: fidl_fuchsia_net::IpAddress,
-    match_mac: fidl_fuchsia_net::MacAddress,
-) {
-    matches::assert_matches!(
-        entry,
-        fidl_fuchsia_net_neighbor::Entry {
-            interface: Some(interface),
-            neighbor: Some(neighbor),
-            state: Some(fidl_fuchsia_net_neighbor::EntryState::Stale(
-                fidl_fuchsia_net_neighbor::StaleState { .. },
-            )),
-            mac: Some(mac),
-            updated_at: Some(updated_at), ..
-        } if interface == match_interface && neighbor == match_neighbor && mac == match_mac && updated_at != 0
-    );
-}
-
-fn assert_unreachable_entry(
-    entry: fidl_fuchsia_net_neighbor::Entry,
-    match_interface: u64,
-    match_neighbor: fidl_fuchsia_net::IpAddress,
-) {
-    matches::assert_matches!(
-        entry,
-        fidl_fuchsia_net_neighbor::Entry {
-            interface: Some(interface),
-            neighbor: Some(neighbor),
-            state: Some(fidl_fuchsia_net_neighbor::EntryState::Unreachable(
-                fidl_fuchsia_net_neighbor::UnreachableState { .. },
-            )),
-            mac: None,
-            updated_at: Some(updated_at), ..
-        } if interface == match_interface && neighbor == match_neighbor && updated_at != 0
-    );
-}
-
-fn assert_static_entry(
-    entry: fidl_fuchsia_net_neighbor::Entry,
-    match_interface: u64,
-    match_neighbor: fidl_fuchsia_net::IpAddress,
-    match_mac: fidl_fuchsia_net::MacAddress,
-) {
-    matches::assert_matches!(
-        entry,
-        fidl_fuchsia_net_neighbor::Entry {
-            interface: Some(interface),
-            neighbor: Some(neighbor),
-            state: Some(fidl_fuchsia_net_neighbor::EntryState::Static_(
-                fidl_fuchsia_net_neighbor::StaticState { .. },
-            )),
-            mac: Some(mac),
-            updated_at: Some(updated_at), ..
-        } if interface == match_interface && neighbor == match_neighbor && mac == match_mac && updated_at != 0
+        } if interface == match_interface && neighbor == match_neighbor && state == match_state && mac == match_mac && updated_at != 0
     );
 }
 
@@ -391,17 +310,19 @@ async fn neigh_list_entries() -> Result {
     let mut alice_entries =
         list_existing_entries(&alice.env).await.context("failed to get entries for alice")?;
     // IPv4 entry.
-    let () = assert_reachable_entry(
+    let () = assert_entry(
         alice_entries.remove(&(alice.ep.id(), BOB_IP)).context("missing IPv4 neighbor entry")?,
         alice.ep.id(),
         BOB_IP,
+        fidl_fuchsia_net_neighbor::EntryState::Reachable,
         BOB_MAC,
     );
     // IPv6 entry.
-    let () = assert_reachable_entry(
+    let () = assert_entry(
         alice_entries.remove(&(alice.ep.id(), bob.ipv6)).context("missing IPv6 neighbor entry")?,
         alice.ep.id(),
         bob.ipv6,
+        fidl_fuchsia_net_neighbor::EntryState::Reachable,
         BOB_MAC,
     );
     assert!(
@@ -417,17 +338,19 @@ async fn neigh_list_entries() -> Result {
         list_existing_entries(&bob.env).await.context("failed to get entries for bob")?;
 
     // IPv4 entry.
-    let () = assert_stale_entry(
+    let () = assert_entry(
         bob_entries.remove(&(bob.ep.id(), ALICE_IP)).context("missing IPv4 neighbor entry")?,
         bob.ep.id(),
         ALICE_IP,
+        fidl_fuchsia_net_neighbor::EntryState::Stale,
         ALICE_MAC,
     );
     // IPv6 entry.
-    let () = assert_stale_entry(
+    let () = assert_entry(
         bob_entries.remove(&(bob.ep.id(), alice.ipv6)).context("missing IPv6 neighbor entry")?,
         bob.ep.id(),
         alice.ipv6,
+        fidl_fuchsia_net_neighbor::EntryState::Stale,
         ALICE_MAC,
     );
     assert!(bob_entries.is_empty(), "unexpected neighbors remaining in list: {:?}", bob_entries);
@@ -647,17 +570,19 @@ async fn neigh_clear_entries() -> Result {
     let mut entries =
         list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
     // IPv4 entry.
-    let () = assert_reachable_entry(
+    let () = assert_entry(
         entries.remove(&(alice.ep.id(), BOB_IP)).context("missing IPv4 neighbor entry")?,
         alice.ep.id(),
         BOB_IP,
+        fidl_fuchsia_net_neighbor::EntryState::Reachable,
         BOB_MAC,
     );
     // IPv6 entry.
-    let () = assert_reachable_entry(
+    let () = assert_entry(
         entries.remove(&(alice.ep.id(), bob.ipv6)).context("missing IPv6 neighbor entry")?,
         alice.ep.id(),
         bob.ipv6,
+        fidl_fuchsia_net_neighbor::EntryState::Reachable,
         BOB_MAC,
     );
     assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
@@ -672,10 +597,11 @@ async fn neigh_clear_entries() -> Result {
     let mut entries =
         list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
     // IPv6 entry.
-    let () = assert_reachable_entry(
+    let () = assert_entry(
         entries.remove(&(alice.ep.id(), bob.ipv6)).context("missing IPv6 neighbor entry")?,
         alice.ep.id(),
         bob.ipv6,
+        fidl_fuchsia_net_neighbor::EntryState::Reachable,
         BOB_MAC,
     );
     assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
@@ -800,16 +726,18 @@ async fn neigh_add_remove_entry() -> Result {
 
     let mut entries =
         list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
-    let () = assert_static_entry(
+    let () = assert_entry(
         entries.remove(&(alice.ep.id(), BOB_IP)).expect("static IPv4 entry missing"),
         alice.ep.id(),
         BOB_IP,
+        fidl_fuchsia_net_neighbor::EntryState::Static,
         BOB_MAC,
     );
-    let () = assert_static_entry(
+    let () = assert_entry(
         entries.remove(&(alice.ep.id(), bob.ipv6)).expect("static IPv6 entry missing"),
         alice.ep.id(),
         bob.ipv6,
+        fidl_fuchsia_net_neighbor::EntryState::Static,
         BOB_MAC,
     );
     assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
@@ -1095,13 +1023,23 @@ async fn neigh_unreachable_entries() -> Result {
             entries.remove(&(alice.ep.id(), BOB_IP)).context("missing IPv4 neighbor entry")?;
         assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
 
-        if let Some(fidl_fuchsia_net_neighbor::EntryState::Unreachable(_)) = entry.state {
-            let () = assert_unreachable_entry(entry, alice.ep.id(), BOB_IP);
+        matches::assert_matches!(
+            entry,
+            fidl_fuchsia_net_neighbor::Entry {
+                interface: Some(interface),
+                neighbor: Some(BOB_IP),
+                state: Some(_),
+                mac: None,
+                updated_at: Some(updated_at), ..
+            } if interface == alice.ep.id() && updated_at != 0
+        );
+
+        if entry.state == Some(fidl_fuchsia_net_neighbor::EntryState::Unreachable) {
             break;
-        } else {
-            let () = assert_incomplete_entry(entry, alice.ep.id(), BOB_IP);
-            println!("Found incomplete entry, waiting for the transition to unreachable...");
         }
+
+        assert_eq!(entry.state, Some(fidl_fuchsia_net_neighbor::EntryState::Incomplete));
+        println!("Found incomplete entry, waiting for the transition to unreachable...");
     }
 
     Ok(())
