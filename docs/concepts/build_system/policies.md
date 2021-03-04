@@ -1,155 +1,86 @@
-# Fuchsia build policies
+# Build system policies
 
-The Fuchsia build is a large and complicated build, as it covers a wide
-variety of software and dependencies, both first and third party, from kernel
-up to multi-media user applications and whole-system constructions.
+This document details design principles and specific technical decisions made
+that relate to how the Fuchsia build should work.
+These principles apply to all modes of using the Fuchsia build, for instance
+whether by interactive engineering workflows or via automated systems such as
+CI/CQ.
 
-The Fuchsia build aims to provide common desirable build properties:
+## Goals and priorities of the build
 
-* Hermeticity - the property that the build is self-contained and neither
-  influences external software and configuration or is influenced by external
-  software and configuration.
-* Repeatability and reproducibility - the property that two builds from the same
-  source tree produce the same output. This property is desirable for security
-  and auditing, as well as determinism in the engineering process.
+Like any system, the build is often subject to multiple conflicting
+requirements. When there is a conflict, we generally seek to satisfy these
+priorities by order of importance:
+
+1. Meet customer requirements, as determined by Fuchsia technical leadership.
+2. Ensure correctness: produce the desired outputs.
+3. Promote maintainability: documentation, sound engineering processes.
+4. Improve performance: perform the same builds at a lower cost.
+
+## Desired properties of the build
+
+The following are considered to be good properties for the build:
+
+* Hermeticity - the build is self-contained and neither influences external
+  software and configuration or is influenced by external software and
+  configuration. Build steps 
+* Repeatability and reproducibility - two builds from the same source tree
+  produce the same output or the same outcome deterministically.
+  Reproducibility promotes security and auditing, and simplifies
+  troubleshooting.
 * Efficient - builds should only spend time doing work relevant to the build,
   and must aim to minimize the impact on both human and infrastructure costs.
+* Portability - builds should produce consistent results across all supported
+  host platforms.
 
-## Only use the dependency graph to modulate runtime behavior
+These are ideals.
+We aim to meet these ideals and measure our progress against these measures.
 
-It is a goal of the Fuchsia architecture that all products may co-exist in a
-global Fuchsia ecosystem, sharing component addressability and updates
-throughout the ecosystem. In order to reach this goal, components that are
-provided a name in that ecosystem must have the same meaning regardless of
-the particulars of the build from which they are produced. If a build may
-produce a package called `fortune`, there should not be any build
-configuration used to produce `fortune` that alters the intended use case or
-behavior of fortune that is not considered a bug or a local-only workflow
-tool.
+## Python scripts as build actions
 
-Examples of allowed configuration changes for a build target:
+Python scripts may be used as build actions.
 
-- Local debugging flags that are never built in "production" releases, such
-  as DEBUG_ASSERT, or increased logging levels.
-- ASAN, TSAN, and other sanitizer builds that are not inputs to production
-  components, but are used in development environments for validation.
+Please follow the [Google style guide for Python][python-style].
 
-Examples of disallowed changes for a build target:
+Fuchsia currently uses Python 3.8. All Python sources are to begin with the
+following:
 
-- Enabling or disabling feature sets, for example a build flag that modulates
-  whether or not component `fortune` implements the `com.fuchsia.FortuneExtra`
-  interface.
-- This policy includes hardware feature modulation - in order to provide for
-  example a driver that has build support to disable a feature would be built
-  twice, once with the feature enabled, and once without and packaged into
-  two package targets with distinct names.
-
-It must be possible for one configuration and invocation to build all
-possible feature axes and combinations. Products and image sets are composed
-with particular features by modulating the set of dependencies those products
-are composed from, rather than modulating the behavior or implementation of a
-particular component.
-
-The following is a small example demonstrating the approach:
-
-``` gn
-config("feature_foo") {
-  cflags = [ "-DFOO=1" ]
-}
-
-executable("mytool_nofoo") {
-  ...
-}
-
-executable("mytool_foo") {
-  configs = [":feature_foo"]
-}
-
-package("mytool_with_foo") {
-  deps = [":mytool_foo"]
-  ...
-}
-
-package("mytool") {
-  deps = [":mytool_nofoo"]
-  ...
-}
+```shell
+#!/usr/bin/env python3.8
 ```
 
-An example of an undesirable approach is as follows:
+## Shell scripts as build actions
 
-``` gn
-declare_args() {
-  enable_foo = false
-}
+Shell scripts may be used as build actions.
 
-executable("mytool") {
-  if (enable_foo) {
-    cflags = [ "-DFOO=1" ]
-  }
-  ...
-}
+Shell scripts are encouraged for tasks that can be expressed with a few simple
+shell commands. For complex operations, other languages are preferred.
+
+Please follow the [Google style guide for shell scripting][bash-style].
+Please use [shellcheck] to find and correct common shell programming errors.
+
+We prefer POSIX (aka Bourne) shell scripts for portability across wide set of
+host platforms.
+If you're maintaining an existing Bash script, please restrict the features
+used to version 3.2, or consider rewriting the script as POSIX shell script.
+To check whether your script is POSIX compliant, you can use:
+
+```posix-terminal
+shellcheck --shell=sh
 ```
 
-The above negative example would modulate the behavior, and definition of the
-component "mytool" based on build configuration, preventing the build from
-being able to build all possible configurations, and violating the component
-addressability scheme of the Fuchsia architecture.
+Scripts that run on POSIX shell should begin with the following:
 
-## Board vs. product axes
+```shell
+#!/bin/sh
+```
 
-It is often tempting to want to use specific board properties, or a board
-name to modulate the configuration or behavior of software. This is
-undesirable as products should run on a variety of target hardware. A board
-does not define a product, even if it might for a user. Instead, a board
-defines only a set of hardware properties.
+Scripts that specifically require Bash should begin with the following:
 
-Board package dependency configuration should ideally only provide
-configuration data and driver selection. Runtime or product software should
-not be reconfigured by the board, as the board as an abstraction cannot know
-what software configuration might run on it. For example, you may run the
-router product configuration on top of a VIM2 board configuration.
+```shell
+#!/bin/bash
+```
 
-## Package configuration vs. config_data
-
-Packages often contain components with runtime configurable behavior and/or a
-need for additional data or metadata that a component consumes in order to
-function for a particular purpose. There are two commonly used methods to
-provide such data to a component, first to include that data in variations of
-the package, for example `fortune-with-jokes` and `fortune-without-jokes`,
-and the second to configure `fortune` using `config-data` provided data. The
-package configuration pattern is always preferred over the config-data
-mechanism where applicable, as it provides the maximum flexibility and
-longevity in the build and product composition system. Additionally, the
-config-data pattern is to be considered temporary - it does not yet solve the
-configuration management challenge well for all possible forms of product
-composition, and may not last through future architecture changes.
-
-## Null builds
-
-A build that invoked twice with no source code changes must perform no build
-actions. The ninja build system that is used in Fuchsia encodes a strong
-concept of a null build that is performed when ninja can observe no dirty
-inputs to any targets. A failure of a build configuration to be a null-build
-on repeated invocations is an indication of a configuration error in the
-build system that should be fixed promptly. Failures to null-build often
-indicate failures of hermetic build behavior or failures in repeatability of
-the build.
-
-## Known Bugs and Exceptions
-
-The following exceptions are recorded as known issues that may not be
-resolved for an extended time. Newly discovered issues of a similar issues
-are to be first treated as bugs rather than becoming new exceptions.
-
-- The following packages are in violation of the package specialism and
-  naming rules: system_image, config-data, shell-commands, update.
-- If a build is reconfigured (for example by `fx set`) to include a subset of
-  the previously requested artifacts, some dependencies not relevant to the new
-  configuration may be rebuilt, and sometimes this may lead to build failure.
-  This is a known challenge of the build system and users are encouraged to
-  clean their build tree when performing major or subtractive build
-  configuration changes.
-- Currently $PATH is consumed as-is by the build due to the lack of a
-  prebuilt Python distribution and dependence on a handful of other utilities
-  common on Unix type systems.
+[bash-style]: https://google.github.io/styleguide/shellguide.html
+[python-style]: https://google.github.io/styleguide/pyguide.html
+[shellcheck]: https://www.shellcheck.net/
