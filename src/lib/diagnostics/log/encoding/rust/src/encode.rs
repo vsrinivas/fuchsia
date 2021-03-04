@@ -41,14 +41,12 @@ where
     pub fn write_event(
         &mut self,
         event: &Event<'_>,
-        process_name: &str,
         pid: zx::Koid,
         tid: zx::Koid,
         dropped: u32,
     ) -> Result<(), EncodingError> {
         let builder = RecordBuilder::from_tracing_event(
             event,
-            process_name,
             pid.raw_koid() as u64,
             tid.raw_koid() as u64,
             dropped,
@@ -61,7 +59,6 @@ where
     pub fn write_record_for_test(
         &mut self,
         record: &Record,
-        process_name: &str,
         pid: zx::Koid,
         tid: zx::Koid,
         file: &str,
@@ -70,7 +67,6 @@ where
     ) -> Result<(), EncodingError> {
         let mut builder = RecordBuilder::new(
             record.severity,
-            process_name,
             pid.raw_koid() as u64,
             tid.raw_koid() as u64,
             Some(file),
@@ -190,7 +186,6 @@ macro_rules! arg {
 impl RecordBuilder {
     fn new(
         severity: Severity,
-        process_name: &str,
         pid: u64,
         tid: u64,
         file: Option<&str>,
@@ -200,7 +195,6 @@ impl RecordBuilder {
         let timestamp = zx::Time::get_monotonic().into_nanos();
         let mut arguments = vec![];
 
-        arguments.push(arg!("tag", Text(process_name.to_string())));
         arguments.push(arg!("pid", UnsignedInt(pid)));
         arguments.push(arg!("tid", UnsignedInt(tid)));
 
@@ -227,27 +221,14 @@ impl RecordBuilder {
         }
     }
 
-    fn from_tracing_event(
-        event: &Event<'_>,
-        process_name: &str,
-        pid: u64,
-        tid: u64,
-        dropped: u32,
-    ) -> Self {
+    fn from_tracing_event(event: &Event<'_>, pid: u64, tid: u64, dropped: u32) -> Self {
         // normalizing is needed to get log records to show up in trace metadata correctly
         let metadata = event.normalized_metadata();
         let metadata = if let Some(ref m) = metadata { m } else { event.metadata() };
 
         // TODO(fxbug.dev/56090) do this without allocating all the intermediate values
-        let mut builder = Self::new(
-            metadata.severity(),
-            process_name,
-            pid,
-            tid,
-            metadata.file(),
-            metadata.line(),
-            dropped,
-        );
+        let mut builder =
+            Self::new(metadata.severity(), pid, tid, metadata.file(), metadata.line(), dropped);
         event.record(&mut builder);
         builder
     }
@@ -517,14 +498,13 @@ mod tests {
 
     #[test]
     fn build_basic_record() {
-        let builder = RecordBuilder::new(Severity::Info, "foo.cm", 0, 0, None, None, 0);
+        let builder = RecordBuilder::new(Severity::Info, 0, 0, None, None, 0);
         assert_eq!(
             builder.inner,
             Record {
                 timestamp: builder.inner.timestamp,
                 severity: Severity::Info,
                 arguments: vec![
-                    Argument { name: "tag".into(), value: Value::Text("foo.cm".into()) },
                     Argument { name: "pid".into(), value: Value::UnsignedInt(0) },
                     Argument { name: "tid".into(), value: Value::UnsignedInt(0) }
                 ]
@@ -534,29 +514,26 @@ mod tests {
 
     #[test]
     fn build_records_with_location() {
-        let info = RecordBuilder::new(Severity::Info, "foo.cm", 0, 0, Some("foo.rs"), Some(10), 0);
+        let info = RecordBuilder::new(Severity::Info, 0, 0, Some("foo.rs"), Some(10), 0);
         assert_eq!(
             info.inner,
             Record {
                 timestamp: info.inner.timestamp,
                 severity: Severity::Info,
                 arguments: vec![
-                    Argument { name: "tag".into(), value: Value::Text("foo.cm".into()) },
                     Argument { name: "pid".into(), value: Value::UnsignedInt(0) },
                     Argument { name: "tid".into(), value: Value::UnsignedInt(0) },
                 ]
             }
         );
 
-        let error =
-            RecordBuilder::new(Severity::Error, "foo.cm", 0, 0, Some("foo.rs"), Some(10), 0);
+        let error = RecordBuilder::new(Severity::Error, 0, 0, Some("foo.rs"), Some(10), 0);
         assert_eq!(
             error.inner,
             Record {
                 timestamp: error.inner.timestamp,
                 severity: Severity::Error,
                 arguments: vec![
-                    Argument { name: "tag".into(), value: Value::Text("foo.cm".into()) },
                     Argument { name: "pid".into(), value: Value::UnsignedInt(0) },
                     Argument { name: "tid".into(), value: Value::UnsignedInt(0) },
                     Argument { name: "file".into(), value: Value::Text("foo.rs".into()) },
@@ -568,14 +545,13 @@ mod tests {
 
     #[test]
     fn build_record_with_dropped_count() {
-        let builder = RecordBuilder::new(Severity::Info, "foo.cm", 0, 0, None, None, 7);
+        let builder = RecordBuilder::new(Severity::Info, 0, 0, None, None, 7);
         assert_eq!(
             builder.inner,
             Record {
                 timestamp: builder.inner.timestamp,
                 severity: Severity::Info,
                 arguments: vec![
-                    Argument { name: "tag".into(), value: Value::Text("foo.cm".into()) },
                     Argument { name: "pid".into(), value: Value::UnsignedInt(0) },
                     Argument { name: "tid".into(), value: Value::UnsignedInt(0) },
                     Argument { name: "num_dropped".into(), value: Value::UnsignedInt(7) },
@@ -594,7 +570,7 @@ mod tests {
         impl<S: Subscriber> Layer<S> for RecordBuilderLayer {
             fn on_event(&self, event: &Event<'_>, _cx: Context<'_, S>) {
                 *LAST_RECORD.lock().unwrap() =
-                    Some(RecordBuilder::from_tracing_event(event, "foo.cm", 0, 0, 0));
+                    Some(RecordBuilder::from_tracing_event(event, 0, 0, 0));
             }
         }
         static LAST_RECORD: Lazy<Mutex<Option<RecordBuilder>>> = Lazy::new(|| Mutex::new(None));
@@ -616,7 +592,6 @@ mod tests {
                 timestamp: last_record.timestamp,
                 severity: Severity::Info,
                 arguments: vec![
-                    Argument { name: "tag".into(), value: Value::Text("foo.cm".into()) },
                     Argument { name: "pid".into(), value: Value::UnsignedInt(0) },
                     Argument { name: "tid".into(), value: Value::UnsignedInt(0) },
                     Argument {

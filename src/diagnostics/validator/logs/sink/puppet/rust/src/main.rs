@@ -30,7 +30,7 @@ async fn run_puppet(mut requests: LogSinkPuppetRequestStream) {
         match next {
             LogSinkPuppetRequest::GetInfo { responder } => {
                 let mut info = PuppetInfo {
-                    tag: Some(rt::process_self().get_name().unwrap().into_string().unwrap()),
+                    tag: None,
                     pid: rt::process_self().get_koid().unwrap().raw_koid(),
                     tid: rt::thread_self().get_koid().unwrap().raw_koid(),
                 };

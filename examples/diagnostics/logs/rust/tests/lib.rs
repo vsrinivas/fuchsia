@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use diagnostics_hierarchy::testing::AnyProperty;
 use diagnostics_reader::{assert_data_tree, ArchiveReader, Data, Logs, Severity};
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage};
 use fuchsia_async::Task;
@@ -20,7 +21,7 @@ async fn launch_example_and_read_hello_world() {
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
     assert_eq!(next.severity, syslog::levels::INFO);
-    assert_eq!(next.tags, vec!["rust_logs_example.cm"]);
+    assert_eq!(next.tags, vec!["logs_example"]);
     assert_eq!(next.msg, "should print");
     assert_ne!(next.pid, 0);
     assert_ne!(next.tid, 0);
@@ -28,13 +29,15 @@ async fn launch_example_and_read_hello_world() {
     assert_eq!(new_next.metadata.severity, Severity::Info);
     assert_eq!(new_next.metadata.component_url, url);
     assert_eq!(new_next.moniker, "logs_example");
-    assert_data_tree!(new_next.payload.unwrap(), root: contains {
+    assert_data_tree!(new_next.payload.unwrap(), root: {
         "message": "should print",
+        "pid": AnyProperty,
+        "tid": AnyProperty,
     });
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
     assert_eq!(next.severity, syslog::levels::INFO);
-    assert_eq!(next.tags, vec!["rust_logs_example.cm"]);
+    assert_eq!(next.tags, vec!["logs_example"]);
     assert_eq!(next.msg, "hello, world! bar=baz foo=1");
     assert_ne!(next.pid, 0);
     assert_ne!(next.tid, 0);
@@ -42,15 +45,17 @@ async fn launch_example_and_read_hello_world() {
     assert_eq!(new_next.metadata.severity, Severity::Info);
     assert_eq!(new_next.metadata.component_url, url);
     assert_eq!(new_next.moniker, "logs_example");
-    assert_data_tree!(new_next.payload.unwrap(), root: contains {
+    assert_data_tree!(new_next.payload.unwrap(), root: {
         "message": "hello, world!",
         "foo": 1u64,
         "bar": "baz",
+        "pid": AnyProperty,
+        "tid": AnyProperty,
     });
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
     assert_eq!(next.severity, syslog::levels::WARN);
-    assert_eq!(next.tags, vec!["rust_logs_example.cm"]);
+    assert_eq!(next.tags, vec!["logs_example"]);
     assert_eq!(next.msg, "warning: using old api");
     assert_ne!(next.pid, 0);
     assert_ne!(next.tid, 0);
@@ -58,8 +63,10 @@ async fn launch_example_and_read_hello_world() {
     assert_eq!(new_next.metadata.severity, Severity::Warn);
     assert_eq!(new_next.metadata.component_url, url);
     assert_eq!(new_next.moniker, "logs_example");
-    assert_data_tree!(new_next.payload.unwrap(), root: contains {
+    assert_data_tree!(new_next.payload.unwrap(), root: {
         "message": "warning: using old api",
+        "pid": AnyProperty,
+        "tid": AnyProperty,
     });
 }
 

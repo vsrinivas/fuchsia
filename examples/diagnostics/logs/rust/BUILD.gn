@@ -36,6 +36,7 @@ rustc_test("test") {
 
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//src/lib/diagnostics/hierarchy",
     "//src/lib/diagnostics/reader",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

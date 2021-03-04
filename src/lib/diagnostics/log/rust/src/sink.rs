@@ -17,13 +17,6 @@ use tracing_subscriber::layer::{Context, Layer};
 
 static PROCESS_ID: Lazy<zx::Koid> =
     Lazy::new(|| rt::process_self().get_koid().expect("couldn't read our own process koid"));
-static PROCESS_NAME: Lazy<String> = Lazy::new(|| {
-    rt::process_self()
-        .get_name()
-        .expect("couldn't read our own process name")
-        .to_string_lossy()
-        .to_string()
-});
 
 thread_local! {
     static THREAD_ID: zx::Koid = rt::thread_self()
@@ -79,7 +72,6 @@ impl Sink {
         self.encode_and_send(move |encoder, previously_dropped| {
             encoder.write_record_for_test(
                 &record,
-                &*PROCESS_NAME,
                 *PROCESS_ID,
                 THREAD_ID.with(|t| *t),
                 file,
@@ -93,13 +85,7 @@ impl Sink {
 impl<S: Subscriber> Layer<S> for Sink {
     fn on_event(&self, event: &Event<'_>, _cx: Context<'_, S>) {
         self.encode_and_send(|encoder, previously_dropped| {
-            encoder.write_event(
-                event,
-                &*PROCESS_NAME,
-                *PROCESS_ID,
-                THREAD_ID.with(|t| *t),
-                previously_dropped,
-            )
+            encoder.write_event(event, *PROCESS_ID, THREAD_ID.with(|t| *t), previously_dropped)
         });
     }
 }
@@ -128,7 +114,6 @@ mod tests {
 
     fn arg_prefix() -> Vec<Argument> {
         vec![
-            Argument { name: "tag".into(), value: Value::Text(PROCESS_NAME.to_string()) },
             Argument { name: "pid".into(), value: Value::UnsignedInt(PROCESS_ID.raw_koid() as _) },
             Argument {
                 name: "tid".into(),
@@ -255,8 +240,8 @@ mod tests {
     async fn drop_count_is_tracked() {
         let socket = init_sink().await;
         let mut buf = [0u8; MAX_DATAGRAM_LEN_BYTES as _];
-        const MESSAGE_SIZE: usize = 152;
-        const MESSAGE_SIZE_WITH_DROPS: usize = 184;
+        const MESSAGE_SIZE: usize = 104;
+        const MESSAGE_SIZE_WITH_DROPS: usize = 136;
         const NUM_DROPPED: usize = 100;
 
         let socket_capacity = || {
