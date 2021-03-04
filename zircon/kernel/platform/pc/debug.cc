@@ -148,10 +148,10 @@ static interrupt_eoi uart_irq_handler(void* arg) {
         break;
       }
       case 0b0010:
-        // transmitter is empty, signal any waiting senders
-        uart_dputc_event.Signal();
         // disable the tx irq
         uart_write(1, (1 << 0));  // just rx interrupt enable
+        // transmitter is empty, signal any waiting senders
+        uart_dputc_event.Signal();
         break;
       case 0b0110:     // receiver line status
         uart_read(5);  // read the LSR
