@@ -303,7 +303,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 		}
 		if sshAddr.IP == nil {
 			ipv4Addr, ipv6Addr, err := func() (net.IP, net.IPAddr, error) {
-				ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+				ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 				defer cancel()
 				return botanist.ResolveIP(ctx, t.Nodename())
 			}()
