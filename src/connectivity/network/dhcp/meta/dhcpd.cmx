@@ -6,9 +6,6 @@
         "binary": "bin/dhcpd"
     },
     "sandbox": {
-        "features": [
-            "config-data"
-        ],
         "services": [
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",

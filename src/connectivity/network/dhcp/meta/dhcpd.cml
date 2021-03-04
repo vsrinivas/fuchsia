@@ -20,11 +20,6 @@
                 "fuchsia.stash.SecureStore",
             ],
         },
-        {
-            directory: "config-data",
-            rights: [ "r*" ],
-            path: "/config/data",
-        },
     ],
     expose: [
         {
