@@ -10,7 +10,6 @@ use crate::base::SettingType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::internal::agent;
 use crate::internal::event;
-use crate::internal::switchboard;
 use crate::service;
 use crate::service_context::ServiceContext;
 use crate::tests::scaffold;
@@ -209,7 +208,6 @@ async fn create_authority() -> AuthorityImpl {
     AuthorityImpl::create(
         service::message::create_hub(),
         agent::message::create_hub(),
-        switchboard::message::create_hub(),
         event::message::create_hub(),
         HashSet::new(),
         None,

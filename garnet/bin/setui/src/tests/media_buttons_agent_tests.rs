@@ -5,8 +5,8 @@
 use crate::agent::base::{Context, Descriptor, Invocation, Lifespan};
 use crate::agent::media_buttons;
 use crate::input::{ButtonType, VolumeGain};
+use crate::internal::agent;
 use crate::internal::event::{self, Event};
-use crate::internal::{agent, switchboard};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::service;
 use crate::service_context::ServiceContext;
@@ -55,7 +55,6 @@ async fn test_media_buttons_proxied() {
         agent_receptor,
         Descriptor::new("test_media_buttons_agent"),
         service::message::create_hub(),
-        switchboard::message::create_hub(),
         event_hub,
         HashSet::new(),
         None,

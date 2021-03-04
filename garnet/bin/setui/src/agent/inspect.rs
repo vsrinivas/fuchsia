@@ -229,7 +229,6 @@ mod tests {
     use crate::display::types::SetDisplayInfo;
     use crate::internal::agent;
     use crate::internal::event;
-    use crate::internal::switchboard;
     use crate::intl::types::{IntlInfo, LocaleId, TemperatureUnit};
     use crate::service;
 
@@ -283,7 +282,6 @@ mod tests {
                 .1,
             Descriptor::new("test_component"),
             service::message::create_hub(),
-            switchboard::message::create_hub(),
             event::message::create_hub(),
             HashSet::new(),
             None,

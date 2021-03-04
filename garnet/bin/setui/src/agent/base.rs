@@ -4,7 +4,6 @@
 use crate::base::SettingType;
 use crate::internal::agent::message::Receptor;
 use crate::internal::event;
-use crate::internal::switchboard;
 use crate::message::base::MessengerType;
 use crate::monitor;
 use crate::service;
@@ -53,7 +52,6 @@ pub struct Context {
     event_factory: event::message::Factory,
     publisher: event::Publisher,
     pub messenger_factory: service::message::Factory,
-    pub switchboard_messenger_factory: switchboard::message::Factory,
     pub available_components: HashSet<SettingType>,
     pub resource_monitor_actor: Option<monitor::environment::Actor>,
 }
@@ -63,7 +61,6 @@ impl Context {
         receptor: Receptor,
         descriptor: Descriptor,
         messenger_factory: service::message::Factory,
-        switchboard_messenger_factory: switchboard::message::Factory,
         event_factory: event::message::Factory,
         available_components: HashSet<SettingType>,
         resource_monitor_actor: Option<monitor::environment::Actor>,
@@ -78,7 +75,6 @@ impl Context {
             event_factory,
             publisher,
             messenger_factory,
-            switchboard_messenger_factory,
             available_components,
             resource_monitor_actor,
         }
@@ -91,18 +87,6 @@ impl Context {
         &self,
     ) -> Result<service::message::Messenger, service::message::MessageError> {
         Ok(self.messenger_factory.create(MessengerType::Unbound).await?.0)
-    }
-
-    /// Generates a new `Messenger` on the switchboard's `MessageHub`. Only
-    /// top-level messages can be sent, not received, as the associated
-    /// `Receptor` is discarded.
-    pub async fn create_switchboard_messenger(
-        &self,
-    ) -> Result<switchboard::message::Messenger, switchboard::message::MessageError> {
-        let (messenger, _) =
-            self.switchboard_messenger_factory.create(MessengerType::Unbound).await?;
-
-        Ok(messenger)
     }
 
     pub fn event_factory(&self) -> &event::message::Factory {

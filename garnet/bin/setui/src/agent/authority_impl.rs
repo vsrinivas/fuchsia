@@ -7,7 +7,6 @@ use crate::agent::base::{AgentError, Authority, BlueprintHandle, Context, Invoca
 use crate::base::SettingType;
 use crate::internal::agent;
 use crate::internal::event;
-use crate::internal::switchboard;
 use crate::message::base::{Audience, MessengerType};
 use crate::monitor;
 use crate::service;
@@ -26,8 +25,6 @@ pub struct AuthorityImpl {
     messenger_factory: service::message::Factory,
     // Factory to generate messengers to comunicate with the agent
     agent_messenger_factory: agent::message::Factory,
-    // Factory passed to agents for communicating with the switchboard.
-    switchboard_messenger_factory: switchboard::message::Factory,
     // Messenger
     messenger: agent::message::Messenger,
     // Factory to generate event messengers
@@ -42,7 +39,6 @@ impl AuthorityImpl {
     pub async fn create(
         messenger_factory: service::message::Factory,
         agent_messenger_factory: agent::message::Factory,
-        switchboard_messenger_factory: switchboard::message::Factory,
         event_factory: event::message::Factory,
         available_components: HashSet<SettingType>,
         resource_monitor_actor: Option<monitor::environment::Actor>,
@@ -56,7 +52,6 @@ impl AuthorityImpl {
             agent_signatures: Vec::new(),
             messenger_factory,
             agent_messenger_factory,
-            switchboard_messenger_factory,
             messenger: client,
             event_factory,
             available_components,
@@ -139,7 +134,6 @@ impl Authority for AuthorityImpl {
                     agent_receptor,
                     blueprint.get_descriptor(),
                     self.messenger_factory.clone(),
-                    self.switchboard_messenger_factory.clone(),
                     self.event_factory.clone(),
                     self.available_components.clone(),
                     self.resource_monitor_actor.clone(),

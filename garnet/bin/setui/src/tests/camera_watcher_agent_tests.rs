@@ -4,8 +4,8 @@
 
 use crate::agent::base::{Context, Descriptor, Invocation, Lifespan};
 use crate::agent::camera_watcher::CameraWatcherAgent;
+use crate::internal::agent;
 use crate::internal::event::{self, Event};
-use crate::internal::{agent, switchboard};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::service;
 use crate::service_context::ServiceContext;
@@ -53,7 +53,6 @@ async fn test_camera_agent_proxy() {
         agent_receptor,
         Descriptor::new("test_camera_watcher_agent"),
         service::message::create_hub(),
-        switchboard::message::create_hub(),
         event_hub,
         HashSet::new(),
         None,
