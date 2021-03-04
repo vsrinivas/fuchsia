@@ -197,8 +197,6 @@ inline void TestIteration(TestDataZbiType type) {
 // Note: using the CRC32-checking in tests is a cheap and easy way to verify
 // that the storage type is delivering the correct payload data.
 #define TEST_ITERATION_BY_TYPE(suite_name, TestTraits, type_name, type)                         \
-  TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, TestTraits, Permissive,                       \
-                                      zbitl::Checking::kPermissive, type_name, type)            \
   TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, TestTraits, Strict, zbitl::Checking::kStrict, \
                                       type_name, type)                                          \
   TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, TestTraits, Crc, zbitl::Checking::kCrc,       \
@@ -207,9 +205,6 @@ inline void TestIteration(TestDataZbiType type) {
 #define TEST_ITERATION(suite_name, TestTraits)                                                  \
   TEST_ITERATION_BY_TYPE(suite_name, TestTraits, EmptyZbi, TestDataZbiType::kEmpty)             \
   TEST_ITERATION_BY_TYPE(suite_name, TestTraits, OneItemZbi, TestDataZbiType::kOneItem)         \
-  TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, TestTraits, Permissive,                       \
-                                      zbitl::Checking::kPermissive, BadCrcZbi,                  \
-                                      TestDataZbiType::kBadCrcItem)                             \
   TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, TestTraits, Strict, zbitl::Checking::kStrict, \
                                       BadCrcZbi, TestDataZbiType::kBadCrcItem)                  \
   TEST_ITERATION_BY_TYPE(suite_name, TestTraits, MultipleSmallItemsZbi,                         \

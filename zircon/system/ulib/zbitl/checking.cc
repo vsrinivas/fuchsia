@@ -9,21 +9,10 @@ namespace zbitl {
 using namespace std::literals;
 
 template <>
-fitx::result<std::string_view> CheckHeader<Checking::kPermissive>(const zbi_header_t& header,
-                                                                  size_t capacity) {
-  // Permissive mode only checks things that break the structural navigation.
-  if (header.length > capacity) {
-    return fitx::error{"item doesn't fit, container truncated?"sv};
-  }
-
-  return fitx::ok();
-}
-
-template <>
 fitx::result<std::string_view> CheckHeader<Checking::kStrict>(const zbi_header_t& header,
                                                               size_t capacity) {
-  if (auto result = CheckHeader<Checking::kPermissive>(header, capacity); result.is_error()) {
-    return result;
+  if (header.length > capacity) {
+    return fitx::error{"item doesn't fit, container truncated?"sv};
   }
 
   // Strict mode also checks policy requirements.  Boot loaders do not always

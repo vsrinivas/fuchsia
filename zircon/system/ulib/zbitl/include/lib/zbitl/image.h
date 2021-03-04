@@ -217,10 +217,6 @@ class Image : public View<Storage, Check> {
 template <typename Storage>
 explicit Image(Storage) -> Image<Storage>;
 
-// A shorthand for permissive checking.
-template <typename Storage>
-using PermissiveImage = Image<Storage, Checking::kPermissive>;
-
 // A shorthand for CRC checking.
 template <typename Storage>
 using CrcCheckingImage = Image<Storage, Checking::kCrc>;

@@ -31,8 +31,8 @@
 class BootZbi {
  public:
   using Bytes = ktl::span<std::byte>;
-  using InputZbi = zbitl::PermissiveView<zbitl::ByteView>;
-  using Zbi = zbitl::PermissiveImage<Bytes>;
+  using InputZbi = zbitl::View<zbitl::ByteView>;
+  using Zbi = zbitl::Image<Bytes>;
   using Error = InputZbi::CopyError<Bytes>;
 
   struct Size {

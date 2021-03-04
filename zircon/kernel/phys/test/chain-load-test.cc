@@ -42,7 +42,7 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
 
   auto zbi_header = static_cast<const zbi_header_t*>(zbi_ptr);
   auto zbi_bytes = zbitl::StorageFromRawHeader(zbi_header);
-  zbitl::PermissiveView<zbitl::ByteView> zbi(zbi_bytes);
+  zbitl::View<zbitl::ByteView> zbi(zbi_bytes);
 
   // Find the first RAMDISK item.  We'll ignore anything before that, though
   // there probably isn't anything except maybe an embedded cmdline.  Anything

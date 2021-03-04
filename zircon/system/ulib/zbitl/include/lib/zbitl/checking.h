@@ -14,15 +14,11 @@
 namespace zbitl {
 
 /// Provides a mode of severity for checking the validity of ZBI items.
+///
+/// TODO(fxbug.dev/486538): delete me.
 enum class Checking {
-  /// In this most forgiving of modes, only structural requirements to ensure
-  /// safe iteration over items in the container are checked. Catering to a
-  /// common denominator, this is the likely mode of choice for dealing with
-  /// ZBIs constructed outside of the platform.
-  kPermissive,
-
-  /// Extending the bounds-checking of the permissive mode, in this mode common
-  /// header properties are also validated (e.g., for proper 'magic' and the
+  /// Performs bounds-checking to ensure structural navigation of the ZBI and
+  /// validates basic header properties (e.g., for proper 'magic' and the
   /// specification of required flags).
   kStrict,
 
@@ -39,10 +35,6 @@ fitx::result<std::string_view> CheckHeader(const zbi_header_t& header, size_t ca
 template <>
 fitx::result<std::string_view> CheckHeader<Checking::kStrict>(const zbi_header_t& header,
                                                               size_t capacity);
-
-template <>
-fitx::result<std::string_view> CheckHeader<Checking::kPermissive>(const zbi_header_t& header,
-                                                                  size_t capacity);
 
 // CRC-checking mode doesn't apply to the header.
 template <>

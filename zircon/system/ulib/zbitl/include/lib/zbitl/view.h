@@ -459,10 +459,8 @@ class View {
       ZX_DEBUG_ASSERT(offset_ % ZBI_ALIGNMENT == 0);
       if (view_->limit_ - offset_ < sizeof(zbi_header_t)) {
         // Reached the end of the container.
-        if constexpr (Check != Checking::kPermissive) {
-          if (offset_ != view_->limit_) {
-            Fail("container too short for next item header");
-          }
+        if (offset_ != view_->limit_) {
+          Fail("container too short for next item header");
         }
         *this = view_->end();
       } else if (auto header = Traits::Header(view_->storage(), offset_); header.is_error()) {
@@ -476,10 +474,7 @@ class View {
         offset_ += static_cast<uint32_t>(sizeof(zbi_header_t));
         if (view_->limit_ - offset_ < header_->length) {
           // Reached the end of the container.
-          if constexpr (Check != Checking::kPermissive) {
-            Fail("container too short for next item payload");
-          }
-          *this = view_->end();
+          Fail("container too short for next item payload");
           return *this;
         }
         if (auto payload = Traits::Payload(view_->storage(), offset_, header_->length);
@@ -645,10 +640,8 @@ class View {
           "container header specifies length that exceeds capcity", sizeof(zbi_header_t), {}});
     }
 
-    if constexpr (Check != Checking::kPermissive) {
-      if (header->flags & ZBI_FLAG_CRC32) {
-        return fitx::error(Error{"container header has CRC32 flag", 0, {}});
-      }
+    if (header->flags & ZBI_FLAG_CRC32) {
+      return fitx::error(Error{"container header has CRC32 flag", 0, {}});
     }
 
     if (header->length % ZBI_ALIGNMENT != 0) {
@@ -1367,10 +1360,6 @@ class View {
 // Deduction guide: View v(T{}) instantiates View<T>.
 template <typename Storage>
 explicit View(Storage) -> View<Storage>;
-
-// A shorthand for permissive checking.
-template <typename Storage>
-using PermissiveView = View<Storage, Checking::kPermissive>;
 
 // A shorthand for CRC checking.
 template <typename Storage>

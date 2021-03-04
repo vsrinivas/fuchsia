@@ -37,28 +37,28 @@ inline void CheckTwoItemZbi(uint32_t type1, uint32_t type2, bool expect_ok) {
   constexpr size_t kPayloadSize = ZBI_ALIGNMENT;
   struct TwoItemZbi {
     struct Item {
-      alignas(ZBI_ALIGNMENT) zbi_header_t header{};
-      uint8_t payload[kPayloadSize] = {0};
+      alignas(ZBI_ALIGNMENT) zbi_header_t header;
+      uint8_t payload[kPayloadSize];
     };
-    alignas(ZBI_ALIGNMENT) zbi_header_t header{};
-    Item items[2] = {};
+    alignas(ZBI_ALIGNMENT) zbi_header_t header;
+    Item items[2];
   };
 
   const TwoItemZbi contents = {
-      .header = {.length = sizeof(contents.items)},
+      .header = ZBI_CONTAINER_HEADER(sizeof(contents.items)),
       .items =
           {
               {
-                  .header = {.type = type1, .length = kPayloadSize},
+                  .header = zbitl::SanitizeHeader({.type = type1, .length = kPayloadSize}),
               },
               {
-                  .header = {.type = type2, .length = kPayloadSize},
+                  .header = zbitl::SanitizeHeader({.type = type2, .length = kPayloadSize}),
               },
           },
   };
 
   ByteView bytes(reinterpret_cast<const uint8_t*>(&contents), sizeof(contents));
-  zbitl::PermissiveView<ByteView> zbi(bytes);
+  zbitl::View<ByteView> zbi(bytes);
   auto result = zbitl::CheckComplete(zbi, kKernelType, kBootfsType);
   if (expect_ok) {
     EXPECT_IS_OK(result);
@@ -100,37 +100,31 @@ TEST(ZbitlCompletenessTest, KernelAndBootfsMissing) {
 
 TEST(ZbitlHeaderTest, MagicAndFlagsMissing) {
   // * Item fits, but magic, required flags and CRC are unset.
-  // Succeeding: kPermissive.
-  // Failing: kStrict, kCrc.
+  // Expectation: failure.
   zbi_header_t header = kValidHeader;
   header.flags = 0u;
   header.magic = 0u;
   header.crc32 = 0u;
 
-  EXPECT_IS_OK(zbitl::CheckHeader<zbitl::Checking::kPermissive>(header, kValidCapacity));
   EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kStrict>(header, kValidCapacity));
   EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kCrc>(header, kValidCapacity));
 }
 
 TEST(ZbitlHeaderTest, ItemTooLargeWithMagicAndFlagsMissing) {
   // * Item is too large, and magic, required flags and CRC are unset.
-  // Succeeding: none.
-  // Failing: kPermissive, kStrict, kCrc.
+  // Expectation: failure.
   zbi_header_t header = kValidHeader;
   header.flags = 0u;
   header.magic = 0u;
   header.crc32 = 0u;
 
-  EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kPermissive>(header, kNoCapacity));
   EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kStrict>(header, kNoCapacity));
   EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kCrc>(header, kNoCapacity));
 }
 
 TEST(ZbitlHeaderTest, ValidHeader) {
   // * Item fits, magic is correct, and required flags and CRC are set.
-  // Succeeding: kPermissive, kStrict, kCrc.
-  // Failing: none.
-  EXPECT_IS_OK(zbitl::CheckHeader<zbitl::Checking::kPermissive>(kValidHeader, kValidCapacity));
+  // Expectation: success.
   EXPECT_IS_OK(zbitl::CheckHeader<zbitl::Checking::kStrict>(kValidHeader, kValidCapacity));
   EXPECT_IS_OK(zbitl::CheckHeader<zbitl::Checking::kCrc>(kValidHeader, kValidCapacity));
 }
@@ -138,31 +132,25 @@ TEST(ZbitlHeaderTest, ValidHeader) {
 TEST(ZbitlHeaderTest, ItemTooLarge) {
   // * Item is too large, but magic is correct, and required flags and CRC
   // are set.
-  // Succeeding: none.
-  // Failing: kPermissive, kStrict, kCrc.
-  EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kPermissive>(kValidHeader, kNoCapacity));
+  // Expectation: failure.
   EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kStrict>(kValidHeader, kNoCapacity));
   EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kCrc>(kValidHeader, kNoCapacity));
 }
 
 TEST(ZbitlHeaderTest, CrcIsMissing) {
   // * Item fits, magic is correct, required flags are set, and CRC is missing.
-  // Succeeding: kPermissive.
-  // Failing: kStrict, kCrc.
+  // Expectation: failure.
   zbi_header_t header = kValidHeader;
   header.flags = ZBI_ITEM_NO_CRC32;
-  EXPECT_IS_OK(zbitl::CheckHeader<zbitl::Checking::kPermissive>(header, kValidCapacity));
   EXPECT_IS_OK(zbitl::CheckHeader<zbitl::Checking::kStrict>(header, kValidCapacity));
   EXPECT_IS_OK(zbitl::CheckHeader<zbitl::Checking::kCrc>(header, kValidCapacity));
 }
 
 TEST(ZbitlHeaderTest, FlagsMissing) {
   // * Item fits, magic is correct, required flags are missing, and CRC is set.
-  // Succeeding: kPermissive.
-  // Failing: kStrict, kCrc.
+  // Expectation: failure.
   zbi_header_t header = kValidHeader;
   header.flags = 0u;
-  EXPECT_IS_OK(zbitl::CheckHeader<zbitl::Checking::kPermissive>(header, kValidCapacity));
   EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kStrict>(header, kValidCapacity));
   EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kCrc>(header, kValidCapacity));
 }

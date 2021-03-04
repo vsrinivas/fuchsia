@@ -49,7 +49,7 @@ void PhysMain(void* zbi, arch::EarlyTicks ticks) {
   // variant and sets its configuration values.  So a later item will override
   // the selection and configuration of an earlier item.  But this all happens
   // before anything touches hardware.
-  zbitl::PermissiveView<ktl::span<ktl::byte>> zbi_view(
+  zbitl::View<ktl::span<ktl::byte>> zbi_view(
       // We don't have any outside information on the maximum size of the
       // ZBI.  We'll just have to trust the length in the ZBI header, so tell
       // zbitl that the memory storing it is as large as a ZBI could ever be.

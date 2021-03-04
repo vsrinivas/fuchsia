@@ -10,7 +10,7 @@
 
 // If FuzzedDataProvider::ConsumeEnum() did not require a terminal kMaxValue
 // enum value, we would just use zbitl::Checking.
-enum class Checking { kPermissive, kStrict, kCrc, kMaxValue };
+enum class Checking { kStrict, kCrc, kMaxValue };
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   FuzzedDataProvider provider(data, size);
@@ -27,11 +27,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   };
 
   switch (checking) {
-    case Checking::kPermissive: {
-      zbitl::View<std::string_view, zbitl::Checking::kPermissive> view(zbi);
-      iterate(view);
-      break;
-    }
     case Checking::kStrict: {
       zbitl::View<std::string_view, zbitl::Checking::kStrict> view(zbi);
       iterate(view);

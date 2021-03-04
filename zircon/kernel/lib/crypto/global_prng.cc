@@ -51,7 +51,7 @@ PRNG* GetInstance() {
 
 static unsigned int IntegrateZbiEntropy() {
   auto zbi_bytes = zbitl::StorageFromRawHeader(platform_get_zbi());
-  zbitl::PermissiveView<ktl::span<ktl::byte>> zbi(
+  zbitl::View<ktl::span<ktl::byte>> zbi(
       {const_cast<ktl::byte*>(zbi_bytes.data()), zbi_bytes.size()});
   unsigned int found = 0;
   for (auto it = zbi.begin(); it != zbi.end(); ++it) {
