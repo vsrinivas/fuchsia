@@ -8,261 +8,109 @@
 #include <gtest/gtest.h>
 #include <src/lib/fidl/llcpp/tests/types_test_utils.h>
 
-namespace {
-
-fidl::HeapAllocator allocator;
-
-}  // namespace
-
-TEST(Table, UnownedBuilderBuildTablePrimitive) {
+TEST(Table, TablePrimitive) {
   namespace test = fidl_llcpp_types_test;
-  fidl::aligned<uint8_t> x = 3;
-  fidl::aligned<uint8_t> y = 100;
-  auto builder = test::wire::SampleTable::UnownedBuilder()
-                     .set_x(fidl::unowned_ptr(&x))
-                     .set_y(fidl::unowned_ptr(&y));
-  const auto& table = builder.build();
+  fidl::FidlAllocator allocator;
+  test::wire::SampleTable table(allocator);
+  table.set_x(allocator, 3).set_y(allocator, 100);
 
   ASSERT_TRUE(table.has_x());
   ASSERT_TRUE(table.has_y());
   ASSERT_FALSE(table.has_vector_of_struct());
-  ASSERT_EQ(table.x(), x);
-  ASSERT_EQ(table.y(), y);
+  ASSERT_EQ(table.x(), 3);
+  ASSERT_EQ(table.y(), 100);
 }
 
-TEST(Table, BuilderBuildTablePrimitive) {
+TEST(Table, TableVectorOfStruct) {
   namespace test = fidl_llcpp_types_test;
-  fidl::aligned<uint8_t> x = 3;
-  fidl::aligned<uint8_t> y = 100;
-  test::wire::SampleTable::Frame frame;
-  auto builder = test::wire::SampleTable::Builder(fidl::unowned_ptr(&frame))
-                     .set_x(fidl::unowned_ptr(&x))
-                     .set_y(fidl::unowned_ptr(&y));
-  const auto& table = builder.build();
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<test::wire::CopyableStruct> structs(allocator, 2);
+  structs[0].x = 30;
+  structs[1].x = 42;
 
-  ASSERT_TRUE(table.has_x());
-  ASSERT_TRUE(table.has_y());
-  ASSERT_FALSE(table.has_vector_of_struct());
-  ASSERT_EQ(table.x(), x);
-  ASSERT_EQ(table.y(), y);
-}
-
-TEST(Table, UnownedBuilderBuildTableVectorOfStruct) {
-  namespace test = fidl_llcpp_types_test;
-  std::vector<test::wire::CopyableStruct> structs = {
-      {.x = 30},
-      {.x = 42},
-  };
-  fidl::VectorView<test::wire::CopyableStruct> vector_view = fidl::unowned_vec(structs);
-  auto builder = test::wire::SampleTable::UnownedBuilder().set_vector_of_struct(
-      fidl::unowned_ptr(&vector_view));
-  const auto& table = builder.build();
+  test::wire::SampleTable table(allocator);
+  table.set_vector_of_struct(allocator, std::move(structs));
 
   ASSERT_FALSE(table.has_x());
   ASSERT_FALSE(table.has_y());
   ASSERT_TRUE(table.has_vector_of_struct());
-  ASSERT_EQ(table.vector_of_struct().count(), structs.size());
-  ASSERT_EQ(table.vector_of_struct()[0].x, structs[0].x);
-  ASSERT_EQ(table.vector_of_struct()[1].x, structs[1].x);
+  ASSERT_EQ(table.vector_of_struct().count(), 2UL);
+  ASSERT_EQ(table.vector_of_struct()[0].x, 30);
+  ASSERT_EQ(table.vector_of_struct()[1].x, 42);
 }
 
-TEST(Table, BuilderBuildTableVectorOfStruct) {
+TEST(Table, EmptyTable) {
   namespace test = fidl_llcpp_types_test;
-  std::vector<test::wire::CopyableStruct> structs = {
-      {.x = 30},
-      {.x = 42},
-  };
-  fidl::VectorView<test::wire::CopyableStruct> vector_view = fidl::unowned_vec(structs);
-  test::wire::SampleTable::Frame frame;
-  auto builder = test::wire::SampleTable::Builder(fidl::unowned_ptr(&frame))
-                     .set_vector_of_struct(fidl::unowned_ptr(&vector_view));
-  const auto& table = builder.build();
-
-  ASSERT_FALSE(table.has_x());
-  ASSERT_FALSE(table.has_y());
-  ASSERT_TRUE(table.has_vector_of_struct());
-  ASSERT_EQ(table.vector_of_struct().count(), structs.size());
-  ASSERT_EQ(table.vector_of_struct()[0].x, structs[0].x);
-  ASSERT_EQ(table.vector_of_struct()[1].x, structs[1].x);
-}
-
-TEST(Table, UnownedBuilderBuildEmptyTable) {
-  namespace test = fidl_llcpp_types_test;
-  auto builder = test::wire::SampleEmptyTable::UnownedBuilder();
-  const auto& table = builder.build();
+  fidl::FidlAllocator allocator;
+  test::wire::SampleEmptyTable table(allocator);
   ASSERT_TRUE(table.IsEmpty());
 }
 
-TEST(Table, BuilderBuildEmptyTable) {
+TEST(Table, NotEmptyTable) {
   namespace test = fidl_llcpp_types_test;
-  fidl::aligned<test::wire::SampleEmptyTable::Frame> frame;
-  auto builder = test::wire::SampleEmptyTable::Builder(fidl::unowned_ptr(&frame));
-  const auto& table = builder.build();
+  fidl::FidlAllocator allocator;
+  test::wire::SampleTable table(allocator);
   ASSERT_TRUE(table.IsEmpty());
+  table.set_x(allocator, 3).set_y(allocator, 100);
+  ASSERT_FALSE(table.IsEmpty());
 }
 
-TEST(Table, BuilderGetters) {
+TEST(Table, Getters) {
   namespace test = fidl_llcpp_types_test;
-  fidl::aligned<test::wire::SampleTable::Frame> frame;
-  fidl::aligned<uint8_t> x = 3;
-  fidl::aligned<uint8_t> x2 = 4;
-  auto builder = test::wire::SampleTable::Builder(fidl::unowned_ptr(&frame));
-  EXPECT_FALSE(builder.has_x());
-  builder.set_x(fidl::unowned_ptr(&x));
-  static_assert(std::is_same<uint8_t&, decltype(builder.x())>::value);
-  EXPECT_TRUE(builder.has_x());
-  EXPECT_EQ(3, builder.x());
-  const test::wire::SampleTable::Builder& const_builder_ref = builder;
-  static_assert(std::is_same<const uint8_t&, decltype(const_builder_ref.x())>::value);
-  EXPECT_TRUE(const_builder_ref.has_x());
-  EXPECT_EQ(3, const_builder_ref.x());
-  builder.set_x(fidl::unowned_ptr(&x2));
-  EXPECT_TRUE(builder.has_x());
-  EXPECT_EQ(4, builder.x());
+  fidl::FidlAllocator allocator;
+  test::wire::SampleTable table(allocator);
+  EXPECT_FALSE(table.has_x());
+  table.set_x(allocator, 3);
+  static_assert(std::is_same<uint8_t&, decltype(table.x())>::value);
+  EXPECT_TRUE(table.has_x());
+  EXPECT_EQ(3, table.x());
+  table.set_x(allocator, 4);
+  EXPECT_TRUE(table.has_x());
+  EXPECT_EQ(4, table.x());
 }
 
-TEST(Table, UnownedBuilderGetters) {
+TEST(Table, SubTables) {
   namespace test = fidl_llcpp_types_test;
-  fidl::aligned<uint8_t> x = 3;
-  fidl::aligned<uint8_t> x2 = 4;
-  auto builder = test::wire::SampleTable::UnownedBuilder();
-  EXPECT_FALSE(builder.has_x());
-  builder.set_x(fidl::unowned_ptr(&x));
-  static_assert(std::is_same<uint8_t&, decltype(builder.x())>::value);
-  EXPECT_TRUE(builder.has_x());
-  EXPECT_EQ(3, builder.x());
-  const test::wire::SampleTable::UnownedBuilder& const_builder_ref = builder;
-  static_assert(std::is_same<const uint8_t&, decltype(const_builder_ref.x())>::value);
-  EXPECT_TRUE(const_builder_ref.has_x());
-  EXPECT_EQ(3, const_builder_ref.x());
-  builder.set_x(fidl::unowned_ptr(&x2));
-  EXPECT_TRUE(builder.has_x());
-  EXPECT_EQ(4, builder.x());
-}
+  fidl::FidlAllocator allocator;
+  test::wire::TableWithSubTables table(allocator);
 
-TEST(Table, BuilderGetBuilder) {
-  namespace test = fidl_llcpp_types_test;
-  auto builder = test::wire::TableWithSubTables::Builder(
-      allocator.make<test::wire::TableWithSubTables::Frame>());
-  EXPECT_FALSE(builder.has_t());
-  builder.set_t(allocator.make<test::wire::SampleTable>(
-      test::wire::SampleTable::Builder(allocator.make<test::wire::SampleTable::Frame>()).build()));
-  EXPECT_TRUE(builder.has_t());
-  EXPECT_FALSE(builder.t().has_x());
-  builder.get_builder_t().set_x(allocator.make<uint8_t>(12));
-  EXPECT_TRUE(builder.t().has_x());
-  EXPECT_EQ(12, builder.t().x());
-  EXPECT_FALSE(builder.has_vt());
-  builder.set_vt(allocator.make<fidl::VectorView<test::wire::SampleTable>>(
-      allocator.make<test::wire::SampleTable[]>(6), 6));
-  EXPECT_TRUE(builder.has_vt());
-  for (uint32_t i = 0; i < 2; ++i) {
-    EXPECT_FALSE(builder.vt()[0].has_x());
-    switch (i) {
-      case 0:
-        // Assign as table with full-size Frame.
-        builder.vt()[0] =
-            test::wire::SampleTable::Builder(allocator.make<test::wire::SampleTable::Frame>())
-                .build();
-        break;
-      case 1:
-        // Assign as builder with full-size Frame.
-        builder.get_builders_vt()[0] =
-            test::wire::SampleTable::Builder(allocator.make<test::wire::SampleTable::Frame>());
-        break;
-    }
-    EXPECT_FALSE(builder.vt()[0].has_x());
-    builder.get_builders_vt()[0].set_x(allocator.make<uint8_t>(13 + i));
-    EXPECT_TRUE(builder.vt()[0].has_x());
-    EXPECT_EQ(13 + i, builder.vt()[0].x());
-    builder.get_builders_vt()[0].set_x(nullptr);
-    EXPECT_FALSE(builder.vt()[0].has_x());
-  }
-  EXPECT_FALSE(builder.has_at());
-  builder.set_at(allocator.make<fidl::Array<test::wire::SampleTable, 3>>());
-  EXPECT_TRUE(builder.has_at());
-  for (uint32_t i = 0; i < 2; ++i) {
-    EXPECT_FALSE(builder.at()[0].has_x());
-    switch (i) {
-      case 0:
-        builder.at()[0] =
-            test::wire::SampleTable::Builder(allocator.make<test::wire::SampleTable::Frame>())
-                .build();
-        break;
-      case 1:
-        builder.get_builders_at()[0] =
-            test::wire::SampleTable::Builder(allocator.make<test::wire::SampleTable::Frame>());
-        break;
-    }
-    EXPECT_FALSE(builder.at()[0].has_x());
-    builder.get_builders_at()[0].set_x(allocator.make<uint8_t>(15 + i));
-    EXPECT_TRUE(builder.at()[0].has_x());
-    EXPECT_EQ(15 + i, builder.at()[0].x());
-    builder.get_builders_at()[0].set_x(nullptr);
-    EXPECT_FALSE(builder.at()[0].has_x());
-  }
-}
+  // Test setting a field which is a table.
+  EXPECT_FALSE(table.has_t());
+  table.set_t(allocator, allocator);
+  EXPECT_TRUE(table.has_t());
 
-TEST(Table, UnownedBuilderGetBuilder) {
-  namespace test = fidl_llcpp_types_test;
-  test::wire::TableWithSubTables::UnownedBuilder builder;
-  EXPECT_FALSE(builder.has_t());
-  builder.set_t(allocator.make<test::wire::SampleTable>(
-      test::wire::SampleTable::Builder(allocator.make<test::wire::SampleTable::Frame>()).build()));
-  EXPECT_TRUE(builder.has_t());
-  EXPECT_FALSE(builder.t().has_x());
-  builder.get_builder_t().set_x(allocator.make<uint8_t>(12));
-  EXPECT_TRUE(builder.t().has_x());
-  EXPECT_EQ(12, builder.t().x());
-  EXPECT_FALSE(builder.has_vt());
-  builder.set_vt(allocator.make<fidl::VectorView<test::wire::SampleTable>>(
-      allocator.make<test::wire::SampleTable[]>(6), 6));
-  EXPECT_TRUE(builder.has_vt());
-  for (uint32_t i = 0; i < 2; ++i) {
-    EXPECT_FALSE(builder.vt()[0].has_x());
-    switch (i) {
-      case 0:
-        // Assign as table with full-size Frame.
-        builder.vt()[0] =
-            test::wire::SampleTable::Builder(allocator.make<test::wire::SampleTable::Frame>())
-                .build();
-        break;
-      case 1:
-        // Assign as builder with full-size Frame.
-        builder.get_builders_vt()[0] =
-            test::wire::SampleTable::Builder(allocator.make<test::wire::SampleTable::Frame>());
-        break;
-    }
-    EXPECT_FALSE(builder.vt()[0].has_x());
-    builder.get_builders_vt()[0].set_x(allocator.make<uint8_t>(13 + i));
-    EXPECT_TRUE(builder.vt()[0].has_x());
-    EXPECT_EQ(13 + i, builder.vt()[0].x());
-    builder.get_builders_vt()[0].set_x(nullptr);
-    EXPECT_FALSE(builder.vt()[0].has_x());
-  }
-  EXPECT_FALSE(builder.has_at());
-  builder.set_at(allocator.make<fidl::Array<test::wire::SampleTable, 3>>());
-  EXPECT_TRUE(builder.has_at());
-  for (uint32_t i = 0; i < 2; ++i) {
-    EXPECT_FALSE(builder.at()[0].has_x());
-    switch (i) {
-      case 0:
-        builder.at()[0] =
-            test::wire::SampleTable::Builder(allocator.make<test::wire::SampleTable::Frame>())
-                .build();
-        break;
-      case 1:
-        builder.get_builders_at()[0] =
-            test::wire::SampleTable::Builder(allocator.make<test::wire::SampleTable::Frame>());
-        break;
-    }
-    EXPECT_FALSE(builder.at()[0].has_x());
-    builder.get_builders_at()[0].set_x(allocator.make<uint8_t>(15 + i));
-    EXPECT_TRUE(builder.at()[0].has_x());
-    EXPECT_EQ(15 + i, builder.at()[0].x());
-    builder.get_builders_at()[0].set_x(nullptr);
-    EXPECT_FALSE(builder.at()[0].has_x());
-  }
+  EXPECT_FALSE(table.t().has_x());
+  table.t().set_x(allocator, 12);
+  EXPECT_TRUE(table.t().has_x());
+  EXPECT_EQ(12, table.t().x());
+
+  // Test setting a field which is a vector of tables.
+  EXPECT_FALSE(table.has_vt());
+  table.set_vt(allocator, allocator, 6);
+  EXPECT_TRUE(table.has_vt());
+  // |Allocate| must be called on a default-constructed table before using it.
+  table.vt()[0].Allocate(allocator);
+
+  EXPECT_FALSE(table.vt()[0].has_x());
+  table.vt()[0].set_x(allocator, 13);
+  EXPECT_TRUE(table.vt()[0].has_x());
+  EXPECT_EQ(13, table.vt()[0].x());
+  table.vt()[0].set_x(nullptr);
+  EXPECT_FALSE(table.vt()[0].has_x());
+
+  // Test setting a field which is an array of tables.
+  EXPECT_FALSE(table.has_at());
+  table.set_at(allocator);
+  EXPECT_TRUE(table.has_at());
+
+  // |Allocate| must be called on a default-constructed table before using it.
+  table.at()[0].Allocate(allocator);
+  EXPECT_FALSE(table.at()[0].has_x());
+  table.at()[0].set_x(allocator, 15);
+  EXPECT_TRUE(table.at()[0].has_x());
+  EXPECT_EQ(15, table.at()[0].x());
+  table.at()[0].set_x(nullptr);
+  EXPECT_FALSE(table.at()[0].has_x());
 }
 
 TEST(Table, UnknownHandlesResource) {
