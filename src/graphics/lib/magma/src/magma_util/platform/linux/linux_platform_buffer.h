@@ -51,6 +51,7 @@ class LinuxPlatformBuffer : public PlatformBuffer {
   bool Read(void* buffer, uint64_t offset, uint64_t length) override;
   bool Write(const void* buffer, uint64_t offset, uint64_t length) override;
   bool SetPadding(uint64_t padding_size) override { return false; }
+  std::string GetName() const override { return ""; }
 
  private:
   int memfd_;

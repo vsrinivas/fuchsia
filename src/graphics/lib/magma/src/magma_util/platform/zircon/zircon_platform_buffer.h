@@ -93,6 +93,7 @@ class ZirconPlatformBuffer : public PlatformBuffer {
   bool Read(void* buffer, uint64_t offset, uint64_t length) override;
   bool Write(const void* buffer, uint64_t offset, uint64_t length) override;
   bool SetName(const char* name) override;
+  std::string GetName() const override;
 
   uint64_t num_pages() const { return size_ / PAGE_SIZE; }
 

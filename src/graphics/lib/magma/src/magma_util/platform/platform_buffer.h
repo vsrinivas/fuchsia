@@ -120,6 +120,7 @@ class PlatformBuffer {
   virtual bool Write(const void* buffer, uint64_t offset, uint64_t length) = 0;
 
   virtual bool SetName(const char* name) = 0;
+  virtual std::string GetName() const = 0;
 
   static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
 

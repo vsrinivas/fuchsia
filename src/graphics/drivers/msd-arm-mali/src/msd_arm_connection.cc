@@ -425,12 +425,15 @@ bool MsdArmConnection::PageInMemory(uint64_t address) {
   --it;
   GpuMapping& mapping = *it->second.get();
   DASSERT(address >= mapping.gpu_va());
+  auto buffer = mapping.buffer().lock();
+  DASSERT(buffer);
+
   if (address >= mapping.gpu_va() + mapping.size()) {
     MAGMA_LOG(WARNING,
               "Address 0x%lx is unmapped. Closest lower mapping is at 0x%lx, size 0x%lx (offset "
-              "would be 0x%lx), flags 0x%lx",
+              "would be 0x%lx), flags 0x%lx, name %s",
               address, mapping.gpu_va(), mapping.size(), address - mapping.gpu_va(),
-              mapping.flags());
+              mapping.flags(), buffer->platform_buffer()->GetName().c_str());
     uint32_t i = 0;
     for (auto x : recently_removed_mappings_) {
       if (address >= x.first && address < x.first + x.second) {
@@ -446,15 +449,12 @@ bool MsdArmConnection::PageInMemory(uint64_t address) {
     MAGMA_LOG(WARNING,
               "Address 0x%lx at offset 0x%lx in non-growable mapping at 0x%lx, size 0x%lx, pinned "
               "region start offset 0x%lx, pinned region length 0x%lx "
-              "flags 0x%lx",
+              "flags 0x%lx, name %s",
               address, address - mapping.gpu_va(), mapping.gpu_va(), mapping.size(),
               committed_region.start() * PAGE_SIZE, committed_region.length() * PAGE_SIZE,
-              mapping.flags());
+              mapping.flags(), buffer->platform_buffer()->GetName().c_str());
     return false;
   }
-
-  auto buffer = mapping.buffer().lock();
-  DASSERT(buffer);
 
   // TODO(fxbug.dev/13028): Look into growing the buffer on a different thread.
 

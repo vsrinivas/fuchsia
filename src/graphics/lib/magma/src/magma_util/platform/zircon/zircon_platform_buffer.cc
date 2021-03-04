@@ -470,6 +470,16 @@ bool ZirconPlatformBuffer::SetName(const char* name) {
   return DRETF(status == ZX_OK, "Setting name failed with status %d", status);
 }
 
+std::string ZirconPlatformBuffer::GetName() const {
+  char name[ZX_MAX_NAME_LEN] = {};
+  zx_status_t status = vmo_.get_property(ZX_PROP_NAME, name, sizeof(name));
+  if (status != ZX_OK) {
+    DMESSAGE("Getting name failed with status %d", status);
+    return "";
+  }
+  return std::string(name);
+}
+
 bool ZirconPlatformBuffer::CreateChild(uint32_t* handle_out) {
   zx::vmo child;
   zx_status_t status = vmo_.create_child(ZX_VMO_CHILD_SLICE, 0, /*offset*/
