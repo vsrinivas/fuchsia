@@ -424,6 +424,12 @@ group("png") {
   deps = [ ":png-v0_14_0" ]
 }
 
+if (!(current_os == "fuchsia")) {
+  group("polling") {
+    deps = [ ":polling-v2_0_2" ]
+  }
+}
+
 if (current_os == "fuchsia") {
   group("pretty") {
     deps = [ ":pretty-v0_5_2" ]
@@ -5581,6 +5587,7 @@ rust_library("parking_lot-v0_11_1") {
     "--edition=2018",
     "-Cmetadata=a739a418d82fd597",
     "-Cextra-filename=-a739a418d82fd597",
+    "--cfg=feature=\"default\"",
   ]
 }
 
@@ -6187,6 +6194,38 @@ rust_library("podio-v0_1_6") {
     "--edition=2015",
     "-Cmetadata=9f03c94555630577",
     "-Cextra-filename=-9f03c94555630577",
+  ]
+}
+
+rust_library("polling-v2_0_2") {
+  crate_name = "polling"
+  crate_root = "//third_party/rust_crates/vendor/polling/src/lib.rs"
+  output_name = "polling-2a1f69f38bc0860c"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cfg-if-v0_1_10" ]
+  deps += [ ":log-v0_4_11" ]
+  if (true) {
+    deps += [ ":libc-v0_2_84" ]
+  }
+  if (false) {
+    deps += [ ":wepoll-sys-v3_0_1" ]
+    deps += [ ":winapi-v0_3_9" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=2a1f69f38bc0860c",
+    "-Cextra-filename=-2a1f69f38bc0860c",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
   ]
 }
 
@@ -8494,7 +8533,7 @@ rust_library("serial_test-v0_5_1") {
 
   deps = []
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":parking_lot-v0_10_2" ]
+  deps += [ ":parking_lot-v0_11_1" ]
   deps += [ ":serial_test_derive-v0_5_1($host_toolchain)" ]
 
   rustenv = []
@@ -11030,6 +11069,27 @@ rust_library("wepoll-binding-v2_0_2") {
   ]
 }
 
+rust_library("wepoll-sys-v3_0_1") {
+  crate_name = "wepoll_sys"
+  crate_root = "//third_party/rust_crates/tiny_mirrors/wepoll-sys/src/lib.rs"
+  output_name = "wepoll_sys-ab562e75c3795c15"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=ab562e75c3795c15",
+    "-Cextra-filename=-ab562e75c3795c15",
+  ]
+}
+
 rust_library("winapi-v0_3_9") {
   crate_name = "winapi"
   crate_root = "//third_party/rust_crates/tiny_mirrors/winapi/src/lib.rs"
@@ -11056,6 +11116,7 @@ rust_library("winapi-v0_3_9") {
     "--cfg=feature=\"handleapi\"",
     "--cfg=feature=\"in6addr\"",
     "--cfg=feature=\"inaddr\"",
+    "--cfg=feature=\"ioapiset\"",
     "--cfg=feature=\"lmcons\"",
     "--cfg=feature=\"minschannel\"",
     "--cfg=feature=\"minwinbase\"",

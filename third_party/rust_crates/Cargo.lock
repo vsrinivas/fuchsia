@@ -1054,6 +1054,7 @@ dependencies = [
  "pin-project 1.0.4",
  "pin-utils",
  "png",
+ "polling",
  "pretty",
  "pretty_assertions",
  "prettytable-rs",
@@ -2300,6 +2301,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "780fb4b6698bbf9cf2444ea5d22411cef2953f0824b98f33cf454ec5615645bd"
 
 [[package]]
+name = "polling"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2a7bc6b2a29e632e45451c941832803a18cce6781db04de8a04696cdca8bde4"
+dependencies = [
+ "cfg-if 0.1.10",
+ "libc",
+ "log 0.4.11",
+ "wepoll-sys",
+ "winapi",
+]
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3193,7 +3207,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e0bccbcf40c8938196944a3da0e133e031a33f4d6b72db3bda3cc556e361905d"
 dependencies = [
  "lazy_static",
- "parking_lot 0.10.2",
+ "parking_lot 0.11.1",
  "serial_test_derive",
 ]
 
@@ -4152,6 +4166,10 @@ dependencies = [
 [[package]]
 name = "wepoll-binding"
 version = "2.0.2"
+
+[[package]]
+name = "wepoll-sys"
+version = "3.0.1"
 
 [[package]]
 name = "winapi"

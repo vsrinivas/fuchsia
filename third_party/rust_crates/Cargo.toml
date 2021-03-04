@@ -214,6 +214,7 @@ nix = "0.18" # not included in fuchsia so we don't depend on #[cfg(unix)] things
 parking = "2"
 petgraph = "0.5.1"
 proc-macro2 = "1.0.24"
+polling = "2.0.2"
 pulldown-cmark = "0.6.0"
 quote = "1.0.2"
 serial_test = "0.5.1" # Not for use on Fuchsia, only for a single process.
@@ -259,6 +260,7 @@ tracing-core = { path = "tiny_mirrors/tracing-core" }
 wasm-bindgen-futures = { path = "tiny_mirrors/wasm-bindgen-futures" }
 web-sys = { path = "tiny_mirrors/web-sys" }
 wepoll-binding = { path = "tiny_mirrors/wepoll-binding" }
+wepoll-sys = { path = "tiny_mirrors/wepoll-sys" }
 winapi-i686-pc-windows-gnu = { path = "tiny_mirrors/winapi-i686-pc-windows-gnu" }
 winapi-x86_64-pc-windows-gnu = { path = "tiny_mirrors/winapi-x86_64-pc-windows-gnu" }
 winapi = { path = "tiny_mirrors/winapi" }
