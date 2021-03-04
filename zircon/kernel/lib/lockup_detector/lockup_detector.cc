@@ -90,11 +90,15 @@ class HeartbeatLockupChecker {
   static void InitStaticParams() {
     constexpr uint64_t kDefaultPeriodMsec = 1000;
     constexpr uint64_t kDefaultAgeThresholdMsec = 3000;
+    constexpr uint64_t kDefaultAgeFatalThresholdMsec = 10000;
 
     period_.store(ZX_MSEC(
         gCmdline.GetUInt64(kernel_option::kLockupDetectorHeartbeatPeriodMs, kDefaultPeriodMsec)));
     threshold_.store(ZX_MSEC(gCmdline.GetUInt64(
         kernel_option::kLockupDetectorHeartbeatAgeThresholdMs, kDefaultAgeThresholdMsec)));
+    fatal_threshold_.store(
+        ZX_MSEC(gCmdline.GetUInt64(kernel_option::kLockupDetectorHeartbeatAgeFatalThresholdMs,
+                                   kDefaultAgeFatalThresholdMsec)));
   }
 
   // Perform a check of the condition.  If a failure is detected, record the
@@ -116,9 +120,14 @@ class HeartbeatLockupChecker {
   // The period at which CPUs emit heartbeats.  0 means heartbeats are disabled.
   static inline ktl::atomic<zx_duration_t> period_{0};
 
-  // If a CPU's most recent heartbeat is older than this threshold, it is considered to be locked up
-  // and a KERNEL OOPS will be triggered.
+  // If a CPU's most recent heartbeat is older than this threshold, it is
+  // considered to be locked up and a KERNEL OOPS will be triggered.
   static inline ktl::atomic<zx_duration_t> threshold_{0};
+
+  // If a CPU's most recent heartbeat is older than this threshold, it is
+  // considered to be locked up and crashlog will be generated followed by a
+  // reboot.
+  static inline ktl::atomic<zx_duration_t> fatal_threshold_{0};
 
   bool report_failure_{false};
   struct {
@@ -145,6 +154,12 @@ class CriticalSectionLockupChecker {
     const zx_duration_t threshold_duration = ZX_MSEC(gCmdline.GetUInt64(
         kernel_option::kLockupDetectorCriticalSectionThresholdMs, kDefaultThresholdMsec));
     threshold_ticks_.store(DurationToTicks(threshold_duration));
+
+    constexpr uint64_t kDefaultFatalThresholdMsec = 10000;
+    const zx_duration_t fatal_threshold_duration = ZX_MSEC(gCmdline.GetUInt64(
+        kernel_option::kLockupDetectorCriticalSectionThresholdMs, kDefaultFatalThresholdMsec));
+    fatal_threshold_ticks_.store(DurationToTicks(fatal_threshold_duration));
+
     worst_case_threshold_ticks_ = DurationToTicks(counter_buckets_[0].exceeding);
   }
 
@@ -188,6 +203,7 @@ class CriticalSectionLockupChecker {
   // This value is expressed in units of ticks rather than nanoseconds because it is faster to read
   // the platform timer's tick count than to get current_time().
   static inline RelaxedAtomic<zx_ticks_t> threshold_ticks_{0};
+  static inline RelaxedAtomic<zx_ticks_t> fatal_threshold_ticks_{0};
   static inline zx_ticks_t worst_case_threshold_ticks_{ktl::numeric_limits<zx_ticks_t>::max()};
 
   bool report_failure_{false};

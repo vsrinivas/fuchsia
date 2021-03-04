@@ -403,16 +403,31 @@ this threshold, a KERNEL OOPS will be emitted.
 See also `k lockup status` and
 [lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
 
-When 0, critical section lockup detection is disabled.
+When 0, critical section OOPS generation is disabled.
+
+When kernel.lockup-detector.heartbeat-period-ms is 0, critical section lockup
+detection is disabled.
+
+## kernel.lockup-detector.critical-section-fatal-threshold-ms=\<num>
+
+When a CPU remains in a designated critical section for longer than this
+threshold, a crashlog will be generated and the system will reboot, indicating a
+reboot reason of `SOFTWARE_WATCHDOG` as it does.
+
+See also `k lockup status` and
+[lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
+
+When 0, critical section crashlog generation and reboot is disabled.
 
 When kernel.lockup-detector.heartbeat-period-ms is 0, critical section lockup
 detection is disabled.
 
 ## kernel.lockup-detector.heartbeat-period-ms=\<num>
 
-How frequently a secondary CPU should emit a heartbeat via kernel timer.  This
-value should be large enough to not impact system performance, but should be
-smaller than the heartbeat age threshold.  1000 is a reasonable value.
+How frequently each CPU should emit a heartbeat via kernel timer, and cross
+check other CPUs looking for lockups.  This value should be large enough to not
+impact system performance, but should be smaller than the heartbeat age
+threshold.  1000 is a reasonable value.
 
 See also [lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
 
@@ -420,13 +435,24 @@ When 0, heartbeat detection is disabled.
 
 ## kernel.lockup-detector.heartbeat-age-threshold-ms=\<num>
 
-The maximum age of a secondary CPU's last heartbeat before it is considered to
-be locked up.  This value should be larger than the heartbeat peroid, but small
-enough so as to not miss short-lived lockup events.  3000 is a reasonable value.
+The maximum age of a CPU's last heartbeat before it is considered to be locked
+up, triggering generation of a KERNEL OOPS.  This value should be larger than
+the heartbeat period, but small enough so as to not miss short-lived lockup
+events.  3000 is a reasonable value.
 
 See also [lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
 
-When 0, heartbeat detection is disabled.
+When 0, heartbeat OOPS generation is disabled.
+
+## kernel.lockup-detector.heartbeat-age-fatal-threshold-ms=\<num>
+
+The maximum age of a CPU's last heartbeat before it is considered to be locked
+up, triggering generation of a crashlog indicating a reboot reason of
+`SOFTWARE_WATCHDOG` followed by a reboot.
+
+See also [lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
+
+When 0, heartbeat crashlog generation and reboot is disabled.
 
 ## kernel.memory-limit-dbg=\<bool>
 

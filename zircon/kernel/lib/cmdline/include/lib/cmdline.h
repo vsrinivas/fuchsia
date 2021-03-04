@@ -137,8 +137,12 @@ static constexpr const char kGfxConsoleFont[] = "gfxconsole.font";
 static constexpr const char kHaltOnPanic[] = "kernel.halt-on-panic";
 static constexpr const char kKtraceBufSize[] = "ktrace.bufsize";
 static constexpr const char kKtraceGrpMask[] = "ktrace.grpmask";
+static constexpr const char kLockupDetectorCriticalSectionFatalThresholdMs[] =
+    "kernel.lockup-detector.critical-section-fatal-threshold-ms";
 static constexpr const char kLockupDetectorCriticalSectionThresholdMs[] =
     "kernel.lockup-detector.critical-section-threshold-ms";
+static constexpr const char kLockupDetectorHeartbeatAgeFatalThresholdMs[] =
+    "kernel.lockup-detector.heartbeat-age-fatal-threshold-ms";
 static constexpr const char kLockupDetectorHeartbeatAgeThresholdMs[] =
     "kernel.lockup-detector.heartbeat-age-threshold-ms";
 static constexpr const char kLockupDetectorHeartbeatPeriodMs[] =
