@@ -878,7 +878,7 @@ void SimFirmware::AuthClearContext() {
   auth_state_.sec_type = simulation::SEC_PROTO_TYPE_OPEN;
 }
 
-void SimFirmware::AssocHandleFailure() {
+void SimFirmware::AssocHandleFailure(uint16_t status) {
   if (assoc_state_.state == AssocState::NOT_ASSOCIATED) {
     return;
   }
@@ -889,8 +889,8 @@ void SimFirmware::AssocHandleFailure() {
       || assoc_state_.state == AssocState::AUTHENTICATION_CHALLENGE_FAILURE ||
       auth_state_.sec_type == simulation::SEC_PROTO_TYPE_WPA3) {
     BRCMF_DBG(SIM, "Assoc failed. Send E_SET_SSID with failure");
-    SendEventToDriver(0, nullptr, BRCMF_E_ASSOC, BRCMF_E_STATUS_FAIL, kClientIfidx, nullptr, 0, 30,
-                      assoc_state_.opts->bssid);
+    SendEventToDriver(0, nullptr, BRCMF_E_ASSOC, BRCMF_E_STATUS_FAIL, kClientIfidx, nullptr, 0,
+                      static_cast<uint32_t>(status), assoc_state_.opts->bssid);
     SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL, kClientIfidx);
     AssocClearContext();
   } else {
@@ -907,7 +907,8 @@ void SimFirmware::AuthStart() {
   common::MacAddr bssid(assoc_state_.opts->bssid);
 
   auto callback = std::make_unique<std::function<void()>>();
-  *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
+  *callback =
+      std::bind(&SimFirmware::AssocHandleFailure, this, WLAN_STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
   hw_.RequestCallback(std::move(callback), kAuthTimeout, &auth_state_.auth_timer_id);
 
   ZX_ASSERT(auth_state_.state == AuthState::NOT_AUTHENTICATED);
@@ -1053,9 +1054,9 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
   if (iface_tbl_[kClientIfidx].auth_type == BRCMF_AUTH_MODE_OPEN) {
     ZX_ASSERT(auth_state_.state == AuthState::EXPECTING_SECOND);
     ZX_ASSERT(frame->seq_num_ == 2);
-    if (frame->status_ == WLAN_AUTH_RESULT_REFUSED) {
+    if (frame->status_ != WLAN_AUTH_RESULT_SUCCESS) {
       BRCMF_DBG(SIM, "Auth refused, Handle failure");
-      AssocHandleFailure();
+      AssocHandleFailure(frame->status_);
       return;
     }
     auth_state_.state = AuthState::AUTHENTICATED;
@@ -1067,7 +1068,7 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
     // When iface_tbl_[kClientIfidx].auth_type == BRCMF_AUTH_MODE_AUTO
     if (auth_state_.state == AuthState::EXPECTING_SECOND && frame->seq_num_ == 2) {
       // Retry with AUTH_TYPE_OPEN_SYSTEM when refused in AUTH_TYPE_SHARED_KEY mode
-      if (frame->status_ == WLAN_AUTH_RESULT_REFUSED) {
+      if (frame->status_ != WLAN_AUTH_RESULT_SUCCESS) {
         auth_state_.state = AuthState::NOT_AUTHENTICATED;
         iface_tbl_[kClientIfidx].auth_type = BRCMF_AUTH_MODE_OPEN;
         BRCMF_DBG(SIM, "Auth shared refused...try with OPEN");
@@ -1081,7 +1082,8 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
       // If we receive the second auth frame when we are expecting it, we send out the third one and
       // set another timer for it.
       auto callback = std::make_unique<std::function<void()>>();
-      *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
+      *callback = std::bind(&SimFirmware::AssocHandleFailure, this,
+                            WLAN_STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
       hw_.RequestCallback(std::move(callback), kAuthTimeout, &auth_state_.auth_timer_id);
 
       auth_state_.state = AuthState::EXPECTING_FOURTH;
@@ -1101,7 +1103,7 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
         SendEventToDriver(0, nullptr, BRCMF_E_AUTH, BRCMF_E_STATUS_FAIL, kClientIfidx, nullptr,
                           0,  // TODO: determine what the flags should be
                           frame->status_, frame->src_addr_);
-        AssocHandleFailure();
+        AssocHandleFailure(frame->status_);
         return;
       }
 
@@ -1148,7 +1150,8 @@ zx_status_t SimFirmware::RemoteUpdateExternalSaeStatus(uint16_t seq_num, uint16_
   memcpy(buf->data() + sizeof(wlan::Authentication), sae_payload, text_len);
 
   auto callback = std::make_unique<std::function<void()>>();
-  *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
+  *callback =
+      std::bind(&SimFirmware::AssocHandleFailure, this, WLAN_STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
   hw_.RequestCallback(std::move(callback), kAuthTimeout, &auth_state_.auth_timer_id);
 
   // Update state
@@ -1197,7 +1200,8 @@ zx_status_t SimFirmware::LocalUpdateExternalSaeStatus(uint16_t seq_num, uint16_t
   auth_req_frame.sec_proto_type_ = auth_state_.sec_type;
 
   auto callback = std::make_unique<std::function<void()>>();
-  *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
+  *callback =
+      std::bind(&SimFirmware::AssocHandleFailure, this, WLAN_STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
   hw_.RequestCallback(std::move(callback), kAuthTimeout, &auth_state_.auth_timer_id);
 
   hw_.Tx(auth_req_frame);
@@ -1302,7 +1306,7 @@ void SimFirmware::AssocStart() {
   common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
 
   auto callback = std::make_unique<std::function<void()>>();
-  *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
+  *callback = std::bind(&SimFirmware::AssocHandleFailure, this, WLAN_STATUS_CODE_REFUSED);
   hw_.RequestCallback(std::move(callback), kAssocTimeout, &assoc_state_.assoc_timer_id);
 
   // We can't use assoc_state_.opts->bssid directly because it may get free'd during TxAssocReq
@@ -1417,7 +1421,7 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
     hw_.RequestCallback(std::move(callback), kAssocEventDelay);
   } else {
     BRCMF_DBG(SIM, "Assoc refused, Handle failure");
-    AssocHandleFailure();
+    AssocHandleFailure(frame->status_);
   }
 }
 
@@ -1425,7 +1429,7 @@ void SimFirmware::SetAssocState(AssocState::AssocStateName state) { assoc_state_
 
 // Disassociate the Local Client (request coming in from the driver)
 void SimFirmware::DisassocLocalClient(uint32_t reason) {
-    common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
+  common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
   if (assoc_state_.state == AssocState::ASSOCIATED) {
     common::MacAddr bssid(assoc_state_.opts->bssid);
     // Transmit the disassoc req and since there is no response for it, indicate disassoc done to

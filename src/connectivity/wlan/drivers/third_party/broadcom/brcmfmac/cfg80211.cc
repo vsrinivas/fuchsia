@@ -122,23 +122,23 @@ struct parsed_vndr_ies {
   struct parsed_vndr_ie_info ie_info[VNDR_IE_PARSE_LIMIT];
 };
 
-#define BRCMF_CONNECT_STATUS_LIST               \
-  X(BRCMF_CONNECT_STATUS_CONNECTED)             \
-  X(BRCMF_CONNECT_STATUS_DEAUTHENTICATING)      \
-  X(BRCMF_CONNECT_STATUS_DISASSOCIATING)        \
-  X(BRCMF_CONNECT_STATUS_NO_NETWORK)            \
-  X(BRCMF_CONNECT_STATUS_LINK_FAILED)           \
-  X(BRCMF_CONNECT_STATUS_CONNECTING_TIMEOUT)    \
-  X(BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED) \
-  X(BRCMF_CONNECT_STATUS_ASSOC_REQ_FAILED)
+#define BRCMF_CONNECT_STATUS_LIST \
+  X(CONNECTED)                    \
+  X(DEAUTHENTICATING)             \
+  X(DISASSOCIATING)               \
+  X(NO_NETWORK)                   \
+  X(LINK_FAILED)                  \
+  X(CONNECTING_TIMEOUT)           \
+  X(AUTHENTICATION_FAILED)        \
+  X(ASSOC_REQ_FAILED)
 
 #define X(CONNECT_STATUS) CONNECT_STATUS,
-enum brcmf_connect_status_t : uint8_t { BRCMF_CONNECT_STATUS_LIST };
+enum class brcmf_connect_status_t : uint8_t { BRCMF_CONNECT_STATUS_LIST };
 #undef X
 
-#define X(CONNECT_STATUS) \
-  case CONNECT_STATUS:    \
-    return #CONNECT_STATUS;
+#define X(CONNECT_STATUS)                      \
+  case brcmf_connect_status_t::CONNECT_STATUS: \
+    return "brcmf_connect_status_t::" #CONNECT_STATUS;
 const char* brcmf_get_connect_status_str(brcmf_connect_status_t connect_status) {
   switch (connect_status) { BRCMF_CONNECT_STATUS_LIST };
 }
@@ -1695,7 +1695,7 @@ void set_assoc_conf_wmm_param(const brcmf_cfg80211_info* cfg, wlanif_assoc_confi
   }
 }
 
-void brcmf_return_assoc_result(struct net_device* ndev, uint8_t result_code) {
+void brcmf_return_assoc_result(struct net_device* ndev, wlan_assoc_result_t assoc_result) {
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping association callback");
@@ -1706,7 +1706,7 @@ void brcmf_return_assoc_result(struct net_device* ndev, uint8_t result_code) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   wlanif_assoc_confirm_t conf;
 
-  conf.result_code = result_code;
+  conf.result_code = assoc_result;
   BRCMF_DBG(TEMP, " * Hard-coding association_id to 42; this will likely break something!");
   conf.association_id = 42;  // TODO: Use brcmf_cfg80211_get_station() to get aid
   set_assoc_conf_wmm_param(cfg, &conf);
@@ -5028,13 +5028,13 @@ static void brcmf_log_conn_status(brcmf_if* ifp, brcmf_connect_status_t connect_
 
   // We track specific failures that are of interest on inspect.
   switch (connect_status) {
-    case BRCMF_CONNECT_STATUS_CONNECTED:
+    case brcmf_connect_status_t::CONNECTED:
       ifp->drvr->inspect->LogConnSuccess();
       break;
-    case BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED:
+    case brcmf_connect_status_t::AUTHENTICATION_FAILED:
       ifp->drvr->inspect->LogConnAuthFail();
       break;
-    case BRCMF_CONNECT_STATUS_NO_NETWORK:
+    case brcmf_connect_status_t::NO_NETWORK:
       ifp->drvr->inspect->LogConnNoNetworkFail();
       break;
     default:
@@ -5063,7 +5063,8 @@ static zx_status_t brcmf_clear_firmware_connection_state(brcmf_if* ifp) {
   return status;
 }
 
-static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t connect_status) {
+static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t connect_status,
+                                          wlan_assoc_result_t assoc_result) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   struct net_device* ndev = ifp->ndev;
   BRCMF_DBG(TRACE, "Enter");
@@ -5075,10 +5076,7 @@ static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t 
     brcmf_log_conn_status(ifp, connect_status);
 
     switch (connect_status) {
-      case BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED:
-        brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);
-        break;
-      case BRCMF_CONNECT_STATUS_CONNECTED: {
+      case brcmf_connect_status_t::CONNECTED: {
         brcmf_get_assoc_ies(cfg, ifp);
         brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
         if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
@@ -5114,19 +5112,21 @@ static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t 
         brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_SUCCESS);
         break;
       }
-      case BRCMF_CONNECT_STATUS_ASSOC_REQ_FAILED: {
+      case brcmf_connect_status_t::ASSOC_REQ_FAILED: {
         BRCMF_INFO("Association is rejected, need to reset firmware state.");
         zx_status_t err = brcmf_clear_firmware_connection_state(ifp);
         if (err != ZX_OK) {
           BRCMF_ERR("Failed to clear firmware connection state.");
         }
-        brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+        brcmf_return_assoc_result(ndev, assoc_result);
         break;
       }
-      default:
-        BRCMF_WARN("Unsuccessful connect status: %s", brcmf_get_connect_status_str(connect_status));
-        brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+      default: {
+        BRCMF_WARN("Unsuccessful connection: connect_status %s assoc_result %d",
+                   brcmf_get_connect_status_str(connect_status), static_cast<int>(assoc_result));
+        brcmf_return_assoc_result(ndev, assoc_result);
         break;
+      }
     }
   }
 
@@ -5147,7 +5147,8 @@ static void brcmf_connect_timeout_worker(WorkItem* work) {
   }
   // In case the timeout happens in SAE process.
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
-  brcmf_bss_connect_done(ifp, BRCMF_CONNECT_STATUS_CONNECTING_TIMEOUT);
+  brcmf_bss_connect_done(ifp, brcmf_connect_status_t::CONNECTING_TIMEOUT,
+                         WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 }
 
 static zx_status_t brcmf_indicate_client_connect(struct brcmf_if* ifp,
@@ -5159,7 +5160,8 @@ static zx_status_t brcmf_indicate_client_connect(struct brcmf_if* ifp,
             brcmf_fweh_get_event_status_str(e->status), e->reason,
             brcmf_fweh_get_auth_type_str(e->auth_type), e->flags);
   BRCMF_DBG(CONN, "Linkup\n");
-  brcmf_bss_connect_done(ifp, BRCMF_CONNECT_STATUS_CONNECTED);
+
+  brcmf_bss_connect_done(ifp, brcmf_connect_status_t::CONNECTED, WLAN_ASSOC_RESULT_SUCCESS);
   brcmf_net_setcarrier(ifp, true);
 
   BRCMF_DBG(TRACE, "Exit\n");
@@ -5171,9 +5173,47 @@ static zx_status_t brcmf_handle_assoc_event(struct brcmf_if* ifp, const struct b
                                             void* data) {
   BRCMF_DBG_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
   ZX_DEBUG_ASSERT(!brcmf_is_apmode(ifp->vif));
-  return brcmf_bss_connect_done(ifp, (e->status == BRCMF_E_STATUS_SUCCESS)
-                                         ? BRCMF_CONNECT_STATUS_CONNECTED
-                                         : BRCMF_CONNECT_STATUS_ASSOC_REQ_FAILED);
+
+  // For this event, e->reason is in the StatusCode enum space.
+  wlan_assoc_result_t assoc_result = {};
+  switch (static_cast<wlan_ieee80211::StatusCode>(e->reason)) {
+    case wlan_ieee80211::StatusCode::SUCCESS:
+      assoc_result = WLAN_ASSOC_RESULT_SUCCESS;
+      break;
+    case wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED:
+      assoc_result = WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED;
+      break;
+    case wlan_ieee80211::StatusCode::REFUSED_UNAUTHENTICATED_ACCESS_NOT_SUPPORTED:
+      assoc_result = WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED;
+      break;
+    case wlan_ieee80211::StatusCode::REFUSED_CAPABILITIES_MISMATCH:
+      assoc_result = WLAN_ASSOC_RESULT_REFUSED_CAPABILITIES_MISMATCH;
+      break;
+    case wlan_ieee80211::StatusCode::REFUSED_EXTERNAL_REASON:
+      assoc_result = WLAN_ASSOC_RESULT_REFUSED_EXTERNAL_REASON;
+      break;
+    case wlan_ieee80211::StatusCode::REFUSED_AP_OUT_OF_MEMORY:
+      assoc_result = WLAN_ASSOC_RESULT_REFUSED_AP_OUT_OF_MEMORY;
+      break;
+    case wlan_ieee80211::StatusCode::REFUSED_BASIC_RATES_MISMATCH:
+      assoc_result = WLAN_ASSOC_RESULT_REFUSED_BASIC_RATES_MISMATCH;
+      break;
+    case wlan_ieee80211::StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED:
+      assoc_result = WLAN_ASSOC_RESULT_REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED;
+      break;
+    case wlan_ieee80211::StatusCode::REFUSED_TEMPORARILY:
+      assoc_result = WLAN_ASSOC_RESULT_REFUSED_TEMPORARILY;
+      break;
+    default:
+      assoc_result = WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED;
+      break;
+  }
+
+  return brcmf_bss_connect_done(ifp,
+                                (e->status == BRCMF_E_STATUS_SUCCESS)
+                                    ? brcmf_connect_status_t::CONNECTED
+                                    : brcmf_connect_status_t::ASSOC_REQ_FAILED,
+                                assoc_result);
 }
 
 // Handler to ASSOC_IND and REASSOC_IND events. These are explicitly meant for SoftAP
@@ -5294,7 +5334,8 @@ static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct b
       }
       brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
     }
-    brcmf_bss_connect_done(ifp, BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED);
+    brcmf_bss_connect_done(ifp, brcmf_connect_status_t::AUTHENTICATION_FAILED,
+                           WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);
   }
 
   // Only care about the authentication frames during SAE process.
@@ -5355,7 +5396,8 @@ static void brcmf_indicate_no_network(struct brcmf_if* ifp) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
   BRCMF_DBG(CONN, "No network\n");
-  brcmf_bss_connect_done(ifp, BRCMF_CONNECT_STATUS_NO_NETWORK);
+  brcmf_bss_connect_done(ifp, brcmf_connect_status_t::NO_NETWORK,
+                         WLAN_ASSOC_RESULT_REFUSED_EXTERNAL_REASON);
   brcmf_disconnect_done(cfg);
 }
 
@@ -5379,7 +5421,10 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
              brcmf_get_client_connect_state_string(ifp), ndev->last_known_rssi_dbm,
              ndev->last_known_snr_db);
   BRCMF_INFO_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
-  brcmf_bss_connect_done(ifp, connect_status);
+  brcmf_bss_connect_done(ifp, connect_status,
+                         (connect_status == brcmf_connect_status_t::CONNECTED)
+                             ? WLAN_ASSOC_RESULT_SUCCESS
+                             : WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   brcmf_disconnect_done(cfg);
   brcmf_link_down(ifp->vif, e->reason, e->event_code);
   brcmf_clear_profile_on_client_disconnect(ndev_to_prof(ndev));
@@ -5426,7 +5471,7 @@ static zx_status_t brcmf_process_link_event(struct brcmf_if* ifp, const struct b
       return brcmf_indicate_client_connect(ifp, e, data);
     }
     if (!(e->flags & BRCMF_EVENT_MSG_LINK)) {
-      return brcmf_indicate_client_disconnect(ifp, e, data, BRCMF_CONNECT_STATUS_LINK_FAILED);
+      return brcmf_indicate_client_disconnect(ifp, e, data, brcmf_connect_status_t::LINK_FAILED);
     }
     if (e->status == BRCMF_E_STATUS_NO_NETWORKS) {
       brcmf_indicate_no_network(ifp);
@@ -5458,7 +5503,7 @@ static zx_status_t brcmf_process_deauth_event(struct brcmf_if* ifp, const struct
     return ZX_OK;
   }
 
-  return brcmf_indicate_client_disconnect(ifp, e, data, BRCMF_CONNECT_STATUS_DEAUTHENTICATING);
+  return brcmf_indicate_client_disconnect(ifp, e, data, brcmf_connect_status_t::DEAUTHENTICATING);
 }
 
 static zx_status_t brcmf_process_disassoc_ind_event(struct brcmf_if* ifp,
@@ -5474,7 +5519,7 @@ static zx_status_t brcmf_process_disassoc_ind_event(struct brcmf_if* ifp,
       brcmf_notify_disassoc(ifp->ndev, ZX_OK);
     return ZX_OK;
   }
-  return brcmf_indicate_client_disconnect(ifp, e, data, BRCMF_CONNECT_STATUS_DISASSOCIATING);
+  return brcmf_indicate_client_disconnect(ifp, e, data, brcmf_connect_status_t::DISASSOCIATING);
 }
 
 static zx_status_t brcmf_process_set_ssid_event(struct brcmf_if* ifp,
@@ -5502,7 +5547,7 @@ static zx_status_t brcmf_notify_roaming_status(struct brcmf_if* ifp,
     if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
       BRCMF_ERR("Received roaming notification - unsupported\n");
     } else {
-      brcmf_bss_connect_done(ifp, BRCMF_CONNECT_STATUS_CONNECTED);
+      brcmf_bss_connect_done(ifp, brcmf_connect_status_t::CONNECTED, WLAN_ASSOC_RESULT_SUCCESS);
       brcmf_net_setcarrier(ifp, true);
     }
   }

@@ -793,9 +793,45 @@ TEST_F(AssocTest, ApIgnoredRequest) {
   EXPECT_EQ(context_.assoc_resp_count, 1U);
 }
 
-// Verify that if an AP refuses an association request we return a failure, driver will also send a
-// BRCMF_C_DISASSOC to clear AP state each time when rejected.
-TEST_F(AssocTest, ApRejectedRequest) {
+// Verify that if an AP refuses an association request we return a temporary refusal.  The driver
+// will also send a BRCMF_C_DISASSOC to clear AP state each time when refused.
+TEST_F(AssocTest, ApTemporarilyRefusedRequest) {
+  // Create our device instance
+  Init();
+
+  // Start up fake APs
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.SetAssocHandling(simulation::FakeAp::ASSOC_REFUSED_TEMPORARILY);
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_TEMPORARILY);
+
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+
+  env_->Run(kTestDuration);
+
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  uint32_t max_assoc_retries;
+  zx_status_t status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &max_assoc_retries, nullptr);
+  EXPECT_EQ(status, ZX_OK);
+  ASSERT_EQ(max_assoc_retries, kMaxAssocRetries);
+
+  // Should have received as many refusals as the configured # of retries.
+  EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
+  EXPECT_EQ(assoc_responses_.front().status, WLAN_STATUS_CODE_REFUSED_TEMPORARILY);
+
+  // The AP should have received 1 deauth, no matter there were how many firmware assoc retries.
+  EXPECT_EQ(deauth_frames_.size(), 1U);
+  EXPECT_EQ(deauth_frames_.front(), WLANIF_REASON_CODE_STA_LEAVING);
+
+  // Make sure we got our response from the driver
+  EXPECT_EQ(context_.assoc_resp_count, 1U);
+}
+
+// Verify that if an AP refuses an association request we return a failure.  The driver will also
+// send a BRCMF_C_DISASSOC to clear AP state each time when refused.
+TEST_F(AssocTest, ApRefusedRequest) {
   // Create our device instance
   Init();
 
@@ -819,7 +855,7 @@ TEST_F(AssocTest, ApRejectedRequest) {
 
   // Should have received as many refusals as the configured # of retries.
   EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
-  EXPECT_EQ(assoc_responses_.front().status, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(assoc_responses_.front().status, WLAN_STATUS_CODE_REFUSED);
 
   // The AP should have received 1 deauth, no matter there were how many firmware assoc retries.
   EXPECT_EQ(deauth_frames_.size(), 1U);
@@ -1278,7 +1314,7 @@ TEST_F(AssocTest, AssocMaxRetries) {
   ASSERT_EQ(max_assoc_retries, assoc_retries);
   // Should have received as many refusals as the configured # of retries.
   EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
-  EXPECT_EQ(assoc_responses_.front().status, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(assoc_responses_.front().status, WLAN_STATUS_CODE_REFUSED);
 
   // The AP should have received 1 deauth, no matter there were how many firmware assoc retries.
   EXPECT_EQ(deauth_frames_.size(), 1U);
@@ -1344,7 +1380,7 @@ TEST_F(AssocTest, AssocNoRetries) {
 
   // We should have gotten a refusal from the fake AP
   EXPECT_EQ(assoc_responses_.size(), 1U);
-  EXPECT_EQ(assoc_responses_.front().status, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(assoc_responses_.front().status, WLAN_STATUS_CODE_REFUSED);
 
   // The AP should have received 1 deauth, no matter there were how many firmware assoc retries.
   EXPECT_EQ(deauth_frames_.size(), 1U);

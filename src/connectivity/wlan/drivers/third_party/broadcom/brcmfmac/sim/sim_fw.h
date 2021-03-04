@@ -357,7 +357,7 @@ class SimFirmware {
   void SetAssocState(AssocState::AssocStateName state);
   void AssocClearContext();
   void AuthClearContext();
-  void AssocHandleFailure();
+  void AssocHandleFailure(uint16_t status);
   void AuthHandleFailure();
   void DisassocStart(brcmf_scb_val_le* scb_val);
   void DisassocLocalClient(uint32_t reason);
