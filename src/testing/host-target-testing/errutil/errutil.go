@@ -47,6 +47,10 @@ func HandleError(ctx context.Context, serialSocketPath string, err error) error 
 		return err
 	}
 
+	if err := printNetstackGoroutines(ctx, serial); err != nil {
+		return err
+	}
+
 	if err := printDeviceProcessBacktraces(ctx, serial); err != nil {
 		return err
 	}
@@ -110,6 +114,30 @@ func printDeviceProcessBacktraces(ctx context.Context, serial net.Conn) error {
 	time.Sleep(60 * time.Second)
 
 	logger.Infof(ctx, "done waiting for backtraces to be printed")
+
+	return nil
+}
+
+func printNetstackGoroutines(ctx context.Context, serial net.Conn) error {
+	logger.Infof(ctx, "printing netstack goroutine stack traces to serial")
+
+	// Print out the netstack goroutines while only using shell-builtin commands to avoid hitting the package resolver.
+	const shellFmtStr = `(export PATH=; +
+		echo '%s --- netstack goroutine traces ---';
+		export P="$(echo /hub/r/sys/*/c/netstack.cmx/*/out/debug/goroutines)" &&
+		test -e "$P" && while IFS='' read line; do echo "$line"; done < "$P";
+		echo '------------------------------------') &
+`
+	cmd := fmt.Sprintf(shellFmtStr, time.Now().Format(time.RFC3339Nano))
+
+	err := run(ctx, serial, cmd)
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(60 * time.Second)
+
+	logger.Infof(ctx, "done waiting for netstack goroutine to be printed")
 
 	return nil
 }
