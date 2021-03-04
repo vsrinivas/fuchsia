@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1434
+From //build/config/BUILDCONFIG.gn:1435
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -930,7 +930,7 @@ Enable all strict deps.
 
 **Current value (from the default):** `false`
 
-From //build/dart/dart_library.gni:18
+From //build/dart/dart_library.gni:19
 
 ### disable_kernel_pci
 Disable kernel PCI driver support. A counterpart of the the build
@@ -946,14 +946,14 @@ TODO(fxbug.dev/36723, fxbug.dev/6623) Remove this flag once issues are resolved
 
 **Current value (from the default):** `false`
 
-From //build/dart/dart_library.gni:22
+From //build/dart/dart_library.gni:23
 
 ### enable_dart_analysis
 Enable all dart analysis
 
 **Current value (from the default):** `true`
 
-From //build/dart/dart_library.gni:15
+From //build/dart/dart_library.gni:16
 
 ### enable_frame_pointers
 Controls whether the compiler emits full stack frames for function calls.
@@ -1086,7 +1086,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1213
+From //build/config/BUILDCONFIG.gn:1214
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1443,7 +1443,7 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:12](https://fuchsia.googlesource.com/third_party/icu/+/ef02cc27c0faceffc9345e11a35769ae92b836fb/config.gni#12)
+From [//third_party/icu/config.gni:12](https://fuchsia.googlesource.com/third_party/icu/+/477b621d3613b432f469624c73ec3f3703c1bac0/config.gni#12)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
@@ -1452,7 +1452,7 @@ is only useful in Fuchsia.
 
 **Current value (from the default):** `"68"`
 
-From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/ef02cc27c0faceffc9345e11a35769ae92b836fb/version.gni#9)
+From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/477b621d3613b432f469624c73ec3f3703c1bac0/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1460,7 +1460,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/ef02cc27c0faceffc9345e11a35769ae92b836fb/config.gni#8)
+From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/477b621d3613b432f469624c73ec3f3703c1bac0/config.gni#8)
 
 ### include_devmgr_config_in_vbmeta
 If true, /config/devmgr config will be included into a vbmeta image
@@ -1776,7 +1776,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1088
+From //build/config/BUILDCONFIG.gn:1089
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3041,7 +3041,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1424
+From //build/config/BUILDCONFIG.gn:1425
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3050,7 +3050,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1429
+From //build/config/BUILDCONFIG.gn:1430
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3082,7 +3082,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1259
+From //build/config/BUILDCONFIG.gn:1260
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3362,7 +3362,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1243
+From //build/config/BUILDCONFIG.gn:1244
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3481,6 +3481,14 @@ This argument will affect all vulkan_{executable/test} build targets.
 **Current value (from the default):** `false`
 
 From //src/lib/vulkan/build/config.gni:40
+
+### use_physboot
+**TODO(fxbug.dev/32414): This is a temporary switch that will be removed.**
+If true, use the new "physboot" booting path for the Zircon kernel.
+
+**Current value (from the default):** `false`
+
+From //zircon/kernel/BUILD.gn:21
 
 ### use_prebuilt_ffmpeg
 Use a prebuilt ffmpeg binary rather than building it locally.  See
