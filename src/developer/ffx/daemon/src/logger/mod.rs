@@ -296,6 +296,12 @@ mod test {
             Ok(Some(Timestamp::from(inner.most_recent_ts)))
         }
 
+        // TODO(jwing): add a new field for this
+        async fn read_most_recent_entry_timestamp(&self) -> Result<Option<Timestamp>> {
+            let inner = self.inner.lock().await;
+            Ok(Some(Timestamp::from(inner.most_recent_ts)))
+        }
+
         async fn clean_sessions_for_target(&self) -> Result<()> {
             let mut inner = self.inner.lock().await;
             inner.cleaned_sessions = true;

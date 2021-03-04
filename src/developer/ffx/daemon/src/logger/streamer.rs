@@ -437,6 +437,8 @@ pub trait GenericDiagnosticsStreamer {
 
     async fn read_most_recent_target_timestamp(&self) -> Result<Option<Timestamp>>;
 
+    async fn read_most_recent_entry_timestamp(&self) -> Result<Option<Timestamp>>;
+
     async fn clean_sessions_for_target(&self) -> Result<()>;
 
     async fn stream_entries(&self, stream_mode: StreamMode) -> Result<SessionStream>;
@@ -533,6 +535,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
         Ok(())
     }
 
+    /// Reads the most recent target-timestamp (a monotonic ID) from a target log
     async fn read_most_recent_target_timestamp(&self) -> Result<Option<Timestamp>> {
         let inner = self.inner.read().await;
         let output_dir = inner.output_dir.as_ref().context("stream not setup")?;
@@ -556,6 +559,27 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
         Ok(None)
     }
 
+    /// Reads the entry timestamp of the most recent log (of any type)
+    async fn read_most_recent_entry_timestamp(&self) -> Result<Option<Timestamp>> {
+        let inner = self.inner.read().await;
+        let output_dir = inner.output_dir.as_ref().context("stream not setup")?;
+
+        let files = output_dir.sort_entries().await?;
+        for file in files.iter().rev() {
+            let entry = file
+                .stream_entries()
+                .await?
+                .filter_map(|l| l.ok())
+                .map(|l| l.timestamp)
+                .last()
+                .await;
+            if entry.is_some() {
+                return Ok(entry);
+            }
+        }
+        Ok(None)
+    }
+
     async fn clean_sessions_for_target(&self) -> Result<()> {
         let inner = self.inner.read().await;
         inner
@@ -569,7 +593,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
 
     async fn stream_entries(&self, stream_mode: StreamMode) -> Result<SessionStream> {
         let ts = if stream_mode == StreamMode::SnapshotAll {
-            Some(self.read_most_recent_target_timestamp().await?.unwrap_or(Timestamp::from(0u64)))
+            Some(self.read_most_recent_entry_timestamp().await?.unwrap_or(Timestamp::from(0u64)))
         } else {
             None
         };
