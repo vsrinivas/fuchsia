@@ -63,12 +63,11 @@ static zx_status_t __fdio_open(fdio_t** io, const char* path, int flags, uint32_
 // wiping the fd table *after* it has been fill in with valid entries.
 // (musl invokes "__libc_start_init" after "__libc_extensions_init")
 static constexpr fdio_state_t initialize_fdio_state() {
-  fdio_state_t state = {};
-  state.lock = MTX_INIT;
-  state.cwd_lock = MTX_INIT;
-  state.cwd_path[0] = '/';
-  state.cwd_path[1] = '\0';
-  return state;
+  return {
+      .lock = MTX_INIT,
+      .cwd_lock = MTX_INIT,
+      .cwd_path = "/",
+  };
 }
 fdio_state_t __fdio_global_state = initialize_fdio_state();
 
@@ -485,7 +484,7 @@ static zx_status_t __fdio_open(fdio_t** io, const char* path, int flags, uint32_
   return __fdio_open_at(io, AT_FDCWD, path, flags, mode);
 }
 
-static void update_cwd_path(const char* path) {
+static void update_cwd_path(const char* path) __TA_REQUIRES(fdio_cwd_lock) {
   if (path[0] == '/') {
     // it's "absolute", but we'll still parse it as relative (from /)
     // so that we normalize the path (resolving, ., .., //, etc)
@@ -620,7 +619,7 @@ static zx_status_t __fdio_opendir_containing_at(fdio_t** io, int dirfd, const ch
 // zircon/third_party/ulib/musl/src/internal/libc.h
 extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle_t handle[],
                                                 uint32_t handle_info[], uint32_t name_count,
-                                                char** names) {
+                                                char** names) __TA_NO_THREAD_SAFETY_ANALYSIS {
   zx_status_t status = fdio_ns_create(&fdio_root_ns);
   ZX_ASSERT_MSG(status == ZX_OK, "Failed to create root namespace");
 
@@ -714,7 +713,7 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
 //
 // extern "C" is required here, since the corresponding declaration is in an internal musl header:
 // zircon/third_party/ulib/musl/src/internal/libc.h
-extern "C" __EXPORT void __libc_extensions_fini(void) __TA_ACQUIRE(&fdio_lock) {
+extern "C" __EXPORT void __libc_extensions_fini(void) __TA_ACQUIRE(fdio_lock) {
   mtx_lock(&fdio_lock);
   for (int fd = 0; fd < FDIO_MAX_FD; fd++) {
     fdio_t* io = fdio_fdtab[fd];

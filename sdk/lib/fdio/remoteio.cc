@@ -10,6 +10,8 @@
 #include <poll.h>
 #include <zircon/device/vfs.h>
 
+#include <fbl/auto_lock.h>
+
 #include "lib/zx/channel.h"
 #include "private-socket.h"
 
@@ -111,7 +113,12 @@ zx_status_t fdio_open(const char* path, uint32_t flags, zx_handle_t request) {
     return ZX_ERR_INVALID_ARGS;
   }
   // Otherwise attempt to connect through the root namespace
-  return fdio_ns_connect(fdio_root_ns, path, flags, request);
+  fdio_ns_t* ns;
+  zx_status_t status = fdio_ns_get_installed(&ns);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return fdio_ns_connect(ns, path, flags, request);
 }
 
 __EXPORT
@@ -170,8 +177,12 @@ zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd) {
   }
   path++;
 
-  // TODO: Missing fdio_lock.
-  return fdio_open_fd_common(fdio_root_handle, path, flags, out_fd);
+  return fdio_open_fd_common(
+      []() {
+        fbl::AutoLock lock(&fdio_lock);
+        return fdio_root_handle;
+      }(),
+      path, flags, out_fd);
 }
 
 __EXPORT

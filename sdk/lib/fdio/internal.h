@@ -162,17 +162,6 @@ zx_status_t fdio_release(fdio_t* io);
 // Returns true if |io| is the only acquired reference to an object.
 bool fdio_is_last_reference(fdio_t* io);
 
-// Accessors for the internal fields of fdio_t:
-
-const fdio_ops_t* fdio_get_ops(const fdio_t* io);
-int32_t fdio_get_dupcount(const fdio_t* io);
-void fdio_dupcount_acquire(fdio_t* io);
-void fdio_dupcount_release(fdio_t* io);
-uint32_t* fdio_get_ioflag(fdio_t* io);
-zxio_storage_t* fdio_get_zxio_storage(fdio_t* io);
-zx::duration* fdio_get_rcvtimeo(fdio_t* io);
-zx::duration* fdio_get_sndtimeo(fdio_t* io);
-
 // Lifecycle notes:
 //
 // Upon creation, fdio objects have a refcount of 1.
@@ -399,16 +388,13 @@ Errno fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
 
 using fdio_state_t = struct {
   mtx_t lock;
-  mtx_t cwd_lock;
-  mode_t umask;
-  fdio_t* root;
-  fdio_t* cwd;
-  // fdtab contains either NULL, or a reference to fdio_reserved_io, or a
-  // valid fdio_t pointer. fdio_reserved_io must never be returned for
-  // operations.
-  fdio_t* fdtab[FDIO_MAX_FD];
-  fdio_ns_t* ns;
-  char cwd_path[PATH_MAX];
+  mtx_t cwd_lock __TA_ACQUIRED_BEFORE(lock);
+  mode_t umask __TA_GUARDED(lock);
+  fdio_t* root __TA_GUARDED(lock);
+  fdio_t* cwd __TA_GUARDED(lock);
+  fdio_t* fdtab[FDIO_MAX_FD] __TA_GUARDED(lock);
+  fdio_ns_t* ns __TA_GUARDED(lock);
+  char cwd_path[PATH_MAX] __TA_GUARDED(cwd_lock);
 };
 
 extern fdio_state_t __fdio_global_state;
@@ -420,6 +406,17 @@ extern fdio_state_t __fdio_global_state;
 #define fdio_cwd_path (__fdio_global_state.cwd_path)
 #define fdio_fdtab (__fdio_global_state.fdtab)
 #define fdio_root_ns (__fdio_global_state.ns)
+
+// Accessors for the internal fields of fdio_t:
+
+const fdio_ops_t* fdio_get_ops(const fdio_t* io);
+int32_t fdio_get_dupcount(const fdio_t* io) __TA_REQUIRES(fdio_lock);
+void fdio_dupcount_acquire(fdio_t* io) __TA_REQUIRES(fdio_lock);
+void fdio_dupcount_release(fdio_t* io) __TA_REQUIRES(fdio_lock);
+uint32_t* fdio_get_ioflag(fdio_t* io);
+zxio_storage_t* fdio_get_zxio_storage(fdio_t* io);
+zx::duration* fdio_get_rcvtimeo(fdio_t* io);
+zx::duration* fdio_get_sndtimeo(fdio_t* io);
 
 // Returns an fd number greater than or equal to |starting_fd|, following the
 // same rules as fdio_bind_fd. If there are no free file descriptors, -1 is

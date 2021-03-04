@@ -7,6 +7,8 @@
 #include <lib/fdio/unsafe.h>
 #include <zircon/assert.h>
 
+#include <fbl/auto_lock.h>
+
 #include "internal.h"
 
 __EXPORT
@@ -27,28 +29,29 @@ zx_status_t fdio_fd_create(zx_handle_t handle, int* fd_out) {
 
 __EXPORT
 zx_status_t fdio_cwd_clone(zx_handle_t* out_handle) {
-  auto ops = fdio_get_ops(fdio_cwd_handle);
-  return ops->clone(fdio_cwd_handle, out_handle);
+  fdio_t* cwd = []() {
+    fbl::AutoLock lock(&fdio_lock);
+    return fdio_cwd_handle;
+  }();
+  return fdio_get_ops(cwd)->clone(cwd, out_handle);
 }
 
 __EXPORT
 zx_status_t fdio_fd_clone(int fd, zx_handle_t* out_handle) {
-  zx_status_t status;
-  fdio_t* io = nullptr;
+  fdio_t* io;
   if ((io = fdio_unsafe_fd_to_io(fd)) == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
   // TODO(fxbug.dev/30920): implement/honor close-on-exec flag
-  status = fdio_get_ops(io)->clone(io, out_handle);
+  zx_status_t status = fdio_get_ops(io)->clone(io, out_handle);
   fdio_release(io);
   return status;
 }
 
 __EXPORT
 zx_status_t fdio_fd_transfer(int fd, zx_handle_t* out_handle) {
-  zx_status_t status;
-  fdio_t* io = nullptr;
-  status = fdio_unbind_from_fd(fd, &io);
+  fdio_t* io;
+  zx_status_t status = fdio_unbind_from_fd(fd, &io);
   if (status != ZX_OK) {
     return status;
   }
