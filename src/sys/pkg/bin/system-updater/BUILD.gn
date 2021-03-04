@@ -47,6 +47,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:uuid",
   ]
+  non_rust_deps = [ ":generate_epoch" ]
   test_deps = [
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/lib/version",
@@ -100,6 +101,24 @@ fuchsia_component("isolated") {
 
 sysmgr_config("config") {
   source = "sysmgr.config"
+}
+
+compiled_action("generate_epoch") {
+  tool = "//src/sys/pkg/bin/system-updater/epoch:generator"
+  tool_output_name = "epoch_generator"
+
+  _history_file = "epoch/history"
+  _epoch_file = "${target_out_dir}/epoch.json"
+
+  args = [
+    "--history",
+    rebase_path("//src/sys/pkg/bin/system-updater/${_history_file}",
+                root_build_dir),
+    "--output",
+    rebase_path(_epoch_file, root_build_dir),
+  ]
+  sources = [ _history_file ]
+  outputs = [ _epoch_file ]
 }
 
 group("tests") {
