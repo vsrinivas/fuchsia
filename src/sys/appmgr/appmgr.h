@@ -20,6 +20,7 @@
 #include "src/sys/appmgr/moniker.h"
 #include "src/sys/appmgr/realm.h"
 #include "src/sys/appmgr/startup_service.h"
+#include "src/sys/appmgr/storage_metrics.h"
 #include "src/sys/appmgr/storage_watchdog.h"
 #include "src/sys/appmgr/util.h"
 
@@ -88,6 +89,7 @@ class Appmgr {
   fidl::VectorPtr<std::string> sysmgr_args_;
   bool sysmgr_running_ = false;
   StorageWatchdog storage_watchdog_;
+  StorageMetrics storage_metrics_;
 
   LifecycleServer lifecycle_server_;
   async::Executor lifecycle_executor_;
