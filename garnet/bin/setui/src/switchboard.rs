@@ -6,6 +6,3 @@
 /// make requests upon settings. It also describes the types used to communicate
 /// with the Switchboard.
 pub mod base;
-
-/// This mod provides a concrete implementation of the Switchboard.
-pub mod switchboard;

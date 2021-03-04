@@ -42,7 +42,6 @@ use {
     crate::service_context::ServiceContext,
     crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
-    crate::switchboard::switchboard::SwitchboardBuilder,
     anyhow::{format_err, Error},
     fidl_fuchsia_settings::{
         AccessibilityRequestStream, AudioRequestStream, DeviceRequestStream, DisplayRequestStream,
@@ -664,7 +663,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     policy_handler_factory: Arc<Mutex<PolicyHandlerFactoryImpl<T>>>,
 ) -> Result<(), Error> {
     let core_messenger_factory = internal::core::message::create_hub();
-    let switchboard_messenger_factory = internal::switchboard::message::create_hub();
     let policy_messenger_factory = internal::policy::message::create_hub();
 
     for blueprint in event_subscriber_blueprints {
@@ -734,17 +732,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     PolicyInspectBroker::create(policy_messenger_factory.clone(), policy_inspect_node)
         .await
         .expect("could not create inspect");
-
-    // Creates switchboard, handed to interface implementations to send messages
-    // to handlers.
-    SwitchboardBuilder::create()
-        .core_messenger_factory(core_messenger_factory)
-        .switchboard_messenger_factory(switchboard_messenger_factory.clone())
-        .add_setting_proxies(proxies.clone())
-        .add_policy_proxies(policy_core_signatures)
-        .build()
-        .await
-        .expect("could not create switchboard");
 
     let mut agent_authority = AuthorityImpl::create(
         messenger_factory.clone(),
