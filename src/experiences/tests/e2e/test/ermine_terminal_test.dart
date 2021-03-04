@@ -82,16 +82,24 @@ void main() {
     await ermine.launch(componentUrl);
     expect(await _waitForInstances(componentUrl, 3), isTrue);
 
+    print('Launched 3 terminal instances');
+
     // Close first instance using keyboard shortcut.
     // TODO(http://fxb/66076): Replace action with shortcut when implemented.
     await ermine.driver.requestData('close');
     await _waitForViews(componentUrl, 2, testForFocus: true);
     expect(await _waitForInstances(componentUrl, 2), isTrue);
 
+    print('Closed first instance');
+
     // Close second instance clicking the close button on view title bar.
+    await ermine.driver.waitFor(find.byValueKey('close'));
     await ermine.driver.tap(find.byValueKey('close'));
+    await ermine.driver.waitUntilNoTransientCallbacks();
     await _waitForViews(componentUrl, 1, testForFocus: true);
     expect(await _waitForInstances(componentUrl, 1), isTrue);
+
+    print('Closed second instance');
 
     // Close the third instance by injecting 'exit\n'.
     // TODO(http://fxbug.dev/69242): Uncomment once text injection is fixed.
@@ -99,10 +107,10 @@ void main() {
     // await input.text('exit');
     // await input.keyPress(kEnterKey);
     // await Future.delayed(Duration(seconds: 1));
+    await ermine.driver.requestData('close');
+    await _waitForViews(componentUrl, 0);
+    expect(await _waitForInstances(componentUrl, 0), isTrue);
 
-    // views = await ermine.launchedViews();
-    // terminalViews = views.where((view) => view['url'] == componentUrl);
-    // expect(terminalViews.length, 0);
-    // expect(await _waitForInstances(componentUrl, 0), isTrue);
+    print('Closed third instance');
   });
 }

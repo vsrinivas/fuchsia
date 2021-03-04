@@ -70,6 +70,7 @@ class ErmineDriver {
 
     // Close any pre-existing views.
     await _driver.requestData('closeAll');
+    expect((await launchedViews()).isEmpty, isTrue);
   }
 
   /// Closes [FlutterDriverConnector] and performs cleanup.
@@ -333,6 +334,8 @@ class ErmineDriver {
     while (DateTime.now().isBefore(end)) {
       final result = await completion();
       if (result == null || result is bool && result == false) {
+        // Add a delay so as not to spam the system.
+        await Future.delayed(Duration(seconds: 1));
         continue;
       }
       completer.complete(result);

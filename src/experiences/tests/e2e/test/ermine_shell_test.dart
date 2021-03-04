@@ -59,6 +59,8 @@ void main() {
     expect(viewRect.width > 0, isTrue);
     expect(await ermine.driver.getText(title), 'terminal.cmx');
 
+    print(' Launched terminal');
+
     // Switch to workspace 1, which should be empty.
     expect(
         await ermine.waitFor(() async {
@@ -67,12 +69,16 @@ void main() {
           return viewRect.width == 0;
         }),
         isTrue);
+    print(' Switched to workspace 1');
 
     // Launch simple browser in workspace 1.
     await ermine.launch(simpleBrowserUrl);
     viewRect = await ermine.getViewRect(simpleBrowserUrl);
     expect(viewRect.width > 0, isTrue);
     expect(await ermine.driver.getText(title), 'simple-browser.cmx');
+    expect(await ermine.isRunning(simpleBrowserUrl), isTrue);
+
+    print(' Launched simple_browser');
 
     // Switch back to workspace 0, which should show terminal and hide browser.
     expect(
@@ -84,6 +90,8 @@ void main() {
         isTrue);
     viewRect = await ermine.getViewRect(terminalUrl);
     expect(viewRect.width > 0, isTrue);
+
+    print(' Switched to workspace 0');
 
     // Close terminal and simple-browser
     await ermine.driver.requestData('closeAll');
