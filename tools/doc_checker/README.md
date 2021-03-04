@@ -16,26 +16,29 @@ yaml.
 
 ## Usage
 
-First build the tool as part of the Fuchsia build. Specify the `doc-checker`
-package during `fx set`.
+Run the `fx host-tool` to locate `doc-checker`, build it if necessary and
+execute it:
 
 ```
-fx set core.x64 --with //tools/doc_checker
-fx build
+fx host-tool doc-checker
 ```
 
-Run `doc-checker` without argument.
-```
-cd ${FUCHSIA_SRC_DIR}
-out/{default,x64}/dart-tools/doc-checker
-```
+If the command above fails, the following are common error messages and
+suggested solutions:
 
-See the tool's help for how to hold it right.
+- "Can't load Kernel binary: Invalid kernel binary format version": the
+  doc\_checker tool needs to be rebuilt with the command:
 
-In order to view the generated graph, run (on Linux):
-```
-dot -Tpng graph.dot -o tree.png && feh tree.png
-```
+  ```
+  fx build doc_checker
+  ```
+
+- "ERROR: found no artifacts in the GN graph": add `doc-checker` to your
+  `fx set` line before executing `fx host-tool`:
+
+  ```
+  fx set <product>.<board> --with //tools/doc_checker
+  ```
 
 ## Where is this used?
 
