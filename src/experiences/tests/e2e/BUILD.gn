@@ -29,7 +29,9 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
     "ermine_intl_test.dart",
     "ermine_session_shell_ask_test.dart",
     "ermine_session_shell_quicksettings_test.dart",
-    "ermine_session_shell_simple_browser_test.dart",
+
+    # TODO(71420): Uncomment once flakes are fixed.
+    # "ermine_session_shell_simple_browser_test.dart",
     "ermine_shell_test.dart",
     "ermine_smoke_test.dart",
     "ermine_spinning_square_view_test.dart",
