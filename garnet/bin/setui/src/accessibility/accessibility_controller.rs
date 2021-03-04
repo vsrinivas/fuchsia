@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::accessibility::types::AccessibilityInfo;
-use crate::base::SettingInfo;
+use crate::base::{Merge, SettingInfo};
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError, SettingHandlerResult};
-use crate::switchboard::base::Merge;
 
 use async_trait::async_trait;
 

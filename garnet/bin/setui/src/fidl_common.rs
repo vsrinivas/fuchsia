@@ -1,5 +1,7 @@
 use crate::handler::base::Error;
 
+use fuchsia_syslog::fx_log_warn;
+
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -238,7 +240,7 @@ macro_rules! fidl_hanging_get_responder {
 
         $(impl $crate::hanging_get_handler::Sender<$setting_type> for $responder_type {
             fn send_response(self, data: $setting_type) {
-                use $crate::switchboard::base::FidlResponseErrorLogger;
+                use $crate::fidl_common::FidlResponseErrorLogger;
 
                 self.send(data).log_fidl_response_error(
                     <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME);
@@ -261,7 +263,7 @@ macro_rules! fidl_result_sender_for_responder {
     ($marker_type:ty $(, $result_type:ty, $responder_type:ty)+$(,)*) => {
         $(impl $crate::hanging_get_handler::Sender<$result_type> for $responder_type {
             fn send_response(self, mut result: $result_type) {
-                use $crate::switchboard::base::FidlResponseErrorLogger;
+                use $crate::fidl_common::FidlResponseErrorLogger;
 
                 self.send(&mut result).log_fidl_response_error(
                 <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME);
@@ -276,4 +278,55 @@ macro_rules! fidl_result_sender_for_responder {
             }
         })+
     };
+}
+
+/// Custom trait used to handle results from responding to FIDL calls.
+pub trait FidlResponseErrorLogger {
+    fn log_fidl_response_error(&self, client_name: &str);
+}
+
+/// In order to not crash when a client dies, logs but doesn't crash for the specific case of
+/// being unable to write to the client. Crashes if other types of errors occur.
+impl FidlResponseErrorLogger for Result<(), fidl::Error> {
+    fn log_fidl_response_error(&self, client_name: &str) {
+        if let Some(error) = self.as_ref().err() {
+            match error {
+                fidl::Error::ServerResponseWrite(_) => {
+                    fx_log_warn!("Failed to respond to client {:?} : {:?}", client_name, error);
+                }
+                _ => {
+                    panic!(
+                        "Unexpected client response error from client {:?} : {:?}",
+                        client_name, error
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fuchsia_zircon as zx;
+
+    use super::*;
+
+    // Should succeed either when responding was successful or there was an error on the client
+    // side.
+    #[test]
+    fn test_error_logger_succeeds() {
+        let result = Err(fidl::Error::ServerResponseWrite(zx::Status::PEER_CLOSED));
+        result.log_fidl_response_error("");
+
+        let result = Ok(());
+        result.log_fidl_response_error("");
+    }
+
+    // Should fail at all other times.
+    #[should_panic]
+    #[test]
+    fn test_error_logger_fails() {
+        let result = Err(fidl::Error::ServerRequestRead(zx::Status::PEER_CLOSED));
+        result.log_fidl_response_error("");
+    }
 }

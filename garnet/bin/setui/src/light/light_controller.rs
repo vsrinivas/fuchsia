@@ -12,12 +12,13 @@ use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatibl
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError, SettingHandlerResult};
+use crate::handler::setting_handler::{
+    controller, ControllerError, ControllerStateResult, SettingHandlerResult,
+};
 use crate::input::ButtonType;
 use crate::light::light_hardware_configuration::DisableConditions;
 use crate::light::types::{LightGroup, LightInfo, LightState, LightType, LightValue};
 use crate::service_context::ExternalServiceProxy;
-use crate::switchboard::base::ControllerStateResult;
 use crate::{call_async, LightHardwareConfiguration};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;

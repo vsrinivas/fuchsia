@@ -5,8 +5,7 @@
 use bitflags::bitflags;
 use serde::{Deserialize, Serialize};
 
-use crate::base::SettingInfo;
-use crate::switchboard::base::Merge;
+use crate::base::{Merge, SettingInfo};
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

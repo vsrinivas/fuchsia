@@ -26,6 +26,8 @@ use crate::night_mode::types::NightModeInfo;
 use crate::privacy::types::PrivacyInfo;
 use crate::setup::types::SetupInfo;
 use serde::{Deserialize, Serialize};
+use std::array;
+use std::collections::HashSet;
 
 /// The setting types supported by the service.
 #[derive(PartialEq, Debug, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
@@ -114,3 +116,46 @@ generate_inspect_with_info! {
 #[derive(PartialEq, Debug, Clone)]
 #[cfg(test)]
 pub struct UnknownInfo(pub bool);
+
+/// The `Merge` trait allows merging two structs.
+pub trait Merge<Other = Self> {
+    /// Returns a copy of the original struct where the values of all fields set in `other`
+    /// replace the matching fields in the copy of `self`.
+    fn merge(&self, other: Other) -> Self;
+}
+
+/// Returns default setting types. These types should be product-agnostic,
+/// capable of operating with platform level support.
+pub fn get_default_setting_types() -> HashSet<SettingType> {
+    return array::IntoIter::new([
+        SettingType::Accessibility,
+        SettingType::Device,
+        SettingType::Intl,
+        SettingType::Power,
+        SettingType::Privacy,
+        SettingType::Setup,
+    ])
+    .collect();
+}
+
+/// Returns all known setting types. New additions to SettingType should also
+/// be inserted here.
+pub fn get_all_setting_types() -> HashSet<SettingType> {
+    return array::IntoIter::new([
+        SettingType::Accessibility,
+        SettingType::Audio,
+        SettingType::Device,
+        SettingType::Display,
+        SettingType::DoNotDisturb,
+        SettingType::FactoryReset,
+        SettingType::Input,
+        SettingType::Intl,
+        SettingType::Light,
+        SettingType::LightSensor,
+        SettingType::NightMode,
+        SettingType::Power,
+        SettingType::Privacy,
+        SettingType::Setup,
+    ])
+    .collect();
+}

@@ -4,7 +4,7 @@
 use {
     crate::accessibility::types::AccessibilityInfo,
     crate::agent::restore_agent,
-    crate::base::{SettingInfo, SettingType, UnknownInfo},
+    crate::base::{get_all_setting_types, SettingInfo, SettingType, UnknownInfo},
     crate::do_not_disturb::types::DoNotDisturbInfo,
     crate::handler::base::{ContextBuilder, Request},
     crate::handler::device_storage::testing::InMemoryStorageFactory,
@@ -13,12 +13,11 @@ use {
     crate::handler::setting_handler::{
         controller, persist, persist::controller as data_controller, persist::write,
         persist::ClientProxy as DataClientProxy, persist::Handler as DataHandler, persist::Storage,
-        BoxedController, ClientImpl, ClientProxy, Command, ControllerError, Event,
-        GenerateController, Handler, Payload, SettingHandlerResult, State,
+        BoxedController, ClientImpl, ClientProxy, Command, ControllerError, ControllerStateResult,
+        Event, GenerateController, Handler, Payload, SettingHandlerResult, State,
     },
     crate::message::base::{Audience, MessageEvent, MessengerType},
     crate::service,
-    crate::switchboard::base::{get_all_setting_types, ControllerStateResult},
     crate::tests::message_utils::verify_payload,
     crate::EnvironmentBuilder,
     async_trait::async_trait,

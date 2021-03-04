@@ -5,12 +5,12 @@
 use {
     crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType},
     crate::base::{SettingInfo, SettingType},
+    crate::fidl_common::FidlResponseErrorLogger,
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
     crate::handler::base::Request,
     crate::request_respond,
-    crate::switchboard::base::FidlResponseErrorLogger,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::{

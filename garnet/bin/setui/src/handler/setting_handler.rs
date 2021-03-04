@@ -8,7 +8,6 @@ use crate::message::base::Audience;
 use crate::payload_convert;
 use crate::service::message::{MessageClient, Messenger, Signature};
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::ControllerStateResult;
 use async_trait::async_trait;
 use core::convert::TryFrom;
 use fuchsia_async as fasync;
@@ -22,6 +21,8 @@ use thiserror::Error;
 
 pub type ExitResult = Result<(), ControllerError>;
 pub type SettingHandlerResult = Result<Option<SettingInfo>, ControllerError>;
+/// Return type from a controller after handling a state change.
+pub type ControllerStateResult = Result<(), ControllerError>;
 
 // The types of data that can be sent to and from a setting controller.
 #[derive(Clone, Debug, PartialEq)]

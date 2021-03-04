@@ -9,7 +9,9 @@ use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatibl
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError, SettingHandlerResult, State};
+use crate::handler::setting_handler::{
+    controller, ControllerError, ControllerStateResult, SettingHandlerResult, State,
+};
 use crate::input::common::connect_to_camera;
 use crate::input::input_device_configuration::InputConfiguration;
 use crate::input::types::{
@@ -17,7 +19,6 @@ use crate::input::types::{
     InputState, Microphone,
 };
 use crate::input::ButtonType;
-use crate::switchboard::base::ControllerStateResult;
 
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;

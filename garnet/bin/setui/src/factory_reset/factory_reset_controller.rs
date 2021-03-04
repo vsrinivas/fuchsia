@@ -9,10 +9,10 @@ use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::controller::Handle;
 use crate::handler::setting_handler::persist::{controller, ClientProxy};
-use crate::handler::setting_handler::ControllerError;
-use crate::handler::setting_handler::{SettingHandlerResult, State};
+use crate::handler::setting_handler::{
+    ControllerError, ControllerStateResult, SettingHandlerResult, State,
+};
 use crate::service_context::ExternalServiceProxy;
-use crate::switchboard::base::ControllerStateResult;
 use async_trait::async_trait;
 use fidl_fuchsia_recovery_policy::{DeviceMarker, DeviceProxy};
 use fuchsia_syslog::fx_log_err;

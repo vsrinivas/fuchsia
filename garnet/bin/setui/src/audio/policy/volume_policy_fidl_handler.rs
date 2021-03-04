@@ -16,6 +16,7 @@ use futures::FutureExt;
 use std::convert::TryInto;
 
 use crate::audio::policy::{self as audio, PolicyId, Response, Transform};
+use crate::fidl_common::FidlResponseErrorLogger;
 use crate::fidl_process_policy;
 use crate::fidl_processor::policy::RequestContext;
 use crate::fidl_result_sender_for_responder;
@@ -23,7 +24,6 @@ use crate::handler::base::Error;
 use crate::hanging_get_handler::Sender;
 use crate::policy::base::{response, PolicyInfo, PolicyType, Request};
 use crate::shutdown_responder_with_error;
-use crate::switchboard::base::FidlResponseErrorLogger;
 
 fidl_result_sender_for_responder!(
     VolumePolicyControllerMarker,

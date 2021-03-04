@@ -12,10 +12,9 @@ use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{
-    controller, ControllerError, Event, SettingHandlerResult, State,
+    controller, ControllerError, ControllerStateResult, Event, SettingHandlerResult, State,
 };
 use crate::input::ButtonType;
-use crate::switchboard::base::*;
 use async_trait::async_trait;
 use fuchsia_async as fasync;
 use futures::lock::Mutex;

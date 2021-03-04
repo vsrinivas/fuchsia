@@ -4,6 +4,7 @@
 
 use {
     crate::base::{SettingInfo, SettingType},
+    crate::fidl_common::FidlResponseErrorLogger,
     crate::fidl_hanging_get_responder,
     crate::fidl_process_custom,
     crate::fidl_processor::settings::RequestContext,
@@ -11,7 +12,6 @@ use {
     crate::input::input_controller::DEFAULT_MIC_NAME,
     crate::input::types::{DeviceState, DeviceStateSource, InputDevice, InputDeviceType},
     crate::request_respond,
-    crate::switchboard::base::FidlResponseErrorLogger,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         Error, InputDeviceSettings, InputMarker, InputRequest, InputSettings,

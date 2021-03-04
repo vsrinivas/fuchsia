@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::{SettingInfo, SettingType};
+use crate::base::{Merge, SettingInfo, SettingType};
 use crate::call_async;
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
@@ -11,7 +11,6 @@ use crate::handler::setting_handler::persist::{
 };
 use crate::handler::setting_handler::{controller, ControllerError, SettingHandlerResult};
 use crate::intl::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
-use crate::switchboard::base::Merge;
 use async_trait::async_trait;
 use std::collections::HashSet;
 

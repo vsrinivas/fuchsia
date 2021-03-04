@@ -4,12 +4,12 @@
 use {
     crate::base::{SettingInfo, SettingType},
     crate::display::types::{LowLightMode, SetDisplayInfo, Theme, ThemeMode, ThemeType},
+    crate::fidl_common::FidlResponseErrorLogger,
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
     crate::handler::base::Request,
     crate::request_respond,
-    crate::switchboard::base::FidlResponseErrorLogger,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatchLightSensorResponder,

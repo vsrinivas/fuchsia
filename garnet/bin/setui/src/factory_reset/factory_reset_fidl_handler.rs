@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use crate::base::{SettingInfo, SettingType};
+use crate::fidl_common::FidlResponseErrorLogger;
 use crate::fidl_processor::settings::RequestContext;
 use crate::handler::base::Request;
-use crate::switchboard::base::FidlResponseErrorLogger;
 use crate::{fidl_hanging_get_responder, fidl_process, request_respond};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{

@@ -30,7 +30,7 @@ macro_rules! request_respond {
         $marker:ty $(,)?
     ) => {{
         use ::fidl::endpoints::ServiceMarker;
-        use $crate::switchboard::base::FidlResponseErrorLogger;
+        use $crate::fidl_common::FidlResponseErrorLogger;
 
         match $context.request($setting_type, $request).await {
             Ok(_) => $responder.send(&mut $success),

@@ -5,7 +5,7 @@
 use fidl_fuchsia_settings::IntlSettings;
 use serde::{Deserialize, Serialize};
 
-use crate::switchboard::base::Merge;
+use crate::base::Merge;
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct IntlInfo {

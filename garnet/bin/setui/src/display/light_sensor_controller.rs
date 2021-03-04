@@ -7,9 +7,9 @@ use crate::display::types::LightData;
 use crate::handler::base::Request;
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::handler::setting_handler::{
-    controller, ClientProxy, ControllerError, Event, SettingHandlerResult, State,
+    controller, ClientProxy, ControllerError, ControllerStateResult, Event, SettingHandlerResult,
+    State,
 };
-use crate::switchboard::base::ControllerStateResult;
 use async_trait::async_trait;
 use fidl_fuchsia_input_report::InputDeviceMarker;
 use fuchsia_async::{self as fasync, DurationExt};
