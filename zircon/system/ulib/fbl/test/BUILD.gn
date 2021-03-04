@@ -48,7 +48,6 @@ test("fbl") {
     "ref_ptr_tests.cc",
     "span_tests.cc",
     "string_buffer_tests.cc",
-    "string_piece_tests.cc",
     "string_printf_tests.cc",
     "string_tests.cc",
     "string_traits_tests.cc",

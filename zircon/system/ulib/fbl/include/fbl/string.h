@@ -212,11 +212,6 @@ class __OWNER(char) String {
   // |ac| must not be null.
   void Set(const StringPiece& piece, AllocChecker* ac) { Set(piece.data(), piece.length(), ac); }
 
-  // Creates a string piece backed by the string.
-  // The string piece does not take ownership of the data so the string
-  // must outlast the string piece.
-  operator StringPiece() const { return {data(), length()}; }
-
   // Create a std::string_view backed by the string.
   // The view does not take ownership of the data so the string
   // must outlast the std::string_view.
