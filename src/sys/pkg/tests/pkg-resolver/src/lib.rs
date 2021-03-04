@@ -52,6 +52,16 @@ use {
     tempfile::TempDir,
 };
 
+// If the body of an https response is not large enough, hyper will download the body
+// along with the header in the initial fuchsia_hyper::HttpsClient.request(). This means
+// that even if the body is implemented with a stream that sends some bytes and then fails
+// before the transfer is complete, the error will occur on the initial request instead
+// of when looping over the Response body bytes.
+// This value probably just needs to be larger than the Hyper buffer, which defaults to 400 kB
+// https://docs.rs/hyper/0.13.10/hyper/client/struct.Builder.html#method.http1_max_buf_size
+// TODO(fxbug.dev/71333) shrink this value
+pub const FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING: usize = 600_000;
+
 pub mod mock_filesystem;
 
 pub trait PkgFs {

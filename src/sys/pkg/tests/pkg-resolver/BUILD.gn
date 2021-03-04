@@ -313,6 +313,26 @@ rustc_test("resolve_recovers_from_http_errors") {
   sources = [ "src/resolve_recovers_from_http_errors.rs" ]
 }
 
+rustc_test("resolve_resumes_blob_gets") {
+  name = "resolve-resumes-blob-gets"
+  edition = "2018"
+
+  source_root = "src/resolve_resumes_blob_gets.rs"
+
+  deps = [
+    ":lib",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:http",
+    "//third_party/rust_crates:hyper",
+  ]
+
+  sources = [ "src/resolve_resumes_blob_gets.rs" ]
+}
+
 rustc_test("resolve_succeeds_with_broken_minfs") {
   name = "resolve-succeeds-with-broken-minfs"
   edition = "2018"
@@ -574,6 +594,7 @@ test_package("pkg-resolver-integration-tests") {
     ":resolve_fails",
     ":resolve_propagates_pkgfs_failure",
     ":resolve_recovers_from_http_errors",
+    ":resolve_resumes_blob_gets",
     ":resolve_succeeds",
     ":resolve_succeeds_with_broken_minfs",
     ":system_cache_fallback",
@@ -661,6 +682,13 @@ test_package("pkg-resolver-integration-tests") {
     {
       name = "resolve_recovers_from_http_errors"
       dest = "resolve-recovers-from-http-errors"
+    },
+    {
+      log_settings = {
+        max_severity = "ERROR"
+      }
+      name = "resolve_resumes_blob_gets"
+      dest = "resolve-resumes-blob-gets"
     },
     {
       log_settings = {

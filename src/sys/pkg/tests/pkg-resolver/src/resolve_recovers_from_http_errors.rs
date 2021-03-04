@@ -13,7 +13,10 @@ use {
         Package, PackageBuilder, RepositoryBuilder,
     },
     fuchsia_zircon::Status,
-    lib::{extra_blob_contents, make_pkg_with_extra_blobs, TestEnvBuilder, EMPTY_REPO_PATH},
+    lib::{
+        extra_blob_contents, make_pkg_with_extra_blobs, TestEnvBuilder, EMPTY_REPO_PATH,
+        FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING,
+    },
     matches::assert_matches,
     std::{net::Ipv4Addr, sync::Arc, time::Duration},
 };
@@ -38,6 +41,7 @@ async fn verify_resolve_fails_then_succeeds<H: UriPathHandler>(
     let served_repository = repo
         .server()
         .uri_path_override_handler(handler::Toggleable::new(&should_fail, handler))
+        .range_uri_path_override_handler(handler::RangeStaticResponseCode::server_error())
         .start()
         .unwrap();
     env.register_repo(&served_repository).await;
@@ -85,13 +89,6 @@ async fn second_resolve_succeeds_when_blob_404() {
     )
     .await
 }
-
-// If the body of an https response is not large enough, hyper will download the body
-// along with the header in the initial fuchsia_hyper::HttpsClient.request(). This means
-// that even if the body is implemented with a stream that fails before the transfer is
-// complete, the failure will occur during the initial request and before the batch loop
-// that writes to pkgfs/blobfs. Value was found experimentally.
-const FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING: usize = 1_000_000;
 
 #[fasync::run_singlethreaded(test)]
 async fn second_resolve_succeeds_when_far_errors_mid_download() {
