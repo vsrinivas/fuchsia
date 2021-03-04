@@ -263,19 +263,19 @@ func TestBridgeWritePackets(t *testing.T) {
 		// byte which we ignore.
 		if pkt := ep1.getPacket(); pkt == nil {
 			t.Error("expected a packet on ep1")
-		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
+		} else if got := pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data[0]) {
 			t.Errorf("got ep1 data = %x, want = %x", got, data[0])
 		}
 
 		if pkt := ep2.getPacket(); pkt == nil {
 			t.Error("expected a packet on ep2")
-		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
+		} else if got := pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data[0]) {
 			t.Errorf("got ep2 data = %x, want = %x", got, data[0])
 		}
 
 		if pkt := ep3.getPacket(); pkt == nil {
 			t.Error("expected a packet on ep3")
-		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
+		} else if got := pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data[0]) {
 			t.Errorf("got ep3 data = %x, want = %x", got, data[0])
 		}
 	})
@@ -293,19 +293,19 @@ func TestBridgeWritePackets(t *testing.T) {
 
 		if pkt := ep1.getPacket(); pkt == nil {
 			t.Error("expected a packet on ep1")
-		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
+		} else if got := pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data[0]) {
 			t.Errorf("got ep1 data = %x, want = %x", got, data[0])
 		}
 
 		if pkt := ep2.getPacket(); pkt == nil {
 			t.Error("expected a packet on ep2")
-		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
+		} else if got := pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data[0]) {
 			t.Errorf("got ep2 data = %x, want = %x", got, data[0])
 		}
 
 		if pkt := ep3.getPacket(); pkt == nil {
 			t.Error("expected a packet on ep3")
-		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
+		} else if got := pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data[0]) {
 			t.Errorf("got ep3 data = %x, want = %x", got, data[0])
 		}
 	})
@@ -333,19 +333,19 @@ func TestBridgeWritePackets(t *testing.T) {
 			for j := 0; j < i; j++ {
 				if pkt := ep1.getPacket(); pkt == nil {
 					t.Errorf("(j=%d) expected a packet on ep1", j)
-				} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[j]) {
+				} else if got := pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data[j]) {
 					t.Errorf("(j=%d) got ep1 data = %x, want = %x", j, got, data[j])
 				}
 
 				if pkt := ep2.getPacket(); pkt == nil {
 					t.Errorf("(j=%d) expected a packet on ep2", j)
-				} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[j]) {
+				} else if got := pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data[j]) {
 					t.Errorf("(j=%d) got ep2 data = %x, want = %x", j, got, data[j])
 				}
 
 				if pkt := ep3.getPacket(); pkt == nil {
 					t.Errorf("(j=%d) expected a packet on ep3", j)
-				} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[j]) {
+				} else if got := pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data[j]) {
 					t.Errorf("(j=%d) got ep3 data = %x, want = %x", j, got, data[j])
 				}
 			}
@@ -364,9 +364,9 @@ func TestBridgeRouting(t *testing.T) {
 	)
 
 	data := []byte{1, 2, 3, 4}
-	pkt := stack.PacketBuffer{
+	pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 		Data: buffer.View(data).ToVectorisedView(),
-	}
+	})
 
 	tests := []struct {
 		name               string
@@ -469,12 +469,12 @@ func TestBridgeRouting(t *testing.T) {
 						t.Fatalf("unrecognized rxEPKind = %d", subtest.rxEP)
 					}
 
-					bridgeEP.DeliverNetworkPacketToBridge(rxEP, linkAddr3, test.dstAddr, 0, &pkt)
+					bridgeEP.DeliverNetworkPacketToBridge(rxEP, linkAddr3, test.dstAddr, 0, pkt.Clone())
 
 					if pkt := ep1.getPacket(); subtest.ep1ShouldGetPacket {
 						if pkt == nil {
 							t.Error("expected a packet on ep1")
-						} else if got := pkt.Data.ToView(); !bytes.Equal(got, data) {
+						} else if got := pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data) {
 							t.Errorf("got ep1 data = %x, want = %x", got, data)
 						}
 					} else if pkt != nil {
@@ -485,7 +485,7 @@ func TestBridgeRouting(t *testing.T) {
 						if nd1.count != 1 {
 							t.Errorf("got nd1.count = %d, want = 1", nd1.count)
 						}
-						if got := nd1.pkt.Data.ToView(); !bytes.Equal(got, data) {
+						if got := nd1.pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data) {
 							t.Errorf("got nd1 data = %x, want = %x", got, data)
 						}
 					} else if nd1.count != 0 {
@@ -495,7 +495,7 @@ func TestBridgeRouting(t *testing.T) {
 					if pkt := ep2.getPacket(); subtest.ep2ShouldGetPacket {
 						if pkt == nil {
 							t.Error("expected a packet on ep2")
-						} else if got := pkt.Data.ToView(); !bytes.Equal(got, data) {
+						} else if got := pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data) {
 							t.Errorf("got ep2 data = %x, want = %x", got, data)
 						}
 					} else if pkt != nil {
@@ -506,7 +506,7 @@ func TestBridgeRouting(t *testing.T) {
 						if nd2.count != 1 {
 							t.Errorf("got nd2.count = %d, want = 1", nd2.count)
 						}
-						if got := nd2.pkt.Data.ToView(); !bytes.Equal(got, data) {
+						if got := nd2.pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data) {
 							t.Errorf("got nd2 data = %x, want = %x", got, data)
 						}
 					} else if nd2.count != 0 {
@@ -517,7 +517,7 @@ func TestBridgeRouting(t *testing.T) {
 						if ndb.count != 1 {
 							t.Errorf("got ndb.count = %d, want = 1", ndb.count)
 						}
-						if got := ndb.pkt.Data.ToView(); !bytes.Equal(got, data) {
+						if got := ndb.pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, data) {
 							t.Errorf("got ndb data = %x, want = %x", got, data)
 						}
 					} else if ndb.count != 0 {
@@ -642,7 +642,7 @@ func TestBridge(t *testing.T) {
 			}
 
 			ep2.onWritePacket = func(pkt *stack.PacketBuffer) {
-				for i, view := range pkt.Data.Views() {
+				for i, view := range pkt.Data().Views() {
 					if bytes.Contains(view, []byte(payload)) {
 						t.Errorf("did not expect payload %x to be sent back to ep1 in view %d: %x", payload, i, view)
 					}

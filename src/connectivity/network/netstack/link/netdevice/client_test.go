@@ -722,9 +722,9 @@ func TestPairExchangePackets(t *testing.T) {
 		for i := uint32(0); i < payloadLength; i++ {
 			view = append(view, byte(rng.Uint32()))
 		}
-		return &stack.PacketBuffer{
+		return stack.NewPacketBuffer(stack.PacketBufferOptions{
 			Data: buffer.View(view).ToVectorisedView(),
-		}
+		})
 	}
 
 	send := func(endpoint stack.LinkEndpoint, prefix byte, errs chan error) {

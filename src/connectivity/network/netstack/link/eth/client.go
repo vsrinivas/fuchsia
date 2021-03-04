@@ -261,9 +261,9 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		if err := c.handler.RxLoop(func(entry *eth.FifoEntry) {
 			// Process inbound packet.
 			var emptyLinkAddress tcpip.LinkAddress
-			dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, 0, &stack.PacketBuffer{
+			dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, 0, stack.NewPacketBuffer(stack.PacketBufferOptions{
 				Data: append(buffer.View(nil), c.iob.BufferFromEntry(*entry)...).ToVectorisedView(),
-			})
+			}))
 
 			// This entry is going back to the driver; it can be reused.
 			entry.SetLength(bufferSize)

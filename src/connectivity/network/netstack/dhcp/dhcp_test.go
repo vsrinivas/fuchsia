@@ -434,7 +434,7 @@ func TestDelayRetransmission(t *testing.T) {
 			_, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg, nil /* clock */)
 			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 				func() {
-					switch mustMsgType(t, hdr(pkt.Data.ToView())) {
+					switch mustMsgType(t, hdr(pkt.Data().AsRange().ToOwnedView())) {
 					case dhcpOFFER:
 						if !tc.cancelBeforeOffer {
 							return
@@ -608,7 +608,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 
 			var ackCnt uint32
 			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
-				if mustMsgType(t, hdr(pkt.Data.ToView())) != dhcpACK {
+				if mustMsgType(t, hdr(pkt.Data().AsRange().ToOwnedView())) != dhcpACK {
 					return pkt
 				}
 
@@ -999,7 +999,7 @@ func mustCloneWithNewMsgType(t *testing.T, pkt *stack.PacketBuffer, msgType dhcp
 
 	pkt = pkt.Clone()
 
-	h := hdr(pkt.Data.ToView())
+	h := hdr(pkt.Data().AsRange().ToOwnedView())
 	opts, err := h.options()
 	if err != nil {
 		t.Fatalf("failed to get options from header: %s", err)
@@ -1023,7 +1023,7 @@ func mustCloneWithNewMsgType(t *testing.T, pkt *stack.PacketBuffer, msgType dhcp
 	// Disable checksum verification since we've surely invalidated it.
 	header.UDP(pkt.TransportHeader().View()).SetChecksum(0)
 
-	pkt.Data = buffer.NewViewFromBytes(h).ToVectorisedView()
+	pkt.Data().Replace(buffer.NewViewFromBytes(h).ToVectorisedView())
 	return pkt
 }
 
@@ -1593,7 +1593,7 @@ func TestClientRestartIPHeader(t *testing.T) {
 	packets := make(chan Packet, len(types)*iterations)
 	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 		var packet Packet
-		ipv4Packet := header.IPv4(pkt.Data.ToView())
+		ipv4Packet := header.IPv4(pkt.Data().AsRange().ToOwnedView())
 		packet.Addresses.Source = ipv4Packet.SourceAddress()
 		packet.Addresses.Destination = ipv4Packet.DestinationAddress()
 		udpPacket := header.UDP(ipv4Packet.Payload())
@@ -1755,7 +1755,7 @@ func TestDecline(t *testing.T) {
 	for {
 		r := <-ch
 		pkt := r.pkt
-		ip := header.IPv4(pkt.Data.ToView())
+		ip := header.IPv4(pkt.Data().AsRange().ToOwnedView())
 		if !ip.IsValid(pkt.Size()) {
 			t.Fatal("sent invalid IPv4 packet")
 		}

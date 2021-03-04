@@ -249,9 +249,9 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				protocolNumber = header.IPv6ProtocolNumber
 			}
 
-			dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, protocolNumber, &stack.PacketBuffer{
+			dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, protocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
 				Data: view.ToVectorisedView(),
-			})
+			}))
 
 			// This entry is going back to the driver; it can be reused.
 			c.resetDescriptor(descriptor)

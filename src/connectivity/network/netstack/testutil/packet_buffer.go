@@ -26,6 +26,6 @@ var PacketBufferCmpTransformer = cmp.Transformer("packetBufferToParts", func(pkt
 		LinkHeader:      pkt.LinkHeader().View(),
 		NetworkHeader:   pkt.NetworkHeader().View(),
 		TransportHeader: pkt.TransportHeader().View(),
-		Data:            pkt.Data.ToView(),
+		Data:            pkt.Data().AsRange().ToOwnedView(),
 	}
 })
