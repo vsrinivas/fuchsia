@@ -223,19 +223,23 @@ func Main() {
 	ndpDisp := newNDPDispatcher()
 	var nudDisp nudDispatcher
 
+	dadConfigs := tcpipstack.DADConfigurations{
+		DupAddrDetectTransmits: dadTransmits,
+		RetransmitTimer:        dadRetransmitTimer,
+	}
+
 	stk := tcpipstack.New(tcpipstack.Options{
 		NetworkProtocols: []tcpipstack.NetworkProtocolFactory{
-			arp.NewProtocol,
+			arp.NewProtocolWithOptions(arp.Options{
+				DADConfigs: dadConfigs,
+			}),
 			ipv4.NewProtocolWithOptions(ipv4.Options{
 				IGMP: ipv4.IGMPOptions{
 					Enabled: true,
 				},
 			}),
 			ipv6.NewProtocolWithOptions(ipv6.Options{
-				DADConfigs: tcpipstack.DADConfigurations{
-					DupAddrDetectTransmits: dadTransmits,
-					RetransmitTimer:        dadRetransmitTimer,
-				},
+				DADConfigs: dadConfigs,
 				NDPConfigs: ipv6.NDPConfigurations{
 					MaxRtrSolicitations:           maxRtrSolicitations,
 					RtrSolicitationInterval:       rtrSolicitationInterval,

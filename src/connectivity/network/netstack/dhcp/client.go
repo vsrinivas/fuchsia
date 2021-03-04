@@ -28,6 +28,15 @@ import (
 const (
 	tag                        = "DHCP"
 	defaultLeaseLength Seconds = 12 * 3600
+
+	// As per RFC 2131 section 3.1,
+	//
+	//   If the client detects that the address is already in use (e.g., through
+	//   the use of ARP), the client MUST send a DHCPDECLINE message to the server
+	//   and restarts the configuration process. The client SHOULD wait a minimum
+	//   of ten seconds before restarting the configuration process to avoid
+	//   excessive network traffic in case of looping.
+	minBackoffAfterDupAddrDetetected = 10 * time.Second
 )
 
 type AcquiredFunc func(lost, acquired tcpip.AddressWithPrefix, cfg Config)
@@ -185,8 +194,6 @@ func (c *Client) Run(ctx context.Context) {
 		c.info.Store(info)
 	}()
 
-	var timer *time.Timer
-
 	for {
 		if err := func() error {
 			acquisitionTimeout := info.Acquisition
@@ -270,6 +277,118 @@ func (c *Client) Run(ctx context.Context) {
 			c.renewTime = now.Add(cfg.RenewTime.Duration())
 			c.rebindTime = now.Add(cfg.RebindTime.Duration())
 
+			if info.State == initSelecting {
+				if err := func() error {
+					ch := make(chan stack.DADResult, 1)
+					addr := info.Acquired.Address
+					// Per RFC 2131 section 3.1:
+					//
+					//  5. The client receives the DHCPACK message with configuration
+					//     parameters.  The client SHOULD perform a final check on the
+					//     parameters (e.g., ARP for allocated network address), and notes the
+					//     duration of the lease specified in the DHCPACK message.  At this
+					//     point, the client is configured.  If the client detects that the
+					//     address is already in use (e.g., through the use of ARP), the
+					//     client MUST send a DHCPDECLINE message to the server and restarts
+					//     the configuration process.  The client SHOULD wait a minimum of ten
+					//     seconds before restarting the configuration process to avoid
+					//     excessive network traffic in case of looping.
+					//
+					// Per RFC 2131 section 4.4.1:
+					//
+					// The client SHOULD perform a check on the suggested address to
+					// ensure that the address is not already in use.  For example, if
+					// the client is on a network that supports ARP, the client may issue
+					// an ARP request for the suggested request.  When broadcasting an
+					// ARP request for the suggested address, the client must fill in its
+					// own hardware address as the sender's hardware address, and 0 as
+					// the sender's IP address, to avoid confusing ARP caches in other
+					// hosts on the same subnet.  If the network address appears to be in
+					// use, the client MUST send a DHCPDECLINE message to the server. The
+					// client SHOULD broadcast an ARP reply to announce the client's new
+					// IP address and clear any outdated ARP cache entries in hosts on
+					// the client's subnet.
+					res, err := c.stack.CheckDuplicateAddress(info.NICID, header.IPv4ProtocolNumber, addr, func(result stack.DADResult) {
+						ch <- result
+					})
+					switch err.(type) {
+					case nil:
+					case *tcpip.ErrNotSupported:
+						// If the link does not support DAD, then we have no way to check if
+						// the address is already in use by a neighbor so be optimistic and
+						// proceed with the acquired address.
+						return nil
+					default:
+						return fmt.Errorf("failed to start duplicate address checks: %s", err)
+					}
+					switch res {
+					case stack.DADStarting, stack.DADAlreadyRunning:
+					case stack.DADDisabled:
+						// If the stack is not configured to perform DAD, then we have no
+						// way to check if the address is already in use by a neighbor so
+						// we proceed with the acquired address without checking if it is
+						// already assigned to a neighbor.
+						return nil
+					default:
+						panic(fmt.Sprintf("unexpected result = %d", res))
+					}
+
+					select {
+					case <-ctx.Done():
+						return fmt.Errorf("failed to complete duplicate address detection: %w", ctx.Err())
+					case result := <-ch:
+						if result.Err != nil {
+							return fmt.Errorf("error performing duplicate address detection: %s", err)
+						}
+
+						if result.Resolved {
+							// DAD did not find a neighbor with the address assigned so we are
+							// safe to proceed with the address.
+							return nil
+						}
+
+						info.Backoff = minBackoffAfterDupAddrDetetected
+						// Since we're discarding the lease, mark it expired.
+						c.leaseExpirationTime = now
+						c.renewTime = now
+						c.rebindTime = now
+						// As per RFC 2131 section 4.4.1,
+						//
+						//  Option                     DHCPDECLINE
+						//  ------                     -----------
+						//  DHCP message type          DHCPDECLINE
+						//
+						//  Requested IP address       MUST
+						//
+						//  Server identifier          MUST
+						//
+						//  Client identifier          MAY
+						if err := c.send(
+							ctx,
+							nicName,
+							&info,
+							options{
+								{optDHCPMsgType, []byte{byte(dhcpDECLINE)}},
+								{optReqIPAddr, []byte(addr)},
+								{optDHCPServer, []byte(info.Server)},
+							},
+							tcpip.FullAddress{
+								NIC:  info.NICID,
+								Addr: header.IPv4Broadcast,
+								Port: ServerPort,
+							},
+							false, /* broadcast */
+							false, /* ciaddr */
+						); err != nil {
+							return fmt.Errorf("%s: %w", dhcpDECLINE, err)
+						}
+						return fmt.Errorf("declined %s because it is held", info.Acquired)
+					}
+				}(); err != nil {
+					return fmt.Errorf("DAD: %w", err)
+				}
+			}
+
 			c.assign(&info, info.Acquired, cfg)
 			info.State = bound
 
@@ -323,20 +442,17 @@ func (c *Client) Run(ctx context.Context) {
 				return
 			}
 		} else {
-			// Only (re)set timer if we actually wait on it, otherwise subsequent
-			// `timer.Reset` may not work as expected because of undrained `timer.C`.
-			//
-			// https://golang.org/pkg/time/#Timer.Reset
-			if timer == nil {
-				timer = time.NewTimer(waitDuration)
-			} else if waitDuration != 0 {
-				timer.Reset(waitDuration)
-			}
+			ch := make(chan struct{})
+			timer := c.stack.Clock().AfterFunc(waitDuration, func() {
+				ch <- struct{}{}
+			})
+
 			_ = syslog.InfoTf(tag, "%s: scheduling renewal in %.fs", nicName, waitDuration.Seconds())
 			select {
 			case <-ctx.Done():
+				timer.Stop()
 				return
-			case <-timer.C:
+			case <-ch:
 			}
 		}
 

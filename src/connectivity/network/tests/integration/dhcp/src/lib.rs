@@ -43,19 +43,25 @@ const ALT_SERVER_PARAMETER_ADDRESSPOOL: fidl_fuchsia_net_dhcp::Parameter =
         pool_range_stop: Some(fidl_ip_v4!("192.168.1.5")),
         ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
     });
-const DEFAULT_SERVER_ENDPOINT: DhcpTestEndpoint<'_> = DhcpTestEndpoint {
-    name: "server-ep",
-    env: DhcpTestEnv::Server,
-    static_addr: Some(DEFAULT_SERVER_ADDR),
-    want_addr: None,
-};
-const DEFAULT_CLIENT_ENDPOINT: DhcpTestEndpoint<'_> = DhcpTestEndpoint {
-    name: "client-ep",
-    env: DhcpTestEnv::Client,
-    static_addr: None,
-    want_addr: Some(DEFAULT_CLIENT_WANT_ADDR),
-};
 const DEFAULT_NETWORK_NAME: &'static str = "net";
+
+fn default_server_endpoint() -> DhcpTestEndpoint<'static> {
+    DhcpTestEndpoint {
+        name: "server-ep",
+        env: DhcpTestEnv::Server,
+        static_addrs: vec![DEFAULT_SERVER_ADDR],
+        want_addr: None,
+    }
+}
+
+fn default_client_endpoint() -> DhcpTestEndpoint<'static> {
+    DhcpTestEndpoint {
+        name: "client-ep",
+        env: DhcpTestEnv::Client,
+        static_addrs: Vec::new(),
+        want_addr: Some(DEFAULT_CLIENT_WANT_ADDR),
+    }
+}
 
 /// Endpoints in DHCP tests are either
 /// 1. attached to the server stack, which will have DHCP servers serving on them.
@@ -69,9 +75,9 @@ enum DhcpTestEnv {
 struct DhcpTestEndpoint<'a> {
     name: &'a str,
     env: DhcpTestEnv,
-    /// static_addr is the static address configured on the endpoint before any
-    /// server or client is started.
-    static_addr: Option<fidl_fuchsia_net::Subnet>,
+    /// static_addrs holds the static addresses configured on the endpoint
+    /// before any server or client is started.
+    static_addrs: Vec<fidl_fuchsia_net::Subnet>,
     /// want_addr is the address expected after a successful address acquisition
     /// from a DHCP client.
     want_addr: Option<fidl_fuchsia_net::Subnet>,
@@ -271,7 +277,7 @@ async fn test_dhcp<E: netemul::Endpoint>(
             // dropped.
             let network_ref = &network;
             let eps = stream::iter(eps.into_iter())
-                .then(|DhcpTestEndpoint { name, env, static_addr, want_addr }| async move {
+                .then(|DhcpTestEndpoint { name, env, static_addrs, want_addr }| async move {
                     let test_environments = match env {
                         DhcpTestEnv::Client => {
                             stream::iter(std::iter::once(client_env_ref)).left_stream()
@@ -282,29 +288,28 @@ async fn test_dhcp<E: netemul::Endpoint>(
                         }
                     };
 
-                    let config = match static_addr {
-                        // NOTE: InterfaceAddress does not currently
-                        // implement Clone, it probably will at some point
-                        // as FIDL bindings evolve.
-                        Some(fidl_fuchsia_net::Subnet { addr, prefix_len }) => {
-                            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
-                                addr: *addr,
-                                prefix_len: *prefix_len,
-                            })
-                        }
-                        None => netemul::InterfaceConfig::None,
-                    };
-
                     let name = &*name;
-                    let config = &config;
                     let interfaces = test_environments
                         .enumerate()
-                        .then(|(id, test_environment)| async move {
+                        .zip(futures::stream::repeat(static_addrs.clone()))
+                        .then(|((id, test_environment), static_addrs)| async move {
                             let name = format!("{}-{}", name, id);
-                            test_environment
-                                .join_network::<E, _>(network_ref, name, config)
+                            let iface = test_environment
+                                .join_network::<E, _>(
+                                    network_ref,
+                                    name,
+                                    &netemul::InterfaceConfig::None,
+                                )
                                 .await
-                                .context("failed to create endpoint")
+                                .context("failed to create endpoint")?;
+                            for a in static_addrs.into_iter() {
+                                let () = iface
+                                    .add_ip_addr(a)
+                                    .await
+                                    .with_context(|| format!("failed to add address {:?}", a))?;
+                            }
+
+                            Ok::<_, anyhow::Error>(iface)
                         })
                         .try_collect::<Vec<_>>()
                         .await?;
@@ -364,7 +369,61 @@ async fn acquire_dhcp_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) 
         name,
         &mut [DhcpTestNetwork {
             name: DEFAULT_NETWORK_NAME,
-            eps: &mut [DEFAULT_SERVER_ENDPOINT, DEFAULT_CLIENT_ENDPOINT],
+            eps: &mut [default_server_endpoint(), default_client_endpoint()],
+        }],
+        &mut [&mut [
+            fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![DEFAULT_SERVER_IPV4]),
+            DEFAULT_SERVER_PARAMETER_ADDRESSPOOL,
+            fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec!["eth2".to_string()]),
+        ]],
+        1,
+    )
+    .await
+}
+
+#[variants_test]
+async fn acquire_dhcp_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(name: &str) -> Result {
+    let expected_addr = match DEFAULT_CLIENT_WANT_ADDR.addr {
+        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr: mut octets }) => {
+            // We expect to assign the address numericaly succeeding the default client address
+            // since the default client address will be assigned to a neighbor of the client so
+            // the client should decline the offer and restart DHCP.
+            *octets.iter_mut().last().expect("IPv4 addresses have a non-zero number of octets") +=
+                1;
+
+            fidl_fuchsia_net::Subnet {
+                addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                    addr: octets,
+                }),
+                ..DEFAULT_CLIENT_WANT_ADDR
+            }
+        }
+        fidl_fuchsia_net::IpAddress::Ipv6(a) => {
+            return Err(anyhow::anyhow!("expected IPv4 address; got IPv6 address = {:?}", a));
+        }
+    };
+
+    // Tests that if the client detects an address is already assigned to a neighbor,
+    // the client will decline the request and restart DHCP. In this test, the neighbor
+    // with the address assigned is the DHCP server.
+    test_dhcp::<E>(
+        name,
+        &mut [DhcpTestNetwork {
+            name: DEFAULT_NETWORK_NAME,
+            eps: &mut [
+                DhcpTestEndpoint {
+                    name: "server-ep",
+                    env: DhcpTestEnv::Server,
+                    static_addrs: vec![DEFAULT_SERVER_ADDR, DEFAULT_CLIENT_WANT_ADDR],
+                    want_addr: None,
+                },
+                DhcpTestEndpoint {
+                    name: "client-ep",
+                    env: DhcpTestEnv::Client,
+                    static_addrs: Vec::new(),
+                    want_addr: Some(expected_addr),
+                },
+            ],
         }],
         &mut [&mut [
             fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![DEFAULT_SERVER_IPV4]),
@@ -387,13 +446,13 @@ async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) ->
                     DhcpTestEndpoint {
                         name: "server-ep1",
                         env: DhcpTestEnv::Server,
-                        static_addr: Some(DEFAULT_SERVER_ADDR),
+                        static_addrs: vec![DEFAULT_SERVER_ADDR],
                         want_addr: None,
                     },
                     DhcpTestEndpoint {
                         name: "client-ep1",
                         env: DhcpTestEnv::Client,
-                        static_addr: None,
+                        static_addrs: Vec::new(),
                         want_addr: Some(DEFAULT_CLIENT_WANT_ADDR),
                     },
                 ],
@@ -404,13 +463,13 @@ async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) ->
                     DhcpTestEndpoint {
                         name: "server-ep2",
                         env: DhcpTestEnv::Server,
-                        static_addr: Some(ALT_SERVER_ADDR),
+                        static_addrs: vec![ALT_SERVER_ADDR],
                         want_addr: None,
                     },
                     DhcpTestEndpoint {
                         name: "client-ep2",
                         env: DhcpTestEnv::Client,
-                        static_addr: None,
+                        static_addrs: Vec::new(),
                         want_addr: Some(ALT_CLIENT_WANT_ADDR),
                     },
                 ],
