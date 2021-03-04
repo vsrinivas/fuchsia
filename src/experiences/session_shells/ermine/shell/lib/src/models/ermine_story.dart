@@ -187,11 +187,13 @@ class ErmineStory {
     }
 
     try {
-      await childViewConnection.requestFocus();
+      if (childViewConnection != null) {
+        await childViewConnection.requestFocus();
+      }
     } on Exception catch (e) {
-      log.shout('Failed to request focus for $url is installed: $e');
+      log.shout('Failed to request focus for $url: $e');
     } on Error catch (e) {
-      log.shout('Failed to request focus for $url is installed: $e');
+      log.shout('Failed to request focus for $url: $e');
     }
   }
 
