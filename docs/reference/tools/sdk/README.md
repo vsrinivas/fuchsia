@@ -7,7 +7,7 @@
 Fuchsia has the following SDK tools:
 
 {% for item in tocmeta.toc %}
-  {% if item.path %}
+  {% if item.path and != "Overview" %}
     <li><a href="{{ item.path }}">{{ item.title }}</a></li>
   {% elif item.section %}
       <h2>{{ item.title }}</h2>
