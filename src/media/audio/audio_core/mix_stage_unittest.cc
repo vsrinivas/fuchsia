@@ -729,7 +729,7 @@ TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
   //
   // We use 480, which is 10ms at 48kHz.
   mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, 480 /* block size in frames */,
-                                          timeline_function_, *device_clock_);
+                                          timeline_function_, device_clock_);
 
   // The crash happened in PointSampler.
   auto mixer = mix_stage_->AddInput(input, std::nullopt, Mixer::Resampler::SampleAndHold);
