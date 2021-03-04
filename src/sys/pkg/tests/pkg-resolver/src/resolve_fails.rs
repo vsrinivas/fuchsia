@@ -174,13 +174,7 @@ async fn download_blob_header_timeout() {
 
     env.assert_count_events(
         metrics::FETCH_BLOB_METRIC_ID,
-        vec![
-            (
-                metrics::FetchBlobMetricDimensionResult::BlobHeaderDeadlineExceeded,
-                metrics::FetchBlobMetricDimensionResumed::False
-            );
-            2
-        ],
+        vec![metrics::FetchBlobMetricDimensionResult::BlobHeaderDeadlineExceeded; 2],
     )
     .await;
 
@@ -213,13 +207,7 @@ async fn download_blob_body_timeout() {
 
     env.assert_count_events(
         metrics::FETCH_BLOB_METRIC_ID,
-        vec![
-            (
-                metrics::FetchBlobMetricDimensionResult::BlobBodyDeadlineExceeded,
-                metrics::FetchBlobMetricDimensionResumed::False
-            );
-            2
-        ],
+        vec![metrics::FetchBlobMetricDimensionResult::BlobBodyDeadlineExceeded; 2],
     )
     .await;
 

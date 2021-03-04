@@ -4,7 +4,7 @@
 
 /// This module tests the Cobalt metrics reporting.
 use {
-    cobalt_client::traits::AsEventCodes,
+    cobalt_client::traits::{AsEventCode, AsEventCodes},
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
@@ -57,7 +57,7 @@ async fn verify_resolve_emits_cobalt_events_with_metric_id(
     handler: Option<impl UriPathHandler>,
     expected_resolve_result: Result<(), Status>,
     metric_id: u32,
-    expected_events: Vec<impl AsEventCodes>,
+    expected_events: Vec<impl AsEventCode>,
 ) {
     let env = TestEnvBuilder::new().build().await;
     let repo = Arc::new(
@@ -324,10 +324,7 @@ async fn pkg_resolver_fetch_blob_success() {
         Option::<handler::StaticResponseCode>::None,
         Ok(()),
         metrics::FETCH_BLOB_METRIC_ID,
-        vec![(
-            metrics::FetchBlobMetricDimensionResult::Success,
-            metrics::FetchBlobMetricDimensionResumed::False,
-        )],
+        vec![metrics::FetchBlobMetricDimensionResult::Success],
     )
     .await;
 }
@@ -347,11 +344,8 @@ async fn pkg_resolver_fetch_blob_failure() {
         Err(Status::UNAVAILABLE),
         metrics::FETCH_BLOB_METRIC_ID,
         vec![
-            (
-                metrics::FetchBlobMetricDimensionResult::HttpNotFound,
-                metrics::FetchBlobMetricDimensionResumed::False
-            );
-            2
+            metrics::FetchBlobMetricDimensionResult::HttpNotFound,
+            metrics::FetchBlobMetricDimensionResult::HttpNotFound,
         ],
     )
     .await;
@@ -650,16 +644,13 @@ async fn pkg_resolver_blob_fetch_status_ranges() {
         // these because StatusCode won't let us create new ones in this range.
     ];
 
-    let mut statuses = Vec::new();
+    let mut statuses: Vec<metrics::FetchBlobMetricDimensionResult> = Vec::new();
 
     for ent in test_table.iter() {
         for code in ent.min_code..=ent.max_code {
             response_code.set(code);
             let _ = env.resolve_package(&pkg_url).await;
-            statuses.append(&mut vec![
-                (ent.status, metrics::FetchBlobMetricDimensionResumed::False);
-                ent.count
-            ]);
+            statuses.append(&mut vec![ent.status; ent.count]);
         }
     }
 
