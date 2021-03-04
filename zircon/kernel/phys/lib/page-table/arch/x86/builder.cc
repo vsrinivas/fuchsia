@@ -20,7 +20,7 @@ namespace {
 constexpr PageSize GetLargestPageSize(Vaddr vaddr, Paddr paddr, size_t size) {
   for (int i = kPageSizes.size() - 1; i > 0; i--) {
     size_t page_size = PageBytes(kPageSizes[i]);
-    if (page_size >= size && vaddr.value() % page_size == 0 && paddr.value() % page_size == 0) {
+    if (page_size <= size && vaddr.value() % page_size == 0 && paddr.value() % page_size == 0) {
       return kPageSizes[i];
     }
   }

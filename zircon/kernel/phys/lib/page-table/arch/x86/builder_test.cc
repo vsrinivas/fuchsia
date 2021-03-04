@@ -80,4 +80,21 @@ TEST(Builder, MultiplePages) {
   EXPECT_EQ(LookupPage(allocator, builder->root_node(), Vaddr(0xd000)), std::nullopt);
 }
 
+TEST(Builder, LargePage) {
+  TestMemoryManager allocator;
+
+  // Create a builder, and map a large region with 1:1 phys/virt.
+  std::optional builder = AddressSpaceBuilder::Create(allocator);
+  ASSERT_TRUE(builder.has_value());
+  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0), kPageSize1GiB * 4), ZX_OK);
+
+  // Lookup an address in the range, and ensure that large pages were used to construct
+  // the entries.
+  std::optional<LookupResult> result = LookupPage(allocator, builder->root_node(), Vaddr(0x1234));
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->entry.is_page(result->level));
+  EXPECT_EQ(result->level, 2);
+}
+
+
 }  // namespace page_table::x86
