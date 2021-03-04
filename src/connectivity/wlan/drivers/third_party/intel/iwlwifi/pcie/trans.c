@@ -1818,6 +1818,7 @@ void iwl_trans_pcie_unbind(struct iwl_trans* trans) {
   // process (which would cause driver mgr to get locked up). Therefore,
   // this must stay within the Unbind() sequence.
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  zx_interrupt_destroy(trans_pcie->irq_handle);
   thrd_join(trans_pcie->irq_thread, NULL);
 }
 

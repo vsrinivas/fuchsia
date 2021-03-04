@@ -28,6 +28,7 @@ source_set("iwlwifi_sim_trans_ss") {
     "//sdk/banjo/fuchsia.hardware.pci",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
     "//src/devices/lib/driver",
+    "//src/devices/pci/testing:pci-protocol-fake",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
   ]
