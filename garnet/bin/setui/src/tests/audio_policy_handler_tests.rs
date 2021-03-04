@@ -17,45 +17,213 @@ use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::{
     DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
 };
-use crate::internal::core;
-use crate::internal::core::message::Receptor;
-use crate::message::base::MessengerType;
+use crate::message::base::{filter, Audience, MessageEvent, MessengerType, Status};
+use crate::message_hub_definition;
 use crate::policy::base::response::{Error as PolicyError, Payload};
 use crate::policy::base::{PolicyInfo, PolicyType, Request};
-use crate::policy::policy_handler::{
-    ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
-};
+use crate::policy::policy_handler::{ClientProxy, Create, PolicyHandler, RequestTransform};
 use crate::service;
 use crate::service::TryFromWithClient;
-use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use crate::tests::message_utils::verify_payload;
 use fuchsia_async::Task;
-use futures::lock::Mutex;
 use futures::StreamExt;
 use matches::assert_matches;
-use std::borrow::BorrowMut;
 use std::sync::Arc;
 
 const CONTEXT_ID: u64 = 0;
+
+// The types of data that can be sent.
+#[cfg_attr(test, derive(PartialEq))]
+#[derive(Clone, Debug)]
+pub enum TestEnvironmentPayload {
+    Request(SettingRequest),
+    Serve(AudioInfo),
+}
+
+message_hub_definition!(TestEnvironmentPayload);
 
 struct TestEnvironment {
     /// Device storage handle.
     store: Arc<DeviceStorage>,
 
-    /// Core messenger factory.
-    core_messenger_factory: core::message::Factory,
-
-    /// Service messenger factory.
-    service_messenger_factory: service::message::Factory,
-
-    /// Receptor representing the setting proxy.
-    setting_proxy_receptor: Arc<Mutex<Receptor>>,
-
-    /// Receptor representing the switchboard.
-    switchboard_receptor: Arc<Mutex<Receptor>>,
-
     /// A newly created AudioPolicyHandler.
     handler: AudioPolicyHandler,
+
+    /// Factory for internal message hub.
+    internal_messenger_factory: message::Factory,
+
+    setting_handler_signature: message::Signature,
+
+    messenger_factory: service::message::Factory,
+}
+
+impl TestEnvironment {
+    async fn create_store() -> Arc<DeviceStorage> {
+        let storage_factory = InMemoryStorageFactory::new();
+        // Initialize storage since there's no EnvironmentBuilder to manage that here.
+        storage_factory.initialize_storage::<State>().await;
+        return storage_factory.get_store(CONTEXT_ID).await;
+    }
+
+    async fn new() -> Self {
+        TestEnvironment::new_with_store(TestEnvironment::create_store().await).await
+    }
+
+    async fn new_with_store(store: Arc<DeviceStorage>) -> Self {
+        let messenger_factory = service::message::create_hub();
+        let (messenger, _) =
+            messenger_factory.create(MessengerType::Unbound).await.expect("core messenger created");
+        let policy_type = PolicyType::Audio;
+
+        let test_factory = message::create_hub();
+
+        let handler_signature =
+            TestEnvironment::spawn_setting_handler(&messenger_factory, &test_factory).await;
+
+        let client_proxy = ClientProxy::new(messenger, store.clone(), policy_type);
+
+        let handler = AudioPolicyHandler::create(client_proxy.clone())
+            .await
+            .expect("failed to create handler");
+
+        Self {
+            store,
+            handler,
+            internal_messenger_factory: test_factory,
+            setting_handler_signature: handler_signature,
+            messenger_factory: messenger_factory,
+        }
+    }
+
+    async fn create_volume_listener(&self) -> service::message::Receptor {
+        let messenger = self
+            .messenger_factory
+            .create(MessengerType::Unbound)
+            .await
+            .expect("messenger should be present")
+            .0;
+
+        messenger
+            .message(
+                SettingPayload::Request(SettingRequest::Listen).into(),
+                Audience::Address(service::Address::Handler(SettingType::Audio)),
+            )
+            .send()
+    }
+
+    async fn create_request_observer(&self) -> message::Receptor {
+        self.internal_messenger_factory
+            .create(MessengerType::Broker(Some(filter::Builder::single(
+                filter::Condition::Custom(Arc::new(move |message| {
+                    matches!(message.payload(), TestEnvironmentPayload::Request(_))
+                })),
+            ))))
+            .await
+            .expect("receptor should be present")
+            .1
+    }
+
+    async fn spawn_setting_handler(
+        service_factory: &service::message::Factory,
+        test_factory: &message::Factory,
+    ) -> message::Signature {
+        let cmd_receptor = test_factory
+            .create(MessengerType::Unbound)
+            .await
+            .expect("receptor for handler should be created")
+            .1;
+
+        let signature = cmd_receptor.get_signature();
+
+        let receptor = service_factory
+            .create(MessengerType::Addressable(service::Address::Handler(SettingType::Audio)))
+            .await
+            .expect("should create setting messenger")
+            .1;
+
+        let receptor_fuse = receptor.fuse();
+        let cmd_receptor_fuse = cmd_receptor.fuse();
+
+        let test_messenger = test_factory
+            .create(MessengerType::Unbound)
+            .await
+            .expect("receptor for handler should be created")
+            .0;
+
+        Task::spawn(async move {
+            futures::pin_mut!(receptor_fuse, cmd_receptor_fuse);
+            let mut listeners = Vec::new();
+            let mut audio_info = default_audio_info();
+
+            loop {
+                futures::select! {
+                    event = cmd_receptor_fuse.select_next_some() => {
+                        if let MessageEvent::Message(TestEnvironmentPayload::Serve(info),
+                                mut client) = event {
+                            client.acknowledge().await;
+                            audio_info = info;
+                        }
+                    }
+                    event = receptor_fuse.select_next_some() => {
+                        if let Ok((SettingPayload::Request(request), client)) =
+                                SettingPayload::try_from_with_client(event) {
+                            // Echo request to those listening.
+                            test_messenger.message(TestEnvironmentPayload::Request(request.clone()),
+                                Audience::Broadcast)
+                                .send();
+
+                            match request {
+                                SettingRequest::Listen => {
+                                    listeners.push(client);
+                                }
+                                SettingRequest::Get => {
+                                    client
+                                        .reply(SettingPayload::Response(Ok(Some(
+                                            SettingInfo::Audio(audio_info.clone())))).into())
+                                        .send();
+                                }
+                                SettingRequest::Rebroadcast => {
+                                    // Inform all the service message hub listeners.
+                                    for listener in &listeners {
+                                        listener
+                                        .reply(SettingPayload::Response(Ok(Some(
+                                            SettingInfo::Audio(audio_info.clone())))).into())
+                                        .send();
+                                    }
+                                }
+                                _ => {
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        .detach();
+
+        signature
+    }
+
+    async fn serve_audio_info(&mut self, audio_info: AudioInfo) {
+        let messenger = self
+            .internal_messenger_factory
+            .create(MessengerType::Unbound)
+            .await
+            .expect("receptor for handler should be created")
+            .0;
+        let mut receptor = messenger
+            .message(
+                TestEnvironmentPayload::Serve(audio_info),
+                Audience::Messenger(self.setting_handler_signature),
+            )
+            .send();
+
+        while let Some(event) = receptor.next().await {
+            if MessageEvent::Status(Status::Acknowledged) == event {
+                return;
+            }
+        }
+    }
 }
 
 /// Creates a state containing all of the default audio streams.
@@ -99,146 +267,6 @@ fn verify_state(state: &State, target: PropertyTarget, transform: Transform) {
     }
 }
 
-async fn create_handler_test_environment() -> TestEnvironment {
-    let core_messenger_factory = core::message::create_hub();
-    let (core_messenger, _) = core_messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("core messenger created");
-
-    let messenger_factory = service::message::create_hub();
-    let (messenger, _) =
-        messenger_factory.create(MessengerType::Unbound).await.expect("core messenger created");
-
-    let (_, setting_proxy_receptor) = core_messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("setting proxy messenger created");
-    let (_, switchboard_receptor) = core_messenger_factory
-        .create(MessengerType::Addressable(core::Address::Switchboard))
-        .await
-        .expect("switchboard messenger created");
-    let storage_factory = InMemoryStorageFactory::new();
-    // Initialize storage since there's no EnvironmentBuilder to manage that here.
-    storage_factory.initialize_storage::<State>().await;
-    let store = storage_factory.get_store(CONTEXT_ID).await;
-    let client_proxy = ClientProxy::new(
-        messenger,
-        core_messenger,
-        setting_proxy_receptor.get_signature(),
-        store.clone(),
-        PolicyType::Audio,
-    );
-
-    let handler =
-        AudioPolicyHandler::create(client_proxy.clone()).await.expect("failed to create handler");
-
-    TestEnvironment {
-        store,
-        core_messenger_factory,
-        service_messenger_factory: messenger_factory,
-        setting_proxy_receptor: Arc::new(Mutex::new(setting_proxy_receptor)),
-        switchboard_receptor: Arc::new(Mutex::new(switchboard_receptor)),
-        handler,
-    }
-}
-
-/// Starts a task that continuously watches for requests to the setting handler on the service
-/// MessageHub and respond with a preset info value.
-async fn serve_audio_info(
-    core_messenger_factory: core::message::Factory,
-    messenger_factory: service::message::Factory,
-    audio_info: AudioInfo,
-) {
-    let core_messenger_factory_clone = core_messenger_factory.clone();
-    let receptor = messenger_factory
-        .create(MessengerType::Addressable(service::Address::Handler(SettingType::Audio)))
-        .await
-        .expect("should create setting messenger")
-        .1;
-
-    let receptor_fuse = receptor.fuse();
-
-    Task::spawn(async move {
-        futures::pin_mut!(receptor_fuse);
-        let mut listeners = Vec::new();
-
-        loop {
-            futures::select! {
-                event = receptor_fuse.select_next_some() => {
-                    if let Ok((SettingPayload::Request(request), client)) =
-                            SettingPayload::try_from_with_client(event) {
-                        match request {
-                            SettingRequest::Listen => {
-                                listeners.push(client);
-                            }
-                            SettingRequest::Get => {
-                                client
-                                    .reply(SettingPayload::Response(Ok(Some(
-                                        SettingInfo::Audio(audio_info.clone())))).into())
-                                    .send();
-                            }
-                            SettingRequest::Rebroadcast => {
-                                // Inform all the service message hub listeners.
-                                for listener in &listeners {
-                                    listener
-                                    .reply(SettingPayload::Response(Ok(Some(
-                                        SettingInfo::Audio(audio_info.clone())))).into())
-                                    .send();
-                                }
-
-                                // Inform the switchboard of the change
-                                core_messenger_factory_clone
-                                    .create(MessengerType::Unbound)
-                                    .await
-                                    .expect("should create setting messenger")
-                                    .0
-                                    .message(core::Payload::Event(SettingEvent::Changed(
-                                            SettingInfo::Audio(audio_info.clone()))),
-                                        core::message::Audience::Address(
-                                            core::Address::Switchboard))
-                                    .send();
-                            }
-                            _ => {
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    })
-    .detach();
-}
-
-/// Starts a task that continuously watches for get requests on the given receptor and replies with
-/// the given audio info.
-fn serve_audio_info_switchboard(
-    setting_proxy_receptor: Arc<Mutex<Receptor>>,
-    audio_info: AudioInfo,
-) {
-    Task::spawn(async move {
-        match setting_proxy_receptor.lock().await.next_payload().await {
-            Ok((
-                core::Payload::Action(SettingAction {
-                    id: request_id,
-                    setting_type: SettingType::Audio,
-                    data: SettingActionData::Request(SettingRequest::Get),
-                }),
-                message_client,
-            )) => {
-                message_client
-                    .reply(core::Payload::Event(SettingEvent::Response(
-                        request_id,
-                        Ok(Some(SettingInfo::Audio(audio_info))),
-                    )))
-                    .send();
-            }
-            _ => {}
-        }
-    })
-    .detach();
-}
-
 /// Adds a media volume limit to the handler in the test environment. Automatically handles a Get
 /// request for the current audio info, which happens whenever policies are modified.
 async fn set_media_volume_limit(
@@ -248,7 +276,7 @@ async fn set_media_volume_limit(
 ) -> PolicyId {
     // Start task to provide audio info to the handler, which it requests when policies are
     // modified.
-    serve_audio_info_switchboard(env.setting_proxy_receptor.clone(), audio_info);
+    env.serve_audio_info(audio_info).await;
 
     // Add the policy to the handler.
     let policy_response = env
@@ -278,7 +306,7 @@ async fn get_and_verify_media_volume(
     // received.
     let mut audio_info = default_audio_info();
     audio_info.replace_stream(create_media_stream(internal_volume_level, false));
-    serve_audio_info_switchboard(env.setting_proxy_receptor.clone(), audio_info.clone());
+    env.serve_audio_info(audio_info.clone()).await;
 
     // Send the get request to the handler.
     let request_transform = env.handler.handle_setting_request(SettingRequest::Get).await;
@@ -322,35 +350,29 @@ async fn set_and_verify_media_volume(
     .await;
 }
 
-/// Verifies that the setting proxy in the test environment received a set request with the given
-/// [`AudioStream`].
-async fn verify_stream_set(env: &mut TestEnvironment, stream: AudioStream) {
-    verify_payload(
-        core::Payload::Action(SettingAction {
-            id: 0,
-            setting_type: SettingType::Audio,
-            data: SettingActionData::Request(SettingRequest::SetVolume(vec![stream])),
-        }),
-        env.setting_proxy_receptor.lock().await.borrow_mut(),
-        None,
-    )
-    .await;
+async fn verify_stream_set(receptor: &mut message::Receptor, stream: AudioStream) {
+    while let Some(message_event) = receptor.next().await {
+        if let MessageEvent::Message(incoming_payload, mut client) = message_event {
+            client.acknowledge().await;
+            if let TestEnvironmentPayload::Request(SettingRequest::SetVolume(streams)) =
+                incoming_payload
+            {
+                assert_eq!(vec![stream], streams);
+                return;
+            }
+        }
+    }
+
+    // We expect the setting handler scaffold to report it received a set request with the specified
+    // AudioStream. If that payload is not encountered before the end of the message stream
+    // (triggered by either removal of the receptor from the MessageHub or receptor going out of
+    // scope), this is considered an error.
+    panic!("didn't expected request");
 }
 
 /// Verifies that the setting proxy in the test environment received a set request for media volume.
-async fn verify_media_volume_set(env: &mut TestEnvironment, volume_level: f32) {
-    verify_stream_set(env, create_media_stream(volume_level, false)).await;
-}
-
-/// Verifies that the switchboard in the test environment received a changed notification with the
-/// given audio info.
-async fn verify_media_volume_changed(env: &mut TestEnvironment, audio_info: AudioInfo) {
-    verify_payload(
-        core::Payload::Event(SettingEvent::Changed(SettingInfo::Audio(audio_info))),
-        env.switchboard_receptor.lock().await.borrow_mut(),
-        None,
-    )
-    .await;
+async fn verify_media_volume_set(receptor: &mut message::Receptor, volume_level: f32) {
+    verify_stream_set(receptor, create_media_stream(volume_level, false)).await;
 }
 
 // Verifies that the audio policy handler restores to a default state with all stream types when no
@@ -359,7 +381,7 @@ async fn verify_media_volume_changed(env: &mut TestEnvironment, audio_info: Audi
 async fn test_handler_no_persisted_state() {
     let expected_value = get_default_state();
 
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     // Request the policy state from the handler.
     let payload = env.handler.handle_policy_request(Request::Get).await.expect("get failed");
@@ -382,46 +404,18 @@ async fn test_handler_restore_persisted_state() {
         StateBuilder::new().add_property(AudioStreamType::Media, TransformFlags::all()).build();
     persisted_state.add_transform(modified_property, expected_transform);
 
-    let core_messenger_factory = core::message::create_hub();
-    let (core_messenger, _) = core_messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("core messenger created");
-
-    let messenger_factory = service::message::create_hub();
-    let (messenger, _) =
-        messenger_factory.create(MessengerType::Unbound).await.expect("core messenger created");
-
-    let (_, setting_proxy_receptor) = core_messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("setting proxy messenger created");
-    let storage_factory = InMemoryStorageFactory::new();
-    // Initialize storage since there's no EnvironmentBuilder to manage that here.
-    storage_factory.initialize_storage::<State>().await;
-    let store = storage_factory.get_store(CONTEXT_ID).await;
-    let client_proxy = ClientProxy::new(
-        messenger,
-        core_messenger,
-        setting_proxy_receptor.get_signature(),
-        store.clone(),
-        PolicyType::Audio,
-    );
+    let store = TestEnvironment::create_store().await;
 
     // Write the "persisted" value to storage for the handler to read on start.
     store.write(&persisted_state, false).await.expect("write failed");
 
-    // Start task to provide audio info to the handler, which it requests at startup.
-    serve_audio_info_switchboard(
-        Arc::new(Mutex::new(setting_proxy_receptor)),
-        default_audio_info(),
-    );
+    let mut env = TestEnvironment::new_with_store(store).await;
 
-    let mut handler =
-        AudioPolicyHandler::create(client_proxy.clone()).await.expect("failed to create handler");
+    // Start task to provide audio info to the handler, which it requests at startup.
+    env.serve_audio_info(default_audio_info()).await;
 
     // Request the policy state from the handler.
-    let payload = handler.handle_policy_request(Request::Get).await.expect("get failed");
+    let payload = env.handler.handle_policy_request(Request::Get).await.expect("get failed");
 
     // The state response matches the expected value.
     if let Payload::PolicyInfo(PolicyInfo::Audio(mut state)) = payload {
@@ -442,11 +436,11 @@ async fn test_handler_add_policy() {
     let expected_transform = Transform::Max(1.0);
     let modified_property = AudioStreamType::Media;
 
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     // Start task to provide audio info to the handler, which it requests when policies are
     // modified.
-    serve_audio_info_switchboard(env.setting_proxy_receptor.clone(), default_audio_info());
+    env.serve_audio_info(default_audio_info()).await;
 
     // Add a policy transform.
     let payload = env
@@ -473,7 +467,7 @@ async fn test_handler_add_policy() {
 // Tests that attempting to removing an unknown policy returns an appropriate error.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_remove_unknown_policy() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
     let invalid_policy_id = PolicyId::create(42);
 
     // Attempt to remove a policy, even though none have been added.
@@ -498,11 +492,11 @@ async fn test_handler_remove_unknown_policy() {
 async fn test_handler_remove_policy() {
     let expected_value = get_default_state();
 
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     // Start task to provide audio info to the handler, which it requests when policies are
     // modified.
-    serve_audio_info_switchboard(env.setting_proxy_receptor.clone(), default_audio_info());
+    env.serve_audio_info(default_audio_info()).await;
 
     // Add a policy transform.
     let payload = env
@@ -520,7 +514,7 @@ async fn test_handler_remove_policy() {
 
     // Start task to provide audio info to the handler, which it requests when policies are
     // modified.
-    serve_audio_info_switchboard(env.setting_proxy_receptor.clone(), default_audio_info());
+    env.serve_audio_info(default_audio_info()).await;
 
     // Remove the added transform
     let payload = env
@@ -546,7 +540,7 @@ async fn test_handler_remove_policy() {
 // new max.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_add_policy_modifies_internal_volume_above_max() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     let mut starting_audio_info = default_audio_info();
 
@@ -555,17 +549,20 @@ async fn test_handler_add_policy_modifies_internal_volume_above_max() {
 
     // Set the max volume limit to 60%.
     let max_volume = 0.6;
+
+    // Create observer to capture the events to follow.
+    let mut receptor = env.create_request_observer().await;
     set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
 
     // Handler requests that the setting handler set the volume to 60% (the max set by policy).
-    verify_media_volume_set(&mut env, max_volume).await;
+    verify_media_volume_set(&mut receptor, max_volume).await;
 }
 
 // Verifies that adding a min volume policy adjusts the internal volume level if it's below the
 // new min.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_add_policy_modifies_internal_volume_below_min() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     let mut starting_audio_info = default_audio_info();
 
@@ -574,21 +571,24 @@ async fn test_handler_add_policy_modifies_internal_volume_below_min() {
 
     // Set the min volume limit to 40%.
     let min_volume = 0.4;
+    let mut receptor = env.create_request_observer().await;
     set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info).await;
 
     // Handler requests that the setting handler set the volume to 40% (the min set by policy).
-    verify_media_volume_set(&mut env, min_volume).await;
+    verify_media_volume_set(&mut receptor, min_volume).await;
 }
 
 // Verifies that adding a min volume policy unmutes the volume stream.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_add_min_limit_unmutes() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     let starting_volume_level = 0.8;
     let mut starting_audio_info = default_audio_info();
 
     let expected_stream = create_media_stream(starting_volume_level, false);
+
+    let mut receptor = env.create_request_observer().await;
 
     // Starting audio info has media volume at max volume.
     starting_audio_info.replace_stream(create_media_stream(starting_volume_level, true));
@@ -598,35 +598,39 @@ async fn test_handler_add_min_limit_unmutes() {
         .await;
 
     // Handler requests that the setting handler unmute the stream.
-    verify_stream_set(&mut env, expected_stream).await;
+    verify_stream_set(&mut receptor, expected_stream).await;
 }
 
 // Verifies that adding a max volume policy of 0% succeeds and sets the volume 0%.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_add_zero_max() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     // Starting audio info at non-zero value.
     let mut starting_audio_info = default_audio_info();
     starting_audio_info.replace_stream(create_media_stream(0.5, false));
+
+    let mut receptor = env.create_request_observer().await;
 
     // Set the max volume limit to 0%.
     let max_volume = 0.0;
     set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
 
     // Handler requests that the setting handler set the volume to 0%.
-    verify_media_volume_set(&mut env, max_volume).await;
+    verify_media_volume_set(&mut receptor, max_volume).await;
 }
 
 // Verifies that the internal volume will not be adjusted when it's already within policy limits.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_add_policy_does_not_modify_internal_volume_within_limits() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at 50%.
     starting_audio_info.replace_stream(create_media_stream(0.5, false));
+
+    let mut receptor = env.create_request_observer().await;
 
     // Set the min volume limit to 40%.
     set_media_volume_limit(&mut env, Transform::Min(0.4), starting_audio_info.clone()).await;
@@ -639,14 +643,28 @@ async fn test_handler_add_policy_does_not_modify_internal_volume_within_limits()
     set_media_volume_limit(&mut env, Transform::Min(0.55), starting_audio_info).await;
 
     // Handler requests that the setting handler set the volume to 55% (the min set by policy).
-    verify_media_volume_set(&mut env, 0.55).await;
+    verify_media_volume_set(&mut receptor, 0.55).await;
+}
+
+/// Verifies that the switchboard in the test environment received a changed notification with the
+/// given audio info.
+async fn verify_media_volume_changed(
+    receptor: &mut service::message::Receptor,
+    audio_info: AudioInfo,
+) {
+    verify_payload(
+        SettingPayload::Response(Ok(Some(SettingInfo::Audio(audio_info)))).into(),
+        receptor,
+        None,
+    )
+    .await;
 }
 
 // Verifies that when a max volume policy is removed, the switchboard will receive a changed event
 // with the new external volume.
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_handler_remove_policy_notifies_switchboard() {
-    let mut env = create_handler_test_environment().await;
+async fn test_handler_remove_policy_notifies_listeners() {
+    let mut env = TestEnvironment::new().await;
 
     let mut starting_audio_info = default_audio_info();
 
@@ -655,12 +673,9 @@ async fn test_handler_remove_policy_notifies_switchboard() {
     // Starting audio info has media volume at 60% volume.
     starting_audio_info.replace_stream(create_media_stream(max_volume, false));
 
-    serve_audio_info(
-        env.core_messenger_factory.clone(),
-        env.service_messenger_factory.clone(),
-        starting_audio_info.clone(),
-    )
-    .await;
+    env.serve_audio_info(starting_audio_info.clone()).await;
+
+    let mut listener = env.create_volume_listener().await;
 
     // Set the max volume limit to 60%.
     let policy_id =
@@ -670,11 +685,11 @@ async fn test_handler_remove_policy_notifies_switchboard() {
     // The internal volume didn't change but the external volume did, so the handler manually sends
     // a changed even to the switchboard. The value will still be the original value as there is
     // no policy proxy to intercept the message and pass it back to the handler for processing.
-    verify_media_volume_changed(&mut env, starting_audio_info.clone()).await;
+    verify_media_volume_changed(&mut listener, starting_audio_info.clone()).await;
 
     // Start task to provide audio info to the handler, which it requests when policies are
     // modified.
-    serve_audio_info_switchboard(env.setting_proxy_receptor.clone(), starting_audio_info.clone());
+    env.serve_audio_info(starting_audio_info.clone()).await;
 
     // Remove the policy from the handler.
     env.handler
@@ -684,25 +699,27 @@ async fn test_handler_remove_policy_notifies_switchboard() {
 
     // The internal volume didn't change but the external volume should be back at the original
     // values.
-    verify_media_volume_changed(&mut env, starting_audio_info).await;
+    verify_media_volume_changed(&mut listener, starting_audio_info).await;
 }
 
 // Verifies that when multiple max volume policies are in place, that the most strict one applies.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_lowest_max_limit_applies_internally() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at max volume.
     starting_audio_info.replace_stream(create_media_stream(1.0, false));
 
+    let mut receptor = env.create_request_observer().await;
+
     // Add a policy transform to limit the max media volume to 60%.
     let max_volume = 0.6;
     set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone()).await;
 
     // Handler requests that the setting handler set the volume to 60% (the max set by policy).
-    verify_media_volume_set(&mut env, max_volume).await;
+    verify_media_volume_set(&mut receptor, max_volume).await;
 
     // Internal audio level should now be at 60%.
     starting_audio_info.replace_stream(create_media_stream(max_volume, false));
@@ -716,25 +733,27 @@ async fn test_handler_lowest_max_limit_applies_internally() {
         .await;
 
     // Handler requests that the setting handler set the volume to 50% (the lowest max).
-    verify_media_volume_set(&mut env, lower_max_volume).await;
+    verify_media_volume_set(&mut receptor, lower_max_volume).await;
 }
 
 // Verifies that when multiple min volume policies are in place, that the most strict one applies.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_highest_min_limit_applies_internally() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at 0% volume.
     starting_audio_info.replace_stream(create_media_stream(0.0, false));
 
+    let mut receptor = env.create_request_observer().await;
+
     // Add a policy transform to limit the min media volume to 30%.
     let min_volume = 0.3;
     set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info.clone()).await;
 
     // Handler requests that the setting handler set the volume to 30% (the max set by policy).
-    verify_media_volume_set(&mut env, min_volume).await;
+    verify_media_volume_set(&mut receptor, min_volume).await;
 
     // Internal audio level should now be at 30%.
     starting_audio_info.replace_stream(create_media_stream(min_volume, false));
@@ -752,13 +771,13 @@ async fn test_handler_highest_min_limit_applies_internally() {
     .await;
 
     // Handler requests that the setting handler set the volume to 40% (the highest min).
-    verify_media_volume_set(&mut env, higher_min_volume).await;
+    verify_media_volume_set(&mut receptor, higher_min_volume).await;
 }
 
 // Verifies that when no policies are in place that external set requests are not modified.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_no_policy_external_sets_not_modified() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     for i in 0..=10 {
         // 0 to 1 inclusive, with steps of 0.1.
@@ -774,7 +793,7 @@ async fn test_handler_no_policy_external_sets_not_modified() {
 // volume level.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_max_volume_policy_scales_external_sets() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     let mut starting_audio_info = default_audio_info();
 
@@ -803,7 +822,7 @@ async fn test_handler_max_volume_policy_scales_external_sets() {
 // volume level.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_min_volume_policy_scales_external_sets() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     let mut starting_audio_info = default_audio_info();
 
@@ -831,7 +850,7 @@ async fn test_handler_min_volume_policy_scales_external_sets() {
 // Verifies that adding a min volume policy prevents external sets from muting the stream.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_min_volume_policy_prevents_mute() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     let mut starting_audio_info = default_audio_info();
     let starting_stream = create_media_stream(0.5, false);
@@ -852,7 +871,7 @@ async fn test_handler_min_volume_policy_prevents_mute() {
 // appropriate internal volume level.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_min_and_max_volume_policy_scales_external_volume() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     let mut starting_audio_info = default_audio_info();
 
@@ -887,7 +906,7 @@ async fn test_handler_min_and_max_volume_policy_scales_external_volume() {
 // level as the internal volume levels.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_no_policy_gets_not_modified() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     // Test get requests with internal volumes from 0.0 to 1.0.
     for i in 0..=10 {
@@ -904,7 +923,7 @@ async fn test_handler_no_policy_gets_not_modified() {
 // volume level.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_max_volume_policy_scales_gets() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     let mut starting_audio_info = default_audio_info();
 
@@ -934,7 +953,7 @@ async fn test_handler_max_volume_policy_scales_gets() {
 // levels.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_min_volume_policy_scales_gets() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     let mut starting_audio_info = default_audio_info();
 
@@ -958,7 +977,7 @@ async fn test_handler_min_volume_policy_scales_gets() {
 // and a max volume policy are in place.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_min_and_max_volume_policy_scales_gets() {
-    let mut env = create_handler_test_environment().await;
+    let mut env = TestEnvironment::new().await;
 
     let mut starting_audio_info = default_audio_info();
 
@@ -987,39 +1006,4 @@ async fn test_handler_min_and_max_volume_policy_scales_gets() {
         // Get requests have the expected volume level after passing through the policy handler.
         get_and_verify_media_volume(&mut env, internal_volume_level, expected_volume_level).await;
     }
-}
-
-// Verifies that the handler scales setting events based on volume limits.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_handler_transforms_setting_events() {
-    let mut env = create_handler_test_environment().await;
-
-    let mut starting_audio_info = default_audio_info();
-
-    let max_volume = 0.6;
-    let starting_audio_stream = create_media_stream(max_volume, false);
-
-    // Starting audio info has user volume at 60% volume.
-    starting_audio_info.replace_stream(starting_audio_stream.clone());
-
-    // Set the max volume limit to 60%.
-    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone()).await;
-
-    let transform_result = env
-        .handler
-        .handle_setting_event(SettingEvent::Changed(SettingInfo::Audio(
-            starting_audio_info.clone(),
-        )))
-        .await;
-
-    // Since the max matches the starting volume, the transformed external volume should be 100%.
-    let mut expected_audio_info = starting_audio_info.clone();
-    let mut expected_audio_stream = starting_audio_stream.clone();
-    expected_audio_stream.user_volume_level = 1.0;
-    expected_audio_info.replace_stream(expected_audio_stream);
-
-    assert_eq!(
-        transform_result,
-        Some(EventTransform::Event(SettingEvent::Changed(SettingInfo::Audio(expected_audio_info))))
-    );
 }

@@ -64,15 +64,17 @@ use crate::audio::policy::{
 use crate::audio::types::AudioInfo;
 use crate::audio::utils::round_volume_level;
 use crate::base::{SettingInfo, SettingType};
-use crate::handler::base::{Request as SettingRequest, Response as SettingResponse};
+use crate::handler::base::{
+    Payload as HandlerPayload, Request as SettingRequest, Response as SettingResponse,
+};
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::internal::core::Payload;
 use crate::policy::base as policy_base;
 use crate::policy::base::response::Error as PolicyError;
 use crate::policy::base::PolicyInfo;
 use crate::policy::policy_handler::{
     ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform, ResponseTransform,
 };
+use crate::service;
 use crate::switchboard::base::SettingEvent;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
@@ -233,19 +235,20 @@ impl AudioPolicyHandler {
 
     /// Requests the current audio state from the audio setting proxy.
     async fn fetch_audio_info(&self) -> Result<AudioInfo, Error> {
-        self.client_proxy.send_setting_request(SettingRequest::Get).next_payload().await.and_then(
-            |(payload, _)| {
-                if let Payload::Event(SettingEvent::Response(
-                    _,
-                    Ok(Some(SettingInfo::Audio(audio_info))),
-                )) = payload
+        self.client_proxy
+            .send_setting_request(SettingType::Audio, SettingRequest::Get)
+            .next_payload()
+            .await
+            .and_then(|(payload, _)| {
+                if let service::Payload::Setting(HandlerPayload::Response(Ok(Some(
+                    SettingInfo::Audio(audio_info),
+                )))) = payload
                 {
                     Ok(audio_info)
                 } else {
                     Err(format_err!("did not receive setting value"))
                 }
-            },
-        )
+            })
     }
 
     /// Determines the max and min volume levels for the given property based on the active
@@ -429,7 +432,10 @@ impl AudioPolicyHandler {
             // controller. If this would cause the external volume levels to change as well, that
             // will be handled automatically as a Changed event in handle_setting_event.
 
-            self.client_proxy.send_setting_request(SettingRequest::SetVolume(vec![transformed]));
+            self.client_proxy.send_setting_request(
+                SettingType::Audio,
+                SettingRequest::SetVolume(vec![transformed]),
+            );
         } else if new_external_volume != previous_external_volume {
             // In some cases, such as when a max volume limit is removed, the internal volume may
             // not change but the external volume should still be updated. We send a Rebroadcast

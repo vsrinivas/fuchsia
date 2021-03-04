@@ -6,15 +6,13 @@ use crate::base::SettingType;
 use crate::handler::base::{Payload as HandlerPayload, Request, Response as SettingResponse};
 use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::handler::setting_handler::{SettingHandlerResult, StorageFactory};
-use crate::internal::core::message::{Audience as CoreAudience, Messenger, Receptor, Signature};
-use crate::internal::core::Payload;
 use crate::message::base::Audience;
 use crate::policy::base::response::{Error as PolicyError, Response};
 use crate::policy::base::{
     BoxedHandler, Context, GenerateHandlerResult, PolicyType, Request as PolicyRequest,
 };
 use crate::service;
-use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
+use crate::switchboard::base::SettingEvent;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -129,13 +127,7 @@ where
     Box::pin(async move {
         let storage = context.storage_factory.get_store(context.id).await;
 
-        let proxy = ClientProxy::new(
-            context.service_messenger,
-            context.messenger,
-            context.setting_proxy_signature,
-            storage,
-            context.policy_type,
-        );
+        let proxy = ClientProxy::new(context.service_messenger, storage, context.policy_type);
 
         C::create(proxy).await.map(|handler| Box::new(handler) as BoxedHandler)
     })
@@ -145,23 +137,21 @@ where
 #[derive(Clone)]
 pub struct ClientProxy {
     service_messenger: service::message::Messenger,
-    messenger: Messenger,
-    setting_proxy_signature: Signature,
     storage: Arc<DeviceStorage>,
     policy_type: PolicyType,
 }
 
 impl ClientProxy {
     /// Sends a setting request to the underlying setting proxy this policy handler controls.
-    pub fn send_setting_request(&self, request: Request) -> Receptor {
-        self.messenger
+    pub fn send_setting_request(
+        &self,
+        setting_type: SettingType,
+        request: Request,
+    ) -> service::message::Receptor {
+        self.service_messenger
             .message(
-                Payload::Action(SettingAction {
-                    id: 0,
-                    setting_type: self.policy_type.setting_type(),
-                    data: SettingActionData::Request(request),
-                }),
-                CoreAudience::Messenger(self.setting_proxy_signature),
+                HandlerPayload::Request(request).into(),
+                Audience::Address(service::Address::Handler(setting_type)),
             )
             .send()
     }
@@ -180,12 +170,10 @@ impl ClientProxy {
 impl ClientProxy {
     pub fn new(
         service_messenger: service::message::Messenger,
-        messenger: Messenger,
-        setting_proxy_signature: Signature,
         storage: Arc<DeviceStorage>,
         policy_type: PolicyType,
     ) -> Self {
-        Self { service_messenger, messenger, setting_proxy_signature, storage, policy_type }
+        Self { service_messenger, storage, policy_type }
     }
 
     pub fn policy_type(&self) -> PolicyType {
@@ -224,13 +212,10 @@ mod tests {
     use crate::handler::base::{Payload as HandlerPayload, Request};
     use crate::handler::device_storage::testing::InMemoryStorageFactory;
     use crate::handler::device_storage::DeviceStorageFactory;
-    use crate::internal::core;
-    use crate::internal::core::Payload;
     use crate::message::base::MessengerType;
     use crate::policy::base::PolicyType;
     use crate::privacy::types::PrivacyInfo;
     use crate::service;
-    use crate::switchboard::base::{SettingAction, SettingActionData};
     use crate::tests::message_utils::verify_payload;
 
     const CONTEXT_ID: u64 = 0;
@@ -239,15 +224,13 @@ mod tests {
     async fn test_client_proxy_send_setting_request() {
         let policy_type = PolicyType::Unknown;
         let setting_request = Request::Get;
+        let target_setting_type = SettingType::Unknown;
 
         let service_messenger_factory = service::message::create_hub();
-        let core_messenger_factory = core::message::create_hub();
-        let (messenger, _) = core_messenger_factory
-            .create(MessengerType::Unbound)
-            .await
-            .expect("core messenger created");
-        let (_, mut setting_proxy_receptor) = core_messenger_factory
-            .create(MessengerType::Unbound)
+        let (_, mut setting_proxy_receptor) = service_messenger_factory
+            .create(MessengerType::Addressable(service::Address::Handler(
+                policy_type.setting_type(),
+            )))
             .await
             .expect("setting proxy messenger created");
         let storage_factory = InMemoryStorageFactory::new();
@@ -260,20 +243,14 @@ mod tests {
                 .await
                 .expect("messenger should be created")
                 .0,
-            messenger,
-            setting_proxy_signature: setting_proxy_receptor.get_signature(),
             storage,
             policy_type,
         };
 
-        client_proxy.send_setting_request(setting_request.clone());
+        client_proxy.send_setting_request(target_setting_type, setting_request.clone());
 
         verify_payload(
-            Payload::Action(SettingAction {
-                id: 0,
-                setting_type: policy_type.setting_type(),
-                data: SettingActionData::Request(setting_request),
-            }),
+            service::Payload::Setting(HandlerPayload::Request(setting_request)),
             &mut setting_proxy_receptor,
             None,
         )
@@ -286,16 +263,7 @@ mod tests {
         let setting_type = SettingType::Unknown;
 
         let service_messenger_factory = service::message::create_hub();
-        let core_messenger_factory = core::message::create_hub();
 
-        let (messenger, _) = core_messenger_factory
-            .create(MessengerType::Unbound)
-            .await
-            .expect("core messenger created");
-        let (_, setting_proxy_receptor) = core_messenger_factory
-            .create(MessengerType::Unbound)
-            .await
-            .expect("setting proxy messenger created");
         let (_, mut receptor) = service_messenger_factory
             .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
             .await
@@ -307,8 +275,6 @@ mod tests {
                 .await
                 .expect("messenger should be created")
                 .0,
-            messenger,
-            setting_proxy_signature: setting_proxy_receptor.get_signature(),
             storage: InMemoryStorageFactory::new().get_store(CONTEXT_ID).await,
             policy_type,
         };

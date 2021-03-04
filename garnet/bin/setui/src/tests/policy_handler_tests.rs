@@ -5,7 +5,6 @@
 use crate::handler::base::{Request, Response as SettingResponse};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::DeviceStorageFactory;
-use crate::internal::core;
 use crate::message::base::MessengerType;
 use crate::policy::base::response::{Payload, Response};
 use crate::policy::base::{PolicyInfo, PolicyType, Request as PolicyRequest, UnknownInfo};
@@ -72,24 +71,14 @@ impl PolicyHandler for FakePolicyHandler {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_write() {
     let expected_value = PrivacyInfo { user_data_sharing_consent: Some(true) };
-    let core_messenger_factory = core::message::create_hub();
-    let (core_messenger, _) = core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
     let messenger_factory = service::message::create_hub();
     let (messenger, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
-    let (_, setting_proxy_receptor) =
-        core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
     let storage_factory = InMemoryStorageFactory::new();
     storage_factory.initialize_storage::<PrivacyInfo>().await;
     let store = storage_factory.get_store(CONTEXT_ID).await;
-    let client_proxy = ClientProxy::new(
-        messenger,
-        core_messenger,
-        setting_proxy_receptor.get_signature(),
-        store.clone(),
-        PolicyType::Unknown,
-    );
+    let client_proxy = ClientProxy::new(messenger, store.clone(), PolicyType::Unknown);
 
     // Create a handler that writes a value through the client proxy when handle_policy_request is
     // called.
