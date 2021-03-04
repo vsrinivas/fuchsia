@@ -22,3 +22,11 @@ group("drivers") {
     "//src/graphics/drivers/virtio:virtio_gpu",
   ]
 }
+
+# This contains services needed for Vulkan drivers to work. It should be included in base_package_labels.
+group("vulkan") {
+  deps = [
+    "//src/devices/sysmem/bin/sysmem_connector",
+    "//src/graphics/bin/vulkan_loader",
+  ]
+}

@@ -61,13 +61,13 @@ Example:
 
 fx set core.x64 --with-base=//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma-dev --args magma_enable_developer_build=true
 
-2. Build with `--with src/graphics/lib/magma/tests:l0` and run the test script [src/graphics/lib/magma/scripts/test.sh](/src/graphics/lib/magma/scripts/test.sh).
+2. Build with `--with-base //src/graphics/bundles:vulkan --with src/graphics/lib/magma/tests:l0` and run the test script [src/graphics/lib/magma/scripts/test.sh](/src/graphics/lib/magma/scripts/test.sh).
 
 #### L1
 
 If you have an attached display, execute the spinning [vkcube](/src/graphics/examples/vkcube).
 This test uses an imagepipe swapchain to pass frames to the system compositor.
-Build with `--with src/graphics/lib/magma/tests:l1`.
+Build with `--with-base //src/graphics/bundles:vulkan --with src/graphics/lib/magma/tests:l1`.
 Test with present direct to display: `run vkcube-on-fb --c 500`
 Test with present via Scenic: `run present_view fuchsia-pkg://fuchsia.com/vkcube-on-scenic#meta/vkcube-on-scenic.cmx`.
 
