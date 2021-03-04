@@ -367,6 +367,11 @@ impl Painter {
 
         match styles(top_carry_layer).fill {
             Fill::Solid(color) => {
+                if color[3] < 1.0 {
+                    return None;
+                }
+
+
                 let mut i = 0;
 
                 self.next_queue.clear();
@@ -580,6 +585,7 @@ mod tests {
     use crate::{point::Point, rasterizer::Rasterizer, LinesBuilder, Segment, TILE_SIZE};
 
     const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+    const BLACK_TRANSPARENT: [f32; 4] = [0.0, 0.0, 0.0, 0.5];
     const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
     const RED_50: [f32; 4] = [0.5, 0.0, 0.0, 1.0];
     const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
@@ -693,5 +699,37 @@ mod tests {
             painter.colors[column + row_start..column + row_end],
             [RED_GREEN_50, RED, RED, RED]
         );
+    }
+
+    #[test]
+    fn transparent_overlay() {
+        let segments = line_segments(&[
+            (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
+            (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
+        ]);
+
+        let mut styles = HashMap::new();
+
+        styles.insert(
+            0,
+            Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(RED),
+                blend_mode: BlendMode::Over,
+            },
+        );
+        styles.insert(
+            1,
+            Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(BLACK_TRANSPARENT),
+                blend_mode: BlendMode::Over,
+            },
+        );
+
+        let mut painter = Painter::new();
+        painter.paint_tile(&segments, &|order| styles[&order]);
+
+        assert_eq!(painter.colors[0], RED_50);
     }
 }
