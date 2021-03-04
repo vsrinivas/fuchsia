@@ -11,6 +11,8 @@ group("tools") {
 executable("profiler_bin") {
   output_name = "audio_mixer_profiler"
 
+  testonly = true
+
   sources = [
     "audio_performance.cc",
     "audio_performance.h",
@@ -24,6 +26,7 @@ executable("profiler_bin") {
     "//src/media/audio/audio_core/mixer/test:frequency_set",
     "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/format",
+    "//zircon/system/ulib/perftest",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -31,5 +34,7 @@ executable("profiler_bin") {
 }
 
 fuchsia_shell_package("audio_mixer_profiler") {
+  testonly = true
+
   deps = [ ":profiler_bin" ]
 }

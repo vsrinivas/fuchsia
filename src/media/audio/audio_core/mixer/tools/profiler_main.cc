@@ -24,7 +24,8 @@ namespace {
 enum class Benchmark { Create, Mix, Output };
 
 struct Options {
-  zx::duration duration_per_config;
+  // Duration and iteration limits per config.
+  AudioPerformance::Limits limits;
 
   std::set<Benchmark> enabled;
   bool enable_pprof;
@@ -41,9 +42,23 @@ struct Options {
 
   // OutputProducerConfig.
   std::set<InputRange> input_ranges;
+
+  // JSON filepath to export perftest results.
+  std::optional<std::string> perftest_json;
+
+  // Provide matching source and dest rates if available; else, return a default.
+  const std::pair<uint32_t, uint32_t> matching_rates() const {
+    for (auto [src, dest] : source_dest_rates) {
+      if (src == dest) {
+        return {src, dest};
+      }
+    }
+    return {48000, 48000};
+  }
 };
 
 constexpr char kBenchmarkDurationSwitch[] = "bench-time";
+constexpr char kBenchmarkRunsSwitch[] = "bench-runs";
 
 constexpr char kProfileMixerCreationSwitch[] = "enable-create";
 constexpr char kProfileMixingSwitch[] = "enable-mix";
@@ -76,6 +91,8 @@ constexpr char kOutputProducerSourceRangeSilenceOption[] = "silence";
 constexpr char kOutputProducerSourceRangeOutOfRangeOption[] = "out-of-range";
 constexpr char kOutputProducerSourceRangeNormalOption[] = "normal";
 
+constexpr char kPerftestJsonFilepathSwitch[] = "perftest-json";
+
 constexpr char kUsageSwitch[] = "help";
 
 std::vector<MixerConfig> ConfigsForMixerCreation(const Options& opt) {
@@ -101,6 +118,7 @@ std::vector<MixerConfig> ConfigsForMixerCreation(const Options& opt) {
   return out;
 }
 
+// Create mixer configs that cover every combination of provided Options.
 std::vector<MixerConfig> ConfigsForMixer(const Options& opt) {
   if (opt.enabled.count(Benchmark::Mix) == 0) {
     return {};
@@ -137,6 +155,77 @@ std::vector<MixerConfig> ConfigsForMixer(const Options& opt) {
   return out;
 }
 
+// Create mixer configs such that one of each provided Option is included in a config.
+std::vector<MixerConfig> ConfigsForMixerReduced(const Options& opt) {
+  if (opt.enabled.count(Benchmark::Mix) == 0) {
+    return {};
+  }
+
+  std::vector<MixerConfig> out;
+
+  for (auto sampler : opt.samplers) {
+    // Create base config from which to deviate. Note: point sampler can only accept matching source
+    // and dest rates, so we accommodate that here.
+    MixerConfig base_config = {
+        .sampler_type = sampler,
+        .num_input_chans = opt.num_input_output_chans.begin()->first,
+        .num_output_chans = opt.num_input_output_chans.begin()->second,
+        .source_rate = sampler == Resampler::SampleAndHold ? opt.matching_rates().first
+                                                           : opt.source_dest_rates.begin()->first,
+        .dest_rate = sampler == Resampler::SampleAndHold ? opt.matching_rates().second
+                                                         : opt.source_dest_rates.begin()->second,
+        .sample_format = *opt.sample_formats.begin(),
+        .gain_type = *opt.gain_types.begin(),
+        .accumulate = *opt.accumulates.begin(),
+    };
+    out.push_back(base_config);
+
+    for (auto [source_rate, dest_rate] : opt.source_dest_rates) {
+      if (sampler == Resampler::SampleAndHold && source_rate != dest_rate) {
+        continue;
+      }
+      MixerConfig config = base_config;
+      config.sampler_type = sampler;
+      config.source_rate = source_rate;
+      config.dest_rate = dest_rate;
+      if (config != base_config) {
+        out.push_back(config);
+      }
+    }
+    for (auto [num_input_chans, num_output_chans] : opt.num_input_output_chans) {
+      MixerConfig config = base_config;
+      config.num_input_chans = num_input_chans;
+      config.num_output_chans = num_output_chans;
+      if (config != base_config) {
+        out.push_back(config);
+      }
+    }
+    for (auto sample_format : opt.sample_formats) {
+      MixerConfig config = base_config;
+      config.sample_format = sample_format;
+      if (config != base_config) {
+        out.push_back(config);
+      }
+    }
+    for (auto gain_type : opt.gain_types) {
+      MixerConfig config = base_config;
+      config.gain_type = gain_type;
+      if (config != base_config) {
+        out.push_back(config);
+      }
+    }
+    for (auto accumulate : opt.accumulates) {
+      MixerConfig config = base_config;
+      config.accumulate = accumulate;
+      if (config != base_config) {
+        out.push_back(config);
+      }
+    }
+  }
+
+  return out;
+}
+
 std::vector<OutputProducerConfig> ConfigsForOutputProducer(const Options& opt) {
   if (opt.enabled.count(Benchmark::Output) == 0) {
     return {};
@@ -159,14 +248,52 @@ std::vector<OutputProducerConfig> ConfigsForOutputProducer(const Options& opt) {
   return out;
 }
 
+// Create output producer configs such that one of each provided Option is included in a config.
+std::vector<OutputProducerConfig> ConfigsForOutputProducerReduced(const Options& opt) {
+  if (opt.enabled.count(Benchmark::Output) == 0) {
+    return {};
+  }
+
+  std::vector<OutputProducerConfig> out;
+
+  OutputProducerConfig base_config = {.sample_format = *opt.sample_formats.begin(),
+                                      .input_range = *opt.input_ranges.begin(),
+                                      .num_chans = opt.num_input_output_chans.begin()->second};
+
+  for (auto [num_input_chans, num_output_chans] : opt.num_input_output_chans) {
+    OutputProducerConfig config = base_config;
+    config.num_chans = num_output_chans;
+    if (config != base_config) {
+      out.push_back(config);
+    }
+  }
+  for (auto sample_format : opt.sample_formats) {
+    OutputProducerConfig config = base_config;
+    config.sample_format = sample_format;
+    if (config != base_config) {
+      out.push_back(config);
+    }
+  }
+  for (auto input_range : opt.input_ranges) {
+    OutputProducerConfig config = base_config;
+    config.input_range = input_range;
+    if (config != base_config) {
+      out.push_back(config);
+    }
+  }
+
+  return out;
+}
+
 const Options kDefaultOpts = {
-    // Expected run time for kDefaultOpts is about 4.5 minutes on an astro device.
-    .duration_per_config = zx::msec(250),
+    // Expected run time for kDefaultOpts is ~1m40s for a full run and ~2s for a reduced (perftest)
+    // run on an astro device.
+    .limits = {.duration_per_config = zx::msec(250), .runs_per_config = 100},
     .enabled = {Benchmark::Create, Benchmark::Mix, Benchmark::Output},
     .enable_pprof = false,
     .sample_formats =
         {
-            // skip ASF::UNSIGNED_8: that is rarely used
+            ASF::UNSIGNED_8,
             ASF::SIGNED_16,
             ASF::SIGNED_24_IN_32,
             ASF::FLOAT,
@@ -206,7 +333,16 @@ void Usage(const char* prog_name) {
   printf("set of configurations. Valid options are:\n");
   printf("\n");
   printf("  --%s=<seconds>\n", kBenchmarkDurationSwitch);
-  printf("    Each benchmark is run for at least this long. Defaults to 0.5s.\n");
+  printf(
+      "    Each benchmark is run for at least this long or --%s, whichever comes first. "
+      "Defaults to 0.25s.\n",
+      kBenchmarkRunsSwitch);
+  printf("\n");
+  printf("  --%s=<runs>\n", kBenchmarkRunsSwitch);
+  printf(
+      "    Each benchmark is run for at least this many iterations or --%s, whichever "
+      "comes first. Defaults to 100 runs.\n",
+      kBenchmarkDurationSwitch);
   printf("\n");
   printf("  --%s=<bool>\n", kProfileMixerCreationSwitch);
   printf("    Enable Mixer creation benchmarks (default=true).\n");
@@ -244,6 +380,9 @@ void Usage(const char* prog_name) {
          kOutputProducerSourceRangeNormalOption);
   printf("    Enable these kinds of inputs for OutputProducer benchmarks. Multiple kinds of\n");
   printf("    inputs can be separated by commas.\n");
+  printf("\n");
+  printf("  --%s=<filepath.json>\n", kPerftestJsonFilepathSwitch);
+  printf("    Include a json filepath to record perftest results.\n");
   printf("\n");
   printf("  --%s\n", kUsageSwitch);
   printf("    Display this message.\n");
@@ -313,7 +452,19 @@ Options ParseCommandLine(int argc, char** argv) {
     exit(0);
   }
 
-  duration_seconds_flag(kBenchmarkDurationSwitch, opt.duration_per_config);
+  if (command_line.HasOption(kPerftestJsonFilepathSwitch)) {
+    std::string json;
+    command_line.GetOptionValue(kPerftestJsonFilepathSwitch, &json);
+    opt.perftest_json = json;
+  }
+
+  if (command_line.HasOption(kBenchmarkRunsSwitch)) {
+    std::string runs;
+    command_line.GetOptionValue(kBenchmarkRunsSwitch, &runs);
+    opt.limits.runs_per_config = std::stoi(runs);
+  }
+
+  duration_seconds_flag(kBenchmarkDurationSwitch, opt.limits.duration_per_config);
 
   bool profile_creation = true;
   bool profile_mixing = true;
@@ -380,20 +531,34 @@ int main(int argc, char** argv) {
   if (opt.enable_pprof) {
     ProfilerStart("/tmp/audio_mixer_profiler.pprof");
   }
+
+  perftest::ResultsSet* results = nullptr;
+  if (opt.perftest_json) {
+    results = new perftest::ResultsSet();
+  }
+
   if (opt.enabled.count(Benchmark::Create) > 0) {
-    AudioPerformance::ProfileMixerCreation(ConfigsForMixerCreation(opt), opt.duration_per_config);
+    AudioPerformance::ProfileMixerCreation(ConfigsForMixerCreation(opt), opt.limits, results);
   }
 
   if (opt.enabled.count(Benchmark::Mix) > 0) {
-    AudioPerformance::ProfileMixing(ConfigsForMixer(opt), opt.duration_per_config);
+    AudioPerformance::ProfileMixer(results ? ConfigsForMixerReduced(opt) : ConfigsForMixer(opt),
+                                   opt.limits, results);
   }
 
   if (opt.enabled.count(Benchmark::Output) > 0) {
-    AudioPerformance::ProfileOutputProducer(ConfigsForOutputProducer(opt), opt.duration_per_config);
+    AudioPerformance::ProfileOutputProducer(
+        results ? ConfigsForOutputProducerReduced(opt) : ConfigsForOutputProducer(opt), opt.limits,
+        results);
   }
 
   if (opt.enable_pprof) {
     ProfilerStop();
   }
+
+  if (results) {
+    return results->WriteJSONFile(opt.perftest_json.value().c_str()) ? 0 : 1;
+  }
+
   return 0;
 }

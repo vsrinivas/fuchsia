@@ -17,6 +17,7 @@ import("//build/testing/host_test_data.gni")
 
 test_list = [
   "archivist_benchmarks_test",
+  "audio_mixer_profiler_test",
   "dart_inspect_benchmarks_test",
   "fidlc_microbenchmarks_test",
   "garnet_input_latency_benchmarks_test",
@@ -144,6 +145,7 @@ group("package_deps") {
     "//src/connectivity/network/tests/benchmarks",
     "//src/diagnostics/archivist/bench",
     "//src/lib/diagnostics/inspect/rust:benchmarks",
+    "//src/media/audio/audio_core/mixer/tools:audio_mixer_profiler",
     "//src/tests/benchmarks:kernel-boot-benchmarks",
     "//src/tests/benchmarks/fidl:benchmarks",
     "//src/tests/microbenchmarks:fuchsia_microbenchmarks_perftestmode",
