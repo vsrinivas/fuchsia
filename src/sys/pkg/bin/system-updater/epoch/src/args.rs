@@ -22,8 +22,6 @@ impl Args {
         Path::new(&self.history)
     }
 
-    // TODO(zkbaum) use this in a future CL.
-    #[allow(dead_code)]
     pub fn output(&self) -> &Path {
         Path::new(&self.output)
     }
