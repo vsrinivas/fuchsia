@@ -196,7 +196,7 @@ void DriverHost::Start(fdf::wire::DriverStartArgs start_args,
       completer.Close(status);
       return;
     }
-    auto driver = Driver::Load(std::move(url), std::move(binary), std::move(response->buffer->vmo));
+    auto driver = Driver::Load(std::move(url), binary, std::move(response->buffer->vmo));
     if (driver.is_error()) {
       completer.Close(driver.error_value());
       return;
