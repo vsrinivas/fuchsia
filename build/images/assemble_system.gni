@@ -83,6 +83,9 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #     [bool] Collect and merges a component id index from the base
 #     package set.
 #
+#   check_production_tag (default: false)
+#      [bool] Whether to check there is no non_production_tag dependencies.
+#
 #   testonly (optional)
 #     [bool] Usual GN meanings.
 template("assemble_system") {
@@ -425,6 +428,11 @@ template("assemble_system") {
     }
   }
 
+  check_production_tag = false
+  if (defined(invoker.check_production_tag)) {
+    check_production_tag = invoker.check_production_tag
+  }
+
   zbi("${image_name}_zbi") {
     metadata = {
       # We insert a package barrier because the packages inside this ZBI
@@ -466,6 +474,10 @@ template("assemble_system") {
         ":${image_name}_fvm.blk_ramdisk",
         "//src/storage/fshost:minfs_ramdisk",
       ]
+    }
+
+    if (check_production_tag) {
+      assert_no_deps = [ "//build/validate:non_production_tag" ]
     }
   }
 
