@@ -14,14 +14,14 @@ The structure of the `//sdk/cts` directory mirrors the structure of SDK
 artifacts.  Tests should go in the same directory as the interface under test is
 found in an SDK.  For example:
 
-  * Tests for host tools should go in `//sdk/cts/tools`
+  * Tests for host tools should go in `//sdk/cts/tests/tools`
   * Tests for FIDL interfaces should go in the appropriate subdirectory of
-      `//sdk/cts/fidl`.  For example, tests for `fuchsia.sysmem` should go in
-      `//sdk/cts/fidl/fuchsia.sysmem`.
+      `//sdk/cts/tests/fidl`.  For example, tests for `fuchsia.sysmem` should go
+      in `//sdk/cts/tests/fidl/fuchsia.sysmem`.
   * Tests for libraries should go in the appropriate subdirectory of
-    `//sdk/cts/pkg`.  For example, tests for `async-loop` should go in
-    `//sdk/cts/pkg/async-loop`.
-    
+    `//sdk/cts/tests/pkg`.  For example, tests for `async-loop` should go in
+    `//sdk/cts/tests/pkg/async-loop`.
+
 ### Build support
 
 CTS tests target API and ABI available through externally-available SDKs.  Build
