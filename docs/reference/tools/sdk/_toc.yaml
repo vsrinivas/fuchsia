@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 toc:
-- title: "ffx"
+- title: "ffx command"
   path: /docs/reference/tools/sdk/ffx.md
-- title: "Coding"
+- title: "Coding commands"
   section:
   - title: "cmc"
     path: /docs/reference/tools/sdk/cmc.md
@@ -16,7 +16,7 @@ toc:
     path: /docs/reference/tools/sdk/fidlcat.md
   - title: "fidlgen"
     path: /docs/reference/tools/sdk/fidlgen.md
-- title: "Debugging"
+- title: "Debugging commands"
   section:
   - title: "symbol-index"
     path: /docs/reference/tools/sdk/symbol-index.md
@@ -26,11 +26,9 @@ toc:
     path: /docs/reference/tools/sdk/symbolizer.md
   - title: "triage"
     path: /docs/reference/tools/sdk/triage.md
-  - title: "zbi"
-    path: /docs/reference/tools/sdk/zbi.md
   - title: "zxdb"
     path: /docs/reference/tools/sdk/zxdb.md
-- title: "Device management"
+- title: "Device management commands"
   section:
   - title: "bootserver"
     path: /docs/reference/tools/sdk/bootserver.md
@@ -48,7 +46,9 @@ toc:
     path: /docs/reference/tools/sdk/fvm.md
   - title: "minfs"
     path: /docs/reference/tools/sdk/minfs.md
-- title: "Packaging"
+  - title: "zbi"
+    path: /docs/reference/tools/sdk/zbi.md
+- title: "Packaging commands"
   section:
   - title: "fpublish"
     path: /docs/reference/tools/sdk/fpublish.md
