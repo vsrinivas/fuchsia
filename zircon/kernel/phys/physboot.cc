@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <zircon/assert.h>
 
+#include <ktl/array.h>
 #include <ktl/optional.h>
 #include <pretty/sizes.h>
 
@@ -213,6 +214,11 @@ void ZbiMain(void* zbi_ptr, arch::EarlyTicks ticks) {
   if (kernel_item == zbi.end()) {
     BadZbi(zbi, count, ktl::nullopt);
   }
+
+  // TODO(mcgrathr): Bloat the binary so the total kernel.zbi size doesn't
+  // get too comfortably small while physboot functionality is still growing.
+  static const ktl::array<char, 512 * 1024> kPad{1};
+  __asm__ volatile("" ::"m"(kPad), "r"(kPad.data()));
 
   BootZircon(zbi, kernel_item, ticks);
 }

@@ -546,31 +546,34 @@ if (is_kernel) {
   image_binary("kernel") {
     visibility = [ ":*" ]
 
+    deps = [ ":image" ]
+
     output_dir = root_out_dir
     output_extension = "zbi"
-    output_path = rebase_path("$output_dir/$target_name.$output_extension",
-                              root_build_dir)
-    deps = [ ":image" ]
-    metadata = {
-      # For the //:images build_api_module().
-      images = [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = "kernel"
-          tags = [ "incomplete" ]
-          type = "zbi"
-          path = output_path
-          cpu = current_cpu
-        },
-      ]
+    if (!use_physboot) {
+      output_path = rebase_path("$output_dir/$target_name.$output_extension",
+                                root_build_dir)
+      metadata = {
+        # For the //:images build_api_module().
+        images = [
+          {
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            name = "kernel"
+            tags = [ "incomplete" ]
+            type = "zbi"
+            path = output_path
+            cpu = current_cpu
+          },
+        ]
 
-      # Used by the zbi() template. This metadata makes the kernel act as a zbi_input()
-      # target so it can be a dependency of a zbi() target to get into the image.
-      zbi_input_barrier = []
-      zbi_input_args = [
-        "--type=container",
-        output_path,
-      ]
+        # Used by the zbi() template. This metadata makes the kernel act as a zbi_input()
+        # target so it can be a dependency of a zbi() target to get into the image.
+        zbi_input_barrier = []
+        zbi_input_args = [
+          "--type=container",
+          output_path,
+        ]
+      }
     }
 
     # Use the same variant for the extraction that will have built the kernel.
@@ -584,6 +587,7 @@ if (is_kernel) {
   zbi_input("vmzircon") {
     type = "kernel"
     sources = get_target_outputs(":kernel")
+    deps = [ ":kernel" ]
 
     # The kernel image is small enough that maximum compression is quick enough
     # at build time, so always get the smallest size available.
@@ -595,6 +599,24 @@ if (is_kernel) {
       ":vmzircon",
       "phys:physboot",
     ]
+
+    output_dir = root_out_dir
+    output_extension = "zbi"
+    output_path = rebase_path("$output_dir/$target_name.$output_extension",
+                              root_build_dir)
+    metadata = {
+      # For the //:images build_api_module().
+      images = [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = "kernel"
+          tags = [ "incomplete" ]
+          type = "zbi"
+          path = output_path
+          cpu = current_cpu
+        },
+      ]
+    }
   }
 } else {
   group("kernel") {
