@@ -38,7 +38,7 @@ inline bool operator==(zx_handle_disposition_t a, zx_handle_disposition_t b) {
 inline bool operator!=(zx_handle_disposition_t a, zx_handle_disposition_t b) { return !(a == b); }
 inline std::ostream& operator<<(std::ostream& os, const zx_handle_disposition_t& hd) {
   return os << "zx_handle_disposition_t{\n"
-            << "  .operator = " << hd.operation << "\n"
+            << "  .operation = " << hd.operation << "\n"
             << "  .handle = " << hd.handle << "\n"
             << "  .type = " << hd.type << "\n"
             << "  .rights = " << hd.rights << "\n"

@@ -7,7 +7,6 @@ package llcpp
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"text/template"
 
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
@@ -177,26 +176,6 @@ func GenerateConformanceTests(gidl gidlir.All, fidl fidl.Root, config gidlconfig
 	return buf.Bytes(), err
 }
 
-func buildRawHandleDispositions(handle_dispositions []gidlir.HandleDisposition) string {
-	if len(handle_dispositions) == 0 {
-		return fmt.Sprintf("std::vector<zx_handle_disposition_t>{}")
-	}
-	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("std::vector<zx_handle_disposition_t>{"))
-	for _, h := range handle_dispositions {
-		builder.WriteString(fmt.Sprintf(`
-{
-	.operation = ZX_HANDLE_OP_MOVE,
-	.handle = handle_defs[%d],
-	.type = %d,
-	.rights = %d,
-	.result = ZX_OK,
-},`, h.Handle, h.Type, h.Rights))
-	}
-	builder.WriteString("}")
-	return builder.String()
-}
-
 func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlmixer.Schema) ([]encodeSuccessCase, error) {
 	var encodeSuccessCases []encodeSuccessCase
 	for _, encodeSuccess := range gidlEncodeSuccesses {
@@ -220,7 +199,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				ValueBuild:        valueBuild,
 				ValueVar:          valueVar,
 				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
-				Handles:           buildRawHandleDispositions(encoding.HandleDispositions),
+				Handles:           libhlcpp.BuildRawHandleDispositions(encoding.HandleDispositions),
 				FuchsiaOnly:       fuchsiaOnly,
 				CheckHandleRights: encodeSuccess.CheckHandleRights,
 			})

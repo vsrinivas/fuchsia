@@ -40,7 +40,7 @@ TEST(Conformance, {{ .Name }}_Encode) {
 	{{/* Must use a variable because macros don't understand commas in template args. */}}
 	const auto result =
 		fidl::test::util::ValueToBytes<{{ .ValueType }}>(
-			{{ .ValueVar }}, expected_bytes, expected_handles);
+			{{ .ValueVar }}, expected_bytes, expected_handles, {{ .CheckRights }});
 	EXPECT_TRUE(result);
 	{{- /* The handles are closed by the fidl::Message destructor in ValueToBytes. */}}
 }
@@ -61,7 +61,13 @@ TEST(Conformance, {{ .Name }}_Decode) {
 	auto bytes = {{ .Bytes }};
 	auto handles = {{ .Handles }};
 	auto value = fidl::test::util::DecodedBytes<{{ .ValueType }}>(std::move(bytes), std::move(handles));
+	{{- if not .IsResourceType }}
+	{{- /*
+		We currently cannot check equality for resource types.
+		TODO(fxbug.dev/71467) Enable some form of equality for resource types.
+		*/}}
 	ASSERT_TRUE(fidl::Equals(value, {{ .ValueVar }}));
+	{{- end }}
 	{{- /* The handles are closed in the destructor of .ValueVar */}}
 	fidl::test::util::ForgetHandles(std::move(value));
 }
@@ -82,8 +88,9 @@ TEST(Conformance, {{ .Name }}_Encode_Failure) {
 	fidl::test::util::CheckEncodeFailure<{{ .ValueType }}>(
 		{{ .ValueVar }}, {{ .ErrorCode }});
 	{{- if .HandleDefs }}
-	for (const auto handle : handle_defs) {
-		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+	for (const auto handle_def : handle_defs) {
+		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(
+			handle_def, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 	}
 	{{- end }}
 }
@@ -104,8 +111,9 @@ TEST(Conformance, {{ .Name }}_Decode_Failure) {
 	auto handles = {{ .Handles }};
 	fidl::test::util::CheckDecodeFailure<{{ .ValueType }}>(std::move(bytes), std::move(handles), {{ .ErrorCode }});
 	{{- if .HandleDefs }}
-	for (const auto handle : handle_defs) {
-		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+	for (const auto handle_def : handle_defs) {
+		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(
+			handle_def.handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 	}
 	{{- end }}
 }
@@ -124,12 +132,12 @@ type conformanceTmplInput struct {
 
 type encodeSuccessCase struct {
 	Name, HandleDefs, ValueType, ValueBuild, ValueVar, Bytes, Handles string
-	FuchsiaOnly                                                       bool
+	FuchsiaOnly, CheckRights                                          bool
 }
 
 type decodeSuccessCase struct {
 	Name, HandleDefs, ValueType, ValueBuild, ValueVar, Bytes, Handles string
-	FuchsiaOnly                                                       bool
+	FuchsiaOnly, IsResourceType                                       bool
 }
 
 type encodeFailureCase struct {
@@ -195,8 +203,9 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				ValueVar:    valueVar,
 				ValueType:   declName(decl),
 				Bytes:       BuildBytes(encoding.Bytes),
-				Handles:     BuildRawHandles(gidlir.GetHandlesFromHandleDispositions(encoding.HandleDispositions)),
+				Handles:     BuildRawHandleDispositions(encoding.HandleDispositions),
 				FuchsiaOnly: fuchsiaOnly,
+				CheckRights: encodeSuccess.CheckHandleRights,
 			})
 		}
 	}
@@ -210,8 +219,10 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
 		}
-		handleDefs := BuildHandleDefs(decodeSuccess.HandleDefs)
-		valueBuilder := newCppValueBuilder()
+		handleDefs := BuildHandleInfoDefs(decodeSuccess.HandleDefs)
+		valueBuilder := cppValueBuilder{
+			handleExtractOp: ".handle",
+		}
 		valueVar := valueBuilder.visit(decodeSuccess.Value, decl)
 		valueBuild := valueBuilder.String()
 		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
@@ -226,8 +237,11 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				ValueVar:    valueVar,
 				ValueType:   declName(decl),
 				Bytes:       BuildBytes(encoding.Bytes),
-				Handles:     BuildRawHandles(encoding.Handles),
+				Handles:     BuildRawHandleInfos(encoding.Handles),
 				FuchsiaOnly: fuchsiaOnly,
+				// Pass in if the type is a resource to disable equality checking.
+				// TODO(fxb/71467) Remove this.
+				IsResourceType: decl.IsResourceType(),
 			})
 		}
 	}
@@ -272,7 +286,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 		if err != nil {
 			return nil, fmt.Errorf("decode failure %s: %s", decodeFailure.Name, err)
 		}
-		handleDefs := BuildHandleDefs(decodeFailure.HandleDefs)
+		handleDefs := BuildHandleInfoDefs(decodeFailure.HandleDefs)
 		valueType := cppConformanceType(decodeFailure.Type)
 		errorCode := cppErrorCode(decodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeFailure.HandleDefs) > 0
@@ -285,7 +299,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 				HandleDefs:  handleDefs,
 				ValueType:   valueType,
 				Bytes:       BuildBytes(encoding.Bytes),
-				Handles:     BuildRawHandles(encoding.Handles),
+				Handles:     BuildRawHandleInfos(encoding.Handles),
 				ErrorCode:   errorCode,
 				FuchsiaOnly: fuchsiaOnly,
 			})

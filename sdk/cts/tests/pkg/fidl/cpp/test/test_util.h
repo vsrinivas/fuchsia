@@ -19,15 +19,35 @@ namespace fidl {
 namespace test {
 namespace util {
 
+inline bool operator==(zx_handle_disposition_t a, zx_handle_disposition_t b) {
+  return a.operation == b.operation && a.handle == b.handle && a.type == b.type &&
+         a.rights == b.rights && a.result == b.result;
+}
+inline bool operator!=(zx_handle_disposition_t a, zx_handle_disposition_t b) { return !(a == b); }
+inline std::ostream& operator<<(std::ostream& os, const zx_handle_disposition_t& hd) {
+  return os << "zx_handle_disposition_t{\n"
+            << "  .operation = " << hd.operation << "\n"
+            << "  .handle = " << hd.handle << "\n"
+            << "  .type = " << hd.type << "\n"
+            << "  .rights = " << hd.rights << "\n"
+            << "  .result = " << hd.result << "\n"
+            << "}\n";
+}
+
 template <typename T>
 bool cmp_payload(const T* actual, size_t actual_size, const T* expected, size_t expected_size) {
   bool pass = true;
   for (size_t i = 0; i < actual_size && i < expected_size; i++) {
     if (actual[i] != expected[i]) {
       pass = false;
-      std::cout << std::dec << "element[" << i << "]: " << std::hex << "actual=0x" << +actual[i]
-                << " "
-                << "expected=0x" << +expected[i] << "\n";
+      if constexpr (std::is_same_v<T, zx_handle_disposition_t>) {
+        std::cout << std::dec << "element[" << i << "]: actual=" << actual[i]
+                  << " expected=" << expected[i];
+      } else {
+        std::cout << std::dec << "element[" << i << "]: " << std::hex << "actual=0x" << +actual[i]
+                  << " "
+                  << "expected=0x" << +expected[i] << "\n";
+      }
     }
   }
   if (actual_size != expected_size) {
@@ -38,8 +58,6 @@ bool cmp_payload(const T* actual, size_t actual_size, const T* expected, size_t 
   }
   return pass;
 }
-
-std::vector<zx_handle_info_t> ToHandleInfos(std::vector<zx_handle_t> handles);
 
 template <class Output, class Input>
 Output RoundTrip(const Input& input) {
@@ -82,8 +100,7 @@ Output DecodedBytes(std::vector<uint8_t> input) {
 }
 
 template <class Output>
-Output DecodedBytes(std::vector<uint8_t> bytes, std::vector<zx_handle_t> handles) {
-  auto handle_infos = ToHandleInfos(std::move(handles));
+Output DecodedBytes(std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handle_infos) {
   HLCPPIncomingMessage message(
       BytePart(bytes.data(), static_cast<uint32_t>(bytes.capacity()),
                static_cast<uint32_t>(bytes.size())),
@@ -120,26 +137,35 @@ bool ValueToBytes(const Input& input, const std::vector<uint8_t>& expected) {
 
 template <class Input>
 bool ValueToBytes(Input input, const std::vector<uint8_t>& bytes,
-                  const std::vector<zx_handle_t>& handles) {
+                  const std::vector<zx_handle_disposition_t>& handles, bool check_rights = true) {
   fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER);
   auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));
   input.Encode(&enc, offset);
-  auto msg = enc.GetMessage();
+  HLCPPOutgoingMessage msg = enc.GetMessage();
   auto bytes_match =
       cmp_payload(msg.bytes().data(), msg.bytes().actual(), bytes.data(), bytes.size());
-  zx_handle_t msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  for (uint32_t i = 0; i < msg.handles().actual(); i++) {
-    msg_handles[i] = msg.handles().data()[i].handle;
+  bool handles_match = false;
+  if (check_rights) {
+    handles_match =
+        cmp_payload(msg.handles().data(), msg.handles().actual(), handles.data(), handles.size());
+  } else {
+    zx_handle_t msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    for (uint32_t i = 0; i < msg.handles().actual(); i++) {
+      msg_handles[i] = msg.handles().data()[i].handle;
+    }
+    zx_handle_t expected_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    for (uint32_t i = 0; i < handles.size(); i++) {
+      expected_handles[i] = handles.data()[i].handle;
+    }
+    handles_match =
+        cmp_payload(msg_handles, msg.handles().actual(), expected_handles, handles.size());
   }
-  auto handles_match =
-      cmp_payload(msg_handles, msg.handles().actual(), handles.data(), handles.size());
   return bytes_match && handles_match;
 }
 
 template <class Output>
-void CheckDecodeFailure(std::vector<uint8_t> input, std::vector<zx_handle_t> handles,
+void CheckDecodeFailure(std::vector<uint8_t> input, std::vector<zx_handle_info_t> handle_infos,
                         const zx_status_t expected_failure_code) {
-  auto handle_infos = ToHandleInfos(std::move(handles));
   HLCPPIncomingMessage message(
       BytePart(input.data(), static_cast<uint32_t>(input.capacity()),
                static_cast<uint32_t>(input.size())),

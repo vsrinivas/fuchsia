@@ -102,7 +102,8 @@ func newCppValueBuilder() cppValueBuilder {
 type cppValueBuilder struct {
 	strings.Builder
 
-	varidx int
+	varidx          int
+	handleExtractOp string
 }
 
 func (b *cppValueBuilder) newVar() string {
@@ -161,7 +162,7 @@ func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) s
 	case string:
 		return fmt.Sprintf("%s(%s, %d)", typeName(decl), escapeStr(value), len(value))
 	case gidlir.HandleWithRights:
-		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value.Handle)
+		return fmt.Sprintf("%s(handle_defs[%d]%s)", typeName(decl), value.Handle, b.handleExtractOp)
 	case gidlir.Record:
 		return b.visitRecord(value, decl.(gidlmixer.RecordDeclaration))
 	case []interface{}:
@@ -199,9 +200,12 @@ func (b *cppValueBuilder) visitRecord(value gidlir.Record, decl gidlmixer.Record
 			if isTable {
 				unknownData := field.Value.(gidlir.UnknownData)
 				if decl.IsResourceType() {
-					b.Builder.WriteString(fmt.Sprintf(
-						"::fidl::UnknownData _data = {\n.bytes=%s,\n.handles=%s\n};\n%s%sSetUnknownDataEntry(%dlu, std::move(_data));\n",
-						BuildBytes(unknownData.Bytes), buildHandles(unknownData.Handles), containerVar, accessor, field.Key.UnknownOrdinal))
+					b.Builder.WriteString(fmt.Sprintf(`::fidl::UnknownData _data = {
+	.bytes=%s,
+	.handles=%s
+};
+%s%sSetUnknownDataEntry(%dlu, std::move(_data));
+`, BuildBytes(unknownData.Bytes), buildHandles(unknownData.Handles, b.handleExtractOp), containerVar, accessor, field.Key.UnknownOrdinal))
 				} else {
 					b.Builder.WriteString(fmt.Sprintf(
 						"%s%sSetUnknownDataEntry(%dlu, %s);\n",
@@ -213,7 +217,7 @@ func (b *cppValueBuilder) visitRecord(value gidlir.Record, decl gidlmixer.Record
 					b.Builder.WriteString(fmt.Sprintf(
 						"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s, %s);\n",
 						containerVar, accessor, field.Key.UnknownOrdinal, BuildBytes(unknownData.Bytes),
-						buildHandles(unknownData.Handles)))
+						buildHandles(unknownData.Handles, b.handleExtractOp)))
 				} else {
 					b.Builder.WriteString(fmt.Sprintf(
 						"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s);\n",
@@ -368,7 +372,27 @@ func BuildRawHandleInfos(handles []gidlir.Handle) string {
 	return buildRawHandleImpl(handles, "zx_handle_info_t")
 }
 
-func buildHandles(handles []gidlir.Handle) string {
+func BuildRawHandleDispositions(handle_dispositions []gidlir.HandleDisposition) string {
+	if len(handle_dispositions) == 0 {
+		return fmt.Sprintf("std::vector<zx_handle_disposition_t>{}")
+	}
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("std::vector<zx_handle_disposition_t>{"))
+	for _, h := range handle_dispositions {
+		builder.WriteString(fmt.Sprintf(`
+{
+	.operation = ZX_HANDLE_OP_MOVE,
+	.handle = handle_defs[%d],
+	.type = %d,
+	.rights = %d,
+	.result = ZX_OK,
+},`, h.Handle, h.Type, h.Rights))
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
+func buildHandles(handles []gidlir.Handle, handleExtractOp string) string {
 	if len(handles) == 0 {
 		return "std::vector<zx::handle>{}"
 	}
@@ -378,7 +402,7 @@ func buildHandles(handles []gidlir.Handle) string {
 	builder.WriteString("([&handle_defs] {\n")
 	builder.WriteString("std::vector<zx::handle> v;\n")
 	for _, h := range handles {
-		builder.WriteString(fmt.Sprintf("v.emplace_back(handle_defs[%d]);\n", h))
+		builder.WriteString(fmt.Sprintf("v.emplace_back(handle_defs[%d]%s);\n", h, handleExtractOp))
 	}
 	builder.WriteString("return v;\n")
 	builder.WriteString("})()")
