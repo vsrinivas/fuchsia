@@ -48,7 +48,7 @@ and communicate to the kernel (through the ZBI) the important details of whether
 or not the WDT exists, whether it is enabled, how frequently it must be pet, and
 how to pet, enable, or disable it. A system running zircon only "has" a WDT if
 the bootloader tells it that it does and how to operate it. While a bootloader
-must tell the kernel how to pet the watchdog when present and enabled, it may
+must tell the kernel how to pet the watchdog when present and enabled, it might
 not tell the kernel how to disable it. This could be the result of either a
 system design decision, or because the WDT cannot be disabled from the kernel.
 
@@ -65,7 +65,7 @@ set timers.
 The vast majority of developers should never need to do anything with a watchdog
 timer, or even be aware of it existing. For it to fire during normal operation
 is an indication of something going rather badly wrong. In some situations,
-however, you may be in a situation where they need to hold off hard interrupt
+however, developers may be in a situation where they need to hold off hard interrupt
 requests (IRQs) for excessive amounts of time as part of investigating a bug, or
 other performance issues. In these situations, it is good to know what options
 exist for controlling the watchdog, and not getting bit at inappropriate times.
