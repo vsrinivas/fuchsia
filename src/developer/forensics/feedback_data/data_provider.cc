@@ -24,6 +24,7 @@
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/image_conversion.h"
 #include "src/developer/forensics/utils/archive.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
@@ -67,11 +68,17 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                                    ? zx::duration(params.collection_timeout_per_data())
                                    : kDefaultDataTimeout;
 
+  std::optional<zx::channel> channel;
+  if (params.has_response_channel()) {
+    channel = std::move(*params.mutable_response_channel());
+  }
+
   const uint64_t timer_id = cobalt_->StartTimer();
   auto promise =
       ::fit::join_promises(datastore_->GetAnnotations(timeout), datastore_->GetAttachments(timeout))
-          .and_then([this](std::tuple<::fit::result<Annotations>, ::fit::result<Attachments>>&
-                               annotations_and_attachments) {
+          .and_then([this, channel = std::move(channel)](
+                        std::tuple<::fit::result<Annotations>, ::fit::result<Attachments>>&
+                            annotations_and_attachments) mutable {
             Snapshot snapshot;
             std::map<std::string, std::string> attachments;
 
@@ -114,8 +121,12 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
               if (Archive(attachments, &archive, &file_size_stats)) {
                 inspect_data_budget_->UpdateBudget(file_size_stats);
                 cobalt_->LogCount(SnapshotVersion::kCobalt, (uint64_t)archive.size());
-                snapshot.set_archive(
-                    {.key = kSnapshotFilename, .value = std::move(archive).ToTransport()});
+                if (channel) {
+                  ServeArchive(std::move(archive), std::move(channel.value()));
+                } else {
+                  snapshot.set_archive(
+                      {.key = kSnapshotFilename, .value = std::move(archive).ToTransport()});
+                }
               }
             }
 
@@ -132,6 +143,43 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
           });
 
   executor_.schedule_task(std::move(promise));
+}
+
+bool DataProvider::ServeArchive(fsl::SizedVmo archive, zx::channel server_end) {
+  const size_t archive_index = next_served_archive_index_++;
+  auto served_archive = std::make_unique<ServedArchive>(std::move(archive));
+
+  if (!served_archive->Serve(std::move(server_end), dispatcher_, [this, archive_index]() mutable {
+        served_archives_.erase(archive_index);
+      })) {
+    return false;
+  }
+
+  served_archives_.emplace(archive_index, std::move(served_archive));
+  return true;
+}
+
+ServedArchive::ServedArchive(fsl::SizedVmo archive)
+    : file_(std::move(archive.vmo()), 0, archive.size()) {}
+
+bool ServedArchive::Serve(zx::channel server_end, async_dispatcher_t* dispatcher,
+                          std::function<void()> completed) {
+  channel_closed_observer_ =
+      std::make_unique<async::WaitOnce>(server_end.get(), ZX_CHANNEL_PEER_CLOSED);
+  if (const auto status = file_.Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(server_end));
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Cannot serve archive";
+    return false;
+  }
+
+  if (const auto status = channel_closed_observer_->Begin(
+          dispatcher, [completed = std::move(completed)](...) { completed(); });
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Cannot attach observer to server end";
+    return false;
+  }
+
+  return true;
 }
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {

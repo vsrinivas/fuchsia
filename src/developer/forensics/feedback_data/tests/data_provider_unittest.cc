@@ -179,7 +179,8 @@ class DataProviderTest : public UnitTestFixture {
     return out_response;
   }
 
-  Snapshot GetSnapshot(zx::duration snapshot_flow_duration = kDefaultSnapshotFlowDuration) {
+  Snapshot GetSnapshot(std::optional<zx::channel> channel = std::nullopt,
+                       zx::duration snapshot_flow_duration = kDefaultSnapshotFlowDuration) {
     FX_CHECK(data_provider_ && clock_);
 
     Snapshot snapshot;
@@ -189,12 +190,18 @@ class DataProviderTest : public UnitTestFixture {
     // loop. So, as long the end time is set before the loop is run, a non-zero duration will be
     // recorded.
     clock_->Set(zx::time(0));
-    data_provider_->GetSnapshot(fuchsia::feedback::GetSnapshotParameters(),
+    fuchsia::feedback::GetSnapshotParameters params;
+    if (channel) {
+      params.set_response_channel(*std::move(channel));
+    }
+    data_provider_->GetSnapshot(std::move(params),
                                 [&snapshot](Snapshot res) { snapshot = std::move(res); });
     clock_->Set(zx::time(0) + snapshot_flow_duration);
     RunLoopUntilIdle();
     return snapshot;
   }
+
+  size_t NumCurrentServedArchives() { return data_provider_->NumCurrentServedArchives(); }
 
   std::map<std::string, std::string> UnpackSnapshot(const Snapshot& snapshot) {
     FX_CHECK(snapshot.has_archive());
@@ -336,15 +343,123 @@ TEST_F(DataProviderTest, GetSnapshot_SmokeTest) {
 
   ASSERT_TRUE(snapshot.has_archive());
 
-  const auto attachment_size = snapshot.archive().value.size;
-  ASSERT_TRUE(attachment_size > 0);
+  const auto archive_size = snapshot.archive().value.size;
+  ASSERT_TRUE(archive_size > 0);
 
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
                   cobalt::Event(cobalt::SnapshotGenerationFlow::kSuccess,
                                 kDefaultSnapshotFlowDuration.to_usecs()),
-                  cobalt::Event(cobalt::SnapshotVersion::kV_01, attachment_size),
+                  cobalt::Event(cobalt::SnapshotVersion::kV_01, archive_size),
               }));
+}
+
+TEST_F(DataProviderTest, GetSnapshotInvalidChannel) {
+  SetUpDataProvider();
+
+  zx::channel server_end;
+
+  ASSERT_EQ(NumCurrentServedArchives(), 0u);
+  GetSnapshot(std::optional<zx::channel>(std::move(server_end)));
+
+  RunLoopUntilIdle();
+  ASSERT_EQ(NumCurrentServedArchives(), 0u);
+}
+
+TEST_F(DataProviderTest, GetSnapshotViaChannel) {
+  SetUpDataProvider();
+
+  zx::channel server_end, client_end;
+  ZX_ASSERT(zx::channel::create(0, &client_end, &server_end) == ZX_OK);
+
+  ASSERT_EQ(NumCurrentServedArchives(), 0u);
+  Snapshot snapshot = GetSnapshot(std::optional<zx::channel>(std::move(server_end)));
+
+  RunLoopUntilIdle();
+  ASSERT_EQ(NumCurrentServedArchives(), 1u);
+
+  {
+    // Archive sent through channel, so no archive here in snapshot.
+    ASSERT_FALSE(snapshot.has_archive());
+
+    fuchsia::io::FilePtr archive;
+    archive.Bind(std::move(client_end));
+    ASSERT_TRUE(archive.is_bound());
+
+    // Get archive attributes.
+    uint64_t archive_size;
+    archive->GetAttr([&archive_size](zx_status_t status, fuchsia::io::NodeAttributes attributes) {
+      ASSERT_EQ(ZX_OK, status);
+      archive_size = attributes.content_size;
+    });
+
+    RunLoopUntilIdle();
+    ASSERT_TRUE(archive_size > 0);
+
+    uint64_t read_count = 0;
+    uint64_t increment = 0;
+    do {
+      archive->Read(fuchsia::io::MAX_BUF,
+                    [&increment](zx_status_t status, std::vector<uint8_t> result) {
+                      EXPECT_EQ(ZX_OK, status);
+                      increment = result.size();
+                    });
+      RunLoopUntilIdle();
+      read_count += increment;
+    } while (increment);
+
+    ASSERT_EQ(archive_size, read_count);
+
+    EXPECT_THAT(ReceivedCobaltEvents(),
+                UnorderedElementsAreArray({
+                    cobalt::Event(cobalt::SnapshotGenerationFlow::kSuccess,
+                                  kDefaultSnapshotFlowDuration.to_usecs()),
+                    cobalt::Event(cobalt::SnapshotVersion::kV_01, archive_size),
+                }));
+  }
+
+  // The channel went out of scope
+  RunLoopUntilIdle();
+  ASSERT_EQ(NumCurrentServedArchives(), 0u);
+}
+
+TEST_F(DataProviderTest, GetMultipleSnapshotViaChannel) {
+  SetUpDataProvider();
+
+  zx::channel server_end_1, client_end_1;
+  zx::channel server_end_2, client_end_2;
+  zx::channel server_end_3, client_end_3;
+  ZX_ASSERT(zx::channel::create(0, &client_end_1, &server_end_1) == ZX_OK);
+  ZX_ASSERT(zx::channel::create(0, &client_end_2, &server_end_2) == ZX_OK);
+  ZX_ASSERT(zx::channel::create(0, &client_end_3, &server_end_3) == ZX_OK);
+
+  ASSERT_EQ(NumCurrentServedArchives(), 0u);
+
+  // Serve clients.
+  GetSnapshot(std::optional<zx::channel>(std::move(server_end_1)));
+  RunLoopUntilIdle();
+  ASSERT_EQ(NumCurrentServedArchives(), 1u);
+
+  GetSnapshot(std::optional<zx::channel>(std::move(server_end_2)));
+  RunLoopUntilIdle();
+  ASSERT_EQ(NumCurrentServedArchives(), 2u);
+
+  GetSnapshot(std::optional<zx::channel>(std::move(server_end_3)));
+  RunLoopUntilIdle();
+  ASSERT_EQ(NumCurrentServedArchives(), 3u);
+
+  // Close clients.
+  client_end_2.reset();
+  RunLoopUntilIdle();
+  ASSERT_EQ(NumCurrentServedArchives(), 2u);
+
+  client_end_1.reset();
+  RunLoopUntilIdle();
+  ASSERT_EQ(NumCurrentServedArchives(), 1u);
+
+  client_end_3.reset();
+  RunLoopUntilIdle();
+  ASSERT_EQ(NumCurrentServedArchives(), 0u);
 }
 
 TEST_F(DataProviderTest, GetSnapshot_AnnotationsAsAttachment) {

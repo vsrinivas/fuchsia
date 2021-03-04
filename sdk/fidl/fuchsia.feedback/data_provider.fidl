@@ -31,7 +31,7 @@ protocol DataProvider {
 const uint32 MAX_NUM_ANNOTATIONS_PROVIDED = 64;
 
 /// Parameters for the DataProvider::GetSnapshot() method.
-table GetSnapshotParameters {
+resource table GetSnapshotParameters {
     /// A snapshot aggregates various data from the platform (device uptime, logs, Inspect data,
     /// etc.) that are collected in parallel. Internally, each data collection is done within a
     /// timeout.
@@ -43,6 +43,11 @@ table GetSnapshotParameters {
     /// which is by construction higher than `collection_timeout_per_data`, as clients can control
     /// the total time by using a timeout on the call to GetSnapshot() on their side.
     1: zx.duration collection_timeout_per_data;
+
+    /// If set, the snapshot archive will be sent as a |fuchsia.io.File| over this channel instead
+    /// of being set in the |archive| field in the |Snapshot| response. This is typically useful if
+    /// the client is on the host and does not support VMOs.
+    2: zx.handle:CHANNEL response_channel;
 };
 
 /// Represents a snapshot.
@@ -55,6 +60,8 @@ resource table Snapshot {
     /// The ZIP archive contains several files corresponding to the various data it collected from
     /// the platform. There is typically one file for all the annotations (device uptime, build
     /// version, etc.) and one file per attachment (logs, Inspect data, etc.).
+    ///
+    /// Not set if |response_channel| was set in the request.
     1: Attachment archive;
 
     /// A vector of key-value string pairs. Keys are guaranteed to be unique.
