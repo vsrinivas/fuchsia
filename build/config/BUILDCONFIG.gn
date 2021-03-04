@@ -652,12 +652,13 @@ foreach(_target_type,
           args += [ "--no-check-output-freshness" ]
         }
 
+        # As far as tracing and dependencies are concerned, sources are just inputs.
+        args += [ "--inputs" ]
         if (defined(sources)) {
-          args += [ "--sources" ] + rebase_path(sources, root_build_dir)
+          args += rebase_path(sources, root_build_dir)
         }
-
         if (defined(inputs)) {
-          args += [ "--inputs" ] + rebase_path(inputs, root_build_dir)
+          args += rebase_path(inputs, root_build_dir)
         }
 
         if (defined(outputs)) {

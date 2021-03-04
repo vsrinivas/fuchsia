@@ -260,15 +260,8 @@ class Action(object):
     """Represents a set of parameters of a single build action."""
     inputs: Sequence[str] = dataclasses.field(default_factory=list)
     outputs: Collection[str] = dataclasses.field(default_factory=list)
-    sources: Sequence[str] = dataclasses.field(default_factory=list)
-    # TODO(fangism): combine sources->inputs since this script has no reason
-    # to distinguish between them.
     depfile: Optional[str] = None
     response_file_name: Optional[str] = None
-
-    @property
-    def all_declared_inputs(self):
-        return set(self.inputs + self.sources)
 
     def access_constraints(
             self, writeable_depfile_inputs=False) -> AccessConstraints:
@@ -280,7 +273,7 @@ class Action(object):
         # Actions may touch files other than their listed outputs.
         allowed_writes = required_writes.copy()
 
-        allowed_reads = self.all_declared_inputs
+        allowed_reads = set(self.inputs)
 
         if self.depfile and os.path.exists(self.depfile):
             # Writing the depfile is not required (yet), but allowed.
@@ -645,7 +638,6 @@ def main_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--response-file-name", help="action#response_file_name")
     parser.add_argument("--inputs", nargs="*", help="action#inputs")
-    parser.add_argument("--sources", nargs="*", help="action#sources")
     parser.add_argument("--outputs", nargs="*", help="action#outputs")
     parser.add_argument("--depfile", help="action#depfile")
 
@@ -759,7 +751,6 @@ def main():
     action = Action(
         inputs=args.inputs,
         outputs=args.outputs,
-        sources=args.sources,
         depfile=args.depfile,
         response_file_name=args.response_file_name)
     access_constraints = action.access_constraints(
@@ -829,8 +820,7 @@ def main():
     # Make sure no declared inputs match ignored patterns.
     # Ignored files should never be depended on by other actions.
     declared_ignored_inputs = {
-        path for path in action.all_declared_inputs
-        if ignore_conditions.matches(path)
+        path for path in action.inputs if ignore_conditions.matches(path)
     }
     if args.check_inputs_not_in_ignored_set and declared_ignored_inputs:
         ignored_inputs_formatted = "\n  ".join(declared_ignored_inputs)

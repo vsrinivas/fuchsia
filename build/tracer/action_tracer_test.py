@@ -647,14 +647,6 @@ class AccessConstraintsTests(unittest.TestCase):
                 allowed_writes=abspaths({"main.o"}),
                 required_writes=abspaths({"main.o"})))
 
-    def test_have_sources(self):
-        action = action_tracer.Action(
-            inputs=["script.sh"], sources=["input.src", "main.h"])
-        self.assertEqual(
-            action.access_constraints(),
-            action_tracer.AccessConstraints(
-                allowed_reads=abspaths({"script.sh", "input.src", "main.h"})))
-
     def test_have_response_file(self):
         action = action_tracer.Action(
             inputs=["script.sh"], response_file_name="response.out")
