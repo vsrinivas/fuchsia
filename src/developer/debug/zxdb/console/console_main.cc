@@ -8,17 +8,13 @@
 #include <lib/fit/defer.h>
 
 #include <cstdlib>
-#include <filesystem>
-#include <iostream>
 
-#include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/curl.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
-#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/common/version.h"
 #include "src/developer/debug/zxdb/console/actions.h"
 #include "src/developer/debug/zxdb/console/analytics.h"
@@ -27,8 +23,6 @@
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/developer/debug/zxdb/debug_adapter/server.h"
-#include "src/developer/debug/zxdb/symbols/system_symbols.h"
-#include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -203,11 +197,7 @@ int ConsoleMain(int argc, const char* argv[]) {
   // This scope forces all the objects to be destroyed before the Cleanup() call which will mark the
   // message loop as not-current.
   {
-    debug_ipc::BufferedFD buffer;
-
-    // Route data from buffer -> session.
     Session session;
-    buffer.set_data_available_callback([&session]() { session.OnStreamReadable(); });
 
     Analytics::Init(session, options.analytics);
     Analytics::IfEnabledSendInvokeEvent(&session);
