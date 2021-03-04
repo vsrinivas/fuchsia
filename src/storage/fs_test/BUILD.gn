@@ -541,6 +541,11 @@ isolated_devmgr_unittest_v2_component("watcher-tests") {
 }
 
 fuchsia_test_package("fs-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   test_components = [
     ":access-tests",
     ":append-tests",
@@ -649,5 +654,8 @@ fuchsia_test_package("large-fs-tests") {
         tags = [ "slow" ]
       },
     ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }

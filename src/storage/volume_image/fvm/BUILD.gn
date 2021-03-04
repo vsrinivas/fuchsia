@@ -159,6 +159,11 @@ isolated_devmgr_unittest_v2_component(
 }
 
 fuchsia_test_package("fvm-sparse-image-reader-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   test_components = [ ":fvm-sparse-image-reader-tests-component" ]
 }
 

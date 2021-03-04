@@ -58,6 +58,11 @@ fuchsia_component("unit-tests-driver") {
 }
 
 fuchsia_test_package("unit-tests-package") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   package_name = "blobfs-ramdisk-unit-tests"
   test_components = [ ":unit-tests-root" ]
   deps = [ ":unit-tests-driver" ]
