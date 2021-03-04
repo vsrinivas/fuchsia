@@ -1,0 +1,30 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+
+# A wrapper for creating a GCloud client.
+dart_library("gcloud_lib") {
+  package_name = "gcloud_lib"
+
+  sources = [
+    "gcloud_lib.dart",
+    "src/audio_matchers.dart",
+    "src/gcloud.dart",
+    "src/gcloud_exceptions.dart",
+    "src/image_matchers.dart",
+  ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/gcloud",
+    "//third_party/dart-pkg/pub/googleapis",
+    "//third_party/dart-pkg/pub/googleapis_auth",
+    "//third_party/dart-pkg/pub/http",
+    "//third_party/dart-pkg/pub/image",
+    "//third_party/dart-pkg/pub/logging",
+    "//third_party/dart-pkg/pub/matcher",
+    "//third_party/dart-pkg/pub/meta",
+  ]
+}
