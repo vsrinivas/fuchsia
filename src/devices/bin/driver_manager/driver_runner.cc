@@ -65,10 +65,10 @@ void InspectNode(inspect::Inspector* inspector, InspectStack* stack) {
 }
 
 template <typename T>
-void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& binding) {
-  if (binding.has_value()) {
-    binding->Unbind();
-    binding.reset();
+void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
+  if (ref.has_value()) {
+    ref->Unbind();
+    ref.reset();
   }
 }
 
@@ -93,15 +93,15 @@ DriverComponent::DriverComponent(fidl::ClientEnd<fio::Directory> exposed_dir,
       driver_(std::move(driver)),
       wait_(this, driver_.channel().get(), ZX_CHANNEL_PEER_CLOSED) {}
 
-DriverComponent::~DriverComponent() { UnbindAndReset(node_binding_); }
+DriverComponent::~DriverComponent() { UnbindAndReset(node_ref_); }
 
-void DriverComponent::set_driver_binding(
-    fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_binding) {
-  driver_binding_.emplace(std::move(driver_binding));
+void DriverComponent::set_driver_ref(
+    fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_ref) {
+  driver_ref_.emplace(std::move(driver_ref));
 }
 
-void DriverComponent::set_node_binding(fidl::ServerBindingRef<fdf::Node> node_binding) {
-  node_binding_.emplace(std::move(node_binding));
+void DriverComponent::set_node_ref(fidl::ServerBindingRef<fdf::Node> node_ref) {
+  node_ref_.emplace(std::move(node_ref));
 }
 
 zx::status<> DriverComponent::WatchDriver(async_dispatcher_t* dispatcher) {
@@ -110,7 +110,7 @@ zx::status<> DriverComponent::WatchDriver(async_dispatcher_t* dispatcher) {
 }
 
 void DriverComponent::Stop(DriverComponent::StopCompleter::Sync& completer) {
-  UnbindAndReset(node_binding_);
+  UnbindAndReset(node_ref_);
 }
 
 void DriverComponent::Kill(DriverComponent::KillCompleter::Sync& completer) {}
@@ -120,7 +120,7 @@ void DriverComponent::OnPeerClosed(async_dispatcher_t* dispatcher, async::WaitBa
   if (status != ZX_OK) {
     LOGF(WARNING, "Failed to watch channel for driver: %s", zx_status_get_string(status));
   } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    UnbindAndReset(driver_binding_);
+    UnbindAndReset(driver_ref_);
   }
 }
 
@@ -162,7 +162,7 @@ Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispat
            std::string_view name)
     : parent_(parent), driver_binder_(driver_binder), dispatcher_(dispatcher), name_(name) {}
 
-Node::~Node() { UnbindAndReset(controller_binding_); }
+Node::~Node() { UnbindAndReset(controller_ref_); }
 
 const std::string& Node::name() const { return name_; }
 
@@ -174,24 +174,24 @@ DriverHostComponent* Node::parent_driver_host() const { return parent_->driver_h
 
 void Node::set_driver_host(DriverHostComponent* driver_host) { driver_host_ = driver_host; }
 
-void Node::set_driver_binding(fidl::ServerBindingRef<frunner::ComponentController> driver_binding) {
-  driver_binding_.emplace(std::move(driver_binding));
+void Node::set_driver_ref(fidl::ServerBindingRef<frunner::ComponentController> driver_ref) {
+  driver_ref_.emplace(std::move(driver_ref));
 }
 
-void Node::set_controller_binding(fidl::ServerBindingRef<fdf::NodeController> controller_binding) {
-  controller_binding_.emplace(std::move(controller_binding));
+void Node::set_controller_ref(fidl::ServerBindingRef<fdf::NodeController> controller_ref) {
+  controller_ref_.emplace(std::move(controller_ref));
 }
 
-void Node::set_node_binding(fidl::ServerBindingRef<fdf::Node> node_binding) {
-  node_binding_.emplace(std::move(node_binding));
+void Node::set_node_ref(fidl::ServerBindingRef<fdf::Node> node_ref) {
+  node_ref_.emplace(std::move(node_ref));
 }
 
 fbl::DoublyLinkedList<std::unique_ptr<Node>>& Node::children() { return children_; }
 
 void Node::Unbind() {
-  UnbindAndReset(driver_binding_);
-  UnbindAndReset(controller_binding_);
-  UnbindAndReset(node_binding_);
+  UnbindAndReset(driver_ref_);
+  UnbindAndReset(controller_ref_);
+  UnbindAndReset(node_ref_);
 }
 
 void Node::Remove() {
@@ -213,9 +213,9 @@ void Node::Remove() {
     }
   }
 
-  bool is_bound = node_binding_.has_value();
+  bool is_bound = node_ref_.has_value();
   // Traverse list of nodes in reverse order in order to unbind depth-first.
-  // Note: Unbind() both unbinds and resets the optional binding value. This
+  // Note: Unbind() both unbinds and resets the optional server ref value. This
   // means that subsequent calls from children removing their own child nodes
   // are no-ops.
   for (auto node = nodes.rbegin(), end = nodes.rend(); node != end; ++node) {
@@ -228,10 +228,10 @@ void Node::Remove() {
       // explicitly, through a call to Remove() over FIDL (see method below).
       //
       // When this occurs, the node that FIDL is operating on contains a valid
-      // server binding, and is therefore the root of a sub-tree being removed.
+      // server ref, and is therefore the root of a sub-tree being removed.
       //
       // To safely remove all of the children of the node, we need to tell all
-      // FIDL bindings to unbind themselves. However, this also means we need to
+      // FIDL servers to unbind themselves. However, this also means we need to
       // delay erasing of the root node of a sub-tree until all of its children
       // have erased themselves first, therefore avoiding a use-after-free.
       //
@@ -248,12 +248,12 @@ void Node::Remove() {
 
 void Node::Remove(RemoveCompleter::Sync& completer) {
   // When NodeController::Remove() is called, we unbind the Node. This causes
-  // the Node binding to then call Node::Remove().
+  // the Node server to then call Node::Remove().
   //
   // We take this approach to avoid a use-after-free, where calling
-  // Node::Remove() directly would then cause the the Node binding to do the
+  // Node::Remove() directly would then cause the the Node server to do the
   // same, after the Node has already been freed.
-  UnbindAndReset(node_binding_);
+  UnbindAndReset(node_ref_);
 }
 
 void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeController> controller,
@@ -311,7 +311,7 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
     completer.Close(bind_controller.error());
     return;
   }
-  child->set_controller_binding(bind_controller.take_value());
+  child->set_controller_ref(bind_controller.take_value());
 
   if (node.is_valid()) {
     auto bind_node = fidl::BindServer<fdf::Node::Interface>(
@@ -323,7 +323,7 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
       completer.Close(bind_node.error());
       return;
     }
-    child->set_node_binding(bind_node.take_value());
+    child->set_node_ref(bind_node.take_value());
   } else {
     auto bind_result = driver_binder_->Bind(child.get(), std::move(args));
     if (bind_result.is_error()) {
@@ -461,8 +461,8 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
     completer.Close(bind_driver.error());
     return;
   }
-  driver_args.node->set_driver_binding(bind_driver.value());
-  driver->set_driver_binding(bind_driver.take_value());
+  driver_args.node->set_driver_ref(bind_driver.value());
+  driver->set_driver_ref(bind_driver.take_value());
   auto watch = driver->WatchDriver(dispatcher_);
   if (watch.is_error()) {
     LOGF(ERROR, "Failed to watch channel for driver '%.*s': %s", url.size(), url.data(),
@@ -481,8 +481,8 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
     completer.Close(bind_node.error());
     return;
   }
-  driver_args.node->set_node_binding(bind_node.value());
-  driver->set_node_binding(bind_node.take_value());
+  driver_args.node->set_node_ref(bind_node.value());
+  driver->set_node_ref(bind_node.take_value());
   drivers_.push_back(std::move(driver));
 }
 

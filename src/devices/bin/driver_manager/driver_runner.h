@@ -29,9 +29,9 @@ class DriverComponent : public fuchsia_component_runner::ComponentController::In
                   fidl::ClientEnd<fuchsia_driver_framework::Driver> driver);
   ~DriverComponent() override;
 
-  void set_driver_binding(
-      fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_binding);
-  void set_node_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Node> node_binding);
+  void set_driver_ref(
+      fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_ref);
+  void set_node_ref(fidl::ServerBindingRef<fuchsia_driver_framework::Node> node_ref);
 
   zx::status<> WatchDriver(async_dispatcher_t* dispatcher);
 
@@ -46,9 +46,8 @@ class DriverComponent : public fuchsia_component_runner::ComponentController::In
   fidl::ClientEnd<fuchsia_io::Directory> exposed_dir_;
   fidl::ClientEnd<fuchsia_driver_framework::Driver> driver_;
   async::WaitMethod<DriverComponent, &DriverComponent::OnPeerClosed> wait_;
-  std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>>
-      driver_binding_;
-  std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>> driver_ref_;
+  std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
 };
 
 class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<DriverHostComponent>> {
@@ -94,11 +93,11 @@ class Node : public fuchsia_driver_framework::NodeController::Interface,
   fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols();
   DriverHostComponent* parent_driver_host() const;
   void set_driver_host(DriverHostComponent* driver_host);
-  void set_driver_binding(
-      fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_binding);
-  void set_node_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Node> node_binding);
-  void set_controller_binding(
-      fidl::ServerBindingRef<fuchsia_driver_framework::NodeController> controller_binding);
+  void set_driver_ref(
+      fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_ref);
+  void set_node_ref(fidl::ServerBindingRef<fuchsia_driver_framework::Node> node_ref);
+  void set_controller_ref(
+      fidl::ServerBindingRef<fuchsia_driver_framework::NodeController> controller_ref);
   fbl::DoublyLinkedList<std::unique_ptr<Node>>& children();
 
   void Remove();
@@ -123,11 +122,9 @@ class Node : public fuchsia_driver_framework::NodeController::Interface,
   Symbols symbols_;
 
   DriverHostComponent* driver_host_ = nullptr;
-  std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>>
-      driver_binding_;
-  std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_binding_;
-  std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>>
-      controller_binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>> driver_ref_;
+  std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
+  std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>> controller_ref_;
   fbl::DoublyLinkedList<std::unique_ptr<Node>> children_;
 };
 
