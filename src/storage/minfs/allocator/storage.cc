@@ -68,13 +68,15 @@ zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData 
 
   zx_status_t status = device_->VolumeExtend(request.offset, request.length);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << ":PersistentStorage::Extend failed to grow (on disk): " << status;
+    if (status != ZX_ERR_NO_SPACE) {
+      FX_LOGS(ERROR) << "PersistentStorage::Extend failed to grow (on disk): " << status;
+    }
     return status;
   }
 
   if (grow_cb_) {
     if ((status = grow_cb_(pool_size)) != ZX_OK) {
-      FX_LOGS(ERROR) << ":Allocator grow callback failure: " << status;
+      FX_LOGS(ERROR) << "Allocator grow callback failure: " << status;
       return status;
     }
   }

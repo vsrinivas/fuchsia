@@ -51,8 +51,12 @@ constexpr zx_status_t kDirIteratorNext = 1;
 constexpr zx_status_t kDirIteratorSaveSync = 2;
 
 zx_status_t ValidateDirent(Dirent* de, size_t bytes_read, size_t off) {
+  if (bytes_read < kMinfsDirentSize) {
+    FX_LOGS(ERROR) << "vn_dir: Short read (" << bytes_read << " bytes) at offset " << off;
+    return ZX_ERR_IO;
+  }
   uint32_t reclen = static_cast<uint32_t>(MinfsReclen(de, off));
-  if ((bytes_read < kMinfsDirentSize) || (reclen < kMinfsDirentSize)) {
+  if (reclen < kMinfsDirentSize) {
     FX_LOGS(ERROR) << "vn_dir: Could not read dirent at offset: " << off;
     return ZX_ERR_IO;
   }
