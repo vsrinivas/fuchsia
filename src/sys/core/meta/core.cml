@@ -360,6 +360,7 @@
         },
         {
             protocol: [
+                "fuchsia.hwinfo.Device",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.overnet.Overnet",
                 "fuchsia.overnet.ServicePublisher",
@@ -625,6 +626,7 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.exception.Handler",
                 "fuchsia.feedback.CrashReporter",
+                "fuchsia.hwinfo.Device",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.NameLookup",
                 "fuchsia.net.stack.Log",
