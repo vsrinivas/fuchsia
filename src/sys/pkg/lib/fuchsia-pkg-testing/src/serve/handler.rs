@@ -5,7 +5,7 @@
 //! UriPathHandler implementations
 
 use {
-    crate::serve::UriPathHandler,
+    crate::serve::{RangeUriPathHandler, UriPathHandler},
     futures::{
         channel::{mpsc, oneshot},
         future::{pending, ready, BoxFuture},
@@ -56,6 +56,27 @@ impl StaticResponseCode {
     /// Creates handler that always responds with 429 Too Many Requests
     pub fn too_many_requests() -> Self {
         Self(StatusCode::TOO_MANY_REQUESTS)
+    }
+}
+
+/// Handler that always responds with the given status code
+pub struct RangeStaticResponseCode(StatusCode);
+
+impl RangeUriPathHandler for RangeStaticResponseCode {
+    fn handle(
+        &self,
+        _: &Path,
+        _: &http::HeaderValue,
+        _: Response<Body>,
+    ) -> BoxFuture<'_, Response<Body>> {
+        ready(Response::builder().status(self.0).body(Body::empty()).unwrap()).boxed()
+    }
+}
+
+impl RangeStaticResponseCode {
+    /// Creates handler that always responds with 500 Internal Server Error
+    pub fn server_error() -> Self {
+        Self(StatusCode::INTERNAL_SERVER_ERROR)
     }
 }
 
@@ -462,6 +483,83 @@ impl UriPathHandler for OneByteShortThenError {
     }
 }
 
+/// Handler that yields the response up to the Nth byte, then produces an error.  Panics if the
+/// response does not contain more than N bytes.
+pub struct NBytesThenError {
+    n: usize,
+}
+
+impl NBytesThenError {
+    /// Make a handler that returns N bytes then errors.
+    pub fn new(n: usize) -> Self {
+        Self { n }
+    }
+}
+impl UriPathHandler for NBytesThenError {
+    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        let n = self.n;
+        async move {
+            let mut bytes = body_to_bytes(response.into_body()).await;
+            let initial_len = bytes.len();
+            if initial_len <= n {
+                panic!("not enough bytes to shorten, {} {}", initial_len, n);
+            }
+            bytes.truncate(n);
+            Response::builder()
+                .status(hyper::StatusCode::OK)
+                .header(CONTENT_LENGTH, initial_len)
+                .body(Body::wrap_stream(futures::stream::iter(vec![
+                    Ok(bytes),
+                    Err("all_but_one_byte_then_eror has sent all but one bytes".to_string()),
+                ])))
+                .expect("valid response")
+        }
+        .boxed()
+    }
+}
+
+/// Handler that yields the response up to the Nth byte, then produces an error.  Panics if the
+/// response does not contain more than N bytes.
+pub struct RangeNBytesThenError {
+    n: usize,
+}
+
+impl RangeNBytesThenError {
+    /// Make a handler that returns N bytes then errors.
+    pub fn new(n: usize) -> Self {
+        Self { n }
+    }
+}
+impl RangeUriPathHandler for RangeNBytesThenError {
+    fn handle(
+        &self,
+        _: &Path,
+        _: &http::HeaderValue,
+        response: Response<Body>,
+    ) -> BoxFuture<'_, Response<Body>> {
+        let n = self.n;
+        async move {
+            let content_range_header =
+                response.headers().get(http::header::CONTENT_RANGE).unwrap().clone();
+            let mut bytes = body_to_bytes(response.into_body()).await;
+            let initial_len = bytes.len();
+            if initial_len <= n {
+                panic!("not enough bytes to shorten, {} {}", initial_len, n);
+            }
+            bytes.truncate(n);
+            Response::builder()
+                .status(hyper::StatusCode::PARTIAL_CONTENT)
+                .header(http::header::CONTENT_RANGE, content_range_header)
+                .body(Body::wrap_stream(futures::stream::iter(vec![
+                    Ok(bytes),
+                    Err("all_but_one_byte_then_eror has sent all but one bytes".to_string()),
+                ])))
+                .expect("valid response")
+        }
+        .boxed()
+    }
+}
+
 /// Handler that yields the response up to the final byte, then disconnects.  Panics if the
 /// response contains an empty body.
 pub struct OneByteShortThenDisconnect;
@@ -555,6 +653,34 @@ impl<H: UriPathHandler> Once<H> {
     }
 }
 
+/// Range Handler that forwards to its wrapped handler once.
+pub struct RangeOnce<H: RangeUriPathHandler> {
+    already_forwarded: AtomicBool,
+    handler: H,
+}
+
+impl<H: RangeUriPathHandler> RangeUriPathHandler for RangeOnce<H> {
+    fn handle(
+        &self,
+        uri_path: &Path,
+        range: &http::HeaderValue,
+        response: Response<Body>,
+    ) -> BoxFuture<'_, Response<Body>> {
+        if self.already_forwarded.fetch_or(true, Ordering::SeqCst) {
+            ready(response).boxed()
+        } else {
+            self.handler.handle(uri_path, range, response)
+        }
+    }
+}
+
+impl<H: RangeUriPathHandler> RangeOnce<H> {
+    /// Creates a Range handler that forwards to `handler` once.
+    pub fn new(handler: H) -> Self {
+        Self { already_forwarded: AtomicBool::new(false), handler }
+    }
+}
+
 /// Handler that forwards to its wrapped handler the nth time it is called.
 pub struct OverrideNth<H: UriPathHandler> {
     n: u32,
@@ -576,5 +702,61 @@ impl<H: UriPathHandler> OverrideNth<H> {
     /// Creates a handler that forwards to `handler` on the nth call.
     pub fn new(n: u32, handler: H) -> Self {
         Self { n, call_count: AtomicU32::new(0), handler }
+    }
+}
+
+/// Information record by RecordingRange for each request it handles.
+pub struct RangeHistoryEntry {
+    uri_path: PathBuf,
+    range: http::HeaderValue,
+}
+
+impl RangeHistoryEntry {
+    /// The uri_path of the request.
+    pub fn uri_path(&self) -> &Path {
+        &self.uri_path
+    }
+
+    /// The "Range" header of the request.
+    pub fn range(&self) -> &http::HeaderValue {
+        &self.range
+    }
+}
+
+/// The request history recorded by RecordingRange.
+pub struct RangeHistory(Arc<Mutex<Vec<RangeHistoryEntry>>>);
+
+impl RangeHistory {
+    /// Take the recorded history, clearing it from the RecordingRange.
+    pub fn take(&self) -> Vec<RangeHistoryEntry> {
+        std::mem::replace(&mut self.0.lock(), vec![])
+    }
+}
+
+/// Handler that records the Range headers
+pub struct RecordingRange {
+    history: RangeHistory,
+}
+
+impl RecordingRange {
+    /// Creates a handler that records all the requests.
+    pub fn new() -> (Self, RangeHistory) {
+        let history = Arc::new(Mutex::new(vec![]));
+        (Self { history: RangeHistory(Arc::clone(&history)) }, RangeHistory(history))
+    }
+}
+
+impl RangeUriPathHandler for RecordingRange {
+    fn handle(
+        &self,
+        uri_path: &Path,
+        range: &http::HeaderValue,
+        response: Response<Body>,
+    ) -> BoxFuture<'_, Response<Body>> {
+        self.history
+            .0
+            .lock()
+            .push(RangeHistoryEntry { uri_path: uri_path.to_owned(), range: range.clone() });
+        ready(response).boxed()
     }
 }
