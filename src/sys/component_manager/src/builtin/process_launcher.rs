@@ -20,7 +20,7 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::prelude::*,
     lazy_static::lazy_static,
-    log::warn,
+    log::{log, warn, Level},
     process_builder::{
         BuiltProcess, NamespaceEntry, ProcessBuilder, ProcessBuilderError, StartupHandle,
     },
@@ -81,6 +81,21 @@ struct ProcessLauncherState {
     handles: Vec<fproc::HandleInfo>,
 }
 
+/// Similar to fproc::LaunchInfo, but with the job wrapped in an Arc (to enable use after the struct
+/// is moved).
+#[derive(Debug)]
+struct LaunchInfo {
+    executable: zx::Vmo,
+    job: Arc<zx::Job>,
+    name: String,
+}
+
+impl From<fproc::LaunchInfo> for LaunchInfo {
+    fn from(info: fproc::LaunchInfo) -> Self {
+        LaunchInfo { executable: info.executable, job: Arc::new(info.job), name: info.name }
+    }
+}
+
 /// An implementation of the `fuchsia.process.Launcher` protocol using the `process_builder` crate.
 pub struct ProcessLauncher;
 
@@ -122,7 +137,8 @@ impl ProcessLauncher {
         while let Some(req) = stream.try_next().await? {
             match req {
                 fproc::LauncherRequest::Launch { info, responder } => {
-                    let job_koid = info.job.get_koid();
+                    let info = LaunchInfo::from(info);
+                    let job = info.job.clone();
                     let name = info.name.clone();
 
                     match Self::launch_process(info, state).await {
@@ -130,12 +146,7 @@ impl ProcessLauncher {
                             responder.send(zx::Status::OK.into_raw(), Some(process))?;
                         }
                         Err(err) => {
-                            warn!(
-                                "Failed to launch process '{}' in job {}: {}",
-                                name,
-                                koid_to_string(job_koid),
-                                err
-                            );
+                            Self::log_launcher_error(&err, "launch", job, name);
                             responder.send(err.as_zx_status().into_raw(), None)?;
                         }
                     }
@@ -144,7 +155,8 @@ impl ProcessLauncher {
                     state = ProcessLauncherState::default();
                 }
                 fproc::LauncherRequest::CreateWithoutStarting { info, responder } => {
-                    let job_koid = info.job.get_koid();
+                    let info = LaunchInfo::from(info);
+                    let job = info.job.clone();
                     let name = info.name.clone();
 
                     match Self::create_process(info, state).await {
@@ -162,12 +174,7 @@ impl ProcessLauncher {
                             responder.send(zx::Status::OK.into_raw(), Some(&mut process_data))?;
                         }
                         Err(err) => {
-                            warn!(
-                                "Failed to create process '{}' in job {}: {}",
-                                name,
-                                koid_to_string(job_koid),
-                                err
-                            );
+                            Self::log_launcher_error(&err, "create", job, name);
                             responder.send(err.as_zx_status().into_raw(), None)?;
                         }
                     }
@@ -192,22 +199,65 @@ impl ProcessLauncher {
         Ok(())
     }
 
+    fn log_launcher_error(err: &LauncherError, op: &str, job: Arc<zx::Job>, name: String) {
+        // Special case BAD_STATE errors to check the job's exited status and log more info.
+        // BAD_STATE errors are expected if the job has exited for reasons outside our control, like
+        // another process killing the job or the parent job exiting, while a new process is being
+        // created in it.
+        let mut log_level = Level::Warn;
+        let mut job_message = format!("");
+        match err {
+            LauncherError::BuilderError(err) if err.as_zx_status() == zx::Status::BAD_STATE => {
+                match job.info() {
+                    Ok(job_info) => {
+                        if job_info.exited {
+                            job_message =
+                                format!(", job has exited (retcode {})", job_info.return_code);
+                        } else {
+                            // If the job has not exited, then the BAD_STATE error was unexpected
+                            // and indicates a bug somewhere.
+                            log_level = Level::Error;
+                            job_message = format!(", job has not exited");
+                        }
+                    }
+                    Err(status) => {
+                        log_level = Level::Error;
+                        job_message = format!(" (error {} getting job state)", status);
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        let job_koid =
+            job.get_koid().map(|j| j.raw_koid().to_string()).unwrap_or("<unknown>".to_string());
+        log!(
+            log_level,
+            "Failed to {} process '{}' in job {}{}: {}",
+            op,
+            name,
+            job_koid,
+            job_message,
+            err
+        );
+    }
+
     async fn launch_process(
-        info: fproc::LaunchInfo,
+        info: LaunchInfo,
         state: ProcessLauncherState,
     ) -> Result<zx::Process, LauncherError> {
         Ok(Self::create_process(info, state).await?.start()?)
     }
 
     async fn create_process(
-        info: fproc::LaunchInfo,
+        info: LaunchInfo,
         state: ProcessLauncherState,
     ) -> Result<BuiltProcess, LauncherError> {
         Ok(Self::create_process_builder(info, state)?.build().await?)
     }
 
     fn create_process_builder(
-        info: fproc::LaunchInfo,
+        info: LaunchInfo,
         state: ProcessLauncherState,
     ) -> Result<ProcessBuilder, LauncherError> {
         let proc_name = CString::new(info.name)
@@ -310,10 +360,6 @@ impl CapabilityProvider for ProcessLauncherCapabilityProvider {
         .detach();
         Ok(())
     }
-}
-
-fn koid_to_string(koid: Result<zx::Koid, zx::Status>) -> String {
-    koid.map(|j| j.raw_koid().to_string()).unwrap_or("<unknown>".to_string())
 }
 
 // These tests are very similar to the tests in process_builder itself, and even reuse the test
