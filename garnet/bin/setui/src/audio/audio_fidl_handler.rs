@@ -14,9 +14,10 @@ use {
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::{
         AudioInput, AudioMarker, AudioRequest, AudioSettings, AudioStreamSettingSource,
-        AudioStreamSettings, AudioWatch2Responder, AudioWatchResponder, Error, Volume,
+        AudioStreamSettings, AudioWatch2Responder, AudioWatchResponder, Volume,
     },
     fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_err,
 };
 
 fidl_hanging_get_responder!(
@@ -105,25 +106,38 @@ impl From<AudioSettingSource> for AudioStreamSettingSource {
     }
 }
 
-fn to_request(settings: AudioSettings) -> Option<SettingRequest> {
-    let mut request = None;
-    if let Some(streams_value) = settings.streams {
-        let mut streams = Vec::new();
+#[derive(thiserror::Error, Debug)]
+enum Error {
+    #[error("missing user_volume at stream {0}")]
+    NoUserVolume(usize),
+    #[error("missing user_volume.level at stream {0}")]
+    NoUserVolumeLevel(usize),
+    #[error("missing user_volume.muted at stream {0}")]
+    NoUserVolumeMuted(usize),
+    #[error("missing stream at stream {0}")]
+    NoStreamType(usize),
+    #[error("missing source at stream {0}")]
+    NoSource(usize),
+}
 
-        for stream in streams_value {
-            let user_volume = stream.user_volume.unwrap();
-
-            streams.push(AudioStream {
-                stream_type: AudioStreamType::from(stream.stream.unwrap()),
-                source: AudioSettingSource::from(stream.source.unwrap()),
-                user_volume_level: user_volume.level.unwrap(),
-                user_volume_muted: user_volume.muted.unwrap(),
-            });
-        }
-
-        request = Some(SettingRequest::SetVolume(streams));
-    }
-    request
+fn to_request(settings: AudioSettings) -> Option<Result<SettingRequest, Error>> {
+    settings.streams.map(|streams| {
+        streams
+            .into_iter()
+            .enumerate()
+            .map(|(i, stream)| {
+                let user_volume = stream.user_volume.ok_or_else(|| Error::NoUserVolume(i))?;
+                let user_volume_level =
+                    user_volume.level.ok_or_else(|| Error::NoUserVolumeLevel(i))?;
+                let user_volume_muted =
+                    user_volume.muted.ok_or_else(|| Error::NoUserVolumeMuted(i))?;
+                let stream_type = stream.stream.ok_or_else(|| Error::NoStreamType(i))?.into();
+                let source = stream.source.ok_or_else(|| Error::NoSource(i))?.into();
+                Ok(AudioStream { stream_type, source, user_volume_level, user_volume_muted })
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(SettingRequest::SetVolume)
+    })
 }
 
 fidl_process!(
@@ -145,21 +159,33 @@ async fn process_request(
     match req {
         AudioRequest::Set { settings, responder } => {
             if let Some(request) = to_request(settings) {
-                fasync::Task::spawn(async move {
-                    request_respond!(
-                        context,
-                        responder,
-                        SettingType::Audio,
-                        request,
-                        Ok(()),
-                        Err(fidl_fuchsia_settings::Error::Failed),
-                        AudioMarker
-                    );
-                })
-                .detach();
+                match request {
+                    Ok(request) => fasync::Task::spawn(async move {
+                        request_respond!(
+                            context,
+                            responder,
+                            SettingType::Audio,
+                            request,
+                            Ok(()),
+                            Err(fidl_fuchsia_settings::Error::Failed),
+                            AudioMarker
+                        );
+                    })
+                    .detach(),
+                    Err(err) => {
+                        fx_log_err!(
+                            "{}: Failed to process request: {:?}",
+                            AudioMarker::DEBUG_NAME,
+                            err
+                        );
+                        responder
+                            .send(&mut Err(fidl_fuchsia_settings::Error::Failed))
+                            .log_fidl_response_error(AudioMarker::DEBUG_NAME);
+                    }
+                }
             } else {
                 responder
-                    .send(&mut Err(Error::Unsupported))
+                    .send(&mut Err(fidl_fuchsia_settings::Error::Unsupported))
                     .log_fidl_response_error(AudioMarker::DEBUG_NAME);
             }
         }
