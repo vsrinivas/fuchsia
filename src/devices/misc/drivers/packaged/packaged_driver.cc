@@ -19,7 +19,7 @@ class PackagedDriver {
   explicit PackagedDriver(async_dispatcher_t* dispatcher)
       : dispatcher_(dispatcher), outgoing_(dispatcher) {}
 
-  zx::status<> Init(fdf::DriverStartArgs* start_args) {
+  zx::status<> Init(fdf::wire::DriverStartArgs* start_args) {
     zx_status_t status = node_.Bind(std::move(start_args->node()), dispatcher_);
     if (status != ZX_OK) {
       return zx::error(status);
@@ -63,7 +63,7 @@ class PackagedDriver {
 
 zx_status_t PackagedDriverStart(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher,
                                 void** driver) {
-  fdf::DriverStartArgs::DecodedMessage decoded(msg);
+  fdf::wire::DriverStartArgs::DecodedMessage decoded(msg);
   if (!decoded.ok()) {
     return decoded.status();
   }
