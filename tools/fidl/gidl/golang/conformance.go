@@ -48,7 +48,7 @@ func TestAllEncodeSuccessCases(t *testing.T) {
 			input: &{{ .Value }},
 			bytes: {{ .Bytes }},
 	{{- if .HandleDefs }}
-			handleInfos: {{ .Handles }},
+			handleDispositions: {{ .Handles }},
 	{{- end }}
 			checkRights: {{ .CheckRights }},
 		}.check(t)

@@ -98,11 +98,16 @@ func buildHandleDispositions(handleDispositions []gidlir.HandleDisposition) stri
 		return "nil"
 	}
 	var builder strings.Builder
-	// TODO(bprosnitz) Migrate this to handle dispositions.
-	builder.WriteString("[]zx.HandleInfo{")
+	builder.WriteString("[]zx.HandleDisposition{")
 	for _, handleDisposition := range handleDispositions {
 		builder.WriteString(fmt.Sprintf(`
-		{Handle: handles[%d], Type: %d, Rights: %d},`,
+	{
+		Operation: zx.HandleOpMove,
+		Handle: handles[%d],
+		Type: %d,
+		Rights: %d,
+		Result: zx.ErrOk,
+	},`,
 			handleDisposition.Handle, handleDisposition.Type, handleDisposition.Rights))
 	}
 	builder.WriteString("\n}")
