@@ -335,9 +335,9 @@ TEST(DiscoverTestsInDirGlobs, DiscoverTestsInDirGlobsBasic) {
   // The order of the results is not defined, so just check that each is
   // present.
   for (const auto& path : discovered_paths) {
-    if (fbl::StringPiece(path) == a_file_name.ToStringPiece()) {
+    if (path == a_file_name) {
       discovered_a = true;
-    } else if (fbl::StringPiece(path) == b_file_name.ToStringPiece()) {
+    } else if (path == b_file_name) {
       discovered_b = true;
     }
   }

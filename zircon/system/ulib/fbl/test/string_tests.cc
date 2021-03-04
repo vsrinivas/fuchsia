@@ -575,14 +575,14 @@ TEST(StringTest, AllocChecker) {
 TEST(StringTest, ToString) {
   {
     fbl::String empty;
-    fbl::StringPiece piece(empty.ToStringPiece());
+    fbl::StringPiece piece(empty);
     EXPECT_EQ(empty.data(), piece.data());
     EXPECT_EQ(0u, piece.length());
   }
 
   {
     fbl::String str("abc");
-    fbl::StringPiece piece(str.ToStringPiece());
+    fbl::StringPiece piece(str);
     EXPECT_EQ(str.data(), piece.data());
     EXPECT_EQ(3u, piece.length());
   }

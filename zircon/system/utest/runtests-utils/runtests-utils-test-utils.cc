@@ -46,7 +46,7 @@ PackagedScriptFile::PackagedScriptFile(const fbl::StringPiece path) {
 
 PackagedScriptFile::~PackagedScriptFile() {}
 
-fbl::StringPiece PackagedScriptFile::path() const { return path_.ToStringPiece(); }
+fbl::StringPiece PackagedScriptFile::path() const { return path_; }
 
 ScopedStubFile::ScopedStubFile(const fbl::StringPiece path) : path_(path) {
   const int fd = open(path_.data(), O_CREAT | O_WRONLY, S_IRWXU);

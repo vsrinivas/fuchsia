@@ -141,8 +141,10 @@ class __OWNER(char) StringBuffer final {
   // Gets the buffer's contents as a string.
   fbl::String ToString() const { return fbl::String(data(), length()); }
 
-  // Gets the buffer's contents as a string piece.
-  fbl::StringPiece ToStringPiece() const { return fbl::StringPiece(data(), length()); }
+  // Creates a string piece backed by the string.
+  // The string piece does not take ownership of the data so the string
+  // must outlast the string piece.
+  operator StringPiece() const { return {data(), length()}; }
 
  private:
   void AppendInternal(const char* data, size_t length) {

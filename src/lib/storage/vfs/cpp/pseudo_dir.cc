@@ -77,7 +77,7 @@ zx_status_t PseudoDir::Readdir(VdirCookie* cookie, void* data, size_t len, size_
     if ((r = it->node()->GetAttributes(&attr)) != ZX_OK) {
       continue;
     }
-    if (df.Next(it->name().ToStringPiece(), VTYPE_TO_DTYPE(attr.mode), attr.inode) != ZX_OK) {
+    if (df.Next(it->name(), VTYPE_TO_DTYPE(attr.mode), attr.inode) != ZX_OK) {
       *out_actual = df.BytesFilled();
       return ZX_OK;
     }
@@ -100,7 +100,7 @@ zx_status_t PseudoDir::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol pro
 zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
   ZX_DEBUG_ASSERT(vn);
 
-  if (!vfs_valid_name(name.ToStringPiece())) {
+  if (!vfs_valid_name(name)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -110,7 +110,7 @@ zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  Notify(name.ToStringPiece(), fio::wire::WATCH_EVENT_ADDED);
+  Notify(name, fio::wire::WATCH_EVENT_ADDED);
   auto entry = std::make_unique<Entry>(next_node_id_++, std::move(name), std::move(vn));
   entries_by_name_.insert(entry.get());
   entries_by_id_.insert(std::move(entry));
@@ -149,7 +149,7 @@ void PseudoDir::RemoveAllEntries() {
   std::lock_guard<std::mutex> lock(mutex_);
 
   for (auto& entry : entries_by_name_) {
-    Notify(entry.name().ToStringPiece(), fio::wire::WATCH_EVENT_REMOVED);
+    Notify(entry.name(), fio::wire::WATCH_EVENT_REMOVED);
   }
   entries_by_name_.clear();
   entries_by_id_.clear();

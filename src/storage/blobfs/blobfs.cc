@@ -604,7 +604,7 @@ zx_status_t Blobfs::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, s
 
       auto name = digest.ToString();
       uint64_t ino = ::fuchsia_io::wire::INO_UNKNOWN;
-      if (df.Next(name.ToStringPiece(), VTYPE_TO_DTYPE(V_TYPE_FILE), ino) != ZX_OK) {
+      if (df.Next(name, VTYPE_TO_DTYPE(V_TYPE_FILE), ino) != ZX_OK) {
         break;
       }
       c->index = i + 1;

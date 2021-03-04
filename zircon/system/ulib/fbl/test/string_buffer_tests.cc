@@ -236,7 +236,7 @@ TEST(StringBufferTest, ToStringPiece) {
   fbl::StringBuffer<16u> buf;
   buf.Append("abcdef");
 
-  fbl::StringPiece piece = buf.ToStringPiece();
+  fbl::StringPiece piece = buf;
   EXPECT_EQ(buf.data(), piece.data());
   EXPECT_EQ(buf.length(), piece.length());
 }

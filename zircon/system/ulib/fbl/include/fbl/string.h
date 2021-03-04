@@ -215,7 +215,7 @@ class __OWNER(char) String {
   // Creates a string piece backed by the string.
   // The string piece does not take ownership of the data so the string
   // must outlast the string piece.
-  StringPiece ToStringPiece() const { return StringPiece(data(), length()); }
+  operator StringPiece() const { return {data(), length()}; }
 
   // Create a std::string_view backed by the string.
   // The view does not take ownership of the data so the string
