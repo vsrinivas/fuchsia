@@ -1,4 +1,4 @@
-Written by Wilco Dijkstra, 1996\. The following email exchange establishes the
+(?P<text>Written by Wilco Dijkstra, 1996\. The following email exchange establishes the
 license\.
 
 From: Wilco Dijkstra \<Wilco\.Dijkstra@ntlworld\.com\>
@@ -22,4 +22,4 @@ http://www\.finesse\.demon\.co\.uk/steven/sqrt\.html\.
 Just wonder if there's any copyright information with your Successive
 approximation routines, or if I can freely use it for any purpose\.
 Thanks\.
-Kevin
+Kevin)
