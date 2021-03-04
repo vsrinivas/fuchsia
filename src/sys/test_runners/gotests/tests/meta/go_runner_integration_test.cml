@@ -29,10 +29,5 @@
             from: "parent",
             to: [ "#test_manager" ],
         },
-        {
-            protocol: "fuchsia.sys2.EventSource",
-            from: "parent",
-            to: [ "#test_manager" ],
-        },
     ],
 }

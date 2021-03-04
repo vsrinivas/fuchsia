@@ -38,11 +38,6 @@ fuchsia_component("disk-extractor-unit-test-component") {
 }
 
 fuchsia_test_package("disk-extractor-unit-test") {
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
   test_components = [ ":disk-extractor-unit-test-component" ]
 }
 

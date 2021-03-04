@@ -59,11 +59,6 @@ isolated_devmgr_unittest_v2_component("export-ffs-tests-component") {
 }
 
 fuchsia_test_package("export-ffs-tests") {
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
   test_components = [ ":export-ffs-tests-component" ]
 }
 

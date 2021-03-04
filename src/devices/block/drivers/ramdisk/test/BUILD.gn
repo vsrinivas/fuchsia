@@ -42,11 +42,6 @@ isolated_devmgr_unittest_v2_component("ramdisk-test") {
 }
 
 fuchsia_test_package("ramdisk-tests") {
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
   test_components = [ ":ramdisk-test" ]
 }
 

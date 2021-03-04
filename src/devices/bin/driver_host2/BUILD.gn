@@ -88,12 +88,8 @@ executable("unittests") {
 }
 
 fuchsia_unittest_package("driver-host2-test") {
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
   manifest = "meta/driver_host2_test.cml"
+
   deps = [
     ":test_driver",
     ":test_not_driver",

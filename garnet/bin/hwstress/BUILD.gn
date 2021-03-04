@@ -178,9 +178,6 @@ test_package("hwstress_test_pkg") {
   v2_tests = [
     {
       name = "hwstress_v2_test"
-      log_settings = {
-        max_severity = "ERROR"
-      }
     },
   ]
 }

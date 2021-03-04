@@ -88,11 +88,6 @@ fuchsia_component("service-reflector") {
 }
 
 fuchsia_test_package("pkg-cache-integration-tests") {
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
   test_components = [ ":test-root" ]
   deps = [
     ":pkg-cache-integration-test",

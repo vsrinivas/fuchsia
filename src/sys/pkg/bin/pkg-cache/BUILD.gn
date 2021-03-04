@@ -85,11 +85,6 @@ fuchsia_component("pkg-cache-test") {
 }
 
 fuchsia_test_package("pkg-cache-tests") {
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
   test_components = [ ":pkg-cache-test" ]
 }
 
