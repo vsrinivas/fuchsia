@@ -29,12 +29,7 @@ class TA_CAP("mutex") SpinLock {
   }
 
   // Returns false when the lock is acquired, and true when the lock is not acquired.
-  bool TryAcquire() TA_TRY_ACQ(false) {
-    bool failed_to_acquire = arch_spin_trylock(&spinlock_);
-    if (!failed_to_acquire) {
-    }
-    return failed_to_acquire;
-  }
+  bool TryAcquire() TA_TRY_ACQ(false) { return arch_spin_trylock(&spinlock_); }
 
   // Interrupts must already be disabled.
   void Release() TA_REL() { arch_spin_unlock(&spinlock_); }
