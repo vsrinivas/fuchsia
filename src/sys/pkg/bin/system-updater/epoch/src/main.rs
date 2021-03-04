@@ -2,8 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod args;
+use {
+    anyhow::{Context, Error},
+    std::fs::read_to_string,
+};
 
-fn main() {
-    let _args: args::Args = argh::from_env();
+mod args;
+mod history;
+
+use {args::Args, history::History};
+
+fn main() -> Result<(), Error> {
+    let args: Args = argh::from_env();
+
+    let _history: History = read_to_string(args.history())
+        .with_context(|| format!("while reading {:?} to string", args.history()))?
+        .parse()
+        .context("while parsing history")?;
+
+    Ok(())
 }

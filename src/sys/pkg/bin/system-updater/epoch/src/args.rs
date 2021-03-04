@@ -18,8 +18,6 @@ pub struct Args {
 }
 
 impl Args {
-    // TODO(zkbaum) use this in a future CL.
-    #[allow(dead_code)]
     pub fn history(&self) -> &Path {
         Path::new(&self.history)
     }
