@@ -39,8 +39,8 @@ func TestAllEncodeSuccessCases(t *testing.T) {
 {{ range .EncodeSuccessCases }}
 	{
 	{{- if .HandleDefs }}
-		handleTypes := {{ .HandleDefs }}
-		handles := createHandles(handleTypes)
+		handleDefs := {{ .HandleDefs }}
+		handles := createHandlesFromHandleDef(handleDefs)
 	{{- end }}
 		encodeSuccessCase{
 			name: {{ .Name }},
@@ -50,6 +50,7 @@ func TestAllEncodeSuccessCases(t *testing.T) {
 	{{- if .HandleDefs }}
 			handleInfos: {{ .Handles }},
 	{{- end }}
+			checkRights: {{ .CheckRights }},
 		}.check(t)
 	}
 {{ end }}
@@ -61,8 +62,8 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 {{ range .DecodeSuccessCases }}
 	{
 	{{- if .HandleDefs }}
-		handleTypes := {{ .HandleDefs }}
-		handles := createHandles(handleTypes)
+		handleDefs := {{ .HandleDefs }}
+		handles := createHandlesFromHandleDef(handleDefs)
 	{{- end }}
 		decodeSuccessCase{
 			name: {{ .Name }},
@@ -83,7 +84,7 @@ func TestAllEncodeFailureCases(t *testing.T) {
 {{ range .EncodeFailureCases }}
 	{
 	{{- if .HandleDefs }}
-		handles := createHandles({{ .HandleDefs }})
+		handles := createHandlesFromHandleDef({{ .HandleDefs }})
 	{{- end }}
 		encodeFailureCase{
 			name: {{ .Name }},
@@ -104,8 +105,8 @@ func TestAllDecodeFailureCases(t *testing.T) {
 {{ range .DecodeFailureCases }}
 	{
 	{{- if .HandleDefs }}
-		handleTypes := {{ .HandleDefs }}
-		handles := createHandles(handleTypes)
+		handleDefs := {{ .HandleDefs }}
+		handles := createHandlesFromHandleDef(handleDefs)
 	{{- end }}
 		decodeFailureCase{
 			name: {{ .Name }},
@@ -132,6 +133,7 @@ type conformanceTmplInput struct {
 
 type encodeSuccessCase struct {
 	Name, Context, Value, Bytes, HandleDefs, Handles string
+	CheckRights                                      bool
 }
 
 type decodeSuccessCase struct {
@@ -198,12 +200,13 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-				Name:       testCaseName(encodeSuccess.Name, encoding.WireFormat),
-				Context:    marshalerContext(encoding.WireFormat),
-				Value:      value,
-				Bytes:      buildBytes(encoding.Bytes),
-				HandleDefs: buildHandleDefs(encodeSuccess.HandleDefs),
-				Handles:    buildHandleInfos(gidlir.GetHandlesFromHandleDispositions(encoding.HandleDispositions)),
+				Name:        testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				Context:     marshalerContext(encoding.WireFormat),
+				Value:       value,
+				Bytes:       buildBytes(encoding.Bytes),
+				HandleDefs:  buildHandleDefs(encodeSuccess.HandleDefs),
+				Handles:     buildHandleDispositions(encoding.HandleDispositions),
+				CheckRights: encodeSuccess.CheckHandleRights,
 			})
 		}
 	}

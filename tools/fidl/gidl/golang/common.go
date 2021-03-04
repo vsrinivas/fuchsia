@@ -55,18 +55,25 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 		return ""
 	}
 	var builder strings.Builder
-	builder.WriteString("[]zx.ObjectType{\n")
+	builder.WriteString("[]handleDef{\n")
 	for i, d := range defs {
+		var subtype string
 		switch d.Subtype {
 		case fidl.Channel:
-			builder.WriteString("zx.ObjectTypeChannel,")
+			subtype = "zx.ObjectTypeChannel"
 		case fidl.Event:
-			builder.WriteString("zx.ObjectTypeEvent,")
+			subtype = "zx.ObjectTypeEvent"
 		default:
 			panic(fmt.Sprintf("unsupported handle subtype: %s", d.Subtype))
 		}
 		// Write indices corresponding to the .gidl file handle_defs block.
-		builder.WriteString(fmt.Sprintf(" // #%d\n", i))
+		builder.WriteString(fmt.Sprintf(`
+	// #%d:
+	{
+		subtype: %s,
+		rights: %d,
+	},
+`, i, subtype, d.Rights))
 	}
 	builder.WriteString("}")
 	return builder.String()
@@ -77,11 +84,28 @@ func buildHandleInfos(handles []gidlir.Handle) string {
 		return "nil"
 	}
 	var builder strings.Builder
-	builder.WriteString("[]zx.HandleInfo{\n")
+	builder.WriteString("[]zx.HandleInfo{")
 	for _, handle := range handles {
-		builder.WriteString(fmt.Sprintf("{Handle: handles[%d], Type: handleTypes[%d]},\n", handle, handle))
+		builder.WriteString(fmt.Sprintf(`
+		{Handle: handles[%d], Type: handleDefs[%d].subtype, Rights: handleDefs[%d].rights},`, handle, handle, handle))
 	}
-	builder.WriteString("}")
+	builder.WriteString("\n}")
+	return builder.String()
+}
+
+func buildHandleDispositions(handleDispositions []gidlir.HandleDisposition) string {
+	if len(handleDispositions) == 0 {
+		return "nil"
+	}
+	var builder strings.Builder
+	// TODO(bprosnitz) Migrate this to handle dispositions.
+	builder.WriteString("[]zx.HandleInfo{")
+	for _, handleDisposition := range handleDispositions {
+		builder.WriteString(fmt.Sprintf(`
+		{Handle: handles[%d], Type: %d, Rights: %d},`,
+			handleDisposition.Handle, handleDisposition.Type, handleDisposition.Rights))
+	}
+	builder.WriteString("\n}")
 	return builder.String()
 }
 
