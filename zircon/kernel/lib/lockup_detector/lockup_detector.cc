@@ -145,6 +145,23 @@ class CriticalSectionLockupChecker {
     const zx_duration_t threshold_duration = ZX_MSEC(gCmdline.GetUInt64(
         kernel_option::kLockupDetectorCriticalSectionThresholdMs, kDefaultThresholdMsec));
     threshold_ticks_.store(DurationToTicks(threshold_duration));
+    worst_case_threshold_ticks_ = DurationToTicks(counter_buckets_[0].exceeding);
+  }
+
+  static void RecordCriticalSectionBucketCounters(zx_ticks_t lockup_ticks) {
+    // Fast abort if the time spent in the critical sections is less than the
+    // minimum bucket threshold.
+    if (lockup_ticks < worst_case_threshold_ticks_) {
+      return;
+    }
+
+    zx_duration_t lockup_duration = TicksToDuration(lockup_ticks);
+    for (auto iter = counter_buckets_.rbegin(); iter != counter_buckets_.rend(); iter++) {
+      if (lockup_duration >= iter->exceeding) {
+        kcounter_add(iter->counter, 1);
+        break;
+      }
+    }
   }
 
   // See comments in HeartbeatLockupChecker.
@@ -157,16 +174,6 @@ class CriticalSectionLockupChecker {
     const zx_duration_t exceeding;
     const Counter& counter;
   };
-
-  static void RecordCriticalSectionCounters(zx_duration_t lockup_duration) {
-    kcounter_add(counter_lockup_cs_count, 1);
-    for (auto iter = counter_buckets_.rbegin(); iter != counter_buckets_.rend(); iter++) {
-      if (lockup_duration >= iter->exceeding) {
-        kcounter_add(iter->counter, 1);
-        break;
-      }
-    }
-  }
 
   static constexpr const ktl::array counter_buckets_{
       CounterBucket{ZX_MSEC(10), counter_lockup_cs_exceeding_10ms},
@@ -181,12 +188,14 @@ class CriticalSectionLockupChecker {
   // This value is expressed in units of ticks rather than nanoseconds because it is faster to read
   // the platform timer's tick count than to get current_time().
   static inline RelaxedAtomic<zx_ticks_t> threshold_ticks_{0};
+  static inline zx_ticks_t worst_case_threshold_ticks_{ktl::numeric_limits<zx_ticks_t>::max()};
 
   bool report_failure_{false};
   struct {
     zx_ticks_t begin_ticks{0};
     zx_ticks_t threshold_ticks{0};
     zx_ticks_t age_ticks{0};
+    zx_ticks_t new_worst_case_ticks{0};
   } observed_;
 };
 
@@ -244,8 +253,24 @@ void CriticalSectionLockupChecker::PerformCheck(LockupDetectorState& state, zx_t
   // Observe all of the info we need to make a decision as to whether or not there
   // has been a condition violation.
   auto& cs_state = state.critical_section;
-  observed_.begin_ticks = cs_state.begin_ticks.load(std::memory_order_relaxed);
+  observed_.begin_ticks = cs_state.begin_ticks.load(ktl::memory_order_relaxed);
   observed_.threshold_ticks = threshold_ticks_.load();
+  zx_ticks_t worst_case_ticks = cs_state.worst_case_ticks.load(ktl::memory_order_acquire);
+
+  // If:
+  // 1) The worst case is bad enough to make it into any of our counter buckets, and
+  // 2) The worst case is worse than the previously reported worst case, and
+  // 3) The rate limiter will allow us to create a new report
+  //
+  // Then stash the newly observed worst case in the observed state to be
+  // reported later, and also update the worst reported value to prevent
+  // multiple reports for the same value.
+  if ((worst_case_ticks > worst_case_threshold_ticks_) &&
+      (worst_case_ticks > cs_state.reported_worst_case_ticks) &&
+      cs_state.worst_case_alert_limiter.Ready()) {
+    observed_.new_worst_case_ticks = worst_case_ticks;
+    cs_state.reported_worst_case_ticks = worst_case_ticks;
+  }
 
   // If the threshold ticks value is non-positive, then checking is currently
   // disabled and we can get out now.  Likewise, if the CPU's begin_ticks value
@@ -269,8 +294,9 @@ void CriticalSectionLockupChecker::PerformCheck(LockupDetectorState& state, zx_t
     return;
   }
 
-  // Threshold exceeded.  Record this in the kcounters, and then decide whether
-  // or not to print out an oops based on our rate limiter.
+  // Threshold exceeded.  Record this in the kcounters if this is the first time
+  // we have seen this event, and then decide whether or not to print out an
+  // oops based on our rate limiter.
   //
   // TODO(johngro): Consider cleaning this up.  We are going to clearly be
   // double reporting some of these faults as things stand.  Not only will each
@@ -284,15 +310,26 @@ void CriticalSectionLockupChecker::PerformCheck(LockupDetectorState& state, zx_t
   // for a single instance of the hang.  I can come back here and clean this up
   // once I have a better idea of what this counter should be tracking,
   // however.
-  const zx_duration_t duration = TicksToDuration(observed_.age_ticks);
-  RecordCriticalSectionCounters(duration);
+  if (cs_state.last_counted_begin_ticks != observed_.begin_ticks) {
+    kcounter_add(counter_lockup_cs_count, 1);
+    cs_state.last_counted_begin_ticks = observed_.begin_ticks;
+  }
 
   // Report this issue once we drop the role of checker, if the rate limiter
   // will allow it.
-  report_failure_ = cs_state.alert_limiter.Ready();
+  report_failure_ = cs_state.ongoing_call_alert_limiter.Ready();
 }
 
 void CriticalSectionLockupChecker::ReportFailures(cpu_num_t cpu) {
+  // Did we observe a new worst case?  If so, report it and update the counters.
+  if (observed_.new_worst_case_ticks > 0) {
+    const zx_duration_t duration = TicksToDuration(observed_.new_worst_case_ticks);
+    KERNEL_OOPS(
+        "lockup_detector: CPU-%u encountered a new worst case critical section section time of "
+        "%" PRId64 " usec. Reported by [CPU-%u] (message rate limited)\n",
+        cpu, duration / ZX_USEC(1), arch_curr_cpu_num());
+  }
+
   if (report_failure_) {
     KERNEL_OOPS("lockup_detector: CPU-%u in critical section for %" PRId64 " ms, threshold=%" PRId64
                 " ms start=%" PRId64 " now=%" PRId64
@@ -516,7 +553,19 @@ void lockup_end() {
     return;
   }
 
-  // Clear it.
+  // Is this a new worst for us?
+  const zx_ticks_t now_ticks = current_ticks();
+  const zx_ticks_t begin = cs_state.begin_ticks.load(ktl::memory_order_relaxed);
+  zx_ticks_t delta = zx_time_sub_time(now_ticks, begin);
+  if (delta > cs_state.worst_case_ticks.load(ktl::memory_order_relaxed)) {
+    cs_state.worst_case_ticks.store(delta, ktl::memory_order_release);
+  }
+
+  // Update our counters.
+  CriticalSectionLockupChecker::RecordCriticalSectionBucketCounters(delta);
+
+  // We are done with the CS now.  Clear the begin time to indicate that we are
+  // not in any critical section.
   cs_state.begin_ticks.store(0, ktl::memory_order_relaxed);
 }
 
@@ -540,11 +589,15 @@ void lockup_status() {
       const auto& cs_state = percpu::Get(i).lockup_detector_state.critical_section;
       const zx_ticks_t begin_ticks = cs_state.begin_ticks.load(ktl::memory_order_relaxed);
       const zx_ticks_t now = current_ticks();
+      const int64_t worst_case_usec =
+          TicksToDuration(cs_state.worst_case_ticks.load(ktl::memory_order_acquire)) / ZX_USEC(1);
       if (begin_ticks == 0) {
-        printf("CPU-%u not in critical section\n", i);
+        printf("CPU-%u not in critical section (worst case %" PRId64 " uSec)\n", i,
+               worst_case_usec);
       } else {
         zx_duration_t duration = TicksToDuration(now - begin_ticks);
-        printf("CPU-%u in critical section for %" PRId64 " ms\n", i, duration / ZX_MSEC(1));
+        printf("CPU-%u in critical section for %" PRId64 " ms (worst case %" PRId64 " uSec)\n", i,
+               duration / ZX_MSEC(1), worst_case_usec);
       }
     }
   }
