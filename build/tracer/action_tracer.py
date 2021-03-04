@@ -721,10 +721,6 @@ def main():
     # Scripts with known issues
     # TODO(shayba): file bugs for the suppressions below
     ignored_scripts = {
-        # TODO(shayba): it's not the wrapper script that's the problem but some
-        # of its usages. Refine the suppression or just fix the underlying
-        # issues.
-        "gn_script_wrapper.py",
         # When using `/bin/ln -f`, a temporary file may be created in the
         # target directory. This will register as a write to a non-output file.
         # TODO(shayba): address this somehow.
