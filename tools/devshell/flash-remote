@@ -94,11 +94,21 @@ fi
 
 save_remote_info "$host" "$dir"
 
+# Fetch remote flashing artifacts
 artifact_dir="${FUCHSIA_DIR}/out/fetched"
+flash_manifest=$(find_remote_build_artifact "${host}" "${dir}" flash-manifest images)
+
+if [[ -z "${flash_manifest}" ]]; then
+    fx-error "failed to find flash manifest on $host."
+    exit 1
+fi
+
 fetch_remote_build_artifacts "${host}" "${dir}" "${artifact_dir}" flash $build
+fetch_remote_artifacts "${host}" "${dir}" "${artifact_dir}" "${flash_manifest}"
 
 if "${flash}"; then
   fetch_or_build_tool ${host} ${dir} "${artifact_dir}" fastboot
   cd "${artifact_dir}"
-  fx-flash "${serial}" "${device}"
+  manifest_path="${artifact_dir}/${flash_manifest}"
+  fx-flash "${serial}" "${device}" "${manifest_path}"
 fi

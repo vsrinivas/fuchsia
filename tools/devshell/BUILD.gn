@@ -152,6 +152,7 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/emu-remote",
         "//tools/devshell/fdt",
         "//tools/devshell/flash",
+        "//tools/devshell/flash-remote",
         "//tools/devshell/get-build-dir",
         "//tools/devshell/get-device-addr",
         "//tools/devshell/helpdoc",

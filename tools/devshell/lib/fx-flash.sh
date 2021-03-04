@@ -11,6 +11,7 @@ function fx-flash {
   local enable_ipv4="${FX_ENABLE_IPV4:-false}"
   local serial="$1"
   local device="$2"
+  local flash_manifest="$3"
 
   # Process devices in gigaboot.
   gb_device_ip=
@@ -72,7 +73,6 @@ function fx-flash {
 
       "./flash.sh" "${flash_args[@]}" "${fastboot_args[@]}"
     else
-      flash_manifest="${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts --expect-one --name flash-manifest images)"
       if [[ ! -f "${flash_manifest}" ]]; then
         fx-error "Flash manifest: '${flash_manifest}' not found"
         return 1

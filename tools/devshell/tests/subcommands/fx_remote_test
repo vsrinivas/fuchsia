@@ -7,10 +7,12 @@
 
 BT_FILE_DEPS=(
   "scripts/fx"
+  "tools/devshell/flash-remote"
   "tools/devshell/serve-remote"
   "tools/devshell/pave-remote"
   "tools/devshell/lib/fvm.sh"
   "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-flash.sh"
   "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/fx-remote.sh"
   "tools/devshell/lib/image_build_vars.sh"
@@ -104,6 +106,31 @@ TEST_fx-pave-remote-args-given() {
   BT_EXPECT ${fx} pave-remote --no-pave "$anotherhost" "${testdir}" >>${out} 2>&1
   BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${anotherhost}:${testdir}"
   btf::does-mock-args-contain "${ssh_mock}.mock_state" "$anotherhost"
+}
+
+# test flash-remote if the fetched manifest from fx-remote is properly
+# forwarded to the fx-flash layer
+TEST_fx-flash-remote-manifest() {
+  local testhost=myhostname.my.server.com
+  local testdir=~/myfuchsia/directory
+  local out="${BT_TEMP_DIR}/output.log"
+  local artifact_dir="${BT_TEMP_DIR}/out/fetched"
+  local args_file="${BT_TEMP_DIR}/flash.args"
+
+  {
+    echo "function find_remote_build_artifact { echo flash.json; }"
+    echo "function fetch_remote_build_artifacts { :; }"
+    echo "function fetch_remote_artifacts { :; }"
+    echo "function fetch_or_build_tool { :; }"
+  } >> "${BT_TEMP_DIR}/tools/devshell/lib/fx-remote.sh"
+
+  {
+    echo "function fx-flash { echo "\$3" > ${args_file} ; }"
+  } >> "${BT_TEMP_DIR}/tools/devshell/lib/fx-flash.sh"
+
+  mkdir -p "${artifact_dir}"
+  BT_EXPECT ${fx} flash-remote "$testhost" "${testdir}" >>${out} 2>&1
+  BT_EXPECT_FILE_CONTAINS "$args_file" "${artifact_dir}/flash.json"
 }
 
 BT_RUN_TESTS "$@"

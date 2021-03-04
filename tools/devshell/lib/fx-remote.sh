@@ -33,12 +33,40 @@ function save_remote_info {
   echo "${remote_host}:${remote_dir}" > "${FUCHSIA_DIR}/${_REMOTE_INFO_CACHE_FILE}"
 }
 
+# Return the name of the build output directory on the remote
 function get_remote_build_dir {
   local host=$1
   local remote_checkout=$2
   echo $(ssh "${host}" "cd ${remote_checkout} && .jiri_root/bin/fx get-build-dir")
 }
 
+# Search for a specific build artifact by name
+function find_remote_build_artifact {
+  local host="$1"
+  local remote_checkout="$2"
+  local name="$3"
+  local mode="$4"
+
+  echo $(ssh "${host}" "cd ${remote_checkout} && .jiri_root/bin/fx list-build-artifacts --expect-one --name ${name} ${mode}")
+}
+
+# Fetch a named artifact from the remote build directory
+function fetch_remote_artifacts {
+  local host="$1"
+  local remote_checkout="$2"
+  local local_dir="$3"
+  shift 3
+  local artifacts=("$@")
+
+  local remote_build_dir="$(get_remote_build_dir "${host}" "${remote_checkout}")" || exit $?
+  local joined=$(printf "%s," "${artifacts[@]}")
+  mkdir -p "${local_dir}"
+  # --relative ensures that the artifacts are copied to out/fetched relative to
+  # the '/./' (i.e., the build directory).
+  rsync --compress --partial --progress --relative "${host}:${remote_build_dir}/./{${joined}}" "${local_dir}" || exit $?
+}
+
+# Fetch all build artifacts for a given mode, optionally building them first
 function fetch_remote_build_artifacts {
   local host="$1"
   local remote_checkout="$2"
@@ -52,12 +80,7 @@ function fetch_remote_build_artifacts {
     ssh "${host}" "cd ${remote_checkout} && .jiri_root/bin/fx build ${artifacts[@]}"
   fi
 
-  local remote_build_dir="$(get_remote_build_dir "${host}" "${remote_checkout}")" || exit $?
-  local joined=$(printf "%s," "${artifacts[@]}")
-  mkdir -p "${local_dir}"
-  # --relative ensures that the artifacts are copied to out/fetched relative to
-  # the '/./' (i.e., the build directory).
-  rsync --compress --partial --progress --relative "${host}:${remote_build_dir}/./{${joined}}" "${local_dir}" || exit $?
+  fetch_remote_artifacts "${host}" "${remote_checkout}" "${local_dir}" "${artifacts[@]}"
 }
 
 # Attempts to fetch a remote tool able to run on the host platform, and
@@ -70,8 +93,7 @@ function fetch_or_build_tool {
 
   local tool="$(ssh "${host}" "cd ${remote_checkout} && .jiri_root/bin/fx list-build-artifacts --build --allow-empty --os ${HOST_OS} --cpu ${HOST_CPU}" --name ${tool_name} tools)"
   if [[ -n "${tool}" ]] ; then
-    local remote_build_dir="$(get_remote_build_dir "${host}" "${remote_checkout}")" || exit $?
-    rsync --compress --partial --progress --relative "${host}:${remote_build_dir}/./${tool}" "${local_dir}" >&2 || exit $?
+    fetch_remote_artifacts "${host}" "${remote_checkout}" "${local_dir}" "${tool}"
   else
     tool="$(fx-command-run list-build-artifacts --build --expect-one --name ${tool_name} tools)" || exit $?
     rm -f "${local_dir}/${tool}"
