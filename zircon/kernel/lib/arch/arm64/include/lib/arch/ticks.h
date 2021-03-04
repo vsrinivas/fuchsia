@@ -8,6 +8,8 @@
 #define ZIRCON_KERNEL_LIB_ARCH_ARM64_INCLUDE_LIB_ARCH_TICKS_H_
 
 #ifndef __ASSEMBLER__
+#include <lib/arch/intrin.h>
+
 #include <cstdint>
 
 namespace arch {
@@ -17,6 +19,13 @@ namespace arch {
 // monotonic clock's zx_ticks_t.
 struct EarlyTicks {
   uint64_t cntpct_el0, cntvct_el0;
+
+  [[gnu::always_inline]] static EarlyTicks Get() {
+    return {
+        __arm_rsr64("cntpct_el0"),
+        __arm_rsr64("cntvct_el0"),
+    };
+  }
 };
 
 }  // namespace arch

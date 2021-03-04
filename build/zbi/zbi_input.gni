@@ -115,6 +115,12 @@ template("zbi_input") {
         zbi_input_args += rebase_path(invoker.sources, root_build_dir)
       }
 
+      if (defined(invoker.args)) {
+        # Explicit $args might have set the compression state for its $sources
+        # so be sure to reset to default state.
+        zbi_input_args += [ "--compressed" ]
+      }
+
       # Always include the manifest generated from the deps here.  The
       # presence of the fini_manifest() target will prevent zbi()
       # from collecting entries that are redundant with this manifest.

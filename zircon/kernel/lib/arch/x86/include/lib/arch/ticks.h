@@ -20,7 +20,7 @@ namespace arch {
 struct EarlyTicks {
   uint64_t tsc;
 
-  static EarlyTicks Get() { return {_rdtsc()}; }
+  [[gnu::always_inline]] static EarlyTicks Get() { return {_rdtsc()}; }
 };
 
 }  // namespace arch

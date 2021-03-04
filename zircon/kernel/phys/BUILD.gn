@@ -8,6 +8,7 @@ import("//build/config/zircon/standard.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/unification/global_variables.gni")
 import("//zircon/kernel/arch/$zircon_cpu/phys/phys.gni")
+import("zbi_executable.gni")
 
 if (current_toolchain == default_toolchain) {
   # Default toolchain (current_cpu == "") just defines the phys environment.
@@ -238,5 +239,22 @@ group("tests") {
     "boot-shim:tests",
     "lib:tests",
     "test",
+  ]
+}
+
+zbi_executable("physboot") {
+  sources = [ "physboot.cc" ]
+  deps = [
+    ":allocation",
+    ":boot-zbi",
+    ":main",
+    ":symbolize",
+    ":zbitl-allocation",
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/boot-options",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/libc",
+    "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/zbitl",
   ]
 }

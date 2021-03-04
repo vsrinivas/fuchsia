@@ -341,6 +341,7 @@ template("assemble_system") {
     forward_variables_from(invoker, [ "testonly" ])
 
     type = "ramdisk"
+    args = [ "--compress=$zbi_compression" ]
 
     # Use data_deps and not deps so that the contents of the fvm don't get
     # included in the dependent zbi.

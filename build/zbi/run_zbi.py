@@ -27,10 +27,10 @@ def main():
         args.zbi,
         '--depfile',
         intermediate_depfile,
-    ] + zbi_args
+    ]
     with open(args.rspfile, 'r') as rspfile:
         command.extend([l.strip() for l in rspfile.readlines()])
-    subprocess.check_call(command)
+    subprocess.check_call(command + zbi_args)
 
     # Write the final depfile.
     with open(intermediate_depfile, 'r') as depfile:
