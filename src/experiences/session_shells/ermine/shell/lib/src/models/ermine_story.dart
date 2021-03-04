@@ -203,9 +203,7 @@ class ErmineStory {
     try {
       final viewRefService = viewRefInstalled ?? ViewRefInstalledProxy();
       if (viewRefInstalled == null) {
-        StartupContext.fromStartupInfo()
-            .incoming
-            .connectToService(viewRefService);
+        Incoming.fromSvcPath().connectToService(viewRefService);
       }
       final eventPair = viewRef.reference.duplicate(ZX.RIGHT_SAME_RIGHTS);
       assert(eventPair.isValid);

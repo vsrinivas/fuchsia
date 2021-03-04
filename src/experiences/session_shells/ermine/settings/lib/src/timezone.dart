@@ -9,7 +9,7 @@ import 'package:fidl_fuchsia_intl/fidl_async.dart';
 import 'package:fidl_fuchsia_settings/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:flutter/material.dart';
-import 'package:fuchsia_services/services.dart' show StartupContext;
+import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
 
@@ -31,9 +31,9 @@ class TimeZone extends UiSpec {
     );
   }
 
-  factory TimeZone.fromStartupContext(StartupContext startupContext) {
+  factory TimeZone.withSvcPath() {
     final intlSettingsService = IntlProxy();
-    startupContext.incoming.connectToService(intlSettingsService);
+    Incoming.fromSvcPath().connectToService(intlSettingsService);
 
     final timeZonesLoader = _TimeZonesLoader();
 

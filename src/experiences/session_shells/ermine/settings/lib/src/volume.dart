@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:fidl_fuchsia_media/fidl_async.dart' as vol;
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:internationalization/strings.dart';
-import 'package:fuchsia_services/services.dart' show StartupContext;
+import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:quickui/quickui.dart';
 
 // ignore_for_file: prefer_constructors_over_static_methods
@@ -31,9 +31,9 @@ class Volume extends UiSpec {
     model = _VolumeModel(control: control, onChange: _onChange);
   }
 
-  factory Volume.fromStartupContext(StartupContext context) {
+  factory Volume.withSvcPath() {
     final control = vol.AudioCoreProxy();
-    context.incoming.connectToService(control);
+    Incoming.fromSvcPath().connectToService(control);
     return Volume(control);
   }
 

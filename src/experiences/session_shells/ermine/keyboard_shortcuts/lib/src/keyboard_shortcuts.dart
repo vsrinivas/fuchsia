@@ -11,8 +11,8 @@ import 'package:fidl_fuchsia_input/fidl_async.dart' show Key;
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
     show Registry, RegistryProxy, Shortcut, Trigger, Listener, ListenerBinding;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' show ViewRef;
-import 'package:fuchsia_services/services.dart' show StartupContext;
-import 'package:zircon/zircon.dart' show EventPair, ZX;
+import 'package:fuchsia_services/services.dart' show Incoming;
+import 'package:zircon/zircon.dart' show EventPair, Handle, ZX;
 
 /// Listens for keyboard shortcuts and triggers callbacks when they occur.
 class KeyboardShortcuts extends ui_shortcut.Listener {
@@ -38,21 +38,20 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
     shortcuts.forEach(registry.registerShortcut);
   }
 
-  factory KeyboardShortcuts.fromStartupContext(
-    StartupContext startupContext, {
+  factory KeyboardShortcuts.withViewRef(
+    Handle viewRef, {
     Map<String, VoidCallback> actions,
     String bindings,
   }) {
     final shortcutRegistry = ui_shortcut.RegistryProxy();
-    startupContext.incoming.connectToService(shortcutRegistry);
-    ViewRef viewRef = ViewRef(
-        reference:
-            EventPair(startupContext.viewRef).duplicate(ZX.RIGHT_SAME_RIGHTS));
+    Incoming.fromSvcPath().connectToService(shortcutRegistry);
+    ViewRef _viewRef =
+        ViewRef(reference: EventPair(viewRef).duplicate(ZX.RIGHT_SAME_RIGHTS));
     return KeyboardShortcuts(
       registry: shortcutRegistry,
       actions: actions,
       bindings: bindings,
-      viewRef: viewRef,
+      viewRef: _viewRef,
     );
   }
 

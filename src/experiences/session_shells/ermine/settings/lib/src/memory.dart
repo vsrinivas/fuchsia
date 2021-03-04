@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 
 import 'package:fidl_fuchsia_memory/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
-import 'package:fuchsia_services/services.dart' show StartupContext;
+import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
 
@@ -29,9 +29,9 @@ class Memory extends UiSpec {
     );
   }
 
-  factory Memory.fromStartupContext(StartupContext startupContext) {
+  factory Memory.withSvcPath() {
     final monitor = MonitorProxy();
-    startupContext.incoming.connectToService(monitor);
+    Incoming.fromSvcPath().connectToService(monitor);
     return Memory(monitor: monitor);
   }
 

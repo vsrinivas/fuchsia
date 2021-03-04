@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 
 import 'package:fidl_fuchsia_ui_brightness/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
-import 'package:fuchsia_services/services.dart' show StartupContext;
+import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
 
@@ -41,9 +41,9 @@ class Brightness extends UiSpec {
     _model = _BrightnessModel(control: control, onChange: _onChange);
   }
 
-  factory Brightness.fromStartupContext(StartupContext context) {
+  factory Brightness.withSvcPath() {
     final control = ControlProxy();
-    context.incoming.connectToService(control);
+    Incoming.fromSvcPath().connectToService(control);
     return Brightness(control);
   }
 

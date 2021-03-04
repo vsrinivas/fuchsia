@@ -20,9 +20,9 @@ class PointerEventsStream implements PointerCaptureListenerHack {
     presentation.capturePointerEventsHack(_binding.wrap(this));
   }
 
-  factory PointerEventsStream.fromStartupContext(StartupContext context) {
+  factory PointerEventsStream.withSvcPath() {
     final presentation = PresentationProxy();
-    context.incoming.connectToService(presentation);
+    Incoming.fromSvcPath().connectToService(presentation);
     final pointerEventsStream = PointerEventsStream(presentation);
     presentation.ctrl.close();
     return pointerEventsStream;

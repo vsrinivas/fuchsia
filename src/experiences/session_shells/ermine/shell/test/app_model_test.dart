@@ -12,6 +12,7 @@ import 'package:fidl_fuchsia_ui_focus/fidl_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_inspect/inspect.dart' show Inspect;
+import 'package:fuchsia_services/services.dart';
 import 'package:mockito/mockito.dart';
 
 // ignore_for_file: implementation_imports
@@ -25,6 +26,7 @@ import 'package:ermine/src/models/app_model.dart';
 
 void main() {
   AppModel appModel;
+  ComponentContext componentContext;
   Inspect inspect;
   KeyboardShortcuts keyboardShortcuts;
   PointerEventsStream pointerEventsStream;
@@ -36,6 +38,7 @@ void main() {
   FocusChainListenerBinding focusChainListenerBinding;
 
   setUp(() async {
+    componentContext = MockComponentContext();
     inspect = MockInspect();
     keyboardShortcuts = MockKeyboardShortcuts();
     pointerEventsStream = MockPointerEventsStream();
@@ -50,6 +53,7 @@ void main() {
     when(pointerEventsStream.stream).thenAnswer((_) => controller.stream);
 
     appModel = _TestAppModel(
+      componentContext: componentContext,
       inspect: inspect,
       keyboardShortcuts: keyboardShortcuts,
       pointerEventsStream: pointerEventsStream,
@@ -242,6 +246,7 @@ void main() {
 
 class _TestAppModel extends AppModel {
   _TestAppModel({
+    ComponentContext componentContext,
     Inspect inspect,
     KeyboardShortcuts keyboardShortcuts,
     PointerEventsStream pointerEventsStream,
@@ -251,6 +256,7 @@ class _TestAppModel extends AppModel {
     ClustersModel clustersModel,
     FocusChainListenerBinding focusChainListenerBinding,
   }) : super(
+          componentContext: componentContext,
           inspect: inspect,
           keyboardShortcuts: keyboardShortcuts,
           pointerEventsStream: pointerEventsStream,
@@ -262,7 +268,7 @@ class _TestAppModel extends AppModel {
         );
 
   @override
-  void advertise() {}
+  void advertise(Outgoing outgoing) {}
 }
 
 PointerEvent _moveEvent(double x, double y) =>
@@ -279,6 +285,8 @@ PointerEvent _pointerEvent({PointerEventPhase phase, double x, double y}) =>
       eventTime: 0,
       pointerId: 0,
     );
+
+class MockComponentContext extends Mock implements ComponentContext {}
 
 class MockInspect extends Mock implements Inspect {}
 

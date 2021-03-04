@@ -29,13 +29,12 @@ class SuggestionService {
         _launcher = launcher,
         _onSuggestion = onSuggestion;
 
-  /// Construct from [StartupContext].
-  factory SuggestionService.fromStartupContext({
-    StartupContext startupContext,
+  /// Construct with the a connection to the default /svc path.
+  factory SuggestionService.withSvcPath({
     ValueChanged<Suggestion> onSuggestion,
   }) {
     final launcher = LauncherProxy();
-    startupContext.incoming.connectToService(launcher);
+    Incoming.fromSvcPath().connectToService(launcher);
 
     final Incoming incoming = Incoming();
     final ComponentControllerProxy componentIndexController =

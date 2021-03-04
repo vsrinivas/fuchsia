@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 
 import 'package:fidl_fuchsia_power/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
-import 'package:fuchsia_services/services.dart' show StartupContext;
+import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
 
@@ -29,9 +29,9 @@ class Battery extends UiSpec {
     );
   }
 
-  factory Battery.fromStartupContext(StartupContext startupContext) {
+  factory Battery.withSvcPath() {
     final batteryManager = BatteryManagerProxy();
-    startupContext.incoming.connectToService(batteryManager);
+    Incoming.fromSvcPath().connectToService(batteryManager);
     return Battery(monitor: batteryManager);
   }
 

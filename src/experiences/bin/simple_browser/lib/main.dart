@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_services/services.dart';
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart';
 
 import 'app.dart';
@@ -24,6 +25,7 @@ void main() {
   setupLogger(name: 'Browser');
   final _context = createWebContext();
   TldChecker().prefetchTlds();
+  final componentContext = ComponentContext.createAndServe();
 
   // Bind |tabsBloc| here so that it can be referenced in the TabsBloc
   // constructor arguments.
@@ -55,8 +57,8 @@ void main() {
 
   tabsBloc.request.add(NewTabAction());
 
-  KeyboardShortcuts kShortcuts =
-      BrowserShortcuts(tabsBloc: tabsBloc).activateShortcuts();
+  KeyboardShortcuts kShortcuts = BrowserShortcuts(tabsBloc: tabsBloc)
+      .activateShortcuts(componentContext.viewRef);
 
   final appModel = AppModel.fromStartupContext(
     tabsBloc: tabsBloc,

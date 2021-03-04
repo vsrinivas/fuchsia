@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:fidl_fuchsia_update_channelcontrol/fidl_async.dart';
-import 'package:fuchsia_services/services.dart' show StartupContext;
+import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
 
@@ -21,9 +21,9 @@ class Channel extends UiSpec {
     _model = _ChannelModel(control: control, onChange: _onChange);
   }
 
-  factory Channel.fromStartupContext(StartupContext context) {
+  factory Channel.withSvcPath() {
     final control = ChannelControlProxy();
-    context.incoming.connectToService(control);
+    Incoming.fromSvcPath().connectToService(control);
     return Channel(control);
   }
 

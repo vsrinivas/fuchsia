@@ -14,7 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_inspect/inspect.dart';
-import 'package:fuchsia_services/services.dart' show StartupContext;
+import 'package:fuchsia_services/services.dart';
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
 
@@ -34,6 +34,7 @@ import 'topbar_model.dart';
 /// like Overview, Recents, Ask and Status.
 class AppModel {
   Inspect _inspect;
+  ComponentContext _componentContext;
   KeyboardShortcuts _keyboardShortcuts;
   PointerEventsStream _pointerEventsStream;
   SuggestionService _suggestionService;
@@ -48,7 +49,6 @@ class AppModel {
 
   final String backgroundImageUrl = 'assets/images/fuchsia.png';
   final Color backgroundColor = Colors.grey[850];
-  final _startupContext = StartupContext.fromStartupInfo();
 
   final ValueNotifier<DateTime> currentTime =
       ValueNotifier<DateTime>(DateTime.now());
@@ -67,41 +67,46 @@ class AppModel {
   TopbarModel topbarModel;
   String keyboardShortcutsHelpText = 'Help Me!';
 
-  AppModel(
-      {Inspect inspect,
-      KeyboardShortcuts keyboardShortcuts,
-      PointerEventsStream pointerEventsStream,
-      LocaleSource localeSource,
-      SuggestionService suggestionService,
-      FocusChainListenerBinding focusChainListenerBinding,
-      this.statusModel,
-      this.clustersModel})
-      : _inspect = inspect,
+  AppModel({
+    ComponentContext componentContext,
+    Inspect inspect,
+    KeyboardShortcuts keyboardShortcuts,
+    PointerEventsStream pointerEventsStream,
+    LocaleSource localeSource,
+    SuggestionService suggestionService,
+    FocusChainListenerBinding focusChainListenerBinding,
+    this.statusModel,
+    this.clustersModel,
+  })  : _componentContext = componentContext,
+        _inspect = inspect,
         _keyboardShortcuts = keyboardShortcuts,
         _pointerEventsStream = pointerEventsStream,
         _focusChainListenerBinding = focusChainListenerBinding,
         _suggestionService = suggestionService {
+    // Initialize ComponentContext.
+    _componentContext ??= ComponentContext.create();
+    final outgoing = _componentContext.outgoing;
+
     // Setup child models.
     topbarModel = TopbarModel(appModel: this);
 
-    statusModel ??= StatusModel.fromStartupContext(_startupContext, onLogout);
+    statusModel ??= StatusModel.withSvcPath(onLogout);
 
     clustersModel ??= ClustersModel();
 
     // Setup Inspect.
-    _inspect ??= Inspect()..serve(_startupContext.outgoing);
+    _inspect ??= Inspect()..serve(outgoing);
 
     // Setup keyboard shortcuts.
-    _keyboardShortcuts ??= KeyboardShortcuts.fromStartupContext(
-      _startupContext,
+    _keyboardShortcuts ??= KeyboardShortcuts.withViewRef(
+      _componentContext.viewRef,
       actions: actions,
       bindings: keyboardBindings,
     );
     keyboardShortcutsHelpText = _keyboardShortcuts.helpText();
 
     // Setup pointer events listener.
-    _pointerEventsStream ??=
-        PointerEventsStream.fromStartupContext(_startupContext);
+    _pointerEventsStream ??= PointerEventsStream.withSvcPath();
     _splitter = StreamSplitter(_pointerEventsStream.stream)
       ..split()
           .where((event) => event.phase == input.PointerEventPhase.move)
@@ -110,21 +115,20 @@ class AppModel {
 
     // Setup locale stream.
     if (localeSource == null) {
-      _startupContext.incoming.connectToService(_intl);
+      Incoming.fromSvcPath().connectToService(_intl);
       localeSource = LocaleSource(_intl);
     }
     _localeStream = localeSource.stream().asBroadcastStream();
 
     // Suggestion service.
-    _suggestionService ??= SuggestionService.fromStartupContext(
-      startupContext: _startupContext,
+    _suggestionService ??= SuggestionService.withSvcPath(
       onSuggestion: clustersModel.storySuggested,
     );
 
     // Focus chain registry.
     if (_focusChainListenerBinding == null) {
       final focusChainRegistry = FocusChainListenerRegistryProxy();
-      _startupContext.incoming.connectToService(focusChainRegistry);
+      Incoming.fromSvcPath().connectToService(focusChainRegistry);
 
       final listener = FocusChangeListener(onFocusChange);
       _focusChainListenerBinding = FocusChainListenerBinding();
@@ -134,18 +138,19 @@ class AppModel {
     }
 
     // Expose PresenterService to the environment.
-    advertise();
+    advertise(outgoing);
   }
 
   @visibleForTesting
-  void advertise() {
+  void advertise(Outgoing outgoing) {
     // Expose the presenter service to the environment.
     _presenterService = PresenterService(
       onPresent: clustersModel.presentStory,
       onDismiss: clustersModel.dismissStory,
     );
-    _startupContext.outgoing
-        .addPublicService(_presenterService.bind, PresenterService.serviceName);
+    outgoing
+      ..addPublicService(_presenterService.bind, PresenterService.serviceName)
+      ..serveFromStartupInfo();
   }
 
   SuggestionService get suggestions => _suggestionService;

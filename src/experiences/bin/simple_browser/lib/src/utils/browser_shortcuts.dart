@@ -10,7 +10,7 @@ import 'package:fuchsia_services/services.dart';
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart';
 import 'package:simple_browser/src/blocs/tabs_bloc.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' show ViewRef;
-import 'package:zircon/zircon.dart' show EventPair, ZX;
+import 'package:zircon/zircon.dart' show EventPair, Handle, ZX;
 import '../models/tabs_action.dart';
 import '../models/webpage_action.dart';
 
@@ -57,17 +57,16 @@ class BrowserShortcuts {
     actions ??= defaultActions();
   }
 
-  KeyboardShortcuts activateShortcuts() {
+  KeyboardShortcuts activateShortcuts(Handle viewRef) {
     File file = File(path);
-    ViewRef viewRef = ViewRef(
-        reference: EventPair(StartupContext.fromStartupInfo().viewRef)
-            .duplicate(ZX.RIGHT_SAME_RIGHTS));
+    ViewRef ref =
+        ViewRef(reference: EventPair(viewRef).duplicate(ZX.RIGHT_SAME_RIGHTS));
     file.readAsString().then((bindings) {
       return KeyboardShortcuts(
         registry: registryProxy,
         actions: actions,
         bindings: bindings,
-        viewRef: viewRef,
+        viewRef: ref,
       );
     }).catchError((err) {
       log.shout('$err: Failed to activate keyboard shortcuts.');

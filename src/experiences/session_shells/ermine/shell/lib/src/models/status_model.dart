@@ -41,22 +41,21 @@ class StatusModel implements Inspectable {
     this.channel,
   });
 
-  factory StatusModel.fromStartupContext(
-      StartupContext startupContext, VoidCallback logout) {
+  factory StatusModel.withSvcPath(VoidCallback logout) {
     final deviceManager = AdministratorProxy();
-    startupContext.incoming.connectToService(deviceManager);
+    Incoming.fromSvcPath().connectToService(deviceManager);
 
     return StatusModel(
       datetime: UiStream(Datetime()),
-      timezone: UiStream(TimeZone.fromStartupContext(startupContext)),
-      brightness: UiStream(Brightness.fromStartupContext(startupContext)),
-      memory: UiStream(Memory.fromStartupContext(startupContext)),
-      battery: UiStream(Battery.fromStartupContext(startupContext)),
-      volume: UiStream(Volume.fromStartupContext(startupContext)),
-      bluetooth: UiStream(Bluetooth.fromStartupContext(startupContext)),
+      timezone: UiStream(TimeZone.withSvcPath()),
+      brightness: UiStream(Brightness.withSvcPath()),
+      memory: UiStream(Memory.withSvcPath()),
+      battery: UiStream(Battery.withSvcPath()),
+      volume: UiStream(Volume.withSvcPath()),
+      bluetooth: UiStream(Bluetooth.withSvcPath()),
       deviceManager: deviceManager,
       logout: logout,
-      channel: UiStream(Channel.fromStartupContext(startupContext)),
+      channel: UiStream(Channel.withSvcPath()),
     );
   }
 
