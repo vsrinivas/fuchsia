@@ -41,20 +41,25 @@ rustc_library("lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics-rustc",
     "//src/diagnostics/archivist:lib",
     "//src/diagnostics/control:controller-rustc",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/inspect/derive",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tracing",
   ]
 
@@ -62,6 +67,7 @@ rustc_library("lib") {
 
   sources = [
     "src/lib.rs",
+    "src/metric_logger.rs",
     "src/stats.rs",
   ]
 }

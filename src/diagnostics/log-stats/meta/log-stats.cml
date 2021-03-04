@@ -20,6 +20,14 @@
         {
             protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
         },
+        {
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
     ],
     expose: [
         {

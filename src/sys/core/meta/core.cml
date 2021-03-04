@@ -282,6 +282,11 @@
             ],
         },
         {
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
+            from: "#appmgr",
+            to: [ "#log-stats" ],
+        },
+        {
             protocol: [ "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister" ],
             from: "parent",
             to: [ "#sampler" ],
@@ -461,6 +466,12 @@
             from: "parent",
             to: [ "#detect" ],
             subdir: "triage-detect",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#log-stats" ],
+            subdir: "log-stats",
         },
         {
             protocol: [

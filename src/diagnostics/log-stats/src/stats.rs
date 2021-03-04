@@ -150,10 +150,14 @@ impl GranularLogStats {
     }
 }
 
+/// The combination of |file_path| and |line_no| which uniquely identifies the location in the code
+/// where the log was generated.
 #[derive(Hash, PartialEq, Eq, Clone)]
-struct LogIdentifier {
-    file_path: String,
-    line_no: u64,
+pub struct LogIdentifier {
+    /// Path to the file that generated the log.
+    pub file_path: String,
+    /// Line number into the file where the log was generated.
+    pub line_no: u64,
 }
 
 impl TryFrom<&LogsData> for LogIdentifier {

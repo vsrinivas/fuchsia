@@ -13,14 +13,25 @@ use fuchsia_inspect::{
     health::Reporter,
 };
 use fuchsia_inspect_derive::WithInspect;
+use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use futures::{future::join, prelude::*};
+use std::convert::TryFrom;
+use std::fs::File;
+use std::io::BufReader;
 use tracing::*;
+
+mod stats;
+use stats::{LogIdentifier, LogManagerStats, LogSource};
+
+mod metric_logger;
+use metric_logger::MetricLogger;
 
 /// The name of the subcommand and the logs-tag.
 pub const PROGRAM_NAME: &str = "log-stats";
 
-mod stats;
-use stats::{LogManagerStats, LogSource};
+/// Path to the json file that contains the MetricSpecs for granular error stats metric.
+pub const GRANULAR_STATS_METRIC_SPECS_FILE_PATH: &str =
+    "/config/data/granular_stats_metric_specs.json";
 
 /// Empty command line args, just to give Launcher the subcommand name "log-stats"
 #[derive(FromArgs, Debug, PartialEq)]
@@ -31,6 +42,40 @@ pub async fn main() -> Result<(), anyhow::Error> {
     let mut service_fs = ServiceFs::new_local();
     service_fs.take_and_serve_directory_handle()?;
 
+    // Try to read and parse the MetricSpecs file and create a MetricLogger. If this fails, we
+    // continue but metrics are not logged.
+    let metric_logger = match File::open(GRANULAR_STATS_METRIC_SPECS_FILE_PATH) {
+        Ok(file) => {
+            let reader = BufReader::new(file);
+            match serde_json::from_reader(reader) {
+                Ok(specs) => match MetricLogger::new(specs).await {
+                    Ok(metric_logger) => Some(metric_logger),
+                    Err(err) => {
+                        fx_log_err!(
+                            "Cannot log metrics because MetricLogger instantiation failed: {}",
+                            err
+                        );
+                        None
+                    }
+                },
+                Err(err) => {
+                    fx_log_err!(
+                        "Cannot log metrics because the MetricSpecs file could not be parsed: {}",
+                        err
+                    );
+                    None
+                }
+            }
+        }
+        Err(err) => {
+            fx_log_warn!(
+                "Cannot log metrics because the MetricSpecs file could not be opened: {}",
+                err
+            );
+            None
+        }
+    };
+
     inspector().serve(&mut service_fs)?;
     health().set_starting_up();
     let stats = LogManagerStats::default().with_inspect(inspector().root(), "log_stats")?;
@@ -39,12 +84,16 @@ pub async fn main() -> Result<(), anyhow::Error> {
 
     health().set_ok();
     info!("Maintaining.");
-    join(maintain(stats, accessor), service_fs.collect::<()>()).await;
+    join(maintain(stats, accessor, metric_logger), service_fs.collect::<()>()).await;
     info!("Exiting.");
     Ok(())
 }
 
-async fn maintain(mut stats: LogManagerStats, archive: ArchiveAccessorProxy) {
+async fn maintain(
+    mut stats: LogManagerStats,
+    archive: ArchiveAccessorProxy,
+    metric_logger_opt: Option<MetricLogger>,
+) {
     let reader = ArchiveReader::new().with_archive(archive);
 
     let (mut logs, mut errors) = reader.snapshot_then_subscribe::<Logs>().unwrap().split_streams();
@@ -62,6 +111,15 @@ async fn maintain(mut stats: LogManagerStats, archive: ArchiveAccessorProxy) {
         };
         stats.record_log(&log, source);
         stats.get_component_log_stats(&log.metadata.component_url).await.record_log(&log);
+        if let Some(ref metric_logger) = metric_logger_opt {
+            if let Ok(log_identifier) = LogIdentifier::try_from(&log) {
+                let res =
+                    metric_logger.log(&log_identifier.file_path, log_identifier.line_no).await;
+                if let Err(err) = res {
+                    fx_log_err!("Metric logger failed: {}", err);
+                }
+            }
+        }
     }
 }
 

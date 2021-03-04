@@ -20,16 +20,20 @@ async fn log_attribution() {
         panic!("log stats should not exit during test!");
     });
 
+    // We expect two logs from log-stats itself:
+    // - INFO: Maintaining.
+    // - WARNING: Cannot log metrics because ... (Cobalt metric specs are not provided)
     let assertion = tree_assertion!(root: contains {
-        // we expect one log from log-stats itself
         info_logs: 1u64,
-        logsink_logs: 1u64,
-        total_logs: 1u64,
+        warning_logs: 1u64,
+        logsink_logs: 2u64,
+        total_logs: 2u64,
 
         by_component: {
             "fuchsia-pkg://fuchsia.com/log-stats-tests#meta/log-stats.cmx": contains {
                 info_logs: 1u64,
-                total_logs: 1u64,
+                warning_logs: 1u64,
+                total_logs: 2u64,
             }
         },
     });
