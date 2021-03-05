@@ -549,6 +549,8 @@ impl Associated {
                 last_snr: self.last_snr,
                 bssid: self.bss.bssid,
                 ssid: self.bss.ssid().to_vec(),
+                protection: self.bss.protection(),
+                wsc: self.bss.probe_resp_wsc(),
                 channel: Channel::from_fidl(self.bss.chan),
                 disconnect_source,
                 time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
@@ -618,6 +620,8 @@ impl Associated {
                     last_snr: self.last_snr,
                     bssid: self.bss.bssid,
                     ssid: self.bss.ssid().to_vec(),
+                    protection: self.bss.protection(),
+                    wsc: self.bss.probe_resp_wsc(),
                     channel: Channel::from_fidl(self.bss.chan),
                     disconnect_source,
                     time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
@@ -1009,6 +1013,8 @@ impl ClientState {
                     last_snr: state.last_snr,
                     bssid: state.bss.bssid,
                     ssid: state.bss.ssid().to_vec(),
+                    protection: state.bss.protection(),
+                    wsc: state.bss.probe_resp_wsc(),
                     channel: Channel::from_fidl(state.bss.chan),
                     disconnect_source,
                     time_since_channel_switch: state.last_channel_switch_time.map(|t| now() - t),
@@ -1361,8 +1367,19 @@ mod tests {
     use link_state::{EstablishingRsna, LinkUp};
     use std::sync::Arc;
     use wlan_common::{
-        assert_variant, fake_bss, hasher::WlanHasher, ie::rsn::rsne::Rsne,
-        test_utils::fake_stas::IesOverrides, RadioConfig,
+        assert_variant,
+        bss::Protection as BssProtection,
+        fake_bss,
+        hasher::WlanHasher,
+        ie::{
+            fake_ies::{
+                fake_probe_resp_wsc_ie, fake_probe_resp_wsc_ie_bytes,
+                get_vendor_ie_bytes_for_wsc_ie,
+            },
+            rsn::rsne::Rsne,
+        },
+        test_utils::fake_stas::IesOverrides,
+        RadioConfig,
     };
     use wlan_rsn::{key::exchange::Key, rsna::SecAssocStatus};
     use wlan_rsn::{
@@ -2242,6 +2259,8 @@ mod tests {
             assert_eq!(info.last_rssi, 60);
             assert_eq!(info.last_snr, 30);
             assert_eq!(info.ssid, b"bar");
+            assert_eq!(info.wsc, None);
+            assert_eq!(info.protection, BssProtection::Open);
             assert_eq!(info.bssid, [8; 6]);
             assert_variant!(info.disconnect_source, DisconnectSource::Mlme(DisconnectCause {
                 mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
@@ -2268,6 +2287,8 @@ mod tests {
             assert_eq!(info.last_rssi, 60);
             assert_eq!(info.last_snr, 30);
             assert_eq!(info.ssid, b"bar");
+            assert_eq!(info.wsc, None);
+            assert_eq!(info.protection, BssProtection::Open);
             assert_eq!(info.bssid, [8; 6]);
             assert_variant!(info.disconnect_source, DisconnectSource::Mlme(DisconnectCause {
                 mlme_event_name: DisconnectMlmeEventName::DisassociateIndication,
@@ -2287,6 +2308,31 @@ mod tests {
             assert_eq!(info.last_rssi, 60);
             assert_eq!(info.last_snr, 30);
             assert_eq!(info.ssid, b"bar");
+            assert_eq!(info.wsc, None);
+            assert_eq!(info.protection, BssProtection::Open);
+            assert_eq!(info.bssid, [8; 6]);
+            assert_eq!(info.disconnect_source, DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
+        });
+    }
+
+    #[test]
+    fn disconnect_reported_on_manual_disconnect_with_wsc() {
+        let mut h = TestHelper::new();
+        let bss = fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6], ies_overrides: IesOverrides::new().set_raw(
+            get_vendor_ie_bytes_for_wsc_ie(&fake_probe_resp_wsc_ie_bytes()).expect("getting vendor ie bytes")
+        ));
+        println!("{:02x?}", bss);
+
+        let state = link_up_state(Box::new(bss));
+
+        let _state =
+            state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
+            assert_eq!(info.last_rssi, 60);
+            assert_eq!(info.last_snr, 30);
+            assert_eq!(info.ssid, b"bar");
+            assert_eq!(info.wsc, Some(fake_probe_resp_wsc_ie()));
+            assert_eq!(info.protection, BssProtection::Open);
             assert_eq!(info.bssid, [8; 6]);
             assert_eq!(info.disconnect_source, DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
         });

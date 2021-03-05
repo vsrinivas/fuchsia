@@ -37,6 +37,9 @@ pub enum IeType {
         extension: Option<u8>,
     },
     Vendor {
+        // TODO(fxbug.dev/71573): The Vendor Specific element defined by IEEE 802.11-2016 9.4.2.26
+        // does not have a header length of 6. Instead, the OUI is noted to be either 3 or 5
+        // bytes and the vendor determines the remainder of the contents.
         vendor_ie_hdr: [u8; 6], // OUI, OUI type, version
     },
 }

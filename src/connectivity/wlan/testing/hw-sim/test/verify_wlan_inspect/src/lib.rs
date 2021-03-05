@@ -241,6 +241,13 @@ async fn verify_wlan_inspect() {
                     bssid_hash: AnyProperty,
                     ssid: "open",
                     ssid_hash: AnyProperty,
+                    wsc: {
+                        device_name: "ASUS Router",
+                        manufacturer: "ASUSTek Computer Inc.",
+                        model_name: "RT-AC58U",
+                        model_number: "123",
+                    },
+                    protection: "Open",
                     channel: {
                         primary: 1u64,
                         cbw: "Cbw20",
