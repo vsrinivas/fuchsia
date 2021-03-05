@@ -13,13 +13,14 @@ use {
         App, AppAssistant, Point, Rect, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
-    euclid::default::Point2D,
+    euclid::{default::Point2D, size2},
     fuchsia_trace_provider,
     fuchsia_zircon::Event,
     std::{collections::BTreeMap, path::PathBuf},
 };
 
 const BACKGROUND_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
+const SPACING_FRACTION: f32 = 0.8;
 
 /// Svg.
 #[derive(Debug, FromArgs)]
@@ -88,8 +89,12 @@ impl ViewAssistant for SvgViewAssistant {
             let location = Rect::from_size(context.size).center();
             self.position = location;
             let mut builder = SceneBuilder::new(BACKGROUND_COLOR);
-            let shed_facet =
-                ShedFacet::new(PathBuf::from("/pkg/data/static/fuchsia.shed"), location);
+            let edge_size = context.size.width.min(context.size.height) * SPACING_FRACTION;
+            let shed_facet = ShedFacet::new(
+                PathBuf::from("/pkg/data/static/fuchsia.shed"),
+                location,
+                size2(edge_size, edge_size),
+            );
             let shed_facet_id = builder.facet(Box::new(shed_facet));
             let scene = builder.build();
             SceneDetails { scene, facet_id: shed_facet_id }
@@ -103,7 +108,7 @@ impl ViewAssistant for SvgViewAssistant {
 
     fn handle_pointer_event(
         &mut self,
-        _context: &mut ViewAssistantContext,
+        context: &mut ViewAssistantContext,
         _event: &input::Event,
         pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {
@@ -131,6 +136,7 @@ impl ViewAssistant for SvgViewAssistant {
             }
             _ => (),
         }
+        context.request_render();
         Ok(())
     }
 }

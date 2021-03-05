@@ -309,33 +309,49 @@ impl Facet for RasterFacet {
 pub struct ShedFacet {
     path: PathBuf,
     location: Point,
+    size: Size,
     rasters: Option<Vec<(Raster, Style)>>,
 }
 
 impl ShedFacet {
-    pub fn new(path: PathBuf, location: Point) -> Self {
-        Self { path, location, rasters: None }
+    pub fn new(path: PathBuf, location: Point, size: Size) -> Self {
+        Self { path, location, size, rasters: None }
     }
 }
 
 impl Facet for ShedFacet {
     fn update_layers(
         &mut self,
-        size: Size,
+        _size: Size,
         layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
     ) -> Result<(), Error> {
         let rasters = self.rasters.take().unwrap_or_else(|| {
-            let shed = Shed::open(&self.path).unwrap();
-            let shed_size = shed.size();
-            let min_side = shed_size.width.min(shed_size.height);
-            let min_view_side = size.width.min(size.height);
-            let scale_factor = min_view_side / min_side * 0.75;
-            let transform =
-                Transform2D::translation(-shed_size.width / 2.0, -shed_size.height / 2.0)
-                    .then_scale(scale_factor, scale_factor);
+            if let Some(shed) = Shed::open(&self.path).ok() {
+                let shed_size = shed.size();
+                let scale_factor: Size =
+                    size2(self.size.width / shed_size.width, self.size.height / shed_size.height);
+                let transform =
+                    Transform2D::translation(-shed_size.width / 2.0, -shed_size.height / 2.0)
+                        .then_scale(scale_factor.width, scale_factor.height);
 
-            shed.rasters(render_context, Some(&transform))
+                shed.rasters(render_context, Some(&transform))
+            } else {
+                let placeholder_rect =
+                    Rect::from_size(self.size).translate(self.size.to_vector() / -2.0);
+                let rect_path = path_for_rectangle(&placeholder_rect, render_context);
+                let mut raster_builder = render_context.raster_builder().expect("raster_builder");
+                raster_builder.add(&rect_path, None);
+                let raster = raster_builder.build();
+                vec![(
+                    raster,
+                    Style {
+                        fill_rule: FillRule::NonZero,
+                        fill: Fill::Solid(Color::red()),
+                        blend_mode: BlendMode::Over,
+                    },
+                )]
+            }
         });
         let location = self.location;
         layer_group.replace_all(rasters.iter().map(|(raster, style)| Layer {

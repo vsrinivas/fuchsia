@@ -6,30 +6,27 @@ use anyhow::Error;
 use argh::FromArgs;
 use carnelian::{
     color::Color,
-    drawing::{load_font, path_for_circle, DisplayRotation, FontFace, GlyphMap, Text},
-    geometry::IntVector,
-    input, make_message,
-    render::{
-        BlendMode, Composition, Context as RenderContext, CopyRegion, Fill, FillRule, Image, Layer,
-        PostCopy, PreClear, Raster, RenderExt, Style,
+    drawing::{load_font, path_for_circle, DisplayRotation, FontFace},
+    facet::{
+        RasterFacet, Scene, SceneBuilder, ShedFacet, TextFacetOptions, TextHorizontalAlignment,
+        TextVerticalAlignment,
     },
+    input, make_message,
+    render::{BlendMode, Context as RenderContext, Fill, FillRule, Raster, Style},
     App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, Coord, LocalBoxFuture,
-    Point, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
-use euclid::{
-    default::{Point2D, Transform2D, Vector2D},
-    point2,
-};
+use euclid::{point2, size2};
 use fidl_fuchsia_input_report::ConsumerControlButton;
 use fidl_fuchsia_recovery::FactoryResetMarker;
 use fuchsia_async::{self as fasync, Task};
 use fuchsia_component::client::connect_to_service;
-use fuchsia_zircon::{AsHandleRef, Duration, Event, Signals};
+use fuchsia_zircon::{Duration, Event};
 use futures::StreamExt;
-use std::{fs::File, path::PathBuf};
+use std::path::PathBuf;
 
 const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 10;
-const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.png";
+const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.shed";
 const BG_COLOR: Color = Color::white();
 const HEADING_COLOR: Color = Color::new();
 const BODY_COLOR: Color = Color { r: 0x7e, g: 0x86, b: 0x8d, a: 0xff };
@@ -60,15 +57,10 @@ fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, String> {
     }
 }
 
-fn raster_for_circle(
-    center: Point,
-    radius: Coord,
-    transform: Option<&Transform2D<f32>>,
-    render_context: &mut RenderContext,
-) -> Raster {
+fn raster_for_circle(center: Point, radius: Coord, render_context: &mut RenderContext) -> Raster {
     let path = path_for_circle(center, radius, render_context);
     let mut raster_builder = render_context.raster_builder().expect("raster_builder");
-    raster_builder.add(&path, transform);
+    raster_builder.add(&path, None);
     raster_builder.build()
 }
 
@@ -93,11 +85,6 @@ enum RecoveryMessages {
     ResetMessage(FactoryResetState),
     CountdownTick(u8),
     ResetFailed,
-}
-
-struct PngImage {
-    file: String,
-    loaded_info: Option<(Size, Image, Point2D<f32>)>,
 }
 
 const RECOVERY_MODE_HEADLINE: &'static str = "Recovery Mode";
@@ -142,64 +129,99 @@ impl AppAssistant for RecoveryAppAssistant {
     }
 }
 
-fn to_raster_translation_vector(pt: Point) -> IntVector {
-    pt.to_vector().to_i32()
-}
-
-struct SizedText {
-    text: Text,
-    #[allow(unused)]
-    glyphs: GlyphMap,
-}
-
-impl SizedText {
-    pub fn new(
-        context: &mut RenderContext,
-        label: &str,
-        size: f32,
-        wrap: f32,
-        face: &FontFace,
-    ) -> Self {
-        let mut glyphs = GlyphMap::new();
-        let text = Text::new(context, label, size, wrap, face, &mut glyphs);
-        Self { text, glyphs }
-    }
-}
-
 struct RenderResources {
-    heading_label: SizedText,
-    body_label: SizedText,
-    countdown_label: SizedText,
-    countdown_text_size: f32,
+    scene: Scene,
 }
 
 impl RenderResources {
     fn new(
-        context: &mut RenderContext,
-        min_dimension: f32,
+        render_context: &mut RenderContext,
+        target_size: Size,
         heading: &str,
         body: &str,
         countdown_ticks: u8,
         face: &FontFace,
+        is_counting_down: bool,
     ) -> Self {
+        let min_dimension = target_size.width.min(target_size.height);
+        let logo_edge = min_dimension * 0.5;
         let text_size = min_dimension / 10.0;
-        let heading_label = SizedText::new(context, heading, text_size, 1000.0, face);
-        let heading_label_size = heading_label.text.bounding_box.size;
 
         let body_text_size = min_dimension / 18.0;
-        let body_label =
-            SizedText::new(context, body, body_text_size, heading_label_size.width, face);
-
         let countdown_text_size = min_dimension / 4.0;
-        let countdown_label = SizedText::new(
-            context,
-            &format!("{:02}", countdown_ticks),
-            countdown_text_size,
-            1000.0,
-            face,
+
+        let mut builder = SceneBuilder::new(BG_COLOR);
+
+        let logo_size: Size = size2(logo_edge, logo_edge);
+        // Calculate position for centering the logo image
+        let logo_position = {
+            let x = target_size.width / 2.0;
+            let y = target_size.height / 2.0 - logo_size.height;
+            point2(x, y)
+        };
+
+        if is_counting_down {
+            let circle = raster_for_circle(logo_position, logo_edge / 2.0, render_context);
+            let circle_facet = RasterFacet::new(
+                circle,
+                Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(COUNTDOWN_COLOR),
+                    blend_mode: BlendMode::Over,
+                },
+                Point::zero(),
+            );
+
+            builder.text(
+                face.clone(),
+                &format!("{:02}", countdown_ticks),
+                countdown_text_size,
+                logo_position,
+                TextFacetOptions {
+                    horizontal_alignment: TextHorizontalAlignment::Center,
+                    vertical_alignment: TextVerticalAlignment::Center,
+                    color: Color::white(),
+                    ..TextFacetOptions::default()
+                },
+            );
+            let _ = builder.facet(Box::new(circle_facet));
+        } else {
+            let shed_facet =
+                ShedFacet::new(PathBuf::from(LOGO_IMAGE_PATH), logo_position, logo_size);
+            builder.facet(Box::new(shed_facet));
+        }
+
+        let heading_text_location =
+            point2(min_dimension / 2.0, logo_position.y + logo_size.height / 2.0 + text_size);
+        builder.text(
+            face.clone(),
+            &heading,
+            text_size,
+            heading_text_location,
+            TextFacetOptions {
+                horizontal_alignment: TextHorizontalAlignment::Center,
+                color: HEADING_COLOR,
+                ..TextFacetOptions::default()
+            },
         );
 
-        Self { heading_label, body_label, countdown_label, countdown_text_size }
+        let margin = 0.1;
+        let body_x = target_size.width * margin;
+        let wrap_width = target_size.width - 2.0 * body_x;
+        builder.text(
+            face.clone(),
+            &body,
+            body_text_size,
+            point2(body_x, heading_text_location.y + text_size),
+            TextFacetOptions {
+                horizontal_alignment: TextHorizontalAlignment::Left,
+                color: BODY_COLOR,
+                max_width: Some(wrap_width),
+                ..TextFacetOptions::default()
+            },
+        );
+
+        Self { scene: builder.build() }
     }
 }
 
@@ -212,9 +234,7 @@ struct RecoveryViewAssistant {
     view_key: ViewKey,
     countdown_task: Option<Task<()>>,
     countdown_ticks: u8,
-    composition: Composition,
     render_resources: Option<RenderResources>,
-    logo_image: PngImage,
 }
 
 impl RecoveryViewAssistant {
@@ -226,13 +246,10 @@ impl RecoveryViewAssistant {
     ) -> Result<RecoveryViewAssistant, Error> {
         RecoveryViewAssistant::setup(app_context, view_key)?;
 
-        let composition = Composition::new(BG_COLOR);
         let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
-        let logo_image = PngImage { file: LOGO_IMAGE_PATH.to_string(), loaded_info: None };
 
         Ok(RecoveryViewAssistant {
             face,
-            composition,
             heading: heading.to_string(),
             body: body.to_string(),
             reset_state_machine: fdr::FactoryResetStateMachine::new(),
@@ -241,7 +258,6 @@ impl RecoveryViewAssistant {
             countdown_task: None,
             countdown_ticks: FACTORY_RESET_TIMER_IN_SECONDS,
             render_resources: None,
-            logo_image,
         })
     }
 
@@ -315,170 +331,22 @@ impl ViewAssistant for RecoveryViewAssistant {
     ) -> Result<(), Error> {
         // Emulate the size that Carnelian passes when the display is rotated
         let target_size = context.size;
-        let min_dimension = target_size.width.min(target_size.height);
 
         if self.render_resources.is_none() {
             self.render_resources = Some(RenderResources::new(
                 render_context,
-                min_dimension,
+                target_size,
                 &self.heading,
                 &self.body,
                 self.countdown_ticks,
                 &self.face,
+                self.reset_state_machine.is_counting_down(),
             ));
         }
 
-        let render_resources = self.render_resources.as_ref().unwrap();
-
-        let clear_background_ext =
-            RenderExt { pre_clear: Some(PreClear { color: BG_COLOR }), ..Default::default() };
-        let image = render_context.get_current_image(context);
-
-        let (logo_size, png_image, logo_position) =
-            self.logo_image.loaded_info.take().unwrap_or_else(|| {
-                let file = File::open(&self.logo_image.file).expect("failed to load logo png");
-                let decoder = png::Decoder::new(file);
-                let (info, mut reader) = decoder.read_info().unwrap();
-                let image = render_context
-                    .new_image_from_png(&mut reader)
-                    .expect(&format!("failed to decode file {}", &self.logo_image.file));
-                let size = Size::new(info.width as f32, info.height as f32);
-
-                // Calculate position for centering the logo image
-                let logo_position = {
-                    let x = (target_size.width - size.width) / 2.0;
-                    let y = target_size.height / 2.0 - size.height;
-                    point2(x, y)
-                };
-
-                (size, image, logo_position)
-            });
-
-        // Cache loaded png info and position
-        self.logo_image.loaded_info.replace((logo_size, png_image, logo_position));
-
-        let (heading_label_layer, heading_label_offset, heading_label_size) = {
-            let heading_label_size = render_resources.heading_label.text.bounding_box.size;
-            let heading_label_offset = Point::new(
-                (target_size.width / 2.0) - (heading_label_size.width / 2.0),
-                logo_position.y + logo_size.height,
-            );
-
-            (
-                Layer {
-                    raster: render_resources
-                        .heading_label
-                        .text
-                        .raster
-                        .clone()
-                        .translate(to_raster_translation_vector(heading_label_offset)),
-                    style: Style {
-                        fill_rule: FillRule::NonZero,
-                        fill: Fill::Solid(HEADING_COLOR),
-                        blend_mode: BlendMode::Over,
-                    },
-                },
-                heading_label_offset,
-                heading_label_size,
-            )
-        };
-
-        let body_label_layer = {
-            let body_label_size = render_resources.body_label.text.bounding_box.size;
-            let body_label_offset = Point::new(
-                (target_size.width / 2.0) - (body_label_size.width / 2.0),
-                heading_label_offset.y + heading_label_size.height * 1.5,
-            );
-
-            Layer {
-                raster: render_resources
-                    .body_label
-                    .text
-                    .raster
-                    .clone()
-                    .translate(to_raster_translation_vector(body_label_offset)),
-                style: Style {
-                    fill_rule: FillRule::NonZero,
-                    fill: Fill::Solid(BODY_COLOR),
-                    blend_mode: BlendMode::Over,
-                },
-            }
-        };
-
-        if self.reset_state_machine.is_counting_down() {
-            let logo_center = Rect::new(logo_position, logo_size).center();
-            // TODO: Don't recreate this raster every frame
-            let circle_raster = raster_for_circle(
-                logo_center,
-                logo_size.width.min(logo_size.height) / 2.0,
-                None,
-                render_context,
-            );
-            let circle_layer = Layer {
-                raster: circle_raster,
-                style: Style {
-                    fill_rule: FillRule::NonZero,
-                    fill: Fill::Solid(COUNTDOWN_COLOR),
-                    blend_mode: BlendMode::Over,
-                },
-            };
-
-            let countdown_label_layer = {
-                let countdown_label_size = render_resources.countdown_label.text.bounding_box.size;
-                let countdown_label_offset = Point::new(
-                    logo_center.x - countdown_label_size.width / 2.0,
-                    logo_center.y - (render_resources.countdown_text_size / 2.0),
-                );
-
-                Layer {
-                    raster: render_resources
-                        .countdown_label
-                        .text
-                        .raster
-                        .clone()
-                        .translate(to_raster_translation_vector(countdown_label_offset)),
-                    style: Style {
-                        fill_rule: FillRule::NonZero,
-                        fill: Fill::Solid(Color::white()),
-                        blend_mode: BlendMode::Over,
-                    },
-                }
-            };
-
-            self.composition.replace(
-                ..,
-                std::iter::once(body_label_layer)
-                    .chain(std::iter::once(heading_label_layer))
-                    .chain(std::iter::once(countdown_label_layer))
-                    .chain(std::iter::once(circle_layer)),
-            );
-            render_context.render(&self.composition, None, image, &clear_background_ext);
-        } else {
-            // Determine visible rect and copy |png_image| to |image|.
-            let dst_rect = &Rect::new(logo_position, logo_size);
-            let output_rect = Rect::from_size(target_size);
-            let png_ext = RenderExt {
-                post_copy: dst_rect.intersection(&output_rect).map(|visible_rect| PostCopy {
-                    image,
-                    color: BG_COLOR,
-                    exposure_distance: Vector2D::zero(),
-                    copy_region: CopyRegion {
-                        src_offset: (visible_rect.origin - dst_rect.origin).to_point().to_u32(),
-                        dst_offset: visible_rect.origin.to_u32(),
-                        extent: visible_rect.size.to_u32(),
-                    },
-                }),
-                ..Default::default()
-            };
-            self.composition.replace(
-                ..,
-                std::iter::once(body_label_layer).chain(std::iter::once(heading_label_layer)),
-            );
-            render_context.render(&self.composition, None, image, &clear_background_ext);
-            render_context.render(&self.composition, None, png_image, &png_ext);
-        }
-
-        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
+        let render_resources = self.render_resources.as_mut().unwrap();
+        render_resources.scene.render(render_context, ready_event, context)?;
+        context.request_render();
         Ok(())
     }
 
