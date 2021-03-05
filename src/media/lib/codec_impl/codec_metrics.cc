@@ -124,28 +124,34 @@ void CodecMetrics::LogEvent(
 }
 
 void CodecMetrics::FlushPendingEventCounts() {
-  // This method is never called on the nop instance.
-  ZX_DEBUG_ASSERT(loop_);
-  {  // scope lock
-    std::lock_guard<std::mutex> lock(lock_);
-    last_flushed_ = zx::clock::get_monotonic();
-    PendingCounts snapped_pending_event_counts;
-    snapped_pending_event_counts.swap(pending_counts_);
-    auto iter = snapped_pending_event_counts.begin();
-    constexpr uint32_t kMaxBatchSize = 64;
-    std::vector<fuchsia::cobalt::CobaltEvent> batch;
-    while (iter != snapped_pending_event_counts.end()) {
-      auto [key, count] = *iter;
-      iter++;
-      batch.emplace_back(cobalt::CobaltEventBuilder(media_metrics::kStreamProcessorEvents2MetricId)
-                             .with_event_codes({static_cast<uint32_t>(key.implementation()),
-                                                static_cast<uint32_t>(key.event())})
-                             .as_count_event(/*period_duration_micros=*/0, count));
-      ZX_DEBUG_ASSERT(batch.size() <= kMaxBatchSize);
-      if (batch.size() == kMaxBatchSize || iter == snapped_pending_event_counts.end()) {
-        cobalt_logger_->LogCobaltEvents(std::move(batch));
-        ZX_DEBUG_ASSERT(batch.empty());
-      }
+  std::lock_guard<std::mutex> lock(lock_);
+  ZX_DEBUG_ASSERT(!!loop_ == !!cobalt_logger_);
+  if (!cobalt_logger_) {
+    // In testing scenarios, the codec_factory isn't a singleton, and we can end up here if
+    // SetServiceDirectory() hit an error while switching from an old loop_ and cobalt_logger_ to
+    // a new loop_ and cobalt_logger_.
+    //
+    // If later we get a new cobalt_logger_ from a new SetServiceDirectory(), this method will run
+    // again.
+    return;
+  }
+  last_flushed_ = zx::clock::get_monotonic();
+  PendingCounts snapped_pending_event_counts;
+  snapped_pending_event_counts.swap(pending_counts_);
+  auto iter = snapped_pending_event_counts.begin();
+  constexpr uint32_t kMaxBatchSize = 64;
+  std::vector<fuchsia::cobalt::CobaltEvent> batch;
+  while (iter != snapped_pending_event_counts.end()) {
+    auto [key, count] = *iter;
+    iter++;
+    batch.emplace_back(cobalt::CobaltEventBuilder(media_metrics::kStreamProcessorEvents2MetricId)
+                            .with_event_codes({static_cast<uint32_t>(key.implementation()),
+                                              static_cast<uint32_t>(key.event())})
+                            .as_count_event(/*period_duration_micros=*/0, count));
+    ZX_DEBUG_ASSERT(batch.size() <= kMaxBatchSize);
+    if (batch.size() == kMaxBatchSize || iter == snapped_pending_event_counts.end()) {
+      cobalt_logger_->LogCobaltEvents(std::move(batch));
+      ZX_DEBUG_ASSERT(batch.empty());
     }
   }
 }
