@@ -2,21 +2,76 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    anyhow::{Context as _, Error},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
     fidl_fuchsia_ui_views as ui_views,
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_scenic as scenic,
-    fuchsia_syslog::fx_log_info,
+    fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_zircon::{self as zx, AsHandleRef},
-    futures::{lock::Mutex, TryStreamExt},
+    futures::{future, lock::Mutex, TryStreamExt},
     std::{
         collections::{HashMap, HashSet},
+        convert::TryFrom,
+        fmt,
+        hash::{Hash, Hasher},
         sync::Arc,
     },
 };
 
 const DEFAULT_LISTENER_TIMEOUT: zx::Duration = zx::Duration::from_seconds(2);
+
+/// Abstraction wrapper for fidl_fuchsia_ui_views::ViewRef.
+/// See https://fuchsia.dev/fuchsia-src/concepts/graphics/scenic/view_ref
+#[derive(Eq)]
+pub(crate) struct ViewRef {
+    inner: ui_views::ViewRef,
+}
+
+impl ViewRef {
+    pub fn new(view_ref: ui_views::ViewRef) -> Self {
+        Self { inner: view_ref }
+    }
+}
+
+impl Clone for ViewRef {
+    fn clone(&self) -> Self {
+        let inner = scenic::duplicate_view_ref(&self.inner).expect("valid view_ref");
+        Self { inner }
+    }
+}
+
+/// Compares ViewRefs by underlying zx::Koid.
+impl PartialEq for ViewRef {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.reference.as_handle_ref().get_koid()
+            == other.inner.reference.as_handle_ref().get_koid()
+    }
+}
+
+impl fmt::Debug for ViewRef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ViewRef")
+            .field("koid", &self.inner.reference.as_handle_ref().get_koid().unwrap())
+            .finish()
+    }
+}
+
+/// Hashes based on the underlying zx::Koid.
+impl Hash for ViewRef {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let koid = self.inner.reference.as_handle_ref().get_koid().unwrap();
+        koid.hash(state);
+    }
+}
+
+impl TryFrom<ViewRef> for ui_views::ViewRef {
+    type Error = Error;
+
+    fn try_from(view_ref: ViewRef) -> Result<Self, Error> {
+        Ok(view_ref.clone().inner)
+    }
+}
 
 /// Provides implementation for fuchsia.ui.input3.Keyboard FIDL.
 #[derive(Clone)]
@@ -27,24 +82,33 @@ pub struct KeyboardService {
 /// Holder for fuchsia.ui.input3.KeyboardListener client requests.
 #[derive(Default)]
 struct KeyListenerStore {
-    /// Client subscribers for the Keyboard service, keyed
-    /// by self-generated monotonic id.
-    subscribers: HashMap<usize, Arc<Mutex<Subscriber>>>,
+    /// Listener viewrefs, keyed by self-generated monotonic id.
+    /// Used to remove listeners when a client disconnects from Keyboard
+    /// service.
+    view_refs: HashMap<usize, ViewRef>,
 
-    /// Last monotonic id used as a subscribers hash key.
+    /// Last monotonic id used as a `view_refs` hash key.
     last_id: usize,
 
-    /// Currently focused View.
-    focused_view: Option<ui_views::ViewRef>,
+    /// Client subscribers for the Keyboard service, keyed by `ViewRef`.
+    subscribers: HashMap<ViewRef, Arc<Mutex<Subscriber>>>,
 
-    // Currently pressed keys.
+    /// Currently focused View.
+    focused_view: Option<ViewRef>,
+
+    /// Currently pressed keys.
     keys_pressed: HashSet<input::Key>,
 }
 
 /// A client of fuchsia.ui.input3.Keyboard.SetListener()
 struct Subscriber {
-    pub view_ref: ui_views::ViewRef,
+    pub view_ref: ViewRef,
     pub listener: ui_input3::KeyboardListenerProxy,
+
+    /// Pressed keys that were reported to client.
+    /// This is used to notify client about keys that were released while
+    /// the client was out of the focus.
+    pub held_keys: HashSet<input::Key>,
 }
 
 impl KeyboardService {
@@ -59,10 +123,68 @@ impl KeyboardService {
         Ok(self.store.lock().await.dispatch_key(event).await?)
     }
 
+    async fn update_focused_view(&self, focused_view: ViewRef) {
+        self.store.lock().await.focused_view = Some(focused_view);
+    }
+
+    /// Handles event of current subscriber losing focus.
+    /// Will lock KeyListenerStore and current subscriber.
+    async fn handle_focus_lost(&self) {
+        let mut store = self.store.lock().await;
+        let focused_view = match &store.focused_view {
+            Some(view_ref) => view_ref,
+            None => return,
+        };
+        if let Some(subscriber) = store.subscribers.get(&focused_view) {
+            let mut subscriber = subscriber.lock().await;
+            subscriber.held_keys = store.keys_pressed.clone();
+        };
+        store.focused_view = None;
+    }
+
+    /// New client was focused, send SYNC/CANCEL events if necessary.
+    /// Will lock KeyListenerStore and current subscriber.
+    async fn handle_client_focused(&self, focused_view: ViewRef) {
+        let store = self.store.lock().await;
+        let subscriber = match store.subscribers.get(&focused_view) {
+            Some(subscriber) => subscriber,
+            None => return,
+        };
+        let subscriber = subscriber.lock().await;
+
+        // Find keys that were released since the focused client was last notified.
+        let released_keys_iter =
+            subscriber.held_keys.difference(&store.keys_pressed).map(|key| ui_input3::KeyEvent {
+                key: Some(*key),
+                type_: Some(ui_input3::KeyEventType::Cancel),
+                ..ui_input3::KeyEvent::EMPTY
+            });
+
+        // Find keys that were pressed since the focused client was last notified.
+        let pressed_keys_iter =
+            store.keys_pressed.difference(&subscriber.held_keys).map(|key| ui_input3::KeyEvent {
+                key: Some(*key),
+                type_: Some(ui_input3::KeyEventType::Sync),
+                ..ui_input3::KeyEvent::EMPTY
+            });
+
+        let keys_iter = released_keys_iter
+            .chain(pressed_keys_iter)
+            .map(|event| subscriber.listener.on_key_event(event));
+
+        if let Err(e) = future::try_join_all(keys_iter).await {
+            fx_log_warn!("Error sending sync/cancel events {:?} to {:?}", e, subscriber.view_ref);
+        };
+    }
+
     /// Handle focus change.
-    pub async fn handle_focus_change(&self, focused_view: ui_views::ViewRef) {
-        self.store.lock().await.focused_view =
-            Some(scenic::duplicate_view_ref(&focused_view).expect("valid view_ref"));
+    /// Updates current focused client, performs bookkeeping necessary for
+    /// SYNC/CANCEL events, and dispatches those for newly focused client
+    /// if necessary.
+    pub(crate) async fn handle_focus_change(&self, focused_view: ViewRef) {
+        self.handle_focus_lost().await;
+        self.update_focused_view(focused_view.clone()).await;
+        self.handle_client_focused(focused_view).await;
     }
 
     /// Starts serving fuchsia.ui.input3.Keyboard protocol.
@@ -72,7 +194,7 @@ impl KeyboardService {
     ) -> Result<(), Error> {
         let store = self.store.clone();
         // KeyListenerStore subscriber ids to cleanup once client disconnects.
-        let mut subscriber_ids: Vec<usize> = Vec::new();
+        let mut view_ref_ids: Vec<usize> = Vec::new();
         while let Some(ui_input3::KeyboardRequest::AddListener {
             view_ref,
             listener,
@@ -80,15 +202,31 @@ impl KeyboardService {
             ..
         }) = stream.try_next().await.context("error running keyboard service")?
         {
-            let id = store.lock().await.add_new_subscriber(view_ref, listener.into_proxy()?);
-            subscriber_ids.push(id);
+            let view_ref = ViewRef::new(view_ref);
+            // Scope store modification to release store lock as soon as possible.
+            {
+                // Get the store lock to make sure all data is modified exclusively.
+                let mut store = store.lock().await;
+                store.add_new_subscriber(view_ref.clone(), listener.into_proxy()?);
+                let id = store.add_view_ref(view_ref);
+                view_ref_ids.push(id);
+            }
             responder.send()?;
         }
         // Remove subscribers from the store.
         let mut store = store.lock().await;
-        subscriber_ids.iter().for_each(|i| {
-            store.subscribers.remove(i);
-        });
+        view_ref_ids
+            .iter()
+            .map(|i| {
+                let view_ref = store.view_refs.remove(i).ok_or(format_err!(
+                    "Unable to cleanup after client disconnecting: view_ref lost."
+                ))?;
+                store.subscribers.remove(&view_ref).ok_or(format_err!(
+                    "Unable to cleanup after client disconnecting: subscriber lost."
+                ))?;
+                Ok(())
+            })
+            .collect::<Result<_, Error>>()?;
         Ok(())
     }
 
@@ -116,19 +254,26 @@ impl KeyboardService {
 impl KeyListenerStore {
     fn add_new_subscriber(
         &mut self,
-        view_ref: ui_views::ViewRef,
+        view_ref: ViewRef,
         listener: ui_input3::KeyboardListenerProxy,
-    ) -> usize {
-        let subscriber = Arc::new(Mutex::new(Subscriber { view_ref, listener }));
+    ) {
+        let subscriber = Arc::new(Mutex::new(Subscriber {
+            view_ref: view_ref.clone(),
+            listener,
+            held_keys: HashSet::new(),
+        }));
+        self.subscribers.insert(view_ref, subscriber);
+    }
+
+    fn add_view_ref(&mut self, view_ref: ViewRef) -> usize {
         self.last_id += 1;
-        self.subscribers.insert(self.last_id, subscriber);
+        self.view_refs.insert(self.last_id, view_ref);
         self.last_id
     }
 
-    fn is_focused(&self, view_ref: &ui_views::ViewRef) -> bool {
+    fn is_focused(&self, view_ref: &ViewRef) -> bool {
         if let Some(focused_view) = &self.focused_view {
-            focused_view.reference.as_handle_ref().get_koid()
-                == view_ref.reference.as_handle_ref().get_koid()
+            focused_view == view_ref
         } else {
             false
         }
@@ -240,7 +385,8 @@ mod tests {
 
         async fn create_and_focus_client(&self) -> Result<Client, Error> {
             let (view_ref, listener) = self.create_fake_client().await?;
-            self.service.handle_focus_change(scenic::duplicate_view_ref(&view_ref)?).await;
+            let wrapped_view_ref = ViewRef::new(scenic::duplicate_view_ref(&view_ref)?);
+            self.service.handle_focus_change(wrapped_view_ref).await;
             Ok((view_ref, listener))
         }
 
@@ -287,6 +433,26 @@ mod tests {
         }
     }
 
+    async fn expect_key_and_type(
+        listener: &mut ui_input3::KeyboardListenerRequestStream,
+        key: input::Key,
+        type_: ui_input3::KeyEventType,
+    ) {
+        let listener_request = listener.next().await;
+        if let Some(Ok(ui_input3::KeyboardListenerRequest::OnKeyEvent {
+            event, responder, ..
+        })) = listener_request
+        {
+            responder
+                .send(ui_input3::KeyEventStatus::Handled)
+                .expect("responding from key listener");
+            assert_eq!(event.key, Some(key));
+            assert_eq!(event.type_, Some(type_));
+        } else {
+            panic!("Expected key and type error: {:?}, got {:?}", (key, type_), listener_request);
+        }
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_single_client() -> Result<(), Error> {
         let mut helper = Helper::new();
@@ -325,10 +491,12 @@ mod tests {
 
         // Create fake clients.
         let (view_ref, mut listener) = helper.create_fake_client().await?;
+        let view_ref = ViewRef::new(view_ref);
         let (other_view_ref, mut other_listener) = helper.create_fake_client().await?;
+        let other_view_ref = ViewRef::new(other_view_ref);
 
         // Set focus to the first fake client.
-        helper.service.handle_focus_change(scenic::duplicate_view_ref(&view_ref)?).await;
+        helper.service.handle_focus_change(view_ref).await;
 
         // Scope part of the test case to release listeners and borrows once done.
         {
@@ -353,8 +521,12 @@ mod tests {
             assert!(matches!(activated_listener, future::Either::Left { .. }));
         }
 
-        // Change focus to another client.
-        helper.service.handle_focus_change(scenic::duplicate_view_ref(&other_view_ref)?).await;
+        // Change focus to another client, expect SYNC event.
+        future::join(
+            helper.service.handle_focus_change(other_view_ref),
+            expect_key_and_type(&mut other_listener, input::Key::A, ui_input3::KeyEventType::Sync),
+        )
+        .await;
 
         // Scope part of the test case to release listeners and borrows once done.
         {

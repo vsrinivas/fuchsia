@@ -49,6 +49,7 @@ impl Service {
                             responder,
                             ..
                         } => {
+                            let view_ref = keyboard3::ViewRef::new(view_ref);
                             keyboard3.handle_focus_change(view_ref).await;
                             responder.send()?;
                         }
