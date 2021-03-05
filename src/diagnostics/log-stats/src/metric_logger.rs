@@ -34,6 +34,12 @@ type ComponentEventCodeMap = HashMap<String, u32>;
 /// The event code that is used if there is no corresponding event code for the component URL.
 pub const OTHER_EVENT_CODE: u32 = 1_000_000;
 
+/// What file path to use if the source of the log is not known.
+pub const UNKNOWN_SOURCE_FILE_PATH: &str = "<Unknown source>";
+
+/// What line number to use if the source of the log is not known.
+pub const UNKNOWN_SOURCE_LINE_NUMBER: u64 = 0;
+
 impl MetricLogger {
     /// Create a MetricLogger that logs the given MetricSpecs.
     pub async fn new(
@@ -58,16 +64,16 @@ impl MetricLogger {
         if log.metadata.severity != Severity::Error && log.metadata.severity != Severity::Fatal {
             return Ok(());
         }
-        if let Ok(log_identifier) = LogIdentifier::try_from(log) {
-            let status = self
-                .log(&log.metadata.component_url, &log_identifier.file_path, log_identifier.line_no)
-                .await?;
-            match status {
-                Status::Ok => Ok(()),
-                _ => Err(anyhow::format_err!("Cobalt returned error: {}", status as u8)),
-            }
-        } else {
-            Ok(())
+        let log_identifier = LogIdentifier::try_from(log).unwrap_or(LogIdentifier {
+            file_path: UNKNOWN_SOURCE_FILE_PATH.to_string(),
+            line_no: UNKNOWN_SOURCE_LINE_NUMBER,
+        });
+        let status = self
+            .log(&log.metadata.component_url, &log_identifier.file_path, log_identifier.line_no)
+            .await?;
+        match status {
+            Status::Ok => Ok(()),
+            _ => Err(anyhow::format_err!("Cobalt returned error: {}", status as u8)),
         }
     }
 
