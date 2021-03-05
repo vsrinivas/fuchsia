@@ -1,55 +1,25 @@
 {
-  "skipFiles": [
-    ".gitignore",
-    "API_EVOLUTION.md",
-    "CODE_OF_CONDUCT.md",
-    "CONTRIBUTING.md",
-    "LICENSE-APACHE.old",
-    "LICENSE-MIT.old",
-    "NOTICE.html",
-    "SYNTAX.md",
-    "TESTING.md",
-    "all_selectors.txt",
-    "build-changelist.txt",
-    "cipd.gni",
-    "code_coverage.pb.go",
-    "getting_started.md",
-    "glossary.md",
-    "goldens.txt",
-    "licenses.dart",
-    "navbar.md",
-    "prebuilt/third_party/rust/linux-x64/share/doc/rust/LICENSE-THIRD-PARTY",
-    "prebuilt/third_party/rust_tools/linux-x64/share/doc/rust/LICENSE-THIRD-PARTY",
-    "third_party/crashpad/third_party/glibc/elf/elf.h",
-    "third_party/dart-pkg/pub/devtools/build/assets/NOTICES",
-    "third_party/zstd/src/COPYING"
-  ],
-  "skipDirs": [
-    ".cipd",
-    ".git",
-    ".jiri_root",
-    ".ssh",
-    "examples",
-    "out",
-    "prebuilt/gputest",
-    "prebuilt/gputest-on-scenic",
-    "prebuilt/infra",
-    "prebuilt/media",
-    "prebuilt/ml/tests",
-    "prebuilt/third_party/aemu",
-    "prebuilt/third_party/gcc",
-    "prebuilt/third_party/qemu",
-    "prebuilt/third_party/sysroot/linux",
-    "tests",
-    "tools/check-licenses/golden",
-    "third_party/lz4/programs",
-    "third_party/lz4/tests"
-  ],
+  "dontSkipDirs": [],
+  "skipFiles": [],
+  "skipDirs": [],
   "stopLicensePropagation": [
     "third_party",
     "thirdparty",
     "prebuilt",
     "vendor"
+  ],
+  "textExtensionList": [
+    "a",
+    "bin",
+    "dill",
+    "far",
+    "gyp",
+    "gypi",
+    "in",
+    "md",
+    "merkle",
+    "snapshot",
+    "txt"
   ],
   "strictTextExtensionList": [
     "ac",
@@ -77,36 +47,7 @@
     "sh",
     "yaml"
   ],
-  "textExtensionList": [
-    "a",
-    "bin",
-    "dill",
-    "far",
-    "gyp",
-    "gypi",
-    "in",
-    "md",
-    "merkle",
-    "snapshot",
-    "txt"
-  ],
-  "maxReadSize": 6144,
-  "prohibitedLicenseTypes": [
-    "allowlist_only",
-    "gcc",
-    "gnu",
-    "redhat"
-  ],
-  "exitOnDirRestrictedLicense": true,
-  "exitOnProhibitedLicenseTypes": true,
-  "exitOnUnlicensedFiles": true,
   "strictAnalysis": true,
-  "outputLicenseFile": true,
-  "outputFilePrefix": "NOTICE",
-  "outputFileExtensions": [
-      "html.gz",
-      "txt.gz"
-  ],
   "singleLicenseFiles": [
     "about_os_credits.html",
     "copying",
@@ -117,15 +58,14 @@
     "ofl",
     "unicode_license.txt"
   ],
-  "customProjectLicenses": [
-    {
-      "projectRoot": "prebuilt/third_party/rust/linux-x64",
-      "licenseLocation": "share/doc/rust/COPYRIGHT"
-    },
-    {
-      "projectRoot": "prebuilt/third_party/rust_tools/linux-x64",
-      "licenseLocation": "share/doc/rust/COPYRIGHT"
-    },
+  "licensePatternDir": "tools/check-licenses/golden/patterns",
+  "prohibitedLicenseTypes": [
+    "allowlist_only",
+    "gcc",
+    "gnu",
+    "redhat"
+  ],
+  "customProjectLicenses" : [
     {
       "projectRoot": "prebuilt/third_party/cmake/linux-x64",
       "licenseLocation": "doc/cmake-3.10/Copyright.txt"
@@ -194,12 +134,12 @@
     "prebuilt/third_party/flutter/licenses_skia",
     "prebuilt/third_party/flutter/licenses_third_party"
   ],
-  "noticeTxtFiles": [],
-  "noticeFiles": [],
-  "licensePatternDir": "tools/check-licenses/golden/patterns",
-  "baseDir": ".",
-  "target": "all",
-  "logLevel": "verbose",
+  "noticeFiles": [
+    "prebuilt/third_party/goma/linux-x64/LICENSE",
+    "third_party/icu/LICENSE",
+    "third_party/openssh-portable/LICENCE",
+    "third_party/opus/COPYING"
+  ],
   "licenseAllowList": {
     "cryptsoft.lic": [
       "prebuilt/third_party/flutter"
@@ -258,5 +198,17 @@
     "university_of_illinois.lic": [
       "prebuilt/third_party/llvm/linux-x64/include/llvm/Support/"
     ]
-  }
+  },
+  "exitOnDirRestrictedLicense": true,
+  "exitOnProhibitedLicenseTypes": true,
+  "exitOnUnlicensedFiles": true,
+  "maxReadSize": 6144,
+  "baseDir": ".",
+  "printFiles": false,
+  "printProjects": true,
+  "outputLicenseFile": true,
+  "outputFilePrefix": "NOTICE",
+  "outputFileExtensions": [
+      "html.gz"
+  ]
 }
