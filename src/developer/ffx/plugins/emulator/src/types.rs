@@ -4,8 +4,9 @@
 
 use crate::cipd;
 use ansi_term::Colour::*;
-use anyhow::{anyhow, bail, format_err, Result};
+use anyhow::{anyhow, format_err, Result};
 use ffx_config::sdk::{Sdk, SdkVersion};
+use ffx_core::ffx_bail;
 use ffx_emulator_args::StartCommand;
 use fuchsia_async::Executor;
 use home::home_dir;
@@ -66,8 +67,8 @@ pub fn get_sdk_version_from_manifest() -> Result<String> {
     let sdk = Sdk::from_sdk_dir(get_fuchsia_sdk_dir()?)?;
     match sdk.get_version() {
         SdkVersion::Version(v) => Ok(v.to_string()),
-        SdkVersion::InTree => bail!("This should only be used in SDK"),
-        SdkVersion::Unknown => bail!("Cannot determine SDK version"),
+        SdkVersion::InTree => ffx_bail!("This should only be used in SDK"),
+        SdkVersion::Unknown => ffx_bail!("Cannot determine SDK version"),
     }
 }
 pub struct HostTools {
@@ -276,6 +277,25 @@ impl ImageFiles {
         })
     }
 
+    pub fn check(&self) -> Result<()> {
+        if !self.amber_files.exists() {
+            ffx_bail!("amber-files at {:?} does not exist", self.amber_files);
+        }
+        if !self.build_args.exists() {
+            ffx_bail!("build_args file at {:?} does not exist", self.build_args);
+        }
+        if !self.fvm.exists() {
+            ffx_bail!("fvm file at {:?} does not exist", self.fvm);
+        }
+        if !self.kernel.exists() {
+            ffx_bail!("kernel file at {:?} does not exist", self.kernel);
+        }
+        if !self.zbi.exists() {
+            ffx_bail!("zbi file at {:?} does not exist", self.zbi);
+        }
+        Ok(())
+    }
+
     pub fn images_exist(&self) -> bool {
         return self.amber_files.exists()
             && self.build_args.exists()
@@ -342,7 +362,6 @@ impl SSHKeys {
 
         let private_key = PathBuf::from(lines.next().unwrap()?);
         let auth_key = PathBuf::from(lines.next().unwrap()?);
-
         Ok(SSHKeys { auth_key: auth_key, private_key: private_key })
     }
 
@@ -355,6 +374,16 @@ impl SSHKeys {
             private_key: home_dir().unwrap_or_default().join(".ssh/fuchsia_ed25519"),
         };
         Ok(keys)
+    }
+
+    pub fn check(&self) -> Result<()> {
+        if !self.private_key.exists() {
+            ffx_bail!("private_key file at {:?} does not exist", self.private_key);
+        }
+        if !self.auth_key.exists() {
+            ffx_bail!("public_key file at {:?} does not exist", self.auth_key);
+        }
+        Ok(())
     }
 
     pub fn stage_files(&mut self, dir: &PathBuf) -> Result<()> {
@@ -492,6 +521,7 @@ mod tests {
             vdl_version: None,
             emulator_log: None,
             package_server_log: Some("/a/b/c/server.log".to_string()),
+            amber_unpack_root: None,
             port_map: None,
             vdl_output: None,
             nointeractive: false,

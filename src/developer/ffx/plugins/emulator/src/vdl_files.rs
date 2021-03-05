@@ -5,7 +5,8 @@
 use crate::portpicker::{pick_unused_port, Port};
 use crate::types::{get_sdk_data_dir, read_env_path, HostTools, ImageFiles, SSHKeys, VDLArgs};
 use ansi_term::Colour::*;
-use anyhow::{bail, Result};
+use anyhow::Result;
+use ffx_core::ffx_bail;
 use ffx_emulator_args::{KillCommand, StartCommand};
 use regex::Regex;
 use std::env;
@@ -29,6 +30,9 @@ pub struct VDLFiles {
 
     /// A file created under staging_dir to store emulator output.
     emulator_log: PathBuf,
+
+    /// True if user invoked fvdl with the arg --sdk.
+    is_sdk: bool,
 }
 
 impl VDLFiles {
@@ -43,6 +47,7 @@ impl VDLFiles {
                 output_proto: staging_dir_path.join("vdl_proto"),
                 emulator_log: staging_dir_path.join("emu_log"),
                 staging_dir: staging_dir,
+                is_sdk: is_sdk,
             };
 
             vdl_files.ssh_files.stage_files(&staging_dir_path)?;
@@ -56,6 +61,7 @@ impl VDLFiles {
                 output_proto: staging_dir_path.join("vdl_proto"),
                 emulator_log: staging_dir_path.join("emu_log"),
                 staging_dir: staging_dir,
+                is_sdk: is_sdk,
             };
 
             vdl_files.image_files.stage_files(&staging_dir_path)?;
@@ -81,7 +87,7 @@ impl VDLFiles {
         if status.success() {
             return Ok(zbi_out);
         } else {
-            bail!("Cannot provision zbi. Exit status was {}", status.code().unwrap_or_default())
+            ffx_bail!("Cannot provision zbi. Exit status was {}", status.code().unwrap_or_default())
         }
     }
 
@@ -239,7 +245,7 @@ impl VDLFiles {
 
     pub fn check_start_command(&self, command: &StartCommand) -> Result<()> {
         if command.nointeractive && command.vdl_output.is_none() {
-            bail!(
+            ffx_bail!(
                 "--vdl-ouput must be specified for --nointeractive mode.\n\
                 example: fx vdl start --nointeractive --vdl-output /path/to/saved/output.log\n\
                 example: ./fvdl --sdk start --nointeractive --vdl-output /path/to/saved/output.log\n"
@@ -251,6 +257,10 @@ impl VDLFiles {
     /// Launches FEMU, opens an SSH session, and waits for the FEMU instance or SSH session to exit.
     pub fn start_emulator(&mut self, start_command: &StartCommand) -> Result<()> {
         self.check_start_command(&start_command)?;
+        if !self.is_sdk {
+            self.image_files.check()?;
+            self.ssh_files.check()?;
+        }
 
         let vdl_args: VDLArgs = start_command.clone().into();
 
@@ -276,19 +286,19 @@ impl VDLFiles {
 
         let aemu = self.resolve_aemu_path(start_command)?;
         if !aemu.exists() || !aemu.is_file() {
-            bail!("Invalid 'emulator' binary at path {}", aemu.display())
+            ffx_bail!("Invalid 'emulator' binary at path {}", aemu.display())
         }
 
         let vdl = self.resolve_vdl_path(start_command)?;
         if !vdl.exists() || !vdl.is_file() {
-            bail!("device_launcher binary cannot be found at {}", vdl.display())
+            ffx_bail!("device_launcher binary cannot be found at {}", vdl.display())
         }
 
         let mut grpcwebproxy = self.host_tools.grpcwebproxy.clone();
         if vdl_args.enable_grpcwebproxy {
             grpcwebproxy = self.resolve_grpcwebproxy_path(start_command)?;
             if !grpcwebproxy.exists() || !grpcwebproxy.is_file() {
-                bail!("grpcwebproxy binary cannot be found at {}", grpcwebproxy.display())
+                ffx_bail!("grpcwebproxy binary cannot be found at {}", grpcwebproxy.display())
             }
         }
 
@@ -297,6 +307,10 @@ impl VDLFiles {
             None => self.emulator_log.clone(),
         };
         let package_server_log = match &start_command.package_server_log {
+            Some(location) => PathBuf::from(location),
+            None => PathBuf::new(),
+        };
+        let amber_unpack_root = match &start_command.amber_unpack_root {
             Some(location) => PathBuf::from(location),
             None => PathBuf::new(),
         };
@@ -313,6 +327,11 @@ impl VDLFiles {
             "linux" => true,
             _ => false,
         };
+
+        let mut invoker = "fvdl-intree";
+        if self.is_sdk {
+            invoker = "fvdl-sdk";
+        }
 
         let status = Command::new(&vdl)
             .arg("--action=start")
@@ -339,9 +358,12 @@ impl VDLFiles {
             .arg(&emu_log)
             .arg("--package_server_log")
             .arg(&package_server_log)
+            .arg("--unpack_repo_root")
+            .arg(&amber_unpack_root)
             .arg("--proto_file_path")
             .arg(&fvd)
             .arg("--audio=true")
+            .arg(format!("--event_action={}", &invoker))
             .arg(format!("--debugger={}", &start_command.debugger))
             .arg(format!("--resize_fvm={}", vdl_args.image_size))
             .arg(format!("--gpu={}", vdl_args.gpu))
@@ -366,7 +388,7 @@ impl VDLFiles {
                 .unwrap_or(env::current_dir()?)
                 .join("emu_crash.log");
             copy(&self.emulator_log, &persistent_emu_log)?;
-            bail!(
+            ffx_bail!(
                 "Cannot start Fuchsia Emulator. Exit status is {}\nEmulator log is copied to {}",
                 status.code().unwrap_or_default(),
                 persistent_emu_log.display()
@@ -468,11 +490,11 @@ impl VDLFiles {
             },
         };
         if !vdl.exists() || !vdl.is_file() {
-            bail!("device_launcher binary cannot be found at {}", vdl.display())
+            ffx_bail!("device_launcher binary cannot be found at {}", vdl.display())
         }
         match &kill_command.launched_proto {
             None => {
-                bail!(
+                ffx_bail!(
                     "--launched-proto must be specified for `kill` subcommand.\n\
                     example: \"fx vdl kill --launched-proto /path/to/saved/output.log\"\n\
                     example: \"./fvdl --sdk kill --launched-proto /path/to/saved/output.log\"\n"
@@ -537,6 +559,7 @@ mod tests {
             grpcwebproxy_path: Some("/path/to/grpcwebproxy".to_string()),
             pointing_device: Some("mouse".to_string()),
             aemu_version: Some("git_revision:da1cc2ee512714a176f08b8b5fec035994ca305d".to_string()),
+            amber_unpack_root: None,
             gcs_bucket: None,
             grpcwebproxy_version: Some("git_revision:1".to_string()),
             sdk_version: Some("0.20201130.3.1".to_string()),

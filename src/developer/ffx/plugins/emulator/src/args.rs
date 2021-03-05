@@ -182,6 +182,12 @@ pub struct StartCommand {
     /// Requires --nopackageserver=false
     #[argh(option)]
     pub package_server_log: Option<String>,
+
+    /// path to unpack archived_package downloaded from GCS. This only applies when fvdl is
+    /// downloading images files from GCS (ex: --gcs-bucket, --sdk-verion, --image-name flags
+    /// are specified). If not specified, a temporary path will be used.
+    #[argh(option)]
+    pub amber_unpack_root: Option<String>,
 }
 
 fn default_window_height() -> usize {
