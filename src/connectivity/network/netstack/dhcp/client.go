@@ -30,7 +30,13 @@ const (
 	defaultLeaseLength Seconds = 12 * 3600
 )
 
-type AcquiredFunc func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config)
+// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.5 * duration_of_lease).
+func defaultRenewTime(leaseLength Seconds) Seconds { return leaseLength / 2 }
+
+// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.875 * duration_of_lease).
+func defaultRebindTime(leaseLength Seconds) Seconds { return (leaseLength * 875) / 1000 }
+
+type AcquiredFunc func(lost, acquired tcpip.AddressWithPrefix, cfg Config)
 
 // Client is a DHCP client.
 type Client struct {
@@ -52,8 +58,6 @@ type Client struct {
 	sem chan struct{}
 
 	stats Stats
-
-	leaseExpirationTime, renewTime, rebindTime time.Time
 
 	// Stubbable in test.
 	rand           *rand.Rand
@@ -103,14 +107,22 @@ type Info struct {
 	// Retransmission is the duration to wait before resending a DISCOVER or
 	// REQUEST within an active transaction.
 	Retransmission time.Duration
-	// Addr is the acquired network address.
-	Addr tcpip.AddressWithPrefix
-	// Server is the network address of the DHCP server.
-	Server tcpip.Address
+	// Acquired is the network address most recently acquired by the client.
+	Acquired tcpip.AddressWithPrefix
 	// State is the DHCP client state.
 	State dhcpClientState
-	// OldAddr is the address reported in the last call to acquiredFunc.
-	OldAddr tcpip.AddressWithPrefix
+	// Assigned is the network address added by the client to its stack.
+	Assigned tcpip.AddressWithPrefix
+	// LeaseExpiration is the time at which the client's current lease will
+	// expire.
+	LeaseExpiration time.Time
+	// RenewTime is the at which the client will transition to its renewing state.
+	RenewTime time.Time
+	// RebindTime is the time at which the client will transition to its rebinding
+	// state.
+	RebindTime time.Time
+	// Config is the last DHCP configuration assigned to the client by the server.
+	Config Config
 }
 
 // NewClient creates a DHCP client.
@@ -174,8 +186,6 @@ func (c *Client) Run(ctx context.Context) {
 	defer func() {
 		_ = syslog.InfoTf(tag, "%s: client is stopping, cleaning up", nicName)
 		c.cleanup(&info)
-		// cleanup mutates info.
-		c.info.Store(info)
 	}()
 
 	var timer *time.Timer
@@ -199,14 +209,14 @@ func (c *Client) Run(ctx context.Context) {
 				c.stats.RenewAcquire.Increment()
 				// Instead of `time.Until`, use `now` stored on the client so
 				// it can be stubbed out in test for consistency.
-				if tilRebind := c.rebindTime.Sub(c.now()); tilRebind < acquisitionTimeout {
+				if tilRebind := info.RebindTime.Sub(c.now()); tilRebind < acquisitionTimeout {
 					acquisitionTimeout = tilRebind
 				}
 			case rebinding:
 				c.stats.RebindAcquire.Increment()
 				// Instead of `time.Until`, use `now` stored on the client so
 				// it can be stubbed out in test for consistency.
-				if tilLeaseExpire := c.leaseExpirationTime.Sub(c.now()); tilLeaseExpire < acquisitionTimeout {
+				if tilLeaseExpire := info.LeaseExpiration.Sub(c.now()); tilLeaseExpire < acquisitionTimeout {
 					acquisitionTimeout = tilLeaseExpire
 				}
 			default:
@@ -223,10 +233,6 @@ func (c *Client) Run(ctx context.Context) {
 			if cfg.Declined {
 				c.stats.ReacquireAfterNAK.Increment()
 				c.cleanup(&info)
-				// Reset all the times so the client will re-acquire.
-				c.leaseExpirationTime = time.Time{}
-				c.renewTime = time.Time{}
-				c.rebindTime = time.Time{}
 				return nil
 			}
 
@@ -235,38 +241,28 @@ func (c *Client) Run(ctx context.Context) {
 				cfg.LeaseLength = defaultLeaseLength
 			}
 			{
-				// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.5 * duration_of_lease).
-				defaultRenewTime := cfg.LeaseLength / 2
+				renewTime := defaultRenewTime(cfg.LeaseLength)
 				if cfg.RenewTime == 0 {
-					_ = syslog.WarnTf(tag, "%s: unspecified renew time; proceeding with default (%s)", nicName, defaultRenewTime)
-					cfg.RenewTime = defaultRenewTime
+					_ = syslog.WarnTf(tag, "%s: unspecified renew time; proceeding with default (%s)", nicName, renewTime)
+					cfg.RenewTime = renewTime
 				}
 				if cfg.RenewTime >= cfg.LeaseLength {
-					_ = syslog.WarnTf(tag, "%s: renew time (%s) >= lease length (%s); proceeding with default (%s)", nicName, cfg.RenewTime, cfg.LeaseLength, defaultRenewTime)
-					cfg.RenewTime = defaultRenewTime
+					_ = syslog.WarnTf(tag, "%s: renew time (%s) >= lease length (%s); proceeding with default (%s)", nicName, cfg.RenewTime, cfg.LeaseLength, renewTime)
+					cfg.RenewTime = renewTime
 				}
 			}
 			{
-				// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.875 * duration_of_lease).
-				defaultRebindTime := cfg.LeaseLength * 875 / 1000
+				rebindTime := defaultRebindTime(cfg.LeaseLength)
 				if cfg.RebindTime == 0 {
-					cfg.RebindTime = defaultRebindTime
+					cfg.RebindTime = rebindTime
 				}
 				if cfg.RebindTime <= cfg.RenewTime {
-					_ = syslog.WarnTf(tag, "%s: rebind time (%s) <= renew time (%s); proceeding with default (%s)", nicName, cfg.RebindTime, cfg.RenewTime, defaultRebindTime)
-					cfg.RebindTime = defaultRebindTime
+					_ = syslog.WarnTf(tag, "%s: rebind time (%s) <= renew time (%s); proceeding with default (%s)", nicName, cfg.RebindTime, cfg.RenewTime, rebindTime)
+					cfg.RebindTime = rebindTime
 				}
 			}
 
-			now := c.now()
-			c.leaseExpirationTime = now.Add(cfg.LeaseLength.Duration())
-			c.renewTime = now.Add(cfg.RenewTime.Duration())
-			c.rebindTime = now.Add(cfg.RebindTime.Duration())
-
-			if fn := c.acquiredFunc; fn != nil {
-				fn(info.OldAddr, info.Addr, cfg)
-			}
-			info.OldAddr = info.Addr
+			c.assign(&info, info.Acquired, cfg, c.now())
 			info.State = bound
 
 			return nil
@@ -288,11 +284,11 @@ func (c *Client) Run(ctx context.Context) {
 		var next dhcpClientState
 		var waitDuration time.Duration
 		switch now := c.now(); {
-		case !now.Before(c.leaseExpirationTime):
+		case !now.Before(info.LeaseExpiration):
 			next = initSelecting
-		case !now.Before(c.rebindTime):
+		case !now.Before(info.RebindTime):
 			next = rebinding
-		case !now.Before(c.renewTime):
+		case !now.Before(info.RenewTime):
 			next = renewing
 		default:
 			switch s := info.State; s {
@@ -301,10 +297,10 @@ func (c *Client) Run(ctx context.Context) {
 				// the timers are correctly set, previous cases should have matched.
 				panic(fmt.Sprintf(
 					"invalid client state %s, now=%s, leaseExpirationTime=%s, renewTime=%s, rebindTime=%s",
-					s, now, c.leaseExpirationTime, c.renewTime, c.rebindTime,
+					s, now, info.LeaseExpiration, info.RenewTime, info.RebindTime,
 				))
 			}
-			waitDuration = c.renewTime.Sub(now)
+			waitDuration = info.RenewTime.Sub(now)
 			next = renewing
 		}
 
@@ -347,16 +343,21 @@ func (c *Client) Run(ctx context.Context) {
 	}
 }
 
-func (c *Client) cleanup(info *Info) {
-	if info.OldAddr == (tcpip.AddressWithPrefix{}) {
-		return
-	}
-
-	// Remove the old address and configuration.
+func (c *Client) assign(info *Info, acquired tcpip.AddressWithPrefix, config Config, now time.Time) {
+	prevAssigned := info.Assigned
+	info.Assigned = acquired
+	info.LeaseExpiration = now.Add(config.LeaseLength.Duration())
+	info.RenewTime = now.Add(config.RenewTime.Duration())
+	info.RebindTime = now.Add(config.RebindTime.Duration())
+	info.Config = config
+	c.info.Store(*info)
 	if fn := c.acquiredFunc; fn != nil {
-		fn(info.OldAddr, tcpip.AddressWithPrefix{}, Config{})
+		fn(prevAssigned, acquired, config)
 	}
-	info.OldAddr = tcpip.AddressWithPrefix{}
+}
+
+func (c *Client) cleanup(info *Info) {
+	c.assign(info, tcpip.AddressWithPrefix{}, Config{}, time.Time{})
 }
 
 const maxBackoff = 64 * time.Second
@@ -430,7 +431,7 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 	switch info.State {
 	case initSelecting:
 	case renewing:
-		writeTo.Addr = info.Server
+		writeTo.Addr = info.Config.ServerAddress
 	case rebinding:
 	default:
 		panic(fmt.Sprintf("unknown client state: c.State=%s", info.State))
@@ -453,7 +454,7 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 			6,  // domain name server
 		}},
 	}
-	requestedAddr := info.Addr
+	requestedAddr := info.Acquired
 	if info.State == initSelecting {
 		discOpts := append(options{
 			{optDHCPMsgType, []byte{byte(dhcpDISCOVER)}},
@@ -511,18 +512,15 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 					return Config{}, fmt.Errorf("%s decode: %w", result.typ, err)
 				}
 
-				// We can overwrite the client's server notion, since there's no
-				// atomicity required for correctness.
-				//
-				// We do not perform sophisticated offer selection and instead merely
-				// select the first valid offer we receive.
-				info.Server = cfg.ServerAddress
-
 				if len(cfg.SubnetMask) == 0 {
-					cfg.SubnetMask = tcpip.AddressMask(net.IP(info.Addr.Address).DefaultMask())
+					cfg.SubnetMask = tcpip.AddressMask(net.IP(result.yiaddr).DefaultMask())
 				}
 
-				prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
+				// We do not perform sophisticated offer selection and instead merely
+				// select the first valid offer we receive.
+				info.Config = cfg
+
+				prefixLen, _ := net.IPMask(info.Config.SubnetMask).Size()
 				requestedAddr = tcpip.AddressWithPrefix{
 					Address:   result.yiaddr,
 					PrefixLen: prefixLen,
@@ -535,10 +533,10 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 					result.typ,
 					result.source,
 					requestedAddr,
-					info.Server,
-					cfg.LeaseLength,
-					cfg.RenewTime,
-					cfg.RebindTime,
+					info.Config.ServerAddress,
+					info.Config.LeaseLength,
+					info.Config.RenewTime,
+					info.Config.RebindTime,
 				)
 
 				break retransmitDiscover
@@ -552,7 +550,7 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 	if info.State == initSelecting {
 		reqOpts = append(reqOpts,
 			options{
-				{optDHCPServer, []byte(info.Server)},
+				{optDHCPServer, []byte(info.Config.ServerAddress)},
 				{optReqIPAddr, []byte(requestedAddr.Address)},
 			}...)
 	}
@@ -588,12 +586,12 @@ retransmitRequest:
 		case initSelecting:
 			retransmitAfter = c.exponentialBackoff(i)
 		case renewing:
-			retransmitAfter = c.rebindTime.Sub(c.now()) / 2
+			retransmitAfter = info.RebindTime.Sub(c.now()) / 2
 			if min := 60 * time.Second; retransmitAfter < min {
 				retransmitAfter = min
 			}
 		case rebinding:
-			retransmitAfter = c.leaseExpirationTime.Sub(c.now()) / 2
+			retransmitAfter = info.LeaseExpiration.Sub(c.now()) / 2
 			if min := 60 * time.Second; retransmitAfter < min {
 				retransmitAfter = min
 			}
@@ -638,7 +636,7 @@ retransmitRequest:
 				c.stats.RecvAcks.Increment()
 
 				// Now that we've successfully acquired the address, update the client state.
-				info.Addr = requestedAddr
+				info.Acquired = requestedAddr
 				_ = syslog.InfoTf(tag, "%s: got %s from %s with leaseLength=%s", nicName, result.typ, result.source, cfg.LeaseLength)
 				return cfg, nil
 			case dhcpNAK:
@@ -684,13 +682,15 @@ func (c *Client) send(
 		dhcpPayload.setBroadcast()
 	}
 	if ciaddr {
-		if l := copy(dhcpPayload.ciaddr(), info.Addr.Address); l != len(info.Addr.Address) {
-			panic(fmt.Sprintf("failed to copy info.Addr.Address bytes, want=%d got=%d", len(info.Addr.Address), l))
+		ciaddr := info.Assigned.Address
+		if n, l := copy(dhcpPayload.ciaddr(), ciaddr), len(ciaddr); n != l {
+			panic(fmt.Sprintf("failed to copy ciaddr bytes, want=%d got=%d", l, n))
 		}
 	}
 
-	if l := copy(dhcpPayload.chaddr(), info.LinkAddr); l != len(info.LinkAddr) {
-		panic(fmt.Sprintf("failed to copy all info.LinkAddr bytes, want=%d got=%d", len(info.LinkAddr), l))
+	chaddr := info.LinkAddr
+	if n, l := copy(dhcpPayload.chaddr(), chaddr), len(chaddr); n != l {
+		panic(fmt.Sprintf("failed to copy all chaddr bytes, want=%d got=%d", l, n))
 	}
 	dhcpPayload.setOptions(opts)
 
@@ -704,7 +704,7 @@ func (c *Client) send(
 		"%s: send %s from %s:%d to %s:%d on NIC:%d (bcast=%t ciaddr=%t)",
 		nicName,
 		typ,
-		info.Addr.Address,
+		info.Assigned.Address,
 		ClientPort,
 		writeTo.Addr,
 		writeTo.Port,
@@ -724,7 +724,7 @@ func (c *Client) send(
 		DstPort: writeTo.Port,
 		Length:  length,
 	})
-	xsum := header.PseudoHeaderChecksum(header.UDPProtocolNumber, info.Addr.Address, writeTo.Addr, length)
+	xsum := header.PseudoHeaderChecksum(header.UDPProtocolNumber, info.Assigned.Address, writeTo.Addr, length)
 	xsum = header.Checksum(dhcpPayload, xsum)
 	udp.SetChecksum(^udp.CalculateChecksum(xsum))
 
@@ -737,7 +737,7 @@ func (c *Client) send(
 		TTL:         ep.DefaultTTL(),
 		TOS:         stack.DefaultTOS,
 		Protocol:    uint8(header.UDPProtocolNumber),
-		SrcAddr:     info.Addr.Address,
+		SrcAddr:     info.Assigned.Address,
 		DstAddr:     writeTo.Addr,
 	})
 	ip.SetChecksum(^ip.CalculateChecksum())
@@ -746,7 +746,7 @@ func (c *Client) send(
 	if !ok {
 		attemptedResolution := false
 		for {
-			resolved, ch, err := c.stack.GetLinkAddress(info.NICID, writeTo.Addr, info.Addr.Address, header.IPv4ProtocolNumber, nil)
+			resolved, ch, err := c.stack.GetLinkAddress(info.NICID, writeTo.Addr, info.Assigned.Address, header.IPv4ProtocolNumber, nil)
 			if err == tcpip.ErrWouldBlock {
 				if !attemptedResolution {
 					attemptedResolution = true

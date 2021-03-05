@@ -283,7 +283,7 @@ func TestDHCP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got, want := info.Addr.Address, defaultClientAddrs[0]; got != want {
+			if got, want := info.Acquired.Address, defaultClientAddrs[0]; got != want {
 				t.Errorf("c.addr=%s, want=%s", got, want)
 			}
 			if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
@@ -296,7 +296,7 @@ func TestDHCP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got, want := info.Addr.Address, defaultClientAddrs[0]; got != want {
+			if got, want := info.Acquired.Address, defaultClientAddrs[0]; got != want {
 				t.Errorf("c.addr=%s, want=%s", got, want)
 			}
 			if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
@@ -313,7 +313,7 @@ func TestDHCP(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := info.Addr.Address, defaultClientAddrs[1]; got != want {
+		if got, want := info.Acquired.Address, defaultClientAddrs[1]; got != want {
 			t.Errorf("c.addr=%s, want=%s", got, want)
 		}
 		if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
@@ -325,16 +325,16 @@ func TestDHCP(t *testing.T) {
 	{
 		if err := s.AddProtocolAddressWithOptions(testNICID, tcpip.ProtocolAddress{
 			Protocol:          ipv4.ProtocolNumber,
-			AddressWithPrefix: info.Addr,
+			AddressWithPrefix: info.Acquired,
 		}, stack.NeverPrimaryEndpoint); err != nil {
 			t.Fatalf("failed to add address to stack: %s", err)
 		}
-		defer s.RemoveAddress(testNICID, info.Addr.Address)
+		defer s.RemoveAddress(testNICID, info.Acquired.Address)
 		cfg, err := acquire(ctx, c0, t.Name(), &info)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := info.Addr.Address, defaultClientAddrs[0]; got != want {
+		if got, want := info.Acquired.Address, defaultClientAddrs[0]; got != want {
 			t.Errorf("c.addr=%s, want=%s", got, want)
 		}
 		if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
@@ -429,7 +429,7 @@ func TestDelayRetransmission(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got, want := info.Addr.Address, defaultClientAddrs[0]; got != want {
+				if got, want := info.Acquired.Address, defaultClientAddrs[0]; got != want {
 					t.Errorf("c.addr=%s, want=%s", got, want)
 				}
 				if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
@@ -475,6 +475,23 @@ func TestExponentialBackoff(t *testing.T) {
 	}
 }
 
+func removeLostAddAcquired(t *testing.T, clientStack *stack.Stack, lost, acquired tcpip.AddressWithPrefix) {
+	if lost != (tcpip.AddressWithPrefix{}) {
+		if err := clientStack.RemoveAddress(testNICID, lost.Address); err != nil {
+			t.Fatalf("RemoveAddress(%s): %s", lost.Address, err)
+		}
+	}
+	if acquired != (tcpip.AddressWithPrefix{}) {
+		protocolAddress := tcpip.ProtocolAddress{
+			Protocol:          ipv4.ProtocolNumber,
+			AddressWithPrefix: acquired,
+		}
+		if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
+			t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
+		}
+	}
+}
+
 func TestAcquisitionAfterNAK(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
@@ -513,7 +530,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				// First acquisition.
 				0,
 				// Trasition to renew.
-				defaultLeaseLength.Duration() / 2,
+				defaultRenewTime(defaultLeaseLength).Duration(),
 				// Backoff while renewing.
 				0,
 				// Retry after NAK.
@@ -538,7 +555,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				// First acquisition.
 				0,
 				// Trasition to rebind.
-				defaultLeaseLength.Duration() * 875 / 1000,
+				defaultRebindTime(defaultLeaseLength).Duration(),
 				// Backoff while rebinding.
 				0,
 				// Retry after NAK.
@@ -581,23 +598,8 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				return b
 			}
 
-			c.acquiredFunc = func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
-				if newAddr != oldAddr {
-					if oldAddr != (tcpip.AddressWithPrefix{}) {
-						if err := clientStack.RemoveAddress(testNICID, oldAddr.Address); err != nil {
-							t.Fatalf("RemoveAddress(%s): %s", oldAddr.Address, err)
-						}
-					}
-					if newAddr != (tcpip.AddressWithPrefix{}) {
-						protocolAddress := tcpip.ProtocolAddress{
-							Protocol:          ipv4.ProtocolNumber,
-							AddressWithPrefix: newAddr,
-						}
-						if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
-							t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
-						}
-					}
-				}
+			c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
+				removeLostAddAcquired(t, clientStack, lost, acquired)
 			}
 
 			wg.Add(1)
@@ -875,11 +877,13 @@ func TestRenewRebindBackoff(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			_, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+			clientStack, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
 
 			now := time.Now()
-			c.rebindTime = now.Add(tc.rebindTime)
-			c.leaseExpirationTime = now.Add(tc.leaseExpiration)
+			info := c.Info()
+			info.RebindTime = now.Add(tc.rebindTime)
+			info.LeaseExpiration = now.Add(tc.leaseExpiration)
+			c.info.Store(info)
 
 			serverEP.onWritePacket = func(*stack.PacketBuffer) *stack.PacketBuffer {
 				// Don't send any response, keep the client renewing / rebinding
@@ -906,16 +910,25 @@ func TestRenewRebindBackoff(t *testing.T) {
 			errs := make(chan error)
 			go func() {
 				info := c.Info()
-				info.State = tc.state
-				if tc.state == renewing {
-					// Pretend the server's address is broadcast to avoid ARP (which
-					// won't work because we don't have an IP address). This is not
-					// necessary in other states since DHCPDISCOVER is always sent to
-					// broadcast.
-					info.Server = header.IPv4Broadcast
-				} else {
-					info.Server = serverAddr
+				if tc.state != initSelecting {
+					// Uphold the invariant that an address is assigned in this state. Without this, ARP
+					// would immediately fail as it tries to resolve the server's unicast link address.
+					assigned := tcpip.AddressWithPrefix{
+						Address:   defaultClientAddrs[0],
+						PrefixLen: 24,
+					}
+					info.Assigned = assigned
+					info.Acquired = assigned
+					protocolAddress := tcpip.ProtocolAddress{
+						Protocol:          ipv4.ProtocolNumber,
+						AddressWithPrefix: assigned,
+					}
+					if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
+						t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
+					}
 				}
+				info.State = tc.state
+				info.Config.ServerAddress = serverAddr
 				_, err := acquire(ctx, c, t.Name(), &info)
 				errs <- err
 			}()
@@ -1251,7 +1264,7 @@ func TestStateTransition(t *testing.T) {
 					return Config{}, fmt.Errorf("fake test timeout error: %w", ctx.Err())
 				}
 
-				info.Addr = tcpip.AddressWithPrefix{
+				info.Acquired = tcpip.AddressWithPrefix{
 					Address:   "\xc0\xa8\x03\x02",
 					PrefixLen: 24,
 				}
@@ -1268,13 +1281,13 @@ func TestStateTransition(t *testing.T) {
 			count := 0
 			var curAddr tcpip.AddressWithPrefix
 			addrCh := make(chan tcpip.AddressWithPrefix)
-			c.acquiredFunc = func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
-				if oldAddr != curAddr {
-					t.Fatalf("aquisition %d: curAddr=%s, oldAddr=%s", count, curAddr, oldAddr)
+			c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, cfg Config) {
+				if lost != curAddr {
+					t.Fatalf("aquisition %d: curAddr=%s, oldAddr=%s", count, curAddr, lost)
 				}
 
 				count++
-				curAddr = newAddr
+				curAddr = acquired
 
 				// Respond to context cancellation to avoid deadlock when enclosing test
 				// times out.
@@ -1363,7 +1376,7 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 			return Config{}, fmt.Errorf("fake test timeout error: %w", ctx.Err())
 		}
 		firstAcquisition = false
-		info.Addr = tcpip.AddressWithPrefix{
+		info.Acquired = tcpip.AddressWithPrefix{
 			Address:   "\xc0\xa8\x03\x02",
 			PrefixLen: 24,
 		}
@@ -1390,7 +1403,7 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 
 	var curAddr tcpip.AddressWithPrefix
 	addrCh := make(chan tcpip.AddressWithPrefix)
-	c.acquiredFunc = func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
+	c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, cfg Config) {
 		// Respond to context cancellation to avoid deadlock when enclosing test
 		// times out.
 		select {
@@ -1553,5 +1566,205 @@ func TestTwoServers(t *testing.T) {
 	info := c.Info()
 	if _, err := acquire(ctx, c, t.Name(), &info); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestClientRestartIPHeader(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	clientStack, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg)
+
+	type Packet struct {
+		Addresses struct {
+			Source, Destination tcpip.Address
+		}
+		Ports struct {
+			Source, Destination uint16
+		}
+		Options options
+	}
+
+	types := []dhcpMsgType{
+		dhcpDISCOVER,
+		dhcpREQUEST,
+	}
+
+	const iterations = 3
+
+	packets := make(chan Packet, len(types)*iterations)
+	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
+		var packet Packet
+		ipv4Packet := header.IPv4(pkt.Data.ToView())
+		packet.Addresses.Source = ipv4Packet.SourceAddress()
+		packet.Addresses.Destination = ipv4Packet.DestinationAddress()
+		udpPacket := header.UDP(ipv4Packet.Payload())
+		packet.Ports.Source = udpPacket.SourcePort()
+		packet.Ports.Destination = udpPacket.DestinationPort()
+		dhcpPacket := hdr(udpPacket.Payload())
+		options, err := dhcpPacket.options()
+		if err != nil {
+			t.Errorf("dhcpPacket.options(): %s", err)
+		}
+		packet.Options = options
+		packets <- packet
+
+		return pkt
+	}
+
+	for i := 0; i < iterations; i++ {
+		func() {
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
+				removeLostAddAcquired(t, clientStack, lost, acquired)
+				cancel()
+			}
+
+			c.Run(ctx)
+		}()
+	}
+	close(packets)
+
+	i := 0
+	for packet := range packets {
+		typ := types[i%len(types)]
+
+		expected := Packet{
+			Options: options{
+				{optDHCPMsgType, []byte{byte(typ)}},
+			},
+		}
+		expected.Ports.Source = ClientPort
+		expected.Ports.Destination = ServerPort
+		switch typ {
+		case dhcpDISCOVER, dhcpREQUEST:
+			expected.Addresses.Source = header.IPv4Any
+			expected.Addresses.Destination = header.IPv4Broadcast
+			expected.Options = append(expected.Options, option{
+				optParamReq,
+				[]byte{
+					1,  // request subnet mask
+					3,  // request router
+					15, // domain name
+					6,  // domain name server
+				},
+			})
+			if typ == dhcpREQUEST {
+				expected.Options = append(expected.Options, option{
+					optDHCPServer,
+					[]byte(serverAddr),
+				})
+			}
+			// Only the very first DISCOVER doesn't request a specific address.
+			if i != 0 {
+				expected.Options = append(expected.Options, option{
+					optReqIPAddr,
+					[]byte(defaultClientAddrs[0]),
+				})
+			}
+		default:
+			t.Fatalf("unhandled client message type %s", typ)
+		}
+
+		if diff := cmp.Diff(expected, packet, cmp.AllowUnexported(option{})); diff != "" {
+			t.Errorf("%s packet mismatch (-want +got):\n%s", typ, diff)
+		}
+
+		i++
+	}
+}
+
+func TestClientRestartLeaseTime(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	clientStack, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg)
+	// Always return the same arbitrary time.
+	c.now = func() time.Time { return time.Unix(1234, 5678) }
+
+	acquiredDone := make(chan struct{})
+	c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
+		removeLostAddAcquired(t, clientStack, lost, acquired)
+		acquiredDone <- struct{}{}
+	}
+	clientCtx, clientCancel := context.WithCancel(ctx)
+	// Acquire address and transition to bound state.
+	go c.Run(clientCtx)
+	<-acquiredDone
+
+	checkTimes := func(now time.Time, leaseLength, renew, rebind Seconds) {
+		info := c.Info()
+		if got, want := info.LeaseExpiration, now.Add(leaseLength.Duration()); got != want {
+			t.Errorf("info.LeaseExpiration=%s, want=%s", got, want)
+		}
+		if got, want := info.RenewTime, now.Add(renew.Duration()); got != want {
+			t.Errorf("info.RenewTime=%s, want=%s", got, want)
+		}
+		if got, want := info.RebindTime, now.Add(rebind.Duration()); got != want {
+			t.Errorf("info.RebindTime=%s, want=%s", got, want)
+		}
+		if info.Config.LeaseLength != leaseLength {
+			t.Errorf("info.Config.LeaseLength=%s, want=%s", info.Config.LeaseLength, leaseLength)
+		}
+		if info.Config.RenewTime != renew {
+			t.Errorf("info.Config.RenewTime=%s, want=%s", info.Config.RenewTime, renew)
+		}
+		if info.Config.RebindTime != rebind {
+			t.Errorf("info.Config.RebindTime=%s, want=%s", info.Config.RebindTime, rebind)
+		}
+	}
+	renewTime, rebindTime := defaultRenewTime(defaultLeaseLength), defaultRebindTime(defaultLeaseLength)
+	checkTimes(c.now(), defaultLeaseLength, renewTime, rebindTime)
+
+	// Simulate interface going down.
+	clientCancel()
+	<-acquiredDone
+
+	zero := Seconds(0)
+	checkTimes(time.Time{}, zero, zero, zero)
+
+	clientCtx, clientCancel = context.WithCancel(ctx)
+	defer clientCancel()
+
+	writeIntercept := make(chan struct{})
+	intercepts := 0
+	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
+		ipv4Packet := header.IPv4(pkt.Data.ToView())
+		udpPacket := header.UDP(ipv4Packet.Payload())
+		dhcpPacket := hdr(udpPacket.Payload())
+		opts, err := dhcpPacket.options()
+		if err != nil {
+			t.Fatalf("packet missing options: %s", err)
+		}
+		typ, err := opts.dhcpMsgType()
+		if err != nil {
+			t.Fatalf("packet missing message type: %s", err)
+		}
+		if typ == dhcpDISCOVER {
+			// maxIntercepts is selected to cause an acquisition attempt to timeout
+			// given the defaultAcquireTimeout and defaultRetransTime.
+			// maxIntercepts * defaultRetransTime >= defaultAcquireTime
+			const maxIntercepts = 3
+			if intercepts < maxIntercepts {
+				intercepts++
+				return nil
+			}
+			if intercepts == maxIntercepts {
+				writeIntercept <- struct{}{}
+			}
+		}
+		return pkt
+	}
+	// Restart client and transition to bound.
+	go c.Run(clientCtx)
+	<-writeIntercept
+	<-acquiredDone
+
+	checkTimes(c.now(), defaultLeaseLength, renewTime, rebindTime)
+	info := c.Info()
+	if info.State != bound {
+		t.Errorf("info.State=%s, want=%s", info.State, bound)
 	}
 }
