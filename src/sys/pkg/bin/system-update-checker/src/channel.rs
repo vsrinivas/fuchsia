@@ -266,9 +266,7 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
         Ok(repo_configs
             .into_iter()
             .filter_map(|config| config.try_into().ok())
-            .filter_map(|config: RepositoryConfig| {
-                config.repo_url().channel().map(|s| s.to_string())
-            })
+            .map(|config: RepositoryConfig| config.repo_url().host().to_string())
             .collect())
     }
 }
@@ -848,8 +846,7 @@ mod tests {
                                 .iter()
                                 .map(|channel| {
                                     RepositoryConfigBuilder::new(
-                                        RepoUrl::new(format!("a.{}.c.fuchsia.com", channel))
-                                            .unwrap(),
+                                        RepoUrl::new(channel.to_string()).unwrap(),
                                     )
                                     .build()
                                     .into()
