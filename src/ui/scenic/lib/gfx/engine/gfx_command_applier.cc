@@ -323,7 +323,7 @@ bool GfxCommandApplier::ApplyReleaseResourceCmd(Session* session,
   for (auto& [_, info] : session->BufferCollections()) {
     info.ImageResourceIds().erase(command.id);
   }
-  for (auto& info : session->DeregisteredBufferCollections()) {
+  for (auto& [_, info] : session->DeregisteredBufferCollections()) {
     info.ImageResourceIds().erase(command.id);
   }
   return session->resources()->RemoveResource(command.id);
@@ -433,8 +433,8 @@ bool GfxCommandApplier::ApplySetDisplayMinimumRgbCmd(
   display_controller->CheckConfig(/*discard=*/false, &result, &ops);
   if (result != fuchsia::hardware::display::ConfigResult::OK) {
     const char* msg = "GfxCommandApplier::ApplySetDisplayMinimumRgbCmd config result: ";
-    session->error_reporter()->ERROR() << msg <<  static_cast<uint32_t>(result);
-    FX_LOGS(ERROR) << msg <<  static_cast<uint32_t>(result);
+    session->error_reporter()->ERROR() << msg << static_cast<uint32_t>(result);
+    FX_LOGS(ERROR) << msg << static_cast<uint32_t>(result);
     return false;
   }
   return true;

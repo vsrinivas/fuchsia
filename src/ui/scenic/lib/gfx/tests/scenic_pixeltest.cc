@@ -8,35 +8,25 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <glm/gtx/quaternion.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/string_cast.hpp>
-#include <gtest/gtest.h>
 #include <lib/fdio/directory.h>
+#include <lib/images/cpp/images.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/session.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
-#include <lib/images/cpp/images.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 #include <zircon/types.h>
 
 #include <map>
 #include <string>
 
+#include <gtest/gtest.h>
+
 #include "src/lib/fsl/handles/object_info.h"
-#include <lib/syslog/cpp/macros.h>
-#include "src/ui/scenic/lib/gfx/tests/pixel_test.h"
-#include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
-#include "src/ui/scenic/lib/gfx/tests/vk_util.h"
-#include "src/ui/testing/views/background_view.h"
-#include "src/ui/testing/views/coordinate_test_view.h"
-#include "src/ui/testing/views/opacity_view.h"
-#include "src/ui/testing/views/test_view.h"
-#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/impl/naive_image.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
@@ -44,7 +34,18 @@
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/yuv/yuv.h"
 #include "src/ui/scenic/lib/gfx/engine/buffer_collection.h"
+#include "src/ui/scenic/lib/gfx/tests/pixel_test.h"
+#include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
+#include "src/ui/scenic/lib/gfx/tests/vk_util.h"
+#include "src/ui/testing/views/background_view.h"
+#include "src/ui/testing/views/coordinate_test_view.h"
+#include "src/ui/testing/views/opacity_view.h"
+#include "src/ui/testing/views/test_view.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <vulkan/vulkan.hpp>
 
 namespace {
@@ -2052,6 +2053,70 @@ TEST_F(ScenicPixelTest, Image2PixelTest) {
   session->Enqueue(scenic::NewReleaseResourceCmd(kShapeNodeId));
   session->Enqueue(scenic::NewReleaseResourceCmd(kMaterialId));
   session->Enqueue(scenic::NewReleaseResourceCmd(kImageId));
+
+  RunLoopUntilIdle();
+  Present(session);
+}
+
+TEST_F(ScenicPixelTest, Image2CreateTest) {
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  test_session->SetUpCamera().SetProjection(0);
+
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(sysmem_allocator);
+
+  auto [local_token, dup_token] = CreateSysmemTokens(sysmem_allocator.get());
+
+  const uint32_t kBufferId = 199118;
+  session->RegisterBufferCollection(kBufferId, std::move(dup_token));
+  RunLoopUntilIdle();
+  Present(session);
+
+  const uint32_t kShapeWidth = 32;
+  const uint32_t kShapeHeight = 32;
+  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  zx_status_t status = sysmem_allocator->BindSharedCollection(std::move(local_token),
+                                                              buffer_collection.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.cpu_domain_supported = true;
+  constraints.buffer_memory_constraints.ram_domain_supported = true;
+  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWriteOften;
+
+  constraints.image_format_constraints_count = 1;
+  auto& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0] =
+      fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
+  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.has_format_modifier = true;
+  image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+  image_constraints.min_coded_width = kShapeWidth;
+  image_constraints.max_coded_width = kShapeWidth;
+  image_constraints.min_coded_height = kShapeHeight;
+  image_constraints.max_coded_height = kShapeHeight;
+
+  status = buffer_collection->SetConstraints(true, constraints);
+  EXPECT_EQ(status, ZX_OK);
+
+  // Have the client wait for allocation.
+  zx_status_t allocation_status = ZX_OK;
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+  status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(allocation_status, ZX_OK);
+
+  status = buffer_collection->Close();
+  EXPECT_EQ(status, ZX_OK);
+
+  session->DeregisterBufferCollection(kBufferId);
+
+  const uint32_t kImageId = session->next_resource_id();
+  session->Enqueue(scenic::NewCreateImage2Cmd(kImageId, kShapeWidth, kShapeHeight, kBufferId, 0));
 
   RunLoopUntilIdle();
   Present(session);

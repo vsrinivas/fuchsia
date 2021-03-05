@@ -112,7 +112,7 @@ class Session : public CommandDispatcher {
     return buffer_collections_;
   }
 
-  std::vector<BufferCollectionInfo>& DeregisteredBufferCollections() {
+  std::unordered_map<uint32_t, BufferCollectionInfo>& DeregisteredBufferCollections() {
     return deregistered_buffer_collections_;
   }
 
@@ -171,7 +171,7 @@ class Session : public CommandDispatcher {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 
   std::unordered_map<uint32_t, BufferCollectionInfo> buffer_collections_;
-  std::vector<BufferCollectionInfo> deregistered_buffer_collections_;
+  std::unordered_map<uint32_t, BufferCollectionInfo> deregistered_buffer_collections_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;  // must be last
 };

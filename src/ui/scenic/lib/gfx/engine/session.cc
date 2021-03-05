@@ -128,11 +128,14 @@ bool Session::ApplyScheduledUpdates(CommandContext* command_context,
   // Updates have been applied - inspect latest session resource and tree stats.
   inspect_resource_count_.Set(resource_count_);
 
-  deregistered_buffer_collections_.erase(
-      std::remove_if(deregistered_buffer_collections_.begin(),
-                     deregistered_buffer_collections_.end(),
-                     [](BufferCollectionInfo& info) { return info.ImageResourceIds().empty(); }),
-      deregistered_buffer_collections_.end());
+  for (auto it = deregistered_buffer_collections_.begin();
+       it != deregistered_buffer_collections_.end();) {
+    if (it->second.ImageResourceIds().empty()) {
+      it = deregistered_buffer_collections_.erase(it);
+    } else {
+      ++it;
+    }
+  }
 
   return true;
 }
@@ -209,7 +212,7 @@ void Session::DeregisterBufferCollection(uint32_t buffer_collection_id) {
     return;
   }
 
-  deregistered_buffer_collections_.push_back(std::move(buffer_collection.mapped()));
+  deregistered_buffer_collections_[buffer_collection_id] = std::move(buffer_collection.mapped());
 }
 
 }  // namespace gfx

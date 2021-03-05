@@ -40,9 +40,12 @@ ImagePtr Image::New(Session* session, ResourceId id, uint32_t width, uint32_t he
                     ErrorReporter* error_reporter) {
   auto buffer_collection_it = session->BufferCollections().find(buffer_collection_id);
   if (buffer_collection_it == session->BufferCollections().end()) {
-    FX_LOGS(ERROR) << "buffer_collection_id " << buffer_collection_id
-                   << " has not yet been registered.";
-    return nullptr;
+    buffer_collection_it = session->DeregisteredBufferCollections().find(buffer_collection_id);
+    if (buffer_collection_it == session->DeregisteredBufferCollections().end()) {
+      FX_LOGS(ERROR) << "buffer_collection_id " << buffer_collection_id
+                     << " has not yet been registered.";
+      return nullptr;
+    }
   }
 
   BufferCollectionInfo& info = buffer_collection_it->second;
