@@ -95,3 +95,7 @@
     <p><img src="https://fonts.gstatic.com/s/i/googlematerialicons/edit/v6/googblue-24dp/1x/gm_edit_googblue_24dp.png" class="inline-icon" alt=""> <a href="{{ fuchsia_editor }}{{ rfcs_dir }}{{ rfcs_metadata_file }}">Edit RFC metadata</a></p>
   </div>
 </div>
+
+<!--Comments to improve SEO
+<p>RFC{{ rfc.name|trim("RFC-")|int }}</p>
+<p>RFC {{ rfc.name|trim("RFC-")|int }}</p>-->
