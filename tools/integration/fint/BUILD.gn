@@ -100,6 +100,9 @@ golden_file("context_pb_go_diff") {
   current = "${root_gen_dir}/go-proto-gen/src/tools/integration/fint/proto/context.pb.go"
   golden = "proto/context.pb.go"
   deps = [ ":context" ]
+
+  # The pb.go files contain version strings of protoc and protoc-gen-go, so failing on
+  # diffs would make it more difficult to roll updates to those tools.
   warn_on_changes = true
 }
 
@@ -107,6 +110,9 @@ golden_file("static_pb_go_diff") {
   current = "${root_gen_dir}/go-proto-gen/src/tools/integration/fint/proto/static.pb.go"
   golden = "proto/static.pb.go"
   deps = [ ":static" ]
+
+  # The pb.go files contain version strings of protoc and protoc-gen-go, so failing on
+  # diffs would make it more difficult to roll updates to those tools.
   warn_on_changes = true
 }
 
@@ -114,6 +120,9 @@ golden_file("set_artifacts_pb_go_diff") {
   current = "${root_gen_dir}/go-proto-gen/src/tools/integration/fint/proto/set_artifacts.pb.go"
   golden = "proto/set_artifacts.pb.go"
   deps = [ ":set_artifacts" ]
+
+  # The pb.go files contain version strings of protoc and protoc-gen-go, so failing on
+  # diffs would make it more difficult to roll updates to those tools.
   warn_on_changes = true
 }
 
@@ -121,7 +130,6 @@ golden_file("static_desc_pb_diff") {
   current = "${target_out_dir}/static.desc.pb"
   golden = "proto/static.desc.pb"
   deps = [ ":static" ]
-  warn_on_changes = true
 }
 
 group("tests") {
