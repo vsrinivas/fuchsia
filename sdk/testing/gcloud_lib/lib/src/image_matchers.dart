@@ -40,7 +40,7 @@ bool _isRetriableError(int code) =>
 ///
 /// Throws [VisionException] if there's a non-retriable error or if it fails
 /// after retrying.
-Future<gcloud.AnnotateImageResponse> _invokeAnnotate(gcloud.VisionApi vision,
+Future<gcloud.AnnotateImageResponse> invokeAnnotate(gcloud.VisionApi vision,
     {@required String $fields,
     @required gcloud.BatchAnnotateImagesRequest request,
     String dumpName,
@@ -102,8 +102,7 @@ Future<gcloud.AnnotateImageResponse> annotateImage(
         ]
     ];
 
-  return _invokeAnnotate(vision,
-      $fields: $fields, request: request, dump: dump);
+  return invokeAnnotate(vision, $fields: $fields, request: request, dump: dump);
 }
 
 // Log JSON formatted AnnotateImageResponse
