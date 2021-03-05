@@ -36,9 +36,9 @@ constexpr uint32_t MaxSizeInChannel() {
 // the |kSending| context, and requests are processed in the |kReceiving| context.
 template <typename FidlType>
 using Buffer =
-    internal::AlignedBuffer<internal::IsResponseType<FidlType>::value
-                                ? MaxSizeInChannel<FidlType, MessageDirection::kReceiving>()
-                                : MaxSizeInChannel<FidlType, MessageDirection::kSending>()>;
+    internal::InlineMessageBuffer<internal::IsResponseType<FidlType>::value
+                                      ? MaxSizeInChannel<FidlType, MessageDirection::kReceiving>()
+                                      : MaxSizeInChannel<FidlType, MessageDirection::kSending>()>;
 
 }  // namespace fidl
 

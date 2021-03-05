@@ -125,7 +125,7 @@ struct DocCommentWithQuotes {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(DocCommentWithQuotes* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -143,8 +143,7 @@ struct DocCommentWithQuotes {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<8> bytes_;
     UnownedEncodedByteMessage message_;
   };
 

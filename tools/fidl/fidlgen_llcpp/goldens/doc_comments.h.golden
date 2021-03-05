@@ -489,7 +489,7 @@ class Table final {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Table* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -507,8 +507,7 @@ class Table final {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<40> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -1009,7 +1008,7 @@ struct Struct {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Struct* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -1027,8 +1026,7 @@ struct Struct {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<8> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -1238,9 +1236,9 @@ class Interface final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid)
-          : message_(bytes_, sizeof(bytes_), _txid) {}
+          : message_(bytes_.data(), bytes_.size(), _txid) {}
       explicit OwnedEncodedByteMessage(MethodRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -1266,8 +1264,7 @@ class Interface final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -1473,9 +1470,10 @@ class Interface final {
 
     class OwnedEncodedByteMessage final {
      public:
-      explicit OwnedEncodedByteMessage() : message_(bytes_, sizeof(bytes_)) {}
+      explicit OwnedEncodedByteMessage()
+          : message_(bytes_.data(), bytes_.size()) {}
       explicit OwnedEncodedByteMessage(OnEventResponse* response)
-          : message_(bytes_, sizeof(bytes_), response) {}
+          : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -1501,8 +1499,7 @@ class Interface final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedByteMessage message_;
     };
 

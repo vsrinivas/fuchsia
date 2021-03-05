@@ -17,6 +17,7 @@ import (
 // This value needs to be kept in sync with the one defined in
 // zircon/system/ulib/fidl/include/lib/fidl/llcpp/sync_call.h
 const llcppMaxStackAllocSize = 512
+const channelMaxMessageSize = 65536
 
 // These are used in header/impl templates to select the correct type-specific template
 type bitsKind struct{}
@@ -283,7 +284,7 @@ type Table struct {
 	BiggestOrdinal int
 	MaxHandles     int
 	MaxOutOfLine   int
-	MaxSentSize    int
+	ByteBufferType string
 	HasPointer     bool
 
 	// FrameItems stores the members in ordinal order; "null" for reserved.
@@ -317,16 +318,16 @@ type Struct struct {
 	fidl.Attributes
 	fidl.Resourceness
 	DeclName
-	TableType     string
-	Members       []StructMember
-	InlineSize    int
-	MaxHandles    int
-	MaxOutOfLine  int
-	MaxSentSize   int
-	HasPadding    bool
-	IsResultValue bool
-	HasPointer    bool
-	Result        *Result
+	TableType      string
+	Members        []StructMember
+	InlineSize     int
+	MaxHandles     int
+	MaxOutOfLine   int
+	ByteBufferType string
+	HasPadding     bool
+	IsResultValue  bool
+	HasPointer     bool
+	Result         *Result
 	// Full decls needed to check if a type is memcpy compatible.
 	// Only set if it may be possible for a type to be memcpy compatible,
 	// e.g. has no padding.
@@ -375,6 +376,7 @@ type protocolInner struct {
 	RequestDecoderName  DeclVariant
 	ResponseEncoderName DeclVariant
 	ResponseDecoderName DeclVariant
+	ByteBufferType      string
 	Methods             []Method
 	FuzzingName         string
 	TestBase            DeclName
@@ -480,6 +482,34 @@ type methodInner struct {
 	Result              *Result
 }
 
+func fidlAlign(size int) int {
+	return (size + 7) & ^7
+}
+
+type boundedness bool
+
+const (
+	boundednessBounded   = true
+	boundednessUnbounded = false
+)
+
+func byteBufferType(primarySize int, maxOutOfLine int, boundedness boundedness) string {
+	var sizeString string
+	var size int
+	if boundedness == boundednessUnbounded || primarySize+maxOutOfLine > channelMaxMessageSize {
+		sizeString = "ZX_CHANNEL_MAX_MSG_BYTES"
+		size = channelMaxMessageSize
+	} else {
+		size = fidlAlign(primarySize + maxOutOfLine)
+		sizeString = fmt.Sprintf("%d", size)
+	}
+
+	if size > llcppMaxStackAllocSize {
+		return fmt.Sprintf("::fidl::internal::BoxedMessageBuffer<%s>", sizeString)
+	}
+	return fmt.Sprintf("::fidl::internal::InlineMessageBuffer<%s>", sizeString)
+}
+
 // Method should be created using methodInner.build().
 // TODO: Consider factoring out common fields between Request and Response.
 type Method struct {
@@ -490,7 +520,7 @@ type Method struct {
 	RequestSize             int
 	RequestMaxHandles       int
 	RequestMaxOutOfLine     int
-	RequestSentMaxSize      int
+	RequestByteBufferType   string
 	RequestPadding          bool
 	RequestFlexible         bool
 	RequestHasPointer       bool
@@ -498,7 +528,7 @@ type Method struct {
 	ResponseSize            int
 	ResponseMaxHandles      int
 	ResponseMaxOutOfLine    int
-	ResponseSentMaxSize     int
+	ResponseByteBufferType  string
 	ResponseReceivedMaxSize int
 	ResponsePadding         bool
 	ResponseFlexible        bool
@@ -538,6 +568,11 @@ func (inner methodInner) build() Method {
 		computedResponseReceivedMaxSize = inner.responseTypeShape.InlineSize + inner.responseTypeShape.MaxOutOfLine
 	}
 
+	var responseBoundedness boundedness = boundednessBounded
+	if inner.responseTypeShape.HasFlexibleEnvelope {
+		responseBoundedness = boundednessUnbounded
+	}
+
 	m := Method{
 		methodInner:             inner,
 		NameInLowerSnakeCase:    fidl.ToSnakeCase(inner.Name),
@@ -545,7 +580,7 @@ func (inner methodInner) build() Method {
 		RequestSize:             inner.requestTypeShape.InlineSize,
 		RequestMaxHandles:       inner.requestTypeShape.MaxHandles,
 		RequestMaxOutOfLine:     inner.requestTypeShape.MaxOutOfLine,
-		RequestSentMaxSize:      inner.requestTypeShape.InlineSize + inner.requestTypeShape.MaxOutOfLine,
+		RequestByteBufferType:   byteBufferType(inner.requestTypeShape.InlineSize, inner.requestTypeShape.MaxOutOfLine, boundednessBounded),
 		RequestPadding:          inner.requestTypeShape.HasPadding,
 		RequestFlexible:         inner.requestTypeShape.HasFlexibleEnvelope,
 		RequestHasPointer:       inner.requestTypeShape.Depth > 0,
@@ -553,7 +588,7 @@ func (inner methodInner) build() Method {
 		ResponseSize:            inner.responseTypeShape.InlineSize,
 		ResponseMaxHandles:      inner.responseTypeShape.MaxHandles,
 		ResponseMaxOutOfLine:    inner.responseTypeShape.MaxOutOfLine,
-		ResponseSentMaxSize:     inner.responseTypeShape.InlineSize + inner.responseTypeShape.MaxOutOfLine,
+		ResponseByteBufferType:  byteBufferType(inner.responseTypeShape.InlineSize, inner.responseTypeShape.MaxOutOfLine, responseBoundedness),
 		ResponseReceivedMaxSize: computedResponseReceivedMaxSize,
 		ResponsePadding:         inner.responseTypeShape.HasPadding,
 		ResponseFlexible:        inner.responseTypeShape.HasFlexibleEnvelope,
@@ -1446,6 +1481,7 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 		Natural: NewDeclVariant(tableName, protocolName.Natural.Namespace().Append("_internal")),
 	}
 	methods := []Method{}
+	maxResponseSize := 0
 	for _, v := range val.Methods {
 		name := changeIfReserved(v.Name, "")
 		requestTable := tableBase.AppendName(string(v.Name) + "RequestTable")
@@ -1462,7 +1498,7 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 			result = c.resultForUnion[v.Response[0].Type.Identifier]
 		}
 
-		methods = append(methods, methodInner{
+		method := methodInner{
 			protocolName:        protocolName,
 			requestTypeShape:    v.RequestTypeShapeV1,
 			responseTypeShape:   v.ResponseTypeShapeV1,
@@ -1477,7 +1513,11 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 			ResponseCodingTable: responseTable,
 			Transitional:        v.IsTransitional(),
 			Result:              result,
-		}.build())
+		}.build()
+		methods = append(methods, method)
+		if size := method.ResponseSize + method.ResponseMaxOutOfLine; size > maxResponseSize {
+			maxResponseSize = size
+		}
 	}
 
 	fuzzingName := strings.ReplaceAll(strings.ReplaceAll(string(val.Name), ".", "_"), "/", "_")
@@ -1496,6 +1536,7 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 		RequestDecoderName:  protocolName.AppendName("_RequestDecoder").Natural,
 		ResponseEncoderName: protocolName.AppendName("_ResponseEncoder").Natural,
 		ResponseDecoderName: protocolName.AppendName("_ResponseDecoder").Natural,
+		ByteBufferType:      byteBufferType(maxResponseSize, 0, boundednessBounded),
 		Methods:             methods,
 		FuzzingName:         fuzzingName,
 		TestBase:            protocolName.AppendName("_TestBase").AppendNamespace("testing"),
@@ -1547,17 +1588,17 @@ func (c *compiler) compileStruct(val fidl.Struct) Struct {
 	name := c.compileDeclName(val.Name)
 	tableType := c.compileTableType(val.Name)
 	r := Struct{
-		Attributes:   val.Attributes,
-		Resourceness: val.Resourceness,
-		DeclName:     name,
-		TableType:    tableType,
-		Members:      []StructMember{},
-		InlineSize:   val.TypeShapeV1.InlineSize,
-		MaxHandles:   val.TypeShapeV1.MaxHandles,
-		MaxOutOfLine: val.TypeShapeV1.MaxOutOfLine,
-		MaxSentSize:  val.TypeShapeV1.InlineSize + val.TypeShapeV1.MaxOutOfLine,
-		HasPadding:   val.TypeShapeV1.HasPadding,
-		HasPointer:   val.TypeShapeV1.Depth > 0,
+		Attributes:     val.Attributes,
+		Resourceness:   val.Resourceness,
+		DeclName:       name,
+		TableType:      tableType,
+		Members:        []StructMember{},
+		InlineSize:     val.TypeShapeV1.InlineSize,
+		MaxHandles:     val.TypeShapeV1.MaxHandles,
+		MaxOutOfLine:   val.TypeShapeV1.MaxOutOfLine,
+		ByteBufferType: byteBufferType(val.TypeShapeV1.InlineSize, val.TypeShapeV1.MaxOutOfLine, boundednessBounded),
+		HasPadding:     val.TypeShapeV1.HasPadding,
+		HasPointer:     val.TypeShapeV1.Depth > 0,
 	}
 
 	for _, v := range val.Members {
@@ -1650,7 +1691,7 @@ func (c *compiler) compileTable(val fidl.Table) Table {
 		BiggestOrdinal: 0,
 		MaxHandles:     val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine:   val.TypeShapeV1.MaxOutOfLine,
-		MaxSentSize:    val.TypeShapeV1.InlineSize + val.TypeShapeV1.MaxOutOfLine,
+		ByteBufferType: byteBufferType(val.TypeShapeV1.InlineSize, val.TypeShapeV1.MaxOutOfLine, boundednessBounded),
 		HasPointer:     val.TypeShapeV1.Depth > 0,
 	}
 

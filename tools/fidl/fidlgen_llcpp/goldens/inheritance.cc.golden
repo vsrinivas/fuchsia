@@ -20,8 +20,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
     const ::fidl::StringView& s) {
   ::fidl::internal::EncodedMessageTypes<fooRequest>::OwnedByte _request(
       zx_txid_t(0), s);
-  _request.GetOutgoingMessage().Call<fooResponse>(
-      _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
+  _request.GetOutgoingMessage().Call<fooResponse>(_client, bytes_.data(),
+                                                  bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -31,9 +31,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
     const ::fidl::StringView& s, zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<fooRequest>::OwnedByte _request(
       zx_txid_t(0), s);
-  _request.GetOutgoingMessage().Call<fooResponse>(
-      _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
-      _deadline);
+  _request.GetOutgoingMessage().Call<fooResponse>(_client, bytes_.data(),
+                                                  bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -234,8 +233,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
     const ::fidl::StringView& s) {
   ::fidl::internal::EncodedMessageTypes<fooRequest>::OwnedByte _request(
       zx_txid_t(0), s);
-  _request.GetOutgoingMessage().Call<fooResponse>(
-      _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
+  _request.GetOutgoingMessage().Call<fooResponse>(_client, bytes_.data(),
+                                                  bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -245,9 +244,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
     const ::fidl::StringView& s, zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<fooRequest>::OwnedByte _request(
       zx_txid_t(0), s);
-  _request.GetOutgoingMessage().Call<fooResponse>(
-      _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
-      _deadline);
+  _request.GetOutgoingMessage().Call<fooResponse>(_client, bytes_.data(),
+                                                  bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }

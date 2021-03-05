@@ -124,7 +124,7 @@ struct Simple {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Simple* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -142,8 +142,7 @@ struct Simple {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<8> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -292,9 +291,7 @@ struct BasicStruct {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(BasicStruct* value)
-        : bytes_(std::make_unique<
-                 ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()),
-          message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -312,8 +309,7 @@ struct BasicStruct {
     }
 
    private:
-    std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
-        bytes_;
+    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     UnownedEncodedByteMessage message_;
   };
 

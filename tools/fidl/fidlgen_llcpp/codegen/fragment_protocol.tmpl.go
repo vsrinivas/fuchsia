@@ -36,38 +36,6 @@ class {{ .Name }};
 {{- end }}
 {{- end }}
 
-{{- define "RequestSentSize" }}
-  {{- if gt .RequestSentMaxSize 65536 -}}
-  ZX_CHANNEL_MAX_MSG_BYTES
-  {{- else -}}
-  PrimarySize + MaxOutOfLine
-  {{- end -}}
-{{- end }}
-
-{{- define "ResponseSentSize" }}
-  {{- if gt .ResponseSentMaxSize 65536 -}}
-  ZX_CHANNEL_MAX_MSG_BYTES
-  {{- else -}}
-  PrimarySize + MaxOutOfLine
-  {{- end -}}
-{{- end }}
-
-{{- define "ResponseReceivedSize" }}
-  {{- if gt .ResponseReceivedMaxSize 65536 -}}
-  ZX_CHANNEL_MAX_MSG_BYTES
-  {{- else -}}
-  {{ .Name }}Response::PrimarySize + {{ .Name }}Response::MaxOutOfLine
-  {{- end -}}
-{{- end }}
-
-{{- define "ResponseReceivedByteAccess" }}
-  {{- if gt .ResponseReceivedMaxSize 512 -}}
-  bytes_->data()
-  {{- else -}}
-  bytes_
-  {{- end -}}
-{{- end }}
-
 {{- define "ProtocolDeclaration" }}
 {{- $protocol := . }}
 {{ "" }}
@@ -260,21 +228,10 @@ class {{ .Name }} final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage({{ .Response | MessagePrototype }})
-          {{- if gt .ResponseSentMaxSize 512 -}}
-        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" . }}>>()),
-          message_(bytes_->data(), {{- template "ResponseSentSize" . }}
-          {{- else }}
-          : message_(bytes_, sizeof(bytes_)
-          {{- end }}
+        : message_(bytes_.data(), bytes_.size()
           {{- .Response | CommaParamNames }}) {}
       explicit OwnedEncodedByteMessage({{ .Name }}Response* response)
-          {{- if gt .ResponseSentMaxSize 512 -}}
-        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" . }}>>()),
-          message_(bytes_->data(), {{- template "ResponseSentSize" . }}
-          {{- else }}
-          : message_(bytes_, sizeof(bytes_)
-          {{- end }}
-          , response) {}
+        : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -295,12 +252,7 @@ class {{ .Name }} final {
 #endif
 
      private:
-      {{- if gt .ResponseSentMaxSize 512 }}
-      std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" . }}>> bytes_;
-      {{- else }}
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
-      {{- end }}
+      {{ .ResponseByteBufferType }} bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -558,21 +510,10 @@ class {{ .Name }} final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid
         {{- .Request | CommaMessagePrototype }})
-          {{- if gt .RequestSentMaxSize 512 -}}
-        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" . }}>>()),
-          message_(bytes_->data(), {{- template "RequestSentSize" . }}, _txid
-          {{- else }}
-          : message_(bytes_, sizeof(bytes_), _txid
-          {{- end }}
+        : message_(bytes_.data(), bytes_.size(), _txid
           {{- .Request | CommaParamNames }}) {}
       explicit OwnedEncodedByteMessage({{ .Name }}Request* request)
-          {{- if gt .RequestSentMaxSize 512 -}}
-        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" . }}>>()),
-          message_(bytes_->data(), {{- template "RequestSentSize" . }}
-          {{- else }}
-          : message_(bytes_, sizeof(bytes_)
-          {{- end }}
-          , request) {}
+        : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -593,12 +534,7 @@ class {{ .Name }} final {
 #endif
 
      private:
-      {{- if gt .RequestSentMaxSize 512 }}
-      std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" . }}>> bytes_;
-      {{- else }}
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
-      {{- end }}
+      {{ .RequestByteBufferType }} bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -752,11 +688,11 @@ class {{ .Name }} final {
 
       {{ .Name }}Response* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<{{ .Name }}Response*>({{- template "ResponseReceivedByteAccess" . }});
+        return reinterpret_cast<{{ .Name }}Response*>(bytes_.data());
       }
       const {{ .Name }}Response* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const {{ .Name }}Response*>({{- template "ResponseReceivedByteAccess" . }});
+        return reinterpret_cast<const {{ .Name }}Response*>(bytes_.data());
       }
 
       {{ .Name }}Response& value() { return *Unwrap(); }
@@ -771,12 +707,7 @@ class {{ .Name }} final {
 
      private:
       {{- if .HasResponse }}
-        {{- if gt .ResponseReceivedMaxSize 512 }}
-        std::unique_ptr<::fidl::internal::AlignedBuffer<{{ template "ResponseReceivedSize" . }}>> bytes_;
-        {{- else }}
-        FIDL_ALIGNDECL
-        uint8_t bytes_[{{ .Name }}Response::PrimarySize + {{ .Name }}Response::MaxOutOfLine];
-        {{- end }}
+        {{ .ResponseByteBufferType }} bytes_;
       {{- end }}
     };
     {{- end }}

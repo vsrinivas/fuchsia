@@ -190,9 +190,9 @@ class SecondProtocol final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid)
-          : message_(bytes_, sizeof(bytes_), _txid) {}
+          : message_(bytes_.data(), bytes_.size(), _txid) {}
       explicit OwnedEncodedByteMessage(MethodOnSecondRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -218,8 +218,7 @@ class SecondProtocol final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -593,9 +592,9 @@ class FirstProtocol final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid)
-          : message_(bytes_, sizeof(bytes_), _txid) {}
+          : message_(bytes_.data(), bytes_.size(), _txid) {}
       explicit OwnedEncodedByteMessage(MethodOnFirstRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -621,8 +620,7 @@ class FirstProtocol final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedByteMessage message_;
     };
 

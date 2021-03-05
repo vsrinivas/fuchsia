@@ -10,14 +10,6 @@ const fragmentStructTmpl = `
 struct {{ .Name }};
 {{- end }}
 
-{{- define "SentSize" }}
-  {{- if gt .MaxSentSize 65536 -}}
-  ZX_CHANNEL_MAX_MSG_BYTES
-  {{- else -}}
-  FIDL_ALIGN(PrimarySize + MaxOutOfLine)
-  {{- end -}}
-{{- end }}
-
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "StructDeclaration" }}
@@ -134,13 +126,7 @@ struct {{ .Name }} {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage({{ .Name }}* value)
-        {{- if gt .MaxSentSize 512 -}}
-      : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "SentSize" . }}>>()),
-        message_(bytes_->data(), {{- template "SentSize" . }}
-        {{- else }}
-        : message_(bytes_, sizeof(bytes_)
-        {{- end }}
-        , value) {}
+      : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -156,12 +142,7 @@ struct {{ .Name }} {
     ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
    private:
-    {{- if gt .MaxSentSize 512 }}
-    std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "SentSize" . }}>> bytes_;
-    {{- else }}
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
-    {{- end }}
+    {{ .ByteBufferType }} bytes_;
     UnownedEncodedByteMessage message_;
   };
 

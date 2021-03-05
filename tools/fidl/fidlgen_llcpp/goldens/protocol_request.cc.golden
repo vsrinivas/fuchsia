@@ -46,9 +46,8 @@ extern "C" const fidl_type_t
     ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client) {
   ::fidl::internal::EncodedMessageTypes<GetChildRequest>::OwnedByte _request(
       zx_txid_t(0));
-  _request.GetOutgoingMessage().Call<GetChildResponse>(
-      _client, bytes_,
-      GetChildResponse::PrimarySize + GetChildResponse::MaxOutOfLine);
+  _request.GetOutgoingMessage().Call<GetChildResponse>(_client, bytes_.data(),
+                                                       bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -59,9 +58,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<GetChildRequest>::OwnedByte _request(
       zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildResponse>(
-      _client, bytes_,
-      GetChildResponse::PrimarySize + GetChildResponse::MaxOutOfLine,
-      _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -87,9 +84,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<GetChildRequestRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildRequestResponse>(
-      _client, bytes_,
-      GetChildRequestResponse::PrimarySize +
-          GetChildRequestResponse::MaxOutOfLine);
+      _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -100,10 +95,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<GetChildRequestRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildRequestResponse>(
-      _client, bytes_,
-      GetChildRequestResponse::PrimarySize +
-          GetChildRequestResponse::MaxOutOfLine,
-      _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }

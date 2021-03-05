@@ -156,7 +156,7 @@ struct Padding7ByteMiddle {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding7ByteMiddle* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -174,8 +174,7 @@ struct Padding7ByteMiddle {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -326,7 +325,7 @@ struct Padding7ByteEnd {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding7ByteEnd* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -344,8 +343,7 @@ struct Padding7ByteEnd {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -497,7 +495,7 @@ struct Padding6ByteMiddle {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding6ByteMiddle* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -515,8 +513,7 @@ struct Padding6ByteMiddle {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -667,7 +664,7 @@ struct Padding6ByteEnd {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding6ByteEnd* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -685,8 +682,7 @@ struct Padding6ByteEnd {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -840,7 +836,7 @@ struct Padding5ByteMiddle {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding5ByteMiddle* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -858,8 +854,7 @@ struct Padding5ByteMiddle {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -1012,7 +1007,7 @@ struct Padding5ByteEnd {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding5ByteEnd* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -1030,8 +1025,7 @@ struct Padding5ByteEnd {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -1183,7 +1177,7 @@ struct Padding4ByteMiddle {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding4ByteMiddle* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -1201,8 +1195,7 @@ struct Padding4ByteMiddle {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -1353,7 +1346,7 @@ struct Padding4ByteEnd {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding4ByteEnd* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -1371,8 +1364,7 @@ struct Padding4ByteEnd {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -1529,7 +1521,7 @@ struct Padding4ByteAlignmentLength12 {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding4ByteAlignmentLength12* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -1547,8 +1539,7 @@ struct Padding4ByteAlignmentLength12 {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -1700,7 +1691,7 @@ struct Padding3ByteMiddle {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding3ByteMiddle* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -1718,8 +1709,7 @@ struct Padding3ByteMiddle {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<8> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -1870,7 +1860,7 @@ struct Padding3ByteEnd {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding3ByteEnd* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -1888,8 +1878,7 @@ struct Padding3ByteEnd {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<8> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -2041,7 +2030,7 @@ struct Padding2ByteMiddle {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding2ByteMiddle* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -2059,8 +2048,7 @@ struct Padding2ByteMiddle {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<8> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -2211,7 +2199,7 @@ struct Padding2ByteEnd {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding2ByteEnd* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -2229,8 +2217,7 @@ struct Padding2ByteEnd {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<8> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -2385,7 +2372,7 @@ struct Padding2ByteAlignmentLength6 {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding2ByteAlignmentLength6* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -2403,8 +2390,7 @@ struct Padding2ByteAlignmentLength6 {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<8> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -2556,7 +2542,7 @@ struct Padding1ByteMiddle {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding1ByteMiddle* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -2574,8 +2560,7 @@ struct Padding1ByteMiddle {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<8> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -2726,7 +2711,7 @@ struct Padding1ByteEnd {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Padding1ByteEnd* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -2744,8 +2729,7 @@ struct Padding1ByteEnd {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<8> bytes_;
     UnownedEncodedByteMessage message_;
   };
 

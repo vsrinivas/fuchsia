@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <type_traits>
 
 namespace fidl {
 
@@ -25,113 +26,49 @@ struct BufferSpan {
 
 namespace internal {
 
-// An uninitialized array of |kSize| bytes, guaranteed to follow FIDL alignment.
-template <uint32_t kSize>
-struct AlignedBuffer {
-  AlignedBuffer() {}
+// An stack allocated uninitialized array of |kSize| bytes, guaranteed to follow FIDL alignment.
+template <size_t kSize>
+struct InlineMessageBuffer {
+  static_assert(kSize % FIDL_ALIGNMENT == 0, "kSize must be FIDL-aligned");
 
-  BufferSpan view() { return BufferSpan(data_, kSize); }
+  InlineMessageBuffer() {}
+  InlineMessageBuffer(InlineMessageBuffer&&) = delete;
+  InlineMessageBuffer(const InlineMessageBuffer&) = delete;
+  InlineMessageBuffer& operator=(InlineMessageBuffer&&) = delete;
+  InlineMessageBuffer& operator=(const InlineMessageBuffer&) = delete;
+
+  BufferSpan view() { return BufferSpan(data(), kSize); }
   uint8_t* data() { return data_; }
+  const uint8_t* data() const { return data_; }
+  constexpr size_t size() const { return kSize; }
 
  private:
   FIDL_ALIGNDECL uint8_t data_[kSize];
 };
 
+static_assert(sizeof(InlineMessageBuffer<40>) == 40);
+
 static_assert(alignof(std::max_align_t) % FIDL_ALIGNMENT == 0,
               "AlignedBuffer should follow FIDL alignment when allocated on the heap.");
 
-// The largest acceptable size for a stack-allocated buffer.
-// Messages which are smaller than/equal to this threshold are stack-allocated,
-// whereas messages greater than this threshold are heap allocated.
-// This constant has therefore a potentially large impact on the behavior of programs built
-// on top of the LLCPP bindings, and modification should be done with great care.
-//
-// July 2019: initial value set at 512 due to Chrome's restriction that the largest stack object
-// tolerated is 512 bytes. For reference, the default stack size on Fuchsia is 256kb.
-constexpr uint32_t kMaxStackAllocSize = 512;
+// An heap allocated uninitialized array of |kSize| bytes, guaranteed to follow FIDL alignment.
+template <size_t kSize>
+struct BoxedMessageBuffer {
+  static_assert(kSize % FIDL_ALIGNMENT == 0, "kSize must be FIDL-aligned");
 
-// |ByteStorage| allocates a buffer either inline or on the heap, depending on the magnitude
-// of |kSize| relative to |kMaxStackAllocSize|.
-template <uint32_t kSize, typename Enabled = void>
-struct ByteStorage;
+  BoxedMessageBuffer() { ZX_DEBUG_ASSERT(FidlIsAligned(bytes_.get())); }
+  BoxedMessageBuffer(BoxedMessageBuffer&&) = delete;
+  BoxedMessageBuffer(const BoxedMessageBuffer&) = delete;
+  BoxedMessageBuffer& operator=(BoxedMessageBuffer&&) = delete;
+  BoxedMessageBuffer& operator=(const BoxedMessageBuffer&) = delete;
 
-// A tag to delay allocation when passed to the constructor of |ByteStorage|.
-// The caller should then invoke |Allocate| explicitly at a later point.
-struct DelayAllocationTag {};
-constexpr DelayAllocationTag DelayAllocation = DelayAllocationTag{};
-
-// This definition is selected when the size is larger than |kMaxStackAllocSize|.
-template <uint32_t kSize>
-struct ByteStorage<kSize, std::enable_if_t<(kSize > kMaxStackAllocSize)>> {
-  constexpr static bool kWillCopyBufferDuringMove = false;
-  constexpr static uint32_t kBufferSize = kSize;
-
-  BufferSpan buffer() { return storage->view(); }
-  uint8_t* data() { return storage->data(); }
-
-  ByteStorage() : storage(std::make_unique<AlignedBuffer<kBufferSize>>()) {}
-  explicit ByteStorage(DelayAllocationTag) {}
-  ~ByteStorage() = default;
-
-  void Allocate() { storage = std::make_unique<AlignedBuffer<kBufferSize>>(); }
-
-  ByteStorage(const ByteStorage&) = delete;
-  ByteStorage& operator=(const ByteStorage&) = delete;
-
-  ByteStorage(ByteStorage&&) = default;
-  ByteStorage& operator=(ByteStorage&&) = default;
+  BufferSpan view() { return BufferSpan(data(), kSize); }
+  uint8_t* data() { return bytes_.get(); }
+  const uint8_t* data() const { return bytes_.get(); }
+  constexpr size_t size() const { return kSize; }
 
  private:
-  std::unique_ptr<AlignedBuffer<kBufferSize>> storage = {};
-};
-
-// This definition is selected when the size is less than or equal to |kMaxStackAllocSize|.
-template <uint32_t kSize>
-struct ByteStorage<kSize, std::enable_if_t<(kSize <= kMaxStackAllocSize)>> {
-  constexpr static bool kWillCopyBufferDuringMove = true;
-  constexpr static uint32_t kBufferSize = kSize;
-
-  BufferSpan buffer() { return storage.view(); }
-  uint8_t* data() { return storage.data(); }
-
-  ByteStorage() {}
-  explicit ByteStorage(DelayAllocationTag) {}
-  ~ByteStorage() = default;
-
-  void Allocate() { /* No-op when |storage| is in stack, since everything is already allocated */
-  }
-
-  ByteStorage(const ByteStorage&) = delete;
-  ByteStorage& operator=(const ByteStorage&) = delete;
-
-  ByteStorage(ByteStorage&&) = default;
-  ByteStorage& operator=(ByteStorage&&) = default;
-
- private:
-  AlignedBuffer<kBufferSize> storage;
-};
-
-// |ResponseStorage| allocates a buffer either inline or on the heap, depending on the
-// maximum wire-format size of that particular FidlType. FidlType should be a response message.
-template <typename FidlType>
-struct ResponseStorage
-    : private ByteStorage<ClampedMessageSize<FidlType, MessageDirection::kReceiving>()> {
- private:
-  using Super = ByteStorage<ClampedMessageSize<FidlType, MessageDirection::kReceiving>()>;
-
- public:
-  using Super::buffer;
-  using Super::kBufferSize;
-  using Super::kWillCopyBufferDuringMove;
-
-  ResponseStorage() = default;
-  ~ResponseStorage() = default;
-
-  ResponseStorage(const ResponseStorage&) = delete;
-  ResponseStorage& operator=(const ResponseStorage&) = delete;
-
-  ResponseStorage(ResponseStorage&&) = default;
-  ResponseStorage& operator=(ResponseStorage&&) = default;
+  std::unique_ptr<uint8_t[]> bytes_ = std::make_unique<uint8_t[]>(kSize);
 };
 
 }  // namespace internal

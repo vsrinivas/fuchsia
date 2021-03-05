@@ -67,9 +67,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<SendAndReceiveRequest>::OwnedByte
       _request(zx_txid_t(0), e);
   _request.GetOutgoingMessage().Call<SendAndReceiveResponse>(
-      _client, bytes_,
-      SendAndReceiveResponse::PrimarySize +
-          SendAndReceiveResponse::MaxOutOfLine);
+      _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -82,10 +80,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<SendAndReceiveRequest>::OwnedByte
       _request(zx_txid_t(0), e);
   _request.GetOutgoingMessage().Call<SendAndReceiveResponse>(
-      _client, bytes_,
-      SendAndReceiveResponse::PrimarySize +
-          SendAndReceiveResponse::MaxOutOfLine,
-      _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -257,15 +252,6 @@ std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
   if (status != ZX_OK) {
     return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kReadAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    if (::fidl::internal::ClampedMessageSize<
-            ReceiveResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<
-          ReceiveResponse, ::fidl::MessageDirection::kReceiving>();
-    }
-    return x;
-  })();
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
     if (ReceiveResponse::MaxNumHandles >= x) {
@@ -276,14 +262,14 @@ std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
     }
     return x;
   })();
-  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  ::fidl::internal::InlineMessageBuffer<24> read_storage;
   uint8_t* read_bytes = read_storage.data();
   zx_handle_info_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
   status = client_end.channel()->read_etc(
-      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles, kReadAllocSize,
-      kHandleAllocSize, &actual_bytes, &actual_handles);
+      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles,
+      read_storage.size(), kHandleAllocSize, &actual_bytes, &actual_handles);
   if (status == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new

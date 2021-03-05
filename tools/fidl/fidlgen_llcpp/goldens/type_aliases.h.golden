@@ -158,9 +158,7 @@ struct ExampleOfUseOfAliases {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(ExampleOfUseOfAliases* value)
-        : bytes_(std::make_unique<
-                 ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()),
-          message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -178,8 +176,7 @@ struct ExampleOfUseOfAliases {
     }
 
    private:
-    std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
-        bytes_;
+    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     UnownedEncodedByteMessage message_;
   };
 

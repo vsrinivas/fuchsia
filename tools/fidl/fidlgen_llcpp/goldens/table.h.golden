@@ -245,7 +245,7 @@ class SimpleTable final {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(SimpleTable* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -263,8 +263,7 @@ class SimpleTable final {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<112> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -737,7 +736,7 @@ class ReverseOrdinalTable final {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(ReverseOrdinalTable* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -755,8 +754,7 @@ class ReverseOrdinalTable final {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<88> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -1178,7 +1176,7 @@ class OlderSimpleTable final {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(OlderSimpleTable* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -1196,8 +1194,7 @@ class OlderSimpleTable final {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<40> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -1627,7 +1624,7 @@ class NewerSimpleTable final {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(NewerSimpleTable* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -1645,8 +1642,7 @@ class NewerSimpleTable final {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<136> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -2025,7 +2021,7 @@ class EmptyTable final {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(EmptyTable* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -2043,8 +2039,7 @@ class EmptyTable final {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
     UnownedEncodedByteMessage message_;
   };
 

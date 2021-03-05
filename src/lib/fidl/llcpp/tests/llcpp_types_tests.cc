@@ -262,36 +262,26 @@ TEST(LlcppTypesTests, VectorView) {
   EXPECT_EQ(view.at(1), 2);
 }
 
-TEST(LlcppTypesTests, UninitializedBufferStackAllocationAlignmentTest) {
-  fidl::internal::AlignedBuffer<1> array_of_1;
-  ASSERT_EQ(sizeof(array_of_1), 8);
-  ASSERT_TRUE(reinterpret_cast<uintptr_t>(&array_of_1) % 8 == 0);
+TEST(LlcppTypesTests, InlineMessageBuffer) {
+  fidl::internal::InlineMessageBuffer<32> buffer;
+  ASSERT_EQ(32, buffer.size());
+  ASSERT_EQ(reinterpret_cast<uint8_t*>(&buffer), buffer.data());
+  ASSERT_EQ(buffer.data(), buffer.view().data);
+  ASSERT_EQ(32, buffer.view().capacity);
 
-  fidl::internal::AlignedBuffer<5> array_of_5;
-  ASSERT_EQ(sizeof(array_of_5), 8);
-  ASSERT_TRUE(reinterpret_cast<uintptr_t>(&array_of_5) % 8 == 0);
-
-  fidl::internal::AlignedBuffer<25> array_of_25;
-  ASSERT_EQ(sizeof(array_of_25), 32);
-  ASSERT_TRUE(reinterpret_cast<uintptr_t>(&array_of_25) % 8 == 0);
-
-  fidl::internal::AlignedBuffer<100> array_of_100;
-  ASSERT_EQ(sizeof(array_of_100), 104);
-  ASSERT_TRUE(reinterpret_cast<uintptr_t>(&array_of_100) % 8 == 0);
+  const fidl::internal::InlineMessageBuffer<32> const_buffer;
+  ASSERT_EQ(reinterpret_cast<const uint8_t*>(&const_buffer), const_buffer.data());
 }
 
-TEST(LlcppTypesTests, UninitializedBufferHeapAllocationAlignmentTest) {
-  std::unique_ptr array_of_1 = std::make_unique<fidl::internal::AlignedBuffer<1>>();
-  ASSERT_TRUE(reinterpret_cast<uintptr_t>(array_of_1.get()) % 8 == 0);
+TEST(LlcppTypesTests, BoxedMessageBuffer) {
+  fidl::internal::BoxedMessageBuffer<32> buffer;
+  ASSERT_EQ(32, buffer.size());
+  ASSERT_NE(reinterpret_cast<uint8_t*>(&buffer), buffer.data());
+  ASSERT_EQ(buffer.data(), buffer.view().data);
+  ASSERT_EQ(32, buffer.view().capacity);
 
-  std::unique_ptr array_of_5 = std::make_unique<fidl::internal::AlignedBuffer<5>>();
-  ASSERT_TRUE(reinterpret_cast<uintptr_t>(array_of_5.get()) % 8 == 0);
-
-  std::unique_ptr array_of_25 = std::make_unique<fidl::internal::AlignedBuffer<25>>();
-  ASSERT_TRUE(reinterpret_cast<uintptr_t>(array_of_25.get()) % 8 == 0);
-
-  std::unique_ptr array_of_100 = std::make_unique<fidl::internal::AlignedBuffer<100>>();
-  ASSERT_TRUE(reinterpret_cast<uintptr_t>(array_of_100.get()) % 8 == 0);
+  const fidl::internal::BoxedMessageBuffer<32> const_buffer;
+  ASSERT_NE(reinterpret_cast<const uint8_t*>(&const_buffer), const_buffer.data());
 }
 
 TEST(LlcppTypesTests, ResponseStorageAllocationStrategyTest) {

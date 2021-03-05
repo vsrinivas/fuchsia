@@ -58,14 +58,12 @@ extern "C" const fidl_type_t
     RequestStrictResponseFlexible::RequestStrictResponseFlexible(
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s)
-    : bytes_(std::make_unique<
-             ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
+        ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s) {
   ::fidl::internal::EncodedMessageTypes<
       RequestStrictResponseFlexibleRequest>::OwnedByte _request(zx_txid_t(0),
                                                                 s);
   _request.GetOutgoingMessage().Call<RequestStrictResponseFlexibleResponse>(
-      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
+      _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -75,14 +73,12 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s,
-        zx_time_t _deadline)
-    : bytes_(std::make_unique<
-             ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
+        zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<
       RequestStrictResponseFlexibleRequest>::OwnedByte _request(zx_txid_t(0),
                                                                 s);
   _request.GetOutgoingMessage().Call<RequestStrictResponseFlexibleResponse>(
-      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -111,14 +107,12 @@ extern "C" const fidl_type_t
     RequestFlexibleResponseStrict::RequestFlexibleResponseStrict(
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s)
-    : bytes_(std::make_unique<
-             ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
+        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s) {
   ::fidl::internal::EncodedMessageTypes<
       RequestFlexibleResponseStrictRequest>::OwnedByte _request(zx_txid_t(0),
                                                                 s);
   _request.GetOutgoingMessage().Call<RequestFlexibleResponseStrictResponse>(
-      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
+      _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -128,14 +122,12 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s,
-        zx_time_t _deadline)
-    : bytes_(std::make_unique<
-             ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
+        zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<
       RequestFlexibleResponseStrictRequest>::OwnedByte _request(zx_txid_t(0),
                                                                 s);
   _request.GetOutgoingMessage().Call<RequestFlexibleResponseStrictResponse>(
-      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }

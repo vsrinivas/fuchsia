@@ -14,15 +14,6 @@ const fragmentSyncEventHandlerTmpl = `
   if (status != ZX_OK) {
     return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kReadAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    {{- range .Events }}
-    if (::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving>();
-    }
-    {{- end }}
-    return x;
-  })();
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
     {{- range .Events }}
@@ -35,14 +26,14 @@ const fragmentSyncEventHandlerTmpl = `
     }
     return x;
   })();
-  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  {{ .ByteBufferType }} read_storage;
   uint8_t* read_bytes = read_storage.data();
   zx_handle_info_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
   status = client_end.channel()->read_etc(ZX_CHANNEL_READ_MAY_DISCARD,
                                           read_bytes, read_handles,
-                                          kReadAllocSize, kHandleAllocSize,
+                                          read_storage.size(), kHandleAllocSize,
                                           &actual_bytes, &actual_handles);
   if (status == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.

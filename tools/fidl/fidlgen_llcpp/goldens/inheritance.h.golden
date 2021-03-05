@@ -177,9 +177,9 @@ class super final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(int64_t y)
-          : message_(bytes_, sizeof(bytes_), y) {}
+          : message_(bytes_.data(), bytes_.size(), y) {}
       explicit OwnedEncodedByteMessage(fooResponse* response)
-          : message_(bytes_, sizeof(bytes_), response) {}
+          : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -205,8 +205,7 @@ class super final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -421,13 +420,9 @@ class super final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid,
                                        const ::fidl::StringView& s)
-          : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
-                       ZX_CHANNEL_MAX_MSG_BYTES>>()),
-            message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, s) {}
+          : message_(bytes_.data(), bytes_.size(), _txid, s) {}
       explicit OwnedEncodedByteMessage(fooRequest* request)
-          : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
-                       ZX_CHANNEL_MAX_MSG_BYTES>>()),
-            message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -453,8 +448,7 @@ class super final {
 #endif
 
      private:
-      std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
-          bytes_;
+      ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -566,11 +560,11 @@ class super final {
 
       fooResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<fooResponse*>(bytes_);
+        return reinterpret_cast<fooResponse*>(bytes_.data());
       }
       const fooResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const fooResponse*>(bytes_);
+        return reinterpret_cast<const fooResponse*>(bytes_.data());
       }
 
       fooResponse& value() { return *Unwrap(); }
@@ -583,8 +577,7 @@ class super final {
       const fooResponse& operator*() const { return value(); }
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[fooResponse::PrimarySize + fooResponse::MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
     };
   };
 
@@ -905,9 +898,9 @@ class sub final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(int64_t y)
-          : message_(bytes_, sizeof(bytes_), y) {}
+          : message_(bytes_.data(), bytes_.size(), y) {}
       explicit OwnedEncodedByteMessage(fooResponse* response)
-          : message_(bytes_, sizeof(bytes_), response) {}
+          : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -933,8 +926,7 @@ class sub final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -1149,13 +1141,9 @@ class sub final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid,
                                        const ::fidl::StringView& s)
-          : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
-                       ZX_CHANNEL_MAX_MSG_BYTES>>()),
-            message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, s) {}
+          : message_(bytes_.data(), bytes_.size(), _txid, s) {}
       explicit OwnedEncodedByteMessage(fooRequest* request)
-          : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
-                       ZX_CHANNEL_MAX_MSG_BYTES>>()),
-            message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -1181,8 +1169,7 @@ class sub final {
 #endif
 
      private:
-      std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
-          bytes_;
+      ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -1294,11 +1281,11 @@ class sub final {
 
       fooResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<fooResponse*>(bytes_);
+        return reinterpret_cast<fooResponse*>(bytes_.data());
       }
       const fooResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const fooResponse*>(bytes_);
+        return reinterpret_cast<const fooResponse*>(bytes_.data());
       }
 
       fooResponse& value() { return *Unwrap(); }
@@ -1311,8 +1298,7 @@ class sub final {
       const fooResponse& operator*() const { return value(); }
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[fooResponse::PrimarySize + fooResponse::MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
     };
   };
 

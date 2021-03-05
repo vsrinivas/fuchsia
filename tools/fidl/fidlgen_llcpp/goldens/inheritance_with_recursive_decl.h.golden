@@ -205,9 +205,9 @@ class Parent final {
           zx_txid_t _txid,
           ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
-          : message_(bytes_, sizeof(bytes_), _txid, request) {}
+          : message_(bytes_.data(), bytes_.size(), _txid, request) {}
       explicit OwnedEncodedByteMessage(FirstRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -233,8 +233,7 @@ class Parent final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -679,9 +678,9 @@ class Child final {
           zx_txid_t _txid,
           ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
-          : message_(bytes_, sizeof(bytes_), _txid, request) {}
+          : message_(bytes_.data(), bytes_.size(), _txid, request) {}
       explicit OwnedEncodedByteMessage(FirstRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -707,8 +706,7 @@ class Child final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -950,9 +948,9 @@ class Child final {
           zx_txid_t _txid,
           ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&
               request)
-          : message_(bytes_, sizeof(bytes_), _txid, request) {}
+          : message_(bytes_.data(), bytes_.size(), _txid, request) {}
       explicit OwnedEncodedByteMessage(SecondRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -978,8 +976,7 @@ class Child final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 

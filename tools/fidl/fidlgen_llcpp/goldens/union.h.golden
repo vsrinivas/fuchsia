@@ -3641,7 +3641,7 @@ struct StructWithNullableXUnion {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(StructWithNullableXUnion* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -3659,8 +3659,7 @@ struct StructWithNullableXUnion {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<32> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -3806,9 +3805,7 @@ struct Pizza {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Pizza* value)
-        : bytes_(std::make_unique<
-                 ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()),
-          message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -3826,8 +3823,7 @@ struct Pizza {
     }
 
    private:
-    std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
-        bytes_;
+    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -3973,7 +3969,7 @@ struct Pasta {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Pasta* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -3991,8 +3987,7 @@ struct Pasta {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<32> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -4222,10 +4217,10 @@ class TestProtocol final {
      public:
       explicit OwnedEncodedByteMessage(
           ::fidl_test_union::wire::StrictBoundedXUnion& xu)
-          : message_(bytes_, sizeof(bytes_), xu) {}
+          : message_(bytes_.data(), bytes_.size(), xu) {}
       explicit OwnedEncodedByteMessage(
           StrictXUnionHenceResponseMayBeStackAllocatedResponse* response)
-          : message_(bytes_, sizeof(bytes_), response) {}
+          : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -4251,8 +4246,7 @@ class TestProtocol final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<72> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -4479,10 +4473,10 @@ class TestProtocol final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid)
-          : message_(bytes_, sizeof(bytes_), _txid) {}
+          : message_(bytes_.data(), bytes_.size(), _txid) {}
       explicit OwnedEncodedByteMessage(
           StrictXUnionHenceResponseMayBeStackAllocatedRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -4508,8 +4502,7 @@ class TestProtocol final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -4740,10 +4733,10 @@ class TestProtocol final {
      public:
       explicit OwnedEncodedByteMessage(
           ::fidl_test_union::wire::OlderSimpleUnion& xu)
-          : message_(bytes_, sizeof(bytes_), xu) {}
+          : message_(bytes_.data(), bytes_.size(), xu) {}
       explicit OwnedEncodedByteMessage(
           FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* response)
-          : message_(bytes_, sizeof(bytes_), response) {}
+          : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -4769,8 +4762,7 @@ class TestProtocol final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -4997,10 +4989,10 @@ class TestProtocol final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid)
-          : message_(bytes_, sizeof(bytes_), _txid) {}
+          : message_(bytes_.data(), bytes_.size(), _txid) {}
       explicit OwnedEncodedByteMessage(
           FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -5026,8 +5018,7 @@ class TestProtocol final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -5149,14 +5140,15 @@ class TestProtocol final {
       StrictXUnionHenceResponseMayBeStackAllocatedResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
         return reinterpret_cast<
-            StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(bytes_);
+            StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(
+            bytes_.data());
       }
       const StrictXUnionHenceResponseMayBeStackAllocatedResponse* Unwrap()
           const {
         ZX_DEBUG_ASSERT(ok());
         return reinterpret_cast<
             const StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(
-            bytes_);
+            bytes_.data());
       }
 
       StrictXUnionHenceResponseMayBeStackAllocatedResponse& value() {
@@ -5184,10 +5176,7 @@ class TestProtocol final {
       }
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_
-          [StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize +
-           StrictXUnionHenceResponseMayBeStackAllocatedResponse::MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<72> bytes_;
     };
     class FlexibleXUnionHenceResponseMustBeHeapAllocated final
         : public ::fidl::Result {
@@ -5214,14 +5203,14 @@ class TestProtocol final {
         ZX_DEBUG_ASSERT(ok());
         return reinterpret_cast<
             FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(
-            bytes_->data());
+            bytes_.data());
       }
       const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* Unwrap()
           const {
         ZX_DEBUG_ASSERT(ok());
         return reinterpret_cast<
             const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(
-            bytes_->data());
+            bytes_.data());
       }
 
       FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value() {
@@ -5249,8 +5238,7 @@ class TestProtocol final {
       }
 
      private:
-      std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
-          bytes_;
+      ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     };
   };
 
@@ -5679,9 +5667,7 @@ struct NullableUnionStruct {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(NullableUnionStruct* value)
-        : bytes_(std::make_unique<
-                 ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()),
-          message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -5699,8 +5685,7 @@ struct NullableUnionStruct {
     }
 
    private:
-    std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
-        bytes_;
+    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -5846,7 +5831,7 @@ struct Empty {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Empty* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -5864,8 +5849,7 @@ struct Empty {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<8> bytes_;
     UnownedEncodedByteMessage message_;
   };
 

@@ -39,8 +39,8 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
     int32_t a, int32_t b) {
   ::fidl::internal::EncodedMessageTypes<AddRequest>::OwnedByte _request(
       zx_txid_t(0), a, b);
-  _request.GetOutgoingMessage().Call<AddResponse>(
-      _client, bytes_, AddResponse::PrimarySize + AddResponse::MaxOutOfLine);
+  _request.GetOutgoingMessage().Call<AddResponse>(_client, bytes_.data(),
+                                                  bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -50,9 +50,8 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
     int32_t a, int32_t b, zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<AddRequest>::OwnedByte _request(
       zx_txid_t(0), a, b);
-  _request.GetOutgoingMessage().Call<AddResponse>(
-      _client, bytes_, AddResponse::PrimarySize + AddResponse::MaxOutOfLine,
-      _deadline);
+  _request.GetOutgoingMessage().Call<AddResponse>(_client, bytes_.data(),
+                                                  bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }

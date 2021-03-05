@@ -23,9 +23,8 @@ extern "C" const fidl_type_t
                _client) {
   ::fidl::internal::EncodedMessageTypes<GetFooRequest>::OwnedByte _request(
       zx_txid_t(0));
-  _request.GetOutgoingMessage().Call<GetFooResponse>(
-      _client, bytes_,
-      GetFooResponse::PrimarySize + GetFooResponse::MaxOutOfLine);
+  _request.GetOutgoingMessage().Call<GetFooResponse>(_client, bytes_.data(),
+                                                     bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -37,9 +36,8 @@ extern "C" const fidl_type_t
            zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<GetFooRequest>::OwnedByte _request(
       zx_txid_t(0));
-  _request.GetOutgoingMessage().Call<GetFooResponse>(
-      _client, bytes_,
-      GetFooResponse::PrimarySize + GetFooResponse::MaxOutOfLine, _deadline);
+  _request.GetOutgoingMessage().Call<GetFooResponse>(_client, bytes_.data(),
+                                                     bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }

@@ -214,9 +214,9 @@ class Parent final {
      public:
       explicit OwnedEncodedByteMessage(
           ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>& c)
-          : message_(bytes_, sizeof(bytes_), c) {}
+          : message_(bytes_.data(), bytes_.size(), c) {}
       explicit OwnedEncodedByteMessage(GetChildResponse* response)
-          : message_(bytes_, sizeof(bytes_), response) {}
+          : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -242,8 +242,7 @@ class Parent final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -458,9 +457,9 @@ class Parent final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid)
-          : message_(bytes_, sizeof(bytes_), _txid) {}
+          : message_(bytes_.data(), bytes_.size(), _txid) {}
       explicit OwnedEncodedByteMessage(GetChildRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -486,8 +485,7 @@ class Parent final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -714,9 +712,9 @@ class Parent final {
      public:
       explicit OwnedEncodedByteMessage(
           ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>& r)
-          : message_(bytes_, sizeof(bytes_), r) {}
+          : message_(bytes_.data(), bytes_.size(), r) {}
       explicit OwnedEncodedByteMessage(GetChildRequestResponse* response)
-          : message_(bytes_, sizeof(bytes_), response) {}
+          : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -742,8 +740,7 @@ class Parent final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -959,9 +956,9 @@ class Parent final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid)
-          : message_(bytes_, sizeof(bytes_), _txid) {}
+          : message_(bytes_.data(), bytes_.size(), _txid) {}
       explicit OwnedEncodedByteMessage(GetChildRequestRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -987,8 +984,7 @@ class Parent final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -1218,9 +1214,9 @@ class Parent final {
       explicit OwnedEncodedByteMessage(
           zx_txid_t _txid,
           ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>& c)
-          : message_(bytes_, sizeof(bytes_), _txid, c) {}
+          : message_(bytes_.data(), bytes_.size(), _txid, c) {}
       explicit OwnedEncodedByteMessage(TakeChildRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -1246,8 +1242,7 @@ class Parent final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -1486,9 +1481,9 @@ class Parent final {
       explicit OwnedEncodedByteMessage(
           zx_txid_t _txid,
           ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>& r)
-          : message_(bytes_, sizeof(bytes_), _txid, r) {}
+          : message_(bytes_.data(), bytes_.size(), _txid, r) {}
       explicit OwnedEncodedByteMessage(TakeChildRequestRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -1514,8 +1509,7 @@ class Parent final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -1639,11 +1633,11 @@ class Parent final {
 
       GetChildResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<GetChildResponse*>(bytes_);
+        return reinterpret_cast<GetChildResponse*>(bytes_.data());
       }
       const GetChildResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const GetChildResponse*>(bytes_);
+        return reinterpret_cast<const GetChildResponse*>(bytes_.data());
       }
 
       GetChildResponse& value() { return *Unwrap(); }
@@ -1656,9 +1650,7 @@ class Parent final {
       const GetChildResponse& operator*() const { return value(); }
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[GetChildResponse::PrimarySize +
-                     GetChildResponse::MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
     };
     class GetChildRequest final : public ::fidl::Result {
      public:
@@ -1682,11 +1674,11 @@ class Parent final {
 
       GetChildRequestResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<GetChildRequestResponse*>(bytes_);
+        return reinterpret_cast<GetChildRequestResponse*>(bytes_.data());
       }
       const GetChildRequestResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const GetChildRequestResponse*>(bytes_);
+        return reinterpret_cast<const GetChildRequestResponse*>(bytes_.data());
       }
 
       GetChildRequestResponse& value() { return *Unwrap(); }
@@ -1699,9 +1691,7 @@ class Parent final {
       const GetChildRequestResponse& operator*() const { return value(); }
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[GetChildRequestResponse::PrimarySize +
-                     GetChildRequestResponse::MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
     };
     class TakeChild final : public ::fidl::Result {
      public:

@@ -185,9 +185,9 @@ class Top final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(::bottom::wire::Foo& foo)
-          : message_(bytes_, sizeof(bytes_), foo) {}
+          : message_(bytes_.data(), bytes_.size(), foo) {}
       explicit OwnedEncodedByteMessage(GetFooResponse* response)
-          : message_(bytes_, sizeof(bytes_), response) {}
+          : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -213,8 +213,7 @@ class Top final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -422,9 +421,9 @@ class Top final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid)
-          : message_(bytes_, sizeof(bytes_), _txid) {}
+          : message_(bytes_.data(), bytes_.size(), _txid) {}
       explicit OwnedEncodedByteMessage(GetFooRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -450,8 +449,7 @@ class Top final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<16> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -564,11 +562,11 @@ class Top final {
 
       GetFooResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<GetFooResponse*>(bytes_);
+        return reinterpret_cast<GetFooResponse*>(bytes_.data());
       }
       const GetFooResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const GetFooResponse*>(bytes_);
+        return reinterpret_cast<const GetFooResponse*>(bytes_.data());
       }
 
       GetFooResponse& value() { return *Unwrap(); }
@@ -581,9 +579,7 @@ class Top final {
       const GetFooResponse& operator*() const { return value(); }
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t
-          bytes_[GetFooResponse::PrimarySize + GetFooResponse::MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
     };
   };
 

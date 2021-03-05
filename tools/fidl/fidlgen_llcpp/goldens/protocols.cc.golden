@@ -56,9 +56,8 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
     int64_t x) {
   ::fidl::internal::EncodedMessageTypes<RequestRequest>::OwnedByte _request(
       zx_txid_t(0), x);
-  _request.GetOutgoingMessage().Call<RequestResponse>(
-      _client, bytes_,
-      RequestResponse::PrimarySize + RequestResponse::MaxOutOfLine);
+  _request.GetOutgoingMessage().Call<RequestResponse>(_client, bytes_.data(),
+                                                      bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -68,9 +67,8 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
     int64_t x, zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<RequestRequest>::OwnedByte _request(
       zx_txid_t(0), x);
-  _request.GetOutgoingMessage().Call<RequestResponse>(
-      _client, bytes_,
-      RequestResponse::PrimarySize + RequestResponse::MaxOutOfLine, _deadline);
+  _request.GetOutgoingMessage().Call<RequestResponse>(_client, bytes_.data(),
+                                                      bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -256,15 +254,6 @@ std::optional<::fidl::UnbindInfo> Transitional::ClientImpl::DispatchEvent(
   if (status != ZX_OK) {
     return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kReadAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    if (::fidl::internal::ClampedMessageSize<
-            EventResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<
-          EventResponse, ::fidl::MessageDirection::kReceiving>();
-    }
-    return x;
-  })();
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
     if (EventResponse::MaxNumHandles >= x) {
@@ -275,14 +264,14 @@ std::optional<::fidl::UnbindInfo> Transitional::ClientImpl::DispatchEvent(
     }
     return x;
   })();
-  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  ::fidl::internal::InlineMessageBuffer<24> read_storage;
   uint8_t* read_bytes = read_storage.data();
   zx_handle_info_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
   status = client_end.channel()->read_etc(
-      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles, kReadAllocSize,
-      kHandleAllocSize, &actual_bytes, &actual_handles);
+      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles,
+      read_storage.size(), kHandleAllocSize, &actual_bytes, &actual_handles);
   if (status == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -519,9 +508,8 @@ extern "C" const fidl_type_t
     int64_t a, int64_t b) {
   ::fidl::internal::EncodedMessageTypes<MethodBRequest>::OwnedByte _request(
       zx_txid_t(0), a, b);
-  _request.GetOutgoingMessage().Call<MethodBResponse>(
-      _client, bytes_,
-      MethodBResponse::PrimarySize + MethodBResponse::MaxOutOfLine);
+  _request.GetOutgoingMessage().Call<MethodBResponse>(_client, bytes_.data(),
+                                                      bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -531,9 +519,8 @@ extern "C" const fidl_type_t
     int64_t a, int64_t b, zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<MethodBRequest>::OwnedByte _request(
       zx_txid_t(0), a, b);
-  _request.GetOutgoingMessage().Call<MethodBResponse>(
-      _client, bytes_,
-      MethodBResponse::PrimarySize + MethodBResponse::MaxOutOfLine, _deadline);
+  _request.GetOutgoingMessage().Call<MethodBResponse>(_client, bytes_.data(),
+                                                      bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -560,9 +547,8 @@ extern "C" const fidl_type_t
     ::zx::handle& h) {
   ::fidl::internal::EncodedMessageTypes<TakeHandleRequest>::OwnedByte _request(
       zx_txid_t(0), h);
-  _request.GetOutgoingMessage().Call<TakeHandleResponse>(
-      _client, bytes_,
-      TakeHandleResponse::PrimarySize + TakeHandleResponse::MaxOutOfLine);
+  _request.GetOutgoingMessage().Call<TakeHandleResponse>(_client, bytes_.data(),
+                                                         bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -573,9 +559,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<TakeHandleRequest>::OwnedByte _request(
       zx_txid_t(0), h);
   _request.GetOutgoingMessage().Call<TakeHandleResponse>(
-      _client, bytes_,
-      TakeHandleResponse::PrimarySize + TakeHandleResponse::MaxOutOfLine,
-      _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -603,8 +587,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<MutateSocketRequest>::OwnedByte
       _request(zx_txid_t(0), a);
   _request.GetOutgoingMessage().Call<MutateSocketResponse>(
-      _client, bytes_,
-      MutateSocketResponse::PrimarySize + MutateSocketResponse::MaxOutOfLine);
+      _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -615,9 +598,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<MutateSocketRequest>::OwnedByte
       _request(zx_txid_t(0), a);
   _request.GetOutgoingMessage().Call<MutateSocketResponse>(
-      _client, bytes_,
-      MutateSocketResponse::PrimarySize + MutateSocketResponse::MaxOutOfLine,
-      _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -942,15 +923,6 @@ std::optional<::fidl::UnbindInfo> ChannelProtocol::ClientImpl::DispatchEvent(
   if (status != ZX_OK) {
     return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kReadAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    if (::fidl::internal::ClampedMessageSize<
-            EventAResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<
-          EventAResponse, ::fidl::MessageDirection::kReceiving>();
-    }
-    return x;
-  })();
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
     if (EventAResponse::MaxNumHandles >= x) {
@@ -961,14 +933,14 @@ std::optional<::fidl::UnbindInfo> ChannelProtocol::ClientImpl::DispatchEvent(
     }
     return x;
   })();
-  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  ::fidl::internal::InlineMessageBuffer<32> read_storage;
   uint8_t* read_bytes = read_storage.data();
   zx_handle_info_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
   status = client_end.channel()->read_etc(
-      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles, kReadAllocSize,
-      kHandleAllocSize, &actual_bytes, &actual_handles);
+      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles,
+      read_storage.size(), kHandleAllocSize, &actual_bytes, &actual_handles);
   if (status == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -1321,9 +1293,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<
       NoRequestEmptyResponseRequest>::OwnedByte _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<NoRequestEmptyResponseResponse>(
-      _client, bytes_,
-      NoRequestEmptyResponseResponse::PrimarySize +
-          NoRequestEmptyResponseResponse::MaxOutOfLine);
+      _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1337,10 +1307,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<
       NoRequestEmptyResponseRequest>::OwnedByte _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<NoRequestEmptyResponseResponse>(
-      _client, bytes_,
-      NoRequestEmptyResponseResponse::PrimarySize +
-          NoRequestEmptyResponseResponse::MaxOutOfLine,
-      _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1351,13 +1318,11 @@ extern "C" const fidl_type_t
     NoRequestWithResponse::NoRequestWithResponse(
         ::fidl::UnownedClientEnd<
             ::fidl_test_protocols::WithAndWithoutRequestResponse>
-            _client)
-    : bytes_(std::make_unique<
-             ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
+            _client) {
   ::fidl::internal::EncodedMessageTypes<NoRequestWithResponseRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<NoRequestWithResponseResponse>(
-      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
+      _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1367,13 +1332,11 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<
             ::fidl_test_protocols::WithAndWithoutRequestResponse>
             _client,
-        zx_time_t _deadline)
-    : bytes_(std::make_unique<
-             ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
+        zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<NoRequestWithResponseRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<NoRequestWithResponseResponse>(
-      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1437,9 +1400,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<
       WithRequestEmptyResponseRequest>::OwnedByte _request(zx_txid_t(0), arg);
   _request.GetOutgoingMessage().Call<WithRequestEmptyResponseResponse>(
-      _client, bytes_,
-      WithRequestEmptyResponseResponse::PrimarySize +
-          WithRequestEmptyResponseResponse::MaxOutOfLine);
+      _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1453,10 +1414,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<
       WithRequestEmptyResponseRequest>::OwnedByte _request(zx_txid_t(0), arg);
   _request.GetOutgoingMessage().Call<WithRequestEmptyResponseResponse>(
-      _client, bytes_,
-      WithRequestEmptyResponseResponse::PrimarySize +
-          WithRequestEmptyResponseResponse::MaxOutOfLine,
-      _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1487,13 +1445,11 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<
             ::fidl_test_protocols::WithAndWithoutRequestResponse>
             _client,
-        const ::fidl::StringView& arg)
-    : bytes_(std::make_unique<
-             ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
+        const ::fidl::StringView& arg) {
   ::fidl::internal::EncodedMessageTypes<
       WithRequestWithResponseRequest>::OwnedByte _request(zx_txid_t(0), arg);
   _request.GetOutgoingMessage().Call<WithRequestWithResponseResponse>(
-      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
+      _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1503,13 +1459,11 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<
             ::fidl_test_protocols::WithAndWithoutRequestResponse>
             _client,
-        const ::fidl::StringView& arg, zx_time_t _deadline)
-    : bytes_(std::make_unique<
-             ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
+        const ::fidl::StringView& arg, zx_time_t _deadline) {
   ::fidl::internal::EncodedMessageTypes<
       WithRequestWithResponseRequest>::OwnedByte _request(zx_txid_t(0), arg);
   _request.GetOutgoingMessage().Call<WithRequestWithResponseResponse>(
-      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1961,22 +1915,6 @@ WithAndWithoutRequestResponse::ClientImpl::DispatchEvent(
   if (status != ZX_OK) {
     return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kReadAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    if (::fidl::internal::ClampedMessageSize<
-            OnEmptyResponseResponse, ::fidl::MessageDirection::kReceiving>() >=
-        x) {
-      x = ::fidl::internal::ClampedMessageSize<
-          OnEmptyResponseResponse, ::fidl::MessageDirection::kReceiving>();
-    }
-    if (::fidl::internal::ClampedMessageSize<
-            OnWithResponseResponse, ::fidl::MessageDirection::kReceiving>() >=
-        x) {
-      x = ::fidl::internal::ClampedMessageSize<
-          OnWithResponseResponse, ::fidl::MessageDirection::kReceiving>();
-    }
-    return x;
-  })();
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
     if (OnEmptyResponseResponse::MaxNumHandles >= x) {
@@ -1990,14 +1928,14 @@ WithAndWithoutRequestResponse::ClientImpl::DispatchEvent(
     }
     return x;
   })();
-  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> read_storage;
   uint8_t* read_bytes = read_storage.data();
   zx_handle_info_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
   status = client_end.channel()->read_etc(
-      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles, kReadAllocSize,
-      kHandleAllocSize, &actual_bytes, &actual_handles);
+      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles,
+      read_storage.size(), kHandleAllocSize, &actual_bytes, &actual_handles);
   if (status == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -2390,9 +2328,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<ResponseAsStructRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
-      _client, bytes_,
-      ResponseAsStructResponse::PrimarySize +
-          ResponseAsStructResponse::MaxOutOfLine);
+      _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -2405,10 +2341,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<ResponseAsStructRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
-      _client, bytes_,
-      ResponseAsStructResponse::PrimarySize +
-          ResponseAsStructResponse::MaxOutOfLine,
-      _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -2438,9 +2371,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<ErrorAsPrimitiveRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
-      _client, bytes_,
-      ErrorAsPrimitiveResponse::PrimarySize +
-          ErrorAsPrimitiveResponse::MaxOutOfLine);
+      _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -2453,10 +2384,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<ErrorAsPrimitiveRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
-      _client, bytes_,
-      ErrorAsPrimitiveResponse::PrimarySize +
-          ErrorAsPrimitiveResponse::MaxOutOfLine,
-      _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -2484,8 +2412,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<ErrorAsEnumRequest>::OwnedByte _request(
       zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
-      _client, bytes_,
-      ErrorAsEnumResponse::PrimarySize + ErrorAsEnumResponse::MaxOutOfLine);
+      _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -2496,9 +2423,7 @@ extern "C" const fidl_type_t
   ::fidl::internal::EncodedMessageTypes<ErrorAsEnumRequest>::OwnedByte _request(
       zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
-      _client, bytes_,
-      ErrorAsEnumResponse::PrimarySize + ErrorAsEnumResponse::MaxOutOfLine,
-      _deadline);
+      _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }

@@ -587,7 +587,7 @@ struct SandwichUnionSize8Alignment4 {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(SandwichUnionSize8Alignment4* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -605,8 +605,7 @@ struct SandwichUnionSize8Alignment4 {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<48> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -761,7 +760,7 @@ struct SandwichUnionSize36Alignment4 {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(SandwichUnionSize36Alignment4* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -779,8 +778,7 @@ struct SandwichUnionSize36Alignment4 {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<72> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -935,7 +933,7 @@ struct SandwichUnionSize12Alignment4 {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(SandwichUnionSize12Alignment4* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -953,8 +951,7 @@ struct SandwichUnionSize12Alignment4 {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<48> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -1107,7 +1104,7 @@ struct StructSize16Alignment8 {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(StructSize16Alignment8* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -1125,8 +1122,7 @@ struct StructSize16Alignment8 {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -1281,7 +1277,7 @@ struct SandwichUnionSize24Alignment8 {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(SandwichUnionSize24Alignment8* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -1299,8 +1295,7 @@ struct SandwichUnionSize24Alignment8 {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<56> bytes_;
     UnownedEncodedByteMessage message_;
   };
 

@@ -124,7 +124,7 @@ struct Empty {
   class OwnedEncodedByteMessage final {
    public:
     explicit OwnedEncodedByteMessage(Empty* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
+        : message_(bytes_.data(), bytes_.size(), value) {}
     OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
     OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
     OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
@@ -142,8 +142,7 @@ struct Empty {
     }
 
    private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    ::fidl::internal::InlineMessageBuffer<8> bytes_;
     UnownedEncodedByteMessage message_;
   };
 
@@ -370,9 +369,9 @@ class EmptyProtocol final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid,
                                        ::fidl_test_emptystruct::wire::Empty& e)
-          : message_(bytes_, sizeof(bytes_), _txid, e) {}
+          : message_(bytes_.data(), bytes_.size(), _txid, e) {}
       explicit OwnedEncodedByteMessage(SendRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -398,8 +397,7 @@ class EmptyProtocol final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -615,9 +613,9 @@ class EmptyProtocol final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(::fidl_test_emptystruct::wire::Empty& e)
-          : message_(bytes_, sizeof(bytes_), e) {}
+          : message_(bytes_.data(), bytes_.size(), e) {}
       explicit OwnedEncodedByteMessage(ReceiveResponse* response)
-          : message_(bytes_, sizeof(bytes_), response) {}
+          : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -643,8 +641,7 @@ class EmptyProtocol final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -858,9 +855,9 @@ class EmptyProtocol final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(::fidl_test_emptystruct::wire::Empty& e)
-          : message_(bytes_, sizeof(bytes_), e) {}
+          : message_(bytes_.data(), bytes_.size(), e) {}
       explicit OwnedEncodedByteMessage(SendAndReceiveResponse* response)
-          : message_(bytes_, sizeof(bytes_), response) {}
+          : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -886,8 +883,7 @@ class EmptyProtocol final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -1107,9 +1103,9 @@ class EmptyProtocol final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid,
                                        ::fidl_test_emptystruct::wire::Empty& e)
-          : message_(bytes_, sizeof(bytes_), _txid, e) {}
+          : message_(bytes_.data(), bytes_.size(), _txid, e) {}
       explicit OwnedEncodedByteMessage(SendAndReceiveRequest* request)
-          : message_(bytes_, sizeof(bytes_), request) {}
+          : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
       OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
       OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
@@ -1135,8 +1131,7 @@ class EmptyProtocol final {
 #endif
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
       UnownedEncodedByteMessage message_;
     };
 
@@ -1284,11 +1279,11 @@ class EmptyProtocol final {
 
       SendAndReceiveResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<SendAndReceiveResponse*>(bytes_);
+        return reinterpret_cast<SendAndReceiveResponse*>(bytes_.data());
       }
       const SendAndReceiveResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const SendAndReceiveResponse*>(bytes_);
+        return reinterpret_cast<const SendAndReceiveResponse*>(bytes_.data());
       }
 
       SendAndReceiveResponse& value() { return *Unwrap(); }
@@ -1301,9 +1296,7 @@ class EmptyProtocol final {
       const SendAndReceiveResponse& operator*() const { return value(); }
 
      private:
-      FIDL_ALIGNDECL
-      uint8_t bytes_[SendAndReceiveResponse::PrimarySize +
-                     SendAndReceiveResponse::MaxOutOfLine];
+      ::fidl::internal::InlineMessageBuffer<24> bytes_;
     };
   };
 
