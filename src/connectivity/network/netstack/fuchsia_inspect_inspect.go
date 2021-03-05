@@ -419,17 +419,40 @@ func (impl *dhcpInfoInspectImpl) ReadData() inspect.Object {
 		}
 		return addr.String()
 	}
+	maskString := func(mask tcpip.AddressMask) string {
+		if mask.String() == "" {
+			return "[none]"
+		}
+		return mask.String()
+	}
+	properties := []inspect.Property{
+		{Key: "State", Value: inspect.PropertyValueWithStr(impl.info.State.String())},
+		{Key: "AcquiredAddress", Value: inspect.PropertyValueWithStr(addrPrefixString(impl.info.Acquired))},
+		{Key: "AssignedAddress", Value: inspect.PropertyValueWithStr(addrPrefixString(impl.info.Assigned))},
+		{Key: "Acquisition", Value: inspect.PropertyValueWithStr(impl.info.Acquisition.String())},
+		{Key: "Backoff", Value: inspect.PropertyValueWithStr(impl.info.Backoff.String())},
+		{Key: "Retransmission", Value: inspect.PropertyValueWithStr(impl.info.Retransmission.String())},
+		{Key: "LeaseExpiration", Value: inspect.PropertyValueWithStr(impl.info.LeaseExpiration.String())},
+		{Key: "RenewTime", Value: inspect.PropertyValueWithStr(impl.info.RenewTime.String())},
+		{Key: "RebindTime", Value: inspect.PropertyValueWithStr(impl.info.RebindTime.String())},
+		{Key: "Config.ServerAddress", Value: inspect.PropertyValueWithStr(addrString(impl.info.Config.ServerAddress))},
+		{Key: "Config.SubnetMask", Value: inspect.PropertyValueWithStr(maskString(impl.info.Config.SubnetMask))},
+	}
+	for i, router := range impl.info.Config.Router {
+		properties = append(properties, inspect.Property{Key: fmt.Sprintf("Config.Router%d", i), Value: inspect.PropertyValueWithStr(addrString(router))})
+	}
+	for i, dns := range impl.info.Config.DNS {
+		properties = append(properties, inspect.Property{Key: fmt.Sprintf("Config.DNS%d", i), Value: inspect.PropertyValueWithStr(addrString(dns))})
+	}
+	properties = append(properties, []inspect.Property{
+		{Key: "Config.LeaseLength", Value: inspect.PropertyValueWithStr(impl.info.Config.LeaseLength.String())},
+		{Key: "Config.RenewTime", Value: inspect.PropertyValueWithStr(impl.info.Config.RenewTime.String())},
+		{Key: "Config.RebindTime", Value: inspect.PropertyValueWithStr(impl.info.Config.RebindTime.String())},
+		{Key: "Config.Declined", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.info.Config.Declined))},
+	}...)
 	return inspect.Object{
-		Name: impl.name,
-		Properties: []inspect.Property{
-			{Key: "State", Value: inspect.PropertyValueWithStr(impl.info.State.String())},
-			{Key: "AcquiredAddress", Value: inspect.PropertyValueWithStr(addrPrefixString(impl.info.Acquired))},
-			{Key: "ServerAddress", Value: inspect.PropertyValueWithStr(addrString(impl.info.Server))},
-			{Key: "AssignedAddress", Value: inspect.PropertyValueWithStr(addrPrefixString(impl.info.Assigned))},
-			{Key: "Acquisition", Value: inspect.PropertyValueWithStr(impl.info.Acquisition.String())},
-			{Key: "Backoff", Value: inspect.PropertyValueWithStr(impl.info.Backoff.String())},
-			{Key: "Retransmission", Value: inspect.PropertyValueWithStr(impl.info.Retransmission.String())},
-		},
+		Name:       impl.name,
+		Properties: properties,
 	}
 }
 

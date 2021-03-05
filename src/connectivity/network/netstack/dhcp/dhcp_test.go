@@ -513,6 +513,23 @@ func TestExponentialBackoff(t *testing.T) {
 	}
 }
 
+func removeLostAddAcquired(t *testing.T, clientStack *stack.Stack, lost, acquired tcpip.AddressWithPrefix) {
+	if lost != (tcpip.AddressWithPrefix{}) {
+		if err := clientStack.RemoveAddress(testNICID, lost.Address); err != nil {
+			t.Fatalf("RemoveAddress(%s): %s", lost.Address, err)
+		}
+	}
+	if acquired != (tcpip.AddressWithPrefix{}) {
+		protocolAddress := tcpip.ProtocolAddress{
+			Protocol:          ipv4.ProtocolNumber,
+			AddressWithPrefix: acquired,
+		}
+		if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
+			t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
+		}
+	}
+}
+
 func TestAcquisitionAfterNAK(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
@@ -551,7 +568,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				// First acquisition.
 				0,
 				// Trasition to renew.
-				defaultLeaseLength.Duration() / 2,
+				defaultRenewTime(defaultLeaseLength).Duration(),
 				// Backoff while renewing.
 				0,
 				// Retry after NAK.
@@ -576,7 +593,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				// First acquisition.
 				0,
 				// Trasition to rebind.
-				defaultLeaseLength.Duration() * 875 / 1000,
+				defaultRebindTime(defaultLeaseLength).Duration(),
 				// Backoff while rebinding.
 				0,
 				// Retry after NAK.
@@ -620,22 +637,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 			}
 
 			c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
-				if acquired != lost {
-					if lost != (tcpip.AddressWithPrefix{}) {
-						if err := clientStack.RemoveAddress(testNICID, lost.Address); err != nil {
-							t.Fatalf("RemoveAddress(%s): %s", lost.Address, err)
-						}
-					}
-					if acquired != (tcpip.AddressWithPrefix{}) {
-						protocolAddress := tcpip.ProtocolAddress{
-							Protocol:          ipv4.ProtocolNumber,
-							AddressWithPrefix: acquired,
-						}
-						if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
-							t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
-						}
-					}
-				}
+				removeLostAddAcquired(t, clientStack, lost, acquired)
 			}
 
 			wg.Add(1)
@@ -916,8 +918,10 @@ func TestRenewRebindBackoff(t *testing.T) {
 			clientStack, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg, nil /* clock */)
 
 			now := time.Now()
-			c.rebindTime = now.Add(tc.rebindTime)
-			c.leaseExpirationTime = now.Add(tc.leaseExpiration)
+			info := c.Info()
+			info.RebindTime = now.Add(tc.rebindTime)
+			info.LeaseExpiration = now.Add(tc.leaseExpiration)
+			c.info.Store(info)
 
 			serverEP.onWritePacket = func(*stack.PacketBuffer) *stack.PacketBuffer {
 				// Don't send any response, keep the client renewing / rebinding
@@ -962,7 +966,7 @@ func TestRenewRebindBackoff(t *testing.T) {
 					}
 				}
 				info.State = tc.state
-				info.Server = serverAddr
+				info.Config.ServerAddress = serverAddr
 				_, err := acquire(ctx, c, t.Name(), &info)
 				errs <- err
 			}()
@@ -1336,7 +1340,7 @@ func TestStateTransition(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				// Avoid waiting for ARP on sending DHCPRELEASE.
-				s.AddStaticNeighbor(testNICID, header.IPv4ProtocolNumber, c.Info().Server, tcpip.LinkAddress([]byte{0, 1, 2, 3, 4, 5}))
+				s.AddStaticNeighbor(testNICID, header.IPv4ProtocolNumber, c.Info().Config.ServerAddress, tcpip.LinkAddress([]byte{0, 1, 2, 3, 4, 5}))
 
 				c.Run(ctx)
 				wg.Done()
@@ -1454,7 +1458,7 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		// Avoid waiting for ARP on sending DHCPRELEASE.
-		s.AddStaticNeighbor(testNICID, header.IPv4ProtocolNumber, c.Info().Server, tcpip.LinkAddress([]byte{0, 1, 2, 3, 4, 5}))
+		s.AddStaticNeighbor(testNICID, header.IPv4ProtocolNumber, c.Info().Config.ServerAddress, tcpip.LinkAddress([]byte{0, 1, 2, 3, 4, 5}))
 
 		c.Run(ctx)
 		wg.Done()
@@ -1616,22 +1620,7 @@ func TestClientRestartIPHeader(t *testing.T) {
 			defer cancel()
 
 			c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
-				if acquired != lost {
-					if lost != (tcpip.AddressWithPrefix{}) {
-						if err := clientStack.RemoveAddress(testNICID, lost.Address); err != nil {
-							t.Fatalf("RemoveAddress(%s): %s", lost.Address, err)
-						}
-					}
-					if acquired != (tcpip.AddressWithPrefix{}) {
-						protocolAddress := tcpip.ProtocolAddress{
-							Protocol:          ipv4.ProtocolNumber,
-							AddressWithPrefix: acquired,
-						}
-						if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
-							t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
-						}
-					}
-				}
+				removeLostAddAcquired(t, clientStack, lost, acquired)
 				cancel()
 			}
 
@@ -1802,5 +1791,98 @@ func TestDecline(t *testing.T) {
 		}
 
 		break
+	}
+}
+
+func TestClientRestartLeaseTime(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	clientStack, _, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg, nil)
+	// Always return the same arbitrary time.
+	c.now = func() time.Time { return time.Unix(1234, 5678) }
+
+	acquiredDone := make(chan struct{})
+	c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
+		removeLostAddAcquired(t, clientStack, lost, acquired)
+		acquiredDone <- struct{}{}
+	}
+	clientCtx, clientCancel := context.WithCancel(ctx)
+	// Acquire address and transition to bound state.
+	go c.Run(clientCtx)
+	<-acquiredDone
+
+	checkTimes := func(now time.Time, leaseLength, renew, rebind Seconds) {
+		info := c.Info()
+		if got, want := info.LeaseExpiration, now.Add(leaseLength.Duration()); got != want {
+			t.Errorf("info.LeaseExpiration=%s, want=%s", got, want)
+		}
+		if got, want := info.RenewTime, now.Add(renew.Duration()); got != want {
+			t.Errorf("info.RenewTime=%s, want=%s", got, want)
+		}
+		if got, want := info.RebindTime, now.Add(rebind.Duration()); got != want {
+			t.Errorf("info.RebindTime=%s, want=%s", got, want)
+		}
+		if info.Config.LeaseLength != leaseLength {
+			t.Errorf("info.Config.LeaseLength=%s, want=%s", info.Config.LeaseLength, leaseLength)
+		}
+		if info.Config.RenewTime != renew {
+			t.Errorf("info.Config.RenewTime=%s, want=%s", info.Config.RenewTime, renew)
+		}
+		if info.Config.RebindTime != rebind {
+			t.Errorf("info.Config.RebindTime=%s, want=%s", info.Config.RebindTime, rebind)
+		}
+	}
+	renewTime, rebindTime := defaultRenewTime(defaultLeaseLength), defaultRebindTime(defaultLeaseLength)
+	checkTimes(c.now(), defaultLeaseLength, renewTime, rebindTime)
+
+	// Simulate interface going down.
+	clientCancel()
+	<-acquiredDone
+
+	zero := Seconds(0)
+	checkTimes(time.Time{}, zero, zero, zero)
+
+	clientCtx, clientCancel = context.WithCancel(ctx)
+	defer clientCancel()
+
+	writeIntercept := make(chan struct{})
+	intercepts := 0
+	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
+		ipv4Packet := header.IPv4(pkt.Data().AsRange().ToOwnedView())
+		udpPacket := header.UDP(ipv4Packet.Payload())
+		dhcpPacket := hdr(udpPacket.Payload())
+		opts, err := dhcpPacket.options()
+		if err != nil {
+			t.Fatalf("packet missing options: %s", err)
+		}
+		typ, err := opts.dhcpMsgType()
+		if err != nil {
+			t.Fatalf("packet missing message type: %s", err)
+		}
+		if typ == dhcpDISCOVER {
+			// maxIntercepts is selected to cause an acquisition attempt to timeout
+			// given the defaultAcquireTimeout and defaultRetransTime.
+			// maxIntercepts * defaultRetransTime >= defaultAcquireTime
+			const maxIntercepts = 3
+			if intercepts < maxIntercepts {
+				intercepts++
+				return nil
+			}
+			if intercepts == maxIntercepts {
+				writeIntercept <- struct{}{}
+			}
+		}
+		return pkt
+	}
+	// Restart client and transition to bound.
+	go c.Run(clientCtx)
+	<-writeIntercept
+	<-acquiredDone
+
+	checkTimes(c.now(), defaultLeaseLength, renewTime, rebindTime)
+	info := c.Info()
+	if info.State != bound {
+		t.Errorf("info.State=%s, want=%s", info.State, bound)
 	}
 }
