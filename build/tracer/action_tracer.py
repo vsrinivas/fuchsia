@@ -732,7 +732,6 @@ def main():
         return retval
 
     # `compiled_action()` programs with known issues
-    # TODO(shayba): file bugs for the suppressions below
     ignored_compiled_actions = {
         # fxbug.dev/61770
         "banjo_bin",
