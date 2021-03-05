@@ -718,7 +718,60 @@ You can add this to your component by including the following manifest shard:
 }
 ```
 
-## Converting CMX features {#cmx-features}
+### Resolvers
+
+If your component is not part of the `base` package set you must route the
+`universe` resolver to it. You can check if your package is in the `base` set.
+
+```posix-terminal
+fx list-packages --base
+```
+
+Note: You can use `--cache` and `--universe` to inspect what is in the `cache`
+and `universe` sets, respectively.
+
+Resolvers are routed to components via environments. First define the
+environment in the `environments` section.
+
+```json5
+// core.cml
+{
+  environments: [
+    ...
+    {
+      name: "my_component_env",
+      // inherits things from your parent's realm, almost always the right thing
+      extends: "realm",
+      resolvers: [
+        {
+          resolver: "universe-resolver",
+          scheme: "fuchsia-pkg",
+          // "#universe-resolver" is a child of core
+          from: "#universe-resolver",
+        },
+      ],
+    },
+  ]
+}
+```
+
+Then assign the `environment` to your component.
+
+```json5
+// core.cml
+{
+  children: [
+    ...
+    {
+      name: "my_component",
+      url: "fuchsia-pkg://fuchsia.com/my-pkg#meta/my_component.cm",
+      environment: "#my_component_env",
+    },
+  ],
+}
+```
+
+## Converting CMX features {:#cmx-features}
 
 This section provides guidance on migrating CMX [`features`][cmx-services].
 If there's a feature in your CMX file that's not in this list, please reach out
