@@ -1,0 +1,19 @@
+{
+  "basemgr": {
+    "enable_cobalt": false,
+    "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
+    "session_shells": [
+      {
+        "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx"
+      }
+    ]
+  },
+  "sessionmgr": {
+    "enable_cobalt": false,
+    "startup_agents": [],
+    "session_agents": [],
+    "component_args": [],
+    "agent_service_index": [],
+    "restart_session_on_agent_crash": []
+  }
+}
