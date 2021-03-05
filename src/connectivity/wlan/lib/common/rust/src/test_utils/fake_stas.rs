@@ -115,6 +115,9 @@ impl BssCreator {
                         .set(ie_type, &bytes[..])
                         .with_context(|| format!("set IE type: {:?}", ie_type))?;
                 }
+                IeOverride::SetRaw(bytes) => {
+                    ies_updater.set_raw(&bytes[..]).context("set raw IE")?;
+                }
             }
         }
 
@@ -151,11 +154,17 @@ impl IesOverrides {
         self.overrides.push(IeOverride::Set(ie_type, bytes));
         self
     }
+
+    pub fn set_raw(mut self, bytes: Vec<u8>) -> Self {
+        self.overrides.push(IeOverride::SetRaw(bytes));
+        self
+    }
 }
 
 enum IeOverride {
     Remove(IeType),
     Set(IeType, Vec<u8>),
+    SetRaw(Vec<u8>),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

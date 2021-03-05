@@ -6,7 +6,12 @@ use {
     crate::{
         format::MacFmt as _,
         hasher::WlanHasher,
-        ie::{self, rsn::suite_filter, IeType},
+        ie::{
+            self,
+            rsn::suite_filter,
+            wsc::{parse_probe_resp_wsc, ProbeRespWsc},
+            IeType,
+        },
         mac::CapabilityInfo,
     },
     anyhow::format_err,
@@ -343,6 +348,20 @@ impl BssDescription {
                 _ => None,
             })
             .next()
+    }
+
+    pub fn probe_resp_wsc(&self) -> Option<ProbeRespWsc> {
+        match self.find_wsc_ie() {
+            Some(ie) => match parse_probe_resp_wsc(ie) {
+                Ok(wsc) => Some(wsc),
+                // Parsing could fail because the WSC IE comes from a beacon, which does
+                // not contain all the information that a probe response WSC is expected
+                // to have. We don't have the information to distinguish between a beacon
+                // and a probe response, so we let this case fail silently.
+                Err(_) => None,
+            },
+            None => None,
+        }
     }
 
     /// Returns a simplified BssCandidacy which implements PartialOrd.
