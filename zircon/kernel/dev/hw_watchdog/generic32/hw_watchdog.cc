@@ -81,6 +81,16 @@ class GenericWatchdog32 {
     return last_pet_time_;
   }
 
+  void SuppressPetting(bool suppress) TA_EXCL(lock_) {
+    Guard<SpinLock, IrqSave> guard{&lock_};
+    is_petting_suppressed_ = suppress;
+  }
+
+  bool IsPettingSuppressed() const TA_EXCL(lock_) {
+    Guard<SpinLock, IrqSave> guard{&lock_};
+    return is_petting_suppressed_;
+  }
+
  private:
   static bool TranslatePAddr(uint64_t* paddr);
   void TakeAction(const dcfg_generic_32bit_watchdog_action_t& action) TA_REQ(lock_) {
@@ -91,8 +101,10 @@ class GenericWatchdog32 {
   }
 
   void PetLocked() TA_REQ(lock_) {
-    last_pet_time_ = current_time();
-    TakeAction(cfg_.pet_action);
+    if (!is_petting_suppressed_) {
+      last_pet_time_ = current_time();
+      TakeAction(cfg_.pet_action);
+    }
   }
   void HandlePetTimer() TA_REQ(lock_);
   void PretendLocked() TA_ASSERT(lock_) {}
@@ -103,6 +115,7 @@ class GenericWatchdog32 {
   zx_time_t last_pet_time_ TA_GUARDED(lock_) = 0;
   Timer pet_timer_ TA_GUARDED(lock_);
   bool is_enabled_ TA_GUARDED(lock_) = false;
+  bool is_petting_suppressed_ TA_GUARDED(lock_) = false;
 };
 
 static GenericWatchdog32 g_watchdog;
@@ -113,6 +126,8 @@ static const pdev_watchdog_ops_t THUNKS = {
     .is_enabled = []() { return g_watchdog.is_enabled(); },
     .get_timeout_nsec = []() { return g_watchdog.timeout_nsec(); },
     .get_last_pet_time = []() { return g_watchdog.last_pet_time(); },
+    .suppress_petting = [](bool suppress) { g_watchdog.SuppressPetting(suppress); },
+    .is_petting_suppressed = []() -> bool { return g_watchdog.IsPettingSuppressed(); },
 };
 
 void GenericWatchdog32::InitEarly(const void* driver_data, uint32_t length) {
