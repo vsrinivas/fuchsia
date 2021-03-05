@@ -35,6 +35,13 @@ The allowlist for non-SDK code can be found in
 `//sdk/cts/build/allowed_cts_deps.gni`.  Test authors who believe they need an
 additional inclusion should reach out to the OWNERS of this directory.
 
+### Running example tests
+
+To run example tests, append `--with //sdk/cts` to `fx set`
+eg, `fx set core.qemu-64 --with //sdk/cts`
+
+Next, run `fx test //sdk/cts/examples/`
+
 ### Writing tests
 
 For example tests, see `//sdk/cts/examples`.
