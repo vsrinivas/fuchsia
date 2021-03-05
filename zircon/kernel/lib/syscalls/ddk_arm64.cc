@@ -17,7 +17,7 @@
 namespace {
 
 // Rate limit the OOPS message to avoid spamming the log.
-EventLimiter<ZX_SEC(10)> oops_rate_limiter;
+EventLimiter<ZX_SEC(1)> oops_rate_limiter;
 
 // Emit an OOPS if the current thread has exceeded its targeted preemption time by |threshold|.
 //
@@ -31,9 +31,9 @@ bool CheckForOverrun(zx_duration_t threshold) {
   const zx_time_t target_preemption_time = Scheduler::GetTargetPreemptionTime();
   const zx_duration_t overrun = zx_time_sub_time(now, target_preemption_time);
   if (overrun > threshold && oops_rate_limiter.Ready()) {
-    KERNEL_OOPS(
-        "lockup_detector: thread has overrun its preemption time, overrun=%ldns, threshold=%ldns "
-        "(message rate limited)\n",
+    printf(
+        "WARNING: lockup_detector: thread has overrun its preemption time, overrun=%ldns, "
+        "threshold=%ldns (message rate limited)\n",
         overrun, threshold);
     return true;
   }
