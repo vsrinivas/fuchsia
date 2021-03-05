@@ -9,9 +9,14 @@ group("tests") {
 
   deps = [
     ":present_view_apptests",
-    ":present_view_integration_tests",
     ":present_view_unittests",
   ]
+
+  # TODO(fxbug.dev/70869): Re-enable this test in profile build when it passes
+  # consistently in profile build.
+  if (select_variant + [ "profile" ] - [ "profile" ] == select_variant) {
+    deps += [ ":present_view_integration_tests" ]
+  }
 }
 
 fuchsia_unittest_package("present_view_apptests") {
