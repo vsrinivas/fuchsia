@@ -340,7 +340,7 @@ void CriticalSectionLockupChecker::ReportFailures(cpu_num_t cpu) {
   // Did we observe a new worst case?  If so, report it and update the counters.
   if (observed_.new_worst_case_ticks > 0) {
     const zx_duration_t duration = TicksToDuration(observed_.new_worst_case_ticks);
-    KERNEL_OOPS(
+    printf(
         "lockup_detector: CPU-%u encountered a new worst case critical section section time of "
         "%" PRId64 " usec. Reported by [CPU-%u] (message rate limited)\n",
         cpu, duration / ZX_USEC(1), arch_curr_cpu_num());
