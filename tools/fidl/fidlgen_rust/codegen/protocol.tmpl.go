@@ -89,7 +89,7 @@ pub trait {{ $protocol.Name }}ProxyInterface: Send + Sync {
 	{{- if $method.IsTransitional -}}
 	#[allow(unused_variables)]
 	{{- end }}
-	fn {{ $method.Name }}(&self,
+	fn r#{{ $method.Name }}(&self,
 		{{- range $request := $method.Request }}
 		{{ $request.Name }}: {{ $request.BorrowedType }},
 		{{- end }}
@@ -129,7 +129,7 @@ impl {{ $protocol.Name }}SynchronousProxy {
 	{{- range .DocComments}}
 	///{{ . }}
 	{{- end}}
-	pub fn {{ $method.Name }}(&mut self,
+	pub fn r#{{ $method.Name }}(&mut self,
 		{{- range $request := $method.Request }}
 		mut {{ $request.Name }}: {{ $request.BorrowedType }},
 		{{- end }}
@@ -214,7 +214,7 @@ impl {{ $protocol.Name }}Proxy {
 	{{- range .DocComments}}
 	///{{ . }}
 	{{- end}}
-	pub fn {{ $method.Name }}(&self,
+	pub fn r#{{ $method.Name }}(&self,
 		{{- range $request := $method.Request }}
 		mut {{ $request.Name }}: {{ $request.BorrowedType }},
 		{{- end }}
@@ -229,7 +229,7 @@ impl {{ $protocol.Name }}Proxy {
 	{{- else -}}
 	-> Result<(), fidl::Error> {
 	{{- end }}
-		{{ $protocol.Name }}ProxyInterface::{{ $method.Name }}(self,
+		{{ $protocol.Name }}ProxyInterface::r#{{ $method.Name }}(self,
 		{{- range $request := $method.Request }}
 		{{ $request.Name }},
 		{{- end }}
@@ -252,7 +252,7 @@ impl {{ $protocol.Name}}ProxyInterface for {{ $protocol.Name}}Proxy {
 
 	{{- if $method.HasRequest }}
 	{{- if $method.HasResponse -}}
-	fn {{ $method.Name }}(&self,
+	fn r#{{ $method.Name }}(&self,
 		{{- range $request := $method.Request }}
 		mut {{ $request.Name }}: {{ $request.BorrowedType }},
 		{{- end }}
@@ -281,7 +281,7 @@ impl {{ $protocol.Name}}ProxyInterface for {{ $protocol.Name}}Proxy {
         })
 	}
 	{{- else -}}
-	fn {{ $method.Name }}(&self,
+	fn r#{{ $method.Name }}(&self,
 		{{- range $request := $method.Request }}
 		mut {{ $request.Name }}: {{ $request.BorrowedType }},
 		{{- end }}

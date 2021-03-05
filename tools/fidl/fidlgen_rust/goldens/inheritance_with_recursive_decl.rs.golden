@@ -42,7 +42,8 @@ impl fidl::endpoints::ServiceMarker for ParentMarker {
 }
 
 pub trait ParentProxyInterface: Send + Sync {
-    fn first(&self, request: fidl::endpoints::ServerEnd<ParentMarker>) -> Result<(), fidl::Error>;
+    fn r#first(&self, request: fidl::endpoints::ServerEnd<ParentMarker>)
+        -> Result<(), fidl::Error>;
 }
 
 #[derive(Debug)]
@@ -60,7 +61,7 @@ impl ParentSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn first(
+    pub fn r#first(
         &mut self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
@@ -104,16 +105,16 @@ impl ParentProxy {
     pub fn take_event_stream(&self) -> ParentEventStream {
         ParentEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn first(
+    pub fn r#first(
         &self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
-        ParentProxyInterface::first(self, request)
+        ParentProxyInterface::r#first(self, request)
     }
 }
 
 impl ParentProxyInterface for ParentProxy {
-    fn first(
+    fn r#first(
         &self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
@@ -396,8 +397,12 @@ impl fidl::endpoints::ServiceMarker for ChildMarker {
 }
 
 pub trait ChildProxyInterface: Send + Sync {
-    fn first(&self, request: fidl::endpoints::ServerEnd<ParentMarker>) -> Result<(), fidl::Error>;
-    fn second(&self, request: fidl::endpoints::ServerEnd<ParentMarker>) -> Result<(), fidl::Error>;
+    fn r#first(&self, request: fidl::endpoints::ServerEnd<ParentMarker>)
+        -> Result<(), fidl::Error>;
+    fn r#second(
+        &self,
+        request: fidl::endpoints::ServerEnd<ParentMarker>,
+    ) -> Result<(), fidl::Error>;
 }
 
 #[derive(Debug)]
@@ -415,13 +420,13 @@ impl ChildSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn first(
+    pub fn r#first(
         &mut self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
         self.client.send(&mut (request), 0x2a592d0a81dac39b)
     }
-    pub fn second(
+    pub fn r#second(
         &mut self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
@@ -465,28 +470,28 @@ impl ChildProxy {
     pub fn take_event_stream(&self) -> ChildEventStream {
         ChildEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn first(
+    pub fn r#first(
         &self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
-        ChildProxyInterface::first(self, request)
+        ChildProxyInterface::r#first(self, request)
     }
-    pub fn second(
+    pub fn r#second(
         &self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
-        ChildProxyInterface::second(self, request)
+        ChildProxyInterface::r#second(self, request)
     }
 }
 
 impl ChildProxyInterface for ChildProxy {
-    fn first(
+    fn r#first(
         &self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
         self.client.send(&mut (request), 0x2a592d0a81dac39b)
     }
-    fn second(
+    fn r#second(
         &self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {

@@ -38,7 +38,7 @@ impl fidl::endpoints::ServiceMarker for Super_Marker {
 
 pub trait Super_ProxyInterface: Send + Sync {
     type FooResponseFut: std::future::Future<Output = Result<(i64), fidl::Error>> + Send;
-    fn foo(&self, s: &str) -> Self::FooResponseFut;
+    fn r#foo(&self, s: &str) -> Self::FooResponseFut;
 }
 
 #[derive(Debug)]
@@ -56,7 +56,7 @@ impl Super_SynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn foo(&mut self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
+    pub fn r#foo(&mut self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
         let _value: (i64,) = self.client.send_query(&mut (s), 0x45602cf3b581d6ab, ___deadline)?;
         Ok(_value.0)
     }
@@ -98,14 +98,14 @@ impl Super_Proxy {
     pub fn take_event_stream(&self) -> Super_EventStream {
         Super_EventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn foo(&self, mut s: &str) -> fidl::client::QueryResponseFut<(i64)> {
-        Super_ProxyInterface::foo(self, s)
+    pub fn r#foo(&self, mut s: &str) -> fidl::client::QueryResponseFut<(i64)> {
+        Super_ProxyInterface::r#foo(self, s)
     }
 }
 
 impl Super_ProxyInterface for Super_Proxy {
     type FooResponseFut = fidl::client::QueryResponseFut<(i64)>;
-    fn foo(&self, mut s: &str) -> Self::FooResponseFut {
+    fn r#foo(&self, mut s: &str) -> Self::FooResponseFut {
         fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
             result.map(|_value| _value.0)
         }
@@ -501,7 +501,7 @@ impl fidl::endpoints::ServiceMarker for SubMarker {
 
 pub trait SubProxyInterface: Send + Sync {
     type FooResponseFut: std::future::Future<Output = Result<(i64), fidl::Error>> + Send;
-    fn foo(&self, s: &str) -> Self::FooResponseFut;
+    fn r#foo(&self, s: &str) -> Self::FooResponseFut;
 }
 
 #[derive(Debug)]
@@ -519,7 +519,7 @@ impl SubSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn foo(&mut self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
+    pub fn r#foo(&mut self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
         let _value: (i64,) = self.client.send_query(&mut (s), 0x45602cf3b581d6ab, ___deadline)?;
         Ok(_value.0)
     }
@@ -561,14 +561,14 @@ impl SubProxy {
     pub fn take_event_stream(&self) -> SubEventStream {
         SubEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn foo(&self, mut s: &str) -> fidl::client::QueryResponseFut<(i64)> {
-        SubProxyInterface::foo(self, s)
+    pub fn r#foo(&self, mut s: &str) -> fidl::client::QueryResponseFut<(i64)> {
+        SubProxyInterface::r#foo(self, s)
     }
 }
 
 impl SubProxyInterface for SubProxy {
     type FooResponseFut = fidl::client::QueryResponseFut<(i64)>;
-    fn foo(&self, mut s: &str) -> Self::FooResponseFut {
+    fn r#foo(&self, mut s: &str) -> Self::FooResponseFut {
         fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
             result.map(|_value| _value.0)
         }

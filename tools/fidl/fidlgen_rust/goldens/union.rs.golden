@@ -630,12 +630,12 @@ impl fidl::endpoints::ServiceMarker for TestProtocolMarker {
 pub trait TestProtocolProxyInterface: Send + Sync {
     type StrictXUnionHenceResponseMayBeStackAllocatedResponseFut: std::future::Future<Output = Result<(StrictBoundedXUnion), fidl::Error>>
         + Send;
-    fn strict_x_union_hence_response_may_be_stack_allocated(
+    fn r#strict_x_union_hence_response_may_be_stack_allocated(
         &self,
     ) -> Self::StrictXUnionHenceResponseMayBeStackAllocatedResponseFut;
     type FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut: std::future::Future<Output = Result<(OlderSimpleUnion), fidl::Error>>
         + Send;
-    fn flexible_x_union_hence_response_must_be_heap_allocated(
+    fn r#flexible_x_union_hence_response_must_be_heap_allocated(
         &self,
     ) -> Self::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut;
 }
@@ -655,7 +655,7 @@ impl TestProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn strict_x_union_hence_response_may_be_stack_allocated(
+    pub fn r#strict_x_union_hence_response_may_be_stack_allocated(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(StrictBoundedXUnion), fidl::Error> {
@@ -663,7 +663,7 @@ impl TestProtocolSynchronousProxy {
             self.client.send_query(&mut (), 0x747b084a44f0dc3e, ___deadline)?;
         Ok(_value.0)
     }
-    pub fn flexible_x_union_hence_response_must_be_heap_allocated(
+    pub fn r#flexible_x_union_hence_response_must_be_heap_allocated(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(OlderSimpleUnion), fidl::Error> {
@@ -709,22 +709,22 @@ impl TestProtocolProxy {
     pub fn take_event_stream(&self) -> TestProtocolEventStream {
         TestProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn strict_x_union_hence_response_may_be_stack_allocated(
+    pub fn r#strict_x_union_hence_response_may_be_stack_allocated(
         &self,
     ) -> fidl::client::QueryResponseFut<(StrictBoundedXUnion)> {
-        TestProtocolProxyInterface::strict_x_union_hence_response_may_be_stack_allocated(self)
+        TestProtocolProxyInterface::r#strict_x_union_hence_response_may_be_stack_allocated(self)
     }
-    pub fn flexible_x_union_hence_response_must_be_heap_allocated(
+    pub fn r#flexible_x_union_hence_response_must_be_heap_allocated(
         &self,
     ) -> fidl::client::QueryResponseFut<(OlderSimpleUnion)> {
-        TestProtocolProxyInterface::flexible_x_union_hence_response_must_be_heap_allocated(self)
+        TestProtocolProxyInterface::r#flexible_x_union_hence_response_must_be_heap_allocated(self)
     }
 }
 
 impl TestProtocolProxyInterface for TestProtocolProxy {
     type StrictXUnionHenceResponseMayBeStackAllocatedResponseFut =
         fidl::client::QueryResponseFut<(StrictBoundedXUnion)>;
-    fn strict_x_union_hence_response_may_be_stack_allocated(
+    fn r#strict_x_union_hence_response_may_be_stack_allocated(
         &self,
     ) -> Self::StrictXUnionHenceResponseMayBeStackAllocatedResponseFut {
         fn transform(
@@ -742,7 +742,7 @@ impl TestProtocolProxyInterface for TestProtocolProxy {
     }
     type FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut =
         fidl::client::QueryResponseFut<(OlderSimpleUnion)>;
-    fn flexible_x_union_hence_response_must_be_heap_allocated(
+    fn r#flexible_x_union_hence_response_must_be_heap_allocated(
         &self,
     ) -> Self::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut {
         fn transform(

@@ -64,7 +64,7 @@ impl fidl::endpoints::ServiceMarker for ExampleMarker {
 pub trait ExampleProxyInterface: Send + Sync {
     type FooResponseFut: std::future::Future<Output = Result<(ExampleFooResult), fidl::Error>>
         + Send;
-    fn foo(&self, s: &str) -> Self::FooResponseFut;
+    fn r#foo(&self, s: &str) -> Self::FooResponseFut;
 }
 
 #[derive(Debug)]
@@ -82,7 +82,7 @@ impl ExampleSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn foo(
+    pub fn r#foo(
         &mut self,
         mut s: &str,
         ___deadline: zx::Time,
@@ -129,14 +129,14 @@ impl ExampleProxy {
     pub fn take_event_stream(&self) -> ExampleEventStream {
         ExampleEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn foo(&self, mut s: &str) -> fidl::client::QueryResponseFut<(ExampleFooResult)> {
-        ExampleProxyInterface::foo(self, s)
+    pub fn r#foo(&self, mut s: &str) -> fidl::client::QueryResponseFut<(ExampleFooResult)> {
+        ExampleProxyInterface::r#foo(self, s)
     }
 }
 
 impl ExampleProxyInterface for ExampleProxy {
     type FooResponseFut = fidl::client::QueryResponseFut<(ExampleFooResult)>;
-    fn foo(&self, mut s: &str) -> Self::FooResponseFut {
+    fn r#foo(&self, mut s: &str) -> Self::FooResponseFut {
         fn transform(
             result: Result<(ExampleFooResultHandleWrapper), fidl::Error>,
         ) -> Result<(ExampleFooResult), fidl::Error> {

@@ -132,20 +132,21 @@ impl fidl::endpoints::ServiceMarker for WithAndWithoutRequestResponseMarker {
 }
 
 pub trait WithAndWithoutRequestResponseProxyInterface: Send + Sync {
-    fn no_request_no_response(&self) -> Result<(), fidl::Error>;
+    fn r#no_request_no_response(&self) -> Result<(), fidl::Error>;
     type NoRequestEmptyResponseResponseFut: std::future::Future<Output = Result<(), fidl::Error>>
         + Send;
-    fn no_request_empty_response(&self) -> Self::NoRequestEmptyResponseResponseFut;
+    fn r#no_request_empty_response(&self) -> Self::NoRequestEmptyResponseResponseFut;
     type NoRequestWithResponseResponseFut: std::future::Future<Output = Result<(String), fidl::Error>>
         + Send;
-    fn no_request_with_response(&self) -> Self::NoRequestWithResponseResponseFut;
-    fn with_request_no_response(&self, arg: &str) -> Result<(), fidl::Error>;
+    fn r#no_request_with_response(&self) -> Self::NoRequestWithResponseResponseFut;
+    fn r#with_request_no_response(&self, arg: &str) -> Result<(), fidl::Error>;
     type WithRequestEmptyResponseResponseFut: std::future::Future<Output = Result<(), fidl::Error>>
         + Send;
-    fn with_request_empty_response(&self, arg: &str) -> Self::WithRequestEmptyResponseResponseFut;
+    fn r#with_request_empty_response(&self, arg: &str)
+        -> Self::WithRequestEmptyResponseResponseFut;
     type WithRequestWithResponseResponseFut: std::future::Future<Output = Result<(String), fidl::Error>>
         + Send;
-    fn with_request_with_response(&self, arg: &str) -> Self::WithRequestWithResponseResponseFut;
+    fn r#with_request_with_response(&self, arg: &str) -> Self::WithRequestWithResponseResponseFut;
     type OnEmptyResponseResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
     type OnWithResponseResponseFut: std::future::Future<Output = Result<(String), fidl::Error>>
         + Send;
@@ -166,24 +167,27 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn no_request_no_response(&mut self) -> Result<(), fidl::Error> {
+    pub fn r#no_request_no_response(&mut self) -> Result<(), fidl::Error> {
         self.client.send(&mut (), 0x6ad894147d0c6ba4)
     }
-    pub fn no_request_empty_response(&mut self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
+    pub fn r#no_request_empty_response(
+        &mut self,
+        ___deadline: zx::Time,
+    ) -> Result<(), fidl::Error> {
         let _value: () = self.client.send_query(&mut (), 0x4068f26bf6d868ae, ___deadline)?;
         Ok(())
     }
-    pub fn no_request_with_response(
+    pub fn r#no_request_with_response(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(String), fidl::Error> {
         let _value: (String,) = self.client.send_query(&mut (), 0x447e655905ccfbf4, ___deadline)?;
         Ok(_value.0)
     }
-    pub fn with_request_no_response(&mut self, mut arg: &str) -> Result<(), fidl::Error> {
+    pub fn r#with_request_no_response(&mut self, mut arg: &str) -> Result<(), fidl::Error> {
         self.client.send(&mut (arg), 0x7cb47b2f9e76d17d)
     }
-    pub fn with_request_empty_response(
+    pub fn r#with_request_empty_response(
         &mut self,
         mut arg: &str,
         ___deadline: zx::Time,
@@ -191,7 +195,7 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
         let _value: () = self.client.send_query(&mut (arg), 0x65eb512ff0e1c07e, ___deadline)?;
         Ok(())
     }
-    pub fn with_request_with_response(
+    pub fn r#with_request_with_response(
         &mut self,
         mut arg: &str,
         ___deadline: zx::Time,
@@ -241,35 +245,38 @@ impl WithAndWithoutRequestResponseProxy {
             event_receiver: self.client.take_event_receiver(),
         }
     }
-    pub fn no_request_no_response(&self) -> Result<(), fidl::Error> {
-        WithAndWithoutRequestResponseProxyInterface::no_request_no_response(self)
+    pub fn r#no_request_no_response(&self) -> Result<(), fidl::Error> {
+        WithAndWithoutRequestResponseProxyInterface::r#no_request_no_response(self)
     }
-    pub fn no_request_empty_response(&self) -> fidl::client::QueryResponseFut<()> {
-        WithAndWithoutRequestResponseProxyInterface::no_request_empty_response(self)
+    pub fn r#no_request_empty_response(&self) -> fidl::client::QueryResponseFut<()> {
+        WithAndWithoutRequestResponseProxyInterface::r#no_request_empty_response(self)
     }
-    pub fn no_request_with_response(&self) -> fidl::client::QueryResponseFut<(String)> {
-        WithAndWithoutRequestResponseProxyInterface::no_request_with_response(self)
+    pub fn r#no_request_with_response(&self) -> fidl::client::QueryResponseFut<(String)> {
+        WithAndWithoutRequestResponseProxyInterface::r#no_request_with_response(self)
     }
-    pub fn with_request_no_response(&self, mut arg: &str) -> Result<(), fidl::Error> {
-        WithAndWithoutRequestResponseProxyInterface::with_request_no_response(self, arg)
+    pub fn r#with_request_no_response(&self, mut arg: &str) -> Result<(), fidl::Error> {
+        WithAndWithoutRequestResponseProxyInterface::r#with_request_no_response(self, arg)
     }
-    pub fn with_request_empty_response(&self, mut arg: &str) -> fidl::client::QueryResponseFut<()> {
-        WithAndWithoutRequestResponseProxyInterface::with_request_empty_response(self, arg)
+    pub fn r#with_request_empty_response(
+        &self,
+        mut arg: &str,
+    ) -> fidl::client::QueryResponseFut<()> {
+        WithAndWithoutRequestResponseProxyInterface::r#with_request_empty_response(self, arg)
     }
-    pub fn with_request_with_response(
+    pub fn r#with_request_with_response(
         &self,
         mut arg: &str,
     ) -> fidl::client::QueryResponseFut<(String)> {
-        WithAndWithoutRequestResponseProxyInterface::with_request_with_response(self, arg)
+        WithAndWithoutRequestResponseProxyInterface::r#with_request_with_response(self, arg)
     }
 }
 
 impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestResponseProxy {
-    fn no_request_no_response(&self) -> Result<(), fidl::Error> {
+    fn r#no_request_no_response(&self) -> Result<(), fidl::Error> {
         self.client.send(&mut (), 0x6ad894147d0c6ba4)
     }
     type NoRequestEmptyResponseResponseFut = fidl::client::QueryResponseFut<()>;
-    fn no_request_empty_response(&self) -> Self::NoRequestEmptyResponseResponseFut {
+    fn r#no_request_empty_response(&self) -> Self::NoRequestEmptyResponseResponseFut {
         fn transform(result: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
             result.map(|_value| ())
         }
@@ -282,7 +289,7 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
         })
     }
     type NoRequestWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;
-    fn no_request_with_response(&self) -> Self::NoRequestWithResponseResponseFut {
+    fn r#no_request_with_response(&self) -> Self::NoRequestWithResponseResponseFut {
         fn transform(result: Result<(String,), fidl::Error>) -> Result<(String), fidl::Error> {
             result.map(|_value| _value.0)
         }
@@ -294,11 +301,11 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
             Err(e) => MaybeDone::Done(Err(e)),
         })
     }
-    fn with_request_no_response(&self, mut arg: &str) -> Result<(), fidl::Error> {
+    fn r#with_request_no_response(&self, mut arg: &str) -> Result<(), fidl::Error> {
         self.client.send(&mut (arg), 0x7cb47b2f9e76d17d)
     }
     type WithRequestEmptyResponseResponseFut = fidl::client::QueryResponseFut<()>;
-    fn with_request_empty_response(
+    fn r#with_request_empty_response(
         &self,
         mut arg: &str,
     ) -> Self::WithRequestEmptyResponseResponseFut {
@@ -314,7 +321,7 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
         })
     }
     type WithRequestWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;
-    fn with_request_with_response(
+    fn r#with_request_with_response(
         &self,
         mut arg: &str,
     ) -> Self::WithRequestWithResponseResponseFut {
@@ -1470,13 +1477,13 @@ impl fidl::endpoints::ServiceMarker for WithErrorSyntaxMarker {
 pub trait WithErrorSyntaxProxyInterface: Send + Sync {
     type ResponseAsStructResponseFut: std::future::Future<Output = Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error>>
         + Send;
-    fn response_as_struct(&self) -> Self::ResponseAsStructResponseFut;
+    fn r#response_as_struct(&self) -> Self::ResponseAsStructResponseFut;
     type ErrorAsPrimitiveResponseFut: std::future::Future<Output = Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error>>
         + Send;
-    fn error_as_primitive(&self) -> Self::ErrorAsPrimitiveResponseFut;
+    fn r#error_as_primitive(&self) -> Self::ErrorAsPrimitiveResponseFut;
     type ErrorAsEnumResponseFut: std::future::Future<Output = Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error>>
         + Send;
-    fn error_as_enum(&self) -> Self::ErrorAsEnumResponseFut;
+    fn r#error_as_enum(&self) -> Self::ErrorAsEnumResponseFut;
 }
 
 #[derive(Debug)]
@@ -1494,7 +1501,7 @@ impl WithErrorSyntaxSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn response_as_struct(
+    pub fn r#response_as_struct(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error> {
@@ -1502,7 +1509,7 @@ impl WithErrorSyntaxSynchronousProxy {
             self.client.send_query(&mut (), 0x3784d38864674290, ___deadline)?;
         Ok(_value.map(|_value| (_value.0, _value.1, _value.2)))
     }
-    pub fn error_as_primitive(
+    pub fn r#error_as_primitive(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error> {
@@ -1510,7 +1517,7 @@ impl WithErrorSyntaxSynchronousProxy {
             self.client.send_query(&mut (), 0x2f7c390f3cdef4ce, ___deadline)?;
         Ok(_value.map(|_value| ()))
     }
-    pub fn error_as_enum(
+    pub fn r#error_as_enum(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error> {
@@ -1556,27 +1563,27 @@ impl WithErrorSyntaxProxy {
     pub fn take_event_stream(&self) -> WithErrorSyntaxEventStream {
         WithErrorSyntaxEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn response_as_struct(
+    pub fn r#response_as_struct(
         &self,
     ) -> fidl::client::QueryResponseFut<(WithErrorSyntaxResponseAsStructResult)> {
-        WithErrorSyntaxProxyInterface::response_as_struct(self)
+        WithErrorSyntaxProxyInterface::r#response_as_struct(self)
     }
-    pub fn error_as_primitive(
+    pub fn r#error_as_primitive(
         &self,
     ) -> fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsPrimitiveResult)> {
-        WithErrorSyntaxProxyInterface::error_as_primitive(self)
+        WithErrorSyntaxProxyInterface::r#error_as_primitive(self)
     }
-    pub fn error_as_enum(
+    pub fn r#error_as_enum(
         &self,
     ) -> fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsEnumResult)> {
-        WithErrorSyntaxProxyInterface::error_as_enum(self)
+        WithErrorSyntaxProxyInterface::r#error_as_enum(self)
     }
 }
 
 impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
     type ResponseAsStructResponseFut =
         fidl::client::QueryResponseFut<(WithErrorSyntaxResponseAsStructResult)>;
-    fn response_as_struct(&self) -> Self::ResponseAsStructResponseFut {
+    fn r#response_as_struct(&self) -> Self::ResponseAsStructResponseFut {
         fn transform(
             result: Result<(WithErrorSyntaxResponseAsStructResultHandleWrapper), fidl::Error>,
         ) -> Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error> {
@@ -1592,7 +1599,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
     }
     type ErrorAsPrimitiveResponseFut =
         fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsPrimitiveResult)>;
-    fn error_as_primitive(&self) -> Self::ErrorAsPrimitiveResponseFut {
+    fn r#error_as_primitive(&self) -> Self::ErrorAsPrimitiveResponseFut {
         fn transform(
             result: Result<(WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper), fidl::Error>,
         ) -> Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error> {
@@ -1608,7 +1615,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
     }
     type ErrorAsEnumResponseFut =
         fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsEnumResult)>;
-    fn error_as_enum(&self) -> Self::ErrorAsEnumResponseFut {
+    fn r#error_as_enum(&self) -> Self::ErrorAsEnumResponseFut {
         fn transform(
             result: Result<(WithErrorSyntaxErrorAsEnumResultHandleWrapper), fidl::Error>,
         ) -> Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error> {
@@ -2374,15 +2381,15 @@ impl fidl::endpoints::ServiceMarker for ChannelProtocolMarker {
 }
 
 pub trait ChannelProtocolProxyInterface: Send + Sync {
-    fn method_a(&self, a: i64, b: i64) -> Result<(), fidl::Error>;
+    fn r#method_a(&self, a: i64, b: i64) -> Result<(), fidl::Error>;
     type EventAResponseFut: std::future::Future<Output = Result<(i64, i64), fidl::Error>> + Send;
     type MethodBResponseFut: std::future::Future<Output = Result<(i64), fidl::Error>> + Send;
-    fn method_b(&self, a: i64, b: i64) -> Self::MethodBResponseFut;
+    fn r#method_b(&self, a: i64, b: i64) -> Self::MethodBResponseFut;
     type TakeHandleResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
-    fn take_handle(&self, h: fidl::Handle) -> Self::TakeHandleResponseFut;
+    fn r#take_handle(&self, h: fidl::Handle) -> Self::TakeHandleResponseFut;
     type MutateSocketResponseFut: std::future::Future<Output = Result<(fidl::Socket), fidl::Error>>
         + Send;
-    fn mutate_socket(&self, a: fidl::Socket) -> Self::MutateSocketResponseFut;
+    fn r#mutate_socket(&self, a: fidl::Socket) -> Self::MutateSocketResponseFut;
 }
 
 #[derive(Debug)]
@@ -2400,10 +2407,10 @@ impl ChannelProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn method_a(&mut self, mut a: i64, mut b: i64) -> Result<(), fidl::Error> {
+    pub fn r#method_a(&mut self, mut a: i64, mut b: i64) -> Result<(), fidl::Error> {
         self.client.send(&mut (a, b), 0x7d92c10fb2d002e)
     }
-    pub fn method_b(
+    pub fn r#method_b(
         &mut self,
         mut a: i64,
         mut b: i64,
@@ -2413,7 +2420,7 @@ impl ChannelProtocolSynchronousProxy {
             self.client.send_query(&mut (a, b), 0x5da1d2ed00055cea, ___deadline)?;
         Ok(_value.0)
     }
-    pub fn take_handle(
+    pub fn r#take_handle(
         &mut self,
         mut h: fidl::Handle,
         ___deadline: zx::Time,
@@ -2421,7 +2428,7 @@ impl ChannelProtocolSynchronousProxy {
         let _value: () = self.client.send_query(&mut (h), 0xc25674355065c28, ___deadline)?;
         Ok(())
     }
-    pub fn mutate_socket(
+    pub fn r#mutate_socket(
         &mut self,
         mut a: fidl::Socket,
         ___deadline: zx::Time,
@@ -2468,30 +2475,30 @@ impl ChannelProtocolProxy {
     pub fn take_event_stream(&self) -> ChannelProtocolEventStream {
         ChannelProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn method_a(&self, mut a: i64, mut b: i64) -> Result<(), fidl::Error> {
-        ChannelProtocolProxyInterface::method_a(self, a, b)
+    pub fn r#method_a(&self, mut a: i64, mut b: i64) -> Result<(), fidl::Error> {
+        ChannelProtocolProxyInterface::r#method_a(self, a, b)
     }
-    pub fn method_b(&self, mut a: i64, mut b: i64) -> fidl::client::QueryResponseFut<(i64)> {
-        ChannelProtocolProxyInterface::method_b(self, a, b)
+    pub fn r#method_b(&self, mut a: i64, mut b: i64) -> fidl::client::QueryResponseFut<(i64)> {
+        ChannelProtocolProxyInterface::r#method_b(self, a, b)
     }
-    pub fn take_handle(&self, mut h: fidl::Handle) -> fidl::client::QueryResponseFut<()> {
-        ChannelProtocolProxyInterface::take_handle(self, h)
+    pub fn r#take_handle(&self, mut h: fidl::Handle) -> fidl::client::QueryResponseFut<()> {
+        ChannelProtocolProxyInterface::r#take_handle(self, h)
     }
-    pub fn mutate_socket(
+    pub fn r#mutate_socket(
         &self,
         mut a: fidl::Socket,
     ) -> fidl::client::QueryResponseFut<(fidl::Socket)> {
-        ChannelProtocolProxyInterface::mutate_socket(self, a)
+        ChannelProtocolProxyInterface::r#mutate_socket(self, a)
     }
 }
 
 impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
-    fn method_a(&self, mut a: i64, mut b: i64) -> Result<(), fidl::Error> {
+    fn r#method_a(&self, mut a: i64, mut b: i64) -> Result<(), fidl::Error> {
         self.client.send(&mut (a, b), 0x7d92c10fb2d002e)
     }
     type EventAResponseFut = fidl::client::QueryResponseFut<(i64, i64)>;
     type MethodBResponseFut = fidl::client::QueryResponseFut<(i64)>;
-    fn method_b(&self, mut a: i64, mut b: i64) -> Self::MethodBResponseFut {
+    fn r#method_b(&self, mut a: i64, mut b: i64) -> Self::MethodBResponseFut {
         fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
             result.map(|_value| _value.0)
         }
@@ -2504,7 +2511,7 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
         })
     }
     type TakeHandleResponseFut = fidl::client::QueryResponseFut<()>;
-    fn take_handle(&self, mut h: fidl::Handle) -> Self::TakeHandleResponseFut {
+    fn r#take_handle(&self, mut h: fidl::Handle) -> Self::TakeHandleResponseFut {
         fn transform(result: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
             result.map(|_value| ())
         }
@@ -2517,7 +2524,7 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
         })
     }
     type MutateSocketResponseFut = fidl::client::QueryResponseFut<(fidl::Socket)>;
-    fn mutate_socket(&self, mut a: fidl::Socket) -> Self::MutateSocketResponseFut {
+    fn r#mutate_socket(&self, mut a: fidl::Socket) -> Self::MutateSocketResponseFut {
         fn transform(
             result: Result<
                 (HandleWrapperObjectTypeSOCKETRights2147483648<fidl::Socket>,),
@@ -3397,11 +3404,11 @@ impl fidl::endpoints::ServiceMarker for TransitionalMarker {
 pub trait TransitionalProxyInterface: Send + Sync {
     type RequestResponseFut: std::future::Future<Output = Result<(i64), fidl::Error>> + Send;
     #[allow(unused_variables)]
-    fn request(&self, x: i64) -> Self::RequestResponseFut {
+    fn r#request(&self, x: i64) -> Self::RequestResponseFut {
         unimplemented!("transitional method request is unimplemented");
     }
     #[allow(unused_variables)]
-    fn one_way(&self, x: i64) -> Result<(), fidl::Error> {
+    fn r#one_way(&self, x: i64) -> Result<(), fidl::Error> {
         unimplemented!("transitional method one_way is unimplemented");
     }
     type EventResponseFut: std::future::Future<Output = Result<(i64), fidl::Error>> + Send;
@@ -3422,11 +3429,11 @@ impl TransitionalSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn request(&mut self, mut x: i64, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
+    pub fn r#request(&mut self, mut x: i64, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
         let _value: (i64,) = self.client.send_query(&mut (x), 0x62d345e621780ee8, ___deadline)?;
         Ok(_value.0)
     }
-    pub fn one_way(&mut self, mut x: i64) -> Result<(), fidl::Error> {
+    pub fn r#one_way(&mut self, mut x: i64) -> Result<(), fidl::Error> {
         self.client.send(&mut (x), 0xf99bc4b26bc9ea5)
     }
 }
@@ -3467,17 +3474,17 @@ impl TransitionalProxy {
     pub fn take_event_stream(&self) -> TransitionalEventStream {
         TransitionalEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn request(&self, mut x: i64) -> fidl::client::QueryResponseFut<(i64)> {
-        TransitionalProxyInterface::request(self, x)
+    pub fn r#request(&self, mut x: i64) -> fidl::client::QueryResponseFut<(i64)> {
+        TransitionalProxyInterface::r#request(self, x)
     }
-    pub fn one_way(&self, mut x: i64) -> Result<(), fidl::Error> {
-        TransitionalProxyInterface::one_way(self, x)
+    pub fn r#one_way(&self, mut x: i64) -> Result<(), fidl::Error> {
+        TransitionalProxyInterface::r#one_way(self, x)
     }
 }
 
 impl TransitionalProxyInterface for TransitionalProxy {
     type RequestResponseFut = fidl::client::QueryResponseFut<(i64)>;
-    fn request(&self, mut x: i64) -> Self::RequestResponseFut {
+    fn r#request(&self, mut x: i64) -> Self::RequestResponseFut {
         fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
             result.map(|_value| _value.0)
         }
@@ -3489,7 +3496,7 @@ impl TransitionalProxyInterface for TransitionalProxy {
             Err(e) => MaybeDone::Done(Err(e)),
         })
     }
-    fn one_way(&self, mut x: i64) -> Result<(), fidl::Error> {
+    fn r#one_way(&self, mut x: i64) -> Result<(), fidl::Error> {
         self.client.send(&mut (x), 0xf99bc4b26bc9ea5)
     }
     type EventResponseFut = fidl::client::QueryResponseFut<(i64)>;

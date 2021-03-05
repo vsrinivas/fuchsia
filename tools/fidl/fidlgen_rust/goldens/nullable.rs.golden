@@ -217,7 +217,7 @@ impl fidl::endpoints::ServiceMarker for SimpleProtocolMarker {
 
 pub trait SimpleProtocolProxyInterface: Send + Sync {
     type AddResponseFut: std::future::Future<Output = Result<(i32), fidl::Error>> + Send;
-    fn add(&self, a: i32, b: i32) -> Self::AddResponseFut;
+    fn r#add(&self, a: i32, b: i32) -> Self::AddResponseFut;
 }
 
 #[derive(Debug)]
@@ -235,7 +235,7 @@ impl SimpleProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn add(
+    pub fn r#add(
         &mut self,
         mut a: i32,
         mut b: i32,
@@ -283,14 +283,14 @@ impl SimpleProtocolProxy {
     pub fn take_event_stream(&self) -> SimpleProtocolEventStream {
         SimpleProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn add(&self, mut a: i32, mut b: i32) -> fidl::client::QueryResponseFut<(i32)> {
-        SimpleProtocolProxyInterface::add(self, a, b)
+    pub fn r#add(&self, mut a: i32, mut b: i32) -> fidl::client::QueryResponseFut<(i32)> {
+        SimpleProtocolProxyInterface::r#add(self, a, b)
     }
 }
 
 impl SimpleProtocolProxyInterface for SimpleProtocolProxy {
     type AddResponseFut = fidl::client::QueryResponseFut<(i32)>;
-    fn add(&self, mut a: i32, mut b: i32) -> Self::AddResponseFut {
+    fn r#add(&self, mut a: i32, mut b: i32) -> Self::AddResponseFut {
         fn transform(result: Result<(i32,), fidl::Error>) -> Result<(i32), fidl::Error> {
             result.map(|_value| _value.0)
         }

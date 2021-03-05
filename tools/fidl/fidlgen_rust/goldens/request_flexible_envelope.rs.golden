@@ -92,13 +92,13 @@ impl fidl::endpoints::ServiceMarker for ProtocolMarker {
 pub trait ProtocolProxyInterface: Send + Sync {
     type RequestStrictResponseFlexibleResponseFut: std::future::Future<Output = Result<(FlexibleFoo), fidl::Error>>
         + Send;
-    fn request_strict_response_flexible(
+    fn r#request_strict_response_flexible(
         &self,
         s: &mut StrictFoo,
     ) -> Self::RequestStrictResponseFlexibleResponseFut;
     type RequestFlexibleResponseStrictResponseFut: std::future::Future<Output = Result<(StrictFoo), fidl::Error>>
         + Send;
-    fn request_flexible_response_strict(
+    fn r#request_flexible_response_strict(
         &self,
         s: &mut FlexibleFoo,
     ) -> Self::RequestFlexibleResponseStrictResponseFut;
@@ -119,7 +119,7 @@ impl ProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn request_strict_response_flexible(
+    pub fn r#request_strict_response_flexible(
         &mut self,
         mut s: &mut StrictFoo,
         ___deadline: zx::Time,
@@ -128,7 +128,7 @@ impl ProtocolSynchronousProxy {
             self.client.send_query(&mut (s), 0x3c5330c58686011a, ___deadline)?;
         Ok(_value.0)
     }
-    pub fn request_flexible_response_strict(
+    pub fn r#request_flexible_response_strict(
         &mut self,
         mut s: &mut FlexibleFoo,
         ___deadline: zx::Time,
@@ -175,23 +175,23 @@ impl ProtocolProxy {
     pub fn take_event_stream(&self) -> ProtocolEventStream {
         ProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn request_strict_response_flexible(
+    pub fn r#request_strict_response_flexible(
         &self,
         mut s: &mut StrictFoo,
     ) -> fidl::client::QueryResponseFut<(FlexibleFoo)> {
-        ProtocolProxyInterface::request_strict_response_flexible(self, s)
+        ProtocolProxyInterface::r#request_strict_response_flexible(self, s)
     }
-    pub fn request_flexible_response_strict(
+    pub fn r#request_flexible_response_strict(
         &self,
         mut s: &mut FlexibleFoo,
     ) -> fidl::client::QueryResponseFut<(StrictFoo)> {
-        ProtocolProxyInterface::request_flexible_response_strict(self, s)
+        ProtocolProxyInterface::r#request_flexible_response_strict(self, s)
     }
 }
 
 impl ProtocolProxyInterface for ProtocolProxy {
     type RequestStrictResponseFlexibleResponseFut = fidl::client::QueryResponseFut<(FlexibleFoo)>;
-    fn request_strict_response_flexible(
+    fn r#request_strict_response_flexible(
         &self,
         mut s: &mut StrictFoo,
     ) -> Self::RequestStrictResponseFlexibleResponseFut {
@@ -209,7 +209,7 @@ impl ProtocolProxyInterface for ProtocolProxy {
         })
     }
     type RequestFlexibleResponseStrictResponseFut = fidl::client::QueryResponseFut<(StrictFoo)>;
-    fn request_flexible_response_strict(
+    fn r#request_flexible_response_strict(
         &self,
         mut s: &mut FlexibleFoo,
     ) -> Self::RequestFlexibleResponseStrictResponseFut {

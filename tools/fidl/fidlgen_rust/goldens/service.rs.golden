@@ -37,7 +37,7 @@ impl fidl::endpoints::ServiceMarker for FirstProtocolMarker {
 }
 
 pub trait FirstProtocolProxyInterface: Send + Sync {
-    fn method_on_first(&self) -> Result<(), fidl::Error>;
+    fn r#method_on_first(&self) -> Result<(), fidl::Error>;
 }
 
 #[derive(Debug)]
@@ -55,7 +55,7 @@ impl FirstProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn method_on_first(&mut self) -> Result<(), fidl::Error> {
+    pub fn r#method_on_first(&mut self) -> Result<(), fidl::Error> {
         self.client.send(&mut (), 0x5b76bb4db7c2bba4)
     }
 }
@@ -96,13 +96,13 @@ impl FirstProtocolProxy {
     pub fn take_event_stream(&self) -> FirstProtocolEventStream {
         FirstProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn method_on_first(&self) -> Result<(), fidl::Error> {
-        FirstProtocolProxyInterface::method_on_first(self)
+    pub fn r#method_on_first(&self) -> Result<(), fidl::Error> {
+        FirstProtocolProxyInterface::r#method_on_first(self)
     }
 }
 
 impl FirstProtocolProxyInterface for FirstProtocolProxy {
-    fn method_on_first(&self) -> Result<(), fidl::Error> {
+    fn r#method_on_first(&self) -> Result<(), fidl::Error> {
         self.client.send(&mut (), 0x5b76bb4db7c2bba4)
     }
 }
@@ -372,7 +372,7 @@ impl fidl::endpoints::ServiceMarker for SecondProtocolMarker {
 }
 
 pub trait SecondProtocolProxyInterface: Send + Sync {
-    fn method_on_second(&self) -> Result<(), fidl::Error>;
+    fn r#method_on_second(&self) -> Result<(), fidl::Error>;
 }
 
 #[derive(Debug)]
@@ -390,7 +390,7 @@ impl SecondProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn method_on_second(&mut self) -> Result<(), fidl::Error> {
+    pub fn r#method_on_second(&mut self) -> Result<(), fidl::Error> {
         self.client.send(&mut (), 0x54ea6448c1555a29)
     }
 }
@@ -431,13 +431,13 @@ impl SecondProtocolProxy {
     pub fn take_event_stream(&self) -> SecondProtocolEventStream {
         SecondProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn method_on_second(&self) -> Result<(), fidl::Error> {
-        SecondProtocolProxyInterface::method_on_second(self)
+    pub fn r#method_on_second(&self) -> Result<(), fidl::Error> {
+        SecondProtocolProxyInterface::r#method_on_second(self)
     }
 }
 
 impl SecondProtocolProxyInterface for SecondProtocolProxy {
-    fn method_on_second(&self) -> Result<(), fidl::Error> {
+    fn r#method_on_second(&self) -> Result<(), fidl::Error> {
         self.client.send(&mut (), 0x54ea6448c1555a29)
     }
 }

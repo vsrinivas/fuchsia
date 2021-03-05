@@ -147,7 +147,7 @@ impl fidl::endpoints::ServiceMarker for ExampleProtocolMarker {
 }
 
 pub trait ExampleProtocolProxyInterface: Send + Sync {
-    fn method(&self, arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error>;
+    fn r#method(&self, arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error>;
 }
 
 #[derive(Debug)]
@@ -165,7 +165,7 @@ impl ExampleProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn method(&mut self, mut arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error> {
+    pub fn r#method(&mut self, mut arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error> {
         self.client.send(&mut (arg), 0x207d2f81c0ddb184)
     }
 }
@@ -206,13 +206,13 @@ impl ExampleProtocolProxy {
     pub fn take_event_stream(&self) -> ExampleProtocolEventStream {
         ExampleProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn method(&self, mut arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error> {
-        ExampleProtocolProxyInterface::method(self, arg)
+    pub fn r#method(&self, mut arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error> {
+        ExampleProtocolProxyInterface::r#method(self, arg)
     }
 }
 
 impl ExampleProtocolProxyInterface for ExampleProtocolProxy {
-    fn method(&self, mut arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error> {
+    fn r#method(&self, mut arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error> {
         self.client.send(&mut (arg), 0x207d2f81c0ddb184)
     }
 }

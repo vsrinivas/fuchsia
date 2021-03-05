@@ -39,7 +39,7 @@ impl fidl::endpoints::ServiceMarker for TopMarker {
 pub trait TopProxyInterface: Send + Sync {
     type GetFooResponseFut: std::future::Future<Output = Result<(fidl_bottom::Foo), fidl::Error>>
         + Send;
-    fn get_foo(&self) -> Self::GetFooResponseFut;
+    fn r#get_foo(&self) -> Self::GetFooResponseFut;
 }
 
 #[derive(Debug)]
@@ -57,7 +57,7 @@ impl TopSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn get_foo(&mut self, ___deadline: zx::Time) -> Result<(fidl_bottom::Foo), fidl::Error> {
+    pub fn r#get_foo(&mut self, ___deadline: zx::Time) -> Result<(fidl_bottom::Foo), fidl::Error> {
         let _value: (fidl_bottom::Foo,) =
             self.client.send_query(&mut (), 0x2c8ccb022c3c571f, ___deadline)?;
         Ok(_value.0)
@@ -100,14 +100,14 @@ impl TopProxy {
     pub fn take_event_stream(&self) -> TopEventStream {
         TopEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn get_foo(&self) -> fidl::client::QueryResponseFut<(fidl_bottom::Foo)> {
-        TopProxyInterface::get_foo(self)
+    pub fn r#get_foo(&self) -> fidl::client::QueryResponseFut<(fidl_bottom::Foo)> {
+        TopProxyInterface::r#get_foo(self)
     }
 }
 
 impl TopProxyInterface for TopProxy {
     type GetFooResponseFut = fidl::client::QueryResponseFut<(fidl_bottom::Foo)>;
-    fn get_foo(&self) -> Self::GetFooResponseFut {
+    fn r#get_foo(&self) -> Self::GetFooResponseFut {
         fn transform(
             result: Result<(fidl_bottom::Foo,), fidl::Error>,
         ) -> Result<(fidl_bottom::Foo), fidl::Error> {

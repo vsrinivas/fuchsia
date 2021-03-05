@@ -313,12 +313,12 @@ impl fidl::endpoints::ServiceMarker for ParentMarker {
 pub trait ParentProxyInterface: Send + Sync {
     type GetChildResponseFut: std::future::Future<Output = Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error>>
         + Send;
-    fn get_child(&self) -> Self::GetChildResponseFut;
+    fn r#get_child(&self) -> Self::GetChildResponseFut;
     type GetChildRequestResponseFut: std::future::Future<Output = Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error>>
         + Send;
-    fn get_child_request(&self) -> Self::GetChildRequestResponseFut;
-    fn take_child(&self, c: fidl::endpoints::ClientEnd<ChildMarker>) -> Result<(), fidl::Error>;
-    fn take_child_request(
+    fn r#get_child_request(&self) -> Self::GetChildRequestResponseFut;
+    fn r#take_child(&self, c: fidl::endpoints::ClientEnd<ChildMarker>) -> Result<(), fidl::Error>;
+    fn r#take_child_request(
         &self,
         r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error>;
@@ -339,7 +339,7 @@ impl ParentSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn get_child(
+    pub fn r#get_child(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error> {
@@ -350,7 +350,7 @@ impl ParentSynchronousProxy {
         ) = self.client.send_query(&mut (), 0x6e0c789be8dbb77e, ___deadline)?;
         Ok(_value.0.into_inner())
     }
-    pub fn get_child_request(
+    pub fn r#get_child_request(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error> {
@@ -361,13 +361,13 @@ impl ParentSynchronousProxy {
         ) = self.client.send_query(&mut (), 0x193e7d6949a9df98, ___deadline)?;
         Ok(_value.0.into_inner())
     }
-    pub fn take_child(
+    pub fn r#take_child(
         &mut self,
         mut c: fidl::endpoints::ClientEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
         self.client.send(&mut (c), 0x5311bd7214c0f6e)
     }
-    pub fn take_child_request(
+    pub fn r#take_child_request(
         &mut self,
         mut r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
@@ -411,34 +411,34 @@ impl ParentProxy {
     pub fn take_event_stream(&self) -> ParentEventStream {
         ParentEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn get_child(
+    pub fn r#get_child(
         &self,
     ) -> fidl::client::QueryResponseFut<(fidl::endpoints::ClientEnd<ChildMarker>)> {
-        ParentProxyInterface::get_child(self)
+        ParentProxyInterface::r#get_child(self)
     }
-    pub fn get_child_request(
+    pub fn r#get_child_request(
         &self,
     ) -> fidl::client::QueryResponseFut<(fidl::endpoints::ServerEnd<ChildMarker>)> {
-        ParentProxyInterface::get_child_request(self)
+        ParentProxyInterface::r#get_child_request(self)
     }
-    pub fn take_child(
+    pub fn r#take_child(
         &self,
         mut c: fidl::endpoints::ClientEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
-        ParentProxyInterface::take_child(self, c)
+        ParentProxyInterface::r#take_child(self, c)
     }
-    pub fn take_child_request(
+    pub fn r#take_child_request(
         &self,
         mut r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
-        ParentProxyInterface::take_child_request(self, r)
+        ParentProxyInterface::r#take_child_request(self, r)
     }
 }
 
 impl ParentProxyInterface for ParentProxy {
     type GetChildResponseFut =
         fidl::client::QueryResponseFut<(fidl::endpoints::ClientEnd<ChildMarker>)>;
-    fn get_child(&self) -> Self::GetChildResponseFut {
+    fn r#get_child(&self) -> Self::GetChildResponseFut {
         fn transform(
             result: Result<
                 (
@@ -461,7 +461,7 @@ impl ParentProxyInterface for ParentProxy {
     }
     type GetChildRequestResponseFut =
         fidl::client::QueryResponseFut<(fidl::endpoints::ServerEnd<ChildMarker>)>;
-    fn get_child_request(&self) -> Self::GetChildRequestResponseFut {
+    fn r#get_child_request(&self) -> Self::GetChildRequestResponseFut {
         fn transform(
             result: Result<
                 (
@@ -482,13 +482,13 @@ impl ParentProxyInterface for ParentProxy {
             Err(e) => MaybeDone::Done(Err(e)),
         })
     }
-    fn take_child(
+    fn r#take_child(
         &self,
         mut c: fidl::endpoints::ClientEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
         self.client.send(&mut (c), 0x5311bd7214c0f6e)
     }
-    fn take_child_request(
+    fn r#take_child_request(
         &self,
         mut r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {

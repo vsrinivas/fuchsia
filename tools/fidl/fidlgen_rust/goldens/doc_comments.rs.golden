@@ -248,7 +248,7 @@ impl fidl::endpoints::ServiceMarker for InterfaceMarker {
 }
 
 pub trait InterfaceProxyInterface: Send + Sync {
-    fn method(&self) -> Result<(), fidl::Error>;
+    fn r#method(&self) -> Result<(), fidl::Error>;
     type OnEventResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
 }
 
@@ -270,7 +270,7 @@ impl InterfaceSynchronousProxy {
     /// method comment #1
     ///
     /// method comment #3
-    pub fn method(&mut self) -> Result<(), fidl::Error> {
+    pub fn r#method(&mut self) -> Result<(), fidl::Error> {
         self.client.send(&mut (), 0x5c492542705b4265)
     }
 }
@@ -314,13 +314,13 @@ impl InterfaceProxy {
     /// method comment #1
     ///
     /// method comment #3
-    pub fn method(&self) -> Result<(), fidl::Error> {
-        InterfaceProxyInterface::method(self)
+    pub fn r#method(&self) -> Result<(), fidl::Error> {
+        InterfaceProxyInterface::r#method(self)
     }
 }
 
 impl InterfaceProxyInterface for InterfaceProxy {
-    fn method(&self) -> Result<(), fidl::Error> {
+    fn r#method(&self) -> Result<(), fidl::Error> {
         self.client.send(&mut (), 0x5c492542705b4265)
     }
     type OnEventResponseFut = fidl::client::QueryResponseFut<()>;
