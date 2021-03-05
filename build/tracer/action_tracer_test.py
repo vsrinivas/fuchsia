@@ -722,6 +722,18 @@ class AccessConstraintsTests(unittest.TestCase):
                     }),
                 allowed_writes=abspaths({"foo.d", "foo.o"})))
 
+    def test_have_nonexistent_depfile(self):
+        action = action_tracer.Action(depfile="foo.d")
+        with mock.patch.object(os.path, 'exists',
+                               return_value=False) as mock_exists:
+            constraints = action.access_constraints()
+        mock_exists.assert_called()
+        self.assertEqual(
+            constraints,
+            action_tracer.AccessConstraints(
+                allowed_writes=abspaths({"foo.d"}),
+                allowed_reads=abspaths({"foo.d"})))
+
 
 class DiagnoseStaleOutputsTest(unittest.TestCase):
 

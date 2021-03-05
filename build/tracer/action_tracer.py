@@ -275,17 +275,18 @@ class Action(object):
 
         allowed_reads = set(self.inputs)
 
-        if self.depfile and os.path.exists(self.depfile):
+        if self.depfile:
             # Writing the depfile is not required (yet), but allowed.
             allowed_writes.add(self.depfile)
-            with open(self.depfile, "r") as f:
-                depfile = parse_depfile(f)
+            if os.path.exists(self.depfile):
+                with open(self.depfile, "r") as f:
+                    depfile = parse_depfile(f)
 
-            if (writeable_depfile_inputs):
-                allowed_writes.update(depfile.all_ins)
-            else:
-                allowed_reads.update(depfile.all_ins)
-            allowed_writes.update(depfile.all_outs)
+                if (writeable_depfile_inputs):
+                    allowed_writes.update(depfile.all_ins)
+                else:
+                    allowed_reads.update(depfile.all_ins)
+                allowed_writes.update(depfile.all_outs)
 
         # Everything writeable is readable.
         allowed_reads.update(allowed_writes)
