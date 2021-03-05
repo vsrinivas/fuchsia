@@ -536,7 +536,7 @@ func TestSerialTester(t *testing.T) {
 			Path: "foo",
 		},
 	}
-	expectedCmd := "\r\nruntests --output /data/infra/testrunner foo\r\n"
+	expectedCmd := "\r\nruntests foo\r\n"
 
 	t.Run("test passes", func(t *testing.T) {
 		errs := make(chan error)

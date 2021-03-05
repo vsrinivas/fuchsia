@@ -515,7 +515,7 @@ func (w *lastWriteSaver) Write(p []byte) (int, error) {
 }
 
 func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
-	command, err := commandForTest(&test, true, dataOutputDir, t.perTestTimeout)
+	command, err := commandForTest(&test, true, "", t.perTestTimeout)
 	if err != nil {
 		return nil, err
 	}
