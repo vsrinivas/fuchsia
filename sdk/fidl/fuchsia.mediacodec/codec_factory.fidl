@@ -371,7 +371,6 @@ protocol CodecFactory {
     /// The codec_end may lack ZX_RIGHT_SIGNAL or ZX_RIGHT_SIGNAL_PEER, but must
     /// have ZX_RIGHT_DUPLICATE (and must have ZX_RIGHT_TRANSFER to transfer
     /// without causing CodecFactory channel failure).
-    [Transitional = "AttachLifetimeTracking() not yet implemented"]
     AttachLifetimeTracking(
         zx.handle:EVENTPAIR codec_end);
 };
