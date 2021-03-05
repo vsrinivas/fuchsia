@@ -61,6 +61,24 @@ zx::duration GetMinimumPredictedFrameDuration() {
              : scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration;
 }
 
+bool GetPointerAutoFocusBehavior() {
+  std::string scenic_config;
+  bool pointer_auto_focus = true;
+  if (files::ReadFileToString("/config/data/scenic_config", &scenic_config)) {
+    rapidjson::Document document;
+    document.Parse(scenic_config);
+
+    if (document.HasMember("pointer_auto_focus")) {
+      auto& val = document["pointer_auto_focus"];
+      FX_CHECK(val.IsBool()) << "pointer_auto_focus must be a boolean";
+      pointer_auto_focus = val.GetBool();
+    }
+  }
+
+  FX_LOGS(INFO) << "Scenic pointer auto focus: " << pointer_auto_focus;
+  return pointer_auto_focus;
+}
+
 }  // namespace
 
 namespace scenic_impl {
@@ -270,7 +288,8 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
 #endif
 
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
-  auto input = scenic_->RegisterSystem<input::InputSystem>(engine_->scene_graph());
+  auto input = scenic_->RegisterSystem<input::InputSystem>(engine_->scene_graph(),
+                                                           GetPointerAutoFocusBehavior());
   FX_DCHECK(input);
 #endif
 

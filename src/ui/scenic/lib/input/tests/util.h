@@ -135,6 +135,9 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   // InputSystemTest needs its own teardown sequence, for session management.
   void TearDown() override;
 
+ protected:
+  virtual bool auto_focus_behavior() const { return true; }
+
  private:
   // |scenic_impl::test::ScenicTest|
   // Create a dummy GFX system, as well as a live input system to test.

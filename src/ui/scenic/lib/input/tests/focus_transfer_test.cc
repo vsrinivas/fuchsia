@@ -155,6 +155,12 @@ class FocusTransferTest : public InputSystemTest {
   std::unique_ptr<SessionWrapper> client_2_;
 };
 
+// Class for testing if turning pointer auto focus off works.
+class NoFocusTransferTest : public FocusTransferTest {
+ private:
+  bool auto_focus_behavior() const override { return false; }
+};
+
 // Some tests require the presence of an accessibility listener to trigger pointer interception.
 class A11yListener : public fuchsia::ui::input::accessibility::PointerEventListener {
  public:
@@ -517,6 +523,50 @@ TEST_F(FocusTransferTest, MouseFocusWithInvalidTarget) {
     // FOCUS
     EXPECT_TRUE(events[0].is_focus());
     EXPECT_TRUE(events[0].focus().focused);
+  }
+}
+
+TEST_F(NoFocusTransferTest, TouchFocusWithValidTarget) {
+  // Inject ADD/DOWN on client 2 to trigger focus dispatch.
+  {
+    scenic::Session* const session = root_session()->session();
+
+    PointerCommandGenerator finger(root_resources()->compositor.id(), /*device id*/ 1,
+                                   /*pointer id*/ 1, PointerEventType::TOUCH);
+    session->Enqueue(finger.Add(7.5, 3.5));
+    session->Enqueue(finger.Down(7.5, 3.5));
+  }
+  RunLoopUntilIdle();
+
+  // Verify no client receives focus events.
+  EXPECT_TRUE(client_1()->events().empty());
+  {
+    const std::vector<InputEvent>& events = client_2()->events();
+    ASSERT_EQ(events.size(), 2u);
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(events[1].is_pointer());
+  }
+}
+
+TEST_F(NoFocusTransferTest, MouseFocusWithValidTarget) {
+  // Inject ADD/DOWN on client 2 and observe no focus dispatch.
+  {
+    scenic::Session* const session = root_session()->session();
+
+    PointerCommandGenerator finger(root_resources()->compositor.id(), /*device id*/ 1,
+                                   /*pointer id*/ 1, PointerEventType::MOUSE);
+    session->Enqueue(finger.Move(7.5, 3.5));
+    session->Enqueue(finger.Down(7.5, 3.5));
+  }
+  RunLoopUntilIdle();
+
+  // Verify no client receives focus events.
+  EXPECT_TRUE(client_1()->events().empty());
+  {
+    const std::vector<InputEvent>& events = client_2()->events();
+    ASSERT_EQ(events.size(), 2u);
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(events[1].is_pointer());
   }
 }
 

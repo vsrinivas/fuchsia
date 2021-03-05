@@ -170,8 +170,11 @@ void ChattyA11yLog(const fuchsia::ui::input::accessibility::PointerEvent& event)
 
 const char* InputSystem::kName = "InputSystem";
 
-InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> scene_graph)
-    : System(std::move(context)), scene_graph_(scene_graph) {
+InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> scene_graph,
+                         bool pointer_auto_focus)
+    : System(std::move(context)),
+      pointer_auto_focus_(pointer_auto_focus),
+      scene_graph_(scene_graph) {
   FX_CHECK(scene_graph);
 
   pointer_event_registry_ = std::make_unique<A11yPointerEventRegistry>(
@@ -795,6 +798,10 @@ zx_koid_t InputSystem::focus_chain_root() const {
 }
 
 void InputSystem::RequestFocusChange(zx_koid_t view) {
+  if (!pointer_auto_focus_) {
+    return;
+  }
+
   FX_DCHECK(view != ZX_KOID_INVALID) << "precondition";
 
   if (!scene_graph_)

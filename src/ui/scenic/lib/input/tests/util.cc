@@ -166,7 +166,8 @@ void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
   frame_scheduler->AddSessionUpdater(scenic);
   scenic->SetFrameScheduler(frame_scheduler);
 
-  input_system_ = scenic->RegisterSystem<InputSystem>(engine_->scene_graph()).get();
+  input_system_ =
+      scenic->RegisterSystem<InputSystem>(engine_->scene_graph(), auto_focus_behavior()).get();
   scenic->SetInitialized();
 }
 

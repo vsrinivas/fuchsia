@@ -68,7 +68,8 @@ class InputSystem : public System,
   static constexpr TypeId kTypeId = kInput;
   static const char* kName;
 
-  explicit InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> scene_graph);
+  explicit InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> scene_graph,
+                       bool pointer_auto_focus);
   ~InputSystem() override = default;
 
   CommandDispatcherUniquePtr CreateCommandDispatcher(
@@ -159,6 +160,9 @@ class InputSystem : public System,
   // Destroy the arena if the contest is complete (i.e. no contenders left or contest over and
   // stream ended).
   void DestroyArenaIfComplete(StreamId stream_id);
+
+  // Determines whether focus should be automatically changed by pointer input.
+  const bool pointer_auto_focus_;
 
   using InjectorId = uint64_t;
   InjectorId last_injector_id_ = 0;
