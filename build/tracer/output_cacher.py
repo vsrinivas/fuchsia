@@ -24,7 +24,7 @@ import os
 import shutil
 import subprocess
 import sys
-from typing import Collection, FrozenSet, Sequence
+from typing import Callable, Collection, Dict, FrozenSet, Iterable, Sequence, Tuple
 import dataclasses
 
 
@@ -72,6 +72,35 @@ class TempFileTransform(object):
         return os.path.join(self.temp_dir, path + self.suffix)
 
 
+def replace_tokens(
+        command: Iterable[str],
+        transform: Callable[[str],
+                            str]) -> Tuple[Sequence[str], Dict[str, str]]:
+    """Substitutes command tokens with a transformation.
+
+    Args:
+      command: sequence of command tokens, some of which may be substituted.
+      transform: function to substituted command tokens.
+
+    Returns:
+      modified command (some tokens replaced),
+      dictionary of text substitutions made (original, new)
+    """
+    renamed_tokens = {}
+
+    def replace_token(arg: str):
+        # TODO(fangism): lex a single arg into tokens, substitute, re-assemble
+        #   This would support outputs like "--flag=out1,out2..."
+        new_arg = transform(arg)
+        if new_arg != arg:
+            # record any substitutions made
+            renamed_tokens[arg] = new_arg
+        return new_arg
+
+    substituted_command = [replace_token(token) for token in command]
+    return substituted_command, renamed_tokens
+
+
 @dataclasses.dataclass
 class Action(object):
     """Represents a set of parameters of a single build action."""
@@ -88,21 +117,17 @@ class Action(object):
           tempfile_transform: describes transformation to temporary file name.
           verbose: If True, print substituted command.
         """
-        # keys: original file names, values: transformed temporary file names
-        renamed_outputs = {}
 
-        def replace_arg(arg):
-            # TODO(fangism): lex a single arg into tokens, substitute, re-assemble
-            #   This would support outputs like "--flag=out1,out2..."
+        def replace_arg(arg: str):
             if arg in self.outputs:
-                new_arg = tempfile_transform.transform(arg)
-                renamed_outputs[arg] = new_arg
-                return new_arg
+                return tempfile_transform.transform(arg)
             else:
                 return arg
 
-        # Rename output arguments with a suffix.
-        substituted_command = [replace_arg(token) for token in self.command]
+        # Rename output arguments.
+        # renamed_outputs: keys: original file names, values: transformed temporary file names
+        substituted_command, renamed_outputs = replace_tokens(
+            self.command, replace_arg)
 
         if verbose:
             cmd_str = " ".join(substituted_command)
@@ -111,7 +136,7 @@ class Action(object):
         # mkdir when needed.
         if tempfile_transform.temp_dir:
             for new_arg in renamed_outputs.values():
-                os.makedirs(os.path.dirname(new_arg))
+                os.makedirs(os.path.dirname(new_arg), exist_ok=True)
 
         # Run the modified command.
         retval = subprocess.call(substituted_command)
@@ -132,6 +157,65 @@ class Action(object):
                 # of a potentially missed opportunity to cache unchanged outputs.
                 unrenamed_formatted = " ".join(unrenamed_outputs)
                 print(f"  === Un-renamed outputs: {unrenamed_formatted}")
+
+        return 0
+
+    def run_twice_and_compare_outputs(
+            self,
+            tempfile_transform: TempFileTransform,
+            verbose: bool = False) -> int:
+
+        def replace_arg(arg: str):
+            if arg in self.outputs:
+                return tempfile_transform.transform(arg)
+            else:
+                return arg
+
+        # Rename output arguments.
+        # renamed_outputs: keys: original file names, values: transformed temporary file names
+        substituted_command, renamed_outputs = replace_tokens(
+            self.command, replace_arg)
+
+        if verbose:
+            cmd_str = " ".join(substituted_command)
+            print(f"=== substituted command: {cmd_str}")
+
+        # mkdir when needed.
+        if tempfile_transform.temp_dir:
+            for new_arg in renamed_outputs.values():
+                os.makedirs(os.path.dirname(new_arg), exist_ok=True)
+
+        # Run the original command.
+        retval = subprocess.call(self.command)
+
+        # If the command failed, skip re-running.
+        if retval != 0:
+            return retval
+
+        # Otherwise command succeeded, re-run with different output locations.
+        rerun_retval = subprocess.call(substituted_command)
+        if rerun_retval != 0:
+            print(
+                f"Re-run failed with substituted outputs: {substituted_command}"
+            )
+            return rerun_retval
+
+        # Compare outputs and report differences.
+        different_files = [
+            (orig_out, temp_out)
+            for orig_out, temp_out in renamed_outputs.items()
+            # If either file is missing, this will fail, which indicates that
+            # something is not working as expected.
+            if not files_match(orig_out, temp_out)
+        ]
+        if different_files:
+            print(
+                "Repeating command with renamed outputs produces different results:"
+            )
+            for orig, temp in different_files:
+                print(f"  {orig} vs. {temp}")
+
+            return 1
 
         return 0
 
@@ -173,6 +257,13 @@ def main_arg_parser() -> argparse.ArgumentParser:
         dest="enable",
         default=True,
         help="If disabled, run the original command as-is.",
+    )
+    parser.add_argument(
+        "--check-repeatability",
+        action="store_true",
+        default=False,
+        help=
+        "Check for repeatability: run the command twice, with different outputs, and compare.",
     )
 
     # Positional args are the command and arguments to run.
@@ -218,6 +309,19 @@ def main():
         command=args.command,
         outputs=outputs,
     )
+
+    # Run one of the following modes:
+    # check_repeatability: run the command twice, once with alternate output
+    #   names, and compare the outputs.  This finds nondeterminism.
+    #   This check may not work well if the names of the outputs also affects
+    #   the *contents* of outputs produced by the command.
+    # [default]: redirect outputs to temporary locations, and move them
+    #   in-place to their original locations if contents have not changed.
+
+    if args.check_repeatability:
+        return action.run_twice_and_compare_outputs(
+            tempfile_transform=tempfile_transform, verbose=args.verbose)
+
     return action.run_cached(
         tempfile_transform=tempfile_transform, verbose=args.verbose)
 

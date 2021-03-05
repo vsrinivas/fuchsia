@@ -48,6 +48,25 @@ class TempFileTransformTests(unittest.TestCase):
             "/t/m/p/foo/bar.o.foo")
 
 
+class ReplaceTokensTest(unittest.TestCase):
+
+    def test_no_change(self):
+        self.assertEqual(
+            output_cacher.replace_tokens(['echo', 'xyzzy'], lambda x: x),
+            (['echo', 'xyzzy'], {}))
+
+    def test_with_substitution(self):
+
+        def transform(x):
+            return x + x if x.startswith('x') else x
+
+        self.assertEqual(
+            output_cacher.replace_tokens(['echo', 'xyz', 'bar'], transform),
+            (['echo', 'xyzxyz', 'bar'], {
+                'xyz': 'xyzxyz'
+            }))
+
+
 class MoveIfDifferentTests(unittest.TestCase):
 
     def test_nonexistent_source(self):
@@ -143,11 +162,58 @@ class ReplaceOutputArgsTest(unittest.TestCase):
                                    "move_if_different") as mock_update:
                 with mock.patch.object(os, "makedirs") as mock_mkdir:
                     self.assertEqual(action.run_cached(transform), 0)
-        mock_mkdir.assert_called_with("temp/temp/foo")
+        mock_mkdir.assert_called_with("temp/temp/foo", exist_ok=True)
         mock_call.assert_called_with(
             ["run.sh", "in.put", "temp/temp/foo/out.put"])
         mock_update.assert_called_with(
             src="temp/temp/foo/out.put", dest="foo/out.put", verbose=False)
+
+
+class RunTwiceCompareTests(unittest.TestCase):
+
+    def test_command_failed(self):
+        transform = output_cacher.TempFileTransform(suffix=".tmp")
+        action = output_cacher.Action(command=["run.sh"], outputs={})
+        with mock.patch.object(subprocess, "call", return_value=1) as mock_call:
+            with mock.patch.object(output_cacher, "files_match") as mock_match:
+                self.assertEqual(
+                    action.run_twice_and_compare_outputs(transform), 1)
+        mock_call.assert_called_once_with(["run.sh"])
+        mock_match.assert_not_called()
+
+    def test_command_passed_and_rerun_matches(self):
+        transform = output_cacher.TempFileTransform(suffix=".tmp")
+        action = output_cacher.Action(
+            command=["run.sh", "in.put", "out.put"], outputs={"out.put"})
+        with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
+            with mock.patch.object(output_cacher, "files_match",
+                                   return_value=True) as mock_match:
+                self.assertEqual(
+                    action.run_twice_and_compare_outputs(transform), 0)
+        mock_call.assert_has_calls(
+            [
+                mock.call(["run.sh", "in.put", "out.put"]),
+                mock.call(["run.sh", "in.put", "out.put.tmp"]),
+            ],
+            any_order=True)
+        mock_match.assert_called_with("out.put", "out.put.tmp")
+
+    def test_command_passed_and_rerun_differs(self):
+        transform = output_cacher.TempFileTransform(suffix=".tmp")
+        action = output_cacher.Action(
+            command=["run.sh", "in.put", "out.put"], outputs={"out.put"})
+        with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
+            with mock.patch.object(output_cacher, "files_match",
+                                   return_value=False) as mock_match:
+                self.assertEqual(
+                    action.run_twice_and_compare_outputs(transform), 1)
+        mock_call.assert_has_calls(
+            [
+                mock.call(["run.sh", "in.put", "out.put"]),
+                mock.call(["run.sh", "in.put", "out.put.tmp"]),
+            ],
+            any_order=True)
+        mock_match.assert_called_with("out.put", "out.put.tmp")
 
 
 if __name__ == '__main__':
