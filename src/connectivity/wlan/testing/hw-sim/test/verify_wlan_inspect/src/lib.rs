@@ -249,7 +249,7 @@ async fn verify_wlan_inspect() {
                     last_rssi: AnyProperty,
                     last_snr: AnyProperty,
                     reason_code: AnyProperty,
-                    disconnect_source: "user",
+                    disconnect_source: "source: user, reason: NetworkUnsaved",
                 },
             },
         },

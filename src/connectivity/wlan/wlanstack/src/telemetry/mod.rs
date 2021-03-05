@@ -7,7 +7,7 @@ mod convert;
 use {
     crate::{device::IfaceMap, inspect, telemetry::convert::*},
     fidl_fuchsia_cobalt::HistogramBucket,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_stats as fidl_stats,
+    fidl_fuchsia_wlan_stats as fidl_stats,
     fidl_fuchsia_wlan_stats::MlmeStats::{ApMlmeStats, ClientMlmeStats},
     fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
@@ -676,21 +676,12 @@ pub fn log_disconnect(
             cbw: format!("{:?}", info.channel.cbw.to_fidl().0),
             secondary80: info.channel.cbw.to_fidl().1,
         },
+        disconnect_source: info.disconnect_source.inspect_string(),
+        time_since_channel_switch?: info.time_since_channel_switch.map(|d| d.into_nanos()),
+        // Both reason_code and locally_initiated are still consumed
+        // by an upper layer and should not be removed.
         reason_code: info.disconnect_source.reason_code(),
         locally_initiated: info.disconnect_source.locally_initiated(),
-        disconnect_source: match info.disconnect_source {
-            DisconnectSource::User(_) => "user",
-            DisconnectSource::Mlme(_) => "mlme",
-            DisconnectSource::Ap(_) => "ap",
-        },
-        disconnect_reason: match info.disconnect_source {
-            DisconnectSource::User(user_reason) => format!("{:?}", user_reason),
-            DisconnectSource::Mlme(mlme_reason) => fidl_mlme::ReasonCode::from_primitive(mlme_reason)
-                .map(|reason_code| format!("{:?}", reason_code)).unwrap_or("Undefined".to_string()),
-            DisconnectSource::Ap(ap_reason) => fidl_mlme::ReasonCode::from_primitive(ap_reason)
-                .map(|reason_code| format!("{:?}", reason_code)).unwrap_or("Undefined".to_string()),
-        },
-        time_since_channel_switch?: info.time_since_channel_switch.map(|d| d.into_nanos()),
     });
 
     if let DisconnectSource::Mlme(_) = info.disconnect_source {
@@ -729,6 +720,8 @@ pub fn log_disconnect(
         x if x < &6.hours() => LessThanSixHours,
         _ => AtLeastSixHours,
     };
+    // TODO(fxbug.dev/71138): Log disconnect MLME event name and reason
+    // code to Cobalt too.
     let disconnect_source_dim = match &info.disconnect_source {
         DisconnectSource::User(_) => User,
         DisconnectSource::Mlme(_) => Mlme,
@@ -768,6 +761,7 @@ mod tests {
         },
         fidl::endpoints::create_proxy,
         fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
+        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker},
         fidl_fuchsia_wlan_sme as fidl_sme,
         fidl_fuchsia_wlan_stats::{Counter, DispatcherStats, IfaceStats, PacketCounter},
@@ -785,9 +779,9 @@ mod tests {
         },
         wlan_sme::client::{
             info::{
-                CandidateNetwork, ConnectStats, DisconnectInfo, DisconnectSource,
-                PreviousDisconnectInfo, ScanEndStats, ScanResult, ScanStartStats,
-                SupplicantProgress,
+                CandidateNetwork, ConnectStats, DisconnectCause, DisconnectInfo,
+                DisconnectMlmeEventName, DisconnectSource, PreviousDisconnectInfo, ScanEndStats,
+                ScanResult, ScanStartStats, SupplicantProgress,
             },
             ConnectFailure, ConnectResult, EstablishRsnaFailure, EstablishRsnaFailureReason,
             SelectNetworkFailure,
@@ -1112,13 +1106,69 @@ mod tests {
     }
 
     #[test]
+    fn test_log_disconnect_initiated_from_user() {
+        let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
+        let disconnect_info = DisconnectInfo {
+            disconnect_source: DisconnectSource::User(
+                fidl_sme::UserDisconnectReason::WlanstackUnitTesting,
+            ),
+            ..fake_disconnect_info()
+        };
+        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
+
+        assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event.metric_id, metrics::DISCONNECT_COUNT_METRIC_ID);
+        });
+        assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event.metric_id, metrics::DISCONNECT_COUNT_BREAKDOWN_METRIC_ID);
+            assert_eq!(event.event_codes, vec![
+                metrics::DisconnectCountBreakdownMetricDimensionConnectedTime::LessThanOneMinute as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionDisconnectSource::User as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionSnr::From1To10 as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionRecentChannelSwitch::No as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionChannelBand::Band2Dot4Ghz as u32
+            ]);
+        });
+    }
+
+    #[test]
+    fn test_log_disconnect_initiated_from_ap() {
+        let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
+        let disconnect_info = DisconnectInfo {
+            disconnect_source: DisconnectSource::Ap(DisconnectCause {
+                reason_code: fidl_ieee80211::ReasonCode::NoMoreStas,
+                mlme_event_name: DisconnectMlmeEventName::DisassociateIndication,
+            }),
+            ..fake_disconnect_info()
+        };
+        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
+
+        assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event.metric_id, metrics::DISCONNECT_COUNT_METRIC_ID);
+        });
+        assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event.metric_id, metrics::DISCONNECT_COUNT_BREAKDOWN_METRIC_ID);
+            assert_eq!(event.event_codes, vec![
+                metrics::DisconnectCountBreakdownMetricDimensionConnectedTime::LessThanOneMinute as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionDisconnectSource::Ap as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionSnr::From1To10 as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionRecentChannelSwitch::No as u32,
+                metrics::DisconnectCountBreakdownMetricDimensionChannelBand::Band2Dot4Ghz as u32
+            ]);
+        });
+    }
+
+    #[test]
     fn test_log_disconnect_initiated_from_mlme() {
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
         let inspect_tree = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
-            disconnect_source: DisconnectSource::Mlme(
-                fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
-            ),
+            disconnect_source: DisconnectSource::Mlme(DisconnectCause {
+                reason_code: fidl_ieee80211::ReasonCode::UnspecifiedReason,
+                mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+            }),
             ..fake_disconnect_info()
         };
         log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
@@ -1142,46 +1192,6 @@ mod tests {
     }
 
     #[test]
-    fn test_log_disconnect_initiated_from_user_request() {
-        let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
-        let inspect_tree = fake_inspect_tree();
-        let disconnect_info = DisconnectInfo {
-            disconnect_source: DisconnectSource::User(
-                fidl_sme::UserDisconnectReason::WlanstackUnitTesting,
-            ),
-            ..fake_disconnect_info()
-        };
-        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
-
-        assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
-            assert_eq!(event.metric_id, metrics::DISCONNECT_COUNT_METRIC_ID);
-        });
-        assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
-            assert_eq!(event.metric_id, metrics::DISCONNECT_COUNT_BREAKDOWN_METRIC_ID);
-        });
-    }
-
-    #[test]
-    fn test_log_disconnect_initiated_from_ap() {
-        let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
-        let inspect_tree = fake_inspect_tree();
-        let disconnect_info = DisconnectInfo {
-            disconnect_source: DisconnectSource::Ap(
-                fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
-            ),
-            ..fake_disconnect_info()
-        };
-        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
-
-        assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
-            assert_eq!(event.metric_id, metrics::DISCONNECT_COUNT_METRIC_ID);
-        });
-        assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
-            assert_eq!(event.metric_id, metrics::DISCONNECT_COUNT_BREAKDOWN_METRIC_ID);
-        });
-    }
-
-    #[test]
     fn test_inspect_log_connect_stats() {
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
         let inspect_tree = fake_inspect_tree();
@@ -1199,53 +1209,6 @@ mod tests {
                             gap_time: DURATION_SINCE_LAST_DISCONNECT.into_nanos(),
                             same_ssid: true,
                         },
-                    }
-                }
-            }
-        });
-    }
-
-    #[test]
-    fn test_inspect_log_disconnect_stats() {
-        let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
-        let inspect_tree = fake_inspect_tree();
-
-        let disconnect_source =
-            DisconnectSource::Mlme(fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive());
-        let disconnect_info = DisconnectInfo {
-            connected_duration: 30.seconds(),
-            bssid: [1u8; 6],
-            ssid: b"foo".to_vec(),
-            channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
-            last_rssi: -90,
-            last_snr: 1,
-            disconnect_source,
-            time_since_channel_switch: Some(zx::Duration::from_nanos(1337i64)),
-        };
-        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
-
-        assert_inspect_tree!(inspect_tree.inspector, root: contains {
-            client_stats: contains {
-                disconnect: {
-                    "0": {
-                        "@time": AnyProperty,
-                        connected_duration: 30.seconds().into_nanos(),
-                        bssid: "01:01:01:01:01:01",
-                        bssid_hash: AnyProperty,
-                        ssid: "foo",
-                        ssid_hash: AnyProperty,
-                        channel: {
-                            primary: 1u64,
-                            cbw: "Cbw20",
-                            secondary80: 0u64,
-                        },
-                        last_rssi: -90i64,
-                        last_snr: 1i64,
-                        locally_initiated: true,
-                        reason_code: 1u64,
-                        disconnect_source: "mlme",
-                        disconnect_reason: "UnspecifiedReason",
-                        time_since_channel_switch: 1337i64,
                     }
                 }
             }
@@ -1290,8 +1253,102 @@ mod tests {
                         last_snr: 1i64,
                         locally_initiated: true,
                         reason_code: (1u64 << 16) + 1u64,
-                        disconnect_source: "user",
-                        disconnect_reason: "FailedToConnect",
+                        disconnect_source: "source: user, reason: FailedToConnect",
+                        time_since_channel_switch: 1337i64,
+                    }
+                }
+            }
+        });
+    }
+    #[test]
+    fn test_inspect_log_disconnect_stats_disconnect_source_ap() {
+        let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
+
+        let disconnect_source = DisconnectSource::Ap(DisconnectCause {
+            reason_code: fidl_ieee80211::ReasonCode::NoMoreStas,
+            mlme_event_name: DisconnectMlmeEventName::DisassociateIndication,
+        });
+        let disconnect_info = DisconnectInfo {
+            connected_duration: 30.seconds(),
+            bssid: [1u8; 6],
+            ssid: b"foo".to_vec(),
+            channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
+            last_rssi: -90,
+            last_snr: 1,
+            disconnect_source,
+            time_since_channel_switch: Some(zx::Duration::from_nanos(1337i64)),
+        };
+        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
+
+        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+            client_stats: contains {
+                disconnect: {
+                    "0": {
+                        "@time": AnyProperty,
+                        connected_duration: 30.seconds().into_nanos(),
+                        bssid: "01:01:01:01:01:01",
+                        bssid_hash: AnyProperty,
+                        ssid: "foo",
+                        ssid_hash: AnyProperty,
+                        channel: {
+                            primary: 1u64,
+                            cbw: "Cbw20",
+                            secondary80: 0u64,
+                        },
+                        last_rssi: -90i64,
+                        last_snr: 1i64,
+                        locally_initiated: false,
+                        reason_code: 5u64,
+                        disconnect_source: "source: ap, reason: NoMoreStas, mlme_event_name: DisassociateIndication",
+                        time_since_channel_switch: 1337i64,
+                    }
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn test_inspect_log_disconnect_stats_disconnect_source_mlme() {
+        let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
+
+        let disconnect_source = DisconnectSource::Mlme(DisconnectCause {
+            reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
+            mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+        });
+        let disconnect_info = DisconnectInfo {
+            connected_duration: 30.seconds(),
+            bssid: [1u8; 6],
+            ssid: b"foo".to_vec(),
+            channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
+            last_rssi: -90,
+            last_snr: 1,
+            disconnect_source,
+            time_since_channel_switch: Some(zx::Duration::from_nanos(1337i64)),
+        };
+        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
+
+        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+            client_stats: contains {
+                disconnect: {
+                    "0": {
+                        "@time": AnyProperty,
+                        connected_duration: 30.seconds().into_nanos(),
+                        bssid: "01:01:01:01:01:01",
+                        bssid_hash: AnyProperty,
+                        ssid: "foo",
+                        ssid_hash: AnyProperty,
+                        channel: {
+                            primary: 1u64,
+                            cbw: "Cbw20",
+                            secondary80: 0u64,
+                        },
+                        last_rssi: -90i64,
+                        last_snr: 1i64,
+                        locally_initiated: true,
+                        reason_code: 3u64,
+                        disconnect_source: "source: mlme, reason: LeavingNetworkDeauth, mlme_event_name: DeauthenticateIndication",
                         time_since_channel_switch: 1337i64,
                     }
                 }
@@ -1612,9 +1669,10 @@ mod tests {
             channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
             last_rssi: -90,
             last_snr: 1,
-            disconnect_source: DisconnectSource::Mlme(
-                fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
-            ),
+            disconnect_source: DisconnectSource::Mlme(DisconnectCause {
+                reason_code: fidl_ieee80211::ReasonCode::NoMoreStas,
+                mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+            }),
             time_since_channel_switch: None,
         }
     }
