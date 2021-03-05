@@ -24,8 +24,8 @@ using fuchsia::ui::scenic::internal::LinkProperties;
 
 namespace flatland {
 
-EngineTestBase::FakeFlatlandSession::ChildLink EngineTestBase::FakeFlatlandSession::LinkToParent(
-    FakeFlatlandSession& parent_session) {
+DisplayCompositorTestBase::FakeFlatlandSession::ChildLink
+DisplayCompositorTestBase::FakeFlatlandSession::LinkToParent(FakeFlatlandSession& parent_session) {
   // Create the tokens.
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -57,7 +57,7 @@ EngineTestBase::FakeFlatlandSession::ChildLink EngineTestBase::FakeFlatlandSessi
 }
 
 std::unique_ptr<UberStruct>
-EngineTestBase::FakeFlatlandSession::CreateUberStructWithCurrentTopology(
+DisplayCompositorTestBase::FakeFlatlandSession::CreateUberStructWithCurrentTopology(
     TransformHandle local_root) {
   auto uber_struct = std::make_unique<UberStruct>();
 
@@ -78,7 +78,8 @@ EngineTestBase::FakeFlatlandSession::CreateUberStructWithCurrentTopology(
 
 // Pushes |uber_struct| to the UberStructSystem and updates the system so that it represents
 // this session in the InstanceMap.
-void EngineTestBase::FakeFlatlandSession::PushUberStruct(std::unique_ptr<UberStruct> uber_struct) {
+void DisplayCompositorTestBase::FakeFlatlandSession::PushUberStruct(
+    std::unique_ptr<UberStruct> uber_struct) {
   EXPECT_FALSE(uber_struct->local_topology.empty());
   EXPECT_EQ(uber_struct->local_topology[0].handle.GetInstanceId(), id_);
 

@@ -4,8 +4,8 @@
 
 source_set("engine") {
   sources = [
-    "engine.cc",
-    "engine.h",
+    "display_compositor.cc",
+    "display_compositor.h",
     "engine_types.cc",
     "engine_types.h",
   ]

@@ -43,10 +43,10 @@ using namespace display;
 namespace flatland {
 namespace test {
 
-class EnginePixelTest : public EngineTestBase {
+class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
  public:
   void SetUp() override {
-    EngineTestBase::SetUp();
+    DisplayCompositorTestBase::SetUp();
 
     // Create the SysmemAllocator.
     zx_status_t status = fdio_service_connect(
@@ -73,7 +73,7 @@ class EnginePixelTest : public EngineTestBase {
     RunLoopUntilIdle();
     executor_.reset();
     display_manager_.reset();
-    EngineTestBase::TearDown();
+    DisplayCompositorTestBase::TearDown();
   }
 
  protected:
@@ -189,14 +189,14 @@ class EnginePixelTest : public EngineTestBase {
   // Sets up the buffer collection information for collections that will be imported
   // into the engine.
   fuchsia::sysmem::BufferCollectionSyncPtr SetupTextures(
-      Engine* engine, sysmem_util::GlobalBufferCollectionId collection_id, uint32_t width,
-      uint32_t height, uint32_t num_vmos,
+      DisplayCompositor* display_compositor, sysmem_util::GlobalBufferCollectionId collection_id,
+      uint32_t width, uint32_t height, uint32_t num_vmos,
       fuchsia::sysmem::BufferCollectionInfo_2* collection_info) {
     // Setup the buffer collection that will be used for the flatland rectangle's texture.
     auto texture_tokens = SysmemTokens::Create(sysmem_allocator_.get());
 
-    auto result = engine->ImportBufferCollection(collection_id, sysmem_allocator_.get(),
-                                                 std::move(texture_tokens.dup_token));
+    auto result = display_compositor->ImportBufferCollection(collection_id, sysmem_allocator_.get(),
+                                                             std::move(texture_tokens.dup_token));
     EXPECT_TRUE(result);
 
     auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
@@ -328,12 +328,12 @@ class EnginePixelTest : public EngineTestBase {
 // data and then pass the data along to the display-controller interface
 // to be composited directly in hardware. The Astro display controller
 // only handles full screen rects.
-TEST_F(EnginePixelTest, FullscreenRectangleTest) {
+TEST_F(DisplayCompositorPixelTest, FullscreenRectangleTest) {
   // By using the null renderer, we can demonstrate that the rendering is being done directly
   // by the display controller hardware, and not the software renderer.
   auto renderer = NewNullRenderer();
-  auto engine = std::make_unique<flatland::Engine>(display_manager_->default_display_controller(),
-                                                   renderer, render_data_func());
+  auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
+      display_manager_->default_display_controller(), renderer, render_data_func());
 
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();
@@ -359,8 +359,9 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
   const uint32_t kRectWidth = display->width_in_px(), kTextureWidth = display->width_in_px();
   const uint32_t kRectHeight = display->height_in_px(), kTextureHeight = display->height_in_px();
   fuchsia::sysmem::BufferCollectionInfo_2 texture_collection_info;
-  auto texture_collection = SetupTextures(engine.get(), kTextureCollectionId, kTextureWidth,
-                                          kTextureHeight, 1, &texture_collection_info);
+  auto texture_collection =
+      SetupTextures(display_compositor.get(), kTextureCollectionId, kTextureWidth, kTextureHeight,
+                    1, &texture_collection_info);
 
   // Get a raw pointer for the texture's vmo and make it green. DC uses ARGB format.
   uint32_t col = (255U << 24) | (255U << 8);
@@ -379,7 +380,7 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
                                       .width = kTextureWidth,
                                       .height = kTextureHeight,
                                       .has_transparency = false};
-  auto result = engine->ImportBufferImage(image_metadata);
+  auto result = display_compositor->ImportBufferImage(image_metadata);
   EXPECT_TRUE(result);
 
   // Create a flatland session with a root and image handle. Import to the engine as display root.
@@ -387,11 +388,12 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
   const TransformHandle root_handle = session.graph().CreateTransform();
   const TransformHandle image_handle = session.graph().CreateTransform();
   session.graph().AddChild(root_handle, image_handle);
-  engine->AddDisplay(display->display_id(),
-                     {.transform = root_handle,
-                      .pixel_scale = glm::uvec2(display->width_in_px(), display->height_in_px()),
-                      .formats = {kPixelFormat}},
-                     sysmem_allocator_.get(), /*num_vmos*/ 0);
+  display_compositor->AddDisplay(
+      display->display_id(),
+      {.transform = root_handle,
+       .pixel_scale = glm::uvec2(display->width_in_px(), display->height_in_px()),
+       .formats = {kPixelFormat}},
+      sysmem_allocator_.get(), /*num_vmos*/ 0);
 
   // Setup the uberstruct data.
   auto uberstruct = session.CreateUberStructWithCurrentTopology(root_handle);
@@ -401,7 +403,7 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
   session.PushUberStruct(std::move(uberstruct));
 
   // Now we can finally render.
-  engine->RenderFrame();
+  display_compositor->RenderFrame();
 
   // Grab the capture vmo data.
   std::vector<uint8_t> read_values;
@@ -418,7 +420,7 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
 
 // Test the software path of the engine. Render 2 rectangles, each taking up half of the
 // display's screen, so that the left half is blue and the right half is red.
-VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
+VK_TEST_F(DisplayCompositorPixelTest, SoftwareRenderingTest) {
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();
 
@@ -472,11 +474,12 @@ VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
 
   // Use the VK renderer here so we can make use of software rendering.
   auto [escher, renderer] = NewVkRenderer();
-  auto engine = std::make_unique<flatland::Engine>(display_manager_->default_display_controller(),
-                                                   renderer, std::move(data_func));
+  auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
+      display_manager_->default_display_controller(), renderer, std::move(data_func));
 
-  auto texture_collection = SetupTextures(engine.get(), kTextureCollectionId, kTextureWidth,
-                                          kTextureHeight, /*num_vmos*/ 2, &texture_collection_info);
+  auto texture_collection =
+      SetupTextures(display_compositor.get(), kTextureCollectionId, kTextureWidth, kTextureHeight,
+                    /*num_vmos*/ 2, &texture_collection_info);
 
   // Write to the two textures. Make the first blue and the second red. Format is ARGB.
   uint32_t cols[] = {(255 << 24) | (255U << 0), (255U << 24) | (255U << 16)};
@@ -492,22 +495,22 @@ VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
 
   // We now have to import the textures to the engine and the renderer.
   for (uint32_t i = 0; i < 2; i++) {
-    auto result = engine->ImportBufferImage(image_metadatas[i]);
+    auto result = display_compositor->ImportBufferImage(image_metadatas[i]);
     EXPECT_TRUE(result);
   }
 
   fuchsia::sysmem::BufferCollectionInfo_2 render_target_info;
-  auto render_target_collection_id =
-      engine->AddDisplay(display->display_id(),
-                         {.transform = TransformHandle(),
-                          .pixel_scale = glm::vec2(display->width_in_px(), display->height_in_px()),
-                          .formats = {kPixelFormat}},
-                         sysmem_allocator_.get(),
-                         /*num_vmos*/ 2, &render_target_info);
+  auto render_target_collection_id = display_compositor->AddDisplay(
+      display->display_id(),
+      {.transform = TransformHandle(),
+       .pixel_scale = glm::vec2(display->width_in_px(), display->height_in_px()),
+       .formats = {kPixelFormat}},
+      sysmem_allocator_.get(),
+      /*num_vmos*/ 2, &render_target_info);
   EXPECT_NE(render_target_collection_id, 0U);
 
   // Now we can finally render.
-  engine->RenderFrame();
+  display_compositor->RenderFrame();
   renderer->WaitIdle();
 
   // Make sure the render target has the same data as what's being put on the display.
@@ -547,7 +550,7 @@ VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
 
 // Test to make sure that the engine can handle rendering a transparent object overlapping an
 // opaque one.
-VK_TEST_F(EnginePixelTest, OverlappingTransparencyTest) {
+VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();
 
@@ -605,11 +608,12 @@ VK_TEST_F(EnginePixelTest, OverlappingTransparencyTest) {
 
   // Use the VK renderer here so we can make use of software rendering.
   auto [escher, renderer] = NewVkRenderer();
-  auto engine = std::make_unique<flatland::Engine>(display_manager_->default_display_controller(),
-                                                   renderer, std::move(data_func));
+  auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
+      display_manager_->default_display_controller(), renderer, std::move(data_func));
 
-  auto texture_collection = SetupTextures(engine.get(), kTextureCollectionId, kTextureWidth,
-                                          kTextureHeight, /*num_vmos*/ 2, &texture_collection_info);
+  auto texture_collection =
+      SetupTextures(display_compositor.get(), kTextureCollectionId, kTextureWidth, kTextureHeight,
+                    /*num_vmos*/ 2, &texture_collection_info);
 
   // Write to the two textures. Make the first blue and opaque and the second red and
   // half transparent. Format is ARGB.
@@ -626,22 +630,22 @@ VK_TEST_F(EnginePixelTest, OverlappingTransparencyTest) {
 
   // We now have to import the textures to the engine and the renderer.
   for (uint32_t i = 0; i < 2; i++) {
-    auto result = engine->ImportBufferImage(image_metadatas[i]);
+    auto result = display_compositor->ImportBufferImage(image_metadatas[i]);
     EXPECT_TRUE(result);
   }
 
   fuchsia::sysmem::BufferCollectionInfo_2 render_target_info;
-  auto render_target_collection_id =
-      engine->AddDisplay(display->display_id(),
-                         {.transform = TransformHandle(),
-                          .pixel_scale = glm::vec2(display->width_in_px(), display->height_in_px()),
-                          .formats = {kPixelFormat}},
-                         sysmem_allocator_.get(),
-                         /*num_vmos*/ 2, &render_target_info);
+  auto render_target_collection_id = display_compositor->AddDisplay(
+      display->display_id(),
+      {.transform = TransformHandle(),
+       .pixel_scale = glm::vec2(display->width_in_px(), display->height_in_px()),
+       .formats = {kPixelFormat}},
+      sysmem_allocator_.get(),
+      /*num_vmos*/ 2, &render_target_info);
   EXPECT_NE(render_target_collection_id, 0U);
 
   // Now we can finally render.
-  engine->RenderFrame();
+  display_compositor->RenderFrame();
   renderer->WaitIdle();
 
   // Make sure the render target has the same data as what's being put on the display.

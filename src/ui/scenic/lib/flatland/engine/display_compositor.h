@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_H_
-#define SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_H_
+#ifndef SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_DISPLAY_COMPOSITOR_H_
+#define SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_DISPLAY_COMPOSITOR_H_
 
 #include "src/ui/scenic/lib/display/util.h"
 #include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
@@ -11,28 +11,29 @@
 
 namespace flatland {
 
-// The engine is responsible for compositing Flatland render data onto the display(s).
+// The DisplayCompositor is responsible for compositing Flatland render data onto the display(s).
 // It accomplishes this either by direct hardware compositing via the display controller
 // interface, or rendering on the GPU via a custom renderer API. It also handles the
 // registration of sysmem buffer collections and importation of images to both the
 // display controller and the renderer via the BufferCollectionImporter interface. The
 // BufferCollectionImporter interface is how Flatland instances communicate with the
-// Engine, providing it with the necessary data to render without exposing to Flatland
+// DisplayCompositor, providing it with the necessary data to render without exposing to Flatland
 // the DisplayController or other dependencies.
-class Engine final : public BufferCollectionImporter {
+class DisplayCompositor final : public BufferCollectionImporter {
  public:
-  // TODO(fxbug.dev/66807): The engine has multiple parts of its code where usage of the display
-  // controller is protected by locks, because of the multithreaded environment of flatland.
-  // Ideally, we'd want the engine to have sole ownership of the display controller - meaning that
-  // it would require a unique_ptr instead of a shared_ptr. But since access to the real
-  // display controller is provided to clients via a shared_ptr, we take in a shared_ptr as
-  // a parameter here. However, this could cause problems with our locking mechanisms, as
-  // other display-controller clients could be accessing the same functions and/or state at
-  // the same time as the engine without making use of locks.
-  Engine(std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
-         const std::shared_ptr<Renderer>& renderer, RenderDataFunc render_data_func);
+  // TODO(fxbug.dev/66807): The DisplayCompositor has multiple parts of its code where usage of the
+  // display controller is protected by locks, because of the multithreaded environment of flatland.
+  // Ideally, we'd want the DisplayCompositor to have sole ownership of the display controller -
+  // meaning that it would require a unique_ptr instead of a shared_ptr. But since access to the
+  // real display controller is provided to clients via a shared_ptr, we take in a shared_ptr as a
+  // parameter here. However, this could cause problems with our locking mechanisms, as other
+  // display-controller clients could be accessing the same functions and/or state at the same time
+  // as the DisplayCompositor without making use of locks.
+  DisplayCompositor(
+      std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
+      const std::shared_ptr<Renderer>& renderer, RenderDataFunc render_data_func);
 
-  ~Engine() override;
+  ~DisplayCompositor() override;
 
   // |BufferCollectionImporter|
   bool ImportBufferCollection(
@@ -53,9 +54,9 @@ class Engine final : public BufferCollectionImporter {
   // the data is processed correctly.
   void RenderFrame();
 
-  // Register a new display to the engine, which also generates the render targets to be presented
-  // on the display when compositing on the GPU. If num_vmos is 0, this function will not create
-  // any render targets for GPU composition for that display. Returns the ID for the buffer
+  // Register a new display to the DisplayCompositor, which also generates the render targets to be
+  // presented on the display when compositing on the GPU. If num_vmos is 0, this function will not
+  // create any render targets for GPU composition for that display. Returns the ID for the buffer
   // collection of the render targets. The buffer collection info is also returned back to the
   // caller via an output parameter.
   // TODO(fxbug.dev/59646): We need to figure out exactly how we want the display to anchor
@@ -152,7 +153,8 @@ class Engine final : public BufferCollectionImporter {
   RenderDataFunc render_data_func_;
 
   // Maps a display ID to the the DisplayInfo struct. This is kept separate from the
-  // display_engine_data_map_ since this only this data is needed for the render_data_func_.
+  // display_DisplayCompositor_data_map_ since this only this data is needed for the
+  // render_data_func_.
   std::unordered_map<uint64_t, DisplayInfo> display_info_map_;
 
   // Maps a display ID to a struct of all the information needed to properly render to
@@ -162,4 +164,4 @@ class Engine final : public BufferCollectionImporter {
 
 }  // namespace flatland
 
-#endif  // SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_H_
+#endif  // SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_DISPLAY_COMPOSITOR_H_

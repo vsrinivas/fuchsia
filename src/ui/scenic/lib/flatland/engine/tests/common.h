@@ -22,7 +22,7 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
-#include "src/ui/scenic/lib/flatland/engine/engine.h"
+#include "src/ui/scenic/lib/flatland/engine/display_compositor.h"
 #include "src/ui/scenic/lib/flatland/engine/engine_types.h"
 #include "src/ui/scenic/lib/flatland/flatland.h"
 #include "src/ui/scenic/lib/flatland/global_image_data.h"
@@ -37,7 +37,7 @@
 
 namespace flatland {
 
-class EngineTestBase : public gtest::RealLoopFixture {
+class DisplayCompositorTestBase : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
     gtest::RealLoopFixture::SetUp();
@@ -93,7 +93,8 @@ class EngineTestBase : public gtest::RealLoopFixture {
   class FakeFlatlandSession {
    public:
     FakeFlatlandSession(const std::shared_ptr<UberStructSystem>& uber_struct_system,
-                        const std::shared_ptr<LinkSystem>& link_system, EngineTestBase* harness)
+                        const std::shared_ptr<LinkSystem>& link_system,
+                        DisplayCompositorTestBase* harness)
         : uber_struct_system_(uber_struct_system),
           link_system_(link_system),
           harness_(harness),
@@ -144,7 +145,7 @@ class EngineTestBase : public gtest::RealLoopFixture {
     std::shared_ptr<LinkSystem> link_system_;
 
     // The test harness to give access to RunLoopUntilIdle().
-    EngineTestBase* harness_;
+    DisplayCompositorTestBase* harness_;
 
     // Data specific to this session.
     scheduling::SessionId id_;

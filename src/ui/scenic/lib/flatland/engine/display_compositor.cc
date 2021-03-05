@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/flatland/engine/engine.h"
+#include "src/ui/scenic/lib/flatland/engine/display_compositor.h"
 
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
@@ -37,8 +37,9 @@ fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_form
 }
 }  // anonymous namespace
 
-Engine::Engine(std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
-               const std::shared_ptr<Renderer>& renderer, RenderDataFunc render_data_func)
+DisplayCompositor::DisplayCompositor(
+    std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
+    const std::shared_ptr<Renderer>& renderer, RenderDataFunc render_data_func)
     : display_controller_(std::move(display_controller)),
       renderer_(renderer),
       render_data_func_(render_data_func) {
@@ -46,7 +47,7 @@ Engine::Engine(std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> di
   FX_DCHECK(render_data_func_);
 }
 
-Engine::~Engine() {
+DisplayCompositor::~DisplayCompositor() {
   // Destroy all of the display layers.
   DiscardConfig();
   for (const auto& [_, data] : display_engine_data_map_) {
@@ -60,7 +61,7 @@ Engine::~Engine() {
   }
 }
 
-bool Engine::ImportBufferCollection(
+bool DisplayCompositor::ImportBufferCollection(
     sysmem_util::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
@@ -89,14 +90,15 @@ bool Engine::ImportBufferCollection(
   return result;
 }
 
-void Engine::ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) {
+void DisplayCompositor::ReleaseBufferCollection(
+    sysmem_util::GlobalBufferCollectionId collection_id) {
   std::unique_lock<std::mutex> lock(lock_);
   FX_DCHECK(display_controller_);
   (*display_controller_.get())->ReleaseBufferCollection(collection_id);
   renderer_->ReleaseBufferCollection(collection_id);
 }
 
-bool Engine::ImportBufferImage(const ImageMetadata& metadata) {
+bool DisplayCompositor::ImportBufferImage(const ImageMetadata& metadata) {
   FX_DCHECK(display_controller_);
 
   if (metadata.identifier == 0) {
@@ -146,7 +148,7 @@ bool Engine::ImportBufferImage(const ImageMetadata& metadata) {
   }
 }
 
-void Engine::ReleaseBufferImage(sysmem_util::GlobalImageId image_id) {
+void DisplayCompositor::ReleaseBufferImage(sysmem_util::GlobalImageId image_id) {
   auto display_image_id = InternalImageId(image_id);
 
   // Locks the rest of the function.
@@ -158,7 +160,7 @@ void Engine::ReleaseBufferImage(sysmem_util::GlobalImageId image_id) {
   renderer_->ReleaseBufferImage(image_id);
 }
 
-uint64_t Engine::CreateDisplayLayer() {
+uint64_t DisplayCompositor::CreateDisplayLayer() {
   std::unique_lock<std::mutex> lock(lock_);
   uint64_t layer_id;
   zx_status_t create_layer_status;
@@ -171,14 +173,14 @@ uint64_t Engine::CreateDisplayLayer() {
   return layer_id;
 }
 
-void Engine::SetDisplayLayers(uint64_t display_id, const std::vector<uint64_t>& layers) {
+void DisplayCompositor::SetDisplayLayers(uint64_t display_id, const std::vector<uint64_t>& layers) {
   // Set all of the layers for each of the images on the display.
   std::unique_lock<std::mutex> lock(lock_);
   auto status = (*display_controller_.get())->SetDisplayLayers(display_id, layers);
   FX_DCHECK(status == ZX_OK);
 }
 
-bool Engine::SetRenderDataOnDisplay(const RenderData& data) {
+bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
   // Every rectangle should have an associated image.
   uint32_t num_images = data.images.size();
 
@@ -204,9 +206,9 @@ bool Engine::SetRenderDataOnDisplay(const RenderData& data) {
   return true;
 }
 
-void Engine::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle, ImageMetadata image,
-                             scenic_impl::DisplayEventId wait_id,
-                             scenic_impl::DisplayEventId signal_id) {
+void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle,
+                                        ImageMetadata image, scenic_impl::DisplayEventId wait_id,
+                                        scenic_impl::DisplayEventId signal_id) {
   auto display_image_id = InternalImageId(image.identifier);
   auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
 
@@ -235,8 +237,8 @@ void Engine::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle, I
   (*display_controller_.get())->SetLayerImage(layer_id, display_image_id, wait_id, signal_id);
 }
 
-Engine::DisplayConfigResponse Engine::CheckConfig() {
-  TRACE_DURATION("flatland", "EngineRenderer::CheckConfig");
+DisplayCompositor::DisplayConfigResponse DisplayCompositor::CheckConfig() {
+  TRACE_DURATION("gfx", "DisplayCompositor::CheckConfig");
   fuchsia::hardware::display::ConfigResult result;
   std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
   std::unique_lock<std::mutex> lock(lock_);
@@ -244,23 +246,23 @@ Engine::DisplayConfigResponse Engine::CheckConfig() {
   return {.result = result, .ops = ops};
 }
 
-void Engine::DiscardConfig() {
-  TRACE_DURATION("flatland", "EngineRenderer::DiscardConfig");
+void DisplayCompositor::DiscardConfig() {
+  TRACE_DURATION("gfx", "DisplayCompositor::DiscardConfig");
   fuchsia::hardware::display::ConfigResult result;
   std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
   std::unique_lock<std::mutex> lock(lock_);
   (*display_controller_.get())->CheckConfig(/*discard*/ true, &result, &ops);
 }
 
-void Engine::ApplyConfig() {
-  TRACE_DURATION("flatland", "EngineRenderer::ApplyConfig");
+void DisplayCompositor::ApplyConfig() {
+  TRACE_DURATION("gfx", "DisplayCompositor::ApplyConfig");
   std::unique_lock<std::mutex> lock(lock_);
   auto status = (*display_controller_.get())->ApplyConfig();
   FX_DCHECK(status == ZX_OK);
 }
 
-void Engine::RenderFrame() {
-  TRACE_DURATION("flatland", "EngineRenderer::RenderFrame");
+void DisplayCompositor::RenderFrame() {
+  TRACE_DURATION("gfx", "DisplayCompositor::RenderFrame");
   auto render_data_list = render_data_func_(display_info_map_);
 
   // Config should be reset before doing anything new.
@@ -294,7 +296,8 @@ void Engine::RenderFrame() {
 
       // We expect the retired event to already have been signaled.  Verify this without waiting.
       if (event_data.signal_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr) != ZX_OK) {
-        FX_LOGS(ERROR) << "flatland::Engine::RenderFrame rendering into in-use backbuffer";
+        FX_LOGS(ERROR)
+            << "flatland::DisplayCompositor::RenderFrame rendering into in-use backbuffer";
       }
 
       event_data.wait_event.signal(ZX_EVENT_SIGNALED, 0);
@@ -324,7 +327,7 @@ void Engine::RenderFrame() {
   ApplyConfig();
 }
 
-Engine::FrameEventData Engine::NewFrameEventData() {
+DisplayCompositor::FrameEventData DisplayCompositor::NewFrameEventData() {
   FrameEventData result;
 
   std::unique_lock<std::mutex> lock(lock_);
@@ -344,7 +347,7 @@ Engine::FrameEventData Engine::NewFrameEventData() {
   return result;
 }
 
-sysmem_util::GlobalBufferCollectionId Engine::AddDisplay(
+sysmem_util::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
     uint64_t display_id, DisplayInfo info, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     uint32_t num_vmos, fuchsia::sysmem::BufferCollectionInfo_2* collection_info) {
   FX_DCHECK(sysmem_allocator);
@@ -378,20 +381,20 @@ sysmem_util::GlobalBufferCollectionId Engine::AddDisplay(
   FX_DCHECK(collection_info);
 
   // Create the buffer collection token to be used for frame buffers.
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr engine_token;
-  auto status = sysmem_allocator->AllocateSharedCollection(engine_token.NewRequest());
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr compositor_token;
+  auto status = sysmem_allocator->AllocateSharedCollection(compositor_token.NewRequest());
   FX_DCHECK(status == ZX_OK) << status;
 
   // Dup the token for the renderer.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr renderer_token;
-  status =
-      engine_token->Duplicate(std::numeric_limits<uint32_t>::max(), renderer_token.NewRequest());
+  status = compositor_token->Duplicate(std::numeric_limits<uint32_t>::max(),
+                                       renderer_token.NewRequest());
   FX_DCHECK(status == ZX_OK);
 
   // Dup the token for the display.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
   status =
-      engine_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
+      compositor_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
   FX_DCHECK(status == ZX_OK);
 
   // Register the buffer collection with the renderer
@@ -406,10 +409,10 @@ sysmem_util::GlobalBufferCollectionId Engine::AddDisplay(
                                                std::move(display_token), image_config);
   FX_DCHECK(result);
 
-  // Finally set the engine constraints.
+  // Finally set the DisplayCompositor constraints.
   auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
   fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr = CreateClientPointerWithConstraints(
-      sysmem_allocator, std::move(engine_token), num_vmos, kWidth, kHeight, buffer_usage,
+      sysmem_allocator, std::move(compositor_token), num_vmos, kWidth, kHeight, buffer_usage,
       ConvertZirconFormatToSysmemFormat(pixel_format), memory_constraints);
 
   // Have the client wait for buffers allocated so it can populate its information
@@ -445,7 +448,7 @@ sysmem_util::GlobalBufferCollectionId Engine::AddDisplay(
   return collection_id;
 }
 
-uint64_t Engine::InternalImageId(sysmem_util::GlobalImageId image_id) const {
+uint64_t DisplayCompositor::InternalImageId(sysmem_util::GlobalImageId image_id) const {
   // Lock the whole function.
   std::unique_lock<std::mutex> lock(lock_);
   auto itr = image_id_map_.find(image_id);

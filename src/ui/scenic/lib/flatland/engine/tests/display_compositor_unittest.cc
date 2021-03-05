@@ -32,10 +32,10 @@ using fuchsia::ui::scenic::internal::LinkProperties;
 namespace flatland {
 namespace test {
 
-class EngineTest : public EngineTestBase {
+class DisplayCompositorTest : public DisplayCompositorTestBase {
  public:
   void SetUp() override {
-    EngineTestBase::SetUp();
+    DisplayCompositorTestBase::SetUp();
 
     sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr();
 
@@ -57,16 +57,16 @@ class EngineTest : public EngineTestBase {
         std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
     shared_display_controller->Bind(std::move(controller_channel_client));
 
-    engine_ = std::make_unique<flatland::Engine>(std::move(shared_display_controller), renderer_,
-                                                 render_data_func());
+    display_compositor_ = std::make_unique<flatland::DisplayCompositor>(
+        std::move(shared_display_controller), renderer_, render_data_func());
   }
 
   void TearDown() override {
     renderer_.reset();
-    engine_.reset();
+    display_compositor_.reset();
     mock_display_controller_.reset();
 
-    EngineTestBase::TearDown();
+    DisplayCompositorTestBase::TearDown();
   }
 
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> CreateToken() {
@@ -82,11 +82,11 @@ class EngineTest : public EngineTestBase {
   const zx_pixel_format_t kPixelFormat = ZX_PIXEL_FORMAT_RGB_x888;
   std::unique_ptr<flatland::MockDisplayController> mock_display_controller_;
   std::shared_ptr<flatland::MockRenderer> renderer_;
-  std::unique_ptr<flatland::Engine> engine_;
+  std::unique_ptr<flatland::DisplayCompositor> display_compositor_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 
-TEST_F(EngineTest, ImportAndReleaseBufferCollectionTest) {
+TEST_F(DisplayCompositorTest, ImportAndReleaseBufferCollectionTest) {
   auto mock = mock_display_controller_.get();
   // Set the mock display controller functions and wait for messages.
   std::thread server([&mock]() mutable {
@@ -116,14 +116,14 @@ TEST_F(EngineTest, ImportAndReleaseBufferCollectionTest) {
 
   EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
       .WillOnce(Return(true));
-  engine_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
-                                  CreateToken());
+  display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
+                                              CreateToken());
 
   EXPECT_CALL(*mock_display_controller_.get(), ReleaseBufferCollection(kGlobalBufferCollectionId))
       .WillOnce(Return());
   EXPECT_CALL(*renderer_.get(), ReleaseBufferCollection(kGlobalBufferCollectionId))
       .WillOnce(Return());
-  engine_->ReleaseBufferCollection(kGlobalBufferCollectionId);
+  display_compositor_->ReleaseBufferCollection(kGlobalBufferCollectionId);
 
   EXPECT_CALL(*mock_display_controller_.get(), CheckConfig(_, _))
       .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
@@ -133,11 +133,11 @@ TEST_F(EngineTest, ImportAndReleaseBufferCollectionTest) {
         callback(result, ops);
       }));
 
-  engine_.reset();
+  display_compositor_.reset();
   server.join();
 }
 
-TEST_F(EngineTest, ImageIsValidAfterReleaseBufferCollection) {
+TEST_F(DisplayCompositorTest, ImageIsValidAfterReleaseBufferCollection) {
   auto mock = mock_display_controller_.get();
   // Set the mock display controller functions and wait for messages.
   std::thread server([&mock]() mutable {
@@ -164,8 +164,8 @@ TEST_F(EngineTest, ImageIsValidAfterReleaseBufferCollection) {
           }));
   EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
       .WillOnce(Return(true));
-  engine_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
-                                  CreateToken());
+  display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
+                                              CreateToken());
 
   // Import image.
   ImageMetadata image_metadata = ImageMetadata{
@@ -182,14 +182,14 @@ TEST_F(EngineTest, ImageIsValidAfterReleaseBufferCollection) {
         callback(ZX_OK, kDisplayImageId);
       }));
   EXPECT_CALL(*renderer_.get(), ImportBufferImage(image_metadata)).WillOnce(Return(true));
-  engine_->ImportBufferImage(image_metadata);
+  display_compositor_->ImportBufferImage(image_metadata);
 
   // Release buffer collection. Make sure that does not release Image.
   EXPECT_CALL(*mock, ReleaseImage(kDisplayImageId)).Times(0);
   EXPECT_CALL(*mock, ReleaseBufferCollection(kGlobalBufferCollectionId)).WillOnce(Return());
   EXPECT_CALL(*renderer_.get(), ReleaseBufferCollection(kGlobalBufferCollectionId))
       .WillOnce(Return());
-  engine_->ReleaseBufferCollection(kGlobalBufferCollectionId);
+  display_compositor_->ReleaseBufferCollection(kGlobalBufferCollectionId);
 
   EXPECT_CALL(*mock, CheckConfig(_, _))
       .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
@@ -199,11 +199,11 @@ TEST_F(EngineTest, ImageIsValidAfterReleaseBufferCollection) {
         callback(result, ops);
       }));
 
-  engine_.reset();
+  display_compositor_.reset();
   server.join();
 }
 
-TEST_F(EngineTest, ImportImageErrorCases) {
+TEST_F(DisplayCompositorTest, ImportImageErrorCases) {
   const sysmem_util::GlobalBufferCollectionId kGlobalBufferCollectionId = 30;
   const sysmem_util::GlobalImageId kImageId = 50;
   const uint32_t kVmoCount = 2;
@@ -245,8 +245,8 @@ TEST_F(EngineTest, ImportImageErrorCases) {
     }
   });
 
-  engine_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
-                                  CreateToken());
+  display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
+                                              CreateToken());
 
   ImageMetadata metadata = {
       .collection_id = kGlobalBufferCollectionId,
@@ -268,14 +268,14 @@ TEST_F(EngineTest, ImportImageErrorCases) {
 
   EXPECT_CALL(*renderer_.get(), ImportBufferImage(metadata)).WillOnce(Return(true));
 
-  auto result = engine_->ImportBufferImage(metadata);
+  auto result = display_compositor_->ImportBufferImage(metadata);
   EXPECT_TRUE(result);
 
   // Make sure we can release the image properly.
   EXPECT_CALL(*mock_display_controller_, ReleaseImage(kDisplayImageId)).WillOnce(Return());
   EXPECT_CALL(*renderer_.get(), ReleaseBufferImage(metadata.identifier)).WillOnce(Return());
 
-  engine_->ReleaseBufferImage(metadata.identifier);
+  display_compositor_->ReleaseBufferImage(metadata.identifier);
 
   // Make sure that the engine returns false if the display controller returns an error
   EXPECT_CALL(*mock_display_controller_.get(),
@@ -289,7 +289,7 @@ TEST_F(EngineTest, ImportImageErrorCases) {
   // This should still return false for the engine even if the renderer returns true.
   EXPECT_CALL(*renderer_.get(), ImportBufferImage(metadata)).WillOnce(Return(true));
 
-  result = engine_->ImportBufferImage(metadata);
+  result = display_compositor_->ImportBufferImage(metadata);
   EXPECT_FALSE(result);
 
   // Collection ID can't be invalid. This shouldn't reach the display controller.
@@ -298,7 +298,7 @@ TEST_F(EngineTest, ImportImageErrorCases) {
       .Times(0);
   auto copy_metadata = metadata;
   copy_metadata.collection_id = sysmem_util::kInvalidId;
-  result = engine_->ImportBufferImage(copy_metadata);
+  result = display_compositor_->ImportBufferImage(copy_metadata);
   EXPECT_FALSE(result);
 
   // Image Id can't be 0. This shouldn't reach the display controller.
@@ -307,7 +307,7 @@ TEST_F(EngineTest, ImportImageErrorCases) {
       .Times(0);
   copy_metadata = metadata;
   copy_metadata.identifier = 0;
-  result = engine_->ImportBufferImage(copy_metadata);
+  result = display_compositor_->ImportBufferImage(copy_metadata);
   EXPECT_FALSE(result);
 
   // Width can't be 0. This shouldn't reach the display controller.
@@ -316,14 +316,14 @@ TEST_F(EngineTest, ImportImageErrorCases) {
       .Times(0);
   copy_metadata = metadata;
   copy_metadata.width = 0;
-  result = engine_->ImportBufferImage(copy_metadata);
+  result = display_compositor_->ImportBufferImage(copy_metadata);
   EXPECT_FALSE(result);
 
   // Height can't be 0. This shouldn't reach the display controller.
   EXPECT_CALL(*mock_display_controller_.get(), ImportImage(_, _, 0, _)).Times(0);
   copy_metadata = metadata;
   copy_metadata.height = 0;
-  result = engine_->ImportBufferImage(copy_metadata);
+  result = display_compositor_->ImportBufferImage(copy_metadata);
   EXPECT_FALSE(result);
 
   EXPECT_CALL(*mock_display_controller_, CheckConfig(_, _))
@@ -334,7 +334,7 @@ TEST_F(EngineTest, ImportImageErrorCases) {
         callback(result, ops);
       }));
 
-  engine_.reset();
+  display_compositor_.reset();
 
   server.join();
 }
@@ -346,7 +346,7 @@ TEST_F(EngineTest, ImportImageErrorCases) {
 // and frame data that is generated by flatland sends along to the display controller
 // the proper source and destination frame data. Each source and destination frame pair
 // should be added to its own layer on the display.
-TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
+TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
   const uint64_t kGlobalBufferCollectionId = 1;
 
   // Create a parent and child session.
@@ -459,8 +459,8 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
   EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
       .WillOnce(Return(true));
 
-  engine_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
-                                  CreateToken());
+  display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
+                                              CreateToken());
 
   const uint64_t kParentDisplayImageId = 2;
   EXPECT_CALL(*mock, ImportImage(_, kGlobalBufferCollectionId, 0, _))
@@ -471,7 +471,7 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
 
   EXPECT_CALL(*renderer_.get(), ImportBufferImage(parent_image_metadata)).WillOnce(Return(true));
 
-  engine_->ImportBufferImage(parent_image_metadata);
+  display_compositor_->ImportBufferImage(parent_image_metadata);
 
   const uint64_t kChildDisplayImageId = 3;
   EXPECT_CALL(*mock, ImportImage(_, kGlobalBufferCollectionId, 1, _))
@@ -481,7 +481,7 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
       }));
 
   EXPECT_CALL(*renderer_.get(), ImportBufferImage(child_image_metadata)).WillOnce(Return(true));
-  engine_->ImportBufferImage(child_image_metadata);
+  display_compositor_->ImportBufferImage(child_image_metadata);
 
   // We start the frame by clearing the config.
   EXPECT_CALL(*mock, CheckConfig(true, _))
@@ -529,11 +529,11 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
 
   EXPECT_CALL(*mock, ApplyConfig()).WillOnce(Return());
 
-  engine_->AddDisplay(display_id, {parent_root_handle, resolution, {kPixelFormat}},
-                      sysmem_allocator_.get(),
-                      /*num_vmos*/ 0);
+  display_compositor_->AddDisplay(display_id, {parent_root_handle, resolution, {kPixelFormat}},
+                                  sysmem_allocator_.get(),
+                                  /*num_vmos*/ 0);
 
-  engine_->RenderFrame();
+  display_compositor_->RenderFrame();
 
   for (uint32_t i = 0; i < 2; i++) {
     EXPECT_CALL(*mock, DestroyLayer(layers[i]));
@@ -547,7 +547,7 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
         callback(result, ops);
       }));
 
-  engine_.reset();
+  display_compositor_.reset();
 
   server.join();
 }

@@ -18,12 +18,12 @@ group("pixeltests") {
 }
 
 executable("unittests") {
-  output_name = "flatland_engine_pixeltests"
+  output_name = "flatland_display_compositor_pixeltests"
   testonly = true
   sources = [
     "//src/ui/scenic/lib/flatland/engine/tests/common.cc",
     "//src/ui/scenic/lib/flatland/engine/tests/common.h",
-    "engine_pixeltest.cc",
+    "display_compositor_pixeltest.cc",
 
     # Registers a global Escher environment for testing.
     "run_all_unittests.cc",

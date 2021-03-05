@@ -11,14 +11,17 @@
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/flatland_engine_unittests"
+        "binary": "test/flatland_display_compositor_pixeltests"
     },
     "sandbox": {
         "services": [
             "fuchsia.hardware.display.Provider",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader",
             "fuchsia.sysmem.Allocator"
         ]
     }
