@@ -52,6 +52,7 @@ void InitializeCoordinator(Coordinator* coordinator) {
   ASSERT_OK(status);
   status = devfs_publish(coordinator->root_device(), coordinator->sys_device());
   ASSERT_OK(status);
-  devfs_connect_diagnostics(coordinator->inspect_manager().diagnostics_channel());
+  devfs_connect_diagnostics(fidl::UnownedClientEnd<fuchsia_io::Directory>(
+      coordinator->inspect_manager().diagnostics_channel()));
   coordinator->set_running(true);
 }

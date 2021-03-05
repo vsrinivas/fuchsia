@@ -1139,7 +1139,8 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
     }
     zx::channel client_remote = dev->take_client_remote();
     if (client_remote.is_valid()) {
-      if ((r = devfs_connect(dev->proxy().get(), std::move(client_remote))) != ZX_OK) {
+      if ((r = devfs_connect(dev->proxy().get(),
+                             fidl::ServerEnd<fio::Node>(std::move(client_remote)))) != ZX_OK) {
         LOGF(ERROR, "Failed to connect to service from proxy device '%s' in driver_host '%s': %s",
              dev->name().data(), driver_hostname, zx_status_get_string(r));
       }
@@ -1183,7 +1184,8 @@ void Coordinator::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
   if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
     zx::channel client_remote = dev->take_client_remote();
     if (client_remote.is_valid()) {
-      zx_status_t status = devfs_connect(dev.get(), std::move(client_remote));
+      zx_status_t status =
+          devfs_connect(dev.get(), fidl::ServerEnd<fio::Node>(std::move(client_remote)));
       if (status != ZX_OK) {
         LOGF(ERROR, "Failed to connect to service from proxy device '%s': %s", dev->name().data(),
              zx_status_get_string(status));

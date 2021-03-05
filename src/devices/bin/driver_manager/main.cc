@@ -403,7 +403,8 @@ int main(int argc, char** argv) {
   devfs_publish(coordinator.root_device(), coordinator.misc_device());
   devfs_publish(coordinator.root_device(), coordinator.sys_device());
   devfs_publish(coordinator.root_device(), coordinator.test_device());
-  devfs_connect_diagnostics(coordinator.inspect_manager().diagnostics_channel());
+  devfs_connect_diagnostics(fidl::UnownedClientEnd<fuchsia_io::Directory>(
+      coordinator.inspect_manager().diagnostics_channel()));
 
   // Check if whatever launched devmgr gave a channel to be connected to /dev.
   // This is for use in tests to let the test environment see devfs.

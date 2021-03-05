@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DEVFS_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DEVFS_H_
 
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
@@ -32,8 +33,8 @@ zx_status_t devfs_publish(const fbl::RefPtr<Device>& parent, const fbl::RefPtr<D
 void devfs_unpublish(Device* dev);
 void devfs_advertise(const fbl::RefPtr<Device>& dev);
 void devfs_advertise_modified(const fbl::RefPtr<Device>& dev);
-zx_status_t devfs_connect(const Device* dev, zx::channel client_remote);
-void devfs_connect_diagnostics(zx::unowned_channel diagnostics_channel);
+zx_status_t devfs_connect(const Device* dev, fidl::ServerEnd<fuchsia_io::Node> client_remote);
+void devfs_connect_diagnostics(fidl::UnownedClientEnd<fuchsia_io::Directory> diagnostics_channel);
 
 // This method is exposed for testing.  It walks the devfs from the given node,
 // traversing the given sub-path.

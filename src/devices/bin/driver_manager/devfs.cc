@@ -51,7 +51,7 @@ std::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const fbl::String& name);
 std::unique_ptr<Devnode> diagnostics_devnode;
 
 // Connection to diagnostics VFS server. Channel is owned by inspect manager.
-zx::unowned_channel diagnostics_channel;
+std::optional<fidl::UnownedClientEnd<fuchsia_io::Directory>> diagnostics_channel;
 
 const char kDiagnosticsDirName[] = "diagnostics";
 const size_t kDiagnosticsDirLen = strlen(kDiagnosticsDirName);
@@ -531,8 +531,8 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
     } else {
       dir_path = current_dir;
     }
-    fio::Directory::Call::Open(fidl::UnownedClientEnd<fio::Directory>(diagnostics_channel->get()),
-                               flags, 0, fidl::unowned_str(dir_path, strlen(dir_path)),
+    fio::Directory::Call::Open(*diagnostics_channel, flags, 0,
+                               fidl::unowned_str(dir_path, strlen(dir_path)),
                                fidl::ServerEnd<fio::Node>(std::move(ipc)));
     return;
   }
@@ -760,17 +760,19 @@ void devfs_unpublish(Device* dev) {
   }
 }
 
-zx_status_t devfs_connect(const Device* dev, zx::channel client_remote) {
+zx_status_t devfs_connect(const Device* dev, fidl::ServerEnd<fio::Node> client_remote) {
   if (!client_remote.is_valid()) {
     return ZX_ERR_BAD_HANDLE;
   }
   fio::Directory::Call::Open(
       fidl::UnownedClientEnd<fio::Directory>(dev->device_controller().channel().get()), 0, 0, ".",
-      fidl::ServerEnd<fio::Node>(std::move(client_remote)));
+      std::move(client_remote));
   return ZX_OK;
 }
 
-void devfs_connect_diagnostics(zx::unowned_channel h) { diagnostics_channel = h; }
+void devfs_connect_diagnostics(fidl::UnownedClientEnd<fio::Directory> h) {
+  diagnostics_channel = std::make_optional<fidl::UnownedClientEnd<fio::Directory>>(std::move(h));
+}
 
 zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* txn, void* cookie,
                                         async_dispatcher_t* dispatcher) {
