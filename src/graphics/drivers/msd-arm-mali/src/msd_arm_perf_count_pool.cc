@@ -7,6 +7,7 @@
 #include <lib/zx/clock.h>
 
 void MsdArmPerfCountPool::OnPerfCountDump(const std::vector<uint32_t>& dumped) {
+  std::lock_guard lock(device_thread_checker_);
   if (!valid_)
     return;
 
@@ -58,14 +59,19 @@ void MsdArmPerfCountPool::OnPerfCountDump(const std::vector<uint32_t>& dumped) {
   }
 }
 
-void MsdArmPerfCountPool::OnForceDisabled() { discontinuous_ = true; }
+void MsdArmPerfCountPool::OnForceDisabled() {
+  std::lock_guard lock(device_thread_checker_);
+  discontinuous_ = true;
+}
 
 void MsdArmPerfCountPool::AddBuffer(std::shared_ptr<MsdArmBuffer> buffer, uint64_t buffer_id,
                                     uint64_t offset, uint64_t size) {
+  std::lock_guard lock(device_thread_checker_);
   buffers_.push_back({buffer, buffer_id, offset, size});
 }
 
 void MsdArmPerfCountPool::RemoveBuffer(std::shared_ptr<MsdArmBuffer> buffer) {
+  std::lock_guard lock(device_thread_checker_);
   for (auto it = buffers_.begin(); it != buffers_.end();) {
     if (it->buffer == buffer) {
       it = buffers_.erase(it);
@@ -75,4 +81,7 @@ void MsdArmPerfCountPool::RemoveBuffer(std::shared_ptr<MsdArmBuffer> buffer) {
   }
 }
 
-void MsdArmPerfCountPool::AddTriggerId(uint32_t trigger_id) { triggers_.push_back(trigger_id); }
+void MsdArmPerfCountPool::AddTriggerId(uint32_t trigger_id) {
+  std::lock_guard lock(device_thread_checker_);
+  triggers_.push_back(trigger_id);
+}

@@ -13,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <thread>
 #include <unordered_map>
 
 #include "address_space.h"
@@ -56,6 +57,10 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
       auto reply = real_task->GetReply();
       reply->Signal(task(nullptr));
       return reply;
+    }
+    virtual std::thread::id GetDeviceThreadId() {
+      // Only for testing.
+      return std::this_thread::get_id();
     }
   };
 
@@ -122,6 +127,8 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
                                                          uint64_t buffer_size);
   magma_status_t RemovePerformanceCounterBufferFromPool(std::shared_ptr<MsdArmPerfCountPool> pool,
                                                         std::shared_ptr<MsdArmBuffer> buffer);
+
+  std::thread::id GetDeviceThreadId() { return owner_->GetDeviceThreadId(); }
 
  private:
   static const uint32_t kMagic = 0x636f6e6e;  // "conn" (Connection)

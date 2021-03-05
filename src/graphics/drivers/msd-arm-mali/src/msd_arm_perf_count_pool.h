@@ -5,6 +5,8 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_SRC_MSD_ARM_PERF_COUNT_POOL_H_
 #define SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_SRC_MSD_ARM_PERF_COUNT_POOL_H_
 
+#include <lib/fit/thread_checker.h>
+
 #include <list>
 #include <vector>
 
@@ -16,12 +18,17 @@
 // All interaction with this class must happen on the device thread.
 class MsdArmPerfCountPool : public PerformanceCounters::Client {
  public:
-  MsdArmPerfCountPool(std::weak_ptr<MsdArmConnection> connection, uint64_t pool_id)
-      : connection_(connection), pool_id_(pool_id) {}
+  MsdArmPerfCountPool(std::shared_ptr<MsdArmConnection> connection, uint64_t pool_id)
+      : device_thread_checker_(connection->GetDeviceThreadId()),
+        connection_(connection),
+        pool_id_(pool_id) {}
 
   virtual ~MsdArmPerfCountPool() = default;
 
-  void set_valid(bool valid) { valid_ = false; }
+  void set_valid(bool valid) {
+    std::lock_guard lock(device_thread_checker_);
+    valid_ = false;
+  }
   uint64_t pool_id() { return pool_id_; }
 
   // PerformanceCounters::Client implementation.
@@ -34,6 +41,8 @@ class MsdArmPerfCountPool : public PerformanceCounters::Client {
   void AddTriggerId(uint32_t trigger_id);
 
  private:
+  fit::thread_checker device_thread_checker_;
+
   struct BufferOffset {
     std::shared_ptr<MsdArmBuffer> buffer;
     uint64_t buffer_id;
@@ -41,14 +50,14 @@ class MsdArmPerfCountPool : public PerformanceCounters::Client {
     uint64_t size;
   };
 
-  std::weak_ptr<MsdArmConnection> connection_;
+  MAGMA_GUARDED(device_thread_checker_) std::weak_ptr<MsdArmConnection> connection_;
   // If valid_ is false, this pool is in the process of being torn down.
-  bool valid_ = true;
-  uint64_t pool_id_;
+  MAGMA_GUARDED(device_thread_checker_) bool valid_ = true;
+  const uint64_t pool_id_;
 
-  std::list<BufferOffset> buffers_;
-  std::vector<uint32_t> triggers_;
-  bool discontinuous_ = true;
+  MAGMA_GUARDED(device_thread_checker_) std::list<BufferOffset> buffers_;
+  MAGMA_GUARDED(device_thread_checker_) std::vector<uint32_t> triggers_;
+  MAGMA_GUARDED(device_thread_checker_) bool discontinuous_ = true;
 
   static constexpr uint32_t kMagic = 'MPCP';
 };

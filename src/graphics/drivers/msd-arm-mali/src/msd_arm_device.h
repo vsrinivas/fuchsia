@@ -133,6 +133,7 @@ class MsdArmDevice : public msd_device_t,
   void SetCurrentThreadToDefaultPriority() override;
   PerformanceCounters* performance_counters() override { return perf_counters_.get(); }
   std::shared_ptr<DeviceRequest::Reply> RunTaskOnDeviceThread(FitCallbackTask task) override;
+  std::thread::id GetDeviceThreadId() override { return device_thread_.get_id(); }
 
   magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
   magma_status_t QueryReturnsBuffer(uint64_t id, uint32_t* buffer_out);

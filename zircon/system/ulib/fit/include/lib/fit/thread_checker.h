@@ -44,6 +44,8 @@ class FIT_CAPABILITY("mutex") thread_checker final {
   // Default constructor. Constructs a thread checker bound to the currently
   // running thread.
   thread_checker() : self_(std::this_thread::get_id()) {}
+  // Constructs a thread checker bound to an explicit other thread.
+  explicit thread_checker(std::thread::id self) : self_(self) {}
   ~thread_checker() = default;
 
   // Returns true if the current thread is the thread this object was created
