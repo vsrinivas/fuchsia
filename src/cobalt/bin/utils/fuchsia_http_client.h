@@ -11,23 +11,23 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/callback/scoped_task_runner.h"
-#include "third_party/cobalt/src/lib/clearcut/http_client.h"
 #include "third_party/cobalt/src/lib/statusor/statusor.h"
+#include "third_party/cobalt/src/public/lib/http_client.h"
 
 namespace cobalt {
 namespace utils {
 
-// FuchsiaHTTPClient implements lib::clearcut::HTTPClient using fuchsia's fuchsia::net::http::Loader
+// FuchsiaHTTPClient implements lib::HTTPClient using fuchsia's fuchsia::net::http::Loader
 // FIDL interface.
-class FuchsiaHTTPClient : public lib::clearcut::HTTPClient {
+class FuchsiaHTTPClient : public lib::HTTPClient {
  public:
   using LoaderFactory = fit::function<::fuchsia::net::http::LoaderSyncPtr()>;
 
   FuchsiaHTTPClient(LoaderFactory loader_factory);
 
   // Posts an HTTPRequest to fuchsia's network backend.
-  lib::statusor::StatusOr<lib::clearcut::HTTPResponse> PostSync(
-      lib::clearcut::HTTPRequest request, std::chrono::steady_clock::time_point deadline) override;
+  lib::statusor::StatusOr<lib::HTTPResponse> PostSync(
+      lib::HTTPRequest request, std::chrono::steady_clock::time_point deadline) override;
 
  private:
   const LoaderFactory loader_factory_;

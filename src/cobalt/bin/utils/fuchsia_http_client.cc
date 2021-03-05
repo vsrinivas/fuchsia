@@ -16,15 +16,14 @@
 namespace cobalt {
 namespace utils {
 
-using lib::clearcut::HTTPClient;
-using lib::clearcut::HTTPRequest;
-using lib::clearcut::HTTPResponse;
+using lib::HTTPClient;
+using lib::HTTPRequest;
+using lib::HTTPResponse;
 using lib::statusor::StatusOr;
 
 namespace {
 
-fuchsia::net::http::Request MakeRequest(const lib::clearcut::HTTPRequest& request,
-                                        zx::time deadline) {
+fuchsia::net::http::Request MakeRequest(const lib::HTTPRequest& request, zx::time deadline) {
   fuchsia::net::http::Request fx_request;
   fx_request.set_method("POST");
   fx_request.set_url(request.url);

@@ -23,8 +23,8 @@
 namespace cobalt {
 namespace utils {
 
-using lib::clearcut::HTTPRequest;
-using lib::clearcut::HTTPResponse;
+using lib::HTTPRequest;
+using lib::HTTPResponse;
 using lib::statusor::StatusOr;
 using ::testing::HasSubstr;
 
@@ -145,7 +145,7 @@ class FuchsiaHTTPClientTest : public ::gtest::TestLoopFixture {
     EXPECT_EQ(response.response, response_body_to_use);
     EXPECT_EQ(response.http_code, http_response_code);
     if (include_response_headers) {
-      EXPECT_EQ(response.headers.size(), 2);
+      EXPECT_EQ(response.headers.size(), 2ul);
       EXPECT_EQ(response.headers["name1"], "value1");
       EXPECT_EQ(response.headers["name2"], "value2");
     } else {
