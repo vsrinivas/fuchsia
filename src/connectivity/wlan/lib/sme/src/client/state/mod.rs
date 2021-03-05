@@ -648,6 +648,49 @@ impl Associated {
         Idle { cfg: self.cfg }
     }
 
+    fn process_link_state_update<U, H>(
+        self,
+        update: U,
+        update_handler: H,
+        context: &mut Context,
+        state_change_ctx: &mut Option<StateChangeContext>,
+    ) -> Result<Self, Idle>
+    where
+        H: Fn(
+            LinkState,
+            U,
+            &BssDescription,
+            &mut Option<StateChangeContext>,
+            &mut Context,
+        ) -> Result<LinkState, EstablishRsnaFailureReason>,
+    {
+        let link_state =
+            match update_handler(self.link_state, update, &self.bss, state_change_ctx, context) {
+                Ok(link_state) => link_state,
+                Err(failure_reason) => {
+                    report_connect_finished(
+                        self.responder,
+                        context,
+                        EstablishRsnaFailure {
+                            auth_method: self.auth_method,
+                            reason: failure_reason,
+                        }
+                        .into(),
+                    );
+                    send_deauthenticate_request(&self.bss, &context.mlme_sink);
+                    return Err(Idle { cfg: self.cfg });
+                }
+            };
+
+        let mut responder = self.responder;
+        if let LinkState::LinkUp(_) = link_state {
+            context.info.report_rsna_established(context.att_id);
+            report_connect_finished(responder.take(), context, ConnectResult::Success);
+        }
+
+        Ok(Self { link_state, responder, ..self })
+    }
+
     fn on_eapol_ind(
         self,
         ind: fidl_mlme::EapolIndication,
@@ -673,31 +716,16 @@ impl Associated {
             return Ok(self);
         }
 
-        let link_state =
-            match self.link_state.on_eapol_ind(ind, &self.bss, state_change_ctx, context) {
-                Ok(link_state) => link_state,
-                Err(failure_reason) => {
-                    report_connect_finished(
-                        self.responder,
-                        context,
-                        EstablishRsnaFailure {
-                            auth_method: self.auth_method,
-                            reason: failure_reason,
-                        }
-                        .into(),
-                    );
-                    send_deauthenticate_request(&self.bss, &context.mlme_sink);
-                    return Err(Idle { cfg: self.cfg });
-                }
-            };
+        self.process_link_state_update(ind, LinkState::on_eapol_ind, context, state_change_ctx)
+    }
 
-        let mut responder = self.responder;
-        if let LinkState::LinkUp(_) = link_state {
-            context.info.report_rsna_established(context.att_id);
-            report_connect_finished(responder.take(), context, ConnectResult::Success);
-        }
-
-        Ok(Self { link_state, responder, ..self })
+    fn on_eapol_conf(
+        self,
+        resp: fidl_mlme::EapolConfirm,
+        state_change_ctx: &mut Option<StateChangeContext>,
+        context: &mut Context,
+    ) -> Result<Self, Idle> {
+        self.process_link_state_update(resp, LinkState::on_eapol_conf, context, state_change_ctx)
     }
 
     fn on_channel_switched(&mut self, info: fidl_mlme::ChannelSwitchInfo) {
@@ -881,6 +909,13 @@ impl ClientState {
                 MlmeEvent::EapolInd { ind } => {
                     let (transition, associated) = state.release_data();
                     match associated.on_eapol_ind(ind, &mut state_change_ctx, context) {
+                        Ok(associated) => transition.to(associated).into(),
+                        Err(idle) => transition.to(idle).into(),
+                    }
+                }
+                MlmeEvent::EapolConf { resp } => {
+                    let (transition, associated) = state.release_data();
+                    match associated.on_eapol_conf(resp, &mut state_change_ctx, context) {
                         Ok(associated) => transition.to(associated).into(),
                         Err(idle) => transition.to(idle).into(),
                     }

@@ -200,17 +200,21 @@ impl LinkState {
         }
     }
 
-    pub fn on_eapol_ind(
+    fn on_eapol_event<T, H>(
         self,
-        ind: fidl_mlme::EapolIndication,
+        eapol_event: T,
+        process_eapol_event: H,
         bss: &BssDescription,
         state_change_msg: &mut Option<StateChangeContext>,
         context: &mut Context,
-    ) -> Result<Self, EstablishRsnaFailureReason> {
+    ) -> Result<Self, EstablishRsnaFailureReason>
+    where
+        H: Fn(&mut Context, &mut Rsna, &T) -> RsnaStatus,
+    {
         match self {
             Self::EstablishingRsna(state) => {
                 let (transition, mut state) = state.release_data();
-                match process_eapol_ind(context, &mut state.rsna, &ind) {
+                match process_eapol_event(context, &mut state.rsna, &eapol_event) {
                     RsnaStatus::Established => {
                         let link_up = state.on_rsna_established(bss, context);
                         state_change_msg.set_msg("RSNA established".to_string());
@@ -228,7 +232,7 @@ impl LinkState {
                 let (transition, mut state) = state.release_data();
                 // Drop EAPOL frames if the BSS is not an RSN.
                 if let Protection::Rsna(rsna) = &mut state.protection {
-                    match process_eapol_ind(context, rsna, &ind) {
+                    match process_eapol_event(context, rsna, &eapol_event) {
                         RsnaStatus::Unchanged => {}
                         // This can happen when there's a GTK rotation.
                         // Timeout is ignored because only one RX frame is
@@ -244,6 +248,26 @@ impl LinkState {
             }
             _ => unreachable!(),
         }
+    }
+
+    pub fn on_eapol_ind(
+        self,
+        eapol_ind: fidl_mlme::EapolIndication,
+        bss: &BssDescription,
+        state_change_msg: &mut Option<StateChangeContext>,
+        context: &mut Context,
+    ) -> Result<Self, EstablishRsnaFailureReason> {
+        self.on_eapol_event(eapol_ind, process_eapol_ind, bss, state_change_msg, context)
+    }
+
+    pub fn on_eapol_conf(
+        self,
+        eapol_conf: fidl_mlme::EapolConfirm,
+        bss: &BssDescription,
+        state_change_msg: &mut Option<StateChangeContext>,
+        context: &mut Context,
+    ) -> Result<Self, EstablishRsnaFailureReason> {
+        self.on_eapol_event(eapol_conf, process_eapol_conf, bss, state_change_msg, context)
     }
 
     pub fn handle_timeout(
@@ -390,6 +414,28 @@ fn send_eapol_frame(
     resp_timeout_id
 }
 
+fn process_eapol_conf(
+    context: &mut Context,
+    rsna: &mut Rsna,
+    eapol_conf: &fidl_mlme::EapolConfirm,
+) -> RsnaStatus {
+    let mut update_sink = rsna::UpdateSink::default();
+    match rsna.supplicant.on_eapol_conf(&mut update_sink, eapol_conf.result_code) {
+        Err(e) => {
+            error!("error handling EAPOL confirm: {}", e);
+            context.info.report_supplicant_error(anyhow::anyhow!(e));
+            return RsnaStatus::Unchanged;
+        }
+        Ok(_) => {
+            if update_sink.is_empty() {
+                return RsnaStatus::Unchanged;
+            }
+        }
+    }
+    context.info.report_supplicant_updates(&update_sink);
+    process_eapol_updates(context, eapol_conf.dst_addr, update_sink)
+}
+
 fn process_eapol_ind(
     context: &mut Context,
     rsna: &mut Rsna,
@@ -431,11 +477,17 @@ fn process_eapol_ind(
         }
     }
     context.info.report_supplicant_updates(&update_sink);
+    process_eapol_updates(context, ind.src_addr, update_sink)
+}
 
-    let bssid = ind.src_addr;
-    let sta_addr = ind.dst_addr;
+fn process_eapol_updates(
+    context: &mut Context,
+    bssid: [u8; 6],
+    updates: rsna::UpdateSink,
+) -> RsnaStatus {
+    let sta_addr = context.device_info.mac_addr;
     let mut new_resp_timeout = None;
-    for update in update_sink {
+    for update in updates {
         match update {
             // ESS Security Association requests to send an EAPOL frame.
             // Forward EAPOL frame to MLME.

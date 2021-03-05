@@ -277,6 +277,15 @@ impl Supplicant for MockSupplicant {
         populate_update_sink(update_sink, &self.on_eapol_frame)
     }
 
+    fn on_eapol_conf(
+        &mut self,
+        _update_sink: &mut UpdateSink,
+        _result: fidl_mlme::EapolResultCode,
+    ) -> Result<(), Error> {
+        // TODO(fxbug.dev/68454): Implement once this does something for a real supplicant.
+        Ok(())
+    }
+
     fn on_pmk_available(
         &mut self,
         _update_sink: &mut UpdateSink,

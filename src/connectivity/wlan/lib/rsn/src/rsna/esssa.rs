@@ -13,6 +13,7 @@ use crate::rsna::{
 };
 use crate::{format_rsn_err, Error};
 use eapol;
+use fidl_fuchsia_wlan_mlme::EapolResultCode;
 use log::{error, info};
 use std::collections::HashSet;
 use wlan_statemachine::StateMachine;
@@ -348,6 +349,15 @@ impl EssSa {
         pmk: Vec<u8>,
     ) -> Result<(), Error> {
         self.on_key_confirmed(update_sink, Key::Pmk(pmk))
+    }
+
+    pub fn on_eapol_conf(
+        &mut self,
+        _update_sink: &mut UpdateSink,
+        _result: EapolResultCode,
+    ) -> Result<(), Error> {
+        // TODO(fxbug.dev/68454): Implement.
+        Ok(())
     }
 
     pub fn on_eapol_frame<B: ByteSlice>(

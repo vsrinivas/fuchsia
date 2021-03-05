@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use eapol;
+use fidl_fuchsia_wlan_mlme::EapolResultCode;
 use wlan_rsn::{self, rsna::UpdateSink, Error, NegotiatedProtection};
 
 // Trait has to be Send because wlanstack wraps SME into a Future
@@ -14,6 +15,11 @@ pub trait Authenticator: std::fmt::Debug + std::marker::Send {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<&[u8]>,
+    ) -> Result<(), Error>;
+    fn on_eapol_conf(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        result: EapolResultCode,
     ) -> Result<(), Error>;
 }
 
@@ -36,5 +42,13 @@ impl Authenticator for wlan_rsn::Authenticator {
         frame: eapol::Frame<&[u8]>,
     ) -> Result<(), Error> {
         wlan_rsn::Authenticator::on_eapol_frame(self, update_sink, frame)
+    }
+
+    fn on_eapol_conf(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        result: EapolResultCode,
+    ) -> Result<(), Error> {
+        wlan_rsn::Authenticator::on_eapol_conf(self, update_sink, result)
     }
 }

@@ -32,7 +32,7 @@ use {
         rsna::{esssa::EssSa, Role, UpdateSink},
     },
     eapol,
-    fidl_fuchsia_wlan_mlme::SaeFrame,
+    fidl_fuchsia_wlan_mlme::{EapolResultCode, SaeFrame},
     std::sync::{Arc, Mutex},
     wlan_common::ie::{
         rsn::{
@@ -143,6 +143,14 @@ impl Supplicant {
         frame: eapol::Frame<B>,
     ) -> Result<(), Error> {
         self.esssa.on_eapol_frame(update_sink, frame)
+    }
+
+    pub fn on_eapol_conf(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        result: EapolResultCode,
+    ) -> Result<(), Error> {
+        self.esssa.on_eapol_conf(update_sink, result)
     }
 
     fn extract_sae_key(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
@@ -299,6 +307,14 @@ impl Authenticator {
         frame: eapol::Frame<B>,
     ) -> Result<(), Error> {
         self.esssa.on_eapol_frame(update_sink, frame)
+    }
+
+    pub fn on_eapol_conf(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        result: EapolResultCode,
+    ) -> Result<(), Error> {
+        self.esssa.on_eapol_conf(update_sink, result)
     }
 
     fn extract_sae_key(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {

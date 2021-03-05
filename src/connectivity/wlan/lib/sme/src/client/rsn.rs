@@ -7,7 +7,7 @@ use {
     anyhow::{bail, ensure, format_err},
     eapol,
     fidl_fuchsia_wlan_common::DriverFeature,
-    fidl_fuchsia_wlan_mlme::{DeviceInfo, SaeFrame},
+    fidl_fuchsia_wlan_mlme::{DeviceInfo, EapolResultCode, SaeFrame},
     fidl_fuchsia_wlan_sme as fidl_sme,
     std::boxed::Box,
     wlan_common::{bss::BssDescription, ie::rsn::rsne},
@@ -36,6 +36,11 @@ pub trait Supplicant: std::fmt::Debug + std::marker::Send {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<&[u8]>,
+    ) -> Result<(), Error>;
+    fn on_eapol_conf(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        result: EapolResultCode,
     ) -> Result<(), Error>;
     fn on_pmk_available(
         &mut self,
@@ -69,6 +74,14 @@ impl Supplicant for wlan_rsn::Supplicant {
         frame: eapol::Frame<&[u8]>,
     ) -> Result<(), Error> {
         wlan_rsn::Supplicant::on_eapol_frame(self, update_sink, frame)
+    }
+
+    fn on_eapol_conf(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        result: EapolResultCode,
+    ) -> Result<(), Error> {
+        wlan_rsn::Supplicant::on_eapol_conf(self, update_sink, result)
     }
 
     fn on_pmk_available(
