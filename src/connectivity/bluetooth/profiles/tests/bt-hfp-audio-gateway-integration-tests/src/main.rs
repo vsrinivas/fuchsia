@@ -3,18 +3,23 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::format_err,
+    anyhow::{format_err, Error},
     bitflags::bitflags,
-    bt_profile_test_server_client::ProfileTestHarness,
-    fidl::encoding::Decodable,
-    fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
-    fuchsia_bluetooth::types::{PeerId, Uuid},
+    bt_profile_test_server_client::{MockPeer, ProfileTestHarness},
+    fidl::{
+        encoding::Decodable,
+        endpoints::{ServerEnd, ServiceMarker},
+    },
+    fidl_fuchsia_bluetooth_bredr as bredr,
+    fidl_fuchsia_bluetooth_hfp::HfpMarker,
+    fidl_fuchsia_sys::EnvironmentOptions,
+    fuchsia_async as fasync,
+    fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
+    fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceObj},
     futures::{stream::StreamExt, TryFutureExt},
+    std::convert::TryInto,
+    test_call_manager::{TestCallManager, HFP_AG_URL},
 };
-
-/// HFP component URL.
-const HFP_URL: &str =
-    "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-default#meta/bt-hfp-audio-gateway.cmx";
 
 /// SDP Attribute ID for the Supported Features of HFP.
 /// Defined in Assigned Numbers for SDP
@@ -36,7 +41,8 @@ bitflags! {
 }
 
 fn hfp_launch_info() -> bredr::LaunchInfo {
-    bredr::LaunchInfo { component_url: Some(HFP_URL.to_string()), ..bredr::LaunchInfo::EMPTY }
+    let url = Some(HFP_AG_URL.to_string());
+    bredr::LaunchInfo { component_url: url.clone(), ..bredr::LaunchInfo::EMPTY }
 }
 
 /// Make the SDP definition for an HFP Hands Free service.
@@ -103,24 +109,58 @@ async fn test_hfp_ag_service_advertisement() {
     responder.send().unwrap();
 }
 
-/// Tests that HFP correctly searches for Handsfree and discovers a mock peer
-/// providing it.
+fn launch_hfp(
+    url: &str,
+) -> (ServiceFs<ServiceObj<'_, fidl::Channel>>, NestedEnvironment, fuchsia_component::client::App) {
+    let mut fs = ServiceFs::new();
+    fs.add_service_at(bredr::ProfileMarker::NAME, |chan| Some(chan));
+    let options = EnvironmentOptions {
+        inherit_parent_services: true,
+        use_parent_runners: false,
+        kill_on_oom: false,
+        delete_storage_on_death: false,
+    };
+    let env = fs.create_salted_nested_environment_with_options(&"hfp", options).unwrap();
+    let app = fuchsia_component::client::launch(env.launcher(), url.to_string(), None).unwrap();
+    (fs, env, app)
+}
+
+async fn connect_profile_to_peer(
+    peer: &mut MockPeer,
+    fs: &mut ServiceFs<ServiceObj<'_, fidl::Channel>>,
+) -> Result<(), Error> {
+    let channel = fs.next().await.ok_or(format_err!("Connection expected from hfp component"))?;
+    let server_end = ServerEnd::<bredr::ProfileMarker>::new(channel);
+    peer.connect_proxy(server_end).await?;
+    Ok(())
+}
+
+/// Tests that HFP correctly searches for Handsfree, discovers a mock peer
+/// providing it, and attempts to connect to the mock peer.
 #[fasync::run_singlethreaded(test)]
 async fn test_hfp_search_and_connect() {
     let test_harness = ProfileTestHarness::new().expect("Failed to create profile test harness");
 
     // MockPeer #1 is driven by the test.
     let id1 = PeerId(0x1111);
-    let mock_peer1 = test_harness.register_peer(id1).await.unwrap();
+    let mut mock_peer1 = test_harness.register_peer(id1).await.unwrap();
 
     // Peer #1 advertises an HFP HF service.
     let service_defs = vec![hfp_hf_service_definition()];
-    let _connect_requests = mock_peer1.register_service_advertisement(service_defs).await.unwrap();
+    let mut connect_requests =
+        mock_peer1.register_service_advertisement(service_defs).await.unwrap();
 
     // MockPeer #2 is the profile-under-test: HFP.
     let id2 = PeerId(0x2222);
     let mut mock_peer2 = test_harness.register_peer(id2).await.unwrap();
-    mock_peer2.launch_profile(hfp_launch_info()).await.expect("launch profile should be ok");
+
+    // Launch hfp component and wire it up to MockPeer #2
+    let (mut fs, _env, app) = launch_hfp(HFP_AG_URL);
+    connect_profile_to_peer(&mut mock_peer2, &mut fs).await.unwrap();
+
+    let proxy = app.connect_to_service::<HfpMarker>().unwrap();
+    let facade = TestCallManager::new();
+    facade.register_manager(proxy).await.unwrap();
 
     // We expect HFP to discover Peer #1's service advertisement.
     if let bredr::PeerObserverRequest::ServiceFound { peer_id, responder, .. } =
@@ -128,5 +168,22 @@ async fn test_hfp_search_and_connect() {
     {
         assert_eq!(id1, peer_id.into());
         responder.send().unwrap();
+    }
+
+    // We then expect HFP to attempt to connect to Peer #1.
+    let _channel: Channel = match connect_requests.select_next_some().await.unwrap() {
+        bredr::ConnectionReceiverRequest::Connected { peer_id, channel, .. } => {
+            assert_eq!(id2, peer_id.into());
+            channel.try_into().unwrap()
+        }
+    };
+
+    // The observer of Peer #1 should be relayed of the connection attempt.
+    match mock_peer1.expect_observer_request().await.unwrap() {
+        bredr::PeerObserverRequest::PeerConnected { peer_id, responder, .. } => {
+            assert_eq!(id2, peer_id.into());
+            responder.send().unwrap();
+        }
+        x => panic!("Expected PeerConnected but got: {:?}", x),
     }
 }

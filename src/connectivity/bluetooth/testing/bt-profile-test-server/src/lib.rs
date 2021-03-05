@@ -8,7 +8,7 @@ use {
     anyhow::{format_err, Context, Error},
     fidl::{
         encoding::Decodable,
-        endpoints::{create_proxy, create_request_stream},
+        endpoints::{create_proxy, create_request_stream, ServerEnd},
     },
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_async::{DurationExt, TimeoutExt},
@@ -124,6 +124,10 @@ impl MockPeer {
             .await
             .expect("launch profile fidl call failure")
             .map_err(|e| format_err!("{:?}", e))
+    }
+
+    pub async fn connect_proxy(&mut self, stream: ServerEnd<ProfileMarker>) -> Result<(), Error> {
+        Ok(self.mock_peer.connect_proxy_(stream).await?)
     }
 
     /// Expects a request over the PeerObserver protocol for this MockPeer.
