@@ -34,6 +34,7 @@
 #include <mutex>
 #include <shared_mutex>
 
+#include "arp_logger.h"
 #include "bus.h"
 #include "fweh.h"
 #include "fwil_types.h"
@@ -214,6 +215,8 @@ struct brcmf_if {
   // spinlock_t netif_stop_lock;
   std::atomic<int> pend_8021x_cnt;
   sync_completion_t pend_8021x_wait;
+  // The logger for ARP frame.
+  std::unique_ptr<wlan::brcmfmac::ArpLogger> arp_logger;
 };
 
 void brcmf_write_net_device_name(struct net_device* dev, const char* name);

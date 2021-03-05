@@ -14,6 +14,17 @@
 
 import("//build/test/test_package.gni")
 
+executable("arp_log_test") {
+  output_name = "arp_log_test"
+  testonly = true
+  sources = [ "arp_log_test.cc" ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
 source_set("stub_netbuf") {
   testonly = true
   sources = [ "stub_netbuf.cc" ]
@@ -220,6 +231,7 @@ unittest_package("brcmfmac_test") {
   tests = []
   foreach(test_name,
           [
+            "arp_log_test",
             "bcmdhd_crossdriver_test",
             "brcmu_utils_test",
             "channel_conversion_test",

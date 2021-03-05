@@ -626,6 +626,7 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
         brcmf_write_net_device_name(ndev, name);
       }
       ifp = brcmf_get_ifp(drvr, 0);
+      ifp->arp_logger = std::make_unique<wlan::brcmfmac::ArpLogger>();
 
       if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
         // Since a single IF is shared when operating with manufacturing FW, change
@@ -2288,7 +2289,9 @@ void brcmf_cfg80211_handle_eapol_frame(struct brcmf_if* ifp, const void* data, s
   wlanif_impl_ifc_eapol_ind(&ndev->if_proto, &eapol_ind);
 }
 
-#define EAPOL_ETHERNET_TYPE_UINT16 0x8e88
+#define EAPOL_ETHERNET_TYPE_UINT16 0x888e
+#define ARP_ETHERNET_TYPE_UINT16 0x0806
+
 void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
   struct net_device* ndev = ifp->ndev;
 
@@ -2300,12 +2303,29 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
   BRCMF_THROTTLE_IF(5, BRCMF_IS_ON(BYTES) && BRCMF_IS_ON(DATA),
                     BRCMF_DBG_HEX_DUMP(true, data, std::min<size_t>(size, 64u),
                                        "Data received (%zu bytes, max 64 shown):", size));
+  const uint8_t* frame = (uint8_t*)(data);
   // IEEE Std. 802.3-2015, 3.1.1
-  const uint16_t eth_type = ((uint16_t*)(data))[6];
+
+  if (size < 14) {
+    BRCMF_WARN(
+        "The frame size is not long enough to contain a full ethernet header, transmitting "
+        "anyway.");
+    wlanif_impl_ifc_data_recv(&ndev->if_proto, data, size, 0);
+    return;
+  }
+
+  const uint16_t eth_type = betoh16(((uint16_t*)(data))[6]);
+  const uint16_t arp_opt_code = betoh16(((uint16_t*)(data))[10]);
+
   if (eth_type == EAPOL_ETHERNET_TYPE_UINT16) {
-    // queue up the eapol frame along with events to ensure processing order
+    // queue up the eapol frame along with events to ensure processing order.
     brcmf_fweh_queue_eapol_frame(ifp, data, size);
   } else {
+    // Update the ArpLogger when it's a ARP Reply frame.
+    if (eth_type == ARP_ETHERNET_TYPE_UINT16 && arp_opt_code == 2) {
+      const uint32_t ip_addr = betoh32(*reinterpret_cast<const uint32_t*>(frame + 28));
+      ifp->arp_logger->ArpReplyIn(ip_addr);
+    }
     wlanif_impl_ifc_data_recv(&ndev->if_proto, data, size, 0);
   }
 }
@@ -3758,7 +3778,7 @@ void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req) {
   // IEEE Std. 802.3-2015, 3.1.1
   memcpy(packet_data.get(), req->dst_addr, ETH_ALEN);
   memcpy(packet_data.get() + ETH_ALEN, req->src_addr, ETH_ALEN);
-  *(uint16_t*)(packet_data.get() + 2 * ETH_ALEN) = EAPOL_ETHERNET_TYPE_UINT16;
+  *(uint16_t*)(packet_data.get() + 2 * ETH_ALEN) = htobe16(EAPOL_ETHERNET_TYPE_UINT16);
   memcpy(packet_data.get() + 2 * ETH_ALEN + sizeof(uint16_t), req->data_list, req->data_count);
 
   auto packet =
@@ -4572,7 +4592,30 @@ send_resp:
 
 void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_t* netbuf,
                             ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
   auto b = std::make_unique<wlan::brcmfmac::EthernetNetbuf>(netbuf, completion_cb, cookie);
+
+  const uint8_t* frame = (uint8_t*)(netbuf->data_buffer);
+
+  if (netbuf->data_size < 14) {
+    BRCMF_WARN(
+        "The frame size is not long enough to contain a full ethernet header, transmitting "
+        "anyway.");
+    brcmf_netdev_start_xmit(ndev, std::move(b));
+    return;
+  }
+
+  // IEEE Std. 802.3-2015, 3.1.1
+  const uint16_t eth_type = betoh16(((uint16_t*)(netbuf->data_buffer))[6]);
+  const uint16_t arp_opt_code = betoh16(((uint16_t*)(netbuf->data_buffer))[10]);
+
+  // Update the ArpLogger when it's a ARP Request frame.
+  if (eth_type == ARP_ETHERNET_TYPE_UINT16 && arp_opt_code == 1) {
+    // Encodes 4 target IP address bytes to a uint.
+    const uint32_t ip_addr = betoh32(*reinterpret_cast<const uint32_t*>(frame + 38));
+    ifp->arp_logger->ArpRequestOut(ip_addr);
+  }
+
   brcmf_netdev_start_xmit(ndev, std::move(b));
 }
 
@@ -4651,7 +4694,8 @@ zx_status_t brcmf_if_sae_frame_tx(net_device* ndev, const wlanif_sae_frame_t* fr
   auto sae_frame =
       reinterpret_cast<brcmf_sae_auth_frame*>(cmd_buf + offsetof(assoc_mgr_cmd_t, params));
 
-  // Set MAC addresses in MAC header, firmware will check these parts, and fill other missing parts.
+  // Set MAC addresses in MAC header, firmware will check these parts, and fill other missing
+  // parts.
   sae_frame->mac_hdr.addr1 = wlan::common::MacAddr(frame->peer_sta_address);  // DA
   sae_frame->mac_hdr.addr2 = wlan::common::MacAddr(ifp->mac_addr);            // SA
   sae_frame->mac_hdr.addr3 = wlan::common::MacAddr(frame->peer_sta_address);  // BSSID
@@ -4927,8 +4971,8 @@ static zx_status_t brcmf_notify_start_auth(struct brcmf_if* ifp, const struct br
   // SAE four-way authentication start.
   brcmf_set_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
 
-  // Issue assoc_mgr_cmd to update the the state machine of firmware, so that the firmware will wait
-  // for SAE frame from external supplicant.
+  // Issue assoc_mgr_cmd to update the the state machine of firmware, so that the firmware will
+  // wait for SAE frame from external supplicant.
   cmd.version = ASSOC_MGR_CURRENT_VERSION;
   cmd.length = sizeof(cmd);
   cmd.cmd = ASSOC_MGR_CMD_PAUSE_ON_EVT;
@@ -5938,6 +5982,7 @@ zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wir
     case WLAN_INFO_MAC_ROLE_CLIENT:
       // Dissconnect the client in an attempt to exit gracefully.
       brcmf_link_down(ifp->vif, WLANIF_REASON_CODE_UNSPECIFIED, false);
+      ifp->arp_logger.reset();
       // The default client iface 0 is always assumed to exist by the driver, and is never
       // explicitly deleted.
       ndev->sme_channel.reset();

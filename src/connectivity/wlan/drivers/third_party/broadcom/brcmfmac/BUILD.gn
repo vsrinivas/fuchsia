@@ -147,6 +147,7 @@ source_set("timer") {
 # Sources for the driver core logic.
 source_set("core") {
   sources = [
+    "arp_logger.cc",
     "bits.cc",
     "bits.h",
     "btcoex.cc",
@@ -168,6 +169,7 @@ source_set("core") {
     "wlan_interface.h",
   ]
   public = [
+    "arp_logger.h",
     "bits.h",
     "brcm_hw_ids.h",
     "brcmu_d11.h",
