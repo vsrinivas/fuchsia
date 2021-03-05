@@ -487,7 +487,8 @@ void MdnsServiceImpl::SimplePublisher::ReportSuccess(bool success) {
 
 void MdnsServiceImpl::SimplePublisher::GetPublication(
     Mdns::PublicationCause publication_cause, const std::string& subtype,
-    const std::vector<inet::SocketAddress>& source_addresses, GetPublicationCallback callback) {
+    const std::vector<inet::SocketAddress>& source_addresses,
+    fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
   FX_DCHECK(subtype.empty() || MdnsNames::IsValidSubtypeName(subtype));
   callback(publication_->Clone());
 }
@@ -513,7 +514,6 @@ MdnsServiceImpl::ResponderPublisher::ResponderPublisher(
       if (!MdnsNames::IsValidSubtypeName(subtype)) {
         FX_LOGS(ERROR) << "Invalid subtype " << subtype
                        << " passed in SetSubtypes event, closing connection.";
-        // TODO(fxb/71542): Should also call deleter here and at other Unpublish call sites.
         responder_ = nullptr;
         Unpublish();
         return;
@@ -592,35 +592,9 @@ void MdnsServiceImpl::ResponderPublisher::ReportSuccess(bool success) {
 
 void MdnsServiceImpl::ResponderPublisher::GetPublication(
     Mdns::PublicationCause publication_cause, const std::string& subtype,
-    const std::vector<inet::SocketAddress>& source_addresses, GetPublicationCallback callback) {
-  if (on_publication_calls_in_progress_ < kMaxOnPublicationCallsInProgress) {
-    ++on_publication_calls_in_progress_;
-    GetPublicationNow(publication_cause, subtype, source_addresses, std::move(callback));
-  } else {
-    pending_publications_.emplace(publication_cause, subtype, source_addresses,
-                                  std::move(callback));
-  }
-}
-
-void MdnsServiceImpl::ResponderPublisher::OnGetPublicationComplete() {
-  --on_publication_calls_in_progress_;
-  if (!pending_publications_.empty() &&
-      on_publication_calls_in_progress_ < kMaxOnPublicationCallsInProgress) {
-    ++on_publication_calls_in_progress_;
-    auto& entry = pending_publications_.front();
-    GetPublicationNow(entry.publication_cause_, entry.subtype_, entry.source_addresses_,
-                      std::move(entry.callback_));
-    // Note that if |GetPublicationNow| calls this method back synchronously, the pop call below
-    // would happen too late. However, the calls happen asynchronously, so we're ok.
-    pending_publications_.pop();
-  }
-}
-
-void MdnsServiceImpl::ResponderPublisher::GetPublicationNow(
-    Mdns::PublicationCause publication_cause, const std::string& subtype,
-    const std::vector<inet::SocketAddress>& source_addresses, GetPublicationCallback callback) {
+    const std::vector<inet::SocketAddress>& source_addresses,
+    fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
   FX_DCHECK(subtype.empty() || MdnsNames::IsValidSubtypeName(subtype));
-
   if (responder_) {
     responder_->OnPublication(
         fidl::To<fuchsia::net::mdns::PublicationCause>(publication_cause), subtype,
@@ -648,7 +622,6 @@ void MdnsServiceImpl::ResponderPublisher::GetPublicationNow(
           }
 
           callback(MdnsFidlUtil::Convert(publication_ptr));
-          OnGetPublicationComplete();
         });
   } else {
     FX_DCHECK(responder2_);
@@ -678,7 +651,6 @@ void MdnsServiceImpl::ResponderPublisher::GetPublicationNow(
           }
 
           callback(MdnsFidlUtil::Convert(publication_ptr));
-          OnGetPublicationComplete();
         });
   }
 }
