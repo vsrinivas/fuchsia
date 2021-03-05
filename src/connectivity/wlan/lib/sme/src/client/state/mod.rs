@@ -11,7 +11,7 @@ use {
             bss::ClientConfig,
             capabilities::derive_join_channel_and_capabilities,
             event::{self, Event},
-            info::{DisconnectInfo, DisconnectSource},
+            info::{DisconnectCause, DisconnectInfo, DisconnectMlmeEventName, DisconnectSource},
             internal::Context,
             protection::{build_protection_ie, Protection, ProtectionIe},
             report_connect_finished, AssociationFailure, ConnectFailure, ConnectResult,
@@ -532,10 +532,14 @@ impl Associated {
     ) -> Associating {
         let (mut protection, connected_duration) = self.link_state.disconnect();
 
+        let disconnect_reason = DisconnectCause {
+            mlme_event_name: DisconnectMlmeEventName::DisassociateIndication,
+            reason_code: ind.reason_code,
+        };
         let disconnect_source = if ind.locally_initiated {
-            DisconnectSource::Mlme(ind.reason_code)
+            DisconnectSource::Mlme(disconnect_reason)
         } else {
-            DisconnectSource::Ap(ind.reason_code)
+            DisconnectSource::Ap(disconnect_reason)
         };
 
         if let Some(duration) = connected_duration {
@@ -596,10 +600,14 @@ impl Associated {
     ) -> Idle {
         let (_, connected_duration) = self.link_state.disconnect();
 
+        let disconnect_reason = DisconnectCause {
+            mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+            reason_code: ind.reason_code,
+        };
         let disconnect_source = if ind.locally_initiated {
-            DisconnectSource::Mlme(ind.reason_code)
+            DisconnectSource::Mlme(disconnect_reason)
         } else {
-            DisconnectSource::Ap(ind.reason_code)
+            DisconnectSource::Ap(disconnect_reason)
         };
 
         match connected_duration {
@@ -2235,8 +2243,10 @@ mod tests {
             assert_eq!(info.last_snr, 30);
             assert_eq!(info.ssid, b"bar");
             assert_eq!(info.bssid, [8; 6]);
-            assert_variant!(info.disconnect_source, DisconnectSource::Mlme(
-                    fidl_ieee80211::ReasonCode::LeavingNetworkDeauth));
+            assert_variant!(info.disconnect_source, DisconnectSource::Mlme(DisconnectCause {
+                mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
+            }));
         });
     }
 
@@ -2259,7 +2269,10 @@ mod tests {
             assert_eq!(info.last_snr, 30);
             assert_eq!(info.ssid, b"bar");
             assert_eq!(info.bssid, [8; 6]);
-            assert_variant!(info.disconnect_source, DisconnectSource::Mlme(fidl_ieee80211::ReasonCode::ReasonInactivity));
+            assert_variant!(info.disconnect_source, DisconnectSource::Mlme(DisconnectCause {
+                mlme_event_name: DisconnectMlmeEventName::DisassociateIndication,
+                reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
+            }));
         });
     }
 
