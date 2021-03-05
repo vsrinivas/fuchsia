@@ -130,6 +130,8 @@ class Mdns : public MdnsAgent::Host {
   // Abstract base class for client-supplied publisher.
   class Publisher {
    public:
+    using GetPublicationCallback = fit::function<void(std::unique_ptr<Publication>)>;
+
     virtual ~Publisher();
 
     // Sets subtypes for the service instance.  If this |Publisher| is
@@ -159,7 +161,7 @@ class Mdns : public MdnsAgent::Host {
     // announcement or response is transmitted.
     virtual void GetPublication(PublicationCause pubication_type, const std::string& subtype,
                                 const std::vector<inet::SocketAddress>& source_addresses,
-                                fit::function<void(std::unique_ptr<Publication>)> callback) = 0;
+                                GetPublicationCallback callback) = 0;
 
    protected:
     Publisher() {}
