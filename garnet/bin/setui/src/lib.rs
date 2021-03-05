@@ -27,7 +27,6 @@ use {
     crate::input::input_controller::InputController,
     crate::inspect::inspect_broker::InspectBroker,
     crate::inspect::policy_inspect_broker::PolicyInspectBroker,
-    crate::internal::core::message as core_message,
     crate::intl::intl_controller::IntlController,
     crate::light::light_controller::LightController,
     crate::monitor::base as monitor_base,
@@ -662,7 +661,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
     policy_handler_factory: Arc<Mutex<PolicyHandlerFactoryImpl<T>>>,
 ) -> Result<(), Error> {
-    let core_messenger_factory = internal::core::message::create_hub();
     let policy_messenger_factory = internal::policy::message::create_hub();
 
     for blueprint in event_subscriber_blueprints {
@@ -682,47 +680,31 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .await
         .expect("could not create inspect");
 
-    let mut proxies = HashMap::new();
-
     // TODO(fxbug.dev/58893): make max attempts a configurable option.
     // TODO(fxbug.dev/59174): make setting proxy response timeout and retry configurable.
     for setting_type in &components {
-        proxies.insert(
+        SettingProxy::create(
             *setting_type,
-            SettingProxy::create(
-                *setting_type,
-                handler_factory.clone(),
-                messenger_factory.clone(),
-                core_messenger_factory.clone(),
-                event_messenger_factory.clone(),
-                DEFAULT_SETTING_PROXY_MAX_ATTEMPTS,
-                Some(DEFAULT_SETTING_PROXY_RESPONSE_TIMEOUT_MS.millis()),
-                true,
-            )
-            .await?
-            .0,
-        );
+            handler_factory.clone(),
+            messenger_factory.clone(),
+            event_messenger_factory.clone(),
+            DEFAULT_SETTING_PROXY_MAX_ATTEMPTS,
+            Some(DEFAULT_SETTING_PROXY_RESPONSE_TIMEOUT_MS.millis()),
+            true,
+        )
+        .await?;
     }
-
-    // Mapping from core message hub signature to setting type.
-    let mut policy_core_signatures: HashMap<core_message::Signature, SettingType> = HashMap::new();
 
     for policy_type in policies {
         let setting_type = policy_type.setting_type();
         if components.contains(&setting_type) {
-            let core_signature = PolicyProxy::create(
+            PolicyProxy::create(
                 policy_type,
                 policy_handler_factory.clone(),
                 messenger_factory.clone(),
-                core_messenger_factory.clone(),
                 policy_messenger_factory.clone(),
-                proxies
-                    .get(&setting_type)
-                    .expect(format!("{:?} proxy not found", policy_type).as_str())
-                    .clone(),
             )
             .await?;
-            policy_core_signatures.insert(core_signature, setting_type);
         }
     }
 

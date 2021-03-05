@@ -26,21 +26,15 @@ use futures::StreamExt;
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::{Payload, Request};
 use crate::handler::setting_handler;
-use crate::internal::core;
 use crate::internal::event;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::service;
-use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use fuchsia_zircon::Duration;
 
 /// An enumeration of the different client types that provide requests to
 /// setting handlers.
 #[derive(Clone, Debug)]
 enum Client {
-    /// A client from the core MessageHub to communicate with the switchboard.
-    /// The first element represents the id of the action while the second
-    /// element is the client to communicate back responses to.
-    Core(u64, core::message::MessageClient),
     /// A client from the Unified (service) MessageHub
     Service(service::message::MessageClient),
 }
@@ -66,9 +60,6 @@ impl RequestInfo {
     /// Sends the supplied result as a reply with the associated [`Client`].
     pub fn reply(&self, result: SettingHandlerResult) {
         match &self.client {
-            Client::Core(id, client) => {
-                client.reply(core::Payload::Event(SettingEvent::Response(*id, result))).send();
-            }
             Client::Service(client) => {
                 // While the switchboard is still being used, we must manually
                 // convert the ControllerError into a HandlerError if present.
@@ -87,9 +78,6 @@ impl RequestInfo {
     /// the client the request was processed.
     async fn acknowledge(&mut self) {
         match &mut self.client {
-            Client::Core(_, client) => {
-                client.acknowledge().await;
-            }
             Client::Service(client) => {
                 client.acknowledge().await;
             }
@@ -109,9 +97,6 @@ impl RequestInfo {
             .build();
 
         match &mut self.client {
-            Client::Core(_, client) => {
-                client.bind_to_recipient(fuse).await;
-            }
             Client::Service(client) => {
                 client.bind_to_recipient(fuse).await;
             }
@@ -162,13 +147,10 @@ enum ProxyRequest {
 #[derive(Clone, Debug, PartialEq)]
 enum ListenEvent {
     Restart,
-    ListenerCount(u64),
 }
 
 pub struct SettingProxy {
     setting_type: SettingType,
-
-    core_messenger_client: core::message::Messenger,
 
     client_signature: Option<service::message::Signature>,
     active_request: Option<ActiveRequest>,
@@ -209,12 +191,11 @@ impl SettingProxy {
         setting_type: SettingType,
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
         messenger_factory: service::message::Factory,
-        core_messenger_factory: core::message::Factory,
         event_messenger_factory: event::message::Factory,
         max_attempts: u64,
         request_timeout: Option<Duration>,
         retry_on_timeout: bool,
-    ) -> Result<(core::message::Signature, service::message::Signature), Error> {
+    ) -> Result<service::message::Signature, Error> {
         let (messenger, receptor) = messenger_factory
             .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
             .await
@@ -223,11 +204,6 @@ impl SettingProxy {
 
         // TODO(fxbug.dev/67536): Remove receptors below as their logic is
         // migrated to the MessageHub defined above.
-
-        let (core_client, core_receptor) =
-            core_messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
-
-        let signature = core_receptor.get_signature();
 
         let event_publisher = event::Publisher::create(
             &event_messenger_factory,
@@ -249,7 +225,6 @@ impl SettingProxy {
             pending_requests: VecDeque::new(),
             listen_requests: Vec::new(),
             has_active_switchboard_listener: false,
-            core_messenger_client: core_client,
             messenger_factory,
             messenger,
             signature: service_signature,
@@ -263,10 +238,9 @@ impl SettingProxy {
         // Main task loop for receiving and processing incoming messages.
         fasync::Task::spawn(async move {
             let receptor_fuse = receptor.fuse();
-            let core_fuse = core_receptor.fuse();
             let proxy_fuse = proxy_request_receiver.fuse();
 
-            futures::pin_mut!(core_fuse, receptor_fuse, proxy_fuse);
+            futures::pin_mut!(receptor_fuse, proxy_fuse);
 
             loop {
                 futures::select! {
@@ -274,11 +248,6 @@ impl SettingProxy {
                     // communication from the setting controller.
                     event = receptor_fuse.select_next_some() => {
                         proxy.process_service_event(event).await;
-                    }
-
-                    // Handle messages from the core messenger.
-                    core_event = core_fuse.select_next_some() => {
-                        proxy.process_core_event(core_event).await;
                     }
 
                     // Handles messages for enqueueing requests and processing
@@ -290,7 +259,7 @@ impl SettingProxy {
             }
         })
         .detach();
-        Ok((signature, service_signature))
+        Ok(service_signature)
     }
 
     async fn process_service_event(&mut self, event: service::message::MessageEvent) {
@@ -319,12 +288,6 @@ impl SettingProxy {
                     panic!("Unexpected message");
                 }
             }
-        }
-    }
-
-    async fn process_core_event(&mut self, event: core::message::MessageEvent) {
-        if let MessageEvent::Message(core::Payload::Action(action), message_client) = event {
-            self.process_action(action, message_client).await;
         }
     }
 
@@ -370,42 +333,6 @@ impl SettingProxy {
         .await;
     }
 
-    /// Interpret action from switchboard into proxy actions.
-    async fn process_action(
-        &mut self,
-        action: SettingAction,
-        mut message_client: core::message::MessageClient,
-    ) {
-        if self.setting_type != action.setting_type {
-            message_client
-                .reply(core::Payload::Event(SettingEvent::Response(
-                    action.id,
-                    Err(ControllerError::DeliveryError(action.setting_type, self.setting_type)),
-                )))
-                .send();
-            return;
-        }
-
-        match action.data {
-            SettingActionData::Request(request) => {
-                let id = self.next_request_id;
-                self.next_request_id += 1;
-                self.process_request(RequestInfo {
-                    setting_request: request,
-                    id,
-                    client: Client::Core(action.id, message_client),
-                })
-                .await;
-            }
-            SettingActionData::Listen(size) => {
-                self.request(ProxyRequest::Listen(ListenEvent::ListenerCount(size)));
-                // Inform client that the request has been processed, regardless
-                // of whether a result was produced.
-                message_client.acknowledge().await;
-            }
-        }
-    }
-
     async fn get_handler_signature(
         &mut self,
         force_create: bool,
@@ -435,13 +362,6 @@ impl SettingProxy {
         if !self.is_listening() {
             return;
         }
-
-        self.core_messenger_client
-            .message(
-                core::Payload::Event(SettingEvent::Changed(setting_info.clone())),
-                Audience::Address(core::Address::Switchboard),
-            )
-            .send();
 
         // Notify each listener on the service MessageHub.
         for request in &self.listen_requests {
@@ -549,15 +469,6 @@ impl SettingProxy {
     /// non-zero and we aren't already listening for changes or there
     /// are no more listeners and we are actively listening.
     async fn handle_listen(&mut self, event: ListenEvent) {
-        if let ListenEvent::ListenerCount(size) = event {
-            let no_more_listeners = size == 0;
-            if no_more_listeners ^ self.has_active_switchboard_listener {
-                return;
-            }
-
-            self.has_active_switchboard_listener = size > 0;
-        }
-
         self.send_listen_update(ListenEvent::Restart == event).await;
     }
 

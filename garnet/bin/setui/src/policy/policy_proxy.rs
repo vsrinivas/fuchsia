@@ -7,19 +7,15 @@ use fuchsia_async::Task;
 use futures::StreamExt;
 
 use crate::handler::base::{Error as HandlerError, Payload, Request, Response};
-use crate::internal::core;
 use crate::internal::policy;
 use crate::message::base::{filter, role, MessageEvent, MessageType, MessengerType};
 use crate::policy::base as policy_base;
 use crate::policy::base::{
     Address, PolicyHandlerFactory, PolicyType, Request as PolicyRequest, Role,
 };
-use crate::policy::policy_handler::{
-    EventTransform, PolicyHandler, RequestTransform, ResponseTransform,
-};
+use crate::policy::policy_handler::{PolicyHandler, RequestTransform, ResponseTransform};
 use crate::service;
 use crate::service::TryFromWithClient;
-use crate::switchboard::base::SettingEvent;
 use futures::lock::Mutex;
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -39,10 +35,8 @@ impl PolicyProxy {
         policy_type: PolicyType,
         handler_factory: Arc<Mutex<dyn PolicyHandlerFactory + Send + Sync>>,
         messenger_factory: service::message::Factory,
-        core_messenger_factory: core::message::Factory,
         policy_messenger_factory: policy::message::Factory,
-        setting_proxy_signature: core::message::Signature,
-    ) -> Result<core::message::Signature, Error> {
+    ) -> Result<(), Error> {
         // TODO(fxbug.dev/68489): return this receptor rather than the switchboard receptor.
         let (handler_messenger, receptor) =
             messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
@@ -99,19 +93,6 @@ impl PolicyProxy {
         let (_, service_proxy_receptor) =
             messenger_factory.create(MessengerType::Broker(Some(service_proxy_filter))).await?;
 
-        let (_, proxy_receptor) = core_messenger_factory
-            .create(MessengerType::Broker(Some(filter::Builder::single(
-                filter::Condition::Custom(Arc::new(move |message| {
-                    // Only catch messages that were sent by the setting proxy and contain a
-                    // SettingEvent. We check the message type to make sure we only capture event
-                    // messages that originate from the proxy and not ones sent as replies.
-                    message.get_author() == setting_proxy_signature
-                        && matches!(message.payload(), core::Payload::Event(_))
-                        && matches!(message.get_type(), core::message::MessageType::Origin(_))
-                })),
-            ))))
-            .await?;
-
         let (_, policy_receptor) = policy_messenger_factory
             .messenger_builder(MessengerType::Addressable(Address::Policy(policy_type)))
             .add_role(role::Signature::role(Role::PolicyHandler))
@@ -126,28 +107,16 @@ impl PolicyProxy {
             .build()
             .await?;
 
-        let (switchboard_handler_messenger, switchboard_handler_receptor) =
-            core_messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
-
-        let policy_handler = handler_factory
-            .lock()
-            .await
-            .generate(
-                policy_type,
-                handler_messenger,
-                switchboard_handler_messenger,
-                setting_proxy_signature,
-            )
-            .await?;
+        let policy_handler =
+            handler_factory.lock().await.generate(policy_type, handler_messenger).await?;
 
         let mut proxy = Self { policy_handler };
 
         Task::spawn(async move {
             let service_policy_fuse = service_policy_receptor.fuse();
             let policy_fuse = policy_receptor.fuse();
-            let proxy_fuse = proxy_receptor.fuse();
             let message_fuse = service_proxy_receptor.fuse();
-            futures::pin_mut!(policy_fuse, proxy_fuse, message_fuse, service_policy_fuse);
+            futures::pin_mut!(policy_fuse, message_fuse, service_policy_fuse);
             loop {
                 futures::select! {
                     // Handle policy messages.
@@ -176,16 +145,6 @@ impl PolicyProxy {
                         proxy.process_settings_event(message).await;
                     }
 
-                    // Handler intercepted an event sent by the setting proxy.
-                    proxy_message = proxy_fuse.select_next_some() => {
-                        if let MessageEvent::Message(core::Payload::Event(setting_event), message_client) = proxy_message
-                        {
-                            proxy
-                                .process_settings_event_switchboard(setting_event, message_client)
-                                .await;
-                        }
-                    }
-
                     // This shouldn't ever be triggered since the policy proxy (and its receptors)
                     // should be active for the duration of the service. This is just a safeguard to
                     // ensure this detached task doesn't run forever if the receptors stop somehow.
@@ -195,7 +154,7 @@ impl PolicyProxy {
         })
         .detach();
 
-        Ok(switchboard_handler_receptor.get_signature())
+        Ok(())
     }
 
     async fn process_service_policy_request(
@@ -277,30 +236,6 @@ impl PolicyProxy {
             // Handler provided a modified setting event to forward to the switchboard in place
             // of the original.
             client.propagate(Payload::Response(response).into()).send();
-        }
-    }
-
-    /// Passes the given setting event to the [`PolicyHandler`], then take an appropriate action
-    /// based on the [`EventTransform`] it returns, such as ignoring the event or forwarding the
-    /// event with a modified request.
-    ///
-    /// [`PolicyHandler`]: ../policy_handler/trait.PolicyHandler.html
-    /// [`EventTransform`]: ../policy_handler/enum.EventTransform.html
-    async fn process_settings_event_switchboard(
-        &mut self,
-        event: SettingEvent,
-        message_client: core::message::MessageClient,
-    ) {
-        let handler_result = self.policy_handler.handle_setting_event(event).await;
-        match handler_result {
-            Some(EventTransform::Event(setting_event)) => {
-                // Handler provided a modified setting event to forward to the switchboard in place
-                // of the original.
-                message_client.propagate(core::Payload::Event(setting_event)).send();
-            }
-            // Don't do anything with the message, it'll continue onwards to the switchboard as
-            // expected.
-            None => return,
         }
     }
 }

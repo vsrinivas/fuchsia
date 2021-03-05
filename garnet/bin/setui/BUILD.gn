@@ -162,7 +162,6 @@ rustc_library("lib") {
     "src/internal.rs",
     "src/internal/agent.rs",
     "src/internal/common.rs",
-    "src/internal/core.rs",
     "src/internal/event.rs",
     "src/internal/monitor.rs",
     "src/internal/policy.rs",

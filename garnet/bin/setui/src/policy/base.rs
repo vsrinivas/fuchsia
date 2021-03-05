@@ -6,7 +6,6 @@ use crate::audio::policy::{self as audio, State};
 use crate::base::SettingType;
 use crate::generate_inspect_with_info;
 use crate::handler::device_storage::DeviceStorageFactory;
-use crate::internal::core::message;
 use crate::policy::base::response::Response;
 use crate::policy::policy_handler::PolicyHandler;
 use crate::service;
@@ -141,8 +140,6 @@ pub type GenerateHandler<T> =
 pub struct Context<T: DeviceStorageFactory> {
     pub policy_type: PolicyType,
     pub service_messenger: service::message::Messenger,
-    pub messenger: message::Messenger,
-    pub setting_proxy_signature: message::Signature,
     pub storage_factory: Arc<T>,
     pub id: u64,
 }
@@ -155,8 +152,6 @@ pub trait PolicyHandlerFactory {
         &mut self,
         policy_type: PolicyType,
         service_messenger: service::message::Messenger,
-        messenger: message::Messenger,
-        setting_proxy_signature: message::Signature,
     ) -> Result<BoxedHandler, PolicyHandlerFactoryError>;
 }
 

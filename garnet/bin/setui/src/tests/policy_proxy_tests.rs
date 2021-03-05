@@ -6,7 +6,6 @@ use crate::base::{SettingInfo, SettingType, UnknownInfo as SettingUnknownInfo};
 use crate::handler::base::{Payload, Request, Response as SettingResponse};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::SettingHandlerResult;
-use crate::internal::core;
 use crate::internal::policy;
 use crate::message::base::{Audience, MessengerType};
 use crate::policy::base as policy_base;
@@ -228,15 +227,7 @@ async fn test_policy_proxy_creation() {
                 .build(),
         ),
         service::message::create_hub(),
-        core::message::create_hub(),
         policy::message::create_hub(),
-        // TODO(fxbug.dev/67967): Remove once switched over to unified MessageHub.
-        core::message::create_hub()
-            .create(MessengerType::Unbound)
-            .await
-            .expect("core messenger created")
-            .1
-            .get_signature(),
     )
     .await;
 
@@ -252,11 +243,6 @@ async fn test_policy_messages_passed_to_handler() {
     let policy_payload =
         policy_base::response::Payload::PolicyInfo(PolicyInfo::Unknown(UnknownInfo(true)));
 
-    let core_messenger_factory = core::message::create_hub();
-    let (_, setting_proxy_receptor) = core_messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("core messenger created");
     let policy_messenger_factory = policy::message::create_hub();
     // Initialize the policy proxy and a messenger to communicate with it.
     PolicyProxy::create(
@@ -266,9 +252,7 @@ async fn test_policy_messages_passed_to_handler() {
             FakePolicyHandlerBuilder::new().set_policy_response(Ok(policy_payload.clone())).build(),
         ),
         service::message::create_hub(),
-        core_messenger_factory,
         policy_messenger_factory.clone(),
-        setting_proxy_receptor.get_signature(),
     )
     .await
     .ok();
@@ -299,7 +283,6 @@ async fn test_policy_messages_passed_to_handler() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_message_pass_through() {
     let messenger_factory = service::message::create_hub();
-    let core_messenger_factory = core::message::create_hub();
     let (_, mut setting_proxy_receptor) = messenger_factory
         .create(MessengerType::Addressable(service::Address::Handler(SETTING_TYPE)))
         .await
@@ -312,15 +295,7 @@ async fn test_setting_message_pass_through() {
             FakePolicyHandlerBuilder::new().build(),
         ),
         messenger_factory.clone(),
-        core_messenger_factory.clone(),
         policy::message::create_hub(),
-        // TODO(fxbug.dev/67967): Remove once switched over to unified MessageHub.
-        core_messenger_factory
-            .create(MessengerType::Unbound)
-            .await
-            .expect("core messenger created")
-            .1
-            .get_signature(),
     )
     .await
     .ok();
@@ -384,15 +359,7 @@ async fn test_setting_message_result_replacement() {
                 .build(),
         ),
         messenger_factory.clone(),
-        core::message::create_hub(),
         policy::message::create_hub(),
-        // TODO(fxbug.dev/67967): Remove once switched over to unified MessageHub.
-        core::message::create_hub()
-            .create(MessengerType::Unbound)
-            .await
-            .expect("core messenger created")
-            .1
-            .get_signature(),
     )
     .await
     .ok();
@@ -476,15 +443,7 @@ async fn test_setting_message_payload_replacement() {
                 .build(),
         ),
         messenger_factory.clone(),
-        core::message::create_hub(),
         policy::message::create_hub(),
-        // TODO(fxbug.dev/67967): Remove once switched over to unified MessageHub.
-        core::message::create_hub()
-            .create(MessengerType::Unbound)
-            .await
-            .expect("core messenger created")
-            .1
-            .get_signature(),
     )
     .await
     .ok();
@@ -537,15 +496,7 @@ async fn test_setting_response_pass_through() {
             FakePolicyHandlerBuilder::new().build(),
         ),
         messenger_factory.clone(),
-        core::message::create_hub(),
         policy::message::create_hub(),
-        // TODO(fxbug.dev/67967): Remove once switched over to unified MessageHub.
-        core::message::create_hub()
-            .create(MessengerType::Unbound)
-            .await
-            .expect("core messenger created")
-            .1
-            .get_signature(),
     )
     .await
     .ok();
@@ -588,15 +539,7 @@ async fn test_setting_response_replace() {
                 .build(),
         ),
         messenger_factory.clone(),
-        core::message::create_hub(),
         policy::message::create_hub(),
-        // TODO(fxbug.dev/67967): Remove once switched over to unified MessageHub.
-        core::message::create_hub()
-            .create(MessengerType::Unbound)
-            .await
-            .expect("core messenger created")
-            .1
-            .get_signature(),
     )
     .await
     .ok();
@@ -655,15 +598,7 @@ async fn test_multiple_messages() {
                 .build(),
         ),
         messenger_factory.clone(),
-        core::message::create_hub(),
         policy_messenger_factory.clone(),
-        // TODO(fxbug.dev/67967): Remove once switched over to unified MessageHub.
-        core::message::create_hub()
-            .create(MessengerType::Unbound)
-            .await
-            .expect("core messenger created")
-            .1
-            .get_signature(),
     )
     .await
     .ok();

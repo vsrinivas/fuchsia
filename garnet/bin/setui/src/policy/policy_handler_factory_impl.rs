@@ -4,7 +4,6 @@
 
 use crate::base::SettingType;
 use crate::handler::device_storage::DeviceStorageFactory;
-use crate::internal::core::message;
 use crate::policy::base::{BoxedHandler, Context, PolicyHandlerFactoryError, PolicyType};
 use crate::policy::base::{GenerateHandler, PolicyHandlerFactory};
 use crate::service;
@@ -32,8 +31,6 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandl
         &mut self,
         policy_type: PolicyType,
         service_messenger: service::message::Messenger,
-        messenger: message::Messenger,
-        setting_proxy_signature: message::Signature,
     ) -> Result<BoxedHandler, PolicyHandlerFactoryError> {
         let setting_type = policy_type.setting_type();
         if !self.policies.contains(&policy_type) {
@@ -52,8 +49,6 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandl
         let context = Context {
             policy_type,
             service_messenger,
-            messenger,
-            setting_proxy_signature,
             storage_factory: self.storage_factory.clone(),
             id: self.context_id_counter.fetch_add(1, Ordering::Relaxed),
         };
