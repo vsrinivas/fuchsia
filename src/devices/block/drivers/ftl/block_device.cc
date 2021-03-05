@@ -9,6 +9,7 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/fidl.h>
+#include <zircon/status.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
 
@@ -93,8 +94,8 @@ BlockDevice::~BlockDevice() {
   ZX_ASSERT(list_is_empty(&txn_list_));
   bool volume_created = (DdkGetSize() != 0);
   if (volume_created) {
-    if (volume_->Unmount() != ZX_OK) {
-      zxlogf(ERROR, "FTL: FtlUmount() failed");
+    if (zx_status_t status = volume_->Unmount(); status != ZX_OK) {
+      zxlogf(ERROR, "FTL: FtlUmount() failed: %s", zx_status_get_string(status));
     }
   }
 }
@@ -276,7 +277,7 @@ bool BlockDevice::OnVolumeAdded(uint32_t page_size, uint32_t num_pages) {
 zx_status_t BlockDevice::Format() {
   zx_status_t status = volume_->Format();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FTL: format failed");
+    zxlogf(ERROR, "FTL: format failed: %s", zx_status_get_string(status));
   }
   return status;
 }
@@ -286,7 +287,7 @@ bool BlockDevice::InitFtl() {
       NandDriver::CreateWithCounters(&parent_, &bad_block_, &nand_counters_);
   const char* error = driver->Init();
   if (error) {
-    zxlogf(ERROR, "FTL: %s", error);
+    zxlogf(ERROR, "Failed to init FTL driver: %s", error);
     return false;
   }
   memcpy(guid_, driver->info().partition_guid, ZBI_PARTITION_GUID_LEN);
@@ -297,7 +298,7 @@ bool BlockDevice::InitFtl() {
 
   error = volume_->Init(std::move(driver));
   if (error) {
-    zxlogf(ERROR, "FTL: %s", error);
+    zxlogf(ERROR, "Failed to init FTL volume: %s", error);
     return false;
   }
 
@@ -450,7 +451,8 @@ zx_status_t BlockDevice::ReadWriteData(block_op_t* operation) {
     zxlogf(TRACE, "FTL: BLK To write %d blocks at %d :", operation->rw.length, offset);
     status = volume_->Write(offset, operation->rw.length, mapper.start());
     if (status != ZX_OK) {
-      zxlogf(ERROR, "FTL: Failed to write to ftl");
+      zxlogf(ERROR, "FTL: Failed to write %u@%u: %s", operation->rw.length, offset,
+             zx_status_get_string(status));
       return status;
     }
   }
@@ -459,7 +461,8 @@ zx_status_t BlockDevice::ReadWriteData(block_op_t* operation) {
     zxlogf(TRACE, "FTL: BLK To read %d blocks at %d :", operation->rw.length, offset);
     status = volume_->Read(offset, operation->rw.length, mapper.start());
     if (status != ZX_OK) {
-      zxlogf(ERROR, "FTL: Failed to read from ftl");
+      zxlogf(ERROR, "FTL: Failed to read %u@%u: %s", operation->rw.length, offset,
+             zx_status_get_string(status));
       return status;
     }
   }
@@ -477,7 +480,7 @@ zx_status_t BlockDevice::TrimData(block_op_t* operation) {
   zxlogf(TRACE, "FTL: BLK To trim %d blocks at %d :", operation->trim.length, offset);
   zx_status_t status = volume_->Trim(offset, operation->trim.length);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FTL: Failed to trim");
+    zxlogf(ERROR, "FTL: Failed to trim: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -487,7 +490,7 @@ zx_status_t BlockDevice::TrimData(block_op_t* operation) {
 zx_status_t BlockDevice::Flush() {
   zx_status_t status = volume_->Flush();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FTL: flush failed");
+    zxlogf(ERROR, "FTL: flush failed: %s", zx_status_get_string(status));
     return status;
   }
 
