@@ -93,7 +93,7 @@ pub const DEFAULT_SAMPLE_RATE: u32 = 48000;
 pub const DEFAULT_SESSION_ID: u64 = 0;
 
 // Highest AAC bitrate we want to transmit
-const MAX_BITRATE_AAC: u32 = 250000;
+const MAX_BITRATE_AAC: u32 = 320000;
 
 /// Pick a reasonable quality bitrate to use by default. 64k average per channel.
 const PREFERRED_BITRATE_AAC: u32 = 128000;
