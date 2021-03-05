@@ -201,10 +201,8 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
       "aml-nna",
       "sys/platform/00:00:29",  // registers device
-      /* TODO(fxb/70442): re-enable when USB is fixed
       "aml-usb-phy-v2",
       "dwc2/dwc2/usb-peripheral/function-000/cdc-eth-function",
-      */
       "mali/aml-gpu",
       "sys/platform/05:00:10/aml-canvas",
       "display/amlogic-display/display-controller",
@@ -357,8 +355,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio", "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
       "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2", "sys/platform/00:00:1e/dw-dsi",
       "display/amlogic-display/display-controller", "class/dsi-base/000", "ti-ina231-mlb/ti-ina231",
-      "ti-ina231-speakers/ti-ina231",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-112/shtv3",
+      "ti-ina231-speakers/ti-ina231", "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-112/shtv3",
       "gt6853-touch/gt6853",
 
       // Amber LED.

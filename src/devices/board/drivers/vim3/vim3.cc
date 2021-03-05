@@ -114,13 +114,11 @@ int Vim3::Thread() {
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
-  /* TODO(fxb/70442): re-enable USB when bug is fixed
   if ((status = UsbInit()) != ZX_OK) {
     zxlogf(ERROR, "UsbInit() failed: %d", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
-  */
   if ((status = CanvasInit()) != ZX_OK) {
     zxlogf(ERROR, "CanvasInit() failed: %d", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);
