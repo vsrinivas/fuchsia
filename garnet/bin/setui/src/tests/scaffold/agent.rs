@@ -1,14 +1,15 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::agent::base;
+use crate::agent;
+use crate::agent::Descriptor;
 use futures::future::BoxFuture;
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub enum Generate {
-    Sync(Arc<dyn Fn(base::Context) + Send + Sync>),
-    Async(Arc<dyn Fn(base::Context) -> BoxFuture<'static, ()> + Send + Sync>),
+    Sync(Arc<dyn Fn(agent::Context) + Send + Sync>),
+    Async(Arc<dyn Fn(agent::Context) -> BoxFuture<'static, ()> + Send + Sync>),
 }
 
 /// This blueprint allows tests to specify either an asynchronous or syncronous
@@ -16,21 +17,21 @@ pub enum Generate {
 /// scope or else the MessageHub will fail on the name collision.
 pub struct Blueprint {
     generate: Generate,
-    descriptor: base::Descriptor,
+    descriptor: Descriptor,
 }
 
 impl Blueprint {
     pub fn new(generate: Generate, component: &str) -> Self {
-        Self { generate: generate, descriptor: base::Descriptor::new(component) }
+        Self { generate: generate, descriptor: Descriptor::new(component) }
     }
 }
 
-impl base::Blueprint for Blueprint {
-    fn get_descriptor(&self) -> base::Descriptor {
+impl agent::Blueprint for Blueprint {
+    fn get_descriptor(&self) -> Descriptor {
         self.descriptor.clone()
     }
 
-    fn create(&self, context: base::Context) -> BoxFuture<'static, ()> {
+    fn create(&self, context: agent::Context) -> BoxFuture<'static, ()> {
         match &self.generate {
             Generate::Sync(func) => {
                 let func = func.clone();

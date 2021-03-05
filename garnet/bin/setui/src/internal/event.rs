@@ -28,7 +28,7 @@ pub enum Event {
 
 #[derive(PartialEq, Clone, Debug, Eq, Hash)]
 pub enum Address {
-    Agent(agent::base::Descriptor),
+    Agent(agent::Descriptor),
     SettingProxy(SettingType),
 }
 

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::base::{
-    AgentError, Context as AgentContext, Invocation, InvocationResult, Lifespan,
-};
 use crate::agent::earcons::bluetooth_handler::BluetoothHandler;
 use crate::agent::earcons::volume_change_handler::VolumeChangeHandler;
+use crate::agent::Context as AgentContext;
+use crate::agent::Lifespan;
+use crate::agent::{AgentError, Invocation, InvocationResult};
 use crate::blueprint_definition;
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::internal::agent::Payload;

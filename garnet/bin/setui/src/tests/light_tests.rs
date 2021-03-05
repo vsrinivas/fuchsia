@@ -9,7 +9,7 @@ use std::sync::Arc;
 use fidl_fuchsia_settings::{LightError, LightMarker, LightProxy};
 use futures::lock::Mutex;
 
-use crate::agent::base::BlueprintHandle;
+use crate::agent::BlueprintHandle;
 use crate::base::SettingType;
 use crate::config::base::AgentType;
 use crate::handler::base::{Context, GenerateHandler};

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::base::{AgentError, Context};
+use crate::agent::{AgentError, Context};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::internal::agent;
 use crate::internal::event;

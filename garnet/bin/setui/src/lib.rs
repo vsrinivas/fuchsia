@@ -9,7 +9,7 @@ use {
     crate::accessibility::accessibility_controller::AccessibilityController,
     crate::account::account_controller::AccountController,
     crate::agent::authority_impl::AuthorityImpl,
-    crate::agent::base::{Authority, BlueprintHandle as AgentBlueprintHandle, Lifespan},
+    crate::agent::{Authority, BlueprintHandle as AgentBlueprintHandle, Lifespan},
     crate::audio::audio_controller::AudioController,
     crate::audio::policy::audio_policy_handler::AudioPolicyHandler,
     crate::base::SettingType,

@@ -8,7 +8,7 @@
 //! ordering), the [`InspectAgent`] begins listening to requests immediately
 //! after creation.
 
-use crate::agent::base::Context;
+use crate::agent::Context;
 use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::clock;
@@ -220,7 +220,7 @@ impl InspectAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent::base::Descriptor;
+    use crate::agent::Descriptor;
     use crate::display::types::SetDisplayInfo;
     use crate::internal::agent;
     use crate::internal::event;

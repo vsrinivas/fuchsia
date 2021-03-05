@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::agent::authority_impl::AuthorityImpl;
-use crate::agent::base::{
+use crate::agent::{
     AgentError, Authority, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan,
 };
 use crate::base::SettingType;

@@ -7,7 +7,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info},
-    settings::agent::base::BlueprintHandle as AgentBlueprintHandle,
+    settings::agent::BlueprintHandle as AgentBlueprintHandle,
     settings::base::get_default_setting_types,
     settings::config::base::{get_default_agent_types, AgentType},
     settings::config::default_settings::DefaultSetting,

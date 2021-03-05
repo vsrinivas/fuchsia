@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::base::{
-    AgentError, Context as AgentContext, Invocation, InvocationResult, Lifespan,
-};
+use crate::agent::{AgentError, Context as AgentContext, Invocation, InvocationResult, Lifespan};
 use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::handler::base::{Payload as HandlerPayload, Request};

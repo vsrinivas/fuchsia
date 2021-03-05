@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::base::{Context, Descriptor, Invocation, Lifespan};
 use crate::agent::media_buttons;
+use crate::agent::Context;
+use crate::agent::Lifespan;
+use crate::agent::{Descriptor, Invocation};
 use crate::input::{ButtonType, VolumeGain};
 use crate::internal::agent;
 use crate::internal::event::{self, Event};

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::base::{Context, Descriptor, Invocation, Lifespan};
 use crate::agent::camera_watcher::CameraWatcherAgent;
+use crate::agent::{Context, Descriptor, Invocation, Lifespan};
 use crate::internal::agent;
 use crate::internal::event::{self, Event};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
