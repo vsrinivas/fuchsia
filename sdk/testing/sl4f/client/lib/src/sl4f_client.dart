@@ -66,7 +66,7 @@ class Sl4f {
     'net-if': 'net if list',
     'ps': 'ps -T',
     'top': 'top -n 1',
-    'wlan': 'wlan status',
+    'wlan': 'wlan-dev status',
   };
   static const _sl4fComponentUrl =
       'fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx';
