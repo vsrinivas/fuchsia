@@ -5,4 +5,4 @@
 name:
 dependencies:
   image: ^3.0.0-nullsafety.0
-  webdriver: ^3.0.0-nullsafety.1
+  webdriver: ^3.0.0
