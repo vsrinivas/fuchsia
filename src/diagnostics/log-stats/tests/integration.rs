@@ -22,17 +22,15 @@ async fn log_attribution() {
 
     // We expect two logs from log-stats itself:
     // - INFO: Maintaining.
-    // - WARNING: Cannot log metrics because ... (Cobalt metric specs are not provided)
+    // - INFO: Failed to open component map file ...
     let assertion = tree_assertion!(root: contains {
-        info_logs: 1u64,
-        warning_logs: 1u64,
+        info_logs: 2u64,
         logsink_logs: 2u64,
         total_logs: 2u64,
 
         by_component: {
             "fuchsia-pkg://fuchsia.com/log-stats-tests#meta/log-stats.cmx": contains {
-                info_logs: 1u64,
-                warning_logs: 1u64,
+                info_logs: 2u64,
                 total_logs: 2u64,
             }
         },
