@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/handle.h>
@@ -52,23 +53,16 @@ zx_status_t AudioDeviceStream::Open() {
   if (stream_ch_.is_valid())
     return ZX_ERR_BAD_STATE;
 
-  zx::channel local, remote;
-  auto res = zx::channel::create(0, &local, &remote);
-  if (res != ZX_OK) {
-    printf("Failed to create channel (res %d)\n", res);
-    return res;
+  auto client_end = service::Connect<audio_fidl::Device>(name());
+  if (client_end.is_error()) {
+    printf("service::Connect failed with error %s\n", client_end.status_string());
+    return client_end.status_value();
   }
-  res = fdio_service_connect(name(), remote.release());
-  if (res != ZX_OK) {
-    printf("Failed to obtain channel (res %d)\n", res);
-    return res;
-  }
-  audio_fidl::Device::SyncClient client_wrap(std::move(local));
-  audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+  auto client = fidl::BindSyncClient(std::move(client_end.value()));
+  auto channel_wrap = client.GetChannel();
   if (!channel_wrap.ok()) {
-    res = channel_wrap.status();
-    printf("GetChannel failed with error %s (res %d)\n", channel_wrap.error(), res);
-    return res;
+    printf("GetChannel failed with error %s\n", channel_wrap.status_string());
+    return channel_wrap.status();
   }
 
   stream_ch_ = std::move(channel_wrap->channel);
@@ -169,10 +163,8 @@ zx_status_t AudioDeviceStream::GetUniqueId(audio_stream_cmd_get_unique_id_resp_t
   if (out_id == nullptr)
     return ZX_ERR_INVALID_ARGS;
   auto result = audio_fidl::StreamConfig::Call::GetProperties(stream_ch_);
-  size_t size = (result->properties.unique_id().size() > sizeof(out_id->unique_id))
-                    ? sizeof(out_id->unique_id)
-                    : result->properties.unique_id().size();
-  memcpy(out_id->unique_id.data, result->properties.unique_id().data(), size);
+  memcpy(out_id->unique_id.data, result->properties.unique_id().data(),
+         std::min(result->properties.unique_id().size(), sizeof(out_id->unique_id)));
   return ZX_OK;
 }
 

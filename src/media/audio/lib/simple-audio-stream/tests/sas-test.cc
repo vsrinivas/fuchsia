@@ -182,7 +182,8 @@ TEST(SimpleAudioTest, SetAndGetGain) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client;
+  *client.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -204,7 +205,8 @@ TEST(SimpleAudioTest, WatchGainAndCloseStreamBeforeReply) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client;
+  *client.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -245,7 +247,8 @@ TEST(SimpleAudioTest, SetAndGetAgc) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client;
+  *client.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -276,7 +279,8 @@ TEST(SimpleAudioTest, SetAndGetMute) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client;
+  *client.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -315,7 +319,8 @@ TEST(SimpleAudioTest, SetMuteWhenDisabled) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudioLocal>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client;
+  *client.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -338,7 +343,8 @@ TEST(SimpleAudioTest, Enumerate1) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client_wrap;
+  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -393,7 +399,8 @@ TEST(SimpleAudioTest, Enumerate2) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudioLocal>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client_wrap;
+  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -446,7 +453,8 @@ TEST(SimpleAudioTest, CreateRingBuffer1) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client_wrap;
+  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -487,7 +495,8 @@ TEST(SimpleAudioTest, CreateRingBuffer2) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudioLocal>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client_wrap;
+  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -520,7 +529,8 @@ TEST(SimpleAudioTest, SetBadFormat1) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client_wrap;
+  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -554,7 +564,8 @@ TEST(SimpleAudioTest, SetBadFormat2) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client_wrap;
+  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -588,7 +599,8 @@ TEST(SimpleAudioTest, GetIds) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client;
+  *client.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -611,7 +623,8 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client;
+  *client.mutable_channel() = std::move(tester.FidlClient());
   // We get 2 channels from the one FIDL channel acquired via FidlClient() using GetChannel.
 
   audio_fidl::Device::ResultOf::GetChannel ch1 = client.GetChannel();
@@ -645,7 +658,8 @@ TEST(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client;
+  *client.mutable_channel() = std::move(tester.FidlClient());
   // We get 2 channels from the one FIDL channel acquired via FidlClient() using GetChannel.
   audio_fidl::Device::ResultOf::GetChannel ch1 = client.GetChannel();
   audio_fidl::Device::ResultOf::GetChannel ch2 = client.GetChannel();
@@ -703,7 +717,8 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client;
+  *client.mutable_channel() = std::move(tester.FidlClient());
   // We get 2 channels from the one FIDL channel acquired via FidlClient() using GetChannel.
   audio_fidl::Device::ResultOf::GetChannel ch1 = client.GetChannel();
   audio_fidl::Device::ResultOf::GetChannel ch2 = client.GetChannel();
@@ -743,7 +758,8 @@ TEST(SimpleAudioTest, MultipleChannelsGainState) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client;
+  *client.mutable_channel() = std::move(tester.FidlClient());
   // We get 2 channels from the one FIDL channel acquired via FidlClient() using GetChannel.
   audio_fidl::Device::ResultOf::GetChannel ch1 = client.GetChannel();
   audio_fidl::Device::ResultOf::GetChannel ch2 = client.GetChannel();
@@ -766,7 +782,8 @@ TEST(SimpleAudioTest, MultipleChannelsGainStateNotify) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client;
+  *client.mutable_channel() = std::move(tester.FidlClient());
   // We get 2 channels from the one FIDL channel acquired via FidlClient() using GetChannel.
   audio_fidl::Device::ResultOf::GetChannel ch1 = client.GetChannel();
   audio_fidl::Device::ResultOf::GetChannel ch2 = client.GetChannel();
@@ -826,7 +843,8 @@ TEST(SimpleAudioTest, RingBufferTests) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client;
+  *client.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -867,7 +885,8 @@ TEST(SimpleAudioTest, WatchPositionAndCloseRingBufferBeforeReply) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client;
+  *client.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -920,7 +939,8 @@ TEST(SimpleAudioTest, ClientCloseStreamConfigProtocol) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client_wrap;
+  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
@@ -935,21 +955,22 @@ TEST(SimpleAudioTest, ClientCloseRingBufferProtocol) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client_wrap;
+  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
   audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
   fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
   auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-  auto ret = client.CreateRingBuffer(builder.build(), std::move(remote));
+  auto ret = client.CreateRingBuffer(builder.build(), std::move(endpoints->server));
   ASSERT_OK(ret.status());
 
-  local.reset();
+  endpoints->client.reset();
 
   server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
@@ -961,18 +982,19 @@ TEST(SimpleAudioTest, ClientCloseStreamConfigProtocolWithARingBufferProtocol) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client_wrap;
+  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
   audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
   fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
   auto builder = audio_fidl::wire::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-  auto ret = client.CreateRingBuffer(builder.build(), std::move(remote));
+  auto ret = client.CreateRingBuffer(builder.build(), std::move(endpoints->server));
   ASSERT_OK(ret.status());
 
   client.mutable_channel()->reset();
@@ -987,7 +1009,8 @@ TEST(SimpleAudioTest, NonPriviledged) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  audio_fidl::Device::SyncClient client_wrap;
+  *client_wrap.mutable_channel() = std::move(tester.FidlClient());
   audio_fidl::Device::ResultOf::GetChannel ch1 = client_wrap.GetChannel();
   audio_fidl::Device::ResultOf::GetChannel ch2 = client_wrap.GetChannel();
   audio_fidl::Device::ResultOf::GetChannel ch3 = client_wrap.GetChannel();
@@ -1001,31 +1024,31 @@ TEST(SimpleAudioTest, NonPriviledged) {
 
   auto channel1 = zx::unowned_channel(ch1->channel.channel());
   audio_fidl::StreamConfig::SyncClient client1(std::move(ch1->channel));
-  zx::channel local1, remote1;
-  ASSERT_OK(zx::channel::create(0, &local1, &remote1));
-  auto ret1 = client1.CreateRingBuffer(builder.build(), std::move(remote1));
+  auto endpoints1 = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints1.status_value());
+  auto ret1 = client1.CreateRingBuffer(builder.build(), std::move(endpoints1->server));
   ASSERT_OK(ret1.status());
-  audio_fidl::RingBuffer::SyncClient ringbuffer1(std::move(local1));
+  audio_fidl::RingBuffer::SyncClient ringbuffer1(std::move(endpoints1->client));
   auto stop1 = ringbuffer1.Stop();
   ASSERT_OK(stop1.status());  // Priviledged channel.
 
   auto channel2 = zx::unowned_channel(ch2->channel.channel());
   audio_fidl::StreamConfig::SyncClient client2(std::move(ch2->channel));
-  zx::channel local2, remote2;
-  ASSERT_OK(zx::channel::create(0, &local2, &remote2));
-  auto ret2 = client2.CreateRingBuffer(builder.build(), std::move(remote2));
+  auto endpoints2 = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints2.status_value());
+  auto ret2 = client2.CreateRingBuffer(builder.build(), std::move(endpoints2->server));
   ASSERT_OK(ret2.status());
-  audio_fidl::RingBuffer::SyncClient ringbuffer2(std::move(local2));
+  audio_fidl::RingBuffer::SyncClient ringbuffer2(std::move(endpoints2->client));
   auto stop2 = ringbuffer2.Stop();
   ASSERT_NOT_OK(stop2.status());  // Non-priviledged channel.
 
   auto channel3 = zx::unowned_channel(ch3->channel.channel());
   audio_fidl::StreamConfig::SyncClient client3(std::move(ch3->channel));
-  zx::channel local3, remote3;
-  ASSERT_OK(zx::channel::create(0, &local3, &remote3));
-  auto ret3 = client3.CreateRingBuffer(builder.build(), std::move(remote3));
+  auto endpoints3 = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints3.status_value());
+  auto ret3 = client3.CreateRingBuffer(builder.build(), std::move(endpoints3->server));
   ASSERT_OK(ret3.status());
-  audio_fidl::RingBuffer::SyncClient ringbuffer3(std::move(local3));
+  audio_fidl::RingBuffer::SyncClient ringbuffer3(std::move(endpoints3->client));
   auto stop3 = ringbuffer3.Stop();
   ASSERT_NOT_OK(stop3.status());  // Non-priviledged channel.
 

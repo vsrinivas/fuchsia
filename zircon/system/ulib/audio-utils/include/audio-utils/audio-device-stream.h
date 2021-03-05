@@ -57,7 +57,9 @@ class AudioDeviceStream {
   bool IsRingBufChannelConnected() const { return IsChannelConnected(rb_ch_.channel()); }
 
   // Available for unit tests.
-  void SetStreamChannel(zx::channel channel) { stream_ch_ = std::move(channel); }
+  void SetStreamChannel(fidl::ClientEnd<audio_fidl::StreamConfig> channel) {
+    stream_ch_ = std::move(channel);
+  }
 
   const char* name() const { return name_; }
   bool input() const { return direction_ == StreamDirection::kInput; }

@@ -288,7 +288,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/virtualization/bin/guest:bin",
     "//src/virtualization/bin/guest_runner:bin",
     "//vendor/*",
-    "//zircon/system/ulib/audio-utils:audio-utils",
     "//zircon/system/ulib/audio-utils-legacy:audio-utils-legacy",
     "//zircon/system/ulib/block-client:block-client",
     "//zircon/system/ulib/c/test:cdebugdata-test",
