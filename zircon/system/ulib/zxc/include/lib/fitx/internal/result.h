@@ -27,45 +27,6 @@ class success;
 
 namespace internal {
 
-// Implicitly deletes the copy assignment operator of a subclass when T is not
-// trivially copy assignable.
-template <size_t Index, typename T, bool = std::is_trivially_copy_assignable<T>::value>
-struct modulate_copy_assignment {};
-template <size_t Index, typename T>
-struct modulate_copy_assignment<Index, T, false> {
-  constexpr modulate_copy_assignment() = default;
-  constexpr modulate_copy_assignment(const modulate_copy_assignment&) = default;
-  constexpr modulate_copy_assignment& operator=(const modulate_copy_assignment&) = delete;
-  constexpr modulate_copy_assignment(modulate_copy_assignment&&) = default;
-  constexpr modulate_copy_assignment& operator=(modulate_copy_assignment&&) = default;
-};
-
-// Implicitly deletes the move assignment operator of a subclass when T is not
-// trivially move assignable.
-template <size_t Index, typename T, bool = std::is_trivially_move_assignable<T>::value>
-struct modulate_move_assignment {};
-template <size_t Index, typename T>
-struct modulate_move_assignment<Index, T, false> {
-  constexpr modulate_move_assignment() = default;
-  constexpr modulate_move_assignment(const modulate_move_assignment&) = default;
-  constexpr modulate_move_assignment& operator=(const modulate_move_assignment&) = default;
-  constexpr modulate_move_assignment(modulate_move_assignment&&) = default;
-  constexpr modulate_move_assignment& operator=(modulate_move_assignment&&) = delete;
-};
-
-// Modulates the copy-move assignment operators of a subclass based on whether
-// the types in Ts are trivially copy-move assignable.
-template <typename IndexSequence, typename... Ts>
-struct modulate_copy_move_assignment;
-
-template <size_t... Is, typename... Ts>
-struct modulate_copy_move_assignment<std::index_sequence<Is...>, Ts...>
-    : modulate_copy_assignment<Is, Ts>..., modulate_move_assignment<Is, Ts>... {};
-
-template <typename... Ts>
-struct modulate_copy_and_move
-    : modulate_copy_move_assignment<std::index_sequence_for<Ts...>, Ts...> {};
-
 // Determines whether T has an operator-> overload and provides a method that
 // forwards its argument by reference when T has the overload, or by pointer
 // otherwise.
@@ -198,6 +159,12 @@ union error_or_value_type<E, T, storage_class_e::non_trivial> {
 
   ~error_or_value_type() {}
 
+  // The caller must manually destroy() if overwriting an existing value.
+  constexpr void copy_from(error_t, const E& e) { new (&error) E(e); }
+  constexpr void copy_from(value_t, const T& t) { new (&value) T(t); }
+  constexpr void move_from(error_t, E&& e) { new (&error) E(std::move(e)); }
+  constexpr void move_from(value_t, T&& t) { new (&value) T(std::move(t)); }
+
   constexpr void destroy(error_t) { error.E::~E(); }
   constexpr void destroy(value_t) { value.T::~T(); }
 
@@ -266,10 +233,43 @@ struct storage_type<storage_class_e::non_trivial, E, T> {
 
   constexpr storage_type() = default;
 
-  constexpr storage_type(const storage_type&) = default;
-  constexpr storage_type& operator=(const storage_type&) = default;
-  constexpr storage_type(storage_type&&) = default;
-  constexpr storage_type& operator=(storage_type&&) = default;
+  constexpr storage_type(const storage_type& other) { copy_from(other); }
+  constexpr storage_type& operator=(const storage_type& other) {
+    destroy();
+    copy_from(other);
+    return *this;
+  }
+
+  constexpr storage_type(storage_type&& other) noexcept(
+      std::is_nothrow_move_constructible<E>::value &&
+      std::is_nothrow_move_constructible<T>::value) {
+    move_from(std::move(other));
+  }
+  constexpr storage_type& operator=(storage_type&& other) noexcept(
+      std::is_nothrow_move_assignable<E>::value && std::is_nothrow_move_assignable<T>::value) {
+    destroy();
+    move_from(std::move(other));
+    return *this;
+  }
+
+  // Copy/move-constructs over this object's value. If there could be a previous value, callers must
+  // call destroy() first.
+  constexpr void copy_from(const storage_type& other) {
+    state = other.state;
+    if (state == state_e::has_value) {
+      error_or_value.copy_from(value_v, other.error_or_value.value);
+    } else if (state == state_e::has_error) {
+      error_or_value.copy_from(error_v, other.error_or_value.error);
+    }
+  }
+  constexpr void move_from(storage_type&& other) {
+    state = other.state;
+    if (state == state_e::has_value) {
+      error_or_value.move_from(value_v, std::move(other.error_or_value.value));
+    } else if (state == state_e::has_error) {
+      error_or_value.move_from(error_v, std::move(other.error_or_value.error));
+    }
+  }
 
   constexpr void destroy() {
     if (state == state_e::has_value) {
@@ -314,7 +314,7 @@ struct storage_type<storage_class, E> {
 
   constexpr storage_type() = default;
 
-  constexpr storage_type(const storage_type&) = default;
+  constexpr storage_type(const storage_type& other) = default;
   constexpr storage_type& operator=(const storage_type&) = default;
   constexpr storage_type(storage_type&&) = default;
   constexpr storage_type& operator=(storage_type&&) = default;

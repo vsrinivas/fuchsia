@@ -253,6 +253,12 @@ static_assert(!std::is_copy_constructible_v<fitx::result<move_only, move_only>>)
 static_assert(
     std::is_copy_constructible_v<fitx::result<non_trivial_copyable, non_trivial_copyable>>);
 
+static_assert(std::is_copy_assignable_v<fitx::result<copyable, copyable>>);
+static_assert(!std::is_copy_assignable_v<fitx::result<copyable, move_only>>);
+static_assert(!std::is_copy_assignable_v<fitx::result<move_only, copyable>>);
+static_assert(!std::is_copy_assignable_v<fitx::result<move_only, move_only>>);
+static_assert(std::is_copy_assignable_v<fitx::result<non_trivial_copyable, non_trivial_copyable>>);
+
 static_assert(std::is_trivially_copy_constructible_v<fitx::result<trivial, trivial>>);
 static_assert(!std::is_trivially_copy_constructible_v<fitx::result<trivial, non_trivial>>);
 static_assert(!std::is_trivially_copy_constructible_v<fitx::result<non_trivial, trivial>>);
@@ -266,6 +272,12 @@ static_assert(std::is_move_constructible_v<fitx::result<move_only, copyable>>);
 static_assert(std::is_move_constructible_v<fitx::result<move_only, move_only>>);
 static_assert(
     std::is_move_constructible_v<fitx::result<non_trivial_copyable, non_trivial_copyable>>);
+
+static_assert(std::is_move_assignable_v<fitx::result<copyable, copyable>>);
+static_assert(std::is_move_assignable_v<fitx::result<copyable, move_only>>);
+static_assert(std::is_move_assignable_v<fitx::result<move_only, copyable>>);
+static_assert(std::is_move_assignable_v<fitx::result<move_only, move_only>>);
+static_assert(std::is_move_assignable_v<fitx::result<non_trivial_copyable, non_trivial_copyable>>);
 
 static_assert(std::is_nothrow_move_constructible_v<fitx::result<copyable, copyable>>);
 static_assert(std::is_nothrow_move_constructible_v<fitx::result<copyable, move_only>>);
@@ -640,6 +652,9 @@ struct counter {
   static int assignment_count() { return copy_assignment_count + move_assignment_count; }
   static int alive_count() { return constructor_count() - destructor_count; }
 
+  static int copy_count() { return copy_constructor_count + copy_assignment_count; }
+  static int move_count() { return move_constructor_count + move_assignment_count; }
+
   inline static int default_constructor_count{0};
   inline static int non_default_constructor_count{0};
   inline static int copy_constructor_count{0};
@@ -678,6 +693,32 @@ TEST(LibZxCommon, BasicConstructorDestructor) {
 
   counter_a::reset();
   counter_b::reset();
+}
+
+TEST(LibZxCommon, Assignment) {
+  // Fill with non-zero values to prevent the compiler from optimizing the assignment to a
+  // constructor call.
+  auto result1 = get_values();
+  auto result2 = get_values();
+
+  counter_a::reset();
+  counter_b::reset();
+
+  // This should be a move assignment of the value (counter_b).
+  result1 = std::move(result2);
+  EXPECT_EQ(0, counter_a::copy_count());
+  EXPECT_EQ(0, counter_b::copy_count());
+  EXPECT_EQ(0, counter_a::move_count());
+  EXPECT_EQ(1, counter_b::move_count());
+
+  counter_b::reset();
+
+  // This should be a copy assignment of the value (counter_b).
+  result2 = result1;
+  EXPECT_EQ(0, counter_a::copy_count());
+  EXPECT_EQ(1, counter_b::copy_count());
+  EXPECT_EQ(0, counter_a::move_count());
+  EXPECT_EQ(0, counter_b::move_count());
 }
 
 TEST(LibZxCommon, Accessors) {

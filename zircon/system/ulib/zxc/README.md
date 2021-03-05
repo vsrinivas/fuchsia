@@ -85,9 +85,6 @@ value type `T`, if any. That is, it is only trivially constructible when all of
 the supplied types are trivially constructible and it is only copy constructible
 when all of the supplied types are copy constructible.
 
-The result type is only copy/move assignable when the types `E` and `T` are
-*trivially* copy/move assignable, otherwise the result is not assignable.
-
 ##### fitx::success
 
 `fitx::result<E, T?>` is implicitly constructible from `fitx::success<U?>`, when
