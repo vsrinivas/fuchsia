@@ -218,8 +218,8 @@ semantics those components expect.
 
 ### Lifecycle
 
-Every element of the [Fuchsia System Interface] (e.g., a system call or a FIDL
-message) goes through the following lifecycle:
+Every element of the [Fuchsia System Interface][Fuchsia System Interface]
+(e.g., a system call or a FIDL message) goes through the following lifecycle:
 
  1. The element is *introduced* into the platform. End-developers cannot use the
     API until Fuchsia releases an SDK with a new API level that includes that
