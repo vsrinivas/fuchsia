@@ -586,10 +586,6 @@ foreach(_target_type,
       #   run-twice-compare-outputs
       # These look like: wrapper [wrapper_args...] -- original_command_args
 
-      # TODO(shayba): fix response file issue (see below)
-      should_trace =
-          build_should_trace_actions && !defined(response_file_contents)
-
       # If the action has inputs/outputs that are not explicitly stated then
       # it will fail verification against the trace.
       # Actions that are known non-hermetic should set `hermetic_deps = false`.
@@ -603,6 +599,8 @@ foreach(_target_type,
       }
 
       # Touching this file will force all non-hermetic actions to rerun.
+      # This is useful for ensuring incremental build correctness, even in
+      # the presence of non-hermetic actions.
       if (!hermetic_deps) {
         inputs += [ "//build/tracer/force_nonhermetic_rebuild" ]
       }
@@ -614,7 +612,11 @@ foreach(_target_type,
         all_outputs_fresh = invoker.all_outputs_fresh
       }
 
-      if (!should_trace || (!hermetic_deps && !all_outputs_fresh)) {
+      # TODO(shayba): fix response file issue (see below)
+      should_trace =
+          build_should_trace_actions && (hermetic_deps || all_outputs_fresh) &&
+          !defined(response_file_contents)
+      if (!should_trace) {
         not_needed([
                      "hermetic_deps",
                      "all_outputs_fresh",
