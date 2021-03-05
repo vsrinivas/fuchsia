@@ -67,6 +67,7 @@ driver_module("nelson-module") {
     "nelson-nna.cc",
     "nelson-power.cc",
     "nelson-pwm.cc",
+    "nelson-ram.cc",
     "nelson-registers.cc",
     "nelson-sdio.cc",
     "nelson-securemem.cc",

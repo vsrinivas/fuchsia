@@ -215,6 +215,10 @@ int Nelson::Thread() {
     zxlogf(ERROR, "NnaInit failed: %d", status);
   }
 
+  if (RamCtlInit() != ZX_OK) {
+    zxlogf(ERROR, "RamCtlInit failed");
+  }
+
   // This function includes some non-trivial delays, so lets run this last
   // to avoid slowing down the rest of the boot.
   if ((status = BluetoothInit()) != ZX_OK) {

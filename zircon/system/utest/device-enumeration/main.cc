@@ -365,6 +365,8 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       // TODO(fxbug.dev/69587): Re-enable this check when the selina driver is stable.
       // "selina/selina",
       // "class/radar/000",
+
+      "sys/platform/05:05:24/ram",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
