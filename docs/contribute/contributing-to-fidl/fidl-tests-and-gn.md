@@ -4,30 +4,28 @@ This document standardizes the way we define and organize FIDL tests in the GN
 build system, respecting the following goals:
 
 *   **Name consistently**. If Rust uses `fx test fidl_rust_conformance_tests`,
-    then Go should use `fx test fidl_go_conformance_tests`. There should be no
-    need to continually look these up because they're all different.
-*   **Run what you need**. If there are multiple test executables in a given
-    category, it should be easy to only run the one you care about using `fx
-    test`.
-*   **Run on host**. Wherever possible, we should provide ways to run tests on
-    host, and in a predictable way. The quick edit-build-run cycle on host can
-    greatly improve productivity.
-*   **Follow best practices**. Our approach should be aligned with Fuchsia best
-    practices, e.g. following the fuchsia-pkg URL specification, working well
-    with `fx test`, etc.
+    then Go should use `fx test fidl_go_conformance_tests`. Consistent and
+    predictable naming provides a better developer experience.
+*   **Run what you need**. The testing workflow should make it easy to run a
+    single test component without building or running anything extra.
+*   **Run on host**. Where possible, tests should support running on host
+    (non-Fuchsia), where the edit-build-run cycles are typically much quicker.
+*   **Follow best practices**. We should follow Fuchsia best practices around
+    [using `fx test`][Run Fuchsia tests],
+    [building components][Building components], etc.
 
 ## Terminology
 
 This document uses the following terminology:
 
-*   **target**: a [GN target][gn-targets] defined in a BUILD.gn file
+*   **target**: a [GN target] defined in a BUILD.gn file
 *   **toolchain**: see `fx gn help toolchain`
 *   **host**: a developer's platform, specifically linux or mac
 *   **device**: a Fuchsia platform, either physical or emulated (i.e. qemu)
-*   **package**: a [Fuchsia package][package]; the unit of distribution in
+*   **package**: a [Fuchsia package]; the unit of distribution in
     Fuchsia
-*   **component**: a [Fuchsia component][components]; the unit of executable
-    software in Fuchsia
+*   **component**: a [Fuchsia component]; the unit of executable software in
+    Fuchsia
 
 ## Naming {#naming}
 
@@ -76,8 +74,13 @@ group("tests") {
 }
 ```
 
-These are aggregated in "tests" groups of BUILD.gn files in parent directories.
-The root "tests" group (for some portion of the codebase, e.g.
+If the directory ends in "tests", and the BUILD.gn file only defines test
+targets, the group should instead match the directory name. For example,
+foo_tests/BUILD.gn could use `group("foo_tests")`. This enables the GN label
+shorthand `//path/to/foo_tests`, equivalent to `//path/to/foo_tests:foo_tests`.
+
+These groups are aggregated in "tests" groups of BUILD.gn files in parent
+directories. The root "tests" group (for some portion of the codebase, e.g.
 src/lib/fidl/BUILD.gn) should be included in bundles/fidl/BUILD.gn. This enables
 `fx set ... --with //bundles/fidl:tests` to include all FIDL tests in the build.
 (The tests are also run in CQ because `//bundles/buildbot:core` includes
@@ -104,7 +107,7 @@ This also works for `rustc_test`, `go_test`, etc.
 ## Device tests
 
 Assume we have a `:fidl_foo_tests_bin` target that produces a `fidl_foo_tests`
-binary. To wrap this in a package, start with a `fuchsia_unittest_package`:
+binary. To wrap this in a package, use `fuchsia_unittest_package`:
 
 ```gn
 import("//src/sys/build/components.gni")
@@ -114,31 +117,14 @@ fuchsia_unittest_package("fidl_foo_tests") {
 }
 ```
 
-We can now run the test by package name or component name (they are the same in
-this case) with `fx test fidl_foo_tests`.
+We can now run the test by package name or component name (they are the same)
+with `fx test fidl_foo_tests`.
 
-For multiple device tests, collect them all in a **single package** with
-`fuchsia_test_package`. For example, suppose we split `fidl_foo_tests` into
-`fidl_foo_unit_tests` and `fidl_foo_integration_tests`:
-
-```gn
-import("//src/sys/build/components.gni")
-
-fuchsia_unittest_component("fidl_foo_unit_tests") {
-  deps = [ "fidl_foo_unit_tests_bin" ]
-}
-
-fuchsia_unittest_component("fidl_foo_integration_tests") {
-  deps = [ "fidl_foo_integration_tests_bin" ]
-}
-
-fuchsia_test_package("fidl_foo_tests") {
-  test_components = [
-    ":fidl_foo_unit_tests",
-    ":fidl_foo_integration_tests",
-  ]
-}
-```
+**Use a separate package for each test.** If unrelated test components are
+bundled in one package, running one of the tests causes the whole package to be
+rebuilt. You should only bundle multiple test components in a package if they
+are meant to be tested together, e.g. a client and server integration test. See
+[Complex topologies and integration testing] for examples.
 
 If your test requires any component features, services, etc. beyond the
 `fuchsia_unittest_component` defaults, you must write a component manifest file:
@@ -166,11 +152,8 @@ fuchsia_unittest_package("fidl_foo_tests") {
 }
 ```
 
-If you're grouping multiple components into a single `fuchsia_test_package`,
-each `fuchsia_unittest_component` needs its own manifest.
-
-For more information on package and component templates, see
-[Building components][building_components].
+For more information on package and component templates, see [Building
+components].
 
 ## Host tests
 
@@ -232,36 +215,6 @@ group("tests") {
 }
 ```
 
-Or, if the component is packaged with other tests:
-
-```gn
-import("//src/sys/build/components.gni")
-
-rustc_test("fidl_rust_conformance_tests_bin") {
-  output_name = "fidl_rust_conformance_tests"                # host test name
-  ...
-}
-
-fuchsia_unittest_component("fidl_rust_conformance_tests") {  # device test name
-  deps = [ ":fidl_rust_conformance_tests_bin" ]
-}
-
-fuchsia_test_package("fidl_rust_tests") {
-  test_components = [
-    ":fidl_rust_conformance_tests",
-    ...
-  ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [
-    ":fidl_rust_conformance_tests_bin($host_toolchain)",
-    ":fidl_rust_tests",
-  ]
-}
-```
-
 We can now run the test both ways:
 
 *   on device: `fx test fidl_rust_conformance_tests --device`
@@ -317,28 +270,9 @@ Now, we can run the test both ways:
 *   on device: `fx test fidl_hlcpp_conformance_tests --device`
 *   on host: `fx test fidl_hlcpp_conformance_tests --host`
 
-## C++ Zircon tests
-
-C++ tests in Zircon are usually defined using `zx_test`. This template behaves
-differently from most others like `test`, `rustc_test`, `go_test`, etc.: it
-appends `-test` to the binary name by default. **Do not rely on this**, for two
-reasons:
-
-1.  The [naming guidelines](#naming) require a `_tests` suffix, not `-test`.
-2.  This behaviour might change during build unification.
-
-Instead, specify the target and binary name explicitly:
-
-```gn
-zx_test("fidlc_unit_tests") {
-  output_name = "fidlc_unit_tests"  # explicit binary name
-  ...
-}
-```
-
 ## Rust unit tests
 
-Rust libraries are often defined like this:
+Rust libraries can be defined like this:
 
 ```gn
 rustc_library("baz") {
@@ -351,9 +285,8 @@ This automatically creates a `baz_test` target that builds a `baz_lib_test`
 binary. **Do not use this**, for two reasons:
 
 1.  The [naming guidelines](#naming) require a `_tests` suffix, not `_test`.
-2.  It will be
-    [deprecated](https://fuchsia.googlesource.com/fuchsia/+/9d9f092f2b30598c3929bd30d0058d4e052bb0f4/build/rust/rustc_library.gni#91)
-    soon.
+2.  It can be confusing and might be [deprecated][with_unit_tests] in the
+    future.
 
 Instead of `with_unit_tests`, write a separate `rustc_test` target with an
 appropriate name:
@@ -384,7 +317,7 @@ We should have test targets for the leaves:
 *   `fx test fidl_rust_conformance_tests`
 *   `fx test fidl_rust_integration_tests`
 
-We should **not** make additional targets for running various subsets of the
+We should **not** make additional packages for running various subsets of the
 tests. Using `fx test`, we can already
 
 *   run all tests: `fx test //path/to/fidl/rust`
@@ -393,18 +326,20 @@ tests. Using `fx test`, we can already
 
 ## References
 
-*   [Source code layout][source_code_layout]
-*   [Building components][building_components]
-*   [Run Fuchsia tests][run_fuchsia_tests]
-*   [Fuchsia component manifest][component_manifest]
-*   [Fuchsia package URLs][package_url]
+*   [Source code layout]
+*   [Building components]
+*   [Run Fuchsia tests]
+*   [Fuchsia component manifest]
+*   [Fuchsia package URLs]
 
 <!-- xrefs -->
-[gn-targets]: https://gn.googlesource.com/gn/+/HEAD/docs/language.md#Targets
-[package]: /docs/concepts/packages/package.md
-[components]: /docs/concepts/components/v2
-[run_fuchsia_tests]: /docs/development/testing/run_fuchsia_tests.md
-[component_manifest]: /docs/concepts/components/v1/component_manifests.md
-[package_url]: /docs/concepts/packages/package_url.md
-[source_code_layout]: /docs/concepts/source_code/layout.md
-[building_components]: /docs/development/components/build.md
+[GN target]: https://gn.googlesource.com/gn/+/HEAD/docs/language.md#Targets
+[Fuchsia package]: /docs/concepts/packages/package.md
+[Fuchsia component]: /docs/concepts/components/v2
+[Run Fuchsia tests]: /docs/development/testing/run_fuchsia_tests.md
+[Fuchsia component manifest]: /docs/concepts/components/v1/component_manifests.md
+[Fuchsia package URLs]: /docs/concepts/packages/package_url.md
+[Source code layout]: /docs/concepts/source_code/layout.md
+[Building components]: /docs/development/components/build.md
+[Complex topologies and integration testing]: /docs/concepts/testing/v2/v2_integration_testing.md
+[with_unit_tests]: https://fuchsia.googlesource.com/fuchsia/+/9d9f092f2b30598c3929bd30d0058d4e052bb0f4/build/rust/rustc_library.gni#91

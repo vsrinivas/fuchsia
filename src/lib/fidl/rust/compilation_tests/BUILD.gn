@@ -19,7 +19,7 @@ fidl("fidl.rust.test.compilation.compose") {
   public_deps = [ ":fidl.rust.test.compilation" ]
 }
 
-group("tests") {
+group("compilation_tests") {
   testonly = true
   deps = [
     ":fidl.rust.test.compilation-rustc",

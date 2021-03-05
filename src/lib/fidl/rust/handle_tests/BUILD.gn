@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
 
 handle_test_sources = [
   "src/channel.rs",
@@ -22,10 +23,15 @@ if (is_fuchsia) {
   handle_test_deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
 }
 
-rustc_test("fidl_rust_handle_tests") {
+rustc_test("fidl_rust_handle_tests_bin") {
+  output_name = "fidl_rust_handle_tests"
   edition = "2018"
   sources = handle_test_sources
   deps = handle_test_deps
+}
+
+fuchsia_unittest_package("fidl_rust_handle_tests") {
+  deps = [ ":fidl_rust_handle_tests_bin" ]
 }
 
 # Also build as a library for use in overnet tests.
@@ -33,4 +39,12 @@ rustc_library("fidl_handle_tests") {
   edition = "2018"
   sources = handle_test_sources
   deps = handle_test_deps
+}
+
+group("handle_tests") {
+  testonly = true
+  deps = [
+    ":fidl_rust_handle_tests",
+    ":fidl_rust_handle_tests_bin($host_toolchain)",
+  ]
 }
