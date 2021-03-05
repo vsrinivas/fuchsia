@@ -514,7 +514,7 @@ func (w *lastWriteSaver) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
+func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, stdout, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
 	command, err := commandForTest(&test, true, "", t.perTestTimeout)
 	if err != nil {
 		return nil, err
@@ -544,7 +544,12 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _
 		return nil, ctx.Err()
 	}
 
-	success, err := runtests.TestPassed(ctx, io.MultiReader(bytes.NewReader(lastWrite.buf), t.socket), test.Name)
+	success, err := runtests.TestPassed(ctx, io.TeeReader(
+		// See comment above lastWrite declaration.
+		io.MultiReader(bytes.NewReader(lastWrite.buf), t.socket),
+		// To capture stdout.
+		stdout),
+		test.Name)
 
 	if err != nil {
 		return nil, err

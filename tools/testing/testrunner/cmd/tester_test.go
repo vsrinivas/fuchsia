@@ -540,8 +540,9 @@ func TestSerialTester(t *testing.T) {
 
 	t.Run("test passes", func(t *testing.T) {
 		errs := make(chan error)
+		var stdout bytes.Buffer
 		go func() {
-			_, err := tester.Test(ctx, test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
+			_, err := tester.Test(ctx, test, &stdout, ioutil.Discard, "unused-out-dir")
 			errs <- err
 		}()
 
@@ -565,6 +566,10 @@ func TestSerialTester(t *testing.T) {
 			if err != nil {
 				t.Error("test unexpectedly failed")
 			}
+		}
+		stdoutBytes := stdout.Bytes()
+		if !bytes.Contains(stdoutBytes, []byte(startedAndSucceded)) {
+			t.Errorf("Expected stdout to contain %q, got %q", startedAndSucceded, string(stdoutBytes))
 		}
 	})
 	t.Run("test fails", func(t *testing.T) {
