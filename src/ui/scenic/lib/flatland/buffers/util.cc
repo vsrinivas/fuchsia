@@ -77,7 +77,7 @@ void SetClientConstraintsAndWaitForAllocated(
 fuchsia::sysmem::BufferCollectionSyncPtr CreateClientPointerWithConstraints(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token, uint32_t image_count, uint32_t width,
-    uint32_t height, fuchsia::sysmem::BufferUsage usage,
+    uint32_t height, fuchsia::sysmem::BufferUsage usage, fuchsia::sysmem::PixelFormatType format,
     std::optional<fuchsia::sysmem::BufferMemoryConstraints> memory_constraints) {
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   zx_status_t status =
@@ -101,8 +101,7 @@ fuchsia::sysmem::BufferCollectionSyncPtr CreateClientPointerWithConstraints(
   image_constraints.color_space[0] =
       fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
 
-  // Compatible with ZX_PIXEL_FORMAT_RGB_x888 and ZX_PIXEL_FORMAT_ARGB_8888.
-  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.type = format;
   image_constraints.pixel_format.has_format_modifier = true;
   image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
 

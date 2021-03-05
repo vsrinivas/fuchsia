@@ -25,15 +25,13 @@ escher::GpuMemPtr CreateGPUMem(const vk::Device& device, vk::MemoryAllocateInfo*
 namespace flatland {
 
 vk::ImageCreateInfo GpuImageInfo::NewVkImageCreateInfo(uint32_t width, uint32_t height,
+                                                       vk::Format format,
                                                        vk::ImageUsageFlags usage) const {
   vk::ImageCreateInfo create_info;
   create_info.imageType = vk::ImageType::e2D;
   create_info.extent = vk::Extent3D{width, height, 1};
   create_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
-
-  // Hardcode a single viable pixel format. We want to be able to test every single possible
-  // format that is allowed into Flatland, and so we start with just one.
-  create_info.format = vk::Format::eB8G8R8A8Unorm;
+  create_info.format = format;
   create_info.mipLevels = 1;
   create_info.arrayLayers = 1;
   create_info.samples = vk::SampleCountFlagBits::e1;
@@ -65,16 +63,9 @@ GpuImageInfo GpuImageInfo::New(const vk::Device& device, const vk::DispatchLoade
     return GpuImageInfo();
   }
 
-  // Currently only support a single format.
-  FX_DCHECK(info.settings.image_format_constraints.pixel_format.type ==
-            fuchsia::sysmem::PixelFormatType::BGRA32);
-
-  // Get a handle to the vmo and extract the size of its buffer.
-  zx::vmo vmo;
-  zx_status_t status = info.buffers[index].vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
-  FX_DCHECK(status == ZX_OK);
+  // Grab the size of the vmo buffer.
   uint64_t vmo_size;
-  status = vmo.get_size(&vmo_size);
+  auto status = info.buffers[index].vmo.get_size(&vmo_size);
   FX_DCHECK(status == ZX_OK);
 
   auto collection_properties =

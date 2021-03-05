@@ -51,6 +51,10 @@ class VkRenderer final : public Renderer {
               const std::vector<ImageMetadata>& images,
               const std::vector<zx::event>& release_fences = {}) override;
 
+  // |Renderer|.
+  zx_pixel_format_t ChoosePreferredPixelFormat(
+      const std::vector<zx_pixel_format_t>& available_formats) const override;
+
   // Wait for all gpu operations to complete.
   void WaitIdle();
 
@@ -62,10 +66,11 @@ class VkRenderer final : public Renderer {
                           vk::ImageUsageFlags usage);
 
   // The function ExtractImage() creates an escher Image from a sysmem collection vmo.
-  escher::ImagePtr ExtractImage(ImageMetadata metadata, vk::ImageUsageFlags usage);
+  escher::ImagePtr ExtractImage(ImageMetadata metadata, vk::Format format,
+                                vk::ImageUsageFlags usage);
 
   // ExtractTexture() is a wrapper function to ExtractImage().
-  escher::TexturePtr ExtractTexture(ImageMetadata metadata);
+  escher::TexturePtr ExtractTexture(ImageMetadata metadata, vk::Format format);
 
   // Escher is how we access Vulkan.
   escher::EscherWeakPtr escher_;

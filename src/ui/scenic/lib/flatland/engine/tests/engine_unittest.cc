@@ -79,6 +79,7 @@ class EngineTest : public EngineTestBase {
   }
 
  protected:
+  const zx_pixel_format_t kPixelFormat = ZX_PIXEL_FORMAT_RGB_x888;
   std::unique_ptr<flatland::MockDisplayController> mock_display_controller_;
   std::shared_ptr<flatland::MockRenderer> renderer_;
   std::unique_ptr<flatland::Engine> engine_;
@@ -148,7 +149,7 @@ TEST_F(EngineTest, ImageIsValidAfterReleaseBufferCollection) {
     }
   });
 
-  const sysmem_util::GlobalBufferCollectionId kGlobalBufferCollectionId = 15;
+  const auto kGlobalBufferCollectionId = sysmem_util::GenerateUniqueBufferCollectionId();
 
   // Import buffer collection.
   EXPECT_CALL(*mock, ImportBufferCollection(kGlobalBufferCollectionId, _, _))
@@ -169,7 +170,7 @@ TEST_F(EngineTest, ImageIsValidAfterReleaseBufferCollection) {
   // Import image.
   ImageMetadata image_metadata = ImageMetadata{
       .collection_id = kGlobalBufferCollectionId,
-      .identifier = 1,
+      .identifier = sysmem_util::GenerateUniqueImageId(),
       .vmo_index = 0,
       .width = 128,
       .height = 256,
@@ -375,7 +376,7 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
   // Add an image.
   ImageMetadata parent_image_metadata = ImageMetadata{
       .collection_id = kGlobalBufferCollectionId,
-      .identifier = 1,
+      .identifier = sysmem_util::GenerateUniqueImageId(),
       .vmo_index = 0,
       .width = 128,
       .height = 256,
@@ -395,7 +396,7 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
   // Add an image.
   ImageMetadata child_image_metadata = ImageMetadata{
       .collection_id = kGlobalBufferCollectionId,
-      .identifier = 2,
+      .identifier = sysmem_util::GenerateUniqueImageId(),
       .vmo_index = 1,
       .width = 512,
       .height = 1024,
@@ -528,7 +529,8 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
 
   EXPECT_CALL(*mock, ApplyConfig()).WillOnce(Return());
 
-  engine_->AddDisplay(display_id, {parent_root_handle, resolution}, sysmem_allocator_.get(),
+  engine_->AddDisplay(display_id, {parent_root_handle, resolution, {kPixelFormat}},
+                      sysmem_allocator_.get(),
                       /*num_vmos*/ 0);
 
   engine_->RenderFrame();

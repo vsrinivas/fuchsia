@@ -77,7 +77,8 @@ VK_TEST_F(MemoryTest, SimpleTest) {
                                                 vk_collection, i);
     EXPECT_TRUE(gpu_info.GetGpuMem());
     EXPECT_TRUE(gpu_info.p_extension());
-    auto vk_image_create_info = gpu_info.NewVkImageCreateInfo(kWidth, kHeight, usage);
+    auto vk_image_create_info =
+        gpu_info.NewVkImageCreateInfo(kWidth, kHeight, vk::Format::eB8G8R8A8Srgb, usage);
     EXPECT_EQ(vk_image_create_info.extent, vk::Extent3D(kWidth, kHeight, 1));
     EXPECT_TRUE(vk_image_create_info.pNext);
   }
@@ -236,9 +237,9 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
   EXPECT_TRUE(gpu_info.GetGpuMem());
 
   // Create an image from the server side collection.
-  auto image =
-      image_utils::NewImage(vk_device, gpu_info.NewVkImageCreateInfo(kWidth, kHeight, usage),
-                            gpu_info.GetGpuMem(), resource_recycler);
+  auto image = image_utils::NewImage(
+      vk_device, gpu_info.NewVkImageCreateInfo(kWidth, kHeight, vk::Format::eB8G8R8A8Srgb, usage),
+      gpu_info.GetGpuMem(), resource_recycler);
 
   // The returned image should not be null and should have the
   // width and height specified above.
@@ -246,7 +247,7 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
   if (image) {
     EXPECT_EQ(image->width(), kWidth);
     EXPECT_EQ(image->height(), kHeight);
-    EXPECT_EQ(image->vk_format(), vk::Format::eB8G8R8A8Unorm);
+    EXPECT_EQ(image->vk_format(), vk::Format::eB8G8R8A8Srgb);
     EXPECT_EQ(image->size(), kWidth * kHeight * 4);
   }
 

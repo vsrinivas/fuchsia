@@ -44,6 +44,8 @@ class Display {
   uint64_t display_id() { return display_id_; };
   uint32_t width_in_px() { return width_in_px_; };
   uint32_t height_in_px() { return height_in_px_; };
+
+  // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
   const std::vector<zx_pixel_format_t>& pixel_formats() const { return pixel_formats_; }
 
   // Event signaled by DisplayManager when ownership of the display

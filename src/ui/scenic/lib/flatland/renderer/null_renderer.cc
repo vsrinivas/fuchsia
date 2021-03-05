@@ -147,4 +147,15 @@ void NullRenderer::Render(const ImageMetadata& render_target,
   }
 }
 
+zx_pixel_format_t NullRenderer::ChoosePreferredPixelFormat(
+    const std::vector<zx_pixel_format_t>& available_formats) const {
+  for (const auto& format : available_formats) {
+    if (format == ZX_PIXEL_FORMAT_ARGB_8888) {
+      return format;
+    }
+  }
+  FX_DCHECK(false) << "Preferred format is not available.";
+  return ZX_PIXEL_FORMAT_NONE;
+}
+
 }  // namespace flatland

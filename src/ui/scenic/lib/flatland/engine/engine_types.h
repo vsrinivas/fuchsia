@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_TYPES_H_
-#define SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_TYPES_H_
+#ifndef SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_TYPES_H_
+#define SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_TYPES_H_
 
 #include <fuchsia/hardware/display/cpp/fidl.h>
+#include <zircon/pixelformat.h>
 
 #include <functional>
 
@@ -23,6 +24,7 @@ namespace flatland {
 struct DisplayInfo {
   TransformHandle transform;
   glm::uvec2 pixel_scale;
+  std::vector<zx_pixel_format_t> formats;
 };
 
 // The data that gets forwarded either to the display or the software renderer. The lengths
@@ -60,4 +62,4 @@ struct DisplaySrcDstFrames {
 
 }  // namespace flatland
 
-#endif  // SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_TYPES_H_
+#endif  // SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_TYPES_H_

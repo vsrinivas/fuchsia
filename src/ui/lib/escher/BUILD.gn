@@ -185,8 +185,6 @@ template("escher_library") {
       "impl/vulkan_utils.h",
       "impl/z_sort.cc",
       "impl/z_sort.h",
-      "material/color_utils.cc",
-      "material/color_utils.h",
       "material/material.cc",
       "material/material.h",
       "math/lerp.h",

@@ -49,6 +49,10 @@ class NullRenderer final : public Renderer {
               const std::vector<ImageMetadata>& images,
               const std::vector<zx::event>& release_fences = {}) override;
 
+  // |Renderer|.
+  zx_pixel_format_t ChoosePreferredPixelFormat(
+      const std::vector<zx_pixel_format_t>& available_formats) const override;
+
  private:
   // This mutex is used to protect access to |collection_map_| and |image_map|.
   std::mutex lock_;

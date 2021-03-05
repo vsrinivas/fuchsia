@@ -77,6 +77,8 @@ class EnginePixelTest : public EngineTestBase {
   }
 
  protected:
+  const zx_pixel_format_t kPixelFormat = ZX_PIXEL_FORMAT_ARGB_8888;
+
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   std::unique_ptr<async::Executor> executor_;
   std::unique_ptr<display::DisplayManager> display_manager_;
@@ -199,9 +201,9 @@ class EnginePixelTest : public EngineTestBase {
 
     auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
     fuchsia::sysmem::BufferCollectionSyncPtr texture_collection =
-        CreateClientPointerWithConstraints(sysmem_allocator_.get(),
-                                           std::move(texture_tokens.local_token), num_vmos, width,
-                                           height, buffer_usage, memory_constraints);
+        CreateClientPointerWithConstraints(
+            sysmem_allocator_.get(), std::move(texture_tokens.local_token), num_vmos, width, height,
+            buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32, memory_constraints);
 
     // Have the client wait for buffers allocated so it can populate its information
     // struct with the vmo data.
@@ -271,9 +273,9 @@ class EnginePixelTest : public EngineTestBase {
     }
 
     uint32_t capture_stride = ZX_ALIGN(width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888), 64);
-    uint32_t buffer_stride = ZX_ALIGN(width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_ARGB_8888), 64);
-    uint32_t buffer_width_bytes = width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_ARGB_8888);
+    uint32_t buffer_stride = ZX_ALIGN(width * ZX_PIXEL_FORMAT_BYTES(kPixelFormat), 64);
     uint32_t capture_width_bytes = width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888);
+    uint32_t buffer_width_bytes = width * ZX_PIXEL_FORMAT_BYTES(kPixelFormat);
     size_t buf_idx = 0;
 
 #ifdef PLATFORM_ASTRO
@@ -372,7 +374,7 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
 
   // Import the texture to the engine.
   auto image_metadata = ImageMetadata{.collection_id = kTextureCollectionId,
-                                      .identifier = 1,
+                                      .identifier = sysmem_util::GenerateUniqueImageId(),
                                       .vmo_index = 0,
                                       .width = kTextureWidth,
                                       .height = kTextureHeight,
@@ -386,7 +388,9 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
   const TransformHandle image_handle = session.graph().CreateTransform();
   session.graph().AddChild(root_handle, image_handle);
   engine->AddDisplay(display->display_id(),
-                     {root_handle, glm::uvec2(display->width_in_px(), display->height_in_px())},
+                     {.transform = root_handle,
+                      .pixel_scale = glm::uvec2(display->width_in_px(), display->height_in_px()),
+                      .formats = {kPixelFormat}},
                      sysmem_allocator_.get(), /*num_vmos*/ 0);
 
   // Setup the uberstruct data.
@@ -493,11 +497,13 @@ VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
   }
 
   fuchsia::sysmem::BufferCollectionInfo_2 render_target_info;
-  auto render_target_collection_id = engine->AddDisplay(
-      display->display_id(),
-      {TransformHandle(), glm::vec2(display->width_in_px(), display->height_in_px())},
-      sysmem_allocator_.get(),
-      /*num_vmos*/ 2, &render_target_info);
+  auto render_target_collection_id =
+      engine->AddDisplay(display->display_id(),
+                         {.transform = TransformHandle(),
+                          .pixel_scale = glm::vec2(display->width_in_px(), display->height_in_px()),
+                          .formats = {kPixelFormat}},
+                         sysmem_allocator_.get(),
+                         /*num_vmos*/ 2, &render_target_info);
   EXPECT_NE(render_target_collection_id, 0U);
 
   // Now we can finally render.
@@ -625,11 +631,13 @@ VK_TEST_F(EnginePixelTest, OverlappingTransparencyTest) {
   }
 
   fuchsia::sysmem::BufferCollectionInfo_2 render_target_info;
-  auto render_target_collection_id = engine->AddDisplay(
-      display->display_id(),
-      {TransformHandle(), glm::vec2(display->width_in_px(), display->height_in_px())},
-      sysmem_allocator_.get(),
-      /*num_vmos*/ 2, &render_target_info);
+  auto render_target_collection_id =
+      engine->AddDisplay(display->display_id(),
+                         {.transform = TransformHandle(),
+                          .pixel_scale = glm::vec2(display->width_in_px(), display->height_in_px()),
+                          .formats = {kPixelFormat}},
+                         sysmem_allocator_.get(),
+                         /*num_vmos*/ 2, &render_target_info);
   EXPECT_NE(render_target_collection_id, 0U);
 
   // Now we can finally render.

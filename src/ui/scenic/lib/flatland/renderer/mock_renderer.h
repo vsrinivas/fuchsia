@@ -32,6 +32,9 @@ class MockRenderer : public Renderer {
 
   MOCK_METHOD4(Render, void(const ImageMetadata&, const std::vector<Rectangle2D>&,
                             const std::vector<ImageMetadata>&, const std::vector<zx::event>&));
+
+  MOCK_CONST_METHOD1(ChoosePreferredPixelFormat,
+                     zx_pixel_format_t(const std::vector<zx_pixel_format_t>&));
 };
 
 }  // namespace flatland

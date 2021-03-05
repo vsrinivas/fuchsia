@@ -16,7 +16,26 @@
 
 namespace flatland {
 
+namespace {
+
+// TODO(fxbug.dev/71344): We shouldn't need to provide the display controller with a pixel format.
 const zx_pixel_format_t kDefaultImageFormat = ZX_PIXEL_FORMAT_ARGB_8888;
+
+// TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
+fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_format_t format) {
+  switch (format) {
+    // These two Zircon formats correspond to the Sysmem BGRA32 format.
+    case ZX_PIXEL_FORMAT_RGB_x888:
+    case ZX_PIXEL_FORMAT_ARGB_8888:
+      return fuchsia::sysmem::PixelFormatType::BGRA32;
+    case ZX_PIXEL_FORMAT_BGR_888x:
+    case ZX_PIXEL_FORMAT_ABGR_8888:
+      return fuchsia::sysmem::PixelFormatType::R8G8B8A8;
+  }
+  FX_CHECK(false) << "Unsupported Zircon pixel format: " << format;
+  return fuchsia::sysmem::PixelFormatType::INVALID;
+}
+}  // anonymous namespace
 
 Engine::Engine(std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
                const std::shared_ptr<Renderer>& renderer, RenderDataFunc render_data_func)
@@ -61,10 +80,8 @@ bool Engine::ImportBufferCollection(
     return false;
   }
 
-  // TODO(fxbug.dev/61974): Find a way to query what formats are compatible with a particular
-  // display.
-  fuchsia::hardware::display::ImageConfig image_config = {.pixel_format = kDefaultImageFormat};
-
+  // The pixel format doesn't matter here when importing to the display.
+  fuchsia::hardware::display::ImageConfig image_config;
   std::unique_lock<std::mutex> lock(lock_);
   auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
                                                     std::move(sync_token), image_config);
@@ -103,13 +120,11 @@ bool Engine::ImportBufferImage(const ImageMetadata& metadata) {
     return false;
   }
 
+  // TODO(fxbug.dev/71344): Pixel format should be ignored when using sysmem. We do not want
+  // to have to rely on this kDefaultImageFormat.
   uint64_t display_image_id;
   fuchsia::hardware::display::ImageConfig image_config = {
-      .width = metadata.width,
-      .height = metadata.height,
-      // TODO(fxbug.dev/61974): Find a way to query what formats are compatible with a particular
-      // display. Right now we hardcode ARGB_8888 to match the format used in tests for textures.
-      .pixel_format = kDefaultImageFormat};
+      .width = metadata.width, .height = metadata.height, .pixel_format = kDefaultImageFormat};
   zx_status_t import_image_status = ZX_OK;
 
   // Scope the lock.
@@ -201,6 +216,8 @@ void Engine::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle, I
   // the flatland code.
   auto transform = fuchsia::hardware::display::Transform::IDENTITY;
 
+  // TODO(fxbug.dev/71344): Pixel format should be ignored when using sysmem. We do not want to have
+  // to deal with this default image format.
   fuchsia::hardware::display::ImageConfig image_config = {
       .width = src.width, .height = src.height, .pixel_format = kDefaultImageFormat};
 
@@ -334,6 +351,11 @@ sysmem_util::GlobalBufferCollectionId Engine::AddDisplay(
   const uint32_t kWidth = info.pixel_scale.x;
   const uint32_t kHeight = info.pixel_scale.y;
 
+  // Grab the best pixel format that the renderer prefers given the list of available formats on
+  // the display.
+  FX_DCHECK(info.formats.size());
+  auto pixel_format = renderer_->ChoosePreferredPixelFormat(info.formats);
+
   display_info_map_[display_id] = std::move(info);
   auto& display_engine_data = display_engine_data_map_[display_id];
 
@@ -378,18 +400,17 @@ sysmem_util::GlobalBufferCollectionId Engine::AddDisplay(
                                                           std::move(renderer_token));
   FX_DCHECK(result);
 
-  // TODO(fxbug.dev/61974): Find a way to query what formats are compatible with a particular
-  // display.
-  fuchsia::hardware::display::ImageConfig image_config = {.pixel_format = kDefaultImageFormat};
+  fuchsia::hardware::display::ImageConfig image_config;
+  image_config.pixel_format = pixel_format;
   result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
                                                std::move(display_token), image_config);
   FX_DCHECK(result);
 
   // Finally set the engine constraints.
   auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
-  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr =
-      CreateClientPointerWithConstraints(sysmem_allocator, std::move(engine_token), num_vmos,
-                                         kWidth, kHeight, buffer_usage, memory_constraints);
+  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr = CreateClientPointerWithConstraints(
+      sysmem_allocator, std::move(engine_token), num_vmos, kWidth, kHeight, buffer_usage,
+      ConvertZirconFormatToSysmemFormat(pixel_format), memory_constraints);
 
   // Have the client wait for buffers allocated so it can populate its information
   // struct with the vmo data.

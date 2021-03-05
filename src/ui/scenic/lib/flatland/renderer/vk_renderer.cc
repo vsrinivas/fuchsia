@@ -4,27 +4,68 @@
 
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 
-#include <zircon/pixelformat.h>
-
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/render_funcs.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 
-namespace escher {
 namespace {
 
-TexturePtr CreateDepthTexture(Escher* escher, const ImagePtr& output_image) {
-  TexturePtr depth_buffer;
-  RenderFuncs::ObtainDepthTexture(
+// Highest priority format first.
+const vk::Format kPreferredImageFormats[] = {
+    vk::Format::eR8G8B8A8Srgb,
+    vk::Format::eB8G8R8A8Srgb,
+};
+
+// Returns the corresponding Vulkan image format to use given the provided
+// Zircon image format.
+// TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
+static vk::Format ConvertToVkFormat(zx_pixel_format_t pixel_format) {
+  switch (pixel_format) {
+    // These two Zircon formats correspond to the Sysmem BGRA32 format.
+    case ZX_PIXEL_FORMAT_RGB_x888:
+    case ZX_PIXEL_FORMAT_ARGB_8888:
+      return vk::Format::eB8G8R8A8Srgb;
+    // These two Zircon formats correspond to the Sysmem R8G8B8A8 format.
+    case ZX_PIXEL_FORMAT_BGR_888x:
+    case ZX_PIXEL_FORMAT_ABGR_8888:
+      return vk::Format::eR8G8B8A8Srgb;
+  }
+  FX_CHECK(false) << "Unsupported Zircon pixel format: " << pixel_format;
+  return vk::Format::eUndefined;
+}
+
+// Returns the corresponding Vulkan image format to use given the provided
+// Sysmem image format.
+static vk::Format ConvertToVkFormat(fuchsia::sysmem::PixelFormatType pixel_format) {
+  switch (pixel_format) {
+    // BGRA32 is compatible with ZX_PIXEL_FORMAT_RGB_x888:
+    // and ZX_PIXEL_FORMAT_ARGB_8888. Those Zircon formats
+    // are then compatible with vk::Format::eB8G8R8A8Srgb.
+    case fuchsia::sysmem::PixelFormatType::BGRA32:
+      return vk::Format::eB8G8R8A8Srgb;
+    // R8G8B8A8  is compatible with ZX_PIXEL_FORMAT_ABGR_8888
+    // and ZX_PIXEL_FORMAT_BGR_888x. Those Zircon formats are
+    // then compatible with vk::Format::eR8G8B8A8Srgb.
+    case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
+      return vk::Format::eR8G8B8A8Srgb;
+    default:
+      FX_CHECK(false) << "Unsupported Sysmem pixel format.";
+      return vk::Format::eUndefined;
+  }
+}
+
+static escher::TexturePtr CreateDepthTexture(escher::Escher* escher,
+                                             const escher::ImagePtr& output_image) {
+  escher::TexturePtr depth_buffer;
+  escher::RenderFuncs::ObtainDepthTexture(
       escher, output_image->use_protected_memory(), output_image->info(),
       escher->device()->caps().GetMatchingDepthStencilFormat().value, depth_buffer);
   return depth_buffer;
 }
 
 }  // anonymous namespace
-}  // namespace escher
 
 namespace flatland {
 
@@ -92,8 +133,18 @@ bool VkRenderer::RegisterCollection(
     return sysmem_util::kInvalidId;
   }
 
-  auto vk_constraints =
-      escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eB8G8R8A8Unorm, usage);
+  std::vector<vk::ImageCreateInfo> create_infos;
+  for (const auto& format : kPreferredImageFormats) {
+    create_infos.push_back(escher::RectangleCompositor::GetDefaultImageConstraints(format, usage));
+  }
+
+  vk::ImageConstraintsInfoFUCHSIA image_constraints_info;
+  image_constraints_info.createInfoCount = create_infos.size();
+  image_constraints_info.pCreateInfos = create_infos.data();
+  image_constraints_info.pFormatConstraints = nullptr;
+  image_constraints_info.minBufferCount = 1;
+  image_constraints_info.minBufferCountForDedicatedSlack = 0;
+  image_constraints_info.minBufferCountForSharedSlack = 0;
 
   // Create a duped vulkan token.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
@@ -110,6 +161,9 @@ bool VkRenderer::RegisterCollection(
 
   // Create the sysmem buffer collection. We do this before creating the vulkan collection below,
   // since New() checks if the incoming token is of the wrong type/malicious.
+  //
+  // TODO(fxbug.dev/71336): Remove this collection and grab all necessary information using the
+  // Vulkan Fuchsia extension API.
   auto result = BufferCollectionInfo::New(sysmem_allocator, std::move(token));
   if (result.is_error()) {
     FX_LOGS(ERROR) << "Unable to register collection.";
@@ -123,13 +177,13 @@ bool VkRenderer::RegisterCollection(
     buffer_collection_create_info.collectionToken = vulkan_token.Unbind().TakeChannel().release();
     vk_collection = escher::ESCHER_CHECKED_VK_RESULT(
         vk_device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader));
-    auto vk_result =
-        vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, vk_constraints, vk_loader);
+    auto vk_result = vk_device.setBufferCollectionImageConstraintsFUCHSIA(
+        vk_collection, image_constraints_info, vk_loader);
     FX_DCHECK(vk_result == vk::Result::eSuccess);
   }
 
-  // Multiple threads may be attempting to read/write from |collection_map_| so we
-  // lock this function here.
+  // Multiple threads may be attempting to read/write from |collection_map_| and
+  // |vk_collection_map_| so we lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
   std::unique_lock<std::mutex> lock(lock_);
   collection_map_[collection_id] = std::move(result.value());
@@ -184,14 +238,17 @@ bool VkRenderer::ImportBufferImage(const ImageMetadata& metadata) {
     return false;
   }
 
+  auto vk_format = ConvertToVkFormat(image_constraints.pixel_format.type);
+
   if (metadata.is_render_target) {
-    auto image = ExtractImage(metadata, escher::RectangleCompositor::kRenderTargetUsageFlags);
+    auto image =
+        ExtractImage(metadata, vk_format, escher::RectangleCompositor::kRenderTargetUsageFlags);
     image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
     render_target_map_[metadata.identifier] = image;
-    depth_target_map_[metadata.identifier] = escher::CreateDepthTexture(escher_.get(), image);
+    depth_target_map_[metadata.identifier] = CreateDepthTexture(escher_.get(), image);
     pending_render_targets_.insert(metadata.identifier);
   } else {
-    texture_map_[metadata.identifier] = ExtractTexture(metadata);
+    texture_map_[metadata.identifier] = ExtractTexture(metadata, vk_format);
     pending_textures_.insert(metadata.identifier);
   }
   return true;
@@ -207,7 +264,8 @@ void VkRenderer::ReleaseBufferImage(sysmem_util::GlobalImageId image_id) {
   }
 }
 
-escher::ImagePtr VkRenderer::ExtractImage(ImageMetadata metadata, vk::ImageUsageFlags usage) {
+escher::ImagePtr VkRenderer::ExtractImage(ImageMetadata metadata, vk::Format format,
+                                          vk::ImageUsageFlags usage) {
   TRACE_DURATION("flatland", "VkRenderer::ExtractImage");
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
@@ -228,7 +286,7 @@ escher::ImagePtr VkRenderer::ExtractImage(ImageMetadata metadata, vk::ImageUsage
 
   // Create and return an escher image.
   auto image_ptr = escher::image_utils::NewImage(
-      vk_device, gpu_info.NewVkImageCreateInfo(metadata.width, metadata.height, usage),
+      vk_device, gpu_info.NewVkImageCreateInfo(metadata.width, metadata.height, format, usage),
       gpu_info.GetGpuMem(), escher_->resource_recycler());
   FX_DCHECK(image_ptr);
   return image_ptr;
@@ -247,8 +305,8 @@ void VkRenderer::DeregisterRenderTargetCollection(
   ReleaseBufferCollection(collection_id);
 }
 
-escher::TexturePtr VkRenderer::ExtractTexture(ImageMetadata metadata) {
-  auto image = ExtractImage(metadata, escher::RectangleCompositor::kTextureUsageFlags);
+escher::TexturePtr VkRenderer::ExtractTexture(ImageMetadata metadata, vk::Format format) {
+  auto image = ExtractImage(metadata, format, escher::RectangleCompositor::kTextureUsageFlags);
   auto texture = escher::Texture::New(escher_->resource_recycler(), image, vk::Filter::eNearest);
   FX_DCHECK(texture);
   return texture;
@@ -345,6 +403,20 @@ void VkRenderer::Render(const ImageMetadata& render_target,
 
   // Submit the commands and wait for them to finish.
   frame->EndFrame(semaphores, nullptr);
+}
+
+zx_pixel_format_t VkRenderer::ChoosePreferredPixelFormat(
+    const std::vector<zx_pixel_format_t>& available_formats) const {
+  for (auto preferred_format : kPreferredImageFormats) {
+    for (zx_pixel_format_t format : available_formats) {
+      vk::Format vk_format = ConvertToVkFormat(format);
+      if (vk_format == preferred_format) {
+        return format;
+      }
+    }
+  }
+  FX_DCHECK(false) << "Preferred format is not available.";
+  return ZX_PIXEL_FORMAT_NONE;
 }
 
 void VkRenderer::WaitIdle() { escher_->vk_device().waitIdle(); }

@@ -45,7 +45,7 @@ struct ImageMetadata {
   bool operator==(const ImageMetadata& meta) const {
     return collection_id == meta.collection_id && vmo_index == meta.vmo_index &&
            width == meta.width && height == meta.height &&
-           has_transparency == meta.has_transparency;
+           has_transparency == meta.has_transparency && is_render_target == meta.is_render_target;
   }
 };
 

@@ -56,6 +56,7 @@ fuchsia::sysmem::BufferCollectionSyncPtr CreateClientPointerWithConstraints(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token, uint32_t image_count = 1,
     uint32_t width = 64, uint32_t height = 32, fuchsia::sysmem::BufferUsage usage = kNoneUsage,
+    fuchsia::sysmem::PixelFormatType format = fuchsia::sysmem::PixelFormatType::BGRA32,
     std::optional<fuchsia::sysmem::BufferMemoryConstraints> memory_constraints = std::nullopt);
 
 // Maps a sysmem vmo's bytes into host memory that can be accessed via a callback function. The

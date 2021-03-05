@@ -15,10 +15,13 @@
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
 
+#include <zircon/pixelformat.h>
+
+#include "src/ui/lib/escher/geometry/types.h"
+
 #include <glm/mat3x3.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
-#include "src/ui/lib/escher/geometry/types.h"
 
 namespace flatland {
 
@@ -65,6 +68,11 @@ class Renderer : public BufferCollectionImporter {
                       const std::vector<Rectangle2D>& rectangles,
                       const std::vector<ImageMetadata>& images,
                       const std::vector<zx::event>& release_fences = {}) = 0;
+
+  // Returns the pixel format that the renderer prefers to use for render targets.
+  // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t
+  virtual zx_pixel_format_t ChoosePreferredPixelFormat(
+      const std::vector<zx_pixel_format_t>& available_formats) const = 0;
 
   virtual ~Renderer() = default;
 };

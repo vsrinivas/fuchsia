@@ -530,7 +530,8 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
       sysmem_allocator_.get(), std::move(tokens.local_token),
       /*image_count*/ 1,
       /*width*/ 60,
-      /*height*/ 40, buffer_usage, std::make_optional(memory_constraints));
+      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
+      std::make_optional(memory_constraints));
 
   auto target_id = sysmem_util::GenerateUniqueBufferCollectionId();
 
@@ -543,7 +544,8 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
       sysmem_allocator_.get(), std::move(target_tokens.local_token),
       /*image_count*/ 1,
       /*width*/ 60,
-      /*height*/ 40, buffer_usage, std::make_optional(memory_constraints));
+      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
+      std::make_optional(memory_constraints));
 
   // Have the client wait for buffers allocated so it can populate its information
   // struct with the vmo data.
@@ -691,7 +693,8 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
       sysmem_allocator_.get(), std::move(tokens.local_token),
       /*image_count*/ 2,
       /*width*/ 60,
-      /*height*/ 40, buffer_usage, std::make_optional(memory_constraints));
+      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
+      std::make_optional(memory_constraints));
 
   auto target_id = sysmem_util::GenerateUniqueBufferCollectionId();
   result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
@@ -703,7 +706,8 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
       sysmem_allocator_.get(), std::move(target_tokens.local_token),
       /*image_count*/ 1,
       /*width*/ 60,
-      /*height*/ 40, buffer_usage, std::make_optional(memory_constraints));
+      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
+      std::make_optional(memory_constraints));
 
   // Have the client wait for buffers allocated so it can populate its information
   // struct with the vmo data.
@@ -799,37 +803,53 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   // Get a raw pointer from the client collection's vmo that represents the render target
   // and read its values. This should show that the renderable was rendered to the center
   // of the render target, with its associated texture.
-  MapHostPointer(client_target_info, render_target.vmo_index,
-                 [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
-                   // Flush the cache before reading back target image.
-                   EXPECT_EQ(ZX_OK,
-                             zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
-                                            ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+  MapHostPointer(
+      client_target_info, render_target.vmo_index,
+      [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+        // Flush the cache before reading back target image.
+        EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
+                                        ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
 
-                   // Make sure the pixels are in the right order give that we rotated
-                   // the rectangle.
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 3), glm::ivec4(255, 0, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 4), glm::ivec4(255, 0, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 3), glm::ivec4(127, 255, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 4), glm::ivec4(127, 255, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 3), glm::ivec4(127, 255, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 4), glm::ivec4(127, 255, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 3), glm::ivec4(127, 255, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 4), glm::ivec4(127, 255, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 10, 3), glm::ivec4(0, 255, 0, 128));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 10, 4), glm::ivec4(0, 255, 0, 128));
+        // Directly reading the vmo values does not unmap the sRGB image values back
+        // into a linear space. So we have to do that conversion here before we do
+        // any value comparisons. This conversion could be done automatically if we were
+        // doing a Vulkan read on the vk::Image directly and not a sysmem read of the vmo,
+        // but we don't have direct access to the images in the Renderer.
+        uint8_t linear_vals[num_bytes];
+        for (uint32_t i = 0; i < num_bytes; i++) {
+          // Do not de-encode the alpha value.
+          if ((i + 1) % 4 == 0) {
+            linear_vals[i] = vmo_host[i];
+            continue;
+          }
+          float lin_val = std::powf((float(vmo_host[i]) / float(0xFF)), 2.2f);
+          linear_vals[i] = lin_val * 255U;
+        }
 
-                   // Make sure the remaining pixels are black.
-                   uint32_t black_pixels = 0;
-                   for (uint32_t y = 0; y < kTargetHeight; y++) {
-                     for (uint32_t x = 0; x < kTargetWidth; x++) {
-                       auto col = GetPixel(vmo_host, kTargetWidth, x, y);
-                       if (col == glm::ivec4(0, 0, 0, 0))
-                         black_pixels++;
-                     }
-                   }
-                   EXPECT_EQ(black_pixels, kTargetWidth * kTargetHeight - 10U);
-                 });
+        // Make sure the pixels are in the right order give that we rotated
+        // the rectangle.
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 6, 3), glm::ivec4(255, 0, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 6, 4), glm::ivec4(255, 0, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 7, 3), glm::ivec4(128, 255, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 7, 4), glm::ivec4(128, 255, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 8, 3), glm::ivec4(128, 255, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 8, 4), glm::ivec4(128, 255, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 9, 3), glm::ivec4(128, 255, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 9, 4), glm::ivec4(128, 255, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 10, 3), glm::ivec4(0, 255, 0, 128));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 10, 4), glm::ivec4(0, 255, 0, 128));
+
+        // Make sure the remaining pixels are black.
+        uint32_t black_pixels = 0;
+        for (uint32_t y = 0; y < kTargetHeight; y++) {
+          for (uint32_t x = 0; x < kTargetWidth; x++) {
+            auto col = GetPixel(vmo_host, kTargetWidth, x, y);
+            if (col == glm::ivec4(0, 0, 0, 0))
+              black_pixels++;
+          }
+        }
+        EXPECT_EQ(black_pixels, kTargetWidth * kTargetHeight - 10U);
+      });
 }
 
 }  // namespace flatland
