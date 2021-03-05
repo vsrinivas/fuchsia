@@ -23,11 +23,15 @@ pub mod portmgr;
 mod servicemgr;
 
 use {
+    crate::address::LifIpAddr,
     crate::config::InterfaceType,
     crate::lifmgr::{LIFProperties, LIFType},
     crate::portmgr::PortId,
-    fidl_fuchsia_net as fnet, fidl_fuchsia_net_name as fname, fidl_fuchsia_net_stack as stack,
-    fidl_fuchsia_netstack as netstack, fidl_fuchsia_router_config as netconfig,
+    fidl_fuchsia_net as fnet, fidl_fuchsia_net_interfaces as fnet_interfaces,
+    fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext, fidl_fuchsia_net_name as fname,
+    fidl_fuchsia_router_config as netconfig,
+    std::collections::HashMap,
+    std::convert::TryFrom as _,
     std::sync::atomic::{AtomicUsize, Ordering},
 };
 
@@ -162,45 +166,27 @@ impl DeviceState {
         self.hal.get_netstack_dns_server_watcher()
     }
 
-    /// Returns the underlying event streams associated with the open channels to fuchsia.net.stack
-    /// and fuchsia.netstack.
-    pub fn take_event_streams(
+    /// Informs network manager of a network interface watcher event.
+    pub async fn update_state_for_interface_watcher_event(
         &mut self,
-    ) -> (stack::StackEventStream, netstack::NetstackEventStream) {
-        self.hal.take_event_streams()
-    }
-
-    /// Informs network manager of an external event from fuchsia.net.stack containing updates to
-    /// properties associated with an interface. OnInterfaceStatusChange event is raised when an
-    /// interface is enabled/disabled, connected/disconnected, or added/removed.
-    pub async fn update_state_for_stack_event(
-        &mut self,
-        event: stack::StackEvent,
+        event: fnet_interfaces::Event,
     ) -> error::Result<()> {
         match event {
-            stack::StackEvent::OnInterfaceStatusChange { info } => {
-                match self.hal.get_interface(info.id).await {
-                    Some(iface) => self.notify_lif_added_or_updated(iface),
-                    None => Ok(()),
-                }
+            fnet_interfaces::Event::Added(properties)
+            | fnet_interfaces::Event::Existing(properties) => {
+                let properties = fnet_interfaces_ext::Properties::try_from(properties)
+                    .map_err(error::Lif::InvalidProperties)?;
+                let () = self.notify_lif_added(properties)?;
             }
-        }
-    }
-
-    /// Informs network manager of an external event from fuchsia.netstack containing updates to
-    /// properties associated with an interface.
-    pub async fn update_state_for_netstack_event(
-        &mut self,
-        event: netstack::NetstackEvent,
-    ) -> error::Result<()> {
-        match event {
-            netstack::NetstackEvent::OnInterfacesChanged { interfaces } => {
-                interfaces.into_iter().try_for_each(|iface| {
-                    let i = &iface;
-                    self.notify_lif_added_or_updated(i.into())
-                })
+            fnet_interfaces::Event::Changed(changed) => {
+                info!("property change {:?}", changed);
             }
+            fnet_interfaces::Event::Removed(removed_id) => {
+                info!("interface {} removed", removed_id);
+            }
+            fnet_interfaces::Event::Idle(fnet_interfaces::Empty {}) => {}
         }
+        Ok(())
     }
 
     /// Restores the `topo_path`'s configured packet filters.
@@ -448,40 +434,49 @@ impl DeviceState {
         Ok(())
     }
 
-    /// Update internal state with information about an LIF that was added or updated externally.
-    /// When an interface not known before is found, it will add it.
-    /// If it's a know interface, it will log the new operational state.
-    fn notify_lif_added_or_updated(&mut self, iface: hal::Interface) -> error::Result<()> {
-        match self.lif_manager.lif_at_port(iface.id) {
-            Some(lif) => log_property_change(lif, iface),
-            None => self.notify_lif_added(iface)?,
-        };
-        Ok(())
-    }
-
     /// Update internal state with information about an LIF that was added externally.
-    fn notify_lif_added(&mut self, iface: hal::Interface) -> error::Result<()> {
-        if iface.get_address_v4().is_none() {
+    fn notify_lif_added(
+        &mut self,
+        fnet_interfaces_ext::Properties {
+            id,
+            name,
+            addresses,
+            ..
+        }: fnet_interfaces_ext::Properties,
+    ) -> error::Result<()> {
+        let (v4_addr, v6_addrs) = addresses.into_iter().fold(
+            (None, Vec::new()),
+            |(mut v4, mut v6), fnet_interfaces_ext::Address { addr }| {
+                match addr.addr {
+                    fnet::IpAddress::Ipv4(_) => {
+                        if v4.is_none() {
+                            v4 = Some(LifIpAddr::from(&addr));
+                        }
+                    }
+                    fnet::IpAddress::Ipv6(_) => v6.push(LifIpAddr::from(&addr)),
+                }
+                (v4, v6)
+            },
+        );
+        let v4_addr = if let Some(v4_addr) = v4_addr {
+            v4_addr
+        } else {
             return Ok(());
-        }
-        let port = iface.id;
+        };
+        let port = PortId::from(id);
         self.port_manager.use_port(port);
         let l = lifmgr::LIF::new(
             self.version,
             LIFType::WAN,
-            &iface.topo_path,
-            iface.id,
-            vec![iface.id],
+            &name,
+            port,
+            vec![port],
             0, // vlan
             Some(lifmgr::LIFProperties {
-                dhcp: if iface.dhcp_client_enabled {
-                    lifmgr::Dhcp::Client
-                } else {
-                    lifmgr::Dhcp::None
-                },
+                dhcp: lifmgr::Dhcp::None,
                 dhcp_config: None,
-                address_v4: iface.get_address_v4(),
-                address_v6: iface.get_address_v6(),
+                address_v4: Some(v4_addr),
+                address_v6: v6_addrs,
                 enabled: true,
             }),
         )
@@ -495,24 +490,28 @@ impl DeviceState {
         })?;
         // TODO(guzt): This should ideally compare metrics or be manually settable when there are
         // multiple WAN ports.
-        if let Some(addr) = iface.get_address_v4() {
-            self.service_manager.set_global_ip_nat(addr, port)
-        }
+        let () = self.service_manager.set_global_ip_nat(v4_addr, port);
         Ok(())
     }
 
     /// Populate state based on lower layers.
-    pub async fn populate_state(&mut self) -> error::Result<()> {
+    pub async fn populate_state(&mut self) -> error::Result<fnet_interfaces::WatcherProxy> {
         for p in self.hal.ports().await?.iter() {
             self.add_port(p.id, &p.path, self.version());
         }
-        self.hal
-            .interfaces()
-            .await?
-            .into_iter()
-            .try_for_each(|iface| self.notify_lif_added(iface))?;
+        let watcher = self.hal.create_interface_watcher()?;
+        let () = fnet_interfaces_ext::existing(
+            fnet_interfaces_ext::event_stream(watcher.clone()),
+            HashMap::new(),
+        )
+        .await
+        .map_err(error::Hal::GetExistingInterfacesFailed)?
+        // TODO(https://github.com/rust-lang/rust/issues/75294) Use into_values() when stabilized.
+        .into_iter()
+        .map(|(_, p): (u64, _)| self.notify_lif_added(p))
+        .collect::<error::Result<()>>()?;
         self.version += 1;
-        Ok(())
+        Ok(watcher)
     }
 
     /// Adds a new port.
@@ -572,14 +571,14 @@ impl DeviceState {
         })?;
         if reserved.len() > 1 {
             // Multiple ports, bridge them.
-            let i = self.hal.create_bridge(reserved.clone()).await.or_else(|e| {
+            let id = self.hal.create_bridge(reserved.clone()).await.or_else(|e| {
                 self.release_ports(&reserved);
                 Err(e)
             })?;
             // LIF ID is associated with the bridge.
-            l.set_pid(i.id);
+            let () = l.set_pid(id);
         } else {
-            l.set_pid(reserved[0]);
+            let () = l.set_pid(reserved[0]);
         }
         let r = self.lif_manager.add_lif(&l);
         if let Err(e) = r {
@@ -792,19 +791,6 @@ impl DeviceState {
     }
 }
 
-/// Log that the lif properties have changed.
-///
-/// This will be later use to update the operational state, but not the configuration state.
-/// (we are not currently caching operational state, just querying for it).
-fn log_property_change(lif: &mut lifmgr::LIF, iface: hal::Interface) {
-    let properties = lif.properties();
-    info!("log_property_change {:?} {:?}", iface.id, iface.name);
-    let new_properties: lifmgr::LIFProperties = iface.into();
-    if properties != &new_properties {
-        info!("Properties have changed {:?}: new properties {:?}", properties, new_properties);
-    }
-}
-
 /// Represents the version of the configuration associated to a device object (i.e. an
 /// interface, and ACL, etc). It should only be updated when configuration state is updated. It
 /// should never be updated due to operational state changes.
@@ -866,6 +852,8 @@ mod tests {
     use crate::address::LifIpAddr;
     use fidl_fuchsia_net as net;
     use fuchsia_async as fasync;
+    use matches::assert_matches;
+    use net_declare::fidl_subnet;
     use std::net::IpAddr;
 
     #[test]
@@ -900,39 +888,27 @@ mod tests {
         assert_eq!(d.lif_manager.all_lifs().count(), 0);
     }
 
-    fn net_interface_with_flags(
-        port: u32,
-        addr: [u8; 4],
-        dhcp: bool,
-        enabled: bool,
-    ) -> netstack::NetInterface {
-        let mut flags = netstack::Flags::empty();
-        if enabled {
-            flags |= netstack::Flags::Up;
+    fn interface_properties(
+        port: u64,
+        addr: Option<net::Subnet>,
+        online: bool,
+    ) -> fnet_interfaces::Properties {
+        fnet_interfaces::Properties {
+            id: Some(port),
+            name: Some(port.to_string()),
+            device_class: Some(fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {})),
+            online: Some(online),
+            addresses: Some(addr.map_or_else(Vec::new, |a| {
+                vec![fnet_interfaces::Address { addr: Some(a), ..fnet_interfaces::Address::EMPTY }]
+            })),
+            has_default_ipv4_route: Some(false),
+            has_default_ipv6_route: Some(false),
+            ..fnet_interfaces::Properties::EMPTY
         }
-        if dhcp {
-            flags |= netstack::Flags::Dhcp;
-        }
-        netstack::NetInterface {
-            id: port,
-            flags,
-            features: fidl_fuchsia_hardware_ethernet::Features::empty(),
-            configuration: 0,
-            name: port.to_string(),
-            addr: net::IpAddress::Ipv4(net::Ipv4Address { addr }),
-            netmask: net::IpAddress::Ipv4(net::Ipv4Address { addr: [255, 255, 255, 0] }),
-            broadaddr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 255] }),
-            ipv6addrs: vec![],
-            hwaddr: [1, 2, 3, 4, 5, port as u8].to_vec(),
-        }
-    }
-
-    fn net_interface(port: u32, addr: [u8; 4]) -> netstack::NetInterface {
-        net_interface_with_flags(port, addr, true, true)
     }
 
     #[fuchsia_async::run_until_stalled(test)]
-    async fn test_update_state_for_netstack_event() {
+    async fn test_update_state_for_interface_watcher_event() {
         let mut device_state = DeviceState::new(
             hal::NetCfg::new().unwrap(),
             packet_filter::PacketFilter::start().unwrap(),
@@ -953,12 +929,14 @@ mod tests {
         assert_eq!(ports.len(), 2);
 
         // Netstack informs network manager of a new interface at port 5 with ip 1.2.3.4.
-        assert!(device_state
-            .update_state_for_netstack_event(netstack::NetstackEvent::OnInterfacesChanged {
-                interfaces: vec![net_interface(5, [1, 2, 3, 4])],
-            },)
-            .await
-            .is_ok());
+        assert_matches!(
+            device_state
+                .update_state_for_interface_watcher_event(fnet_interfaces::Event::Added(
+                    interface_properties(5, Some(fidl_subnet!("1.2.3.4/24")), true)
+                ))
+                .await,
+            Ok(())
+        );
         // Port 5 should now be marked used.
         assert!(
             !device_state.port_manager.port_available(&hal::PortId::from(5)).unwrap(),
@@ -979,12 +957,14 @@ mod tests {
         }
 
         // Netstack informs network manager of a new interface at port 4.
-        assert!(device_state
-            .update_state_for_netstack_event(netstack::NetstackEvent::OnInterfacesChanged {
-                interfaces: vec![net_interface(4, [3, 4, 5, 6])],
-            },)
-            .await
-            .is_ok());
+        assert_matches!(
+            device_state
+                .update_state_for_interface_watcher_event(fnet_interfaces::Event::Added(
+                    interface_properties(4, Some(fidl_subnet!("3.4.5.6/24")), true)
+                ))
+                .await,
+            Ok(())
+        );
         // Assert that network manager now knows about the new interface and updates to the other
         // interface.
         {
@@ -995,7 +975,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_until_stalled(test)]
-    async fn test_dont_update_state_for_netstack_event_without_ip() {
+    async fn test_dont_update_state_for_interface_watcher_event_without_ip() {
         let mut device_state = DeviceState::new(
             hal::NetCfg::new().unwrap(),
             packet_filter::PacketFilter::start().unwrap(),
@@ -1005,15 +985,14 @@ mod tests {
             port_id: hal::PortId::from(5),
             path: "path".to_string(),
         });
-        assert!(device_state
-            .update_state_for_netstack_event(netstack::NetstackEvent::OnInterfacesChanged {
-                interfaces: vec![
-                    net_interface_with_flags(5, [0, 0, 0, 0], false, true),
-                    net_interface_with_flags(5, [0, 0, 0, 0], true, false),
-                ],
-            },)
-            .await
-            .is_ok());
+        assert_matches!(
+            device_state
+                .update_state_for_interface_watcher_event(fnet_interfaces::Event::Added(
+                    interface_properties(5, None, true)
+                ))
+                .await,
+            Ok(())
+        );
         // Port should still be free.
         assert!(device_state.port_manager.port_available(&hal::PortId::from(5)).unwrap());
         assert_eq!(device_state.lifs(LIFType::WAN).next(), None);

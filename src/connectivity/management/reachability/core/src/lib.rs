@@ -9,8 +9,8 @@ mod ping;
 extern crate log;
 pub use ping::{ping_fut, IcmpPinger, Pinger};
 use {
-    anyhow::Error,
-    fidl_fuchsia_net_stack as stack, fidl_fuchsia_netstack as netstack,
+    fidl_fuchsia_hardware_network, fidl_fuchsia_net_interfaces as fnet_interfaces,
+    fidl_fuchsia_net_interfaces_ext::{self as fnet_interfaces_ext},
     fuchsia_inspect::Inspector,
     fuchsia_zircon::{self as zx},
     inspect::InspectInfo,
@@ -21,7 +21,6 @@ use {
 
 const IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS: &str = "8.8.8.8";
 const IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS: &str = "2001:4860:4860::8888";
-const PROBE_PERIOD_IN_SEC: i64 = 60;
 
 /// `Stats` keeps the monitoring service statistic counters.
 #[derive(Debug, Default, Clone)]
@@ -82,6 +81,8 @@ impl std::fmt::Display for Proto {
 /// `PortType` is the type of port backing the L3 interface.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PortType {
+    /// Unknown.
+    Unknown,
     /// EthernetII or 802.3.
     Ethernet,
     /// Wireless LAN based on 802.11.
@@ -95,6 +96,21 @@ pub enum PortType {
 impl Default for PortType {
     fn default() -> Self {
         PortType::Ethernet
+    }
+}
+
+impl From<fnet_interfaces::DeviceClass> for PortType {
+    fn from(device_class: fnet_interfaces::DeviceClass) -> Self {
+        match device_class {
+            fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {}) => PortType::Loopback,
+            fnet_interfaces::DeviceClass::Device(device_class) => match device_class {
+                fidl_fuchsia_hardware_network::DeviceClass::Ethernet => PortType::Ethernet,
+                fidl_fuchsia_hardware_network::DeviceClass::Wlan => PortType::WiFi,
+                fidl_fuchsia_hardware_network::DeviceClass::Ppp
+                | fidl_fuchsia_hardware_network::DeviceClass::Bridge
+                | fidl_fuchsia_hardware_network::DeviceClass::Unknown => PortType::Unknown,
+            },
+        }
     }
 }
 
@@ -241,11 +257,6 @@ fn fix_state_on_change(old: &NetworkInfo, new: &mut NetworkInfo) -> bool {
     new.previous_state = old.state;
     true
 }
-/// Trait to set a periodic timer that calls `Monitor::timer_event`
-/// every `duration`.
-pub trait Timer {
-    fn periodic(&self, duration: zx::Duration, id: Option<u64>);
-}
 
 /// `Monitor` monitors the reachability state.
 pub struct Monitor {
@@ -254,7 +265,6 @@ pub struct Monitor {
     system_state: HashMap<Proto, (Id, NetworkInfo)>,
     stats: Stats,
     pinger: Box<dyn Pinger>,
-    timer: Option<Box<dyn Timer>>,
     inspector: Option<&'static Inspector>,
     system_node: Option<InspectInfo>,
     nodes: HashMap<Id, InspectInfo>,
@@ -262,7 +272,7 @@ pub struct Monitor {
 
 impl Monitor {
     /// Create the monitoring service.
-    pub fn new(pinger: Box<dyn Pinger>) -> Result<Self, Error> {
+    pub fn new(pinger: Box<dyn Pinger>) -> anyhow::Result<Self> {
         let hal = hal::NetCfg::new()?;
         Ok(Monitor {
             hal,
@@ -276,7 +286,6 @@ impl Monitor {
             .cloned()
             .collect(),
             pinger,
-            timer: None,
             inspector: None,
             system_node: None,
             nodes: HashMap::new(),
@@ -323,22 +332,9 @@ impl Monitor {
         }
     }
 
-    /// Returns the underlying event streams associated with the open channels to fuchsia.net.stack
-    /// and fuchsia.netstack.
-    pub fn take_event_streams(
-        &mut self,
-    ) -> (stack::StackEventStream, netstack::NetstackEventStream) {
-        self.hal.take_event_streams()
-    }
-
-    /// Sets the timer to use for periodic events.
-    pub fn set_timer(&mut self, timer: Box<dyn Timer>) {
-        self.timer = Some(timer);
-
-        if let Some(timer) = &self.timer {
-            debug!("setting periodic report timer");
-            timer.periodic(zx::Duration::from_seconds(PROBE_PERIOD_IN_SEC), None);
-        }
+    /// Returns an interface watcher client proxy.
+    pub fn create_interface_watcher(&self) -> error::Result<fnet_interfaces::WatcherProxy> {
+        self.hal.create_interface_watcher()
     }
 
     /// Sets the inspector.
@@ -362,100 +358,45 @@ impl Monitor {
         }
     }
 
-    /// `update_state` evaluates reachability on an interface and updates
-    /// its state accordingly.
-    async fn update_state(&mut self, interface_info: &hal::Interface) -> HashSet<Proto> {
-        let port_type = port_type(interface_info);
-        if port_type == PortType::Loopback {
-            return HashSet::new();
-        }
-
-        let routes = self.hal.routes().await;
-        let mut new_info = match compute_state(interface_info, routes, &mut *self.pinger).await {
-            Some(new_info) => new_info,
-            None => return HashSet::new(),
-        };
-
-        if self.interface_state.get(interface_info.id).is_none() {
-            // New interface, set timer for periodic updates if it wasn't already set.
-            if let Some(timer) = &self.timer {
-                debug!("update_state {:?}  ->  setting timer", interface_info.id);
-                timer.periodic(
-                    zx::Duration::from_seconds(PROBE_PERIOD_IN_SEC),
-                    Some(interface_info.id.to_u64()),
-                );
-            }
-        }
-
-        let updated = self.interface_state.update_on_change(interface_info.id, &mut new_info);
+    /// Update state based on the new reachability info.
+    pub fn update_state(&mut self, id: Id, mut new_info: ReachabilityInfo) {
+        let updated = self.interface_state.update_on_change(id, &mut new_info);
         if !updated.is_empty() {
             // Count number of state updates.
-            *self.stats.state_updates.entry(interface_info.id).or_insert(0) += 1;
+            *self.stats.state_updates.entry(id).or_insert(0) += 1;
+
+            let system_updated =
+                update_system_state(id, &updated, &mut self.system_state, &self.interface_state.0);
+            let () = self.report_system_updated(system_updated);
+            let () = self.report_updated(id, updated);
         }
-
-        updated
     }
 
-    /// `evaluate_state` recomputes the reachability state for interface `id` and the system
-    /// reachability state. If they have changed, it saves the new state and reports the changes.
-    async fn evaluate_state(&mut self, id: Id, info: &hal::Interface) {
-        let updated = self.update_state(&info).await;
-        let system_updated =
-            update_system_state(id, &updated, &mut self.system_state, &self.interface_state.0);
-        self.report_system_updated(system_updated);
-        self.report_updated(info.id, updated);
-    }
-
-    pub async fn timer_event(&mut self, id: u64) -> error::Result<()> {
-        if let Some(info) = self.hal.get_interface(id).await {
-            self.evaluate_state(id.into(), &info).await;
+    /// Compute the reachability state of an interface.
+    ///
+    /// The interface may have been recently-discovered, or the properties of a known interface may
+    /// have changed.
+    pub async fn compute_state(&mut self, properties: &fnet_interfaces_ext::Properties) {
+        if let Some(info) =
+            compute_state(properties, self.hal.routes().await, &mut *self.pinger).await
+        {
+            let id = Id::from(properties.id);
+            let () = self.update_state(id, info);
         }
-        Ok(())
     }
 
-    /// Processes an event coming from fuchsia.net.stack containing updates to
-    /// properties associated with an interface. `OnInterfaceStatusChange` event is raised when an
-    /// interface is enabled/disabled, connected/disconnected, or added/removed.
-    pub async fn stack_event(&mut self, event: stack::StackEvent) -> error::Result<()> {
-        self.stats.events += 1;
-        match event {
-            stack::StackEvent::OnInterfaceStatusChange { info } => {
-                // This event is not really hooked up (stack does not generate them), code here
-                // just for completeness and to be ready when it gets hooked up.
-                if let Some(current_info) = self.hal.get_interface(info.id).await {
-                    self.evaluate_state(info.id.into(), &current_info).await;
-                }
-                Ok(())
+    /// Handle an interface removed event.
+    pub fn handle_interface_removed(
+        &mut self,
+        fnet_interfaces_ext::Properties { id, .. }: fnet_interfaces_ext::Properties,
+    ) {
+        if let Some(mut info) = self.interface_state.get(id.into()).cloned() {
+            for info in info.info.values_mut() {
+                info.previous_state = StateEvent::default();
+                info.state = State::Removed.into();
             }
+            let () = self.update_state(id.into(), info);
         }
-    }
-
-    /// Processes an event coming from fuchsia.netstack containing updates to
-    /// properties associated with an interface.
-    pub async fn netstack_event(&mut self, event: netstack::NetstackEvent) -> error::Result<()> {
-        self.stats.events += 1;
-        match event {
-            netstack::NetstackEvent::OnInterfacesChanged { interfaces } => {
-                // This type of event is useful to know that there has been some change related
-                // to the network state, but doesn't give an indication about what that event
-                // was. We need to check all interfaces to find out if there has been a state
-                // change.
-                for i in interfaces {
-                    if let Some(current_info) = self.hal.get_interface(u64::from(i.id)).await {
-                        self.evaluate_state(Id::from(i.id as u64), &current_info).await;
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// `populate_state` queries the networks stack to determine current state.
-    pub async fn populate_state(&mut self) -> error::Result<()> {
-        for info in self.hal.interfaces().await?.iter() {
-            self.evaluate_state(info.id, &info).await;
-        }
-        Ok(())
     }
 }
 
@@ -498,39 +439,50 @@ fn update_system_state(
 /// `compute_state` processes an event and computes the reachability based on the event and
 /// system observations.
 async fn compute_state(
-    interface_info: &hal::Interface,
+    &fnet_interfaces_ext::Properties {
+        id,
+        ref name,
+        device_class,
+        online,
+        ref addresses,
+        has_default_ipv4_route: _,
+        has_default_ipv6_route: _,
+    }: &fnet_interfaces_ext::Properties,
     routes: Option<Vec<hal::Route>>,
     pinger: &mut dyn Pinger,
 ) -> Option<ReachabilityInfo> {
-    let port_type = port_type(interface_info);
+    let id = Id::from(id);
+    let port_type = PortType::from(device_class);
+    let (v4_addrs, v6_addrs): (Vec<_>, _) = addresses
+        .iter()
+        .map(|fnet_interfaces_ext::Address { addr }| LifIpAddr::from(addr))
+        .partition(|addr| addr.is_ipv4());
+
     if port_type == PortType::Loopback {
         return None;
     }
 
     let mut info = ReachabilityInfo::new(
         port_type,
-        &interface_info.name,
+        name,
         NetworkInfo {
-            is_l3: interface_info.ipv4_addr.is_some(),
-            state: State::Down.into(),
+            is_l3: !v4_addrs.is_empty(),
+            state: if online { State::Up } else { State::Down }.into(),
             ..Default::default()
         },
         NetworkInfo {
-            is_l3: !interface_info.ipv6_addr.is_empty(),
-            state: State::Down.into(),
+            is_l3: !v6_addrs.is_empty(),
+            state: if online { State::Up } else { State::Down }.into(),
             ..Default::default()
         },
     );
 
-    if interface_info.state != hal::InterfaceState::Up {
+    if !online {
         return Some(info);
     }
 
-    info.get_mut(Proto::IPv4).state = State::Up.into();
-    info.get_mut(Proto::IPv6).state = State::Up.into();
-
     // packet reception is network layer independent.
-    if !packet_count_increases(interface_info.id) {
+    if !packet_count_increases(id) {
         // TODO(dpradilla): add active probing here.
         // No packets seen, but interface is up.
         return Some(info);
@@ -542,7 +494,7 @@ async fn compute_state(
     // TODO(fxbug.dev/65581) Parallelize the following two calls for IPv4 and IPv6 respectively
     // when the ping logic is implemented in Rust and async.
     info.get_mut(Proto::IPv4).state = network_layer_state(
-        interface_info.get_address_v4(),
+        v4_addrs,
         &routes,
         &info.get(Proto::IPv4),
         pinger,
@@ -550,7 +502,7 @@ async fn compute_state(
     )
     .await;
     info.get_mut(Proto::IPv6).state = network_layer_state(
-        interface_info.get_address_v6(),
+        v6_addrs,
         &routes,
         &info.get(Proto::IPv6),
         pinger,
@@ -584,18 +536,6 @@ fn has_local_neighbors() -> bool {
 // `packet_count_increases` verifies packet counts are going up.
 fn packet_count_increases(_: hal::PortId) -> bool {
     true
-}
-
-fn port_type(interface_info: &hal::Interface) -> PortType {
-    if interface_info.topo_path.contains("wlan") {
-        PortType::WiFi
-    } else if interface_info.topo_path.contains("ethernet") {
-        PortType::Ethernet
-    } else if interface_info.topo_path.contains("loopback") {
-        PortType::Loopback
-    } else {
-        PortType::SVI
-    }
 }
 
 // `network_layer_state` determines the L3 reachability state.
@@ -665,9 +605,11 @@ mod tests {
         super::*,
         async_trait::async_trait,
         fuchsia_async as fasync,
-        net_declare::std_ip,
+        net_declare::{fidl_subnet, std_ip},
         std::net::{IpAddr, Ipv4Addr, Ipv6Addr},
     };
+
+    const ETHERNET_INTERFACE_NAME: &str = "eth1";
 
     #[test]
     fn test_has_local_neighbors() {
@@ -757,7 +699,7 @@ mod tests {
         let id = Id::from(5);
         let mut info = ReachabilityInfo::new(
             PortType::Ethernet,
-            "eth1",
+            ETHERNET_INTERFACE_NAME,
             NetworkInfo {
                 is_default: false,
                 is_l3: true,
@@ -794,7 +736,7 @@ mod tests {
 
         let mut info = ReachabilityInfo::new(
             PortType::Ethernet,
-            "eth1",
+            ETHERNET_INTERFACE_NAME,
             NetworkInfo {
                 is_default: false,
                 is_l3: true,
@@ -814,7 +756,7 @@ mod tests {
 
         let want = ReachabilityInfo::new(
             PortType::Ethernet,
-            "eth1",
+            ETHERNET_INTERFACE_NAME,
             NetworkInfo {
                 is_default: false,
                 is_l3: true,
@@ -915,56 +857,26 @@ mod tests {
     #[test]
     fn test_port_type() {
         assert_eq!(
-            port_type(&hal::Interface {
-                ipv4_addr: None,
-                ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Unknown,
-                enabled: true,
-                topo_path: "loopback".to_string(),
-                name: "lo".to_string(),
-                id: hal::PortId::from(1),
-                dhcp_client_enabled: false,
-            }),
+            PortType::from(fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {})),
             PortType::Loopback
         );
         assert_eq!(
-            port_type(&hal::Interface {
-                ipv4_addr: None,
-                ipv6_addr: Vec::new(),
-                enabled: true,
-                state: hal::InterfaceState::Up,
-                topo_path: "ethernet/eth0".to_string(),
-                name: "eth0".to_string(),
-                id: hal::PortId::from(1),
-                dhcp_client_enabled: false,
-            }),
+            PortType::from(fnet_interfaces::DeviceClass::Device(
+                fidl_fuchsia_hardware_network::DeviceClass::Ethernet
+            )),
             PortType::Ethernet
         );
         assert_eq!(
-            port_type(&hal::Interface {
-                ipv4_addr: None,
-                ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Up,
-                enabled: true,
-                topo_path: "ethernet/wlan".to_string(),
-                name: "eth0".to_string(),
-                id: hal::PortId::from(1),
-                dhcp_client_enabled: false,
-            }),
+            PortType::from(fnet_interfaces::DeviceClass::Device(
+                fidl_fuchsia_hardware_network::DeviceClass::Wlan
+            )),
             PortType::WiFi
         );
         assert_eq!(
-            port_type(&hal::Interface {
-                ipv4_addr: None,
-                ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Up,
-                enabled: true,
-                topo_path: "br0".to_string(),
-                name: "eth0".to_string(),
-                id: hal::PortId::from(1),
-                dhcp_client_enabled: false,
-            }),
-            PortType::SVI
+            PortType::from(fnet_interfaces::DeviceClass::Device(
+                fidl_fuchsia_hardware_network::DeviceClass::Unknown
+            )),
+            PortType::Unknown
         );
     }
 
@@ -1209,18 +1121,19 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_compute_state() {
         let id = hal::PortId::from(1);
-        let interface = || hal::Interface {
-            id: id,
-            topo_path: "ethernet/eth0".to_string(),
-            name: "eth1".to_string(),
-            ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
-                address: std_ip!("1.2.3.4"),
-                prefix: 24,
-            })),
-            ipv6_addr: vec![LifIpAddr { address: std_ip!("123::4"), prefix: 64 }],
-            state: hal::InterfaceState::Up,
-            enabled: true,
-            dhcp_client_enabled: false,
+        let properties = fnet_interfaces_ext::Properties {
+            id: id.to_u64(),
+            name: ETHERNET_INTERFACE_NAME.to_string(),
+            device_class: fnet_interfaces::DeviceClass::Device(
+                fidl_fuchsia_hardware_network::DeviceClass::Ethernet,
+            ),
+            has_default_ipv4_route: true,
+            has_default_ipv6_route: true,
+            online: true,
+            addresses: vec![
+                fnet_interfaces_ext::Address { addr: fidl_subnet!("1.2.3.4/24") },
+                fnet_interfaces_ext::Address { addr: fidl_subnet!("123::4/64") },
+            ],
         };
         let route_table = vec![
             hal::Route {
@@ -1251,63 +1164,70 @@ mod tests {
             },
         ];
 
+        const NON_ETHERNET_INTERFACE_NAME: &str = "test01";
         let got = compute_state(
-            &hal::Interface {
-                topo_path: "ifname".to_string(),
-                ipv4_addr: None,
-                ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Down,
-                enabled: false,
-                ..interface()
+            &fnet_interfaces_ext::Properties {
+                id: 1,
+                name: NON_ETHERNET_INTERFACE_NAME.to_string(),
+                device_class: fnet_interfaces::DeviceClass::Device(
+                    fidl_fuchsia_hardware_network::DeviceClass::Unknown,
+                ),
+                online: false,
+                has_default_ipv4_route: false,
+                has_default_ipv6_route: false,
+                addresses: vec![],
             },
             None,
             &mut FakePing::default(),
         )
         .await;
-        let want = Some(ReachabilityInfo::new(
-            PortType::SVI,
-            "eth1",
-            NetworkInfo { state: State::Down.into(), ..Default::default() },
-            NetworkInfo { state: State::Down.into(), ..Default::default() },
-        ));
-        assert_eq!(got, want, "not an ethernet interface, no addresses, interface down");
+        assert_eq!(
+            got,
+            Some(ReachabilityInfo::new(
+                PortType::Unknown,
+                NON_ETHERNET_INTERFACE_NAME,
+                NetworkInfo { state: State::Down.into(), ..Default::default() },
+                NetworkInfo { state: State::Down.into(), ..Default::default() },
+            )),
+            "not an ethernet interface, no addresses, interface down"
+        );
 
         let got = compute_state(
-            &hal::Interface { state: hal::InterfaceState::Down, enabled: false, ..interface() },
+            &fnet_interfaces_ext::Properties { online: false, ..properties.clone() },
             None,
             &mut FakePing::default(),
         )
         .await;
         let want = Some(ReachabilityInfo::new(
             PortType::Ethernet,
-            "eth1",
+            ETHERNET_INTERFACE_NAME,
             NetworkInfo { is_l3: true, state: State::Down.into(), ..Default::default() },
             NetworkInfo { is_l3: true, state: State::Down.into(), ..Default::default() },
         ));
         assert_eq!(got, want, "ethernet interface, address configured, interface down");
 
-        let got = compute_state(&interface(), None, &mut FakePing::default()).await;
+        let got = compute_state(
+            &fnet_interfaces_ext::Properties {
+                has_default_ipv4_route: false,
+                has_default_ipv6_route: false,
+                ..properties.clone()
+            },
+            None,
+            &mut FakePing::default(),
+        )
+        .await;
         let want = Some(ReachabilityInfo::new(
             PortType::Ethernet,
-            "eth1",
+            ETHERNET_INTERFACE_NAME,
             NetworkInfo { is_l3: true, state: State::Local.into(), ..Default::default() },
             NetworkInfo { is_l3: true, state: State::Local.into(), ..Default::default() },
         ));
         assert_eq!(got, want, "ethernet interface, address configured, interface up");
 
-        let got = compute_state(
-            &interface(),
-            Some(route_table2),
-            &mut FakePing {
-                gateway_urls: vec!["1.2.3.1", "223::1"],
-                gateway_response: true,
-                internet_response: false,
-            },
-        )
-        .await;
+        let got = compute_state(&properties, Some(route_table2), &mut FakePing::default()).await;
         let want = Some(ReachabilityInfo::new(
             PortType::Ethernet,
-            "eth1",
+            ETHERNET_INTERFACE_NAME,
             NetworkInfo { is_l3: true, state: State::Local.into(), ..Default::default() },
             NetworkInfo { is_l3: true, state: State::Local.into(), ..Default::default() },
         ));
@@ -1317,7 +1237,7 @@ mod tests {
         );
 
         let got = compute_state(
-            &interface(),
+            &properties,
             Some(route_table.clone()),
             &mut FakePing {
                 gateway_urls: vec!["1.2.3.1", "123::1"],
@@ -1328,7 +1248,7 @@ mod tests {
         .await;
         let want = Some(ReachabilityInfo::new(
             PortType::Ethernet,
-            "eth1",
+            ETHERNET_INTERFACE_NAME,
             NetworkInfo { is_l3: true, state: State::Gateway.into(), ..Default::default() },
             NetworkInfo { is_l3: true, state: State::Gateway.into(), ..Default::default() },
         ));
@@ -1338,7 +1258,7 @@ mod tests {
         );
 
         let got = compute_state(
-            &interface(),
+            &properties,
             Some(route_table.clone()),
             &mut FakePing {
                 gateway_urls: vec!["1.2.3.1", "123::1"],
@@ -1349,7 +1269,7 @@ mod tests {
         .await;
         let want = Some(ReachabilityInfo::new(
             PortType::Ethernet,
-            "eth1",
+            ETHERNET_INTERFACE_NAME,
             NetworkInfo { is_l3: true, state: State::Internet.into(), ..Default::default() },
             NetworkInfo { is_l3: true, state: State::Internet.into(), ..Default::default() },
         ));
@@ -1408,7 +1328,7 @@ mod tests {
                 Id::from(1),
                 ReachabilityInfo::new(
                     PortType::Ethernet,
-                    "eth1",
+                    ETHERNET_INTERFACE_NAME,
                     NetworkInfo {
                         is_default: false,
                         is_l3: true,
@@ -1439,38 +1359,7 @@ mod tests {
                 Id::from(3),
                 ReachabilityInfo::new(
                     PortType::Ethernet,
-                    "eth1",
-                    NetworkInfo {
-                        is_default: false,
-                        is_l3: true,
-                        state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                        previous_state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                    },
-                    NetworkInfo {
-                        is_default: false,
-                        is_l3: false,
-                        state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                        previous_state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                    },
-                ),
-            ),
-            (
-                Id::from(3),
-                ReachabilityInfo::new(
-                    PortType::Ethernet,
-                    "eth1",
+                    ETHERNET_INTERFACE_NAME,
                     NetworkInfo {
                         is_default: false,
                         is_l3: true,
@@ -1552,7 +1441,7 @@ mod tests {
             Id::from(2),
             ReachabilityInfo::new(
                 PortType::Ethernet,
-                "eth1",
+                ETHERNET_INTERFACE_NAME,
                 NetworkInfo {
                     is_default: false,
                     is_l3: true,
@@ -1627,7 +1516,7 @@ mod tests {
             Id::from(3),
             ReachabilityInfo::new(
                 PortType::Ethernet,
-                "eth1",
+                ETHERNET_INTERFACE_NAME,
                 NetworkInfo {
                     is_default: false,
                     is_l3: true,
@@ -1702,7 +1591,7 @@ mod tests {
             Id::from(1),
             ReachabilityInfo::new(
                 PortType::Ethernet,
-                "eth1",
+                ETHERNET_INTERFACE_NAME,
                 NetworkInfo {
                     is_default: false,
                     is_l3: true,
@@ -1780,7 +1669,7 @@ mod tests {
             Id::from(3),
             ReachabilityInfo::new(
                 PortType::Ethernet,
-                "eth1",
+                ETHERNET_INTERFACE_NAME,
                 NetworkInfo {
                     is_default: false,
                     is_l3: true,
@@ -1855,7 +1744,7 @@ mod tests {
             Id::from(3),
             ReachabilityInfo::new(
                 PortType::Ethernet,
-                "eth1",
+                ETHERNET_INTERFACE_NAME,
                 NetworkInfo {
                     is_default: false,
                     is_l3: true,
@@ -1930,7 +1819,7 @@ mod tests {
             Id::from(3),
             ReachabilityInfo::new(
                 PortType::Ethernet,
-                "eth1",
+                ETHERNET_INTERFACE_NAME,
                 NetworkInfo {
                     is_default: false,
                     is_l3: true,
@@ -1998,7 +1887,82 @@ mod tests {
             .iter()
             .cloned()
             .collect(),
-            "port 3 gateway"
+            "port 3 internet"
+        );
+
+        interfaces.insert(
+            Id::from(3),
+            ReachabilityInfo::new(
+                PortType::Ethernet,
+                ETHERNET_INTERFACE_NAME,
+                NetworkInfo {
+                    is_default: false,
+                    is_l3: true,
+                    state: StateEvent {
+                        state: State::Removed,
+                        time: Time(zx::Time::from_nanos(80000)),
+                    },
+                    previous_state: StateEvent {
+                        state: State::Internet,
+                        time: Time(zx::Time::from_nanos(70000)),
+                    },
+                },
+                NetworkInfo {
+                    is_default: false,
+                    is_l3: false,
+                    state: StateEvent { state: State::None, time: Time(zx::Time::from_nanos(0)) },
+                    previous_state: StateEvent {
+                        state: State::None,
+                        time: Time(zx::Time::from_nanos(0)),
+                    },
+                },
+            ),
+        );
+        update_system_state(Id::from(3), &updated, &mut system_state, &interfaces);
+        assert_eq!(
+            system_state,
+            [
+                (
+                    Proto::IPv4,
+                    (
+                        Id::from(1),
+                        NetworkInfo {
+                            is_default: false,
+                            is_l3: true,
+                            state: StateEvent {
+                                state: State::Local,
+                                time: Time(zx::Time::from_nanos(40000)),
+                            },
+                            previous_state: StateEvent {
+                                state: State::Internet,
+                                time: Time(zx::Time::from_nanos(30000)),
+                            },
+                        },
+                    ),
+                ),
+                (
+                    Proto::IPv6,
+                    (
+                        Id::from(0),
+                        NetworkInfo {
+                            is_default: false,
+                            is_l3: true,
+                            state: StateEvent {
+                                state: State::None,
+                                time: Time(zx::Time::from_nanos(0)),
+                            },
+                            previous_state: StateEvent {
+                                state: State::None,
+                                time: Time(zx::Time::from_nanos(0)),
+                            },
+                        },
+                    ),
+                ),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
+            "port 3 removed"
         );
     }
 }

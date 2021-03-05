@@ -25,6 +25,7 @@ rustc_library("fidl_fuchsia_net_interfaces_ext") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:test-case",
   ]
 
   sources = [

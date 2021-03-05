@@ -112,11 +112,9 @@ impl EventLoop {
             error!("Failed to load a device config: {}", e);
         }
         self.device.setup_services().await.context("setup_services")?;
-        self.device.populate_state().await.context("populate_state")?;
-
-        let (stack_stream, netstack_stream) = self.device.take_event_streams();
-        let stack_stream = stack_stream.map(|r| r.context("Stack event stream")).fuse();
-        let netstack_stream = netstack_stream.map(|r| r.context("Netstack event stream")).fuse();
+        let interface_watcher = self.device.populate_state().await.context("populate_state")?;
+        let interface_event_stream =
+            fidl_fuchsia_net_interfaces_ext::event_stream(interface_watcher).fuse();
         let netstack_dns_stream = dns_server_watcher::new_dns_server_stream(
             DnsServersUpdateSource::Netstack,
             self.device
@@ -149,37 +147,38 @@ impl EventLoop {
         let mut router_admin_streams = stream::SelectAll::new();
         let mut router_state_streams = stream::SelectAll::new();
 
-        futures::pin_mut!(
-            stack_stream,
-            netstack_stream,
-            netstack_dns_stream,
-            oir_stream,
-            fidl_req_stream
-        );
+        futures::pin_mut!(interface_event_stream, netstack_dns_stream, oir_stream, fidl_req_stream);
 
         loop {
             // Currently, if any of the workers encounters an error, the event loop
             // will return with the worker's error immediately.
             // TODO(fxbug.dev/52740): Gracefully handle worker errors.
             let () = futures::select! {
-                stack_res = stack_stream.try_next() => {
-                    let event = stack_res?.ok_or(anyhow::anyhow!("Stack event stream unexpectedly ended"))?;
-                    self.handle_stack_event(event).await
-                }
-                netstack_res = netstack_stream.try_next() => {
-                    let event = netstack_res?.ok_or(anyhow::anyhow!("Netstack event stream unexpectedly ended"))?;
-                    self.handle_netstack_event(event).await
+                interface_res = interface_event_stream.try_next() => {
+                    let event = interface_res?.ok_or_else(|| {
+                        anyhow::anyhow!("interface watcher event stream unexpectedly ended")
+                    })?;
+                    self.handle_interface_watcher_event(event).await
                 }
                 netstack_dns_res = netstack_dns_stream.next() => {
-                    let (source, res) = netstack_dns_res.ok_or(anyhow::anyhow!("Netstack DNS Server watcher stream unexpectedly ended"))?;
-                    self.handle_dns_server_watcher_event(source, res.context("error getting next DNS server event from netstack")?).await
+                    let (source, res) = netstack_dns_res.ok_or_else(|| {
+                        anyhow::anyhow!("Netstack DNS Server watcher stream unexpectedly ended")
+                    })?;
+                    self.handle_dns_server_watcher_event(
+                        source,
+                        res.context("error getting next DNS server event from netstack")?
+                    ).await
                 }
                 oir_res = oir_stream.try_next() => {
-                    let event = oir_res?.ok_or(anyhow::anyhow!("OIR stream unexpectedly ended"))?;
+                    let event = oir_res?.ok_or_else(|| {
+                        anyhow::anyhow!("OIR stream unexpectedly ended")
+                    })?;
                     self.handle_oir_event(event).await
                 }
                 fidl_req_res = fidl_req_stream.try_next() => {
-                    let req = fidl_req_res?.ok_or(anyhow::anyhow!("FIDL service request stream unexpectedly ended"))?;
+                    let req = fidl_req_res?.ok_or_else(|| {
+                        anyhow::anyhow!("FIDL service request stream unexpectedly ended")
+                    })?;
                     match req {
                         IncomingFidlRequestStream::RouterAdmin(r) => router_admin_streams.push(r),
                         IncomingFidlRequestStream::RouterState(r) => router_state_streams.push(r),
@@ -225,22 +224,17 @@ impl EventLoop {
             .unwrap_or_else(|err| warn!("error setting dns servers: {:?}", err));
     }
 
-    async fn handle_stack_event(&mut self, event: fidl_fuchsia_net_stack::StackEvent) {
-        self.device
-            .update_state_for_stack_event(event)
-            .await
-            .unwrap_or_else(|err| warn!("error updating state: {:?}", err));
-    }
-
-    async fn handle_netstack_event(&mut self, event: fidl_fuchsia_netstack::NetstackEvent) {
-        self.device
-            .update_state_for_netstack_event(event)
+    async fn handle_interface_watcher_event(&mut self, event: fidl_fuchsia_net_interfaces::Event) {
+        let () = self
+            .device
+            .update_state_for_interface_watcher_event(event)
             .await
             .unwrap_or_else(|err| warn!("error updating state: {:?}", err));
     }
 
     async fn handle_oir_event(&mut self, event: network_manager_core::oir::OIRInfo) {
-        self.device
+        let () = self
+            .device
             .oir_event(event)
             .await
             .unwrap_or_else(|err| warn!("error processing oir event: {:?}", err));

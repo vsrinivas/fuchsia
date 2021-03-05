@@ -7,24 +7,23 @@
 use {
     crate::address::{subnet_mask_to_prefix_length, to_ip_addr, LifIpAddr},
     crate::error,
-    crate::lifmgr::{self, DhcpAddressPool, LIFProperties},
+    crate::lifmgr::{self, DhcpAddressPool},
     crate::oir,
     anyhow::{Context as _, Error},
     fidl_fuchsia_net as fnet,
     fidl_fuchsia_net_dhcp::{self as fnetdhcp, Server_Marker, Server_Proxy},
+    fidl_fuchsia_net_interfaces::{self as fnet_interfaces, StateMarker, StateProxy},
+    fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext,
     fidl_fuchsia_net_name::{
         DnsServerWatcherMarker, DnsServerWatcherProxy, LookupAdminMarker, LookupAdminProxy,
     },
-    fidl_fuchsia_net_stack::{
-        self as stack, ForwardingDestination, ForwardingEntry, InterfaceInfo, StackMarker,
-        StackProxy,
-    },
+    fidl_fuchsia_net_stack::{ForwardingDestination, ForwardingEntry, StackMarker, StackProxy},
     fidl_fuchsia_net_stack_ext::FidlReturn,
     fidl_fuchsia_netstack::{self as netstack, NetstackMarker, NetstackProxy},
     fidl_fuchsia_router_config as netconfig,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx,
-    futures::{stream, StreamExt, TryStreamExt},
+    futures::{stream, StreamExt as _, TryStreamExt as _},
     std::convert::TryFrom,
     std::net::IpAddr,
 };
@@ -140,6 +139,7 @@ impl From<&netstack::RouteTableEntry2> for Route {
 pub struct NetCfg {
     stack: StackProxy,
     netstack: NetstackProxy,
+    interface_state: StateProxy,
     lookup_admin: LookupAdminProxy,
     // NOTE: The DHCP server component does not support applying different configurations to
     // multiple interfaces. To avoid managing the lifetimes of multiple components, limit to
@@ -168,140 +168,17 @@ pub enum InterfaceState {
     Down,
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct Interface {
-    pub id: PortId,
-    pub topo_path: String,
-    pub name: String,
-    pub ipv4_addr: Option<InterfaceAddress>,
-    pub ipv6_addr: Vec<LifIpAddr>,
-    pub enabled: bool,
-    pub state: InterfaceState,
-    pub dhcp_client_enabled: bool,
-}
-
-impl Interface {
-    pub fn get_address_v4(&self) -> Option<LifIpAddr> {
-        self.ipv4_addr.as_ref().map(|a| match a {
-            InterfaceAddress::Unknown(a) => *a,
-            InterfaceAddress::Static(a) => *a,
-            InterfaceAddress::Dhcp(a) => *a,
-        })
-    }
-
-    pub fn get_address_v6(&self) -> Vec<LifIpAddr> {
-        self.ipv6_addr.clone()
-    }
-}
-
-fn address_is_valid_unicast(addr: &IpAddr) -> bool {
-    // TODO(guzt): This should also check for special-purpose addresses as defined by rfc6890.
-    !addr.is_loopback() && !addr.is_unspecified() && !addr.is_multicast()
-}
-
-impl From<&InterfaceInfo> for Interface {
-    fn from(iface: &InterfaceInfo) -> Self {
-        Interface {
-            id: iface.id.into(),
-            topo_path: iface.properties.topopath.clone(),
-            name: iface.properties.name.clone(),
-            ipv4_addr: iface
-                .properties
-                .addresses
-                .iter()
-                .filter_map(|a| match a.addr {
-                    // Only return interfaces with an IPv4 address
-                    // TODO(dpradilla) support interfaces with multiple IPs? (is there
-                    // a use case given this context?)
-                    fnet::IpAddress::Ipv4(_) => {
-                        if address_is_valid_unicast(&LifIpAddr::from(&a.addr).address) {
-                            Some(InterfaceAddress::Unknown(LifIpAddr::from(a)))
-                        } else {
-                            None
-                        }
-                    }
-                    _ => None,
-                })
-                .next(),
-            ipv6_addr: iface
-                .properties
-                .addresses
-                .iter()
-                .filter_map(|a| match a.addr {
-                    // Only return Ipv6 addresses
-                    fnet::IpAddress::Ipv6(_) => Some(LifIpAddr::from(a)),
-                    _ => None,
-                })
-                .collect(),
-
-            enabled: match iface.properties.administrative_status {
-                stack::AdministrativeStatus::Enabled => true,
-                stack::AdministrativeStatus::Disabled => false,
-            },
-            state: match iface.properties.physical_status {
-                stack::PhysicalStatus::Up => InterfaceState::Up,
-                stack::PhysicalStatus::Down => InterfaceState::Down,
-            },
-            dhcp_client_enabled: false,
-        }
-    }
-}
-
-fn valid_unicast_address_or_none(addr: LifIpAddr) -> Option<LifIpAddr> {
-    if address_is_valid_unicast(&addr.address) {
-        Some(addr)
-    } else {
-        None
-    }
-}
-
-impl From<&netstack::NetInterface> for Interface {
-    fn from(iface: &netstack::NetInterface) -> Self {
-        let dhcp = iface.flags.contains(netstack::Flags::Dhcp);
-        let addr = valid_unicast_address_or_none(LifIpAddr {
-            address: to_ip_addr(iface.addr),
-            prefix: subnet_mask_to_prefix_length(iface.netmask),
-        });
-        Interface {
-            id: PortId(iface.id.into()),
-            topo_path: iface.name.clone(),
-            name: iface.name.clone(),
-            ipv4_addr: addr.map(|a| {
-                if dhcp {
-                    InterfaceAddress::Dhcp(a)
-                } else {
-                    InterfaceAddress::Static(a)
-                }
-            }),
-            ipv6_addr: iface.ipv6addrs.iter().map(|a| LifIpAddr::from(a)).collect(),
-            enabled: iface.flags.contains(netstack::Flags::Up),
-            state: InterfaceState::Unknown,
-            dhcp_client_enabled: dhcp,
-        }
-    }
-}
-
-impl Into<LIFProperties> for Interface {
-    fn into(self) -> LIFProperties {
-        LIFProperties {
-            dhcp: if self.dhcp_client_enabled { lifmgr::Dhcp::Client } else { lifmgr::Dhcp::None },
-            dhcp_config: None,
-            address_v4: self.get_address_v4(),
-            address_v6: self.get_address_v6(),
-            enabled: self.enabled,
-        }
-    }
-}
-
 impl NetCfg {
     pub fn new() -> Result<Self, Error> {
+        let interface_state = connect_to_service::<StateMarker>()
+            .context("network_manager failed to connect to interface state")?;
         let stack = connect_to_service::<StackMarker>()
-            .context("network_manager failed to connect to netstack")?;
+            .context("network_manager failed to connect to stack")?;
         let netstack = connect_to_service::<NetstackMarker>()
             .context("network_manager failed to connect to netstack")?;
         let lookup_admin = connect_to_service::<LookupAdminMarker>()
             .context("network_manager failed to connect to lookup admin")?;
-        Ok(NetCfg { stack, netstack, lookup_admin, dhcp_server: None })
+        Ok(NetCfg { stack, netstack, interface_state, lookup_admin, dhcp_server: None })
     }
 
     /// Returns a client for a `fuchsia.net.name.DnsServerWatcher` from the
@@ -324,19 +201,26 @@ impl NetCfg {
         Ok(dns_server_watcher)
     }
 
-    /// Returns event streams for fuchsia.fnet.stack and fuchsia.netstack.
-    pub fn take_event_streams(
-        &mut self,
-    ) -> (stack::StackEventStream, netstack::NetstackEventStream) {
-        (self.stack.take_event_stream(), self.netstack.take_event_stream())
-    }
-
-    /// Returns the interface associated with the specified port.
-    pub async fn get_interface(&mut self, port: u64) -> Option<Interface> {
-        match self.stack.get_interface_info(port).await {
-            Ok(Ok(info)) => Some((&info).into()),
-            _ => None,
-        }
+    /// Returns an interface watcher client proxy.
+    pub fn create_interface_watcher(&self) -> error::Result<fnet_interfaces::WatcherProxy> {
+        let (watcher, watcher_server) = fidl::endpoints::create_proxy::<
+            fnet_interfaces::WatcherMarker,
+        >()
+        .map_err(|e| error::Hal::Fidl {
+            context: "failed to create fuchsia.net.interfaces/Watcher proxy".to_string(),
+            source: e,
+        })?;
+        let () = self
+            .interface_state
+            .get_watcher(
+                fnet_interfaces::WatcherOptions { ..fnet_interfaces::WatcherOptions::EMPTY },
+                watcher_server,
+            )
+            .map_err(|e| error::Hal::Fidl {
+                context: "failed to call fuchsia.net.interfaces/State.get_watcher".to_string(),
+                source: e,
+            })?;
+        Ok(watcher)
     }
 
     /// Returns all physical ports in the system.
@@ -350,22 +234,8 @@ impl NetCfg {
         Ok(p)
     }
 
-    /// Returns all L3 interfaces with valid, non-local IPs in the system.
-    pub async fn interfaces(&mut self) -> error::Result<Vec<Interface>> {
-        let ifs = self
-            .stack
-            .list_interfaces()
-            .await
-            .map_err(|_| error::Hal::OperationFailed)?
-            .iter()
-            .map(|i| i.into())
-            .filter(|i: &Interface| i.ipv4_addr.is_some())
-            .collect();
-        Ok(ifs)
-    }
-
     /// Creates a new interface, bridging the given ports.
-    pub async fn create_bridge(&mut self, ports: Vec<PortId>) -> error::Result<Interface> {
+    pub async fn create_bridge(&mut self, ports: Vec<PortId>) -> error::Result<PortId> {
         let (error, bridge_id) = self
             .netstack
             .bridge_interfaces(
@@ -374,18 +244,14 @@ impl NetCfg {
             .await
             .map_err(|e| {
                 error!("Failed creating bridge {:?}", e);
-                error::NetworkManager::Hal(error::Hal::OperationFailed)
+                error::NetworkManager::Hal(error::Hal::BridgeNotCreated)
             })?;
         if error.status != netstack::Status::Ok {
             error!("Failed creating bridge {:?}", error);
-            return Err(error::NetworkManager::Hal(error::Hal::OperationFailed));
+            return Err(error::NetworkManager::Hal(error::Hal::BridgeNotCreated));
         }
         info!("bridge created {:?}", bridge_id);
-        if let Some(i) = self.get_interface(bridge_id.into()).await {
-            Ok(i)
-        } else {
-            Err(error::NetworkManager::Hal(error::Hal::BridgeNotFound))
-        }
+        Ok(u64::from(bridge_id).into())
     }
 
     /// Deletes the given bridge.
@@ -620,27 +486,31 @@ impl NetCfg {
         // changed.
         if enable {
             self.stop_dhcp_server(pid).await?;
-            let iface_info = self.get_interface_info(pid).await?;
-            let addrs = iface_info
-                .properties
-                .addresses
+            let fnet_interfaces_ext::Properties { name, addresses, .. } =
+                self.get_interface(pid).await?;
+            let addrs = addresses
                 .into_iter()
-                .filter_map(|addr| match addr.addr {
-                    fnet::IpAddress::Ipv4(addr) => Some(addr),
-                    fnet::IpAddress::Ipv6(_) => None,
-                })
-                .collect::<Vec<_>>();
-            self.set_dhcp_server_parameter(pid, &mut fnetdhcp::Parameter::IpAddrs(addrs)).await?;
-            self.set_dhcp_server_parameter(
-                pid,
-                &mut fnetdhcp::Parameter::BoundDeviceNames(vec![String::from(
-                    iface_info.properties.name,
-                )]),
-            )
-            .await?;
-            self.start_dhcp_server(pid).await?;
+                .filter_map(
+                    |fnet_interfaces_ext::Address {
+                         addr: fnet::Subnet { addr, prefix_len: _ },
+                     }| match addr {
+                        fnet::IpAddress::Ipv4(addr) => Some(addr),
+                        fnet::IpAddress::Ipv6(_) => None,
+                    },
+                )
+                .collect();
+            let () = self
+                .set_dhcp_server_parameter(pid, &mut fnetdhcp::Parameter::IpAddrs(addrs))
+                .await?;
+            let () = self
+                .set_dhcp_server_parameter(
+                    pid,
+                    &mut fnetdhcp::Parameter::BoundDeviceNames(vec![name]),
+                )
+                .await?;
+            let () = self.start_dhcp_server(pid).await?;
         } else {
-            self.disable_dhcp_server(pid).await?;
+            let () = self.disable_dhcp_server(pid).await?;
         }
         info!("set_dhcp_server_state pid: {:?} enable: {}", pid, enable);
         Ok(())
@@ -693,20 +563,24 @@ impl NetCfg {
         }
 
         if let Some(DhcpAddressPool { start, end, .. }) = pool {
-            let if_info = self.get_interface_info(pid).await?;
-
             // NOTE: network and mask are not specified in the input configuration, so use the
             // first address from the interface.
-            let (addr, prefix_len) = if_info
-                .properties
+            let (addr, prefix_len) = self
+                .get_interface(pid)
+                .await?
                 .addresses
                 .into_iter()
-                .filter_map(|if_addr| match if_addr.addr {
-                    fnet::IpAddress::Ipv4(addr) => Some((addr.addr, if_addr.prefix_len)),
-                    fnet::IpAddress::Ipv6(_) => None,
-                })
-                .next()
-                .ok_or({
+                .find_map(
+                    |fnet_interfaces_ext::Address { addr: fnet::Subnet { addr, prefix_len } }| {
+                        match addr {
+                            fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
+                                Some((addr, prefix_len))
+                            }
+                            fnet::IpAddress::Ipv6(_) => None,
+                        }
+                    },
+                )
+                .ok_or_else(|| {
                     warn!("can't add address pool: no address found on interface {:?}", pid);
                     error::NetworkManager::Hal(error::Hal::OperationFailed)
                 })?;
@@ -834,23 +708,22 @@ impl NetCfg {
         Ok(())
     }
 
-    /// Gets interface info from netstack.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the FIDL call failed.
-    async fn get_interface_info(&self, pid: PortId) -> error::Result<stack::InterfaceInfo> {
-        self.stack
-            .get_interface_info(pid.to_u64())
-            .await
-            .map_err(|e| {
-                warn!("fidl query failed: {}", e);
-                error::NetworkManager::Hal(error::Hal::OperationFailed)
-            })?
-            .map_err(|e| {
-                warn!("get_interface_info({}) failed: {:?}", pid.to_u64(), e);
-                error::NetworkManager::Hal(error::Hal::OperationFailed)
-            })
+    /// Get interface properties.
+    async fn get_interface(
+        &self,
+        pid: PortId,
+    ) -> error::Result<fidl_fuchsia_net_interfaces_ext::Properties> {
+        let watcher = self.create_interface_watcher()?;
+        let event_stream = futures::stream::try_unfold(watcher, |watcher| async {
+            Ok(Some((watcher.watch().await?, watcher)))
+        });
+        fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+            event_stream,
+            &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(pid.to_u64()),
+            |p| Some(p.clone()),
+        )
+        .await
+        .map_err(|e| error::Hal::GetInterfaceFailed(e).into())
     }
 
     /// Sets an option on the DHCP server on the specified interface.
@@ -1106,430 +979,27 @@ mod tests {
     use {
         super::*,
         crate::{address::LifIpAddr, lifmgr::DnsSearch, ElementId},
-        futures::join,
+        futures::{future, join, TryFutureExt as _},
         matches::assert_matches,
+        net_declare::fidl_subnet,
         std::net::Ipv4Addr,
     };
 
-    fn interface_info_with_addrs(addrs: Vec<fnet::Subnet>) -> InterfaceInfo {
-        InterfaceInfo {
-            id: 42,
-            properties: stack::InterfaceProperties {
-                topopath: "test/interface/info".to_string(),
-                addresses: addrs,
-                administrative_status: stack::AdministrativeStatus::Enabled,
-                name: "ethtest".to_string(),
-                filepath: "/some/file".to_string(),
-                mac: None,
-                mtu: 0,
-                features: fidl_fuchsia_hardware_ethernet::Features::empty(),
-                physical_status: stack::PhysicalStatus::Up,
-            },
-        }
-    }
-
-    fn interface_with_addr(addr: Option<LifIpAddr>) -> Interface {
-        Interface {
-            id: 42.into(),
-            topo_path: "test/interface/info".to_string(),
-            name: "ethtest".to_string(),
-            ipv4_addr: addr.map(|a| InterfaceAddress::Unknown(a)),
-            ipv6_addr: Vec::new(),
-            enabled: true,
-            state: InterfaceState::Up,
-            dhcp_client_enabled: false,
-        }
-    }
-
-    fn sample_addresses() -> Vec<fnet::Subnet> {
-        vec![
-            // Unspecified addresses are skipped.
-            fnet::Subnet {
-                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [0, 0, 0, 0] }),
-                prefix_len: 24,
-            },
-            // Multicast addresses are skipped.
-            fnet::Subnet {
-                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [224, 0, 0, 5] }),
-                prefix_len: 24,
-            },
-            // Loopback addresses are skipped.
-            fnet::Subnet {
-                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [127, 0, 0, 1] }),
-                prefix_len: 24,
-            },
-            // IPv6 addresses are skipped.
-            fnet::Subnet {
-                addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                    addr: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
-                }),
-                prefix_len: 8,
-            },
-            // First valid address, should be picked.
-            fnet::Subnet {
-                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [4, 3, 2, 1] }),
-                prefix_len: 24,
-            },
-            // A valid address is already available, so this address should be skipped.
-            fnet::Subnet {
-                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
-                prefix_len: 24,
-            },
-        ]
-    }
-
     fn create_test_netcfg() -> NetCfg {
+        let interface_state: StateProxy =
+            fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
         let stack: StackProxy = fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
         let netstack: NetstackProxy =
             fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
         let lookup_admin: LookupAdminProxy =
             fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
-        NetCfg { stack, netstack, lookup_admin, dhcp_server: None }
-    }
-
-    #[test]
-    fn test_net_interface_info_into_hal_interface() {
-        let info = interface_info_with_addrs(sample_addresses());
-        let iface: Interface = (&info).into();
-        assert_eq!(iface.topo_path, "test/interface/info");
-        assert_eq!(iface.enabled, true);
-        assert_eq!(
-            iface.get_address_v4(),
-            Some(LifIpAddr { address: IpAddr::from([4, 3, 2, 1]), prefix: 24 })
-        );
-        assert_eq!(iface.id.to_u64(), 42);
-    }
-
-    async fn handle_list_interfaces(request: stack::StackRequest) {
-        match request {
-            stack::StackRequest::ListInterfaces { responder } => {
-                responder
-                    .send(
-                        &mut sample_addresses()
-                            .into_iter()
-                            .map(|addr| interface_info_with_addrs(vec![addr]))
-                            .collect::<Vec<InterfaceInfo>>()
-                            .iter_mut(),
-                    )
-                    .unwrap();
-            }
-            _ => {
-                panic!("unexpected stack request: {:?}", request);
-            }
-        }
+        NetCfg { stack, netstack, interface_state, lookup_admin, dhcp_server: None }
     }
 
     async fn handle_with_panic<Request: std::fmt::Debug>(request: Request) {
         panic!("unexpected request: {:?}", request);
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
-    async fn test_ignore_interface_without_ip() {
-        let mut netcfg = create_test_netcfg();
-        netcfg.stack = fidl::endpoints::spawn_stream_handler(handle_list_interfaces).unwrap();
-
-        assert_eq!(
-            netcfg.interfaces().await.unwrap(),
-            // Should return only interfaces with a valid address.
-            vec![
-                interface_with_addr(Some(LifIpAddr {
-                    address: IpAddr::from([4, 3, 2, 1]),
-                    prefix: 24
-                })),
-                interface_with_addr(Some(LifIpAddr {
-                    address: IpAddr::from([1, 2, 3, 4]),
-                    prefix: 24
-                })),
-            ]
-        );
-    }
-
-    #[test]
-    fn test_valid_address() {
-        let f = |addr| {
-            valid_unicast_address_or_none(LifIpAddr { address: IpAddr::from(addr), prefix: 24 })
-        };
-        assert!(f([0, 0, 0, 0]).is_none());
-        assert!(f([127, 0, 0, 1]).is_none());
-        assert!(f([224, 0, 0, 5]).is_none());
-        assert_eq!(
-            f([1, 2, 3, 4]),
-            Some(LifIpAddr { address: IpAddr::from([1, 2, 3, 4]), prefix: 24 })
-        );
-    }
-
-    #[test]
-    fn test_hal_interface_from_netstack_net_interface() {
-        for (test, net_interface, want) in [
-            (
-                "ipv4 /24",
-                netstack::NetInterface {
-                    id: 5,
-                    flags: netstack::Flags::Up | netstack::Flags::Dhcp,
-                    features: fidl_fuchsia_hardware_ethernet::Features::empty(),
-                    configuration: 0,
-                    name: "test_if".to_string(),
-                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
-                    netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 255, 0] }),
-                    broadaddr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 255] }),
-                    ipv6addrs: vec![],
-                    hwaddr: vec![1, 2, 3, 4, 5, 6],
-                },
-                Interface {
-                    id: PortId(5),
-                    topo_path: "test_if".to_string(),
-                    name: "test_if".to_string(),
-                    ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
-                        address: IpAddr::from([1, 2, 3, 4]),
-                        prefix: 24,
-                    })),
-                    ipv6_addr: Vec::new(),
-                    enabled: true,
-                    state: InterfaceState::Unknown,
-                    dhcp_client_enabled: true,
-                },
-            ),
-            (
-                "ipv4 /25",
-                netstack::NetInterface {
-                    id: 5,
-                    flags: netstack::Flags::Up | netstack::Flags::Dhcp,
-                    features: fidl_fuchsia_hardware_ethernet::Features::empty(),
-                    configuration: 0,
-                    name: "test_if".to_string(),
-                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
-                    netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
-                        addr: [255, 255, 255, 128],
-                    }),
-                    broadaddr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 127] }),
-                    ipv6addrs: vec![],
-                    hwaddr: vec![1, 2, 3, 4, 5, 6],
-                },
-                Interface {
-                    id: PortId(5),
-                    topo_path: "test_if".to_string(),
-                    name: "test_if".to_string(),
-                    ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
-                        address: IpAddr::from([1, 2, 3, 4]),
-                        prefix: 25,
-                    })),
-                    ipv6_addr: Vec::new(),
-                    enabled: true,
-                    state: InterfaceState::Unknown,
-                    dhcp_client_enabled: true,
-                },
-            ),
-            (
-                "ipv6 /64",
-                netstack::NetInterface {
-                    id: 5,
-                    flags: netstack::Flags::Up | netstack::Flags::Dhcp,
-                    features: fidl_fuchsia_hardware_ethernet::Features::empty(),
-                    configuration: 0,
-                    name: "test_if".to_string(),
-                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
-                    netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 255, 0] }),
-                    broadaddr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 255] }),
-                    ipv6addrs: vec![fnet::Subnet {
-                        addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                            addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-                        }),
-                        prefix_len: 64,
-                    }],
-                    hwaddr: vec![1, 2, 3, 4, 5, 6],
-                },
-                Interface {
-                    id: PortId(5),
-                    topo_path: "test_if".to_string(),
-                    name: "test_if".to_string(),
-                    ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
-                        address: IpAddr::from([1, 2, 3, 4]),
-                        prefix: 24,
-                    })),
-                    ipv6_addr: vec![LifIpAddr {
-                        address: IpAddr::from([
-                            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-                        ]),
-                        prefix: 64,
-                    }],
-                    enabled: true,
-                    state: InterfaceState::Unknown,
-                    dhcp_client_enabled: true,
-                },
-            ),
-            (
-                "ipv6 /72",
-                netstack::NetInterface {
-                    id: 5,
-                    flags: netstack::Flags::Up | netstack::Flags::Dhcp,
-                    features: fidl_fuchsia_hardware_ethernet::Features::empty(),
-                    configuration: 0,
-                    name: "test_if".to_string(),
-                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
-                    netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 255, 0] }),
-                    broadaddr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 255] }),
-                    ipv6addrs: vec![fnet::Subnet {
-                        addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                            addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-                        }),
-                        prefix_len: 72,
-                    }],
-                    hwaddr: vec![1, 2, 3, 4, 5, 6],
-                },
-                Interface {
-                    id: PortId(5),
-                    topo_path: "test_if".to_string(),
-                    name: "test_if".to_string(),
-                    ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
-                        address: IpAddr::from([1, 2, 3, 4]),
-                        prefix: 24,
-                    })),
-                    ipv6_addr: vec![LifIpAddr {
-                        address: IpAddr::from([
-                            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-                        ]),
-                        prefix: 72,
-                    }],
-                    enabled: true,
-                    state: InterfaceState::Unknown,
-                    dhcp_client_enabled: true,
-                },
-            ),
-            (
-                "2 ipv6 /64",
-                netstack::NetInterface {
-                    id: 5,
-                    flags: netstack::Flags::Up | netstack::Flags::Dhcp,
-                    features: fidl_fuchsia_hardware_ethernet::Features::empty(),
-                    configuration: 0,
-                    name: "test_if".to_string(),
-                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
-                    netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 255, 0] }),
-                    broadaddr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 255] }),
-                    ipv6addrs: vec![
-                        fnet::Subnet {
-                            addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                                addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-                            }),
-                            prefix_len: 64,
-                        },
-                        fnet::Subnet {
-                            addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                                addr: [2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-                            }),
-                            prefix_len: 48,
-                        },
-                    ],
-                    hwaddr: vec![1, 2, 3, 4, 5, 6],
-                },
-                Interface {
-                    id: PortId(5),
-                    topo_path: "test_if".to_string(),
-                    name: "test_if".to_string(),
-                    ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
-                        address: IpAddr::from([1, 2, 3, 4]),
-                        prefix: 24,
-                    })),
-                    ipv6_addr: vec![
-                        LifIpAddr {
-                            address: IpAddr::from([
-                                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-                            ]),
-                            prefix: 64,
-                        },
-                        LifIpAddr {
-                            address: IpAddr::from([
-                                2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-                            ]),
-                            prefix: 48,
-                        },
-                    ],
-                    enabled: true,
-                    state: InterfaceState::Unknown,
-                    dhcp_client_enabled: true,
-                },
-            ),
-        ]
-        .iter()
-        {
-            let got = Interface::from(net_interface);
-            assert_eq!(got, *want, "{} Got {:?}, want {:?}", test, got, want)
-        }
-    }
-
-    #[test]
-    fn test_hal_interface_from_interfaceinfo() {
-        for (test, net_interface, want) in [(
-            "multiple v4 and v6 addresses",
-            InterfaceInfo {
-                id: 5,
-                properties: stack::InterfaceProperties {
-                    topopath: "test/interface/info".to_string(),
-                    addresses: vec![
-                        fnet::Subnet {
-                            addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                                addr: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
-                            }),
-                            prefix_len: 8,
-                        },
-                        fnet::Subnet {
-                            addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                                addr: [1, 1, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
-                            }),
-                            prefix_len: 64,
-                        },
-                        fnet::Subnet {
-                            addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [4, 3, 2, 1] }),
-                            prefix_len: 23,
-                        },
-                        // A valid address is already available, so this address should be skipped.
-                        fnet::Subnet {
-                            addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
-                            prefix_len: 27,
-                        },
-                    ],
-                    administrative_status: stack::AdministrativeStatus::Enabled,
-                    name: "test_if".to_string(),
-                    filepath: "/some/file".to_string(),
-                    mac: None,
-                    mtu: 1234,
-                    features: fidl_fuchsia_hardware_ethernet::Features::empty(),
-                    physical_status: stack::PhysicalStatus::Up,
-                },
-            },
-            Interface {
-                id: PortId(5),
-                topo_path: "test/interface/info".to_string(),
-                name: "test_if".to_string(),
-                ipv4_addr: Some(InterfaceAddress::Unknown(LifIpAddr {
-                    address: IpAddr::from([4, 3, 2, 1]),
-                    prefix: 23,
-                })),
-                ipv6_addr: vec![
-                    LifIpAddr {
-                        address: IpAddr::from([
-                            16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
-                        ]),
-                        prefix: 8,
-                    },
-                    LifIpAddr {
-                        address: IpAddr::from([
-                            1, 1, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
-                        ]),
-                        prefix: 64,
-                    },
-                ],
-                enabled: true,
-                state: InterfaceState::Up,
-                dhcp_client_enabled: false,
-            },
-        )]
-        .iter()
-        {
-            let got = Interface::from(net_interface);
-            assert_eq!(got, *want, "{} Got {:?}, want {:?}", test, got, want)
-        }
-    }
     #[test]
     fn test_route_from_forwarding_entry() {
         assert_eq!(
@@ -1538,7 +1008,7 @@ mod tests {
                     addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 0] }),
                     prefix_len: 23,
                 },
-                destination: stack::ForwardingDestination::NextHop(fnet::IpAddress::Ipv4(
+                destination: ForwardingDestination::NextHop(fnet::IpAddress::Ipv4(
                     fnet::Ipv4Address { addr: [1, 2, 3, 4] },
                 )),
             }),
@@ -1557,7 +1027,7 @@ mod tests {
                     addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 0] }),
                     prefix_len: 23,
                 },
-                destination: stack::ForwardingDestination::DeviceId(3)
+                destination: ForwardingDestination::DeviceId(3)
             }),
             Route {
                 target: LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 23 },
@@ -1576,7 +1046,7 @@ mod tests {
                     }),
                     prefix_len: 64,
                 },
-                destination: stack::ForwardingDestination::NextHop(fnet::IpAddress::Ipv6(
+                destination: ForwardingDestination::NextHop(fnet::IpAddress::Ipv6(
                     fnet::Ipv6Address {
                         addr: [
                             0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x0, 0x5e, 0xff, 0xfe, 0x0, 0x02,
@@ -1602,7 +1072,7 @@ mod tests {
                     }),
                     prefix_len: 58,
                 },
-                destination: stack::ForwardingDestination::DeviceId(3)
+                destination: ForwardingDestination::DeviceId(3)
             }),
             Route {
                 target: LifIpAddr { address: "2620:0:1000:5000::".parse().unwrap(), prefix: 58 },
@@ -1721,35 +1191,41 @@ mod tests {
         );
     }
 
-    async fn handle_get_interface(request: stack::StackRequest) {
-        match request {
-            stack::StackRequest::GetInterfaceInfo { responder, .. } => {
-                responder
-                    .send(&mut Ok(stack::InterfaceInfo {
-                        id: 42,
-                        properties: stack::InterfaceProperties {
-                            name: "forty-two".to_string(),
-                            topopath: "".to_string(),
-                            filepath: "".to_string(),
-                            mac: None,
-                            mtu: 0,
-                            features: fidl_fuchsia_hardware_ethernet::Features::empty(),
-                            administrative_status: stack::AdministrativeStatus::Enabled,
-                            physical_status: stack::PhysicalStatus::Up,
-                            addresses: vec![fnet::Subnet {
-                                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
-                                    addr: [192, 168, 42, 1],
-                                }),
-                                prefix_len: 24,
-                            }],
-                        },
-                    }))
-                    .unwrap();
+    fn interface_state_handler() -> Result<
+        (fnet_interfaces::StateProxy, impl futures::Future<Output = Result<(), fidl::Error>>),
+        Error,
+    > {
+        let (interface_state, interface_state_requests) =
+            fidl::endpoints::create_proxy_and_stream::<fnet_interfaces::StateMarker>()
+                .context("failed to create fuchsia.net.interfaces/State proxy and stream")?;
+        let interface_state_handler = interface_state_requests.try_for_each(|req| match req {
+            fnet_interfaces::StateRequest::GetWatcher { watcher, .. } => {
+                future::ready(watcher.into_stream()).and_then(|requests| {
+                    requests.try_for_each(|req| match req {
+                        fnet_interfaces::WatcherRequest::Watch { responder } => {
+                            future::ready(responder.send(&mut fnet_interfaces::Event::Existing(
+                                fnet_interfaces::Properties {
+                                    id: Some(42),
+                                    name: Some("forty-two".to_string()),
+                                    device_class: Some(fnet_interfaces::DeviceClass::Device(
+                                        fidl_fuchsia_hardware_network::DeviceClass::Unknown,
+                                    )),
+                                    online: Some(true),
+                                    addresses: Some(vec![fnet_interfaces::Address {
+                                        addr: Some(fidl_subnet!("192.168.42.1/24")),
+                                        ..fnet_interfaces::Address::EMPTY
+                                    }]),
+                                    has_default_ipv4_route: Some(false),
+                                    has_default_ipv6_route: Some(false),
+                                    ..fnet_interfaces::Properties::EMPTY
+                                },
+                            )))
+                        }
+                    })
+                })
             }
-            _ => {
-                panic!("unexpected stack request: {:?}", request);
-            }
-        }
+        });
+        Ok((interface_state, interface_state_handler))
     }
 
     #[derive(Debug, PartialEq)]
@@ -1813,8 +1289,9 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_enable_disable_dhcp_server() {
         let mut netcfg = create_test_netcfg();
-        netcfg.stack = fidl::endpoints::spawn_stream_handler(handle_get_interface)
-            .expect("failed to spawn test handler");
+        let (interface_state, interface_state_handler) = interface_state_handler()
+            .expect("failed to initialize mock fuchsia.net.interfaces/State service");
+        netcfg.interface_state = interface_state;
 
         // Trying to disable DHCP server when no servers are running is no-op.
         netcfg
@@ -1852,7 +1329,12 @@ mod tests {
         };
 
         let mut mock_server = MockDhcpServer::new();
-        join!(enable_then_disable_server, mock_server.handle_request_stream(dhcpd_stream));
+        let ((), (), interface_state_res) = join!(
+            enable_then_disable_server,
+            mock_server.handle_request_stream(dhcpd_stream),
+            interface_state_handler
+        );
+        let () = interface_state_res.expect("mock fuchsia.net.interfaces/State server failed");
 
         assert_eq!(
             mock_server.requests,
@@ -1882,8 +1364,9 @@ mod tests {
 
     async fn run_dhcp_server_config_test(tc: DhcpServerConfigTestCase<'_>) {
         let mut netcfg = create_test_netcfg();
-        netcfg.stack = fidl::endpoints::spawn_stream_handler(handle_get_interface)
-            .expect("failed to spawn test handler");
+        let (interface_state, interface_state_handler) = interface_state_handler()
+            .expect("failed to initialize mock fuchsia.net.interfaces/State service");
+        netcfg.interface_state = interface_state;
 
         let (dhcpd_proxy, dhcpd_stream) =
             fidl::endpoints::create_proxy_and_stream::<Server_Marker>()
@@ -1903,7 +1386,12 @@ mod tests {
         };
 
         let mut mock_server = MockDhcpServer::new();
-        join!(set_server_config, mock_server.handle_request_stream(dhcpd_stream));
+        let ((), (), interface_state_res) = join!(
+            set_server_config,
+            mock_server.handle_request_stream(dhcpd_stream),
+            interface_state_handler
+        );
+        let () = interface_state_res.expect("mock fuchsia.net.interfaces/State service failed");
 
         assert_eq!(mock_server.requests.len(), tc.want_num_requests);
 
@@ -2101,8 +1589,9 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_configure_dhcp_server_address_pool_not_in_subnet() {
         let mut netcfg = create_test_netcfg();
-        netcfg.stack = fidl::endpoints::spawn_stream_handler(handle_get_interface)
-            .expect("failed to spawn test handler");
+        let (interface_state, interface_state_handler) = interface_state_handler()
+            .expect("failed to initialize mock fuchsia.net.interfaces/State service");
+        netcfg.interface_state = interface_state;
 
         let (dhcpd_proxy, dhcpd_stream) =
             fidl::endpoints::create_proxy_and_stream::<Server_Marker>()
@@ -2136,14 +1625,17 @@ mod tests {
         };
 
         let mut mock_server = MockDhcpServer::new();
-        join!(set_server_config, mock_server.handle_request_stream(dhcpd_stream));
+        let ((), (), interface_state_res) = join!(
+            set_server_config,
+            mock_server.handle_request_stream(dhcpd_stream),
+            interface_state_handler
+        );
+        let () = interface_state_res.expect("mock fuchsia.net.interfaces/State service failed");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_configure_dhcp_server_should_propagate_fidl_error() {
         let mut netcfg = create_test_netcfg();
-        netcfg.stack = fidl::endpoints::spawn_stream_handler(handle_get_interface)
-            .expect("failed to spawn test handler");
 
         let (dhcpd_proxy, dhcpd_stream) =
             fidl::endpoints::create_proxy_and_stream::<Server_Marker>()
