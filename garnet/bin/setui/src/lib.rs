@@ -52,7 +52,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_inspect::component,
-    fuchsia_syslog::fx_log_err,
     fuchsia_zircon::DurationNum,
     futures::lock::Mutex,
     futures::StreamExt,
@@ -716,7 +715,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     let mut agent_authority = Authority::create(
         messenger_factory.clone(),
-        internal::agent::message::create_hub(),
         event_messenger_factory.clone(),
         components.clone(),
         monitor_actor,
@@ -841,9 +839,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     });
 
     for blueprint in agent_blueprints {
-        if agent_authority.register(blueprint).await.is_err() {
-            fx_log_err!("failed to register agent via blueprint");
-        }
+        agent_authority.register(blueprint).await;
     }
 
     // Execute initialization agents sequentially

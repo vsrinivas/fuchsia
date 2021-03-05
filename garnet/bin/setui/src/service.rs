@@ -20,6 +20,7 @@
 //! message hubs located in the internal mod. Communication from these hubs
 //! should migrate here over time.
 
+use crate::agent;
 use crate::base::SettingType;
 use crate::handler::base as handler;
 use crate::handler::setting_handler as controller;
@@ -56,6 +57,8 @@ pub enum Payload {
     /// requests and responses served by any policy as well as domain-specific requests and
     /// responses defined for individual policies.
     Policy(policy::Payload),
+    /// Agent payloads contain communication between the agent authority and individual agents.
+    Agent(agent::Payload),
 }
 
 /// A trait implemented by payloads for extracting the payload and associated

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::Payload;
 use crate::agent::{AgentError, Context as AgentContext, Invocation, InvocationResult, Lifespan};
 use crate::base::SettingType;
 use crate::blueprint_definition;
@@ -9,16 +10,17 @@ use crate::handler::base::{Payload as HandlerPayload, Request};
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::input::common::ButtonType;
 use crate::input::{monitor_media_buttons, VolumeGain};
-use crate::internal::agent::Payload;
 use crate::internal::event::{media_buttons, Event, Publisher};
 use crate::message::base::Audience;
 use crate::service;
 use crate::service_context::ServiceContextHandle;
+
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::StreamExt;
 use std::collections::HashSet;
+use std::convert::TryFrom;
 
 blueprint_definition!("buttons_agent", MediaButtonsAgent::create);
 
@@ -55,8 +57,11 @@ impl MediaButtonsAgent {
         let mut receptor = context.receptor;
         fasync::Task::spawn(async move {
             while let Ok((payload, client)) = receptor.next_payload().await {
-                if let Payload::Invocation(invocation) = payload {
-                    client.reply(Payload::Complete(agent.handle(invocation).await)).send().ack();
+                if let Ok(Payload::Invocation(invocation)) = Payload::try_from(payload) {
+                    client
+                        .reply(Payload::Complete(agent.handle(invocation).await).into())
+                        .send()
+                        .ack();
                 }
             }
 

@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use crate::agent::camera_watcher::CameraWatcherAgent;
-use crate::agent::{Context, Descriptor, Invocation, Lifespan};
-use crate::internal::agent;
+use crate::agent::{Context, Descriptor, Invocation, Lifespan, Payload};
 use crate::internal::event::{self, Event};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::service;
@@ -14,6 +13,7 @@ use crate::tests::fakes::service_registry::ServiceRegistry;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use std::collections::HashSet;
+use std::convert::TryFrom;
 use std::sync::Arc;
 
 struct FakeServices {
@@ -32,17 +32,20 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_camera_agent_proxy() {
-    let agent_hub = agent::message::create_hub();
+    let service_hub = service::message::create_hub();
     let event_hub = event::message::create_hub();
 
     // Create the agent receptor for use by the agent.
-    let agent_receptor =
-        agent_hub.create(MessengerType::Unbound).await.expect("Unable to create agent messenger").1;
+    let agent_receptor = service_hub
+        .create(MessengerType::Unbound)
+        .await
+        .expect("Unable to create agent messenger")
+        .1;
     let signature = agent_receptor.get_signature();
 
     // Create the messenger where we will send the invocations.
     let (agent_messenger, _) =
-        agent_hub.create(MessengerType::Unbound).await.expect("Unable to create agent messenger");
+        service_hub.create(MessengerType::Unbound).await.expect("Unable to create agent messenger");
 
     // Create the receptor which will receive the broadcast events.
     let (_, mut event_receptor) =
@@ -52,7 +55,7 @@ async fn test_camera_agent_proxy() {
     let context = Context::new(
         agent_receptor,
         Descriptor::new("test_camera_watcher_agent"),
-        service::message::create_hub(),
+        service_hub,
         event_hub,
         HashSet::new(),
         None,
@@ -70,13 +73,15 @@ async fn test_camera_agent_proxy() {
     // Create and send the invocation with faked services.
     let invocation = Invocation { lifespan: Lifespan::Service, service_context };
     let mut reply_receptor = agent_messenger
-        .message(agent::Payload::Invocation(invocation), Audience::Messenger(signature))
+        .message(Payload::Invocation(invocation).into(), Audience::Messenger(signature))
         .send();
     let mut completion_result = None;
     while let Some(event) = reply_receptor.next().await {
-        if let MessageEvent::Message(agent::Payload::Complete(result), _) = event {
-            completion_result = Some(result);
-            break;
+        if let MessageEvent::Message(payload, _) = event {
+            if let Ok(Payload::Complete(result)) = Payload::try_from(payload) {
+                completion_result = Some(result);
+                break;
+            }
         }
     }
 

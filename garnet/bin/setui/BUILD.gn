@@ -159,7 +159,6 @@ rustc_library("lib") {
     "src/inspect/inspect_broker.rs",
     "src/inspect/policy_inspect_broker.rs",
     "src/internal.rs",
-    "src/internal/agent.rs",
     "src/internal/common.rs",
     "src/internal/event.rs",
     "src/internal/monitor.rs",

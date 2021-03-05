@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::{BlueprintHandle, Context as AgentContext};
+use crate::agent::{BlueprintHandle, Context as AgentContext, Payload};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::internal::agent;
 use crate::internal::monitor;
 use crate::monitor::base::monitor::Context as MonitorContext;
 use crate::monitor::environment::Actor;
@@ -41,7 +40,7 @@ impl TestMonitorAgent {
                         // Immediately respond to all invocations
                         fasync::Task::spawn(async move {
                             while let Ok((.., client)) = context.receptor.next_payload().await {
-                                client.reply(agent::Payload::Complete(Ok(()))).send().ack();
+                                client.reply(Payload::Complete(Ok(())).into()).send().ack();
                             }
                         })
                         .detach();

@@ -6,10 +6,10 @@ use crate::agent::earcons::bluetooth_handler::BluetoothHandler;
 use crate::agent::earcons::volume_change_handler::VolumeChangeHandler;
 use crate::agent::Context as AgentContext;
 use crate::agent::Lifespan;
+use crate::agent::Payload;
 use crate::agent::{AgentError, Invocation, InvocationResult};
 use crate::blueprint_definition;
 use crate::handler::device_storage::DeviceStorageAccess;
-use crate::internal::agent::Payload;
 use crate::internal::event::Publisher;
 use crate::message::base::MessageEvent;
 use crate::service;
@@ -21,6 +21,7 @@ use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::lock::Mutex;
 use futures::StreamExt;
 use std::collections::HashSet;
+use std::convert::TryFrom;
 use std::sync::Arc;
 
 blueprint_definition!("earcons_agent", Agent::create);
@@ -55,8 +56,13 @@ impl Agent {
 
         fasync::Task::spawn(async move {
             while let Some(message) = context.receptor.next().await {
-                if let MessageEvent::Message(Payload::Invocation(invocation), client) = message {
-                    client.reply(Payload::Complete(agent.handle(invocation).await)).send().ack();
+                if let MessageEvent::Message(payload, client) = message {
+                    if let Ok(Payload::Invocation(invocation)) = Payload::try_from(payload) {
+                        client
+                            .reply(Payload::Complete(agent.handle(invocation).await).into())
+                            .send()
+                            .ack();
+                    }
                 }
             }
 

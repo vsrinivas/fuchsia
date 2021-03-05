@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::Payload;
 use crate::agent::{AgentError, Context, Invocation, InvocationResult, Lifespan};
 use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::handler::base::{Error, Payload as HandlerPayload, Request};
 use crate::handler::device_storage::DeviceStorageAccess;
-use crate::internal::agent::Payload;
 use crate::internal::event::{restore, Event, Publisher};
 use crate::message::base::{Audience, MessageEvent};
 use crate::service;
@@ -41,8 +41,15 @@ impl RestoreAgent {
 
         fasync::Task::spawn(async move {
             while let Some(event) = context.receptor.next().await {
-                if let MessageEvent::Message(Payload::Invocation(invocation), client) = event {
-                    client.reply(Payload::Complete(agent.handle(invocation).await)).send().ack();
+                if let MessageEvent::Message(
+                    service::Payload::Agent(Payload::Invocation(invocation)),
+                    client,
+                ) = event
+                {
+                    client
+                        .reply(Payload::Complete(agent.handle(invocation).await).into())
+                        .send()
+                        .ack();
                 }
             }
         })

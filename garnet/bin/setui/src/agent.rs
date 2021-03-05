@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use crate::base::SettingType;
-use crate::internal::agent::message::Receptor;
 use crate::internal::event;
 use crate::message::base::MessengerType;
 use crate::monitor;
+use crate::payload_convert;
 use crate::service;
+use crate::service::message::Receptor;
 use crate::service_context::ServiceContextHandle;
 
 use futures::future::BoxFuture;
@@ -33,7 +34,7 @@ pub mod inspect;
 /// Earcons.
 pub mod earcons;
 
-#[derive(Error, Debug, Clone)]
+#[derive(Error, Debug, Clone, Copy, PartialEq)]
 pub enum AgentError {
     #[error("Unhandled Lifespan")]
     UnhandledLifespan,
@@ -71,6 +72,12 @@ pub enum Lifespan {
 pub struct Invocation {
     pub lifespan: Lifespan,
     pub service_context: ServiceContextHandle,
+}
+
+impl PartialEq for Invocation {
+    fn eq(&self, other: &Self) -> bool {
+        self.lifespan == other.lifespan
+    }
 }
 
 /// Blueprint defines an interface provided to the authority for constructing
@@ -168,3 +175,11 @@ macro_rules! blueprint_definition {
         }
     };
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Payload {
+    Invocation(Invocation),
+    Complete(InvocationResult),
+}
+
+payload_convert!(Agent, Payload);

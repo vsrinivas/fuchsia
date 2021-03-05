@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::{AgentError, Context};
+use crate::agent::{AgentError, Context, Payload};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::internal::agent;
 use crate::internal::event;
 use crate::message::base::{MessageEvent, MessengerType};
 use crate::tests::scaffold;
@@ -13,6 +12,7 @@ use fuchsia_async as fasync;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::StreamExt;
+use std::convert::TryFrom;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_event_test_environment";
@@ -50,9 +50,9 @@ async fn test_agent_event_propagation() {
 
             fasync::Task::spawn(async move {
                 while let Ok((payload, client)) = context.receptor.next_payload().await {
-                    if let agent::Payload::Invocation(_) = payload {
+                    if let Ok(Payload::Invocation(_)) = Payload::try_from(payload) {
                         client
-                            .reply(agent::Payload::Complete(Err(AgentError::UnhandledLifespan)))
+                            .reply(Payload::Complete(Err(AgentError::UnhandledLifespan)).into())
                             .send()
                             .ack();
                     }

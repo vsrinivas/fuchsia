@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::{AgentError, BlueprintHandle, Context, Invocation, Lifespan};
+use crate::agent::{AgentError, BlueprintHandle, Context, Invocation, Lifespan, Payload};
 
 use crate::base::SettingType;
-use crate::internal::agent;
 use crate::internal::event;
 use crate::message::base::{Audience, MessengerType};
 use crate::monitor;
@@ -18,13 +17,11 @@ use std::collections::HashSet;
 /// stage.
 pub struct Authority {
     // A mapping of agent addresses
-    agent_signatures: Vec<agent::message::Signature>,
+    agent_signatures: Vec<service::message::Signature>,
     // Factory passed to agents for communicating with the service.
     messenger_factory: service::message::Factory,
-    // Factory to generate messengers to comunicate with the agent
-    agent_messenger_factory: agent::message::Factory,
     // Messenger
-    messenger: agent::message::Messenger,
+    messenger: service::message::Messenger,
     // Factory to generate event messengers
     event_factory: event::message::Factory,
     // Available components
@@ -36,12 +33,11 @@ pub struct Authority {
 impl Authority {
     pub async fn create(
         messenger_factory: service::message::Factory,
-        agent_messenger_factory: agent::message::Factory,
         event_factory: event::message::Factory,
         available_components: HashSet<SettingType>,
         resource_monitor_actor: Option<monitor::environment::Actor>,
     ) -> Result<Authority, Error> {
-        let (client, _) = agent_messenger_factory
+        let (client, _) = messenger_factory
             .create(MessengerType::Unbound)
             .await
             .map_err(|_| anyhow::format_err!("could not create agent messenger for authority"))?;
@@ -49,7 +45,6 @@ impl Authority {
         return Ok(Authority {
             agent_signatures: Vec::new(),
             messenger_factory,
-            agent_messenger_factory,
             messenger: client,
             event_factory,
             available_components,
@@ -57,12 +52,12 @@ impl Authority {
         });
     }
 
-    pub async fn register(&mut self, blueprint: BlueprintHandle) -> Result<(), Error> {
+    pub async fn register(&mut self, blueprint: BlueprintHandle) {
         let agent_receptor = self
-            .agent_messenger_factory
+            .messenger_factory
             .create(MessengerType::Unbound)
             .await
-            .map_err(|_| format_err!("could not register"))?
+            .expect("agent receptor should be created")
             .1;
         let signature = agent_receptor.get_signature();
         blueprint
@@ -80,8 +75,6 @@ impl Authority {
             .await;
 
         self.agent_signatures.push(signature);
-
-        Ok(())
     }
 
     /// Invokes each registered agent for a given lifespan. If sequential is true,
@@ -102,10 +95,11 @@ impl Authority {
             let mut receptor = self
                 .messenger
                 .message(
-                    agent::Payload::Invocation(Invocation {
+                    Payload::Invocation(Invocation {
                         lifespan: lifespan.clone(),
                         service_context: service_context.clone(),
-                    }),
+                    })
+                    .into(),
                     Audience::Messenger(signature),
                 )
                 .send();
@@ -134,11 +128,13 @@ impl Authority {
 }
 
 fn process_payload(
-    payload: Result<(agent::Payload, agent::message::MessageClient), Error>,
+    payload: Result<(service::Payload, service::message::MessageClient), Error>,
 ) -> Result<(), Error> {
     match payload {
-        Ok((agent::Payload::Complete(Ok(_)), _)) => Ok(()),
-        Ok((agent::Payload::Complete(Err(AgentError::UnhandledLifespan)), _)) => Ok(()),
+        Ok((service::Payload::Agent(Payload::Complete(Ok(_))), _)) => Ok(()),
+        Ok((service::Payload::Agent(Payload::Complete(Err(AgentError::UnhandledLifespan))), _)) => {
+            Ok(())
+        }
         _ => Err(format_err!("invocation failed")),
     }
 }

@@ -9,12 +9,12 @@
 //! after creation.
 
 use crate::agent::Context;
+use crate::agent::Payload;
 use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::clock;
 use crate::handler::base::{Payload as HandlerPayload, Request};
 use crate::handler::device_storage::DeviceStorageAccess;
-use crate::internal::agent::Payload;
 use crate::message::base::{filter, MessageEvent, MessengerType};
 use crate::service;
 use crate::service::TryFromWithClient;
@@ -145,11 +145,12 @@ impl InspectAgent {
                         agent.process_message_event(message_event);
                     },
                     agent_message = agent_event.select_next_some() => {
-                        if let MessageEvent::Message(Payload::Invocation(_invocation), client)
+                        if let MessageEvent::Message(
+                                service::Payload::Agent(Payload::Invocation(_invocation)), client)
                                 = agent_message {
                             // Since the agent runs at creation, there is no
                             // need to handle state here.
-                            client.reply(Payload::Complete(Ok(()))).send().ack();
+                            client.reply(Payload::Complete(Ok(())).into()).send().ack();
                         }
                     },
                 }
@@ -222,7 +223,6 @@ mod tests {
     use super::*;
     use crate::agent::Descriptor;
     use crate::display::types::SetDisplayInfo;
-    use crate::internal::agent;
     use crate::internal::event;
     use crate::intl::types::{IntlInfo, LocaleId, TemperatureUnit};
     use crate::service;
@@ -270,7 +270,7 @@ mod tests {
 
     async fn create_context() -> Context {
         Context::new(
-            agent::message::create_hub()
+            service::message::create_hub()
                 .create(MessengerType::Unbound)
                 .await
                 .expect("should be present")

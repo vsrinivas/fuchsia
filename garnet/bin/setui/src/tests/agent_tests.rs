@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 use crate::agent::authority::Authority;
-use crate::agent::{AgentError, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan};
+use crate::agent::{
+    AgentError, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan, Payload,
+};
 use crate::base::SettingType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::internal::agent;
 use crate::internal::event;
 use crate::service;
 use crate::service_context::ServiceContext;
 use crate::tests::scaffold;
 use crate::EnvironmentBuilder;
-use anyhow::{format_err, Error};
 use core::fmt::{Debug, Formatter};
 use fuchsia_async as fasync;
 use futures::channel::mpsc::UnboundedSender;
@@ -20,6 +20,7 @@ use futures::lock::Mutex;
 use futures::StreamExt;
 use rand::Rng;
 use std::collections::HashSet;
+use std::convert::TryFrom;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_agent_test_environment";
@@ -66,14 +67,12 @@ impl TestAgent {
         lifespan_target: LifespanTarget,
         authority: &mut Authority,
         callback: CallbackSender,
-    ) -> Result<Arc<Mutex<TestAgent>>, Error> {
+    ) -> Arc<Mutex<TestAgent>> {
         let (agent, generate) = Self::create(id, lifespan_target, callback);
 
-        if !authority.register(generate).await.is_ok() {
-            return Err(format_err!("could not register"));
-        }
+        authority.register(generate).await;
 
-        Ok(agent)
+        agent
     }
 
     pub fn create(
@@ -94,11 +93,12 @@ impl TestAgent {
                 let agent = agent_clone.clone();
                 fasync::Task::spawn(async move {
                     while let Ok((payload, client)) = context.receptor.next_payload().await {
-                        if let agent::Payload::Invocation(invocation) = payload {
+                        if let Ok(Payload::Invocation(invocation)) = Payload::try_from(payload) {
                             client
-                                .reply(agent::Payload::Complete(
-                                    agent.lock().await.handle(invocation).await,
-                                ))
+                                .reply(
+                                    Payload::Complete(agent.lock().await.handle(invocation).await)
+                                        .into(),
+                                )
                                 .send()
                                 .ack();
                         }
@@ -205,7 +205,6 @@ async fn test_environment_startup() {
 async fn create_authority() -> Authority {
     Authority::create(
         service::message::create_hub(),
-        agent::message::create_hub(),
         event::message::create_hub(),
         HashSet::new(),
         None,
@@ -308,7 +307,6 @@ async fn test_err_handling() {
         tx.clone(),
     )
     .await
-    .unwrap()
     .lock()
     .await
     .id();
@@ -319,8 +317,7 @@ async fn test_err_handling() {
         &mut authority,
         tx.clone(),
     )
-    .await
-    .unwrap();
+    .await;
 
     fasync::Task::spawn(async move {
         // Ensure the first agent received an invocation, acknowledge with an error.
@@ -354,14 +351,8 @@ async fn create_agents(
     for _i in 0..count {
         let id = rng.gen();
         return_agents.push(id);
-        assert!(TestAgent::create_and_register(
-            id,
-            lifespan_target.clone(),
-            authority,
-            sender.clone()
-        )
-        .await
-        .is_ok())
+        TestAgent::create_and_register(id, lifespan_target.clone(), authority, sender.clone())
+            .await;
     }
 
     return return_agents;
