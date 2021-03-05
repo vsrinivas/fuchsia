@@ -5,11 +5,13 @@
 use {
     crate::{queue, repository::Repository, repository_manager::Stats, TCP_KEEPALIVE_TIMEOUT},
     anyhow::anyhow,
+    cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_pkg::{LocalMirrorProxy, PackageCacheProxy},
     fidl_fuchsia_pkg_ext::{BlobId, MirrorConfig, RepositoryConfig},
+    fuchsia_async::TimeoutExt as _,
     fuchsia_cobalt::CobaltSender,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_trace as trace,
@@ -17,14 +19,14 @@ use {
     fuchsia_zircon::Status,
     futures::{lock::Mutex as AsyncMutex, prelude::*, stream::FuturesUnordered},
     http_uri_ext::HttpUriExt as _,
-    hyper::StatusCode,
+    hyper::{body::HttpBody, Body, Request, StatusCode},
     parking_lot::Mutex,
     pkgfs::install::BlobKind,
     std::{
         collections::HashSet,
         hash::Hash,
         sync::{
-            atomic::{AtomicBool, AtomicU64, Ordering},
+            atomic::{AtomicBool, Ordering},
             Arc,
         },
         time::Duration,
@@ -36,7 +38,6 @@ mod base_package_index;
 pub use base_package_index::BasePackageIndex;
 
 mod inspect;
-mod resume;
 mod retry;
 
 pub type BlobFetcher = queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>;
@@ -375,12 +376,6 @@ impl ToResolveStatus for FetchError {
             FetchError::ConflictingBlobSources => Status::INTERNAL,
             FetchError::BlobHeaderTimeout { .. } => Status::UNAVAILABLE,
             FetchError::BlobBodyTimeout { .. } => Status::UNAVAILABLE,
-            FetchError::ExpectedHttpStatus206 { .. } => Status::UNAVAILABLE,
-            FetchError::MissingContentRangeHeader { .. } => Status::UNAVAILABLE,
-            FetchError::MalformedContentRangeHeader { .. } => Status::UNAVAILABLE,
-            FetchError::InvalidContentRangeHeader { .. } => Status::UNAVAILABLE,
-            FetchError::ExceededResumptionAttemptLimit { .. } => Status::UNAVAILABLE,
-            FetchError::ContentLengthContentRangeMismatch { .. } => Status::UNAVAILABLE,
         }
     }
 }
@@ -583,22 +578,6 @@ async fn fetch_blob(
     }
 }
 
-#[derive(Default)]
-struct FetchStats {
-    // How many times the blob download was resumed, e.g. with Http Range requests
-    resumptions: AtomicU64,
-}
-
-impl FetchStats {
-    fn resume(&self) {
-        self.resumptions.fetch_add(1, Ordering::SeqCst);
-    }
-
-    fn resumptions(&self) -> u64 {
-        self.resumptions.load(Ordering::SeqCst)
-    }
-}
-
 async fn fetch_blob_http(
     inspect: inspect::NeedsMirror,
     client: &fuchsia_hyper::HttpsClient,
@@ -626,13 +605,8 @@ async fn fetch_blob_http(
         let flaked = Arc::clone(&flaked);
         let mirror_stats = &mirror_stats;
         let mut cobalt_sender = cobalt_sender.clone();
-        // TODO(fxbug.dev/71333) don't use .inspect so this doesn't need to be in an Arc.
-        let fetch_stats = Arc::new(FetchStats::default());
-        let fetch_stats_clone = Arc::clone(&fetch_stats);
-        let inspect = &inspect;
-        let blob_url = &blob_url;
 
-        async move {
+        async {
             let inspect = inspect.attempt();
             inspect.state(inspect::Http::CreateBlob);
             if let Some((blob, blob_closer)) =
@@ -646,7 +620,6 @@ async fn fetch_blob_http(
                     expected_len,
                     blob,
                     blob_network_timeouts,
-                    fetch_stats_clone,
                 )
                 .await;
                 inspect.state(inspect::Http::CloseBlob);
@@ -671,21 +644,12 @@ async fn fetch_blob_http(
             }
         })
         .inspect(move |res| {
-            let result_event_code = match res {
+            let event_code = match res {
                 Ok(()) => metrics::FetchBlobMetricDimensionResult::Success,
                 Err(e) => e.into(),
-            };
-            let resumed_event_code = if fetch_stats.resumptions() != 0 {
-                metrics::FetchBlobMetricDimensionResumed::True
-            } else {
-                metrics::FetchBlobMetricDimensionResumed::False
-            };
-            cobalt_sender.log_event_count(
-                metrics::FETCH_BLOB_METRIC_ID,
-                (result_event_code, resumed_event_code),
-                0,
-                1,
-            );
+            }
+            .as_event_code();
+            cobalt_sender.log_event_count(metrics::FETCH_BLOB_METRIC_ID, event_code, 0, 1);
         })
     })
     .await
@@ -775,21 +739,54 @@ async fn download_blob(
     expected_len: Option<u64>,
     dest: pkgfs::install::Blob<pkgfs::install::NeedsTruncate>,
     blob_network_timeouts: BlobNetworkTimeouts,
-    fetch_stats: Arc<FetchStats>,
 ) -> Result<(), FetchError> {
     inspect.state(inspect::Http::HttpGet);
-    let (expected_len, content) =
-        resume::resuming_get(client, uri, expected_len, blob_network_timeouts, fetch_stats).await?;
+    let request = Request::get(uri)
+        .body(Body::empty())
+        .map_err(|e| FetchError::Http { e, uri: uri.to_string() })?;
+    let response = client
+        .request(request)
+        .map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })
+        .on_timeout(blob_network_timeouts.header(), || {
+            Err(FetchError::BlobHeaderTimeout { uri: uri.to_string() })
+        })
+        .await?;
+
+    if response.status() != StatusCode::OK {
+        return Err(FetchError::BadHttpStatus { code: response.status(), uri: uri.to_string() });
+    }
+
+    let expected_len = match (expected_len, response.size_hint().exact()) {
+        (Some(expected), Some(actual)) => {
+            if expected != actual {
+                return Err(FetchError::ContentLengthMismatch {
+                    expected,
+                    actual,
+                    uri: uri.to_string(),
+                });
+            } else {
+                expected
+            }
+        }
+        (Some(length), None) | (None, Some(length)) => length,
+        (None, None) => return Err(FetchError::UnknownLength { uri: uri.to_string() }),
+    };
     inspect.expected_size_bytes(expected_len);
 
     inspect.state(inspect::Http::TruncateBlob);
     let mut dest = dest.truncate(expected_len).await.map_err(FetchError::Truncate)?;
 
     inspect.state(inspect::Http::ReadHttpBody);
+    let mut chunks = response.into_body();
     let mut written = 0u64;
-
-    futures::pin_mut!(content);
-    while let Some(chunk) = content.try_next().await? {
+    while let Some(chunk) = chunks
+        .try_next()
+        .map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })
+        .on_timeout(blob_network_timeouts.body(), || {
+            Err(FetchError::BlobBodyTimeout { uri: uri.to_string() })
+        })
+        .await?
+    {
         if written + chunk.len() as u64 > expected_len {
             return Err(FetchError::BlobTooLarge { uri: uri.to_string() });
         }
@@ -892,39 +889,6 @@ pub enum FetchError {
         "timed out waiting for bytes from the http response body while downloading blob: {uri}"
     )]
     BlobBodyTimeout { uri: String },
-
-    #[error("Blob fetch of {uri}: http request expected 206, got {code}")]
-    ExpectedHttpStatus206 { code: hyper::StatusCode, uri: String },
-
-    #[error("Blob fetch of {uri}: http request expected Content-Range header")]
-    MissingContentRangeHeader { uri: String },
-
-    #[error("Blob fetch of {uri}: http request for range {first_byte_pos}-{last_byte_pos} returned malformed Content-Range header: {header:?}")]
-    MalformedContentRangeHeader {
-        #[source]
-        e: resume::ContentRangeParseError,
-        uri: String,
-        first_byte_pos: u64,
-        last_byte_pos: u64,
-        header: http::header::HeaderValue,
-    },
-
-    #[error("Blob fetch of {uri}: http request returned Content-Range: {content_range:?} but expected: {expected:?}")]
-    InvalidContentRangeHeader {
-        uri: String,
-        content_range: resume::HttpContentRange,
-        expected: resume::HttpContentRange,
-    },
-
-    #[error("Blob fetch of {uri}: exceeded resumption attempt limit of: {limit}")]
-    ExceededResumptionAttemptLimit { uri: String, limit: u64 },
-
-    #[error("Blob fetch of {uri}: Content-Length: {content_length} and Content-Range: {content_range:?} are inconsistent")]
-    ContentLengthContentRangeMismatch {
-        uri: String,
-        content_length: u64,
-        content_range: resume::HttpContentRange,
-    },
 }
 
 impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
@@ -972,18 +936,6 @@ impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
             FetchError::ConflictingBlobSources => EventCodes::ConflictingBlobSources,
             FetchError::BlobHeaderTimeout { .. } => EventCodes::BlobHeaderDeadlineExceeded,
             FetchError::BlobBodyTimeout { .. } => EventCodes::BlobBodyDeadlineExceeded,
-            FetchError::ExpectedHttpStatus206 { .. } => EventCodes::ExpectedHttpStatus206,
-            FetchError::MissingContentRangeHeader { .. } => EventCodes::MissingContentRangeHeader,
-            FetchError::MalformedContentRangeHeader { .. } => {
-                EventCodes::MalformedContentRangeHeader
-            }
-            FetchError::InvalidContentRangeHeader { .. } => EventCodes::InvalidContentRangeHeader,
-            FetchError::ExceededResumptionAttemptLimit { .. } => {
-                EventCodes::ExceededResumptionAttemptLimit
-            }
-            FetchError::ContentLengthContentRangeMismatch { .. } => {
-                EventCodes::ContentLengthContentRangeMismatch
-            }
         }
     }
 }
@@ -998,27 +950,8 @@ impl FetchError {
             | FetchError::Http { .. }
             | FetchError::BadHttpStatus { .. }
             | FetchError::BlobHeaderTimeout { .. }
-            | FetchError::BlobBodyTimeout { .. }
-            | FetchError::ExpectedHttpStatus206 { .. }
-            | FetchError::MissingContentRangeHeader { .. }
-            | FetchError::MalformedContentRangeHeader { .. }
-            | FetchError::InvalidContentRangeHeader { .. }
-            | FetchError::ExceededResumptionAttemptLimit { .. }
-            | FetchError::ContentLengthContentRangeMismatch { .. } => FetchErrorKind::Network,
-            FetchError::CreateBlob { .. }
-            | FetchError::NoMirrors
-            | FetchError::ContentLengthMismatch { .. }
-            | FetchError::UnknownLength { .. }
-            | FetchError::BlobTooSmall { .. }
-            | FetchError::BlobTooLarge { .. }
-            | FetchError::Truncate { .. }
-            | FetchError::Write { .. }
-            | FetchError::BlobUrl { .. }
-            | FetchError::FidlError { .. }
-            | FetchError::IoError { .. }
-            | FetchError::LocalMirror { .. }
-            | FetchError::NoBlobSource { .. }
-            | FetchError::ConflictingBlobSources => FetchErrorKind::Other,
+            | FetchError::BlobBodyTimeout { .. } => FetchErrorKind::Network,
+            _ => FetchErrorKind::Other,
         }
     }
 }
