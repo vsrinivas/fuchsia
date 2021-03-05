@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    analytics::{add_crash_event, add_launch_event, show_analytics_notice},
+    analytics::{add_crash_event, add_launch_event, get_notice},
     anyhow::{anyhow, Context, Result},
-    ffx_core::{build_info, ffx_bail, ffx_error, FfxError},
+    ffx_core::{ffx_bail, ffx_error, init_metrics_svc, FfxError},
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
     ffx_lib_args::{from_env, Ffx},
     ffx_lib_sub_command::Subcommand,
@@ -25,9 +25,6 @@ use {
     std::sync::{Arc, Mutex},
     std::time::{Duration, Instant},
 };
-
-// app name for analytics
-const APP_NAME: &str = "ffx";
 
 // Config key for event timeout.
 const PROXY_TIMEOUT_SECS: &str = "proxy.timeout_secs";
@@ -221,6 +218,14 @@ fn sha256_digest<R: Read>(mut reader: R) -> Result<Digest> {
     Ok(context.finish())
 }
 
+fn get_launch_args() -> String {
+    let args: Vec<String> = std::env::args().collect();
+    // drop arg[0]: executable with hard path
+    // TODO(fxb/71028): do we want to break out subcommands for analytics?
+    let args_str = &args[1..].join(" ");
+    format!("{}", &args_str)
+}
+
 async fn run() -> Result<()> {
     let app: Ffx = from_env();
 
@@ -239,23 +244,17 @@ async fn run() -> Result<()> {
         std::env::set_var("ASCENDD", sockpath);
     });
 
-    let notice_writer = Box::new(std::io::stderr());
-    show_analytics_notice(notice_writer);
+    init_metrics_svc().await; // one time call to initialize app analytics
+    if let Some(note) = get_notice().await {
+        eprintln!("{}", note);
+    }
 
     let analytics_start = Instant::now();
 
     let analytics_task = fuchsia_async::Task::spawn(async {
-        let args: Vec<String> = std::env::args().collect();
-        // drop arg[0]: executable with hard path
-        // TODO do we want to break out subcommands for analytics?
-        let args_str = &args[1..].join(" ");
-        let launch_args = format!("{}", &args_str);
-        let build_info = build_info();
-        let build_version = build_info.build_version;
-        if let Err(e) =
-            add_launch_event(APP_NAME, build_version.as_deref(), Some(launch_args).as_deref()).await
-        {
-            log::error!("analytics submission failed: {}", e);
+        let launch_args = get_launch_args();
+        if let Err(e) = add_launch_event(Some(&launch_args)).await {
+            log::error!("metrics submission failed: {}", e);
         }
         Instant::now()
     });
@@ -275,8 +274,8 @@ async fn run() -> Result<()> {
     let analytics_done = analytics_task
         // TODO(66918): make configurable, and evaluate chosen time value.
         .on_timeout(Duration::from_secs(2), || {
-            log::error!("analytics submission timed out");
-            // Analytics timeouts should not impact user flows
+            log::error!("metrics submission timed out");
+            // Metrics timeouts should not impact user flows.
             Instant::now()
         })
         .await;

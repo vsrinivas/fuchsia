@@ -1,31 +1,22 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-extern crate url;
-
 use std::collections::BTreeMap;
 use url::form_urlencoded;
 
 pub use crate::env_info::*;
-pub use crate::user_status::*;
 
 const GA_PROPERTY_KEY: &str = "tid";
-
-#[cfg(test)]
-const GA_PROPERTY_ID: &str = "UA-175659118-1";
-#[cfg(not(test))]
-const GA_PROPERTY_ID: &str = "UA-127897021-9";
 
 const GA_CLIENT_KEY: &str = "cid";
 
 const GA_EVENT_CATEGORY_KEY: &str = "ec";
 const GA_EVENT_CATEGORY_DEFAULT: &str = "general";
 
-// TODO - match zxdb by changing category and action for analytics commands
-const GA_EVENT_CATEGORY_ANALYTICS: &str = "analytics";
-const GA_EVENT_CATEGORY_ANALYTICS_ACTION_ENABLE: &str = "manual-enable";
-const GA_EVENT_CATEGORY_ANALYTICS_ACTION_DISABLE: &str = "disable";
+// TODO(fxb/71579): match zxdb by changing category and action for analytics commands
+// const GA_EVENT_CATEGORY_ANALYTICS: &str = "analytics";
+// const GA_EVENT_CATEGORY_ANALYTICS_ACTION_ENABLE: &str = "manual-enable";
+// const GA_EVENT_CATEGORY_ANALYTICS_ACTION_DISABLE: &str = "disable";
 
 const GA_EVENT_ACTION_KEY: &str = "ea";
 
@@ -36,31 +27,30 @@ const GA_DATA_TYPE_EVENT_KEY: &str = "event";
 const GA_PROTOCOL_KEY: &str = "v";
 const GA_PROTOCOL_VAL: &str = "1";
 
-//  TODO fx uses bash or zsh. Is that what we want?
 const GA_APP_NAME_KEY: &str = "an";
 const GA_APP_VERSION_KEY: &str = "av";
 const GA_APP_VERSION_DEFAULT: &str = "unknown";
 
 const GA_CUSTOM_DIMENSION_1_KEY: &str = "cd1";
 
-pub type UuidBuilder = fn() -> String;
-
+/// Produces http encoded parameter string to send to the analytics
+/// service.
 pub fn make_body_with_hash(
     app_name: &str,
     app_version: Option<&str>,
+    ga_property_id: &str,
     category: Option<&str>,
     action: Option<&str>,
     labels: Option<&str>,
     custom_dimensions: BTreeMap<&str, String>,
-    uuid_builder: &UuidBuilder,
+    uuid: String,
 ) -> String {
-    let uuid_pre = &(uuid_builder)();
     let uname = os_and_release_desc();
 
     let mut params = BTreeMap::new();
     params.insert(GA_PROTOCOL_KEY, GA_PROTOCOL_VAL);
-    params.insert(GA_PROPERTY_KEY, GA_PROPERTY_ID);
-    params.insert(GA_CLIENT_KEY, &uuid_pre);
+    params.insert(GA_PROPERTY_KEY, ga_property_id);
+    params.insert(GA_CLIENT_KEY, &uuid);
     params.insert(GA_DATA_TYPE_KEY, GA_DATA_TYPE_EVENT_KEY);
     params.insert(GA_APP_NAME_KEY, app_name);
     params.insert(
@@ -115,9 +105,7 @@ fn to_kv_post_body(params: &BTreeMap<&str, &str>) -> String {
 mod test {
     use super::*;
 
-    fn test_uuid() -> String {
-        "test_cid".to_string()
-    }
+    pub const GA_PROPERTY_ID: &str = "UA-175659118-1";
 
     #[test]
     fn make_post_body() {
@@ -126,21 +114,22 @@ mod test {
         let app_name = "ffx";
         let app_version = "1";
         let uname = os_and_release_desc().replace(" ", "+");
-        let cid = test_uuid();
+        let cid = "test";
         let expected = format!(
-            "an={}&av={}&cd1={}&cid={}&ea={}&ec=general&el={}&t=event&tid=UA-175659118-1&v=1",
-            &app_name, &app_version, &uname, &cid, &args_encoded, &args_encoded
+            "an={}&av={}&cd1={}&cid={}&ea={}&ec=general&el={}&t=event&tid={}&v=1",
+            &app_name, &app_version, &uname, &cid, &args_encoded, &args_encoded, GA_PROPERTY_ID
         );
         assert_eq!(
             expected,
             make_body_with_hash(
                 app_name,
                 Some(app_version),
+                GA_PROPERTY_ID,
                 None,
                 Some(args),
                 Some(args),
                 BTreeMap::new(),
-                &(test_uuid as UuidBuilder)
+                String::from("test")
             )
         );
     }
@@ -153,21 +142,22 @@ mod test {
         let app_name = "ffx";
         let app_version = "1";
         let uname = os_and_release_desc().replace(" ", "+");
-        let cid = test_uuid();
+        let cid = "test";
         let expected = format!(
-            "an={}&av={}&cd1={}&cid={}&ea={}&ec=general&el={}&t=event&tid=UA-175659118-1&v=1",
-            &app_name, &app_version, &uname, &cid, &args_encoded, &labels
+            "an={}&av={}&cd1={}&cid={}&ea={}&ec=general&el={}&t=event&tid={}&v=1",
+            &app_name, &app_version, &uname, &cid, &args_encoded, &labels, GA_PROPERTY_ID
         );
         assert_eq!(
             expected,
             make_body_with_hash(
                 app_name,
                 Some(app_version),
+                GA_PROPERTY_ID,
                 None,
                 Some(args),
                 Some(labels),
                 BTreeMap::new(),
-                &(test_uuid as UuidBuilder)
+                String::from("test")
             )
         );
     }
@@ -181,10 +171,10 @@ mod test {
         let app_version = "1";
         let uname = os_and_release_desc().replace(" ", "+");
         let cd3_val = "foo".to_string();
-        let cid = test_uuid();
+        let cid = "test";
         let expected = format!(
-            "an={}&av={}&cd1={}&cd3={}&cid={}&ea={}&ec=general&el={}&t=event&tid=UA-175659118-1&v=1",
-            &app_name, &app_version, &uname, &cd3_val, &cid, &args_encoded, &labels
+            "an={}&av={}&cd1={}&cd3={}&cid={}&ea={}&ec=general&el={}&t=event&tid={}&v=1",
+            &app_name, &app_version, &uname, &cd3_val, &cid, &args_encoded, &labels, GA_PROPERTY_ID
         );
         let mut custom_dimensions = BTreeMap::new();
         custom_dimensions.insert("cd3", cd3_val);
@@ -193,11 +183,12 @@ mod test {
             make_body_with_hash(
                 app_name,
                 Some(app_version),
+                GA_PROPERTY_ID,
                 None,
                 Some(args),
                 Some(labels),
                 custom_dimensions,
-                &(test_uuid as UuidBuilder)
+                String::from("test")
             )
         );
     }

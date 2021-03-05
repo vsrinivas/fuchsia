@@ -5,6 +5,7 @@
 pub use core_macros::{ffx_command, ffx_plugin};
 
 use {
+    analytics::init,
     anyhow::Result,
     futures::stream::{FuturesUnordered, StreamExt, TryStream},
     futures::{future::FusedFuture, Future},
@@ -16,6 +17,14 @@ use {
 };
 
 pub use ffx_build_version::build_info;
+
+pub const GA_PROPERTY_ID: &str = "UA-127897021-9";
+
+pub async fn init_metrics_svc() {
+    let build_info = build_info();
+    let build_version = build_info.build_version;
+    init(String::from("ffx"), build_version, GA_PROPERTY_ID.to_string()).await;
+}
 
 // Error type for wrapping errors known to an `ffx` command and whose occurrence should
 // not a priori be considered a bug in ffx.

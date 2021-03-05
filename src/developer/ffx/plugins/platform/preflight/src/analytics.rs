@@ -4,7 +4,7 @@
 
 use {
     super::command_runner::SYSTEM_COMMAND_RUNNER, analytics::add_custom_event, anyhow::Result,
-    ffx_core::build_info, std::collections::BTreeMap,
+    std::collections::BTreeMap,
 };
 
 #[allow(unused_imports)]
@@ -16,7 +16,6 @@ pub static ANALYTICS_ACTION_WARNING: &str = "completed_warning";
 pub static ANALYTICS_ACTION_FAILURE_RECOVERABLE: &str = "completed_failure_recoverable";
 pub static ANALYTICS_ACTION_FAILURE: &str = "completed_failure";
 
-static ANALYTICS_APP_NAME: &str = "ffx";
 static ANALYTICS_CATEGORY: &str = "preflight";
 static ANALYTICS_CUSTOM_DIMENSION_2_KEY: &str = "cd3";
 
@@ -36,17 +35,8 @@ pub async fn report_preflight_analytics(action: &str) {
         custom_dimensions.insert(ANALYTICS_CUSTOM_DIMENSION_2_KEY, cards.join(","));
     }
 
-    let build_info = build_info();
-    let build_version = build_info.build_version;
-    if let Err(e) = add_custom_event(
-        ANALYTICS_APP_NAME,
-        build_version.as_deref(),
-        Some(ANALYTICS_CATEGORY),
-        Some(action),
-        None,
-        custom_dimensions,
-    )
-    .await
+    if let Err(e) =
+        add_custom_event(Some(ANALYTICS_CATEGORY), Some(action), None, custom_dimensions).await
     {
         log::error!("Preflight analytics submission failed: {}", e);
     }

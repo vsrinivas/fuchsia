@@ -1,99 +1,131 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-#![allow(unused)]
-
-pub use env_info::is_analytics_disabled_by_env;
-pub use ga_event::*;
-pub use notice::*;
-use std::any::Any;
-use std::collections::BTreeMap;
-pub use user_status::*;
-use {
-    anyhow::Error,
-    fuchsia_hyper::new_https_client,
-    futures::{
-        stream::Stream,
-        task::{Context, Poll},
-    },
-    hyper::{Body, Method, Request, StatusCode},
-    std::pin::Pin,
-};
-
 mod env_info;
 mod ga_event;
-pub mod notice;
-mod user_status;
+mod metrics_service;
+mod metrics_state;
+mod notice;
 
-#[cfg(test)]
-const GA_URL: &str = "https://www.google-analytics.com/debug/collect";
-#[cfg(not(test))]
-const GA_URL: &str = "https://www.google-analytics.com/collect";
+use {
+    anyhow::{bail, Result},
+    std::collections::BTreeMap,
+    std::path::PathBuf,
+};
 
-pub async fn add_launch_event(
-    app_name: &str,
-    app_version: Option<&str>,
-    args: Option<&str>,
-) -> anyhow::Result<()> {
-    add_custom_event(app_name, app_version, None, args, args, BTreeMap::new()).await
+use crate::env_info::{analytics_folder, is_analytics_disabled_by_env};
+use crate::metrics_service::*;
+use crate::metrics_state::{MetricsState, UNKNOWN_VERSION};
+
+const INIT_ERROR: &str = "Please call analytics::init prior to any other analytics api calls.";
+
+/// This function initializes the metrics service so that an app
+/// can make posts to the analytics service and read the current opt in status of the user
+pub async fn init(app_name: String, build_version: Option<String>, ga_product_code: String) {
+    METRICS_SERVICE.lock().await.inner_init(MetricsState::from_config(
+        &PathBuf::from(&analytics_folder()),
+        app_name,
+        build_version.unwrap_or(UNKNOWN_VERSION.into()),
+        ga_product_code,
+        is_analytics_disabled_by_env(),
+    ));
 }
 
+/// Returns a legal notice of metrics data collection if user
+/// is new to all tools (full notice) or new to this tool (brief notice).
+/// Returns an error if init has not been called.
+pub async fn get_notice() -> Option<String> {
+    let svc = METRICS_SERVICE.lock().await;
+    match &svc.init_state {
+        MetricsServiceInitStatus::INITIALIZED => svc.inner_get_notice(),
+        MetricsServiceInitStatus::UNINITIALIZED => {
+            log::error!("get_notice called on uninitialized METRICS_SERVICE");
+            None
+        }
+    }
+}
+
+/// Records intended opt in status.
+/// Returns an error if init has not been called.
+pub async fn set_opt_in_status(enabled: bool) -> Result<()> {
+    let mut svc = METRICS_SERVICE.lock().await;
+    match &svc.init_state {
+        MetricsServiceInitStatus::INITIALIZED => svc.inner_set_opt_in_status(enabled),
+        MetricsServiceInitStatus::UNINITIALIZED => {
+            log::error!("set_optin_status called on uninitialized METRICS_SERVICE");
+            bail!(INIT_ERROR)
+        }
+    }
+}
+
+/// Returns current opt in status.
+/// Returns an error if init has not been called.
+pub async fn is_opted_in() -> bool {
+    let svc = METRICS_SERVICE.lock().await;
+    match &svc.init_state {
+        MetricsServiceInitStatus::INITIALIZED => svc.inner_is_opted_in(),
+        MetricsServiceInitStatus::UNINITIALIZED => {
+            log::error!("is_opted_in called on uninitialized METRICS_SERVICE");
+            false
+        }
+    }
+}
+
+/// Records a launch event with the command line args used to launch app.
+/// Returns an error if init has not been called.
+pub async fn add_launch_event(args: Option<&str>) -> Result<()> {
+    let svc = METRICS_SERVICE.lock().await;
+    match &svc.init_state {
+        MetricsServiceInitStatus::INITIALIZED => svc.inner_add_launch_event(args).await,
+        MetricsServiceInitStatus::UNINITIALIZED => {
+            log::error!("add_launch_event called on uninitialized METRICS_SERVICE");
+            bail!(INIT_ERROR)
+        }
+    }
+}
+
+/// Records an error event in the app.
+/// Returns an error if init has not been called.
+pub async fn add_crash_event(err: &str) -> Result<()> {
+    let svc = METRICS_SERVICE.lock().await;
+    match &svc.init_state {
+        MetricsServiceInitStatus::INITIALIZED => svc.inner_add_crash_event(err).await,
+        MetricsServiceInitStatus::UNINITIALIZED => {
+            log::error!("add_crash_event called on uninitialized METRICS_SERVICE");
+            bail!(INIT_ERROR)
+        }
+    }
+}
+
+/// Records a timing event from the app.
+/// Returns an error if init has not been called.
+pub async fn add_timing_event() -> Result<()> {
+    let svc = METRICS_SERVICE.lock().await;
+    match &svc.init_state {
+        MetricsServiceInitStatus::INITIALIZED => svc.inner_add_timing_event().await,
+        MetricsServiceInitStatus::UNINITIALIZED => {
+            log::error!("add_timing_event called on uninitialized METRICS_SERVICE");
+            bail!(INIT_ERROR)
+        }
+    }
+}
+
+/// Records an event with an option to specify every parameter.
+/// Returns an error if init has not been called.
 pub async fn add_custom_event(
-    app_name: &str,
-    app_version: Option<&str>,
     category: Option<&str>,
     action: Option<&str>,
     label: Option<&str>,
     custom_dimensions: BTreeMap<&str, String>,
-) -> anyhow::Result<()> {
-    if is_analytics_disabled_by_env() || !is_opted_in() {
-        return Ok(());
+) -> Result<()> {
+    let svc = METRICS_SERVICE.lock().await;
+    match &svc.init_state {
+        MetricsServiceInitStatus::INITIALIZED => {
+            svc.inner_add_custom_event(category, action, label, custom_dimensions).await
+        }
+        MetricsServiceInitStatus::UNINITIALIZED => {
+            log::error!("add_custom_event called on uninitialized METRICS_SERVICE");
+            bail!(INIT_ERROR)
+        }
     }
-
-    let body = make_body_with_hash(
-        &app_name,
-        app_version,
-        category,
-        action,
-        label,
-        custom_dimensions,
-        &(uuid as UuidBuilder),
-    );
-    let client = new_https_client();
-    let req = Request::builder().method(Method::POST).uri(GA_URL).body(Body::from(body))?;
-    let mut res = client.request(req).await;
-    match res {
-        Ok(res) => log::info!("Analytics response: {}", res.status()),
-        Err(e) => log::debug!("Error posting analytics: {}", e),
-    }
-    Ok(())
 }
-
-//
-// not sure if we will use this
-// fx exception in subcommand
-// "t=event" \
-// "ec=fx_exception" \
-// "ea=${subcommand}" \
-// "el=${args}" \
-// "cd1=${exit_status}" \
-// )
-pub async fn add_crash_event(err: &str) -> anyhow::Result<()> {
-    Ok(())
-}
-
-// fx subcommand timing event
-// hit_type="timing"
-//  "t=timing" \
-//     "utc=fx" \
-//     "utv=${subcommand}" \
-//     "utt=${timing}" \
-//     "utl=${args}" \
-//     )
-pub async fn add_timing_event() -> anyhow::Result<()> {
-    Ok(())
-}
-
-//#[cfg(test)]
-//mod test

@@ -18,7 +18,7 @@ use {
         home::home, identity::identity, runtime::runtime,
     },
     crate::paths::get_default_user_file_path,
-    analytics::{is_opted_in, opt_in_status},
+    analytics::{is_opted_in, set_opt_in_status},
     anyhow::{anyhow, bail, Context, Result},
     std::{
         convert::{From, TryFrom, TryInto},
@@ -252,12 +252,12 @@ pub async fn get_sdk() -> Result<sdk::Sdk> {
     }
 }
 
-pub fn set_analytics(value: bool) -> Result<()> {
-    opt_in_status(&value)
+pub async fn set_metrics_status(value: bool) -> Result<()> {
+    set_opt_in_status(value).await
 }
 
-pub fn show_analytics<W: Write>(mut writer: W) -> Result<()> {
-    let state = match is_opted_in() {
+pub async fn show_metrics_status<W: Write>(mut writer: W) -> Result<()> {
+    let state = match is_opted_in().await {
         true => "enabled",
         false => "disabled",
     };

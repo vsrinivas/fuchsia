@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, Context, Result},
     ffx_config::{
         add, api::query::ConfigQuery, api::ConfigError, env_file, environment::Environment, get,
-        print_config, raw, remove, set, set_analytics, show_analytics, ConfigLevel,
+        print_config, raw, remove, set, set_metrics_status, show_metrics_status, ConfigLevel,
     },
     ffx_config_plugin_args::{
         AddCommand, AnalyticsCommand, AnalyticsControlCommand, ConfigCommand, EnvAccessCommand,
@@ -166,9 +166,9 @@ fn exec_env<W: Write + Sync>(env_command: &EnvCommand, mut writer: W) -> Result<
 async fn exec_analytics(analytics_cmd: &AnalyticsCommand) -> Result<()> {
     let writer = Box::new(std::io::stdout());
     match &analytics_cmd.sub {
-        AnalyticsControlCommand::Enable(_) => set_analytics(true)?,
-        AnalyticsControlCommand::Disable(_) => set_analytics(false)?,
-        AnalyticsControlCommand::Show(_) => show_analytics(writer)?,
+        AnalyticsControlCommand::Enable(_) => set_metrics_status(true).await?,
+        AnalyticsControlCommand::Disable(_) => set_metrics_status(false).await?,
+        AnalyticsControlCommand::Show(_) => show_metrics_status(writer).await?,
     }
     Ok(())
 }
