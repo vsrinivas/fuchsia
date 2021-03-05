@@ -87,7 +87,10 @@ async fn monitor_control_requests<T: TimeSource>(
                     file_report(&params.proxy, "fuchsia-consecutive-failed-update-checks").await;
                 }
             }
-            None => error!("failed to receive ControlRequest"),
+            None => {
+                error!("Crash report handler failed to receive ControlRequest");
+                return;
+            }
         }
     }
 }
@@ -280,5 +283,23 @@ mod tests {
         // Drain remaining file calls.
         assert_signature(recv.next().await.unwrap(), "fuchsia-installation-error");
         assert_signature(recv.next().await.unwrap(), "fuchsia-consecutive-failed-update-checks");
+    }
+
+    /// Tests that when the control handle is dropped, the `handle_crash_reports_impl` future
+    /// terminates.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_ch_dropped() {
+        let mock = Arc::new(MockCrashReporterService::new(|_| Ok(())));
+        let (proxy, _fidl_server) = mock.spawn_crash_reporter_service();
+        let (ch, fut) = handle_crash_reports_impl(HandleCrashReportsParams {
+            proxy,
+            max_pending_crash_reports: 2,
+            min_consecutive_failed_update_checks: 0,
+            time_source: MockTimeSource::new_from_now(),
+        });
+
+        drop(ch);
+
+        let () = fut.await;
     }
 }
