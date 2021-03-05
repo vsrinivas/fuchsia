@@ -51,55 +51,50 @@ namespace {
 // have to reason about the precise guarantees made by the monotonic
 // clock or blocking system calls.
 
-timespec now() {
-  timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return ts;
-}
-
-timespec delta(const timespec& before, const timespec& after) {
-  timespec ts = after;
-  ts.tv_sec -= before.tv_sec;
-  if (ts.tv_nsec < before.tv_nsec) {
-    ts.tv_sec -= 1;
-    ts.tv_nsec += 1000000000ll;
-  }
-  ts.tv_nsec -= before.tv_nsec;
-  return ts;
-}
-
 TEST(Poll, PollZeroFds) {
-  timespec before = now();
-  // Ten millisecond timeout.
-  int timeout = 10;
-  int ret = poll(nullptr, 0, timeout);
-  timespec after = now();
+  constexpr std::chrono::duration minimum_duration = std::chrono::milliseconds(1);
 
-  // poll should have returned 0.
-  ASSERT_EQ(ret, 0);
-
-  // Time should have advanced, at least a millisecond.
-  ASSERT_TRUE(before.tv_sec < after.tv_sec ||
-              (before.tv_sec == after.tv_sec && before.tv_nsec <= after.tv_nsec));
-  timespec interval = delta(before, after);
-  ASSERT_TRUE(interval.tv_sec > 0 || interval.tv_nsec >= 1000000ll);
+  const auto begin = std::chrono::steady_clock::now();
+  ASSERT_EQ(poll(nullptr, 0, std::chrono::milliseconds(minimum_duration).count()), 0, "%s",
+            strerror(errno));
+  ASSERT_GE(std::chrono::steady_clock::now() - begin, minimum_duration);
 }
 
-TEST(Poll, PpollZeroFds) {
-  timespec before = now();
-  // Ten millisecond timeout.
-  const timespec timeout = {0, 10 * 1000 * 1000};
-  int ret = ppoll(nullptr, 0, &timeout, nullptr);
-  timespec after = now();
+TEST(Poll, PPollZeroFds) {
+  constexpr std::chrono::duration minimum_duration = std::chrono::milliseconds(1);
 
-  // poll should have returned 0.
-  ASSERT_EQ(ret, 0);
+  const struct timespec timeout = {
+      .tv_nsec = std::chrono::nanoseconds(minimum_duration).count(),
+  };
+  const auto begin = std::chrono::steady_clock::now();
+  ASSERT_EQ(ppoll(nullptr, 0, &timeout, nullptr), 0, "%s", strerror(errno));
+  ASSERT_GE(std::chrono::steady_clock::now() - begin, minimum_duration);
+}
 
-  // Time should have advanced, at least a millisecond.
-  ASSERT_TRUE(before.tv_sec < after.tv_sec ||
-              (before.tv_sec == after.tv_sec && before.tv_nsec <= after.tv_nsec));
-  timespec interval = delta(before, after);
-  ASSERT_TRUE(interval.tv_sec > 0 || interval.tv_nsec >= 1000000ll);
+TEST(Poll, PPollNegativeTimeout) {
+  {
+    const struct timespec timeout_ts = {
+        .tv_sec = -1,
+    };
+    ASSERT_EQ(ppoll(nullptr, 0, &timeout_ts, nullptr), -1);
+    ASSERT_EQ(errno, EINVAL, "%s", strerror(errno));
+  }
+
+  {
+    const struct timespec timeout_ts = {
+        .tv_nsec = -1,
+    };
+    ASSERT_EQ(ppoll(nullptr, 0, &timeout_ts, nullptr), -1);
+    ASSERT_EQ(errno, EINVAL, "%s", strerror(errno));
+  }
+}
+
+TEST(Poll, PPollInvalidTimeout) {
+  const struct timespec timeout_ts = {
+      .tv_nsec = 1000000000,
+  };
+  ASSERT_EQ(ppoll(nullptr, 0, &timeout_ts, nullptr), -1);
+  ASSERT_EQ(errno, EINVAL, "%s", strerror(errno));
 }
 
 TEST(Poll, Pipe) {

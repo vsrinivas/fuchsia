@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
@@ -16,7 +14,6 @@
 #include <sys/stat.h>
 #include <threads.h>
 #include <unistd.h>
-#include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include <zxtest/zxtest.h>
@@ -111,11 +108,6 @@ void ppoll_test_handler(struct timespec* timeout) {
   EXPECT_EQ(1, ppoll_result, "didn't read anything");
 
   ASSERT_EQ(thrd_join(t, NULL), thrd_success, "join blocking send thread");
-}
-
-TEST(HandleFDTest, PPollNegative) {
-  struct timespec timeout_ts = {-1, -1};
-  ppoll_test_handler(&timeout_ts);
 }
 
 TEST(HandleFDTest, PPollNull) { ppoll_test_handler(NULL); }

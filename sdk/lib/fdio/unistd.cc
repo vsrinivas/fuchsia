@@ -1911,102 +1911,102 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
   if (sigmask) {
     return ERRNO(ENOSYS);
   }
-  if (n > MAX_POLL_NFDS) {
+  if (n > MAX_POLL_NFDS || n < 0) {
     return ERRNO(EINVAL);
   }
 
-  fdio_t* ios[n];
-  nfds_t ios_used_count = 0;
+  auto timeout = zx::duration::infinite();
+  if (timeout_ts) {
+    // Match Linux's validation strategy. See:
+    //
+    // https://github.com/torvalds/linux/blob/f40ddce/include/linux/time64.h#L84-L96
+    //
+    // https://github.com/torvalds/linux/blob/f40ddce/include/vdso/time64.h#L11
+    if (timeout_ts->tv_sec < 0 || timeout_ts->tv_nsec < 0 || timeout_ts->tv_nsec >= 1000000000L) {
+      return ERRNO(EINVAL);
+    }
+    timeout = zx::duration(*timeout_ts);
+  }
 
-  zx_status_t r = ZX_OK;
-  nfds_t nvalid = 0;
+  if (n == 0) {
+    std::this_thread::sleep_for(std::chrono::nanoseconds(timeout.to_nsecs()));
+    return 0;
+  }
+
+  // TODO(https://fxbug.dev/71558): investigate VLA alternatives.
+  fdio_t* ios[n];
+  size_t nios = 0;
+  auto clean_io = fbl::MakeAutoCall([&ios, &nios] {
+    for (size_t i = 0; i < nios; ++i) {
+      auto* io = ios[i];
+      if (io != nullptr) {
+        fdio_release(io);
+      }
+    }
+  });
 
   zx_wait_item_t items[n];
-  int nfds = 0;
+  size_t nitems = 0;
 
-  for (nfds_t i = 0; i < n; i++) {
-    struct pollfd* pfd = &fds[i];
-    pfd->revents = 0;  // initialize to zero
+  for (nfds_t i = 0; i < n; ++i) {
+    auto& pfd = fds[i];
 
-    ios[i] = nullptr;
-    if (pfd->fd < 0) {
-      // if fd is negative, the entry is invalid
-      continue;
-    }
-    fdio_t* io;
-    if ((io = fd_to_io(pfd->fd)) == nullptr) {
+    auto& io = ios[nios];
+    if ((io = fd_to_io(pfd.fd)) == nullptr) {
       // fd is not opened
-      pfd->revents = POLLNVAL;
-      nfds++;
+      pfd.revents = POLLNVAL;
       continue;
     }
-    ios[i] = io;
-    ios_used_count = i + 1;
+    pfd.revents = 0;
+    ++nios;
 
     zx_handle_t h;
     zx_signals_t sigs;
-    fdio_get_ops(io)->wait_begin(io, pfd->events, &h, &sigs);
+    fdio_get_ops(io)->wait_begin(io, pfd.events, &h, &sigs);
     if (h == ZX_HANDLE_INVALID) {
       // wait operation is not applicable to the handle
-      r = ZX_ERR_INVALID_ARGS;
-      break;
+      return ERROR(ZX_ERR_INVALID_ARGS);
     }
-    items[nvalid].handle = h;
-    items[nvalid].waitfor = sigs;
-    items[nvalid].pending = 0;
-    nvalid++;
+    items[nitems] = {
+        .handle = h,
+        .waitfor = sigs,
+    };
+    ++nitems;
   }
 
-  if (r == ZX_OK) {
-    zx_time_t tmo = ZX_TIME_INFINITE;
-    // Check for overflows on every operation.
-    if (timeout_ts && timeout_ts->tv_sec >= 0 && timeout_ts->tv_nsec >= 0 &&
-        timeout_ts->tv_sec <= INT64_MAX / ZX_SEC(1)) {
-      zx_duration_t seconds_duration = ZX_SEC(timeout_ts->tv_sec);
-      zx_duration_t duration = zx_duration_add_duration(seconds_duration, timeout_ts->tv_nsec);
-      if (duration >= seconds_duration) {
-        tmo = zx_deadline_after(duration);
-      }
+  zx_status_t status = zx::handle::wait_many(items, nitems, zx::deadline_after(timeout));
+  // pending signals could be reported on ZX_ERR_TIMED_OUT case as well
+  if (!(status == ZX_OK || status == ZX_ERR_TIMED_OUT)) {
+    return ERROR(status);
+  }
+
+  nfds_t nfds = 0;
+  size_t j = 0;
+  for (nfds_t i = 0; i < n; ++i) {
+    auto& pfd = fds[i];
+
+    if (pfd.revents != POLLNVAL) {
+      fdio_t* io = ios[j];
+      uint32_t events;
+      fdio_get_ops(io)->wait_end(io, items[j].pending, &events);
+      // mask unrequested events except HUP/ERR
+      pfd.revents = static_cast<int16_t>(events) & (pfd.events | POLLHUP | POLLERR);
+      ++j;
     }
-    r = zx_object_wait_many(items, nvalid, tmo);
-    // pending signals could be reported on ZX_ERR_TIMED_OUT case as well
-    if (r == ZX_OK || r == ZX_ERR_TIMED_OUT) {
-      nfds_t j = 0;  // j counts up on a valid entry
-
-      for (nfds_t i = 0; i < n; i++) {
-        struct pollfd* pfd = &fds[i];
-        fdio_t* io = ios[i];
-
-        if (io == nullptr) {
-          // skip an invalid entry
-          continue;
-        }
-        if (j < nvalid) {
-          uint32_t events = 0;
-          fdio_get_ops(io)->wait_end(io, items[j].pending, &events);
-          // mask unrequested events except HUP/ERR
-          pfd->revents = static_cast<short>(events) & (pfd->events | POLLHUP | POLLERR);
-          if (pfd->revents != 0) {
-            nfds++;
-          }
-        }
-        j++;
-      }
+    if (pfd.revents != 0) {
+      ++nfds;
     }
   }
 
-  for (nfds_t i = 0; i < ios_used_count; i++) {
-    if (ios[i]) {
-      fdio_release(ios[i]);
-    }
-  }
-
-  return (r == ZX_OK || r == ZX_ERR_TIMED_OUT) ? nfds : ERROR(r);
+  return nfds;
 }
 
 __EXPORT
 int poll(struct pollfd* fds, nfds_t n, int timeout) {
-  struct timespec timeout_ts = {timeout / 1000, (timeout % 1000) * 1000000};
+  struct timespec timeout_ts = {
+      .tv_sec = timeout / 1000,
+      .tv_nsec = (timeout % 1000) * 1000000,
+  };
   struct timespec* ts = timeout >= 0 ? &timeout_ts : nullptr;
   return ppoll(fds, n, ts, nullptr);
 }
@@ -2018,23 +2018,35 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
     return ERRNO(EINVAL);
   }
 
+  auto timeout = zx::duration::infinite();
+  if (tv) {
+    if (tv->tv_sec < 0 || tv->tv_usec < 0) {
+      return ERRNO(EINVAL);
+    }
+    timeout = zx::sec(tv->tv_sec) + zx::usec(tv->tv_usec);
+  }
+
   if (n == 0) {
-    std::this_thread::sleep_for(std::chrono::microseconds(tv->tv_usec) +
-                                std::chrono::seconds(tv->tv_sec));
+    std::this_thread::sleep_for(std::chrono::nanoseconds(timeout.to_nsecs()));
     return 0;
   }
 
+  // TODO(https://fxbug.dev/71558): investigate VLA alternatives.
   fdio_t* ios[n];
-  int ios_used_max = -1;
-
-  zx_status_t r = ZX_OK;
-  int nvalid = 0;
+  size_t ios_used_max = -1;
+  auto clean_io = fbl::MakeAutoCall([&ios, &ios_used_max] {
+    for (size_t i = 0; i <= ios_used_max; ++i) {
+      auto* io = ios[i];
+      if (io != nullptr) {
+        fdio_release(io);
+      }
+    }
+  });
 
   zx_wait_item_t items[n];
+  size_t nitems = 0;
 
-  for (int fd = 0; fd < n; fd++) {
-    ios[fd] = nullptr;
-
+  for (int fd = 0; fd < n; ++fd) {
     uint32_t events = 0;
     if (rfds && FD_ISSET(fd, rfds))
       events |= POLLIN;
@@ -2042,95 +2054,84 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
       events |= POLLOUT;
     if (efds && FD_ISSET(fd, efds))
       events |= POLLERR;
+
+    auto& io = ios[fd];
     if (events == 0) {
+      io = nullptr;
       continue;
     }
 
-    fdio_t* io;
     if ((io = fd_to_io(fd)) == nullptr) {
-      r = ZX_ERR_BAD_HANDLE;
-      break;
+      return ERROR(ZX_ERR_INVALID_ARGS);
     }
-    ios[fd] = io;
     ios_used_max = fd;
 
     zx_handle_t h;
     zx_signals_t sigs;
     fdio_get_ops(io)->wait_begin(io, events, &h, &sigs);
     if (h == ZX_HANDLE_INVALID) {
-      r = ZX_ERR_INVALID_ARGS;
-      break;
+      return ERROR(ZX_ERR_INVALID_ARGS);
     }
-    items[nvalid].handle = h;
-    items[nvalid].waitfor = sigs;
-    items[nvalid].pending = 0;
-    nvalid++;
+    items[nitems] = {
+        .handle = h,
+        .waitfor = sigs,
+    };
+    ++nitems;
+  }
+
+  zx_status_t status = zx::handle::wait_many(items, nitems, zx::deadline_after(timeout));
+  // pending signals could be reported on ZX_ERR_TIMED_OUT case as well
+  if (!(status == ZX_OK || status == ZX_ERR_TIMED_OUT)) {
+    return ERROR(status);
   }
 
   int nfds = 0;
-  if (r == ZX_OK && nvalid > 0) {
-    zx_time_t tmo =
-        (tv == nullptr)
-            ? ZX_TIME_INFINITE
-            : zx_deadline_after(zx_duration_add_duration(ZX_SEC(tv->tv_sec), ZX_USEC(tv->tv_usec)));
-    r = zx_object_wait_many(items, nvalid, tmo);
-    // pending signals could be reported on ZX_ERR_TIMED_OUT case as well
-    if (r == ZX_OK || r == ZX_ERR_TIMED_OUT) {
-      int j = 0;  // j counts up on a valid entry
-
-      for (int fd = 0; fd < n; fd++) {
-        fdio_t* io = ios[fd];
-        if (io == nullptr) {
-          // skip an invalid entry
-          continue;
-        }
-        if (j < nvalid) {
-          uint32_t events = 0;
-          fdio_get_ops(io)->wait_end(io, items[j].pending, &events);
-          if (rfds && FD_ISSET(fd, rfds)) {
-            if (events & POLLIN) {
-              nfds++;
-            } else {
-              FD_CLR(fd, rfds);
-            }
-          }
-          if (wfds && FD_ISSET(fd, wfds)) {
-            if (events & POLLOUT) {
-              nfds++;
-            } else {
-              FD_CLR(fd, wfds);
-            }
-          }
-          if (efds && FD_ISSET(fd, efds)) {
-            if (events & POLLERR) {
-              nfds++;
-            } else {
-              FD_CLR(fd, efds);
-            }
-          }
+  size_t j = 0;
+  for (int fd = 0; fd < n; fd++) {
+    fdio_t* io = ios[fd];
+    if (io == nullptr) {
+      // skip an invalid entry
+      continue;
+    }
+    if (j < nitems) {
+      uint32_t events = 0;
+      fdio_get_ops(io)->wait_end(io, items[j].pending, &events);
+      if (rfds && FD_ISSET(fd, rfds)) {
+        if (events & POLLIN) {
+          ++nfds;
         } else {
-          if (rfds) {
-            FD_CLR(fd, rfds);
-          }
-          if (wfds) {
-            FD_CLR(fd, wfds);
-          }
-          if (efds) {
-            FD_CLR(fd, efds);
-          }
+          FD_CLR(fd, rfds);
         }
-        j++;
+      }
+      if (wfds && FD_ISSET(fd, wfds)) {
+        if (events & POLLOUT) {
+          ++nfds;
+        } else {
+          FD_CLR(fd, wfds);
+        }
+      }
+      if (efds && FD_ISSET(fd, efds)) {
+        if (events & POLLERR) {
+          ++nfds;
+        } else {
+          FD_CLR(fd, efds);
+        }
+      }
+    } else {
+      if (rfds) {
+        FD_CLR(fd, rfds);
+      }
+      if (wfds) {
+        FD_CLR(fd, wfds);
+      }
+      if (efds) {
+        FD_CLR(fd, efds);
       }
     }
+    ++j;
   }
 
-  for (int i = 0; i <= ios_used_max; i++) {
-    if (ios[i]) {
-      fdio_release(ios[i]);
-    }
-  }
-
-  return (r == ZX_OK || r == ZX_ERR_TIMED_OUT) ? nfds : ERROR(r);
+  return nfds;
 }
 
 __EXPORT

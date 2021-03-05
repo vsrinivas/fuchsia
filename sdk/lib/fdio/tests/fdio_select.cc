@@ -39,4 +39,28 @@ TEST(Select, SelectZeroFds) {
   }
 }
 
+TEST(Select, SelectNegative) {
+  fd_set readfds;
+  fd_set writefds;
+  fd_set exceptfds;
+  FD_ZERO(&readfds);
+  FD_ZERO(&writefds);
+  FD_ZERO(&exceptfds);
+
+  {
+    struct timeval timeout = {
+        .tv_sec = -1,
+    };
+    ASSERT_EQ(select(0, &readfds, &writefds, &exceptfds, &timeout), -1);
+    ASSERT_EQ(errno, EINVAL, "%s", strerror(errno));
+  }
+  {
+    struct timeval timeout = {
+        .tv_usec = -1,
+    };
+    ASSERT_EQ(select(0, &readfds, &writefds, &exceptfds, &timeout), -1);
+    ASSERT_EQ(errno, EINVAL, "%s", strerror(errno));
+  }
+}
+
 }  // namespace
