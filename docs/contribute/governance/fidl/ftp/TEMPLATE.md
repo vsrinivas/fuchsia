@@ -127,7 +127,7 @@ proposal? For instance, do other serialization or IPC systems address the same
 problem this proposal addresses?
 
 <!-- xref -->
-[ietf-rfc2119]: https://tools.ietf.org/html/rfc2119 [conformance-suite]:
-/src/tests/fidl/conformance_suite/ [source-compatibility-suite]:
-/src/tests/fidl/source_compatibility/ [fidl-tutorials]:
-/docs/development/languages/fidl/tutorials/overview.md
+[ietf-rfc2119]: https://tools.ietf.org/html/rfc2119
+[conformance-suite]: /src/tests/fidl/conformance_suite/
+[source-compatibility-suite]: /src/tests/fidl/source_compatibility/
+[fidl-tutorials]: /docs/development/languages/fidl/tutorials/overview.md

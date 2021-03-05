@@ -2,11 +2,10 @@
 
 The Fuchsia RFC process has evolved from the following RFCs:
 
-[RFC-0001: Fuchsia Request for Comments process](0001_rfc_process.md)
-
-[RFC-0006: Addendum of the RFC process for Zircon](0006_addendum_to_rfc_process_for_zircon.md)
-
-[RFC-0067: Additions to Fuchsia RFC process](0067_rfc_process_additions.md)
+* [RFC-0001: Fuchsia Request for Comments process](0001_rfc_process.md)
+* [RFC-0006: Addendum of the RFC process for Zircon](0006_addendum_to_rfc_process_for_zircon.md)
+* [RFC-0067: Additions to Fuchsia RFC process](0067_rfc_process_additions.md)
+* [RFC-0017: The FTP Process is dead, long live the RFC Process!](0017_folding_ftp_into_rfc.md)
 
 This page collates the above RFCs and captures the current process.
 
@@ -75,7 +74,6 @@ The following kinds of changes must use the RFC process:
    decision can be escalated to the RFC process either by one of the disagreeing
    parties or by another contributor.
 
-
 In addition to the general considerations outlined above, Zircon changes in
 the source directories:
 
@@ -118,6 +116,33 @@ that meet the following criteria must use RFC process:
    that itself has significant dependencies or that is large by itself, should use
    the RFC process.
 
+In addition to the general considerations outlined above, FIDL changes that meet
+the following criteria must use RFC process:
+
+1. The **solution space is large**, i.e. the change is one of many possibly good
+   other solutions and there is a difficult design tradeoff to make;
+
+2. The **change has a large impact**, i.e. The change modifies the behavior of
+   FIDL in a substantial way such that it may introduce risk to many-or-all
+   users of FIDL;
+
+3. The **change has a large scope**, i.e. The change touches enough pieces of
+   FIDL such that careful attention is required to determine whether it may or
+   may not have a large impact.
+
+For instance, changes to the following FIDL areas will likely require an RFC:
+
+* FIDL governance
+* Design principles
+* Language grammar
+* Type system
+* Protocol semantics
+* Wire format
+* Bindings specification
+
+Additional details are provided in [FTP-049: FIDL Tuning Process
+Evolution](/docs/contribute/governance/fidl/ftp/ftp-049.md).
+
 Other changes that might benefit of the RFC process are ones that require manual or
 automated large scale changes of the codebase. For example how logs are written or how
 error paths are handled. Rather than live with islands of consistency, the aspiration
@@ -144,8 +169,9 @@ People interact with the RFC process in several roles:
    often *represented* by someone, often a technical lead or other person
    responsible for a group of stakeholders.
 
- * *Eng Council.* The [Eng Council](../eng_council.md) facilitate discussion
-   and make the final decision as to whether the project accepts an RFC.
+ * *Eng Council.* The [Eng Council (FEC)](../eng_council.md) facilitate
+   discussion and make the final decision as to whether the project accepts an
+   RFC.
 
 ### How the process works
 
@@ -165,6 +191,14 @@ It’s best to start socializing as early as possible to receive feedback on
 whether the idea is feasible and if the direction is correct. This can potentially
 save the authors time and effort in case the idea does not materialize or if
 the direction needs to change significantly.
+
+While mechanically, an RFC takes shape as a markdown file reviewed using a
+Gerrit code change, using a more dynamic medium than a code review during the
+socialization phase, e.g. Google Doc or other, can be beneficial. Should another
+medium be chosen to socialize, it is strongly encouraged to carry over the
+relevant context from the more dynamic medium over to RFC writeup. For instance,
+back-and-forth conversations may lead to additional "alternatives considered"
+entries to be added.
 
 Compared to the remaining steps in the process, this step is relatively
 informal. This document does not contain a rigorous description of how to
@@ -195,12 +229,11 @@ socialization, you are ready to start the formal part of the RFC process. The
 next step is to write a first draft of the RFC document itself.
 
 Mechanically, an RFC is a markdown file in the
-`//docs/contribute/governance/rfcs` directory.
-To create and RFC, you create a CL that adds a file to that directory. You
-should start by making a copy of the [RFC template](TEMPLATE.md). While not
-strictly required, the template is designed to guide you towards writing a
-high-quality RFC by prompting you to think through the problem you are trying to
-solve in a semi-structured way.
+`//docs/contribute/governance/rfcs` directory. To create and RFC, you create a
+CL that adds a file to that directory. You must start by making a copy of the
+[RFC template](TEMPLATE.md). The template is designed to guide you towards
+writing a high-quality RFC by prompting you to think through the problem you are
+trying to solve in a semi-structured way.
 
 Any other files that are part of the RFC, diagrams for example, can be added to
 the `resources` directory under a subfolder with the same name as the RFC itself.
@@ -222,7 +255,9 @@ Once you have created a CL containing the first draft of your RFC, you are ready
 to iterate on your idea with the appropriate stakeholders. Hopefully you will
 have already discovered most the appropriate stakeholders as part of socializing
 your idea, but you are very likely to discover additional stakeholders at this
-stage.
+stage. RFC author(s) should request from the FEC to identify all stakeholders
+early in the process, thus reducing the likelihood of a surprise at the
+submission step.
 
 Mechanically, you should invite stakeholders to provide feedback on your RFC by
 adding them to the "Reviewers" or "CC" fields in the CL, as you would for a
@@ -244,6 +279,18 @@ another forum. Regardless of how the discussion proceeds, the results of any
 off-CL discussion must be captured in the CL, often by posting a summary of the
 discussion as a CL comment.
 
+At FEC's discretion, RFCs that would benefit from more socialization should be
+scheduled for an [engineering
+review](/docs/contribute/governance/eng_council.md#eng-review) meeting. Some
+triggers leading to scheduling an engineering review are:
+
+ * Difficulty to identify relevant stakeholders(s). It might be the case than an
+   RFC receives many comments, suggestions, push back, and that the author(s)
+   are unclear how to act on this feedback, and which represents core feedback
+   which is potentially a blocker to the RFC being accepted, vs auxiliary
+   feedback which may be curiosity, future plans, etc.
+ * Difficulty for RFC author(s) and stakeholder(s) to converge on open items.
+
 If you wish to withdraw your RFC, you can mark the CL containing the RFC as
 abandoned. You, or someone else, can always resurrect your RFC later if
 circumstances change. If you are resurrecting an RFC created by someone else,
@@ -251,11 +298,6 @@ you should start the RFC process over from the beginning, but you can use the
 withdrawn RFC as a starting point rather than `TEMPLATE.md`. Please confer with
 the original authors to determine whether they wish to continue to have their
 names associated with the new incarnation of the RFC.
-
-At the end of this step, provide a list of stakeholders and their roles to
-eng-council@fuchsia.dev. Eng Council will provide confirmation on the stakeholders
-identified, and will suggest any changes, if needed. Iterate with any new
-stakeholders identified.
 
 *Note to reviewers:* The RFC process is meant to encourage a variety of
 perspectives and vibrant discussions. Often, giving negative feedback in a public
