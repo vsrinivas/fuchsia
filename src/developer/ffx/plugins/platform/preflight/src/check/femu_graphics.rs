@@ -37,16 +37,13 @@ static NVIDIA_REQ_DRIVER_VERSION: (u32, u32) = (440, 100);
 macro_rules! NO_GRAPHICS_WARNING {
     () => {
         "Did not find tested and supported graphics acceleration hardware. Usage of \
-the graphical Fuchsia emulator (`{command}`) may fall back to a slow \
+the graphical Fuchsia emulator (`fx vdl start`) may fall back to a slow \
 software renderer. The terminal emulator (`fx qemu`) is unaffected.\n\n\
 Found the following chipsets: {chipsets}\n\n\
 Only a small set of chipsets are officially supported: \
 https://fuchsia.dev/fuchsia-src/get-started/set_up_femu#supported-hardware"
     };
 }
-static FUCHSIA_EMU_COMMAND_LINUX: &str = "fx emu";
-static FUCHSIA_EMU_COMMAND_MACOS: &str = "fx vdl --start";
-
 pub struct FemuGraphics<'a> {
     command_runner: &'a CommandRunner,
 }
@@ -129,7 +126,6 @@ impl<'a> FemuGraphics<'a> {
         if cards.is_empty() {
             return Ok(Warning(format!(
                 NO_GRAPHICS_WARNING!(),
-                command = FUCHSIA_EMU_COMMAND_LINUX,
                 chipsets = linux_find_graphics_cards(self.command_runner)?.join(", ")
             )));
         }
@@ -156,7 +152,6 @@ impl<'a> FemuGraphics<'a> {
         Ok(if cards.is_empty() {
             Warning(format!(
                 NO_GRAPHICS_WARNING!(),
-                command = FUCHSIA_EMU_COMMAND_MACOS,
                 chipsets = macos_find_graphics_cards(self.command_runner)?.join(", ")
             ))
         } else {
