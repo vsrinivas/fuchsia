@@ -162,11 +162,11 @@ func libraryName(librarySuffix string) string {
 }
 
 func benchmarkTypeFromValue(librarySuffix string, value gidlir.Value) string {
-	return fmt.Sprintf("llcpp::%s::wire::%s", libraryName(librarySuffix), gidlir.TypeFromValue(value))
+	return fmt.Sprintf("%s::wire::%s", libraryName(librarySuffix), gidlir.TypeFromValue(value))
 }
 
 func benchmarkProtocolFromValue(librarySuffix string, value gidlir.Value) string {
-	return fmt.Sprintf("llcpp::%s::%s", libraryName(librarySuffix), gidlir.TypeFromValue(value))
+	return fmt.Sprintf("%s::%s", libraryName(librarySuffix), gidlir.TypeFromValue(value))
 }
 
 func benchmarkName(gidlName string) string {

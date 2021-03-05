@@ -66,8 +66,7 @@ func typeNameIgnoreNullable(decl gidlmixer.Declaration) string {
 func declName(decl gidlmixer.NamedDeclaration) string {
 	// Note: only works for domain objects (not protocols & services)
 	parts := strings.SplitN(decl.Name(), "/", 2)
-	parts = append([]string{"llcpp"}, parts[0], "wire", parts[1])
-	return strings.Join(parts, "::")
+	return fmt.Sprintf("%s::wire::%s", parts[0], parts[1])
 }
 
 func ConformanceType(gidlTypeString string) string {
