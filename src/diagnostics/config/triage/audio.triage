@@ -1,0 +1,88 @@
+{
+    select: {
+        capture_overflows_vec: "INSPECT:audio_core.cmx:root/capturers/*/overflows:count",
+        capture_overflows_duration_vec: "INSPECT:audio_core.cmx:root/capturers/*/overflows:duration (ns)",
+        capture_sessions_duration_vec: "INSPECT:audio_core.cmx:root/capturers/*/overflows:total duration of all parent sessions (ns)",
+
+        output_device_underflows: "INSPECT:audio_core.cmx:root/output devices/000/device underflows:count",
+        output_device_underflows_duration: "INSPECT:audio_core.cmx:root/output devices/000/device underflows:duration (ns)",
+        output_device_sessions_duration: "INSPECT:audio_core.cmx:root/output devices/000/device underflows:total duration of all parent sessions (ns)",
+
+        output_pipeline_underflows: "INSPECT:audio_core.cmx:root/output devices/000/pipeline underflows:count",
+        output_pipeline_underflows_duration: "INSPECT:audio_core.cmx:root/output devices/000/pipeline underflows:duration (ns)",
+        output_pipeline_sessions_duration: "INSPECT:audio_core.cmx:root/output devices/000/pipeline underflows:total duration of all parent sessions (ns)",
+
+        render_underflows_vec: "INSPECT:audio_core.cmx:root/renderers/*/underflows:count",
+        render_underflows_duration_vec: "INSPECT:audio_core.cmx:root/renderers/*/underflows:duration (ns)",
+        render_sessions_duration_vec: "INSPECT:audio_core.cmx:root/renderers/*/underflows:total duration of all parent sessions (ns)",
+    },
+
+    eval: {
+        capture_overflows: "Fold(Fn([a,b], a+b), capture_overflows_vec, 0)",
+        capture_overflows_duration: "Fold(Fn([a,b], a+b), capture_overflows_duration_vec, 0)",
+        capture_sessions_duration: "Fold(Fn([a,b], a+b), capture_sessions_duration_vec, 0)",
+
+        render_underflows: "Fold(Fn([a,b], a+b), render_underflows_vec, 0)",
+        render_underflows_duration: "Fold(Fn([a,b], a+b), render_underflows_duration_vec, 0)",
+        render_sessions_duration: "Fold(Fn([a,b], a+b), render_sessions_duration_vec, 0)",
+
+        capture_overflows_ms_per_hour: "1000 * 3600 * capture_overflows_duration / capture_sessions_duration",
+        audio_core_underflows_ms_per_hour: "1000 * 3600 * (output_device_underflows_duration / output_device_sessions_duration + output_pipeline_underflows_duration / output_pipeline_sessions_duration)",
+        render_underflows_ms_per_hour: "1000 * 3600 * render_underflows_duration / render_sessions_duration",
+    },
+
+    act: {
+        audio_capturer_overflows_warning: {
+            type: "Warning",
+            trigger: "capture_overflows > 0",
+            print: "AudioCapturer overflows detected (bug in clients); expect problems with voice capture",
+        },
+        audio_capturer_overflows: {
+            type: "Gauge",
+            value: "capture_overflows",
+            format: "count",
+        },
+        audio_capturer_overflows_ms_per_hour: {
+            type: "Gauge",
+            value: "capture_overflows_ms_per_hour",
+            format: "milliseconds",
+        },
+
+        audio_core_underflows_warning: {
+            type: "Warning",
+            trigger: "Or(output_device_underflows > 0, output_pipeline_underflows > 0)",
+            print: "AudioCore underflows detected; expect glitchy audio output",
+        },
+        audio_core_device_underflows: {
+            type: "Gauge",
+            value: "output_device_underflows",
+            format: "count",
+        },
+        audio_core_pipeline_underflows: {
+            type: "Gauge",
+            value: "output_pipeline_underflows",
+            format: "count",
+        },
+        audio_core_underflows_ms_per_hour: {
+            type: "Gauge",
+            value: "audio_core_underflows_ms_per_hour",
+            format: "milliseconds",
+        },
+
+        audio_renderer_underflows_warning: {
+            type: "Warning",
+            trigger: "render_underflows > 0",
+            print: "AudioRender underflows detected (bug in clients); expect glitchy audio output",
+        },
+        audio_renderer_underflows: {
+            type: "Gauge",
+            value: "render_underflows",
+            format: "count",
+        },
+        audio_renderer_underflows_ms_per_hour: {
+            type: "Gauge",
+            value: "render_underflows_ms_per_hour",
+            format: "milliseconds",
+        },
+    },
+}
