@@ -385,6 +385,10 @@ unittest_package("sample-setui-config-test") {
       dest = "service_configuration.json"
     },
     {
+      path = rebase_path("src/tests/testdata/display_configuration.json")
+      dest = "display_configuration.json"
+    },
+    {
       path = rebase_path("src/tests/testdata/policy_configuration.json")
       dest = "policy_configuration.json"
     },
@@ -417,6 +421,8 @@ unittest_package("sample-setui-config-test") {
       args = [
         "--service-config",
         "/pkg/data/service_configuration.json",
+        "--display-config",
+        "/pkg/data/display_configuration.json",
         "--policy-config",
         "/pkg/data/policy_configuration.json",
         "--controller-flags",
@@ -437,6 +443,8 @@ unittest_package("sample-setui-config-test") {
       args = [
         "-s",
         "/pkg/data/service_configuration.json",
+        "-d",
+        "/pkg/data/display_configuration.json",
         "-p",
         "/pkg/data/policy_configuration.json",
         "-f",

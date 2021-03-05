@@ -85,6 +85,7 @@ mod service;
 mod setup;
 pub mod task;
 
+pub use display::display_configuration::DisplayConfiguration;
 pub use display::LightSensorConfig;
 pub use input::input_device_configuration::InputConfiguration;
 pub use light::light_hardware_configuration::LightHardwareConfiguration;

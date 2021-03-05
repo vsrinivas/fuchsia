@@ -7,8 +7,9 @@ use argh::FromArgs;
 use fuchsia_syslog::fx_log_info;
 use serde::de::DeserializeOwned;
 use settings::{
-    AgentConfiguration, EnabledPoliciesConfiguration, EnabledServicesConfiguration,
-    InputConfiguration, LightHardwareConfiguration, LightSensorConfig, ServiceFlags,
+    AgentConfiguration, DisplayConfiguration, EnabledPoliciesConfiguration,
+    EnabledServicesConfiguration, InputConfiguration, LightHardwareConfiguration,
+    LightSensorConfig, ServiceFlags,
 };
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
@@ -21,6 +22,11 @@ struct TestConfig {
     /// within the settings service.
     #[argh(option, short = 's')]
     service_config: Vec<OsString>,
+
+    /// these configurations are the one that will determine the initial
+    /// display settings.
+    #[argh(option, short = 'd')]
+    display_config: Vec<OsString>,
 
     /// these configurations are the ones that will determine which policies are enabled within the
     /// settings service.
@@ -62,8 +68,13 @@ fn read_config<C: DeserializeOwned>(path: &OsStr) -> Result<(), Error> {
 
 fn main() -> Result<(), Error> {
     let test_config: TestConfig = argh::from_env();
+
     for config in test_config.service_config.into_iter() {
         read_config::<EnabledServicesConfiguration>(&config)?;
+    }
+
+    for config in test_config.display_config.into_iter() {
+        read_config::<DisplayConfiguration>(&config)?;
     }
 
     for config in test_config.policy_config.into_iter() {
