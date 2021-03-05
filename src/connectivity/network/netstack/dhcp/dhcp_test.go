@@ -1734,7 +1734,6 @@ func TestDecline(t *testing.T) {
 	}
 	ch := make(chan pktAndTime, 3)
 	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
-		// TODO(https://fxbug.dev/57075): Use a fake clock
 		ch <- pktAndTime{pkt: pkt.Clone(), time: time.Unix(0 /* sec */, clock.NowMonotonic())}
 		return pkt
 	}
