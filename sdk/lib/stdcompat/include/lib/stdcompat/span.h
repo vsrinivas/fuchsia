@@ -98,19 +98,19 @@ class span {
 
   template <typename U, size_t N, size_type Extent_ = Extent,
             std::enable_if_t<(Extent_ == dynamic_extent || N == Extent_) &&
-                                 std::is_convertible<U (*)[], element_type (*)[]>::value,
+                                 internal::is_qualification_conversion<U, element_type>::value,
                              bool> = true>
   constexpr span(U (&arr)[N]) noexcept : extent_(cpp17::data(arr), cpp17::size(arr)) {}
 
   template <typename U, size_t N, size_type Extent_ = Extent,
             std::enable_if_t<(Extent_ == dynamic_extent || N == Extent_) &&
-                                 std::is_convertible<U (*)[], element_type (*)[]>::value,
+                                 internal::is_qualification_conversion<U, element_type>::value,
                              bool> = true>
   constexpr span(std::array<U, N>& arr) noexcept : extent_(cpp17::data(arr), cpp17::size(arr)) {}
 
   template <typename U, size_t N, size_type Extent_ = Extent,
             std::enable_if_t<(Extent_ == dynamic_extent || N == Extent_) &&
-                                 std::is_convertible<U (*)[], element_type (*)[]>::value,
+                                 internal::is_qualification_conversion<U, element_type>::value,
                              bool> = true>
   constexpr span(const std::array<U, N>& arr) noexcept
       : extent_(cpp17::data(arr), cpp17::size(arr)) {}
@@ -131,7 +131,7 @@ class span {
 
   template <typename U, size_t N, size_type Extent_ = Extent,
             std::enable_if_t<Extent_ != dynamic_extent && N == dynamic_extent &&
-                                 std::is_convertible<U (*)[], T (*)[]>::value,
+                                 internal::is_qualification_conversion<U, T>::value,
                              bool> = true>
   explicit constexpr span(const cpp20::span<U, N>& s) noexcept : extent_(s.data(), s.size()) {
     assert((s.size() == size() || extent == dynamic_extent));
@@ -139,7 +139,7 @@ class span {
 
   template <typename U, size_t N, size_type Extent_ = Extent,
             std::enable_if_t<(Extent_ == dynamic_extent || N == Extent_) &&
-                                 std::is_convertible<U (*)[], T (*)[]>::value,
+                                 internal::is_qualification_conversion<U, T>::value,
                              bool> = true>
   constexpr span(const cpp20::span<U, N>& s) noexcept : extent_(s.data(), s.size()) {
     assert((s.size() == size() || extent == dynamic_extent));

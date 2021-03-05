@@ -10,6 +10,7 @@
 #include <type_traits>
 
 #include "../iterator.h"
+#include "../type_traits.h"
 #include "utility.h"
 
 namespace cpp20 {
@@ -77,18 +78,26 @@ struct is_array_internal : std::is_array<T> {};
 template <class T, size_t S>
 struct is_array_internal<std::array<T, S>> : std::true_type {};
 
+template <typename T, typename U>
+using is_qualification_conversion = std::is_convertible<T (*)[], U (*)[]>;
+
 template <class T>
 struct is_array_type : is_array_internal<std::remove_cv_t<T>> {};
 
-template <class T, class ElementType>
-using is_span_compatible = std::integral_constant<
-    bool, !is_span<T>::value && !is_array_type<T>::value &&
-              std::is_convertible<std::remove_pointer_t<decltype(cpp17::data(std::declval<T>()))>,
-                                  ElementType>::value &&
-              std::is_same<void, cpp17::void_t<decltype(cpp17::data(std::declval<T>())),
-                                               decltype(cpp17::size(std::declval<T>()))>>::value>;
+template <typename T, typename ElementType, typename = void>
+struct is_well_formed_data_and_size : std::false_type {};
+
+template <typename T, typename ElementType>
+struct is_well_formed_data_and_size<
+    T, ElementType,
+    cpp17::void_t<decltype(cpp17::data(std::declval<T&>()), cpp17::size(std::declval<T&>()))>>
+    : is_qualification_conversion<std::remove_pointer_t<decltype(cpp17::data(std::declval<T&>()))>,
+                                  ElementType>::type {};
+
 template <typename T, class ElementType>
-static constexpr bool is_span_compatible_v = is_span_compatible<T, ElementType>::value;
+static constexpr bool is_span_compatible_v =
+    cpp17::conjunction_v<cpp17::negation<is_span<T>>, cpp17::negation<is_array_type<T>>,
+                         is_well_formed_data_and_size<T, ElementType>>;
 
 template <typename SizeType, SizeType Extent, SizeType Offset, SizeType Count>
 struct subspan_extent

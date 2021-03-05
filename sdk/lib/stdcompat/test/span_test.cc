@@ -1,18 +1,84 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include <lib/stdcompat/internal/span.h>
 #include <lib/stdcompat/span.h>
 #include <lib/stdcompat/string_view.h>
+#include <lib/stdcompat/type_traits.h>
 
 #include <array>
 #include <cstddef>
 #include <span>
+#include <string>
 #include <type_traits>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 namespace {
+
+struct WellFormed {
+  int* data() { return nullptr; }
+  const int* data() const { return nullptr; }
+  size_t size() const { return 0; }
+};
+
+struct NoMutableDataOverload {
+  const int* data() const { return nullptr; }
+  size_t size() const { return 0; }
+};
+
+struct NoDataOverload {
+  size_t size() const { return 0; }
+};
+
+struct NoConstDataOverload {
+  int* data() { return nullptr; }
+  size_t size() const { return 0; }
+};
+
+struct NoSizeOverload {
+  int* data() { return nullptr; }
+  const int* data() const { return nullptr; }
+};
+
+TEST(SpanCompatibleTraitTest, CheckForDataSizeAndConversionValidation) {
+  using ::cpp20::internal::is_well_formed_data_and_size;
+
+  static_assert(is_well_formed_data_and_size<std::vector<int>, int>::value == true, "");
+  static_assert(is_well_formed_data_and_size<std::vector<int>, const int>::value == true, "");
+  static_assert(is_well_formed_data_and_size<WellFormed, int>::value == true, "");
+  static_assert(is_well_formed_data_and_size<NoMutableDataOverload, const int>::value == true, "");
+  static_assert(is_well_formed_data_and_size<NoConstDataOverload, int>::value == true, "");
+  static_assert(is_well_formed_data_and_size<const NoDataOverload, const int>::value == false, "");
+  static_assert(is_well_formed_data_and_size<std::vector<const int>, int>::value == false, "");
+  static_assert(is_well_formed_data_and_size<NoSizeOverload, const int>::value == false, "");
+  static_assert(is_well_formed_data_and_size<WellFormed, std::vector<int>>::value == false, "");
+  static_assert(is_well_formed_data_and_size<WellFormed, std::string>::value == false, "");
+}
+
+TEST(SpanCompatibleTraitTest, CheckForWellAndIllformedTypes) {
+  using ::cpp20::internal::is_span_compatible_v;
+
+  static_assert(is_span_compatible_v<std::vector<int>, int> == true, "");
+  static_assert(is_span_compatible_v<std::vector<int>, const int> == true, "");
+  static_assert(is_span_compatible_v<WellFormed, int> == true, "");
+  static_assert(is_span_compatible_v<NoMutableDataOverload, const int> == true, "");
+  static_assert(is_span_compatible_v<NoConstDataOverload, int> == true, "");
+  static_assert(is_span_compatible_v<const NoDataOverload, const int> == false, "");
+  static_assert(is_span_compatible_v<NoSizeOverload, const int> == false, "");
+
+  // Discard array and span specializations.
+  static_assert(is_span_compatible_v<cpp20::span<const int>, int> == false, "");
+  static_assert(is_span_compatible_v<cpp20::span<int, 1>, int> == false, "");
+  static_assert(is_span_compatible_v<std::array<int, 1>, int> == false, "");
+
+  // Well formed with non convertible types.
+  static_assert(is_span_compatible_v<std::vector<const int>, int> == false, "");
+  static_assert(is_span_compatible_v<WellFormed, float> == false, "");
+  static_assert(is_span_compatible_v<WellFormed, std::vector<int>> == false, "");
+  static_assert(is_span_compatible_v<WellFormed, std::string> == false, "");
+}
 
 TEST(SpanTest, EmptyConstructorWithDynamicExtent) {
   constexpr cpp20::span<int> empty_span;
