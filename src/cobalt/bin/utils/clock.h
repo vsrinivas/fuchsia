@@ -13,7 +13,7 @@
 #include <chrono>
 #include <optional>
 
-#include "third_party/cobalt/src/lib/util/clock.h"
+#include "third_party/cobalt/src/public/lib/clock_interfaces.h"
 
 namespace cobalt {
 

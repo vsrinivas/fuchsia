@@ -36,7 +36,7 @@ source_set("clock") {
   public_deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//third_party/cobalt/src/lib/util:clock",
+    "//third_party/cobalt/src/public/lib:clock_interfaces",
   ]
 }
 

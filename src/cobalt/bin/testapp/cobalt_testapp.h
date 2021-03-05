@@ -20,13 +20,16 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
-#include "third_party/cobalt/src/lib/util/clock.h"
+#include "third_party/cobalt/src/public/lib/clock_interfaces.h"
 
 namespace cobalt {
 namespace testapp {
 
 constexpr size_t kEventAggregatorBackfillDays = 2;
 
+class SystemClock : public util::SystemClockInterface {
+  std::chrono::system_clock::time_point now() override { return std::chrono::system_clock::now(); }
+};
 class CobaltTestApp {
  public:
   CobaltTestApp(bool use_network, bool test_for_prober)
@@ -34,7 +37,7 @@ class CobaltTestApp {
         logger_(use_network, &cobalt_controller_),
         use_network_(use_network),
         test_for_prober_(test_for_prober) {
-    clock_.reset(new util::SystemClock);
+    clock_ = std::make_unique<SystemClock>();
     if (test_for_prober) {
       FX_LOGS(INFO) << "Running the Cobalt test app in prober mode";
     }

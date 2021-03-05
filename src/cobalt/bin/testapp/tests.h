@@ -17,7 +17,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
-#include "third_party/cobalt/src/lib/util/clock.h"
+#include "third_party/cobalt/src/public/lib/clock_interfaces.h"
 
 namespace cobalt {
 namespace testapp {
@@ -71,7 +71,8 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger,
 
 bool TestLogElapsedTimeWithAggregationWorkerRunning(
     CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
-    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller, size_t backfill_days, uint32_t project_id);
+    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller, size_t backfill_days,
+    uint32_t project_id);
 
 // Tests of Cobalt 1.1 metrics, all of which use local aggregation.
 //
@@ -87,20 +88,20 @@ bool TestLogElapsedTimeWithAggregationWorkerRunning(
 // again, for the same day index, and checks that no observations were
 // generated.
 bool TestLogInteger(CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
-                    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                    size_t backfill_days, uint32_t project_id);
+                    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller, size_t backfill_days,
+                    uint32_t project_id);
 
 bool TestLogOccurrence(CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
-                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                       size_t backfill_days, uint32_t project_id);
+                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller, size_t backfill_days,
+                       uint32_t project_id);
 
 bool TestLogIntegerHistogram(CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
                              fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                              size_t backfill_days, uint32_t project_id);
 
 bool TestLogString(CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
-                   fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                   size_t backfill_days, uint32_t project_id);
+                   fuchsia::cobalt::ControllerSyncPtr* cobalt_controller, size_t backfill_days,
+                   uint32_t project_id);
 
 }  // namespace testapp
 }  // namespace cobalt
