@@ -41,16 +41,20 @@ where
     pub fn write_event(
         &mut self,
         event: &Event<'_>,
+        tag: Option<&str>,
         pid: zx::Koid,
         tid: zx::Koid,
         dropped: u32,
     ) -> Result<(), EncodingError> {
-        let builder = RecordBuilder::from_tracing_event(
+        let mut builder = RecordBuilder::from_tracing_event(
             event,
             pid.raw_koid() as u64,
             tid.raw_koid() as u64,
             dropped,
         );
+        if let Some(tag) = tag {
+            builder.add_tag(tag);
+        }
         self.write_record(&builder.inner)
     }
 
@@ -59,6 +63,7 @@ where
     pub fn write_record_for_test(
         &mut self,
         record: &Record,
+        tag: Option<&str>,
         pid: zx::Koid,
         tid: zx::Koid,
         file: &str,
@@ -73,6 +78,9 @@ where
             Some(line),
             dropped,
         );
+        if let Some(tag) = tag {
+            builder.add_tag(tag);
+        }
         builder.inner.arguments.extend(record.arguments.iter().cloned());
         self.write_record(&builder.inner)
     }
@@ -219,6 +227,10 @@ impl RecordBuilder {
         if !matches!(field.name(), "log.target" | "log.module_path" | "log.file" | "log.line") {
             self.inner.arguments.push(make_arg());
         }
+    }
+
+    fn add_tag(&mut self, tag: &str) {
+        self.inner.arguments.push(arg!("tag", Text(tag.to_string())));
     }
 
     fn from_tracing_event(event: &Event<'_>, pid: u64, tid: u64, dropped: u32) -> Self {

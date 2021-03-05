@@ -1,6 +1,8 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#![deny(missing_docs)]
+
 //! Publish diagnostics as a stream of log messages.
 
 use fidl_fuchsia_diagnostics_stream::Record;
@@ -34,7 +36,10 @@ use sink::Sink;
 #[macro_export]
 macro_rules! init {
     () => {
-        fuchsia_async::Task::spawn($crate::init_publishing().unwrap()).detach()
+        fuchsia_async::Task::spawn($crate::init_publishing(None).unwrap()).detach()
+    };
+    ($tag:expr) => {
+        fuchsia_async::Task::spawn($crate::init_publishing(Some($tag)).unwrap()).detach()
     };
 }
 
@@ -43,8 +48,8 @@ macro_rules! init {
 /// Also installs a bridge to capture events from the `log` crate's macros and a panic hook to
 /// ensure panic messages are logged when stderr is not hooked up to anything.
 #[must_use = "Interest registration future must be polled."]
-pub fn init_publishing() -> Result<impl Future<Output = ()>, PublishError> {
-    let (publisher, on_interest) = Publisher::new()?;
+pub fn init_publishing(tag: Option<&str>) -> Result<impl Future<Output = ()>, PublishError> {
+    let (publisher, on_interest) = Publisher::new(tag)?;
 
     tracing::subscriber::set_global_default(publisher)?;
     LogTracer::init()?;
@@ -68,14 +73,20 @@ pub struct Publisher {
 impl Publisher {
     /// Construct a new `Publisher` from the provided `LogSink`. Returns a `Publisher` and a future
     /// which must be polled to listen to interest/severity changes from the environment `LogSink`.
-    fn new() -> Result<(Self, impl Future<Output = ()>), PublishError> {
+    fn new(tag: Option<&str>) -> Result<(Self, impl Future<Output = ()>), PublishError> {
         let log_sink = connect_to_service::<LogSinkMarker>()
             .map_err(|e| e.to_string())
             .map_err(PublishError::LogSinkConnect)?;
-        let sink_events = log_sink.take_event_stream();
-        let publisher = Sink::new(log_sink)?;
-        let (filter, on_change) = InterestFilter::new(sink_events);
-        Ok((Self { inner: Registry::default().with(publisher).with(filter) }, on_change))
+
+        let events = log_sink.take_event_stream();
+        let (filter, on_change) = InterestFilter::new(events);
+
+        let mut sink = Sink::new(log_sink)?;
+        if let Some(tag) = tag {
+            sink.set_tag(tag);
+        }
+
+        Ok((Self { inner: Registry::default().with(sink).with(filter) }, on_change))
     }
 
     // TODO(fxbug.dev/71242) delete this and make Publisher private

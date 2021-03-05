@@ -26,6 +26,7 @@ thread_local! {
 
 pub(crate) struct Sink {
     socket: zx::Socket,
+    tag: Option<String>,
     num_events_dropped: AtomicU32,
 }
 
@@ -35,7 +36,11 @@ impl Sink {
             zx::Socket::create(zx::SocketOpts::DATAGRAM).map_err(PublishError::MakeSocket)?;
         log_sink.connect_structured(remote_socket).map_err(PublishError::SendSocket)?;
 
-        Ok(Self { socket, num_events_dropped: AtomicU32::new(0) })
+        Ok(Self { socket, tag: None, num_events_dropped: AtomicU32::new(0) })
+    }
+
+    pub fn set_tag(&mut self, tag: &str) {
+        self.tag = Some(tag.to_string());
     }
 }
 
@@ -72,6 +77,7 @@ impl Sink {
         self.encode_and_send(move |encoder, previously_dropped| {
             encoder.write_record_for_test(
                 &record,
+                self.tag.as_ref().map(String::as_str),
                 *PROCESS_ID,
                 THREAD_ID.with(|t| *t),
                 file,
@@ -85,7 +91,13 @@ impl Sink {
 impl<S: Subscriber> Layer<S> for Sink {
     fn on_event(&self, event: &Event<'_>, _cx: Context<'_, S>) {
         self.encode_and_send(|encoder, previously_dropped| {
-            encoder.write_event(event, *PROCESS_ID, THREAD_ID.with(|t| *t), previously_dropped)
+            encoder.write_event(
+                event,
+                self.tag.as_ref().map(String::as_str),
+                *PROCESS_ID,
+                THREAD_ID.with(|t| *t),
+                previously_dropped,
+            )
         });
     }
 }
@@ -101,9 +113,12 @@ mod tests {
     use tracing::{debug, error, info, trace, warn};
     use tracing_subscriber::{layer::SubscriberExt, Registry};
 
-    async fn init_sink() -> fidl::Socket {
+    async fn init_sink(tag: Option<&str>) -> fidl::Socket {
         let (proxy, mut requests) = create_proxy_and_stream::<LogSinkMarker>().unwrap();
-        let sink = Sink::new(proxy).unwrap();
+        let mut sink = Sink::new(proxy).unwrap();
+        if let Some(tag) = tag {
+            sink.set_tag(tag);
+        }
         tracing::subscriber::set_global_default(Registry::default().with(sink)).unwrap();
 
         match requests.next().await.unwrap().unwrap() {
@@ -124,7 +139,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn packets_are_sent() {
-        let socket = init_sink().await;
+        let socket = init_sink(None /* tag */).await;
         let mut buf = [0u8; MAX_DATAGRAM_LEN_BYTES as _];
         let mut next_message = || {
             let len = socket.read(&mut buf).unwrap();
@@ -237,8 +252,37 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn tags_are_sent() {
+        let socket = init_sink(Some("tags_are_sent")).await;
+        let mut buf = [0u8; MAX_DATAGRAM_LEN_BYTES as _];
+        let mut next_message = || {
+            let len = socket.read(&mut buf).unwrap();
+            let (record, _) = parse_record(&buf[..len]).unwrap();
+            assert_eq!(socket.outstanding_read_bytes().unwrap(), 0, "socket must be empty");
+            record
+        };
+
+        info!("this should have a tag");
+        let observed = next_message();
+
+        let mut expected = Record {
+            timestamp: observed.timestamp,
+            severity: Severity::Info,
+            arguments: arg_prefix(),
+        };
+        expected.arguments.push(Argument {
+            name: "message".into(),
+            value: Value::Text("this should have a tag".into()),
+        });
+        expected
+            .arguments
+            .push(Argument { name: "tag".into(), value: Value::Text("tags_are_sent".into()) });
+        assert_eq!(observed, expected);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn drop_count_is_tracked() {
-        let socket = init_sink().await;
+        let socket = init_sink(None /* tag */).await;
         let mut buf = [0u8; MAX_DATAGRAM_LEN_BYTES as _];
         const MESSAGE_SIZE: usize = 104;
         const MESSAGE_SIZE_WITH_DROPS: usize = 136;
