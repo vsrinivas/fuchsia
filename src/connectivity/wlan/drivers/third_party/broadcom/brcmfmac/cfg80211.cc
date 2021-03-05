@@ -1876,7 +1876,8 @@ static zx_status_t brcmf_get_ctrl_channel(brcmf_if* ifp, uint16_t* chanspec_out,
 }
 
 // Log driver and FW packet counters along with current channel and signal strength
-static void brcmf_log_client_stats(net_device* ndev) {
+static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
+  struct net_device* ndev = cfg_to_ndev(cfg);
   struct brcmf_if* ifp = ndev_to_if(ndev);
   bcme_status_t fw_err;
   uint32_t is_up = 0;
@@ -1919,13 +1920,15 @@ static void brcmf_log_client_stats(net_device* ndev) {
     BRCMF_INFO("Unable to get FW packet counts err: %s fw err %s", zx_status_get_string(err),
                brcmf_fil_get_errstr(fw_err));
   }
-  BRCMF_INFO("FW Stats: Rx - Good: %d Bad: %d Ocast: %d Tx - Good: %d Bad: %d",
+  BRCMF_INFO("FW Stats: Rx - Good: %d Bad: %d Ocast: %d; Tx - Good: %d Bad: %d",
              fw_pktcnt.rx_good_pkt, fw_pktcnt.rx_bad_pkt, fw_pktcnt.rx_ocast_good_pkt,
              fw_pktcnt.tx_good_pkt, fw_pktcnt.tx_bad_pkt);
 
-  BRCMF_INFO("Driver Stats: Rx - Good: %d Bad: %d Tx - Sent to FW: %d Conf: %d drop: %d Bad: %d",
+  BRCMF_INFO("Driver Stats: Rx - Good: %d Bad: %d; Tx - Sent to FW: %d Conf: %d Drop: %d Bad: %d",
              ndev->stats.rx_packets, ndev->stats.rx_errors, ndev->stats.tx_packets,
              ndev->stats.tx_confirmed, ndev->stats.tx_dropped, ndev->stats.tx_errors);
+
+  brcmf_bus_log_stats(cfg->pub->bus_if);
 }
 
 static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
@@ -1946,7 +1949,7 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
   if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
     cfg->signal_report_timer->Stop();
     // Log the client stats one last time before clearing out the counters
-    brcmf_log_client_stats(ndev);
+    brcmf_log_client_stats(cfg);
     ndev->stats = {};
     bcme_status_t fw_err;
     zx_status_t status = brcmf_fil_iovar_data_get(ifp, "reset_cnts", nullptr, 0, &fw_err);
@@ -2008,7 +2011,7 @@ static void cfg80211_signal_ind(net_device* ndev) {
     cfg->connect_log_cnt++;
     if (cfg->connect_log_cnt >= BRCMF_CONNECT_LOG_COUNT) {
       // Log the stats
-      brcmf_log_client_stats(ndev);
+      brcmf_log_client_stats(cfg);
       cfg->connect_log_cnt = 0;
     }
   } else if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {

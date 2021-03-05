@@ -59,6 +59,7 @@ struct brcmf_netbuf* brcmu_pktq_penq(struct pktq* pq, int prec, struct brcmf_net
   q = &pq->q[prec].netbuf_list;
   brcmf_netbuf_list_add_tail(q, p);
   pq->len++;
+  pq->enq_cnt++;
 
   if (pq->hi_prec < prec) {
     pq->hi_prec = (uint8_t)prec;
@@ -77,6 +78,7 @@ struct brcmf_netbuf* brcmu_pktq_penq_head(struct pktq* pq, int prec, struct brcm
   q = &pq->q[prec].netbuf_list;
   brcmf_netbuf_list_add_head(q, p);
   pq->len++;
+  pq->enq_cnt++;
 
   if (pq->hi_prec < prec) {
     pq->hi_prec = (uint8_t)prec;
