@@ -8,10 +8,6 @@ const fragmentStructTmpl = `
 {{- define "StructForwardDeclaration" }}
 {{ EnsureNamespace . }}
 struct {{ .Name }};
-{{- if .WireAlias }}
-{{- EnsureNamespace .WireAlias }}
-using {{ .WireAlias.Name }} = {{ . }};
-{{- end }}
 {{- end }}
 
 {{- define "SentSize" }}

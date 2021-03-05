@@ -111,10 +111,6 @@ constexpr inline void {{ .Name }}::operator^=(
   this->value_ ^= other.value_;
 }
 
-{{- if .WireAlias }}
-{{- EnsureNamespace .WireAlias }}
-using {{ .WireAlias.Name }} = {{ . }};
-{{- end }}
 {{ end }}
 
 {{- define "BitsTraits" }}

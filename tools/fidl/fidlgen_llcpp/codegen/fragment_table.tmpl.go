@@ -486,11 +486,6 @@ private:
   {{- end }}
 };
 
-{{- if .WireAlias }}
-{{- EnsureNamespace .WireAlias }}
-using {{ .WireAlias.Name }} = {{ . }};
-{{- end }}
-
 {{- if .IsResourceType }}
 {{- PopNamespace }}
 #endif  // __Fuchsia__

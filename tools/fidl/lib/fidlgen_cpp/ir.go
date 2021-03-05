@@ -189,7 +189,6 @@ type Const struct {
 	Decorator string
 	Type      Type
 	Value     ConstantValue
-	WireAlias *DeclVariant
 
 	// Kind should be default initialized.
 	Kind constKind
@@ -199,11 +198,10 @@ type Bits struct {
 	fidl.Attributes
 	fidl.Strictness
 	DeclName
-	Type      TypeName
-	Mask      string
-	MaskName  DeclName
-	Members   []BitsMember
-	WireAlias *DeclVariant
+	Type     TypeName
+	Mask     string
+	MaskName DeclName
+	Members  []BitsMember
 
 	// Kind should be default initialized.
 	Kind bitsKind
@@ -219,10 +217,9 @@ type Enum struct {
 	fidl.Attributes
 	fidl.Strictness
 	DeclName
-	Enum      fidl.Enum
-	Type      TypeName
-	Members   []EnumMember
-	WireAlias *DeclVariant
+	Enum    fidl.Enum
+	Type    TypeName
+	Members []EnumMember
 
 	// Kind should be default initialized.
 	Kind enumKind
@@ -250,7 +247,6 @@ type Union struct {
 	MaxOutOfLine int
 	Result       *Result
 	HasPointer   bool
-	WireAlias    *DeclVariant
 
 	// Kind should be default initialized.
 	Kind unionKind
@@ -289,7 +285,6 @@ type Table struct {
 	MaxOutOfLine   int
 	MaxSentSize    int
 	HasPointer     bool
-	WireAlias      *DeclVariant
 
 	// FrameItems stores the members in ordinal order; "null" for reserved.
 	FrameItems []TableFrameItem
@@ -332,7 +327,6 @@ type Struct struct {
 	IsResultValue bool
 	HasPointer    bool
 	Result        *Result
-	WireAlias     *DeclVariant
 	// Full decls needed to check if a type is memcpy compatible.
 	// Only set if it may be possible for a type to be memcpy compatible,
 	// e.g. has no padding.
@@ -1048,64 +1042,6 @@ func codingTableName(ident fidl.EncodedCompoundIdentifier) string {
 	return formatLibrary(ci.Library, "_", keepPartIfReserved) + "_" + string(ci.Name) + string(ci.Member)
 }
 
-var wireAliasAllowed = map[string]struct{}{
-	// For //third_party/android/device/generic/goldfish-opengl
-	"::fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverPingMessage": {},
-	"::fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType":        {},
-	"::fuchsia_hardware_goldfish::wire::BufferHandleType":                   {},
-	"::fuchsia_hardware_goldfish::wire::ColorBufferFormatType":              {},
-	"::fuchsia_hardware_goldfish::wire::CreateBuffer2Params":                {},
-	"::fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params":           {},
-	"::fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_DEVICE_LOCAL":       {},
-	"::fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE":       {},
-	"::fuchsia_hardware_goldfish::wire::SIGNAL_HANGUP":                      {},
-	"::fuchsia_hardware_goldfish::wire::SIGNAL_READABLE":                    {},
-	"::fuchsia_io::wire::OPEN_FLAG_CREATE":                                  {},
-	"::fuchsia_io::wire::OPEN_RIGHT_WRITABLE":                               {},
-	"::fuchsia_sysmem::wire::BufferCollectionConstraints":                   {},
-	"::fuchsia_sysmem::wire::BufferCollectionInfo_2":                        {},
-	"::fuchsia_sysmem::wire::BufferMemoryConstraints":                       {},
-	"::fuchsia_sysmem::wire::ColorSpaceType":                                {},
-	"::fuchsia_sysmem::wire::cpuUsageRead":                                  {},
-	"::fuchsia_sysmem::wire::cpuUsageReadOften":                             {},
-	"::fuchsia_sysmem::wire::cpuUsageWrite":                                 {},
-	"::fuchsia_sysmem::wire::cpuUsageWriteOften":                            {},
-	"::fuchsia_sysmem::wire::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL":       {},
-	"::fuchsia_sysmem::wire::FORMAT_MODIFIER_LINEAR":                        {},
-	"::fuchsia_sysmem::wire::HeapType":                                      {},
-	"::fuchsia_sysmem::wire::ImageFormatConstraints":                        {},
-	"::fuchsia_sysmem::wire::PixelFormatType":                               {},
-	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_INDEX_BUFFER":              {},
-	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_INDIRECT_BUFFER":           {},
-	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_STORAGE_BUFFER":            {},
-	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_STORAGE_TEXEL_BUFFER":      {},
-	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_TRANSFER_DST":              {},
-	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_TRANSFER_SRC":              {},
-	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_UNIFORM_BUFFER":            {},
-	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER":      {},
-	"::fuchsia_sysmem::wire::VULKAN_BUFFER_USAGE_VERTEX_BUFFER":             {},
-	"::fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_COLOR_ATTACHMENT":           {},
-	"::fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_SAMPLED":                    {},
-	"::fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_DST":               {},
-	"::fuchsia_sysmem::wire::VULKAN_IMAGE_USAGE_TRANSFER_SRC":               {},
-	// also
-	"::fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer": {},
-	"::fuchsia_hardware_sharedmemory::wire::SharedVmoRight":  {},
-	"::fuchsia_hardware_spi::wire::MAX_TRANSFER_SIZE":        {},
-	"::fuchsia_mem::wire::Range":                             {},
-}
-
-func wireAlias(name DeclName) *DeclVariant {
-	_, ok := wireAliasAllowed[name.Wire.String()]
-	if ok {
-		return &DeclVariant{
-			name:      name.Wire.name,
-			namespace: name.Wire.namespace.DropLastComponent(),
-		}
-	}
-	return nil
-}
-
 type compiler struct {
 	symbolPrefix     string
 	decls            fidl.DeclInfoMap
@@ -1395,7 +1331,6 @@ func (c *compiler) compileBits(val fidl.Bits) Bits {
 		Type:       c.compileType(val.Type).TypeName,
 		Mask:       val.Mask,
 		MaskName:   name.AppendName("Mask"),
-		WireAlias:  wireAlias(name),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, BitsMember{
@@ -1410,8 +1345,7 @@ func (c *compiler) compileBits(val fidl.Bits) Bits {
 func (c *compiler) compileConst(val fidl.Const) Const {
 	n := c.compileDeclName(val.Name)
 	v := Const{Attributes: val.Attributes,
-		DeclName:  n,
-		WireAlias: wireAlias(n),
+		DeclName: n,
 	}
 	if val.Type.Kind == fidl.StringType {
 		v.Extern = true
@@ -1439,7 +1373,6 @@ func (c *compiler) compileEnum(val fidl.Enum) Enum {
 		DeclName:   name,
 		Enum:       val,
 		Type:       TypeNameForPrimitive(val.Type),
-		WireAlias:  wireAlias(name),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
@@ -1625,7 +1558,6 @@ func (c *compiler) compileStruct(val fidl.Struct) Struct {
 		MaxSentSize:  val.TypeShapeV1.InlineSize + val.TypeShapeV1.MaxOutOfLine,
 		HasPadding:   val.TypeShapeV1.HasPadding,
 		HasPointer:   val.TypeShapeV1.Depth > 0,
-		WireAlias:    wireAlias(name),
 	}
 
 	for _, v := range val.Members {
@@ -1720,7 +1652,6 @@ func (c *compiler) compileTable(val fidl.Table) Table {
 		MaxOutOfLine:   val.TypeShapeV1.MaxOutOfLine,
 		MaxSentSize:    val.TypeShapeV1.InlineSize + val.TypeShapeV1.MaxOutOfLine,
 		HasPointer:     val.TypeShapeV1.Depth > 0,
-		WireAlias:      wireAlias(name),
 	}
 
 	for i, v := range val.SortedMembersNoReserved() {
@@ -1766,7 +1697,6 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 		MaxHandles:   val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine: val.TypeShapeV1.MaxOutOfLine,
 		HasPointer:   val.TypeShapeV1.Depth > 0,
-		WireAlias:    wireAlias(name),
 	}
 
 	for _, v := range val.Members {
