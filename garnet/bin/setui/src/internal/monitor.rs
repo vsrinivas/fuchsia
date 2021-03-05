@@ -100,6 +100,7 @@ impl DataBuilder {
     /// details
     #[allow(dead_code)]
     pub fn new(state: State) -> Self {
+        // TODO(fxbug.dev/71479): Refer to use clock::now() for Time::get_monotonic()
         Self { update_time: zx::Time::get_monotonic(), state, details: None }
     }
 

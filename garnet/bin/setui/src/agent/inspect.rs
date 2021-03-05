@@ -26,7 +26,6 @@ use futures::StreamExt;
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
-use std::time::{Duration, SystemTime};
 
 blueprint_definition!("inspect", crate::agent::inspect::InspectAgent::create);
 
@@ -207,17 +206,13 @@ impl InspectAgent {
 
         let count = setting_type_info.count;
         setting_type_info.count += 1;
-        let timestamp = clock::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .as_ref()
-            .map(Duration::as_millis)
-            .unwrap_or(0);
+        let timestamp = clock::inspect_format_now();
         // std::u64::MAX maxes out at 20 digits.
         let request_info = RequestInfo::new()
             .with_inspect(&request_type_info.inspect_node, format!("{:020}", count))
             .expect("failed to create RequestInfo inspect node");
         request_info.request.set(&format!("{:?}", request));
-        request_info.timestamp.set(&timestamp.to_string());
+        request_info.timestamp.set(&timestamp);
         last_requests.push_front(request_info);
     }
 }
@@ -234,7 +229,7 @@ mod tests {
 
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_inspect::testing::{AnyProperty, TreeAssertion};
-
+    use fuchsia_zircon::Time;
     use std::collections::HashSet;
 
     /// The `RequestProcessor` handles sending a request through a MessageHub
@@ -291,7 +286,8 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_inspect() {
-        clock::mock::set(SystemTime::UNIX_EPOCH);
+        // Set the clock so that timestamps will always be 0.
+        clock::mock::set(Time::from_nanos(0));
 
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("switchboard");
@@ -336,7 +332,7 @@ mod tests {
                                 low_light_mode: None, \
                                 theme: None \
                             })",
-                            timestamp: "0",
+                            timestamp: "0.000000000",
                         },
                         "00000000000000000001": {
                             request: "SetDisplayInfo(SetDisplayInfo { \
@@ -346,7 +342,7 @@ mod tests {
                                 low_light_mode: None, \
                                 theme: None \
                             })",
-                            timestamp: "0",
+                            timestamp: "0.000000000",
                         },
                     },
                 },
@@ -358,7 +354,7 @@ mod tests {
                                 temperature_unit: Some(Celsius), \
                                 time_zone_id: Some(\"UTC\"), \
                                 hour_cycle: None })",
-                            timestamp: "0",
+                            timestamp: "0.000000000",
                         }
                     },
                 }
@@ -368,7 +364,8 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_inspect_mixed_request_types() {
-        clock::mock::set(SystemTime::UNIX_EPOCH);
+        // Set the clock so that timestamps will always be 0.
+        clock::mock::set(Time::from_nanos(0));
 
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("switchboard");
@@ -415,7 +412,7 @@ mod tests {
                                 low_light_mode: None, \
                                 theme: None \
                             })",
-                            timestamp: "0",
+                            timestamp: "0.000000000",
                         },
                         "00000000000000000002": {
                             request: "SetDisplayInfo(SetDisplayInfo { \
@@ -425,17 +422,17 @@ mod tests {
                                 low_light_mode: None, \
                                 theme: None \
                             })",
-                            timestamp: "0",
+                            timestamp: "0.000000000",
                         },
                     },
                     "Get": {
                         "00000000000000000001": {
                             request: "Get",
-                            timestamp: "0",
+                            timestamp: "0.000000000",
                         },
                         "00000000000000000003": {
                             request: "Get",
-                            timestamp: "0",
+                            timestamp: "0.000000000",
                         },
                     },
                 },
@@ -445,8 +442,8 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn inspect_queue_test() {
-        clock::mock::set(SystemTime::UNIX_EPOCH);
-
+        // Set the clock so that timestamps will always be 0.
+        clock::mock::set(Time::from_nanos(0));
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("switchboard");
         let context = create_context().await;
@@ -500,7 +497,7 @@ mod tests {
                     "SetIntlInfo": {
                         "00000000000000000000": {
                             request: AnyProperty,
-                            timestamp: "0",
+                            timestamp: "0.000000000",
                         }
                     }
                 }

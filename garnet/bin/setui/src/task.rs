@@ -143,6 +143,7 @@ impl<C: Category + 'static> Client<C> {
         let task_id = self.id_generator.generate();
 
         // We report the creation before spawning in case spawning fails.
+        // TODO(fxbug.dev/71479): Refer to use clock::now() for Time::get_monotonic()
         self.action_tx
             .unbounded_send((task_id, Action::Create(category.clone()), zx::Time::get_monotonic()))
             .ok();
@@ -154,6 +155,7 @@ impl<C: Category + 'static> Client<C> {
             future.await;
 
             // Report exit.
+            // TODO(fxbug.dev/71479): Refer to use clock::now() for Time::get_monotonic()
             action_tx.unbounded_send((task_id, Action::Complete, zx::Time::get_monotonic())).ok();
         })
         .detach();
@@ -478,6 +480,7 @@ mod tests {
 
         // Capture timestamp before spawning to verify any action is recorded
         // after this point.
+        // TODO(fxbug.dev/71479): Refer to use clock::now() for Time::get_monotonic()
         let before_timestamp = zx::Time::get_monotonic();
         client.spawn(&category, async move {});
 

@@ -4,7 +4,6 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
@@ -171,10 +170,7 @@ impl PolicyInspectBroker {
         // Convert the response to a string for inspect.
         let (policy_name, inspect_str) = policy_info.for_inspect();
 
-        let timestamp = clock::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .map(|duration| duration.as_millis())
-            .unwrap_or(0);
+        let timestamp = clock::inspect_format_now();
 
         match self.policy_values.get_mut(&policy_name.to_string()) {
             Some(policy_info) => {
@@ -183,14 +179,14 @@ impl PolicyInspectBroker {
                     return Ok(());
                 }
                 // Value already known, just update its fields.
-                policy_info.timestamp.set(&timestamp.to_string());
+                policy_info.timestamp.set(&timestamp);
                 policy_info.value.set(&inspect_str);
             }
             None => {
                 // Policy info not recorded yet, create a new inspect node.
                 let node = self.inspect_node.create_child(policy_name);
                 let value_prop = node.create_string("value", inspect_str);
-                let timestamp_prop = node.create_string("timestamp", timestamp.to_string());
+                let timestamp_prop = node.create_string("timestamp", timestamp.clone());
                 self.policy_values.insert(
                     policy_name.to_string(),
                     PolicyInspectInfo { _node: node, value: value_prop, timestamp: timestamp_prop },
@@ -206,9 +202,9 @@ impl PolicyInspectBroker {
 mod tests {
     use fuchsia_inspect as inspect;
     use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_zircon::Time;
     use futures::future::BoxFuture;
     use futures::StreamExt;
-    use std::time::SystemTime;
 
     use crate::internal::policy::message::{create_hub, Audience};
 
@@ -228,7 +224,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_write_policy_inspect_on_start() {
         // Set the clock so that timestamps will always be 0.
-        clock::mock::set(SystemTime::UNIX_EPOCH);
+        clock::mock::set(Time::from_nanos(0));
 
         let messenger_factory = create_hub();
 
@@ -283,7 +279,7 @@ mod tests {
             policy_values: {
                 "Audio": {
                     value: format!("{:?}", expected_state),
-                    timestamp: "0",
+                    timestamp: "0.000000000",
                 }
             }
         });
@@ -293,7 +289,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_write_inspect_on_changed() {
         // Set the clock so that timestamps will always be 0.
-        clock::mock::set(SystemTime::UNIX_EPOCH);
+        clock::mock::set(Time::from_nanos(0));
 
         let messenger_factory = create_hub();
 
@@ -401,7 +397,7 @@ mod tests {
             policy_values: {
                 "Audio": {
                     value: format!("{:?}", expected_state),
-                    timestamp: "0",
+                    timestamp: "0.000000000",
                 }
             }
         });

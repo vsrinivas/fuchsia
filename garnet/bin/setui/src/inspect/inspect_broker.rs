@@ -5,7 +5,6 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
@@ -159,22 +158,19 @@ impl InspectBroker {
     async fn write_setting_to_inspect(&mut self, setting: SettingInfo) {
         let (key, value) = setting.for_inspect();
 
-        let timestamp = clock::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .map(|duration| duration.as_millis())
-            .unwrap_or(0);
+        let timestamp = clock::inspect_format_now();
 
         match self.setting_values.get_mut(key) {
             Some(setting) => {
                 // Value already known, just update its fields.
-                setting.timestamp.set(&timestamp.to_string());
+                setting.timestamp.set(&timestamp);
                 setting.value.set(&value);
             }
             None => {
                 // Setting value not recorded yet, create a new inspect node.
                 let node = self.inspect_node.create_child(key);
                 let value_prop = node.create_string("value", value);
-                let timestamp_prop = node.create_string("timestamp", timestamp.to_string());
+                let timestamp_prop = node.create_string("timestamp", timestamp.clone());
                 self.setting_values.insert(
                     key,
                     SettingInspectInfo {
@@ -191,6 +187,7 @@ impl InspectBroker {
 #[cfg(test)]
 mod tests {
     use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_zircon::Time;
 
     use crate::base::{SettingInfo, UnknownInfo};
     use crate::service::message::{create_hub, Receptor};
@@ -212,7 +209,8 @@ mod tests {
     /// inspect.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_write_inspect_on_restore() {
-        clock::mock::set(SystemTime::UNIX_EPOCH);
+        // Set the clock so that timestamps will always be 0.
+        clock::mock::set(Time::from_nanos(0));
 
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("setting_values");
@@ -259,7 +257,7 @@ mod tests {
             setting_values: {
                 "Unknown": {
                     value: "UnknownInfo(true)",
-                    timestamp: "0",
+                    timestamp: "0.000000000",
                 }
             }
         });
@@ -269,7 +267,8 @@ mod tests {
     /// to inspect.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_write_inspect_on_changed() {
-        clock::mock::set(SystemTime::UNIX_EPOCH);
+        // Set the clock so that timestamps will always be 0.
+        clock::mock::set(Time::from_nanos(0));
 
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("setting_values");
@@ -318,7 +317,7 @@ mod tests {
             setting_values: {
                 "Unknown": {
                     value: "UnknownInfo(true)",
-                    timestamp: "0",
+                    timestamp: "0.000000000",
                 }
             }
         });
