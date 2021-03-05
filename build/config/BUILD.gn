@@ -634,6 +634,9 @@ config("Wno-deprecated-declarations") {
 # TODO(fxbug.dev/58162): clean up instances of this outside of third party code.
 config("Wno-conversion") {
   cflags = [ "-Wno-conversion" ]
+
+  # To trim this list:
+  # $ scripts/gn/trim_visibility.py --target="//build/config:Wno-conversion"
   visibility = [
     "//garnet/bin/catapult_converter/*",
     "//garnet/bin/cpuperf/*",
@@ -800,7 +803,6 @@ config("Wno-conversion") {
     "//zircon/system/ulib/profile/*",
     "//zircon/system/ulib/runtests-utils/*",
     "//zircon/system/ulib/sysconfig-client/*",
-    "//zircon/system/ulib/syslog/*",
     "//zircon/system/ulib/task-utils/*",
     "//zircon/system/ulib/trace-engine/*",
     "//zircon/system/ulib/trace-reader/*",
