@@ -38,7 +38,6 @@
 #include "internal.h"
 
 namespace fio = ::fuchsia_io;
-namespace fsocket = ::fuchsia_posix_socket;
 
 static_assert(IOFLAG_CLOEXEC == FD_CLOEXEC, "Unexpected fdio flags value");
 
@@ -71,53 +70,45 @@ static constexpr fdio_state_t initialize_fdio_state() {
 }
 fdio_state_t __fdio_global_state = initialize_fdio_state();
 
-static bool fdio_is_reserved_or_null(fdio_t* io) {
-  if (io == nullptr || io == fdio_get_reserved_io()) {
-    return true;
-  }
-  return false;
-}
-
 int fdio_reserve_fd(int starting_fd) {
   if ((starting_fd < 0) || (starting_fd >= FDIO_MAX_FD)) {
-    errno = EINVAL;
-    return -1;
+    return ERRNO(EINVAL);
   }
   fbl::AutoLock lock(&fdio_lock);
   for (int fd = starting_fd; fd < FDIO_MAX_FD; fd++) {
-    if (fdio_fdtab[fd] == nullptr) {
-      fdio_fdtab[fd] = fdio_get_reserved_io();
+    auto& var = fdio_fdtab[fd];
+    if (std::holds_alternative<fdio_available>(var)) {
+      var = fdio_reserved{};
       return fd;
     }
   }
-  errno = EMFILE;
-  return -1;
+  return ERRNO(EMFILE);
 }
 
 int fdio_assign_reserved(int fd, fdio_t* io) {
+  if ((fd < 0) || (fd >= FDIO_MAX_FD)) {
+    return ERRNO(EINVAL);
+  }
   fbl::AutoLock lock(&fdio_lock);
-  fdio_t* res = fdio_fdtab[fd];
-  if (res != fdio_get_reserved_io()) {
-    errno = EINVAL;
-    return -1;
+  auto& var = fdio_fdtab[fd];
+  if (!std::holds_alternative<fdio_reserved>(var)) {
+    return ERRNO(EINVAL);
   }
   fdio_dupcount_acquire(io);
-  fdio_fdtab[fd] = io;
+  var = io;
   return fd;
 }
 
 int fdio_release_reserved(int fd) {
   if ((fd < 0) || (fd >= FDIO_MAX_FD)) {
-    errno = EINVAL;
-    return -1;
+    return ERRNO(EINVAL);
   }
   fbl::AutoLock lock(&fdio_lock);
-  fdio_t* res = fdio_fdtab[fd];
-  if (res != fdio_get_reserved_io()) {
-    errno = EINVAL;
-    return -1;
+  auto& var = fdio_fdtab[fd];
+  if (!std::holds_alternative<fdio_reserved>(var)) {
+    return ERRNO(EINVAL);
   }
-  fdio_fdtab[fd] = nullptr;
+  var = fdio_available{};
   return fd;
 }
 
@@ -126,51 +117,44 @@ int fdio_release_reserved(int fd) {
 // fdtab prior to binding.
 __EXPORT
 int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
+  // If we are not given an |fd|, the |starting_fd| must be non-negative.
+  if ((fd < 0 && starting_fd < 0) || fd >= FDIO_MAX_FD) {
+    return ERRNO(EINVAL);
+  }
+
   fdio_t* io_to_close = nullptr;
+  auto clean_io = fbl::MakeAutoCall([&io_to_close] {
+    if (io_to_close != nullptr) {
+      fdio_release(io_to_close);
+    }
+  });
   {
     fbl::AutoLock lock(&fdio_lock);
     if (fd < 0) {
-      // If we are not given an |fd|, the |starting_fd| must be non-negative.
-      if (starting_fd < 0) {
-        errno = EINVAL;
-        return -1;
-      }
-
       // A negative fd implies that any free fd value can be used
       // TODO: bitmap, ffs, etc
       for (fd = starting_fd; fd < FDIO_MAX_FD; fd++) {
-        if (fdio_fdtab[fd] == nullptr) {
+        if (std::holds_alternative<fdio_available>(fdio_fdtab[fd])) {
           goto free_fd_found;
         }
       }
-      errno = EMFILE;
-      return -1;
-    } else if (fd >= FDIO_MAX_FD) {
-      errno = EINVAL;
-      return -1;
+      return ERRNO(EMFILE);
     }
-    io_to_close = fdio_fdtab[fd];
-    if (io_to_close == io) {
-      // No change, but we must remember to drop the additional reference.
-      fdio_release(io_to_close);
-      return fd;
-    }
-    if (io_to_close) {
-      fdio_dupcount_release(io_to_close);
-      if (fdio_get_dupcount(io_to_close) > 0) {
-        // still alive in another fdtab slot
-        fdio_release(io_to_close);
-        io_to_close = nullptr;
+    {
+      auto* ptr = std::get_if<fdio_t*>(&fdio_fdtab[fd]);
+      if (ptr != nullptr) {
+        io_to_close = *ptr;
+        ZX_ASSERT(io_to_close);
+        if (io_to_close == io) {
+          // No change; the additional reference will be dropped via |clean_io|.
+          return fd;
+        }
+        fdio_dupcount_release(io_to_close);
       }
     }
-
   free_fd_found:
     fdio_dupcount_acquire(io);
     fdio_fdtab[fd] = io;
-  }
-
-  if (io_to_close) {
-    fdio_release(io_to_close);
   }
   return fd;
 }
@@ -185,10 +169,13 @@ zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
   if ((fd < 0) || (fd >= FDIO_MAX_FD)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  fdio_t* io = fdio_fdtab[fd];
-  if (fdio_is_reserved_or_null(io)) {
+  auto& var = fdio_fdtab[fd];
+  auto* ptr = std::get_if<fdio_t*>(&var);
+  if (ptr == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
+  auto* io = *ptr;
+  ZX_ASSERT(io);
   if (fdio_get_dupcount(io) > 1) {
     return ZX_ERR_UNAVAILABLE;
   }
@@ -196,7 +183,7 @@ zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
     return ZX_ERR_UNAVAILABLE;
   }
   fdio_dupcount_release(io);
-  fdio_fdtab[fd] = nullptr;
+  var = fdio_available{};
   *out = io;
   return ZX_OK;
 }
@@ -206,15 +193,15 @@ fdio_t* fdio_unsafe_fd_to_io(int fd) {
   if ((fd < 0) || (fd >= FDIO_MAX_FD)) {
     return nullptr;
   }
-  fdio_t* io = nullptr;
   fbl::AutoLock lock(&fdio_lock);
-  io = fdio_fdtab[fd];
-  if (fdio_is_reserved_or_null(io)) {
-    // Never hand back the reserved io as it does not have an ops table.
-    io = nullptr;
-  } else {
-    fdio_acquire(io);
+  auto& var = fdio_fdtab[fd];
+  auto* ptr = std::get_if<fdio_t*>(&var);
+  if (ptr == nullptr) {
+    return nullptr;
   }
+  auto* io = *ptr;
+  ZX_ASSERT(io);
+  fdio_acquire(io);
   return io;
 }
 
@@ -297,24 +284,38 @@ static uint32_t zxio_flags_to_fdio(uint32_t flags) {
 // the cwd, or, for the ...at variants, dirfd. In the absolute path
 // case, *path is also adjusted.
 static fdio_t* fdio_iodir(const char** path, int dirfd) {
-  fdio_t* iodir = nullptr;
-  fbl::AutoLock lock(&fdio_lock);
-  if (*path[0] == '/') {
-    iodir = fdio_root_handle;
-    // Since we are sending a request to the root handle, the
-    // rest of the path should be canonicalized as a relative
-    // path (relative to this root handle).
-    while (*path[0] == '/') {
-      (*path)++;
-      if (*path[0] == 0) {
-        *path = ".";
+  auto* iodir = [&]() -> fdio_t* {
+    bool root = *path[0] == '/';
+    if (root) {
+      // Since we are sending a request to the root handle, the
+      // rest of the path should be canonicalized as a relative
+      // path (relative to this root handle).
+      while (*path[0] == '/') {
+        (*path)++;
+        if (*path[0] == 0) {
+          *path = ".";
+        }
       }
     }
-  } else if (dirfd == AT_FDCWD) {
-    iodir = fdio_cwd_handle;
-  } else if ((dirfd >= 0) && (dirfd < FDIO_MAX_FD)) {
-    iodir = fdio_fdtab[dirfd];
-  }
+    fbl::AutoLock lock(&fdio_lock);
+    if (root) {
+      return fdio_root_handle;
+    }
+    if (dirfd == AT_FDCWD) {
+      return fdio_cwd_handle;
+    }
+    if (dirfd < 0 || dirfd >= FDIO_MAX_FD) {
+      return nullptr;
+    }
+    auto& var = fdio_fdtab[dirfd];
+    auto* ptr = std::get_if<fdio_t*>(&var);
+    if (ptr == nullptr) {
+      return nullptr;
+    }
+    auto* io = *ptr;
+    ZX_ASSERT(io);
+    return io;
+  }();
   if (iodir != nullptr) {
     fdio_acquire(iodir);
   }
@@ -620,10 +621,13 @@ static zx_status_t __fdio_opendir_containing_at(fdio_t** io, int dirfd, const ch
 extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle_t handle[],
                                                 uint32_t handle_info[], uint32_t name_count,
                                                 char** names) __TA_NO_THREAD_SAFETY_ANALYSIS {
-  zx_status_t status = fdio_ns_create(&fdio_root_ns);
-  ZX_ASSERT_MSG(status == ZX_OK, "Failed to create root namespace");
+  {
+    zx_status_t status = fdio_ns_create(&fdio_root_ns);
+    ZX_ASSERT_MSG(status == ZX_OK, "Failed to create root namespace: %s",
+                  zx_status_get_string(status));
+  }
 
-  int stdio_fd = -1;
+  fdio_t* use_for_stdio = nullptr;
 
   // extract handles we care about
   for (uint32_t n = 0; n < handle_count; n++) {
@@ -635,41 +639,40 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
 
     switch (PA_HND_TYPE(handle_info[n])) {
       case PA_FD: {
-        fdio_t* io = nullptr;
-        status = fdio_create(h, &io);
+        fdio_t* io;
+        zx_status_t status = fdio_create(h, &io);
         if (status != ZX_OK) {
-          zx_handle_close(h);
           continue;
         }
         ZX_ASSERT_MSG(arg_fd < FDIO_MAX_FD,
                       "unreasonably large fd number %u in PA_FD (must be less than %u)", arg_fd,
                       FDIO_MAX_FD);
-        ZX_ASSERT_MSG(fdio_fdtab[arg_fd] == nullptr, "duplicate fd number %u in PA_FD", arg_fd);
-        fdio_fdtab[arg_fd] = io;
-        fdio_dupcount_acquire(fdio_fdtab[arg_fd]);
+        auto& var = fdio_fdtab[arg_fd];
+        ZX_ASSERT_MSG(std::holds_alternative<fdio_available>(var),
+                      "duplicate fd number %u in PA_FD", arg_fd);
+        var = io;
+        fdio_dupcount_acquire(io);
+
+        if (arg & FDIO_FLAG_USE_FOR_STDIO) {
+          use_for_stdio = io;
+        }
+
+        handle[n] = 0;
+        handle_info[n] = 0;
+
         break;
       }
       case PA_NS_DIR:
+        if (arg < name_count) {
+          fdio_ns_bind(fdio_root_ns, names[arg], h);
+        }
         // we always continue here to not steal the
         // handles from higher level code that may
         // also need access to the namespace
-        if (arg >= name_count) {
-          continue;
-        }
-        fdio_ns_bind(fdio_root_ns, names[arg], h);
         continue;
       default:
         // unknown handle, leave it alone
         continue;
-    }
-    handle[n] = 0;
-    handle_info[n] = 0;
-
-    // If we reach here then the handle is a PA_FD type (a file descriptor),
-    // so check for a bit flag indicating that it should be duped
-    // into 0/1/2 to become all of stdin/out/err
-    if ((arg & FDIO_FLAG_USE_FOR_STDIO) && (arg_fd < FDIO_MAX_FD)) {
-      stdio_fd = arg_fd;
     }
   }
 
@@ -678,18 +681,17 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
 
   update_cwd_path(cwd);
 
-  fdio_t* use_for_stdio = (stdio_fd >= 0) ? fdio_fdtab[stdio_fd] : nullptr;
-
   // configure stdin/out/err if not init'd
   for (uint32_t n = 0; n < 3; n++) {
-    if (fdio_fdtab[n] == nullptr) {
+    auto& var = fdio_fdtab[n];
+    if (std::holds_alternative<fdio_available>(var)) {
       if (use_for_stdio) {
         fdio_acquire(use_for_stdio);
-        fdio_fdtab[n] = use_for_stdio;
+        var = use_for_stdio;
       } else {
-        fdio_fdtab[n] = fdio_null_create();
+        var = fdio_null_create();
       }
-      fdio_dupcount_acquire(fdio_fdtab[n]);
+      fdio_dupcount_acquire(std::get<fdio_t*>(var));
     }
   }
 
@@ -716,14 +718,17 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
 extern "C" __EXPORT void __libc_extensions_fini(void) __TA_ACQUIRE(fdio_lock) {
   mtx_lock(&fdio_lock);
   for (int fd = 0; fd < FDIO_MAX_FD; fd++) {
-    fdio_t* io = fdio_fdtab[fd];
-    if (!fdio_is_reserved_or_null(io)) {
-      fdio_fdtab[fd] = nullptr;
+    auto& var = fdio_fdtab[fd];
+    auto* ptr = std::get_if<fdio_t*>(&var);
+    if (ptr != nullptr) {
+      auto* io = *ptr;
+      ZX_ASSERT(io);
       fdio_dupcount_release(io);
       if (fdio_get_dupcount(io) == 0) {
         fdio_release(io);
       }
     }
+    var = fdio_available{};
   }
 }
 
@@ -965,12 +970,15 @@ int close(int fd) {
   fdio_t* io;
   {
     fbl::AutoLock lock(&fdio_lock);
-    io = fdio_fdtab[fd];
-    if (io == nullptr) {
+    auto& var = fdio_fdtab[fd];
+    auto* ptr = std::get_if<fdio_t*>(&var);
+    if (ptr == nullptr) {
       return ERRNO(EBADF);
     }
+    io = *ptr;
+    ZX_ASSERT(io);
     fdio_dupcount_release(io);
-    fdio_fdtab[fd] = nullptr;
+    var = fdio_available{};
   }
   return STATUS(fdio_release(io));
 }

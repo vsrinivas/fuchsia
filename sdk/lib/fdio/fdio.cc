@@ -38,28 +38,6 @@ struct fdio {
   zx::duration sndtimeo;
 };
 
-// fdio_reserved_io is a globally shared fdio_t that is used to represent a
-// reservation in the fdtab. If a user observes fdio_reserved_io there is a race
-// condition in their code or they are looking up fd's by number.
-// fdio_reserved_io is used in the time between a user requesting an operation
-// that creates and fd, and the time when a remote operation to create the
-// backing fdio_t is created, without holding the fdtab lock. Examples include
-// open() of a file, or accept() on a socket.
-static fdio_t fdio_reserved_io = {
-    // TODO(raggi): It may be ideal to replace these operations with ones that
-    // more directly encode the result that a user must have implemented a race
-    // in order to invoke them.
-    .ops = nullptr,
-    .refcount = 1,
-    .dupcount = 1,
-    .ioflag = 0,
-    .storage = {},
-    .rcvtimeo = zx::duration::infinite(),
-    .sndtimeo = zx::duration::infinite(),
-};
-
-fdio_t* fdio_get_reserved_io() { return &fdio_reserved_io; }
-
 __EXPORT
 zxio_t* fdio_get_zxio(fdio_t* io) { return &io->storage.io; }
 

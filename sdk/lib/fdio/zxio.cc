@@ -495,12 +495,18 @@ fdio_t* fdio_pty_create(zx_handle_t control, zx_handle_t event) {
 __EXPORT
 zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
   fbl::AutoLock lock(&fdio_lock);
-  if ((fd < 0) || (fd >= FDIO_MAX_FD) || (fdio_fdtab[fd] == nullptr)) {
+  if ((fd < 0) || (fd >= FDIO_MAX_FD)) {
     return ZX_ERR_NOT_FOUND;
   }
-  fdio_t* io = fdio_fdtab[fd];
+  auto& var = fdio_fdtab[fd];
+  auto* ptr = std::get_if<fdio_t*>(&var);
+  if (ptr == nullptr) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  auto* io = *ptr;
+  ZX_ASSERT(io);
   fdio_dupcount_release(io);
-  fdio_fdtab[fd] = nullptr;
+  var = fdio_available{};
   zx_status_t status;
   if (fdio_get_dupcount(io) > 0) {
     // still alive in other fdtab slots

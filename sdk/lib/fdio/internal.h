@@ -130,13 +130,6 @@ using fdio_ops_t = struct fdio_ops {
 // Static assertions in unistd.cc ensure we aren't colliding.
 #define IOFLAG_FD_FLAGS IOFLAG_CLOEXEC
 
-// Acquire a reference to a globally shared "fdio_t" object
-// acts as a sentinel value for reservation.
-//
-// It is unsafe to call any ops within this object.
-// It is unsafe to change the reference count of this object.
-fdio_t* fdio_get_reserved_io();
-
 zx_status_t fdio_zxio_close(fdio_t* io);
 zx_status_t fdio_zxio_clone(fdio_t* io, zx_handle_t* out_handle);
 zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* out_handle);
@@ -386,13 +379,17 @@ zx_status_t fdio_default_setsockopt(fdio_t* io, int level, int optname, const vo
 zx_status_t fdio_default_shutdown(fdio_t* io, int how, int16_t* out_code);
 Errno fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
 
+using fdio_available = struct {};
+using fdio_reserved = struct {};
+
 using fdio_state_t = struct {
   mtx_t lock;
   mtx_t cwd_lock __TA_ACQUIRED_BEFORE(lock);
   mode_t umask __TA_GUARDED(lock);
   fdio_t* root __TA_GUARDED(lock);
   fdio_t* cwd __TA_GUARDED(lock);
-  fdio_t* fdtab[FDIO_MAX_FD] __TA_GUARDED(lock);
+  std::array<std::variant<fdio_available, fdio_reserved, fdio_t*>, FDIO_MAX_FD> fdtab
+      __TA_GUARDED(lock);
   fdio_ns_t* ns __TA_GUARDED(lock);
   char cwd_path[PATH_MAX] __TA_GUARDED(cwd_lock);
 };
@@ -420,9 +417,8 @@ zx::duration* fdio_get_sndtimeo(fdio_t* io);
 
 // Returns an fd number greater than or equal to |starting_fd|, following the
 // same rules as fdio_bind_fd. If there are no free file descriptors, -1 is
-// returned and |errno| is set to EMFILE. The returned |fd| is bound to
-// fdio_reserved_io that has no ops table, and must not be consumed outside of
-// fdio, nor allowed to be used for operations.
+// returned and |errno| is set to EMFILE. The returned |fd| is not valid for
+// use outside of |fdio_assign_reserved| and |fdio_release_reserved|.
 int fdio_reserve_fd(int starting_fd);
 
 // Assign the given |io| to the reserved |fd|. If |fd| is not reserved, then -1
