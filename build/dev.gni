@@ -41,7 +41,7 @@ declare_args() {
   #   "none": Do not allow testonly=true target in all ZBI dependencies
   #      including base/cache packages.
   #
-  # Default value is 'none', it is preferable to set to 'all' for production
+  # Default value is 'all', it is preferable to set to 'none' for production
   #   image to avoid accidental inclusion of testing targets.
   dev_testonly_in_containers = "all"
 }
