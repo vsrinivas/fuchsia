@@ -6,19 +6,19 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
 if (is_host) {
-  generator_deps = [
+  _generator_deps = [
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
   ]
-  generator_test_deps = [
+  _generator_test_deps = [
     "//third_party/rust_crates:indoc",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:proptest",
   ]
-  generator_sources = [
+  _generator_sources = [
     "src/args.rs",
     "src/epoch.rs",
     "src/history.rs",
@@ -28,14 +28,14 @@ if (is_host) {
   rustc_binary("generator") {
     name = "epoch_generator"
     edition = "2018"
-    deps = generator_deps
-    sources = generator_sources
+    deps = _generator_deps
+    sources = _generator_sources
   }
 
   rustc_test("epoch-generator-tests") {
-    deps = generator_deps + generator_test_deps
+    deps = _generator_deps + _generator_test_deps
     source_root = "src/main.rs"
-    sources = generator_sources
+    sources = _generator_sources
   }
 }
 
