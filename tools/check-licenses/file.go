@@ -39,27 +39,10 @@ func NewFile(path string, parent *FileTree) (*File, error) {
 	return file, nil
 }
 
-func (f *File) Equal(other *File) bool {
-	if f.Name != other.Name {
-		return false
-	}
-	if f.Path != other.Path {
-		return false
-	}
-	if f.Symlink != other.Symlink {
-		return false
-	}
-
-	if len(f.Licenses) != len(other.Licenses) {
-		return false
-	}
-	for i := range f.Licenses {
-		if f.Licenses[i] != other.Licenses[i] {
-			return false
-		}
-	}
-
-	return true
+// shouldProcess looks at this file extension and the extensions lists in the config file
+// to determine whether or not this file should be processed by checklicenses.
+func (f *File) shouldProcess(strict bool, config *Config) bool {
+	return hasExt(f.Name, config.StrictTextExtensionList) || (!strict && hasExt(f.Name, config.TextExtensionList))
 }
 
 // Use a custom Marshal function to make Files easier to read in JSON:

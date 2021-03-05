@@ -8,11 +8,13 @@ const TemplateTxt = `
 {{ range $_, $license := .Used }}
 ================================================================================
 License Category: {{ (getCategory $license) }}
-{{ range $author := (getAuthors $license ) }}
---------------------------------------------------------------------------------
-Authors/Contributors: {{ $author }}
 
-{{ (getText $license $author) }}
+{{ range $match := (getMatches $license) }}
+--------------------------------------------------------------------------------
+{{ (getCopyrights $match) }}
+{{ (getProjectsFromMatch $match) }}
+{{ (getFilesFromMatch $match) }}
+{{ $match.Text }}
 {{ end }}
 ================================================================================
 {{ end }}

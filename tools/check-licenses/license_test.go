@@ -16,7 +16,7 @@ import (
 // Successfully create a License object from a very simple license pattern.
 func TestLicenseNew(t *testing.T) {
 	want, got := setupLicenseTest("simple", t)
-	if !got.Equal(want) {
+	if !got.equal(want) {
 		t.Errorf("%v(): got %v, want %v", t.Name(), got, want)
 	}
 }
@@ -25,7 +25,7 @@ func TestLicenseNew(t *testing.T) {
 // converting all empty space characters into "[\s\\#\*\/]*"
 func TestLicenseNewWithSpaces(t *testing.T) {
 	want, got := setupLicenseTest("spaces", t)
-	if !got.Equal(want) {
+	if !got.equal(want) {
 		t.Errorf("%v(): got %v, want %v", t.Name(), got, want)
 	}
 }
@@ -33,63 +33,8 @@ func TestLicenseNewWithSpaces(t *testing.T) {
 // Successfully create a prohibited License object from a very simple license pattern.
 func TestLicenseNewProhibited(t *testing.T) {
 	want, got := setupLicenseTest("prohibited", t)
-	if !got.Equal(want) {
+	if !got.equal(want) {
 		t.Errorf("%v(): got %v, want %v", t.Name(), got, want)
-	}
-}
-
-func TestLicenseGetAuthorMatches(t *testing.T) {
-	data := []string{
-		"Copyright (C) 2020 Foo All rights reserved",
-		"Copyright © 2020 Foo All rights reserved",
-		"Copyright © 2020 Foo",
-	}
-	for _, in := range data {
-		if m := getAuthorMatches([]byte(in)); len(m) == 0 {
-			t.Errorf("%q failed, got %q", in, m)
-		}
-	}
-}
-
-// Successfully choose the same variation of a copyright blurb regardless of the order
-// in which they are added.
-func TestConsistentText(t *testing.T) {
-	consistentText := "Copyright 2001 author\n bodyA aaaaaaaaaaa"
-
-	l, _ := setupLicenseTest("consistency", t)
-	l.Search([]byte(consistentText), "pathA")
-	l.Search([]byte("Copyright 2002 author\n bodyB bbbbbbbbbbb"), "pathB")
-	l.Search([]byte("Copyright 2003 author\n bodyC shortest"), "pathC")
-	l.Search([]byte("* Copyright 2004 author\n bodyD dddddddddddd"), "pathD")
-	l.Search([]byte("Copyright 2005 author\n bodyE eeeeeeeeeee"), "pathE")
-	l.Search([]byte("// Copyright 2006 author\n bodyF longestttttttttttttt"), "pathF")
-
-	if l.matches["author"].GetText() != consistentText {
-		t.Errorf("First: Got %s, want %s", l.matches["author"].GetText(), consistentText)
-	}
-
-	l, _ = setupLicenseTest("consistency", t)
-	l.Search([]byte("Copyright 2003 author\n bodyC shortest"), "pathC")
-	l.Search([]byte("Copyright 2002 author\n bodyB bbbbbbbbbbb"), "pathB")
-	l.Search([]byte("Copyright 2005 author\n bodyE eeeeeeeeeee"), "pathE")
-	l.Search([]byte(consistentText), "pathA")
-	l.Search([]byte("* Copyright 2004 author\n bodyD dddddddddddd"), "pathD")
-	l.Search([]byte("// Copyright 2006 author\n bodyF longestttttttttttttt"), "pathF")
-
-	if l.matches["author"].GetText() != consistentText {
-		t.Errorf("Middle: Got %s, want %s", l.matches["author"].GetText(), consistentText)
-	}
-
-	l, _ = setupLicenseTest("consistency", t)
-	l.Search([]byte("* Copyright 2004 author\n bodyD dddddddddddd"), "pathD")
-	l.Search([]byte("// Copyright 2006 author\n bodyF longestttttttttttttt"), "pathF")
-	l.Search([]byte("Copyright 2003 author\n bodyC shortest"), "pathC")
-	l.Search([]byte("Copyright 2005 author\n bodyE eeeeeeeeeee"), "pathE")
-	l.Search([]byte("Copyright 2002 author\n bodyB bbbbbbbbbbb"), "pathB")
-	l.Search([]byte(consistentText), "pathA")
-
-	if l.matches["author"].GetText() != consistentText {
-		t.Errorf("Last: Got %s, want %s", l.matches["author"].GetText(), consistentText)
 	}
 }
 
@@ -147,4 +92,17 @@ func setupLicenseTest(name string, t *testing.T) (*License, *License) {
 	}
 
 	return want, got
+}
+
+func (l *License) equal(other *License) bool {
+	if l.pattern.String() != other.pattern.String() {
+		return false
+	}
+	if l.Category != other.Category {
+		return false
+	}
+	if l.ValidType != other.ValidType {
+		return false
+	}
+	return true
 }

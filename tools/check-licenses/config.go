@@ -11,37 +11,45 @@ import (
 )
 
 type CustomProjectLicense struct {
+	Name            string
 	ProjectRoot     string
 	LicenseLocation string
 }
 
 // Config values are populated from the the json file at the default or user-specified path
 type Config struct {
-	SkipDirs                     []string               `json:"skipDirs"`
-	DontSkipDirs                 []string               `json:"dontSkipDirs"`
-	SkipFiles                    []string               `json:"skipFiles"`
-	ProhibitedLicenseTypes       []string               `json:"prohibitedLicenseTypes"`
-	TextExtensionList            []string               `json:"textExtensionList"`
-	StrictTextExtensionList      []string               `json:"strictTextExtensionList"`
-	ExitOnDirRestrictedLicense   bool                   `json:"exitOnDirRestrictedLicense"`
-	ExitOnProhibitedLicenseTypes bool                   `json:"exitOnProhibitedLicenseTypes"`
-	ExitOnUnlicensedFiles        bool                   `json:"exitOnUnlicensedFiles"`
-	StrictAnalysis               bool                   `json:"strictAnalysis"`
-	OutputLicenseFile            bool                   `json:"outputLicenseFile"`
-	MaxReadSize                  int                    `json:"maxReadSize"`
-	OutputFilePrefix             string                 `json:"outputFilePrefix"`
-	OutputFileExtensions         []string               `json:"outputFileExtensions"`
-	SingleLicenseFiles           []string               `json:"singleLicenseFiles"`
-	StopLicensePropagation       []string               `json:"stopLicensePropagation"`
-	LicensePatternDir            string                 `json:"licensePatternDir"`
-	CustomProjectLicenses        []CustomProjectLicense `json:"customProjectLicenses"`
-	FlutterLicenses              []string               `json:"flutterLicenses"`
-	NoticeTxtFiles               []string               `json:"noticeTxtFiles"`
-	NoticeFiles                  []string               `json:"noticeFiles"`
-	BaseDir                      string                 `json:"baseDir"`
-	Target                       string                 `json:"target"`
-	LogLevel                     string                 `json:"logLevel"`
-	LicenseAllowList             map[string][]string    `json:"licenseAllowList"`
+	DontSkipDirs []string `json:"dontSkipDirs"`
+	SkipDirs     []string `json:"skipDirs"`
+	SkipFiles    []string `json:"skipFiles"`
+
+	TextExtensionList       []string `json:"textExtensionList"`
+	StrictTextExtensionList []string `json:"strictTextExtensionList"`
+	StrictAnalysis          bool     `json:"strictAnalysis"`
+	SingleLicenseFiles      []string `json:"singleLicenseFiles"`
+	NoticeFiles             []string `json:"noticeFiles"`
+	StopLicensePropagation  []string `json:"stopLicensePropagation"`
+
+	ProhibitedLicenseTypes       []string `json:"prohibitedLicenseTypes"`
+	ExitOnDirRestrictedLicense   bool     `json:"exitOnDirRestrictedLicense"`
+	ExitOnProhibitedLicenseTypes bool     `json:"exitOnProhibitedLicenseTypes"`
+	ExitOnUnlicensedFiles        bool     `json:"exitOnUnlicensedFiles"`
+
+	LicensePatternDir     string                 `json:"licensePatternDir"`
+	CustomProjectLicenses []CustomProjectLicense `json:"customProjectLicenses"`
+	FlutterLicenses       []string               `json:"flutterLicenses"`
+	NoticeTxtFiles        []string               `json:"noticeTxtFiles"`
+	LicenseAllowList      map[string][]string    `json:"licenseAllowList"`
+
+	PrintFiles           bool     `json:"printFiles"`
+	PrintProjects        bool     `json:"printProjects"`
+	OutputLicenseFile    bool     `json:"outputLicenseFile"`
+	OutputFilePrefix     string   `json:"outputFilePrefix"`
+	OutputFileExtensions []string `json:"outputFileExtensions"`
+
+	LogLevel    string `json:"logLevel"`
+	MaxReadSize int    `json:"maxReadSize"`
+	BaseDir     string `json:"baseDir"`
+	Target      string `json:"target"`
 }
 
 // NewConfig returns a config file representing the values found in the json file.
@@ -87,26 +95,22 @@ func NewConfigJson(configJson string) (*Config, error) {
 // - Regular fields will be equal to the left struct field ("c") if it's not equal to the default value ("" for strings, 0 for ints),
 //	otherwise they will be set to the right struct field.
 func (c *Config) Merge(other *Config) {
-	c.SkipDirs = append(c.SkipDirs, other.SkipDirs...)
 	c.DontSkipDirs = append(c.DontSkipDirs, other.DontSkipDirs...)
+	c.SkipDirs = append(c.SkipDirs, other.SkipDirs...)
 	c.SkipFiles = append(c.SkipFiles, other.SkipFiles...)
-	c.ProhibitedLicenseTypes = append(c.ProhibitedLicenseTypes, other.ProhibitedLicenseTypes...)
+
 	c.TextExtensionList = append(c.TextExtensionList, other.TextExtensionList...)
 	c.StrictTextExtensionList = append(c.StrictTextExtensionList, other.StrictTextExtensionList...)
-	c.OutputFileExtensions = append(c.OutputFileExtensions, other.OutputFileExtensions...)
+	c.StrictAnalysis = c.StrictAnalysis || other.StrictAnalysis
+	c.SingleLicenseFiles = append(c.SingleLicenseFiles, other.SingleLicenseFiles...)
+	c.NoticeFiles = append(c.NoticeFiles, other.NoticeFiles...)
+	c.StopLicensePropagation = append(c.StopLicensePropagation, other.StopLicensePropagation...)
+
+	c.ProhibitedLicenseTypes = append(c.ProhibitedLicenseTypes, other.ProhibitedLicenseTypes...)
 	c.ExitOnDirRestrictedLicense = c.ExitOnDirRestrictedLicense || other.ExitOnDirRestrictedLicense
 	c.ExitOnProhibitedLicenseTypes = c.ExitOnProhibitedLicenseTypes || other.ExitOnProhibitedLicenseTypes
 	c.ExitOnUnlicensedFiles = c.ExitOnUnlicensedFiles || other.ExitOnUnlicensedFiles
-	c.StrictAnalysis = c.StrictAnalysis || other.StrictAnalysis
-	c.OutputLicenseFile = c.OutputLicenseFile || other.OutputLicenseFile
-	if c.MaxReadSize == 0 {
-		c.MaxReadSize = other.MaxReadSize
-	}
-	if c.OutputFilePrefix == "" {
-		c.OutputFilePrefix = other.OutputFilePrefix
-	}
-	c.SingleLicenseFiles = append(c.SingleLicenseFiles, other.SingleLicenseFiles...)
-	c.StopLicensePropagation = append(c.StopLicensePropagation, other.StopLicensePropagation...)
+
 	if c.LicensePatternDir == "" {
 		c.LicensePatternDir = other.LicensePatternDir
 	}
@@ -131,5 +135,23 @@ func (c *Config) Merge(other *Config) {
 		for k := range other.LicenseAllowList {
 			c.LicenseAllowList[k] = append(c.LicenseAllowList[k], other.LicenseAllowList[k]...)
 		}
+	}
+
+	c.PrintFiles = c.PrintFiles || other.PrintFiles
+	c.PrintProjects = c.PrintProjects || other.PrintProjects
+	c.OutputLicenseFile = c.OutputLicenseFile || other.OutputLicenseFile
+	if c.OutputFilePrefix == "" {
+		c.OutputFilePrefix = other.OutputFilePrefix
+	}
+	c.OutputFileExtensions = append(c.OutputFileExtensions, other.OutputFileExtensions...)
+
+	if c.MaxReadSize == 0 {
+		c.MaxReadSize = other.MaxReadSize
+	}
+	if c.BaseDir == "" {
+		c.BaseDir = other.BaseDir
+	}
+	if c.Target == "" {
+		c.Target = other.Target
 	}
 }
