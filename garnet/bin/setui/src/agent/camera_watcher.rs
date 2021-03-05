@@ -164,7 +164,7 @@ mod tests {
         let (messenger, _) = service_message_hub
             .create(MessengerType::Unbound)
             .await
-            .expect("Unable to create switchboard messenger");
+            .expect("Unable to create messenger");
 
         // Construct the agent.
         let mut agent =
@@ -192,7 +192,7 @@ mod tests {
         let (messenger, _) = service_message_hub
             .create(MessengerType::Unbound)
             .await
-            .expect("Unable to create switchboard messenger");
+            .expect("Unable to create messenger");
 
         // Construct the agent.
         let mut agent =
@@ -235,7 +235,7 @@ mod tests {
         let handler_receptor = service_message_hub
             .create(MessengerType::Addressable(service::Address::Handler(SettingType::Unknown)))
             .await
-            .expect("Unable to create switchboard receptor")
+            .expect("Unable to create receptor")
             .1;
 
         let mut event_handler = EventHandler {
@@ -243,7 +243,7 @@ mod tests {
             messenger: service_message_hub
                 .create(MessengerType::Unbound)
                 .await
-                .expect("Unable to create switchboard messenger")
+                .expect("Unable to create messenger")
                 .0,
             recipient_settings: vec![SettingType::Unknown].into_iter().collect(),
             sw_muted: false,
@@ -338,7 +338,7 @@ mod tests {
         service_message_hub
             .create(MessengerType::Unbound)
             .await
-            .expect("Unable to create switchboard messenger")
+            .expect("Unable to create messenger")
             .0
             .message(
                 HandlerPayload::Request(verification_request.clone()).into(),

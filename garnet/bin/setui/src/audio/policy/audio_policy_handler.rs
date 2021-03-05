@@ -72,10 +72,9 @@ use crate::policy::base as policy_base;
 use crate::policy::base::response::Error as PolicyError;
 use crate::policy::base::PolicyInfo;
 use crate::policy::policy_handler::{
-    ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform, ResponseTransform,
+    ClientProxy, Create, PolicyHandler, RequestTransform, ResponseTransform,
 };
 use crate::service;
-use crate::switchboard::base::SettingEvent;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;
@@ -173,19 +172,6 @@ impl PolicyHandler for AudioPolicyHandler {
                 Some(RequestTransform::Result(Ok(Some(SettingInfo::Audio(
                     self.transform_internal_audio_info(audio_info),
                 )))))
-            }
-            _ => None,
-        }
-    }
-
-    async fn handle_setting_event(&mut self, event: SettingEvent) -> Option<EventTransform> {
-        match event {
-            SettingEvent::Changed(SettingInfo::Audio(audio_info)) => {
-                // The setting changed in response to a Set. Note that this is event is not sent if
-                // there are no active listeners.
-                Some(EventTransform::Event(SettingEvent::Changed(SettingInfo::Audio(
-                    self.transform_internal_audio_info(audio_info),
-                ))))
             }
             _ => None,
         }
@@ -429,9 +415,7 @@ impl AudioPolicyHandler {
         // Set internal/external volume state as needed.
         if transformed != original {
             // When the internal volume level should change, send a Set request to the audio
-            // controller. If this would cause the external volume levels to change as well, that
-            // will be handled automatically as a Changed event in handle_setting_event.
-
+            // controller.
             self.client_proxy.send_setting_request(
                 SettingType::Audio,
                 SettingRequest::SetVolume(vec![transformed]),

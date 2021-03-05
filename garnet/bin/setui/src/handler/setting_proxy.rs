@@ -61,11 +61,7 @@ impl RequestInfo {
     pub fn reply(&self, result: SettingHandlerResult) {
         match &self.client {
             Client::Service(client) => {
-                // While the switchboard is still being used, we must manually
-                // convert the ControllerError into a HandlerError if present.
-                // Once switchboard has been removed, we can move SettingProxy
-                // and controller implementations to report back HandlerErrors
-                // directly.
+                // TODO(fxbug.dev/70985): return HandlerErrors directly
                 client
                     .reply(HandlerPayload::Response(result.map_err(HandlerError::from)).into())
                     .send();
@@ -156,7 +152,6 @@ pub struct SettingProxy {
     active_request: Option<ActiveRequest>,
     pending_requests: VecDeque<RequestInfo>,
     listen_requests: Vec<RequestInfo>,
-    has_active_switchboard_listener: bool,
     next_request_id: usize,
 
     /// Factory for generating a new controller to service requests.
@@ -185,7 +180,7 @@ macro_rules! publish {
 }
 
 impl SettingProxy {
-    /// Creates a SettingProxy that is listening to SettingAction from the
+    /// Creates a SettingProxy that is listening to requests from the
     /// provided receiver and will send responses/updates on the given sender.
     pub async fn create(
         setting_type: SettingType,
@@ -224,7 +219,6 @@ impl SettingProxy {
             active_request: None,
             pending_requests: VecDeque::new(),
             listen_requests: Vec::new(),
-            has_active_switchboard_listener: false,
             messenger_factory,
             messenger,
             signature: service_signature,
@@ -353,7 +347,7 @@ impl SettingProxy {
     /// Returns whether there is an active listener across the various
     /// listening clients.
     fn is_listening(&self) -> bool {
-        self.has_active_switchboard_listener || !self.listen_requests.is_empty()
+        !self.listen_requests.is_empty()
     }
 
     /// Informs the Switchboard when the controller has indicated the setting

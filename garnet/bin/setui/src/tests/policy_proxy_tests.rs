@@ -12,13 +12,10 @@ use crate::policy::base as policy_base;
 use crate::policy::base::{
     Address, BoxedHandler, PolicyHandlerFactory, PolicyInfo, PolicyType, UnknownInfo,
 };
-use crate::policy::policy_handler::{
-    EventTransform, PolicyHandler, RequestTransform, ResponseTransform,
-};
+use crate::policy::policy_handler::{PolicyHandler, RequestTransform, ResponseTransform};
 use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
 use crate::policy::policy_proxy::PolicyProxy;
 use crate::service;
-use crate::switchboard::base::SettingEvent;
 use crate::tests::message_utils::verify_payload;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -54,8 +51,6 @@ struct FakePolicyHandlerBuilder {
     policy_response: policy_base::response::Response,
     setting_request_mapping: Vec<(Request, RequestTransform)>,
     setting_request_transform: Option<RequestTransform>,
-    setting_event_mapping: Vec<(SettingEvent, EventTransform)>,
-    setting_event_transform: Option<EventTransform>,
     setting_response_mapping: Vec<(SettingResponse, ResponseTransform)>,
     setting_response_transform: Option<ResponseTransform>,
 }
@@ -67,8 +62,6 @@ impl FakePolicyHandlerBuilder {
             policy_response: Err(policy_base::response::Error::Unexpected),
             setting_request_mapping: Vec::new(),
             setting_request_transform: None,
-            setting_event_mapping: Vec::new(),
-            setting_event_transform: None,
             setting_response_mapping: Vec::new(),
             setting_response_transform: None,
         }
@@ -105,14 +98,6 @@ impl FakePolicyHandlerBuilder {
         self
     }
 
-    #[allow(dead_code)]
-    fn add_event_mapping(mut self, event: SettingEvent, transform: EventTransform) -> Self {
-        self.setting_event_mapping.retain(|(key, _)| *key != event);
-        self.setting_event_mapping.push((event, transform));
-
-        self
-    }
-
     fn add_response_mapping(
         mut self,
         response: SettingResponse,
@@ -130,8 +115,6 @@ impl FakePolicyHandlerBuilder {
             policy_response: self.policy_response,
             setting_request_mapping: self.setting_request_mapping,
             setting_request_transform: self.setting_request_transform,
-            setting_event_mapping: self.setting_event_mapping,
-            setting_event_transform: self.setting_event_transform,
             setting_response_mapping: self.setting_response_mapping,
             setting_response_transform: self.setting_response_transform,
         }
@@ -145,8 +128,6 @@ struct FakePolicyHandler {
     policy_response: policy_base::response::Response,
     setting_request_mapping: Vec<(Request, RequestTransform)>,
     setting_request_transform: Option<RequestTransform>,
-    setting_event_mapping: Vec<(SettingEvent, EventTransform)>,
-    setting_event_transform: Option<EventTransform>,
     setting_response_mapping: Vec<(SettingResponse, ResponseTransform)>,
     setting_response_transform: Option<ResponseTransform>,
 }
@@ -168,14 +149,6 @@ impl PolicyHandler for FakePolicyHandler {
             .setting_request_mapping
             .iter()
             .find(|(key, _)| *key == request)
-            .map(|x| x.1.clone()))
-    }
-
-    async fn handle_setting_event(&mut self, event: SettingEvent) -> Option<EventTransform> {
-        self.setting_event_transform.clone().or(self
-            .setting_event_mapping
-            .iter()
-            .find(|(key, _)| *key == event)
             .map(|x| x.1.clone()))
     }
 
@@ -304,7 +277,7 @@ async fn test_setting_message_pass_through() {
     let (messenger, _) =
         messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
 
-    // Send a setting request from the switchboard to the setting handler.
+    // Send a setting request to the setting handler.
     let mut settings_send_receptor = messenger
         .message(
             SETTING_REQUEST_PAYLOAD.clone().into(),
@@ -324,7 +297,7 @@ async fn test_setting_message_pass_through() {
     )
     .await;
 
-    // Verify that the "switchboard" receives the response the setting handler sent.
+    // Verify that the requestor receives the response the setting handler sent.
     verify_payload(
         service::Payload::try_from(SETTING_RESPONSE_PAYLOAD.clone())
             .expect("should derive payload"),
@@ -335,7 +308,7 @@ async fn test_setting_message_pass_through() {
 }
 
 /// Verify that when the policy handler returns a result to give directly to the client, that the
-/// given result is provided back to the switchboard without reaching the setting handler.
+/// given result is provided back to the requestor without reaching the setting handler.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_message_result_replacement() {
     let messenger_factory = service::message::create_hub();
@@ -371,7 +344,7 @@ async fn test_setting_message_result_replacement() {
     let (messenger, _) =
         messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
 
-    // Send a setting request from the switchboard to the setting handler.
+    // Send a setting request from the requestor to the setting handler.
     let mut settings_send_receptor = messenger
         .message(
             SETTING_REQUEST_PAYLOAD.clone().into(),
@@ -382,8 +355,7 @@ async fn test_setting_message_result_replacement() {
     // We want to verify that the setting handler didn't receive the original message from the
     // client. To do this, we create a new messenger and send a message to the setting handler
     // and wait for it to be received. Since messages are delivered in-order, if the setting handler
-    // received the switchboard's message, this will fail. We can't send a message as the
-    // switchboard, since the policy proxy will intercept it.
+    // received the original message, this will fail.
     let (test_messenger, _) =
         messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
 
@@ -473,7 +445,7 @@ async fn test_setting_message_payload_replacement() {
     )
     .await;
 
-    // Verify that the "switchboard" receives the response that the setting handler returned.
+    // Verify that the requestor receives the response that the setting handler returned.
     verify_payload(SETTING_RESPONSE_PAYLOAD.clone().into(), &mut settings_send_receptor, None)
         .await;
 }
@@ -502,12 +474,10 @@ async fn test_setting_response_pass_through() {
     .ok();
 
     // Create a messenger that represents the client.
-    let (_, mut receptor) = messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("switchboard messenger created");
+    let (_, mut receptor) =
+        messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
 
-    // Send a setting event from the setting proxy to the switchboard.
+    // Send a setting event from the setting proxy to the client.
     setting_proxy_messenger
         .message(
             SETTING_RESPONSE_PAYLOAD.clone().into(),
@@ -515,7 +485,7 @@ async fn test_setting_response_pass_through() {
         )
         .send();
 
-    // Verify the switchboard receives the event.
+    // Verify the client receives the event.
     verify_payload(SETTING_RESPONSE_PAYLOAD.clone().into(), &mut receptor, None).await;
 }
 
@@ -545,10 +515,8 @@ async fn test_setting_response_replace() {
     .ok();
 
     // Create a messenger that represents the client.
-    let (_, mut receptor) = messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("switchboard messenger created");
+    let (_, mut receptor) =
+        messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
 
     // Send a setting request from the setting proxy to the client.
     setting_proxy_messenger
@@ -631,7 +599,7 @@ async fn test_multiple_messages() {
         )
         .await;
 
-        // Send a switchboard request that the policy proxy intercepts.
+        // Send a request that the policy proxy intercepts.
         let mut settings_send_receptor = messenger
             .message(
                 SETTING_REQUEST_PAYLOAD.clone().into(),
@@ -639,7 +607,7 @@ async fn test_multiple_messages() {
             )
             .send();
 
-        // Verify that the "switchboard" receives the response that the policy handler returns
+        // Verify that the client receives the response that the policy handler returns
         // each time.
         verify_payload(
             Payload::Response(SETTING_RESULT_NO_RESPONSE.clone()).into(),

@@ -112,7 +112,7 @@ where
     }
 }
 
-/// Handler for hanging gets within the switchboard.
+/// Handler for hanging gets.
 /// We never use the data type T directly, but it is used to constrain ST as the sender
 /// for that type.
 /// To use, one should implement a sender, as well as a way to convert SettingInfo into
@@ -535,7 +535,7 @@ mod tests {
 
         fn on_error(self, error: &anyhow::Error) {
             let error = match error.root_cause().downcast_ref::<Error>() {
-                Some(switchboard_error) => Event::Error(switchboard_error.clone()),
+                Some(request_error) => Event::Error(request_error.clone()),
                 _ => Event::UnknownError,
             };
             self.sender.unbounded_send(error).unwrap();

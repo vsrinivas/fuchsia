@@ -646,7 +646,7 @@ async fn test_handler_add_policy_does_not_modify_internal_volume_within_limits()
     verify_media_volume_set(&mut receptor, 0.55).await;
 }
 
-/// Verifies that the switchboard in the test environment received a changed notification with the
+/// Verifies that the requestor in the test environment received a changed notification with the
 /// given audio info.
 async fn verify_media_volume_changed(
     receptor: &mut service::message::Receptor,
@@ -660,8 +660,8 @@ async fn verify_media_volume_changed(
     .await;
 }
 
-// Verifies that when a max volume policy is removed, the switchboard will receive a changed event
-// with the new external volume.
+// Verifies that when a max volume policy is removed, listeners will receive a changed event with
+// the new external volume.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_remove_policy_notifies_listeners() {
     let mut env = TestEnvironment::new().await;
@@ -683,7 +683,7 @@ async fn test_handler_remove_policy_notifies_listeners() {
             .await;
 
     // The internal volume didn't change but the external volume did, so the handler manually sends
-    // a changed even to the switchboard. The value will still be the original value as there is
+    // a changed event to listeners. The value will still be the original value as there is
     // no policy proxy to intercept the message and pass it back to the handler for processing.
     verify_media_volume_changed(&mut listener, starting_audio_info.clone()).await;
 

@@ -12,7 +12,6 @@ use crate::policy::base::{
     BoxedHandler, Context, GenerateHandlerResult, PolicyType, Request as PolicyRequest,
 };
 use crate::service;
-use crate::switchboard::base::SettingEvent;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -38,17 +37,6 @@ pub trait PolicyHandler {
     /// [`RequestTransform::Result`]: enum.RequestTransform.html
     /// [`RequestTransform::Request`]: enum.RequestTransform.html
     async fn handle_setting_request(&mut self, request: Request) -> Option<RequestTransform>;
-
-    /// Called when a setting event is intercepted from the setting this policy handler supervises.
-    ///
-    /// If there are no policies or the event does not need to be modified, `None` should be
-    /// returned.
-    ///
-    /// If this handler wants to modify the event and still let the switchboard handle it,
-    /// [`EventTransform::Event`] should be returned, containing the modified event.
-    ///
-    /// [`EventTransform::Event`]: enum.EventTransform.html
-    async fn handle_setting_event(&mut self, event: SettingEvent) -> Option<EventTransform>;
 
     /// Called when a setting response is intercepted from the setting this policy handler
     /// supervises.
@@ -80,19 +68,6 @@ pub enum RequestTransform {
 
     /// A result to return directly to the settings client.
     Result(SettingHandlerResult),
-}
-
-/// `EventTransform` is returned by a [`PolicyHandler`] in response to a setting event that a
-/// [`PolicyProxy`] intercepted. The presence of this value indicates that the policy handler has
-/// decided to take action in order to apply policies.
-///
-/// [`PolicyHandler`]: trait.PolicyHandler.html
-/// [`PolicyProxy`]: ../policy_proxy/struct.PolicyProxy.html
-///
-#[derive(Clone, Debug, PartialEq)]
-pub enum EventTransform {
-    /// A new, modified event that should be forwarded to the switchboard for processing.
-    Event(SettingEvent),
 }
 
 /// `ResponseTransform` is returned by a [`PolicyHandler`] in response to a setting response that a

@@ -73,7 +73,7 @@ async fn create_display_test_env_with_failures(
 }
 
 // Tests that the FIDL calls for manual brightness result in appropriate
-// commands sent to the switchboard.
+// commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_manual_brightness_with_storage_controller() {
     let display_proxy = setup_display_env().await;
@@ -92,7 +92,7 @@ async fn test_manual_brightness_with_storage_controller() {
 }
 
 // Tests that the FIDL calls for manual brightness result in appropriate
-// commands sent to the switchboard.
+// commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_manual_brightness_with_brightness_controller() {
     let (display_proxy, brightness_service_handle) = setup_brightness_display_env().await;
@@ -114,7 +114,7 @@ async fn test_manual_brightness_with_brightness_controller() {
 }
 
 // Tests that the FIDL calls for auto brightness result in appropriate
-// commands sent to the switchboard.
+// commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_auto_brightness_with_storage_controller() {
     let display_proxy = setup_display_env().await;
@@ -129,7 +129,7 @@ async fn test_auto_brightness_with_storage_controller() {
 }
 
 // Tests that the FIDL calls for auto brightness result in appropriate
-// commands sent to the switchboard.
+// commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_auto_brightness_with_brightness_controller() {
     let (display_proxy, brightness_service_handle) = setup_brightness_display_env().await;
@@ -147,7 +147,7 @@ async fn test_auto_brightness_with_brightness_controller() {
 }
 
 // Tests that the FIDL calls for light mode result in appropriate
-// commands sent to the switchboard.
+// commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_light_mode_with_storage_controller() {
     let display_proxy = setup_display_env().await;
@@ -181,7 +181,7 @@ async fn test_light_mode_with_storage_controller() {
 }
 
 // Tests that the FIDL calls for light mode result in appropriate
-// commands sent to the switchboard.
+// commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_light_mode_with_brightness_controller() {
     let (display_proxy, _) = setup_brightness_display_env().await;
@@ -358,7 +358,7 @@ async fn test_theme_mode_auto_preserves_previous_type() {
 }
 
 // Tests that the FIDL calls for screen enabled result in appropriate
-// commands sent to the switchboard.
+// commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_screen_enabled_with_storage_controller() {
     let display_proxy = setup_display_env().await;
@@ -366,7 +366,7 @@ async fn test_screen_enabled_with_storage_controller() {
 }
 
 // Tests that the FIDL calls for screen enabled result in appropriate
-// commands sent to the switchboard.
+// commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_screen_enabled_with_brightness_controller() {
     let (display_proxy, _) = setup_brightness_display_env().await;

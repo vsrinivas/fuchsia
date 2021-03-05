@@ -270,11 +270,11 @@ fn assert_lights_eq(mut groups: Vec<fidl_fuchsia_settings::LightGroup>, info: Li
     groups.sort_by_key(|group: &fidl_fuchsia_settings::LightGroup| group.name.clone());
     expected_value.sort_by_key(|group| group.name.clone());
     for i in 0..groups.len() {
-        assert_light_group_eq(&groups[i], &expected_value[i]);
+        assert_fidl_light_group_eq(&groups[i], &expected_value[i]);
     }
 }
 
-fn assert_light_group_eq(
+fn assert_fidl_light_group_eq(
     left: &fidl_fuchsia_settings::LightGroup,
     right: &fidl_fuchsia_settings::LightGroup,
 ) {
@@ -287,7 +287,7 @@ fn assert_light_group_eq(
     }
 }
 
-fn assert_switchboard_light_group_eq(left: &LightGroup, right: &LightGroup) {
+fn assert_light_group_eq(left: &LightGroup, right: &LightGroup) {
     assert_eq!(left.name, right.name);
     assert_eq!(left.enabled, right.enabled);
     assert_eq!(left.light_type, right.light_type);
@@ -313,7 +313,7 @@ async fn test_light_restore() {
 
     // Verify that the restored value is persisted.
     let retrieved_struct = env.store.get::<LightInfo>().await;
-    assert_switchboard_light_group_eq(
+    assert_light_group_eq(
         &expected_light_group.clone(),
         retrieved_struct.light_groups.get(LIGHT_NAME_1).unwrap(),
     );
@@ -321,7 +321,7 @@ async fn test_light_restore() {
     // Verify that the restored value is returned on a watch call.
     let settings: fidl_fuchsia_settings::LightGroup =
         env.light_service.watch_light_group(LIGHT_NAME_1).await.expect("watch completed");
-    assert_light_group_eq(
+    assert_fidl_light_group_eq(
         &fidl_fuchsia_settings::LightGroup::from(expected_light_group),
         &settings,
     );
@@ -376,7 +376,7 @@ async fn test_light_restore_from_configuration() {
 
     // Verify that the restored value is persisted.
     let retrieved_struct = env.store.get::<LightInfo>().await;
-    assert_switchboard_light_group_eq(
+    assert_light_group_eq(
         &expected_light_group.clone(),
         retrieved_struct.light_groups.get(LIGHT_NAME_3).unwrap(),
     );
@@ -384,7 +384,7 @@ async fn test_light_restore_from_configuration() {
     // Verify that the restored value is returned on a watch call.
     let settings: fidl_fuchsia_settings::LightGroup =
         env.light_service.watch_light_group(LIGHT_NAME_3).await.expect("watch completed");
-    assert_light_group_eq(
+    assert_fidl_light_group_eq(
         &fidl_fuchsia_settings::LightGroup::from(expected_light_group),
         &settings,
     );
@@ -479,7 +479,7 @@ async fn test_light_disabled_by_mic_mute_off() {
     // Verify that the expected value is returned on a watch call.
     let settings: fidl_fuchsia_settings::LightGroup =
         env.light_service.watch_light_group(LIGHT_NAME_3).await.expect("watch completed");
-    assert_light_group_eq(
+    assert_fidl_light_group_eq(
         &fidl_fuchsia_settings::LightGroup::from(expected_light_group),
         &settings,
     );
@@ -621,20 +621,20 @@ async fn test_individual_light_group() {
 
     // Ensure values from Watch matches set values.
     let settings = light_service.watch_light_group(LIGHT_NAME_1).await.expect("watch completed");
-    assert_light_group_eq(&settings, &light_group_1.into());
+    assert_fidl_light_group_eq(&settings, &light_group_1.into());
     let settings = light_service.watch_light_group(LIGHT_NAME_2).await.expect("watch completed");
-    assert_light_group_eq(&settings, &light_group_2.into());
+    assert_fidl_light_group_eq(&settings, &light_group_2.into());
 
     // Set updated values for the two lights.
     set_light_value(&light_service, light_group_1_updated.clone()).await;
 
     let settings = light_service.watch_light_group(LIGHT_NAME_1).await.expect("watch completed");
-    assert_light_group_eq(&settings, &light_group_1_updated.into());
+    assert_fidl_light_group_eq(&settings, &light_group_1_updated.into());
 
     set_light_value(&light_service, light_group_2_updated.clone()).await;
 
     let settings = light_service.watch_light_group(LIGHT_NAME_2).await.expect("watch completed");
-    assert_light_group_eq(&settings, &light_group_2_updated.into());
+    assert_fidl_light_group_eq(&settings, &light_group_2_updated.into());
 }
 
 #[fuchsia_async::run_until_stalled(test)]

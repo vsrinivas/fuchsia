@@ -17,7 +17,7 @@ use crate::service;
 use crate::ExitSender;
 use std::hash::Hash;
 
-/// Convenience macro to make a switchboard request and send the result to a responder.
+/// Convenience macro to make a setting request and send the result to a responder.
 #[macro_export]
 macro_rules! request_respond {
     (
@@ -51,9 +51,8 @@ pub type RequestCallback<S, T, ST, K> =
 type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
 
 /// `RequestContext` is passed to each request callback to provide resources,
-/// such as the switchboard and hanging get functionality. Note that we do not
-/// directly expose the hanging get handler so that we can better control its
-/// lifetime.
+/// Note that we do not directly expose the hanging get handler so that we can
+/// better control its lifetime.
 pub struct RequestContext<T, ST, K = String>
 where
     T: From<SettingInfo> + Send + Sync + 'static,

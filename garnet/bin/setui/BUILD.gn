@@ -208,8 +208,6 @@ rustc_library("lib") {
     "src/setup/setup_controller.rs",
     "src/setup/setup_fidl_handler.rs",
     "src/setup/types.rs",
-    "src/switchboard.rs",
-    "src/switchboard/base.rs",
     "src/task.rs",
     "src/tests.rs",
     "src/tests/accessibility_tests.rs",

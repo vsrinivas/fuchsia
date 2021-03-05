@@ -9,11 +9,10 @@ use crate::message::base::MessengerType;
 use crate::policy::base::response::{Payload, Response};
 use crate::policy::base::{PolicyInfo, PolicyType, Request as PolicyRequest, UnknownInfo};
 use crate::policy::policy_handler::{
-    ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform, ResponseTransform,
+    ClientProxy, Create, PolicyHandler, RequestTransform, ResponseTransform,
 };
 use crate::privacy::types::PrivacyInfo;
 use crate::service;
-use crate::switchboard::base::SettingEvent;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -52,10 +51,6 @@ impl PolicyHandler for FakePolicyHandler {
     }
 
     async fn handle_setting_request(&mut self, _request: Request) -> Option<RequestTransform> {
-        None
-    }
-
-    async fn handle_setting_event(&mut self, _event: SettingEvent) -> Option<EventTransform> {
         None
     }
 

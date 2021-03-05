@@ -96,8 +96,7 @@ impl controller::Handle for LightController {
     }
 }
 
-/// Controller for processing switchboard messages surrounding the Light
-/// protocol.
+/// Controller for processing requests surrounding the Light protocol.
 impl LightController {
     /// Alternate constructor that allows specifying a configuration.
     pub(crate) async fn create_with_config(

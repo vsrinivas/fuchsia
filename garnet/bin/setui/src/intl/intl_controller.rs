@@ -67,8 +67,8 @@ impl controller::Handle for IntlController {
     }
 }
 
-/// Controller for processing switchboard messages surrounding the Intl
-/// protocol, backed by a number of services, including TimeZone.
+/// Controller for processing requests surrounding the Intl protocol, backed by a number of
+/// services, including TimeZone.
 impl IntlController {
     /// Loads the set of valid time zones from resources.
     fn load_time_zones() -> std::collections::HashSet<String> {

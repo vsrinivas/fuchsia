@@ -98,7 +98,6 @@ pub mod handler;
 pub mod message;
 pub mod monitor;
 pub mod service_context;
-pub mod switchboard;
 
 const DEFAULT_SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
 const DEFAULT_SETTING_PROXY_RESPONSE_TIMEOUT_MS: i64 = 10_000;
@@ -646,8 +645,8 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 /// Brings up the settings service environment.
 ///
 /// This method generates the necessary infrastructure to support the settings
-/// service (switchboard, proxies, etc.) and brings up the components necessary
-/// to support the components specified in the components HashSet.
+/// service (handlers, agents, etc.) and brings up the components necessary to
+/// support the components specified in the components HashSet.
 async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     messenger_factory: service::message::Factory,

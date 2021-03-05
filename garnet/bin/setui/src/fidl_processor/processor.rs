@@ -120,7 +120,7 @@ where
 }
 
 /// Wraps [`BaseFidlProcessor`] for use with FIDL APIs in the fuchsia.settings namespace that send
-/// and receive messages through the switchboard.
+/// and receive messages through the service MessageHub.
 ///
 /// [`BaseFidlProcessor`]: struct.BaseFidlProcessor.html
 pub struct SettingsFidlProcessor<S>

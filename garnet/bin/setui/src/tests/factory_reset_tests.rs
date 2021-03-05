@@ -37,7 +37,7 @@ async fn setup_env() -> (FactoryResetProxy, RecoveryPolicy) {
 }
 
 // Tests that the FIDL calls for the reset setting result in appropriate
-// commands sent to the switchboard.
+// commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_set() {
     let (factory_reset_proxy, recovery_policy_service_handler) = setup_env().await;

@@ -55,7 +55,7 @@ impl InspectBroker {
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
                     Payload::try_from(message.payload()).map_or(false, |payload| {
-                        // Only catch messages that were originally sent from the switchboard, and
+                        // Only catch messages that were originally sent from the interfaces, and
                         // that contain a request for the specific setting type we're interested in.
                         matches!(payload, Payload::Command(Command::HandleRequest(_)))
                             || matches!(payload, Payload::Event(Event::Changed(_)))

@@ -37,7 +37,6 @@ impl PolicyProxy {
         messenger_factory: service::message::Factory,
         policy_messenger_factory: policy::message::Factory,
     ) -> Result<(), Error> {
-        // TODO(fxbug.dev/68489): return this receptor rather than the switchboard receptor.
         let (handler_messenger, receptor) =
             messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
 
@@ -233,7 +232,7 @@ impl PolicyProxy {
     ) {
         let handler_result = self.policy_handler.handle_setting_response(response).await;
         if let Some(ResponseTransform::Response(response)) = handler_result {
-            // Handler provided a modified setting event to forward to the switchboard in place
+            // Handler provided a modified setting event to forward to the requestor in place
             // of the original.
             client.propagate(Payload::Response(response).into()).send();
         }

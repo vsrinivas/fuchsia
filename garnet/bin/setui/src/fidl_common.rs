@@ -132,8 +132,8 @@ macro_rules! fidl_process_policy {
 macro_rules! fidl_process {
     // Generates a fidl_io mod with a spawn for the given fidl interface,
     // setting type, and handler function. Additional handlers can be specified
-    // by providing the switchboard setting type, fidl setting type,
-    // watch responder, and handle function.
+    // by providing the internal setting type, fidl setting type, watch
+    // responder, and handle function.
     ($interface:ident, $setting_type:expr, $handle_func:ident
             $(,$item_setting_type:expr, $fidl_settings:ty, $fidl_responder:ty,
             $item_handle_func:ident)*$(,)*) => {
