@@ -90,7 +90,7 @@ rustc_library("lib") {
     "src/account.rs",
     "src/account/account_controller.rs",
     "src/agent.rs",
-    "src/agent/authority_impl.rs",
+    "src/agent/authority.rs",
     "src/agent/camera_watcher.rs",
     "src/agent/earcons.rs",
     "src/agent/earcons/agent.rs",

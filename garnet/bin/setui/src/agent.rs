@@ -10,8 +10,6 @@ use crate::monitor;
 use crate::service;
 use crate::service_context::ServiceContextHandle;
 
-use anyhow::Error;
-use async_trait::async_trait;
 use futures::future::BoxFuture;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -24,7 +22,7 @@ pub mod camera_watcher;
 pub mod media_buttons;
 
 /// This mod provides a concrete implementation of the agent authority.
-pub mod authority_impl;
+pub mod authority;
 
 /// Agent for rehydrating actions for restore.
 pub mod restore_agent;
@@ -87,13 +85,6 @@ pub trait Blueprint {
 }
 
 pub type BlueprintHandle = Arc<dyn Blueprint + Send + Sync>;
-
-/// Entity for registering agents. It is responsible for signaling
-/// Stages based on the specified lifespan.
-#[async_trait]
-pub trait Authority {
-    async fn register(&mut self, blueprint: BlueprintHandle) -> Result<(), Error>;
-}
 
 /// TODO(fxbug.dev/68659): Add documentation.
 pub struct Context {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::{AgentError, Authority, BlueprintHandle, Context, Invocation, Lifespan};
+use crate::agent::{AgentError, BlueprintHandle, Context, Invocation, Lifespan};
 
 use crate::base::SettingType;
 use crate::internal::agent;
@@ -12,13 +12,11 @@ use crate::monitor;
 use crate::service;
 use crate::service_context::ServiceContextHandle;
 use anyhow::{format_err, Error};
-use async_trait::async_trait;
 use std::collections::HashSet;
 
-/// AuthorityImpl is the default implementation of the Authority trait. It
-/// provides the ability to execute agents sequentially or simultaneously for a
-/// given stage.
-pub struct AuthorityImpl {
+/// Authority provides the ability to execute agents sequentially or simultaneously for a given
+/// stage.
+pub struct Authority {
     // A mapping of agent addresses
     agent_signatures: Vec<agent::message::Signature>,
     // Factory passed to agents for communicating with the service.
@@ -35,20 +33,20 @@ pub struct AuthorityImpl {
     resource_monitor_actor: Option<monitor::environment::Actor>,
 }
 
-impl AuthorityImpl {
+impl Authority {
     pub async fn create(
         messenger_factory: service::message::Factory,
         agent_messenger_factory: agent::message::Factory,
         event_factory: event::message::Factory,
         available_components: HashSet<SettingType>,
         resource_monitor_actor: Option<monitor::environment::Actor>,
-    ) -> Result<AuthorityImpl, Error> {
+    ) -> Result<Authority, Error> {
         let (client, _) = agent_messenger_factory
             .create(MessengerType::Unbound)
             .await
             .map_err(|_| anyhow::format_err!("could not create agent messenger for authority"))?;
 
-        return Ok(AuthorityImpl {
+        return Ok(Authority {
             agent_signatures: Vec::new(),
             messenger_factory,
             agent_messenger_factory,
@@ -57,6 +55,33 @@ impl AuthorityImpl {
             available_components,
             resource_monitor_actor,
         });
+    }
+
+    pub async fn register(&mut self, blueprint: BlueprintHandle) -> Result<(), Error> {
+        let agent_receptor = self
+            .agent_messenger_factory
+            .create(MessengerType::Unbound)
+            .await
+            .map_err(|_| format_err!("could not register"))?
+            .1;
+        let signature = agent_receptor.get_signature();
+        blueprint
+            .create(
+                Context::new(
+                    agent_receptor,
+                    blueprint.get_descriptor(),
+                    self.messenger_factory.clone(),
+                    self.event_factory.clone(),
+                    self.available_components.clone(),
+                    self.resource_monitor_actor.clone(),
+                )
+                .await,
+            )
+            .await;
+
+        self.agent_signatures.push(signature);
+
+        Ok(())
     }
 
     /// Invokes each registered agent for a given lifespan. If sequential is true,
@@ -115,35 +140,5 @@ fn process_payload(
         Ok((agent::Payload::Complete(Ok(_)), _)) => Ok(()),
         Ok((agent::Payload::Complete(Err(AgentError::UnhandledLifespan)), _)) => Ok(()),
         _ => Err(format_err!("invocation failed")),
-    }
-}
-
-#[async_trait]
-impl Authority for AuthorityImpl {
-    async fn register(&mut self, blueprint: BlueprintHandle) -> Result<(), Error> {
-        let agent_receptor = self
-            .agent_messenger_factory
-            .create(MessengerType::Unbound)
-            .await
-            .map_err(|_| format_err!("could not register"))?
-            .1;
-        let signature = agent_receptor.get_signature();
-        blueprint
-            .create(
-                Context::new(
-                    agent_receptor,
-                    blueprint.get_descriptor(),
-                    self.messenger_factory.clone(),
-                    self.event_factory.clone(),
-                    self.available_components.clone(),
-                    self.resource_monitor_actor.clone(),
-                )
-                .await,
-            )
-            .await;
-
-        self.agent_signatures.push(signature);
-
-        Ok(())
     }
 }

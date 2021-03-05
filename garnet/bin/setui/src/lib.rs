@@ -8,8 +8,8 @@
 use {
     crate::accessibility::accessibility_controller::AccessibilityController,
     crate::account::account_controller::AccountController,
-    crate::agent::authority_impl::AuthorityImpl,
-    crate::agent::{Authority, BlueprintHandle as AgentBlueprintHandle, Lifespan},
+    crate::agent::authority::Authority,
+    crate::agent::{BlueprintHandle as AgentBlueprintHandle, Lifespan},
     crate::audio::audio_controller::AudioController,
     crate::audio::policy::audio_policy_handler::AudioPolicyHandler,
     crate::base::SettingType,
@@ -714,7 +714,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .await
         .expect("could not create inspect");
 
-    let mut agent_authority = AuthorityImpl::create(
+    let mut agent_authority = Authority::create(
         messenger_factory.clone(),
         internal::agent::message::create_hub(),
         event_messenger_factory.clone(),

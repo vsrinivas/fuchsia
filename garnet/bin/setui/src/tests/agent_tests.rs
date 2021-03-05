@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::authority_impl::AuthorityImpl;
-use crate::agent::{
-    AgentError, Authority, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan,
-};
+use crate::agent::authority::Authority;
+use crate::agent::{AgentError, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan};
 use crate::base::SettingType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::internal::agent;
@@ -66,7 +64,7 @@ impl TestAgent {
     pub async fn create_and_register(
         id: u32,
         lifespan_target: LifespanTarget,
-        authority: &mut dyn Authority,
+        authority: &mut Authority,
         callback: CallbackSender,
     ) -> Result<Arc<Mutex<TestAgent>>, Error> {
         let (agent, generate) = Self::create(id, lifespan_target, callback);
@@ -204,8 +202,8 @@ async fn test_environment_startup() {
         .is_ok());
 }
 
-async fn create_authority() -> AuthorityImpl {
-    AuthorityImpl::create(
+async fn create_authority() -> Authority {
+    Authority::create(
         service::message::create_hub(),
         agent::message::create_hub(),
         event::message::create_hub(),
@@ -347,7 +345,7 @@ async fn test_err_handling() {
 async fn create_agents(
     count: u32,
     lifespan_target: LifespanTarget,
-    authority: &mut dyn Authority,
+    authority: &mut Authority,
     sender: UnboundedSender<(u32, Invocation, AckSender)>,
 ) -> Vec<u32> {
     let mut return_agents = Vec::new();
