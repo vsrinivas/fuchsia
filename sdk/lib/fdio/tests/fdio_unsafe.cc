@@ -20,13 +20,14 @@ TEST(UnsafeTest, BorrowChannel) {
   fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
   ASSERT_NOT_NULL(io);
 
-  zx::unowned_channel dir(fdio_unsafe_borrow_channel(io));
-  ASSERT_TRUE(dir->is_valid());
+  auto dir = fidl::UnownedClientEnd<fuchsia_io::Node>(fdio_unsafe_borrow_channel(io));
+  ASSERT_TRUE(dir.is_valid());
 
-  zx::channel h1, h2;
-  ASSERT_OK(zx::channel::create(0, &h1, &h2));
-  auto result = ::fuchsia_io::Node::Call::Clone(
-      std::move(dir), ::fuchsia_io::wire::CLONE_FLAG_SAME_RIGHTS, std::move(h1));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  ASSERT_OK(endpoints.status_value());
+
+  auto result = ::fuchsia_io::Node::Call::Clone(dir, ::fuchsia_io::wire::CLONE_FLAG_SAME_RIGHTS,
+                                                std::move(endpoints->server));
   ASSERT_OK(result.status());
 
   fdio_unsafe_release(io);

@@ -217,8 +217,8 @@ TEST(GetVMOTest, Remote) {
   ASSERT_OK(loop.StartThread("fake-filesystem"));
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
+  ASSERT_OK(endpoints.status_value());
 
   Context context = {};
   context.is_vmofile = false;
@@ -227,11 +227,11 @@ TEST(GetVMOTest, Remote) {
   create_context_vmo(ZX_PAGE_SIZE, &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
-  ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher, std::move(server),
+  ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher, std::move(endpoints->server),
                                          std::make_unique<TestServer>(&context)));
 
   int raw_fd = -1;
-  ASSERT_OK(fdio_fd_create(client.release(), &raw_fd));
+  ASSERT_OK(fdio_fd_create(endpoints->client.channel().release(), &raw_fd));
   fbl::unique_fd fd(raw_fd);
 
   zx_rights_t expected_rights =
@@ -289,8 +289,8 @@ TEST(GetVMOTest, VMOFile) {
   ASSERT_OK(loop.StartThread("fake-filesystem"));
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
+  ASSERT_OK(endpoints.status_value());
 
   Context context = {};
   context.content_size = 43;
@@ -299,11 +299,11 @@ TEST(GetVMOTest, VMOFile) {
   create_context_vmo(ZX_PAGE_SIZE, &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
-  ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher, std::move(server),
+  ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher, std::move(endpoints->server),
                                          std::make_unique<TestServer>(&context)));
 
   int raw_fd = -1;
-  ASSERT_OK(fdio_fd_create(client.release(), &raw_fd));
+  ASSERT_OK(fdio_fd_create(endpoints->client.channel().release(), &raw_fd));
   fbl::unique_fd fd(raw_fd);
   context.supports_seek = false;
 
@@ -342,8 +342,8 @@ TEST(MmapFileTest, ProtExecWorks) {
   ASSERT_OK(loop.StartThread("fake-filesystem"));
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
+  ASSERT_OK(endpoints.status_value());
 
   Context context = {};
   context.is_vmofile = false;
@@ -352,11 +352,11 @@ TEST(MmapFileTest, ProtExecWorks) {
   create_context_vmo(ZX_PAGE_SIZE, &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
-  ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher, std::move(server),
+  ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher, std::move(endpoints->server),
                                          std::make_unique<TestServer>(&context)));
 
   int raw_fd = -1;
-  ASSERT_OK(fdio_fd_create(client.release(), &raw_fd));
+  ASSERT_OK(fdio_fd_create(endpoints->client.channel().release(), &raw_fd));
   fbl::unique_fd fd(raw_fd);
 
   size_t offset = 0;

@@ -42,28 +42,27 @@ class Server final : public fuchsia_io::testing::Node_TestBase {
   cpp17::optional<fuchsia_io::wire::NodeInfo> describe_info_;
 };
 
-// Serves |node_info| over |server_channel| to |client_channel| using a |Server| instance by
+// Serves |node_info| over |endpoints| using a |Server| instance by
 // creating a file descriptor from |client_channel| and immediately closing it.
 void ServeAndExerciseFileDescriptionTeardown(fuchsia_io::wire::NodeInfo node_info,
-                                             zx::channel client_channel,
-                                             zx::channel server_channel) {
+                                             fidl::Endpoints<fuchsia_io::Node> endpoints) {
   Server server(std::move(node_info));
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  auto bind_result = fidl::BindServer(loop.dispatcher(), std::move(server_channel), &server);
+  auto bind_result = fidl::BindServer(loop.dispatcher(), std::move(endpoints.server), &server);
   ASSERT_TRUE(bind_result.is_ok(), "failed to bind server: %s",
               zx_status_get_string(bind_result.error()));
   ASSERT_OK(loop.StartThread("fake-socket-server"));
 
   {
     fbl::unique_fd fd;
-    ASSERT_OK(fdio_fd_create(client_channel.release(), fd.reset_and_get_address()));
+    ASSERT_OK(fdio_fd_create(endpoints.client.channel().release(), fd.reset_and_get_address()));
   }
 }
 
 TEST(SocketCleanup, Datagram) {
-  zx::channel client_channel, server_channel;
-  ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  ASSERT_OK(endpoints.status_value());
 
   zx::eventpair client_event, server_event;
   ASSERT_OK(zx::eventpair::create(0, &client_event, &server_event));
@@ -72,19 +71,19 @@ TEST(SocketCleanup, Datagram) {
   fuchsia_io::wire::NodeInfo node_info;
   node_info.set_datagram_socket(fidl::unowned_ptr(&dgram_info));
 
-  zx::unowned_channel client_handle(client_channel);
-  ASSERT_NO_FATAL_FAILURES(ServeAndExerciseFileDescriptionTeardown(
-      std::move(node_info), std::move(client_channel), std::move(server_channel)));
+  ASSERT_NO_FATAL_FAILURES(
+      ServeAndExerciseFileDescriptionTeardown(std::move(node_info), std::move(endpoints.value())));
 
   // Client must have disposed of its channel and eventpair handle on close.
-  EXPECT_STATUS(client_handle->wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), nullptr),
+  EXPECT_STATUS(endpoints->client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                     zx::time::infinite_past(), nullptr),
                 ZX_ERR_BAD_HANDLE);
   EXPECT_OK(server_event.wait_one(ZX_EVENTPAIR_PEER_CLOSED, zx::time::infinite_past(), nullptr));
 }
 
 TEST(SocketCleanup, Stream) {
-  zx::channel client_channel, server_channel;
-  ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  ASSERT_OK(endpoints.status_value());
 
   zx::socket client_socket, server_socket;
   ASSERT_OK(zx::socket::create(0, &client_socket, &server_socket));
@@ -93,12 +92,12 @@ TEST(SocketCleanup, Stream) {
   fuchsia_io::wire::NodeInfo node_info;
   node_info.set_stream_socket(fidl::unowned_ptr(&stream_info));
 
-  zx::unowned_channel client_handle(client_channel);
-  ASSERT_NO_FATAL_FAILURES(ServeAndExerciseFileDescriptionTeardown(
-      std::move(node_info), std::move(client_channel), std::move(server_channel)));
+  ASSERT_NO_FATAL_FAILURES(
+      ServeAndExerciseFileDescriptionTeardown(std::move(node_info), std::move(endpoints.value())));
 
   // Client must have disposed of its channel and socket handles on close.
-  EXPECT_STATUS(client_handle->wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), nullptr),
+  EXPECT_STATUS(endpoints->client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                     zx::time::infinite_past(), nullptr),
                 ZX_ERR_BAD_HANDLE);
   EXPECT_OK(server_socket.wait_one(ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), nullptr));
 }

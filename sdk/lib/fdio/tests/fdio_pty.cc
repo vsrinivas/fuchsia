@@ -15,17 +15,18 @@
 namespace fpty = fuchsia_hardware_pty;
 
 TEST(PtyTest, WindowSize) {
-  zx::channel device_client_end, device_server_end;
-  ASSERT_OK(zx::channel::create(0, &device_client_end, &device_server_end));
+  auto endpoints = fidl::CreateEndpoints<fpty::Device>();
+  ASSERT_OK(endpoints.status_value());
+
+  auto client = fidl::BindSyncClient(std::move(endpoints->client));
 
   std::string path = "/svc/";
   path.append(fpty::Device::Name);
-  ASSERT_OK(fdio_service_connect(path.c_str(), device_server_end.release()));
+  ASSERT_OK(fdio_service_connect(path.c_str(), endpoints->server.channel().release()));
 
   zx::channel pty_client_end, pty_server_end;
   ASSERT_OK(zx::channel::create(0, &pty_client_end, &pty_server_end));
-  auto result0 =
-      fpty::Device::Call::OpenClient(device_client_end.borrow(), 0, std::move(pty_server_end));
+  auto result0 = client.OpenClient(0, std::move(pty_server_end));
   ASSERT_OK(result0.status());
   ASSERT_OK(result0->s);
 
@@ -33,23 +34,24 @@ TEST(PtyTest, WindowSize) {
   ASSERT_OK(fdio_fd_create(pty_client_end.release(), controlling_client.reset_and_get_address()));
 
   ASSERT_OK(zx::channel::create(0, &pty_client_end, &pty_server_end));
-  auto result1 =
-      fpty::Device::Call::OpenClient(device_client_end.borrow(), 1, std::move(pty_server_end));
+  auto result1 = client.OpenClient(1, std::move(pty_server_end));
   ASSERT_OK(result1.status());
   ASSERT_OK(result1->s);
 
-  fbl::unique_fd client;
-  ASSERT_OK(fdio_fd_create(pty_client_end.release(), client.reset_and_get_address()));
+  fbl::unique_fd fd;
+  ASSERT_OK(fdio_fd_create(pty_client_end.release(), fd.reset_and_get_address()));
 
-  struct winsize size = {};
-  size.ws_row = 7;
-  size.ws_col = 5;
-  ASSERT_EQ(0, ioctl(controlling_client.get(), TIOCSWINSZ, &size));
+  struct winsize set_size = {
+      .ws_row = 7,
+      .ws_col = 5,
+  };
+  ASSERT_EQ(0, ioctl(controlling_client.get(), TIOCSWINSZ, &set_size));
 
-  size.ws_row = 9783;
-  size.ws_col = 7573;
-
-  ASSERT_EQ(0, ioctl(client.get(), TIOCGWINSZ, &size));
-  ASSERT_EQ(7, size.ws_row);
-  ASSERT_EQ(5, size.ws_col);
+  struct winsize get_size = {
+      .ws_row = 9783,
+      .ws_col = 7573,
+  };
+  ASSERT_EQ(0, ioctl(fd.get(), TIOCGWINSZ, &get_size));
+  ASSERT_EQ(get_size.ws_row, set_size.ws_row);
+  ASSERT_EQ(get_size.ws_col, set_size.ws_col);
 }

@@ -101,11 +101,6 @@ test("fdio") {
     "//zircon/system/ulib/test-utils",
     "//zircon/system/ulib/zxio",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 executable("accept-child") {

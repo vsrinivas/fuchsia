@@ -121,8 +121,7 @@ zx_status_t BindSingleInFlightOnly(
     auto* impl = static_cast<ServerImpl*>(interface);
     delete impl;
   };
-  return BindSingleInFlightOnly(dispatcher, server_end.TakeChannel(), impl.release(),
-                                std::move(fn));
+  return BindSingleInFlightOnly(dispatcher, std::move(server_end), impl.release(), std::move(fn));
 }
 
 }  // namespace fidl

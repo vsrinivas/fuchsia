@@ -83,13 +83,14 @@ class BaseTest : public ::zxtest::Test {
 
  public:
   BaseTest() : server_(clientSocket()), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    zx::channel client_channel, server_channel;
-    ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_posix_socket::StreamSocket>();
+    ASSERT_OK(endpoints.status_value());
 
     ASSERT_OK(
-        fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server_channel), &server_));
+        fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(endpoints->server), &server_));
     ASSERT_OK(loop_.StartThread("fake-socket-server"));
-    ASSERT_OK(fdio_fd_create(client_channel.release(), client_fd_.reset_and_get_address()));
+    ASSERT_OK(
+        fdio_fd_create(endpoints->client.channel().release(), client_fd_.reset_and_get_address()));
   }
 
  protected:
