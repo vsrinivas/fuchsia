@@ -14,14 +14,46 @@
 #include <type_traits>
 #include <utility>
 
-//
 // General purpose fitx::result type for Zircon kernel, system, and above.
 //
-// fitx::result is an efficient C++ implementation of the result pattern found
-// in many languages and vocabulary libraries. This implementation supports
-// returning either an error value or zero/one non-error values from a
-// function or method.
+// fitx::result is an efficient C++ implementation of the result pattern found in many languages and
+// vocabulary libraries. This implementation supports returning either an error value or zero/one
+// non-error values from a function or method.
 //
+// To make a fitx::result:
+//
+//   fitx::success(success_value)  // Success for fitx::result<E, V>.
+//   fitx::success()               // Success for fitx::result<E> (no success value).
+//   fitx::ok(success_value)       // Success for fitx::result<E, V>.
+//   fitx::ok()                    // Success for fitx::result<E> (no success value).
+//
+//   fitx::error(error_value)      // Failure.
+//   fitx::as_error(error_value)   // Failure.
+//   fitx::failed()                // Failure for fix::result<>.
+//
+// General functions that can always be called:
+//
+//   bool is_ok()
+//   bool is_error()
+//   T value_or(default_value)   // Returns value on success, or default on failure.
+//
+// Available only when is_ok() (will assert otherwise).
+//
+//   T& value()                  // Accesses the value.
+//   T&& value()                 // Moves the value.
+//   T& operator*()              // Accesses the value.
+//   T&& operator*()             // Moves the value.
+//   T* operator->()             // Accesses the value.
+//   success<T> take_value()     // Generates a fitx::success() which can be implicitly converted to
+//                               // another fitx::result with the same "success" type.
+//
+// Available only when is_error() (will assert otherwise):
+//
+//   E& error_value()            // Error value.
+//   E&& error_value()           // Error value.
+//   error<E> take_error()       // Generates a fitx::error() which can be implicitly converted to a
+//                               // fitx::result with a different "success" vluae type (or
+//                               // fitx::result<E>).
 
 namespace fitx {
 
@@ -39,13 +71,11 @@ namespace fitx {
 //
 struct failed {};
 
-// Type representing an error value of type E to return as a result. Returning
-// an error through fitx::result always requires using fitx::error to
-// disambiguate errors from values.
+// Type representing an error value of type E to return as a result. Returning an error through
+// fitx::result always requires using fitx::error to disambiguate errors from values.
 //
-// fitx::result<E, Ts...> is implicitly constructible from any fitx::error<F>,
-// where E is constructible from F. This simplifies returning errors when the E
-// has converting constructors.
+// fitx::result<E, Ts...> is implicitly constructible from any fitx::error<F>, where E is
+// constructible from F. This simplifies returning errors when the E has converting constructors.
 //
 // Example usage:
 //
@@ -87,9 +117,8 @@ error(T) -> error<T>;
 
 #endif
 
-// Returns fitx::error<E> for the given value, where E is deduced from the
-// argument type. This utility is a C++14 compatible alternative to the
-// C++17 deduction guide above.
+// Returns fitx::error<E> for the given value, where E is deduced from the argument type. This
+// utility is a C++14 compatible alternative to the C++17 deduction guide above.
 //
 // Example:
 //
@@ -113,16 +142,11 @@ constexpr error<E> as_error(E&& error_value) {
 template <typename... Ts>
 class success;
 
-// Type representing a success value of type T to return as a result. Returning
-// a value through fitx::result always requires using fitx::success to
-// disambiguate errors from values.
+// Type representing a success value of type T to return as a result. Returning a value through
+// fitx::result always requires using fitx::success to disambiguate errors from values.
 //
-// fitx::result<E, T> is implicitly constructible from any fitx::success<U>, where
-// T is constructible from U. This simplifies returning values when T has
-// converting constructors.
-//
-// Example usage:
-//
+// fitx::result<E, T> is implicitly constructible from any fitx::success<U>, where T is
+// constructible from U. This simplifies returning values when T has converting constructors.
 template <typename T>
 class success<T> {
  public:
@@ -161,8 +185,7 @@ class success<> {
 
 #if __cplusplus >= 201703L
 
-// Deduction guides to simplify zero and single argument success expressions in
-// C++17.
+// Deduction guides to simplify zero and single argument success expressions in C++17.
 success()->success<>;
 
 template <typename T>
@@ -170,9 +193,8 @@ success(T) -> success<T>;
 
 #endif
 
-// Returns fitx::success<T> for the given value, where T is deduced from the
-// argument type. This utility is a C++14 compatible alternative to the
-// C++17 deduction guide above.
+// Returns fitx::success<T> for the given value, where T is deduced from the argument type. This
+// utility is a C++14 compatible alternative to the C++17 deduction guide above.
 //
 // Example:
 //
@@ -183,7 +205,7 @@ success(T) -> success<T>;
 //       return fitx::as_error("String is empty!");
 //     }
 //     return fitx::ok(string);
-//
+//   }
 template <typename T>
 constexpr success<T> ok(T&& value) {
   return success<T>(std::forward<T>(value));
@@ -218,8 +240,8 @@ class LIB_FITX_NODISCARD result<E, T> {
   constexpr result(result&&) = default;
   constexpr result& operator=(result&&) = default;
 
-  // Implicit conversion from fitx::failed. This overload is only enabled when
-  // the error type E is fitx::failed.
+  // Implicit conversion from fitx::failed. This overload is only enabled when the error type E is
+  // fitx::failed.
   constexpr result(failed_or_none) : storage_{::fitx::internal::error_v, failed{}} {}
 
   // Implicit conversion from success<U>, where T is constructible from U.
@@ -238,9 +260,9 @@ class LIB_FITX_NODISCARD result<E, T> {
                                             std::is_constructible<T, U>> = true>
   constexpr result(result<F, U> other) : storage_{std::move(other.storage_)} {}
 
-  // Predicates indicating whether the result contains a value or an error.
-  // The positive values are mutually exclusive, however, both predicates are
-  // negative when the result is default constructed to the empty state.
+  // Predicates indicating whether the result contains a value or an error. The positive values are
+  // mutually exclusive, however, both predicates are negative when the result is default
+  // constructed to the empty state.
   constexpr bool is_ok() const { return storage_.state == ::fitx::internal::state_e::has_value; }
   constexpr bool is_error() const { return storage_.state == ::fitx::internal::state_e::has_error; }
 
@@ -272,8 +294,8 @@ class LIB_FITX_NODISCARD result<E, T> {
     __builtin_abort();
   }
 
-  // Moves the underlying error and returns it as an instance of fitx::error,
-  // simplifying propagating the error to another fitx::result.
+  // Moves the underlying error and returns it as an instance of fitx::error, simplifying
+  // propagating the error to another fitx::result.
   //
   // May only be called when the result contains an error.
   constexpr error<E> take_error() {
@@ -311,8 +333,8 @@ class LIB_FITX_NODISCARD result<E, T> {
     __builtin_abort();
   }
 
-  // Moves the underlying value and returns it as an instance of fitx::success,
-  // simplifying propagating the value to another fitx::result.
+  // Moves the underlying value and returns it as an instance of fitx::success, simplifying
+  // propagating the value to another fitx::result.
   //
   // May only be called when the result contains a value.
   constexpr success<T> take_value() {
@@ -324,8 +346,7 @@ class LIB_FITX_NODISCARD result<E, T> {
 
   // Contingent accessors for the underlying value.
   //
-  // Returns the value when the result has a value, otherwise returns the given
-  // default value.
+  // Returns the value when the result has a value, otherwise returns the given default value.
   template <typename U, ::fitx::internal::requires_conditions<std::is_constructible<T, U>> = true>
   constexpr T value_or(U&& default_value) const& {
     if (is_ok()) {
@@ -341,8 +362,8 @@ class LIB_FITX_NODISCARD result<E, T> {
     return static_cast<T>(std::forward<U>(default_value));
   }
 
-  // Accessors for the members of the underlying value. These operators forward
-  // to T::operator->() when defined, otherwise they provide direct access to T*.
+  // Accessors for the members of the underlying value. These operators forward to T::operator->()
+  // when defined, otherwise they provide direct access to T*.
   //
   // May only be called when the result contains a value.
   constexpr decltype(auto) operator->() {
@@ -366,9 +387,9 @@ class LIB_FITX_NODISCARD result<E, T> {
   constexpr T&& operator*() && { return std::move(value()); }
   constexpr const T&& operator*() const&& { return std::move(value()); }
 
-  // Augments the error value of the result with the given error value. The
-  // operator E::operator+=(F) must be defined. Additionally, E may not be a
-  // pointer, primitive, or enum type.
+  // Augments the error value of the result with the given error value. The operator
+  // E::operator+=(F) must be defined. Additionally, E may not be a pointer, primitive, or enum
+  // type.
   //
   // May only be called when the result contains an error.
   template <typename F, ::fitx::internal::requires_conditions<
@@ -385,8 +406,8 @@ class LIB_FITX_NODISCARD result<E, T> {
   // Default constructs a result in empty state.
   constexpr result() = default;
 
-  // Reset is not a recommended operation for the general result pattern. This
-  // method is provided for derived types that need it for specific use cases.
+  // Reset is not a recommended operation for the general result pattern. This method is provided
+  // for derived types that need it for specific use cases.
   constexpr void reset() { storage_.reset(); }
 
  private:
@@ -415,8 +436,8 @@ class LIB_FITX_NODISCARD result<E> {
   constexpr result(result&&) = default;
   constexpr result& operator=(result&&) = default;
 
-  // Implicit conversion from fitx::failure. This overload is only enabled when
-  // the error type E is fitx::failed.
+  // Implicit conversion from fitx::failure. This overload is only enabled when the error type E is
+  // fitx::failed.
   constexpr result(failure_or_none) : storage_{::fitx::internal::error_v, failed{}} {}
 
   // Implicit conversion from fitx::success<>.
@@ -463,8 +484,8 @@ class LIB_FITX_NODISCARD result<E> {
     __builtin_abort();
   }
 
-  // Moves the underlying error and returns it as an instance of fitx::error,
-  // simplifying propagating the error to another fitx::result.
+  // Moves the underlying error and returns it as an instance of fitx::error, simplifying
+  // propagating the error to another fitx::result.
   //
   // May only be called when the result contains an error.
   constexpr error<E> take_error() {
@@ -474,9 +495,8 @@ class LIB_FITX_NODISCARD result<E> {
     __builtin_abort();
   }
 
-  // Augments the error value of the result with the given value. The
-  // operator E::operator+=(F) must be defined. Additionally, E may not be a
-  // pointer, primitive, or enum type.
+  // Augments the error value of the result with the given value. The operator E::operator+=(F) must
+  // be defined. Additionally, E may not be a pointer, primitive, or enum type.
   //
   // May only be called when the result contains an error.
   template <typename F, ::fitx::internal::requires_conditions<
@@ -493,8 +513,8 @@ class LIB_FITX_NODISCARD result<E> {
   // Default constructs a result in empty state.
   constexpr result() = default;
 
-  // Reset is not a recommended operation for the general result pattern. This
-  // method is provided for derived types that need it for specific use cases.
+  // Reset is not a recommended operation for the general result pattern. This method is provided
+  // for derived types that need it for specific use cases.
   constexpr void reset() { storage_.reset(); }
 
  private:
@@ -512,12 +532,10 @@ class LIB_FITX_NODISCARD result<E> {
 //  * Any instance of fitx::success<> (i.e. fitx::ok()).
 //  * Any instance of fitx::failed.
 //
-// Result comparisons behave similarly to std::optional<T>, having the same
-// empty and non-empty lexicographic ordering. A non-value result behaves like
-// an empty std::optional, regardless of the value of the actual error. Error
-// values are never compared, only the is_ok() predicate and result values
-// are considered in comparisons.
-//
+// Result comparisons behave similarly to std::optional<T>, having the same empty and non-empty
+// lexicographic ordering. A non-value result behaves like an empty std::optional, regardless of the
+// value of the actual error. Error values are never compared, only the is_ok() predicate and result
+// values are considered in comparisons.
 
 // Equal/not equal to fitx::success.
 template <typename E, typename... Ts>

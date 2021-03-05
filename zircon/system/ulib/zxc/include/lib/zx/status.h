@@ -18,8 +18,39 @@
 
 namespace zx {
 
-// Simplified result type for returning either a zx_status_t error or zero/one
-// values. See lib/fitx/result.h for an explanation of the general result type.
+// Simplified result type for returning either a zx_status_t error or zero/one values. See
+// lib/fitx/result.h for an explanation of the general result type.
+//
+// To make a zx::status:
+//
+//   zx::ok()                    // For success on zx::status<>.
+//   zx::ok(foo)                 // For success on zx::status<Foo>.
+//
+//   zx::error(ZX_ERR_NO_MEMORY) // For failure.
+//
+// General functions that can always be called:
+//
+//   bool is_ok()
+//   bool is_error()
+//   zx_status_t status_value()  // Returns the error value or ZX_OK on success.
+//   const char* status_string() // String representation of the error (Fuchsia only).
+//   T value_or(default_value)   // Returns value on success, or default on failure.
+//
+// Available only when is_ok():
+//
+//   T& value()                  // Accesses the value.
+//   T&& value()                 // Moves the value.
+//   T& operator*()              // Accesses the value.
+//   T&& operator*()             // Moves the value.
+//   T* operator->()             // Accesses the value.
+//   success<T> take_value()     // Generates a zx::success() which can be implicitly converted to
+//                               // another fitx::result with the same "success" type.
+//
+// Available only when is_error():
+//
+//   zx_status_t error_value()   // Error code. See also status_value() which is always usable.
+//   error<E> take_error()       // Generates a zx::error() which can be implicitly converted to a
+//                               // zx::status with another "success" type (or zx::status<>).
 //
 // Examples:
 //
