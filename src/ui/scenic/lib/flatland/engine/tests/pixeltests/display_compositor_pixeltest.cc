@@ -333,7 +333,7 @@ TEST_F(DisplayCompositorPixelTest, FullscreenRectangleTest) {
   // by the display controller hardware, and not the software renderer.
   auto renderer = NewNullRenderer();
   auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
-      display_manager_->default_display_controller(), renderer, render_data_func());
+      display_manager_->default_display_controller(), renderer);
 
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();
@@ -388,12 +388,13 @@ TEST_F(DisplayCompositorPixelTest, FullscreenRectangleTest) {
   const TransformHandle root_handle = session.graph().CreateTransform();
   const TransformHandle image_handle = session.graph().CreateTransform();
   session.graph().AddChild(root_handle, image_handle);
-  display_compositor->AddDisplay(
-      display->display_id(),
-      {.transform = root_handle,
-       .pixel_scale = glm::uvec2(display->width_in_px(), display->height_in_px()),
-       .formats = {kPixelFormat}},
-      sysmem_allocator_.get(), /*num_vmos*/ 0);
+  DisplayInfo display_info{
+      .transform = root_handle,
+      .pixel_scale = glm::uvec2(display->width_in_px(), display->height_in_px()),
+      .formats = {kPixelFormat}};
+  display_compositor->AddDisplay(display->display_id(),
+                     display_info,
+                     sysmem_allocator_.get(), /*num_vmos*/ 0);
 
   // Setup the uberstruct data.
   auto uberstruct = session.CreateUberStructWithCurrentTopology(root_handle);
@@ -403,7 +404,7 @@ TEST_F(DisplayCompositorPixelTest, FullscreenRectangleTest) {
   session.PushUberStruct(std::move(uberstruct));
 
   // Now we can finally render.
-  display_compositor->RenderFrame();
+  display_compositor->RenderFrame(GenerateDisplayListForTest({{display->display_id(), display_info}}));
 
   // Grab the capture vmo data.
   std::vector<uint8_t> read_values;
@@ -456,26 +457,10 @@ VK_TEST_F(DisplayCompositorPixelTest, SoftwareRenderingTest) {
                           .has_transparency = false};
   }
 
-  // Curate the data we want so we don't need to go through flatland.
-  auto data_func =
-      [&](std::unordered_map<uint64_t, DisplayInfo> display_map) -> std::vector<RenderData> {
-    RenderData result;
-    uint32_t width = display->width_in_px() / 2;
-    uint32_t height = display->height_in_px();
-
-    result.display_id = display->display_id();
-    result.rectangles.push_back({glm::vec2(0), glm::vec2(width, height)});
-    result.rectangles.push_back({glm::vec2(width, 0), glm::vec2(width, height)});
-
-    result.images.push_back(image_metadatas[0]);
-    result.images.push_back(image_metadatas[1]);
-    return {result};
-  };
-
   // Use the VK renderer here so we can make use of software rendering.
   auto [escher, renderer] = NewVkRenderer();
   auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
-      display_manager_->default_display_controller(), renderer, std::move(data_func));
+      display_manager_->default_display_controller(), renderer);
 
   auto texture_collection =
       SetupTextures(display_compositor.get(), kTextureCollectionId, kTextureWidth, kTextureHeight,
@@ -500,17 +485,31 @@ VK_TEST_F(DisplayCompositorPixelTest, SoftwareRenderingTest) {
   }
 
   fuchsia::sysmem::BufferCollectionInfo_2 render_target_info;
-  auto render_target_collection_id = display_compositor->AddDisplay(
-      display->display_id(),
-      {.transform = TransformHandle(),
-       .pixel_scale = glm::vec2(display->width_in_px(), display->height_in_px()),
-       .formats = {kPixelFormat}},
-      sysmem_allocator_.get(),
-      /*num_vmos*/ 2, &render_target_info);
+  DisplayInfo display_info{
+      .transform = TransformHandle(),
+      .pixel_scale = glm::vec2(display->width_in_px(), display->height_in_px()),
+      .formats = {kPixelFormat}};
+  auto render_target_collection_id =
+      display_compositor->AddDisplay(display->display_id(), display_info, sysmem_allocator_.get(),
+                         /*num_vmos*/ 2, &render_target_info);
   EXPECT_NE(render_target_collection_id, 0U);
 
   // Now we can finally render.
-  display_compositor->RenderFrame();
+  RenderData render_data;
+  {
+    uint32_t width = display->width_in_px() / 2;
+    uint32_t height = display->height_in_px();
+
+    render_data.display_id = display->display_id();
+    render_data.rectangles.emplace_back(glm::vec2(0), glm::vec2(width, height));
+    render_data.rectangles.emplace_back(glm::vec2(width, 0), glm::vec2(width, height));
+
+    render_data.images.push_back(image_metadatas[0]);
+    render_data.images.push_back(image_metadatas[1]);
+
+    render_data.pixel_scale = display_info.pixel_scale;
+  }
+  display_compositor->RenderFrame({std::move(render_data)});
   renderer->WaitIdle();
 
   // Make sure the render target has the same data as what's being put on the display.
@@ -586,30 +585,10 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
                           .has_transparency = (i == 1)};
   }
 
-  // Curate the data we want so we don't need to go through flatland.
-  const uint32_t kNumOverlappingRows = 25;
-  auto data_func =
-      [&](std::unordered_map<uint64_t, DisplayInfo> display_map) -> std::vector<RenderData> {
-    RenderData result;
-    uint32_t width = display->width_in_px() / 2;
-    uint32_t height = display->height_in_px();
-
-    // Have the two rectangles overlap eachother slightly with 25 rows in common across the
-    // display.s
-    result.display_id = display->display_id();
-    result.rectangles.push_back({glm::vec2(0, 0), glm::vec2(width + kNumOverlappingRows, height)});
-    result.rectangles.push_back({glm::vec2(width - kNumOverlappingRows, 0),
-                                 glm::vec2(width + kNumOverlappingRows, height)});
-
-    result.images.push_back(image_metadatas[0]);
-    result.images.push_back(image_metadatas[1]);
-    return {result};
-  };
-
   // Use the VK renderer here so we can make use of software rendering.
   auto [escher, renderer] = NewVkRenderer();
   auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
-      display_manager_->default_display_controller(), renderer, std::move(data_func));
+      display_manager_->default_display_controller(), renderer);
 
   auto texture_collection =
       SetupTextures(display_compositor.get(), kTextureCollectionId, kTextureWidth, kTextureHeight,
@@ -635,17 +614,36 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
   }
 
   fuchsia::sysmem::BufferCollectionInfo_2 render_target_info;
-  auto render_target_collection_id = display_compositor->AddDisplay(
-      display->display_id(),
-      {.transform = TransformHandle(),
-       .pixel_scale = glm::vec2(display->width_in_px(), display->height_in_px()),
-       .formats = {kPixelFormat}},
-      sysmem_allocator_.get(),
-      /*num_vmos*/ 2, &render_target_info);
+  DisplayInfo display_info{
+      .transform = TransformHandle(),
+      .pixel_scale = glm::vec2(display->width_in_px(), display->height_in_px()),
+      .formats = {kPixelFormat}};
+  auto render_target_collection_id =
+      display_compositor->AddDisplay(display->display_id(), display_info, sysmem_allocator_.get(),
+                         /*num_vmos*/ 2, &render_target_info);
   EXPECT_NE(render_target_collection_id, 0U);
 
   // Now we can finally render.
-  display_compositor->RenderFrame();
+  const uint32_t kNumOverlappingRows = 25;
+  RenderData render_data;
+  {
+    uint32_t width = display->width_in_px() / 2;
+    uint32_t height = display->height_in_px();
+
+    // Have the two rectangles overlap each other slightly with 25 rows in common across the
+    // displays.
+    render_data.display_id = display->display_id();
+    render_data.rectangles.push_back(
+        {glm::vec2(0, 0), glm::vec2(width + kNumOverlappingRows, height)});
+    render_data.rectangles.push_back({glm::vec2(width - kNumOverlappingRows, 0),
+                                      glm::vec2(width + kNumOverlappingRows, height)});
+
+    render_data.images.push_back(image_metadatas[0]);
+    render_data.images.push_back(image_metadatas[1]);
+
+    render_data.pixel_scale = display_info.pixel_scale;
+  }
+  display_compositor->RenderFrame({std::move(render_data)});
   renderer->WaitIdle();
 
   // Make sure the render target has the same data as what's being put on the display.

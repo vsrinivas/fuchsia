@@ -31,7 +31,7 @@ class DisplayCompositor final : public BufferCollectionImporter {
   // as the DisplayCompositor without making use of locks.
   DisplayCompositor(
       std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
-      const std::shared_ptr<Renderer>& renderer, RenderDataFunc render_data_func);
+      const std::shared_ptr<Renderer>& renderer);
 
   ~DisplayCompositor() override;
 
@@ -52,7 +52,7 @@ class DisplayCompositor final : public BufferCollectionImporter {
 
   // TODO(fxbug.dev/59646): Add in parameters for scheduling, etc. Right now we're just making sure
   // the data is processed correctly.
-  void RenderFrame();
+  void RenderFrame(const std::vector<RenderData>& render_data_list);
 
   // Register a new display to the DisplayCompositor, which also generates the render targets to be
   // presented on the display when compositing on the GPU. If num_vmos is 0, this function will not
@@ -147,10 +147,7 @@ class DisplayCompositor final : public BufferCollectionImporter {
   std::unordered_map<sysmem_util::GlobalImageId, uint64_t> image_id_map_;
 
   // Software renderer used when render data cannot be directly composited to the display.
-  std::shared_ptr<Renderer> renderer_;
-
-  // Function used to get render data.
-  RenderDataFunc render_data_func_;
+  const std::shared_ptr<Renderer> renderer_;
 
   // Maps a display ID to the the DisplayInfo struct. This is kept separate from the
   // display_DisplayCompositor_data_map_ since this only this data is needed for the

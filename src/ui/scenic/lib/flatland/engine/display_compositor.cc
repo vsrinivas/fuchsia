@@ -39,12 +39,10 @@ fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_form
 
 DisplayCompositor::DisplayCompositor(
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
-    const std::shared_ptr<Renderer>& renderer, RenderDataFunc render_data_func)
+    const std::shared_ptr<Renderer>& renderer)
     : display_controller_(std::move(display_controller)),
-      renderer_(renderer),
-      render_data_func_(render_data_func) {
+      renderer_(renderer){
   FX_DCHECK(renderer_);
-  FX_DCHECK(render_data_func_);
 }
 
 DisplayCompositor::~DisplayCompositor() {
@@ -261,9 +259,8 @@ void DisplayCompositor::ApplyConfig() {
   FX_DCHECK(status == ZX_OK);
 }
 
-void DisplayCompositor::RenderFrame() {
+void DisplayCompositor::RenderFrame(const std::vector<RenderData>& render_data_list) {
   TRACE_DURATION("gfx", "DisplayCompositor::RenderFrame");
-  auto render_data_list = render_data_func_(display_info_map_);
 
   // Config should be reset before doing anything new.
   DiscardConfig();
@@ -286,8 +283,8 @@ void DisplayCompositor::RenderFrame() {
     DiscardConfig();
 
     for (const auto& data : render_data_list) {
+      FX_DCHECK(data.pixel_scale.x > 0 && data.pixel_scale.y > 0);
       auto& display_engine_data = display_engine_data_map_[data.display_id];
-      const auto& pixel_scale = display_info_map_[data.display_id].pixel_scale;
       auto& curr_vmo = display_engine_data.curr_vmo;
       const auto& render_target = display_engine_data.targets[curr_vmo];
 
@@ -311,7 +308,7 @@ void DisplayCompositor::RenderFrame() {
 
       auto layer = display_engine_data.layers[0];
       SetDisplayLayers(data.display_id, {layer});
-      ApplyLayerImage(layer, {glm::vec2(0), pixel_scale}, render_target, event_data.wait_id,
+      ApplyLayerImage(layer, {glm::vec2(0), data.pixel_scale}, render_target, event_data.wait_id,
                       event_data.signal_id);
 
       auto [result, /*ops*/ _] = CheckConfig();
@@ -351,6 +348,9 @@ sysmem_util::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
     uint64_t display_id, DisplayInfo info, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     uint32_t num_vmos, fuchsia::sysmem::BufferCollectionInfo_2* collection_info) {
   FX_DCHECK(sysmem_allocator);
+  FX_DCHECK(display_engine_data_map_.find(display_id) == display_engine_data_map_.end())
+      << "Engine::AddDisplay(): display already exists: " << display_id;
+
   const uint32_t kWidth = info.pixel_scale.x;
   const uint32_t kHeight = info.pixel_scale.y;
 

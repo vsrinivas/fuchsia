@@ -22,6 +22,7 @@ namespace flatland {
 // transform handle. A new DisplayInfo struct is added to the display_map_ when a client
 // calls AddDisplay().
 struct DisplayInfo {
+  // TODO(fxbug.dev/70464): |transform| is unnecessary now.
   TransformHandle transform;
   glm::uvec2 pixel_scale;
   std::vector<zx_pixel_format_t> formats;
@@ -33,14 +34,12 @@ struct DisplayInfo {
 struct RenderData {
   std::vector<Rectangle2D> rectangles;
   std::vector<ImageMetadata> images;
+  glm::uvec2 pixel_scale;
+  // TODO(fxbug.dev/70464): should we remove this, and pass to RenderFrame() as a std::map of
+  // RenderData keyed by display_id?  That would have the benefit of guaranteeing by construction
+  // that each display_id could only appear once.
   uint64_t display_id;
 };
-
-// This function is used by the engine to extract render data. By making a function pointer that
-// we can pass directly to the engine, we can curate data by hand for the engine to use without
-// even having to touch any flatland code.
-using RenderDataFunc =
-    std::function<std::vector<RenderData>(std::unordered_map<uint64_t, DisplayInfo>)>;
 
 // Struct to combine the source and destination frames used to set a layer's
 // position on the display. The src frame represents the (cropped) UV coordinates
