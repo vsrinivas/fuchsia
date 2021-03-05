@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/9440a98c523ea74a54be077f7f84c97a4f5ad37e/src/intel/vulkan/BUILD.gn#26)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/bf5ea841df6ea61da3fe5137e72aedeef80c2736/src/intel/vulkan/BUILD.gn#26)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/9440a98c523ea74a54be077f7f84c97a4f5ad37e/src/intel/vulkan/BUILD.gn#28)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/bf5ea841df6ea61da3fe5137e72aedeef80c2736/src/intel/vulkan/BUILD.gn#28)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -1443,7 +1443,7 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:12](https://fuchsia.googlesource.com/third_party/icu/+/477b621d3613b432f469624c73ec3f3703c1bac0/config.gni#12)
+From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/e6379c8802a00952a90c4bc547171fd4827f974b/config.gni#12)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
@@ -1452,7 +1452,7 @@ is only useful in Fuchsia.
 
 **Current value (from the default):** `"68"`
 
-From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/477b621d3613b432f469624c73ec3f3703c1bac0/version.gni#9)
+From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/e6379c8802a00952a90c4bc547171fd4827f974b/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1460,7 +1460,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/477b621d3613b432f469624c73ec3f3703c1bac0/config.gni#8)
+From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/e6379c8802a00952a90c4bc547171fd4827f974b/config.gni#8)
 
 ### include_devmgr_config_in_vbmeta
 If true, /config/devmgr config will be included into a vbmeta image
@@ -2889,7 +2889,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"p-Ebpz3PsdM7_vp0iZyS1QbrAnKpvzypdvINVDh10DEC"`
+**Current value (from the default):** `"w57uFBk1KUKPBZYyWcc1_LaGPzuyrUaA8bdoZhTD5TYC"`
 
 From //build/rust/config.gni:32
 
