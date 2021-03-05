@@ -6,8 +6,5 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Introduction"
-  path: /docs/concepts/settings/introduction.md
-- name: "Policy"
-  contents:
-  - include: /docs/concepts/settings/policy/_toc.yaml
+- title: "Policy concepts"
+  path: /docs/concepts/settings/policy/policy_concepts.md
