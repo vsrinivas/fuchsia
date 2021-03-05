@@ -7,6 +7,7 @@ use crate::audio::policy::{
     PolicyId, PropertyTarget, State, StateBuilder, Transform, TransformFlags,
 };
 use crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType};
+use crate::audio::utils::round_volume_level;
 use crate::base::SettingType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::message::base::{Audience, MessengerType};
@@ -17,7 +18,8 @@ use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::{internal, EnvironmentBuilder};
 use fidl_fuchsia_settings::{self as audio_fidl, AudioMarker, AudioProxy, AudioStreamSettings};
 use fidl_fuchsia_settings_policy::{
-    self as policy_fidl, VolumePolicyControllerMarker, VolumePolicyControllerProxy,
+    self as policy_fidl, PolicyParameters, Volume, VolumePolicyControllerMarker,
+    VolumePolicyControllerProxy,
 };
 use fuchsia_component::server::NestedEnvironment;
 use std::collections::HashSet;
@@ -131,6 +133,49 @@ async fn add_policy(env: &TestEnvironment, target: PropertyTarget, transform: Tr
         .await
         .expect("failed to add policy")
         .expect("no policy ID found")
+}
+
+/// Adds a max volume transform with the given volume limit to the policy service, then fetches the
+/// active policies to verify the added limit matches the expected value.
+///
+/// While the input limit and actual added limit are usually the same, rounding or clamping may
+/// result in differences.
+async fn add_and_verify_max_volume_policy(input_volume_limit: f32, actual_volume_limit: f32) {
+    let target = AudioStreamType::Media;
+
+    // Add the max volume transform.
+    let env = create_test_environment().await;
+    env.policy_service
+        .add_policy(
+            &mut policy_fidl::Target::Stream(target.into()),
+            &mut Transform::Max(input_volume_limit).into(),
+        )
+        .await
+        .expect("failed to add policy")
+        .expect("no policy ID found");
+
+    let properties = env.policy_service.get_properties().await.expect("failed to get properties");
+    let property = properties
+        .iter()
+        .find(|property| property.target == Some(target.into()))
+        .expect("failed to find added property");
+    let policy = property
+        .active_policies
+        .as_ref()
+        .expect("no active policies")
+        .first()
+        .expect("no active policy");
+
+    // Volume limit values are rounded to two decimal places, similar to audio setting volumes.
+    // When comparing the values, we use an epsilon that's smaller than the threshold for
+    // rounding.
+    let epsilon = 0.0001;
+    match policy.parameters.as_ref().expect("has parameters") {
+        PolicyParameters::Max(Volume { volume: Some(added_volume_limit), .. }) => {
+            assert!((added_volume_limit - actual_volume_limit).abs() <= epsilon)
+        }
+        _ => panic!("Unexpected transform found"),
+    }
 }
 
 async fn remove_policy(env: &TestEnvironment, policy_id: u32) {
@@ -282,6 +327,42 @@ async fn test_policy_add_policy_ids_unique_across_restart() {
         // of the set.
         assert!(ids_seen.insert(PolicyId::create(id)));
     }
+}
+
+// Tests that volume limits specified in transform parameters for new policies are rounded.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_policy_add_policy_rounds_volume_limits() {
+    // Test various starting volumes to make sure the actual added policy limit is rounded.
+    let mut input_volume_limit = 0.0;
+    add_and_verify_max_volume_policy(input_volume_limit, round_volume_level(input_volume_limit))
+        .await;
+
+    input_volume_limit = 0.999999;
+    add_and_verify_max_volume_policy(input_volume_limit, round_volume_level(input_volume_limit))
+        .await;
+
+    input_volume_limit = 0.12452;
+    add_and_verify_max_volume_policy(input_volume_limit, round_volume_level(input_volume_limit))
+        .await;
+}
+
+// Tests that volume limits specified in transform parameters for new policies are clamped to the
+// [0-1] range.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_policy_add_policy_clamps_volume_limits() {
+    let min_volume = 0.0;
+    let max_volume = 1.0;
+
+    // Values below the minimum volume level are clamped to the minimum volume level.
+    add_and_verify_max_volume_policy(-0.0, min_volume).await;
+    add_and_verify_max_volume_policy(-0.1, min_volume).await;
+    add_and_verify_max_volume_policy(f32::MIN, min_volume).await;
+    add_and_verify_max_volume_policy(f32::NEG_INFINITY, min_volume).await;
+
+    // Values above the maximum volume level are clamped to the maximum volume level.
+    add_and_verify_max_volume_policy(1.1, max_volume).await;
+    add_and_verify_max_volume_policy(f32::MAX, max_volume).await;
+    add_and_verify_max_volume_policy(f32::INFINITY, max_volume).await;
 }
 
 // Tests that removing and added policy transform works and the removed policy is gone

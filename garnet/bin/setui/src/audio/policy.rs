@@ -12,6 +12,7 @@ use fidl_fuchsia_settings_policy::{PolicyParameters, Volume};
 use bitflags::bitflags;
 
 use crate::audio::types::AudioStreamType;
+use crate::audio::utils::round_volume_level;
 use crate::handler::device_storage::DeviceStorageCompatible;
 
 pub mod audio_policy_handler;
@@ -101,7 +102,13 @@ impl State {
     ) -> Option<PolicyId> {
         let next_id = self.next_id();
 
-        self.properties.get_mut(&target)?.add_transform(transform, next_id);
+        // Round policy volume levels to the same precision as the base audio setting.
+        let rounded_transform = match transform {
+            Transform::Max(value) => Transform::Max(round_volume_level(value)),
+            Transform::Min(value) => Transform::Min(round_volume_level(value)),
+        };
+
+        self.properties.get_mut(&target)?.add_transform(rounded_transform, next_id);
 
         Some(next_id)
     }
@@ -334,11 +341,39 @@ mod tests {
         PolicyId, Property, PropertyTarget, StateBuilder, Transform, TransformFlags,
     };
     use crate::audio::types::AudioStreamType;
+    use crate::audio::utils::round_volume_level;
     use fidl_fuchsia_settings_policy::{PolicyParameters, Volume};
     use matches::assert_matches;
     use std::collections::{HashMap, HashSet};
     use std::convert::TryFrom;
     use std::iter::FromIterator;
+
+    /// Verifies that adding a max volume transform with the given volume limit results in a
+    /// transform being added with the expected volume limit.
+    ///
+    /// While the input limit and actual added limit are usually the same, rounding or clamping may
+    /// result in differences.
+    fn set_and_verify_max_volume(input_volume_limit: f32, actual_volume_limit: f32) {
+        let target = AudioStreamType::Background;
+        let mut state =
+            StateBuilder::new().add_property(target, TransformFlags::TRANSFORM_MAX).build();
+        state.add_transform(target, Transform::Max(input_volume_limit)).expect("add succeeded");
+
+        let added_policy = state
+            .properties()
+            .get(&target)
+            .expect("found target")
+            .active_policies
+            .first()
+            .expect("has policy");
+
+        // Volume limit values are rounded to two decimal places, similar to audio setting volumes.
+        // When comparing the values, we use an epsilon that's smaller than the threshold for
+        // rounding.
+        let epsilon = 0.0001;
+        assert!(matches!(added_policy.transform, Transform::Max(max_volume_limit)
+            if (max_volume_limit - actual_volume_limit).abs() <= epsilon));
+    }
 
     /// Verifies that using `TryFrom` to convert a `PolicyParameters` into a `Transform` will fail
     /// if the source did not have required parameters specified.
@@ -429,6 +464,38 @@ mod tests {
             // Each new ID should also be the highest ID.
             last_id = id;
         }
+    }
+
+    // Verifies that the audio policy state rounds volume limit levels.
+    #[test]
+    fn test_state_add_transform_inputs_rounded() {
+        // Test various starting volumes to make sure rounding works.
+        let mut input_volume_limit = 0.0;
+        set_and_verify_max_volume(input_volume_limit, round_volume_level(input_volume_limit));
+
+        input_volume_limit = 0.000001;
+        set_and_verify_max_volume(input_volume_limit, round_volume_level(input_volume_limit));
+
+        input_volume_limit = 0.44444;
+        set_and_verify_max_volume(input_volume_limit, round_volume_level(input_volume_limit));
+    }
+
+    // Verifies that the audio policy state clamps volume limit levels.
+    #[test]
+    fn test_state_add_transform_inputs_clamped() {
+        let min_volume = 0.0;
+        let max_volume = 1.0;
+
+        // Values below the minimum volume level are clamped to the minimum volume level.
+        set_and_verify_max_volume(-0.0, min_volume);
+        set_and_verify_max_volume(-0.1, min_volume);
+        set_and_verify_max_volume(f32::MIN, min_volume);
+        set_and_verify_max_volume(f32::NEG_INFINITY, min_volume);
+
+        // Values above the maximum volume level are clamped to the maximum volume level.
+        set_and_verify_max_volume(1.1, max_volume);
+        set_and_verify_max_volume(f32::MAX, max_volume);
+        set_and_verify_max_volume(f32::INFINITY, max_volume);
     }
 
     // Verifies that adding transforms to policy properties works.
