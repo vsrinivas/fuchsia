@@ -182,7 +182,7 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
 
     device_clock_ = context().clock_manager()->CreateDeviceFixed(clock::CloneOfMonotonic(),
                                                                  AudioClock::kMonotonicDomain);
-    audio_clock_helper::VerifyAdvances(*device_clock_);
+    audio_clock_helper::VerifyAdvances(*device_clock_, context().clock_manager());
 
     zx::time source_start = context().clock_manager()->mono_time();
     if (clock_mode == ClockMode::WITH_OFFSET) {
@@ -195,7 +195,7 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
 
     client_clock_ = context().clock_manager()->CreateClientFixed(
         source_start, clock_mode == ClockMode::RATE_ADJUST ? rate_adjust_ppm : 0);
-    audio_clock_helper::VerifyAdvances(*client_clock_);
+    audio_clock_helper::VerifyAdvances(*client_clock_, context().clock_manager());
   }
 };
 
@@ -236,7 +236,7 @@ class AdjustableClockTest : public MixStageClockTest,
 
     client_clock_ =
         context().clock_manager()->CreateClientAdjustable(clock::AdjustableCloneOfMonotonic());
-    audio_clock_helper::VerifyAdvances(*client_clock_);
+    audio_clock_helper::VerifyAdvances(*client_clock_, context().clock_manager());
 
     auto device_start = context().clock_manager()->mono_time();
     if (clock_mode == ClockMode::WITH_OFFSET) {
@@ -251,7 +251,7 @@ class AdjustableClockTest : public MixStageClockTest,
         device_start, clock_mode == ClockMode::RATE_ADJUST ? rate_adjust_ppm : 0,
         kNonMonotonicDomain);
 
-    audio_clock_helper::VerifyAdvances(*device_clock_);
+    audio_clock_helper::VerifyAdvances(*device_clock_, context().clock_manager());
   }
 };
 

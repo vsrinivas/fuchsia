@@ -96,7 +96,7 @@ TEST_F(AudioDeviceTest, ReferenceClockIsAdvancing) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(device_->driver_info_fetched_);
-  audio_clock_helper::VerifyAdvances(device_->reference_clock());
+  audio_clock_helper::VerifyAdvances(device_->reference_clock(), context().clock_manager());
 }
 
 TEST_F(AudioDeviceTest, DefaultClockIsClockMono) {

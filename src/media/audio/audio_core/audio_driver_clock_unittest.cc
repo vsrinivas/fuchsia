@@ -97,7 +97,7 @@ class AudioDriverClockTest : public testing::ThreadingModelFixture {
   void ValidateClockAdvancesAtClockMonotonicRate(uint32_t clock_domain) {
     CreateDrivers(clock_domain);
 
-    audio_clock_helper::VerifyAdvances(driver_->reference_clock());
+    audio_clock_helper::VerifyAdvances(driver_->reference_clock(), context().clock_manager());
     audio_clock_helper::VerifyIsSystemMonotonic(driver_->reference_clock());
   }
 

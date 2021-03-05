@@ -20,11 +20,6 @@
 namespace media::audio {
 
 class AudioClock;
-
-namespace audio_clock_helper {
-const zx::clock& get_underlying_zx_clock(const AudioClock&);
-}
-
 class AudioClockTest;
 
 class AudioClock {
@@ -126,7 +121,6 @@ class AudioClock {
   virtual void UpdateClockRate(int32_t rate_adjust_ppm);
 
  private:
-  friend const zx::clock& audio_clock_helper::get_underlying_zx_clock(const AudioClock&);
   friend class AudioClockTest;
 
   enum class SyncMode {

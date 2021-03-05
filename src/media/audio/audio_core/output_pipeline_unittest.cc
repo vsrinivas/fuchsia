@@ -837,12 +837,12 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
                                                        kDefaultTransform, *device_clock_);
 
   audio_clock_helper::VerifyReadOnlyRights(pipeline->reference_clock());
-  audio_clock_helper::VerifyAdvances(pipeline->reference_clock());
+  audio_clock_helper::VerifyAdvances(pipeline->reference_clock(), context().clock_manager());
   audio_clock_helper::VerifyCannotBeRateAdjusted(pipeline->reference_clock());
 
   auto& loopback_clock = pipeline->loopback()->reference_clock();
   audio_clock_helper::VerifyReadOnlyRights(loopback_clock);
-  audio_clock_helper::VerifyAdvances(loopback_clock);
+  audio_clock_helper::VerifyAdvances(loopback_clock, context().clock_manager());
   audio_clock_helper::VerifyCannotBeRateAdjusted(loopback_clock);
   ASSERT_TRUE(pipeline->reference_clock() == loopback_clock);
 }

@@ -144,7 +144,7 @@ TEST_F(AudioCapturerTest, ReferenceClockIsAdvancing) {
   auto fidl_clock = GetReferenceClock();
 
   clock::testing::VerifyAdvances(fidl_clock);
-  audio_clock_helper::VerifyAdvances(capturer_->reference_clock());
+  audio_clock_helper::VerifyAdvances(capturer_->reference_clock(), context().clock_manager());
 }
 
 TEST_F(AudioCapturerTest, DefaultReferenceClockIsReadOnly) {

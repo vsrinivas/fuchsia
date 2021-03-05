@@ -335,8 +335,7 @@ TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
 TEST_F(AudioRendererTest, ReferenceClockIsAdvancing) {
   auto fidl_clock = GetReferenceClock();
   clock::testing::VerifyAdvances(fidl_clock);
-  clock::testing::VerifyAdvances(
-      audio_clock_helper::get_underlying_zx_clock(renderer_->reference_clock()));
+  audio_clock_helper::VerifyAdvances(renderer_->reference_clock(), context().clock_manager());
 }
 
 TEST_F(AudioRendererTest, ReferenceClockIsReadOnly) {
@@ -344,15 +343,13 @@ TEST_F(AudioRendererTest, ReferenceClockIsReadOnly) {
   clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
 
   // Within audio_core, the default clock is rate-adjustable.
-  clock::testing::VerifyCanBeRateAdjusted(
-      audio_clock_helper::get_underlying_zx_clock(renderer_->reference_clock()));
+  audio_clock_helper::VerifyCanBeRateAdjusted(renderer_->reference_clock());
 }
 
 TEST_F(AudioRendererTest, DefaultClockIsClockMonotonic) {
   auto fidl_clock = GetReferenceClock();
   clock::testing::VerifyIsSystemMonotonic(fidl_clock);
-  clock::testing::VerifyIsSystemMonotonic(
-      audio_clock_helper::get_underlying_zx_clock(renderer_->reference_clock()));
+  audio_clock_helper::VerifyIsSystemMonotonic(renderer_->reference_clock());
 }
 
 // The renderer clock is valid, before and after devices are routed.

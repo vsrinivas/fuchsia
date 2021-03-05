@@ -7,17 +7,20 @@
 
 #include <lib/zx/clock.h>
 
+#include <memory>
+
+#include "src/media/audio/audio_core/audio_clock_manager.h"
+
 namespace media::audio {
 class AudioClock;
 }
 
 namespace media::audio::audio_clock_helper {
 
-const zx::clock& get_underlying_zx_clock(const AudioClock& audio_clock);
-
 void VerifyReadOnlyRights(const AudioClock& audio_clock);
 
-void VerifyAdvances(const AudioClock& audio_clock);
+void VerifyAdvances(const AudioClock& audio_clock,
+                    std::shared_ptr<AudioClockManager> clock_manager);
 
 void VerifyCannotBeRateAdjusted(const AudioClock& audio_clock);
 void VerifyCanBeRateAdjusted(const AudioClock& audio_clock);
