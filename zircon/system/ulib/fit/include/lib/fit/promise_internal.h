@@ -7,6 +7,7 @@
 
 #include <assert.h>
 #include <lib/stdcompat/optional.h>
+#include <lib/stdcompat/type_traits.h>
 
 #include <tuple>
 #include <type_traits>
@@ -47,10 +48,11 @@ struct continuation_traits {
   using type = Continuation;
   using result_type = decltype(std::declval<Continuation&>()(std::declval<::fit::context&>()));
 };
-template <typename Continuation, typename = fit::void_t<>>
+template <typename Continuation, typename = cpp17::void_t<>>
 struct is_continuation : std::false_type {};
 template <typename Continuation>
-struct is_continuation<Continuation, fit::void_t<typename continuation_traits<Continuation>::type>>
+struct is_continuation<Continuation,
+                       cpp17::void_t<typename continuation_traits<Continuation>::type>>
     : std::true_type {};
 
 // Interposer type that provides uniform move construction/assignment for

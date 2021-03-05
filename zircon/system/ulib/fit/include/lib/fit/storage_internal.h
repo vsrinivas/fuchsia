@@ -5,6 +5,8 @@
 #ifndef LIB_FIT_STORAGE_INTERNAL_H_
 #define LIB_FIT_STORAGE_INTERNAL_H_
 
+#include <lib/stdcompat/type_traits.h>
+
 #include <cstdint>
 #include <limits>
 #include <type_traits>
@@ -574,9 +576,9 @@ class indexed_storage<DestructorClass, type_index<Ts, Is>...> {
   static constexpr bool nothrow_default_constructible =
       std::is_nothrow_default_constructible<first_t<Ts...>>::value;
   static constexpr bool nothrow_move_constructible =
-      conjunction_v<std::is_nothrow_move_constructible<Ts>...>;
+      cpp17::conjunction_v<std::is_nothrow_move_constructible<Ts>...>;
   static constexpr bool nothrow_move_assignable =
-      conjunction_v<std::is_nothrow_move_assignable<Ts>...>;
+      cpp17::conjunction_v<std::is_nothrow_move_assignable<Ts>...>;
 
   constexpr indexed_storage() = default;
 

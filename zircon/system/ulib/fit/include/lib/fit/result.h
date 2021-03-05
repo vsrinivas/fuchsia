@@ -13,7 +13,6 @@
 #include <utility>
 
 #include "in_place_internal.h"
-#include "traits.h"
 
 namespace fit {
 
