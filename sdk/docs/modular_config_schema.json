@@ -120,6 +120,10 @@
           "type": "array",
           "items": { "$ref": "#/definitions/component_url" },
           "uniqueItems": true
+        },
+        "disable_agent_restart_on_crash": {
+          "type": "boolean",
+          "default": false
         }
       },
       "additionalProperties": false
