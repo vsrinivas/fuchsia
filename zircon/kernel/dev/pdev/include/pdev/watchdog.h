@@ -19,6 +19,8 @@ typedef struct pdev_watchdog_ops {
   bool (*is_enabled)(void);
   zx_duration_t (*get_timeout_nsec)(void);
   zx_time_t (*get_last_pet_time)(void);
+  void (*suppress_petting)(bool);
+  bool (*is_petting_suppressed)(void);
 } pdev_watchdog_ops_t;
 
 void pdev_register_watchdog(const pdev_watchdog_ops_t* ops);

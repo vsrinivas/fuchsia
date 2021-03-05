@@ -15,12 +15,13 @@
 
 static void usage(const char* cmd_name) {
   printf("Usage:\n");
-  printf("%s status  : show the recent status of the hardware watchdog subsystem.\n", cmd_name);
-  printf("%s pet     : force an immediate pet of the watchdog.\n", cmd_name);
-  printf("%s enable  : attempt to enable the watchdog.\n", cmd_name);
-  printf("%s disable : attempt to disable the watchdog.\n", cmd_name);
-  printf("%s force   : force the watchdog to fire.\n", cmd_name);
-  printf("%s help    : show this message.\n", cmd_name);
+  printf("%s status   : show the recent status of the hardware watchdog subsystem.\n", cmd_name);
+  printf("%s pet      : force an immediate pet of the watchdog.\n", cmd_name);
+  printf("%s enable   : attempt to enable the watchdog.\n", cmd_name);
+  printf("%s disable  : attempt to disable the watchdog.\n", cmd_name);
+  printf("%s force    : force the watchdog to fire by locking up all cores.\n", cmd_name);
+  printf("%s suppress : Pet the WDT one last time, then suppress future pets.\n", cmd_name);
+  printf("%s help     : show this message.\n", cmd_name);
 }
 
 enum class Cmd {
@@ -29,6 +30,7 @@ enum class Cmd {
   Enable,
   Disable,
   Force,
+  Suppress,
 };
 
 static int cmd_watchdog(int argc, const cmd_args* argv, uint32_t flags) {
@@ -49,6 +51,8 @@ static int cmd_watchdog(int argc, const cmd_args* argv, uint32_t flags) {
     command = Cmd::Disable;
   } else if (!strcmp(argv[1].str, "force")) {
     command = Cmd::Force;
+  } else if (!strcmp(argv[1].str, "suppress")) {
+    command = Cmd::Suppress;
   } else if (!strcmp(argv[1].str, "help")) {
     usage(argv[0].str);
     return 0;
@@ -68,8 +72,10 @@ static int cmd_watchdog(int argc, const cmd_args* argv, uint32_t flags) {
       zx_time_t last_pet = hw_watchdog_get_last_pet_time();
       zx_time_t now = current_time();
       printf("Enabled  : %s\n", hw_watchdog_is_enabled() ? "yes" : "no");
-      printf("Timeout  : %ld nSec\n", hw_watchdog_get_timeout_nsec());
-      printf("Last Pet : %ld (%ld nSec ago)\n", last_pet, now - last_pet);
+      printf("Timeout  : %ld mSec\n", hw_watchdog_get_timeout_nsec() / ZX_MSEC(1));
+      printf("Last Pet : %ld.%03ld (%ld mSec ago)\n", last_pet / ZX_SEC(1),
+             (last_pet / ZX_MSEC(1)) % 1000, (now - last_pet) / ZX_MSEC(1));
+      printf("Petting  : %s\n", hw_watchdog_is_petting_suppressed() ? "Suppressed" : "Enabled");
     } break;
 
     case Cmd::Pet: {
@@ -127,12 +133,28 @@ static int cmd_watchdog(int argc, const cmd_args* argv, uint32_t flags) {
       // the system.
       dlog_force_panic();
 
-      zx_time_t deadline = hw_watchdog_get_last_pet_time() + hw_watchdog_get_timeout_nsec();
-      printf("System wedged!  Watchdog will fire in %ld nSec\n", deadline - current_time());
+      zx_time_t deadline =
+          zx_time_add_duration(hw_watchdog_get_last_pet_time(), hw_watchdog_get_timeout_nsec());
+      printf("System wedged!  Watchdog will fire in %ld mSec\n",
+             (deadline - current_time()) / ZX_MSEC(1));
 
       // Spin forever.  The watchdog should reboot us.
       while (true)
         ;
+    } break;
+
+    case Cmd::Suppress: {
+      hw_watchdog_pet();
+      hw_watchdog_suppress_petting(true);
+
+      if (!hw_watchdog_is_enabled()) {
+        printf("WDT petting is now suppressed, but the WDT is not currently enabled.\n");
+      } else {
+        zx_time_t deadline =
+            zx_time_add_duration(hw_watchdog_get_last_pet_time(), hw_watchdog_get_timeout_nsec());
+        printf("WDT petting is now suppressed, WDT will fire in %ld mSec\n",
+               (deadline - current_time()) / ZX_MSEC(1));
+      }
     } break;
   };
 
