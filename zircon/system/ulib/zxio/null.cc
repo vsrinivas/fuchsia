@@ -71,11 +71,6 @@ zx_status_t zxio_default_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vm
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_open(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
-                              zxio_t** out_io) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t zxio_default_open_async(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
                                     size_t path_len, zx_handle_t request) {
   zx_handle_close(request);

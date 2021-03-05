@@ -245,15 +245,6 @@ zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size
 
 // Open a new file relative to the given |directory|.
 //
-// The connection is represented as a |zxio_t|. This call blocks until the
-// remote server is able to describe the new connection.
-//
-// See io.fidl for the available |flags| and |mode|.
-zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,
-                      zxio_t** out_io);
-
-// Open a new file relative to the given |directory|.
-//
 // The connection is represented as a |zx_handle_t|. The caller is responsible
 // for creating the |zx_handle_t|, which must be a channel. This call does not
 // block on the remote server.

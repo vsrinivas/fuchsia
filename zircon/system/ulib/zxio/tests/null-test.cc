@@ -45,8 +45,6 @@ TEST(NullTest, Basic) {
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_clone(&io, &vmo, &size));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_exact(&io, &vmo, &size));
 
-  zxio_t* result = nullptr;
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_open(&io, 0u, 0u, "hello", &result));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
             zxio_open_async(&io, 0u, 0u, "hello", strlen("hello"), ZX_HANDLE_INVALID));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_unlink(&io, "hello"));

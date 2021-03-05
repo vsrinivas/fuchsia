@@ -81,8 +81,6 @@ TEST_F(VmoTest, Basic) {
   ASSERT_OK(zxio_write_at(io, 0u, buffer, sizeof(buffer), 0, &actual));
   EXPECT_EQ(actual, sizeof(buffer));
 
-  zxio_t* result = nullptr;
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_open(io, 0u, 0u, "hello", &result));
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED,
                 zxio_open_async(io, 0u, 0u, "hello", strlen("hello"), ZX_HANDLE_INVALID));
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_unlink(io, "hello"));
