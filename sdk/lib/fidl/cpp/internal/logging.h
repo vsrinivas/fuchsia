@@ -16,6 +16,9 @@ void ReportEncodingError(const HLCPPOutgoingMessage& message, const fidl_type_t*
 void ReportDecodingError(const HLCPPIncomingMessage& message, const fidl_type_t* type,
                          const char* error_msg, const char* file, int line);
 
+void ReportValidatingError(const HLCPPOutgoingMessage& message, const fidl_type_t* type,
+                           const char* error_msg, const char* file, int line);
+
 void ReportChannelWritingError(const HLCPPOutgoingMessage& message, const fidl_type_t* type,
                                zx_status_t status, const char* file, int line);
 
@@ -24,6 +27,9 @@ void ReportChannelWritingError(const HLCPPOutgoingMessage& message, const fidl_t
 
 #define FIDL_REPORT_DECODING_ERROR(message, type, error_msg) \
   ::fidl::internal::ReportDecodingError((message), (type), (error_msg), __FILE__, __LINE__)
+
+#define FIDL_REPORT_VALIDATING_ERROR(message, type, error_msg) \
+  ::fidl::internal::ReportValidatingError((message), (type), (error_msg), __FILE__, __LINE__)
 
 #define FIDL_REPORT_CHANNEL_WRITING_ERROR(message, type, status) \
   ::fidl::internal::ReportChannelWritingError((message), (type), (status), __FILE__, __LINE__)

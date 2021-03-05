@@ -1,5 +1,5 @@
 {
-  "pkg/fidl_cpp_sync/include/lib/fidl/cpp/internal/logging.h": "c5ad6b8aec0252ff875d7298a4c8adbf",
+  "pkg/fidl_cpp_sync/include/lib/fidl/cpp/internal/logging.h": "d87a8afb4f59a9492ee16564a935558e",
   "pkg/fidl_cpp_sync/include/lib/fidl/cpp/internal/message_sender.h": "959affdfe8cde839d1d575e9a3605025",
   "pkg/fidl_cpp_sync/include/lib/fidl/cpp/internal/synchronous_proxy.h": "2c3479b9d6a246cd8edf745e6b35881b",
   "pkg/fidl_cpp_sync/include/lib/fidl/cpp/synchronous_interface_ptr.h": "26120b383f60c4e7daf452fb52d09335"

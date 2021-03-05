@@ -129,6 +129,27 @@ TEST(ProxyController, BadSend) {
   EXPECT_EQ(ZX_HANDLE_INVALID, controller.reader().channel());
 }
 
+TEST(ProxyController, BadSendNoErrorHandlerClosesChannel) {
+  zx::channel h1, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+  zx_handle_t h1_raw = h1.get();
+
+  fidl::test::AsyncLoopForTest loop;
+
+  ProxyController controller;
+  EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
+
+  EXPECT_EQ(ZX_OK, zx_object_get_info(h1_raw, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+
+  uint8_t bytes[1000] = {};
+  fidl::HLCPPOutgoingMessage outgoing_msg(BytePart(bytes, sizeof(bytes)),
+                                          fidl::HandleDispositionPart());
+  controller.Send(&unbounded_nonnullable_string_message_type, std::move(outgoing_msg), nullptr);
+
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE,
+            zx_object_get_info(h1_raw, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+}
+
 TEST(ProxyController, BadReply) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));

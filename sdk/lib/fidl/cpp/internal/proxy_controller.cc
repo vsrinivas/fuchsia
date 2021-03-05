@@ -56,9 +56,11 @@ void ProxyController::Send(const fidl_type_t* type, HLCPPOutgoingMessage message
   const char* error_msg = nullptr;
   zx_status_t status = message.Validate(type, &error_msg);
   if (status != ZX_OK) {
-    FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
-    if (transitory_clientside_error_disable_count == 0 && reader_.error_handler_ != nullptr) {
-      reader_.error_handler_(status);
+    FIDL_REPORT_VALIDATING_ERROR(message, type, error_msg);
+    if (transitory_clientside_error_disable_count == 0) {
+      if (reader_.error_handler_ != nullptr) {
+        reader_.error_handler_(status);
+      }
       reader_.Reset();
     }
     return;
@@ -69,8 +71,10 @@ void ProxyController::Send(const fidl_type_t* type, HLCPPOutgoingMessage message
     // completed, so ZX_ERR_PEER_CLOSED is expected to occur sometimes under normal operation.
     if (status != ZX_ERR_PEER_CLOSED) {
       FIDL_REPORT_CHANNEL_WRITING_ERROR(message, type, status);
-      if (transitory_clientside_error_disable_count == 0 && reader_.error_handler_ != nullptr) {
-        reader_.error_handler_(status);
+      if (transitory_clientside_error_disable_count == 0) {
+        if (reader_.error_handler_ != nullptr) {
+          reader_.error_handler_(status);
+        }
         reader_.Reset();
       }
     }

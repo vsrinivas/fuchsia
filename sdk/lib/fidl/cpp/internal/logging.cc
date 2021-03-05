@@ -39,6 +39,17 @@ void ReportDecodingError(const HLCPPIncomingMessage& message, const fidl_type_t*
           message.bytes().actual(), message.handles().actual());
 }
 
+void ReportValidatingError(const HLCPPOutgoingMessage& message, const fidl_type_t* type,
+                           const char* error_msg, const char* file, int line) {
+  char type_name[1024];
+  size_t type_name_length = fidl_format_type_name(type, type_name, sizeof(type_name));
+  fprintf(stderr,
+          "ERROR: [%s(%d)] fidl validating error: %s. "
+          "message: %.*s, %" PRIu32 " bytes, %" PRIu32 " handles\n",
+          file, line, error_msg, static_cast<int>(type_name_length), type_name,
+          message.bytes().actual(), message.handles().actual());
+}
+
 void ReportChannelWritingError(const HLCPPOutgoingMessage& message, const fidl_type_t* type,
                                zx_status_t status, const char* file, int line) {
   char type_name[1024];
