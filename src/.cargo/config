@@ -6,6 +6,7 @@ directory = "../third_party/rust_crates/vendor"
 
 [build]
 target-dir = "../out/cargo_target"
+rustflags = ["-W rust-2018-idioms"]
 
 # Override the harfbuzz and freetype crates' build scripts, and instead link to our existing
 # versions of the native libraries.
