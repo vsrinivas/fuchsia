@@ -389,33 +389,31 @@ void Magnifier::BindGestures(a11y::GestureHandler* gesture_handler) {
 
   // Add gestures with higher priority earlier than gestures with lower priority.
   bool gesture_bind_status = gesture_handler->BindMFingerNTapAction(
-      1 /* number of fingers */, 3 /* number of taps */,
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {});
+      1 /* number of fingers */, 3 /* number of taps */, [](GestureContext context) {});
   FX_DCHECK(gesture_bind_status);
 
   gesture_bind_status = gesture_handler->BindMFingerNTapAction(
-      3 /* number of fingers */, 2 /* number of taps */,
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {});
+      3 /* number of fingers */, 2 /* number of taps */, [](GestureContext gesture_context) {});
   FX_DCHECK(gesture_bind_status);
 
-  gesture_bind_status = gesture_handler->BindMFingerNTapDragAction(
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {}, /* on recognize */
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {}, /* on update */
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {}, /* on complete */
-      1 /* number of fingers */, 3 /* number of taps */);
+  gesture_bind_status =
+      gesture_handler->BindMFingerNTapDragAction([](GestureContext context) {}, /* on recognize */
+                                                 [](GestureContext context) {}, /* on update */
+                                                 [](GestureContext context) {}, /* on complete */
+                                                 1 /* number of fingers */, 3 /* number of taps */);
   FX_DCHECK(gesture_bind_status);
 
-  gesture_bind_status = gesture_handler->BindMFingerNTapDragAction(
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {}, /* on recognize */
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {}, /* on update */
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {}, /* on complete */
-      3 /* number of fingers */, 2 /* number of taps */);
+  gesture_bind_status =
+      gesture_handler->BindMFingerNTapDragAction([](GestureContext context) {}, /* on recognize */
+                                                 [](GestureContext context) {}, /* on update */
+                                                 [](GestureContext context) {}, /* on complete */
+                                                 3 /* number of fingers */, 2 /* number of taps */);
   FX_DCHECK(gesture_bind_status);
 
-  gesture_bind_status = gesture_handler->BindTwoFingerDragAction(
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {}, /* on recognize */
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {}, /* on update */
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {} /* on complete */);
+  gesture_bind_status =
+      gesture_handler->BindTwoFingerDragAction([](GestureContext context) {}, /* on recognize */
+                                               [](GestureContext context) {}, /* on update */
+                                               [](GestureContext context) {} /* on complete */);
   FX_DCHECK(gesture_bind_status);
 }
 

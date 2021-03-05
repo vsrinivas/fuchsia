@@ -27,32 +27,28 @@ GestureHandler::GestureHandler(AddRecognizerToArenaCallback add_recognizer_callb
     : add_recognizer_callback_(std::move(add_recognizer_callback)) {}
 
 void GestureHandler::OnGesture(const GestureType gesture_type, const GestureEvent gesture_event,
-                               GestureArguments args) {
+                               GestureContext gesture_context) {
   auto it = gesture_handlers_.find(gesture_type);
   if (it == gesture_handlers_.end()) {
     FX_LOGS(INFO) << "GestureHandler::OnGesture: No action found for GestureType:" << gesture_type;
     return;
   }
 
-  // TODO: Revisit which gestures need coordinates. As currently implemented,
-  // all gestures expect them, but they may be unnecessary for some gestures.
-  if (args.viewref_koid && args.coordinates) {
-    switch (gesture_event) {
-      case GestureEvent::kRecognize:
-        FX_DCHECK(it->second.on_recognize);
-        it->second.on_recognize(*args.viewref_koid, *args.coordinates);
-        break;
-      case GestureEvent::kUpdate:
-        FX_DCHECK(it->second.on_update);
-        it->second.on_update(*args.viewref_koid, *args.coordinates);
-        break;
-      case GestureEvent::kComplete:
-        FX_DCHECK(it->second.on_complete);
-        it->second.on_complete(*args.viewref_koid, *args.coordinates);
-        break;
-      default:
-        break;
-    }
+  switch (gesture_event) {
+    case GestureEvent::kRecognize:
+      FX_DCHECK(it->second.on_recognize);
+      it->second.on_recognize(gesture_context);
+      break;
+    case GestureEvent::kUpdate:
+      FX_DCHECK(it->second.on_update);
+      it->second.on_update(gesture_context);
+      break;
+    case GestureEvent::kComplete:
+      FX_DCHECK(it->second.on_complete);
+      it->second.on_complete(gesture_context);
+      break;
+    default:
+      break;
   }
 }
 
@@ -95,9 +91,7 @@ bool GestureHandler::BindMFingerNTapAction(uint32_t num_fingers, uint32_t num_ta
 
   gesture_recognizers_[gesture_type] = std::make_unique<MFingerNTapRecognizer>(
       [this, gesture_type](GestureContext context) {
-        OnGesture(gesture_type, GestureEvent::kRecognize,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(gesture_type, GestureEvent::kRecognize, context);
       },
       num_fingers, num_taps);
   add_recognizer_callback_(gesture_recognizers_[gesture_type].get());
@@ -134,9 +128,7 @@ bool GestureHandler::BindOneFingerNTapAction(OnGestureCallback callback, int num
 
   gesture_recognizers_[gesture_type] = std::make_unique<OneFingerNTapRecognizer>(
       [this, gesture_type](GestureContext context) {
-        OnGesture(gesture_type, GestureEvent::kComplete,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(gesture_type, GestureEvent::kComplete, context);
       },
       number_of_taps);
   add_recognizer_callback_(gesture_recognizers_[gesture_type].get());
@@ -156,19 +148,13 @@ bool GestureHandler::BindOneFingerDragAction(OnGestureCallback on_recognize,
 
   gesture_recognizers_[kOneFingerDrag] = std::make_unique<OneFingerDragRecognizer>(
       [this](GestureContext context) {
-        OnGesture(kOneFingerDrag, GestureEvent::kRecognize,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(kOneFingerDrag, GestureEvent::kRecognize, context);
       }, /* on recognize */
       [this](GestureContext context) {
-        OnGesture(kOneFingerDrag, GestureEvent::kUpdate,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(kOneFingerDrag, GestureEvent::kUpdate, context);
       }, /* on update */
       [this](GestureContext context) {
-        OnGesture(kOneFingerDrag, GestureEvent::kComplete,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(kOneFingerDrag, GestureEvent::kComplete, context);
       } /* on complete */);
   add_recognizer_callback_(gesture_recognizers_[kOneFingerDrag].get());
 
@@ -187,19 +173,13 @@ bool GestureHandler::BindTwoFingerDragAction(OnGestureCallback on_recognize,
 
   gesture_recognizers_[kTwoFingerDrag] = std::make_unique<TwoFingerDragRecognizer>(
       [this](GestureContext context) {
-        OnGesture(kTwoFingerDrag, GestureEvent::kRecognize,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(kTwoFingerDrag, GestureEvent::kRecognize, context);
       }, /* drag start callback */
       [this](GestureContext context) {
-        OnGesture(kTwoFingerDrag, GestureEvent::kUpdate,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(kTwoFingerDrag, GestureEvent::kUpdate, context);
       }, /* drag update callback */
       [this](GestureContext context) {
-        OnGesture(kTwoFingerDrag, GestureEvent::kComplete,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(kTwoFingerDrag, GestureEvent::kComplete, context);
       } /* drag completion callback */);
   add_recognizer_callback_(gesture_recognizers_[kTwoFingerDrag].get());
 
@@ -255,9 +235,7 @@ bool GestureHandler::BindUpSwipeAction(OnGestureCallback callback, GestureType g
   gesture_handlers_[gesture_type].on_complete = std::move(callback);
   gesture_recognizers_[gesture_type] = std::make_unique<UpSwipeGestureRecognizer>(
       [this, gesture_type](GestureContext context) {
-        OnGesture(gesture_type, GestureEvent::kComplete,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(gesture_type, GestureEvent::kComplete, context);
       },
       number_of_fingers);
   add_recognizer_callback_(gesture_recognizers_[gesture_type].get());
@@ -287,9 +265,7 @@ bool GestureHandler::BindDownSwipeAction(OnGestureCallback callback, GestureType
   gesture_handlers_[gesture_type].on_complete = std::move(callback);
   gesture_recognizers_[gesture_type] = std::make_unique<DownSwipeGestureRecognizer>(
       [this, gesture_type](GestureContext context) {
-        OnGesture(gesture_type, GestureEvent::kComplete,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(gesture_type, GestureEvent::kComplete, context);
       },
       number_of_fingers);
   add_recognizer_callback_(gesture_recognizers_[gesture_type].get());
@@ -318,9 +294,7 @@ bool GestureHandler::BindLeftSwipeAction(OnGestureCallback callback, GestureType
   gesture_handlers_[gesture_type].on_complete = std::move(callback);
   gesture_recognizers_[gesture_type] = std::make_unique<LeftSwipeGestureRecognizer>(
       [this, gesture_type](GestureContext context) {
-        OnGesture(gesture_type, GestureEvent::kComplete,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(gesture_type, GestureEvent::kComplete, context);
       },
       number_of_fingers);
   add_recognizer_callback_(gesture_recognizers_[gesture_type].get());
@@ -350,9 +324,7 @@ bool GestureHandler::BindRightSwipeAction(OnGestureCallback callback, GestureTyp
   gesture_handlers_[gesture_type].on_complete = std::move(callback);
   gesture_recognizers_[gesture_type] = std::make_unique<RightSwipeGestureRecognizer>(
       [this, gesture_type](GestureContext context) {
-        OnGesture(gesture_type, GestureEvent::kComplete,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(gesture_type, GestureEvent::kComplete, context);
       },
       number_of_fingers);
   add_recognizer_callback_(gesture_recognizers_[gesture_type].get());
@@ -369,9 +341,7 @@ bool GestureHandler::BindTwoFingerSingleTapAction(OnGestureCallback callback) {
 
   gesture_recognizers_[kTwoFingerSingleTap] = std::make_unique<MFingerNTapRecognizer>(
       [this](GestureContext context) {
-        OnGesture(kTwoFingerSingleTap, GestureEvent::kComplete,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(kTwoFingerSingleTap, GestureEvent::kComplete, context);
       },
       2,  // number of fingers
       1 /* number of taps */);
@@ -412,19 +382,13 @@ bool GestureHandler::BindMFingerNTapDragAction(OnGestureCallback on_recognize,
 
   gesture_recognizers_[gesture_type] = std::make_unique<MFingerNTapDragRecognizer>(
       [this, gesture_type](GestureContext context) {
-        OnGesture(gesture_type, GestureEvent::kRecognize,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(gesture_type, GestureEvent::kRecognize, context);
       }, /* on recognize */
       [this, gesture_type](GestureContext context) {
-        OnGesture(gesture_type, GestureEvent::kUpdate,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(gesture_type, GestureEvent::kUpdate, context);
       }, /* on update */
       [this, gesture_type](GestureContext context) {
-        OnGesture(gesture_type, GestureEvent::kComplete,
-                  {.viewref_koid = context.view_ref_koid,
-                   .coordinates = context.CurrentCentroid(true /*local coordinates*/)});
+        OnGesture(gesture_type, GestureEvent::kComplete, context);
       }, /* on complete */
       num_fingers, num_taps);
   add_recognizer_callback_(gesture_recognizers_[gesture_type].get());

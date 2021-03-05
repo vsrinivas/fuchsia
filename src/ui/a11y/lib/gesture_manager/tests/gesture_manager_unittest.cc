@@ -63,109 +63,98 @@ void GestureManagerTest::SetUp() {
   listener_.Bind(gesture_manager_.binding().NewBinding());
   gesture_handler_ = gesture_manager_.gesture_handler();
 
-  auto one_finger_up_swipe_callback = [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto one_finger_up_swipe_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     one_finger_up_swipe_detected_ = true;
   };
 
-  auto one_finger_down_swipe_callback = [this](zx_koid_t viewref_koid,
-                                               fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto one_finger_down_swipe_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     one_finger_down_swipe_detected_ = true;
   };
 
-  auto one_finger_left_swipe_callback = [this](zx_koid_t viewref_koid,
-                                               fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto one_finger_left_swipe_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     one_finger_left_swipe_detected_ = true;
   };
 
-  auto one_finger_right_swipe_callback = [this](zx_koid_t viewref_koid,
-                                                fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto one_finger_right_swipe_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     one_finger_right_swipe_detected_ = true;
   };
 
-  auto three_finger_up_swipe_callback = [this](zx_koid_t viewref_koid,
-                                               fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto three_finger_up_swipe_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     three_finger_up_swipe_detected_ = true;
   };
 
-  auto three_finger_down_swipe_callback = [this](zx_koid_t viewref_koid,
-                                                 fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto three_finger_down_swipe_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     three_finger_down_swipe_detected_ = true;
   };
 
-  auto three_finger_left_swipe_callback = [this](zx_koid_t viewref_koid,
-                                                 fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto three_finger_left_swipe_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     three_finger_left_swipe_detected_ = true;
   };
 
-  auto three_finger_right_swipe_callback = [this](zx_koid_t viewref_koid,
-                                                  fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto three_finger_right_swipe_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     three_finger_right_swipe_detected_ = true;
   };
 
-  auto single_tap_callback = [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto single_tap_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     single_tap_detected_ = true;
   };
-  auto double_tap_callback = [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto double_tap_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     double_tap_detected_ = true;
   };
 
-  auto one_finger_triple_tap_callback = [this](zx_koid_t viewref_koid,
-                                               fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto one_finger_triple_tap_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     one_finger_triple_tap_detected_ = true;
   };
 
-  auto one_finger_triple_tap_drag_callback = [this](zx_koid_t viewref_koid,
-                                                    fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto one_finger_triple_tap_drag_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     one_finger_triple_tap_drag_detected_ = true;
   };
 
-  auto three_finger_double_tap_callback = [this](zx_koid_t viewref_koid,
-                                                 fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto three_finger_double_tap_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     three_finger_double_tap_detected_ = true;
   };
 
-  auto three_finger_double_tap_drag_callback = [this](zx_koid_t viewref_koid,
-                                                      fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto three_finger_double_tap_drag_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     three_finger_double_tap_drag_detected_ = true;
   };
 
-  auto one_finger_drag_callback = [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto one_finger_drag_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     one_finger_drag_detected_ = true;
   };
 
-  auto two_finger_drag_callback = [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto two_finger_drag_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     two_finger_drag_detected_ = true;
   };
 
@@ -174,17 +163,14 @@ void GestureManagerTest::SetUp() {
   gesture_handler_->BindMFingerNTapAction(1, 3, std::move(one_finger_triple_tap_callback));
   gesture_handler_->BindMFingerNTapAction(3, 2, std::move(three_finger_double_tap_callback));
   gesture_handler_->BindMFingerNTapDragAction(
-      std::move(one_finger_triple_tap_drag_callback),
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {},
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {}, 1, 3);
+      std::move(one_finger_triple_tap_drag_callback), [](a11y::GestureContext context) {},
+      [](a11y::GestureContext context) {}, 1, 3);
   gesture_handler_->BindMFingerNTapDragAction(
-      std::move(three_finger_double_tap_drag_callback),
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {},
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {}, 3, 2);
+      std::move(three_finger_double_tap_drag_callback), [](a11y::GestureContext context) {},
+      [](a11y::GestureContext context) {}, 3, 2);
   gesture_handler_->BindTwoFingerDragAction(
-      std::move(two_finger_drag_callback),
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {},
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {});
+      std::move(two_finger_drag_callback), [](a11y::GestureContext context) {},
+      [](a11y::GestureContext context) {});
   gesture_handler_->BindSwipeAction(std::move(one_finger_up_swipe_callback),
                                     a11y::GestureHandler::kOneFingerUpSwipe);
   gesture_handler_->BindSwipeAction(std::move(one_finger_down_swipe_callback),
@@ -204,9 +190,8 @@ void GestureManagerTest::SetUp() {
   gesture_handler_->BindOneFingerDoubleTapAction(std::move(double_tap_callback));
   gesture_handler_->BindOneFingerSingleTapAction(std::move(single_tap_callback));
   gesture_handler_->BindOneFingerDragAction(
-      std::move(one_finger_drag_callback),
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {},
-      [](zx_koid_t viewref_koid, fuchsia::math::PointF point) {});
+      std::move(one_finger_drag_callback), [](a11y::GestureContext context) {},
+      [](a11y::GestureContext context) {});
 }
 
 // Returns a default Accessibility Pointer Event.
@@ -996,9 +981,9 @@ TEST_F(GestureManagerTest, CallsActionOnTwoFingerDrag) {
 }
 
 TEST_F(GestureManagerTest, BindGestureMultipleTimes) {
-  auto double_tap_callback = [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid_ = viewref_koid;
-    actual_point_ = point;
+  auto double_tap_callback = [this](a11y::GestureContext context) {
+    actual_viewref_koid_ = context.view_ref_koid;
+    actual_point_ = context.CurrentCentroid(true);
     double_tap_detected_ = true;
   };
   // Calling Bind again should fail since the gesture is already binded.

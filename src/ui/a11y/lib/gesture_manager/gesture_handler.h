@@ -15,6 +15,7 @@
 
 #include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
+#include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
 
 namespace a11y {
 
@@ -47,19 +48,8 @@ class GestureHandler {
     kTwoFingerDrag,
   };
 
-  // Some gestures need additional information about what was touched and where it was touched on
-  // the screen. Callers of OnGesture() may provide this information.
-  // TODO(lucasradaelli): Expand this arguments to support multi-pointer IDs.
-  struct GestureArguments {
-    // Viewref koid of the view where the gesture was performed.
-    std::optional<zx_koid_t> viewref_koid;
-    // Local view coordinate when the pointer ID on a DOWN event.
-    // TODO(lucasradaelli): Implement multi-pointer ID coordinate storage. Right now, only one
-    // finger tap is implemented, so this is enough here.
-    std::optional<fuchsia::math::PointF> coordinates;
-  };
   // Callback invoked when the gesture it is bound to is detected.
-  using OnGestureCallback = fit::function<void(zx_koid_t, fuchsia::math::PointF)>;
+  using OnGestureCallback = fit::function<void(GestureContext)>;
 
   explicit GestureHandler(AddRecognizerToArenaCallback add_recognizer_callback);
   virtual ~GestureHandler() = default;
@@ -119,7 +109,7 @@ class GestureHandler {
  private:
   // Calls an action bound to |gesture_type| if it exists.
   void OnGesture(const GestureType gesture_type, const GestureEvent gesture_event,
-                 GestureArguments args);
+                 GestureContext gesture_context);
 
   // Helper function to bind the action defined in |callback| with the tap recognizer where taps
   // equal to |num_of_taps| if no action is currently binded for the given |gesture_type|. Returns

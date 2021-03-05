@@ -76,13 +76,13 @@ void MockGestureHandler::TriggerGesture(GestureType gesture_type) {
   FX_DCHECK(it != gesture_handlers_.end());
   // These values are not important and are here so that the callback can be invoked.
   if (it->second.on_recognize) {
-    it->second.on_recognize(ZX_KOID_INVALID, {.x = 1, .y = 1});
+    it->second.on_recognize(a11y::GestureContext());
   }
   if (it->second.on_update) {
-    it->second.on_update(ZX_KOID_INVALID, {.x = 1, .y = 1});
+    it->second.on_update(a11y::GestureContext());
   }
   if (it->second.on_complete) {
-    it->second.on_complete(ZX_KOID_INVALID, {.x = 1, .y = 1});
+    it->second.on_complete(a11y::GestureContext());
   }
 }
 
