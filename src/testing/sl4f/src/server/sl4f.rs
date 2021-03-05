@@ -48,7 +48,7 @@ use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
 use crate::bluetooth::bt_sys_facade::BluetoothSysFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
-use crate::bluetooth::hfp_facade::HfpFacade;
+use test_call_manager::TestCallManager as HfpFacade;
 
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;

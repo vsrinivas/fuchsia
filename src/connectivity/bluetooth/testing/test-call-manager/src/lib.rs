@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use async_utils::hanging_get::client::HangingGetStream;
 use derivative::Derivative;
 use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_hfp::{
     CallManagerMarker, CallManagerProxy, CallMarker, CallRequest, CallRequestStream,
     CallState as FidlCallState, CallWatchStateResponder, DtmfCode, HeadsetGainProxy, HfpMarker,
-    NetworkInformation, PeerHandlerRequest, PeerHandlerRequestStream,
+    HfpProxy, NetworkInformation, PeerHandlerRequest, PeerHandlerRequestStream,
     PeerHandlerWaitForCallResponder, PeerHandlerWatchNetworkInformationResponder, SignalStrength,
 };
 use fuchsia_async as fasync;
@@ -20,7 +20,8 @@ use futures::{lock::Mutex, stream::StreamExt, FutureExt};
 use serde::Serialize;
 use std::{collections::HashMap, sync::Arc};
 
-use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
+pub const HFP_AG_URL: &str =
+    "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-default#meta/bt-hfp-audio-gateway.cmx";
 
 type CallId = u64;
 
@@ -189,7 +190,7 @@ impl From<&CallState> for CallStateSer {
 
 #[derive(Derivative, Default)]
 #[derivative(Debug)]
-struct HfpFacadeInner {
+struct TestCallManagerInner {
     /// Running instance of the bt-hfp-audio-gateway component.
     #[derivative(Debug = "ignore")]
     hfp_component: Option<client::App>,
@@ -206,7 +207,7 @@ struct HfpFacadeInner {
     calls: HashMap<CallId, CallState>,
 }
 
-impl HfpFacadeInner {
+impl TestCallManagerInner {
     pub fn active_peer_mut(&mut self) -> Option<&mut PeerState> {
         if let Some(id) = &self.active_peer {
             Some(self.peers.get_mut(id).expect("Active peer must exist in peers map"))
@@ -217,49 +218,48 @@ impl HfpFacadeInner {
 }
 
 #[derive(Debug, Clone)]
-pub struct HfpFacade {
-    inner: Arc<Mutex<HfpFacadeInner>>,
+pub struct TestCallManager {
+    inner: Arc<Mutex<TestCallManagerInner>>,
 }
 
 /// Perform Bluetooth HFP functions by acting as the call manager (client) side of the
 /// fuchsia.bluetooth.hfp.Hfp protocol.
-impl HfpFacade {
-    pub fn new() -> HfpFacade {
-        HfpFacade { inner: Arc::new(Mutex::new(HfpFacadeInner::default())) }
+impl TestCallManager {
+    pub fn new() -> TestCallManager {
+        TestCallManager { inner: Arc::new(Mutex::new(TestCallManagerInner::default())) }
+    }
+
+    pub async fn set_proxy(&self, proxy: CallManagerProxy) {
+        let mut inner = self.inner.lock().await;
+        inner.manager.proxy = Some(proxy.clone());
+        fasync::Task::spawn(
+            self.clone().watch_for_peers(proxy.clone()).map(|f| f.unwrap_or_else(|_| {})),
+        )
+        .detach();
+    }
+
+    pub async fn register_manager(&self, proxy: HfpProxy) -> Result<(), Error> {
+        let (manager_proxy, server_end) = fidl::endpoints::create_proxy::<CallManagerMarker>()?;
+        proxy.register(server_end)?;
+        self.set_proxy(manager_proxy).await;
+        Ok(())
     }
 
     /// Return an HFP CallManagerProxy. If one does not exist, create it and store it in the Facade.
     async fn hfp_service_proxy(&self) -> Result<CallManagerProxy, Error> {
-        let tag = "HfpFacade::hfp_service_proxy";
         let mut inner = self.inner.lock().await;
         let needs_watcher = inner.manager.proxy.is_none();
         let proxy = match inner.manager.proxy.clone() {
             Some(proxy) => proxy,
             None => {
-                fx_log_info!(tag: &with_line!(tag), "Launching HFP and setting new service proxy");
-                let launcher = match client::launcher() {
-                    Ok(r) => r,
-                    Err(err) => fx_err_and_bail!(
-                        &with_line!(tag),
-                        format_err!("Failed to get launcher service: {}", err)
-                    ),
-                };
-                let bt_hfp = client::launch(
-                    &launcher,
-                    "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-default#meta/bt-hfp-audio-gateway.cmx"
-                        .to_string(),
-                    None,
-                )?;
+                fx_log_info!("Launching HFP and setting new service proxy");
+                let launcher = client::launcher()
+                    .map_err(|err| format_err!("Failed to get launcher service: {}", err))?;
+                let bt_hfp = client::launch(&launcher, HFP_AG_URL.to_string(), None)?;
 
-                let hfp_service_proxy = match bt_hfp.connect_to_service::<HfpMarker>() {
-                    Ok(hfp_svc) => hfp_svc,
-                    Err(err) => {
-                        fx_err_and_bail!(
-                            &with_line!(tag),
-                            format_err!("Failed to create HFP service proxy: {}", err)
-                        );
-                    }
-                };
+                let hfp_service_proxy = bt_hfp
+                    .connect_to_service::<HfpMarker>()
+                    .map_err(|err| format_err!("Failed to create HFP service proxy: {}", err))?;
                 inner.hfp_component = Some(bt_hfp);
                 let (proxy, server_end) = fidl::endpoints::create_proxy::<CallManagerMarker>()?;
                 hfp_service_proxy.register(server_end)?;
@@ -370,12 +370,9 @@ impl HfpFacade {
     /// Arguments:
     ///     `call_id`: The unique id of the call as assigned by the call manager.
     pub async fn set_call_active(&self, call_id: CallId) -> Result<(), Error> {
-        let tag = "HfpFacade::set_call_active";
         match self.update_call(call_id, FidlCallState::OngoingActive).await {
             Ok(()) => Ok(()),
-            Err(e) => {
-                fx_err_and_bail!(&with_line!(tag), format_err!("Failed to set call active: {}", e))
-            }
+            Err(e) => Err(format_err!("Failed to set call active: {}", e)),
         }
     }
 
@@ -384,12 +381,9 @@ impl HfpFacade {
     /// Arguments:
     ///     `call_id`: The unique id of the call as assigned by the call manager.
     pub async fn set_call_held(&self, call_id: CallId) -> Result<(), Error> {
-        let tag = "HfpFacade::set_call_held";
         match self.update_call(call_id, FidlCallState::OngoingHeld).await {
             Ok(()) => Ok(()),
-            Err(e) => {
-                fx_err_and_bail!(&with_line!(tag), format_err!("Failed to set call active: {}", e))
-            }
+            Err(e) => Err(format_err!("Failed to set call active: {}", e)),
         }
     }
 
@@ -398,12 +392,9 @@ impl HfpFacade {
     /// Arguments:
     ///     `call_id`: The unique id of the call as assigned by the call manager.
     pub async fn set_call_terminated(&self, call_id: CallId) -> Result<(), Error> {
-        let tag = "HfpFacade::set_call_terminated";
         match self.update_call(call_id, FidlCallState::Terminated).await {
             Ok(()) => Ok(()),
-            Err(e) => {
-                fx_err_and_bail!(&with_line!(tag), format_err!("Failed to terminate call: {}", e))
-            }
+            Err(e) => Err(format_err!("Failed to terminate call: {}", e)),
         }
     }
 
@@ -412,13 +403,9 @@ impl HfpFacade {
     /// Arguments:
     ///     `call_id`: The unique id of the call as assigned by the call manager.
     pub async fn set_call_transferred_to_ag(&self, call_id: CallId) -> Result<(), Error> {
-        let tag = "HfpFacade::set_call_transferred_to_ag";
         match self.update_call(call_id, FidlCallState::TransferredToAg).await {
             Ok(()) => Ok(()),
-            Err(e) => fx_err_and_bail!(
-                &with_line!(tag),
-                format_err!("Failed to transfer call to ag: {}", e)
-            ),
+            Err(e) => Err(format_err!("Failed to transfer call to ag: {}", e)),
         }
     }
 
@@ -439,15 +426,14 @@ impl HfpFacade {
     /// Arguments:
     ///     `id`: The unique id for the peer that initiated the request.
     pub async fn set_active_peer(&self, id: u64) -> Result<(), Error> {
-        let tag = "HfpFacade::set_active_peer";
         let id = PeerId { value: id };
         let mut inner = self.inner.lock().await;
         if inner.peers.contains_key(&id) {
             inner.active_peer = Some(id);
+            Ok(())
         } else {
-            fx_err_and_bail!(&with_line!(tag), format_err!("Peer {:?} not connected", id));
+            Err(format_err!("Peer {:?} not connected", id))
         }
-        Ok(())
     }
 
     /// Handle a peer `request`. Most requests are handled by immediately responding with the
@@ -480,7 +466,7 @@ impl HfpFacade {
                 } else {
                     let err = format_err!("double hanging get call on PeerHandler::WatchForCall");
                     fx_log_err!("{}", err);
-                    *inner = HfpFacadeInner::default();
+                    *inner = TestCallManagerInner::default();
                     return Err(err);
                 }
             }
@@ -782,6 +768,6 @@ impl HfpFacade {
 
     /// Cleanup any HFP related objects.
     pub async fn cleanup(&self) {
-        *self.inner.lock().await = HfpFacadeInner::default();
+        *self.inner.lock().await = TestCallManagerInner::default();
     }
 }

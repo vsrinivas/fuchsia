@@ -11,6 +11,7 @@ use fidl_fuchsia_bluetooth_le::ScanFilter;
 use fidl_fuchsia_bluetooth_sys::{LeSecurityMode, Settings};
 use parking_lot::RwLock;
 use serde_json::{from_value, to_value, Value};
+use test_call_manager::TestCallManager as HfpFacade;
 
 // Bluetooth-related functionality
 use crate::bluetooth::avdtp_facade::AvdtpFacade;
@@ -20,7 +21,6 @@ use crate::bluetooth::bt_sys_facade::BluetoothSysFacade;
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
-use crate::bluetooth::hfp_facade::HfpFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 use crate::bluetooth::types::{
     BleAdvertiseResponse, BleConnectPeripheralResponse,
