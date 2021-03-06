@@ -3,23 +3,44 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//src/sys/build/components.gni")
 
 fxfs_deps = [
+  "//src/lib/fuchsia-async",
+  "//src/lib/zircon/rust:fuchsia-zircon",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:async-trait",
+  "//third_party/rust_crates:rand",
   "//third_party/rust_crates:serde",
 ]
 
 fxfs_sources = [
   "src/lib.rs",
   "src/lsm_tree.rs",
+  "src/lsm_tree/skip_list_layer.rs",
   "src/lsm_tree/types.rs",
 ]
 
 rustc_library("lib") {
   edition = "2018"
+  with_unit_tests = true
   name = "fxfs"
 
   deps = fxfs_deps
   sources = fxfs_sources
+}
+
+fuchsia_component("fxfs-test") {
+  testonly = true
+  deps = [ ":lib_test" ]
+  manifest = "meta/fxfs_lib_test.cml"
+}
+
+fuchsia_test_package("fxfs-tests") {
+  test_components = [ ":fxfs-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fxfs-tests" ]
 }
