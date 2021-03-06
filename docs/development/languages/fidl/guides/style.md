@@ -224,7 +224,7 @@ For example, the `AudioCapturer` protocol has an event named
 #### Single method protocols
 
 The method of a single method protocol should be the verb phrase of the
-protocol's non phrase they are defined in, e.g. `Loader.Load`, `Getter.Get`,
+protocol's noun phrase they are defined in, e.g. `Loader.Load`, `Getter.Get`,
 `Uploader.Upload`. In the case of qualified nouns phrases such as `JobCreator`
 or `ProcessStopper`, the unqualified verb phrase should be used, i.e.
 `JobCreator.Create` or `ProcessStopper.Stop`.
