@@ -86,7 +86,7 @@ pub async fn example(
 
 And that's it.  The plugin should now be able to communicate with
 target device using native FIDL calls.  FFX plugins can accept any
-number of plugins as long as the same steps are followed and the
+number of proxies as long as the same steps are followed and the
 proxies are correctly mapped to component selectors.
 
 There are two exceptions to this rule.  FFX already knows how to
