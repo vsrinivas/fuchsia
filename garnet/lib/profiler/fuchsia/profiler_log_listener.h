@@ -29,16 +29,30 @@ class ProfilerLogListener : public fuchsia::logger::LogListenerSafe {
   std::string Log() { return log_buffer_.str(); }
 
  private:
-  enum log_entry_kind { RESET, MODULE, MMAP, DSO, SKIP, DONE, ERROR };
+  enum class LogEntryKind { Module, Mmap };
+  struct LogEntry {
+    LogEntryKind kind;
 
-  log_entry_kind parse_log_entry(const std::string& log_line);
+    uintptr_t module_id;
+    std::string module_name;
+    uintptr_t module_base_address;
+
+    uintptr_t mmap_address;
+    uintptr_t mmap_size;
+    uintptr_t mmap_module_id;
+    std::string mmap_access;
+    uintptr_t mmap_offset;
+  };
+
+  void ParseLogEntry(const std::string& log_line);
+  void FlushLogEntryQueue();
 
   fit::function<void()> all_done_;
   ::fidl::Binding<fuchsia::logger::LogListenerSafe> binding_;
   fuchsia::logger::LogListenerSafePtr log_listener_;
   std::stringbuf log_buffer_;
   std::ostream log_os_;
-  std::vector<std::vector<std::string>> mmap_entry_;
+  std::vector<LogEntry> log_entry_queue_;
 };
 
 std::string CollectProfilerLog();
