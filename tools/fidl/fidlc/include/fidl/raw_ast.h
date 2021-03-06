@@ -735,6 +735,16 @@ class UnionDeclaration final : public SourceElement {
   const types::Resourceness resourceness;
 };
 
+class Constraints final : public SourceElement {
+ public:
+  Constraints(SourceElement const& element, std::vector<std::unique_ptr<raw::Constant>> items)
+      : SourceElement(element), items(std::move(items)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::vector<std::unique_ptr<raw::Constant>> items;
+};
+
 class Layout;
 
 class LayoutMember final : public SourceElement {
@@ -764,17 +774,19 @@ class Layout final : public SourceElement {
          // TODO(fxbug.dev/65978): Support layout attributes.
          // TODO(fxbug.dev/65978): Support type decl modifiers (e.g. `flexible`).
          Kind kind, std::vector<std::unique_ptr<LayoutMember>> members,
-         std::unique_ptr<TypeConstructor> type_ctor, std::optional<types::Strictness> strictness,
-         types::Resourceness resourceness)
+         std::unique_ptr<Constraints> constraints, std::unique_ptr<TypeConstructor> type_ctor,
+         std::optional<types::Strictness> strictness, types::Resourceness resourceness)
       : SourceElement(element),
         kind(kind),
         members(std::move(members)),
+        constraints(std::move(constraints)),
         type_ctor(std::move(type_ctor)),
         strictness(strictness),
         resourceness(resourceness) {}
 
   Kind kind;
   std::vector<std::unique_ptr<raw::LayoutMember>> members;
+  std::unique_ptr<Constraints> constraints;
   std::unique_ptr<TypeConstructor> type_ctor;
   std::optional<types::Strictness> strictness;
   types::Resourceness resourceness;

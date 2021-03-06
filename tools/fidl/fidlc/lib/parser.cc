@@ -497,9 +497,13 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
 }
 
 std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructorOf(
-    ASTScope& scope, std::unique_ptr<raw::CompoundIdentifier> identifier) {
+    ASTScope& scope, std::unique_ptr<raw::CompoundIdentifier> identifier, bool new_syntax) {
   std::unique_ptr<raw::TypeConstructor> maybe_arg_type_ctor;
   std::unique_ptr<raw::Constant> handle_rights;
+  std::unique_ptr<raw::Constant> maybe_size;
+  std::unique_ptr<raw::Identifier> handle_subtype_identifier;
+  auto nullability = types::Nullability::kNonnullable;
+
   if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
     if (!Ok())
       return Fail();
@@ -519,8 +523,16 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructorOf(
     if (!Ok())
       return Fail();
   }
-  std::unique_ptr<raw::Constant> maybe_size;
-  std::unique_ptr<raw::Identifier> handle_subtype_identifier;
+
+  // The new syntax parses constraints as part of the "layout" AST node, not
+  // as part of the type constructor.
+  if (new_syntax) {
+    return std::make_unique<raw::TypeConstructor>(
+        scope.GetSourceElement(), std::move(identifier), std::move(maybe_arg_type_ctor),
+        std::move(handle_subtype_identifier), std::move(handle_rights), std::move(maybe_size),
+        nullability);
+  }
+
   if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
     if (!Ok())
       return Fail();
@@ -548,7 +560,6 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructorOf(
     if (!Ok())
       return Fail();
   }
-  auto nullability = types::Nullability::kNonnullable;
   if (MaybeConsumeToken(OfKind(Token::Kind::kQuestion))) {
     if (!Ok())
       return Fail();
@@ -566,7 +577,7 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
   auto identifier = ParseCompoundIdentifier();
   if (!Ok())
     return Fail();
-  return ParseTypeConstructorOf(scope, std::move(identifier));
+  return ParseTypeConstructorOf(scope, std::move(identifier), false);
 }
 
 std::unique_ptr<raw::BitsMember> Parser::ParseBitsMember() {
@@ -1656,6 +1667,112 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       std::move(comment_tokens_), fidl::utils::Syntax::kOld);
 }
 
+// A helper function to parse any comma separated list into a vector of some
+// type T. The items_seen reference tracks how many item parsings were
+// attempted. This information may be useful for callers that want to error in
+// certain cases, like empty lists or lists with greater than N members.  If
+// such a reference were not passed in, this error logic could only account for
+// successfully parsed list members, resulting in situations where lists with a
+// single malformed member are mistaken for empty lists, and so on.
+template <typename T, typename Fn, Token::Kind ClosingToken>
+std::vector<std::unique_ptr<T>> Parser::ParseCommaSeparatedList(int& items_seen, Fn fn) {
+  std::vector<std::unique_ptr<T>> items;
+
+  auto parse_item = [&]() {
+    switch (Peek().kind()) {
+      case Token::Kind::kComma: {
+        if (items_seen == 0) {
+          Fail(ErrLeadingComma);
+        }
+        ConsumeToken(OfKind(Token::Kind::kComma));
+
+        switch (Peek().kind()) {
+          case Token::Kind::kComma: {
+            Fail(ErrConsecutiveComma);
+            break;
+          }
+          case Token::Kind::kSemicolon:
+          case ClosingToken: {
+            Fail(ErrTrailingComma);
+            break;
+          }
+          default: {
+            add(&items, fn);
+            break;
+          }
+        }
+        return More;
+      }
+      case ClosingToken:
+      case Token::Kind::kSemicolon: {
+        return Done;
+      }
+      default:
+        if (items_seen == 0) {
+          add(&items, fn);
+        } else {
+          Fail(ErrMissingComma);
+        }
+        return More;
+    }
+  };
+
+  while (parse_item() == More) {
+    ++items_seen;
+    if (!Ok()) {
+      const auto result = RecoverToEndOfListItem<ClosingToken>();
+      if (result == RecoverResult::Failure) {
+        if (Peek().kind() == Token::Kind::kSemicolon) {
+          continue;
+        }
+        Fail();
+        return items;
+      } else if (result == RecoverResult::EndOfScope) {
+        continue;
+      }
+    }
+  }
+
+  return items;
+}
+
+std::unique_ptr<raw::Constraints> Parser::ParseConstraints() {
+  ASTScope scope(this);
+  bool bracketed = false;
+
+  if (Peek().kind() == Token::Kind::kLeftSquare) {
+    ConsumeToken(OfKind(Token::Kind::kLeftSquare));
+    bracketed = true;
+  }
+
+  int items_seen = 0;
+  auto parse_item = [&] { return ParseConstant(); };
+  // TODO(fxbug.dev/65978): figure out a solution that doesn't use decltype.
+  auto items =
+      ParseCommaSeparatedList<raw::Constant, decltype(parse_item), Token::Kind::kRightSquare>(
+          items_seen, parse_item);
+  if (!Ok())
+    return Fail();
+
+  if (items_seen == 0) {
+    Fail(ErrEmptyConstraints);
+  }
+  if (bracketed) {
+    ConsumeTokenOrRecover(OfKind(Token::Kind::kRightSquare));
+    if (items_seen == 1) {
+      Fail(ErrUnnecessaryConstraintBrackets);
+    }
+  } else if (items_seen > 1) {
+    Fail(ErrMissingConstraintBrackets);
+  }
+  RecoverAllErrors();
+
+  if (!Ok())
+    return Fail();
+
+  return std::make_unique<raw::Constraints>(scope.GetSourceElement(), std::move(items));
+}
+
 std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::Layout::Kind kind) {
   ASTScope scope(this);
 
@@ -1693,6 +1810,7 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(ASTScope& scope) {
   // allowed?.
 
   const auto modifiers = ParseModifiers();
+  std::unique_ptr<raw::Constraints> constraints = nullptr;
   auto identifier = ParseCompoundIdentifier();
   if (!Ok())
     return Fail();
@@ -1728,13 +1846,16 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(ASTScope& scope) {
     case Token::Kind::kColon:
     case Token::Kind::kSemicolon: {
       ValidateModifiers</* none */>(modifiers, identifier->start_);
-      auto type_ctor = ParseTypeConstructorOf(scope, std::move(identifier));
+      auto type_ctor = ParseTypeConstructorOf(scope, std::move(identifier), true);
+      if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
+        constraints = ParseConstraints();
+      }
       if (!Ok())
         return Fail();
-      return std::make_unique<raw::Layout>(scope.GetSourceElement(), raw::Layout::Kind::kTypeCtor,
-                                           std::vector<std::unique_ptr<raw::LayoutMember>>(),
-                                           std::move(type_ctor), /*strictness=*/std::nullopt,
-                                           types::Resourceness::kValue);
+      return std::make_unique<raw::Layout>(
+          scope.GetSourceElement(), raw::Layout::Kind::kTypeCtor,
+          std::vector<std::unique_ptr<raw::LayoutMember>>(), std::move(constraints),
+          std::move(type_ctor), /*strictness=*/std::nullopt, types::Resourceness::kValue);
     }
     default:
       // TODO(fxbug.dev/65978): Improve error messaging here, only struct,
@@ -1750,6 +1871,9 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(ASTScope& scope) {
   auto parse_member = [&]() {
     if (Peek().kind() == Token::Kind::kRightCurly) {
       ConsumeToken(OfKind(Token::Kind::kRightCurly));
+      if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
+        constraints = ParseConstraints();
+      }
       return Done;
     } else {
       add(&members, [&] { return ParseLayoutMember(kind); });
@@ -1772,7 +1896,7 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(ASTScope& scope) {
     return Fail();
 
   return std::make_unique<raw::Layout>(
-      scope.GetSourceElement(), kind, std::move(members),
+      scope.GetSourceElement(), kind, std::move(members), std::move(constraints),
       /*type_ctor=*/nullptr, modifiers.strictness,
       modifiers.resourceness.value_or(types::Resourceness::kValue));
 };
@@ -1973,7 +2097,8 @@ Parser::RecoverResult Parser::RecoverToEndOfMember() {
   }
 }
 
-Parser::RecoverResult Parser::RecoverToEndOfParam() {
+template <Token::Kind ClosingToken>
+Parser::RecoverResult Parser::RecoverToEndOfListItem() {
   if (ConsumedEOF()) {
     return RecoverResult::Failure;
   }
@@ -1981,8 +2106,11 @@ Parser::RecoverResult Parser::RecoverToEndOfParam() {
   RecoverAllErrors();
 
   static const auto exit_tokens = std::set<Token::Kind>{
-      Token::Kind::kComma,      Token::Kind::kRightParen, Token::Kind::kSemicolon,
-      Token::Kind::kRightCurly, Token::Kind::kEndOfFile,
+      Token::Kind::kComma,
+      Token::Kind::kSemicolon,
+      Token::Kind::kRightCurly,
+      Token::Kind::kEndOfFile,
+      ClosingToken,
   };
   if (!ConsumeTokensUntil(exit_tokens)) {
     return RecoverResult::Failure;
@@ -1991,11 +2119,15 @@ Parser::RecoverResult Parser::RecoverToEndOfParam() {
   switch (Peek().combined()) {
     case CASE_TOKEN(Token::Kind::kComma):
       return RecoverResult::Continue;
-    case CASE_TOKEN(Token::Kind::kRightParen):
+    case CASE_TOKEN(ClosingToken):
       return RecoverResult::EndOfScope;
     default:
       return RecoverResult::Failure;
   }
+}
+
+Parser::RecoverResult Parser::RecoverToEndOfParam() {
+  return RecoverToEndOfListItem<Token::Kind::kRightParen>();
 }
 
 }  // namespace fidl

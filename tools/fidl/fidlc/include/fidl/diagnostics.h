@@ -28,11 +28,21 @@ constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedId
 constexpr ErrorDef<std::string> ErrInvalidIdentifier("invalid identifier '{}'");
 constexpr ErrorDef<std::string> ErrInvalidLibraryNameComponent("Invalid library name component {}");
 constexpr ErrorDef<std::string> ErrDuplicateAttribute("duplicate attribute with name '{}'");
+constexpr ErrorDef ErrEmptyConstraints("no constraints specified");
+constexpr ErrorDef ErrLeadingComma("lists must not have leading commas");
+constexpr ErrorDef ErrTrailingComma("lists must not have trailing commas");
+constexpr ErrorDef ErrConsecutiveComma("lists entries must not be empty");
+constexpr ErrorDef ErrMissingComma("list entries must be separated using commas");
+constexpr ErrorDef ErrMissingConstraintBrackets(
+    "lists of constraints must be enclosed in brackets");
+constexpr ErrorDef ErrUnnecessaryConstraintBrackets(
+    "single constraints must not be enclosed in brackets");
 constexpr ErrorDef ErrMissingOrdinalBeforeType("missing ordinal before type");
 constexpr ErrorDef ErrOrdinalOutOfBound("ordinal out-of-bound");
 constexpr ErrorDef ErrOrdinalsMustStartAtOne("ordinals must start at 1");
 constexpr ErrorDef ErrCompoundAliasIdentifier("alias identifiers cannot contain '.'");
-constexpr ErrorDef ErrOldUsingSyntaxDeprecated("old `using Name = Type;` syntax is disallowed; use `alias Name = Type;` instead");
+constexpr ErrorDef ErrOldUsingSyntaxDeprecated(
+    "old `using Name = Type;` syntax is disallowed; use `alias Name = Type;` instead");
 constexpr ErrorDef ErrMustHaveOneMember("must have at least one member");
 constexpr ErrorDef ErrCannotAttachAttributesToCompose("Cannot attach attributes to compose stanza");
 constexpr ErrorDef ErrUnrecognizedProtocolMember("unrecognized protocol member");

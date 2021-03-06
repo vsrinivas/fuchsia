@@ -288,7 +288,7 @@ class Parser {
                                          const Modifiers&);
 
   std::unique_ptr<raw::TypeConstructor> ParseTypeConstructorOf(
-      ASTScope&, std::unique_ptr<raw::CompoundIdentifier>);
+      ASTScope&, std::unique_ptr<raw::CompoundIdentifier>, bool);
   std::unique_ptr<raw::TypeConstructor> ParseTypeConstructor();
 
   std::unique_ptr<raw::BitsMember> ParseBitsMember();
@@ -341,6 +341,9 @@ class Parser {
   // TODO(fxbug.dev/70247): Consolidate the ParseFoo methods.
   // --- new syntax ---
 
+  template <typename T, typename Fn, Token::Kind ClosingToken>
+  std::vector<std::unique_ptr<T>> ParseCommaSeparatedList(int& items_seen, Fn fn);
+  std::unique_ptr<raw::Constraints> ParseConstraints();
   std::unique_ptr<raw::LayoutMember> ParseLayoutMember(raw::Layout::Kind);
   std::unique_ptr<raw::Layout> ParseLayout(ASTScope&);
   std::unique_ptr<raw::TypeDecl> ParseTypeDecl(ASTScope&);
@@ -370,6 +373,8 @@ class Parser {
   //    A signal to `break` out of the current parsing loop.
   RecoverResult RecoverToEndOfDecl();
   RecoverResult RecoverToEndOfMember();
+  template <Token::Kind ClosingToken>
+  RecoverResult RecoverToEndOfListItem();
   RecoverResult RecoverToEndOfParam();
 
   // Utility function used by RecoverTo* methods
