@@ -18,10 +18,7 @@ use {
 
 use crate::{
     at::{AtAgMessage, AtHfMessage, Parser},
-    procedure::{
-        nrec::NrecProcedure, slc_initialization::SlcInitProcedure, Procedure, ProcedureMarker,
-        ProcedureRequest,
-    },
+    procedure::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest},
 };
 
 /// A connection between two peers that shares synchronized state and acts as the control plane for
@@ -33,6 +30,7 @@ pub struct ServiceLevelConnection {
     initialized: bool,
     /// An AT Command parser instance.
     parser: Parser,
+    /// The current active procedures serviced by this SLC.
     procedures: HashMap<ProcedureMarker, Box<dyn Procedure>>,
 }
 
@@ -52,23 +50,35 @@ impl ServiceLevelConnection {
         self.channel.as_ref().map(|ch| !ch.is_terminated()).unwrap_or(false)
     }
 
+    /// Returns `true` if the channel has been initialized - namely the SLCI procedure has
+    /// been completed for the connected channel.
+    #[cfg(test)]
+    fn initialized(&self) -> bool {
+        self.connected() && self.initialized
+    }
+
+    /// Returns `true` if the provided `procedure` is currently active.
+    #[cfg(test)]
+    fn is_active(&self, procedure: &ProcedureMarker) -> bool {
+        self.procedures.contains_key(procedure)
+    }
+
     /// Connect using the provided `channel`.
     pub fn connect(&mut self, channel: Channel) {
         self.channel = Some(channel);
     }
 
+    /// Sets the channel status to initialized.
+    /// Note: This should only be called when the SLCI Procedure has successfully finished
+    /// or in testing scenarios.
+    fn set_initialized(&mut self) {
+        // TODO(fxbug.dev/71643): Save the results of the SLCI procedure here.
+        self.initialized = true;
+    }
+
     /// Close the service level connection and reset the state.
     fn reset(&mut self) {
         *self = Self::new();
-    }
-
-    /// Checks if the channel has been initialized, namely the SLCI Procedure is complete.
-    fn check_initialized(&mut self) {
-        if let Some(is_terminated) =
-            self.procedures.get(&ProcedureMarker::SlcInitialization).map(|p| p.is_terminated())
-        {
-            self.initialized = is_terminated;
-        }
     }
 
     pub async fn send_message_to_peer(&mut self, message: AtAgMessage) {
@@ -79,26 +89,49 @@ impl ServiceLevelConnection {
         }
     }
 
+    /// Garbage collects the provided `procedure` and returns true if it has terminated.
+    fn check_and_cleanup_procedure(&mut self, procedure: &ProcedureMarker) -> bool {
+        let is_terminated = self.procedures.get(procedure).map_or(false, |p| p.is_terminated());
+        if is_terminated {
+            self.procedures.remove(procedure);
+
+            // Special case of the SLCI Procedure - once this is complete, the channel is
+            // considered initialized.
+            if *procedure == ProcedureMarker::SlcInitialization {
+                self.set_initialized();
+            }
+        }
+        is_terminated
+    }
+
     /// Consume bytes from the peer, producing a parsed AtHfMessage from the bytes and
     /// handling it.
-    pub fn receive_data(&mut self, bytes: Vec<u8>) -> (ProcedureMarker, ProcedureRequest) {
+    pub fn receive_data(
+        &mut self,
+        bytes: Vec<u8>,
+    ) -> Result<(ProcedureMarker, ProcedureRequest), ProcedureError> {
         // Parse the byte buffer into a HF message.
         let command = self.parser.parse(&bytes);
-        log::info!("Received {:?}", command);
+        log::info!("Received {:?} from peer", command);
 
         // Attempt to match the received message to a procedure.
-        let procedure_id = self.match_command_to_procedure(&command);
+        let procedure_id = self.match_command_to_procedure(&command)?;
         // Progress the procedure with the message.
         let request = self.hf_message(procedure_id, command);
+        // Potentially clean up the procedure if this was the last stage. Procedures that
+        // have been cleaned up cannot require additional responses, as this would violate
+        // the `Procedure::is_terminated()` guarantee.
+        if self.check_and_cleanup_procedure(&procedure_id) && request.requires_response() {
+            return Err(ProcedureError::UnexpectedRequest);
+        }
 
-        // There is special consideration for the SLC Initialization procedure.
-        //   - Other procedures can only be started after this procedure has finished. Therefore,
-        //     we check procedure termination before continuing.
+        // There is special consideration for the SLC Initialization procedure:
         //   - Errors in this procedure are considered fatal. If we encounter an error in this
         //     procedure, we close the underlying RFCOMM channel and let the peer (HF) retry.
+        // TODO(fxbug.dev/70591): We should determine the appropriate response to errors in other
+        // procedures. It may make sense to shut down the entire SLC for all errors because the
+        // service level connection is considered synchronized with the remote peer.
         if procedure_id == ProcedureMarker::SlcInitialization {
-            // Check if it is finished.
-            self.check_initialized();
             // Errors in this procedure are considered fatal.
             if request.is_err() {
                 log::warn!("Error in the SLC Initialization procedure. Closing channel");
@@ -106,69 +139,60 @@ impl ServiceLevelConnection {
             }
         }
 
-        (procedure_id, request)
+        Ok((procedure_id, request))
     }
 
     /// Matches the incoming HF message to a procedure. Returns the procedure identifier
-    /// for the given `command`.
-    // TODO(fxbug.dev/70591): This should be more sophisticated. For now since we only support the
-    // SLC Init procedure, we match to that every time.
-    pub fn match_command_to_procedure(&mut self, _command: &AtHfMessage) -> ProcedureMarker {
+    /// for the given `command` or an error if the command couldn't be matched.
+    pub fn match_command_to_procedure(
+        &self,
+        command: &AtHfMessage,
+    ) -> Result<ProcedureMarker, ProcedureError> {
         // If we haven't initialized the SLC yet, the only valid procedure to match is
-        // the SlcInitProcedure.
+        // the SLCI Procedure.
         if !self.initialized {
-            // Potentially create a new SLCI.
-            self.procedures
-                .entry(ProcedureMarker::SlcInitialization)
-                .or_insert(Box::new(SlcInitProcedure::new()));
-            return ProcedureMarker::SlcInitialization;
-        } else {
-            if let AtHfMessage::Nrec(_) = _command {
-                self.procedures
-                    .entry(ProcedureMarker::Nrec)
-                    .or_insert(Box::new(NrecProcedure::new()));
-                return ProcedureMarker::Nrec;
-            }
+            return Ok(ProcedureMarker::SlcInitialization);
         }
-        // TODO(fxbug.dev/70591): Try to match it to a different procedure.
-        ProcedureMarker::Unknown
+
+        // Otherwise, try to match it to a procedure - it must be a non SLCI command since
+        // the channel has already been initialized.
+        match ProcedureMarker::match_command(command) {
+            Ok(ProcedureMarker::SlcInitialization) => {
+                log::warn!(
+                    "Received unexpected SLCI command after SLC initialization: {:?}",
+                    command
+                );
+                Err(ProcedureError::UnexpectedHf(command.clone()))
+            }
+            res => res,
+        }
     }
 
     /// Updates the the procedure specified by the `marker` with the received AG `message`.
+    /// Initializes the procedure if it is not already in progress.
     /// Returns the request associated with the `message`.
     pub fn ag_message(
         &mut self,
         marker: ProcedureMarker,
         message: AtAgMessage,
     ) -> ProcedureRequest {
-        match self.procedures.get_mut(&marker) {
-            Some(p) => p.ag_update(message),
-            None => {
-                log::warn!("Procedure: {:?} doesn't exist", marker);
-                ProcedureRequest::None
-            }
-        }
+        self.procedures.entry(marker).or_insert(marker.initialize()).ag_update(message)
     }
 
     /// Updates the the procedure specified by the `marker` with the received HF `message`.
+    /// Initializes the procedure if it is not already in progress.
     /// Returns the request associated with the `message`.
     pub fn hf_message(
         &mut self,
         marker: ProcedureMarker,
         message: AtHfMessage,
     ) -> ProcedureRequest {
-        match self.procedures.get_mut(&marker) {
-            Some(p) => p.hf_update(message),
-            None => {
-                log::warn!("Procedure: {:?} doesn't exist", marker);
-                ProcedureRequest::None
-            }
-        }
+        self.procedures.entry(marker).or_insert(marker.initialize()).hf_update(message)
     }
 }
 
 impl Stream for ServiceLevelConnection {
-    type Item = Result<(ProcedureMarker, ProcedureRequest), fuchsia_zircon::Status>;
+    type Item = Result<(ProcedureMarker, ProcedureRequest), ProcedureError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.is_terminated() {
@@ -176,8 +200,9 @@ impl Stream for ServiceLevelConnection {
         }
         if let Some(channel) = &mut self.channel {
             Poll::Ready(
-                ready!(channel.poll_next_unpin(cx))
-                    .map(|item| item.map(|data| self.receive_data(data))),
+                ready!(channel.poll_next_unpin(cx)).map(|item| {
+                    item.map_or_else(|e| Err(e.into()), |data| self.receive_data(data))
+                }),
             )
         } else {
             Poll::Pending
@@ -195,7 +220,10 @@ impl FusedStream for ServiceLevelConnection {
 mod tests {
     use {
         super::*,
-        crate::protocol::features::{AgFeatures, HfFeatures},
+        crate::{
+            at::IndicatorStatus,
+            protocol::features::{AgFeatures, HfFeatures},
+        },
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::Channel,
         futures::io::AsyncWriteExt,
@@ -220,7 +248,7 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn scl_stream_produces_items() {
+    async fn slc_stream_produces_items() {
         let (mut slc, mut remote) = create_and_connect_slc();
 
         remote.write_all(b"AT+BRSF=0\r").await.unwrap();
@@ -237,7 +265,7 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn scl_stream_terminated() {
+    async fn slc_stream_terminated() {
         let (mut slc, remote) = create_and_connect_slc();
 
         drop(remote);
@@ -266,26 +294,89 @@ mod tests {
         assert!(!slc.connected());
     }
 
+    async fn expect_outgoing_message_to_peer(slc: &mut ServiceLevelConnection) {
+        match slc.next().await {
+            Some(Ok((_, ProcedureRequest::SendMessage(_)))) => {}
+            x => panic!("Expected SendMessage but got: {:?}", x),
+        }
+    }
+
+    // TODO(fxbug.dev/71412): Migrate regex-based AT to library definitions.
     #[fasync::run_until_stalled(test)]
-    async fn start_slc_init_procedure() {
+    async fn completing_slc_init_procedure_initializes_channel() {
         let (mut slc, remote) = create_and_connect_slc();
+        let slci_marker = ProcedureMarker::SlcInitialization;
+        assert!(!slc.initialized());
+        assert!(!slc.is_active(&slci_marker));
 
         // Peer sends us HF features.
-        let features = HfFeatures::empty();
-        let command = format!("AT+BRSF={}\r", features.bits()).into_bytes();
-        let _ = remote.as_ref().write(&command);
-
-        let response_fn = {
+        let features = HfFeatures::THREE_WAY_CALLING;
+        let command1 = format!("AT+BRSF={}\r", features.bits()).into_bytes();
+        let _ = remote.as_ref().write(&command1);
+        let response_fn1 = {
             match slc.next().await {
                 Some(Ok((_, ProcedureRequest::GetAgFeatures { response }))) => response,
-                x => panic!("Expected Request but got: {:?}", x),
+                x => panic!("Expected GetAgFeatures but got: {:?}", x),
             }
         };
-
-        // Simulate local response with AG Features.
+        // At this point, the SLC Initialization procedure should be in progress.
+        assert!(slc.is_active(&slci_marker));
+        // Simulate local response with AG Features - expect these to be sent to the peer.
         let features = AgFeatures::empty();
-        let next_request =
-            slc.ag_message(ProcedureMarker::SlcInitialization, response_fn(features));
+        let next_request = slc.ag_message(slci_marker, response_fn1(features));
         assert_matches!(next_request, ProcedureRequest::SendMessage(_));
+
+        // Peer sends us an HF supported indicators request - expect an outgoing message
+        // to the peer.
+        let command2 = format!("AT+CIND=?\r").into_bytes();
+        let _ = remote.as_ref().write(&command2);
+        expect_outgoing_message_to_peer(&mut slc).await;
+
+        // We then expect the HF to request the indicator status which will result
+        // in the procedure asking the AG for the status.
+        let command3 = format!("AT+CIND?\r").into_bytes();
+        let _ = remote.as_ref().write(&command3);
+        let response_fn2 = {
+            match slc.next().await {
+                Some(Ok((_, ProcedureRequest::GetAgIndicatorStatus { response }))) => response,
+                x => panic!("Expected GetAgFeatures but got: {:?}", x),
+            }
+        };
+        // Simulate local response with AG status - expect this to go to the peer.
+        let status = IndicatorStatus::default();
+        let next_request = slc.ag_message(slci_marker, response_fn2(status));
+        assert_matches!(next_request, ProcedureRequest::SendMessage(_));
+
+        // We then expect HF to request enabling Ind Status update in the AG - expect an outgoing
+        // message to the peer.
+        let command4 = format!("AT+CMER\r").into_bytes();
+        let _ = remote.as_ref().write(&command4);
+        expect_outgoing_message_to_peer(&mut slc).await;
+
+        // The SLC should be considered initialized and the SLCI Procedure garbage collected.
+        assert!(slc.initialized());
+        assert!(!slc.is_active(&slci_marker));
+    }
+
+    // TODO(fxbug.dev/71412): Migrate regex-based AT to library definitions.
+    #[test]
+    fn slci_command_after_initialization_returns_error() {
+        let _exec = fasync::Executor::new().unwrap();
+        let (mut slc, _remote) = create_and_connect_slc();
+        // Bypass the SLCI procedure by setting the channel to initialized.
+        slc.set_initialized();
+
+        // Receiving an AT command associated with the SLCI procedure thereafter should
+        // be an error.
+        let cmd1 = AtHfMessage::HfFeatures(HfFeatures::empty());
+        assert_matches!(
+            slc.match_command_to_procedure(&cmd1),
+            Err(ProcedureError::UnexpectedHf(_))
+        );
+        let cmd2 = AtHfMessage::AgIndStat;
+        assert_matches!(
+            slc.match_command_to_procedure(&cmd2),
+            Err(ProcedureError::UnexpectedHf(_))
+        );
     }
 }
