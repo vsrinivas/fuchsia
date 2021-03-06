@@ -23,6 +23,7 @@ use {
     },
     log::{debug, error, info, warn},
     net_declare::fidl_ip_v6,
+    net_types::ip::IpAddress,
     parking_lot::RwLock,
     std::collections::VecDeque,
     std::convert::TryFrom,
@@ -664,7 +665,7 @@ impl DasCmpInfo {
                     true,
                     dst_addr.scope() == src_addr.scope(),
                     dst_label == src_label,
-                    dst_addr.common_prefix_length(&src_addr),
+                    dst_addr.common_prefix_len(&src_addr),
                 )
             }
             None => (false, false, false, 0),

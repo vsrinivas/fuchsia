@@ -800,6 +800,7 @@ mod tests {
         }
     }
 
+    #[derive(Copy, Clone, Eq, PartialEq)]
     enum AddressScope {
         LinkLocal,
         Global,

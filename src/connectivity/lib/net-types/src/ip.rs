@@ -48,6 +48,7 @@
 // TODO(joshlf): Add RFC references for various standards such as the global
 // broadcast address or the Class E subnet.
 
+use core::cmp::{Ord, Ordering, PartialOrd};
 use core::convert::TryFrom;
 use core::fmt::{self, Debug, Display, Formatter};
 use core::hash::Hash;
@@ -530,6 +531,9 @@ pub trait IpAddress:
         Self::Version::LOOPBACK_SUBNET.contains(self)
     }
 
+    /// Calculates the common prefix length between this address and `other`.
+    fn common_prefix_len(&self, other: &Self) -> u8;
+
     /// Is this a unicast address contained in the given subnet?
     ///
     /// `is_unicast_in_subnet` returns `true` if a given subnet contains this
@@ -908,14 +912,14 @@ impl Scope for Ipv6Scope {
     }
 }
 
-impl core::cmp::PartialOrd for Ipv6Scope {
-    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+impl PartialOrd for Ipv6Scope {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl core::cmp::Ord for Ipv6Scope {
-    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+impl Ord for Ipv6Scope {
+    fn cmp(&self, other: &Self) -> Ordering {
         // RFC 4291, section 2.7 defines these scope IDs.
         //  0   Reserved
         //  1   Interface-Local scope
@@ -930,7 +934,9 @@ impl core::cmp::Ord for Ipv6Scope {
         //  E   Global scope
         //  F   Reserved
         let scope_id = |scope: &Ipv6Scope| match scope {
-            Ipv6Scope::Reserved(Ipv6ReservedScope::Scope0) => 0x00,
+            // Force type inference to use u8 rather than usize (which is the
+            // default).
+            Ipv6Scope::Reserved(Ipv6ReservedScope::Scope0) => 0x00u8,
             Ipv6Scope::InterfaceLocal => 0x01,
             Ipv6Scope::LinkLocal => 0x02,
             Ipv6Scope::Reserved(Ipv6ReservedScope::Scope3) => 0x03,
@@ -1133,13 +1139,6 @@ impl Ipv4Addr {
         Ipv4::CLASS_E_SUBNET.contains(&self)
     }
 
-    /// Calculates the common prefix length between this address and `other`.
-    pub fn common_prefix_length(&self, other: &Ipv4Addr) -> u8 {
-        let Ipv4Addr(me) = self;
-        let Ipv4Addr(other) = other;
-        common_prefix_len(me.iter().copied().zip(other.iter().copied()))
-    }
-
     /// Converts the address to an IPv4-compatible IPv6 address according to
     /// [RFC 4291 Section 2.5.5.1].
     ///
@@ -1222,6 +1221,13 @@ impl IpAddress for Ipv4Addr {
     #[inline]
     fn into_ip_addr(self) -> IpAddr {
         IpAddr::V4(self)
+    }
+
+    #[inline]
+    fn common_prefix_len(&self, other: &Ipv4Addr) -> u8 {
+        let Ipv4Addr(me) = self;
+        let Ipv4Addr(other) = other;
+        common_prefix_len(me.iter().copied().zip(other.iter().copied()))
     }
 
     #[inline]
@@ -1353,13 +1359,6 @@ impl Ipv6Addr {
         self.is_unicast_in_subnet(&Ipv6::LINK_LOCAL_UNICAST_SUBNET)
     }
 
-    /// Calculates the common prefix length between this address and `other`.
-    pub fn common_prefix_length(&self, other: &Ipv6Addr) -> u8 {
-        let Ipv6Addr(me) = self;
-        let Ipv6Addr(other) = other;
-        common_prefix_len(me.iter().copied().zip(other.iter().copied()))
-    }
-
     /// Tries to extract the IPv4 address from an IPv4-compatible IPv6 address.
     ///
     /// IPv4-compatible IPv6 addresses were defined to assist in the IPv6
@@ -1458,6 +1457,13 @@ impl IpAddress for Ipv6Addr {
     #[inline]
     fn into_ip_addr(self) -> IpAddr {
         IpAddr::V6(self)
+    }
+
+    #[inline]
+    fn common_prefix_len(&self, other: &Ipv6Addr) -> u8 {
+        let Ipv6Addr(me) = self;
+        let Ipv6Addr(other) = other;
+        common_prefix_len(me.iter().copied().zip(other.iter().copied()))
     }
 
     #[inline]
@@ -2651,7 +2657,7 @@ mod tests {
         let ip3 = Ipv6Addr::new([0xFF, 0xFF, 0x80, 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
         let ip4 = Ipv6Addr::new([0xFF, 0xFF, 0xC0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
         let compare_with_ip1 = |target, expect| {
-            assert_eq!(ip1.common_prefix_length(&target), expect, "{} <=> {}", ip1, target);
+            assert_eq!(ip1.common_prefix_len(&target), expect, "{} <=> {}", ip1, target);
         };
         let () = compare_with_ip1(ip1, 128);
         let () = compare_with_ip1(ip2, 0);
@@ -2666,7 +2672,7 @@ mod tests {
         let ip3 = Ipv4Addr::new([0xFF, 0xFF, 0x80, 0xFF]);
         let ip4 = Ipv4Addr::new([0xFF, 0xFF, 0xC0, 0x20]);
         let compare_with_ip1 = |target, expect| {
-            assert_eq!(ip1.common_prefix_length(&target), expect, "{} <=> {}", ip1, target);
+            assert_eq!(ip1.common_prefix_len(&target), expect, "{} <=> {}", ip1, target);
         };
         let () = compare_with_ip1(ip1, 32);
         let () = compare_with_ip1(ip2, 0);
