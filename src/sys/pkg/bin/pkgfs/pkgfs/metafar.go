@@ -8,6 +8,7 @@ package pkgfs
 
 import (
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -22,16 +23,27 @@ import (
 	zxio "syscall/zx/io"
 )
 
-func newMetaFar(blob string, fs *Filesystem) *metaFar {
-	return &metaFar{
+func newMetaFar(blob string, fs *Filesystem) (*metaFar, error) {
+	mf := &metaFar{
 		blob: blob,
 		fs:   fs,
 	}
+	fr, err := mf.open()
+	if err != nil {
+		return nil, err
+	}
+
+	contents := fr.List()
+	fr.Close()
+
+	mf.contents = contents
+	return mf, nil
 }
 
-// metaFar is a shared reference to an open meta.far or one or more of it's contents.
+// metaFar is a shared reference to a meta.far or one or more of it's contents.
 type metaFar struct {
-	blob string
+	blob     string
+	contents []string
 
 	fs *Filesystem
 }
@@ -49,13 +61,8 @@ func (mf *metaFar) open() (*far.Reader, error) {
 	return fr, err
 }
 
-func (mf *metaFar) list() ([]string, error) {
-	fr, err := mf.open()
-	if err != nil {
-		return nil, err
-	}
-	defer fr.Close()
-	return fr.List(), nil
+func (mf *metaFar) list() []string {
+	return mf.contents
 }
 
 // metaFile is the package dir "meta" opened as a file, which on read returns
@@ -69,10 +76,10 @@ type metaFile struct {
 	flags fs.OpenFlags
 }
 
-func newMetaFile(blob string, fs *Filesystem, flags fs.OpenFlags) *metaFile {
+func newMetaFile(mf *metaFar, flags fs.OpenFlags) *metaFile {
 	return &metaFile{
-		unsupportedFile("package/meta:" + blob),
-		newMetaFar(blob, fs),
+		unsupportedFile("package/meta:" + mf.blob),
+		mf,
 		0,
 		flags,
 	}
@@ -113,18 +120,18 @@ type metaFarDir struct {
 	path string
 }
 
-func newMetaFarDir(blob string, fs *Filesystem) *metaFarDir {
+func newMetaFarDir(mf *metaFar) *metaFarDir {
 	return &metaFarDir{
-		unsupportedDirectory("package/meta:" + blob),
-		newMetaFar(blob, fs),
+		unsupportedDirectory("package/meta:" + mf.blob),
+		mf,
 		"meta",
 	}
 }
 
-func newMetaFarDirAt(blob string, fs *Filesystem, path string) *metaFarDir {
-	mf := newMetaFarDir(blob, fs)
-	mf.path = path
-	return mf
+func newMetaFarDirAt(mf *metaFar, path string) *metaFarDir {
+	mfd := newMetaFarDir(mf)
+	mfd.path = path
+	return mfd
 }
 
 func (d *metaFarDir) Close() error {
@@ -148,7 +155,7 @@ func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 
 	if name == "" {
 		if flags.File() || (!flags.Directory() && !flags.Path()) {
-			return newMetaFile(d.blob, d.fs, flags), nil, nil, nil
+			return newMetaFile(d.metaFar, flags), nil, nil, nil
 		}
 		return nil, d, nil, nil
 	}
@@ -157,22 +164,17 @@ func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 		return nil, nil, nil, fs.ErrNotSupported
 	}
 
-	contents, err := d.metaFar.list()
-	if err != nil {
-		return nil, nil, nil, err
-	}
+	contents := d.metaFar.list()
 
-	for _, lname := range contents {
-		if name == lname {
-			mff, err := newMetaFarFile(d.blob, d.fs, name, flags)
-			return mff, nil, nil, err
-		}
+	if n := sort.SearchStrings(contents, name); n != len(contents) && contents[n] == name {
+		mff, err := newMetaFarFile(d.metaFar, name, flags)
+		return mff, nil, nil, err
 	}
 
 	dname := name + "/"
 	for _, lname := range contents {
 		if strings.HasPrefix(lname, dname) {
-			return nil, newMetaFarDirAt(d.blob, d.fs, name), nil, nil
+			return nil, newMetaFarDirAt(d.metaFar, name), nil, nil
 		}
 	}
 
@@ -180,10 +182,7 @@ func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 }
 
 func (d *metaFarDir) Read() ([]fs.Dirent, error) {
-	contents, err := d.metaFar.list()
-	if err != nil {
-		return nil, goErrToFSErr(err)
-	}
+	contents := d.metaFar.list()
 
 	// TODO(raggi): improve efficiency
 	dirs := map[string]struct{}{}
@@ -212,10 +211,7 @@ func (d *metaFarDir) Read() ([]fs.Dirent, error) {
 
 func (d *metaFarDir) Stat() (int64, time.Time, time.Time, error) {
 	// TODO(raggi): forward stat values from the index
-	contents, err := d.metaFar.list()
-	if err != nil {
-		return 0, time.Time{}, time.Time{}, goErrToFSErr(err)
-	}
+	contents := d.metaFar.list()
 	return int64(len(contents)), d.fs.mountTime, d.fs.mountTime, nil
 }
 
@@ -242,8 +238,7 @@ type metaFarFile struct {
 	backingBlobVMO *zx.VMO
 }
 
-func newMetaFarFile(blob string, fs *Filesystem, path string, flags fs.OpenFlags) (*metaFarFile, error) {
-	mf := newMetaFar(blob, fs)
+func newMetaFarFile(mf *metaFar, path string, flags fs.OpenFlags) (*metaFarFile, error) {
 	fr, err := mf.open()
 	if err != nil {
 		return nil, goErrToFSErr(err)
@@ -255,7 +250,7 @@ func newMetaFarFile(blob string, fs *Filesystem, path string, flags fs.OpenFlags
 	}
 
 	return &metaFarFile{
-		unsupportedFile("package/meta:" + blob + "/" + path),
+		unsupportedFile("package/meta:" + mf.blob + "/" + path),
 		mf,
 		fr,
 		er,

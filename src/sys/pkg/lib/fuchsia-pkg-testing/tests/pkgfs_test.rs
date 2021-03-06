@@ -1562,3 +1562,280 @@ async fn test_pkgfs_node_set_flags() {
     // which means pkgfs hasn't crashed.
     assert!(fs::read_to_string("/pkg/meta").expect("read to string").len() > 0);
 }
+
+// Test that pkgfs correctly handles interleaved opens and closes on the same file in the meta
+// virtual directory
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_multiple_opens_on_meta_file() {
+    let package = PackageBuilder::new("example")
+        .add_resource_at("meta/a", "Hello world!\n".as_bytes())
+        .add_resource_at("meta/b", "These are some bytes\n".as_bytes())
+        .add_resource_at("some/path", "An actual file\n".as_bytes())
+        .build()
+        .await
+        .expect("build package");
+
+    let system_image_package = SystemImageBuilder::new().static_packages(&[&package]).build().await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+
+    let d = pkgfs.root_dir_proxy().expect("getting pkgfs root dir");
+    let meta_directory = io_util::directory::open_directory(
+        &d,
+        &format!("versions/{}/meta/", package.meta_far_merkle_root()),
+        io_util::OPEN_RIGHT_READABLE,
+    )
+    .await
+    .expect("open meta dir");
+
+    // We should be able to open a file twice, close one version, then read from the second.
+    let file_a = io_util::directory::open_file(&meta_directory, "a", io_util::OPEN_RIGHT_READABLE)
+        .await
+        .unwrap();
+    let file_a_2 =
+        io_util::directory::open_file(&meta_directory, "a", io_util::OPEN_RIGHT_READABLE)
+            .await
+            .unwrap();
+
+    file_a.close().await.unwrap();
+    let (status, buffer) = file_a_2
+        .get_buffer(fidl_fuchsia_io::VMO_FLAG_READ | fidl_fuchsia_io::VMO_FLAG_PRIVATE)
+        .await
+        .unwrap();
+    Status::ok(status).unwrap();
+    let buffer = buffer.unwrap();
+    assert_ne!(buffer.size, 0);
+    file_a_2.close().await.unwrap();
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
+
+// Test that pkgfs correctly handles closing a parent directory when a child file is open
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_opening_file_within_directory_and_closing_directory() {
+    let package = PackageBuilder::new("example")
+        .add_resource_at("meta/subdir/a", "Hello world!\n".as_bytes())
+        .add_resource_at("meta/subdir/b", "These are some bytes\n".as_bytes())
+        .build()
+        .await
+        .expect("build package");
+
+    let system_image_package = SystemImageBuilder::new().static_packages(&[&package]).build().await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+
+    let d = pkgfs.root_dir_proxy().expect("getting pkgfs root dir");
+    let meta_directory = io_util::directory::open_directory(
+        &d,
+        &format!("versions/{}/meta/", package.meta_far_merkle_root()),
+        io_util::OPEN_RIGHT_READABLE,
+    )
+    .await
+    .expect("open meta dir");
+
+    // We should be able to open subdir in a meta directory, open a file within it,
+    // close the directory, and still read from the file.
+    let subdir =
+        io_util::directory::open_directory(&meta_directory, "subdir", io_util::OPEN_RIGHT_READABLE)
+            .await
+            .unwrap();
+    let file_a =
+        io_util::directory::open_file(&subdir, "a", io_util::OPEN_RIGHT_READABLE).await.unwrap();
+    subdir.close().await.unwrap();
+    let a_contents = io_util::file::read_to_string(&file_a).await.unwrap();
+    assert_eq!(a_contents, "Hello world!\n");
+    file_a.close().await.unwrap();
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_walking_the_pkg_dir() {
+    let paths = [
+        "meta/a",
+        "meta/b",
+        "meta/c/d/e/f/g",
+        "meta/c/d/e/f/h",
+        "meta/c/i",
+        "meta/c/j",
+        "a",
+        "b/d/e/f/g",
+        "b/d/e/f/h",
+        "c/i",
+        "c/j",
+    ];
+
+    let mut package = PackageBuilder::new("example");
+
+    for path in &paths {
+        package = package.add_resource_at(path, path.as_bytes());
+    }
+
+    let package = package.build().await.expect("build package");
+
+    let system_image_package = SystemImageBuilder::new().static_packages(&[&package]).build().await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+
+    let pkgfs_dir = pkgfs.root_dir_proxy().expect("getting pkgfs root dir");
+
+    // Make sure we can access the files directly through the root.
+    {
+        let pkg_directory = io_util::directory::open_directory(
+            &pkgfs_dir,
+            &format!("versions/{}", package.meta_far_merkle_root()),
+            io_util::OPEN_RIGHT_READABLE,
+        )
+        .await
+        .expect("open meta dir");
+
+        for path in &paths {
+            let file = io_util::directory::open_file(&pkg_directory, path, io_util::OPEN_RIGHT_READABLE)
+                .await
+                .unwrap();
+
+            let body = io_util::file::read_to_string(&file).await.unwrap();
+            assert_eq!(path, &body);
+        }
+    }
+
+    // Next, walk through the directories to get to the files.
+    for path in &paths {
+        let mut d = io_util::directory::open_directory(
+            &pkgfs_dir,
+            &format!("versions/{}", package.meta_far_merkle_root()),
+            io_util::OPEN_RIGHT_READABLE,
+        )
+        .await
+        .expect("open meta dir");
+
+        let mut entries = path.split('/');
+        let mut entry = entries.next().unwrap();
+
+        while let Some(child) = entries.next() {
+            d = io_util::directory::open_directory(
+                &d,
+                entry,
+                io_util::OPEN_RIGHT_READABLE,
+            ).await.unwrap();
+
+            entry = child;
+        }
+
+        let file = io_util::directory::open_file(&d, entry, io_util::OPEN_RIGHT_READABLE).await.unwrap();
+        let body = io_util::file::read_to_string(&file).await.unwrap();
+        assert_eq!(path, &body);
+    }
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_interacting_with_broken_pkg_dir_does_not_break_pkgfs() {
+    let expected_contents = "Hello world!\n";
+
+    let package_to_corrupt = PackageBuilder::new("example0")
+        .add_resource_at("meta/a", expected_contents.as_bytes())
+        .build()
+        .await
+        .expect("build package");
+
+    let package_still_good = PackageBuilder::new("example1")
+        .add_resource_at("meta/b", expected_contents.as_bytes())
+        .build()
+        .await
+        .expect("build package");
+
+    let system_image_package = SystemImageBuilder::new()
+        .static_packages(&[&package_to_corrupt, &package_still_good])
+        .build()
+        .await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    let blobfs_proxy = blobfs.root_dir_proxy().unwrap();
+
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    package_to_corrupt.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    package_still_good.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+
+    let pkgfs_dir = pkgfs.root_dir_proxy().expect("getting pkgfs root dir");
+
+    // Open a pkg dir
+    let pkg_dir = io_util::directory::open_directory(
+        &pkgfs_dir,
+        &format!("versions/{}", package_to_corrupt.meta_far_merkle_root()),
+        io_util::OPEN_RIGHT_READABLE,
+    )
+    .await
+    .expect("open meta dir");
+
+    // Delete the meta.far blob of the open pkg dir
+    Status::ok(
+        blobfs_proxy
+            .unlink(&package_to_corrupt.meta_far_merkle_root().to_string())
+            .await
+            .expect("unlink fidl"),
+    )
+    .expect("unlink status");
+
+    // Opening the meta/ directory should fail
+    assert_matches!(
+        io_util::directory::open_directory(
+            &pkg_dir,
+            "meta",
+            io_util::OPEN_RIGHT_READABLE
+        ).await,
+        Err(io_util::node::OpenError::OpenError(s)) if s == Status::NOT_FOUND
+    );
+
+    // Opening a meta file should fail
+    assert_matches!(
+        io_util::directory::open_file(
+            &pkg_dir,
+            "meta/a",
+            io_util::OPEN_RIGHT_READABLE
+        ).await,
+        Err(io_util::node::OpenError::OpenError(s)) if s == Status::NOT_FOUND
+    );
+
+    // Interacting with other pkg dirs should continue to work
+    let file = io_util::directory::open_file(
+        &pkgfs_dir,
+        &format!("versions/{}/meta/b", package_still_good.meta_far_merkle_root()),
+        io_util::OPEN_RIGHT_READABLE,
+    )
+    .await
+    .unwrap();
+
+    let actual_contents = io_util::file::read_to_string(&file).await.unwrap();
+    assert_eq!(actual_contents, expected_contents);
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
