@@ -2715,7 +2715,6 @@ group("default-images") {
       ":record_filesystem_sizes",
       ":root_component_index_metadata",
       ":updates",
-      "recovery",
     ]
   }
 }
