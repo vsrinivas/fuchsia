@@ -62,7 +62,7 @@ int main(int argc, const char** argv) {
   // Make a synchronous EchoString call, which blocks until it receives the response,
   // then returns a ResultOf object for the response.
   auto result_sync = client->EchoString_Sync("hello");
-  ZX_ASSERT(result_async.ok());
+  ZX_ASSERT(result_sync.ok());
   std::string reply_string(result_sync->response.data(), result_sync->response.size());
   std::cout << "Got synchronous response: " << reply_string << std::endl;
 
