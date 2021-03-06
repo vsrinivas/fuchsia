@@ -30,7 +30,7 @@ pub fn run_stream_link<'a>(
         async move {
             loop {
                 let msg = framer_read.read().await?;
-                tx_bytes.write(&msg).await?;
+                tx_bytes.write_all(&msg).await?;
             }
         },
         async move {
