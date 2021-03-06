@@ -106,6 +106,7 @@ class Action(object):
     """Represents a set of parameters of a single build action."""
     command: Sequence[str] = dataclasses.field(default_factory=list)
     outputs: FrozenSet[str] = dataclasses.field(default_factory=set)
+    label: str = ""
 
     def run_cached(
             self,
@@ -196,7 +197,7 @@ class Action(object):
         rerun_retval = subprocess.call(substituted_command)
         if rerun_retval != 0:
             print(
-                f"Re-run failed with substituted outputs: {substituted_command}"
+                f"Re-run failed with substituted outputs of target [{self.label}]: {substituted_command}"
             )
             return rerun_retval
 
@@ -210,7 +211,7 @@ class Action(object):
         ]
         if different_files:
             print(
-                "Repeating command with renamed outputs produces different results:"
+                "Repeating command for target [{self.label}] with renamed outputs produces different results:"
             )
             for orig, temp in different_files:
                 print(f"  {orig} vs. {temp}")
@@ -227,7 +228,12 @@ def main_arg_parser() -> argparse.ArgumentParser:
         argument_default=[],
     )
     # label is only used for diagnostics
-    parser.add_argument("--label", help="The wrapped target's label")
+    parser.add_argument(
+        "--label",
+        type=str,
+        default="",
+        help="The wrapped target's label",
+    )
     parser.add_argument(
         "--outputs", nargs="*", help="An action's declared outputs")
     parser.add_argument(
@@ -308,6 +314,7 @@ def main():
     action = Action(
         command=args.command,
         outputs=outputs,
+        label=args.label,
     )
 
     # Run one of the following modes:
