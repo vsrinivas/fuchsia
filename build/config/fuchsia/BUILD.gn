@@ -91,9 +91,30 @@ config("compiler_cpu") {
   }
   ldflags = cflags
   asmflags = cflags
+  configs = [
+    ":skylake_jcc",
+    ":cortex_a53_843419",
+  ]
+}
 
+# Mitigate Jump Conditional Code erratum.
+config("skylake_jcc") {
+  visibility = [ ":*" ]
+  if (current_cpu == "x64") {
+    if (is_gcc) {
+      cflags = [ "-Wa,-mbranches-within-32B-boundaries" ]
+    } else {
+      cflags = [ "-mbranches-within-32B-boundaries" ]
+    }
+    ldflags = cflags
+  }
+}
+
+# Mitigate Cortex-A53 erratum.
+config("cortex_a53_843419") {
+  visibility = [ ":*" ]
   if (current_cpu == "arm64") {
-    ldflags += [ "-Wl,--fix-cortex-a53-843419" ]
+    ldflags = [ "-Wl,--fix-cortex-a53-843419" ]
   }
 }
 
