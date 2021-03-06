@@ -318,7 +318,7 @@ func (c *Client) Run(ctx context.Context) {
 						// proceed with the acquired address.
 						return nil
 					default:
-						return fmt.Errorf("failed to start duplicate address checks: %s", err)
+						return fmt.Errorf("failed to start duplicate address detection on %s: %s", addr, err)
 					}
 					switch res {
 					case stack.DADStarting, stack.DADAlreadyRunning:
@@ -334,16 +334,21 @@ func (c *Client) Run(ctx context.Context) {
 
 					select {
 					case <-ctx.Done():
-						return fmt.Errorf("failed to complete duplicate address detection: %w", ctx.Err())
+						return fmt.Errorf("failed to complete duplicate address detection on %s: %w", addr, ctx.Err())
 					case result := <-ch:
-						if result.Err != nil {
-							return fmt.Errorf("error performing duplicate address detection: %s", err)
-						}
-
-						if result.Resolved {
+						switch result := result.(type) {
+						case *stack.DADSucceeded:
 							// DAD did not find a neighbor with the address assigned so we are
 							// safe to proceed with the address.
 							return nil
+						case *stack.DADError:
+							return fmt.Errorf("error performing duplicate address detection on %s: %s", addr, result.Err)
+						case *stack.DADAborted:
+							return fmt.Errorf("duplicate address detection aborted on %s", addr)
+						case *stack.DADDupAddrDetected:
+							// TODO(https://github.com/google/gvisor/pull/5621): log the holder's link address.
+						default:
+							panic(fmt.Sprintf("unhandled DAD result variant %#v", result))
 						}
 
 						info.Backoff = minBackoffAfterDupAddrDetetected

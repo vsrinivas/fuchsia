@@ -23,6 +23,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 const (
@@ -58,8 +59,7 @@ func (*ndpRouterAndDADEventCommon) isNDPEvent() {}
 
 type ndpDuplicateAddressDetectionEvent struct {
 	ndpRouterAndDADEventCommon
-	resolved bool
-	err      tcpip.Error
+	result stack.DADResult
 }
 
 type ndpDiscoveredRouterEvent struct {
@@ -167,21 +167,19 @@ type ndpDispatcher struct {
 	}
 }
 
-// OnDuplicateAddressDetectionStatus implements
-// ipv6.NDPDispatcher.OnDuplicateAddressDetectionStatus.
-func (n *ndpDispatcher) OnDuplicateAddressDetectionStatus(nicID tcpip.NICID, addr tcpip.Address, resolved bool, err tcpip.Error) {
-	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDuplicateAddressDetectionStatus(%d, %s, %t, %v)", nicID, addr, resolved, err)
+// OnDuplicateAddressDetectionResult implements ipv6.NDPDispatcher.
+func (n *ndpDispatcher) OnDuplicateAddressDetectionResult(nicID tcpip.NICID, addr tcpip.Address, result stack.DADResult) {
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDuplicateAddressDetectionStatus(%d, %s, %#v)", nicID, addr, result)
 	n.addEvent(&ndpDuplicateAddressDetectionEvent{
 		ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{
 			nicID: nicID,
 			addr:  addr,
 		},
-		resolved: resolved,
-		err:      err,
+		result: result,
 	})
 }
 
-// OnDefaultRouterDiscovered implements ipv6.NDPDispatcher.OnDefaultRouterDiscovered.
+// OnDefaultRouterDiscovered implements ipv6.NDPDispatcher.
 //
 // Adds the event to the event queue and returns true so Stack remembers the
 // discovered default router.
@@ -191,13 +189,13 @@ func (n *ndpDispatcher) OnDefaultRouterDiscovered(nicID tcpip.NICID, addr tcpip.
 	return true
 }
 
-// OnDefaultRouterInvalidated implements ipv6.NDPDispatcher.OnDefaultRouterInvalidated.
+// OnDefaultRouterInvalidated implements ipv6.NDPDispatcher.
 func (n *ndpDispatcher) OnDefaultRouterInvalidated(nicID tcpip.NICID, addr tcpip.Address) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDefaultRouterInvalidated(%d, %s)", nicID, addr)
 	n.addEvent(&ndpInvalidatedRouterEvent{ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{nicID: nicID, addr: addr}})
 }
 
-// OnOnLinkPrefixDiscovered implements ipv6.NDPDispatcher.OnOnLinkPrefixDiscovered.
+// OnOnLinkPrefixDiscovered implements ipv6.NDPDispatcher.
 //
 // Adds the event to the event queue and returns true so Stack remembers the
 // discovered on-link prefix.
@@ -207,13 +205,13 @@ func (n *ndpDispatcher) OnOnLinkPrefixDiscovered(nicID tcpip.NICID, prefix tcpip
 	return true
 }
 
-// OnOnLinkPrefixInvalidated implements ipv6.NDPDispatcher.OnOnLinkPrefixInvalidated.
+// OnOnLinkPrefixInvalidated implements ipv6.NDPDispatcher.
 func (n *ndpDispatcher) OnOnLinkPrefixInvalidated(nicID tcpip.NICID, prefix tcpip.Subnet) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnOnLinkPrefixInvalidated(%d, %s)", nicID, prefix)
 	n.addEvent(&ndpInvalidatedPrefixEvent{ndpPrefixEventCommon: ndpPrefixEventCommon{nicID: nicID, prefix: prefix}})
 }
 
-// OnAutoGenAddress implements ipv6.NDPDispatcher.OnAutoGenAddress.
+// OnAutoGenAddress implements ipv6.NDPDispatcher.
 //
 // Adds the event to the event queue and returns true so Stack adds the
 // auto-generated address.
@@ -230,15 +228,14 @@ func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip
 	return true
 }
 
-// OnAutoGenAddressDeprecated implements
-// ipv6.NDPDispatcher.OnAutoGenAddressDeprecated.
+// OnAutoGenAddressDeprecated implements ipv6.NDPDispatcher.
 func (*ndpDispatcher) OnAutoGenAddressDeprecated(tcpip.NICID, tcpip.AddressWithPrefix) {
 	// No need to do anything with this as deprecated addresses are still usable.
 	// stack.Stack will handle not returning deprecated addresses if more
 	// preferred addresses exist.
 }
 
-// OnAutoGenAddressInvalidated implements ipv6.NDPDispatcher.OnAutoGenAddressInvalidated.
+// OnAutoGenAddressInvalidated implements ipv6.NDPDispatcher.
 func (n *ndpDispatcher) OnAutoGenAddressInvalidated(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnAutoGenAddressInvalidated(%d, %s)", nicID, addrWithPrefix)
 	n.addEvent(&ndpInvalidatedAutoGenAddrEvent{ndpAutoGenAddrEventCommon: ndpAutoGenAddrEventCommon{nicID: nicID, addrWithPrefix: addrWithPrefix}})
@@ -250,13 +247,13 @@ func (n *ndpDispatcher) OnAutoGenAddressInvalidated(nicID tcpip.NICID, addrWithP
 	}
 }
 
-// OnRecursiveDNSServerOption implements ipv6.NDPDispatcher.OnRecursiveDNSServerOption.
+// OnRecursiveDNSServerOption implements ipv6.NDPDispatcher.
 func (n *ndpDispatcher) OnRecursiveDNSServerOption(nicID tcpip.NICID, addrs []tcpip.Address, lifetime time.Duration) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnRecursiveDNSServerOption(%d, %s, %s)", nicID, addrs, lifetime)
 	n.addEvent(&ndpRecursiveDNSServerEvent{nicID: nicID, addrs: addrs, lifetime: lifetime})
 }
 
-// OnDNSSearchListOption implements ipv6.NDPDispatcher.OnDNSSearchListOption.
+// OnDNSSearchListOption implements ipv6.NDPDispatcher.
 func (n *ndpDispatcher) OnDNSSearchListOption(nicID tcpip.NICID, domainNames []string, lifetime time.Duration) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDNSSearchListOption(%d, %s, %s)", nicID, domainNames, lifetime)
 }
@@ -446,7 +443,7 @@ func (o *dhcpV6Observation) events() []cobalt.CobaltEvent {
 	return res
 }
 
-// OnDHCPv6Configuration implements ipv6.NDPDispatcher.OnDHCPv6Configuration.
+// OnDHCPv6Configuration implements ipv6.NDPDispatcher.
 func (n *ndpDispatcher) OnDHCPv6Configuration(nicID tcpip.NICID, configuration ipv6.DHCPv6ConfigurationFromNDPRA) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDHCPv6Configuration(%d, %s)", nicID, configuration)
 
@@ -540,17 +537,18 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 			// Handle the event.
 			switch event := event.(type) {
 			case *ndpDuplicateAddressDetectionEvent:
-				switch event.err.(type) {
-				case nil:
-					if event.resolved {
-						_ = syslog.InfoTf(ndpSyslogTagName, "DAD resolved for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
-					} else {
-						_ = syslog.WarnTf(ndpSyslogTagName, "duplicate address detected during DAD for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
-					}
-				case *tcpip.ErrAborted:
-					_ = syslog.WarnTf(ndpSyslogTagName, "DAD for %s on nicID (%d) aborted (err=%s), sending interface changed event...", event.addr, event.nicID, event.err)
+				switch result := event.result.(type) {
+				case *stack.DADSucceeded:
+					_ = syslog.InfoTf(ndpSyslogTagName, "DAD resolved for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
+				case *stack.DADError:
+					_ = syslog.ErrorTf(ndpSyslogTagName, "DAD for %s on nicID (%d) encountered error = %s, sending interface changed event...", event.addr, event.nicID, result.Err)
+				case *stack.DADAborted:
+					_ = syslog.WarnTf(ndpSyslogTagName, "DAD for %s on nicID (%d) aborted, sending interface changed event...", event.addr, event.nicID)
+				case *stack.DADDupAddrDetected:
+					// TODO(https://github.com/google/gvisor/pull/5621): log the holder's link address.
+					_ = syslog.WarnTf(ndpSyslogTagName, "duplicate address detected during DAD for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
 				default:
-					_ = syslog.ErrorTf(ndpSyslogTagName, "DAD for %s on nicID (%d) encountered error = %s, sending interface changed event...", event.addr, event.nicID, event.err)
+					panic(fmt.Sprintf("unhandled DAD result variant %#v", result))
 				}
 
 				n.ns.onInterfacesChanged()

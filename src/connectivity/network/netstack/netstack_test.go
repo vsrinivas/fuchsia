@@ -800,32 +800,31 @@ func TestNotStartedByDefault(t *testing.T) {
 }
 
 type ndpDADEvent struct {
-	nicID    tcpip.NICID
-	addr     tcpip.Address
-	resolved bool
-	err      tcpip.Error
+	nicID  tcpip.NICID
+	addr   tcpip.Address
+	result tcpipstack.DADResult
 }
 
+var _ ipv6.NDPDispatcher = (*testNDPDispatcher)(nil)
+
 // testNDPDispatcher is a tcpip.NDPDispatcher that sends an NDP DAD event on
-// dadC when OnDuplicateAddressDetectionStatus gets called.
+// dadC when OnDuplicateAddressDetectionResult gets called.
 type testNDPDispatcher struct {
 	dadC chan ndpDADEvent
 }
 
-// OnDuplicateAddressDetectionStatus implements
-// stack.NDPDispatcher.OnDuplicateAddressDetectionStatus.
-func (n *testNDPDispatcher) OnDuplicateAddressDetectionStatus(nicID tcpip.NICID, addr tcpip.Address, resolved bool, err tcpip.Error) {
+// OnDuplicateAddressDetectionResult implements ipv6.NDPDispatcher.
+func (n *testNDPDispatcher) OnDuplicateAddressDetectionResult(nicID tcpip.NICID, addr tcpip.Address, result tcpipstack.DADResult) {
 	if c := n.dadC; c != nil {
 		c <- ndpDADEvent{
-			nicID:    nicID,
-			addr:     addr,
-			resolved: resolved,
-			err:      err,
+			nicID:  nicID,
+			addr:   addr,
+			result: result,
 		}
 	}
 }
 
-// OnDefaultRouterDiscovered implements stack.NDPDispatcher.OnDefaultRouterDiscovered.
+// OnDefaultRouterDiscovered implements ipv6.NDPDispatcher.
 //
 // Adds the event to the event queue and returns true so Stack remembers the
 // discovered default router.
@@ -833,42 +832,41 @@ func (*testNDPDispatcher) OnDefaultRouterDiscovered(tcpip.NICID, tcpip.Address) 
 	return false
 }
 
-// OnDefaultRouterInvalidated implements stack.NDPDispatcher.OnDefaultRouterInvalidated.
+// OnDefaultRouterInvalidated implements ipv6.NDPDispatcher.
 func (*testNDPDispatcher) OnDefaultRouterInvalidated(tcpip.NICID, tcpip.Address) {
 }
 
-// OnOnLinkPrefixDiscovered implements stack.NDPDispatcher.OnOnLinkPrefixDiscovered.
+// OnOnLinkPrefixDiscovered implements ipv6.NDPDispatcher.
 func (*testNDPDispatcher) OnOnLinkPrefixDiscovered(tcpip.NICID, tcpip.Subnet) bool {
 	return false
 }
 
-// OnOnLinkPrefixInvalidated implements stack.NDPDispatcher.OnOnLinkPrefixInvalidated.
+// OnOnLinkPrefixInvalidated implements ipv6.NDPDispatcher.
 func (*testNDPDispatcher) OnOnLinkPrefixInvalidated(tcpip.NICID, tcpip.Subnet) {
 }
 
-// OnAutoGenAddress implements stack.NDPDispatcher.OnAutoGenAddress.
+// OnAutoGenAddress implements ipv6.NDPDispatcher.
 func (*testNDPDispatcher) OnAutoGenAddress(tcpip.NICID, tcpip.AddressWithPrefix) bool {
 	return false
 }
 
-// OnAutoGenAddressDeprecated implements
-// stack.NDPDispatcher.OnAutoGenAddressDeprecated.
+// OnAutoGenAddressDeprecated implements ipv6.NDPDispatcher.
 func (*testNDPDispatcher) OnAutoGenAddressDeprecated(tcpip.NICID, tcpip.AddressWithPrefix) {
 }
 
-// OnAutoGenAddressInvalidated implements stack.NDPDispatcher.OnAutoGenAddressInvalidated.
+// OnAutoGenAddressInvalidated implements ipv6.NDPDispatcher.
 func (*testNDPDispatcher) OnAutoGenAddressInvalidated(tcpip.NICID, tcpip.AddressWithPrefix) {
 }
 
-// OnRecursiveDNSServerOption implements stack.NDPDispatcher.OnRecursiveDNSServerOption.
+// OnRecursiveDNSServerOption implements ipv6.NDPDispatcher.
 func (*testNDPDispatcher) OnRecursiveDNSServerOption(tcpip.NICID, []tcpip.Address, time.Duration) {
 }
 
-// OnDNSSearchListOption implements stack.NDPDispatcher.OnDNSSearchListOption.
+// OnDNSSearchListOption implements ipv6.NDPDispatcher.
 func (*testNDPDispatcher) OnDNSSearchListOption(tcpip.NICID, []string, time.Duration) {
 }
 
-// OnDHCPv6Configuration implements stack.NDPDispatcher.OnDHCPv6Configuration.
+// OnDHCPv6Configuration implements ipv6.NDPDispatcher.
 func (*testNDPDispatcher) OnDHCPv6Configuration(tcpip.NICID, ipv6.DHCPv6ConfigurationFromNDPRA) {
 }
 
@@ -1305,7 +1303,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 					if !expectDad {
 						t.Fatalf("unexpected DAD event: %#v", d)
 					}
-					if diff := cmp.Diff(ndpDADEvent{nicID: ifState.nicid, addr: addr.Address, resolved: true, err: nil}, d, cmp.AllowUnexported(d)); diff != "" {
+					if diff := cmp.Diff(ndpDADEvent{nicID: ifState.nicid, addr: addr.Address, result: &tcpipstack.DADSucceeded{}}, d, cmp.AllowUnexported(d)); diff != "" {
 						t.Fatalf("ndp DAD event mismatch (-want +got):\n%s", diff)
 					}
 				case <-time.After(dadResolutionTimeout):

@@ -26,6 +26,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 const (
@@ -107,7 +108,7 @@ func TestInterfacesChangeEvent(t *testing.T) {
 		{
 			name: "On DAD event",
 			ndpEventFn: func(id tcpip.NICID, ndpDisp *ndpDispatcher) {
-				ndpDisp.OnDuplicateAddressDetectionStatus(id, testLinkLocalV6Addr1, false, nil)
+				ndpDisp.OnDuplicateAddressDetectionResult(id, testLinkLocalV6Addr1, &stack.DADSucceeded{})
 			},
 			addr: tcpip.AddressWithPrefix{
 				Address:   testLinkLocalV6Addr1,
