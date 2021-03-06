@@ -82,6 +82,7 @@ pub enum AtHfMessage {
     HfIndSup(bool, bool),
     HfIndAgSup,
     CurrentCalls,
+    Nrec(bool),
     Unknown(String),
 }
 

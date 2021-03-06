@@ -12,6 +12,9 @@ use crate::{
 /// Defines the implementation of the SLC Initialization Procedure.
 pub mod slc_initialization;
 
+/// Defines the implementation of the NR/EC Procedure.
+pub mod nrec;
+
 #[derive(Clone, Error, Debug)]
 pub enum ProcedureError {
     #[error("Unexpected AG procedural update: {:?}", .0)]
@@ -28,6 +31,8 @@ pub enum ProcedureError {
 pub enum ProcedureMarker {
     /// The Service Level Connection Initialization procedure as defined in HFP v1.8 Section 4.2.
     SlcInitialization,
+    /// The Noise Reduction/Echo Cancelation procedure as defined in HFP v1.8 Section 4.24.
+    Nrec,
     /// A generic marker typically used for procedures that have yet to be defined.
     Unknown,
 }
@@ -44,6 +49,11 @@ pub enum ProcedureRequest {
     },
     GetAgIndicatorStatus {
         response: Box<dyn FnOnce(IndicatorStatus) -> AtAgMessage>,
+    },
+
+    SetNrec {
+        enable: bool,
+        response: Box<dyn FnOnce(Result<(), ()>) -> AtAgMessage>,
     },
 
     /// Error from processing an update.
@@ -64,11 +74,18 @@ impl ProcedureRequest {
 
 impl fmt::Debug for ProcedureRequest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let other;
         let output = match &self {
-            Self::GetAgFeatures { .. } => "GetAgFeatures".to_string(),
-            Self::GetAgIndicatorStatus { .. } => "GetAgIndicatorStatus".to_string(),
-            event => format!("{:?}", event),
-        };
+            Self::GetAgFeatures { .. } => "GetAgFeatures",
+            Self::GetAgIndicatorStatus { .. } => "GetAgIndicatorStatus",
+            Self::SetNrec { enable: true, .. } => "SetNrec(enabled)",
+            Self::SetNrec { enable: false, .. } => "SetNrec(disabled)",
+            event => {
+                other = format!("{:?}", event);
+                &other
+            }
+        }
+        .to_string();
         write!(f, "{}", output)
     }
 }

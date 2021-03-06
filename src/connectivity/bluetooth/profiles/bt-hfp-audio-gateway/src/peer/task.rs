@@ -32,7 +32,7 @@ pub(super) struct PeerTask {
     id: PeerId,
     _local_config: AudioGatewayFeatureSupport,
     profile_proxy: bredr::ProfileProxy,
-    _handler: Option<PeerHandlerProxy>,
+    handler: Option<PeerHandlerProxy>,
     network: NetworkInformation,
     calls: Calls,
     gain_control: GainControl,
@@ -49,7 +49,7 @@ impl PeerTask {
             id,
             _local_config: local_config,
             profile_proxy,
-            _handler: None,
+            handler: None,
             network: NetworkInformation::EMPTY,
             calls: Calls::new(None),
             gain_control: GainControl::new()?,
@@ -133,7 +133,7 @@ impl PeerTask {
 
         self.calls = Calls::new(Some(handler.clone()));
 
-        self._handler = Some(handler);
+        self.handler = Some(handler);
 
         Ok(())
     }
@@ -195,6 +195,18 @@ impl PeerTask {
                     };
                     // Update the procedure with the retrieved AG update.
                     request = self.connection.ag_message(marker, response(status));
+                }
+                ProcedureRequest::SetNrec { enable, response } => {
+                    let result = if let Some(handler) = &mut self.handler {
+                        if let Ok(Ok(())) = handler.set_nrec_mode(enable).await {
+                            Ok(())
+                        } else {
+                            Err(())
+                        }
+                    } else {
+                        Err(())
+                    };
+                    request = self.connection.ag_message(marker, response(result));
                 }
             };
         }
@@ -379,7 +391,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn handle_peer_request_stores_peer_handler_proxy() {
         let mut peer = setup_peer_task().0;
-        assert!(peer._handler.is_none());
+        assert!(peer.handler.is_none());
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
         fasync::Task::local(async move {
@@ -399,20 +411,20 @@ mod tests {
         .detach();
 
         peer.peer_request(PeerRequest::Handle(proxy)).await.expect("peer request to succeed");
-        assert!(peer._handler.is_some());
+        assert!(peer.handler.is_some());
     }
 
     #[fasync::run_until_stalled(test)]
     async fn handle_peer_request_decline_to_handle() {
         let mut peer = setup_peer_task().0;
-        assert!(peer._handler.is_none());
+        assert!(peer.handler.is_none());
         let (proxy, server_end) = fidl::endpoints::create_proxy::<PeerHandlerMarker>().unwrap();
 
         // close the PeerHandler channel by dropping the server endpoint.
         drop(server_end);
 
         peer.peer_request(PeerRequest::Handle(proxy)).await.expect("request to succeed");
-        assert!(peer._handler.is_none());
+        assert!(peer.handler.is_none());
     }
 
     #[fasync::run_until_stalled(test)]

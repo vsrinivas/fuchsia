@@ -19,7 +19,8 @@ use {
 use crate::{
     at::{AtAgMessage, AtHfMessage, Parser},
     procedure::{
-        slc_initialization::SlcInitProcedure, Procedure, ProcedureMarker, ProcedureRequest,
+        nrec::NrecProcedure, slc_initialization::SlcInitProcedure, Procedure, ProcedureMarker,
+        ProcedureRequest,
     },
 };
 
@@ -121,6 +122,13 @@ impl ServiceLevelConnection {
                 .entry(ProcedureMarker::SlcInitialization)
                 .or_insert(Box::new(SlcInitProcedure::new()));
             return ProcedureMarker::SlcInitialization;
+        } else {
+            if let AtHfMessage::Nrec(_) = _command {
+                self.procedures
+                    .entry(ProcedureMarker::Nrec)
+                    .or_insert(Box::new(NrecProcedure::new()));
+                return ProcedureMarker::Nrec;
+            }
         }
         // TODO(fxbug.dev/70591): Try to match it to a different procedure.
         ProcedureMarker::Unknown
