@@ -726,7 +726,7 @@ impl std::cmp::Ord for DasCmpInfo {
             )
             .then(
                 // Rule 8: Prefer smaller scope.
-                self_scope.cmp(other_scope),
+                self_scope.multicast_scope_id().cmp(&other_scope.multicast_scope_id()),
             )
             .then(
                 // Rule 9: Use longest matching prefix.

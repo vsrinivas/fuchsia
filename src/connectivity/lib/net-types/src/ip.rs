@@ -48,7 +48,6 @@
 // TODO(joshlf): Add RFC references for various standards such as the global
 // broadcast address or the Class E subnet.
 
-use core::cmp::{Ord, Ordering, PartialOrd};
 use core::convert::TryFrom;
 use core::fmt::{self, Debug, Display, Formatter};
 use core::hash::Hash;
@@ -912,48 +911,87 @@ impl Scope for Ipv6Scope {
     }
 }
 
-impl PartialOrd for Ipv6Scope {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
+impl Ipv6Scope {
+    /// The multicast scope ID of an interface-local address.
+    ///
+    /// Multicast scope IDs are defined in [RFC 4291 Section 2.7].
+    ///
+    /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
+    pub const MULTICAST_SCOPE_ID_INTERFACE_LOCAL: u8 = 1;
 
-impl Ord for Ipv6Scope {
-    fn cmp(&self, other: &Self) -> Ordering {
-        // RFC 4291, section 2.7 defines these scope IDs.
-        //  0   Reserved
-        //  1   Interface-Local scope
-        //  2   Link-Local scope
-        //  3   Reserved
-        //  4   Admin-Local scope
-        //  5   Site-Local scope
-        //  6   Unassigned
-        //  7   Unassigned
-        //  8   Organization-Local scope
-        //  9-D Unassigned
-        //  E   Global scope
-        //  F   Reserved
-        let scope_id = |scope: &Ipv6Scope| match scope {
-            // Force type inference to use u8 rather than usize (which is the
-            // default).
-            Ipv6Scope::Reserved(Ipv6ReservedScope::Scope0) => 0x00u8,
-            Ipv6Scope::InterfaceLocal => 0x01,
-            Ipv6Scope::LinkLocal => 0x02,
-            Ipv6Scope::Reserved(Ipv6ReservedScope::Scope3) => 0x03,
-            Ipv6Scope::AdminLocal => 0x04,
-            Ipv6Scope::SiteLocal => 0x05,
-            Ipv6Scope::Unassigned(Ipv6UnassignedScope::Scope6) => 0x06,
-            Ipv6Scope::Unassigned(Ipv6UnassignedScope::Scope7) => 0x07,
-            Ipv6Scope::OrganizationLocal => 0x08,
-            Ipv6Scope::Unassigned(Ipv6UnassignedScope::Scope9) => 0x09,
-            Ipv6Scope::Unassigned(Ipv6UnassignedScope::ScopeA) => 0x0A,
-            Ipv6Scope::Unassigned(Ipv6UnassignedScope::ScopeB) => 0x0B,
-            Ipv6Scope::Unassigned(Ipv6UnassignedScope::ScopeC) => 0x0C,
-            Ipv6Scope::Unassigned(Ipv6UnassignedScope::ScopeD) => 0x0D,
-            Ipv6Scope::Global => 0xE,
-            Ipv6Scope::Reserved(Ipv6ReservedScope::ScopeF) => 0x0F,
-        };
-        scope_id(self).cmp(&scope_id(other))
+    /// The multicast scope ID of a link-local address.
+    ///
+    /// Multicast scope IDs are defined in [RFC 4291 Section 2.7].
+    ///
+    /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
+    pub const MULTICAST_SCOPE_ID_LINK_LOCAL: u8 = 2;
+
+    /// The multicast scope ID of an admin-local address.
+    ///
+    /// Multicast scope IDs are defined in [RFC 4291 Section 2.7].
+    ///
+    /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
+    pub const MULTICAST_SCOPE_ID_ADMIN_LOCAL: u8 = 4;
+
+    /// The multicast scope ID of a (deprecated) site-local address.
+    ///
+    /// Note that site-local addresses are deprecated.
+    ///
+    /// Multicast scope IDs are defined in [RFC 4291 Section 2.7].
+    ///
+    /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
+    pub const MULTICAST_SCOPE_ID_SITE_LOCAL: u8 = 5;
+
+    /// The multicast scope ID of an organization-local address.
+    ///
+    /// Multicast scope IDs are defined in [RFC 4291 Section 2.7].
+    ///
+    /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
+    pub const MULTICAST_SCOPE_ID_ORG_LOCAL: u8 = 8;
+
+    /// The multicast scope ID of global address.
+    ///
+    /// Multicast scope IDs are defined in [RFC 4291 Section 2.7].
+    ///
+    /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
+    pub const MULTICAST_SCOPE_ID_GLOBAL: u8 = 0xE;
+
+    /// The ID used to indicate this scope in a multicast IPv6 address.
+    ///
+    /// Per [RFC 4291 Section 2.7], the bits of a multicast IPv6 address are
+    /// laid out as follows:
+    ///
+    /// ```text
+    /// |   8    |  4 |  4 |                  112 bits                   |
+    /// +------ -+----+----+---------------------------------------------+
+    /// |11111111|flgs|scop|                  group ID                   |
+    /// +--------+----+----+---------------------------------------------+
+    /// ```
+    ///
+    /// The 4-bit scop field encodes the scope of the address.
+    /// `multicast_scope_id` returns the numerical value used to encode this
+    /// scope in the scop field of a multicast address.
+    ///
+    /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
+    pub fn multicast_scope_id(&self) -> u8 {
+        match self {
+            Ipv6Scope::Reserved(Ipv6ReservedScope::Scope0) => 0,
+            Ipv6Scope::InterfaceLocal => Self::MULTICAST_SCOPE_ID_INTERFACE_LOCAL,
+            Ipv6Scope::LinkLocal => Self::MULTICAST_SCOPE_ID_LINK_LOCAL,
+            Ipv6Scope::Reserved(Ipv6ReservedScope::Scope3) => 3,
+            Ipv6Scope::AdminLocal => Self::MULTICAST_SCOPE_ID_ADMIN_LOCAL,
+            Ipv6Scope::SiteLocal => Self::MULTICAST_SCOPE_ID_SITE_LOCAL,
+            Ipv6Scope::Unassigned(Ipv6UnassignedScope::Scope6) => 6,
+            Ipv6Scope::Unassigned(Ipv6UnassignedScope::Scope7) => 7,
+            Ipv6Scope::OrganizationLocal => Self::MULTICAST_SCOPE_ID_ORG_LOCAL,
+            Ipv6Scope::Unassigned(Ipv6UnassignedScope::Scope9) => 9,
+            Ipv6Scope::Unassigned(Ipv6UnassignedScope::ScopeA) => 0xA,
+            Ipv6Scope::Unassigned(Ipv6UnassignedScope::ScopeB) => 0xB,
+            Ipv6Scope::Unassigned(Ipv6UnassignedScope::ScopeC) => 0xC,
+            Ipv6Scope::Unassigned(Ipv6UnassignedScope::ScopeD) => 0xD,
+            Ipv6Scope::Global => Self::MULTICAST_SCOPE_ID_GLOBAL,
+            Ipv6Scope::Reserved(Ipv6ReservedScope::ScopeF) => 0xF,
+        }
     }
 }
 
@@ -973,20 +1011,20 @@ impl ScopeableAddress for Ipv6Addr {
             // https://tools.ietf.org/html/rfc4291#section-2.7).
             match self.0[1] & 0xF {
                 0 => Reserved(Scope0),
-                1 => InterfaceLocal,
-                2 => LinkLocal,
+                Ipv6Scope::MULTICAST_SCOPE_ID_INTERFACE_LOCAL => InterfaceLocal,
+                Ipv6Scope::MULTICAST_SCOPE_ID_LINK_LOCAL => LinkLocal,
                 3 => Reserved(Scope3),
-                4 => AdminLocal,
-                5 => SiteLocal,
+                Ipv6Scope::MULTICAST_SCOPE_ID_ADMIN_LOCAL => AdminLocal,
+                Ipv6Scope::MULTICAST_SCOPE_ID_SITE_LOCAL => SiteLocal,
                 6 => Unassigned(Scope6),
                 7 => Unassigned(Scope7),
-                8 => OrganizationLocal,
+                Ipv6Scope::MULTICAST_SCOPE_ID_ORG_LOCAL => OrganizationLocal,
                 9 => Unassigned(Scope9),
                 0xA => Unassigned(ScopeA),
                 0xB => Unassigned(ScopeB),
                 0xC => Unassigned(ScopeC),
                 0xD => Unassigned(ScopeD),
-                0xE => Global,
+                Ipv6Scope::MULTICAST_SCOPE_ID_GLOBAL => Global,
                 0xF => Reserved(ScopeF),
                 _ => unreachable!(),
             }
@@ -2258,6 +2296,8 @@ fn common_prefix_len(it: impl Iterator<Item = (u8, u8)>) -> u8 {
 
 #[cfg(test)]
 mod tests {
+    use core::convert::TryInto;
+
     use super::*;
 
     #[test]
@@ -2594,8 +2634,8 @@ mod tests {
     }
 
     #[test]
-    fn test_ipv6_scope_ord() {
-        const ALL_SCOPES: [Ipv6Scope; 16] = [
+    fn test_ipv6_multicast_scope_id() {
+        const ALL_SCOPES: &[Ipv6Scope] = &[
             Ipv6Scope::Reserved(Ipv6ReservedScope::Scope0),
             Ipv6Scope::InterfaceLocal,
             Ipv6Scope::LinkLocal,
@@ -2614,9 +2654,7 @@ mod tests {
             Ipv6Scope::Reserved(Ipv6ReservedScope::ScopeF),
         ];
         for (i, a) in ALL_SCOPES.iter().enumerate() {
-            for (j, b) in ALL_SCOPES.iter().enumerate() {
-                assert_eq!(a.cmp(b), i.cmp(&j));
-            }
+            assert_eq!(a.multicast_scope_id(), i.try_into().unwrap());
         }
     }
 
