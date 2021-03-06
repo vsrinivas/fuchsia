@@ -21,13 +21,14 @@
 
 namespace fs_pty::internal {
 
-void DispatchPtyDeviceMessage(::fuchsia_hardware_pty::Device::RawChannelInterface* interface,
+void DispatchPtyDeviceMessage(::fuchsia_hardware_pty::Device::Interface* interface,
                               fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
   ::fuchsia_hardware_pty::Device::Dispatch(interface, msg, txn);
 }
 
 // Return ZX_ERR_NOT_SUPPORTED for all of the PTY things we don't actually support
-void NullPtyDeviceImpl::OpenClient(uint32_t id, zx::channel client,
+void NullPtyDeviceImpl::OpenClient(uint32_t id,
+                                   fidl::ServerEnd<fuchsia_hardware_pty::Device> client,
                                    OpenClientCompleter::Sync& completer) {
   fidl::Buffer<::fuchsia_hardware_pty::Device::OpenClientResponse> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
@@ -70,7 +71,8 @@ void NullPtyDeviceImpl::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sy
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Clone(uint32_t flags, zx::channel node, CloneCompleter::Sync& completer) {
+void NullPtyDeviceImpl::Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> node,
+                              CloneCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

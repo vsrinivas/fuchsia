@@ -12,6 +12,7 @@
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zircon-internal/paths.h>
 #include <sys/ioctl.h>
 
@@ -65,46 +66,12 @@ void SessionManager::SessionIoCallback(vc_t* vc, async_dispatcher_t* dispatcher,
 zx::status<vc_t*> SessionManager::CreateSession(fidl::ServerEnd<fpty::Device> session,
                                                 bool make_active,
                                                 const color_scheme_t* color_scheme) {
-  // Connect to the PTY service.  We have to do this dance rather than just
-  // using open() because open() uses the DESCRIBE flag internally, and the
-  // plumbing of the PTY service through svchost causes the DESCRIBE to get
-  // consumed by the wrong code, resulting in the wrong NodeInfo being provided.
-  // This manifests as a loss of fd signals.
-  fbl::unique_fd fd;
-  {
-    zx::channel local, remote;
-    zx_status_t status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
-      return zx::error(status);
-    }
-    status = fdio_service_connect("/svc/fuchsia.hardware.pty.Device", remote.release());
-    if (status != ZX_OK) {
-      return zx::error(status);
-    }
-    int raw_fd;
-    status = fdio_fd_create(local.release(), &raw_fd);
-    if (status != ZX_OK) {
-      return zx::error(status);
-    }
-    fd.reset(raw_fd);
-    int flags = fcntl(fd.get(), F_GETFL);
-    if (flags < 0) {
-      return zx::error(ZX_ERR_IO);
-    }
-    if (fcntl(fd.get(), F_SETFL, flags | O_NONBLOCK) < 0) {
-      return zx::error(ZX_ERR_IO);
-    }
+  auto client_end = service::Connect<fpty::Device>();
+  if (client_end.is_error()) {
+    return client_end.take_error();
   }
 
-  fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
-  if (io == nullptr) {
-    return zx::error(ZX_ERR_INTERNAL);
-  }
-
-  auto result = fpty::Device::Call::OpenClient(
-      fidl::UnownedClientEnd<fpty::Device>(fdio_unsafe_borrow_channel(io)), 0,
-      session.TakeChannel());
-  fdio_unsafe_release(io);
+  auto result = fpty::Device::Call::OpenClient(client_end->borrow(), 0, std::move(session));
   if (result.status() != ZX_OK) {
     return zx::error(result.status());
   }
@@ -112,14 +79,45 @@ zx::status<vc_t*> SessionManager::CreateSession(fidl::ServerEnd<fpty::Device> se
     return zx::error(result->s);
   }
 
+  // We have to do this dance because the plumbing of the PTY service through svchost causes the
+  // DESCRIBE flag to get consumed by the wrong code, resulting in the wrong NodeInfo being
+  // provided. This manifests as a loss of fd signals. Setting the O_NONBLOCK flag manually fixes
+  // the connection's state.
+  fbl::unique_fd fd;
+  zx_status_t status =
+      fdio_fd_create(client_end.value().channel().release(), fd.reset_and_get_address());
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  int flags = fcntl(fd.get(), F_GETFL);
+  if (flags < 0) {
+    return zx::error(ZX_ERR_IO);
+  }
+  if (fcntl(fd.get(), F_SETFL, flags | O_NONBLOCK) < 0) {
+    return zx::error(ZX_ERR_IO);
+  }
+
   vc_t* vc;
   if (vc_create(&vc, color_scheme)) {
     return zx::error(ZX_ERR_INTERNAL);
   }
 
+  struct winsize wsz = {
+      .ws_row = static_cast<unsigned short>(vc->rows),
+      .ws_col = static_cast<unsigned short>(vc->columns),
+  };
+  ioctl(fd.get(), TIOCSWINSZ, &wsz);
+
+  vc->io = fdio_unsafe_fd_to_io(fd.get());
+  if (vc->io == nullptr) {
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+  vc->fd = fd.release();
+
   zx_handle_t handle;
   zx_signals_t signals;
-  fdio_unsafe_wait_begin(io, POLLIN | POLLRDHUP | POLLHUP, &handle, &signals);
+  fdio_unsafe_wait_begin(vc->io, POLLIN | POLLRDHUP | POLLHUP, &handle, &signals);
+
   vc->pty_wait = std::make_unique<async::Wait>(
       handle, signals, 0,
       [this, vc](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
@@ -127,14 +125,6 @@ zx::status<vc_t*> SessionManager::CreateSession(fidl::ServerEnd<fpty::Device> se
         SessionIoCallback(vc, dispatcher, wait, status, signal);
       });
 
-  struct winsize wsz = {};
-  wsz.ws_col = vc->columns;
-  wsz.ws_row = vc->rows;
-  ioctl(fd.get(), TIOCSWINSZ, &wsz);
-
-  vc->io = fdio_unsafe_fd_to_io(fd.get());
-
-  vc->fd = fd.release();
   if (make_active) {
     vc_set_active(-1, vc);
   }

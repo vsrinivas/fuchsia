@@ -24,22 +24,25 @@ TEST(PtyTest, WindowSize) {
   path.append(fpty::Device::Name);
   ASSERT_OK(fdio_service_connect(path.c_str(), endpoints->server.channel().release()));
 
-  zx::channel pty_client_end, pty_server_end;
-  ASSERT_OK(zx::channel::create(0, &pty_client_end, &pty_server_end));
-  auto result0 = client.OpenClient(0, std::move(pty_server_end));
+  auto endpoints0 = fidl::CreateEndpoints<fpty::Device>();
+  ASSERT_OK(endpoints0.status_value());
+  auto result0 = client.OpenClient(0, std::move(endpoints0->server));
   ASSERT_OK(result0.status());
   ASSERT_OK(result0->s);
 
   fbl::unique_fd controlling_client;
-  ASSERT_OK(fdio_fd_create(pty_client_end.release(), controlling_client.reset_and_get_address()));
+  ASSERT_OK(fdio_fd_create(endpoints0->client.channel().release(),
+                           controlling_client.reset_and_get_address()));
 
-  ASSERT_OK(zx::channel::create(0, &pty_client_end, &pty_server_end));
-  auto result1 = client.OpenClient(1, std::move(pty_server_end));
+  auto endpoints1 = fidl::CreateEndpoints<fpty::Device>();
+  ASSERT_OK(endpoints1.status_value());
+
+  auto result1 = client.OpenClient(1, std::move(endpoints1->server));
   ASSERT_OK(result1.status());
   ASSERT_OK(result1->s);
 
   fbl::unique_fd fd;
-  ASSERT_OK(fdio_fd_create(pty_client_end.release(), fd.reset_and_get_address()));
+  ASSERT_OK(fdio_fd_create(endpoints1->client.channel().release(), fd.reset_and_get_address()));
 
   struct winsize set_size = {
       .ws_row = 7,

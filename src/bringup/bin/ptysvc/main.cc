@@ -50,9 +50,10 @@ class PtyGeneratingVnode : public fs::Vnode {
 };
 
 int main(int argc, const char** argv) {
-  zx_status_t status = StdoutToDebuglog::Init();
-  if (status != ZX_OK) {
-    return status;
+  zx_status_t status;
+  if ((status = StdoutToDebuglog::Init()) != ZX_OK) {
+    printf("console: failed to init stdout to debuglog: %s\n", zx_status_get_string(status));
+    return -1;
   }
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
@@ -61,21 +62,24 @@ int main(int argc, const char** argv) {
 
   auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  root_dir->AddEntry("svc", svc_dir);
-
-  auto dir_request = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-  if (!dir_request) {
-    printf("console: failed to take startup handle\n");
+  if ((status = root_dir->AddEntry("svc", svc_dir)) != ZX_OK) {
+    printf("console: failed to add svc to root dir: %s\n", zx_status_get_string(status));
     return -1;
   }
-  if ((status = vfs.ServeDirectory(root_dir, std::move(dir_request))) != ZX_OK) {
+  if ((status = svc_dir->AddEntry(fuchsia_hardware_pty::Device::Name,
+                                  fbl::MakeRefCounted<PtyGeneratingVnode>(&vfs))) != ZX_OK) {
+    printf("console: failed to add %s to svc dir: %s\n", fuchsia_hardware_pty::Device::Name,
+           zx_status_get_string(status));
+    return -1;
+  }
+
+  if ((status = vfs.ServeDirectory(root_dir, fidl::ServerEnd<fuchsia_io::Directory>(zx::channel(
+                                                 zx_take_startup_handle(PA_DIRECTORY_REQUEST))))) !=
+      ZX_OK) {
     printf("console: failed to serve startup handle: %s\n", zx_status_get_string(status));
     return -1;
   }
 
-  svc_dir->AddEntry("fuchsia.hardware.pty.Device", fbl::MakeRefCounted<PtyGeneratingVnode>(&vfs));
-
-  status = loop.Run();
-  ZX_ASSERT(status == ZX_OK);
+  ZX_ASSERT_MSG((status = loop.Run()) == ZX_OK, "%s", zx_status_get_string(status));
   return 0;
 }

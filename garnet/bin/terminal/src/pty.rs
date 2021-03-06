@@ -135,7 +135,7 @@ impl Pty {
     /// Creates a File which is suitable to use as the client side of the Pty.
     async fn open_client_pty(server_pty: &File) -> Result<File, Error> {
         ftrace::duration!("terminal", "Pty:open_client_pty");
-        let (device_channel, client_channel) = zx::Channel::create()?;
+        let (client_end, server_end) = fidl::endpoints::create_endpoints()?;
 
         let server_pty_channel = fdio::clone_channel(server_pty)
             .context("failed to clone channel from server PTY FD")?;
@@ -143,15 +143,17 @@ impl Pty {
             .context("failed to create FIDL channel from zircon channel")?;
 
         let device_proxy = DeviceProxy::new(server_pty_fidl_channel);
-        device_proxy
-            .open_client(0, device_channel)
+        let () = device_proxy
+            .open_client(0, server_end)
             .await
+            .map(zx::Status::ok)
+            .context("failed to interact with PTY device")?
             .context("failed to attach PTY to channel")?;
 
         // convert the client side into a file descriptor. This must be called
         // after the server side has been established.
-        let client_pty = fdio::create_fd(client_channel.into())
-            .context("failed to create FD from client PTY")?;
+        let client_pty =
+            fdio::create_fd(client_end.into()).context("failed to create FD from client PTY")?;
 
         Ok(client_pty)
     }

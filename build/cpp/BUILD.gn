@@ -31,7 +31,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/bringup/bin/netsvc:netsvc-stress-test",
     "//src/bringup/bin/netsvc:netsvc-test",
     "//src/bringup/bin/netsvc:netsvc_common",
-    "//src/bringup/bin/ptysvc:common",
     "//src/bringup/bin/pwrbtn-monitor:pwrbtn-monitor",
     "//src/bringup/bin/svchost:crashsvc",
     "//src/bringup/bin/svchost:crashsvc-test",

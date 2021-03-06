@@ -5,8 +5,8 @@
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/logger/llcpp/fidl.h>
 #include <lib/cmdline/args_parser.h>
-#include <lib/fdio/directory.h>
 #include <lib/fs-pty/service.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/svc/outgoing.h>
 
 #include <fbl/string_printf.h>
@@ -41,20 +41,13 @@ zx_status_t ParseArgs(int argc, const char** argv, Options* opts) {
 }
 
 zx::resource GetRootResource() {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return {};
-  }
-  auto path = fbl::StringPrintf("/svc/%s", fuchsia_boot::RootResource::Name);
-  status = fdio_service_connect(path.data(), remote.release());
-  if (status != ZX_OK) {
-    printf("console: Could not connect to RootResource service: %s\n",
-           zx_status_get_string(status));
+  auto client_end = service::Connect<fuchsia_boot::RootResource>();
+  if (client_end.is_error()) {
+    printf("console: Could not connect to RootResource service: %s\n", client_end.status_string());
     return {};
   }
 
-  fuchsia_boot::RootResource::SyncClient client(std::move(local));
+  auto client = fidl::BindSyncClient(std::move(client_end.value()));
   auto result = client.Get();
   if (result.status() != ZX_OK) {
     printf("console: Could not retrieve RootResource: %s\n", zx_status_get_string(result.status()));
@@ -63,20 +56,15 @@ zx::resource GetRootResource() {
   return std::move(result.Unwrap()->resource);
 }
 
-zx_status_t ConnectListener(zx::channel listener, std::vector<std::string> allowed_log_tags) {
-  zx::channel client, server;
-  zx_status_t status = zx::channel::create(0, &client, &server);
-  if (status != ZX_OK) {
-    return status;
+zx_status_t ConnectListener(fidl::ClientEnd<fuchsia_logger::LogListenerSafe> listener,
+                            std::vector<std::string> allowed_log_tags) {
+  auto client_end = service::Connect<fuchsia_logger::Log>();
+  if (client_end.is_error()) {
+    printf("console: fdio_service_connect() = %s\n", client_end.status_string());
+    return client_end.status_value();
   }
 
-  auto path = fbl::StringPrintf("/svc/%s", fuchsia_logger::Log::Name);
-  status = fdio_service_connect(path.data(), server.release());
-  if (status != ZX_OK) {
-    printf("console: fdio_service_connect() = %s\n", zx_status_get_string(status));
-    return status;
-  }
-  fuchsia_logger::Log::SyncClient log(std::move(client));
+  auto log = fidl::BindSyncClient(std::move(client_end.value()));
   std::vector<fidl::StringView> tags;
   for (auto& tag : allowed_log_tags) {
     tags.emplace_back(fidl::unowned_str(tag));
@@ -140,16 +128,16 @@ int main(int argc, const char** argv) {
     return status;
   }
 
-  zx::channel client, server;
-  status = zx::channel::create(0, &client, &server);
+  auto endpoints = fidl::CreateEndpoints<fuchsia_logger::LogListenerSafe>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+
+  status = ConnectListener(std::move(endpoints->client), std::move(opts.allowed_log_tags));
   if (status != ZX_OK) {
     return status;
   }
-  status = ConnectListener(std::move(client), std::move(opts.allowed_log_tags));
-  if (status != ZX_OK) {
-    return status;
-  }
-  auto result = fidl::BindServer(loop.dispatcher(), std::move(server), console.get());
+  auto result = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), console.get());
   if (result.is_error()) {
     printf("console: fidl::BindServer() = %s\n", zx_status_get_string(result.error()));
     return result.error();
@@ -164,7 +152,7 @@ int main(int argc, const char** argv) {
 
   using Vnode =
       fs_pty::TtyService<fs_pty::SimpleConsoleOps<fbl::RefPtr<Console>>, fbl::RefPtr<Console>>;
-  outgoing.svc_dir()->AddEntry("fuchsia.hardware.pty.Device",
+  outgoing.svc_dir()->AddEntry(fuchsia_hardware_pty::Device::Name,
                                fbl::AdoptRef(new Vnode(std::move(console))));
 
   status = loop.Run();

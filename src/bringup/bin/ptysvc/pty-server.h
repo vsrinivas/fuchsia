@@ -6,6 +6,7 @@
 #define SRC_BRINGUP_BIN_PTYSVC_PTY_SERVER_H_
 
 #include <fuchsia/device/llcpp/fidl.h>
+#include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <lib/zx/eventpair.h>
 
 #include <fbl/intrusive_double_list.h>
@@ -40,7 +41,8 @@ class PtyServer : public fbl::RefCounted<PtyServer> {
   zx_status_t GetEvent(zx::eventpair* event) { return remote_.duplicate(ZX_RIGHTS_BASIC, event); }
 
   // Create a new PtyClient
-  zx_status_t CreateClient(uint32_t id, zx::channel client_request);
+  zx_status_t CreateClient(uint32_t id,
+                           fidl::ServerEnd<fuchsia_hardware_pty::Device> client_request);
   // Remove a PtyClient
   void RemoveClient(PtyClient* client);
 

@@ -73,7 +73,8 @@ zx_status_t PtyServer::Write(const void* data, size_t count, size_t* out_actual)
   }
 }
 
-zx_status_t PtyServer::CreateClient(uint32_t id, zx::channel client_request) {
+zx_status_t PtyServer::CreateClient(uint32_t id,
+                                    fidl::ServerEnd<fuchsia_hardware_pty::Device> client_request) {
   unsigned num_clients = 0;
 
   // Make sure we don't already have a client with the requested id.
@@ -92,7 +93,8 @@ zx_status_t PtyServer::CreateClient(uint32_t id, zx::channel client_request) {
   clients_.push_back(client);
 
   auto vnode = fbl::MakeRefCounted<PtyClientVnode>(client);
-  status = vfs_->Serve(vnode, std::move(client_request), fs::VnodeConnectionOptions::ReadWrite());
+  status = vfs_->Serve(vnode, fidl::ServerEnd<fuchsia_io::Node>(client_request.TakeChannel()),
+                       fs::VnodeConnectionOptions::ReadWrite());
   if (status != ZX_OK) {
     return status;
   }

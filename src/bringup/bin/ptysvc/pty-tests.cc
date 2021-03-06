@@ -21,14 +21,12 @@
 
 namespace {
 
-using Connection = ::fuchsia_hardware_pty::Device::SyncClient;
+using Device = fuchsia_hardware_pty::Device;
+using Connection = Device::SyncClient;
 
 class PtyTestCase : public zxtest::Test {
  public:
-  PtyTestCase()
-      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        vfs_(loop_.dispatcher()),
-        server_(zx::channel()) {}
+  PtyTestCase() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), vfs_(loop_.dispatcher()) {}
 
   void SetUp() override {
     ASSERT_OK(loop_.StartThread("pty-test"));
@@ -42,19 +40,18 @@ class PtyTestCase : public zxtest::Test {
 
  protected:
   zx_status_t OpenClient(Connection* conn, uint32_t id, Connection* client) {
-    zx::channel local, remote;
-    zx_status_t status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
-      return status;
+    auto endpoints = fidl::CreateEndpoints<Device>();
+    if (endpoints.is_error()) {
+      return endpoints.status_value();
     }
-    auto result = conn->OpenClient(id, std::move(remote));
+    auto result = conn->OpenClient(id, std::move(endpoints->server));
     if (result.status() != ZX_OK) {
       return ZX_ERR_BAD_STATE;
     }
     if (result->s != ZX_OK) {
       return result->s;
     }
-    *client = Connection(std::move(local));
+    *client = Connection(std::move(endpoints->client));
     return ZX_OK;
   }
 
@@ -68,11 +65,12 @@ class PtyTestCase : public zxtest::Test {
     ASSERT_OK(PtyServer::Create(&server, &vfs_));
     auto vnode = fbl::MakeRefCounted<PtyServerVnode>(std::move(server));
 
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
-    ASSERT_OK(
-        vfs()->Serve(std::move(vnode), std::move(remote), fs::VnodeConnectionOptions::ReadWrite()));
-    *conn = Connection(std::move(local));
+    auto endpoints = fidl::CreateEndpoints<Device>();
+    ASSERT_OK(endpoints.status_value());
+    ASSERT_OK(vfs()->Serve(std::move(vnode),
+                           fidl::ServerEnd<fuchsia_io::Node>(endpoints->server.TakeChannel()),
+                           fs::VnodeConnectionOptions::ReadWrite()));
+    *conn = Connection(std::move(endpoints->client));
   }
 
   async::Loop loop_;
@@ -150,7 +148,7 @@ TEST_F(PtyTestCase, ServerReadEvents) {
 // Basic test of opening a client
 TEST_F(PtyTestCase, ServerBasicOpenClient) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 0, &client));
 
   // Make sure our client connection is valid after this
@@ -161,9 +159,9 @@ TEST_F(PtyTestCase, ServerBasicOpenClient) {
 // Try opening two clients with the same id
 TEST_F(PtyTestCase, ServerOpenClientTwice) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 0, &client));
-  Connection client2{zx::channel{}};
+  Connection client2;
   ASSERT_STATUS(OpenClient(&server, 0, &client2), ZX_ERR_INVALID_ARGS);
 
   // Our original client connection should still be good.
@@ -174,9 +172,9 @@ TEST_F(PtyTestCase, ServerOpenClientTwice) {
 // Try opening two clients with different ids
 TEST_F(PtyTestCase, ServerOpenClientTwoDifferent) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
-  Connection client2{zx::channel{}};
+  Connection client2;
   ASSERT_OK(OpenClient(&server, 0, &client2));
 
   // Both connections should be good
@@ -221,7 +219,7 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
   // Create a client and close it, then make sure we're back in the initial
   // state
   {
-    Connection client{zx::channel{}};
+    Connection client;
     ASSERT_OK(OpenClient(&server, 1, &client));
   }
   // Wait for the server to signal that it got the client disconnect
@@ -234,7 +232,7 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
 // Verify a server with a client has the right state
 TEST_F(PtyTestCase, ServerWithClientInitialConditions) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 0, &client));
 
   zx::eventpair server_event = GetEvent(&server);
@@ -272,7 +270,7 @@ TEST_F(PtyTestCase, ServerWithClientInitialConditions) {
 // Verify a read from a server for 0 bytes doesn't return ZX_ERR_SHOULD_WAIT
 TEST_F(PtyTestCase, ServerEmpty0ByteRead) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
 
   auto result = server.Read(0);
@@ -285,7 +283,7 @@ TEST_F(PtyTestCase, ServerEmpty0ByteRead) {
 // ZX_ERR_SHOULD_WAIT
 TEST_F(PtyTestCase, ClientFull0ByteServerWrite) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
 
   // Fill up FIFO
@@ -310,9 +308,9 @@ TEST_F(PtyTestCase, ClientFull0ByteServerWrite) {
 // ZX_ERR_SHOULD_WAIT
 TEST_F(PtyTestCase, ClientInactive0ByteClientWrite) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
-  Connection inactive_client{zx::channel{}};
+  Connection inactive_client;
   ASSERT_OK(OpenClient(&server, 0, &inactive_client));
 
   auto result = inactive_client.Write({});
@@ -323,7 +321,7 @@ TEST_F(PtyTestCase, ClientInactive0ByteClientWrite) {
 // Make sure the client connections describe appropriately
 TEST_F(PtyTestCase, ClientDescribe) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 0, &client));
 
   auto result = client.Describe();
@@ -334,7 +332,7 @@ TEST_F(PtyTestCase, ClientDescribe) {
 
 TEST_F(PtyTestCase, ClientWindowSize) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 0, &client));
 
   {
@@ -365,7 +363,7 @@ TEST_F(PtyTestCase, ClientWindowSize) {
 
 TEST_F(PtyTestCase, ClientClrSetFeature) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 0, &client));
 
   {
@@ -402,7 +400,7 @@ TEST_F(PtyTestCase, ClientClrSetFeature) {
 
 TEST_F(PtyTestCase, ClientClrSetFeatureInvalidBit) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 0, &client));
 
   {
@@ -422,7 +420,7 @@ TEST_F(PtyTestCase, ClientClrSetFeatureInvalidBit) {
 
 TEST_F(PtyTestCase, ClientGetWindowSizeServerNeverSet) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 0, &client));
 
   auto result = client.GetWindowSize();
@@ -435,9 +433,9 @@ TEST_F(PtyTestCase, ClientGetWindowSizeServerNeverSet) {
 // Each client should have its own feature flags
 TEST_F(PtyTestCase, ClientIndependentFeatureFlags) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
-  Connection client2{zx::channel{}};
+  Connection client2;
   ASSERT_OK(OpenClient(&server, 0, &client2));
 
   {
@@ -458,9 +456,9 @@ TEST_F(PtyTestCase, ClientIndependentFeatureFlags) {
 
 TEST_F(PtyTestCase, ClientMakeActive) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
-  Connection client2{zx::channel{}};
+  Connection client2;
   ASSERT_OK(OpenClient(&server, 0, &client2));
 
   {
@@ -498,9 +496,9 @@ TEST_F(PtyTestCase, ClientMakeActive) {
 
 TEST_F(PtyTestCase, ClientReadEvents) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
-  Connection client2{zx::channel{}};
+  Connection client2;
   ASSERT_OK(OpenClient(&server, 0, &client2));
 
   {
@@ -522,9 +520,9 @@ TEST_F(PtyTestCase, ClientReadEvents) {
 // Reading events should clear the event condition
 TEST_F(PtyTestCase, ClientReadEventsClears) {
   Connection server{take_server()};
-  Connection active_client{zx::channel{}};
+  Connection active_client;
   ASSERT_OK(OpenClient(&server, 1, &active_client));
-  Connection control_client{zx::channel{}};
+  Connection control_client;
   ASSERT_OK(OpenClient(&server, 0, &control_client));
 
   zx::eventpair control_event = GetEvent(&control_client);
@@ -564,14 +562,14 @@ TEST_F(PtyTestCase, ClientReadEventsClears) {
 // Events arrive even without a controlling client connected
 TEST_F(PtyTestCase, EventsSentWithNoControllingClient) {
   Connection server{take_server()};
-  Connection active_client{zx::channel{}};
+  Connection active_client;
   ASSERT_OK(OpenClient(&server, 1, &active_client));
 
   // Write a ^C byte from the server to trigger a cooked-mode event
   ASSERT_NO_FATAL_FAILURES(WriteCtrlC(&server));
 
   // Connect a control client to inspect the event
-  Connection control_client{zx::channel{}};
+  Connection control_client;
   ASSERT_OK(OpenClient(&server, 0, &control_client));
 
   zx::eventpair control_event = GetEvent(&control_client);
@@ -588,10 +586,10 @@ TEST_F(PtyTestCase, EventsSentWithNoControllingClient) {
 
 TEST_F(PtyTestCase, NonControllingClientOpenClient) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
 
-  Connection client2{zx::channel{}};
+  Connection client2;
   // This client is not the controlling client (id=0), so it cannot create new
   // clients
   ASSERT_STATUS(OpenClient(&client, 2, &client2), ZX_ERR_ACCESS_DENIED);
@@ -599,19 +597,19 @@ TEST_F(PtyTestCase, NonControllingClientOpenClient) {
 
 TEST_F(PtyTestCase, ControllingClientOpenClient) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 0, &client));
 
-  Connection client2{zx::channel{}};
+  Connection client2;
   ASSERT_OK(OpenClient(&client, 1, &client2));
 }
 
 TEST_F(PtyTestCase, ActiveClientCloses) {
   Connection server{take_server()};
-  Connection control_client{zx::channel{}};
+  Connection control_client;
   ASSERT_OK(OpenClient(&server, 0, &control_client));
   {
-    Connection active_client{zx::channel{}};
+    Connection active_client;
     ASSERT_OK(OpenClient(&server, 1, &active_client));
     auto result = control_client.MakeActive(1);
     ASSERT_OK(result.status());
@@ -640,7 +638,7 @@ TEST_F(PtyTestCase, ActiveClientCloses) {
 TEST_F(PtyTestCase, ActiveClientClosesWhenControl) {
   Connection server{take_server()};
   {
-    Connection control_client{zx::channel{}};
+    Connection control_client;
     ASSERT_OK(OpenClient(&server, 0, &control_client));
   }
   zx::eventpair event = GetEvent(&server);
@@ -651,7 +649,7 @@ TEST_F(PtyTestCase, ActiveClientClosesWhenControl) {
 
 TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 0, &client));
 
   // Write some data to the client, so we can verify the client can drain the
@@ -714,7 +712,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
 // Test writes from the client to the server when the client is cooked
 TEST_F(PtyTestCase, ServerReadClientCooked) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
 
   // In cooked mode, client writes should have \n transformed to \r\n, and
@@ -747,7 +745,7 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
 // Test writes from the server to the client when the client is cooked
 TEST_F(PtyTestCase, ServerWriteClientCooked) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
 
   // In cooked mode, server writes should have newlines untouched and control
@@ -783,7 +781,7 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
 // Test writes from the client to the server when the client is raw
 TEST_F(PtyTestCase, ServerReadClientRaw) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
 
   {
@@ -820,9 +818,9 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
 // Test writes from the server to the client when the client is raw
 TEST_F(PtyTestCase, ServerWriteClientRaw) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
-  Connection control_client{zx::channel{}};
+  Connection control_client;
   ASSERT_OK(OpenClient(&server, 0, &control_client));
 
   {
@@ -866,7 +864,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
 
 TEST_F(PtyTestCase, ServerFillsClientFifo) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
 
   zx::eventpair server_event = GetEvent(&server);
@@ -913,7 +911,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
 
 TEST_F(PtyTestCase, ClientFillsServerFifo) {
   Connection server{take_server()};
-  Connection client{zx::channel{}};
+  Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
 
   zx::eventpair server_event = GetEvent(&server);
@@ -960,9 +958,9 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
 
 TEST_F(PtyTestCase, NonActiveClientsCantWrite) {
   Connection server{take_server()};
-  Connection control_client{zx::channel{}};
+  Connection control_client;
   ASSERT_OK(OpenClient(&server, 0, &control_client));
-  Connection other_client{zx::channel{}};
+  Connection other_client;
   ASSERT_OK(OpenClient(&server, 1, &other_client));
 
   // control_client is the current active
@@ -981,9 +979,9 @@ TEST_F(PtyTestCase, NonActiveClientsCantWrite) {
 
 TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
   Connection server{take_server()};
-  Connection control_client{zx::channel{}};
+  Connection control_client;
   ASSERT_OK(OpenClient(&server, 0, &control_client));
-  Connection other_client{zx::channel{}};
+  Connection other_client;
   ASSERT_OK(OpenClient(&server, 1, &other_client));
 
   uint8_t kControlClientByte = 1;

@@ -15,14 +15,15 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
-class PtyServerDevice : public ::fuchsia_hardware_pty::Device::RawChannelInterface {
+class PtyServerDevice : public ::fuchsia_hardware_pty::Device::Interface {
  public:
   explicit PtyServerDevice(fbl::RefPtr<PtyServer> server) : server_(std::move(server)) {}
 
   ~PtyServerDevice() override = default;
 
   // fuchsia.hardware.pty.Device methods
-  void OpenClient(uint32_t id, zx::channel client, OpenClientCompleter::Sync& completer) final;
+  void OpenClient(uint32_t id, fidl::ServerEnd<fuchsia_hardware_pty::Device> client,
+                  OpenClientCompleter::Sync& completer) final;
   void ClrSetFeature(uint32_t clr, uint32_t set, ClrSetFeatureCompleter::Sync& completer) final;
   void GetWindowSize(GetWindowSizeCompleter::Sync& completer) final;
   void MakeActive(uint32_t client_pty_id, MakeActiveCompleter::Sync& completer) final;
@@ -45,7 +46,8 @@ class PtyServerDevice : public ::fuchsia_hardware_pty::Device::RawChannelInterfa
   void SetFlags(uint32_t flags, SetFlagsCompleter::Sync& completer) final;
   void GetBuffer(uint32_t flags, GetBufferCompleter::Sync& completer) final;
 
-  void Clone(uint32_t flags, zx::channel node, CloneCompleter::Sync& completer) final;
+  void Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> node,
+             CloneCompleter::Sync& completer) final;
   void Close(CloseCompleter::Sync& completer) final;
   void Describe(DescribeCompleter::Sync& completer) final;
   void Sync(SyncCompleter::Sync& completer) final;

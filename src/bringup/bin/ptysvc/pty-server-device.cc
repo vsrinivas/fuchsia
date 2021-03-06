@@ -15,7 +15,7 @@ void PtyServerDevice::SetWindowSize(::fuchsia_hardware_pty::wire::WindowSize siz
   server_->set_window_size({.width = size.width, .height = size.height});
   completer.Reply(buf.view(), ZX_OK);
 }
-void PtyServerDevice::OpenClient(uint32_t id, zx::channel client,
+void PtyServerDevice::OpenClient(uint32_t id, fidl::ServerEnd<fuchsia_hardware_pty::Device> client,
                                  OpenClientCompleter::Sync& completer) {
   fidl::Buffer<::fuchsia_hardware_pty::Device::OpenClientResponse> buf;
   completer.Reply(buf.view(), server_->CreateClient(id, std::move(client)));
@@ -51,7 +51,8 @@ void PtyServerDevice::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Clone(uint32_t flags, zx::channel node, CloneCompleter::Sync& completer) {
+void PtyServerDevice::Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> node,
+                            CloneCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
