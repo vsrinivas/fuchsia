@@ -1,0 +1,143 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.virtualkeyboard;
+
+using fuchsia.ui.views;
+
+/// Describes the type of text expected to be input by a virtual keyboard.
+flexible enum TextType {
+    ALPHANUMERIC = 0;
+    NUMERIC = 1;
+    PHONE = 2;
+};
+
+/// Provides the ability to acquire a `Controller`.
+///
+/// This protocol exists to bind `Controller`s to `View`s (via `ViewRef`s).
+/// The binding allows the keyboard subsystem to use its knowledge of `View`
+/// focus to limit when a `Controller` can influence virtual keyboard
+/// configuration.
+///
+/// Note that the `Controller` itself allows configuration of the virtual
+/// keyboard's presentation (visibility and layout), but does not pertain
+/// to text events. See the `Controler` documentation for details.
+///
+/// # Roles
+/// This protocol will typically be:
+/// * Implemented by platform components which control UI policy.
+///   For example, Root Presenter, or the Workstation Session.
+/// * Consumed by application runtimes. For example, Flutter, Chromium.
+[Discoverable]
+protocol ControllerCreator {
+    /// Requests that the `Controller` at the other end of the
+    /// `request<Controller>` channel be associated with the `View`
+    /// referenced by `view_ref`.
+    ///
+    /// When `Controller.RequestShow()` is called, the `Controller`
+    /// implementer will will attempt to provide a keyboard optimized
+    /// for the entry of `text_type` (unless the type is overriden by a
+    /// call to `Controller.SetType()`).
+    ///
+    /// Implementers of `ControllerCreator` _should_ use knowledge of
+    /// the associated `View`'s focus state to apply access controls to
+    /// calls made on `Controller`. See documentation of the `Controller`
+    /// methods for further details.
+    ///
+    /// Consumers of `ControllerCreator` may freely drop their Creator
+    /// connection, without affecting their Controller(s).
+    Create(
+        fuchsia.ui.views.ViewRef view_ref,
+        TextType text_type,
+        request<Controller> controller_request);
+};
+
+/// Provides the ability to control a virtual keyboard.
+///
+/// # Abstract model
+/// The virtual keyboard is "owned" by at most one Controller at a time.
+/// The owner is the Controller whose associated `View` is focused. If no such
+/// Controller exists, the virtual keyboard is unowned (and hidden).
+///
+/// Only the owning Controller may modify the virtual keyboard's configuration.
+/// When the owning Controller loses focus, the implementer of this protocol
+/// will automatically dismiss the virtual keyboard.
+///
+/// # Roles
+/// This protocol will typically be:
+/// * Implemented by platform components which control keyboard visbility.
+/// * Consumed by application runtimes. For example, Flutter, Chromium.
+///
+/// # Related protocols
+/// This protocol does not provide access to the output of the virtual
+/// keyboard. For that, see one of the following protocols:
+/// * `fuchsia.ui.input3.Keyboard` (for keystrokes)
+/// * `fuchsia.ui.input.InputMethodEditor` (for text editing)
+///
+/// # Note for implementers
+/// Calls to this protocol's methods would, ideally, only be allowed when the
+/// associated `View` has focus. However, the implementer and consumer of this
+/// protocol receive focus change notifications independently, with no guarantee
+/// that the `Controller` implementer will learn of the focus change
+/// before the `Controller` consumer.
+///
+/// Hence, disallowing calls when the `View` is not focused would run the risk
+/// of spuriously rejecting valid calls, due to the race condition above.
+/// Instead, implementations _should_ buffer requests as described in the
+/// per-method comments.
+protocol Controller {
+    /// Requests a change in text type for the virtual keyboard.
+    ///
+    /// * If the callee determines that the `View` for this Controller is
+    ///   focused, the callee applies the change immediately.
+    /// * If the callee determines that the `View` for this Controller is
+    ///   _not_ focused, the callee applies the change when the `View` regains
+    ///   focus.
+    /// * If the callee receives multiple calls before the `View` regains
+    ///   focus, the  callee will apply the value from the most recent call.
+    SetTextType(TextType text_type);
+
+    /// Requests that the keyboard be made visible.
+    ///
+    /// * If the callee determines that the `View` for this Controller is
+    ///   focused, the callee applies the change immediately.
+    /// * If the callee determines that the `View` for this Controller is
+    ///   _not_ focused, the callee applies the change when the `View`
+    ///   regains focus. However, a call to `RequestHide()` will nullify
+    ///   such a pending request.
+    /// * Calls to this method are idempotent.
+    RequestShow();
+
+    /// Requests that the keyboard be hidden.
+    ///
+    /// * If the callee determines that the `View` for this Controller is
+    ///   focused, the callee applies the change immediately.
+    /// * If the callee determines that the `View` for this Controller is
+    ///   _not_ focused:
+    ///   * If there is a pending `RequestShow()`, the callee cancels
+    ///     that request.
+    ///   * Otherwise, the call has no effect.
+    /// * Calls to this method are idempotent.
+    RequestHide();
+
+    /// Waits for the visibility to change, then reports the new value.
+    ///
+    /// * Returns `true` after the callee decides to show the keyboard
+    ///   due to this Controller's request. This _may_ occur before the
+    ///   keyboard is visible on screen.
+    ///
+    /// * Returns `false` when the callee decides to hide the keyboard
+    ///   that was requested by this Controller.
+    ///   * This may happen due to a call to `RequestHide()`, or
+    ///     implicitly when the `View` loses focus.
+    ///   * The function _may_ return while the keyboard is still
+    ///     visible on screen.
+    ///
+    /// * The first call immediately returns...
+    ///    * `true` if the callee has decided that the keyboard should
+    ///      be visible due to a request from this Controller (this
+    ///      does not guarantee that the keyboard is visible on screen)
+    ///    * `false` otherwise
+    WatchVisibility() -> (bool is_visible);
+};
