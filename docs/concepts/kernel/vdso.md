@@ -24,7 +24,7 @@ lookups much more efficient (the `.gnu_hash` section, located via
 `DT_GNU_HASH` format exclusively. (It's also possible to use the symbol
 table directly via linear search, ignoring the hash table.)
 
-The vDSO uses a [simplified layout](#Read_Only-Dynamic-Shared-Object-Layout)
+The vDSO uses a [simplified layout](#read-only-dynamic-shared-object-layout)
 that has no writable segment and requires no dynamic relocations. This
 makes it easier to use the system call ABI without implementing a
 general-purpose ELF loader and full ELF dynamic linking semantics.
@@ -139,7 +139,7 @@ presence of attributes after the system call name:
   these are only available through `#include "private.h"` with
   `VDSO_zx_` prefixes.
 
-### Read-Only Dynamic Shared Object Layout
+### Read-Only Dynamic Shared Object Layout {#read-only-dynamic-shared-object-layout}
 
 The vDSO is a normal ELF shared library and can be treated like any
 other. But it's intentionally kept to a small subset of what an ELF

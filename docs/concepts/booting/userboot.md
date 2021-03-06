@@ -53,7 +53,7 @@ is subject to the full [vDSO enforcement](/docs/concepts/kernel/vdso.md#Enforcem
 What's special about `userboot` is the way it gets loaded.
 
 `userboot` is built as an ELF dynamic shared object, using the
-same [RODSO layout](/docs/concepts/kernel/vdso.md#Read_Only-Dynamic-Shared-Object-Layout) as
+same [RODSO layout](/docs/concepts/kernel/vdso.md#read-only-dynamic-shared-object-layout) as
 the vDSO.  Like the vDSO, the `userboot` ELF image is embedded in the
 kernel at compile time.  Its simple layout means that loading it does
 not require the kernel to interpret ELF headers at boot time.  The
