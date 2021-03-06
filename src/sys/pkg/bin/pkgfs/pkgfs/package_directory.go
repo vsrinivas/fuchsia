@@ -172,16 +172,26 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 	}
 
 	if name == "meta" {
+		mf, err := newMetaFar(d.contents[name].blobId, d.fs)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
 		if flags.File() || (!flags.Directory() && !flags.Path()) {
-			mff := newMetaFile(d.contents[name].blobId, d.fs, flags)
+			mff := newMetaFile(mf, flags)
 			return mff, nil, nil, nil
 		}
-		mfd := newMetaFarDir(d.contents[name].blobId, d.fs)
+		mfd := newMetaFarDir(mf)
 		return nil, mfd, nil, nil
 	}
 
 	if strings.HasPrefix(name, "meta/") {
-		mfd := newMetaFarDir(d.contents["meta"].blobId, d.fs)
+		mf, err := newMetaFar(d.contents["meta"].blobId, d.fs)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		mfd := newMetaFarDir(mf)
 		return mfd.Open(strings.TrimPrefix(name, "meta"), flags)
 	}
 
