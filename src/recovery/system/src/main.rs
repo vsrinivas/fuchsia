@@ -100,7 +100,7 @@ struct PngImage {
     loaded_info: Option<(Size, Image, Point2D<f32>)>,
 }
 
-const RECOVERY_MODE_HEADLINE: &'static str = "Recovery Mode";
+const RECOVERY_MODE_HEADLINE: &'static str = "Recovery Diagnostic Mode";
 const RECOVERY_MODE_BODY: &'static str = "Press and hold both volume keys to factory reset.";
 
 const COUNTDOWN_MODE_HEADLINE: &'static str = "Factory reset device";
@@ -247,6 +247,10 @@ impl RecoveryViewAssistant {
 
     #[cfg(not(feature = "http_setup_server"))]
     fn setup(_: &AppContext, _: ViewKey) -> Result<(), Error> {
+        let f = async {
+            check_blobfs_health().await;
+        };
+        fasync::Task::local(f).detach();
         Ok(())
     }
 
@@ -663,6 +667,56 @@ fn make_app_assistant_fut(
 
 pub fn make_app_assistant() -> AssistantCreatorFunc {
     Box::new(make_app_assistant_fut)
+}
+
+const DEV_BLOCK: &'static str = "/dev/class/block/000";
+use anyhow::Context as _;
+use fidl_fuchsia_device as device;
+use fs_management::{Blobfs, Filesystem};
+async fn check_blobfs_health() {
+    let path = DEV_BLOCK;
+    println!("Check block {}", path);
+    let (controller, req) =
+        fidl::endpoints::create_proxy::<device::ControllerMarker>().unwrap();
+    let res =
+        fdio::service_connect(&path, req.into_channel().into()).with_context(|| {
+            format!("error calling fdio::service_connect({})", path)
+        });
+
+    println!("service_connect -> {:?}", res);
+
+    let topo_path = controller.get_topological_path().await.unwrap().unwrap();
+    println!("path->topo path {:?}->{:?}", path, topo_path);
+    if topo_path.contains("/fvm/") && !topo_path.contains("ramdisk") {
+        let fvm_path = topo_path + "/fvm/blobfs-p-1/block";
+        println!("This is the fvm, check it! {}", fvm_path);
+        check_blobfs(&fvm_path);
+    } else {
+        println!("Not the fvm, skip");
+    }
+}
+
+fn check_blobfs(path: &str) {
+    let config = Blobfs { verbose: true, readonly: true, metrics: true, ..Blobfs::default() };
+    let res = Filesystem::from_path(path, config);
+    match res {
+        Ok(b) => {
+            println!("Attempting to run fsck on Blobfs");
+            let mut x: Filesystem<Blobfs> = b;
+            match x.fsck() {
+                Ok(_) => {
+                    println!("Blobfs-fsck OK");
+                },
+                Err(e) => println!("Error occurred during fsck() {}", e),
+            }
+            println!("Attempting to mount Blobfs");
+            match x.mount("/fuchsia-blob-existing") {
+                Ok(_) => println!("Mount succeeded"),
+                Err(e) => println!("Mount failed: {}", e),
+            }
+        }
+        Err(_) => println!("Mount failed"),
+    }
 }
 
 fn main() -> Result<(), Error> {
