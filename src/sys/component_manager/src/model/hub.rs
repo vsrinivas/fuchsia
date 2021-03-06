@@ -537,40 +537,36 @@ impl Hub {
 #[async_trait]
 impl Hook for Hub {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        let target_moniker = event
+            .target_moniker
+            .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match &event.result {
             Ok(EventPayload::CapabilityRouted { source, capability_provider }) => {
                 self.on_capability_routed_async(
-                    &event.target_moniker,
+                    target_moniker,
                     source.clone(),
                     capability_provider.clone(),
                 )
                 .await?;
             }
             Ok(EventPayload::Destroyed) => {
-                self.on_destroyed_async(&event.target_moniker).await?;
+                self.on_destroyed_async(target_moniker).await?;
             }
             Ok(EventPayload::Discovered) => {
-                self.on_discovered_async(&event.target_moniker, event.component_url.to_string())
-                    .await?;
+                self.on_discovered_async(target_moniker, event.component_url.to_string()).await?;
             }
             Ok(EventPayload::MarkedForDestruction) => {
-                self.on_marked_for_destruction_async(&event.target_moniker).await?;
+                self.on_marked_for_destruction_async(target_moniker).await?;
             }
             Ok(EventPayload::Started { component, runtime, component_decl, .. }) => {
-                self.on_started_async(&event.target_moniker, component, &runtime, &component_decl)
-                    .await?;
+                self.on_started_async(target_moniker, component, &runtime, &component_decl).await?;
             }
             Ok(EventPayload::Resolved { component, resolved_url, decl, .. }) => {
-                self.on_resolved_async(
-                    &event.target_moniker,
-                    component,
-                    resolved_url.clone(),
-                    &decl,
-                )
-                .await?;
+                self.on_resolved_async(target_moniker, component, resolved_url.clone(), &decl)
+                    .await?;
             }
             Ok(EventPayload::Stopped { .. }) => {
-                self.on_stopped_async(&event.target_moniker).await?;
+                self.on_stopped_async(target_moniker).await?;
             }
             _ => {}
         };

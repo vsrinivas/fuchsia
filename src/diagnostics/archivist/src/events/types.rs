@@ -116,16 +116,23 @@ impl ComponentIdentifier {
     }
 
     pub fn parse_from_moniker(moniker: &str) -> Result<Self, MonikerError> {
-        let mut segments = vec![];
+        if moniker == "<component_manager>" {
+            return Ok(ComponentIdentifier::Moniker(vec![MonikerSegment {
+                collection: None,
+                name: "<component_manager>".to_string(),
+                instance_id: "0".to_string(),
+            }]));
+        }
 
         if moniker == "." {
-            return Ok(ComponentIdentifier::Moniker(segments));
+            return Ok(ComponentIdentifier::Moniker(vec![]));
         }
 
         let without_root = moniker
             .strip_prefix("./")
             .ok_or_else(|| MonikerError::InvalidMonikerPrefix(moniker.to_string()))?;
 
+        let mut segments = vec![];
         for raw_segment in without_root.split("/") {
             let mut parts = raw_segment.split(":");
             let segment = match (parts.next(), parts.next(), parts.next()) {

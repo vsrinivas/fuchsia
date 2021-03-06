@@ -156,12 +156,15 @@ impl EventStreamProvider {
 #[async_trait]
 impl Hook for EventStreamProvider {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        let target_moniker = event
+            .target_moniker
+            .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match &event.result {
             Ok(EventPayload::Destroyed) => {
-                self.on_component_destroyed(&event.target_moniker).await?;
+                self.on_component_destroyed(target_moniker).await?;
             }
             Ok(EventPayload::Resolved { decl, .. }) => {
-                self.on_component_resolved(&event.target_moniker, decl).await?;
+                self.on_component_resolved(target_moniker, decl).await?;
             }
             _ => {}
         }

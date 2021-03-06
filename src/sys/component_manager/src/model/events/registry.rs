@@ -29,7 +29,7 @@ use {
     cm_rust::{CapabilityName, UseDecl, UseEventDecl},
     fuchsia_trace as trace,
     futures::lock::Mutex,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, ExtendedMoniker},
     std::{
         collections::HashMap,
         sync::{Arc, Weak},
@@ -221,7 +221,9 @@ impl EventRegistry {
                 .map(|(source_name, mode)| RoutedEvent {
                     source_name: source_name.clone(),
                     mode: mode.clone(),
-                    scopes: vec![EventDispatcherScope::new(AbsoluteMoniker::root()).for_debug()],
+                    scopes: vec![
+                        EventDispatcherScope::new(AbsoluteMoniker::root().into()).for_debug()
+                    ],
                 })
                 .collect(),
             SubscriptionType::Component(target_moniker) => {
@@ -387,12 +389,17 @@ impl EventRegistry {
     async fn route_event(
         event_decl: UseEventDecl,
         component: &Arc<ComponentInstance>,
-    ) -> Result<(CapabilityName, AbsoluteMoniker), ModelError> {
+    ) -> Result<(CapabilityName, ExtendedMoniker), ModelError> {
         match routing::route_event(event_decl, component).await? {
             CapabilitySource::Framework {
                 capability: InternalCapability::Event(source_name),
                 scope_moniker,
-            } => Ok((source_name, scope_moniker)),
+            } => Ok((source_name, scope_moniker.into())),
+            CapabilitySource::Builtin { capability: InternalCapability::Event(source_name) }
+                if source_name == "capability_ready".into() =>
+            {
+                Ok((source_name, ExtendedMoniker::ComponentManager))
+            }
             _ => unreachable!(),
         }
     }
@@ -537,7 +544,7 @@ mod tests {
             },
             scope_moniker,
             ..
-        } if capability == capability && scope_moniker == AbsoluteMoniker::root());
+        } if capability == capability && scope_moniker == AbsoluteMoniker::root().into());
 
         Ok(())
     }

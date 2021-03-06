@@ -44,7 +44,10 @@ impl RootStopNotifier {
 #[async_trait]
 impl Hook for RootStopNotifier {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if event.target_moniker.is_root() {
+        let target_moniker = event
+            .target_moniker
+            .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
+        if target_moniker.is_root() {
             let tx = self.tx.lock().await.take();
             if let Some(tx) = tx {
                 tx.send(()).expect("Could not notify on Stopped of root realm");

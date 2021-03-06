@@ -14,6 +14,7 @@ group("tests") {
     "collections:collections_integration_test",
     "component-time:tests",
     "destruction:destruction_integration_test",
+    "diagnostics:tests",
     "elf_runner:tests",
     "events:events_integration_test",
     "hub:hub_integration_test",

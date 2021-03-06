@@ -4,12 +4,13 @@
 
 use {
     crate::model::{
-        component::ComponentInstance,
-        events::{filter::EventFilter, synthesizer::EventSynthesisProvider},
+        events::{
+            filter::EventFilter,
+            synthesizer::{EventSynthesisProvider, ExtendedComponent},
+        },
         hooks::{Event, EventPayload},
     },
     async_trait::async_trait,
-    std::sync::Arc,
 };
 
 pub struct RunningProvider {}
@@ -22,8 +23,13 @@ impl RunningProvider {
 
 #[async_trait]
 impl EventSynthesisProvider for RunningProvider {
-    async fn provide(&self, component: Arc<ComponentInstance>, _filter: EventFilter) -> Vec<Event> {
-        match &component.lock_execution().await.runtime {
+    async fn provide(&self, component: ExtendedComponent, _filter: &EventFilter) -> Vec<Event> {
+        let component = match component {
+            ExtendedComponent::ComponentManager => return vec![],
+            ExtendedComponent::ComponentInstance(component) => component,
+        };
+        let execution = component.lock_execution().await;
+        match execution.runtime.as_ref() {
             // No runtime means the component is not running. Don't synthesize anything.
             None => vec![],
             Some(runtime) => vec![Event::new(

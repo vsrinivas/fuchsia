@@ -24,7 +24,7 @@ use {
         sink::SinkExt,
     },
     maplit::hashmap,
-    moniker::AbsoluteMoniker,
+    moniker::ExtendedMoniker,
 };
 
 /// EventDispatcher and EventStream are two ends of a channel.
@@ -131,7 +131,7 @@ impl EventDispatcher {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct EventDispatcherScope {
     /// The moniker of the realm
-    pub moniker: AbsoluteMoniker,
+    pub moniker: ExtendedMoniker,
 
     /// Filters for an event in that realm.
     pub filter: EventFilter,
@@ -140,7 +140,7 @@ pub struct EventDispatcherScope {
 }
 
 impl EventDispatcherScope {
-    pub fn new(moniker: AbsoluteMoniker) -> Self {
+    pub fn new(moniker: ExtendedMoniker) -> Self {
         Self {
             moniker,
             filter: EventFilter::new(None),
@@ -238,6 +238,7 @@ mod tests {
         fuchsia_zircon as zx,
         futures::StreamExt,
         matches::assert_matches,
+        moniker::AbsoluteMoniker,
         std::{convert::TryInto, sync::Arc},
     };
 
@@ -265,7 +266,8 @@ mod tests {
             options: SubscriptionOptions,
             mode: EventMode,
         ) -> Arc<EventDispatcher> {
-            let scopes = vec![EventDispatcherScope::new(AbsoluteMoniker::root()).for_debug()];
+            let scopes =
+                vec![EventDispatcherScope::new(AbsoluteMoniker::root().into()).for_debug()];
             Arc::new(EventDispatcher::new(options.clone(), mode, scopes, self.tx.clone()))
         }
     }

@@ -223,7 +223,7 @@
         },
         {
             event: "capability_ready",
-            from: "framework",
+            from: "parent",
             to: [ "#bootstrap" ],
             filter: { name: "diagnostics" },
             modes: [ "async" ],

@@ -55,12 +55,13 @@ use {
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd, ServiceMarker},
     fidl_fuchsia_component_internal::{BuiltinPkgResolver, OutDirContents},
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
+        DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys::{LoaderMarker, LoaderProxy},
     fuchsia_async as fasync,
     fuchsia_component::{client, server::*},
+    fuchsia_inspect::{component, health::Reporter},
     fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_zircon::{self as zx, Clock, HandleBased},
     futures::{channel::oneshot, prelude::*},
@@ -695,6 +696,13 @@ impl BuiltinEnvironment {
             });
         }
 
+        component::inspector()
+            .serve(&mut service_fs)
+            .map_err(|err| ModelError::Inspect { err })
+            .unwrap_or_else(|err| {
+                warn!("Failed to serve inspect: {:?}", err);
+            });
+
         Ok(service_fs)
     }
 
@@ -706,6 +714,10 @@ impl BuiltinEnvironment {
         service_fs
             .serve_connection(channel)
             .map_err(|err| ModelError::namespace_creation_failed(err))?;
+
+        self.emit_diagnostics(&mut service_fs).unwrap_or_else(|err| {
+            warn!("Failed to serve diagnostics: {:?}", err);
+        });
 
         // Start up ServiceFs
         fasync::Task::spawn(async move {
@@ -721,6 +733,11 @@ impl BuiltinEnvironment {
             fuchsia_runtime::HandleType::DirectoryRequest.into(),
         ) {
             self.bind_service_fs(zx::Channel::from(handle)).await?;
+        } else {
+            // The component manager running on startup does not get a directory handle. If it was
+            // to run as a component itself, it'd get one. When we don't have a handle to the out
+            // directory, create one.
+            self.bind_service_fs(zx::Channel::create().expect("make channel").1).await?;
         }
         Ok(())
     }
@@ -748,6 +765,38 @@ impl BuiltinEnvironment {
         Ok(hub_proxy)
     }
 
+    fn emit_diagnostics<'a>(
+        &self,
+        service_fs: &mut ServiceFs<ServiceObj<'a, ()>>,
+    ) -> Result<(), ModelError> {
+        let (service_fs_proxy, service_fs_server_end) = create_proxy::<DirectoryMarker>().unwrap();
+        service_fs
+            .serve_connection(service_fs_server_end.into_channel())
+            .map_err(|err| ModelError::namespace_creation_failed(err))?;
+
+        let (node, server_end) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
+        service_fs_proxy
+            .open(
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                MODE_TYPE_DIRECTORY,
+                "diagnostics",
+                ServerEnd::new(server_end.into_channel()),
+            )
+            .map_err(|err| ModelError::namespace_creation_failed(err))?;
+
+        self.capability_ready_notifier.register_component_manager_capability("diagnostics", node);
+
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn emit_diagnostics_for_test<'a>(
+        &self,
+        service_fs: &mut ServiceFs<ServiceObj<'a, ()>>,
+    ) -> Result<(), ModelError> {
+        self.emit_diagnostics(service_fs)
+    }
+
     pub async fn wait_for_root_stop(&self) {
         self.stop_notifier.wait_for_root_stop().await;
     }
@@ -762,6 +811,7 @@ impl BuiltinEnvironment {
                 info!("Field `out_dir_contents` is set to Hub.");
                 self.bind_service_fs_to_out().await?;
                 self.model.start().await;
+                component::health().set_ok();
                 Ok(self.wait_for_root_stop().await)
             }
             OutDirContents::Svc => {
@@ -782,6 +832,9 @@ impl BuiltinEnvironment {
                 fs.add_remote("svc", expose_dir_proxy);
 
                 fs.take_and_serve_directory_handle()?;
+
+                component::health().set_ok();
+
                 Ok(fs.collect::<()>().await)
             }
         }

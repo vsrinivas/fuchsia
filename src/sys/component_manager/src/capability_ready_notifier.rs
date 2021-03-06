@@ -6,7 +6,10 @@ use {
     crate::model::{
         component::{ComponentInstance, InstanceState},
         error::ModelError,
-        events::{filter::EventFilter, synthesizer::EventSynthesisProvider},
+        events::{
+            filter::EventFilter,
+            synthesizer::{EventSynthesisProvider, ExtendedComponent},
+        },
         hooks::{
             Event, EventError, EventErrorPayload, EventPayload, EventType, Hook, HooksRegistration,
         },
@@ -25,18 +28,21 @@ use {
     io_util,
     log::*,
     moniker::AbsoluteMoniker,
-    std::sync::{Arc, Weak},
+    std::sync::{Arc, Mutex, Weak},
 };
 
 /// Awaits for `Started` events and for each capability exposed to framework, dispatches a
 /// `CapabilityReady` event.
 pub struct CapabilityReadyNotifier {
     model: Weak<Model>,
+    /// Capabilities offered by component manager that we wish to provide through `CapabilityReady`
+    /// events. For example, the diagnostics directory hosting inspect data.
+    builtin_capabilities: Mutex<Vec<(String, NodeProxy)>>,
 }
 
 impl CapabilityReadyNotifier {
     pub fn new(model: Weak<Model>) -> Self {
-        Self { model }
+        Self { model, builtin_capabilities: Mutex::new(Vec::new()) }
     }
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
@@ -45,6 +51,12 @@ impl CapabilityReadyNotifier {
             vec![EventType::Started],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
+    }
+
+    pub fn register_component_manager_capability(&self, name: impl Into<String>, node: NodeProxy) {
+        if let Ok(mut guard) = self.builtin_capabilities.lock() {
+            guard.push((name.into(), node));
+        }
     }
 
     async fn on_component_started(
@@ -238,6 +250,39 @@ impl CapabilityReadyNotifier {
             ),
         }
     }
+
+    async fn provide_builtin(&self, filter: &EventFilter) -> Vec<Event> {
+        if let Ok(capabilities) = self.builtin_capabilities.lock() {
+            (*capabilities)
+                .iter()
+                .filter_map(|(name, node)| {
+                    if !filter.contains("name", vec![name.to_string()]) {
+                        return None;
+                    }
+                    let (node_clone, server_end) = fidl::endpoints::create_proxy().unwrap();
+                    let event = node
+                        .clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end)
+                        .map(|_| {
+                            Event::new_builtin(Ok(EventPayload::CapabilityReady {
+                                name: name.clone(),
+                                node: node_clone,
+                            }))
+                        })
+                        .unwrap_or_else(|_| {
+                            let err =
+                                ModelError::clone_node_error(AbsoluteMoniker::root(), name.clone());
+                            Event::new_builtin(Err(EventError::new(
+                                &err,
+                                EventErrorPayload::CapabilityReady { name: name.clone() },
+                            )))
+                        });
+                    Some(event)
+                })
+                .collect()
+        } else {
+            vec![]
+        }
+    }
 }
 
 fn filter_matching_exposes<'a>(
@@ -289,7 +334,13 @@ async fn clone_outgoing_root(
 
 #[async_trait]
 impl EventSynthesisProvider for CapabilityReadyNotifier {
-    async fn provide(&self, component: Arc<ComponentInstance>, filter: EventFilter) -> Vec<Event> {
+    async fn provide(&self, component: ExtendedComponent, filter: &EventFilter) -> Vec<Event> {
+        let component = match component {
+            ExtendedComponent::ComponentManager => {
+                return self.provide_builtin(filter).await;
+            }
+            ExtendedComponent::ComponentInstance(component) => component,
+        };
         let decl = match *component.lock_state().await {
             InstanceState::Resolved(ref s) => s.decl().clone(),
             InstanceState::New | InstanceState::Discovered | InstanceState::Destroyed => {
@@ -330,6 +381,9 @@ impl EventSynthesisProvider for CapabilityReadyNotifier {
 #[async_trait]
 impl Hook for CapabilityReadyNotifier {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        let target_moniker = event
+            .target_moniker
+            .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match &event.result {
             Ok(EventPayload::Started { runtime, component_decl, .. }) => {
                 if filter_matching_exposes(&component_decl, None).is_empty() {
@@ -340,7 +394,7 @@ impl Hook for CapabilityReadyNotifier {
                 }
                 if let Some(outgoing_dir) = &runtime.outgoing_dir {
                     self.on_component_started(
-                        &event.target_moniker,
+                        &target_moniker,
                         outgoing_dir,
                         component_decl.clone(),
                     )

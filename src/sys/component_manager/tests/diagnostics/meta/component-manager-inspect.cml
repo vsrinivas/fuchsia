@@ -1,0 +1,67 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "archivist",
+            url: "fuchsia-pkg://fuchsia.com/diagnostics-integration-test#meta/archivist-for-embedding.cm",
+        },
+        {
+            name: "reporter",
+            url: "fuchsia-pkg://fuchsia.com/diagnostics-integration-test#meta/reporter.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: [ "#archivist" ],
+        },
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "framework",
+            to: [ "#reporter" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#reporter" ],
+        },
+        {
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
+            from: "#archivist",
+            to: [ "#reporter" ],
+        },
+        {
+            event: "capability_ready",
+            from: "parent",
+            to: [ "#archivist" ],
+            filter: { name: "diagnostics" },
+            modes: [ "async" ],
+        },
+
+        // These events are not needed for the test to pass, but including them
+        // reduces log noise.
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "framework",
+            to: [ "#archivist" ],
+            modes: [ "async" ],
+        },
+        {
+            event: "capability_requested",
+            from: "framework",
+            to: [ "#archivist" ],
+            filter: { name: "fuchsia.logger.LogSink" },
+        },
+    ],
+}

@@ -10,7 +10,7 @@ use {
     },
     anyhow::Error,
     clonable_error::ClonableError,
-    fuchsia_zircon as zx,
+    fuchsia_inspect, fuchsia_zircon as zx,
     moniker::{AbsoluteMoniker, PartialMoniker},
     std::{ffi::OsString, path::PathBuf},
     thiserror::Error,
@@ -46,6 +46,8 @@ pub enum ModelError {
     PathInvalid { path: String },
     #[error("filename is not utf-8: {:?}", name)]
     NameIsNotUtf8 { name: OsString },
+    #[error("expected a component instance moniker")]
+    UnexpectedComponentManagerMoniker,
     #[error("component manifest invalid {}: {}", url, err)]
     ManifestInvalid {
         url: String,
@@ -85,6 +87,8 @@ pub enum ModelError {
     RemoveEntryError { entry_name: String },
     #[error("failed to open directory '{}' for component '{}'", relative_path, moniker)]
     OpenDirectoryError { moniker: AbsoluteMoniker, relative_path: String },
+    #[error("failed to clone node '{}' for '{}'", relative_path, moniker)]
+    CloneNodeError { moniker: AbsoluteMoniker, relative_path: String },
     #[error("failed to create stream from channel")]
     StreamCreationError {
         #[source]
@@ -113,6 +117,11 @@ pub enum ModelError {
     PolicyError {
         #[from]
         err: PolicyError,
+    },
+    #[error("inspect error: {}", err)]
+    Inspect {
+        #[from]
+        err: fuchsia_inspect::Error,
     },
 }
 
@@ -185,6 +194,13 @@ impl ModelError {
         relative_path: impl Into<String>,
     ) -> ModelError {
         ModelError::OpenDirectoryError { moniker, relative_path: relative_path.into() }
+    }
+
+    pub fn clone_node_error(
+        moniker: AbsoluteMoniker,
+        relative_path: impl Into<String>,
+    ) -> ModelError {
+        ModelError::CloneNodeError { moniker, relative_path: relative_path.into() }
     }
 
     pub fn stream_creation_error(err: impl Into<Error>) -> ModelError {

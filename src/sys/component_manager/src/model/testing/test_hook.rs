@@ -257,21 +257,24 @@ impl TestHook {
 #[async_trait]
 impl Hook for TestHook {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        let target_moniker = event
+            .target_moniker
+            .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match &event.result {
             Ok(EventPayload::Destroyed) => {
-                self.on_destroyed_async(&event.target_moniker).await?;
+                self.on_destroyed_async(&target_moniker).await?;
             }
             Ok(EventPayload::Discovered { .. }) => {
-                self.create_instance_if_necessary(&event.target_moniker).await?;
+                self.create_instance_if_necessary(&target_moniker).await?;
             }
             Ok(EventPayload::MarkedForDestruction) => {
-                self.on_marked_for_destruction_async(&event.target_moniker).await?;
+                self.on_marked_for_destruction_async(&target_moniker).await?;
             }
             Ok(EventPayload::Started { .. }) => {
-                self.on_started_async(&event.target_moniker).await?;
+                self.on_started_async(&target_moniker).await?;
             }
             Ok(EventPayload::Stopped { .. }) => {
-                self.on_stopped_async(&event.target_moniker).await?;
+                self.on_stopped_async(&target_moniker).await?;
             }
             _ => (),
         };

@@ -2464,8 +2464,11 @@ mod tests {
         #[async_trait]
         impl Hook for StopErrorHook {
             async fn on(self: Arc<Self>, event: &hooks::Event) -> Result<(), ModelError> {
+                let target_moniker = event
+                    .target_moniker
+                    .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
                 if let Ok(EventPayload::Stopped { .. }) = event.result {
-                    self.on_shutdown_instance_async(&event.target_moniker).await?;
+                    self.on_shutdown_instance_async(target_moniker).await?;
                 }
                 Ok(())
             }

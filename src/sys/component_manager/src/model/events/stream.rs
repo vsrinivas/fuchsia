@@ -13,7 +13,7 @@ use {
     },
     fuchsia_trace as trace,
     futures::{channel::mpsc, StreamExt},
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, ExtendedMoniker},
     std::sync::{Arc, Weak},
 };
 
@@ -64,6 +64,7 @@ impl EventStream {
         expected_event_type: EventType,
         expected_moniker: AbsoluteMoniker,
     ) -> Option<Event> {
+        let expected_moniker = ExtendedMoniker::ComponentInstance(expected_moniker);
         while let Some(event) = self.next().await {
             let actual_event_type = event.event.event_type();
             if expected_moniker == event.event.target_moniker

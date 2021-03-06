@@ -60,6 +60,9 @@ impl BuiltinRunner {
 #[async_trait]
 impl Hook for BuiltinRunner {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        let target_moniker = event
+            .target_moniker
+            .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         if let Ok(EventPayload::CapabilityRouted {
             source: CapabilitySource::Builtin { capability },
             capability_provider,
@@ -70,7 +73,7 @@ impl Hook for BuiltinRunner {
             if let InternalCapability::Runner(runner_name) = capability {
                 if *runner_name == self.name {
                     let checker =
-                        ScopedPolicyChecker::new(self.config.clone(), event.target_moniker.clone());
+                        ScopedPolicyChecker::new(self.config.clone(), target_moniker.clone());
                     let runner = self.runner.clone().get_scoped_runner(checker);
                     *capability_provider.lock().await =
                         Some(Box::new(RunnerCapabilityProvider::new(runner)));

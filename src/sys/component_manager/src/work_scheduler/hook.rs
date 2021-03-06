@@ -89,6 +89,9 @@ impl WorkScheduler {
 #[async_trait]
 impl Hook for WorkScheduler {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        let target_moniker = event
+            .target_moniker
+            .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match &event.result {
             Ok(EventPayload::CapabilityRouted {
                 source: CapabilitySource::Builtin { capability },
@@ -113,7 +116,7 @@ impl Hook for WorkScheduler {
                     .await?;
             }
             Ok(EventPayload::Resolved { decl, .. }) => {
-                self.try_add_realm_as_worker(&event.target_moniker, &decl).await;
+                self.try_add_realm_as_worker(&target_moniker, &decl).await;
             }
             _ => {}
         };

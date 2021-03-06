@@ -1789,7 +1789,7 @@ pub mod tests {
         let event =
             event_stream.wait_until(EventType::CapabilityReady, vec![].into()).await.unwrap().event;
 
-        assert_eq!(event.target_moniker, AbsoluteMoniker::root());
+        assert_eq!(event.target_moniker, AbsoluteMoniker::root().into());
         assert_matches!(event.result,
                         Err(EventError {
                             event_error_payload:
@@ -1910,7 +1910,7 @@ pub mod tests {
             .await
             .unwrap()
             .event;
-        assert_eq!(stop_event.target_moniker, b_moniker.clone());
+        assert_eq!(stop_event.target_moniker, b_moniker.clone().into());
 
         // Verify that a parent of the exited component can still be stopped
         // properly.
@@ -1923,7 +1923,7 @@ pub mod tests {
             .await
             .unwrap()
             .event;
-        assert_eq!(parent_stop.target_moniker, a_moniker.clone());
+        assert_eq!(parent_stop.target_moniker, a_moniker.clone().into());
     }
 
     #[fuchsia::test]

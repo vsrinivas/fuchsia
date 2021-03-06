@@ -426,6 +426,24 @@ impl ExtendedMoniker {
             )?))
         }
     }
+
+    pub fn unwrap_instance_moniker_or<E: std::error::Error>(
+        &self,
+        error: E,
+    ) -> Result<&AbsoluteMoniker, E> {
+        match self {
+            Self::ComponentManager => Err(error),
+            Self::ComponentInstance(moniker) => Ok(moniker),
+        }
+    }
+
+    pub fn contains_in_realm(&self, other: &ExtendedMoniker) -> bool {
+        match (self, other) {
+            (Self::ComponentManager, _) => true,
+            (Self::ComponentInstance(_), Self::ComponentManager) => false,
+            (Self::ComponentInstance(a), Self::ComponentInstance(b)) => a.contains_in_realm(b),
+        }
+    }
 }
 
 impl fmt::Display for ExtendedMoniker {
@@ -439,6 +457,12 @@ impl fmt::Display for ExtendedMoniker {
             }
         }
         Ok(())
+    }
+}
+
+impl From<AbsoluteMoniker> for ExtendedMoniker {
+    fn from(m: AbsoluteMoniker) -> Self {
+        Self::ComponentInstance(m)
     }
 }
 

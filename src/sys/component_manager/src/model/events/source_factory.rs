@@ -111,6 +111,9 @@ impl EventSourceFactory {
 #[async_trait]
 impl Hook for EventSourceFactory {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        let target_moniker = event
+            .target_moniker
+            .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match &event.result {
             Ok(EventPayload::CapabilityRouted {
                 source: CapabilitySource::Builtin { capability },
@@ -120,7 +123,7 @@ impl Hook for EventSourceFactory {
                 *capability_provider = self
                     .on_capability_routed_async(
                         &capability,
-                        event.target_moniker.clone(),
+                        target_moniker.clone(),
                         capability_provider.take(),
                     )
                     .await?;

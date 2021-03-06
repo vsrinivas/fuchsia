@@ -727,8 +727,11 @@ pub mod tests {
         #[async_trait]
         impl Hook for DestroyErrorHook {
             async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+                let target_moniker = event
+                    .target_moniker
+                    .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
                 if let Ok(EventPayload::Destroyed) = event.result {
-                    self.on_destroyed_async(&event.target_moniker).await?;
+                    self.on_destroyed_async(target_moniker).await?;
                 }
                 Ok(())
             }

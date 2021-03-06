@@ -24,10 +24,10 @@ use thiserror::Error;
 
 use parking_lot::Mutex;
 
-pub use diagnostics_data::{
-    assert_data_tree, tree_assertion, Data, Inspect, Lifecycle, Logs, Severity,
+pub use diagnostics_data::{tree_assertion, Data, Inspect, Lifecycle, Logs, Severity};
+pub use diagnostics_hierarchy::{
+    assert_data_tree, testing::AnyProperty, DiagnosticsHierarchy, Property,
 };
-pub use diagnostics_hierarchy::{DiagnosticsHierarchy, Property};
 
 const RETRY_DELAY_MS: i64 = 300;
 

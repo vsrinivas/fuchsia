@@ -49,5 +49,13 @@ void main() {
           ),
           equals(['OK']));
     });
+
+    test('archivist can read component manager data', () async {
+      expect(
+        await getInspectValues(
+            inspect, '<component_manager>:root/fuchsia.inspect.Health:status'),
+        equals(['OK']),
+      );
+    });
   });
 }

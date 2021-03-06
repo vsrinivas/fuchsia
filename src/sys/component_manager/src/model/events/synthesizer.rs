@@ -15,22 +15,36 @@ use {
     fuchsia_async as fasync,
     futures::{channel::mpsc, future::join_all, stream, SinkExt, StreamExt},
     log::error,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, ExtendedMoniker},
     std::{
         collections::{HashMap, HashSet},
         sync::{Arc, Weak},
     },
 };
 
+/// A component instance or component manager itself
+pub enum ExtendedComponent {
+    ComponentManager,
+    ComponentInstance(Arc<ComponentInstance>),
+}
+
+impl From<Arc<ComponentInstance>> for ExtendedComponent {
+    fn from(instance: Arc<ComponentInstance>) -> Self {
+        Self::ComponentInstance(instance)
+    }
+}
+
+impl From<&Arc<ComponentInstance>> for ExtendedComponent {
+    fn from(instance: &Arc<ComponentInstance>) -> Self {
+        Self::ComponentInstance(instance.clone())
+    }
+}
+
 /// Implementors of this trait know how to synthesize an event.
 #[async_trait]
 pub trait EventSynthesisProvider: Send + Sync {
     /// Provides a synthesized event applying the given `filter` under the given `component`.
-    async fn provide(
-        &self,
-        component: Arc<ComponentInstance>,
-        filter: EventFilter,
-    ) -> Vec<HookEvent>;
+    async fn provide(&self, component: ExtendedComponent, filter: &EventFilter) -> Vec<HookEvent>;
 }
 
 /// Synthesis manager.
@@ -146,21 +160,55 @@ impl SynthesisTask {
     ) -> Result<(), ModelError> {
         let mut visited_components = HashSet::new();
         for scope in info.scopes {
-            let root = model.look_up(&scope.moniker).await?;
+            // If the scope is component manager, synthesize the builtin events first and then
+            // proceed to synthesize from the root and down.
+            let scope_moniker = match scope.moniker {
+                ExtendedMoniker::ComponentManager => {
+                    // Ignore this error. This can occur when the event stream is closed in the
+                    // middle of synthesis. We can finish synthesizing if an error happens.
+                    if let Err(_) = Self::send_events(
+                        &info.provider,
+                        &scope,
+                        ExtendedComponent::ComponentManager,
+                        &mut sender,
+                    )
+                    .await
+                    {
+                        return Ok(());
+                    }
+                    AbsoluteMoniker::root()
+                }
+                ExtendedMoniker::ComponentInstance(ref scope_moniker) => scope_moniker.clone(),
+            };
+            let root = model.look_up(&scope_moniker).await?;
             let mut component_stream = get_subcomponents(root, visited_components.clone());
             while let Some(component) = component_stream.next().await {
                 visited_components.insert(component.abs_moniker.clone());
-                let events = info.provider.provide(component, scope.filter.clone()).await;
-                for event in events {
-                    let event =
-                        Event { event, scope_moniker: scope.moniker.clone(), responder: None };
-                    // Ignore this error. This can occur when the event stream is closed in the
-                    // middle of synthesis. We can finish synthesizing if an error happens.
-                    if let Err(_) = sender.send(event).await {
-                        return Ok(());
-                    }
+                if let Err(_) = Self::send_events(
+                    &info.provider,
+                    &scope,
+                    ExtendedComponent::ComponentInstance(component),
+                    &mut sender,
+                )
+                .await
+                {
+                    return Ok(());
                 }
             }
+        }
+        Ok(())
+    }
+
+    async fn send_events(
+        provider: &Arc<dyn EventSynthesisProvider>,
+        scope: &EventDispatcherScope,
+        target_component: ExtendedComponent,
+        sender: &mut mpsc::UnboundedSender<Event>,
+    ) -> Result<(), anyhow::Error> {
+        let events = provider.provide(target_component, &scope.filter).await;
+        for event in events {
+            let event = Event { event, scope_moniker: scope.moniker.clone(), responder: None };
+            sender.send(event).await?;
         }
         Ok(())
     }
@@ -206,23 +254,29 @@ fn get_subcomponents(
 #[cfg(test)]
 mod tests {
     use {
+        super::*,
         crate::model::{
             events::{
-                dispatcher::EventDispatcherScope,
                 event::EventMode,
-                filter::EventFilter,
                 mode_set::EventModeSet,
                 registry::{EventRegistry, RoutedEvent, SubscriptionOptions},
                 stream::EventStream,
             },
-            hooks::{EventError, EventErrorPayload, EventPayload, EventType},
+            hooks::{EventError, EventErrorPayload, EventPayload},
             testing::{routing_test_helpers::*, test_helpers::*},
         },
         cm_rust::{DirectoryDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget},
         fidl_fuchsia_io2 as fio,
-        moniker::AbsoluteMoniker,
-        std::{collections::HashSet, iter::FromIterator},
+        fuchsia_component::server::ServiceFs,
+        std::iter::FromIterator,
     };
+
+    struct CreateStreamArgs<'a> {
+        registry: &'a EventRegistry,
+        scope_monikers: Vec<AbsoluteMoniker>,
+        events: Vec<EventType>,
+        include_builtin: bool,
+    }
 
     // Shows that we see Running only for components that are bound at the moment of subscription.
     #[fuchsia::test]
@@ -235,11 +289,12 @@ mod tests {
         test.bind_instance(&vec!["c:0", "e:0"].into()).await.expect("bind instance e success");
 
         let registry = test.builtin_environment.event_registry.clone();
-        let mut event_stream = create_stream(
-            &registry,
-            vec![AbsoluteMoniker::root()],
-            vec![EventType::Started, EventType::Running],
-        )
+        let mut event_stream = create_stream(CreateStreamArgs {
+            registry: &registry,
+            scope_monikers: vec![AbsoluteMoniker::root()],
+            events: vec![EventType::Started, EventType::Running],
+            include_builtin: false,
+        })
         .await;
 
         // Bind f, this will be a Started event.
@@ -292,11 +347,16 @@ mod tests {
 
         // Subscribing with scopes /c, /c/e and /c/e/h
         let registry = test.builtin_environment.event_registry.clone();
-        let mut event_stream = create_stream(
-            &registry,
-            vec![vec!["c:0"].into(), vec!["c:0", "e:0"].into(), vec!["c:0", "e:0", "h:0"].into()],
-            vec![EventType::Started, EventType::Running],
-        )
+        let mut event_stream = create_stream(CreateStreamArgs {
+            registry: &registry,
+            scope_monikers: vec![
+                vec!["c:0"].into(),
+                vec!["c:0", "e:0"].into(),
+                vec!["c:0", "e:0", "h:0"].into(),
+            ],
+            events: vec![EventType::Started, EventType::Running],
+            include_builtin: false,
+        })
         .await;
 
         let result_monikers = get_and_sort_running_events(&mut event_stream, 5).await;
@@ -336,11 +396,16 @@ mod tests {
 
         // Subscribing with scopes /c, /c/e and c/f/i
         let registry = test.builtin_environment.event_registry.clone();
-        let mut event_stream = create_stream(
-            &registry,
-            vec![vec!["c:0"].into(), vec!["c:0", "e:0"].into(), vec!["c:0", "f:0", "i:0"].into()],
-            vec![EventType::Started, EventType::Running],
-        )
+        let mut event_stream = create_stream(CreateStreamArgs {
+            registry: &registry,
+            scope_monikers: vec![
+                vec!["c:0"].into(),
+                vec!["c:0", "e:0"].into(),
+                vec!["c:0", "f:0", "i:0"].into(),
+            ],
+            events: vec![EventType::Started, EventType::Running],
+            include_builtin: false,
+        })
         .await;
 
         let result_monikers = get_and_sort_running_events(&mut event_stream, 5).await;
@@ -374,19 +439,19 @@ mod tests {
             .expect("bind instance g success");
         test.bind_instance(&vec!["c:0", "e:0", "h:0"].into())
             .await
-            .expect("bind instance g success");
-        test.bind_instance(&vec!["c:0", "f:0"].into()).await.expect("bind instance g success");
+            .expect("bind instance h success");
+        test.bind_instance(&vec!["c:0", "f:0"].into()).await.expect("bind instance f success");
         test.bind_instance(&vec!["c:0", "f:0", "i:0"].into())
             .await
-            .expect("bind instance g success");
+            .expect("bind instance i success");
 
         let registry = test.builtin_environment.event_registry.clone();
-        // TODO: bind components
-        let mut event_stream = create_stream(
-            &registry,
-            vec![vec!["b:0"].into(), vec!["c:0", "e:0"].into()],
-            vec![EventType::Running, EventType::CapabilityReady],
-        )
+        let mut event_stream = create_stream(CreateStreamArgs {
+            registry: &registry,
+            scope_monikers: vec![vec!["b:0"].into(), vec!["c:0", "e:0"].into()],
+            events: vec![EventType::Running, EventType::CapabilityReady],
+            include_builtin: false,
+        })
         .await;
 
         // We expect 4 CapabilityReady events and 5 running events.
@@ -426,20 +491,50 @@ mod tests {
         assert_eq!(result_capability_ready, expected_capability_ready_monikers);
     }
 
-    async fn create_stream(
-        registry: &EventRegistry,
-        scope_monikers: Vec<AbsoluteMoniker>,
-        events: Vec<EventType>,
-    ) -> EventStream {
-        let scopes = scope_monikers
+    #[fuchsia::test]
+    async fn synthesize_capability_ready_builtin() {
+        let test = setup_synthesis_test().await;
+
+        let mut fs = ServiceFs::new();
+        test.builtin_environment.emit_diagnostics_for_test(&mut fs).expect("emitting diagnostics");
+
+        let registry = test.builtin_environment.event_registry.clone();
+        let mut event_stream = create_stream(CreateStreamArgs {
+            registry: &registry,
+            scope_monikers: vec![],
+            events: vec![EventType::CapabilityReady],
+            include_builtin: true,
+        })
+        .await;
+
+        let event = event_stream.next().await.expect("got running event");
+        match event.event.result {
+            Ok(EventPayload::CapabilityReady { name, .. }) if name == "diagnostics" => {
+                assert_eq!(event.event.target_moniker, ExtendedMoniker::ComponentManager);
+            }
+            payload => panic!("Expected running or capability ready. Got: {:?}", payload),
+        }
+    }
+
+    async fn create_stream<'a>(args: CreateStreamArgs<'a>) -> EventStream {
+        let mut scopes = args
+            .scope_monikers
             .into_iter()
             .map(|moniker| EventDispatcherScope {
-                moniker,
+                moniker: moniker.into(),
                 filter: EventFilter::debug(),
                 mode_set: EventModeSet::new(cm_rust::EventMode::Sync),
             })
             .collect::<Vec<_>>();
-        let events = events
+        if args.include_builtin {
+            scopes.push(EventDispatcherScope {
+                moniker: ExtendedMoniker::ComponentManager,
+                filter: EventFilter::debug(),
+                mode_set: EventModeSet::new(cm_rust::EventMode::Sync),
+            });
+        }
+        let events = args
+            .events
             .into_iter()
             .map(|event| RoutedEvent {
                 source_name: event.into(),
@@ -447,7 +542,7 @@ mod tests {
                 scopes: scopes.clone(),
             })
             .collect();
-        registry
+        args.registry
             .subscribe_with_routed_events(&SubscriptionOptions::default(), events)
             .await
             .expect("subscribe to event stream")

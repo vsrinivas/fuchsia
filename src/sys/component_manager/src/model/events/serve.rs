@@ -31,7 +31,7 @@ use {
         TryStreamExt,
     },
     log::{debug, error, info, warn},
-    moniker::{AbsoluteMoniker, RelativeMoniker},
+    moniker::{AbsoluteMoniker, ExtendedMoniker, RelativeMoniker},
     std::{path::PathBuf, sync::Arc},
 };
 
@@ -136,7 +136,7 @@ pub async fn serve_event_stream(
 }
 
 async fn maybe_create_event_result(
-    scope: &AbsoluteMoniker,
+    scope: &ExtendedMoniker,
     event_result: &EventResult,
 ) -> Result<Option<fsys::EventResult>, fidl::Error> {
     match event_result {
@@ -147,7 +147,15 @@ async fn maybe_create_event_result(
             create_capability_requested_payload(name.to_string(), capability.clone()).await,
         )),
         Ok(EventPayload::CapabilityRouted { source, capability_provider, .. }) => {
-            Ok(maybe_create_capability_routed_payload(scope, source, capability_provider.clone()))
+            let scope_moniker = match scope {
+                ExtendedMoniker::ComponentInstance(moniker) => moniker,
+                _ => unreachable!(),
+            };
+            Ok(maybe_create_capability_routed_payload(
+                scope_moniker,
+                source,
+                capability_provider.clone(),
+            ))
         }
         Ok(EventPayload::Running { started_timestamp }) => Ok(Some(fsys::EventResult::Payload(
             fsys::EventPayload::Running(fsys::RunningPayload {
@@ -351,11 +359,18 @@ fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventRes
 async fn create_event_fidl_object(
     event: Event,
 ) -> Result<(Option<BoxFuture<'static, ()>>, fsys::Event), fidl::Error> {
-    let target_relative_moniker =
-        RelativeMoniker::from_absolute(&event.scope_moniker, &event.event.target_moniker);
+    let moniker_string = match (&event.event.target_moniker, &event.scope_moniker) {
+        (moniker @ ExtendedMoniker::ComponentManager, _) => moniker.to_string(),
+        (ExtendedMoniker::ComponentInstance(target), ExtendedMoniker::ComponentManager) => {
+            RelativeMoniker::from_absolute(&AbsoluteMoniker::root(), &target).to_string()
+        }
+        (ExtendedMoniker::ComponentInstance(target), ExtendedMoniker::ComponentInstance(scope)) => {
+            RelativeMoniker::from_absolute(&scope, &target).to_string()
+        }
+    };
     let header = Some(fsys::EventHeader {
         event_type: Some(event.event.event_type().into()),
-        moniker: Some(target_relative_moniker.to_string()),
+        moniker: Some(moniker_string),
         component_url: Some(event.event.component_url.clone()),
         timestamp: Some(event.event.timestamp.into_nanos()),
         ..fsys::EventHeader::EMPTY

@@ -18,7 +18,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex},
     io_util,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, ExtendedMoniker},
     rand::random,
     std::{
         collections::HashMap,
@@ -376,7 +376,7 @@ pub struct Event {
     pub id: u64,
 
     /// Moniker of component that this event applies to
-    pub target_moniker: AbsoluteMoniker,
+    pub target_moniker: ExtendedMoniker,
 
     /// Component url of the component that this event applies to
     pub component_url: String,
@@ -391,7 +391,22 @@ pub struct Event {
 impl Event {
     pub fn new(component: &Arc<ComponentInstance>, result: EventResult) -> Self {
         let timestamp = zx::Time::get_monotonic();
-        Self::new_with_timestamp(component, result, timestamp)
+        Self::new_internal(
+            component.abs_moniker.clone().into(),
+            component.component_url.clone(),
+            timestamp,
+            result,
+        )
+    }
+
+    pub fn new_builtin(result: EventResult) -> Self {
+        let timestamp = zx::Time::get_monotonic();
+        Self::new_internal(
+            ExtendedMoniker::ComponentManager,
+            "bin/component_manager".to_string(),
+            timestamp,
+            result,
+        )
     }
 
     pub fn new_with_timestamp(
@@ -399,9 +414,8 @@ impl Event {
         result: EventResult,
         timestamp: zx::Time,
     ) -> Self {
-        // Generate a random 64-bit integer to identify this event
         Self::new_internal(
-            component.abs_moniker.clone(),
+            component.abs_moniker.clone().into(),
             component.component_url.clone(),
             timestamp,
             result,
@@ -414,7 +428,7 @@ impl Event {
     ) -> Self {
         let timestamp = zx::Time::get_monotonic();
         Self::new_internal(
-            target_moniker,
+            target_moniker.into(),
             component_url.into(),
             timestamp,
             Ok(EventPayload::Discovered),
@@ -428,15 +442,21 @@ impl Event {
         result: EventResult,
     ) -> Self {
         let timestamp = zx::Time::get_monotonic();
-        Self::new_internal(target_moniker, component_url.into(), timestamp, result)
+        Self::new_internal(
+            ExtendedMoniker::ComponentInstance(target_moniker),
+            component_url.into(),
+            timestamp,
+            result,
+        )
     }
 
     fn new_internal(
-        target_moniker: AbsoluteMoniker,
+        target_moniker: ExtendedMoniker,
         component_url: String,
         timestamp: zx::Time,
         result: EventResult,
     ) -> Self {
+        // Generate a random 64-bit integer to identify this event
         let id = random::<u64>();
         Self { id, target_moniker, component_url, timestamp, result }
     }
