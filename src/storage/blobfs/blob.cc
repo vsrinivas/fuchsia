@@ -297,8 +297,8 @@ zx_status_t Blob::Verify() const {
     // on its merkle root digest (i.e. the blob's merkle tree is just a single root digest).
     // Still verify the blob's contents in this case.
     if ((status = BlobVerifier::CreateWithoutTree(
-             MerkleRoot(), blobfs_->Metrics(), inode_.blob_size, blobfs_->GetCorruptBlobNotifier(),
-             &verifier)) != ZX_OK) {
+             MerkleRoot(), blobfs_->Metrics(), inode_.blob_size,
+             &blobfs_->blob_corruption_notifier(), &verifier)) != ZX_OK) {
       return status;
     }
   } else {
@@ -306,7 +306,7 @@ zx_status_t Blob::Verify() const {
     if ((status = BlobVerifier::Create(
              MerkleRoot(), blobfs_->Metrics(), GetMerkleTreeBuffer(*blob_layout.value()),
              blob_layout->MerkleTreeSize(), blob_layout->Format(), inode_.blob_size,
-             blobfs_->GetCorruptBlobNotifier(), &verifier)) != ZX_OK) {
+             &blobfs_->blob_corruption_notifier(), &verifier)) != ZX_OK) {
       return status;
     }
   }
@@ -996,10 +996,10 @@ zx_status_t Blob::LoadVmosFromDisk() {
     if (cache_policy) {
       set_overridden_cache_policy(*cache_policy);
     }
-    status = loader.LoadBlobPaged(map_index_, blobfs_->GetCorruptBlobNotifier(), &page_watcher_,
+    status = loader.LoadBlobPaged(map_index_, &blobfs_->blob_corruption_notifier(), &page_watcher_,
                                   &data_mapping_, &merkle_mapping_);
   } else {
-    status = loader.LoadBlob(map_index_, blobfs_->GetCorruptBlobNotifier(), &data_mapping_,
+    status = loader.LoadBlob(map_index_, &blobfs_->blob_corruption_notifier(), &data_mapping_,
                              &merkle_mapping_);
   }
 

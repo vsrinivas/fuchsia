@@ -21,7 +21,7 @@ fuchsia-pkg://fuchsia.com/virtualization-net-tests#meta/virtualization_net_tests
 fuchsia-pkg://fuchsia.com/virtualization-vsock-tests#meta/virtualization_vsock_tests.cmx
 
 # Non-virtualization tests
-fuchsia-pkg://fuchsia.com/blobs-integration#meta/executable-mount-test.cmx
+fuchsia-pkg://fuchsia.com/blobfs-integration#meta/executable-mount-test.cmx
 fuchsia-pkg://fuchsia.com/bootsvc-tests#meta/bootfs-loader-service-test.cmx
 fuchsia-pkg://fuchsia.com/component-manager-tests#meta/component_manager_boot_env_tests.cmx
 fuchsia-pkg://fuchsia.com/driver-manager-tests#meta/driver-host-loader-service-test.cmx

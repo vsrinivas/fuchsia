@@ -13,28 +13,26 @@
 #include "src/lib/digest/digest.h"
 
 namespace blobfs {
-using digest::Digest;
 
-// BlobCorruptionNotifier notifies a handler of blob corruption,
-// if a handler has been registered.
+// BlobCorruptionNotifier notifies a handler of blob corruption, if a handler has been registered.
 class BlobCorruptionNotifier {
  public:
-  BlobCorruptionNotifier(const BlobCorruptionNotifier&) = delete;
-  BlobCorruptionNotifier(BlobCorruptionNotifier&&) = delete;
-  BlobCorruptionNotifier& operator=(const BlobCorruptionNotifier&) = delete;
-  BlobCorruptionNotifier& operator=(BlobCorruptionNotifier&&) = delete;
-
-  // Creates a single instance of BlobCorruptionNotifier for all blobs.
-  static zx_status_t Create(std::unique_ptr<BlobCorruptionNotifier>* out);
-
-  void SetCorruptBlobHandler(fidl::ClientEnd<fuchsia_blobfs::CorruptBlobHandler> blobfs_handler);
-
   // Notifies corrupt blob to the corruption handler service.
-  // If handler is not registered, simply ignore notifying and continue.
-  zx_status_t NotifyCorruptBlob(const uint8_t* blob_root_hash, size_t blob_root_len) const;
+  virtual void NotifyCorruptBlob(const digest::Digest& digest) const = 0;
+};
+
+// Implementation of BlobCorruptionNotifier that nofities over a Fidl interface.
+class FidlBlobCorruptionNotifier : public BlobCorruptionNotifier {
+ public:
+  void set_corruption_handler(fidl::ClientEnd<fuchsia_blobfs::CorruptBlobHandler> handler) {
+    corruption_handler_ = std::move(handler);
+  }
+
+  // BlobCorruptionNotifier implementation:
+  void NotifyCorruptBlob(const digest::Digest& digest) const override;
 
  private:
-  BlobCorruptionNotifier() {}
+  // This handler can be null if no Fidl handler is registered.
   fidl::ClientEnd<fuchsia_blobfs::CorruptBlobHandler> corruption_handler_;
 };
 

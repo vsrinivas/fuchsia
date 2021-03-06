@@ -215,9 +215,9 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations) override;
 
   // Corruption notifier related.
-  const BlobCorruptionNotifier* GetCorruptBlobNotifier() { return blob_corruption_notifier_.get(); }
+  const BlobCorruptionNotifier& blob_corruption_notifier() { return blob_corruption_notifier_; }
   void SetCorruptBlobHandler(fidl::ClientEnd<fuchsia_blobfs::CorruptBlobHandler> blobfs_handler) {
-    blob_corruption_notifier_->SetCorruptBlobHandler(std::move(blobfs_handler));
+    blob_corruption_notifier_.set_corruption_handler(std::move(blobfs_handler));
   }
 
   // Returns an optional overriden cache policy to apply for pager-backed blobs. If unset, the
@@ -242,7 +242,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
  private:
   friend class BlobfsChecker;
-  std::unique_ptr<BlobCorruptionNotifier> blob_corruption_notifier_;
+  FidlBlobCorruptionNotifier blob_corruption_notifier_;
 
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
          const Superblock* info, Writability writable,

@@ -348,11 +348,6 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
   FX_LOGS(INFO) << "Using blob layout format: "
                 << BlobLayoutFormatToString(GetBlobLayoutFormat(*superblock));
 
-  status = BlobCorruptionNotifier::Create(&(fs->blob_corruption_notifier_));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to initialize corruption notifier: " << zx_status_get_string(status);
-  }
-
   if (zx_status_t status = fs->Migrate(); status != ZX_OK) {
     return zx::error(status);
   }

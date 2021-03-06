@@ -326,7 +326,7 @@ fuchsia_test_package("blobfs-integration-package") {
       max_severity = "ERROR"
     }
   }
-  package_name = "blobs-integration"
+  package_name = "blobfs-integration"
   test_components = [
     ":blobfs-fragmentation-component",
     ":blobfs-integration-component",

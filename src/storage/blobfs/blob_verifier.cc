@@ -120,13 +120,7 @@ zx_status_t BlobVerifier::Verify(const void* data, size_t data_size, size_t buff
                                              ticker.End());
   if (status == ZX_ERR_IO_DATA_INTEGRITY && corruption_notifier_) {
     // Notify the corruption handler server about the corrupted blob.
-    // If there is any error to do this, we should not fail the verify.
-    zx_status_t notify_status =
-        corruption_notifier_->NotifyCorruptBlob(digest_.get(), digest_.len());
-    if (notify_status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to notify corruptionHandler for blob: " << digest_.ToString()
-                     << " error: " << zx_status_get_string(notify_status);
-    }
+    corruption_notifier_->NotifyCorruptBlob(digest_);
   }
   return status;
 }
@@ -151,13 +145,7 @@ zx_status_t BlobVerifier::VerifyPartial(const void* data, size_t length, size_t 
 
   if (status == ZX_ERR_IO_DATA_INTEGRITY && corruption_notifier_) {
     // Notify the corruption handler server about the corrupted blob.
-    // If there is any error to do this, we should not fail the verify.
-    zx_status_t notify_status =
-        corruption_notifier_->NotifyCorruptBlob(digest_.get(), digest_.len());
-    if (notify_status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to notify corruptionHandler for blob: " << digest_.ToString()
-                     << " error: " << zx_status_get_string(notify_status);
-    }
+    corruption_notifier_->NotifyCorruptBlob(digest_);
   }
   return status;
 }

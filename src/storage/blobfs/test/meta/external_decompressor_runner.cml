@@ -2,11 +2,11 @@
     children: [
         {
             name: "test",
-            url: "fuchsia-pkg://fuchsia.com/blobs-integration#meta/external-decompressor-integration.cm",
+            url: "fuchsia-pkg://fuchsia.com/blobfs-integration#meta/external-decompressor-integration.cm",
         },
         {
             name: "decompressor",
-            url: "fuchsia-pkg://fuchsia.com/blobs-integration#meta/decompressor-sandbox.cm",
+            url: "fuchsia-pkg://fuchsia.com/blobfs-integration#meta/decompressor-sandbox.cm",
         },
     ],
     offer: [
