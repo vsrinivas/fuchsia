@@ -33,13 +33,14 @@ dart_library("fuchsia_scenic_flutter") {
     "//sdk/fidl/fuchsia.ui.views",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/meta",
+    dart_package_label.fuchsia_logger,
     dart_package_label.fuchsia_services,
     dart_package_label.zircon,
   ]
 }
 
 # Runs these tests using:
-#   fx run-host-tests fuchsia_scenic_flutter_unittests
+#   fx test fuchsia_scenic_flutter_unittests
 flutter_test("fuchsia_scenic_flutter_unittests") {
   sources = [
     "child_view_test.dart",
@@ -58,6 +59,7 @@ flutter_test("fuchsia_scenic_flutter_unittests") {
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
     dart_package_label.fidl,
+    dart_package_label.fuchsia_logger,
     dart_package_label.fuchsia_services,
     dart_package_label.zircon,
   ]

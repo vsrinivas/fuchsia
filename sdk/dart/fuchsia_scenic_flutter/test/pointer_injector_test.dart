@@ -11,6 +11,7 @@ import 'package:fidl_fuchsia_ui_pointerinjector/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:mockito/mockito.dart';
 import 'package:zircon/zircon.dart';
 
@@ -18,6 +19,8 @@ import 'package:zircon/zircon.dart';
 import 'package:fuchsia_scenic_flutter/src/pointer_injector.dart';
 
 void main() {
+  setupLogger();
+
   test('PointerInjector register', () async {
     final device = _mockDevice();
     final registry = MockRegistry();
@@ -65,6 +68,25 @@ void main() {
     final pointerEvent = events.last;
     expect(pointerEvent.data!.pointerSample!.phase, EventPhase.add);
     expect(pointerEvent.data!.pointerSample!.positionInViewport, [10.0, 10.0]);
+  });
+
+  test('PointerInjector dispatchEvent logs exception', () async {
+    MockDevice device = _mockDevice() as MockDevice;
+    final registry = MockRegistry();
+    final viewRefInstalled = MockViewRefInstalled();
+    final injector = PointerInjector(registry, viewRefInstalled, device);
+
+    // Throw a FidlError when inject gets called. This should be logged.
+    when(device.inject(any)).thenThrow(FidlError('Proxy<Device> is closed.'));
+    bool logsError = false;
+    log.onRecord.listen((event) {
+      logsError = true;
+    });
+
+    final rect = Rect.fromLTWH(0, 0, 100, 100);
+    final pointer = PointerDownEvent(position: Offset(10, 10));
+    await injector.dispatchEvent(pointer: pointer, viewport: rect);
+    expect(logsError, isTrue);
   });
 }
 

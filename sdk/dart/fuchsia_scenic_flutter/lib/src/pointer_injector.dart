@@ -12,6 +12,7 @@ import 'package:meta/meta.dart';
 
 import 'package:fidl_fuchsia_ui_pointerinjector/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart';
 
@@ -127,7 +128,11 @@ class PointerInjector {
       events.add(injectorEvent);
     }
 
-    return _device.inject(events);
+    try {
+      return _device.inject(events);
+    } on Exception catch (e) {
+      log.warning('Failed to dispatch pointer events: $e');
+    }
   }
 
   // Check if [PointerEvent] is one of supported events.
@@ -143,7 +148,11 @@ class PointerInjector {
     final eventPair = viewRef.reference.duplicate(ZX.RIGHT_SAME_RIGHTS);
     assert(eventPair.isValid);
 
-    return _viewRefInstalled.watch(ViewRef(reference: eventPair));
+    try {
+      return _viewRefInstalled.watch(ViewRef(reference: eventPair));
+    } on Exception catch (e) {
+      log.warning('Failed to watch viewRefInstalled: $e');
+    }
   }
 
   List<Float32List> _extentFromRect(Rect rect) => [
