@@ -33,6 +33,13 @@ class Digest final {
   Digest(Digest&& other);
   Digest& operator=(const uint8_t (&bytes)[kSha256Length]);
   Digest& operator=(Digest&& other);
+
+  // Copying a digest copies the digest bytes but can not be used for incrementally adding to
+  // the digest. The copy constructor/assignment code will assert if the source object is not
+  // finalized.
+  Digest(const Digest& other);
+  Digest& operator=(const Digest& other);
+
   ~Digest();
 
   const uint8_t* get() const { return bytes_; }

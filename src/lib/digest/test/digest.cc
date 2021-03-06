@@ -141,6 +141,31 @@ TEST(DigestTest, CopyTo) {
   }
 }
 
+TEST(DigestTest, Copy) {
+  Digest uninitialized_digest;
+
+  Digest digest1;
+  digest1.Init();
+  digest1.Update("data", 4);  // Hash this string.
+  digest1.Final();
+
+  EXPECT_NE(uninitialized_digest, digest1);
+
+  // Test copy constructor
+  Digest digest2(digest1);
+  EXPECT_EQ(digest2, digest1);
+  EXPECT_NE(uninitialized_digest, digest2);
+
+  // Test assignment to empty.
+  digest2 = uninitialized_digest;
+  EXPECT_EQ(uninitialized_digest, digest2);
+
+  // Test assignment to nonempty.
+  digest2 = digest1;
+  EXPECT_EQ(digest2, digest1);
+  EXPECT_NE(uninitialized_digest, digest2);
+}
+
 TEST(DigestTest, Move) {
   const Digest uninitialized_digest;
   Digest digest1;

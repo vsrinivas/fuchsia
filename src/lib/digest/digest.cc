@@ -53,6 +53,17 @@ Digest& Digest::operator=(Digest&& other) {
   return *this;
 }
 
+Digest::Digest(const Digest& other) {
+  ZX_DEBUG_ASSERT(!other.ctx_);  // Can only copy finalized digests.
+  memcpy(bytes_, other.bytes_, sizeof(bytes_));
+}
+
+Digest& Digest::operator=(const Digest& other) {
+  ZX_DEBUG_ASSERT(!other.ctx_);  // Can only copy finalized digests.
+  memcpy(bytes_, other.bytes_, sizeof(bytes_));
+  return *this;
+}
+
 void Digest::Init() {
   ctx_.reset(new Context());
   SHA256_Init(&ctx_->impl);
