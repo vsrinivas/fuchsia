@@ -9,6 +9,9 @@
   <string name="role_progressbar">Barra di avanzamento</string>
   <string name="role_slider">Dispositivo di scorrimento</string>
   <string name="role_tab">Scheda</string>
+  <string name="role_toggleswitch">Opzione Attiva/Disattiva</string>
+  <string name="element_toggled_on">Opzione attiva</string>
+  <string name="element_toggled_off">Opzione disattivata</string>
   <string name="role_radiobutton">Pulsante di opzione</string>
   <string name="radio_button_selected">{name}, pulsante di opzione selezionato</string>
   <string name="radio_button_unselected">{name}, pulsante di opzione deselezionato</string>

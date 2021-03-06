@@ -9,6 +9,9 @@
   <string name="role_progressbar">Förloppsindikator</string>
   <string name="role_slider">Skjutreglage</string>
   <string name="role_tab">Flik</string>
+  <string name="role_toggleswitch">Reglage för På/Av</string>
+  <string name="element_toggled_on">Reglaget står i läget På</string>
+  <string name="element_toggled_off">Reglaget står i läget Av</string>
   <string name="role_radiobutton">Alternativknapp</string>
   <string name="radio_button_selected">{name}, alternativknapp markerad</string>
   <string name="radio_button_unselected">{name}, alternativknapp inte markerad</string>

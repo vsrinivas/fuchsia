@@ -9,6 +9,9 @@
   <string name="role_progressbar">[Þŕöĝŕéšš бåŕ one two]</string>
   <string name="role_slider">[Šļîðéŕ one]</string>
   <string name="role_tab">[Ţåб one]</string>
+  <string name="role_toggleswitch">[Ţöĝĝļé šŵîţçĥ one two]</string>
+  <string name="element_toggled_on">[Šŵîţçĥ Öñ one two]</string>
+  <string name="element_toggled_off">[Šŵîţçĥ Öƒƒ one two]</string>
   <string name="role_radiobutton">[Ŕåðîö бûţţöñ one two]</string>
   <string name="radio_button_selected">[ᐅ{name}ᐊ, ŕåðîö бûţţöñ šéļéçţéð one two three four five six]</string>
   <string name="radio_button_unselected">[ᐅ{name}ᐊ, ŕåðîö бûţţöñ ûñšéļéçţéð one two three four five six]</string>
