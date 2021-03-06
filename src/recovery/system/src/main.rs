@@ -94,7 +94,7 @@ enum RecoveryMessages {
     ResetFailed,
 }
 
-const RECOVERY_MODE_HEADLINE: &'static str = "Recovery mode";
+const RECOVERY_MODE_HEADLINE: &'static str = "Recovery Diagnostic Mode";
 const RECOVERY_MODE_BODY: &'static str = "Press and hold both volume keys to factory reset.";
 
 const COUNTDOWN_MODE_HEADLINE: &'static str = "Factory reset device";
@@ -240,6 +240,10 @@ impl RecoveryViewAssistant {
 
     #[cfg(not(feature = "http_setup_server"))]
     fn setup(_: &AppContext, _: ViewKey) -> Result<(), Error> {
+        let f = async {
+            check_blobfs_health().await;
+        };
+        fasync::Task::local(f).detach();
         Ok(())
     }
 
@@ -651,6 +655,156 @@ fn make_app_assistant_fut(
 
 pub fn make_app_assistant() -> AssistantCreatorFunc {
     Box::new(make_app_assistant_fut)
+}
+
+const DEV_BLOCK: &'static str = "/dev/class/block";
+use anyhow::Context as _;
+use fidl::endpoints::Proxy;
+use fidl_fuchsia_device::ControllerProxy;
+use fs_management::{Blobfs, Filesystem};
+use fuchsia_zircon::{self as zx};
+use std::fs;
+async fn connect_to_fdio_service(path: &str) -> Result<fidl::AsyncChannel, Error> {
+    let (local, remote) = zx::Channel::create().context("Creating channel")?;
+    fdio::service_connect(path, remote).context("Connecting to service")?;
+    let local = fidl::AsyncChannel::from_channel(local).context("Creating AsyncChannel")?;
+    Ok(local)
+}
+async fn get_topo_path(channel: fidl::AsyncChannel) -> Option<String> {
+    let controller = ControllerProxy::from_channel(channel);
+    match controller.get_topological_path().await {
+        Ok(res) => match res {
+            Ok(path) => {
+                println!("Returned path: {}", path);
+                Some(path)
+            }
+            Err(errno) => {
+                println!("Received topo_path error value: {}", errno);
+                None
+            }
+        },
+        Err(e) => {
+            println!("Error getting topological path {:#}", e);
+            None
+        }
+    }
+}
+async fn check_blobfs_health() {
+    println!("In diagnostics section, sleeping for 5 seconds");
+    let five_seconds = std::time::Duration::from_secs(5);
+    std::thread::sleep(five_seconds);
+    println!("Sleep complete: running diagnostics");
+    // lsblk
+    match fs::read_dir(DEV_BLOCK) {
+        Ok(rd) => {
+            println!("Read block: OK");
+            for entry in rd {
+                let entry = entry.unwrap();
+                let pathbuf = entry.path();
+                let path = pathbuf.to_str().unwrap();
+                println!("Found entry {:?} path {:?}", entry, path);
+
+                match connect_to_fdio_service(path).await {
+                    Ok(channel) => {
+                        if let Some(topo_path) = get_topo_path(channel).await {
+                            if topo_path.contains("/fvm/blobfs-p-1/block")
+                                && !topo_path.contains("ramdisk")
+                            {
+                                println!("This is the expected blobfs, mount it! {}", topo_path);
+                                check_blobfs(&topo_path, true);
+                            } else {
+                                println!("Not the fvm, skip");
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        println!("Error connected to service for path {}, {:#}", path, e);
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            println!("Couldn't read block: {:#}", e);
+        }
+    }
+}
+
+fn check_blobfs(path: &str, readonly: bool) {
+    let config = Blobfs { verbose: true, readonly: readonly, metrics: true, ..Blobfs::default() };
+    let res = Filesystem::from_path(path, config).context("Filesystem::from_path");
+    match res {
+        Ok(b) => {
+            println!("Attempting to run fsck on Blobfs");
+            let mut b: Filesystem<Blobfs> = b;
+            match b.fsck() {
+                Ok(_) => {
+                    println!("Blobfs-fsck OK");
+                }
+                Err(e) => println!("Error occurred during fsck() {:#}", e),
+            }
+            println!("Attempting to mount Blobfs");
+            match b.mount("/fuchsia-blob-existing") {
+                Ok(_) => {
+                    println!("Mount succeeded");
+                    if let Err(e) = traverse_blobfs(b, "/fuchsia-blob-existing") {
+                        println!("Traverse blobfs had an unexpected error {:#}", e);
+                    }
+                }
+                Err(e) => println!("Mount failed: {:#}", e),
+            }
+        }
+        Err(e) => println!("Mount failed: {:#}", e),
+    }
+}
+
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
+use std::fs::{DirEntry, File};
+use std::io::Read;
+fn read_entry(entry: Result<DirEntry, std::io::Error>) -> Result<(), Error> {
+    println!("Check: {:?}", entry);
+    let entry = entry.context("Error reading dir entry")?;
+    let path_buf = entry.path();
+    let path = path_buf.to_str().context("Error reading entry path")?;
+    println!(" path: {}", &path);
+
+    match fs::metadata(&path) {
+        Ok(metadata) => {
+            println!(" metadata: {:?}", metadata);
+        }
+        Err(error) => {
+            println!("  Error getting file metadata {:#}", error);
+        }
+    };
+    let mut f = File::open(path).context("Error opening file")?;
+    let mut buffer = Vec::new();
+
+    let bytes_read = f.read_to_end(&mut buffer)?;
+    println!("  bytes read: {}", bytes_read);
+
+    let mut hasher = Sha256::new();
+    hasher.input(&buffer[..bytes_read]);
+    let hex_val = hasher.result_str();
+    println!("  Sha256: {}", hex_val);
+    Ok(())
+}
+
+fn traverse_blobfs(_blobfs: Filesystem<Blobfs>, mount_path: &str) -> Result<(), Error> {
+    let mut error_count = 0;
+    let rd = fs::read_dir(mount_path)?;
+    for entry_res in rd {
+        if let Err(error) = read_entry(entry_res) {
+            println!("  Unexpected error reading dir entry: {:#}", error);
+            error_count += 1;
+        }
+    }
+    if error_count == 0 {
+        println!("No errors traversing blobs");
+    } else {
+        println!("WARNING!");
+        println!("There were {} errors traversing blobs", error_count);
+    }
+    Ok(())
 }
 
 fn main() -> Result<(), Error> {
