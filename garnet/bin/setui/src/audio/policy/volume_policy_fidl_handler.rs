@@ -22,7 +22,7 @@ use crate::fidl_processor::policy::RequestContext;
 use crate::fidl_result_sender_for_responder;
 use crate::handler::base::Error;
 use crate::hanging_get_handler::Sender;
-use crate::policy::base::{response, PolicyInfo, PolicyType, Request};
+use crate::policy::{response, PolicyInfo, PolicyType, Request};
 use crate::shutdown_responder_with_error;
 
 fidl_result_sender_for_responder!(
@@ -116,7 +116,7 @@ async fn process_request(
 mod tests {
     use crate::audio::policy::{Property, PropertyTarget, State, TransformFlags};
     use crate::audio::types::AudioStreamType;
-    use crate::policy::base::{response, PolicyInfo};
+    use crate::policy::{response, PolicyInfo};
     use std::collections::HashMap;
 
     /// Verifies that converting a policy response containing an empty `State` into a vector of

@@ -6,7 +6,7 @@ use {
     crate::base::SettingType,
     crate::config::default_settings::DefaultSetting,
     crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::policy::base::PolicyType,
+    crate::policy::PolicyType,
     crate::tests::fakes::audio_core_service,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::AgentConfiguration,

@@ -4,8 +4,10 @@
 
 use crate::base::SettingType;
 use crate::handler::device_storage::DeviceStorageFactory;
-use crate::policy::base::{BoxedHandler, Context, PolicyHandlerFactoryError, PolicyType};
-use crate::policy::base::{GenerateHandler, PolicyHandlerFactory};
+use crate::policy::{
+    BoxedHandler, Context, GenerateHandler, PolicyHandlerFactory, PolicyHandlerFactoryError,
+    PolicyType,
+};
 use crate::service;
 use async_trait::async_trait;
 use std::collections::HashMap;

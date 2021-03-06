@@ -9,11 +9,10 @@ use futures::StreamExt;
 use crate::handler::base::{Error as HandlerError, Payload, Request, Response};
 use crate::internal::policy;
 use crate::message::base::{filter, role, MessageEvent, MessageType, MessengerType};
-use crate::policy::base as policy_base;
-use crate::policy::base::{
-    Address, PolicyHandlerFactory, PolicyType, Request as PolicyRequest, Role,
-};
 use crate::policy::policy_handler::{PolicyHandler, RequestTransform, ResponseTransform};
+use crate::policy::{
+    self as policy_base, Address, PolicyHandlerFactory, PolicyType, Request as PolicyRequest, Role,
+};
 use crate::service;
 use crate::service::TryFromWithClient;
 use futures::lock::Mutex;

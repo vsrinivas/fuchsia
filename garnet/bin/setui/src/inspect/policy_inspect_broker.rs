@@ -15,8 +15,7 @@ use futures::StreamExt;
 use crate::clock;
 use crate::internal::policy::message::{Audience, Factory, MessageClient, Messenger, Signature};
 use crate::message::base::{role, MessageEvent, MessengerType};
-use crate::policy::base as policy_base;
-use crate::policy::base::{Address, Payload, Request, Role};
+use crate::policy::{self as policy_base, Address, Payload, Request, Role};
 
 /// A broker that listens in on messages sent on the policy message hub to policy proxies handlers
 /// to record their internal state to inspect.
@@ -214,8 +213,7 @@ mod tests {
     use crate::clock;
     use crate::inspect::policy_inspect_broker::PolicyInspectBroker;
     use crate::message::base::{role, MessageEvent, MessengerType, Status};
-    use crate::policy::base as policy_base;
-    use crate::policy::base::{Payload, PolicyInfo, Role, UnknownInfo};
+    use crate::policy::{self as policy_base, Payload, PolicyInfo, Role, UnknownInfo};
     use crate::tests::message_utils::verify_payload;
 
     const GET_REQUEST: Payload = Payload::Request(policy_base::Request::Get);

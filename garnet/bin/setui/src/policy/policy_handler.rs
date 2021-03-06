@@ -7,8 +7,8 @@ use crate::handler::base::{Payload as HandlerPayload, Request, Response as Setti
 use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::handler::setting_handler::{SettingHandlerResult, StorageFactory};
 use crate::message::base::Audience;
-use crate::policy::base::response::{Error as PolicyError, Response};
-use crate::policy::base::{
+use crate::policy::response::{Error as PolicyError, Response};
+use crate::policy::{
     BoxedHandler, Context, GenerateHandlerResult, PolicyType, Request as PolicyRequest,
 };
 use crate::service;
@@ -188,7 +188,7 @@ mod tests {
     use crate::handler::device_storage::testing::InMemoryStorageFactory;
     use crate::handler::device_storage::DeviceStorageFactory;
     use crate::message::base::MessengerType;
-    use crate::policy::base::PolicyType;
+    use crate::policy::PolicyType;
     use crate::privacy::types::PrivacyInfo;
     use crate::service;
     use crate::tests::message_utils::verify_payload;

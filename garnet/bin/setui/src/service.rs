@@ -25,8 +25,7 @@ use crate::base::SettingType;
 use crate::handler::base as handler;
 use crate::handler::setting_handler as controller;
 use crate::message_hub_definition;
-use crate::policy::base as policy;
-use crate::policy::base::PolicyType;
+use crate::policy::{self, PolicyType};
 
 message_hub_definition!(Payload, Address, Role);
 

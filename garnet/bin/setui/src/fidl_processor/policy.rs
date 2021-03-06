@@ -6,7 +6,7 @@ use fidl::endpoints::{Request, ServiceMarker};
 
 use crate::fidl_processor::processor::{ProcessingUnit, RequestResultCreator};
 use crate::message::base::Audience;
-use crate::policy::base::{Payload, PolicyType};
+use crate::policy::{Payload, PolicyType};
 use crate::service;
 use crate::ExitSender;
 use fuchsia_syslog::fx_log_err;
@@ -40,8 +40,8 @@ impl RequestContext {
     pub async fn request(
         &self,
         policy_type: PolicyType,
-        request: crate::policy::base::Request,
-    ) -> crate::policy::base::response::Response {
+        request: crate::policy::Request,
+    ) -> crate::policy::response::Response {
         let mut receptor = self
             .service_messenger
             .message(
@@ -57,7 +57,7 @@ impl RequestContext {
             fx_log_err!("Failed to get policy response: {}", err);
         }
 
-        Err(crate::policy::base::response::Error::CommunicationError)
+        Err(crate::policy::response::Error::CommunicationError)
     }
 }
 

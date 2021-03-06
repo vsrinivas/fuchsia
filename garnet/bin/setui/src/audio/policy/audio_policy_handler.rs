@@ -68,12 +68,11 @@ use crate::handler::base::{
     Payload as HandlerPayload, Request as SettingRequest, Response as SettingResponse,
 };
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::policy::base as policy_base;
-use crate::policy::base::response::Error as PolicyError;
-use crate::policy::base::PolicyInfo;
 use crate::policy::policy_handler::{
     ClientProxy, Create, PolicyHandler, RequestTransform, ResponseTransform,
 };
+use crate::policy::response::Error as PolicyError;
+use crate::policy::{self as policy_base, PolicyInfo};
 use crate::service;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;

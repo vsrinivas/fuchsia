@@ -19,9 +19,9 @@ use crate::handler::device_storage::{
 };
 use crate::message::base::{filter, Audience, MessageEvent, MessengerType, Status};
 use crate::message_hub_definition;
-use crate::policy::base::response::{Error as PolicyError, Payload};
-use crate::policy::base::{PolicyInfo, PolicyType, Request};
 use crate::policy::policy_handler::{ClientProxy, Create, PolicyHandler, RequestTransform};
+use crate::policy::response::{Error as PolicyError, Payload};
+use crate::policy::{PolicyInfo, PolicyType, Request};
 use crate::service;
 use crate::service::TryFromWithClient;
 use crate::tests::message_utils::verify_payload;

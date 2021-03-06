@@ -8,13 +8,13 @@ use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::SettingHandlerResult;
 use crate::internal::policy;
 use crate::message::base::{Audience, MessengerType};
-use crate::policy::base as policy_base;
-use crate::policy::base::{
-    Address, BoxedHandler, PolicyHandlerFactory, PolicyInfo, PolicyType, UnknownInfo,
-};
 use crate::policy::policy_handler::{PolicyHandler, RequestTransform, ResponseTransform};
 use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
 use crate::policy::policy_proxy::PolicyProxy;
+use crate::policy::{
+    self as policy_base, Address, BoxedHandler, PolicyHandlerFactory, PolicyInfo, PolicyType,
+    UnknownInfo,
+};
 use crate::service;
 use crate::tests::message_utils::verify_payload;
 use async_trait::async_trait;

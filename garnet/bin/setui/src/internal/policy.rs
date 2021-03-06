@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::message_hub_definition;
-use crate::policy::base::{Address, Payload, Role};
+use crate::policy::{Address, Payload, Role};
 
 // TODO(fxbug.dev/68487): remove once the policy layer uses the service message hub.
 message_hub_definition!(Payload, Address, Role);

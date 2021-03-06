@@ -6,11 +6,11 @@ use crate::handler::base::{Request, Response as SettingResponse};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::message::base::MessengerType;
-use crate::policy::base::response::{Payload, Response};
-use crate::policy::base::{PolicyInfo, PolicyType, Request as PolicyRequest, UnknownInfo};
 use crate::policy::policy_handler::{
     ClientProxy, Create, PolicyHandler, RequestTransform, ResponseTransform,
 };
+use crate::policy::response::{Payload, Response};
+use crate::policy::{PolicyInfo, PolicyType, Request as PolicyRequest, UnknownInfo};
 use crate::privacy::types::PrivacyInfo;
 use crate::service;
 use anyhow::Error;
