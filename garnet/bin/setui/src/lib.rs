@@ -69,6 +69,7 @@ mod clock;
 mod device;
 mod display;
 mod do_not_disturb;
+mod event;
 mod factory_reset;
 mod fidl_processor;
 mod hanging_get_handler;
@@ -203,7 +204,7 @@ pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     configuration: Option<ServiceConfiguration>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
     agent_mapping_func: Option<Box<dyn Fn(AgentType) -> AgentBlueprintHandle>>,
-    event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
+    event_subscriber_blueprints: Vec<event::subscriber::BlueprintHandle>,
     storage_factory: Arc<T>,
     generate_service: Option<GenerateService>,
     handlers: HashMap<SettingType, GenerateHandler<T>>,
@@ -340,7 +341,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     /// Event subscribers to participate
     pub fn event_subscribers(
         mut self,
-        subscribers: &[internal::event::subscriber::BlueprintHandle],
+        subscribers: &[event::subscriber::BlueprintHandle],
     ) -> EnvironmentBuilder<T> {
         self.event_subscriber_blueprints.append(&mut subscribers.to_vec());
         self
@@ -375,7 +376,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             _ => (HashSet::new(), HashSet::new(), HashSet::new(), HashSet::new()),
         };
 
-        let event_messenger_factory = internal::event::message::create_hub();
+        let event_messenger_factory = event::message::create_hub();
         let service_context =
             ServiceContext::create(self.generate_service, Some(event_messenger_factory.clone()));
 
@@ -654,9 +655,9 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     policies: HashSet<PolicyType>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
     resource_monitor_generators: Vec<monitor_base::monitor::Generate>,
-    event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
+    event_subscriber_blueprints: Vec<event::subscriber::BlueprintHandle>,
     service_context_handle: ServiceContextHandle,
-    event_messenger_factory: internal::event::message::Factory,
+    event_messenger_factory: event::message::Factory,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
     policy_handler_factory: Arc<Mutex<PolicyHandlerFactoryImpl<T>>>,
 ) -> Result<(), Error> {

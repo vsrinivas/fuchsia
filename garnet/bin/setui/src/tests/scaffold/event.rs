@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 pub mod subscriber {
-    use crate::internal::event;
+    use crate::event;
     use futures::future::BoxFuture;
     use std::sync::Arc;
 

@@ -157,35 +157,3 @@ pub mod subscriber {
         fn create(&self, message_factory: message::Factory) -> BoxFuture<'static, ()>;
     }
 }
-
-/// This macro helps define a blueprint for a given async subscriber creation
-/// method.
-#[macro_export]
-macro_rules! subscriber_blueprint {
-    ($create:expr) => {
-        pub mod event {
-            #[allow(unused_imports)]
-            use super::*;
-            use crate::internal::event;
-            use futures::future::BoxFuture;
-            use std::sync::Arc;
-
-            pub fn create() -> event::subscriber::BlueprintHandle {
-                Arc::new(BlueprintImpl)
-            }
-
-            struct BlueprintImpl;
-
-            impl event::subscriber::Blueprint for BlueprintImpl {
-                fn create(
-                    &self,
-                    message_factory: event::message::Factory,
-                ) -> BoxFuture<'static, ()> {
-                    Box::pin(async move {
-                        $create(context).await;
-                    })
-                }
-            }
-        }
-    };
-}

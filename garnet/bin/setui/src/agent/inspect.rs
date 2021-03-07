@@ -223,7 +223,7 @@ mod tests {
     use super::*;
     use crate::agent::Descriptor;
     use crate::display::types::SetDisplayInfo;
-    use crate::internal::event;
+    use crate::event;
     use crate::intl::types::{IntlInfo, LocaleId, TemperatureUnit};
     use crate::service;
 

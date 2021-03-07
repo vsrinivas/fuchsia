@@ -4,10 +4,10 @@
 
 use crate::agent::restore_agent;
 use crate::base::SettingType;
+use crate::event::{self as event, message::Receptor, restore, Event};
 use crate::handler::base::Request;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::{ControllerError, SettingHandlerResult};
-use crate::internal::event::{self as event, message::Receptor, restore, Event};
 use crate::message::base::{MessageEvent, MessengerType};
 use crate::tests::fakes::base::create_setting_handler;
 use crate::tests::fakes::service_registry::ServiceRegistry;

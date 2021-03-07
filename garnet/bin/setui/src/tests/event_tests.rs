@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::agent::{AgentError, Context, Payload};
+use crate::event;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::internal::event;
 use crate::message::base::{MessageEvent, MessengerType};
 use crate::tests::scaffold;
 use crate::EnvironmentBuilder;

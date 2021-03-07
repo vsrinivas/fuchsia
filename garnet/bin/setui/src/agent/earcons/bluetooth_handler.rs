@@ -9,7 +9,7 @@ use crate::agent::earcons::sound_ids::{
 use crate::agent::earcons::utils::connect_to_sound_player;
 use crate::agent::earcons::utils::play_sound;
 use crate::call;
-use crate::internal::event::Publisher;
+use crate::event::Publisher;
 
 use anyhow::{format_err, Context, Error};
 use fidl::encoding::Decodable;

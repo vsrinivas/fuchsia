@@ -4,7 +4,7 @@
 
 use crate::agent::camera_watcher::CameraWatcherAgent;
 use crate::agent::{Context, Descriptor, Invocation, Lifespan, Payload};
-use crate::internal::event::{self, Event};
+use crate::event::{self, Event};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::service;
 use crate::service_context::ServiceContext;

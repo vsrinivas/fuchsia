@@ -5,7 +5,7 @@
 use crate::agent::{AgentError, BlueprintHandle, Context, Invocation, Lifespan, Payload};
 
 use crate::base::SettingType;
-use crate::internal::event;
+use crate::event;
 use crate::message::base::{Audience, MessengerType};
 use crate::monitor;
 use crate::service;

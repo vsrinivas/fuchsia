@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::internal::event::message::Factory as EventMessengerFactory;
-use crate::internal::event::{Event, Publisher};
+use crate::event::message::Factory as EventMessengerFactory;
+use crate::event::{Event, Publisher};
 use crate::message::base::MessengerType;
 
 use anyhow::{format_err, Error};

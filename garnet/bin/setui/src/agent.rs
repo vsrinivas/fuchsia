@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::base::SettingType;
-use crate::internal::event;
+use crate::event;
 use crate::message::base::MessengerType;
 use crate::monitor;
 use crate::payload_convert;

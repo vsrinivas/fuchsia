@@ -16,6 +16,7 @@ use futures::StreamExt;
 use async_trait::async_trait;
 
 use crate::base::{SettingInfo, SettingType, UnknownInfo};
+use crate::event;
 use crate::handler::base::{
     Error as HandlerError, Payload as HandlerPayload, Request, Response, SettingHandlerFactory,
     SettingHandlerFactoryError,
@@ -24,7 +25,6 @@ use crate::handler::setting_handler::{
     self, Command, ControllerError, Event, ExitResult, SettingHandlerResult, State,
 };
 use crate::handler::setting_proxy::SettingProxy;
-use crate::internal::event;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::service;
 use crate::service::TryFromWithClient;

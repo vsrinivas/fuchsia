@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::call_async,
-    crate::internal::event::Publisher,
+    crate::event::Publisher,
     crate::service_context::{ExternalServiceProxy, ServiceContextHandle},
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_media::AudioRenderUsage,

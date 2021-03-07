@@ -6,11 +6,11 @@ use crate::agent::Payload;
 use crate::agent::{AgentError, Context as AgentContext, Invocation, InvocationResult, Lifespan};
 use crate::base::SettingType;
 use crate::blueprint_definition;
+use crate::event::{media_buttons, Event, Publisher};
 use crate::handler::base::{Payload as HandlerPayload, Request};
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::input::common::ButtonType;
 use crate::input::{monitor_media_buttons, VolumeGain};
-use crate::internal::event::{media_buttons, Event, Publisher};
 use crate::message::base::Audience;
 use crate::service;
 use crate::service_context::ServiceContextHandle;
@@ -159,13 +159,12 @@ impl EventHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::event;
     use crate::input::common::MediaButtonsEventBuilder;
-    use crate::internal::event;
     use crate::message::base::{MessageEvent, MessengerType};
     use crate::service;
     use crate::service_context::ServiceContext;
     use crate::tests::fakes::service_registry::ServiceRegistry;
-    //    use std::collections::HashMap;
 
     // TODO(fxbug.dev/62860): Refactor tests, could use a common setup helper.
 

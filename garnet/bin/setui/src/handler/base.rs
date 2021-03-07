@@ -28,8 +28,7 @@ use thiserror;
 
 #[cfg(test)]
 use {
-    crate::internal::event::message::Factory as EventMessengerFactory,
-    crate::service_context::ServiceContext,
+    crate::event::message::Factory as EventMessengerFactory, crate::service_context::ServiceContext,
 };
 
 pub type ControllerGenerateResult = Result<(), anyhow::Error>;

@@ -24,9 +24,9 @@ use futures::lock::Mutex;
 use futures::StreamExt;
 
 use crate::base::{SettingInfo, SettingType};
+use crate::event;
 use crate::handler::base::{Payload, Request};
 use crate::handler::setting_handler;
-use crate::internal::event;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::service;
 use fuchsia_zircon::Duration;

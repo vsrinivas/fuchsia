@@ -5,7 +5,7 @@
 use crate::audio::types::AudioStreamType;
 #[cfg(test)]
 use crate::audio::{create_default_audio_stream, StreamVolumeControl};
-use crate::internal::event;
+use crate::event;
 use crate::message::base::{MessageEvent, MessengerType};
 use crate::service_context::ServiceContext;
 use crate::tests::fakes::audio_core_service;

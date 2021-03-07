@@ -7,8 +7,8 @@ use crate::agent::{
     AgentError, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan, Payload,
 };
 use crate::base::SettingType;
+use crate::event;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::internal::event;
 use crate::service;
 use crate::service_context::ServiceContext;
 use crate::tests::scaffold;
