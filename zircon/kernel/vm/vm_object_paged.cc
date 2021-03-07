@@ -970,12 +970,15 @@ zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, 
   // Record the current generation count, we can use this to attempt to avoid re-performing checks
   // whilst copying.
   uint64_t gen_count = GetHierarchyGenerationCountLocked();
+  // The PageRequest is a non-trivial object so we declare it outside the loop to avoid having to
+  // construct and deconstruct it each iteration. It is tolerant of being reused and will
+  // reinitialize itself if needed.
+  PageRequest page_request;
   while (len > 0) {
     const size_t page_offset = src_offset % PAGE_SIZE;
     const size_t tocopy = ktl::min(PAGE_SIZE - page_offset, len);
 
     // fault in the page
-    PageRequest page_request;
     paddr_t pa;
     zx_status_t status =
         GetPageLocked(src_offset, VMM_PF_FLAG_SW_FAULT | (write ? VMM_PF_FLAG_WRITE : 0), nullptr,
