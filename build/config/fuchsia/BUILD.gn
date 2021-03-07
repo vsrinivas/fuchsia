@@ -98,6 +98,7 @@ config("compiler_cpu") {
 }
 
 # Mitigate Jump Conditional Code erratum.
+# See: fxbug.dev/44204
 config("skylake_jcc") {
   visibility = [ ":*" ]
   if (current_cpu == "x64") {
