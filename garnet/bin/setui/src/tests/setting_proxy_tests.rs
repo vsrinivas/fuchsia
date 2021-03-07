@@ -234,7 +234,6 @@ impl TestEnvironmentBuilder {
 
     pub async fn build(self) -> TestEnvironment {
         let messenger_factory = service::message::create_hub();
-        let event_messenger_factory = event::message::create_hub();
 
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new(messenger_factory.clone())));
 
@@ -242,7 +241,6 @@ impl TestEnvironmentBuilder {
             self.setting_type,
             handler_factory.clone(),
             messenger_factory.clone(),
-            event_messenger_factory.clone(),
             SETTING_PROXY_MAX_ATTEMPTS,
             self.timeout.map_or(None, |(duration, _)| Some(duration)),
             self.timeout.map_or(true, |(_, retry)| retry),
@@ -270,7 +268,6 @@ impl TestEnvironmentBuilder {
             handler_factory,
             setting_handler_rx: state_rx,
             setting_handler: handler,
-            event_factory: event_messenger_factory,
             setting_type: self.setting_type,
             messenger_factory,
         }
@@ -284,7 +281,6 @@ pub struct TestEnvironment {
     setting_handler_rx: UnboundedReceiver<State>,
     setting_handler: Arc<Mutex<SettingHandler>>,
     setting_type: SettingType,
-    event_factory: event::message::Factory,
     pub messenger_factory: service::message::Factory,
 }
 
@@ -543,11 +539,7 @@ async fn test_retry() {
     let setting_type = SettingType::Unknown;
     let mut environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
-    let (_, mut event_receptor) = environment
-        .event_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("Should be able to retrieve receptor");
+    let mut event_receptor = service::build_event_listener(&environment.messenger_factory).await;
 
     // Queue up external failure responses in the handler.
     for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
@@ -643,11 +635,7 @@ async fn test_early_exit() {
     let setting_type = SettingType::Unknown;
     let environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
-    let (_, mut event_receptor) = environment
-        .event_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("Should be able to retrieve receptor");
+    let mut event_receptor = service::build_event_listener(&environment.messenger_factory).await;
 
     // Queue up external failure responses in the handler.
     for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
@@ -720,11 +708,8 @@ fn test_timeout() {
             .build()
             .await;
 
-        let (_, mut event_receptor) = environment
-            .event_factory
-            .create(MessengerType::Unbound)
-            .await
-            .expect("Should be able to retrieve receptor");
+        let mut event_receptor =
+            service::build_event_listener(&environment.messenger_factory).await;
 
         // Queue up to ignore resquests
         for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
@@ -824,11 +809,8 @@ fn test_timeout_no_retry() {
             .build()
             .await;
 
-        let (_, mut event_receptor) = environment
-            .event_factory
-            .create(MessengerType::Unbound)
-            .await
-            .expect("Should be able to retrieve receptor");
+        let mut event_receptor =
+            service::build_event_listener(&environment.messenger_factory).await;
 
         // Queue up to ignore resquests
         environment
@@ -890,11 +872,14 @@ fn test_timeout_no_retry() {
 /// Checks that the supplied message event specifies the supplied handler event.
 fn verify_handler_event(
     setting_type: SettingType,
-    message_event: MessageEvent<event::Payload, event::Address>,
+    message_event: service::message::MessageEvent,
     event: event::handler::Event,
 ) {
     if let MessageEvent::Message(
-        event::Payload::Event(event::Event::Handler(captured_type, captured_event)),
+        service::Payload::Event(event::Payload::Event(event::Event::Handler(
+            captured_type,
+            captured_event,
+        ))),
         _,
     ) = message_event
     {

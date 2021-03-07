@@ -7,6 +7,7 @@ use crate::audio::types::AudioStreamType;
 use crate::audio::{create_default_audio_stream, StreamVolumeControl};
 use crate::event;
 use crate::message::base::{MessageEvent, MessengerType};
+use crate::service;
 use crate::service_context::ServiceContext;
 use crate::tests::fakes::audio_core_service;
 use crate::tests::fakes::service_registry::ServiceRegistry;
@@ -26,12 +27,11 @@ async fn create_service() -> Arc<Mutex<ServiceRegistry>> {
 // Tests that the volume event stream thread exits when the StreamVolumeControl is deleted.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_drop_thread() {
-    let factory = event::message::create_hub();
+    let messenger_factory = service::message::create_hub();
 
-    let (_, mut receptor) =
-        factory.create(MessengerType::Unbound).await.expect("Should be able to retrieve receptor");
+    let mut receptor = service::build_event_listener(&messenger_factory).await;
 
-    let publisher = event::Publisher::create(&factory, MessengerType::Unbound).await;
+    let publisher = event::Publisher::create(&messenger_factory, MessengerType::Unbound).await;
 
     let service_context =
         ServiceContext::create(Some(ServiceRegistry::serve(create_service().await)), None);
@@ -59,7 +59,10 @@ async fn test_drop_thread() {
         receptor.next().await.expect("First message should have been the closed event");
 
     match received_event {
-        MessageEvent::Message(event::Payload::Event(broadcasted_event), _) => {
+        MessageEvent::Message(
+            service::Payload::Event(event::Payload::Event(broadcasted_event)),
+            _,
+        ) => {
             assert_eq!(broadcasted_event, event::Event::Closed("volume_control_events"));
         }
         _ => {

@@ -376,9 +376,8 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             _ => (HashSet::new(), HashSet::new(), HashSet::new(), HashSet::new()),
         };
 
-        let event_messenger_factory = event::message::create_hub();
         let service_context =
-            ServiceContext::create(self.generate_service, Some(event_messenger_factory.clone()));
+            ServiceContext::create(self.generate_service, Some(messenger_factory.clone()));
 
         let context_id_counter = Arc::new(AtomicU64::new(1));
 
@@ -444,7 +443,6 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             self.resource_monitors,
             self.event_subscriber_blueprints,
             service_context,
-            event_messenger_factory,
             Arc::new(Mutex::new(handler_factory)),
             Arc::new(Mutex::new(policy_handler_factory)),
         )
@@ -657,12 +655,11 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     resource_monitor_generators: Vec<monitor_base::monitor::Generate>,
     event_subscriber_blueprints: Vec<event::subscriber::BlueprintHandle>,
     service_context_handle: ServiceContextHandle,
-    event_messenger_factory: event::message::Factory,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
     policy_handler_factory: Arc<Mutex<PolicyHandlerFactoryImpl<T>>>,
 ) -> Result<(), Error> {
     for blueprint in event_subscriber_blueprints {
-        blueprint.create(event_messenger_factory.clone()).await;
+        blueprint.create(messenger_factory.clone()).await;
     }
 
     let monitor_actor = if resource_monitor_generators.is_empty() {
@@ -685,7 +682,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             *setting_type,
             handler_factory.clone(),
             messenger_factory.clone(),
-            event_messenger_factory.clone(),
             DEFAULT_SETTING_PROXY_MAX_ATTEMPTS,
             Some(DEFAULT_SETTING_PROXY_RESPONSE_TIMEOUT_MS.millis()),
             true,
@@ -712,13 +708,8 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .await
         .expect("could not create inspect");
 
-    let mut agent_authority = Authority::create(
-        messenger_factory.clone(),
-        event_messenger_factory.clone(),
-        components.clone(),
-        monitor_actor,
-    )
-    .await?;
+    let mut agent_authority =
+        Authority::create(messenger_factory.clone(), components.clone(), monitor_actor).await?;
 
     register_fidl_handler!(
         components,

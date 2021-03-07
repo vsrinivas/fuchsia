@@ -4,16 +4,17 @@
 
 use crate::agent::restore_agent;
 use crate::base::SettingType;
-use crate::event::{self as event, message::Receptor, restore, Event};
+use crate::event::{self as event, restore, Event};
 use crate::handler::base::Request;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::{ControllerError, SettingHandlerResult};
-use crate::message::base::{MessageEvent, MessengerType};
+use crate::message::base::MessageEvent;
+use crate::service;
+use crate::service::message::Receptor;
 use crate::tests::fakes::base::create_setting_handler;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::scaffold::event::subscriber::Blueprint;
 use crate::EnvironmentBuilder;
-use fuchsia_component::server::NestedEnvironment;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::StreamExt;
@@ -22,25 +23,20 @@ use std::sync::Arc;
 const ENV_NAME: &str = "restore_agent_test_environment";
 
 // Create an environment that includes Event handling.
-async fn create_event_environment(
-) -> (NestedEnvironment, Arc<Mutex<Option<event::message::Receptor>>>) {
+async fn create_event_environment() -> Arc<Mutex<Option<Receptor>>> {
     let event_receptor: Arc<Mutex<Option<Receptor>>> = Arc::new(Mutex::new(None));
     let receptor_capture = event_receptor.clone();
 
     // Upon environment initialization, the subscriber will capture the event receptor.
     let create_subscriber =
-        Arc::new(move |factory: event::message::Factory| -> BoxFuture<'static, ()> {
+        Arc::new(move |factory: service::message::Factory| -> BoxFuture<'static, ()> {
             let event_receptor = receptor_capture.clone();
             Box::pin(async move {
-                let (_, receptor) = factory
-                    .create(MessengerType::Unbound)
-                    .await
-                    .expect("Should be able to retrieve messenger for publisher");
-                *event_receptor.lock().await = Some(receptor);
+                *event_receptor.lock().await = Some(service::build_event_listener(&factory).await);
             })
         });
 
-    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
+    let _env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(ServiceRegistry::serve(ServiceRegistry::create()))
         .event_subscribers(&[Blueprint::create(create_subscriber)])
         .settings(&[SettingType::Setup])
@@ -49,7 +45,7 @@ async fn create_event_environment(
         .await
         .unwrap();
 
-    (env, event_receptor)
+    event_receptor
 }
 
 // Helper function for bringing up an environment with a single handler for a
@@ -121,10 +117,12 @@ async fn test_restore() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_unimplemented() {
-    let (_, receptor) = create_event_environment().await;
+    let receptor = create_event_environment().await;
     let mut event_receptor = receptor.lock().await.take().expect("Should have captured receptor");
-    if let Some(MessageEvent::Message(event::Payload::Event(received_event), ..)) =
-        event_receptor.next().await
+    if let Some(MessageEvent::Message(
+        service::Payload::Event(event::Payload::Event(received_event)),
+        ..,
+    )) = event_receptor.next().await
     {
         // Will stall if not encountered
         if received_event == Event::Restore(restore::Event::NoOp(SettingType::Setup)) {

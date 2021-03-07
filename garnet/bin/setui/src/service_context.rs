@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::event::message::Factory as EventMessengerFactory;
 use crate::event::{Event, Publisher};
 use crate::message::base::MessengerType;
+use crate::service;
 
 use anyhow::{format_err, Error};
 use fidl::endpoints::{DiscoverableService, Proxy, ServiceMarker};
@@ -28,30 +28,27 @@ pub type ServiceContextHandle = Arc<Mutex<ServiceContext>>;
 /// environment.
 pub struct ServiceContext {
     generate_service: Option<GenerateService>,
-    event_messenger_factory: Option<EventMessengerFactory>,
+    messenger_factory: Option<service::message::Factory>,
 }
 
 impl ServiceContext {
     pub fn create(
         generate_service: Option<GenerateService>,
-        event_messenger_factory: Option<EventMessengerFactory>,
+        messenger_factory: Option<service::message::Factory>,
     ) -> ServiceContextHandle {
-        return Arc::new(Mutex::new(ServiceContext::new(
-            generate_service,
-            event_messenger_factory,
-        )));
+        return Arc::new(Mutex::new(ServiceContext::new(generate_service, messenger_factory)));
     }
 
     pub fn new(
         generate_service: Option<GenerateService>,
-        event_messenger_factory: Option<EventMessengerFactory>,
+        messenger_factory: Option<service::message::Factory>,
     ) -> Self {
-        Self { generate_service, event_messenger_factory }
+        Self { generate_service, messenger_factory }
     }
 
     async fn make_publisher(&self) -> Option<Publisher> {
         let maybe: OptionFuture<_> = self
-            .event_messenger_factory
+            .messenger_factory
             .as_ref()
             .map(|factory| Publisher::create(factory, MessengerType::Unbound))
             .into();

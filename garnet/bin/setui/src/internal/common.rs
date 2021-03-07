@@ -21,6 +21,7 @@ macro_rules! message_hub_definition {
             use crate::message::base::MessageError as BaseMessageError;
             use crate::message::base::MessageEvent as BaseMessageEvent;
             use crate::message::base::MessageType as BaseMessageType;
+            use crate::message::base::MessengerType as BaseMessengerType;
             use crate::message::base::Signature as BaseSignature;
             use crate::message::message_client::MessageClient as BaseMessageClient;
             use crate::message::message_hub::MessageHub;
@@ -49,6 +50,9 @@ macro_rules! message_hub_definition {
 
             #[allow(dead_code)]
             pub type MessageClient = BaseMessageClient<$payload, $address, $role>;
+
+            #[allow(dead_code)]
+            pub type MessengerType = BaseMessengerType<$payload, $address, $role>;
 
             #[allow(dead_code)]
             pub type MessageType = BaseMessageType<$payload, $address, $role>;

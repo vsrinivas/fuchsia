@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::agent;
-use crate::agent::Descriptor;
 use futures::future::BoxFuture;
 use std::sync::Arc;
 
@@ -17,20 +16,15 @@ pub enum Generate {
 /// scope or else the MessageHub will fail on the name collision.
 pub struct Blueprint {
     generate: Generate,
-    descriptor: Descriptor,
 }
 
 impl Blueprint {
-    pub fn new(generate: Generate, component: &str) -> Self {
-        Self { generate: generate, descriptor: Descriptor::new(component) }
+    pub fn new(generate: Generate) -> Self {
+        Self { generate: generate }
     }
 }
 
 impl agent::Blueprint for Blueprint {
-    fn get_descriptor(&self) -> Descriptor {
-        self.descriptor.clone()
-    }
-
     fn create(&self, context: agent::Context) -> BoxFuture<'static, ()> {
         match &self.generate {
             Generate::Sync(func) => {

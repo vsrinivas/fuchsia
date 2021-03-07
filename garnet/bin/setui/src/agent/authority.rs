@@ -5,7 +5,6 @@
 use crate::agent::{AgentError, BlueprintHandle, Context, Invocation, Lifespan, Payload};
 
 use crate::base::SettingType;
-use crate::event;
 use crate::message::base::{Audience, MessengerType};
 use crate::monitor;
 use crate::service;
@@ -22,8 +21,6 @@ pub struct Authority {
     messenger_factory: service::message::Factory,
     // Messenger
     messenger: service::message::Messenger,
-    // Factory to generate event messengers
-    event_factory: event::message::Factory,
     // Available components
     available_components: HashSet<SettingType>,
     // Available resource monitors
@@ -33,7 +30,6 @@ pub struct Authority {
 impl Authority {
     pub async fn create(
         messenger_factory: service::message::Factory,
-        event_factory: event::message::Factory,
         available_components: HashSet<SettingType>,
         resource_monitor_actor: Option<monitor::environment::Actor>,
     ) -> Result<Authority, Error> {
@@ -46,7 +42,6 @@ impl Authority {
             agent_signatures: Vec::new(),
             messenger_factory,
             messenger: client,
-            event_factory,
             available_components,
             resource_monitor_actor,
         });
@@ -64,9 +59,7 @@ impl Authority {
             .create(
                 Context::new(
                     agent_receptor,
-                    blueprint.get_descriptor(),
                     self.messenger_factory.clone(),
-                    self.event_factory.clone(),
                     self.available_components.clone(),
                     self.resource_monitor_actor.clone(),
                 )

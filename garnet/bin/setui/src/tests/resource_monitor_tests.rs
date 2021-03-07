@@ -27,28 +27,25 @@ struct TestMonitorAgent;
 
 impl TestMonitorAgent {
     pub fn create(callback: CallbackSender) -> BlueprintHandle {
-        Arc::new(scaffold::agent::Blueprint::new(
-            scaffold::agent::Generate::Async(Arc::new(
-                move |mut context: AgentContext| -> BoxFuture<'static, ()> {
-                    callback
-                        .unbounded_send(
-                            context.resource_monitor_actor.clone().expect("should be present"),
-                        )
-                        .ok();
+        Arc::new(scaffold::agent::Blueprint::new(scaffold::agent::Generate::Async(Arc::new(
+            move |mut context: AgentContext| -> BoxFuture<'static, ()> {
+                callback
+                    .unbounded_send(
+                        context.resource_monitor_actor.clone().expect("should be present"),
+                    )
+                    .ok();
 
-                    Box::pin(async move {
-                        // Immediately respond to all invocations
-                        fasync::Task::spawn(async move {
-                            while let Ok((.., client)) = context.receptor.next_payload().await {
-                                client.reply(Payload::Complete(Ok(())).into()).send().ack();
-                            }
-                        })
-                        .detach();
+                Box::pin(async move {
+                    // Immediately respond to all invocations
+                    fasync::Task::spawn(async move {
+                        while let Ok((.., client)) = context.receptor.next_payload().await {
+                            client.reply(Payload::Complete(Ok(())).into()).send().ack();
+                        }
                     })
-                },
-            )),
-            "test_monitor_agent",
-        ))
+                    .detach();
+                })
+            },
+        ))))
     }
 }
 

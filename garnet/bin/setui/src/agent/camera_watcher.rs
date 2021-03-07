@@ -160,9 +160,8 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn initialization_lifespan_is_unhandled() {
         // Setup messengers needed to construct the agent.
-        let event_message_hub = event::message::create_hub();
         let service_message_hub = service::message::create_hub();
-        let publisher = Publisher::create(&event_message_hub, MessengerType::Unbound).await;
+        let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
 
         let (messenger, _) = service_message_hub
             .create(MessengerType::Unbound)
@@ -188,9 +187,8 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn when_camera3_inaccessible_returns_err() {
         // Setup messengers needed to construct the agent.
-        let event_message_hub = event::message::create_hub();
         let service_message_hub = service::message::create_hub();
-        let publisher = Publisher::create(&event_message_hub, MessengerType::Unbound).await;
+        let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
 
         let (messenger, _) = service_message_hub
             .create(MessengerType::Unbound)
@@ -216,20 +214,15 @@ mod tests {
     // Tests that events can be sent to the intended recipients.
     #[fuchsia_async::run_until_stalled(test)]
     async fn event_handler_proxies_event() {
-        let event_message_hub = event::message::create_hub();
         let service_message_hub = service::message::create_hub();
 
         // Get the messenger's signature and the receptor for agents. We need
         // a different messenger below because a broadcast would not send a message
         // to itself. The signature is used to delete the original messenger for this
         // receptor.
-        let event_receptor = event_message_hub
-            .create(MessengerType::Unbound)
-            .await
-            .expect("Unable to create agent receptor")
-            .1;
+        let event_receptor = service::build_event_listener(&service_message_hub).await;
 
-        let publisher = Publisher::create(&event_message_hub, MessengerType::Unbound).await;
+        let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
 
         // Get the messenger's signature and the receptor for agents. We need
         // a different messenger below because a broadcast would not send a message
@@ -258,7 +251,7 @@ mod tests {
         // Delete the messengers for the receptors we're selecting below. This
         // will allow the `select!` to eventually hit the `complete` case.
         service_message_hub.delete(handler_receptor.get_signature());
-        event_message_hub.delete(event_receptor.get_signature());
+        service_message_hub.delete(event_receptor.get_signature());
 
         let mut agent_received_sw_mute = false;
         let mut handler_received_event = false;
@@ -273,9 +266,9 @@ mod tests {
         loop {
             futures::select! {
                 message = fused_event.select_next_some() => {
-                    if let MessageEvent::Message(event::Payload::Event(
+                    if let MessageEvent::Message(service::Payload::Event(event::Payload::Event(
                         event::Event::CameraUpdate(event)
-                    ), _) = message
+                    )), _) = message
                     {
                         match event {
                             event::camera_watcher::Event::OnSWMuteState(muted) => {
@@ -306,9 +299,8 @@ mod tests {
     // Tests that events are not sent to unavailable settings.
     #[fuchsia_async::run_until_stalled(test)]
     async fn event_handler_sends_no_events_if_no_settings_available() {
-        let event_message_hub = event::message::create_hub();
         let service_message_hub = service::message::create_hub();
-        let publisher = Publisher::create(&event_message_hub, MessengerType::Unbound).await;
+        let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
         let handler_address = service::Address::Handler(SettingType::Unknown);
         let verification_request = Request::Get;
 

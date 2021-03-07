@@ -7,7 +7,6 @@ use crate::agent::{
     AgentError, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan, Payload,
 };
 use crate::base::SettingType;
-use crate::event;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::service;
 use crate::service_context::ServiceContext;
@@ -88,8 +87,8 @@ impl TestAgent {
         }));
 
         let agent_clone = agent.clone();
-        let blueprint = Arc::new(scaffold::agent::Blueprint::new(
-            scaffold::agent::Generate::Sync(Arc::new(move |mut context: Context| {
+        let blueprint = Arc::new(scaffold::agent::Blueprint::new(scaffold::agent::Generate::Sync(
+            Arc::new(move |mut context: Context| {
                 let agent = agent_clone.clone();
                 fasync::Task::spawn(async move {
                     while let Ok((payload, client)) = context.receptor.next_payload().await {
@@ -105,9 +104,8 @@ impl TestAgent {
                     }
                 })
                 .detach();
-            })),
-            &id.to_string()[..],
-        ));
+            }),
+        )));
 
         (agent.clone(), blueprint)
     }
@@ -203,14 +201,7 @@ async fn test_environment_startup() {
 }
 
 async fn create_authority() -> Authority {
-    Authority::create(
-        service::message::create_hub(),
-        event::message::create_hub(),
-        HashSet::new(),
-        None,
-    )
-    .await
-    .unwrap()
+    Authority::create(service::message::create_hub(), HashSet::new(), None).await.unwrap()
 }
 
 /// Ensures that agents are executed in sequential order and the

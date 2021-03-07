@@ -27,9 +27,7 @@ use std::sync::Arc;
 use thiserror;
 
 #[cfg(test)]
-use {
-    crate::event::message::Factory as EventMessengerFactory, crate::service_context::ServiceContext,
-};
+use crate::service_context::ServiceContext;
 
 pub type ControllerGenerateResult = Result<(), anyhow::Error>;
 
@@ -352,7 +350,6 @@ pub struct ContextBuilder<T: DeviceStorageFactory> {
     storage_factory: Arc<T>,
     settings: HashSet<SettingType>,
     service_context: Option<ServiceContextHandle>,
-    event_messenger_factory: Option<EventMessengerFactory>,
     messenger: Messenger,
     receptor: Receptor,
     notifier_signature: Signature,
@@ -374,7 +371,6 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
             storage_factory,
             settings: HashSet::new(),
             service_context: None,
-            event_messenger_factory: None,
             messenger,
             receptor,
             notifier_signature,
@@ -385,15 +381,6 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
     // Sets the service context to be used.
     pub fn service_context(mut self, service_context_handle: ServiceContextHandle) -> Self {
         self.service_context = Some(service_context_handle);
-
-        self
-    }
-
-    pub fn event_messenger_factory(
-        mut self,
-        event_messenger_factory: EventMessengerFactory,
-    ) -> Self {
-        self.event_messenger_factory = Some(event_messenger_factory);
 
         self
     }
@@ -410,7 +397,7 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
     /// Generates the Context.
     pub fn build(self) -> Context<T> {
         let service_context = if self.service_context.is_none() {
-            ServiceContext::create(None, self.event_messenger_factory)
+            ServiceContext::create(None, None)
         } else {
             self.service_context.unwrap()
         };

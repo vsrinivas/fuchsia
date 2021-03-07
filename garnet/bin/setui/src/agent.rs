@@ -44,20 +44,6 @@ pub enum AgentError {
 
 pub type InvocationResult = Result<(), AgentError>;
 
-/// Identification for the agent used for logging purposes.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Descriptor {
-    component: String,
-}
-
-impl Descriptor {
-    /// Returns a `Descriptor` with the passed in argument as the component
-    /// name.
-    pub fn new(component: &str) -> Self {
-        Self { component: component.to_string() }
-    }
-}
-
 /// The scope of an agent's life. Initialization components should
 /// only run at the beginning of the service. Service components follow
 /// initialization and run for the duration of the service.
@@ -83,10 +69,6 @@ impl PartialEq for Invocation {
 /// Blueprint defines an interface provided to the authority for constructing
 /// a given agent.
 pub trait Blueprint {
-    /// Returns the Agent descriptor to be associated with components used
-    /// by this agent, such as logging.
-    fn get_descriptor(&self) -> Descriptor;
-
     /// Uses the supplied context to create agent.
     fn create(&self, context: Context) -> BoxFuture<'static, ()>;
 }
@@ -96,7 +78,6 @@ pub type BlueprintHandle = Arc<dyn Blueprint + Send + Sync>;
 /// TODO(fxbug.dev/68659): Add documentation.
 pub struct Context {
     pub receptor: Receptor,
-    event_factory: event::message::Factory,
     publisher: event::Publisher,
     pub messenger_factory: service::message::Factory,
     pub available_components: HashSet<SettingType>,
@@ -106,20 +87,13 @@ pub struct Context {
 impl Context {
     pub async fn new(
         receptor: Receptor,
-        descriptor: Descriptor,
         messenger_factory: service::message::Factory,
-        event_factory: event::message::Factory,
         available_components: HashSet<SettingType>,
         resource_monitor_actor: Option<monitor::environment::Actor>,
     ) -> Self {
-        let publisher = event::Publisher::create(
-            &event_factory,
-            MessengerType::Addressable(event::Address::Agent(descriptor)),
-        )
-        .await;
+        let publisher = event::Publisher::create(&messenger_factory, MessengerType::Unbound).await;
         Self {
             receptor,
-            event_factory,
             publisher,
             messenger_factory,
             available_components,
@@ -136,10 +110,6 @@ impl Context {
         Ok(self.messenger_factory.create(MessengerType::Unbound).await?.0)
     }
 
-    pub fn event_factory(&self) -> &event::message::Factory {
-        &self.event_factory
-    }
-
     pub fn get_publisher(&self) -> event::Publisher {
         self.publisher.clone()
     }
@@ -151,7 +121,7 @@ macro_rules! blueprint_definition {
         pub mod blueprint {
             #[allow(unused_imports)]
             use super::*;
-            use crate::agent::{Blueprint, BlueprintHandle, Context, Descriptor};
+            use crate::agent::{Blueprint, BlueprintHandle, Context};
             use futures::future::BoxFuture;
             use std::sync::Arc;
 
@@ -162,10 +132,6 @@ macro_rules! blueprint_definition {
             struct BlueprintImpl;
 
             impl Blueprint for BlueprintImpl {
-                fn get_descriptor(&self) -> Descriptor {
-                    Descriptor::new($component)
-                }
-
                 fn create(&self, context: Context) -> BoxFuture<'static, ()> {
                     Box::pin(async move {
                         $create(context).await;

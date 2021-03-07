@@ -6,11 +6,11 @@ use {
     crate::audio::default_audio_info,
     crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType},
     crate::base::SettingType,
-    crate::event,
     crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
     crate::handler::device_storage::DeviceStorage,
     crate::input::common::MediaButtonsEventBuilder,
     crate::message::base::MessengerType,
+    crate::service,
     crate::tests::fakes::audio_core_service,
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
@@ -173,20 +173,20 @@ struct FakeServices {
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
     overridden_initial_streams: Vec<AudioStreamSettings>,
-) -> (NestedEnvironment, Arc<DeviceStorage>, event::message::Receptor) {
+) -> (NestedEnvironment, Arc<DeviceStorage>, service::message::Receptor) {
     let mut initial_audio_info = default_audio_info();
 
     for stream in overridden_initial_streams {
         initial_audio_info.replace_stream(AudioStream::from(stream));
     }
 
-    let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<event::message::Factory>();
+    let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<service::message::Factory>();
     let storage_factory = Arc::new(InMemoryStorageFactory::with_initial_data(&initial_audio_info));
 
     // Upon instantiation, the subscriber will capture the event message
     // factory.
     let create_subscriber =
-        Arc::new(move |factory: event::message::Factory| -> BoxFuture<'static, ()> {
+        Arc::new(move |factory: service::message::Factory| -> BoxFuture<'static, ()> {
             let event_tx = event_tx.clone();
             Box::pin(async move {
                 event_tx.unbounded_send(factory).ok();

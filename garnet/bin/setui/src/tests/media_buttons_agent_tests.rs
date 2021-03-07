@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use crate::agent::media_buttons;
+use crate::agent::Invocation;
 use crate::agent::Lifespan;
 use crate::agent::{Context, Payload};
-use crate::agent::{Descriptor, Invocation};
 use crate::event::{self, Event};
 use crate::input::{ButtonType, VolumeGain};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
@@ -39,7 +39,6 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_media_buttons_proxied() {
     let service_hub = service::message::create_hub();
-    let event_hub = event::message::create_hub();
     // Create the agent receptor for use by the agent.
     let agent_receptor = service_hub
         .create(MessengerType::Unbound)
@@ -52,19 +51,10 @@ async fn test_media_buttons_proxied() {
     let (agent_messenger, _) =
         service_hub.create(MessengerType::Unbound).await.expect("Unable to create agent messenger");
     // Create the receptor which will receive the broadcast events.
-    let (_, mut event_receptor) =
-        event_hub.create(MessengerType::Unbound).await.expect("Unable to create agent messenger");
+    let mut event_receptor = service::build_event_listener(&service_hub).await;
 
     // Create the agent context and agent.
-    let context = Context::new(
-        agent_receptor,
-        Descriptor::new("test_media_buttons_agent"),
-        service_hub,
-        event_hub,
-        HashSet::new(),
-        None,
-    )
-    .await;
+    let context = Context::new(agent_receptor, service_hub, HashSet::new(), None).await;
     MediaButtonsAgent::create(context).await;
 
     // Setup the fake services.
@@ -106,7 +96,8 @@ async fn test_media_buttons_proxied() {
     let mut mic_mute_received = false;
     let mut volume_received = false;
     while let Ok((payload, _)) = event_receptor.next_payload().await {
-        if let event::Payload::Event(Event::MediaButtons(event)) = payload {
+        if let service::Payload::Event(event::Payload::Event(Event::MediaButtons(event))) = payload
+        {
             match event {
                 event::media_buttons::Event::OnButton(ButtonType::MicrophoneMute(true)) => {
                     mic_mute_received = true;

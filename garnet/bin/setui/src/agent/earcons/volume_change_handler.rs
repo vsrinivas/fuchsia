@@ -278,9 +278,8 @@ mod tests {
     async fn test_changed_streams() {
         let (fake_streams, old_timestamps, new_timestamps, expected_changed_streams) =
             fake_values();
-        let event_messenger_factory = event::message::create_hub();
-        let publisher =
-            event::Publisher::create(&event_messenger_factory, MessengerType::Unbound).await;
+        let messenger_factory = service::message::create_hub();
+        let publisher = event::Publisher::create(&messenger_factory, MessengerType::Unbound).await;
         let mut last_user_volumes = HashMap::new();
         last_user_volumes.insert(AudioStreamType::Media, 1.0);
         last_user_volumes.insert(AudioStreamType::Interruption, 0.5);

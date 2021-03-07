@@ -5,7 +5,8 @@
 use crate::agent::{AgentError, Context, Payload};
 use crate::event;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::message::base::{MessageEvent, MessengerType};
+use crate::message::base::MessageEvent;
+use crate::service;
 use crate::tests::scaffold;
 use crate::EnvironmentBuilder;
 use fuchsia_async as fasync;
@@ -21,7 +22,7 @@ const ENV_NAME: &str = "settings_service_event_test_environment";
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_agent_event_propagation() {
     let agent_publisher: Arc<Mutex<Option<event::Publisher>>> = Arc::new(Mutex::new(None));
-    let event_factory: Arc<Mutex<Option<event::message::Factory>>> = Arc::new(Mutex::new(None));
+    let event_factory: Arc<Mutex<Option<service::message::Factory>>> = Arc::new(Mutex::new(None));
 
     // Capturing the context allows retrieving the publisher meant for the
     // agent.
@@ -33,7 +34,7 @@ async fn test_agent_event_propagation() {
     // Upon instantiation, the subscriber will capture the event message
     // factory.
     let create_subscriber =
-        Arc::new(move |factory: event::message::Factory| -> BoxFuture<'static, ()> {
+        Arc::new(move |factory: service::message::Factory| -> BoxFuture<'static, ()> {
             let event_factory = event_factory_capture.clone();
             Box::pin(async move {
                 *event_factory.lock().await = Some(factory);
@@ -65,20 +66,16 @@ async fn test_agent_event_propagation() {
     let _ = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .settings(&[])
         .event_subscribers(&[scaffold::event::subscriber::Blueprint::create(create_subscriber)])
-        .agents(&[Arc::new(scaffold::agent::Blueprint::new(
-            scaffold::agent::Generate::Async(create_agent),
-            "test",
-        ))])
+        .agents(&[Arc::new(scaffold::agent::Blueprint::new(scaffold::agent::Generate::Async(
+            create_agent,
+        )))])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
 
     let factory =
         event_factory.clone().lock().await.take().expect("Should have captured event factory");
-    let (_, mut receptor) = factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("Should be able to retrieve messenger for publisher");
+    let mut receptor = service::build_event_listener(&factory).await;
 
     let sent_event = event::Event::Custom("test");
 
@@ -88,7 +85,10 @@ async fn test_agent_event_propagation() {
     let received_event =
         receptor.next().await.expect("First message should have been the broadcast");
     match received_event {
-        MessageEvent::Message(event::Payload::Event(broadcasted_event), _) => {
+        MessageEvent::Message(
+            service::Payload::Event(event::Payload::Event(broadcasted_event)),
+            _,
+        ) => {
             assert_eq!(broadcasted_event, sent_event);
         }
         _ => {

@@ -221,9 +221,7 @@ impl InspectAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent::Descriptor;
     use crate::display::types::SetDisplayInfo;
-    use crate::event;
     use crate::intl::types::{IntlInfo, LocaleId, TemperatureUnit};
     use crate::service;
 
@@ -275,9 +273,7 @@ mod tests {
                 .await
                 .expect("should be present")
                 .1,
-            Descriptor::new("test_component"),
             service::message::create_hub(),
-            event::message::create_hub(),
             HashSet::new(),
             None,
         )

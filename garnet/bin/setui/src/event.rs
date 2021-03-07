@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent;
 use crate::base::SettingType;
-use crate::message::base::{Audience, MessengerType};
-use crate::message_hub_definition;
+use crate::event;
+use crate::message::base::{role, Audience};
+use crate::payload_convert;
+use crate::service;
 use std::sync::Arc;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Payload {
     Event(Event),
 }
@@ -26,10 +27,14 @@ pub enum Event {
     Handler(SettingType, handler::Event),
 }
 
-#[derive(PartialEq, Clone, Debug, Eq, Hash)]
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {
-    Agent(agent::Descriptor),
     SettingProxy(SettingType),
+}
+
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
+pub enum Role {
+    Sink,
 }
 
 pub mod camera_watcher {
@@ -113,23 +118,19 @@ pub mod restore {
     }
 }
 
-// The Event message hub should be used to capture events not normally exposed
-// through other communication. For example, actions that happen within agents
-// are generally not reported back. Events that are useful for diagnostics and
-// verification in tests should be defined here.
-message_hub_definition!(Payload, Address);
+payload_convert!(Event, Payload);
 
 /// Publisher is a helper for producing logs. It simplifies message creation for
 /// each event and associates an address with these messages at construction.
 #[derive(Clone, Debug)]
 pub struct Publisher {
-    messenger: message::Messenger,
+    messenger: service::message::Messenger,
 }
 
 impl Publisher {
     pub async fn create(
-        factory: &message::Factory,
-        messenger_type: MessengerType<Payload, Address>,
+        factory: &service::message::Factory,
+        messenger_type: service::message::MessengerType,
     ) -> Publisher {
         let (messenger, _) = factory
             .create(messenger_type)
@@ -141,7 +142,13 @@ impl Publisher {
 
     /// Broadcasts event to the message hub.
     pub fn send_event(&self, event: Event) {
-        self.messenger.message(Payload::Event(event), Audience::Broadcast).send().ack();
+        self.messenger
+            .message(
+                Payload::Event(event).into(),
+                Audience::Role(role::Signature::role(service::Role::Event(event::Role::Sink))),
+            )
+            .send()
+            .ack();
     }
 }
 
@@ -154,6 +161,6 @@ pub mod subscriber {
     /// The Subscriber Blueprint is used for spawning new subscribers on demand
     /// in the environment.
     pub trait Blueprint {
-        fn create(&self, message_factory: message::Factory) -> BoxFuture<'static, ()>;
+        fn create(&self, message_factory: service::message::Factory) -> BoxFuture<'static, ()>;
     }
 }

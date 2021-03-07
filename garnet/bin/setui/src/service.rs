@@ -22,8 +22,13 @@
 
 use crate::agent;
 use crate::base::SettingType;
+use crate::event;
 use crate::handler::base as handler;
 use crate::handler::setting_handler as controller;
+#[cfg(test)]
+use crate::message::base::role;
+#[cfg(test)]
+use crate::message::base::MessengerType;
 use crate::message_hub_definition;
 use crate::policy::{self, PolicyType};
 
@@ -38,6 +43,7 @@ message_hub_definition!(Payload, Address, Role);
 pub enum Address {
     Handler(SettingType),
     PolicyHandler(PolicyType),
+    EventSource(event::Address),
 }
 
 /// The types of data that can be sent through the service [`MessageHub`]. This
@@ -58,6 +64,8 @@ pub enum Payload {
     Policy(policy::Payload),
     /// Agent payloads contain communication between the agent authority and individual agents.
     Agent(agent::Payload),
+    /// Event payloads contain data about events that occur throughout the system.
+    Event(event::Payload),
 }
 
 /// A trait implemented by payloads for extracting the payload and associated
@@ -74,6 +82,7 @@ pub trait TryFromWithClient<T>: Sized {
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Role {
     Policy(policy::Role),
+    Event(event::Role),
 }
 
 /// The payload_convert macro helps convert between the domain-specific payloads
@@ -150,4 +159,15 @@ macro_rules! payload_convert {
             }
         }
     };
+}
+
+#[cfg(test)]
+pub async fn build_event_listener(messenger_factory: &message::Factory) -> message::Receptor {
+    messenger_factory
+        .messenger_builder(MessengerType::Unbound)
+        .add_role(role::Signature::role(Role::Event(event::Role::Sink)))
+        .build()
+        .await
+        .expect("Should be able to retrieve receptor")
+        .1
 }

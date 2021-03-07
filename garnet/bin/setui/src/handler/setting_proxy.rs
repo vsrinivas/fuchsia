@@ -186,7 +186,6 @@ impl SettingProxy {
         setting_type: SettingType,
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
         messenger_factory: service::message::Factory,
-        event_messenger_factory: event::message::Factory,
         max_attempts: u64,
         request_timeout: Option<Duration>,
         retry_on_timeout: bool,
@@ -201,8 +200,10 @@ impl SettingProxy {
         // migrated to the MessageHub defined above.
 
         let event_publisher = event::Publisher::create(
-            &event_messenger_factory,
-            MessengerType::Addressable(event::Address::SettingProxy(setting_type)),
+            &messenger_factory,
+            MessengerType::Addressable(service::Address::EventSource(
+                event::Address::SettingProxy(setting_type),
+            )),
         )
         .await;
 
