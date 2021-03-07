@@ -7,9 +7,11 @@ import("//src/sys/build/components.gni")
 
 fxfs_deps = [
   "//src/lib/fuchsia-async",
+  "//src/lib/syslog/rust:syslog",
   "//src/lib/zircon/rust:fuchsia-zircon",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:async-trait",
+  "//third_party/rust_crates:futures",
   "//third_party/rust_crates:rand",
   "//third_party/rust_crates:serde",
 ]
@@ -17,6 +19,7 @@ fxfs_deps = [
 fxfs_sources = [
   "src/lib.rs",
   "src/lsm_tree.rs",
+  "src/lsm_tree/merge.rs",
   "src/lsm_tree/skip_list_layer.rs",
   "src/lsm_tree/types.rs",
 ]
