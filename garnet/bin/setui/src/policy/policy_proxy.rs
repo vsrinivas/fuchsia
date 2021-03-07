@@ -7,11 +7,10 @@ use fuchsia_async::Task;
 use futures::StreamExt;
 
 use crate::handler::base::{Error as HandlerError, Payload, Request, Response};
-use crate::internal::policy;
 use crate::message::base::{filter, role, MessageEvent, MessageType, MessengerType};
 use crate::policy::policy_handler::{PolicyHandler, RequestTransform, ResponseTransform};
 use crate::policy::{
-    self as policy_base, Address, PolicyHandlerFactory, PolicyType, Request as PolicyRequest, Role,
+    self as policy_base, PolicyHandlerFactory, PolicyType, Request as PolicyRequest, Role,
 };
 use crate::service;
 use crate::service::TryFromWithClient;
@@ -34,7 +33,6 @@ impl PolicyProxy {
         policy_type: PolicyType,
         handler_factory: Arc<Mutex<dyn PolicyHandlerFactory + Send + Sync>>,
         messenger_factory: service::message::Factory,
-        policy_messenger_factory: policy::message::Factory,
     ) -> Result<(), Error> {
         let (handler_messenger, receptor) =
             messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
@@ -91,12 +89,6 @@ impl PolicyProxy {
         let (_, service_proxy_receptor) =
             messenger_factory.create(MessengerType::Broker(Some(service_proxy_filter))).await?;
 
-        let (_, policy_receptor) = policy_messenger_factory
-            .messenger_builder(MessengerType::Addressable(Address::Policy(policy_type)))
-            .add_role(role::Signature::role(Role::PolicyHandler))
-            .build()
-            .await?;
-
         let (_, service_policy_receptor) = messenger_factory
             .messenger_builder(MessengerType::Addressable(service::Address::PolicyHandler(
                 policy_type,
@@ -112,22 +104,11 @@ impl PolicyProxy {
 
         Task::spawn(async move {
             let service_policy_fuse = service_policy_receptor.fuse();
-            let policy_fuse = policy_receptor.fuse();
             let message_fuse = service_proxy_receptor.fuse();
-            futures::pin_mut!(policy_fuse, message_fuse, service_policy_fuse);
+            futures::pin_mut!(message_fuse, service_policy_fuse);
             loop {
                 futures::select! {
                     // Handle policy messages.
-                    policy_event = policy_fuse.select_next_some() => {
-                        if let MessageEvent::Message(
-                            policy_base::Payload::Request(request),
-                            message_client,
-                        ) = policy_event
-                        {
-                            proxy.process_policy_request(request, message_client).await;
-                        }
-                    }
-
                     service_policy_event = service_policy_fuse.select_next_some() => {
                         if let MessageEvent::Message(
                             service::Payload::Policy(policy_base::Payload::Request(request)),
@@ -164,15 +145,6 @@ impl PolicyProxy {
         message_client
             .reply(service::Payload::Policy(policy_base::Payload::Response(response)))
             .send();
-    }
-
-    async fn process_policy_request(
-        &mut self,
-        request: PolicyRequest,
-        message_client: policy::message::MessageClient,
-    ) {
-        let response = self.policy_handler.handle_policy_request(request).await;
-        message_client.reply(policy_base::Payload::Response(response)).send();
     }
 
     async fn process_settings_event(&mut self, event: service::message::MessageEvent) {

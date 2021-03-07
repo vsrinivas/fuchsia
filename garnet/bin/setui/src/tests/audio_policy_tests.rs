@@ -12,10 +12,11 @@ use crate::base::SettingType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::message::base::{Audience, MessengerType};
 use crate::policy::response;
-use crate::policy::{Address, Payload, PolicyInfo, PolicyType, Request};
+use crate::policy::{Payload, PolicyInfo, PolicyType, Request};
+use crate::service;
 use crate::tests::fakes::audio_core_service;
 use crate::tests::fakes::service_registry::ServiceRegistry;
-use crate::{internal, EnvironmentBuilder};
+use crate::EnvironmentBuilder;
 use fidl_fuchsia_settings::{self as audio_fidl, AudioMarker, AudioProxy, AudioStreamSettings};
 use fidl_fuchsia_settings_policy::{
     self as policy_fidl, PolicyParameters, Volume, VolumePolicyControllerMarker,
@@ -190,8 +191,8 @@ async fn remove_policy(env: &TestEnvironment, policy_id: u32) {
 // properly.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_policy_message_hub() {
-    let messenger_factory = internal::policy::message::create_hub();
-    let policy_handler_address = Address::Policy(PolicyType::Audio);
+    let messenger_factory = service::message::create_hub();
+    let policy_handler_address = service::Address::PolicyHandler(PolicyType::Audio);
 
     // Create messenger to send request.
     let (messenger, receptor) = messenger_factory
@@ -206,7 +207,7 @@ async fn test_policy_message_hub() {
         .expect("addressable messenger should be present")
         .1;
 
-    let request_payload = Payload::Request(Request::Get);
+    let request_payload: service::Payload = Payload::Request(Request::Get).into();
 
     // Send request.
     let mut reply_receptor = messenger
@@ -223,8 +224,8 @@ async fn test_policy_message_hub() {
         .build();
 
     // Send response.
-    let reply_payload =
-        Payload::Response(Ok(response::Payload::PolicyInfo(PolicyInfo::Audio(state))));
+    let reply_payload: service::Payload =
+        Payload::Response(Ok(response::Payload::PolicyInfo(PolicyInfo::Audio(state)))).into();
     client.reply(reply_payload.clone()).send().ack();
 
     // Verify response received.

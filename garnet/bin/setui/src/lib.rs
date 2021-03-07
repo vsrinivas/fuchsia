@@ -660,8 +660,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
     policy_handler_factory: Arc<Mutex<PolicyHandlerFactoryImpl<T>>>,
 ) -> Result<(), Error> {
-    let policy_messenger_factory = internal::policy::message::create_hub();
-
     for blueprint in event_subscriber_blueprints {
         blueprint.create(event_messenger_factory.clone()).await;
     }
@@ -701,7 +699,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
                 policy_type,
                 policy_handler_factory.clone(),
                 messenger_factory.clone(),
-                policy_messenger_factory.clone(),
             )
             .await?;
         }
@@ -710,7 +707,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     // Attach the policy inspect broker, which watches messages to the policy layer and records
     // policy state to inspect.
     let policy_inspect_node = component::inspector().root().create_child("policy_values");
-    PolicyInspectBroker::create(policy_messenger_factory.clone(), policy_inspect_node)
+    PolicyInspectBroker::create(messenger_factory.clone(), policy_inspect_node)
         .await
         .expect("could not create inspect");
 

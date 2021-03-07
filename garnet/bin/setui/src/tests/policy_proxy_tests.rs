@@ -6,14 +6,12 @@ use crate::base::{SettingInfo, SettingType, UnknownInfo as SettingUnknownInfo};
 use crate::handler::base::{Payload, Request, Response as SettingResponse};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::SettingHandlerResult;
-use crate::internal::policy;
 use crate::message::base::{Audience, MessengerType};
 use crate::policy::policy_handler::{PolicyHandler, RequestTransform, ResponseTransform};
 use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
 use crate::policy::policy_proxy::PolicyProxy;
 use crate::policy::{
-    self as policy_base, Address, BoxedHandler, PolicyHandlerFactory, PolicyInfo, PolicyType,
-    UnknownInfo,
+    self as policy_base, BoxedHandler, PolicyHandlerFactory, PolicyInfo, PolicyType, UnknownInfo,
 };
 use crate::service;
 use crate::tests::message_utils::verify_payload;
@@ -200,7 +198,6 @@ async fn test_policy_proxy_creation() {
                 .build(),
         ),
         service::message::create_hub(),
-        policy::message::create_hub(),
     )
     .await;
 
@@ -216,7 +213,7 @@ async fn test_policy_messages_passed_to_handler() {
     let policy_payload =
         policy_base::response::Payload::PolicyInfo(PolicyInfo::Unknown(UnknownInfo(true)));
 
-    let policy_messenger_factory = policy::message::create_hub();
+    let service_messenger_factory = service::message::create_hub();
     // Initialize the policy proxy and a messenger to communicate with it.
     PolicyProxy::create(
         POLICY_TYPE,
@@ -224,13 +221,12 @@ async fn test_policy_messages_passed_to_handler() {
             InMemoryStorageFactory::new(),
             FakePolicyHandlerBuilder::new().set_policy_response(Ok(policy_payload.clone())).build(),
         ),
-        service::message::create_hub(),
-        policy_messenger_factory.clone(),
+        service_messenger_factory.clone(),
     )
     .await
     .ok();
 
-    let (policy_messenger, _) = policy_messenger_factory
+    let (policy_messenger, _) = service_messenger_factory
         .create(MessengerType::Unbound)
         .await
         .expect("policy messenger created");
@@ -238,8 +234,8 @@ async fn test_policy_messages_passed_to_handler() {
     // Send a policy request to the policy proxy.
     let mut policy_send_receptor = policy_messenger
         .message(
-            policy_base::Payload::Request(policy_request),
-            Audience::Address(Address::Policy(POLICY_TYPE)),
+            policy_base::Payload::Request(policy_request).into(),
+            Audience::Address(service::Address::PolicyHandler(POLICY_TYPE)),
         )
         .send();
 
@@ -248,7 +244,10 @@ async fn test_policy_messages_passed_to_handler() {
         policy_send_receptor.next_payload().await.expect("policy response received");
 
     // Policy handler returned its response through the policy proxy, back to the client.
-    assert_eq!(policy_response, policy_base::Payload::Response(Ok(policy_payload)));
+    assert_eq!(
+        policy_response,
+        service::Payload::Policy(policy_base::Payload::Response(Ok(policy_payload)))
+    );
 }
 
 /// Verify that when the policy handler doesn't take any action on a setting request, it will
@@ -268,7 +267,6 @@ async fn test_setting_message_pass_through() {
             FakePolicyHandlerBuilder::new().build(),
         ),
         messenger_factory.clone(),
-        policy::message::create_hub(),
     )
     .await
     .ok();
@@ -332,7 +330,6 @@ async fn test_setting_message_result_replacement() {
                 .build(),
         ),
         messenger_factory.clone(),
-        policy::message::create_hub(),
     )
     .await
     .ok();
@@ -415,7 +412,6 @@ async fn test_setting_message_payload_replacement() {
                 .build(),
         ),
         messenger_factory.clone(),
-        policy::message::create_hub(),
     )
     .await
     .ok();
@@ -468,7 +464,6 @@ async fn test_setting_response_pass_through() {
             FakePolicyHandlerBuilder::new().build(),
         ),
         messenger_factory.clone(),
-        policy::message::create_hub(),
     )
     .await
     .ok();
@@ -509,7 +504,6 @@ async fn test_setting_response_replace() {
                 .build(),
         ),
         messenger_factory.clone(),
-        policy::message::create_hub(),
     )
     .await
     .ok();
@@ -550,8 +544,6 @@ async fn test_multiple_messages() {
         .await
         .expect("setting proxy messenger created");
 
-    let policy_messenger_factory = policy::message::create_hub();
-
     // Initialize the policy proxy and a messenger to communicate with it.
     PolicyProxy::create(
         POLICY_TYPE,
@@ -566,16 +558,13 @@ async fn test_multiple_messages() {
                 .build(),
         ),
         messenger_factory.clone(),
-        policy_messenger_factory.clone(),
     )
     .await
     .ok();
 
     // Create a messenger for sending messages directly to the policy proxy.
-    let (policy_messenger, _) = policy_messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("policy messenger created");
+    let (policy_messenger, _) =
+        messenger_factory.create(MessengerType::Unbound).await.expect("policy messenger created");
 
     // Create a messenger that represents the client.
     let (messenger, _) =
@@ -586,14 +575,14 @@ async fn test_multiple_messages() {
         // Send a policy request.
         let mut policy_send_receptor = policy_messenger
             .message(
-                policy_base::Payload::Request(policy_request.clone()),
-                Audience::Address(Address::Policy(POLICY_TYPE)),
+                policy_base::Payload::Request(policy_request.clone()).into(),
+                Audience::Address(service::Address::PolicyHandler(POLICY_TYPE)),
             )
             .send();
 
         // Verify a policy response is returned each time.
         verify_payload(
-            policy_base::Payload::Response(Ok(policy_payload.clone())),
+            policy_base::Payload::Response(Ok(policy_payload.clone())).into(),
             &mut policy_send_receptor,
             None,
         )

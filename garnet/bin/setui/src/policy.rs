@@ -6,6 +6,7 @@ use crate::audio::policy::{self as audio, State};
 use crate::base::SettingType;
 use crate::generate_inspect_with_info;
 use crate::handler::device_storage::DeviceStorageFactory;
+use crate::payload_convert;
 use crate::policy::policy_handler::PolicyHandler;
 use crate::policy::response::Response;
 use crate::service;
@@ -82,7 +83,7 @@ pub struct UnknownInfo(pub bool);
 
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {
-    Policy(PolicyType),
+    //    Policy(PolicyType),
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -90,6 +91,8 @@ pub enum Payload {
     Request(Request),
     Response(Response),
 }
+
+payload_convert!(Policy, Payload);
 
 /// `Role` defines grouping for responsibilities on the policy message hub.
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
