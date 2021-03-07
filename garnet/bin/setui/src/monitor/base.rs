@@ -21,7 +21,7 @@ pub enum Error {
 /// definitions, such as the monitor MessageHub, which is used by other entities
 /// like agents.
 pub mod monitor {
-    use crate::internal::monitor;
+    use crate::monitor;
     use anyhow::Error;
     use futures::future::BoxFuture;
     use std::sync::Arc;

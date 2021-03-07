@@ -4,7 +4,7 @@
 
 use crate::agent::{BlueprintHandle, Context as AgentContext, Payload};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::internal::monitor;
+use crate::monitor;
 use crate::monitor::base::monitor::Context as MonitorContext;
 use crate::monitor::environment::Actor;
 use crate::tests::scaffold;

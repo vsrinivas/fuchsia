@@ -14,8 +14,8 @@
 //! directed. The separation of this responsibility from the main
 //! resource-watching component promotes code reshare and modularity.
 
-use crate::internal::monitor;
 use crate::message::base::MessengerType;
+use crate::monitor;
 use crate::monitor::base::{
     monitor::{self as base_monitor},
     Error,

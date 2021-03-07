@@ -161,7 +161,6 @@ rustc_library("lib") {
     "src/inspect/policy_inspect_broker.rs",
     "src/internal.rs",
     "src/internal/common.rs",
-    "src/internal/monitor.rs",
     "src/intl.rs",
     "src/intl/intl_controller.rs",
     "src/intl/intl_fidl_handler.rs",
