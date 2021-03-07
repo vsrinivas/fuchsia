@@ -3739,7 +3739,7 @@ From //build/images/args.gni:69
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:135
+From //build/config/fuchsia/BUILD.gn:156
 
 ### zircon_b_partition
 
