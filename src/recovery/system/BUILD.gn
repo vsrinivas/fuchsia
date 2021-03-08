@@ -38,7 +38,7 @@ group("tests") {
 
 resource("recovery_logo") {
   sources = [ recovery_logo_path ]
-  outputs = [ "data/logo.png" ]
+  outputs = [ "data/logo.shed" ]
 }
 
 resource("roboto_regular") {
@@ -155,7 +155,7 @@ config_data("config_fdr") {
 
 fuchsia_package_with_single_component("system_recovery_fdr") {
   deps = [
-    ":bin",
+    ":bin_fdr",
     ":recovery_logo",
     ":roboto_regular",
     "//src/storage/bin/blobfs",
