@@ -12,7 +12,6 @@ fidl("test-foo-fidl") {
     "disallowed-library-name-component",
     "invalid-case-for-decl-name",
     "string-bounds-not-specified",
-    "too-many-nested-libraries",
   ]
 
   name = "test.fuchsia.service.foo"

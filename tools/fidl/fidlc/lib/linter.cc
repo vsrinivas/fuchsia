@@ -209,20 +209,8 @@ void Linter::NewFile(const raw::File& element) {
                "change '${ORIGINAL}' to ${REPLACEMENT}", "${REPLACEMENT}");
   }
 
-  // Library names should not have more than three components, except for
-  // fuchsia.hardware.* libraries, where we allow four library components.
-  bool libraryNameTooDeep = false;
-  if (element.library_name->components.size() > 3) {
-    if (element.library_name->components.at(0)->span().data() == "fuchsia" &&
-        element.library_name->components.at(1)->span().data() == "hardware") {
-      if (element.library_name->components.size() > 4) {
-        libraryNameTooDeep = true;
-      }
-    } else {
-      libraryNameTooDeep = true;
-    }
-  }
-  if (libraryNameTooDeep) {
+  // Library names should not have more than four components.
+  if (element.library_name->components.size() > 4) {
     AddFinding(element.library_name, kLibraryNameDepthCheck);
   }
 
@@ -378,8 +366,7 @@ void Linter::ExitContext() {
 
 Linter::Linter()
     : kLibraryNameDepthCheck(DefineCheck("too-many-nested-libraries",
-                                         "Avoid library names with more than two dots (or three "
-                                         "dots for fuchsia.hardware libraries)")),
+                                         "Avoid library names with more than three dots")),
       kLibraryNameComponentCheck(
           DefineCheck("disallowed-library-name-component",
                       "Library names must not contain the following components: common, service, "

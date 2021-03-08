@@ -189,7 +189,6 @@ fidl("json_xdr_unittest_fidl") {
   # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
     "string-bounds-not-specified",
-    "too-many-nested-libraries",
     "vector-bounds-not-specified",
   ]
 

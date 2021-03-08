@@ -2073,9 +2073,7 @@ struct TestStruct {
 TEST(LintFindingsTests, too_many_nested_libraries) {
   LintTest test;
   test.check_id("too-many-nested-libraries")
-      .message(
-          "Avoid library names with more than two dots (or three dots for fuchsia.hardware "
-          "libraries)")
+      .message("Avoid library names with more than three dots")
       .source_template(R"FIDL(
 library ${TEST};
 )FIDL");
@@ -2084,15 +2082,9 @@ library ${TEST};
   ASSERT_NO_FINDINGS(test);
 
   test.substitute("TEST", "fuchsia.foo.bar.baz");
-  ASSERT_FINDINGS(test);
-
-  test.substitute("TEST", "fidl.hardware.bar.baz");
-  ASSERT_FINDINGS(test);
-
-  test.substitute("TEST", "fuchsia.hardware.bar.baz");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", "fuchsia.hardware.bar.baz.foo");
+  test.substitute("TEST", "fuchsia.foo.bar.baz.qux");
   ASSERT_FINDINGS(test);
 }
 
@@ -2293,13 +2285,11 @@ struct ${STRUCT_NAME} {
 )FIDL");
 
   test.substitute({
-                      {"LIBRARY", "fuchsia.foo.bar.baz"},
+                      {"LIBRARY", "fuchsia.foo.bar.baz.qux"},
                       {"COMMENT_STYLE", "///"},
                       {"STRUCT_NAME", "my_struct"},
                   })
-      .AddFinding("too-many-nested-libraries",
-                  "Avoid library names with more than two dots (or three dots for fuchsia.hardware "
-                  "libraries)",
+      .AddFinding("too-many-nested-libraries", "Avoid library names with more than three dots",
                   "${LIBRARY}")
       .AddFinding("invalid-case-for-decl-name", "structs must be named in UpperCamelCase",
                   "${STRUCT_NAME}", "change 'my_struct' to 'MyStruct'", "MyStruct")
@@ -2333,9 +2323,7 @@ struct ${STRUCT_NAME} {
       .include_checks({
           "todo-should-not-be-doc-comment",
       })
-      .AddFinding("too-many-nested-libraries",
-                  "Avoid library names with more than two dots (or three dots for fuchsia.hardware "
-                  "libraries)",
+      .AddFinding("too-many-nested-libraries", "Avoid library names with more than three dots",
                   "${LIBRARY}")
       .AddFinding("todo-should-not-be-doc-comment",
                   "TODO comment should use a non-flow-through comment marker", "${COMMENT_STYLE}",
@@ -2346,9 +2334,7 @@ struct ${STRUCT_NAME} {
                           "invalid-case-for-decl-name",
                           "todo-should-not-be-doc-comment",
                       })
-      .AddFinding("too-many-nested-libraries",
-                  "Avoid library names with more than two dots (or three dots for fuchsia.hardware "
-                  "libraries)",
+      .AddFinding("too-many-nested-libraries", "Avoid library names with more than three dots",
                   "${LIBRARY}");
   ASSERT_FINDINGS_IN_ANY_POSITION(test);
 
@@ -2358,9 +2344,7 @@ struct ${STRUCT_NAME} {
                           "todo-should-not-be-doc-comment",
                           "vector-bounds-not-specified",
                       })
-      .AddFinding("too-many-nested-libraries",
-                  "Avoid library names with more than two dots (or three dots for fuchsia.hardware "
-                  "libraries)",
+      .AddFinding("too-many-nested-libraries", "Avoid library names with more than three dots",
                   "${LIBRARY}");
   ASSERT_FINDINGS_IN_ANY_POSITION(test);
 
@@ -2374,9 +2358,7 @@ struct ${STRUCT_NAME} {
           "invalid-case-for-decl-name",
           "todo-should-not-be-doc-comment",
       })
-      .AddFinding("too-many-nested-libraries",
-                  "Avoid library names with more than two dots (or three dots for fuchsia.hardware "
-                  "libraries)",
+      .AddFinding("too-many-nested-libraries", "Avoid library names with more than three dots",
                   "${LIBRARY}");
   ASSERT_FINDINGS_IN_ANY_POSITION(test);
 }

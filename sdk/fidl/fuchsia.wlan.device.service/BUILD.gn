@@ -10,7 +10,6 @@ fidl("fuchsia.wlan.device.service") {
     "disallowed-library-name-component",
     "protocol-name-includes-service",
     "string-bounds-not-specified",
-    "too-many-nested-libraries",
     "vector-bounds-not-specified",
   ]
 

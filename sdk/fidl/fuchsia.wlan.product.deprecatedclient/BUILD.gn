@@ -7,7 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.wlan.product.deprecatedclient") {
   sdk_category = "partner"
 
-  excluded_checks = [ "too-many-nested-libraries" ]
-
   sources = [ "wlan_deprecated_client.fidl" ]
 }
