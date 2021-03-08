@@ -6,9 +6,12 @@
 // memory usage.
 
 use {
-    crate::lsm_tree::types::{
-        BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerIteratorMut,
-        MutableLayer, Value,
+    crate::lsm_tree::{
+        merge::{MergeFn, Merger},
+        types::{
+            BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerIteratorMut,
+            MutableLayer, Value,
+        },
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -129,6 +132,12 @@ impl<'layer, K: Key, V: Value> MutableLayer<K, V> for SkipListLayer<K, V> {
             }
         }
         iter.insert_before(item);
+    }
+
+    async fn merge_into(&self, item: Item<K, V>, lower_bound: &K, merge_fn: MergeFn<K, V>) {
+        Merger::merge_into(Box::new(SkipListLayerIterMut::new(self)), item, lower_bound, merge_fn)
+            .await
+            .unwrap();
     }
 }
 
@@ -358,7 +367,13 @@ impl<K: Key, V: Value> LayerIteratorMut<K, V> for SkipListLayerIterMut<'_, K, V>
 mod tests {
     use {
         super::SkipListLayer,
-        crate::lsm_tree::types::{Item, ItemRef, Layer, MutableLayer, OrdLowerBound},
+        crate::lsm_tree::{
+            merge::{
+                ItemOp::{Discard, Replace},
+                MergeIterator, MergeResult,
+            },
+            types::{Item, ItemRef, Layer, MutableLayer, OrdLowerBound},
+        },
         fuchsia_async as fasync, fuchsia_zircon as zx,
         std::ops::Bound,
     };
@@ -617,5 +632,32 @@ mod tests {
         iter.advance().await.unwrap();
         let ItemRef { key, value } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
+    }
+
+    fn merge(
+        left: &MergeIterator<'_, TestKey, i32>,
+        right: &MergeIterator<'_, TestKey, i32>,
+    ) -> MergeResult<TestKey, i32> {
+        MergeResult::Other {
+            emit: None,
+            left: Replace(Item::new((*left.key()).clone(), *left.value() + *right.value())),
+            right: Discard,
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_into() {
+        let skip_list = SkipListLayer::new(100);
+        skip_list.insert(Item::new(TestKey(1), 1)).await;
+
+        skip_list.merge_into(Item::new(TestKey(2), 2), &TestKey(1), merge).await;
+
+        let mut iter = skip_list.get_iterator();
+        assert!(iter.get().is_none());
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&TestKey(1), &3));
+        iter.advance().await.unwrap();
+        assert!(iter.get().is_none());
     }
 }

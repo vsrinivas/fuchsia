@@ -3,10 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::lsm_tree::types::{BoxedLayerIterator, Item, ItemRef, LayerIterator, OrdLowerBound},
+    crate::lsm_tree::types::{
+        BoxedLayerIterator, Item, ItemRef, LayerIterator, LayerIteratorMut, OrdLowerBound,
+    },
     anyhow::Error,
+    fuchsia_syslog::fx_log_debug,
     futures::try_join,
-    std::{cmp::Ordering, collections::BinaryHeap, convert::From, pin::Pin, ptr::NonNull},
+    std::{
+        cmp::Ordering, collections::BinaryHeap, convert::From, ops::Bound, pin::Pin, ptr::NonNull,
+    },
 };
 
 #[derive(Debug)]
@@ -373,6 +378,138 @@ impl<
     pub fn get(&self) -> Option<ItemRef<'_, K, V>> {
         (&self.item).into()
     }
+
+    // Merges the given item into a mutable layer. |lower_bound| should be the first possible key
+    // that the item might need to be merged with.
+    pub(super) async fn merge_into(
+        mut mut_iter: Box<dyn LayerIteratorMut<K, V> + '_>,
+        item: Item<K, V>,
+        lower_bound: &K,
+        merge_fn: MergeFn<K, V>,
+    ) -> Result<(), Error> {
+        mut_iter.seek(Bound::Included(lower_bound)).await?;
+        let mut mut_merge_iter = MergeIterator {
+            iter: None,
+            layer: 1,
+            item: unsafe { MergeItem::from(mut_iter.get()) },
+        };
+        let mut item_merge_iter =
+            MergeIterator { iter: None, layer: 0, item: MergeItem::Item(item) };
+        while mut_merge_iter.is_some() && item_merge_iter.is_some() {
+            if MergeIteratorRef::new(&mut mut_merge_iter)
+                > MergeIteratorRef::new(&mut item_merge_iter)
+            {
+                // In this branch the mutable layer is left and the item we're merging-in is right.
+                let merge_result = merge_fn(&mut_merge_iter, &item_merge_iter);
+                fx_log_debug!(
+                    "(1) merge for {:?} {:?} -> {:?}",
+                    mut_merge_iter.key(),
+                    item_merge_iter.key(),
+                    merge_result
+                );
+                match merge_result {
+                    MergeResult::EmitLeft => {
+                        if let MergeItem::Item(item) = mut_merge_iter.item {
+                            mut_iter.insert_before(item);
+                        }
+                        mut_iter.advance().await?;
+                        mut_merge_iter.item = unsafe { MergeItem::from(mut_iter.get()) };
+                    }
+                    MergeResult::Other { emit, left, right } => {
+                        if let Some(emit) = emit {
+                            mut_iter.insert_before(emit);
+                            mut_iter.advance().await?;
+                            if let ItemOp::Keep = left {
+                                // This isn't necessary with our skip list implementation because
+                                // the existing node shouldn't have been moved, but other layers
+                                // might do things differently.
+                                if let MergeItem::Ref(_) = mut_merge_iter.item {
+                                    mut_merge_iter.item =
+                                        unsafe { MergeItem::from(mut_iter.get()) };
+                                }
+                            }
+                        }
+                        match left {
+                            ItemOp::Keep => {}
+                            ItemOp::Discard => {
+                                if let MergeItem::Ref(_) = mut_merge_iter.item {
+                                    mut_iter.erase();
+                                }
+                                mut_merge_iter.item = unsafe { MergeItem::from(mut_iter.get()) };
+                            }
+                            ItemOp::Replace(item) => {
+                                if let MergeItem::Ref(_) = mut_merge_iter.item {
+                                    mut_iter.erase();
+                                }
+                                mut_merge_iter.item = MergeItem::Item(item)
+                            }
+                        }
+                        match right {
+                            ItemOp::Keep => {}
+                            ItemOp::Discard => item_merge_iter.item = MergeItem::None,
+                            ItemOp::Replace(item) => item_merge_iter.item = MergeItem::Item(item),
+                        }
+                    }
+                }
+            } else {
+                // In this branch, the item we're merging-in is left and the mutable layer is right.
+                let merge_result = merge_fn(&item_merge_iter, &mut_merge_iter);
+                fx_log_debug!(
+                    "(2) merge for {:?} {:?} -> {:?}",
+                    item_merge_iter.key(),
+                    mut_merge_iter.key(),
+                    merge_result
+                );
+                match merge_result {
+                    MergeResult::EmitLeft => break, // Item is inserted outside the loop
+                    MergeResult::Other { emit, left, right } => {
+                        if let Some(emit) = emit {
+                            mut_iter.insert_before(emit);
+                            mut_iter.advance().await?;
+                            if let ItemOp::Keep = right {
+                                // This isn't necessary with our skip list implementation because
+                                // the existing node shouldn't have been moved, but other layers
+                                // might do things differently.
+                                if let MergeItem::Ref(_) = mut_merge_iter.item {
+                                    mut_merge_iter.item =
+                                        unsafe { MergeItem::from(mut_iter.get()) };
+                                }
+                            }
+                        }
+                        match left {
+                            ItemOp::Keep => {}
+                            ItemOp::Discard => item_merge_iter.item = MergeItem::None,
+                            ItemOp::Replace(item) => item_merge_iter.item = MergeItem::Item(item),
+                        }
+                        match right {
+                            ItemOp::Keep => {}
+                            ItemOp::Discard => {
+                                if let MergeItem::Ref(_) = mut_merge_iter.item {
+                                    mut_iter.erase();
+                                }
+                                mut_merge_iter.item = unsafe { MergeItem::from(mut_iter.get()) };
+                            }
+                            ItemOp::Replace(item) => {
+                                if let MergeItem::Ref(_) = mut_merge_iter.item {
+                                    mut_iter.erase();
+                                }
+                                mut_merge_iter.item = MergeItem::Item(item)
+                            }
+                        }
+                    }
+                }
+            }
+        } // while ...
+          // The only way we could get here with both items is via the break above, so we know the
+          // correct order required here.
+        if let MergeItem::Item(item) = mut_merge_iter.item {
+            mut_iter.insert_before(item);
+        }
+        if let MergeItem::Item(item) = item_merge_iter.item {
+            mut_iter.insert_before(item);
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -594,5 +731,237 @@ mod tests {
         assert_eq!((key, value), (&items[1].key, &items[1].value));
         merger.advance().await.unwrap();
         assert!(merger.get().is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_into_emit_left() {
+        let skip_list = SkipListLayer::new(100);
+        let items =
+            [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2), Item::new(TestKey(3..3), 3)];
+        skip_list.insert(items[0].clone()).await;
+        skip_list.insert(items[2].clone()).await;
+        skip_list
+            .merge_into(items[1].clone(), &items[0].key, |_left, _right| MergeResult::EmitLeft)
+            .await;
+
+        let mut iter = skip_list.get_iterator();
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&items[0].key, &items[0].value));
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&items[1].key, &items[1].value));
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&items[2].key, &items[2].value));
+        iter.advance().await.unwrap();
+        assert!(iter.get().is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_into_emit_last_after_replacing() {
+        let skip_list = SkipListLayer::new(100);
+        let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
+        skip_list.insert(items[0].clone()).await;
+
+        skip_list
+            .merge_into(items[1].clone(), &items[0].key, |left, right| {
+                if left.key() == &TestKey(1..1) {
+                    assert_eq!(right.key(), &TestKey(2..2));
+                    MergeResult::Other {
+                        emit: None,
+                        left: Replace(Item::new(TestKey(3..3), 3)),
+                        right: Keep,
+                    }
+                } else {
+                    assert_eq!(left.key(), &TestKey(2..2));
+                    assert_eq!(right.key(), &TestKey(3..3));
+                    MergeResult::EmitLeft
+                }
+            })
+            .await;
+
+        let mut iter = skip_list.get_iterator();
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&items[1].key, &items[1].value));
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&TestKey(3..3), &3));
+        iter.advance().await.unwrap();
+        assert!(iter.get().is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_into_emit_left_after_replacing() {
+        let skip_list = SkipListLayer::new(100);
+        let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(3..3), 3)];
+        skip_list.insert(items[0].clone()).await;
+
+        skip_list
+            .merge_into(items[1].clone(), &items[0].key, |left, right| {
+                if left.key() == &TestKey(1..1) {
+                    assert_eq!(right.key(), &TestKey(3..3));
+                    MergeResult::Other {
+                        emit: None,
+                        left: Replace(Item::new(TestKey(2..2), 2)),
+                        right: Keep,
+                    }
+                } else {
+                    assert_eq!(left.key(), &TestKey(2..2));
+                    assert_eq!(right.key(), &TestKey(3..3));
+                    MergeResult::EmitLeft
+                }
+            })
+            .await;
+
+        let mut iter = skip_list.get_iterator();
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&TestKey(2..2), &2));
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&items[1].key, &items[1].value));
+        iter.advance().await.unwrap();
+        assert!(iter.get().is_none());
+    }
+
+    // This tests emitting in both branches of merge_into, and most of the discard paths.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_into_emit_other_and_discard() {
+        let skip_list = SkipListLayer::new(100);
+        let items =
+            [Item::new(TestKey(1..1), 1), Item::new(TestKey(3..3), 3), Item::new(TestKey(5..5), 3)];
+        skip_list.insert(items[0].clone()).await;
+        skip_list.insert(items[2].clone()).await;
+
+        skip_list
+            .merge_into(items[1].clone(), &items[0].key, |left, right| {
+                if left.key() == &TestKey(1..1) {
+                    // This tests the top branch in merge_into.
+                    assert_eq!(right.key(), &TestKey(3..3));
+                    MergeResult::Other {
+                        emit: Some(Item::new(TestKey(2..2), 2)),
+                        left: Discard,
+                        right: Keep,
+                    }
+                } else {
+                    // This tests the bottom branch in merge_into.
+                    assert_eq!(left.key(), &TestKey(3..3));
+                    assert_eq!(right.key(), &TestKey(5..5));
+                    MergeResult::Other {
+                        emit: Some(Item::new(TestKey(4..4), 4)),
+                        left: Discard,
+                        right: Discard,
+                    }
+                }
+            })
+            .await;
+
+        let mut iter = skip_list.get_iterator();
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&TestKey(2..2), &2));
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&TestKey(4..4), &4));
+        iter.advance().await.unwrap();
+        assert!(iter.get().is_none());
+    }
+
+    // This tests replacing the item and discarding the right item (the one remaining untested
+    // discard path) in the top branch in merge_into.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_into_replace_and_discard() {
+        let skip_list = SkipListLayer::new(100);
+        let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(3..3), 3)];
+        skip_list.insert(items[0].clone()).await;
+
+        skip_list
+            .merge_into(items[1].clone(), &items[0].key, |_left, _right| MergeResult::Other {
+                emit: Some(Item::new(TestKey(2..2), 2)),
+                left: Replace(Item::new(TestKey(4..4), 4)),
+                right: Discard,
+            })
+            .await;
+
+        let mut iter = skip_list.get_iterator();
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&TestKey(2..2), &2));
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&TestKey(4..4), &4));
+        iter.advance().await.unwrap();
+        assert!(iter.get().is_none());
+    }
+
+    // This tests replacing the right item in the top branch of merge_into and the left item in the
+    // bottom branch of merge_into.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_into_replace_merge_item() {
+        let skip_list = SkipListLayer::new(100);
+        let items =
+            [Item::new(TestKey(1..1), 1), Item::new(TestKey(3..3), 3), Item::new(TestKey(5..5), 5)];
+        skip_list.insert(items[0].clone()).await;
+        skip_list.insert(items[2].clone()).await;
+
+        skip_list
+            .merge_into(items[1].clone(), &items[0].key, |_left, right| {
+                if right.key() == &TestKey(3..3) {
+                    MergeResult::Other {
+                        emit: None,
+                        left: Discard,
+                        right: Replace(Item::new(TestKey(2..2), 2)),
+                    }
+                } else {
+                    assert_eq!(right.key(), &TestKey(5..5));
+                    MergeResult::Other {
+                        emit: None,
+                        left: Replace(Item::new(TestKey(4..4), 4)),
+                        right: Discard,
+                    }
+                }
+            })
+            .await;
+
+        let mut iter = skip_list.get_iterator();
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&TestKey(4..4), &4));
+        iter.advance().await.unwrap();
+        assert!(iter.get().is_none());
+    }
+
+    // This tests replacing the right item in the bottom branch of merge_into.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_into_replace_existing() {
+        let skip_list = SkipListLayer::new(100);
+        let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(3..3), 3)];
+        skip_list.insert(items[1].clone()).await;
+
+        skip_list
+            .merge_into(items[0].clone(), &items[0].key, |_left, right| {
+                if right.key() == &TestKey(3..3) {
+                    MergeResult::Other {
+                        emit: None,
+                        left: Keep,
+                        right: Replace(Item::new(TestKey(2..2), 2)),
+                    }
+                } else {
+                    MergeResult::EmitLeft
+                }
+            })
+            .await;
+
+        let mut iter = skip_list.get_iterator();
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&items[0].key, &items[0].value));
+        iter.advance().await.unwrap();
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&TestKey(2..2), &2));
+        iter.advance().await.unwrap();
+        assert!(iter.get().is_none());
     }
 }
