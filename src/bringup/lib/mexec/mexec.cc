@@ -14,8 +14,10 @@
 #include <lib/zircon-internal/align.h>
 #include <zircon/status.h>
 
+#include <array>
 #include <cstddef>
 
+#include <explicit-memory/bytes.h>
 #include <fbl/array.h>
 
 namespace mexec {
@@ -57,6 +59,15 @@ zx_status_t Boot(zx::resource resource, zx::channel devmgr_channel, zx::vmo kern
     return ZX_ERR_INTERNAL;
   }
 
+  std::array<uint8_t, 64> entropy;
+  zx_cprng_draw(entropy.data(), entropy.size());
+  if (auto result = data_image.Append(zbi_header_t{.type = ZBI_TYPE_SECURE_ENTROPY},
+                                      zbitl::AsBytes(entropy.data(), entropy.size()));
+      result.is_error()) {
+    zbitl::PrintViewError(result.error_value());
+    return ZX_ERR_INTERNAL;
+  }
+  mandatory_memset(entropy.data(), 0, entropy.size());
   {
     namespace devmgr = fuchsia_device_manager;
 

@@ -7,7 +7,10 @@ import("//src/bringup/lib/mexec/testing/zbi_test.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":mexec-smoke-test" ]
+  deps = [
+    ":mexec-entropy-test",
+    ":mexec-smoke-test",
+  ]
 }
 
 executable("no-op-success") {
@@ -19,6 +22,24 @@ zbi_test("smoke-zbi-test") {
   assert(current_cpu != "")
 
   args = [ "userboot=bin/no-op-success" ]
+
+  deps = [
+    ":no-op-success",
+    "//zircon/kernel",
+  ]
+}
+
+# This test is not intended to be run directly, as it relies
+# on requiring entropy from the cmdline.
+# It is intended to be used as part of an mexec_zbi_test.
+zbi_test("entropy-zbi-test") {
+  assert(current_cpu != "")
+
+  args = [
+    "userboot=bin/no-op-success",
+    "kernel.cprng-seed-require.cmdline=true",
+  ]
+
   deps = [
     ":no-op-success",
     "//zircon/kernel",
@@ -31,4 +52,8 @@ mexec_zbi_test("mexec-smoke-test") {
   # Force that data ZBI to be put above the 4GiB mark in physical memory; this
   # covers an edge case that can arise with particularly large ZBIs.
   args = [ "kernel.mexec-force-high-ramdisk=true" ]
+}
+
+mexec_zbi_test("mexec-entropy-test") {
+  child_zbi = ":entropy-zbi-test.zbi"
 }

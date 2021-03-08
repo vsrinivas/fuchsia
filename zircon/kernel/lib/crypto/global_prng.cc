@@ -63,6 +63,7 @@ static unsigned int IntegrateZbiEntropy() {
       } else {
         kGlobalPrng->AddEntropy(data.data(), data.size());
         mandatory_memset(data.data(), 0, data.size());
+        LTRACEF("Collected %zu bytes of entropy from a ZBI Item\n", data.size());
         auto result = zbi.EditHeader(it, {.type = ZBI_TYPE_DISCARD});
         ZX_ASSERT(result.is_ok());
         ++found;

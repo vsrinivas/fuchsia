@@ -9,6 +9,7 @@ source_set("mexec") {
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zbitl",
   ]
