@@ -44,10 +44,12 @@ class FuchsiaWebViewPlatformController extends WebViewPlatformController {
       : super(_platformCallbacksHandler) {
     fuchsiaWebServices.setNavigationEventListener(
         _WebviewNavigationEventListener(_onNavigationStateChanged));
-    updateSettings(creationParams.webSettings);
+    if (creationParams.webSettings != null) {
+      updateSettings(creationParams.webSettings!);
+    }
     _addBeforeLoadChannels(creationParams.javascriptChannelNames);
     if (creationParams.initialUrl != null) {
-      loadUrl(creationParams.initialUrl, {});
+      loadUrl(creationParams.initialUrl!, {});
     }
   }
 
@@ -62,13 +64,19 @@ class FuchsiaWebViewPlatformController extends WebViewPlatformController {
   }
 
   @override
-  Future<bool?> canGoBack() async {
-    return _currentState.canGoBack;
+  Future<bool> canGoBack() async {
+    if (_currentState.canGoBack != null) {
+      return _currentState.canGoBack!;
+    }
+    return Future.value();
   }
 
   @override
-  Future<bool?> canGoForward() async {
-    return _currentState.canGoForward;
+  Future<bool> canGoForward() async {
+    if (_currentState.canGoBack != null) {
+      return _currentState.canGoForward!;
+    }
+    return Future.value();
   }
 
   @override
@@ -105,14 +113,16 @@ class FuchsiaWebViewPlatformController extends WebViewPlatformController {
   @override
   Future<void> loadUrl(
     String url,
-    Map<String, String> headers,
+    Map<String, String>? headers,
   ) async {
     final headersList = <fidl_net.Header>[];
-    headers.forEach((k, v) {
-      headersList.add(fidl_net.Header(
-          name: utf8.encode(k) as Uint8List,
-          value: utf8.encode(v) as Uint8List));
-    });
+    if (headers != null) {
+      headers.forEach((k, v) {
+        headersList.add(fidl_net.Header(
+            name: utf8.encode(k) as Uint8List,
+            value: utf8.encode(v) as Uint8List));
+      });
+    }
 
     return fuchsiaWebServices.navigationController.loadUrl(
         url,
@@ -146,7 +156,7 @@ class FuchsiaWebViewPlatformController extends WebViewPlatformController {
   @override
   Future<void> updateSettings(WebSettings settings) {
     if (settings.debuggingEnabled != null) {
-      return fuchsiaWebServices.setJavaScriptLogLevel(settings.debuggingEnabled
+      return fuchsiaWebServices.setJavaScriptLogLevel(settings.debuggingEnabled!
           ? fidl_web.ConsoleLogLevel.debug
           : fidl_web.ConsoleLogLevel.none);
     }
