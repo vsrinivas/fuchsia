@@ -764,12 +764,12 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
   // into the unswappable queue.
   {
     PageQueues* pq = pmm_page_queues();
-    Guard<SpinLock, IrqSave> guard{pq->get_lock()};
+    Guard<CriticalMutex> guard{pq->get_lock()};
     page_list_.ForEveryPage([pq](auto* p, uint64_t off) {
       if (p->IsPage()) {
         vm_page_t* page = p->Page();
         if (page->object.pin_count == 0) {
-          AssertHeld<Lock<SpinLock>, IrqSave>(*pq->get_lock());
+          AssertHeld<Lock<CriticalMutex>>(*pq->get_lock());
           pq->MoveToUnswappableLocked(page);
         }
       }

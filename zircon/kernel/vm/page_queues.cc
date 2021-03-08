@@ -29,7 +29,7 @@ PageQueues::~PageQueues() {
 }
 
 void PageQueues::RotatePagerBackedQueues() {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   for (size_t i = kNumPagerBacked - 1; i > 0; i--) {
     list_splice_after(&pager_backed_[i - 1], &pager_backed_[i]);
   }
@@ -38,7 +38,7 @@ void PageQueues::RotatePagerBackedQueues() {
 void PageQueues::SetWired(vm_page_t* page) {
   DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
   DEBUG_ASSERT(!page->is_free());
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   DEBUG_ASSERT(!list_in_list(&page->queue_node));
   page->object.set_object(nullptr);
   page->object.set_page_offset(0);
@@ -48,7 +48,7 @@ void PageQueues::SetWired(vm_page_t* page) {
 void PageQueues::MoveToWired(vm_page_t* page) {
   DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
   DEBUG_ASSERT(!page->is_free());
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   DEBUG_ASSERT(list_in_list(&page->queue_node));
   page->object.set_object(nullptr);
   page->object.set_page_offset(0);
@@ -60,7 +60,7 @@ void PageQueues::SetUnswappable(vm_page_t* page) {
   DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(page->object.pin_count == 0);
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   DEBUG_ASSERT(!list_in_list(&page->queue_node));
   page->object.set_object(nullptr);
   page->object.set_page_offset(0);
@@ -79,7 +79,7 @@ void PageQueues::MoveToUnswappableLocked(vm_page_t* page) {
 }
 
 void PageQueues::MoveToUnswappable(vm_page_t* page) {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   MoveToUnswappableLocked(page);
 }
 
@@ -88,7 +88,7 @@ void PageQueues::SetPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t pa
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(page->object.pin_count == 0);
   DEBUG_ASSERT(object);
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   DEBUG_ASSERT(!list_in_list(&page->queue_node));
   page->object.set_object(object);
   page->object.set_page_offset(page_offset);
@@ -100,7 +100,7 @@ void PageQueues::MoveToPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(page->object.pin_count == 0);
   DEBUG_ASSERT(object);
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   DEBUG_ASSERT(list_in_list(&page->queue_node));
   page->object.set_object(object);
   page->object.set_page_offset(page_offset);
@@ -113,7 +113,7 @@ void PageQueues::MoveToPagerBackedInactive(vm_page_t* page) {
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(page->object.pin_count == 0);
   DEBUG_ASSERT(page->object.get_object());
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   DEBUG_ASSERT(list_in_list(&page->queue_node));
   list_delete(&page->queue_node);
   list_add_head(&pager_backed_inactive_, &page->queue_node);
@@ -123,7 +123,7 @@ void PageQueues::SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uin
   DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(page->object.pin_count == 0);
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   DEBUG_ASSERT(!list_in_list(&page->queue_node));
   page->object.set_object(object);
   page->object.set_page_offset(page_offset);
@@ -135,7 +135,7 @@ void PageQueues::MoveToUnswappableZeroFork(vm_page_t* page, VmCowPages* object,
   DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(page->object.pin_count == 0);
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   DEBUG_ASSERT(list_in_list(&page->queue_node));
   page->object.set_object(object);
   page->object.set_page_offset(page_offset);
@@ -151,13 +151,13 @@ void PageQueues::RemoveLocked(vm_page_t* page) {
 }
 
 void PageQueues::Remove(vm_page_t* page) {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   RemoveLocked(page);
 }
 
 void PageQueues::RemoveArrayIntoList(vm_page_t** pages, size_t count, list_node_t* out_list) {
   DEBUG_ASSERT(pages);
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   for (size_t i = 0; i < count; i++) {
     DEBUG_ASSERT(pages[i]);
     RemoveLocked(pages[i]);
@@ -167,7 +167,7 @@ void PageQueues::RemoveArrayIntoList(vm_page_t** pages, size_t count, list_node_
 
 PageQueues::PagerCounts PageQueues::GetPagerQueueCounts() const {
   PagerCounts counts;
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   counts.newest = list_length(&pager_backed_[0]);
   counts.total = counts.newest;
   for (size_t i = 1; i < kNumPagerBacked - 1; i++) {
@@ -183,7 +183,7 @@ PageQueues::PagerCounts PageQueues::GetPagerQueueCounts() const {
 
 PageQueues::Counts PageQueues::DebugQueueCounts() const {
   Counts counts;
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   for (size_t i = 0; i < kNumPagerBacked; i++) {
     counts.pager_backed[i] = list_length(&pager_backed_[i]);
   }
@@ -205,12 +205,12 @@ bool PageQueues::DebugPageInListLocked(const list_node_t* list, const vm_page_t*
 }
 
 bool PageQueues::DebugPageInList(const list_node_t* list, const vm_page_t* page) const {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return DebugPageInListLocked(list, page);
 }
 
 bool PageQueues::DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue) const {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   for (size_t i = 0; i < kNumPagerBacked; i++) {
     if (DebugPageInListLocked(&pager_backed_[i], page)) {
       if (queue) {
@@ -239,13 +239,14 @@ bool PageQueues::DebugPageIsUnswappableZeroFork(const vm_page_t* page) const {
 }
 
 bool PageQueues::DebugPageIsAnyUnswappable(const vm_page_t* page) const {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return DebugPageInListLocked(&unswappable_, page) ||
          DebugPageInListLocked(&unswappable_zero_fork_, page);
 }
 
 ktl::optional<PageQueues::VmoBacklink> PageQueues::PopUnswappableZeroFork() {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
+
   vm_page_t* page = list_peek_tail_type(&unswappable_zero_fork_, vm_page_t, queue_node);
   if (!page) {
     return ktl::nullopt;
@@ -270,7 +271,7 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::PopUnswappableZeroFork() {
 }
 
 ktl::optional<PageQueues::VmoBacklink> PageQueues::PeekPagerBacked(size_t lowest_queue) const {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   // Peek the tail of the inactive queue first.
   vm_page_t* page = list_peek_tail_type(&pager_backed_inactive_, vm_page_t, queue_node);
   // If a page is not found in the inactive queue, move on to the last LRU queue.

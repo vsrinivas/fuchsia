@@ -11,7 +11,7 @@
 
 #include <fbl/macros.h>
 #include <kernel/lockdep.h>
-#include <kernel/spinlock.h>
+#include <kernel/mutex.h>
 #include <ktl/array.h>
 #include <ktl/optional.h>
 #include <vm/page.h>
@@ -80,10 +80,10 @@ class PageQueues {
   void MoveToUnswappableLocked(vm_page_t* page) TA_REQ(lock_);
 
   // Provides access to the underlying lock, allowing _Locked variants to be called. Use of this is
-  // highly discouraged as the underlying lock is a spinlock, which cannot generally be held safely,
-  // specifically it is unsafe to access the heap whilst holding this lock. Preferably *Array
-  // variations should be used, but this provides a higher performance mechanism when needed.
-  Lock<SpinLock>* get_lock() TA_RET_CAP(lock_) { return &lock_; }
+  // highly discouraged as the underlying lock is a CriticalMutex which disables preemption.
+  // Preferably *Array variations should be used, but this provides a higher performance mechanism
+  // when needed.
+  Lock<CriticalMutex>* get_lock() TA_RET_CAP(lock_) { return &lock_; }
 
   // Rotates the pager backed queues such that all the pages in queue J get moved to queue J+1.
   // This leaves queue 0 empty and the last queue (kNumPagerBacked - 1) has both its old contents
@@ -161,7 +161,7 @@ class PageQueues {
   bool DebugPageIsWired(const vm_page_t* page) const;
 
  private:
-  DECLARE_SPINLOCK(PageQueues) mutable lock_;
+  DECLARE_CRITICAL_MUTEX(PageQueues) mutable lock_;
   // pager_backed_ denotes pages that both have a user level pager associated with them, and could
   // be evicted such that the pager could re-create the page.
   list_node_t pager_backed_[kNumPagerBacked] TA_GUARDED(lock_) = {LIST_INITIAL_CLEARED_VALUE};
