@@ -235,16 +235,18 @@ impl Scrutiny {
     }
 
     /// Schedules the DataCollectors to run and starts the REST service.
-    pub fn run(&mut self) -> Result<()> {
+    pub fn run(&mut self) -> Result<String> {
         self.scheduler.lock().unwrap().schedule()?;
 
         if let Some(command) = &self.config.launch.command {
-            self.shell.execute(command.to_string());
+            return self.shell.execute(command.to_string());
         } else if let Some(script) = &self.config.launch.script_path {
             let script_file = BufReader::new(File::open(script)?);
+            let mut script_output = String::new();
             for line in script_file.lines() {
-                self.shell.execute(line?);
+                script_output.push_str(&self.shell.execute(line?)?);
             }
+            return Ok(script_output);
         } else {
             if let Some(server_config) = &self.config.runtime.server {
                 RestService::spawn(
@@ -255,7 +257,7 @@ impl Scrutiny {
             }
             self.shell.run();
         }
-        Ok(())
+        Ok(String::new())
     }
 }
 

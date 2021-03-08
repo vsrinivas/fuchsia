@@ -47,5 +47,7 @@ pub async fn scrutiny_shell(cmd: ScrutinyShellCommand) -> Result<(), Error> {
         }
     }
 
-    launcher::launch_from_config(config)
+    launcher::launch_from_config(config)?;
+
+    Ok(())
 }

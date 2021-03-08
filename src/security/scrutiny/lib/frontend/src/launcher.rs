@@ -13,7 +13,7 @@ use {
 
 /// Launches scrutiny from a configuration file. This is intended to be used by binaries that
 /// want to launch custom configurations of the Scrutiny framework with select features enabled.
-pub fn launch_from_config(config: Config) -> Result<()> {
+pub fn launch_from_config(config: Config) -> Result<String> {
     let mut scrutiny = Scrutiny::new(config)?;
     scrutiny.plugin(CorePlugin::new())?;
     scrutiny.plugin(SearchPlugin::new())?;
@@ -31,20 +31,20 @@ pub fn launch_from_config(config: Config) -> Result<()> {
 /// Provides a default launcher for the Scrutiny frontend. This is intended to
 /// be used by binaries that wish to launch a full copy of the Scrutiny
 /// framework with default settings.
-pub fn launch() -> Result<()> {
+pub fn launch() -> Result<String> {
     launch_from_config(Scrutiny::args_from_env()?)
 }
 
 /// Provides a utility launcher for the Scruity frontend. This is intended to
 /// be used by consumer libraries that simply want to launch the framework to
 /// run a single command.
-pub fn run_command(command: String) -> Result<()> {
+pub fn run_command(command: String) -> Result<String> {
     launch_from_config(Config::run_command(command))
 }
 
 /// Provides a utility launcher for the Scrutiny frontend. This is inteded to
 /// be used by consumer libraries that simply want to launch the framework to
 /// run a Scrutiny script.
-pub fn run_script(script_path: String) -> Result<()> {
+pub fn run_script(script_path: String) -> Result<String> {
     launch_from_config(Config::run_script(script_path))
 }

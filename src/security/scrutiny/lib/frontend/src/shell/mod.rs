@@ -13,7 +13,7 @@ use {
         error::ShellError,
     },
     anyhow::{Error, Result},
-    log::{info, warn},
+    log::{error, info, warn},
     rustyline::{
         completion::{Completer, FilenameCompleter, Pair},
         error::ReadlineError,
@@ -30,12 +30,23 @@ use {
         model::controller::ConnectionMode,
     },
     serde_json::{self, json, Value},
-    std::borrow::Cow::{self, Borrowed},
-    std::collections::{HashMap, VecDeque},
-    std::process,
-    std::sync::{Arc, Mutex, RwLock},
+    std::{
+        borrow::Cow::{self, Borrowed},
+        collections::{HashMap, VecDeque},
+        fmt::Write,
+        process,
+        sync::{Arc, Mutex, RwLock},
+    },
     termion::{self, clear, color, cursor, style},
 };
+
+/// A CommandResponse is an internal type to define whether a command was acted
+/// on by a submodule or not.
+#[derive(Eq, PartialEq)]
+enum CommandResponse {
+    Executed,
+    NotFound,
+}
 
 #[allow(dead_code)]
 struct ScrutinyHelper {
@@ -156,32 +167,32 @@ impl Shell {
         }
     }
 
-    fn builtin(&mut self, command: String) -> bool {
+    fn builtin(&mut self, command: String, out_buffer: &mut impl std::fmt::Write) -> Result<CommandResponse> {
         if let Some(builtin) = BuiltinCommand::parse(command) {
             match builtin.program {
                 Builtin::PluginLoad => {
                     if builtin.args.len() != 1 {
-                        println!("Error: Provide a single plugin to load.");
-                        return true;
+                        writeln!(out_buffer, "Error: Provide a single plugin to load.")?;
+                        return Ok(CommandResponse::Executed);
                     }
                     let desc = PluginDescriptor::new(builtin.args.first().unwrap());
                     if let Err(e) = self.manager.lock().unwrap().load(&desc) {
-                        println!("Error: {}", e);
+                        writeln!(out_buffer, "Error: {}", e)?;
                     }
                 }
                 Builtin::PluginUnload => {
                     if builtin.args.len() != 1 {
-                        println!("Error: Provide a single plugin to unload.");
-                        return true;
+                        writeln!(out_buffer, "Error: Provide a single plugin to unload.")?;
+                        return Ok(CommandResponse::Executed);
                     }
                     let desc = PluginDescriptor::new(builtin.args.first().unwrap());
                     if let Err(e) = self.manager.lock().unwrap().unload(&desc) {
-                        println!("Error: {}", e);
+                        writeln!(out_buffer, "Error: {}", e)?;
                     }
                 }
                 Builtin::Print => {
                     let message = builtin.args.join(" ");
-                    println!("{}", message);
+                    writeln!(out_buffer, "{}", message)?;
                 }
                 Builtin::Help => {
                     // Provide usage for a specific command.
@@ -193,15 +204,15 @@ impl Shell {
                         }
                         let result = self.dispatcher.read().unwrap().usage(command);
                         if let Ok(usage) = result {
-                            println!("{}", usage);
+                            writeln!(out_buffer, "{}", usage)?;
                         } else {
-                            println!("Error: Command does not exist.");
+                            writeln!(out_buffer, "Error: Command does not exist.")?;
                         }
-                        return true;
+                        return Ok(CommandResponse::Executed);
                     }
                     // Provide usage for a general command.
                     BuiltinCommand::usage();
-                    println!("");
+                    writeln!(out_buffer, "")?;
                     let manager = self.manager.lock().unwrap();
                     let plugins = manager.plugins();
                     for plugin in plugins.iter() {
@@ -222,7 +233,7 @@ impl Shell {
                                 formatted.push(c);
                             }
                             plugin_name = formatted.into_iter().collect();
-                            println!("{} Commands:", plugin_name);
+                            writeln!(out_buffer, "{} Commands:", plugin_name)?;
 
                             // Print out all the plugin specific commands
                             for controller in controllers.iter() {
@@ -235,32 +246,36 @@ impl Shell {
                                 let command = str::replace(&controller, "/api/", "");
                                 let shell_command = str::replace(&command, "/", ".");
                                 if description.is_empty() {
-                                    println!("  {}", shell_command);
+                                    writeln!(out_buffer, "  {}", shell_command)?;
                                 } else {
-                                    println!("  {:<25} - {}", shell_command, description);
+                                    writeln!(
+                                        out_buffer,
+                                        "  {:<25} - {}",
+                                        shell_command, description
+                                    )?;
                                 }
                             }
-                            println!("");
+                            writeln!(out_buffer, "")?;
                         }
                     }
                 }
                 Builtin::History => {
                     let mut count = 1;
                     for entry in self.readline.history().iter() {
-                        println!("{} {}", count, entry);
+                        writeln!(out_buffer, "{} {}", count, entry)?;
                         count += 1;
                     }
                 }
                 Builtin::Clear => {
-                    print!("{}{}", clear::All, cursor::Goto(1, 1));
+                    write!(out_buffer, "{}{}", clear::All, cursor::Goto(1, 1))?;
                 }
                 Builtin::Exit => {
                     process::exit(0);
                 }
             };
-            return true;
+            return Ok(CommandResponse::Executed);
         }
-        false
+        Ok(CommandResponse::NotFound)
     }
 
     /// Parses a command returning the namespace and arguments as a json value.
@@ -312,16 +327,16 @@ impl Shell {
     /// any plugin services that url. Two syntaxes are supported /foo/bar or
     /// foo.bar both will be translated into /foo/bar before being sent to the
     /// dispatcher.
-    fn plugin(&mut self, command: String) -> bool {
+    fn plugin(&mut self, command: String, out_buffer: &mut impl std::fmt::Write) -> Result<CommandResponse> {
         let command_result = Self::parse_command(command);
         if let Err(err) = command_result {
             if let Some(shell_error) = err.downcast_ref::<ShellError>() {
                 if let ShellError::EmptyCommand = shell_error {
-                    return true;
+                    return Ok(CommandResponse::Executed);
                 }
             }
-            println!("Error: {}", err);
-            return true;
+            writeln!(out_buffer, "Error: {}", err)?;
+            return Ok(CommandResponse::Executed);
         }
         let (namespace, query) = command_result.unwrap();
 
@@ -331,40 +346,45 @@ impl Shell {
                 if let Some(dispatch_error) = e.downcast_ref::<DispatcherError>() {
                     match dispatch_error {
                         DispatcherError::NamespaceDoesNotExist(_) => {
-                            return false;
+                            return Ok(CommandResponse::NotFound);
                         }
                         _ => {}
                     }
                 }
-                println!("Error: {}", e);
-                true
+                writeln!(out_buffer, "Error: {}", e)?;
+                Ok(CommandResponse::Executed)
             }
             Ok(result) => {
-                println!("{}", serde_json::to_string_pretty(&result).unwrap());
-                true
+                writeln!(out_buffer, "{}", serde_json::to_string_pretty(&result).unwrap())?;
+                Ok(CommandResponse::Executed)
             }
         }
     }
 
     /// Executes a single command.
-    pub fn execute(&mut self, command: String) {
+    pub fn execute(&mut self, command: String) -> Result<String> {
         if command.is_empty() || command.starts_with("#") {
-            return;
+            return Ok(String::new());
         }
         info!("Command: {}", command);
 
-        if self.builtin(command.clone()) {
-        } else if self.plugin(command.clone()) {
+        let mut output = String::new();
+        if self.builtin(command.clone(), &mut output)? == CommandResponse::Executed {
+        } else if self.plugin(command.clone(), &mut output)? == CommandResponse::Executed {
         } else {
-            println!("scrutiny: command not found: {}", command);
+            writeln!(output, "scrutiny: command not found: {}", command)?;
         }
+        print!("{}", output);
+        Ok(output)
     }
 
     /// Runs a blocking loop executing commands from standard input.
     pub fn run(&mut self) {
         loop {
             if let Some(command) = self.prompt() {
-                self.execute(command);
+                if let Err(err) = self.execute(command) {
+                    error!("Execute failed: {:?}", err);
+                }
             } else {
                 break;
             }

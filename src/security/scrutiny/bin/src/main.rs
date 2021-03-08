@@ -5,5 +5,6 @@
 use {anyhow::Result, scrutiny_frontend};
 
 fn main() -> Result<()> {
-    scrutiny_frontend::launcher::launch()
+    scrutiny_frontend::launcher::launch()?;
+    Ok(())
 }

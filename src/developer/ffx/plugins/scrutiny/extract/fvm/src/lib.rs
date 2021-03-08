@@ -24,5 +24,7 @@ pub async fn scrutiny_fvm(cmd: ScrutinyFvmCommand) -> Result<(), Error> {
         },
         runtime: RuntimeConfig::minimal(),
     };
-    launcher::launch_from_config(config)
+    launcher::launch_from_config(config)?;
+
+    Ok(())
 }

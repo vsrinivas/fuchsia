@@ -24,5 +24,7 @@ pub async fn scrutiny_blobfs(cmd: ScrutinyBlobfsCommand) -> Result<(), Error> {
         },
         runtime: RuntimeConfig::minimal(),
     };
-    launcher::launch_from_config(config)
+    launcher::launch_from_config(config)?;
+
+    Ok(())
 }
