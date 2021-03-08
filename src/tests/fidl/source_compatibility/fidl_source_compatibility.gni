@@ -86,6 +86,7 @@ template("_dart_compat") {
     deps = [ ":${invoker.fidl}(${dart_toolchain})" ]
     non_dart_deps = [ ":${copy_target_name}" ]
     options_file = "//topaz/tools/analysis_options.yaml"
+    pubspec = "//src/tests/fidl/source_compatibility/pubspec.yaml"
   }
 }
 

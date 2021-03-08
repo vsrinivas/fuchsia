@@ -352,15 +352,19 @@ if (current_toolchain == dart_toolchain) {
 
         depfile = "$target_gen_dir/$target_name.analysis.d"
 
-        output_file = "$target_gen_dir/$target_name.analyzed"
-
+        _pubspec = "${package_root}/pubspec.yaml"
+        if (defined(invoker.pubspec)) {
+          _pubspec = invoker.pubspec
+        }
         inputs = [
-                   dart_analyzer_binary,
                    _packages_path,
+                   _pubspec,
+                   dart_analyzer_binary,
                    options_file,
                    source_file,
                  ] + rebased_sources + third_party_yaml_lib3_srcs
 
+        output_file = "$target_gen_dir/$target_name.analyzed"
         outputs = [ output_file ]
 
         args = [
