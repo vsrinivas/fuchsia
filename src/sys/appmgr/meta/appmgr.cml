@@ -244,16 +244,8 @@
             path: "/svc_for_sys/fuchsia.device.manager.DriverHostDevelopment",
         },
         {
-            protocol: "fuchsia.device.manager.BindDebugger",
-            path: "/svc_for_sys/fuchsia.device.manager.BindDebugger",
-        },
-        {
             protocol: "fuchsia.driver.registrar.DriverRegistrar",
             path: "/svc_for_sys/fuchsia.driver.registrar.DriverRegistrar",
-        },
-        {
-            protocol: "fuchsia.hardware.pci.Bus",
-            path: "/svc_for_sys/fuchsia.hardware.pci.Bus",
         },
         {
             protocol: "fuchsia.hardware.power.statecontrol.Admin",
@@ -366,12 +358,6 @@
         {
             protocol: "fuchsia.sysinfo.SysInfo",
             path: "/svc_for_sys/fuchsia.sysinfo.SysInfo",
-        },
-
-        // From test_manager
-        {
-            protocol: "fuchsia.test.manager.Harness",
-            path: "/svc_for_sys/fuchsia.test.manager.Harness",
         },
 
         // From power_manager
