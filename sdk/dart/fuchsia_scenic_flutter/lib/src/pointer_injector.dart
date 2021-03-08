@@ -35,13 +35,13 @@ class PointerInjector {
         _viewRefInstalled = viewRefInstalled,
         _device = device;
 
-  /// Construct PointerInjector from [StartupContext].
-  factory PointerInjector.fromStartupContext(StartupContext startupContext) {
+  /// Construct PointerInjector from [/svc].
+  factory PointerInjector.fromSvcPath() {
     final registry = RegistryProxy();
     final viewRefInstalled = ViewRefInstalledProxy();
     final device = DeviceProxy();
-    startupContext.incoming.connectToService(registry);
-    startupContext.incoming.connectToService(viewRefInstalled);
+    Incoming.fromSvcPath().connectToService(registry);
+    Incoming.fromSvcPath().connectToService(viewRefInstalled);
     return PointerInjector(registry, viewRefInstalled, device);
   }
 

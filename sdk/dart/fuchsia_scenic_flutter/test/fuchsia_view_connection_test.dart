@@ -123,7 +123,6 @@ ViewHolderToken _mockViewHolderToken() {
 
 class TestFuchsiaViewConnection extends FuchsiaViewConnection {
   final _platformMethodChannel = MockMethodChannel();
-  final _startupContext = MockStartupContext();
   final _pointerInjector = MockPointerInjector();
 
   TestFuchsiaViewConnection(
@@ -144,9 +143,6 @@ class TestFuchsiaViewConnection extends FuchsiaViewConnection {
 
   @override
   MethodChannel get platformViewChannel => _platformMethodChannel;
-
-  @override
-  StartupContext get startupContext => _startupContext;
 
   @override
   PointerInjector get pointerInjector => _pointerInjector;

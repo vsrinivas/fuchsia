@@ -3,4 +3,5 @@
 // found in the LICENSE file.
 
 /// Utilities for working with Scenic Views.
+export 'src/scenic_context.dart';
 export 'src/view_token_pair.dart';

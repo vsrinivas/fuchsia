@@ -14,12 +14,16 @@ dart_library("fuchsia_scenic") {
   source_dir = "lib"
 
   sources = [
+    "src/scenic_context.dart",
     "src/view_token_pair.dart",
     "views.dart",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.ui.views",
+
+    # TODO(fxbug.dev/71491): Migrate viewRef away from package:fuchsia_services.
+    dart_package_label.fuchsia_services,
     dart_package_label.zircon,
   ]
 }

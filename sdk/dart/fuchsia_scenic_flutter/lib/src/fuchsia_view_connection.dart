@@ -7,7 +7,7 @@
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
-import 'package:fuchsia_services/services.dart';
+import 'package:fuchsia_scenic/views.dart';
 import 'package:zircon/zircon.dart';
 
 import 'fuchsia_view_controller.dart';
@@ -31,20 +31,13 @@ class FuchsiaViewConnection extends FuchsiaViewController {
   /// Returns the [PointerInjector] instance used by this connection.
   @visibleForTesting
   PointerInjector get pointerInjector =>
-      _pointerInjector ??= PointerInjector.fromStartupContext(startupContext);
+      _pointerInjector ??= PointerInjector.fromSvcPath();
 
   /// Callback when the connection to child's view is connected to view tree.
   final FuchsiaViewConnectionCallback? _onViewConnected;
 
   /// Callback when the child's view is disconnected from view tree.
   final FuchsiaViewConnectionCallback? _onViewDisconnected;
-
-  StartupContext? _startupContext;
-
-  /// Returns the [StartupContext] used to connect to required services.
-  @visibleForTesting
-  StartupContext get startupContext =>
-      _startupContext ??= StartupContext.fromStartupInfo();
 
   /// Set to true if pointer injection into child views should be enabled.
   /// This requires the view's [ViewRef] to be set during construction.
@@ -85,10 +78,7 @@ class FuchsiaViewConnection extends FuchsiaViewController {
     connection._onViewConnected?.call(controller);
 
     if (connection.usePointerInjection) {
-      final hostViewRef = ViewRef(
-        reference: EventPair(
-            connection.startupContext.viewRef!.duplicate(ZX.RIGHT_SAME_RIGHTS)),
-      );
+      final hostViewRef = ScenicContext.hostViewRef();
       final viewRefDup = ViewRef(
           reference:
               connection.viewRef!.reference.duplicate(ZX.RIGHT_SAME_RIGHTS));
