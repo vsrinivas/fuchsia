@@ -7,7 +7,7 @@ _isolated_ access to a private storage directory. When a storage capability is
 declared in a [component manifest][manifests-storage] it must reference a
 backing [directory capability][directory-capabilities]. Each component that then
 [uses][use] this storage capability receives a unique and non-overlapping
-sub-directory within the backing directory. This prevents [component
+subdirectory within the backing directory. This prevents [component
 instances][component-instance] from accessing files belonging to other component
 instances (including their own children).
 
@@ -150,12 +150,12 @@ When a component instance attempts to access the directory provided to it
 through a storage capability, the framework binds to and generates
 sub-directories in the component instance that provides the backing directory
 capability. Then, the framework provides the component instance access to a
-unique sub-directory.
+unique subdirectory.
 
-The sub-directory to which a component instance is provided access is determined
+The subdirectory to which a component instance is provided access is determined
 by its location in the component topology. This means that if a component
 instance is renamed in its parent manifest or moved to a different parent then
-it will receive a different sub-directory than it did before the change.
+it will receive a different subdirectory than it did before the change.
 
 [component-instance]: /docs/glossary.md#component-instance
 [directory-capabilities]: /docs/glossary.md#directory-capability

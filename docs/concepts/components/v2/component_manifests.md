@@ -469,6 +469,10 @@ A definition of a [protocol capability][doc-protocol].
 A definition of a [directory capability][doc-directory].
 
 -   `directory`: The [name](#capability-names) for this directory capability.
+-   `subdir` _(optional)_: A subdirectory within the source component's
+    directory capability. This will expose only the given subdirectory as the
+    root of the target directory capability. If absent, the source directory's
+    root will be exposed.
 -   `path`: The path in the component's outgoing directory from which this
     directory is served.
 -   `rights`: The maximum [directory rights](#directory-rights) that may be set
@@ -487,7 +491,7 @@ A definition of a [storage capability][doc-storage].
         instance.
 -   `backing_dir`: The [name](#capability-names) of the directory backing the
     storage.
--   `subdir`: Users are given isolated access to this sub-directory that is
+-   `subdir`: Users are given isolated access to this subdirectory that is
     inside of the `backing_dir` directory.
 
 #### runner {#capability-runner}
