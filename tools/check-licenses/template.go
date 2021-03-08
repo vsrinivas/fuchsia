@@ -120,9 +120,9 @@ func getFuncMap(config *Config) template.FuncMap {
 		},
 		"getHTMLText": func(m *Match) string {
 			txt := m.Text
+			txt = strings.ReplaceAll(txt, "<", "&lt;")
+			txt = strings.ReplaceAll(txt, ">", "&gt;")
 			txt = strings.Replace(txt, "\n", "<br />", -1)
-			txt = strings.ReplaceAll(txt, "<", "&lt")
-			txt = strings.ReplaceAll(txt, ">", "&gt")
 			return txt
 		},
 		"getMatches": func(l *License) []*Match {
