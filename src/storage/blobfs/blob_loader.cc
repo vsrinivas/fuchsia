@@ -86,14 +86,16 @@ zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
                            std::move(decompressor_client)));
 }
 
-zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
-                                 const BlobCorruptionNotifier* corruption_notifier,
-                                 fzl::OwnedVmoMapper* data_out, fzl::OwnedVmoMapper* merkle_out) {
+zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlob(
+    uint32_t node_index, const BlobCorruptionNotifier* corruption_notifier) {
+  LoadResult result;
+
   ZX_DEBUG_ASSERT(read_mapper_.vmo().is_valid());
   auto inode = node_finder_->GetNode(node_index);
   if (inode.is_error()) {
-    return inode.status_value();
+    return inode.take_error();
   }
+
   // LoadBlob should only be called for Inodes. If this doesn't hold, one of two things happened:
   //   - Programmer error
   //   - Corruption of a blob's Inode
@@ -108,60 +110,62 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
                                                  *inode.value(), GetBlockSize());
   if (blob_layout.is_error()) {
     FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout.status_string();
-    return blob_layout.status_value();
+    return blob_layout.take_error();
   }
   if (inode->blob_size == 0) {
     // No data to load for the null blob.
-    return VerifyNullBlob(digest::Digest(inode->merkle_root_hash), corruption_notifier);
+    if (zx_status_t status =
+            VerifyNullBlob(digest::Digest(inode->merkle_root_hash), corruption_notifier);
+        status != ZX_OK) {
+      return zx::error(status);
+    }
+    return zx::ok(std::move(result));
   }
 
-  fzl::OwnedVmoMapper merkle_mapper;
   std::unique_ptr<BlobVerifier> verifier;
-  zx_status_t status;
-  if ((status = InitMerkleVerifier(node_index, *inode.value(), *blob_layout.value(),
-                                   corruption_notifier, &merkle_mapper, &verifier)) != ZX_OK) {
-    return status;
+  if (zx_status_t status = InitMerkleVerifier(node_index, *inode.value(), *blob_layout.value(),
+                                              corruption_notifier, &result.merkle, &verifier);
+      status != ZX_OK) {
+    return zx::error(status);
   }
 
   uint64_t file_block_aligned_size = blob_layout->FileBlockAlignedSize();
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
   FormatBlobDataVmoName(*inode.value(), &data_vmo_name);
 
-  fzl::OwnedVmoMapper data_mapper;
-  status = data_mapper.CreateAndMap(file_block_aligned_size, data_vmo_name.c_str());
-  if (status != ZX_OK) {
+  if (zx_status_t status = result.data.CreateAndMap(file_block_aligned_size, data_vmo_name.c_str());
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize data vmo; error: " << zx_status_get_string(status);
-    return status;
+    return zx::error(status);
   }
-  status = inode->IsCompressed() ? LoadAndDecompressData(node_index, *inode.value(),
-                                                         *blob_layout.value(), data_mapper)
-                                 : LoadData(node_index, *blob_layout.value(), data_mapper);
+
+  zx_status_t status =
+      inode->IsCompressed()
+          ? LoadAndDecompressData(node_index, *inode.value(), *blob_layout.value(), result.data)
+          : LoadData(node_index, *blob_layout.value(), result.data);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
-  if ((status = verifier->Verify(data_mapper.start(), inode->blob_size, file_block_aligned_size)) !=
-      ZX_OK) {
-    return status;
+  if (zx_status_t status =
+          verifier->Verify(result.data.start(), inode->blob_size, file_block_aligned_size);
+      status != ZX_OK) {
+    return zx::error(status);
   }
 
-  *data_out = std::move(data_mapper);
-  if (merkle_mapper.vmo().is_valid()) {
-    *merkle_out = std::move(merkle_mapper);
-  }
-  return ZX_OK;
+  return zx::ok(std::move(result));
 }
 
-zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
-                                      const BlobCorruptionNotifier* corruption_notifier,
-                                      std::unique_ptr<pager::PageWatcher>* page_watcher_out,
-                                      fzl::OwnedVmoMapper* data_out,
-                                      fzl::OwnedVmoMapper* merkle_out) {
+zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlobPaged(
+    uint32_t node_index, const BlobCorruptionNotifier* corruption_notifier) {
+  LoadResult result;
+
   ZX_DEBUG_ASSERT(read_mapper_.vmo().is_valid());
   auto inode = node_finder_->GetNode(node_index);
   if (inode.is_error()) {
-    return inode.status_value();
+    return inode.take_error();
   }
+
   // LoadBlobPaged should only be called for Inodes. If this doesn't hold, one of two things
   // happened:
   //   - Programmer error
@@ -178,25 +182,30 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   if (blob_layout.is_error()) {
     FX_LOGS(ERROR) << "Failed to create blob layout: "
                    << zx_status_get_string(blob_layout.error_value());
-    return blob_layout.error_value();
+    return blob_layout.take_error();
   }
   if (inode->blob_size == 0) {
     // No data to load for the null blob.
-    return VerifyNullBlob(digest::Digest(inode->merkle_root_hash), corruption_notifier);
+    if (zx_status_t status =
+            VerifyNullBlob(digest::Digest(inode->merkle_root_hash), corruption_notifier);
+        status != ZX_OK) {
+      return zx::error(status);
+    }
+    return zx::ok(std::move(result));
   }
 
-  fzl::OwnedVmoMapper merkle_mapper;
   std::unique_ptr<BlobVerifier> verifier;
-  zx_status_t status;
-  if ((status = InitMerkleVerifier(node_index, *inode.value(), *blob_layout.value(),
-                                   corruption_notifier, &merkle_mapper, &verifier)) != ZX_OK) {
-    return status;
+  if (zx_status_t status = InitMerkleVerifier(node_index, *inode.value(), *blob_layout.value(),
+                                              corruption_notifier, &result.merkle, &verifier);
+      status != ZX_OK) {
+    return zx::error(status);
   }
 
   std::unique_ptr<SeekableDecompressor> decompressor;
-  if ((status = InitForDecompression(node_index, *inode.value(), *blob_layout.value(), *verifier,
-                                     &decompressor)) != ZX_OK) {
-    return status;
+  if (zx_status_t status = InitForDecompression(node_index, *inode.value(), *blob_layout.value(),
+                                                *verifier, &decompressor);
+      status != ZX_OK) {
+    return zx::error(status);
   }
 
   pager::UserPagerInfo userpager_info;
@@ -205,30 +214,25 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   userpager_info.data_length_bytes = inode->blob_size;
   userpager_info.verifier = std::move(verifier);
   userpager_info.decompressor = std::move(decompressor);
-  auto page_watcher = std::make_unique<pager::PageWatcher>(pager_, std::move(userpager_info));
+  result.page_watcher = std::make_unique<pager::PageWatcher>(pager_, std::move(userpager_info));
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
   FormatBlobDataVmoName(*inode.value(), &data_vmo_name);
 
   zx::vmo data_vmo;
-  if ((status = page_watcher->CreatePagedVmo(blob_layout->FileBlockAlignedSize(), &data_vmo)) !=
-      ZX_OK) {
-    return status;
+  if (zx_status_t status =
+          result.page_watcher->CreatePagedVmo(blob_layout->FileBlockAlignedSize(), &data_vmo);
+      status != ZX_OK) {
+    return zx::error(status);
   }
   data_vmo.set_property(ZX_PROP_NAME, data_vmo_name.c_str(), data_vmo_name.length());
 
-  fzl::OwnedVmoMapper data_mapper;
-  if ((status = data_mapper.Map(std::move(data_vmo))) != ZX_OK) {
+  if (zx_status_t status = result.data.Map(std::move(data_vmo)); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create mapping for data vmo: " << zx_status_get_string(status);
-    return status;
+    return zx::error(status);
   }
 
-  *page_watcher_out = std::move(page_watcher);
-  *data_out = std::move(data_mapper);
-  if (merkle_mapper.vmo().is_valid()) {
-    *merkle_out = std::move(merkle_mapper);
-  }
-  return ZX_OK;
+  return zx::ok(std::move(result));
 }
 
 zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& inode,

@@ -32,6 +32,13 @@ namespace blobfs {
 // contents as needed.
 class BlobLoader {
  public:
+  struct LoadResult {
+    fzl::OwnedVmoMapper data;
+    fzl::OwnedVmoMapper merkle;
+
+    std::unique_ptr<pager::PageWatcher> page_watcher;  // Will only be set for paged blobs.
+  };
+
   BlobLoader() = default;
   BlobLoader(BlobLoader&& o) = default;
   BlobLoader& operator=(BlobLoader&& o) = default;
@@ -55,8 +62,9 @@ class BlobLoader {
   //  - The stored merkle tree is well-formed.
   //  - The blob's merkle root in |inode| matches the root of the merkle tree stored on-disk.
   //  - The blob's contents match the merkle tree.
-  zx_status_t LoadBlob(uint32_t node_index, const BlobCorruptionNotifier* corruption_notifier,
-                       fzl::OwnedVmoMapper* data_out, fzl::OwnedVmoMapper* merkle_out);
+  zx::status<LoadResult> LoadBlob(uint32_t node_index,
+                                  const BlobCorruptionNotifier* corruption_notifier);
+
   // Loads the merkle tree for the blob referenced |inode|, and prepare a pager-backed VMO for
   // data.
   //
@@ -71,9 +79,8 @@ class BlobLoader {
   //
   // This method does *NOT* immediately verify the integrity of the blob's data, this will be
   // lazily verified by the pager as chunks of the blob are loaded.
-  zx_status_t LoadBlobPaged(uint32_t node_index, const BlobCorruptionNotifier* corruption_notifier,
-                            std::unique_ptr<pager::PageWatcher>* page_watcher_out,
-                            fzl::OwnedVmoMapper* data_out, fzl::OwnedVmoMapper* merkle_out);
+  zx::status<LoadResult> LoadBlobPaged(uint32_t node_index,
+                                       const BlobCorruptionNotifier* corruption_notifier);
 
  private:
   BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,

@@ -184,14 +184,14 @@ TEST_P(BlobLoaderTest, NullBlob) {
   std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
   ASSERT_EQ(Remount(), ZX_OK);
 
-  fzl::OwnedVmoMapper data, merkle;
-  ASSERT_EQ(loader().LoadBlob(LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
+  auto result = loader().LoadBlob(LookupInode(*info), nullptr);
+  ASSERT_TRUE(result.is_ok());
 
-  EXPECT_FALSE(data.vmo().is_valid());
-  EXPECT_EQ(data.size(), 0ul);
+  EXPECT_FALSE(result->data.vmo().is_valid());
+  EXPECT_EQ(result->data.size(), 0ul);
 
-  EXPECT_FALSE(merkle.vmo().is_valid());
-  EXPECT_EQ(merkle.size(), 0ul);
+  EXPECT_FALSE(result->merkle.vmo().is_valid());
+  EXPECT_EQ(result->merkle.size(), 0ul);
 }
 
 TEST_P(BlobLoaderTest, SmallBlob) {
@@ -201,15 +201,15 @@ TEST_P(BlobLoaderTest, SmallBlob) {
   // We explicitly don't check the compression algorithm was respected here, since files this small
   // don't need to be compressed.
 
-  fzl::OwnedVmoMapper data, merkle;
-  ASSERT_EQ(loader().LoadBlob(LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
+  auto result = loader().LoadBlob(LookupInode(*info), nullptr);
+  ASSERT_TRUE(result.is_ok());
 
-  ASSERT_TRUE(data.vmo().is_valid());
-  ASSERT_GE(data.size(), info->size_data);
-  EXPECT_EQ(memcmp(data.start(), info->data.get(), info->size_data), 0);
+  ASSERT_TRUE(result->data.vmo().is_valid());
+  ASSERT_GE(result->data.size(), info->size_data);
+  EXPECT_EQ(memcmp(result->data.start(), info->data.get(), info->size_data), 0);
 
-  EXPECT_FALSE(merkle.vmo().is_valid());
-  EXPECT_EQ(merkle.size(), 0ul);
+  EXPECT_FALSE(result->merkle.vmo().is_valid());
+  EXPECT_EQ(result->merkle.size(), 0ul);
 }
 
 TEST_P(BlobLoaderPagedTest, SmallBlob) {
@@ -219,20 +219,18 @@ TEST_P(BlobLoaderPagedTest, SmallBlob) {
   // We explicitly don't check the compression algorithm was respected here, since files this small
   // don't need to be compressed.
 
-  fzl::OwnedVmoMapper data, merkle;
-  std::unique_ptr<pager::PageWatcher> page_watcher;
-  ASSERT_EQ(loader().LoadBlobPaged(LookupInode(*info), nullptr, &page_watcher, &data, &merkle),
-            ZX_OK);
+  auto result = loader().LoadBlobPaged(LookupInode(*info), nullptr);
+  ASSERT_TRUE(result.is_ok());
 
-  ASSERT_TRUE(data.vmo().is_valid());
-  ASSERT_GE(data.size(), info->size_data);
+  ASSERT_TRUE(result->data.vmo().is_valid());
+  ASSERT_GE(result->data.size(), info->size_data);
   // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
   fbl::Array<uint8_t> buf(new uint8_t[blob_len], blob_len);
-  ASSERT_EQ(data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
+  ASSERT_EQ(result->data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
   EXPECT_EQ(memcmp(buf.get(), info->data.get(), info->size_data), 0);
 
-  EXPECT_FALSE(merkle.vmo().is_valid());
-  EXPECT_EQ(merkle.size(), 0ul);
+  EXPECT_FALSE(result->merkle.vmo().is_valid());
+  EXPECT_EQ(result->merkle.size(), 0ul);
 }
 
 TEST_P(BlobLoaderTest, LargeBlob) {
@@ -241,14 +239,14 @@ TEST_P(BlobLoaderTest, LargeBlob) {
   ASSERT_EQ(Remount(), ZX_OK);
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
-  fzl::OwnedVmoMapper data, merkle;
-  ASSERT_EQ(loader().LoadBlob(LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
+  auto result = loader().LoadBlob(LookupInode(*info), nullptr);
+  ASSERT_TRUE(result.is_ok());
 
-  ASSERT_TRUE(data.vmo().is_valid());
-  ASSERT_GE(data.size(), info->size_data);
-  EXPECT_EQ(memcmp(data.start(), info->data.get(), info->size_data), 0);
+  ASSERT_TRUE(result->data.vmo().is_valid());
+  ASSERT_GE(result->data.size(), info->size_data);
+  EXPECT_EQ(memcmp(result->data.start(), info->data.get(), info->size_data), 0);
 
-  CheckMerkleTreeContents(merkle, *info);
+  CheckMerkleTreeContents(result->merkle, *info);
 }
 
 TEST_P(BlobLoaderTest, LargeBlobWithNonAlignedLength) {
@@ -257,14 +255,14 @@ TEST_P(BlobLoaderTest, LargeBlobWithNonAlignedLength) {
   ASSERT_EQ(Remount(), ZX_OK);
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
-  fzl::OwnedVmoMapper data, merkle;
-  ASSERT_EQ(loader().LoadBlob(LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
+  auto result = loader().LoadBlob(LookupInode(*info), nullptr);
+  ASSERT_TRUE(result.is_ok());
 
-  ASSERT_TRUE(data.vmo().is_valid());
-  ASSERT_GE(data.size(), info->size_data);
-  EXPECT_EQ(memcmp(data.start(), info->data.get(), info->size_data), 0);
+  ASSERT_TRUE(result->data.vmo().is_valid());
+  ASSERT_GE(result->data.size(), info->size_data);
+  EXPECT_EQ(memcmp(result->data.start(), info->data.get(), info->size_data), 0);
 
-  CheckMerkleTreeContents(merkle, *info);
+  CheckMerkleTreeContents(result->merkle, *info);
 }
 
 TEST_P(BlobLoaderPagedTest, LargeBlob) {
@@ -273,19 +271,17 @@ TEST_P(BlobLoaderPagedTest, LargeBlob) {
   ASSERT_EQ(Remount(), ZX_OK);
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
-  fzl::OwnedVmoMapper data, merkle;
-  std::unique_ptr<pager::PageWatcher> page_watcher;
-  ASSERT_EQ(loader().LoadBlobPaged(LookupInode(*info), nullptr, &page_watcher, &data, &merkle),
-            ZX_OK);
+  auto result = loader().LoadBlobPaged(LookupInode(*info), nullptr);
+  ASSERT_TRUE(result.is_ok());
 
-  ASSERT_TRUE(data.vmo().is_valid());
-  ASSERT_GE(data.size(), info->size_data);
+  ASSERT_TRUE(result->data.vmo().is_valid());
+  ASSERT_GE(result->data.size(), info->size_data);
   // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
   fbl::Array<uint8_t> buf(new uint8_t[blob_len], blob_len);
-  ASSERT_EQ(data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
+  ASSERT_EQ(result->data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
   EXPECT_EQ(memcmp(buf.get(), info->data.get(), info->size_data), 0);
 
-  CheckMerkleTreeContents(merkle, *info);
+  CheckMerkleTreeContents(result->merkle, *info);
 }
 
 TEST_P(BlobLoaderPagedTest, LargeBlobWithNonAlignedLength) {
@@ -294,19 +290,17 @@ TEST_P(BlobLoaderPagedTest, LargeBlobWithNonAlignedLength) {
   ASSERT_EQ(Remount(), ZX_OK);
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
-  fzl::OwnedVmoMapper data, merkle;
-  std::unique_ptr<pager::PageWatcher> page_watcher;
-  ASSERT_EQ(loader().LoadBlobPaged(LookupInode(*info), nullptr, &page_watcher, &data, &merkle),
-            ZX_OK);
+  auto result = loader().LoadBlobPaged(LookupInode(*info), nullptr);
+  ASSERT_TRUE(result.is_ok());
 
-  ASSERT_TRUE(data.vmo().is_valid());
-  ASSERT_GE(data.size(), info->size_data);
+  ASSERT_TRUE(result->data.vmo().is_valid());
+  ASSERT_GE(result->data.size(), info->size_data);
   // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
   fbl::Array<uint8_t> buf(new uint8_t[blob_len], blob_len);
-  ASSERT_EQ(data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
+  ASSERT_EQ(result->data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
   EXPECT_EQ(memcmp(buf.get(), info->data.get(), info->size_data), 0);
 
-  CheckMerkleTreeContents(merkle, *info);
+  CheckMerkleTreeContents(result->merkle, *info);
 }
 
 TEST_P(BlobLoaderTest, MediumBlobWithRoomForMerkleTree) {
@@ -317,14 +311,14 @@ TEST_P(BlobLoaderTest, MediumBlobWithRoomForMerkleTree) {
   std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
   ASSERT_EQ(Remount(), ZX_OK);
 
-  fzl::OwnedVmoMapper data, merkle;
-  ASSERT_EQ(loader().LoadBlob(LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
+  auto result = loader().LoadBlob(LookupInode(*info), nullptr);
+  ASSERT_TRUE(result.is_ok());
 
-  ASSERT_TRUE(data.vmo().is_valid());
-  ASSERT_GE(data.size(), info->size_data);
-  EXPECT_EQ(memcmp(data.start(), info->data.get(), info->size_data), 0);
+  ASSERT_TRUE(result->data.vmo().is_valid());
+  ASSERT_GE(result->data.size(), info->size_data);
+  EXPECT_EQ(memcmp(result->data.start(), info->data.get(), info->size_data), 0);
 
-  CheckMerkleTreeContents(merkle, *info);
+  CheckMerkleTreeContents(result->merkle, *info);
 }
 
 TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
@@ -333,8 +327,8 @@ TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
   uint32_t inode_index = LookupInode(*info);
 
   // Verify the null blob can be read back.
-  fzl::OwnedVmoMapper data, merkle;
-  ASSERT_EQ(loader().LoadBlob(inode_index, nullptr, &data, &merkle), ZX_OK);
+  auto result = loader().LoadBlob(inode_index, nullptr);
+  ASSERT_TRUE(result.is_ok());
 
   uint8_t corrupt_merkle_root[digest::kSha256Length] = "-corrupt-null-blob-merkle-root-";
   {
@@ -364,21 +358,23 @@ TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
   EXPECT_EQ(LookupInode(corrupt_info), inode_index);
 
   // Verify the null blob with a corrupted Merkle root fails to load.
-  ASSERT_EQ(loader().LoadBlob(inode_index, nullptr, &data, &merkle), ZX_ERR_IO_DATA_INTEGRITY);
+  auto failed_result = loader().LoadBlob(inode_index, nullptr);
+  ASSERT_TRUE(failed_result.is_error());
+  EXPECT_EQ(failed_result.error_value(), ZX_ERR_IO_DATA_INTEGRITY);
 }
 
 TEST_P(BlobLoaderTest, LoadBlobWithAnInvalidNodeIndexIsAnError) {
   uint32_t invalid_node_index = kMaxNodeId - 1;
-  fzl::OwnedVmoMapper data, merkle;
-  EXPECT_EQ(loader().LoadBlob(invalid_node_index, nullptr, &data, &merkle), ZX_ERR_INVALID_ARGS);
+  auto result = loader().LoadBlob(invalid_node_index, nullptr);
+  ASSERT_TRUE(result.is_error());
+  EXPECT_EQ(result.error_value(), ZX_ERR_INVALID_ARGS);
 }
 
 TEST_P(BlobLoaderPagedTest, LoadBlobPagedWithAnInvalidNodeIndexIsAnError) {
   uint32_t invalid_node_index = kMaxNodeId - 1;
-  fzl::OwnedVmoMapper data, merkle;
-  std::unique_ptr<pager::PageWatcher> page_watcher;
-  EXPECT_EQ(loader().LoadBlobPaged(invalid_node_index, nullptr, &page_watcher, &data, &merkle),
-            ZX_ERR_INVALID_ARGS);
+  auto result = loader().LoadBlobPaged(invalid_node_index, nullptr);
+  ASSERT_TRUE(result.is_error());
+  EXPECT_EQ(result.error_value(), ZX_ERR_INVALID_ARGS);
 }
 
 TEST_P(BlobLoaderTest, LoadBlobWithACorruptNextNodeIndexIsAnError) {
@@ -393,10 +389,9 @@ TEST_P(BlobLoaderTest, LoadBlobWithACorruptNextNodeIndexIsAnError) {
   inode->header.next_node = invalid_node_index;
   inode->extent_count = 2;
 
-  fzl::OwnedVmoMapper data, merkle;
-  std::unique_ptr<pager::PageWatcher> page_watcher;
-  EXPECT_EQ(loader().LoadBlobPaged(node_index, nullptr, &page_watcher, &data, &merkle),
-            ZX_ERR_IO_DATA_INTEGRITY);
+  auto result = loader().LoadBlobPaged(node_index, nullptr);
+  ASSERT_TRUE(result.is_error());
+  EXPECT_EQ(result.error_value(), ZX_ERR_IO_DATA_INTEGRITY);
 }
 
 std::string GetTestParamName(const TestParamInfo<TestParamType>& param) {
