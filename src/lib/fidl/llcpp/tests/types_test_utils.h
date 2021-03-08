@@ -8,6 +8,10 @@
 #ifndef SRC_LIB_FIDL_LLCPP_TESTS_TYPES_TEST_UTILS_H_
 #define SRC_LIB_FIDL_LLCPP_TESTS_TYPES_TEST_UTILS_H_
 
+#ifndef __Fuchsia__
+#error "Fuchsia-only header"
+#endif  // __Fuchsia__
+
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -37,7 +41,7 @@ class HandleChecker {
 };
 
 // Verifies that:
-//   - |bytes| and |handles| decodes succesfully as |FidlType|
+//   - |bytes| and |handles| decodes successfully as |FidlType|
 //   - all handles in |handles| are closed
 //   - the resulting object fails to encode
 // Assuming that:

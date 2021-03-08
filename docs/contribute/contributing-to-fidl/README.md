@@ -56,7 +56,7 @@ Path | Description
 [/tools/fidl/gidl] | Source code and build templates for the GIDL tool itself.
 [/src/tests/fidl/conformance_suite] | Test definitions (`.fidl` and `.gidl` files) for conformance tests.
 [/sdk/lib/fidl/cpp/test/{test,handle}_utils.h](/sdk/lib/fidl/cpp/test) | Runtime support for HLCPP conformance tests.
-[/src/lib/fidl/llcpp/tests/test_utils.h] | Runtime support for LLCPP conformance tests.
+[/src/lib/fidl/llcpp/tests/conformance/conformance_utils.h] | Runtime support for LLCPP conformance tests.
 [/src/lib/fidl/rust/gidl_util] | Runtime support for Rust conformance tests.
 [/third_party/go/src/syscall/zx/fidl/fidl_test] | Runtime support for Go conformance tests.
 [/src/lib/fidl/dart/gidl] | Runtime support for Dart conformance tests.
@@ -516,11 +516,11 @@ useful for debugging issues that prevent boot of the device.
 
 | Name                     | Test Command                        | Coverage
 |--------------------------|-------------------------------------|---------------------------
-| c runtime test, coding tables      | `fx test fidl_c_tests`          | //zircon/system/ulib/fidl                                                 |
+| c runtime test, coding tables      | `fx test fidl_c_tests`    | //zircon/system/ulib/fidl                                                 |
 | walker, misc             | `fx test fidl-walker-tests`         |  //zircon/system/ulib/fidl
 | walker tests w/ handle closing checks | `fx test fidl-handle-closing-tests` | //zircon/system/ulib/fidl
 | hlcpp bindings tests including conformance tests     | `fx test fidl_hlcpp_tests`                | //sdk/lib/fidl                                                             |
-| llcpp bindings tests     | `fx test fidl_llcpp_tests`     | //zircon/system/ulib/fidl/include/lib/fidl/llcpp
+| llcpp bindings tests     | `fx test //src/lib/fidl/llcpp`      | //zircon/system/ulib/fidl/include/lib/fidl/llcpp
 | go bindings tests        | `fx test go-fidl-tests`             | //third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
 | dart bindings tests      | `fx test dart-bindings-test`<br>(_see note below_) | //sdk/dart/fidl                                                  |
 | rust bindings tests      | `fx test //src/lib/fidl/rust`           | //src/lib/fidl/rust |

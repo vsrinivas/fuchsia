@@ -5,7 +5,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/wait.h>
-#include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/llcpp/fidl_allocator.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/object_view.h>
@@ -20,10 +19,10 @@
 #include <cstdint>
 
 #include <gtest/gtest.h>
-#include <llcpptest/handles/test/llcpp/fidl.h>
+#include <llcpptest/handleraii/test/llcpp/fidl.h>
 #include <src/lib/fidl/llcpp/tests/types_test_utils.h>
 
-namespace test = ::llcpptest_handles_test;
+namespace test = ::llcpptest_handleraii_test;
 
 // All the tests in this file check that when a result is freed, all the handles inside the result
 // are closed.
@@ -394,7 +393,7 @@ class HandleCloseTest : public ::testing::Test {
     ASSERT_EQ(endpoints.status_value(), ZX_OK);
     client_end_ = std::move(endpoints->client);
     server_ = std::make_unique<HandleCloseProviderServer>();
-    fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(endpoints->server), server_.get());
+    fidl::BindServer(loop_->dispatcher(), std::move(endpoints->server), server_.get());
   }
 
   test::HandleProvider::SyncClient TakeClient() {

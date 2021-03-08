@@ -1,0 +1,165 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+import("//src/sys/build/components.gni")
+
+group("integration") {
+  testonly = true
+  deps = [
+    ":fidl_llcpp_flexible_tests",
+    ":fidl_llcpp_gen_api_tests",
+    ":fidl_llcpp_handle_raii_tests",
+    ":fidl_llcpp_handle_rights_tests",
+    ":fidl_llcpp_protocol_tests",
+    ":fidl_llcpp_transitional_tests",
+  ]
+}
+
+test("fidl_llcpp_gen_api_tests_bin") {
+  output_name = "fidl_llcpp_gen_api_tests"
+  sources = [
+    "client_gen_api_test.cc",
+    "server_gen_api_test.cc",
+  ]
+  deps = [
+    ":fidl.test.coding.fuchsia_llcpp",
+    "//src/lib/fidl/llcpp/tests:types_test_utils",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_package("fidl_llcpp_gen_api_tests") {
+  deps = [ ":fidl_llcpp_gen_api_tests_bin" ]
+}
+
+fidl("fidl.test.coding.fuchsia") {
+  visibility = [ "//src/lib/fidl/llcpp/tests/*" ]
+  sources = [ "llcpp.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+fidl("llcpptest.flexible.test") {
+  sources = [ "flexible.test.fidl" ]
+}
+
+test("fidl_llcpp_flexible_tests_bin") {
+  output_name = "fidl_llcpp_flexible_tests"
+  sources = [ "flexible_test.cc" ]
+  deps = [
+    ":llcpptest.flexible.test_llcpp",
+    "//src/lib/fidl/llcpp/tests:types_test_utils",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_package("fidl_llcpp_flexible_tests") {
+  deps = [ ":fidl_llcpp_flexible_tests_bin" ]
+}
+
+fidl("llcpptest.handlerights.test") {
+  experimental_flags = [ "enable_handle_rights" ]
+  sources = [ "handle_rights.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+test("fidl_llcpp_handle_rights_tests_bin") {
+  output_name = "fidl_llcpp_handle_rights_tests"
+  sources = [ "handle_rights_test.cc" ]
+  deps = [
+    ":llcpptest.handlerights.test_llcpp",
+    "//src/lib/fidl/llcpp/tests:types_test_utils",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_package("fidl_llcpp_handle_rights_tests") {
+  deps = [ ":fidl_llcpp_handle_raii_tests_bin" ]
+}
+
+fidl("llcpptest.protocol.test") {
+  sources = [ "protocol.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+test("fidl_llcpp_protocol_tests_bin") {
+  output_name = "fidl_llcpp_protocol_tests"
+  sources = [ "protocol_test.cc" ]
+  deps = [
+    ":llcpptest.protocol.test_llcpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+  ]
+}
+
+fuchsia_unittest_package("fidl_llcpp_protocol_tests") {
+  deps = [ ":fidl_llcpp_protocol_tests_bin" ]
+}
+
+fidl("llcpptest.handleraii.test") {
+  sources = [ "handle_raii.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+test("fidl_llcpp_handle_raii_tests_bin") {
+  output_name = "fidl_llcpp_handle_raii_tests"
+  sources = [ "handle_raii_test.cc" ]
+  deps = [
+    ":llcpptest.handleraii.test_llcpp",
+    "//src/lib/fidl/llcpp/tests:types_test_utils",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_package("fidl_llcpp_handle_raii_tests") {
+  deps = [ ":fidl_llcpp_handle_raii_tests_bin" ]
+}
+
+fidl("llcpptest.transitional.test") {
+  sources = [ "transitional.test.fidl" ]
+}
+
+test("fidl_llcpp_transitional_tests_bin") {
+  output_name = "fidl_llcpp_transitional_tests"
+  sources = [ "transitional_test.cc" ]
+  deps = [
+    ":llcpptest.transitional.test_llcpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+  ]
+}
+
+fuchsia_unittest_package("fidl_llcpp_transitional_tests") {
+  deps = [ ":fidl_llcpp_transitional_tests_bin" ]
+}

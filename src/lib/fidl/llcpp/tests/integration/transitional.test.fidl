@@ -8,6 +8,6 @@ library llcpptest.transitional.test;
 /// Only the non-transitional method should need to be implemented.
 protocol TransitionMethods {
     ImplementedMethod() -> (string value);
-    [Transitional="This method should not need to be implemented to build"]
+    [Transitional = "This method should not need to be implemented to build"]
     UnimplementedMethod() -> (string value);
 };

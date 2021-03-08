@@ -2,229 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/fidl.gni")
-import("//build/test.gni")
-import("//src/sys/build/components.gni")
-import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
-import("//tools/fidl/gidl/gidl.gni")
-
-gidl_deps = []
-foreach(gidl_file, conformance_suite_gidl_files) {
-  gidl_name = get_path_info(gidl_file, "name")
-  target = "conformance_suite__${gidl_name}"
-  gidl_deps += [ ":" + target ]
-  gidl_llcpp_conformance(target) {
-    testonly = true
-    inputs = [ gidl_file ]
-    fidl = conformance_suite_fidl_target
-    deps = [ "//third_party/googletest:gtest" ]
-    if (is_fuchsia) {
-      deps += [ "//sdk/cts/tests/pkg/fidl/cpp:handle_util" ]
-    }
-  }
-}
-
-executable("fidl_llcpp_conformance_tests_bin") {
-  testonly = true
-
-  output_name = "fidl_llcpp_conformance_tests"
-
-  sources = [ "manual_conformance_test.cc" ]
-
-  deps = [
-           "//sdk/lib/fidl/cpp/test:fidl_test_llcpp",
-           "//src/lib/fxl/test:gtest_main",
-           "//src/tests/fidl/conformance_suite:conformance_fidl_llcpp",
-           "//third_party/googletest:gtest",
-           "//zircon/public/lib/fbl",
-           "//zircon/system/ulib/async-loop:async-loop-cpp",
-           "//zircon/system/ulib/async-loop:async-loop-default",
-         ] + gidl_deps
-}
-
-fuchsia_unittest_component("fidl_llcpp_conformance_tests") {
-  deps = [ ":fidl_llcpp_conformance_tests_bin" ]
-}
-
-if (is_host) {
-  test("fidl_llcpp_conformance_tests_host") {
-    output_name = "fidl_llcpp_conformance_tests"
-    deps = [
-             "//src/lib/fxl/test:gtest_main",
-             "//src/tests/fidl/conformance_suite:conformance_fidl_llcpp",
-             "//third_party/googletest:gtest",
-             "//zircon/public/lib/fbl",
-           ] + gidl_deps
-  }
-}
-
-fidl("fidl.llcpp.types.test") {
-  sources = [ "types.test.fidl" ]
-}
-
-fidl("fidl.llcpp.linearized.test") {
-  sources = [ "linearized.test.fidl" ]
-}
-
-fidl("llcpptest.flexible.test") {
-  sources = [ "flexible.test.fidl" ]
-}
-
-fidl("llcpptest.handlerights.test") {
-  experimental_flags = [ "enable_handle_rights" ]
-  sources = [ "handle_rights.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
-}
-
-fidl("llcpptest.protocol.test") {
-  sources = [ "protocol.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
-}
-
-fidl("llcpptest.handles.test") {
-  sources = [ "handles.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
-}
-
-fidl("llcpptest.transitional.test") {
-  sources = [ "transitional.test.fidl" ]
-}
-
-fidl("fidl.test.coding.fuchsia") {
-  visibility = [ ":*" ]
-  sources = [ "llcpp.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
-}
-
-executable("fidl_llcpp_type_tests_bin") {
-  testonly = true
-
-  output_name = "fidl_llcpp_type_tests"
-
-  sources = [
-    "bits_test.cc",
-    "client_end_test.cc",
-    "enum_test.cc",
-    "flexible_test.cc",
-    "handle_rights_test.cc",
-    "handle_test.cc",
-    "iovec_test.cc",
-    "linearized_and_encoded_test.cc",
-    "outgoing_message_adapter_from_c_test.cc",
-    "outgoing_to_incoming_message_test.cc",
-    "protocol_test.cc",
-    "server_end_test.cc",
-    "table_test.cc",
-    "traits_test.cc",
-    "transitional_test.cc",
-    "types_test_utils.cc",
-    "xunion_test.cc",
-  ]
-
-  deps = [
-    ":fidl.llcpp.linearized.test_llcpp",
-    ":fidl.llcpp.types.test_llcpp",
-    ":llcpptest.flexible.test_llcpp",
-    ":llcpptest.handlerights.test_llcpp",
-    ":llcpptest.handles.test_llcpp",
-    ":llcpptest.protocol.test_llcpp",
-    ":llcpptest.transitional.test_llcpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl-llcpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-  ]
-}
-
-fuchsia_unittest_component("fidl_llcpp_type_tests") {
-  manifest = "meta/fidl_llcpp_type_tests.cmx"
-  deps = [ ":fidl_llcpp_type_tests_bin" ]
-}
-
-executable("fidl_llcpp_builder_tests_bin") {
-  testonly = true
-
-  output_name = "fidl_llcpp_builder_tests"
-
-  sources = [
-    "aligned_test.cc",
-    "allocator_test.cc",
-    "buffer_then_heap_allocator_test.cc",
-    "failover_allocator_test.cc",
-    "fidl_allocator_test.cc",
-    "heap_allocator_test.cc",
-    "memory_test.cc",
-    "tracking_ptr_test.cc",
-    "types_test_utils.cc",
-    "unowned_ptr_test.cc",
-    "unsafe_buffer_allocator_test.cc",
-    "vector_view_test.cc",
-  ]
-
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fidl-llcpp",
-  ]
-}
-
-fuchsia_unittest_component("fidl_llcpp_builder_tests") {
-  manifest = "meta/fidl_llcpp_builder_tests.cmx"
-  deps = [ ":fidl_llcpp_builder_tests_bin" ]
-}
-
-executable("fidl_llcpp_dispatcher_tests_bin") {
-  testonly = true
-
-  output_name = "fidl_llcpp_dispatcher_tests"
-
-  sources = [
-    "llcpp_bind_server_overloads_test.cc",
-    "llcpp_client_test.cc",
-    "llcpp_gen_api_test.cc",
-    "llcpp_server_test.cc",
-    "llcpp_transaction_tests.cc",
-    "llcpp_types_tests.cc",
-  ]
-
-  deps = [
-    ":fidl.test.coding.fuchsia_llcpp",
-    "//sdk/lib/stdcompat",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fidl-llcpp",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/async-loop",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-fuchsia_unittest_component("fidl_llcpp_dispatcher_tests") {
-  manifest = "meta/fidl_llcpp_dispatcher_tests.cmx"
-  deps = [ ":fidl_llcpp_dispatcher_tests_bin" ]
-}
-
-fuchsia_test_package("fidl_llcpp_tests") {
-  test_components = [
-    ":fidl_llcpp_builder_tests",
-    ":fidl_llcpp_conformance_tests",
-    ":fidl_llcpp_type_tests",
-    ":fidl_llcpp_dispatcher_tests",
-  ]
-}
-
 group("tests") {
   testonly = true
+  deps = [
+    "conformance",
+    "dispatcher",
+    "integration",
+    "message_container",
+    "wire_types",
+  ]
+}
+
+source_set("types_test_utils") {
+  testonly = true
+  public = [ "types_test_utils.h" ]
+  sources = [
+    "types_test_utils.cc",
+    "types_test_utils.h",
+  ]
   public_deps = [
-    ":fidl_llcpp_conformance_tests_host($host_toolchain)",
-    ":fidl_llcpp_tests",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-llcpp",
   ]
 }

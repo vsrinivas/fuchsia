@@ -13,7 +13,6 @@
 
 #include <fidl/llcpp/types/test/llcpp/fidl.h>
 #include <gtest/gtest.h>
-#include <src/lib/fidl/llcpp/tests/test_utils.h>
 #include <src/lib/fidl/llcpp/tests/types_test_utils.h>
 
 namespace llcpp_test = ::fidl_llcpp_types_test;

@@ -26,7 +26,7 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 #include <conformance/llcpp/fidl.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/fidl/llcpp/tests/test_utils.h"
+#include "src/lib/fidl/llcpp/tests/conformance/conformance_utils.h"
 
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>

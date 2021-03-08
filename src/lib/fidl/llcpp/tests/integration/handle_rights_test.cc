@@ -6,7 +6,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/wait.h>
-#include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/llcpp/server.h>
 
 #include <gtest/gtest.h>

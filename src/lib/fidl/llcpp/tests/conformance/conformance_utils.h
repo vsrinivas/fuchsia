@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FIDL_LLCPP_TESTS_TEST_UTILS_H_
-#define SRC_LIB_FIDL_LLCPP_TESTS_TEST_UTILS_H_
+#ifndef SRC_LIB_FIDL_LLCPP_TESTS_CONFORMANCE_CONFORMANCE_UTILS_H_
+#define SRC_LIB_FIDL_LLCPP_TESTS_CONFORMANCE_CONFORMANCE_UTILS_H_
 
 #include <lib/fidl/llcpp/aligned.h>
 #include <lib/fidl/llcpp/coding.h>
@@ -176,4 +176,4 @@ constexpr inline uint64_t FidlAlign(uint32_t offset) {
 
 }  // namespace llcpp_conformance_utils
 
-#endif  // SRC_LIB_FIDL_LLCPP_TESTS_TEST_UTILS_H_
+#endif  // SRC_LIB_FIDL_LLCPP_TESTS_CONFORMANCE_CONFORMANCE_UTILS_H_
