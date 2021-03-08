@@ -8,6 +8,8 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/test/test_package.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
+import(
+    "//third_party/go/src/syscall/zx/fidl/fidl_test/conformance_test_files.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
 generated_dir = "$target_gen_dir"
@@ -23,11 +25,10 @@ gidl("conformance_suite") {
 }
 
 copy("copy_test_utils") {
-  sources = [
-    "//third_party/go/src/syscall/zx/fidl/fidl_test/testutil_test.go",
-    "//third_party/go/src/syscall/zx/fidl/fidl_test/zx_fuchsia_test.go",
-    "//third_party/go/src/syscall/zx/fidl/fidl_test/zx_notfuchsia_test.go",
-  ]
+  sources = []
+  foreach(filename, go_conformance_test_files) {
+    sources += [ "//third_party/go/src/syscall/zx/fidl/fidl_test/" + filename ]
+  }
   outputs = [ "${generated_dir}/{{source_file_part}}" ]
 }
 
