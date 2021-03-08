@@ -756,10 +756,6 @@ struct IsFidlType<::fidl_test_handlesintypes::wire::TableWithHandle>
 template <>
 struct IsTable<::fidl_test_handlesintypes::wire::TableWithHandle>
     : public std::true_type {};
-template <>
-struct IsTableBuilder<
-    ::fidl_test_handlesintypes::wire::TableWithHandle::Builder>
-    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::fidl_test_handlesintypes::wire::TableWithHandle>);
 #endif  // __Fuchsia__

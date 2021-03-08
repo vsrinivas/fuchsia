@@ -1349,9 +1349,6 @@ struct IsFidlType<::fidl_test_arrays::wire::TableSmallArray>
 template <>
 struct IsTable<::fidl_test_arrays::wire::TableSmallArray>
     : public std::true_type {};
-template <>
-struct IsTableBuilder<::fidl_test_arrays::wire::TableSmallArray::Builder>
-    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::fidl_test_arrays::wire::TableSmallArray>);
 
@@ -1360,9 +1357,6 @@ struct IsFidlType<::fidl_test_arrays::wire::TableLargeArray>
     : public std::true_type {};
 template <>
 struct IsTable<::fidl_test_arrays::wire::TableLargeArray>
-    : public std::true_type {};
-template <>
-struct IsTableBuilder<::fidl_test_arrays::wire::TableLargeArray::Builder>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::fidl_test_arrays::wire::TableLargeArray>);

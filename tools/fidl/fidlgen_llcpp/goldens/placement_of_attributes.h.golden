@@ -1359,10 +1359,6 @@ struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleTable>
 template <>
 struct IsTable<::fidl_test_placementofattributes::wire::ExampleTable>
     : public std::true_type {};
-template <>
-struct IsTableBuilder<
-    ::fidl_test_placementofattributes::wire::ExampleTable::Builder>
-    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::fidl_test_placementofattributes::wire::ExampleTable>);
 

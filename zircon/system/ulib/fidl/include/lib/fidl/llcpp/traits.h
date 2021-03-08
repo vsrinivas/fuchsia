@@ -135,15 +135,6 @@ struct IsStruct<MaybeConstStruct,
                     std::is_const<MaybeConstStruct>::value &&
                     IsStruct<typename std::remove_const<MaybeConstStruct>::type>::value>::type>
     : std::true_type {};
-template <typename T, typename Enable = void>
-struct IsTableBuilder : std::false_type {};
-template <typename MaybeConstTableBuilder>
-struct IsTableBuilder<
-    MaybeConstTableBuilder,
-    typename std::enable_if<
-        std::is_const<MaybeConstTableBuilder>::value &&
-        IsTableBuilder<typename std::remove_const<MaybeConstTableBuilder>::type>::value>::type>
-    : std::true_type {};
 
 // IsFidlObject is a subset of IsFidlType referring to user defined aggregate types, i.e.
 // tables, unions, and structs.

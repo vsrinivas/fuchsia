@@ -2190,9 +2190,6 @@ struct IsFidlType<::fidl_test_table::wire::SimpleTable>
     : public std::true_type {};
 template <>
 struct IsTable<::fidl_test_table::wire::SimpleTable> : public std::true_type {};
-template <>
-struct IsTableBuilder<::fidl_test_table::wire::SimpleTable::Builder>
-    : public std::true_type {};
 static_assert(std::is_standard_layout_v<::fidl_test_table::wire::SimpleTable>);
 
 template <>
@@ -2200,9 +2197,6 @@ struct IsFidlType<::fidl_test_table::wire::ReverseOrdinalTable>
     : public std::true_type {};
 template <>
 struct IsTable<::fidl_test_table::wire::ReverseOrdinalTable>
-    : public std::true_type {};
-template <>
-struct IsTableBuilder<::fidl_test_table::wire::ReverseOrdinalTable::Builder>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::fidl_test_table::wire::ReverseOrdinalTable>);
@@ -2213,9 +2207,6 @@ struct IsFidlType<::fidl_test_table::wire::OlderSimpleTable>
 template <>
 struct IsTable<::fidl_test_table::wire::OlderSimpleTable>
     : public std::true_type {};
-template <>
-struct IsTableBuilder<::fidl_test_table::wire::OlderSimpleTable::Builder>
-    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::fidl_test_table::wire::OlderSimpleTable>);
 
@@ -2225,9 +2216,6 @@ struct IsFidlType<::fidl_test_table::wire::NewerSimpleTable>
 template <>
 struct IsTable<::fidl_test_table::wire::NewerSimpleTable>
     : public std::true_type {};
-template <>
-struct IsTableBuilder<::fidl_test_table::wire::NewerSimpleTable::Builder>
-    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::fidl_test_table::wire::NewerSimpleTable>);
 
@@ -2236,9 +2224,6 @@ struct IsFidlType<::fidl_test_table::wire::EmptyTable> : public std::true_type {
 };
 template <>
 struct IsTable<::fidl_test_table::wire::EmptyTable> : public std::true_type {};
-template <>
-struct IsTableBuilder<::fidl_test_table::wire::EmptyTable::Builder>
-    : public std::true_type {};
 static_assert(std::is_standard_layout_v<::fidl_test_table::wire::EmptyTable>);
 }  // namespace fidl
 namespace fidl_test_table {

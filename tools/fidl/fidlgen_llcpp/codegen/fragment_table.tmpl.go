@@ -513,8 +513,6 @@ template <>
 struct IsFidlType<{{ . }}> : public std::true_type {};
 template <>
 struct IsTable<{{ . }}> : public std::true_type {};
-template <>
-struct IsTableBuilder<{{ . }}::Builder> : public std::true_type {};
 static_assert(std::is_standard_layout_v<{{ . }}>);
 {{- if .IsResourceType }}
 {{- PopNamespace }}
