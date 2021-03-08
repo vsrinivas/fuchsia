@@ -488,27 +488,15 @@ fdio_t* fdio_pty_create(fidl::ClientEnd<fpty::Device> device, zx::eventpair even
 
 __EXPORT
 zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
-  fbl::AutoLock lock(&fdio_lock);
-  if ((fd < 0) || (fd >= FDIO_MAX_FD)) {
-    return ZX_ERR_NOT_FOUND;
+  fdio_t* io;
+  zx_status_t status = fdio_unbind_from_fd(fd, &io);
+  if (status != ZX_OK) {
+    if (status == ZX_ERR_INVALID_ARGS) {
+      status = ZX_ERR_NOT_FOUND;
+    }
+    return status;
   }
-  auto& var = fdio_fdtab[fd];
-  auto* ptr = std::get_if<fdio_t*>(&var);
-  if (ptr == nullptr) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  auto* io = *ptr;
-  ZX_ASSERT(io);
-  fdio_dupcount_release(io);
-  var = fdio_available{};
-  zx_status_t status;
-  if (fdio_get_dupcount(io) > 0) {
-    // still alive in other fdtab slots
-    // this fd goes away but we can't give away the handle
-    status = ZX_ERR_UNAVAILABLE;
-  } else {
-    status = fdio_get_ops(io)->unwrap(io, out);
-  }
+  status = fdio_get_ops(io)->unwrap(io, out);
   fdio_release(io);
   return status;
 }

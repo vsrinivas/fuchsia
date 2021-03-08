@@ -172,9 +172,6 @@ bool fdio_is_last_reference(fdio_t* io);
 // certainly fail due to underlying handles being closed
 // at which point a downref will happen and destruction
 // will follow.
-//
-// dupcount tracks how many fdtab entries an fdio object
-// is in.
 
 // Waits until one or more |events| are signalled, or the |deadline| passes.
 // The |events| are of the form |FDIO_EVT_*|, defined in io.h.
@@ -388,9 +385,6 @@ extern fdio_state_t __fdio_global_state;
 // Accessors for the internal fields of fdio_t:
 
 const fdio_ops_t* fdio_get_ops(const fdio_t* io);
-int32_t fdio_get_dupcount(const fdio_t* io) __TA_REQUIRES(fdio_lock);
-void fdio_dupcount_acquire(fdio_t* io) __TA_REQUIRES(fdio_lock);
-void fdio_dupcount_release(fdio_t* io) __TA_REQUIRES(fdio_lock);
 uint32_t* fdio_get_ioflag(fdio_t* io);
 zxio_storage_t* fdio_get_zxio_storage(fdio_t* io);
 zx::duration* fdio_get_rcvtimeo(fdio_t* io);

@@ -49,7 +49,7 @@ zx_status_t fdio_cwd_clone(zx_handle_t* out_handle);
 // Clones a file descriptor.
 //
 // Upon success, |out_handle| contains a handle that represents the given file
-// descriptor. This handle is suitable for tranferring to another process.
+// descriptor. This handle is suitable for transferring to another process.
 //
 // |fd| is not modified by this function.
 //
@@ -67,16 +67,11 @@ zx_status_t fdio_fd_clone(int fd, zx_handle_t* out_handle);
 
 // Prepares a file descriptor for transfer to another process.
 //
-// Upon success, |out_handle| contains a handle that represents the given file
-// descriptor, and the given file descriptor has been removed from the file
+// Upon return, the given file descriptor has been removed from the file
 // descriptor table for this process.
 //
-// Upon failure, |fd| might or might not be removed from the file descriptor
-// table for this process, depending on the error condition. If this function
-// returns |ZX_ERR_INVALID_ARGS| or |ZX_ERR_UNAVAILABLE|, the file descriptor
-// is not consumed. Otherwise, the file descriptor is consumed.
-//
-// TODO(REVIEW): This function should always consume the file descriptor.
+// Upon success, |out_handle| contains a handle that represents the given file
+// descriptor.
 //
 // # Errors
 //

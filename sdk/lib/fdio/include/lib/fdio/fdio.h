@@ -67,11 +67,6 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd);
 // Specifically, the caller is responsible for calling |fdio_unsafe_release|
 // upon success.
 //
-// Upon failure, the file descriptor is not removed from the file descriptor
-// table for this process.
-//
-// TODO(REVIEW): This function should always consume the file descriptor.
-//
 // # Errors
 //
 // ZX_ERR_INVALID_ARGS: |fd| is not a valid file descriptor.

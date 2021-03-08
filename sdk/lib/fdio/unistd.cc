@@ -94,7 +94,6 @@ int fdio_assign_reserved(int fd, fdio_t* io) {
   if (!std::holds_alternative<fdio_reserved>(var)) {
     return ERRNO(EINVAL);
   }
-  fdio_dupcount_acquire(io);
   var = io;
   return fd;
 }
@@ -134,8 +133,10 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
       // A negative fd implies that any free fd value can be used
       // TODO: bitmap, ffs, etc
       for (fd = starting_fd; fd < FDIO_MAX_FD; fd++) {
-        if (std::holds_alternative<fdio_available>(fdio_fdtab[fd])) {
-          goto free_fd_found;
+        auto& var = fdio_fdtab[fd];
+        if (std::holds_alternative<fdio_available>(var)) {
+          var = io;
+          return fd;
         }
       }
       return ERRNO(EMFILE);
@@ -149,20 +150,13 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
           // No change; the additional reference will be dropped via |clean_io|.
           return fd;
         }
-        fdio_dupcount_release(io_to_close);
       }
     }
-  free_fd_found:
-    fdio_dupcount_acquire(io);
     fdio_fdtab[fd] = io;
+    return fd;
   }
-  return fd;
 }
 
-// If a fdio_t exists for this fd and it has not been dup'd
-// and is not in active use (an io operation underway, etc),
-// detach it from the fdtab and return it with a single
-// refcount.
 __EXPORT
 zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
   fbl::AutoLock lock(&fdio_lock);
@@ -176,14 +170,11 @@ zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
   }
   auto* io = *ptr;
   ZX_ASSERT(io);
-  if (fdio_get_dupcount(io) > 1) {
-    return ZX_ERR_UNAVAILABLE;
-  }
-  if (!fdio_is_last_reference(io)) {
-    return ZX_ERR_UNAVAILABLE;
-  }
-  fdio_dupcount_release(io);
   var = fdio_available{};
+  if (!fdio_is_last_reference(io)) {
+    fdio_release(io);
+    return ZX_ERR_UNAVAILABLE;
+  }
   *out = io;
   return ZX_OK;
 }
@@ -651,7 +642,6 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
         ZX_ASSERT_MSG(std::holds_alternative<fdio_available>(var),
                       "duplicate fd number %u in PA_FD", arg_fd);
         var = io;
-        fdio_dupcount_acquire(io);
 
         if (arg & FDIO_FLAG_USE_FOR_STDIO) {
           use_for_stdio = io;
@@ -691,7 +681,6 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
       } else {
         var = fdio_null_create();
       }
-      fdio_dupcount_acquire(std::get<fdio_t*>(var));
     }
   }
 
@@ -723,10 +712,7 @@ extern "C" __EXPORT void __libc_extensions_fini(void) __TA_ACQUIRE(fdio_lock) {
     if (ptr != nullptr) {
       auto* io = *ptr;
       ZX_ASSERT(io);
-      fdio_dupcount_release(io);
-      if (fdio_get_dupcount(io) == 0) {
-        fdio_release(io);
-      }
+      fdio_release(io);
     }
     var = fdio_available{};
   }
@@ -977,7 +963,6 @@ int close(int fd) {
     }
     io = *ptr;
     ZX_ASSERT(io);
-    fdio_dupcount_release(io);
     var = fdio_available{};
   }
   return STATUS(fdio_release(io));

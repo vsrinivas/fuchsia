@@ -183,10 +183,10 @@ TEST(FileDescriptorTest, TransferAfterDup) {
   ASSERT_EQ(ZX_ERR_UNAVAILABLE, fdio_fd_transfer(fd, &handle));
   ASSERT_EQ(ZX_HANDLE_INVALID, handle);
 
-  // Currently, fdio_fd_transfer does not consume |fd| when it returns
-  // ZX_ERR_UNAVAILABLE, but we might want to change that in the future.
-  ASSERT_EQ(0, close(fd));
-  ASSERT_EQ(0, close(fd2));
+  // fdio_fd_transfer consumes |fd| when it returns ZX_ERR_UNAVAILABLE.
+  EXPECT_EQ(close(fd), -1);
+  EXPECT_EQ(errno, EBADF, "%s", strerror(errno));
+  EXPECT_EQ(close(fd2), 0);
 }
 
 TEST(FileDescriptorTest, DupToSameFdSucceeds) {

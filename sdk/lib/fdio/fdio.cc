@@ -21,9 +21,6 @@ struct fdio {
   // Ongoing operations will also contribute to the refcount.
   std::atomic_int_fast32_t refcount;
 
-  // The number of times this fdio object appears in the fd table.
-  int32_t dupcount;
-
   // |ioflag| contains mutable properties of this object, shared by
   // different transports. Possible values are |IOFLAG_*| in private.h.
   uint32_t ioflag;
@@ -43,12 +40,6 @@ zxio_t* fdio_get_zxio(fdio_t* io) { return &io->storage.io; }
 
 const fdio_ops_t* fdio_get_ops(const fdio_t* io) { return io->ops; }
 
-int32_t fdio_get_dupcount(const fdio_t* io) { return io->dupcount; }
-
-void fdio_dupcount_acquire(fdio_t* io) { io->dupcount++; }
-
-void fdio_dupcount_release(fdio_t* io) { io->dupcount--; }
-
 uint32_t* fdio_get_ioflag(fdio_t* io) { return &io->ioflag; }
 
 zxio_storage_t* fdio_get_zxio_storage(fdio_t* io) { return &io->storage; }
@@ -57,7 +48,6 @@ fdio_t* fdio_alloc(const fdio_ops_t* ops) {
   return new fdio_t{
       .ops = ops,
       .refcount = 1,
-      .dupcount = 0,
       .ioflag = 0,
       .storage = {},
       .rcvtimeo = zx::duration::infinite(),
