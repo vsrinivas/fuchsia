@@ -15,26 +15,26 @@
 //! resource-watching component promotes code reshare and modularity.
 
 use crate::message::base::MessengerType;
-use crate::monitor;
 use crate::monitor::base::{
     monitor::{self as base_monitor},
     Error,
 };
+use crate::service;
 
 /// `Actor` handles bringing up and controlling environment-specific components
 /// surrounding monitoring, such as the resource monitors.
 #[derive(Clone)]
 pub struct Actor {
-    messenger_factory: monitor::message::Factory,
+    messenger_factory: service::message::Factory,
     monitors: Vec<base_monitor::Generate>,
 }
 
 impl Actor {
     /// Starts up environment monitors and returns a TargetedMessenger that
     /// broadcasts to all monitors.
-    pub async fn start_monitoring(&self) -> Result<monitor::message::TargetedMessenger, Error> {
+    pub async fn start_monitoring(&self) -> Result<service::message::TargetedMessenger, Error> {
         // Create unbound, broadcasting messenger to send messages to the monitors.
-        let monitor_messenger = monitor::message::TargetedMessenger::new(
+        let monitor_messenger = service::message::TargetedMessenger::new(
             self.messenger_factory
                 .create(MessengerType::Unbound)
                 .await
@@ -42,7 +42,7 @@ impl Actor {
                     Error::MessageSetupFailure("could not create monitor messenger".into())
                 })?
                 .0,
-            monitor::message::Audience::Broadcast,
+            service::message::Audience::Broadcast,
         );
 
         // Bring up each monitor.
@@ -82,7 +82,7 @@ impl Builder {
 
     /// Constructs the configuration.
     pub fn build(self) -> Actor {
-        let monitor_messenger_factory = monitor::message::create_hub();
+        let monitor_messenger_factory = service::message::create_hub();
         Actor { messenger_factory: monitor_messenger_factory, monitors: self.monitors }
     }
 }

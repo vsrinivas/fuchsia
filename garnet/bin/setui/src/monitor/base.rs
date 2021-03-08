@@ -21,7 +21,7 @@ pub enum Error {
 /// definitions, such as the monitor MessageHub, which is used by other entities
 /// like agents.
 pub mod monitor {
-    use crate::monitor;
+    use crate::service;
     use anyhow::Error;
     use futures::future::BoxFuture;
     use std::sync::Arc;
@@ -34,7 +34,7 @@ pub mod monitor {
         /// [`Receptor`] on which monitors will receive messages from watchdog.
         ///
         /// [`Receptor`]: monitor::message::Receptor
-        pub receptor: monitor::message::Receptor,
+        pub receptor: service::message::Receptor,
     }
 
     /// `Generate` defines the closure for generating a monitor. This is

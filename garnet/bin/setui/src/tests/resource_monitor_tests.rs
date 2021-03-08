@@ -7,6 +7,7 @@ use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::monitor;
 use crate::monitor::base::monitor::Context as MonitorContext;
 use crate::monitor::environment::Actor;
+use crate::service;
 use crate::tests::scaffold;
 use crate::EnvironmentBuilder;
 use anyhow::Error;
@@ -92,11 +93,11 @@ async fn test_environment_bringup() {
     let mut monitor_context = monitor_context_rx.next().await.expect("should receive context");
 
     // Send Monitor command to monitor.
-    monitor_messenger.message(monitor::Payload::Monitor).send().ack();
+    monitor_messenger.message(monitor::Payload::Monitor.into()).send().ack();
 
     // Ensure command is received by the monitor.
     assert!(matches!(
         monitor_context.receptor.next_payload().await.expect("payload should be present").0,
-        monitor::Payload::Monitor
+        service::Payload::Monitor(monitor::Payload::Monitor)
     ));
 }

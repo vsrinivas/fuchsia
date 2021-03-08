@@ -30,6 +30,7 @@ use crate::message::base::role;
 #[cfg(test)]
 use crate::message::base::MessengerType;
 use crate::message_hub_definition;
+use crate::monitor;
 use crate::policy::{self, PolicyType};
 
 message_hub_definition!(Payload, Address, Role);
@@ -66,6 +67,8 @@ pub enum Payload {
     Agent(agent::Payload),
     /// Event payloads contain data about events that occur throughout the system.
     Event(event::Payload),
+    /// Monitor payloads contain commands and information surrounding resource usage.
+    Monitor(monitor::Payload),
 }
 
 /// A trait implemented by payloads for extracting the payload and associated
@@ -83,6 +86,7 @@ pub trait TryFromWithClient<T>: Sized {
 pub enum Role {
     Policy(policy::Role),
     Event(event::Role),
+    Monitor(monitor::Role),
 }
 
 /// The payload_convert macro helps convert between the domain-specific payloads

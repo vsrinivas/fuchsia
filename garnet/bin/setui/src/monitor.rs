@@ -2,30 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! MessageHub for resource monitoring communication.
+//! Resource monitoring communication.
 //!
 //! # Summary
 //!
-//! The monitor MessageHub fosters communication between the resources watchdog
-//! and individual monitors. This is a two-way communication path where the
-//! watchdog issues commands to the monitors and the monitors return data
-//! as it becomes available.
+//! The monitor MessageHub definitions fosters communication between the
+//! resources watchdog and individual monitors. This is a two-way communication
+//! path where the watchdog issues commands to the monitors and the monitors
+//! return data as it becomes available.
 //!
 //! Since the watchdog and monitors are brought up independently of each other,
-//! no address space is required. A single command to initiate monitoring is
-//! available to the watchdog. The watchdog broadcasts this command, reaching
-//! all monitors, and then listens on the resulting receptor for responses.
+//! communication initiation is through broadcasting. A single command to
+//! initiate monitoring is available to the watchdog. The watchdog broadcasts
+//! this command, reaching all monitors, and then listens on the resulting
+//! receptor for responses.
 //!
 //!
 //! # Example
 //!
 //! ```no_run
-//! #use crate::internal::monitor;
-//! #use crate::message::base::{Audience, MessengerType};
+//! #use crate::monitor;
+//! #use crate::service::base::{Audience, MessengerType};
 //!
 //! async fn message_example() {
 //!     // Create monitor message hub.
-//!     let messenger_factory = monitor::message::create_hub();
+//!     let messenger_factory = service::message::create_hub();
 //!
 //!     // Create a messenger for watchdog.
 //!     let (watchdog_client, _) = messenger_factory
@@ -35,25 +36,30 @@
 //!
 //!     // Create a messenger for monitor.
 //!     let (_, mut monitor_receptor) = messenger_factory
-//!         .create(MessengerType::Unbound)
+//!         .messenger_builder(MessengerType::Unbound)
+//!         .add_role(role::Signature::role(service::Role::Monitor(monitor::Role::Monitor)))
+//!         .build()
 //!         .await
 //!         .expect("should be able to create messenger");
 //!
 //!     // Issue monitor command.
-//!     let mut data_receptor =
-//!     watchdog_client.message(monitor::Payload::Monitor, Audience::Broadcast).send();
+//!     let mut data_receptor = watchdog_client
+//!         .message(request_payload.clone(),
+//!             Audience::Role(role::Signature::role(service::Role::Monitor(monitor::Role::Monitor,
+//!             )))).send();
 //!
 //!     let data_payload = monitor::Payload::Data(
 //!             monitor::DataBuilder::new(monitor::State::Warning).build());
 //!
 //!     // Receive command.
-//!     if let Ok((monitor::Payload::Monitor, client)) = monitor_receptor.next_payload().await {
-//!         client.reply(data_payload.clone()).send().ack();
+//!     if let Ok((monitor::Payload::Monitor.into(), client)) =
+//!             monitor_receptor.next_payload().await {
+//!         client.reply(data_payload..into()).send().ack();
 //!     }
 //! }
 //! ```
 
-use crate::message_hub_definition;
+use crate::payload_convert;
 use fuchsia_zircon as zx;
 
 pub mod base;
@@ -71,6 +77,11 @@ pub enum Payload {
     Monitor,
     /// Details captured by a monitor, sent as a response to Monitor.
     Data(Data),
+}
+
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
+pub enum Role {
+    Monitor,
 }
 
 /// `State` defines buckets for operating ranges that resources can be observed
@@ -138,17 +149,18 @@ pub struct Data {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Details {}
 
-message_hub_definition!(Payload);
+payload_convert!(Monitor, Payload);
 
 #[cfg(test)]
 mod tests {
-    use crate::message::base::{Audience, MessengerType};
+    use crate::message::base::{role, Audience, MessengerType};
     use crate::monitor;
+    use crate::service;
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_messaging() {
         // Create monitor message hub.
-        let messenger_factory = monitor::message::create_hub();
+        let messenger_factory = service::message::create_hub();
 
         // Create a messenger for watchdog.
         let (watchdog_client, _) = messenger_factory
@@ -158,20 +170,32 @@ mod tests {
 
         // Create a messenger for monitor.
         let (_, mut monitor_receptor) = messenger_factory
-            .create(MessengerType::Unbound)
+            .messenger_builder(MessengerType::Unbound)
+            .add_role(role::Signature::role(service::Role::Monitor(monitor::Role::Monitor)))
+            .build()
             .await
             .expect("should be able to create messenger");
 
-        // Issue monitor command.
-        let mut data_receptor =
-            watchdog_client.message(monitor::Payload::Monitor, Audience::Broadcast).send();
+        let request_payload: service::Payload = monitor::Payload::Monitor.into();
 
-        let data_payload =
-            monitor::Payload::Data(monitor::DataBuilder::new(monitor::State::Warning).build());
+        // Issue monitor command.
+        let mut data_receptor = watchdog_client
+            .message(
+                request_payload.clone(),
+                Audience::Role(role::Signature::role(service::Role::Monitor(
+                    monitor::Role::Monitor,
+                ))),
+            )
+            .send();
+
+        let data_payload: service::Payload =
+            monitor::Payload::Data(monitor::DataBuilder::new(monitor::State::Warning).build())
+                .into();
 
         // Receive command.
-        if let Ok((monitor::Payload::Monitor, client)) = monitor_receptor.next_payload().await {
-            client.reply(data_payload.clone()).send().ack();
+        if let Ok((payload, client)) = monitor_receptor.next_payload().await {
+            assert_eq!(payload, request_payload);
+            client.reply(data_payload.clone().into()).send().ack();
         } else {
             panic!("expected payload");
         }
