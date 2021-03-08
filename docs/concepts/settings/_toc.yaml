@@ -9,5 +9,5 @@ toc:
 - title: "Introduction"
   path: /docs/concepts/settings/introduction.md
 - title: "Policy"
-  contents:
+  section:
   - include: /docs/concepts/settings/policy/_toc.yaml
