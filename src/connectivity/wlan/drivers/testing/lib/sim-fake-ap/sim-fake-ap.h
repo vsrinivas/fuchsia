@@ -25,7 +25,7 @@ namespace wlan::simulation {
 // To simulate an AP. Only keep minimum information for sim-fw to generate
 // response for driver.
 //
-class FakeAp : public StationIfc {
+class FakeAp final : public StationIfc {
  public:
   // How to handle an association request
   enum AssocHandling { ASSOC_ALLOWED, ASSOC_IGNORED, ASSOC_REFUSED_TEMPORARILY, ASSOC_REFUSED };

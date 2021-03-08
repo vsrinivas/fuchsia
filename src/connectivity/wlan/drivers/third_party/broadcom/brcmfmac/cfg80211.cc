@@ -1097,7 +1097,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
   }
   if (brcmf_is_ap_start_pending(cfg)) {
     BRCMF_INFO("AP start request in progress, rejecting scan request, a retry is expected.");
-    return ZX_ERR_UNAVAILABLE;
+    return ZX_ERR_SHOULD_WAIT;
   }
 
   BRCMF_DBG(SCAN, "START ESCAN\n");
