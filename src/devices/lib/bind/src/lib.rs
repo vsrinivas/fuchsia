@@ -7,9 +7,12 @@
 
 pub mod bind_library;
 mod bind_program;
+mod bind_program_v2_constants;
+mod bytecode_common;
 pub mod compiler;
 pub mod ddk_bind_constants;
 pub mod debugger;
+mod decoded_bind_program;
 mod dependency_graph;
 mod device_specification;
 pub mod encode_bind_program_v1;

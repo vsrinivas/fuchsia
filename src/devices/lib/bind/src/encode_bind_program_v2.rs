@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::bind_program_v2_constants::*;
 use crate::compiler::{
     BindProgram, BindProgramEncodeError, Symbol, SymbolTable, SymbolicInstructionInfo,
 };
@@ -11,40 +12,6 @@ use std::convert::TryFrom;
 
 /// Functions for encoding the new bytecode format. When the
 /// old bytecode format is deleted, the "v2" should be removed from the names.
-
-// Magic number for BIND.
-const BIND_MAGIC_NUM: u32 = 0x42494E44;
-
-// Magic number for SYMB.
-const SYMB_MAGIC_NUM: u32 = 0x53594E42;
-
-// Magic number for INST.
-const INSTRUCTION_MAGIC_NUM: u32 = 0x494E5354;
-
-const BYTECODE_VERSION: u32 = 2;
-
-#[allow(dead_code)]
-enum RawOp {
-    EqualCondition = 0x01,
-    InequalCondition = 0x02,
-    UnconditionalJump = 0x10,
-    JumpIfEqual = 0x11,
-    JumpIfNotEqual = 0x12,
-    JumpLandPad = 0x20,
-    Abort = 0x30,
-    DebugStart = 0x40,
-    DebugTerminate = 0x41,
-}
-
-#[allow(dead_code)]
-#[derive(Clone)]
-enum RawValueType {
-    Key = 0,
-    NumberValue,
-    StringValue,
-    BoolValue,
-    EnumValue,
-}
 
 // Info on a jump instruction's offset. |index| represents the jump offset's
 // location in the bytecode vector. |inst_offset| represents number of bytes
@@ -108,13 +75,12 @@ impl<'a> Encoder<'a> {
 
     fn encode_symbol_table(&mut self) -> Result<Vec<u8>, BindProgramEncodeError> {
         let mut bytecode: Vec<u8> = vec![];
-        let mut unique_id: u32 = 1;
+        let mut unique_id: u32 = SYMB_TBL_START_KEY;
 
         // TODO(fxb/67919): Add support for enum values.
         for value in self.symbol_table.values() {
             if let Symbol::StringValue(str) = value {
-                // The max string length is 255 characters.
-                if str.len() > 255 {
+                if str.len() > MAX_STRING_LENGTH {
                     return Err(BindProgramEncodeError::InvalidStringLength(str.to_string()));
                 }
 

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::bytecode_common::BytecodeError;
 use crate::compiler::{BindProgramDecodeError, BindProgramEncodeError, CompilerError};
 use crate::debugger;
 use crate::dependency_graph::DependencyError;
@@ -435,6 +436,49 @@ impl From<BindProgramDecodeError> for UserError {
                     "The bind binary cannot be divided into instructions. \
                     The binary size must be divisible by 12",
                 ),
+                None,
+                false,
+            ),
+        }
+    }
+}
+
+impl From<BytecodeError> for UserError {
+    fn from(error: BytecodeError) -> Self {
+        match error {
+            BytecodeError::UnexpectedEnd => {
+                UserError::new("E801", "Unexpected end of bytecode", None, false)
+            }
+            BytecodeError::InvalidHeader(expected, actual) => UserError::new(
+                "E802",
+                &format!(
+                    "Invalid header magic number. Expected {:x}, found {:x}",
+                    expected, actual
+                ),
+                None,
+                false,
+            ),
+            BytecodeError::InvalidVersion(version) => UserError::new(
+                "E803",
+                &format!("Invalid bytecode version {}", version),
+                None,
+                false,
+            ),
+            BytecodeError::InvalidStringLength => {
+                UserError::new("E804", "String exceeds 255 characters", None, false)
+            }
+            BytecodeError::EmptyString => {
+                UserError::new("E805", "Symbol table contains empty string", None, false)
+            }
+            BytecodeError::Utf8ConversionFailure => {
+                UserError::new("E806", "Error converting bytes to UTF-8", None, false)
+            }
+            BytecodeError::InvalidSymbolTableKey(id) => {
+                UserError::new("E807", &format!("Invalid key {} in symbol table", id), None, false)
+            }
+            BytecodeError::IncorrectSectionSize => UserError::new(
+                "E808",
+                "Section bytecode does not match size listed in the header",
                 None,
                 false,
             ),

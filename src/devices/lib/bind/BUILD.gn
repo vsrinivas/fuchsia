@@ -54,9 +54,12 @@ rustc_library("lib") {
   sources = [
     "src/bind_library.rs",
     "src/bind_program.rs",
+    "src/bind_program_v2_constants.rs",
+    "src/bytecode_common.rs",
     "src/compiler.rs",
     "src/ddk_bind_constants.rs",
     "src/debugger.rs",
+    "src/decoded_bind_program.rs",
     "src/dependency_graph.rs",
     "src/device_specification.rs",
     "src/encode_bind_program_v1.rs",
