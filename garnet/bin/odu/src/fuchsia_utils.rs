@@ -8,7 +8,7 @@ use {
 };
 
 pub struct DurationScope<'a> {
-    _duration_scope: ftrace::DurationScope<'a>,
+    _duration_scope: Option<ftrace::DurationScope<'a>>,
 }
 
 pub fn get_trace_event(
@@ -20,27 +20,26 @@ pub fn get_trace_event(
     // arguments through which most of the parameters are sent. Converting str/String to static CStr
     // is not possible. Since we want ftrace only for those run that are started by bots and we
     // intend to limit different combination of these parameters in bot, this hack seems ok!
+    //
+    // For operations other than writes, we are not going to log any message since we do not do
+    // mounting, unmounting at the time when test starts and tears down, respectively.
     DurationScope {
         _duration_scope: match (sequential, operation, alignment) {
             (true, OperationType::Write, 8192) => {
-                ftrace::duration(cstr!("benchmark"), cstr!("sequential/write/8192"), &[])
+                Some(ftrace::duration(cstr!("benchmark"), cstr!("sequential/write/8192"), &[]))
             }
             (false, OperationType::Write, 8192) => {
-                ftrace::duration(cstr!("benchmark"), cstr!("random/write/8192"), &[])
+                Some(ftrace::duration(cstr!("benchmark"), cstr!("random/write/8192"), &[]))
             }
-            (true, OperationType::Write, 1) => {
-                ftrace::duration(cstr!("benchmark"), cstr!("sequential/write/random_size"), &[])
-            }
+            (true, OperationType::Write, 1) => Some(ftrace::duration(
+                cstr!("benchmark"),
+                cstr!("sequential/write/random_size"),
+                &[],
+            )),
             (false, OperationType::Write, 1) => {
-                ftrace::duration(cstr!("benchmark"), cstr!("random/write/random_size"), &[])
+                Some(ftrace::duration(cstr!("benchmark"), cstr!("random/write/random_size"), &[]))
             }
-            (_, OperationType::Exit, _) => {
-                ftrace::duration(cstr!("benchmark"), cstr!("exit/exit/exit"), &[])
-            }
-            (_, OperationType::Abort, _) => {
-                ftrace::duration(cstr!("benchmark"), cstr!("abort/abort/abort"), &[])
-            }
-            _ => ftrace::duration(cstr!("benchmark"), cstr!("unknown/unknown/unknown"), &[]),
+            _ => None,
         },
     }
 }
