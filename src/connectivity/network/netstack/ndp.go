@@ -545,8 +545,7 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 				case *stack.DADAborted:
 					_ = syslog.WarnTf(ndpSyslogTagName, "DAD for %s on nicID (%d) aborted, sending interface changed event...", event.addr, event.nicID)
 				case *stack.DADDupAddrDetected:
-					// TODO(https://github.com/google/gvisor/pull/5621): log the holder's link address.
-					_ = syslog.WarnTf(ndpSyslogTagName, "duplicate address detected during DAD for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
+					_ = syslog.WarnTf(ndpSyslogTagName, "DAD found %s holding %s on nicID (%d), sending interface changed event...", result.HolderLinkAddress, event.addr, event.nicID)
 				default:
 					panic(fmt.Sprintf("unhandled DAD result variant %#v", result))
 				}

@@ -346,43 +346,41 @@ func (c *Client) Run(ctx context.Context) {
 						case *stack.DADAborted:
 							return fmt.Errorf("duplicate address detection aborted on %s", addr)
 						case *stack.DADDupAddrDetected:
-							// TODO(https://github.com/google/gvisor/pull/5621): log the holder's link address.
+							info.Backoff = minBackoffAfterDupAddrDetetected
+							// As per RFC 2131 section 4.4.1,
+							//
+							//  Option                     DHCPDECLINE
+							//  ------                     -----------
+							//  DHCP message type          DHCPDECLINE
+							//
+							//  Requested IP address       MUST
+							//
+							//  Server identifier          MUST
+							//
+							//  Client identifier          MAY
+							if err := c.send(
+								ctx,
+								nicName,
+								&info,
+								options{
+									{optDHCPMsgType, []byte{byte(dhcpDECLINE)}},
+									{optReqIPAddr, []byte(addr)},
+									{optDHCPServer, []byte(info.Config.ServerAddress)},
+								},
+								tcpip.FullAddress{
+									NIC:  info.NICID,
+									Addr: header.IPv4Broadcast,
+									Port: ServerPort,
+								},
+								false, /* broadcast */
+								false, /* ciaddr */
+							); err != nil {
+								return fmt.Errorf("%s: %w", dhcpDECLINE, err)
+							}
+							return fmt.Errorf("declined %s because it is held by %s", info.Acquired, result.HolderLinkAddress)
 						default:
 							panic(fmt.Sprintf("unhandled DAD result variant %#v", result))
 						}
-
-						info.Backoff = minBackoffAfterDupAddrDetetected
-						// As per RFC 2131 section 4.4.1,
-						//
-						//  Option                     DHCPDECLINE
-						//  ------                     -----------
-						//  DHCP message type          DHCPDECLINE
-						//
-						//  Requested IP address       MUST
-						//
-						//  Server identifier          MUST
-						//
-						//  Client identifier          MAY
-						if err := c.send(
-							ctx,
-							nicName,
-							&info,
-							options{
-								{optDHCPMsgType, []byte{byte(dhcpDECLINE)}},
-								{optReqIPAddr, []byte(addr)},
-								{optDHCPServer, []byte(info.Config.ServerAddress)},
-							},
-							tcpip.FullAddress{
-								NIC:  info.NICID,
-								Addr: header.IPv4Broadcast,
-								Port: ServerPort,
-							},
-							false, /* broadcast */
-							false, /* ciaddr */
-						); err != nil {
-							return fmt.Errorf("%s: %w", dhcpDECLINE, err)
-						}
-						return fmt.Errorf("declined %s because it is held", info.Acquired)
 					}
 				}(); err != nil {
 					return fmt.Errorf("DAD: %w", err)
