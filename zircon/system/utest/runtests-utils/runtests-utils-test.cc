@@ -125,7 +125,7 @@ TEST(WriteSummaryJSON, WriteSummaryJSONSucceeds) {
   fbl::Vector<std::unique_ptr<Result>> results;
   results.push_back(std::make_unique<Result>("/a", SUCCESS, 0, 10));
   results.push_back(std::make_unique<Result>("b", FAILED_TO_LAUNCH, 0, 0));
-  ASSERT_EQ(0, WriteSummaryJSON(results, "output.txt", "/tmp/file_path", buf_file));
+  ASSERT_EQ(0, WriteSummaryJSON(results, "/tmp/file_path", buf_file));
   fclose(buf_file);
   // We don't have a JSON parser in zircon right now, so just hard-code the
   // expected output.
@@ -133,13 +133,11 @@ TEST(WriteSummaryJSON, WriteSummaryJSONSucceeds) {
   "tests": [
     {
       "name": "/a",
-      "output_file": "a/output.txt",
       "result": "PASS",
       "duration_milliseconds": 10
     },
     {
       "name": "b",
-      "output_file": "b/output.txt",
       "result": "FAIL",
       "duration_milliseconds": 0
     }
@@ -159,7 +157,7 @@ TEST(WriteSummaryJSON, WriteSummaryJSONSucceedsWithoutSyslogPath) {
   fbl::Vector<std::unique_ptr<Result>> results;
   results.push_back(std::make_unique<Result>("/a", SUCCESS, 0, 10));
   results.push_back(std::make_unique<Result>("b", FAILED_TO_LAUNCH, 0, 0));
-  ASSERT_EQ(0, WriteSummaryJSON(results, "output.txt", /*syslog_path=*/"", buf_file));
+  ASSERT_EQ(0, WriteSummaryJSON(results, /*syslog_path=*/"", buf_file));
   fclose(buf_file);
   // With an empty syslog_path, we expect no values under "outputs" and
   // "syslog_file" to be generated in the JSON output.
@@ -167,13 +165,11 @@ TEST(WriteSummaryJSON, WriteSummaryJSONSucceedsWithoutSyslogPath) {
   "tests": [
     {
       "name": "/a",
-      "output_file": "a/output.txt",
       "result": "PASS",
       "duration_milliseconds": 10
     },
     {
       "name": "b",
-      "output_file": "b/output.txt",
       "result": "FAIL",
       "duration_milliseconds": 0
     }
@@ -182,20 +178,6 @@ TEST(WriteSummaryJSON, WriteSummaryJSONSucceedsWithoutSyslogPath) {
 )";
 
   EXPECT_STR_EQ(kExpectedJSONOutput, buf.get());
-}
-
-TEST(WriteSummaryJSON, WriteSummaryJSONBadTestName) {
-  // A reasonable guess that the function won't output more than this.
-  std::unique_ptr<char[]> buf(new char[kOneMegabyte]);
-  FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
-  // A test name and output file consisting entirely of slashes should trigger
-  // an error.
-  fbl::Vector<std::unique_ptr<Result>> results;
-  results.push_back(std::make_unique<Result>("///", SUCCESS, 0, 10));
-  results.push_back(std::make_unique<Result>("b", FAILED_TO_LAUNCH, 0, 10));
-  ASSERT_NE(0, WriteSummaryJSON(results, /*output_file_basename=*/"///",
-                                /*syslog_path=*/"/", buf_file));
-  fclose(buf_file);
 }
 
 TEST(ResolveGlobs, ResolveGlobsNoMatches) {
@@ -229,7 +211,7 @@ TEST(RunTest, RunTestSuccess) {
   PackagedScriptFile script_file("succeed.sh");
   fbl::String test_name = script_file.path();
   const char* argv[] = {test_name.c_str(), nullptr};
-  std::unique_ptr<Result> result = RunTest(argv, nullptr, nullptr, test_name.c_str(), 0, nullptr);
+  std::unique_ptr<Result> result = RunTest(argv, nullptr, test_name.c_str(), 0, nullptr);
   EXPECT_STR_EQ(argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
@@ -241,7 +223,7 @@ TEST(RunTest, RunTestTimeout) {
   fbl::String inf_loop_name = inf_loop_file.path();
   const char* inf_loop_argv[] = {inf_loop_name.c_str(), nullptr};
   std::unique_ptr<Result> result =
-      RunTest(inf_loop_argv, nullptr, nullptr, inf_loop_name.c_str(), 1, nullptr);
+      RunTest(inf_loop_argv, nullptr, inf_loop_name.c_str(), 1, nullptr);
   EXPECT_STR_EQ(inf_loop_argv[0], result->name.c_str());
   EXPECT_EQ(TIMED_OUT, result->launch_status);
   EXPECT_EQ(0, result->return_code);
@@ -250,62 +232,20 @@ TEST(RunTest, RunTestTimeout) {
   PackagedScriptFile success_file("succeed.sh");
   fbl::String succeed_name = success_file.path();
   const char* succeed_argv[] = {succeed_name.c_str(), nullptr};
-  result = RunTest(succeed_argv, nullptr, nullptr, succeed_name.c_str(), 100000, nullptr);
+  result = RunTest(succeed_argv, nullptr, succeed_name.c_str(), 100000, nullptr);
   EXPECT_STR_EQ(succeed_argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
-
-  // Still works if output file set.
-  ScopedTestDir test_dir;
-  fbl::String output_filename = JoinPath(test_dir.path(), "test-inf-loop.out");
-  result =
-      RunTest(inf_loop_argv, nullptr, output_filename.c_str(), inf_loop_name.c_str(), 1, nullptr);
-  EXPECT_STR_EQ(inf_loop_argv[0], result->name.c_str());
-  EXPECT_EQ(TIMED_OUT, result->launch_status);
-  EXPECT_EQ(0, result->return_code);
 }
 
-TEST(RunTest, RunTestSuccessWithStdout) {
-  ScopedTestDir test_dir;
-  PackagedScriptFile script_file("expect-this-success.sh");
-  fbl::String test_name = script_file.path();
-  const char* argv[] = {test_name.c_str(), nullptr};
-  const char expected_output[] = "Expect this!\n";
-
-  fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
-  std::unique_ptr<Result> result =
-      RunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0, nullptr);
-
-  FILE* output_file = fopen(output_filename.c_str(), "r");
-  ASSERT_TRUE(output_file);
-  char buf[1024];
-  memset(buf, 0, sizeof(buf));
-  EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
-  fclose(output_file);
-  EXPECT_STR_EQ(expected_output, buf);
-  EXPECT_STR_EQ(argv[0], result->name.c_str());
-  EXPECT_EQ(SUCCESS, result->launch_status);
-  EXPECT_EQ(0, result->return_code);
-}
-
-TEST(RunTest, RunTestFailureWithStderr) {
+TEST(RunTest, RunTestFailure) {
   ScopedTestDir test_dir;
   PackagedScriptFile script_file("expect-this-failure.sh");
   fbl::String test_name = script_file.path();
   const char* argv[] = {test_name.c_str(), nullptr};
-  const char expected_output[] = "Expect this!\n";
 
-  fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
-  std::unique_ptr<Result> result =
-      RunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0, nullptr);
+  std::unique_ptr<Result> result = RunTest(argv, nullptr, test_name.c_str(), 0, nullptr);
 
-  FILE* output_file = fopen(output_filename.c_str(), "r");
-  ASSERT_TRUE(output_file);
-  char buf[1024];
-  memset(buf, 0, sizeof(buf));
-  EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
-  fclose(output_file);
-  EXPECT_STR_EQ(expected_output, buf);
   EXPECT_STR_EQ(argv[0], result->name.c_str());
   EXPECT_EQ(FAILED_NONZERO_RETURN_CODE, result->launch_status);
   EXPECT_EQ(77, result->return_code);
@@ -314,7 +254,7 @@ TEST(RunTest, RunTestFailureWithStderr) {
 TEST(RunTest, RunTestFailureToLoadFile) {
   const char* argv[] = {"i/do/not/exist/", nullptr};
 
-  std::unique_ptr<Result> result = RunTest(argv, nullptr, nullptr, argv[0], 0, nullptr);
+  std::unique_ptr<Result> result = RunTest(argv, nullptr, argv[0], 0, nullptr);
   EXPECT_STR_EQ(argv[0], result->name.c_str());
   EXPECT_EQ(FAILED_TO_LAUNCH, result->launch_status);
 }
@@ -383,46 +323,11 @@ TEST(RunTests, RunTestsWithArguments) {
   fbl::Vector<std::unique_ptr<Result>> results;
   fbl::Vector<fbl::String> args{"first", "second", "third", "-4", "--", "-", "seventh"};
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
-  const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests({succeed_file_name}, args, 1, 0, output_dir.c_str(), output_file_base_name,
-                       nullptr, &num_failed, &results));
+  EXPECT_TRUE(RunTests({succeed_file_name}, args, 1, 0, output_dir.c_str(), nullptr, &num_failed,
+                       &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(1, results.size());
-
-  fbl::String output_path =
-      JoinPath(JoinPath(output_dir, succeed_file_name), output_file_base_name);
-  FILE* output_file = fopen(output_path.c_str(), "r");
-  ASSERT_TRUE(output_file);
-  char buf[1024];
-  memset(buf, 0, sizeof(buf));
-  EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
-  fclose(output_file);
-  EXPECT_STR_EQ("Success! first second third -4 -- - seventh\n", buf);
-}
-
-TEST(RunTests, RunTestsCreatesOutputFile) {
-  // Assert the output file is created, even if the test doesn't execute.
-  ScopedTestDir test_dir;
-  const fbl::String does_not_exist_file_name = JoinPath(test_dir.path(), "i-do-not-exist.sh");
-  int num_failed = 0;
-  fbl::Vector<std::unique_ptr<Result>> results;
-  const fbl::String output_dir = JoinPath(test_dir.path(), "output");
-  const char output_file_base_name[] = "output.txt";
-  ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests({does_not_exist_file_name}, {}, 1, 0, output_dir.c_str(),
-                       output_file_base_name, nullptr, &num_failed, &results));
-  EXPECT_EQ(1, num_failed);
-  EXPECT_EQ(1, results.size());
-
-  fbl::String output_path =
-      JoinPath(JoinPath(output_dir, does_not_exist_file_name), output_file_base_name);
-  FILE* output_file = fopen(output_path.c_str(), "r");
-  ASSERT_TRUE(output_file);
-  char buf[1024];
-  memset(buf, 0, sizeof(buf));
-  EXPECT_EQ(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
-  fclose(output_file);
 }
 
 TEST(DiscoverAndRunTests, DiscoverAndRunTestsBasicPass) {
@@ -496,33 +401,24 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsWithOutput) {
   EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(4, argv, {script_dir.c_str()}, &stopwatch, ""));
 
   // Prepare the expected output.
-  fbl::String success_output_rel_path;
-  ASSERT_TRUE(GetOutputFileRelPath(output_dir, succeed_file_name, &success_output_rel_path));
-  fbl::String failure_output_rel_path;
-  ASSERT_TRUE(GetOutputFileRelPath(output_dir, fail_file_name, &failure_output_rel_path));
-
   char expected_pass_output_buf[1024];
   sprintf(expected_pass_output_buf,
           R"(    \{
       "name": "%s",
-      "output_file": "%s",
       "result": "PASS",
       "duration_milliseconds": \d+
     \})",
-          succeed_file_name.c_str(),
-          success_output_rel_path.c_str() + 1);  // +1 to discard the leading slash.
+          succeed_file_name.c_str());
   std::regex expected_pass_output_regex(expected_pass_output_buf);
 
   char expected_fail_output_buf[1024];
   sprintf(expected_fail_output_buf,
           R"(    \{
       "name": "%s",
-      "output_file": "%s",
       "result": "FAIL",
       "duration_milliseconds": \d+
     \})",
-          fail_file_name.c_str(),
-          failure_output_rel_path.c_str() + 1);  // +1 to discared the leading slash.
+          fail_file_name.c_str());
   std::regex expected_fail_output_regex(expected_fail_output_buf);
 
   // Extract the actual output.
@@ -567,11 +463,6 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsWithSyslogOutput) {
             DiscoverAndRunTests(4, argv, {script_dir.c_str()}, &stopwatch, "syslog.txt"));
 
   // Prepare the expected output.
-  fbl::String success_output_rel_path;
-  ASSERT_TRUE(GetOutputFileRelPath(output_dir, succeed_file_name, &success_output_rel_path));
-  fbl::String failure_output_rel_path;
-  ASSERT_TRUE(GetOutputFileRelPath(output_dir, fail_file_name, &failure_output_rel_path));
-
   const char kExpectedOutputsStr[] =
       "  \"outputs\": {\n"
       "    \"syslog_file\": \"syslog.txt\"\n"

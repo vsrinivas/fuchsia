@@ -335,8 +335,7 @@ bool SetUpForTestComponent(const char* test_path, fbl::String* out_component_exe
   return true;
 }
 
-std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
-                                const char* output_filename, const char* test_name,
+std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, const char* test_name,
                                 int64_t timeout_msec, const char* realm_label) {
   // The arguments passed to fdio_spawn_etc. May be overridden.
   const char** args = argv;
@@ -471,25 +470,6 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
     }
   }
 
-  // If |output_filename| is provided, prepare the file descriptors that will
-  // be used to tee the stdout/stderr of the test into the associated file.
-  fbl::unique_fd fds[2];
-  if (output_filename != nullptr) {
-    int temp_fds[2] = {-1, -1};
-    if (pipe(temp_fds)) {
-      fprintf(stderr, "FAILURE: Failed to create pipe: %s\n", strerror(errno));
-      return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0, 0);
-    }
-    fds[0].reset(temp_fds[0]);
-    fds[1].reset(temp_fds[1]);
-
-    fdio_actions.push_back(
-        fdio_spawn_action{.action = FDIO_SPAWN_ACTION_CLONE_FD,
-                          .fd = {.local_fd = fds[1].get(), .target_fd = STDOUT_FILENO}});
-    fdio_actions.push_back(
-        fdio_spawn_action{.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
-                          .fd = {.local_fd = fds[1].get(), .target_fd = STDERR_FILENO}});
-  }
   zx::job test_job;
   status = zx::job::create(*zx::job::default_job(), 0, &test_job);
   if (status != ZX_OK) {
@@ -527,7 +507,6 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
   }
   const char* const* env_vars_p = !env_vars.is_empty() ? env_vars.begin() : nullptr;
 
-  fds[1].release();  // To avoid double close since fdio_spawn_etc() closes it.
   zx::process process;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   const zx::time start_time = zx::clock::get_monotonic();
@@ -544,47 +523,6 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
   zx::time deadline = zx::time::infinite();
   if (timeout_msec) {
     deadline = zx::deadline_after(zx::msec(timeout_msec));
-  }
-
-  // Tee output.
-  if (output_filename != nullptr) {
-    FILE* output_file = fopen(output_filename, "w");
-    if (output_file == nullptr) {
-      fprintf(stderr, "FAILURE: Could not open output file at %s: %s\n", output_filename,
-              strerror(errno));
-      return std::make_unique<Result>(test_name, FAILED_DURING_IO, 0, 0);
-    }
-    if (timeout_msec) {
-      // If we have a timeout, we want non-blocking reads.
-      // This will trigger the EAGAIN code path in the read loop.
-      int flags = fcntl(fds[0].get(), F_GETFL, 0);
-      fcntl(fds[0].get(), F_SETFL, flags | O_NONBLOCK);
-    }
-    char buf[1024];
-    ssize_t bytes_read = 0;
-    while ((bytes_read = read(fds[0].get(), buf, sizeof(buf))) != 0) {
-      if (bytes_read > 0) {
-        fwrite(buf, 1, bytes_read, output_file);
-        fwrite(buf, 1, bytes_read, stdout);
-      } else if (errno == EAGAIN) {
-        const zx::time now = zx::clock::get_monotonic();
-        if (now > deadline) {
-          break;
-        }
-        const zx::duration sleep_for = std::min(zx::msec(100), deadline - now);
-        zx::nanosleep(zx::deadline_after(sleep_for));
-      } else {
-        fprintf(stderr, "Failed to read test process' output: %s\n", strerror(errno));
-        break;
-      }
-    }
-    fflush(stdout);
-    fflush(stderr);
-    fflush(output_file);
-    if (fclose(output_file)) {
-      fprintf(stderr, "FAILURE: Could not close %s: %s\n", output_filename, strerror(errno));
-      return std::make_unique<Result>(test_name, FAILED_DURING_IO, 0, 0);
-    }
   }
 
   status = process.wait_one(ZX_PROCESS_TERMINATED, deadline, nullptr);

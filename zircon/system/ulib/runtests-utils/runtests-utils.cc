@@ -109,7 +109,6 @@ fbl::String JoinPath(const fbl::StringPiece parent, const fbl::StringPiece child
 }
 
 int WriteSummaryJSON(const fbl::Vector<std::unique_ptr<Result>>& results,
-                     const fbl::StringPiece output_file_basename,
                      const fbl::StringPiece syslog_path, FILE* summary_json) {
   int test_count = 0;
   fprintf(summary_json, "{\n  \"tests\": [\n");
@@ -121,18 +120,6 @@ int WriteSummaryJSON(const fbl::Vector<std::unique_ptr<Result>>& results,
 
     // Write the name of the test.
     fprintf(summary_json, "      \"name\": \"%s\",\n", result->name.c_str());
-
-    // Write the path to the output file, relative to the test output root
-    // (i.e. what's passed in via -o). The test name is already a path to
-    // the test binary on the target, so to make this a relative path, we
-    // only have to skip leading '/' characters in the test name.
-    fbl::String output_file = runtests::JoinPath(result->name, output_file_basename);
-    size_t i = strspn(output_file.c_str(), "/");
-    if (i == output_file.size()) {
-      fprintf(stderr, "Error: output_file was empty or all slashes: %s\n", output_file.c_str());
-      return EINVAL;
-    }
-    fprintf(summary_json, "      \"output_file\": \"%s\",\n", &(output_file.c_str()[i]));
 
     // Write the result of the test, which is either PASS or FAIL. We only
     // have one PASS condition in TestResult, which is SUCCESS.
@@ -308,13 +295,11 @@ int DiscoverTestsInDirGlobs(const fbl::Vector<fbl::String>& dir_globs, const cha
 }
 
 bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl::String>& test_args,
-              int repeat, int64_t timeout_msec, const char* output_dir,
-              const fbl::StringPiece output_file_basename, const char* realm_label,
+              int repeat, int64_t timeout_msec, const char* output_dir, const char* realm_label,
               int* failed_count, fbl::Vector<std::unique_ptr<Result>>* results) {
   std::map<fbl::String, int> test_name_to_count;
   for (int i = 1; i <= repeat; ++i) {
     for (const fbl::String& test_path : test_paths) {
-      fbl::String output_filename_str;
       fbl::String output_test_name;
       if (test_name_to_count.find(test_path) != test_name_to_count.end()) {
         int count = test_name_to_count[test_path];
@@ -325,10 +310,8 @@ bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl:
         test_name_to_count[test_path] = 1;
         output_test_name = test_path;
       }
-      // Ensure the output directory for this test binary's output exists.
+      // Ensure the output directory for this test's output exists.
       if (output_dir != nullptr) {
-        // If output_dir was specified, ask |RunTest| to redirect stdout/stderr
-        // to a file whose name is based on the test name.
         fbl::String output_dir_for_test_str = runtests::JoinPath(output_dir, output_test_name);
         const int error = runtests::MkDirAll(output_dir_for_test_str);
         if (error) {
@@ -336,7 +319,6 @@ bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl:
                   output_dir_for_test_str.c_str(), strerror(error));
           return false;
         }
-        output_filename_str = JoinPath(output_dir_for_test_str, output_file_basename);
       }
 
       // Assemble test binary args.
@@ -348,28 +330,14 @@ bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl:
       }
       argv.push_back(nullptr);  // Important, since there's no argc.
 
-      const char* output_filename = nullptr;
-      if (!output_filename_str.empty()) {
-        output_filename = output_filename_str.c_str();
-        // Ensure the output file exists, even if RunTest fails to create it.
-        // This makes it possible for the infra to trust the summary.json.
-        FILE* output_file = fopen(output_filename, "w");
-        if (output_file == nullptr) {
-          fprintf(stderr, "Error: Could not create output file %s: %s\n", output_filename,
-                  strerror(errno));
-          return false;
-        }
-        fclose(output_file);
-      }
-
       // Execute the test binary.
       printf(
           "\n------------------------------------------------\n"
           "RUNNING TEST: %s\n\n",
           output_test_name.c_str());
       fflush(stdout);
-      std::unique_ptr<Result> result = RunTest(argv.data(), output_dir, output_filename,
-                                               output_test_name.c_str(), timeout_msec, realm_label);
+      std::unique_ptr<Result> result =
+          RunTest(argv.data(), output_dir, output_test_name.c_str(), timeout_msec, realm_label);
       char duration_str[64];  // Size should be large enough for all reasonable durations.
       snprintf(duration_str, sizeof(duration_str), "%" PRIu64 ".%03u sec",
                result->duration_milliseconds / 1000,

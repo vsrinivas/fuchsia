@@ -76,7 +76,7 @@ TEST(RunTests, RunTestDontPublishData) {
   fbl::String test_name = PublishDataHelperBin();
 
   const char* argv[] = {test_name.c_str(), nullptr};
-  std::unique_ptr<Result> result = RunTest(argv, nullptr, nullptr, test_name.c_str(), 0, nullptr);
+  std::unique_ptr<Result> result = RunTest(argv, nullptr, test_name.c_str(), 0, nullptr);
   EXPECT_STR_EQ(argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
@@ -89,10 +89,8 @@ TEST(RunTests, RunTestsPublishData) {
   int num_failed = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
-  const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name, nullptr,
-                       &num_failed, &results));
+  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), nullptr, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(1, results.size());
   EXPECT_LE(1, results[0]->data_sinks.size());
@@ -104,10 +102,9 @@ TEST(RunTests, RunDuplicateTestsPublishData) {
   int num_failed = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
-  const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests({test_name, test_name, test_name}, {}, 1, 0, output_dir.c_str(),
-                       output_file_base_name, nullptr, &num_failed, &results));
+  EXPECT_TRUE(RunTests({test_name, test_name, test_name}, {}, 1, 0, output_dir.c_str(), nullptr,
+                       &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(3, results.size());
   EXPECT_STR_EQ(test_name.c_str(), results[0]->name.c_str());
@@ -129,18 +126,13 @@ TEST(RunTests, RunAllTestsPublishData) {
             DiscoverAndRunTests(4, argv, {test_containing_dir.c_str()}, &stopwatch, ""));
 
   // Prepare the expected output.
-  fbl::String test_output_rel_path;
-  ASSERT_TRUE(GetOutputFileRelPath(output_dir, test_name, &test_output_rel_path));
-
   fbl::StringBuffer<1024> expected_output_buf;
   expected_output_buf.AppendPrintf(
       R"(
       "name": "%s",
-      "output_file": "%s",
       "result": "PASS",
       "duration_milliseconds": \d+)",
-      test_name.c_str(),
-      test_output_rel_path.c_str() + 1);  // +1 to discard the leading slash.
+      test_name.c_str());
   std::regex expected_output_regex(expected_output_buf.c_str());
 
   fbl::String test_data_sink_rel_path;
@@ -175,12 +167,11 @@ TEST(RunTests, RunProfileMergeData) {
   int num_failed = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
-  const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
 
   // Run the test for the first time.
-  EXPECT_TRUE(RunTests({test_name, test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name,
-                       nullptr, &num_failed, &results));
+  EXPECT_TRUE(RunTests({test_name, test_name}, {}, 1, 0, output_dir.c_str(), nullptr, &num_failed,
+                       &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(2, results.size());
   EXPECT_LE(1, results[0]->data_sinks.size());
@@ -188,8 +179,7 @@ TEST(RunTests, RunProfileMergeData) {
   EXPECT_EQ(1, results[0]->data_sinks["llvm-profile"].size());
 
   // Run the test for the second time.
-  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name, nullptr,
-                       &num_failed, &results));
+  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), nullptr, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(3, results.size());
   EXPECT_LE(1, results[1]->data_sinks.size());
@@ -216,18 +206,8 @@ TEST(RunTests, RunTestRootDir) {
 
   // Run a test and confirm TEST_ROOT_DIR gets passed along.
   {
-    fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
-    std::unique_ptr<Result> result =
-        RunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0, nullptr);
+    std::unique_ptr<Result> result = RunTest(argv, nullptr, test_name.c_str(), 0, nullptr);
 
-    FILE* output_file = fopen(output_filename.c_str(), "r");
-    ASSERT_TRUE(output_file);
-    char* line = nullptr;
-    size_t n = 0;
-    ASSERT_LE(0, getline(&line, &n, output_file));
-    EXPECT_STR_EQ("Hello world!\n", line);
-    fclose(output_file);
-    free(line);
     EXPECT_STR_EQ(argv[0], result->name.c_str());
     EXPECT_EQ(SUCCESS, result->launch_status);
     EXPECT_EQ(0, result->return_code);

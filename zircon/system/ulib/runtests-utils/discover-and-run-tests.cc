@@ -22,9 +22,6 @@
 namespace runtests {
 namespace {
 
-// The name of the file containing stdout and stderr of a test.
-constexpr char kOutputFileName[] = "stdout-and-stderr.txt";
-
 // Ignore test directories where the last component is this. This permits users
 // to specify a more general glob that might match to a subdirectory
 // containing data for a particular test, which would result in failure should
@@ -64,7 +61,7 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
           "           of directory globs. (accepts a                \n"
           "           comma-separated list)                         \n"
           "       -n: Same as --names.                              \n"
-          " --output: Write test output to a directory        [3]   \n"
+          " --output: Write test summary to a directory        [3]  \n"
           "       -o: Same as --output.                             \n"
           "    --all: Run tests found in the default directory      \n"
           "           globs.                                        \n"
@@ -78,13 +75,11 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
           "                                                         \n"
           "[3] If -o is enabled, then a JSON summary of the test    \n"
           "    results will be written to a file named              \n"
-          "    \"summary.json\" under the desired directory, in     \n"
-          "    addition to each test's standard output and error.   \n"
-          "    The summary contains a listing of the tests          \n"
-          "    executed by full path (e.g.,                         \n"
-          "    /boot/test/core/futex_test), as well as whether      \n"
-          "    the test passed or failed. For details, see          \n"
-          "    //system/ulib/runtests-utils/summary-schema.json     \n");
+          "    \"summary.json\" under that directory.               \n"
+          "    Any data sink files referenced in the summary will   \n"
+          "    also be written to that directory.                   \n"
+          "    For details, see                                     \n"
+          "    zircon/system/ulib/runtests-utils/summary-schema.json\n");
   return EXIT_FAILURE;
 }
 }  // namespace
@@ -232,7 +227,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
   fbl::Vector<std::unique_ptr<Result>> results;
   if (!RunTests(test_paths, test_args, repeat,
                 static_cast<int64_t>(timeout_seconds) * static_cast<int64_t>(1000), output_dir,
-                kOutputFileName, realm_label, &failed_count, &results)) {
+                realm_label, &failed_count, &results)) {
     return EXIT_FAILURE;
   }
 
@@ -244,7 +239,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
       fprintf(stderr, "Error: Could not open JSON summary file.\n");
       return EXIT_FAILURE;
     }
-    const int error = WriteSummaryJSON(results, kOutputFileName, syslog_file_name, summary_json);
+    const int error = WriteSummaryJSON(results, syslog_file_name, summary_json);
     if (error) {
       fprintf(stderr, "Error: Failed to write JSON summary: %s\n", strerror(error));
       return EXIT_FAILURE;

@@ -67,17 +67,13 @@ struct Result {
 //   program.
 // |output_dir| is the name of a directory where debug data
 //   will be written. If nullptr, no debug data will be collected.
-// |output_filename| is the name of the file to which the test binary's output
-//   will be written. May be nullptr, in which case the output will not be
-//   redirected.
 // |test_name| is used to populate Result and in log messages.
 // |timeout_msec| is a number of milliseconds to wait for the test. If 0,
 //   will wait indefinitely.
 // |realm_label| is the realm label to be applied to calls to underlying run-test-component.
 //   The test will run in that realm and its run artifacts will not be cleaned up automatically
 //   after the completion of the test.
-std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
-                                const char* output_filename, const char* test_name,
+std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, const char* test_name,
                                 int64_t timeout_msec, const char* realm_label);
 
 // A means of measuring how long it takes to run tests.
@@ -113,14 +109,12 @@ fbl::String JoinPath(fbl::StringPiece parent, fbl::StringPiece child);
 // Writes a JSON summary of test results given a sequence of results.
 //
 // |results| are the run results to summarize.
-// |output_file_basename| is base name of output file.
 // |syslog_path| is the file path where syslogs are written.
 // |summary_json| is the file stream to write the JSON summary to.
 //
 // Returns 0 on success, else an error code compatible with errno.
 int WriteSummaryJSON(const fbl::Vector<std::unique_ptr<Result>>& results,
-                     fbl::StringPiece output_file_basename, fbl::StringPiece syslog_path,
-                     FILE* summary_json);
+                     fbl::StringPiece syslog_path, FILE* summary_json);
 
 // Resolves a set of globs.
 //
@@ -140,12 +134,8 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs, fbl::Vector<fbl::String>
 //   b) we can get an idea of global flake rates without waiting for all runs to complete
 // |timeout_msec| is the number of milliseconds to wait for a test before considering it failed.
 //   ignored if 0.
-// |output_dir| is the output directory for all the tests' output. May be nullptr, in which case
-//   output will not be captured.
-// |output_file_basename| is the basename of the tests' output files. May be nullptr only if
-//   |output_dir| is also nullptr.
-//   Each test's standard output and standard error will be written to
-//   |output_dir|/<test binary path>/|output_file_basename|.
+// |output_dir| is the directory for all the tests' debug data sinks. May be nullptr, in
+//   which case debug data will not be captured.
 // |realm_label| is the realm label to be applied to calls to underlying run-test-component.
 //   The test will run in that realm and its run artifacts will not be cleaned up automatically
 //   after the completion of the test.
@@ -155,9 +145,8 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs, fbl::Vector<fbl::String>
 //
 // Returns false if any test binary failed, true otherwise.
 bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl::String>& test_args,
-              int repeat, int64_t timeout_msec, const char* output_dir,
-              fbl::StringPiece output_file_basename, const char* realm_label, int* failed_count,
-              fbl::Vector<std::unique_ptr<Result>>* results);
+              int repeat, int64_t timeout_msec, const char* output_dir, const char* realm_label,
+              int* failed_count, fbl::Vector<std::unique_ptr<Result>>* results);
 
 // Expands |dir_globs| and searches those directories for files.
 //
