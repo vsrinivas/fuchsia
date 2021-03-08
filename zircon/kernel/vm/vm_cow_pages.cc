@@ -1492,6 +1492,23 @@ void VmCowPages::UpdateOnAccessLocked(vm_page_t* page, uint64_t offset) {
 // Looks up the page at the requested offset, faulting it in if requested and necessary.  If
 // this VMO has a parent and the requested page isn't found, the parent will be searched.
 //
+// Both VMM_PF_FLAG_HW_FAULT and VMM_PF_FLAG_SW_FAULT are treated identically with respect to the
+// values that get returned, they only differ with respect to internal meta-data that gets updated
+// different. If SW or HW fault then unless there is some other error condition, a page of some kind
+// will always be returned, performing allocations as required.
+// The rules for non faults are:
+//  * A reference to the zero page will never be returned, be it because reading from an uncommitted
+//    offset or from a marker. Uncommitted offsets and markers will always result in
+//    ZX_ERR_NOT_FOUND
+//  * Writes to real committed pages (i.e. non markers) in parent VMOs will cause a copy-on-write
+//    fork to be allocated into this VMO and returned.
+// This means that
+//  * Reads or writes to committed real (non marker) pages in this VMO will always succeed.
+//  * Reads to committed real (non marker) pages in parents will succeed
+//  * Writes to real pages in parents will trigger a COW fork and succeed
+//  * All other cases, that is reads or writes to markers in this VMO or the parent and uncommitted
+//    offsets, will not trigger COW forks or allocations and will fail.
+//
 // |alloc_list|, if not NULL, is a list of allocated but unused vm_page_t that
 // this function may allocate from.  This function will need at most one entry,
 // and will not fail if |alloc_list| is a non-empty list, faulting in was requested,
