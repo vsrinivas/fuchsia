@@ -11,7 +11,6 @@
 #include <cerrno>
 
 #include <fbl/auto_lock.h>
-#include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
 #include "local-connection.h"
@@ -27,8 +26,8 @@ __BEGIN_CDECLS
 __EXPORT
 zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t flags,
                             zx_handle_t raw_handle) {
-  zx::channel channel(raw_handle);
-  return ns->Connect(path, flags, std::move(channel));
+  auto remote = fidl::ClientEnd<fuchsia_io::Node>(zx::channel(raw_handle));
+  return ns->Connect(path, flags, std::move(remote));
 }
 
 __EXPORT
@@ -51,7 +50,7 @@ zx_status_t fdio_ns_destroy(fdio_ns_t* raw_ns) {
 
 __EXPORT
 zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t remote_raw) {
-  zx::channel remote(remote_raw);
+  auto remote = fidl::ClientEnd<fuchsia_io::Directory>(zx::channel(remote_raw));
   return ns->Bind(path, std::move(remote));
 }
 

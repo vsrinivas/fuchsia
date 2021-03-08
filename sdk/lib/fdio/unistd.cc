@@ -2319,12 +2319,13 @@ static int fs_stat(int fd, struct statfs* buf) {
   if ((io = fd_to_io(fd)) == nullptr) {
     return ERRNO(EBADF);
   }
-  zx_handle_t handle = fdio_unsafe_borrow_channel(io);
-  if (handle == ZX_HANDLE_INVALID) {
+  auto directory_admin =
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(fdio_unsafe_borrow_channel(io));
+  if (!directory_admin.is_valid()) {
     fdio_release(io);
     return ERRNO(ENOTSUP);
   }
-  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(zx::unowned_channel(handle));
+  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(directory_admin);
   fdio_release(io);
   if (result.status() != ZX_OK) {
     return ERROR(result.status());

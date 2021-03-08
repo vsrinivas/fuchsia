@@ -2,16 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <dirent.h>
-#include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
-#include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -25,27 +20,26 @@ typedef struct fdio_watcher {
 } fdio_watcher_t;
 
 static zx_status_t fdio_watcher_create(int dirfd, fdio_watcher_t** out) {
-  zx::channel client, server;
-  zx_status_t status = zx::channel::create(0, &client, &server);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   fdio_t* io = fdio_unsafe_fd_to_io(dirfd);
   if (io == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_handle_t dir_channel = fdio_unsafe_borrow_channel(io);
-  if (dir_channel == ZX_HANDLE_INVALID) {
+  auto directory = fidl::UnownedClientEnd<fio::Directory>(fdio_unsafe_borrow_channel(io));
+  if (!directory.is_valid()) {
     fdio_unsafe_release(io);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto result = fio::Directory::Call::Watch(zx::unowned_channel(dir_channel),
-                                            fio::wire::WATCH_MASK_ALL, 0, std::move(server));
+  auto endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+
+  auto result = fio::Directory::Call::Watch(directory, fio::wire::WATCH_MASK_ALL, 0,
+                                            endpoints->server.TakeChannel());
   fdio_unsafe_release(io);
-  status = result.status();
+  zx_status_t status = result.status();
   if (status != ZX_OK) {
     return status;
   }
@@ -56,7 +50,7 @@ static zx_status_t fdio_watcher_create(int dirfd, fdio_watcher_t** out) {
   }
 
   auto watcher = static_cast<fdio_watcher_t*>(malloc(sizeof(fdio_watcher_t)));
-  watcher->h = client.release();
+  watcher->h = endpoints->client.channel().release();
   *out = watcher;
   return ZX_OK;
 }

@@ -4,10 +4,7 @@
 
 #include "local-filesystem.h"
 
-#include <fcntl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/types.h>
@@ -18,20 +15,17 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fbl/function.h>
-#include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
-#include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 
 #include "../internal.h"
 #include "local-connection.h"
 #include "local-vnode.h"
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 // The |mode| argument used for |fuchsia.io.Directory/Open| calls.
 #define FDIO_CONNECT_MODE ((uint32_t)0755)
@@ -63,7 +57,7 @@ zx_status_t ValidateName(const fbl::StringPiece& name) {
 
 }  // namespace
 
-fdio_namespace::fdio_namespace() : root_(LocalVnode::Create(nullptr, zx::channel(), "")) {}
+fdio_namespace::fdio_namespace() : root_(LocalVnode::Create(nullptr, {}, "")) {}
 
 fdio_namespace::~fdio_namespace() {
   fbl::AutoLock lock(&lock_);
@@ -147,7 +141,7 @@ zx_status_t fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char* path, u
 
   // Active remote connections are immutable, so referencing remote here
   // is safe. We don't want to do a blocking open under the ns lock.
-  return fdio_remote_open_at(vn->Remote().get(), path, flags, mode, out);
+  return fdio_remote_open_at(vn->Remote(), path, flags, mode, out);
 }
 
 zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* state, void* buffer,
@@ -202,7 +196,8 @@ fdio_t* fdio_namespace::CreateConnection(fbl::RefPtr<LocalVnode> vn) const {
   return fdio_internal::CreateLocalConnection(fbl::RefPtr(this), std::move(vn));
 }
 
-zx_status_t fdio_namespace::Connect(const char* path, uint32_t flags, zx::channel channel) const {
+zx_status_t fdio_namespace::Connect(const char* path, uint32_t flags,
+                                    fidl::ClientEnd<fio::Node> client_end) const {
   // Require that we start at /
   if (path[0] != '/') {
     return ZX_ERR_NOT_FOUND;
@@ -224,7 +219,7 @@ zx_status_t fdio_namespace::Connect(const char* path, uint32_t flags, zx::channe
     }
   }
 
-  return fdio_open_at(vn->Remote().get(), path, flags, channel.release());
+  return fdio_open_at(vn->Remote().channel().get(), path, flags, client_end.channel().release());
 }
 
 zx_status_t fdio_namespace::Unbind(const char* path) {
@@ -299,7 +294,7 @@ zx_status_t fdio_namespace::Unbind(const char* path) {
   }
 }
 
-zx_status_t fdio_namespace::Bind(const char* path, zx::channel remote) {
+zx_status_t fdio_namespace::Bind(const char* path, fidl::ClientEnd<fio::Directory> remote) {
   if (!remote.is_valid()) {
     return ZX_ERR_BAD_HANDLE;
   }
@@ -355,7 +350,7 @@ zx_status_t fdio_namespace::Bind(const char* path, zx::channel remote) {
       fbl::RefPtr<LocalVnode> child = vn->Lookup(name);
       if (child == nullptr) {
         // Create a new intermediate node.
-        vn = LocalVnode::Create(vn, zx::channel(), fbl::String(name));
+        vn = LocalVnode::Create(vn, {}, fbl::String(name));
 
         // Keep track of the first node we create. If any subsequent
         // operation fails during bind, we will need to delete all nodes
@@ -395,7 +390,8 @@ fdio_t* fdio_namespace::OpenRoot() const {
   lock.release();
 
   fdio_t* io;
-  zx_status_t status = fdio_remote_clone(vn->Remote().get(), &io);
+  zx_status_t status =
+      fdio_remote_clone(fidl::UnownedClientEnd<fio::Node>(vn->Remote().channel().get()), &io);
   if (status != ZX_OK) {
     return nullptr;
   }
@@ -406,13 +402,13 @@ zx_status_t fdio_namespace::SetRoot(fdio_t* io) {
   fbl::RefPtr<LocalVnode> vn = fdio_internal::GetLocalNodeFromConnectionIfAny(io);
 
   if (!vn) {
-    zx::channel handle;
-    zx_status_t status = fdio_zxio_clone(io, handle.reset_and_get_address());
+    fidl::ClientEnd<fio::Directory> client_end;
+    zx_status_t status = fdio_zxio_clone(io, client_end.channel().reset_and_get_address());
     if (status != ZX_OK) {
       return status;
     }
 
-    vn = LocalVnode::Create(nullptr, std::move(handle), "");
+    vn = LocalVnode::Create(nullptr, std::move(client_end), "");
   }
 
   fbl::AutoLock lock(&lock_);
@@ -434,7 +430,8 @@ zx_status_t fdio_namespace::Export(fdio_flat_namespace_t** out) const {
 
   fbl::AutoLock lock(&lock_);
 
-  auto count_callback = [&es](const fbl::StringPiece& path, const zx::channel& channel) {
+  auto count_callback = [&es](const fbl::StringPiece& path,
+                              const fidl::ClientEnd<fio::Directory>& client_end) {
     // Each entry needs one slot in the handle table,
     // one slot in the type table, and one slot in the
     // path table, plus storage for the path and NUL
@@ -459,8 +456,9 @@ zx_status_t fdio_namespace::Export(fdio_flat_namespace_t** out) const {
   es.buffer = reinterpret_cast<char*>(es.path + es.count);
   es.count = 0;
 
-  auto export_callback = [&es](const fbl::StringPiece& path, const zx::channel& channel) {
-    zx::channel remote(fdio_service_clone(channel.get()));
+  auto export_callback = [&es](const fbl::StringPiece& path,
+                               const fidl::ClientEnd<fio::Directory>& client_end) {
+    zx::channel remote(fdio_service_clone(client_end.channel().get()));
     if (!remote.is_valid()) {
       return ZX_ERR_BAD_STATE;
     }

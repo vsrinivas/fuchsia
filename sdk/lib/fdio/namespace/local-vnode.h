@@ -5,6 +5,7 @@
 #ifndef LIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
 #define LIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
 
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <limits.h>
 #include <zircon/types.h>
@@ -21,8 +22,8 @@
 
 namespace fdio_internal {
 
-using EnumerateCallback =
-    fbl::Function<zx_status_t(const fbl::StringPiece& path, const zx::channel& channel)>;
+using EnumerateCallback = fbl::Function<zx_status_t(
+    const fbl::StringPiece& path, const fidl::ClientEnd<fuchsia_io::Directory>& client_end)>;
 
 // Represents a mapping from a string name to a remote connection.
 //
@@ -36,7 +37,8 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
 
   // Initializes a new vnode, and attaches a reference to it inside an
   // (optional) parent.
-  static fbl::RefPtr<LocalVnode> Create(fbl::RefPtr<LocalVnode> parent, zx::channel remote,
+  static fbl::RefPtr<LocalVnode> Create(fbl::RefPtr<LocalVnode> parent,
+                                        fidl::ClientEnd<fuchsia_io::Directory> remote,
                                         fbl::String name);
 
   // Recursively unlinks this Vnode's children, and detaches this node from
@@ -75,7 +77,7 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
 
   // Remote is "set-once". If it is valid, this class guarantees that
   // the value of |Remote()| will not change for the lifetime of |LocalVnode|.
-  const zx::channel& Remote() const { return remote_; }
+  const fidl::ClientEnd<fuchsia_io::Directory>& Remote() const { return remote_; }
   const fbl::String& Name() const { return name_; }
 
   bool has_children() const { return !entries_by_id_.is_empty(); }
@@ -84,7 +86,8 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
   void AddEntry(fbl::RefPtr<LocalVnode> vn);
   void RemoveEntry(LocalVnode* vn);
   void UnlinkChildren();
-  LocalVnode(fbl::RefPtr<LocalVnode> parent, zx::channel remote, fbl::String name);
+  LocalVnode(fbl::RefPtr<LocalVnode> parent, fidl::ClientEnd<fuchsia_io::Directory> remote,
+             fbl::String name);
 
   struct IdTreeTag {};
   struct NameTreeTag {};
@@ -127,7 +130,7 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
   EntryByNameMap entries_by_name_;
 
   fbl::RefPtr<LocalVnode> parent_;
-  const zx::channel remote_;
+  const fidl::ClientEnd<fuchsia_io::Directory> remote_;
   const fbl::String name_;
 };
 

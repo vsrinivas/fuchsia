@@ -4,48 +4,14 @@
 
 #include <errno.h>
 #include <fuchsia/device/llcpp/fidl.h>
-#include <lib/fdio/directory.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <sys/utsname.h>
-#include <threads.h>
-#include <unistd.h>
-#include <zircon/status.h>
 #include <zircon/types.h>
 
-#include <mutex>
 #include <vector>
 
 #include "fdio_unistd.h"
 #include "internal.h"
-
-static zx_status_t get_name_provider(fuchsia_device::NameProvider::SyncClient** out) {
-  static fuchsia_device::NameProvider::SyncClient* saved;
-
-  {
-    static std::once_flag once;
-    static zx_status_t status;
-    std::call_once(once, [&]() {
-      zx::channel out, request;
-      status = zx::channel::create(0, &out, &request);
-      if (status != ZX_OK) {
-        return;
-      }
-      status = fdio_service_connect_by_name(fuchsia_device::NameProvider::Name, request.release());
-      if (status != ZX_OK) {
-        return;
-      }
-      static fuchsia_device::NameProvider::SyncClient client(std::move(out));
-      saved = &client;
-    });
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  *out = saved;
-  return ZX_OK;
-}
 
 extern "C" __EXPORT int uname(utsname* uts) {
   if (!uts) {
@@ -53,10 +19,9 @@ extern "C" __EXPORT int uname(utsname* uts) {
   }
 
   // Avoid overwriting caller's memory until after all fallible operations have succeeded.
-  fuchsia_device::NameProvider::SyncClient* name_provider;
-  zx_status_t status = get_name_provider(&name_provider);
-  if (status != ZX_OK) {
-    return ERROR(status);
+  auto& name_provider = get_client<fuchsia_device::NameProvider>();
+  if (name_provider.is_error()) {
+    return ERROR(name_provider.status_value());
   }
 
   auto response = name_provider->GetDeviceName();

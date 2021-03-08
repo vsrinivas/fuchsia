@@ -5,10 +5,8 @@
 #include <fcntl.h>
 #include <fuchsia/net/llcpp/fidl.h>
 #include <ifaddrs.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
-#include <net/if.h>
 #include <netdb.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -17,7 +15,6 @@
 
 #include <cerrno>
 #include <cstdarg>
-#include <cstdlib>
 #include <cstring>
 #include <mutex>
 
@@ -27,45 +24,18 @@
 #include "internal.h"
 #include "src/network/getifaddrs.h"
 
-namespace fio = ::fuchsia_io;
-namespace fnet = ::fuchsia_net;
-namespace fsocket = ::fuchsia_posix_socket;
+namespace fio = fuchsia_io;
+namespace fnet = fuchsia_net;
+namespace fsocket = fuchsia_posix_socket;
 
-#define MAKE_GET_SERVICE(fn_name, symbol)                                     \
-  zx_status_t fn_name(symbol::SyncClient** out) {                             \
-    static symbol::SyncClient* saved;                                         \
-    static std::once_flag once;                                               \
-    static zx_status_t status;                                                \
-    std::call_once(once, [&]() {                                              \
-      zx::channel out, request;                                               \
-      status = zx::channel::create(0, &out, &request);                        \
-      if (status != ZX_OK) {                                                  \
-        return;                                                               \
-      }                                                                       \
-      status = fdio_service_connect_by_name(symbol::Name, request.release()); \
-      if (status != ZX_OK) {                                                  \
-        return;                                                               \
-      }                                                                       \
-      static symbol::SyncClient client(std::move(out));                       \
-      saved = &client;                                                        \
-    });                                                                       \
-    if (status != ZX_OK) {                                                    \
-      return status;                                                          \
-    }                                                                         \
-    *out = saved;                                                             \
-    return ZX_OK;                                                             \
-  }
-
-namespace {
-MAKE_GET_SERVICE(get_name_lookup, fnet::NameLookup)
+zx::status<fsocket::Provider::SyncClient>& fdio_get_socket_provider() {
+  return get_client<fsocket::Provider>();
 }
-MAKE_GET_SERVICE(fdio_get_socket_provider, fsocket::Provider)
 
 __EXPORT
 int socket(int domain, int type, int protocol) {
-  fsocket::Provider::SyncClient* provider;
-  zx_status_t status = fdio_get_socket_provider(&provider);
-  if (status != ZX_OK) {
+  auto& provider = fdio_get_socket_provider();
+  if (provider.is_error()) {
     return ERRNO(EIO);
   }
 
@@ -83,7 +53,7 @@ int socket(int domain, int type, int protocol) {
       return ERRNO(EPROTONOSUPPORT);
   }
   constexpr int kSockTypesMask = ~(SOCK_CLOEXEC | SOCK_NONBLOCK);
-  zx::channel socket_channel;
+  fidl::ClientEnd<fio::Node> client_end;
   switch (type & kSockTypesMask) {
     case SOCK_STREAM:
       switch (protocol) {
@@ -97,7 +67,7 @@ int socket(int domain, int type, int protocol) {
           if (result->result.is_err()) {
             return ERRNO(static_cast<int32_t>(result->result.err()));
           }
-          socket_channel = std::move(result->result.mutable_response().s.channel());
+          client_end.channel() = result->result.mutable_response().s.TakeChannel();
         } break;
         default:
           return ERRNO(EPROTONOSUPPORT);
@@ -132,14 +102,14 @@ int socket(int domain, int type, int protocol) {
       if (result->result.is_err()) {
         return ERRNO(static_cast<int32_t>(result->result.err()));
       }
-      socket_channel = std::move(result->result.mutable_response().s.channel());
+      client_end.channel() = result->result.mutable_response().s.TakeChannel();
     } break;
     default:
       return ERRNO(EPROTONOSUPPORT);
   }
 
   fdio_t* io;
-  status = fdio_from_channel(std::move(socket_channel), &io);
+  zx_status_t status = fdio_from_channel(std::move(client_end), &io);
   if (status != ZX_OK) {
     return ERROR(status);
   }
@@ -320,10 +290,9 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
 __EXPORT
 int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const char* name,
                           int family) {
-  fnet::NameLookup::SyncClient* name_lookup;
-  zx_status_t status = get_name_lookup(&name_lookup);
-  if (status != ZX_OK) {
-    errno = fdio_status_to_errno(status);
+  auto& name_lookup = get_client<fnet::NameLookup>();
+  if (name_lookup.is_error()) {
+    errno = fdio_status_to_errno(name_lookup.status_value());
     return EAI_SYSTEM;
   }
 
@@ -349,7 +318,7 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
   fidl::Buffer<fnet::NameLookup::LookupIpResponse> response_buffer;
   auto result = name_lookup->LookupIp(request_buffer.view(), fidl::unowned_str(name, strlen(name)),
                                       options, response_buffer.view());
-  status = result.status();
+  zx_status_t status = result.status();
   if (status != ZX_OK) {
     errno = fdio_status_to_errno(status);
     return EAI_SYSTEM;
@@ -558,14 +527,13 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
 // result list because raw sockets are not supported on Fuchsia.
 __EXPORT
 int getifaddrs(struct ifaddrs** ifap) {
-  fsocket::Provider::SyncClient* provider = nullptr;
-  zx_status_t status = fdio_get_socket_provider(&provider);
-  if (status != ZX_OK) {
-    return ERROR(status);
+  auto& provider = fdio_get_socket_provider();
+  if (provider.is_error()) {
+    return ERRNO(provider.error_value());
   }
 
   auto response = provider->GetInterfaceAddresses();
-  status = response.status();
+  zx_status_t status = response.status();
   if (status != ZX_OK) {
     return ERROR(status);
   }

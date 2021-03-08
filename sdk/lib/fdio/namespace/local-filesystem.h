@@ -65,10 +65,11 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   //
   // Returns an error if |path| does not exist.
   // Returns an error if |path| references a non-remote object.
-  zx_status_t Connect(const char* path, uint32_t flags, zx::channel channel) const;
+  zx_status_t Connect(const char* path, uint32_t flags,
+                      fidl::ClientEnd<fuchsia_io::Node> client_end) const;
 
   // Attaches |remote| to |path| within the current namespace.
-  zx_status_t Bind(const char* path, zx::channel remote);
+  zx_status_t Bind(const char* path, fidl::ClientEnd<fuchsia_io::Directory> remote);
 
   // Detaches a remote object from |path| within the current namespace.
   //

@@ -5,8 +5,10 @@
 #ifndef LIB_FDIO_INTERNAL_H_
 #define LIB_FDIO_INTERNAL_H_
 
+#include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/posix/socket/llcpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zx/debuglog.h>
@@ -16,8 +18,6 @@
 #include <sys/types.h>
 #include <threads.h>
 #include <zircon/types.h>
-
-zx_status_t fdio_get_socket_provider(::fuchsia_posix_socket::Provider::SyncClient** out);
 
 using fdio_t = struct fdio;
 using fdio_ns_t = struct fdio_namespace;
@@ -182,8 +182,7 @@ bool fdio_is_last_reference(fdio_t* io);
 zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx::time deadline, uint32_t* out_pending);
 
 // Wraps a channel with an fdio_t using remote io.
-// Takes ownership of |control| and |event|.
-fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event);
+fdio_t* fdio_remote_create(fidl::ClientEnd<fuchsia_io::Node> node, zx::eventpair event);
 
 // creates a fdio that wraps a log object
 // this will allocate a buffer (on demand) to assemble
@@ -191,23 +190,16 @@ fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event);
 fdio_t* fdio_logger_create(zx::debuglog);
 
 // Creates an |fdio_t| from a remote directory connection.
-//
-// Takes ownership of |control|.
-fdio_t* fdio_dir_create(zx_handle_t control);
+fdio_t* fdio_dir_create(fidl::ClientEnd<fuchsia_io::Directory> dir);
 
 // Creates an |fdio_t| from a remote file connection.
-//
-// Takes ownership of |control|, |event|, and |stream|.
-fdio_t* fdio_file_create(zx_handle_t control, zx_handle_t event, zx_handle_t stream);
+fdio_t* fdio_file_create(fidl::ClientEnd<fuchsia_io::File> file, zx::event event,
+                         zx::stream stream);
 
 // Creates an |fdio_t| from a remote PTY connection.
-//
-// Takes ownership of |control| and |event|.
-fdio_t* fdio_pty_create(zx_handle_t control, zx_handle_t event);
+fdio_t* fdio_pty_create(fidl::ClientEnd<fuchsia_hardware_pty::Device> device, zx::eventpair event);
 
 // Creates a pipe backed by a socket.
-//
-// Takes ownership of |socket|.
 fdio_t* fdio_pipe_create(zx::socket socket);
 
 // Creates an |fdio_t| from a VMO and a stream.
@@ -217,20 +209,19 @@ fdio_t* fdio_vmo_create(zx::vmo vmo, zx::stream stream);
 
 // Creates an |fdio_t| for a VMO file.
 //
-// * |control| is an handle to the control channel for the VMO file.
 // * |vmo| is the VMO that contains the contents of the file.
 // * |offset| is the index of the first byte of the file in the VMO.
 // * |length| is the number of bytes in the file.
 // * |seek| is the initial seek offset within the file (i.e., relative to
 //   |offset| within the underlying VMO).
-fdio_t* fdio_vmofile_create(fuchsia_io::File::SyncClient control, zx::vmo vmo, zx_off_t offset,
+fdio_t* fdio_vmofile_create(fidl::ClientEnd<fuchsia_io::File> file, zx::vmo vmo, zx_off_t offset,
                             zx_off_t length, zx_off_t seek);
 
 fdio_t* fdio_datagram_socket_create(zx::eventpair event,
-                                    fuchsia_posix_socket::DatagramSocket::SyncClient client);
+                                    fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client);
 
 fdio_t* fdio_stream_socket_create(zx::socket socket,
-                                  fuchsia_posix_socket::StreamSocket::SyncClient client,
+                                  fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client,
                                   zx_info_socket_t info);
 
 // Creates a message port and pair of simple io fdio_t's
@@ -260,24 +251,18 @@ zx_status_t fdio_ns_set_root(fdio_ns_t* ns, fdio_t* io);
 // Otherwise, returns |ZX_ERR_INVALID_ARGS|.
 zx_status_t fdio_validate_path(const char* path, size_t* out_length);
 
-// Create an |fdio_t| from a |handle| and an |info|.
+// Create an |fdio_t| from a |node| and an |info|.
 //
 // Uses |info| to determine what kind of |fdio_t| to create.
 //
 // Upon success, |out_io| receives ownership of all handles.
 //
 // Upon failure, consumes all handles.
-zx_status_t fdio_from_node_info(zx::channel handle, fuchsia_io::wire::NodeInfo info,
-                                fdio_t** out_io);
+zx_status_t fdio_from_node_info(fidl::ClientEnd<fuchsia_io::Node> node,
+                                fuchsia_io::wire::NodeInfo info, fdio_t** out_io);
 
-// Creates an |fdio_t| from a Zircon channel object.
-//
-// The |channel| must implement the |fuchsia.io.Node| protocol. Uses the
-// |Describe| method from the |fuchsia.io.Node| protocol to determine the type
-// of |fdio_t| object to create.
-//
-// Always consumes |channel|.
-zx_status_t fdio_from_channel(zx::channel channel, fdio_t** out_io);
+// Creates an |fdio_t| from a |node|.
+zx_status_t fdio_from_channel(fidl::ClientEnd<fuchsia_io::Node> node, fdio_t** out_io);
 
 // Creates an |fdio_t| by waiting for a |fuchsia.io/Node.OnOpen| event on |channel|.
 //
@@ -286,27 +271,23 @@ zx_status_t fdio_from_channel(zx::channel channel, fdio_t** out_io);
 // Upon success, |out_io| receives ownership of all handles.
 //
 // Upon failure, consumes all handles.
-zx_status_t fdio_from_on_open_event(zx::channel channel, fdio_t** out_io);
+zx_status_t fdio_from_on_open_event(fidl::ClientEnd<fuchsia_io::Node> client_end, fdio_t** out_io);
 
 // Clones the |node| connection and packages the new connection into a |fdio_t|.
 // The new connection has the same |fuchsia.io| rights as the original connection.
-//
-// Upon failure, |out_io| is not updated and |node| is not consumed.
-zx_status_t fdio_remote_clone(zx_handle_t node, fdio_t** out_io);
+zx_status_t fdio_remote_clone(fidl::UnownedClientEnd<fuchsia_io::Node> node, fdio_t** out_io);
 
 // Open |path| relative to |dir| as an |fdio_t|.
 //
-// |dir| must be a channel that implements the |fuchsia.io.Directory| protocol.
-// The |flags| and |mode| are passed to |fuchsia.io.Directory/Open| as |flags|
-// and |mode|, respectively.
+// |flags| and |mode| are passed to |fuchsia.io.Directory/Open| as |flags| and |mode|, respectively.
 //
 // If |flags| includes |ZX_FS_FLAG_DESCRIBE|, this function reads the resulting
 // |fuchsia.io.Node/OnOpen| event from the newly created channel and creates an
 // appropriate |fdio_t| object to interact with the remote object.
 //
 // Otherwise, this function creates a generic "remote" |fdio_t| object.
-zx_status_t fdio_remote_open_at(zx_handle_t dir, const char* path, uint32_t flags, uint32_t mode,
-                                fdio_t** out_io);
+zx_status_t fdio_remote_open_at(fidl::UnownedClientEnd<fuchsia_io::Directory> dir, const char* path,
+                                uint32_t flags, uint32_t mode, fdio_t** out_io);
 
 // io will be consumed by this and must not be shared
 void fdio_chdir(fdio_t* io, const char* path);
@@ -428,5 +409,29 @@ int fdio_assign_reserved(int fd, fdio_t* io);
 // Unassign the reservation at |fd|. If |fd| does not resolve to a reservation
 // then -1 is returned and errno is set to EINVAL, otherwise |fd| is returned.
 int fdio_release_reserved(int fd);
+
+template <class T>
+zx::status<typename T::SyncClient>& get_client() {
+  static zx::status<typename T::SyncClient> client;
+  static std::once_flag once;
+
+  std::call_once(once, [&]() {
+    client = [&]() -> zx::status<typename T::SyncClient> {
+      auto endpoints = fidl::CreateEndpoints<T>();
+      if (endpoints.is_error()) {
+        return endpoints.take_error();
+      }
+      zx_status_t status =
+          fdio_service_connect_by_name(T::Name, endpoints->server.channel().release());
+      if (status != ZX_OK) {
+        return zx::error(status);
+      }
+      return zx::ok(fidl::BindSyncClient(std::move(endpoints->client)));
+    }();
+  });
+  return client;
+}
+
+zx::status<fuchsia_posix_socket::Provider::SyncClient>& fdio_get_socket_provider();
 
 #endif  // LIB_FDIO_INTERNAL_H_

@@ -7,7 +7,6 @@
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -17,7 +16,8 @@
 
 namespace fdio_internal {
 
-fbl::RefPtr<LocalVnode> LocalVnode::Create(fbl::RefPtr<LocalVnode> parent, zx::channel remote,
+fbl::RefPtr<LocalVnode> LocalVnode::Create(fbl::RefPtr<LocalVnode> parent,
+                                           fidl::ClientEnd<fuchsia_io::Directory> remote,
                                            fbl::String name) {
   auto vn = fbl::AdoptRef(new LocalVnode(std::move(parent), std::move(remote), std::move(name)));
   if (vn->parent_ != nullptr) {
@@ -60,7 +60,8 @@ fbl::RefPtr<LocalVnode> LocalVnode::Lookup(const fbl::StringPiece& name) const {
   return nullptr;
 }
 
-LocalVnode::LocalVnode(fbl::RefPtr<LocalVnode> parent, zx::channel remote, fbl::String name)
+LocalVnode::LocalVnode(fbl::RefPtr<LocalVnode> parent,
+                       fidl::ClientEnd<fuchsia_io::Directory> remote, fbl::String name)
     : parent_(std::move(parent)), remote_(std::move(remote)), name_(std::move(name)) {}
 
 void LocalVnode::UnlinkChildren() {

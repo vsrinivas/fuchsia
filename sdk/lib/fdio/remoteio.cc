@@ -15,9 +15,10 @@
 #include "lib/zx/channel.h"
 #include "private-socket.h"
 
-namespace fio = ::fuchsia_io;
-namespace fsocket = ::fuchsia_posix_socket;
-namespace fdevice = ::fuchsia_device;
+namespace fio = fuchsia_io;
+namespace fpty = fuchsia_hardware_pty;
+namespace fsocket = fuchsia_posix_socket;
+namespace fdevice = fuchsia_device;
 
 #define ZXDEBUG 0
 
@@ -57,59 +58,52 @@ zx_status_t fdio_service_connect(const char* path, zx_handle_t h) {
 
 __EXPORT
 zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle_t request_raw) {
-  zx::channel request(request_raw);
+  auto request = fidl::ServerEnd<fio::Node>(zx::channel(request_raw));
+  auto directory = fidl::UnownedClientEnd<fio::Directory>(dir);
+  if (!directory.is_valid()) {
+    return ZX_ERR_UNAVAILABLE;
+  }
+
   size_t length = 0u;
   zx_status_t status = fdio_validate_path(path, &length);
   if (status != ZX_OK) {
     return status;
   }
-
-  if (dir == ZX_HANDLE_INVALID) {
-    return ZX_ERR_UNAVAILABLE;
-  }
   uint32_t flags = fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE;
-  return fio::Directory::Call::Open(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
+  return fio::Directory::Call::Open(directory, flags, FDIO_CONNECT_MODE,
                                     fidl::unowned_str(path, length), std::move(request))
       .status();
 }
 
 __EXPORT
 zx_status_t fdio_service_connect_by_name(const char name[], zx_handle_t request) {
-  static zx_handle_t service_root;
+  static zx::channel service_root;
 
   {
     static std::once_flag once;
     static zx_status_t status;
     std::call_once(once, [&]() {
-      zx::channel c0, c1;
-      status = zx::channel::create(0, &c0, &c1);
+      zx::channel request;
+      status = zx::channel::create(0, &service_root, &request);
       if (status != ZX_OK) {
         return;
       }
       // TODO(abarth): Use "/svc/" once that actually works.
-      status = fdio_service_connect("/svc/.", c0.release());
-      if (status != ZX_OK) {
-        return;
-      }
-      service_root = c1.release();
+      status = fdio_service_connect("/svc/.", request.release());
     });
     if (status != ZX_OK) {
       return status;
     }
   }
 
-  zx_status_t status = fdio_service_connect_at(service_root, name, request);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return ZX_OK;
+  return fdio_service_connect_at(service_root.get(), name, request);
 }
 
 __EXPORT
 zx_status_t fdio_open(const char* path, uint32_t flags, zx_handle_t request) {
+  auto handle = zx::handle(request);
   // TODO: fdio_validate_path?
   if (path == nullptr) {
-    zx_handle_close(request);
     return ZX_ERR_INVALID_ARGS;
   }
   // Otherwise attempt to connect through the root namespace
@@ -118,13 +112,18 @@ zx_status_t fdio_open(const char* path, uint32_t flags, zx_handle_t request) {
   if (status != ZX_OK) {
     return status;
   }
-  return fdio_ns_connect(ns, path, flags, request);
+  return fdio_ns_connect(ns, path, flags, handle.release());
 }
 
 __EXPORT
 zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
                          zx_handle_t raw_request) {
-  zx::channel request(raw_request);
+  auto request = fidl::ServerEnd<fio::Node>(zx::channel(raw_request));
+  auto directory = fidl::UnownedClientEnd<fio::Directory>(dir);
+  if (!directory.is_valid()) {
+    return ZX_ERR_UNAVAILABLE;
+  }
+
   size_t length;
   zx_status_t status = fdio_validate_path(path, &length);
   if (status != ZX_OK) {
@@ -135,7 +134,7 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return fio::Directory::Call::Open(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
+  return fio::Directory::Call::Open(directory, flags, FDIO_CONNECT_MODE,
                                     fidl::unowned_str(path, length), std::move(request))
       .status();
 }
@@ -204,29 +203,26 @@ zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* o
 
 __EXPORT
 zx_handle_t fdio_service_clone(zx_handle_t handle) {
-  if (handle == ZX_HANDLE_INVALID) {
+  auto endpoints = fidl::CreateEndpoints<fio::Node>();
+  if (endpoints.is_error()) {
     return ZX_HANDLE_INVALID;
   }
-  zx::channel clone, request;
-  if (zx::channel::create(0, &clone, &request) != ZX_OK) {
+  zx_status_t status = fdio_service_clone_to(handle, endpoints->server.channel().release());
+  if (status != ZX_OK) {
     return ZX_HANDLE_INVALID;
   }
-  uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
-  auto result = fio::Node::Call::Clone(zx::unowned_channel(handle), flags, std::move(request));
-  if (result.status() != ZX_OK) {
-    return ZX_HANDLE_INVALID;
-  }
-  return clone.release();
+  return endpoints->client.channel().release();
 }
 
 __EXPORT
 zx_status_t fdio_service_clone_to(zx_handle_t handle, zx_handle_t request_raw) {
-  zx::channel request(request_raw);
-  if (!request.is_valid()) {
+  auto request = fidl::ServerEnd<fio::Node>(zx::channel(request_raw));
+  auto node = fidl::UnownedClientEnd<fio::Node>(handle);
+  if (!node.is_valid()) {
     return ZX_ERR_INVALID_ARGS;
   }
   uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
-  return fio::Node::Call::Clone(zx::unowned_channel(handle), flags, std::move(request)).status();
+  return fio::Node::Call::Clone(node, flags, std::move(request)).status();
 }
 
 static zx_status_t check_connected(const zx::socket& socket, bool* out_connected) {
@@ -246,34 +242,35 @@ static zx_status_t check_connected(const zx::socket& socket, bool* out_connected
   return ZX_OK;
 }
 
-zx_status_t fdio_from_node_info(zx::channel handle, fio::wire::NodeInfo info, fdio_t** out_io) {
-  if (!handle.is_valid()) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
+zx_status_t fdio_from_node_info(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo info,
+                                fdio_t** out_io) {
   bool connected = false;
 
   fdio_t* io = nullptr;
   switch (info.which()) {
-    case fio::wire::NodeInfo::Tag::kDirectory:
-      io = fdio_dir_create(handle.release());
-      break;
-    case fio::wire::NodeInfo::Tag::kService:
-      io = fdio_remote_create(handle.release(), 0);
-      break;
-    case fio::wire::NodeInfo::Tag::kFile:
-      io = fdio_file_create(handle.release(), info.mutable_file().event.release(),
-                            info.mutable_file().stream.release());
-      break;
-    case fio::wire::NodeInfo::Tag::kDevice:
-      io = fdio_remote_create(handle.release(), info.mutable_device().event.release());
-      break;
-    case fio::wire::NodeInfo::Tag::kTty:
-      io = fdio_pty_create(handle.release(), info.mutable_tty().event.release());
-      break;
+    case fio::wire::NodeInfo::Tag::kDirectory: {
+      io = fdio_dir_create(fidl::ClientEnd<fio::Directory>(node.TakeChannel()));
+    } break;
+    case fio::wire::NodeInfo::Tag::kService: {
+      io = fdio_remote_create(std::move(node), zx::eventpair{});
+    } break;
+    case fio::wire::NodeInfo::Tag::kFile: {
+      auto& file = info.mutable_file();
+      io = fdio_file_create(fidl::ClientEnd<fio::File>(node.TakeChannel()), std::move(file.event),
+                            std::move(file.stream));
+    } break;
+    case fio::wire::NodeInfo::Tag::kDevice: {
+      auto& device = info.mutable_device();
+      io = fdio_remote_create(std::move(node), std::move(device.event));
+    } break;
+    case fio::wire::NodeInfo::Tag::kTty: {
+      auto& tty = info.mutable_tty();
+      io = fdio_pty_create(fidl::ClientEnd<fpty::Device>(node.TakeChannel()), std::move(tty.event));
+    } break;
     case fio::wire::NodeInfo::Tag::kVmofile: {
-      fio::File::SyncClient control(std::move(handle));
-      auto result = control.Seek(0, fio::wire::SeekOrigin::START);
+      auto& file = info.mutable_vmofile();
+      auto control = fidl::ClientEnd<fio::File>(node.TakeChannel());
+      auto result = fio::File::Call::Seek(control.borrow(), 0, fio::wire::SeekOrigin::START);
       zx_status_t status = result.status();
       if (status != ZX_OK) {
         return status;
@@ -282,32 +279,35 @@ zx_status_t fdio_from_node_info(zx::channel handle, fio::wire::NodeInfo info, fd
       if (status != ZX_OK) {
         return status;
       }
-      io = fdio_vmofile_create(std::move(control), std::move(info.mutable_vmofile().vmo),
-                               info.vmofile().offset, info.vmofile().length, result->offset);
+      io = fdio_vmofile_create(std::move(control), std::move(file.vmo), file.offset, file.length,
+                               result->offset);
       break;
     }
     case fio::wire::NodeInfo::Tag::kPipe: {
-      io = fdio_pipe_create(std::move(info.mutable_pipe().socket));
+      auto& pipe = info.mutable_pipe();
+      io = fdio_pipe_create(std::move(pipe.socket));
       break;
     }
     case fio::wire::NodeInfo::Tag::kDatagramSocket: {
-      io = fdio_datagram_socket_create(std::move(info.mutable_datagram_socket().event),
-                                       fsocket::DatagramSocket::SyncClient(std::move(handle)));
+      auto& socket = info.mutable_datagram_socket();
+      io = fdio_datagram_socket_create(
+          std::move(socket.event), fidl::ClientEnd<fsocket::DatagramSocket>(node.TakeChannel()));
       break;
     }
     case fio::wire::NodeInfo::Tag::kStreamSocket: {
-      zx_status_t status = check_connected(info.stream_socket().socket, &connected);
+      auto& socket = info.mutable_stream_socket();
+      zx_status_t status = check_connected(socket.socket, &connected);
       if (status != ZX_OK) {
         return status;
       }
       zx_info_socket_t socket_info;
-      status = info.stream_socket().socket.get_info(ZX_INFO_SOCKET, &socket_info,
-                                                    sizeof(socket_info), nullptr, nullptr);
+      status = socket.socket.get_info(ZX_INFO_SOCKET, &socket_info, sizeof(socket_info), nullptr,
+                                      nullptr);
       if (status != ZX_OK) {
         return status;
       }
-      io = fdio_stream_socket_create(std::move(info.mutable_stream_socket().socket),
-                                     fsocket::StreamSocket::SyncClient(std::move(handle)),
+      io = fdio_stream_socket_create(std::move(socket.socket),
+                                     fidl::ClientEnd<fsocket::StreamSocket>(node.TakeChannel()),
                                      socket_info);
       break;
     }
@@ -327,13 +327,13 @@ zx_status_t fdio_from_node_info(zx::channel handle, fio::wire::NodeInfo info, fd
   return ZX_OK;
 }
 
-zx_status_t fdio_from_channel(zx::channel channel, fdio_t** out_io) {
-  auto response = fio::Node::Call::Describe(zx::unowned_channel(channel));
+zx_status_t fdio_from_channel(fidl::ClientEnd<fio::Node> node, fdio_t** out_io) {
+  auto response = fio::Node::Call::Describe(node);
   zx_status_t status = response.status();
   if (status != ZX_OK) {
     return status;
   }
-  return fdio_from_node_info(std::move(channel), std::move(response.Unwrap()->info), out_io);
+  return fdio_from_node_info(std::move(node), std::move(response.Unwrap()->info), out_io);
 }
 
 __EXPORT
@@ -347,12 +347,12 @@ zx_status_t fdio_create(zx_handle_t h, fdio_t** out_io) {
   fdio_t* io = nullptr;
   switch (info.type) {
     case ZX_OBJ_TYPE_CHANNEL:
-      return fdio_from_channel(zx::channel(handle.release()), out_io);
+      return fdio_from_channel(fidl::ClientEnd<fio::Node>(zx::channel(std::move(handle))), out_io);
     case ZX_OBJ_TYPE_SOCKET:
-      io = fdio_pipe_create(zx::socket(handle.release()));
+      io = fdio_pipe_create(zx::socket(std::move(handle)));
       break;
     case ZX_OBJ_TYPE_VMO: {
-      zx::vmo vmo(handle.release());
+      zx::vmo vmo(std::move(handle));
       zx::stream stream;
       uint32_t options = 0u;
       if (info.rights & ZX_RIGHT_READ) {
@@ -371,7 +371,7 @@ zx_status_t fdio_create(zx_handle_t h, fdio_t** out_io) {
       break;
     }
     case ZX_OBJ_TYPE_LOG:
-      io = fdio_logger_create(zx::debuglog(handle.release()));
+      io = fdio_logger_create(zx::debuglog(std::move(handle)));
       break;
     default: {
       return ZX_ERR_INVALID_ARGS;
@@ -385,82 +385,79 @@ zx_status_t fdio_create(zx_handle_t h, fdio_t** out_io) {
 }
 
 // Creates an |fdio_t| by waiting for a |fuchsia.io/Node.OnOpen| event on |channel|.
-zx_status_t fdio_from_on_open_event(zx::channel channel, fdio_t** out_io) {
-  class EventHandler : public fio::Directory::SyncEventHandler {
+zx_status_t fdio_from_on_open_event(fidl::ClientEnd<fio::Node> client_end, fdio_t** out_io) {
+  class EventHandler : public fio::Node::SyncEventHandler {
    public:
-    EventHandler(zx::channel channel, fdio_t** out_io)
-        : channel_(std::move(channel)), out_io_(out_io) {}
+    EventHandler(fidl::ClientEnd<fio::Node> client_end, fdio_t** out_io)
+        : client_end_(std::move(client_end)), out_io_(out_io) {}
 
-    const zx::channel& channel() const { return channel_; }
     zx_status_t open_status() const { return open_status_; }
 
-    void OnOpen(fio::Directory::OnOpenResponse* event) override {
+    const fidl::ClientEnd<fio::Node>& client_end() const { return client_end_; }
+    void OnOpen(fio::Node::OnOpenResponse* event) override {
       open_status_ = (event->s != ZX_OK) ? event->s
-                                         : fdio_from_node_info(std::move(channel_),
+                                         : fdio_from_node_info(std::move(client_end_),
                                                                std::move(event->info), out_io_);
     }
 
     zx_status_t Unknown() override { return ZX_ERR_IO; }
 
    private:
-    zx::channel channel_;
+    fidl::ClientEnd<fio::Node> client_end_;
     fdio_t** out_io_;
     zx_status_t open_status_ = ZX_OK;
   };
 
-  EventHandler event_handler(std::move(channel), out_io);
-  zx_status_t status =
-      event_handler.HandleOneEvent(zx::unowned_channel(event_handler.channel())).status();
+  EventHandler event_handler(std::move(client_end), out_io);
+  zx_status_t status = event_handler.HandleOneEvent(event_handler.client_end().borrow()).status();
   if (status == ZX_OK) {
     return event_handler.open_status();
   }
   return (status == ZX_ERR_NOT_SUPPORTED) ? ZX_ERR_IO : status;
 }
 
-zx_status_t fdio_remote_clone(zx_handle_t node, fdio_t** out_io) {
-  zx::channel handle, request;
-  zx_status_t status = zx::channel::create(0, &handle, &request);
+zx_status_t fdio_remote_clone(fidl::UnownedClientEnd<fio::Node> node, fdio_t** out_io) {
+  auto endpoints = fidl::CreateEndpoints<fio::Node>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+
+  zx_status_t status = fio::Node::Call::Clone(
+                           node, fio::wire::CLONE_FLAG_SAME_RIGHTS | fio::wire::OPEN_FLAG_DESCRIBE,
+                           std::move(endpoints->server))
+                           .status();
   if (status != ZX_OK) {
     return status;
   }
 
-  status = fio::Node::Call::Clone(zx::unowned_channel(node),
-                                  fio::wire::CLONE_FLAG_SAME_RIGHTS | fio::wire::OPEN_FLAG_DESCRIBE,
-                                  std::move(request))
-               .status();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return fdio_from_on_open_event(std::move(handle), out_io);
+  return fdio_from_on_open_event(std::move(endpoints->client), out_io);
 }
 
-zx_status_t fdio_remote_open_at(zx_handle_t dir, const char* path, uint32_t flags, uint32_t mode,
-                                fdio_t** out_io) {
+zx_status_t fdio_remote_open_at(fidl::UnownedClientEnd<fio::Directory> dir, const char* path,
+                                uint32_t flags, uint32_t mode, fdio_t** out_io) {
   size_t length;
   zx_status_t status = fdio_validate_path(path, &length);
   if (status != ZX_OK) {
     return status;
   }
 
-  zx::channel handle, request;
-  status = zx::channel::create(0, &handle, &request);
-  if (status != ZX_OK) {
-    return status;
+  auto endpoints = fidl::CreateEndpoints<fio::Node>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
   }
 
-  status = fio::Directory::Call::Open(zx::unowned_channel(dir), flags, mode,
-                                      fidl::unowned_str(path, length), std::move(request))
+  status = fio::Directory::Call::Open(dir, flags, mode, fidl::unowned_str(path, length),
+                                      std::move(endpoints->server))
                .status();
   if (status != ZX_OK) {
     return status;
   }
 
   if (flags & ZX_FS_FLAG_DESCRIBE) {
-    return fdio_from_on_open_event(std::move(handle), out_io);
+    return fdio_from_on_open_event(std::move(endpoints->client), out_io);
   }
 
-  fdio_t* io = fdio_remote_create(handle.release(), 0);
+  fdio_t* io = fdio_remote_create(std::move(endpoints->client), zx::eventpair{});
   if (io == nullptr) {
     return ZX_ERR_NO_RESOURCES;
   }
