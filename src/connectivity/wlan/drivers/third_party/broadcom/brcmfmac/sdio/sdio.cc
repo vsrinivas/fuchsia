@@ -2409,6 +2409,7 @@ static zx_status_t brcmf_sdio_bus_txdata(brcmf_bus* bus_if, brcmf_netbuf* pkt) {
     brcmf_netbuf_shrink_head(pkt, bus->tx_hdrlen);
     BRCMF_ERR_THROTTLE("out of bus->txq !!!");
     sdiodev->drvr->inspect->LogTxQueueFull();
+    bus->sdcnt.tx_qfull++;
     ret = ZX_ERR_NO_RESOURCES;
 
     // TODO(fxbug.dev/42151): Remove once bug resolved
@@ -3078,6 +3079,21 @@ static void brcmf_sdio_dataworker(WorkItem* work) {
   sdio_release_host(bus->sdiodev->func1);
 }
 
+void brcmf_sdio_log_stats(struct brcmf_bus* bus_if) {
+  struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
+  struct brcmf_sdio* bus = sdiodev->bus;
+
+  BRCMF_INFO(
+      "SDIO bus stats: FC: %x FC_ChangeCnt: %u TxSeq: %u TxMax: %u TxCtlCnt: %lu TxCtlErr: %lu",
+      bus->flowcontrol, bus->sdcnt.fc_rcvd, bus->tx_seq, bus->tx_max, bus->sdcnt.tx_ctlpkts,
+      bus->sdcnt.tx_ctlerrs);
+  BRCMF_INFO(
+      "SDIO txq stats: EnqueueCnt: %u QFullCnt: %u QLen: %u PerPrecLen [0]: %u [1]: %u [2]: %u "
+      "[3]: %u",
+      pktq_enq_cnt(&bus->txq), bus->sdcnt.tx_qfull, pktq_len(&bus->txq), pktq_plen(&bus->txq, 0),
+      pktq_plen(&bus->txq, 1), pktq_plen(&bus->txq, 2), pktq_plen(&bus->txq, 3));
+}
+
 int brcmf_sdio_oob_irqhandler(void* cookie) {
   struct brcmf_sdio_dev* sdiodev = static_cast<decltype(sdiodev)>(cookie);
   zx_status_t status;
@@ -3540,6 +3556,7 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .txctl = brcmf_sdio_bus_txctl,
     .rxctl = brcmf_sdio_bus_rxctl,
     .gettxq = brcmf_sdio_bus_gettxq,
+    .log_stats = brcmf_sdio_log_stats,
 };
 
 zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,

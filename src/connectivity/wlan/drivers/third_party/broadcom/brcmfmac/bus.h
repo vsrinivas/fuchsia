@@ -73,6 +73,7 @@ struct brcmf_bus_ops {
   void (*set_sim_timer)(brcmf_bus* bus, std::unique_ptr<std::function<void()>> fn,
                         zx_duration_t delay, uint64_t* id_out);
   void (*cancel_sim_timer)(brcmf_bus* bus, uint64_t id);
+  void (*log_stats)(brcmf_bus* bus);
 };
 
 namespace wlan {
@@ -83,20 +84,6 @@ class PcieBus;
 }  // namespace brcmfmac
 }  // namespace wlan
 
-/**
- * struct brcmf_bus - interface structure between common and bus layer
- *
- * @bus_priv: pointer to private bus device.
- * @dev: device pointer of bus device.
- * @drvr: public driver information.
- * @state: operational state of the bus interface.
- * @stats: statistics shared between common and bus layer.
- * @maxctl: maximum size for rxctl request message.
- * @chip: device identifier of the dongle chip.
- * @always_use_fws_queue: bus wants use queue also when fwsignal is inactive.
- * @wowl_supported: is wowl supported by bus driver.
- * @chiprev: revision of the dongle chip.
- */
 struct brcmf_bus {
   union {
     ::wlan::brcmfmac::PcieBus* pcie;
@@ -178,5 +165,7 @@ static inline void brcmf_bus_set_sim_timer(struct brcmf_bus* bus,
 static inline void brcmf_bus_cancel_sim_timer(struct brcmf_bus* bus, uint64_t id) {
   return bus->ops->cancel_sim_timer(bus, id);
 }
+
+static inline void brcmf_bus_log_stats(struct brcmf_bus* bus) { bus->ops->log_stats(bus); }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_

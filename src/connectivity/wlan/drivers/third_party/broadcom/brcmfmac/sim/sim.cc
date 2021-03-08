@@ -68,6 +68,7 @@ static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
         [](brcmf_bus* bus, std::unique_ptr<std::function<void()>> fn, zx_duration_t delay,
            uint64_t* id_out) { BUS_OP(bus)->BusSetTimer(std::move(fn), delay, id_out); },
     .cancel_sim_timer = [](brcmf_bus* bus, uint64_t id) { BUS_OP(bus)->BusCancelTimer(id); },
+    .log_stats = [](brcmf_bus* bus) { BRCMF_INFO("Simulated bus, no stats to log"); }
 };
 #undef BUS_OP
 
