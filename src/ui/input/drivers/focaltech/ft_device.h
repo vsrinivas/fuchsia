@@ -53,6 +53,8 @@
 #define FTS_REG_ESD_SATURATE                0xED
 #define FTS_REG_TYPE                        0xA0  // Chip model number (refer to datasheet)
 #define FTS_REG_FIRMID                      0xA6  // Firmware version
+#define FTS_REG_VENDOR_ID                   0xA8
+#define FTS_REG_PANEL_ID                    0xAC
 #define FTS_REG_RELEASE_ID_HIGH             0xAE  // Firmware release ID (two bytes)
 #define FTS_REG_RELEASE_ID_LOW              0xAF
 #define FTS_REG_IC_VERSION                  0xB1

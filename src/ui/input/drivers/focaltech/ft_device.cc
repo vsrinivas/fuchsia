@@ -127,6 +127,8 @@ zx_status_t FtDevice::Init() {
   node_ = inspector_.GetRoot().CreateChild("Chip info");
   LogRegisterValue(FTS_REG_TYPE, "TYPE");
   LogRegisterValue(FTS_REG_FIRMID, "FIRMID");
+  LogRegisterValue(FTS_REG_VENDOR_ID, "VENDOR_ID");
+  LogRegisterValue(FTS_REG_PANEL_ID, "PANEL_ID");
   LogRegisterValue(FTS_REG_RELEASE_ID_HIGH, "RELEASE_ID_HIGH");
   LogRegisterValue(FTS_REG_RELEASE_ID_LOW, "RELEASE_ID_LOW");
   LogRegisterValue(FTS_REG_IC_VERSION, "IC_VERSION");
