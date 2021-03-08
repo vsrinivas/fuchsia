@@ -33,26 +33,22 @@ namespace {
 
 static const char* kTag = "goldfish-host-visible-heap";
 
-fuchsia_sysmem2::wire::HeapProperties GetHeapProperties() {
-  auto coherency_domain_support = std::make_unique<fuchsia_sysmem2::wire::CoherencyDomainSupport>();
-  *coherency_domain_support =
-      fuchsia_sysmem2::wire::CoherencyDomainSupport::Builder(
-          std::make_unique<fuchsia_sysmem2::wire::CoherencyDomainSupport::Frame>())
-          .set_cpu_supported(std::make_unique<bool>(true))
-          .set_ram_supported(std::make_unique<bool>(true))
-          .set_inaccessible_supported(std::make_unique<bool>(false))
-          .build();
+fuchsia_sysmem2::wire::HeapProperties GetHeapProperties(fidl::AnyAllocator& allocator) {
+  fuchsia_sysmem2::wire::CoherencyDomainSupport coherency_domain_support(allocator);
+  coherency_domain_support.set_cpu_supported(allocator, true)
+      .set_ram_supported(allocator, true)
+      .set_inaccessible_supported(allocator, false);
 
-  return fuchsia_sysmem2::wire::HeapProperties::Builder(
-             std::make_unique<fuchsia_sysmem2::wire::HeapProperties::Frame>())
-      .set_coherency_domain_support(std::move(coherency_domain_support))
+  fuchsia_sysmem2::wire::HeapProperties heap_properties(allocator);
+  heap_properties
+      .set_coherency_domain_support(allocator, std::move(coherency_domain_support))
       // Allocated VMOs are not directly writeable since they are physical
       // VMOs on MMIO; Also, contents of VMOs allocated by this Heap are only
       // valid after |CreateColorBuffer()| render control call. Thus it doesn't
       // work for sysmem to clear the VMO contents, instead we do map-and-clear
       // in the end of |CreateResource()|.
-      .set_need_clear(std::make_unique<bool>(false))
-      .build();
+      .set_need_clear(allocator, false);
+  return heap_properties;
 }
 
 zx_status_t CheckSingleBufferSettings(
@@ -93,7 +89,8 @@ zx_status_t CheckSingleBufferSettings(
 }
 
 fit::result<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params, zx_status_t>
-GetCreateColorBuffer2Params(const fuchsia_sysmem2::wire::SingleBufferSettings& buffer_settings,
+GetCreateColorBuffer2Params(fidl::AnyAllocator& allocator,
+                            const fuchsia_sysmem2::wire::SingleBufferSettings& buffer_settings,
                             uint64_t paddr) {
   using fuchsia_hardware_goldfish::wire::ColorBufferFormatType;
   using fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params;
@@ -138,18 +135,17 @@ GetCreateColorBuffer2Params(const fuchsia_sysmem2::wire::SingleBufferSettings& b
                                      ? image_constraints.coded_height_divisor()
                                      : 1);
 
-  return fit::ok(
-      CreateColorBuffer2Params::Builder(std::make_unique<CreateColorBuffer2Params::Frame>())
-          .set_width(std::make_unique<uint32_t>(width))
-          .set_height(std::make_unique<uint32_t>(height))
-          .set_memory_property(std::make_unique<uint32_t>(
-              fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE))
-          .set_physical_address(std::make_unique<uint64_t>(paddr))
-          .set_format(std::make_unique<ColorBufferFormatType>(color_buffer_format))
-          .build());
+  CreateColorBuffer2Params buffer2_params(allocator);
+  buffer2_params.set_width(allocator, width)
+      .set_height(allocator, height)
+      .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE)
+      .set_physical_address(allocator, paddr)
+      .set_format(allocator, color_buffer_format);
+  return fit::ok(std::move(buffer2_params));
 }
 
 fuchsia_hardware_goldfish::wire::CreateBuffer2Params GetCreateBuffer2Params(
+    fidl::AnyAllocator& allocator,
     const fuchsia_sysmem2::wire::SingleBufferSettings& single_buffer_settings, uint64_t paddr) {
   using fuchsia_hardware_goldfish::wire::CreateBuffer2Params;
   using fuchsia_sysmem2::wire::PixelFormatType;
@@ -160,12 +156,11 @@ fuchsia_hardware_goldfish::wire::CreateBuffer2Params GetCreateBuffer2Params(
 
   ZX_DEBUG_ASSERT(buffer_settings.has_size_bytes());
   uint64_t size_bytes = buffer_settings.size_bytes();
-  return CreateBuffer2Params::Builder(std::make_unique<CreateBuffer2Params::Frame>())
-      .set_size(std::make_unique<uint64_t>(size_bytes))
-      .set_memory_property(
-          std::make_unique<uint32_t>(fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE))
-      .set_physical_address(std::make_unique<uint64_t>(paddr))
-      .build();
+  CreateBuffer2Params buffer2_params(allocator);
+  buffer2_params.set_size(allocator, size_bytes)
+      .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE)
+      .set_physical_address(allocator, paddr);
+  return buffer2_params;
 }
 
 }  // namespace
@@ -327,8 +322,9 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
   auto cleanup_handle = fbl::MakeAutoCall([this, id] { control()->FreeBufferHandle(id); });
 
   if (is_image) {
+    fidl::FidlAllocator allocator;
     // ColorBuffer creation.
-    auto create_params = GetCreateColorBuffer2Params(buffer_settings, paddr);
+    auto create_params = GetCreateColorBuffer2Params(allocator, buffer_settings, paddr);
     if (create_params.is_error()) {
       completer.Reply(create_params.error(), 0u);
       return;
@@ -353,8 +349,9 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
     // ColorBuffer can be leaked.
     ZX_DEBUG_ASSERT(result.value().hw_address_page_offset == 0u);
   } else {
+    fidl::FidlAllocator allocator;
     // Data buffer creation.
-    auto create_params = GetCreateBuffer2Params(buffer_settings, paddr);
+    auto create_params = GetCreateBuffer2Params(allocator, buffer_settings, paddr);
 
     // Create actual data buffer and map physical address |paddr| to
     // address of the buffer's host memory.
@@ -419,7 +416,10 @@ void HostVisibleHeap::DestroyResource(uint64_t id, DestroyResourceCompleter::Syn
 }
 
 void HostVisibleHeap::Bind(zx::channel server_request) {
-  BindWithHeapProperties(std::move(server_request), GetHeapProperties());
+  auto allocator = std::make_unique<fidl::FidlAllocator<512>>();
+  fuchsia_sysmem2::wire::HeapProperties heap_properties = GetHeapProperties(*allocator.get());
+  BindWithHeapProperties(std::move(server_request), std::move(allocator),
+                         std::move(heap_properties));
 }
 
 }  // namespace goldfish

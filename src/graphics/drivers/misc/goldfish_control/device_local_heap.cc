@@ -24,21 +24,16 @@ namespace {
 
 static const char* kTag = "goldfish-device-local-heap";
 
-fuchsia_sysmem2::wire::HeapProperties GetHeapProperties() {
-  auto coherency_domain_support = std::make_unique<fuchsia_sysmem2::wire::CoherencyDomainSupport>();
-  *coherency_domain_support =
-      fuchsia_sysmem2::wire::CoherencyDomainSupport::Builder(
-          std::make_unique<fuchsia_sysmem2::wire::CoherencyDomainSupport::Frame>())
-          .set_cpu_supported(std::make_unique<bool>(false))
-          .set_ram_supported(std::make_unique<bool>(false))
-          .set_inaccessible_supported(std::make_unique<bool>(true))
-          .build();
+fuchsia_sysmem2::wire::HeapProperties GetHeapProperties(fidl::AnyAllocator& allocator) {
+  fuchsia_sysmem2::wire::CoherencyDomainSupport coherency_domain_support(allocator);
+  coherency_domain_support.set_cpu_supported(allocator, false)
+      .set_ram_supported(allocator, false)
+      .set_inaccessible_supported(allocator, true);
 
-  return fuchsia_sysmem2::wire::HeapProperties::Builder(
-             std::make_unique<fuchsia_sysmem2::wire::HeapProperties::Frame>())
-      .set_coherency_domain_support(std::move(coherency_domain_support))
-      .set_need_clear(std::make_unique<bool>(false))
-      .build();
+  fuchsia_sysmem2::wire::HeapProperties heap_properties(allocator);
+  heap_properties.set_coherency_domain_support(allocator, std::move(coherency_domain_support))
+      .set_need_clear(allocator, false);
+  return heap_properties;
 }
 
 }  // namespace
@@ -81,7 +76,10 @@ void DeviceLocalHeap::DestroyResource(uint64_t id, DestroyResourceCompleter::Syn
 }
 
 void DeviceLocalHeap::Bind(zx::channel server_request) {
-  BindWithHeapProperties(std::move(server_request), GetHeapProperties());
+  auto allocator = std::make_unique<fidl::FidlAllocator<512>>();
+  fuchsia_sysmem2::wire::HeapProperties heap_properties = GetHeapProperties(*allocator.get());
+  BindWithHeapProperties(std::move(server_request), std::move(allocator),
+                         std::move(heap_properties));
 }
 
 }  // namespace goldfish

@@ -53,6 +53,7 @@ class Heap : public HeapInterface, public fbl::DoublyLinkedListable<std::unique_
   // This helper method is used only by subclasses to bind to sysmem using
   // given channel and send |heap_properties| to sysmem.
   void BindWithHeapProperties(zx::channel server_request,
+                              std::unique_ptr<fidl::FidlAllocator<512>> allocator,
                               fuchsia_sysmem2::wire::HeapProperties heap_properties);
 
   Control* control() const { return control_; }

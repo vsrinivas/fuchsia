@@ -607,19 +607,15 @@ void Control::GetBufferHandleInfo(zx::vmo vmo, GetBufferHandleInfoCompleter::Syn
     return;
   }
 
-  ControlDevice_GetBufferHandleInfo_Response response;
-  auto builder =
-      fuchsia_hardware_goldfish::wire::BufferHandleInfo::Builder(
-          std::make_unique<fuchsia_hardware_goldfish::wire::BufferHandleInfo::Frame>())
-          .set_id(std::make_unique<uint32_t>(handle))
-          .set_memory_property(std::make_unique<uint32_t>(it_types->second.memory_property))
-          .set_type(std::make_unique<BufferHandleType>(it_types->second.type));
+  fidl::FidlAllocator allocator;
 
-  completer.Reply(ControlDevice_GetBufferHandleInfo_Result::WithResponse(
-      std::make_unique<ControlDevice_GetBufferHandleInfo_Response>(
-          ControlDevice_GetBufferHandleInfo_Response{
-              .info = builder.build(),
-          })));
+  ControlDevice_GetBufferHandleInfo_Response response;
+  response.info.Allocate(allocator);
+  response.info.set_id(allocator, handle)
+      .set_memory_property(allocator, it_types->second.memory_property)
+      .set_type(allocator, it_types->second.type);
+  completer.Reply(
+      ControlDevice_GetBufferHandleInfo_Result::WithResponse(allocator, std::move(response)));
 }
 
 void Control::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
