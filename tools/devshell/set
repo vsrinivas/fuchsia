@@ -163,9 +163,24 @@ function main {
     # Cache the compiled executable for later invocations.
     local exe_path="${FX_CACHE_DIR}/fx-set"
 
+    local add_log=false
+    if [ ! -f "$exe_path" ] && [ -t 1 ]; then
+      # If the executable has not yet been built, the system build cache is
+      # probably cold so it will take multiple seconds to build the tool. Add a
+      # temporary log so the user knows what's going on (but only do it if
+      # stdout is terminal, since otherwise we won't be able to clear the log).
+      add_log=true
+      fx-info "Compiling fx set..."
+    fi
+
     # `go build` does an incremental build, only rebuilding what's necessary
     # based on source content hashes.
     "${PREBUILT_GO_DIR}/bin/go" build -mod=readonly -o "$exe_path" ./build/fx-set/cmd
+    if $add_log; then
+      # Delete the "compiling fx set" log so it doesn't show up in the final
+      # output.
+      echo -n -e "\r\033[1A\033[0K"
+    fi
 
     exec "$exe_path" "$@"
   fi
