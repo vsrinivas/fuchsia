@@ -44,11 +44,12 @@ void platform_halt(platform_halt_action suggested_action, zircon_crash_reason_t 
     hw_watchdog_pet();
   }
 
-  // Was this an OOM or Panic condition?  If so, render the payload of our
-  // crashlog before stowing our reason.  Then, whether we have a payload or
-  // not, stow our final crashlog.
+  // Was this an OOM, panic, or software watchdog condition?  If so, render the
+  // payload of our crashlog before stowing our reason.  Then, whether we have a
+  // payload or not, stow our final crashlog.
   size_t rendered_crashlog_len = 0;
-  if ((reason == ZirconCrashReason::Oom) || (reason == ZirconCrashReason::Panic)) {
+  if ((reason == ZirconCrashReason::Oom) || (reason == ZirconCrashReason::Panic) ||
+      (reason == ZirconCrashReason::SoftwareWatchdog)) {
     memset(crashlog_render_buffer, 0, sizeof(crashlog_render_buffer));
     rendered_crashlog_len =
         crashlog_to_string(crashlog_render_buffer, sizeof(crashlog_render_buffer), reason);

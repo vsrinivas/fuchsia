@@ -70,10 +70,31 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
   } outfile{{out, out_len}};
   auto total_size = [&]() -> size_t { return outfile.buffer_.data() - out; };
 
-  const bool is_oom = (reason == ZirconCrashReason::Oom);
+  uintptr_t crashlog_base_address = 0;
+  const char* reason_str;
+  switch (reason) {
+    case ZirconCrashReason::NoCrash:
+      reason_str = "NO CRASH";
+      break;
 
-  fprintf(&outfile.stream_, "ZIRCON REBOOT REASON (%s)\n\n", is_oom ? "OOM" : "KERNEL PANIC");
+    case ZirconCrashReason::Oom:
+      reason_str = "OOM";
+      break;
 
+    case ZirconCrashReason::Panic:
+      reason_str = "KERNEL PANIC";
+      crashlog_base_address = crashlog.base_address;
+      break;
+
+    case ZirconCrashReason::SoftwareWatchdog:
+      reason_str = "SW WATCHDOG";
+      break;
+
+    default:
+      reason_str = "UNKNOWN";
+      break;
+  }
+  fprintf(&outfile.stream_, "ZIRCON REBOOT REASON (%s)\n\n", reason_str);
   fprintf(&outfile.stream_, "UPTIME (ms)\n%" PRIi64 "\n\n", current_time() / ZX_MSEC(1));
 
   // Keep the format and values in sync with the symbolizer.
@@ -86,113 +107,117 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
   fprintf(&outfile.stream_,
           "VERSION\narch: %s\nbuild_id: %s\ndso: id=%s base=%#lx "
           "name=zircon.elf\n\n",
-          arch, version_string(), elf_build_id_string(), is_oom ? 0u : crashlog.base_address);
+          arch, version_string(), elf_build_id_string(), crashlog_base_address);
 
-  if (is_oom) {
-    // If OOM, then including a backtrace doesn't make sense, return early.
+  // If this is an OOM, then including a backtrace doesn't make sense, return early.
+  if (reason == ZirconCrashReason::Oom) {
     return total_size();
   }
 
-  PrintSymbolizerContext(&outfile.stream_);
+  // If this is not a SW Watchdog firing, then attempt to log stuff like the CPU
+  // registers, a backtrace, some of the stack, and so on.
+  if (reason != ZirconCrashReason::SoftwareWatchdog) {
+    PrintSymbolizerContext(&outfile.stream_);
 
-  if (crashlog.iframe) {
+    if (crashlog.iframe) {
 #if defined(__aarch64__)
-    fprintf(&outfile.stream_,
-            // clang-format off
-            "REGISTERS\n"
-            "  x0: %#18" PRIx64 "\n"
-            "  x1: %#18" PRIx64 "\n"
-            "  x2: %#18" PRIx64 "\n"
-            "  x3: %#18" PRIx64 "\n"
-            "  x4: %#18" PRIx64 "\n"
-            "  x5: %#18" PRIx64 "\n"
-            "  x6: %#18" PRIx64 "\n"
-            "  x7: %#18" PRIx64 "\n"
-            "  x8: %#18" PRIx64 "\n"
-            "  x9: %#18" PRIx64 "\n"
-            " x10: %#18" PRIx64 "\n"
-            " x11: %#18" PRIx64 "\n"
-            " x12: %#18" PRIx64 "\n"
-            " x13: %#18" PRIx64 "\n"
-            " x14: %#18" PRIx64 "\n"
-            " x15: %#18" PRIx64 "\n"
-            " x16: %#18" PRIx64 "\n"
-            " x17: %#18" PRIx64 "\n"
-            " x18: %#18" PRIx64 "\n"
-            " x19: %#18" PRIx64 "\n"
-            " x20: %#18" PRIx64 "\n"
-            " x21: %#18" PRIx64 "\n"
-            " x22: %#18" PRIx64 "\n"
-            " x23: %#18" PRIx64 "\n"
-            " x24: %#18" PRIx64 "\n"
-            " x25: %#18" PRIx64 "\n"
-            " x26: %#18" PRIx64 "\n"
-            " x27: %#18" PRIx64 "\n"
-            " x28: %#18" PRIx64 "\n"
-            " x29: %#18" PRIx64 "\n"
-            "  lr: %#18" PRIx64 "\n"
-            " usp: %#18" PRIx64 "\n"
-            " elr: %#18" PRIx64 "\n"
-            "spsr: %#18" PRIx64 "\n"
-            " esr: %#18" PRIx32 "\n"
-            " far: %#18" PRIx64 "\n"
-            "\n",
-            // clang-format on
-            crashlog.iframe->r[0], crashlog.iframe->r[1], crashlog.iframe->r[2],
-            crashlog.iframe->r[3], crashlog.iframe->r[4], crashlog.iframe->r[5],
-            crashlog.iframe->r[6], crashlog.iframe->r[7], crashlog.iframe->r[8],
-            crashlog.iframe->r[9], crashlog.iframe->r[10], crashlog.iframe->r[11],
-            crashlog.iframe->r[12], crashlog.iframe->r[13], crashlog.iframe->r[14],
-            crashlog.iframe->r[15], crashlog.iframe->r[16], crashlog.iframe->r[17],
-            crashlog.iframe->r[18], crashlog.iframe->r[19], crashlog.iframe->r[20],
-            crashlog.iframe->r[21], crashlog.iframe->r[22], crashlog.iframe->r[23],
-            crashlog.iframe->r[24], crashlog.iframe->r[25], crashlog.iframe->r[26],
-            crashlog.iframe->r[27], crashlog.iframe->r[28], crashlog.iframe->r[29],
-            crashlog.iframe->lr, crashlog.iframe->usp, crashlog.iframe->elr, crashlog.iframe->spsr,
-            crashlog.esr, crashlog.far);
+      fprintf(&outfile.stream_,
+              // clang-format off
+              "REGISTERS\n"
+              "  x0: %#18" PRIx64 "\n"
+              "  x1: %#18" PRIx64 "\n"
+              "  x2: %#18" PRIx64 "\n"
+              "  x3: %#18" PRIx64 "\n"
+              "  x4: %#18" PRIx64 "\n"
+              "  x5: %#18" PRIx64 "\n"
+              "  x6: %#18" PRIx64 "\n"
+              "  x7: %#18" PRIx64 "\n"
+              "  x8: %#18" PRIx64 "\n"
+              "  x9: %#18" PRIx64 "\n"
+              " x10: %#18" PRIx64 "\n"
+              " x11: %#18" PRIx64 "\n"
+              " x12: %#18" PRIx64 "\n"
+              " x13: %#18" PRIx64 "\n"
+              " x14: %#18" PRIx64 "\n"
+              " x15: %#18" PRIx64 "\n"
+              " x16: %#18" PRIx64 "\n"
+              " x17: %#18" PRIx64 "\n"
+              " x18: %#18" PRIx64 "\n"
+              " x19: %#18" PRIx64 "\n"
+              " x20: %#18" PRIx64 "\n"
+              " x21: %#18" PRIx64 "\n"
+              " x22: %#18" PRIx64 "\n"
+              " x23: %#18" PRIx64 "\n"
+              " x24: %#18" PRIx64 "\n"
+              " x25: %#18" PRIx64 "\n"
+              " x26: %#18" PRIx64 "\n"
+              " x27: %#18" PRIx64 "\n"
+              " x28: %#18" PRIx64 "\n"
+              " x29: %#18" PRIx64 "\n"
+              "  lr: %#18" PRIx64 "\n"
+              " usp: %#18" PRIx64 "\n"
+              " elr: %#18" PRIx64 "\n"
+              "spsr: %#18" PRIx64 "\n"
+              " esr: %#18" PRIx32 "\n"
+              " far: %#18" PRIx64 "\n"
+              "\n",
+              // clang-format on
+              crashlog.iframe->r[0], crashlog.iframe->r[1], crashlog.iframe->r[2],
+              crashlog.iframe->r[3], crashlog.iframe->r[4], crashlog.iframe->r[5],
+              crashlog.iframe->r[6], crashlog.iframe->r[7], crashlog.iframe->r[8],
+              crashlog.iframe->r[9], crashlog.iframe->r[10], crashlog.iframe->r[11],
+              crashlog.iframe->r[12], crashlog.iframe->r[13], crashlog.iframe->r[14],
+              crashlog.iframe->r[15], crashlog.iframe->r[16], crashlog.iframe->r[17],
+              crashlog.iframe->r[18], crashlog.iframe->r[19], crashlog.iframe->r[20],
+              crashlog.iframe->r[21], crashlog.iframe->r[22], crashlog.iframe->r[23],
+              crashlog.iframe->r[24], crashlog.iframe->r[25], crashlog.iframe->r[26],
+              crashlog.iframe->r[27], crashlog.iframe->r[28], crashlog.iframe->r[29],
+              crashlog.iframe->lr, crashlog.iframe->usp, crashlog.iframe->elr,
+              crashlog.iframe->spsr, crashlog.esr, crashlog.far);
 #elif defined(__x86_64__)
-    fprintf(&outfile.stream_,
-            // clang-format off
-            "REGISTERS\n"
-            "  CS: %#18" PRIx64 "\n"
-            " RIP: %#18" PRIx64 "\n"
-            " EFL: %#18" PRIx64 "\n"
-            " CR2: %#18lx\n"
-            " RAX: %#18" PRIx64 "\n"
-            " RBX: %#18" PRIx64 "\n"
-            " RCX: %#18" PRIx64 "\n"
-            " RDX: %#18" PRIx64 "\n"
-            " RSI: %#18" PRIx64 "\n"
-            " RDI: %#18" PRIx64 "\n"
-            " RBP: %#18" PRIx64 "\n"
-            " RSP: %#18" PRIx64 "\n"
-            "  R8: %#18" PRIx64 "\n"
-            "  R9: %#18" PRIx64 "\n"
-            " R10: %#18" PRIx64 "\n"
-            " R11: %#18" PRIx64 "\n"
-            " R12: %#18" PRIx64 "\n"
-            " R13: %#18" PRIx64 "\n"
-            " R14: %#18" PRIx64 "\n"
-            " R15: %#18" PRIx64 "\n"
-            "errc: %#18" PRIx64 "\n"
-            "\n",
-            crashlog.iframe->cs, crashlog.iframe->ip, crashlog.iframe->flags,
-            x86_get_cr2(), crashlog.iframe->rax, crashlog.iframe->rbx,
-            crashlog.iframe->rcx, crashlog.iframe->rdx, crashlog.iframe->rsi,
-            crashlog.iframe->rdi, crashlog.iframe->rbp,
-            crashlog.iframe->user_sp, crashlog.iframe->r8,
-            crashlog.iframe->r9, crashlog.iframe->r10, crashlog.iframe->r11,
-            crashlog.iframe->r12, crashlog.iframe->r13, crashlog.iframe->r14,
-            crashlog.iframe->r15, crashlog.iframe->err_code);
-    // clang-format on
+      fprintf(&outfile.stream_,
+              // clang-format off
+              "REGISTERS\n"
+              "  CS: %#18" PRIx64 "\n"
+              " RIP: %#18" PRIx64 "\n"
+              " EFL: %#18" PRIx64 "\n"
+              " CR2: %#18lx\n"
+              " RAX: %#18" PRIx64 "\n"
+              " RBX: %#18" PRIx64 "\n"
+              " RCX: %#18" PRIx64 "\n"
+              " RDX: %#18" PRIx64 "\n"
+              " RSI: %#18" PRIx64 "\n"
+              " RDI: %#18" PRIx64 "\n"
+              " RBP: %#18" PRIx64 "\n"
+              " RSP: %#18" PRIx64 "\n"
+              "  R8: %#18" PRIx64 "\n"
+              "  R9: %#18" PRIx64 "\n"
+              " R10: %#18" PRIx64 "\n"
+              " R11: %#18" PRIx64 "\n"
+              " R12: %#18" PRIx64 "\n"
+              " R13: %#18" PRIx64 "\n"
+              " R14: %#18" PRIx64 "\n"
+              " R15: %#18" PRIx64 "\n"
+              "errc: %#18" PRIx64 "\n"
+              "\n",
+              crashlog.iframe->cs, crashlog.iframe->ip, crashlog.iframe->flags,
+              x86_get_cr2(), crashlog.iframe->rax, crashlog.iframe->rbx,
+              crashlog.iframe->rcx, crashlog.iframe->rdx, crashlog.iframe->rsi,
+              crashlog.iframe->rdi, crashlog.iframe->rbp,
+              crashlog.iframe->user_sp, crashlog.iframe->r8,
+              crashlog.iframe->r9, crashlog.iframe->r10, crashlog.iframe->r11,
+              crashlog.iframe->r12, crashlog.iframe->r13, crashlog.iframe->r14,
+              crashlog.iframe->r15, crashlog.iframe->err_code);
+      // clang-format on
 #endif
+    }
+
+    fprintf(&outfile.stream_, "BACKTRACE (up to 16 calls)\n");
+
+    size_t len = Thread::Current::AppendBacktrace(outfile.buffer_.data(), outfile.buffer_.size());
+    outfile.buffer_ = outfile.buffer_.subspan(len);
+    fprintf(&outfile.stream_, "\n");
   }
-
-  fprintf(&outfile.stream_, "BACKTRACE (up to 16 calls)\n");
-
-  size_t len = Thread::Current::AppendBacktrace(outfile.buffer_.data(), outfile.buffer_.size());
-  outfile.buffer_ = outfile.buffer_.subspan(len);
-  fprintf(&outfile.stream_, "\n");
 
   // Include counters for critical events.
   fprintf(&outfile.stream_,

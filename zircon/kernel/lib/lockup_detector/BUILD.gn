@@ -14,6 +14,7 @@ zx_library("lockup_detector") {
     "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/counters",
+    "//zircon/kernel/lib/crashlog",
     "//zircon/kernel/object",
     "//zircon/system/ulib/affine",
   ]

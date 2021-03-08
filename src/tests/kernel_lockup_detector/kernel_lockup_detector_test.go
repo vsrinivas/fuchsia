@@ -17,6 +17,10 @@ var args = []string{
 	"kernel.lockup-detector.heartbeat-period-ms=50",
 	"kernel.lockup-detector.heartbeat-age-threshold-ms=200",
 	"kernel.lockup-detector.critical-section-threshold-ms=200",
+	// Make sure the fatal thresholds are explicitly disabled.  We don't want the
+	// device to spontaneously reboot during testing.
+	"kernel.lockup-detector.heartbeat-age-fatal-threshold-ms=0",
+	"kernel.lockup-detector.critical-section-fatal-threshold-ms=0",
 	// Upon booting run "k", which will print a usage message.  By waiting for the usage
 	// message, we can be sure the system has booted and is ready to accept "k" commands.
 	"zircon.autorun.boot=/boot/bin/sh+-c+k",
