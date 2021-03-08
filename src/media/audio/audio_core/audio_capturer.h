@@ -63,16 +63,12 @@ class AudioCapturer : public BaseCapturer,
   fuchsia::media::Usage GetStreamUsage() const final;
   void RealizeVolume(VolumeCommand volume_command) final;
 
-  CaptureUsage capture_usage() const {
-    return loopback_ ? CaptureUsage::LOOPBACK : CaptureUsageFromFidlCaptureUsage(usage_);
-  }
-
   fidl::BindingSet<fuchsia::media::audio::GainControl> gain_control_bindings_;
 
   const bool loopback_;
   bool mute_;
   std::atomic<float> stream_gain_db_;
-  fuchsia::media::AudioCaptureUsage usage_ = fuchsia::media::AudioCaptureUsage::FOREGROUND;
+  CaptureUsage usage_ = CaptureUsage::FOREGROUND;
 
   bool reference_clock_is_set_ = false;
 };

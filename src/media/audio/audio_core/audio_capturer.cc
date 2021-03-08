@@ -29,13 +29,15 @@ AudioCapturer::AudioCapturer(fuchsia::media::AudioCapturerConfiguration configur
       mute_(false),
       stream_gain_db_(kInitialCaptureGainDb) {
   FX_DCHECK(context);
-  if (!loopback_) {
+  if (loopback_) {
+    usage_ = CaptureUsage::LOOPBACK;
+  } else {
     context->volume_manager().AddStream(this);
     if (configuration.input().has_usage()) {
-      usage_ = configuration.input().usage();
+      usage_ = CaptureUsageFromFidlCaptureUsage(configuration.input().usage());
     }
   }
-  reporter().SetUsage(CaptureUsageFromFidlCaptureUsage(usage_));
+  reporter().SetUsage(usage_);
 }
 
 AudioCapturer::~AudioCapturer() {
@@ -47,14 +49,16 @@ AudioCapturer::~AudioCapturer() {
 void AudioCapturer::ReportStart() {
   BaseCapturer::ReportStart();
   if (!loopback_) {
-    context().audio_admin().UpdateCapturerState(usage_, true, this);
+    context().audio_admin().UpdateCapturerState(FidlCaptureUsageFromCaptureUsage(usage_).value(),
+                                                true, this);
   }
 }
 
 void AudioCapturer::ReportStop() {
   BaseCapturer::ReportStop();
   if (!loopback_) {
-    context().audio_admin().UpdateCapturerState(usage_, false, this);
+    context().audio_admin().UpdateCapturerState(FidlCaptureUsageFromCaptureUsage(usage_).value(),
+                                                false, this);
   }
 }
 
@@ -66,8 +70,10 @@ void AudioCapturer::OnStateChanged(State old_state, State new_state) {
 }
 
 void AudioCapturer::SetRoutingProfile(bool routable) {
-  auto profile =
-      RoutingProfile{.routable = routable, .usage = StreamUsage::WithCaptureUsage(capture_usage())};
+  auto profile = RoutingProfile{
+      .routable = routable,
+      .usage = StreamUsage::WithCaptureUsage(usage_),
+  };
   context().route_graph().SetCapturerRoutingProfile(*this, std::move(profile));
 
   // Once we route the capturer, we accept the default reference clock if one hasn't yet been set.
@@ -151,7 +157,7 @@ void AudioCapturer::BindGainControl(
 
 void AudioCapturer::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioCapturer::SetUsage");
-  if (usage == usage_) {
+  if (usage_ == CaptureUsageFromFidlCaptureUsage(usage)) {
     return;
   }
   if (loopback_) {
@@ -160,8 +166,8 @@ void AudioCapturer::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
   }
 
   ReportStop();
-  reporter().SetUsage(CaptureUsageFromFidlCaptureUsage(usage));
-  usage_ = usage;
+  usage_ = CaptureUsageFromFidlCaptureUsage(usage);
+  reporter().SetUsage(usage_);
   context().volume_manager().NotifyStreamChanged(this);
   State state = capture_state();
   SetRoutingProfile(StateIsRoutable(state));
@@ -179,11 +185,10 @@ bool AudioCapturer::GetStreamMute() const { return mute_; }
 
 fuchsia::media::Usage AudioCapturer::GetStreamUsage() const {
   // We should only be calling these from the StreamVolumeManager. We don't register LOOPBACK
-  // capturers with the StreamVolumeManager since those capturers do not have a compatible
-  // usage.
-  FX_DCHECK(!loopback_);
+  // capturers with the StreamVolumeManager since those capturers do not have a compatible usage.
+  FX_CHECK(!loopback_);
   fuchsia::media::Usage usage;
-  usage.set_capture_usage(usage_);
+  usage.set_capture_usage(FidlCaptureUsageFromCaptureUsage(usage_).value());
   return usage;
 }
 
