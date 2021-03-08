@@ -423,8 +423,7 @@ std::unique_ptr<raw::Constant> Parser::ParseConstant() {
       return Fail();
   }
 
-  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kEnableHandleRights) &&
-      Peek().combined() == Token::Kind::kPipe) {
+  if (Peek().combined() == Token::Kind::kPipe) {
     ConsumeToken(OfKind(Token::Kind::kPipe));
     std::unique_ptr right_operand = ParseConstant();
     if (!Ok())

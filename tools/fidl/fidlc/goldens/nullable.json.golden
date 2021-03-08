@@ -8,6 +8,24 @@
         "zx/rights": {
           "kind": "bits"
         },
+        "zx/RIGHTS_BASIC": {
+          "kind": "const"
+        },
+        "zx/RIGHTS_IO": {
+          "kind": "const"
+        },
+        "zx/RIGHTS_PROPERTY": {
+          "kind": "const"
+        },
+        "zx/RIGHTS_POLICY": {
+          "kind": "const"
+        },
+        "zx/DEFAULT_CHANNEL_RIGHTS": {
+          "kind": "const"
+        },
+        "zx/DEFAULT_EVENT_RIGHTS": {
+          "kind": "const"
+        },
         "zx/CHANNEL_MAX_MSG_BYTES": {
           "kind": "const"
         },

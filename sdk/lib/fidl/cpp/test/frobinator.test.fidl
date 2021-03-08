@@ -16,8 +16,6 @@ protocol Frobinator {
     Fail(bool fail) -> () error uint32;
     FailHard(bool fail) -> (string froyo) error uint32;
     FailHardest(bool fail) -> (string fro, string yo) error uint32;
-    // 0x0000d003 is ZX_DEFAULT_EVENT_RIGHTS.
-    // TODO(fxbug.dev/41920) Use constants define in zx.
-    SendEventHandle(zx.handle:<EVENT, 0x0000d003> event);
+    SendEventHandle(zx.handle:<EVENT, zx.DEFAULT_EVENT_RIGHTS> event);
     SendProtocol(EmptyProtocol ep);
 };
