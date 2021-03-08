@@ -24,12 +24,27 @@ import os
 import shutil
 import subprocess
 import sys
-from typing import Callable, Collection, Dict, FrozenSet, Iterable, Sequence, Tuple
+from typing import Any, Callable, Collection, Dict, FrozenSet, Iterable, Sequence, Tuple
 import dataclasses
 
 
+def _partition(
+        iterable: Iterable[Any],
+        predicate: Callable[[Any],
+                            bool]) -> Tuple[Sequence[Any], Sequence[Any]]:
+    """Splits sequence into two sequences based on predicate function."""
+    trues = []
+    falses = []
+    for item in iterable:
+        if predicate(item):
+            trues.append(item)
+        else:
+            falses.append(item)
+    return trues, falses
+
+
 def files_match(file1: str, file2: str):
-    """`diff`s two files, and forwards its exit status (0=same)."""
+    """`diff`s two files, returns True if they both exist and match."""
     # Silence "Files x and y differ" message.
     # TODO(fangism): can use faster diff-ing strategies, e.g. file size
     return subprocess.call(
@@ -202,20 +217,28 @@ class Action(object):
             return rerun_retval
 
         # Compare outputs and report differences.
-        different_files = [
-            (orig_out, temp_out)
-            for orig_out, temp_out in renamed_outputs.items()
+        matching_files, different_files = _partition(
+            renamed_outputs.items(),
             # If either file is missing, this will fail, which indicates that
             # something is not working as expected.
-            if not files_match(orig_out, temp_out)
-        ]
+            lambda pair: files_match(pair[0], pair[1]))
+
+        # Remove any files that matched to save space.
+        for _, temp_out in matching_files:
+            os.remove(temp_out)
+
         if different_files:
             print(
-                "Repeating command for target [{self.label}] with renamed outputs produces different results:"
+                f"Repeating command for target [{self.label}] with renamed outputs produces different results:"
             )
             for orig, temp in different_files:
                 print(f"  {orig} vs. {temp}")
 
+            # Keep around different outputs for analysis.
+
+            # Note: Even though the original command succeeded, forcing this to
+            # fail may influence tools that examine the freshness of outputs
+            # relative to the last succeeded command.
             return 1
 
         return 0

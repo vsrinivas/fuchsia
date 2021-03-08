@@ -188,8 +188,9 @@ class RunTwiceCompareTests(unittest.TestCase):
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
             with mock.patch.object(output_cacher, "files_match",
                                    return_value=True) as mock_match:
-                self.assertEqual(
-                    action.run_twice_and_compare_outputs(transform), 0)
+                with mock.patch.object(os, "remove") as mock_remove:
+                    self.assertEqual(
+                        action.run_twice_and_compare_outputs(transform), 0)
         mock_call.assert_has_calls(
             [
                 mock.call(["run.sh", "in.put", "out.put"]),
@@ -197,6 +198,7 @@ class RunTwiceCompareTests(unittest.TestCase):
             ],
             any_order=True)
         mock_match.assert_called_with("out.put", "out.put.tmp")
+        mock_remove.assert_called_with("out.put.tmp")
 
     def test_command_passed_and_rerun_differs(self):
         transform = output_cacher.TempFileTransform(suffix=".tmp")
@@ -205,8 +207,9 @@ class RunTwiceCompareTests(unittest.TestCase):
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
             with mock.patch.object(output_cacher, "files_match",
                                    return_value=False) as mock_match:
-                self.assertEqual(
-                    action.run_twice_and_compare_outputs(transform), 1)
+                with mock.patch.object(os, "remove") as mock_remove:
+                    self.assertEqual(
+                        action.run_twice_and_compare_outputs(transform), 1)
         mock_call.assert_has_calls(
             [
                 mock.call(["run.sh", "in.put", "out.put"]),
@@ -214,6 +217,40 @@ class RunTwiceCompareTests(unittest.TestCase):
             ],
             any_order=True)
         mock_match.assert_called_with("out.put", "out.put.tmp")
+        mock_remove.assert_not_called()
+
+    def test_command_passed_and_some_outptus_differ(self):
+
+        def fake_match(file1: str, file2: str) -> bool:
+            if file1 == "out.put":
+                return True
+            elif file1 == "out2.put":
+                return False
+            raise ValueError(f"Unhandled file name: {file1}")
+
+        transform = output_cacher.TempFileTransform(suffix=".tmp")
+        action = output_cacher.Action(
+            command=["run.sh", "in.put", "out.put", "out2.put"],
+            outputs={"out.put", "out2.put"})
+        with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
+            with mock.patch.object(output_cacher, "files_match",
+                                   wraps=fake_match) as mock_match:
+                with mock.patch.object(os, "remove") as mock_remove:
+                    self.assertEqual(
+                        action.run_twice_and_compare_outputs(transform), 1)
+        mock_call.assert_has_calls(
+            [
+                mock.call(["run.sh", "in.put", "out.put", "out2.put"]),
+                mock.call(["run.sh", "in.put", "out.put.tmp", "out2.put.tmp"]),
+            ],
+            any_order=True)
+        mock_match.assert_has_calls(
+            [
+                mock.call("out.put", "out.put.tmp"),
+                mock.call("out2.put", "out2.put.tmp"),
+            ],
+            any_order=True)
+        mock_remove.assert_has_calls([mock.call("out.put.tmp")])
 
 
 if __name__ == '__main__':
