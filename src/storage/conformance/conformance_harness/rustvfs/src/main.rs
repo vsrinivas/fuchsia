@@ -96,11 +96,14 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
             Io1HarnessRequest::GetConfig { responder } => {
                 let config = Io1Config {
                     immutable_file: Some(false),
-                    immutable_dir: Some(false),
                     no_vmofile: Some(false),
                     no_get_buffer: Some(false),
                     no_rename: Some(false),
                     no_link: Some(false),
+                    // TODO(fxbug.dev/45624): Mutable directories are actually supported, but there
+                    // is a bug where you can create files/folders without OPEN_FLAG_WRITABLE. See
+                    // fxbug.dev/45624#c21.
+                    immutable_dir: Some(true),
                     // TODO(fxbug.dev/33880): Remote directories are supported by the vfs, just
                     // haven't been implemented in this harness yet.
                     no_remote_dir: Some(true),
@@ -141,7 +144,17 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
         };
 
         let token_registry = token_registry::Simple::new();
-        let scope = ExecutionScope::build().token_registry(token_registry).new();
+        let scope = ExecutionScope::build()
+            .token_registry(token_registry)
+            .entry_constructor(simple::tree_constructor(|_parent, _filename| {
+                let entry = pcb::read_write(
+                    move || future::ok(vec![]),
+                    100,
+                    |_content| async move { Ok(()) },
+                );
+                Ok(entry)
+            }))
+            .new();
 
         dir.open(scope, flags, 0, Path::empty(), directory_request.into_channel().into());
     }

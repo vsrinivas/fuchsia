@@ -324,6 +324,60 @@ async fn open_file_without_describe_flag() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn create_file_with_sufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.immutable_dir.unwrap_or_default() {
+        return;
+    }
+
+    for dir_flags in harness.writable_flag_combos() {
+        let root = root_directory(harness.all_rights, vec![]);
+        let test_dir = harness.get_directory(root);
+        // Re-open directory with the flags being tested.
+        let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
+        let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
+
+        dir.open(
+            dir_flags | io::OPEN_FLAG_CREATE | io::OPEN_FLAG_DESCRIBE,
+            io::MODE_TYPE_FILE,
+            TEST_FILE,
+            server,
+        )
+        .expect("Cannot open file");
+
+        assert_eq!(get_open_status(&client).await, Status::OK);
+        assert_eq!(read_file(&test_dir, TEST_FILE).await, &[]);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn create_file_with_insufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.immutable_dir.unwrap_or_default() {
+        return;
+    }
+
+    for dir_flags in harness.non_writable_flag_combos() {
+        let root = root_directory(harness.all_rights, vec![]);
+        let test_dir = harness.get_directory(root);
+        // Re-open directory with the flags being tested.
+        let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
+        let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
+
+        dir.open(
+            dir_flags | io::OPEN_FLAG_CREATE | io::OPEN_FLAG_DESCRIBE,
+            io::MODE_TYPE_FILE,
+            TEST_FILE,
+            server,
+        )
+        .expect("Cannot open file");
+
+        assert_eq!(get_open_status(&client).await, Status::ACCESS_DENIED);
+        assert_file_not_found(&test_dir, TEST_FILE).await;
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn file_read_with_sufficient_rights() {
     let harness = TestHarness::new().await;
 
