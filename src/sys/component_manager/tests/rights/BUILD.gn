@@ -189,7 +189,7 @@ fuchsia_component("invalid_use_dir_rights") {
 }
 
 component_config("component_manager_debug_config") {
-  sources = [ "rights_test_config.json" ]
+  sources = [ "rights_test_config.json5" ]
 }
 
 fuchsia_component("component_manager_for_rights_test") {

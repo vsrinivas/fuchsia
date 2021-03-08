@@ -386,22 +386,22 @@ group("bootfs") {
 }
 
 component_config("component_manager_appmgr_config") {
-  sources = [ "configs/appmgr_config.json" ]
+  sources = [ "configs/appmgr_config.json5" ]
 }
 
 component_config("component_manager_debug_config") {
-  sources = [ "configs/debug_config.json" ]
+  sources = [ "configs/debug_config.json5" ]
 }
 
 component_config("component_manager_bootfs_config") {
   sources = [
-    "//src/security/policy/component_manager_policy.json",
-    "configs/bootfs_config.json",
+    "//src/security/policy/component_manager_policy.json5",
+    "configs/bootfs_config.json5",
   ]
   dest = "config/component_manager"
 }
 
 component_config("component_manager_for_examples_config") {
-  sources = [ "configs/for_examples_config.json" ]
+  sources = [ "configs/for_examples_config.json5" ]
   dest = "data/component_manager_config"
 }

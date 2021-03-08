@@ -76,7 +76,7 @@ rustc_binary("integration_test_root_bin") {
 }
 
 component_config("config") {
-  sources = [ "namespace_config.json" ]
+  sources = [ "namespace_config.json5" ]
 }
 
 resource("config_resource") {

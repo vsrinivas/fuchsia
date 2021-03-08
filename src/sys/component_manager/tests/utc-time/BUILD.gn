@@ -114,7 +114,7 @@ fuchsia_component("realm") {
 }
 
 component_config("cm_config") {
-  sources = [ "cm_config.json" ]
+  sources = [ "cm_config.json5" ]
 }
 
 resource("cm_config_resource") {

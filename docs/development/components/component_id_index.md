@@ -89,7 +89,7 @@ To supply an index file to the build, use the
 
 ```gn
 component_id_index("my_component_id_index") {
-  source = "my_component_id_index.json"
+  source = "my_component_id_index.json5"
 }
 ```
 
@@ -99,12 +99,12 @@ component_id_index("my_component_id_index") {
 
 In order to add a component to the index, you must insert an entry into the
 appropriate index file. Currently, `fuchsia.git`'s components are listed in the
-[core_component_id_index.json](/src/sys/appmgr/config/core_component_id_index.json)
+[core_component_id_index.json5](/src/sys/appmgr/config/core_component_id_index.json5)
 index file.
 
 {% dynamic if user.is_googler %}
 
-Note: Outside of fuchsia.git, you can usually find a *component_id_index.json
+Note: Outside of fuchsia.git, you can usually find a *component_id_index.json5
 file in the `bundles/config` directory of a specific `//vendor` repository hosting
 a product's configuration.
 
@@ -150,7 +150,7 @@ The above output tells us that my_other_component.cmx runs under the
 `[app, sys]` realm path.
 
 Add `fuchsia-pkg://example.com/my_other_package#meta/my_other_component.cmx` to
-the index by appending this entry to [core_component_id_index.json](/src/sys/appmgr/config/core_component_id_index.json)'s
+the index by appending this entry to [core_component_id_index.json5](/src/sys/appmgr/config/core_component_id_index.json5)'s
 `instances` list:
 
 ```json5
@@ -173,7 +173,7 @@ Now run the build.  The build should fail, suggesting a new instance ID:
 $ fx build
 .
 .
-Error: Could not merge index file ../../src/sys/appmgr/config/core_component_id_index.json
+Error: Could not merge index file ../../src/sys/appmgr/config/core_component_id_index.json5
 
 Caused by:
     Some entries are missing `instance_id` fields. Here are some generated IDs for you:

@@ -8,8 +8,8 @@ import("//src/sys/build/components.gni")
 
 component_config("component_manager_config") {
   sources = [
-    "//src/security/policy/component_manager_policy.json",
-    "config.json",
+    "//src/security/policy/component_manager_policy.json5",
+    "config.json5",
   ]
 }
 

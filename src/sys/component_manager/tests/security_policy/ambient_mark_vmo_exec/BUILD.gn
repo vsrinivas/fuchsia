@@ -56,7 +56,7 @@ rustc_binary("protected_ops_util") {
 }
 
 component_config("cm_config") {
-  sources = [ "cm_config.json" ]
+  sources = [ "cm_config.json5" ]
 }
 
 fuchsia_component("protected_ops") {

@@ -25,7 +25,7 @@ rustc_test("bin") {
 }
 
 component_config("component_manager_config") {
-  sources = [ "config.json" ]
+  sources = [ "config.json5" ]
 }
 
 resource("component_manager_config_resource") {

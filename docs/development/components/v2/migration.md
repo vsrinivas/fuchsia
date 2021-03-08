@@ -873,14 +873,14 @@ for assistance.
 
 Components that use storage use a [component ID index][component-id-index] to
 preserve access to persistent storage contents across the migration, such as
-[`core_component_id_index.json`][example-component-id-index].
+[`core_component_id_index.json5`][example-component-id-index].
 You must update the component index to map the new component moniker to the same
 instance within the component that provides the storage capability.
 
 Find any instances of your current v1 component in component index files:
 
 ```json5
-// core_component_id_index.json
+// core_component_id_index.json5
 {
     instances: [
         ...
@@ -899,7 +899,7 @@ Replace the `appmgr_moniker` for your component instance with the new moniker in
 the migrated v2 realm, keeping the same `instance_id`:
 
 ```json5
-// core_component_id_index.json
+// core_component_id_index.json5
 {
     instances: [
         ...
@@ -1111,7 +1111,7 @@ the directory capability with the appropriate subdirectory to your component.
 [cs-appmgr-cml]: /src/sys/appmgr/meta/appmgr.cml
 [cs-core-cml]: /src/sys/core/meta/core.cml
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
-[example-component-id-index]: /src/sys/appmgr/config/core_component_id_index.json
+[example-component-id-index]: /src/sys/appmgr/config/core_component_id_index.json5
 [example-fonts]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/meta/fonts.cmx
 [example-package-rule]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/BUILD.gn
 [example-services-config]: /src/sys/sysmgr/config/services.config
