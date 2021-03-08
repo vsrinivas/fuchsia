@@ -783,6 +783,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
       device_type_ = DeviceType::kG12A;
       break;
     case PDEV_PID_AMLOGIC_T931:
+    case PDEV_PID_AMLOGIC_A311D:
       device_type_ = DeviceType::kG12B;
       break;
     case PDEV_PID_AMLOGIC_S905D3:

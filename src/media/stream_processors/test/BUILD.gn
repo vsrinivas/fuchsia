@@ -307,8 +307,11 @@ fuchsia_unittest_package("h264_decoder_test") {
 
   test_specs = {
     environments = basic_envs + [
-                     sherlock_env,
                      astro_env,
+                     sherlock_env,
+
+                     # Fails on Vim3 due to fxb/70799
+                     vim3_env,
                    ]
   }
 }

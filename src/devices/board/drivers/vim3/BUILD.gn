@@ -37,6 +37,7 @@ driver_module("vim3") {
     "vim3-sysmem.cc",
     "vim3-thermal.cc",
     "vim3-usb.cc",
+    "vim3-video.cc",
     "vim3.cc",
   ]
   deps = [

@@ -26,12 +26,16 @@ static const pbus_mmio_t clk_mmios[] = {
     },
 };
 
+// clang-format off
 static const clock_id_t clock_ids[] = {
     {g12b_clk::G12B_CLK_SYS_PLL_DIV16},
     {g12b_clk::G12B_CLK_SYS_CPU_CLK_DIV16},
     {g12b_clk::G12B_CLK_SYS_PLLB_DIV16},
     {g12b_clk::G12B_CLK_SYS_CPUB_CLK_DIV16},
+    {g12b_clk::G12B_CLK_DOS_GCLK_VDEC},
+    {g12b_clk::G12B_CLK_DOS},
 };
+// clang-format on
 
 static const pbus_metadata_t clock_metadata[] = {
     {

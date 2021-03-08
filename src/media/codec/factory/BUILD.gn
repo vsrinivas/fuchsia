@@ -91,6 +91,9 @@ fuchsia_unittest_package("codec_detect_hw_decode_test") {
     environments = [
       sherlock_env,
       astro_env,
+
+      # Fails on Vim3 due to fxb/70799
+      vim3_env,
     ]
   }
 }

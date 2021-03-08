@@ -32,6 +32,7 @@ enum {
   BTI_NNA,
   BTI_USB,
   BTI_MALI,
+  BTI_VIDEO,
 };
 
 // MAC address metadata indices
@@ -75,6 +76,7 @@ class Vim3 : public Vim3Type {
   zx_status_t NnaInit();
   zx_status_t UsbInit();
   zx_status_t MaliInit();
+  zx_status_t VideoInit();
 
   int Thread();
 
