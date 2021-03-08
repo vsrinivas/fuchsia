@@ -237,12 +237,13 @@ static constexpr fdio_ops_t fdio_zxio_ops = {
 
 __EXPORT
 fdio_t* fdio_zxio_create(zxio_storage_t** out_storage) {
-  fdio_t* io = fdio_alloc(&fdio_zxio_ops);
+  fdio_t* io = fdio_t::alloc(&fdio_zxio_ops);
   if (io == nullptr) {
     return nullptr;
   }
-  zxio_null_init(&fdio_get_zxio_storage(io)->io);
-  *out_storage = fdio_get_zxio_storage(io);
+  zxio_storage_t& storage = io->zxio_storage();
+  zxio_null_init(&storage.io);
+  *out_storage = &storage;
   return io;
 }
 
@@ -373,12 +374,12 @@ static constexpr fdio_ops_t fdio_zxio_remote_ops = {
 };
 
 fdio_t* fdio_remote_create(fidl::ClientEnd<fio::Node> node, zx::eventpair event) {
-  fdio_t* io = fdio_alloc(&fdio_zxio_remote_ops);
+  fdio_t* io = fdio_t::alloc(&fdio_zxio_remote_ops);
   if (io == nullptr) {
     return nullptr;
   }
   zx_status_t status =
-      zxio_remote_init(fdio_get_zxio_storage(io), node.channel().release(), event.release());
+      zxio_remote_init(&io->zxio_storage(), node.channel().release(), event.release());
   if (status != ZX_OK) {
     return nullptr;
   }
@@ -400,11 +401,11 @@ static constexpr fdio_ops_t fdio_zxio_dir_ops = ([] {
 })();
 
 fdio_t* fdio_dir_create(fidl::ClientEnd<fio::Directory> dir) {
-  fdio_t* io = fdio_alloc(&fdio_zxio_dir_ops);
+  fdio_t* io = fdio_t::alloc(&fdio_zxio_dir_ops);
   if (io == nullptr) {
     return nullptr;
   }
-  zx_status_t status = zxio_dir_init(fdio_get_zxio_storage(io), dir.channel().release());
+  zx_status_t status = zxio_dir_init(&io->zxio_storage(), dir.channel().release());
   if (status != ZX_OK) {
     return nullptr;
   }
@@ -412,11 +413,11 @@ fdio_t* fdio_dir_create(fidl::ClientEnd<fio::Directory> dir) {
 }
 
 fdio_t* fdio_file_create(fidl::ClientEnd<fio::File> file, zx::event event, zx::stream stream) {
-  fdio_t* io = fdio_alloc(&fdio_zxio_remote_ops);
+  fdio_t* io = fdio_t::alloc(&fdio_zxio_remote_ops);
   if (io == nullptr) {
     return nullptr;
   }
-  zx_status_t status = zxio_file_init(fdio_get_zxio_storage(io), file.channel().release(),
+  zx_status_t status = zxio_file_init(&io->zxio_storage(), file.channel().release(),
                                       event.release(), stream.release());
   if (status != ZX_OK) {
     return nullptr;
@@ -474,12 +475,12 @@ static constexpr fdio_ops_t fdio_zxio_pty_ops = ([] {
 })();
 
 fdio_t* fdio_pty_create(fidl::ClientEnd<fpty::Device> device, zx::eventpair event) {
-  fdio_t* io = fdio_alloc(&fdio_zxio_pty_ops);
+  fdio_t* io = fdio_t::alloc(&fdio_zxio_pty_ops);
   if (io == nullptr) {
     return nullptr;
   }
   zx_status_t status =
-      zxio_remote_init(fdio_get_zxio_storage(io), device.channel().release(), event.release());
+      zxio_remote_init(&io->zxio_storage(), device.channel().release(), event.release());
   if (status != ZX_OK) {
     return nullptr;
   }
@@ -496,8 +497,8 @@ zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
     }
     return status;
   }
-  status = fdio_get_ops(io)->unwrap(io, out);
-  fdio_release(io);
+  status = io->ops().unwrap(io, out);
+  io->release();
   return status;
 }
 
@@ -508,7 +509,7 @@ zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io) {
   }
 
   zx_handle_t handle = ZX_HANDLE_INVALID;
-  if (fdio_get_ops(io)->borrow_channel(io, &handle) != ZX_OK) {
+  if (io->ops().borrow_channel(io, &handle) != ZX_OK) {
     return ZX_HANDLE_INVALID;
   }
   return handle;
@@ -524,7 +525,7 @@ fdio_t* fdio_vmo_create(zx::vmo vmo, zx::stream stream) {
   }
   zx_status_t status = zxio_vmo_init(storage, std::move(vmo), std::move(stream));
   if (status != ZX_OK) {
-    fdio_release(io);
+    io->release();
     return nullptr;
   }
   return io;
@@ -577,13 +578,12 @@ static constexpr fdio_ops_t fdio_zxio_vmofile_ops = {
 
 fdio_t* fdio_vmofile_create(fidl::ClientEnd<fio::File> file, zx::vmo vmo, zx_off_t offset,
                             zx_off_t length, zx_off_t seek) {
-  fdio_t* io = fdio_alloc(&fdio_zxio_vmofile_ops);
+  fdio_t* io = fdio_t::alloc(&fdio_zxio_vmofile_ops);
   if (io == nullptr) {
     return nullptr;
   }
-  zx_status_t status =
-      zxio_vmofile_init(fdio_get_zxio_storage(io), fidl::BindSyncClient(std::move(file)),
-                        std::move(vmo), offset, length, seek);
+  zx_status_t status = zxio_vmofile_init(&io->zxio_storage(), fidl::BindSyncClient(std::move(file)),
+                                         std::move(vmo), offset, length, seek);
   if (status != ZX_OK) {
     return nullptr;
   }
@@ -740,7 +740,7 @@ static constexpr fdio_ops_t fdio_zxio_pipe_ops = {
 };
 
 fdio_t* fdio_pipe_create(zx::socket socket) {
-  fdio_t* io = fdio_alloc(&fdio_zxio_pipe_ops);
+  fdio_t* io = fdio_t::alloc(&fdio_zxio_pipe_ops);
   if (io == nullptr) {
     return nullptr;
   }
@@ -749,7 +749,7 @@ fdio_t* fdio_pipe_create(zx::socket socket) {
   if (status != ZX_OK) {
     return nullptr;
   }
-  status = zxio_pipe_init(fdio_get_zxio_storage(io), std::move(socket), info);
+  status = zxio_pipe_init(&io->zxio_storage(), std::move(socket), info);
   if (status != ZX_OK) {
     return nullptr;
   }
@@ -767,7 +767,7 @@ int fdio_pipe_pair(fdio_t** _a, fdio_t** _b, uint32_t options) {
     return ZX_ERR_NO_MEMORY;
   }
   if ((b = fdio_pipe_create(std::move(h1))) == nullptr) {
-    fdio_release(a);
+    a->release();
     return ZX_ERR_NO_MEMORY;
   }
   *_a = a;
@@ -787,7 +787,7 @@ zx_status_t fdio_pipe_half(int* out_fd, zx_handle_t* out_handle) {
     r = ZX_ERR_NO_MEMORY;
   }
   if ((*out_fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
-    fdio_release(io);
+    io->release();
     r = ZX_ERR_NO_RESOURCES;
   }
   *out_handle = h1.release();

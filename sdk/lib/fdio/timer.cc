@@ -135,11 +135,11 @@ static constexpr zxio_ops_t fdio_timer_ops = []() {
 
 static void fdio_timer_init(zxio_storage_t* storage, zx::timer handle) {
   auto timer = new (storage) fdio_timer_t{
-    .io = storage->io,
-    .handle = std::move(handle),
-    .lock = {},
-    .current_deadline = {},
-    .interval = {},
+      .io = storage->io,
+      .handle = std::move(handle),
+      .lock = {},
+      .current_deadline = {},
+      .interval = {},
   };
   zxio_init(&timer->io, &fdio_timer_ops);
 }
@@ -196,16 +196,16 @@ int timerfd_create(int clockid, int flags) {
   }
 
   if (flags & TFD_CLOEXEC) {
-    *fdio_get_ioflag(io) |= IOFLAG_CLOEXEC;
+    io->ioflag() |= IOFLAG_CLOEXEC;
   }
 
   if (flags & TFD_NONBLOCK) {
-    *fdio_get_ioflag(io) |= IOFLAG_NONBLOCK;
+    io->ioflag() |= IOFLAG_NONBLOCK;
   }
 
   int fd = fdio_bind_to_fd(io, -1, 0);
   if (fd < 0) {
-    fdio_release(io);
+    io->release();
   }
   // fdio_bind_to_fd already sets errno.
   return fd;
@@ -229,7 +229,7 @@ __EXPORT int timerfd_settime(int fd, int flags, const struct itimerspec* new_val
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  auto clean_io = fbl::MakeAutoCall([io] { fdio_release(io); });
+  auto clean_io = fbl::MakeAutoCall([io] { io->release(); });
 
   fdio_timer_t* timer = nullptr;
   if (!to_timer(io, &timer)) {
@@ -287,7 +287,7 @@ int timerfd_gettime(int fd, struct itimerspec* curr_value) {
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  auto clean_io = fbl::MakeAutoCall([io] { fdio_release(io); });
+  auto clean_io = fbl::MakeAutoCall([io] { io->release(); });
 
   fdio_timer_t* timer = nullptr;
   if (!to_timer(io, &timer)) {

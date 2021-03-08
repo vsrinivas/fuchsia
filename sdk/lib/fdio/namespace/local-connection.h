@@ -7,7 +7,6 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "../internal.h"
 #include "local-filesystem.h"
 #include "local-vnode.h"
 

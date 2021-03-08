@@ -220,16 +220,16 @@ int eventfd(unsigned int initval, int flags) {
   }
 
   if (flags & EFD_CLOEXEC) {
-    *fdio_get_ioflag(io) |= IOFLAG_CLOEXEC;
+    io->ioflag() |= IOFLAG_CLOEXEC;
   }
 
   if (flags & EFD_NONBLOCK) {
-    *fdio_get_ioflag(io) |= IOFLAG_NONBLOCK;
+    io->ioflag() |= IOFLAG_NONBLOCK;
   }
 
   int fd = fdio_bind_to_fd(io, -1, 0);
   if (fd < 0) {
-    fdio_release(io);
+    io->release();
   }
   // fdio_bind_to_fd already sets errno.
   return fd;

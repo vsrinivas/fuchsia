@@ -139,40 +139,6 @@ zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, s
 Errno fdio_zx_socket_posix_ioctl(const zx::socket& socket, int request, va_list va);
 zx_status_t fdio_zx_socket_shutdown(const zx::socket& socket, int how);
 
-// Initialize an |fdio_t| object with the provided ops table.
-//
-// Initializes the refcount to one. The refcount may be altered with the |fdio_acquire| and
-// |fdio_release| functions. When the refcount reaches zero, the object is destroyed.
-fdio_t* fdio_alloc(const fdio_ops_t* ops);
-
-// Increases the refcount of |io| by one.
-void fdio_acquire(fdio_t* io);
-
-// Decreases the refcount of |io| by one. If the reference count
-// reaches zero, the object is destroyed.
-zx_status_t fdio_release(fdio_t* io);
-
-// Returns true if |io| is the only acquired reference to an object.
-bool fdio_is_last_reference(fdio_t* io);
-
-// Lifecycle notes:
-//
-// Upon creation, fdio objects have a refcount of 1.
-// fdio_acquire() and fdio_release() are used to upref
-// and downref, respectively.  Upon downref to 0,
-// the object will be freed.
-//
-// The close hook must be called before free and should
-// only be called once.  In normal use, fdio objects are
-// accessed through the fdio_fdtab, and when close is
-// called they are removed from the fdtab and the reference
-// that the fdtab itself is holding is released, at which
-// point they will be free()'d unless somebody is holding
-// a ref due to an ongoing io transaction, which will
-// certainly fail due to underlying handles being closed
-// at which point a downref will happen and destruction
-// will follow.
-
 // Waits until one or more |events| are signalled, or the |deadline| passes.
 // The |events| are of the form |FDIO_EVT_*|, defined in io.h.
 // If not NULL, |out_pending| returns a bitmap of all observed events.
@@ -357,6 +323,81 @@ zx_status_t fdio_default_setsockopt(fdio_t* io, int level, int optname, const vo
 zx_status_t fdio_default_shutdown(fdio_t* io, int how, int16_t* out_code);
 Errno fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
 
+// Lifecycle notes:
+//
+// Upon creation, fdio objects have a refcount of 1.
+// fdio::acquire() and fdio::release() are used to upref
+// and downref, respectively.  Upon downref to 0,
+// the object will be freed.
+//
+// The close hook must be called before free and should
+// only be called once.  In normal use, fdio objects are
+// accessed through the fdio_fdtab, and when close is
+// called they are removed from the fdtab and the reference
+// that the fdtab itself is holding is released, at which
+// point they will be free()'d unless somebody is holding
+// a ref due to an ongoing io transaction, which will
+// certainly fail due to underlying handles being closed
+// at which point a downref will happen and destruction
+// will follow.
+struct fdio {
+ public:
+  static fdio_t* alloc(const fdio_ops_t* ops) { return new fdio(*ops); }
+
+  // The operation function table which encapsulates specialized I/O
+  // transport under a common interface.
+  const fdio_ops_t& ops() { return ops_; }
+
+  // |ioflag| contains mutable properties of this object, shared by
+  // different transports. Possible values are |IOFLAG_*| in private.h.
+  uint32_t& ioflag() { return ioflag_; }
+
+  // The zxio object, if the zxio transport is selected in |ops|.
+  zxio_storage_t& zxio_storage() { return storage_; }
+
+  // Used to implement SO_RCVTIMEO. See `man 7 socket` for details.
+  zx::duration& rcvtimeo() { return rcvtimeo_; }
+  // Used to implement SO_SNDTIMEO. See `man 7 socket` for details.
+  zx::duration& sndtimeo() { return sndtimeo_; }
+
+  void acquire() { refcount_.fetch_add(1); }
+
+  zx_status_t release() {
+    if (refcount_.fetch_sub(1) == 1) {
+      zx_status_t status = ops().close(this);
+      delete this;
+      return status;
+    }
+    return ZX_OK;
+  }
+
+  bool is_last_reference() { return refcount_.load() == 1; }
+
+ private:
+  explicit fdio(const fdio_ops_t& ops)
+      : ops_(ops),
+        refcount_(1),
+        ioflag_(0),
+        storage_({}),
+        rcvtimeo_(zx::duration::infinite()),
+        sndtimeo_(zx::duration::infinite()){};
+
+  const fdio_ops_t& ops_;
+
+  // The number of references on this object. Note that each appearance
+  // in the fd table counts as one reference on the corresponding object.
+  // Ongoing operations will also contribute to the refcount.
+  std::atomic_int_fast32_t refcount_;
+
+  uint32_t ioflag_;
+
+  zxio_storage_t storage_;
+
+  zx::duration rcvtimeo_;
+
+  zx::duration sndtimeo_;
+};
+
 using fdio_available = struct {};
 using fdio_reserved = struct {};
 
@@ -381,14 +422,6 @@ extern fdio_state_t __fdio_global_state;
 #define fdio_cwd_path (__fdio_global_state.cwd_path)
 #define fdio_fdtab (__fdio_global_state.fdtab)
 #define fdio_root_ns (__fdio_global_state.ns)
-
-// Accessors for the internal fields of fdio_t:
-
-const fdio_ops_t* fdio_get_ops(const fdio_t* io);
-uint32_t* fdio_get_ioflag(fdio_t* io);
-zxio_storage_t* fdio_get_zxio_storage(fdio_t* io);
-zx::duration* fdio_get_rcvtimeo(fdio_t* io);
-zx::duration* fdio_get_sndtimeo(fdio_t* io);
 
 // Returns an fd number greater than or equal to |starting_fd|, following the
 // same rules as fdio_bind_fd. If there are no free file descriptors, -1 is

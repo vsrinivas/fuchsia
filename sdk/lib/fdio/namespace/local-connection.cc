@@ -5,10 +5,8 @@
 #include "local-connection.h"
 
 #include <fcntl.h>
-#include <lib/fdio/namespace.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
-#include <zircon/device/vfs.h>
 #include <zircon/types.h>
 
 #include <atomic>
@@ -171,7 +169,7 @@ constexpr fdio_ops_t kLocalConnectionOps = []() {
 }  // namespace
 
 fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs, fbl::RefPtr<LocalVnode> vn) {
-  fdio_t* io = fdio_alloc(&kLocalConnectionOps);
+  fdio_t* io = fdio_t::alloc(&kLocalConnectionOps);
   if (io == nullptr) {
     return nullptr;
   }
@@ -179,9 +177,9 @@ fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs, fbl::RefPtr<
   // destructible, we can avoid invoking the destructor.
   static_assert(std::is_trivially_destructible<LocalConnection>::value,
                 "LocalConnection must have trivial destructor");
-  char* storage = reinterpret_cast<char*>(fdio_get_local_dir(io));
-  LocalConnection* dir = new (storage) LocalConnection();
-  zxio_null_init(&(fdio_get_zxio_storage(io)->io));
+  zxio_storage_t& storage = io->zxio_storage();
+  LocalConnection* dir = new (&storage) LocalConnection();
+  zxio_null_init(&storage.io);
 
   // Leak a strong reference to |this| which will be reclaimed
   // in |zxio_dir_close()|.
@@ -191,7 +189,7 @@ fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs, fbl::RefPtr<
 }
 
 fbl::RefPtr<LocalVnode> GetLocalNodeFromConnectionIfAny(fdio_t* io) {
-  if (fdio_get_ops(io) != &kLocalConnectionOps) {
+  if (&io->ops() != &kLocalConnectionOps) {
     return nullptr;
   }
   return fbl::RefPtr<LocalVnode>(fdio_get_local_dir(io)->vn);

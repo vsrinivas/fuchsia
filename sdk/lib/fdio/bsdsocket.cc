@@ -116,7 +116,7 @@ int socket(int domain, int type, int protocol) {
 
   // TODO(tamird): we're not handling this flag in fdio_from_channel, which seems bad.
   if (type & SOCK_NONBLOCK) {
-    *fdio_get_ioflag(io) |= IOFLAG_NONBLOCK;
+    io->ioflag() |= IOFLAG_NONBLOCK;
   }
 
   // TODO(fxbug.dev/30920): Implement CLOEXEC.
@@ -125,7 +125,7 @@ int socket(int domain, int type, int protocol) {
 
   int fd = fdio_bind_to_fd(io, -1, 0);
   if (fd < 0) {
-    fdio_release(io);
+    io->release();
     return ERRNO(EMFILE);
   }
   return fd;
@@ -140,23 +140,23 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
   int16_t out_code;
   zx_status_t status;
-  if ((status = fdio_get_ops(io)->connect(io, addr, len, &out_code)) != ZX_OK) {
-    fdio_release(io);
+  if ((status = io->ops().connect(io, addr, len, &out_code)) != ZX_OK) {
+    io->release();
     return ERROR(status);
   }
   if (out_code == EINPROGRESS) {
-    bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
+    bool nonblocking = io->ioflag() & IOFLAG_NONBLOCK;
 
     if (nonblocking) {
-      *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTING;
+      io->ioflag() |= IOFLAG_SOCKET_CONNECTING;
     } else {
       if ((status = fdio_wait(io, FDIO_EVT_WRITABLE, zx::time::infinite(), nullptr)) != ZX_OK) {
-        fdio_release(io);
+        io->release();
         return ERROR(status);
       }
       // Call Connect() again after blocking to find connect's result.
-      if ((status = fdio_get_ops(io)->connect(io, addr, len, &out_code)) != ZX_OK) {
-        fdio_release(io);
+      if ((status = io->ops().connect(io, addr, len, &out_code)) != ZX_OK) {
+        io->release();
         return ERROR(status);
       }
     }
@@ -164,13 +164,13 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
   switch (out_code) {
     case 0: {
-      *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTED;
-      fdio_release(io);
+      io->ioflag() |= IOFLAG_SOCKET_CONNECTED;
+      io->release();
       return out_code;
     }
 
     default: {
-      fdio_release(io);
+      io->release();
       return ERRNO(out_code);
     }
   }
@@ -184,7 +184,7 @@ static int delegate(int fd, F fn) {
   }
   int16_t out_code;
   zx_status_t status = fn(io, &out_code);
-  fdio_release(io);
+  io->release();
   if (status != ZX_OK) {
     return ERROR(status);
   }
@@ -196,16 +196,14 @@ static int delegate(int fd, F fn) {
 
 __EXPORT
 int bind(int fd, const struct sockaddr* addr, socklen_t len) {
-  return delegate(fd, [&](fdio_t* io, int16_t* out_code) {
-    return fdio_get_ops(io)->bind(io, addr, len, out_code);
-  });
+  return delegate(
+      fd, [&](fdio_t* io, int16_t* out_code) { return io->ops().bind(io, addr, len, out_code); });
 }
 
 __EXPORT
 int listen(int fd, int backlog) {
-  return delegate(fd, [&](fdio_t* io, int16_t* out_code) {
-    return fdio_get_ops(io)->listen(io, backlog, out_code);
-  });
+  return delegate(
+      fd, [&](fdio_t* io, int16_t* out_code) { return io->ops().listen(io, backlog, out_code); });
 }
 
 __EXPORT
@@ -233,14 +231,13 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
       return ERRNO(EBADF);
     }
 
-    bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
+    bool nonblocking = io->ioflag() & IOFLAG_NONBLOCK;
 
     for (;;) {
       // We're going to manage blocking on the client side, so always ask the
       // provider for a non-blocking socket.
-      if ((status = fdio_get_ops(io)->accept(io, flags | SOCK_NONBLOCK, addr, addrlen,
-                                             accepted.reset_and_get_address(), &out_code)) !=
-          ZX_OK) {
+      if ((status = io->ops().accept(io, flags | SOCK_NONBLOCK, addr, addrlen,
+                                     accepted.reset_and_get_address(), &out_code)) != ZX_OK) {
         break;
       }
 
@@ -256,7 +253,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
       }
       break;
     }
-    fdio_release(io);
+    io->release();
 
     if (status != ZX_OK) {
       fdio_release_reserved(nfd);
@@ -277,12 +274,12 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
 
   // TODO(tamird): we're not handling this flag in fdio_from_channel, which seems bad.
   if (flags & SOCK_NONBLOCK) {
-    *fdio_get_ioflag(accepted_io) |= IOFLAG_NONBLOCK;
+    accepted_io->ioflag() |= IOFLAG_NONBLOCK;
   }
 
   nfd = fdio_assign_reserved(nfd, accepted_io);
   if (nfd < 0) {
-    fdio_release(accepted_io);
+    accepted_io->release();
   }
   return nfd;
 }
@@ -374,7 +371,7 @@ int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
   }
 
   return delegate(fd, [&](fdio_t* io, int16_t* out_code) {
-    return fdio_get_ops(io)->getsockname(io, addr, len, out_code);
+    return io->ops().getsockname(io, addr, len, out_code);
   });
 }
 
@@ -385,7 +382,7 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
   }
 
   return delegate(fd, [&](fdio_t* io, int16_t* out_code) {
-    return fdio_get_ops(io)->getpeername(io, addr, len, out_code);
+    return io->ops().getpeername(io, addr, len, out_code);
   });
 }
 
@@ -400,40 +397,35 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  auto clean_io = fbl::MakeAutoCall([io] { fdio_release(io); });
+  auto clean_io = fbl::MakeAutoCall([io] { io->release(); });
 
   // Handle client-maintained socket options.
   if (level == SOL_SOCKET) {
-    const zx::duration* timeout = nullptr;
-    switch (optname) {
-      case SO_RCVTIMEO:
-        timeout = fdio_get_rcvtimeo(io);
-        break;
-      case SO_SNDTIMEO:
-        timeout = fdio_get_sndtimeo(io);
-        break;
-      default:
-        break;
-    }
-    if (timeout) {
-      if (optlen == nullptr || *optlen < sizeof(struct timeval)) {
+    auto do_timeout = [&](zx::duration& timeout) {
+      if (*optlen < sizeof(struct timeval)) {
         return ERRNO(EINVAL);
       }
       *optlen = sizeof(struct timeval);
       auto duration_tv = static_cast<struct timeval*>(optval);
-      if (*timeout == zx::duration::infinite()) {
+      if (timeout == zx::duration::infinite()) {
         duration_tv->tv_sec = 0;
         duration_tv->tv_usec = 0;
       } else {
-        duration_tv->tv_sec = timeout->to_secs();
-        duration_tv->tv_usec = (*timeout - zx::sec(duration_tv->tv_sec)).to_usecs();
+        duration_tv->tv_sec = timeout.to_secs();
+        duration_tv->tv_usec = (timeout - zx::sec(duration_tv->tv_sec)).to_usecs();
       }
       return 0;
+    };
+    switch (optname) {
+      case SO_RCVTIMEO:
+        return do_timeout(io->rcvtimeo());
+      case SO_SNDTIMEO:
+        return do_timeout(io->sndtimeo());
     }
   }
 
   int16_t out_code;
-  zx_status_t status = fdio_get_ops(io)->getsockopt(io, level, optname, optval, optlen, &out_code);
+  zx_status_t status = io->ops().getsockopt(io, level, optname, optval, optlen, &out_code);
   if (status != ZX_OK) {
     return ERROR(status);
   }
@@ -449,21 +441,12 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  auto clean_io = fbl::MakeAutoCall([io] { fdio_release(io); });
+  auto clean_io = fbl::MakeAutoCall([io] { io->release(); });
 
+  // Handle client-maintained socket options.
   switch (level) {
     case SOL_SOCKET: {
-      // Handle client-maintained socket options.
-      zx::duration* timeout = nullptr;
-      switch (optname) {
-        case SO_RCVTIMEO:
-          timeout = fdio_get_rcvtimeo(io);
-          break;
-        case SO_SNDTIMEO:
-          timeout = fdio_get_sndtimeo(io);
-          break;
-      }
-      if (timeout) {
+      auto do_timeout = [&](zx::duration& timeout) {
         if (optlen < sizeof(struct timeval)) {
           return ERRNO(EINVAL);
         }
@@ -474,11 +457,17 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
           return ERRNO(EDOM);
         }
         if (duration_tv->tv_sec || duration_tv->tv_usec) {
-          *timeout = zx::sec(duration_tv->tv_sec) + zx::usec(duration_tv->tv_usec);
+          timeout = zx::sec(duration_tv->tv_sec) + zx::usec(duration_tv->tv_usec);
         } else {
-          *timeout = zx::duration::infinite();
+          timeout = zx::duration::infinite();
         }
         return 0;
+      };
+      switch (optname) {
+        case SO_RCVTIMEO:
+          return do_timeout(io->rcvtimeo());
+        case SO_SNDTIMEO:
+          return do_timeout(io->sndtimeo());
       }
       break;
     }
@@ -511,7 +500,7 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
   }
 
   int16_t out_code;
-  zx_status_t status = fdio_get_ops(io)->setsockopt(io, level, optname, optval, optlen, &out_code);
+  zx_status_t status = io->ops().setsockopt(io, level, optname, optval, optlen, &out_code);
   if (status != ZX_OK) {
     return ERROR(status);
   }

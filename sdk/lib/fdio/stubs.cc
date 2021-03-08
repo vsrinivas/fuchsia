@@ -41,7 +41,7 @@ static int checkfileat(int fd, const char* path, int flags, int err) {
 static bool fdok(int fd) {
   fdio_t* io = fd_to_io(fd);
   if (io) {
-    fdio_release(io);
+    io->release();
     return true;
   }
   return false;
@@ -61,12 +61,12 @@ static int check2fds(int fd1, int fd2, int err) {
     errno = EBADF;
     return -1;
   }
-  fdio_release(io);
+  io->release();
   if ((io = fd_to_io(fd2)) == nullptr) {
     errno = EBADF;
     return -1;
   }
-  fdio_release(io);
+  io->release();
   return seterr(err);
 }
 
@@ -80,7 +80,7 @@ static int checkfilefd(const char* path, int fd, int err) {
     errno = EBADF;
     return -1;
   }
-  fdio_release(io);
+  io->release();
   return seterr(err);
 }
 
@@ -91,7 +91,7 @@ static int checksocket(int fd, int sock_err, int err) {
     return -1;
   }
   bool is_socket = fdio_is_socket(io);
-  fdio_release(io);
+  io->release();
   if (!is_socket) {
     errno = sock_err;
     return -1;

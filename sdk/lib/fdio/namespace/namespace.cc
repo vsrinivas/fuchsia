@@ -13,9 +13,9 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
+#include "../internal.h"
 #include "local-connection.h"
 #include "local-filesystem.h"
-#include "local-vnode.h"
 
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns) { return ns->OpenRoot(); }
 
@@ -77,7 +77,7 @@ int fdio_ns_opendir(fdio_ns_t* ns) {
   }
   int fd = fdio_bind_to_fd(io, -1, 0);
   if (fd < 0) {
-    fdio_release(io);
+    io->release();
     errno = ENOMEM;
   }
   return fd;

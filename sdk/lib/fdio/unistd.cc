@@ -124,7 +124,7 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
   fdio_t* io_to_close = nullptr;
   auto clean_io = fbl::MakeAutoCall([&io_to_close] {
     if (io_to_close != nullptr) {
-      fdio_release(io_to_close);
+      io_to_close->release();
     }
   });
   {
@@ -171,8 +171,8 @@ zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
   auto* io = *ptr;
   ZX_ASSERT(io);
   var = fdio_available{};
-  if (!fdio_is_last_reference(io)) {
-    fdio_release(io);
+  if (!io->is_last_reference()) {
+    io->release();
     return ZX_ERR_UNAVAILABLE;
   }
   *out = io;
@@ -192,7 +192,7 @@ fdio_t* fdio_unsafe_fd_to_io(int fd) {
   }
   auto* io = *ptr;
   ZX_ASSERT(io);
-  fdio_acquire(io);
+  io->acquire();
   return io;
 }
 
@@ -308,7 +308,7 @@ static fdio_t* fdio_iodir(const char** path, int dirfd) {
     return io;
   }();
   if (iodir != nullptr) {
-    fdio_acquire(iodir);
+    iodir->acquire();
   }
   return iodir;
 }
@@ -430,7 +430,7 @@ static zx_status_t __fdio_open_at_impl(fdio_t** io, int dirfd, const char* path,
   bool has_ending_slash;
   zx_status_t status = __fdio_cleanpath(path, clean, &outlen, &has_ending_slash);
   if (status != ZX_OK) {
-    fdio_release(iodir);
+    iodir->release();
     return status;
   }
   // Emulate EISDIR behavior from
@@ -438,7 +438,7 @@ static zx_status_t __fdio_open_at_impl(fdio_t** io, int dirfd, const char* path,
   bool flags_incompatible_with_directory =
       ((flags & ~O_PATH & O_ACCMODE) != O_RDONLY) || (flags & O_CREAT);
   if (enforce_eisdir && has_ending_slash && flags_incompatible_with_directory) {
-    fdio_release(iodir);
+    iodir->release();
     return ZX_ERR_NOT_FILE;
   }
   flags |= (has_ending_slash ? O_DIRECTORY : 0);
@@ -457,8 +457,8 @@ static zx_status_t __fdio_open_at_impl(fdio_t** io, int dirfd, const char* path,
   if (zx_flags & ZX_FS_FLAG_VNODE_REF_ONLY) {
     zx_flags &= ZX_FS_FLAGS_ALLOWED_WITH_O_PATH;
   }
-  status = fdio_get_ops(iodir)->open(iodir, clean, zx_flags, mode, io);
-  fdio_release(iodir);
+  status = iodir->ops().open(iodir, clean, zx_flags, mode, io);
+  iodir->release();
   return status;
 }
 
@@ -559,7 +559,7 @@ static zx_status_t __fdio_opendir_containing_at(fdio_t** io, int dirfd, const ch
   bool is_dir;
   zx_status_t status = __fdio_cleanpath(path, clean, &pathlen, &is_dir);
   if (status != ZX_OK) {
-    fdio_release(iodir);
+    iodir->release();
     return status;
   }
 
@@ -576,7 +576,7 @@ static zx_status_t __fdio_opendir_containing_at(fdio_t** io, int dirfd, const ch
   // clean[i] is now the start of the name
   size_t namelen = pathlen - i;
   if (namelen + (is_dir ? 1 : 0) > NAME_MAX) {
-    fdio_release(iodir);
+    iodir->release();
     return ZX_ERR_BAD_PATH;
   }
 
@@ -598,8 +598,8 @@ static zx_status_t __fdio_opendir_containing_at(fdio_t** io, int dirfd, const ch
   }
 
   zx_status_t r =
-      fdio_get_ops(iodir)->open(iodir, clean, fdio_flags_to_zxio(O_RDONLY | O_DIRECTORY), 0, io);
-  fdio_release(iodir);
+      iodir->ops().open(iodir, clean, fdio_flags_to_zxio(O_RDONLY | O_DIRECTORY), 0, io);
+  iodir->release();
   return r;
 }
 
@@ -676,7 +676,7 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
     auto& var = fdio_fdtab[n];
     if (std::holds_alternative<fdio_available>(var)) {
       if (use_for_stdio) {
-        fdio_acquire(use_for_stdio);
+        use_for_stdio->acquire();
         var = use_for_stdio;
       } else {
         var = fdio_null_create();
@@ -712,7 +712,7 @@ extern "C" __EXPORT void __libc_extensions_fini(void) __TA_ACQUIRE(fdio_lock) {
     if (ptr != nullptr) {
       auto* io = *ptr;
       ZX_ASSERT(io);
-      fdio_release(io);
+      io->release();
     }
     var = fdio_available{};
   }
@@ -733,7 +733,7 @@ zx_status_t fdio_ns_get_installed(fdio_ns_t** ns) {
 zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx::time deadline, uint32_t* out_pending) {
   zx_handle_t h = ZX_HANDLE_INVALID;
   zx_signals_t signals = 0;
-  fdio_get_ops(io)->wait_begin(io, events, &h, &signals);
+  io->ops().wait_begin(io, events, &h, &signals);
   if (h == ZX_HANDLE_INVALID)
     // Wait operation is not applicable to the handle.
     return ZX_ERR_INVALID_ARGS;
@@ -741,7 +741,7 @@ zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx::time deadline, uint32_t* 
   zx_signals_t pending;
   zx_status_t status = zx_object_wait_one(h, signals, deadline.get(), &pending);
   if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
-    fdio_get_ops(io)->wait_end(io, pending, &events);
+    io->ops().wait_end(io, pending, &events);
     if (out_pending != nullptr) {
       *out_pending = events;
     }
@@ -758,19 +758,19 @@ zx_status_t fdio_wait_fd(int fd, uint32_t events, uint32_t* out_pending, zx_time
 
   zx_status_t status = fdio_wait(io, events, zx::time(deadline), out_pending);
 
-  fdio_release(io);
+  io->release();
   return status;
 }
 
 static zx_status_t fdio_stat(fdio_t* io, struct stat* s) {
   zxio_node_attributes_t attr;
-  zx_status_t status = fdio_get_ops(io)->get_attr(io, &attr);
+  zx_status_t status = io->ops().get_attr(io, &attr);
   if (status != ZX_OK) {
     return status;
   }
 
   memset(s, 0, sizeof(struct stat));
-  s->st_mode = fdio_get_ops(io)->convert_to_posix_mode(io, attr.protocols, attr.abilities);
+  s->st_mode = io->ops().convert_to_posix_mode(io, attr.protocols, attr.abilities);
   s->st_ino = attr.has.id ? attr.id : fio::wire::INO_UNKNOWN;
   s->st_size = attr.content_size;
   s->st_blksize = VNATTR_BLKSIZE;
@@ -800,7 +800,7 @@ extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_opti
   zx::vmo vmo;
   size_t size;
   zx_status_t r = zxio_vmo_get(fdio_get_zxio(io), vflags, vmo.reset_and_get_address(), &size);
-  fdio_release(io);
+  io->release();
   // On POSIX, performing mmap on an fd which does not support it returns an access denied error.
   if (r == ZX_ERR_NOT_SUPPORTED) {
     return ZX_ERR_ACCESS_DENIED;
@@ -829,8 +829,8 @@ int unlinkat(int dirfd, const char* path, int flags) {
   if ((r = __fdio_opendir_containing_at(&io, dirfd, path, name)) < 0) {
     return ERROR(r);
   }
-  r = fdio_get_ops(io)->unlink(io, name, strlen(name));
-  fdio_release(io);
+  r = io->ops().unlink(io, name, strlen(name));
+  io->release();
   return STATUS(r);
 }
 
@@ -856,8 +856,8 @@ ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
-  zx::time deadline = zx::deadline_after(*fdio_get_rcvtimeo(io));
+  bool nonblocking = io->ioflag() & IOFLAG_NONBLOCK;
+  zx::time deadline = zx::deadline_after(io->rcvtimeo());
 
   zx_iovec_t zx_iov[iovcnt];
   for (int i = 0; i < iovcnt; ++i) {
@@ -875,7 +875,7 @@ ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
         continue;
       }
     }
-    fdio_release(io);
+    io->release();
     if (status != ZX_OK) {
       return ERROR(status);
     }
@@ -889,8 +889,8 @@ ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
-  zx::time deadline = zx::deadline_after(*fdio_get_sndtimeo(io));
+  bool nonblocking = io->ioflag() & IOFLAG_NONBLOCK;
+  zx::time deadline = zx::deadline_after(io->sndtimeo());
 
   zx_iovec_t zx_iov[iovcnt];
   for (int i = 0; i < iovcnt; ++i) {
@@ -908,7 +908,7 @@ ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
         continue;
       }
     }
-    fdio_release(io);
+    io->release();
     if (status != ZX_OK) {
       return ERROR(status);
     }
@@ -965,7 +965,7 @@ int close(int fd) {
     ZX_ASSERT(io);
     var = fdio_available{};
   }
-  return STATUS(fdio_release(io));
+  return STATUS(io->release());
 }
 
 static int fdio_dup(int oldfd, int newfd, int starting_fd) {
@@ -975,7 +975,7 @@ static int fdio_dup(int oldfd, int newfd, int starting_fd) {
   }
   int fd = fdio_bind_to_fd(io, newfd, starting_fd);
   if (fd < 0) {
-    fdio_release(io);
+    io->release();
   }
   return fd;
 }
@@ -1026,10 +1026,10 @@ int fcntl(int fd, int cmd, ...) {
       if (io == nullptr) {
         return ERRNO(EBADF);
       }
-      int flags = (int)(*fdio_get_ioflag(io) & IOFLAG_FD_FLAGS);
+      int flags = (int)(io->ioflag() & IOFLAG_FD_FLAGS);
       // POSIX mandates that the return value be nonnegative if successful.
       assert(flags >= 0);
-      fdio_release(io);
+      io->release();
       return flags;
     }
     case F_SETFD: {
@@ -1039,9 +1039,9 @@ int fcntl(int fd, int cmd, ...) {
       }
       GET_INT_ARG(flags);
       // TODO(fxbug.dev/30920) Implement CLOEXEC.
-      *fdio_get_ioflag(io) &= ~IOFLAG_FD_FLAGS;
-      *fdio_get_ioflag(io) |= (uint32_t)flags & IOFLAG_FD_FLAGS;
-      fdio_release(io);
+      io->ioflag() &= ~IOFLAG_FD_FLAGS;
+      io->ioflag() |= (uint32_t)flags & IOFLAG_FD_FLAGS;
+      io->release();
       return 0;
     }
     case F_GETFL: {
@@ -1050,7 +1050,7 @@ int fcntl(int fd, int cmd, ...) {
         return ERRNO(EBADF);
       }
       uint32_t flags = 0;
-      zx_status_t r = fdio_get_ops(io)->get_flags(io, &flags);
+      zx_status_t r = io->ops().get_flags(io, &flags);
       if (r == ZX_ERR_NOT_SUPPORTED) {
         // We treat this as non-fatal, as it's valid for a remote to
         // simply not support FCNTL, but we still want to correctly
@@ -1059,10 +1059,10 @@ int fcntl(int fd, int cmd, ...) {
         r = ZX_OK;
       }
       flags = zxio_flags_to_fdio(flags);
-      if (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) {
+      if (io->ioflag() & IOFLAG_NONBLOCK) {
         flags |= O_NONBLOCK;
       }
-      fdio_release(io);
+      io->release();
       if (r < 0) {
         return STATUS(r);
       }
@@ -1077,7 +1077,7 @@ int fcntl(int fd, int cmd, ...) {
 
       zx_status_t r;
       uint32_t flags = fdio_flags_to_zxio(n & ~O_NONBLOCK);
-      r = fdio_get_ops(io)->set_flags(io, flags);
+      r = io->ops().set_flags(io, flags);
 
       // Some remotes don't support setting flags; we
       // can adjust their local flags anyway if NONBLOCK
@@ -1090,13 +1090,13 @@ int fcntl(int fd, int cmd, ...) {
         n = STATUS(r);
       } else {
         if (n & O_NONBLOCK) {
-          *fdio_get_ioflag(io) |= IOFLAG_NONBLOCK;
+          io->ioflag() |= IOFLAG_NONBLOCK;
         } else {
-          *fdio_get_ioflag(io) &= ~IOFLAG_NONBLOCK;
+          io->ioflag() &= ~IOFLAG_NONBLOCK;
         }
         n = 0;
       }
-      fdio_release(io);
+      io->release();
       return n;
     }
     case F_GETOWN:
@@ -1128,7 +1128,7 @@ off_t lseek(int fd, off_t offset, int whence) {
 
   size_t result = 0u;
   zx_status_t status = zxio_seek(fdio_get_zxio(io), whence, offset, &result);
-  fdio_release(io);
+  io->release();
   if (status == ZX_ERR_WRONG_TYPE) {
     // Although 'ESPIPE' is a bit of a misnomer, it is the valid errno
     // for any fd which does not implement seeking (i.e., for pipes,
@@ -1145,9 +1145,8 @@ static int truncateat(int dirfd, const char* path, off_t len) {
   if ((r = __fdio_open_at(&io, dirfd, path, O_WRONLY, 0)) < 0) {
     return ERROR(r);
   }
-  const fdio_ops_t* ops = fdio_get_ops(io);
-  r = ops->truncate(io, len);
-  fdio_release(io);
+  r = io->ops().truncate(io, len);
+  io->release();
   return STATUS(r);
 }
 
@@ -1161,8 +1160,8 @@ int ftruncate(int fd, off_t len) {
     return ERRNO(EBADF);
   }
 
-  zx_status_t r = fdio_get_ops(io)->truncate(io, len);
-  fdio_release(io);
+  zx_status_t r = io->ops().truncate(io, len);
+  io->release();
   return STATUS(r);
 }
 
@@ -1198,17 +1197,17 @@ static int two_path_op_at(int olddirfd, const char* oldpath, int newdirfd, const
   }
 
   zx_handle_t token;
-  status = fdio_get_ops(io_newparent)->get_token(io_newparent, &token);
+  status = io_newparent->ops().get_token(io_newparent, &token);
   if (status < 0) {
     goto newparent_open;
   }
-  status = (fdio_get_ops(io_oldparent)->*op_getter)(io_oldparent, oldname, strlen(oldname), token,
-                                                    newname, strlen(newname));
+  status = (io_oldparent->ops().*op_getter)(io_oldparent, oldname, strlen(oldname), token, newname,
+                                            strlen(newname));
 
 newparent_open:
-  fdio_release(io_newparent);
+  io_newparent->release();
 oldparent_open:
-  fdio_release(io_oldparent);
+  io_oldparent->release();
   return STATUS(status);
 }
 
@@ -1249,10 +1248,10 @@ static int vopenat(int dirfd, const char* path, int flags, va_list args) {
     return ERROR(r);
   }
   if (flags & O_NONBLOCK) {
-    *fdio_get_ioflag(io) |= IOFLAG_NONBLOCK;
+    io->ioflag() |= IOFLAG_NONBLOCK;
   }
   if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
-    fdio_release(io);
+    io->release();
     return ERRNO(EMFILE);
   }
   return fd;
@@ -1289,7 +1288,7 @@ int mkdirat(int dirfd, const char* path, mode_t mode) {
   if ((r = __fdio_open_at_ignore_eisdir(&io, dirfd, path, O_RDONLY | O_CREAT | O_EXCL, mode)) < 0) {
     return ERROR(r);
   }
-  fdio_release(io);
+  io->release();
   return 0;
 }
 
@@ -1300,7 +1299,7 @@ int fsync(int fd) {
     return ERRNO(EBADF);
   }
   zx_status_t status = zxio_sync(fdio_get_zxio(io));
-  fdio_release(io);
+  io->release();
   return STATUS(status);
 }
 
@@ -1327,7 +1326,7 @@ int fstat(int fd, struct stat* s) {
     return ERRNO(EBADF);
   }
   int r = STATUS(fdio_stat(io, s));
-  fdio_release(io);
+  io->release();
   return r;
 }
 
@@ -1340,7 +1339,7 @@ int fstatat(int dirfd, const char* fn, struct stat* s, int flags) {
     return ERROR(r);
   }
   r = fdio_stat(io, s);
-  fdio_release(io);
+  io->release();
   return STATUS(r);
 }
 
@@ -1421,7 +1420,7 @@ static zx_status_t zx_utimens(fdio_t* io, const std::timespec times[2], int flag
   }
 
   // set time(s) on underlying object
-  return fdio_get_ops(io)->set_attr(io, &attr);
+  return io->ops().set_attr(io, &attr);
 }
 
 __EXPORT
@@ -1439,7 +1438,7 @@ int utimensat(int dirfd, const char* path, const struct timespec times[2], int f
     return ERROR(r);
   }
   r = zx_utimens(io, times, 0);
-  fdio_release(io);
+  io->release();
   return STATUS(r);
 }
 
@@ -1447,7 +1446,7 @@ __EXPORT
 int futimens(int fd, const struct timespec times[2]) {
   fdio_t* io = fd_to_io(fd);
   zx_status_t r = zx_utimens(io, times, 0);
-  fdio_release(io);
+  io->release();
   return STATUS(r);
 }
 
@@ -1460,15 +1459,15 @@ static int socketpair_create(int fd[2], uint32_t options) {
   fd[0] = fdio_bind_to_fd(a, -1, 0);
   if (fd[0] < 0) {
     int errno_ = errno;
-    fdio_release(a);
-    fdio_release(b);
+    a->release();
+    b->release();
     return ERRNO(errno_);
   }
   fd[1] = fdio_bind_to_fd(b, -1, 0);
   if (fd[1] < 0) {
     int errno_ = errno;
     close(fd[0]);
-    fdio_release(b);
+    b->release();
     return ERRNO(errno_);
   }
   return 0;
@@ -1557,7 +1556,7 @@ int faccessat(int dirfd, const char* filename, int amode, int flag) {
       return ERROR(status);
     }
   }
-  fdio_release(io);
+  io->release();
   return STATUS(status);
 }
 
@@ -1596,7 +1595,7 @@ void fdio_chdir(fdio_t* io, const char* path) {
   fbl::AutoLock lock(&fdio_lock);
   fdio_t* old = fdio_cwd_handle;
   fdio_cwd_handle = io;
-  fdio_release(old);
+  old->release();
 }
 
 __EXPORT
@@ -1661,7 +1660,7 @@ int chroot(const char* path) {
 
     status = fdio_ns_set_root(fdio_root_ns, io);
     if (status != ZX_OK) {
-      fdio_release(io);
+      io->release();
       return ERROR(status);
     }
 
@@ -1684,7 +1683,7 @@ int chroot(const char* path) {
     fdio_root_handle = io;
   }
 
-  fdio_release(old_root);
+  old_root->release();
   return 0;
 }
 
@@ -1734,7 +1733,7 @@ DIR* fdopendir(int fd) {
   // TODO(mcgrathr): Technically this should verify that it's
   // really a directory and fail with ENOTDIR if not.  But
   // that's not so easy to do, so don't bother for now.
-  fdio_release(io);
+  io->release();
   return internal_opendir(fd);
 }
 
@@ -1742,8 +1741,8 @@ __EXPORT
 int closedir(DIR* dir) {
   if (dir->is_iterator_initialized) {
     fdio_t* io = fd_to_io(dir->fd);
-    fdio_get_ops(io)->dirent_iterator_destroy(io, &dir->iterator);
-    fdio_release(io);
+    io->ops().dirent_iterator_destroy(io, &dir->iterator);
+    io->release();
   }
   close(dir->fd);
   delete dir;
@@ -1759,21 +1758,20 @@ struct dirent* readdir(DIR* dir) {
   fdio_t* io = fd_to_io(dir->fd);
   auto clean_io = fbl::MakeAutoCall([io] {
     if (io != nullptr) {
-      fdio_release(io);
+      io->release();
     }
   });
 
   // Lazy initialize the iterator.
   if (!dir->is_iterator_initialized) {
-    zx_status_t status =
-        fdio_get_ops(io)->dirent_iterator_init(io, &dir->iterator, fdio_get_zxio(io));
+    zx_status_t status = io->ops().dirent_iterator_init(io, &dir->iterator, fdio_get_zxio(io));
     if (status != ZX_OK) {
       errno = fdio_status_to_errno(status);
       return nullptr;
     }
     dir->is_iterator_initialized = true;
   }
-  zx_status_t status = fdio_get_ops(io)->dirent_iterator_next(io, &dir->iterator, &entry);
+  zx_status_t status = io->ops().dirent_iterator_next(io, &dir->iterator, &entry);
   if (status == ZX_ERR_NOT_FOUND) {
     // Reached the end.
     ZX_DEBUG_ASSERT(!entry);
@@ -1826,8 +1824,8 @@ void rewinddir(DIR* dir) {
   fbl::AutoLock lock(&dir->lock);
   if (dir->is_iterator_initialized) {
     fdio_t* io = fd_to_io(dir->fd);
-    fdio_get_ops(io)->dirent_iterator_destroy(io, &dir->iterator);
-    fdio_release(io);
+    io->ops().dirent_iterator_destroy(io, &dir->iterator);
+    io->release();
     dir->is_iterator_initialized = false;
   }
 }
@@ -1854,7 +1852,7 @@ int isatty(int fd) {
     errno = ENOTTY;
   }
 
-  fdio_release(io);
+  io->release();
 
   return ret;
 }
@@ -1874,7 +1872,7 @@ int fdio_handle_fd(zx_handle_t h, zx_signals_t signals_in, zx_signals_t signals_
   fdio_t* io = fdio_waitable_create(h, signals_in, signals_out, shared_handle);
   int fd = fdio_bind_to_fd(io, -1, 0);
   if (fd < 0) {
-    fdio_release(io);
+    io->release();
   }
   return fd;
 }
@@ -1884,16 +1882,16 @@ int fdio_handle_fd(zx_handle_t h, zx_signals_t signals_in, zx_signals_t signals_
 __EXPORT
 void fdio_unsafe_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle_out,
                             zx_signals_t* signals_out) {
-  return fdio_get_ops(io)->wait_begin(io, events, handle_out, signals_out);
+  return io->ops().wait_begin(io, events, handle_out, signals_out);
 }
 
 __EXPORT
 void fdio_unsafe_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* events_out) {
-  return fdio_get_ops(io)->wait_end(io, signals, events_out);
+  return io->ops().wait_end(io, signals, events_out);
 }
 
 __EXPORT
-void fdio_unsafe_release(fdio_t* io) { fdio_release(io); }
+void fdio_unsafe_release(fdio_t* io) { io->release(); }
 
 // TODO: getrlimit(RLIMIT_NOFILE, ...)
 #define MAX_POLL_NFDS 1024
@@ -1933,7 +1931,7 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
     for (size_t i = 0; i < nios; ++i) {
       auto* io = ios[i];
       if (io != nullptr) {
-        fdio_release(io);
+        io->release();
       }
     }
   });
@@ -1955,7 +1953,7 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
 
     zx_handle_t h;
     zx_signals_t sigs;
-    fdio_get_ops(io)->wait_begin(io, pfd.events, &h, &sigs);
+    io->ops().wait_begin(io, pfd.events, &h, &sigs);
     if (h == ZX_HANDLE_INVALID) {
       // wait operation is not applicable to the handle
       return ERROR(ZX_ERR_INVALID_ARGS);
@@ -1981,7 +1979,7 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
     if (pfd.revents != POLLNVAL) {
       fdio_t* io = ios[j];
       uint32_t events;
-      fdio_get_ops(io)->wait_end(io, items[j].pending, &events);
+      io->ops().wait_end(io, items[j].pending, &events);
       // mask unrequested events except HUP/ERR
       pfd.revents = static_cast<int16_t>(events) & (pfd.events | POLLHUP | POLLERR);
       ++j;
@@ -2031,7 +2029,7 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
     for (size_t i = 0; i <= ios_used_max; ++i) {
       auto* io = ios[i];
       if (io != nullptr) {
-        fdio_release(io);
+        io->release();
       }
     }
   });
@@ -2061,7 +2059,7 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
 
     zx_handle_t h;
     zx_signals_t sigs;
-    fdio_get_ops(io)->wait_begin(io, events, &h, &sigs);
+    io->ops().wait_begin(io, events, &h, &sigs);
     if (h == ZX_HANDLE_INVALID) {
       return ERROR(ZX_ERR_INVALID_ARGS);
     }
@@ -2088,7 +2086,7 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
     }
     if (j < nitems) {
       uint32_t events = 0;
-      fdio_get_ops(io)->wait_end(io, items[j].pending, &events);
+      io->ops().wait_end(io, items[j].pending, &events);
       if (rfds && FD_ISSET(fd, rfds)) {
         if (events & POLLIN) {
           ++nfds;
@@ -2136,9 +2134,9 @@ int ioctl(int fd, int req, ...) {
 
   va_list ap;
   va_start(ap, req);
-  Errno e = fdio_get_ops(io)->posix_ioctl(io, req, ap);
+  Errno e = io->ops().posix_ioctl(io, req, ap);
   va_end(ap);
-  fdio_release(io);
+  io->release();
   if (e.is_error()) {
     return ERRNO(e.e);
   }
@@ -2188,18 +2186,18 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  uint32_t* ioflag = fdio_get_ioflag(io);
+  auto& ioflag = io->ioflag();
   // The |flags| are typically used to express intent *not* to issue SIGPIPE
   // via MSG_NOSIGNAL. Applications use this frequently to avoid having to
   // install additional signal handlers to handle cases where connection has
   // been closed by remote end.
-  bool nonblocking = (*ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+  bool nonblocking = (ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
   flags &= ~MSG_DONTWAIT;
-  zx::time deadline = zx::deadline_after(*fdio_get_sndtimeo(io));
+  zx::time deadline = zx::deadline_after(io->sndtimeo());
   for (;;) {
     size_t actual;
     int16_t out_code;
-    zx_status_t status = fdio_get_ops(io)->sendmsg(io, msg, flags, &actual, &out_code);
+    zx_status_t status = io->ops().sendmsg(io, msg, flags, &actual, &out_code);
     if ((status == ZX_ERR_SHOULD_WAIT || (status == ZX_OK && out_code == EWOULDBLOCK)) &&
         !nonblocking) {
       uint32_t pending;
@@ -2208,7 +2206,7 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
           break;
         case ZX_OK:
           if (pending & POLLERR) {
-            if (*ioflag & IOFLAG_SOCKET_CONNECTING) {
+            if (ioflag & IOFLAG_SOCKET_CONNECTING) {
               status = ZX_ERR_CONNECTION_REFUSED;
             } else {
               status = ZX_ERR_CONNECTION_RESET;
@@ -2220,7 +2218,7 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
           continue;
       }
     }
-    fdio_release(io);
+    io->release();
     if (status != ZX_OK) {
       return ERROR(status);
     }
@@ -2237,14 +2235,14 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  uint32_t* ioflag = fdio_get_ioflag(io);
-  bool nonblocking = (*ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+  auto& ioflag = io->ioflag();
+  bool nonblocking = (ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
   flags &= ~MSG_DONTWAIT;
-  zx::time deadline = zx::deadline_after(*fdio_get_rcvtimeo(io));
+  zx::time deadline = zx::deadline_after(io->rcvtimeo());
   for (;;) {
     size_t actual;
     int16_t out_code;
-    zx_status_t status = fdio_get_ops(io)->recvmsg(io, msg, flags, &actual, &out_code);
+    zx_status_t status = io->ops().recvmsg(io, msg, flags, &actual, &out_code);
     if ((status == ZX_ERR_SHOULD_WAIT || (status == ZX_OK && out_code == EWOULDBLOCK)) &&
         !nonblocking) {
       uint32_t pending;
@@ -2253,7 +2251,7 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
           break;
         case ZX_OK:
           if (pending & POLLERR) {
-            if (*ioflag & IOFLAG_SOCKET_CONNECTING) {
+            if (ioflag & IOFLAG_SOCKET_CONNECTING) {
               status = ZX_ERR_CONNECTION_REFUSED;
             } else {
               status = ZX_ERR_CONNECTION_RESET;
@@ -2265,7 +2263,7 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
           continue;
       }
     }
-    fdio_release(io);
+    io->release();
     if (status != ZX_OK) {
       return ERROR(status);
     }
@@ -2284,8 +2282,8 @@ int shutdown(int fd, int how) {
   }
 
   int16_t out_code;
-  zx_status_t status = fdio_get_ops(io)->shutdown(io, how, &out_code);
-  fdio_release(io);
+  zx_status_t status = io->ops().shutdown(io, how, &out_code);
+  io->release();
   if (status != ZX_OK) {
     return ERROR(status);
   }
@@ -2307,11 +2305,11 @@ static int fs_stat(int fd, struct statfs* buf) {
   auto directory_admin =
       fidl::UnownedClientEnd<fio::DirectoryAdmin>(fdio_unsafe_borrow_channel(io));
   if (!directory_admin.is_valid()) {
-    fdio_release(io);
+    io->release();
     return ERRNO(ENOTSUP);
   }
   auto result = fio::DirectoryAdmin::Call::QueryFilesystem(directory_admin);
-  fdio_release(io);
+  io->release();
   if (result.status() != ZX_OK) {
     return ERROR(result.status());
   }

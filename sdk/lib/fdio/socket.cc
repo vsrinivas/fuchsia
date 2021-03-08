@@ -547,28 +547,27 @@ enum class IO {
 // Read the current ioflag state and try to infer the return zx_status.
 // Returns the appropriate ZX_ERR status if possible, else returns ZX_OK.
 zx_status_t zxsio_flag_status(fdio_t* io, IO op) {
-  uint32_t* ioflag = fdio_get_ioflag(io);
-  const int flags = *ioflag;
+  auto& ioflag = io->ioflag();
 
-  if (flags & IOFLAG_SOCKET_HAS_ERROR) {
+  if (ioflag & IOFLAG_SOCKET_HAS_ERROR) {
     // Reset the socket connected or connecting flags, so that the subsequent calls do not return
     // the same error. Test: src/connectivity/network/tests/bsdsocket_test.cc:TestListenWhileConnect
-    if (flags & IOFLAG_SOCKET_CONNECTED) {
-      *ioflag ^= IOFLAG_SOCKET_CONNECTED;
+    if (ioflag & IOFLAG_SOCKET_CONNECTED) {
+      ioflag ^= IOFLAG_SOCKET_CONNECTED;
       return ZX_ERR_CONNECTION_RESET;
     }
-    if (flags & IOFLAG_SOCKET_CONNECTING) {
-      *ioflag ^= IOFLAG_SOCKET_CONNECTING;
+    if (ioflag & IOFLAG_SOCKET_CONNECTING) {
+      ioflag ^= IOFLAG_SOCKET_CONNECTING;
       return ZX_ERR_CONNECTION_REFUSED;
     }
     return ZX_OK;
   }
 
-  if (flags & IOFLAG_SOCKET_CONNECTED) {
+  if (ioflag & IOFLAG_SOCKET_CONNECTED) {
     return ZX_OK;
   }
 
-  if (flags & IOFLAG_SOCKET_CONNECTING) {
+  if (ioflag & IOFLAG_SOCKET_CONNECTING) {
     return ZX_ERR_SHOULD_WAIT;
   }
 
@@ -582,26 +581,26 @@ zx_status_t zxsio_flag_status(fdio_t* io, IO op) {
 
 }  // namespace
 
-static void fdio_wait_begin_socket(fdio_t* io, const zx::socket& socket, uint32_t* ioflag,
-                                   uint32_t events, zx_handle_t* handle,
-                                   zx_signals_t* out_signals) {
+static void fdio_wait_begin_socket(fdio_t* io, const zx::socket& socket, uint32_t events,
+                                   zx_handle_t* handle, zx_signals_t* out_signals) {
   // TODO(https://fxbug.dev/67465): locking for flags/state
-  if (*ioflag & IOFLAG_SOCKET_CONNECTING) {
+  auto& ioflag = io->ioflag();
+  if (ioflag & IOFLAG_SOCKET_CONNECTING) {
     // check the connection state
     zx_signals_t observed;
     zx_status_t status =
         socket.wait_one(ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), &observed);
     if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
       if (observed & ZXSIO_SIGNAL_CONNECTED) {
-        *ioflag ^= IOFLAG_SOCKET_CONNECTING;
-        *ioflag |= IOFLAG_SOCKET_CONNECTED;
+        ioflag ^= IOFLAG_SOCKET_CONNECTING;
+        ioflag |= IOFLAG_SOCKET_CONNECTED;
       }
     }
   }
 
   zxio_signals_t signals = ZXIO_SIGNAL_PEER_CLOSED;
 
-  if (*ioflag & IOFLAG_SOCKET_CONNECTED) {
+  if (ioflag & IOFLAG_SOCKET_CONNECTED) {
     fdio_zxio_pipe_wait_begin(io, events, signals, handle, out_signals);
     return;
   }
@@ -613,7 +612,7 @@ static void fdio_wait_begin_socket(fdio_t* io, const zx::socket& socket, uint32_
     signals |= ZXIO_SIGNAL_READ_DISABLED;
   }
 
-  if (*ioflag & IOFLAG_SOCKET_CONNECTING) {
+  if (ioflag & IOFLAG_SOCKET_CONNECTING) {
     if (events & POLLIN) {
       signals |= ZXIO_SIGNAL_READABLE;
     }
@@ -634,19 +633,19 @@ static void fdio_wait_begin_socket(fdio_t* io, const zx::socket& socket, uint32_
 }
 
 static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t zx_signals, uint32_t* out_events) {
-  uint32_t* ioflag = fdio_get_ioflag(io);
+  auto& ioflag = io->ioflag();
   // check the connection state
-  if (*ioflag & IOFLAG_SOCKET_CONNECTING) {
+  if (ioflag & IOFLAG_SOCKET_CONNECTING) {
     if (zx_signals & ZXSIO_SIGNAL_CONNECTED) {
-      *ioflag ^= IOFLAG_SOCKET_CONNECTING;
-      *ioflag |= IOFLAG_SOCKET_CONNECTED;
+      ioflag ^= IOFLAG_SOCKET_CONNECTING;
+      ioflag |= IOFLAG_SOCKET_CONNECTED;
     }
     zx_signals &= ~ZXSIO_SIGNAL_CONNECTED;
   }
 
   zxio_signals_t signals = ZXIO_SIGNAL_NONE;
   uint32_t events = 0;
-  if (*ioflag & IOFLAG_SOCKET_CONNECTED) {
+  if (ioflag & IOFLAG_SOCKET_CONNECTED) {
     fdio_zxio_pipe_wait_end(io, zx_signals, &events, &signals);
   } else {
     zxio_wait_end(fdio_get_zxio(io), zx_signals, &signals);
@@ -670,9 +669,9 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t zx_signals, uint32_t*
     //     The caller of this routine can interpret POLLHUP to return appropriate error.
     // (2) If the read/write is called post connection reset, that is treated as I/O
     //     on a peer-closed socket handle.
-    if (*ioflag & IOFLAG_NONBLOCK &&
+    if (ioflag & IOFLAG_NONBLOCK &&
         (zx_signals & (ZXSIO_SIGNAL_CONNECTION_REFUSED | ZXSIO_SIGNAL_CONNECTION_RESET))) {
-      *ioflag |= IOFLAG_SOCKET_HAS_ERROR;
+      ioflag |= IOFLAG_SOCKET_HAS_ERROR;
     }
     events |= POLLIN | POLLOUT | POLLERR | POLLHUP | POLLRDHUP;
   }
@@ -981,13 +980,13 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
 
 fdio_t* fdio_datagram_socket_create(zx::eventpair event,
                                     fidl::ClientEnd<fsocket::DatagramSocket> client) {
-  fdio_t* io = fdio_alloc(&fdio_datagram_socket_ops);
+  fdio_t* io = fdio_t::alloc(&fdio_datagram_socket_ops);
   if (io == nullptr) {
     return nullptr;
   }
-  zxio_storage_t* storage = fdio_get_zxio_storage(io);
-  auto zs = new (storage) zxio_datagram_socket_t{
-      .io = storage->io,
+  zxio_storage_t& storage = io->zxio_storage();
+  auto zs = new (&storage) zxio_datagram_socket_t{
+      .io = storage.io,
       .event = std::move(event),
       .client = fidl::BindSyncClient(std::move(client)),
   };
@@ -1025,8 +1024,7 @@ static fdio_ops_t fdio_stream_socket_ops = {
     .wait_begin =
         [](fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) {
           auto const sio = reinterpret_cast<zxio_stream_socket_t*>(fdio_get_zxio(io));
-          fdio_wait_begin_socket(io, sio->pipe.socket, fdio_get_ioflag(io), events, handle,
-                                 out_signals);
+          fdio_wait_begin_socket(io, sio->pipe.socket, events, handle, out_signals);
         },
     .wait_end = zxsio_wait_end_stream,
     .posix_ioctl =
@@ -1211,12 +1209,12 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
 
 fdio_t* fdio_stream_socket_create(zx::socket socket, fidl::ClientEnd<fsocket::StreamSocket> client,
                                   zx_info_socket_t info) {
-  fdio_t* io = fdio_alloc(&fdio_stream_socket_ops);
+  fdio_t* io = fdio_t::alloc(&fdio_stream_socket_ops);
   if (io == nullptr) {
     return nullptr;
   }
-  zxio_storage_t* storage = fdio_get_zxio_storage(io);
-  auto zs = new (storage) zxio_stream_socket_t{
+  zxio_storage_t& storage = io->zxio_storage();
+  auto zs = new (&storage) zxio_stream_socket_t{
       .io = {},
       .pipe = {},
       .client = fidl::BindSyncClient(std::move(client)),
@@ -1230,6 +1228,6 @@ bool fdio_is_socket(fdio_t* io) {
   if (!io) {
     return false;
   }
-  const fdio_ops_t* ops = fdio_get_ops(io);
+  const fdio_ops_t* ops = &io->ops();
   return ops == &fdio_datagram_socket_ops || ops == &fdio_stream_socket_ops;
 }

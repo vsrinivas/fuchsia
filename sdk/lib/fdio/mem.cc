@@ -47,7 +47,7 @@ int memfd_create(const char* name, unsigned int flags) {
 
   int fd = fdio_bind_to_fd(io, -1, 0);
   if (fd < 0) {
-    fdio_release(io);
+    io->release();
   }
   return fd;
 }
