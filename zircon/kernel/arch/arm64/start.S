@@ -212,7 +212,7 @@ FUNCTION(_start)
 
     /* set up the mmu */
 
-    /* Invalidate TLB */
+    /* Invalidate the entire TLB */
     tlbi    vmalle1is
     dsb     sy
     isb
@@ -224,13 +224,16 @@ FUNCTION(_start)
     /* Initialize TCR_EL1 */
     /* set cacheable attributes on translation walk */
     /* (SMP extensions) non-shareable, inner write-back write-allocate */
+    /* both aspaces active, current ASID in TTBR1 */
     movlit  tmp, MMU_TCR_FLAGS_IDENT
     msr     tcr_el1, tmp
     isb
 
-    /* Write ttbr with phys addr of the translation table */
+    /* Write the ttbrs with phys addr of the translation table */
     msr     ttbr0_el1, page_table0
-    msr     ttbr1_el1, page_table1
+    /* Or in 0x1 (GLOBAL_ASID) bits. Keep in sync with mmu.h  */
+    orr     tmp, page_table1, #(0x1 << 48)
+    msr     ttbr1_el1, tmp
     isb
 
     /* Read SCTLR */
@@ -258,8 +261,9 @@ FUNCTION(_start)
     msr     tcr_el1, tmp
     isb
 
-    /* Invalidate TLB */
+    /* Invalidate the entire TLB */
     tlbi    vmalle1
+    dsb     sy
     isb
 
     cbnz    cpuid, .Lsecondary_boot
