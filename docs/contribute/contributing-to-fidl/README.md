@@ -647,7 +647,7 @@ instructions for the example case where `fidlc --files test.fidl` is crashing:
 
 Note: Even with all optimizations turned off, the binaries in
 `out/default/host_x64` are stripped. For debugging, you should use the binaries
-in the `exe.unstripped` sub-directory, such as `out/default/host_x64/exe.unstripped/fidlc`.
+in the `exe.unstripped` subdirectory, such as `out/default/host_x64/exe.unstripped/fidlc`.
 
 ### `gdb` {#gdb}
 

@@ -173,13 +173,13 @@ top-level BUILD.gn file:
     behavior" of a particular product - for example, including the directory
     target should not cause new software to be automatically started at boot
     time, or override default service topologies or service maps.
-  * When a new sub-directory is added to an area, it should define this
+  * When a new subdirectory is added to an area, it should define this
     directory-name target, as well as including the directory name target in
     the parent directory target.
 
 * `tests`
   * All of the tests within this area
-  * When a new sub-directory is added with a new tests target, the tests target
+  * When a new subdirectory is added with a new tests target, the tests target
     should be added to the parent directories tests target.
 
 ### Naming conventions

@@ -1353,7 +1353,7 @@ From //build/images/args.gni:46
 
 ### graphics_compute_generate_debug_shaders
 Set to true in your args.gn file to generate pre-processed and
-auto-formatted shaders under the "debug" sub-directory of HotSort
+auto-formatted shaders under the "debug" subdirectory of HotSort
 and Spinel target generation output directories.
 
 These are never used, but can be reviewed manually to verify the

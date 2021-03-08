@@ -149,7 +149,7 @@ fn flaky_test_we_need_to_fix() { ... }
 Alternatively, you may also disable an entire test executable within a
 package containing several test executables. To do this, edit the `BUILD.gn` as
 follows: `tests = [ { name = "scenic_unittests", disabled = true } ]`. As a
-result, `scenic_unittests` will be put in a `disabled` sub-directory of
+result, `scenic_unittests` will be put in a `disabled` subdirectory of
 `/pkgfs/packages/<package_name>/0/test`, and will not be run by the CQ system.
 
 ### Comment out the test

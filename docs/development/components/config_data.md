@@ -141,7 +141,7 @@ For instance your parent may have a declaration that looks like this:
 }
 ```
 
-Note that by convention a sub-directory of the parent's `"config-data"`, named
+Note that by convention a subdirectory of the parent's `"config-data"`, named
 according to the child's package name, is offered to the child component.
 
 ### Updating
