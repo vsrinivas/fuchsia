@@ -4,17 +4,26 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
 
 group("tests") {
   testonly = true
+  deps = [ ":fidl-fuzzer-tests" ]
+}
 
-  # TODO(71013): Empty for now, since this library is due to be updated.
-  deps = []
+fuchsia_component("fidl-fuzzer-core-tests") {
+  testonly = true
+  manifest = "meta/core-tests.cmx"
+  deps = [ ":fidl_fuzzer_core_unittests" ]
+}
+
+fuchsia_test_package("fidl-fuzzer-tests") {
+  test_components = [ ":fidl-fuzzer-core-tests" ]
 }
 
 ########################################
 # Common elements
-# TODO(71013): Update and replace.
 
 fidl("fuchsia.fuzzer") {
   sources = [ "fuzzer.fidl" ]
@@ -22,15 +31,32 @@ fidl("fuchsia.fuzzer") {
 }
 
 source_set("core_lib") {
-  sources = [
-    "shared-memory.cc",
-    "test-input.cc",
-  ]
+  sources = [ "shared-memory.cc" ]
   public_deps = [
     ":fuchsia.fuzzer",
     "//src/lib/fxl",
   ]
   public_configs = [ ":config" ]
+}
+
+test("fidl_fuzzer_core_unittests") {
+  sources = [ "shared-memory-unittest.cc" ]
+  deps = [
+    ":core_lib",
+    ":test_utils",
+  ]
+}
+
+source_set("test_utils") {
+  testonly = true
+  deps = [
+    ":core_lib",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+  public_deps = [
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
 }
 
 config("config") {

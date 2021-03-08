@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FUZZING_FIDL_SHARED_MEMORY_H_
 #define SRC_LIB_FUZZING_FIDL_SHARED_MEMORY_H_
 
+#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fxl/macros.h>
 #include <lib/zx/vmo.h>
 #include <stddef.h>
@@ -12,60 +13,108 @@
 #include <zircon/types.h>
 
 namespace fuzzing {
+namespace {
 
-// This small utility class can be used to share VMOs mapped into multiple processes. For example,
-// for a given |max_size|, a FIDL client of some service might do the following (error-checking
-// omitted):
-//
+using ::fuchsia::mem::Buffer;
+
+}  // namespace
+
+// This class can be used to share VMOs mapped into multiple processes. For example, one process
+// may create a |fuchsia.mem.Buffer| with a certain capacity using:
 //   SharedMemory shmem;
-//   shmem.Create(max_size);
 //   fuchsia.mem.Buffer buffer;
-//   shmem.Share(&buffer.vmo);
+//   shmem.Create(capacity, &buffer);
 //
-// The service might then do (again, error-checking omitted):
-//
+// It can then send it to another process via FIDL, which can link it:
 //   SharedMemory shmem;
-//   shmem.Link(buffer.vmo);
+//   shmem.Link(buffer);
 //
-class SharedMemory {
+// This buffer can be used to share fixed-length data, e.g. coverage data.
+//
+// For variable-length data, both callers should set the optional |inline_size| parameter to true,
+// e.g.
+//   shmem.Create(capacity, &buffer, /* inline_size= */ true);
+// and
+//   shmem.Link(buffer, /* inline_size= */ true);
+//
+// This will allocate |sizeof(uint64_t)| additional bytes to store the size of valid data in the
+// VMO. This size can be updated using |write| or |Clear| and retrieved with |size|, allowing
+// callers to send or receive variable-length data. Reading and writing this size is not guaranteed
+// to be atomic, so callers should use some other method to coordinate when the size changes, e.g.
+// with a SignalCoordinator.
+//
+class SharedMemory final {
  public:
-  SharedMemory();
-  SharedMemory(SharedMemory &&other);
-  virtual ~SharedMemory();
+  SharedMemory() = default;
+  SharedMemory(SharedMemory&& other) { *this = std::move(other); }
+  SharedMemory& operator=(SharedMemory&& other);
+  ~SharedMemory();
 
-  bool is_mapped() const { return addr_ != 0; }
-  const zx::vmo &vmo() const { return vmo_; }
+  const zx::vmo& vmo() const { return vmo_; }
   zx_vaddr_t addr() const { return addr_; }
-  template <typename T>
-  T *begin() const {
-    return reinterpret_cast<T *>(addr_);
+  size_t capacity() const { return capacity_; }
+  bool is_mapped() const { return addr_ != 0; }
+
+  // Describes the memory region, e.g. like inline 8-bit counters (uint8_t) for
+  // __sanitizer_cov_inline_8bit_counters_init or PC tables (uintptr_t) for
+  // __sanitizer_cov_pc_tables_init.
+  template <typename T = void>
+  T* begin() const {
+    return reinterpret_cast<T*>(Begin());
   }
-  template <typename T>
-  T *end() const {
-    return reinterpret_cast<T *>(addr_ + len_);
+  template <typename T = void>
+  T* end() const {
+    return reinterpret_cast<T*>(End());
   }
-  size_t len() const { return len_; }
 
-  // Create a VMO of at least |len| bytes and map it. This method can be called at most once, and is
-  // exclusive with |Link|.
-  virtual zx_status_t Create(size_t len);
+  // Describes the memory region like a fuzzer test input, e.g. for LLVMFuzzerTestOneInput.
+  uint8_t* data() const { return begin<uint8_t>(); }
+  size_t size() const { return GetSize(); }
 
-  // Duplicate the underlying VMO and return it via |out|. This is typically called after |Create|,
-  // but it does not need to be called immediately. For example, the VMO may be created and mapped
-  // early, and shared only later when a connection is established.
-  virtual zx_status_t Share(zx::vmo *out_vmo);
+  // Resets this object, then creates a VMO of at least |capacity| bytes, maps it, and returns a
+  // duplicate handle in |out|. If |inline_size| is true, this object can be used to send or receive
+  // variable-length data as described in the class description.
+  void Create(size_t capacity, Buffer* out, bool inline_size = false);
 
-  // Duplicates |vmo| and maps it. This method can be called at most once, and is exclusive with
-  // |Create|. |len| must be less than or equal to the VMO's size.
-  virtual zx_status_t Link(const zx::vmo &vmo, size_t len);
+  // Like |Create|, but determines the capacity and initial contents automatically from the memory
+  // region described by |begin| and |end|. |begin| MUST be less than |end|, i.e. the region must be
+  // valid and non-empty. This method cannot be used to send variable-length data. The pointers are
+  // saved and used by |Update|; they MUST remain valid until |Reset| is called.
+  void Share(const void* begin, const void* end, Buffer* out);
+
+  // Resets this object, then takes ownership of the VMO handle in |buffer| and maps it. If
+  // |inline_size| is true, this object can be used to send or receive variable-length data as
+  // described in the class description.
+  void Link(Buffer buffer, bool inline_size = false);
+
+  // Writes data to the VMO. If unmapped, returns ZX_ERR_BAD_STATE. If the data is truncated due to
+  // insufficient remaining capacity, writes as much as it can and returns ZX_ERR_BUFFER_TOO_SMALL.
+  zx_status_t Write(const void* data, size_t size);
+
+  // If this object was |Share|d, copies the data from the original memory region to this objects
+  // shared memory; otherwise, does nothing.
+  void Update();
+
+  // Sets the amount valid date to 0.
+  void Clear();
 
   // Unmaps and resets the VMO if mapped.
   void Reset();
 
  private:
+  // Manages the (possibly inlined) size.
+  size_t GetSize() const;
+  void SetSize(size_t size);
+
+  // Gets memory region pointers, accounting for the possibly inlined header.
+  void* Begin() const;
+  void* End() const;
+
   zx::vmo vmo_;
-  zx_vaddr_t addr_;
-  size_t len_;
+  zx_vaddr_t addr_ = 0;
+  size_t capacity_ = 0;
+  const void* source_ = nullptr;
+  size_t size_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SharedMemory);
 };
