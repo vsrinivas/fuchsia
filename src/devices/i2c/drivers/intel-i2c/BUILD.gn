@@ -40,6 +40,7 @@ driver_module("intel-i2c") {
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",

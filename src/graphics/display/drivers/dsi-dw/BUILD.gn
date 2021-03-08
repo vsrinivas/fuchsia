@@ -37,6 +37,7 @@ source_set("common_srcs") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/bitmap",

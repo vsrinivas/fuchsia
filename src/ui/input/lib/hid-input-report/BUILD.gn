@@ -54,6 +54,7 @@ test("lib-hid-input-report-test") {
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//sdk/fidl/fuchsia.ui.input2",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//src/ui/lib/key_util",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",

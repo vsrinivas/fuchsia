@@ -55,6 +55,7 @@ group("common") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",

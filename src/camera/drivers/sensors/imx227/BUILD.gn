@@ -39,6 +39,7 @@ source_set("lib") {
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/lib/syslog/cpp",
     "//src/devices/lib/driver",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//zircon/public/lib/safemath",
     "//zircon/system/ulib/fzl",
   ]

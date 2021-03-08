@@ -19,6 +19,7 @@ source_set("src") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",

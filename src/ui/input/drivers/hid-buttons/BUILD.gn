@@ -38,6 +38,7 @@ source_set("common") {
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/fidl/fuchsia.buttons:fuchsia.buttons_llcpp",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",

@@ -67,6 +67,7 @@ test("hid-input-report-test-bin") {
     "//src/devices/lib/driver",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//src/ui/input/lib/hid-input-report",
     "//zircon/public/lib/fbl",

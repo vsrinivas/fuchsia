@@ -59,6 +59,7 @@ source_set("common") {
     "//src/devices/lib/mmio",
     "//src/graphics/display/lib/device-protocol-display",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",

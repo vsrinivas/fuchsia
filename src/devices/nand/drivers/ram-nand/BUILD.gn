@@ -49,6 +49,7 @@ source_set("common") {
     "//sdk/banjo/fuchsia.hardware.nand",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",

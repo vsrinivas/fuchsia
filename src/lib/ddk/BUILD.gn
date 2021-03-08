@@ -12,21 +12,6 @@ group("tests") {
 
 library_headers("ddk-headers") {
   headers = [
-    "ddk/metadata/bad-block.h",
-    "ddk/metadata/buttons.h",
-    "ddk/metadata/camera.h",
-    "ddk/metadata/clock.h",
-    "ddk/metadata/display.h",
-    "ddk/metadata/gpio.h",
-    "ddk/metadata/gpt.h",
-    "ddk/metadata/i2c.h",
-    "ddk/metadata/init-step.h",
-    "ddk/metadata/lights.h",
-    "ddk/metadata/nand.h",
-    "ddk/metadata/power.h",
-    "ddk/metadata/pwm.h",
-    "ddk/metadata/spi.h",
-    "ddk/metadata/test.h",
     "ddk/trace/event.h",
     "ddk/binding_priv.h",
     "ddk/debug.h",
@@ -77,8 +62,26 @@ static_library("ddk") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-source_set("ddk-metadata") {
-  sources = [ "include/ddk/usb-peripheral-config.h" ]
+library_headers("ddk-metadata-headers") {
+  headers = [
+    "ddk/binding_priv.h",  # for i2c.h
+    "ddk/metadata/bad-block.h",
+    "ddk/metadata/buttons.h",
+    "ddk/metadata/camera.h",
+    "ddk/metadata/clock.h",
+    "ddk/metadata/display.h",
+    "ddk/metadata/gpio.h",
+    "ddk/metadata/gpt.h",
+    "ddk/metadata/i2c.h",
+    "ddk/metadata/init-step.h",
+    "ddk/metadata/lights.h",
+    "ddk/metadata/nand.h",
+    "ddk/metadata/power.h",
+    "ddk/metadata/pwm.h",
+    "ddk/metadata/spi.h",
+    "ddk/metadata/test.h",
+    "ddk/usb-peripheral-config.h",
+  ]
 
   public_deps = [
     # <ddk/usb-peripheral-config.h> has #include <fuchsia/hardware/usb/peripheral/c/fidl.h>.

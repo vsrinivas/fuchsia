@@ -70,6 +70,7 @@ test("spi-test-bin") {
     "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",

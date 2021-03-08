@@ -43,6 +43,7 @@ driver_module("msm8x53-som") {
     "//src/devices/lib/driver",
     "//src/devices/lib/msm8x53",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",

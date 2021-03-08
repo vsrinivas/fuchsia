@@ -108,6 +108,7 @@ test("gt92xx-test") {
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//src/ui/input/testing/mock-hidbus-ifc",
     "//zircon/public/lib/fbl",

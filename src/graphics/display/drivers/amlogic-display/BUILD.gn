@@ -51,6 +51,7 @@ source_set("common_srcs") {
     "//src/devices/lib/mmio",
     "//src/graphics/display/lib/device-protocol-display",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",

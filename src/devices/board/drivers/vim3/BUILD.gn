@@ -65,7 +65,7 @@ driver_module("vim3") {
     "//src/devices/lib/mmio",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-    "//src/lib/ddk:ddk-metadata",
+    "//src/lib/ddk:ddk-metadata-headers",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
