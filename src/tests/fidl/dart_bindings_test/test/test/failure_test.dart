@@ -5,9 +5,8 @@
 import 'dart:async';
 
 import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
+import 'package:server_test/server.dart';
 import 'package:test/test.dart';
-
-import './server.dart';
 
 void main() async {
   TestServerInstance server;

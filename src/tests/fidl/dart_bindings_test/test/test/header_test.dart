@@ -4,12 +4,12 @@
 
 import 'dart:async';
 
-import 'package:pedantic/pedantic.dart';
-import 'package:zircon/zircon.dart';
-import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
-import 'package:test/test.dart';
 import 'package:fidl/fidl.dart';
-import './server.dart';
+import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
+import 'package:pedantic/pedantic.dart';
+import 'package:server_test/server.dart';
+import 'package:test/test.dart';
+import 'package:zircon/zircon.dart';
 
 class TestAsyncBinding extends AsyncBinding<EmptyImpl> {
   // ignore: empty_constructor_bodies

@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 import 'dart:typed_data';
-import 'package:test/test.dart';
-import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
-import 'package:zircon/zircon.dart' show System;
 
-import './server.dart';
+import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
+import 'package:server_test/server.dart';
+import 'package:test/test.dart';
+import 'package:zircon/zircon.dart' show System;
 
 void main() async {
   TestServerInstance server;
