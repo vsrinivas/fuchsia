@@ -16,6 +16,7 @@
 #include <thread>
 #include <unordered_map>
 
+#include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/flatland/allocator.h"
 #include "src/ui/scenic/lib/flatland/flatland.h"
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
@@ -23,17 +24,23 @@
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/utils/post_initialization_runner.h"
 
 namespace flatland {
 
 class FlatlandManager : public scheduling::SessionUpdater {
  public:
-  FlatlandManager(
-      async_dispatcher_t* dispatcher, const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
-      const std::shared_ptr<UberStructSystem>& uber_struct_system,
-      const std::shared_ptr<LinkSystem>& link_system,
-      const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers);
+  FlatlandManager(async_dispatcher_t* dispatcher,
+                  const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
+                  const std::shared_ptr<UberStructSystem>& uber_struct_system,
+                  const std::shared_ptr<LinkSystem>& link_system);
   ~FlatlandManager() override;
+
+  // This must be called exactly once.  An incoming requests to connect to Flatland services (e.g.
+  // CreateFlatland()) will be deferred until this is called.
+  void Initialize(
+      std::shared_ptr<scenic_impl::display::Display> display,
+      const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers);
 
   void CreateFlatland(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> flatland);
 
@@ -63,6 +70,8 @@ class FlatlandManager : public scheduling::SessionUpdater {
   std::shared_ptr<UberStructSystem> uber_struct_system_;
   std::shared_ptr<LinkSystem> link_system_;
   std::vector<std::shared_ptr<BufferCollectionImporter>> buffer_collection_importers_;
+
+  utils::PostInitializationRunner post_initialization_runner_;
 
   // Represents an individual Flatland session for a client.
   struct FlatlandInstance {
@@ -101,6 +110,10 @@ class FlatlandManager : public scheduling::SessionUpdater {
   // its own destruction when the client makes an unrecoverable error. This function will be called
   // on Flatland instance worker threads.
   void DestroyInstanceFunction(scheduling::SessionId session_id);
+
+  // Eventually we will support multiple displays, but as we bootstrap Flatland we assume that
+  // there is a single primary display.
+  std::shared_ptr<scenic_impl::display::Display> primary_display_;
 };
 
 }  // namespace flatland

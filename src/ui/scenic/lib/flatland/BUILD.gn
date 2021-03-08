@@ -48,7 +48,9 @@ source_set("flatland") {
     # since it is currently only used for escher::FenceQueue.
     "//src/ui/lib/escher",
     "//src/ui/lib/glm_workaround",
+    "//src/ui/scenic/lib/display",
     "//src/ui/scenic/lib/flatland/buffers",
+    "//src/ui/scenic/lib/utils",
     "//zircon/public/lib/fit",
   ]
 
@@ -59,5 +61,31 @@ source_set("flatland") {
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//src/ui/scenic/lib/utils",
     "//zircon/system/ulib/trace",
+  ]
+}
+
+group("pixeltests") {
+  testonly = true
+
+  public_deps = [ "engine/tests/pixeltests" ]
+}
+
+group("unittests") {
+  testonly = true
+
+  public_deps = [
+    "buffers/tests:unittests",
+    "engine/tests:unittests",
+    "renderer/tests:unittests",
+    "tests:unittests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":pixeltests",
+    ":unittests",
   ]
 }

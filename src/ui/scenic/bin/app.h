@@ -16,6 +16,7 @@
 #include "src/ui/scenic/lib/annotation/annotation_registry.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/flatland/default_flatland_presenter.h"
+#include "src/ui/scenic/lib/flatland/engine/display_compositor.h"
 #include "src/ui/scenic/lib/flatland/flatland_manager.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
@@ -72,6 +73,7 @@ class App {
   std::shared_ptr<flatland::LinkSystem> link_system_;
   std::shared_ptr<flatland::DefaultFlatlandPresenter> flatland_presenter_;
   std::shared_ptr<flatland::FlatlandManager> flatland_manager_;
+  std::shared_ptr<flatland::DisplayCompositor> flatland_compositor_;
 
   AnnotationRegistry annotation_registry_;
 

@@ -114,9 +114,8 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
 
     flatland_presenter_ = std::shared_ptr<FlatlandPresenter>(mock_flatland_presenter_);
 
-    manager_ = std::make_unique<FlatlandManager>(
-        dispatcher(), flatland_presenter_, uber_struct_system_, link_system_,
-        std::vector<std::shared_ptr<flatland::BufferCollectionImporter>>());
+    manager_ = std::make_unique<FlatlandManager>(dispatcher(), flatland_presenter_,
+                                                 uber_struct_system_, link_system_);
   }
 
   void TearDown() override {
@@ -172,6 +171,15 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
     return next_present_id;
   }
 
+  void InitializeManagerWithDisplay() {
+    uint64_t kDisplayId = 1;
+    uint32_t kDisplayWidth = 640;
+    uint32_t kDisplayHeight = 480;
+    manager_->Initialize(
+        std::make_shared<scenic_impl::display::Display>(kDisplayId, kDisplayWidth, kDisplayHeight),
+        {});
+  }
+
  protected:
   ::testing::StrictMock<MockFlatlandPresenter>* mock_flatland_presenter_;
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
@@ -195,6 +203,8 @@ namespace flatland {
 namespace test {
 
 TEST_F(FlatlandManagerTest, CreateFlatlands) {
+  InitializeManagerWithDisplay();
+
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1;
   manager_->CreateFlatland(flatland1.NewRequest(dispatcher()));
 
@@ -205,11 +215,34 @@ TEST_F(FlatlandManagerTest, CreateFlatlands) {
 
   EXPECT_TRUE(flatland1.is_bound());
   EXPECT_TRUE(flatland2.is_bound());
+  EXPECT_EQ(manager_->GetSessionCount(), 2ul);
+}
 
+TEST_F(FlatlandManagerTest, CreateFlatlandsWithDeferredInitialization) {
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1;
+  manager_->CreateFlatland(flatland1.NewRequest(dispatcher()));
+
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2;
+  manager_->CreateFlatland(flatland2.NewRequest(dispatcher()));
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(flatland1.is_bound());
+  EXPECT_TRUE(flatland2.is_bound());
+  EXPECT_EQ(manager_->GetSessionCount(), 0ul);
+
+  // It's only after initializing the FlatlandManager with a display that pending
+  // connections are processed.
+  InitializeManagerWithDisplay();
+
+  EXPECT_TRUE(flatland1.is_bound());
+  EXPECT_TRUE(flatland2.is_bound());
   EXPECT_EQ(manager_->GetSessionCount(), 2ul);
 }
 
 TEST_F(FlatlandManagerTest, ClientDiesBeforeManager) {
+  InitializeManagerWithDisplay();
+
   scheduling::SessionId id;
   {
     fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
@@ -232,6 +265,8 @@ TEST_F(FlatlandManagerTest, ClientDiesBeforeManager) {
 }
 
 TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
+  InitializeManagerWithDisplay();
+
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
   manager_->CreateFlatland(flatland.NewRequest(dispatcher()));
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
@@ -255,6 +290,8 @@ TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
 }
 
 TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
+  InitializeManagerWithDisplay();
+
   // Setup a Flatland instance with an OnPresentTokensReturned() callback.
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
   manager_->CreateFlatland(flatland.NewRequest(dispatcher()));
@@ -272,6 +309,8 @@ TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
 }
 
 TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
+  InitializeManagerWithDisplay();
+
   // Setup two Flatland instances with OnPresentTokensReturned() callbacks.
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1;
   manager_->CreateFlatland(flatland1.NewRequest(dispatcher()));
@@ -353,6 +392,8 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
 }
 
 TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
+  InitializeManagerWithDisplay();
+
   // Setup a Flatland instance with an OnPresentTokensReturned() callback.
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
   manager_->CreateFlatland(flatland.NewRequest(dispatcher()));
@@ -385,6 +426,8 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
 }
 
 TEST_F(FlatlandManagerTest, OnFramePresentedEvent) {
+  InitializeManagerWithDisplay();
+
   // Setup two Flatland instances with OnFramePresented() callbacks.
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1;
   manager_->CreateFlatland(flatland1.NewRequest(dispatcher()));

@@ -12,15 +12,13 @@
 
 namespace flatland {
 
-FlatlandManager::FlatlandManager(
-    async_dispatcher_t* dispatcher, const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
-    const std::shared_ptr<UberStructSystem>& uber_struct_system,
-    const std::shared_ptr<LinkSystem>& link_system,
-    const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers)
+FlatlandManager::FlatlandManager(async_dispatcher_t* dispatcher,
+                                 const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
+                                 const std::shared_ptr<UberStructSystem>& uber_struct_system,
+                                 const std::shared_ptr<LinkSystem>& link_system)
     : flatland_presenter_(flatland_presenter),
       uber_struct_system_(uber_struct_system),
       link_system_(link_system),
-      buffer_collection_importers_(buffer_collection_importers),
       executor_(dispatcher) {}
 
 FlatlandManager::~FlatlandManager() {
@@ -31,29 +29,43 @@ FlatlandManager::~FlatlandManager() {
   }
 }
 
+void FlatlandManager::Initialize(
+    std::shared_ptr<scenic_impl::display::Display> display,
+    const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers) {
+  FX_DCHECK(display);
+  FX_DCHECK(!primary_display_);
+  primary_display_ = std::move(display);
+  buffer_collection_importers_.insert(buffer_collection_importers_.end(),
+                                      buffer_collection_importers.begin(),
+                                      buffer_collection_importers.end());
+  post_initialization_runner_.SetInitialized();
+}
+
 void FlatlandManager::CreateFlatland(
     fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request) {
-  const scheduling::SessionId id = uber_struct_system_->GetNextInstanceId();
-  FX_DCHECK(flatland_instances_.find(id) == flatland_instances_.end());
+  post_initialization_runner_.RunAfterInitialized([this, request{std::move(request)}]() mutable {
+    const scheduling::SessionId id = uber_struct_system_->GetNextInstanceId();
+    FX_DCHECK(flatland_instances_.find(id) == flatland_instances_.end());
 
-  // Allocate the worker Loop first so that the Flatland impl can be bound to it's dispatcher.
-  auto result = flatland_instances_.emplace(id, std::make_unique<FlatlandInstance>());
-  FX_DCHECK(result.second);
-  auto& instance = result.first->second;
+    // Allocate the worker Loop first so that the Flatland impl can be bound to its dispatcher.
+    auto result = flatland_instances_.emplace(id, std::make_unique<FlatlandInstance>());
+    FX_DCHECK(result.second);
 
-  instance->impl = std::make_shared<Flatland>(
-      instance->loop.dispatcher(), std::move(request), id,
-      std::bind(&FlatlandManager::DestroyInstanceFunction, this, id), CreateOrGetAllocator(),
-      flatland_presenter_, link_system_, uber_struct_system_->AllocateQueueForSession(id));
+    auto& instance = result.first->second;
+    instance->impl = std::make_shared<Flatland>(
+        instance->loop.dispatcher(), std::move(request), id,
+        std::bind(&FlatlandManager::DestroyInstanceFunction, this, id), CreateOrGetAllocator(),
+        flatland_presenter_, link_system_, uber_struct_system_->AllocateQueueForSession(id));
 
-  const std::string name = "Flatland ID=" + std::to_string(id);
-  zx_status_t status = instance->loop.StartThread(name.c_str());
-  FX_DCHECK(status == ZX_OK);
+    const std::string name = "Flatland ID=" + std::to_string(id);
+    zx_status_t status = instance->loop.StartThread(name.c_str());
+    FX_DCHECK(status == ZX_OK);
 
-  // TODO(fxbug.dev/44211): this logic may move into FrameScheduler
-  // Send the client their initial allotment of present tokens minus one since clients assume they
-  // start with one.
-  SendPresentTokens(instance.get(), scheduling::FrameScheduler::kMaxPresentsInFlight - 1u);
+    // TODO(fxbug.dev/44211): this logic may move into FrameScheduler
+    // Send the client their initial allotment of present tokens minus one since clients assume they
+    // start with one.
+    SendPresentTokens(instance.get(), scheduling::FrameScheduler::kMaxPresentsInFlight - 1u);
+  });
 }
 
 scheduling::SessionUpdater::UpdateResults FlatlandManager::UpdateSessions(

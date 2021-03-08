@@ -135,8 +135,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
       flatland_presenter_(
           std::make_shared<flatland::DefaultFlatlandPresenter>(async_get_default_dispatcher())),
       flatland_manager_(std::make_shared<flatland::FlatlandManager>(
-          async_get_default_dispatcher(), flatland_presenter_, uber_struct_system_, link_system_,
-          std::vector<std::shared_ptr<flatland::BufferCollectionImporter>>({}))),
+          async_get_default_dispatcher(), flatland_presenter_, uber_struct_system_, link_system_)),
       annotation_registry_(app_context_.get()),
       lifecycle_controller_impl_(app_context_.get(),
                                  std::weak_ptr<ShutdownManager>(shutdown_manager_)) {
@@ -302,6 +301,7 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   scenic_->InitializeSnapshotService(std::move(snapshotter));
 
   scenic_->SetInitialized(engine_->scene_graph());
+  flatland_manager_->Initialize(display, {flatland_compositor_});
 }
 
 }  // namespace scenic_impl
