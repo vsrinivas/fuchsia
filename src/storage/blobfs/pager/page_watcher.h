@@ -31,6 +31,15 @@ class PageWatcher {
 
   ~PageWatcher() { DetachPagedVmoSync(); }
 
+  // Accessors for the internal state of this class. This allows this to be shared by both the
+  // new and old paging systems.
+  //
+  // TODO(fxbug.dev/51111) Remove this class and move these variables to Blob.
+  UserPager* user_pager() const { return user_pager_; }
+  const UserPagerInfo& user_pager_info() const { return userpager_info_; }
+  bool is_corrupt() const { return is_corrupt_; }
+  void set_is_corrupt(bool c) { is_corrupt_ = c; }
+
   // Creates a paged VMO |vmo_out| that will be backed by |user_pager_|.
   // |vmo_out| is owned by the caller.
   zx_status_t CreatePagedVmo(size_t vmo_size, zx::vmo* vmo_out);

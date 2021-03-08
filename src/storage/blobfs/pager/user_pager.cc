@@ -203,10 +203,10 @@ zx::status<std::unique_ptr<UserPager::Worker>> UserPager::Worker::Create(
   return zx::ok(std::move(worker));
 }
 
-PagerErrorStatus UserPager::Worker::TransferPagesToVmo(uint64_t offset, uint64_t length,
+PagerErrorStatus UserPager::Worker::TransferPagesToVmo(UserPager::PageSupplier page_supplier,
+                                                       uint64_t offset, uint64_t length,
                                                        const zx::vmo& vmo,
-                                                       const UserPagerInfo& info,
-                                                       const zx::pager& pager) {
+                                                       const UserPagerInfo& info) {
   size_t end;
   if (add_overflow(offset, length, &end)) {
     FX_LOGS(ERROR) << "pager transfer range would overflow (off=" << offset << ", len=" << length
@@ -215,9 +215,9 @@ PagerErrorStatus UserPager::Worker::TransferPagesToVmo(uint64_t offset, uint64_t
   }
 
   if (info.decompressor != nullptr) {
-    return TransferChunkedPagesToVmo(offset, length, vmo, info, pager);
+    return TransferChunkedPagesToVmo(std::move(page_supplier), offset, length, vmo, info);
   } else {
-    return TransferUncompressedPagesToVmo(offset, length, vmo, info, pager);
+    return TransferUncompressedPagesToVmo(std::move(page_supplier), offset, length, vmo, info);
   }
 }
 
@@ -230,11 +230,9 @@ PagerErrorStatus UserPager::Worker::TransferPagesToVmo(uint64_t offset, uint64_t
 // The assumption here is that the transfer buffer is sized per the alignment requirements for
 // Merkle tree verification. We have static asserts in place to check this assumption - the transfer
 // buffer (256MB) is 8k block aligned.
-PagerErrorStatus UserPager::Worker::TransferUncompressedPagesToVmo(uint64_t requested_offset,
-                                                                   uint64_t requested_length,
-                                                                   const zx::vmo& vmo,
-                                                                   const UserPagerInfo& info,
-                                                                   const zx::pager& pager) {
+PagerErrorStatus UserPager::Worker::TransferUncompressedPagesToVmo(
+    UserPager::PageSupplier page_supplier, uint64_t requested_offset, uint64_t requested_length,
+    const zx::vmo& vmo, const UserPagerInfo& info) {
   ZX_DEBUG_ASSERT(!info.decompressor);
 
   const auto [start_offset, total_length] =
@@ -312,12 +310,12 @@ PagerErrorStatus UserPager::Worker::TransferUncompressedPagesToVmo(uint64_t requ
 
     ZX_DEBUG_ASSERT(offset % PAGE_SIZE == 0);
     // Move the pages from the transfer buffer to the destination VMO.
-    zx_status_t status =
-        pager.supply_pages(vmo, offset, rounded_length, uncompressed_transfer_buffer_->vmo(), 0);
-    if (status != ZX_OK) {
+    if (auto status =
+            page_supplier(vmo, offset, rounded_length, uncompressed_transfer_buffer_->vmo(), 0);
+        status.is_error()) {
       FX_LOGS(ERROR) << "TransferUncompressed: Failed to supply pages to paged VMO for blob "
-                     << info.verifier->digest() << ": " << zx_status_get_string(status);
-      return ToPagerErrorStatus(status);
+                     << info.verifier->digest() << ": " << status.status_string();
+      return ToPagerErrorStatus(status.error_value());
     }
 
     length_remaining -= length;
@@ -347,11 +345,11 @@ PagerErrorStatus UserPager::Worker::TransferUncompressedPagesToVmo(uint64_t requ
 // transfer buffer should work with the worst case compression ratio of 1. We have static asserts in
 // place to check both these assumptions - the transfer buffer is the same size as the decompression
 // buffer (256MB), and both these buffers are 8k block aligned.
-PagerErrorStatus UserPager::Worker::TransferChunkedPagesToVmo(uint64_t requested_offset,
+PagerErrorStatus UserPager::Worker::TransferChunkedPagesToVmo(UserPager::PageSupplier page_supplier,
+                                                              uint64_t requested_offset,
                                                               uint64_t requested_length,
                                                               const zx::vmo& vmo,
-                                                              const UserPagerInfo& info,
-                                                              const zx::pager& pager) {
+                                                              const UserPagerInfo& info) {
   ZX_DEBUG_ASSERT(info.decompressor);
 
   const auto [offset, length] = GetBlockAlignedReadRange(info, requested_offset, requested_length);
@@ -475,12 +473,12 @@ PagerErrorStatus UserPager::Worker::TransferChunkedPagesToVmo(uint64_t requested
     decompressed_mapper.Unmap();
 
     // Move the pages from the decompression buffer to the destination VMO.
-    status = pager.supply_pages(vmo, mapping.decompressed_offset, rounded_length,
-                                decompression_buffer_, 0);
-    if (status != ZX_OK) {
+    if (auto status = page_supplier(vmo, mapping.decompressed_offset, rounded_length,
+                                    decompression_buffer_, 0);
+        status.is_error()) {
       FX_LOGS(ERROR) << "TransferChunked: Failed to supply pages to paged VMO for blob "
-                     << info.verifier->digest() << ": " << zx_status_get_string(status);
-      return ToPagerErrorStatus(status);
+                     << info.verifier->digest() << ": " << status.status_string();
+      return ToPagerErrorStatus(status.error_value());
     }
     metrics_->IncrementPageIn(merkle_root_hash, read_offset, read_len);
 
@@ -543,10 +541,33 @@ PagerErrorStatus UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length,
       fs_watchdog::FsOperationType::CommonFsOperation::PageFault, std::chrono::seconds(60));
   [[maybe_unused]] fs_watchdog::FsOperationTracker tracker(&kOperation, watchdog_.get());
 
+  auto page_supplier =
+      PageSupplier([pager = &pager_](const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
+                                     const zx::vmo& aux_vmo, uint64_t aux_offset) {
+        return zx::make_status(pager->supply_pages(node_vmo, offset, length, aux_vmo, aux_offset));
+      });
+
   // TODO(fxbug.dev/67659): This will eventually contain logic for selecting which worker will
   // handle this request.
-  return worker_->TransferPagesToVmo(offset, length, vmo, info, pager_);
+  return worker_->TransferPagesToVmo(std::move(page_supplier), offset, length, vmo, info);
 }
+
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+PagerErrorStatus UserPager::TransferPagesToVmo(fs::PagedVfs& paged_vfs, uint64_t offset,
+                                               uint64_t length, const zx::vmo& vmo,
+                                               const UserPagerInfo& info) {
+  static const fs_watchdog::FsOperationType kOperation(
+      fs_watchdog::FsOperationType::CommonFsOperation::PageFault, std::chrono::seconds(60));
+  [[maybe_unused]] fs_watchdog::FsOperationTracker tracker(&kOperation, watchdog_.get());
+
+  auto page_supplier =
+      PageSupplier([&paged_vfs](const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
+                                const zx::vmo& aux_vmo, uint64_t aux_offset) {
+        return paged_vfs.SupplyPages(node_vmo, offset, length, aux_vmo, aux_offset);
+      });
+  return worker_->TransferPagesToVmo(std::move(page_supplier), offset, length, vmo, info);
+}
+#endif
 
 }  // namespace pager
 }  // namespace blobfs

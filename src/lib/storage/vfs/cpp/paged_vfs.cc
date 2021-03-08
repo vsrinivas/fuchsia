@@ -26,12 +26,12 @@ zx::status<> PagedVfs::Init() {
   return pager_pool_->Init();
 }
 
-zx::status<> PagedVfs::SupplyPages(zx::vmo& node_vmo, uint64_t offset, uint64_t length,
-                                   zx::vmo& aux_vmo, uint64_t aux_offset) {
+zx::status<> PagedVfs::SupplyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
+                                   const zx::vmo& aux_vmo, uint64_t aux_offset) {
   return zx::make_status(pager_.supply_pages(node_vmo, offset, length, aux_vmo, aux_offset));
 }
 
-zx::status<> PagedVfs::ReportPagerError(zx::vmo& node_vmo, uint64_t offset, uint64_t length,
+zx::status<> PagedVfs::ReportPagerError(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
                                         zx_status_t err) {
   return zx::make_status(pager_.op_range(ZX_PAGER_OP_FAIL, node_vmo, offset, length, err));
 }

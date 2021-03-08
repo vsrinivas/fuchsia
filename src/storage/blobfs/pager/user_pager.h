@@ -15,8 +15,10 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/pager.h>
 
+#include <functional>
 #include <memory>
 
+#include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/storage/blobfs/compression/external_decompressor.h"
 #include "src/storage/blobfs/metrics.h"
 #include "src/storage/blobfs/pager/transfer_buffer.h"
@@ -98,6 +100,13 @@ class UserPager {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(UserPager);
 
+  // Abtracts out how pages are supplied to the system. This allows this code to be used by the
+  // new pager infrastructure (where PagedVfs::SupplyPages() is used) and the old pager
+  // infrastructure (where zx::pager::supply_pages() is used).
+  using PageSupplier =
+      std::function<zx::status<>(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
+                                 const zx::vmo& aux_vmo, uint64_t aux_offset)>;
+
   // Creates an instance of UserPager.
   // A new thread is created and started to process page fault requests.
   // |uncompressed_buffer| is used to retrieve and buffer uncompressed data from the underlying
@@ -132,6 +141,12 @@ class UserPager {
   [[nodiscard]] PagerErrorStatus TransferPagesToVmo(uint64_t offset, uint64_t length,
                                                     const zx::vmo& vmo, const UserPagerInfo& info);
 
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+  [[nodiscard]] PagerErrorStatus TransferPagesToVmo(fs::PagedVfs& paged_vfs, uint64_t offset,
+                                                    uint64_t length, const zx::vmo& vmo,
+                                                    const UserPagerInfo& info);
+#endif
+
  protected:
   // Protected for unit test access.
   zx::pager pager_;
@@ -153,18 +168,20 @@ class UserPager {
 
     // See |UserPager::TransferPagesToVmo()| which simply selects which Worker to delegate the
     // actual work to.
-    [[nodiscard]] PagerErrorStatus TransferPagesToVmo(uint64_t offset, uint64_t length,
-                                                      const zx::vmo& vmo, const UserPagerInfo& info,
-                                                      const zx::pager& pager);
+    [[nodiscard]] PagerErrorStatus TransferPagesToVmo(UserPager::PageSupplier page_supplier,
+                                                      uint64_t offset, uint64_t length,
+                                                      const zx::vmo& vmo,
+                                                      const UserPagerInfo& info);
 
    private:
     Worker(size_t decompression_buffer_size, BlobfsMetrics* metrics);
 
-    PagerErrorStatus TransferChunkedPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
-                                               const UserPagerInfo& info, const zx::pager& pager);
-    PagerErrorStatus TransferUncompressedPagesToVmo(uint64_t offset, uint64_t length,
-                                                    const zx::vmo& vmo, const UserPagerInfo& infoi,
-                                                    const zx::pager& pager);
+    PagerErrorStatus TransferChunkedPagesToVmo(UserPager::PageSupplier page_supplier,
+                                               uint64_t offset, uint64_t length, const zx::vmo& vmo,
+                                               const UserPagerInfo& info);
+    PagerErrorStatus TransferUncompressedPagesToVmo(UserPager::PageSupplier page_supplier,
+                                                    uint64_t offset, uint64_t length,
+                                                    const zx::vmo& vmo, const UserPagerInfo& info);
 
     // Scratch buffer for pager transfers of uncompressed data.
     // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, the VMO owned by this buffer

@@ -35,13 +35,13 @@ class PagedVfs : public ManagedVfs {
   // Called in response to a successful PagedVnode::VmoRead() request, this supplies paged data from
   // aux_vmo to the PagedVnode's VMO to the kernel. See zx_pager_supply_pages() documentation for
   // more.
-  zx::status<> SupplyPages(zx::vmo& node_vmo, uint64_t offset, uint64_t length, zx::vmo& aux_vmo,
-                           uint64_t aux_offset);
+  zx::status<> SupplyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
+                           const zx::vmo& aux_vmo, uint64_t aux_offset);
 
   // Called in response to a failed PagedVnode::VmoRead() request, this reports that there was an
   // error populating page data. See zx_pager_op_range() documentation for more, only certain
   // values are permitted for err.
-  zx::status<> ReportPagerError(zx::vmo& node_vmo, uint64_t offset, uint64_t length,
+  zx::status<> ReportPagerError(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
                                 zx_status_t err);
 
   // Allocates a VMO of the given size associated with the given PagedVnode. VMOs for use with

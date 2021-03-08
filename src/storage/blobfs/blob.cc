@@ -1231,8 +1231,50 @@ void Blob::Sync(SyncCallback on_complete) {
 }
 
 #if defined(ENABLE_BLOBFS_NEW_PAGER)
+// This function will get called on an arbitrary pager worker thread.
 void Blob::VmoRead(uint64_t offset, uint64_t length) {
-  // TODO(fxbug.dev/51111) Implement this code.
+  TRACE_DURATION("blobfs", "Blob::VmoRead", "offset", offset, "length", length);
+
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  ZX_DEBUG_ASSERT(vmo().is_valid());
+
+  if (page_watcher_->is_corrupt()) {
+    FX_LOGS(ERROR) << "Blobfs failing page request because blob was previously found corrupt.";
+    if (auto error_result = paged_vfs()->ReportPagerError(vmo(), offset, length, ZX_ERR_BAD_STATE);
+        error_result.is_error()) {
+      FX_LOGS(ERROR) << "Failed to report pager error to kernel: " << error_result.status_string();
+    }
+    return;
+  }
+
+  // TODO(fxbug.dev/51111) This gets the pager state out of the PageWatcher to avoid forking the
+  // code too much during the pager code transition. When the old pager is not needed, the
+  // PageWatcher should be deleted and its state moved into this class.
+  pager::PagerErrorStatus pager_error_status = page_watcher_->user_pager()->TransferPagesToVmo(
+      offset, length, vmo(), page_watcher_->user_pager_info());
+  if (pager_error_status != pager::PagerErrorStatus::kOK) {
+    FX_LOGS(ERROR) << "Pager failed to transfer pages to the blob, error: "
+                   << zx_status_get_string(static_cast<zx_status_t>(pager_error_status));
+    if (auto error_result = paged_vfs()->ReportPagerError(
+            vmo(), offset, length, static_cast<zx_status_t>(pager_error_status));
+        error_result.is_error()) {
+      FX_LOGS(ERROR) << "Failed to report pager error to kernel: " << error_result.status_string();
+    }
+
+    // We've signaled a failure and unblocked outstanding page requests for this range. If the pager
+    // error was a verification error, fail future requests as well - we should not service further
+    // page requests on a corrupt blob.
+    //
+    // Note that we cannot simply detach the VMO from the pager here. There might be outstanding
+    // page requests which have been queued but are yet to be serviced. These need to be handled
+    // correctly - if the VMO is detached, there will be no way for us to communicate failure to
+    // the kernel, since zx_pager_op_range() requires a valid pager VMO handle. Without being able
+    // to make a call to zx_pager_op_range() to indicate a failed page request, the faulting thread
+    // would hang indefinitely.
+    if (pager_error_status == pager::PagerErrorStatus::kErrDataIntegrity)
+      page_watcher_->set_is_corrupt_(true);
+  }
 }
 #endif
 
