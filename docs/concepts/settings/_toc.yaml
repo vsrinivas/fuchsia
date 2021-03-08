@@ -8,6 +8,6 @@
 toc:
 - title: "Introduction"
   path: /docs/concepts/settings/introduction.md
-- name: "Policy"
+- title: "Policy"
   contents:
   - include: /docs/concepts/settings/policy/_toc.yaml
