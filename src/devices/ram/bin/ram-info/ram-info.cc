@@ -41,6 +41,18 @@ constexpr ram_info::RamDeviceInfo kDevices[] = {
                 [3] = {.name = "vpu", .mask = aml_ram::kDefaultChannelVpu},
             },
     },
+    {
+        // Nelson
+        .devfs_path = "/dev/sys/platform/05:05:24/ram",
+        .default_cycles_to_measure = 456000000 / 20,  // 456 Mhz, 50 ms.
+        .default_channels =
+            {
+                [0] = {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
+                [1] = {.name = "gpu", .mask = aml_ram::kDefaultChannelGpu},
+                [2] = {.name = "vdec", .mask = aml_ram::kDefaultChannelVDec},
+                [3] = {.name = "vpu", .mask = aml_ram::kDefaultChannelVpu},
+            },
+    },
 };
 
 double CounterToBandwidthMBs(uint64_t cycles, uint64_t frequency, uint64_t cycles_measured,
