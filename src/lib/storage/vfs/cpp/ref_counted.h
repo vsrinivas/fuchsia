@@ -48,7 +48,7 @@ class VnodeRefCounted
   // they risk going through the entire Vnode lifecycle and destroying it (with another call to
   // Vnode::fbl_recycle) before the initial recycle execution terminates.
   void ResurrectRef() const {
-    if (EnableAdoptionValidator) {
+    if constexpr (EnableAdoptionValidator) {
       int32_t old = this->ref_count_.load(std::memory_order_relaxed);
       ZX_DEBUG_ASSERT_MSG(old == 0, "count %d(0x%08x) != 0\n", old, old);
     }

@@ -5,9 +5,10 @@
 #ifndef FBL_REF_COUNTED_INTERNAL_H_
 #define FBL_REF_COUNTED_INTERNAL_H_
 
-#include <atomic>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
+
+#include <atomic>
 
 namespace fbl {
 namespace internal {
@@ -25,7 +26,7 @@ class RefCountedBase {
   constexpr RefCountedBase() : ref_count_(kPreAdoptSentinel) {}
 
   ~RefCountedBase() {
-    if (EnableAdoptionValidator) {
+    if constexpr (EnableAdoptionValidator) {
       // Reset the ref-count back to the pre-adopt sentinel value so that we
       // have the best chance of catching a use-after-free situation, even if
       // we have a messed up mix of debug/release translation units being
@@ -52,7 +53,7 @@ class RefCountedBase {
     // pruned in release builds, but leaving this as an always on ASSERT
     // will mean that the tests continue to function even when built as
     // release.
-    if (EnableAdoptionValidator) {
+    if constexpr (EnableAdoptionValidator) {
       ZX_ASSERT_MSG(rc >= 1, "count %d(0x%08x) < 1\n", rc, static_cast<uint32_t>(rc));
     }
   }
@@ -70,7 +71,7 @@ class RefCountedBase {
     // pruned in release builds, but leaving this as an always on ASSERT
     // will mean that the tests continue to function even when built as
     // release.
-    if (EnableAdoptionValidator) {
+    if constexpr (EnableAdoptionValidator) {
       ZX_ASSERT_MSG(rc >= 1, "count %d(0x%08x) < 1\n", rc, static_cast<uint32_t>(rc));
     }
 
@@ -83,9 +84,7 @@ class RefCountedBase {
   }
 
   void Adopt() const {
-    // TODO(johngro): turn this into an if-constexpr when we have moved up
-    // to C++17
-    if (EnableAdoptionValidator) {
+    if constexpr (EnableAdoptionValidator) {
       int32_t expected = kPreAdoptSentinel;
       bool res = ref_count_.compare_exchange_strong(expected, 1, std::memory_order_acq_rel,
                                                     std::memory_order_acquire);
