@@ -12,6 +12,7 @@ source_set("src") {
   sources = [
     "abr.c",
     "cmdline.c",
+    "compression.c",
     "device_id.c",
     "diskio.c",
     "fastboot.c",
@@ -34,6 +35,7 @@ source_set("src") {
     "//zircon/system/ulib/gfx-font-data",
     "//zircon/system/ulib/tftp",
     "//zircon/third_party/ulib/cksum",
+    "//zircon/third_party/ulib/lz4",
   ]
 }
 
@@ -45,6 +47,8 @@ test("gigaboot_test") {
   # Once we have enough functionality stubbed out host-side we can just depend
   # on ":src" directly instead.
   sources = [
+    "compression.c",
+    "compression_test.cc",
     "diskio.c",
     "diskio_test.cc",
     "utf_conversion.c",
@@ -56,5 +60,6 @@ test("gigaboot_test") {
     "//third_party/googletest:gmock",
     "//zircon/kernel/lib/efi",
     "//zircon/kernel/lib/efi/testing",
+    "//zircon/third_party/ulib/lz4",
   ]
 }
