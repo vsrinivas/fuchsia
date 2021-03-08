@@ -12,13 +12,13 @@ use {
     async_trait::async_trait,
     diagnostics_data::{Severity, Timestamp},
     ffx_config::get,
-    ffx_core::ffx_plugin,
+    ffx_core::{ffx_error, ffx_plugin},
     ffx_log_args::{DumpCommand, LogCommand, LogSubCommand, WatchCommand},
     ffx_log_data::{EventType, LogData, LogEntry},
     ffx_log_utils::{run_logging_pipeline, OrderedBatchPipeline},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{
-        self as bridge, DaemonDiagnosticsStreamParameters, StreamMode,
+        self as bridge, DaemonDiagnosticsStreamParameters, DiagnosticsStreamError, StreamMode,
     },
     fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, ArchiveIteratorMarker},
     fidl_fuchsia_diagnostics::ComponentSelector,
@@ -30,6 +30,11 @@ use {
 type ArchiveIteratorResult = Result<LogEntry, ArchiveIteratorError>;
 const PIPELINE_SIZE: usize = 20;
 const COLOR_CONFIG_NAME: &str = "target_log.color";
+const NO_STREAM_ERROR: &str = "\
+The proactive logger isn't connected to this target.
+
+Verify that the target is up with `ffx target list` and retry\
+in a few seconds.";
 
 fn timestamp_to_partial_secs(ts: Timestamp) -> f64 {
     let u_ts: u64 = ts.into();
@@ -248,10 +253,15 @@ pub async fn log_cmd(
         stream_mode: Some(stream_mode),
         ..DaemonDiagnosticsStreamParameters::EMPTY
     };
-    let _ = daemon_proxy
-        .stream_diagnostics(Some(&target_str), params, server)
-        .await?
-        .map_err(|s| anyhow!("failure setting up diagnostics stream: {:?}", s))?;
+    let _ =
+        daemon_proxy.stream_diagnostics(Some(&target_str), params, server).await?.map_err(|e| {
+            match e {
+                DiagnosticsStreamError::NoStreamForTarget => {
+                    anyhow!(ffx_error!("{}", NO_STREAM_ERROR))
+                }
+                _ => anyhow!("failure setting up diagnostics stream: {:?}", e),
+            }
+        })?;
 
     let mut requests = OrderedBatchPipeline::new(PIPELINE_SIZE);
     loop {

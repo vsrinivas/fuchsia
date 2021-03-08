@@ -297,7 +297,7 @@ struct TargetInner {
     // used for Fastboot
     serial: RwLock<Option<String>>,
     boot_timestamp_nanos: RwLock<Option<u64>>,
-    diagnostics_info: Arc<DiagnosticsStreamer>,
+    diagnostics_info: Arc<DiagnosticsStreamer<'static>>,
     ascendd: Arc<Ascendd>,
 }
 
@@ -570,7 +570,7 @@ impl Target {
         *inner_ts = ts;
     }
 
-    pub fn stream_info(&self) -> Arc<DiagnosticsStreamer> {
+    pub fn stream_info(&self) -> Arc<DiagnosticsStreamer<'static>> {
         self.inner.diagnostics_info.clone()
     }
 
@@ -697,7 +697,7 @@ impl Target {
                 }
                 // Note: not adding ipv6 link-local addresses without scopes here is deliberate!
                 if addr.ip().is_link_local_addr() && addr.scope_id == 0 {
-                    return
+                    return;
                 }
             }
             addrs.replace((addr, now.clone()).into());
@@ -2176,7 +2176,7 @@ mod test {
         let mut addrs = target.addrs().await.into_iter();
         let addr = addrs.next().expect("Merged target has no address.");
         assert!(addrs.next().is_none());
-        assert_eq!(addr, TargetAddr{ip, scope_id: 0xbadf00d});
+        assert_eq!(addr, TargetAddr { ip, scope_id: 0xbadf00d });
         assert_eq!(addr.ip, ip);
         assert_eq!(addr.scope_id, 0xbadf00d);
     }

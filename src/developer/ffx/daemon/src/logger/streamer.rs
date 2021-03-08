@@ -18,7 +18,11 @@ use {
     ffx_config::get,
     ffx_log_data::{LogData, LogEntry},
     fidl_fuchsia_developer_bridge::StreamMode,
-    futures::{FutureExt, TryStreamExt},
+    futures::{
+        channel::oneshot,
+        future::{BoxFuture, Shared},
+        FutureExt, TryStreamExt,
+    },
     std::convert::TryInto,
     std::io::ErrorKind,
     std::iter::Iterator,
@@ -385,9 +389,21 @@ impl SessionStream {
     }
 }
 
-#[derive(Default)]
-struct DiagnosticsStreamerInner {
+/// A bit of explanation for the setup_* fields: they exist to facilitate the
+/// wait_for_setup method on DiagnosticsStreamer.
+///
+/// `setup_fut` is a future polling the result of the Receiver end of
+/// `setup_notifier`. Because it is `Shared`, it has two properties:
+/// 1. It can be cloned by individual calls to `wait_for_setup`.
+/// 2. It transparently resolves immediately if `setup_stream` has already
+/// been called, even if `wait_for_setup` has already been called.
+///
+/// This all could likely be replaced by a condvar, but sadly these are
+/// unavailable in the present version of async-std.
+struct DiagnosticsStreamerInner<'a> {
     output_dir: Option<TargetSessionDirectory>,
+    setup_notifier: Option<oneshot::Sender<()>>,
+    setup_fut: Shared<BoxFuture<'a, Result<(), oneshot::Canceled>>>,
     current_file: Option<LogFile>,
     max_file_size_bytes: usize,
     max_session_size_bytes: usize,
@@ -395,10 +411,13 @@ struct DiagnosticsStreamerInner {
     read_stream: Arc<mpmc::Sender<LogEntry>>,
 }
 
-impl Clone for DiagnosticsStreamerInner {
+impl Clone for DiagnosticsStreamerInner<'_> {
     fn clone(&self) -> Self {
+        let (tx, rx) = oneshot::channel::<()>();
         Self {
             output_dir: self.output_dir.clone(),
+            setup_notifier: Some(tx),
+            setup_fut: rx.boxed().shared(),
             current_file: None,
             max_file_size_bytes: self.max_file_size_bytes,
             max_session_size_bytes: self.max_session_size_bytes,
@@ -408,20 +427,36 @@ impl Clone for DiagnosticsStreamerInner {
     }
 }
 
-pub struct DiagnosticsStreamer {
-    inner: RwLock<DiagnosticsStreamerInner>,
+impl DiagnosticsStreamerInner<'_> {
+    fn new() -> Self {
+        let (tx, rx) = oneshot::channel::<()>();
+        Self {
+            output_dir: None,
+            setup_notifier: Some(tx),
+            setup_fut: rx.boxed().shared(),
+            current_file: None,
+            max_file_size_bytes: 0,
+            max_session_size_bytes: 0,
+            max_num_sessions: 0,
+            read_stream: Arc::new(mpmc::Sender::default()),
+        }
+    }
 }
 
-impl Clone for DiagnosticsStreamer {
+pub struct DiagnosticsStreamer<'a> {
+    inner: RwLock<DiagnosticsStreamerInner<'a>>,
+}
+
+impl Clone for DiagnosticsStreamer<'_> {
     fn clone(&self) -> Self {
         let inner = futures::executor::block_on(self.inner.read());
         Self { inner: RwLock::new(inner.clone()) }
     }
 }
 
-impl Default for DiagnosticsStreamer {
+impl Default for DiagnosticsStreamer<'_> {
     fn default() -> Self {
-        Self { inner: RwLock::new(DiagnosticsStreamerInner::default()) }
+        Self { inner: RwLock::new(DiagnosticsStreamerInner::new()) }
     }
 }
 
@@ -445,7 +480,7 @@ pub trait GenericDiagnosticsStreamer {
 }
 
 #[async_trait::async_trait]
-impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
+impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
     async fn setup_stream(
         &self,
         target_nodename: String,
@@ -605,7 +640,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
     }
 }
 
-impl DiagnosticsStreamer {
+impl DiagnosticsStreamer<'_> {
     // This should only be called by tests.
     pub(crate) async fn setup_stream_with_config(
         &self,
@@ -625,17 +660,35 @@ impl DiagnosticsStreamer {
             _ => Err(e),
         })?;
 
-        let mut inner = self.inner.write().await;
-        inner.output_dir.replace(session_dir);
-        inner.max_file_size_bytes = max_file_size_bytes;
-        inner.max_session_size_bytes = max_session_size_bytes;
-        inner.max_num_sessions = max_num_sessions;
+        let mut sender;
+        {
+            let mut inner = self.inner.write().await;
+            inner.output_dir.replace(session_dir);
+            inner.max_file_size_bytes = max_file_size_bytes;
+            inner.max_session_size_bytes = max_session_size_bytes;
+            inner.max_num_sessions = max_num_sessions;
+            sender = inner.setup_notifier.take();
+        }
+
+        if let Some(s) = sender.take() {
+            let _ = s.send(());
+        }
         Ok(())
     }
 
-    async fn cleanup_logs(
+    /// Blocks until this Streamer has been setup (i.e. `setup_stream` has been called
+    /// at least once).
+    pub async fn wait_for_setup(&self) -> Result<()> {
+        let f = {
+            let inner = self.inner.read().await;
+            inner.setup_fut.clone()
+        };
+        f.await.map_err(|e| anyhow!(e))
+    }
+
+    async fn cleanup_logs<'a>(
         &self,
-        inner: RwLockWriteGuard<'_, DiagnosticsStreamerInner>,
+        inner: RwLockWriteGuard<'_, DiagnosticsStreamerInner<'a>>,
     ) -> Result<()> {
         let output_dir = inner.output_dir.as_ref().context("no stream setup")?;
         let mut entries = output_dir.sort_entries().await?;
@@ -662,6 +715,7 @@ mod test {
         diagnostics_data::{LogsData, LogsField, Severity},
         diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
         ffx_log_data::LogData,
+        fuchsia_async::TimeoutExt,
         std::collections::HashMap,
         std::time::Duration,
         tempfile::{tempdir, TempDir},
@@ -744,7 +798,7 @@ mod test {
         max_log_size: usize,
         max_session_size: usize,
         max_sessions: usize,
-    ) -> Result<DiagnosticsStreamer> {
+    ) -> Result<DiagnosticsStreamer<'static>> {
         let mut root: PathBuf = temp_parent.path().to_path_buf().into();
         root.push(FAKE_DIR_NAME.to_string());
 
@@ -768,7 +822,7 @@ mod test {
         max_log_size: usize,
         max_session_size: usize,
         max_sessions: usize,
-    ) -> Result<DiagnosticsStreamer> {
+    ) -> Result<DiagnosticsStreamer<'static>> {
         setup_default_streamer_with_temp_and_boot_time(
             temp_parent,
             BOOT_TIME_NANOS,
@@ -783,7 +837,7 @@ mod test {
         max_log_size: usize,
         max_session_size: usize,
         max_sessions: usize,
-    ) -> Result<(TempDir, DiagnosticsStreamer)> {
+    ) -> Result<(TempDir, DiagnosticsStreamer<'static>)> {
         let temp_parent = tempdir()?;
         let streamer = setup_default_streamer_with_temp(
             &temp_parent,
@@ -1161,6 +1215,43 @@ mod test {
     async fn test_read_no_setup_call_errors() -> Result<()> {
         let streamer = DiagnosticsStreamer::default();
         assert!(streamer.stream_entries(StreamMode::SnapshotAll).await.is_err());
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_wait_for_setup() -> Result<()> {
+        let streamer = Arc::new(DiagnosticsStreamer::default());
+        assert!(streamer.stream_entries(StreamMode::SnapshotAll).await.is_err());
+
+        let streamer_clone = streamer.clone();
+        let f = streamer_clone.wait_for_setup();
+
+        // Unfortunately we can't reliably assert that this future *never* finishes, but this
+        // check will at least show up as a flake.
+        match timeout(Duration::from_millis(100), f).await {
+            Ok(_) => panic!("wait_for_setup should not complete before setup is completed"),
+            Err(_) => {}
+        };
+
+        let f = streamer_clone.wait_for_setup();
+        let target_dir =
+            TargetLogDirectory::new_with_root(PathBuf::from("/tmp"), NODENAME.to_string());
+        streamer
+            .setup_stream_with_config(
+                target_dir,
+                BOOT_TIME_NANOS,
+                LARGE_MAX_LOG_SIZE,
+                LARGE_MAX_SESSION_SIZE,
+                DEFAULT_MAX_SESSIONS,
+            )
+            .await?;
+
+        f.on_timeout(Duration::from_millis(100), || {
+            panic!("wait_for_setup should have completed after setup is completed")
+        })
+        .await
+        .unwrap();
 
         Ok(())
     }

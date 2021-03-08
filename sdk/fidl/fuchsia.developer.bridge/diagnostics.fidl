@@ -19,6 +19,13 @@ enum DiagnosticsStreamError : uint32 {
     // Indicates the provided target specifier does not match any targets
     // or matches more than target.
     TARGET_MATCH_FAILED = 3;
+    // Indicates the provided target specifier does not match any targets.
+    // This is a more specific version of TARGET_MATCH_FAILED that is
+    // used when possible.
+    NO_MATCHING_TARGETS = 4;
+    // Indicates that we have not successfully setup a logging stream
+    // for the specified target.
+    NO_STREAM_FOR_TARGET = 5;
 };
 
 table DaemonDiagnosticsStreamParameters {

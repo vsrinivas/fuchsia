@@ -30,7 +30,7 @@ use {
     },
     fidl_fuchsia_overnet::{MeshControllerProxy, ServiceConsumerProxy, ServicePublisherProxy},
     fidl_fuchsia_overnet_protocol::NodeId,
-    fuchsia_async::{Task, Timer},
+    fuchsia_async::{Task, TimeoutExt, Timer},
     futures::prelude::*,
     hoist::{hoist, OvernetInstance},
     std::collections::BTreeSet,
@@ -551,8 +551,18 @@ impl Daemon {
                 responder.send(&hash).context("error sending response")?;
             }
             DaemonRequest::StreamDiagnostics { target, parameters, iterator, responder } => {
-                let target = match self.get_default_target(target.clone()).await {
+                let target = match self
+                    .get_default_target(target.clone())
+                    .on_timeout(Duration::from_secs(3), || Err(DaemonError::Timeout))
+                    .await
+                {
                     Ok(t) => t,
+                    Err(DaemonError::Timeout) => {
+                        responder
+                            .send(&mut Err(DiagnosticsStreamError::NoMatchingTargets))
+                            .context("sending error response")?;
+                        return Ok(());
+                    }
                     Err(e) => {
                         log::warn!(
                             "got error fetching target with filter '{}': {:?}",
@@ -567,6 +577,22 @@ impl Daemon {
                 };
 
                 let stream = target.stream_info();
+                match stream
+                    .wait_for_setup()
+                    .map(|_| Ok(()))
+                    .on_timeout(Duration::from_secs(3), || {
+                        Err(DiagnosticsStreamError::NoStreamForTarget)
+                    })
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(e) => {
+                        // TODO(jwing): we should be able to interact with inactive targets here for
+                        // stream modes that don't involve subscription.
+                        return responder.send(&mut Err(e)).context("sending error response");
+                    }
+                }
+
                 if parameters.stream_mode.is_none() {
                     log::info!("StreamDiagnostics failed: stream mode is required");
                     return responder
