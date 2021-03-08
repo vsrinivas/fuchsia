@@ -169,10 +169,15 @@ impl PairingDispatcher {
             },
             pending_req = &mut self.inflight_requests.next().fuse() => {
                 match pending_req {
-                    Some((_peer_id, (upstream_response, downstream))) => {
+                    Some((peer_id, (upstream_response, downstream))) => {
                         match upstream_response {
-                            Ok((status, passkey)) => {
-                                let result = downstream.send(status, passkey);
+                            Ok((accept, passkey)) => {
+                                let accepted = if accept { "accepted" } else { "rejected" };
+                                info!(
+                                    "PairingDelegate {} pairing request to PeerId {}. Passkey: {}",
+                                    accepted, peer_id, passkey
+                                );
+                                let result = downstream.send(accept, passkey);
                                 if let Err(e) = result {
                                     warn!("Error replying to pairing request from bt-host: {}", e);
                                     // TODO(fxbug.dev/45325) - when errors occur communicating with a downstream
@@ -226,6 +231,11 @@ impl PairingDispatcher {
                             .on_pairing_request(peer, method, displayed_passkey)
                             .map(move |res| (res, responder))
                             .boxed();
+                        info!(
+                            "Making PairingDelegate Pairing Request to PeerId {} with method {:?} \
+                            (passkey: {})",
+                            id, method, displayed_passkey
+                        );
                         self.inflight_requests.insert(host, id, response)
                     }
                     Err(e) => {
