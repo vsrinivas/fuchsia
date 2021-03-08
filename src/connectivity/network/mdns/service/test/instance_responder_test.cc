@@ -58,6 +58,11 @@ class InstanceResponderTest : public AgentTest, public Mdns::Publisher {
   // Expects a single publication to the given reply address.
   void ExpectPublication(ReplyAddress reply_address);
 
+  // Expects a single publication to the given reply address and subtype.
+  void ExpectPublication(ReplyAddress reply_address, const std::string& subtype);
+
+  ReplyAddress MulticastReply(Media media);
+
  private:
   struct GetPublicationCall {
     Mdns::PublicationCause publication_cause_;
@@ -77,8 +82,6 @@ class InstanceResponderTest : public AgentTest, public Mdns::Publisher {
                                                    .source_addresses_ = source_addresses,
                                                    .callback_ = std::move(callback)});
   }
-
-  ReplyAddress MulticastReply(Media media);
 
   std::optional<bool> report_success_parameter_;
   std::queue<GetPublicationCall> get_publication_calls_;
@@ -142,11 +145,23 @@ void InstanceResponderTest::ExpectPublication(Media media) {
 }
 
 void InstanceResponderTest::ExpectPublication(ReplyAddress reply_address) {
+  ExpectPublication(reply_address, "");
+}
+
+void InstanceResponderTest::ExpectPublication(ReplyAddress reply_address,
+                                              const std::string& subtype) {
   auto message = ExpectOutboundMessage(reply_address);
 
   auto resource = ExpectResource(message.get(), MdnsResourceSection::kAnswer, service_full_name(),
                                  DnsType::kPtr, DnsClass::kIn, false);
   EXPECT_EQ(instance_full_name(), resource->ptr_.pointer_domain_name_.dotted_string_);
+
+  if (subtype != "") {
+    resource = ExpectResource(message.get(), MdnsResourceSection::kAnswer,
+                              subtype + "._sub." + service_full_name(), DnsType::kPtr,
+                              DnsClass::kIn, false);
+    EXPECT_EQ(instance_full_name(), resource->ptr_.pointer_domain_name_.dotted_string_);
+  }
 
   resource = ExpectResource(message.get(), MdnsResourceSection::kAdditional, instance_full_name(),
                             DnsType::kSrv);
@@ -335,8 +350,8 @@ TEST_F(InstanceResponderTest, SourceAddressLimit) {
   ExpectNoOther();
 }
 
-// Tests that a wireless-only responder announces over wireless only and only responds to questions
-// received via wireless interfaces.
+// Tests that a wireless-only responder announces over wireless only and only responds to
+// questions received via wireless interfaces.
 TEST_F(InstanceResponderTest, WirelessOnly) {
   InstanceResponder under_test(this, kServiceName, kInstanceName, Media::kWireless, this);
   SetAgent(under_test);
@@ -423,6 +438,27 @@ TEST_F(InstanceResponderTest, Unicast) {
   ExpectGetPublicationCall(Mdns::PublicationCause::kQueryUnicastResponse, "",
                            {sender_address.socket_address()})(Mdns::Publication::Create(kPort));
   ExpectPublication(sender_address);
+  ExpectNoOther();
+}
+
+// Tests that subtypes are properly communicated.
+TEST_F(InstanceResponderTest, Subtype) {
+  InstanceResponder under_test(this, kServiceName, kInstanceName, Media::kBoth, this);
+  SetAgent(under_test);
+
+  // Normal startup.
+  under_test.Start(kHostFullName, addresses());
+  ExpectAnnouncements();
+
+  ReplyAddress sender_address(inet::SocketAddress(192, 168, 1, 1, kPort),
+                              inet::IpAddress(192, 168, 1, 100), Media::kWired);
+
+  under_test.ReceiveQuestion(DnsQuestion("_cookies._sub." + service_full_name(), DnsType::kPtr),
+                             addresses().multicast_reply(), sender_address);
+  ExpectGetPublicationCall(Mdns::PublicationCause::kQueryMulticastResponse, "_cookies",
+                           {sender_address.socket_address()})(Mdns::Publication::Create(kPort));
+  ExpectPublication(MulticastReply(Media::kBoth), "_cookies");
+  ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
   ExpectNoOther();
 }
 
