@@ -93,8 +93,8 @@ class Scheduler {
   SchedWeight GetTotalWeight() const TA_EXCL(thread_lock);
   size_t GetRunnableTasks() const TA_EXCL(thread_lock);
 
-  // Dumps the state of the run queue to the debug log.
-  void Dump() TA_REQ(thread_lock);
+  // Dumps the state of the run queue to the specified output target.
+  void Dump(FILE* output_target = stdout) TA_REQ(thread_lock);
 
   // Returns the number of the CPU this scheduler instance is associated with.
   cpu_num_t this_cpu() const { return this_cpu_; }

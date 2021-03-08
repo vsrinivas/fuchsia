@@ -276,48 +276,53 @@ inline void Scheduler::TraceTotalRunnableThreads() const {
                        runnable_fair_task_count_ + runnable_deadline_task_count_, this_cpu());
 }
 
-void Scheduler::Dump() {
-  printf("\ttweight=%s nfair=%d ndeadline=%d vtime=%" PRId64 " period=%" PRId64 " tema=%" PRId64
-         " tutil=%s\n",
-         Format(weight_total_).c_str(), runnable_fair_task_count_, runnable_deadline_task_count_,
-         virtual_time_.raw_value(), scheduling_period_grans_.raw_value(),
-         total_expected_runtime_ns_.raw_value(), Format(total_deadline_utilization_).c_str());
+void Scheduler::Dump(FILE* output_target) {
+  fprintf(output_target,
+          "\ttweight=%s nfair=%d ndeadline=%d vtime=%" PRId64 " period=%" PRId64 " tema=%" PRId64
+          " tutil=%s\n",
+          Format(weight_total_).c_str(), runnable_fair_task_count_, runnable_deadline_task_count_,
+          virtual_time_.raw_value(), scheduling_period_grans_.raw_value(),
+          total_expected_runtime_ns_.raw_value(), Format(total_deadline_utilization_).c_str());
 
   if (active_thread_ != nullptr) {
     const SchedulerState& state = active_thread_->scheduler_state();
     if (IsFairThread(active_thread_)) {
-      printf("\t-> name=%s weight=%s start=%" PRId64 " finish=%" PRId64 " ts=%" PRId64
-             " ema=%" PRId64 "\n",
-             active_thread_->name(), Format(state.fair_.weight).c_str(),
-             state.start_time_.raw_value(), state.finish_time_.raw_value(),
-             state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
+      fprintf(output_target,
+              "\t-> name=%s weight=%s start=%" PRId64 " finish=%" PRId64 " ts=%" PRId64
+              " ema=%" PRId64 "\n",
+              active_thread_->name(), Format(state.fair_.weight).c_str(),
+              state.start_time_.raw_value(), state.finish_time_.raw_value(),
+              state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
     } else {
-      printf("\t-> name=%s deadline=(%" PRId64 ", %" PRId64 ", %" PRId64 ") start=%" PRId64
-             " finish=%" PRId64 " ts=%" PRId64 " ema=%" PRId64 "\n",
-             active_thread_->name(), state.deadline_.capacity_ns.raw_value(),
-             state.deadline_.deadline_ns.raw_value(), state.deadline_.period_ns.raw_value(),
-             state.start_time_.raw_value(), state.finish_time_.raw_value(),
-             state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
+      fprintf(output_target,
+              "\t-> name=%s deadline=(%" PRId64 ", %" PRId64 ", %" PRId64 ") start=%" PRId64
+              " finish=%" PRId64 " ts=%" PRId64 " ema=%" PRId64 "\n",
+              active_thread_->name(), state.deadline_.capacity_ns.raw_value(),
+              state.deadline_.deadline_ns.raw_value(), state.deadline_.period_ns.raw_value(),
+              state.start_time_.raw_value(), state.finish_time_.raw_value(),
+              state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
     }
   }
 
   for (const Thread& thread : deadline_run_queue_) {
     const SchedulerState& state = thread.scheduler_state();
-    printf("\t   name=%s deadline=(%" PRId64 ", %" PRId64 ", %" PRId64 ") start=%" PRId64
-           " finish=%" PRId64 " ts=%" PRId64 " ema=%" PRId64 "\n",
-           thread.name(), state.deadline_.capacity_ns.raw_value(),
-           state.deadline_.deadline_ns.raw_value(), state.deadline_.period_ns.raw_value(),
-           state.start_time_.raw_value(), state.finish_time_.raw_value(),
-           state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
+    fprintf(output_target,
+            "\t   name=%s deadline=(%" PRId64 ", %" PRId64 ", %" PRId64 ") start=%" PRId64
+            " finish=%" PRId64 " ts=%" PRId64 " ema=%" PRId64 "\n",
+            thread.name(), state.deadline_.capacity_ns.raw_value(),
+            state.deadline_.deadline_ns.raw_value(), state.deadline_.period_ns.raw_value(),
+            state.start_time_.raw_value(), state.finish_time_.raw_value(),
+            state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
   }
 
   for (const Thread& thread : fair_run_queue_) {
     const SchedulerState& state = thread.scheduler_state();
-    printf("\t   name=%s weight=%s start=%" PRId64 " finish=%" PRId64 " ts=%" PRId64 " ema=%" PRId64
-           "\n",
-           thread.name(), Format(state.fair_.weight).c_str(), state.start_time_.raw_value(),
-           state.finish_time_.raw_value(), state.time_slice_ns_.raw_value(),
-           state.expected_runtime_ns_.raw_value());
+    fprintf(output_target,
+            "\t   name=%s weight=%s start=%" PRId64 " finish=%" PRId64 " ts=%" PRId64
+            " ema=%" PRId64 "\n",
+            thread.name(), Format(state.fair_.weight).c_str(), state.start_time_.raw_value(),
+            state.finish_time_.raw_value(), state.time_slice_ns_.raw_value(),
+            state.expected_runtime_ns_.raw_value());
   }
 }
 
