@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::internal::common::now;
 use crate::message::action_fuse::{ActionFuse, ActionFuseHandle};
 use crate::message::base::{
     Address, Attribution, Message, MessageAction, MessageType, Payload, Role,
 };
 use crate::message::beacon::BeaconBuilder;
 use crate::message::messenger::Messenger;
+use crate::message::now;
 use crate::message::receptor::Receptor;
 use fuchsia_zircon::Duration;
 

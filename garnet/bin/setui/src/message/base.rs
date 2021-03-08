@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::internal::common::Timestamp;
 use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::beacon::Beacon;
 use crate::message::message_client::MessageClient;
 use crate::message::messenger::{Messenger, MessengerClient};
 use crate::message::receptor::Receptor;
+use crate::message::Timestamp;
 use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
 use std::collections::HashSet;

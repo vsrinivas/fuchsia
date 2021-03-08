@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::internal::common::Timestamp;
 use crate::message::action_fuse::{ActionFuse, ActionFuseBuilder, ActionFuseHandle};
 use crate::message::base::{
     Address, Audience, Message, MessageClientId, MessageType, Payload, Role, Signature, Status,
@@ -11,6 +10,7 @@ use crate::message::beacon::BeaconBuilder;
 use crate::message::message_builder::MessageBuilder;
 use crate::message::messenger::Messenger;
 use crate::message::receptor::Receptor;
+use crate::message::Timestamp;
 
 /// MessageClient provides a subset of Messenger functionality around a specific
 /// delivered message. The client may duplicate/move the MessageClient as

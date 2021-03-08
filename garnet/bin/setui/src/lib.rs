@@ -75,7 +75,6 @@ mod fidl_processor;
 mod hanging_get_handler;
 mod input;
 mod inspect;
-mod internal;
 mod intl;
 mod light;
 mod night_mode;
