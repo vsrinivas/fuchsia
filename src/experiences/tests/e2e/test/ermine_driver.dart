@@ -199,6 +199,9 @@ class ErmineDriver {
   Future<List<Map<String, dynamic>>> launchedViews() async {
     final views = <Map<String, dynamic>>[];
     final snapshot = await Inspect(sl4f).snapshotRoot('ermine.cmx');
+    if (snapshot == null) {
+      return views;
+    }
     final workspace = snapshot['workspaces'];
     if (workspace == null) {
       return views;

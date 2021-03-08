@@ -93,9 +93,12 @@ void main() {
     print('Closed first instance');
 
     // Close second instance clicking the close button on view title bar.
-    await ermine.driver.waitFor(find.byValueKey('close'));
-    await ermine.driver.tap(find.byValueKey('close'));
     await ermine.driver.waitUntilNoTransientCallbacks();
+    final close = find.descendant(
+        of: find.byType('TileChrome'),
+        matching: find.byValueKey('close'),
+        firstMatchOnly: true);
+    await ermine.driver.tap(close);
     await _waitForViews(componentUrl, 1, testForFocus: true);
     expect(await _waitForInstances(componentUrl, 1), isTrue);
 

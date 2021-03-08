@@ -74,7 +74,12 @@ void main() {
     // Launch simple browser in workspace 1.
     await ermine.launch(simpleBrowserUrl);
     viewRect = await ermine.getViewRect(simpleBrowserUrl);
-    expect(viewRect.width > 0, isTrue);
+    expect(
+        await ermine.waitFor(() async {
+          viewRect = await ermine.getViewRect(simpleBrowserUrl);
+          return viewRect.width > 0;
+        }),
+        isTrue);
     expect(await ermine.driver.getText(title), 'simple-browser.cmx');
     expect(await ermine.isRunning(simpleBrowserUrl), isTrue);
 
