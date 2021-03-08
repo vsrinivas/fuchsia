@@ -139,9 +139,7 @@ struct alignas(sizeof(uint64_t)) PageTableEntry {
   friend bool operator==(const PageTableEntry& a, const PageTableEntry& b) {
     return a.raw == b.raw;
   }
-  friend bool operator!=(const PageTableEntry& a, const PageTableEntry& b) {
-    return !(a == b);
-  }
+  friend bool operator!=(const PageTableEntry& a, const PageTableEntry& b) { return !(a == b); }
 
  private:
   // Location of the PAT bit at different levels.

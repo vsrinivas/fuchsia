@@ -20,9 +20,7 @@ namespace {
 
 // GMock matcher to check that a std::optional<LookupResult> evaluates to the given
 // physical address.
-MATCHER_P(MapsToPaddr, paddr, "") {
-  return arg.has_value() && arg->phys_addr == Paddr(paddr);
-}
+MATCHER_P(MapsToPaddr, paddr, "") { return arg.has_value() && arg->phys_addr == Paddr(paddr); }
 
 TEST(LookupPage, LookupZero) {
   TestMemoryManager allocator;

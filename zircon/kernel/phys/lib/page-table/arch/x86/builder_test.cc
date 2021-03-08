@@ -96,5 +96,4 @@ TEST(Builder, LargePage) {
   EXPECT_EQ(result->level, 2);
 }
 
-
 }  // namespace page_table::x86
