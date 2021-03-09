@@ -297,8 +297,8 @@ class AppModel {
 
   /// Called on 'closeAll' action.
   void onCloseAll() {
-    while (clustersModel.focusedStory != null) {
-      onClose();
+    while (clustersModel.stories.isNotEmpty) {
+      clustersModel.stories.last.delete();
     }
   }
 

@@ -100,7 +100,7 @@ void main() {
 
     // Close terminal and simple-browser
     await ermine.driver.requestData('closeAll');
-    await ermine.isStopped(terminalUrl);
     await ermine.isStopped(simpleBrowserUrl);
+    await ermine.isStopped(terminalUrl);
   });
 }
