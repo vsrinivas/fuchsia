@@ -58,17 +58,38 @@ fn handle_phy_event(
     bssid: &mac::Bssid,
     protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
+    update_sink: &mut Option<wlan_rsn::rsna::UpdateSink>,
     all_the_updates_sink: &mut wlan_rsn::rsna::UpdateSink,
 ) {
     match event {
         WlantapPhyEvent::SetChannel { args } => {
             handle_set_channel_event(&args, phy, ssid, bssid, protection)
         }
-        WlantapPhyEvent::Tx { args } => {
-            handle_tx_event(&args, phy, bssid, authenticator, |_, update_sink, _, _, _| {
+        WlantapPhyEvent::Tx { args } => handle_tx_event(
+            &args,
+            phy,
+            bssid,
+            authenticator,
+            update_sink,
+            |authenticator, update_sink, channel, bssid, phy, ready_for_eapol_frames| {
                 all_the_updates_sink.append(&mut update_sink.to_vec());
-            })
-        }
+                process_tx_auth_updates(
+                    authenticator,
+                    update_sink,
+                    channel,
+                    bssid,
+                    phy,
+                    ready_for_eapol_frames,
+                )?;
+
+                // After updates are processed, the update sink can be drained. A WPA2 EAPOL
+                // exchange does not require persisting updates in the update_sink
+                // since all TxEapolFrame updates appear after association. Draining
+                // the update_sink avoids adding entries to all_the_updates_sink twice.
+                update_sink.drain(..);
+                Ok(())
+            },
+        ),
         _ => (),
     }
 }
@@ -94,6 +115,7 @@ async fn handle_tx_event_hooks() {
 
     // Validate the connect request.
     let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(&BSSID, SSID, p));
+    let mut update_sink = Some(wlan_rsn::rsna::UpdateSink::default());
     let protection = Protection::Wpa2Personal;
 
     let mut all_the_updates_sink = wlan_rsn::rsna::UpdateSink::default();
@@ -110,6 +132,7 @@ async fn handle_tx_event_hooks() {
                     &BSSID,
                     &protection,
                     &mut authenticator,
+                    &mut update_sink,
                     &mut all_the_updates_sink,
                 );
             },
@@ -117,7 +140,7 @@ async fn handle_tx_event_hooks() {
         )
         .await;
 
-    // The post_process_auth_update hook for this test collects all of the updates that appear
+    // The process_auth_update hook for this test collects all of the updates that appear
     // in an update_sink while connecting to a WPA2 AP.
     assert_variant!(
         &all_the_updates_sink[0],

@@ -32,7 +32,7 @@ use {
         mac, mgmt_writer, TimeUnit,
     },
     wlan_frame_writer::write_frame_with_dynamic_buf,
-    wlan_rsn::rsna::SecAssocUpdate,
+    wlan_rsn::{self, rsna::SecAssocUpdate},
 };
 
 pub mod test_utils;
@@ -49,6 +49,7 @@ mod wlanstack_helper;
 
 pub const CLIENT_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
 pub const AP_MAC_ADDR: mac::Bssid = mac::Bssid([0x70, 0xf1, 0x1c, 0x05, 0x2d, 0x7f]);
+pub const AP_SSID: &[u8] = b"ap_ssid";
 pub const ETH_DST_MAC: [u8; 6] = [0x65, 0x74, 0x68, 0x64, 0x73, 0x74];
 pub const CHANNEL: WlanChan = WlanChan { primary: 1, secondary80: 0, cbw: Cbw::Cbw20 };
 pub const WLANCFG_DEFAULT_AP_CHANNEL: WlanChan =
@@ -359,23 +360,34 @@ pub fn create_wpa2_psk_authenticator(
     .expect("creating authenticator")
 }
 
-fn process_auth_update(
-    updates: &wlan_rsn::rsna::UpdateSink,
+pub fn process_tx_auth_updates(
+    _authenticator: &mut wlan_rsn::Authenticator,
+    update_sink: &mut wlan_rsn::rsna::UpdateSink,
     channel: &WlanChan,
     bssid: &mac::Bssid,
     phy: &WlantapPhyProxy,
+    ready_for_eapol_frames: bool,
 ) -> Result<(), anyhow::Error> {
-    for update in updates {
-        if let SecAssocUpdate::TxEapolKeyFrame(frame) = update {
+    if !ready_for_eapol_frames {
+        return Ok(());
+    }
+
+    // TODO(fxbug.dev/69580): Use Vec::drain_filter instead.
+    let mut i = 0;
+    while i < update_sink.len() {
+        if let SecAssocUpdate::TxEapolKeyFrame(eapol_frame) = &update_sink[i] {
             rx_wlan_data_frame(
                 channel,
                 &CLIENT_MAC_ADDR,
                 &bssid.0,
                 &bssid.0,
-                &frame[..],
+                &eapol_frame[..],
                 mac::ETHER_TYPE_EAPOL,
                 phy,
-            )?
+            )?;
+            update_sink.remove(i);
+        } else {
+            i += 1;
         }
     }
     Ok(())
@@ -394,21 +406,23 @@ pub fn handle_set_channel_event(
     }
 }
 
-pub fn handle_tx_event<
-    F: FnMut(
-        &mut wlan_rsn::Authenticator,
-        &wlan_rsn::rsna::UpdateSink,
-        &WlanChan,
-        &mac::Bssid,
-        &WlantapPhyProxy,
-    ),
->(
+pub fn handle_tx_event<F>(
     args: &TxArgs,
     phy: &WlantapPhyProxy,
     bssid: &mac::Bssid,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
-    mut post_process_auth_update: F,
-) {
+    update_sink: &mut Option<wlan_rsn::rsna::UpdateSink>,
+    mut process_auth_update: F,
+) where
+    F: FnMut(
+        &mut wlan_rsn::Authenticator,
+        &mut wlan_rsn::rsna::UpdateSink,
+        &WlanChan,
+        &mac::Bssid,
+        &WlantapPhyProxy,
+        bool, // ready_for_eapol_frames
+    ) -> Result<(), anyhow::Error>,
+{
     debug!("Handling tx event.");
     match mac::MacFrame::parse(&args.packet.data[..], false) {
         Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
@@ -421,12 +435,20 @@ pub fn handle_tx_event<
                     send_association_response(&CHANNEL, bssid, mac::StatusCode::SUCCESS, &phy)
                         .expect("Error sending fake association response frame.");
                     if let Some(authenticator) = authenticator {
-                        authenticator.reset();
-                        let mut updates = wlan_rsn::rsna::UpdateSink::default();
-                        authenticator.initiate(&mut updates).expect("initiating authenticator");
-                        process_auth_update(&mut updates, &CHANNEL, bssid, &phy)
-                            .expect("processing authenticator updates after initiation");
-                        post_process_auth_update(authenticator, &updates, &CHANNEL, bssid, &phy);
+                        let mut update_sink = update_sink.as_mut().unwrap_or_else(|| {
+                            panic!("No UpdateSink provided with Authenticator.")
+                        });
+                        match authenticator.auth_cfg {
+                            wlan_rsn::auth::Config::Sae { .. } => {}
+                            wlan_rsn::auth::Config::ComputedPsk(_) => authenticator.reset(),
+                            wlan_rsn::auth::Config::DriverSae { .. } => panic!(
+                                "hw-sim does not support wlan_rsn::auth::Config::DriverSae(_)"
+                            ),
+                        }
+                        authenticator.initiate(&mut update_sink).expect("initiating authenticator");
+                        process_auth_update(authenticator, &mut update_sink, &CHANNEL, bssid, &phy, true).expect(
+                            "processing authenticator updates immediately after association complete",
+                        );
                     }
                 }
                 _ => {}
@@ -439,18 +461,19 @@ pub fn handle_tx_event<
             for mac::Msdu { llc_frame, .. } in msdus {
                 assert_eq!(llc_frame.hdr.protocol_id.to_native(), mac::ETHER_TYPE_EAPOL);
                 if let Some(authenticator) = authenticator {
-                    let mut updates = wlan_rsn::rsna::UpdateSink::default();
+                    let mut update_sink = update_sink
+                        .as_mut()
+                        .unwrap_or_else(|| panic!("No UpdateSink provided with Authenticator."));
                     let mic_size = authenticator.get_negotiated_protection().mic_size;
                     let frame_rx = eapol::KeyFrameRx::parse(mic_size as usize, llc_frame.body)
                         .expect("parsing EAPOL frame");
                     if let Err(e) =
-                        authenticator.on_eapol_frame(&mut updates, eapol::Frame::Key(frame_rx))
+                        authenticator.on_eapol_frame(&mut update_sink, eapol::Frame::Key(frame_rx))
                     {
                         error!("error sending EAPOL frame to authenticator: {}", e);
                     }
-                    process_auth_update(&updates, &CHANNEL, bssid, &phy)
+                    process_auth_update(authenticator, update_sink, &CHANNEL, bssid, &phy, true)
                         .expect("processing authenticator updates after EAPOL frame");
-                    post_process_auth_update(authenticator, &updates, &CHANNEL, bssid, &phy);
                 }
             }
         }
@@ -465,14 +488,28 @@ pub fn handle_connect_events(
     bssid: &mac::Bssid,
     protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
+    update_sink: &mut Option<wlan_rsn::rsna::UpdateSink>,
 ) {
     match event {
         WlantapPhyEvent::SetChannel { args } => {
             handle_set_channel_event(&args, phy, ssid, bssid, protection)
         }
-        WlantapPhyEvent::Tx { args } => {
-            handle_tx_event(&args, phy, bssid, authenticator, |_, _, _, _, _| {})
-        }
+        WlantapPhyEvent::Tx { args } => match authenticator {
+            Some(_) => match update_sink {
+                Some(_) => handle_tx_event(
+                    &args,
+                    phy,
+                    bssid,
+                    authenticator,
+                    update_sink,
+                    process_tx_auth_updates,
+                ),
+                None => panic!("No UpdateSink provided with Authenticator."),
+            },
+            None => {
+                handle_tx_event(&args, phy, bssid, &mut None, &mut None, process_tx_auth_updates)
+            }
+        },
         _ => (),
     }
 }
@@ -488,13 +525,27 @@ pub async fn connect_to_ap<F, R>(
 where
     F: Future<Output = R> + Unpin,
 {
+    // Provide an UpdateSink if there is an Authenticator
+    let mut update_sink = match authenticator {
+        Some(_) => Some(wlan_rsn::rsna::UpdateSink::default()),
+        None => None,
+    };
+
     let phy = helper.proxy();
     helper
         .run_until_complete_or_timeout(
             30.seconds(),
             format!("connecting to {} ({:02X?})", String::from_utf8_lossy(ap_ssid), ap_bssid),
             |event| {
-                handle_connect_events(&event, &phy, ap_ssid, ap_bssid, protection, authenticator);
+                handle_connect_events(
+                    &event,
+                    &phy,
+                    ap_ssid,
+                    ap_bssid,
+                    protection,
+                    authenticator,
+                    &mut update_sink,
+                );
             },
             connect_fut,
         )
@@ -554,6 +605,7 @@ pub async fn connect(
 
     // Validate the connect request.
     let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(bssid, ssid, p));
+    let mut update_sink = Some(wlan_rsn::rsna::UpdateSink::default());
     let protection = match passphrase {
         Some(_) => Protection::Wpa2Personal,
         None => Protection::Open,
@@ -564,7 +616,15 @@ pub async fn connect(
             30.seconds(),
             format!("connecting to {} ({:02X?})", String::from_utf8_lossy(ssid), bssid),
             |event| {
-                handle_connect_events(&event, &phy, ssid, bssid, &protection, &mut authenticator);
+                handle_connect_events(
+                    &event,
+                    &phy,
+                    ssid,
+                    bssid,
+                    &protection,
+                    &mut authenticator,
+                    &mut update_sink,
+                );
             },
             connect_fut,
         )

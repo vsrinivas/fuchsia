@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::format_err,
     fidl_fuchsia_wlan_policy::{self as wlan_policy},
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_async::Task,
@@ -76,6 +77,7 @@ fn handle_phy_event(
     bssid: &mac::Bssid,
     protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
+    update_sink: &mut Option<wlan_rsn::rsna::UpdateSink>,
     first_association_complete: &mut bool,
     second_association_confirm_sender_wrapper: &mut Option<oneshot::Sender<()>>,
 ) {
@@ -88,26 +90,51 @@ fn handle_phy_event(
             phy,
             bssid,
             authenticator,
-            |authenticator, updates, channel, bssid, phy| {
-                for update in updates {
-                    if let SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished) = update {
+            update_sink,
+            |authenticator, update_sink, channel, bssid, phy, ready_for_eapol_frames| {
+                process_tx_auth_updates(
+                    authenticator,
+                    update_sink,
+                    channel,
+                    bssid,
+                    phy,
+                    ready_for_eapol_frames,
+                )?;
+
+                // TODO(fxbug.dev/69580): Use Vec::drain_filter instead.
+                let mut i = 0;
+                while i < update_sink.len() {
+                    if let SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished) =
+                        &update_sink[i]
+                    {
                         if !*first_association_complete {
-                            send_disassociate(&channel, bssid, mac::ReasonCode::NO_MORE_STAS, &phy)
-                                .expect("Error sending disassociation frame.");
+                            send_disassociate(
+                                &channel,
+                                bssid,
+                                mac::ReasonCode::NO_MORE_STAS,
+                                &phy,
+                            )?;
                             authenticator.reset();
                             *first_association_complete = true;
-                            return;
+                            return Ok(());
                         }
                         if let Some(_) = second_association_confirm_sender_wrapper {
                             let second_association_confirm_sender =
                                 second_association_confirm_sender_wrapper.take().unwrap();
-                            second_association_confirm_sender.send(()).expect(
-                                "second association complete, sending message to other future",
-                            );
+                            second_association_confirm_sender.send(()).map_err(|e| {
+                                format_err!(
+                                    "Unable to send confirmation of second association: {:?}",
+                                    e
+                                )
+                            })?;
                         }
-                        return;
+                        update_sink.remove(i);
+                        return Ok(());
+                    } else {
+                        i += 1;
                     }
                 }
+                Ok(())
             },
         ),
         _ => (),
@@ -143,6 +170,10 @@ async fn reconnect_to_wpa2_network() {
 
     // Validate the connect request.
     let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(&BSSID, SSID, p));
+    let mut update_sink = match authenticator {
+        Some(_) => Some(wlan_rsn::rsna::UpdateSink::default()),
+        None => None,
+    };
     let protection = Protection::Wpa2Personal;
 
     helper
@@ -157,6 +188,7 @@ async fn reconnect_to_wpa2_network() {
                     &BSSID,
                     &protection,
                     &mut authenticator,
+                    &mut update_sink,
                     &mut first_association_complete,
                     &mut second_association_confirm_sender_wrapper,
                 );
