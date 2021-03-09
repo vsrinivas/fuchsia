@@ -299,10 +299,8 @@ struct escan_info {
   uint32_t escan_state;
   uint8_t* escan_buf;
   struct brcmf_if* ifp;
-  zx_status_t (*run)(struct brcmf_cfg80211_info* cfg,
-                     struct brcmf_if* ifp,
-                     const wlanif_scan_req_t* request,
-                     uint16_t* sync_id_out);
+  zx_status_t (*run)(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
+                     const wlanif_scan_req_t* request, uint16_t* sync_id_out);
 };
 
 /**

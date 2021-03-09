@@ -32,47 +32,47 @@ namespace wlan::brcmfmac {
 // enough ticks since the last token was issued. If it has enough ticks the bucket will add the
 // price of the token to the time the last token was issued, thereby consuming ticks.
 class TokenBucket {
-  public:
-    explicit TokenBucket(double tokens_per_second, zx_ticks_t capacity = 1)
-      : capacity_(capacity)
-      , ticks_per_token_(static_cast<zx_ticks_t>(
-        static_cast<double>(zx_ticks_per_second()) / tokens_per_second))
-      // Start out with a full bucket, i.e. the last issued tick was at capacity ticks in past
-      , last_issued_tick_(zx_ticks_get() - capacity_ * ticks_per_token_) {
-    }
+ public:
+  explicit TokenBucket(double tokens_per_second, zx_ticks_t capacity = 1)
+      : capacity_(capacity),
+        ticks_per_token_(
+            static_cast<zx_ticks_t>(static_cast<double>(zx_ticks_per_second()) / tokens_per_second))
+        // Start out with a full bucket, i.e. the last issued tick was at capacity ticks in past
+        ,
+        last_issued_tick_(zx_ticks_get() - capacity_ * ticks_per_token_) {}
 
-    // Attempt to consume one token. If a token is successfully consumed then one token will be
-    // deducted and true is returned. Returns false if there are not enough tokens.
-    bool consume() {
-      zx_ticks_t current_tick = zx_ticks_get();
-      zx_ticks_t old_tick = last_issued_tick_.load(std::memory_order_relaxed);
+  // Attempt to consume one token. If a token is successfully consumed then one token will be
+  // deducted and true is returned. Returns false if there are not enough tokens.
+  bool consume() {
+    zx_ticks_t current_tick = zx_ticks_get();
+    zx_ticks_t old_tick = last_issued_tick_.load(std::memory_order_relaxed);
 
-      // If the last tick that we issued a token is further back than the capacity of the bucket we
-      // need to update it to be full but not over capacity.
-      zx_ticks_t min_tick = current_tick - ticks_per_token_ * capacity_;
-      zx_ticks_t updated_tick = min_tick > old_tick ? min_tick : old_tick;
+    // If the last tick that we issued a token is further back than the capacity of the bucket we
+    // need to update it to be full but not over capacity.
+    zx_ticks_t min_tick = current_tick - ticks_per_token_ * capacity_;
+    zx_ticks_t updated_tick = min_tick > old_tick ? min_tick : old_tick;
 
-      while (true) {
-        // Add the cost of a token to the time we last issued a token, if the total exceeds the
-        // current number of ticks that is the same as the cost being too high.
-        updated_tick += ticks_per_token_;
-        if (updated_tick > current_tick) {
-          // The number of ticks required to consume a token is too high
-          return false;
-        }
-        if (last_issued_tick_.compare_exchange_weak(old_tick, updated_tick,
-                                                    std::memory_order_relaxed)) {
-          // lastIssuedTick_ didn't change and now contains updatedTick
-          return true;
-        }
-        // lastIssuedTick_ changed, updated value is in old_tick, check again
-        updated_tick = old_tick;
+    while (true) {
+      // Add the cost of a token to the time we last issued a token, if the total exceeds the
+      // current number of ticks that is the same as the cost being too high.
+      updated_tick += ticks_per_token_;
+      if (updated_tick > current_tick) {
+        // The number of ticks required to consume a token is too high
+        return false;
       }
+      if (last_issued_tick_.compare_exchange_weak(old_tick, updated_tick,
+                                                  std::memory_order_relaxed)) {
+        // lastIssuedTick_ didn't change and now contains updatedTick
+        return true;
+      }
+      // lastIssuedTick_ changed, updated value is in old_tick, check again
+      updated_tick = old_tick;
     }
+  }
 
-    const zx_ticks_t capacity_;
-    const zx_ticks_t ticks_per_token_;
-    std::atomic<zx_ticks_t> last_issued_tick_;
+  const zx_ticks_t capacity_;
+  const zx_ticks_t ticks_per_token_;
+  std::atomic<zx_ticks_t> last_issued_tick_;
 };
 
 }  // namespace wlan::brcmfmac

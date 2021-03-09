@@ -6,7 +6,7 @@
 
 // Arbitrary values used to uniquely identify scan requests (and results)
 constexpr uint64_t kFirstScanId = 0x4f4a;
-constexpr uint64_t kSecondScanId =  0x414a;
+constexpr uint64_t kSecondScanId = 0x414a;
 
 namespace wlan::brcmfmac {
 

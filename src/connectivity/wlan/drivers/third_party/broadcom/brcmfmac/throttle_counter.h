@@ -19,11 +19,10 @@
 
 namespace wlan::brcmfmac {
 
-template<typename Throttler>
+template <typename Throttler>
 class ThrottleCounter {
-public:
-  explicit ThrottleCounter(Throttler& throttler) : throttler_(throttler) {
-  }
+ public:
+  explicit ThrottleCounter(Throttler& throttler) : throttler_(throttler) {}
 
   // Attempt to consume a token from the token bucket to use for logging. If the consume is
   // successful the previous number of throttled events is placed in |counter|. If the consume is
@@ -42,9 +41,9 @@ public:
     return false;
   }
 
-private:
+ private:
   Throttler& throttler_;
   std::atomic<uint64_t> counter_ = 0;
 };
 
-} // namespace wlan::brcmfmac
+}  // namespace wlan::brcmfmac
