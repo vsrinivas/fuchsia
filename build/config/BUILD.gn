@@ -449,7 +449,7 @@ config("optimize_sanitizer") {
 config("optimize_profile") {
   cflags = [ "-O1" ]
   ldflags = cflags
-  rustflags = [ "-Copt-level=0" ]
+  rustflags = [ "-Copt-level=1" ]
 }
 
 config("default_optimize") {
