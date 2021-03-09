@@ -24,34 +24,88 @@ mod host;
 // LOGGING INITIALIZATION
 //
 
-/// Initialize logging for a component.
+/// Initialize logging
 #[doc(hidden)]
-#[cfg(target_os = "fuchsia")]
-pub fn init_logging_for_component() {
-    fuchsia_syslog::init_with_tags(&[fuchsia_syslog::COMPONENT_NAME_PLACEHOLDER_TAG])
-        .expect("initialize logging")
-}
+pub fn init_logging_for_component_with_executor<R>(func: impl FnOnce() -> R) -> impl FnOnce() -> R {
+    move || {
+        #[cfg(target_os = "fuchsia")]
+        diagnostics_log::init!();
+        #[cfg(not(target_os = "fuchsia"))]
+        crate::host::logger::init();
 
-/// Initialize logging for a test.
-#[doc(hidden)]
-#[cfg(target_os = "fuchsia")]
-pub fn init_logging_for_test(test_name: &str) {
-    fuchsia_syslog::init_with_tags(&[fuchsia_syslog::COMPONENT_NAME_PLACEHOLDER_TAG, test_name])
-        .expect("initialize logging")
+        func()
+    }
 }
 
 /// Initialize logging
 #[doc(hidden)]
-#[cfg(not(target_os = "fuchsia"))]
-pub fn init_logging_for_component() {
-    crate::host::logger::init()
+pub fn init_logging_for_component_with_threads<R>(func: impl FnOnce() -> R) -> impl FnOnce() -> R {
+    move || {
+        #[cfg(target_os = "fuchsia")]
+        let _guard = init_logging_with_threads(None);
+        #[cfg(not(target_os = "fuchsia"))]
+        crate::host::logger::init();
+
+        func()
+    }
 }
 
 /// Initialize logging
 #[doc(hidden)]
-#[cfg(not(target_os = "fuchsia"))]
-pub fn init_logging_for_test(_name: &'static str) {
-    crate::host::logger::init()
+pub fn init_logging_for_test_with_executor<R>(
+    func: impl Fn(usize) -> R,
+    _name: &'static str,
+) -> impl Fn(usize) -> R {
+    move |n| {
+        #[cfg(target_os = "fuchsia")]
+        diagnostics_log::init!(_name);
+        #[cfg(not(target_os = "fuchsia"))]
+        crate::host::logger::init();
+
+        func(n)
+    }
+}
+
+/// Initialize logging
+#[doc(hidden)]
+pub fn init_logging_for_test_with_threads<R>(
+    func: impl Fn(usize) -> R,
+    _name: &'static str,
+) -> impl Fn(usize) -> R {
+    move |n| {
+        #[cfg(target_os = "fuchsia")]
+        let _guard = init_logging_with_threads(None);
+        #[cfg(not(target_os = "fuchsia"))]
+        crate::host::logger::init();
+
+        func(n)
+    }
+}
+
+/// Initializes logging on a background thread, returning a guard which cancels interest listening
+/// when dropped.
+#[cfg(target_os = "fuchsia")]
+fn init_logging_with_threads(tag: Option<&'static str>) -> impl Drop {
+    struct AbortAndJoinOnDrop(futures::future::AbortHandle, Option<std::thread::JoinHandle<()>>);
+    impl Drop for AbortAndJoinOnDrop {
+        fn drop(&mut self) {
+            self.0.abort();
+            self.1.take().unwrap().join().unwrap();
+        }
+    }
+
+    let (send, recv) = std::sync::mpsc::channel();
+    let bg_thread = std::thread::spawn(move || {
+        let mut exec = fuchsia_async::Executor::new().expect("Failed to create executor");
+        let on_interest_changes = diagnostics_log::init_publishing(tag).unwrap();
+        let (on_interest_changes, cancel_interest) =
+            futures::future::abortable(on_interest_changes);
+        send.send(cancel_interest).unwrap();
+        drop(send);
+        exec.run(on_interest_changes, 1 /* threads */).ok();
+    });
+
+    AbortAndJoinOnDrop(recv.recv().unwrap(), Some(bg_thread))
 }
 
 //

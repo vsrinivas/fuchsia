@@ -49,6 +49,10 @@ impl Executor {
             Executor::None | Executor::Singlethreaded | Executor::Multithreaded(_) => false,
         }
     }
+
+    fn is_some(&self) -> bool {
+        !matches!(self, Executor::Test | Executor::None)
+    }
 }
 
 impl quote::ToTokens for Executor {
@@ -183,12 +187,20 @@ impl Finish for Transformer {
 
         // Initialize logging
         let init_logging = if !self.logging {
-            quote! {}
+            quote! { func }
         } else if self.executor.is_test() {
             let test_name = LitStr::new(&format!("{}", ident), ident.span());
-            quote! { ::fuchsia::init_logging_for_test(#test_name); }
+            if self.executor.is_some() {
+                quote! { ::fuchsia::init_logging_for_test_with_executor(func, #test_name) }
+            } else {
+                quote! { ::fuchsia::init_logging_for_test_with_threads(func, #test_name) }
+            }
         } else {
-            quote! { ::fuchsia::init_logging_for_component(); }
+            if self.executor.is_some() {
+                quote! { ::fuchsia::init_logging_for_component_with_executor(func) }
+            } else {
+                quote! { ::fuchsia::init_logging_for_component_with_threads(func) }
+            }
         };
 
         if self.executor.is_test() {
@@ -227,8 +239,8 @@ impl Finish for Transformer {
                 #asyncness fn #func(#inputs) #ret_type {
                     #block
                 }
-                #init_logging
                 let func = #adapt_main;
+                let func = #init_logging;
                 #run_executor
             }
         };
