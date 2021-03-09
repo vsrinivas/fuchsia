@@ -50,14 +50,16 @@ class FakeAudioDevice : public fuchsia::hardware::audio::Device {
 class DeviceTracker {
  public:
   struct DeviceConnection {
-    zx::channel channel;
     std::string name;
     bool is_input;
+    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config;
   };
 
-  fit::function<void(zx::channel, std::string, bool, AudioDriverVersion)> GetHandler() {
-    return [this](auto channel, auto name, auto is_input, auto version) {
-      devices_.emplace_back(DeviceConnection{std::move(channel), std::move(name), is_input});
+  fit::function<void(std::string, bool,
+                     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>)>
+  GetHandler() {
+    return [this](auto name, auto is_input, auto stream_config) {
+      devices_.emplace_back(DeviceConnection{std::move(name), is_input, std::move(stream_config)});
     };
   }
 

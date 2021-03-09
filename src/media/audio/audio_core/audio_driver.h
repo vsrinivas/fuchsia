@@ -39,11 +39,6 @@ struct HwGainState {
   float gain_step;
 };
 
-enum class AudioDriverVersion : uint8_t {
-  V1,  // Legacy, manual serialization in system/public/zircon/device/audio.h.
-  V2,  // FIDL, defined in sdk/fidl/fuchsia.hardware.audio.
-};
-
 class AudioDriver {
  public:
   // Timeout values are chosen to be generous while still providing some guard-rails against
@@ -66,109 +61,85 @@ class AudioDriver {
     Shutdown,
   };
 
-  AudioDriver() = default;
-  virtual ~AudioDriver() = default;
-
-  virtual zx_status_t Init(zx::channel stream_channel) = 0;
-  virtual void Cleanup() = 0;
-  virtual std::optional<Format> GetFormat() const = 0;
-  virtual bool plugged() const = 0;
-  virtual zx::time plug_time() const = 0;
-
-  // Methods which need to be called from the owner's execution domain.  If there was a good way to
-  // use the static lock analysis to ensure this, I would do so, but unfortunately the compiler is
-  // unable to figure out that the owner calling these methods is always the same as owner_.
-  virtual State state() const = 0;
-  virtual zx::time ref_start_time() const = 0;
-  virtual zx::duration external_delay() const = 0;
-  virtual uint32_t fifo_depth_frames() const = 0;
-  virtual zx::duration fifo_depth_duration() const = 0;
-  virtual zx_koid_t stream_channel_koid() const = 0;
-  virtual const HwGainState& hw_gain_state() const = 0;
-  virtual uint32_t clock_domain() const = 0;
-
-  // The following properties are only safe to access after the driver is beyond the
-  // MissingDriverInfo state.  After that state, these members must be treated as immutable, and the
-  // driver class may no longer change them.
-  virtual const audio_stream_unique_id_t& persistent_unique_id() const = 0;
-  virtual const std::string& manufacturer_name() const = 0;
-  virtual const std::string& product_name() const = 0;
-
-  virtual zx_status_t GetDriverInfo() = 0;
-  virtual zx_status_t Configure(const Format& format, zx::duration min_ring_buffer_duration) = 0;
-  virtual zx_status_t Start() = 0;
-  virtual zx_status_t Stop() = 0;
-  virtual zx_status_t SetPlugDetectEnabled(bool enabled) = 0;
-  virtual zx_status_t SetGain(const AudioDeviceSettings::GainState& gain_state,
-                              audio_set_gain_flags_t set_flags) = 0;
-  virtual zx_status_t SelectBestFormat(uint32_t* frames_per_second_inout, uint32_t* channels_inout,
-                                       fuchsia::media::AudioSampleFormat* sample_format_inout) = 0;
-  virtual const std::shared_ptr<ReadableRingBuffer>& readable_ring_buffer() const
-      FXL_NO_THREAD_SAFETY_ANALYSIS = 0;
-  virtual const std::shared_ptr<WritableRingBuffer>& writable_ring_buffer() const
-      FXL_NO_THREAD_SAFETY_ANALYSIS = 0;
-  virtual const TimelineFunction& ref_time_to_frac_presentation_frame() const = 0;
-  virtual const TimelineFunction& ref_time_to_frac_safe_read_or_write_frame() const = 0;
-
-  virtual AudioClock& reference_clock() = 0;
-};
-
-class AudioDriverV2 : public AudioDriver {
- public:
-  AudioDriverV2(AudioDevice* owner);
+  explicit AudioDriver(AudioDevice* owner);
 
   using DriverTimeoutHandler = fit::function<void(zx::duration)>;
-  AudioDriverV2(AudioDevice* owner, DriverTimeoutHandler timeout_handler);
+  AudioDriver(AudioDevice* owner, DriverTimeoutHandler timeout_handler);
 
-  virtual ~AudioDriverV2() = default;
+  virtual ~AudioDriver() = default;
 
-  zx_status_t Init(zx::channel stream_channel) override;
-  void Cleanup() override;
-  std::optional<Format> GetFormat() const override;
+  zx_status_t Init(zx::channel stream_channel);
+  void Cleanup();
+  std::optional<Format> GetFormat() const;
 
-  bool plugged() const override {
+  bool plugged() const {
     std::lock_guard<std::mutex> lock(plugged_lock_);
     return plugged_;
   }
 
-  zx::time plug_time() const override {
+  zx::time plug_time() const {
     std::lock_guard<std::mutex> lock(plugged_lock_);
     return plug_time_;
   }
 
-  State state() const override { return state_; }
-  zx::time ref_start_time() const override { return ref_start_time_; }
-  zx::duration external_delay() const override { return external_delay_; }
-  uint32_t fifo_depth_frames() const override { return fifo_depth_frames_; }
-  zx::duration fifo_depth_duration() const override { return fifo_depth_duration_; }
-  zx_koid_t stream_channel_koid() const override { return stream_channel_koid_; }
-  const HwGainState& hw_gain_state() const override { return hw_gain_state_; }
-  uint32_t clock_domain() const override { return clock_domain_; }
+  // Methods which need to be called from the owner's execution domain.  If there was a good way to
+  // use the static lock analysis to ensure this, I would do so, but unfortunately the compiler is
+  // unable to figure out that the owner calling these methods is always the same as owner_.
+  State state() const { return state_; }
+  zx::time ref_start_time() const { return ref_start_time_; }
+  zx::duration external_delay() const { return external_delay_; }
+  uint32_t fifo_depth_frames() const { return fifo_depth_frames_; }
+  zx::duration fifo_depth_duration() const { return fifo_depth_duration_; }
+  zx_koid_t stream_channel_koid() const { return stream_channel_koid_; }
+  const HwGainState& hw_gain_state() const { return hw_gain_state_; }
+  uint32_t clock_domain() const { return clock_domain_; }
 
-  const TimelineFunction& ref_time_to_frac_presentation_frame() const override {
+  virtual const TimelineFunction& ref_time_to_frac_presentation_frame() const {
     return ref_time_to_frac_presentation_frame_;
   }
-  const TimelineFunction& ref_time_to_frac_safe_read_or_write_frame() const override {
+  virtual const TimelineFunction& ref_time_to_frac_safe_read_or_write_frame() const {
     return ref_time_to_frac_safe_read_or_write_frame_;
   }
 
-  const audio_stream_unique_id_t& persistent_unique_id() const override {
-    return persistent_unique_id_;
-  }
-  const std::string& manufacturer_name() const override { return manufacturer_name_; }
-  const std::string& product_name() const override { return product_name_; }
+  // The following properties are only safe to access after the driver is beyond the
+  // MissingDriverInfo state.  After that state, these members must be treated as immutable, and the
+  // driver class may no longer change them.
+  const audio_stream_unique_id_t& persistent_unique_id() const { return persistent_unique_id_; }
+  const std::string& manufacturer_name() const { return manufacturer_name_; }
+  const std::string& product_name() const { return product_name_; }
 
-  zx_status_t GetDriverInfo() override;
-  zx_status_t Configure(const Format& format, zx::duration min_ring_buffer_duration) override;
-  zx_status_t Start() override;
-  zx_status_t Stop() override;
-  zx_status_t SetPlugDetectEnabled(bool enabled) override;
+  zx_status_t GetDriverInfo();
+  zx_status_t Configure(const Format& format, zx::duration min_ring_buffer_duration);
+  zx_status_t Start();
+  zx_status_t Stop();
+  zx_status_t SetPlugDetectEnabled(bool enabled);
   zx_status_t SetGain(const AudioDeviceSettings::GainState& gain_state,
-                      audio_set_gain_flags_t set_flags) override;
+                      audio_set_gain_flags_t set_flags);
   zx_status_t SelectBestFormat(uint32_t* frames_per_second_inout, uint32_t* channels_inout,
-                               fuchsia::media::AudioSampleFormat* sample_format_inout) override;
+                               fuchsia::media::AudioSampleFormat* sample_format_inout);
 
-  AudioClock& reference_clock() override { return *audio_clock_; }
+  // Accessors for the ring buffer pointer and the current output clock transformation.
+  //
+  // Note: Only AudioDriver writes to these, and only when in our owner's mixing execution
+  // domain.  It is safe for our owner to read these objects, but only when operating in the mixing
+  // domain.  Unfortunately, it is not practical to use the static thread safety annotation to prove
+  // that we are accessing these variable from the mixing domain.  Instead, we...
+  //
+  // 1) Make these methods private.
+  // 2) Make the AudioDevice class (our owner) a friend.
+  // 3) Expose protected accessors in AudioDevice which demand that we execute in the mix domain.
+  //
+  // This should be a strong enough guarantee to warrant disabling the thread safety analysis here.
+  const std::shared_ptr<ReadableRingBuffer>& readable_ring_buffer() const
+      FXL_NO_THREAD_SAFETY_ANALYSIS {
+    return readable_ring_buffer_;
+  };
+  const std::shared_ptr<WritableRingBuffer>& writable_ring_buffer() const
+      FXL_NO_THREAD_SAFETY_ANALYSIS {
+    return writable_ring_buffer_;
+  };
+
+  AudioClock& reference_clock() { return *audio_clock_; }
 
  private:
   static constexpr uint32_t kDriverInfoHasUniqueId = (1u << 0);
@@ -208,27 +179,6 @@ class AudioDriverV2 : public AudioDriver {
   bool fetching_driver_info() const FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token()) {
     return fetch_driver_info_deadline_ != zx::time::infinite();
   }
-
-  // Accessors for the ring buffer pointer and the current output clock transformation.
-  //
-  // Note: Only AudioDriverV2 writes to these, and only when in our owner's mixing execution
-  // domain.  It is safe for our owner to read these objects, but only when operating in the mixing
-  // domain.  Unfortunately, it is not practical to use the static thread safety annotation to prove
-  // that we are accessing these variable from the mixing domain.  Instead, we...
-  //
-  // 1) Make these methods private.
-  // 2) Make the AudioDevice class (our owner) a friend.
-  // 3) Expose protected accessors in AudioDevice which demand that we execute in the mix domain.
-  //
-  // This should be a strong enough guarantee to warrant disabling the thread safety analysis here.
-  const std::shared_ptr<ReadableRingBuffer>& readable_ring_buffer() const override
-      FXL_NO_THREAD_SAFETY_ANALYSIS {
-    return readable_ring_buffer_;
-  };
-  const std::shared_ptr<WritableRingBuffer>& writable_ring_buffer() const override
-      FXL_NO_THREAD_SAFETY_ANALYSIS {
-    return writable_ring_buffer_;
-  };
 
   void DriverCommandTimedOut() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
   void RequestNextPlugStateChange() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());

@@ -13,20 +13,12 @@ class FakePlugDetector : public PlugDetector {
  public:
   virtual ~FakePlugDetector() = default;
 
-  void SimulatePlugEvent(zx::channel channel, std::string name, bool input) {
-    if (observer_) {
-      observer_(std::move(channel), std::move(name), input, AudioDriverVersion::V2);
-    } else {
-      pending_devices_.push_back({std::move(channel), std::move(name), input});
-    }
-  }
-
   // |media::audio::PlugDetector|
   zx_status_t Start(Observer o) override {
     observer_ = std::move(o);
     std::vector<Device>::iterator it;
     while ((it = pending_devices_.begin()) != pending_devices_.end()) {
-      observer_(std::move(it->channel), std::move(it->name), it->input, AudioDriverVersion::V2);
+      observer_(std::move(it->name), it->input, std::move(it->stream_config));
       pending_devices_.erase(it);
     }
     return ZX_OK;
@@ -36,9 +28,9 @@ class FakePlugDetector : public PlugDetector {
  private:
   Observer observer_;
   struct Device {
-    zx::channel channel;
     std::string name;
     bool input;
+    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config;
   };
   std::vector<Device> pending_devices_;
 };

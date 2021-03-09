@@ -21,10 +21,10 @@
 
 namespace media::audio::testing {
 
-class FakeAudioDriverV2 : public fuchsia::hardware::audio::StreamConfig,
-                          public fuchsia::hardware::audio::RingBuffer {
+class FakeAudioDriver : public fuchsia::hardware::audio::StreamConfig,
+                        public fuchsia::hardware::audio::RingBuffer {
  public:
-  FakeAudioDriverV2(zx::channel channel, async_dispatcher_t* dispatcher);
+  FakeAudioDriver(zx::channel channel, async_dispatcher_t* dispatcher);
 
   fzl::VmoMapper CreateRingBuffer(size_t size);
   void Start();

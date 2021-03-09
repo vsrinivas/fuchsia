@@ -68,13 +68,13 @@ class TestOutputPipeline : public OutputPipeline {
   std::unique_ptr<AudioClock> audio_clock_;
 };
 
-class StubDriver : public AudioDriverV2 {
+class StubDriver : public AudioDriver {
  public:
   static constexpr size_t kSafeWriteDelayFrames = 480;
   static constexpr auto kSafeWriteDelayDuration = zx::msec(10);
   static constexpr size_t kRingBufferFrames = 48000;
 
-  StubDriver(AudioDevice* owner) : AudioDriverV2(owner) {}
+  StubDriver(AudioDevice* owner) : AudioDriver(owner) {}
 
   const TimelineFunction& ref_time_to_frac_presentation_frame() const override {
     return kDriverRefPtsToFractionalFrames;
@@ -168,7 +168,7 @@ class AudioOutputTest : public testing::ThreadingModelFixture {
     // domain, so that AudioDriver establishes and passes on an AudioClock for this device.
     zx::channel c1, c2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
-    remote_driver_ = std::make_unique<testing::FakeAudioDriverV2>(std::move(c1), dispatcher());
+    remote_driver_ = std::make_unique<testing::FakeAudioDriver>(std::move(c1), dispatcher());
     audio_output_->driver()->Init(std::move(c2));
     remote_driver_->Start();
 
@@ -195,7 +195,7 @@ class AudioOutputTest : public testing::ThreadingModelFixture {
       std::make_shared<TestAudioOutput>(&threading_model(), &context().device_manager(),
                                         &context().link_matrix(), context().clock_manager());
 
-  std::unique_ptr<testing::FakeAudioDriverV2> remote_driver_;
+  std::unique_ptr<testing::FakeAudioDriver> remote_driver_;
 };
 
 TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {

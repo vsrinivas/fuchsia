@@ -15,10 +15,10 @@ namespace {
 
 constexpr size_t kRingBufferSizeBytes = 8 * PAGE_SIZE;
 
-class AudioInputTestDriverV2 : public testing::ThreadingModelFixture,
-                               public ::testing::WithParamInterface<uint32_t> {
+class AudioInputTestDriver : public testing::ThreadingModelFixture,
+                             public ::testing::WithParamInterface<uint32_t> {
  protected:
-  AudioInputTestDriverV2()
+  AudioInputTestDriver()
       : ThreadingModelFixture(
             ProcessConfig::Builder()
                 .AddDeviceProfile({std::nullopt, DeviceConfig::InputDeviceProfile(GetParam())})
@@ -31,7 +31,7 @@ class AudioInputTestDriverV2 : public testing::ThreadingModelFixture,
     zx::channel c1, c2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
 
-    remote_driver_ = std::make_unique<testing::FakeAudioDriverV2>(
+    remote_driver_ = std::make_unique<testing::FakeAudioDriver>(
         std::move(c1), threading_model().FidlDomain().dispatcher());
     ASSERT_NE(remote_driver_, nullptr);
 
@@ -46,12 +46,12 @@ class AudioInputTestDriverV2 : public testing::ThreadingModelFixture,
     ASSERT_NE(ring_buffer_mapper_.start(), nullptr);
   }
 
-  std::unique_ptr<testing::FakeAudioDriverV2> remote_driver_;
+  std::unique_ptr<testing::FakeAudioDriver> remote_driver_;
   std::shared_ptr<AudioInput> input_;
   fzl::VmoMapper ring_buffer_mapper_;
 };
 
-TEST_P(AudioInputTestDriverV2, RequestHardwareRateInConfigIfSupported) {
+TEST_P(AudioInputTestDriver, RequestHardwareRateInConfigIfSupported) {
   // Publish a format that has a matching sample rate, and also formats with double and half the
   // requested rate.
   fuchsia::hardware::audio::PcmSupportedFormats formats = {};
@@ -73,7 +73,7 @@ TEST_P(AudioInputTestDriverV2, RequestHardwareRateInConfigIfSupported) {
   ASSERT_EQ(format->frames_per_second(), GetParam());
 }
 
-TEST_P(AudioInputTestDriverV2, FallBackToAlternativeRateIfPreferredRateIsNotSupported) {
+TEST_P(AudioInputTestDriver, FallBackToAlternativeRateIfPreferredRateIsNotSupported) {
   ASSERT_NE(GetParam(), static_cast<uint32_t>(0));  // Invalid frame rate passed as test parameter.
   const uint32_t kSupportedRate = GetParam() * 2;
   fuchsia::hardware::audio::PcmSupportedFormats formats = {};
@@ -93,7 +93,7 @@ TEST_P(AudioInputTestDriverV2, FallBackToAlternativeRateIfPreferredRateIsNotSupp
   ASSERT_EQ(format->frames_per_second(), kSupportedRate);
 }
 
-INSTANTIATE_TEST_SUITE_P(AudioInputTestDriverV2Instance, AudioInputTestDriverV2,
+INSTANTIATE_TEST_SUITE_P(AudioInputTestDriverInstance, AudioInputTestDriver,
                          ::testing::Values(24000, 48000, 96000));
 
 }  // namespace

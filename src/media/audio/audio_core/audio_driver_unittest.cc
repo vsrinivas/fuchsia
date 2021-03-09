@@ -12,31 +12,14 @@
 namespace media::audio {
 namespace {
 
-// These tests are templated to run on both driver types
-typedef ::testing::Types<testing::FakeAudioDriverV2> DriverTypes;
-
-// Enable gtest to pretty-print the driver type name
-class DriverTypeNames {
- public:
-  template <typename T>
-  static std::string GetName(int) {
-    if constexpr (std::is_same<T, testing::FakeAudioDriverV2>()) {
-      return "AudioDriverV2";
-    }
-  }
-};
-
-TYPED_TEST_SUITE(AudioDriverTest, DriverTypes, DriverTypeNames);
-
 // Test class to verify the driver initialization/configuration sequence.
-template <typename T>
 class AudioDriverTest : public testing::ThreadingModelFixture {
  public:
   void SetUp() override {
-    driver_ = CreateAudioDriver<T>();
+    driver_ = CreateAudioDriver<testing::FakeAudioDriver>();
     zx::channel c1, c2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
-    remote_driver_ = std::make_unique<T>(std::move(c1), dispatcher());
+    remote_driver_ = std::make_unique<testing::FakeAudioDriver>(std::move(c1), dispatcher());
 
     // Set fake non-zero fifo depth and external delay, to keep things interesting.
     remote_driver_->set_fifo_depth(kFifoDepthFrames * kChannelCount * 2);
@@ -64,7 +47,7 @@ class AudioDriverTest : public testing::ThreadingModelFixture {
   std::unique_ptr<AudioDriver> driver_;
   // While |driver_| is the object under test, this object simulates the channel messages that
   // normally come from the actual driver instance.
-  std::unique_ptr<T> remote_driver_;
+  std::unique_ptr<testing::FakeAudioDriver> remote_driver_;
   zx::duration last_late_command_ = zx::duration::infinite();
 
   fzl::VmoMapper mapped_ring_buffer_;
@@ -74,13 +57,13 @@ class AudioDriverTest : public testing::ThreadingModelFixture {
   std::unique_ptr<AudioDriver> CreateAudioDriver() {}
 
   template <>
-  std::unique_ptr<AudioDriver> CreateAudioDriver<testing::FakeAudioDriverV2>() {
-    return std::make_unique<AudioDriverV2>(
+  std::unique_ptr<AudioDriver> CreateAudioDriver<testing::FakeAudioDriver>() {
+    return std::make_unique<AudioDriver>(
         device_.get(), [this](zx::duration delay) { last_late_command_ = delay; });
   }
 };
 
-TYPED_TEST(AudioDriverTest, GetDriverInfo) {
+TEST_F(AudioDriverTest, GetDriverInfo) {
   this->remote_driver_->Start();
 
   this->driver_->GetDriverInfo();
@@ -89,7 +72,7 @@ TYPED_TEST(AudioDriverTest, GetDriverInfo) {
   EXPECT_EQ(this->driver_->state(), AudioDriver::State::Unconfigured);
 }
 
-TYPED_TEST(AudioDriverTest, GetDriverInfoTimeout) {
+TEST_F(AudioDriverTest, GetDriverInfoTimeout) {
   this->remote_driver_->Stop();
 
   this->driver_->GetDriverInfo();
@@ -113,7 +96,7 @@ TYPED_TEST(AudioDriverTest, GetDriverInfoTimeout) {
   EXPECT_EQ(this->driver_->state(), AudioDriver::State::Unconfigured);
 }
 
-TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
+TEST_F(AudioDriverTest, SanityCheckTimelineMath) {
   // In order to sanity check the timeline math done by the audio driver, we
   // need to march it pretty much all of the way through the configure/startup
   // state machine.  Only after it has been completely configured and started

@@ -34,7 +34,7 @@ constexpr zx::duration kBeyondSubmittedPackets = zx::sec(1);
 
 }  // namespace
 
-class DriverV2OutputTest : public testing::ThreadingModelFixture {
+class DriverOutputTest : public testing::ThreadingModelFixture {
  protected:
   static constexpr uint32_t kRequestedDeviceRate = 48000;
   static constexpr uint16_t kRequestedDeviceChannels = 4;
@@ -58,7 +58,7 @@ class DriverV2OutputTest : public testing::ThreadingModelFixture {
     return config;
   }
 
-  DriverV2OutputTest()
+  DriverOutputTest()
       : ThreadingModelFixture(
             ProcessConfig::Builder()
                 .AddDeviceProfile(
@@ -78,7 +78,7 @@ class DriverV2OutputTest : public testing::ThreadingModelFixture {
     zx::channel c1, c2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
 
-    driver_ = std::make_unique<testing::FakeAudioDriverV2>(
+    driver_ = std::make_unique<testing::FakeAudioDriver>(
         std::move(c1), threading_model().FidlDomain().dispatcher());
     ASSERT_NE(driver_, nullptr);
     driver_->Start();
@@ -133,7 +133,7 @@ class DriverV2OutputTest : public testing::ThreadingModelFixture {
   }
 
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
-  std::unique_ptr<testing::FakeAudioDriverV2> driver_;
+  std::unique_ptr<testing::FakeAudioDriver> driver_;
   std::shared_ptr<DriverOutput> output_;
   fzl::VmoMapper ring_buffer_mapper_;
   zx::vmo ring_buffer_;
@@ -141,7 +141,7 @@ class DriverV2OutputTest : public testing::ThreadingModelFixture {
 };
 
 // Simple sanity test that the DriverOutput properly initializes the driver.
-TEST_F(DriverV2OutputTest, DriverOutputStartsDriver) {
+TEST_F(DriverOutputTest, DriverOutputStartsDriver) {
   // Fill the ring buffer with some bytes so we can detect if we've written to the buffer.
   auto rb_bytes = RingBuffer<uint8_t>();
   memset(rb_bytes.data(), 0xff, rb_bytes.size());
@@ -180,7 +180,7 @@ TEST_F(DriverV2OutputTest, DriverOutputStartsDriver) {
   RunLoopUntilIdle();
 }
 
-TEST_F(DriverV2OutputTest, RendererOutput) {
+TEST_F(DriverOutputTest, RendererOutput) {
   // Setup our driver to advertise support for a single format.
   fuchsia::hardware::audio::PcmFormat supportedSampleFormat = {};
   supportedSampleFormat.sample_format = fuchsia::hardware::audio::SampleFormat::PCM_SIGNED;
@@ -237,7 +237,7 @@ TEST_F(DriverV2OutputTest, RendererOutput) {
   RunLoopUntilIdle();
 }
 
-TEST_F(DriverV2OutputTest, MixAtExpectedInterval) {
+TEST_F(DriverOutputTest, MixAtExpectedInterval) {
   // Setup our driver to advertise support for a single format.
   fuchsia::hardware::audio::PcmFormat supportedSampleFormat = {};
   supportedSampleFormat.sample_format = fuchsia::hardware::audio::SampleFormat::PCM_SIGNED;
@@ -314,7 +314,7 @@ TEST_F(DriverV2OutputTest, MixAtExpectedInterval) {
   RunLoopUntilIdle();
 }
 
-TEST_F(DriverV2OutputTest, WriteSilenceToRingWhenMuted) {
+TEST_F(DriverOutputTest, WriteSilenceToRingWhenMuted) {
   // Setup our driver to advertise support for a single format.
   fuchsia::hardware::audio::PcmFormat supportedSampleFormat = {};
   supportedSampleFormat.sample_format = fuchsia::hardware::audio::SampleFormat::PCM_SIGNED;
@@ -392,7 +392,7 @@ TEST_F(DriverV2OutputTest, WriteSilenceToRingWhenMuted) {
   RunLoopUntilIdle();
 }
 
-TEST_F(DriverV2OutputTest, SelectRateAndChannelizationFromDeviceConfig) {
+TEST_F(DriverOutputTest, SelectRateAndChannelizationFromDeviceConfig) {
   // Setup our driver to advertise support for a single format.
   fuchsia::hardware::audio::PcmSupportedFormats formats = {};
   formats.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
@@ -421,7 +421,7 @@ TEST_F(DriverV2OutputTest, SelectRateAndChannelizationFromDeviceConfig) {
   EXPECT_EQ(output_->pipeline_config()->frames_per_second(), kRequestedDeviceRate);
 }
 
-TEST_F(DriverV2OutputTest, UseBestAvailableSampleRateAndChannelization) {
+TEST_F(DriverOutputTest, UseBestAvailableSampleRateAndChannelization) {
   // Setup our driver to advertise support for a single format.
   fuchsia::hardware::audio::PcmSupportedFormats formats = {};
   formats.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);

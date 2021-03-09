@@ -94,7 +94,7 @@ TEST_F(AudioCapturerTest, CanShutdownWithUnusedBuffer) {
   RunLoopUntilIdle();
 }
 
-TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffersDriverV2) {
+TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffersDriver) {
   EXPECT_EQ(context().link_matrix().SourceLinkCount(*capturer_), 0u);
 
   zx::vmo duplicate;
@@ -110,7 +110,7 @@ TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffersD
                                   &context().device_manager(), &context().link_matrix(),
                                   context().clock_manager());
   auto fake_driver =
-      testing::FakeAudioDriverV2(std::move(c1), threading_model().FidlDomain().dispatcher());
+      testing::FakeAudioDriver(std::move(c1), threading_model().FidlDomain().dispatcher());
 
   auto vmo = fake_driver.CreateRingBuffer(PAGE_SIZE);
 

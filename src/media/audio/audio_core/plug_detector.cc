@@ -27,14 +27,9 @@ namespace {
 static const struct {
   const char* path;
   bool is_input;
-  media::audio::AudioDriverVersion version;
 } AUDIO_DEVNODES[] = {
-    {.path = "/dev/class/audio-output",
-     .is_input = false,
-     .version = media::audio::AudioDriverVersion::V2},
-    {.path = "/dev/class/audio-input",
-     .is_input = true,
-     .version = media::audio::AudioDriverVersion::V2},
+    {.path = "/dev/class/audio-output", .is_input = false},
+    {.path = "/dev/class/audio-input", .is_input = true},
 };
 
 class PlugDetectorImpl : public PlugDetector {
@@ -55,9 +50,9 @@ class PlugDetectorImpl : public PlugDetector {
     // Create our watchers.
     for (const auto& devnode : AUDIO_DEVNODES) {
       auto watcher = fsl::DeviceWatcher::Create(
-          devnode.path, [this, is_input = devnode.is_input, version = devnode.version](
-                            int dir_fd, const std::string& filename) {
-            AddAudioDevice(dir_fd, filename, is_input, version);
+          devnode.path,
+          [this, is_input = devnode.is_input](int dir_fd, const std::string& filename) {
+            AddAudioDevice(dir_fd, filename, is_input);
           });
 
       if (watcher != nullptr) {
@@ -80,8 +75,7 @@ class PlugDetectorImpl : public PlugDetector {
   }
 
  private:
-  void AddAudioDevice(int dir_fd, const std::string& name, bool is_input,
-                      AudioDriverVersion version) {
+  void AddAudioDevice(int dir_fd, const std::string& name, bool is_input) {
     TRACE_DURATION("audio", "PlugDetectorImpl::AddAudioDevice");
     if (!observer_) {
       return;
@@ -119,9 +113,9 @@ class PlugDetectorImpl : public PlugDetector {
       FX_PLOGS(ERROR, res) << "Failed to open channel to audio " << (is_input ? "input" : "output");
     });
     device->GetChannel(
-        [d = std::move(device), this, is_input, version,
+        [d = std::move(device), this, is_input,
          name](::fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config) {
-          observer_(stream_config.TakeChannel(), name, is_input, version);
+          observer_(name, is_input, std::move(stream_config));
         });
   }
   Observer observer_;

@@ -78,10 +78,10 @@ class TestDevice : public AudioOutput {
   TestDevice(std::unique_ptr<Context>& context)
       : AudioOutput("", &context->threading_model(), &context->device_manager(),
                     &context->link_matrix(), context->clock_manager(),
-                    std::make_unique<AudioDriverV2>(this)) {
+                    std::make_unique<AudioDriver>(this)) {
     zx::channel c1, c2;
     ZX_ASSERT(ZX_OK == zx::channel::create(0, &c1, &c2));
-    fake_driver_ = std::make_unique<testing::FakeAudioDriverV2>(
+    fake_driver_ = std::make_unique<testing::FakeAudioDriver>(
         std::move(c1), context->threading_model().FidlDomain().dispatcher());
     fake_driver_->set_stream_unique_id(kDeviceIdUnique);
     ZX_ASSERT(ZX_OK == driver()->Init(std::move(c2)));
@@ -145,7 +145,7 @@ class TestDevice : public AudioOutput {
  private:
   std::vector<fit::bridge<void, zx_status_t>> pipeline_update_bridges_;
   std::vector<fit::bridge<void, fuchsia::media::audio::UpdateEffectError>> effect_update_bridges_;
-  std::unique_ptr<testing::FakeAudioDriverV2> fake_driver_;
+  std::unique_ptr<testing::FakeAudioDriver> fake_driver_;
 };
 
 class AudioTunerTest : public gtest::TestLoopFixture {

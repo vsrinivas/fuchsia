@@ -25,7 +25,7 @@ class FakeAudioDevice : public AudioDevice {
   FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager)
       : AudioDevice(type, "", threading_model, registry, link_matrix, clock_manager,
-                    std::make_unique<AudioDriverV2>(this)) {}
+                    std::make_unique<AudioDriver>(this)) {}
 
   // Needed because AudioDevice is an abstract class
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
@@ -50,14 +50,14 @@ class AudioDeviceTest : public testing::ThreadingModelFixture {
 
     zx::channel c1, c2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
-    remote_driver_ = std::make_unique<testing::FakeAudioDriverV2>(std::move(c1), dispatcher());
+    remote_driver_ = std::make_unique<testing::FakeAudioDriver>(std::move(c1), dispatcher());
     remote_driver_->set_clock_domain(kCustomClockDomain);
 
     device_->driver()->Init(std::move(c2));
     remote_driver_->Start();
   }
   std::shared_ptr<FakeAudioDevice> device_;
-  std::unique_ptr<testing::FakeAudioDriverV2> remote_driver_;
+  std::unique_ptr<testing::FakeAudioDriver> remote_driver_;
 };
 
 TEST_F(AudioDeviceTest, UniqueIdFromString) {

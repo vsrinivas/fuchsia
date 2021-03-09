@@ -44,7 +44,7 @@ DriverOutput::DriverOutput(const std::string& name, ThreadingModel* threading_mo
                            std::shared_ptr<AudioClockManager> clock_manager,
                            VolumeCurve volume_curve)
     : AudioOutput(name, threading_model, registry, link_matrix, clock_manager,
-                  std::make_unique<AudioDriverV2>(this)),
+                  std::make_unique<AudioDriver>(this)),
       initial_stream_channel_(channel.TakeChannel()),
       volume_curve_(volume_curve) {}
 

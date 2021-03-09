@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/media/audio/audio_core/audio_driver.h"
+
 #include <lib/async/cpp/time.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/syslog/cpp/macros.h>
@@ -16,7 +18,6 @@
 #include <audio-proto-utils/format-utils.h>
 
 #include "fbl/algorithm.h"
-#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/format/driver_format.h"
@@ -34,9 +35,9 @@ void LogMissedCommandDeadline(zx::duration delay) {
 
 }  // namespace
 
-AudioDriverV2::AudioDriverV2(AudioDevice* owner) : AudioDriverV2(owner, LogMissedCommandDeadline) {}
+AudioDriver::AudioDriver(AudioDevice* owner) : AudioDriver(owner, LogMissedCommandDeadline) {}
 
-AudioDriverV2::AudioDriverV2(AudioDevice* owner, DriverTimeoutHandler timeout_handler)
+AudioDriver::AudioDriver(AudioDevice* owner, DriverTimeoutHandler timeout_handler)
     : owner_(owner),
       timeout_handler_(std::move(timeout_handler)),
       versioned_ref_time_to_frac_presentation_frame_(
@@ -44,8 +45,8 @@ AudioDriverV2::AudioDriverV2(AudioDevice* owner, DriverTimeoutHandler timeout_ha
   FX_DCHECK(owner_ != nullptr);
 }
 
-zx_status_t AudioDriverV2::Init(zx::channel stream_channel) {
-  TRACE_DURATION("audio", "AudioDriverV2::Init");
+zx_status_t AudioDriver::Init(zx::channel stream_channel) {
+  TRACE_DURATION("audio", "AudioDriver::Init");
   // TODO(fxbug.dev/13665): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
   FX_DCHECK(state_ == State::Uninitialized);
@@ -86,8 +87,8 @@ zx_status_t AudioDriverV2::Init(zx::channel stream_channel) {
   return ZX_OK;
 }
 
-void AudioDriverV2::Cleanup() {
-  TRACE_DURATION("audio", "AudioDriverV2::Cleanup");
+void AudioDriver::Cleanup() {
+  TRACE_DURATION("audio", "AudioDriver::Cleanup");
   // TODO(fxbug.dev/13665): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
   std::shared_ptr<ReadableRingBuffer> readable_ring_buffer;
@@ -106,14 +107,14 @@ void AudioDriverV2::Cleanup() {
   ring_buffer_fidl_ = nullptr;
 }
 
-std::optional<Format> AudioDriverV2::GetFormat() const {
-  TRACE_DURATION("audio", "AudioDriverV2::GetFormat");
+std::optional<Format> AudioDriver::GetFormat() const {
+  TRACE_DURATION("audio", "AudioDriver::GetFormat");
   std::lock_guard<std::mutex> lock(configured_format_lock_);
   return configured_format_;
 }
 
-zx_status_t AudioDriverV2::GetDriverInfo() {
-  TRACE_DURATION("audio", "AudioDriverV2::GetDriverInfo");
+zx_status_t AudioDriver::GetDriverInfo() {
+  TRACE_DURATION("audio", "AudioDriver::GetDriverInfo");
   // TODO(fxbug.dev/13665): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
@@ -218,8 +219,8 @@ zx_status_t AudioDriverV2::GetDriverInfo() {
   return ZX_OK;
 }
 
-zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring_buffer_duration) {
-  TRACE_DURATION("audio", "AudioDriverV2::Configure");
+zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_buffer_duration) {
+  TRACE_DURATION("audio", "AudioDriver::Configure");
   // TODO(fxbug.dev/13665): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
@@ -412,7 +413,7 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
   return ZX_OK;
 }
 
-void AudioDriverV2::RequestNextPlugStateChange() {
+void AudioDriver::RequestNextPlugStateChange() {
   stream_config_fidl_->WatchPlugState([this](fuchsia::hardware::audio::PlugState state) {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     // Wardware reporting hardwired but notifies unplugged.
@@ -427,8 +428,8 @@ void AudioDriverV2::RequestNextPlugStateChange() {
 }
 
 // This position notification will be used to synthesize a clock for this audio device.
-void AudioDriverV2::ClockRecoveryUpdate(fuchsia::hardware::audio::RingBufferPositionInfo info) {
-  TRACE_DURATION("audio", "AudioDriverV2::ClockRecoveryUpdate");
+void AudioDriver::ClockRecoveryUpdate(fuchsia::hardware::audio::RingBufferPositionInfo info) {
+  TRACE_DURATION("audio", "AudioDriver::ClockRecoveryUpdate");
   if (clock_domain_ == AudioClock::kMonotonicDomain) {
     return;
   }
@@ -478,15 +479,15 @@ void AudioDriverV2::ClockRecoveryUpdate(fuchsia::hardware::audio::RingBufferPosi
   RequestNextClockRecoveryUpdate();
 }
 
-void AudioDriverV2::RequestNextClockRecoveryUpdate() {
+void AudioDriver::RequestNextClockRecoveryUpdate() {
   FX_CHECK(clock_domain_ != AudioClock::kMonotonicDomain);
 
   ring_buffer_fidl_->WatchClockRecoveryPositionInfo(
       [this](fuchsia::hardware::audio::RingBufferPositionInfo info) { ClockRecoveryUpdate(info); });
 }
 
-zx_status_t AudioDriverV2::Start() {
-  TRACE_DURATION("audio", "AudioDriverV2::Start");
+zx_status_t AudioDriver::Start() {
+  TRACE_DURATION("audio", "AudioDriver::Start");
   // TODO(fxbug.dev/13665): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
@@ -600,8 +601,8 @@ zx_status_t AudioDriverV2::Start() {
   return ZX_OK;
 }
 
-zx_status_t AudioDriverV2::Stop() {
-  TRACE_DURATION("audio", "AudioDriverV2::Stop");
+zx_status_t AudioDriver::Stop() {
+  TRACE_DURATION("audio", "AudioDriver::Stop");
   // TODO(fxbug.dev/13665): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
@@ -637,15 +638,15 @@ zx_status_t AudioDriverV2::Stop() {
   return ZX_OK;
 }
 
-zx_status_t AudioDriverV2::SetPlugDetectEnabled(bool enabled) {
-  TRACE_DURATION("audio", "AudioDriverV2::SetPlugDetectEnabled");
+zx_status_t AudioDriver::SetPlugDetectEnabled(bool enabled) {
+  TRACE_DURATION("audio", "AudioDriver::SetPlugDetectEnabled");
 
   // This method is a no-op since under the FIDL API plug detect is always enabled if supported.
   return ZX_OK;
 }
 
-void AudioDriverV2::ShutdownSelf(const char* reason, zx_status_t status) {
-  TRACE_DURATION("audio", "AudioDriverV2::ShutdownSelf");
+void AudioDriver::ShutdownSelf(const char* reason, zx_status_t status) {
+  TRACE_DURATION("audio", "AudioDriver::ShutdownSelf");
   if (state_ == State::Shutdown) {
     return;
   }
@@ -660,8 +661,8 @@ void AudioDriverV2::ShutdownSelf(const char* reason, zx_status_t status) {
   state_ = State::Shutdown;
 }
 
-void AudioDriverV2::SetupCommandTimeout() {
-  TRACE_DURATION("audio", "AudioDriverV2::SetupCommandTimeout");
+void AudioDriver::SetupCommandTimeout() {
+  TRACE_DURATION("audio", "AudioDriver::SetupCommandTimeout");
 
   // If we have received a late response, report it now.
   if (driver_last_timeout_ != zx::time::infinite()) {
@@ -685,8 +686,8 @@ void AudioDriverV2::SetupCommandTimeout() {
   }
 }
 
-void AudioDriverV2::ReportPlugStateChange(bool plugged, zx::time plug_time) {
-  TRACE_DURATION("audio", "AudioDriverV2::ReportPlugStateChange");
+void AudioDriver::ReportPlugStateChange(bool plugged, zx::time plug_time) {
+  TRACE_DURATION("audio", "AudioDriver::ReportPlugStateChange");
   {
     std::lock_guard<std::mutex> lock(plugged_lock_);
     plugged_ = plugged;
@@ -697,8 +698,8 @@ void AudioDriverV2::ReportPlugStateChange(bool plugged, zx::time plug_time) {
   owner_->OnDriverPlugStateChange(plugged, plug_time);
 }
 
-zx_status_t AudioDriverV2::OnDriverInfoFetched(uint32_t info) {
-  TRACE_DURATION("audio", "AudioDriverV2::OnDriverInfoFetched");
+zx_status_t AudioDriver::OnDriverInfoFetched(uint32_t info) {
+  TRACE_DURATION("audio", "AudioDriver::OnDriverInfoFetched");
   // We should never fetch the same info twice.
   if (fetched_driver_info_ & info) {
     ShutdownSelf("Duplicate driver info fetch\n", ZX_ERR_BAD_STATE);
@@ -725,7 +726,7 @@ zx_status_t AudioDriverV2::OnDriverInfoFetched(uint32_t info) {
   return ZX_OK;
 }
 
-void AudioDriverV2::SetUpClocks() {
+void AudioDriver::SetUpClocks() {
   if (clock_domain_ == AudioClock::kMonotonicDomain) {
     // If in the monotonic domain, we'll fall back to a non-adjustable clone of CLOCK_MONOTONIC.
     audio_clock_ = owner_->clock_manager()->CreateDeviceFixed(audio::clock::CloneOfMonotonic(),
@@ -755,15 +756,15 @@ void AudioDriverV2::SetUpClocks() {
   audio_clock_ = std::move(clone);
 }
 
-zx_status_t AudioDriverV2::SetGain(const AudioDeviceSettings::GainState& gain_state,
-                                   audio_set_gain_flags_t set_flags) {
+zx_status_t AudioDriver::SetGain(const AudioDeviceSettings::GainState& gain_state,
+                                 audio_set_gain_flags_t set_flags) {
   // We ignore set_flags since the FIDL API requires updates to all field of
   // fuchsia::hardware::audio::GainState.
   return SetGain(gain_state);
 }
 
-zx_status_t AudioDriverV2::SetGain(const AudioDeviceSettings::GainState& gain_state) {
-  TRACE_DURATION("audio", "AudioDriverV2::SetGain");
+zx_status_t AudioDriver::SetGain(const AudioDeviceSettings::GainState& gain_state) {
+  TRACE_DURATION("audio", "AudioDriver::SetGain");
 
   fuchsia::hardware::audio::GainState gain_state2 = {};
   if (gain_state.muted) {
@@ -777,14 +778,14 @@ zx_status_t AudioDriverV2::SetGain(const AudioDeviceSettings::GainState& gain_st
   return ZX_OK;
 }
 
-zx_status_t AudioDriverV2::SelectBestFormat(
-    uint32_t* frames_per_second_inout, uint32_t* channels_inout,
-    fuchsia::media::AudioSampleFormat* sample_format_inout) {
+zx_status_t AudioDriver::SelectBestFormat(uint32_t* frames_per_second_inout,
+                                          uint32_t* channels_inout,
+                                          fuchsia::media::AudioSampleFormat* sample_format_inout) {
   return media::audio::SelectBestFormat(formats_, frames_per_second_inout, channels_inout,
                                         sample_format_inout);
 }
 
-void AudioDriverV2::DriverCommandTimedOut() {
+void AudioDriver::DriverCommandTimedOut() {
   FX_LOGS(WARNING) << "Unexpected driver timeout";
   driver_last_timeout_ = async::Now(owner_->mix_domain().dispatcher());
 }

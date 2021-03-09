@@ -22,7 +22,8 @@ class PlugDetector {
   virtual ~PlugDetector() = default;
 
   // Callback invoked whenever a new device is added to the system.
-  using Observer = fit::function<void(zx::channel, std::string, bool, AudioDriverVersion version)>;
+  using Observer = fit::function<void(
+      std::string, bool, fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>)>;
   virtual zx_status_t Start(Observer o) = 0;
 
   virtual void Stop() = 0;

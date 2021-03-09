@@ -231,10 +231,6 @@ static const audio_stream_unique_id_t kUniqueId = {
 static const std::string kUniqueIdString = "000102030405060708090a0b0c0d0e0f";
 }  // namespace
 
-typedef ::testing::Types<testing::FakeAudioDriverV2> DriverTypes;
-TYPED_TEST_SUITE(AudioDeviceEnumeratorAddByChannelTest, DriverTypes);
-
-template <typename T>
 class AudioDeviceEnumeratorAddByChannelTest : public HermeticAudioTest {
  protected:
   void SetUp() override;
@@ -249,11 +245,7 @@ class AudioDeviceEnumeratorAddByChannelTest : public HermeticAudioTest {
   void set_device_token(uint64_t token) { device_token_ = token; }
 
  private:
-  template <typename U>
-  void EnumeratorAddDevice(zx::channel remote_channel) {}
-
-  template <>
-  void EnumeratorAddDevice<testing::FakeAudioDriverV2>(zx::channel remote_channel) {
+  void EnumeratorAddDevice(zx::channel remote_channel) {
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
     stream_config.set_channel(std::move(remote_channel));
     audio_device_enumerator_->AddDeviceByChannel2("test device", false, std::move(stream_config));
@@ -263,12 +255,11 @@ class AudioDeviceEnumeratorAddByChannelTest : public HermeticAudioTest {
   std::vector<fuchsia::media::AudioDeviceInfo> devices_;
   uint64_t device_token_;
 
-  std::unique_ptr<T> driver_;
+  std::unique_ptr<testing::FakeAudioDriver> driver_;
   fzl::VmoMapper ring_buffer_;
 };
 
-template <typename T>
-void AudioDeviceEnumeratorAddByChannelTest<T>::SetUp() {
+void AudioDeviceEnumeratorAddByChannelTest::SetUp() {
   HermeticAudioTest::SetUp();
   audio_device_enumerator_ = TakeOwnershipOfAudioDeviceEnumerator();
 
@@ -277,7 +268,7 @@ void AudioDeviceEnumeratorAddByChannelTest<T>::SetUp() {
   zx_status_t status = zx::channel::create(0u, &local_channel, &remote_channel);
   EXPECT_EQ(ZX_OK, status);
 
-  driver_ = std::make_unique<T>(std::move(local_channel), dispatcher());
+  driver_ = std::make_unique<testing::FakeAudioDriver>(std::move(local_channel), dispatcher());
   ASSERT_NE(driver_, nullptr);
   driver_->set_device_manufacturer(kManufacturer);
   driver_->set_device_product(kProduct);
@@ -290,11 +281,10 @@ void AudioDeviceEnumeratorAddByChannelTest<T>::SetUp() {
     devices_.push_back(std::move(info));
   };
 
-  EnumeratorAddDevice<T>(std::move(remote_channel));
+  EnumeratorAddDevice(std::move(remote_channel));
 }
 
-template <typename T>
-void AudioDeviceEnumeratorAddByChannelTest<T>::TearDown() {
+void AudioDeviceEnumeratorAddByChannelTest::TearDown() {
   ASSERT_TRUE(audio_device_enumerator_.is_bound());
   audio_device_enumerator_.events().OnDeviceRemoved = [this](uint64_t dev_token) {
     EXPECT_EQ(dev_token, device_token());
@@ -311,7 +301,7 @@ void AudioDeviceEnumeratorAddByChannelTest<T>::TearDown() {
 }
 
 // Test that |AddDeviceByChannel| and |AddDeviceByChannel2| result in an |OnDeviceAdded| event.
-TYPED_TEST(AudioDeviceEnumeratorAddByChannelTest, AddDevice) {
+TEST_F(AudioDeviceEnumeratorAddByChannelTest, AddDevice) {
   // Expect that the added device is enumerated via the device enumerator.
   this->RunLoopUntil([this]() { return !this->devices().empty(); });
 
@@ -325,7 +315,7 @@ TYPED_TEST(AudioDeviceEnumeratorAddByChannelTest, AddDevice) {
 }
 
 // Test that the info in |GetDevices| matches the info in the |OnDeviceAdded| event.
-TYPED_TEST(AudioDeviceEnumeratorAddByChannelTest, GetDevices) {
+TEST_F(AudioDeviceEnumeratorAddByChannelTest, GetDevices) {
   this->RunLoopUntil([this]() { return !this->devices().empty(); });
 
   std::optional<std::vector<fuchsia::media::AudioDeviceInfo>> devices;

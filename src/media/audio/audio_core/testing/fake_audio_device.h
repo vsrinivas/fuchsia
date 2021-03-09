@@ -18,7 +18,7 @@ class FakeAudioDevice : public AudioDevice {
   FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager)
       : AudioDevice(type, "", threading_model, registry, link_matrix, clock_manager,
-                    std::make_unique<AudioDriverV2>(this)),
+                    std::make_unique<AudioDriver>(this)),
         mix_domain_(threading_model->AcquireMixDomain("fake-audio-device")) {}
 
   bool driver_info_fetched() { return driver_info_fetched_; }

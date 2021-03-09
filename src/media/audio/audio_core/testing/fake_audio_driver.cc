@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/media/audio/audio_core/testing/fake_audio_driver.h"
+
 #include <lib/syslog/cpp/macros.h>
 
 #include <audio-proto-utils/format-utils.h>
 #include <gtest/gtest.h>
 
-#include "src/media/audio/audio_core/testing/fake_audio_driver.h"
-
 namespace media::audio::testing {
 
-FakeAudioDriverV2::FakeAudioDriverV2(zx::channel channel, async_dispatcher_t* dispatcher)
+FakeAudioDriver::FakeAudioDriver(zx::channel channel, async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher), stream_binding_(this, std::move(channel), dispatcher) {
   formats_.number_of_channels.push_back(2);
   formats_.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
@@ -21,7 +21,7 @@ FakeAudioDriverV2::FakeAudioDriverV2(zx::channel channel, async_dispatcher_t* di
   Stop();
 }
 
-void FakeAudioDriverV2::Start() {
+void FakeAudioDriver::Start() {
   assert(!stream_binding_.is_bound());
   stream_binding_.Bind(std::move(stream_req_), dispatcher_);
   if (ring_buffer_binding_.has_value() && !ring_buffer_binding_->is_bound()) {
@@ -29,7 +29,7 @@ void FakeAudioDriverV2::Start() {
   }
 }
 
-void FakeAudioDriverV2::Stop() {
+void FakeAudioDriver::Stop() {
   if (stream_binding_.is_bound()) {
     stream_req_ = stream_binding_.Unbind();
   }
@@ -38,7 +38,7 @@ void FakeAudioDriverV2::Stop() {
   }
 }
 
-fzl::VmoMapper FakeAudioDriverV2::CreateRingBuffer(size_t size) {
+fzl::VmoMapper FakeAudioDriver::CreateRingBuffer(size_t size) {
   FX_CHECK(!ring_buffer_) << "Calling CreateRingBuffer multiple times is not supported";
 
   ring_buffer_size_ = size;
@@ -48,7 +48,7 @@ fzl::VmoMapper FakeAudioDriverV2::CreateRingBuffer(size_t size) {
   return mapper;
 }
 
-void FakeAudioDriverV2::GetProperties(
+void FakeAudioDriver::GetProperties(
     fuchsia::hardware::audio::StreamConfig::GetPropertiesCallback callback) {
   fuchsia::hardware::audio::StreamProperties props = {};
 
@@ -67,7 +67,7 @@ void FakeAudioDriverV2::GetProperties(
   callback(std::move(props));
 }
 
-void FakeAudioDriverV2::GetSupportedFormats(
+void FakeAudioDriver::GetSupportedFormats(
     fuchsia::hardware::audio::StreamConfig::GetSupportedFormatsCallback callback) {
   fuchsia::hardware::audio::SupportedFormats formats = {};
   formats.set_pcm_supported_formats(formats_);
@@ -77,14 +77,14 @@ void FakeAudioDriverV2::GetSupportedFormats(
   callback(std::move(all_formats));
 }
 
-void FakeAudioDriverV2::CreateRingBuffer(
+void FakeAudioDriver::CreateRingBuffer(
     fuchsia::hardware::audio::Format format,
     ::fidl::InterfaceRequest<fuchsia::hardware::audio::RingBuffer> ring_buffer) {
   ring_buffer_binding_.emplace(this, ring_buffer.TakeChannel(), dispatcher_);
   selected_format_ = format.pcm_format();
 }
 
-void FakeAudioDriverV2::WatchGainState(
+void FakeAudioDriver::WatchGainState(
     fuchsia::hardware::audio::StreamConfig::WatchGainStateCallback callback) {
   if (gain_state_sent_) {
     return;  // Only send gain state once, as if it never changed.
@@ -97,9 +97,9 @@ void FakeAudioDriverV2::WatchGainState(
   callback(std::move(gain_state));
 }
 
-void FakeAudioDriverV2::SetGain(fuchsia::hardware::audio::GainState target_state) {}
+void FakeAudioDriver::SetGain(fuchsia::hardware::audio::GainState target_state) {}
 
-void FakeAudioDriverV2::WatchPlugState(
+void FakeAudioDriver::WatchPlugState(
     fuchsia::hardware::audio::StreamConfig::WatchPlugStateCallback callback) {
   if (plug_state_sent_) {
     return;  // Only send plug state once, as if it never changed.
@@ -111,7 +111,7 @@ void FakeAudioDriverV2::WatchPlugState(
   callback(std::move(plug_state));
 }
 
-void FakeAudioDriverV2::GetProperties(
+void FakeAudioDriver::GetProperties(
     fuchsia::hardware::audio::RingBuffer::GetPropertiesCallback callback) {
   fuchsia::hardware::audio::RingBufferProperties props = {};
 
@@ -122,7 +122,7 @@ void FakeAudioDriverV2::GetProperties(
   callback(std::move(props));
 }
 
-void FakeAudioDriverV2::SendPositionNotification(zx::time timestamp, uint32_t position) {
+void FakeAudioDriver::SendPositionNotification(zx::time timestamp, uint32_t position) {
   position_notify_timestamp_mono_ = timestamp;
   position_notify_position_bytes_ = position;
 
@@ -132,7 +132,7 @@ void FakeAudioDriverV2::SendPositionNotification(zx::time timestamp, uint32_t po
   }
 }
 
-void FakeAudioDriverV2::WatchClockRecoveryPositionInfo(
+void FakeAudioDriver::WatchClockRecoveryPositionInfo(
     fuchsia::hardware::audio::RingBuffer::WatchClockRecoveryPositionInfoCallback callback) {
   position_notify_callback_ = std::move(callback);
 
@@ -141,7 +141,7 @@ void FakeAudioDriverV2::WatchClockRecoveryPositionInfo(
   }
 }
 
-void FakeAudioDriverV2::PositionNotification() {
+void FakeAudioDriver::PositionNotification() {
   FX_CHECK(position_notify_callback_);
   FX_CHECK(position_notification_values_are_set_);
 
@@ -161,8 +161,8 @@ void FakeAudioDriverV2::PositionNotification() {
   }
 }
 
-void FakeAudioDriverV2::GetVmo(uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring,
-                               fuchsia::hardware::audio::RingBuffer::GetVmoCallback callback) {
+void FakeAudioDriver::GetVmo(uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring,
+                             fuchsia::hardware::audio::RingBuffer::GetVmoCallback callback) {
   // This should be true since it's set as part of creating the channel that's carrying these
   // messages.
   FX_CHECK(selected_format_);
@@ -189,7 +189,7 @@ void FakeAudioDriverV2::GetVmo(uint32_t min_frames, uint32_t clock_recovery_noti
   callback(std::move(result));
 }
 
-void FakeAudioDriverV2::Start(fuchsia::hardware::audio::RingBuffer::StartCallback callback) {
+void FakeAudioDriver::Start(fuchsia::hardware::audio::RingBuffer::StartCallback callback) {
   EXPECT_TRUE(!is_running_);
   mono_start_time_ = async::Now(dispatcher_);
   is_running_ = true;
@@ -197,7 +197,7 @@ void FakeAudioDriverV2::Start(fuchsia::hardware::audio::RingBuffer::StartCallbac
   callback(mono_start_time_.get());
 }
 
-void FakeAudioDriverV2::Stop(fuchsia::hardware::audio::RingBuffer::StopCallback callback) {
+void FakeAudioDriver::Stop(fuchsia::hardware::audio::RingBuffer::StopCallback callback) {
   EXPECT_TRUE(is_running_);
   is_running_ = false;
 

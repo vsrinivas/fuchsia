@@ -30,7 +30,7 @@ AudioInput::AudioInput(const std::string& name,
                        ThreadingModel* threading_model, DeviceRegistry* registry,
                        LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager)
     : AudioDevice(Type::Input, name, threading_model, registry, link_matrix, clock_manager,
-                  std::make_unique<AudioDriverV2>(this)),
+                  std::make_unique<AudioDriver>(this)),
       initial_stream_channel_(stream_config.TakeChannel()),
       reporter_(Reporter::Singleton().CreateInputDevice(name, mix_domain().name())) {}
 
