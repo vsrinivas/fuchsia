@@ -2316,7 +2316,6 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
 
   const uint16_t eth_type = betoh16(((uint16_t*)(data))[6]);
   const uint16_t arp_opt_code = betoh16(((uint16_t*)(data))[10]);
-
   if (eth_type == EAPOL_ETHERNET_TYPE_UINT16) {
     // queue up the eapol frame along with events to ensure processing order.
     brcmf_fweh_queue_eapol_frame(ifp, data, size);
@@ -4594,7 +4593,6 @@ void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_
                             ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   auto b = std::make_unique<wlan::brcmfmac::EthernetNetbuf>(netbuf, completion_cb, cookie);
-
   const uint8_t* frame = (uint8_t*)(netbuf->data_buffer);
 
   if (netbuf->data_size < 14) {
@@ -4613,6 +4611,11 @@ void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_
   if (eth_type == ARP_ETHERNET_TYPE_UINT16 && arp_opt_code == 1) {
     // Encodes 4 target IP address bytes to a uint.
     const uint32_t ip_addr = betoh32(*reinterpret_cast<const uint32_t*>(frame + 38));
+    std::string arp_frame_str(reinterpret_cast<char const*>(frame), netbuf->data_size);
+    if (ifp->arp_logger->AddArpRequestFrame(arp_frame_str)) {
+      ifp->drvr->inspect->LogArpRequestFrame(zx_clock_get_monotonic(), frame,
+                                                          netbuf->data_size);
+    }
     ifp->arp_logger->ArpRequestOut(ip_addr);
   }
 

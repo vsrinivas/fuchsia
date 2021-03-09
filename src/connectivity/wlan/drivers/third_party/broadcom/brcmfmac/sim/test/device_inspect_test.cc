@@ -24,6 +24,7 @@ constexpr uint16_t kWindowPropertyNum = 5;
 
 const std::vector<std::string> kRootMetrics = {"brcmfmac-phy"};
 const std::vector<std::string> kConnMetrics = {"brcmfmac-phy", "connection-metrics"};
+const std::vector<std::string> kArpReqFrame = {"brcmfmac-phy", "arp-req-frames"};
 
 struct PropertyTestUnit {
   const std::vector<std::string> path_;
@@ -34,6 +35,12 @@ struct PropertyTestUnit {
       : path_(path), name_(name), log_callback_(callback) {}
 };
 
+struct ArpReqFrameTestInfo {
+  bool frame_exists_;
+  int64_t timestamp_;
+  std::vector<uint8_t> frame_bytes_;
+};
+
 class DeviceInspectTest : public DeviceInspectTestHelper {
  public:
   void LogTxQfull() { device_->inspect_.LogTxQueueFull(); }
@@ -41,6 +48,9 @@ class DeviceInspectTest : public DeviceInspectTestHelper {
   void LogConnNoNetworkFail() { device_->inspect_.LogConnNoNetworkFail(); }
   void LogConnAuthFail() { device_->inspect_.LogConnAuthFail(); }
   void LogConnOtherFail() { device_->inspect_.LogConnOtherFail(); }
+  void LogArpRequestFrame(zx_time_t time, const uint8_t* frame, size_t frame_size) {
+    device_->inspect_.LogArpRequestFrame(time, frame, frame_size);
+  }
 
   uint64_t GetUintProperty(const std::vector<std::string>& path, std::string name) {
     FetchHierarchy();
@@ -49,6 +59,28 @@ class DeviceInspectTest : public DeviceInspectTestHelper {
     auto* uint_property = root->node().get_property<inspect::UintPropertyValue>(name);
     EXPECT_TRUE(uint_property);
     return uint_property->value();
+  }
+
+  ArpReqFrameTestInfo GetArpFrameNodeInfo(const std::string& frame_num) {
+    FetchHierarchy();
+    std::vector<std::string> path(kArpReqFrame);
+    ArpReqFrameTestInfo frame_info_out = {};
+
+    path.push_back(frame_num);
+    auto* root = hierarchy_.value().GetByPath(path);
+    if (root == nullptr) {
+      frame_info_out.frame_exists_ = false;
+      return frame_info_out;
+    }
+    frame_info_out.frame_exists_ = true;
+    auto* int_property = root->node().get_property<inspect::IntPropertyValue>("timestamp");
+    EXPECT_TRUE(int_property);
+    frame_info_out.timestamp_ = int_property->value();
+    auto* byte_vector_property =
+        root->node().get_property<inspect::ByteVectorPropertyValue>("frame_data");
+    EXPECT_TRUE(byte_vector_property);
+    frame_info_out.frame_bytes_ = byte_vector_property->value();
+    return frame_info_out;
   }
 
   // Defining properties which will be covered in the test cases.
@@ -141,6 +173,47 @@ TEST_F(DeviceInspectTest, LogTxQfull24HrsFor100Hrs) {
     // a count of only 24.
     EXPECT_EQ(24u, GetUintProperty(window_properties_[k].path_, window_properties_[k].name_));
   }
+}
+
+TEST_F(DeviceInspectTest, LogArpRequestFrameTest) {
+  constexpr static size_t kFakeFirstFrameSize = 8;
+  constexpr static size_t kFakeOtherFrameSize = 6;
+
+  const zx_time_t base_time = 84848;
+  const uint8_t fake_first_frame[kFakeFirstFrameSize] = {5, 5, 5, 5, 5, 5, 5, 5};
+  const uint8_t fake_other_frames[kFakeOtherFrameSize] = {1, 2, 3, 4, 5, 6};
+  ArpReqFrameTestInfo frame_info_out = {};
+
+  // Log the first frame and verify it.
+  LogArpRequestFrame(base_time, fake_first_frame, kFakeFirstFrameSize);
+  frame_info_out = GetArpFrameNodeInfo("0");
+  EXPECT_TRUE(frame_info_out.frame_exists_);
+  EXPECT_EQ(frame_info_out.timestamp_, base_time);
+  EXPECT_EQ(frame_info_out.frame_bytes_,
+            std::vector<uint8_t>(fake_first_frame, fake_first_frame + kFakeFirstFrameSize));
+
+  for (uint16_t k = 0; k < ArpFrameMetrics::kMaxArpRequestFrameCount; k++) {
+    LogArpRequestFrame(base_time + 1 + k, fake_other_frames, kFakeOtherFrameSize);
+  }
+
+  // Verify that the first frame was deleted.
+  frame_info_out = GetArpFrameNodeInfo("0");
+  EXPECT_FALSE(frame_info_out.frame_exists_);
+
+  // Verify that the second frame exists.
+  frame_info_out = GetArpFrameNodeInfo("1");
+  EXPECT_TRUE(frame_info_out.frame_exists_);
+  EXPECT_EQ(frame_info_out.timestamp_, base_time + 1);
+  EXPECT_EQ(frame_info_out.frame_bytes_,
+            std::vector<uint8_t>(fake_other_frames, fake_other_frames + kFakeOtherFrameSize));
+
+  // Verify the last frame is correct.
+  frame_info_out = GetArpFrameNodeInfo(std::to_string(ArpFrameMetrics::kMaxArpRequestFrameCount));
+  EXPECT_TRUE(frame_info_out.frame_exists_);
+  EXPECT_EQ(frame_info_out.timestamp_,
+            base_time + (const int64_t)ArpFrameMetrics::kMaxArpRequestFrameCount);
+  EXPECT_EQ(frame_info_out.frame_bytes_,
+            std::vector<uint8_t>(fake_other_frames, fake_other_frames + kFakeOtherFrameSize));
 }
 
 }  // namespace brcmfmac

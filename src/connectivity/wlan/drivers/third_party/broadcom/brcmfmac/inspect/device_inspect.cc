@@ -63,6 +63,8 @@ zx_status_t DeviceInspect::InitMetrics() {
     return status;
   }
 
+  arp_frame_metrics_.root = root_.CreateChild("arp-req-frames");
+
   return status;
 }
 
@@ -106,6 +108,30 @@ void DeviceInspect::LogConnNoNetworkFail() {
 void DeviceInspect::LogConnOtherFail() {
   conn_metrics_.other_fail.Add(1);
   conn_metrics_.other_fail_24hrs.Add(1);
+}
+
+void DeviceInspect::LogArpRequestFrame(zx_time_t time, const uint8_t* frame, size_t frame_size) {
+  uint16_t& local_count = arp_frame_metrics_.local_unique_arp_request_count;
+  std::vector<uint8_t> arp_frame_vec(frame, frame + frame_size);
+
+  // Create a new node for each unique ARP Request frame.
+  arp_frame_metrics_.arp_request_frame_roots.push_back(
+      arp_frame_metrics_.root.CreateChild(std::to_string(local_count)));
+
+  // Create ARP Request frame info base on the new node.
+  auto current_node = arp_frame_metrics_.arp_request_frame_roots.rbegin();
+  arp_frame_metrics_.arp_req_frame_nodes.push_back(
+      {.timestamp = current_node->CreateInt("timestamp", time),
+       .frame_byte_vec = current_node->CreateByteVector("frame_data", arp_frame_vec)});
+
+  // Pop the frame node after push, so the maximum number of frames could be in the metrics is
+  // kMaxArpRequestFrameSize + 1.
+  if (local_count >= ArpFrameMetrics::kMaxArpRequestFrameCount) {
+    arp_frame_metrics_.arp_req_frame_nodes.pop_front();
+    arp_frame_metrics_.arp_request_frame_roots.pop_front();
+  }
+
+  local_count++;
 }
 
 }  // namespace wlan::brcmfmac

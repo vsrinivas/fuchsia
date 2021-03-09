@@ -70,4 +70,19 @@ TEST(ArpLogger, ReplyResetCount) {
   EXPECT_EQ(arp_count, 0U);
 }
 
+TEST(ArpLogger, ArpReqFrameSet) {
+  auto arp_logger = std::make_unique<wlan::brcmfmac::ArpLogger>();
+  const std::string fake_frame_str1("aaaa");
+  const std::string fake_frame_str2("bbbb");
+
+  EXPECT_EQ(arp_logger->AddArpRequestFrame(fake_frame_str1), true);
+  EXPECT_EQ(arp_logger->GetArpReqFrameSize(), 1U);
+
+  EXPECT_EQ(arp_logger->AddArpRequestFrame(fake_frame_str1), false);
+  EXPECT_EQ(arp_logger->GetArpReqFrameSize(), 1U);
+
+  EXPECT_EQ(arp_logger->AddArpRequestFrame(fake_frame_str2), true);
+  EXPECT_EQ(arp_logger->GetArpReqFrameSize(), 2U);
+}
+
 }  // namespace wlan::brcmfmac

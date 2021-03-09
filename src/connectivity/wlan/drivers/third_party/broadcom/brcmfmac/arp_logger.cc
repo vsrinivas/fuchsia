@@ -62,6 +62,11 @@ zx_status_t ArpLogger::ArpReplyIn(const uint32_t& src_ip_addr) {
   return ZX_OK;
 }
 
+bool ArpLogger::AddArpRequestFrame(const std::string& frame_in) {
+  auto result = unique_arp_req_frames_.insert(frame_in);
+  return result.second;
+}
+
 zx_status_t ArpLogger::GetArpCount(const uint32_t& ip_addr, uint16_t* count_out) {
   std::lock_guard<std::mutex> lock(table_lock_);
 
@@ -79,6 +84,8 @@ zx_status_t ArpLogger::GetArpCount(const uint32_t& ip_addr, uint16_t* count_out)
   *count_out = value->second;
   return ZX_OK;
 }
+
+size_t ArpLogger::GetArpReqFrameSize() { return unique_arp_req_frames_.size(); }
 
 std::string ArpLogger::IpToStr(const uint32_t& ip_addr) {
   uint32_t temp_ip = ip_addr;

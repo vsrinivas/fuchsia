@@ -16,6 +16,9 @@
 
 #include <lib/inspect/cpp/inspect.h>
 
+#include <list>
+#include <memory>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/windowed_uintproperty.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/timer.h"
 
@@ -34,6 +37,19 @@ struct DeviceConnMetrics {
   WindowedUintProperty other_fail_24hrs;
 };
 
+struct ArpReqFrameInfo {
+  inspect::IntProperty timestamp;
+  inspect::ByteVectorProperty frame_byte_vec;
+};
+
+struct ArpFrameMetrics {
+  inspect::Node root;
+  constexpr static size_t kMaxArpRequestFrameCount = 10;
+  uint16_t local_unique_arp_request_count;
+  std::list<inspect::Node> arp_request_frame_roots;
+  std::list<ArpReqFrameInfo> arp_req_frame_nodes;
+};
+
 class DeviceInspect {
  public:
   zx_status_t Start(struct brcmf_bus* bus_if, async_dispatcher_t* dispatcher);
@@ -50,6 +66,7 @@ class DeviceInspect {
   void LogConnNoNetworkFail();
   void LogConnAuthFail();
   void LogConnOtherFail();
+  void LogArpRequestFrame(zx_time_t time, const uint8_t* frame, size_t frame_size);
 
  private:
   void AllocTimers(struct brcmf_bus* bus_if, async_dispatcher_t* dispatcher);
@@ -63,6 +80,7 @@ class DeviceInspect {
 
   // Metrics
   DeviceConnMetrics conn_metrics_;
+  ArpFrameMetrics arp_frame_metrics_;
   inspect::UintProperty tx_qfull_;
   WindowedUintProperty tx_qfull_24hrs_;
 };
