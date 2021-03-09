@@ -1,8 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_ULIB_CLOCKTREE_TEST_TESTCLOCK_H_
-#define ZIRCON_SYSTEM_ULIB_CLOCKTREE_TEST_TESTCLOCK_H_
+#ifndef SRC_DEVICES_CLOCK_LIB_CLOCKTREE_TESTS_TESTCLOCK_H_
+#define SRC_DEVICES_CLOCK_LIB_CLOCKTREE_TESTS_TESTCLOCK_H_
 
 #include "baseclock.h"
 
@@ -152,4 +152,4 @@ class TestMuxClockFail : public TestMuxClockTrivial {
 
 }  // namespace clk
 
-#endif  // ZIRCON_SYSTEM_ULIB_CLOCKTREE_TEST_TESTCLOCK_H_
+#endif  // SRC_DEVICES_CLOCK_LIB_CLOCKTREE_TESTS_TESTCLOCK_H_

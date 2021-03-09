@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_TRACE_BENCHMARK_HANDLER_H_
-#define ZIRCON_SYSTEM_UAPP_TRACE_BENCHMARK_HANDLER_H_
+#ifndef SRC_BRINGUP_BIN_TRACE_BENCHMARK_HANDLER_H_
+#define SRC_BRINGUP_BIN_TRACE_BENCHMARK_HANDLER_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -121,4 +121,4 @@ class BenchmarkHandler : public trace::TraceHandler {
   zx::event observer_event_;
 };
 
-#endif  // ZIRCON_SYSTEM_UAPP_TRACE_BENCHMARK_HANDLER_H_
+#endif  // SRC_BRINGUP_BIN_TRACE_BENCHMARK_HANDLER_H_

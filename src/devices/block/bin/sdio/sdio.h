@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_SDIO_SDIO_H_
-#define ZIRCON_SYSTEM_UAPP_SDIO_SDIO_H_
+#ifndef SRC_DEVICES_BLOCK_BIN_SDIO_SDIO_H_
+#define SRC_DEVICES_BLOCK_BIN_SDIO_SDIO_H_
 
 #include <fuchsia/hardware/sdio/llcpp/fidl.h>
 
@@ -19,4 +19,4 @@ int RunSdioTool(SdioClient client, int argc, const char** argv);
 
 }  // namespace sdio
 
-#endif  // ZIRCON_SYSTEM_UAPP_SDIO_SDIO_H_
+#endif  // SRC_DEVICES_BLOCK_BIN_SDIO_SDIO_H_

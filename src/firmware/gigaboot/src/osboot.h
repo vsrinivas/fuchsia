@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_BOOTLOADER_SRC_OSBOOT_H_
-#define ZIRCON_BOOTLOADER_SRC_OSBOOT_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_SRC_OSBOOT_H_
+#define SRC_FIRMWARE_GIGABOOT_SRC_OSBOOT_H_
 
 #include <stdint.h>
 
@@ -53,4 +53,4 @@ size_t image_getsize(void* imageheader, size_t sz);
 extern size_t kernel_zone_size;
 extern efi_physical_addr kernel_zone_base;
 
-#endif  // ZIRCON_BOOTLOADER_SRC_OSBOOT_H_
+#endif  // SRC_FIRMWARE_GIGABOOT_SRC_OSBOOT_H_

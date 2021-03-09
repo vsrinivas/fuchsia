@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_BOOTLOADER_SRC_FRAMEBUFFER_H_
-#define ZIRCON_BOOTLOADER_SRC_FRAMEBUFFER_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_SRC_FRAMEBUFFER_H_
+#define SRC_FIRMWARE_GIGABOOT_SRC_FRAMEBUFFER_H_
 
 #include <lib/gfx-font-data/gfx-font-data.h>
 
@@ -46,4 +46,4 @@ void draw_version(const char*);
 // Draws nodename in appropriate location based on mode.
 void draw_nodename(const char* text);
 
-#endif  // ZIRCON_BOOTLOADER_SRC_FRAMEBUFFER_H_
+#endif  // SRC_FIRMWARE_GIGABOOT_SRC_FRAMEBUFFER_H_

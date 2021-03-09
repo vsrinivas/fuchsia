@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_BOOTLOADER_SRC_LOGO_H_
-#define ZIRCON_BOOTLOADER_SRC_LOGO_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_SRC_LOGO_H_
+#define SRC_FIRMWARE_GIGABOOT_SRC_LOGO_H_
 
 static unsigned logo_width = 512;
 static unsigned logo_height = 512;
@@ -1033,4 +1033,4 @@ static unsigned char logo_rle[] = {
     0xff, 0x00, 0xd4, 0x00,
 };
 
-#endif  // ZIRCON_BOOTLOADER_SRC_LOGO_H_
+#endif  // SRC_FIRMWARE_GIGABOOT_SRC_LOGO_H_

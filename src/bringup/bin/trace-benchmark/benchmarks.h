@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_TRACE_BENCHMARK_BENCHMARKS_H_
-#define ZIRCON_SYSTEM_UAPP_TRACE_BENCHMARK_BENCHMARKS_H_
+#ifndef SRC_BRINGUP_BIN_TRACE_BENCHMARK_BENCHMARKS_H_
+#define SRC_BRINGUP_BIN_TRACE_BENCHMARK_BENCHMARKS_H_
 
 #include <lib/trace-engine/types.h>
 #include <stddef.h>
@@ -26,4 +26,4 @@ void RunTracingEnabledBenchmarks(const BenchmarkSpec* spec);
 // Runs benchmarks with NTRACE macro defined.
 void RunNoTraceBenchmarks();
 
-#endif  // ZIRCON_SYSTEM_UAPP_TRACE_BENCHMARK_BENCHMARKS_H_
+#endif  // SRC_BRINGUP_BIN_TRACE_BENCHMARK_BENCHMARKS_H_

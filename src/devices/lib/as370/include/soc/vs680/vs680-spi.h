@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_AS370_INCLUDE_SOC_VS680_VS680_SPI_H_
-#define ZIRCON_SYSTEM_DEV_LIB_AS370_INCLUDE_SOC_VS680_VS680_SPI_H_
+#ifndef SRC_DEVICES_LIB_AS370_INCLUDE_SOC_VS680_VS680_SPI_H_
+#define SRC_DEVICES_LIB_AS370_INCLUDE_SOC_VS680_VS680_SPI_H_
 
 #include <stdint.h>
 
@@ -32,4 +32,4 @@ constexpr uint32_t kSpi1MisoAltFunction = 0;
 
 }  // namespace vs680
 
-#endif  // ZIRCON_SYSTEM_DEV_LIB_AS370_INCLUDE_SOC_VS680_VS680_I2C_H_
+#endif  // SRC_DEVICES_LIB_AS370_INCLUDE_SOC_VS680_VS680_SPI_H_

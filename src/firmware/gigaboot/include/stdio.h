@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_BOOTLOADER_INCLUDE_STDIO_H_
-#define ZIRCON_BOOTLOADER_INCLUDE_STDIO_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_INCLUDE_STDIO_H_
+#define SRC_FIRMWARE_GIGABOOT_INCLUDE_STDIO_H_
 
 #ifndef NULL
 #define NULL ((void*)0)
@@ -15,4 +15,4 @@
 
 int puts16(char16_t* str);
 
-#endif  // ZIRCON_BOOTLOADER_INCLUDE_STDIO_H_
+#endif  // SRC_FIRMWARE_GIGABOOT_INCLUDE_STDIO_H_

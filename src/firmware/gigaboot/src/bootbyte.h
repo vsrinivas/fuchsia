@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_BOOTLOADER_SRC_BOOTBYTE_H_
-#define ZIRCON_BOOTLOADER_SRC_BOOTBYTE_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_SRC_BOOTBYTE_H_
+#define SRC_FIRMWARE_GIGABOOT_SRC_BOOTBYTE_H_
 
 #include <stdint.h>
 
@@ -105,4 +105,4 @@ static inline int bootbyte_decrement(void) { return 0; }
 #error "add code for other arches here"
 #endif
 
-#endif  // ZIRCON_BOOTLOADER_SRC_BOOTBYTE_H_
+#endif  // SRC_FIRMWARE_GIGABOOT_SRC_BOOTBYTE_H_

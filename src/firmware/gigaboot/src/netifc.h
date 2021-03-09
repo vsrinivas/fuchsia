@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_BOOTLOADER_SRC_NETIFC_H_
-#define ZIRCON_BOOTLOADER_SRC_NETIFC_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_SRC_NETIFC_H_
+#define SRC_FIRMWARE_GIGABOOT_SRC_NETIFC_H_
 
 #include <stdint.h>
 
@@ -25,4 +25,4 @@ void netifc_set_timer(uint32_t ms);
 // returns true once the timer has expired
 int netifc_timer_expired(void);
 
-#endif  // ZIRCON_BOOTLOADER_SRC_NETIFC_H_
+#endif  // SRC_FIRMWARE_GIGABOOT_SRC_NETIFC_H_

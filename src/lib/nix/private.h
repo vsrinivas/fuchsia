@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_NIX_PRIVATE_H_
-#define ZIRCON_SYSTEM_ULIB_NIX_PRIVATE_H_
+#ifndef SRC_LIB_NIX_PRIVATE_H_
+#define SRC_LIB_NIX_PRIVATE_H_
 
 #include <cerrno>
 
@@ -13,4 +13,4 @@ static inline int ERRNO(int e) {
   return -1;
 }
 
-#endif  // ZIRCON_SYSTEM_ULIB_NIX_PRIVATE_H_
+#endif  // SRC_LIB_NIX_PRIVATE_H_

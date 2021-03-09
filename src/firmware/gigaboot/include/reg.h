@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_BOOTLOADER_INCLUDE_REG_H_
-#define ZIRCON_BOOTLOADER_INCLUDE_REG_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_INCLUDE_REG_H_
+#define SRC_FIRMWARE_GIGABOOT_INCLUDE_REG_H_
 
 #include <stdint.h>
 
@@ -21,4 +21,4 @@
 #define writell(v, a) (*REG64(a) = (v))
 #define readll(a) (*REG64(a))
 
-#endif  // ZIRCON_BOOTLOADER_INCLUDE_REG_H_
+#endif  // SRC_FIRMWARE_GIGABOOT_INCLUDE_REG_H_

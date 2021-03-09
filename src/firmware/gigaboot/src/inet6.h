@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_BOOTLOADER_SRC_INET6_H_
-#define ZIRCON_BOOTLOADER_SRC_INET6_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_SRC_INET6_H_
+#define SRC_FIRMWARE_GIGABOOT_SRC_INET6_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -166,4 +166,4 @@ void tftp_recv(void* data, size_t len, const ip6_addr* daddr, uint16_t dport, co
 // via eth_put_buffer().
 //
 
-#endif  // ZIRCON_BOOTLOADER_SRC_INET6_H_
+#endif  // SRC_FIRMWARE_GIGABOOT_SRC_INET6_H_

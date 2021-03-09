@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_BOOTLOADER_INCLUDE_STRING_H_
-#define ZIRCON_BOOTLOADER_INCLUDE_STRING_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_INCLUDE_STRING_H_
+#define SRC_FIRMWARE_GIGABOOT_INCLUDE_STRING_H_
 
 #include <stddef.h>
 
@@ -21,4 +21,4 @@ size_t strspn(const char* s, const char* accept);
 char* strpbrk(const char* cs, const char* ct);
 char* strtok(char* s, const char* ct);
 
-#endif  // ZIRCON_BOOTLOADER_INCLUDE_STRING_H_
+#endif  // SRC_FIRMWARE_GIGABOOT_INCLUDE_STRING_H_
