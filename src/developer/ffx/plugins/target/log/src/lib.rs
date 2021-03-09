@@ -33,7 +33,7 @@ const COLOR_CONFIG_NAME: &str = "target_log.color";
 const NO_STREAM_ERROR: &str = "\
 The proactive logger isn't connected to this target.
 
-Verify that the target is up with `ffx target list` and retry\
+Verify that the target is up with `ffx target list` and retry \
 in a few seconds.";
 
 fn timestamp_to_partial_secs(ts: Timestamp) -> f64 {
