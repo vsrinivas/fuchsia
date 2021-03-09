@@ -9,7 +9,9 @@ use crate::{
     installer::{FuchsiaInstallError, InstallerFailureReason},
 };
 use anyhow::anyhow;
+use fidl_fuchsia_feedback::{CrashReporterMarker, CrashReporterProxy};
 use fuchsia_inspect::Node;
+use futures::{future::LocalBoxFuture, prelude::*};
 use log::{error, warn};
 use omaha_client::{
     clock,
@@ -17,11 +19,13 @@ use omaha_client::{
     protocol::response::Response,
     state_machine::{update_check, InstallProgress, State, StateMachineEvent, UpdateCheckError},
     storage::Storage,
+    time::{StandardTimeSource, TimeSource},
 };
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::SystemTime;
 
+mod crash_report;
 mod platform;
 
 pub struct FuchsiaObserver<ST, SM>
@@ -38,6 +42,7 @@ where
     notified_cobalt: bool,
     target_version: Option<String>,
     platform_metrics_emitter: platform::Emitter,
+    crash_reporter: Option<crash_report::CrashReportControlHandle>,
 }
 
 impl<ST, SM> FuchsiaObserver<ST, SM>
@@ -64,7 +69,35 @@ where
             notified_cobalt,
             target_version: None,
             platform_metrics_emitter: platform::Emitter::from_node(platform_metrics_node),
+            crash_reporter: None,
         }
+    }
+
+    pub fn start_handling_crash_reports(&mut self) -> LocalBoxFuture<'static, ()> {
+        self.start_handling_crash_reports_impl(
+            || fuchsia_component::client::connect_to_service::<CrashReporterMarker>(),
+            StandardTimeSource,
+        )
+    }
+
+    fn start_handling_crash_reports_impl<ProxyFn>(
+        &mut self,
+        proxy_fn: ProxyFn,
+        time_source: impl TimeSource + 'static,
+    ) -> LocalBoxFuture<'static, ()>
+    where
+        ProxyFn: FnOnce() -> Result<CrashReporterProxy, anyhow::Error>,
+    {
+        let proxy = match proxy_fn() {
+            Ok(p) => p,
+            Err(e) => {
+                error!("Failed to connect to fuchsia.feedback/CrashReporter: {:#}", anyhow!(e));
+                return futures::future::ready(()).boxed_local();
+            }
+        };
+        let (ch, fut) = crash_report::handle_crash_reports(proxy, time_source);
+        self.crash_reporter = Some(ch);
+        fut
     }
 
     pub async fn on_event(&mut self, event: StateMachineEvent) {
@@ -115,6 +148,12 @@ where
                 error!("Got an unknown installer error: {:?}", downcast_err);
             }
         }
+
+        if let Some(crash_reporter) = self.crash_reporter.as_mut() {
+            if let Err(e) = crash_reporter.installation_error() {
+                warn!("Failed to request installation error crash report: {:#}", anyhow!(e));
+            }
+        }
     }
 
     async fn on_state_change(&mut self, state: State) {
@@ -162,6 +201,17 @@ where
 
     fn on_protocol_state_change(&mut self, protocol_state: &ProtocolState) {
         self.protocol_state_node.set(protocol_state);
+
+        if let Some(crash_reporter) = self.crash_reporter.as_mut() {
+            if let Err(e) = crash_reporter
+                .consecutive_failed_update_checks(protocol_state.consecutive_failed_update_checks)
+            {
+                warn!(
+                    "Failed to request consecutive failed update checks crash report: {:#}",
+                    anyhow!(e)
+                );
+            }
+        }
     }
 
     async fn on_update_check_result(
@@ -204,12 +254,16 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::crash_report::assert_signature;
     use super::*;
     use crate::fidl::{FidlServerBuilder, MockOrRealStateMachineController};
     use crate::installer::InstallerFailure;
     use anyhow::anyhow;
-    use fuchsia_async as fasync;
+    use fuchsia_async::{self as fasync, Task};
     use fuchsia_inspect::Inspector;
+    use matches::assert_matches;
+    use mock_crash_reporter::{MockCrashReporterService, ThrottleHook};
+    use omaha_client::time::MockTimeSource;
     use omaha_client::{
         common::{App, UserCounting},
         protocol::{
@@ -218,6 +272,7 @@ mod tests {
         },
         storage::MemStorage,
     };
+    use std::{sync::Arc, time::Duration};
 
     async fn new_test_observer() -> FuchsiaObserver<MemStorage, MockOrRealStateMachineController> {
         let fidl = FidlServerBuilder::new().build().await;
@@ -327,5 +382,81 @@ mod tests {
 
         // The observer should have called the FIDL server's function to set the latch.
         assert!(FidlServer::previous_out_of_space_failure(Rc::clone(&observer.fidl_server)));
+    }
+
+    /// When we fail to get the CrashReporter proxy, the start_handling_crash_reports_impl
+    /// future should immediately complete and we shouldn't set a control handle.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_start_handling_crash_reports_proxyfn_error() {
+        let mut observer = new_test_observer().await;
+
+        let () = observer
+            .start_handling_crash_reports_impl(|| Err(anyhow!("foo")), StandardTimeSource)
+            .await;
+
+        assert_matches!(observer.crash_reporter, None);
+    }
+
+    /// Verify we file crash reports on installation errors within a 24 hour band.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_installation_error_crash_report() {
+        let mut observer = new_test_observer().await;
+
+        let (hook, mut recv) = ThrottleHook::new(Ok(()));
+        let mock = Arc::new(MockCrashReporterService::new(hook));
+        let (proxy, _fidl_server) = mock.spawn_crash_reporter_service();
+        let mut time_source = MockTimeSource::new_from_now();
+        let _handler = Task::local(
+            observer.start_handling_crash_reports_impl(|| Ok(proxy), time_source.clone()),
+        );
+
+        observer.on_event(StateMachineEvent::InstallerError(None)).await;
+        assert_signature(recv.next().await.unwrap(), "fuchsia-installation-error");
+
+        // within 24 hrs so no report filed
+        observer.on_event(StateMachineEvent::InstallerError(None)).await;
+        assert_matches!(recv.try_next(), Err(_));
+
+        // hit 24 hours so file report
+        time_source.advance(Duration::from_secs(60 * 60 * 24));
+        observer.on_event(StateMachineEvent::InstallerError(None)).await;
+        assert_signature(recv.next().await.unwrap(), "fuchsia-installation-error");
+    }
+
+    /// Verify we file crash reports on >= 5 consecutive failed update checks.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_consecutive_failed_update_checks_crash_report() {
+        let mut observer = new_test_observer().await;
+
+        let (hook, mut recv) = ThrottleHook::new(Ok(()));
+        let mock = Arc::new(MockCrashReporterService::new(hook));
+        let (proxy, _fidl_server) = mock.spawn_crash_reporter_service();
+        let _handler = Task::local(
+            observer.start_handling_crash_reports_impl(|| Ok(proxy), StandardTimeSource),
+        );
+
+        // Below 5 consecutive failed update checks, verify we DON'T file a crash report.
+        observer.on_protocol_state_change(&ProtocolState {
+            consecutive_failed_update_checks: 1,
+            ..ProtocolState::default()
+        });
+        assert_matches!(recv.try_next(), Err(_));
+        observer.on_protocol_state_change(&ProtocolState {
+            consecutive_failed_update_checks: 4,
+            ..ProtocolState::default()
+        });
+        assert_matches!(recv.try_next(), Err(_));
+
+        // >=5 consecutive failed update checks, verify we DO file a crash report.
+        observer.on_protocol_state_change(&ProtocolState {
+            consecutive_failed_update_checks: 5,
+            ..ProtocolState::default()
+        });
+        assert_signature(recv.next().await.unwrap(), "fuchsia-consecutive-failed-update-checks");
+        observer.on_protocol_state_change(&ProtocolState {
+            consecutive_failed_update_checks: 8,
+            ..ProtocolState::default()
+        });
+        assert_signature(recv.next().await.unwrap(), "fuchsia-consecutive-failed-update-checks");
     }
 }

@@ -8,6 +8,7 @@ group("tests") {
     "blobfs-ramdisk:tests",
     "dir-reflector:tests",
     "host-target-testing:tests",
+    "mock-crash-reporter:tests",
     "mock-installer:tests",
     "mock-omaha-server:tests",
     "mock-paver:tests",

@@ -15,7 +15,7 @@ use {
         MonitorRequest, MonitorRequestStream, NoUpdateAvailableData, State, UpdateInfo,
     },
     fidl_fuchsia_update_channelcontrol::{ChannelControlMarker, ChannelControlProxy},
-    fidl_fuchsia_update_installer::InstallerMarker,
+    fidl_fuchsia_update_installer::{InstallerMarker, UpdateNotStartedReason},
     fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
@@ -34,6 +34,7 @@ use {
         prelude::*,
     },
     matches::assert_matches,
+    mock_crash_reporter::{CrashReport, MockCrashReporterService, ThrottleHook},
     mock_installer::MockUpdateInstallerService,
     mock_omaha_server::{OmahaResponse, OmahaServer},
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
@@ -106,6 +107,7 @@ struct TestEnvBuilder {
     version: String,
     installer: Option<MockUpdateInstallerService>,
     paver: Option<MockPaverService>,
+    crash_reporter: Option<MockCrashReporterService>,
 }
 
 impl TestEnvBuilder {
@@ -115,6 +117,7 @@ impl TestEnvBuilder {
             version: "0.1.2.3".to_string(),
             installer: None,
             paver: None,
+            crash_reporter: None,
         }
     }
 
@@ -132,6 +135,10 @@ impl TestEnvBuilder {
 
     fn paver(self, paver: MockPaverService) -> Self {
         Self { paver: Some(paver), ..self }
+    }
+
+    fn crash_reporter(self, crash_reporter: MockCrashReporterService) -> Self {
+        Self { crash_reporter: Some(crash_reporter), ..self }
     }
 
     fn build(self) -> TestEnv {
@@ -198,6 +205,18 @@ impl TestEnvBuilder {
                 Arc::clone(&reboot_service)
                     .run_reboot_service(stream)
                     .unwrap_or_else(|e| panic!("error running reboot service: {:#}", anyhow!(e))),
+            )
+            .detach()
+        });
+
+        // Set up crash reporter service.
+        let crash_reporter = Arc::new(
+            self.crash_reporter.unwrap_or_else(|| MockCrashReporterService::new(|_| Ok(()))),
+        );
+        let crash_reporter_clone = Arc::clone(&crash_reporter);
+        fs.add_fidl_service(move |stream| {
+            fasync::Task::spawn(
+                Arc::clone(&crash_reporter_clone).run_crash_reporter_service(stream),
             )
             .detach()
         });
@@ -831,10 +850,7 @@ async fn test_omaha_client_no_update() {
     .await;
 }
 
-#[fasync::run_singlethreaded(test)]
-async fn test_omaha_client_invalid_response() {
-    let env = TestEnvBuilder::new().response(OmahaResponse::InvalidResponse).build();
-
+async fn do_failed_update_check(env: &TestEnv) {
     let mut stream = env.check_now().await;
     expect_states(
         &mut stream,
@@ -845,6 +861,13 @@ async fn test_omaha_client_invalid_response() {
     )
     .await;
     assert_matches!(stream.next().await, None);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_invalid_response() {
+    let env = TestEnvBuilder::new().response(OmahaResponse::InvalidResponse).build();
+
+    do_failed_update_check(&env).await;
 
     env.assert_platform_metrics(tree_assertion!(
         "children": {
@@ -1002,4 +1025,77 @@ async fn test_omaha_client_perform_pending_reboot_after_out_of_space() {
 
     // This will hang if reboot was not triggered.
     env.reboot_called.await.unwrap();
+}
+
+/// Verifies the signature of the CrashReport is what's expected.
+fn assert_signature(report: CrashReport, expected_signature: &str) {
+    matches::assert_matches!(
+        report,
+        CrashReport {
+            crash_signature: Some(signature),
+            program_name: Some(program),
+            program_uptime: Some(_),
+            ..
+        } if signature == expected_signature && program == "system"
+    )
+}
+
+/// When we fail with an installation error, we should file a crash report.
+#[fasync::run_singlethreaded(test)]
+async fn test_crash_report_installation_error() {
+    let (hook, mut recv) = ThrottleHook::new(Ok(()));
+    let env = TestEnvBuilder::new()
+        .response(OmahaResponse::Update)
+        .installer(MockUpdateInstallerService::with_response(Err(
+            UpdateNotStartedReason::AlreadyInProgress,
+        )))
+        .crash_reporter(MockCrashReporterService::new(hook))
+        .build();
+
+    let mut stream = env.check_now().await;
+
+    // Consume states to get InstallationError.
+    expect_states(
+        &mut stream,
+        &[
+            State::CheckingForUpdates(CheckingForUpdatesData::EMPTY),
+            State::InstallingUpdate(InstallingData {
+                update: update_info(),
+                installation_progress: progress(None),
+                ..InstallingData::EMPTY
+            }),
+            State::InstallationError(InstallationErrorData {
+                update: update_info(),
+                installation_progress: progress(None),
+                ..InstallationErrorData::EMPTY
+            }),
+        ],
+    )
+    .await;
+
+    // Observe the crash report was filed.
+    assert_signature(recv.next().await.unwrap(), "fuchsia-installation-error");
+}
+
+/// When we fail 5 times to check for updates, we should file a crash report.
+#[fasync::run_singlethreaded(test)]
+async fn test_crash_report_consecutive_failed_update_checks() {
+    let (hook, mut recv) = ThrottleHook::new(Ok(()));
+    let env = TestEnvBuilder::new()
+        .response(OmahaResponse::InvalidResponse)
+        .crash_reporter(MockCrashReporterService::new(hook))
+        .build();
+
+    // Failing <5 times will not yield crash reports.
+    do_failed_update_check(&env).await;
+    do_failed_update_check(&env).await;
+    do_failed_update_check(&env).await;
+    do_failed_update_check(&env).await;
+    assert_matches!(recv.try_next(), Err(_));
+
+    // But failing >=5 times will.
+    do_failed_update_check(&env).await;
+    assert_signature(recv.next().await.unwrap(), "fuchsia-consecutive-failed-update-checks");
+    do_failed_update_check(&env).await;
+    assert_signature(recv.next().await.unwrap(), "fuchsia-consecutive-failed-update-checks");
 }
