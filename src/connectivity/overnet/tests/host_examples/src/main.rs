@@ -393,7 +393,7 @@ mod tests {
         let mut ascendd2 = Ascendd::new(&ctx).context("creating ascendd 2")?;
         ctx.clone().show_reports_if_failed(args.timeout, move || {
             bridge(&mut ascendd1, &mut ascendd2).context("bridging ascendds")?;
-            ascendd1.add_echo_server().context("starting server")?;
+            ascendd2.add_echo_server().context("starting server")?;
             ctx.run_client(ascendd1.echo_client()).context("running client")?;
             let output = ctx
                 .run_client(ascendd1.onet_client("list-peers", &[]))
