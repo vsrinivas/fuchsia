@@ -17,9 +17,21 @@ import os
 import re
 import subprocess
 import sys
+import json
+import functools
 import unittest
 
 TARGET_DIR_PART = re.compile(r"\/\/([\w\-_]*(?:\/[\w\-_]+)*)")
+
+
+# functools.cache is more semantically accurate, but requires Python 3.9
+@functools.lru_cache
+def get_out_dir():
+    """Retrieve the build output directory"""
+
+    fx_status = run_command(["fx", "status", "--format=json"])
+    return json.loads(
+        fx_status)["environmentInfo"]["items"]["build_dir"]["value"]
 
 
 def run_command(command):
@@ -73,8 +85,8 @@ def main():
     verbose("Getting visibility list...")
     target_visibility = (
         run_command(
-            ["fx", "gn", "desc", "out/default", args.target,
-             "visibility"]).strip().splitlines())
+            ["fx", "gn", "desc",
+             get_out_dir(), args.target, "visibility"]).strip().splitlines())
     verbose(f"Found {len(target_visibility)} elements in list.")
 
     # Unfortunately we can't rely on `gn refs` to find all references to the
