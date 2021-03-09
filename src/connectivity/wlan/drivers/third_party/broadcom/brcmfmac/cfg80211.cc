@@ -5220,16 +5220,32 @@ static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct b
       BRCMF_ERR("bss iovar error: %s, fw err %s", zx_status_get_string(status),
                 brcmf_fil_get_errstr(fwerr));
     }
+
+    if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state)) {
+      // Issue assoc_mgr_cmd to resume firmware from waiting for the success of SAE authentication.
+      assoc_mgr_cmd_t cmd;
+      cmd.version = ASSOC_MGR_CURRENT_VERSION;
+      cmd.length = sizeof(cmd);
+      cmd.cmd = ASSOC_MGR_CMD_PAUSE_ON_EVT;
+      cmd.params = ASSOC_MGR_PARAMS_EVENT_NONE;
+
+      status = brcmf_fil_iovar_data_set(ifp, "assoc_mgr_cmd", &cmd, sizeof(cmd), &fwerr);
+      if (status != ZX_OK) {
+        // An error will always be returned here until the firmware bug is fixed.
+        // TODO(zhiyichen): Remove the comment once the firmware bug is fixed.
+        BRCMF_ERR("Set iovar assoc_mgr_cmd fail. err: %s, fw_err: %s", zx_status_get_string(status),
+                  brcmf_fil_get_errstr(fwerr));
+      }
+      brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
+    }
     brcmf_bss_connect_done(ifp, brcmf_connect_status_t::AUTHENTICATION_FAILED,
                            WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);
   }
 
-  if (e->datalen > 0) {
-    // Ignore the auth frame when SAE is not in progress.
-    if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state)) {
-      BRCMF_ERR("Received auth frame when sme is not doing SAE four-way authentication.");
-      return ZX_ERR_BAD_STATE;
-    }
+  // Only care about the authentication frames during SAE process.
+  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state) &&
+      e->datalen > 0) {
+    BRCMF_INFO("SAE frame received from driver.");
     return brcmf_rx_auth_frame(ifp, e->datalen, data);
   }
 
