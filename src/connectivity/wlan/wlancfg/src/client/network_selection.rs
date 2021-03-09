@@ -39,7 +39,7 @@ const RECENT_FAILURE_WINDOW: zx::Duration = zx::Duration::from_seconds(60 * 5); 
 const STALE_SCAN_AGE: zx::Duration = zx::Duration::from_millis(50);
 
 /// Above or at this RSSI, we'll give 5G networks a preference
-const RSSI_CUTOFF_5G_PREFERENCE: i8 = -58;
+const RSSI_CUTOFF_5G_PREFERENCE: i8 = -64;
 /// The score boost for 5G networks that we are giving preference to.
 const RSSI_5G_PREFERENCE_BOOST: i8 = 20;
 
