@@ -48,7 +48,7 @@
 namespace blobfs {
 
 class Blobfs;
-class Producer;
+class BlobDataProducer;
 
 using digest::Digest;
 
@@ -283,7 +283,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   uint32_t GetBlockSize() const;
 
   // Write |block_count| blocks using the data from |producer| into |streamer|.
-  zx_status_t WriteData(uint32_t block_count, Producer& producer, fs::DataStreamer& streamer);
+  zx_status_t WriteData(uint32_t block_count, BlobDataProducer& producer,
+                        fs::DataStreamer& streamer);
 
   Blobfs* const blobfs_;
   BlobState state_ = BlobState::kEmpty;
@@ -341,9 +342,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   //
   // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
   // is complete.
-  fbl::RefPtr<Blob> clone_ref_ = {};
+  fbl::RefPtr<Blob> clone_ref_;
 
-  zx::event readable_event_ = {};
+  zx::event readable_event_;
 
   uint32_t fd_count_ = 0;
 
@@ -354,60 +355,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   Inode inode_ = {};
 
   // Data used exclusively during writeback.
-  struct WriteInfo {
-    // See comment for merkle_tree() below.
-    static constexpr size_t kPreMerkleTreePadding = kBlobfsBlockSize;
-
-    WriteInfo() = default;
-
-    // Not copyable or movable because merkle_tree_creator has a pointer to digest.
-    WriteInfo(const WriteInfo&) = delete;
-    WriteInfo& operator=(const WriteInfo&) = delete;
-
-    // We leave room in the merkle tree buffer to add padding before the merkle tree which might be
-    // required with the compact blob layout.
-    uint8_t* merkle_tree() const {
-      ZX_ASSERT(merkle_tree_buffer);
-      return merkle_tree_buffer.get() + kPreMerkleTreePadding;
-    }
-
-    uint64_t bytes_written = {};
-
-    fbl::Vector<ReservedExtent> extents;
-    fbl::Vector<ReservedNode> node_indices;
-
-    std::optional<BlobCompressor> compressor;
-
-    // Target compressed size for this blob indicates the possible on-disk compressed size in bytes.
-    std::optional<uint64_t> target_compression_size_;
-
-    // The fused write error.  Once writing has failed, we return the same error on subsequent
-    // writes in case a higher layer dropped the error and returned a short write instead.
-    zx_status_t write_error = ZX_OK;
-
-    // As data is written, we build the merkle tree using this.
-    digest::MerkleTreeCreator merkle_tree_creator;
-
-    // The merkle tree creator stores the root digest here.
-    uint8_t digest[digest::kSha256Length];
-
-    // The merkle tree creator stores the rest of the tree here.  The buffer includes space for
-    // padding.  See the comment for merkle_tree() above.
-    std::unique_ptr<uint8_t[]> merkle_tree_buffer;
-
-    // The old blob that this write is replacing.
-    fbl::RefPtr<Blob> old_blob;
-
-    // Sets the target_compression_size_ field.
-    void SetTargetCompressionSize(uint64_t size) {
-      target_compression_size_ = std::make_optional(size);
-    }
-  };
-
-  std::unique_ptr<WriteInfo> write_info_ = {};
+  struct WriteInfo;
+  std::unique_ptr<WriteInfo> write_info_;
 
   // Reads in the blob's pages on demand.
-  std::unique_ptr<pager::PageWatcher> page_watcher_ = nullptr;
+  std::unique_ptr<pager::PageWatcher> page_watcher_;
 };
 
 // Returns true if the given inode supports paging.

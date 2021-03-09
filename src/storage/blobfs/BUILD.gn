@@ -129,6 +129,8 @@ static_library("blobfs") {
       "blob.cc",
       "blob_cache.cc",
       "blob_corruption_notifier.cc",
+      "blob_data_producer.cc",
+      "blob_data_producer.h",
       "blob_loader.cc",
       "blob_verifier.cc",
       "blobfs.cc",

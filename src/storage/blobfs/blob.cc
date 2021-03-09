@@ -29,7 +29,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/span.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 #include <safemath/checked_math.h>
@@ -41,6 +40,7 @@
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/lib/storage/vfs/cpp/transaction/writeback.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
+#include "src/storage/blobfs/blob_data_producer.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/blob_verifier.h"
 #include "src/storage/blobfs/blobfs.h"
@@ -57,216 +57,59 @@
 
 namespace blobfs {
 
-// Producer is an abstact class that is used when writing blobs.  It produces data (see the Consume
-// method) which is then to be written to the device.
-class Producer {
- public:
-  Producer() = default;
-
-  // The number of bytes remaining for this producer.
-  virtual uint64_t remaining() const = 0;
-
-  // Producers must be able to accommodate zero padding up to kBlobfsBlockSize if it would be
-  // required i.e. if the last span returned is not a whole block size, it must point to a buffer
-  // that can be extended with zero padding (which will be done by the caller).
-  virtual zx::status<fbl::Span<const uint8_t>> Consume(uint64_t max) = 0;
-
-  // Subclasses should return true if the next call to Consume would invalidate data returned by
-  // previous calls to Consume.
-  virtual bool NeedsFlush() const { return false; }
-
- protected:
-  Producer(Producer&&) = default;
-  Producer& operator=(Producer&&) = default;
-};
-
-namespace {
-
 using ::digest::Digest;
 using ::digest::MerkleTreeCreator;
 
-// Merges two producers together with optional padding between them.  If there is padding, we
-// require the second producer to be able to accomodate padding at the beginning up to
-// kBlobfsBlockSize i.e. the first span it returns must point to a buffer that can be prepended with
-// up to kBlobfsBlockSize bytes.  Both producers should be able to accommodate padding at the end if
-// it would be required.
-class MergeProducer : public Producer {
- public:
-  MergeProducer(Producer& first, Producer& second, size_t padding)
-      : first_(first), second_(second), padding_(padding) {
-    ZX_ASSERT(padding_ < kBlobfsBlockSize);
+// Data used exclusively during writeback.
+struct Blob::WriteInfo {
+  // See comment for merkle_tree() below.
+  static constexpr size_t kPreMerkleTreePadding = kBlobfsBlockSize;
+
+  WriteInfo() = default;
+
+  // Not copyable or movable because merkle_tree_creator has a pointer to digest.
+  WriteInfo(const WriteInfo&) = delete;
+  WriteInfo& operator=(const WriteInfo&) = delete;
+
+  // We leave room in the merkle tree buffer to add padding before the merkle tree which might be
+  // required with the compact blob layout.
+  uint8_t* merkle_tree() const {
+    ZX_ASSERT(merkle_tree_buffer);
+    return merkle_tree_buffer.get() + kPreMerkleTreePadding;
   }
 
-  uint64_t remaining() const override {
-    return first_.remaining() + padding_ + second_.remaining();
+  uint64_t bytes_written = 0;
+
+  fbl::Vector<ReservedExtent> extents;
+  fbl::Vector<ReservedNode> node_indices;
+
+  std::optional<BlobCompressor> compressor;
+
+  // Target compressed size for this blob indicates the possible on-disk compressed size in bytes.
+  std::optional<uint64_t> target_compression_size_;
+
+  // The fused write error.  Once writing has failed, we return the same error on subsequent
+  // writes in case a higher layer dropped the error and returned a short write instead.
+  zx_status_t write_error = ZX_OK;
+
+  // As data is written, we build the merkle tree using this.
+  digest::MerkleTreeCreator merkle_tree_creator;
+
+  // The merkle tree creator stores the root digest here.
+  uint8_t digest[digest::kSha256Length];
+
+  // The merkle tree creator stores the rest of the tree here.  The buffer includes space for
+  // padding.  See the comment for merkle_tree() above.
+  std::unique_ptr<uint8_t[]> merkle_tree_buffer;
+
+  // The old blob that this write is replacing.
+  fbl::RefPtr<Blob> old_blob;
+
+  // Sets the target_compression_size_ field.
+  void SetTargetCompressionSize(uint64_t size) {
+    target_compression_size_ = std::make_optional(size);
   }
-
-  zx::status<fbl::Span<const uint8_t>> Consume(uint64_t max) override {
-    if (first_.remaining() > 0) {
-      auto data = first_.Consume(max);
-      if (data.is_error()) {
-        return data;
-      }
-
-      // Deal with data returned that isn't a multiple of the block size.
-      const size_t alignment = data->size() % kBlobfsBlockSize;
-      if (alignment > 0) {
-        // First, add any padding that might be required.
-        const size_t to_pad = std::min(padding_, kBlobfsBlockSize - alignment);
-        uint8_t* p = const_cast<uint8_t*>(data->end());
-        memset(p, 0, to_pad);
-        p += to_pad;
-        data.value() = fbl::Span(data->data(), data->size() + to_pad);
-        padding_ -= to_pad;
-
-        // If we still don't have a full block, fill the block with data from the second producer.
-        const size_t alignment = data->size() % kBlobfsBlockSize;
-        if (alignment > 0) {
-          auto data2 = second_.Consume(kBlobfsBlockSize - alignment);
-          if (data2.is_error())
-            return data2;
-          memcpy(p, data2->data(), data2->size());
-          data.value() = fbl::Span(data->data(), data->size() + data2->size());
-        }
-      }
-      return data;
-    } else {
-      auto data = second_.Consume(max - padding_);
-      if (data.is_error())
-        return data;
-
-      // If we have some padding, prepend zeroed data.
-      if (padding_ > 0) {
-        data.value() = fbl::Span(data->data() - padding_, data->size() + padding_);
-        memset(const_cast<uint8_t*>(data->data()), 0, padding_);
-        padding_ = 0;
-      }
-      return data;
-    }
-  }
-
-  bool NeedsFlush() const override { return first_.NeedsFlush() || second_.NeedsFlush(); }
-
- private:
-  Producer& first_;
-  Producer& second_;
-  size_t padding_;
 };
-
-// A simple producer that just vends data from a supplied span.
-class SimpleProducer : public Producer {
- public:
-  SimpleProducer(fbl::Span<const uint8_t> data) : data_(data) {}
-
-  uint64_t remaining() const override { return data_.size(); }
-
-  zx::status<fbl::Span<const uint8_t>> Consume(uint64_t max) override {
-    auto result = data_.subspan(0, std::min(max, data_.size()));
-    data_ = data_.subspan(result.size());
-    return zx::ok(result);
-  }
-
- private:
-  fbl::Span<const uint8_t> data_;
-};
-
-// A producer that allows us to write uncompressed data by decompressing data.  This is used when we
-// discover that it is not profitable to compress a blob.  It decompresses into a temporary buffer.
-class DecompressProducer : public Producer {
- public:
-  static zx::status<DecompressProducer> Create(BlobCompressor& compressor,
-                                               uint64_t decompressed_size) {
-    ZX_ASSERT_MSG(compressor.algorithm() == CompressionAlgorithm::CHUNKED, "%u",
-                  compressor.algorithm());
-    std::unique_ptr<SeekableDecompressor> decompressor;
-    const size_t compressed_size = compressor.Size();
-    if (zx_status_t status = SeekableChunkedDecompressor::CreateDecompressor(
-            compressor.Data(), compressed_size, compressed_size, &decompressor);
-        status != ZX_OK) {
-      return zx::error(status);
-    }
-
-    return zx::ok(DecompressProducer(
-        std::move(decompressor), decompressed_size,
-        fbl::round_up(131'072ul, compressor.compressor().GetChunkSize()), compressor.Data()));
-  }
-
-  uint64_t remaining() const override { return decompressed_remaining_ + buffer_avail_; }
-
-  zx::status<fbl::Span<const uint8_t>> Consume(uint64_t max) override {
-    if (buffer_avail_ == 0) {
-      if (zx_status_t status = Decompress(); status != ZX_OK) {
-        return zx::error(status);
-      }
-    }
-    fbl::Span result(buffer_.get() + buffer_offset_, std::min(buffer_avail_, max));
-    buffer_offset_ += result.size();
-    buffer_avail_ -= result.size();
-    return zx::ok(result);
-  }
-
-  // Return true if previous data would be invalidated by the next call to Consume.
-  bool NeedsFlush() const override { return buffer_offset_ > 0 && buffer_avail_ == 0; }
-
- private:
-  DecompressProducer(std::unique_ptr<SeekableDecompressor> decompressor, uint64_t decompressed_size,
-                     size_t buffer_size, const void* compressed_data_start)
-      : decompressor_(std::move(decompressor)),
-        decompressed_remaining_(decompressed_size),
-        buffer_(std::make_unique<uint8_t[]>(buffer_size)),
-        buffer_size_(buffer_size),
-        compressed_data_start_(static_cast<const uint8_t*>(compressed_data_start)) {}
-
-  // Decompress into the temporary buffer.
-  zx_status_t Decompress() {
-    size_t decompressed_length = std::min(buffer_size_, decompressed_remaining_);
-    auto mapping_or = decompressor_->MappingForDecompressedRange(
-        decompressed_offset_, decompressed_length, std::numeric_limits<size_t>::max());
-    if (mapping_or.is_error()) {
-      return mapping_or.error_value();
-    }
-    ZX_ASSERT(mapping_or.value().decompressed_offset == decompressed_offset_);
-    ZX_ASSERT(mapping_or.value().decompressed_length == decompressed_length);
-    if (zx_status_t status = decompressor_->DecompressRange(
-            buffer_.get(), &decompressed_length,
-            compressed_data_start_ + mapping_or.value().compressed_offset,
-            mapping_or.value().compressed_length, mapping_or.value().decompressed_offset);
-        status != ZX_OK) {
-      return status;
-    }
-    ZX_ASSERT(mapping_or.value().decompressed_length == decompressed_length);
-    buffer_avail_ = decompressed_length;
-    buffer_offset_ = 0;
-    decompressed_remaining_ -= decompressed_length;
-    decompressed_offset_ += decompressed_length;
-    return ZX_OK;
-  }
-
-  std::unique_ptr<SeekableDecompressor> decompressor_;
-
-  // The total number of decompressed bytes left to decompress.
-  uint64_t decompressed_remaining_;
-
-  // A temporary buffer we use to decompress into.
-  std::unique_ptr<uint8_t[]> buffer_;
-
-  // The size of the temporary buffer.
-  const size_t buffer_size_;
-
-  // Pointer to the first byte of compressed data.
-  const uint8_t* compressed_data_start_;
-
-  // The current offset of decompressed bytes.
-  uint64_t decompressed_offset_ = 0;
-
-  // The current offset in the temporary buffer indicate what to return on the next call to Consume.
-  size_t buffer_offset_ = 0;
-
-  // The number of bytes available in the temporary buffer.
-  size_t buffer_avail_ = 0;
-};
-
-}  // namespace
 
 bool SupportsPaging(const Inode& inode) {
   zx::status<CompressionAlgorithm> status = AlgorithmForInode(inode);
@@ -668,44 +511,45 @@ zx_status_t Blob::Commit() {
     return status;
   }
 
-  std::variant<std::monostate, DecompressProducer, SimpleProducer> data;
-  Producer* data_ptr = nullptr;
+  std::variant<std::monostate, DecompressBlobDataProducer, SimpleBlobDataProducer> data;
+  BlobDataProducer* data_ptr = nullptr;
 
   if (compress) {
     // The data comes from the compression buffer.
-    data_ptr = &data.emplace<SimpleProducer>(
+    data_ptr = &data.emplace<SimpleBlobDataProducer>(
         fbl::Span(static_cast<const uint8_t*>(write_info_->compressor->Data()),
                   write_info_->compressor->Size()));
     SetCompressionAlgorithm(&inode_, write_info_->compressor->algorithm());
   } else if (write_info_->compressor) {
     // In this case, we've decided against compressing because there are no savings, so we have to
     // decompress.
-    if (auto producer_or = DecompressProducer::Create(*write_info_->compressor, inode_.blob_size);
+    if (auto producer_or =
+            DecompressBlobDataProducer::Create(*write_info_->compressor, inode_.blob_size);
         producer_or.is_error()) {
       return producer_or.error_value();
     } else {
-      data_ptr = &data.emplace<DecompressProducer>(std::move(producer_or).value());
+      data_ptr = &data.emplace<DecompressBlobDataProducer>(std::move(producer_or).value());
     }
   } else {
     // The data comes from the data buffer.
-    data_ptr = &data.emplace<SimpleProducer>(
+    data_ptr = &data.emplace<SimpleBlobDataProducer>(
         fbl::Span(static_cast<const uint8_t*>(data_mapping_.start()), inode_.blob_size));
   }
 
-  SimpleProducer merkle(fbl::Span(write_info_->merkle_tree(), merkle_size));
+  SimpleBlobDataProducer merkle(fbl::Span(write_info_->merkle_tree(), merkle_size));
 
-  MergeProducer producer = [&]() {
+  MergeBlobDataProducer producer = [&]() {
     switch (blob_layout->Format()) {
       case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
         // Write the merkle data first followed by the data.  The merkle data should be a multiple
         // of the block size so we don't need any padding.
-        ZX_ASSERT(merkle.remaining() % kBlobfsBlockSize == 0);
-        return MergeProducer(merkle, *data_ptr, /*padding=*/0);
+        ZX_ASSERT(merkle.GetRemainingBytes() % kBlobfsBlockSize == 0);
+        return MergeBlobDataProducer(merkle, *data_ptr, /*padding=*/0);
       case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
         // Write the data followed by the merkle tree.  There might be some padding between the
         // data and the merkle tree.
-        return MergeProducer(*data_ptr, merkle,
-                             blob_layout->MerkleTreeOffset() - data_ptr->remaining());
+        return MergeBlobDataProducer(
+            *data_ptr, merkle, blob_layout->MerkleTreeOffset() - data_ptr->GetRemainingBytes());
     }
   }();
 
@@ -764,7 +608,8 @@ zx_status_t Blob::Commit() {
   return MarkReadable();
 }
 
-zx_status_t Blob::WriteData(uint32_t block_count, Producer& producer, fs::DataStreamer& streamer) {
+zx_status_t Blob::WriteData(uint32_t block_count, BlobDataProducer& producer,
+                            fs::DataStreamer& streamer) {
   BlockIterator block_iter(std::make_unique<VectorExtentIterator>(write_info_->extents));
   const uint64_t data_start = DataStartBlock(blobfs_->Info());
   return StreamBlocks(
