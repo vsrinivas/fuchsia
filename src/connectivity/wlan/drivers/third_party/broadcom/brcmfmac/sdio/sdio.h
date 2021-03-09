@@ -468,6 +468,7 @@ struct brcmf_sdio_count {
   uint pollcnt;           /* Count of active polls */
   uint regfails;          /* Count of R_REG failures */
   uint tx_sderrs;         /* Count of tx attempts with sd errors */
+  uint tx_qfull;          /* Count of tx attempts with queue full */
   uint fcqueued;          /* Tx packets that got queued */
   uint rxrtx;             /* Count of rtx requests (NAK to dongle) */
   uint rx_toolong;        /* Receive frames too long to receive */

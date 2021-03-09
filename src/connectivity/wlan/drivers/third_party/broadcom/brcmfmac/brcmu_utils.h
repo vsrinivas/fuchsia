@@ -84,6 +84,8 @@ struct pktq {
   uint16_t hi_prec;  /* rapid dequeue hint (>= highest non-empty prec) */
   uint16_t max;      /* total max packets */
   uint16_t len;      /* total number of packets */
+  uint32_t enq_cnt;  /* total number of packets enqueued */
+
   /*
    * q array must be last since # of elements can be either
    * PKTQ_MAX_PREC or 1
@@ -140,6 +142,8 @@ int brcmu_pktq_mlen(struct pktq* pq, uint prec_bmp);
 struct brcmf_netbuf* brcmu_pktq_mdeq(struct pktq* pq, uint prec_bmp, int* prec_out);
 
 /* operations on packet queue as a whole */
+
+static inline uint32_t pktq_enq_cnt(struct pktq* pq) { return pq->enq_cnt; }
 
 static inline int pktq_len(struct pktq* pq) { return (int)pq->len; }
 

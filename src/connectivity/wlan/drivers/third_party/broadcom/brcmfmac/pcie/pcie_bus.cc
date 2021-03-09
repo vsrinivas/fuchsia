@@ -108,6 +108,7 @@ const brcmf_bus_ops* PcieBus::GetBusOps() {
           [](brcmf_bus* bus, void* config, size_t exp_size, size_t* actual) {
             return bus->bus_priv.pcie->GetWifiMetadata(config, exp_size, actual);
           },
+      .log_stats = [](brcmf_bus* bus) {},
   };
   return &bus_ops;
 }
