@@ -157,6 +157,7 @@ class MultiAccelerator : public media::H264Decoder::H264Accelerator {
     // struct copy
     slice_data.header = *slice_hdr;
     slice_data.pic = pic;
+    // vector copies
     slice_data.ref_pic_list0 = ref_pic_list0;
     slice_data.ref_pic_list1 = ref_pic_list1;
     owner_->SubmitSliceData(std::move(slice_data));

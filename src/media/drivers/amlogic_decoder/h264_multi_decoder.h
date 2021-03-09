@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "macros.h"
+#include "magic.h"
 #include "media/video/h264_parser.h"
 #include "media/video/h264_poc.h"
 #include "registers.h"
