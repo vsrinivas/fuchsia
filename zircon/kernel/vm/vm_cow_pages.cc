@@ -113,6 +113,8 @@ fbl::DoublyLinkedList<VmCowPages::Cursor*> VmCowPages::discardable_vmos_cursors_
 // its spinlock overhead for every single page. Pages that it removes from the page queue get placed
 // into a provided list. Note that pages are not moved into the list until *after* Flush has been
 // called and Flush must be called prior to object destruction.
+//
+// This class has a large internal array and should be marked uninitialized.
 class BatchPQRemove {
  public:
   BatchPQRemove(list_node_t* freed_list) : freed_list_(freed_list) {}
@@ -122,6 +124,7 @@ class BatchPQRemove {
   // Add a page to the batch set. Automatically calls |Flush| if the limit is reached.
   void Push(vm_page_t* page) {
     DEBUG_ASSERT(page);
+    DEBUG_ASSERT(count_ < kMaxPages);
     pages_[count_] = page;
     count_++;
     if (count_ == kMaxPages) {
@@ -133,7 +136,7 @@ class BatchPQRemove {
   // original list so that you can do operations on the list.
   void Flush() {
     if (count_ > 0) {
-      pmm_page_queues()->RemoveArrayIntoList(pages_.data(), count_, freed_list_);
+      pmm_page_queues()->RemoveArrayIntoList(pages_, count_, freed_list_);
       count_ = 0;
     }
   }
@@ -157,7 +160,7 @@ class BatchPQRemove {
   static constexpr size_t kMaxPages = 64;
 
   size_t count_ = 0;
-  ktl::array<vm_page_t*, kMaxPages> pages_;
+  vm_page_t* pages_[kMaxPages];
   list_node_t* freed_list_ = nullptr;
 };
 
@@ -225,7 +228,7 @@ VmCowPages::~VmCowPages() {
   list_node_t list;
   list_initialize(&list);
 
-  BatchPQRemove page_remover(&list);
+  __UNINITIALIZED BatchPQRemove page_remover(&list);
   // free all of the pages attached to us
   page_list_.RemoveAllPages([&page_remover](vm_page_t* page) {
     ASSERT(page->object.pin_count == 0);
@@ -702,7 +705,7 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
 
   list_node freed_pages;
   list_initialize(&freed_pages);
-  BatchPQRemove page_remover(&freed_pages);
+  __UNINITIALIZED BatchPQRemove page_remover(&freed_pages);
 
   const uint64_t visibility_start_offset = child.parent_offset_ + child.parent_start_limit_;
   const uint64_t merge_start_offset = child.parent_offset_;
@@ -825,7 +828,7 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
 
     list_node covered_pages;
     list_initialize(&covered_pages);
-    BatchPQRemove covered_remover(&covered_pages);
+    __UNINITIALIZED BatchPQRemove covered_remover(&covered_pages);
 
     // Now merge |child|'s pages into |this|, overwriting any pages present in |this|, and
     // then move that list to |child|.
@@ -1954,7 +1957,7 @@ zx_status_t VmCowPages::UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len,
   list_node_t freed_list;
   list_initialize(&freed_list);
 
-  BatchPQRemove page_remover(&freed_list);
+  __UNINITIALIZED BatchPQRemove page_remover(&freed_list);
 
   page_list_.RemovePages(page_remover.RemovePagesCallback(), offset, offset + len);
   page_remover.Flush();
@@ -2050,7 +2053,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     if (hidden_parent) {
       // Release any COW pages that are no longer necessary. This will also
       // update the parent limit.
-      BatchPQRemove page_remover(&freed_list);
+      __UNINITIALIZED BatchPQRemove page_remover(&freed_list);
       ReleaseCowParentPagesLocked(rounded_start, parent_limit_, &page_remover);
       page_remover.Flush();
     } else {
@@ -2521,7 +2524,7 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
   list_node_t freed_list;
   list_initialize(&freed_list);
 
-  BatchPQRemove page_remover(&freed_list);
+  __UNINITIALIZED BatchPQRemove page_remover(&freed_list);
 
   // see if we're shrinking or expanding the vmo
   if (s < size_) {
