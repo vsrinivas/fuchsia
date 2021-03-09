@@ -27,3 +27,14 @@ show-test3/basic_component.cmx:
       fuchsia.inspect.Health:
         start_timestamp_nanos = TIMESTAMP
         status = OK
+show-test4\:with_colon/basic_component.cmx:
+  metadata:
+    filename = fuchsia.inspect.Tree
+    component_url = fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx
+    timestamp = TIMESTAMP
+  payload:
+    root:
+      iquery = rocks
+      fuchsia.inspect.Health:
+        start_timestamp_nanos = TIMESTAMP
+        status = OK

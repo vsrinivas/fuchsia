@@ -15,7 +15,7 @@ use {
     files_async::{self, DirentKind},
     fuchsia_component::client,
     futures::StreamExt,
-    glob, io_util,
+    glob, io_util, selectors,
 };
 
 /// If not path is provided, then connects to the global archivist. If one is provided, then
@@ -128,10 +128,25 @@ pub async fn fetch_data(
     let mut reader = ArchiveReader::new().with_archive(archive).retry_if_empty(false);
     // We support receiving the moniker or a tree selector
     for selector in selectors {
-        if selector.contains(":") {
-            reader = reader.add_selector(selector.as_ref());
-        } else {
-            reader = reader.add_selector(format!("{}:*", selector));
+        match selectors::tokenize_string(selector, selectors::SELECTOR_DELIMITER) {
+            Ok(tokens) => {
+                if tokens.len() > 1 {
+                    reader = reader.add_selector(selector.as_ref());
+                } else if tokens.len() == 1 {
+                    reader = reader.add_selector(format!("{}:*", selector));
+                } else {
+                    return Err(Error::InvalidArguments(format!(
+                        "Iquery selectors cannot be empty strings: {:?}",
+                        selector
+                    )));
+                }
+            }
+            Err(e) => {
+                return Err(Error::InvalidArguments(format!(
+                    "Tokenizing a provided selector failed. Error: {:?} Selector: {:?}",
+                    e, selector
+                )));
+            }
         }
     }
     let mut results = reader.snapshot::<Inspect>().await.map_err(|e| Error::Fetch(e))?;

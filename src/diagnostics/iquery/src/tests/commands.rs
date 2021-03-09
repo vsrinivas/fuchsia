@@ -263,19 +263,23 @@ async fn show_test() {
     let (_env, app) = utils::start_basic_component("show-test").await.expect("create comp 1");
     let (_env2, app2) = utils::start_basic_component("show-test2").await.expect("create comp 2");
     let (_env3, app3) = utils::start_basic_component("show-test3").await.expect("create comp 3");
+    let (_env4, app4) =
+        utils::start_basic_component("show-test4:with_colon").await.expect("create comp 4");
     assert_command!(
         command: "show",
         golden_basename: show_test,
         args: [
             "show-test/basic_component.cmx:root/fuchsia.inspect.Health",
             "show-test2/basic_component.cmx:root:iquery",
-            "show-test3/basic_component.cmx"
+            "show-test3/basic_component.cmx",
+            r#"show-test4\:with_colon/basic_component.cmx"#
         ],
         test_opts: [ "with_retries" ]
     );
     utils::wait_for_terminated(app).await;
     utils::wait_for_terminated(app2).await;
     utils::wait_for_terminated(app3).await;
+    utils::wait_for_terminated(app4).await;
 }
 
 #[fasync::run_singlethreaded(test)]

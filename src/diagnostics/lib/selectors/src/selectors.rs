@@ -18,7 +18,7 @@ use {
 };
 // Character used to delimit the different sections of an inspect selector,
 // the component selector, the tree selector, and the property selector.
-static SELECTOR_DELIMITER: char = ':';
+pub static SELECTOR_DELIMITER: char = ':';
 
 // Character used to delimit nodes within a component hierarchy path.
 pub static PATH_NODE_DELIMITER: char = '/';
