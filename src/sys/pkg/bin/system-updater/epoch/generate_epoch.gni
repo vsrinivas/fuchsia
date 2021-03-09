@@ -1,0 +1,42 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Generate an epoch file, which is used to prevent backwards OTAs across a version boundary. See
+# [RFC-0071](https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0071_ota_backstop) for more
+# context on the epoch.
+#
+# This is abstracted into a template because epoch needs to be generated in two locations:
+# 1. In the update package, to specify the epoch of the build we're trying to OTA to.
+# 2. In the system-updater binary, to specify the epoch of the build we're currently running.
+#
+# Having a centralized build template prevents epoch generation from drifting. This makes it harder
+# to "mess up" epoch generation if we do a build system refactor.
+#
+# Parameters
+#
+#   output_file (required)
+#     [string] A path to write epoch.json to.
+#
+template("generate_epoch") {
+  forward_variables_from(invoker, [ "output_file" ])
+  assert(defined(output_file), "output epoch file must be defined")
+
+  compiled_action(target_name) {
+    tool = "//src/sys/pkg/bin/system-updater/epoch:generator"
+    tool_output_name = "epoch_generator"
+
+    _history_file = "//src/sys/pkg/bin/system-updater/epoch/history"
+
+    args = [
+      "--history",
+      rebase_path(_history_file, root_build_dir),
+      "--output",
+      rebase_path(output_file, root_build_dir),
+    ]
+    sources = [ _history_file ]
+    outputs = [ output_file ]
+  }
+}
