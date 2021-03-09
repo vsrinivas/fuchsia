@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    epoch::EpochFile,
     std::io::{BufRead, BufReader},
     thiserror::Error,
 };
@@ -71,9 +72,16 @@ impl std::str::FromStr for History {
     }
 }
 
+impl Into<EpochFile> for History {
+    fn into(self) -> EpochFile {
+        let Self { epoch } = self;
+        EpochFile::Version1 { epoch }
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use {super::*, indoc::indoc};
+    use {super::*, indoc::indoc, proptest::prelude::*};
 
     #[test]
     fn success() {
@@ -183,5 +191,13 @@ mod test {
         let res: Result<History, ParseError> = data.parse();
 
         assert_eq!(res, Err(ParseError::Format("1".to_owned())));
+    }
+
+    proptest! {
+        #[test]
+        fn history_into_epoch(epoch: u64) {
+            let file: EpochFile = History{epoch}.into();
+            assert_eq!(file, EpochFile::Version1{epoch})
+        }
     }
 }

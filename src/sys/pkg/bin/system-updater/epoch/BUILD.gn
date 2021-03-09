@@ -7,6 +7,7 @@ import("//build/rust/rustc_test.gni")
 
 if (is_host) {
   _generator_deps = [
+    "//src/sys/pkg/lib/epoch",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:serde",
@@ -20,7 +21,6 @@ if (is_host) {
   ]
   _generator_sources = [
     "src/args.rs",
-    "src/epoch.rs",
     "src/history.rs",
     "src/main.rs",
   ]

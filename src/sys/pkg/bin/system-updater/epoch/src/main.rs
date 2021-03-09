@@ -4,14 +4,14 @@
 
 use {
     anyhow::{Context, Error},
+    epoch::EpochFile,
     std::fs::{read_to_string, File},
 };
 
 mod args;
-mod epoch;
 mod history;
 
-use {args::Args, epoch::Epoch, history::History};
+use {args::Args, history::History};
 
 fn main() -> Result<(), Error> {
     let args: Args = argh::from_env();
@@ -21,7 +21,7 @@ fn main() -> Result<(), Error> {
         .parse()
         .context("while parsing history")?;
 
-    let epoch: Epoch = history.into();
+    let epoch: EpochFile = history.into();
     let output_file = File::create(args.output())
         .with_context(|| format!("while creating {:?}", args.output()))?;
     let () = serde_json::to_writer(output_file, &epoch).context("while writing data")?;
