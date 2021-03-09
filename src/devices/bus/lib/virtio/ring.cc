@@ -52,7 +52,7 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
   }
 
   // allocate a ring
-  size_t size = vring_size(count, PAGE_SIZE);
+  size_t size = vring_size(count, zx_system_get_page_size());
   zxlogf(TRACE, "%s: need %zu bytes", __func__, size);
 
   zx_status_t status =
@@ -65,7 +65,7 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
          io_buffer_virt(&ring_buf_), io_buffer_phys(&ring_buf_));
 
   /* initialize the ring */
-  vring_init(&ring_, count, io_buffer_virt(&ring_buf_), PAGE_SIZE);
+  vring_init(&ring_, count, io_buffer_virt(&ring_buf_), zx_system_get_page_size());
   ring_.free_list = 0xffff;
   ring_.free_count = 0;
 
