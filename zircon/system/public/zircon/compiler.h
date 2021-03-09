@@ -67,6 +67,14 @@
 // Warn if the result of this function is ignored by the caller.
 #define __WARN_UNUSED_RESULT __attribute__((__warn_unused_result__))
 
+// Declare that the given stack variable may be left uninitialized if it does
+// not have a specified initial value.
+#if defined(__clang__)
+#define __UNINITIALIZED __attribute__((uninitialized))
+#else
+#define __UNINITIALIZED
+#endif
+
 // Warn if a constructed objected is not used by the caller.
 //
 // Generates a warning on code like this:
