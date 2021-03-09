@@ -25,6 +25,8 @@ pub enum MetricValue {
     Bytes(Vec<u8>),
     Missing(String),
     Lambda(Box<Lambda>),
+    /// An unknown (not supported yet) value that is present but cannot be used in computation.
+    Unhandled,
 }
 
 impl PartialEq for MetricValue {
@@ -56,6 +58,7 @@ impl std::fmt::Display for MetricValue {
             MetricValue::Bytes(n) => write!(f, "Bytes({:?})", n),
             MetricValue::Missing(n) => write!(f, "Missing({})", n),
             MetricValue::Lambda(n) => write!(f, "Fn({:?})", n),
+            MetricValue::Unhandled => write!(f, "Unhandled"),
         }
     }
 }
@@ -93,12 +96,8 @@ impl From<DiagnosticProperty> for MetricValue {
             }
             DiagnosticProperty::DoubleArray(_name, ArrayContent::Buckets(_))
             | DiagnosticProperty::IntArray(_name, ArrayContent::Buckets(_))
-            | DiagnosticProperty::UintArray(_name, ArrayContent::Buckets(_)) => {
-                Self::Missing("Histograms aren't supported (yet)".to_string())
-            }
-            DiagnosticProperty::StringList(_name, _list) => {
-                Self::Missing("StringLists aren't supported (yet)".to_string())
-            }
+            | DiagnosticProperty::UintArray(_name, ArrayContent::Buckets(_)) => Self::Unhandled,
+            DiagnosticProperty::StringList(_name, _list) => Self::Unhandled,
         }
     }
 }
@@ -145,7 +144,8 @@ impl From<&JsonValue> for MetricValue {
 pub(crate) mod test {
     use {
         super::*,
-        crate::assert_missing,
+        crate::{assert_missing, assert_not_missing},
+        diagnostics_hierarchy::ArrayFormat,
         serde_json::{json, Number as JsonNumber},
     };
 
@@ -320,6 +320,9 @@ pub(crate) mod test {
                 DoubleArray(Key, ArrayContent<f64>),
                 IntArray(Key, ArrayContent<i64>),
                 UintArray(Key, ArrayContent<u64>),
+                DoubleArray(Key, Bucket<f64>),
+                IntArray(Key, Bucket<i64>),
+                UintArray(Key, Bucket<u64>),
         */
         macro_rules! test_from {
             ($diagnostic:path, $metric:path, $value:expr) => {
@@ -366,6 +369,26 @@ pub(crate) mod test {
             MetricValue::Vector,
             diagnostic_array,
             vec![MetricValue::Int(1), MetricValue::Int(2), MetricValue::Int(3)]
+        );
+
+        let diagnostic_array = ArrayContent::new(vec![0, 1, 0, 0, 0], ArrayFormat::LinearHistogram)
+            .expect("create histogram");
+        assert_not_missing!(
+            DiagnosticProperty::UintArray("foo".to_string(), diagnostic_array).into()
+        );
+
+        let diagnostic_array =
+            ArrayContent::new(vec![-10, 1, 0, 0, 0], ArrayFormat::LinearHistogram)
+                .expect("create histogram");
+        assert_not_missing!(
+            DiagnosticProperty::IntArray("foo".to_string(), diagnostic_array).into()
+        );
+
+        let diagnostic_array =
+            ArrayContent::new(vec![0., 0.1, 0., 0., 0.], ArrayFormat::LinearHistogram)
+                .expect("create histogram");
+        assert_not_missing!(
+            DiagnosticProperty::DoubleArray("foo".to_string(), diagnostic_array).into()
         );
     }
 }

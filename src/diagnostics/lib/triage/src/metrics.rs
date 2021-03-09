@@ -856,6 +856,18 @@ pub(crate) mod test {
         };
     }
 
+    #[macro_export]
+    macro_rules! assert_not_missing {
+        ($not_missing:expr) => {
+            match $not_missing {
+                MetricValue::Missing(message) => {
+                    assert!(false, "Expected not missing, was: {}", &message)
+                }
+                _ => {}
+            }
+        };
+    }
+
     lazy_static! {
         static ref EMPTY_F: Vec<DiagnosticData> = {
             let s = r#"[]"#;
