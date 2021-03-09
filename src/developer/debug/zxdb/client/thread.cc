@@ -25,8 +25,7 @@ const char* ClientSettings::Thread::kDisplayDescription =
 
   An alternative to modifying this list is the "display" verb which appends
   an expression to the global list. It's an alias for:
-    global set display += "<expression>"
-)";
+    global set display += "<expression>")";
 
 namespace {
 

@@ -141,8 +141,8 @@ TEST_F(VerbsSettingsTest, GetSet) {
 
   // Process qualified set.
   EXPECT_EQ(
-      "New value build-dirs for process 1:\n"
-      "• prdir\n",
+      "Set process 1 build-dirs = \n"
+      "  • prdir\n",
       DoInput("pr set build-dirs prdir"));
 
   // Both the unqualified and process-qualified one should get it,
@@ -151,8 +151,8 @@ TEST_F(VerbsSettingsTest, GetSet) {
 
   // Globally qualified set.
   EXPECT_EQ(
-      "New value build-dirs system-wide:\n"
-      "• gldir\n",
+      "Set global build-dirs = \n"
+      "  • gldir\n",
       DoInput("global set build-dirs gldir"));
 
   // The globally qualified one should return it, but the unqualified one should return the process
@@ -163,16 +163,16 @@ TEST_F(VerbsSettingsTest, GetSet) {
 
   // Unqualified set.
   EXPECT_EQ(
-      "New value build-dirs system-wide:\n"
-      "• gldir2\n",
+      "Set global build-dirs = \n"
+      "  • gldir2\n",
       DoInput("set build-dirs gldir2"));
 
   // Append.
   EXPECT_EQ(
-      "New value build-dirs system-wide:\n"
-      "• gldir2\n"
-      "• gldir3\n"
-      "• \"gldir four\"\n",
+      "Set global build-dirs = \n"
+      "  • gldir2\n"
+      "  • gldir3\n"
+      "  • \"gldir four\"\n",
       DoInput("set build-dirs += gldir3 \"gldir four\""));
 
   EXPECT_EQ("gldir2 gldir3 \"gldir four\"", DoInput("global get --value-only build-dirs"));

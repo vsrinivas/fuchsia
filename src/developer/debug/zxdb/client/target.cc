@@ -14,8 +14,7 @@ namespace zxdb {
 
 static const char kShowStdoutDescription[] =
     R"(  Whether this process should pipe its stdout/stderr to zxdb.
-  If not set for a particular process, it will default to the system-wide
-  setting.)";
+  If not set for a particular process, it will default to the global setting.)";
 
 const char* ClientSettings::Target::kBuildDirs = "build-dirs";
 const char* ClientSettings::Target::kBuildDirsDescription =

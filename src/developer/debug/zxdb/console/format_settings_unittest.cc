@@ -140,13 +140,7 @@ TEST_F(FormatSettingTest, List) {
       "setting-list2 = \n"
       "  • /some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
       "  • /another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
-      "  • \"this path/needs\\tquoting\"\n"
-      "\n"
-      "See \"help set\" about using the set value for lists.\n"
-      "To set, type: set setting-list2 "
-      "/some/very/long/and/annoying/path/that/actually/leads/nowhere "
-      "/another/some/very/long/and/annoying/path/that/actually/leads/nowhere "
-      "\"this path/needs\\tquoting\"\n",
+      "  • \"this path/needs\\tquoting\"\n",
       out.AsString());
 }
 

@@ -103,15 +103,6 @@ OutputBuffer FormatSetting(ConsoleContext* context, const std::string& name,
     out.Append("\n");
   out.Append(FormatSettingShort(context, name, value, 2));
 
-  if (value.is_list()) {
-    // List have a copy-paste value for setting the value.
-    out.Append("\n");
-    out.Append(Syntax::kComment, "See \"help set\" about using the set value for lists.\n");
-    out.Append(Syntax::kComment, fxl::StringPrintf("To set, type: set %s ", name.c_str()));
-    out.Append(Syntax::kComment, FormatSettingValue(context, value).AsString().c_str());
-    out.Append("\n");
-  }
-
   return out;
 }
 
@@ -119,7 +110,8 @@ OutputBuffer FormatSettingShort(ConsoleContext* context, const std::string& name
                                 const SettingValue& value, int list_indent) {
   FX_DCHECK(!value.is_null());
 
-  int pad_left = value.is_list() ? list_indent : 0;
+  // Only indent nonempty lists.
+  int pad_left = value.is_list() && !value.get_list().empty() ? list_indent : 0;
 
   OutputBuffer out;
   std::vector<std::vector<OutputBuffer>> rows;

@@ -384,30 +384,28 @@ Setting Types
 Examples
 
   [zxdb] set show-stdout true
-  New value show-stdout system-wide:
-  true
+  Set global show-stdout = true
 
   [zxdb] pr 3 set vector-format double
-  New value vector-format for process 3:
-  double
+  Set process 3 vector-format = double
 
   [zxdb] get build-dirs
-  • /home/me/build
-  • /home/me/other/out
+    • /home/me/build
+    • /home/me/other/out
 
   [zxdb] set build-dirs += /tmp/build
-  New value build-dirs system-wide:
-  • /home/me/build
-  • /home/me/other/out
-  • /tmp/build
+  Set global build-dirs =
+    • /home/me/build
+    • /home/me/other/out
+    • /tmp/build
 
   [zxdb] set build-dirs = /other/build/location /other/build2
-  New value build-dirs system-wide:
-  • /other/build/location
-  • /other/build2
+  Set global build-dirs build-dirs =
+    • /other/build/location
+    • /other/build2
 
   [zxdb] set build-dirs =
-      Clears the build-dirs variable.
+  Set global build-dirs = <empty>
 )";
 
 Err SetBool(SettingStore* store, const std::string& setting_name, const std::string& value) {
@@ -532,40 +530,42 @@ OutputBuffer FormatSetFeedback(ConsoleContext* console_context,
                                const std::string& setting_name, const Command& cmd,
                                const SettingValue& value) {
   OutputBuffer out;
-  out.Append("New value ");
-  out.Append(Syntax::kVariable, setting_name);
 
   std::string message;
   switch (setting_context.level) {
     case SettingContext::Level::kGlobal:
-      out.Append(" system-wide:\n");
+      out.Append("Set global");
       break;
-    case SettingContext::Level::kTarget: {
-      int target_id = console_context->IdForTarget(cmd.target());
-      out.Append(fxl::StringPrintf(" for process %d:\n", target_id));
+    case SettingContext::Level::kTarget:
+      out.Append("Set process ");
+      out.Append(Syntax::kSpecial, std::to_string(console_context->IdForTarget(cmd.target())));
       break;
-    }
-    case SettingContext::Level::kThread: {
-      int target_id = console_context->IdForTarget(cmd.target());
-      int thread_id = console_context->IdForThread(cmd.thread());
-      out.Append(fxl::StringPrintf(" for thread %d of process %d:\n", thread_id, target_id));
+    case SettingContext::Level::kThread:
+      out.Append("Set process ");
+      out.Append(Syntax::kSpecial, std::to_string(console_context->IdForTarget(cmd.target())));
+      out.Append(" thread ");
+      out.Append(Syntax::kSpecial, std::to_string(console_context->IdForThread(cmd.thread())));
       break;
-    }
-    case SettingContext::Level::kBreakpoint: {
-      out.Append(fxl::StringPrintf(" for breakpoint %d:\n",
-                                   console_context->IdForBreakpoint(cmd.breakpoint())));
+    case SettingContext::Level::kBreakpoint:
+      out.Append("Set breakpoint ");
+      out.Append(Syntax::kSpecial,
+                 std::to_string(console_context->IdForBreakpoint(cmd.breakpoint())));
       break;
-    }
-    case SettingContext::Level::kFilter: {
-      out.Append(
-          fxl::StringPrintf(" for filter %d:\n", console_context->IdForFilter(cmd.filter())));
+    case SettingContext::Level::kFilter:
+      out.Append("Set filter ");
+      out.Append(Syntax::kSpecial, std::to_string(console_context->IdForFilter(cmd.filter())));
       break;
-    }
     default:
       FX_NOTREACHED() << "Should not receive a default setting.";
   }
 
-  out.Append(FormatSettingShort(console_context, setting_name, value));
+  out.Append(" ");
+  out.Append(Syntax::kVariable, setting_name);
+  out.Append(" = ");
+
+  if (value.is_list() && !value.get_list().empty())
+    out.Append("\n");  // Put list items on their own lines.
+  out.Append(FormatSettingShort(console_context, setting_name, value, 2));
   return out;
 }
 

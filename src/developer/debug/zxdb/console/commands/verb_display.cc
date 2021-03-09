@@ -8,8 +8,10 @@
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/console/command.h"
+#include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/print_command_utils.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 
 namespace zxdb {
@@ -108,9 +110,18 @@ Err RunVerbDisplay(ConsoleContext* context, const Command& cmd) {
   OutputBuffer out("Added to display for every stop: ");
   out.Append(Syntax::kHeading, new_expression);
   out.Append("\n");
-  out.Append(kCommandHelp);
+  out.Append(Syntax::kComment, kCommandHelp);
 
   Console::get()->Output(out);
+
+  // Output the new expression right away.
+  ConsoleFormatOptions options;
+  options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+  options.wrapping = ConsoleFormatOptions::Wrapping::kSmart;
+  options.pointer_expand_depth = 2;
+  Console::get()->Output(
+      FormatExpressionsForConsole({new_expression}, options, GetEvalContextForCommand(cmd)));
+
   return Err();
 }
 
