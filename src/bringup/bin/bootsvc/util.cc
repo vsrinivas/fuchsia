@@ -40,8 +40,8 @@ bool StoreItem(uint32_t type) {
 
 // Discards the boot item from the boot image VMO.
 void DiscardItem(zx::vmo* vmo, uint32_t begin_in, uint32_t end_in) {
-  uint64_t begin = fbl::round_up(begin_in, static_cast<uint32_t>(PAGE_SIZE));
-  uint64_t end = fbl::round_down(end_in, static_cast<uint32_t>(PAGE_SIZE));
+  uint64_t begin = fbl::round_up(begin_in, static_cast<uint32_t>(zx_system_get_page_size()));
+  uint64_t end = fbl::round_down(end_in, static_cast<uint32_t>(zx_system_get_page_size()));
   if (begin < end) {
     zx_status_t status = vmo->op_range(ZX_VMO_OP_DECOMMIT, begin, end - begin, nullptr, 0);
     ZX_ASSERT_MSG(status == ZX_OK, "Discarding boot item failed: %s\n",
@@ -237,7 +237,7 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
   if (discard_end > discard_begin) {
     // We are at the end of the last element and it should be discarded.
     // We should discard until the end of the page.
-    discard_end = fbl::round_up(discard_end, static_cast<uint32_t>(PAGE_SIZE));
+    discard_end = fbl::round_up(discard_end, static_cast<uint32_t>(zx_system_get_page_size()));
   }
 
   DiscardItem(&vmo, discard_begin, discard_end);

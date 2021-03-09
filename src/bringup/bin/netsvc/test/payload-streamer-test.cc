@@ -39,7 +39,7 @@ TEST_F(PayloadStreamerTest, RegisterVmo) {
   StartStreamer();
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
 
   auto result = client_->RegisterVmo(std::move(vmo));
   ASSERT_OK(result.status());
@@ -50,13 +50,13 @@ TEST_F(PayloadStreamerTest, RegisterVmoTwice) {
   StartStreamer();
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
 
   auto result = client_->RegisterVmo(std::move(vmo));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
 
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
 
   auto result2 = client_->RegisterVmo(std::move(vmo));
   ASSERT_OK(result2.status());
@@ -67,7 +67,7 @@ TEST_F(PayloadStreamerTest, ReadData) {
   StartStreamer();
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
 
   auto result = client_->RegisterVmo(std::move(vmo));
   ASSERT_OK(result.status());
@@ -77,7 +77,7 @@ TEST_F(PayloadStreamerTest, ReadData) {
   ASSERT_OK(result2.status());
   ASSERT_TRUE(result2.value().result.is_info());
   ASSERT_EQ(result2.value().result.info().offset, 0);
-  ASSERT_EQ(result2.value().result.info().size, ZX_PAGE_SIZE);
+  ASSERT_EQ(result2.value().result.info().size, zx_system_get_page_size());
 }
 
 TEST_F(PayloadStreamerTest, ReadDataWithoutRegisterVmo) {
@@ -96,7 +96,7 @@ TEST_F(PayloadStreamerTest, ReadDataHalfFull) {
   });
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
 
   auto result = client_->RegisterVmo(std::move(vmo));
   ASSERT_OK(result.status());
@@ -105,7 +105,7 @@ TEST_F(PayloadStreamerTest, ReadDataHalfFull) {
   ASSERT_OK(result2.status());
   ASSERT_TRUE(result2.value().result.is_info());
   ASSERT_EQ(result2.value().result.info().offset, 0);
-  ASSERT_EQ(result2.value().result.info().size, ZX_PAGE_SIZE / 2);
+  ASSERT_EQ(result2.value().result.info().size, zx_system_get_page_size() / 2);
 }
 
 TEST_F(PayloadStreamerTest, ReadEof) {
@@ -115,7 +115,7 @@ TEST_F(PayloadStreamerTest, ReadEof) {
   });
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
 
   auto result = client_->RegisterVmo(std::move(vmo));
   ASSERT_OK(result.status());
@@ -131,7 +131,7 @@ TEST_F(PayloadStreamerTest, ReadFailure) {
       [](void* buf, size_t offset, size_t size, size_t* actual) { return ZX_ERR_INTERNAL; });
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
 
   auto result = client_->RegisterVmo(std::move(vmo));
   ASSERT_OK(result.status());

@@ -87,7 +87,7 @@ int Paver::StreamBuffer() {
     // running out of memory.
     ZX_ASSERT(read_offset + size > decommitted_offset);
     const size_t decommit_size =
-        fbl::round_down(read_offset + size - decommitted_offset, ZX_PAGE_SIZE);
+        fbl::round_down(read_offset + size - decommitted_offset, zx_system_get_page_size());
     // TODO(surajmalhotra): Tune this in case we decommit too aggressively.
     if (decommit_size > 0) {
       if (auto status = buffer_mapper_.vmo().op_range(ZX_VMO_OP_DECOMMIT, decommitted_offset,

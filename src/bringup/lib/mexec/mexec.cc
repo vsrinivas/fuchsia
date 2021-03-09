@@ -25,12 +25,12 @@ namespace mexec {
 namespace {
 
 zx_status_t GetMexecDataZbi(zx::unowned_resource resource, fbl::Array<std::byte>& buff) {
-  buff = fbl::Array<std::byte>(new std::byte[ZX_PAGE_SIZE], ZX_PAGE_SIZE);
+  buff = fbl::Array<std::byte>(new std::byte[zx_system_get_page_size()], zx_system_get_page_size());
   zx_status_t status = zx_system_mexec_payload_get(resource->get(), buff.get(), buff.size());
   // For as long as the buffer is too small, increase it by a page. The maximum
   // allowed size is 16Kib, so this loop is tightly bounded.
   while (status == ZX_ERR_BUFFER_TOO_SMALL) {
-    const size_t new_size = buff.size() + ZX_PAGE_SIZE;
+    const size_t new_size = buff.size() + zx_system_get_page_size();
     buff = fbl::Array<std::byte>(new std::byte[new_size], new_size);
     status = zx_system_mexec_payload_get(resource->get(), buff.get(), buff.size());
   }

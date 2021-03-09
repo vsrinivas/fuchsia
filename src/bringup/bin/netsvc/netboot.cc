@@ -40,7 +40,7 @@ static uint32_t last_arg = 0;
 static uint32_t last_ack_cmd = 0;
 static uint32_t last_ack_arg = 0;
 
-#define PAGE_ROUNDUP(x) ((x + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
+#define PAGE_ROUNDUP(x) ((x + zx_system_get_page_size() - 1) & ~(zx_system_get_page_size() - 1))
 #define MAX_ADVERTISE_DATA_LEN 256
 
 bool xfer_active = false;
