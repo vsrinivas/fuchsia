@@ -459,8 +459,6 @@ class H264MultiDecoder : public VideoDecoder {
   uint64_t unwrapped_write_stream_offset_decode_tried_ = 0;
   uint64_t unwrapped_first_slice_header_of_frame_decoded_stream_offset_decode_tried_ = 0;
 
-  // This points direction to a value within slice_data_map_.
-  SliceData* current_slice_data_ = nullptr;
   media::H264SliceHeader stashed_latest_slice_header_;
 
   // Stashed during ConfigureDpb(), since not robustly available during HandleSliceHeader().

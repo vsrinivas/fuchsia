@@ -1714,7 +1714,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   // indicated at least 1 slice for the current frame.
   ZX_DEBUG_ASSERT(slice_data_map_.size() >= 1);
   ZX_DEBUG_ASSERT(slice_data_map_.find(first_mb_in_slice) != slice_data_map_.end());
-  current_slice_data_ = &slice_data_map_[first_mb_in_slice];
+  const SliceData& current_slice_data = slice_data_map_[first_mb_in_slice];
 
   // Configure the HW and decode the body of the current slice (corresponding to current_slice_data_
   // and current_frame_).  We may repeat this part later if the client is splitting slices across
@@ -1725,14 +1725,14 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   //
   // Slices 5-9 are equivalent for this purpose with slices 0-4 - see 7.4.3
   constexpr uint32_t kSliceTypeMod = 5;
-  ZX_DEBUG_ASSERT(current_slice_data_->header.slice_type % kSliceTypeMod ==
+  ZX_DEBUG_ASSERT(current_slice_data.header.slice_type % kSliceTypeMod ==
                   params_.data[HardwareRenderParams::kSliceType] % kSliceTypeMod);
   // Check for interlacing (already rejected above).
   constexpr uint32_t kPictureStructureFrame = 3;
   ZX_DEBUG_ASSERT(params_.data[HardwareRenderParams::kNewPictureStructure] ==
                   kPictureStructureFrame);
 
-  auto poc = poc_.ComputePicOrderCnt(&current_slice_data_->sps, current_slice_data_->header);
+  auto poc = poc_.ComputePicOrderCnt(&current_slice_data.sps, current_slice_data.header);
   if (!poc) {
     LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_PicOrderCntError);
     LOG(ERROR, "No poc");
@@ -1768,7 +1768,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   current_frame_->info1 = poc.value();
   // Bottom field
   current_frame_->info2 = poc.value();
-  current_frame_->is_long_term_reference = current_slice_data_->pic->long_term;
+  current_frame_->is_long_term_reference = current_slice_data.pic->long_term;
 
   H264BufferInfoIndex::Get().FromValue(16).WriteTo(owner_->dosbus());
 
@@ -1791,9 +1791,9 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     H264BufferInfoData::Get().FromValue(video_frames_[i]->info1).WriteTo(owner_->dosbus());
     H264BufferInfoData::Get().FromValue(video_frames_[i]->info2).WriteTo(owner_->dosbus());
   }
-  if (!InitializeRefPics(current_slice_data_->ref_pic_list0, 0))
+  if (!InitializeRefPics(current_slice_data.ref_pic_list0, 0))
     return;
-  if (!InitializeRefPics(current_slice_data_->ref_pic_list1, 8))
+  if (!InitializeRefPics(current_slice_data.ref_pic_list1, 8))
     return;
 
   // Wait for the hardware to finish processing its current mbs.  Normally this should be quick, but
@@ -1815,16 +1815,16 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     // direct 8x8 mode seems to store 1/4 the data, so the offsets need to be less as well.
     mv_size /= 4;
   }
-  uint32_t mv_byte_offset = current_slice_data_->header.first_mb_in_slice * mv_size;
+  uint32_t mv_byte_offset = current_slice_data.header.first_mb_in_slice * mv_size;
 
   H264CoMbWrAddr::Get()
       .FromValue(truncate_to_32(current_frame_->reference_mv_buffer.phys_base()) + mv_byte_offset)
       .WriteTo(owner_->dosbus());
 
   // 8.4.1.2.1 - co-located motion vectors come from RefPictList1[0] for frames.
-  if (current_slice_data_->ref_pic_list1.size() > 0) {
+  if (current_slice_data.ref_pic_list1.size() > 0) {
     auto* amlogic_picture =
-        static_cast<AmlogicH264Picture*>(current_slice_data_->ref_pic_list1[0].get());
+        static_cast<AmlogicH264Picture*>(current_slice_data.ref_pic_list1[0].get());
     if (amlogic_picture) {
       auto internal_picture = amlogic_picture->internal_picture.lock();
       if (!internal_picture) {
@@ -1843,7 +1843,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
 
   // TODO: Maybe we could do what H264Decoder::IsNewPrimaryCodedPicture() does to detect this, but
   // this seems to work for now, and I'm not aware of any specific cases where it doesn't work.
-  if (current_slice_data_->header.first_mb_in_slice == 0) {
+  if (current_slice_data.header.first_mb_in_slice == 0) {
     DpbStatusReg::Get().FromValue(kH264ActionDecodeNewpic).WriteTo(owner_->dosbus());
   } else {
     DpbStatusReg::Get().FromValue(kH264ActionDecodeSlice).WriteTo(owner_->dosbus());
