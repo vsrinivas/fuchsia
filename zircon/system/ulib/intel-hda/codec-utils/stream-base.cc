@@ -174,7 +174,7 @@ zx_status_t IntelHDAStreamBase::PublishDeviceLocked() {
   args.name = dev_name_;
   args.ctx = this;
   args.ops = &STREAM_DEVICE_THUNKS;
-  args.proto_id = (is_input() ? ZX_PROTOCOL_AUDIO_INPUT_2 : ZX_PROTOCOL_AUDIO_OUTPUT_2);
+  args.proto_id = (is_input() ? ZX_PROTOCOL_AUDIO_INPUT : ZX_PROTOCOL_AUDIO_OUTPUT);
 
   // Publish the device.
   zx_status_t res = device_add(parent_codec_->codec_device(), &args, &stream_device_);

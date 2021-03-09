@@ -25,7 +25,7 @@ DaiTest::DaiTest(zx_device_t* parent, bool is_input)
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       is_input_(is_input) {
   loop_.StartThread(is_input_ ? "dai-test-in" : "dai-test-out");
-  ddk_proto_id_ = is_input_ ? ZX_PROTOCOL_AUDIO_INPUT_2 : ZX_PROTOCOL_AUDIO_OUTPUT_2;
+  ddk_proto_id_ = is_input_ ? ZX_PROTOCOL_AUDIO_INPUT : ZX_PROTOCOL_AUDIO_OUTPUT;
   plug_time_ = zx::clock::get_monotonic().get();
 }
 

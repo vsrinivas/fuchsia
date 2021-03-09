@@ -20,8 +20,8 @@ static const struct {
   const char* path;
   DeviceType device_type;
 } kAudioDevNodes[] = {
-    {.path = "/dev/class/audio-input-2", .device_type = DeviceType::Input},
-    {.path = "/dev/class/audio-output-2", .device_type = DeviceType::Output},
+    {.path = "/dev/class/audio-input", .device_type = DeviceType::Input},
+    {.path = "/dev/class/audio-output", .device_type = DeviceType::Output},
 };
 
 // static

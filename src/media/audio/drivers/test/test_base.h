@@ -37,15 +37,14 @@ struct DeviceEntry {
 //
 // See googletest/docs/advanced.md for details
 //
-// Devices are displayed in the 'audio-output-2/000' format, or simply the filename, if the
+// Devices are displayed in the 'audio-output/000' format, or simply the filename, if the
 // special dir_fd value is observed (an example might be 'Bluetooth-A2DP' for Bluetooth devices).
 std::string inline DevNameForEntry(const DeviceEntry& device_entry) {
   if (device_entry.dir_fd == DeviceEntry::kA2dp) {
     return device_entry.filename;
   }
 
-  return std::string(device_entry.dev_type == DeviceType::Input ? "audio-input-2"
-                                                                : "audio-output-2") +
+  return std::string(device_entry.dev_type == DeviceType::Input ? "audio-input" : "audio-output") +
          "/" + device_entry.filename;
 }
 std::string inline TestNameForEntry(const std::string& test_class_name,

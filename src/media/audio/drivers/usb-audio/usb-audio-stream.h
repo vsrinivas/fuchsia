@@ -35,7 +35,7 @@ class UsbAudioStreamInterface;
 
 struct AudioStreamProtocol : public ddk::internal::base_protocol {
   explicit AudioStreamProtocol(bool is_input) {
-    ddk_proto_id_ = is_input ? ZX_PROTOCOL_AUDIO_INPUT_2 : ZX_PROTOCOL_AUDIO_OUTPUT_2;
+    ddk_proto_id_ = is_input ? ZX_PROTOCOL_AUDIO_INPUT : ZX_PROTOCOL_AUDIO_OUTPUT;
   }
 
   bool is_input() const { return (ddk_proto_id_ == ZX_PROTOCOL_AUDIO_INPUT); }

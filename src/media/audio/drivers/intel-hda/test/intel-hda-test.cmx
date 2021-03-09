@@ -7,8 +7,8 @@
     },
     "sandbox": {
         "dev": [
-            "class/audio-input-2",
-            "class/audio-output-2",
+            "class/audio-input",
+            "class/audio-output",
             "class/intel-hda"
         ],
         "services": [

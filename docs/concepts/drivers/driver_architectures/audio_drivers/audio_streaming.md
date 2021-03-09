@@ -114,8 +114,8 @@ by the drivers.
 
 Stream Type | Protocol                   | Location
 ----------- | -------------------------- | -----------------------
-Input       | `ZX_PROTOCOL_AUDIO_INPUT`  | /dev/class/audio-input-2
-Output      | `ZX_PROTOCOL_AUDIO_OUTPUT` | /dev/class/audio-output-2
+Input       | `ZX_PROTOCOL_AUDIO_INPUT`  | /dev/class/audio-input
+Output      | `ZX_PROTOCOL_AUDIO_OUTPUT` | /dev/class/audio-output
 
 ### Establishing the stream channel
 

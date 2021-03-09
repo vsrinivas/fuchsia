@@ -77,23 +77,19 @@ class PlugDetectorTest : public gtest::RealLoopFixture,
     ASSERT_EQ(fdio_ns_get_installed(&ns_), ZX_OK);
     zx::channel c1, c2;
 
-    // Serve up the emulated audio-input[-n] directory
+    // Serve up the emulated audio-input directory
     ASSERT_EQ(zx::channel::create(0, &c1, &c2), ZX_OK);
     ASSERT_EQ(vfs_.Serve(input_dir_, fidl::ServerEnd<fuchsia_io::Node>(std::move(c1)),
                          fs::VnodeConnectionOptions::ReadOnly()),
               ZX_OK);
-    ASSERT_EQ(fdio_ns_bind(ns_, (std::string("/dev/class/audio-input") + GetParam()).c_str(),
-                           c2.release()),
-              ZX_OK);
+    ASSERT_EQ(fdio_ns_bind(ns_, "/dev/class/audio-input", c2.release()), ZX_OK);
 
-    // Serve up the emulated audio-output[-n] directory
+    // Serve up the emulated audio-output directory
     ASSERT_EQ(zx::channel::create(0, &c1, &c2), ZX_OK);
     ASSERT_EQ(vfs_.Serve(output_dir_, fidl::ServerEnd<fuchsia_io::Node>(std::move(c1)),
                          fs::VnodeConnectionOptions::ReadOnly()),
               ZX_OK);
-    ASSERT_EQ(fdio_ns_bind(ns_, (std::string("/dev/class/audio-output") + GetParam()).c_str(),
-                           c2.release()),
-              ZX_OK);
+    ASSERT_EQ(fdio_ns_bind(ns_, "/dev/class/audio-output", c2.release()), ZX_OK);
   }
   void TearDown() override {
     ASSERT_TRUE(input_dir_->IsEmpty());
@@ -101,10 +97,8 @@ class PlugDetectorTest : public gtest::RealLoopFixture,
     vfs_loop_.Shutdown();
     vfs_loop_.JoinThreads();
     ASSERT_NE(ns_, nullptr);
-    ASSERT_EQ(fdio_ns_unbind(ns_, (std::string("/dev/class/audio-input") + GetParam()).c_str()),
-              ZX_OK);
-    ASSERT_EQ(fdio_ns_unbind(ns_, (std::string("/dev/class/audio-output") + GetParam()).c_str()),
-              ZX_OK);
+    ASSERT_EQ(fdio_ns_unbind(ns_, "/dev/class/audio-input"), ZX_OK);
+    ASSERT_EQ(fdio_ns_unbind(ns_, "/dev/class/audio-output"), ZX_OK);
   }
 
   // Holds a reference to a pseudo dir entry that removes the entry when this object goes out of
@@ -119,16 +113,16 @@ class PlugDetectorTest : public gtest::RealLoopFixture,
     }
   };
 
-  // Adds a |FakeAudioDevice| to the emulated 'audio-input-n' directory that has been installed in
-  // the local namespace at /dev/class/audio-input-n.
+  // Adds a |FakeAudioDevice| to the emulated 'audio-input' directory that has been installed in
+  // the local namespace at /dev/class/audio-input.
   ScopedDirent AddInputDevice(FakeAudioDevice* device) {
     auto name = std::to_string(next_input_device_number_++);
     FX_CHECK(ZX_OK == input_dir_->AddEntry(name, device->AsService()));
     return {name, input_dir_};
   }
 
-  // Adds a |FakeAudioDevice| to the emulated 'audio-output-n' directory that has been installed in
-  // the local namespace at /dev/class/audio-output-n.
+  // Adds a |FakeAudioDevice| to the emulated 'audio-output' directory that has been installed in
+  // the local namespace at /dev/class/audio-output.
   ScopedDirent AddOutputDevice(FakeAudioDevice* device) {
     auto name = std::to_string(next_output_device_number_++);
     FX_CHECK(ZX_OK == output_dir_->AddEntry(name, device->AsService()));
@@ -155,7 +149,7 @@ class PlugDetectorTest : public gtest::RealLoopFixture,
   fbl::RefPtr<fs::PseudoDir> output_dir_{fbl::MakeRefCounted<fs::PseudoDir>()};
 };
 
-TEST_P(PlugDetectorTest, DetectExistingDevices) {
+TEST_F(PlugDetectorTest, DetectExistingDevices) {
   // Add some devices that will exist before the plug detector starts.
   FakeAudioDevice input0, input1;
   auto d1 = AddInputDevice(&input0);
@@ -182,7 +176,7 @@ TEST_P(PlugDetectorTest, DetectExistingDevices) {
   plug_detector->Stop();
 }
 
-TEST_P(PlugDetectorTest, DetectHotplugDevices) {
+TEST_F(PlugDetectorTest, DetectHotplugDevices) {
   DeviceTracker tracker;
   auto plug_detector = PlugDetector::Create();
   ASSERT_EQ(ZX_OK, plug_detector->Start(tracker.GetHandler()));
@@ -200,10 +194,6 @@ TEST_P(PlugDetectorTest, DetectHotplugDevices) {
 
   plug_detector->Stop();
 }
-
-// This allows us to pick /dev/class/audio-input-2 (similar for output) and extention for future
-// versions.
-INSTANTIATE_TEST_SUITE_P(PlugDetectorTestInstance, PlugDetectorTest, ::testing::Values("-2"));
 
 }  // namespace
 }  // namespace media::audio
