@@ -29,14 +29,14 @@ dart_test("flash_test") {
 if (is_host) {
   host_test_data("test_deps") {
     sources = [
-      "$root_out_dir/firmware.img",
-      "$root_out_dir/firmware_bl2.img",
-      "$root_out_dir/flash.sh",
-      "$root_out_dir/fuchsia.vbmeta",
-      "$root_out_dir/fuchsia.zbi.signed",
-      "$root_out_dir/obj/build/images/fvm.fastboot.blk",
-      "$root_out_dir/zedboot.vbmeta",
-      "$root_out_dir/zedboot.zbi.signed",
+      "$root_build_dir/firmware.img",
+      "$root_build_dir/firmware_bl2.img",
+      "$root_build_dir/flash.sh",
+      "$root_build_dir/fuchsia.vbmeta",
+      "$root_build_dir/fuchsia.zbi.signed",
+      "$root_build_dir/obj/build/images/fvm.fastboot.blk",
+      "$root_build_dir/zedboot.vbmeta",
+      "$root_build_dir/zedboot.zbi.signed",
     ]
   }
 }
