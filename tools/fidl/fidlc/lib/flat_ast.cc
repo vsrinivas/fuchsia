@@ -582,8 +582,6 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
     }
     switch (type_decl_->kind) {
       case Decl::Kind::kService:
-        return Fail(ErrCannotUseServicesInOtherDeclarations, args.span);
-
       case Decl::Kind::kProtocol:
         break;
 
@@ -3230,9 +3228,10 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
         return types::Resourceness::kResource;
       }
       break;
+    case Decl::Kind::kService:
+      return types::Resourceness::kValue;
     case Decl::Kind::kConst:
     case Decl::Kind::kResource:
-    case Decl::Kind::kService:
     case Decl::Kind::kTypeAlias:
       assert(false && "Compiler bug: unexpected kind");
   }
@@ -3550,13 +3549,11 @@ bool Library::CompileService(Service* service_decl) {
       return Fail(ErrDuplicateServiceMemberNameCanonical, member.name, original_name,
                   previous_span.data(), previous_span, canonical_name);
     }
-    if (!CompileTypeConstructor(member.type_ctor.get()))
+    // TODO: in the new syntax we check that the service member is a type, but
+    // don't validate that it's client_end or server_end (because they don't exist yet)
+    auto expected_category = member.type_ctor->syntax == fidl::utils::Syntax::kOld ? AllowedCategories::kProtocolOnly : AllowedCategories::kTypeOnly;
+    if (!CompileTypeConstructorAllowing(member.type_ctor.get(), expected_category))
       return false;
-    if (member.type_ctor->type->kind != Type::Kind::kIdentifier)
-      return Fail(ErrNonProtocolServiceMember, member.name);
-    auto member_identifier_type = static_cast<const IdentifierType*>(member.type_ctor->type);
-    if (member_identifier_type->type_decl->kind != Decl::Kind::kProtocol)
-      return Fail(ErrNonProtocolServiceMember, member.name);
     if (member.type_ctor->nullability != types::Nullability::kNonnullable)
       return Fail(ErrNullableServiceMember, member.name);
   }
@@ -3768,6 +3765,14 @@ bool Library::Compile() {
 }
 
 bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
+  if (type_ctor->syntax == fidl::utils::Syntax::kNew) {
+    return CompileTypeConstructorAllowing(type_ctor, AllowedCategories::kTypeOnly);
+  }
+  return CompileTypeConstructorAllowing(type_ctor, AllowedCategories::kTypeOrProtocol);
+}
+
+bool Library::CompileTypeConstructorAllowing(TypeConstructor* type_ctor,
+                                             AllowedCategories category) {
   const Type* maybe_arg_type = nullptr;
   if (type_ctor->maybe_arg_type_ctor != nullptr) {
     if (!CompileTypeConstructor(type_ctor->maybe_arg_type_ctor.get()))
@@ -3803,6 +3808,36 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
                           &type_ctor->type, &type_ctor->from_type_alias))
     return false;
 
+  // postcondition: compilation sets the Type of the TypeConstructor
+  assert(type_ctor->type && "type constructors' type not resolved after compilation");
+  return VerifyTypeCategory(type_ctor, category);
+}
+
+bool Library::VerifyTypeCategory(TypeConstructor* type_ctor, AllowedCategories category) {
+  assert(type_ctor->type && "CompileTypeConstructor did not set Type");
+  if (type_ctor->type->kind != Type::Kind::kIdentifier) {
+    // we assume that all non-identifier types (i.e. builtins) are actually
+    // types (and not e.g. protocols or services).
+    return category == AllowedCategories::kProtocolOnly
+               ? Fail(ErrCannotUseType, type_ctor->name.span())
+               : true;
+  }
+
+  auto identifier_type = static_cast<const IdentifierType*>(type_ctor->type);
+  switch (identifier_type->type_decl->kind) {
+    // services are never allowed in any context
+    case Decl::Kind::kService:
+      return Fail(ErrCannotUseService, type_ctor->name.span());
+      break;
+    case Decl::Kind::kProtocol:
+      if (category == AllowedCategories::kTypeOnly)
+        return Fail(ErrCannotUseProtocol, type_ctor->name.span());
+      break;
+    default:
+      if (category == AllowedCategories::kProtocolOnly)
+        return Fail(ErrCannotUseType, type_ctor->name.span());
+      break;
+  }
   return true;
 }
 

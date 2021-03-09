@@ -145,8 +145,6 @@ struct TypeConstructor final {
   const fidl::utils::Syntax syntax;
 
   // Set during compilation.
-  bool compiling = false;
-  bool compiled = false;
   const Type* type = nullptr;
   uint32_t handle_obj_type_resolved = std::numeric_limits<uint32_t>::max();
   types::HandleSubtype handle_subtype_identifier_resolved;
@@ -872,7 +870,29 @@ class Library {
 
   // Compiling a type validates the type: in particular, we validate that optional identifier types
   // refer to things that can in fact be nullable (ie not enums).
+  //
+  // These three sets of functions functions exist to support differing behavior
+  // between the "old" and "new" syntax: protocols can be treated as types in the
+  // former but not the latter.
+
+  // This top level function switches behavior depending on what syntax is
+  // being read, calling into CompileTypeConstructorAllowing to do the actual
+  // compilation.
   bool CompileTypeConstructor(TypeConstructor* type);
+  // This version compiles the constructor, then validates that it is of the
+  // expected "category". The possible "categories" are the different classes of things
+  // that are stored in the Typespace: types, protocols, and services - things
+  // of one category cannot generally be used in place of another.
+  enum class AllowedCategories {
+    kTypeOrProtocol,
+    kTypeOnly,
+    kProtocolOnly,
+    // Note: there's currently no scenario where we expect a service.
+  };
+  // Compiles the TypeConstructor and then validates that it's in one of the
+  // allowed categories.
+  bool CompileTypeConstructorAllowing(TypeConstructor* type, AllowedCategories category);
+  bool VerifyTypeCategory(TypeConstructor* type, AllowedCategories category);
 
   ConstantValue::Kind ConstantValuePrimitiveKind(const types::PrimitiveSubtype primitive_subtype);
   bool ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, uint32_t* out_obj_type,

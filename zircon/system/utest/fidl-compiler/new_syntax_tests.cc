@@ -1,6 +1,14 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// TODO(fxbug.dev/70186): Remove this file
+
+// NOTE: this file contains unittests for the "read side" of the new syntax.
+// Once the read functionality catches up to the write functionality (fidlconv),
+// these tests should look to be merged with the converter tests so that each
+// test case both produces new syntax and ensures that it compiles and has
+// IR and coding tables that match the output from compiling the old syntax.
 
 #include <zxtest/zxtest.h>
 
@@ -370,6 +378,74 @@ using foo = uint8;
   const auto& errors = library.errors();
   EXPECT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrOldUsingSyntaxDeprecated);
+}
+
+// Ensure that we don't accidentally enable the new syntax when the new syntax
+// flag is not enabled.
+TEST(NewSyntaxTests, TypedChannelNewInOld) {
+  {
+    TestLibrary library(R"FIDL(
+library test;
+
+protocol MyProtocol {};
+
+struct Foo {
+  client_end:MyProtocol foo;
+};
+
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    const auto& errors = library.errors();
+    ASSERT_EQ(errors.size(), 2);
+    ASSERT_ERR(errors[0], fidl::ErrExpectedValueButGotType);
+    ASSERT_ERR(errors[1], fidl::ErrCouldNotParseSizeBound);
+  }
+
+  {
+    TestLibrary library(R"FIDL(
+library test;
+
+protocol MyProtocol {};
+
+struct Foo {
+  server_end:MyProtocol foo;
+};
+
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    const auto& errors = library.errors();
+    ASSERT_EQ(errors.size(), 2);
+    ASSERT_ERR(errors[0], fidl::ErrExpectedValueButGotType);
+    ASSERT_ERR(errors[1], fidl::ErrCouldNotParseSizeBound);
+  }
+}
+
+// Ensure that we don't accidentally enable the old syntax when the new syntax
+// flag is enabled.
+TEST(NewSyntaxTests, TypedChannelOldInNew) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library test;
+
+protocol MyProtocol {};
+
+type Foo = struct {
+  foo MyProtocol;
+};
+
+)FIDL",
+                      std::move(experimental_flags));
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrCannotUseProtocol);
+}
+
+// The new syntax works when the new syntax flag is enabled.
+TEST(NewSyntaxTests, TypedChannelNewInNew) {
+  // TODO(fcz): make accompanying typespace change
 }
 
 }  // namespace

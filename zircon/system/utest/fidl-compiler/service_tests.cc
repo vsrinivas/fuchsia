@@ -110,7 +110,7 @@ service SomeService {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrNonProtocolServiceMember);
+  ASSERT_ERR(errors[0], fidl::ErrCannotUseType);
 }
 
 TEST(ServiceTests, invalid_cannot_use_services_in_decls) {
@@ -127,7 +127,7 @@ struct CannotUseService {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotUseServicesInOtherDeclarations);
+  ASSERT_ERR(errors[0], fidl::ErrCannotUseService);
 }
 
 }  // namespace

@@ -179,7 +179,6 @@ constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
     ErrDuplicateServiceMemberNameCanonical(
         "service member '{}' conflicts with member '{}' from {}; both are "
         "represented by the canonical form '{}'");
-constexpr ErrorDef ErrNonProtocolServiceMember("only protocol members are allowed");
 constexpr ErrorDef ErrNullableServiceMember("service members cannot be nullable");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateStructMemberName(
     "multiple struct fields named '{}'; previous was at {}");
@@ -229,6 +228,12 @@ constexpr ErrorDef<flat::Name, std::string_view, std::string_view, flat::Name>
         "be declared with the `resource` modifier: `resource {} {}`");
 constexpr ErrorDef ErrInlineSizeExceeds64k(
     "inline objects greater than 64k not currently supported");
+// TODO(fxbug.dev/70399): As part of consolidating name resolution, these should
+// be grouped into a single "expected foo but got bar" error, along with
+// ErrExpectedValueButGotType.
+constexpr ErrorDef<> ErrCannotUseService("cannot use services in other declarations");
+constexpr ErrorDef<> ErrCannotUseProtocol("cannot use protocol in this context");
+constexpr ErrorDef<> ErrCannotUseType("cannot use type in this context");
 
 // ---------------------------------------------------------------------------
 // Attribute Validation: Placement, Values, Constraints
@@ -260,8 +265,6 @@ constexpr WarningDef<std::string, std::string> WarnAttributeTypo(
 // ---------------------------------------------------------------------------
 constexpr ErrorDef<flat::Name> ErrUnknownType("unknown type {}");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrMustBeAProtocol("{} must be a protocol");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotUseServicesInOtherDeclarations(
-    "{} cannot use services in other declarations");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotParametrizeTwice(
     "{} cannot parametrize twice");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBoundTwice("{} cannot bound twice");
