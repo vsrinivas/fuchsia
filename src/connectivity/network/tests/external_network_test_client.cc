@@ -146,15 +146,13 @@ TEST(ExternalNetworkTest, UDPErrSend) {
       .sin_family = AF_INET,
       .sin_port = htons(1337),
   };
-  char bytes[64];
-  // Assign to a ssize_t variable to avoid compiler warnings for signedness in the EXPECTs below.
-  ssize_t len = sizeof(bytes);
+  char bytes[1];
 
   // Precondition sanity check: write completes without error.
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   EXPECT_EQ(sendto(fd.get(), bytes, sizeof(bytes), 0, reinterpret_cast<struct sockaddr*>(&addr),
                    sizeof(addr)),
-            len)
+            ssize_t(sizeof(bytes)))
       << strerror(errno);
 
   // Send to a routable address to a non-existing remote. This triggers ARP resolution which is
@@ -163,14 +161,14 @@ TEST(ExternalNetworkTest, UDPErrSend) {
   ASSERT_EQ(inet_pton(AF_INET, routable, &addr.sin_addr), 1) << strerror(errno);
   EXPECT_EQ(sendto(fd.get(), bytes, sizeof(bytes), 0, reinterpret_cast<struct sockaddr*>(&addr),
                    sizeof(addr)),
-            len)
+            ssize_t(sizeof(bytes)))
       << strerror(errno);
 
   // Postcondition sanity check: write completes without error.
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   EXPECT_EQ(sendto(fd.get(), bytes, sizeof(bytes), 0, reinterpret_cast<struct sockaddr*>(&addr),
                    sizeof(addr)),
-            len)
+            ssize_t(sizeof(bytes)))
       << strerror(errno);
 
   EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
