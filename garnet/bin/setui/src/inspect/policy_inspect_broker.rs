@@ -8,8 +8,7 @@ use std::sync::Arc;
 
 use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
-use fuchsia_inspect as inspect;
-use fuchsia_inspect::Property;
+use fuchsia_inspect::{self as inspect, component, Property};
 use fuchsia_syslog::fx_log_err;
 use futures::StreamExt;
 
@@ -19,12 +18,14 @@ use crate::policy::{self as policy_base, Payload, Request, Role};
 use crate::service;
 use crate::service::message::{Audience, Factory, MessageClient, Messenger, Signature};
 
+const INSPECT_NODE_NAME: &str = "policy_values";
+
 /// A broker that listens in on messages sent on the policy message hub to policy proxies handlers
 /// to record their internal state to inspect.
 pub struct PolicyInspectBroker {
     messenger_client: Messenger,
-    inspect_node: Arc<inspect::Node>,
-    policy_values: HashMap<String, PolicyInspectInfo>,
+    inspect_node: inspect::Node,
+    policy_values: HashMap<&'static str, PolicyInspectInfo>,
 }
 
 /// Information about a policy to be written to inspect.
@@ -43,13 +44,19 @@ struct PolicyInspectInfo {
 }
 
 impl PolicyInspectBroker {
-    pub async fn create(
-        messenger_factory: Factory,
-        inspect_node: inspect::Node,
-    ) -> Result<(), Error> {
+    pub async fn create(messenger_factory: Factory) {
+        Self::create_with_node(
+            messenger_factory,
+            component::inspector().root().create_child(INSPECT_NODE_NAME),
+        )
+        .await;
+    }
+
+    pub async fn create_with_node(messenger_factory: Factory, inspect_node: inspect::Node) {
         // Create broker to listen in on policy requests. We must take care not to observe all
         // requests as the broker itself can issue messages and block on their response. If another
         // message is passed to the broker during this wait, we will deadlock.
+        // TODO(fxb/71826): log and exit instead of panicking
         let (messenger_client, broker_receptor) = messenger_factory
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(|message| {
@@ -60,11 +67,7 @@ impl PolicyInspectBroker {
             .await
             .expect("broker listening to only policy requests could not be created");
 
-        let mut broker = Self {
-            messenger_client,
-            inspect_node: Arc::new(inspect_node),
-            policy_values: HashMap::new(),
-        };
+        let mut broker = Self { messenger_client, inspect_node, policy_values: HashMap::new() };
 
         fasync::Task::spawn(async move {
             // Request initial values from all policy handlers.
@@ -103,8 +106,6 @@ impl PolicyInspectBroker {
             }
         })
         .detach();
-
-        return Ok(());
     }
 
     /// Handles responses to the initial broadcast by the inspect broker to all policy handlers that
@@ -186,7 +187,7 @@ impl PolicyInspectBroker {
 
         let timestamp = clock::inspect_format_now();
 
-        match self.policy_values.get_mut(&policy_name.to_string()) {
+        match self.policy_values.get_mut(policy_name) {
             Some(policy_info) => {
                 if ignore_if_present {
                     // Value already present in inspect, ignore this response.
@@ -202,7 +203,7 @@ impl PolicyInspectBroker {
                 let value_prop = node.create_string("value", inspect_str);
                 let timestamp_prop = node.create_string("timestamp", timestamp.clone());
                 self.policy_values.insert(
-                    policy_name.to_string(),
+                    policy_name,
                     PolicyInspectInfo { _node: node, value: value_prop, timestamp: timestamp_prop },
                 );
             }
@@ -253,9 +254,7 @@ mod tests {
         // Create the inspect broker.
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("policy_values");
-        PolicyInspectBroker::create(messenger_factory, inspect_node)
-            .await
-            .expect("could not create policy inspect broker");
+        PolicyInspectBroker::create_with_node(messenger_factory, inspect_node).await;
 
         let expected_state = StateBuilder::new()
             .add_property(AudioStreamType::Media, TransformFlags::TRANSFORM_MAX)
@@ -325,9 +324,7 @@ mod tests {
         // Create the inspect broker.
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("policy_values");
-        PolicyInspectBroker::create(messenger_factory, inspect_node)
-            .await
-            .expect("could not create policy inspect broker");
+        PolicyInspectBroker::create_with_node(messenger_factory, inspect_node).await;
 
         // Starting state for audio policy.
         let initial_state = StateBuilder::new()

@@ -669,10 +669,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // Attach inspect broker, which watches messages between proxies and setting handlers to
     // record settings values to inspect.
-    let settings_inspect_node = component::inspector().root().create_child("setting_values");
-    InspectBroker::create(messenger_factory.clone(), settings_inspect_node)
-        .await
-        .expect("could not create inspect");
+    InspectBroker::create(messenger_factory.clone()).await;
 
     // TODO(fxbug.dev/58893): make max attempts a configurable option.
     // TODO(fxbug.dev/59174): make setting proxy response timeout and retry configurable.
@@ -702,10 +699,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // Attach the policy inspect broker, which watches messages to the policy layer and records
     // policy state to inspect.
-    let policy_inspect_node = component::inspector().root().create_child("policy_values");
-    PolicyInspectBroker::create(messenger_factory.clone(), policy_inspect_node)
-        .await
-        .expect("could not create inspect");
+    PolicyInspectBroker::create(messenger_factory.clone()).await;
 
     let mut agent_authority =
         Authority::create(messenger_factory.clone(), components.clone(), monitor_actor).await?;

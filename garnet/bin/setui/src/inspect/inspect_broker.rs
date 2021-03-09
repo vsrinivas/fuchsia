@@ -8,10 +8,8 @@ use std::sync::Arc;
 
 use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
-use fuchsia_inspect as inspect;
-use fuchsia_inspect::Property;
+use fuchsia_inspect::{self as inspect, component, Property};
 use fuchsia_syslog::fx_log_err;
-use futures::lock::Mutex;
 use futures::StreamExt;
 
 use crate::base::SettingInfo;
@@ -22,11 +20,13 @@ use crate::message::base::{filter, Audience, MessengerType};
 use crate::service::message::{Factory, MessageClient, Messenger, Signature};
 use crate::service::TryFromWithClient;
 
+const INSPECT_NODE_NAME: &str = "setting_values";
+
 /// A broker that listens in on messages between the proxy and setting handlers to record the
 /// values of all settings to inspect.
 pub struct InspectBroker {
     messenger_client: Messenger,
-    inspect_node: Arc<inspect::Node>,
+    inspect_node: inspect::Node,
     setting_values: HashMap<&'static str, SettingInspectInfo>,
 }
 
@@ -46,11 +46,17 @@ struct SettingInspectInfo {
 }
 
 impl InspectBroker {
-    pub async fn create(
-        messenger_factory: Factory,
-        inspect_node: inspect::Node,
-    ) -> Result<(), Error> {
+    pub async fn create(messenger_factory: Factory) {
+        Self::create_with_node(
+            messenger_factory,
+            component::inspector().root().create_child(INSPECT_NODE_NAME),
+        )
+        .await;
+    }
+
+    pub async fn create_with_node(messenger_factory: Factory, inspect_node: inspect::Node) {
         // Create broker to listen in on all messages between Proxy and setting handlers.
+        // TODO(fxb/71826): log and exit instead of panicking
         let (messenger_client, mut receptor) = messenger_factory
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
@@ -63,13 +69,9 @@ impl InspectBroker {
                 })),
             ))))
             .await
-            .unwrap();
+            .expect("could not create inspect");
 
-        let broker = Arc::new(Mutex::new(Self {
-            messenger_client,
-            inspect_node: Arc::new(inspect_node),
-            setting_values: HashMap::new(),
-        }));
+        let mut broker = Self { messenger_client, inspect_node, setting_values: HashMap::new() };
 
         fasync::Task::spawn(async move {
             while let Some(message_event) = receptor.next().await {
@@ -82,12 +84,7 @@ impl InspectBroker {
                         Payload::Command(Command::HandleRequest(Request::Restore)) => {
                             match InspectBroker::watch_reply(client).await {
                                 Ok(reply_signature) => {
-                                    broker
-                                        .lock()
-                                        .await
-                                        .request_and_write_to_inspect(reply_signature)
-                                        .await
-                                        .ok();
+                                    broker.request_and_write_to_inspect(reply_signature).await.ok();
                                 }
                                 Err(err) => {
                                     fx_log_err!("Failed to watch reply to restore: {:?}", err)
@@ -99,8 +96,6 @@ impl InspectBroker {
                         // TODO(fxb/66294): Capture new value directly here.
                         Payload::Event(Event::Changed(_)) => {
                             broker
-                                .lock()
-                                .await
                                 .request_and_write_to_inspect(client.get_author())
                                 .await
                                 .map_err(|err| {
@@ -114,8 +109,6 @@ impl InspectBroker {
             }
         })
         .detach();
-
-        return Ok(());
     }
 
     /// Watches for the reply to a sent message and return the author of the reply.
@@ -223,9 +216,7 @@ mod tests {
             messenger_factory.create(MessengerType::Unbound).await.unwrap();
         let setting_handler_signature = setting_handler_receptor.get_signature();
 
-        InspectBroker::create(messenger_factory, inspect_node)
-            .await
-            .expect("could not create inspect");
+        InspectBroker::create_with_node(messenger_factory, inspect_node).await;
 
         // Proxy sends restore request.
         proxy
@@ -285,9 +276,7 @@ mod tests {
         let (setting_handler, setting_handler_receptor) =
             messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
-        InspectBroker::create(messenger_factory, inspect_node)
-            .await
-            .expect("could not create inspect");
+        InspectBroker::create_with_node(messenger_factory, inspect_node).await;
 
         // Setting handler notifies proxy of setting changed. The value does not
         // matter as it is fetched.
