@@ -362,9 +362,8 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "gpio-light", "class/light/000",
 
       "spi/aml-spi-1/spi/spi-1-0",
-      // TODO(fxbug.dev/69587): Re-enable this check when the selina driver is stable.
-      // "selina/selina",
-      // "class/radar/000",
+      "selina/selina",
+      "class/radar/000",
 
       "sys/platform/05:05:24/ram",
   };
