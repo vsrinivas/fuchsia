@@ -5,6 +5,7 @@
 #include "block.h"
 
 #include <inttypes.h>
+#include <lib/zircon-internal/align.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +19,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <lib/zircon-internal/align.h>
 #include <pretty/hexdump.h>
 
 #include "src/devices/bus/lib/virtio/trace.h"
@@ -27,11 +27,13 @@
 
 // 1MB max transfer (unless further restricted by ring size).
 #define MAX_SCATTER 257
-#define MAX_MAX_XFER ((MAX_SCATTER - 1) * PAGE_SIZE)
-
-#define PAGE_MASK (PAGE_SIZE - 1)
 
 namespace virtio {
+
+// Cache some page size calculations that are used frequently.
+static const uint32_t kPageSize = zx_system_get_page_size();
+static const uint32_t kPageMask = kPageSize - 1;
+static const uint32_t kMaxMaxXfer = (MAX_SCATTER - 1) * kPageSize;
 
 void BlockDevice::txn_complete(block_txn_t* txn, zx_status_t status) {
   if (txn->pmt != ZX_HANDLE_INVALID) {
@@ -47,11 +49,11 @@ void BlockDevice::BlockImplQuery(block_info_t* info, size_t* bopsz) {
   memset(info, 0, sizeof(*info));
   info->block_size = GetBlockSize();
   info->block_count = DdkGetSize() / GetBlockSize();
-  info->max_transfer_size = (uint32_t)(PAGE_SIZE * (ring_size - 2));
+  info->max_transfer_size = (uint32_t)(kPageSize * (ring_size - 2));
 
   // Limit max transfer to our worst case scatter list size.
-  if (info->max_transfer_size > MAX_MAX_XFER) {
-    info->max_transfer_size = MAX_MAX_XFER;
+  if (info->max_transfer_size > kMaxMaxXfer) {
+    info->max_transfer_size = kMaxMaxXfer;
   }
   *bopsz = sizeof(block_txn_t);
 }
@@ -289,16 +291,16 @@ zx_status_t BlockDevice::QueueTxn(block_txn_t* txn, uint32_t type, size_t bytes,
   for (size_t n = 0; n < pagecount; n++) {
     desc = vring_.DescFromIndex(desc->next);
     desc->addr = pages[n];
-    desc->len = (uint32_t)((bytes > PAGE_SIZE) ? PAGE_SIZE : bytes);
+    desc->len = (uint32_t)((bytes > kPageSize) ? kPageSize : bytes);
     if (n == 0) {
       // First entry may not be page aligned.
-      size_t page0_offset = txn->op.rw.offset_vmo & PAGE_MASK;
+      size_t page0_offset = txn->op.rw.offset_vmo & kPageMask;
 
       // Adjust starting address.
       desc->addr += page0_offset;
 
       // Trim length if necessary.
-      size_t max = PAGE_SIZE - page0_offset;
+      size_t max = kPageSize - page0_offset;
       if (desc->len > max) {
         desc->len = (uint32_t)max;
       }
@@ -329,10 +331,10 @@ zx_status_t BlockDevice::QueueTxn(block_txn_t* txn, uint32_t type, size_t bytes,
 
 static zx_status_t pin_pages(zx_handle_t bti, block_txn_t* txn, size_t bytes, zx_paddr_t* pages,
                              size_t* num_pages) {
-  uint64_t suboffset = txn->op.rw.offset_vmo & PAGE_MASK;
-  uint64_t aligned_offset = txn->op.rw.offset_vmo & ~PAGE_MASK;
-  size_t pin_size = ZX_ROUNDUP(suboffset + bytes, PAGE_SIZE);
-  *num_pages = pin_size / PAGE_SIZE;
+  uint64_t suboffset = txn->op.rw.offset_vmo & kPageMask;
+  uint64_t aligned_offset = txn->op.rw.offset_vmo & ~kPageMask;
+  size_t pin_size = ZX_ROUNDUP(suboffset + bytes, kPageSize);
+  *num_pages = pin_size / kPageSize;
   if (*num_pages > MAX_SCATTER) {
     TRACEF("virtio: transaction too large\n");
     return ZX_ERR_INVALID_ARGS;
