@@ -55,8 +55,12 @@ void main() {
         of: find.byType('TileChrome'), matching: find.byType('Text'));
 
     await ermine.launch(terminalUrl);
-    var viewRect = await ermine.getViewRect(terminalUrl);
-    expect(viewRect.width > 0, isTrue);
+    expect(
+        await ermine.waitFor(() async {
+          final viewRect = await ermine.getViewRect(terminalUrl);
+          return viewRect.width > 0;
+        }),
+        isTrue);
     expect(await ermine.driver.getText(title), 'terminal.cmx');
 
     print(' Launched terminal');
@@ -65,7 +69,7 @@ void main() {
     expect(
         await ermine.waitFor(() async {
           await ermine.driver.requestData('nextCluster');
-          viewRect = await ermine.getViewRect(terminalUrl);
+          final viewRect = await ermine.getViewRect(terminalUrl);
           return viewRect.width == 0;
         }),
         isTrue);
@@ -73,10 +77,9 @@ void main() {
 
     // Launch simple browser in workspace 1.
     await ermine.launch(simpleBrowserUrl);
-    viewRect = await ermine.getViewRect(simpleBrowserUrl);
     expect(
         await ermine.waitFor(() async {
-          viewRect = await ermine.getViewRect(simpleBrowserUrl);
+          final viewRect = await ermine.getViewRect(simpleBrowserUrl);
           return viewRect.width > 0;
         }),
         isTrue);
@@ -89,12 +92,16 @@ void main() {
     expect(
         await ermine.waitFor(() async {
           await ermine.driver.requestData('previousCluster');
-          viewRect = await ermine.getViewRect(simpleBrowserUrl);
+          final viewRect = await ermine.getViewRect(simpleBrowserUrl);
           return viewRect.width == 0;
         }),
         isTrue);
-    viewRect = await ermine.getViewRect(terminalUrl);
-    expect(viewRect.width > 0, isTrue);
+    expect(
+        await ermine.waitFor(() async {
+          final viewRect = await ermine.getViewRect(terminalUrl);
+          return viewRect.width > 0;
+        }),
+        isTrue);
 
     print(' Switched to workspace 0');
 

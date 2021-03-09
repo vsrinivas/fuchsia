@@ -66,7 +66,7 @@ void main() {
           .toList();
       if (views.length == instances) {
         if (testForFocus) {
-          expect(views.last['focused'], isTrue);
+          expect(views.any((view) => view['focused']), isTrue);
         }
         return views;
       }
@@ -81,24 +81,26 @@ void main() {
     await ermine.launch(componentUrl);
     await ermine.launch(componentUrl);
     expect(await _waitForInstances(componentUrl, 3), isTrue);
+    await _waitForViews(componentUrl, 3, testForFocus: true);
 
     print('Launched 3 terminal instances');
 
-    // Close first instance using keyboard shortcut.
-    // TODO(http://fxb/66076): Replace action with shortcut when implemented.
-    await ermine.driver.requestData('close');
-    await _waitForViews(componentUrl, 2, testForFocus: true);
-    expect(await _waitForInstances(componentUrl, 2), isTrue);
-
-    print('Closed first instance');
-
-    // Close second instance clicking the close button on view title bar.
+    // Close first instance by clicking the close button on view title bar.
     await ermine.driver.waitUntilNoTransientCallbacks();
     final close = find.descendant(
         of: find.byType('TileChrome'),
         matching: find.byValueKey('close'),
         firstMatchOnly: true);
+    await ermine.driver.waitFor(close);
     await ermine.driver.tap(close);
+    await _waitForViews(componentUrl, 2, testForFocus: true);
+    expect(await _waitForInstances(componentUrl, 2), isTrue);
+
+    print('Closed first instance');
+
+    // Close the second instance using keyboard shortcut.
+    // TODO(http://fxb/66076): Replace action with shortcut when implemented.
+    await ermine.driver.requestData('close');
     await _waitForViews(componentUrl, 1, testForFocus: true);
     expect(await _waitForInstances(componentUrl, 1), isTrue);
 
