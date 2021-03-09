@@ -522,7 +522,6 @@ sdk("fuchsia_dart") {
     "//sdk/fidl/fuchsia.element:fuchsia.element_sdk",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_sdk",
     "//tools/fidl/fidlgen_dart:fidlgen_dart_sdk_legacy($host_toolchain)",
-    "//topaz/public/dart/composition_delegate:composition_delegate_sdk($dart_toolchain)",
     get_label_info(dart_package_label.fidl, "dir") + ":" +
         get_label_info(dart_package_label.fidl, "name") +
         "_sdk($dart_toolchain)",
