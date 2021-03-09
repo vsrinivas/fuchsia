@@ -84,6 +84,11 @@ pub(crate) trait PhyManagerApi {
         reason: CreateClientIfacesReason,
     ) -> Result<Vec<u16>, (Vec<u16>, PhyManagerError)>;
 
+    /// The PhyManager is the authoritative source of whether or not the policy layer is allowed to
+    /// create client interfaces.  This method allows other parts of the policy layer to determine
+    /// whether the API client has allowed client interfaces to be created.
+    fn client_connections_enabled(&self) -> bool;
+
     /// Destroys all client interfaces.  Do not allow the creation of client interfaces for newly
     /// discovered PHYs.
     async fn destroy_all_client_ifaces(&mut self) -> Result<(), PhyManagerError>;
@@ -409,6 +414,10 @@ impl PhyManagerApi for PhyManager {
             Ok(()) => Ok(recovered_iface_ids),
             Err(e) => Err((recovered_iface_ids, e)),
         }
+    }
+
+    fn client_connections_enabled(&self) -> bool {
+        self.client_connections_enabled
     }
 
     async fn destroy_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
@@ -2353,5 +2362,27 @@ mod tests {
         phy_manager.phys.insert(fake_phy_id, phy_container);
 
         assert_eq!(phy_manager.has_wpa3_client_iface(), false);
+    }
+
+    /// Tests reporting of client connections status when client connections are enabled.
+    #[test]
+    fn test_client_connections_enabled_when_enabled() {
+        let _exec = Executor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
+
+        phy_manager.client_connections_enabled = true;
+        assert!(phy_manager.client_connections_enabled());
+    }
+
+    /// Tests reporting of client connections status when client connections are disabled.
+    #[test]
+    fn test_client_connections_enabled_when_disabled() {
+        let _exec = Executor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
+
+        phy_manager.client_connections_enabled = false;
+        assert!(!phy_manager.client_connections_enabled());
     }
 }

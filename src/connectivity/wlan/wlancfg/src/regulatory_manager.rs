@@ -973,6 +973,10 @@ mod tests {
             unimplemented!();
         }
 
+        fn client_connections_enabled(&self) -> bool {
+            unimplemented!();
+        }
+
         async fn destroy_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
             unimplemented!();
         }
