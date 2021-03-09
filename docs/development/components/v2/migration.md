@@ -771,6 +771,36 @@ Then assign the `environment` to your component.
 }
 ```
 
+### Logging to stdout/stderr {#logging-to-stdout-stderr}
+
+In components v1 appmgr redirected `stderr` and `stdout` to the debug log, but
+in v2 these outputs are not redirected anywhere. If your component writes log
+data to the debug log you'll need to make the changes described in this section.
+
+To write to the debug log your component needs access to the
+`fuchsia.boot.WriteOnlyLog` capability. This capability is offered to `core` and
+can be offered to your component.
+
+```json5
+{
+  offer: [
+  ...
+    {
+      protocol: [ "fuchsia.boot.WriteOnlyLog" ],
+      from: "parent",
+      to: [ "#my_component" ],
+    },
+  ],
+}
+```
+
+Next, in your program you must direct `stderr` and `stdout` to the debug log.
+You can use libraries for the initialization if your component is written in
+[Rust][debug-log-rust] or [C++][debug-log-cpp].
+
+Note: If the component isn't  written in C++ or Rust you can use the existing
+libraries as a template for how to perform the initialization.
+
 ## Converting CMX features {:#cmx-features}
 
 This section provides guidance on migrating CMX [`features`][cmx-services].
@@ -1110,6 +1140,8 @@ the directory capability with the appropriate subdirectory to your component.
 [components-migration-status]: /docs/concepts/components/v2/migration.md
 [cs-appmgr-cml]: /src/sys/appmgr/meta/appmgr.cml
 [cs-core-cml]: /src/sys/core/meta/core.cml
+[debug-log-cpp]: /src/sys/lib/stdout-to-debuglog/cpp
+[debug-log-rust]: /src/sys/lib/stdout-to-debuglog/rust
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
 [example-component-id-index]: /src/sys/appmgr/config/core_component_id_index.json5
 [example-fonts]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/meta/fonts.cmx
