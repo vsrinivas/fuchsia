@@ -1,6 +1,6 @@
 {
     select: {
-      le_connection_failures: "INSPECT:bootstrap/driver_manager:root/adapter/low_energy_connection_manager:recent_connection_failures",
+      le_connection_failures: "INSPECT:bootstrap/driver_manager:root/bt-host/adapter/low_energy_connection_manager:recent_connection_failures",
     },
     act: {
         le_connection_failures: {
