@@ -342,8 +342,8 @@ void OpteeClient::OpenSession2(
 
   if (peak_smc_call_duration > kSmcCallDurationThreshold) {
     LOG(WARNING,
-        "SMC call threshold exceeded. peak_smc_call_duration: %" PRIi64 "us trusted_app: %s",
-        peak_smc_call_duration.to_usecs(), application_uuid_.ToString().c_str());
+        "SMC call threshold exceeded. peak_smc_call_duration: %" PRIi64 "ns trusted_app: %s",
+        peak_smc_call_duration.to_nsecs(), application_uuid_.ToString().c_str());
   }
 
   if (call_code != kReturnOk) {
@@ -410,8 +410,8 @@ void OpteeClient::InvokeCommand(
   if (peak_smc_call_duration > kSmcCallDurationThreshold) {
     LOG(WARNING,
         "SMC call threshold exceeded. peak_smc_call_duration: %" PRIi64
-        "us trusted_app: %s session_id: 0x%" PRIx32 " command_id: 0x%" PRIx32,
-        peak_smc_call_duration.to_usecs(), application_uuid_.ToString().c_str(), session_id,
+        "ns trusted_app: %s session_id: 0x%" PRIx32 " command_id: 0x%" PRIx32,
+        peak_smc_call_duration.to_nsecs(), application_uuid_.ToString().c_str(), session_id,
         command_id);
   }
 
@@ -458,8 +458,8 @@ zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
   if (peak_smc_call_duration > kSmcCallDurationThreshold) {
     LOG(WARNING,
         "SMC call threshold exceeded. peak_smc_call_duration: %" PRIi64
-        "us trusted_app: %s session_id: 0x%" PRIx32,
-        peak_smc_call_duration.to_usecs(), application_uuid_.ToString().c_str(), session_id);
+        "ns trusted_app: %s session_id: 0x%" PRIx32,
+        peak_smc_call_duration.to_nsecs(), application_uuid_.ToString().c_str(), session_id);
   }
 
   if (call_code == kReturnOk) {
