@@ -341,8 +341,8 @@ impl ViewAssistant for RecoveryViewAssistant {
                         let y = target_size.height * 0.255;
                         point2(x, y)
                     };
-                    let transform = Transform2D::create_scale(scale_factor, scale_factor)
-                        .post_translate(Vector2D::new(logo_position.x, logo_position.y));
+                    let transform = Transform2D::scale(scale_factor, scale_factor)
+                        .then_translate(Vector2D::new(logo_position.x, logo_position.y));
                     (logo_size, shed.rasters(render_context, Some(&transform)), logo_position)
                 }
                 Err(e) => {
