@@ -17,17 +17,53 @@ use {
 };
 
 use crate::{
-    at::{AtAgMessage, AtHfMessage, Parser},
+    at::{AtAgMessage, AtHfMessage, IndicatorStatus, Parser},
     procedure::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest},
+    protocol::features::{AgFeatures, HfFeatures},
 };
+
+/// The state associated with this service level connection.
+#[derive(Clone, Debug, Default)]
+pub struct SlcState {
+    /// Whether the channel has been initialized with the SLCI Procedure.
+    pub initialized: bool,
+    /// The features of the AG.
+    pub ag_features: AgFeatures,
+    /// The features of the HF.
+    pub hf_features: HfFeatures,
+    /// The codecs supported by the HF.
+    pub hf_supported_codecs: Option<Vec<u32>>,
+    /// The current indicator status of the AG.
+    pub ag_indicator_status: IndicatorStatus,
+}
+
+impl SlcState {
+    /// Returns true if both peers support the Codec Negotiation state.
+    pub fn codec_negotiation(&self) -> bool {
+        self.ag_features.contains(AgFeatures::CODEC_NEGOTIATION)
+            && self.hf_features.contains(HfFeatures::CODEC_NEGOTIATION)
+    }
+
+    /// Returns true if both peers support Three-way calling.
+    pub fn three_way_calling(&self) -> bool {
+        self.hf_features.contains(HfFeatures::THREE_WAY_CALLING)
+            && self.ag_features.contains(AgFeatures::THREE_WAY_CALLING)
+    }
+
+    /// Returns true if both peers support HF Indicators.
+    pub fn hf_indicators(&self) -> bool {
+        self.hf_features.contains(HfFeatures::HF_INDICATORS)
+            && self.ag_features.contains(AgFeatures::HF_INDICATORS)
+    }
+}
 
 /// A connection between two peers that shares synchronized state and acts as the control plane for
 /// HFP. See HFP v1.8, 4.2 for more information.
 pub struct ServiceLevelConnection {
     /// The underlying RFCOMM channel connecting the peers.
     channel: Option<Channel>,
-    /// Whether the channel has been initialized with the SLCI Procedure.
-    initialized: bool,
+    /// The current state associated with this connection.
+    state: SlcState,
     /// An AT Command parser instance.
     parser: Parser,
     /// The current active procedures serviced by this SLC.
@@ -38,8 +74,8 @@ impl ServiceLevelConnection {
     /// Create a new, unconnected `ServiceLevelConnection`.
     pub fn new() -> Self {
         Self {
-            initialized: false,
             channel: None,
+            state: SlcState::default(),
             parser: Parser::default(),
             procedures: HashMap::new(),
         }
@@ -54,7 +90,7 @@ impl ServiceLevelConnection {
     /// been completed for the connected channel.
     #[cfg(test)]
     fn initialized(&self) -> bool {
-        self.connected() && self.initialized
+        self.connected() && self.state.initialized
     }
 
     /// Returns `true` if the provided `procedure` is currently active.
@@ -72,8 +108,7 @@ impl ServiceLevelConnection {
     /// Note: This should only be called when the SLCI Procedure has successfully finished
     /// or in testing scenarios.
     fn set_initialized(&mut self) {
-        // TODO(fxbug.dev/71643): Save the results of the SLCI procedure here.
-        self.initialized = true;
+        self.state.initialized = true;
     }
 
     /// Close the service level connection and reset the state.
@@ -150,7 +185,7 @@ impl ServiceLevelConnection {
     ) -> Result<ProcedureMarker, ProcedureError> {
         // If we haven't initialized the SLC yet, the only valid procedure to match is
         // the SLCI Procedure.
-        if !self.initialized {
+        if !self.state.initialized {
             return Ok(ProcedureMarker::SlcInitialization);
         }
 
@@ -176,7 +211,10 @@ impl ServiceLevelConnection {
         marker: ProcedureMarker,
         message: AtAgMessage,
     ) -> ProcedureRequest {
-        self.procedures.entry(marker).or_insert(marker.initialize()).ag_update(message)
+        self.procedures
+            .entry(marker)
+            .or_insert(marker.initialize())
+            .ag_update(message, &mut self.state)
     }
 
     /// Updates the the procedure specified by the `marker` with the received HF `message`.
@@ -187,7 +225,10 @@ impl ServiceLevelConnection {
         marker: ProcedureMarker,
         message: AtHfMessage,
     ) -> ProcedureRequest {
-        self.procedures.entry(marker).or_insert(marker.initialize()).hf_update(message)
+        self.procedures
+            .entry(marker)
+            .or_insert(marker.initialize())
+            .hf_update(message, &mut self.state)
     }
 }
 

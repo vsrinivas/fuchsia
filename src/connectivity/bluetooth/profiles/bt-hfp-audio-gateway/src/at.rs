@@ -13,7 +13,7 @@
 use crate::protocol::features::{AgFeatures, HfFeatures};
 use regex::Regex;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct IndicatorStatus {
     pub service: bool,
     pub call: bool,

@@ -6,7 +6,8 @@ use super::{Procedure, ProcedureError as Error, ProcedureMarker, ProcedureReques
 
 use crate::{
     at::{AtAgMessage, AtHfMessage, IndicatorStatus},
-    protocol::features::{AgFeatures, HfFeatures},
+    peer::service_level_connection::SlcState,
+    protocol::features::AgFeatures,
 };
 
 /// A singular state within the SLC Initialization Procedure.
@@ -15,7 +16,7 @@ pub trait SlcProcedureState {
     /// AG `update`.
     /// By default, the state transition will return an error. Implementors should only
     /// implement this for valid transitions.
-    fn ag_update(&self, update: AtAgMessage) -> Box<dyn SlcProcedureState> {
+    fn ag_update(&self, update: AtAgMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         SlcErrorState::unexpected_ag(update)
     }
 
@@ -23,7 +24,7 @@ pub trait SlcProcedureState {
     /// HF `update`.
     /// By default, the state transition will return an error. Implementors should only
     /// implement this for valid transitions.
-    fn hf_update(&self, update: AtHfMessage) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: AtHfMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         SlcErrorState::unexpected_hf(update)
     }
 
@@ -33,36 +34,6 @@ pub trait SlcProcedureState {
     /// Returns true if this is the final state in the Procedure.
     fn is_terminal(&self) -> bool {
         false
-    }
-}
-
-/// The relevant state associated with this procedure. This passed among the states, and
-/// is populated as the procedure progresses.
-#[derive(Clone, Debug, Default)]
-struct SlcState {
-    ag_features: AgFeatures,
-    hf_features: HfFeatures,
-    codecs: Option<Vec<u32>>,
-    status: IndicatorStatus,
-}
-
-impl SlcState {
-    /// Returns true if both peers support the Codec Negotiation state.
-    fn codec_negotiation(&self) -> bool {
-        self.ag_features.contains(AgFeatures::CODEC_NEGOTIATION)
-            && self.hf_features.contains(HfFeatures::CODEC_NEGOTIATION)
-    }
-
-    /// Returns true if both peers support Three-way calling.
-    fn three_way_calling(&self) -> bool {
-        self.hf_features.contains(HfFeatures::THREE_WAY_CALLING)
-            && self.ag_features.contains(AgFeatures::THREE_WAY_CALLING)
-    }
-
-    /// Returns true if both peers support HF Indicators.
-    fn hf_indicators(&self) -> bool {
-        self.hf_features.contains(HfFeatures::HF_INDICATORS)
-            && self.ag_features.contains(AgFeatures::HF_INDICATORS)
     }
 }
 
@@ -106,21 +77,21 @@ impl Procedure for SlcInitProcedure {
         ProcedureMarker::SlcInitialization
     }
 
-    fn hf_update(&mut self, update: AtHfMessage) -> ProcedureRequest {
+    fn hf_update(&mut self, update: AtHfMessage, state: &mut SlcState) -> ProcedureRequest {
         if self.is_terminated() {
             return ProcedureRequest::Error(Error::AlreadyTerminated);
         }
 
-        self.state = self.state.hf_update(update);
+        self.state = self.state.hf_update(update, state);
         self.state.request()
     }
 
-    fn ag_update(&mut self, update: AtAgMessage) -> ProcedureRequest {
+    fn ag_update(&mut self, update: AtAgMessage, state: &mut SlcState) -> ProcedureRequest {
         if self.is_terminated() {
             return ProcedureRequest::Error(Error::AlreadyTerminated);
         }
 
-        self.state = self.state.ag_update(update);
+        self.state = self.state.ag_update(update, state);
         self.state.request()
     }
 
@@ -132,21 +103,20 @@ impl Procedure for SlcInitProcedure {
 /// This is the default starting point of the Service Level Connection Initialization procedure.
 /// Per HFP v1.8 Section 4.2.1.6, the HF always initiates this procedure.
 #[derive(Debug, Default, Clone)]
-struct SlcInitStart {
-    state: SlcState,
-}
+struct SlcInitStart;
 
 impl SlcProcedureState for SlcInitStart {
     fn request(&self) -> ProcedureRequest {
         ProcedureRequest::None
     }
 
-    fn hf_update(&self, update: AtHfMessage) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: AtHfMessage, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // Only the HF request containing its features can continue the SLC initialization process.
         match update {
-            AtHfMessage::HfFeatures(f) => Box::new(HfFeaturesReceived {
-                state: SlcState { hf_features: f, ..self.state.clone() },
-            }),
+            AtHfMessage::HfFeatures(f) => {
+                state.hf_features = f;
+                Box::new(HfFeaturesReceived)
+            }
             m => SlcErrorState::unexpected_hf(m),
         }
     }
@@ -154,9 +124,7 @@ impl SlcProcedureState for SlcInitStart {
 
 /// We've received a supported features request from the HF.
 #[derive(Debug, Clone)]
-struct HfFeaturesReceived {
-    state: SlcState,
-}
+struct HfFeaturesReceived;
 
 impl SlcProcedureState for HfFeaturesReceived {
     fn request(&self) -> ProcedureRequest {
@@ -165,12 +133,13 @@ impl SlcProcedureState for HfFeaturesReceived {
         }
     }
 
-    fn ag_update(&self, update: AtAgMessage) -> Box<dyn SlcProcedureState> {
+    fn ag_update(&self, update: AtAgMessage, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // Only the AG request containing its features can continue the process.
         match update {
-            AtAgMessage::AgFeatures(f) => Box::new(AgFeaturesReceived {
-                state: SlcState { ag_features: f, ..self.state.clone() },
-            }),
+            AtAgMessage::AgFeatures(f) => {
+                state.ag_features = f;
+                Box::new(AgFeaturesReceived { state: state.clone() })
+            }
             m => SlcErrorState::unexpected_ag(m),
         }
     }
@@ -186,16 +155,15 @@ impl SlcProcedureState for AgFeaturesReceived {
         ProcedureRequest::SendMessage(AtAgMessage::AgFeatures(self.state.ag_features))
     }
 
-    fn hf_update(&self, update: AtHfMessage) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: AtHfMessage, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // The codec negotiation step of this procedure is optional and is determined by the
         // availability specified in the feature flags of the HF and AG.
-        match (update, self.state.codec_negotiation()) {
-            (AtHfMessage::HfCodecSup(codecs), true) => Box::new(AvailableCodecsReceived {
-                state: SlcState { codecs: Some(codecs), ..self.state.clone() },
-            }),
-            (AtHfMessage::AgIndSupRequest, false) => {
-                Box::new(AgSupportedIndicatorsRequested { state: self.state.clone() })
+        match (update, state.codec_negotiation()) {
+            (AtHfMessage::HfCodecSup(codecs), true) => {
+                state.hf_supported_codecs = Some(codecs);
+                Box::new(AvailableCodecsReceived)
             }
+            (AtHfMessage::AgIndSupRequest, false) => Box::new(AgSupportedIndicatorsRequested),
             (m, _) => SlcErrorState::unexpected_hf(m),
         }
     }
@@ -203,52 +171,42 @@ impl SlcProcedureState for AgFeaturesReceived {
 
 /// We've received the available codecs from the HF.
 #[derive(Debug, Clone)]
-struct AvailableCodecsReceived {
-    state: SlcState,
-}
+struct AvailableCodecsReceived;
 
 impl SlcProcedureState for AvailableCodecsReceived {
     fn request(&self) -> ProcedureRequest {
         ProcedureRequest::SendMessage(AtAgMessage::Ok)
     }
 
-    fn hf_update(&self, update: AtHfMessage) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: AtHfMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // Only a HF request for AG indicators can continue the procedure.
         match update {
-            AtHfMessage::AgIndSupRequest => {
-                Box::new(AgSupportedIndicatorsRequested { state: self.state.clone() })
-            }
+            AtHfMessage::AgIndSupRequest => Box::new(AgSupportedIndicatorsRequested),
             m => SlcErrorState::unexpected_hf(m),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-struct AgSupportedIndicatorsRequested {
-    state: SlcState,
-}
+struct AgSupportedIndicatorsRequested;
 
 impl SlcProcedureState for AgSupportedIndicatorsRequested {
     fn request(&self) -> ProcedureRequest {
         ProcedureRequest::SendMessage(AtAgMessage::AgSupportedIndicators)
     }
 
-    fn hf_update(&self, update: AtHfMessage) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: AtHfMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // Only a HF request for the current status of the AG indicators will
         // continue the procedure.
         match update {
-            AtHfMessage::AgIndStat => {
-                Box::new(AgIndicatorStatusRequestReceived { state: self.state.clone() })
-            }
+            AtHfMessage::AgIndStat => Box::new(AgIndicatorStatusRequestReceived),
             m => SlcErrorState::unexpected_hf(m),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-struct AgIndicatorStatusRequestReceived {
-    state: SlcState,
-}
+struct AgIndicatorStatusRequestReceived;
 
 impl SlcProcedureState for AgIndicatorStatusRequestReceived {
     fn request(&self) -> ProcedureRequest {
@@ -257,12 +215,13 @@ impl SlcProcedureState for AgIndicatorStatusRequestReceived {
         }
     }
 
-    fn ag_update(&self, update: AtAgMessage) -> Box<dyn SlcProcedureState> {
+    fn ag_update(&self, update: AtAgMessage, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // Only the current status information from the AG will continue the procedure.
         match update {
-            AtAgMessage::AgIndStat(status) => Box::new(AgIndicatorStatusReceived {
-                state: SlcState { status, ..self.state.clone() },
-            }),
+            AtAgMessage::AgIndStat(status) => {
+                state.ag_indicator_status = status;
+                Box::new(AgIndicatorStatusReceived { state: state.clone() })
+            }
             m => SlcErrorState::unexpected_ag(m),
         }
     }
@@ -275,14 +234,14 @@ struct AgIndicatorStatusReceived {
 
 impl SlcProcedureState for AgIndicatorStatusReceived {
     fn request(&self) -> ProcedureRequest {
-        ProcedureRequest::SendMessage(AtAgMessage::AgIndStat(self.state.status))
+        ProcedureRequest::SendMessage(AtAgMessage::AgIndStat(self.state.ag_indicator_status))
     }
 
-    fn hf_update(&self, update: AtHfMessage) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: AtHfMessage, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // Only a HF request to enable the AG Indicator Status will continue the procedure.
         match update {
             AtHfMessage::HfIndStatusAgEnable => {
-                Box::new(AgIndicatorStatusEnableReceived { state: self.state.clone() })
+                Box::new(AgIndicatorStatusEnableReceived { state: state.clone() })
             }
             m => SlcErrorState::unexpected_hf(m),
         }
@@ -301,17 +260,17 @@ impl SlcProcedureState for AgIndicatorStatusEnableReceived {
         ProcedureRequest::SendMessage(AtAgMessage::Ok)
     }
 
-    fn hf_update(&self, update: AtHfMessage) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: AtHfMessage, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         if self.is_terminal() {
             return SlcErrorState::already_terminated();
         }
 
         // If both parties support three way calling, then we expect the 3-way support message
         // from the HF.
-        if self.state.three_way_calling() {
+        if state.three_way_calling() {
             return match update {
                 AtHfMessage::ThreeWaySupport => {
-                    Box::new(ThreeWaySupportReceived { state: self.state.clone() })
+                    Box::new(ThreeWaySupportReceived { state: state.clone() })
                 }
                 m => SlcErrorState::unexpected_hf(m),
             };
@@ -320,9 +279,7 @@ impl SlcProcedureState for AgIndicatorStatusEnableReceived {
         // Otherwise, both parties must be supporting HF Indicators (or else self.is_terminal()
         // would be true).
         match update {
-            AtHfMessage::HfIndSup(_, _) => {
-                Box::new(HfSupportedIndicatorsReceived { state: self.state.clone() })
-            }
+            AtHfMessage::HfIndSup(_, _) => Box::new(HfSupportedIndicatorsReceived),
             m => SlcErrorState::unexpected_hf(m),
         }
     }
@@ -342,15 +299,13 @@ impl SlcProcedureState for ThreeWaySupportReceived {
         ProcedureRequest::SendMessage(AtAgMessage::AgThreeWaySupport)
     }
 
-    fn hf_update(&self, update: AtHfMessage) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: AtHfMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         if self.is_terminal() {
             return SlcErrorState::already_terminated();
         }
 
         match update {
-            AtHfMessage::HfIndSup(_, _) => {
-                Box::new(HfSupportedIndicatorsReceived { state: self.state.clone() })
-            }
+            AtHfMessage::HfIndSup(_, _) => Box::new(HfSupportedIndicatorsReceived),
             m => SlcErrorState::unexpected_hf(m),
         }
     }
@@ -361,32 +316,22 @@ impl SlcProcedureState for ThreeWaySupportReceived {
     }
 }
 
-struct HfSupportedIndicatorsReceived {
-    state: SlcState,
-}
+struct HfSupportedIndicatorsReceived;
 
 impl SlcProcedureState for HfSupportedIndicatorsReceived {
     fn request(&self) -> ProcedureRequest {
         ProcedureRequest::SendMessage(AtAgMessage::Ok)
     }
 
-    fn hf_update(&self, update: AtHfMessage) -> Box<dyn SlcProcedureState> {
-        if self.is_terminal() {
-            return SlcErrorState::already_terminated();
-        }
-
+    fn hf_update(&self, update: AtHfMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         match update {
-            AtHfMessage::HfIndAgSup => {
-                Box::new(ListSupportedGenericIndicatorsReceived { _state: self.state.clone() })
-            }
+            AtHfMessage::HfIndAgSup => Box::new(ListSupportedGenericIndicatorsReceived),
             m => SlcErrorState::unexpected_hf(m),
         }
     }
 }
 
-struct ListSupportedGenericIndicatorsReceived {
-    _state: SlcState,
-}
+struct ListSupportedGenericIndicatorsReceived;
 
 impl SlcProcedureState for ListSupportedGenericIndicatorsReceived {
     fn request(&self) -> ProcedureRequest {
@@ -396,11 +341,11 @@ impl SlcProcedureState for ListSupportedGenericIndicatorsReceived {
         })
     }
 
-    fn ag_update(&self, _update: AtAgMessage) -> Box<dyn SlcProcedureState> {
+    fn ag_update(&self, _update: AtAgMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         SlcErrorState::already_terminated()
     }
 
-    fn hf_update(&self, _update: AtHfMessage) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, _update: AtHfMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         SlcErrorState::already_terminated()
     }
 
@@ -448,52 +393,57 @@ impl SlcProcedureState for SlcErrorState {
 mod tests {
     use super::*;
 
+    use crate::protocol::features::HfFeatures;
     use matches::assert_matches;
 
     #[test]
     fn supported_features_received_transition_to_codec_negotiation() {
-        let state = SlcState {
+        let mut state = SlcState {
             hf_features: HfFeatures::CODEC_NEGOTIATION,
             ag_features: AgFeatures::CODEC_NEGOTIATION,
             ..SlcState::default()
         };
-        let mut procedure = SlcInitProcedure::new_at_state(AgFeaturesReceived { state });
+        let mut procedure =
+            SlcInitProcedure::new_at_state(AgFeaturesReceived { state: state.clone() });
         let update = AtHfMessage::HfCodecSup(Vec::new());
         // Both parties support codec negotiation, so upon receiving the Codec HF message, we
         // expect to successfully transition to the codec state and the resulting event
         // should be an Ack to the codecs.
-        let event = procedure.hf_update(update);
+        let event = procedure.hf_update(update, &mut state);
         assert_matches!(event, ProcedureRequest::SendMessage(AtAgMessage::Ok));
     }
 
     #[test]
     fn supported_features_received_transition_unexpected_update() {
-        let state = SlcState {
+        let mut state = SlcState {
             hf_features: HfFeatures::CODEC_NEGOTIATION,
             ag_features: AgFeatures::CODEC_NEGOTIATION,
             ..SlcState::default()
         };
-        let mut procedure = SlcInitProcedure::new_at_state(AgFeaturesReceived { state });
+        let mut procedure =
+            SlcInitProcedure::new_at_state(AgFeaturesReceived { state: state.clone() });
         let update = AtHfMessage::AgIndSupRequest;
         // Both parties support codec negotiation, but we receive an invalid HF message.
-        assert_matches!(procedure.hf_update(update), ProcedureRequest::Error(_));
+        assert_matches!(procedure.hf_update(update, &mut state), ProcedureRequest::Error(_));
     }
 
     #[test]
     fn supported_features_received_transition_with_no_codec_support() {
         // HF doesn't support codec negotiation.
-        let state = SlcState {
+        let mut state = SlcState {
             hf_features: HfFeatures::NR_EC,
             ag_features: AgFeatures::CODEC_NEGOTIATION,
             ..SlcState::default()
         };
-        let mut procedure = SlcInitProcedure::new_at_state(AgFeaturesReceived { state });
+
+        let mut procedure =
+            SlcInitProcedure::new_at_state(AgFeaturesReceived { state: state.clone() });
 
         // Since one party doesn't support codec negotiation, we expect the next update to
         // be a request for the AG supported indicators.
         let update = AtHfMessage::AgIndSupRequest;
         assert_matches!(
-            procedure.hf_update(update),
+            procedure.hf_update(update, &mut state),
             ProcedureRequest::SendMessage(AtAgMessage::AgSupportedIndicators)
         );
     }
@@ -501,16 +451,18 @@ mod tests {
     #[test]
     fn supported_features_received_transition_unexpected_update_with_no_codec_support() {
         // AG doesn't support codec negotiation.
-        let state = SlcState {
+        let mut state = SlcState {
             hf_features: HfFeatures::CODEC_NEGOTIATION,
             ag_features: AgFeatures::NR_EC,
             ..SlcState::default()
         };
-        let mut procedure = SlcInitProcedure::new_at_state(AgFeaturesReceived { state });
+
+        let mut procedure =
+            SlcInitProcedure::new_at_state(AgFeaturesReceived { state: state.clone() });
         let update = AtHfMessage::HfCodecSup(Vec::new());
         // One party doesn't support codec negotiation, so it is an error if the HF sends
         // a codec negotiation AT message.
-        assert_matches!(procedure.hf_update(update), ProcedureRequest::Error(_));
+        assert_matches!(procedure.hf_update(update, &mut state), ProcedureRequest::Error(_));
     }
 
     /// Validates the entire mandatory state machine for the SLCI Procedure, see
@@ -520,6 +472,8 @@ mod tests {
     #[test]
     fn validate_mandatory_procedure_state_machine() {
         let mut slc_proc = SlcInitProcedure::new();
+        let mut state = SlcState::default();
+
         assert_matches!(slc_proc.marker(), ProcedureMarker::SlcInitialization);
         assert!(!slc_proc.is_terminated());
 
@@ -531,28 +485,34 @@ mod tests {
 
         // First update should be an HF Feature request.
         let update1 = AtHfMessage::HfFeatures(hf_features);
-        assert_matches!(slc_proc.hf_update(update1), ProcedureRequest::GetAgFeatures { .. });
+        assert_matches!(
+            slc_proc.hf_update(update1, &mut state),
+            ProcedureRequest::GetAgFeatures { .. }
+        );
 
         // Next update should be an AG Feature response.
         let update2 = AtAgMessage::AgFeatures(ag_features);
-        assert_matches!(slc_proc.ag_update(update2), ProcedureRequest::SendMessage(_));
+        assert_matches!(slc_proc.ag_update(update2, &mut state), ProcedureRequest::SendMessage(_));
 
         // Since the AG doesn't support codec negotiation (see `ag_features`), we expect to
         // skip to the Hf Indicator support stage.
         let update3 = AtHfMessage::AgIndSupRequest;
-        assert_matches!(slc_proc.hf_update(update3), ProcedureRequest::SendMessage(_));
+        assert_matches!(slc_proc.hf_update(update3, &mut state), ProcedureRequest::SendMessage(_));
 
         // We then expect the HF to request the indicator status which will result
         // in the procedure asking the AG for the status.
         let update4 = AtHfMessage::AgIndStat;
-        assert_matches!(slc_proc.hf_update(update4), ProcedureRequest::GetAgIndicatorStatus { .. });
+        assert_matches!(
+            slc_proc.hf_update(update4, &mut state),
+            ProcedureRequest::GetAgIndicatorStatus { .. }
+        );
         let status = IndicatorStatus::default();
         let update5 = AtAgMessage::AgIndStat(status);
-        assert_matches!(slc_proc.ag_update(update5), ProcedureRequest::SendMessage(_));
+        assert_matches!(slc_proc.ag_update(update5, &mut state), ProcedureRequest::SendMessage(_));
 
         // Lastly, the HF should request to enable the indicator status update on the AG.
         let update6 = AtHfMessage::HfIndStatusAgEnable;
-        assert_matches!(slc_proc.hf_update(update6), ProcedureRequest::SendMessage(_));
+        assert_matches!(slc_proc.hf_update(update6, &mut state), ProcedureRequest::SendMessage(_));
 
         // Since both the AG and HF don't support 3-way calling and HF-indicators flags, we
         // expect the procedure to be terminated.
@@ -564,42 +524,56 @@ mod tests {
     #[test]
     fn validate_optional_procedure_state_machine() {
         let mut slc_proc = SlcInitProcedure::new();
+        let mut state = SlcState::default();
         let hf_features = HfFeatures::all();
         let ag_features = AgFeatures::all();
 
-        // First update should be an HF Feature request.
+        // First update should be an HF Feature request - the shared state should be updated.
         let update1 = AtHfMessage::HfFeatures(hf_features);
-        assert_matches!(slc_proc.hf_update(update1), ProcedureRequest::GetAgFeatures { .. });
+        assert_matches!(
+            slc_proc.hf_update(update1, &mut state),
+            ProcedureRequest::GetAgFeatures { .. }
+        );
+        assert_eq!(state.hf_features, hf_features);
 
-        // Next update should be an AG Feature response.
+        // Next update should be an AG Feature response - the shared state should be updated.
         let update2 = AtAgMessage::AgFeatures(ag_features);
-        assert_matches!(slc_proc.ag_update(update2), ProcedureRequest::SendMessage(_));
+        assert_matches!(slc_proc.ag_update(update2, &mut state), ProcedureRequest::SendMessage(_));
+        assert_eq!(state.ag_features, ag_features);
 
-        let update3 = AtHfMessage::HfCodecSup(vec![]);
-        assert_matches!(slc_proc.hf_update(update3), ProcedureRequest::SendMessage(_));
+        // Codec information should update shared state.
+        let codecs = vec![];
+        let update3 = AtHfMessage::HfCodecSup(codecs.clone());
+        assert_matches!(slc_proc.hf_update(update3, &mut state), ProcedureRequest::SendMessage(_));
+        assert_eq!(state.hf_supported_codecs, Some(codecs));
 
         let update4 = AtHfMessage::AgIndSupRequest;
-        assert_matches!(slc_proc.hf_update(update4), ProcedureRequest::SendMessage(_));
+        assert_matches!(slc_proc.hf_update(update4, &mut state), ProcedureRequest::SendMessage(_));
 
         let update5 = AtHfMessage::AgIndStat;
-        assert_matches!(slc_proc.hf_update(update5), ProcedureRequest::GetAgIndicatorStatus { .. });
+        assert_matches!(
+            slc_proc.hf_update(update5, &mut state),
+            ProcedureRequest::GetAgIndicatorStatus { .. }
+        );
 
+        // Indicator status should be updated.
         let status = IndicatorStatus::default();
         let update6 = AtAgMessage::AgIndStat(status);
-        assert_matches!(slc_proc.ag_update(update6), ProcedureRequest::SendMessage(_));
+        assert_matches!(slc_proc.ag_update(update6, &mut state), ProcedureRequest::SendMessage(_));
+        assert_eq!(state.ag_indicator_status, status);
 
         let update7 = AtHfMessage::HfIndStatusAgEnable;
-        assert_matches!(slc_proc.hf_update(update7), ProcedureRequest::SendMessage(_));
+        assert_matches!(slc_proc.hf_update(update7, &mut state), ProcedureRequest::SendMessage(_));
 
         // Optional
         let update8 = AtHfMessage::ThreeWaySupport;
-        assert_matches!(slc_proc.hf_update(update8), ProcedureRequest::SendMessage(_));
+        assert_matches!(slc_proc.hf_update(update8, &mut state), ProcedureRequest::SendMessage(_));
         // Optional
         let update9 = AtHfMessage::HfIndSup(true, true);
-        assert_matches!(slc_proc.hf_update(update9), ProcedureRequest::SendMessage(_));
+        assert_matches!(slc_proc.hf_update(update9, &mut state), ProcedureRequest::SendMessage(_));
         // Optional
         let update10 = AtHfMessage::HfIndAgSup;
-        assert_matches!(slc_proc.hf_update(update10), ProcedureRequest::SendMessage(_));
+        assert_matches!(slc_proc.hf_update(update10, &mut state), ProcedureRequest::SendMessage(_));
 
         assert!(slc_proc.is_terminated());
     }
@@ -607,17 +581,23 @@ mod tests {
     #[test]
     fn unexpected_at_event_results_in_error() {
         let mut slc_proc = SlcInitProcedure::new();
+        let mut state = SlcState::default();
 
         // We don't expect this AT command to be received in the starting
         // state of the SLC Initialization Procedure.
         let unexpected_update1 = AtHfMessage::AgIndStat;
-        assert_matches!(slc_proc.hf_update(unexpected_update1), ProcedureRequest::Error(_));
+        assert_matches!(
+            slc_proc.hf_update(unexpected_update1, &mut state),
+            ProcedureRequest::Error(_)
+        );
 
         // Jump to a different state and test an unexpected update.
-        let state = SlcState { hf_features: HfFeatures::CODEC_NEGOTIATION, ..SlcState::default() };
-        slc_proc = SlcInitProcedure::new_at_state(HfFeaturesReceived { state });
+        slc_proc = SlcInitProcedure::new_at_state(HfFeaturesReceived);
         let unexpected_update2 = AtHfMessage::CurrentCalls;
-        assert_matches!(slc_proc.hf_update(unexpected_update2), ProcedureRequest::Error(_));
+        assert_matches!(
+            slc_proc.hf_update(unexpected_update2, &mut state),
+            ProcedureRequest::Error(_)
+        );
     }
 
     /// Validates the result of the is_terminated() check on various input flags.

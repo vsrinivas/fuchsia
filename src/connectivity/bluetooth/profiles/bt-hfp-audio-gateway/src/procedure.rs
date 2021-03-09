@@ -6,6 +6,7 @@ use {std::fmt, thiserror::Error};
 
 use crate::{
     at::{AtAgMessage, AtHfMessage, IndicatorStatus},
+    peer::service_level_connection::SlcState,
     protocol::features::AgFeatures,
 };
 
@@ -47,7 +48,7 @@ impl From<fuchsia_zircon::Status> for ProcedureError {
 pub enum ProcedureMarker {
     // The Service Level Connection Initialization procedure as defined in HFP v1.8 Section 4.2.
     SlcInitialization,
-    /// The Noise Reduction/Echo Cancelation procedure as defined in HFP v1.8 Section 4.24.
+    /// The Noise Reduction/Echo Cancellation procedure as defined in HFP v1.8 Section 4.24.
     Nrec,
 }
 
@@ -115,7 +116,9 @@ impl ProcedureRequest {
     /// Returns true if this request requires a response.
     pub fn requires_response(&self) -> bool {
         match &self {
-            Self::GetAgFeatures { .. } | Self::GetAgIndicatorStatus { .. } => true,
+            Self::GetAgFeatures { .. }
+            | Self::GetAgIndicatorStatus { .. }
+            | Self::SetNrec { .. } => true,
             _ => false,
         }
     }
@@ -147,22 +150,30 @@ pub trait Procedure {
     /// Receive an HF `update` to progress the procedure. Returns a request
     /// to the update.
     ///
+    /// `update` is the incoming AT message received from the HF.
+    /// `state` is the shared state associated with the service level connection and may be
+    /// modified when applying the update.
+    ///
     /// There are no guarantees if `hf_update()` is called on a Procedure that is terminated
     /// (namely, `is_terminated()` returns true) and may result in an error request.
     /// The handling of unexpected or invalid updates is procedure dependent.
     /// Developers should ensure that the final request of a Procedure does not require
     /// a response.
-    fn hf_update(&mut self, update: AtHfMessage) -> ProcedureRequest;
+    fn hf_update(&mut self, update: AtHfMessage, state: &mut SlcState) -> ProcedureRequest;
 
     /// Receive an AG `update` to progress the procedure. Returns a request
     /// to the update.
+    ///
+    /// `update` is the incoming AT message received from the AG.
+    /// `state` is the shared state associated with the service level connection and may be
+    /// modified when applying the update.
     ///
     /// There are no guarantees if `ag_update()` is called on a Procedure that is terminated
     /// (namely, `is_terminated()` returns true) and may result in an error request.
     /// The handling of unexpected or invalid updates is procedure dependent.
     /// Developers should ensure that the final request of a Procedure does not require
     /// a response.
-    fn ag_update(&mut self, update: AtAgMessage) -> ProcedureRequest;
+    fn ag_update(&mut self, update: AtAgMessage, state: &mut SlcState) -> ProcedureRequest;
 
     /// Returns true if the Procedure is finished.
     fn is_terminated(&self) -> bool {

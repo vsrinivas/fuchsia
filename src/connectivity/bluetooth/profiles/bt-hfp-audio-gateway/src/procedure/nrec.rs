@@ -5,6 +5,7 @@
 use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
 use crate::at::{AtAgMessage, AtHfMessage};
+use crate::peer::service_level_connection::SlcState;
 
 /// Represents the current state of the Hf request to enable or disable the AG EC and NR functions
 /// as defined in HFP v1.8, Section 4.24.
@@ -53,7 +54,7 @@ impl Procedure for NrecProcedure {
         ProcedureMarker::Nrec
     }
 
-    fn hf_update(&mut self, update: AtHfMessage) -> ProcedureRequest {
+    fn hf_update(&mut self, update: AtHfMessage, _state: &mut SlcState) -> ProcedureRequest {
         match (self.state, update) {
             (State::Start, AtHfMessage::Nrec(enable)) => {
                 self.state.transition();
@@ -66,7 +67,7 @@ impl Procedure for NrecProcedure {
         }
     }
 
-    fn ag_update(&mut self, update: AtAgMessage) -> ProcedureRequest {
+    fn ag_update(&mut self, update: AtAgMessage, _state: &mut SlcState) -> ProcedureRequest {
         match (self.state, update) {
             (State::SetRequest, update @ AtAgMessage::Ok)
             | (State::SetRequest, update @ AtAgMessage::Error) => {
@@ -117,10 +118,12 @@ mod tests {
     #[test]
     fn unexpected_hf_update_returns_error() {
         let mut proc = NrecProcedure::new();
+        let mut state = SlcState::default();
+
         // SLCI AT command.
         let random_hf = AtHfMessage::AgIndStat;
         assert_matches!(
-            proc.hf_update(random_hf),
+            proc.hf_update(random_hf, &mut state),
             ProcedureRequest::Error(ProcedureError::UnexpectedHf(_))
         );
     }
@@ -128,10 +131,11 @@ mod tests {
     #[test]
     fn unexpected_ag_update_returns_error() {
         let mut proc = NrecProcedure::new();
+        let mut state = SlcState::default();
         // SLCI AT command.
         let random_ag = AtAgMessage::AgThreeWaySupport;
         assert_matches!(
-            proc.ag_update(random_ag),
+            proc.ag_update(random_ag, &mut state),
             ProcedureRequest::Error(ProcedureError::UnexpectedAg(_))
         );
     }
@@ -139,22 +143,24 @@ mod tests {
     #[test]
     fn updates_produce_expected_requests() {
         let mut proc = NrecProcedure::new();
-        let req = proc.hf_update(AtHfMessage::Nrec(true));
+        let mut state = SlcState::default();
+
+        let req = proc.hf_update(AtHfMessage::Nrec(true), &mut state);
         let update = match req {
             ProcedureRequest::SetNrec { enable: true, response } => response(Ok(())),
             x => panic!("Unexpected message: {:?}", x),
         };
-        let req = proc.ag_update(update);
+        let req = proc.ag_update(update, &mut state);
         assert_matches!(req, ProcedureRequest::SendMessage(_));
 
         // Check that the procedure is termianted and any new messages produce an error.
         assert!(proc.is_terminated());
         assert_matches!(
-            proc.hf_update(AtHfMessage::Nrec(true)),
+            proc.hf_update(AtHfMessage::Nrec(true), &mut state),
             ProcedureRequest::Error(ProcedureError::UnexpectedHf(_))
         );
         assert_matches!(
-            proc.ag_update(AtAgMessage::Ok),
+            proc.ag_update(AtAgMessage::Ok, &mut state),
             ProcedureRequest::Error(ProcedureError::UnexpectedAg(_))
         );
     }
