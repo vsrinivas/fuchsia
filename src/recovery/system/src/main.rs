@@ -1,6 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 use anyhow::Error;
 use argh::FromArgs;
 use carnelian::{
@@ -9,15 +10,15 @@ use carnelian::{
     geometry::IntVector,
     input, make_message,
     render::{
-        BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster,
-        RenderExt, Style,
+        BlendMode, Composition, Context as RenderContext, CopyRegion, Fill, FillRule, Image, Layer,
+        PostCopy, PreClear, Raster, RenderExt, Style,
     },
     App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, Coord, LocalBoxFuture,
     Point, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::{
     default::{Point2D, Transform2D, Vector2D},
-    point2, size2,
+    point2,
 };
 use fidl_fuchsia_input_report::ConsumerControlButton;
 use fidl_fuchsia_recovery::FactoryResetMarker;
@@ -25,10 +26,10 @@ use fuchsia_async::{self as fasync, Task};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon::{AsHandleRef, Duration, Event, Signals};
 use futures::StreamExt;
-use std::path::PathBuf;
+use std::{fs::File, path::PathBuf};
 
 const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 10;
-const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.shed";
+const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.png";
 const BG_COLOR: Color = Color::white();
 const HEADING_COLOR: Color = Color::new();
 const BODY_COLOR: Color = Color { r: 0x7e, g: 0x86, b: 0x8d, a: 0xff };
@@ -94,7 +95,12 @@ enum RecoveryMessages {
     ResetFailed,
 }
 
-const RECOVERY_MODE_HEADLINE: &'static str = "Recovery mode";
+struct PngImage {
+    file: String,
+    loaded_info: Option<(Size, Image, Point2D<f32>)>,
+}
+
+const RECOVERY_MODE_HEADLINE: &'static str = "Recovery Mode";
 const RECOVERY_MODE_BODY: &'static str = "Press and hold both volume keys to factory reset.";
 
 const COUNTDOWN_MODE_HEADLINE: &'static str = "Factory reset device";
@@ -184,7 +190,7 @@ impl RenderResources {
         let body_wrap = heading_label_size.width / body_text_size * 3.0;
         let body_label = SizedText::new(context, body, body_text_size, body_wrap as usize, face);
 
-        let countdown_text_size = min_dimension / 6.0;
+        let countdown_text_size = min_dimension / 4.0;
         let countdown_label = SizedText::new(
             context,
             &format!("{:02}", countdown_ticks),
@@ -208,7 +214,7 @@ struct RecoveryViewAssistant {
     countdown_ticks: u8,
     composition: Composition,
     render_resources: Option<RenderResources>,
-    rasters: Option<(Size, Vec<(Raster, Style)>, Point2D<f32>)>,
+    logo_image: PngImage,
 }
 
 impl RecoveryViewAssistant {
@@ -222,6 +228,7 @@ impl RecoveryViewAssistant {
 
         let composition = Composition::new(BG_COLOR);
         let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
+        let logo_image = PngImage { file: LOGO_IMAGE_PATH.to_string(), loaded_info: None };
 
         Ok(RecoveryViewAssistant {
             face,
@@ -234,7 +241,7 @@ impl RecoveryViewAssistant {
             countdown_task: None,
             countdown_ticks: FACTORY_RESET_TIMER_IN_SECONDS,
             render_resources: None,
-            rasters: None,
+            logo_image,
         })
     }
 
@@ -327,35 +334,28 @@ impl ViewAssistant for RecoveryViewAssistant {
             RenderExt { pre_clear: Some(PreClear { color: BG_COLOR }), ..Default::default() };
         let image = render_context.get_current_image(context);
 
+        let (logo_size, png_image, logo_position) =
+            self.logo_image.loaded_info.take().unwrap_or_else(|| {
+                let file = File::open(&self.logo_image.file).expect("failed to load logo png");
+                let decoder = png::Decoder::new(file);
+                let (info, mut reader) = decoder.read_info().unwrap();
+                let image = render_context
+                    .new_image_from_png(&mut reader)
+                    .expect(&format!("failed to decode file {}", &self.logo_image.file));
+                let size = Size::new(info.width as f32, info.height as f32);
+
+                // Calculate position for centering the logo image
+                let logo_position = {
+                    let x = (target_size.width - size.width) / 2.0;
+                    let y = target_size.height / 2.0 - size.height;
+                    point2(x, y)
+                };
+
+                (size, image, logo_position)
+            });
+
         // Cache loaded png info and position
-        let (logo_size, rasters, logo_position) = self.rasters.get_or_insert_with(|| {
-            match carnelian::render::Shed::open(LOGO_IMAGE_PATH) {
-                Ok(shed) => {
-                    let shed_size = shed.size();
-                    let max_logo_size = f32::max(shed_size.width, shed_size.height);
-                    let target_size_min = f32::min(target_size.width, target_size.height);
-                    let scale_factor: f32 = 0.24 * target_size_min / max_logo_size;
-                    let logo_size = shed_size * scale_factor;
-                    let logo_position: Point2D<f32> = {
-                        let x = (target_size.width - logo_size.width) / 2.0;
-                        let y = target_size.height * 0.255;
-                        point2(x, y)
-                    };
-                    let transform = Transform2D::create_scale(scale_factor, scale_factor)
-                        .post_translate(Vector2D::new(logo_position.x, logo_position.y));
-                    (logo_size, shed.rasters(render_context, Some(&transform)), logo_position)
-                }
-                Err(e) => {
-                    println!("recovery: Warning: No logo found {}", e);
-                    let logo_position: Point2D<f32> = {
-                        let x = target_size.width / 2.0 - 72.0;
-                        let y = target_size.height / 4.0;
-                        point2(x, y)
-                    };
-                    (size2(144.0, 144.0), Vec::new(), logo_position)
-                }
-            }
-        });
+        self.logo_image.loaded_info.replace((logo_size, png_image, logo_position));
 
         let (heading_label_layer, heading_label_offset, heading_label_size) = {
             let heading_label_size = render_resources.heading_label.text.bounding_box.size;
@@ -406,7 +406,7 @@ impl ViewAssistant for RecoveryViewAssistant {
         };
 
         if self.reset_state_machine.is_counting_down() {
-            let logo_center = Rect::new(*logo_position, *logo_size).center();
+            let logo_center = Rect::new(logo_position, logo_size).center();
             // TODO: Don't recreate this raster every frame
             let circle_raster = raster_for_circle(
                 logo_center,
@@ -454,16 +454,28 @@ impl ViewAssistant for RecoveryViewAssistant {
             );
             render_context.render(&self.composition, None, image, &clear_background_ext);
         } else {
-            let raster_layer = rasters
-                .iter()
-                .map(|(raster, style)| Layer { raster: raster.clone(), style: *style });
+            // Determine visible rect and copy |png_image| to |image|.
+            let dst_rect = &Rect::new(logo_position, logo_size);
+            let output_rect = Rect::from_size(target_size);
+            let png_ext = RenderExt {
+                post_copy: dst_rect.intersection(&output_rect).map(|visible_rect| PostCopy {
+                    image,
+                    color: BG_COLOR,
+                    exposure_distance: Vector2D::zero(),
+                    copy_region: CopyRegion {
+                        src_offset: (visible_rect.origin - dst_rect.origin).to_point().to_u32(),
+                        dst_offset: visible_rect.origin.to_u32(),
+                        extent: visible_rect.size.to_u32(),
+                    },
+                }),
+                ..Default::default()
+            };
             self.composition.replace(
                 ..,
-                raster_layer
-                    .chain(std::iter::once(body_label_layer))
-                    .chain(std::iter::once(heading_label_layer)),
+                std::iter::once(body_label_layer).chain(std::iter::once(heading_label_layer)),
             );
             render_context.render(&self.composition, None, image, &clear_background_ext);
+            render_context.render(&self.composition, None, png_image, &png_ext);
         }
 
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
