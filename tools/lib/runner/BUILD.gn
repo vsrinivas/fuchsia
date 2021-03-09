@@ -13,7 +13,10 @@ go_library("runner") {
     "subprocess.go",
     "subprocess_test.go",
   ]
-  deps = [ "//tools/lib/logger" ]
+  deps = [
+    "//tools/lib/isatty",
+    "//tools/lib/logger",
+  ]
 }
 
 go_test("runner_tests") {

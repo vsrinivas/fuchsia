@@ -7,9 +7,11 @@ package runner
 import (
 	"context"
 	"io"
+	"os"
 	"os/exec"
 	"syscall"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/isatty"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
@@ -28,7 +30,7 @@ type SubprocessRunner struct {
 // which case the subprocess is killed so that no subprocesses it spun up are
 // orphaned.
 func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
-	return r.RunWithStdin(ctx, command, stdout, stderr, nil)
+	return r.RunWithStdin(ctx, command, stdout, stderr, os.Stdin)
 }
 
 // RunWithStdin operates identically to Run, but additionally pipes input to the
@@ -40,9 +42,15 @@ func (r *SubprocessRunner) RunWithStdin(ctx context.Context, command []string, s
 	cmd.Stdin = stdin
 	cmd.Dir = r.Dir
 	cmd.Env = r.Env
-	// Set a process group ID so we can kill the entire group, meaning the
-	// process and any of its children.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		// Set a process group ID so we can kill the entire group, meaning the
+		// process and any of its children.
+		Setpgid: true,
+		// Detach the subprocess's stdin from the terminal for potentially
+		// interactive commands. Otherwise it's not possible to pipe the
+		// parent's stdin into the subprocess.
+		Noctty: isatty.IsTerminal(),
+	}
 	if len(cmd.Env) > 0 {
 		logger.Debugf(ctx, "environment of subprocess: %v", cmd.Env)
 	}
