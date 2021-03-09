@@ -11,6 +11,12 @@ config("fidl-llcpp-deprecated-raw-channels") {
 
   # Please do not add to this list. Refer to fxbug.dev/69585 to see
   # how a target could be migrated to use typed channels.
+  #
+  # To regenerate this list, run
+  #
+  #   scripts/gn/trim_visibility.py --target="//build/cpp:fidl-llcpp-deprecated-raw-channels"
+  #
+  # and replace the contents of `visibility` with the script output.
   visibility = [
     "//examples/dotmatrix_display:bin2",
     "//garnet/public/lib/svc/cpp:cpp",
@@ -196,10 +202,9 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/lib/loader_service:loader_service",
     "//src/lib/loader_service:loader_service_test",
     "//src/lib/loader_service:loader_service_test_fixture",
-    "//src/lib/storage/vfs/cpp",
+    "//src/lib/storage/vfs/cpp:cpp",
     "//src/lib/storage/vfs/cpp:fs-connection-test",
     "//src/lib/storage/vfs/cpp:fs-vnode-test",
-    "//src/media/audio/audio_core:unittest_bin",
     "//src/media/audio/drivers/usb-audio:shared",
     "//src/media/audio/drivers/usb-audio:usb-audio",
     "//src/media/audio/drivers/usb-audio/tests:usb-audio-test-bin",
@@ -214,12 +219,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/security/zxcrypt/tests:zxcrypt",
     "//src/storage/bin/blobfs:blobfs",
     "//src/storage/bin/storage-metrics:storage-metrics",
-    "//src/storage/blobfs:blobfs",
-    "//src/storage/blobfs/test:blobfs-integration",
-    "//src/storage/blobfs/test:blobfs_integration",
-    "//src/storage/blobfs/test:blobfs_unittest",
-    "//src/storage/blobfs/test:executable_mount",
-    "//src/storage/blobfs/test:external_decompressor_integration",
     "//src/storage/conformance/conformance_harness/minfs:bin",
     "//src/storage/conformance/conformance_harness/ulibfs:bin",
     "//src/storage/factory/factoryfs:factoryfs",
@@ -286,7 +285,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/virtualization/bin/guest:bin",
     "//src/virtualization/bin/guest_runner:bin",
     "//vendor/*",
-    "//zircon/system/ulib/audio-utils-legacy:audio-utils-legacy",
     "//zircon/system/ulib/block-client:block-client",
     "//zircon/system/ulib/c/test:cdebugdata-test",
     "//zircon/system/ulib/debugdata/test:debugdata",
@@ -298,7 +296,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//zircon/system/ulib/inet6:netifc-discover",
     "//zircon/system/ulib/intel-hda:intel-hda",
     "//zircon/system/ulib/log-writer-logger:log-writer-logger",
-    "//zircon/system/ulib/memfs:memfs",
     "//zircon/system/ulib/mock-boot-arguments:mock-boot-arguments",
     "//zircon/system/ulib/ramdevice-client:ramdevice-client",
     "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",
