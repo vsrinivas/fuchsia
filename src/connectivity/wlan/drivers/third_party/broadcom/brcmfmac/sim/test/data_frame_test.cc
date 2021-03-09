@@ -27,6 +27,8 @@ constexpr wlan_channel_t kDefaultChannel = {
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {.channel = kDefaultChannel};
 constexpr wlan_ssid_t kApSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kApBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
+const common::MacAddr kSoftapMacAddr({0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12});
+
 constexpr uint8_t kIes[] = {
     // SSID
     0x00, 0x0f, 'F', 'u', 'c', 'h', 's', 'i', 'a', ' ', 'F', 'a', 'k', 'e', ' ', 'A', 'P',
@@ -95,6 +97,35 @@ const std::vector<uint8_t> kSampleEapol = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x16, 0xdd, 0x14, 0x00, 0x0f, 0xac, 0x04, 0xf8, 0xac, 0xf0, 0xb5, 0xc5, 0xa3, 0xd1,
     0x2e, 0x83, 0xb6, 0xb5, 0x60, 0x5b, 0x8d, 0x75, 0x68};
+
+const std::vector<uint8_t> kSampleArpRequest{
+    // Ethernet header
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x44, 0x07, 0x0b, 0xb0, 0xf9, 0xed, 0x08, 0x06,
+    // ARP header
+    0x00, 0x01, 0x08, 0x00, 0x06, 0x04, 0x00, 0x01,
+    // Source MAC address
+    0x44, 0x07, 0x0b, 0xb0, 0xf9, 0xed,
+    // Source IP address
+    0xc0, 0xa8, 0x01, 0x5a,
+    // Destination Mac address
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // Destination IP address
+    0xc0, 0xa8, 0x01, 0x01};
+
+const std::vector<uint8_t> kSampleArpReply{
+    // Ethernet header
+    0x44, 0x07, 0x0b, 0xb0, 0xf9, 0xed, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0x08, 0x06,
+    // ARP header
+    0x00, 0x01, 0x08, 0x00, 0x06, 0x04, 0x00, 0x01,
+    // Source MAC address
+    0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc,
+    // Source IP address
+    0xc0, 0xa8, 0x01, 0x01,
+    // Destination Mac address
+    0x44, 0x07, 0x0b, 0xb0, 0xf9, 0xed,
+    // Destination IP address
+    0xc0, 0xa8, 0x01, 0x5a};
+
 class DataFrameTest : public SimTest {
  public:
   // How long an individual test will run for. We need an end time because tests run until no more
@@ -111,7 +142,7 @@ class DataFrameTest : public SimTest {
   void StartAssoc();
 
   // Send a data frame
-  void Tx(std::vector<uint8_t>& ethFrame);
+  void Tx(std::vector<uint8_t>& ethFrame, bool from_ap_iface = false);
   // Send a eapol request
   void TxEapolRequest(common::MacAddr dstAddr, common::MacAddr srcAddr,
                       const std::vector<uint8_t>& eapol);
@@ -166,6 +197,9 @@ class DataFrameTest : public SimTest {
 
   // This is the interface we will use for our single client interface
   SimInterface client_ifc_;
+
+  // This is the interface we will use for our single client interface
+  SimInterface softap_ifc_;
 
   // The MAC address of our client interface
   common::MacAddr ifc_mac_;
@@ -262,6 +296,8 @@ void DataFrameTest::Init() {
 
   // Bring up the interface
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_, std::nullopt, kSoftapMacAddr),
+            ZX_OK);
 
   // Figure out the interface's mac address
   client_ifc_.GetMacAddr(&ifc_mac_);
@@ -340,7 +376,6 @@ void DataFrameTest::OnDataRecv(const void* data_buffer, size_t data_size) {
   non_eapol_data_count++;
 }
 
-
 void DataFrameTest::StartAssoc() {
   // Send join request
   BRCMF_DBG(SIM, "Start assoc: @ %lu\n", env_->GetTime().get());
@@ -368,15 +403,21 @@ void DataFrameTest::TxComplete(void* ctx, zx_status_t status, ethernet_netbuf_t*
   context->sent_data.push_back(std::move(payload));
 }
 
-void DataFrameTest::Tx(std::vector<uint8_t>& ethFrame) {
+void DataFrameTest::Tx(std::vector<uint8_t>& ethFrame, bool is_from_ap) {
   // Wrap frame in a netbuf
   ethernet_netbuf_t* netbuf = new ethernet_netbuf_t;
   netbuf->data_buffer = ethFrame.data();
   netbuf->data_size = ethFrame.size();
 
   // Send it
-  client_ifc_.if_impl_ops_->data_queue_tx(client_ifc_.if_impl_ctx_, 0, netbuf, TxComplete,
-                                          &data_context_);
+  if (is_from_ap) {
+    softap_ifc_.if_impl_ops_->data_queue_tx(client_ifc_.if_impl_ctx_, 0, netbuf, TxComplete,
+                                            &data_context_);
+  } else {
+    client_ifc_.if_impl_ops_->data_queue_tx(client_ifc_.if_impl_ctx_, 0, netbuf, TxComplete,
+                                            &data_context_);
+  }
+
   ethFrame.clear();
   delete netbuf;
 }
@@ -437,7 +478,8 @@ TEST_F(DataFrameTest, TxDataFrame) {
   // Simulate sending a data frame from driver to the AP
   data_context_.expected_sent_data.push_back(
       CreateEthernetFrame(kClientMacAddress, ifc_mac_, htobe16(ETH_P_IP), kSampleEthBody));
-  SCHEDULE_CALL(zx::sec(1), &DataFrameTest::Tx, this, data_context_.expected_sent_data.front());
+  SCHEDULE_CALL(zx::sec(1), &DataFrameTest::Tx, this, data_context_.expected_sent_data.front(),
+                false);
   recv_addr_capture_filter = ap.GetBssid();
 
   env_->Run();
@@ -458,6 +500,32 @@ TEST_F(DataFrameTest, TxDataFrame) {
   EXPECT_EQ(env_data_frame_capture_.front().qosControl_.value(), 6);
 }
 
+// Ensure there is no crash when transmitting ARP Request frame.
+TEST_F(DataFrameTest, TxArpResquestFrame) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  aps_.push_back(&ap);
+
+  // Assoc driver with fake AP
+  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  SCHEDULE_CALL(zx::msec(10), &DataFrameTest::StartAssoc, this);
+
+  // Simulate sending a EAPOL packet from us to the AP
+  data_context_.expected_sent_data.push_back(kSampleArpRequest);
+  SCHEDULE_CALL(zx::sec(1), &DataFrameTest::Tx, this, kSampleArpRequest, true);
+
+  env_->Run();
+
+  // Verify frame was rejected
+  EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
+  EXPECT_EQ(data_context_.tx_data_status_codes.front(), ZX_OK);
+  EXPECT_EQ(data_context_.sent_data.size(), 1U);
+}
+
 // Verify that malformed ethernet header frames are detected by the driver
 TEST_F(DataFrameTest, TxMalformedDataFrame) {
   // Create our device instance
@@ -474,14 +542,15 @@ TEST_F(DataFrameTest, TxMalformedDataFrame) {
 
   // Simulate sending a illegal ethernet frame from us to the AP
   std::vector<uint8_t> ethFrame = {0x20, 0x43};
-  SCHEDULE_CALL(zx::sec(1), &DataFrameTest::Tx, this, ethFrame);
+  SCHEDULE_CALL(zx::sec(1), &DataFrameTest::Tx, this, ethFrame, false);
+  recv_addr_capture_filter = ap.GetBssid();
 
   env_->Run();
 
   // Verify frame was rejected
   EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
   EXPECT_EQ(data_context_.tx_data_status_codes.front(), ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(data_context_.sent_data.size(), 0U);
+  ASSERT_EQ(data_context_.sent_data.size(), data_context_.expected_sent_data.size());
 }
 
 TEST_F(DataFrameTest, TxEapolFrame) {
@@ -548,6 +617,34 @@ TEST_F(DataFrameTest, RxDataFrame) {
   EXPECT_EQ(non_eapol_data_count, 1U);
   ASSERT_EQ(data_context_.received_data.size(), data_context_.expected_received_data.size());
   EXPECT_EQ(data_context_.received_data.front(), data_context_.expected_received_data.front());
+}
+
+// Ensure there is no crash when receiving an ARP Reply frame.
+TEST_F(DataFrameTest, RxArpReplyFrame) {
+  // Create our device instance
+  Init();
+
+  zx::duration delay = zx::msec(1);
+  // Start a fake AP
+  simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  aps_.push_back(&ap);
+
+  // Assoc driver with fake AP
+  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  SCHEDULE_CALL(delay, &DataFrameTest::StartAssoc, this);
+
+  // Want to send packet from test to driver
+  data_context_.expected_received_data.push_back(kSampleArpReply);
+  // Ensure the data packet is sent after the client has associated
+  delay += kSsidEventDelay + zx::msec(100);
+  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kSoftapMacAddr, kSampleArpReply);
+
+  // Run
+  env_->Run();
+
+  // Confirm that the driver received that packet
+  EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
 }
 
 // Test driver can receive data frames

@@ -25,7 +25,7 @@ void BootloaderMacAddrTest::Init(const common::MacAddr& mac_addr) {
 
 // Verify that the value from the bootloader is assigned to a client interface
 TEST_F(BootloaderMacAddrTest, GetMacAddrFromBootloader) {
-  const uint8_t kMacAddr[ETH_ALEN] = { 1, 2, 3, 4, 5, 6 };
+  const uint8_t kMacAddr[ETH_ALEN] = {1, 2, 3, 4, 5, 6};
   common::MacAddr mac_addr(kMacAddr);
 
   Init(mac_addr);

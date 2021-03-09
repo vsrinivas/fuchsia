@@ -42,7 +42,7 @@ class ScanAndApStartTest : public SimTest {
   ScanTestIfc client_ifc_;
   ScanTestIfc softap_ifc_;
 
-  enum {NOT_STARTED, STARTED, DONE} ap_start_progress_ = NOT_STARTED;
+  enum { NOT_STARTED, STARTED, DONE } ap_start_progress_ = NOT_STARTED;
 };
 
 void ScanTestIfc::OnScanEnd(const wlanif_scan_end_t* end) {
