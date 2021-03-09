@@ -1299,7 +1299,7 @@ bool H264Decoder::HandleFrameNumGap(int frame_num) {
   // 7.4.3/7-23
   int unused_short_term_frame_num = (prev_ref_frame_num_ + 1) % max_frame_num_;
   while (unused_short_term_frame_num != frame_num) {
-    scoped_refptr<H264Picture> pic(new H264Picture());
+    scoped_refptr<H264Picture> pic = accelerator_->CreateH264Picture();
     if (!InitNonexistingPicture(pic, unused_short_term_frame_num))
       return false;
 
