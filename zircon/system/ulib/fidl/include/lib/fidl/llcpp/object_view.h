@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_OBJECT_VIEW_H_
 
 #include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/unowned_ptr.h>
 
 namespace fidl {
 
@@ -17,6 +18,8 @@ class ObjectView final {
   template <typename... Args>
   explicit ObjectView(AnyAllocator& allocator, Args&&... args)
       : object_(allocator.Allocate<T>(std::forward<Args>(args)...)) {}
+  // Uses an object already allocated and managed elsewhere.
+  explicit ObjectView(unowned_ptr_t<T> other) { object_ = other.get(); }
 
   template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
   U& operator*() const {

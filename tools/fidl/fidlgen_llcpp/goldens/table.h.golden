@@ -150,6 +150,12 @@ class SimpleTable final {
   SimpleTable() = default;
   explicit SimpleTable(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  // This constructor allows a user controlled allocation (not using a
+  // FidlAllocator). It should only be used when performance is key. As soon as
+  // the frame is given to the table, it must not be used directly or for
+  // another table.
+  explicit SimpleTable(::fidl::ObjectView<Frame>&& frame)
+      : frame_ptr_(std::move(frame)) {}
   explicit SimpleTable(::fidl::Allocator& allocator)
       : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
   explicit SimpleTable(::fidl::tracking_ptr<Frame>&& frame_ptr)
@@ -333,12 +339,16 @@ class SimpleTable final {
   class Builder;
   class UnownedBuilder;
 
+  // Frames are managed automatically by the FidlAllocator class.
+  // The only direct usage is when performance is key and a frame needs to be
+  // allocated outside a FidlAllocator. Once created, a frame can only be used
+  // for one single table.
   class Frame final {
    public:
     Frame() = default;
-    // In its intended usage, Frame will be referenced by a tracking_ptr. If the
-    // tracking_ptr is assigned before a move or copy, then it will reference
-    // the old invalid object. Because this is unsafe, copies are disallowed and
+    // In its intended usage, Frame will be referenced by an ObjectView. If the
+    // ObjectView is assigned before a move or copy, then it will reference the
+    // old invalid object. Because this is unsafe, copies are disallowed and
     // moves are only allowed by friend classes that operate safely.
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;
@@ -637,6 +647,12 @@ class ReverseOrdinalTable final {
   ReverseOrdinalTable() = default;
   explicit ReverseOrdinalTable(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  // This constructor allows a user controlled allocation (not using a
+  // FidlAllocator). It should only be used when performance is key. As soon as
+  // the frame is given to the table, it must not be used directly or for
+  // another table.
+  explicit ReverseOrdinalTable(::fidl::ObjectView<Frame>&& frame)
+      : frame_ptr_(std::move(frame)) {}
   explicit ReverseOrdinalTable(::fidl::Allocator& allocator)
       : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
   explicit ReverseOrdinalTable(::fidl::tracking_ptr<Frame>&& frame_ptr)
@@ -824,12 +840,16 @@ class ReverseOrdinalTable final {
   class Builder;
   class UnownedBuilder;
 
+  // Frames are managed automatically by the FidlAllocator class.
+  // The only direct usage is when performance is key and a frame needs to be
+  // allocated outside a FidlAllocator. Once created, a frame can only be used
+  // for one single table.
   class Frame final {
    public:
     Frame() = default;
-    // In its intended usage, Frame will be referenced by a tracking_ptr. If the
-    // tracking_ptr is assigned before a move or copy, then it will reference
-    // the old invalid object. Because this is unsafe, copies are disallowed and
+    // In its intended usage, Frame will be referenced by an ObjectView. If the
+    // ObjectView is assigned before a move or copy, then it will reference the
+    // old invalid object. Because this is unsafe, copies are disallowed and
     // moves are only allowed by friend classes that operate safely.
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;
@@ -1079,6 +1099,12 @@ class OlderSimpleTable final {
   OlderSimpleTable() = default;
   explicit OlderSimpleTable(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  // This constructor allows a user controlled allocation (not using a
+  // FidlAllocator). It should only be used when performance is key. As soon as
+  // the frame is given to the table, it must not be used directly or for
+  // another table.
+  explicit OlderSimpleTable(::fidl::ObjectView<Frame>&& frame)
+      : frame_ptr_(std::move(frame)) {}
   explicit OlderSimpleTable(::fidl::Allocator& allocator)
       : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
   explicit OlderSimpleTable(::fidl::tracking_ptr<Frame>&& frame_ptr)
@@ -1264,12 +1290,16 @@ class OlderSimpleTable final {
   class Builder;
   class UnownedBuilder;
 
+  // Frames are managed automatically by the FidlAllocator class.
+  // The only direct usage is when performance is key and a frame needs to be
+  // allocated outside a FidlAllocator. Once created, a frame can only be used
+  // for one single table.
   class Frame final {
    public:
     Frame() = default;
-    // In its intended usage, Frame will be referenced by a tracking_ptr. If the
-    // tracking_ptr is assigned before a move or copy, then it will reference
-    // the old invalid object. Because this is unsafe, copies are disallowed and
+    // In its intended usage, Frame will be referenced by an ObjectView. If the
+    // ObjectView is assigned before a move or copy, then it will reference the
+    // old invalid object. Because this is unsafe, copies are disallowed and
     // moves are only allowed by friend classes that operate safely.
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;
@@ -1527,6 +1557,12 @@ class NewerSimpleTable final {
   NewerSimpleTable() = default;
   explicit NewerSimpleTable(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  // This constructor allows a user controlled allocation (not using a
+  // FidlAllocator). It should only be used when performance is key. As soon as
+  // the frame is given to the table, it must not be used directly or for
+  // another table.
+  explicit NewerSimpleTable(::fidl::ObjectView<Frame>&& frame)
+      : frame_ptr_(std::move(frame)) {}
   explicit NewerSimpleTable(::fidl::Allocator& allocator)
       : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
   explicit NewerSimpleTable(::fidl::tracking_ptr<Frame>&& frame_ptr)
@@ -1712,12 +1748,16 @@ class NewerSimpleTable final {
   class Builder;
   class UnownedBuilder;
 
+  // Frames are managed automatically by the FidlAllocator class.
+  // The only direct usage is when performance is key and a frame needs to be
+  // allocated outside a FidlAllocator. Once created, a frame can only be used
+  // for one single table.
   class Frame final {
    public:
     Frame() = default;
-    // In its intended usage, Frame will be referenced by a tracking_ptr. If the
-    // tracking_ptr is assigned before a move or copy, then it will reference
-    // the old invalid object. Because this is unsafe, copies are disallowed and
+    // In its intended usage, Frame will be referenced by an ObjectView. If the
+    // ObjectView is assigned before a move or copy, then it will reference the
+    // old invalid object. Because this is unsafe, copies are disallowed and
     // moves are only allowed by friend classes that operate safely.
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;
@@ -1926,6 +1966,12 @@ class EmptyTable final {
   EmptyTable() = default;
   explicit EmptyTable(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  // This constructor allows a user controlled allocation (not using a
+  // FidlAllocator). It should only be used when performance is key. As soon as
+  // the frame is given to the table, it must not be used directly or for
+  // another table.
+  explicit EmptyTable(::fidl::ObjectView<Frame>&& frame)
+      : frame_ptr_(std::move(frame)) {}
   explicit EmptyTable(::fidl::Allocator& allocator)
       : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
   explicit EmptyTable(::fidl::tracking_ptr<Frame>&& frame_ptr)
@@ -2109,12 +2155,16 @@ class EmptyTable final {
   class Builder;
   class UnownedBuilder;
 
+  // Frames are managed automatically by the FidlAllocator class.
+  // The only direct usage is when performance is key and a frame needs to be
+  // allocated outside a FidlAllocator. Once created, a frame can only be used
+  // for one single table.
   class Frame final {
    public:
     Frame() = default;
-    // In its intended usage, Frame will be referenced by a tracking_ptr. If the
-    // tracking_ptr is assigned before a move or copy, then it will reference
-    // the old invalid object. Because this is unsafe, copies are disallowed and
+    // In its intended usage, Frame will be referenced by an ObjectView. If the
+    // ObjectView is assigned before a move or copy, then it will reference the
+    // old invalid object. Because this is unsafe, copies are disallowed and
     // moves are only allowed by friend classes that operate safely.
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;

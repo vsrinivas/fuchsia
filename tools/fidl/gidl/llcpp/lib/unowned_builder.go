@@ -152,12 +152,12 @@ func (b *unownedBuilder) visitTable(value gidlir.Record, decl *gidlmixer.TableDe
 	frameVar := b.newVar()
 
 	b.write(
-		"auto %s = %s::Frame();\n", frameVar, declName(decl))
+		"%s::Frame %s;\n", declName(decl), frameVar)
 
-	builderVar := b.newVar()
+	tableVar := b.newVar()
 
 	b.write(
-		"auto %s = %s::Builder(fidl::unowned_ptr(&%s));\n", builderVar, declName(decl), frameVar)
+		"%s %s(::fidl::ObjectView<%s::Frame>(fidl::unowned_ptr(&%s)));\n", declName(decl), tableVar, declName(decl), frameVar)
 
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
@@ -171,12 +171,9 @@ func (b *unownedBuilder) visitTable(value gidlir.Record, decl *gidlmixer.TableDe
 		alignedVar := b.newVar()
 		b.write("fidl::aligned<%s> %s = std::move(%s);\n", typeName(fieldDecl), alignedVar, fieldVar)
 		b.write(
-			"%s.set_%s(fidl::unowned_ptr(&%s));\n", builderVar, field.Key.Name, alignedVar)
+			"%s.set_%s(fidl::unowned_ptr(&%s));\n", tableVar, field.Key.Name, alignedVar)
 
 	}
-	tableVar := b.newVar()
-	b.write(
-		"auto %s = %s.build();\n", tableVar, builderVar)
 
 	return fmt.Sprintf("std::move(%s)", tableVar)
 }
