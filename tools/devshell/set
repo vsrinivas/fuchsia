@@ -155,7 +155,7 @@ function main {
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
 
-  if is_feature_enabled "fint_set"; then
+  if ! is_feature_enabled "legacy_set"; then
     # Go commands must be run from first-level subdirectories because that's
     # where the go.mod files are.
     cd "${FUCHSIA_DIR}/tools"
