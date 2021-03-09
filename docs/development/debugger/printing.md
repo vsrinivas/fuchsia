@@ -96,7 +96,7 @@ escaped contents can be literal as long as they are balanced, otherwise, escape 
 with a backslash. Include a literal backslash with two blackslashes:
 
   * `$(something with spaces)`
-  * `$({{impl}})`
+  * `{% verbatim %}$({{impl}}){% endverbatim %}`  {# note: the verbatim block is to avoid issues with the fuchsia.dev template engine #}
   * `$(some_closure(data))`
   * `$(line\)noise\\)`
 
