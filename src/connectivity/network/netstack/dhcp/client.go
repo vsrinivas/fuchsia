@@ -440,17 +440,11 @@ func (c *Client) Run(ctx context.Context) {
 				return
 			}
 		} else {
-			ch := make(chan struct{})
-			timer := c.stack.Clock().AfterFunc(waitDuration, func() {
-				ch <- struct{}{}
-			})
-
 			_ = syslog.InfoTf(tag, "%s: scheduling renewal in %.fs", nicName, waitDuration.Seconds())
 			select {
 			case <-ctx.Done():
-				timer.Stop()
 				return
-			case <-ch:
+			case <-c.retransTimeout(waitDuration):
 			}
 		}
 

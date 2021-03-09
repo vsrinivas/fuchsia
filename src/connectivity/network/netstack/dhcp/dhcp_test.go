@@ -18,7 +18,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
-	"gvisor.dev/gvisor/pkg/tcpip/faketime"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
@@ -55,9 +54,8 @@ var (
 	}
 )
 
-func createTestStack(clock tcpip.Clock) *stack.Stack {
+func createTestStack() *stack.Stack {
 	return stack.New(stack.Options{
-		Clock: clock,
 		NetworkProtocols: []stack.NetworkProtocolFactory{
 			arp.NewProtocol,
 			ipv4.NewProtocol,
@@ -213,7 +211,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 			return pkt
 		},
 	}
-	serverStack := createTestStack(nil /* clock */)
+	serverStack := createTestStack()
 	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
 
 	for i := range clientLinkEPs {
@@ -233,7 +231,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	clientStack := createTestStack(nil /* clock */)
+	clientStack := createTestStack()
 	for i := range clientLinkEPs {
 		clientNICID := tcpip.NICID(i + 1)
 		addEndpointToStack(t, nil, clientNICID, clientStack, &clientLinkEPs[i])
@@ -273,15 +271,15 @@ type randSourceStub struct {
 
 func (s *randSourceStub) Int63() int64 { return s.src }
 
-func setupTestEnv(ctx context.Context, t *testing.T, serverCfg Config, clock tcpip.Clock) (clientStack, serverStack *stack.Stack, client, server *endpoint, _ *Client) {
+func setupTestEnv(ctx context.Context, t *testing.T, serverCfg Config) (clientStack, serverStack *stack.Stack, client, server *endpoint, _ *Client) {
 	var serverLinkEP, clientLinkEP endpoint
 	serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
 	clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
 
-	serverStack = createTestStack(clock)
+	serverStack = createTestStack()
 	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
 
-	clientStack = createTestStack(clock)
+	clientStack = createTestStack()
 	addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
 
 	if _, err := newEPConnServer(ctx, serverStack, defaultClientAddrs, serverCfg); err != nil {
@@ -296,10 +294,10 @@ func TestDHCP(t *testing.T) {
 	serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
 	clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
 
-	serverStack := createTestStack(nil /* clock */)
+	serverStack := createTestStack()
 	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
 
-	clientStack := createTestStack(nil /* clock */)
+	clientStack := createTestStack()
 	addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -431,7 +429,7 @@ func TestDelayRetransmission(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			_, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg, nil /* clock */)
+			_, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
 			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 				func() {
 					switch mustMsgType(t, hdr(pkt.Data().AsRange().ToOwnedView())) {
@@ -479,7 +477,7 @@ func TestDelayRetransmission(t *testing.T) {
 }
 
 func TestExponentialBackoff(t *testing.T) {
-	s := createTestStack(nil /* clock */)
+	s := createTestStack()
 	if err := s.CreateNIC(testNICID, &endpoint{}); err != nil {
 		t.Fatalf("s.CreateNIC(_, nil) = %s", err)
 	}
@@ -619,7 +617,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				wg.Wait()
 			}()
 
-			clientStack, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg, nil /* clock */)
+			clientStack, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
 			clientTransitionsDone := make(chan struct{})
 			c.now = stubTimeNow(ctx, time.Now(), tc.durations, clientTransitionsDone)
 
@@ -772,7 +770,7 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			_, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg, nil /* clock */)
+			_, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
 			info := c.Info()
 			info.Retransmission = retransTimeout
 			c.info.Store(info)
@@ -915,7 +913,7 @@ func TestRenewRebindBackoff(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			clientStack, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg, nil /* clock */)
+			clientStack, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
 
 			now := time.Now()
 			info := c.Info()
@@ -1035,7 +1033,7 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	_, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg, nil /* clock */)
+	_, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
 
 	timeoutCh := make(chan time.Time)
 	c.retransTimeout = func(time.Duration) <-chan time.Time {
@@ -1278,7 +1276,7 @@ func TestStateTransition(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			s := createTestStack(nil /* clock */)
+			s := createTestStack()
 			if err := s.CreateNIC(testNICID, &endpoint{}); err != nil {
 				t.Fatalf("s.CreateNIC(_, nil) = %s", err)
 			}
@@ -1402,7 +1400,7 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	s := createTestStack(nil /* clock */)
+	s := createTestStack()
 	if err := s.CreateNIC(testNICID, &endpoint{}); err != nil {
 		t.Fatalf("s.CreateNIC(_, nil) = %s", err)
 	}
@@ -1535,10 +1533,10 @@ func TestTwoServers(t *testing.T) {
 	serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
 	clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
 
-	serverStack := createTestStack(nil /* clock */)
+	serverStack := createTestStack()
 	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
 
-	clientStack := createTestStack(nil /* clock */)
+	clientStack := createTestStack()
 	addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1574,7 +1572,7 @@ func TestClientRestartIPHeader(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientStack, _, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg, nil /* clock */)
+	clientStack, _, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg)
 
 	type Packet struct {
 		Addresses struct {
@@ -1693,13 +1691,13 @@ func TestDecline(t *testing.T) {
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
-	defer func() {
+	cancelCtx := func() {
 		cancel()
 		wg.Wait()
-	}()
+	}
+	defer cancelCtx()
 
-	clock := faketime.NewManualClock()
-	clientStack, serverStack, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg, clock)
+	clientStack, serverStack, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg)
 	arpEP, err := clientStack.GetNetworkEndpoint(testNICID, arp.ProtocolNumber)
 	if err != nil {
 		t.Fatalf("clientStack.GetNetworkEndpoint(%d, %d): %s", testNICID, arp.ProtocolNumber, err)
@@ -1717,14 +1715,17 @@ func TestDecline(t *testing.T) {
 		t.Fatalf("serverStack.AddAddress(%d, %d, %s): %s", testNICID, ipv4.ProtocolNumber, defaultClientAddrs[0], err)
 	}
 
-	type pktAndTime struct {
-		pkt  *stack.PacketBuffer
-		time time.Time
-	}
-	ch := make(chan pktAndTime, 3)
+	ch := make(chan *stack.PacketBuffer, 3)
 	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
-		ch <- pktAndTime{pkt: pkt.Clone(), time: time.Unix(0 /* sec */, clock.NowMonotonic())}
+		ch <- pkt.Clone()
 		return pkt
+	}
+
+	timeoutCh := make(chan time.Time)
+	var gotTimeouts []time.Duration
+	c.retransTimeout = func(d time.Duration) <-chan time.Time {
+		gotTimeouts = append(gotTimeouts, d)
+		return timeoutCh
 	}
 
 	wg.Add(1)
@@ -1739,10 +1740,9 @@ func TestDecline(t *testing.T) {
 		{optDHCPServer, []byte(serverAddr)},
 	}
 
-	var firstPacketTime time.Time
+	seenDecline := false
 	for {
-		r := <-ch
-		pkt := r.pkt
+		pkt := <-ch
 		ip := header.IPv4(pkt.Data().AsRange().ToOwnedView())
 		if !ip.IsValid(pkt.Size()) {
 			t.Fatal("sent invalid IPv4 packet")
@@ -1778,19 +1778,34 @@ func TestDecline(t *testing.T) {
 			t.Errorf("dhcpDECLINE options mismatch (-want +got):\n%s", diff)
 		}
 
-		// Note, the test server implementation is naive. It does not offer a new
-		// address if the originally offered address is declined.
-		if firstPacketTime.IsZero() {
-			firstPacketTime = r.time
-			clock.Advance(minBackoffAfterDupAddrDetetected)
+		timeoutCh <- time.Time{}
+		if !seenDecline {
+			seenDecline = true
 			continue
 		}
 
-		if got := r.time.Sub(firstPacketTime); got != minBackoffAfterDupAddrDetetected {
-			t.Errorf("expected %s to pass before restarting DHCP after DAD failure, got = %s", minBackoffAfterDupAddrDetetected, got)
-		}
-
 		break
+	}
+
+	cancelCtx()
+
+	// The first two timeouts are to retransmit the DHCP DISCOVER and DHCP REQUEST
+	// messages. The 3rd timeout is for the backoff timer in response to DAD
+	// failure. We test with two cycles of acquire -> DAD failure -> decline with
+	// these timeouts so we only validate the first 6 timeout values.
+	//
+	// Note: a 7th timeout may be requested if the DHCP client is not cancelled
+	// before the 3rd cycle starts but we ignore this.
+	retransTimeout := c.Info().Retransmission
+	if diff := cmp.Diff([]time.Duration{
+		retransTimeout,
+		retransTimeout,
+		minBackoffAfterDupAddrDetetected,
+		retransTimeout,
+		retransTimeout,
+		minBackoffAfterDupAddrDetetected,
+	}, gotTimeouts[:6]); diff != "" {
+		t.Errorf("timeouts mismatch (-want +got):\n%s", diff)
 	}
 }
 
@@ -1798,7 +1813,7 @@ func TestClientRestartLeaseTime(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientStack, _, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg, nil)
+	clientStack, _, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg)
 	// Always return the same arbitrary time.
 	c.now = func() time.Time { return time.Unix(1234, 5678) }
 
