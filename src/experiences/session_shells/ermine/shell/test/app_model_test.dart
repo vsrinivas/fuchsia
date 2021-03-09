@@ -9,6 +9,7 @@ import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_focus/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_inspect/inspect.dart' show Inspect;
@@ -27,6 +28,7 @@ import 'package:ermine/src/models/app_model.dart';
 void main() {
   AppModel appModel;
   ComponentContext componentContext;
+  ViewRef viewRef;
   Inspect inspect;
   KeyboardShortcuts keyboardShortcuts;
   PointerEventsStream pointerEventsStream;
@@ -39,6 +41,7 @@ void main() {
 
   setUp(() async {
     componentContext = MockComponentContext();
+    viewRef = MockViewRef();
     inspect = MockInspect();
     keyboardShortcuts = MockKeyboardShortcuts();
     pointerEventsStream = MockPointerEventsStream();
@@ -54,6 +57,7 @@ void main() {
 
     appModel = _TestAppModel(
       componentContext: componentContext,
+      viewRef: viewRef,
       inspect: inspect,
       keyboardShortcuts: keyboardShortcuts,
       pointerEventsStream: pointerEventsStream,
@@ -247,6 +251,7 @@ void main() {
 class _TestAppModel extends AppModel {
   _TestAppModel({
     ComponentContext componentContext,
+    ViewRef viewRef,
     Inspect inspect,
     KeyboardShortcuts keyboardShortcuts,
     PointerEventsStream pointerEventsStream,
@@ -257,6 +262,7 @@ class _TestAppModel extends AppModel {
     FocusChainListenerBinding focusChainListenerBinding,
   }) : super(
           componentContext: componentContext,
+          viewRef: viewRef,
           inspect: inspect,
           keyboardShortcuts: keyboardShortcuts,
           pointerEventsStream: pointerEventsStream,
@@ -287,6 +293,8 @@ PointerEvent _pointerEvent({PointerEventPhase phase, double x, double y}) =>
     );
 
 class MockComponentContext extends Mock implements ComponentContext {}
+
+class MockViewRef extends Mock implements ViewRef {}
 
 class MockInspect extends Mock implements Inspect {}
 

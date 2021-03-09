@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_inspect/inspect.dart';
+import 'package:fuchsia_scenic/views.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
@@ -69,6 +70,7 @@ class AppModel {
 
   AppModel({
     ComponentContext componentContext,
+    ViewRef viewRef,
     Inspect inspect,
     KeyboardShortcuts keyboardShortcuts,
     PointerEventsStream pointerEventsStream,
@@ -87,6 +89,9 @@ class AppModel {
     _componentContext ??= ComponentContext.create();
     final outgoing = _componentContext.outgoing;
 
+    // Initialize ViewRef.
+    viewRef ??= ScenicContext.hostViewRef();
+
     // Setup child models.
     topbarModel = TopbarModel(appModel: this);
 
@@ -99,7 +104,7 @@ class AppModel {
 
     // Setup keyboard shortcuts.
     _keyboardShortcuts ??= KeyboardShortcuts.withViewRef(
-      _componentContext.viewRef,
+      viewRef,
       actions: actions,
       bindings: keyboardBindings,
     );

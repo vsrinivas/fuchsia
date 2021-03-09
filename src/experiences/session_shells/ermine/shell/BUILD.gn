@@ -126,6 +126,7 @@ flutter_app("ermine") {
     dart_package_label.fuchsia_inspect,
     dart_package_label.fuchsia_internationalization_flutter,
     dart_package_label.fuchsia_logger,
+    dart_package_label.fuchsia_scenic,
     dart_package_label.fuchsia_scenic_flutter,
     dart_package_label.fuchsia_services,
     dart_package_label.zircon,
