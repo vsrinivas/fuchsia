@@ -248,7 +248,7 @@ class AudioDeviceEnumeratorAddByChannelTest : public HermeticAudioTest {
   void EnumeratorAddDevice(zx::channel remote_channel) {
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
     stream_config.set_channel(std::move(remote_channel));
-    audio_device_enumerator_->AddDeviceByChannel2("test device", false, std::move(stream_config));
+    audio_device_enumerator_->AddDeviceByChannel("test device", false, std::move(stream_config));
   }
 
   fuchsia::media::AudioDeviceEnumeratorPtr audio_device_enumerator_;
@@ -300,7 +300,7 @@ void AudioDeviceEnumeratorAddByChannelTest::TearDown() {
   HermeticAudioTest::TearDown();
 }
 
-// Test that |AddDeviceByChannel| and |AddDeviceByChannel2| result in an |OnDeviceAdded| event.
+// Test that |AddDeviceByChannel| result in an |OnDeviceAdded| event.
 TEST_F(AudioDeviceEnumeratorAddByChannelTest, AddDevice) {
   // Expect that the added device is enumerated via the device enumerator.
   this->RunLoopUntil([this]() { return !this->devices().empty(); });

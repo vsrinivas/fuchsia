@@ -43,7 +43,7 @@ zx_status_t AudioDeviceManager::Init() {
 
   // Start monitoring for plug/unplug events of pluggable audio output devices.
   zx_status_t res =
-      plug_detector_->Start(fit::bind_member(this, &AudioDeviceManager::AddDeviceByChannel2));
+      plug_detector_->Start(fit::bind_member(this, &AudioDeviceManager::AddDeviceByChannel));
   if (res != ZX_OK) {
     FX_PLOGS(ERROR, res) << "AudioDeviceManager failed to start plug detector";
     return res;
@@ -436,17 +436,10 @@ void AudioDeviceManager::UpdateDefaultDevice(bool input) {
   }
 }
 
-void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::string device_name,
-                                            bool is_input) {
-  TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceByChannel");
-  FX_LOGS(ERROR) << "Not Adding " << (is_input ? "input" : "output") << " '" << device_name << "'";
-  FX_LOGS(ERROR) << "Deprecated API";
-}
-
-void AudioDeviceManager::AddDeviceByChannel2(
+void AudioDeviceManager::AddDeviceByChannel(
     std::string device_name, bool is_input,
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config) {
-  TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceByChannel2");
+  TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceByChannel");
   FX_LOGS(INFO) << "Adding " << (is_input ? "input" : "output") << " '" << device_name << "'";
 
   // Hand the stream off to the proper type of class to manage.

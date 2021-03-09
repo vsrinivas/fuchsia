@@ -5,7 +5,6 @@
 library fuchsia.media;
 
 using fuchsia.hardware.audio;
-using zx;
 
 bits AudioGainInfoFlags : uint32 {
     MUTE = 0x01;
@@ -109,10 +108,6 @@ protocol AudioDeviceEnumerator {
     [Deprecated, Transitional]
     GetDefaultOutputDevice() -> (uint64 device_token);
 
-    // TODO(fxbug.dev/49734): Rename AddDeviceByChannel2 to AddDeviceByChannel once the
-    // legacy driver method is fully removed.
-    AddDeviceByChannel(zx.handle:CHANNEL device_channel, string:256 device_name,
-                       bool is_input);
-    AddDeviceByChannel2(string:256 device_name, bool is_input,
-                        fuchsia.hardware.audio.StreamConfig channel);
+    AddDeviceByChannel(string:256 device_name, bool is_input,
+                       fuchsia.hardware.audio.StreamConfig channel);
 };

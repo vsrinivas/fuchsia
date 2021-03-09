@@ -97,9 +97,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
                      fuchsia::media::AudioGainValidFlags) final;
   void GetDefaultInputDevice(GetDefaultInputDeviceCallback cbk) final;
   void GetDefaultOutputDevice(GetDefaultOutputDeviceCallback cbk) final;
-  void AddDeviceByChannel(::zx::channel device_channel, std::string device_name,
-                          bool is_input) final;
-  void AddDeviceByChannel2(
+  void AddDeviceByChannel(
       std::string device_name, bool is_input,
       fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel) final;
 

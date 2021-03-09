@@ -19,10 +19,8 @@ void AudioDeviceEnumeratorStub::GetDefaultInputDevice(
     GetDefaultInputDeviceCallback get_def_in_cbk) {}
 void AudioDeviceEnumeratorStub::GetDefaultOutputDevice(
     GetDefaultOutputDeviceCallback get_def_out_cbk) {}
-void AudioDeviceEnumeratorStub::AddDeviceByChannel(::zx::channel channel, std::string dev_name,
-                                                   bool input) {}
 
-void AudioDeviceEnumeratorStub::AddDeviceByChannel2(
+void AudioDeviceEnumeratorStub::AddDeviceByChannel(
     std::string dev_name, bool is_input,
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel) {
   channel_ = std::move(channel);

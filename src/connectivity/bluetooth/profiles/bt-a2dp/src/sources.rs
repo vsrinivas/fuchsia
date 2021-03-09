@@ -101,7 +101,7 @@ impl AudioOutStream {
 
         let svc = fuchsia_component::client::connect_to_service::<AudioDeviceEnumeratorMarker>()
             .context("Failed to connect to AudioDeviceEnumerator")?;
-        svc.add_device_by_channel2("Bluetooth A2DP", false, client)?;
+        svc.add_device_by_channel("Bluetooth A2DP", false, client)?;
 
         Ok(frame_stream)
     }

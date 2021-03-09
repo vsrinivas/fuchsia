@@ -25,9 +25,7 @@ class AudioDeviceEnumeratorStub : public fuchsia::media::AudioDeviceEnumerator {
                      fuchsia::media::AudioGainValidFlags flags) final;
   void GetDefaultInputDevice(GetDefaultInputDeviceCallback get_default_input_callback) final;
   void GetDefaultOutputDevice(GetDefaultOutputDeviceCallback get_default_output_callback) final;
-  void AddDeviceByChannel(::zx::channel device_channel, std::string device_name,
-                          bool is_input) final;
-  void AddDeviceByChannel2(
+  void AddDeviceByChannel(
       std::string device_name, bool is_input,
       fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel) final;
 

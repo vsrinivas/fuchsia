@@ -35,7 +35,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let svc = fuchsia_component::client::connect_to_service::<AudioDeviceEnumeratorMarker>()
         .context("Failed to connect to AudioDeviceEnumerator")?;
-    svc.add_device_by_channel2("AudioOutHarness", false, client)?;
+    svc.add_device_by_channel("AudioOutHarness", false, client)?;
 
     info!("Starting frame stream read loop");
     while let Some(Ok(_frame)) = frame_stream.next().await {}
