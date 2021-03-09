@@ -129,16 +129,18 @@ template("distribution_manifest") {
   }
 }
 
-# Adds distribution entries from a given FINI manifest file.
+# Adds distribution entries from a given distribution manifest file.
 #
-# Use this template to ensure that all entries from a given input FINI
-# manifest are collected through distribution_manifest() or fini_manifest()
-# when this target is part of their dependency tree.
+# Use this template to ensure that all entries from a given input
+# distribution manifest file are collected through distribution_manifest() or
+# fini_manifest() when this target is part of their dependency tree.
+#
+# See documentation for distribution_manifest() for the file format.
 #
 # Parameters
 #
 #   file (required)
-#     Path to a FINI file.
+#     Path to a distribution manifest file.
 #
 #   deps
 #   testonly
@@ -157,6 +159,55 @@ template("distribution_entries_file") {
         {
           file = rebase_path(invoker.file, root_build_dir)
           label = get_label_info(":$target_name", "label_with_toolchain")
+        },
+      ]
+    }
+  }
+}
+
+# Creates distribution entries from a given FINI manifest file.
+#
+# Parameters
+#
+#   file (required)
+#     Path to a FINI file.
+#
+#   deps
+#   testonly
+#   visibility
+template("distribution_entries_from_fini") {
+  assert(defined(invoker.file), "Must specify file")
+  _output = "$target_out_dir/${target_name}_distribution_manifest"
+  _label = get_label_info(":$target_name", "label_with_toolchain")
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    script = "//build/dist/convert_fini_to_manifest.py"
+
+    inputs = [ invoker.file ]
+    outputs = [ _output ]
+
+    args = [
+      "--input",
+      rebase_path(invoker.file, root_build_dir),
+      "--output",
+      rebase_path(_output, root_build_dir),
+      "--label",
+      rebase_path(_label, root_build_dir),
+    ]
+
+    metadata = {
+      distribution_entries_files = [
+        {
+          file = rebase_path(_output, root_build_dir)
+          label = _label
         },
       ]
     }
