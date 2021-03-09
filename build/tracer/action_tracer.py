@@ -98,6 +98,22 @@ class ToolCommand(object):
         """Returns all options and arguments after the tool of the command."""
         return self.tokens[self._tool_index + 1:]
 
+    @property
+    def _end_opts_index(self) -> int:
+        # Find the position of '--', which is conventionally used to stop option
+        # processing.
+        return _find_first_index(self.tokens, lambda x: x == '--')
+
+    def unwrap(self) -> "ToolCommand":
+        # Assuming that '--' separates a wrapper from a command, this unwraps
+        # a command one level.  (For example, this script is such a wrapper,
+        # with the original command following '--' in trailing position.)
+        end_opts_index = self._end_opts_index
+        if end_opts_index == -1:
+            # Deduce that the command is not wrapped.
+            return self
+        return ToolCommand(tokens=self.tokens[end_opts_index + 1:])
+
 
 @dataclasses.dataclass
 class FSAccess(object):
@@ -699,11 +715,47 @@ def main_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _tool_is_python(tool: str) -> bool:
+    base = os.path.basename(tool)
+    return base == "python" or base.startswith("python3")
+
+
+def is_known_wrapper(command: ToolCommand) -> bool:
+    """Is this a command-wrapping script?
+
+    Returns:
+      True if the command is one of the known wrapper scripts that encapsulates
+        another command in tail position after '--'.
+    """
+    # Catch cases when Python interpreter is explicit and implicit.
+    if command.tool.endswith('.py'):
+        python_script = command.tool
+    elif _tool_is_python(command.tool):
+        script_index = _find_first_index(
+            command.args, lambda x: x.endswith('.py'))
+        assert script_index != -1, f"Expected to find Python script after interpreter: {command.args}"
+        python_script = command.args[script_index]
+    else:
+        return False
+
+    if os.path.basename(python_script) in {"action_tracer.py",
+                                           "output_cacher.py"}:
+        return True
+
+    return False
+
+
 def main():
     parser = main_arg_parser()
     args = parser.parse_args()
 
     command = ToolCommand(tokens=args.command)
+
+    # Unwrap certain command wrapper scripts.
+    while is_known_wrapper(command):
+        command = command.unwrap()
+
+    # Identify the intended tool from the original command.
     script = command.tool
 
     # Ensure trace_output directory exists

@@ -38,6 +38,63 @@ class ToolCommandTests(unittest.TestCase):
         self.assertEqual(command.tool, 'ln')
         self.assertEqual(command.args, ['-f', '-s', 'foo', 'bar'])
 
+    def test_unwrap_no_change(self):
+        tokens = ['ln', '-f', '-s', 'foo', 'bar']
+        command = action_tracer.ToolCommand(tokens=tokens)
+        self.assertEqual(command.unwrap().tokens, tokens)
+
+    def test_unwrap_one_level(self):
+        tokens = ['wrapper', '--opt', 'foo', '--', 'bar.sh', 'arg']
+        command = action_tracer.ToolCommand(tokens=tokens)
+        self.assertEqual(command.unwrap().tokens, ['bar.sh', 'arg'])
+
+    def test_unwrap_one_of_many_level(self):
+        tokens = [
+            'wrapper', '--opt', 'foo', '--', 'bar.sh', 'arg', '--', 'inner.sh'
+        ]
+        command = action_tracer.ToolCommand(tokens=tokens)
+        command2 = command.unwrap()
+        self.assertEqual(command2.tokens, ['bar.sh', 'arg', '--', 'inner.sh'])
+        command3 = command2.unwrap()
+        self.assertEqual(command3.tokens, ['inner.sh'])
+
+
+class IsKnownWrapperTests(unittest.TestCase):
+
+    def test_action_tracer_is_not_wrapper(self):
+        command = action_tracer.ToolCommand(
+            tokens=[
+                'path/to/python3.x', 'path/to/not_a_wrapper.py', '--opt1',
+                'arg1'
+            ])
+        self.assertFalse(action_tracer.is_known_wrapper(command))
+
+    def test_action_tracer_is_not_wrapper_implicit_interpreter(self):
+        command = action_tracer.ToolCommand(
+            tokens=['path/to/not_a_wrapper.py', '--opt1', 'arg1'])
+        self.assertFalse(action_tracer.is_known_wrapper(command))
+
+    def test_action_tracer_is_wrapper(self):
+        command = action_tracer.ToolCommand(
+            tokens=[
+                'path/to/python3.x', 'path/to/action_tracer.py', '--', 'foo.sh',
+                'arg1', 'arg2'
+            ])
+        self.assertTrue(action_tracer.is_known_wrapper(command))
+
+    def test_action_tracer_is_wrapper_extra_python_flag(self):
+        command = action_tracer.ToolCommand(
+            tokens=[
+                'path/to/python3.x', '-S', 'path/to/action_tracer.py', '--',
+                'foo.sh', 'arg1', 'arg2'
+            ])
+        self.assertTrue(action_tracer.is_known_wrapper(command))
+
+    def test_action_tracer_is_wrapper_implicit_interpreter(self):
+        command = action_tracer.ToolCommand(
+            tokens=['path/to/action_tracer.py', '--', 'foo.sh', 'arg1', 'arg2'])
+        self.assertTrue(action_tracer.is_known_wrapper(command))
+
 
 class DepEdgesParseTests(unittest.TestCase):
 
