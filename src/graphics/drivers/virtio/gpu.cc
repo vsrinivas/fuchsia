@@ -160,7 +160,7 @@ zx_status_t GpuDevice::Import(zx::vmo vmo, image_t* image, size_t offset, uint32
     return ZX_ERR_NO_MEMORY;
   }
 
-  unsigned size = ZX_ROUNDUP(row_bytes * image->height, PAGE_SIZE);
+  unsigned size = ZX_ROUNDUP(row_bytes * image->height, zx_system_get_page_size());
   zx_paddr_t paddr;
   zx_status_t status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, vmo, offset, size, &paddr, 1,
                                 &import_data->pmt);
@@ -630,7 +630,8 @@ zx_status_t GpuDevice::Init() {
   }
 
   // Allocate a GPU request
-  status = io_buffer_init(&gpu_req_, bti_.get(), PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  status = io_buffer_init(&gpu_req_, bti_.get(), zx_system_get_page_size(),
+                          IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: cannot alloc gpu_req buffers %d", tag(), status);
     return status;
