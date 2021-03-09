@@ -17,8 +17,7 @@ use {
     fuchsia_zircon_status as zx_status,
     futures::{
         channel::mpsc,
-        future::join_all,
-        future::BoxFuture,
+        future::{join_all, try_join},
         io::{self, AsyncRead},
         lock::Mutex,
         prelude::*,
@@ -258,7 +257,7 @@ struct LogOpt {
 }
 
 struct TestCaseProcessor {
-    f: Option<BoxFuture<'static, Result<(), anyhow::Error>>>,
+    f: fuchsia_async::Task<Result<(), anyhow::Error>>,
 }
 
 impl TestCaseProcessor {
@@ -268,7 +267,7 @@ impl TestCaseProcessor {
         test_case_name: String,
         listener: CaseListenerRequestStream,
         stdout_socket: fidl::Socket,
-        sender: mpsc::Sender<TestEvent>,
+        mut sender: mpsc::Sender<TestEvent>,
     ) -> Self {
         let stdout_fut = Self::collect_and_send_stdout(LogOpt {
             name: test_case_name.to_string(),
@@ -277,65 +276,58 @@ impl TestCaseProcessor {
             buffering_duration: LOG_BUFFERING_DURATION,
             buffer_size: LOG_BUFFER_SIZE,
         });
-        let f = Self::process_run_event(test_case_name, listener, stdout_fut, sender);
+        let test_complete_fut = Self::listen_for_completion(listener);
 
-        let (remote, remote_handle) = f.remote_handle();
-        fuchsia_async::Task::spawn(remote).detach();
+        let fut = async move {
+            let ((), result) = try_join(stdout_fut, test_complete_fut).await?;
+            if let Some(result) = result {
+                sender
+                    .send(TestEvent::test_case_finished(&test_case_name, result))
+                    .await
+                    .context("Failed to send TestCaseFinished Event")
+            } else {
+                Ok(())
+            }
+        };
 
-        TestCaseProcessor { f: Some(remote_handle.boxed()) }
+        TestCaseProcessor { f: fuchsia_async::Task::spawn(fut) }
     }
 
-    async fn process_run_event(
-        name: String,
+    /// Listen for test completion on the given |listener|. Returns None if the channel is closed
+    /// before a test completion event.
+    async fn listen_for_completion(
         mut listener: CaseListenerRequestStream,
-        mut stdout_fut: Option<BoxFuture<'static, Result<(), anyhow::Error>>>,
-        mut sender: mpsc::Sender<TestEvent>,
-    ) -> Result<(), anyhow::Error> {
-        while let Some(result) = listener.try_next().await.context("waiting for listener")? {
-            match result {
-                Finished { result, control_handle: _ } => {
-                    // get all test stdout logs before sending finish event.
-                    if let Some(ref mut stdout_fut) = stdout_fut.take().as_mut() {
-                        stdout_fut.await.context("Couldn't get test stdout")?;
-                    }
-
-                    let result = match result.status {
-                        Some(status) => match status {
-                            fidl_fuchsia_test::Status::Passed => TestResult::Passed,
-                            fidl_fuchsia_test::Status::Failed => TestResult::Failed,
-                            fidl_fuchsia_test::Status::Skipped => TestResult::Skipped,
-                        },
-                        // This will happen when test protocol is not properly implemented
-                        // by the test and it forgets to set the result.
-                        None => TestResult::Error,
-                    };
-                    sender
-                        .send(TestEvent::test_case_finished(&name, result))
-                        .await
-                        .context("Failed to send TestCaseFinished Event")?;
-                    return Ok(());
-                }
-            }
+    ) -> Result<Option<TestResult>, anyhow::Error> {
+        if let Some(request) = listener.try_next().await.context("waiting for listener")? {
+            let Finished { result, control_handle: _ } = request;
+            let result = match result.status {
+                Some(status) => match status {
+                    fidl_fuchsia_test::Status::Passed => TestResult::Passed,
+                    fidl_fuchsia_test::Status::Failed => TestResult::Failed,
+                    fidl_fuchsia_test::Status::Skipped => TestResult::Skipped,
+                },
+                // This will happen when test protocol is not properly implemented
+                // by the test and it forgets to set the result.
+                None => TestResult::Error,
+            };
+            Ok(Some(result))
+        } else {
+            Ok(None)
         }
-        if let Some(ref mut stdout_fut) = stdout_fut.take().as_mut() {
-            stdout_fut.await.context("Couldn't get test stdout")?;
-        }
-        Ok(())
     }
 
     /// Internal method that put a listener on `stdout_socket`, process and send test stdout logs
-    /// asynchronously in the background.
-    fn collect_and_send_stdout(
-        log_opt: LogOpt,
-    ) -> Option<BoxFuture<'static, Result<(), anyhow::Error>>> {
+    /// asynchronously in the background. Returns immediately if the provided socket is an invalid
+    /// handle.
+    async fn collect_and_send_stdout(log_opt: LogOpt) -> Result<(), anyhow::Error> {
         if log_opt.stdout_socket.as_handle_ref().is_invalid() {
-            return None;
+            return Ok(());
         }
 
         let mut stream = match StdoutStream::new(log_opt.stdout_socket) {
             Err(e) => {
                 error!("Stdout Logger: Failed to create fuchsia async socket: {:?}", e);
-                return None;
+                return Ok(());
             }
             Ok(stream) => stream,
         };
@@ -346,23 +338,15 @@ impl TestCaseProcessor {
             log_opt.buffer_size,
         );
 
-        let f = async move {
-            while let Some(log) = stream.try_next().await.context("Error reading stdout log msg")? {
-                log_buffer.send_log(&log).await?;
-            }
-            log_buffer.done().await
-        };
-
-        let remote_handle = fuchsia_async::Task::spawn(f);
-        Some(remote_handle.boxed())
+        while let Some(log) = stream.try_next().await.context("Error reading stdout log msg")? {
+            log_buffer.send_log(&log).await?;
+        }
+        log_buffer.done().await
     }
 
     /// This will wait for all the stdout logs and events to be collected
-    pub async fn wait_for_finish(&mut self) -> Result<(), anyhow::Error> {
-        if let Some(ref mut f) = self.f.take().as_mut() {
-            return Ok(f.await.context("Failure waiting for stdout and events")?);
-        }
-        Ok(())
+    pub async fn wait_for_finish(self) -> Result<(), anyhow::Error> {
+        self.f.await.context("Failure waiting for stdout and events")
     }
 }
 
@@ -717,7 +701,7 @@ impl SuiteInstance {
         }
 
         // await for all invocations to complete for which test case never completed.
-        join_all(test_case_processors.iter_mut().map(|i| i.wait_for_finish()))
+        join_all(test_case_processors.into_iter().map(|i| i.wait_for_finish()))
             .await
             .into_iter()
             .collect::<Result<Vec<()>, Error>>()
@@ -766,14 +750,13 @@ mod tests {
 
         let (sender, mut recv) = mpsc::channel(1);
 
-        let fut = TestCaseProcessor::collect_and_send_stdout(LogOpt {
+        let fut = fuchsia_async::Task::spawn(TestCaseProcessor::collect_and_send_stdout(LogOpt {
             name: name.to_string(),
             stdout_socket: sock_client,
             sender,
             buffering_duration: std::time::Duration::from_millis(1),
             buffer_size: LOG_BUFFER_SIZE,
-        })
-        .expect("future should not be None");
+        }));
 
         sock_server.write(b"test message 1").expect("Can't write msg to socket");
         sock_server.write(b"test message 2").expect("Can't write msg to socket");
@@ -955,7 +938,7 @@ mod tests {
                 buffering_duration: std::time::Duration::from_secs(10),
                 buffer_size: LOG_BUFFER_SIZE,
             })
-            .expect("future should not be None");
+            .boxed();
 
             sock_server.write(b"test message 1").expect("Can't write msg to socket");
             sock_server.write(b"test message 2").expect("Can't write msg to socket");
