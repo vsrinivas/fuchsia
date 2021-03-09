@@ -61,8 +61,11 @@ async fn verify_client_connects_to_ap(
     let (wlan_controller, update_stream) = wlan_hw_sim::init_client_controller().await;
 
     let (sender, connect_confirm_receiver) = oneshot::channel();
-    let network_config =
-        NetworkConfigBuilder::protected(&PASS_PHRASE.as_bytes().to_vec()).ssid(&SSID.to_vec());
+    let network_config = NetworkConfigBuilder::protected(
+        fidl_policy::SecurityType::Wpa2,
+        &PASS_PHRASE.as_bytes().to_vec(),
+    )
+    .ssid(&SSID.to_vec());
 
     // The credentials need to be stored before attempting to connect.
     wlan_controller
@@ -228,8 +231,11 @@ async fn verify_ethernet_in_both_directions(
 async fn sim_client_vs_sim_ap() {
     init_syslog();
 
-    let network_config =
-        NetworkConfigBuilder::protected(&PASS_PHRASE.as_bytes().to_vec()).ssid(&SSID.to_vec());
+    let network_config = NetworkConfigBuilder::protected(
+        fidl_policy::SecurityType::Wpa2,
+        &PASS_PHRASE.as_bytes().to_vec(),
+    )
+    .ssid(&SSID.to_vec());
 
     let mut client_helper =
         test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;

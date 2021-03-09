@@ -20,16 +20,21 @@ use {
 #[derive(Clone)]
 pub struct NetworkConfigBuilder {
     ssid: Option<Vec<u8>>,
+    security_type: fidl_policy::SecurityType,
     password: Option<Vec<u8>>,
 }
 
 impl NetworkConfigBuilder {
     pub fn open() -> Self {
-        Self { password: None, ssid: None }
+        Self { ssid: None, security_type: fidl_policy::SecurityType::None, password: None }
     }
 
-    pub fn protected(password: &Vec<u8>) -> Self {
-        Self { password: Some(password.to_vec()), ssid: None }
+    pub fn protected(security_type: fidl_policy::SecurityType, password: &Vec<u8>) -> Self {
+        assert!(
+            fidl_policy::SecurityType::None != security_type,
+            "security_type for NetworkConfigBuilder::protected() cannot be None"
+        );
+        Self { ssid: None, security_type, password: Some(password.to_vec()) }
     }
 
     pub fn ssid(self, ssid: &Vec<u8>) -> Self {
@@ -44,12 +49,18 @@ impl From<NetworkConfigBuilder> for fidl_policy::NetworkConfig {
             Some(ssid) => ssid,
         };
 
-        let (type_, credential) = match config.password {
-            None => {
+        let (type_, credential) = match (config.security_type, config.password) {
+            (fidl_policy::SecurityType::None, Some(_)) => {
+                panic!("Password provided with fidl_policy::SecurityType::None")
+            }
+            (fidl_policy::SecurityType::None, None) => {
                 (fidl_policy::SecurityType::None, fidl_policy::Credential::None(fidl_policy::Empty))
             }
-            Some(password) => {
-                (fidl_policy::SecurityType::Wpa2, fidl_policy::Credential::Password(password))
+            (security_type, Some(password)) => {
+                (security_type, fidl_policy::Credential::Password(password))
+            }
+            (_, None) => {
+                panic!("Password not provided with fidl_policy::SecurityType other than None")
             }
         };
 

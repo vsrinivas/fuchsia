@@ -30,7 +30,10 @@ async fn test_actions(
 
     // Store the config that was just passed in.
     let network_config = match passphrase {
-        Some(passphrase) => NetworkConfigBuilder::protected(&passphrase.as_bytes().to_vec()),
+        Some(passphrase) => NetworkConfigBuilder::protected(
+            wlan_policy::SecurityType::Wpa2,
+            &passphrase.as_bytes().to_vec(),
+        ),
         None => NetworkConfigBuilder::open(),
     }
     .ssid(&ssid.to_vec());

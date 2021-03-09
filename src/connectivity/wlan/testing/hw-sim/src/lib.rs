@@ -501,13 +501,19 @@ where
         .await
 }
 
-async fn connect_to_network(ssid: &[u8], passphrase: Option<&str>) {
+async fn connect_to_network(
+    ssid: &[u8],
+    security_type: wlan_policy::SecurityType,
+    passphrase: Option<&str>,
+) {
     // Connect to the client policy service and get a client controller.
     let (client_controller, mut update_listener) = wlancfg_helper::init_client_controller().await;
 
     // Store the config that was just passed in.
     let network_config = match passphrase {
-        Some(passphrase) => NetworkConfigBuilder::protected(&passphrase.as_bytes().to_vec()),
+        Some(passphrase) => {
+            NetworkConfigBuilder::protected(security_type, &passphrase.as_bytes().to_vec())
+        }
         None => NetworkConfigBuilder::open(),
     }
     .ssid(&ssid.to_vec());
@@ -536,7 +542,14 @@ pub async fn connect(
     bssid: &mac::Bssid,
     passphrase: Option<&str>,
 ) {
-    let connect_fut = connect_to_network(ssid, passphrase);
+    let connect_fut = connect_to_network(
+        ssid,
+        match passphrase {
+            Some(_) => wlan_policy::SecurityType::Wpa2,
+            None => wlan_policy::SecurityType::None,
+        },
+        passphrase,
+    );
     pin_mut!(connect_fut);
 
     // Validate the connect request.
