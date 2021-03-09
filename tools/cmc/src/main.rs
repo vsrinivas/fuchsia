@@ -8,11 +8,10 @@
 
 //! `cmc` is the Component Manifest Compiler.
 
+use anyhow::{ensure, Error};
 pub use cml::{self, error, one_or_many, translate};
-use error::Error;
 use std::fs;
-use std::path::PathBuf;
-use std::process;
+use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
 mod compile;
@@ -24,11 +23,20 @@ mod reference;
 mod util;
 mod validate;
 
-fn main() {
-    if let Err(msg) = run_cmc() {
-        eprintln!("{}", msg);
-        process::exit(1);
+fn main() -> Result<(), Error> {
+    run_cmc()
+}
+
+fn path_exists(path: &Path) -> Result<(), Error> {
+    ensure!(path.exists(), "{:?} does not exist", path);
+    Ok(())
+}
+
+fn optional_path_exists(optional_path: Option<&PathBuf>) -> Result<(), Error> {
+    if let Some(path) = optional_path.as_ref() {
+        ensure!(path.exists(), "{:?} does not exist", path);
     }
+    Ok(())
 }
 
 fn run_cmc() -> Result<(), Error> {
@@ -42,6 +50,7 @@ fn run_cmc() -> Result<(), Error> {
         }
         opts::Commands::Merge { files, output, fromfile } => merge::merge(files, output, fromfile)?,
         opts::Commands::Include { file, output, depfile, includepath, includeroot } => {
+            path_exists(&file)?;
             include::merge_includes(
                 &file,
                 output.as_ref(),
@@ -57,22 +66,28 @@ fn run_cmc() -> Result<(), Error> {
             depfile,
             includepath,
             includeroot,
-        } => include::check_includes(
-            &file,
-            expected_includes,
-            fromfile.as_ref(),
-            depfile.as_ref(),
-            opt.stamp.as_ref(),
-            &includepath,
-            &includeroot.unwrap_or(includepath.clone()),
-        )?,
+        } => {
+            path_exists(&file)?;
+            optional_path_exists(fromfile.as_ref())?;
+            include::check_includes(
+                &file,
+                expected_includes,
+                fromfile.as_ref(),
+                depfile.as_ref(),
+                opt.stamp.as_ref(),
+                &includepath,
+                &includeroot.unwrap_or(includepath.clone()),
+            )?
+        }
         opts::Commands::Format { file, pretty, cml, inplace, mut output } => {
+            path_exists(&file)?;
             if inplace {
                 output = Some(file.clone());
             }
             format::format(&file, pretty, cml, output)?;
         }
         opts::Commands::Compile { file, output, depfile, includepath, includeroot } => {
+            path_exists(&file)?;
             compile::compile(
                 &file,
                 &output.unwrap(),
