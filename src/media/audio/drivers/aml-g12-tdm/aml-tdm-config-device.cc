@@ -117,12 +117,15 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
     // mclk rate for 48kHz = 768MHz/10 = 76.8MHz
     // Note: absmax mclk frequency is 500MHz per AmLogic
     ZX_ASSERT(!(metadata.mClockDivFactor % 2));  // mClock div factor must be divisable by 2.
-    ZX_ASSERT(frame_rate == 48'000 || frame_rate == 96'000);
-    static_assert(countof(AmlTdmConfigDevice::kSupportedFrameRates) == 2);
-    static_assert(AmlTdmConfigDevice::kSupportedFrameRates[0] == 48'000);
-    static_assert(AmlTdmConfigDevice::kSupportedFrameRates[1] == 96'000);
-    uint32_t mdiv = metadata.mClockDivFactor / ((frame_rate == 96'000) ? 2 : 1);
-    status = device_->SetMclkDiv(mdiv - 1);  // register val is div - 1;
+    ZX_ASSERT(frame_rate == 8'000 || frame_rate == 16'000 || frame_rate == 32'000 ||
+              frame_rate == 48'000 || frame_rate == 96'000);
+    static_assert(countof(AmlTdmConfigDevice::kSupportedFrameRates) == 5);
+    ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[0] == 8'000);
+    ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[1] == 16'000);
+    ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[2] == 32'000);
+    ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[3] == 48'000);
+    ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[4] == 96'000);
+    status = device_->SetMclkDiv(metadata.mClockDivFactor * 48'000 / frame_rate - 1);
     if (status != ZX_OK) {
       zxlogf(ERROR, "could not configure MCLK %d", status);
       return status;

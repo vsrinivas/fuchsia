@@ -29,7 +29,8 @@ AmlG12TdmStream::AmlG12TdmStream(zx_device_t* parent, bool is_input, ddk::PDev p
       enable_gpio_(std::move(enable_gpio)) {}
 
 void AmlG12TdmStream::InitDaiFormats() {
-  frame_rate_ = AmlTdmConfigDevice::kSupportedFrameRates[0];
+  frame_rate_ =
+      AmlTdmConfigDevice::kSupportedFrameRates[AmlTdmConfigDevice::kDefaultFrameRateIndex];
   for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
     // Only the PCM signed sample format is supported.
     dai_formats_[i].sample_format = SampleFormat::PCM_SIGNED;
@@ -436,20 +437,19 @@ zx_status_t AmlG12TdmStream::AddFormats() {
   }
 
   // Add the range for basic audio support.
-  audio_stream_format_range_t range;
+  audio_stream_format_range_t range = {};
 
   range.min_channels = metadata_.ring_buffer.number_of_channels;
   range.max_channels = metadata_.ring_buffer.number_of_channels;
   ZX_ASSERT(metadata_.ring_buffer.bytes_per_sample == 2);
   range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-  ZX_ASSERT(sizeof(AmlTdmConfigDevice::kSupportedFrameRates) / sizeof(uint32_t) == 2);
-  ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[0] == 48'000);
-  ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[1] == 96'000);
-  range.min_frames_per_second = AmlTdmConfigDevice::kSupportedFrameRates[0];
-  range.max_frames_per_second = AmlTdmConfigDevice::kSupportedFrameRates[1];
-  range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
 
-  supported_formats_.push_back(range);
+  for (auto& i : AmlTdmConfigDevice::kSupportedFrameRates) {
+    range.min_frames_per_second = i;
+    range.max_frames_per_second = i;
+    range.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;  // No need to specify family when min == max.
+    supported_formats_.push_back(range);
+  }
 
   return ZX_OK;
 }

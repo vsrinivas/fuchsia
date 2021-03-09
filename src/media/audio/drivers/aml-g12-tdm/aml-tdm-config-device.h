@@ -13,7 +13,8 @@ namespace audio::aml_g12 {
 
 class AmlTdmConfigDevice {
  public:
-  static constexpr uint32_t kSupportedFrameRates[2] = {48'000, 96'000};
+  static constexpr uint32_t kDefaultFrameRateIndex = 3;
+  static constexpr uint32_t kSupportedFrameRates[] = {8'000, 16'000, 32'000, 48'000, 96'000};
   explicit AmlTdmConfigDevice(const metadata::AmlConfig& metadata, ddk::MmioBuffer mmio);
 
   zx_status_t InitHW(const metadata::AmlConfig& metadata, uint64_t channels_to_use,

@@ -1280,9 +1280,7 @@ class FakeMmio {
   fake_pdev::FakePDev::MmioInfo mmio_info() { return {.offset = reinterpret_cast<size_t>(this)}; }
 
   ddk::MmioBuffer mmio() { return ddk::MmioBuffer(mmio_->GetMmioBuffer()); }
-  ddk_fake::FakeMmioReg& reg(size_t ix) {
-    return regs_[ix >> 2];  // AML registers are in virtual address units.
-  }
+  ddk_fake::FakeMmioReg& AtIndex(size_t ix) { return regs_[ix]; }
 
  private:
   static constexpr size_t kRegCount =
@@ -1328,6 +1326,29 @@ struct AmlG12TdmTest : public zxtest::Test {
     tester_.SetFragments(std::move(fragments));
   }
 
+  void CreateRingBuffer() {
+    auto metadata = GetDefaultMetadata();
+    tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+
+    ddk::GpioProtocolClient unused_gpio;
+    auto stream = audio::SimpleAudioStream::Create<TestAmlG12TdmStream>(pdev_.proto(), unused_gpio);
+    auto client_wrap = fidl::BindSyncClient(tester_.FidlClient<audio_fidl::Device>());
+    audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+    ASSERT_EQ(ch.status(), ZX_OK);
+    audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
+    fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
+    auto builder = audio_fidl::wire::Format::UnownedBuilder();
+    builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
+    client.CreateRingBuffer(builder.build(), std::move(remote));
+
+    stream->DdkAsyncRemove();
+    EXPECT_TRUE(tester_.Ok());
+    stream->DdkRelease();
+  }
+
   void TestRingBufferSize(uint8_t number_of_channels, uint32_t frames_req,
                           uint32_t frames_expected) {
     auto metadata = GetDefaultMetadata();
@@ -1371,6 +1392,16 @@ TEST_F(AmlG12TdmTest, RingBufferSize3) { TestRingBufferSize(3, 1, 4); }  // Roun
 TEST_F(AmlG12TdmTest, RingBufferSize4) { TestRingBufferSize(3, 3, 4); }  // Rounded to both.
 TEST_F(AmlG12TdmTest, RingBufferSize5) { TestRingBufferSize(8, 1, 1); }  // Rounded to frame size.
 TEST_F(AmlG12TdmTest, RingBufferSize6) { TestRingBufferSize(8, 3, 3); }  // Rounded to frame size.
+
+TEST_F(AmlG12TdmTest, Rate) {
+  uint32_t mclk_ctrl = 0;
+  uint32_t sclk_ctrl = 0;
+  mmio_.AtIndex(0x3).SetWriteCallback([&mclk_ctrl](uint64_t value) { mclk_ctrl = value; });
+  mmio_.AtIndex(0x14).SetWriteCallback([&sclk_ctrl](uint64_t value) { sclk_ctrl = value; });
+  CreateRingBuffer();                // Defaults to 48kHz rate.
+  ASSERT_EQ(0x84000009, mclk_ctrl);  // clkdiv = 9 for 48kHz rate.
+  ASSERT_EQ(0xC1807C3F, sclk_ctrl);  // enabled, 24 sdiv, 31 lrduty, 63 lrdiv for 48kHz rate.
+}
 
 }  // namespace aml_g12
 }  // namespace audio
