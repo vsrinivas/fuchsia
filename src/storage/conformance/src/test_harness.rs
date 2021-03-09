@@ -30,9 +30,11 @@ impl TestHarness {
     }
 
     /// Creates and returns a directory with the given structure from the test harness.
-    pub fn get_directory(&self, root: io_test::Directory) -> io::DirectoryProxy {
+    pub fn get_directory(&self, root: io_test::Directory, flags: u32) -> io::DirectoryProxy {
         let (client, server) = create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy");
-        self.proxy.get_directory(root, server).expect("Cannot get directory from test harness");
+        self.proxy
+            .get_directory(root, flags, server)
+            .expect("Cannot get directory from test harness");
         client
     }
 

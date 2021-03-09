@@ -69,29 +69,18 @@ resource table Directory {
     /// Name not required for root directory.
     1: string name;
 
-    /// fuchsia.io OPEN_RIGHT_* flags for the directory.
-    2: uint32 flags;
-
     /// Nullable to sidestep recursion rules. Don't actually supply nulls.
-    3: vector<DirectoryEntry?> entries;
+    2: vector<DirectoryEntry?> entries;
 };
 
 table File {
     1: string name;
-
-    /// fuchsia.io OPEN_RIGHT_* flags for the file.
-    2: uint32 flags;
-
-    3: bytes contents;
+    2: bytes contents;
 };
 
 resource table VmoFile {
     1: string name;
-
-    /// fuchsia.io OPEN_RIGHT_* flags for the VMO file.
-    2: uint32 flags;
-
-    3: fuchsia.mem.Range buffer;
+    2: fuchsia.mem.Range buffer;
 };
 
 resource union DirectoryEntry {
@@ -109,8 +98,10 @@ protocol Io1Harness {
     ///
     /// `root` describes the initial layout of the filesystem that will be
     /// used for the test case. The root directory that is served (returned via
-    /// `directory_request`) will have the equivalent contents.
+    /// `directory_request`) will have the equivalent contents, served with the
+    /// given `flags`.
     GetDirectory(Directory root,
+                 uint32 flags,
                  request<fuchsia.io.Directory> directory_request);
 
     /// Serves a directory with a single vmofile inside.

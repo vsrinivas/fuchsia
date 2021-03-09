@@ -66,7 +66,6 @@ fn add_entry(
                     add_entry(entry, &new_dir)?;
                 }
             }
-            // TODO(fxbug.dev/33880): Set the correct flags on this directory.
             dest.add_entry(name, new_dir)?;
         }
         io_test::DirectoryEntry::File(file) => {
@@ -77,13 +76,11 @@ fn add_entry(
                 100,
                 |_content| async move { Ok(()) },
             );
-            // TODO(fxbug.dev/33880): File.flags is not used.
             dest.add_entry(name, new_file)?;
         }
         io_test::DirectoryEntry::VmoFile(vmo_file) => {
             let name = vmo_file.name.as_ref().expect("VMO file must have a name");
             let buffer = vmo_file.buffer.as_ref().expect("VMO file must have a buffer");
-            // TODO(fxbug.dev/33880): VmoFile.flags is not used.
             dest.add_entry(name, new_vmo_file(buffer)?)?;
         }
     }
@@ -115,9 +112,13 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                 responder.send(config)?;
                 continue;
             }
-            Io1HarnessRequest::GetDirectory { root, directory_request, control_handle: _ } => {
+            Io1HarnessRequest::GetDirectory {
+                root,
+                flags,
+                directory_request,
+                control_handle: _,
+            } => {
                 let dir = simple();
-                let flags = root.flags.expect("Root directory must have flags");
                 if let Some(entries) = root.entries {
                     for entry in &entries {
                         let entry = entry.as_ref().expect("Directory entries must not be null");

@@ -13,6 +13,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -90,7 +91,7 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
     ZX_PANIC("Method not supported");
   }
 
-  void GetDirectory(fuchsia::io::test::Directory root,
+  void GetDirectory(fuchsia::io::test::Directory root, uint32_t flags,
                     fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
     // Create a unique directory within the root of minfs for each request and popuplate it with the
     // requested contents.
@@ -99,7 +100,7 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
       PopulateDirectory(root.entries(), *directory);
     }
 
-    auto options = directory->ValidateOptions(GetConnectionOptions(root.flags()));
+    auto options = directory->ValidateOptions(GetConnectionOptions(flags));
     ZX_ASSERT_MSG(options.is_ok(), "Invalid directory flags: %s",
                   zx_status_get_string(options.error()));
     zx_status_t status =
