@@ -1219,6 +1219,8 @@ func newStreamSocket(eps *endpointWithSocket) (socket.StreamSocketWithCtxInterfa
 }
 
 func (s *streamSocketImpl) close() {
+	defer s.cancel()
+
 	if s.endpoint.decRef() {
 		linger := s.ep.SocketOptions().GetLinger()
 
@@ -1262,16 +1264,23 @@ func (s *streamSocketImpl) close() {
 			// means that our true TCP linger time will be twice the configured
 			// value, but this is the best we can do without rethinking the
 			// interfaces.
-			var linger tcpip.TCPLingerTimeoutOption
-			if err := s.ep.GetSockOpt(&linger); err != nil {
-				panic(fmt.Sprintf("GetSockOpt(%T): %s", linger, err))
+
+			// If no data is in the buffer, close synchronously. This is an important
+			// optimization that prevents flakiness when a socket is closed and
+			// another socket is immediately bound to the port.
+			if reader := (socketReader{socket: s.endpointWithSocket.local}); reader.Len() == 0 {
+				doClose()
+			} else {
+				var linger tcpip.TCPLingerTimeoutOption
+				if err := s.ep.GetSockOpt(&linger); err != nil {
+					panic(fmt.Sprintf("GetSockOpt(%T): %s", linger, err))
+				}
+				time.AfterFunc(time.Duration(linger), func() { close(s.linger) })
+
+				go doClose()
 			}
-			time.AfterFunc(time.Duration(linger), func() { close(s.linger) })
-			go doClose()
 		}
 	}
-
-	s.cancel()
 }
 
 func (s *streamSocketImpl) Close(fidl.Context) (int32, error) {
