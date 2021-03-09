@@ -9,6 +9,7 @@
 #include <array>
 #include <sstream>
 
+#include "src/developer/forensics/last_reboot/graceful_reboot_reason.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
@@ -28,21 +29,6 @@ enum class ZirconRebootReason {
   kSwWatchdog,
   kBrownout,
   kUnknown,
-  kNotParseable,
-};
-
-enum class GracefulRebootReason {
-  kNotSet,
-  kNone,
-  kUserRequest,
-  kSystemUpdate,
-  kRetrySystemUpdate,
-  kHighTemperature,
-  kSessionFailure,
-  kSysmgrFailure,
-  kCriticalComponentFailure,
-  kFdr,
-  kNotSupported,
   kNotParseable,
 };
 
@@ -70,29 +56,6 @@ ZirconRebootReason ExtractZirconRebootReason(const std::string_view line) {
 
   FX_LOGS(ERROR) << "Failed to extract a reboot reason from Zircon reboot log";
   return ZirconRebootReason::kNotParseable;
-}
-
-GracefulRebootReason ExtractGracefulRebootReason(const std::string_view line) {
-  if (line == "USER REQUEST") {
-    return GracefulRebootReason::kUserRequest;
-  } else if (line == "SYSTEM UPDATE") {
-    return GracefulRebootReason::kSystemUpdate;
-  } else if (line == "RETRY SYSTEM UPDATE") {
-    return GracefulRebootReason::kRetrySystemUpdate;
-  } else if (line == "HIGH TEMPERATURE") {
-    return GracefulRebootReason::kHighTemperature;
-  } else if (line == "SESSION FAILURE") {
-    return GracefulRebootReason::kSessionFailure;
-  } else if (line == "SYSMGR FAILURE") {
-    return GracefulRebootReason::kSysmgrFailure;
-  } else if (line == "CRITICAL COMPONENT FAILURE") {
-    return GracefulRebootReason::kCriticalComponentFailure;
-  } else if (line == "NOT SUPPORTED") {
-    return GracefulRebootReason::kNotSupported;
-  }
-
-  FX_LOGS(ERROR) << "Failed to extract a reboot reason from graceful reboot log";
-  return GracefulRebootReason::kNotParseable;
 }
 
 void ExtractZirconRebootInfo(const std::string& path, ZirconRebootReason* reason,
@@ -177,9 +140,9 @@ void ExtractGracefulRebootInfo(const std::string& graceful_reboot_log_path,
     return;
   }
 
+  // TODO(fxbug.dev/68164) Remove variable content.
   *content = file_content;
-
-  *reason = ExtractGracefulRebootReason(content->value());
+  *reason = FromFileContent(content->value());
 }
 
 RebootReason DetermineGracefulRebootReason(GracefulRebootReason graceful_reason) {
@@ -200,6 +163,7 @@ RebootReason DetermineGracefulRebootReason(GracefulRebootReason graceful_reason)
       return RebootReason::kCriticalComponentFailure;
     case GracefulRebootReason::kFdr:
       return RebootReason::kFdr;
+    case GracefulRebootReason::kZbiSwap:
     case GracefulRebootReason::kNotSupported:
     case GracefulRebootReason::kNone:
     case GracefulRebootReason::kNotParseable:

@@ -69,6 +69,7 @@ source_set("reboot_log") {
   public_deps = [ ":reboot_reason" ]
 
   deps = [
+    ":graceful_reboot_reason",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
     "//src/lib/fxl",
@@ -89,6 +90,19 @@ source_set("reboot_reason") {
   deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
+source_set("graceful_reboot_reason") {
+  sources = [
+    "graceful_reboot_reason.cc",
+    "graceful_reboot_reason.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/syslog/cpp",
+  ]
+}
+
 source_set("reboot_watcher") {
   sources = [
     "reboot_watcher.cc",
@@ -102,6 +116,7 @@ source_set("reboot_watcher") {
   ]
 
   deps = [
+    ":graceful_reboot_reason",
     "//src/lib/files",
     "//src/lib/fxl",
   ]

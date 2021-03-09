@@ -4,42 +4,13 @@
 
 #include "src/developer/forensics/last_reboot/reboot_watcher.h"
 
+#include "src/developer/forensics/last_reboot/graceful_reboot_reason.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
 namespace last_reboot {
-namespace {
-
-std::string FormatReason(fuchsia::hardware::power::statecontrol::RebootReason reason) {
-  using fuchsia::hardware::power::statecontrol::RebootReason;
-
-  switch (reason) {
-    case RebootReason::USER_REQUEST:
-      return "USER REQUEST";
-    case RebootReason::SYSTEM_UPDATE:
-      return "SYSTEM UPDATE";
-    case RebootReason::RETRY_SYSTEM_UPDATE:
-      return "RETRY SYSTEM UPDATE";
-    case RebootReason::HIGH_TEMPERATURE:
-      return "HIGH TEMPERATURE";
-    case RebootReason::SESSION_FAILURE:
-      return "SESSION FAILURE";
-    case RebootReason::SYSMGR_FAILURE:
-      return "SYSMGR FAILURE";
-    case RebootReason::CRITICAL_COMPONENT_FAILURE:
-      return "CRITICAL COMPONENT FAILURE";
-    case RebootReason::FACTORY_DATA_RESET:
-      return "FACTORY DATA RESET";
-    case RebootReason::ZBI_SWAP:
-      return "ZBI SWAP";
-    default:
-      return "NOT SUPPORTED";
-  }
-}
-
-}  // namespace
 
 ImminentGracefulRebootWatcher::ImminentGracefulRebootWatcher(
     std::shared_ptr<sys::ServiceDirectory> services, const std::string& path,
@@ -62,7 +33,7 @@ void ImminentGracefulRebootWatcher::Connect() {
 
 void ImminentGracefulRebootWatcher::OnReboot(
     fuchsia::hardware::power::statecontrol::RebootReason reason, OnRebootCallback callback) {
-  const std::string content = FormatReason(reason);
+  const std::string content = ToFileContent(ToGracefulRebootReason(reason));
   FX_LOGS(INFO) << "Received reboot reason  '" << content << "' ";
 
   const size_t timer_id = cobalt_->StartTimer();
@@ -70,7 +41,7 @@ void ImminentGracefulRebootWatcher::OnReboot(
     cobalt_->LogElapsedTime(cobalt::RebootReasonWriteResult::kSuccess, timer_id);
   } else {
     cobalt_->LogElapsedTime(cobalt::RebootReasonWriteResult::kFailure, timer_id);
-    FX_LOGS(ERROR) << "Failed to write reboot reason '" << FormatReason(reason) << "' to " << path_;
+    FX_LOGS(ERROR) << "Failed to write reboot reason '" << content << "' to " << path_;
   }
 
   callback();
