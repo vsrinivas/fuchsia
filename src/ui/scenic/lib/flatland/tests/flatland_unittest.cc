@@ -84,6 +84,9 @@ struct PresentArgs {
   // The number of present tokens that should be returned to the client.
   uint32_t present_tokens_returned = 1;
 
+  // The future presentation infos that should be returned to the client.
+  flatland::Flatland::FuturePresentationInfos presentation_infos = {};
+
   // If PRESENT_WITH_ARGS is called with |expect_success| = false, the error that should be
   // expected as the return value from Present().
   fuchsia::ui::scenic::internal::Error expected_error =
@@ -107,40 +110,40 @@ struct GlobalIdPair {
 // |flatland| is a Flatland object constructed with the MockFlatlandPresenter owned by the
 // FlatlandTest harness. |expect_success| should be false if the call to Present() is expected to
 // trigger an error.
-#define PRESENT_WITH_ARGS(flatland, args, expect_success)                                    \
-  {                                                                                          \
-    bool had_acquire_fences = !args.acquire_fences.empty();                                  \
-    if (expect_success) {                                                                    \
-      EXPECT_CALL(*mock_flatland_presenter_,                                                 \
-                  RegisterPresent(flatland.GetRoot().GetInstanceId(), _));                   \
-    }                                                                                        \
-    bool processed_callback = false;                                                         \
-    fuchsia::ui::scenic::internal::PresentArgs present_args;                                 \
-    present_args.set_requested_presentation_time(args.requested_presentation_time.get());    \
-    present_args.set_acquire_fences(std::move(args.acquire_fences));                         \
-    present_args.set_release_fences(std::move(args.release_fences));                         \
-    present_args.set_squashable(args.squashable);                                            \
-    flatland.Present(std::move(present_args), [&](Flatland_Present_Result result) {          \
-      EXPECT_EQ(!expect_success, result.is_err());                                           \
-      if (!expect_success) {                                                                 \
-        EXPECT_EQ(args.expected_error, result.err());                                        \
-      }                                                                                      \
-      processed_callback = true;                                                             \
-    });                                                                                      \
-    EXPECT_TRUE(processed_callback);                                                         \
-    if (expect_success) {                                                                    \
-      /* Even with no acquire_fences, UberStruct updates queue on the dispatcher. */         \
-      if (!had_acquire_fences) {                                                             \
-        EXPECT_CALL(                                                                         \
-            *mock_flatland_presenter_,                                                       \
-            ScheduleUpdateForSession(args.requested_presentation_time, _, args.squashable)); \
-      }                                                                                      \
-      RunLoopUntilIdle();                                                                    \
-      if (!args.skip_session_update_and_release_fences) {                                    \
-        ApplySessionUpdatesAndSignalFences();                                                \
-      }                                                                                      \
-    }                                                                                        \
-    flatland.OnPresentTokensReturned(args.present_tokens_returned);                          \
+#define PRESENT_WITH_ARGS(flatland, args, expect_success)                                          \
+  {                                                                                                \
+    bool had_acquire_fences = !args.acquire_fences.empty();                                        \
+    if (expect_success) {                                                                          \
+      EXPECT_CALL(*mock_flatland_presenter_,                                                       \
+                  RegisterPresent(flatland.GetRoot().GetInstanceId(), _));                         \
+    }                                                                                              \
+    bool processed_callback = false;                                                               \
+    fuchsia::ui::scenic::internal::PresentArgs present_args;                                       \
+    present_args.set_requested_presentation_time(args.requested_presentation_time.get());          \
+    present_args.set_acquire_fences(std::move(args.acquire_fences));                               \
+    present_args.set_release_fences(std::move(args.release_fences));                               \
+    present_args.set_squashable(args.squashable);                                                  \
+    flatland.Present(std::move(present_args), [&](Flatland_Present_Result result) {                \
+      EXPECT_EQ(!expect_success, result.is_err());                                                 \
+      if (!expect_success) {                                                                       \
+        EXPECT_EQ(args.expected_error, result.err());                                              \
+      }                                                                                            \
+      processed_callback = true;                                                                   \
+    });                                                                                            \
+    EXPECT_TRUE(processed_callback);                                                               \
+    if (expect_success) {                                                                          \
+      /* Even with no acquire_fences, UberStruct updates queue on the dispatcher. */               \
+      if (!had_acquire_fences) {                                                                   \
+        EXPECT_CALL(                                                                               \
+            *mock_flatland_presenter_,                                                             \
+            ScheduleUpdateForSession(args.requested_presentation_time, _, args.squashable));       \
+      }                                                                                            \
+      RunLoopUntilIdle();                                                                          \
+      if (!args.skip_session_update_and_release_fences) {                                          \
+        ApplySessionUpdatesAndSignalFences();                                                      \
+      }                                                                                            \
+    }                                                                                              \
+    flatland.OnPresentProcessed(args.present_tokens_returned, std::move(args.presentation_infos)); \
   }
 
 // Identical to PRESENT_WITH_ARGS, but supplies an empty PresentArgs to the Present() call.
@@ -489,7 +492,7 @@ TEST_F(FlatlandTest, MultiplePresentTokensAvailable) {
   Flatland flatland = CreateFlatland();
 
   // Return one extra present token, meaning the instance now has two.
-  flatland.OnPresentTokensReturned(1);
+  flatland.OnPresentProcessed(1, {});
 
   // Present, but return no tokens so the client has only one left.
   {

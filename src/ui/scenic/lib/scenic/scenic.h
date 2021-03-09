@@ -63,6 +63,9 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
           latched_times,
       scheduling::PresentTimestamps present_times) override;
 
+  // |scheduling::SessionUpdater|
+  void OnCpuWorkDone() override{};
+
   // Register a delegate class for implementing top-level Scenic operations (e.g., GetDisplayInfo).
   // This delegate must outlive the Scenic instance.
   void SetDisplayInfoDelegate(GetDisplayInfoDelegateDeprecated* delegate) {

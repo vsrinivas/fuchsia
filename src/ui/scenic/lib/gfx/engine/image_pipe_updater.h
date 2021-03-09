@@ -63,6 +63,8 @@ class ImagePipeUpdater : public scheduling::SessionUpdater,
           latched_times,
       scheduling::PresentTimestamps present_times) override;
 
+  void OnCpuWorkDone() override {}
+
   // For tests.
   scheduling::SessionId GetSchedulingId() { return scheduling_id_; }
 

@@ -66,6 +66,7 @@ static void SingleRenderTest(const std::unique_ptr<DefaultFrameScheduler>& sched
 
   EXPECT_EQ(updater->update_sessions_call_count(), 0u);
   EXPECT_EQ(renderer->GetNumPendingFrames(), 0u);
+  EXPECT_EQ(updater->cpu_work_done_count(), 0u);
 
   ScheduleUpdate(scheduler, kSessionId, presentation_time);
 
@@ -74,6 +75,7 @@ static void SingleRenderTest(const std::unique_ptr<DefaultFrameScheduler>& sched
 
   EXPECT_EQ(updater->update_sessions_call_count(), 0u);
   EXPECT_EQ(renderer->GetNumPendingFrames(), 0u);
+  EXPECT_EQ(updater->cpu_work_done_count(), 0u);
 
   EXPECT_GE(update_time, Now());
   loop.RunUntil(update_time);
@@ -81,6 +83,7 @@ static void SingleRenderTest(const std::unique_ptr<DefaultFrameScheduler>& sched
   // Present should have been scheduled and handled.
   EXPECT_EQ(updater->update_sessions_call_count(), 1u);
   EXPECT_EQ(renderer->GetNumPendingFrames(), 1u);
+  EXPECT_EQ(updater->cpu_work_done_count(), 1u);
 
   // Wait for a very long time.
   loop.RunFor(zx::sec(10));
@@ -88,6 +91,7 @@ static void SingleRenderTest(const std::unique_ptr<DefaultFrameScheduler>& sched
   // No further render calls should have been made.
   EXPECT_EQ(updater->update_sessions_call_count(), 1u);
   EXPECT_EQ(renderer->GetNumPendingFrames(), 1u);
+  EXPECT_EQ(updater->cpu_work_done_count(), 1u);
 
   // End the pending frame.
   EXPECT_EQ(updater->on_frame_presented_call_count(), 0u);
@@ -96,6 +100,7 @@ static void SingleRenderTest(const std::unique_ptr<DefaultFrameScheduler>& sched
   EXPECT_EQ(updater->on_frame_presented_call_count(), 1u);
   ASSERT_EQ(updater->last_latched_times().count(kSessionId), 1u);
   EXPECT_EQ(updater->last_latched_times().at(kSessionId).size(), 1u);
+  EXPECT_EQ(updater->cpu_work_done_count(), 1u);
 
   // Wait for a very long time.
   loop.RunFor(zx::sec(10));
@@ -103,6 +108,7 @@ static void SingleRenderTest(const std::unique_ptr<DefaultFrameScheduler>& sched
   // No further render calls should have been made.
   EXPECT_EQ(updater->update_sessions_call_count(), 1u);
   EXPECT_EQ(renderer->GetNumPendingFrames(), 0u);
+  EXPECT_EQ(updater->cpu_work_done_count(), 1u);
   EXPECT_EQ(updater->on_frame_presented_call_count(), 1u);
 }
 

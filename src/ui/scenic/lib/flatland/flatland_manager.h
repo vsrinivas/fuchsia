@@ -50,6 +50,9 @@ class FlatlandManager : public scheduling::SessionUpdater {
       uint64_t trace_id) override;
 
   // |scheduling::SessionUpdater|
+  void OnCpuWorkDone() override;
+
+  // |scheduling::SessionUpdater|
   void OnFramePresented(
       const std::unordered_map<scheduling::SessionId,
                                std::map<scheduling::PresentId, /*latched_time*/ zx::time>>&
@@ -70,6 +73,8 @@ class FlatlandManager : public scheduling::SessionUpdater {
   std::shared_ptr<UberStructSystem> uber_struct_system_;
   std::shared_ptr<LinkSystem> link_system_;
   std::vector<std::shared_ptr<BufferCollectionImporter>> buffer_collection_importers_;
+  std::unordered_map<scheduling::SessionId, /*num_present_tokens*/ uint64_t>
+      flatland_instances_updated_;
 
   utils::PostInitializationRunner post_initialization_runner_;
 
@@ -98,7 +103,8 @@ class FlatlandManager : public scheduling::SessionUpdater {
   async::Executor executor_;
 
   // Sends |num_present_tokens| to a particular Flatland |instance|.
-  void SendPresentTokens(FlatlandInstance* instance, uint32_t num_present_tokens);
+  void SendPresentTokens(FlatlandInstance* instance, uint32_t num_present_tokens,
+                         Flatland::FuturePresentationInfos presentation_infos);
 
   // Sends the OnFramePresented event to a particular Flatland |instance|.
   void SendFramePresented(

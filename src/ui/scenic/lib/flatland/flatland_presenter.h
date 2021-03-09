@@ -39,6 +39,14 @@ class FlatlandPresenter {
   virtual void ScheduleUpdateForSession(zx::time requested_presentation_time,
                                         scheduling::SchedulingIdPair id_pair, bool squashable) = 0;
 
+  // From scheduling::FrameScheduler::GetFuturePresentationInfos():
+  // Gets the predicted latch points and presentation times for the frames at or before the next
+  // |requested_prediction_span| time span. Uses the FramePredictor to do so.
+  //
+  // The callback is guaranteed to run on the calling thread.
+  virtual void GetFuturePresentationInfos(
+      scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback) = 0;
+
   // From scheduling::FrameScheduler::RemoveSession():
   //
   // Removes all references to |session_id|.

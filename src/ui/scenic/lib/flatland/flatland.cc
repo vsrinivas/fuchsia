@@ -824,10 +824,11 @@ void Flatland::ReleaseImage(ContentId image_id) {
   content_handles_.erase(image_id);
 }
 
-void Flatland::OnPresentTokensReturned(uint32_t num_present_tokens) {
+void Flatland::OnPresentProcessed(uint32_t num_present_tokens,
+                                  FuturePresentationInfos presentation_infos) {
   present_tokens_remaining_ += num_present_tokens;
   if (binding_.is_bound()) {
-    binding_.events().OnPresentTokensReturned(num_present_tokens);
+    binding_.events().OnPresentProcessed(num_present_tokens, std::move(presentation_infos));
   }
 }
 

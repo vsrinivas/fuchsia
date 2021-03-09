@@ -4,6 +4,10 @@
 
 #include "src/ui/scenic/lib/flatland/default_flatland_presenter.h"
 
+#include <lib/async-testing/test_loop.h>
+#include <lib/async/default.h>
+#include <lib/async/dispatcher.h>
+#include <lib/fit/thread_checker.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <chrono>
@@ -182,6 +186,37 @@ TEST_F(DefaultFlatlandPresenterTest, RemoveSessionForwardsToFrameScheduler) {
   EXPECT_EQ(last_session_id, kSessionId);
 }
 
+TEST_F(DefaultFlatlandPresenterTest, GetFuturePresentationInfosForwardsToFrameScheduler) {
+  auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
+
+  // Capture the relevant arguments of the GetFuturePresentationInfos() call.
+  zx::duration last_requested_prediction_span;
+  const uint32_t kLatchPoint = 15122;
+  const uint32_t kPresentationTime = 15410;
+  frame_scheduler->set_get_future_presentation_infos_callback(
+      [&last_requested_prediction_span](zx::duration requested_prediction_span) {
+        last_requested_prediction_span = requested_prediction_span;
+        std::vector<fuchsia::scenic::scheduling::PresentationInfo> presentation_infos(1);
+        presentation_infos[0].set_latch_point(kLatchPoint);
+        presentation_infos[0].set_presentation_time(kPresentationTime);
+        return presentation_infos;
+      });
+
+  auto presenter = CreateDefaultFlatlandPresenter();
+  presenter.SetFrameScheduler(frame_scheduler);
+
+  std::vector<fuchsia::scenic::scheduling::PresentationInfo> presentation_infos;
+  presenter.GetFuturePresentationInfos(
+      [&presentation_infos](auto infos) { presentation_infos = std::move(infos); });
+  RunLoopUntilIdle();
+
+  // The requested prediction span should be reasonable - greater than 1 frame's worth of data.
+  EXPECT_GT(last_requested_prediction_span, zx::msec(17));
+  EXPECT_EQ(presentation_infos.size(), 1u);
+  EXPECT_EQ(presentation_infos[0].latch_point(), kLatchPoint);
+  EXPECT_EQ(presentation_infos[0].presentation_time(), kPresentationTime);
+}
+
 TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
   auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
 
@@ -210,6 +245,18 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
         ++function_count;
       });
 
+  frame_scheduler->set_get_future_presentation_infos_callback(
+      [&function_count](zx::duration requested_prediction_span)
+          -> std::vector<fuchsia::scenic::scheduling::PresentationInfo> {
+        ++function_count;
+        std::vector<fuchsia::scenic::scheduling::PresentationInfo> infos;
+        fuchsia::scenic::scheduling::PresentationInfo info;
+        info.set_latch_point(0);
+        info.set_presentation_time(0);
+        infos.push_back(std::move(info));
+        return infos;
+      });
+
   auto presenter = CreateDefaultFlatlandPresenter();
   presenter.SetFrameScheduler(frame_scheduler);
 
@@ -225,15 +272,27 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
   const auto now = std::chrono::steady_clock::now();
   const auto then = now + std::chrono::milliseconds(50);
 
+  uint64_t loop_quits = 0;
+
   for (uint64_t session_id = 1; session_id <= kNumSessions; ++session_id) {
-    std::thread thread([then, session_id, &mutex, &present_ids, &presenter]() {
+    std::thread thread([then, session_id, &mutex, &present_ids, &presenter, &loop_quits]() {
       // Because each of the threads do a fixed amount of work, they may trigger in succession
       // without overlap. In order to bombard the system with concurrent requests, stall thread
       // execution until a specific time.
       std::this_thread::sleep_until(then);
       std::vector<scheduling::PresentId> presents;
+      uint64_t presentation_info_count = 0;
+
+      // Create a thread checker so that we can verify that the GetFuturePresentationInfos()
+      // response runs on the correct thread.
+      fit::thread_checker checker;
+      EXPECT_TRUE(checker.is_thread_valid());
+
+      // Set loop and dispatcher which is needed for GetFuturePresentationInfos().
+      async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
       for (uint64_t i = 0; i < kNumPresents; ++i) {
-        // RegisterPresent() is one of the two functions being tested.
+        // RegisterPresent() is one of the three functions being tested.
         auto present_id = presenter.RegisterPresent(session_id, /*release_fences=*/{});
         presents.push_back(present_id);
 
@@ -242,13 +301,27 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
           std::this_thread::yield();
         }
 
-        // ScheduleUpdateForSession() is the other function being tested.
+        // ScheduleUpdateForSession() is the second function being tested.
         presenter.ScheduleUpdateForSession(zx::time(0), {session_id, present_id}, true);
 
         // Yield with some randomness so the threads get jumbled up a bit.
         if (std::rand() % 4 == 0) {
           std::this_thread::yield();
         }
+
+        // GetFuturePresentationInfos() is the third function being tested.
+        presenter.GetFuturePresentationInfos(
+            [&presentation_info_count, &loop, &loop_quits, &checker](auto) {
+              presentation_info_count++;
+
+              EXPECT_TRUE(checker.is_thread_valid());
+
+              // When all kNumPresents tasks are posted back, this thread can safely return.
+              if (presentation_info_count == kNumPresents) {
+                loop_quits++;
+                loop.Quit();
+              }
+            });
       }
 
       // Acquire the test mutex and insert all IDs for later evaluation.
@@ -258,6 +331,9 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
           present_ids.insert(present_id);
         }
       }
+
+      // This thread should run until it receives all replies back from the frame scheduler.
+      loop.Run();
     });
 
     threads.push_back(std::move(thread));
@@ -273,14 +349,17 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
   std::this_thread::sleep_until(then);
 
   for (uint64_t i = 0; i < kNumGfxPresents; ++i) {
-    // RegisterPresent() is one of the two functions being tested.
+    // RegisterPresent() is one of the three functions being tested.
     auto present_id = scheduling::GetNextPresentId();
     present_id = frame_scheduler->RegisterPresent(kGfxSessionId, /*release_fences=*/{}, present_id);
     gfx_presents.push_back(present_id);
 
-    // ScheduleUpdateForSession() is the other function being tested.
+    // ScheduleUpdateForSession() is the second function being tested.
     frame_scheduler->ScheduleUpdateForSession(zx::time(0), {kGfxSessionId, present_id},
                                               /*squashable=*/true);
+
+    // GetFuturePresentationInfos() is the third function being tested.
+    frame_scheduler->GetFuturePresentationInfos(zx::duration(0), [](auto) {});
   }
 
   {
@@ -290,6 +369,15 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
     }
   }
 
+  // Wait until all sessions have posted their tasks, and then post all GetFuturePresentationtimes()
+  // responses.
+  //
+  // This line is needed instead of RunLoopUntilidle() because otherwise there could be a race
+  // condition where this line runs before some of the t threads have posted their
+  // GetFuturePresentationTimes() messages, leading the test to deadlock.
+  RunLoopWithTimeoutOrUntil([&loop_quits] { return loop_quits == kNumSessions; });
+
+  // End all t threads.
   for (auto& t : threads) {
     t.join();
   }
@@ -306,10 +394,13 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
   EXPECT_EQ(scheduled_updates.size(), kTotalNumPresents);
 
   // Verify that the correct total number of function calls were made.
-  EXPECT_EQ(function_count, kTotalNumPresents * 2ul);
+  EXPECT_EQ(function_count, kTotalNumPresents * 3ul);
 
   // Verify that the sets from both mock functions are identical.
   EXPECT_THAT(registered_presents, ::testing::ElementsAreArray(scheduled_updates));
+
+  // Verify that every session received the total number of presentation_infos.
+  EXPECT_EQ(loop_quits, kNumSessions);
 }
 
 }  // namespace test
