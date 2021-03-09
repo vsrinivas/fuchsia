@@ -7,6 +7,7 @@
 //! Typesafe wrappers around an "update" package.
 
 mod board;
+mod epoch;
 mod hash;
 mod image;
 mod images;
@@ -17,6 +18,7 @@ mod version;
 
 pub use crate::{
     board::VerifyBoardError,
+    epoch::ParseEpochError,
     hash::HashError,
     image::{Image, ImageClass, ImageType, OpenImageError},
     images::{ImageList, ResolveImagesError, UnverifiedImageList},
@@ -88,6 +90,12 @@ impl UpdatePackage {
     /// Returns the version of this update package.
     pub async fn version(&self) -> Result<SystemVersion, ReadVersionError> {
         version::read_version(&self.proxy).await
+    }
+
+    /// Parses the epoch.json file to obtain the epoch. Returns `Ok(None)` if the epoch.json file
+    /// is not present in the update package.
+    pub async fn epoch(&self) -> Result<Option<u64>, ParseEpochError> {
+        epoch::epoch(&self.proxy).await
     }
 }
 
