@@ -71,12 +71,12 @@ pub(super) struct GainControl {
 impl GainControl {
     pub fn new() -> Result<Self, Error> {
         let f: NotifyFn<HeadsetGainWatchSpeakerGainResponder> = Box::new(|s, r| {
-            r.send(*s).unwrap();
+            let _ = r.send(*s);
             true
         });
         let mut _speaker_gain_hanging_get = HangingGet::new(0, f);
         let f: NotifyFn<HeadsetGainWatchMicrophoneGainResponder> = Box::new(|s, r| {
-            r.send(*s).unwrap();
+            let _ = r.send(*s);
             true
         });
         let mut _microphone_gain_hanging_get = HangingGet::new(0, f);
