@@ -53,6 +53,7 @@ func RunChecks(checks []FailureModeCheck, to *TestingOutputs, outputsDir string)
 			testDetails.DurationMillis = time.Now().Sub(testDetails.StartTime).Milliseconds()
 			if len(outputsDir) > 0 {
 				testDetails.OutputFile = debugPathForCheck(check)
+				testDetails.OutputFiles = []string{testDetails.OutputFile}
 				outputFileAbsPath := filepath.Join(outputsDir, testDetails.OutputFile)
 				if err := os.MkdirAll(filepath.Dir(outputFileAbsPath), 0777); err != nil {
 					return nil, err

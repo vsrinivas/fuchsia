@@ -52,6 +52,7 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 		Name:           result.Name,
 		GNLabel:        result.GNLabel,
 		OutputFile:     outputRelPath,
+		OutputFiles:    []string{outputRelPath},
 		Result:         result.Result,
 		Cases:          result.Cases,
 		StartTime:      result.StartTime,

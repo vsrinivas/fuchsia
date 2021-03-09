@@ -78,6 +78,7 @@ func TestRunChecks(t *testing.T) {
 			Result:               runtests.TestFailure,
 			IsTestingFailureMode: true,
 			OutputFile:           debugPathForCheck(trueCheck),
+			OutputFiles:          []string{debugPathForCheck(trueCheck)},
 		},
 		{
 			Name:                 path.Join(checkTestNamePrefix, panicCheck.Name()),
