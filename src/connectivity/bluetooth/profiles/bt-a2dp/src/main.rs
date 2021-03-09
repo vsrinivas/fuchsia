@@ -123,30 +123,38 @@ impl StreamsBuilder {
         // TODO(fxbug.dev/1126): detect codecs, add streams for each codec
         // Sink codecs
         let sbc_endpoint = Self::build_sbc_sink_endpoint()?;
-        let sbc_codec_cap = find_codec_cap(&sbc_endpoint).expect("just built");
+        let sbc_cap = find_codec_cap(&sbc_endpoint).expect("just built");
 
         // SBC is required to be playable if sink is enabled.
         if config.enable_sink {
-            let sbc_config = MediaCodecConfig::try_from(sbc_codec_cap)?;
+            let sbc_config = MediaCodecConfig::try_from(sbc_cap)?;
             if let Err(e) = player::Player::test_playable(&sbc_config).await {
                 warn!("Can't play required SBC audio: {}", e);
                 return Err(e);
             }
         }
 
-        let mut caps_available = vec![sbc_codec_cap.clone()];
+        let aac_available = if config.enable_aac {
+            let aac_cap =
+                Self::build_aac_capability(avdtp::EndpointType::Sink, /* bitrate=*/ 0)?;
+            let aac_config = MediaCodecConfig::try_from(&aac_cap)?;
+            if config.enable_sink {
+                player::Player::test_playable(&aac_config).await.is_ok()
+            } else {
+                true
+            }
+        } else {
+            false
+        };
 
-        let aac_endpoint = Self::build_aac_sink_endpoint()?;
-        let aac_codec_cap = find_codec_cap(&aac_endpoint).expect("just built");
-        let aac_config = MediaCodecConfig::try_from(aac_codec_cap)?;
-        let aac_available = player::Player::test_playable(&aac_config).await.is_ok();
-
-        if aac_available {
-            caps_available = vec![
+        let caps_available = if aac_available {
+            vec![
                 Self::build_aac_capability(avdtp::EndpointType::Sink, PREFERRED_BITRATE_AAC)?,
-                sbc_codec_cap.clone(),
-            ];
-        }
+                sbc_cap.clone(),
+            ]
+        } else {
+            vec![sbc_cap.clone()]
+        };
 
         let codec_negotiation = CodecNegotiation::build(caps_available, avdtp::EndpointType::Sink)?;
         let source_type = if config.enable_source { Some(config.source) } else { None };
@@ -712,6 +720,37 @@ mod tests {
         let streams = exec.run_singlethreaded(&mut streams_fut);
 
         assert!(streams.is_err(), "Stream building should fail when it can't reach MediaPlayer");
+    }
+
+    #[cfg(feature = "test_encoding")]
+    #[test]
+    /// build local_streams should not include the AAC streams
+    fn test_aac_switch() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let (sender, _) = fake_cobalt_sender();
+        let mut config = A2dpConfiguration {
+            source: AudioSourceType::BigBen,
+            enable_sink: false,
+            ..Default::default()
+        };
+        let mut builder_fut = Box::pin(StreamsBuilder::system_available(sender.clone(), &config));
+
+        let builder = exec.run_singlethreaded(&mut builder_fut);
+
+        let streams = builder.expect("should generate streams").streams().expect("gather streams");
+        assert_eq!(streams.information().len(), 2, "Source AAC & SBC should be available");
+
+        drop(builder_fut);
+        drop(streams);
+
+        config.enable_aac = false;
+
+        let mut builder_fut = Box::pin(StreamsBuilder::system_available(sender.clone(), &config));
+
+        let builder = exec.run_singlethreaded(&mut builder_fut);
+
+        let streams = builder.expect("should generate streams").streams().expect("gather streams");
+        assert_eq!(streams.information().len(), 1, "Source SBC only should be available");
     }
 
     #[test]

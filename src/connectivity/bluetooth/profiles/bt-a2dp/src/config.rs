@@ -43,6 +43,11 @@ pub struct A2dpConfigurationArgs {
     /// defaults to true
     #[argh(option)]
     pub enable_avrcp_target: Option<bool>,
+    /// attempt to use AAC. If an AAC encoder / decoder is not available,
+    //  this has no effect.
+    /// defaults to true
+    #[argh(option)]
+    pub enable_aac: Option<bool>,
 
     /// duration for A2DP to wait in milliseconds before assuming role of the initiator.
     /// If a signaling channel has not been established by this time, A2DP will
@@ -104,6 +109,8 @@ pub struct A2dpConfiguration {
     pub enable_sink: bool,
     /// Enable AVRCP-Target. defaults to true.
     pub enable_avrcp_target: bool,
+    /// Enable using the AAC codec.  Has no effect if AAC is not available. defaults to true.
+    pub enable_aac: bool,
     /// Duration for A2DP to wait before assuming role of the initiator.
     /// If a signaling channel has not been established by this time, A2DP will
     /// create the signaling channel, configure, open and start the stream. Defaults
@@ -121,6 +128,7 @@ impl Default for A2dpConfiguration {
             enable_source: true,
             enable_sink: true,
             enable_avrcp_target: true,
+            enable_aac: true,
             initiator_delay: DEFAULT_INITIATOR_DELAY,
         }
     }
@@ -164,6 +172,7 @@ impl A2dpConfiguration {
             enable_source: args.enable_source.unwrap_or(self.enable_source),
             enable_sink: args.enable_sink.unwrap_or(self.enable_sink),
             enable_avrcp_target: args.enable_avrcp_target.unwrap_or(self.enable_avrcp_target),
+            enable_aac: args.enable_aac.unwrap_or(self.enable_aac),
             channel_mode,
             initiator_delay,
             ..self
@@ -270,6 +279,7 @@ mod tests {
         assert_eq!(AudioSourceType::BigBen, config.source);
         assert_eq!(true, config.enable_source);
         assert_eq!(true, config.enable_avrcp_target);
+        assert_eq!(true, config.enable_aac);
         assert_eq!(zx::Duration::from_millis(10000), config.initiator_delay);
 
         let missing_source = br#"
@@ -289,13 +299,30 @@ mod tests {
             {
                 "domain": "Testing",
                 "source": "audio_out",
-                "enable_source": false
+                "enable_source": false,
+                "enable_aac": false
             }
         "#;
         let config =
             A2dpConfiguration::from_reader(&missing_mode[..]).expect("without mode config");
         assert_eq!(A2dpConfiguration::default().channel_mode, config.channel_mode);
         assert_eq!("Testing", config.domain);
+        assert_eq!(false, config.enable_source);
+        assert_eq!(false, config.enable_aac);
+
+        let missing_aac = br#"
+            {
+                "domain": "Testing",
+                "source": "big_ben",
+                "channel_mode": "ertm",
+                "enable_source": false
+            }
+        "#;
+        let config = A2dpConfiguration::from_reader(&missing_aac[..]).expect("without aac config");
+        assert_eq!(A2dpConfiguration::default().enable_aac, config.enable_aac);
+        assert_eq!("Testing", config.domain);
+        assert_eq!(AudioSourceType::BigBen, config.source);
+        assert_eq!(bredr::ChannelMode::EnhancedRetransmission, config.channel_mode);
         assert_eq!(false, config.enable_source);
 
         let missing_all = b"{}";
