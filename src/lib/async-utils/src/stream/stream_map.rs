@@ -9,7 +9,7 @@ use {
         task::{Context, Poll},
     },
     futures::{
-        stream::{Stream, StreamExt},
+        stream::{FusedStream, Stream, StreamExt},
         Future,
     },
     std::collections::HashMap,
@@ -96,6 +96,13 @@ impl<K: Clone + Eq + Hash + Unpin, St: Stream> Stream for StreamMap<K, St> {
             streams.remove(&key);
         }
         result
+    }
+}
+
+// StreamMap never returns None, because a new stream could always be inserted with items.
+impl<K: Clone + Eq + Hash + Unpin, St: Stream> FusedStream for StreamMap<K, St> {
+    fn is_terminated(&self) -> bool {
+        false
     }
 }
 

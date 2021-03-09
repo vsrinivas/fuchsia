@@ -7,7 +7,7 @@ use {
     fuchsia_bluetooth::types::{HostId, PeerId},
     futures::{
         future::BoxFuture,
-        stream::{FuturesUnordered, Stream},
+        stream::{FusedStream, FuturesUnordered, Stream},
     },
     pin_utils::unsafe_pinned,
     std::{
@@ -60,6 +60,13 @@ impl<T> PairingRequests<T> {
     unsafe_pinned!(
         inner: StreamMap<HostId, FuturesUnordered<Tagged<PeerId, BoxFuture<'static, T>>>>
     );
+}
+
+impl<T> FusedStream for PairingRequests<T> {
+    // PairingRequests is never terminated - a new pending request be added at any time
+    fn is_terminated(&self) -> bool {
+        false
+    }
 }
 
 impl<T> Stream for PairingRequests<T> {

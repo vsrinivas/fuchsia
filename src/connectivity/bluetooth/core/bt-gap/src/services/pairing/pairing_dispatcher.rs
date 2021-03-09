@@ -37,8 +37,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::{HostId, Peer, PeerId},
     futures::{
-        channel::{mpsc, oneshot},
-        future::{self, BoxFuture, FutureExt},
+        channel::mpsc,
+        future::{BoxFuture, FutureExt},
         select,
         sink::SinkExt,
         stream::StreamExt,
@@ -68,8 +68,18 @@ pub struct PairingDispatcher {
     inflight_requests: PairingRequests<(PairingResponse, Responder)>,
     /// New hosts that we have been asked to begin processing
     hosts_added: mpsc::Receiver<(HostId, HostProxy)>,
-    /// Notification when this has been closed
-    close_triggered: oneshot::Receiver<()>,
+}
+
+impl Drop for PairingDispatcher {
+    fn drop(&mut self) {
+        // Drop hosts to stop processing the tasks of all host channels
+        self.hosts = IndexedStreams::empty();
+        for (_, reqs) in self.inflight_requests.take_all_requests().into_iter() {
+            for peer in reqs.into_iter() {
+                let _ignored = self.upstream.on_pairing_complete(peer, false);
+            }
+        }
+    }
 }
 
 impl PairingDispatcher {
@@ -79,8 +89,7 @@ impl PairingDispatcher {
         input: InputCapability,
         output: OutputCapability,
     ) -> (PairingDispatcher, PairingDispatcherHandle) {
-        let (add_hosts, hosts_receiver) = mpsc::channel(0);
-        let (closed_sender, closed_receiver) = oneshot::channel();
+        let (hosts_added, handle) = PairingDispatcherHandle::new();
 
         let dispatcher = PairingDispatcher {
             input,
@@ -88,11 +97,8 @@ impl PairingDispatcher {
             upstream,
             hosts: IndexedStreams::empty(),
             inflight_requests: PairingRequests::empty(),
-            hosts_added: hosts_receiver,
-            close_triggered: closed_receiver,
+            hosts_added,
         };
-        let close = Some(closed_sender);
-        let handle = PairingDispatcherHandle { add_hosts, close };
 
         (dispatcher, handle)
     }
@@ -107,37 +113,20 @@ impl PairingDispatcher {
         Ok(())
     }
 
-    /// Once closed, no requests from the host pairers will be handled, and in-flight requests will
-    /// be notified to the upstream delegate as failed.
-    fn close(&mut self) {
-        // Drop hosts to stop processing the tasks of all host channels
-        self.hosts = IndexedStreams::empty();
-        for (_host, mut reqs) in self.inflight_requests.take_all_requests().into_iter() {
-            for peer in reqs.drain(..) {
-                let _ignored = self.upstream.on_pairing_complete(peer, false);
-            }
-        }
-    }
-
     /// Run the PairingDispatcher, processing incoming host requests and responses to in-flight
     /// requests from the upstream delegate
     pub async fn run(mut self) {
         while !self.handle_next().await {}
-        // The loop ended due to termination; clean up
-        self.close();
     }
 
     /// Handle a single incoming event for the PairingDispatcher. Return true if the dispatcher
     /// should terminate, and false if it should continue
     async fn handle_next(&mut self) -> bool {
-        // We stop if either we're notified to stop, or the upstream delegate closes
-        let mut closed = future::select(&mut self.close_triggered, self.upstream.when_done());
-
         select! {
-            host_event = self.hosts.next().fuse() => {
+            host_event = self.hosts.select_next_some() => {
                 match host_event {
                     // A new request was received from a host
-                    Some(StreamItem::Item((host, req))) => {
+                    StreamItem::Item((host, req)) => {
                         match req {
                             Ok(req) => self.handle_host_request(req, host),
                             Err(_) => {
@@ -148,7 +137,7 @@ impl PairingDispatcher {
                     }
                     // A host channel has closed; notify upstream that all of its in-flight
                     // requests have aborted
-                    Some(StreamItem::Epitaph(host)) => {
+                    StreamItem::Epitaph(host) => {
                         if let Some(reqs) = self.inflight_requests.remove_host_requests(host) {
                             for peer in reqs {
                                 if let Err(e) = self.upstream.on_pairing_complete(peer, false) {
@@ -161,46 +150,34 @@ impl PairingDispatcher {
                         }
                         false
                     }
-                    None => {
-                        // The Stream impl for StreamMap never terminates
-                        unreachable!()
+                }
+            },
+            pending_req = &mut self.inflight_requests.select_next_some() => {
+                let (peer_id, (upstream_response, downstream)) = pending_req;
+                match upstream_response {
+                    Ok((accept, passkey)) => {
+                        let accepted = if accept { "accepted" } else { "rejected" };
+                        info!(
+                            "PairingDelegate {} pairing request to PeerId {}. Passkey: {}",
+                            accepted, peer_id, passkey
+                        );
+                        if let Err(e) = downstream.send(accept, passkey) {
+                            warn!("Error replying to pairing request from bt-host: {}", e);
+                            // TODO(fxbug.dev/45325) - when errors occur communicating with a downstream
+                            // host, we should unregister and remove that host
+                        }
+                        false
+                    }
+                    Err(e) => {
+                        // All fidl errors are considered fatal with respect to the upstream
+                        // channel. If we receive any error, we consider the upstream closed and
+                        // terminate the dispatcher. Terminating will result in the downstream
+                        // request being canceled so we do not need to specifically notify.
+                        warn!("Terminating Pairing Delegate: Error handling pairing request: {}", e);
+                        true
                     }
                 }
             },
-            pending_req = &mut self.inflight_requests.next().fuse() => {
-                match pending_req {
-                    Some((peer_id, (upstream_response, downstream))) => {
-                        match upstream_response {
-                            Ok((accept, passkey)) => {
-                                let accepted = if accept { "accepted" } else { "rejected" };
-                                info!(
-                                    "PairingDelegate {} pairing request to PeerId {}. Passkey: {}",
-                                    accepted, peer_id, passkey
-                                );
-                                let result = downstream.send(accept, passkey);
-                                if let Err(e) = result {
-                                    warn!("Error replying to pairing request from bt-host: {}", e);
-                                    // TODO(fxbug.dev/45325) - when errors occur communicating with a downstream
-                                    // host, we should unregister and remove that host
-                                }
-                                false
-                            }
-                            Err(e) => {
-                                // All fidl errors are considered fatal with respect to the upstream
-                                // channel. If we receive any error, we consider the upstream closed and
-                                // terminate the dispatcher. Terminating will result in the downstream
-                                // request being canceled so we do not need to specifically notify.
-                                warn!("Terminating Pairing Delegate: Error handling pairing request: {}", e);
-                                true
-                            }
-                        }
-                    },
-                    None => {
-                        // The Stream impl for StreamMap never terminates
-                        unreachable!()
-                    }
-                }
-            }
             host_added = self.hosts_added.next().fuse() => {
                 match host_added {
                     Some((id, proxy)) => {
@@ -209,11 +186,11 @@ impl PairingDispatcher {
                         }
                         false
                     }
-                    // If empty, the stream has terminated and we should close
+                    // If empty, all senders have been dropped and we should close
                     None => true,
                 }
             },
-            _ = closed => true,
+            _ = self.upstream.when_done().fuse() => true,
         }
     }
 
@@ -222,8 +199,7 @@ impl PairingDispatcher {
     fn handle_host_request(&mut self, event: PairingDelegateRequest, host: HostId) -> bool {
         match event {
             OnPairingRequest { peer, method, displayed_passkey, responder } => {
-                let peer = Peer::try_from(peer);
-                match peer {
+                match Peer::try_from(peer) {
                     Ok(peer) => {
                         let id = peer.id;
                         let response: BoxFuture<'static, _> = self
@@ -284,13 +260,16 @@ impl PairingDispatcher {
 /// dispatcher is not guaranteed to have finished execution and must continue to be polled to
 /// finalize.
 pub struct PairingDispatcherHandle {
-    /// Notify the PairingDispatcher to close
-    close: Option<oneshot::Sender<()>>,
     /// Add a host to the PairingDispatcher
     add_hosts: mpsc::Sender<(HostId, HostProxy)>,
 }
 
 impl PairingDispatcherHandle {
+    pub fn new() -> (mpsc::Receiver<(HostId, HostProxy)>, Self) {
+        let (add_hosts, hosts_receiver) = mpsc::channel(0);
+        (hosts_receiver, Self { add_hosts })
+    }
+
     /// Add a new Host identified by `id` to this PairingDispatcher, so the dispatcher will handle
     /// pairing requests from the host serving to `proxy`.
     pub fn add_host(&self, id: HostId, proxy: HostProxy) {
@@ -303,17 +282,6 @@ impl PairingDispatcherHandle {
             }
         })
         .detach();
-    }
-}
-
-/// Dropping the Handle signals to the dispatcher to close.
-impl Drop for PairingDispatcherHandle {
-    fn drop(&mut self) {
-        if let Some(close) = self.close.take() {
-            // This should not fail; if it does it indicates that the channel has already been
-            // signalled in which case the expected behavior will still occur.
-            let _ = close.send(());
-        }
     }
 }
 
