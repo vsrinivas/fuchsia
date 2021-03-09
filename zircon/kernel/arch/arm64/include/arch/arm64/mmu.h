@@ -58,25 +58,23 @@
 
 #if MMU_IDENT_SIZE_SHIFT < 25
 #error MMU_IDENT_SIZE_SHIFT too small
-#elif MMU_IDENT_SIZE_SHIFT <= 29 /* Use 2MB block mappings (4K page size) */
+#elif MMU_IDENT_SIZE_SHIFT <= 29 // Use 2MB block mappings (4K page size)
 #define MMU_IDENT_PAGE_SIZE_SHIFT       (SHIFT_4K)
-#elif MMU_IDENT_SIZE_SHIFT <= 30 /* Use 512MB block mappings (64K page size) */
+#elif MMU_IDENT_SIZE_SHIFT <= 30 // Use 512MB block mappings (64K page size)
 #define MMU_IDENT_PAGE_SIZE_SHIFT       (SHIFT_64K)
-#elif MMU_IDENT_SIZE_SHIFT <= 39 /* Use 1GB block mappings (4K page size) */
+#elif MMU_IDENT_SIZE_SHIFT <= 39 // Use 1GB block mappings (4K page size)
 #define MMU_IDENT_PAGE_SIZE_SHIFT       (SHIFT_4K)
-#elif MMU_IDENT_SIZE_SHIFT <= 42 /* Use 512MB block mappings (64K page size) */
+#elif MMU_IDENT_SIZE_SHIFT <= 42 // Use 512MB block mappings (64K page size)
 #define MMU_IDENT_PAGE_SIZE_SHIFT       (SHIFT_64K)
 #else
 #error MMU_IDENT_SIZE_SHIFT too large
 #endif
 
-/*
- * TCR TGx values
- *
- * Page size:   4K      16K     64K
- * TG0:         0       2       1
- * TG1:         2       1       3
- */
+// TCR TGx values
+//
+// Page size:   4K      16K     64K
+// TG0:         0       2       1
+// TG1:         2       1       3
 
 #define MMU_TG0(page_size_shift) ((((page_size_shift == 14) & 1) << 1) | \
                                   ((page_size_shift == 16) & 1))
@@ -187,28 +185,28 @@
 #define MMU_MAIR_ATTR(index, attr)              BM(index * 8, 8, (attr))
 
 
-/* L0/L1/L2/L3 descriptor types */
+// L0/L1/L2/L3 descriptor types
 #define MMU_PTE_DESCRIPTOR_INVALID              BM(0, 2, 0)
 #define MMU_PTE_DESCRIPTOR_MASK                 BM(0, 2, 3)
 
-/* L0/L1/L2 descriptor types */
+// L0/L1/L2 descriptor types
 #define MMU_PTE_L012_DESCRIPTOR_BLOCK           BM(0, 2, 1)
 #define MMU_PTE_L012_DESCRIPTOR_TABLE           BM(0, 2, 3)
 
-/* L3 descriptor types */
+// L3 descriptor types
 #define MMU_PTE_L3_DESCRIPTOR_PAGE              BM(0, 2, 3)
 
-/* Output address mask */
+// Output address mask
 #define MMU_PTE_OUTPUT_ADDR_MASK                BM(12, 36, 0xfffffffff)
 
-/* Table attrs */
+// Table attrs
 #define MMU_PTE_ATTR_NS_TABLE                   BM(63, 1, 1)
 #define MMU_PTE_ATTR_AP_TABLE_NO_WRITE          BM(62, 1, 1)
 #define MMU_PTE_ATTR_AP_TABLE_NO_EL0            BM(61, 1, 1)
 #define MMU_PTE_ATTR_UXN_TABLE                  BM(60, 1, 1)
 #define MMU_PTE_ATTR_PXN_TABLE                  BM(59, 1, 1)
 
-/* Block/Page attrs */
+// Block/Page attrs
 #define MMU_PTE_ATTR_RES_SOFTWARE               BM(55, 4, 0xf)
 #define MMU_PTE_ATTR_UXN                        BM(54, 1, 1)
 #define MMU_PTE_ATTR_PXN                        BM(53, 1, 1)
@@ -242,34 +240,30 @@
 #define MMU_S2_PTE_ATTR_S2AP_RW                 BM(6, 2, 3)
 
 #define MMU_S2_PTE_ATTR_ATTR_INDEX_MASK         BM(2, 4, 0xf)
-/* Normal, Outer Write-Back Cacheable, Inner Write-Back Cacheable. */
+// Normal, Outer Write-Back Cacheable, Inner Write-Back Cacheable.
 #define MMU_S2_PTE_ATTR_NORMAL_MEMORY           BM(2, 4, 0xf)
-/* Normal, Outer Non-cacheable, Inner Non-cacheable. */
+// Normal, Outer Non-cacheable, Inner Non-cacheable.
 #define MMU_S2_PTE_ATTR_NORMAL_UNCACHED         BM(2, 4, 0x5)
-/* Device, Device-nGnRnE memory. */
+// Device, Device-nGnRnE memory.
 #define MMU_S2_PTE_ATTR_STRONGLY_ORDERED        BM(2, 4, 0x0)
-/* Device, Device-nGnRE memory. */
+// Device, Device-nGnRE memory.
 #define MMU_S2_PTE_ATTR_DEVICE                  BM(2, 4, 0x1)
 
-/* Default configuration for main kernel page table:
- *    - do cached translation walks
- */
-
-/* Device-nGnRnE memory */
+// Device-nGnRnE memory
 #define MMU_MAIR_ATTR0                  MMU_MAIR_ATTR(0, 0x00)
 #define MMU_PTE_ATTR_STRONGLY_ORDERED   MMU_PTE_ATTR_ATTR_INDEX(0)
 
-/* Device-nGnRE memory */
+// Device-nGnRE memory
 #define MMU_MAIR_ATTR1                  MMU_MAIR_ATTR(1, 0x04)
 #define MMU_PTE_ATTR_DEVICE             MMU_PTE_ATTR_ATTR_INDEX(1)
 
-/* Normal Memory, Outer Write-back non-transient Read/Write allocate,
- * Inner Write-back non-transient Read/Write allocate
- */
+// Normal Memory, Outer Write-back non-transient Read/Write allocate,
+// Inner Write-back non-transient Read/Write allocate
+//
 #define MMU_MAIR_ATTR2                  MMU_MAIR_ATTR(2, 0xff)
 #define MMU_PTE_ATTR_NORMAL_MEMORY      MMU_PTE_ATTR_ATTR_INDEX(2)
 
-/* Normal Memory, Inner/Outer uncached, Write Combined */
+// Normal Memory, Inner/Outer uncached, Write Combined
 #define MMU_MAIR_ATTR3                  MMU_MAIR_ATTR(3, 0x44)
 #define MMU_PTE_ATTR_NORMAL_UNCACHED    MMU_PTE_ATTR_ATTR_INDEX(3)
 
@@ -283,12 +277,11 @@
                                          MMU_MAIR_ATTR4 | MMU_MAIR_ATTR5 | \
                                          MMU_MAIR_ATTR6 | MMU_MAIR_ATTR7 )
 
-/* TODO: read at runtime, or configure per platform */
-#define MMU_TCR_IPS_DEFAULT MMU_TCR_IPS(2) /* 40 bits */
+// TODO: read at runtime, or configure per platform
+#define MMU_TCR_IPS_DEFAULT MMU_TCR_IPS(2) // 40 bits
 
-/* Enable cached page table walks:
- * inner/outer (IRGN/ORGN): write-back + write-allocate
- */
+// Enable cached page table walks:
+// inner/outer (IRGN/ORGN): write-back + write-allocate
 #define MMU_TCR_FLAGS1 (MMU_TCR_TG1(MMU_TG1(MMU_KERNEL_PAGE_SIZE_SHIFT)) | \
                         MMU_TCR_SH1(MMU_SH_INNER_SHAREABLE) | \
                         MMU_TCR_ORGN1(MMU_RGN_WRITE_BACK_ALLOCATE) | \
@@ -306,12 +299,16 @@
                         MMU_TCR_IRGN0(MMU_RGN_WRITE_BACK_ALLOCATE) | \
                         MMU_TCR_T0SZ(64 - MMU_IDENT_SIZE_SHIFT))
 
+// TCR while using the boot trampoline.
+// Both TTBRs active, ASID set to kernel, ident page granule selected for user half.
 #define MMU_TCR_FLAGS_IDENT (MMU_TCR_IPS_DEFAULT | \
                         MMU_TCR_FLAGS1 | \
                         MMU_TCR_FLAGS0_IDENT | \
                         MMU_TCR_AS | \
                         MMU_TCR_A1)
 
+// TCR while a kernel only (no user address space) thread is active.
+// User page walks disabled, ASID set to kernel.
 #define MMU_TCR_FLAGS_KERNEL (MMU_TCR_IPS_DEFAULT | \
                               MMU_TCR_FLAGS1 | \
                               MMU_TCR_FLAGS0 | \
@@ -319,6 +316,8 @@
                               MMU_TCR_AS | \
                               MMU_TCR_A1)
 
+// TCR while a user mode thread is active in user or kernel space.
+// Both TTBrs active, ASID set to user.
 #define MMU_TCR_FLAGS_USER (MMU_TCR_IPS_DEFAULT | \
                             MMU_TCR_FLAGS1 | \
                             MMU_TCR_FLAGS0 | \
@@ -391,14 +390,13 @@
 
 #ifndef __ASSEMBLER__
 
-#include <sys/types.h>
 #include <assert.h>
+#include <sys/types.h>
 #include <zircon/compiler.h>
+
 #include <arch/arm64.h>
 
 typedef uint64_t pte_t;
-
-__BEGIN_CDECLS
 
 #define ARM64_TLBI_NOADDR(op)        \
   ({                                 \
@@ -435,7 +433,6 @@ zx_status_t arm64_boot_map_v(const vaddr_t vaddr, const paddr_t paddr, const siz
 // the physical address of a virtual address
 zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write);
 
-__END_CDECLS
-#endif /* __ASSEMBLER__ */
+#endif  // __ASSEMBLER__
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_MMU_H_

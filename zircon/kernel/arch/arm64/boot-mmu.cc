@@ -187,8 +187,8 @@ extern "C" zx_status_t arm64_boot_map(pte_t* kernel_table0, const vaddr_t vaddr,
 
 // called a bit later in the boot process once the kernel is in virtual memory to map early kernel
 // data
-extern "C" zx_status_t arm64_boot_map_v(const vaddr_t vaddr, const paddr_t paddr, const size_t len,
-                                        const pte_t flags) {
+zx_status_t arm64_boot_map_v(const vaddr_t vaddr, const paddr_t paddr, const size_t len,
+                             const pte_t flags) {
   // assumed to be running with virtual memory enabled, so use a slightly different set of routines
   // to allocate and find the virtual mapping of memory
   auto alloc = []() -> paddr_t {

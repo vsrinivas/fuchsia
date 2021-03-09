@@ -1524,36 +1524,42 @@ zx_status_t ArmArchVmAspace::Destroy() {
   return ZX_OK;
 }
 
+// Called during context switches between threads with different address spaces. Swaps the
+// mmu context on hardware. Assumes old_aspace != aspace and optimizes as such.
 void ArmArchVmAspace::ContextSwitch(ArmArchVmAspace* old_aspace, ArmArchVmAspace* aspace) {
-  if (TRACE_CONTEXT_SWITCH) {
-    TRACEF("aspace %p\n", aspace);
-  }
-
   uint64_t tcr;
   uint64_t ttbr;
-  if (aspace) {
+  if (likely(aspace)) {
     aspace->canary_.Assert();
     DEBUG_ASSERT((aspace->flags_ & (ARCH_ASPACE_FLAG_KERNEL | ARCH_ASPACE_FLAG_GUEST)) == 0);
 
-    tcr = MMU_TCR_FLAGS_USER;
+    // Load the user space TTBR with the translation table and user space ASID.
     ttbr = ((uint64_t)aspace->asid_ << 48) | aspace->tt_phys_;
     __arm_wsr64("ttbr0_el1", ttbr);
     __isb(ARM_MB_SY);
 
-    if (TRACE_CONTEXT_SWITCH) {
-      TRACEF("ttbr %#" PRIx64 ", tcr %#" PRIx64 "\n", ttbr, tcr);
+    // If we're switching away from the kernel aspace, load TCR with the user flags.
+    tcr = MMU_TCR_FLAGS_USER;
+    if (unlikely(!old_aspace)) {
+      __arm_wsr64("tcr_el1", tcr);
+      __isb(ARM_MB_SY);
     }
 
   } else {
+    // Switching to the null aspace, which means kernel address space only.
+    // Load a null TTBR0 and disable page table walking for user space.
     tcr = MMU_TCR_FLAGS_KERNEL;
+    __arm_wsr64("tcr_el1", tcr);
+    __isb(ARM_MB_SY);
 
-    if (TRACE_CONTEXT_SWITCH) {
-      TRACEF("tcr %#" PRIx64 "\n", tcr);
-    }
+    ttbr = 0;  // MMU_ARM64_UNUSED_ASID
+    __arm_wsr64("ttbr0_el1", ttbr);
+    __isb(ARM_MB_SY);
   }
-
-  __arm_wsr64("tcr_el1", tcr);
-  __isb(ARM_MB_SY);
+  if (TRACE_CONTEXT_SWITCH) {
+    TRACEF("old aspace %p aspace %p ttbr %#" PRIx64 ", tcr %#" PRIx64 "\n", old_aspace, aspace,
+           ttbr, tcr);
+  }
 }
 
 void arch_zero_page(void* _ptr) {
