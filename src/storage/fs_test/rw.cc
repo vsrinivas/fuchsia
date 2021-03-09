@@ -41,6 +41,29 @@ TEST_P(RwTest, ZeroLengthOperations) {
   ASSERT_EQ(unlink(filename.c_str()), 0);
 }
 
+// Test that zero length write interleaved with non-zero length writes
+// works as expected.
+TEST_P(RwTest, ZeroLengthOperationWithNonZeroLengthWrites) {
+  const std::string filename = GetPath("zero_length_after_large_offset_ops");
+  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT, 0644));
+  ASSERT_TRUE(fd);
+
+  constexpr size_t kBufferSize = 65374;
+  std::unique_ptr<uint8_t[]> buffer(new uint8_t[kBufferSize]());
+
+  memset(buffer.get(), 0, kBufferSize);
+  uint64_t kLargeOffset = 50ull * 1024ull * 1024ull;
+  uint64_t kOffset = 11ull * 1024ull * 1024ull;
+
+  ASSERT_EQ(pwrite(fd.get(), buffer.get(), kBufferSize, kLargeOffset),
+            static_cast<ssize_t>(kBufferSize));
+  ASSERT_EQ(pwrite(fd.get(), nullptr, 0, kOffset), 0);
+  ASSERT_EQ(pwrite(fd.get(), buffer.get(), kBufferSize, kLargeOffset - 8192),
+            static_cast<ssize_t>(kBufferSize));
+
+  ASSERT_EQ(close(fd.release()), 0);
+}
+
 // Test that non-zero length read_at and write_at operations are valid.
 TEST_P(RwTest, OffsetOperations) {
   srand(0xDEADBEEF);
