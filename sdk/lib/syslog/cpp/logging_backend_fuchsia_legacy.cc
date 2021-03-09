@@ -59,6 +59,29 @@ syslog::LogSeverity GetMinLogLevel() {
   return static_cast<syslog::LogSeverity>(fx_logger_get_min_severity(fx_log_get_logger()));
 }
 
+void BeginRecord(LogBuffer* buffer, syslog::LogSeverity severity, const char* file,
+                 unsigned int line, const char* msg, const char* condition) {
+  BeginRecordLegacy(buffer, severity, file, line, msg, condition);
+}
+
+void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value) {
+  WriteKeyValueLegacy(buffer, key, value);
+}
+
+void WriteKeyValue(LogBuffer* buffer, const char* key, int64_t value) {
+  WriteKeyValueLegacy(buffer, key, value);
+}
+
+void WriteKeyValue(LogBuffer* buffer, const char* key, uint64_t value) {
+  WriteKeyValueLegacy(buffer, key, value);
+}
+
+void WriteKeyValue(LogBuffer* buffer, const char* key, double value) {
+  WriteKeyValueLegacy(buffer, key, value);
+}
+
+void EndRecord(LogBuffer* buffer) { EndRecordLegacy(buffer); }
+
 bool FlushRecord(LogBuffer* buffer) {
   auto header = MsgHeader::CreatePtr(buffer);
   *(header->offset++) = 0;

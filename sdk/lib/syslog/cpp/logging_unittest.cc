@@ -362,7 +362,7 @@ TEST(StructuredLogging, FlushAndReset) {
   ASSERT_EQ(header->RemainingSpace(), initial - 4);
   header->FlushAndReset();
   ASSERT_EQ(header->RemainingSpace(),
-            sizeof(syslog_backend::LogBuffer::data) - 1);  // last byte reserved for NULL terminator
+            sizeof(syslog_backend::LogBuffer::data) - 2);  // last byte reserved for NULL terminator
 }
 
 }  // namespace

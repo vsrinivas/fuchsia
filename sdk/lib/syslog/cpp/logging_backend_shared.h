@@ -23,10 +23,24 @@ struct MsgHeader {
   char* user_tag;
   bool has_msg;
   bool first_kv;
+  bool terminated;
   size_t RemainingSpace() {
     auto end = (reinterpret_cast<const char*>(this) + sizeof(LogBuffer));
-    auto avail = static_cast<size_t>(end - offset - 1);
+    auto avail = static_cast<size_t>(end - offset -
+                                     2);  // Allocate an extra byte for a NULL terminator at the end
     return avail;
+  }
+
+  void NullTerminate() {
+    if (!terminated) {
+      terminated = true;
+      *(offset++) = 0;
+    }
+  }
+
+  const char* c_str() {
+    NullTerminate();
+    return reinterpret_cast<const char*>(buffer->data);
   }
 
   void WriteChar(const char value) {
@@ -81,6 +95,7 @@ struct MsgHeader {
     first_tag = true;
     has_msg = false;
     first_kv = true;
+    terminated = false;
   }
 
   static MsgHeader* CreatePtr(LogBuffer* buffer) {
@@ -94,6 +109,19 @@ const std::string GetNameForLogSeverity(syslog::LogSeverity severity);
 
 static_assert(sizeof(MsgHeader) <= sizeof(LogBuffer::record_state),
               "message header must be no larger than record_state");
+
+void BeginRecordLegacy(LogBuffer* buffer, syslog::LogSeverity severity, const char* file,
+                       unsigned int line, const char* msg, const char* condition);
+
+void WriteKeyValueLegacy(LogBuffer* buffer, const char* key, const char* value);
+
+void WriteKeyValueLegacy(LogBuffer* buffer, const char* key, int64_t value);
+
+void WriteKeyValueLegacy(LogBuffer* buffer, const char* key, uint64_t value);
+
+void WriteKeyValueLegacy(LogBuffer* buffer, const char* key, double value);
+
+void EndRecordLegacy(LogBuffer* buffer);
 
 }  // namespace syslog_backend
 

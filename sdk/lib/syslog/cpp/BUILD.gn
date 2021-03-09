@@ -154,8 +154,10 @@ sdk_source_set("backend_fuchsia_lib") {
   include_base = "//sdk"
 
   sources = [
+    "fx_log_api.cc",
     "logging_backend_fuchsia.cc",
     "logging_backend_fuchsia_globals.h",
+    "logging_backend_shared.cc",
   ]
 
   deps = [
@@ -166,6 +168,7 @@ sdk_source_set("backend_fuchsia_lib") {
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
+    "//zircon/system/ulib/syslog",
   ]
 
   data_deps = [ "//sdk/lib/diagnostics/syslog:client_includes" ]
@@ -182,8 +185,10 @@ sdk_source_set("backend_fuchsia_compat") {
   include_base = "//sdk"
 
   sources = [
+    "fx_log_api_null.cc",
     "logging_backend_fuchsia.cc",
     "logging_backend_fuchsia_globals.h",
+    "logging_backend_shared.cc",
   ]
 
   deps = [
@@ -245,6 +250,7 @@ executable("logging_cpp_unittests_structured") {
   deps = [
     ":backend",
     ":cpp",
+    "//src/lib/files",
     "//third_party/googletest:gtest",
     "//third_party/googletest:gtest_main",
   ]

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fcntl.h>
 #include <fuchsia/diagnostics/stream/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/fdio/directory.h>
@@ -22,9 +23,19 @@
 
 #include "lib/syslog/streams/cpp/fields.h"
 #include "logging_backend_fuchsia_private.h"
+#include "logging_backend_shared.h"
 #include "macros.h"
-
 namespace syslog_backend {
+
+// Flushes a record to the legacy fx_logger, if available.
+// Returns true on success.
+bool fx_log_compat_flush_record(LogBuffer* buffer);
+
+// Attempts to reconfigure the legacy fx_logger if available.
+// Returns the file descriptor if one was configured.
+// A return value of -1 indicates that no file was opened.
+int fx_log_compat_reconfigure(syslog::LogSettings& settings,
+                              const std::initializer_list<std::string>& tags);
 
 bool HasStructuredBackend() { return true; }
 
@@ -136,6 +147,11 @@ struct RecordState {
   WordOffset<log_word_t> cursor;
   // True if encoding was successful, false otherwise
   bool encode_success = true;
+  // Message string -- valid if severity is FATAL. For FATAL
+  // logs the caller is responsible for ensuring the string
+  // is valid for the duration of the call (which our macros
+  // will ensure for current users).
+  const char* msg_string;
   static RecordState* CreatePtr(LogBuffer* buffer) {
     return reinterpret_cast<RecordState*>(&buffer->record_state);
   }
@@ -309,6 +325,8 @@ class LogState {
   // Allowed to be const because descriptor_ is mutable
   cpp17::variant<zx::socket, std::ofstream>& descriptor() const { return descriptor_; }
 
+  cpp17::optional<int> fd() const { return fd_; }
+
  private:
   LogState(const syslog::LogSettings& settings, const std::initializer_list<std::string>& tags);
   bool WriteLogToFile(std::ofstream* file_ptr, zx_time_t time, zx_koid_t pid, zx_koid_t tid,
@@ -316,6 +334,7 @@ class LogState {
                       const char* tag, const char* condition, const std::string& msg) const;
 
   syslog::LogSeverity min_severity_;
+  cpp17::optional<int> fd_;
   zx_koid_t pid_;
   mutable cpp17::variant<zx::socket, std::ofstream> descriptor_ = zx::socket();
   std::string tags_[kMaxTags];
@@ -328,6 +347,10 @@ void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const 
                          zx_handle_t socket) {
   // Ensure we have log state
   auto& log_state = LogState::Get();
+  if (log_state.fd() != -1) {
+    BeginRecordLegacy(buffer, severity, file_name, line, msg, condition);
+    return;
+  }
   zx_time_t time = zx_clock_get_monotonic();
   auto* state = RecordState::CreatePtr(buffer);
   RecordState& record = *state;
@@ -338,6 +361,9 @@ void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const 
     state->socket = socket;
   } else {
     state->socket = cpp17::get<zx::socket>(log_state.descriptor()).get();
+  }
+  if (severity == syslog::LOG_FATAL) {
+    state->msg_string = msg;
   }
   state->log_severity = severity;
   ExternalDataBuffer external_buffer(buffer);
@@ -386,6 +412,11 @@ void BeginRecordWithSocket(LogBuffer* buffer, syslog::LogSeverity severity, cons
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value) {
+  auto& log_state = LogState::Get();
+  if (log_state.fd() != -1) {
+    WriteKeyValueLegacy(buffer, key, value);
+    return;
+  }
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -398,6 +429,11 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value) {
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, int64_t value) {
+  auto& log_state = LogState::Get();
+  if (log_state.fd() != -1) {
+    WriteKeyValueLegacy(buffer, key, value);
+    return;
+  }
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -408,6 +444,11 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, int64_t value) {
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, uint64_t value) {
+  auto& log_state = LogState::Get();
+  if (log_state.fd() != -1) {
+    WriteKeyValueLegacy(buffer, key, value);
+    return;
+  }
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -418,6 +459,11 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, uint64_t value) {
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, double value) {
+  auto& log_state = LogState::Get();
+  if (log_state.fd() != -1) {
+    WriteKeyValueLegacy(buffer, key, value);
+    return;
+  }
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -428,6 +474,11 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, double value) {
 }
 
 void EndRecord(LogBuffer* buffer) {
+  auto& log_state = LogState::Get();
+  if (log_state.fd() != -1) {
+    EndRecordLegacy(buffer);
+    return;
+  }
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -435,6 +486,10 @@ void EndRecord(LogBuffer* buffer) {
 }
 
 bool FlushRecord(LogBuffer* buffer) {
+  auto& log_state = LogState::Get();
+  if (log_state.fd() != -1) {
+    return fx_log_compat_flush_record(buffer);
+  }
   auto* state = RecordState::CreatePtr(buffer);
   if (!state->encode_success) {
     return false;
@@ -446,6 +501,10 @@ bool FlushRecord(LogBuffer* buffer) {
                                 slice.slice().ToByteOffset().unsafe_get(), nullptr);
   if (status != ZX_OK) {
     AddDropped(state->dropped_count + 1);
+  }
+  if (state->log_severity == syslog::LOG_FATAL) {
+    std::cerr << state->msg_string << std::endl;
+    abort();
   }
   return status != ZX_ERR_BAD_STATE && status != ZX_ERR_PEER_CLOSED &&
          state->log_severity != syslog::LOG_FATAL;
@@ -520,10 +579,11 @@ void LogState::Set(const syslog::LogSettings& settings,
   }
 }
 
-LogState::LogState(const syslog::LogSettings& settings,
+LogState::LogState(const syslog::LogSettings& in_settings,
                    const std::initializer_list<std::string>& tags)
-    : min_severity_(settings.min_log_level), pid_(pid) {
-  min_severity_ = settings.min_log_level;
+    : min_severity_(in_settings.min_log_level), fd_(in_settings.log_fd), pid_(pid) {
+  syslog::LogSettings settings = in_settings;
+  min_severity_ = in_settings.min_log_level;
 
   std::ostringstream tag_str;
 
@@ -541,9 +601,11 @@ LogState::LogState(const syslog::LogSettings& settings,
 
   std::ofstream file;
   if (!settings.log_file.empty()) {
-    file.open(settings.log_file, std::ios::out | std::ios::app);
+    fd_ = fx_log_compat_reconfigure(settings, tags);
   }
-
+  if (fd_ != -1) {
+    return;
+  }
   if (file.is_open()) {
     descriptor_ = std::move(file);
   } else {

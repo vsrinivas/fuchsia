@@ -28,6 +28,10 @@ struct LogSettings {
   // redirected to the specified file.  It is not possible to revert to
   // the previous log output through this interface.
   std::string log_file;
+
+  // An fd to log to. Setting this will disable all structured
+  // features resulting in plaintext-only logs written to the specified file descriptor.
+  int log_fd = -1;
 };
 
 // Sets the active log settings for the current process.

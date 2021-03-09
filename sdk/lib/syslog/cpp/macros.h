@@ -80,7 +80,7 @@ struct LogBuffer {
   // Max size of log buffer
   static constexpr auto kBufferSize = (1 << 15) / 8;
   // Additional storage for internal log state.
-  static constexpr auto kStateSize = 12;
+  static constexpr auto kStateSize = 13;
   // Record state (for keeping track of backend-specific details)
   uint64_t record_state[kStateSize];
   // Log data (used by the backend to encode the log into). The format

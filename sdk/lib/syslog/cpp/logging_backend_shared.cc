@@ -10,8 +10,8 @@
 
 namespace syslog_backend {
 
-void BeginRecord(LogBuffer* buffer, syslog::LogSeverity severity, const char* file,
-                 unsigned int line, const char* msg, const char* condition) {
+void BeginRecordLegacy(LogBuffer* buffer, syslog::LogSeverity severity, const char* file,
+                       unsigned int line, const char* msg, const char* condition) {
   auto header = MsgHeader::CreatePtr(buffer);
   header->buffer = buffer;
   header->Init(buffer, severity);
@@ -51,7 +51,7 @@ MsgHeader* StartKv(LogBuffer* buffer, const char* key) {
   return header;
 }
 
-void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value) {
+void WriteKeyValueLegacy(LogBuffer* buffer, const char* key, const char* value) {
   // "tag" has special meaning to our logging API
   if (strcmp("tag", key) == 0) {
     auto header = MsgHeader::CreatePtr(buffer);
@@ -78,27 +78,27 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value) {
   header->WriteChar('"');
 }
 
-void WriteKeyValue(LogBuffer* buffer, const char* key, int64_t value) {
+void WriteKeyValueLegacy(LogBuffer* buffer, const char* key, int64_t value) {
   auto header = StartKv(buffer, key);
   char a_buffer[128];
   snprintf(a_buffer, 128, "%" PRId64, value);
   header->WriteString(a_buffer);
 }
 
-void WriteKeyValue(LogBuffer* buffer, const char* key, uint64_t value) {
+void WriteKeyValueLegacy(LogBuffer* buffer, const char* key, uint64_t value) {
   auto header = StartKv(buffer, key);
   char a_buffer[128];
   snprintf(a_buffer, 128, "%" PRIu64, value);
   header->WriteString(a_buffer);
 }
 
-void WriteKeyValue(LogBuffer* buffer, const char* key, double value) {
+void WriteKeyValueLegacy(LogBuffer* buffer, const char* key, double value) {
   auto header = StartKv(buffer, key);
   char a_buffer[128];
   snprintf(a_buffer, 128, "%f", value);
   header->WriteString(a_buffer);
 }
 
-void EndRecord(LogBuffer* buffer) {}
+void EndRecordLegacy(LogBuffer* buffer) {}
 
 }  // namespace syslog_backend
