@@ -79,7 +79,7 @@ zx::status<zx_paddr_t> PciRootHost::Allocate(AllocationType type, uint32_t kind,
     };
     st = allocator->GetRegion(region, region_uptr);
   } else {
-    st = allocator->GetRegion(static_cast<uint64_t>(size), ZX_PAGE_SIZE, region_uptr);
+    st = allocator->GetRegion(static_cast<uint64_t>(size), zx_system_get_page_size(), region_uptr);
   }
 
   if (st != ZX_OK) {
