@@ -7,6 +7,9 @@
 
 #include <lib/fidl/cpp/binding_set.h>
 
+#include <mutex>
+
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/base_renderer.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
@@ -66,7 +69,8 @@ class AudioRenderer : public BaseRenderer,
 
   fuchsia::media::AudioRenderUsage usage_ = fuchsia::media::AudioRenderUsage::MEDIA;
 
-  bool reference_clock_is_set_ = false;
+  std::mutex mutex_;
+  bool reference_clock_is_set_ FXL_GUARDED_BY(mutex_) = false;
 
   class GainControlBinding : public fuchsia::media::audio::GainControl {
    public:

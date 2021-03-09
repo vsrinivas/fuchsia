@@ -63,8 +63,11 @@ void AudioRenderer::SetUsage(fuchsia::media::AudioRenderUsage usage) {
 // if the client-submitted clock has insufficient rights. Strip off other rights such as WRITE.
 void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
   TRACE_DURATION("audio", "AudioRenderer::SetReferenceClock");
-
   auto cleanup = fit::defer([this]() { context().route_graph().RemoveRenderer(*this); });
+
+  // Lock after storing |cleanup| to ensure |mutex_| is released upon function return, rather than
+  // |cleanup| completion.
+  std::lock_guard<std::mutex> lock(mutex_);
 
   // We cannot change the reference clock, once it is set. Also, calling `SetPcmStreamType` will
   // automatically sets the default reference clock, if one has not been explicitly set.
@@ -90,6 +93,7 @@ void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
 
 void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) {
   TRACE_DURATION("audio", "AudioRenderer::SetPcmStreamType");
+  std::lock_guard<std::mutex> lock(mutex_);
 
   auto cleanup = fit::defer([this]() { context().route_graph().RemoveRenderer(*this); });
 

@@ -78,6 +78,7 @@ void AudioCapturer::SetRoutingProfile(bool routable) {
 
   // Once we route the capturer, we accept the default reference clock if one hasn't yet been set.
   if (routable) {
+    std::lock_guard<std::mutex> lock(mutex_);
     reference_clock_is_set_ = true;
   }
 }
@@ -94,8 +95,11 @@ constexpr auto kRequiredClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | Z
 // if the client-submitted clock has insufficient rights. Strip off other rights such as WRITE.
 void AudioCapturer::SetReferenceClock(zx::clock raw_clock) {
   TRACE_DURATION("audio", "AudioCapturer::SetReferenceClock");
-
   auto cleanup = fit::defer([this]() { BeginShutdown(); });
+
+  // Lock after storing |cleanup| to ensure |mutex_| is released upon function return, rather than
+  // |cleanup| completion.
+  std::lock_guard<std::mutex> lock(mutex_);
 
   // We cannot change the reference clock, once set. Also, once the capturer is routed to a device
   // (which occurs upon AddPayloadBuffer), we set the default clock if one has not yet been set.

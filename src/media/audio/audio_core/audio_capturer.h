@@ -8,6 +8,9 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
+#include <mutex>
+
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/base_capturer.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 
@@ -70,7 +73,8 @@ class AudioCapturer : public BaseCapturer,
   std::atomic<float> stream_gain_db_;
   CaptureUsage usage_ = CaptureUsage::FOREGROUND;
 
-  bool reference_clock_is_set_ = false;
+  std::mutex mutex_;
+  bool reference_clock_is_set_ FXL_GUARDED_BY(mutex_) = false;
 };
 
 }  // namespace media::audio
