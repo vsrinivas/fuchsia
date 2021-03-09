@@ -15,7 +15,7 @@ using Resampler = ::media::audio::Mixer::Resampler;
 using ASF = fuchsia::media::AudioSampleFormat;
 using AudioPerformance = media::audio::tools::AudioPerformance;
 using GainType = AudioPerformance::GainType;
-using InputRange = AudioPerformance::InputRange;
+using OutputRange = AudioPerformance::OutputSourceRange;
 using MixerConfig = AudioPerformance::MixerConfig;
 using OutputProducerConfig = AudioPerformance::OutputProducerConfig;
 
@@ -41,7 +41,7 @@ struct Options {
   std::set<bool> accumulates;
 
   // OutputProducerConfig.
-  std::set<InputRange> input_ranges;
+  std::set<OutputRange> output_ranges;
 
   // JSON filepath to export perftest results.
   std::optional<std::string> perftest_json;
@@ -58,7 +58,11 @@ struct Options {
 };
 
 constexpr char kBenchmarkDurationSwitch[] = "bench-time";
+constexpr zx::duration kBenchmarkDurationDefault = zx::msec(250);
+
 constexpr char kBenchmarkRunsSwitch[] = "bench-runs";
+constexpr size_t kBenchmarkRunsDefault = 500;
+constexpr size_t kBenchmarkMinRuns = 5;
 
 constexpr char kProfileMixerCreationSwitch[] = "enable-create";
 constexpr char kProfileMixingSwitch[] = "enable-mix";
@@ -80,11 +84,13 @@ constexpr char kSampleFormatInt16Option[] = "int16";
 constexpr char kSampleFormatInt24In32Option[] = "int24";
 constexpr char kSampleFormatFloat32Option[] = "float";
 
-constexpr char kMixingGainsSwitch[] = "mix-gains";
-constexpr char kMixingGainMuteOption[] = "mute";
-constexpr char kMixingGainUnityOption[] = "unity";
-constexpr char kMixingGainScaledOption[] = "scaled";
-constexpr char kMixingGainRampedOption[] = "ramped";
+constexpr char kMixGainssSwitch[] = "mix-gains";
+constexpr char kMixGainsMuteOption[] = "mute";
+constexpr char kMixGainsUnityOption[] = "unity";
+constexpr char kMixGainsScaledOption[] = "scaled";
+constexpr char kMixGainsRampedOption[] = "ramped";
+
+constexpr char kMixAccumulateSwitch[] = "accumulate";
 
 constexpr char kOutputProducerSourceRangesSwitch[] = "output-ranges";
 constexpr char kOutputProducerSourceRangeSilenceOption[] = "silence";
@@ -94,6 +100,24 @@ constexpr char kOutputProducerSourceRangeNormalOption[] = "normal";
 constexpr char kPerftestJsonFilepathSwitch[] = "perftest-json";
 
 constexpr char kUsageSwitch[] = "help";
+
+constexpr uint32_t kPreferredInputChans = 1;
+constexpr uint32_t kPreferredOutputChans = 1;
+constexpr uint32_t kPreferredSourceRate = 48000;
+constexpr uint32_t kPreferredDestRate = 48000;
+constexpr ASF kPreferredSampleFormat = ASF::FLOAT;
+constexpr GainType kPreferredGainType = GainType::Unity;
+constexpr bool kPreferredAccumSetting = false;
+
+constexpr uint32_t kAltPreferredInputChans = 2;
+constexpr uint32_t kAltPreferredOutputChans = 2;
+constexpr uint32_t kAltPreferredSourceRate = 44100;
+constexpr uint32_t kAltPreferredDestRate = 48000;
+constexpr ASF kAltPreferredSampleFormat = ASF::SIGNED_16;
+constexpr GainType kAltPreferredGainType = GainType::Scaled;
+constexpr bool kAltPreferredAccumSetting = true;
+
+constexpr OutputRange kPreferredOutputRange = OutputRange::Normal;
 
 std::vector<MixerConfig> ConfigsForMixerCreation(const Options& opt) {
   if (opt.enabled.count(Benchmark::Create) == 0) {
@@ -107,11 +131,11 @@ std::vector<MixerConfig> ConfigsForMixerCreation(const Options& opt) {
   for (auto [source_rate, dest_rate] : opt.source_dest_rates) {
     out.push_back({
         .sampler_type = Resampler::WindowedSinc,
-        .num_input_chans = 1,   // this has no effect on mixer creation time
-        .num_output_chans = 1,  // this has no effect on mixer creation time
+        .num_input_chans = kPreferredInputChans,    // this has no effect on mixer creation time
+        .num_output_chans = kPreferredOutputChans,  // this has no effect on mixer creation time
         .source_rate = source_rate,
         .dest_rate = dest_rate,
-        .sample_format = ASF::FLOAT,  // this has no effect on mixer creation time
+        .sample_format = kPreferredSampleFormat,  // this has no effect on mixer creation time
     });
   }
 
@@ -168,30 +192,52 @@ std::vector<MixerConfig> ConfigsForMixerReduced(const Options& opt) {
     // and dest rates, so we accommodate that here.
     MixerConfig base_config = {
         .sampler_type = sampler,
-        .num_input_chans = opt.num_input_output_chans.begin()->first,
-        .num_output_chans = opt.num_input_output_chans.begin()->second,
-        .source_rate = sampler == Resampler::SampleAndHold ? opt.matching_rates().first
-                                                           : opt.source_dest_rates.begin()->first,
-        .dest_rate = sampler == Resampler::SampleAndHold ? opt.matching_rates().second
-                                                         : opt.source_dest_rates.begin()->second,
-        .sample_format = *opt.sample_formats.begin(),
-        .gain_type = *opt.gain_types.begin(),
-        .accumulate = *opt.accumulates.begin(),
+        .num_input_chans = kPreferredInputChans,
+        .num_output_chans = kPreferredOutputChans,
+        .source_rate =
+            sampler == Resampler::SampleAndHold ? opt.matching_rates().first : kPreferredSourceRate,
+        .dest_rate =
+            sampler == Resampler::SampleAndHold ? opt.matching_rates().second : kPreferredDestRate,
+        .sample_format = kPreferredSampleFormat,
+        .gain_type = kPreferredGainType,
+        .accumulate = kPreferredAccumSetting,
     };
     out.push_back(base_config);
+
+    MixerConfig alt_base_config = {
+        .sampler_type = sampler,
+        .num_input_chans = kAltPreferredInputChans,
+        .num_output_chans = kAltPreferredOutputChans,
+        .source_rate = sampler == Resampler::SampleAndHold ? opt.matching_rates().first
+                                                           : kAltPreferredSourceRate,
+        .dest_rate = sampler == Resampler::SampleAndHold ? opt.matching_rates().second
+                                                         : kAltPreferredDestRate,
+        .sample_format = kAltPreferredSampleFormat,
+        .gain_type = kAltPreferredGainType,
+        .accumulate = kAltPreferredAccumSetting,
+    };
+    out.push_back(alt_base_config);
 
     for (auto [source_rate, dest_rate] : opt.source_dest_rates) {
       if (sampler == Resampler::SampleAndHold && source_rate != dest_rate) {
         continue;
       }
+
       MixerConfig config = base_config;
-      config.sampler_type = sampler;
       config.source_rate = source_rate;
       config.dest_rate = dest_rate;
       if (config != base_config) {
         out.push_back(config);
       }
+
+      config = alt_base_config;
+      config.source_rate = source_rate;
+      config.dest_rate = dest_rate;
+      if (config != alt_base_config) {
+        out.push_back(config);
+      }
     }
+
     for (auto [num_input_chans, num_output_chans] : opt.num_input_output_chans) {
       MixerConfig config = base_config;
       config.num_input_chans = num_input_chans;
@@ -199,25 +245,53 @@ std::vector<MixerConfig> ConfigsForMixerReduced(const Options& opt) {
       if (config != base_config) {
         out.push_back(config);
       }
+
+      config = alt_base_config;
+      config.num_input_chans = num_input_chans;
+      config.num_output_chans = num_output_chans;
+      if (config != alt_base_config) {
+        out.push_back(config);
+      }
     }
+
     for (auto sample_format : opt.sample_formats) {
       MixerConfig config = base_config;
       config.sample_format = sample_format;
       if (config != base_config) {
         out.push_back(config);
       }
+
+      config = alt_base_config;
+      config.sample_format = sample_format;
+      if (config != alt_base_config) {
+        out.push_back(config);
+      }
     }
+
     for (auto gain_type : opt.gain_types) {
       MixerConfig config = base_config;
       config.gain_type = gain_type;
       if (config != base_config) {
         out.push_back(config);
       }
+
+      config = alt_base_config;
+      config.gain_type = gain_type;
+      if (config != alt_base_config) {
+        out.push_back(config);
+      }
     }
+
     for (auto accumulate : opt.accumulates) {
       MixerConfig config = base_config;
       config.accumulate = accumulate;
       if (config != base_config) {
+        out.push_back(config);
+      }
+
+      config = alt_base_config;
+      config.accumulate = accumulate;
+      if (config != alt_base_config) {
         out.push_back(config);
       }
     }
@@ -235,10 +309,10 @@ std::vector<OutputProducerConfig> ConfigsForOutputProducer(const Options& opt) {
 
   for (auto [num_input_chans, num_output_chans] : opt.num_input_output_chans) {
     for (auto sample_format : opt.sample_formats) {
-      for (auto input_range : opt.input_ranges) {
+      for (auto output_range : opt.output_ranges) {
         out.push_back({
             .sample_format = sample_format,
-            .input_range = input_range,
+            .output_range = output_range,
             .num_chans = num_output_chans,
         });
       }
@@ -256,9 +330,11 @@ std::vector<OutputProducerConfig> ConfigsForOutputProducerReduced(const Options&
 
   std::vector<OutputProducerConfig> out;
 
-  OutputProducerConfig base_config = {.sample_format = *opt.sample_formats.begin(),
-                                      .input_range = *opt.input_ranges.begin(),
-                                      .num_chans = opt.num_input_output_chans.begin()->second};
+  OutputProducerConfig base_config = {
+      .sample_format = kPreferredSampleFormat,
+      .output_range = kPreferredOutputRange,
+      .num_chans = kAltPreferredOutputChans,
+  };
 
   for (auto [num_input_chans, num_output_chans] : opt.num_input_output_chans) {
     OutputProducerConfig config = base_config;
@@ -267,6 +343,7 @@ std::vector<OutputProducerConfig> ConfigsForOutputProducerReduced(const Options&
       out.push_back(config);
     }
   }
+
   for (auto sample_format : opt.sample_formats) {
     OutputProducerConfig config = base_config;
     config.sample_format = sample_format;
@@ -274,9 +351,10 @@ std::vector<OutputProducerConfig> ConfigsForOutputProducerReduced(const Options&
       out.push_back(config);
     }
   }
-  for (auto input_range : opt.input_ranges) {
+
+  for (auto output_range : opt.output_ranges) {
     OutputProducerConfig config = base_config;
-    config.input_range = input_range;
+    config.output_range = output_range;
     if (config != base_config) {
       out.push_back(config);
     }
@@ -286,103 +364,131 @@ std::vector<OutputProducerConfig> ConfigsForOutputProducerReduced(const Options&
 }
 
 const Options kDefaultOpts = {
-    // Expected run time for kDefaultOpts is ~1m40s for a full run and ~2s for a reduced (perftest)
-    // run on an astro device.
-    .limits = {.duration_per_config = zx::msec(250), .runs_per_config = 100},
-    .enabled = {Benchmark::Create, Benchmark::Mix, Benchmark::Output},
+    // Expected execution time for kDefaultOpts on an Astro device:
+    // ~2min40sec for a full run; ~6sec for a reduced (perftest) run.
+    .limits =
+        {
+            .duration_per_config = kBenchmarkDurationDefault,
+            .runs_per_config = kBenchmarkRunsDefault,
+            .min_runs_per_config = kBenchmarkMinRuns,
+        },
+    .enabled =
+        {
+            Benchmark::Create,
+            Benchmark::Mix,
+            Benchmark::Output,
+        },
     .enable_pprof = false,
     .sample_formats =
         {
-            ASF::UNSIGNED_8,
-            ASF::SIGNED_16,
-            ASF::SIGNED_24_IN_32,
-            ASF::FLOAT,
+            ASF::UNSIGNED_8, ASF::SIGNED_16, ASF::SIGNED_24_IN_32,
+            ASF::FLOAT,  // kPreferredSampleFormat
         },
     .num_input_output_chans =
         {
-            {1, 1},
+            {1, 1},  // kPreferredInputChans, kPreferredOutputChans
             {1, 2},
             {2, 1},
             {2, 2},
             {4, 4},
         },
-    .samplers = {Resampler::SampleAndHold, Resampler::WindowedSinc},
+    .samplers =
+        {
+            Resampler::SampleAndHold,
+            Resampler::WindowedSinc,
+        },
     .source_dest_rates =
         {
-            // Typical capture paths
+            // Typical capture-path rate pairs
             {96000, 16000},
             {96000, 48000},
-            // Typical render paths
-            {48000, 48000},
+
+            // Typical render-path rate pairs
+            {48000, 48000},  // kPreferredSourceRate, kPreferredDestRate
             {44100, 48000},
             {48000, 96000},
+
             // Extreme cases
             {8000, 192000},
             {192000, 8000},
         },
-    .gain_types = {GainType::Mute, GainType::Unity, GainType::Scaled, GainType::Ramped},
-    .accumulates = {false, true},
-    .input_ranges = {InputRange::Silence, InputRange::OutOfRange, InputRange::Normal},
+    .gain_types =
+        {
+            GainType::Mute,
+            GainType::Unity,  // kPreferredGainType
+            GainType::Scaled,
+            GainType::Ramped,
+        },
+    .accumulates =
+        {
+            false,  // kPreferredAccumSetting
+            true,
+        },
+    .output_ranges =
+        {
+            OutputRange::Silence, OutputRange::OutOfRange,
+            OutputRange::Normal,  // kPreferredOutputRange
+        },
 };
 
 void Usage(const char* prog_name) {
   printf("\nUsage: %s [--option] [...]\n", prog_name);
   printf("Measure the performance of the audio mixer in microbenchmark operations.\n");
   printf("\n");
-  printf("By default, all types of benchmarks are enabled using a default\n");
-  printf("set of configurations. Valid options are:\n");
+  printf("By default, all benchmark types are enabled for a large set of configurations.\n");
+  printf("Valid options are:\n");
   printf("\n");
   printf("  --%s=<seconds>\n", kBenchmarkDurationSwitch);
-  printf(
-      "    Each benchmark is run for at least this long or --%s, whichever comes first. "
-      "Defaults to 0.25s.\n",
-      kBenchmarkRunsSwitch);
+  printf("    Run each benchmark for this duration at most (default: %.2f sec).\n",
+         static_cast<double>(kBenchmarkDurationDefault.to_msecs()) / 1000.0);
   printf("\n");
   printf("  --%s=<runs>\n", kBenchmarkRunsSwitch);
-  printf(
-      "    Each benchmark is run for at least this many iterations or --%s, whichever "
-      "comes first. Defaults to 100 runs.\n",
-      kBenchmarkDurationSwitch);
+  printf("    Run each benchmark for this many iterations at most (default: %zu, minimum: %zu).\n",
+         kBenchmarkRunsDefault, kBenchmarkMinRuns);
   printf("\n");
   printf("  --%s=<bool>\n", kProfileMixerCreationSwitch);
-  printf("    Enable Mixer creation benchmarks (default=true).\n");
+  printf("    Run Mixer creation benchmarks (default: true).\n");
   printf("  --%s=<bool>\n", kProfileMixingSwitch);
-  printf("    Enable Mixer::Mix() benchmarks (default=true).\n");
+  printf("    Run Mixer::Mix() benchmarks (default: true).\n");
   printf("  --%s=<bool>\n", kProfileOutputSwitch);
-  printf("    Enable OutputProducer benchmarks (default=true).\n");
+  printf("    Run OutputProducer benchmarks (default: true).\n");
   printf("\n");
   printf("  --%s=<bool>\n", kEnablePprofSwitch);
-  printf("    Dump a pprof-compatible profile to /tmp/audio_mixer_profiler.pprof.\n");
-  printf("    Defaults to false.\n");
+  printf("    Save a pprof-compatible log to /tmp/audio_mixer_profiler.pprof (default: false).\n");
   printf("\n");
   printf("  --%s=[%s|%s]*\n", kSamplerSwitch, kSamplerPointOption, kSamplerSincOption);
-  printf("    Enable these samplers. Multiple samplers can be separated by commas.\n");
+  printf("    Profile these samplers. Multiple samplers can be separated by commas.\n");
   printf("    For example: --%s=%s,%s\n", kSamplerSwitch, kSamplerPointOption, kSamplerSincOption);
   printf("\n");
   printf("  --%s=[input_chans:output_chans]*\n", kChannelsSwitch);
-  printf("    Enable these channel configs. Multiple configs can be separated by commas.\n");
+  printf("    Profile these channel pairs. Multiple pairs can be separated by commas.\n");
   printf("    For example: --%s=1:2,1:4\n", kChannelsSwitch);
   printf("\n");
   printf("  --%s=[source_rate:dest_rate]*\n", kFrameRatesSwitch);
-  printf("    Enable these frame rate configs. Multiple configs can be separated by commas.\n");
+  printf("    Profile these frame rate pairs. Multiple pairs can be separated by commas.\n");
   printf("    For example: --%s=48000:48000,16000:48000\n", kFrameRatesSwitch);
   printf("\n");
   printf("  --%s=[%s|%s|%s|%s]*\n", kSampleFormatsSwitch, kSampleFormatUint8Option,
          kSampleFormatInt16Option, kSampleFormatInt24In32Option, kSampleFormatFloat32Option);
-  printf("    Enable these sample formats. Multiple sample formats can be separated by commas.\n");
+  printf("    Profile these sample formats. Multiple sample formats can be separated by commas.\n");
   printf("\n");
-  printf("  --%s=[%s|%s|%s|%s]*\n", kMixingGainsSwitch, kMixingGainMuteOption,
-         kMixingGainUnityOption, kMixingGainScaledOption, kMixingGainRampedOption);
-  printf("    Enable these mixer gain configs. Multiple configs can be separated by commas.\n");
+  printf("  --%s=[%s|%s|%s|%s]*\n", kMixGainssSwitch, kMixGainsMuteOption, kMixGainsUnityOption,
+         kMixGainsScaledOption, kMixGainsRampedOption);
+  printf("    Profile these mixer gain options. Multiple options can be separated by commas.\n");
+  printf("\n");
+  printf("  --%s=[false|true]*\n", kMixAccumulateSwitch);
+  printf("    Profile these overwrite/accumulate options (default is both).\n");
+  printf("    Both can be listed, separated by comma.\n");
   printf("\n");
   printf("  --%s=[%s|%s|%s]*\n", kOutputProducerSourceRangesSwitch,
          kOutputProducerSourceRangeSilenceOption, kOutputProducerSourceRangeOutOfRangeOption,
          kOutputProducerSourceRangeNormalOption);
-  printf("    Enable these kinds of inputs for OutputProducer benchmarks. Multiple kinds of\n");
-  printf("    inputs can be separated by commas.\n");
+  printf("    Profile these outbound data ranges for OutputProducer benchmarks.\n");
+  printf("    Multiple types can be separated by commas.\n");
   printf("\n");
   printf("  --%s=<filepath.json>\n", kPerftestJsonFilepathSwitch);
-  printf("    Include a json filepath to record perftest results.\n");
+  printf("    Record perftest results to the specified json filepath. This reduces the profile\n");
+  printf("    set to as few as two unique configurations for each option value.\n");
   printf("\n");
   printf("  --%s\n", kUsageSwitch);
   printf("    Display this message.\n");
@@ -502,19 +608,25 @@ Options ParseCommandLine(int argc, char** argv) {
                    {kSampleFormatFloat32Option, ASF::FLOAT},
                });
 
-  enum_flagset(kMixingGainsSwitch, opt.gain_types,
+  enum_flagset(kMixGainssSwitch, opt.gain_types,
                std::map<std::string, GainType>{
-                   {kMixingGainMuteOption, GainType::Mute},
-                   {kMixingGainUnityOption, GainType::Unity},
-                   {kMixingGainScaledOption, GainType::Scaled},
-                   {kMixingGainRampedOption, GainType::Ramped},
+                   {kMixGainsMuteOption, GainType::Mute},
+                   {kMixGainsUnityOption, GainType::Unity},
+                   {kMixGainsScaledOption, GainType::Scaled},
+                   {kMixGainsRampedOption, GainType::Ramped},
                });
 
-  enum_flagset(kOutputProducerSourceRangesSwitch, opt.input_ranges,
-               std::map<std::string, InputRange>{
-                   {kOutputProducerSourceRangeSilenceOption, InputRange::Silence},
-                   {kOutputProducerSourceRangeOutOfRangeOption, InputRange::OutOfRange},
-                   {kOutputProducerSourceRangeNormalOption, InputRange::Normal},
+  enum_flagset(kMixAccumulateSwitch, opt.accumulates,
+               std::map<std::string, bool>{
+                   {"false", false},
+                   {"true", true},
+               });
+
+  enum_flagset(kOutputProducerSourceRangesSwitch, opt.output_ranges,
+               std::map<std::string, OutputRange>{
+                   {kOutputProducerSourceRangeSilenceOption, OutputRange::Silence},
+                   {kOutputProducerSourceRangeOutOfRangeOption, OutputRange::OutOfRange},
+                   {kOutputProducerSourceRangeNormalOption, OutputRange::Normal},
                });
 
   return opt;

@@ -61,6 +61,7 @@ For example:
 
 In the profiler output, results are preceded by a legend describing the result format.
 
+
 <!-- Reference links -->
 
 [perfcompare]: /garnet/bin/perfcompare/README.md

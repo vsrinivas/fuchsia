@@ -214,7 +214,7 @@ std::string AudioPerformance::MixerConfig::ToPerftestFormatForMixer() const {
 }
 
 bool AudioPerformance::OutputProducerConfig::operator==(const OutputProducerConfig& other) const {
-  return sample_format == other.sample_format && input_range == other.input_range &&
+  return sample_format == other.sample_format && output_range == other.output_range &&
          num_chans == other.num_chans;
 }
 
@@ -226,14 +226,14 @@ std::string AudioPerformance::OutputProducerConfig::ToString() const {
   std::string format = AsfToString(sample_format, /*abbreviate=*/true);
 
   char range;
-  switch (input_range) {
-    case InputRange::Silence:
+  switch (output_range) {
+    case OutputSourceRange::Silence:
       range = 'S';
       break;
-    case InputRange::OutOfRange:
+    case OutputSourceRange::OutOfRange:
       range = 'O';
       break;
-    case InputRange::Normal:
+    case OutputSourceRange::Normal:
       range = 'N';
       break;
   }
@@ -245,14 +245,14 @@ std::string AudioPerformance::OutputProducerConfig::ToPerftestFormat() const {
   std::string format = AsfToString(sample_format, /*abbreviate=*/false);
 
   std::string range;
-  switch (input_range) {
-    case InputRange::Silence:
+  switch (output_range) {
+    case OutputSourceRange::Silence:
       range = "Silence";
       break;
-    case InputRange::OutOfRange:
+    case OutputSourceRange::OutOfRange:
       range = "OutOfRange";
       break;
-    case InputRange::Normal:
+    case OutputSourceRange::Normal:
       range = "Normal";
       break;
   }
@@ -261,7 +261,7 @@ std::string AudioPerformance::OutputProducerConfig::ToPerftestFormat() const {
 }
 
 void AudioPerformance::DisplayMixerCreationLegend() {
-  printf("\n    Elapsed time in microsec for a Mixer object to be created\n");
+  printf("\n    Elapsed time in microseconds for a Mixer object to be created\n");
   printf(
       "\n    For mixer configuration R-fff.IO ssssss:dddddd, where:\n"
       "\t      R: Resampler type - [P]oint, [W]indowed Sinc\n"
@@ -290,8 +290,8 @@ void AudioPerformance::ProfileMixerCreation(const std::vector<MixerConfig>& conf
   }
 
   DisplayMixerCreationColumnHeader();
-  printf("   Total time to profile Mixer creation: %lu ms\n   --------\n\n",
-         (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
+  printf("   Total time to profile %zu Mixer creation configs: %lu ms\n   --------\n\n",
+         configs.size(), (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
 }
 
 void AudioPerformance::ProfileMixerCreation(const MixerConfig& cfg, const Limits& limits,
@@ -303,11 +303,11 @@ void AudioPerformance::ProfileMixerCreation(const MixerConfig& cfg, const Limits
   Stats cold_cache(result);
   Stats warm_cache(result);
 
-  // Limit to |duration_per_config| or between 5 and |runs_per_config| iterations, whichever comes
-  // first.
+  // Limit to |duration_per_config| or between 5 and |runs_per_config| iterations, whichever
+  // comes first.
   size_t iterations = 0;
-  while (cold_cache.total < limits.duration_per_config &&
-         (iterations < 5 || iterations < limits.runs_per_config)) {
+  while (iterations < limits.min_runs_per_config ||
+         (cold_cache.total < limits.duration_per_config && iterations < limits.runs_per_config)) {
     auto t0 = zx::clock::get_monotonic();
 
     auto mixer1 = SelectMixer(cfg.sample_format, cfg.num_input_chans, cfg.source_rate,
@@ -334,7 +334,7 @@ void AudioPerformance::ProfileMixerCreation(const MixerConfig& cfg, const Limits
 }
 
 void AudioPerformance::DisplayMixerLegend() {
-  printf("\n    Elapsed time in microsec for Mix() to produce %ldms of frames\n",
+  printf("\n    Elapsed time in microseconds for Mix() to produce %ld ms of frames\n",
          kMixLength.to_msecs());
   printf(
       "\n    For mixer configuration R-fff.IO ssssss:dddddd GA, where:\n"
@@ -377,7 +377,7 @@ void AudioPerformance::ProfileMixer(const std::vector<MixerConfig>& configs, con
   }
 
   DisplayMixerColumnHeader();
-  printf("   Total time to profile Mixer: %lu ms\n   --------\n\n",
+  printf("   Total time to profile %zu Mixer configs: %lu ms\n   --------\n\n", configs.size(),
          (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
 }
 
@@ -462,11 +462,11 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
                                              cfg.ToPerftestFormatForMixer().c_str(), "nanoseconds")
                       : nullptr);
 
-  // Limit to |duration_per_config| or between 5 and |runs_per_config| iterations, whichever comes
-  // first.
+  // Limit to |duration_per_config| or between 5 and |runs_per_config| iterations, whichever
+  // comes first.
   size_t iterations = 0;
-  while (stats.total < limits.duration_per_config &&
-         (iterations < 5 || iterations < limits.runs_per_config)) {
+  while (iterations < limits.min_runs_per_config ||
+         (stats.total < limits.duration_per_config && iterations < limits.runs_per_config)) {
     info.gain.SetSourceGain(source_mute ? fuchsia::media::audio::MUTED_GAIN_DB : gain_db);
 
     if (cfg.gain_type == GainType::Ramped) {
@@ -506,7 +506,7 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
 }
 
 void AudioPerformance::DisplayOutputConfigLegend() {
-  printf("\n   Elapsed time in microsec to ProduceOutput() %ldms of frames\n",
+  printf("\n   Elapsed time in microseconds to ProduceOutput() %ld ms of frames\n",
          kMixLength.to_msecs());
   printf(
       "\n   For output configuration fff-Rn, where:\n"
@@ -516,7 +516,7 @@ void AudioPerformance::DisplayOutputConfigLegend() {
 }
 
 void AudioPerformance::DisplayOutputColumnHeader() {
-  printf("Config\t     Mean\t    First\t     Best\t    Worst\t Iterations\n");
+  printf("Config\t     Mean\t    First\t     Best\t    Worst\t  Iterations\n");
 }
 
 void AudioPerformance::ProfileOutputProducer(const std::vector<OutputProducerConfig>& configs,
@@ -544,8 +544,8 @@ void AudioPerformance::ProfileOutputProducer(const std::vector<OutputProducerCon
   }
 
   DisplayOutputColumnHeader();
-  printf("   Total time to profile OutputProducer: %lu ms\n   --------\n\n",
-         (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
+  printf("   Total time to profile %zu OutputProducer configs: %lu ms\n   --------\n\n",
+         configs.size(), (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
 }
 
 template <ASF SampleFormat>
@@ -568,12 +568,12 @@ void AudioPerformance::ProfileOutputProducer(const OutputProducerConfig& cfg, co
                                              cfg.ToPerftestFormat().c_str(), "nanoseconds")
                       : nullptr);
 
-  if (cfg.input_range == InputRange::Silence) {
-    // Limit to |duration_per_config| or between 5 and |runs_per_config| iterations, whichever comes
-    // first.
+  if (cfg.output_range == OutputSourceRange::Silence) {
+    // Limit to |duration_per_config| or between 5 and |runs_per_config| iterations, whichever
+    // comes first.
     size_t iterations = 0;
-    while (stats.total < limits.duration_per_config &&
-           (iterations < 5 || iterations < limits.runs_per_config)) {
+    while (iterations < limits.min_runs_per_config ||
+           (stats.total < limits.duration_per_config && iterations < limits.runs_per_config)) {
       auto t0 = zx::clock::get_monotonic();
       output_producer->FillWithSilence(dest.get(), frame_count);
       auto t1 = zx::clock::get_monotonic();
@@ -585,14 +585,14 @@ void AudioPerformance::ProfileOutputProducer(const OutputProducerConfig& cfg, co
     auto accum_format = Format::Create<ASF::FLOAT>(cfg.num_chans, 48000 /* unused */).take_value();
     AudioBuffer accum(accum_format, 0);
 
-    switch (cfg.input_range) {
-      case InputRange::OutOfRange:
+    switch (cfg.output_range) {
+      case OutputSourceRange::OutOfRange:
         accum = AudioBuffer(accum_format, frame_count);
         for (uint32_t idx = 0; idx < num_samples; ++idx) {
           accum.samples()[idx] = (idx % 2 ? -1.5f : 1.5f);
         }
         break;
-      case InputRange::Normal: {
+      case OutputSourceRange::Normal: {
         // This is a 1kHz sine wave, but the actual shape doesn't matter.
         // We use an amplitude < 1.0 to avoid code that clamps +1.0 values on integer outputs.
         const auto periods = TimelineRate(1000, 1'000'000'000).Scale(kMixLength.to_nsecs());
@@ -600,15 +600,15 @@ void AudioPerformance::ProfileOutputProducer(const OutputProducerConfig& cfg, co
         break;
       }
       default:
-        FX_LOGS(FATAL) << "Unknown output type: " << static_cast<int>(cfg.input_range);
+        FX_LOGS(FATAL) << "Unknown output type: " << static_cast<int>(cfg.output_range);
         return;
     }
 
-    // Limit to |duration_per_config| or between 5 and |runs_per_config| iterations, whichever comes
-    // first.
+    // Limit to |duration_per_config| or between 5 and |runs_per_config| iterations, whichever
+    // comes first.
     size_t iterations = 0;
-    while (stats.total < limits.duration_per_config &&
-           (iterations < 5 || iterations < limits.runs_per_config)) {
+    while (iterations < limits.min_runs_per_config ||
+           (stats.total < limits.duration_per_config && iterations < limits.runs_per_config)) {
       auto t0 = zx::clock::get_monotonic();
       output_producer->ProduceOutput(&accum.samples()[0], dest.get(), frame_count);
       auto t1 = zx::clock::get_monotonic();

@@ -33,11 +33,12 @@ class AudioPerformance {
   AudioPerformance() = delete;
 
   enum class GainType { Mute, Unity, Scaled, Ramped };
-  enum class InputRange { Silence, OutOfRange, Normal };
+  enum class OutputSourceRange { Silence, OutOfRange, Normal };
 
   struct Limits {
     zx::duration duration_per_config;
     size_t runs_per_config;
+    size_t min_runs_per_config;
   };
 
   struct MixerConfig {
@@ -61,7 +62,7 @@ class AudioPerformance {
 
   struct OutputProducerConfig {
     fuchsia::media::AudioSampleFormat sample_format;
-    InputRange input_range;
+    OutputSourceRange output_range;
     uint32_t num_chans;
 
     bool operator==(const OutputProducerConfig& other) const;
