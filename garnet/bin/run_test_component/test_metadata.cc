@@ -95,10 +95,10 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
 //
 // TODO(fxbug.dev/57076): migrate these tests and remove this list.
 const std::unordered_set<std::string> kNetworkUsingTestsThatShouldBeE2E = {
-    "aml_widevine_test.cmx",
-    "cdm_app_test",
+    "aml-widevine-cdm-integration-tests.cmx",
+    "widevine-cdm-integration-tests.cmx",
     "cobalt_testapp_for_prober_do_not_run_manually.cmx",
-    "playready_cdm_test.cmx",
+    "playready-cdm-integration-tests.cmx",
 };
 
 const std::unordered_set<std::string> kRealNetworkServices = {
