@@ -690,7 +690,7 @@ TEST_F(DynamicIfTest, RejectScanWhenApStartReqIsPending) {
   // is 149, The scan has been stopped before reaching that channel.
   EXPECT_EQ(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
   ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
-  EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(), WLAN_SCAN_RESULT_INTERNAL_ERROR);
+  EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(), WLAN_SCAN_RESULT_SHOULD_WAIT);
 
   // AP start will also fail because the request is ignored in firmware.
   EXPECT_EQ(softap_ifc_.stats_.start_confirmations.size(), 1U);

@@ -654,9 +654,7 @@ void SimFirmware::SendAPStartLinkEvent(uint16_t ifidx) {
 }
 
 void SimFirmware::ScheduleLinkEvent(zx::duration when, uint16_t ifidx) {
-  hw_.RequestCallback(std::bind(&SimFirmware::SendAPStartLinkEvent, this, ifidx),
-
-                      when);
+  hw_.RequestCallback(std::bind(&SimFirmware::SendAPStartLinkEvent, this, ifidx), when);
 }
 
 uint16_t SimFirmware::GetNumClients(uint16_t ifidx) {
