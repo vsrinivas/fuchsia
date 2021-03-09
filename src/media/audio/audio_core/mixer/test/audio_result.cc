@@ -207,7 +207,7 @@ const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSin
       118.714,   116.822,   114.701,   112.782,   110.851,   108.850,   106.782,   104.845,   102.837,   100.767,
        98.830,    97.247,    94.749,    93.029,    92.809,    92.595,    92.382,    91.962,    91.445,     6.020,
         8.953,    12.817,    25.034,    49.327,    69.102,    88.851,    97.578,    94.967,    99.620,    95.011,
-      113.842,   122.436      };
+      113.840,   122.436      };
 
 const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadSincDown1 = {
       160.000,   138.942,   138.949,   138.935,   138.826,   138.936,   138.912,   138.866,   138.944,   138.889,
@@ -227,14 +227,14 @@ const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSin
 
 const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadSincMicro = {
        88.988,    92.000,    92.003,    92.004,    92.008,    92.012,    92.021,    92.034,    92.055,    92.092,
-       92.146,    92.223,    92.385,    92.584,    92.937,    93.532,    94.503,    96.257,    99.576,   106.674,
-      101.358,    94.706,    91.390,    92.145,    98.565,    90.301,    92.595,    87.213,    87.999,    85.787,
+       92.146,    92.223,    92.385,    92.584,    92.937,    93.532,    94.503,    96.257,    99.575,   106.674,
+      101.358,    94.706,    91.390,    92.145,    98.565,    90.301,    92.595,    87.212,    87.999,    85.787,
        80.329,    76.134,    74.969,    75.913,    49.400,    44.095,    50.769,    23.713,     6.174,     3.012,
     -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
     -INFINITY, -INFINITY      };
 
 const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadSincUp1 = {
-       88.989,    92.001,    92.003,    92.005,    92.009,    92.014,    92.024,    92.040,    92.065,    92.108,
+       88.988,    92.001,    92.003,    92.005,    92.009,    92.014,    92.024,    92.040,    92.065,    92.108,
        92.173,    92.265,    92.457,    92.694,    93.118,    93.835,    95.023,    97.223,   101.587,   106.990,
        98.288,    93.152,    91.160,    93.974,    96.174,    89.221,    93.525,    87.749,    84.539,    82.209,
        83.988,    78.889,    63.366,    51.199,    29.186,    19.439,    12.226,     0.020, -INFINITY, -INFINITY,
@@ -242,16 +242,16 @@ const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSin
     -INFINITY, -INFINITY      };
 
 const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadSincUp2 = {
-       88.931,    88.945,    88.951,    88.957,    88.970,    88.987,    89.023,    89.076,    89.164,    89.314,
-       89.539,    89.867,    90.574,    91.490,    93.276,    96.953,   108.101,   100.196,    92.123,    88.866,
-       89.904,   107.422,    88.653,    94.128,    86.840,    90.064,    88.079,    80.904,    84.836,    75.734,
+       88.931,    88.944,    88.951,    88.957,    88.970,    88.987,    89.023,    89.076,    89.164,    89.314,
+       89.539,    89.867,    90.574,    91.490,    93.276,    96.953,   108.100,   100.196,    92.123,    88.866,
+       89.904,   107.422,    88.653,    94.127,    86.840,    90.064,    88.079,    80.903,    84.836,    75.734,
        49.454,     0.044, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
     -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
     -INFINITY, -INFINITY      };
 
 const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadSincUp3 = {
-       88.989,    92.038,    92.064,    92.089,    92.143,    92.210,    92.353,    92.570,    92.931,    93.569,
-       94.575,    96.154,   100.188,   106.452,   101.313,    94.449,    91.441,    92.165,    98.614,    89.985,
+       88.988,    92.038,    92.064,    92.089,    92.143,    92.210,    92.353,    92.570,    92.931,    93.569,
+       94.575,    96.153,   100.188,   106.452,   101.313,    94.449,    91.441,    92.164,    98.614,    89.985,
        92.530,    87.251,    86.964,    85.827,    80.321,    81.931,    75.049,    49.392, -INFINITY, -INFINITY,
     -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
     -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,

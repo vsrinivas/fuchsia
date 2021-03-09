@@ -36,7 +36,6 @@ void MixerTestsRecap::PrintFrequencyResponseSummary() {
   }
 
   printf("\n\n   Point resampler\n           ");
-
   printf("         No SRC   ");
 
   for (uint32_t idx = begin_idx; idx < end_idx; ++idx) {
@@ -49,45 +48,38 @@ void MixerTestsRecap::PrintFrequencyResponseSummary() {
   }
 
   printf("\n\n   Windowed Sinc resampler\n           ");
-
-  if (FrequencySet::UseFullFrequencySet) {
-    printf("         No SRC   ");
-    printf("       191999->48k");
-    printf("        96k->48k  ");
-  }
+  printf("         No SRC   ");
+  printf("       191999->48k");
+  printf("        96k->48k  ");
   printf("       88.2k->48k ");
   printf("        Micro-SRC ");
   printf("       44.1k->48k ");
-  if (FrequencySet::UseFullFrequencySet) {
-    printf("        24k->48k  ");
-    printf("       12001->48k ");
-  }
+  printf("        24k->48k  ");
+  printf("       12001->48k ");
 
   for (uint32_t idx = begin_idx; idx < end_idx; ++idx) {
     uint32_t freq = FrequencySet::UseFullFrequencySet ? idx : FrequencySet::kSummaryIdxs[idx];
     printf("\n   %6u Hz", FrequencySet::kRefFreqsTranslated[freq]);
 
-    if (FrequencySet::UseFullFrequencySet) {
-      if (AudioResult::kPrevFreqRespSincUnity[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.3lf (%6.3lf)", AudioResult::FreqRespSincUnity[freq],
-               AudioResult::kPrevFreqRespSincUnity[freq]);
-      } else {
-        printf("                  ");
-      }
+    if (AudioResult::kPrevFreqRespSincUnity[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.3lf (%6.3lf)", AudioResult::FreqRespSincUnity[freq],
+             AudioResult::kPrevFreqRespSincUnity[freq]);
+    } else {
+      printf("                  ");
+    }
 
-      if (AudioResult::kPrevFreqRespSincDown0[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.3lf (%6.3lf)", AudioResult::FreqRespSincDown0[freq],
-               AudioResult::kPrevFreqRespSincDown0[freq]);
-      } else {
-        printf("                  ");
-      }
+    if (AudioResult::kPrevFreqRespSincDown0[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.3lf (%6.3lf)", AudioResult::FreqRespSincDown0[freq],
+             AudioResult::kPrevFreqRespSincDown0[freq]);
+    } else {
+      printf("                  ");
+    }
 
-      if (AudioResult::kPrevFreqRespSincDown1[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.3lf (%6.3lf)", AudioResult::FreqRespSincDown1[freq],
-               AudioResult::kPrevFreqRespSincDown1[freq]);
-      } else {
-        printf("                  ");
-      }
+    if (AudioResult::kPrevFreqRespSincDown1[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.3lf (%6.3lf)", AudioResult::FreqRespSincDown1[freq],
+             AudioResult::kPrevFreqRespSincDown1[freq]);
+    } else {
+      printf("                  ");
     }
 
     if (AudioResult::kPrevFreqRespSincDown2[freq] != -std::numeric_limits<double>::infinity()) {
@@ -111,18 +103,16 @@ void MixerTestsRecap::PrintFrequencyResponseSummary() {
       printf("                  ");
     }
 
-    if (FrequencySet::UseFullFrequencySet) {
-      if (AudioResult::kPrevFreqRespSincUp2[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.3lf (%6.3lf)", AudioResult::FreqRespSincUp2[freq],
-               AudioResult::kPrevFreqRespSincUp2[freq]);
-      } else {
-        printf("                  ");
-      }
+    if (AudioResult::kPrevFreqRespSincUp2[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.3lf (%6.3lf)", AudioResult::FreqRespSincUp2[freq],
+             AudioResult::kPrevFreqRespSincUp2[freq]);
+    } else {
+      printf("                  ");
+    }
 
-      if (AudioResult::kPrevFreqRespSincUp3[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.3lf (%6.3lf)", AudioResult::FreqRespSincUp3[freq],
-               AudioResult::kPrevFreqRespSincUp3[freq]);
-      }
+    if (AudioResult::kPrevFreqRespSincUp3[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.3lf (%6.3lf)", AudioResult::FreqRespSincUp3[freq],
+             AudioResult::kPrevFreqRespSincUp3[freq]);
     }
   }
 
@@ -143,7 +133,6 @@ void MixerTestsRecap::PrintSinadSummary() {
   }
 
   printf("\n\n   Point resampler\n           ");
-
   printf("          No SRC   ");
 
   for (uint32_t idx = begin_idx; idx < end_idx; ++idx) {
@@ -156,45 +145,38 @@ void MixerTestsRecap::PrintSinadSummary() {
   }
 
   printf("\n\n   Windowed Sinc resampler\n           ");
-
-  if (FrequencySet::UseFullFrequencySet) {
-    printf("          No SRC   ");
-    printf("        191999->48k");
-    printf("         96k->48k  ");
-  }
+  printf("          No SRC   ");
+  printf("        191999->48k");
+  printf("         96k->48k  ");
   printf("        88.2k->48k ");
   printf("         Micro-SRC ");
   printf("        44.1k->48k ");
-  if (FrequencySet::UseFullFrequencySet) {
-    printf("         24k->48k  ");
-    printf("        12001->48k ");
-  }
+  printf("         24k->48k  ");
+  printf("        12001->48k ");
 
   for (uint32_t idx = begin_idx; idx < end_idx; ++idx) {
     uint32_t freq = FrequencySet::UseFullFrequencySet ? idx : FrequencySet::kSummaryIdxs[idx];
     printf("\n   %6u Hz ", FrequencySet::kRefFreqsTranslated[freq]);
 
-    if (FrequencySet::UseFullFrequencySet) {
-      if (AudioResult::kPrevSinadSincUnity[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.2lf  (%6.2lf)", AudioResult::SinadSincUnity[freq],
-               AudioResult::kPrevSinadSincUnity[freq]);
-      } else {
-        printf("                   ");
-      }
+    if (AudioResult::kPrevSinadSincUnity[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.2lf  (%6.2lf)", AudioResult::SinadSincUnity[freq],
+             AudioResult::kPrevSinadSincUnity[freq]);
+    } else {
+      printf("                   ");
+    }
 
-      if (AudioResult::kPrevSinadSincDown0[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.2lf  (%6.2lf)", AudioResult::SinadSincDown0[freq],
-               AudioResult::kPrevSinadSincDown0[freq]);
-      } else {
-        printf("                   ");
-      }
+    if (AudioResult::kPrevSinadSincDown0[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.2lf  (%6.2lf)", AudioResult::SinadSincDown0[freq],
+             AudioResult::kPrevSinadSincDown0[freq]);
+    } else {
+      printf("                   ");
+    }
 
-      if (AudioResult::kPrevSinadSincDown1[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.2lf  (%6.2lf)", AudioResult::SinadSincDown1[freq],
-               AudioResult::kPrevSinadSincDown1[freq]);
-      } else {
-        printf("                   ");
-      }
+    if (AudioResult::kPrevSinadSincDown1[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.2lf  (%6.2lf)", AudioResult::SinadSincDown1[freq],
+             AudioResult::kPrevSinadSincDown1[freq]);
+    } else {
+      printf("                   ");
     }
 
     if (AudioResult::kPrevSinadSincDown2[freq] != -std::numeric_limits<double>::infinity()) {
@@ -218,18 +200,16 @@ void MixerTestsRecap::PrintSinadSummary() {
       printf("                   ");
     }
 
-    if (FrequencySet::UseFullFrequencySet) {
-      if (AudioResult::kPrevSinadSincUp2[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.2lf  (%6.2lf)", AudioResult::SinadSincUp2[freq],
-               AudioResult::kPrevSinadSincUp2[freq]);
-      } else {
-        printf("                   ");
-      }
+    if (AudioResult::kPrevSinadSincUp2[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.2lf  (%6.2lf)", AudioResult::SinadSincUp2[freq],
+             AudioResult::kPrevSinadSincUp2[freq]);
+    } else {
+      printf("                   ");
+    }
 
-      if (AudioResult::kPrevSinadSincUp3[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.2lf  (%6.2lf)", AudioResult::SinadSincUp3[freq],
-               AudioResult::kPrevSinadSincUp3[freq]);
-      }
+    if (AudioResult::kPrevSinadSincUp3[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.2lf  (%6.2lf)", AudioResult::SinadSincUp3[freq],
+             AudioResult::kPrevSinadSincUp3[freq]);
     }
   }
 
@@ -249,7 +229,6 @@ void MixerTestsRecap::PrintOutOfBandRejectionSummary() {
   uint32_t end_idx = FrequencySet::kReferenceFreqs.size();
 
   printf("\n\n   Windowed Sinc resampler\n           ");
-
   printf("        191999->48k");
   printf("         96k->48k  ");
   printf("        88.2k->48k ");
@@ -303,7 +282,6 @@ void MixerTestsRecap::PrintPhaseResponseSummary() {
   }
 
   printf("\n\n   Point resampler\n           ");
-
   printf("          No SRC   ");
 
   for (uint32_t idx = begin_idx; idx < end_idx; ++idx) {
@@ -316,45 +294,38 @@ void MixerTestsRecap::PrintPhaseResponseSummary() {
   }
 
   printf("\n\n   Windowed Sinc resampler\n           ");
-
-  if (FrequencySet::UseFullFrequencySet) {
-    printf("          No SRC   ");
-    printf("        191999->48k");
-    printf("         96k->48k  ");
-  }
+  printf("          No SRC   ");
+  printf("        191999->48k");
+  printf("         96k->48k  ");
   printf("        88.2k->48k ");
   printf("         Micro-SRC ");
   printf("        44.1k->48k ");
-  if (FrequencySet::UseFullFrequencySet) {
-    printf("         24k->48k  ");
-    printf("        12001->48k ");
-  }
+  printf("         24k->48k  ");
+  printf("        12001->48k ");
 
   for (uint32_t idx = begin_idx; idx < end_idx; ++idx) {
     uint32_t freq = FrequencySet::UseFullFrequencySet ? idx : FrequencySet::kSummaryIdxs[idx];
     printf("\n   %6u Hz ", FrequencySet::kRefFreqsTranslated[freq]);
 
-    if (FrequencySet::UseFullFrequencySet) {
-      if (AudioResult::kPrevPhaseSincUnity[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.3lf  (%6.3lf)", AudioResult::PhaseSincUnity[freq],
-               AudioResult::kPrevPhaseSincUnity[freq]);
-      } else {
-        printf("                   ");
-      }
+    if (AudioResult::kPrevPhaseSincUnity[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.3lf  (%6.3lf)", AudioResult::PhaseSincUnity[freq],
+             AudioResult::kPrevPhaseSincUnity[freq]);
+    } else {
+      printf("                   ");
+    }
 
-      if (AudioResult::kPrevPhaseSincDown0[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.3lf  (%6.3lf)", AudioResult::PhaseSincDown0[freq],
-               AudioResult::kPrevPhaseSincDown0[freq]);
-      } else {
-        printf("                   ");
-      }
+    if (AudioResult::kPrevPhaseSincDown0[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.3lf  (%6.3lf)", AudioResult::PhaseSincDown0[freq],
+             AudioResult::kPrevPhaseSincDown0[freq]);
+    } else {
+      printf("                   ");
+    }
 
-      if (AudioResult::kPrevPhaseSincDown1[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.3lf  (%6.3lf)", AudioResult::PhaseSincDown1[freq],
-               AudioResult::kPrevPhaseSincDown1[freq]);
-      } else {
-        printf("                   ");
-      }
+    if (AudioResult::kPrevPhaseSincDown1[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.3lf  (%6.3lf)", AudioResult::PhaseSincDown1[freq],
+             AudioResult::kPrevPhaseSincDown1[freq]);
+    } else {
+      printf("                   ");
     }
 
     if (AudioResult::kPrevPhaseSincDown2[freq] != -std::numeric_limits<double>::infinity()) {
@@ -378,18 +349,16 @@ void MixerTestsRecap::PrintPhaseResponseSummary() {
       printf("                   ");
     }
 
-    if (FrequencySet::UseFullFrequencySet) {
-      if (AudioResult::kPrevPhaseSincUp2[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.3lf  (%6.3lf)", AudioResult::PhaseSincUp2[freq],
-               AudioResult::kPrevPhaseSincUp2[freq]);
-      } else {
-        printf("                   ");
-      }
+    if (AudioResult::kPrevPhaseSincUp2[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.3lf  (%6.3lf)", AudioResult::PhaseSincUp2[freq],
+             AudioResult::kPrevPhaseSincUp2[freq]);
+    } else {
+      printf("                   ");
+    }
 
-      if (AudioResult::kPrevPhaseSincUp3[freq] != -std::numeric_limits<double>::infinity()) {
-        printf("   %6.3lf  (%6.3lf)", AudioResult::PhaseSincUp3[freq],
-               AudioResult::kPrevPhaseSincUp3[freq]);
-      }
+    if (AudioResult::kPrevPhaseSincUp3[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("   %6.3lf  (%6.3lf)", AudioResult::PhaseSincUp3[freq],
+             AudioResult::kPrevPhaseSincUp3[freq]);
     }
   }
 
