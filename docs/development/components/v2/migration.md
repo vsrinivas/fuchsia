@@ -839,35 +839,6 @@ the following to your CML file:
 }
 ```
 
-#### Inject storage capabilities into tests
-
-When [migrating tests](#migrate-tests), you will need to inject storage access
-into your test component if the test driver or any of the other components in
-the test realm access a storage path.
-
-Following the example in [Test uses injected services](#injected-services), add
-the following to route storage access to your test driver from the test root:
-
-```json5
-// test_root.cml
-}
-    children: [
-        {
-            name: "test_driver",
-            url: "fuchsia-pkg://fuchsia.com/my-package#meta/my_component_test.cm",
-        },
-    ],
-    offer: [
-        ...
-        {
-            storage: "{{ '<var label="storage">data</var>' }}",
-            from: "parent",
-            to: [ "#test_driver" ],
-        },
-    ],
-}
-```
-
 #### Route storage from the parent realm
 
 When [adding your component](#add-component-to-topology),
@@ -944,6 +915,38 @@ the migrated v2 realm, keeping the same `instance_id`:
 Note: If you are migrating your component to a realm other than `core`, the
 moniker should reflect that.
 
+#### Inject storage capabilities into tests
+
+When [migrating tests](#migrate-tests), you will need to inject storage access
+into your test component if the test driver or any of the other components in
+the test realm access a storage path.
+
+Following the example in [Test uses injected services](#injected-services), add
+the following to route storage access to your test driver from the test root:
+
+```json5
+// test_root.cml
+}
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/my-package#meta/my_component_test.cm",
+        },
+    ],
+    offer: [
+        ...
+        {
+            storage: "{{ '<var label="storage">data</var>' }}",
+            from: "parent",
+            to: [ "#test_driver" ],
+        },
+    ],
+}
+```
+
+Note: Storage capabilities are backed by in-memory storage in tests and contents
+will not persist once the test exits.
+
 ### Directory features {#directory-features}
 
 If your component uses any of the following features, follow the instructions in
@@ -981,35 +984,6 @@ Note: Unlike storage locations, which are isolated per-component, directories
 are a shared resource. You may need to also determine the **subdirectory** your
 component needs to access in order to complete this migration.
 
-#### Inject directory path into tests
-
-When [migrating tests](#migrate-tests), you need to inject the directory
-capabilities in your test if the test driver or any of the other components
-in the test realm require directory access.
-
-Following the example in [Test uses injected services](#injected-services), add
-the following to route directory access to your test driver from the test root:
-
-```json5
-// test_root.cml
-{
-    children: [
-        {
-            name: "test_driver",
-            url: "fuchsia-pkg://fuchsia.com/my-package#meta/my_component_test.cm",
-        },
-    ],
-    offer: [
-        ...
-        {
-            directory: "{{ '<var label="directory">config-ssl</var>' }}",
-            from: "parent",
-            to: [ "#test_driver" ],
-        },
-    ],
-}
-```
-
 #### Route directory from the parent realm
 
 When [adding your component](#add-component-to-topology), you'll need to offer
@@ -1037,8 +1011,48 @@ the directory capabilities to your component.
 ```
 
 Note: If the appropriate directory capability is not currently provided by your
-component's parent realm, reach out to [component-framework-dev][cf-dev-list]
-for assistance.
+component's parent realm, reach out to
+[component-framework-dev][cf-dev-list] for assistance.
+
+#### Inject directory path into tests
+
+When [migrating tests](#migrate-tests), you need to inject the directory
+capabilities in your test if the test driver or any of the other components
+in the test realm require directory access.
+
+Test Framework only allows following pre-approved global directories to be used
+by the test:
+
+| Feature | Description | Directory Capability | Path |
+| ------- | ----------- | -------------------- | ---- |
+| `root-ssl-certificates` | Read-only root certificate data | `config-ssl` | `/config/ssl` |
+
+Following the example in [Test uses injected services](#injected-services), add
+the following to route directory access to your test driver from the test root:
+
+```json5
+// test_root.cml
+{
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/my-package#meta/my_component_test.cm",
+        },
+    ],
+    offer: [
+        ...
+        {
+            directory: "{{ '<var label="directory">config-ssl</var>' }}",
+            from: "parent",
+            to: [ "#test_driver" ],
+        },
+    ],
+}
+```
+
+Note: If the appropriate directory capability is not currently provided by
+testing framework, reach out to [component-framework-dev][cf-dev-list] for
+assistance.
 
 ### Configuration data {#config-data}
 
@@ -1067,6 +1081,32 @@ the following to your CML file:
           rights: [ "r*" ],
           path: "/config/data",
       },
+}
+```
+#### Route directory from the parent realm
+
+When [adding your component](#add-component-to-topology), you'll need to offer
+the directory capability with the appropriate subdirectory to your component.
+
+```json5
+// core.cml
+{
+    children: [
+        ...
+        {
+            name: "my_component",
+            url: "fuchsia-pkg://fuchsia.com/my-package#meta/my_component.cm",
+        },
+    ],
+    offer: [
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#my_component" ],
+            subdir: "{{ '<var label="package name">my-package</var>' }}",
+        },
+        ...
+    ],
 }
 ```
 
@@ -1098,33 +1138,6 @@ the following to route directory access to your test driver from the test root:
             to: [ "#test_driver" ],
             subdir: "{{ '<var label="package name">my-package</var>' }}",
         },
-    ],
-}
-```
-
-#### Route directory from the parent realm
-
-When [adding your component](#add-component-to-topology), you'll need to offer
-the directory capability with the appropriate subdirectory to your component.
-
-```json5
-// core.cml
-{
-    children: [
-        ...
-        {
-            name: "my_component",
-            url: "fuchsia-pkg://fuchsia.com/my-package#meta/my_component.cm",
-        },
-    ],
-    offer: [
-        {
-            directory: "config-data",
-            from: "parent",
-            to: [ "#my_component" ],
-            subdir: "{{ '<var label="package name">my-package</var>' }}",
-        },
-        ...
     ],
 }
 ```
