@@ -4,39 +4,8 @@
 
 import("//build/dev.gni")
 import("//build/fidl/fidl.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-
-package("component_index") {
-  testonly = fuchsia_zbi_testonly
-
-  deps = [
-    ":component_index_bin",
-    "//build/images:component_index_metadata",
-  ]
-
-  binaries = [
-    {
-      name = "component_index"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/component_index.cmx")
-      dest = "component_index.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = get_label_info("//build/images:component_index_metadata",
-                            "target_out_dir") + "/component_index_metadata"
-      dest = "component_index.txt"
-    },
-  ]
-}
+import("//src/sys/build/components.gni")
 
 rustc_binary("component_index_bin") {
   name = "component_index"
@@ -60,15 +29,17 @@ rustc_binary("component_index_bin") {
   sources = [ "src/main.rs" ]
 }
 
-test_package("component_index_tests") {
-  deps = [ ":component_index_bin_test" ]
-
-  tests = [
-    {
-      name = "component_index_bin_test"
-      dest = "component_index_tests"
-    },
+fuchsia_package_with_single_component("component_index") {
+  testonly = fuchsia_zbi_testonly
+  manifest = "meta/component_index.cmx"
+  deps = [
+    ":component_index_bin",
+    "//build/images:component_index_txt",
   ]
+}
+
+fuchsia_unittest_package("component_index_tests") {
+  deps = [ ":component_index_bin_test" ]
 }
 
 group("tests") {

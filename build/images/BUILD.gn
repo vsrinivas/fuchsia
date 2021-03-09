@@ -2352,6 +2352,17 @@ generate_component_index("component_index_metadata") {
   }
 }
 
+resource("component_index_txt") {
+  visibility = [
+    "//build/images:*",
+    "//src/sys/component_index:*",
+  ]
+  testonly = fuchsia_zbi_testonly
+  sources = get_target_outputs(":component_index_metadata")
+  outputs = [ "data/component_index.txt" ]
+  deps = [ ":component_index_metadata" ]
+}
+
 # We copy the metatdata to the root dir so that it can easily be used by host
 # tools
 copy("root_component_index_metadata") {

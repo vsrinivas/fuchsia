@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
+import("//src/sys/component_index/component_index.gni")
 
 rustc_binary("locate_bin") {
   name = "locate"
@@ -25,22 +25,9 @@ rustc_binary("locate_bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("locate") {
+fuchsia_shell_package("locate") {
   deps = [ ":locate_bin" ]
-
-  meta = [
-    {
-      path = rebase_path("meta/locate.cmx")
-      dest = "locate.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "locate"
-      shell = true
-    },
-  ]
+  manifest = "meta/locate.cmx"
 }
 
 rustc_binary("locate_integration_test_bin") {
@@ -62,14 +49,16 @@ rustc_binary("locate_integration_test_bin") {
   sources = [ "src/locate_integration_test.rs" ]
 }
 
-test_package("locate_integration_test") {
-  deps = [ ":locate_integration_test_bin" ]
+add_to_component_index("component_index") {
+  package_name = "locate_integration_test"
+  manifest = "meta/locate_integration_test.cmx"
+}
 
-  tests = [
-    {
-      name = "locate_integration_test"
-      dest = "locate_integration_test"
-    },
+fuchsia_unittest_package("locate_integration_test") {
+  manifest = "meta/locate_integration_test.cmx"
+  deps = [
+    ":component_index",
+    ":locate_integration_test_bin",
   ]
 }
 
