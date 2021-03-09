@@ -2039,7 +2039,7 @@ mod tests {
         ; "when_args_conflicts"
     )]
     fn test_merge_from_program_error(mut some: Document, mut other: Document, field: &str) {
-        assert_matches!(
+        matches::assert_matches!(
             some.merge_from(&mut other, &path::Path::new("some/path")),
             Err(Error::Validate { schema_name: None, err, .. })
                 if err == format!("manifest include had a conflicting `program.{}`: some/path", field)

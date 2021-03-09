@@ -543,11 +543,11 @@ mod tests {
     #[test_case(&mut InterfaceState::Known(validated_properties(ID)); "interface_state_known")]
     #[test_case(&mut validated_properties(ID); "properties")]
     fn test_duplicate_error(state: &mut impl Update) {
-        assert_matches!(
+        matches::assert_matches!(
             state.update(fnet_interfaces::Event::Added(fidl_properties(ID))),
             Err(UpdateError::DuplicateAdded(added)) if added == fidl_properties(ID)
         );
-        assert_matches!(
+        matches::assert_matches!(
             state.update(fnet_interfaces::Event::Existing(fidl_properties(ID))),
             Err(UpdateError::DuplicateExisting(existing)) if existing == fidl_properties(ID)
         );
@@ -561,11 +561,11 @@ mod tests {
             online: Some(true),
             ..fnet_interfaces::Properties::EMPTY
         };
-        assert_matches!(
+        matches::assert_matches!(
             state.update(fnet_interfaces::Event::Changed(unknown.clone())),
             Err(UpdateError::UnknownChanged(changed)) if changed == unknown
         );
-        assert_matches!(
+        matches::assert_matches!(
             state.update(fnet_interfaces::Event::Removed(ID)),
             Err(UpdateError::UnknownRemoved(id)) if id == ID
         );
@@ -574,7 +574,7 @@ mod tests {
     #[test_case(&mut InterfaceState::Known(validated_properties(ID)); "interface_state_known")]
     #[test_case(&mut validated_properties(ID); "properties")]
     fn test_removed_error(state: &mut impl Update) {
-        assert_matches!(
+        matches::assert_matches!(
             state.update(fnet_interfaces::Event::Removed(ID)),
             Err(UpdateError::Removed)
         );
@@ -589,7 +589,7 @@ mod tests {
             online: Some(true),
             ..fnet_interfaces::Properties::EMPTY
         };
-        assert_matches!(
+        matches::assert_matches!(
             state.update(fnet_interfaces::Event::Changed(missing_id.clone())),
             Err(UpdateError::MissingId(properties)) if properties == missing_id
         );
@@ -606,11 +606,11 @@ mod tests {
             fnet_interfaces::Properties { id: Some(ID), ..fnet_interfaces::Properties::EMPTY };
         let net_zero_change =
             fnet_interfaces::Properties { name: None, device_class: None, ..fidl_properties(ID) };
-        assert_matches!(
+        matches::assert_matches!(
             state.update(fnet_interfaces::Event::Changed(empty_change.clone())),
             Err(UpdateError::EmptyChange(properties)) if properties == empty_change
         );
-        assert_matches!(
+        matches::assert_matches!(
             state.update(fnet_interfaces::Event::Changed(net_zero_change.clone())),
             Err(UpdateError::EmptyChange(properties)) if properties == net_zero_change
         );
@@ -630,7 +630,7 @@ mod tests {
             addresses: Some(vec![fidl_address(ADDR)]),
             ..fnet_interfaces::Properties::EMPTY
         };
-        assert_matches!(
+        matches::assert_matches!(
             state.update(fnet_interfaces::Event::Changed(properties_delta(ID).clone())),
             Ok(UpdateResult::Changed { previous, current })
                 if previous == want_previous && *current == validated_properties_after_change(ID)

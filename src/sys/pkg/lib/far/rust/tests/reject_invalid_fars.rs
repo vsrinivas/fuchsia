@@ -33,7 +33,8 @@ macro_rules! tests {
             use {
                 super::*,
                 fuchsia_async as fasync,
-                fuchsia_archive::AsyncReader
+                fuchsia_archive::AsyncReader,
+                matches::assert_matches,
             };
 
             $(

@@ -220,7 +220,6 @@ mod tests {
         fuchsia_cobalt::CobaltSender,
         futures::channel::mpsc,
         futures::{future, pin_mut},
-        matches::assert_matches,
         std::task::Poll,
         test_doubles::{FakeBssCache, StubBssResolver},
     };
@@ -334,7 +333,7 @@ mod tests {
                 );
             };
             pin_mut!(test_fut);
-            assert_matches!(
+            matches::assert_matches!(
                 fasync::Executor::new()
                     .expect("internal error: failed to create executor")
                     .run_until_stalled(&mut test_fut),
@@ -379,6 +378,7 @@ mod tests {
             emergency_lib::bss_resolver::ResolverError,
             fidl_fuchsia_cobalt::EventPayload::ElapsedMicros,
             fidl_fuchsia_location_position::{EmergencyProviderMarker, Position, PositionExtras},
+            matches::assert_matches,
             test_case::test_case,
         };
 
@@ -418,7 +418,7 @@ mod tests {
             std::mem::drop(proxy); // Close connection so `server_fut` completes.
 
             let (client_res, _server_res) = future::join(client_fut, server_fut).await;
-            assert_matches!(client_res, Ok(Ok(Position {..})))
+            assert_matches!(client_res, Ok(Ok(Position { .. })))
         }
 
         #[fasync::run_until_stalled(test)]
@@ -619,7 +619,7 @@ mod tests {
                 );
             };
             pin_mut!(test_fut);
-            assert_matches!(
+            matches::assert_matches!(
                 fasync::Executor::new()
                     .expect("internal error: failed to create executor")
                     .run_until_stalled(&mut test_fut),
@@ -669,7 +669,7 @@ mod tests {
                 );
             };
             pin_mut!(test_fut);
-            assert_matches!(
+            matches::assert_matches!(
                 fasync::Executor::new()
                     .expect("internal error: failed to create executor")
                     .run_until_stalled(&mut test_fut),

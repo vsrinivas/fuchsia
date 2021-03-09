@@ -85,7 +85,6 @@ mod tests {
         fidl_fuchsia_input_report::{InputReportsReaderMarker, MAX_DEVICE_REPORT_COUNT},
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::future,
-        matches::assert_matches,
     };
 
     mod report_count {
@@ -192,6 +191,7 @@ mod tests {
 
     mod future_resolution {
         use super::*;
+        use matches::assert_matches;
 
         #[fasync::run_until_stalled(test)]
         async fn resolves_to_ok_when_all_reports_are_written() -> Result<(), Error> {
@@ -266,6 +266,7 @@ mod tests {
         use {
             super::*,
             futures::{pin_mut, task::Poll},
+            matches::assert_matches,
             std::convert::TryFrom,
         };
 

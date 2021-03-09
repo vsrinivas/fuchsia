@@ -240,7 +240,6 @@ mod tests {
         },
         fuchsia_async as fasync,
         futures::future,
-        matches::assert_matches,
     };
 
     const DEFAULT_REPORT_TIMESTAMP: u64 = 0;
@@ -253,6 +252,7 @@ mod tests {
             },
             fidl_fuchsia_input_report::InputReportsReaderMarker,
             futures::{pin_mut, task::Poll},
+            matches::assert_matches,
         };
 
         #[fasync::run_until_stalled(test)]
@@ -339,6 +339,7 @@ mod tests {
                 *,
             },
             crate::usages::Usages,
+            matches::assert_matches,
             std::convert::TryInto as _,
         };
 
@@ -507,6 +508,7 @@ mod tests {
 
         mod yields_err_if_peer_closed_device_channel_without_calling_get_input_reports_reader {
             use super::*;
+            use matches::assert_matches;
 
             #[test]
             fn if_reports_were_available() {
@@ -539,6 +541,7 @@ mod tests {
 
         mod is_pending_if_peer_has_device_channel_open_and_has_not_called_get_input_reports_reader {
             use super::*;
+            use matches::assert_matches;
 
             #[test]
             fn if_reports_were_available() {
@@ -572,6 +575,7 @@ mod tests {
 
         mod is_pending_if_peer_has_not_read_any_reports_when_a_report_is_available {
             use super::*;
+            use matches::assert_matches;
 
             #[test]
             fn if_device_request_channel_is_open() {
@@ -604,7 +608,10 @@ mod tests {
         }
 
         mod is_pending_if_peer_did_not_read_all_reports {
-            use {super::*, fidl_fuchsia_input_report::MAX_DEVICE_REPORT_COUNT};
+            use {
+                super::*, fidl_fuchsia_input_report::MAX_DEVICE_REPORT_COUNT,
+                matches::assert_matches,
+            };
 
             #[test]
             fn if_device_request_channel_is_open() {
@@ -657,6 +664,7 @@ mod tests {
         use {
             super::{utils::make_input_device_proxy_and_struct, *},
             fidl_fuchsia_input_report::{FeatureReport, OutputReport},
+            matches::assert_matches,
         };
 
         #[fasync::run_until_stalled(test)]
@@ -703,6 +711,7 @@ mod tests {
     // rather than panic!()-ing.
     mod unimplemented_trait_methods {
         use super::{utils::make_input_device_proxy_and_struct, *};
+        use matches::assert_matches;
 
         #[test]
         fn media_buttons_yields_error() -> Result<(), Error> {
@@ -739,6 +748,7 @@ mod tests {
         use {
             super::{utils::make_input_device_proxy_and_struct, *},
             fidl_fuchsia_input_report::InputReportsReaderMarker,
+            matches::assert_matches,
         };
 
         #[fasync::run_until_stalled(test)]

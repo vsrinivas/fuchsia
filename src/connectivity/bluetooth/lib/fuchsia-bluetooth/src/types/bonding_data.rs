@@ -864,10 +864,7 @@ pub mod example {
 
 #[cfg(test)]
 pub mod tests {
-    use {
-        super::*, fidl_fuchsia_bluetooth_control as control, fidl_fuchsia_bluetooth_sys as sys,
-        matches::assert_matches,
-    };
+    use {super::*, fidl_fuchsia_bluetooth_control as control, fidl_fuchsia_bluetooth_sys as sys};
 
     #[test]
     fn host_data_to_control() {
@@ -903,6 +900,7 @@ pub mod tests {
     // Tests for conversions from fuchsia.bluetooth.sys API
     mod from_sys {
         use super::*;
+        use matches::assert_matches;
 
         fn empty_data() -> sys::BondingData {
             sys::BondingData::EMPTY

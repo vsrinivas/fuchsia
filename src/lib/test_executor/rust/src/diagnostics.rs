@@ -210,7 +210,6 @@ mod tests {
         fidl::endpoints::ServerEnd,
         fuchsia_async as fasync,
         futures::TryStreamExt,
-        matches::assert_matches,
     };
 
     #[cfg(target_os = "fuchsia")]
@@ -222,6 +221,7 @@ mod tests {
             },
             fidl_fuchsia_mem as fmem, fuchsia_zircon as zx,
             futures::StreamExt,
+            matches::assert_matches,
         };
 
         struct BatchIteratorOpts {
@@ -324,6 +324,7 @@ mod tests {
                 ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker,
                 ArchiveIteratorRequest,
             },
+            matches::assert_matches,
         };
 
         async fn spawn_archive_iterator_server(

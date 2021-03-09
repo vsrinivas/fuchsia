@@ -34,7 +34,6 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::prelude::*,
-    matches::assert_matches,
     moniker::{AbsoluteMoniker, PartialMoniker, RelativeMoniker},
     std::{
         collections::{HashMap, HashSet},
@@ -847,7 +846,7 @@ pub mod capability_util {
     use {
         super::*, crate::model::component_id_index::ComponentInstanceId, anyhow::format_err,
         cm_rust::NativeIntoFidl, fidl::endpoints::ServiceMarker,
-        fidl_fuchsia_sys2::EventSourceMarker, std::path::PathBuf,
+        fidl_fuchsia_sys2::EventSourceMarker, matches::assert_matches, std::path::PathBuf,
     };
 
     /// Looks up `resolved_url` in the namespace, and attempts to read ${path}/hippo. The file

@@ -531,13 +531,13 @@ mod test {
             let delay = if i == 0 { 0.millis() } else { RECOMMENDED_MIN_CONN_ATT_DELAY };
             (delay, Event::Connecting { addr, class: Class::NotListening })
         }) {
-            assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
+            matches::assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
             assert_eq!(connector.take_events(), vec![expected_event]);
         }
 
         // Advance the time to after the min retry timeout, but before the max retry timeout.
         // This should succeed because we reset the timer.
-        assert_matches!(
+        matches::assert_matches!(
             next_event(&mut executor, &mut fut, RECOMMENDED_MIN_CONN_ATT_DELAY),
             Poll::Ready(Err(err)) if err.kind() == io::ErrorKind::ConnectionRefused
         );
@@ -582,7 +582,7 @@ mod test {
             let delay = if i == 0 { 0.millis() } else { RECOMMENDED_CONN_ATT_DELAY };
             (delay, Event::Connecting { addr: *addr, class: Class::Blackholed })
         }) {
-            assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
+            matches::assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
             assert_eq!(connector.take_events(), vec![expected_event]);
         }
 
@@ -591,7 +591,7 @@ mod test {
         // timer is not re-armed when there are no more addresses to try.
         let () = executor.set_fake_time(executor.now() + RECOMMENDED_CONN_ATT_DELAY);
         assert!(!executor.wake_expired_timers());
-        assert_matches!(executor.run_until_stalled(&mut fut), Poll::Pending);
+        matches::assert_matches!(executor.run_until_stalled(&mut fut), Poll::Pending);
         assert_eq!(connector.take_events(), vec![]);
     }
 
@@ -612,7 +612,7 @@ mod test {
         );
 
         // Connect to the service. This succeeds because the address is good.
-        assert_matches!(
+        matches::assert_matches!(
             executor.run_until_stalled(&mut fut),
             Poll::Ready(Ok(a)) if a == server_addr
         );
@@ -646,7 +646,7 @@ mod test {
         );
 
         // Connect to the service. This succeeds because the first address is good.
-        assert_matches!(
+        matches::assert_matches!(
             executor.run_until_stalled(&mut fut),
             Poll::Ready(Ok(a)) if a == server_addr
         );
@@ -732,13 +732,13 @@ mod test {
             let delay = if i == 0 { 0.millis() } else { delay };
             (delay, Event::Connecting { addr: *addr, class: fail_class })
         }) {
-            assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
+            matches::assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
             assert_eq!(connector.take_events(), vec![expected_event]);
         }
 
         // Advance the time to after the min retry timeout, but before the max retry timeout.
         // This should succeed because we reset the timer.
-        assert_matches!(
+        matches::assert_matches!(
             next_event(&mut executor, &mut fut, delay),
             Poll::Ready(Ok(a)) if a == server_addr
         );
@@ -787,12 +787,12 @@ mod test {
             let delay = if i == 0 { 0.millis() } else { RECOMMENDED_CONN_ATT_DELAY };
             (delay, Event::Connecting { addr: *addr, class: Class::Blackholed })
         }) {
-            assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
+            matches::assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
             assert_eq!(connector.take_events(), vec![expected_event]);
         }
 
         // Advance the time after the retry timeout. This should succeed.
-        assert_matches!(
+        matches::assert_matches!(
             next_event(&mut executor, &mut fut, RECOMMENDED_CONN_ATT_DELAY),
             Poll::Ready(Ok(a)) if a == server_addr
         );
@@ -843,13 +843,13 @@ mod test {
                 Event::Connecting { addr: nl_v6, class: Class::NotListening },
             ),
         ] {
-            assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
+            matches::assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
             assert_eq!(connector.take_events(), vec![expected_event]);
         }
 
         // Sleep the max amount, then successfully connect to `server_addr`. We need to sleep the
         // max amount because we have outstanding blackholed connections.
-        assert_matches!(
+        matches::assert_matches!(
             next_event(&mut executor, &mut fut, RECOMMENDED_CONN_ATT_DELAY),
             Poll::Ready(Ok(a)) if a == server_addr
         );
@@ -926,11 +926,11 @@ mod test {
 
         // Trigger all the failing polls.
         for (delay, expected_event) in expected_events {
-            assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
+            matches::assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
             assert_eq!(connector.take_events(), vec![expected_event]);
         }
 
-        assert_matches!(
+        matches::assert_matches!(
             next_event(&mut executor, &mut fut, RECOMMENDED_CONN_ATT_DELAY),
             Poll::Ready(Ok(a)) if a == server_addr
         );
@@ -974,12 +974,12 @@ mod test {
                 Event::Connecting { addr: bh_addr, class: Class::Blackholed },
             ),
         ] {
-            assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
+            matches::assert_matches!(next_event(&mut executor, &mut fut, delay), Poll::Pending);
             assert_eq!(connector.take_events(), vec![expected_event]);
         }
 
         // Sleep to when the server should eventually respond.
-        assert_matches!(
+        matches::assert_matches!(
             next_event(&mut executor, &mut fut, 5.millis()),
             Poll::Ready(Ok(a)) if a == server_addr
         );
@@ -1045,8 +1045,8 @@ mod test {
 
             let res = executor.run_until_stalled(&mut fut);
             match done {
-                false => assert_matches!(res, Poll::Pending),
-                true => assert_matches!(res, Poll::Ready(Ok(a)) if a == server_addr),
+                false => matches::assert_matches!(res, Poll::Pending),
+                true => matches::assert_matches!(res, Poll::Ready(Ok(a)) if a == server_addr),
             }
 
             assert_eq!(
