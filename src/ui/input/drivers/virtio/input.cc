@@ -125,7 +125,7 @@ zx_status_t InputDevice::Init() {
   // Allocate event buffers for the ring.
   // TODO: Avoid multiple allocations, allocate enough for all buffers once.
   for (uint16_t id = 0; id < kEventCount; ++id) {
-    static_assert(sizeof(virtio_input_event_t) <= PAGE_SIZE, "");
+    assert(sizeof(virtio_input_event_t) <= zx_system_get_page_size());
     status = io_buffer_init(&buffers_[id], bti_.get(), sizeof(virtio_input_event_t),
                             IO_BUFFER_RO | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
