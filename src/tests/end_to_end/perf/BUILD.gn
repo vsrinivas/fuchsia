@@ -24,6 +24,7 @@ test_list = [
   "kernel_boot_timeline_test",
   "microbenchmarks_test",
   "netstack_benchmarks_test",
+  "storage_benchmarks_test",
   "rust_inspect_benchmarks_test",
   "rust_inspect_reader_benchmarks_test",
 ]
@@ -162,6 +163,9 @@ group("package_deps") {
     "//src/experiences/benchmarks/bin/button_flutter:button_flutter",
     "//src/experiences/benchmarks/bin/clockface_flutter:clockface-flutter",
     "//src/experiences/benchmarks/bin/scroll_flutter:scroll-flutter",
+
+    # This is used by storage_benchmarks_test
+    "//garnet/bin/odu:odu",
   ]
 }
 
