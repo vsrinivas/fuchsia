@@ -104,6 +104,7 @@ async fn file_report(proxy: &CrashReporterProxy, signature: &str) {
             program_name: Some("system".to_owned()),
             // Need to do syscall because `std::time::Instant` cannot be converted into nanos.
             program_uptime: Some(zx::Time::get_monotonic().into_nanos()),
+            is_fatal: Some(false),
             ..CrashReport::EMPTY
         })
         .await
@@ -149,6 +150,7 @@ pub fn assert_signature(report: CrashReport, expected_signature: &str) {
             crash_signature: Some(signature),
             program_name: Some(program),
             program_uptime: Some(_),
+            is_fatal: Some(false),
             ..
         } if signature == expected_signature && program == "system"
     )

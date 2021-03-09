@@ -1046,6 +1046,7 @@ fn assert_signature(report: CrashReport, expected_signature: &str) {
             crash_signature: Some(signature),
             program_name: Some(program),
             program_uptime: Some(_),
+            is_fatal: Some(false),
             ..
         } if signature == expected_signature && program == "system"
     )
