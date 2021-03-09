@@ -1017,6 +1017,13 @@ mod tests {
             self.saved_country_code = region_code;
         }
 
+        async fn set_country_code(
+            &mut self,
+            _country_code: Option<[u8; REGION_CODE_LEN]>,
+        ) -> Result<(), PhyManagerError> {
+            unimplemented!();
+        }
+
         fn has_wpa3_client_iface(&self) -> bool {
             unimplemented!();
         }

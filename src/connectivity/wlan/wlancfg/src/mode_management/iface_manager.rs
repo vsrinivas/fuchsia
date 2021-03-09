@@ -1301,6 +1301,13 @@ mod tests {
             unimplemented!();
         }
 
+        async fn set_country_code(
+            &mut self,
+            _country_code: Option<[u8; REGION_CODE_LEN]>,
+        ) -> Result<(), PhyManagerError> {
+            unimplemented!();
+        }
+
         fn save_region_code(&mut self, _region_code: Option<[u8; REGION_CODE_LEN]>) {
             unimplemented!();
         }
