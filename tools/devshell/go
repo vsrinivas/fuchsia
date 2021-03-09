@@ -1,0 +1,25 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Build
+### Manage Go source code
+
+## usage: fx go [SUBCOMMAND] [ARGS...]
+##
+## Entrypoint to Fuchsia's Go toolchain.
+##
+## Run `fx go help` to see all subcommands and flags.
+
+set -eu -o pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+
+function main {
+  export GOROOT="${PREBUILT_GO_DIR}"
+  export GOFLAGS="-mod=readonly"
+  exec "${PREBUILT_GO_DIR}/bin/go" "$@"
+}
+
+main "$@"

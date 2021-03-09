@@ -175,7 +175,7 @@ function main {
 
     # `go build` does an incremental build, only rebuilding what's necessary
     # based on source content hashes.
-    "${PREBUILT_GO_DIR}/bin/go" build -mod=readonly -o "$exe_path" ./build/fx-set/cmd
+    fx-command-run go build -o "$exe_path" ./build/fx-set/cmd
     if $add_log; then
       # Delete the "compiling fx set" log so it doesn't show up in the final
       # output.

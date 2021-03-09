@@ -26,6 +26,9 @@ per-file             set = olivernewman@google.com
 per-file fdt,tests/subcommands/fx_fdt_test = shrike@google.com,abbogart@google.com,dragonbear@google.com
 # per-file-COMPONENT fdt,tests/subcommands/fx_fdt_test = DeveloperExperience>FuchsiaDevTools
 
+per-file go = olivernewman@google.com
+# per-file-COMPONENT go = Infra>Platform
+
 per-file symbolize = dangyi@google.com,frousseau@google.com
 # per-file-COMPONENT symbolize = Tools>symbolize
 
