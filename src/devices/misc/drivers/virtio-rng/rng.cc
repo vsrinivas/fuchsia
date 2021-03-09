@@ -41,7 +41,7 @@ zx_status_t RngDevice::Init() {
   }
 
   // allocate the entropy buffer
-  static_assert(kBufferSize <= PAGE_SIZE, "");
+  assert(kBufferSize <= zx_system_get_page_size());
   zx_status_t rc = io_buffer_init(&buf_, bti_.get(), kBufferSize, IO_BUFFER_RO | IO_BUFFER_CONTIG);
   if (rc != ZX_OK) {
     zxlogf(ERROR, "%s: cannot allocate entropy buffer: %d", tag(), rc);
