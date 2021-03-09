@@ -59,6 +59,9 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + Send + ?Sized>(
                 run_logging_pipeline(&mut requests, &proxy).await;
 
             if get_next_results.is_empty() {
+                if let Some(err) = terminal_err {
+                    return Err(anyhow!(err));
+                }
                 continue;
             }
 
@@ -596,6 +599,50 @@ mod test {
             vec![logging_started_entry(), valid_log(log1), valid_log(log2)],
         )
         .await;
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_fidl_error_with_real_logs() -> Result<()> {
+        let log1 = target_log(1, "log1");
+        let log2 = target_log(2, "log2");
+        let target = make_default_target(vec![
+            FakeArchiveIteratorResponse::new_with_values(vec![serde_json::to_string(&log1)?]),
+            FakeArchiveIteratorResponse::new_with_values(vec![serde_json::to_string(&log2)?]),
+            FakeArchiveIteratorResponse::new_with_fidl_error(),
+        ])
+        .await;
+        let t = target.downgrade();
+
+        let log_buf = Arc::new(Mutex::new(vec![]));
+
+        let streamer = FakeDiagnosticsStreamer::new(0, log_buf.clone());
+        streamer.expect_setup(NODENAME, BOOT_TIME).await;
+        let logger = Logger::new_with_streamer_and_config(t, streamer, true);
+        run_logger_to_completion(logger).await;
+
+        verify_logged(
+            log_buf.clone(),
+            vec![logging_started_entry(), valid_log(log1), valid_log(log2)],
+        )
+        .await;
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_fidl_error_with_no_real_logs() -> Result<()> {
+        let target =
+            make_default_target(vec![FakeArchiveIteratorResponse::new_with_fidl_error()]).await;
+        let t = target.downgrade();
+
+        let log_buf = Arc::new(Mutex::new(vec![]));
+
+        let streamer = FakeDiagnosticsStreamer::new(0, log_buf.clone());
+        streamer.expect_setup(NODENAME, BOOT_TIME).await;
+        let logger = Logger::new_with_streamer_and_config(t, streamer, true);
+        run_logger_to_completion(logger).await;
+
+        verify_logged(log_buf.clone(), vec![logging_started_entry()]).await;
         Ok(())
     }
 }

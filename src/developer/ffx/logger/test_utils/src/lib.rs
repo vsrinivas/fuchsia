@@ -13,17 +13,23 @@ use {
 };
 
 pub struct FakeArchiveIteratorResponse {
+    // Note that these are _all_ mutually exclusive.
     values: Vec<String>,
     iterator_error: Option<ArchiveIteratorError>,
+    should_fidl_error: bool,
 }
 
 impl FakeArchiveIteratorResponse {
     pub fn new_with_values(values: Vec<String>) -> Self {
-        Self { values, iterator_error: None }
+        Self { values, iterator_error: None, should_fidl_error: false }
     }
 
     pub fn new_with_error(err: ArchiveIteratorError) -> Self {
-        Self { values: vec![], iterator_error: Some(err) }
+        Self { values: vec![], iterator_error: Some(err), should_fidl_error: false }
+    }
+
+    pub fn new_with_fidl_error() -> Self {
+        Self { values: vec![], iterator_error: None, should_fidl_error: true }
     }
 }
 
@@ -39,9 +45,15 @@ pub fn setup_fake_archive_iterator(
                 ArchiveIteratorRequest::GetNext { responder } => {
                     let next = iter.next();
                     match next {
-                        Some(FakeArchiveIteratorResponse { values, iterator_error }) => {
+                        Some(FakeArchiveIteratorResponse {
+                            values,
+                            iterator_error,
+                            should_fidl_error,
+                        }) => {
                             if let Some(err) = iterator_error {
                                 responder.send(&mut Err(*err)).unwrap();
+                            } else if *should_fidl_error {
+                                responder.control_handle().shutdown();
                             } else {
                                 responder
                                     .send(&mut Ok(values
