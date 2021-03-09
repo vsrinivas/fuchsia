@@ -62,6 +62,7 @@ async fn initial_inspect_state() {
             blob_fetcher: {
                 blob_header_timeout_seconds: 30u64,
                 blob_body_timeout_seconds: 30u64,
+                blob_download_resumption_attempts_limit: 50u64,
                 queue: {},
             }
         }

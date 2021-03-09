@@ -52,6 +52,16 @@ use {
     tempfile::TempDir,
 };
 
+// If the body of an https response is not large enough, hyper will download the body
+// along with the header in the initial fuchsia_hyper::HttpsClient.request(). This means
+// that even if the body is implemented with a stream that sends some bytes and then fails
+// before the transfer is complete, the error will occur on the initial request instead
+// of when looping over the Response body bytes.
+// This value probably just needs to be larger than the Hyper buffer, which defaults to 400 kB
+// https://docs.rs/hyper/0.13.10/hyper/client/struct.Builder.html#method.http1_max_buf_size
+// TODO(fxbug.dev/71333) shrink this value
+pub const FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING: usize = 600_000;
+
 pub mod mock_filesystem;
 
 pub trait PkgFs {
@@ -278,6 +288,7 @@ where
     tuf_metadata_timeout: Option<Duration>,
     blob_network_header_timeout: Option<Duration>,
     blob_network_body_timeout: Option<Duration>,
+    blob_download_resumption_attempts_limit: Option<u64>,
 }
 
 impl
@@ -303,6 +314,7 @@ impl
             tuf_metadata_timeout: None,
             blob_network_header_timeout: None,
             blob_network_body_timeout: None,
+            blob_download_resumption_attempts_limit: None,
         }
     }
 }
@@ -330,6 +342,7 @@ where
             tuf_metadata_timeout: self.tuf_metadata_timeout,
             blob_network_header_timeout: self.blob_network_header_timeout,
             blob_network_body_timeout: self.blob_network_body_timeout,
+            blob_download_resumption_attempts_limit: self.blob_download_resumption_attempts_limit,
         }
     }
     pub fn mounts(
@@ -345,6 +358,7 @@ where
             tuf_metadata_timeout: self.tuf_metadata_timeout,
             blob_network_header_timeout: self.blob_network_header_timeout,
             blob_network_body_timeout: self.blob_network_body_timeout,
+            blob_download_resumption_attempts_limit: self.blob_download_resumption_attempts_limit,
         }
     }
     pub fn boot_arguments_service(self, svc: BootArgumentsService<'static>) -> Self {
@@ -357,6 +371,7 @@ where
             tuf_metadata_timeout: self.tuf_metadata_timeout,
             blob_network_header_timeout: self.blob_network_header_timeout,
             blob_network_body_timeout: self.blob_network_body_timeout,
+            blob_download_resumption_attempts_limit: self.blob_download_resumption_attempts_limit,
         }
     }
 
@@ -413,6 +428,15 @@ where
             flag is in seconds"
         );
         self.blob_network_body_timeout = Some(timeout);
+        self
+    }
+
+    pub fn blob_download_resumption_attempts_limit(mut self, limit: u64) -> Self {
+        assert!(
+            self.blob_download_resumption_attempts_limit.is_none(),
+            "blob_download_resumption_attempts_limit should only be set once"
+        );
+        self.blob_download_resumption_attempts_limit = Some(limit);
         self
     }
 
@@ -488,6 +512,15 @@ where
             pkg_resolver.args(vec![
                 "--blob-network-body-timeout-seconds".to_string(),
                 timeout.as_secs().to_string(),
+            ])
+        } else {
+            pkg_resolver
+        };
+
+        let pkg_resolver = if let Some(limit) = self.blob_download_resumption_attempts_limit {
+            pkg_resolver.args(vec![
+                "--blob-download-resumption-attempts-limit".to_string(),
+                limit.to_string(),
             ])
         } else {
             pkg_resolver

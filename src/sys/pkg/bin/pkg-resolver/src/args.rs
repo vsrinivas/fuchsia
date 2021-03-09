@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        DEFAULT_BLOB_NETWORK_BODY_TIMEOUT, DEFAULT_BLOB_NETWORK_HEADER_TIMEOUT,
-        DEFAULT_TUF_METADATA_TIMEOUT,
+        DEFAULT_BLOB_DOWNLOAD_RESUMPTION_ATTEMPTS_LIMIT, DEFAULT_BLOB_NETWORK_BODY_TIMEOUT,
+        DEFAULT_BLOB_NETWORK_HEADER_TIMEOUT, DEFAULT_TUF_METADATA_TIMEOUT,
     },
     argh::FromArgs,
     std::time::Duration,
@@ -50,6 +50,17 @@ pub struct Args {
     /// The default is 30 seconds. This flag exists for integration testing and
     /// should not be used elsewhere.
     pub blob_network_body_timeout: Duration,
+
+    #[argh(
+        option,
+        default = "DEFAULT_BLOB_DOWNLOAD_RESUMPTION_ATTEMPTS_LIMIT",
+        long = "blob-download-resumption-attempts-limit"
+    )]
+    /// the maximum number of times to try resuming a blob download using HTTP Range
+    /// requests.
+    /// The default is 50 attempts. This flag exists for integration testing and
+    /// should not be used elsewhere.
+    pub blob_download_resumption_attempts_limit: u64,
 }
 
 fn parse_unsigned_integer_as_seconds(flag: &str) -> Result<Duration, String> {
@@ -141,6 +152,26 @@ mod tests {
     }
 
     #[test]
+    fn blob_download_resumption_attempts_limit_success() {
+        assert_matches!(
+            Args::from_args(&["pkg-resolver"], &["--blob-download-resumption-attempts-limit", "26"]),
+            Ok(Args { blob_download_resumption_attempts_limit, .. })
+                if blob_download_resumption_attempts_limit == 26
+        );
+    }
+
+    #[test]
+    fn blob_download_resumption_attempts_limit_failure() {
+        assert_matches!(
+            Args::from_args(
+                &["pkg-resolver"],
+                &["--blob-download-resumption-attempts-limit", "also-not-an-integer-three"]
+            ),
+            Err(_)
+        );
+    }
+
+    #[test]
     fn default() {
         assert_eq!(
             Args::from_args(&["pkg-resolver"], &[]),
@@ -149,6 +180,8 @@ mod tests {
                 tuf_metadata_timeout: DEFAULT_TUF_METADATA_TIMEOUT,
                 blob_network_body_timeout: DEFAULT_BLOB_NETWORK_BODY_TIMEOUT,
                 blob_network_header_timeout: DEFAULT_BLOB_NETWORK_HEADER_TIMEOUT,
+                blob_download_resumption_attempts_limit:
+                    DEFAULT_BLOB_DOWNLOAD_RESUMPTION_ATTEMPTS_LIMIT,
             })
         );
     }

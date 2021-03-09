@@ -6,7 +6,7 @@
 
 use {
     crate::repo::Repository,
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{bail, format_err, Context as _, Error},
     chrono::Utc,
     fidl_fuchsia_pkg_ext::{MirrorConfig, MirrorConfigBuilder, RepositoryConfig},
     fuchsia_async::{self as fasync, net::TcpListener, Task},
@@ -22,8 +22,8 @@ use {
         Body, Method, Request, Response, StatusCode,
     },
     std::{
-        convert::Infallible,
-        io::Cursor,
+        convert::{Infallible, TryFrom, TryInto as _},
+        io::{Cursor, Read as _, Seek as _},
         net::{IpAddr, Ipv6Addr, SocketAddr},
         path::{Path, PathBuf},
         pin::Pin,
@@ -43,6 +43,7 @@ impl<T> AsyncReadWrite for T where T: tokio::io::AsyncRead + tokio::io::AsyncWri
 pub struct ServedRepositoryBuilder {
     repo: Arc<Repository>,
     uri_path_override_handlers: Vec<Arc<dyn UriPathHandler>>,
+    range_uri_path_override_handlers: Vec<Arc<dyn RangeUriPathHandler>>,
     use_https: bool,
     bind_addr: IpAddr,
 }
@@ -54,11 +55,24 @@ pub trait UriPathHandler: 'static + Send + Sync {
     fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>>;
 }
 
+/// Override how a `ServedRepository` responds to GET requests on valid URI paths.
+/// Useful for injecting failures.
+pub trait RangeUriPathHandler: 'static + Send + Sync {
+    /// `response` is what the server would have responded with.
+    fn handle(
+        &self,
+        uri_path: &Path,
+        range: &http::HeaderValue,
+        response: Response<Body>,
+    ) -> BoxFuture<'_, Response<Body>>;
+}
+
 impl ServedRepositoryBuilder {
     pub(crate) fn new(repo: Arc<Repository>) -> Self {
         ServedRepositoryBuilder {
             repo,
             uri_path_override_handlers: vec![],
+            range_uri_path_override_handlers: vec![],
             use_https: false,
             bind_addr: Ipv6Addr::UNSPECIFIED.into(),
         }
@@ -70,6 +84,15 @@ impl ServedRepositoryBuilder {
     /// builder.
     pub fn uri_path_override_handler(mut self, handler: impl UriPathHandler) -> Self {
         self.uri_path_override_handlers.push(Arc::new(handler));
+        self
+    }
+
+    /// Override how the `ServedRepositoryBuilder` responds to some URI paths for Range requests.
+    ///
+    /// Requests are passed through URI path handlers in the order in which they were added to this
+    /// builder.
+    pub fn range_uri_path_override_handler(mut self, handler: impl RangeUriPathHandler) -> Self {
+        self.range_uri_path_override_handlers.push(Arc::new(handler));
         self
     }
 
@@ -137,6 +160,7 @@ impl ServedRepositoryBuilder {
 
         let root = self.repo.path();
         let uri_path_override_handlers = Arc::new(self.uri_path_override_handlers);
+        let range_uri_path_override_handlers = Arc::new(self.range_uri_path_override_handlers);
 
         let (auto_response_creator, auto_event_sender) =
             SseResponseCreator::with_additional_buffer_size(10);
@@ -145,6 +169,7 @@ impl ServedRepositoryBuilder {
         let make_svc = make_service_fn(move |_socket| {
             let root = root.clone();
             let uri_path_override_handlers = Arc::clone(&uri_path_override_handlers);
+            let range_uri_path_override_handlers = Arc::clone(&range_uri_path_override_handlers);
             let auto_response_creator = Arc::clone(&auto_response_creator);
 
             async move {
@@ -154,6 +179,7 @@ impl ServedRepositoryBuilder {
                     ServedRepository::handle_tuf_repo_request(
                         root.clone(),
                         Arc::clone(&uri_path_override_handlers),
+                        Arc::clone(&range_uri_path_override_handlers),
                         Arc::clone(&auto_response_creator),
                         req,
                     )
@@ -312,6 +338,7 @@ impl ServedRepository {
     async fn handle_tuf_repo_request(
         repo: PathBuf,
         uri_path_override_handlers: Arc<Vec<Arc<dyn UriPathHandler>>>,
+        range_uri_path_override_handlers: Arc<Vec<Arc<dyn RangeUriPathHandler>>>,
         auto_response_creator: Arc<SseResponseCreator>,
         req: Request<Body>,
     ) -> Response<Body> {
@@ -335,33 +362,136 @@ impl ServedRepository {
             auto_response_creator.create().await
         } else {
             let fs_path = repo.join(uri_path.strip_prefix("/").unwrap_or(uri_path));
-            // FIXME synchronous IO in an async context.
-            let (status, data) = match std::fs::read(fs_path) {
-                Ok(data) => (StatusCode::OK, data),
-                Err(ref err) if err.kind() == std::io::ErrorKind::NotFound => {
-                    (StatusCode::NOT_FOUND, "File did not exist".to_owned().into_bytes())
-                }
-                Err(err) => {
-                    eprintln!("error reading repo file: {}", err);
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "Failed to read repo file".to_owned().into_bytes(),
-                    )
-                }
-            };
 
-            Response::builder()
-                .status(status)
-                .header(header::CONTENT_LENGTH, data.len())
-                .body(Body::from(data))
-                .unwrap()
+            if let Some(range) = req.headers().get(http::header::RANGE) {
+                make_range_response(fs_path, range)
+            } else {
+                // TODO(fxbug.dev/71372) synchronous IO in an async context.
+                let (status, data) = match std::fs::read(fs_path) {
+                    Ok(data) => (StatusCode::OK, data),
+                    Err(ref err) if err.kind() == std::io::ErrorKind::NotFound => {
+                        (StatusCode::NOT_FOUND, "File did not exist".to_owned().into_bytes())
+                    }
+                    Err(err) => {
+                        eprintln!("error reading repo file: {}", err);
+                        (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            "Failed to read repo file".to_owned().into_bytes(),
+                        )
+                    }
+                };
+
+                Response::builder()
+                    .status(status)
+                    .header(header::CONTENT_LENGTH, data.len())
+                    .body(Body::from(data))
+                    .unwrap()
+            }
         };
 
-        for handler in uri_path_override_handlers.iter() {
-            response = handler.handle(uri_path, response).await
+        // TODO(fxbug.dev/71333) consider combining the handlers
+        if let Some(range) = req.headers().get(http::header::RANGE) {
+            for handler in range_uri_path_override_handlers.iter() {
+                response = handler.handle(uri_path, range, response).await
+            }
+        } else {
+            for handler in uri_path_override_handlers.iter() {
+                response = handler.handle(uri_path, response).await
+            }
         }
 
         response
+    }
+}
+
+// TODO(fxbug.dev/71260) use specific HTTP status codes for errors instead of mapping everything to
+// INTERNAL_SERVER_ERROR.
+fn make_range_response(fs_path: PathBuf, range: &http::HeaderValue) -> Response<Body> {
+    match make_range_response_impl(fs_path, range) {
+        Ok(response) => response,
+        Err(e) => {
+            eprintln!("error making range response: {:#}", e);
+            Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::from("Error creating response".to_owned().into_bytes()))
+                .unwrap()
+        }
+    }
+}
+
+fn make_range_response_impl(
+    fs_path: PathBuf,
+    range: &http::HeaderValue,
+) -> Result<Response<Body>, Error> {
+    let HttpRange { start, end } = range.try_into().context("parse range header")?;
+    let mut file = match std::fs::File::open(fs_path) {
+        Ok(file) => file,
+        Err(ref err) if err.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(Body::from("File did not exist".to_owned().into_bytes()))
+                .unwrap())
+        }
+        Err(e) => Err(e).context("opening file")?,
+    };
+
+    let file_size = file.metadata().context("file metadata")?.len();
+    // TODO(fxbug.dev/71372) synchronous IO in an async context.
+    // TODO(fxbug.dev/71260) return 416 if the range is invalid
+    file.seek(std::io::SeekFrom::Start(start)).context("seeking file")?;
+    let mut data = vec![0; end as usize - start as usize + 1];
+    file.read_exact(&mut data).context("reading file for range request")?;
+
+    Ok(Response::builder()
+        .status(StatusCode::PARTIAL_CONTENT)
+        .header(header::CONTENT_LENGTH, data.len())
+        .header(header::CONTENT_RANGE, format!("bytes {}-{}/{}", start, end, file_size))
+        .body(Body::from(data))
+        .unwrap())
+}
+
+/// Parsed value of an HTTP request "Range" headers
+pub struct HttpRange {
+    start: u64,
+    end: u64,
+}
+
+impl HttpRange {
+    /// The Range start
+    pub fn start(&self) -> u64 {
+        self.start
+    }
+
+    /// The Range start
+    pub fn end(&self) -> u64 {
+        self.end
+    }
+}
+
+// TODO(fxbug.dev/71260) use a spec compliant parser
+impl TryFrom<&http::HeaderValue> for HttpRange {
+    type Error = anyhow::Error;
+
+    fn try_from(range: &http::HeaderValue) -> Result<Self, Self::Error> {
+        let range = range.to_str().context("range header should be ascii")?;
+        let range = if let Some(range) = range.strip_prefix("bytes=") {
+            range
+        } else {
+            bail!("range header should start with 'bytes='");
+        };
+        let dash = range.find('-').ok_or(anyhow::anyhow!("range header should have dash"))?;
+        let (start, end) = range.split_at(dash);
+        if end.len() < 2 {
+            bail!("range header end empty");
+        }
+        let start = start.parse().context("valid range start")?;
+        let end = end[1..].parse().context("valid range end")?;
+
+        if start >= end {
+            bail!("start {} >= end {}", start, end);
+        }
+
+        Ok(HttpRange { start, end })
     }
 }
 

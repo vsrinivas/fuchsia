@@ -92,6 +92,7 @@ const DEFAULT_TUF_METADATA_TIMEOUT: Duration = Duration::from_secs(240);
 
 const DEFAULT_BLOB_NETWORK_BODY_TIMEOUT: Duration = Duration::from_secs(30);
 const DEFAULT_BLOB_NETWORK_HEADER_TIMEOUT: Duration = Duration::from_secs(30);
+const DEFAULT_BLOB_DOWNLOAD_RESUMPTION_ATTEMPTS_LIMIT: u64 = 50;
 
 // The TCP keepalive timeout here in effect acts as a sort of between bytes timeout for connections
 // that are no longer established. Explicit timeouts are used around request futures to guard
@@ -182,9 +183,10 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         repo_manager.read().stats(),
         cobalt_sender.clone(),
         local_mirror,
-        cache::BlobNetworkTimeouts::builder()
-            .header(args.blob_network_header_timeout)
-            .body(args.blob_network_body_timeout),
+        cache::BlobFetchParams::builder()
+            .header_network_timeout(args.blob_network_header_timeout)
+            .body_network_timeout(args.blob_network_body_timeout)
+            .download_resumption_attempts_limit(args.blob_download_resumption_attempts_limit),
     );
     futures.push(blob_fetch_queue.boxed_local());
 

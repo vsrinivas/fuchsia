@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::cache::BlobNetworkTimeouts,
+    crate::cache::BlobFetchParams,
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_inspect::{
         IntProperty, Node, NumericProperty as _, Property as _, StringProperty, UintProperty,
@@ -27,9 +27,13 @@ pub struct BlobFetcher {
 
 impl BlobFetcher {
     /// Create a `BlobFetcher` from an Inspect node.
-    pub fn from_node_and_timeouts(node: Node, timeouts: &BlobNetworkTimeouts) -> Self {
-        node.record_uint("blob_header_timeout_seconds", timeouts.header().as_secs());
-        node.record_uint("blob_body_timeout_seconds", timeouts.body().as_secs());
+    pub fn from_node_and_params(node: Node, params: &BlobFetchParams) -> Self {
+        node.record_uint("blob_header_timeout_seconds", params.header_network_timeout().as_secs());
+        node.record_uint("blob_body_timeout_seconds", params.body_network_timeout().as_secs());
+        node.record_uint(
+            "blob_download_resumption_attempts_limit",
+            params.download_resumption_attempts_limit(),
+        );
         Self { queue: node.create_child("queue"), _node: node }
     }
 
@@ -203,11 +207,12 @@ mod tests {
 
     impl BlobFetcher {
         fn from_node(node: Node) -> Self {
-            Self::from_node_and_timeouts(
+            Self::from_node_and_params(
                 node,
-                &BlobNetworkTimeouts::builder()
-                    .header(Duration::from_secs(0))
-                    .body(Duration::from_secs(1)),
+                &BlobFetchParams::builder()
+                    .header_network_timeout(Duration::from_secs(0))
+                    .body_network_timeout(Duration::from_secs(1))
+                    .download_resumption_attempts_limit(2),
             )
         }
     }
@@ -223,6 +228,7 @@ mod tests {
                 blob_fetcher: {
                     blob_header_timeout_seconds: 0u64,
                     blob_body_timeout_seconds: 1u64,
+                    blob_download_resumption_attempts_limit: 2u64,
                     queue: {}
                 }
             }
