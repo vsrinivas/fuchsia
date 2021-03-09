@@ -12,7 +12,7 @@ use std::io::{Read, Write};
 use std::process::{Child, Command, Stdio};
 use std::sync::{mpsc, Arc};
 use std::time::Duration;
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, TempPath};
 
 struct Semaphore {
     inner: Arc<(Mutex<usize>, Condvar)>,
@@ -63,20 +63,20 @@ fn cmd(name: &str) -> Command {
     cmd
 }
 
-fn copy_output(mut out: impl std::io::Read + Send + 'static) -> mpsc::Receiver<NamedTempFile> {
+fn copy_output(mut out: impl std::io::Read + Send + 'static) -> (TempPath, mpsc::Receiver<()>) {
     let (sender, receiver) = mpsc::channel();
-    let mut temp = NamedTempFile::new().unwrap();
+    let (mut file, path) = NamedTempFile::new().unwrap().into_parts();
     std::thread::spawn(move || {
-        std::io::copy(&mut out, temp.as_file_mut()).unwrap();
-        let _ = sender.send(temp);
+        std::io::copy(&mut out, &mut file).unwrap();
+        let _ = sender.send(());
     });
-    receiver
+    (path, receiver)
 }
 
 struct ChildInfo {
     name: String,
-    stdout: Option<mpsc::Receiver<NamedTempFile>>,
-    stderr: Option<mpsc::Receiver<NamedTempFile>>,
+    stdout: Option<(TempPath, mpsc::Receiver<()>)>,
+    stderr: Option<(TempPath, mpsc::Receiver<()>)>,
 }
 
 impl ChildInfo {
@@ -88,14 +88,14 @@ impl ChildInfo {
         }
     }
 
-    fn show(&mut self) {
+    fn show(&self) {
         println!("*******************************************************************************");
         println!("** {}", self.name);
-        if let Some(Ok(f)) = self.stdout.take().map(|f| f.recv_timeout(Duration::from_secs(60))) {
+        if let Some((f, _)) = self.stdout.as_ref() {
             println!("** STDOUT:");
             println!("{}", std::fs::read_to_string(f).unwrap());
         }
-        if let Some(Ok(f)) = self.stderr.take().map(|f| f.recv_timeout(Duration::from_secs(60))) {
+        if let Some((f, _)) = self.stderr.as_ref() {
             println!("** STDERR:");
             println!("{}", std::fs::read_to_string(f).unwrap());
         }
@@ -162,9 +162,10 @@ impl TestContext {
         let child_info = ChildInfo::new(name, &mut child);
         self.state.lock().run_things.push(child_info);
         assert!(child.wait().expect("client should succeed").success());
-        let mut child_info = self.state.lock().run_things.pop().unwrap();
-        let stdout = child_info.stdout.take().unwrap().recv_timeout(Duration::from_secs(60))?;
-        let stdout_path = stdout.path().to_path_buf();
+        let child_info = self.state.lock().run_things.pop().unwrap();
+        let (stdout, wait) = child_info.stdout.unwrap();
+        wait.recv_timeout(Duration::from_secs(60))?;
+        let stdout_path: std::path::PathBuf = stdout.to_path_buf();
         Ok(std::fs::read_to_string(stdout_path)?)
     }
 
@@ -197,18 +198,18 @@ impl TestContext {
 
         if let Err(ref e) = &r {
             let rm = REPORT_MUTEX.lock();
-            let this = &mut *self.state.lock();
+            let this = &*self.state.lock();
 
             println!(
                 "*******************************************************************************"
             );
             println!("** ERROR: {:?}", e);
 
-            for thing in this.run_things.iter_mut() {
+            for thing in this.run_things.iter() {
                 thing.show();
             }
 
-            for thing in this.daemons.iter_mut() {
+            for thing in this.daemons.iter() {
                 thing.details.show();
             }
 
