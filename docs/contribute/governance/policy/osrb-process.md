@@ -20,7 +20,9 @@ not yet contain any code, submit an issue in Monorail using the
 This issue lets Fuchsia’s OSRB review the code that you want to add, to ensure
 that the code that you want to add is in compliance with [Fuchsia Open Source Licensing Policies](/docs/contribute/governance/policy/open-source-licensing-policies.md).
 
-When the request is approved, a member of the OSRB communicates the next steps
+Warning: You must receive approval from the OSRB _before_ pushing a commit to Gerrit that adds external code to new repositories. Do not request a code review for adding external code to new repositories until you have approval from the OSRB.
+
+If the request is approved, a member of the OSRB communicates the next steps
 to the requester.
 
 ## Process for adding external code to repositories with existing external code
@@ -32,7 +34,9 @@ This Monorail issue lets Fuchsia’s OSRB review the code that you want to add
 to ensure that the code that you want to add is in compliance with
 [Fuchsia Open Source Licensing Policies](/docs/contribute/governance/policy/open-source-licensing-policies.md).
 
-When the request is approved, a member of the OSRB communicates the next steps
+Warning: You must receive approval from the OSRB _before_ pushing a commit to Gerrit that adds external code to repositories with existing external code. Do not request a code review for adding external code to repositories with existing external code until you have approval from the OSRB.
+
+If the request is approved, a member of the OSRB communicates the next steps
 to the requester.
 
 ## Questions about adding external code
@@ -50,6 +54,8 @@ In your email, include answers to the following questions:
 To modify the Name, URL, License, or Usage of an existing Fuchsia repository,
 create an issue in Monorail using the [Open Source Review Board (OSRB) template](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=Open+Source+Review+Board+).
 
-When the request is approved, a member of the OSRB communicates the next steps
+Warning: You must receive approval from the OSRB _before_ pushing a commit to Gerrit that modifies the stated Name, URL, License, or Usage of existing repositories. Do not request a code review for  modifying the stated Name, URL, License, or Usage of existing repositories until you have approval from the OSRB.
+
+If the request is approved, a member of the OSRB communicates the next steps
 to the requester.
 
