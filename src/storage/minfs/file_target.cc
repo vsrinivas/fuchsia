@@ -89,6 +89,10 @@ zx::status<uint32_t> File::GetRequiredBlockCountForDirtyCache(size_t offset, siz
 
 zx::status<> File::MarkRequiredBlocksPending(size_t offset, size_t length) {
   ZX_ASSERT(DirtyCacheEnabled());
+
+  // Caller should have validated the length.
+  ZX_ASSERT(length > 0);
+
   WalkWriteBlockHandlerType mark_pending = [this](uint32_t block, bool allocated,
                                                   bool is_pending) -> zx::status<> {
     if (!is_pending) {

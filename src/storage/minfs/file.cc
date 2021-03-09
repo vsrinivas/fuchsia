@@ -344,6 +344,11 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
                  << " off=" << offset;
 
   *out_actual = 0;
+
+  if (len == 0) {
+    return ZX_OK;
+  }
+
   fs::Ticker ticker(Vfs()->StartTicker());
   auto get_metrics = fbl::MakeAutoCall(
       [&ticker, &out_actual, this]() { Vfs()->UpdateWriteMetrics(*out_actual, ticker.End()); });
