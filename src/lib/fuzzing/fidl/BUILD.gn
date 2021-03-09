@@ -31,16 +31,23 @@ fidl("fuchsia.fuzzer") {
 }
 
 source_set("core_lib") {
-  sources = [ "shared-memory.cc" ]
+  sources = [
+    "shared-memory.cc",
+    "signal-coordinator.cc",
+  ]
   public_deps = [
     ":fuchsia.fuzzer",
     "//src/lib/fxl",
+    "//zircon/system/ulib/sync",
   ]
   public_configs = [ ":config" ]
 }
 
 test("fidl_fuzzer_core_unittests") {
-  sources = [ "shared-memory-unittest.cc" ]
+  sources = [
+    "shared-memory-unittest.cc",
+    "signal-coordinator-unittest.cc",
+  ]
   deps = [
     ":core_lib",
     ":test_utils",
