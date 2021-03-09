@@ -175,6 +175,27 @@ impl AvrcpFacade {
         }
     }
 
+    /// Sets the player application settings on the controller.
+    ///
+    /// # Arguments
+    /// * `settings` - the player application settings to set.
+    pub async fn set_player_application_settings(
+        &self,
+        settings: CustomPlayerApplicationSettings,
+    ) -> Result<CustomPlayerApplicationSettings, Error> {
+        let tag = "AvrcpFacade::set_player_application_settings";
+        match self.inner.read().controller_proxy.clone() {
+            Some(proxy) => match proxy.set_player_application_settings(settings.into()).await? {
+                Ok(player_application_settings) => Ok(player_application_settings.into()),
+                Err(e) => fx_err_and_bail!(
+                    &with_line!(tag),
+                    format!("Error fetching player application settings: {:?}", e)
+                ),
+            },
+            None => fx_err_and_bail!(&with_line!(tag), "No AVRCP service proxy available"),
+        }
+    }
+
     /// A function to remove the profile service proxy and clear connected devices.
     fn clear(&self) {
         self.inner.write().avrcp_service_proxy = None;
@@ -216,6 +237,22 @@ mod tests {
                 repeat_status_mode: Some(CustomRepeatStatusMode::AllTrackRepeat),
                 shuffle_mode: None,
                 scan_mode: Some(CustomScanMode::GroupScan),
+                custom_settings: Some(vec![CustomCustomPlayerApplicationSetting {
+                    attribute_id: Some(1),
+                    attribute_name: Some("attribute".to_string()),
+                    possible_values: Some(vec![CustomCustomAttributeValue {
+                        description: "description".to_string(),
+                        value: 5
+                    }]),
+                    current_value: Some(5),
+                }])
+            };
+        static ref PLAYER_APPLICATION_SETTINGS_INPUT: CustomPlayerApplicationSettings =
+            CustomPlayerApplicationSettings {
+                equalizer: Some(CustomEqualizer::Off),
+                repeat_status_mode: None,
+                shuffle_mode: None,
+                scan_mode: None,
                 custom_settings: Some(vec![CustomCustomPlayerApplicationSetting {
                     attribute_id: Some(1),
                     attribute_name: Some("attribute".to_string()),
@@ -284,6 +321,25 @@ mod tests {
                 _ => {}
             })
         }
+
+        fn expect_set_player_application_settings(
+            self,
+            result: CustomPlayerApplicationSettings,
+            input: &'static CustomPlayerApplicationSettings,
+        ) -> Self {
+            self.push(move |req| match req {
+                ControllerRequest::SetPlayerApplicationSettings {
+                    requested_settings,
+                    responder,
+                } => {
+                    let player_application_settings: CustomPlayerApplicationSettings =
+                        requested_settings.into();
+                    assert_eq!(player_application_settings, *input);
+                    responder.send(&mut Ok(result.into())).unwrap();
+                }
+                _ => {}
+            })
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -308,6 +364,24 @@ mod tests {
         let facade_fut = async move {
             let application_settings = facade
                 .get_player_application_settings(PLAYER_APPLICATION_SETTINGS_ATTRIBUTE_IDS.clone())
+                .await
+                .unwrap();
+            assert_eq!(application_settings, *PLAYER_APPLICATION_SETTINGS);
+        };
+        future::join(facade_fut, application_settings_fut).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_player_application_settings() {
+        let (facade, application_settings_fut) = MockAvrcpTester::new()
+            .expect_set_player_application_settings(
+                PLAYER_APPLICATION_SETTINGS.clone(),
+                &PLAYER_APPLICATION_SETTINGS_INPUT,
+            )
+            .build_controller();
+        let facade_fut = async move {
+            let application_settings = facade
+                .set_player_application_settings(PLAYER_APPLICATION_SETTINGS_INPUT.clone())
                 .await
                 .unwrap();
             assert_eq!(application_settings, *PLAYER_APPLICATION_SETTINGS);

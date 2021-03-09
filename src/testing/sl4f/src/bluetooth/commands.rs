@@ -23,7 +23,7 @@ use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 use crate::bluetooth::types::{
-    BleAdvertiseResponse, BleConnectPeripheralResponse,
+    BleAdvertiseResponse, BleConnectPeripheralResponse, CustomPlayerApplicationSettings,
     CustomPlayerApplicationSettingsAttributeIds, GattcDiscoverCharacteristicResponse,
 };
 
@@ -519,6 +519,17 @@ impl Facade for AvrcpFacade {
                         ),
                     };
                 let result = self.get_player_application_settings(attribute_ids.clone()).await?;
+                Ok(to_value(result)?)
+            }
+            "AvrcpSetPlayerApplicationSettings" => {
+                let settings: CustomPlayerApplicationSettings = match from_value(args.clone()) {
+                    Ok(settings) => settings,
+                    _ => bail!(
+                        "Invalid json argument to AvrcpSetPlayerApplicationSettings! - {}",
+                        args
+                    ),
+                };
+                let result = self.set_player_application_settings(settings.clone()).await?;
                 Ok(to_value(result)?)
             }
             "AvrcpSendCommand" => {

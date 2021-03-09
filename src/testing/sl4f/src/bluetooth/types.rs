@@ -551,7 +551,7 @@ impl From<u8> for CustomPlayerApplicationSettingsAttributeId {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct CustomPlayerApplicationSettings {
     pub equalizer: Option<CustomEqualizer>,
     pub repeat_status_mode: Option<CustomRepeatStatusMode>,
@@ -560,7 +560,7 @@ pub struct CustomPlayerApplicationSettings {
     pub custom_settings: Option<Vec<CustomCustomPlayerApplicationSetting>>,
 }
 
-#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct CustomCustomPlayerApplicationSetting {
     pub attribute_id: Option<u8>,
     pub attribute_name: Option<String>,
@@ -568,31 +568,31 @@ pub struct CustomCustomPlayerApplicationSetting {
     pub current_value: Option<u8>,
 }
 
-#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct CustomCustomAttributeValue {
     pub description: String,
     pub value: u8,
 }
-#[derive(Clone, Debug, Serialize, Eq, PartialEq, Copy)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Copy)]
 pub enum CustomEqualizer {
     Off = 1,
     On = 2,
 }
 
-#[derive(Clone, Debug, Serialize, Eq, PartialEq, Copy)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Copy)]
 pub enum CustomRepeatStatusMode {
     Off = 1,
     SingleTrackRepeat = 2,
     AllTrackRepeat = 3,
     GroupRepeat = 4,
 }
-#[derive(Clone, Debug, Serialize, Eq, PartialEq, Copy)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Copy)]
 pub enum CustomShuffleMode {
     Off = 1,
     AllTrackShuffle = 2,
     GroupShuffle = 3,
 }
-#[derive(Clone, Debug, Serialize, Eq, PartialEq, Copy)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Copy)]
 pub enum CustomScanMode {
     Off = 1,
     AllTrackScan = 2,
