@@ -280,6 +280,7 @@ class ArmArchVmAspace::ConsistencyManager {
         num_pending_tlbs_++;
         return;
       }
+      // Flush what pages we've cached up until now and reset counter to zero.
       Flush();
     }
 
@@ -740,9 +741,6 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
       } else {
         pte |= MMU_PTE_L3_DESCRIPTOR_PAGE;
       }
-      if (!(flags_ & ARCH_ASPACE_FLAG_GUEST)) {
-        pte |= MMU_PTE_ATTR_NON_GLOBAL;
-      }
       LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
       update_pte(&page_table[index], pte);
     }
@@ -1066,6 +1064,8 @@ void ArmArchVmAspace::MmuParamsFromFlags(uint mmu_flags, pte_t* attrs, vaddr_t* 
   } else {
     if (attrs) {
       *attrs = mmu_flags_to_s1_pte_attr(mmu_flags);
+      // User pages are marked non global
+      *attrs |= MMU_PTE_ATTR_NON_GLOBAL;
     }
     *vaddr_base = 0;
     *top_size_shift = MMU_USER_SIZE_SHIFT;
