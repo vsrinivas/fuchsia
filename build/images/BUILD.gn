@@ -32,6 +32,7 @@ import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
 import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
+import("//src/sys/pkg/bin/system-updater/epoch/generate_epoch.gni")
 
 recovery_is_zedboot =
     get_label_info(recovery_label, "label_with_toolchain") ==
@@ -2096,6 +2097,10 @@ action("update_packages.manifest.json") {
   ]
 }
 
+generate_epoch("epoch.json") {
+  output_file = "${target_out_dir}/${target_name}"
+}
+
 # The update package manifest contains the pkgsvr_index and the target
 # system kernel images.
 action("update.manifest") {
@@ -2110,6 +2115,10 @@ action("update.manifest") {
     {
       target = "packages.json"
       deps = [ ":update_packages.manifest.json" ]
+    },
+    {
+      target = "epoch.json"
+      deps = [ ":epoch.json" ]
     },
 
     # Add the meta/package JSON file that makes this the "update" package.
