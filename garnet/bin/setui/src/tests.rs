@@ -1,6 +1,31 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#![macro_use]
+
+/// Macro for generating multiple tests from a common test function
+/// # Example
+/// ```
+/// async_property_test!(test_to_run,
+///     case1(0, String::from("abc")),
+///     case2(1, String::from("xyz")),
+/// );
+/// async fn test_to_run(prop1: usize, prop2: String) {
+///     assert!(prop1 < 2);
+///     assert_eq!(prop2.chars().len(), 3);
+/// }
+/// ```
+macro_rules! async_property_test {
+    ($test_func:ident => [$($test_name:ident($($args:expr),+$(,)?)),+$(,)?]) => {
+        $(paste::paste!{
+            #[allow(non_snake_case)]
+            #[fuchsia_async::run_until_stalled(test)]
+            async fn [<$test_func ___ $test_name>]() {
+                $test_func($($args,)+).await;
+            }
+        })+
+    }
+}
 
 mod accessibility_tests;
 mod agent_tests;
