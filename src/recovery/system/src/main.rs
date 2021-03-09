@@ -156,7 +156,7 @@ impl RenderResources {
         // Calculate position for centering the logo image
         let logo_position = {
             let x = target_size.width / 2.0;
-            let y = target_size.height / 2.0 - logo_size.height;
+            let y = target_size.height / 2.0 - logo_size.height / 2.0 + body_text_size;
             point2(x, y)
         };
 
@@ -192,7 +192,7 @@ impl RenderResources {
         }
 
         let heading_text_location =
-            point2(min_dimension / 2.0, logo_position.y + logo_size.height / 2.0 + text_size);
+            point2(target_size.width / 2.0, logo_position.y + logo_size.height / 2.0 + text_size);
         builder.text(
             face.clone(),
             &heading,
