@@ -3,7 +3,8 @@
 List all handles and [VMOs](/docs/reference/kernel_objects/vm_object.md) (some of these "Virtual
 Memory Objects" can be mapped but won't have open handles) with the `handles` command.
 
-```[zxdb] handles
+```
+[zxdb] handles
       Handle  Type                  Koid
       <none>  ZX_OBJ_TYPE_VMO      30040
   4166674259  ZX_OBJ_TYPE_TIMER    30158
