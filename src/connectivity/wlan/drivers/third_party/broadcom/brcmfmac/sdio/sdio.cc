@@ -3167,11 +3167,13 @@ void brcmf_sdio_log_stats(struct brcmf_bus* bus_if) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
 
-  BRCMF_INFO(
-      "SDIO bus stats: FC: %x FC_ChangeCnt: %u TxSeq: %u TxMax: %u TxCtlCnt: %lu TxCtlErr: %lu",
+  zxlogf(INFO,
+      "SDIO bus stats: FC: %x FC_ChangeCnt: %u TxSeq: %u TxMax: %u TxCtlCnt: %lu TxCtlErr: %lu,"
+      " RxCtlCnt: %lu, RxCtlErr: %lu, Intrs: %u, HdrRead: %u, PktReads: %u, PktWrites: %u",
       bus->flowcontrol, bus->sdcnt.fc_rcvd, bus->tx_seq, bus->tx_max, bus->sdcnt.tx_ctlpkts,
-      bus->sdcnt.tx_ctlerrs);
-  BRCMF_INFO(
+      bus->sdcnt.tx_ctlerrs, bus->sdcnt.rx_ctlpkts, bus->sdcnt.rx_ctlerrs, bus->sdcnt.intrcount,
+      bus->sdcnt.f2rxhdrs, bus->sdcnt.f2rxdata, bus->sdcnt.f2txdata);
+  zxlogf(INFO,
       "SDIO txq stats: EnqueueCnt: %u QFullCnt: %u QLen: %u PerPrecLen [0]: %u [1]: %u [2]: %u "
       "[3]: %u",
       pktq_enq_cnt(&bus->txq), bus->sdcnt.tx_qfull, pktq_len(&bus->txq), pktq_plen(&bus->txq, 0),
@@ -3180,10 +3182,12 @@ void brcmf_sdio_log_stats(struct brcmf_bus* bus_if) {
 
 int brcmf_sdio_oob_irqhandler(void* cookie) {
   struct brcmf_sdio_dev* sdiodev = static_cast<decltype(sdiodev)>(cookie);
+  struct brcmf_sdio* bus = sdiodev->bus;
   zx_status_t status;
   uint32_t intstatus;
 
   while ((status = zx_interrupt_wait(sdiodev->irq_handle, NULL)) == ZX_OK) {
+    bus->sdcnt.intrcount++;
     // Sleep the interrupt handling when reloading the firmware to reduce the chaos in driver caused
     // by queued interrupts.
     std::lock_guard<std::mutex> guard(sdiodev->drvr->fw_reloading);

@@ -1909,7 +1909,7 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
     BRCMF_INFO("Unable to get noise: %s fw err %s", zx_status_get_string(err),
                brcmf_fil_get_errstr(fw_err));
   }
-  BRCMF_INFO("Client IF up: %d channel: %d Rate: %d Mbps RSSI: %d dBm SNR: %d dB  noise: %d dBm",
+  zxlogf(INFO, "Client IF up: %d channel: %d Rate: %d Mbps RSSI: %d dBm SNR: %d dB  noise: %d dBm",
              is_up, ctl_chan, rate / 2, ndev->last_known_rssi_dbm, ndev->last_known_snr_db, noise);
 
   // Get the FW packet counts
@@ -1920,11 +1920,11 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
     BRCMF_INFO("Unable to get FW packet counts err: %s fw err %s", zx_status_get_string(err),
                brcmf_fil_get_errstr(fw_err));
   }
-  BRCMF_INFO("FW Stats: Rx - Good: %d Bad: %d Ocast: %d; Tx - Good: %d Bad: %d",
+  zxlogf(INFO, "FW Stats: Rx - Good: %d Bad: %d Ocast: %d; Tx - Good: %d Bad: %d",
              fw_pktcnt.rx_good_pkt, fw_pktcnt.rx_bad_pkt, fw_pktcnt.rx_ocast_good_pkt,
              fw_pktcnt.tx_good_pkt, fw_pktcnt.tx_bad_pkt);
 
-  BRCMF_INFO("Driver Stats: Rx - Good: %d Bad: %d; Tx - Sent to FW: %d Conf: %d Drop: %d Bad: %d",
+  zxlogf(INFO, "Driver Stats: Rx - Good: %d Bad: %d; Tx - Sent to FW: %d Conf: %d Drop: %d Bad: %d",
              ndev->stats.rx_packets, ndev->stats.rx_errors, ndev->stats.tx_packets,
              ndev->stats.tx_confirmed, ndev->stats.tx_dropped, ndev->stats.tx_errors);
 
