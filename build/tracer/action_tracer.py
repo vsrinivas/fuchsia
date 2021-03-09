@@ -445,7 +445,7 @@ def parse_dep_edges(depfile_line: str) -> DepEdges:
       See https://github.com/ninja-build/ninja/blob/master/src/depfile_parser_test.cc
 
     Args:
-      depfile_line: has the form "OUTPUT: INPUT INPUT ..."
+      depfile_line: has the form "OUTPUT1 [OUTPUT2 ...]: INPUT [INPUT ...]"
 
     Returns:
       A DepEdges object represending a dependency between inputs and outputs.
@@ -453,10 +453,10 @@ def parse_dep_edges(depfile_line: str) -> DepEdges:
     Raises:
       ValueError if unable to parse dependency entry.
     """
-    out, sep, ins = depfile_line.strip().partition(":")
+    outs, sep, ins = depfile_line.strip().partition(":")
     if sep != ":":
         raise ValueError("Failed to parse depfile entry:\n" + depfile_line)
-    return DepEdges(ins=set(shlex.split(ins)), outs={out.strip()})
+    return DepEdges(ins=set(shlex.split(ins)), outs=set(shlex.split(outs)))
 
 
 @dataclasses.dataclass

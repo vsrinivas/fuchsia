@@ -51,6 +51,11 @@ class DepEdgesParseTests(unittest.TestCase):
         self.assertEqual(dep.ins, set())
         self.assertEqual(dep.outs, {"output.txt"})
 
+    def test_multipl_outputs_only(self):
+        dep = action_tracer.parse_dep_edges("output.txt  output2.txt :")
+        self.assertEqual(dep.ins, set())
+        self.assertEqual(dep.outs, {"output.txt", "output2.txt"})
+
     def test_output_with_one_input(self):
         dep = action_tracer.parse_dep_edges("output.txt:input.cc")
         self.assertEqual(dep.ins, {"input.cc"})
@@ -82,6 +87,15 @@ class ParseDepFileTests(unittest.TestCase):
         self.assertEqual(depfile.deps, [])
         self.assertEqual(depfile.all_ins, set())
         self.assertEqual(depfile.all_outs, set())
+
+    def test_multiple_ins_multiple_outs(self):
+        depfile = action_tracer.parse_depfile(["a b: c d"])
+        self.assertEqual(
+            depfile.deps, [
+                action_tracer.DepEdges(ins={"c", "d"}, outs={"a", "b"}),
+            ])
+        self.assertEqual(depfile.all_ins, {"c", "d"})
+        self.assertEqual(depfile.all_outs, {"a", "b"})
 
     def test_two_deps(self):
         depfile = action_tracer.parse_depfile([
