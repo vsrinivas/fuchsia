@@ -126,7 +126,6 @@ mod tests {
 
         // Not compatible:
         assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa1)));
-        assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa2NoPrivacy)));
         assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa3)));
         assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa3Transition)));
         assert!(!cfg.is_bss_compatible(&fake_bss!(Eap)));

@@ -183,7 +183,6 @@ pub enum FakeProtectionCfg {
     Wpa3Transition,
     Wpa3,
     Wpa3Enterprise,
-    Wpa2NoPrivacy,
     Eap,
 }
 
@@ -200,7 +199,7 @@ pub fn build_fake_bss_creator__(protection_cfg: FakeProtectionCfg) -> BssCreator
 
         cap: mac::CapabilityInfo(0)
             .with_privacy(match protection_cfg {
-                FakeProtectionCfg::Open | FakeProtectionCfg::Wpa2NoPrivacy => false,
+                FakeProtectionCfg::Open => false,
                 _ => true,
             })
             .0,
@@ -223,9 +222,7 @@ fn derive_rsne(protection_cfg: FakeProtectionCfg) -> Option<Vec<u8>> {
         FakeProtectionCfg::Wpa1Wpa2TkipOnly | FakeProtectionCfg::Wpa2TkipOnly => {
             Some(fake_wpa2_tkip_only_rsne())
         }
-        FakeProtectionCfg::Wpa1Wpa2
-        | FakeProtectionCfg::Wpa2
-        | FakeProtectionCfg::Wpa2NoPrivacy => Some(fake_wpa2_rsne()),
+        FakeProtectionCfg::Wpa1Wpa2 | FakeProtectionCfg::Wpa2 => Some(fake_wpa2_rsne()),
         FakeProtectionCfg::Eap => Some(fake_eap_rsne()),
         _ => None,
     }

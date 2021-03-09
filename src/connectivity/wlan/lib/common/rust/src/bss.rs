@@ -225,6 +225,10 @@ impl BssDescription {
 
     /// Categorize BSS on what protection it supports.
     pub fn protection(&self) -> Protection {
+        if !CapabilityInfo(self.cap).privacy() {
+            return Protection::Open;
+        }
+
         let supports_wpa_1 = self
             .wpa_ie()
             .map(|wpa_ie| {
@@ -245,7 +249,6 @@ impl BssDescription {
                     return Protection::Unknown;
                 }
             },
-            None if !CapabilityInfo(self.cap).privacy() => return Protection::Open,
             None if self.find_wpa_ie().is_some() => {
                 if supports_wpa_1 {
                     return Protection::Wpa1;
