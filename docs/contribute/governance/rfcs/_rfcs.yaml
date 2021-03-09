@@ -38,8 +38,8 @@
   issue: []
   gerrit_change_id: ['376759']
   reviewers: ['jsanky@google.com', 'jln@google.com', 'kulakowski@google.com', 'geb@google.com', 'raggi@google.com', 'gridman@google.com', 'pascallouis@google.com', 'pylaligand@google.com', 'cpu@google.com']
-  submitted: '2020-0-30'
-  reviewed: '2020-0-23'
+  submitted: '2020-04-30'
+  reviewed: '2020-05-23'
 
 - name: 'RFC-0003'
   title: 'Fuchsia logging guidelines'
