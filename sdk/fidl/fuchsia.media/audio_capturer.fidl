@@ -276,8 +276,8 @@ protocol AudioCapturer {
 
     /// Sets the stream type of the stream to be delivered.  Causes the source
     /// material to be reformatted/resampled if needed in order to produce the
-    /// requested stream type. Note that the stream type may not be changed
-    /// after the payload buffer has been established.
+    /// requested stream type. Must be called before the payload buffer is
+    /// established.
     SetPcmStreamType(AudioStreamType stream_type);
 
     /// Explicitly specify a region of the shared payload buffer for the audio
@@ -339,7 +339,8 @@ protocol AudioCapturer {
     /// which was just created and has not yet had its stream type explicitly
     /// set, this will retrieve the stream type -- at the time the AudioCapturer
     /// was created -- of the source (input or looped-back output) to which the
-    /// AudioCapturer is bound.
+    /// AudioCapturer is bound. Even if this matches the client's desired format,
+    /// `SetPcmStreamType` must still be called.
     ///
     // TODO(mpuryear): Get rid of this. Eventually, AudioCapturers will be
     // bindable to a set of inputs/outputs/renderers, so the concept of a

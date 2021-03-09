@@ -9,6 +9,7 @@
 #include <lib/media/audio/cpp/types.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
+#include <zircon/errors.h>
 
 #include <iomanip>
 #include <memory>
@@ -55,8 +56,6 @@ BaseCapturer::BaseCapturer(
       context_(*context),
       mix_domain_(context_.threading_model().AcquireMixDomain("capturer")),
       state_(State::WaitingForVmo),
-      // Ideally, initialize this to the native configuration of our initially-bound source.
-      format_(kInitialFormat),
       reporter_(Reporter::Singleton().CreateCapturer(mix_domain_->name())),
       audio_clock_(context_.clock_manager()->CreateClientAdjustable(
           audio::clock::AdjustableCloneOfMonotonic())) {
@@ -67,8 +66,6 @@ BaseCapturer::BaseCapturer(
 
   if (format) {
     UpdateFormat(*format);
-  } else {
-    reporter().SetFormat(format_);
   }
 
   zx_status_t status =
@@ -86,7 +83,7 @@ void BaseCapturer::OnLinkAdded() { RecomputePresentationDelay(); }
 
 void BaseCapturer::UpdateState(State new_state) {
   if (new_state == State::OperatingSync) {
-    set_packet_queue(CapturePacketQueue::CreateDynamicallyAllocated(payload_buf_, format_));
+    set_packet_queue(CapturePacketQueue::CreateDynamicallyAllocated(payload_buf_, format_.value()));
   }
   if (new_state == State::Shutdown) {
     // This can be null if we shutdown before initialization completes.
@@ -150,6 +147,11 @@ BaseCapturer::InitializeSourceLink(const AudioObject& source,
                                    std::shared_ptr<ReadableStream> source_stream) {
   TRACE_DURATION("audio", "BaseCapturer::InitializeSourceLink");
 
+  if (!format_.has_value()) {
+    BeginShutdown();
+    return fit::error(ZX_ERR_BAD_STATE);
+  }
+
   switch (state_.load()) {
     // We are operational. Go ahead and add the input to our mix stage.
     case State::OperatingSync:
@@ -178,12 +180,18 @@ void BaseCapturer::GetStreamType(GetStreamTypeCallback cbk) {
   TRACE_DURATION("audio", "BaseCapturer::GetStreamType");
   fuchsia::media::StreamType ret;
   ret.encoding = fuchsia::media::AUDIO_ENCODING_LPCM;
-  ret.medium_specific.set_audio(format_.stream_type());
+  ret.medium_specific.set_audio(format_.value_or(kInitialFormat).stream_type());
   cbk(std::move(ret));
 }
 
 void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   TRACE_DURATION("audio", "BaseCapturer::AddPayloadBuffer");
+  if (!format_.has_value()) {
+    FX_LOGS(WARNING) << "StreamType must be set before payload buffer is added.";
+    BeginShutdown();
+    return;
+  }
+
   if (id != 0) {
     FX_LOGS(WARNING) << "Only buffer ID 0 is currently supported.";
     BeginShutdown();
@@ -216,18 +224,18 @@ void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   }
 
   constexpr uint64_t max_uint32 = std::numeric_limits<uint32_t>::max();
-  if ((payload_buf_size < format_.bytes_per_frame()) ||
-      (payload_buf_size > (max_uint32 * format_.bytes_per_frame()))) {
+  if ((payload_buf_size < format_->bytes_per_frame()) ||
+      (payload_buf_size > (max_uint32 * format_->bytes_per_frame()))) {
     FX_LOGS(ERROR) << "Bad payload buffer VMO size (size = " << payload_buf_.size()
-                   << ", bytes per frame = " << format_.bytes_per_frame() << ")";
+                   << ", bytes per frame = " << format_->bytes_per_frame() << ")";
     return;
   }
 
   reporter_->AddPayloadBuffer(id, payload_buf_size);
 
-  auto payload_buf_frames = static_cast<uint32_t>(payload_buf_size / format_.bytes_per_frame());
+  auto payload_buf_frames = static_cast<uint32_t>(payload_buf_size / format_->bytes_per_frame());
   FX_LOGS(DEBUG) << "payload buf -- size:" << payload_buf_size << ", frames:" << payload_buf_frames
-                 << ", bytes/frame:" << format_.bytes_per_frame();
+                 << ", bytes/frame:" << format_->bytes_per_frame();
 
   // Map the VMO into our process.
   res = payload_buf_.Map(payload_buf_vmo, /*offset=*/0, payload_buf_size,
@@ -257,7 +265,7 @@ void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   });
 
   // Next, select our output producer.
-  output_producer_ = OutputProducer::Select(format_.stream_type());
+  output_producer_ = OutputProducer::Select(format_->stream_type());
   if (output_producer_ == nullptr) {
     FX_LOGS(ERROR) << "Failed to select output producer";
     return;
@@ -399,7 +407,8 @@ void BaseCapturer::StartAsyncCapture(uint32_t frames_per_packet) {
   }
 
   // Allocate an asynchronous queue.
-  auto result = CapturePacketQueue::CreatePreallocated(payload_buf_, format_, frames_per_packet);
+  auto result =
+      CapturePacketQueue::CreatePreallocated(payload_buf_, format_.value(), frames_per_packet);
   if (!result.is_ok()) {
     FX_LOGS(WARNING) << "StartAsyncCapture failed: " << result.error();
     return;
@@ -770,13 +779,13 @@ void BaseCapturer::UpdateFormat(Format format) {
   TRACE_DURATION("audio", "BaseCapturer::UpdateFormat");
   // Record our new format.
   FX_DCHECK(state_.load() == State::WaitingForVmo);
-  format_ = format;
+  format_ = {format};
 
   reporter().SetFormat(format);
 
   auto ref_now = reference_clock().Read();
   ref_pts_to_fractional_frame_->Update(TimelineFunction(
-      0, ref_now.get(), Fixed(format_.frames_per_second()).raw_value(), zx::sec(1).get()));
+      0, ref_now.get(), Fixed(format_->frames_per_second()).raw_value(), zx::sec(1).get()));
 
   // Pre-compute the ratio between frames and clock mono ticks. Also figure out
   // the maximum number of frames we are allowed to mix and capture at a time.
@@ -798,15 +807,15 @@ void BaseCapturer::UpdateFormat(Format format) {
   auto mix_stage_format =
       Format::Create({
                          .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-                         .channels = format_.channels(),
-                         .frames_per_second = format_.frames_per_second(),
+                         .channels = format_->channels(),
+                         .frames_per_second = format_->frames_per_second(),
                      })
           .take_value();
 
   // Allocate our MixStage for mixing.
   //
   // TODO(fxbug.dev/39886): Limit this to something smaller than one second of frames.
-  uint32_t max_mix_frames = format_.frames_per_second();
+  uint32_t max_mix_frames = format_->frames_per_second();
   mix_stage_ = std::make_shared<MixStage>(mix_stage_format, max_mix_frames,
                                           ref_pts_to_fractional_frame_, reference_clock());
 }

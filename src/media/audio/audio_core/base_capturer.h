@@ -185,7 +185,7 @@ class BaseCapturer : public AudioObject,
   void RecomputePresentationDelay();
 
   TimelineRate dest_frames_to_ref_clock_rate() {
-    return TimelineRate(ZX_SEC(1), format_.frames_per_second());
+    return TimelineRate(ZX_SEC(1), format_->frames_per_second());
   }
 
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;
@@ -195,7 +195,7 @@ class BaseCapturer : public AudioObject,
   zx::duration presentation_delay_;
 
   // Capture format and gain state.
-  Format format_;
+  std::optional<Format> format_;
   uint32_t max_frames_per_capture_;
 
   // Shared buffer state

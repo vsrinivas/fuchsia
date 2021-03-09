@@ -104,10 +104,9 @@ void AudioCapturer::SetReferenceClock(zx::clock raw_clock) {
     return;
   }
 
-  zx_status_t status;
   if (raw_clock.is_valid()) {
     // If raw_clock doesn't have DUPLICATE or READ or TRANSFER rights, return (i.e. shutdown).
-    status = raw_clock.replace(kRequiredClockRights, &raw_clock);
+    zx_status_t status = raw_clock.replace(kRequiredClockRights, &raw_clock);
     if (status != ZX_OK) {
       FX_PLOGS(WARNING, status) << "Could not set rights on client-submitted reference clock";
       return;

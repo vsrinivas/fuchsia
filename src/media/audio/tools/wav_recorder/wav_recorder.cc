@@ -373,30 +373,21 @@ void WavRecorder::ReceiveClockAndContinue(
 void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& fmt) {
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
+  // sample_format_ is already set, from cmdline flag or default (we ignore fmt.sample_format)
   channel_count_ = fmt.channels;
   frames_per_second_ = fmt.frames_per_second;
 
-  bool change_format = false;
   bool change_gain = false;
   bool set_mute = false;
 
-  if (fmt.sample_format != sample_format_) {
-    change_format = true;
-  }
-
   std::string opt;
   if (cmd_line_.GetOptionValue(kFrameRateOption, &opt)) {
-    uint32_t rate;
-    CLI_CHECK(sscanf(opt.c_str(), "%u", &rate) == 1, "Frame rate must be a positive integer");
-    CLI_CHECK(rate >= fuchsia::media::MIN_PCM_FRAMES_PER_SECOND &&
-                  rate <= fuchsia::media::MAX_PCM_FRAMES_PER_SECOND,
+    CLI_CHECK(sscanf(opt.c_str(), "%u", &frames_per_second_) == 1,
+              "Frame rate must be a positive integer");
+    CLI_CHECK(frames_per_second_ >= fuchsia::media::MIN_PCM_FRAMES_PER_SECOND &&
+                  frames_per_second_ <= fuchsia::media::MAX_PCM_FRAMES_PER_SECOND,
               "Frame rate must be between " << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND << " and "
                                             << fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
-
-    if (frames_per_second_ != rate) {
-      frames_per_second_ = rate;
-      change_format = true;
-    }
   }
 
   if (cmd_line_.HasOption(kGainOption)) {
@@ -427,17 +418,12 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
   }
 
   if (cmd_line_.GetOptionValue(kChannelsOption, &opt)) {
-    uint32_t count;
-    CLI_CHECK(sscanf(opt.c_str(), "%u", &count) == 1, "Channels must be a positive integer");
-    CLI_CHECK((count >= fuchsia::media::MIN_PCM_CHANNEL_COUNT) &&
-                  (count <= fuchsia::media::MAX_PCM_CHANNEL_COUNT),
+    CLI_CHECK(sscanf(opt.c_str(), "%u", &channel_count_) == 1,
+              "Channels must be a positive integer");
+    CLI_CHECK((channel_count_ >= fuchsia::media::MIN_PCM_CHANNEL_COUNT) &&
+                  (channel_count_ <= fuchsia::media::MAX_PCM_CHANNEL_COUNT),
               "Channels must be between " << fuchsia::media::MIN_PCM_CHANNEL_COUNT << " and "
                                           << fuchsia::media::MAX_PCM_CHANNEL_COUNT);
-
-    if (channel_count_ != count) {
-      channel_count_ = count;
-      change_format = true;
-    }
   }
 
   uint32_t bytes_per_sample =
@@ -451,11 +437,8 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
     bits_per_sample = 24;
   }
 
-  // If desired format differs from default capturer format, change formats now.
-  if (change_format) {
-    audio_capturer_->SetPcmStreamType(
-        media::CreateAudioStreamType(sample_format_, channel_count_, frames_per_second_));
-  }
+  audio_capturer_->SetPcmStreamType(
+      media::CreateAudioStreamType(sample_format_, channel_count_, frames_per_second_));
 
   // Set the specified gain (if specified) for the recording.
   if (change_gain) {

@@ -284,6 +284,17 @@ TEST_F(AudioCapturerTestOldAPI, BindGainControl) {
   ExpectCallback();
 }
 
+// Setting a payload buffer should fail, if format has not yet been set (even if it was retrieved).
+TEST_F(AudioCapturerTestOldAPI, AddPayloadBuffer_BeforeSetFormatShouldDisconnect) {
+  // Give time for Disconnect to occur, if it must.
+  audio_capturer_->GetStreamType(AddCallback("GetStreamType"));
+  ExpectCallback();
+
+  // Calling this before SetPcmStreamType should fail
+  SetUpPayloadBuffer();
+  ExpectDisconnect(audio_capturer_);
+}
+
 // TODO(mpuryear): test GetStreamType() -> (StreamType stream_type);
 // Also negative testing: before format set
 
