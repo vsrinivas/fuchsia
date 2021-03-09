@@ -125,7 +125,9 @@ class TestWeaveTunnelAgent : public WeaveTunnelAgent {
  public:
   WEAVE_ERROR StartServiceTunnel() override { return WEAVE_NO_ERROR; }
 
-  void StopServiceTunnel(WEAVE_ERROR error) override {}
+  void StopServiceTunnel(WEAVE_ERROR error) override {
+    EXPECT_EQ(error, WEAVE_ERROR_TUNNEL_FORCE_ABORT);
+  }
 
   bool IsTunnelRoutingRestricted() override { return true; }
 };

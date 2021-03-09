@@ -200,7 +200,11 @@ void ConnectivityManagerDelegateImpl::DriveServiceTunnelState() {
   if (should_start_service_tunnel) {
     StartServiceTunnel();
   } else {
-    StopServiceTunnel(WEAVE_NO_ERROR);
+    // Forcefully abort the tunnel when the device loses connectivity as this
+    // ensures the proper release of resources like timers. This stops tunnel
+    // retry mechanism when there is no connectivity. The tunnel will be
+    // restarted explicitly, when the connectivity is restored.
+    StopServiceTunnel(WEAVE_ERROR_TUNNEL_FORCE_ABORT);
   }
 }
 
