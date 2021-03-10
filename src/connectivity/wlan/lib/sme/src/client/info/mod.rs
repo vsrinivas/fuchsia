@@ -358,23 +358,59 @@ pub struct PreviousDisconnectInfo {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DisconnectCause {
+    pub mlme_event_name: DisconnectMlmeEventName,
+    pub reason_code: fidl_ieee80211::ReasonCode,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum DisconnectMlmeEventName {
+    DeauthenticateIndication,
+    DisassociateIndication,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DisconnectSource {
     /// Disconnect initiated by upper layer.
     User(fidl_sme::UserDisconnectReason),
     /// Disconnect initiated by AP.
-    Ap(fidl_ieee80211::ReasonCode),
+    Ap(DisconnectCause),
     /// Disconnect initiated by MLME.
-    Mlme(fidl_ieee80211::ReasonCode),
+    Mlme(DisconnectCause),
 }
 
 impl DisconnectSource {
+    pub fn inspect_string(&self) -> String {
+        match self {
+            DisconnectSource::User(user_reason) => {
+                format!("source: user, reason: {:?}", user_reason)
+            }
+            DisconnectSource::Ap(DisconnectCause { mlme_event_name, reason_code }) => {
+                format!(
+                    "source: ap, reason: {:?}, mlme_event_name: {:?}",
+                    reason_code, mlme_event_name
+                )
+            }
+            DisconnectSource::Mlme(DisconnectCause { mlme_event_name, reason_code }) => {
+                format!(
+                    "source: mlme, reason: {:?}, mlme_event_name: {:?}",
+                    reason_code, mlme_event_name
+                )
+            }
+        }
+    }
+
     /// Get the 802.11 reason code if disconnect comes from AP or MLME, or (1u32 << 16) plus the
     /// corresponding enum value if it's a user disconnect reason.
     /// This is mainly used for metric.
     pub fn reason_code(&self) -> u32 {
         match self {
-            DisconnectSource::Ap(ap_reason_code) => ap_reason_code.into_primitive() as u32,
-            DisconnectSource::Mlme(mlme_reason_code) => mlme_reason_code.into_primitive() as u32,
+            DisconnectSource::Ap(DisconnectCause { reason_code: ap_reason_code, .. }) => {
+                ap_reason_code.into_primitive() as u32
+            }
+            DisconnectSource::Mlme(DisconnectCause { reason_code: mlme_reason_code, .. }) => {
+                mlme_reason_code.into_primitive() as u32
+            }
             DisconnectSource::User(reason) => (1u32 << 16) + *reason as u32,
         }
     }
@@ -420,9 +456,16 @@ mod tests {
 
     #[test]
     fn test_disconnect_source_locally_initiated() {
-        assert!(!DisconnectSource::Ap(fidl_ieee80211::ReasonCode::NoMoreStas).locally_initiated());
-        assert!(DisconnectSource::Mlme(fidl_ieee80211::ReasonCode::LeavingNetworkDeauth)
-            .locally_initiated());
+        assert!(!DisconnectSource::Ap(DisconnectCause {
+            reason_code: fidl_ieee80211::ReasonCode::NoMoreStas,
+            mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+        })
+        .locally_initiated());
+        assert!(DisconnectSource::Mlme(DisconnectCause {
+            reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
+            mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+        })
+        .locally_initiated());
         assert!(DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting)
             .locally_initiated());
     }
@@ -431,11 +474,19 @@ mod tests {
     fn test_disconnect_source_reason_code() {
         assert_eq!(
             fidl_ieee80211::ReasonCode::NoMoreStas.into_primitive() as u32,
-            DisconnectSource::Ap(fidl_ieee80211::ReasonCode::NoMoreStas).reason_code()
+            DisconnectSource::Ap(DisconnectCause {
+                reason_code: fidl_ieee80211::ReasonCode::NoMoreStas,
+                mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+            })
+            .reason_code()
         );
         assert_eq!(
             fidl_ieee80211::ReasonCode::ReasonInactivity.into_primitive() as u32,
-            DisconnectSource::Mlme(fidl_ieee80211::ReasonCode::ReasonInactivity).reason_code()
+            DisconnectSource::Mlme(DisconnectCause {
+                reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
+                mlme_event_name: DisconnectMlmeEventName::DisassociateIndication,
+            })
+            .reason_code()
         );
 
         // These values are used in metrics, so making sure they don't change without us being
