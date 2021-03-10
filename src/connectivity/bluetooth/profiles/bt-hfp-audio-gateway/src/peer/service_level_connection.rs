@@ -18,7 +18,10 @@ use {
 
 use crate::{
     at::{AtAgMessage, AtHfMessage, IndicatorStatus, Parser},
-    procedure::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest},
+    procedure::{
+        query_operator_selection::NetworkOperatorNameFormat, Procedure, ProcedureError,
+        ProcedureMarker, ProcedureRequest,
+    },
     protocol::features::{AgFeatures, HfFeatures},
 };
 
@@ -35,6 +38,8 @@ pub struct SlcState {
     pub hf_supported_codecs: Option<Vec<u32>>,
     /// The current indicator status of the AG.
     pub ag_indicator_status: IndicatorStatus,
+    /// The format used when representing the network operator name on the AG.
+    pub ag_network_operator_name_format: Option<NetworkOperatorNameFormat>,
 }
 
 impl SlcState {
@@ -109,6 +114,10 @@ impl ServiceLevelConnection {
     /// or in testing scenarios.
     fn set_initialized(&mut self) {
         self.state.initialized = true;
+    }
+
+    pub fn network_operator_name_format(&self) -> &Option<NetworkOperatorNameFormat> {
+        &self.state.ag_network_operator_name_format
     }
 
     /// Close the service level connection and reset the state.

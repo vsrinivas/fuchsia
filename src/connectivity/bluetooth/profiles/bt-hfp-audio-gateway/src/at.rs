@@ -10,6 +10,7 @@
 // This entire module is to be replaced by fxbug.dev/59648. In the meantime, allow unused items.
 #![allow(unused)]
 
+use crate::procedure::query_operator_selection::NetworkOperatorNameFormat;
 use crate::protocol::features::{AgFeatures, HfFeatures};
 use regex::Regex;
 
@@ -83,6 +84,8 @@ pub enum AtHfMessage {
     HfIndAgSup,
     CurrentCalls,
     Nrec(bool),
+    SetNetworkOperatorFormat(NetworkOperatorNameFormat),
+    GetNetworkOperator,
     Unknown(String),
 }
 
@@ -96,6 +99,7 @@ pub enum AtAgMessage {
     Error,
     AgSupportedIndicators,
     AgSupportedHfSupResp { safety: bool, battery: bool },
+    AgNetworkOperatorName(Option<String>),
 }
 
 impl AtAgMessage {
@@ -109,6 +113,7 @@ impl AtAgMessage {
             Error => error(),
             AgSupportedIndicators => at_ag_supported_indicators(),
             AgSupportedHfSupResp { safety, battery } => at_hf_ind_ag_sup_resp(safety, battery),
+            AgNetworkOperatorName(name) => unimplemented!(),
         }
     }
 }

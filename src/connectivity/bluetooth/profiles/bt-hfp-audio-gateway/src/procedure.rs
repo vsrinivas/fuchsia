@@ -16,7 +16,11 @@ pub mod slc_initialization;
 /// Defines the implementation of the NR/EC Procedure.
 pub mod nrec;
 
+/// Defines the implementation of the Query Operator Selection Procedure.
+pub mod query_operator_selection;
+
 use nrec::NrecProcedure;
+use query_operator_selection::QueryOperatorProcedure;
 use slc_initialization::SlcInitProcedure;
 
 /// Errors that can occur during the operation of an HFP Procedure.
@@ -50,6 +54,8 @@ pub enum ProcedureMarker {
     SlcInitialization,
     /// The Noise Reduction/Echo Cancellation procedure as defined in HFP v1.8 Section 4.24.
     Nrec,
+    /// The Query Operator Selection procedure as defined in HFP v1.8 Section 4.8.
+    QueryOperatorSelection,
 }
 
 impl ProcedureMarker {
@@ -58,6 +64,7 @@ impl ProcedureMarker {
         match self {
             Self::SlcInitialization => Box::new(SlcInitProcedure::new()),
             Self::Nrec => Box::new(NrecProcedure::new()),
+            Self::QueryOperatorSelection => Box::new(QueryOperatorProcedure::new()),
         }
     }
 
@@ -74,6 +81,9 @@ impl ProcedureMarker {
             | AtHfMessage::HfIndSup(_, _)
             | AtHfMessage::HfIndAgSup => Ok(Self::SlcInitialization),
             AtHfMessage::Nrec(_) => Ok(Self::Nrec),
+            AtHfMessage::SetNetworkOperatorFormat(_) | AtHfMessage::GetNetworkOperator => {
+                Ok(Self::QueryOperatorSelection)
+            }
             _ => Err(ProcedureError::NotImplemented),
         }
     }
@@ -91,6 +101,9 @@ pub enum ProcedureRequest {
     },
     GetAgIndicatorStatus {
         response: Box<dyn FnOnce(IndicatorStatus) -> AtAgMessage>,
+    },
+    GetNetworkOperatorName {
+        response: Box<dyn FnOnce(Option<String>) -> AtAgMessage>,
     },
 
     SetNrec {
@@ -118,6 +131,7 @@ impl ProcedureRequest {
         match &self {
             Self::GetAgFeatures { .. }
             | Self::GetAgIndicatorStatus { .. }
+            | Self::GetNetworkOperatorName { .. }
             | Self::SetNrec { .. } => true,
             _ => false,
         }
@@ -132,6 +146,7 @@ impl fmt::Debug for ProcedureRequest {
             Self::GetAgIndicatorStatus { .. } => "GetAgIndicatorStatus",
             Self::SetNrec { enable: true, .. } => "SetNrec(enabled)",
             Self::SetNrec { enable: false, .. } => "SetNrec(disabled)",
+            Self::GetNetworkOperatorName { .. } => "GetNetworkOperatorName",
             event => {
                 other = format!("{:?}", event);
                 &other

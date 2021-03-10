@@ -196,6 +196,24 @@ impl PeerTask {
                     // Update the procedure with the retrieved AG update.
                     request = self.connection.ag_message(marker, response(status));
                 }
+                ProcedureRequest::GetNetworkOperatorName { response } => {
+                    let format = self.connection.network_operator_name_format();
+                    let result = match format {
+                        Some(f) => {
+                            if let Some(handler) = &mut self.handler {
+                                handler
+                                    .query_operator()
+                                    .await
+                                    .map_or(None, |name| name.map(|n| f.format_name(n)))
+                            } else {
+                                None
+                            }
+                        }
+                        None => None, // The format must be set before getting the network name.
+                    };
+                    // Update the procedure with the result of retrieving the AG network name.
+                    request = self.connection.ag_message(marker, response(result));
+                }
                 ProcedureRequest::SetNrec { enable, response } => {
                     let result = if let Some(handler) = &mut self.handler {
                         if let Ok(Ok(())) = handler.set_nrec_mode(enable).await {

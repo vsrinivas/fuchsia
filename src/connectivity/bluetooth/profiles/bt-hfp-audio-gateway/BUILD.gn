@@ -54,6 +54,7 @@ rustc_binary("bin") {
     "src/peer/task.rs",
     "src/procedure.rs",
     "src/procedure/nrec.rs",
+    "src/procedure/query_operator_selection.rs",
     "src/procedure/slc_initialization.rs",
     "src/profile.rs",
     "src/protocol.rs",
