@@ -49,12 +49,13 @@ class LinkVerifier<P> {
 
   @visibleForTesting
   Future<bool> verifyLink(Link<P> link) async {
-    try {
-      for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++) {
+      try {
         final http.Response response = await client.get(link.uri, headers: {
           HttpHeaders.acceptHeader:
               'text/html,application/xhtml+xml,application/xml,',
         });
+
         final int code = response.statusCode;
         if (code == HttpStatus.tooManyRequests) {
           final int delay =
@@ -74,10 +75,18 @@ class LinkVerifier<P> {
         }
 
         return code == HttpStatus.ok;
+      } on IOException {
+        // Treat socket/connection errors as invalid links.
+        // This will occur for issues such as an invalid hostname.
+        return false;
+      } on http.ClientException {
+        // HTTP client exceptions happen the connection is closed unexpectedly.
+        // This generally happens when too many links are being verified,
+        // the verifier should retry.
+        continue;
       }
-    } on IOException {
-      // Properly return an invalid link below instead of crashing.
     }
+    // Retries exhausted
     return false;
   }
 }
