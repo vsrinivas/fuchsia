@@ -4,9 +4,20 @@
 
 import("//build/test.gni")
 
-static_library("core_dev_tools") {
-  friend = [ ":unittests" ]
+source_set("testable_internals") {
+  visibility = [ ":*" ]
+  sources = [
+    "persistent_status.cc",
+    "persistent_status.h",
+  ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/analytics/cpp/metric_properties",
+    "//src/lib/uuid",
+  ]
+}
 
+static_library("core_dev_tools") {
   public = [
     "analytics.h",
     "analytics_executor.h",
@@ -34,8 +45,6 @@ static_library("core_dev_tools") {
     "general_parameters.h",
     "google_analytics_client.cc",
     "google_analytics_client.h",
-    "persistent_status.cc",
-    "persistent_status.h",
     "system_info.cc",
     "system_info.h",
     "user_agent.cc",
@@ -43,13 +52,12 @@ static_library("core_dev_tools") {
   ]
 
   deps = [
+    ":testable_internals",
     "//sdk/lib/syslog/cpp",
     "//src/developer/debug/shared",
     "//src/developer/debug/zxdb/common",
     "//src/lib/analytics/cpp/google_analytics",
-    "//src/lib/analytics/cpp/metric_properties",
     "//src/lib/fxl",
-    "//src/lib/uuid",
   ]
 
   public_deps = [ "//zircon/system/ulib/cmdline" ]
@@ -64,6 +72,7 @@ test("unittests") {
 
   deps = [
     ":core_dev_tools",
+    ":testable_internals",
     "//src/lib/analytics/cpp/metric_properties",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
