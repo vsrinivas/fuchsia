@@ -135,8 +135,8 @@ a good intermediate from which to create the block-device image files
 
 To create the `base` package, the tool needs:
 
-- The list of package files to incorporate into the system (the "base" and
-"cache" packages)
+- The list of package files to incorporate into the system (packages in the the
+  "base" and "cache" package sets)
 
 
 To create the ZBI, the tool needs:
@@ -198,7 +198,7 @@ instructed to create:
 The following manifests are produced, when the tool is instructed to create the
 output files that are described within the manifests.
 
-- Manifest of all packages (including `system_image` and `update`)
+- Manifest of all packages (including `base` and `update`)
 - Manifest of all image files produced, containing:
   - The content-identity hash of the image
   - The architecture the images are for
