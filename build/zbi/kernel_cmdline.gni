@@ -11,11 +11,21 @@ import("zbi_input.gni")
 #   args
 #     Required: List of strings representing the arguments to add to the kernel
 #     command line.
+#
+#   deps (optional)
+#   testonly (optional)
+#     Usual GN meanings.
 
 template("kernel_cmdline") {
   assert(defined(invoker.args), "Arguments are required")
 
   zbi_input(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+
     type = "cmdline"
     args = []
     foreach(arg, invoker.args) {

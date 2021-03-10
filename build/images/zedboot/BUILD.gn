@@ -105,6 +105,7 @@ kernel_cmdline("cmdline") {
     "kernel.enable-serial-syscalls=true",
     "virtcon.colorscheme=special",
   ]
+  deps = [ "//build/validate:non_production_tag" ]
 }
 
 # Note: This output is also used by a script in //scripts/verify_cmdline_params.

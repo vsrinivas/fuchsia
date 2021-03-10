@@ -6,4 +6,5 @@ import("//build/zbi/kernel_cmdline.gni")
 
 kernel_cmdline("serial-legacy") {
   args = [ "kernel.serial=legacy" ]
+  deps = [ "//build/validate:non_production_tag" ]
 }

@@ -57,6 +57,7 @@ resource("empty_manifest") {
 
 kernel_cmdline("live_usb_is_system") {
   args = [ "live_usb.is_system=true" ]
+  deps = [ "//build/validate:non_production_tag" ]
 }
 
 rustc_binary("bin") {
