@@ -14,7 +14,7 @@ WEAVE_ERROR TraitUpdaterImpl::Init() {
     return err;
   }
 
-  return PlatformMgrImpl().AddEventHandler(TrampolineEvent, reinterpret_cast<uintptr_t>(this));
+  return PlatformMgrImpl().AddEventHandler(TrampolineEvent, reinterpret_cast<intptr_t>(this));
 }
 
 void TraitUpdaterImpl::TrampolineEvent(const WeaveDeviceEvent* event, intptr_t arg) {

@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include "trait_updater_delegate_impl.h"
-#include "src/connectivity/weave/adaptation/configuration_manager_delegate_impl.h"
 
 #include <weave/trait/description/DeviceIdentityTrait.h>
+
+#include "src/connectivity/weave/adaptation/configuration_manager_delegate_impl.h"
 
 namespace nl::Weave::DeviceLayer {
 namespace {
@@ -26,17 +27,18 @@ WEAVE_ERROR TraitUpdaterDelegateImpl::Init() {
   return InitApplets(applets_list);
 }
 
-WEAVE_ERROR TraitUpdaterDelegateImpl::InitApplets(std::vector<std::string>& names) {
-  if (names.size() == 0) {
+WEAVE_ERROR TraitUpdaterDelegateImpl::InitApplets(std::vector<std::string>& applet_names) {
+  if (applet_names.empty()) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  for (auto it = names.begin(); it != names.end(); it++) {
+  for (auto& applet_name : applet_names) {
     std::unique_ptr<weavestack::applets::AppletsLoader> m;
     // Create the module and retrieve the loader.
-    zx_status_t status = weavestack::applets::AppletsLoader::CreateWithModule(it->c_str(), &m);
+    zx_status_t status =
+        weavestack::applets::AppletsLoader::CreateWithModule(applet_name.c_str(), &m);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to load module " << it->c_str();
+      FX_LOGS(ERROR) << "Failed to load module " << applet_name;
       return status;
     }
     // Use the loader and call CreateApplet.
@@ -54,8 +56,8 @@ void TraitUpdaterDelegateImpl::HandleWeaveDeviceEvent(const WeaveDeviceEvent* ev
     return;
   }
 
-  for (auto it = applets_.begin(); it != applets_.end(); it++) {
-    it->HandleEvent(event);
+  for (auto& applet : applets_) {
+    applet.HandleEvent(event);
   }
 }
 

@@ -10,11 +10,11 @@
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 // clang-format on
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/connectivity/weave/lib/applets_loader/applets_loader.h"
 #include "src/connectivity/weave/lib/applets_loader/applets_module.h"
 #include "trait_updater.h"
-
-#include <lib/syslog/cpp/macros.h>
 
 namespace nl::Weave::DeviceLayer {
 
@@ -31,7 +31,7 @@ class TraitUpdaterDelegateImpl : public TraitUpdaterImpl::Delegate {
   WEAVE_ERROR Init() override;
 
   // Initialize applets list.
-  WEAVE_ERROR InitApplets(std::vector<std::string>& list);
+  WEAVE_ERROR InitApplets(std::vector<std::string>& applet_names);
 
   // Static function that publishes traits.
   static WEAVE_ERROR PublishTrait(const Profiles::DataManagement_Current::ResourceIdentifier res_id,
@@ -50,8 +50,8 @@ class TraitUpdaterDelegateImpl : public TraitUpdaterImpl::Delegate {
 
  private:
   FuchsiaWeaveAppletsCallbacksV1 callbacks_ = {
-    .publish_trait = &TraitUpdaterDelegateImpl::PublishTrait,
-    .subscribe_trait = &TraitUpdaterDelegateImpl::SubscribeTrait,
+      .publish_trait = &TraitUpdaterDelegateImpl::PublishTrait,
+      .subscribe_trait = &TraitUpdaterDelegateImpl::SubscribeTrait,
   };
   std::vector<std::unique_ptr<weavestack::applets::AppletsLoader>> applets_loader_;
   std::vector<weavestack::applets::Applet> applets_;
