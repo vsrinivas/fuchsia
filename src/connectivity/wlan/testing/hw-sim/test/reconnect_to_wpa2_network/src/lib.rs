@@ -91,13 +91,20 @@ fn handle_phy_event(
             bssid,
             authenticator,
             update_sink,
-            |authenticator, update_sink, channel, bssid, phy, ready_for_eapol_frames| {
+            |authenticator,
+             update_sink,
+             channel,
+             bssid,
+             phy,
+             ready_for_sae_frames,
+             ready_for_eapol_frames| {
                 process_tx_auth_updates(
                     authenticator,
                     update_sink,
                     channel,
                     bssid,
                     phy,
+                    ready_for_sae_frames,
                     ready_for_eapol_frames,
                 )?;
 

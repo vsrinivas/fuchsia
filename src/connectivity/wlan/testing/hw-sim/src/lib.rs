@@ -7,6 +7,7 @@ use {
     fidl::endpoints::{create_endpoints, create_proxy},
     fidl_fuchsia_wlan_common::{Cbw, WlanChan},
     fidl_fuchsia_wlan_device::MacRole,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_policy::{
         self as wlan_policy, Credential, Empty, NetworkConfig, NetworkIdentifier, SecurityType,
     },
@@ -26,6 +27,7 @@ use {
             rsn::{
                 cipher::{CIPHER_CCMP_128, CIPHER_TKIP},
                 rsne,
+                suite_filter::DEFAULT_GROUP_MGMT_CIPHER,
             },
             wpa,
         },
@@ -99,7 +101,6 @@ pub fn send_beacon(
     proxy: &WlantapPhyProxy,
     rssi_dbm: i8,
 ) -> Result<(), anyhow::Error> {
-    let rsne = default_wpa2_psk_rsne();
     let wpa1_ie = default_deprecated_wpa1_vendor_ie();
 
     let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
@@ -127,14 +128,16 @@ pub fn send_beacon(
             rsne?: match protection {
                 Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
                 Protection::Open | Protection::Wep | Protection::Wpa1 => None,
-                Protection::Wpa1Wpa2Personal | Protection::Wpa2Personal => Some(&rsne),
+                Protection::Wpa1Wpa2Personal | Protection::Wpa2Personal => Some(default_wpa2_psk_rsne()),
+                Protection::Wpa2Wpa3Personal => Some(rsne::Rsne::wpa2_wpa3_rsne()),
+                Protection::Wpa3Personal => Some(rsne::Rsne::wpa3_rsne()),
                 _ => panic!("unsupported fake beacon: {:?}", protection),
             },
             wpa1?: match protection {
                 Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
                 Protection::Open | Protection::Wep => None,
                 Protection::Wpa1 | Protection::Wpa1Wpa2Personal => Some(&wpa1_ie),
-                Protection::Wpa2Personal => None,
+                Protection::Wpa2Personal | Protection::Wpa2Wpa3Personal | Protection::Wpa3Personal => None,
                 _ => panic!("unsupported fake beacon: {:?}", protection),
             },
         },
@@ -151,7 +154,6 @@ pub fn send_probe_resp(
     wsc_ie: Option<&[u8]>,
     proxy: &WlantapPhyProxy,
 ) -> Result<(), anyhow::Error> {
-    let rsne = default_wpa2_psk_rsne();
     let wpa1_ie = default_deprecated_wpa1_vendor_ie();
 
     let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
@@ -179,14 +181,15 @@ pub fn send_probe_resp(
             rsne?: match protection {
                 Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
                 Protection::Open | Protection::Wep | Protection::Wpa1 => None,
-                Protection::Wpa1Wpa2Personal | Protection::Wpa2Personal => Some(&rsne),
+                Protection::Wpa1Wpa2Personal | Protection::Wpa2Personal => Some(default_wpa2_psk_rsne()),
+                Protection::Wpa2Wpa3Personal | Protection::Wpa3Personal => Some(rsne::Rsne::wpa3_rsne()),
                 _ => panic!("unsupported fake beacon: {:?}", protection),
             },
             wpa1?: match protection {
                 Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
                 Protection::Open | Protection::Wep => None,
                 Protection::Wpa1 | Protection::Wpa1Wpa2Personal => Some(&wpa1_ie),
-                Protection::Wpa2Personal => None,
+                Protection::Wpa2Personal | Protection::Wpa2Wpa3Personal | Protection::Wpa3Personal => None,
                 _ => panic!("unsupported fake beacon: {:?}", protection),
             },
             wsc?: wsc_ie,
@@ -194,6 +197,70 @@ pub fn send_probe_resp(
     })?;
     proxy.rx(0, &buf, &mut create_rx_info(channel, 0))?;
     Ok(())
+}
+
+pub fn send_sae_authentication_frame(
+    sae_frame: &fidl_mlme::SaeFrame,
+    channel: &WlanChan,
+    bssid: &mac::Bssid,
+    proxy: &WlantapPhyProxy,
+) -> Result<(), anyhow::Error> {
+    let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
+        headers: {
+            mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::MGMT)
+                    .with_mgmt_subtype(mac::MgmtSubtype::AUTH),
+                CLIENT_MAC_ADDR,
+                *bssid,
+                mac::SequenceControl(0).with_seq_num(123),
+            ),
+            mac::AuthHdr: &mac::AuthHdr {
+                auth_alg_num: mac::AuthAlgorithmNumber::SAE,
+                auth_txn_seq_num: sae_frame.seq_num,
+                status_code: convert_to_mac_status_code(sae_frame.status_code),
+            },
+        },
+        body: &sae_frame.sae_fields[..],
+    })?;
+    proxy.rx(0, &buf, &mut create_rx_info(channel, 0))?;
+    Ok(())
+}
+
+fn convert_to_mac_status_code(fidl_status_code: fidl_ieee80211::StatusCode) -> mac::StatusCode {
+    match fidl_status_code {
+        fidl_ieee80211::StatusCode::Success => mac::StatusCode::SUCCESS,
+        fidl_ieee80211::StatusCode::RefusedReasonUnspecified => mac::StatusCode::REFUSED,
+        fidl_ieee80211::StatusCode::AntiCloggingTokenRequired => {
+            mac::StatusCode::ANTI_CLOGGING_TOKEN_REQUIRED
+        }
+        fidl_ieee80211::StatusCode::UnsupportedFiniteCyclicGroup => {
+            mac::StatusCode::UNSUPPORTED_FINITE_CYCLIC_GROUP
+        }
+        fidl_ieee80211::StatusCode::RejectedSequenceTimeout => {
+            mac::StatusCode::REJECTED_SEQUENCE_TIMEOUT
+        }
+        _ => mac::StatusCode::REFUSED,
+    }
+}
+
+fn convert_to_ieee80211_status_code(
+    mac_status_code: mac::StatusCode,
+) -> fidl_ieee80211::StatusCode {
+    match mac_status_code {
+        mac::StatusCode::SUCCESS => fidl_ieee80211::StatusCode::Success,
+        mac::StatusCode::REFUSED => fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
+        mac::StatusCode::ANTI_CLOGGING_TOKEN_REQUIRED => {
+            fidl_ieee80211::StatusCode::AntiCloggingTokenRequired
+        }
+        mac::StatusCode::UNSUPPORTED_FINITE_CYCLIC_GROUP => {
+            fidl_ieee80211::StatusCode::UnsupportedFiniteCyclicGroup
+        }
+        mac::StatusCode::REJECTED_SEQUENCE_TIMEOUT => {
+            fidl_ieee80211::StatusCode::RejectedSequenceTimeout
+        }
+        _ => fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
+    }
 }
 
 pub fn send_open_authentication_success(
@@ -338,6 +405,27 @@ pub fn create_deprecated_wpa1_psk_authenticator(
     .expect("creating authenticator")
 }
 
+pub fn create_wpa3_authenticator(bssid: &mac::Bssid, passphrase: &str) -> wlan_rsn::Authenticator {
+    let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
+    let gtk_provider = wlan_rsn::GtkProvider::new(CIPHER_CCMP_128).expect("creating gtk provider");
+    let igtk_provider =
+        wlan_rsn::IgtkProvider::new(DEFAULT_GROUP_MGMT_CIPHER).expect("creating igtk provider");
+    let password = passphrase.as_bytes().to_vec();
+    let s_rsne = wlan_rsn::ProtectionInfo::Rsne(rsne::Rsne::wpa3_rsne());
+    let a_rsne = wlan_rsn::ProtectionInfo::Rsne(rsne::Rsne::wpa3_rsne());
+    wlan_rsn::Authenticator::new_wpa3(
+        nonce_rdr,
+        std::sync::Arc::new(std::sync::Mutex::new(gtk_provider)),
+        std::sync::Arc::new(std::sync::Mutex::new(igtk_provider)),
+        password,
+        CLIENT_MAC_ADDR,
+        s_rsne,
+        bssid.0,
+        a_rsne,
+    )
+    .expect("creating authenticator")
+}
+
 pub fn create_wpa2_psk_authenticator(
     bssid: &mac::Bssid,
     ssid: &[u8],
@@ -366,30 +454,38 @@ pub fn process_tx_auth_updates(
     channel: &WlanChan,
     bssid: &mac::Bssid,
     phy: &WlantapPhyProxy,
+    ready_for_sae_frames: bool,
     ready_for_eapol_frames: bool,
 ) -> Result<(), anyhow::Error> {
-    if !ready_for_eapol_frames {
+    if !ready_for_sae_frames && !ready_for_eapol_frames {
         return Ok(());
     }
 
     // TODO(fxbug.dev/69580): Use Vec::drain_filter instead.
     let mut i = 0;
     while i < update_sink.len() {
-        if let SecAssocUpdate::TxEapolKeyFrame(eapol_frame) = &update_sink[i] {
-            rx_wlan_data_frame(
-                channel,
-                &CLIENT_MAC_ADDR,
-                &bssid.0,
-                &bssid.0,
-                &eapol_frame[..],
-                mac::ETHER_TYPE_EAPOL,
-                phy,
-            )?;
-            update_sink.remove(i);
-        } else {
-            i += 1;
-        }
+        match &update_sink[i] {
+            SecAssocUpdate::TxSaeFrame(sae_frame) if ready_for_sae_frames => {
+                send_sae_authentication_frame(&sae_frame, &CHANNEL, bssid, &phy)
+                    .expect("Error sending fake SAE authentication frame.");
+                update_sink.remove(i);
+            }
+            SecAssocUpdate::TxEapolKeyFrame(eapol_frame) if ready_for_eapol_frames => {
+                rx_wlan_data_frame(
+                    channel,
+                    &CLIENT_MAC_ADDR,
+                    &bssid.0,
+                    &bssid.0,
+                    &eapol_frame[..],
+                    mac::ETHER_TYPE_EAPOL,
+                    phy,
+                )?;
+                update_sink.remove(i);
+            }
+            _ => i += 1,
+        };
     }
+
     Ok(())
 }
 
@@ -420,6 +516,7 @@ pub fn handle_tx_event<F>(
         &WlanChan,
         &mac::Bssid,
         &WlantapPhyProxy,
+        bool, // ready_for_sae_frames
         bool, // ready_for_eapol_frames
     ) -> Result<(), anyhow::Error>,
 {
@@ -427,7 +524,8 @@ pub fn handle_tx_event<F>(
     match mac::MacFrame::parse(&args.packet.data[..], false) {
         Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
             match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
-                Some(mac::MgmtBody::Authentication { auth_hdr, .. }) => match auth_hdr.auth_alg_num
+                Some(mac::MgmtBody::Authentication { auth_hdr, elements }) => match auth_hdr
+                    .auth_alg_num
                 {
                     mac::AuthAlgorithmNumber::OPEN => match authenticator {
                         Some(wlan_rsn::Authenticator {
@@ -440,6 +538,37 @@ pub fn handle_tx_event<F>(
                         }
                         _ => panic!("Unexpected OPEN authentication frame for {:?}", authenticator),
                     },
+                    mac::AuthAlgorithmNumber::SAE => {
+                        let mut authenticator = authenticator.as_mut().unwrap_or_else(|| {
+                            panic!("Unexpected SAE authentication frame with no Authenticator")
+                        });
+                        let mut update_sink = update_sink.as_mut().unwrap_or_else(|| {
+                            panic!("No UpdateSink provided with Authenticator.")
+                        });
+                        authenticator
+                            .on_sae_frame_rx(
+                                &mut update_sink,
+                                fidl_mlme::SaeFrame {
+                                    peer_sta_address: bssid.0,
+                                    status_code: convert_to_ieee80211_status_code(
+                                        auth_hdr.status_code,
+                                    ),
+                                    seq_num: auth_hdr.auth_txn_seq_num,
+                                    sae_fields: elements.to_vec(),
+                                },
+                            )
+                            .expect("processing SAE frame");
+                        process_auth_update(
+                            &mut authenticator,
+                            &mut update_sink,
+                            &CHANNEL,
+                            bssid,
+                            &phy,
+                            true,
+                            false,
+                        )
+                        .expect("processing authenticator updates during authentication");
+                    }
                     auth_alg_num => {
                         panic!("Unexpected authentication algorithm number: {:?}", auth_alg_num)
                     }
@@ -459,7 +588,7 @@ pub fn handle_tx_event<F>(
                             ),
                         }
                         authenticator.initiate(&mut update_sink).expect("initiating authenticator");
-                        process_auth_update(authenticator, &mut update_sink, &CHANNEL, bssid, &phy, true).expect(
+                        process_auth_update(authenticator, &mut update_sink, &CHANNEL, bssid, &phy, true, true).expect(
                             "processing authenticator updates immediately after association complete",
                         );
                     }
@@ -485,8 +614,16 @@ pub fn handle_tx_event<F>(
                     {
                         error!("error sending EAPOL frame to authenticator: {}", e);
                     }
-                    process_auth_update(authenticator, update_sink, &CHANNEL, bssid, &phy, true)
-                        .expect("processing authenticator updates after EAPOL frame");
+                    process_auth_update(
+                        authenticator,
+                        update_sink,
+                        &CHANNEL,
+                        bssid,
+                        &phy,
+                        true,
+                        true,
+                    )
+                    .expect("processing authenticator updates after EAPOL frame");
                 }
             }
         }
@@ -597,6 +734,40 @@ async fn connect_to_network(
         has_ssid_and_state(update, ssid, wlan_policy::ConnectionState::Connected)
     })
     .await;
+}
+
+pub async fn connect_wpa3(
+    phy: &WlantapPhyProxy,
+    helper: &mut test_utils::TestHelper,
+    ssid: &[u8],
+    bssid: &mac::Bssid,
+    passphrase: &str,
+) {
+    let connect_fut = connect_to_network(ssid, wlan_policy::SecurityType::Wpa3, Some(passphrase));
+    pin_mut!(connect_fut);
+
+    // Validate the connect request.
+    let mut authenticator = Some(create_wpa3_authenticator(bssid, passphrase));
+    let mut update_sink = Some(wlan_rsn::rsna::UpdateSink::default());
+
+    helper
+        .run_until_complete_or_timeout(
+            30.seconds(),
+            format!("connecting to {} ({:02X?})", String::from_utf8_lossy(ssid), bssid),
+            |event| {
+                handle_connect_events(
+                    &event,
+                    &phy,
+                    ssid,
+                    bssid,
+                    &Protection::Wpa3Personal,
+                    &mut authenticator,
+                    &mut update_sink,
+                );
+            },
+            connect_fut,
+        )
+        .await
 }
 
 pub async fn connect(

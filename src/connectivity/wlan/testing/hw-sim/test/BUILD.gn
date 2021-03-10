@@ -50,6 +50,15 @@ fuchsia_component("connect-to-wpa2-network") {
   ]
 }
 
+fuchsia_component("connect-to-wpa3-network") {
+  testonly = true
+  manifest = "meta/connect_to_wpa3_network.cmx"
+  deps = [
+    "connect_to_wpa3_network",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
 fuchsia_component("connect-with-bad-password") {
   testonly = true
   manifest = "meta/connect_with_bad_password.cmx"
@@ -192,6 +201,7 @@ fuchsia_test_package("wlan-hw-sim-test") {
     ":connect-to-open-network",
     ":connect-to-wpa1-network",
     ":connect-to-wpa2-network",
+    ":connect-to-wpa3-network",
     ":connect-with-bad-password",
     ":connect-with-failed-association",
     ":connect-with-wrong-credential-type",

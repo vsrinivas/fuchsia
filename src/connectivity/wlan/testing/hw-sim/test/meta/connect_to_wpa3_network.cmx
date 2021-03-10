@@ -1,0 +1,35 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher": "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cmx",
+                "fuchsia.stash.SecureStore": "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx",
+                "fuchsia.wlan.device.service.DeviceService": [
+                    "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx",
+                    "--isolated-devmgr"
+                ],
+                "fuchsia.wlan.devmgr.IsolatedDevmgr": [
+                    "fuchsia-pkg://fuchsia.com/wlan-hw-sim-test#meta/wlan-devmgr.cmx"
+                ],
+                "fuchsia.wlan.policy.ClientProvider": [
+                    "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
+                ]
+            }
+        }
+    },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/connect_to_wpa3_network"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+            "fuchsia.stash.SecureStore",
+            "fuchsia.wlan.device.service.DeviceService",
+            "fuchsia.wlan.devmgr.IsolatedDevmgr",
+            "fuchsia.wlan.policy.ClientProvider"
+        ]
+    }
+}

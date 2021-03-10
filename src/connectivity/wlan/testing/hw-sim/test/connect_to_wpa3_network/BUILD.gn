@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+
+rustc_test("connect_to_wpa3_network") {
+  edition = "2018"
+  deps = [
+    "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
+    "//src/lib/fuchsia-async",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}

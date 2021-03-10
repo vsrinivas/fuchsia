@@ -71,7 +71,13 @@ fn handle_phy_event(
             bssid,
             authenticator,
             update_sink,
-            |authenticator, update_sink, channel, bssid, phy, ready_for_eapol_frames| {
+            |authenticator,
+             update_sink,
+             channel,
+             bssid,
+             phy,
+             ready_for_sae_frames,
+             ready_for_eapol_frames| {
                 all_the_updates_sink.append(&mut update_sink.to_vec());
                 process_tx_auth_updates(
                     authenticator,
@@ -79,6 +85,7 @@ fn handle_phy_event(
                     channel,
                     bssid,
                     phy,
+                    ready_for_sae_frames,
                     ready_for_eapol_frames,
                 )?;
 
