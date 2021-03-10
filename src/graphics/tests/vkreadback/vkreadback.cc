@@ -241,16 +241,26 @@ bool VkReadbackTest::InitImage() {
   RTN_IF_VKH_ERR(false, rv_image, "vk::Device::createImageUnique()\n");
   image_ = std::move(image);
 
-  vk::MemoryRequirements memory_reqs;
-  device->getImageMemoryRequirements(image_.get(), &memory_reqs);
+  auto memory_reqs_chain =
+      device->getImageMemoryRequirements2<vk::MemoryRequirements2, vk::MemoryDedicatedRequirements>(
+          image_.get());
+  auto memory_reqs = memory_reqs_chain.get<vk::MemoryRequirements2>().memoryRequirements;
+  auto dedicated_reqs = memory_reqs_chain.get<vk::MemoryDedicatedRequirements>();
+  use_dedicated_memory_ = dedicated_reqs.requiresDedicatedAllocation;
 
-  // Add an offset to all operations that's correctly aligned and at least a
-  // page in size, to ensure rounding the VMO down to a page offset will
-  // cause it to point to a separate page.
-  constexpr uint32_t kOffset = 128;
-  bind_offset_ = kPageSize + kOffset;
-  if (memory_reqs.alignment) {
-    bind_offset_ = round_up(bind_offset_, memory_reqs.alignment);
+  if (use_dedicated_memory_) {
+    // If driver requires dedicated allocation to be used, per Vulkan specs,
+    // the image offset can only be zero for dedicated allocation.
+    bind_offset_ = 0u;
+  } else {
+    // Add an offset to all operations that's correctly aligned and at least a
+    // page in size, to ensure rounding the VMO down to a page offset will
+    // cause it to point to a separate page.
+    constexpr uint32_t kOffset = 128;
+    bind_offset_ = kPageSize + kOffset;
+    if (memory_reqs.alignment) {
+      bind_offset_ = round_up(bind_offset_, memory_reqs.alignment);
+    }
   }
 
   vk::PhysicalDeviceMemoryProperties memory_props;
@@ -271,8 +281,20 @@ bool VkReadbackTest::InitImage() {
   vk::ExportMemoryAllocateInfoKHR export_info;
   export_info.handleTypes = vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
 
+  vk::MemoryDedicatedAllocateInfo dedicated_alloc_info;
+  dedicated_alloc_info.image = image_.get();
+
   vk::MemoryAllocateInfo mem_alloc_info;
-  mem_alloc_info.pNext = (import_export_ == IMPORT_EXTERNAL_MEMORY) ? &export_info : nullptr;
+  if (import_export_ == IMPORT_EXTERNAL_MEMORY) {
+    mem_alloc_info.pNext = &export_info;
+  } else if (import_export_ == EXPORT_EXTERNAL_MEMORY) {
+    mem_alloc_info.pNext = &export_info;
+    if (use_dedicated_memory_) {
+      export_info.pNext = &dedicated_alloc_info;
+    }
+  } else {
+    mem_alloc_info.pNext = nullptr;
+  }
   mem_alloc_info.allocationSize = memory_reqs.size + bind_offset_;
   mem_alloc_info.memoryTypeIndex = memory_type;
 

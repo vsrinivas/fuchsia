@@ -72,6 +72,7 @@ class VkReadbackTest {
   bool vulkan_initialized_ = false;
   bool image_initialized_ = false;
   bool command_buffers_initialized_ = false;
+  bool use_dedicated_memory_ = false;
   std::unique_ptr<VulkanContext> ctx_;
   vk::UniqueImage image_;
   vk::DeviceMemory device_memory_;

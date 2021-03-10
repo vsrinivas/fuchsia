@@ -45,27 +45,39 @@ TEST(VulkanExtension, GetMemoryZirconHandlePropertiesFUCHSIA) {
           vulkan_context->device()->getProcAddr("vkGetMemoryZirconHandlePropertiesFUCHSIA"));
   ASSERT_TRUE(get_memory_zircon_handle_properties);
 
-  zx::vmo vmo;
-  ASSERT_EQ(ZX_OK, vmo.create(4096, 0 /*options*/, &vmo));
-
   vk::MemoryZirconHandlePropertiesFUCHSIA handle_properties;
-  EXPECT_EQ(VK_SUCCESS,
-            get_memory_zircon_handle_properties(
-                vulkan_context->device().get(),
-                VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA, vmo.get(),
-                reinterpret_cast<VkMemoryZirconHandlePropertiesFUCHSIA*>(&handle_properties)));
-  EXPECT_NE(0u, handle_properties.memoryTypeBits);
 
-  zx::vmo vmo_no_rights;
-  ASSERT_EQ(ZX_OK, vmo.duplicate(0, &vmo_no_rights));
-  vmo.reset();
+  // TODO(fxbug.dev/69211): Emulator GPU devices (under device type
+  // |eVirtualGpu|) cannot import arbitrary VMOs as VkDeviceMemory since it
+  // doesn't have a unified memory architecture. Thus we skip this test case
+  // and we'll need a new test case covering FEMU cases.
+  auto phy_properties = vulkan_context->physical_device().getProperties();
+  if (phy_properties.deviceType == vk::PhysicalDeviceType::eVirtualGpu) {
+    fprintf(stderr,
+            "Emulator GPU devices cannot support arbitrary VMOs, "
+            "skipping test cases importing VMOs not exported from Vulkan\n");
+  } else {
+    zx::vmo vmo;
+    ASSERT_EQ(ZX_OK, vmo.create(4096, 0 /*options*/, &vmo));
 
-  EXPECT_EQ(VK_SUCCESS,
-            get_memory_zircon_handle_properties(
-                vulkan_context->device().get(),
-                VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA, vmo_no_rights.get(),
-                reinterpret_cast<VkMemoryZirconHandlePropertiesFUCHSIA*>(&handle_properties)));
-  EXPECT_EQ(0u, handle_properties.memoryTypeBits);
+    EXPECT_EQ(VK_SUCCESS,
+              get_memory_zircon_handle_properties(
+                  vulkan_context->device().get(),
+                  VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA, vmo.get(),
+                  reinterpret_cast<VkMemoryZirconHandlePropertiesFUCHSIA*>(&handle_properties)));
+    EXPECT_NE(0u, handle_properties.memoryTypeBits);
+
+    zx::vmo vmo_no_rights;
+    ASSERT_EQ(ZX_OK, vmo.duplicate(0, &vmo_no_rights));
+    vmo.reset();
+
+    EXPECT_EQ(VK_SUCCESS,
+              get_memory_zircon_handle_properties(
+                  vulkan_context->device().get(),
+                  VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA, vmo_no_rights.get(),
+                  reinterpret_cast<VkMemoryZirconHandlePropertiesFUCHSIA*>(&handle_properties)));
+    EXPECT_EQ(0u, handle_properties.memoryTypeBits);
+  }
 
   constexpr uint32_t kGarbageHandle = 0xabcd1234;
   EXPECT_EQ(VK_ERROR_INVALID_EXTERNAL_HANDLE,
