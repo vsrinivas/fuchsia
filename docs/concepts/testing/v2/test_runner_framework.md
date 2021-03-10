@@ -151,10 +151,21 @@ notion of multiple test cases.
 ### Controlling parallel execution of test cases
 
 When using `fx test` to launch tests, they may run each test case in sequence or
-run multiple test cases in parallel up to a given limit. The default parallelism
-behavior is determined by the test runner.
+run multiple test cases in parallel up to a given limit. The default
+parallelism behavior is determined by the test runner. To manually control the
+number of test cases to run in parallel use test spec:
 
-To manually set the parallelism level for test cases, run the following:
+```gn
+fuchsia_test_package("my-test-pkg") {
+  test_components = [ ":my_test_component" ]
+  test_specs = {
+    # control the parallelism
+    parallel = 10
+  }
+}
+```
+
+If using `run-test-suite` to launch tests, pass this as an argument:
 
 ```posix-terminal
 fx shell run-test-suite --parallel=5 <test_url>
