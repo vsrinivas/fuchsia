@@ -196,7 +196,7 @@ pub fn send_probe_resp(
     Ok(())
 }
 
-pub fn send_authentication(
+pub fn send_open_authentication_success(
     channel: &WlanChan,
     bssid: &mac::Bssid,
     proxy: &WlantapPhyProxy,
@@ -427,10 +427,23 @@ pub fn handle_tx_event<F>(
     match mac::MacFrame::parse(&args.packet.data[..], false) {
         Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
             match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
-                Some(mac::MgmtBody::Authentication { .. }) => {
-                    send_authentication(&CHANNEL, bssid, &phy)
-                        .expect("Error sending fake authentication frame.");
-                }
+                Some(mac::MgmtBody::Authentication { auth_hdr, .. }) => match auth_hdr.auth_alg_num
+                {
+                    mac::AuthAlgorithmNumber::OPEN => match authenticator {
+                        Some(wlan_rsn::Authenticator {
+                            auth_cfg: wlan_rsn::auth::Config::ComputedPsk(_),
+                            ..
+                        })
+                        | None => {
+                            send_open_authentication_success(&CHANNEL, bssid, &phy)
+                                .expect("Error sending fake OPEN authentication frame.");
+                        }
+                        _ => panic!("Unexpected OPEN authentication frame for {:?}", authenticator),
+                    },
+                    auth_alg_num => {
+                        panic!("Unexpected authentication algorithm number: {:?}", auth_alg_num)
+                    }
+                },
                 Some(mac::MgmtBody::AssociationReq { .. }) => {
                     send_association_response(&CHANNEL, bssid, mac::StatusCode::SUCCESS, &phy)
                         .expect("Error sending fake association response frame.");

@@ -28,7 +28,7 @@ fn build_event_handler(
                 Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
                     match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
                         Some(mac::MgmtBody::Authentication { .. }) => {
-                            send_authentication(&CHANNEL, &bssid, &phy)
+                            send_open_authentication_success(&CHANNEL, &bssid, &phy)
                                 .expect("Error sending fake authentication frame.");
                         }
                         Some(mac::MgmtBody::AssociationReq { .. }) => {
