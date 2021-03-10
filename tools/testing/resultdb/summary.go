@@ -115,7 +115,7 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *run
 	return testResult
 }
 
-// testCaseToResultSink converts TestDetail defined in /tools/testing/runtests/runtests.go
+// testDetailsToResultSink converts TestDetail defined in /tools/testing/runtests/runtests.go
 // to ResultSink's TestResult. Returns (nil, error) if a test result cannot be mapped to
 // result_sink.Status
 func testDetailsToResultSink(testDetail *runtests.TestDetails, outputRoot string) (*sinkpb.TestResult, error) {
@@ -150,6 +150,7 @@ func testDetailsToResultSink(testDetail *runtests.TestDetails, outputRoot string
 		log.Printf("[Warn] outputFile: %s is not readable, skip.", outputFile)
 	}
 
+	r.SummaryHtml = `<pre><text-artifact artifact-id="triage_output" inv-level/></pre>`
 	r.Expected = determineExpected(testStatus, resultpb.TestStatus_STATUS_UNSPECIFIED)
 	return &r, nil
 }
