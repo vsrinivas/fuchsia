@@ -3,9 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("event-queue") {
   version = "0.0.1"
@@ -35,14 +34,8 @@ group("tests") {
   deps = [ ":event-queue-tests" ]
 }
 
-unittest_package("event-queue-tests") {
+fuchsia_unittest_package("event-queue-tests") {
   deps = [ ":event-queue_test" ]
-
-  tests = [
-    {
-      name = "event_queue_lib_test"
-    },
-  ]
 }
 
 fidl("test.pkg.eventqueue") {

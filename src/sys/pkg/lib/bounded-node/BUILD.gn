@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("bounded-node") {
   version = "0.0.1"
@@ -24,12 +23,6 @@ group("tests") {
   deps = [ ":bounded-node-tests" ]
 }
 
-unittest_package("bounded-node-tests") {
+fuchsia_unittest_package("bounded-node-tests") {
   deps = [ ":bounded-node_test" ]
-
-  tests = [
-    {
-      name = "bounded_node_lib_test"
-    },
-  ]
 }

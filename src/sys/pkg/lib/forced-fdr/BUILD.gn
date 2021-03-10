@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("forced-fdr") {
   name = "forced_fdr"
@@ -34,15 +33,9 @@ rustc_library("forced-fdr") {
   ]
 }
 
-test_package("forced-fdr-tests") {
+fuchsia_unittest_package("forced-fdr-tests") {
+  manifest = "meta/forced-fdr-lib-test.cmx"
   deps = [ ":forced-fdr_test" ]
-
-  tests = [
-    {
-      name = "forced_fdr_lib_test"
-      dest = "forced-fdr-lib-test"
-    },
-  ]
 }
 
 group("tests") {
