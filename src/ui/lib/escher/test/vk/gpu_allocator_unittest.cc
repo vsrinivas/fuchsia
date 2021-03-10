@@ -483,10 +483,10 @@ VK_TEST(NaiveAllocator, NaiveAllocator) {
   // TestAllocationOfImages(&allocator);
 }
 
-class VmaAllocator : public ::testing::TestWithParam</*protected_memory=*/bool> {};
+class VmaAllocator : public ::testing::Test {};
 
-VK_TEST_P(VmaAllocator, Memory) {
-  auto vulkan_queues = CreateVulkanDeviceQueues(GetParam());
+void TestMemory(bool protected_memory) {
+  auto vulkan_queues = CreateVulkanDeviceQueues(protected_memory);
   if (!vulkan_queues) {
     GTEST_SKIP();
   }
@@ -495,8 +495,8 @@ VK_TEST_P(VmaAllocator, Memory) {
   TestAllocationOfMemory(&allocator);
 }
 
-VK_TEST_P(VmaAllocator, Buffers) {
-  auto vulkan_queues = CreateVulkanDeviceQueues(GetParam());
+void TestBuffers(bool protected_memory) {
+  auto vulkan_queues = CreateVulkanDeviceQueues(protected_memory);
   if (!vulkan_queues) {
     GTEST_SKIP();
   }
@@ -505,17 +505,27 @@ VK_TEST_P(VmaAllocator, Buffers) {
   TestAllocationOfBuffers(&allocator);
 }
 
-VK_TEST_P(VmaAllocator, Images) {
-  auto vulkan_queues = CreateVulkanDeviceQueues(GetParam());
+void TestImages(bool protected_memory) {
+  auto vulkan_queues = CreateVulkanDeviceQueues(protected_memory);
   if (!vulkan_queues) {
     GTEST_SKIP();
   }
   VmaGpuAllocator allocator(vulkan_queues->GetVulkanContext());
 
-  TestAllocationOfImages(&allocator, GetParam());
+  TestAllocationOfImages(&allocator, protected_memory);
 }
 
-INSTANTIATE_TEST_SUITE_P(VmaAllocatorTestSuite, VmaAllocator, ::testing::Bool());
+VK_TEST(VmaAllocator, Memory_True) { TestMemory(true); }
+
+VK_TEST(VmaAllocator, Memory_False) { TestMemory(false); }
+
+VK_TEST(VmaAllocator, Buffers_True) { TestBuffers(true); }
+
+VK_TEST(VmaAllocator, Buffers_False) { TestBuffers(false); }
+
+VK_TEST(VmaAllocator, Images_True) { TestImages(true); }
+
+VK_TEST(VmaAllocator, Images_False) { TestImages(false); }
 
 class MockVmaGpuAllocator : public VmaGpuAllocator {
  public:
@@ -537,7 +547,8 @@ VK_TEST(VmaGpuAllocatorTest, ProtectedMemoryIsDedicated) {
   VmaAllocationCreateInfo allocation_create_info;
   EXPECT_CALL(allocator, CreateImage(_, _, _, _, _))
       .Times(1)
-      .WillOnce(DoAll(::testing::SaveArg<1>(&allocation_create_info), ::testing::Return(false)));
+      .WillOnce(::testing::DoAll(::testing::SaveArg<1>(&allocation_create_info),
+                                 ::testing::Return(false)));
   ImageInfo info;
   info.format = vk::Format::eB8G8R8A8Unorm;
   info.usage = vk::ImageUsageFlagBits::eTransferDst;
