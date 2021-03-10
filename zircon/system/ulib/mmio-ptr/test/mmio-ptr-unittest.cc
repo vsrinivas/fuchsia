@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mmio-ptr/fake.h>
+#include <lib/mmio-ptr/fake.h>
+
 #include <zxtest/zxtest.h>
 
 namespace {

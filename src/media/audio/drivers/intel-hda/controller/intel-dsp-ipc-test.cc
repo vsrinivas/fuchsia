@@ -4,6 +4,7 @@
 
 #include "intel-dsp-ipc.h"
 
+#include <lib/mmio-ptr/fake.h>
 #include <lib/zx/time.h>
 #include <threads.h>
 #include <zircon/assert.h>
@@ -14,7 +15,6 @@
 #include <vector>
 
 #include <ddk/debug.h>
-#include <mmio-ptr/fake.h>
 #include <zxtest/zxtest.h>
 
 #include "debug-logging.h"

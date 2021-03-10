@@ -4,7 +4,8 @@
 
 #include "mt8167.h"
 
-#include <mmio-ptr/fake.h>
+#include <lib/mmio-ptr/fake.h>
+
 #include <zxtest/zxtest.h>
 
 #include "soc/mt8167/mt8167-clk-regs.h"

@@ -5,9 +5,8 @@
 #ifndef SRC_LIB_DDK_INCLUDE_DDK_MMIO_BUFFER_H_
 #define SRC_LIB_DDK_INCLUDE_DDK_MMIO_BUFFER_H_
 
+#include <lib/mmio-ptr/mmio-ptr.h>
 #include <zircon/types.h>
-
-#include <mmio-ptr/mmio-ptr.h>
 
 __BEGIN_CDECLS
 

@@ -23,12 +23,12 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
+#include <lib/mmio-ptr/fake.h>
 
 #include <atomic>
 #include <thread>
 
 #include <fake-dma-buffer/fake-dma-buffer.h>
-#include <mmio-ptr/fake.h>
 #include <zxtest/zxtest.h>
 
 #include "usb-xhci.h"

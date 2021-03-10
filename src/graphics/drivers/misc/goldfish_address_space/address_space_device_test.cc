@@ -10,6 +10,7 @@
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fake_ddk/fidl-helper.h>
+#include <lib/mmio-ptr/fake.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmar.h>
 #include <zircon/rights.h>
@@ -23,7 +24,6 @@
 #include <memory>
 #include <vector>
 
-#include <mmio-ptr/fake.h>
 #include <zxtest/zxtest.h>
 
 namespace goldfish {

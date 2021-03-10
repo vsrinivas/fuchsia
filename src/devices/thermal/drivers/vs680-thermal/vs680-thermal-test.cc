@@ -7,11 +7,11 @@
 #include <fuchsia/hardware/clock/cpp/banjo-mock.h>
 #include <fuchsia/hardware/power/cpp/banjo-mock.h>
 #include <lib/fake_ddk/fidl-helper.h>
+#include <lib/mmio-ptr/fake.h>
 #include <lib/zx/clock.h>
 
 #include <memory>
 
-#include <mmio-ptr/fake.h>
 #include <zxtest/zxtest.h>
 
 namespace {

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/mmio-ptr/fake.h>
+
 #include <array>
 
 #include <gtest/gtest.h>
-#include <mmio-ptr/fake.h>
 
 #include "src/graphics/drivers/msd-img-rgx/mtk/mt8167s-gpu.h"
 

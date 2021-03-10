@@ -5,12 +5,12 @@
 #ifndef SRC_DEVICES_TESTING_MOCK_MMIO_REG_INCLUDE_MOCK_MMIO_REG_MOCK_MMIO_REG_H_
 #define SRC_DEVICES_TESTING_MOCK_MMIO_REG_INCLUDE_MOCK_MMIO_REG_MOCK_MMIO_REG_H_
 
+#include <lib/mmio-ptr/fake.h>
 #include <lib/mmio/mmio.h>
 
 #include <memory>
 
 #include <fbl/vector.h>
-#include <mmio-ptr/fake.h>
 #include <zxtest/zxtest.h>
 
 namespace ddk_mock {

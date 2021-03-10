@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_MMIO_PTR_INCLUDE_MMIO_PTR_FAKE_H_
-#define ZIRCON_SYSTEM_DEV_LIB_MMIO_PTR_INCLUDE_MMIO_PTR_FAKE_H_
+#ifndef LIB_MMIO_PTR_FAKE_H_
+#define LIB_MMIO_PTR_FAKE_H_
 
-#include <mmio-ptr/mmio-ptr.h>
+#include <lib/mmio-ptr/mmio-ptr.h>
 
 /// Create a fake MMIO_PTR from a regular pointer. Mock tests for drivers should
 /// use this to implcitly specify that they are handing MMIO pointers.
@@ -22,4 +22,4 @@ constexpr inline MMIO_PTR auto* FakeMmioPtr(T* ptr) {
   return (MMIO_PTR T*)ptr;
 }
 
-#endif  // ZIRCON_SYSTEM_DEV_LIB_MMIO_PTR_INCLUDE_MMIO_PTR_FAKE_H_
+#endif  // LIB_MMIO_PTR_FAKE_H_

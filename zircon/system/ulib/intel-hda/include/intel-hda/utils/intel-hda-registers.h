@@ -5,6 +5,7 @@
 #ifndef INTEL_HDA_UTILS_INTEL_HDA_REGISTERS_H_
 #define INTEL_HDA_UTILS_INTEL_HDA_REGISTERS_H_
 
+#include <lib/mmio-ptr/mmio-ptr.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/assert.h>
@@ -12,8 +13,6 @@
 #include <zircon/types.h>
 
 #include <type_traits>
-
-#include <mmio-ptr/mmio-ptr.h>
 
 /**
  * Register definitions taken from

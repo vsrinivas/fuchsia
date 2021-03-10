@@ -10,7 +10,7 @@ zx_library("mmio-ptr") {
 
   static = true
   sdk = "source"
-  sdk_headers = [ "mmio-ptr/mmio-ptr.h" ]
+  sdk_headers = [ "lib/mmio-ptr/mmio-ptr.h" ]
   sdk_migrated = true
 }
 
@@ -22,6 +22,6 @@ zx_library("mmio-ptr-fake") {
 
   static = true
   sdk = "source"
-  sdk_headers = [ "mmio-ptr/fake.h" ]
+  sdk_headers = [ "lib/mmio-ptr/fake.h" ]
   sdk_migrated = true
 }

@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_LIB_MMIO_INCLUDE_LIB_MMIO_MMIO_H_
 #define SRC_DEVICES_LIB_MMIO_INCLUDE_LIB_MMIO_MMIO_H_
 
+#include <lib/mmio-ptr/mmio-ptr.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
@@ -19,7 +20,6 @@
 #include <ddk/mmio-buffer.h>
 #include <fbl/macros.h>
 #include <hw/arch_ops.h>
-#include <mmio-ptr/mmio-ptr.h>
 
 namespace ddk {
 

@@ -4,12 +4,12 @@
 
 #include <lib/fake-bti/bti.h>
 #include <lib/fdio/directory.h>
+#include <lib/mmio-ptr/fake.h>
 
 #include <memory>
 #include <optional>
 
 #include <gtest/gtest.h>
-#include <mmio-ptr/fake.h>
 
 #include "amlogic-video.h"
 #include "tests/test_support.h"

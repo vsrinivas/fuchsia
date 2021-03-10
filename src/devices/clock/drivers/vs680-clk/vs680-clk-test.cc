@@ -4,7 +4,8 @@
 
 #include "vs680-clk.h"
 
-#include <mmio-ptr/fake.h>
+#include <lib/mmio-ptr/fake.h>
+
 #include <zxtest/zxtest.h>
 
 #include "vs680-clk-reg.h"

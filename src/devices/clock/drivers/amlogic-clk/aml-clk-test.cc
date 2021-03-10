@@ -4,8 +4,9 @@
 
 #include "aml-clk.h"
 
+#include <lib/mmio-ptr/fake.h>
+
 #include <ddk/platform-defs.h>
-#include <mmio-ptr/fake.h>
 #include <soc/aml-meson/aml-clk-common.h>
 #include <soc/aml-meson/axg-clk.h>
 #include <soc/aml-meson/g12a-clk.h>
@@ -435,7 +436,6 @@ TEST(ClkTestAml, TestCpuClkG12b) {
   EXPECT_OK(st);
   EXPECT_EQ(rate, kBigClockTestFreq);
 
-
   st = clk.ClockImplSetRate(kTestCpuLittleClk, kLittleClockTestFreq);
   EXPECT_OK(st);
 
@@ -467,11 +467,11 @@ TEST(ClkTestAml, DisableRefZero) {
   EXPECT_EQ(memcmp(actual.get(), expected.get(), S905D2_HIU_LENGTH), 0);
 
   constexpr uint16_t kTestClock = 0;
-  const uint32_t clk_id = aml_clk_common::AmlClkId(kTestClock, aml_clk_common::aml_clk_type::kMesonGate);
+  const uint32_t clk_id =
+      aml_clk_common::AmlClkId(kTestClock, aml_clk_common::aml_clk_type::kMesonGate);
 
-  ASSERT_DEATH(([&clk]() {
-    clk.ClockImplDisable(clk_id);
-  }), "Failed to crash when trying to disable already disabled clock.");
+  ASSERT_DEATH(([&clk]() { clk.ClockImplDisable(clk_id); }),
+               "Failed to crash when trying to disable already disabled clock.");
 }
 
 TEST(ClkTestAml, EnableDisableRefCount) {
@@ -492,7 +492,8 @@ TEST(ClkTestAml, EnableDisableRefCount) {
   memset(actual.get(), 0, S905D2_HIU_LENGTH);
 
   constexpr uint16_t kTestClock = 0;
-  constexpr uint32_t kTestClockId = aml_clk_common::AmlClkId(kTestClock, aml_clk_common::aml_clk_type::kMesonGate);
+  constexpr uint32_t kTestClockId =
+      aml_clk_common::AmlClkId(kTestClock, aml_clk_common::aml_clk_type::kMesonGate);
   constexpr uint32_t reg = g12a_clk_gates[kTestClock].reg;
   constexpr uint32_t bit = (1u << g12a_clk_gates[kTestClock].bit);
   uint32_t* reg_ptr = reinterpret_cast<uint32_t*>(&actual.get()[reg]);
@@ -521,7 +522,8 @@ TEST(ClkTestAml, EnableDisableRefCount) {
   *reg_ptr = 0xffffffff;
   st = clk.ClockImplDisable(kTestClockId);
   EXPECT_OK(st);
-  EXPECT_EQ((*reg_ptr), (0xffffffff & (~bit)));  // Make sure the driver actually disabled the hardware.
+  EXPECT_EQ((*reg_ptr),
+            (0xffffffff & (~bit)));  // Make sure the driver actually disabled the hardware.
 }
 
 }  // namespace amlogic_clock

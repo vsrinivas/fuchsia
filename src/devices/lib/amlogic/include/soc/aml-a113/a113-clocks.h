@@ -6,9 +6,9 @@
 #define SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A113_A113_CLOCKS_H_
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/mmio-ptr/mmio-ptr.h>
 
 #include <ddk/mmio-buffer.h>
-#include <mmio-ptr/mmio-ptr.h>
 
 #define SDM_FRACTIONALITY ((uint32_t)16384)
 #define A113_FIXED_PLL_RATE ((uint32_t)2000000000)

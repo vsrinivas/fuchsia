@@ -4,12 +4,12 @@
 
 #include "mtk-thermal.h"
 
+#include <lib/mmio-ptr/fake.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <memory>
 
-#include <mmio-ptr/fake.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/mt8167/mt8167-hw.h>
 

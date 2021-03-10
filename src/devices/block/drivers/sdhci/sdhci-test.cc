@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/sdhci/cpp/banjo-mock.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/mmio-ptr/fake.h>
 #include <lib/sync/completion.h>
 
 #include <atomic>
@@ -14,7 +15,6 @@
 #include <optional>
 #include <vector>
 
-#include <mmio-ptr/fake.h>
 #include <zxtest/zxtest.h>
 
 namespace {

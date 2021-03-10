@@ -1,10 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <lib/mmio-ptr/fake.h>
+
 #include <vector>
 
 #include <ddk/driver.h>
-#include <mmio-ptr/fake.h>
 #include <zxtest/zxtest.h>
 
 #include "intel-i915.h"

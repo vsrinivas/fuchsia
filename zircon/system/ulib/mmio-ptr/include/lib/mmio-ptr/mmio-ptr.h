@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_MMIO_PTR_INCLUDE_MMIO_PTR_MMIO_PTR_H_
-#define ZIRCON_SYSTEM_DEV_LIB_MMIO_PTR_INCLUDE_MMIO_PTR_MMIO_PTR_H_
+#ifndef LIB_MMIO_PTR_MMIO_PTR_H_
+#define LIB_MMIO_PTR_MMIO_PTR_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -199,4 +199,4 @@ static inline void MmioReadBuffer(void* dest, MMIO_PTR const volatile void* mmio
   }
 }
 
-#endif  // ZIRCON_SYSTEM_DEV_LIB_MMIO_PTR_INCLUDE_MMIO_PTR_MMIO_PTR_H_
+#endif  // LIB_MMIO_PTR_MMIO_PTR_H_

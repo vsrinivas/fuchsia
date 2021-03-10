@@ -6,10 +6,10 @@
 #define SRC_DEVICES_TESTING_FAKE_MMIO_REG_INCLUDE_FAKE_MMIO_REG_FAKE_MMIO_REG_H_
 
 #include <lib/fit/function.h>
+#include <lib/mmio-ptr/fake.h>
 #include <lib/mmio/mmio.h>
 
 #include <fbl/vector.h>
-#include <mmio-ptr/fake.h>
 #include <zxtest/zxtest.h>
 
 namespace ddk_fake {
