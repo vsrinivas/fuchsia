@@ -99,6 +99,46 @@ GPUs are complex pieces of hardware with flaws that may trigger misbehavior infr
     * A large and complex performance benchmark.
     * Fuchsia details, forthcoming.
 
+## Fuzzing
+
+MSDs should be fuzzed through the magma FIDL interface. Each MSD should have
+its own fuzzer, as every driver is unique in how it processes command buffer
+or immediate command data and as such needs different input pre-processing to
+ensure adequate coverage. [libfuzzer][libfuzzer] fuzzers should link against
+the MSD using [fake-ddk][fake-ddk] to ensure coverage information can be
+received from the driver. Since the real GPU hardware can't be used in a
+fuzzer environment, the fuzzer must have a fake device implementation.
+
+A [seed corpus][seedcorpus] should be used to ensure MSD inputs give full
+coverage. This can be gathered either through an instrumented ICD or a
+proxy MSD that intercepts all Vulkan commands.
+
+Fuzzing Vulkan ICDs is not required as part of Fuchsia ICD development
+because of these difficulties:
+
+* The Vulkan spec is full of undefined behavior and as such it's difficult to
+  ensure a fuzzer tests only legitimate inputs. Incorrect inputs are allowed
+  to crash or hang the application - see [the Vulkan specification][vulkanerrors].
+* The ICD is in the application's address space, and as such fuzzing cannot
+  ensure security guarantees against a malicious application that can also
+  arbitrarily modify its own address space. Protection of the integrity of
+  the operating system and other applications must be performed at the MSD
+  layer.
+
+ICD developers are encouraged to create fuzzers for parts of the ICD that do
+not have undefined behavior. This may include defining test ICD builds that
+define behavior that the specification would otherwise leave undefined.
+
+Most testing to ensure conformance of ICDs with the Vulkan specification
+happens in connection with the Vulkan CTS. There are external efforts such as
+[graphicsfuzz][graphicsfuzz] to use fuzzing to help add CTS tests.
+
 ## See Also
 * [Contributing](contributing.md)
+
+[graphicsfuzz]: https://github.com/google/graphicsfuzz
+[fake-ddk]: /src/devices/testing/fake_ddk
+[libfuzzer]: /docs/development/testing/fuzzing/write-a-fuzzer.md
+[seedcorpus]: /docs/development/testing/fuzzing/improve-a-fuzzer.md#measure_code_coverage
+[vulkanerrors]: https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#fundamentals-errors
 
