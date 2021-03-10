@@ -681,10 +681,10 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
     if (std::holds_alternative<fdio_available>(var)) {
       if (use_for_stdio) {
         use_for_stdio->acquire();
-        var = use_for_stdio;
       } else {
-        var = fdio_null_create();
+        use_for_stdio = fdio_null_create();
       }
+      var = use_for_stdio;
     }
   }
 
