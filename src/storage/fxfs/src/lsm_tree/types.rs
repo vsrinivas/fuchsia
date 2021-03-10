@@ -10,11 +10,11 @@ use {
     std::sync::Arc,
 };
 
-// Keys and values need to implement the following traits.
+// Keys and values need to implement the following traits. For merging, they also need to implement
+// OrdLowerBound.
 // TODO: Use trait_alias when available.
 pub trait Key:
     std::cmp::Ord
-    + OrdLowerBound
     + std::fmt::Debug
     + Send
     + Sync
@@ -26,7 +26,6 @@ pub trait Key:
 }
 impl<K> Key for K where
     K: std::cmp::Ord
-        + OrdLowerBound
         + std::fmt::Debug
         + Send
         + Sync

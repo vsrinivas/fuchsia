@@ -2,7 +2,4 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod lsm_tree;
-pub mod object_handle;
-#[cfg(test)]
-pub mod testing;
+pub mod fake_object;

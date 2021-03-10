@@ -3,5 +3,6 @@
 // found in the LICENSE file.
 
 pub mod merge;
+mod simple_persistent_layer;
 pub mod skip_list_layer;
 pub mod types;

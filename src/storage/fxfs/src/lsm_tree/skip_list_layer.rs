@@ -10,7 +10,7 @@ use {
         merge::{MergeFn, Merger},
         types::{
             BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerIteratorMut,
-            MutableLayer, Value,
+            MutableLayer, OrdLowerBound, Value,
         },
     },
     anyhow::Error,
@@ -109,7 +109,7 @@ impl<'layer, K: Key, V: Value> Layer<K, V> for SkipListLayer<K, V> {
 }
 
 #[async_trait]
-impl<'layer, K: Key, V: Value> MutableLayer<K, V> for SkipListLayer<K, V> {
+impl<'layer, K: Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer<K, V> {
     fn as_layer(self: Arc<Self>) -> Arc<dyn Layer<K, V>> {
         self
     }
