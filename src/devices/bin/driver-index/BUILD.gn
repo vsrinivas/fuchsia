@@ -4,7 +4,6 @@
 
 import("//build/bind/bind.gni")
 import("//build/rust/rustc_binary.gni")
-import("//src/devices/bin/driver-index/bind_index_metadata.gni")
 import("//src/sys/build/components.gni")
 
 group("driver-index") {
