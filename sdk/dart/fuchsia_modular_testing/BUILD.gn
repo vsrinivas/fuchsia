@@ -1,0 +1,91 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+import("//build/dart/dart_test_component.gni")
+import("//build/dart/fidl_move.gni")
+import("//build/fidl/fidl.gni")
+import("//build/flutter/test.gni")
+import("//build/testing/environments.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+
+dart_library("fuchsia_modular_testing") {
+  package_name = "fuchsia_modular_testing"
+  null_safe = true
+
+  sdk_category = "partner"
+
+  sources = [
+    "src/agent_interceptor.dart",
+    "src/test_harness_fixtures.dart",
+    "src/test_harness_spec_builder.dart",
+    "test.dart",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//third_party/dart-pkg/pub/meta",
+    dart_package_label.fidl,
+    dart_package_label.fuchsia_logger,
+    dart_package_label.fuchsia_modular,
+    dart_package_label.fuchsia_services,
+    dart_package_label.zircon,
+  ]
+}
+
+fidl("test_fidl") {
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  excluded_checks = [
+    "invalid-case-for-decl-name",
+    "string-bounds-not-specified",
+  ]
+
+  name = "test.modular.dart"
+
+  sources = [ "test_support/fidl/testing.fidl" ]
+}
+
+# Run tese tests using:
+#  fx test fuchsia-pkg://fuchsia.com/fuchsia-modular-testing-integration-tests#meta/fuchsia-modular-testing-package-integration-tests.cmx
+dart_test_component("integration-test-component") {
+  component_name = "fuchsia-modular-testing-integration-tests"
+  manifest = "meta/fuchsia-modular-testing-integration-tests.cmx"
+  sources = [
+    "agent_interceptor_test.dart",
+    "launch_harness_test.dart",
+    "test_harness_spec_builder_test.dart",
+  ]
+
+  deps = [
+    ":fuchsia_modular_testing",
+    ":test_fidl",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//third_party/dart-pkg/pub/mockito",
+    "//third_party/dart-pkg/pub/test",
+    dart_package_label.fidl,
+    dart_package_label.fuchsia_logger,
+    dart_package_label.fuchsia_modular,
+    dart_package_label.zircon,
+  ]
+}
+
+fuchsia_test_package("fuchsia-modular-testing-integration-tests") {
+  test_components = [ ":integration-test-component" ]
+
+  # TODO(fxb/65865): This check shouldn't be necessary.
+  if (is_fuchsia) {
+    test_specs = {
+      log_settings = {
+        max_severity = "ERROR"
+      }
+    }
+  }
+}
