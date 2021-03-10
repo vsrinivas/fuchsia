@@ -472,11 +472,6 @@ class View {
       } else {
         header_ = header_type(header.value());
         offset_ += static_cast<uint32_t>(sizeof(zbi_header_t));
-        if (view_->limit_ - offset_ < header_->length) {
-          // Reached the end of the container.
-          Fail("container too short for next item payload");
-          return *this;
-        }
         if (auto payload = Traits::Payload(view_->storage(), offset_, header_->length);
             payload.is_error()) {
           Fail("cannot extract payload view", std::move(payload.error_value()));
@@ -602,9 +597,11 @@ class View {
       return fitx::error(Error{check_error.error_value(), 0, {}});
     }
 
-    if (sizeof(zbi_header_t) + header->length > capacity) {
-      return fitx::error(Error{
-          "container header specifies length that exceeds capcity", sizeof(zbi_header_t), {}});
+    if (header->type != ZBI_TYPE_CONTAINER) {
+      return fitx::error(Error{"bad container type", 0, {}});
+    }
+    if (header->extra != ZBI_CONTAINER_MAGIC) {
+      return fitx::error(Error{"bad container magic", 0, {}});
     }
 
     if (header->flags & ZBI_FLAG_CRC32) {
@@ -978,8 +975,16 @@ class View {
     using ErrorType = CopyError<CreateStorage>;
 
     auto [offset, length] = RangeBounds(first, last);
+
+    // We allow the copy to leave padding ("slop") prior to the copied objects
+    // if desired. This lets some storage backends to be more efficient (e.g.,
+    // VMOs can clone pages instead of copying them).
+    //
+    // The amount of slop must be large enough for us to insert a container
+    // header and possibly an additional discard item.
     constexpr auto slopcheck = [](uint32_t slop) {
-      return slop == sizeof(zbi_header_t) || slop >= 2 * sizeof(zbi_header_t);
+      return slop == sizeof(zbi_header_t) ||
+             (slop >= 2 * sizeof(zbi_header_t) && slop % ZBI_ALIGNMENT == 0);
     };
     auto copy = CopyWithSlop(offset, length, sizeof(zbi_header_t), slopcheck);
     if (copy.is_error()) {

@@ -9,8 +9,10 @@ namespace zbitl {
 using namespace std::literals;
 
 fitx::result<std::string_view> CheckHeader(const zbi_header_t& header, size_t capacity) {
-  if (header.length > capacity) {
-    return fitx::error{"item doesn't fit, container truncated?"sv};
+  if (sizeof(header) > capacity) {
+    return fitx::error{"header doesn't fit. ZBI truncated?"sv};
+  } else if (header.length > capacity - sizeof(header)) {
+    return fitx::error{"payload doesn't fit. ZBI truncated?"sv};
   }
 
   // Strict mode also checks policy requirements.  Boot loaders do not always
