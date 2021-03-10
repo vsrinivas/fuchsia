@@ -2072,10 +2072,11 @@ TEST(TrackingPtr, encode_string_view_tracking_ptr_unowned) {
     EXPECT_EQ(written_data[i], input[i]);
 }
 
-// Heap allocated objects are not co-located with the stack object so this tests linearization.
-TEST(TrackingPtr, encode_string_view_tracking_ptr_heap_allocate) {
+// Allocated objects are not co-located with the stack object so this tests linearization.
+TEST(TrackingPtr, encode_string_view_with_fidl_allocator) {
+  fidl::FidlAllocator allocator;
   const char input[] = "abcd";
-  StringStruct str = {.str = fidl::heap_copy_str(input, strlen(input))};
+  StringStruct str = {.str = fidl::StringView(allocator, input)};
 
   constexpr uint32_t kBufSize = 512;
   uint8_t buffer[kBufSize];
