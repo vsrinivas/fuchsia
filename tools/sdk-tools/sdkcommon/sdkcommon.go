@@ -185,8 +185,6 @@ func New() (SDKProperties, error) {
 		if sdk.version, err = readSDKVersion(manifestFile); err != nil {
 			return sdk, err
 		}
-	} else {
-		log.Warningf("Cannot find SDK manifest file %v", manifestFile)
 	}
 
 	sdk.globalPropertiesFilename = filepath.Join(sdk.dataPath, "global_ffx_props.json")
