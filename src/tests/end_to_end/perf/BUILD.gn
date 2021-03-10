@@ -21,7 +21,7 @@ test_list = [
   "dart_inspect_benchmarks_test",
   "fidlc_microbenchmarks_test",
   "garnet_input_latency_benchmarks_test",
-  "kernel_boot_timeline_test",
+  "kernel_boot_stats_test",
   "microbenchmarks_test",
   "netstack_benchmarks_test",
   "storage_benchmarks_test",

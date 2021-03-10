@@ -12,8 +12,8 @@ void main() {
   test('fuchsia.kernel.boot', () async {
     final helper = await PerfTestHelper.make();
     const resultsFile = '/tmp/perf_results.json';
-    final result = await helper.sl4fDriver.ssh
-        .run('/bin/kernel-boot-timeline $resultsFile');
+    final result =
+        await helper.sl4fDriver.ssh.run('/bin/kernel-boot-stats $resultsFile');
     expect(result.exitCode, equals(0));
     await helper.processResults(resultsFile);
   }, timeout: Timeout.none);

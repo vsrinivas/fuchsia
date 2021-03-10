@@ -12,9 +12,9 @@ group("benchmarks") {
   ]
 }
 
-executable("kernel-boot-timeline") {
+executable("kernel-boot-stats") {
   testonly = true
-  sources = [ "kernel_boot_timeline.cc" ]
+  sources = [ "kernel_boot_stats.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/lib/sys/cpp",
@@ -26,5 +26,5 @@ executable("kernel-boot-timeline") {
 
 fuchsia_shell_package("kernel-boot-benchmarks") {
   testonly = true
-  deps = [ ":kernel-boot-timeline" ]
+  deps = [ ":kernel-boot-stats" ]
 }

@@ -21,7 +21,7 @@ This directory contains the following performance tests:
     end-to-end input latency, measured by tracing flow events, for minimal
     Scenic clients (`simplest_app` and `yuv_to_image_pipe`).
 
-*   `kernel_boot_timeline_test` - SL4F wrapper for a test that records the
+*   `kernel_boot_stats_test` - SL4F wrapper for a test that records the
     time taken by different parts of the kernel boot process.
 
 *   `microbenchmarks_test` - SL4F wrapper for [fuchsia_microbenchmarks].
