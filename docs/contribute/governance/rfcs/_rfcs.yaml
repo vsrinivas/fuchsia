@@ -300,3 +300,16 @@
   reviewers: ['jamesr@google.com', 'computerdruid@google.com', 'jfsulliv@google.com', 'ampearce@google.com', 'atyfto@google.com']
   submitted: '2021-02-03'
   reviewed: '2021-02-24'
+
+- name: 'RFC-0072'
+  title: 'Standalone Image Assembly Tool'
+  short_description: 'Create a standalone image assembly tool that can also be used by the Fuchsia build.'
+  authors: ['aaronwood@google.com']
+  file: '0072_standalone_image_assembly_tool.md'
+  area: ['Build']
+  issue: []
+  gerrit_change_id: ['478494']
+  status: 'Accepted'
+  reviewers: ['cpu@google.com', 'amathes@google.com', 'shayba@google.com', 'digit@google.com', 'abarth@google.com', 'mesch@google.com', 'jamesr@google.com']
+  submitted: '2021-01-29'
+  reviewed: '2021-03-05'

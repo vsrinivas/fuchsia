@@ -59,3 +59,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0070_pci_protocol_legacy_interrupt_changes.md
 - title: "RFC-0071 - OTA backstop"
   path: /docs/contribute/governance/rfcs/0071_ota_backstop.md
+- title: "RFC-0072 - Standalone Image Assembly Tool"
+  path: /docs/contribute/governance/rfcs/0072_standalone_image_assembly_tool.md
