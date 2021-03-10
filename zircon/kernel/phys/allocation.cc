@@ -19,9 +19,9 @@
 
 namespace {
 
-// Maximum number of address ranges we support reading from the
+// Maximum number of discontiguous address ranges we support reading from the
 // previous-stage bootloader.
-constexpr size_t kMaxMemoryRanges = 128;
+constexpr size_t kMaxMemoryRanges = 512;
 
 }  // namespace
 
