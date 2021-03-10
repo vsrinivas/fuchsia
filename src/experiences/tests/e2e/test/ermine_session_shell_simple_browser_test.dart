@@ -56,19 +56,32 @@ void main() {
     // TODO(fxb/69291): Remove this workaround once we can properly close hidden
     // components
     FlutterDriver browser = await ermine.launchAndWaitForSimpleBrowser();
-    await browser.requestData('http://127.0.0.1:8080/stop');
+    const stopUrl = 'http://127.0.0.1:8080/stop';
+    await browser.requestData(stopUrl);
+    await browser.waitFor(find.text(stopUrl), timeout: _timeout);
+    expect(await ermine.isStopped(testserverUrl), isTrue);
+    print('Stopped the test server');
 
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
-
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
-    expect(await ermine.isStopped(testserverUrl), isTrue);
+    print('Closed the browser');
 
     await webDriverConnector?.tearDown();
     await ermine.tearDown();
     await sl4f?.stopServer();
     sl4f?.close();
   });
+
+  Future<bool> _waitForTabArrangement(FlutterDriver browser,
+      SerializableFinder leftTabFinder, SerializableFinder rightTabFinder,
+      {Duration timeout = const Duration(seconds: 30)}) async {
+    return ermine.waitFor(() async {
+      final leftTabX = (await browser.getCenter(leftTabFinder)).dx;
+      final rightTabX = (await browser.getCenter(rightTabFinder)).dx;
+      return leftTabX < rightTabX;
+    }, timeout: timeout);
+  }
 
   // TODO(fxb/68689): Transition physical interactions to use Sl4f.Input once
   // fxb/69277 is fixed.
@@ -85,6 +98,7 @@ void main() {
 
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(indexTabFinder), isNotNull);
+    print('Opened http://127.0.0.1:8080/index.html');
 
     final nextLink = webdriver.findElement(By.linkText('Next'));
     expect(nextLink, isNotNull);
@@ -94,6 +108,7 @@ void main() {
     await browser.waitForAbsent(indexTabFinder, timeout: _timeout);
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(nextTabFinder), isNotNull);
+    print('Clicked the next.html link');
 
     final prevLink = webdriver.findElement(By.linkText('Prev'));
     expect(prevLink, isNotNull);
@@ -103,6 +118,7 @@ void main() {
     await browser.waitForAbsent(nextTabFinder, timeout: _timeout);
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(indexTabFinder), isNotNull);
+    print('Clicked the index.html link');
 
     // Goes back to next.html by tapping the BCK button (history navigation)
     final back = find.byValueKey('back');
@@ -110,6 +126,7 @@ void main() {
     await browser.waitForAbsent(indexTabFinder, timeout: _timeout);
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(nextTabFinder), isNotNull);
+    print('Hit BCK');
 
     // Goes forward to index.html by tapping the FWD button (history navigation)
     final forward = find.byValueKey('forward');
@@ -117,6 +134,7 @@ void main() {
     await browser.waitForAbsent(nextTabFinder, timeout: _timeout);
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(indexTabFinder), isNotNull);
+    print('Hit FWD');
 
     // Clicks + button to increase the number
     var digitLink = webdriver.findElement(By.id('target'));
@@ -126,26 +144,30 @@ void main() {
     expect(digitLink.text, '1');
     addButton.click();
     expect(digitLink.text, '2');
+    print('Clicked the + button next to the digit three times');
 
     // Refreshes the page
     final refresh = find.byValueKey('refresh');
     await browser.tap(refresh);
     digitLink = webdriver.findElement(By.id('target'));
     expect(digitLink.text, '0');
+    print('Hit RFRSH');
 
-    // Clicks the text link that opens popup.html (popup page navigation)
     final popupLink = webdriver.findElement(By.linkText('Popup'));
     expect(popupLink, isNotNull);
 
+    // Clicks the text link that opens popup.html (popup page navigation)
     popupLink.click();
     await browser.waitFor(popupTabFinder, timeout: _timeout);
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(indexTabFinder), isNotNull);
     expect(await browser.getText(popupTabFinder), isNotNull);
+    print('Clicked the popup.html link');
 
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+    print('Closed the browser');
   });
 
   test('Should be able to play videos on web pages.', () async {
@@ -157,10 +179,9 @@ void main() {
     // It shows the violet-colored background for the first 3 seconds then shows
     // the fuchsia-colored background for another 3 seconds.
     await browser.requestData('http://127.0.0.1:8080/video.html');
-
     await browser.waitFor(videoTabFinder, timeout: _timeout);
-
     expect(await browser.getText(videoTabFinder), isNotNull);
+    print('Opened http://127.0.0.1:8080/video.html');
 
     // Waits for a while for the video to be loaded before taking a screenshot.
     await Future.delayed(Duration(seconds: 2));
@@ -172,10 +193,12 @@ void main() {
 
     final diff = ermine.screenshotsDiff(earlyScreenshot, lateScreenshot);
     expect(diff, 1, reason: 'The screenshots are more similar than expected.');
+    print('The video was played');
 
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+    print('Closed the browser');
   });
 
   test('Should be able to switch, rearrange, and close tabs', () async {
@@ -193,18 +216,21 @@ void main() {
     // Opens red.html in the second tab leaving the first tab as an empty tab.
     await browser.requestData(redUrl);
     await browser.waitFor(redTabFinder, timeout: _timeout);
+    print('Opened red.html');
 
     // Opens green.html in the third tab.
     await browser.tap(find.byValueKey('new_tab'));
     await browser.waitFor(find.text(newTabHintText), timeout: _timeout);
     await browser.requestData(greenUrl);
     await browser.waitFor(greenTabFinder, timeout: _timeout);
+    print('Opened green.html');
 
     // Opens blue.html in the forth tab.
     await browser.tap(find.byValueKey('new_tab'));
     await browser.waitFor(find.text(newTabHintText), timeout: _timeout);
     await browser.requestData(blueUrl);
     await browser.waitFor(blueTabFinder, timeout: _timeout);
+    print('Opened blue.html');
 
     // Should have 4 tabs and the forth tab should be focused.
     expect(await browser.getText(newTabFinder), isNotNull);
@@ -212,55 +238,48 @@ void main() {
     expect(await browser.getText(greenTabFinder), isNotNull);
     expect(await browser.getText(blueTabFinder), isNotNull);
     expect(await browser.getText(find.text(blueUrl)), isNotNull);
+    print('The Blue tab is focused');
 
     // The second tab should be focused when tapped.
     await browser.tap(redTabFinder);
     await browser.waitFor(find.text(redUrl));
     expect(await browser.getText(find.text(redUrl)), isNotNull);
+    print('Clicked the Red tab');
 
     // The thrid tab should be focused when tapped.
     await browser.tap(greenTabFinder);
     await browser.waitFor(find.text(greenUrl));
     expect(await browser.getText(find.text(greenUrl)), isNotNull);
+    print('Clicked the Green tab');
 
     /// Tab Rearranging Test
 
-    // The current order of tabs before rearranging tabs.
-    var newTabX = (await browser.getCenter(newTabFinder)).dx;
-    var redTabX = (await browser.getCenter(redTabFinder)).dx;
-    var greenTabX = (await browser.getCenter(greenTabFinder)).dx;
-    var blueTabX = (await browser.getCenter(blueTabFinder)).dx;
-
-    expect(newTabX < redTabX, isTrue,
-        reason: 'The NEW TAB is not on the left side of the Red Page tab:'
-            'NEW TAB\'s x is $newTabX, Red Page tab\'s X is $redTabX ');
-    expect(redTabX < greenTabX, isTrue,
-        reason: 'The Red Page tab is not on the left side of the Green Page tab'
-            'Red Page tab\'s x is $redTabX, Green Page tab\'s X is $greenTabX ');
-    expect(greenTabX < blueTabX, isTrue,
-        reason:
-            'The Green Page tab is not on the left side of the Blue Page tab'
-            'Green Page tab\'s x is $greenTabX, Blue Page tab\'s X is $blueTabX ');
+    // Checks the current order of tabs before rearranging tabs.
+    expect(await _waitForTabArrangement(browser, newTabFinder, redTabFinder),
+        isTrue,
+        reason: 'The New tab is not on the left side of the Red tab:');
+    expect(await _waitForTabArrangement(browser, redTabFinder, greenTabFinder),
+        isTrue,
+        reason: 'The Red tab is not on the left side of the Green tab');
+    expect(await _waitForTabArrangement(browser, greenTabFinder, blueTabFinder),
+        isTrue,
+        reason: 'The Green tab is not on the left side of the Blue tab');
+    print('The tabs are in the order of New > Red > Green > Blue');
 
     // Drags the second tab to the right end of the tab list.
     await browser.scroll(redTabFinder, 600, 0, Duration(seconds: 1));
 
     // The order of tabs after rearranging tabs.
-    newTabX = (await browser.getCenter(newTabFinder)).dx;
-    redTabX = (await browser.getCenter(redTabFinder)).dx;
-    greenTabX = (await browser.getCenter(greenTabFinder)).dx;
-    blueTabX = (await browser.getCenter(blueTabFinder)).dx;
-
-    expect(newTabX < greenTabX, isTrue,
-        reason: 'The NEW TAB is not on the left side of the Green Page tab.'
-            'NEW TAB\'s x is $newTabX, Green Page tab\'s X is $greenTabX ');
-    expect(greenTabX < blueTabX, isTrue,
-        reason:
-            'The Green Page tab is not on the left side of the Blue Page tab'
-            'Green Page\'s x is $greenTabX, Blue Page tab\'s X is $blueTabX ');
-    expect(blueTabX < redTabX, isTrue,
-        reason: 'The Blue Page tab is not on the left side of the Red Page tab'
-            'Blue Page tab\'s x is $blueTabX, Red Page tab\'s X is $redTabX ');
+    expect(await _waitForTabArrangement(browser, newTabFinder, greenTabFinder),
+        isTrue,
+        reason: 'The New tab is not on the left side of the Green tab.');
+    expect(await _waitForTabArrangement(browser, greenTabFinder, blueTabFinder),
+        isTrue,
+        reason: 'The Green tab is not on the left side of the Blue tab');
+    expect(await _waitForTabArrangement(browser, blueTabFinder, redTabFinder),
+        isTrue,
+        reason: 'The Blue tab is not on the left side of the Red tab');
+    print('Moved the Red tab to the right end');
 
     /// Tab closing test
     final tabCloseFinder = find.byValueKey('tab_close');
@@ -268,17 +287,20 @@ void main() {
 
     // The red page should be gone and the last tab should be focused.
     await browser.waitForAbsent(redTabFinder);
+    print('Closed the Red tab');
 
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(greenTabFinder), isNotNull);
     expect(await browser.getText(blueTabFinder), isNotNull);
     expect(await browser.getText(find.text(blueUrl)), isNotNull);
+    print('The Blue tab is focused');
 
     // TODO(fxb/70265): Test closing an unfocused tab once fxb/68689 is done.
 
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+    print('Closed the browser');
   });
 
   // TODO(fxb/68720): Test web editing

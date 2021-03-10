@@ -168,6 +168,7 @@ class ErmineDriver {
       await browserDriver.tap(addTab);
       await browserDriver.waitFor(find.text('NEW TAB'),
           timeout: Duration(seconds: 10));
+      print('Opened a new tab');
     }
 
     return browserDriver;
