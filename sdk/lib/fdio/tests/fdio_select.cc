@@ -9,6 +9,8 @@
 
 namespace {
 
+constexpr std::chrono::duration minimum_duration = std::chrono::milliseconds(1);
+
 // Like with poll and ppoll, Fuchsia guarantees that selecting on 0
 // fds in the fd_sets is equivalent to sleeping until the timeout.
 //
@@ -16,27 +18,29 @@ namespace {
 // fdio_poll.cc.
 
 TEST(Select, SelectZeroFds) {
-  fd_set readfds;
-  fd_set writefds;
-  fd_set exceptfds;
-  FD_ZERO(&readfds);
-  FD_ZERO(&writefds);
-  FD_ZERO(&exceptfds);
+  // NB: We pass non-zero here to test deferred cleanup when no work is done by select.
+  for (int i = 0; i < 5; ++i) {
+    struct timeval timeout = {
+        .tv_usec = std::chrono::microseconds(minimum_duration).count(),
+    };
 
-  constexpr std::chrono::duration minimum_duration = std::chrono::milliseconds(1);
+    fd_set readfds;
+    fd_set writefds;
+    fd_set exceptfds;
+    FD_ZERO(&readfds);
+    FD_ZERO(&writefds);
+    FD_ZERO(&exceptfds);
 
-  struct timeval timeout = {
-      .tv_usec = std::chrono::microseconds(minimum_duration).count(),
-  };
-  const auto begin = std::chrono::steady_clock::now();
-  EXPECT_EQ(select(0, &readfds, &writefds, &exceptfds, &timeout), 0, "%s", strerror(errno));
-  EXPECT_GE(std::chrono::steady_clock::now() - begin, minimum_duration);
+    const auto begin = std::chrono::steady_clock::now();
+    EXPECT_EQ(select(i, &readfds, &writefds, &exceptfds, &timeout), 0, "%s", strerror(errno));
+    EXPECT_GE(std::chrono::steady_clock::now() - begin, minimum_duration);
 
-  // All bits in all the fd sets should be 0.
-  for (int fd = 0; fd < FD_SETSIZE; ++fd) {
-    EXPECT_FALSE(FD_ISSET(fd, &readfds));
-    EXPECT_FALSE(FD_ISSET(fd, &writefds));
-    EXPECT_FALSE(FD_ISSET(fd, &exceptfds));
+    // All bits in all the fd sets should be 0.
+    for (int fd = 0; fd < FD_SETSIZE; ++fd) {
+      EXPECT_FALSE(FD_ISSET(fd, &readfds));
+      EXPECT_FALSE(FD_ISSET(fd, &writefds));
+      EXPECT_FALSE(FD_ISSET(fd, &exceptfds));
+    }
   }
 }
 
@@ -47,13 +51,11 @@ TEST(Select, Pipe) {
   fds[0].reset(int_fds[0]);
   fds[1].reset(int_fds[1]);
 
-  constexpr std::chrono::duration minimum_duration = std::chrono::milliseconds(1);
-
-  struct timeval timeout = {
-      .tv_usec = std::chrono::microseconds(minimum_duration).count(),
-  };
-
   {
+    struct timeval timeout = {
+        .tv_usec = std::chrono::microseconds(minimum_duration).count(),
+    };
+
     fd_set readfds;
     FD_ZERO(&readfds);
     FD_SET(fds[0].get(), &readfds);
@@ -64,6 +66,10 @@ TEST(Select, Pipe) {
   }
 
   {
+    struct timeval timeout = {
+        .tv_usec = std::chrono::microseconds(minimum_duration).count(),
+    };
+
     char c;
     ASSERT_EQ(write(fds[1].get(), &c, sizeof(c)), sizeof(c), "%s", strerror(errno));
 
@@ -77,6 +83,10 @@ TEST(Select, Pipe) {
   }
 
   {
+    struct timeval timeout = {
+        .tv_usec = std::chrono::microseconds(minimum_duration).count(),
+    };
+
     ASSERT_EQ(close(fds[1].get()), 0, "%s", strerror(errno));
 
     fd_set readfds;

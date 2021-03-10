@@ -2028,12 +2028,14 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
 
   // TODO(https://fxbug.dev/71558): investigate VLA alternatives.
   fdio_t* ios[n];
-  ssize_t ios_used_max = -1;
+  std::optional<size_t> ios_used_max;
   auto clean_io = fbl::MakeAutoCall([&ios, &ios_used_max] {
-    for (ssize_t i = 0; i <= ios_used_max; ++i) {
-      auto* io = ios[i];
-      if (io != nullptr) {
-        io->release();
+    if (ios_used_max.has_value()) {
+      for (size_t i = 0; i <= ios_used_max.value(); ++i) {
+        auto* io = ios[i];
+        if (io != nullptr) {
+          io->release();
+        }
       }
     }
   });
