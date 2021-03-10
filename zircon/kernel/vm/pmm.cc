@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
+#include <lib/counters.h>
 #include <lib/ktrace.h>
 #include <platform.h>
 #include <pow2.h>
@@ -41,6 +42,9 @@
 #include "vm_priv.h"
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
+
+// Number of bytes available in the PMM after kernel init, but before userspace init.
+KCOUNTER(boot_memory_bytes, "boot.memory.post_init_free_bytes")
 
 using LocalTraceDuration =
     TraceDuration<TraceEnabled<false>, KTRACE_GRP_SCHEDULER, TraceContext::Thread>;
@@ -200,6 +204,19 @@ static void pmm_dump_timer(Timer* t, zx_time_t now, void*) {
 static void init_request_thread(unsigned int level) { pmm_node.InitRequestThread(); }
 
 LK_INIT_HOOK(pmm, init_request_thread, LK_INIT_LEVEL_THREADING)
+
+LK_INIT_HOOK(
+    pmm_boot_memory,
+    [](unsigned int /*level*/) {
+      // Track the amount of free memory available in the PMM after kernel init, but before
+      // userspace starts.
+      //
+      // We record this in a kcounter to be tracked by build infrastructure over time.
+      dprintf(INFO, "Free memory after kernel init: %" PRIu64 " bytes.\n",
+              pmm_node.CountFreePages() * PAGE_SIZE);
+      boot_memory_bytes.Set(pmm_node.CountFreePages() * PAGE_SIZE);
+    },
+    LK_INIT_LEVEL_USER - 1)
 
 static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
   const bool is_panic = flags & CMD_FLAG_PANIC;

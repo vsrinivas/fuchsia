@@ -179,7 +179,7 @@ bool VmoToInspectMapper::ShouldInclude(const counters::Descriptor& entry) {
       "policy.deny.",     //
       "policy.kill.",     //
       "port.full.count",  //
-      "boot.timeline.",   //
+      "boot.",            //
       "thread.suspend",   //
   };
   for (size_t i = 0; i < std::size(kByPrefix); ++i) {

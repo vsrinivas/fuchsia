@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/kernel/cpp/fidl.h>
+#include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/status.h>
@@ -14,7 +15,9 @@
 
 namespace {
 
-constexpr std::pair<const char*, const char*> kSteps[] = {
+constexpr const char* kTestSuiteName = "fuchsia.kernel.boot";
+
+constexpr std::pair<const char*, const char*> kTimelineSteps[] = {
     {"boot.timeline.zbi", "KernelBootLoader"},
     {"boot.timeline.virtual", "KernelBootPhysical"},
     {"boot.timeline.threading", "KernelBootThreads"},
@@ -22,7 +25,50 @@ constexpr std::pair<const char*, const char*> kSteps[] = {
     {"boot.timeline.init", "KernelBootComplete"},
 };
 
-perftest::ResultsSet BootTimeline() {
+// Return the property named `name` in the given node.
+//
+// Aborts if the name cannot be found or is of the wrong type.
+int64_t GetIntValueOrDie(const inspect::NodeValue& node, const std::string& name) {
+  const std::vector<inspect::PropertyValue>& properties = node.properties();
+
+  auto it = std::find_if(properties.begin(), properties.end(),
+                         [&name](const inspect::PropertyValue& m) { return m.name() == name; });
+  ZX_ASSERT_MSG(it != properties.end(), "Key '%s' not found", name.c_str());
+  ZX_ASSERT_MSG(it->Contains<inspect::IntPropertyValue>(),
+                "Property '%s' was expected to be an IntMetric, but found format %d.", name.c_str(),
+                static_cast<int>(it->format()));
+  return it->Get<inspect::IntPropertyValue>().value();
+}
+
+void WriteBootTimelineStats(perftest::ResultsSet& results, const inspect::Hierarchy& timeline) {
+  const inspect::NodeValue& node = timeline.node();
+  ZX_ASSERT(node.properties().size() == std::size(kTimelineSteps));
+
+  double ms_per_tick = 1000.0 / static_cast<double>(zx_ticks_per_second());
+
+  // Export the difference in time between each stage of the timeline.
+  int64_t last_step_ticks = 0;
+  for (auto [name, result_name] : kTimelineSteps) {
+    int64_t step_ticks = GetIntValueOrDie(node, name);
+    int64_t elapsed = step_ticks - last_step_ticks;
+    double elapsed_ms = static_cast<double>(elapsed) * ms_per_tick;
+    last_step_ticks = step_ticks;
+
+    auto* t = results.AddTestCase(kTestSuiteName, result_name, "milliseconds");
+    t->AppendValue(elapsed_ms);
+  }
+  ZX_ASSERT(results.results()->size() == std::size(kTimelineSteps));
+}
+
+// Add a test result recording the amount of free memory after kernel init.
+void WriteBootMemoryStats(perftest::ResultsSet& results, const inspect::Hierarchy& memory_stats) {
+  int64_t value = GetIntValueOrDie(memory_stats.node(), "boot.memory.post_init_free_bytes");
+  perftest::TestCaseResults* t =
+      results.AddTestCase(kTestSuiteName, "KernelBootFreeMemoryAfterInit", "bytes");
+  t->AppendValue(static_cast<double>(value));
+}
+
+perftest::ResultsSet GetBootStatistics() {
   fuchsia::kernel::CounterSyncPtr kcounter;
   auto environment_services = ::sys::ServiceDirectory::CreateFromNamespace();
   environment_services->Connect(kcounter.NewRequest());
@@ -37,35 +83,18 @@ perftest::ResultsSet BootTimeline() {
   auto result = inspect::ReadFromVmo(buffer.vmo);
   ZX_ASSERT_MSG(result.is_ok(), "ReadFromVmo failed");
   auto root = result.take_value();
-  auto timeline = root.GetByPath({"boot", "timeline"});
-  ZX_ASSERT_MSG(timeline, "boot.timeline not found");
-
-  const auto& properties = timeline->node().properties();
-
-  ZX_ASSERT(properties.size() == std::size(kSteps));
-
-  double ms_per_tick = 1000.0 / static_cast<double>(zx_ticks_per_second());
 
   perftest::ResultsSet results;
-  int64_t last_step_ticks = 0;
-  for (auto [name, result_name] : kSteps) {
-    auto it = std::find_if(properties.begin(), properties.end(),
-                           [name = name](const auto& m) { return m.name() == name; });
-    ZX_ASSERT_MSG(it != properties.end(), "%s not found", name);
-    ZX_ASSERT_MSG(
-        it->Contains<inspect::IntPropertyValue>(),
-        "All properties in kSteps are expected to be IntMetric: name: %s actual format: %d", name,
-        static_cast<int>(it->format()));
 
-    int64_t step_ticks = it->Get<inspect::IntPropertyValue>().value();
-    int64_t elapsed = step_ticks - last_step_ticks;
-    double elapsed_ms = static_cast<double>(elapsed) * ms_per_tick;
-    last_step_ticks = step_ticks;
+  // Export boot timeline stats.
+  const inspect::Hierarchy* timeline = root.GetByPath({"boot", "timeline"});
+  ZX_ASSERT_MSG(timeline, "boot.timeline not found");
+  WriteBootTimelineStats(results, *timeline);
 
-    auto* t = results.AddTestCase("fuchsia.kernel.boot", result_name, "milliseconds");
-    t->AppendValue(elapsed_ms);
-  }
-  ZX_ASSERT(results.results()->size() == std::size(kSteps));
+  // Export boot memory stats.
+  const inspect::Hierarchy* memory = root.GetByPath({"boot", "memory"});
+  ZX_ASSERT_MSG(memory, "boot.memory not found");
+  WriteBootMemoryStats(results, *memory);
 
   return results;
 }
@@ -79,7 +108,7 @@ int main(int argc, char** argv) {
   }
   const char* outfile = argv[1];
 
-  perftest::ResultsSet results = BootTimeline();
+  perftest::ResultsSet results = GetBootStatistics();
 
   return results.WriteJSONFile(outfile) ? 0 : 1;
 }
