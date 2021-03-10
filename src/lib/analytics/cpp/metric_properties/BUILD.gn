@@ -17,9 +17,9 @@ static_library("metric_properties") {
   ]
 }
 
-test("analytics_cpp_metric_properties_unittests") {
+test("unittests") {
+  output_name = "analytics_cpp_metric_properties_unittests"
   sources = [ "metric_properties_unittest.cc" ]
-
   deps = [
     ":metric_properties",
     "//src/lib/files",
@@ -31,5 +31,5 @@ test("analytics_cpp_metric_properties_unittests") {
 group("tests") {
   testonly = true
 
-  deps = [ ":analytics_cpp_metric_properties_unittests" ]
+  deps = [ ":unittests" ]
 }
