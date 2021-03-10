@@ -157,7 +157,7 @@ static zx_status_t gic_init() {
   uint32_t typer = GICREG(0, GICD_TYPER);
   gic_max_int = (BITS(typer, 4, 0) + 1) * 32;
 
-  printf("GICv3 detected, rev %u, max interrupts %u, TYPER %#x\n", rev, gic_max_int, typer);
+  printf("GICv3 detected: rev %u, max interrupts %u, TYPER %#x\n", rev, gic_max_int, typer);
 
   // disable the distributor
   GICREG(0, GICD_CTLR) = 0;
@@ -565,7 +565,7 @@ static void arm_gic_v3_init_early(const void* driver_data, uint32_t length) {
     return;
   }
 
-  dprintf(SPEW, "detected GICv3\n");
+  dprintf(SPEW, "GIC IPI base %u\n", ipi_base);
 
   pdev_register_interrupts(&gic_ops);
 

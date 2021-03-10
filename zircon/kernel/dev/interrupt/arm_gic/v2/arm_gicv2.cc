@@ -152,7 +152,7 @@ static zx_status_t arm_gic_init() {
   uint32_t typer = GICREG(0, GICD_TYPER);
   uint32_t it_lines_number = BITS_SHIFT(typer, 4, 0);
   max_irqs = (it_lines_number + 1) * 32;
-  printf("GICv2 detected, max interrupts %u, TYPER %#x\n", max_irqs, typer);
+  printf("GICv2 detected: max interrupts %u, TYPER %#x\n", max_irqs, typer);
   DEBUG_ASSERT(max_irqs <= MAX_INT);
 
   for (i = 0; i < max_irqs; i += 32) {
@@ -470,7 +470,7 @@ static void arm_gic_v2_init_early(const void* driver_data, uint32_t length) {
     return;
   }
 
-  dprintf(SPEW, "detected GICv2 (ID %#x)\n", GICREG(0, GICC_IIDR));
+  dprintf(SPEW, "GICv2 (ID %#x), IPI base %u\n", GICREG(0, GICC_IIDR), ipi_base);
 
   // pass the list of physical and virtual addresses for the GICv2m register apertures
   if (driver->msi_frame_phys) {

@@ -35,7 +35,7 @@ static const dcfg_arm_gicv3_driver_t gicv3_driver = {
     .gicd_offset = 0x00000,
     .gicr_offset = 0xa0000,
     .gicr_stride = 0x20000,
-    .ipi_base = 12,
+    .ipi_base = 0,
     .optional = true,
 };
 
@@ -44,7 +44,7 @@ static const dcfg_arm_gicv2_driver_t gicv2_driver = {
     .msi_frame_phys = 0x08020000,
     .gicd_offset = 0x00000,
     .gicc_offset = 0x10000,
-    .ipi_base = 12,
+    .ipi_base = 0,
     .optional = true,
     .use_msi = true,
 };
@@ -76,22 +76,30 @@ static void add_cpu_topology(zbi_header_t* zbi) {
     cpu_count = MAX_CPU_COUNT;
   }
 
+  // clang-format off
   for (size_t index = 0; index < cpu_count; index++) {
     nodes[index] = (zbi_topology_node_t){
         .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
         .parent_index = ZBI_TOPOLOGY_NO_PARENT,
-        .entity = {.processor = {.logical_ids = {index},
-                                 .logical_id_count = 1,
-                                 .flags = (index == 0) ? ZBI_TOPOLOGY_PROCESSOR_PRIMARY : 0,
-                                 .architecture = ZBI_TOPOLOGY_ARCH_ARM,
-                                 .architecture_info = {
-                                     .arm = {
-                                         // qemu seems to put 16 cores per aff0 level, max 32 cores.
-                                         .cluster_1_id = (index / 16),
-                                         .cpu_id = (index % 16),
-                                         .gic_id = index,
-                                     }}}}};
+        .entity = {
+          .processor = {
+            .logical_ids = {index},
+            .logical_id_count = 1,
+            .flags = (index == 0) ? ZBI_TOPOLOGY_PROCESSOR_PRIMARY : 0,
+            .architecture = ZBI_TOPOLOGY_ARCH_ARM,
+            .architecture_info = {
+              .arm = {
+                // qemu seems to put 16 cores per aff0 level, max 32 cores.
+                .cluster_1_id = (index / 16),
+                .cpu_id = (index % 16),
+                .gic_id = index,
+              }
+            }
+          }
+        }
+    };
   }
+  // clang-format on
 
   append_boot_item(zbi, ZBI_TYPE_CPU_TOPOLOGY,
                    sizeof(zbi_topology_node_t),  // Extra
