@@ -236,10 +236,8 @@ void DisplaySwapchain::UpdateFrameRecord(std::unique_ptr<FrameRecord>& frame_rec
 }
 
 bool DisplaySwapchain::DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& frame_timings,
-                                           size_t swapchain_index,
-                                           const HardwareLayerAssignment& hla,
+                                           size_t swapchain_index, Layer& layer,
                                            DrawCallback draw_callback) {
-  FX_DCHECK(hla.swapchain == this);
   FX_DCHECK(frame_timings);
 
   // Get the next record that can be used to notify |frame_timings| (and hence
@@ -269,28 +267,10 @@ bool DisplaySwapchain::DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& 
   outstanding_frame_count_++;
 
   // Render the scene.
-  size_t num_hardware_layers = hla.items.size();
-  // TODO(fxbug.dev/24296): handle more hardware layers.
-  FX_DCHECK(num_hardware_layers == 1);
-
-  // TODO(fxbug.dev/24306): we'd like to validate that the layer ID is supported
-  // by the display/display-controller, but the DisplayManager API doesn't
-  // currently expose it, and rather than hack in an accessor for |layer_id_|
-  // we should fix this "properly", whatever that means.
-  // FX_DCHECK(hla.items[0].hardware_layer_id is supported by display);
-  for (size_t i = 0; i < num_hardware_layers; ++i) {
+  {
     TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() draw");
-
-    // A single semaphore is sufficient to guarantee that all images have been
-    // rendered, so only provide the semaphore when rendering the image for
-    // the final layer.
-    escher::SemaphorePtr render_finished_escher_semaphore =
-        (i + 1 == num_hardware_layers) ? frame_record->render_finished_escher_semaphore
-                                       : escher::SemaphorePtr();
-    // TODO(fxbug.dev/24296): handle more hardware layers: the single image from
-    // buffer.escher_image is not enough; we need one for each layer.
-    draw_callback(frame_record->buffer->escher_image, hla.items[i], escher::SemaphorePtr(),
-                  render_finished_escher_semaphore);
+    draw_callback(frame_record->buffer->escher_image, layer, escher::SemaphorePtr(),
+                  frame_record->render_finished_escher_semaphore);
   }
 
   // When the image is completely rendered, present it.

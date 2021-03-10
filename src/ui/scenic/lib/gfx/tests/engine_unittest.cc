@@ -66,17 +66,15 @@ class FakeSwapchain : public scenic_impl::gfx::Swapchain {
       : escher_(escher), target_(target), acquire_fences_(acquire_fences) {}
 
   bool DrawAndPresentFrame(const std::shared_ptr<scenic_impl::gfx::FrameTimings>& frame,
-                           size_t swapchain_index,
-                           const scenic_impl::gfx::HardwareLayerAssignment& hla,
+                           size_t swapchain_index, scenic_impl::gfx::Layer& layer,
                            DrawCallback draw_callback) override {
-    EXPECT_EQ(hla.items.size(), 1u);
     EXPECT_FALSE(acquire_fences_->empty());
 
     zx::event release_fence;
     zx::event::create(0, &release_fence);
 
     draw_callback(
-        target_, hla.items[0],
+        target_, layer,
         escher::GetSemaphoreForEvent(escher_->device(), std::move(acquire_fences_->front())),
         escher::GetSemaphoreForEvent(escher_->device(),
                                      scenic_impl::gfx::test::CopyEvent(release_fence)));

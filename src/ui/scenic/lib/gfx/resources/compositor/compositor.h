@@ -57,13 +57,12 @@ class Compositor : public Resource {
   void CollectScenes(std::set<Scene*>* scenes_out);
 
   std::pair<uint32_t, uint32_t> GetBottomLayerSize() const;
-  int GetNumDrawableLayers() const;
 
   // | Resource |
   void Accept(class ResourceVisitor* visitor) override;
 
-  // Returns the list of drawable layers from the layer stack.
-  std::vector<Layer*> GetDrawableLayers() const;
+  // Return the sole layer in the layer stack, or nullptr if no layer exists.
+  Layer* GetDrawableLayer() const;
 
   Swapchain* swapchain() const { return swapchain_.get(); }
 

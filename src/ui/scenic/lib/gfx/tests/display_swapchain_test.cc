@@ -122,11 +122,11 @@ class DisplaySwapchainTest : public Fixture {
   }
 
   void DrawAndPresentFrame(DisplaySwapchain* swapchain, const std::shared_ptr<FrameTimings>& timing,
-                           size_t swapchain_index, const HardwareLayerAssignment& hla) {
+                           size_t swapchain_index, Layer& layer) {
     swapchain->DrawAndPresentFrame(
-        timing, swapchain_index, hla,
-        [this, timing](const escher::ImagePtr& out, const HardwareLayerAssignment::Item& hla,
-                       const escher::SemaphorePtr& wait, const escher::SemaphorePtr& signal) {
+        timing, swapchain_index, layer,
+        [this, timing](const escher::ImagePtr& out, Layer& layer, const escher::SemaphorePtr& wait,
+                       const escher::SemaphorePtr& signal) {
           auto device = escher()->device();
           zx_signals_t tmp;
           if (wait) {
@@ -176,7 +176,6 @@ VK_TEST_F(DisplaySwapchainTest, RenderStress) {
   auto swapchain = CreateSwapchain(display());
 
   auto layer = fxl::MakeRefCounted<Layer>(session(), session()->id(), 0);
-  HardwareLayerAssignment hla({{{0, {layer.get()}}}, swapchain.get()});
 
   constexpr size_t kNumFrames = 100;
   std::array<std::shared_ptr<FrameTimings>, kNumFrames> timings;
@@ -184,7 +183,7 @@ VK_TEST_F(DisplaySwapchainTest, RenderStress) {
     zx::time now(async_now(dispatcher()));
     timings[i] = MakeTimings(i);
     timings[i]->RegisterSwapchains(1);
-    DrawAndPresentFrame(swapchain.get(), timings[i], 0, hla);
+    DrawAndPresentFrame(swapchain.get(), timings[i], 0, *layer.get());
     EXPECT_TRUE(RunLoopWithTimeoutOrUntil([t = timings[i]]() { return t->finalized(); },
                                           /*timeout=*/zx::msec(50)));
   }
@@ -203,7 +202,6 @@ VK_TEST_F(DisplaySwapchainTest, RenderProtectedStress) {
   swapchain->SetUseProtectedMemory(true);
 
   auto layer = fxl::MakeRefCounted<Layer>(session(), session()->id(), 0);
-  HardwareLayerAssignment hla({{{0, {layer.get()}}}, swapchain.get()});
 
   constexpr size_t kNumFrames = 100;
   std::array<std::shared_ptr<FrameTimings>, kNumFrames> timings;
@@ -211,7 +209,7 @@ VK_TEST_F(DisplaySwapchainTest, RenderProtectedStress) {
     zx::time now(async_now(dispatcher()));
     timings[i] = MakeTimings(i);
     timings[i]->RegisterSwapchains(1);
-    DrawAndPresentFrame(swapchain.get(), timings[i], 0, hla);
+    DrawAndPresentFrame(swapchain.get(), timings[i], 0, *layer.get());
     EXPECT_TRUE(RunLoopWithTimeoutOrUntil([t = timings[i]]() { return t->finalized(); },
                                           /*timeout=*/zx::msec(50)));
   }

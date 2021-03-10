@@ -30,21 +30,16 @@ class EngineRenderer {
     escher::SemaphorePtr output_image_acquire_semaphore = escher::SemaphorePtr();
   };
 
-  // Use GPU to render all layers into separate images, and compose them all
-  // into |output_image|.
-  void RenderLayers(const escher::FramePtr& frame, zx::time target_presentation_time,
-                    const RenderTarget& render_target, const std::vector<Layer*>& layers);
+  // Render the contents of |layer| into |output_image|.
+  void RenderLayer(const escher::FramePtr& frame, zx::time target_presentation_time,
+                   const RenderTarget& render_target, const Layer& layer);
 
   void WarmPipelineCache(std::set<vk::Format> framebuffer_formats) const;
 
  private:
-  void DrawLayer(const escher::FramePtr& frame, zx::time target_presentation_time, Layer* layer,
-                 const RenderTarget& render_target, const escher::Model& overlay_model);
-
   void DrawLayerWithPaperRenderer(const escher::FramePtr& frame, zx::time target_presentation_time,
-                                  Layer* layer, escher::PaperRendererShadowType shadow_type,
-                                  const RenderTarget& render_target,
-                                  const escher::Model& overlay_model);
+                                  const Layer& layer, escher::PaperRendererShadowType shadow_type,
+                                  const RenderTarget& render_target);
 
   escher::ImagePtr GetLayerFramebufferImage(uint32_t width, uint32_t height,
                                             bool use_protected_memory);

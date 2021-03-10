@@ -72,8 +72,6 @@ source_set("gfx") {
     "engine/engine_renderer_visitor.h",
     "engine/gfx_command_applier.cc",
     "engine/gfx_command_applier.h",
-    "engine/hardware_layer_assignment.cc",
-    "engine/hardware_layer_assignment.h",
     "engine/hit.h",
     "engine/hit_accumulator.cc",
     "engine/hit_accumulator.h",

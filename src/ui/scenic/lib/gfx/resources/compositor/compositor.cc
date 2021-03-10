@@ -54,28 +54,18 @@ bool Compositor::SetLayerStack(LayerStackPtr layer_stack) {
 }
 
 std::pair<uint32_t, uint32_t> Compositor::GetBottomLayerSize() const {
-  std::vector<Layer*> drawable_layers = GetDrawableLayers();
-  FX_CHECK(!drawable_layers.empty()) << "No drawable layers";
-  return {drawable_layers[0]->width(), drawable_layers[0]->height()};
+  const Layer* layer = GetDrawableLayer();
+  FX_CHECK(layer) << "No drawable layers";
+  return {layer->width(), layer->height()};
 }
 
-int Compositor::GetNumDrawableLayers() const { return GetDrawableLayers().size(); }
-
-std::vector<Layer*> Compositor::GetDrawableLayers() const {
-  if (!layer_stack_) {
-    return std::vector<Layer*>();
+Layer* Compositor::GetDrawableLayer() const {
+  if (!layer_stack_ || layer_stack_->layers().empty()) {
+    return nullptr;
   }
-  std::vector<Layer*> drawable_layers;
-  for (auto& layer : layer_stack_->layers()) {
-    if (layer->IsDrawable()) {
-      drawable_layers.push_back(layer.get());
-    }
-  }
-  // Sort the layers from bottom to top.
-  std::sort(drawable_layers.begin(), drawable_layers.end(),
-            [](auto a, auto b) { return a->translation().z < b->translation().z; });
-
-  return drawable_layers;
+  FX_DCHECK(layer_stack_->layers().size() == 1);
+  Layer* layer = layer_stack_->layers().begin()->get();
+  return layer->IsDrawable() ? layer : nullptr;
 }
 
 // Rotation values can only be multiples of 90 degrees. Logs an

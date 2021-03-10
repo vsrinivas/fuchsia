@@ -52,9 +52,6 @@ class SessionUpdater {
       PresentTimestamps present_times) = 0;
 };
 
-// Result of a call to FrameRenderer::RenderFrame(). See below.
-enum RenderFrameResult { kRenderSuccess, kRenderFailed, kNoContentToRender };
-
 // Interface for rendering frames.
 class FrameRenderer {
  public:

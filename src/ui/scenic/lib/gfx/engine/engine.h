@@ -164,10 +164,10 @@ class Engine : public scheduling::FrameRenderer {
   void InitializeShaderFs();
 
   // Returns true if layers contain content to be rendered.
-  bool CheckForRenderableContent(const std::vector<HardwareLayerAssignment>& hlas);
+  bool CheckForRenderableContent(Layer& layer);
 
   // Returns true if layers contain protected content.
-  bool CheckForProtectedMemoryUse(const std::vector<HardwareLayerAssignment>& hlas);
+  bool CheckForProtectedMemoryUse(Layer& layer);
 
   // Update and deliver metrics for all nodes which subscribe to metrics
   // events.

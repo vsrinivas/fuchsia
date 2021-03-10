@@ -57,71 +57,7 @@ EngineRenderer::EngineRenderer(escher::EscherWeakPtr weak_escher, vk::Format dep
 
 EngineRenderer::~EngineRenderer() = default;
 
-void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx::time target_presentation_time,
-                                  const RenderTarget& render_target,
-                                  const std::vector<Layer*>& layers) {
-  // NOTE: this name is important for benchmarking.  Do not remove or modify it
-  // without also updating the "process_gfx_trace.go" script.
-  TRACE_DURATION("gfx", "EngineRenderer::RenderLayers");
-
-  // Check that we are working with a protected framebuffer.
-  FX_DCHECK(render_target.output_image->use_protected_memory() == frame->use_protected_memory());
-
-  // Render each layer, except the bottom one. Create an escher::Object for
-  // each layer, which will be composited as part of rendering the final
-  // layer.
-  // TODO(fxbug.dev/24455): the efficiency of this GPU compositing could be
-  // improved on tile-based GPUs by generating each layer in a subpass and
-  // compositing it into |output_image| in another subpass.
-  std::vector<escher::Object> overlay_objects;
-
-  if (layers.size() > 1) {
-    overlay_objects.reserve(layers.size() - 1);
-    for (size_t i = 1; i < layers.size(); ++i) {
-      auto layer = layers[i];
-      auto texture = escher::Texture::New(
-          escher_->resource_recycler(),
-          GetLayerFramebufferImage(layer->width(), layer->height(), frame->use_protected_memory()),
-          // TODO(fxbug.dev/24469): shouldn't need linear filter, since this is
-          // 1-1 pixel mapping.  Verify when re-enabling multi-layer support.
-          vk::Filter::eLinear);
-
-      DrawLayer(frame, target_presentation_time, layer, {.output_image = texture->image()}, {});
-
-      // TODO(fxbug.dev/24301): it would be preferable to insert barriers instead of
-      // using semaphores.
-      if (i == layers.size() - 1) {
-        // After rendering the "final" (non-bottom) layer, we wait for them all to complete before
-        // doing any more work.
-        auto overlay_semaphore = escher::Semaphore::New(escher_->vk_device());
-        frame->SubmitPartialFrame(overlay_semaphore);
-        frame->cmds()->AddWaitSemaphore(overlay_semaphore,
-                                        vk::PipelineStageFlagBits::eFragmentShader);
-      } else {
-        frame->SubmitPartialFrame(escher::SemaphorePtr());
-      }
-
-      auto material = escher::Material::New(layer->color(), std::move(texture));
-      material->set_type(layer->opaque() ? escher::Material::Type::kOpaque
-                                         : escher::Material::Type::kTranslucent);
-
-      overlay_objects.push_back(
-          escher::Object::NewRect(escher::Transform(layer->translation()), std::move(material)));
-    }
-  }
-
-  // TODO(fxbug.dev/24469): add support for multiple layers.
-  if (layers.size() > 1) {
-    FX_LOGS(ERROR) << "EngineRenderer::RenderLayers(): only a single Layer is supported.";
-    overlay_objects.clear();
-  }
-
-  // Draw the bottom layer with all of the overlay layers above it.
-  DrawLayer(frame, target_presentation_time, layers[0], render_target,
-            escher::Model(std::move(overlay_objects)));
-}
-
-// Helper function for DrawLayer
+// Helper function for RenderLayer().
 static escher::PaperRendererShadowType GetPaperRendererShadowType(
     fuchsia::ui::gfx::ShadowTechnique technique) {
   using escher::PaperRendererShadowType;
@@ -141,19 +77,25 @@ static escher::PaperRendererShadowType GetPaperRendererShadowType(
   }
 }
 
-void EngineRenderer::DrawLayer(const escher::FramePtr& frame, zx::time target_presentation_time,
-                               Layer* layer, const RenderTarget& render_target,
-                               const escher::Model& overlay_model) {
-  FX_DCHECK(layer->IsDrawable());
+void EngineRenderer::RenderLayer(const escher::FramePtr& frame, zx::time target_presentation_time,
+                                 const RenderTarget& render_target, const Layer& layer) {
+  // NOTE: this name is important for benchmarking.  Do not remove or modify it
+  // without also updating the "process_gfx_trace.go" script.
+  TRACE_DURATION("gfx", "EngineRenderer::RenderLayers");
+
+  // Check that we are working with a protected framebuffer.
+  FX_DCHECK(render_target.output_image->use_protected_memory() == frame->use_protected_memory());
+
+  FX_DCHECK(layer.IsDrawable());
   float stage_width = static_cast<float>(render_target.output_image->width());
   float stage_height = static_cast<float>(render_target.output_image->height());
 
-  if (layer->size().x != stage_width || layer->size().y != stage_height) {
+  if (layer.size().x != stage_width || layer.size().y != stage_height) {
     // TODO(fxbug.dev/23494): Should be able to render into a viewport of the
     // output image, but we're not that fancy yet.
     FX_LOGS(ERROR)
         << "TODO(fxbug.dev/23494): scenic::gfx::EngineRenderer::DrawLayer(): layer size of "
-        << layer->size().x << "x" << layer->size().y << " does not match output image size of "
+        << layer.size().x << "x" << layer.size().y << " does not match output image size of "
         << stage_width << "x" << stage_height << "... not drawing.";
     return;
   }
@@ -161,19 +103,18 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame, zx::time target_pr
   // TODO(fxbug.dev/24472): add pixel tests for various shadow modes (particularly
   // those implemented by PaperRenderer).
   escher::PaperRendererShadowType shadow_type =
-      GetPaperRendererShadowType(layer->renderer()->shadow_technique());
+      GetPaperRendererShadowType(layer.renderer()->shadow_technique());
   switch (shadow_type) {
     case escher::PaperRendererShadowType::kNone:
     case escher::PaperRendererShadowType::kShadowVolume:
       break;
     default:
       FX_LOGS(WARNING) << "EngineRenderer does not support "
-                       << layer->renderer()->shadow_technique() << "; using UNSHADOWED.";
+                       << layer.renderer()->shadow_technique() << "; using UNSHADOWED.";
       shadow_type = escher::PaperRendererShadowType::kNone;
   }
 
-  DrawLayerWithPaperRenderer(frame, target_presentation_time, layer, shadow_type, render_target,
-                             overlay_model);
+  DrawLayerWithPaperRenderer(frame, target_presentation_time, layer, shadow_type, render_target);
 }
 
 std::vector<escher::Camera> EngineRenderer::GenerateEscherCamerasForPaperRenderer(
@@ -208,16 +149,15 @@ std::vector<escher::Camera> EngineRenderer::GenerateEscherCamerasForPaperRendere
 }
 
 void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
-                                                zx::time target_presentation_time, Layer* layer,
+                                                zx::time target_presentation_time, const Layer& layer,
                                                 const escher::PaperRendererShadowType shadow_type,
-                                                const RenderTarget& render_target,
-                                                const escher::Model& overlay_model) {
+                                                const RenderTarget& render_target) {
   TRACE_DURATION("gfx", "EngineRenderer::DrawLayerWithPaperRenderer");
 
   frame->cmds()->AddWaitSemaphore(render_target.output_image_acquire_semaphore,
                                   vk::PipelineStageFlagBits::eColorAttachmentOutput);
 
-  auto& renderer = layer->renderer();
+  auto& renderer = layer.renderer();
   auto camera = renderer->camera();
   auto& scene = camera->scene();
 
@@ -232,7 +172,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
 
   // Set up PaperScene from Scenic Scene resource.
   auto paper_scene = fxl::MakeRefCounted<escher::PaperScene>();
-  paper_scene->bounding_box = layer->GetViewingVolume().bounding_box();
+  paper_scene->bounding_box = layer.GetViewingVolume().bounding_box();
 
   // Set up ambient light.
   if (scene->ambient_lights().empty()) {
@@ -260,7 +200,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
 
   paper_renderer_->BeginFrame(
       frame, gpu_uploader, paper_scene,
-      GenerateEscherCamerasForPaperRenderer(frame, camera, layer->GetViewingVolume(),
+      GenerateEscherCamerasForPaperRenderer(frame, camera, layer.GetViewingVolume(),
                                             target_presentation_time),
       render_target.output_image);
 
@@ -275,9 +215,6 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
       paper_renderer_.get(), gpu_uploader.get(), layout_updater.get(), hide_protected_memory,
       hide_protected_memory ? GetReplacementMaterial(gpu_uploader.get()) : nullptr);
   visitor.Visit(camera->scene().get());
-
-  // TODO(fxbug.dev/24469): support for multiple layers.
-  FX_DCHECK(overlay_model.objects().empty());
 
   paper_renderer_->FinalizeFrame();
 

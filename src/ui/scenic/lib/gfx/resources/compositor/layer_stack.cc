@@ -24,6 +24,10 @@ bool LayerStack::AddLayer(LayerPtr layer, ErrorReporter* reporter) {
     reporter->ERROR() << "LayerStack::AddLayer(): layer already belongs to a LayerStack.";
     return false;
   }
+  if (layers_.size() > 0) {
+    reporter->ERROR() << "LayerStack::AddLayer(): LayerStack can only contain a single layer.";
+    return false;
+  }
   layer->layer_stack_ = this;
   layers_.insert(std::move(layer));
   return true;

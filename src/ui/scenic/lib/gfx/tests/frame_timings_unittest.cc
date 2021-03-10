@@ -199,10 +199,8 @@ TEST(FrameTimings, DroppedAndUnitializedTimesAreUnique) {
 }
 
 TEST(FrameTimings, InitTimestamps) {
-  const zx::time target_present_time(16);
-  const zx::time render_start_time(12);
-  const uint64_t frame_number = 5;
-  auto timings = std::make_unique<FrameTimings>(frame_number, [](const FrameTimings& timings) {});
+  const uint64_t kFrameNumber = 5;
+  auto timings = std::make_unique<FrameTimings>(kFrameNumber, [](const FrameTimings& timings) {});
 
   FrameRenderer::Timestamps init_timestamps = timings->GetTimestamps();
   // The frame is not finalized, and none of the outputs have been recorded.
@@ -211,7 +209,40 @@ TEST(FrameTimings, InitTimestamps) {
   EXPECT_EQ(init_timestamps.actual_presentation_time, FrameTimings::kTimeUninitialized);
 
   EXPECT_FALSE(timings->FrameWasDropped());
-  EXPECT_EQ(frame_number, timings->frame_number());
+  EXPECT_EQ(kFrameNumber, timings->frame_number());
+}
+
+TEST(FrameTimings, WaitForAllSwapchains) {
+  const uint64_t kFrameNumber = 5;
+
+  bool timings_done;
+  std::unique_ptr<FrameTimings> timings;
+
+  timings_done = false;
+  timings = std::make_unique<FrameTimings>(
+      kFrameNumber, [&timings_done](const FrameTimings& timings) { timings_done = true; });
+  timings->RegisterSwapchains(2);
+
+  EXPECT_FALSE(timings_done);
+  timings->OnFrameRendered(/*swapchain_index=*/0, zx::time(200));
+  timings->OnFramePresented(/*swapchain_index=*/0, zx::time(400));
+  EXPECT_FALSE(timings_done);
+  timings->OnFrameRendered(/*swapchain_index=*/1, zx::time(200));
+  timings->OnFramePresented(/*swapchain_index=*/1, zx::time(400));
+  EXPECT_TRUE(timings_done);
+
+  timings_done = false;
+  timings = std::make_unique<FrameTimings>(
+      kFrameNumber, [&timings_done](const FrameTimings& timings) { timings_done = true; });
+  timings->RegisterSwapchains(2);
+
+  EXPECT_FALSE(timings_done);
+  timings->OnFrameRendered(/*swapchain_index=*/0, zx::time(200));
+  timings->OnFrameDropped(/*swapchain_index=*/0);
+  EXPECT_FALSE(timings_done);
+  timings->OnFrameRendered(/*swapchain_index=*/1, zx::time(200));
+  timings->OnFrameDropped(/*swapchain_index=*/1);
+  EXPECT_TRUE(timings_done);
 }
 
 }  // namespace test

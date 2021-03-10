@@ -46,7 +46,7 @@ class DisplaySwapchain : public Swapchain {
 
   // |Swapchain|
   bool DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& frame_timings,
-                           size_t swapchain_index, const HardwareLayerAssignment& hla,
+                           size_t swapchain_index, Layer& layer,
                            DrawCallback draw_callback) override;
 
   // Passes along color correction information to the display

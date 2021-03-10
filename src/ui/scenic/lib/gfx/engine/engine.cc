@@ -18,7 +18,6 @@
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/vk/chained_semaphore_generator.h"
 #include "src/ui/lib/escher/vk/command_buffer.h"
-#include "src/ui/scenic/lib/gfx/engine/hardware_layer_assignment.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/dump_visitor.h"
@@ -115,28 +114,6 @@ void Engine::InitializeInspectObjects() {
   });
 }
 
-// Helper for RenderFrame().  Generate a mapping between a Compositor's Layer
-// resources and the hardware layers they should be displayed on.
-// TODO(fxbug.dev/24296): there should be a separate mechanism that is responsible
-// for inspecting the compositor's resource tree and optimizing the assignment
-// of rendered content to hardware display layers.
-std::optional<HardwareLayerAssignment> GetHardwareLayerAssignment(const Compositor& compositor) {
-  // TODO(fxbug.dev/24306): this is a placeholder; currently only a single hardware
-  // layer is supported, and we don't know its ID (it is hidden within the
-  // DisplayManager implementation), so we just say 0.
-  std::vector<Layer*> layers = compositor.GetDrawableLayers();
-  if (layers.empty() || !compositor.swapchain()) {
-    return {};
-  }
-  return {
-      {.items = {{
-           .hardware_layer_id = 0,
-           .layers = std::move(layers),
-       }},
-       .swapchain = compositor.swapchain()},
-  };
-}
-
 void Engine::RenderFrame(FramePresentedCallback callback, uint64_t frame_number,
                          zx::time presentation_time) {
   is_rendering_ = true;
@@ -161,89 +138,94 @@ void Engine::RenderFrame(FramePresentedCallback callback, uint64_t frame_number,
 
   UpdateAndDeliverMetrics(presentation_time);
 
-  // TODO(fxbug.dev/24297): the FrameTimings are passed to the Compositor's swapchain
-  // to notify when the frame is finished rendering, presented, dropped, etc.
-  // This doesn't make any sense if there are multiple compositors.
-  FX_DCHECK(scene_graph_.compositors().size() <= 1);
+  struct SwapchainLayer {
+    Swapchain* swapchain;
+    Layer* layer;
+  };
+  std::vector<SwapchainLayer> swapchain_layers_to_render;
 
-  std::vector<HardwareLayerAssignment> hlas;
   for (auto& compositor : scene_graph_.compositors()) {
-    if (auto hla = GetHardwareLayerAssignment(*compositor)) {
-      hlas.push_back(std::move(hla.value()));
+    Swapchain* swapchain = compositor->swapchain();
+    if (!swapchain)
+      continue;
 
-      // Verbose logging of the entire Compositor resource tree.
-      if (FX_VLOG_IS_ON(3)) {
-        std::ostringstream output;
-        DumpVisitor visitor(DumpVisitor::VisitorContext(output, nullptr));
-        compositor->Accept(&visitor);
-        FX_VLOGS(3) << "Compositor dump\n" << output.str();
+    Layer* layer = compositor->GetDrawableLayer();
+    if (!layer)
+      continue;
+
+    // Don't render any initial frames if there is no shapenode with a material
+    // in the scene, i.e. anything that could actually be rendered. We do this
+    // to avoid triggering any changes in the display swapchain until we have
+    // content ready to render.
+    if (first_frame_) {
+      if (CheckForRenderableContent(*layer)) {
+        first_frame_ = false;
+      } else {
+        continue;
       }
-    } else {
-      // Nothing to be drawn; either the Compositor has no layers to draw or
-      // it has no valid Swapchain.  The latter will be true if Escher/Vulkan
-      // is unavailable for whatever reason.
+    }
+
+    swapchain_layers_to_render.push_back({swapchain, layer});
+
+    // Verbose logging of the entire Compositor resource tree.
+    if (FX_VLOG_IS_ON(3)) {
+      std::ostringstream output;
+      DumpVisitor visitor(DumpVisitor::VisitorContext(output, nullptr));
+      compositor->Accept(&visitor);
+      FX_VLOGS(3) << "Compositor dump\n" << output.str();
     }
   }
-  if (hlas.empty()) {
+  if (swapchain_layers_to_render.empty()) {
     // No compositor has any renderable content.
     timings->OnFrameSkipped();
     return;
   }
 
-  // Don't render any initial frames if there is no shapenode with a material
-  // in the scene, i.e. anything that could actually be renderered. We do this
-  // to avoid triggering any changes in the display swapchain until we have
-  // content ready to render.
-  if (first_frame_) {
-    if (CheckForRenderableContent(hlas)) {
-      first_frame_ = false;
-    } else {
-      // No layer has any renderable content.
-      timings->OnFrameSkipped();
-      return;
+  // TODO(fxbug.dev/24297): the FrameTimings are passed to the Compositor's swapchain
+  // to notify when the frame is finished rendering, presented, dropped, etc.  Although FrameTimings
+  // supports specifying the number of swapchains via |RegisterSwapchains(count)|, we haven't fully
+  // investigated whether the behavior is suitable in the case of multiple swapchains (e.g. the
+  // current policy is to report the |frame_rendered_time| as the latest of all calls to
+  // OnFrameRendered(), and similar for the |frame_presented_time|).  Put a CHECK here to make sure
+  // that we revisit this, if/when necessary.
+  FX_CHECK(swapchain_layers_to_render.size() == 1);
+  timings->RegisterSwapchains(swapchain_layers_to_render.size());
+  for (size_t i = 0; i < swapchain_layers_to_render.size(); ++i) {
+    auto& swapchain = *swapchain_layers_to_render[i].swapchain;
+    auto& layer = *swapchain_layers_to_render[i].layer;
+
+    const bool uses_protected_memory = CheckForProtectedMemoryUse(layer);
+    if (last_frame_uses_protected_memory_ != uses_protected_memory) {
+      swapchain.SetUseProtectedMemory(uses_protected_memory);
+      last_frame_uses_protected_memory_ = uses_protected_memory;
     }
-  }
 
-  const bool uses_protected_memory = CheckForProtectedMemoryUse(hlas);
-  if (last_frame_uses_protected_memory_ != uses_protected_memory) {
-    for (auto& hla : hlas) {
-      if (!hla.swapchain)
-        continue;
-      hla.swapchain->SetUseProtectedMemory(uses_protected_memory);
+    // TODO(fxbug.dev/24297): do we really want to do this once per swapchain?  Or should this be
+    // moved outside of the loop?
+    if (uses_protected_memory) {
+      // NOTE: This name is important for benchmarking.  Do not remove or modify
+      // it without also updating tests and benchmarks that depend on it.
+      TRACE_INSTANT("gfx", "RenderProtectedFrame", TRACE_SCOPE_THREAD);
     }
-    last_frame_uses_protected_memory_ = uses_protected_memory;
-  }
 
-  if (uses_protected_memory) {
-    // NOTE: This name is important for benchmarking.  Do not remove or modify
-    // it without also updating tests and benchmarks that depend on it.
-    TRACE_INSTANT("gfx", "RenderProtectedFrame", TRACE_SCOPE_THREAD);
-  }
+    escher::FramePtr frame = escher()->NewFrame("Scenic Compositor", frame_number, false,
+                                                escher::CommandBuffer::Type::kGraphics,
+                                                uses_protected_memory ? true : false);
+    frame->DisableLazyPipelineCreation();
 
-  escher::FramePtr frame = escher()->NewFrame("Scenic Compositor", frame_number, false,
-                                              escher::CommandBuffer::Type::kGraphics,
-                                              uses_protected_memory ? true : false);
-
-  frame->DisableLazyPipelineCreation();
-
-  bool success = true;
-  timings->RegisterSwapchains(hlas.size());
-  for (size_t i = 0; i < hlas.size(); ++i) {
-    const bool is_last_hla = (i == hlas.size() - 1);
-    HardwareLayerAssignment& hla = hlas[i];
-
-    success &= hla.swapchain->DrawAndPresentFrame(
-        timings, i, hla,
-        [is_last_hla, &frame, escher{escher_}, engine_renderer{engine_renderer_.get()},
-         semaphore_chain{escher_->semaphore_chain()}, presentation_time](
-            const escher::ImagePtr& output_image, const HardwareLayerAssignment::Item hla_item,
-            const escher::SemaphorePtr& acquire_semaphore,
-            const escher::SemaphorePtr& frame_done_semaphore) {
+    const bool is_last_layer = (i == swapchain_layers_to_render.size() - 1);
+    swapchain.DrawAndPresentFrame(
+        timings, i, layer,
+        [is_last_layer, &frame, escher{escher_}, engine_renderer{engine_renderer_.get()},
+         semaphore_chain{escher_->semaphore_chain()},
+         presentation_time](const escher::ImagePtr& output_image, Layer& layer,
+                            const escher::SemaphorePtr& acquire_semaphore,
+                            const escher::SemaphorePtr& frame_done_semaphore) {
           FX_DCHECK(engine_renderer);
-          engine_renderer->RenderLayers(
+          engine_renderer->RenderLayer(
               frame, presentation_time,
               {.output_image = output_image, .output_image_acquire_semaphore = acquire_semaphore},
-              hla_item.layers);
+              layer);
 
           // Create a flow event that ends in the magma system driver.
           zx::event semaphore_event = GetEventForSemaphore(escher->device(), frame_done_semaphore);
@@ -253,7 +235,7 @@ void Engine::RenderFrame(FramePresentedCallback callback, uint64_t frame_number,
           ZX_DEBUG_ASSERT(status == ZX_OK);
           TRACE_FLOW_BEGIN("gfx", "semaphore", info.koid);
 
-          if (!is_last_hla) {
+          if (!is_last_layer) {
             frame->SubmitPartialFrame(frame_done_semaphore);
           } else {
             auto semaphore_pair = semaphore_chain->TakeLastAndCreateNextSemaphore();
@@ -311,35 +293,23 @@ void Engine::SignalFencesWhenPreviousRendersAreDone(std::vector<zx::event> fence
   }
 }
 
-bool Engine::CheckForRenderableContent(const std::vector<HardwareLayerAssignment>& hlas) {
+bool Engine::CheckForRenderableContent(Layer& layer) {
   TRACE_DURATION("gfx", "CheckForRenderableContent");
 
   HasRenderableContentVisitor visitor;
-  for (auto& hla : hlas) {
-    for (auto& layer_item : hla.items) {
-      for (auto& layer : layer_item.layers) {
-        layer->Accept(&visitor);
-      }
-    }
-  }
+  layer.Accept(&visitor);
 
   return visitor.HasRenderableContent();
 }
 
-bool Engine::CheckForProtectedMemoryUse(const std::vector<HardwareLayerAssignment>& hlas) {
+bool Engine::CheckForProtectedMemoryUse(Layer& layer) {
   TRACE_DURATION("gfx", "CheckForProtectedMemoryUse");
 
   if (!escher()->allow_protected_memory())
     return false;
 
   ProtectedMemoryVisitor visitor;
-  for (auto& hla : hlas) {
-    for (auto& layer_item : hla.items) {
-      for (auto& layer : layer_item.layers) {
-        layer->Accept(&visitor);
-      }
-    }
-  }
+  layer.Accept(&visitor);
 
   return visitor.HasProtectedMemoryUse();
 }

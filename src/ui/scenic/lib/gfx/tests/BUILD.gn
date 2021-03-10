@@ -153,7 +153,6 @@ executable("unittests") {
     "focus_transfer_unittest.cc",
     "frame_timings_unittest.cc",
     "gfx_command_applier_unittest.cc",
-    "hardware_layer_assignment_unittest.cc",
     "has_renderable_content_visitor_unittest.cc",
     "hittest_accumulator_unittest.cc",
     "hittest_global_unittest.cc",

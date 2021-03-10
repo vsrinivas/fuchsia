@@ -151,7 +151,8 @@ void Screenshotter::TakeScreenshot(
   auto* escher = engine->escher();
   const CompositorWeakPtr& compositor = engine->scene_graph()->first_compositor();
 
-  if (!compositor || compositor->GetNumDrawableLayers() == 0) {
+  const Layer* drawable_layer = compositor ? compositor->GetDrawableLayer() : nullptr;
+  if (!drawable_layer) {
     FX_LOGS(WARNING) << "TakeScreenshot: No drawable layers; returning empty screenshot.";
     done_callback(EmptyScreenshot(), false);
     return;
@@ -180,9 +181,8 @@ void Screenshotter::TakeScreenshot(
       vk::PipelineStageFlagBits::eColorAttachmentOutput,
       vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eColorAttachmentRead);
 
-  std::vector<Layer*> drawable_layers = compositor->GetDrawableLayers();
-  engine->renderer()->RenderLayers(frame, zx::time(dispatcher_clock_now()), {.output_image = image},
-                                   drawable_layers);
+  engine->renderer()->RenderLayer(frame, zx::time(dispatcher_clock_now()), {.output_image = image},
+                                  *drawable_layer);
 
   // Generate Vulkan Semaphore pairs so that gfx tasks such as screenshotting,
   // rendering, etc. are properly synchronized.
@@ -224,7 +224,7 @@ void Screenshotter::TakeScreenshot(
 
   command_buffer->Submit(
       queue, [buffer, width, height, rotation, done_callback = std::move(done_callback)]() mutable {
-        OnCommandBufferDone(buffer, width, height, rotation, std::move(done_callback));
+    OnCommandBufferDone(buffer, width, height, rotation, std::move(done_callback));
       });
 
   // Force the command buffer to retire to guarantee that |done_callback| will
