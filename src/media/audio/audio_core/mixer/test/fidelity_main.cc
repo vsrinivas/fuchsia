@@ -22,23 +22,23 @@ int main(int argc, char** argv) {
 
   syslog::SetTags({"audio_fidelity_tests"});
 
-  // --full  Measure across the full frequency spectrum; display full results in tabular format.
+  // --subset  Measure only a small subset of frequencies.
   // --recap Display summary fidelity results.
   // --dump  Display full-spectrum results in importable format.
   //         (This flag is used when updating AudioResult kPrev arrays.)
   //
-  bool show_full_frequency_results = command_line.HasOption("full");
+  bool test_full_frequency_set = !command_line.HasOption("subset");
   bool show_summary_results = command_line.HasOption("recap");
   bool dump_threshold_values = command_line.HasOption("dump");
 
   media::audio::test::FrequencySet::UseFullFrequencySet =
-      (show_full_frequency_results || dump_threshold_values);
+      (test_full_frequency_set || dump_threshold_values);
 
   testing::InitGoogleTest(&argc, argv);
 
   int result = RUN_ALL_TESTS();
 
-  if (show_full_frequency_results || show_summary_results) {
+  if (show_summary_results) {
     media::audio::test::MixerTestsRecap::PrintFidelityResultsSummary();
   }
   if (dump_threshold_values) {

@@ -5,7 +5,11 @@ import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":audio_fidelity_tests" ]
+
+  # Only run on release builds to properly test fidelity and avoid flakes.
+  if (!is_debug) {
+    deps = [ ":audio_fidelity_tests" ]
+  }
 }
 
 source_set("frequency_set") {
@@ -50,4 +54,8 @@ executable("fidelity_test_bin") {
 
 fuchsia_unittest_package("audio_fidelity_tests") {
   deps = [ ":fidelity_test_bin" ]
+
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }
