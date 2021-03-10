@@ -354,5 +354,8 @@ template("sdk") {
     ]
 
     deps = [ ":$archive_manifest_target_name" ]
+
+    # TODO(fxbug.dev/70721): Make deps hermetic.
+    hermetic_deps = false
   }
 }
