@@ -23,35 +23,6 @@ namespace {
 // previous-stage bootloader.
 constexpr size_t kMaxMemoryRanges = 128;
 
-// Remove architecture-specific regions of memory.
-void ArchRemoveReservedRanges(memalloc::Allocator& allocator) {
-#if defined(__x86_64__)
-  // On x86_64, remove space likely to be holding our page tables. We assume
-  // here that the page tables are contiguously allocated, starting at CR3,
-  // and all fitting within 1MiB.
-  //
-  // TODO(fxb/67632): This is a temporary hack to make this work on x86.
-  // Longer term, we plan to allocate new page tables and switch into those
-  // instead of attempting to find the existing ones.
-  //
-  // TODO(fxb/67631): Move architecture-specific code into arch/ directories.
-  {
-    // Get top-level page directory location, stored in the CR3 register.
-    uint64_t pt_base = arch::X86Cr3::Read().base();
-
-    // Remove the range.
-    constexpr uint64_t kMiB = 1024 * 1024;
-    zx::status<> result = allocator.RemoveRange(pt_base, 1 * kMiB);
-    ZX_ASSERT(result.is_ok());
-  }
-
-  // On x86-64, remove space unlikely to be mapped into our address space (anything past 1 GiB).
-  constexpr uint64_t kGiB = 1024 * 1024 * 1024;
-  zx::status<> result = allocator.RemoveRange(1 * kGiB, UINT64_MAX - 1 * kGiB + 1);
-  ZX_ASSERT(result.is_ok());
-#endif
-}
-
 }  // namespace
 
 // Global memory allocation book-keeping.
@@ -94,7 +65,4 @@ void Allocation::InitReservedRanges() {
 
   // Remove the bottom page, to avoid confusion with nullptr.
   ZX_ASSERT(allocator.RemoveRange(0, ZX_PAGE_SIZE).is_ok());
-
-  // Remove any arch-specific reserved ranges.
-  ArchRemoveReservedRanges(allocator);
 }

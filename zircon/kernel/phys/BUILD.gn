@@ -156,6 +156,17 @@ if (toolchain.environment == "kernel.phys" ||
     }
   }
 
+  # Things in other directories include this header by source-absolute path.
+  # But they put this in their deps to get its transitive deps.
+  source_set("arch-header") {
+    public = [ "arch.h" ]
+    public_deps = [
+      "//zircon/kernel/lib/libc",
+      "//zircon/kernel/phys/lib/memalloc",
+      "//zircon/system/ulib/zbitl",
+    ]
+  }
+
   # This is linked into the special-case phys_executable() tests that
   # are run directly as QEMU kernels.
   source_set("qemu-header") {
@@ -205,9 +216,12 @@ if (toolchain.environment == "kernel.phys" ||
     sources = [ "zbi-memory.cc" ]
     deps = [
       ":allocation",
+      ":arch-header",
       ":main",
+      "//zircon/kernel/arch/$zircon_cpu/phys:address-space",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/phys/lib/memalloc",
+      "//zircon/kernel/phys/lib/page-table",
       "//zircon/system/ulib/zbitl",
     ]
     public_deps = [

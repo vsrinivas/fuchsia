@@ -12,6 +12,17 @@ variant("strict-align") {
   cflags = [ "-mstrict-align" ]
 }
 
+source_set("address-space") {
+  sources = [ "address-space.cc" ]
+  include_dirs = [ "//." ]
+  deps = [
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/phys:arch-header",
+    "//zircon/kernel/phys/lib/memalloc",
+    "//zircon/system/ulib/zbitl",
+  ]
+}
+
 source_set("phys") {
   sources = [ "start.S" ]
   include_dirs = [ "//zircon/.." ]

@@ -15,6 +15,7 @@
 #include <ktl/string_view.h>
 
 #include "allocation.h"
+#include "arch.h"
 #include "main.h"
 
 namespace {
@@ -88,4 +89,7 @@ void InitMemory(void* zbi) {
 
   // Remove space occupied by the program itself.
   Allocation::InitReservedRanges();
+
+  // Set up our own address space.
+  ArchSetUpAddressSpace(Allocation::GetAllocator(), container);
 }

@@ -42,6 +42,19 @@ if (current_toolchain == default_toolchain) {
       deps = [ "//zircon/kernel/lib/arch" ]
     }
 
+    source_set("address-space") {
+      sources = [ "address-space.cc" ]
+      deps = [
+        "//zircon/kernel/lib/arch",
+        "//zircon/kernel/lib/ktl",
+        "//zircon/kernel/phys:arch-header",
+        "//zircon/kernel/phys/lib/memalloc",
+        "//zircon/kernel/phys/lib/page-table",
+        "//zircon/system/ulib/zbitl",
+      ]
+      include_dirs = [ "//." ]
+    }
+
     config("zbi_executable.config") {
       configs = [ ":load-1mb" ]
     }
