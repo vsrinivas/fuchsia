@@ -11,6 +11,7 @@
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/trace/event.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,6 +69,7 @@ void AmlGpu::SetClkFreqSource(int32_t clk_source) {
   hiu_buffer_->Write32(current_clk_cntl, 4 * gpu_block_->hhi_clock_cntl_offset);
 
   current_clk_source_ = clk_source;
+  UpdateClockProperties();
 }
 
 void AmlGpu::SetInitialClkFreqSource(int32_t clk_source) {
@@ -91,7 +93,20 @@ void AmlGpu::SetInitialClkFreqSource(int32_t clk_source) {
     hiu_buffer_->Write32(current_clk_cntl, 4 * gpu_block_->hhi_clock_cntl_offset);
     zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
     current_clk_source_ = clk_source;
+    UpdateClockProperties();
   }
+}
+
+void AmlGpu::UpdateClockProperties() {
+  current_clk_source_property_.Set(current_clk_source_);
+  uint32_t clk_mux_source = gpu_block_->gpu_clk_freq[current_clk_source_];
+  current_clk_mux_source_property_.Set(clk_mux_source);
+  ZX_DEBUG_ASSERT(clk_mux_source < kClockInputs);
+  uint32_t current_clk_freq_hz = gpu_block_->input_freq_map[clk_mux_source];
+  current_clk_freq_hz_property_.Set(current_clk_freq_hz);
+  TRACE_INSTANT("magma", "AmlGpu::UpdateClockProperties", TRACE_SCOPE_PROCESS, "current_clk_source",
+                current_clk_source_, "clk_mux_source", clk_mux_source, "current_clk_freq_hz",
+                current_clk_freq_hz);
 }
 
 zx_status_t AmlGpu::Gp0Init() {
@@ -233,6 +248,7 @@ zx_status_t AmlGpu::SetProtected(uint32_t protection_mode) {
               result.arg0);
     return ZX_ERR_INTERNAL;
   }
+  current_protected_mode_property_.Set(protection_mode);
   return ZX_OK;
 }
 
@@ -295,6 +311,12 @@ zx_status_t AmlGpu::ProcessMetadata(std::vector<uint8_t> raw_metadata) {
 }
 
 zx_status_t AmlGpu::Bind() {
+  root_ = inspector_.GetRoot().CreateChild("aml-gpu");
+  current_clk_source_property_ = root_.CreateUint("current_clk_source", current_clk_source_);
+  current_clk_mux_source_property_ = root_.CreateUint("current_clk_mux_source", 0);
+  current_clk_freq_hz_property_ = root_.CreateUint("current_clk_freq_hz", 0);
+  // GPU is in unknown mode on Bind.
+  current_protected_mode_property_ = root_.CreateInt("current_protected_mode", -1);
   size_t size;
   zx_status_t status = DdkGetMetadataSize(fuchsia_hardware_gpu_amlogic::wire::MALI_METADATA, &size);
   if (status == ZX_OK) {
@@ -403,7 +425,8 @@ zx_status_t AmlGpu::Bind() {
       {BIND_PLATFORM_DEV_DID, 0, bind::fuchsia::arm::platform::BIND_PLATFORM_DEV_DID_MAGMA_MALI},
   };
 
-  status = DdkAdd(ddk::DeviceAddArgs("aml-gpu").set_props(props));
+  status = DdkAdd(
+      ddk::DeviceAddArgs("aml-gpu").set_props(props).set_inspect_vmo(inspector_.DuplicateVmo()));
 
   if (status != ZX_OK) {
     return status;

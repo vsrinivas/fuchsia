@@ -54,6 +54,8 @@ source_set("sources") {
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

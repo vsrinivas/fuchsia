@@ -10,6 +10,7 @@
 #include <fuchsia/hardware/registers/llcpp/fidl.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
 
 #include <memory>
@@ -34,6 +35,7 @@ static inline uint32_t CalculateClockMux(bool enabled, uint32_t base, uint32_t d
 constexpr uint32_t kClockMuxMask = 0xfff;
 constexpr uint32_t kMaxGpuClkFreq = 6;
 constexpr uint32_t kFinalMuxBitShift = 31;
+constexpr uint32_t kClockInputs = 8;
 
 enum {
   MMIO_GPU,
@@ -50,7 +52,10 @@ typedef struct {
   uint32_t hhi_clock_cntl_offset;
   // THe index into gpu_clk_freq that will be used upon booting.
   uint32_t initial_clock_index;
+  // Map from the clock index to the mux source to use.
   uint32_t gpu_clk_freq[kMaxGpuClkFreq];
+  // Map from the mux source to the frequency in Hz.
+  uint32_t input_freq_map[kClockInputs];
 } aml_gpu_block_t;
 
 typedef struct aml_hiu_dev aml_hiu_dev_t;
@@ -93,6 +98,8 @@ class AmlGpu final : public DdkDeviceType,
   zx_status_t ProcessMetadata(std::vector<uint8_t> metadata);
   zx_status_t SetProtected(uint32_t protection_mode);
 
+  void UpdateClockProperties();
+
   ddk::PDev pdev_;
   mali_properties_t properties_{};
 
@@ -107,6 +114,15 @@ class AmlGpu final : public DdkDeviceType,
   std::unique_ptr<aml_hiu_dev_t> hiu_dev_;
   std::unique_ptr<aml_pll_dev_t> gp0_pll_dev_;
   int32_t current_clk_source_ = -1;
+  // /dev/diagnostics/class/gpu-thermal/000.inspect
+  inspect::Inspector inspector_;
+  // bootstrap/driver_manager:root/aml-gpu
+  inspect::Node root_;
+
+  inspect::UintProperty current_clk_source_property_;
+  inspect::UintProperty current_clk_mux_source_property_;
+  inspect::UintProperty current_clk_freq_hz_property_;
+  inspect::IntProperty current_protected_mode_property_;
 };
 }  // namespace aml_gpu
 
