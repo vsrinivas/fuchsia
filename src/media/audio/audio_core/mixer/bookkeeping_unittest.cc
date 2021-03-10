@@ -13,18 +13,16 @@ namespace {
 
 class StubMixer : public Mixer {
  public:
-  StubMixer() : Mixer(0, 0) {}
+  StubMixer() : Mixer(Fixed(0), Fixed(0)) {}
 
-  bool Mix(float*, uint32_t, uint32_t*, const void*, uint32_t, int32_t*, bool) final {
-    return false;
-  }
+  bool Mix(float*, uint32_t, uint32_t*, const void*, int64_t, Fixed*, bool) final { return false; }
 };
 
 TEST(BookkeepingTest, Defaults) {
   StubMixer mixer;
   auto& bookkeeping = mixer.bookkeeping();
 
-  EXPECT_EQ(bookkeeping.step_size, Mixer::FRAC_ONE);
+  EXPECT_EQ(bookkeeping.step_size, kOneFrame);
   EXPECT_EQ(bookkeeping.rate_modulo(), 0ull);
   EXPECT_EQ(bookkeeping.denominator(), 1ull);
   EXPECT_EQ(bookkeeping.source_pos_modulo, 0ull);

@@ -414,7 +414,7 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
   const uint32_t dest_frame_count =
       TimelineRate(cfg.dest_rate, 1'000'000'000)
           .Scale(kMixLength.to_nsecs(), TimelineRate::RoundingMode::Floor);
-  const uint32_t source_frame_count =
+  const int64_t source_frames =
       TimelineRate(cfg.source_rate, 1'000'000'000)
           .Scale(kMixLength.to_nsecs(), TimelineRate::RoundingMode::Ceiling);
 
@@ -423,16 +423,16 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
 
   // This is a 500Hz sine wave, but the actual data doesn't matter.
   const auto periods = TimelineRate(500, 1'000'000'000).Scale(kMixLength.to_nsecs());
-  auto source = GenerateCosineAudio(source_format, source_frame_count, periods, amplitude);
+  auto source = GenerateCosineAudio(source_format, source_frames, periods, amplitude);
 
   auto accum = std::make_unique<float[]>(dest_frame_count * cfg.num_output_chans);
-  uint32_t frac_source_frames = source_frame_count * Mixer::FRAC_ONE;
   uint32_t dest_offset, previous_dest_offset;
 
   auto& info = mixer->bookkeeping();
-  info.step_size = (cfg.source_rate * Mixer::FRAC_ONE) / cfg.dest_rate;
+  info.step_size = Fixed(cfg.source_rate) / cfg.dest_rate;
   info.SetRateModuloAndDenominator(
-      (cfg.source_rate * Mixer::FRAC_ONE) - (info.step_size * cfg.dest_rate), cfg.dest_rate);
+      Fixed(cfg.source_rate).raw_value() - (info.step_size.raw_value() * cfg.dest_rate),
+      cfg.dest_rate);
 
   float gain_db;
   bool source_mute = false;
@@ -457,6 +457,7 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
   }
 
   info.gain.SetDestGain(Gain::kUnityGainDb);
+  auto source_frames_fixed = Fixed(source_frames);
 
   Stats stats(results ? results->AddTestCase("fuchsia.audio.mixing",
                                              cfg.ToPerftestFormatForMixer().c_str(), "nanoseconds")
@@ -475,24 +476,24 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
       info.gain.SetSourceGainWithRamp(Gain::kMinGainDb + 1.0f, zx::sec(2));
     }
 
-    auto t0 = zx::clock::get_monotonic();
-
     dest_offset = 0;
-    int32_t frac_source_offset = 0;
+    auto source_offset = Fixed(0);
     info.source_pos_modulo = 0;
+
+    auto t0 = zx::clock::get_monotonic();
 
     while (dest_offset < dest_frame_count) {
       previous_dest_offset = dest_offset;
-      bool buffer_done =
+      bool buffer_consumed =
           mixer->Mix(accum.get(), dest_frame_count, &dest_offset, &source.samples()[0],
-                     frac_source_frames, &frac_source_offset, cfg.accumulate);
+                     source_frames, &source_offset, cfg.accumulate);
 
       // Mix() might process less than all of accum, so Advance() after each.
       info.gain.Advance(dest_offset - previous_dest_offset,
                         TimelineRate(cfg.source_rate, ZX_SEC(1)));
 
-      if (buffer_done) {
-        frac_source_offset -= frac_source_frames;
+      if (buffer_consumed) {
+        source_offset -= source_frames_fixed;
       }
     }
 

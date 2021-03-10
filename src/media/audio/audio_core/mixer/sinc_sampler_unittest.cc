@@ -33,8 +33,10 @@ std::unique_ptr<Mixer> SelectSincSampler(
 }
 
 // These are common frame rates, not the only supported rates
-const uint32_t kFrameRates[] = {8000,  11025, 16000, 22050, 24000,  32000,
-                                44100, 48000, 88200, 96000, 176400, 192000};
+const uint32_t kFrameRates[] = {
+    8000,  11025, 16000, 22050, 24000,  32000,
+    44100, 48000, 88200, 96000, 176400, fuchsia::media::MAX_PCM_FRAMES_PER_SECOND,
+};
 
 const uint32_t kUnsupportedFrameRates[] = {fuchsia::media::MIN_PCM_FRAMES_PER_SECOND - 1,
                                            fuchsia::media::MAX_PCM_FRAMES_PER_SECOND + 1};
@@ -47,12 +49,13 @@ const std::pair<uint32_t, uint32_t> kChannelConfigs[] = {
 };
 
 const std::pair<uint32_t, uint32_t> kUnsupportedChannelConfigs[] = {
-    {1, 5}, {1, 8}, {1, 9},  // Unsupported channel
-    {2, 5}, {2, 8}, {2, 9},  // channel
-    {3, 5}, {3, 8}, {3, 9},  // configurations --
-    {4, 5}, {4, 7}, {4, 9},  // maximum number of
-    {5, 1}, {5, 5},          // channels is 8.
-    {9, 1}, {9, 9},
+    {0, 0},                          //
+    {1, 0}, {1, 5}, {1, 8}, {1, 9},  // Unsupported channel
+    {2, 0}, {2, 5}, {2, 8}, {2, 9},  // channel
+    {3, 4}, {3, 5}, {3, 8}, {3, 9},  // configurations --
+    {4, 3}, {4, 5}, {4, 7}, {4, 9},  // maximum number of
+    {5, 1}, {5, 5},                  // channels is 8.
+    {9, 0}, {9, 1}, {9, 9},
 };
 
 const fuchsia::media::AudioSampleFormat kFormats[] = {
@@ -164,27 +167,26 @@ TEST(SincSamplerTest, Construction_UnsupportedFormat) {
 TEST(SincSamplerTest, SamplingPosition_Basic) {
   auto mixer = SelectSincSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::FLOAT);
 
-  EXPECT_EQ(mixer->pos_filter_width().raw_value(), kSincFilterSideLength - 1u);
-  EXPECT_EQ(mixer->neg_filter_width().raw_value(), kSincFilterSideLength - 1u);
+  EXPECT_EQ(mixer->pos_filter_width().raw_value(), kSincFilterSideLength - 1);
+  EXPECT_EQ(mixer->neg_filter_width().raw_value(), kSincFilterSideLength - 1);
 
-  bool should_not_accum = false;
+  bool do_not_accum = false;
   bool source_is_consumed;
   float source[] = {1.0f,  2.0f,  3.0f,  4.0f,  5.0f,  6.0f,  7.0f,  8.0f,  9.0f,  10.0f,
                     11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f, 17.0f, 18.0f, 19.0f, 20.0f};
-  float dest[40];
-  const uint32_t source_frames = std::size(source);
-  const uint32_t frac_source_frames = source_frames << kPtsFractionalBits;
-  const uint32_t dest_frames = std::size(dest);
+  const int64_t source_frames = std::size(source);
+  Fixed source_offset = ffl::FromRatio(3, 4);
 
-  int32_t frac_source_offset = (3 << (kPtsFractionalBits - 2));
+  float dest[40];
+  const uint32_t dest_frames = std::size(dest);
   uint32_t dest_offset = 0;
 
   // Pass in 20 frames
-  source_is_consumed = mixer->Mix(dest, dest_frames, &dest_offset, source, frac_source_frames,
-                                  &frac_source_offset, should_not_accum);
+  source_is_consumed = mixer->Mix(dest, dest_frames, &dest_offset, source, source_frames,
+                                  &source_offset, do_not_accum);
   EXPECT_TRUE(source_is_consumed);
-  EXPECT_TRUE(frac_source_offset + mixer->pos_filter_width().raw_value() >= frac_source_frames);
-  EXPECT_EQ(dest_offset, static_cast<uint32_t>(frac_source_offset) >> kPtsFractionalBits);
+  EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(source_frames));
+  EXPECT_EQ(dest_offset, source_offset.Floor());
 }
 
 // Validate the "seam" between buffers, at unity rate-conversion
@@ -194,7 +196,7 @@ TEST(SincSamplerTest, SamplingValues_DC_Unity) {
   auto mixer =
       SelectSincSampler(1, 1, kSourceRate, kDestRate, fuchsia::media::AudioSampleFormat::FLOAT);
 
-  bool should_not_accum = false;
+  bool do_not_accum = false;
   bool source_is_consumed;
 
   constexpr uint32_t kDestLen = 512;
@@ -202,30 +204,29 @@ TEST(SincSamplerTest, SamplingValues_DC_Unity) {
   auto dest = std::make_unique<float[]>(kDestLen);
 
   constexpr uint32_t kSourceLen = kDestLen / 2;
-  uint32_t frac_source_frames = kSourceLen << kPtsFractionalBits;
-  int32_t frac_source_offset = 0;
+  auto source_offset = Fixed(0);
   auto source = std::make_unique<float[]>(kSourceLen);
   for (auto idx = 0u; idx < kSourceLen; ++idx) {
     source[idx] = 1.0f;
   }
 
   auto& info = mixer->bookkeeping();
-  info.step_size = Mixer::FRAC_ONE;
+  info.step_size = kOneFrame;
 
   // Mix the first half of the destination
-  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(),
-                                  frac_source_frames, &frac_source_offset, should_not_accum);
-  EXPECT_TRUE(source_is_consumed) << std::hex << frac_source_offset;
-  EXPECT_TRUE(frac_source_offset + mixer->pos_filter_width().raw_value() >= frac_source_frames);
-  EXPECT_EQ(static_cast<uint32_t>(frac_source_offset) >> kPtsFractionalBits, dest_offset);
+  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
+                                  &source_offset, do_not_accum);
+  EXPECT_TRUE(source_is_consumed) << std::hex << source_offset.raw_value();
+  EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
+  EXPECT_EQ(source_offset.Floor(), dest_offset);
   auto first_half_dest = dest_offset;
 
   // Now mix the rest
-  frac_source_offset -= frac_source_frames;
-  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(),
-                                  frac_source_frames, &frac_source_offset, should_not_accum);
-  EXPECT_TRUE(source_is_consumed) << std::hex << frac_source_offset;
-  EXPECT_TRUE(frac_source_offset + mixer->pos_filter_width().raw_value() >= frac_source_frames);
+  source_offset -= Fixed(kSourceLen);
+  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
+                                  &source_offset, do_not_accum);
+  EXPECT_TRUE(source_is_consumed) << std::hex << source_offset.raw_value();
+  EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
 
   // The "seam" between buffers should be invisible
   for (auto idx = first_half_dest - 2; idx < first_half_dest + 2; ++idx) {
@@ -240,7 +241,7 @@ TEST(SincSamplerTest, SamplingValues_DC_DownSample) {
   auto mixer =
       SelectSincSampler(1, 1, kSourceRate, kDestRate, fuchsia::media::AudioSampleFormat::FLOAT);
 
-  bool should_not_accum = false;
+  bool do_not_accum = false;
   bool source_is_consumed;
 
   constexpr uint32_t kDestLen = 512;
@@ -248,32 +249,31 @@ TEST(SincSamplerTest, SamplingValues_DC_DownSample) {
   auto dest = std::make_unique<float[]>(kDestLen);
 
   constexpr uint32_t kSourceLen = kDestLen / 2;
-  uint32_t frac_source_frames = kSourceLen << kPtsFractionalBits;
-  int32_t frac_source_offset = 0;
+  auto source_offset = Fixed(0);
   auto source = std::make_unique<float[]>(kSourceLen);
   for (auto idx = 0u; idx < kSourceLen; ++idx) {
     source[idx] = 1.0f;
   }
 
   auto& info = mixer->bookkeeping();
-  info.step_size = (Mixer::FRAC_ONE * kSourceRate) / kDestRate;
-  info.SetRateModuloAndDenominator(Mixer::FRAC_ONE * kSourceRate - (info.step_size * kDestRate),
-                                   kDestRate);
+  info.step_size = (kOneFrame * kSourceRate) / kDestRate;
+  info.SetRateModuloAndDenominator(
+      Fixed(kOneFrame * kSourceRate - info.step_size * kDestRate).raw_value(), kDestRate);
   info.source_pos_modulo = 0;
 
   // Mix the first half of the destination
-  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(),
-                                  frac_source_frames, &frac_source_offset, should_not_accum);
-  EXPECT_TRUE(source_is_consumed) << std::hex << frac_source_offset;
-  EXPECT_TRUE(frac_source_offset + mixer->pos_filter_width().raw_value() >= frac_source_frames);
+  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
+                                  &source_offset, do_not_accum);
+  EXPECT_TRUE(source_is_consumed) << std::hex << source_offset.raw_value();
+  EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
   auto first_half_dest = dest_offset;
 
   // Now mix the rest
-  frac_source_offset -= frac_source_frames;
-  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(),
-                                  frac_source_frames, &frac_source_offset, should_not_accum);
-  EXPECT_TRUE(source_is_consumed) << std::hex << frac_source_offset;
-  EXPECT_TRUE(frac_source_offset + mixer->pos_filter_width().raw_value() >= frac_source_frames);
+  source_offset -= Fixed(kSourceLen);
+  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
+                                  &source_offset, do_not_accum);
+  EXPECT_TRUE(source_is_consumed) << std::hex << source_offset.raw_value();
+  EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
 
   // The "seam" between buffers should be invisible
   for (auto idx = first_half_dest - 2; idx < first_half_dest + 2; ++idx) {
@@ -288,7 +288,7 @@ TEST(SincSamplerTest, SamplingValues_DC_UpSample) {
   auto mixer =
       SelectSincSampler(1, 1, kSourceRate, kDestRate, fuchsia::media::AudioSampleFormat::FLOAT);
 
-  bool should_not_accum = false;
+  bool do_not_accum = false;
   bool source_is_consumed;
 
   constexpr uint32_t kDestLen = 1024;
@@ -296,33 +296,32 @@ TEST(SincSamplerTest, SamplingValues_DC_UpSample) {
   auto dest = std::make_unique<float[]>(kDestLen);
 
   constexpr uint32_t kSourceLen = kDestLen / 8;
-  uint32_t frac_source_frames = kSourceLen << kPtsFractionalBits;
-  int32_t frac_source_offset = 0;
+  auto source_offset = Fixed(0);
   auto source = std::make_unique<float[]>(kSourceLen);
   for (auto idx = 0u; idx < kSourceLen; ++idx) {
     source[idx] = 1.0f;
   }
 
   auto& info = mixer->bookkeeping();
-  info.step_size = (Mixer::FRAC_ONE * kSourceRate) / kDestRate;
-  info.SetRateModuloAndDenominator(Mixer::FRAC_ONE * kSourceRate - info.step_size * kDestRate,
-                                   kDestRate);
+  info.step_size = (kOneFrame * kSourceRate) / kDestRate;
+  info.SetRateModuloAndDenominator(
+      kOneFrame.raw_value() * kSourceRate - info.step_size.raw_value() * kDestRate, kDestRate);
   info.source_pos_modulo = 0;
 
   // Mix the first half of the destination
-  source_is_consumed = mixer->Mix(dest.get(), kDestLen / 2, &dest_offset, source.get(),
-                                  frac_source_frames, &frac_source_offset, should_not_accum);
-  EXPECT_TRUE(source_is_consumed) << std::hex << frac_source_offset;
-  EXPECT_TRUE(frac_source_offset + mixer->pos_filter_width().raw_value() >= frac_source_frames);
-  EXPECT_EQ(static_cast<uint64_t>(frac_source_offset) >> (kPtsFractionalBits - 2), dest_offset);
+  source_is_consumed = mixer->Mix(dest.get(), kDestLen / 2, &dest_offset, source.get(), kSourceLen,
+                                  &source_offset, do_not_accum);
+  EXPECT_TRUE(source_is_consumed) << std::hex << source_offset.raw_value();
+  EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
+  EXPECT_EQ(Fixed(source_offset * 4).Floor(), dest_offset);
   auto first_half_dest = dest_offset;
 
   // Now mix the rest
-  frac_source_offset -= frac_source_frames;
-  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(),
-                                  frac_source_frames, &frac_source_offset, should_not_accum);
-  EXPECT_TRUE(source_is_consumed) << std::hex << frac_source_offset;
-  EXPECT_TRUE(frac_source_offset + mixer->pos_filter_width().raw_value() >= frac_source_frames);
+  source_offset -= Fixed(kSourceLen);
+  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
+                                  &source_offset, do_not_accum);
+  EXPECT_TRUE(source_is_consumed) << std::hex << source_offset.raw_value();
+  EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
 
   // The two samples before and after the "seam" between buffers should be invisible
   for (auto idx = first_half_dest - 2; idx < first_half_dest + 2; ++idx) {
@@ -342,13 +341,13 @@ constexpr float kSource[] = {
     268.8840529,  -268.8840529, 268.8840529,  -268.8840529,  // kValueWithPreviousFrames.
     268.8840529,
 };
-constexpr int64_t kMixOneFrameSourceOffset = Fixed(1).raw_value() / 128;
+constexpr Fixed kMixOneFrameSourceOffset = ffl::FromRatio(1, 128);
 constexpr float kValueWithoutPreviousFrames = -15.0;
 constexpr float kValueWithPreviousFrames = 10.0;
 
 // Mix a single frame of output based on kSource[0]. Producing a frame for position 0 requires
 // neg_width previous frames, kSource[0] itself, and pos_width frames beyond kSource[0].
-float MixOneFrame(std::unique_ptr<Mixer>& mixer, int32_t frac_source_offset) {
+float MixOneFrame(std::unique_ptr<Mixer>& mixer, Fixed source_offset) {
   auto neg_width = mixer->neg_filter_width().Floor();
   auto pos_width = mixer->pos_filter_width().Floor();
   EXPECT_NE(Fixed(pos_width).raw_value() + 1, mixer->neg_filter_width().raw_value())
@@ -357,10 +356,10 @@ float MixOneFrame(std::unique_ptr<Mixer>& mixer, int32_t frac_source_offset) {
 
   float dest;
   uint32_t dest_offset = 0;
-  uint32_t frac_source_frames = Fixed(pos_width + 1).raw_value();
+  int64_t source_frames = pos_width + 1;
 
-  bool source_is_consumed = mixer->Mix(&dest, 1, &dest_offset, &(kSource[neg_width]),
-                                       frac_source_frames, &frac_source_offset, false);
+  bool source_is_consumed = mixer->Mix(&dest, 1, &dest_offset, &(kSource[neg_width]), source_frames,
+                                       &source_offset, false);
   EXPECT_TRUE(source_is_consumed);
   EXPECT_EQ(dest_offset, 1u) << "No output frame was produced";
 
@@ -385,17 +384,17 @@ TEST(SincSamplerTest, SamplingValues_MixOne_WithCache) {
   auto neg_width = mixer->neg_filter_width().Floor();
 
   // Now, populate the cache with previous frames, instead of using default (silence) values.
-  // The outparam value of frac_source_offset tells us the cache is populated with neg_width
-  // frames, which is ideal for mixing a subsequent source buffer starting at source position [0].
+  // The outparam value of source_offset tells us the cache is populated with neg_width frames,
+  // which is ideal for mixing a subsequent source buffer starting at source position [0].
   float dest;
   uint32_t dest_offset = 0;
-  uint32_t frac_source_frames = Fixed(neg_width).raw_value();
-  int32_t frac_source_offset = frac_source_frames - kMixOneFrameSourceOffset;
+  auto source_frames = neg_width;
+  Fixed source_offset = Fixed(source_frames) - kMixOneFrameSourceOffset;
 
-  bool source_is_consumed = mixer->Mix(&dest, 1, &dest_offset, &(kSource[0]), frac_source_frames,
-                                       &frac_source_offset, false);
+  bool source_is_consumed =
+      mixer->Mix(&dest, 1, &dest_offset, &(kSource[0]), source_frames, &source_offset, false);
   EXPECT_TRUE(source_is_consumed);
-  EXPECT_EQ(frac_source_offset, frac_source_frames - kMixOneFrameSourceOffset);
+  EXPECT_EQ(source_offset, Fixed(source_frames) - kMixOneFrameSourceOffset);
   EXPECT_EQ(dest_offset, 0u) << "Unexpectedly produced output " << dest;
 
   // Mix a single frame at approx position 0. (We use a slightly non-zero value because at true 0,
@@ -407,7 +406,7 @@ TEST(SincSamplerTest, SamplingValues_MixOne_WithCache) {
 }
 
 // Mix a single frame, after feeding the cache with previous data, one frame at a time.
-// Specifying frac_source_offset >= 0 guarantees that the cached source data will be shifted
+// Specifying source_offset >= 0 guarantees that the cached source data will be shifted
 // appropriately, so that subsequent Mix() calls can correctly use that data.
 TEST(SincSamplerTest, SamplingValues_MixOne_CachedFrameByFrame) {
   auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
@@ -416,14 +415,14 @@ TEST(SincSamplerTest, SamplingValues_MixOne_CachedFrameByFrame) {
   // Now, populate the cache with previous data, one frame at a time.
   float dest;
   uint32_t dest_offset = 0;
-  const uint32_t frac_source_frames = Fixed(1).raw_value();
-  int32_t frac_source_offset = frac_source_frames - kMixOneFrameSourceOffset;
+  const auto source_frames = 1;
+  Fixed source_offset = Fixed(source_frames) - kMixOneFrameSourceOffset;
 
   for (auto neg_idx = 0u; neg_idx < neg_width; ++neg_idx) {
-    bool source_is_consumed = mixer->Mix(&dest, 1, &dest_offset, &(kSource[neg_idx]),
-                                         frac_source_frames, &frac_source_offset, false);
+    bool source_is_consumed = mixer->Mix(&dest, 1, &dest_offset, &(kSource[neg_idx]), source_frames,
+                                         &source_offset, false);
     EXPECT_TRUE(source_is_consumed);
-    EXPECT_EQ(frac_source_offset, frac_source_frames - kMixOneFrameSourceOffset);
+    EXPECT_EQ(source_offset, Fixed(source_frames) - kMixOneFrameSourceOffset);
     EXPECT_EQ(dest_offset, 0u) << "Unexpectedly produced output " << dest;
   }
 

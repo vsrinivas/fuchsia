@@ -16,7 +16,7 @@ class SincSampler : public Mixer {
                                        const fuchsia::media::AudioStreamType& dest_format);
 
  protected:
-  SincSampler(uint32_t pos_filter_width, uint32_t neg_filter_width)
+  SincSampler(Fixed pos_filter_width, Fixed neg_filter_width)
       : Mixer(pos_filter_width, neg_filter_width) {}
 };
 

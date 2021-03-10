@@ -25,15 +25,14 @@ TEST(NoOpMixer, PassThru) {
   float expect[] = {-1, 42};
 
   uint32_t dest_offset = 0;
-  int32_t frac_source_offset = 0;
+  auto source_offset = Fixed(0);
 
-  bool mix_result =
-      no_op_mixer->Mix(accum, std::size(accum), &dest_offset, source,
-                       std::size(source) << kPtsFractionalBits, &frac_source_offset, false);
+  bool mix_result = no_op_mixer->Mix(accum, std::size(accum), &dest_offset, source,
+                                     std::size(source), &source_offset, false);
 
   EXPECT_FALSE(mix_result);
   EXPECT_EQ(dest_offset, 0u);
-  EXPECT_EQ(frac_source_offset, 0);
+  EXPECT_EQ(source_offset, Fixed(0));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 

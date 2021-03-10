@@ -76,17 +76,17 @@ class SilenceMaker<DType, typename std::enable_if_t<std::is_same_v<DType, int16_
                                                     std::is_same_v<DType, int32_t> ||
                                                     std::is_same_v<DType, float>>> {
  public:
-  static inline void Fill(void* dest, size_t samples) {
+  static inline void Fill(void* dest_void_ptr, size_t samples) {
     // This works even if DType is float/double: per IEEE-754, all 0s == +0.0.
-    memset(dest, 0, samples * sizeof(DType));
+    memset(dest_void_ptr, 0, samples * sizeof(DType));
   }
 };
 
 template <typename DType>
 class SilenceMaker<DType, typename std::enable_if_t<std::is_same_v<DType, uint8_t>>> {
  public:
-  static inline void Fill(void* dest, size_t samples) {
-    memset(dest, kOffsetInt8ToUint8, samples * sizeof(DType));
+  static inline void Fill(void* dest_void_ptr, size_t samples) {
+    memset(dest_void_ptr, kOffsetInt8ToUint8, samples * sizeof(DType));
   }
 };
 
@@ -97,21 +97,21 @@ class OutputProducerImpl : public OutputProducer {
   explicit OutputProducerImpl(const fuchsia::media::AudioStreamType& format)
       : OutputProducer(format, sizeof(DType)) {}
 
-  void ProduceOutput(const float* source, void* dest_void, uint32_t frames) const override {
+  void ProduceOutput(const float* source_ptr, void* dest_void_ptr, uint32_t frames) const override {
     TRACE_DURATION("audio", "OutputProducerImpl::ProduceOutput");
     using DC = DestConverter<DType>;
-    auto* dest = static_cast<DType*>(dest_void);
+    auto* dest_ptr = static_cast<DType*>(dest_void_ptr);
 
     // Previously we clamped here; because of rounding, this is different for
     // each output type, so it is now handled in Convert() specializations.
     for (size_t i = 0; i < (static_cast<size_t>(frames) * channels_); ++i) {
-      dest[i] = DC::Convert(source[i]);
+      dest_ptr[i] = DC::Convert(source_ptr[i]);
     }
   }
 
-  void FillWithSilence(void* dest, uint32_t frames) const override {
+  void FillWithSilence(void* dest_void_ptr, uint32_t frames) const override {
     TRACE_DURATION("audio", "OutputProducerImpl::FillWithSilence");
-    SilenceMaker<DType>::Fill(dest, frames * channels_);
+    SilenceMaker<DType>::Fill(dest_void_ptr, frames * channels_);
   }
 };
 

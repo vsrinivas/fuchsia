@@ -6,8 +6,9 @@
 
 namespace media::audio::mixer {
 
-bool NoOp::Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* source,
-               uint32_t frac_source_frames, int32_t* frac_source_offset, bool accumulate) {
+bool NoOp::Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
+               const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
+               bool accumulate) {
   return false;
 }
 

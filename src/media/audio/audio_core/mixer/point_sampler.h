@@ -17,7 +17,7 @@ class PointSampler : public Mixer {
                                        const fuchsia::media::AudioStreamType& dest_format);
 
  protected:
-  PointSampler(uint32_t pos_filter_width, uint32_t neg_filter_width)
+  PointSampler(Fixed pos_filter_width, Fixed neg_filter_width)
       : Mixer(pos_filter_width, neg_filter_width) {}
 };
 

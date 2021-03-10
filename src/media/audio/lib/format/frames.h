@@ -12,6 +12,8 @@
 namespace media::audio {
 
 using Fixed = ffl::Fixed<int64_t, kPtsFractionalBits>;
+static constexpr Fixed kOneFrame = Fixed(1);
+static constexpr Fixed kHalfFrame = ffl::FromRatio(1, 2);
 
 }  // namespace media::audio
 

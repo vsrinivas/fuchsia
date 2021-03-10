@@ -111,13 +111,11 @@ CoefficientTable* CreatePointFilterTable(PointFilter::Inputs inputs) {
   auto width = inputs.side_width;
   auto frac_size = 1u << inputs.num_frac_bits;
 
-  // We need not account for rate_conversion_ratio here.
   auto transition_idx = frac_size >> 1u;
 
-  // We know that transition_idx will always be the last idx in the filter table, because in our
-  // ctor we set side_width to (1u << (num_frac_bits - 1u)) + 1u, which == (frac_size >> 1u) +
-  // 1u
-  FX_DCHECK(transition_idx + 1u == width);
+  // We know that transition_idx will always be the last idx in the filter table, because our ctor
+  // sets side_width to (1u << (num_frac_bits - 1u)) + 1u, which == (frac_size >> 1u) + 1u
+  FX_CHECK(transition_idx + 1u == width);
 
   // Just a rectangular window, actually.
   for (auto idx = 0u; idx < transition_idx; ++idx) {
@@ -144,7 +142,6 @@ CoefficientTable* CreateLinearFilterTable(LinearFilter::Inputs inputs) {
   auto width = inputs.side_width;
   auto frac_size = 1u << inputs.num_frac_bits;
 
-  // We need not account for rate_conversion_ratio here.
   uint32_t transition_idx = frac_size;
 
   // Just a Bartlett (triangular) window, actually.
@@ -230,8 +227,8 @@ SincFilter::CacheT* CreateSincFilterCoefficientTableCache() {
 
   auto make_inputs = [](uint32_t source_rate, uint32_t dest_rate) {
     return SincFilter::Inputs{
-        .side_width = SincFilter::GetFilterWidth(source_rate, dest_rate),
-        .num_frac_bits = kPtsFractionalBits,
+        .side_width = SincFilter::GetFilterWidth(source_rate, dest_rate).raw_value(),
+        .num_frac_bits = Fixed::Format::FractionalBits,
         .rate_conversion_ratio = static_cast<double>(dest_rate) / static_cast<double>(source_rate),
     };
   };

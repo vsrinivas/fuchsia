@@ -12,20 +12,22 @@
 
 #include "src/media/audio/audio_core/mixer/coefficient_table.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
+#include "src/media/audio/lib/format/frames.h"
 
 namespace media::audio::mixer {
 
-static constexpr uint32_t kSincFilterSideTaps = 13;
-static constexpr uint32_t kSincFilterSideLength = (kSincFilterSideTaps + 1) << kPtsFractionalBits;
+static constexpr int32_t kSincFilterSideTaps = 13;
+static constexpr int64_t kSincFilterSideLength = (kSincFilterSideTaps + 1)
+                                                 << Fixed::Format::FractionalBits;
 
 // This class represents a convolution-based filter, to be applied to an audio stream. Subclasses
 // represent specific filters for nearest-neighbor interpolation, linear interpolation, and
-// sinc-based band-pass. Note that each child class owns creating and populating its own
-// filter_coefficients vector. More on these details below.
+// sinc-based band-limited interpolation. Note that each child class owns creating and populating
+// its own filter_coefficients vector. More on these details below.
 class Filter {
  public:
-  Filter(uint32_t source_rate, uint32_t dest_rate, uint32_t side_width = kSincFilterSideLength,
-         uint32_t num_frac_bits = kPtsFractionalBits)
+  Filter(uint32_t source_rate, uint32_t dest_rate, int64_t side_width = kSincFilterSideLength,
+         uint32_t num_frac_bits = Fixed::Format::FractionalBits)
       : source_rate_(source_rate),
         dest_rate_(dest_rate),
         side_width_(side_width),
@@ -49,7 +51,7 @@ class Filter {
 
   uint32_t source_rate() const { return source_rate_; }
   uint32_t dest_rate() const { return dest_rate_; }
-  uint32_t side_width() const { return side_width_; }
+  int64_t side_width() const { return side_width_; }
   uint32_t num_frac_bits() const { return num_frac_bits_; }
   uint32_t frac_size() const { return frac_size_; }
   double rate_conversion_ratio() const { return rate_conversion_ratio_; };
@@ -62,7 +64,7 @@ class Filter {
  private:
   uint32_t source_rate_;
   uint32_t dest_rate_;
-  uint32_t side_width_;
+  int64_t side_width_;
 
   uint32_t num_frac_bits_;
   uint32_t frac_size_;
@@ -77,23 +79,24 @@ class Filter {
 // a small subset of these values (using a stride size of one source frame: frac_size_).
 //
 // Nearest-neighbor "zero-order interpolation" resampler, implemented using the convolution
-// filter. Width on both sides is FRAC_HALF (expressed in our fixed-point fractional scale),
+// filter. Width on both sides is kHalfFrame (expressed in our fixed-point fractional scale),
 // modulo the stretching effects of downsampling.
 //
-// Why do we say Point Interpolation's filter width is "FRAC_HALF", even as we send FRAC_HALF+1?
+// Why do we say Point Interpolation's filter width is "kHalfFrame", even as we send kHalfFrame+1 ?
 // Let's pretend that frac_size is 1000. Filter_width 501 includes coefficient values for
 // locations from that exact position, up to positions as much as 500 away. This means:
-// -Fractional source pos 1.499 requires frames between 0.999 and 1.999, thus source frame 1
-// -Fractional source pos 1.500 requires frames between 1.000 and 2.000, thus source frames 1 and 2
-// -Fractional source pos 1.501 requires frames between 1.001 and 2.001, thus source frame 2
-// For frac source pos .5, we average the pre- and post- values so as to achieve zero phase delay
+// - Fractional source pos 1.499 requires frames between 0.999 and 1.999, thus source frame 1
+// - Fractional source pos 1.500 requires frames between 1.000 and 2.000, thus source frames 1 and 2
+// - Fractional source pos 1.501 requires frames between 1.001 and 2.001, thus source frame 2
+// For source pos .5, we average the pre- and post- values so as to achieve zero phase delay
 //
 // TODO(fxbug.dev/37356): Make the fixed-point fractional scale typesafe.
 class PointFilter : public Filter {
  public:
-  PointFilter(uint32_t source_rate, uint32_t dest_rate, uint32_t num_frac_bits = kPtsFractionalBits)
+  PointFilter(uint32_t source_rate, uint32_t dest_rate,
+              uint32_t num_frac_bits = Fixed::Format::FractionalBits)
       : Filter(source_rate, dest_rate,
-               /* side_width= */ (1u << (num_frac_bits - 1u)) + 1u, num_frac_bits),
+               /* side_width= */ (1 << (num_frac_bits - 1)) + 1, num_frac_bits),
         filter_coefficients_(cache_, Inputs{
                                          .side_width = this->side_width(),
                                          .num_frac_bits = this->num_frac_bits(),
@@ -112,7 +115,7 @@ class PointFilter : public Filter {
 
  private:
   struct Inputs {
-    uint32_t side_width;
+    int64_t side_width;
     uint32_t num_frac_bits;
 
     bool operator<(const Inputs& rhs) const {
@@ -128,21 +131,21 @@ class PointFilter : public Filter {
 };
 
 // Linear interpolation, implemented using the convolution filter.
-// Width on both sides is FRAC_ONE-1, modulo the stretching effects of downsampling.
+// Width on both sides is kOneFrame-1, modulo the stretching effects of downsampling.
 //
-// Why do we say Linear Interpolation's filter width is "FRAC_ONE-1", although we send FRAC_ONE?
-// Let's pretend that frac_size is 1000. Filter_width 1000 includes coefficient values for
-// locations from that exact position, up to positions as much as 999 away. This means:
+// Why do we say Linear Interpolation's filter width is "kOneFrame-1", although we send kOneFrame?
+// Let's say frac_size is 1000. Filter_width 1000 includes coefficient values for locations from
+// that exact position, up to positions as much as 999 away. This means:
 // -Fractional source pos 1.999 requires frames between 1.000 and 2.998, thus source frames 1 and 2
 // -Fractional source pos 2.000 requires frames between 1.001 and 2.999, thus source frame 2 only
 // -Fractional source pos 2.001 requires frames between 1.002 and 3.000, thus source frames 2 and 3
-// For frac source pos .0, we use that value precisely; no need to interpolate with any neighbor
+// For source pos .0, we use that value precisely; no need to interpolate with any neighbor
 class LinearFilter : public Filter {
  public:
   LinearFilter(uint32_t source_rate, uint32_t dest_rate,
-               uint32_t num_frac_bits = kPtsFractionalBits)
+               uint32_t num_frac_bits = Fixed::Format::FractionalBits)
       : Filter(source_rate, dest_rate,
-               /* side_width= */ 1u << num_frac_bits, num_frac_bits),
+               /* side_width= */ (1 << num_frac_bits), num_frac_bits),
         filter_coefficients_(cache_, Inputs{
                                          .side_width = this->side_width(),
                                          .num_frac_bits = this->num_frac_bits(),
@@ -161,7 +164,7 @@ class LinearFilter : public Filter {
 
  private:
   struct Inputs {
-    uint32_t side_width;
+    int64_t side_width;
     uint32_t num_frac_bits;
 
     bool operator<(const Inputs& rhs) const {
@@ -179,8 +182,8 @@ class LinearFilter : public Filter {
 // "Fractional-delay" sinc-based resampler with integrated low-pass filter.
 class SincFilter : public Filter {
  public:
-  SincFilter(uint32_t source_rate, uint32_t dest_rate, uint32_t side_width = kSincFilterSideLength,
-             uint32_t num_frac_bits = kPtsFractionalBits)
+  SincFilter(uint32_t source_rate, uint32_t dest_rate, int64_t side_width = kSincFilterSideLength,
+             uint32_t num_frac_bits = Fixed::Format::FractionalBits)
       : Filter(source_rate, dest_rate, side_width, num_frac_bits),
         filter_coefficients_(cache_, Inputs{
                                          .side_width = this->side_width(),
@@ -189,12 +192,14 @@ class SincFilter : public Filter {
                                      }) {}
   SincFilter() : SincFilter(48000, 48000){};
 
-  static inline uint32_t GetFilterWidth(uint32_t source_frame_rate, uint32_t dest_frame_rate) {
-    return ((source_frame_rate > dest_frame_rate)
-                ? std::ceil((static_cast<float>(kSincFilterSideLength) * source_frame_rate) /
-                            dest_frame_rate)
-                : kSincFilterSideLength) -
-           1u;
+  static inline Fixed GetFilterWidth(uint32_t source_frame_rate, uint32_t dest_frame_rate) {
+    if (source_frame_rate <= dest_frame_rate) {
+      return Fixed::FromRaw(kSincFilterSideLength - 1);
+    }
+
+    int64_t width =
+        std::ceil(static_cast<double>(kSincFilterSideLength * source_frame_rate) / dest_frame_rate);
+    return Fixed::FromRaw(width - 1);
   }
 
   float ComputeSample(uint32_t frac_offset, float* center) override {
@@ -209,7 +214,7 @@ class SincFilter : public Filter {
 
  private:
   struct Inputs {
-    uint32_t side_width;
+    int64_t side_width;
     uint32_t num_frac_bits;
     double rate_conversion_ratio;
 

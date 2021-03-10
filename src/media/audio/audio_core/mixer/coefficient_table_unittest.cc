@@ -26,14 +26,12 @@ TEST(CoefficientTableTest, IntegralStrideHasPhysicallyContiguousIndicies) {
   Fixed width(10);
   CoefficientTable table(width.raw_value(), Fixed::Format::FractionalBits);
 
-  const auto FRAC_BITS = Fixed::Format::FractionalBits;
-  const auto FRAC_ONE = 1 << FRAC_BITS;
-  for (uint32_t fraction = 0; fraction < FRAC_ONE; ++fraction) {
+  for (uint32_t fraction = 0; fraction < kOneFrame.raw_value(); ++fraction) {
     // Each fractional value will have a block in the vector. Now check that every valid integral
     // value is contiguous for this fractional value.
     uint32_t block_index = fraction * width.Ceiling();
     for (uint32_t integer = 0; integer < width.Ceiling(); ++integer) {
-      auto fixed_value = (integer << FRAC_BITS) + fraction;
+      auto fixed_value = (integer << Fixed::Format::FractionalBits) + fraction;
       ASSERT_EQ(block_index + integer, table.PhysicalIndex(fixed_value));
     }
   }
@@ -43,9 +41,7 @@ TEST(CoefficientTableTest, ReadSlice) {
   Fixed width(10);
   CoefficientTable table(width.raw_value(), Fixed::Format::FractionalBits);
 
-  const auto FRAC_BITS = Fixed::Format::FractionalBits;
-  const auto FRAC_ONE = 1 << FRAC_BITS;
-  for (uint32_t fraction = 0; fraction < FRAC_ONE; ++fraction) {
+  for (uint32_t fraction = 0; fraction < kOneFrame.raw_value(); ++fraction) {
     auto slice = table.ReadSlice(fraction, width.Ceiling());
     ASSERT_NE(slice, nullptr);
 

@@ -699,7 +699,7 @@ TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
   // next_source_pos_modulo should show that we lose 1 source_pos_modulo per dest frame.
   EXPECT_EQ(bookkeeping.denominator() - info.next_source_pos_modulo, dest_frames_per_mix);
   // ... which also means we'll be one frac-frame behind.
-  EXPECT_EQ(Fixed(info.next_dest_frame), Fixed(info.next_frac_source_frame + Fixed::FromRaw(1)));
+  EXPECT_EQ(Fixed(info.next_dest_frame), Fixed(info.next_source_frame + Fixed::FromRaw(1)));
   // At this point we expect long-running and current source_pos_modulo to be exactly equal.
   EXPECT_EQ(info.next_source_pos_modulo, bookkeeping.source_pos_modulo)
       << info.next_source_pos_modulo << " (current pos_mod) should equal "
@@ -762,8 +762,8 @@ TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
   mixer->source_info().frames_produced = 0;
   mixer->source_info().dest_frames_to_frac_source_frames =
       TimelineFunction(3582737759, 0, 8192000, 999);
-  mixer->source_info().next_frac_source_frame = Fixed::FromRaw(2414202275419);
-  mixer->bookkeeping().step_size = Fixed(1).raw_value();
+  mixer->source_info().next_source_frame = Fixed::FromRaw(2414202275419);
+  mixer->bookkeeping().step_size = Fixed(1);
   mixer->bookkeeping().SetRateModuloAndDenominator(0, 1);
 
   char payload[10 * kDefaultNumChannels * sizeof(float)];

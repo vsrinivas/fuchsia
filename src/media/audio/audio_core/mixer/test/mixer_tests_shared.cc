@@ -75,17 +75,17 @@ void DoMix(Mixer* mixer, const void* source_buf, float* accum_buf, bool accumula
   ASSERT_NE(mixer, nullptr);
 
   uint32_t dest_offset = 0;
-  int32_t frac_source_offset = 0;
+  auto source_offset = Fixed(0);
 
   auto& info = mixer->bookkeeping();
   info.gain.SetSourceGain(gain_db);
 
-  bool mix_result = mixer->Mix(accum_buf, num_frames, &dest_offset, source_buf,
-                               num_frames << kPtsFractionalBits, &frac_source_offset, accumulate);
+  bool mix_result = mixer->Mix(accum_buf, num_frames, &dest_offset, source_buf, num_frames,
+                               &source_offset, accumulate);
 
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(dest_offset, static_cast<uint32_t>(num_frames));
-  EXPECT_EQ(frac_source_offset, static_cast<int32_t>(dest_offset << kPtsFractionalBits));
+  EXPECT_EQ(source_offset, Fixed(dest_offset));
 }
 
 std::pair<double, double> SampleFormatToAmplitudes(fuchsia::media::AudioSampleFormat f) {

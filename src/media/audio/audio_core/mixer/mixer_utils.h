@@ -40,8 +40,8 @@ template <typename SourceSampleType>
 class SampleNormalizer<SourceSampleType,
                        typename std::enable_if_t<std::is_same_v<SourceSampleType, uint8_t>>> {
  public:
-  static inline float Read(const SourceSampleType* source) {
-    return kInt8ToFloat * (static_cast<int32_t>(*source) - kOffsetInt8ToUint8);
+  static inline float Read(const SourceSampleType* source_ptr) {
+    return kInt8ToFloat * (static_cast<int32_t>(*source_ptr) - kOffsetInt8ToUint8);
   }
 };
 
@@ -49,8 +49,8 @@ template <typename SourceSampleType>
 class SampleNormalizer<SourceSampleType,
                        typename std::enable_if_t<std::is_same_v<SourceSampleType, int16_t>>> {
  public:
-  static inline float Read(const SourceSampleType* source) {
-    return kInt16ToFloat * static_cast<float>(*source);
+  static inline float Read(const SourceSampleType* source_ptr) {
+    return kInt16ToFloat * (*source_ptr);
   }
 };
 
@@ -58,8 +58,8 @@ template <typename SourceSampleType>
 class SampleNormalizer<SourceSampleType,
                        typename std::enable_if_t<std::is_same_v<SourceSampleType, int32_t>>> {
  public:
-  static inline float Read(const SourceSampleType* source) {
-    return kInt24In32ToFloat * static_cast<double>(*source);
+  static inline float Read(const SourceSampleType* source_ptr) {
+    return kInt24In32ToFloat * (*source_ptr);
   }
 };
 
@@ -67,7 +67,7 @@ template <typename SourceSampleType>
 class SampleNormalizer<SourceSampleType,
                        typename std::enable_if_t<std::is_same_v<SourceSampleType, float>>> {
  public:
-  static inline float Read(const SourceSampleType* source) { return *source; }
+  static inline float Read(const SourceSampleType* source_ptr) { return *source_ptr; }
 };
 
 //
@@ -109,8 +109,8 @@ template <typename SourceSampleType, size_t SourceChanCount, size_t DestChanCoun
 class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
                    typename std::enable_if_t<(SourceChanCount == DestChanCount)>> {
  public:
-  static inline float Read(const SourceSampleType* source, size_t dest_chan) {
-    return SampleNormalizer<SourceSampleType>::Read(source + dest_chan);
+  static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
+    return SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan);
   }
 };
 
@@ -120,8 +120,8 @@ class SourceReader<
     SourceSampleType, SourceChanCount, DestChanCount,
     typename std::enable_if_t<((SourceChanCount == 1) && (SourceChanCount != DestChanCount))>> {
  public:
-  static inline float Read(const SourceSampleType* source, size_t dest_chan) {
-    return SampleNormalizer<SourceSampleType>::Read(source);
+  static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
+    return SampleNormalizer<SourceSampleType>::Read(source_ptr);
   }
 };
 
@@ -134,9 +134,9 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
  public:
   // This simple 2:1 channel mapping assumes a "LR" stereo configuration for the source channels.
   // Each dest frame's single value is essentially the average of the 2 source chans.
-  static inline float Read(const SourceSampleType* source, size_t dest_chan) {
-    return 0.5f * (SampleNormalizer<SourceSampleType>::Read(source + 0) +
-                   SampleNormalizer<SourceSampleType>::Read(source + 1));
+  static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
+    return 0.5f * (SampleNormalizer<SourceSampleType>::Read(source_ptr + 0) +
+                   SampleNormalizer<SourceSampleType>::Read(source_ptr + 1));
   }
 };
 
@@ -145,10 +145,10 @@ template <typename SourceSampleType, size_t SourceChanCount, size_t DestChanCoun
 class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
                    typename std::enable_if_t<((SourceChanCount == 2) && (DestChanCount == 3))>> {
  public:
-  static inline float Read(const SourceSampleType* source, size_t dest_chan) {
-    return (dest_chan < 2 ? SampleNormalizer<SourceSampleType>::Read(source + dest_chan)
-                          : 0.5 * (SampleNormalizer<SourceSampleType>::Read(source) +
-                                   SampleNormalizer<SourceSampleType>::Read(source + 1)));
+  static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
+    return (dest_chan < 2 ? SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan)
+                          : 0.5 * (SampleNormalizer<SourceSampleType>::Read(source_ptr) +
+                                   SampleNormalizer<SourceSampleType>::Read(source_ptr + 1)));
   }
 };
 
@@ -157,8 +157,8 @@ template <typename SourceSampleType, size_t SourceChanCount, size_t DestChanCoun
 class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
                    typename std::enable_if_t<((SourceChanCount == 2) && (DestChanCount == 4))>> {
  public:
-  static inline float Read(const SourceSampleType* source, size_t dest_chan) {
-    return SampleNormalizer<SourceSampleType>::Read(source + dest_chan % 2);
+  static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
+    return SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan % 2);
   }
 };
 
@@ -171,10 +171,10 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
  public:
   // This simple 3:1 channel mapping assumes an equal weighting of the 3 source channels.
   // Each dest frame's single value is essentially the average of the 3 source chans.
-  static inline float Read(const SourceSampleType* source, size_t dest_chan) {
-    return (SampleNormalizer<SourceSampleType>::Read(source + 0) +
-            SampleNormalizer<SourceSampleType>::Read(source + 1) +
-            SampleNormalizer<SourceSampleType>::Read(source + 2)) /
+  static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
+    return (SampleNormalizer<SourceSampleType>::Read(source_ptr + 0) +
+            SampleNormalizer<SourceSampleType>::Read(source_ptr + 1) +
+            SampleNormalizer<SourceSampleType>::Read(source_ptr + 2)) /
            3.0f;
   }
 };
@@ -191,10 +191,11 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
   // source chans 1+2 to dest chan 1. Because we mix it equally into two dest channels, we multiply
   // source chan2 by sqr(.5) to maintain an equal-power contribution compared to source chans 0&1.
   // Finally, normalize both dest chans (divide by max possible value) to keep result within bounds.
-  static inline float Read(const SourceSampleType* source, size_t dest_chan) {
-    return kInverseOnePlusRootHalf * SampleNormalizer<SourceSampleType>::Read(source + dest_chan) +
+  static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
+    return kInverseOnePlusRootHalf *
+               SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan) +
            (kInverseOnePlusRootHalf * M_SQRT1_2) *
-               SampleNormalizer<SourceSampleType>::Read(source + 2);
+               SampleNormalizer<SourceSampleType>::Read(source_ptr + 2);
   }
 };
 
@@ -207,11 +208,11 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
  public:
   // This simple 4:1 channel mapping averages the incoming 4 source channels to determine the value
   // for the lone destination channel.
-  static inline float Read(const SourceSampleType* source, size_t dest_chan) {
-    return 0.25f * (SampleNormalizer<SourceSampleType>::Read(source + 0) +
-                    SampleNormalizer<SourceSampleType>::Read(source + 1) +
-                    SampleNormalizer<SourceSampleType>::Read(source + 2) +
-                    SampleNormalizer<SourceSampleType>::Read(source + 3));
+  static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
+    return 0.25f * (SampleNormalizer<SourceSampleType>::Read(source_ptr + 0) +
+                    SampleNormalizer<SourceSampleType>::Read(source_ptr + 1) +
+                    SampleNormalizer<SourceSampleType>::Read(source_ptr + 2) +
+                    SampleNormalizer<SourceSampleType>::Read(source_ptr + 3));
   }
 };
 
@@ -223,16 +224,16 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
   // This simple 4:2 channel mapping assumes a "LRLR" configuration for the 4 source channels (e.g.
   // a "four corners" Quad config: FrontL|FrontR|BackL|BackR). Thus in each 4-chan source frame and
   // 2-chan dest frame, we mix source chans 0+2 to dest chan 0, and source chans 1+3 to dest chan 1.
-  static inline float Read(const SourceSampleType* source, size_t dest_chan) {
-    return 0.5f * (SampleNormalizer<SourceSampleType>::Read(source + dest_chan) +
-                   SampleNormalizer<SourceSampleType>::Read(source + dest_chan + 2));
+  static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
+    return 0.5f * (SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan) +
+                   SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan + 2));
   }
 };
 
 //
 // Interpolation variants
 //
-// We specify alpha in fixed-point 19.13: a max val of "1.0" is 0x00002000.
+// Fixed::Format::FractionalBits is 13 for Fixed types, so max alpha of "1.0" is 0x00002000.
 constexpr float kFramesPerPtsSubframe = 1.0f / (1 << kPtsFractionalBits);
 
 // First-order Linear Interpolation formula (Position-fraction):

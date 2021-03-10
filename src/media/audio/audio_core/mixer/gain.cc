@@ -13,8 +13,10 @@ namespace media::audio {
 void Gain::SetSourceGainWithRamp(float source_gain_db, zx::duration duration,
                                  __UNUSED fuchsia::media::audio::RampType ramp_type) {
   TRACE_DURATION("audio", "Gain::SetSourceGainWithRamp");
-  FX_DCHECK(source_gain_db <= kMaxGainDb);
-  FX_DCHECK(duration.get() >= 0) << "Ramp duration cannot be negative";
+  FX_DCHECK(source_gain_db <= kMaxGainDb) << "Ramp target gain (" << source_gain_db
+                                          << " db) cannot exceed maximum (" << kMaxGainDb << " db)";
+  FX_DCHECK(duration.get() >= 0) << "Specified ramp duration (" << duration.to_nsecs()
+                                 << " ns) cannot be negative";
 
   if (duration <= zx::nsec(0)) {
     SetSourceGain(source_gain_db);
@@ -50,7 +52,8 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& destination_frames_p
 
   // If the output device's clock is not running, then it isn't possible to
   // convert from output frames to wallclock (local) time.
-  FX_CHECK(destination_frames_per_reference_tick.invertible()) << "Output clock must be running!";
+  FX_CHECK(destination_frames_per_reference_tick.invertible())
+      << "Output clock must be running! Numerator of dest_frames/ref_tick is zero";
 
   frames_ramped_ += num_frames;
   zx::duration advance_duration =
@@ -89,7 +92,7 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
     return;
   }
 
-  FX_CHECK(scale_arr != nullptr);
+  FX_CHECK(scale_arr != nullptr) << "Null pointer; cannot copy the array of scale values";
 
   AScale scale;
   if (!IsRamping()) {
@@ -101,7 +104,8 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
   } else {
     // If the output device's clock is not running, then it isn't possible to
     // convert from output frames to wallclock (local) time.
-    FX_CHECK(destination_frames_per_reference_tick.invertible()) << "Output clock must be running!";
+    FX_CHECK(destination_frames_per_reference_tick.invertible())
+        << "Output clock must be running! Numerator of dest_frames/ref_tick is zero";
 
     // Compose the ramp, in pieces
     TimelineRate output_to_local = destination_frames_per_reference_tick.Inverse();

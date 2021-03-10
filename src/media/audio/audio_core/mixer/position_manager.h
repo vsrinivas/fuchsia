@@ -16,32 +16,30 @@ namespace media::audio::mixer {
 // extracts a significant amount of duplicate code across the resamplers.
 class PositionManager {
  public:
-  PositionManager() : PositionManager(1, 1, 0, Mixer::FRAC_ONE - 1){};
-  PositionManager(uint32_t num_source_chans, uint32_t num_dest_chans, uint32_t positive_width,
-                  uint32_t negative_width, uint32_t frac_bits = media::audio::kPtsFractionalBits);
+  PositionManager() : PositionManager(1, 1, 0, kOneFrame.raw_value() - 1) {}
+
+  PositionManager(uint32_t num_source_chans, uint32_t num_dest_chans, int64_t positive_width,
+                  int64_t negative_width);
   PositionManager(const PositionManager& not_ctor_copyable) = delete;
   PositionManager& operator=(const PositionManager& not_copyable) = delete;
   PositionManager(PositionManager&& not_ctor_movable) = delete;
   PositionManager& operator=(PositionManager&& not_movable) = delete;
 
   // Used for debugging purposes only
-  static void Display(const PositionManager& pos_mgr,
-                      uint32_t frac_bits = media::audio::kPtsFractionalBits);
-  static void DisplayUpdate(const PositionManager& pos_mgr,
-                            uint32_t frac_bits = media::audio::kPtsFractionalBits);
-
-  static void CheckPositions(uint32_t dest_frames, uint32_t* dest_offset_ptr,
-                             uint32_t frac_source_frames, int32_t* frac_source_offset_ptr,
-                             Fixed pos_filter_width, Mixer::Bookkeeping* info);
+  static void Display(const PositionManager& pos_mgr);
+  static void DisplayUpdate(const PositionManager& pos_mgr);
 
   // Establish the parameters for this source and dest
-  void SetSourceValues(const void* source_void_ptr, uint32_t frac_source_frames,
-                       int32_t* frac_source_offset_ptr);
+  void SetSourceValues(const void* source_void_ptr, int64_t source_frames,
+                       Fixed* source_offset_ptr);
   void SetDestValues(float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr);
   // Specify the rate parameters. If not called, a unity rate (1:1) is assumed.
-  void SetRateValues(uint32_t step_size, uint64_t rate_modulo, uint64_t denominator,
+  void SetRateValues(int64_t step_size, uint64_t rate_modulo, uint64_t denominator,
                      uint64_t* source_pos_mod);
 
+  static void CheckPositions(uint32_t dest_frames, uint32_t* dest_offset_ptr, int64_t source_frames,
+                             int64_t source_offset, int64_t pos_filter_width,
+                             Mixer::Bookkeeping* info);
   // Convenience method to retrieve the pointer to the first available source frame in this buffer.
   template <typename SourceSampleType>
   inline SourceSampleType* FirstSourceFrame() const;
@@ -62,55 +60,49 @@ class PositionManager {
 
   // Is there enough remaining source data and destination space, to produce another frame?
   bool FrameCanBeMixed() const {
-    return (dest_offset_ < dest_frames_) && (frac_source_offset_ <= frac_source_end_);
+    return (dest_offset_ < dest_frames_) && (frac_source_offset_ < frac_source_end_);
   }
 
-  // Advance one dest frame (and frac_source, incl modulo); return the new frac_source_offset.
-  template <bool UseModulo = true>
-  inline int32_t AdvanceFrame();
+  // Advance one dest frame (and related source, incl modulo); return the new source_offset.
+  inline int64_t AdvanceFrame();
 
   // Skip as much source and dest as possible, returning the number of whole source frames skipped.
   // Not necessarily required to be inlined, as this is only invoked once per Mix() call.
-  template <bool UseModulo = true>
-  uint32_t AdvanceToEnd();
+  int64_t AdvanceToEnd();
 
   // Write back the final offset values
   // Not necessarily required to be inlined, as this is only invoked once per Mix() call.
   void UpdateOffsets() {
-    *frac_source_offset_ptr_ = frac_source_offset_;
+    *source_offset_ptr_ = Fixed::FromRaw(frac_source_offset_);
     *dest_offset_ptr_ = dest_offset_;
-    if (using_modulo_) {
+    if (rate_modulo_) {
       *source_pos_modulo_ptr_ = source_pos_modulo_;
     }
   }
 
   // Is there NOT enough remaining source data to produce another output frame?
-  bool SourceIsConsumed() const { return (frac_source_offset_ > frac_source_end_); }
+  bool SourceIsConsumed() const { return (frac_source_offset_ >= frac_source_end_); }
 
-  int32_t frac_source_offset() const { return frac_source_offset_; }
+  Fixed source_offset() const { return Fixed::FromRaw(frac_source_offset_); }
   uint32_t dest_offset() const { return dest_offset_; }
 
  private:
-  static inline void CheckSourcePositions(uint32_t frac_source_frames,
-                                          int32_t* frac_source_offset_ptr, Fixed pos_filter_width);
-  static inline void CheckDestPositions(uint32_t dest_frames, uint32_t* dest_offset_ptr);
-  static inline void CheckRateValues(uint32_t step_size, uint64_t rate_modulo, uint64_t denominator,
-                                     uint64_t* source_position_modulo_ptr);
+  static void CheckDestPositions(uint32_t dest_frames, uint32_t* dest_offset_ptr);
+  static void CheckSourcePositions(int64_t source_frames, int64_t frac_source_offset,
+                                   int64_t frac_pos_filter_width);
+  static void CheckRateValues(int64_t frac_step_size, uint64_t rate_modulo, uint64_t denominator,
+                              uint64_t* source_position_modulo_ptr);
 
-  const uint32_t num_source_chans_;
-  const uint32_t num_dest_chans_;
-  const uint32_t positive_width_;
-  const uint32_t negative_width_;
-  const uint32_t frac_bits_;
-  const uint32_t frac_size_;
-  const uint32_t min_frac_source_frames_;
+  uint32_t num_source_chans_;
+  uint32_t num_dest_chans_;
+  int64_t frac_positive_width_;
+  int64_t frac_negative_width_;
 
   void* source_void_ptr_ = nullptr;
-  // TODO(fxbug.dev/37356): Make frac_source_frames and frac_source_offset typesafe
-  uint32_t frac_source_frames_ = 0;
-  int32_t* frac_source_offset_ptr_ = nullptr;
-  int32_t frac_source_offset_ = 0;
-  int32_t frac_source_end_ = 0;  // the last sampleable fractional frame of this source region
+  int64_t source_frames_ = 0;
+  Fixed* source_offset_ptr_ = nullptr;
+  int64_t frac_source_offset_ = 0;
+  int64_t frac_source_end_ = 0;
 
   float* dest_ptr_ = nullptr;
   uint32_t dest_frames_ = 0;
@@ -118,11 +110,10 @@ class PositionManager {
   uint32_t dest_offset_ = 0;
 
   // If SetRateValues is never called, we successfully operate at 1:1 (without rate change).
-  bool using_modulo_ = false;
-  uint32_t step_size_ = Mixer::FRAC_ONE;
+  int64_t frac_step_size_ = kOneFrame.raw_value();
   uint64_t rate_modulo_ = 0;
   uint64_t denominator_ = 1;
-  uint64_t source_pos_modulo_ = 0;
+  uint64_t source_pos_modulo_ = 0;  // This should always be less than rate_modulo_ (or both 0).
   uint64_t* source_pos_modulo_ptr_ = &source_pos_modulo_;
 };
 
@@ -136,28 +127,25 @@ inline SourceSampleType* PositionManager::FirstSourceFrame() const {
 template <typename SourceSampleType>
 inline SourceSampleType* PositionManager::LastSourceFrame() const {
   return static_cast<SourceSampleType*>(source_void_ptr_) +
-         (((frac_source_frames_ - 1) >> media::audio::kPtsFractionalBits) * num_source_chans_);
+         ((source_frames_ - 1) * num_source_chans_);
 }
 
 template <typename SourceSampleType>
 inline SourceSampleType* PositionManager::CurrentSourceFrame() const {
-  FX_DCHECK(frac_source_offset_ >= 0);
+  FX_CHECK(frac_source_offset_ >= 0);
 
-  auto source = static_cast<SourceSampleType*>(source_void_ptr_);
-  return source + ((frac_source_offset_ >> media::audio::kPtsFractionalBits) * num_source_chans_);
+  auto source_ptr = static_cast<SourceSampleType*>(source_void_ptr_);
+  return source_ptr + (frac_source_offset_ >> Fixed::Format::FractionalBits) * num_source_chans_;
 }
 
-template <bool UseModulo>
-inline int32_t PositionManager::AdvanceFrame() {
+inline int64_t PositionManager::AdvanceFrame() {
   ++dest_offset_;
-  frac_source_offset_ += step_size_;
+  frac_source_offset_ += frac_step_size_;
 
-  if (UseModulo && using_modulo_) {
-    source_pos_modulo_ += rate_modulo_;
-    if (source_pos_modulo_ >= denominator_) {
-      ++frac_source_offset_;
-      source_pos_modulo_ -= denominator_;
-    }
+  source_pos_modulo_ += rate_modulo_;
+  if (source_pos_modulo_ >= denominator_) {
+    ++frac_source_offset_;
+    source_pos_modulo_ -= denominator_;
   }
   return frac_source_offset_;
 }

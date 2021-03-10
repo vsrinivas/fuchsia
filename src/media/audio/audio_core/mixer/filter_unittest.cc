@@ -12,10 +12,10 @@ namespace {
 
 TEST(PointFilterTest, Construction) {
   PointFilter filter;
-  auto source_rate = 48000u;                // default
-  auto dest_rate = 48000u;                  // default
-  auto num_frac_bits = kPtsFractionalBits;  // default
-  auto expected_side_width = (1u << (num_frac_bits - 1u)) + 1u;
+  auto source_rate = 48000u;                           // default
+  auto dest_rate = 48000u;                             // default
+  auto num_frac_bits = Fixed::Format::FractionalBits;  // default
+  auto expected_side_width = (1 << (num_frac_bits - 1u)) + 1;
 
   EXPECT_EQ(filter.source_rate(), source_rate);
   EXPECT_EQ(filter.dest_rate(), dest_rate);
@@ -26,8 +26,8 @@ TEST(PointFilterTest, Construction) {
   source_rate = 16000u;
   dest_rate = 48000u;
   PointFilter filter2(source_rate, dest_rate);
-  num_frac_bits = kPtsFractionalBits;  // default
-  expected_side_width = (1u << (num_frac_bits - 1u)) + 1u;
+  num_frac_bits = Fixed::Format::FractionalBits;  // default
+  expected_side_width = (1 << (num_frac_bits - 1u)) + 1;
 
   EXPECT_EQ(filter2.source_rate(), source_rate);
   EXPECT_EQ(filter2.dest_rate(), dest_rate);
@@ -39,7 +39,7 @@ TEST(PointFilterTest, Construction) {
   dest_rate = 22050u;
   num_frac_bits = 4;
   PointFilter filter3(source_rate, dest_rate, num_frac_bits);
-  expected_side_width = (1u << (num_frac_bits - 1u)) + 1u;
+  expected_side_width = (1 << (num_frac_bits - 1u)) + 1;
 
   EXPECT_EQ(filter3.source_rate(), source_rate);
   EXPECT_EQ(filter3.dest_rate(), dest_rate);
@@ -50,10 +50,10 @@ TEST(PointFilterTest, Construction) {
 
 TEST(LinearFilterTest, Construction) {
   LinearFilter filter;
-  auto source_rate = 48000u;                // default
-  auto dest_rate = 48000u;                  // default
-  auto num_frac_bits = kPtsFractionalBits;  // default
-  auto expected_side_width = 1u << num_frac_bits;
+  auto source_rate = 48000u;                           // default
+  auto dest_rate = 48000u;                             // default
+  auto num_frac_bits = Fixed::Format::FractionalBits;  // default
+  auto expected_side_width = 1 << num_frac_bits;
 
   EXPECT_EQ(filter.source_rate(), source_rate);
   EXPECT_EQ(filter.dest_rate(), dest_rate);
@@ -64,8 +64,8 @@ TEST(LinearFilterTest, Construction) {
   source_rate = 32000u;
   dest_rate = 96000u;
   LinearFilter filter2(source_rate, dest_rate);
-  num_frac_bits = kPtsFractionalBits;  // default
-  expected_side_width = 1u << num_frac_bits;
+  num_frac_bits = Fixed::Format::FractionalBits;  // default
+  expected_side_width = 1 << num_frac_bits;
 
   EXPECT_EQ(filter2.source_rate(), source_rate);
   EXPECT_EQ(filter2.dest_rate(), dest_rate);
@@ -77,7 +77,7 @@ TEST(LinearFilterTest, Construction) {
   dest_rate = 48000u;
   num_frac_bits = 6;
   LinearFilter filter3(source_rate, dest_rate, num_frac_bits);
-  expected_side_width = 1u << num_frac_bits;
+  expected_side_width = 1 << num_frac_bits;
 
   EXPECT_EQ(filter3.source_rate(), source_rate);
   EXPECT_EQ(filter3.dest_rate(), dest_rate);
@@ -91,8 +91,8 @@ TEST(SincFilterTest, Construction) {
   auto source_rate = 48000u;                           // default
   auto dest_rate = 48000u;                             // default
   auto num_taps = kSincFilterSideTaps;                 // default
-  auto num_frac_bits = kPtsFractionalBits;             // default
-  auto side_width = (num_taps + 1u) << num_frac_bits;  // default
+  auto num_frac_bits = Fixed::Format::FractionalBits;  // default
+  auto side_width = (num_taps + 1) << num_frac_bits;   // default
 
   EXPECT_EQ(filter.source_rate(), source_rate);
   EXPECT_EQ(filter.dest_rate(), dest_rate);
@@ -104,8 +104,8 @@ TEST(SincFilterTest, Construction) {
   dest_rate = 96000u;
   SincFilter filter2(source_rate, dest_rate);
   num_taps = kSincFilterSideTaps;                 // default
-  num_frac_bits = kPtsFractionalBits;             // default
-  side_width = (num_taps + 1u) << num_frac_bits;  // default
+  num_frac_bits = Fixed::Format::FractionalBits;  // default
+  side_width = (num_taps + 1) << num_frac_bits;   // default
 
   EXPECT_EQ(filter2.source_rate(), source_rate);
   EXPECT_EQ(filter2.dest_rate(), dest_rate);
@@ -115,9 +115,9 @@ TEST(SincFilterTest, Construction) {
 
   source_rate = 96000u;
   dest_rate = 48000u;
-  num_taps = 9u;
-  num_frac_bits = kPtsFractionalBits;  // default
-  side_width = (num_taps + 1u) << num_frac_bits;
+  num_taps = 9;
+  num_frac_bits = Fixed::Format::FractionalBits;  // default
+  side_width = (num_taps + 1) << num_frac_bits;
   SincFilter filter3(source_rate, dest_rate, side_width);
 
   EXPECT_EQ(filter3.source_rate(), source_rate);
@@ -128,9 +128,9 @@ TEST(SincFilterTest, Construction) {
 
   source_rate = 16000u;
   dest_rate = 96000u;
-  num_taps = 10u;
+  num_taps = 10;
   num_frac_bits = 4u;
-  side_width = (num_taps + 1u) << num_frac_bits;
+  side_width = (num_taps + 1) << num_frac_bits;
   SincFilter filter4(source_rate, dest_rate, side_width, num_frac_bits);
 
   EXPECT_EQ(filter4.source_rate(), source_rate);
@@ -147,17 +147,17 @@ TEST(PointFilterTest, FilterCoefficients) {
 
   PointFilter filter(source_rate, dest_rate, num_frac_bits);
 
-  auto expected_side_width = (1u << (num_frac_bits - 1u)) + 1u;
+  auto expected_side_width = (1 << (num_frac_bits - 1)) + 1;
   EXPECT_EQ(filter.side_width(), expected_side_width);
 
   EXPECT_FLOAT_EQ(filter[0], 1.0f);
-  auto frac_half = 1u << (num_frac_bits - 1u);
-  for (auto idx = 1u; idx < frac_half; ++idx) {
+  auto frac_half = 1 << (num_frac_bits - 1);
+  for (auto idx = 1; idx < frac_half; ++idx) {
     EXPECT_FLOAT_EQ(filter[idx], 1.0f);
   }
 
   EXPECT_FLOAT_EQ(filter[frac_half], 0.5f);
-  for (auto idx = frac_half + 1u; idx < expected_side_width; ++idx) {
+  for (auto idx = frac_half + 1; idx < expected_side_width; ++idx) {
     EXPECT_FLOAT_EQ(filter[idx], 0.0f);
   }
 }
@@ -169,11 +169,11 @@ TEST(LinearFilterTest, FilterCoefficients) {
 
   LinearFilter filter(source_rate, dest_rate, num_frac_bits);
 
-  auto expected_side_width = 1u << num_frac_bits;
+  auto expected_side_width = 1 << num_frac_bits;
   EXPECT_EQ(filter.side_width(), expected_side_width);
 
-  auto frac_size = 1u << num_frac_bits;
-  for (auto idx = 0u; idx < frac_size; ++idx) {
+  auto frac_size = 1 << num_frac_bits;
+  for (auto idx = 0; idx < frac_size; ++idx) {
     EXPECT_FLOAT_EQ(filter[idx], static_cast<float>(frac_size - idx) / frac_size);
   }
   for (auto idx = frac_size; idx < expected_side_width; ++idx) {
@@ -184,9 +184,9 @@ TEST(LinearFilterTest, FilterCoefficients) {
 TEST(SincFilterTest, FilterCoefficients_Unity) {
   auto source_rate = 48000u;
   auto dest_rate = 48000u;
-  auto num_taps = 10u;
+  auto num_taps = 10;
   auto num_frac_bits = 4u;
-  auto side_width = (num_taps + 1u) << num_frac_bits;
+  auto side_width = (num_taps + 1) << num_frac_bits;
 
   SincFilter filter(source_rate, dest_rate, side_width, num_frac_bits);
 
@@ -197,13 +197,13 @@ TEST(SincFilterTest, FilterCoefficients_Unity) {
   EXPECT_FLOAT_EQ(filter.rate_conversion_ratio(), 1.0f);
 
   EXPECT_FLOAT_EQ(filter[0], 1.0f);
-  auto frac_size = 1u << num_frac_bits;
-  auto frac_half = frac_size >> 1u;
+  auto frac_size = 1 << num_frac_bits;
+  auto frac_half = frac_size >> 1;
   auto idx = frac_size;
-  for (auto tap = 1u; tap <= num_taps; ++tap, idx += frac_size) {
+  for (auto tap = 1; tap <= num_taps; ++tap, idx += frac_size) {
     EXPECT_FLOAT_EQ(filter[idx], 0.0f) << "idx: " << idx;
 
-    if (tap & 1u) {
+    if (tap & 1) {
       EXPECT_GT(filter[idx - frac_half], 0.0f);
       EXPECT_LT(filter[idx + frac_half], 0.0f);
     } else {
@@ -216,9 +216,9 @@ TEST(SincFilterTest, FilterCoefficients_Unity) {
 TEST(SincFilterTest, FilterCoefficients_DownSample) {
   auto source_rate = 48000u;
   auto dest_rate = 24000u;
-  auto num_taps = 9u;
+  auto num_taps = 9;
   auto num_frac_bits = 4u;
-  auto side_width = (num_taps + 1u) << num_frac_bits;
+  auto side_width = (num_taps + 1) << num_frac_bits;
 
   SincFilter filter(source_rate, dest_rate, side_width, num_frac_bits);
 
@@ -231,9 +231,9 @@ TEST(SincFilterTest, FilterCoefficients_DownSample) {
 TEST(SincFilterTest, FilterCoefficients_UpSample) {
   auto source_rate = 24000u;
   auto dest_rate = 48000u;
-  auto num_taps = 8u;
+  auto num_taps = 8;
   auto num_frac_bits = 3u;
-  auto side_width = (num_taps + 1u) << num_frac_bits;
+  auto side_width = (num_taps + 1) << num_frac_bits;
 
   SincFilter filter(source_rate, dest_rate, side_width, num_frac_bits);
 
@@ -251,8 +251,8 @@ TEST(PointFilterTest, ComputeSample) {
 
   PointFilter filter(source_rate, dest_rate, num_frac_bits);
 
-  auto frac_size = 1u << num_frac_bits;
-  auto frac_half = frac_size >> 1u;
+  auto frac_size = 1 << num_frac_bits;
+  auto frac_half = frac_size >> 1;
   float data[] = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
 
   EXPECT_FLOAT_EQ(filter.ComputeSample(0, &data[1]), data[1]);
@@ -268,9 +268,9 @@ TEST(LinearFilterTest, ComputeSample) {
 
   LinearFilter filter(source_rate, dest_rate, num_frac_bits);
 
-  auto frac_size = 1u << num_frac_bits;
-  auto frac_half = frac_size >> 1u;
-  auto frac_quarter = frac_size >> 2u;
+  auto frac_size = 1 << num_frac_bits;
+  auto frac_half = frac_size >> 1;
+  auto frac_quarter = frac_size >> 2;
   float data[] = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
 
   EXPECT_FLOAT_EQ(filter.ComputeSample(0, &data[1]), data[1]);
@@ -284,9 +284,9 @@ void ValidateSincComputeSample(uint32_t source_rate, uint32_t dest_rate, uint32_
   SincFilter filter(source_rate, dest_rate, side_width, num_frac_bits);
 
   float data[] = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f};
-  auto frac_size = 1u << num_frac_bits;
-  auto frac_half = frac_size >> 1u;
-  auto frac_quarter = frac_half >> 1u;
+  auto frac_size = 1 << num_frac_bits;
+  auto frac_half = frac_size >> 1;
+  auto frac_quarter = frac_half >> 1;
 
   // These values should be precisely equal
   EXPECT_FLOAT_EQ(filter.ComputeSample(0, &data[3]), data[3]);
@@ -303,25 +303,25 @@ TEST(SincFilterTest, ComputeSample) {
   // Unity rate ratio
   auto source_rate = 48000u;
   auto dest_rate = 48000u;
-  auto num_taps = 2u;
+  auto num_taps = 2;
   auto num_frac_bits = 2u;
-  auto side_width = (num_taps + 1u) << num_frac_bits;
+  auto side_width = (num_taps + 1) << num_frac_bits;
   ValidateSincComputeSample(source_rate, dest_rate, side_width, num_frac_bits);
 
   // Up-sampling rate ratio
   source_rate = 24000u;
   dest_rate = 48000u;
-  num_taps = 3u;
+  num_taps = 3;
   num_frac_bits = 2u;
-  side_width = (num_taps + 1u) << num_frac_bits;
+  side_width = (num_taps + 1) << num_frac_bits;
   ValidateSincComputeSample(source_rate, dest_rate, side_width, num_frac_bits);
 
   // Down-sampling rate ratio
   source_rate = 48000u;
   dest_rate = 24000u;
-  num_taps = 3u;
+  num_taps = 3;
   num_frac_bits = 3u;
-  side_width = (num_taps + 1u) << num_frac_bits;
+  side_width = (num_taps + 1) << num_frac_bits;
   ValidateSincComputeSample(source_rate, dest_rate, side_width, num_frac_bits);
 }
 

@@ -25,6 +25,7 @@ namespace media::audio::mixer {
 // because of cache/locality effects. This length allows a downsampling ratio greater than 24:1 --
 // even with 192kHz input hardware, we can produce 8kHz streams to capturers.
 static constexpr size_t kDataCacheLength = 680;
+static constexpr int64_t kDataCacheFracLength = kDataCacheLength << Fixed::Format::FractionalBits;
 
 template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
 class SincSamplerImpl : public SincSampler {
@@ -35,21 +36,21 @@ class SincSamplerImpl : public SincSampler {
         source_rate_(source_frame_rate),
         dest_rate_(dest_frame_rate),
         position_(SourceChanCount, DestChanCount,
-                  SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate),
-                  SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate)),
+                  SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate).raw_value(),
+                  SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate).raw_value()),
         working_data_(DestChanCount, kDataCacheLength),
         filter_(source_rate_, dest_rate_,
-                SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate)) {
-    num_prev_frames_needed_ = RightIdx(neg_filter_width().raw_value());
-    total_frames_needed_ = num_prev_frames_needed_ + RightIdx(pos_filter_width().raw_value());
+                SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate).raw_value()) {
+    num_prev_frames_needed_ = Ceiling(neg_filter_width().raw_value());
+    total_frames_needed_ = num_prev_frames_needed_ + Ceiling(pos_filter_width().raw_value());
 
     FX_CHECK(kDataCacheLength > total_frames_needed_)
         << "Data cache (len " << kDataCacheLength << ") must be at least " << total_frames_needed_
         << " to support SRC ratio " << source_frame_rate << "/" << dest_frame_rate;
   }
 
-  bool Mix(float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset,
-           const void* source_void_ptr, uint32_t frac_source_frames, int32_t* frac_source_offset,
+  bool Mix(float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr,
+           const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
            bool accumulate) override;
 
   void Reset() override {
@@ -60,23 +61,26 @@ class SincSamplerImpl : public SincSampler {
   virtual void EagerlyPrepare() override { filter_.EagerlyPrepare(); }
 
  private:
+  // As an optimization, we work with raw fixed-point values internally, but we pass Fixed types
+  // through our public interfaces (to MixStage etc.) for source position/filter width/step size.
+  static constexpr int64_t kFracFrame = kOneFrame.raw_value();
+
+  static int64_t Ceiling(int64_t frac_position) {
+    return ((frac_position - 1) >> Fixed::Format::FractionalBits) + 1;
+  }
+  static int64_t Floor(int64_t frac_position) {
+    return frac_position >> Fixed::Format::FractionalBits;
+  }
+
   template <ScalerType ScaleType, bool DoAccumulate>
-  inline bool Mix(float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset,
-                  const void* source_void_ptr, uint32_t frac_source_frames,
-                  int32_t* frac_source_offset);
+  inline bool Mix(float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr,
+                  const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr);
 
   static inline void PopulateFramesToChannelStrip(const void* source_void_ptr,
                                                   int32_t next_source_idx_to_copy,
                                                   const uint32_t frames_needed,
                                                   ChannelStrip* channel_strip,
                                                   uint32_t next_cache_idx_to_fill);
-
-  static inline int32_t LeftIdx(int32_t frac_source_offset) {
-    return frac_source_offset >> kPtsFractionalBits;
-  }
-  static inline int32_t RightIdx(int32_t frac_source_offset) {
-    return ((frac_source_offset - 1) >> kPtsFractionalBits) + 1;
-  }
 
   uint32_t source_rate_;
   uint32_t dest_rate_;
@@ -117,8 +121,8 @@ SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::PopulateFrame
 template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
 template <ScalerType ScaleType, bool DoAccumulate>
 inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
-    float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset, const void* source_void_ptr,
-    uint32_t frac_source_frames, int32_t* frac_source_offset) {
+    float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr, const void* source_void_ptr,
+    int64_t source_frames, Fixed* source_offset_ptr) {
   TRACE_DURATION("audio", "SincSamplerImpl::MixInternal", "source_rate", source_rate_, "dest_rate",
                  dest_rate_, "source_chans", SourceChanCount, "dest_chans", DestChanCount);
 
@@ -128,16 +132,15 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
   using DM = DestMixer<ScaleType, DoAccumulate>;
 
   auto info = &bookkeeping();
-  int32_t frac_source_off = *frac_source_offset;
-  position_.SetSourceValues(source_void_ptr, frac_source_frames, frac_source_offset);
-  position_.SetDestValues(dest_ptr, dest_frames, dest_offset);
-  position_.SetRateValues(info->step_size, info->rate_modulo(), info->denominator(),
+  auto frac_source_offset = source_offset_ptr->raw_value();
+  const auto frac_neg_width = neg_filter_width().raw_value();
+  position_.SetSourceValues(source_void_ptr, source_frames, source_offset_ptr);
+  position_.SetDestValues(dest_ptr, dest_frames, dest_offset_ptr);
+  position_.SetRateValues(info->step_size.raw_value(), info->rate_modulo(), info->denominator(),
                           &info->source_pos_modulo);
 
-  const uint32_t source_frames = frac_source_frames >> kPtsFractionalBits;
-  uint32_t next_cache_idx_to_fill = 0;
-  int32_t next_source_idx_to_copy =
-      RightIdx(frac_source_off - static_cast<int32_t>(neg_filter_width().raw_value()));
+  auto next_cache_idx_to_fill = 0u;
+  auto next_source_idx_to_copy = Ceiling(frac_source_offset - frac_neg_width);
 
   // Do we need previously-cached values?
   if (next_source_idx_to_copy < 0) {
@@ -150,8 +153,8 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
   if (!position_.FrameCanBeMixed()) {
     if (position_.SourceIsConsumed()) {
       const auto frames_needed = source_frames - next_source_idx_to_copy;
-      if (frac_source_off > 0) {
-        working_data_.ShiftBy(RightIdx(frac_source_off));
+      if (frac_source_offset > 0) {
+        working_data_.ShiftBy(Ceiling(frac_source_offset));
       }
 
       // Calculate/store the last few source frames to the start of the channel_strip for next time
@@ -172,8 +175,8 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
     }
 
     while (position_.FrameCanBeMixed()) {
-      auto source_offset_to_cache =
-          RightIdx(frac_source_off - neg_filter_width().raw_value()) * Mixer::FRAC_ONE;
+      // Can't left-shift the potentially-negative result of Ceiling (undefined behavior)
+      auto frac_source_offset_to_cache = Ceiling(frac_source_offset - frac_neg_width) * kFracFrame;
       const auto frames_needed = std::min<uint32_t>(source_frames - next_source_idx_to_copy,
                                                     kDataCacheLength - next_cache_idx_to_fill);
 
@@ -182,36 +185,34 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
                                    &working_data_, next_cache_idx_to_fill);
       next_source_idx_to_copy += frames_needed;
 
-      uint32_t frac_cache_offset = frac_source_off - source_offset_to_cache;
-      uint32_t interp_frac = frac_cache_offset & Mixer::FRAC_MASK;
-      uint32_t cache_center_idx = LeftIdx(frac_cache_offset);
-      FX_CHECK(RightIdx(frac_cache_offset - neg_filter_width().raw_value()) >= 0)
-          << RightIdx(static_cast<int32_t>(cache_center_idx - neg_filter_width().raw_value()))
-          << " should be >= 0";
+      int64_t frac_cache_offset = frac_source_offset - frac_source_offset_to_cache;
+      int64_t frac_interp_fraction = frac_cache_offset & Fixed::Format::FractionalMask;
+      auto cache_center_idx = Floor(frac_cache_offset);
+      FX_CHECK(Ceiling(frac_cache_offset - frac_neg_width) >= 0)
+          << Ceiling(frac_cache_offset - frac_neg_width) << " should be >= 0";
 
-      constexpr uint32_t kDataCacheFracLength = kDataCacheLength << kPtsFractionalBits;
       while (position_.FrameCanBeMixed() &&
-             (frac_cache_offset + pos_filter_width().raw_value() < kDataCacheFracLength)) {
+             frac_cache_offset + pos_filter_width().raw_value() < kDataCacheFracLength) {
         auto dest_frame = position_.CurrentDestFrame();
         if constexpr (ScaleType == ScalerType::RAMPING) {
           amplitude_scale = info->scale_arr[position_.dest_offset() - dest_ramp_start];
         }
 
         for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
-          float sample =
-              filter_.ComputeSample(interp_frac, &(working_data_[dest_chan][cache_center_idx]));
+          float sample = filter_.ComputeSample(frac_interp_fraction,
+                                               &(working_data_[dest_chan][cache_center_idx]));
           dest_frame[dest_chan] = DM::Mix(dest_frame[dest_chan], sample, amplitude_scale);
         }
 
-        frac_source_off = position_.AdvanceFrame();
+        frac_source_offset = position_.AdvanceFrame();
 
-        frac_cache_offset = frac_source_off - source_offset_to_cache;
-        interp_frac = frac_cache_offset & Mixer::FRAC_MASK;
-        cache_center_idx = LeftIdx(frac_cache_offset);
+        frac_cache_offset = frac_source_offset - frac_source_offset_to_cache;
+        frac_interp_fraction = frac_cache_offset & Fixed::Format::FractionalMask;
+        cache_center_idx = Floor(frac_cache_offset);
       }
 
       // idx of the earliest cached frame we must retain == the amount by which we can left-shift
-      auto num_frames_to_shift = RightIdx(frac_cache_offset - neg_filter_width().raw_value());
+      auto num_frames_to_shift = Ceiling(frac_cache_offset - frac_neg_width);
       working_data_.ShiftBy(num_frames_to_shift);
 
       cache_center_idx -= num_frames_to_shift;
@@ -228,50 +229,50 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
 
 template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
 bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
-    float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset, const void* source_void_ptr,
-    uint32_t frac_source_frames, int32_t* frac_source_offset, bool accumulate) {
-  TRACE_DURATION("audio", "SincSamplerImpl::Mix", "source_rate", source_rate_, "dest_rate",
-                 dest_rate_, "source_chans", SourceChanCount, "dest_chans", DestChanCount);
-
+    float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr, const void* source_void_ptr,
+    int64_t source_frames, Fixed* source_offset_ptr, bool accumulate) {
   auto info = &bookkeeping();
+
+  PositionManager::CheckPositions(dest_frames, dest_offset_ptr, source_frames,
+                                  source_offset_ptr->raw_value(), pos_filter_width().raw_value(),
+                                  info);
 
   // For now, we continue to use this proliferation of template specializations, largely to keep the
   // designs congruent between the Point and Sinc samplers. Previously when we removed most
   // of these specializations from Point, we regained only about 75K of blob space, while
   // mixer microbenchmarks running times ballooned to ~3x of their previous durations.
   if (info->gain.IsUnity()) {
-    return accumulate ? Mix<ScalerType::EQ_UNITY, true>(dest_ptr, dest_frames, dest_offset,
-                                                        source_void_ptr, frac_source_frames,
-                                                        frac_source_offset)
-                      : Mix<ScalerType::EQ_UNITY, false>(dest_ptr, dest_frames, dest_offset,
-                                                         source_void_ptr, frac_source_frames,
-                                                         frac_source_offset);
+    return accumulate
+               ? Mix<ScalerType::EQ_UNITY, true>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                 source_void_ptr, source_frames, source_offset_ptr)
+               : Mix<ScalerType::EQ_UNITY, false>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                  source_void_ptr, source_frames,
+                                                  source_offset_ptr);
   }
 
   if (info->gain.IsSilent()) {
-    return Mix<ScalerType::MUTED, true>(dest_ptr, dest_frames, dest_offset, source_void_ptr,
-                                        frac_source_frames, frac_source_offset);
+    return Mix<ScalerType::MUTED, true>(dest_ptr, dest_frames, dest_offset_ptr, source_void_ptr,
+                                        source_frames, source_offset_ptr);
   }
 
   if (info->gain.IsRamping()) {
-    const auto max_frames = Mixer::Bookkeeping::kScaleArrLen + *dest_offset;
+    const auto max_frames = Mixer::Bookkeeping::kScaleArrLen + *dest_offset_ptr;
     if (dest_frames > max_frames) {
       dest_frames = max_frames;
     }
 
     return accumulate
-               ? Mix<ScalerType::RAMPING, true>(dest_ptr, dest_frames, dest_offset, source_void_ptr,
-                                                frac_source_frames, frac_source_offset)
-               : Mix<ScalerType::RAMPING, false>(dest_ptr, dest_frames, dest_offset,
-                                                 source_void_ptr, frac_source_frames,
-                                                 frac_source_offset);
+               ? Mix<ScalerType::RAMPING, true>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                source_void_ptr, source_frames, source_offset_ptr)
+               : Mix<ScalerType::RAMPING, false>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                 source_void_ptr, source_frames, source_offset_ptr);
   }
 
   return accumulate
-             ? Mix<ScalerType::NE_UNITY, true>(dest_ptr, dest_frames, dest_offset, source_void_ptr,
-                                               frac_source_frames, frac_source_offset)
-             : Mix<ScalerType::NE_UNITY, false>(dest_ptr, dest_frames, dest_offset, source_void_ptr,
-                                                frac_source_frames, frac_source_offset);
+             ? Mix<ScalerType::NE_UNITY, true>(dest_ptr, dest_frames, dest_offset_ptr,
+                                               source_void_ptr, source_frames, source_offset_ptr)
+             : Mix<ScalerType::NE_UNITY, false>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                source_void_ptr, source_frames, source_offset_ptr);
 }
 
 // Templates used to expand  the different combinations of possible SincSampler configurations.

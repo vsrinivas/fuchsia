@@ -26,25 +26,26 @@ class OutputProducer {
    * @note It is assumed that the source intermediate mixing buffer has the same
    * number of channels and channel ordering as the output buffer.
    *
-   * @param source A pointer to the normalized frames of audio to use as the
+   * @param source_ptr A pointer to the normalized frames of audio to use as the
    * source.
    *
-   * @param dest A pointer to the destination buffer whose frames match the
+   * @param dest_void_ptr A pointer to the destination buffer whose frames match the
    * format described by output_format during the call to Select.
    *
    * @param frames The number of frames to produce.
    */
-  virtual void ProduceOutput(const float* source, void* dest, uint32_t frames) const = 0;
+  virtual void ProduceOutput(const float* source_ptr, void* dest_void_ptr,
+                             uint32_t frames) const = 0;
 
   /**
    * Fill a destination buffer with silence.
    *
-   * @param dest A pointer to the destination buffer whose frames match the
+   * @param dest_void_ptr A pointer to the destination buffer whose frames match the
    * format described by output_format during the call to Select.
    *
    * @param frames The number of frames to produce.
    */
-  virtual void FillWithSilence(void* dest, uint32_t frames) const = 0;
+  virtual void FillWithSilence(void* dest_void_ptr, uint32_t frames) const = 0;
 
   const fuchsia::media::AudioStreamType& format() const { return format_; }
   uint32_t channels() const { return channels_; }
