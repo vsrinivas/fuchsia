@@ -223,17 +223,25 @@ class CriticalSectionLockupChecker {
       CounterBucket{ZX_MSEC(100000), counter_lockup_cs_exceeding_100000ms},
   };
 
-  // Controls whether critical section checking is enabled and at how long is "too long".
+  // These thresholds control whether critical section checking is enabled and how long is "too
+  // long".
   //
-  // A value of 0 disables the lockup detector for critical sections.
+  // A non-zero |threshold_ticks| enables critical section checking with a non-fatal action (log,
+  // but don't reboot).
   //
-  // This value is expressed in units of ticks rather than nanoseconds because it is faster to read
-  // the platform timer's tick count than to get current_time().
+  // A non-zero |fatal_threshold_ticks| enables critical section checking with a fatal action
+  // (reboot).
   //
-  // Use relaxed atomic operations because this field is accessed within the critical section and
-  // must be fast.
+  // These values are expressed in units of ticks rather than nanoseconds because it is faster to
+  // read the platform timer's tick count than to get current_time().
+  //
+  // These variables are atomic because, although set early during lockup detector initialization,
+  // their values may change to facilitate testing (see |lockup_set_cs_threshold_ticks|).  Use
+  // relaxed operations because these fields are accessed within the critical section and must be
+  // fast.
   static inline RelaxedAtomic<zx_ticks_t> threshold_ticks_{0};
-  static inline zx_ticks_t fatal_threshold_ticks_{0};
+  static inline RelaxedAtomic<zx_ticks_t> fatal_threshold_ticks_{0};
+
   static inline zx_ticks_t worst_case_threshold_ticks_{ktl::numeric_limits<zx_ticks_t>::max()};
 };
 
@@ -294,12 +302,17 @@ void HeartbeatLockupChecker::PerformCheck(LockupDetectorState& state, cpu_num_t 
 
 void CriticalSectionLockupChecker::PerformCheck(LockupDetectorState& state, cpu_num_t cpu,
                                                 zx_ticks_t now_ticks) {
+  auto& cs_state = state.critical_section;
+
   // Observe all of the info we need to make a decision as to whether or not there
   // has been a condition violation.
-  auto& cs_state = state.critical_section;
-  const zx_ticks_t observed_begin_ticks = cs_state.begin_ticks.load(ktl::memory_order_relaxed);
   const zx_ticks_t observed_threshold_ticks = threshold_ticks();
+  // Use Acquire semantics to ensure that if we observe a previously stored |begin_ticks| value we
+  // will also observe stores to other fields that were issued prior to a Release on |begin_ticks|.
+  const zx_ticks_t observed_begin_ticks = cs_state.begin_ticks.load(ktl::memory_order_acquire);
   const char* const observed_name = cs_state.name.load(ktl::memory_order_relaxed);
+  const zx_ticks_t observed_worst_case_ticks =
+      cs_state.worst_case_ticks.load(ktl::memory_order_relaxed);
 
   // If observed_begin_ticks is non-zero, then the CPU we are checking is currently in a
   // critical section.  Compute how long it has been in the CS and check to see
@@ -357,8 +370,6 @@ void CriticalSectionLockupChecker::PerformCheck(LockupDetectorState& state, cpu_
 
   // Next check to see if we have a new worst case time spent in a critical
   // section to report.
-  const zx_ticks_t observed_worst_case_ticks =
-      cs_state.worst_case_ticks.load(ktl::memory_order_acquire);
   if ((observed_worst_case_ticks > worst_case_threshold_ticks_) &&
       (observed_worst_case_ticks > cs_state.reported_worst_case_ticks) &&
       cs_state.worst_case_alert_limiter.Ready()) {
@@ -552,16 +563,46 @@ void lockup_begin(const char* name) {
     return;
   }
 
+  // This is the outermost critical section.  However, we may be racing with an interrupt handler
+  // that may call into `lockup_begin()`.  Use a compiler fence to ensure that the compiler cannot
+  // reorder upcoming stores to precede the depth=1 store above.  If the compiler were to make such
+  // a reordering the `lockup_begin()` call made by the interrupt handler may incorrectly believe
+  // its critical section is the outermost critical section because it has not seen our depth=1
+  // store.
+  //
+  // Note, there is a small gap here where the CriticalSectionLockupChecker may fail to notice a
+  // lockup (though the HeartbeatLockupChecker may still detect it).  Consider the following:
+  //
+  //   1. We have stored depth=1, but not yet stored begin_ticks.
+  //   2. An interrupt fires and the handler calls `lockup_begin()`.
+  //   3. The handler see that depth is 1 so it does nothing.
+  //   4. The CPU enters an infinite loop.
+  //   5. CriticalSectionLockupChecker sees that begin_time has not be set so it assumes the CPU is
+  //      not in a section.
+  //
+  // If interrupts are enabled at the time of the infinite loop in step 4, the system may never
+  // detect the problem.  If instead of an infinite loop we just spend a lot of time in the
+  // interrupt handler, we may never know it because the begin_time would only get set by the outer
+  // critical section *after* returning from the handler.
+  //
+  // One way to close the gap would be to use begin_ticks rather than depth to determine if we're
+  // already critical section.  Instead of storing begin_ticks when depth=1, we would store
+  // begin_ticks only if it's currently unset (i.e. use an atomic compare and exchange with an
+  // expected value of 0).  However, this would increase the cost of critical section
+  // instrumentation.  Because the gap is small and we have heartbeats we have chosen to live with
+  // it rather than pay the price of atomic compare and exchange.
+  ktl::atomic_signal_fence(std::memory_order_seq_cst);
+
   if (!CriticalSectionLockupChecker::IsEnabled()) {
     // Lockup detector is disabled.
     return;
   }
 
-  const zx_ticks_t now = current_ticks();
-  // Using relaxed stores because this is performance sensitive code and it's OK for the checker to
-  // see these stores in any order.
-  cs_state.begin_ticks.store(now, ktl::memory_order_relaxed);
   cs_state.name.store(name, ktl::memory_order_relaxed);
+  const zx_ticks_t now = current_ticks();
+  // Use release semantics to ensure that if an observer sees this store to |begin_ticks|, they will
+  // also see the stores that preceded it.
+  cs_state.begin_ticks.store(now, ktl::memory_order_release);
 }
 
 void lockup_end() {
@@ -585,24 +626,31 @@ void lockup_end() {
     return;
   }
 
+  // This is the outermost critical section.  However, we may be racing with an interrupt handler
+  // that may call into `lockup_begin()`.  Use a compiler fence to ensure that the following
+  // cs_state operations cannot be reordered to preceded the depth operations above.
+  ktl::atomic_signal_fence(std::memory_order_seq_cst);
+
   // Is this a new worst for us?
   const zx_ticks_t now_ticks = current_ticks();
   const zx_ticks_t begin = cs_state.begin_ticks.load(ktl::memory_order_relaxed);
   zx_ticks_t delta = zx_time_sub_time(now_ticks, begin);
-  if (delta > cs_state.worst_case_ticks.load(ktl::memory_order_relaxed)) {
-    cs_state.worst_case_ticks.store(delta, ktl::memory_order_release);
-  }
 
   // Update our counters.
   CriticalSectionLockupChecker::RecordCriticalSectionBucketCounters(delta);
 
+  if (delta > cs_state.worst_case_ticks.load(ktl::memory_order_relaxed)) {
+    cs_state.worst_case_ticks.store(delta, ktl::memory_order_relaxed);
+  }
+
+  cs_state.name.store(nullptr, ktl::memory_order_relaxed);
+
   // We are done with the CS now.  Clear the begin time to indicate that we are
   // not in any critical section.
   //
-  // Using relaxed stores because this is performance sensitive code and it's OK
-  // for the checker to see these stores in any order.
-  cs_state.begin_ticks.store(0, ktl::memory_order_relaxed);
-  cs_state.name.store(nullptr, ktl::memory_order_relaxed);
+  // Use release semantics to ensure that if an observer sees this store to |begin_ticks|, they will
+  // also see any of our previous stores.
+  cs_state.begin_ticks.store(0, ktl::memory_order_release);
 }
 
 int64_t lockup_get_critical_section_oops_count() { return counter_lockup_cs_count.Value(); }
@@ -623,11 +671,11 @@ void lockup_status() {
       }
 
       const auto& cs_state = percpu::Get(i).lockup_detector_state.critical_section;
+      const zx_ticks_t begin_ticks = cs_state.begin_ticks.load(ktl::memory_order_acquire);
       const char* name = cs_state.name.load(ktl::memory_order_relaxed);
-      const zx_ticks_t begin_ticks = cs_state.begin_ticks.load(ktl::memory_order_relaxed);
       const zx_ticks_t now = current_ticks();
       const int64_t worst_case_usec =
-          TicksToDuration(cs_state.worst_case_ticks.load(ktl::memory_order_acquire)) / ZX_USEC(1);
+          TicksToDuration(cs_state.worst_case_ticks.load(ktl::memory_order_relaxed)) / ZX_USEC(1);
       if (begin_ticks == 0) {
         printf("CPU-%u not in critical section (worst case %" PRId64 " uSec)\n", i,
                worst_case_usec);
