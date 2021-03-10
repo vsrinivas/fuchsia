@@ -4,6 +4,8 @@
 
 library conformance;
 
+using zx;
+
 // TODO(fxbug.dev/36441): Allow bindings to compile on host with handles.
 
 resource struct SingleHandle {
@@ -60,33 +62,23 @@ resource struct ReservedFieldTableStruct {
 };
 
 resource struct EventWithDefaultRights {
-    // 53251 is ZX_DEFAULT_EVENT_RIGHTS.
-    // TODO(fxbug.dev/41920) Replace with constant value.
-    handle:<EVENT, 53251> h;
+    handle:<EVENT, zx.DEFAULT_EVENT_RIGHTS> h;
 };
 
 resource struct EventWithReducedRights {
-    // 49155 is ZX_RIGHTS_BASIC, which is missing ZX_RIGHT_SIGNAL
-    // TODO(fxbug.dev/41920) Replace with constant value.
-    handle:<EVENT, 49155> h;
+    handle:<EVENT, zx.RIGHTS_BASIC> h;
 };
 
 resource struct ArrayOfVectorOfEventInStructWithReducedRights {
-    // 49155 is ZX_RIGHTS_BASIC.
-    // TODO(fxbug.dev/41920) Replace with constant value.
-    array<vector<handle:<EVENT, 49155>>:1>:1 h;
+    array<vector<handle:<EVENT, zx.RIGHTS_BASIC>>:1>:1 h;
 };
 
 resource struct VectorOfArrayOfEventInStructWithReducedRights {
-    // 49155 is ZX_RIGHTS_BASIC.
-    // TODO(fxbug.dev/41920) Replace with constant value.
-    vector<array<handle:<EVENT, 49155>>:1>:1 h;
+    vector<array<handle:<EVENT, zx.RIGHTS_BASIC>>:1>:1 h;
 };
 
 resource table ArrayOfVectorOfEventInTableWithReducedRights {
-    // 49155 is ZX_RIGHTS_BASIC.
-    // TODO(fxbug.dev/41920) Replace with constant value.
-    1: array<vector<handle:<EVENT, 49155>>:1>:1 h;
+    1: array<vector<handle:<EVENT, zx.RIGHTS_BASIC>>:1>:1 h;
 };
 
 resource struct ArrayOfVectorOfEventInTableWithReducedRightsStruct {
@@ -94,9 +86,7 @@ resource struct ArrayOfVectorOfEventInTableWithReducedRightsStruct {
 };
 
 resource table VectorOfArrayOfEventInTableWithReducedRights {
-    // 49155 is ZX_RIGHTS_BASIC.
-    // TODO(fxbug.dev/41920) Replace with constant value.
-    1: vector<array<handle:<EVENT, 49155>>:1>:1 h;
+    1: vector<array<handle:<EVENT, zx.RIGHTS_BASIC>>:1>:1 h;
 };
 
 resource struct VectorOfArrayOfEventInTableWithReducedRightsStruct {
@@ -104,9 +94,7 @@ resource struct VectorOfArrayOfEventInTableWithReducedRightsStruct {
 };
 
 resource union ArrayOfVectorOfEventInUnionWithReducedRights {
-    // 49155 is ZX_RIGHTS_BASIC.
-    // TODO(fxbug.dev/41920) Replace with constant value.
-    1: array<vector<handle:<EVENT, 49155>>:1>:1 h;
+    1: array<vector<handle:<EVENT, zx.RIGHTS_BASIC>>:1>:1 h;
 };
 
 resource struct ArrayOfVectorOfEventInUnionWithReducedRightsStruct {
@@ -114,9 +102,7 @@ resource struct ArrayOfVectorOfEventInUnionWithReducedRightsStruct {
 };
 
 resource union VectorOfArrayOfEventInUnionWithReducedRights {
-    // 49155 is ZX_RIGHTS_BASIC.
-    // TODO(fxbug.dev/41920) Replace with constant value.
-    1: vector<array<handle:<EVENT, 49155>>:1>:1 h;
+    1: vector<array<handle:<EVENT, zx.RIGHTS_BASIC>>:1>:1 h;
 };
 
 resource struct VectorOfArrayOfEventInUnionWithReducedRightsStruct {
