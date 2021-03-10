@@ -59,7 +59,7 @@ impl<V> Value for V where
 
 /// ItemRef is a struct that contains references to key and value, which is useful since in many
 /// cases since keys and values are stored separately so &Item is not possible.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct ItemRef<'a, K, V> {
     pub key: &'a K,
     pub value: &'a V,
@@ -73,7 +73,7 @@ impl<'a, K, V> Clone for ItemRef<'a, K, V> {
 impl<'a, K, V> Copy for ItemRef<'a, K, V> {}
 
 /// Item is a struct that combines a key and a value.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Item<K, V> {
     pub key: K,
     pub value: V,
