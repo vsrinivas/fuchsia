@@ -31,26 +31,32 @@ bool NestedCriticalSectionTest() {
 
   zx_ticks_t now = current_ticks();
 
-  lockup_begin();
+  static constexpr const char kOuter[] = "NestedCriticalSectionTest-outer";
+  lockup_begin(kOuter);
   EXPECT_EQ(1u, cs_state.depth);
 
   const zx_ticks_t begin_ticks = cs_state.begin_ticks;
   EXPECT_GE(cs_state.begin_ticks, now);
+  EXPECT_EQ(cs_state.name.load(), kOuter);
 
-  lockup_begin();
+  static constexpr const char kInner[] = "NestedCriticalSectionTest-inner";
+  lockup_begin(kInner);
   EXPECT_EQ(2u, cs_state.depth);
 
   // No change because only the outer most critical section is tracked.
   EXPECT_EQ(begin_ticks, cs_state.begin_ticks);
+  EXPECT_EQ(cs_state.name.load(), kOuter);
 
   lockup_end();
   EXPECT_EQ(1u, cs_state.depth);
 
   EXPECT_EQ(begin_ticks, cs_state.begin_ticks);
+  EXPECT_EQ(cs_state.name.load(), kOuter);
 
   lockup_end();
   EXPECT_EQ(0u, cs_state.depth);
   EXPECT_EQ(0, cs_state.begin_ticks);
+  EXPECT_EQ(cs_state.name.load(), nullptr);
 
   END_TEST;
 }

@@ -73,6 +73,9 @@ struct LockupDetectorState {
   //
   /////////////////////////////////////////////////////////////////////////////
   struct {
+    // The name of the active critical section, if any.  May be nullptr.
+    ktl::atomic<const char*> name{nullptr};
+
     // The time (tick count) at which the CPU entered the critical section.
     ktl::atomic<zx_ticks_t> begin_ticks{0};
 
