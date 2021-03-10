@@ -65,11 +65,16 @@ void TestCloning() {
       const zx::vmo& parent = TestTraits::GetVmo(view.storage());  // Well, would-be parent.
       ASSERT_NO_FATAL_FAILURE(ExpectVmoIsCloned(vmo, parent));
 
-      // CRC-checking and header checking is sufficient to determine
-      // byte-for-byte equality.
-      zbitl::CrcCheckingView<decltype(created)> created_view(std::move(created));
+      zbitl::View created_view(std::move(created));
       auto created_first = created_view.begin();
       EXPECT_EQ(created_view.end(), std::next(created_first));  // Should only have one item.
+
+      // CRC-checking and header checking is sufficient to determine
+      // byte-for-byte equality.
+      auto crc_result = created_view.CheckCrc32(created_first);
+      ASSERT_FALSE(crc_result.is_error()) << zbitl::ViewErrorString(crc_result.error_value());
+      EXPECT_TRUE(crc_result.value());
+
       zbi_header_t src_header = *((*first).header);
       zbi_header_t dest_header = *((*created_first).header);
       EXPECT_EQ(HeaderToTuple(src_header), HeaderToTuple(dest_header));
@@ -90,11 +95,16 @@ void TestCloning() {
       const zx::vmo& vmo = CreationTestTraits::GetVmo(created);
       ASSERT_NO_FATAL_FAILURE(ExpectVmoIsNotCloned(vmo));
 
-      // CRC-checking and header checking is sufficient to determine
-      // byte-for-byte equality.
-      zbitl::CrcCheckingView<decltype(created)> created_view(std::move(created));
+      zbitl::View created_view(std::move(created));
       auto created_first = created_view.begin();
       EXPECT_EQ(created_view.end(), std::next(created_first));  // Should only have one item.
+
+      // CRC-checking and header checking is sufficient to determine
+      // byte-for-byte equality.
+      auto crc_result = created_view.CheckCrc32(created_first);
+      ASSERT_FALSE(crc_result.is_error()) << zbitl::ViewErrorString(crc_result.error_value());
+      EXPECT_TRUE(crc_result.value());
+
       zbi_header_t src_header = *((*second).header);
       zbi_header_t dest_header = *((*created_first).header);
       EXPECT_EQ(HeaderToTuple(src_header), HeaderToTuple(dest_header));
@@ -132,11 +142,16 @@ void TestCloning() {
       const zx::vmo& parent = TestTraits::GetVmo(view.storage());  // Well, would-be parent.
       ASSERT_NO_FATAL_FAILURE(ExpectVmoIsCloned(vmo, parent));
 
-      // CRC-checking and header checking is sufficient to determine
-      // byte-for-byte equality.
-      zbitl::CrcCheckingView<decltype(created)> created_view(std::move(created));
+      zbitl::View created_view(std::move(created));
       auto created_first = created_view.begin();
       EXPECT_EQ(created_view.end(), std::next(created_first));  // Should only have one item.
+
+      // CRC-checking and header checking is sufficient to determine
+      // byte-for-byte equality.
+      auto crc_result = created_view.CheckCrc32(created_first);
+      ASSERT_FALSE(crc_result.is_error()) << zbitl::ViewErrorString(crc_result.error_value());
+      EXPECT_TRUE(crc_result.value());
+
       zbi_header_t src_header = *((*first).header);
       zbi_header_t dest_header = *((*created_first).header);
       EXPECT_EQ(HeaderToTuple(src_header), HeaderToTuple(dest_header));
@@ -160,17 +175,28 @@ void TestCloning() {
       const zx::vmo& parent = TestTraits::GetVmo(view.storage());  // Well, would-be parent.
       ASSERT_NO_FATAL_FAILURE(ExpectVmoIsCloned(vmo, parent));
 
+      zbitl::View created_view(std::move(created));
+      auto created_first = created_view.begin();
+      auto created_second = std::next(created_first);
+      EXPECT_EQ(created_view.end(), std::next(created_second));  // Should have two items.
+
       // CRC-checking and header checking is sufficient to determine
       // byte-for-byte equality.
-      zbitl::CrcCheckingView<decltype(created)> created_view(std::move(created));
-      auto created_first = created_view.begin();
-      auto createdSecond = std::next(created_first);
-      EXPECT_EQ(created_view.end(), std::next(createdSecond));  // Should have two items.
+      {
+        auto result = created_view.CheckCrc32(created_first);
+        ASSERT_FALSE(result.is_error()) << zbitl::ViewErrorString(result.error_value());
+        EXPECT_TRUE(result.value());
+      }
+      {
+        auto result = created_view.CheckCrc32(created_second);
+        ASSERT_FALSE(result.is_error()) << zbitl::ViewErrorString(result.error_value());
+        EXPECT_TRUE(result.value());
+      }
 
       zbi_header_t src_header = *((*second).header);
       zbi_header_t dest1_header = *((*created_first).header);
       uint64_t dest1_payload = (*created_first).payload;
-      zbi_header_t dest2_header = *((*createdSecond).header);
+      zbi_header_t dest2_header = *((*created_second).header);
 
       EXPECT_EQ(static_cast<uint32_t>(ZBI_TYPE_DISCARD), dest1_header.type);
       constexpr uint32_t kExpectedDiscardSize = kSecondItemSize - 2 * sizeof(zbi_header_t);
@@ -197,10 +223,6 @@ TEST(ZbitlViewVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<VmoTestTraits>());
 }
 
-TEST(ZbitlViewVmoTests, CrcCheckFailure) {
-  ASSERT_NO_FATAL_FAILURE(TestCrcCheckFailure<VmoTestTraits>());
-}
-
 TEST(ZbitlViewVmoTests, Cloning) { ASSERT_NO_FATAL_FAILURE(TestCloning<VmoTestTraits>()); }
 
 TEST_ITERATION(ZbitlViewVmoTests, VmoTestTraits)
@@ -213,10 +235,6 @@ TEST(ZbitlImageVmoTests, Appending) { ASSERT_NO_FATAL_FAILURE(TestAppending<VmoT
 
 TEST(ZbitlViewUnownedVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<UnownedVmoTestTraits>());
-}
-
-TEST(ZbitlViewUnownedVmoTests, CrcCheckFailure) {
-  ASSERT_NO_FATAL_FAILURE(TestCrcCheckFailure<UnownedVmoTestTraits>());
 }
 
 TEST(ZbitlViewUnownedVmoTests, Cloning) {
@@ -235,10 +253,6 @@ TEST(ZbitlImageUnownedVmoTests, Appending) {
 
 TEST(ZbitlViewMapUnownedVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<MapUnownedVmoTestTraits>());
-}
-
-TEST(ZbitlViewMapUnownedVmoTests, CrcCheckFailure) {
-  ASSERT_NO_FATAL_FAILURE(TestCrcCheckFailure<MapUnownedVmoTestTraits>());
 }
 
 TEST(ZbitlViewMapUnownedVmoTests, Cloning) {
@@ -260,10 +274,6 @@ TEST(ZbitlImageMapUnownedVmoTests, Appending) {
 
 TEST(ZbitlViewMapOwnedVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<MapOwnedVmoTestTraits>());
-}
-
-TEST(ZbitlViewMapOwnedVmoTests, CrcCheckFailure) {
-  ASSERT_NO_FATAL_FAILURE(TestCrcCheckFailure<MapOwnedVmoTestTraits>());
 }
 
 TEST(ZbitlViewMapOwnedVmoTests, Cloning) {

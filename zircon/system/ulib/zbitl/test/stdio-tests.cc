@@ -9,10 +9,6 @@ namespace {
 // The type of FILE* cannot be default-constructed, so we skip the
 // TestDefaultConstructedView() test case.
 
-TEST(ZbitlViewStdioTests, CrcCheckFailure) {
-  ASSERT_NO_FATAL_FAILURE(TestCrcCheckFailure<StdioTestTraits>());
-}
-
 TEST_ITERATION(ZbitlViewStdioTests, StdioTestTraits)
 
 TEST_MUTATION(ZbitlViewStdioTests, StdioTestTraits)

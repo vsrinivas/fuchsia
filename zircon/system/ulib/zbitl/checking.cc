@@ -8,9 +8,7 @@ namespace zbitl {
 
 using namespace std::literals;
 
-template <>
-fitx::result<std::string_view> CheckHeader<Checking::kStrict>(const zbi_header_t& header,
-                                                              size_t capacity) {
+fitx::result<std::string_view> CheckHeader(const zbi_header_t& header, size_t capacity) {
   if (header.length > capacity) {
     return fitx::error{"item doesn't fit, container truncated?"sv};
   }

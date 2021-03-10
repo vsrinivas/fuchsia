@@ -151,10 +151,8 @@ inline void TestDefaultConstructedView() {
   }
 }
 
-template <typename TestTraits, zbitl::Checking Checking>
+template <typename TestTraits>
 inline void TestIteration(TestDataZbiType type) {
-  using Storage = typename TestTraits::storage_type;
-
   files::ScopedTempDir dir;
 
   fbl::unique_fd fd;
@@ -163,13 +161,14 @@ inline void TestIteration(TestDataZbiType type) {
 
   typename TestTraits::Context context;
   ASSERT_NO_FATAL_FAILURE(TestTraits::Create(std::move(fd), size, &context));
-  zbitl::View<Storage, Checking> view(context.TakeStorage());
+  zbitl::View view(context.TakeStorage());
 
   auto container_result = view.container_header();
   ASSERT_FALSE(container_result.is_error()) << ViewErrorString(container_result.error_value());
 
   size_t idx = 0;
-  for (auto [header, payload] : view) {
+  for (auto it = view.begin(); it != view.end(); ++it) {
+    auto [header, payload] = *it;
     EXPECT_EQ(GetExpectedItemType(type), header->type);
 
     Bytes actual;
@@ -180,6 +179,11 @@ inline void TestIteration(TestDataZbiType type) {
 
     const uint32_t flags = header->flags;
     EXPECT_TRUE(flags & ZBI_FLAG_VERSION) << "flags: 0x" << std::hex << flags;
+
+    // Let's verify CRC32 while we're at it.
+    auto crc_result = view.CheckCrc32(it);
+    ASSERT_FALSE(crc_result.is_error()) << ViewErrorString(crc_result.error_value());
+    EXPECT_EQ(type != TestDataZbiType::kBadCrcItem, crc_result.value());
   }
   EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
 
@@ -187,69 +191,20 @@ inline void TestIteration(TestDataZbiType type) {
   EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
 }
 
-#define TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, TestTraits, checking_name, checking, \
-                                            type_name, type)                                 \
-  TEST(suite_name, type_name##checking_name##Iteration) {                                    \
-    auto test = TestIteration<TestTraits, checking>;                                         \
-    ASSERT_NO_FATAL_FAILURE(test(type));                                                     \
+#define TEST_ITERATION_BY_TYPE(suite_name, TestTraits, type_name, type) \
+  TEST(suite_name, type_name##Iteration) {                              \
+    auto test = TestIteration<TestTraits>;                              \
+    ASSERT_NO_FATAL_FAILURE(test(type));                                \
   }
 
-// Note: using the CRC32-checking in tests is a cheap and easy way to verify
-// that the storage type is delivering the correct payload data.
-#define TEST_ITERATION_BY_TYPE(suite_name, TestTraits, type_name, type)                         \
-  TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, TestTraits, Strict, zbitl::Checking::kStrict, \
-                                      type_name, type)                                          \
-  TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, TestTraits, Crc, zbitl::Checking::kCrc,       \
-                                      type_name, type)
-
-#define TEST_ITERATION(suite_name, TestTraits)                                                  \
-  TEST_ITERATION_BY_TYPE(suite_name, TestTraits, EmptyZbi, TestDataZbiType::kEmpty)             \
-  TEST_ITERATION_BY_TYPE(suite_name, TestTraits, OneItemZbi, TestDataZbiType::kOneItem)         \
-  TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, TestTraits, Strict, zbitl::Checking::kStrict, \
-                                      BadCrcZbi, TestDataZbiType::kBadCrcItem)                  \
-  TEST_ITERATION_BY_TYPE(suite_name, TestTraits, MultipleSmallItemsZbi,                         \
-                         TestDataZbiType::kMultipleSmallItems)                                  \
-  TEST_ITERATION_BY_TYPE(suite_name, TestTraits, SecondItemOnPageBoundaryZbi,                   \
+#define TEST_ITERATION(suite_name, TestTraits)                                            \
+  TEST_ITERATION_BY_TYPE(suite_name, TestTraits, EmptyZbi, TestDataZbiType::kEmpty)       \
+  TEST_ITERATION_BY_TYPE(suite_name, TestTraits, OneItemZbi, TestDataZbiType::kOneItem)   \
+  TEST_ITERATION_BY_TYPE(suite_name, TestTraits, BadCrcZbi, TestDataZbiType::kBadCrcItem) \
+  TEST_ITERATION_BY_TYPE(suite_name, TestTraits, MultipleSmallItemsZbi,                   \
+                         TestDataZbiType::kMultipleSmallItems)                            \
+  TEST_ITERATION_BY_TYPE(suite_name, TestTraits, SecondItemOnPageBoundaryZbi,             \
                          TestDataZbiType::kSecondItemOnPageBoundary)
-
-template <typename TestTraits>
-void TestCrcCheckFailure() {
-  using Storage = typename TestTraits::storage_type;
-
-  files::ScopedTempDir dir;
-
-  fbl::unique_fd fd;
-  size_t size = 0;
-  ASSERT_NO_FATAL_FAILURE(OpenTestDataZbi(TestDataZbiType::kBadCrcItem, dir.path(), &fd, &size));
-
-  typename TestTraits::Context context;
-  ASSERT_NO_FATAL_FAILURE(TestTraits::Create(std::move(fd), size, &context));
-  zbitl::CrcCheckingView<Storage> view(context.TakeStorage());
-
-  auto container_result = view.container_header();
-  ASSERT_FALSE(container_result.is_error()) << ViewErrorString(container_result.error_value());
-
-  for (auto [header, payload] : view) {
-    EXPECT_EQ(header->type, header->type);
-    EXPECT_TRUE(false) << "should not be reached";
-  }
-  auto error = view.take_error();
-
-  ASSERT_TRUE(error.is_error());
-  // The error shouldn't be one of storage.
-  EXPECT_FALSE(error.error_value().storage_error) << error.error_value().zbi_error;
-
-  // For the file types with errno for error_type, print the storage error.
-  if constexpr (std::is_same_v<std::decay_t<decltype(error.error_value().storage_error.value())>,
-                               int>) {
-    EXPECT_FALSE(error.error_value().storage_error) << *error.error_value().storage_error << ": "
-                                                    << strerror(*error.error_value().storage_error);
-  }
-
-  // This matches the exact error text, so it has to be kept in sync.
-  // But otherwise we're not testing that the right error is diagnosed.
-  EXPECT_EQ(error.error_value().zbi_error, "item CRC32 mismatch");
-}
 
 template <typename TestTraits>
 void TestMutation(TestDataZbiType type) {
@@ -893,8 +848,6 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
 
 template <typename TestTraits>
 void TestAppending() {
-  using Storage = typename TestTraits::storage_type;
-
   const Bytes to_append[] = {
       "",
       "aligned ",
@@ -913,9 +866,8 @@ void TestAppending() {
 
   typename TestTraits::Context context;
   ASSERT_NO_FATAL_FAILURE(TestTraits::Create(kInitialSize, &context));
-  // Checking::kCrc will help ensure that we are appending items with valid
-  // CRC32s in the append-with-payload API.
-  zbitl::CrcCheckingImage<Storage> image(context.TakeStorage());
+
+  zbitl::Image image(context.TakeStorage());
 
   // clear() will turn an empty storage object into an empty ZBI (i.e., of
   // sufficient size to hold a trivial ZBI container header).
@@ -982,6 +934,11 @@ void TestAppending() {
       switch (variation) {
         case 0: {  // append-with-payload
           EXPECT_TRUE(ZBI_FLAG_CRC32 & header->flags);
+
+          // Verify that the CRC32 was properly auto-computed.
+          auto crc_result = image.CheckCrc32(it);
+          ASSERT_FALSE(crc_result.is_error()) << zbitl::ViewErrorString(crc_result.error_value());
+          EXPECT_TRUE(crc_result.value());
           break;
         }
         case 1: {  // append-with-deferred-write

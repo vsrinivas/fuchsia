@@ -24,7 +24,7 @@
 namespace zbitl {
 
 // Forward declaration; defined in image.h.
-template <typename Storage, Checking Check>
+template <typename Storage>
 class Image;
 
 /// The zbitl::View class provides functionality for processing ZBI items in various
@@ -93,7 +93,7 @@ class Image;
 /// before destruction then both the original and the copy need to be checked
 /// before their respective destructions.  A moved-from zbitl::View can always
 /// be destroyed without checking.
-template <typename Storage, Checking Check = Checking::kStrict>
+template <typename Storage>
 class View {
  public:
   using storage_type = Storage;
@@ -308,7 +308,7 @@ class View {
                   "zbitl::StorageTraits specialization's Header function returns wrong type");
 
     friend View;
-    template <typename ImageStorage, Checking ImageCheck>
+    template <typename ImageStorage>
     friend class Image;
 
     using HeaderStorage = std::conditional_t<kCopy, zbi_header_t, const zbi_header_t*>;
@@ -466,7 +466,7 @@ class View {
       } else if (auto header = Traits::Header(view_->storage(), offset_); header.is_error()) {
         // Failed to read the next header.
         Fail("cannot read item header", std::move(header.error_value()));
-      } else if (auto header_error = CheckHeader<Check>(header.value(), view_->limit_ - offset_);
+      } else if (auto header_error = CheckHeader(header.value(), view_->limit_ - offset_);
                  header_error.is_error()) {
         Fail(header_error.error_value());
       } else {
@@ -483,39 +483,6 @@ class View {
         } else {
           offset_ += ZBI_ALIGN(header_->length);
           payload_ = std::move(payload.value());
-          if constexpr (Check == Checking::kCrc) {
-            if (header_->flags & ZBI_FLAG_CRC32) {
-              uint32_t item_crc32 = 0;
-              auto compute_crc32 = [&item_crc32](ByteView chunk) -> fitx::result<fitx::failed> {
-                // The cumulative value in principle will not be updated by the
-                // CRC32 of empty data, so do not bother with computation in
-                // this case; doing so, we also sidestep any issues around how
-                // `crc32()` handles the corner case of a nullptr.
-                if (!chunk.empty()) {
-                  item_crc32 = crc32(item_crc32, reinterpret_cast<const uint8_t*>(chunk.data()),
-                                     chunk.size());
-                }
-                return fitx::ok();
-              };
-
-              // An item's CRC32 is computed as the hash of its header with its
-              // crc32 field set to 0, combined with the hash of its payload.
-              zbi_header_t header_without_crc32 = *header_;
-              header_without_crc32.crc32 = 0;
-              static_cast<void>(compute_crc32({reinterpret_cast<std::byte*>(&header_without_crc32),
-                                               sizeof(header_without_crc32)}));
-
-              if (auto result = view_->Read(payload_, header_->length, compute_crc32);
-                  result.is_error()) {
-                Fail("cannot compute item CRC32", std::move(result.error_value()));
-              } else {
-                ZX_DEBUG_ASSERT(result.value().is_ok());
-                if (item_crc32 != header_->crc32) {
-                  Fail("item CRC32 mismatch");
-                }
-              }
-            }
-          }
         }
       }
       return *this;
@@ -554,8 +521,8 @@ class View {
     using difference_type = size_t;
 
    private:
-    // Private fields accessed by Image<Storage, Check>::Append().
-    template <typename ImageStorage, Checking ImageCheck>
+    // Private fields accessed by Image<Storage>::Append().
+    template <typename ImageStorage>
     friend class Image;
 
     // The default-constructed state is almost the same as the end() state:
@@ -630,7 +597,7 @@ class View {
 
     const header_type header(std::move(header_error.value()));
 
-    auto check_error = CheckHeader<Check>(*header, capacity);
+    auto check_error = CheckHeader(*header, capacity);
     if (check_error.is_error()) {
       return fitx::error(Error{check_error.error_value(), 0, {}});
     }
@@ -696,11 +663,10 @@ class View {
   }
 
   // Replace an item's header with a new one, using an iterator into this
-  // view..  This never changes the existing item's length (nor its payload),
-  // and always writes a header that passes Checking::kStrict.  So the header
-  // can be `{.type = XYZ}` alone or whatever fields and flags matter.  Note
-  // this returns only the storage error type, not an Error since no ZBI
-  // format errors are possible here, only a storage failure to update.
+  // view..  This never changes the existing item's length (nor its payload).
+  // So the header can be `{.type = XYZ}` alone or whatever fields and flags
+  // matter.  Note this returns only the storage error type, not an Error since
+  // no ZBI format errors are possible here, only a storage failure to update.
   //
   // This method is not available if zbitl::StorageTraits<storage_type>
   // doesn't support mutation.
@@ -731,6 +697,45 @@ class View {
       return result.take_error();
     }
     return fitx::ok();
+  }
+
+  // Verifies that a given View iterator points to an item with a valid CRC32.
+  fitx::result<Error, bool> CheckCrc32(iterator it) {
+    auto [header, payload] = *it;
+    if (!(header->flags & ZBI_FLAG_CRC32)) {
+      return fitx::ok(true);
+    }
+
+    uint32_t item_crc32 = 0;
+    auto compute_crc32 = [&item_crc32](ByteView chunk) -> fitx::result<fitx::failed> {
+      // The cumulative value in principle will not be updated by the
+      // CRC32 of empty data, so do not bother with computation in
+      // this case; doing so, we also sidestep any issues around how
+      // `crc32()` handles the corner case of a nullptr.
+      if (!chunk.empty()) {
+        item_crc32 =
+            crc32(item_crc32, reinterpret_cast<const uint8_t*>(chunk.data()), chunk.size());
+      }
+      return fitx::ok();
+    };
+
+    // An item's CRC32 is computed as the hash of its header with its
+    // crc32 field set to 0, combined with the hash of its payload.
+    zbi_header_t header_without_crc32 = *header;
+    header_without_crc32.crc32 = 0;
+    static_cast<void>(compute_crc32(
+        {reinterpret_cast<std::byte*>(&header_without_crc32), sizeof(header_without_crc32)}));
+
+    auto result = Read(payload, header->length, compute_crc32);
+    if (result.is_error()) {
+      return fitx::error{Error{
+          .zbi_error = "cannot compute item CRC32",
+          .item_offset = it.item_offset(),
+          .storage_error = std::move(result).error_value(),
+      }};
+    }
+    ZX_DEBUG_ASSERT(result.value().is_ok());
+    return fitx::ok(item_crc32 == header->crc32);
   }
 
   // Copy a range of the underlying storage into an existing piece of storage,
@@ -1022,7 +1027,7 @@ class View {
   static constexpr bool CanZeroCopy() {
     // Reading directly into buffer has no extra copies for a receiver that can
     // do unbuffered writes.
-    using CopyTraits = typename View<std::decay_t<CopyStorage>, Check>::Traits;
+    using CopyTraits = typename View<std::decay_t<CopyStorage>>::Traits;
     return Traits::CanOneShotRead() ||
            (Traits::CanUnbufferedRead() && CopyTraits::CanUnbufferedWrite());
   }
@@ -1161,7 +1166,7 @@ class View {
                                                                        const iterator& it,
                                                                        ScratchAllocator&& scratch) {
     using ErrorType = CopyError<std::decay_t<CopyStorage>>;
-    using ToTraits = typename View<std::decay_t<CopyStorage>, Check>::Traits;
+    using ToTraits = typename View<std::decay_t<CopyStorage>>::Traits;
     constexpr bool bufferless_output = ToTraits::CanUnbufferedWrite();
 
     const auto [header, payload] = *it;
@@ -1360,10 +1365,6 @@ class View {
 // Deduction guide: View v(T{}) instantiates View<T>.
 template <typename Storage>
 explicit View(Storage) -> View<Storage>;
-
-// A shorthand for CRC checking.
-template <typename Storage>
-using CrcCheckingView = View<Storage, Checking::kCrc>;
 
 // Convert a pointer to an in-memory ZBI into a Storage type.
 //

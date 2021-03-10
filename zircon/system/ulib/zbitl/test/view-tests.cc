@@ -25,18 +25,10 @@ TEST(ZbitlViewByteViewTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<ByteViewTestTraits>());
 }
 
-TEST(ZbitlViewByteViewTests, CrcCheckFailure) {
-  ASSERT_NO_FATAL_FAILURE(TestCrcCheckFailure<ByteViewTestTraits>());
-}
-
 TEST_ITERATION(ZbitlViewByteViewTests, ByteViewTestTraits)
 
 TEST(ZbitlViewStringTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<StringTestTraits>());
-}
-
-TEST(ZbitlViewStringTests, CrcCheckFailure) {
-  ASSERT_NO_FATAL_FAILURE(TestCrcCheckFailure<StringTestTraits>());
 }
 
 TEST_ITERATION(ZbitlViewStringTests, StringTestTraits)

@@ -106,8 +106,7 @@ TEST(ZbitlHeaderTest, MagicAndFlagsMissing) {
   header.magic = 0u;
   header.crc32 = 0u;
 
-  EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kStrict>(header, kValidCapacity));
-  EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kCrc>(header, kValidCapacity));
+  EXPECT_IS_ERROR(zbitl::CheckHeader(header, kValidCapacity));
 }
 
 TEST(ZbitlHeaderTest, ItemTooLargeWithMagicAndFlagsMissing) {
@@ -118,23 +117,20 @@ TEST(ZbitlHeaderTest, ItemTooLargeWithMagicAndFlagsMissing) {
   header.magic = 0u;
   header.crc32 = 0u;
 
-  EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kStrict>(header, kNoCapacity));
-  EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kCrc>(header, kNoCapacity));
+  EXPECT_IS_ERROR(zbitl::CheckHeader(header, kNoCapacity));
 }
 
 TEST(ZbitlHeaderTest, ValidHeader) {
   // * Item fits, magic is correct, and required flags and CRC are set.
   // Expectation: success.
-  EXPECT_IS_OK(zbitl::CheckHeader<zbitl::Checking::kStrict>(kValidHeader, kValidCapacity));
-  EXPECT_IS_OK(zbitl::CheckHeader<zbitl::Checking::kCrc>(kValidHeader, kValidCapacity));
+  EXPECT_IS_OK(zbitl::CheckHeader(kValidHeader, kValidCapacity));
 }
 
 TEST(ZbitlHeaderTest, ItemTooLarge) {
   // * Item is too large, but magic is correct, and required flags and CRC
   // are set.
   // Expectation: failure.
-  EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kStrict>(kValidHeader, kNoCapacity));
-  EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kCrc>(kValidHeader, kNoCapacity));
+  EXPECT_IS_ERROR(zbitl::CheckHeader(kValidHeader, kNoCapacity));
 }
 
 TEST(ZbitlHeaderTest, CrcIsMissing) {
@@ -142,8 +138,7 @@ TEST(ZbitlHeaderTest, CrcIsMissing) {
   // Expectation: failure.
   zbi_header_t header = kValidHeader;
   header.flags = ZBI_ITEM_NO_CRC32;
-  EXPECT_IS_OK(zbitl::CheckHeader<zbitl::Checking::kStrict>(header, kValidCapacity));
-  EXPECT_IS_OK(zbitl::CheckHeader<zbitl::Checking::kCrc>(header, kValidCapacity));
+  EXPECT_IS_OK(zbitl::CheckHeader(header, kValidCapacity));
 }
 
 TEST(ZbitlHeaderTest, FlagsMissing) {
@@ -151,8 +146,7 @@ TEST(ZbitlHeaderTest, FlagsMissing) {
   // Expectation: failure.
   zbi_header_t header = kValidHeader;
   header.flags = 0u;
-  EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kStrict>(header, kValidCapacity));
-  EXPECT_IS_ERROR(zbitl::CheckHeader<zbitl::Checking::kCrc>(header, kValidCapacity));
+  EXPECT_IS_ERROR(zbitl::CheckHeader(header, kValidCapacity));
 }
 
 }  // namespace

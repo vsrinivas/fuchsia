@@ -8,37 +8,18 @@
 
 #include <fuzzer/FuzzedDataProvider.h>
 
-// If FuzzedDataProvider::ConsumeEnum() did not require a terminal kMaxValue
-// enum value, we would just use zbitl::Checking.
-enum class Checking { kStrict, kCrc, kMaxValue };
-
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   FuzzedDataProvider provider(data, size);
 
-  auto checking = provider.ConsumeEnum<Checking>();
-  std::string zbi = provider.ConsumeRemainingBytesAsString();
+  const bool check_crc = provider.ConsumeBool();
+  const std::string zbi = provider.ConsumeRemainingBytesAsString();
+  zbitl::View<std::string_view> view(zbi);
 
-  auto iterate = [](auto view) {
-    for (auto [header, payload] : view) {
-      static_cast<void>(header);
-      static_cast<void>(payload);
+  for (auto it = view.begin(); it != view.end(); ++it) {
+    if (check_crc) {
+      static_cast<void>(view.CheckCrc32(it));
     }
-    view.ignore_error();
-  };
-
-  switch (checking) {
-    case Checking::kStrict: {
-      zbitl::View<std::string_view, zbitl::Checking::kStrict> view(zbi);
-      iterate(view);
-      break;
-    }
-    case Checking::kCrc: {
-      zbitl::View<std::string_view, zbitl::Checking::kCrc> view(zbi);
-      iterate(view);
-      break;
-    }
-    case Checking::kMaxValue:  // Just a placeholder.
-      break;
-  };
+  }
+  view.ignore_error();
   return 0;
 }

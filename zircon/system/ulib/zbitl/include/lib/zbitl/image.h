@@ -13,18 +13,18 @@
 namespace zbitl {
 
 /// Image provides a modifiable "view" into a ZBI.
-template <typename Storage, Checking Check = Checking::kStrict>
-class Image : public View<Storage, Check> {
+template <typename Storage>
+class Image : public View<Storage> {
  public:
-  using typename View<Storage, Check>::Error;
-  using typename View<Storage, Check>::Traits;
-  using typename View<Storage, Check>::iterator;
-  using typename View<Storage, Check>::header_type;
+  using typename View<Storage>::Error;
+  using typename View<Storage>::Traits;
+  using typename View<Storage>::iterator;
+  using typename View<Storage>::header_type;
 
   static_assert(Traits::CanWrite(), "zbitl::Image requires writable storage");
 
   // Copy/move-constructible or constructible from a Storage argument, like View.
-  using View<Storage, Check>::View;
+  using View<Storage>::View;
 
   // Updates the underlying storage to hold an empty ZBI. It is valid to call
   // this method even if the underlying storage does not already represent a
@@ -216,10 +216,6 @@ class Image : public View<Storage, Check> {
 // Deduction guide: Image img(T{}) instantiates Image<T>.
 template <typename Storage>
 explicit Image(Storage) -> Image<Storage>;
-
-// A shorthand for CRC checking.
-template <typename Storage>
-using CrcCheckingImage = Image<Storage, Checking::kCrc>;
 
 }  // namespace zbitl
 

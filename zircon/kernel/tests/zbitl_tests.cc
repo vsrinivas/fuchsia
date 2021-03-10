@@ -88,19 +88,17 @@ bool SimpleZbiTest() {
 bool BadCrcZbiTest() {
   BEGIN_TEST;
 
-  zbitl::View<ktl::span<const char>, zbitl::Checking::kCrc> zbi({kBadCrcZbi, sizeof(kBadCrcZbi)});
+  zbitl::View<ktl::span<const char>> zbi({kBadCrcZbi, sizeof(kBadCrcZbi)});
 
   ASSERT_IS_OK(zbi.container_header());
 
-  for (auto [header, payload] : zbi) {
-    EXPECT_EQ(header->type, header->type);
-    EXPECT_TRUE(false, "should not be reached");
+  for (auto it = zbi.begin(); it != zbi.end(); ++it) {
+    auto result = zbi.CheckCrc32(it);
+    ASSERT_IS_OK(result);
+    EXPECT_FALSE(result.value());
   }
 
-  auto error = zbi.take_error();
-  ASSERT_TRUE(error.is_error());
-  // The error should not be storage-related.
-  EXPECT_FALSE(error.error_value().storage_error);
+  ASSERT_IS_OK(zbi.take_error());
 
   END_TEST;
 }

@@ -13,35 +13,9 @@
 
 namespace zbitl {
 
-/// Provides a mode of severity for checking the validity of ZBI items.
-///
-/// TODO(fxbug.dev/486538): delete me.
-enum class Checking {
-  /// Performs bounds-checking to ensure structural navigation of the ZBI and
-  /// validates basic header properties (e.g., for proper 'magic' and the
-  /// specification of required flags).
-  kStrict,
-
-  /// This is the strictest mode: it extends the previous mode by also
-  /// validating the CRC32 of an item's payload.
-  kCrc,
-};
-
 /// The capacity argument is the maximum space left in the container,
 /// starting from the position of this header (not its payload).
-template <Checking = Checking::kStrict>
 fitx::result<std::string_view> CheckHeader(const zbi_header_t& header, size_t capacity);
-
-template <>
-fitx::result<std::string_view> CheckHeader<Checking::kStrict>(const zbi_header_t& header,
-                                                              size_t capacity);
-
-// CRC-checking mode doesn't apply to the header.
-template <>
-inline fitx::result<std::string_view> CheckHeader<Checking::kCrc>(const zbi_header_t& header,
-                                                                  size_t capacity) {
-  return CheckHeader<Checking::kStrict>(header, capacity);
-}
 
 // Modify a header so that it passes checks.  This can be used to mint new
 // items from a designated initializer that omits uninteresting bits.
