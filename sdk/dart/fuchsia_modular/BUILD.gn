@@ -108,8 +108,8 @@ dart_test_component("integration-tests-component") {
     "//third_party/dart-pkg/pub/test",
 
     # TODO(fxb/70818): Add these dependencies back after fuchsia_modular_testing is migrated to fuchisa.git.
-    # "//topaz/public/dart/fuchsia_modular_testing",
-    # "//topaz/public/dart/fuchsia_modular_testing:test_fidl",
+    # "//sdk/dart/fuchsia_modular_testing",
+    # "//sdk/dart/fuchsia_modular_testing:test_fidl",
     dart_package_label.fidl,
   ]
 }
