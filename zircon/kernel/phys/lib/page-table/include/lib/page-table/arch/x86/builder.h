@@ -18,8 +18,22 @@ class PageTableNode;
 
 class AddressSpaceBuilder final : public AddressSpaceBuilderInterface {
  public:
+  // Options for the builder.
+  struct Options {
+    // If true, use 1 GiB page mappings when possible. Only supported on some hardware.
+    bool allow_1gib_pages = false;
+
+    // Return default options.
+    //
+    // We can't use a default constructor due to LLVM bug
+    // https://bugs.llvm.org/show_bug.cgi?id=36684
+    static Options Default() { return Options{}; }
+  };
+
   // Create a new AddressSpace builder, using the given allocator.
-  static std::optional<AddressSpaceBuilder> Create(MemoryManager& allocator);
+  static std::optional<AddressSpaceBuilder> Create(
+      MemoryManager& allocator,
+      const AddressSpaceBuilder::Options& options = AddressSpaceBuilder::Options::Default());
 
   // x86_64-specific page table root.
   PageTableNode* root_node() { return pml4_; }
@@ -29,11 +43,13 @@ class AddressSpaceBuilder final : public AddressSpaceBuilderInterface {
   Paddr root_paddr() override { return allocator_.PtrToPhys(reinterpret_cast<std::byte*>(pml4_)); }
 
  private:
-  explicit AddressSpaceBuilder(MemoryManager& allocator, PageTableNode* pml4)
-      : pml4_(pml4), allocator_(allocator) {}
+  explicit AddressSpaceBuilder(MemoryManager& allocator, PageTableNode* pml4,
+                               const Options& options)
+      : pml4_(pml4), allocator_(allocator), options_(options) {}
 
   PageTableNode* pml4_;
   MemoryManager& allocator_;
+  Options options_;
 };
 
 }  // namespace page_table::x86

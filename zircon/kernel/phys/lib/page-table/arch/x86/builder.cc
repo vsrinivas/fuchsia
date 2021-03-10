@@ -13,29 +13,43 @@ namespace page_table::x86 {
 
 namespace {
 
+// Return true if the beginning of the given vaddr/paddr/size range can
+// be mapped with the given page size.
+constexpr bool RegionMappableWithPageSize(Vaddr vaddr, Paddr paddr, size_t size, size_t page_size) {
+  // If the region size is smaller than the page, we can't map it.
+  if (size < page_size) {
+    return false;
+  }
+
+  // We require both `paddr` and `vaddr` to be aligned to the proposed page size.
+  return vaddr.value() % page_size == 0 && paddr.value() % page_size == 0;
+}
+
 // Get the largest page size that can be used to map the beginning of the region
 // `[vaddr, vaddr+size)` to `paddr`.
 //
 // All arguments must be aligned to at least the smallet page size.
-constexpr PageSize GetLargestPageSize(Vaddr vaddr, Paddr paddr, size_t size) {
-  for (int i = kPageSizes.size() - 1; i > 0; i--) {
-    size_t page_size = PageBytes(kPageSizes[i]);
-    if (page_size <= size && vaddr.value() % page_size == 0 && paddr.value() % page_size == 0) {
-      return kPageSizes[i];
-    }
+constexpr PageSize GetLargestPageSize(Vaddr vaddr, Paddr paddr, size_t size,
+                                      bool allow_1gib_pages) {
+  if (allow_1gib_pages && RegionMappableWithPageSize(vaddr, paddr, size, kPageSize1GiB)) {
+    return PageSize::k1GiB;
   }
-  return kPageSizes[0];
+  if (RegionMappableWithPageSize(vaddr, paddr, size, kPageSize2MiB)) {
+    return PageSize::k2MiB;
+  }
+  return PageSize::k4KiB;
 }
 
 }  // namespace
 
-std::optional<AddressSpaceBuilder> AddressSpaceBuilder::Create(MemoryManager& allocator) {
+std::optional<AddressSpaceBuilder> AddressSpaceBuilder::Create(
+    MemoryManager& allocator, const AddressSpaceBuilder::Options& options) {
   void* top_level = allocator.Allocate(sizeof(PageTableNode), alignof(PageTableNode));
   if (top_level == nullptr) {
     return std::nullopt;
   }
   new (top_level) PageTableNode();
-  return AddressSpaceBuilder(allocator, reinterpret_cast<PageTableNode*>(top_level));
+  return AddressSpaceBuilder(allocator, reinterpret_cast<PageTableNode*>(top_level), options);
 }
 
 zx_status_t AddressSpaceBuilder::MapRegion(Vaddr virt_start, Paddr phys_start, uint64_t size) {
@@ -75,7 +89,8 @@ zx_status_t AddressSpaceBuilder::MapRegion(Vaddr virt_start, Paddr phys_start, u
   // Map in everything a page at a time.
   while (size > 0) {
     // Get the biggest page size we can use.
-    PageSize page_size = GetLargestPageSize(virt_start, phys_start, size);
+    PageSize page_size = GetLargestPageSize(virt_start, phys_start, size,
+                                            /*allow_1gib_pages=*/options_.allow_1gib_pages);
 
     // Map it in.
     if (zx_status_t result = MapPage(allocator_, pml4_, virt_start, phys_start, page_size);

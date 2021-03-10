@@ -84,7 +84,8 @@ TEST(Builder, LargePage) {
   TestMemoryManager allocator;
 
   // Create a builder, and map a large region with 1:1 phys/virt.
-  std::optional builder = AddressSpaceBuilder::Create(allocator);
+  std::optional builder = AddressSpaceBuilder::Create(
+      allocator, AddressSpaceBuilder::Options{.allow_1gib_pages = true});
   ASSERT_TRUE(builder.has_value());
   EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0), kPageSize1GiB * 4), ZX_OK);
 
@@ -93,7 +94,23 @@ TEST(Builder, LargePage) {
   std::optional<LookupResult> result = LookupPage(allocator, builder->root_node(), Vaddr(0x1234));
   ASSERT_TRUE(result.has_value());
   EXPECT_TRUE(result->entry.is_page(result->level));
-  EXPECT_EQ(result->level, 2);
+  EXPECT_EQ(result->level, 2);  // 1 GiB
 }
 
+TEST(Builder, DisableGigabyteMappings) {
+  TestMemoryManager allocator;
+
+  // Create a builder, and map a large region with 1:1 phys/virt.
+  std::optional builder = AddressSpaceBuilder::Create(
+      allocator, AddressSpaceBuilder::Options{.allow_1gib_pages = false});
+  ASSERT_TRUE(builder.has_value());
+  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0), kPageSize1GiB * 4), ZX_OK);
+
+  // Lookup an address in the range, and ensure that 2MiB pages were used to construct
+  // the entries.
+  std::optional<LookupResult> result = LookupPage(allocator, builder->root_node(), Vaddr(0x1234));
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->entry.is_page(result->level));
+  EXPECT_EQ(result->level, 1);  // 2 MiB.
+}
 }  // namespace page_table::x86

@@ -74,9 +74,6 @@ enum class PageSize {
   k1GiB = kPageSize1GiB,
 };
 
-// All page sizes on this architecture, in increasing size.
-constexpr std::array kPageSizes{PageSize::k4KiB, PageSize::k2MiB, PageSize::k1GiB};
-
 // Return the number of bytes in the given PageSize.
 constexpr uint64_t PageBytes(PageSize size) { return static_cast<uint64_t>(size); }
 
