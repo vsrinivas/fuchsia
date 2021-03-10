@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::types::{
-    CustomAvcPanelCommand, CustomPlayStatus, CustomPlayerApplicationSettings,
+    CustomAvcPanelCommand, CustomBatteryStatus, CustomPlayStatus, CustomPlayerApplicationSettings,
     CustomPlayerApplicationSettingsAttributeIds,
 };
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
@@ -196,6 +196,27 @@ impl AvrcpFacade {
         }
     }
 
+    /// Informs battery status on the controller.
+    ///
+    /// # Arguments
+    /// * `battery_status` - the battery status to inform.
+    pub async fn inform_battery_status(
+        &self,
+        battery_status: CustomBatteryStatus,
+    ) -> Result<(), Error> {
+        let tag = "AvrcpFacade::inform_battery_status";
+        match self.inner.read().controller_proxy.clone() {
+            Some(proxy) => match proxy.inform_battery_status(battery_status.into()).await? {
+                Ok(()) => Ok(()),
+                Err(e) => fx_err_and_bail!(
+                    &with_line!(tag),
+                    format!("Error informing battery status: {:?}", e)
+                ),
+            },
+            None => fx_err_and_bail!(&with_line!(tag), "No AVRCP service proxy available"),
+        }
+    }
+
     /// A function to remove the profile service proxy and clear connected devices.
     fn clear(&self) {
         self.inner.write().avrcp_service_proxy = None;
@@ -211,6 +232,8 @@ impl AvrcpFacade {
 
 #[cfg(test)]
 mod tests {
+    use crate::bluetooth::types::CustomBatteryStatus;
+
     use super::super::types::{
         CustomCustomAttributeValue, CustomCustomPlayerApplicationSetting, CustomEqualizer,
         CustomPlayStatus, CustomPlayerApplicationSettings,
@@ -218,7 +241,7 @@ mod tests {
     };
     use super::*;
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_avrcp::{ControllerRequest, PlayStatus};
+    use fidl_fuchsia_bluetooth_avrcp::{BatteryStatus, ControllerRequest, PlayStatus};
     use fuchsia_async as fasync;
     use futures::prelude::*;
     use futures::Future;
@@ -340,8 +363,18 @@ mod tests {
                 _ => {}
             })
         }
-    }
 
+        fn expect_inform_battery_status(self, input: CustomBatteryStatus) -> Self {
+            self.push(move |req| match req {
+                ControllerRequest::InformBatteryStatus { battery_status, responder } => {
+                    let battery_status_expected: BatteryStatus = input.into();
+                    assert_eq!(battery_status_expected, battery_status);
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                _ => {}
+            })
+        }
+    }
     #[fasync::run_singlethreaded(test)]
     async fn test_get_play_status() {
         let (facade, play_status_fut) =
@@ -387,5 +420,16 @@ mod tests {
             assert_eq!(application_settings, *PLAYER_APPLICATION_SETTINGS);
         };
         future::join(facade_fut, application_settings_fut).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inform_battery_status() {
+        let (facade, battery_status_fut) = MockAvrcpTester::new()
+            .expect_inform_battery_status(CustomBatteryStatus::Normal)
+            .build_controller();
+        let facade_fut = async move {
+            facade.inform_battery_status(CustomBatteryStatus::Normal).await.unwrap();
+        };
+        future::join(facade_fut, battery_status_fut).await;
     }
 }

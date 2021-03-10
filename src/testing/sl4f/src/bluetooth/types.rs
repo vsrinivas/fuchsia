@@ -5,9 +5,9 @@
 use anyhow::{format_err, Error};
 use fidl_fuchsia_bluetooth_avdtp::PeerControllerProxy;
 use fidl_fuchsia_bluetooth_avrcp::{
-    AvcPanelCommand, CustomAttributeValue, CustomPlayerApplicationSetting, Equalizer, PlayStatus,
-    PlaybackStatus, PlayerApplicationSettingAttributeId, PlayerApplicationSettings,
-    RepeatStatusMode, ScanMode, ShuffleMode,
+    AvcPanelCommand, BatteryStatus, CustomAttributeValue, CustomPlayerApplicationSetting,
+    Equalizer, PlayStatus, PlaybackStatus, PlayerApplicationSettingAttributeId,
+    PlayerApplicationSettings, RepeatStatusMode, ScanMode, ShuffleMode,
 };
 use fidl_fuchsia_bluetooth_gatt::{
     AttributePermissions, Characteristic, Descriptor, ReadByTypeResult, SecurityRequirements,
@@ -598,6 +598,15 @@ pub enum CustomScanMode {
     AllTrackScan = 2,
     GroupScan = 3,
 }
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Copy)]
+pub enum CustomBatteryStatus {
+    Normal = 0,
+    Warning = 1,
+    Critical = 2,
+    External = 3,
+    FullCharge = 4,
+    Reserved = 5,
+}
 
 impl From<PlayerApplicationSettings> for CustomPlayerApplicationSettings {
     fn from(settings: PlayerApplicationSettings) -> CustomPlayerApplicationSettings {
@@ -745,6 +754,32 @@ impl From<CustomAttributeValue> for CustomCustomAttributeValue {
         CustomCustomAttributeValue {
             description: attribute_value.description,
             value: attribute_value.value,
+        }
+    }
+}
+
+impl From<BatteryStatus> for CustomBatteryStatus {
+    fn from(status: BatteryStatus) -> Self {
+        match status {
+            BatteryStatus::Normal => CustomBatteryStatus::Normal,
+            BatteryStatus::Warning => CustomBatteryStatus::Warning,
+            BatteryStatus::Critical => CustomBatteryStatus::Critical,
+            BatteryStatus::External => CustomBatteryStatus::External,
+            BatteryStatus::FullCharge => CustomBatteryStatus::FullCharge,
+            BatteryStatus::Reserved => CustomBatteryStatus::Reserved,
+        }
+    }
+}
+
+impl From<CustomBatteryStatus> for BatteryStatus {
+    fn from(status: CustomBatteryStatus) -> Self {
+        match status {
+            CustomBatteryStatus::Normal => BatteryStatus::Normal,
+            CustomBatteryStatus::Warning => BatteryStatus::Warning,
+            CustomBatteryStatus::Critical => BatteryStatus::Critical,
+            CustomBatteryStatus::External => BatteryStatus::External,
+            CustomBatteryStatus::FullCharge => BatteryStatus::FullCharge,
+            CustomBatteryStatus::Reserved => BatteryStatus::Reserved,
         }
     }
 }
