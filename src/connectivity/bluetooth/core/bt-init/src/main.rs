@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
-    fidl::endpoints::ServiceMarker,
+    anyhow::{format_err, Context as _, Error},
+    fidl::endpoints::{DiscoverableService, ServiceMarker},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::ControlMarker,
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
@@ -13,13 +13,108 @@ use {
     fidl_fuchsia_bluetooth_sys::{
         AccessMarker, BootstrapMarker, ConfigurationMarker, HostWatcherMarker,
     },
+    fidl_fuchsia_sys::ComponentControllerEvent,
     fuchsia_async as fasync,
-    fuchsia_component::{client, fuchsia_single_component_package_url, server},
-    futures::{future, StreamExt},
+    fuchsia_component::{
+        client::{self, App},
+        fuchsia_single_component_package_url,
+        server::{self, NestedEnvironment},
+    },
+    fuchsia_zircon as zx,
+    futures::{future, Future, FutureExt, StreamExt},
     log::{info, warn},
 };
 
 mod config;
+
+/// Creates a NestedEnvironment and launches the RFCOMM component at `component_url`, which
+/// provides the Profile component
+/// Returns the controller for the launched component and the NestedEnvironment - dropping
+/// either will result in component termination.
+async fn launch_rfcomm(
+    rfcomm_url: String,
+    bt_gap: &App,
+) -> Result<(App, NestedEnvironment, impl Future<Output = ()> + '_), Error> {
+    // RFCOMM's main responsibility is serving the Profile service. It handles RFCOMM Profile
+    // requests itself, and uses the Profile service of bt-gap (which is just a passthrough for
+    // bt-host's Profile server) for non-RFCOMM requests (i.e. L2CAP requests).
+    //
+    // TODO(fxbug.dev/71315): A single bt-rfcomm instance won't function correctly in the presence
+    // of multiple bt-host devices during its lifetime. When handling this is a priority, we will
+    // likely need to either launch an instance of bt-rfcomm per-bt-host (e.g. inside bt-gap), or
+    // modify bt-rfcomm to accommodate this issue.
+    let mut rfcomm_fs = server::ServiceFs::new();
+    rfcomm_fs
+        .add_service_at(ProfileMarker::SERVICE_NAME, move |chan| {
+            info!("Connecting bt-rfcomm's Profile Service to bt-gap");
+            bt_gap.pass_to_named_service(ProfileMarker::SERVICE_NAME, chan).ok();
+            None
+        })
+        .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
+        .add_proxy_service::<fidl_fuchsia_cobalt::LoggerFactoryMarker, _>();
+
+    let env = rfcomm_fs.create_salted_nested_environment("bt-rfcomm")?;
+
+    let bt_rfcomm = client::launch(&env.launcher(), rfcomm_url, None)?;
+
+    // Spawn the RFCOMM ServiceFs onto a Task so that it is polled. Otherwise, the
+    // ComponentControllerEventStream will block without returning the OnDirectoryReady event.
+    let rfcomm_fut = rfcomm_fs.collect();
+
+    // Wait until component has successfully launched before returning the controller.
+    info!("Waiting for successful notification of bt-rfcomm launch...");
+    let mut event_stream = bt_rfcomm.controller().take_event_stream();
+    match future::select(event_stream.next(), rfcomm_fut).await {
+        future::Either::Left((
+            Some(Ok(ComponentControllerEvent::OnDirectoryReady { .. })),
+            rfcomm_fut,
+        )) => Ok((bt_rfcomm, env, rfcomm_fut)),
+        future::Either::Left((Some(Err(e)), ..)) => {
+            Err(format_err!("bt-rfcomm launch failure: {:?}", e))
+        }
+        _ => Err(format_err!("unable to launch bt-rfcomm")),
+    }
+}
+
+// For mocking out the App class in tests
+trait AppAdapter {
+    fn pass_channel_to_named_service(
+        &self,
+        service_name: &str,
+        server_channel: zx::Channel,
+    ) -> Result<(), Error>;
+}
+
+impl AppAdapter for App {
+    fn pass_channel_to_named_service(
+        &self,
+        service_name: &str,
+        server_channel: zx::Channel,
+    ) -> Result<(), Error> {
+        self.pass_to_named_service(service_name, server_channel)
+    }
+}
+
+fn handle_service_req<T: AppAdapter>(
+    service_name: &str,
+    server_channel: zx::Channel,
+    bt_rfcomm: Option<&T>,
+    bt_gap: &T,
+) {
+    let res = match (service_name, bt_rfcomm) {
+        (ProfileMarker::SERVICE_NAME, Some(bt_rfcomm)) => {
+            info!("Passing {} handle to bt-rfcomm", service_name);
+            bt_rfcomm.pass_channel_to_named_service(service_name, server_channel)
+        }
+        _ => {
+            info!("Passing {} handle to bt-gap", service_name);
+            bt_gap.pass_channel_to_named_service(service_name, server_channel)
+        }
+    };
+    if let Err(e) = res {
+        warn!("Error passing {} handle to service: {:?}", service_name, e);
+    }
+}
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["bt-init"]).expect("Can't init logger");
@@ -43,7 +138,7 @@ fn main() -> Result<(), Error> {
     info!("Launching BT-GAP service...");
     let launcher = client::launcher()
         .expect("Failed to launch bt-gap (bluetooth) service; could not access launcher service");
-    let bt_gap = client::launch(
+    let bt_gap = &client::launch(
         &launcher,
         fuchsia_single_component_package_url!("bt-gap").to_string(),
         None,
@@ -52,9 +147,20 @@ fn main() -> Result<(), Error> {
     info!("BT-GAP launched successfully");
 
     let run_bluetooth = async move {
+        let rfcomm_url = fuchsia_single_component_package_url!("bt-rfcomm").to_string();
+        let (bt_rfcomm, _env, rfcomm_fut) = match launch_rfcomm(rfcomm_url, bt_gap).await {
+            Ok((bt_rfcomm, env, rfcomm_fut)) => {
+                info!("bt-rfcomm launched successfully");
+                (Some(bt_rfcomm), Some(env), rfcomm_fut.boxed())
+            }
+            Err(e) => {
+                warn!("Failed to launch bt-rfcomm: {:?}", e);
+                (None, None, future::ready(()).boxed())
+            }
+        };
         info!("Configuring BT-GAP");
         // First, configure bt-gap
-        cfg.set_capabilities(&bt_gap).await.context("Error configuring BT-GAP")?;
+        cfg.set_capabilities(bt_gap).await.context("Error configuring BT-GAP")?;
         info!("BT-GAP configuration sent successfully");
 
         // Then, we can begin serving its services
@@ -74,18 +180,63 @@ fn main() -> Result<(), Error> {
         fs.take_and_serve_directory_handle()?;
 
         info!("Initialization complete, begin serving FIDL protocols");
-        fs.for_each(move |(name, chan)| {
-            info!("Passing {} Handle to bt-gap", name);
-            if let Err(e) = bt_gap.pass_to_named_service(name, chan) {
-                warn!("Error passing {} handle to bt-gap: {:?}", name, e);
-            }
+        let outer_fs = fs.for_each(move |(name, chan)| {
+            handle_service_req(name, chan, bt_rfcomm.as_ref(), bt_gap);
             future::ready(())
-        })
-        .await;
+        });
+        future::join(outer_fs, rfcomm_fut).await;
         Ok::<(), Error>(())
     };
 
     executor
         .run_singlethreaded(run_bluetooth)
         .context("bt-init encountered an error during execution")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+    struct MockApp {
+        pub last_channel: RefCell<Option<zx::Channel>>,
+    }
+
+    impl AppAdapter for MockApp {
+        fn pass_channel_to_named_service(
+            &self,
+            _service_name: &str,
+            server_channel: zx::Channel,
+        ) -> Result<(), Error> {
+            self.last_channel.replace(Some(server_channel));
+            Ok(())
+        }
+    }
+
+    fn assert_channels_connected(writer: &zx::Channel, reader: &zx::Channel) {
+        let expected_bytes = [1, 2, 3, 4, 5];
+        writer.write(&expected_bytes, &mut []).unwrap();
+        let mut bytes = zx::MessageBuf::new();
+        reader.read(&mut bytes).unwrap();
+        assert_eq!(&expected_bytes, bytes.bytes());
+    }
+
+    #[test]
+    fn test_handle_service_req() {
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let bt_gap = MockApp { last_channel: RefCell::new(None) };
+        let bt_rfcomm = MockApp { last_channel: RefCell::new(None) };
+        // When bt_rfcomm is present, Profile requests get routed to bt_rfcomm
+        handle_service_req(ProfileMarker::SERVICE_NAME, server_end, Some(&bt_rfcomm), &bt_gap);
+        assert_channels_connected(&client_end, bt_rfcomm.last_channel.borrow().as_ref().unwrap());
+
+        // When bt_rfcomm is present, non-Profile requests get routed to bt_gap
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        handle_service_req(AccessMarker::SERVICE_NAME, server_end, Some(&bt_rfcomm), &bt_gap);
+        assert_channels_connected(&client_end, bt_gap.last_channel.borrow().as_ref().unwrap());
+
+        // When bt_rfcomm is not present, Profile requests get routed directly to bt_gap
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        handle_service_req(ProfileMarker::SERVICE_NAME, server_end, None, &bt_gap);
+        assert_channels_connected(&client_end, bt_gap.last_channel.borrow().as_ref().unwrap());
+    }
 }

@@ -8,7 +8,11 @@
     "sandbox": {
         "services": [
             "fuchsia.bluetooth.snoop.Snoop",
-            "fuchsia.sys.Launcher"
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
         ]
     }
 }

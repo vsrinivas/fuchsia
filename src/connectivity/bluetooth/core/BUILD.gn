@@ -15,5 +15,6 @@ group("tests") {
   deps = [
     "bt-gap:tests",
     "bt-host:tests",
+    "bt-init:tests",
   ]
 }

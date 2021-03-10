@@ -14,10 +14,7 @@
         ],
         "services": [
             "fuchsia.device.NameProvider",
-            "fuchsia.stash.SecureStore",
-            "fuchsia.sys.Environment",
-            "fuchsia.sys.Launcher",
-            "fuchsia.sys.Loader"
+            "fuchsia.stash.SecureStore"
         ]
     }
 }

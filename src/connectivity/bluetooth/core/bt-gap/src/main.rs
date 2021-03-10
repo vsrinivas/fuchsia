@@ -7,20 +7,14 @@
 use {
     anyhow::{format_err, Context as _, Error},
     async_helpers::hanging_get::asynchronous as hanging_get,
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::{DiscoverableService, ServiceMarker},
     fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateRequest, Server_Marker},
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fidl_fuchsia_device::{NameProviderMarker, DEFAULT_DEVICE_NAME},
-    fidl_fuchsia_sys::ComponentControllerEvent,
     fuchsia_async as fasync,
-    fuchsia_component::{
-        client::{self, connect_to_service, App},
-        fuchsia_single_component_package_url,
-        server::{NestedEnvironment, ServiceFs},
-    },
-    fuchsia_zircon as zx,
+    fuchsia_component::{client::connect_to_service, server::ServiceFs},
     futures::{
         channel::mpsc,
         future::{try_join5, BoxFuture},
@@ -79,61 +73,6 @@ async fn get_host_name() -> Result<String, Error> {
         .map_err(|e| format_err!("failed to obtain host name: {:?}", e))
 }
 
-/// Creates a NestedEnvironment and launches the component specified by `component_url`. The
-/// provided component must provide the Profile service.
-/// Returns the controller for the launched component and the NestedEnvironment - dropping
-/// either will result in component termination.
-async fn launch_profile_forwarding_component(
-    component_url: String,
-    profile_hd: HostDispatcher,
-) -> Result<(App, NestedEnvironment), Error> {
-    let mut rfcomm_fs = ServiceFs::new();
-    rfcomm_fs
-        .add_service_at(ProfileMarker::NAME, move |chan| {
-            info!("Connecting Profile Service to Host Device");
-            fasync::Task::spawn(profile_hd.clone().request_host_service(chan, Profile)).detach();
-            None
-        })
-        .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
-        .add_proxy_service::<fidl_fuchsia_cobalt::LoggerFactoryMarker, _>();
-
-    let env = rfcomm_fs.create_salted_nested_environment("bt-rfcomm")?;
-    fasync::Task::spawn(rfcomm_fs.collect()).detach();
-
-    let bt_rfcomm = client::launch(&env.launcher(), component_url, None)?;
-
-    // Wait until component has successfully launched before returning the controller.
-    let mut event_stream = bt_rfcomm.controller().take_event_stream();
-    match event_stream.next().await {
-        Some(Ok(ComponentControllerEvent::OnDirectoryReady { .. })) => Ok((bt_rfcomm, env)),
-        x => Err(format_err!("Launch failure: {:?}", x)),
-    }
-}
-
-/// Creates a handler that will setup an incoming Profile service channel.
-///
-/// If `component` is set, the channel will be relayed to the component.
-/// Otherwise, it will be relayed directly to the dispatcher.
-fn profile_handler(
-    dispatcher: &HostDispatcher,
-    component: Option<(App, NestedEnvironment)>,
-) -> impl FnMut(zx::Channel) -> Option<()> {
-    let hd = dispatcher.clone();
-    move |chan| {
-        match &component {
-            Some((rfcomm_component, _env)) => {
-                info!("Passing Profile to RFCOMM Service");
-                let _ = rfcomm_component.pass_to_service::<ProfileMarker>(chan);
-            }
-            None => {
-                info!("Directly connecting Profile Service to Host Device");
-                fasync::Task::spawn(hd.clone().request_host_service(chan, Profile)).detach();
-            }
-        }
-        None
-    }
-}
-
 fn host_service_handler(
     dispatcher: &HostDispatcher,
     service_name: &'static str,
@@ -155,7 +94,6 @@ struct BtGap {
     gas_requests: mpsc::Receiver<LocalServiceDelegateRequest>,
     run_watch_peers: BoxFuture<'static, Result<(), Error>>,
     run_watch_hosts: BoxFuture<'static, Result<(), Error>>,
-    bt_rfcomm: Option<(App, NestedEnvironment)>,
 }
 
 impl BtGap {
@@ -224,24 +162,8 @@ impl BtGap {
             watch_hosts_registrar,
         );
 
-        // Attempt to launch the RFCOMM component that will serve requests over `Profile` and forward
-        // to the Host Server. If RFCOMM is not available for any reason, bt-gap will forward `Profile`
-        // requests directly to the Host Server.
-        info!("Launching bt-rfcomm component...");
-        let rfcomm_url = fuchsia_single_component_package_url!("bt-rfcomm").to_string();
-        let bt_rfcomm = match launch_profile_forwarding_component(rfcomm_url, hd.clone()).await {
-            Ok((rfcomm, env)) => {
-                info!("Successfully launched bt-rfcomm");
-                Some((rfcomm, env))
-            }
-            Err(e) => {
-                warn!("bt-gap unable to launch bt-rfcomm: {:?}", e);
-                None
-            }
-        };
-
         info!("bt-gap successfully initialized.");
-        Ok(BtGap { hd, inspect, gas_requests, run_watch_peers, run_watch_hosts, bt_rfcomm })
+        Ok(BtGap { hd, inspect, gas_requests, run_watch_peers, run_watch_hosts })
     }
 
     /// Run continuous tasks that are expected to live until bt-gap terminates
@@ -255,7 +177,7 @@ impl BtGap {
         .run()
         .map(|()| Err::<(), Error>(format_err!("Generic Access Server terminated unexpectedly")));
 
-        let serve_fidl = serve_fidl(self.hd.clone(), self.inspect, self.bt_rfcomm);
+        let serve_fidl = serve_fidl(self.hd.clone(), self.inspect);
 
         try_join5(
             serve_fidl,
@@ -291,11 +213,7 @@ async fn run_host_watcher(hd: HostDispatcher) -> Result<(), Error> {
 }
 
 /// Serve the FIDL protocols offered by bt-gap
-async fn serve_fidl(
-    hd: HostDispatcher,
-    inspect: fuchsia_inspect::Inspector,
-    bt_rfcomm: Option<(App, NestedEnvironment)>,
-) -> Result<(), Error> {
+async fn serve_fidl(hd: HostDispatcher, inspect: fuchsia_inspect::Inspector) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
     // serve bt-gap inspect VMO
@@ -323,7 +241,10 @@ async fn serve_fidl(
             Server_Marker::NAME,
             host_service_handler(&hd, Server_Marker::DEBUG_NAME, LeGatt),
         )
-        .add_service_at(ProfileMarker::NAME, profile_handler(&hd, bt_rfcomm))
+        .add_service_at(
+            ProfileMarker::SERVICE_NAME,
+            host_service_handler(&hd, ProfileMarker::SERVICE_NAME, Profile),
+        )
         // TODO(fxbug.dev/1496) - according fuchsia.bluetooth.sys/bootstrap.fidl, the bootstrap service should
         // only be available before initialization, and only allow a single commit before becoming
         // unservicable. This behavior interacts with parts of Bluetooth lifecycle and component
