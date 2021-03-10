@@ -1443,7 +1443,7 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/d879aac9717d15679125cfe8c26b482006f107f3/config.gni#12)
+From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/899e18383fd732b47e6978db2b960a1b2a80179b/config.gni#12)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
@@ -1452,7 +1452,7 @@ is only useful in Fuchsia.
 
 **Current value (from the default):** `"68"`
 
-From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/d879aac9717d15679125cfe8c26b482006f107f3/version.gni#9)
+From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/899e18383fd732b47e6978db2b960a1b2a80179b/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1460,7 +1460,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/d879aac9717d15679125cfe8c26b482006f107f3/config.gni#8)
+From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/899e18383fd732b47e6978db2b960a1b2a80179b/config.gni#8)
 
 ### include_devmgr_config_in_vbmeta
 If true, /config/devmgr config will be included into a vbmeta image
@@ -2778,7 +2778,7 @@ From //build/images/args.gni:119
 ### recovery_logo_path
 Path to file to use for recovery logo
 
-**Current value (from the default):** `"//src/recovery/system/res/fuchsia-logo.png"`
+**Current value (from the default):** `"//src/recovery/system/res/fuchsia-logo.shed"`
 
 From //src/recovery/system/system_recovery_args.gni:7
 
