@@ -150,13 +150,15 @@ size_t default_platform_recover_crashlog(size_t len, void* cookie,
     // Provide some basic details about the crashlog we recovered in the kernel
     // log.  This can assist in debugging failure in CI/CQ where we might have
     // access to serial logs, but nothing else.
+    int64_t uptime_msec = rlog.uptime / ZX_MSEC(1);
     if (rlog.reason == ZirconCrashReason::NoCrash) {
-      printf("Crashlog: Clean reboot. Uptime (%ld ms) HW Reason \"%s\"\n", rlog.uptime,
-             str_hw_reason);
+      printf("Crashlog: Clean reboot. Uptime (%" PRId64 ".%03" PRId64 " sec) HW Reason \"%s\"\n",
+             uptime_msec / 1000, uptime_msec % 1000, str_hw_reason);
     } else {
-      printf("Crashlog: Uptime (%ld ms) SW Reason \"%s\" HW Reason \"%s\" Payload %s PLen %u\n",
-             rlog.uptime, str_reason, str_hw_reason, rlog.payload_valid ? "valid" : "invalid",
-             rlog.payload_len);
+      printf("Crashlog: Uptime (%" PRId64 ".%03" PRId64
+             " sec) SW Reason \"%s\" HW Reason \"%s\" Payload %s PLen %u\n",
+             uptime_msec / 1000, uptime_msec % 1000, str_reason, str_hw_reason,
+             rlog.payload_valid ? "valid" : "invalid", rlog.payload_len);
     }
   }
 
