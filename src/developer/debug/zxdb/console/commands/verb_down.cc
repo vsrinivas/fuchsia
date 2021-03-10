@@ -4,6 +4,9 @@
 
 #include "src/developer/debug/zxdb/console/commands/verb_down.h"
 
+#include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
@@ -64,6 +67,9 @@ void OutputFrameInfoForChange(const Frame* frame, int id) {
   opts.loc.func.name.elide_templates = true;
   opts.loc.func.name.bold_last = true;
   opts.loc.func.params = FormatFunctionNameOptions::kElideParams;
+
+  // Allow eliding of unnecessary path information.
+  opts.loc.target_symbols = frame->GetThread()->GetProcess()->GetTarget()->GetSymbols();
 
   opts.variable.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
   opts.variable.pointer_expand_depth = 1;

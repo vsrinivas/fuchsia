@@ -133,8 +133,11 @@ fxl::RefPtr<AsyncOutputBuffer> FormatFrame(const Frame* frame, const FormatFrame
                                            int id) {
   auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
 
-  if (id >= 0)
-    out->Append(fxl::StringPrintf("Frame %d ", id));
+  if (id >= 0) {
+    out->Append("Frame ");
+    out->Append(Syntax::kSpecial, std::to_string(id));
+    out->Append(" ");
+  }
 
   const Location& location = frame->GetLocation();
   out->Append(FormatLocation(location, opts.loc));
