@@ -26,6 +26,8 @@ fxfs_sources = [
   "src/lsm_tree/skip_list_layer.rs",
   "src/lsm_tree/types.rs",
   "src/object_handle.rs",
+  "src/object_store.rs",
+  "src/object_store/record.rs",
   "src/testing.rs",
   "src/testing/fake_object.rs",
 ]
