@@ -746,6 +746,8 @@ void MsdArmDevice::StartDeviceThread() {
   DASSERT(!device_thread_.joinable());
   device_thread_ = std::thread([this] { this->DeviceThreadLoop(); });
 
+  perf_counters_->SetDeviceThreadId(device_thread_.get_id());
+
   job_interrupt_thread_ = std::thread([this] { this->JobInterruptThreadLoop(); });
   mmu_interrupt_thread_ = std::thread([this] { this->MmuInterruptThreadLoop(); });
 }

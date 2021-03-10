@@ -16,6 +16,7 @@ constexpr uint32_t kPerfBufferStartOffset = PAGE_SIZE;
 }  // namespace
 
 bool PerformanceCounters::Enable() {
+  std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
   if (counter_state_ == PerformanceCounterState::kTriggeredWillBeDisabled) {
     // Signal that the counters should be left enabled.
     counter_state_ = PerformanceCounterState::kTriggered;
@@ -98,6 +99,7 @@ bool PerformanceCounters::Enable() {
 }
 
 bool PerformanceCounters::TriggerRead() {
+  std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
   if (counter_state_ != PerformanceCounterState::kEnabled) {
     MAGMA_LOG(WARNING, "Can't trigger performance counters from state %d",
               static_cast<int>(counter_state_));
@@ -112,6 +114,7 @@ bool PerformanceCounters::TriggerRead() {
 }
 
 void PerformanceCounters::ReadCompleted() {
+  std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
   std::vector<uint32_t> output;
   if (counter_state_ == PerformanceCounterState::kTriggeredWillBeDisabled) {
     auto config = registers::PerformanceCounterConfig::Get().FromValue(0);
@@ -164,6 +167,7 @@ void PerformanceCounters::ReadCompleted() {
 }
 
 bool PerformanceCounters::Disable() {
+  std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
   switch (counter_state_) {
     case PerformanceCounterState::kTriggered:
     case PerformanceCounterState::kTriggeredWillBeDisabled:
@@ -183,11 +187,19 @@ bool PerformanceCounters::Disable() {
   }
 }
 
-void PerformanceCounters::AddClient(Client* client) { clients_.insert(client); }
+void PerformanceCounters::AddClient(Client* client) {
+  std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
 
-void PerformanceCounters::RemoveClient(Client* client) { clients_.erase(client); }
+  clients_.insert(client);
+}
+
+void PerformanceCounters::RemoveClient(Client* client) {
+  std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
+  clients_.erase(client);
+}
 
 bool PerformanceCounters::AddManager(PerformanceCountersManager* manager) {
+  std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
   if (manager_)
     return false;
   manager_ = manager;
@@ -195,15 +207,18 @@ bool PerformanceCounters::AddManager(PerformanceCountersManager* manager) {
 }
 
 void PerformanceCounters::RemoveManager(PerformanceCountersManager* manager) {
+  std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
   if (manager_ == manager)
     manager_ = nullptr;
 }
 
 bool PerformanceCounters::ShouldBeEnabled() {
+  std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
   return !force_disabled_ && manager_ && manager_->EnabledPerfCountFlags().size() > 0;
 }
 
 void PerformanceCounters::Update() {
+  std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
   bool should_be_enabled = ShouldBeEnabled();
   if (should_be_enabled && (counter_state_ == PerformanceCounterState::kDisabled ||
                             counter_state_ == PerformanceCounterState::kTriggeredWillBeDisabled)) {

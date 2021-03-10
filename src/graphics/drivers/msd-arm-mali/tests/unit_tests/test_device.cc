@@ -110,25 +110,30 @@ class TestMsdArmDevice {
       return;
     }
 
-    EXPECT_FALSE(device->IsInProtectedMode());
-    EXPECT_EQ(1u, device->power_manager_->l2_ready_status());
+    // Run on the device thread to make the thread checker happy.
+    auto reply = device->RunTaskOnDeviceThread([](MsdArmDevice* device) {
+      EXPECT_FALSE(device->IsInProtectedMode());
+      EXPECT_EQ(1u, device->power_manager_->l2_ready_status());
 
-    TestPerfCountManager perf_count_manager;
-    perf_count_manager.set_enabled(true);
-    device->perf_counters_->AddManager(&perf_count_manager);
-    device->perf_counters_->Update();
+      TestPerfCountManager perf_count_manager;
+      perf_count_manager.set_enabled(true);
+      device->perf_counters_->AddManager(&perf_count_manager);
+      device->perf_counters_->Update();
 
-    EXPECT_TRUE(device->perf_counters_->running());
-    device->EnterProtectedMode();
-    EXPECT_EQ(1u, device->power_manager_->l2_ready_status());
-    EXPECT_TRUE(device->IsInProtectedMode());
-    EXPECT_FALSE(device->perf_counters_->running());
+      EXPECT_TRUE(device->perf_counters_->running());
+      device->EnterProtectedMode();
+      EXPECT_EQ(1u, device->power_manager_->l2_ready_status());
+      EXPECT_TRUE(device->IsInProtectedMode());
+      EXPECT_FALSE(device->perf_counters_->running());
 
-    EXPECT_TRUE(device->ExitProtectedMode());
-    EXPECT_EQ(1u, device->power_manager_->l2_ready_status());
-    EXPECT_FALSE(device->IsInProtectedMode());
-    // Exiting protected mode should disable and then re-enable performance counters.
-    EXPECT_TRUE(device->perf_counters_->running());
+      EXPECT_TRUE(device->ExitProtectedMode());
+      EXPECT_EQ(1u, device->power_manager_->l2_ready_status());
+      EXPECT_FALSE(device->IsInProtectedMode());
+      // Exiting protected mode should disable and then re-enable performance counters.
+      EXPECT_TRUE(device->perf_counters_->running());
+      return MAGMA_STATUS_OK;
+    });
+    EXPECT_EQ(MAGMA_STATUS_OK, reply->Wait().get());
   }
 
   void PowerDownL2() {

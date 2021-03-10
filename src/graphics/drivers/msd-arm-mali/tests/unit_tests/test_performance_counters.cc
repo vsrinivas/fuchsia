@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <thread>
+
 #include <gtest/gtest.h>
 
 #include "address_manager.h"
@@ -76,6 +78,9 @@ class PerformanceCounterTest {
     PerformanceCounters perf_counters(&owner);
     TestManager manager;
 
+    perf_counters.SetDeviceThreadId(std::this_thread::get_id());
+    std::lock_guard lock(*perf_counters.device_thread_checker_);
+
     EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kDisabled,
               perf_counters.counter_state_);
     EXPECT_FALSE(perf_counters.TriggerRead());
@@ -114,6 +119,8 @@ class PerformanceCounterTest {
     TestCounterOwner owner(mmio.get());
     PerformanceCounters perf_counters(&owner);
     TestManager manager;
+    perf_counters.SetDeviceThreadId(std::this_thread::get_id());
+    std::lock_guard lock(*perf_counters.device_thread_checker_);
 
     perf_counters.AddManager(&manager);
 
@@ -145,6 +152,8 @@ class PerformanceCounterTest {
     TestCounterOwner owner(mmio.get());
     PerformanceCounters perf_counters(&owner);
     TestManager manager;
+    perf_counters.SetDeviceThreadId(std::this_thread::get_id());
+    std::lock_guard lock(*perf_counters.device_thread_checker_);
 
     perf_counters.AddManager(&manager);
 

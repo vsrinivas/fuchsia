@@ -5,7 +5,10 @@
 #ifndef PERFORMANCE_COUNTERS_H
 #define PERFORMANCE_COUNTERS_H
 
+#include <lib/fit/thread_checker.h>
+
 #include <mutex>
+#include <thread>
 #include <unordered_set>
 
 #include "address_manager.h"
@@ -33,7 +36,14 @@ class PerformanceCounters {
     virtual void OnForceDisabled() = 0;
   };
 
-  explicit PerformanceCounters(Owner* owner) : owner_(owner) {}
+  explicit PerformanceCounters(Owner* owner) : owner_(owner) {
+    // Until the device thread starts its safe to modify this data from the initial thread.
+    SetDeviceThreadId(std::this_thread::get_id());
+  }
+
+  void SetDeviceThreadId(std::thread::id device_thread_id) {
+    device_thread_checker_.emplace(device_thread_id);
+  }
 
   void AddClient(Client* client);
   void RemoveClient(Client* client);
@@ -47,6 +57,7 @@ class PerformanceCounters {
   void ReadCompleted();
 
   void ForceDisable() {
+    std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
     force_disabled_ = true;
     for (Client* client : clients_)
       client->OnForceDisabled();
@@ -55,13 +66,20 @@ class PerformanceCounters {
   }
 
   bool running() const {
+    std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
     return counter_state_ == PerformanceCounterState::kEnabled ||
            counter_state_ == PerformanceCounterState::kTriggered;
   }
 
-  void RemoveForceDisable() { force_disabled_ = false; }
+  void RemoveForceDisable() {
+    std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
+    force_disabled_ = false;
+  }
 
-  bool force_disabled() const { return force_disabled_; }
+  bool force_disabled() const {
+    std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
+    return force_disabled_;
+  }
 
  private:
   friend class PerformanceCounterTest;
@@ -77,16 +95,18 @@ class PerformanceCounters {
   bool Disable();
 
   Owner* owner_;
+  mutable std::optional<fit::thread_checker> device_thread_checker_;
+  MAGMA_GUARDED(*device_thread_checker_)
   PerformanceCounterState counter_state_ = PerformanceCounterState::kDisabled;
-  std::shared_ptr<MsdArmConnection> connection_;
-  std::shared_ptr<MsdArmBuffer> buffer_;
-  std::shared_ptr<AddressSlotMapping> address_mapping_;
-  uint64_t last_perf_base_ = 0;
-  std::chrono::steady_clock::time_point enable_time_;
-  bool force_disabled_ = false;
+  MAGMA_GUARDED(*device_thread_checker_) std::shared_ptr<MsdArmConnection> connection_;
+  MAGMA_GUARDED(*device_thread_checker_) std::shared_ptr<MsdArmBuffer> buffer_;
+  MAGMA_GUARDED(*device_thread_checker_) std::shared_ptr<AddressSlotMapping> address_mapping_;
+  MAGMA_GUARDED(*device_thread_checker_) uint64_t last_perf_base_ = 0;
+  MAGMA_GUARDED(*device_thread_checker_) std::chrono::steady_clock::time_point enable_time_;
+  MAGMA_GUARDED(*device_thread_checker_) bool force_disabled_ = false;
 
-  std::unordered_set<Client*> clients_;
-  PerformanceCountersManager* manager_{};
+  MAGMA_GUARDED(*device_thread_checker_) std::unordered_set<Client*> clients_;
+  MAGMA_GUARDED(*device_thread_checker_) PerformanceCountersManager* manager_{};
 };
 
 #endif  // SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_SRC_PERFORMANCE_COUNTERS_H_
