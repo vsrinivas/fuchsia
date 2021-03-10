@@ -4,9 +4,10 @@
 
 library fuchsia.component.runner;
 
-using fuchsia.data;
-using fuchsia.io;
 using fuchsia.component;
+using fuchsia.data;
+using fuchsia.diagnostics.types;
+using fuchsia.io;
 using fuchsia.url;
 
 const uint32 MAX_NAMESPACE_COUNT = 32;
@@ -161,4 +162,12 @@ protocol ComponentController {
     /// In some cases Kill() may be issued before Stop(), but that is not
     /// guaranteed.
     Kill();
+
+    /// Event for runners to publish diagnostics to the platform.
+    ///
+    /// This event signals to the platform that the runner for this
+    /// component is publishing diagnostics about the runtime of the
+    /// component. The component manager may optionally expose this data
+    /// to clients.
+    -> OnPublishDiagnostics(fuchsia.diagnostics.types.ComponentDiagnostics payload);
 };
