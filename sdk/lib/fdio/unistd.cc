@@ -54,21 +54,25 @@ static zx_status_t __fdio_open_at_ignore_eisdir(fdio_t** io, int dirfd, const ch
 // Open |path| from the current working directory, respecting EISDIR.
 static zx_status_t __fdio_open(fdio_t** io, const char* path, int flags, uint32_t mode);
 
-// non-thread-safe emulation of unistd io functions
-// using the fdio transports
+// non-thread-safe emulation of unistd io functions using the fdio transports
 
-// Constexpr function to compute the initialized value for __fdio_globbal_state at compile time.
-// If this is not constexpr, then initialization would happen after __libc_extensions_init,
-// wiping the fd table *after* it has been fill in with valid entries.
-// (musl invokes "__libc_start_init" after "__libc_extensions_init")
-static constexpr fdio_state_t initialize_fdio_state() {
-  return {
-      .lock = MTX_INIT,
-      .cwd_lock = MTX_INIT,
+// Constexpr function to force initialization at program load time. Otherwise initialization may
+// occur after |__libc_extension_init|, wiping the fd table *after* it has been filled in with valid
+// entries; musl invokes |__libc_start_init| after |__libc_extensions_init|.
+//
+// There are no language guarantees here. C++20 provides the constinit specifier, and clang provides
+// the [[clang::require_constant_initialization]] attribute, but until we are on C++20 this is the
+// best we can do.
+//
+// Note that even moving the initialization to |__libc_extensions_init| doesn't work out in the
+// presence of sanitizers that deliberately initialize with garbage *after* |__libc_extensions_init|
+// runs.
+fdio_state_t __fdio_global_state = []() constexpr {
+  return fdio_state_t{
       .cwd_path = "/",
   };
 }
-fdio_state_t __fdio_global_state = initialize_fdio_state();
+();
 
 int fdio_reserve_fd(int starting_fd) {
   if ((starting_fd < 0) || (starting_fd >= FDIO_MAX_FD)) {
