@@ -7,13 +7,14 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/zx/channel.h>
 #include <poll.h>
 #include <zircon/device/vfs.h>
 
 #include <fbl/auto_lock.h>
 
-#include "lib/zx/channel.h"
 #include "private-socket.h"
+#include "zxio.h"
 
 namespace fio = fuchsia_io;
 namespace fpty = fuchsia_hardware_pty;
@@ -148,7 +149,7 @@ static zx_status_t fdio_open_fd_common(fdio_t* iodir, const char* path, uint32_t
   flags |= ZX_FS_FLAG_DESCRIBE;
 
   fdio_t* io;
-  zx_status_t status = iodir->ops().open(iodir, path, flags, FDIO_CONNECT_MODE, &io);
+  zx_status_t status = iodir->open(path, flags, FDIO_CONNECT_MODE, &io);
   if (status != ZX_OK) {
     return status;
   }
@@ -371,7 +372,11 @@ zx_status_t fdio_create(zx_handle_t h, fdio_t** out_io) {
       break;
     }
     case ZX_OBJ_TYPE_LOG:
-      io = fdio_logger_create(zx::debuglog(std::move(handle)));
+      io = fdio_internal::alloc<fdio_internal::zxio>();
+      if (io) {
+        zxio_debuglog_init(&io->zxio_storage(), zx::debuglog(std::move(handle)));
+        ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
+      }
       break;
     default: {
       return ZX_ERR_INVALID_ARGS;
@@ -414,53 +419,4 @@ zx_status_t fdio_from_on_open_event(fidl::ClientEnd<fio::Node> client_end, fdio_
     return event_handler.open_status();
   }
   return (status == ZX_ERR_NOT_SUPPORTED) ? ZX_ERR_IO : status;
-}
-
-zx_status_t fdio_remote_clone(fidl::UnownedClientEnd<fio::Node> node, fdio_t** out_io) {
-  auto endpoints = fidl::CreateEndpoints<fio::Node>();
-  if (endpoints.is_error()) {
-    return endpoints.status_value();
-  }
-
-  zx_status_t status = fio::Node::Call::Clone(
-                           node, fio::wire::CLONE_FLAG_SAME_RIGHTS | fio::wire::OPEN_FLAG_DESCRIBE,
-                           std::move(endpoints->server))
-                           .status();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return fdio_from_on_open_event(std::move(endpoints->client), out_io);
-}
-
-zx_status_t fdio_remote_open_at(fidl::UnownedClientEnd<fio::Directory> dir, const char* path,
-                                uint32_t flags, uint32_t mode, fdio_t** out_io) {
-  size_t length;
-  zx_status_t status = fdio_validate_path(path, &length);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  auto endpoints = fidl::CreateEndpoints<fio::Node>();
-  if (endpoints.is_error()) {
-    return endpoints.status_value();
-  }
-
-  status = fio::Directory::Call::Open(dir, flags, mode, fidl::unowned_str(path, length),
-                                      std::move(endpoints->server))
-               .status();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  if (flags & ZX_FS_FLAG_DESCRIBE) {
-    return fdio_from_on_open_event(std::move(endpoints->client), out_io);
-  }
-
-  fdio_t* io = fdio_remote_create(std::move(endpoints->client), zx::eventpair{});
-  if (io == nullptr) {
-    return ZX_ERR_NO_RESOURCES;
-  }
-  *out_io = io;
-  return ZX_OK;
 }

@@ -140,7 +140,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
   int16_t out_code;
   zx_status_t status;
-  if ((status = io->ops().connect(io, addr, len, &out_code)) != ZX_OK) {
+  if ((status = io->connect(addr, len, &out_code)) != ZX_OK) {
     io->release();
     return ERROR(status);
   }
@@ -155,7 +155,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
         return ERROR(status);
       }
       // Call Connect() again after blocking to find connect's result.
-      if ((status = io->ops().connect(io, addr, len, &out_code)) != ZX_OK) {
+      if ((status = io->connect(addr, len, &out_code)) != ZX_OK) {
         io->release();
         return ERROR(status);
       }
@@ -196,14 +196,12 @@ static int delegate(int fd, F fn) {
 
 __EXPORT
 int bind(int fd, const struct sockaddr* addr, socklen_t len) {
-  return delegate(
-      fd, [&](fdio_t* io, int16_t* out_code) { return io->ops().bind(io, addr, len, out_code); });
+  return delegate(fd, [&](fdio_t* io, int16_t* out_code) { return io->bind(addr, len, out_code); });
 }
 
 __EXPORT
 int listen(int fd, int backlog) {
-  return delegate(
-      fd, [&](fdio_t* io, int16_t* out_code) { return io->ops().listen(io, backlog, out_code); });
+  return delegate(fd, [&](fdio_t* io, int16_t* out_code) { return io->listen(backlog, out_code); });
 }
 
 __EXPORT
@@ -236,8 +234,8 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
     for (;;) {
       // We're going to manage blocking on the client side, so always ask the
       // provider for a non-blocking socket.
-      if ((status = io->ops().accept(io, flags | SOCK_NONBLOCK, addr, addrlen,
-                                     accepted.reset_and_get_address(), &out_code)) != ZX_OK) {
+      if ((status = io->accept(flags | SOCK_NONBLOCK, addr, addrlen,
+                               accepted.reset_and_get_address(), &out_code)) != ZX_OK) {
         break;
       }
 
@@ -370,9 +368,8 @@ int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
     return ERRNO(EINVAL);
   }
 
-  return delegate(fd, [&](fdio_t* io, int16_t* out_code) {
-    return io->ops().getsockname(io, addr, len, out_code);
-  });
+  return delegate(
+      fd, [&](fdio_t* io, int16_t* out_code) { return io->getsockname(addr, len, out_code); });
 }
 
 __EXPORT
@@ -381,9 +378,8 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
     return ERRNO(EINVAL);
   }
 
-  return delegate(fd, [&](fdio_t* io, int16_t* out_code) {
-    return io->ops().getpeername(io, addr, len, out_code);
-  });
+  return delegate(
+      fd, [&](fdio_t* io, int16_t* out_code) { return io->getpeername(addr, len, out_code); });
 }
 
 __EXPORT
@@ -425,7 +421,7 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
   }
 
   int16_t out_code;
-  zx_status_t status = io->ops().getsockopt(io, level, optname, optval, optlen, &out_code);
+  zx_status_t status = io->getsockopt(level, optname, optval, optlen, &out_code);
   if (status != ZX_OK) {
     return ERROR(status);
   }
@@ -500,7 +496,7 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
   }
 
   int16_t out_code;
-  zx_status_t status = io->ops().setsockopt(io, level, optname, optval, optlen, &out_code);
+  zx_status_t status = io->setsockopt(level, optname, optval, optlen, &out_code);
   if (status != ZX_OK) {
     return ERROR(status);
   }

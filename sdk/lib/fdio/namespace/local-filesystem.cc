@@ -115,6 +115,15 @@ zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn,
   }
 }
 
+// Open |path| relative to |vn| as an |fdio_t|.
+//
+// |flags| and |mode| are passed to |fuchsia.io.Directory/Open| as |flags| and |mode|, respectively.
+//
+// If |flags| includes |ZX_FS_FLAG_DESCRIBE|, this function reads the resulting
+// |fuchsia.io.Node/OnOpen| event from the newly created channel and creates an
+// appropriate |fdio_t| object to interact with the remote object.
+//
+// Otherwise, this function creates a generic "remote" |fdio_t| object.
 zx_status_t fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char* path, uint32_t flags,
                                  uint32_t mode, fdio_t** out) const {
   {
@@ -139,9 +148,36 @@ zx_status_t fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char* path, u
     return ZX_ERR_ALREADY_EXISTS;
   }
 
+  size_t length;
+  zx_status_t status = fdio_validate_path(path, &length);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto endpoints = fidl::CreateEndpoints<fio::Node>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+
   // Active remote connections are immutable, so referencing remote here
   // is safe. We don't want to do a blocking open under the ns lock.
-  return fdio_remote_open_at(vn->Remote(), path, flags, mode, out);
+  status = fio::Directory::Call::Open(vn->Remote(), flags, mode, fidl::unowned_str(path, length),
+                                      std::move(endpoints->server))
+               .status();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (flags & ZX_FS_FLAG_DESCRIBE) {
+    return fdio_from_on_open_event(std::move(endpoints->client), out);
+  }
+
+  fdio_t* io = fdio_remote_create(std::move(endpoints->client), zx::eventpair{});
+  if (io == nullptr) {
+    return ZX_ERR_NO_RESOURCES;
+  }
+  *out = io;
+  return ZX_OK;
 }
 
 zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* state, void* buffer,
@@ -389,9 +425,22 @@ fdio_t* fdio_namespace::OpenRoot() const {
   fbl::RefPtr<LocalVnode> vn = root_;
   lock.release();
 
-  fdio_t* io;
+  auto endpoints = fidl::CreateEndpoints<fio::Node>();
+  if (endpoints.is_error()) {
+    return nullptr;
+  }
+
   zx_status_t status =
-      fdio_remote_clone(fidl::UnownedClientEnd<fio::Node>(vn->Remote().channel().get()), &io);
+      fio::Directory::Call::Clone(vn->Remote(),
+                                  fio::wire::CLONE_FLAG_SAME_RIGHTS | fio::wire::OPEN_FLAG_DESCRIBE,
+                                  std::move(endpoints->server))
+          .status();
+  if (status != ZX_OK) {
+    return nullptr;
+  }
+
+  fdio_t* io;
+  status = fdio_from_on_open_event(std::move(endpoints->client), &io);
   if (status != ZX_OK) {
     return nullptr;
   }
@@ -403,7 +452,7 @@ zx_status_t fdio_namespace::SetRoot(fdio_t* io) {
 
   if (!vn) {
     fidl::ClientEnd<fio::Directory> client_end;
-    zx_status_t status = fdio_zxio_clone(io, client_end.channel().reset_and_get_address());
+    zx_status_t status = io->clone(client_end.channel().reset_and_get_address());
     if (status != ZX_OK) {
       return status;
     }

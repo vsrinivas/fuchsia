@@ -7,5 +7,7 @@
 
 #include "internal.h"
 
+fdio::~fdio() = default;
+
 __EXPORT
 extern "C" zxio_t* fdio_get_zxio(fdio_t* io) { return &io->zxio_storage().io; }

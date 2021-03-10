@@ -537,7 +537,6 @@ extern "C" {
     pub fn fdio_create(handle: zx_handle_t, io_out: *mut *mut fdio_t) -> zx_status_t;
     pub fn fdio_unsafe_wait_end(io: *mut fdio_t, signals: zx_signals_t, events_out: *mut u32);
     pub fn fdio_fd_clone(fd: raw::c_int, handle: *mut zx_handle_t) -> zx_status_t;
-    pub fn fdio_pipe_pair_raw(handles: *mut zx_handle_t, types: *mut u32) -> zx_status_t;
     pub fn fdio_fd_transfer(fd: raw::c_int, handle: *mut zx_handle_t) -> zx_status_t;
     pub fn fdio_fd_create(handle: zx_handle_t, fd_out: *mut raw::c_int) -> zx_status_t;
     pub fn fdio_bind_to_fd(io: *mut fdio_t, fd: raw::c_int, starting_fd: raw::c_int) -> raw::c_int;

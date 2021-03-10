@@ -19,7 +19,6 @@
 #include <threads.h>
 #include <zircon/types.h>
 
-using fdio_t = struct fdio;
 using fdio_ns_t = struct fdio_namespace;
 
 // FDIO provides POSIX I/O functionality over various transports
@@ -42,74 +41,11 @@ using fdio_ns_t = struct fdio_namespace;
 // transport, the different transports should become an implementation detail
 // in zxio.
 
-using two_path_op = zx_status_t (*)(fdio_t*, const char*, size_t, zx_handle_t, const char*, size_t);
-
 struct Errno {
   constexpr explicit Errno(int e) : e(e) {}
   static constexpr int Ok = 0;
   bool is_error() const { return e != 0; }
   int e;
-};
-
-using fdio_ops_t = struct fdio_ops {
-  zx_status_t (*close)(fdio_t* io);
-  zx_status_t (*open)(fdio_t* io, const char* path, uint32_t flags, uint32_t mode, fdio_t** out);
-  zx_status_t (*clone)(fdio_t* io, zx_handle_t* out_handle);
-
-  // |unwrap| releases the underlying handle if applicable.
-  // The caller must ensure there are no concurrent operations on |io|.
-  //
-  // For example, |fdio_fd_transfer| will call |fdio_unbind_from_fd| which will
-  // only succeed when the caller has the last unique reference to the |fdio_t|,
-  // thus ensuring that the fd is only transferred when there are no concurrent
-  // operations.
-  zx_status_t (*unwrap)(fdio_t* io, zx_handle_t* out_handle);
-
-  // |borrow_channel| borrows the underlying handle if applicable.
-  zx_status_t (*borrow_channel)(fdio_t* io, zx_handle_t* out_handle);
-  void (*wait_begin)(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* signals);
-  void (*wait_end)(fdio_t* io, zx_signals_t signals, uint32_t* events);
-
-  // |posix_ioctl| returns an |Errno|, which wraps an errno to be set on
-  // failure, or |Errno::Ok| (0) on success.
-  Errno (*posix_ioctl)(fdio_t* io, int req, va_list va);
-  zx_status_t (*get_token)(fdio_t* io, zx_handle_t* out);
-  zx_status_t (*get_attr)(fdio_t* io, zxio_node_attributes_t* out);
-  zx_status_t (*set_attr)(fdio_t* io, const zxio_node_attributes_t* attr);
-  uint32_t (*convert_to_posix_mode)(fdio_t* io, zxio_node_protocols_t protocols,
-                                    zxio_abilities_t abilities);
-  zx_status_t (*dirent_iterator_init)(fdio_t* io, zxio_dirent_iterator_t* iterator,
-                                      zxio_t* directory);
-  zx_status_t (*dirent_iterator_next)(fdio_t* io, zxio_dirent_iterator_t* iterator,
-                                      zxio_dirent_t** out_entry);
-  void (*dirent_iterator_destroy)(fdio_t* io, zxio_dirent_iterator_t* iterator);
-  zx_status_t (*unlink)(fdio_t* io, const char* path, size_t len);
-  zx_status_t (*truncate)(fdio_t* io, off_t off);
-  two_path_op rename;
-  two_path_op link;
-  zx_status_t (*get_flags)(fdio_t* io, uint32_t* out_flags);
-  zx_status_t (*set_flags)(fdio_t* io, uint32_t flags);
-
-  zx_status_t (*bind)(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
-                      int16_t* out_code);
-  zx_status_t (*connect)(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
-                         int16_t* out_code);
-  zx_status_t (*listen)(fdio_t* io, int backlog, int16_t* out_code);
-  zx_status_t (*accept)(fdio_t* io, int flags, struct sockaddr* addr, socklen_t* addrlen,
-                        zx_handle_t* out_handle, int16_t* out_code);
-  zx_status_t (*getsockname)(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
-                             int16_t* out_code);
-  zx_status_t (*getpeername)(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
-                             int16_t* out_code);
-  zx_status_t (*getsockopt)(fdio_t* io, int level, int optname, void* optval, socklen_t* optlen,
-                            int16_t* out_code);
-  zx_status_t (*setsockopt)(fdio_t* io, int level, int optname, const void* optval,
-                            socklen_t optlen, int16_t* out_code);
-  zx_status_t (*recvmsg)(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
-                         int16_t* out_code);
-  zx_status_t (*sendmsg)(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual,
-                         int16_t* out_code);
-  zx_status_t (*shutdown)(fdio_t* io, int how, int16_t* out_code);
 };
 
 // fdio_t ioflag values
@@ -130,15 +66,6 @@ using fdio_ops_t = struct fdio_ops {
 // Static assertions in unistd.cc ensure we aren't colliding.
 #define IOFLAG_FD_FLAGS IOFLAG_CLOEXEC
 
-zx_status_t fdio_zxio_close(fdio_t* io);
-zx_status_t fdio_zxio_clone(fdio_t* io, zx_handle_t* out_handle);
-zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* out_handle);
-zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual);
-zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual);
-
-Errno fdio_zx_socket_posix_ioctl(const zx::socket& socket, int request, va_list va);
-zx_status_t fdio_zx_socket_shutdown(const zx::socket& socket, int how);
-
 // Waits until one or more |events| are signalled, or the |deadline| passes.
 // The |events| are of the form |FDIO_EVT_*|, defined in io.h.
 // If not NULL, |out_pending| returns a bitmap of all observed events.
@@ -146,11 +73,6 @@ zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx::time deadline, uint32_t* 
 
 // Wraps a channel with an fdio_t using remote io.
 fdio_t* fdio_remote_create(fidl::ClientEnd<fuchsia_io::Node> node, zx::eventpair event);
-
-// creates a fdio that wraps a log object
-// this will allocate a buffer (on demand) to assemble
-// entire log-lines and flush them on newline or buffer full.
-fdio_t* fdio_logger_create(zx::debuglog);
 
 // Creates an |fdio_t| from a remote directory connection.
 fdio_t* fdio_dir_create(fidl::ClientEnd<fuchsia_io::Directory> dir);
@@ -188,13 +110,7 @@ fdio_t* fdio_stream_socket_create(zx::socket socket,
                                   zx_info_socket_t info);
 
 // Creates a message port and pair of simple io fdio_t's
-int fdio_pipe_pair(fdio_t** a, fdio_t** b, uint32_t options);
-
-void fdio_zxio_pipe_wait_begin(fdio_t* io, uint32_t events, zxio_signals_t signals,
-                               zx_handle_t* out_handle, zx_signals_t* out_signals);
-
-void fdio_zxio_pipe_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* out_events,
-                             zxio_signals_t* zxio_signals);
+zx_status_t fdio_pipe_pair(fdio_t** a, fdio_t** b, uint32_t options);
 
 // Creates an |fdio_t| referencing the root of the |ns| namespace.
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns);
@@ -236,22 +152,6 @@ zx_status_t fdio_from_channel(fidl::ClientEnd<fuchsia_io::Node> node, fdio_t** o
 // Upon failure, consumes all handles.
 zx_status_t fdio_from_on_open_event(fidl::ClientEnd<fuchsia_io::Node> client_end, fdio_t** out_io);
 
-// Clones the |node| connection and packages the new connection into a |fdio_t|.
-// The new connection has the same |fuchsia.io| rights as the original connection.
-zx_status_t fdio_remote_clone(fidl::UnownedClientEnd<fuchsia_io::Node> node, fdio_t** out_io);
-
-// Open |path| relative to |dir| as an |fdio_t|.
-//
-// |flags| and |mode| are passed to |fuchsia.io.Directory/Open| as |flags| and |mode|, respectively.
-//
-// If |flags| includes |ZX_FS_FLAG_DESCRIBE|, this function reads the resulting
-// |fuchsia.io.Node/OnOpen| event from the newly created channel and creates an
-// appropriate |fdio_t| object to interact with the remote object.
-//
-// Otherwise, this function creates a generic "remote" |fdio_t| object.
-zx_status_t fdio_remote_open_at(fidl::UnownedClientEnd<fuchsia_io::Directory> dir, const char* path,
-                                uint32_t flags, uint32_t mode, fdio_t** out_io);
-
 // io will be consumed by this and must not be shared
 void fdio_chdir(fdio_t* io, const char* path);
 
@@ -275,78 +175,93 @@ void fdio_iovec_copy_to(const uint8_t* buffer, size_t buffer_size, const zx_iove
 void fdio_iovec_copy_from(const zx_iovec_t* vector, size_t vector_count, uint8_t* buffer,
                           size_t buffer_size, size_t* out_actual);
 
-// unsupported / do-nothing hooks shared by implementations
-zx_status_t fdio_default_get_token(fdio_t* io, zx_handle_t* out);
-zx_status_t fdio_default_set_attr(fdio_t* io, const zxio_node_attributes_t* attr);
-// Defaults to running conversion assuming the object is a file.
-uint32_t fdio_default_convert_to_posix_mode(fdio_t* io, zxio_node_protocols_t protocols,
-                                            zxio_abilities_t abilities);
-zx_status_t fdio_default_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
-                                              zxio_t* directory);
-zx_status_t fdio_default_dirent_iterator_next(fdio_t* io, zxio_dirent_iterator_t* iterator,
-                                              zxio_dirent_t** out_entry);
-void fdio_default_dirent_iterator_destroy(fdio_t* io, zxio_dirent_iterator_t* iterator);
-zx_status_t fdio_default_unlink(fdio_t* io, const char* path, size_t len);
-zx_status_t fdio_default_truncate(fdio_t* io, off_t off);
-zx_status_t fdio_default_rename(fdio_t* io, const char* src, size_t srclen, zx_handle_t dst_token,
+using two_path_op = zx_status_t(const char* src, size_t srclen, zx_handle_t dst_token,
                                 const char* dst, size_t dstlen);
-zx_status_t fdio_default_link(fdio_t* io, const char* src, size_t srclen, zx_handle_t dst_token,
-                              const char* dst, size_t dstlen);
-zx_status_t fdio_default_get_flags(fdio_t* io, uint32_t* out_flags);
-zx_status_t fdio_default_set_flags(fdio_t* io, uint32_t flags);
-zx_status_t fdio_default_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
-                                 int16_t* out_code);
-zx_status_t fdio_default_sendmsg(fdio_t* io, const struct msghdr* msg, int flags,
-                                 size_t* out_actual, int16_t* out_code);
-zx_status_t fdio_default_get_attr(fdio_t* io, zxio_node_attributes_t* out);
-zx_status_t fdio_default_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode,
-                              fdio_t** out);
-zx_status_t fdio_default_clone(fdio_t* io, zx_handle_t* out_handle);
-void fdio_default_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
-                             zx_signals_t* _signals);
-void fdio_default_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events);
-zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* out_handle);
-zx_status_t fdio_default_borrow_channel(fdio_t* io, zx_handle_t* out_handle);
-zx_status_t fdio_default_bind(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
-                              int16_t* out_code);
-zx_status_t fdio_default_connect(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
-                                 int16_t* out_code);
-zx_status_t fdio_default_listen(fdio_t* io, int backlog, int16_t* out_code);
-zx_status_t fdio_default_getsockname(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
-                                     int16_t* out_code);
-zx_status_t fdio_default_getpeername(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
-                                     int16_t* out_code);
-zx_status_t fdio_default_getsockopt(fdio_t* io, int level, int optname, void* optval,
-                                    socklen_t* optlen, int16_t* out_code);
-zx_status_t fdio_default_setsockopt(fdio_t* io, int level, int optname, const void* optval,
-                                    socklen_t optlen, int16_t* out_code);
-zx_status_t fdio_default_shutdown(fdio_t* io, int how, int16_t* out_code);
-Errno fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
+
+namespace fdio_internal {
+
+template <typename T>
+class AllocHelper final {
+ public:
+  template <typename... Args>
+  static fdio_t* alloc(Args&&... args) {
+    return new T(std::forward<Args>(args)...);
+  }
+};
+
+template <typename T, typename... Args>
+fdio_t* alloc(Args&&... args) {
+  return AllocHelper<T>::alloc(std::forward<Args>(args)...);
+}
+
+}  // namespace fdio_internal
 
 // Lifecycle notes:
 //
-// Upon creation, fdio objects have a refcount of 1.
-// fdio::acquire() and fdio::release() are used to upref
-// and downref, respectively.  Upon downref to 0,
-// the object will be freed.
+// Upon creation, objects have a refcount of 1. |acquire| and |release| are used to upref and
+// downref, respectively. Upon downref to 0, the object will be freed.
 //
-// The close hook must be called before free and should
-// only be called once.  In normal use, fdio objects are
-// accessed through the fdio_fdtab, and when close is
-// called they are removed from the fdtab and the reference
-// that the fdtab itself is holding is released, at which
-// point they will be free()'d unless somebody is holding
-// a ref due to an ongoing io transaction, which will
-// certainly fail due to underlying handles being closed
-// at which point a downref will happen and destruction
-// will follow.
+// The close hook must be called before free and should only be called once.  In normal use, objects
+// are accessed through the fdio_fdtab, and when close is called they are removed from the fdtab and
+// the reference that the fdtab itself is holding is released, at which point they will be free()'d
+// unless somebody is holding a ref due to an ongoing io transaction, which will certainly fail due
+// to underlying handles being closed at which point a downref will happen and destruction will
+// follow.
 struct fdio {
- public:
-  static fdio_t* alloc(const fdio_ops_t* ops) { return new fdio(*ops); }
+  virtual zx_status_t close() = 0;
+  virtual zx_status_t open(const char* path, uint32_t flags, uint32_t mode, fdio_t** out);
+  virtual zx_status_t clone(zx_handle_t* out_handle);
 
-  // The operation function table which encapsulates specialized I/O
-  // transport under a common interface.
-  const fdio_ops_t& ops() { return ops_; }
+  // |unwrap| releases the underlying handle if applicable.  The caller must ensure there are no
+  // concurrent operations on |io|.
+  //
+  // For example, |fdio_fd_transfer| will call |fdio_unbind_from_fd| which will only succeed when
+  // the caller has the last unique reference to the |fdio_t|, thus ensuring that the fd is only
+  // transferred when there are no concurrent operations.
+  virtual zx_status_t unwrap(zx_handle_t* out_handle);
+
+  // |borrow_channel| borrows the underlying handle if applicable.
+  virtual zx_status_t borrow_channel(zx_handle_t* out_handle);
+
+  virtual void wait_begin(uint32_t events, zx_handle_t* out_handle, zx_signals_t* out_signals);
+  virtual void wait_end(zx_signals_t signals, uint32_t* out_events);
+
+  // |posix_ioctl| returns an |Errno|, which wraps an errno to be set on failure, or |Errno::Ok| (0)
+  // on success.
+  virtual Errno posix_ioctl(int req, va_list va);
+
+  virtual zx_status_t get_token(zx_handle_t* out);
+  virtual zx_status_t get_attr(zxio_node_attributes_t* out);
+  virtual zx_status_t set_attr(const zxio_node_attributes_t* attr);
+  virtual uint32_t convert_to_posix_mode(zxio_node_protocols_t protocols,
+                                         zxio_abilities_t abilities);
+  virtual zx_status_t dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory);
+  virtual zx_status_t dirent_iterator_next(zxio_dirent_iterator_t* iterator,
+                                           zxio_dirent_t** out_entry);
+  virtual void dirent_iterator_destroy(zxio_dirent_iterator_t* iterator);
+  virtual zx_status_t unlink(const char* path, size_t len);
+  virtual zx_status_t truncate(off_t off);
+  virtual two_path_op rename;
+  virtual two_path_op link;
+  virtual zx_status_t get_flags(uint32_t* out_flags);
+  virtual zx_status_t set_flags(uint32_t flags);
+  virtual zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code);
+  virtual zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code);
+  virtual zx_status_t listen(int backlog, int16_t* out_code);
+  virtual zx_status_t accept(int flags, struct sockaddr* addr, socklen_t* addrlen,
+                             zx_handle_t* out_handle, int16_t* out_code);
+  virtual zx_status_t getsockname(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code);
+  virtual zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code);
+  virtual zx_status_t getsockopt(int level, int optname, void* optval, socklen_t* optlen,
+                                 int16_t* out_code);
+  virtual zx_status_t setsockopt(int level, int optname, const void* optval, socklen_t optlen,
+                                 int16_t* out_code);
+  virtual zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code);
+  virtual zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
+                              int16_t* out_code);
+  virtual zx_status_t shutdown(int how, int16_t* out_code);
+
+  virtual bool is_local_dir() { return false; }
 
   // |ioflag| contains mutable properties of this object, shared by
   // different transports. Possible values are |IOFLAG_*| in private.h.
@@ -364,7 +279,7 @@ struct fdio {
 
   zx_status_t release() {
     if (refcount_.fetch_sub(1) == 1) {
-      zx_status_t status = ops().close(this);
+      zx_status_t status = close();
       delete this;
       return status;
     }
@@ -373,30 +288,30 @@ struct fdio {
 
   bool is_last_reference() { return refcount_.load() == 1; }
 
+ protected:
+  friend class fdio_internal::AllocHelper<fdio>;
+
+  fdio() = default;
+  virtual ~fdio();
+
  private:
-  explicit fdio(const fdio_ops_t& ops)
-      : ops_(ops),
-        refcount_(1),
-        ioflag_(0),
-        storage_({}),
-        rcvtimeo_(zx::duration::infinite()),
-        sndtimeo_(zx::duration::infinite()){};
-
-  const fdio_ops_t& ops_;
-
   // The number of references on this object. Note that each appearance
   // in the fd table counts as one reference on the corresponding object.
   // Ongoing operations will also contribute to the refcount.
-  std::atomic_int_fast32_t refcount_;
+  std::atomic_int_fast32_t refcount_ = 1;
 
-  uint32_t ioflag_;
+  uint32_t ioflag_ = 0;
 
-  zxio_storage_t storage_;
+  zxio_storage_t storage_ = {};
 
-  zx::duration rcvtimeo_;
+  zx::duration rcvtimeo_ = zx::duration::infinite();
 
-  zx::duration sndtimeo_;
+  zx::duration sndtimeo_ = zx::duration::infinite();
 };
+
+namespace fdio_internal {
+using base = fdio_t;
+}  // namespace fdio_internal
 
 using fdio_available = struct {};
 using fdio_reserved = struct {};
