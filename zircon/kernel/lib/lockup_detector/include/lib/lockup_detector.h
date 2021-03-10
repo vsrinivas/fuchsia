@@ -39,25 +39,29 @@ void lockup_set_cs_threshold_ticks(zx_ticks_t ticks);
 #define LOCKUP_CRITICAL_SECTION_ENALBED 1
 
 #if LOCKUP_CRITICAL_SECTION_ENALBED
-#define LOCKUP_BEGIN() \
-  do {                 \
-    lockup_begin();    \
+#define LOCKUP_BEGIN(name) \
+  do {                     \
+    lockup_begin(name);    \
   } while (false)
+
 #define LOCKUP_END() \
   do {               \
     lockup_end();    \
   } while (false)
 #else
-#define LOCKUP_BEGIN()
+#define LOCKUP_BEGIN(name)
 #define LOCKUP_END()
 #endif
 
-// Used to indicate the CPU is entering a critical section where it might appear to be locked up.
+// Used to indicate the CPU is entering a critical section with name |name| where it might appear to
+// be locked up.
+//
+// |name| must have static lifetime.
 //
 // Must be called with preemption disabled or interrupts disabled.
 //
 // Do not use directly.  Use |LOCKUP_BEGIN| macro instead.
-void lockup_begin(void);
+void lockup_begin(const char* name);
 
 // Used to indicate the CPU has left a critical section.
 //

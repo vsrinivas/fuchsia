@@ -14,6 +14,7 @@
 #include <lib/crashlog.h>
 #include <lib/lockup_detector/state.h>
 #include <lib/relaxed_atomic.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <zircon/time.h>
 
@@ -228,6 +229,9 @@ class CriticalSectionLockupChecker {
   //
   // This value is expressed in units of ticks rather than nanoseconds because it is faster to read
   // the platform timer's tick count than to get current_time().
+  //
+  // Use relaxed atomic operations because this field is accessed within the critical section and
+  // must be fast.
   static inline RelaxedAtomic<zx_ticks_t> threshold_ticks_{0};
   static inline zx_ticks_t fatal_threshold_ticks_{0};
   static inline zx_ticks_t worst_case_threshold_ticks_{ktl::numeric_limits<zx_ticks_t>::max()};
@@ -295,6 +299,7 @@ void CriticalSectionLockupChecker::PerformCheck(LockupDetectorState& state, cpu_
   auto& cs_state = state.critical_section;
   const zx_ticks_t observed_begin_ticks = cs_state.begin_ticks.load(ktl::memory_order_relaxed);
   const zx_ticks_t observed_threshold_ticks = threshold_ticks();
+  const char* const observed_name = cs_state.name.load(ktl::memory_order_relaxed);
 
   // If observed_begin_ticks is non-zero, then the CPU we are checking is currently in a
   // critical section.  Compute how long it has been in the CS and check to see
@@ -311,13 +316,15 @@ void CriticalSectionLockupChecker::PerformCheck(LockupDetectorState& state, cpu_
       // See the comment in HeartbeatLockupChecker::PerformCheck for an explanation of why this
       // curious empty-string OOPS is here.
       KERNEL_OOPS("");
-      fprintf(
-          output_target,
-          "lockup_detector: CPU-%u in critical section for %" PRId64 " ms, threshold=%" PRId64
-          " ms start=%" PRId64 " now=%" PRId64 ".\nReported by [CPU-%u] (message rate limited)\n",
-          cpu, TicksToDuration(age_ticks) / ZX_MSEC(1),
-          TicksToDuration(observed_threshold_ticks) / ZX_MSEC(1),
-          TicksToDuration(observed_begin_ticks), TicksToDuration(now_ticks), arch_curr_cpu_num());
+      fprintf(output_target,
+              "lockup_detector: CPU-%u in critical section for %" PRId64 " ms, threshold=%" PRId64
+              " ms start=%" PRId64 " now=%" PRId64
+              " name=%s.\n"
+              "Reported by [CPU-%u] (message rate limited)\n",
+              cpu, TicksToDuration(age_ticks) / ZX_MSEC(1),
+              TicksToDuration(observed_threshold_ticks) / ZX_MSEC(1),
+              TicksToDuration(observed_begin_ticks), TicksToDuration(now_ticks),
+              (observed_name ? observed_name : "unknown"), arch_curr_cpu_num());
 
       DumpSchedulerDiagnostics(cpu, output_target);
     };
@@ -531,7 +538,7 @@ void lockup_set_cs_threshold_ticks(zx_ticks_t val) {
   CriticalSectionLockupChecker::set_threshold_ticks(val);
 }
 
-void lockup_begin() {
+void lockup_begin(const char* name) {
   LockupDetectorState& state = get_local_percpu()->lockup_detector_state;
   auto& cs_state = state.critical_section;
 
@@ -551,7 +558,10 @@ void lockup_begin() {
   }
 
   const zx_ticks_t now = current_ticks();
+  // Using relaxed stores because this is performance sensitive code and it's OK for the checker to
+  // see these stores in any order.
   cs_state.begin_ticks.store(now, ktl::memory_order_relaxed);
+  cs_state.name.store(name, ktl::memory_order_relaxed);
 }
 
 void lockup_end() {
@@ -588,7 +598,11 @@ void lockup_end() {
 
   // We are done with the CS now.  Clear the begin time to indicate that we are
   // not in any critical section.
+  //
+  // Using relaxed stores because this is performance sensitive code and it's OK
+  // for the checker to see these stores in any order.
   cs_state.begin_ticks.store(0, ktl::memory_order_relaxed);
+  cs_state.name.store(nullptr, ktl::memory_order_relaxed);
 }
 
 int64_t lockup_get_critical_section_oops_count() { return counter_lockup_cs_count.Value(); }
@@ -609,6 +623,7 @@ void lockup_status() {
       }
 
       const auto& cs_state = percpu::Get(i).lockup_detector_state.critical_section;
+      const char* name = cs_state.name.load(ktl::memory_order_relaxed);
       const zx_ticks_t begin_ticks = cs_state.begin_ticks.load(ktl::memory_order_relaxed);
       const zx_ticks_t now = current_ticks();
       const int64_t worst_case_usec =
@@ -618,8 +633,8 @@ void lockup_status() {
                worst_case_usec);
       } else {
         zx_duration_t duration = TicksToDuration(now - begin_ticks);
-        printf("CPU-%u in critical section for %" PRId64 " ms (worst case %" PRId64 " uSec)\n", i,
-               duration / ZX_MSEC(1), worst_case_usec);
+        printf("CPU-%u in critical section (%s) for %" PRId64 " ms (worst case %" PRId64 " uSec)\n",
+               i, (name != nullptr ? name : "unknown"), duration / ZX_MSEC(1), worst_case_usec);
       }
     }
   }
@@ -660,8 +675,8 @@ void lockup_trigger_spinlock(cpu_num_t cpu, zx_duration_t duration) {
   run_lockup_func(cpu, duration, [](void* arg) -> int {
     const zx_duration_t duration = *reinterpret_cast<zx_duration_t*>(arg);
     // Acquire a spinlock and hold it for |duration|.
-    DECLARE_SINGLETON_SPINLOCK(lockup_test_lock);
-    Guard<SpinLock, IrqSave> guard{lockup_test_lock::Get()};
+    DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(lockup_test_lock, MonitoredSpinLock);
+    Guard<MonitoredSpinLock, IrqSave> guard{lockup_test_lock::Get(), SOURCE_TAG};
     const zx_time_t deadline = zx_time_add_duration(current_time(), duration);
     while (current_time() < deadline) {
       arch::Yield();
@@ -675,7 +690,7 @@ void lockup_trigger_critical_section(cpu_num_t cpu, zx_duration_t duration) {
   run_lockup_func(cpu, duration, [](void* arg) -> int {
     const zx_duration_t duration = *reinterpret_cast<zx_duration_t*>(arg);
     AutoPreemptDisabler preempt_disable;
-    LOCKUP_BEGIN();
+    LOCKUP_BEGIN("trigger-tool");
     const zx_time_t deadline = zx_time_add_duration(current_time(), duration);
     while (current_time() < deadline) {
       arch::Yield();
