@@ -51,51 +51,55 @@ struct Desc32 {
   DEF_SUBBIT(flags_base_hi16, 23, granularity);
   DEF_SUBFIELD(flags_base_hi16, 31, 24, base_hi8);
 
-  // The 32-bit base address is split across three fields.
+  // Get/set the 32-bit base address, splitting/combining its three fields.
   constexpr uint32_t base() const { return base_lo16() | (base_mid8() << 16) | (base_hi8() << 24); }
 
-  constexpr auto& set_base(uint32_t base) {
+  constexpr Desc32& set_base(uint32_t base) {
     set_base_lo16(base & 0xffff);
     set_base_mid8((base >> 16) & 0xff);
     set_base_hi8(base >> 24);
     return *this;
   }
 
-  // A segment's limit is the the size of the memory range starting at the
-  // base address, minus one.  The 20-bit limit field is split across two
-  // fields, plus the granularity flag determines whether it's scaled by 12
-  // bits.  The limit() and set_limit() accessors take a whole unscaled 32-bit
-  // value.  If the low bits are 0xfff, then it's stored as a scaled value that
-  // can represent the full 32-bit size (with 4k granularity).  Otherwise, it's
-  // stored unscaled and only has 20 bits (with byte granularity: max 1MB - 1).
-  constexpr auto limit() const {
-    return (limit_lo16() | (limit_hi4() << 16)) << (granularity() ? 12 : 0);
-  }
-
-  constexpr auto& set_limit(uint32_t value) {
-    // There are only 20 bits for the limit, so a byte-granularity limit can
-    // only go up to 2MB - 1 byte.  If the granularity flag is set, then the
-    // limit is scaled up by 4KB and the low 12 bits are treated as all ones.
-    // So if the low bits of the intended 32-bit limit are all ones, then the
-    // limit can go up to 4GB - 1.  Otherwise, it can only go up to 2MB - 1.
-    if ((value & 0xfff) == 0xfff) {
-      set_granularity(true);
-      value >>= 12;
-    } else {
-      set_granularity(false);
-    }
+  // Get/set the 20-bit limit, splitting/combining its two fields.
+  //
+  // The interpretation of the 20-bit limit depends on the granularity bit.
+  // See `ScaledLimit` and `SetScaledLimit` for versions that avoid callers
+  // from having to scale manually.
+  constexpr uint32_t limit() const { return limit_lo16() | (limit_hi4() << 16); }
+  constexpr Desc32& set_limit(uint32_t value) {
     set_limit_lo16(value & 0xffff);
     set_limit_hi4(value >> 16);
     return *this;
   }
 
-  // Non-system segments are most often "flat", i.e. base 0 and maximum size.
-  constexpr auto& make_flat() {
+  // Get/set the 20-bit limit, also attempting to set/use the granuality bit
+  // as appropriate.
+  //
+  // A segment's limit is the the size of the memory range starting at the
+  // base address, minus one. The 20-bit limit can then be scaled according
+  // to the granuality bit, which multiplies the value by 12 bits (4096).
+  uint32_t ScaledLimit() const { return limit() << (granularity() ? 12 : 0); }
+  constexpr Desc32& SetScaledLimit(uint32_t value) {
+    if ((value & 0xfff) == 0xfff) {
+      set_granularity(1);
+      set_limit(value >> 12);
+    } else {
+      set_granularity(0);
+      set_limit(value);
+    }
+    return *this;
+  }
+
+  // Set fields to make this a 32-bit "flat" code/data segment.
+  //
+  // Such segments span the entire 32-bit address space, starting from 0.
+  constexpr Desc32& MakeFlat() {
     set_present(true);
     set_system(arch::Desc32::SegmentSystem::NONSYSTEM);
     set_addr32(true);
     set_base(0);
-    set_limit(~uint32_t{0});
+    SetScaledLimit(UINT32_MAX);
     return *this;
   }
 };

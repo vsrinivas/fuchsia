@@ -15,10 +15,10 @@ enum Segments { kNull, kCode32, kData32, kGs32, kCode64, kNumEntries };
 constexpr auto MakePhys32Gdt() {
   std::array<arch::Desc32, kNumEntries> gdt{};
 
-  gdt[kCode32].make_flat().set_type(arch::Desc32::CODE_RX);
-  gdt[kCode64].make_flat().set_type(arch::Desc32::CODE_RX).set_long_mode(true);
-  gdt[kData32].make_flat().set_type(arch::Desc32::DATA_RW);
-  gdt[kGs32].make_flat().set_type(arch::Desc32::DATA_RW);
+  gdt[kCode32].MakeFlat().set_type(arch::Desc32::CODE_RX);
+  gdt[kCode64].MakeFlat().set_type(arch::Desc32::CODE_RX).set_long_mode(true);
+  gdt[kData32].MakeFlat().set_type(arch::Desc32::DATA_RW);
+  gdt[kGs32].MakeFlat().set_type(arch::Desc32::DATA_RW);
 
   return gdt;
 }
