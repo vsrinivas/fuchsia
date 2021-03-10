@@ -11,7 +11,6 @@
 
 #include <zxtest/zxtest.h>
 
-#include "optee-llcpp.h"
 #include "shared-memory.h"
 
 namespace optee {
@@ -61,16 +60,16 @@ class MockMessage : public Message {
 };
 
 // Fill a ParameterSet with a particular pattern of values.
-static ParameterSet CreateParameterSet(size_t num_params) {
+static fidl::VectorView<fuchsia_tee::wire::Parameter> CreateParameters(
+    fidl::AnyAllocator& allocator, size_t num_params) {
   uint8_t byte_val = 0;
   auto inc = [&byte_val]() { return byte_val++; };
 
-  std::vector<Parameter> parameters;
-  parameters.reserve(num_params);
+  fidl::VectorView<fuchsia_tee::wire::Parameter> parameters(allocator, num_params);
 
   for (size_t i = 0; i < num_params; i++) {
-    Value value;
-    value.set_direction(fuchsia_tee::wire::Direction::INOUT);
+    fuchsia_tee::wire::Value value(allocator);
+    value.set_direction(allocator, fuchsia_tee::wire::Direction::INOUT);
 
     uint64_t a, b, c;
 
@@ -82,20 +81,13 @@ static ParameterSet CreateParameterSet(size_t num_params) {
     std::generate(b_ptr, b_ptr + sizeof(b), inc);
     std::generate(c_ptr, c_ptr + sizeof(c), inc);
 
-    value.set_a(a);
-    value.set_b(b);
-    value.set_c(c);
+    value.set_a(allocator, a);
+    value.set_b(allocator, b);
+    value.set_c(allocator, c);
 
-    Parameter param;
-    param.set_value(std::move(value));
-
-    parameters.push_back(std::move(param));
+    parameters[i].set_value(allocator, std::move(value));
   }
-
-  ParameterSet parameter_set;
-  parameter_set.set_parameters(std::move(parameters));
-
-  return parameter_set;
+  return parameters;
 }
 
 class MessageTest : public zxtest::Test {
@@ -121,30 +113,26 @@ class MessageTest : public zxtest::Test {
 
 // Tests that the ParameterSet can be converted to a message and back.
 TEST_F(MessageTest, ParameterSetInvertabilityTest) {
+  fidl::FidlAllocator allocator;
   constexpr size_t kParameterSetSize = 4;
 
-  ParameterSet parameter_set_in = CreateParameterSet(kParameterSetSize);
-  ParameterSet parameter_set_out{};
+  fidl::VectorView<fuchsia_tee::wire::Parameter> parameters_in =
+      CreateParameters(allocator, kParameterSetSize);
 
-  fidl::VectorView<fuchsia_tee::wire::Parameter> llcpp_parameter_set_in =
-      parameter_set_in.to_llcpp();
-
-  auto result =
-      MockMessage::TryCreate(dpool_.get(), cpool_.get(), 0, std::move(llcpp_parameter_set_in));
+  auto result = MockMessage::TryCreate(dpool_.get(), cpool_.get(), 0, std::move(parameters_in));
   ASSERT_TRUE(result.is_ok(), "Creating a MockMessage with has failed with error %d\n",
               result.error());
 
-  result.take_value().CreateOutputParameterSet(0, &parameter_set_out);
+  parameters_in = CreateParameters(allocator, kParameterSetSize);
 
-  fidl::VectorView<fuchsia_tee::wire::Parameter> llcpp_parameter_set_out =
-      parameter_set_out.to_llcpp();
+  fidl::VectorView<fuchsia_tee::wire::Parameter> parameters_out;
+  result.take_value().CreateOutputParameterSet(allocator, 0, &parameters_out);
 
-  llcpp_parameter_set_in = parameter_set_in.to_llcpp();
-  ASSERT_EQ(llcpp_parameter_set_in.count(), llcpp_parameter_set_out.count());
+  ASSERT_EQ(parameters_in.count(), parameters_out.count());
 
-  for (size_t i = 0; i < llcpp_parameter_set_in.count(); i++) {
-    auto& param_in = llcpp_parameter_set_in[i];
-    auto& param_out = llcpp_parameter_set_out[i];
+  for (size_t i = 0; i < parameters_in.count(); i++) {
+    auto& param_in = parameters_in[i];
+    auto& param_out = parameters_out[i];
 
     ASSERT_TRUE(param_in.is_value());
     ASSERT_TRUE(param_out.is_value());

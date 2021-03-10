@@ -6,8 +6,6 @@
 
 #include <cstring>
 
-#include "optee-llcpp.h"
-
 namespace optee {
 
 zx_status_t OpteeDeviceInfo::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
@@ -19,16 +17,17 @@ zx_status_t OpteeDeviceInfo::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* tx
 void OpteeDeviceInfo::DdkRelease() { delete this; }
 
 void OpteeDeviceInfo::GetOsInfo(GetOsInfoCompleter::Sync& completer) {
-  OsRevision os_revision;
-  os_revision.set_major(controller_->os_revision().major);
-  os_revision.set_minor(controller_->os_revision().minor);
+  fidl::FidlAllocator allocator;
+  fuchsia_tee::wire::OsRevision os_revision(allocator);
+  os_revision.set_major(allocator, controller_->os_revision().major);
+  os_revision.set_minor(allocator, controller_->os_revision().minor);
 
-  OsInfo os_info;
-  os_info.set_uuid(kOpteeOsUuid);
-  os_info.set_revision(std::move(os_revision));
-  os_info.set_is_global_platform_compliant(true);
+  fuchsia_tee::wire::OsInfo os_info(allocator);
+  os_info.set_uuid(allocator, kOpteeOsUuid);
+  os_info.set_revision(allocator, std::move(os_revision));
+  os_info.set_is_global_platform_compliant(allocator, true);
 
-  completer.Reply(os_info.to_llcpp());
+  completer.Reply(std::move(os_info));
 }
 
 }  // namespace optee

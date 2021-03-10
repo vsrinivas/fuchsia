@@ -10,7 +10,6 @@
 #include <limits>
 #include <memory>
 
-#include "optee-llcpp.h"
 #include "optee-util.h"
 
 namespace optee {
@@ -169,8 +168,9 @@ zx_status_t Message::TryInitializeBuffer(fuchsia_tee::wire::Buffer* buffer,
   return ZX_OK;
 }
 
-zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
-                                              ParameterSet* out_parameter_set) {
+zx_status_t Message::CreateOutputParameterSet(
+    fidl::AnyAllocator& allocator, size_t starting_param_index,
+    fidl::VectorView<fuchsia_tee::wire::Parameter>* out_parameter_set) {
   ZX_DEBUG_ASSERT(out_parameter_set != nullptr);
 
   if (header()->num_params < starting_param_index) {
@@ -187,32 +187,31 @@ zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  std::vector<Parameter> parameters;
-  parameters.reserve(count);
+  out_parameter_set->Allocate(allocator, count);
 
   for (size_t i = 0; i < count; i++) {
     const MessageParam& optee_param = params()[i + starting_param_index];
-    Parameter parameter;
 
     switch (optee_param.attribute) {
       case MessageParam::kAttributeTypeNone: {
-        parameter.set_none();
+        (*out_parameter_set)[i].set_none(allocator);
         break;
       }
       case MessageParam::kAttributeTypeValueInput:
       case MessageParam::kAttributeTypeValueOutput:
       case MessageParam::kAttributeTypeValueInOut:
-        parameter.set_value(CreateOutputValueParameter(optee_param));
+        (*out_parameter_set)[i].set_value(allocator,
+                                          CreateOutputValueParameter(allocator, optee_param));
         break;
       case MessageParam::kAttributeTypeTempMemInput:
       case MessageParam::kAttributeTypeTempMemOutput:
       case MessageParam::kAttributeTypeTempMemInOut: {
-        Buffer buffer;
-        if (zx_status_t status = CreateOutputBufferParameter(optee_param, &buffer);
+        fuchsia_tee::wire::Buffer buffer(allocator);
+        if (zx_status_t status = CreateOutputBufferParameter(allocator, optee_param, &buffer);
             status != ZX_OK) {
           return status;
         }
-        parameter.set_buffer(std::move(buffer));
+        (*out_parameter_set)[i].set_buffer(allocator, std::move(buffer));
         break;
       }
       case MessageParam::kAttributeTypeRegMemInput:
@@ -221,16 +220,13 @@ zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
       default:
         break;
     }
-
-    parameters.push_back(std::move(parameter));
   }
-
-  out_parameter_set->set_parameters(std::move(parameters));
   return ZX_OK;
 }
 
-Value Message::CreateOutputValueParameter(const MessageParam& optee_param) {
-  Value zx_value;
+fuchsia_tee::wire::Value Message::CreateOutputValueParameter(fidl::AnyAllocator& allocator,
+                                                             const MessageParam& optee_param) {
+  fuchsia_tee::wire::Value zx_value(allocator);
 
   fuchsia_tee::wire::Direction direction;
 
@@ -252,17 +248,18 @@ Value Message::CreateOutputValueParameter(const MessageParam& optee_param) {
 
   if (IsDirectionOutput(direction)) {
     // Only transmit value parameter members if the parameter is marked as output.
-    zx_value.set_a(optee_value.generic.a);
-    zx_value.set_b(optee_value.generic.b);
-    zx_value.set_c(optee_value.generic.c);
+    zx_value.set_a(allocator, optee_value.generic.a);
+    zx_value.set_b(allocator, optee_value.generic.b);
+    zx_value.set_c(allocator, optee_value.generic.c);
   }
-  zx_value.set_direction(direction);
+  zx_value.set_direction(allocator, direction);
 
   return zx_value;
 }
 
-zx_status_t Message::CreateOutputBufferParameter(const MessageParam& optee_param,
-                                                 Buffer* out_buffer) {
+zx_status_t Message::CreateOutputBufferParameter(fidl::AnyAllocator& allocator,
+                                                 const MessageParam& optee_param,
+                                                 fuchsia_tee::wire::Buffer* out_buffer) {
   ZX_DEBUG_ASSERT(out_buffer != nullptr);
 
   fuchsia_tee::wire::Direction direction;
@@ -279,12 +276,12 @@ zx_status_t Message::CreateOutputBufferParameter(const MessageParam& optee_param
     default:
       ZX_PANIC("Invalid OP-TEE attribute specified\n");
   }
-  out_buffer->set_direction(direction);
+  out_buffer->set_direction(allocator, direction);
 
   const MessageParam::TemporaryMemory& optee_temp_mem = optee_param.payload.temporary_memory;
 
   const size_t size = optee_temp_mem.size;
-  out_buffer->set_size(size);
+  out_buffer->set_size(allocator, size);
 
   if (optee_temp_mem.buffer == 0) {
     // If there was no buffer and this was just a size check, just return the size.
@@ -313,8 +310,8 @@ zx_status_t Message::CreateOutputBufferParameter(const MessageParam& optee_param
     }
   }
 
-  out_buffer->set_vmo(zx::vmo(temp_shared_memory.ReleaseVmo()));
-  out_buffer->set_offset(temp_shared_memory.vmo_offset());
+  out_buffer->set_vmo(allocator, zx::vmo(temp_shared_memory.ReleaseVmo()));
+  out_buffer->set_offset(allocator, temp_shared_memory.vmo_offset());
 
   return ZX_OK;
 }

@@ -35,7 +35,6 @@
 #include <fbl/string_buffer.h>
 #include <tee-client-api/tee-client-types.h>
 
-#include "optee-llcpp.h"
 #include "optee-rpmb.h"
 #include "optee-smc.h"
 #include "optee-util.h"
@@ -81,29 +80,30 @@ static fbl::StringBuffer<kTaPathLength> BuildTaPath(const optee::Uuid& ta_uuid) 
   return buf;
 }
 
-static zx_status_t ConvertOpteeToZxResult(uint32_t optee_return_code, uint32_t optee_return_origin,
-                                          optee::OpResult* zx_result) {
+static zx_status_t ConvertOpteeToZxResult(fidl::AnyAllocator& allocator, uint32_t optee_return_code,
+                                          uint32_t optee_return_origin,
+                                          fuchsia_tee::wire ::OpResult* zx_result) {
   ZX_DEBUG_ASSERT(zx_result != nullptr);
 
   // Do a quick check of the return origin to make sure we can map it to one
   // of our FIDL values. If none match, return a communication error instead.
   switch (optee_return_origin) {
     case TEEC_ORIGIN_COMMS:
-      zx_result->set_return_code(optee_return_code);
-      zx_result->set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+      zx_result->set_return_code(allocator, optee_return_code);
+      zx_result->set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
       break;
     case TEEC_ORIGIN_TEE:
-      zx_result->set_return_code(optee_return_code);
-      zx_result->set_return_origin(fuchsia_tee::wire::ReturnOrigin::TRUSTED_OS);
+      zx_result->set_return_code(allocator, optee_return_code);
+      zx_result->set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::TRUSTED_OS);
       break;
     case TEEC_ORIGIN_TRUSTED_APP:
-      zx_result->set_return_code(optee_return_code);
-      zx_result->set_return_origin(fuchsia_tee::wire::ReturnOrigin::TRUSTED_APPLICATION);
+      zx_result->set_return_code(allocator, optee_return_code);
+      zx_result->set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::TRUSTED_APPLICATION);
       break;
     default:
       LOG(ERROR, "optee: returned an invalid return origin (%" PRIu32 ")", optee_return_origin);
-      zx_result->set_return_code(TEEC_ERROR_COMMUNICATION);
-      zx_result->set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+      zx_result->set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
+      zx_result->set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
       return ZX_ERR_INTERNAL;
   }
   return ZX_OK;
@@ -322,16 +322,17 @@ void OpteeClient::OpenSession2(
     fuchsia_tee::Application::Interface::OpenSession2Completer::Sync& completer) {
   constexpr uint32_t kInvalidSession = 0;
 
-  OpResult result;
+  fidl::FidlAllocator allocator;
+  fuchsia_tee::wire::OpResult result(allocator);
 
   auto create_result =
       OpenSessionMessage::TryCreate(controller_->driver_pool(), controller_->client_pool(),
                                     application_uuid_, std::move(parameter_set));
   if (!create_result.is_ok()) {
     LOG(ERROR, "failed to create OpenSessionMessage (status: %d)", create_result.error());
-    result.set_return_code(TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
-    completer.Reply(kInvalidSession, result.to_llcpp());
+    result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    completer.Reply(kInvalidSession, std::move(result));
     return;
   }
 
@@ -347,34 +348,35 @@ void OpteeClient::OpenSession2(
   }
 
   if (call_code != kReturnOk) {
-    result.set_return_code(TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
-    completer.Reply(kInvalidSession, result.to_llcpp());
+    result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    completer.Reply(kInvalidSession, std::move(result));
     return;
   }
 
   LOG(TRACE, "OpenSession returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32, call_code,
       message.return_code(), message.return_origin());
 
-  if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
-    completer.Reply(kInvalidSession, result.to_llcpp());
+  if (ConvertOpteeToZxResult(allocator, message.return_code(), message.return_origin(), &result) !=
+      ZX_OK) {
+    completer.Reply(kInvalidSession, std::move(result));
     return;
   }
 
-  ParameterSet out_parameter_set;
-  if (message.CreateOutputParameterSet(&out_parameter_set) != ZX_OK) {
+  fidl::VectorView<fuchsia_tee::wire::Parameter> out_parameters;
+  if (message.CreateOutputParameterSet(allocator, &out_parameters) != ZX_OK) {
     // Since we failed to parse the output parameters, let's close the session and report error.
     // It is okay that the session id is not in the session list.
     CloseSession(message.session_id());
-    result.set_return_code(TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
-    completer.Reply(kInvalidSession, result.to_llcpp());
+    result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    completer.Reply(kInvalidSession, std::move(result));
     return;
   }
-  result.set_parameter_set(std::move(out_parameter_set));
+  result.set_parameter_set(allocator, std::move(out_parameters));
   open_sessions_.insert(message.session_id());
 
-  completer.Reply(message.session_id(), result.to_llcpp());
+  completer.Reply(message.session_id(), std::move(result));
   return;
 }
 
@@ -382,12 +384,13 @@ void OpteeClient::InvokeCommand(
     uint32_t session_id, uint32_t command_id,
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
     fuchsia_tee::Application::Interface::InvokeCommandCompleter::Sync& completer) {
-  OpResult result;
+  fidl::FidlAllocator allocator;
+  fuchsia_tee::wire::OpResult result(allocator);
 
   if (open_sessions_.find(session_id) == open_sessions_.end()) {
-    result.set_return_code(TEEC_ERROR_BAD_STATE);
-    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
-    completer.Reply(result.to_llcpp());
+    result.set_return_code(allocator, TEEC_ERROR_BAD_STATE);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    completer.Reply(std::move(result));
     return;
   }
 
@@ -396,9 +399,9 @@ void OpteeClient::InvokeCommand(
                                       session_id, command_id, std::move(parameter_set));
   if (!create_result.is_ok()) {
     LOG(ERROR, "failed to create InvokeCommandMessage (status: %d)", create_result.error());
-    result.set_return_code(TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
-    completer.Reply(result.to_llcpp());
+    result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    completer.Reply(std::move(result));
     return;
   }
 
@@ -416,30 +419,31 @@ void OpteeClient::InvokeCommand(
   }
 
   if (call_code != kReturnOk) {
-    result.set_return_code(TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
-    completer.Reply(result.to_llcpp());
+    result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    completer.Reply(std::move(result));
     return;
   }
 
   LOG(TRACE, "InvokeCommand returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32, call_code,
       message.return_code(), message.return_origin());
 
-  if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
-    completer.Reply(result.to_llcpp());
+  if (ConvertOpteeToZxResult(allocator, message.return_code(), message.return_origin(), &result) !=
+      ZX_OK) {
+    completer.Reply(std::move(result));
     return;
   }
 
-  ParameterSet out_parameter_set;
-  if (message.CreateOutputParameterSet(&out_parameter_set) != ZX_OK) {
-    result.set_return_code(TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
-    completer.Reply(result.to_llcpp());
+  fidl::VectorView<fuchsia_tee::wire::Parameter> out_parameters;
+  if (message.CreateOutputParameterSet(allocator, &out_parameters) != ZX_OK) {
+    result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    completer.Reply(std::move(result));
     return;
   }
-  result.set_parameter_set(std::move(out_parameter_set));
+  result.set_parameter_set(allocator, std::move(out_parameters));
 
-  completer.Reply(result.to_llcpp());
+  completer.Reply(std::move(result));
   return;
 }
 

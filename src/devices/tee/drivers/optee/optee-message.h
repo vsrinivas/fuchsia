@@ -18,7 +18,6 @@
 #include <fbl/vector.h>
 #include <tee-client-api/tee-client-types.h>
 
-#include "optee-llcpp.h"
 #include "optee-smc.h"
 #include "optee-util.h"
 #include "shared-memory.h"
@@ -215,8 +214,9 @@ class Message : public MessageBase<std::unique_ptr<SharedMemory>> {
                                   SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                                   MessageParam* out_param);
 
-  zx_status_t CreateOutputParameterSet(size_t starting_param_index,
-                                       ParameterSet* out_parameter_set);
+  zx_status_t CreateOutputParameterSet(
+      fidl::AnyAllocator& allocator, size_t starting_param_index,
+      fidl::VectorView<fuchsia_tee::wire::Parameter>* out_parameter_set);
 
  private:
   // This nested class is just a container for pairing a vmo with a chunk of shared memory. It
@@ -244,8 +244,11 @@ class Message : public MessageBase<std::unique_ptr<SharedMemory>> {
     std::unique_ptr<SharedMemory> shared_memory_;
   };
 
-  Value CreateOutputValueParameter(const MessageParam& optee_param);
-  zx_status_t CreateOutputBufferParameter(const MessageParam& optee_param, Buffer* out_buffer);
+  fuchsia_tee::wire::Value CreateOutputValueParameter(fidl::AnyAllocator& allocator,
+                                                      const MessageParam& optee_param);
+  zx_status_t CreateOutputBufferParameter(fidl::AnyAllocator& allocator,
+                                          const MessageParam& optee_param,
+                                          fuchsia_tee::wire::Buffer* out_buffer);
 
   fbl::Vector<TemporarySharedMemory> allocated_temp_memory_;
 };
@@ -265,8 +268,11 @@ class OpenSessionMessage : public Message {
   uint32_t return_code() const { return header()->return_code; }
   uint32_t return_origin() const { return header()->return_origin; }
 
-  zx_status_t CreateOutputParameterSet(ParameterSet* out_parameter_set) {
-    return Message::CreateOutputParameterSet(kNumFixedOpenSessionParams, out_parameter_set);
+  zx_status_t CreateOutputParameterSet(
+      fidl::AnyAllocator& allocator,
+      fidl::VectorView<fuchsia_tee::wire::Parameter>* out_parameter_set) {
+    return Message::CreateOutputParameterSet(allocator, kNumFixedOpenSessionParams,
+                                             out_parameter_set);
   }
 
  protected:
@@ -311,8 +317,10 @@ class InvokeCommandMessage : public Message {
   uint32_t return_code() const { return header()->return_code; }
   uint32_t return_origin() const { return header()->return_origin; }
 
-  zx_status_t CreateOutputParameterSet(ParameterSet* out_parameter_set) {
-    return Message::CreateOutputParameterSet(0, out_parameter_set);
+  zx_status_t CreateOutputParameterSet(
+      fidl::AnyAllocator& allocator,
+      fidl::VectorView<fuchsia_tee::wire::Parameter>* out_parameter_set) {
+    return Message::CreateOutputParameterSet(allocator, 0, out_parameter_set);
   }
 
  protected:
