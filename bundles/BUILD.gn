@@ -150,9 +150,8 @@ group("bootstrap-zedboot") {
 
 # Debugging tools installed on the boot image.
 group("debugging") {
-  testonly = true
-
   deps = [
+    "//build/validate:non_production_tag",
     "//src/bringup/bundles:debugging",
     "//src/connectivity/bundles:debugging",
     "//src/developer/bundles:debugging",

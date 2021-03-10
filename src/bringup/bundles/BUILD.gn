@@ -37,9 +37,8 @@ group("zedboot") {
 }
 
 group("debugging") {
-  testonly = true
-
   deps = [
+    "//build/validate:non_production_tag",
     "//src/bringup/bin/dlog",
     "//src/bringup/bin/trace-benchmark",
     "//src/bringup/bin/virtcon:bootfs",
