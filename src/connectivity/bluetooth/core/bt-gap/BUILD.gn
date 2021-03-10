@@ -100,11 +100,29 @@ fuchsia_package("bt-gap") {
   deps = [ ":component" ]
 }
 
-fuchsia_unittest_package("bt-gap-unittests") {
-  manifest = "meta/bt-gap-unittests.cmx"
+fuchsia_component("test-stash-secure") {
+  testonly = true
+  deps = [ "//src/sys/stash:bin" ]
+  manifest = "meta/test-stash-secure.cml"
+}
+
+fuchsia_component("test-driver") {
+  testonly = true
+  deps = [ ":bin_test" ]
+  manifest = "meta/test-driver.cml"
+}
+
+fuchsia_component("test-component") {
+  testonly = true
+  manifest = "meta/bt-gap-unittests.cml"
+}
+
+fuchsia_test_package("bt-gap-unittests") {
+  test_components = [ ":test-component" ]
   deps = [
-    ":bin_test",
     ":default-config",
+    ":test-driver",
+    ":test-stash-secure",
   ]
 }
 

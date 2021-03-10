@@ -1,0 +1,16 @@
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+        "src/sys/test_runners/tmp_storage.shard.cml",
+    ],
+    program: {
+        binary: "bin/bt_gap_bin_test",
+    },
+    use: [
+        {
+            protocol: [ "fuchsia.stash.SecureStore" ],
+            from: "parent",
+        },
+    ],
+}

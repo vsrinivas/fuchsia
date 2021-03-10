@@ -1,0 +1,46 @@
+{
+    children: [
+        {
+            name: "test-driver",
+            url: "fuchsia-pkg://fuchsia.com/bt-gap-unittests#meta/test-driver.cm",
+        },
+        {
+            name: "secure-stash",
+            url: "fuchsia-pkg://fuchsia.com/bt-gap-unittests#meta/test-stash-secure.cm",
+        },
+    ],
+    offer: [
+        {
+            runner: "rust_test_runnner",
+            from: "parent",
+            to: [ "#test-driver" ],
+        },
+        {
+            storage: "temp",
+            from: "parent",
+            to: [
+                "#secure-stash",
+                "#test-driver",
+            ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#secure-stash",
+                "#test-driver",
+            ],
+        },
+        {
+            protocol: "fuchsia.stash.SecureStore",
+            from: "#secure-stash",
+            to: [ "#test-driver" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test-driver",
+        },
+    ],
+}
