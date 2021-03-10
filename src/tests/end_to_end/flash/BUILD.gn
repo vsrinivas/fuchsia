@@ -45,5 +45,7 @@ if (is_host) {
 
 group("tests") {
   testonly = true
-  deps = [ ":flash_test($host_toolchain)" ]
+  if (board_name == "astro") {
+    deps = [ ":flash_test($host_toolchain)" ]
+  }
 }
