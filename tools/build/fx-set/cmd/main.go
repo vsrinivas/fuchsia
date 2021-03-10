@@ -45,6 +45,7 @@ const (
 
 type subprocessRunner interface {
 	Run(ctx context.Context, cmd []string, stdout, stderr io.Writer) error
+	RunWithStdin(ctx context.Context, cmd []string, stdout, stderr io.Writer, stdin io.Reader) error
 }
 
 type fxRunner struct {
@@ -60,7 +61,7 @@ func (r *fxRunner) run(ctx context.Context, command string, args ...string) erro
 	fxPath := filepath.Join(r.checkoutDir, "scripts", "fx-reentry")
 	cmd := []string{fxPath, command}
 	cmd = append(cmd, args...)
-	return r.subprocessRunner.Run(ctx, cmd, os.Stdout, os.Stderr)
+	return r.subprocessRunner.RunWithStdin(ctx, cmd, os.Stdout, os.Stderr, os.Stdin)
 }
 
 func main() {

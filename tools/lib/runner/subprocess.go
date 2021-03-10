@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"syscall"
 
-	"go.fuchsia.dev/fuchsia/tools/lib/isatty"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
@@ -42,14 +41,17 @@ func (r *SubprocessRunner) RunWithStdin(ctx context.Context, command []string, s
 	cmd.Stdin = stdin
 	cmd.Dir = r.Dir
 	cmd.Env = r.Env
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		// Set a process group ID so we can kill the entire group, meaning the
-		// process and any of its children.
-		Setpgid: true,
-		// Detach the subprocess's stdin from the terminal for potentially
-		// interactive commands. Otherwise it's not possible to pipe the
-		// parent's stdin into the subprocess.
-		Noctty: isatty.IsTerminal(),
+	// For some reason, adding the child to the same process group as the
+	// current process disconnects it from stdin. So don't do it if we're
+	// running a potentially interactive command that has access to stdin. Those
+	// cases are less likely to involve chains of subprocesses anyway, so it's
+	// not as important to be able to kill the entire chain.
+	if stdin != os.Stdin {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			// Set a process group ID so we can kill the entire group, meaning
+			// the process and any of its children.
+			Setpgid: true,
+		}
 	}
 	if len(cmd.Env) > 0 {
 		logger.Debugf(ctx, "environment of subprocess: %v", cmd.Env)

@@ -278,7 +278,11 @@ type fakeSubprocessRunner struct {
 	fail bool
 }
 
-func (r fakeSubprocessRunner) Run(context.Context, []string, io.Writer, io.Writer) error {
+func (r fakeSubprocessRunner) Run(ctx context.Context, cmd []string, stdout, stderr io.Writer) error {
+	return r.RunWithStdin(ctx, cmd, stdout, stderr, nil)
+}
+
+func (r fakeSubprocessRunner) RunWithStdin(context.Context, []string, io.Writer, io.Writer, io.Reader) error {
 	if r.fail {
 		return &exec.ExitError{}
 	}
