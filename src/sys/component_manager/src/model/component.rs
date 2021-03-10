@@ -12,6 +12,7 @@ use {
                 StopAction,
             },
             binding,
+            component_controller::ComponentController,
             component_id_index::ComponentInstanceId,
             context::{ModelContext, WeakModelContext},
             environment::Environment,
@@ -35,9 +36,7 @@ use {
             join_all, AbortHandle, Abortable, BoxFuture, Either, Future, FutureExt, TryFutureExt,
         },
         lock::{MappedMutexGuard, Mutex, MutexGuard},
-        StreamExt,
     },
-    log::warn,
     moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker, InstanceId, PartialMoniker},
     std::iter::Iterator,
     std::{
@@ -979,7 +978,7 @@ pub struct Runtime {
     pub exposed_dir: ExposedDir,
 
     /// Used to interact with the Runner to influence the component's execution.
-    pub controller: Option<fcrunner::ComponentControllerProxy>,
+    pub controller: Option<ComponentController>,
 
     /// Approximates when the component was started.
     pub timestamp: zx::Time,
@@ -1068,7 +1067,7 @@ impl Runtime {
             outgoing_dir,
             runtime_dir,
             exposed_dir,
-            controller,
+            controller: controller.map(ComponentController::new),
             timestamp,
             exit_listener: None,
         })
@@ -1080,14 +1079,13 @@ impl Runtime {
     /// component.
     pub fn watch_for_exit(&mut self, component: WeakComponentInstance) {
         if let Some(controller) = &self.controller {
-            let controller_clone = controller.clone();
+            let epitaph_fut = controller.wait_for_epitaph();
             let (abort_client, abort_server) = AbortHandle::new_pair();
             let watcher = Abortable::new(
                 async move {
-                    if let Ok(_) = controller_clone.on_closed().await {
-                        if let Ok(component) = component.upgrade() {
-                            let _ = ActionSet::register(component, StopAction::new()).await;
-                        }
+                    epitaph_fut.await;
+                    if let Ok(component) = component.upgrade() {
+                        let _ = ActionSet::register(component, StopAction::new()).await;
                     }
                 },
                 abort_server,
@@ -1099,7 +1097,7 @@ impl Runtime {
 
     pub async fn wait_on_channel_close(&mut self) {
         if let Some(controller) = &self.controller {
-            controller.on_closed().await.expect("failed waiting for channel to close");
+            controller.wait_for_epitaph().await;
             self.controller = None;
         }
     }
@@ -1114,7 +1112,7 @@ impl Runtime {
     ) -> Result<ComponentStopOutcome, StopComponentError> {
         // Potentially there is no controller, perhaps because the component
         // has no running code. In this case this is a no-op.
-        if let Some(controller) = self.controller.as_ref() {
+        if let Some(ref controller) = self.controller {
             stop_component_internal(controller, stop_timer, kill_timer).await
         } else {
             // TODO(jmatt) Need test coverage
@@ -1135,7 +1133,7 @@ impl Drop for Runtime {
 }
 
 async fn stop_component_internal<'a, 'b>(
-    controller: &fcrunner::ComponentControllerProxy,
+    controller: &ComponentController,
     stop_timer: BoxFuture<'a, ()>,
     kill_timer: BoxFuture<'b, ()>,
 ) -> Result<ComponentStopOutcome, StopComponentError> {
@@ -1151,14 +1149,14 @@ async fn stop_component_internal<'a, 'b>(
     match result {
         Ok(request_outcome) => Ok(ComponentStopOutcome {
             request: request_outcome,
-            component_exit_status: wait_for_epitaph(controller).await,
+            component_exit_status: controller.wait_for_epitaph().await,
         }),
         Err(e) => Err(e),
     }
 }
 
 async fn do_runner_stop<'a>(
-    controller: &fcrunner::ComponentControllerProxy,
+    controller: &ComponentController,
     stop_timer: BoxFuture<'a, ()>,
 ) -> Option<Result<StopRequestSuccess, StopComponentError>> {
     // Ask the controller to stop the component
@@ -1187,7 +1185,7 @@ async fn do_runner_stop<'a>(
 }
 
 async fn do_runner_kill<'a>(
-    controller: &fcrunner::ComponentControllerProxy,
+    controller: &ComponentController,
     kill_timer: BoxFuture<'a, ()>,
 ) -> Result<StopRequestSuccess, StopComponentError> {
     match controller.kill() {
@@ -1214,23 +1212,6 @@ async fn do_runner_kill<'a>(
                 // There was some problem sending the message, perhaps a
                 // protocol error, but there isn't really a way to recover.
                 Err(StopComponentError::SendKillFailed)
-            }
-        }
-    }
-}
-
-/// Watch the event stream and wait for an epitaph. A message which is not an
-/// epitaph is discarded. If any error is received besides the error associated
-/// with an epitaph, this function returns zx::Status::PEER_CLOSED.
-async fn wait_for_epitaph(controller: &fcrunner::ComponentControllerProxy) -> zx::Status {
-    loop {
-        match controller.take_event_stream().next().await {
-            Some(Err(fidl::Error::ClientChannelClosed { status, .. })) => return status,
-            Some(Err(_)) | None => return zx::Status::PEER_CLOSED,
-            Some(Ok(event)) => {
-                // Some other message was received
-                warn!("Received unexpected event waiting for component stop: {:?}", event);
-                continue;
             }
         }
     }
@@ -1293,7 +1274,8 @@ pub mod tests {
             timer.await;
         });
         let client_proxy = client.into_proxy().expect("failed to convert client to proxy");
-        match stop_component_internal(&client_proxy, stop_timer, kill_timer).await {
+        let component = ComponentController::new(client_proxy);
+        match stop_component_internal(&component, stop_timer, kill_timer).await {
             Ok(ComponentStopOutcome {
                 request: StopRequestSuccess::Stopped,
                 component_exit_status: zx::Status::OK,
@@ -1330,10 +1312,11 @@ pub mod tests {
             timer.await;
         });
         let client_proxy = client.into_proxy().expect("failed to convert client to proxy");
+        let component = ComponentController::new(client_proxy);
 
         // Drop the server end so it closes
         drop(server);
-        match stop_component_internal(&client_proxy, stop_timer, kill_timer).await {
+        match stop_component_internal(&component, stop_timer, kill_timer).await {
             Ok(ComponentStopOutcome {
                 request: StopRequestSuccess::AlreadyStopped,
                 component_exit_status: zx::Status::PEER_CLOSED,
@@ -1388,8 +1371,8 @@ pub mod tests {
             timer.await;
         });
         let client_proxy = client.into_proxy().expect("failed to convert client to proxy");
-        let mut stop_future =
-            Box::pin(stop_component_internal(&client_proxy, stop_timer, kill_timer));
+        let component = ComponentController::new(client_proxy);
+        let mut stop_future = Box::pin(stop_component_internal(&component, stop_timer, kill_timer));
 
         // Poll the stop component future to where it has asked the controller
         // to stop the component. This should also cause the controller to
@@ -1482,7 +1465,9 @@ pub mod tests {
             timer.await;
         });
         let client_proxy = client.into_proxy().expect("failed to convert client to proxy");
-        let mut stop_fut = Box::pin(stop_component_internal(&client_proxy, stop_timer, kill_timer));
+        let component = ComponentController::new(client_proxy);
+        let epitaph_fut = component.wait_for_epitaph();
+        let mut stop_fut = Box::pin(stop_component_internal(&component, stop_timer, kill_timer));
 
         // it should be the case we stall waiting for a response from the
         // controller
@@ -1505,7 +1490,7 @@ pub mod tests {
         // rendezvous between the controller's execution context and the test.
         // Without this the message map state may be inconsistent.
         let mut check_msgs = Box::pin(async {
-            client_proxy.on_closed().await.expect("failed waiting for channel to close");
+            epitaph_fut.await;
 
             let msg_map = requests.lock().await;
             let msg_list =
@@ -1586,7 +1571,8 @@ pub mod tests {
             timer.await;
         });
         let client_proxy = client.into_proxy().expect("failed to convert client to proxy");
-        let mut stop_fut = Box::pin(stop_component_internal(&client_proxy, stop_timer, kill_timer));
+        let component = ComponentController::new(client_proxy);
+        let mut stop_fut = Box::pin(stop_component_internal(&component, stop_timer, kill_timer));
 
         // it should be the case we stall waiting for a response from the
         // controller
@@ -1662,7 +1648,9 @@ pub mod tests {
             timer.await;
         });
         let client_proxy = client.into_proxy().expect("failed to convert client to proxy");
-        let mut stop_fut = Box::pin(stop_component_internal(&client_proxy, stop_timer, kill_timer));
+        let component = ComponentController::new(client_proxy);
+        let epitaph_fut = component.wait_for_epitaph();
+        let mut stop_fut = Box::pin(stop_component_internal(&component, stop_timer, kill_timer));
 
         // it should be the case we stall waiting for a response from the
         // controller
@@ -1678,7 +1666,7 @@ pub mod tests {
         // rendezvous between the controller's execution context and the test.
         // Without this the message map state may be inconsistent.
         let mut check_msgs = Box::pin(async {
-            client_proxy.on_closed().await.expect("failed waiting for channel to close");
+            epitaph_fut.await;
 
             let msg_map = requests.lock().await;
             let msg_list =

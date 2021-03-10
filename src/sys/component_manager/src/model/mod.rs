@@ -29,6 +29,7 @@ pub(crate) mod runner;
 pub(crate) mod storage;
 
 mod addable_directory;
+mod component_controller;
 mod dir_tree;
 mod exposed_dir;
 #[cfg(test)]
