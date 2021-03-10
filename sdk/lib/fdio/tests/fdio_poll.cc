@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include <poll.h>
-#include <sys/socket.h>
-#include <time.h>
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>

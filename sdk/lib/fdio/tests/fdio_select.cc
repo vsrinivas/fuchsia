@@ -4,6 +4,7 @@
 
 #include <sys/select.h>
 
+#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -28,14 +29,63 @@ TEST(Select, SelectZeroFds) {
       .tv_usec = std::chrono::microseconds(minimum_duration).count(),
   };
   const auto begin = std::chrono::steady_clock::now();
-  ASSERT_EQ(select(0, &readfds, &writefds, &exceptfds, &timeout), 0, "%s", strerror(errno));
-  ASSERT_GE(std::chrono::steady_clock::now() - begin, minimum_duration);
+  EXPECT_EQ(select(0, &readfds, &writefds, &exceptfds, &timeout), 0, "%s", strerror(errno));
+  EXPECT_GE(std::chrono::steady_clock::now() - begin, minimum_duration);
 
   // All bits in all the fd sets should be 0.
   for (int fd = 0; fd < FD_SETSIZE; ++fd) {
-    ASSERT_TRUE(!FD_ISSET(fd, &readfds));
-    ASSERT_TRUE(!FD_ISSET(fd, &writefds));
-    ASSERT_TRUE(!FD_ISSET(fd, &exceptfds));
+    EXPECT_FALSE(FD_ISSET(fd, &readfds));
+    EXPECT_FALSE(FD_ISSET(fd, &writefds));
+    EXPECT_FALSE(FD_ISSET(fd, &exceptfds));
+  }
+}
+
+TEST(Select, Pipe) {
+  std::array<fbl::unique_fd, 2> fds;
+  int int_fds[fds.size()];
+  ASSERT_EQ(pipe(int_fds), 0, "%s", strerror(errno));
+  fds[0].reset(int_fds[0]);
+  fds[1].reset(int_fds[1]);
+
+  constexpr std::chrono::duration minimum_duration = std::chrono::milliseconds(1);
+
+  struct timeval timeout = {
+      .tv_usec = std::chrono::microseconds(minimum_duration).count(),
+  };
+
+  {
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(fds[0].get(), &readfds);
+
+    EXPECT_EQ(select(fds[0].get() + 1, &readfds, nullptr, nullptr, &timeout), 0, "%s",
+              strerror(errno));
+    EXPECT_FALSE(FD_ISSET(fds[0].get(), &readfds));
+  }
+
+  {
+    char c;
+    ASSERT_EQ(write(fds[1].get(), &c, sizeof(c)), sizeof(c), "%s", strerror(errno));
+
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(fds[0].get(), &readfds);
+
+    EXPECT_EQ(select(fds[0].get() + 1, &readfds, nullptr, nullptr, &timeout), 1, "%s",
+              strerror(errno));
+    EXPECT_TRUE(FD_ISSET(fds[0].get(), &readfds));
+  }
+
+  {
+    ASSERT_EQ(close(fds[1].get()), 0, "%s", strerror(errno));
+
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(fds[0].get(), &readfds);
+
+    EXPECT_EQ(select(fds[0].get() + 1, &readfds, nullptr, nullptr, &timeout), 1, "%s",
+              strerror(errno));
+    EXPECT_TRUE(FD_ISSET(fds[0].get(), &readfds));
   }
 }
 
@@ -51,15 +101,15 @@ TEST(Select, SelectNegative) {
     struct timeval timeout = {
         .tv_sec = -1,
     };
-    ASSERT_EQ(select(0, &readfds, &writefds, &exceptfds, &timeout), -1);
-    ASSERT_EQ(errno, EINVAL, "%s", strerror(errno));
+    EXPECT_EQ(select(0, &readfds, &writefds, &exceptfds, &timeout), -1);
+    EXPECT_EQ(errno, EINVAL, "%s", strerror(errno));
   }
   {
     struct timeval timeout = {
         .tv_usec = -1,
     };
-    ASSERT_EQ(select(0, &readfds, &writefds, &exceptfds, &timeout), -1);
-    ASSERT_EQ(errno, EINVAL, "%s", strerror(errno));
+    EXPECT_EQ(select(0, &readfds, &writefds, &exceptfds, &timeout), -1);
+    EXPECT_EQ(errno, EINVAL, "%s", strerror(errno));
   }
 }
 
